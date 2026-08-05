@@ -24,6 +24,46 @@ import { ThreadParam } from '../schemas'
  * One file for the five, mirroring the use cases they call: they share the `:threadId/:loopId`
  * envelope and each body is two lines. Splitting them would produce five files whose only distinct
  * content is a path string.
+ *
+ * ### THE MCP EXPOSURE OF ALL FIVE, ARGUED ONCE HERE RATHER THAN FIVE TIMES BELOW
+ * ─────────────────────────────────────────────────────────────────────────────────────────────────
+ * `orchestration` IS NEW ON EVERY ONE OF THEM, and it answers a request the product could not serve:
+ * the operator asks for a recurring prompt IN the conversation ("todo dia de manhã me pergunta como
+ * está o deploy") and the only door to it was the console. A model with the request and no sanctioned
+ * tool does not go quiet — it narrates. That failure is measured, in this repository, for the steer
+ * and for the custom prompt, both of which were missing the same way.
+ *
+ * ALL FIVE, and the READ is what makes the other four reachable at all. An `orchestration` identity
+ * carries `threadId` and nothing loop-shaped, and the prompt renders no loop list, so a model that
+ * could only CREATE would be able to set alarms and unable to turn any of them off. `ListThreadLoops`
+ * is how it learns an id, which is why it gains the scope rather than staying a console read.
+ *
+ * `system` DOES NOT CHANGE — the read stays, the writes stay out. That asymmetry is not an oversight
+ * being corrected here: it is the deliberate posture this file already carried ("READ only — the
+ * writes below stay off the door"), and it stays true because `system` is the EXTERNAL MCP client,
+ * which carries no run token and therefore has no conversation to be confined to. `orchestration`
+ * does. Widening `system` is a second exposure decision, recorded as a follow-up in the spec rather
+ * than smuggled in with this one.
+ *
+ * `issue-handling` IS OUT. The agent that executes an issue reads third-party text as its input, and
+ * programming recurring whispers into a conversation is not issue work. `IssueWorkAgent.test.ts` still
+ * pins that no `system` tool reaches it, and that assertion is untouched by these lines.
+ *
+ * ### NO OWNERSHIP GUARD IN ANY `handle()`, DELIBERATELY — THE FENCE IS TWO PIECES THAT EXIST
+ *  1. THE CONVERSATION. Every path starts at `/threads/:threadId/loops`; an `orchestration` identity
+ *     carries `threadId` (`OrchestratorAgent.IdentitySchema` omits only `issueId`); and
+ *     `AgentIdentityMiddleware` — appended by `Controller.effectiveMiddlewares` precisely BECAUSE
+ *     these classes declare `mcpScopes` — compares the keys the identity carries against
+ *     `{...params, ...body}`. Another conversation's loops are a 403 before `handle()` is entered.
+ *  2. THE LOOP. The three per-loop doors carry a `loopId` the identity does NOT carry, so
+ *     `compareIdentity` has nothing to say about it — and does not need to: `loadLoop()` in
+ *     `ManageThreadLoops` already refuses a loop whose `ownerId`/`threadId` are not the caller's, a
+ *     guard written for the console for the identical reason (loop ids are addressable from there
+ *     too). Adding a second check here would hide the fact that the existing one is doing the work.
+ *
+ * `ThreadLoops.test.ts` measures both halves by reading the victim's loops back, not merely the error
+ * — and pins the declaration itself, since the declaration is what MOUNTS the first half.
+ * ─────────────────────────────────────────────────────────────────────────────────────────────────
  */
 
 const OWNER = '00000000-0000-4000-8000-000000000001'
@@ -59,9 +99,11 @@ export class ListThreadLoopsController extends Controller<
 	typeof ListThreadLoopsControllerInputSchema,
 	typeof ListThreadLoopsControllerOutputSchema
 > {
-	/** Reachable as an MCP tool: an agent asked "o que está agendado nesta conversa?" should be able to
-	 *  answer without the operator opening the dialog. READ only — the writes below stay off the door. */
-	static override readonly mcpScopes = [McpScope.system]
+	/** BOTH surfaces. `system` is what it already had: an agent asked "o que está agendado nesta
+	 *  conversa?" should be able to answer without the operator opening the dialog. `orchestration` is
+	 *  new, and it is the ONLY way the resident agent learns a loop id — without it the four writes
+	 *  below are addressable by nobody. See the exposure block at the top of the file. */
+	static override readonly mcpScopes = [McpScope.system, McpScope.orchestration]
 	readonly path = '/threads/:threadId/loops'
 	readonly method = 'get' as const
 	readonly description = "This conversation's scheduled prompts (loops) (T11)"
@@ -90,6 +132,8 @@ export class CreateThreadLoopController extends Controller<
 	typeof CreateThreadLoopControllerInputSchema,
 	typeof CreateThreadLoopControllerOutputSchema
 > {
+	/** `orchestration` only — the operator asking out loud, inside the conversation the loop is for. */
+	static override readonly mcpScopes = [McpScope.orchestration]
 	readonly path = '/threads/:threadId/loops'
 	readonly method = 'post' as const
 	readonly description = 'Schedule a recurring whisper into this conversation (C21)'
@@ -121,6 +165,9 @@ export class UpdateThreadLoopController extends Controller<
 	typeof UpdateThreadLoopControllerInputSchema,
 	typeof UpdateThreadLoopControllerOutputSchema
 > {
+	/** `orchestration` only. Note this is a WHOLE-loop edit, which the orchestrator prompt has to say
+	 *  out loud: a model that sends only the half it is changing erases the other one. */
+	static override readonly mcpScopes = [McpScope.orchestration]
 	readonly path = '/threads/:threadId/loops/:loopId'
 	readonly method = 'put' as const
 	readonly description = 'Edit a loop — its prompt and its schedule (C22)'
@@ -153,6 +200,9 @@ export class SetThreadLoopEnabledController extends Controller<
 	typeof SetThreadLoopEnabledControllerInputSchema,
 	typeof SetThreadLoopEnabledControllerOutputSchema
 > {
+	/** `orchestration` only — and this is the REVERSIBLE half of "para de me mandar isso", which is why
+	 *  the prompt sends the model here by default and to the delete door only when asked to remove. */
+	static override readonly mcpScopes = [McpScope.orchestration]
 	readonly path = '/threads/:threadId/loops/:loopId/enabled'
 	readonly method = 'put' as const
 	readonly description = 'Pause or resume a loop (C23)'
@@ -184,6 +234,11 @@ export class DeleteThreadLoopController extends Controller<
 	typeof DeleteThreadLoopControllerInputSchema,
 	typeof DeleteThreadLoopControllerOutputSchema
 > {
+	/** `orchestration` only, and the one door here with no undo — which is a fact about the operation,
+	 *  not a reason to withhold it: the operator who says "pode apagar aquele loop" is asking for this
+	 *  and nothing else. What keeps a model from reaching it on "para com isso" is the prompt, which
+	 *  sends that sentence to the pause door above. */
+	static override readonly mcpScopes = [McpScope.orchestration]
 	readonly path = '/threads/:threadId/loops/:loopId'
 	readonly method = 'delete' as const
 	readonly description = 'Remove a loop (C24)'
