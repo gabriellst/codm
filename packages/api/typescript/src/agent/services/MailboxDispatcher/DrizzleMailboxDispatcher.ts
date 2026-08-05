@@ -1,8 +1,9 @@
 import { injectable } from 'tsyringe-neo'
 import type { DependencyContainer } from 'tsyringe-neo'
-import { LoggingService, type PollingService } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
+import { BaseError, LoggingService, type PollingService } from '@codm/core-typescript'
+import { MailboxItemKind, MailboxTargetKind, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { ThreadRepository } from '@thread/repositories'
+import { RaiseStop } from '@thread/usecases'
 import { WorkspaceRepository } from '@workspace/repositories'
 import { AgentSessionRepository, MailboxRepository, type ClaimedMailboxItem } from '../../repositories'
 import { RunOrchestratorTurn } from '../../usecases/RunOrchestratorTurn'
@@ -20,6 +21,14 @@ const LEASE_MS = 10 * 60 * 1000
 const HEARTBEAT_MS = LEASE_MS / 3
 /** Past this many failed turns an item is POISONED rather than retried — it is blocking its target. */
 const MAX_ATTEMPTS = 3
+/**
+ * How long a CONTENDED item waits before becoming claimable again.
+ *
+ * Long enough that the poll floor cannot spin on it, short enough that a turn finishing early is not
+ * punished by a long silence. Contention resolves when the running turn ends, and nothing here can
+ * know when that is — so this is a retry cadence, not an estimate.
+ */
+const CONTENTION_BACKOFF_MS = 15_000
 const POLL_MIN_MS = 250
 /**
  * The idle ceiling — deliberately LOW for a conversational product.
@@ -65,6 +74,7 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 	 */
 	protected leaseMs = LEASE_MS
 	protected heartbeatMs = HEARTBEAT_MS
+	protected contentionBackoffMs = CONTENTION_BACKOFF_MS
 	private draining: Promise<number> | null = null
 	private pollIntervalMs = POLL_MIN_MS
 	private readonly workerId = `mailbox-${crypto.randomUUID()}`
@@ -284,6 +294,21 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 			await this.mailbox.complete(item.id)
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error)
+
+			// CONTENTION IS NOT FAILURE — and conflating the two is what killed real work.
+			//
+			// `TERMINAL_ALREADY_RUNNING` means "a run already holds this issue", which says nothing about
+			// whether this item's work is good. It went through `fail` like any error, so three unlucky
+			// moments poisoned it. Measured 2026-08-04: an issue sat `WORKING` for two and a half hours
+			// because every retry died here while the operator watched a Needs-you card that never moved.
+			if (error instanceof BaseError && error.name === 'TERMINAL_ALREADY_RUNNING') {
+				this.logging.info({
+					content: { message: 'mailbox turn deferred — target busy', itemId: item.id, targetId: item.targetId },
+				})
+				await this.mailbox.defer(item.id, this.contentionBackoffMs)
+				return
+			}
+
 			this.logging.error({
 				content: {
 					message: 'mailbox turn failed',
@@ -297,6 +322,15 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 			// attempts++ and the lease released. Past MAX_ATTEMPTS the row is poisoned — it is ordered
 			// AHEAD of everything else for its target, so retrying forever would silence that thread.
 			await this.mailbox.fail(item.id, message, MAX_ATTEMPTS)
+
+			// A POISONED ITEM IS A NEEDS-YOU, and until now it was a silent one.
+			//
+			// `attempts` was already incremented at claim, so reaching MAX here means this failure was the
+			// last one and the row is now dead. Before this line the only trace was a log nobody reads:
+			// the item stopped existing for the queue, the issue stayed `WORKING` forever, and the
+			// operator found out by asking. Raising a stop puts it on the Needs-you panel — and since
+			// stops of this kind now reach the channel, on the operator's phone.
+			if (item.attempts >= MAX_ATTEMPTS) await this.raiseStopForPoisoned(item, message)
 		} finally {
 			clearInterval(heartbeat)
 		}
@@ -399,6 +433,47 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 			// Carried through so `persistOutcome` can put it on the ISSUE_RESULT it queues.
 			originEntryId: payload.originEntryId,
 		})
+	}
+
+	/**
+	 * Turn a poisoned item into a Needs-you card — the leg that was missing.
+	 *
+	 * ### Why `SERVER_ERROR` and not a kind of its own
+	 * The frozen `StopKind` set has no member for "the queue gave up on this item", and minting one is a
+	 * contract change, not a hotfix. `SERVER_ERROR` is the least-wrong home: its admissible resolutions
+	 * are exactly the two that apply here (`RETRY` / `TAKE_OVER`), and its catalog title already reads as
+	 * a condition rather than a sentence somebody wrote. The `detail` carries what actually happened, so
+	 * nothing is hidden. A dedicated kind is the follow-up, and it belongs in a spec.
+	 *
+	 * ### Why this is best-effort
+	 * The turn already failed. If raising the stop ALSO fails, rethrowing would replace a recorded
+	 * failure with an unrecorded one and hand the outbox a second thing to retry. The item is already
+	 * dead in the queue either way; the worst case here is the silence we had before, never worse.
+	 */
+	private async raiseStopForPoisoned(item: ClaimedMailboxItem, cause: string): Promise<void> {
+		try {
+			// A THREAD item names its thread directly; an ISSUE item carries it on the payload, which is
+			// where `runIssueWork` already reads it from.
+			const payload = item.payload as { threadId?: string }
+			const threadId = item.targetKind === MailboxTargetKind.THREAD ? item.targetId : payload.threadId
+			if (!threadId) return
+
+			await this.handlerFor(RaiseStop).execute({
+				stopId: crypto.randomUUID(),
+				threadId,
+				issueId: item.targetKind === MailboxTargetKind.ISSUE ? item.targetId : undefined,
+				kind: StopKind.SERVER_ERROR,
+				detail: `O trabalho parou depois de ${item.attempts} tentativas: ${cause}`,
+			})
+		} catch (error) {
+			this.logging.error({
+				content: {
+					message: 'could not raise a stop for a poisoned mailbox item',
+					itemId: item.id,
+					error: error instanceof Error ? error.message : String(error),
+				},
+			})
+		}
 	}
 
 	/**
