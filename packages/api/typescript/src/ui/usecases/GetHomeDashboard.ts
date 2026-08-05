@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { and, desc, eq, isNull } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, inArray, isNull } from 'drizzle-orm'
 import { Handler, z, DrizzleClient } from '@codm/core-typescript'
 import { threads, issues, stops, transcriptEntries, workspaces, channels } from '@codm/contracts/db'
 import {
@@ -44,6 +44,13 @@ export const GetHomeDashboardOutputSchema = z.object({
 	 * `enumLabel` and the i18n rail can see it; as a bare `string` it was invisible to both.
 	 */
 	latestActivity: z.array(z.object({ kind: z.enum(TranscriptKind), subtitle: z.string(), threadId: z.uuid(), at: z.string() })),
+	/**
+	 * `medianResponseSeconds` is HOW LONG THE CONTACT WAITED, in seconds, for the median reply sent
+	 * today — measured on the transcript, from the first message of an unanswered inbound burst to the
+	 * line that answered it. It shipped as a literal `0`, so the card read "0s" forever: a number the
+	 * operator cannot distinguish from "we answer instantly", which is precisely the reading that makes
+	 * the stat worth nothing.
+	 */
 	today: z.object({ issuesOpened: z.number().int(), issuesClosed: z.number().int(), medianResponseSeconds: z.number() }),
 	channels: z.array(z.object({ kind: z.enum(ChannelKind), status: z.enum(ChannelStatus) })),
 })
@@ -149,6 +156,8 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 		const issuesOpened = allIssues.filter(i => i.createdAt >= dayStart).length
 		const issuesClosed = allIssues.filter(i => i.completedAt !== null && i.completedAt !== undefined && i.completedAt >= dayStart).length
 
+		const medianResponseSeconds = await this.medianResponse(input.ownerId, dayStart)
+
 		const channelRows = await this.db
 			.select({ kind: channels.platform, status: channels.status })
 			.from(channels)
@@ -160,9 +169,71 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 			threads: allThreads,
 			activeSessions,
 			latestActivity,
-			today: { issuesOpened, issuesClosed, medianResponseSeconds: 0 },
+			today: { issuesOpened, issuesClosed, medianResponseSeconds },
 			channels: channelRows.map(c => ({ kind: c.kind as ChannelKind, status: c.status as ChannelStatus })),
 		}
+	}
+
+	/**
+	 * TODAY'S MEDIAN RESPONSE, in seconds, off the transcript.
+	 *
+	 * A "response" is one inbound burst answered: the clock starts at the FIRST contact line nobody had
+	 * answered yet and stops at the next line this side put on the channel. Starting it at the first
+	 * message of the burst rather than the last is the whole point — a contact who writes four lines in
+	 * a row waited from the first one, and pairing each line with the same reply would report four
+	 * responses for one, three of them flatteringly short.
+	 *
+	 * OUTBOUND IS `SYSTEM | DIRECT` — the two kinds that reach the contact. `WHISPER` is an in-app steer
+	 * that never leaves the console and `ACTION` is an audit line; counting either would stop the clock
+	 * on a reply the contact never saw.
+	 *
+	 * The window is today, same `dayStart` as the two counters beside it, so the three numbers on the
+	 * card describe the same day. A burst that opened before midnight and was answered after it is
+	 * therefore not counted — the alternative is a stat whose window silently differs from its label.
+	 *
+	 * Median, not mean: one conversation left overnight would drag an average past every number the
+	 * operator recognises.
+	 */
+	private async medianResponse(ownerId: string, dayStart: Date): Promise<number> {
+		const OUTBOUND = [TranscriptKind.SYSTEM, TranscriptKind.DIRECT]
+
+		const entries = await this.db
+			.select({ threadId: transcriptEntries.threadId, kind: transcriptEntries.kind, at: transcriptEntries.at })
+			.from(transcriptEntries)
+			// Same join as `latestActivity` above, for the same reason: a deleted thread's lines must not
+			// speak for the owner's numbers either.
+			.innerJoin(threads, and(eq(transcriptEntries.threadId, threads.id), isNull(threads.deletedAt)))
+			.where(
+				and(
+					eq(transcriptEntries.ownerId, ownerId),
+					gte(transcriptEntries.at, dayStart),
+					inArray(transcriptEntries.kind, [TranscriptKind.CONTACT, ...OUTBOUND]),
+				),
+			)
+			// Chronological, because the pairing below walks each thread forward in time.
+			.orderBy(asc(transcriptEntries.at))
+
+		const waitingSince = new Map<string, Date>()
+		const waits: number[] = []
+		for (const entry of entries) {
+			if (entry.kind === TranscriptKind.CONTACT) {
+				// First line of the burst wins — a later one in the same burst must not reset the clock.
+				if (!waitingSince.has(entry.threadId)) waitingSince.set(entry.threadId, entry.at)
+				continue
+			}
+			const since = waitingSince.get(entry.threadId)
+			// No pending inbound ⇒ this is us opening the conversation, not answering it.
+			if (!since) continue
+			waits.push((entry.at.getTime() - since.getTime()) / 1000)
+			waitingSince.delete(entry.threadId)
+		}
+
+		// Nothing was answered today: 0 is the honest reading of an empty set here, and it is what the
+		// card already renders for a quiet morning.
+		if (waits.length === 0) return 0
+		const sorted = [...waits].sort((a, b) => a - b)
+		const mid = Math.floor(sorted.length / 2)
+		return sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2
 	}
 
 	private buildNeedsYou(
