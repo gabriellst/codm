@@ -152,6 +152,20 @@ export const OrchestratorInputSchema = z.agentInput({
 	 * `thread`'s schemas would couple the agent runtime to that aggregate's shape.
 	 */
 	customPrompt: z.string().min(1).optional(),
+	/**
+	 * The IANA zone this install runs in — the one fact a `DAILY` loop needs and the model cannot derive.
+	 *
+	 * `DailyLoopSchedule` requires a zone, and a model guessing one from the language of the conversation
+	 * writes a wrong hour that reads like a right one. The console never had this problem because it
+	 * reads `Intl.DateTimeFormat().resolvedOptions().timeZone` off the browser (`LoopsSection.tsx:99`);
+	 * the daemon is the same machine, and this repository already ratified that equivalence when it
+	 * dropped the timezone from Settings because "the timezone is the machine's".
+	 *
+	 * REQUIRED, not optional-with-a-default — the same rule `openStops` above states. The turn always
+	 * knows the answer, so "absent" would mean nothing except that somebody forgot to wire it; and a
+	 * DEFAULTED zone is precisely the failure this field exists to prevent, not a fallback for it.
+	 */
+	timezone: z.string().min(1),
 	/** Which model to ask the CLI for. Omitted ⇒ `DEFAULT` ⇒ the CLI's own choice. */
 	model: z.enum(AgentModelId).optional(),
 	/** EXACTLY ONE is set by `RunOrchestratorTurn` — continue the thread's session or open a new one. */

@@ -41,6 +41,9 @@ const input = () =>
 		// always knows, so an absent field could only ever mean the seam was never wired — which is the
 		// exact failure that field exists to make unshippable, and the schema refuses the run without it.
 		openStops: [],
+		// Required for the same reason, and answering a different question: which zone a wall-clock loop
+		// is scheduled in. Absent, a model would guess one from the language of the conversation.
+		timezone: 'America/Sao_Paulo',
 		item: {
 			kind: MailboxItemKind.OPERATOR_MESSAGE,
 			entryId: '00000000-0000-4000-8000-0000000000dd',
