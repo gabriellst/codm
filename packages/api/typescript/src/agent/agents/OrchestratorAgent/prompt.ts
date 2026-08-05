@@ -1,7 +1,13 @@
 import { injectable } from 'tsyringe-neo'
 import { ContactKind, MailboxItemKind } from '@codm/contracts-typescript/wire/enums'
 import type Z from 'zod'
-import { toolNameOf, ForkIssueController, ResolveStopController, SteerIssueTurnController } from '../../mcp/exposure'
+import {
+	toolNameOf,
+	ForkIssueController,
+	ResolveStopController,
+	SteerIssueTurnController,
+	ConfigurePromptController,
+} from '../../mcp/exposure'
 import { AgentRunOutcome } from '../../enums'
 import type { AgentInputEnvelope } from '../../types/AgentInput'
 import type { OrchestratorInputSchema } from './types'
@@ -59,6 +65,7 @@ export class OrchestratorPromptBuilder {
 			'',
 			...this.issues(),
 			...this.redirectingWork(),
+			...this.standingInstructions(input),
 			...this.stops(input),
 			...this.quoting(input),
 			...this.operatorInstructions(input),
@@ -240,6 +247,61 @@ export class OrchestratorPromptBuilder {
 				`not call ${steerIssue}, do not tell the operator you passed it along. If a call failed, say it failed. ` +
 				'A turn that narrates an action it never took is worse than a turn that does nothing, because the ' +
 				'operator stops watching.',
+		]
+	}
+
+	/**
+	 * INSTRUÇÕES PERMANENTES — a situação que faltava do outro lado do custom prompt.
+	 *
+	 * `operatorInstructions()` RENDERS the field; this paragraph is what lets the operator WRITE it from
+	 * inside the conversation. Without it, "de agora em diante responde sempre em inglês" had three
+	 * endings and all three were bad: obey for one turn and let the rule die with the context window,
+	 * send the operator to the console to record a preference about the conversation they are already
+	 * having, or claim to have registered it. The third is not hypothetical here — it is exactly what
+	 * `redirectingWork()` was written for, one situation over.
+	 *
+	 * ### The rule that keeps the tool from being an autonomy
+	 * "Never infer" is `issues()`'s rule, restated verbatim in shape because it is the same rule: a
+	 * standing instruction is something the operator says OUT LOUD. Without it, a model that reads a
+	 * passing complaint as a standing rule would be rewriting its own instructions from a remark — which
+	 * is the objection `ConfigurePrompt.ts`'s doc block answers, and this paragraph is one third of that
+	 * answer (the other two are the identity confinement and the frame it cannot reach).
+	 *
+	 * ### Why REPLACES is stated, and why the "resend it" line is conditional
+	 * The operation writes the whole field; there is no append in the contract and inventing one would
+	 * be a second mechanism for the same column. Telling a model to preserve text it was never shown is
+	 * an instruction it cannot follow — so the line renders only when there IS text, which is exactly
+	 * when the model can see it (`operatorInstructions()` prints it verbatim at the end of this same
+	 * prompt).
+	 *
+	 * ### Why the delay is stated
+	 * `systemPrompt` is folded into the FIRST stdin line of every run, resumed ones included, and
+	 * `RunOrchestratorTurn` reads `thread.customPrompt` off the aggregate when the turn STARTS. So a
+	 * write landing mid-turn cannot change the turn making it. Unsaid, the model reports "pronto, já
+	 * estou falando inglês" while still running under the old text — a small lie of the same family the
+	 * honesty rule above exists to kill.
+	 */
+	private standingInstructions(input: OrchestratorInput): string[] {
+		const configurePrompt = toolNameOf(ConfigurePromptController)
+		return [
+			'',
+			'STANDING INSTRUCTIONS FOR THIS CONVERSATION',
+			'The operator can give you rules that outlive one message — how to talk, which language, what to always do ' +
+				`or never do here. Those live in a field of THIS conversation, and ${configurePrompt} is how you write it.`,
+			'Only when they ask for it out loud. You never infer one, and you never turn a passing remark into a ' +
+				'standing rule — same rule as issues.',
+			`${configurePrompt} REPLACES the whole text with what you send.`,
+			...(input.customPrompt
+				? [
+						'There is already text there — it is at the end of these instructions. If the operator is ADDING to ' +
+							'it, send the existing text back together with the new part, or you have just deleted what they ' +
+							'wrote before.',
+					]
+				: []),
+			'To erase it, call it with no text at all.',
+			'It takes effect on the NEXT message, not on this turn: you are still running under the instructions you ' +
+				'were given when this turn started. Say what you recorded, in one line, and do not claim you are already ' +
+				'behaving differently. And if you did not call it, do not say you did.',
 		]
 	}
 

@@ -16,7 +16,7 @@ import { RecordArtifactController } from '@artifact/controllers'
 // BY NAME as well as through the namespace above, for the prose re-export at the bottom — same shape
 // and same license as `RecordArtifactController` on the line before it. Both lines are covered by the
 // per-file POLICY_EXCEPTIONS entry this module already carries for `<ctx>/controllers`.
-import { ResolveStopController } from '@thread/controllers'
+import { ResolveStopController, ConfigurePromptController } from '@thread/controllers'
 import { wireToolName } from './wire'
 
 /**
@@ -179,4 +179,7 @@ export {
 	// which is the entire reason the prose list exists rather than the prompt builder importing it.
 	ResolveStopController,
 	SteerIssueTurnController,
+	// Named by `standingInstructions()` — the paragraph that lets the operator record a rule for the
+	// conversation without leaving it. Same context and same license as `ResolveStopController` above.
+	ConfigurePromptController,
 }

@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'bun:test'
 import { ContactKind, MailboxItemKind, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { AgentRunOutcome } from '../../enums'
-import { toolNameOf, ForkIssueController, ResolveStopController, SteerIssueTurnController } from '../../mcp/exposure'
+import {
+	toolNameOf,
+	ForkIssueController,
+	ResolveStopController,
+	SteerIssueTurnController,
+	ConfigurePromptController,
+} from '../../mcp/exposure'
 import { OrchestratorPromptBuilder } from './prompt'
 
 /**
@@ -177,6 +183,55 @@ describe('OrchestratorPromptBuilder', () => {
 	/** No prompt, no heading. A heading with nothing under it tells the model an instruction exists. */
 	it('(i) no section at all when the operator never wrote one', () => {
 		expect(builder.system(operatorTurn())).not.toContain('INSTRUCTIONS FROM THE OPERATOR')
+	})
+
+	/**
+	 * AC-8/AC-10 — THE WRITE SIDE of the same field, which is what this frente added.
+	 *
+	 * The rendering above (h/i) is the READ side and predates this. What was missing was any sanctioned
+	 * situation for the operator DICTATING a standing rule: the model had no tool and, once it had one,
+	 * no paragraph telling it when the tool applies. Both halves fail silently — a model with a tool and
+	 * no situation improvises, which in this repository has already produced a turn claiming an action it
+	 * never took.
+	 *
+	 * The tool name is DERIVED, like every other name in this file: swap it for a literal and this goes
+	 * red. It is asserted through `toolNameOf` rather than spelled out so a rename follows the symbol.
+	 */
+	it('(h2) AC-8 — the standing-instruction situation renders, naming the tool by its class', () => {
+		const system = builder.system(operatorTurn())
+
+		expect(system).toContain('STANDING INSTRUCTIONS FOR THIS CONVERSATION')
+		expect(system).toContain(toolNameOf(ConfigurePromptController))
+	})
+
+	/**
+	 * AC-10 — the two sentences that keep the turn honest. The delay is a FACT of the runner
+	 * (`systemPrompt` is folded into the first stdin line of a run that has already started), so a model
+	 * that reports "já estou falando inglês" is wrong about the system, not merely over-eager.
+	 */
+	it('(h3) AC-10 — it says the change lands on the next message, not on this turn', () => {
+		const system = builder.system(operatorTurn())
+
+		expect(system).toContain('NEXT message')
+		expect(system).toContain('REPLACES')
+	})
+
+	/**
+	 * AC-9 — THE CONDITIONAL HALF, and the reason it is conditional.
+	 *
+	 * The operation writes the whole field, so "add a rule" means "resend everything plus the new part".
+	 * That instruction is only followable when the model can SEE the existing text — which is exactly
+	 * when `operatorInstructions()` renders it. With an empty field the same sentence would point at
+	 * text that is not in the prompt, and a model told to preserve something it cannot see invents it.
+	 */
+	it('(h4) AC-9 — the "resend what is already there" warning renders ONLY when there is text', () => {
+		const withText = builder.system(operatorTurn({ customPrompt: 'Fale sempre em inglês.' }))
+		const without = builder.system(operatorTurn())
+
+		expect(withText).toContain('send the existing text back')
+		expect(without).not.toContain('send the existing text back')
+		// The situation itself is unconditional — recording the FIRST instruction is the main case.
+		expect(without).toContain('STANDING INSTRUCTIONS FOR THIS CONVERSATION')
 	})
 
 	/**
