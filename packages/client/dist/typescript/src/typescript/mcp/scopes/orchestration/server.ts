@@ -4,19 +4,29 @@
 */
 
 import { configurePromptHandler } from "./configurePrompt.ts";
+import { createThreadLoopHandler } from "./createThreadLoop.ts";
+import { deleteThreadLoopHandler } from "./deleteThreadLoop.ts";
 import { forkIssueHandler } from "./forkIssue.ts";
 import { getIssueStatusHandler } from "./getIssueStatus.ts";
 import { getSessionIssuesHandler } from "./getSessionIssues.ts";
+import { listThreadLoopsHandler } from "./listThreadLoops.ts";
 import { raiseStopHandler } from "./raiseStop.ts";
 import { resolveStopHandler } from "./resolveStop.ts";
+import { setThreadLoopEnabledHandler } from "./setThreadLoopEnabled.ts";
 import { steerIssueTurnHandler } from "./steerIssueTurn.ts";
+import { updateThreadLoopHandler } from "./updateThreadLoop.ts";
 import { configurePromptMutationRequestSchema, configurePromptMutationResponseSchema } from "../../../zod/configurePromptSchema.ts";
+import { createThreadLoopMutationRequestSchema, createThreadLoopMutationResponseSchema } from "../../../zod/createThreadLoopSchema.ts";
+import { deleteThreadLoopMutationResponseSchema } from "../../../zod/deleteThreadLoopSchema.ts";
 import { forkIssueMutationRequestSchema, forkIssueMutationResponseSchema } from "../../../zod/forkIssueSchema.ts";
 import { getIssueStatusQueryResponseSchema } from "../../../zod/getIssueStatusSchema.ts";
 import { getSessionIssuesQueryResponseSchema } from "../../../zod/getSessionIssuesSchema.ts";
+import { listThreadLoopsQueryResponseSchema } from "../../../zod/listThreadLoopsSchema.ts";
 import { raiseStopMutationRequestSchema, raiseStopMutationResponseSchema } from "../../../zod/raiseStopSchema.ts";
 import { resolveStopMutationRequestSchema, resolveStopMutationResponseSchema } from "../../../zod/resolveStopSchema.ts";
+import { setThreadLoopEnabledMutationRequestSchema, setThreadLoopEnabledMutationResponseSchema } from "../../../zod/setThreadLoopEnabledSchema.ts";
 import { steerIssueTurnMutationRequestSchema, steerIssueTurnMutationResponseSchema } from "../../../zod/steerIssueTurnSchema.ts";
+import { updateThreadLoopMutationRequestSchema, updateThreadLoopMutationResponseSchema } from "../../../zod/updateThreadLoopSchema.ts";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
@@ -81,12 +91,57 @@ server.registerTool("ConfigurePrompt", {
 })
           
 
+server.registerTool("CreateThreadLoop", {
+  description: "Schedule a recurring whisper into this conversation (C21)",
+  outputSchema: { data: createThreadLoopMutationResponseSchema },
+  inputSchema: { threadId: z.string(), data: createThreadLoopMutationRequestSchema },
+}, async ({ threadId, data }) => {
+  return createThreadLoopHandler({ threadId, data })
+})
+          
+
+server.registerTool("ListThreadLoops", {
+  description: "This conversation's scheduled prompts (loops) (T11)",
+  outputSchema: { data: listThreadLoopsQueryResponseSchema },
+  inputSchema: { threadId: z.string() },
+}, async ({ threadId }) => {
+  return listThreadLoopsHandler({ threadId })
+})
+          
+
+server.registerTool("DeleteThreadLoop", {
+  description: "Remove a loop (C24)",
+  outputSchema: { data: deleteThreadLoopMutationResponseSchema },
+  inputSchema: { threadId: z.string(), loopId: z.string() },
+}, async ({ threadId, loopId }) => {
+  return deleteThreadLoopHandler({ threadId, loopId })
+})
+          
+
+server.registerTool("UpdateThreadLoop", {
+  description: "Edit a loop — its prompt and its schedule (C22)",
+  outputSchema: { data: updateThreadLoopMutationResponseSchema },
+  inputSchema: { threadId: z.string(), loopId: z.string(), data: updateThreadLoopMutationRequestSchema },
+}, async ({ threadId, loopId, data }) => {
+  return updateThreadLoopHandler({ threadId, loopId, data })
+})
+          
+
 server.registerTool("ResolveStop", {
   description: "Resolve a stop — retry / review&send / take over / approve / deny (C25)",
   outputSchema: { data: resolveStopMutationResponseSchema },
   inputSchema: { stopId: z.string(), data: resolveStopMutationRequestSchema },
 }, async ({ stopId, data }) => {
   return resolveStopHandler({ stopId, data })
+})
+          
+
+server.registerTool("SetThreadLoopEnabled", {
+  description: "Pause or resume a loop (C23)",
+  outputSchema: { data: setThreadLoopEnabledMutationResponseSchema },
+  inputSchema: { threadId: z.string(), loopId: z.string(), data: setThreadLoopEnabledMutationRequestSchema },
+}, async ({ threadId, loopId, data }) => {
+  return setThreadLoopEnabledHandler({ threadId, loopId, data })
 })
           
   return server

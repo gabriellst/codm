@@ -12,12 +12,17 @@ exports[`AC-16 — the golden snapshot: scope → the tools a model can call the
   ],
   "orchestration": [
     "mcp__codm__ConfigurePrompt",
+    "mcp__codm__CreateThreadLoop",
+    "mcp__codm__DeleteThreadLoop",
     "mcp__codm__ForkIssue",
     "mcp__codm__GetIssueStatus",
     "mcp__codm__GetSessionIssues",
+    "mcp__codm__ListThreadLoops",
     "mcp__codm__RaiseStop",
     "mcp__codm__ResolveStop",
+    "mcp__codm__SetThreadLoopEnabled",
     "mcp__codm__SteerIssueTurn",
+    "mcp__codm__UpdateThreadLoop",
   ],
   "system": [
     "mcp__codm__AddWorkspace",
