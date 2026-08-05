@@ -123,8 +123,24 @@ describe('the scan and the emitted spec describe the same surface, in both direc
 		}
 	})
 
-	test('AC-3 — RaiseStop is in BOTH surfaces, which is the one exposure change of this frente', () => {
+	test('AC-3 — RaiseStop is in BOTH surfaces, which is the one exposure change of that frente', () => {
 		expect(sorted(mcpExposure().scopesFor('RaiseStop'))).toEqual([McpScope.ISSUE_HANDLING, McpScope.orchestration].sort())
+	})
+
+	/**
+	 * AC-1 — the one exposure change of the custom-prompt frente, named rather than left to the snapshot.
+	 *
+	 * BOTH, and each half is load-bearing. Losing `system` would take the console's own write and the
+	 * external MCP client's off the surface to serve the orchestrator, which is not a trade anybody
+	 * asked for. Losing `orchestration` puts the operator back to opening the console to record a
+	 * preference about the conversation they are already having.
+	 *
+	 * And what is NOT here is the same assertion: `issue-handling` is absent, so the agent that executes
+	 * an issue — the one whose input is third-party text — cannot rewrite a conversation's standing
+	 * instructions. `IssueWorkAgent.test.ts` proves the same thing from the other end.
+	 */
+	test('AC-1 — ConfigurePrompt is in system AND orchestration, and in no other surface', () => {
+		expect(sorted(mcpExposure().scopesFor('ConfigurePrompt'))).toEqual([McpScope.system, McpScope.orchestration].sort())
 	})
 })
 
