@@ -83,6 +83,19 @@ export class DrizzleMailboxRepository extends MailboxRepository {
 		return { ...row, targetKind: row.targetKind as MailboxTargetKind, kind: row.kind as MailboxItemKind }
 	}
 
+	async renewLease(id: string, claimedBy: string, leaseMs: number, tx?: DrizzleClient): Promise<void> {
+		const dbc = tx ?? this.db
+		// `claimedBy` is in the predicate, not just the id: if this worker's lease already lapsed and
+		// another claimed the item, the UPDATE matches nothing rather than yanking the lease back from
+		// under the new holder. A heartbeat that could steal would be worse than no heartbeat.
+		await dbc
+			.update(agentMailbox)
+			.set({ leaseUntil: new Date(Date.now() + leaseMs) })
+			.where(
+				and(eq(agentMailbox.id, id), eq(agentMailbox.claimedBy, claimedBy), isNull(agentMailbox.consumedAt), isNull(agentMailbox.deadAt)),
+			)
+	}
+
 	async complete(id: string, tx?: DrizzleClient): Promise<void> {
 		const dbc = tx ?? this.db
 		await dbc.update(agentMailbox).set({ consumedAt: new Date(), claimedBy: null, leaseUntil: null }).where(eq(agentMailbox.id, id))

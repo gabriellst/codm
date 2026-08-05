@@ -110,6 +110,50 @@ describe('MailboxRepository — the guarantees the dispatcher is built on', () =
 	 * simply has an expired lease, and the ordinary claim picks it up. Simulated with a zero lease,
 	 * because the alternative is sleeping past a real one.
 	 */
+	/**
+	 * The heartbeat — and why it is a CORRECTNESS test, not a latency one.
+	 *
+	 * `leaseMs` is the crash budget. Without renewal it silently doubles as a turn-duration budget, and
+	 * an issue turn is a coding agent that routinely outlives it. The lease then lapses under a HEALTHY
+	 * run, this queue hands the same item out again, and the single-active guard rejects the duplicate
+	 * with `TERMINAL_ALREADY_RUNNING` — burning attempts until the item poisons. Measured 2026-08-04:
+	 * two issues died exactly that way while their original runs were still going.
+	 *
+	 * The falsifier is exact: delete the `renewLease` call in `runTurn` and this goes RED, because a
+	 * lease that is never pushed forward is indistinguishable from a worker that died.
+	 */
+	it('a lease renewed mid-turn keeps the item OUT of the queue, however long the turn runs', async () => {
+		const repo = testBed.resolve(MailboxRepository)
+		await enqueue(repo, THREAD_A, 'a-1')
+
+		// A turn claims it with a lease far shorter than the turn will take.
+		const claimed = await repo.claimNext('worker-long-turn', 40)
+		expect(claimed).toBeDefined()
+
+		// The turn is still running, so its heartbeat pushes the lease forward before it lapses.
+		await new Promise(resolve => setTimeout(resolve, 30))
+		await repo.renewLease(claimed?.id ?? '', 'worker-long-turn', 40)
+		await new Promise(resolve => setTimeout(resolve, 30))
+
+		// Past the ORIGINAL expiry, and still nobody else may take it — the run owns it.
+		expect(await repo.claimNext('worker-other', 60_000)).toBeUndefined()
+	})
+
+	it('only the CURRENT holder may renew — a lapsed worker cannot steal its item back', async () => {
+		const repo = testBed.resolve(MailboxRepository)
+		await enqueue(repo, THREAD_A, 'a-1')
+
+		const lapsed = await repo.claimNext('worker-that-stalled', -1)
+		const taken = await repo.claimNext('worker-that-took-over', 60_000)
+		expect(taken?.id).toBe(lapsed?.id)
+
+		// The stalled worker wakes up and heartbeats. It must NOT extend a lease it no longer holds,
+		// or two runs would believe they own the same target.
+		await repo.renewLease(lapsed?.id ?? '', 'worker-that-stalled', 60_000)
+
+		expect(await repo.claimNext('worker-third', 60_000)).toBeUndefined()
+	})
+
 	it('AC-T5.1 — an item stranded by a crashed worker is claimable again once its lease expires', async () => {
 		const repo = testBed.resolve(MailboxRepository)
 		await enqueue(repo, THREAD_A, 'a-1')
@@ -198,6 +242,76 @@ describe('DrizzleMailboxDispatcher — the drain loop wakes for work that arrive
 		}
 		return false
 	}
+
+	/**
+	 * A turn that outlives its lease must keep its own item — the wiring, not the primitive.
+	 *
+	 * The repository-level tests above prove `renewLease` behaves; they say NOTHING about whether the
+	 * dispatcher ever calls it, and that gap is the whole bug. Measured 2026-08-04: two issues poisoned
+	 * because their leases lapsed under healthy runs, `claimNext` re-handed the same items out, and
+	 * `beginSession` rejected each duplicate with `TERMINAL_ALREADY_RUNNING` until attempts ran out.
+	 *
+	 * The falsifier is exact: drop the `renewLease` call from `runTurn` and this goes RED, because a
+	 * lease nobody pushes forward is indistinguishable from a worker that died.
+	 */
+	it('renova o lease do item enquanto o turno ainda está rodando', async () => {
+		const mailbox = testBed.resolve(MailboxRepository)
+		const threads = testBed.resolve(ThreadRepository)
+
+		let releaseTurn = (): void => {}
+		const turnStarted = Promise.withResolvers<void>()
+		const gate = new Promise<void>(resolve => {
+			releaseTurn = resolve
+		})
+		const realFindById = threads.findById.bind(threads)
+		threads.findById = async (id: string) => {
+			if (id === OTHER_THREAD) {
+				turnStarted.resolve()
+				await gate
+			}
+			return undefined
+		}
+
+		// Um lease curto e um heartbeat mais curto ainda: sem a renovação, o item volta à fila no meio
+		// do turno — que é exatamente o estado que envenenou as duas issues em produção.
+		class FastHeartbeatDispatcher extends DrizzleMailboxDispatcher {
+			protected override leaseMs = 60
+			protected override heartbeatMs = 15
+		}
+		const dispatcher = new FastHeartbeatDispatcher(
+			mailbox,
+			threads,
+			testBed.resolve(WorkspaceRepository),
+			testBed.resolve(AgentSessionRepository),
+			testBed.resolve(LoggingService),
+		).bind(testContainer)
+
+		try {
+			await mailbox.enqueue({
+				ownerId: OPERATOR_ID,
+				targetKind: MailboxTargetKind.THREAD,
+				targetId: OTHER_THREAD,
+				kind: MailboxItemKind.OPERATOR_MESSAGE,
+				payload: { entryId: '019e4d24-6524-7041-9e1c-8108180cddae' },
+				dedupKey: 'long-turn-1',
+			})
+
+			const draining = dispatcher.drain()
+			await turnStarted.promise
+
+			// Bem além do lease que o dispatcher usaria se nada o renovasse.
+			await new Promise(resolve => setTimeout(resolve, 120))
+
+			// Ninguém mais consegue reivindicar: o turno em voo ainda é o dono.
+			expect(await mailbox.claimNext('worker-intruso', 60_000)).toBeUndefined()
+
+			releaseTurn()
+			await draining
+		} finally {
+			threads.findById = realFindById
+			releaseTurn()
+		}
+	})
 
 	/**
 	 * A long issue turn must not silence the orchestrator.
