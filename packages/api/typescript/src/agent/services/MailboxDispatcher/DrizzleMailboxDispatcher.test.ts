@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
-import { TestBed } from '@test/support'
-import { LoggingService } from '@codm/core-typescript'
+import { TestBed, givenThread } from '@test/support'
+import { BaseError, LoggingService } from '@codm/core-typescript'
 import { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { ThreadRepository } from '@thread/repositories'
@@ -254,6 +254,116 @@ describe('DrizzleMailboxDispatcher — the drain loop wakes for work that arrive
 	 * The falsifier is exact: drop the `renewLease` call from `runTurn` and this goes RED, because a
 	 * lease nobody pushes forward is indistinguishable from a worker that died.
 	 */
+	/**
+	 * Contenção não pode matar trabalho — e a diferença é o `attempts`.
+	 *
+	 * `TERMINAL_ALREADY_RUNNING` diz que OUTRO run segura o alvo; não diz nada sobre a qualidade deste
+	 * item. Enquanto ele passava pelo `fail`, três momentos ruins seguidos envenenavam trabalho que
+	 * nunca esteve quebrado. Medido em 2026-08-05: uma issue ficou `WORKING` por 2h38 com três itens
+	 * mortos e nenhum sinal em lugar nenhum.
+	 *
+	 * O falsificador é exato: troque o `defer` por `fail` no ramo de contenção e este teste fica
+	 * vermelho, porque o `attempts` volta a subir.
+	 */
+	it('contenção devolve o item à fila SEM gastar tentativa', async () => {
+		const mailbox = testBed.resolve(MailboxRepository)
+		const threads = testBed.resolve(ThreadRepository)
+
+		// O turno morre com o erro de contenção, que é o que o guard de sessão única levanta.
+		// SALVO e restaurado no finally: o repositório é um singleton do container, e deixá-lo
+		// envenenado vaza para os testes seguintes — que foi exatamente o que aconteceu ao escrever isto.
+		const realFindById = threads.findById.bind(threads)
+		threads.findById = async () => {
+			throw new BaseError('TERMINAL_ALREADY_RUNNING', 'Issue x already has an active terminal session')
+		}
+
+		// Backoff curtíssimo: o teste mede o REFUND da tentativa, não a cadência da espera.
+		class FastBackoffDispatcher extends DrizzleMailboxDispatcher {
+			protected override contentionBackoffMs = 5
+		}
+		const dispatcher = new FastBackoffDispatcher(
+			mailbox,
+			threads,
+			testBed.resolve(WorkspaceRepository),
+			testBed.resolve(AgentSessionRepository),
+			testBed.resolve(LoggingService),
+		).bind(testContainer)
+
+		await mailbox.enqueue({
+			ownerId: OPERATOR_ID,
+			targetKind: MailboxTargetKind.THREAD,
+			targetId: OTHER_THREAD,
+			kind: MailboxItemKind.OPERATOR_MESSAGE,
+			payload: { entryId: '019e4d24-6524-7041-9e1c-8108180cddae' },
+			dedupKey: 'contended-1',
+		})
+
+		try {
+			await dispatcher.drain()
+
+			// Vivo, não morto: o item continua reivindicável depois do backoff, e o contador está zerado.
+			expect(await mailbox.hasPending(MailboxTargetKind.THREAD, OTHER_THREAD)).toBe(true)
+			await new Promise(resolve => setTimeout(resolve, 20))
+			const again = await mailbox.claimNext('worker-depois', -1)
+			expect(again?.attempts).toBe(1)
+		} finally {
+			threads.findById = realFindById
+		}
+	})
+
+	/**
+	 * Morrer em silêncio é o defeito, não a morte.
+	 *
+	 * Envenenar é uma decisão defensável: um item que falha sempre não pode bloquear o alvo para
+	 * sempre. O que não é defensável é o item sumir da fila sem que NADA apareça em lugar nenhum — a
+	 * issue fica `WORKING` para sempre e o operador descobre horas depois, perguntando. Medido em
+	 * 2026-08-05: 2h38 nesse estado, com três itens mortos e zero sinal.
+	 *
+	 * O falsificador é exato: remova a chamada a `raiseStopForPoisoned` e este teste fica vermelho,
+	 * porque o item morre igual e o Needs-you continua vazio.
+	 */
+	it('um item envenenado levanta um Stop em vez de sumir calado', async () => {
+		const mailbox = testBed.resolve(MailboxRepository)
+		const threads = testBed.resolve(ThreadRepository)
+		const thread = await givenThread(testBed)
+
+		// A falha é injetada no WORKSPACE, não na thread: `RaiseStop` também lê a thread, e derrubá-la
+		// impediria o próprio Stop de nascer — o teste passaria a medir a injeção, não o comportamento.
+		const workspaces = testBed.resolve(WorkspaceRepository)
+		const realWorkspaceFindById = workspaces.findById.bind(workspaces)
+		workspaces.findById = async () => {
+			throw new Error('boom')
+		}
+
+		const dispatcher = new DrizzleMailboxDispatcher(
+			mailbox,
+			threads,
+			workspaces,
+			testBed.resolve(AgentSessionRepository),
+			testBed.resolve(LoggingService),
+		).bind(testContainer)
+
+		await mailbox.enqueue({
+			ownerId: testBed.ownerId,
+			targetKind: MailboxTargetKind.THREAD,
+			targetId: thread.id.value,
+			kind: MailboxItemKind.OPERATOR_MESSAGE,
+			payload: { entryId: '019e4d24-6524-7041-9e1c-8108180cddae' },
+			dedupKey: 'poison-1',
+		})
+
+		// Uma passada basta: o drain reivindica de novo assim que o `fail` solta o lease, então as três
+		// tentativas se esgotam dentro do mesmo laço.
+		try {
+			await dispatcher.drain()
+
+			expect(await mailbox.hasPending(MailboxTargetKind.THREAD, thread.id.value)).toBe(false)
+			expect(await threads.openStops(thread.id.value)).not.toHaveLength(0)
+		} finally {
+			workspaces.findById = realWorkspaceFindById
+		}
+	})
+
 	it('renova o lease do item enquanto o turno ainda está rodando', async () => {
 		const mailbox = testBed.resolve(MailboxRepository)
 		const threads = testBed.resolve(ThreadRepository)

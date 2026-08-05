@@ -96,6 +96,16 @@ export class DrizzleMailboxRepository extends MailboxRepository {
 			)
 	}
 
+	async defer(id: string, delayMs: number, tx?: DrizzleClient): Promise<void> {
+		const dbc = tx ?? this.db
+		// `attempts - 1` REFUNDS the increment `claimNext` made. Without it a contended item still walks
+		// toward the poison counter, just more slowly — which is the same bug with a longer fuse.
+		await dbc
+			.update(agentMailbox)
+			.set({ claimedBy: null, leaseUntil: new Date(Date.now() + delayMs), attempts: sql`MAX(${agentMailbox.attempts} - 1, 0)` })
+			.where(eq(agentMailbox.id, id))
+	}
+
 	async complete(id: string, tx?: DrizzleClient): Promise<void> {
 		const dbc = tx ?? this.db
 		await dbc.update(agentMailbox).set({ consumedAt: new Date(), claimedBy: null, leaseUntil: null }).where(eq(agentMailbox.id, id))

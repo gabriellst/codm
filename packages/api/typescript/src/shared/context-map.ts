@@ -177,6 +177,26 @@ export const POLICY_EXCEPTIONS: readonly { file: string; imports: string; why: s
 			'item in ONE transaction (`Handler.withTransaction`, shared with `ReopenIssue` via the `tx` it accepts) — an ' +
 			'event would make the reopen eventual, letting a STEER reach an issue that is still COMPLETED.',
 	},
+	{
+		file: 'agent/services/MailboxDispatcher/DrizzleMailboxDispatcher.ts',
+		imports: 'thread/usecases',
+		why:
+			'A poisoned mailbox item has to become a Needs-you card. The ladder, descended in order:\n' +
+			'  degrau 1 (refactor to repositories/services) — NOT TAKEN. Raising a Stop is not a write the ' +
+			'`ThreadRepository` can express: `RaiseStop` checks `StopPolicyConfig` (a disabled criterion must be a ' +
+			'no-op, not a card), is idempotent on `stopId`, resolves the title through the thread owner`s language, ' +
+			'and since the channel-notice work also enqueues the delivery command in the same transaction. Reaching for ' +
+			'the aggregate directly from here would duplicate every one of those and drift from them the first time one ' +
+			'changes.\n' +
+			'  degrau 2 (declared edge + NAMED per-file exception) — TAKEN. `agent → thread` is already the most ' +
+			'trafficked declared edge in the map (this very file imports `@thread/repositories`); this extends the SAME ' +
+			'edge to the usecases surface for one file, and `agent` is the orchestration layer rather than a peer — ' +
+			'composing the destination context`s own guarded entrypoint is its job. Per-file and liveness-gated.\n' +
+			'  degrau 3 (integration event) — NOT NEEDED, and worse here. The dispatcher is the ONLY place that knows an ' +
+			'item just died; publishing a fact for someone else to react to would put a second hop between the failure ' +
+			'and the card, on the exact path whose failure mode is already "nobody was told". Measured 2026-08-04: an ' +
+			'issue sat WORKING for two and a half hours with three dead items and no signal anywhere.',
+	},
 ]
 
 /**
