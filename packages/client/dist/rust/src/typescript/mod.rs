@@ -232,6 +232,7 @@ pub mod types {
     ///    "INVALID_ID",
     ///    "INVALID_ID_VALUES_LENGTH",
     ///    "INVALID_LANGUAGE",
+    ///    "INVALID_LOOP_INTERVAL",
     ///    "INVALID_LOOP_TIME",
     ///    "INVALID_OUTBOX_PAYLOAD",
     ///    "INVALID_PHONE",
@@ -366,6 +367,8 @@ pub mod types {
         InvalidIdValuesLength,
         #[serde(rename = "INVALID_LANGUAGE")]
         InvalidLanguage,
+        #[serde(rename = "INVALID_LOOP_INTERVAL")]
+        InvalidLoopInterval,
         #[serde(rename = "INVALID_LOOP_TIME")]
         InvalidLoopTime,
         #[serde(rename = "INVALID_OUTBOX_PAYLOAD")]
@@ -534,6 +537,7 @@ pub mod types {
                 Self::InvalidId => f.write_str("INVALID_ID"),
                 Self::InvalidIdValuesLength => f.write_str("INVALID_ID_VALUES_LENGTH"),
                 Self::InvalidLanguage => f.write_str("INVALID_LANGUAGE"),
+                Self::InvalidLoopInterval => f.write_str("INVALID_LOOP_INTERVAL"),
                 Self::InvalidLoopTime => f.write_str("INVALID_LOOP_TIME"),
                 Self::InvalidOutboxPayload => f.write_str("INVALID_OUTBOX_PAYLOAD"),
                 Self::InvalidPhone => f.write_str("INVALID_PHONE"),
@@ -637,6 +641,7 @@ pub mod types {
                 "INVALID_ID" => Ok(Self::InvalidId),
                 "INVALID_ID_VALUES_LENGTH" => Ok(Self::InvalidIdValuesLength),
                 "INVALID_LANGUAGE" => Ok(Self::InvalidLanguage),
+                "INVALID_LOOP_INTERVAL" => Ok(Self::InvalidLoopInterval),
                 "INVALID_LOOP_TIME" => Ok(Self::InvalidLoopTime),
                 "INVALID_OUTBOX_PAYLOAD" => Ok(Self::InvalidOutboxPayload),
                 "INVALID_PHONE" => Ok(Self::InvalidPhone),
@@ -1944,28 +1949,59 @@ pub mod types {
     ///      "minLength": 1
     ///    },
     ///    "schedule": {
-    ///      "type": "object",
-    ///      "required": [
-    ///        "timeOfDay",
-    ///        "timezone",
-    ///        "weekdays"
-    ///      ],
-    ///      "properties": {
-    ///        "timeOfDay": {
-    ///          "type": "string",
-    ///          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+    ///      "oneOf": [
+    ///        {
+    ///          "type": "object",
+    ///          "required": [
+    ///            "kind",
+    ///            "timeOfDay",
+    ///            "timezone",
+    ///            "weekdays"
+    ///          ],
+    ///          "properties": {
+    ///            "kind": {
+    ///              "type": "string",
+    ///              "enum": [
+    ///                "DAILY"
+    ///              ]
+    ///            },
+    ///            "timeOfDay": {
+    ///              "type": "string",
+    ///              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+    ///            },
+    ///            "timezone": {
+    ///              "$ref": "#/components/schemas/Timezone"
+    ///            },
+    ///            "weekdays": {
+    ///              "type": "array",
+    ///              "items": {
+    ///                "$ref": "#/components/schemas/DayOfWeek"
+    ///              },
+    ///              "minItems": 1
+    ///            }
+    ///          }
     ///        },
-    ///        "timezone": {
-    ///          "$ref": "#/components/schemas/Timezone"
-    ///        },
-    ///        "weekdays": {
-    ///          "type": "array",
-    ///          "items": {
-    ///            "$ref": "#/components/schemas/DayOfWeek"
-    ///          },
-    ///          "minItems": 1
+    ///        {
+    ///          "type": "object",
+    ///          "required": [
+    ///            "everyMinutes",
+    ///            "kind"
+    ///          ],
+    ///          "properties": {
+    ///            "everyMinutes": {
+    ///              "type": "integer",
+    ///              "maximum": 1440.0,
+    ///              "minimum": 1.0
+    ///            },
+    ///            "kind": {
+    ///              "type": "string",
+    ///              "enum": [
+    ///                "INTERVAL"
+    ///              ]
+    ///            }
+    ///          }
     ///        }
-    ///      }
+    ///      ]
     ///    }
     ///  }
     ///}
@@ -2069,40 +2105,79 @@ pub mod types {
     ///
     /// ```json
     ///{
-    ///  "type": "object",
-    ///  "required": [
-    ///    "timeOfDay",
-    ///    "timezone",
-    ///    "weekdays"
-    ///  ],
-    ///  "properties": {
-    ///    "timeOfDay": {
-    ///      "type": "string",
-    ///      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+    ///  "oneOf": [
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "kind",
+    ///        "timeOfDay",
+    ///        "timezone",
+    ///        "weekdays"
+    ///      ],
+    ///      "properties": {
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "DAILY"
+    ///          ]
+    ///        },
+    ///        "timeOfDay": {
+    ///          "type": "string",
+    ///          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+    ///        },
+    ///        "timezone": {
+    ///          "$ref": "#/components/schemas/Timezone"
+    ///        },
+    ///        "weekdays": {
+    ///          "type": "array",
+    ///          "items": {
+    ///            "$ref": "#/components/schemas/DayOfWeek"
+    ///          },
+    ///          "minItems": 1
+    ///        }
+    ///      }
     ///    },
-    ///    "timezone": {
-    ///      "$ref": "#/components/schemas/Timezone"
-    ///    },
-    ///    "weekdays": {
-    ///      "type": "array",
-    ///      "items": {
-    ///        "$ref": "#/components/schemas/DayOfWeek"
-    ///      },
-    ///      "minItems": 1
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "everyMinutes",
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "everyMinutes": {
+    ///          "type": "integer",
+    ///          "maximum": 1440.0,
+    ///          "minimum": 1.0
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "INTERVAL"
+    ///          ]
+    ///        }
+    ///      }
     ///    }
-    ///  }
+    ///  ]
     ///}
     /// ```
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    pub struct CreateThreadLoopBodySchedule {
-        #[serde(rename = "timeOfDay")]
-        pub time_of_day: CreateThreadLoopBodyScheduleTimeOfDay,
-        pub timezone: ::codm_contracts_rust::wire::enums::Timezone,
-        pub weekdays: ::std::vec::Vec<::codm_contracts_rust::wire::enums::DayOfWeek>,
+    #[serde(tag = "kind")]
+    pub enum CreateThreadLoopBodySchedule {
+        #[serde(rename = "DAILY")]
+        Daily {
+            #[serde(rename = "timeOfDay")]
+            time_of_day: CreateThreadLoopBodyScheduleTimeOfDay,
+            timezone: ::codm_contracts_rust::wire::enums::Timezone,
+            weekdays: ::std::vec::Vec<::codm_contracts_rust::wire::enums::DayOfWeek>,
+        },
+        #[serde(rename = "INTERVAL")]
+        Interval {
+            #[serde(rename = "everyMinutes")]
+            every_minutes: ::std::num::NonZeroU64,
+        },
     }
-    impl ::std::convert::From<&CreateThreadLoopBodySchedule>
-    for CreateThreadLoopBodySchedule {
+    impl ::std::convert::From<&Self> for CreateThreadLoopBodySchedule {
         fn from(value: &CreateThreadLoopBodySchedule) -> Self {
             value.clone()
         }
@@ -6983,6 +7058,8 @@ pub mod types {
     ///  "type": "object",
     ///  "required": [
     ///    "loops",
+    ///    "maxIntervalMinutes",
+    ///    "minIntervalMinutes",
     ///    "promptMaxLength"
     ///  ],
     ///  "properties": {
@@ -6994,9 +7071,7 @@ pub mod types {
     ///          "enabled",
     ///          "loopId",
     ///          "prompt",
-    ///          "timeOfDay",
-    ///          "timezone",
-    ///          "weekdays"
+    ///          "schedule"
     ///        ],
     ///        "properties": {
     ///          "enabled": {
@@ -7016,21 +7091,76 @@ pub mod types {
     ///          "prompt": {
     ///            "type": "string"
     ///          },
-    ///          "timeOfDay": {
-    ///            "type": "string"
-    ///          },
-    ///          "timezone": {
-    ///            "type": "string"
-    ///          },
-    ///          "weekdays": {
-    ///            "type": "array",
-    ///            "items": {
-    ///              "$ref": "#/components/schemas/DayOfWeek"
-    ///            }
+    ///          "schedule": {
+    ///            "oneOf": [
+    ///              {
+    ///                "type": "object",
+    ///                "required": [
+    ///                  "kind",
+    ///                  "timeOfDay",
+    ///                  "timezone",
+    ///                  "weekdays"
+    ///                ],
+    ///                "properties": {
+    ///                  "kind": {
+    ///                    "type": "string",
+    ///                    "enum": [
+    ///                      "DAILY"
+    ///                    ]
+    ///                  },
+    ///                  "timeOfDay": {
+    ///                    "type": "string",
+    ///                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+    ///                  },
+    ///                  "timezone": {
+    ///                    "$ref": "#/components/schemas/Timezone"
+    ///                  },
+    ///                  "weekdays": {
+    ///                    "type": "array",
+    ///                    "items": {
+    ///                      "$ref": "#/components/schemas/DayOfWeek"
+    ///                    },
+    ///                    "minItems": 1
+    ///                  }
+    ///                },
+    ///                "additionalProperties": false
+    ///              },
+    ///              {
+    ///                "type": "object",
+    ///                "required": [
+    ///                  "everyMinutes",
+    ///                  "kind"
+    ///                ],
+    ///                "properties": {
+    ///                  "everyMinutes": {
+    ///                    "type": "integer",
+    ///                    "maximum": 1440.0,
+    ///                    "minimum": 1.0
+    ///                  },
+    ///                  "kind": {
+    ///                    "type": "string",
+    ///                    "enum": [
+    ///                      "INTERVAL"
+    ///                    ]
+    ///                  }
+    ///                },
+    ///                "additionalProperties": false
+    ///              }
+    ///            ]
     ///          }
     ///        },
     ///        "additionalProperties": false
     ///      }
+    ///    },
+    ///    "maxIntervalMinutes": {
+    ///      "type": "integer",
+    ///      "maximum": 9007199254740991.0,
+    ///      "exclusiveMinimum": 0.0
+    ///    },
+    ///    "minIntervalMinutes": {
+    ///      "type": "integer",
+    ///      "maximum": 9007199254740991.0,
+    ///      "exclusiveMinimum": 0.0
     ///    },
     ///    "promptMaxLength": {
     ///      "type": "integer",
@@ -7046,6 +7176,10 @@ pub mod types {
     #[serde(deny_unknown_fields)]
     pub struct ListThreadLoopsResponse {
         pub loops: ::std::vec::Vec<ListThreadLoopsResponseLoopsItem>,
+        #[serde(rename = "maxIntervalMinutes")]
+        pub max_interval_minutes: ::std::num::NonZeroU64,
+        #[serde(rename = "minIntervalMinutes")]
+        pub min_interval_minutes: ::std::num::NonZeroU64,
         #[serde(rename = "promptMaxLength")]
         pub prompt_max_length: ::std::num::NonZeroU64,
     }
@@ -7065,9 +7199,7 @@ pub mod types {
     ///    "enabled",
     ///    "loopId",
     ///    "prompt",
-    ///    "timeOfDay",
-    ///    "timezone",
-    ///    "weekdays"
+    ///    "schedule"
     ///  ],
     ///  "properties": {
     ///    "enabled": {
@@ -7087,17 +7219,62 @@ pub mod types {
     ///    "prompt": {
     ///      "type": "string"
     ///    },
-    ///    "timeOfDay": {
-    ///      "type": "string"
-    ///    },
-    ///    "timezone": {
-    ///      "type": "string"
-    ///    },
-    ///    "weekdays": {
-    ///      "type": "array",
-    ///      "items": {
-    ///        "$ref": "#/components/schemas/DayOfWeek"
-    ///      }
+    ///    "schedule": {
+    ///      "oneOf": [
+    ///        {
+    ///          "type": "object",
+    ///          "required": [
+    ///            "kind",
+    ///            "timeOfDay",
+    ///            "timezone",
+    ///            "weekdays"
+    ///          ],
+    ///          "properties": {
+    ///            "kind": {
+    ///              "type": "string",
+    ///              "enum": [
+    ///                "DAILY"
+    ///              ]
+    ///            },
+    ///            "timeOfDay": {
+    ///              "type": "string",
+    ///              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+    ///            },
+    ///            "timezone": {
+    ///              "$ref": "#/components/schemas/Timezone"
+    ///            },
+    ///            "weekdays": {
+    ///              "type": "array",
+    ///              "items": {
+    ///                "$ref": "#/components/schemas/DayOfWeek"
+    ///              },
+    ///              "minItems": 1
+    ///            }
+    ///          },
+    ///          "additionalProperties": false
+    ///        },
+    ///        {
+    ///          "type": "object",
+    ///          "required": [
+    ///            "everyMinutes",
+    ///            "kind"
+    ///          ],
+    ///          "properties": {
+    ///            "everyMinutes": {
+    ///              "type": "integer",
+    ///              "maximum": 1440.0,
+    ///              "minimum": 1.0
+    ///            },
+    ///            "kind": {
+    ///              "type": "string",
+    ///              "enum": [
+    ///                "INTERVAL"
+    ///              ]
+    ///            }
+    ///          },
+    ///          "additionalProperties": false
+    ///        }
+    ///      ]
     ///    }
     ///  },
     ///  "additionalProperties": false
@@ -7123,15 +7300,184 @@ pub mod types {
         )]
         pub next_run_at: ::std::option::Option<::std::string::String>,
         pub prompt: ::std::string::String,
-        #[serde(rename = "timeOfDay")]
-        pub time_of_day: ::std::string::String,
-        pub timezone: ::std::string::String,
-        pub weekdays: ::std::vec::Vec<::codm_contracts_rust::wire::enums::DayOfWeek>,
+        pub schedule: ListThreadLoopsResponseLoopsItemSchedule,
     }
     impl ::std::convert::From<&ListThreadLoopsResponseLoopsItem>
     for ListThreadLoopsResponseLoopsItem {
         fn from(value: &ListThreadLoopsResponseLoopsItem) -> Self {
             value.clone()
+        }
+    }
+    ///`ListThreadLoopsResponseLoopsItemSchedule`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "oneOf": [
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "kind",
+    ///        "timeOfDay",
+    ///        "timezone",
+    ///        "weekdays"
+    ///      ],
+    ///      "properties": {
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "DAILY"
+    ///          ]
+    ///        },
+    ///        "timeOfDay": {
+    ///          "type": "string",
+    ///          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+    ///        },
+    ///        "timezone": {
+    ///          "$ref": "#/components/schemas/Timezone"
+    ///        },
+    ///        "weekdays": {
+    ///          "type": "array",
+    ///          "items": {
+    ///            "$ref": "#/components/schemas/DayOfWeek"
+    ///          },
+    ///          "minItems": 1
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "everyMinutes",
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "everyMinutes": {
+    ///          "type": "integer",
+    ///          "maximum": 1440.0,
+    ///          "minimum": 1.0
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "INTERVAL"
+    ///          ]
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    }
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(tag = "kind", deny_unknown_fields)]
+    pub enum ListThreadLoopsResponseLoopsItemSchedule {
+        #[serde(rename = "DAILY")]
+        Daily {
+            #[serde(rename = "timeOfDay")]
+            time_of_day: ListThreadLoopsResponseLoopsItemScheduleTimeOfDay,
+            timezone: ::codm_contracts_rust::wire::enums::Timezone,
+            weekdays: ::std::vec::Vec<::codm_contracts_rust::wire::enums::DayOfWeek>,
+        },
+        #[serde(rename = "INTERVAL")]
+        Interval {
+            #[serde(rename = "everyMinutes")]
+            every_minutes: ::std::num::NonZeroU64,
+        },
+    }
+    impl ::std::convert::From<&Self> for ListThreadLoopsResponseLoopsItemSchedule {
+        fn from(value: &ListThreadLoopsResponseLoopsItemSchedule) -> Self {
+            value.clone()
+        }
+    }
+    ///`ListThreadLoopsResponseLoopsItemScheduleTimeOfDay`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct ListThreadLoopsResponseLoopsItemScheduleTimeOfDay(::std::string::String);
+    impl ::std::ops::Deref for ListThreadLoopsResponseLoopsItemScheduleTimeOfDay {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<ListThreadLoopsResponseLoopsItemScheduleTimeOfDay>
+    for ::std::string::String {
+        fn from(value: ListThreadLoopsResponseLoopsItemScheduleTimeOfDay) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&ListThreadLoopsResponseLoopsItemScheduleTimeOfDay>
+    for ListThreadLoopsResponseLoopsItemScheduleTimeOfDay {
+        fn from(value: &ListThreadLoopsResponseLoopsItemScheduleTimeOfDay) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for ListThreadLoopsResponseLoopsItemScheduleTimeOfDay {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            static PATTERN: ::std::sync::LazyLock<::regress::Regex> = ::std::sync::LazyLock::new(||
+            { ::regress::Regex::new("^([01]\\d|2[0-3]):[0-5]\\d$").unwrap() });
+            if PATTERN.find(value).is_none() {
+                return Err(
+                    "doesn't match pattern \"^([01]\\d|2[0-3]):[0-5]\\d$\"".into(),
+                );
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for ListThreadLoopsResponseLoopsItemScheduleTimeOfDay {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ListThreadLoopsResponseLoopsItemScheduleTimeOfDay {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ListThreadLoopsResponseLoopsItemScheduleTimeOfDay {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de>
+    for ListThreadLoopsResponseLoopsItemScheduleTimeOfDay {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
         }
     }
     ///`ListWorkspacesResponse`
@@ -9119,28 +9465,59 @@ pub mod types {
     ///      "minLength": 1
     ///    },
     ///    "schedule": {
-    ///      "type": "object",
-    ///      "required": [
-    ///        "timeOfDay",
-    ///        "timezone",
-    ///        "weekdays"
-    ///      ],
-    ///      "properties": {
-    ///        "timeOfDay": {
-    ///          "type": "string",
-    ///          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+    ///      "oneOf": [
+    ///        {
+    ///          "type": "object",
+    ///          "required": [
+    ///            "kind",
+    ///            "timeOfDay",
+    ///            "timezone",
+    ///            "weekdays"
+    ///          ],
+    ///          "properties": {
+    ///            "kind": {
+    ///              "type": "string",
+    ///              "enum": [
+    ///                "DAILY"
+    ///              ]
+    ///            },
+    ///            "timeOfDay": {
+    ///              "type": "string",
+    ///              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+    ///            },
+    ///            "timezone": {
+    ///              "$ref": "#/components/schemas/Timezone"
+    ///            },
+    ///            "weekdays": {
+    ///              "type": "array",
+    ///              "items": {
+    ///                "$ref": "#/components/schemas/DayOfWeek"
+    ///              },
+    ///              "minItems": 1
+    ///            }
+    ///          }
     ///        },
-    ///        "timezone": {
-    ///          "$ref": "#/components/schemas/Timezone"
-    ///        },
-    ///        "weekdays": {
-    ///          "type": "array",
-    ///          "items": {
-    ///            "$ref": "#/components/schemas/DayOfWeek"
-    ///          },
-    ///          "minItems": 1
+    ///        {
+    ///          "type": "object",
+    ///          "required": [
+    ///            "everyMinutes",
+    ///            "kind"
+    ///          ],
+    ///          "properties": {
+    ///            "everyMinutes": {
+    ///              "type": "integer",
+    ///              "maximum": 1440.0,
+    ///              "minimum": 1.0
+    ///            },
+    ///            "kind": {
+    ///              "type": "string",
+    ///              "enum": [
+    ///                "INTERVAL"
+    ///              ]
+    ///            }
+    ///          }
     ///        }
-    ///      }
+    ///      ]
     ///    }
     ///  }
     ///}
@@ -9244,40 +9621,79 @@ pub mod types {
     ///
     /// ```json
     ///{
-    ///  "type": "object",
-    ///  "required": [
-    ///    "timeOfDay",
-    ///    "timezone",
-    ///    "weekdays"
-    ///  ],
-    ///  "properties": {
-    ///    "timeOfDay": {
-    ///      "type": "string",
-    ///      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+    ///  "oneOf": [
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "kind",
+    ///        "timeOfDay",
+    ///        "timezone",
+    ///        "weekdays"
+    ///      ],
+    ///      "properties": {
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "DAILY"
+    ///          ]
+    ///        },
+    ///        "timeOfDay": {
+    ///          "type": "string",
+    ///          "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+    ///        },
+    ///        "timezone": {
+    ///          "$ref": "#/components/schemas/Timezone"
+    ///        },
+    ///        "weekdays": {
+    ///          "type": "array",
+    ///          "items": {
+    ///            "$ref": "#/components/schemas/DayOfWeek"
+    ///          },
+    ///          "minItems": 1
+    ///        }
+    ///      }
     ///    },
-    ///    "timezone": {
-    ///      "$ref": "#/components/schemas/Timezone"
-    ///    },
-    ///    "weekdays": {
-    ///      "type": "array",
-    ///      "items": {
-    ///        "$ref": "#/components/schemas/DayOfWeek"
-    ///      },
-    ///      "minItems": 1
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "everyMinutes",
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "everyMinutes": {
+    ///          "type": "integer",
+    ///          "maximum": 1440.0,
+    ///          "minimum": 1.0
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "INTERVAL"
+    ///          ]
+    ///        }
+    ///      }
     ///    }
-    ///  }
+    ///  ]
     ///}
     /// ```
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    pub struct UpdateThreadLoopBodySchedule {
-        #[serde(rename = "timeOfDay")]
-        pub time_of_day: UpdateThreadLoopBodyScheduleTimeOfDay,
-        pub timezone: ::codm_contracts_rust::wire::enums::Timezone,
-        pub weekdays: ::std::vec::Vec<::codm_contracts_rust::wire::enums::DayOfWeek>,
+    #[serde(tag = "kind")]
+    pub enum UpdateThreadLoopBodySchedule {
+        #[serde(rename = "DAILY")]
+        Daily {
+            #[serde(rename = "timeOfDay")]
+            time_of_day: UpdateThreadLoopBodyScheduleTimeOfDay,
+            timezone: ::codm_contracts_rust::wire::enums::Timezone,
+            weekdays: ::std::vec::Vec<::codm_contracts_rust::wire::enums::DayOfWeek>,
+        },
+        #[serde(rename = "INTERVAL")]
+        Interval {
+            #[serde(rename = "everyMinutes")]
+            every_minutes: ::std::num::NonZeroU64,
+        },
     }
-    impl ::std::convert::From<&UpdateThreadLoopBodySchedule>
-    for UpdateThreadLoopBodySchedule {
+    impl ::std::convert::From<&Self> for UpdateThreadLoopBodySchedule {
         fn from(value: &UpdateThreadLoopBodySchedule) -> Self {
             value.clone()
         }

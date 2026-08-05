@@ -4,6 +4,7 @@
 */
 
 import type { DayOfWeek } from "./DayOfWeek.ts";
+import type { Timezone } from "./Timezone.ts";
 
 export type ListThreadLoopsPathParams = {
     /**
@@ -11,6 +12,18 @@ export type ListThreadLoopsPathParams = {
     */
     threadId: string;
 };
+
+export const ScheduleKindEnum3 = {
+    DAILY: "DAILY"
+} as const;
+
+export type ScheduleKindEnum3Key = (typeof ScheduleKindEnum3)[keyof typeof ScheduleKindEnum3];
+
+export const ScheduleKindEnum4 = {
+    INTERVAL: "INTERVAL"
+} as const;
+
+export type ScheduleKindEnum4Key = (typeof ScheduleKindEnum4)[keyof typeof ScheduleKindEnum4];
 
 /**
  * @description This conversation\'s scheduled prompts (loops) (T11)
@@ -28,18 +41,36 @@ export type ListThreadLoops200 = {
          * @type string
         */
         prompt: string;
-        /**
-         * @type string
-        */
-        timeOfDay: string;
-        /**
-         * @type array
-        */
-        weekdays: DayOfWeek[];
-        /**
-         * @type string
-        */
-        timezone: string;
+        schedule: ({
+            /**
+             * @type string
+            */
+            kind: ScheduleKindEnum3Key;
+            /**
+             * @pattern ^([01]\d|2[0-3]):[0-5]\d$
+             * @type string
+            */
+            timeOfDay: string;
+            /**
+             * @type array
+            */
+            weekdays: DayOfWeek[];
+            /**
+             * @type string
+            */
+            timezone: Timezone;
+        } | {
+            /**
+             * @type string
+            */
+            kind: ScheduleKindEnum4Key;
+            /**
+             * @minLength 1
+             * @maxLength 1440
+             * @type integer
+            */
+            everyMinutes: number;
+        });
         /**
          * @type boolean
         */
@@ -58,6 +89,16 @@ export type ListThreadLoops200 = {
      * @type integer
     */
     promptMaxLength: number;
+    /**
+     * @maxLength 9007199254740991
+     * @type integer
+    */
+    minIntervalMinutes: number;
+    /**
+     * @maxLength 9007199254740991
+     * @type integer
+    */
+    maxIntervalMinutes: number;
 };
 
 export type ListThreadLoopsQueryResponse = ListThreadLoops200;

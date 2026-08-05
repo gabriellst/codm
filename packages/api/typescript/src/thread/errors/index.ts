@@ -21,9 +21,11 @@ export type ThreadDomainErrors =
 	| 'PROMPT_TOO_LONG'
 	// Loop invariants — raised by `LoopSchedule` / `LoopPromptSchema` at construction, so an unfireable
 	// loop never reaches the table. A schedule with no weekday would sit enabled and never run; a
-	// `09:70` would parse as a date nobody chose.
+	// `09:70` would parse as a date nobody chose; a cadence of half a minute is finer than the sweep
+	// that would have to honour it, and one of a week is an hour wearing a cadence's clothes.
 	| 'INVALID_LOOP_TIME'
 	| 'LOOP_WITHOUT_WEEKDAY'
+	| 'INVALID_LOOP_INTERVAL'
 	| 'LOOP_PROMPT_TOO_LONG'
 export type DomainErrors = BaseDomainErrors | ThreadDomainErrors
 
@@ -100,6 +102,7 @@ registerErrorCodes({
 	// with the right types — it simply says something a schedule may not say.
 	INVALID_LOOP_TIME: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	LOOP_WITHOUT_WEEKDAY: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	INVALID_LOOP_INTERVAL: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	LOOP_PROMPT_TOO_LONG: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	LOOP_NOT_FOUND: HttpStatusCode.NOT_FOUND,
 	THREAD_NOT_FOUND: HttpStatusCode.NOT_FOUND,

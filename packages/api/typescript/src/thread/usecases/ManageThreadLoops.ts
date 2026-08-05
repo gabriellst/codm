@@ -94,6 +94,9 @@ export const UpdateThreadLoopOutputSchema = z.object({ nextRunAt: z.string().opt
  * form with both, and "the operator submitted the form" is one intention. Partial-update semantics
  * would buy nothing and would make "cleared the weekday pills" indistinguishable from "did not touch
  * the schedule" — the exact ambiguity that lets an unfireable loop through.
+ *
+ * The schedule arriving whole is also what makes CHANGING ITS SHAPE just another edit: "toda segunda
+ * às 09:00" → "a cada 30 minutos" is one member of the union replacing the other, not a second door.
  */
 @injectable()
 export class UpdateThreadLoop extends Handler<typeof UpdateThreadLoopInputSchema, typeof UpdateThreadLoopOutputSchema> {

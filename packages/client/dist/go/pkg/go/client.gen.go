@@ -890,6 +890,24 @@ func (e LogLevel) Valid() bool {
 	}
 }
 
+// Defines values for LoopScheduleKind.
+const (
+	LoopScheduleKindDAILY    LoopScheduleKind = "DAILY"
+	LoopScheduleKindINTERVAL LoopScheduleKind = "INTERVAL"
+)
+
+// Valid indicates whether the value is a known member of the LoopScheduleKind enum.
+func (e LoopScheduleKind) Valid() bool {
+	switch e {
+	case LoopScheduleKindDAILY:
+		return true
+	case LoopScheduleKindINTERVAL:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MailboxItemKind.
 const (
 	MailboxItemKindISSUERESULT     MailboxItemKind = "ISSUE_RESULT"
@@ -3719,6 +3737,9 @@ type LogoutChannelOutput struct {
 	Id    string `json:"id"`
 	State string `json:"state"`
 }
+
+// LoopScheduleKind defines model for LoopScheduleKind.
+type LoopScheduleKind string
 
 // MailboxItemKind defines model for MailboxItemKind.
 type MailboxItemKind string

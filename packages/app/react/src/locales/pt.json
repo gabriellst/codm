@@ -331,6 +331,10 @@
 			"en-US": "English (US)",
 			"pt-BR": "Português (Brasil)"
 		},
+		"LoopScheduleKind": {
+			"DAILY": "Horário fixo",
+			"INTERVAL": "De tempos em tempos"
+		},
 		"NotificationCategory": {
 			"DAILY_DIGEST": "Resumo diário",
 			"FEATURE_ANNOUNCEMENT": "Anúncio de novidade",
@@ -406,6 +410,7 @@
 		"INVALID_ID": "Identificador inválido.",
 		"INVALID_ID_VALUES_LENGTH": "Valores de identificador inválidos.",
 		"INVALID_LANGUAGE": "Idioma inválido. Use uma tag BCP-47 como \"pt-BR\".",
+		"INVALID_LOOP_INTERVAL": "O intervalo do loop precisa ser um número inteiro de minutos, de 1 a 1440.",
 		"INVALID_LOOP_TIME": "O horário do loop precisa estar no formato HH:MM (24 horas).",
 		"INVALID_OUTBOX_PAYLOAD": "Erro interno no processamento de eventos. Tente novamente em instantes.",
 		"INVALID_PHONE": "Número de telefone inválido.",
@@ -574,10 +579,14 @@
 			"deleteConfirmDescription": "Este prompt agendado para de ser enviado. O que ele já sussurrou continua no histórico da conversa.",
 			"deleteConfirmTitle": "Apagar este loop?",
 			"edit": "Editar loop",
-			"emptyDescription": "Um loop é um prompt que a CODM sussurra sozinha nesta conversa, no horário e nos dias que você escolher.",
+			"emptyDescription": "Um loop é um prompt que a CODM sussurra sozinha nesta conversa — num horário fixo, nos dias que você escolher, ou de X em X minutos.",
 			"emptyTitle": "Nenhum loop ainda",
 			"enabledToggle": "Ativo",
 			"hint": "Prompts que se repetem sozinhos nesta conversa. Cada disparo chega como um sussurro — só os agentes leem, nunca o contato.",
+			"intervalBadge": "A cada {{minutes}} min",
+			"intervalLabel": "A cada (minutos)",
+			"intervalNote": "De {{min}} a {{max}} minutos.",
+			"kindLabel": "Repetição",
 			"lastFired": "Último: {{when}}",
 			"never": "nunca",
 			"nextRun": "Próximo: {{when}}",

@@ -4,6 +4,7 @@
 */
 
 import { dayOfWeekSchema } from "./dayOfWeekSchema.ts";
+import { timezoneSchema } from "./timezoneSchema.ts";
 import { z } from "zod/v4";
 
 export const listThreadLoopsPathParamsSchema = z.object({
@@ -17,16 +18,26 @@ export const listThreadLoops200Schema = z.object({
     "loops": z.array(z.object({
     "loopId": z.uuid(),
 "prompt": z.string(),
-"timeOfDay": z.string(),
+"schedule": z.union([z.object({
+    "kind": z.enum(["DAILY"]),
+"timeOfDay": z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
 get "weekdays"(){
-                return z.array(dayOfWeekSchema)
+                return z.array(dayOfWeekSchema).min(1)
               },
-"timezone": z.string(),
+get "timezone"(){
+                return timezoneSchema
+              }
+    }), z.object({
+    "kind": z.enum(["INTERVAL"]),
+"everyMinutes": z.int().min(1).max(1440)
+    })]),
 "enabled": z.boolean(),
 "nextRunAt": z.optional(z.string()),
 "lastFiredAt": z.optional(z.string())
     })),
-"promptMaxLength": z.int().max(9007199254740991).gt(0)
+"promptMaxLength": z.int().max(9007199254740991).gt(0),
+"minIntervalMinutes": z.int().max(9007199254740991).gt(0),
+"maxIntervalMinutes": z.int().max(9007199254740991).gt(0)
     })
 
 export const listThreadLoopsQueryResponseSchema = z.lazy(() => listThreadLoops200Schema)

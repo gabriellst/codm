@@ -29,30 +29,42 @@ const meta: Meta<typeof ThreadSettingsDialog> = {
 					],
 				}),
 				mockQuery(getSessionChatQueryOptions(THREAD_ID), { thread: { displayName: 'Ada Lovelace' } }),
-				// TWO loops on purpose: one running and one paused, because the paused row is the state whose
-				// styling (dimmed, "Pausado" instead of a next run) has no other way of being seen.
+				// THREE loops on purpose: a running wall clock, a running cadence, and a paused one. The two
+				// schedule shapes render different badges, and the paused row's styling (dimmed, "Pausado"
+				// instead of a next run) has no other way of being seen.
 				mockQuery(listThreadLoopsQueryOptions(THREAD_ID), {
 					loops: [
 						{
 							loopId: '019e4d24-6524-7041-9e1c-8108180cddb1',
 							prompt: 'Pergunte ao time como está o deploy de hoje e resuma em três linhas.',
-							timeOfDay: '09:00',
-							weekdays: ['MONDAY', 'WEDNESDAY', 'FRIDAY'],
-							timezone: 'America/Sao_Paulo',
+							schedule: {
+								kind: 'DAILY',
+								timeOfDay: '09:00',
+								weekdays: ['MONDAY', 'WEDNESDAY', 'FRIDAY'],
+								timezone: 'America/Sao_Paulo',
+							},
 							enabled: true,
 							nextRunAt: '2026-08-05T12:00:00.000Z',
 							lastFiredAt: '2026-08-03T12:00:00.000Z',
 						},
 						{
+							loopId: '019e4d24-6524-7041-9e1c-8108180cddb3',
+							prompt: 'Veja se o build quebrou e avise se sim.',
+							schedule: { kind: 'INTERVAL', everyMinutes: 15 },
+							enabled: true,
+							nextRunAt: '2026-08-04T12:15:00.000Z',
+							lastFiredAt: '2026-08-04T12:00:00.000Z',
+						},
+						{
 							loopId: '019e4d24-6524-7041-9e1c-8108180cddb2',
 							prompt: 'Feche a semana: o que ficou pendente?',
-							timeOfDay: '18:30',
-							weekdays: ['FRIDAY'],
-							timezone: 'America/Sao_Paulo',
+							schedule: { kind: 'DAILY', timeOfDay: '18:30', weekdays: ['FRIDAY'], timezone: 'America/Sao_Paulo' },
 							enabled: false,
 						},
 					],
 					promptMaxLength: 2000,
+					minIntervalMinutes: 1,
+					maxIntervalMinutes: 1440,
 				}),
 			],
 		},

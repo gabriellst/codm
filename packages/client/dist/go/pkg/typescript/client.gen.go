@@ -50,6 +50,7 @@ const (
 	INVALIDID                       ApiErrors = "INVALID_ID"
 	INVALIDIDVALUESLENGTH           ApiErrors = "INVALID_ID_VALUES_LENGTH"
 	INVALIDLANGUAGE                 ApiErrors = "INVALID_LANGUAGE"
+	INVALIDLOOPINTERVAL             ApiErrors = "INVALID_LOOP_INTERVAL"
 	INVALIDLOOPTIME                 ApiErrors = "INVALID_LOOP_TIME"
 	INVALIDOUTBOXPAYLOAD            ApiErrors = "INVALID_OUTBOX_PAYLOAD"
 	INVALIDPHONE                    ApiErrors = "INVALID_PHONE"
@@ -171,6 +172,8 @@ func (e ApiErrors) Valid() bool {
 	case INVALIDIDVALUESLENGTH:
 		return true
 	case INVALIDLANGUAGE:
+		return true
+	case INVALIDLOOPINTERVAL:
 		return true
 	case INVALIDLOOPTIME:
 		return true
@@ -814,6 +817,24 @@ func (e Language) Valid() bool {
 	}
 }
 
+// Defines values for LoopScheduleKind.
+const (
+	DAILY    LoopScheduleKind = "DAILY"
+	INTERVAL LoopScheduleKind = "INTERVAL"
+)
+
+// Valid indicates whether the value is a known member of the LoopScheduleKind enum.
+func (e LoopScheduleKind) Valid() bool {
+	switch e {
+	case DAILY:
+		return true
+	case INTERVAL:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MessageAuthor.
 const (
 	MessageAuthorHUMAN  MessageAuthor = "HUMAN"
@@ -1177,6 +1198,9 @@ type IssueStatus string
 // Language defines model for Language.
 type Language string
 
+// LoopScheduleKind defines model for LoopScheduleKind.
+type LoopScheduleKind string
+
 // MessageAuthor defines model for MessageAuthor.
 type MessageAuthor string
 
@@ -1354,24 +1378,73 @@ type RaiseStopJSONBody struct {
 	Kind   StopKind `json:"kind"`
 }
 
+// ListThreadLoops200JSONResponseBodyLoopsSchedule0 defines parameters for ListThreadLoops.
+type ListThreadLoops200JSONResponseBodyLoopsSchedule0 struct {
+	Kind      string      `json:"kind"`
+	TimeOfDay string      `json:"timeOfDay"`
+	Timezone  Timezone    `json:"timezone"`
+	Weekdays  []DayOfWeek `json:"weekdays"`
+}
+
+// ListThreadLoops200JSONResponseBodyLoopsSchedule1 defines parameters for ListThreadLoops.
+type ListThreadLoops200JSONResponseBodyLoopsSchedule1 struct {
+	EveryMinutes int    `json:"everyMinutes"`
+	Kind         string `json:"kind"`
+}
+
+// ListThreadLoops200JSONResponseBody_Loops_Schedule defines parameters for ListThreadLoops.
+type ListThreadLoops200JSONResponseBody_Loops_Schedule struct {
+	union json.RawMessage
+}
+
 // CreateThreadLoopJSONBody defines parameters for CreateThreadLoop.
 type CreateThreadLoopJSONBody struct {
-	Prompt   string `json:"prompt"`
-	Schedule struct {
-		TimeOfDay string      `json:"timeOfDay"`
-		Timezone  Timezone    `json:"timezone"`
-		Weekdays  []DayOfWeek `json:"weekdays"`
-	} `json:"schedule"`
+	Prompt   string                            `json:"prompt"`
+	Schedule CreateThreadLoopJSONBody_Schedule `json:"schedule"`
+}
+
+// CreateThreadLoopJSONBodySchedule0 defines parameters for CreateThreadLoop.
+type CreateThreadLoopJSONBodySchedule0 struct {
+	Kind      string      `json:"kind"`
+	TimeOfDay string      `json:"timeOfDay"`
+	Timezone  Timezone    `json:"timezone"`
+	Weekdays  []DayOfWeek `json:"weekdays"`
+}
+
+// CreateThreadLoopJSONBodySchedule1 defines parameters for CreateThreadLoop.
+type CreateThreadLoopJSONBodySchedule1 struct {
+	EveryMinutes int    `json:"everyMinutes"`
+	Kind         string `json:"kind"`
+}
+
+// CreateThreadLoopJSONBody_Schedule defines parameters for CreateThreadLoop.
+type CreateThreadLoopJSONBody_Schedule struct {
+	union json.RawMessage
 }
 
 // UpdateThreadLoopJSONBody defines parameters for UpdateThreadLoop.
 type UpdateThreadLoopJSONBody struct {
-	Prompt   string `json:"prompt"`
-	Schedule struct {
-		TimeOfDay string      `json:"timeOfDay"`
-		Timezone  Timezone    `json:"timezone"`
-		Weekdays  []DayOfWeek `json:"weekdays"`
-	} `json:"schedule"`
+	Prompt   string                            `json:"prompt"`
+	Schedule UpdateThreadLoopJSONBody_Schedule `json:"schedule"`
+}
+
+// UpdateThreadLoopJSONBodySchedule0 defines parameters for UpdateThreadLoop.
+type UpdateThreadLoopJSONBodySchedule0 struct {
+	Kind      string      `json:"kind"`
+	TimeOfDay string      `json:"timeOfDay"`
+	Timezone  Timezone    `json:"timezone"`
+	Weekdays  []DayOfWeek `json:"weekdays"`
+}
+
+// UpdateThreadLoopJSONBodySchedule1 defines parameters for UpdateThreadLoop.
+type UpdateThreadLoopJSONBodySchedule1 struct {
+	EveryMinutes int    `json:"everyMinutes"`
+	Kind         string `json:"kind"`
+}
+
+// UpdateThreadLoopJSONBody_Schedule defines parameters for UpdateThreadLoop.
+type UpdateThreadLoopJSONBody_Schedule struct {
+	union json.RawMessage
 }
 
 // SetThreadLoopEnabledJSONBody defines parameters for SetThreadLoopEnabled.
@@ -1572,6 +1645,192 @@ func (t GetSessionChat200JSONResponseBody_MentionGate) MarshalJSON() ([]byte, er
 }
 
 func (t *GetSessionChat200JSONResponseBody_MentionGate) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsListThreadLoops200JSONResponseBodyLoopsSchedule0 returns the union data inside the ListThreadLoops200JSONResponseBody_Loops_Schedule as a ListThreadLoops200JSONResponseBodyLoopsSchedule0
+func (t ListThreadLoops200JSONResponseBody_Loops_Schedule) AsListThreadLoops200JSONResponseBodyLoopsSchedule0() (ListThreadLoops200JSONResponseBodyLoopsSchedule0, error) {
+	var body ListThreadLoops200JSONResponseBodyLoopsSchedule0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromListThreadLoops200JSONResponseBodyLoopsSchedule0 overwrites any union data inside the ListThreadLoops200JSONResponseBody_Loops_Schedule as the provided ListThreadLoops200JSONResponseBodyLoopsSchedule0
+func (t *ListThreadLoops200JSONResponseBody_Loops_Schedule) FromListThreadLoops200JSONResponseBodyLoopsSchedule0(v ListThreadLoops200JSONResponseBodyLoopsSchedule0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeListThreadLoops200JSONResponseBodyLoopsSchedule0 performs a merge with any union data inside the ListThreadLoops200JSONResponseBody_Loops_Schedule, using the provided ListThreadLoops200JSONResponseBodyLoopsSchedule0
+func (t *ListThreadLoops200JSONResponseBody_Loops_Schedule) MergeListThreadLoops200JSONResponseBodyLoopsSchedule0(v ListThreadLoops200JSONResponseBodyLoopsSchedule0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsListThreadLoops200JSONResponseBodyLoopsSchedule1 returns the union data inside the ListThreadLoops200JSONResponseBody_Loops_Schedule as a ListThreadLoops200JSONResponseBodyLoopsSchedule1
+func (t ListThreadLoops200JSONResponseBody_Loops_Schedule) AsListThreadLoops200JSONResponseBodyLoopsSchedule1() (ListThreadLoops200JSONResponseBodyLoopsSchedule1, error) {
+	var body ListThreadLoops200JSONResponseBodyLoopsSchedule1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromListThreadLoops200JSONResponseBodyLoopsSchedule1 overwrites any union data inside the ListThreadLoops200JSONResponseBody_Loops_Schedule as the provided ListThreadLoops200JSONResponseBodyLoopsSchedule1
+func (t *ListThreadLoops200JSONResponseBody_Loops_Schedule) FromListThreadLoops200JSONResponseBodyLoopsSchedule1(v ListThreadLoops200JSONResponseBodyLoopsSchedule1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeListThreadLoops200JSONResponseBodyLoopsSchedule1 performs a merge with any union data inside the ListThreadLoops200JSONResponseBody_Loops_Schedule, using the provided ListThreadLoops200JSONResponseBodyLoopsSchedule1
+func (t *ListThreadLoops200JSONResponseBody_Loops_Schedule) MergeListThreadLoops200JSONResponseBodyLoopsSchedule1(v ListThreadLoops200JSONResponseBodyLoopsSchedule1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ListThreadLoops200JSONResponseBody_Loops_Schedule) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ListThreadLoops200JSONResponseBody_Loops_Schedule) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsCreateThreadLoopJSONBodySchedule0 returns the union data inside the CreateThreadLoopJSONBody_Schedule as a CreateThreadLoopJSONBodySchedule0
+func (t CreateThreadLoopJSONBody_Schedule) AsCreateThreadLoopJSONBodySchedule0() (CreateThreadLoopJSONBodySchedule0, error) {
+	var body CreateThreadLoopJSONBodySchedule0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCreateThreadLoopJSONBodySchedule0 overwrites any union data inside the CreateThreadLoopJSONBody_Schedule as the provided CreateThreadLoopJSONBodySchedule0
+func (t *CreateThreadLoopJSONBody_Schedule) FromCreateThreadLoopJSONBodySchedule0(v CreateThreadLoopJSONBodySchedule0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeCreateThreadLoopJSONBodySchedule0 performs a merge with any union data inside the CreateThreadLoopJSONBody_Schedule, using the provided CreateThreadLoopJSONBodySchedule0
+func (t *CreateThreadLoopJSONBody_Schedule) MergeCreateThreadLoopJSONBodySchedule0(v CreateThreadLoopJSONBodySchedule0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsCreateThreadLoopJSONBodySchedule1 returns the union data inside the CreateThreadLoopJSONBody_Schedule as a CreateThreadLoopJSONBodySchedule1
+func (t CreateThreadLoopJSONBody_Schedule) AsCreateThreadLoopJSONBodySchedule1() (CreateThreadLoopJSONBodySchedule1, error) {
+	var body CreateThreadLoopJSONBodySchedule1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCreateThreadLoopJSONBodySchedule1 overwrites any union data inside the CreateThreadLoopJSONBody_Schedule as the provided CreateThreadLoopJSONBodySchedule1
+func (t *CreateThreadLoopJSONBody_Schedule) FromCreateThreadLoopJSONBodySchedule1(v CreateThreadLoopJSONBodySchedule1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeCreateThreadLoopJSONBodySchedule1 performs a merge with any union data inside the CreateThreadLoopJSONBody_Schedule, using the provided CreateThreadLoopJSONBodySchedule1
+func (t *CreateThreadLoopJSONBody_Schedule) MergeCreateThreadLoopJSONBodySchedule1(v CreateThreadLoopJSONBodySchedule1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t CreateThreadLoopJSONBody_Schedule) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *CreateThreadLoopJSONBody_Schedule) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsUpdateThreadLoopJSONBodySchedule0 returns the union data inside the UpdateThreadLoopJSONBody_Schedule as a UpdateThreadLoopJSONBodySchedule0
+func (t UpdateThreadLoopJSONBody_Schedule) AsUpdateThreadLoopJSONBodySchedule0() (UpdateThreadLoopJSONBodySchedule0, error) {
+	var body UpdateThreadLoopJSONBodySchedule0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromUpdateThreadLoopJSONBodySchedule0 overwrites any union data inside the UpdateThreadLoopJSONBody_Schedule as the provided UpdateThreadLoopJSONBodySchedule0
+func (t *UpdateThreadLoopJSONBody_Schedule) FromUpdateThreadLoopJSONBodySchedule0(v UpdateThreadLoopJSONBodySchedule0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeUpdateThreadLoopJSONBodySchedule0 performs a merge with any union data inside the UpdateThreadLoopJSONBody_Schedule, using the provided UpdateThreadLoopJSONBodySchedule0
+func (t *UpdateThreadLoopJSONBody_Schedule) MergeUpdateThreadLoopJSONBodySchedule0(v UpdateThreadLoopJSONBodySchedule0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsUpdateThreadLoopJSONBodySchedule1 returns the union data inside the UpdateThreadLoopJSONBody_Schedule as a UpdateThreadLoopJSONBodySchedule1
+func (t UpdateThreadLoopJSONBody_Schedule) AsUpdateThreadLoopJSONBodySchedule1() (UpdateThreadLoopJSONBodySchedule1, error) {
+	var body UpdateThreadLoopJSONBodySchedule1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromUpdateThreadLoopJSONBodySchedule1 overwrites any union data inside the UpdateThreadLoopJSONBody_Schedule as the provided UpdateThreadLoopJSONBodySchedule1
+func (t *UpdateThreadLoopJSONBody_Schedule) FromUpdateThreadLoopJSONBodySchedule1(v UpdateThreadLoopJSONBodySchedule1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeUpdateThreadLoopJSONBodySchedule1 performs a merge with any union data inside the UpdateThreadLoopJSONBody_Schedule, using the provided UpdateThreadLoopJSONBodySchedule1
+func (t *UpdateThreadLoopJSONBody_Schedule) MergeUpdateThreadLoopJSONBodySchedule1(v UpdateThreadLoopJSONBodySchedule1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t UpdateThreadLoopJSONBody_Schedule) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *UpdateThreadLoopJSONBody_Schedule) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }
@@ -6547,16 +6806,16 @@ type ListThreadLoopsResponse struct {
 	HTTPResponse *http.Response
 	JSON200      *struct {
 		Loops []struct {
-			Enabled     bool               `json:"enabled"`
-			LastFiredAt *string            `json:"lastFiredAt,omitempty"`
-			LoopId      openapi_types.UUID `json:"loopId"`
-			NextRunAt   *string            `json:"nextRunAt,omitempty"`
-			Prompt      string             `json:"prompt"`
-			TimeOfDay   string             `json:"timeOfDay"`
-			Timezone    string             `json:"timezone"`
-			Weekdays    []DayOfWeek        `json:"weekdays"`
+			Enabled     bool                                              `json:"enabled"`
+			LastFiredAt *string                                           `json:"lastFiredAt,omitempty"`
+			LoopId      openapi_types.UUID                                `json:"loopId"`
+			NextRunAt   *string                                           `json:"nextRunAt,omitempty"`
+			Prompt      string                                            `json:"prompt"`
+			Schedule    ListThreadLoops200JSONResponseBody_Loops_Schedule `json:"schedule"`
 		} `json:"loops"`
-		PromptMaxLength int `json:"promptMaxLength"`
+		MaxIntervalMinutes int `json:"maxIntervalMinutes"`
+		MinIntervalMinutes int `json:"minIntervalMinutes"`
+		PromptMaxLength    int `json:"promptMaxLength"`
 	}
 }
 
@@ -9136,16 +9395,16 @@ func ParseListThreadLoopsResponse(rsp *http.Response) (*ListThreadLoopsResponse,
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
 			Loops []struct {
-				Enabled     bool               `json:"enabled"`
-				LastFiredAt *string            `json:"lastFiredAt,omitempty"`
-				LoopId      openapi_types.UUID `json:"loopId"`
-				NextRunAt   *string            `json:"nextRunAt,omitempty"`
-				Prompt      string             `json:"prompt"`
-				TimeOfDay   string             `json:"timeOfDay"`
-				Timezone    string             `json:"timezone"`
-				Weekdays    []DayOfWeek        `json:"weekdays"`
+				Enabled     bool                                              `json:"enabled"`
+				LastFiredAt *string                                           `json:"lastFiredAt,omitempty"`
+				LoopId      openapi_types.UUID                                `json:"loopId"`
+				NextRunAt   *string                                           `json:"nextRunAt,omitempty"`
+				Prompt      string                                            `json:"prompt"`
+				Schedule    ListThreadLoops200JSONResponseBody_Loops_Schedule `json:"schedule"`
 			} `json:"loops"`
-			PromptMaxLength int `json:"promptMaxLength"`
+			MaxIntervalMinutes int `json:"maxIntervalMinutes"`
+			MinIntervalMinutes int `json:"minIntervalMinutes"`
+			PromptMaxLength    int `json:"promptMaxLength"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err

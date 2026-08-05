@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenThread } from '@test/support'
-import { DayOfWeek, MailboxTargetKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
+import { DayOfWeek, LoopScheduleKind, MailboxTargetKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { MailboxRepository } from '@agent/repositories'
 import { OPERATOR_ID } from '@auth/operator'
 import { Loop } from '../entities/Loop'
@@ -46,7 +46,20 @@ describe('FireDueLoops — the scheduled whisper', () => {
 			ownerId: OPERATOR_ID,
 			threadId,
 			prompt: PROMPT,
-			schedule: { timeOfDay: '09:00', weekdays: Object.values(DayOfWeek), timezone: SP },
+			schedule: { kind: LoopScheduleKind.DAILY, timeOfDay: '09:00', weekdays: Object.values(DayOfWeek), timezone: SP },
+			now: new Date(),
+		})
+		loop.nextRunAt = new Date(Date.now() - agoMs)
+		return testBed.resolve(LoopRepository).save(loop)
+	}
+
+	/** The same, on a cadence — the shape with no wall clock for lateness to contradict. */
+	const givenDueIntervalLoop = async (threadId: string, agoMs: number, everyMinutes = 15): Promise<Loop> => {
+		const loop = Loop.create({
+			ownerId: OPERATOR_ID,
+			threadId,
+			prompt: PROMPT,
+			schedule: { kind: LoopScheduleKind.INTERVAL, everyMinutes },
 			now: new Date(),
 		})
 		loop.nextRunAt = new Date(Date.now() - agoMs)
@@ -141,6 +154,31 @@ describe('FireDueLoops — the scheduled whisper', () => {
 
 		expect({ firedLoopIds, skippedLoopIds }).toEqual({ firedLoopIds: [], skippedLoopIds: [loop.id.value] })
 		expect(await testBed.resolve(ThreadRepository).recentEntries(thread.id.value, 10)).toHaveLength(0)
+	})
+
+	/**
+	 * THE SAME DOWNTIME, on the other shape — and the opposite outcome, on purpose.
+	 *
+	 * Five hours late means nothing to "a cada 15 minutos": there is no hour it promised. It fires ONCE
+	 * and re-anchors, which is what makes this safe — the four hundred missed occurrences are gone, not
+	 * queued behind it.
+	 */
+	it('DELIVERS a long-overdue cadence run, exactly once, and re-anchors from now', async () => {
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+		const loop = await givenDueIntervalLoop(thread.id.value, 5 * 60 * 60 * 1000)
+
+		expect((await sweep()).firedLoopIds).toEqual([loop.id.value])
+
+		const entries = await testBed.resolve(ThreadRepository).recentEntries(thread.id.value, 10)
+		expect(entries.filter(e => e.kind === TranscriptKind.WHISPER)).toHaveLength(1)
+
+		const after = await testBed.resolve(LoopRepository).findById(loop.id.value)
+		// Fifteen minutes from NOW, not fifteen minutes after the instant it was due — which is what
+		// stops the backlog from draining one tick at a time.
+		expect(after!.nextRunAt!.getTime()).toBeGreaterThan(Date.now() + 14 * 60 * 1000)
+
+		// And the second sweep finds nothing: no burst.
+		expect((await sweep()).firedLoopIds).toEqual([])
 	})
 
 	it('still delivers a run the daemon was a few minutes late to see', async () => {

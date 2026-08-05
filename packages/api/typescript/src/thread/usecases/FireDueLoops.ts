@@ -24,20 +24,6 @@ export const FireDueLoopsOutputSchema = z.object({
  */
 const BATCH_SIZE = 50
 
-/**
- * How late a run may be and still happen: one hour.
- *
- * This is the whole reason `skipRun` exists. The daemon lives on the operator's machine — it is asleep
- * at night, closed over the weekend — so an alarm set for Monday 09:00 is very often first SEEN at
- * Monday 14:00, or on Tuesday. Firing it then would put "bom dia, como está o deploy?" into a real
- * conversation five hours after it made any sense, and after a long absence it would fire EVERY missed
- * occurrence in sequence, which is how a scheduling feature turns into a burst of nonsense.
- *
- * An hour is generous enough that an ordinary restart, a sleeping lid or a slow boot still delivers,
- * and short enough that anything delivered still reads as "on time" to the people in the conversation.
- */
-const MISSED_RUN_GRACE_MS = 60 * 60 * 1000
-
 /** How often the sweep runs. `thread/index.ts` registers the repeatable job with this cadence. */
 export const FIRE_DUE_LOOPS_INTERVAL_MS = 60 * 1000
 
@@ -60,7 +46,7 @@ export const FIRE_DUE_LOOPS_INTERVAL_MS = 60 * 1000
  * ### Every loop gets its own transaction, and its own failure
  * One bad loop must not roll back the whisper another conversation already earned, and must not stop
  * the rest of the batch. A failed loop keeps its `next_run_at` (its transaction rolled back), so it is
- * still due on the next tick and retries naturally — until it falls outside the grace window above,
+ * still due on the next tick and retries naturally — until its own schedule calls the run stale,
  * which is exactly the right outcome for a loop that has been failing for an hour.
  */
 @injectable()
@@ -128,7 +114,10 @@ export class FireDueLoops extends Handler<typeof FireDueLoopsInputSchema, typeof
 
 	/** Why this loop must NOT whisper right now — `undefined` when it should. */
 	private async skipReason(loop: Loop, now: Date): Promise<string | undefined> {
-		if (loop.nextRunAt && now.getTime() - loop.nextRunAt.getTime() > MISSED_RUN_GRACE_MS) return 'the run is older than the grace window'
+		// WHETHER a late run is still worth making is the SCHEDULE's question, not this sweep's: an hour
+		// late breaks a promise about a moment of the day, and means nothing at all to "a cada 15
+		// minutos". Asking the value object is what keeps that difference in one place.
+		if (loop.nextRunAt && loop.schedule.isRunStale(loop.nextRunAt, now)) return 'the run is older than the grace window'
 
 		const thread = await this.threads.findById(loop.threadId)
 		// The conversation was deleted. Its loops are KEPT (deletion is soft and re-attach revives the
