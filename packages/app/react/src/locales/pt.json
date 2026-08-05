@@ -456,7 +456,6 @@
 		"STOP_CRITERION_DISABLED": "Este critério de stop está desativado nas configurações.",
 		"STOP_NOT_FOUND": "Stop não encontrado.",
 		"STOP_NOT_IN_THREAD": "Este stop pertence a outra thread.",
-		"TERMINAL_ALREADY_RUNNING": "Já existe uma sessão de terminal ativa para esta issue.",
 		"TERMINAL_SPAWN_FAILED": "Falha ao iniciar a sessão de terminal.",
 		"THREAD_ALREADY_ATTACHED": "Já existe uma thread para este contato.",
 		"THREAD_ALREADY_DELETED": "Esta conversa já foi apagada.",

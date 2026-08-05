@@ -276,7 +276,6 @@ pub mod types {
     ///    "STOP_CRITERION_DISABLED",
     ///    "STOP_NOT_FOUND",
     ///    "STOP_NOT_IN_THREAD",
-    ///    "TERMINAL_ALREADY_RUNNING",
     ///    "TERMINAL_SPAWN_FAILED",
     ///    "THREAD_ALREADY_ATTACHED",
     ///    "THREAD_ALREADY_DELETED",
@@ -455,8 +454,6 @@ pub mod types {
         StopNotFound,
         #[serde(rename = "STOP_NOT_IN_THREAD")]
         StopNotInThread,
-        #[serde(rename = "TERMINAL_ALREADY_RUNNING")]
-        TerminalAlreadyRunning,
         #[serde(rename = "TERMINAL_SPAWN_FAILED")]
         TerminalSpawnFailed,
         #[serde(rename = "THREAD_ALREADY_ATTACHED")]
@@ -583,7 +580,6 @@ pub mod types {
                 Self::StopCriterionDisabled => f.write_str("STOP_CRITERION_DISABLED"),
                 Self::StopNotFound => f.write_str("STOP_NOT_FOUND"),
                 Self::StopNotInThread => f.write_str("STOP_NOT_IN_THREAD"),
-                Self::TerminalAlreadyRunning => f.write_str("TERMINAL_ALREADY_RUNNING"),
                 Self::TerminalSpawnFailed => f.write_str("TERMINAL_SPAWN_FAILED"),
                 Self::ThreadAlreadyAttached => f.write_str("THREAD_ALREADY_ATTACHED"),
                 Self::ThreadAlreadyDeleted => f.write_str("THREAD_ALREADY_DELETED"),
@@ -685,7 +681,6 @@ pub mod types {
                 "STOP_CRITERION_DISABLED" => Ok(Self::StopCriterionDisabled),
                 "STOP_NOT_FOUND" => Ok(Self::StopNotFound),
                 "STOP_NOT_IN_THREAD" => Ok(Self::StopNotInThread),
-                "TERMINAL_ALREADY_RUNNING" => Ok(Self::TerminalAlreadyRunning),
                 "TERMINAL_SPAWN_FAILED" => Ok(Self::TerminalSpawnFailed),
                 "THREAD_ALREADY_ATTACHED" => Ok(Self::ThreadAlreadyAttached),
                 "THREAD_ALREADY_DELETED" => Ok(Self::ThreadAlreadyDeleted),
