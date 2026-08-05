@@ -433,8 +433,18 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 	 * (§7.6), so `RunOrchestratorTurn` sets `replyToEntryId` itself rather than trusting a sentinel.
 	 * Carrying it on the item and withholding it from the agent's view is what makes that structural.
 	 *
-	 * `dedupKey` is the ISSUE id: an issue concludes once, so a redelivered outcome re-inserts,
-	 * conflicts on the unique index, and schedules no second announcement.
+	 * `dedupKey` is the issue AND THE TURN, and the second half is not decoration.
+	 *
+	 * It used to be the issue alone, under the premise that "an issue concludes once". A reopened
+	 * issue concludes again, and the key made every conclusion after the first vanish: `enqueue` hit
+	 * `onConflictDoNothing`, returned `false`, and nobody reads that boolean. Measured 2026-08-05 —
+	 * the dashboard issue concluded at 23:57 (announced) and again at 00:38 (silence), and the
+	 * operator asked "deu certo? você não me avisou nada"; the loops issue burnt its slot on a STOP at
+	 * 21:23 and had no way to speak when it actually completed at 02:38.
+	 *
+	 * What the key must still block is a REDELIVERED outcome scheduling a second announcement of the
+	 * SAME turn — and a redelivery carries the same `messageId` (the mailbox item that drove it), so
+	 * keying on the pair keeps that protection exactly while letting a NEW turn speak.
 	 */
 	private async enqueueResult(input: this['input'], outcome: TerminalOutcome, tx: Transaction): Promise<void> {
 		await this.mailbox.enqueue(
@@ -452,7 +462,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 							: { kind: AgentRunOutcome.STOPPED, stopKind: outcome.stopKind, detail: outcome.detail },
 					originEntryId: input.originEntryId,
 				},
-				dedupKey: `result:${input.issueId}`,
+				dedupKey: `result:${input.issueId}:${input.messageId}`,
 			},
 			tx,
 		)

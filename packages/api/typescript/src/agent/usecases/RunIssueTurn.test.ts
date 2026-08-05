@@ -133,6 +133,39 @@ describe('RunIssueTurn use case', () => {
 		expect(registry.isActive(issueId)).toBe(false)
 	})
 
+	/**
+	 * O SEGUNDO desfecho de uma issue também precisa ser anunciado.
+	 *
+	 * O `dedupKey` do `ISSUE_RESULT` existe para que a REENTREGA de um desfecho não agende um segundo
+	 * anúncio do mesmo turno. Ele era a issue inteira, sob a premissa de que "uma issue conclui uma
+	 * vez" — premissa que a reabertura tornou falsa. O efeito medido em 2026-08-05: a issue da
+	 * dashboard concluiu às 23:57 (anunciada) e de novo às 00:38 (silêncio), e o operador perguntou
+	 * "deu certo? você não me avisou nada". Pior no caso da issue de loops, onde o slot foi queimado
+	 * por um STOP às 21:23 e a conclusão real das 02:38 não teve como falar.
+	 *
+	 * O falsificador é exato: troque a chave de volta para `result:${issueId}` e o segundo
+	 * `claimNext` volta `undefined` — o enqueue bate no `onConflictDoNothing` e devolve `false`, que
+	 * ninguém lê.
+	 */
+	it('a segunda conclusão da MESMA issue também é anunciada — o dedupKey é do turno, não da issue', async () => {
+		const useCase = testBed.resolve(RunIssueTurn)
+		const mailbox = testBed.resolve(MailboxRepository)
+		const issueId = testId('run-issue-turn', 'issue-reopened')
+
+		await useCase.execute({ ...baseInput(issueId), messageId: testId('run-issue-turn', 'entry-first') })
+		const first = await mailbox.claimNext('run-issue-turn-test', 60_000)
+		expect(first?.kind).toBe(MailboxItemKind.ISSUE_RESULT)
+		// Consumido, senão o lease por alvo esconderia o segundo item em vez do dedupKey.
+		await mailbox.complete(first?.id ?? '')
+
+		// A issue é retomada e conclui DE NOVO — turno novo, cursor novo.
+		await useCase.execute({ ...baseInput(issueId), messageId: testId('run-issue-turn', 'entry-second') })
+		const second = await mailbox.claimNext('run-issue-turn-test', 60_000)
+
+		expect(second?.kind).toBe(MailboxItemKind.ISSUE_RESULT)
+		expect(second?.id).not.toBe(first?.id)
+	})
+
 	it('upserts the durable session row from the session id the terminal event reported', async () => {
 		const useCase = testBed.resolve(RunIssueTurn)
 		const sessions = testBed.resolve(AgentSessionRepository)
