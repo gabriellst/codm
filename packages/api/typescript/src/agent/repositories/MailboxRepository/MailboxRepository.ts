@@ -61,31 +61,14 @@ export abstract class MailboxRepository {
 	 *
 	 * Without it the two meanings collapse, and the collapse is not theoretical: an issue turn is a
 	 * coding agent that routinely runs longer than the lease. Its item then became claimable while the
-	 * run was healthy and still going, the dispatcher started a SECOND run for the same target, the
-	 * single-active guard threw `TERMINAL_ALREADY_RUNNING`, and the retry burnt attempts until the item
-	 * poisoned — killing work that never actually failed. Measured 2026-08-04: two issues died that way
+	 * run was healthy and still going, and the dispatcher started a SECOND turn for the same target
+	 * while the first was still healthy and running. Measured 2026-08-04: two issues died that way
 	 * within three minutes of a daemon restart.
 	 *
 	 * Only the CURRENT holder may renew (`claimedBy` is part of the predicate), so a worker whose lease
 	 * already expired and was taken by someone else cannot steal it back mid-turn.
 	 */
 	abstract renewLease(id: string, claimedBy: string, leaseMs: number, tx?: Transaction): Promise<void>
-
-	/**
-	 * Put a CONTENDED item back — the attempt refunded, the target held for `delayMs`.
-	 *
-	 * Contention is not failure. "Something else is already running for this target" says nothing about
-	 * whether the work is good; it says the queue asked at a bad moment. Routing it through `fail`
-	 * spends an attempt, and three bad moments in a row killed work that was never broken — measured
-	 * 2026-08-04, when an issue sat `WORKING` for two and a half hours with every retry dead on
-	 * `TERMINAL_ALREADY_RUNNING`.
-	 *
-	 * The delay is what keeps this from becoming a spin: released with no lease, the 250ms poll would
-	 * re-claim instantly and contend again, burning CPU instead of attempts. Parking `lease_until` in
-	 * the near future also holds the whole TARGET — which is correct, because the target genuinely is
-	 * busy.
-	 */
-	abstract defer(id: string, delayMs: number, tx?: Transaction): Promise<void>
 
 	/** Mark a turn done. The item never runs again. */
 	abstract complete(id: string, tx?: Transaction): Promise<void>

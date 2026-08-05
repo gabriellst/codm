@@ -113,9 +113,9 @@ interface SessionPlan {
  * be delivered verbatim into somebody's chat.
  *
  * ### What it does NOT do, said out loud
- * No single-active guard (`AgentStreamRegistry.beginSession`). `RunIssueTurn` needs one because two
- * runs could target one issue; here the DISPATCHER's per-target lease is the mutex (§3), and adding a
- * second one keyed by thread would be a second source of truth about whether a turn is in flight.
+ * No single-active guard. O lease por alvo do dispatcher é o mutex (§3), aqui e em `RunIssueTurn` —
+ * que até 2026-08-05 carregava um segundo guard em memória, exatamente a "segunda fonte de verdade"
+ * que este parágrafo já advertia contra, e que divergiu do lease em produção.
  */
 @injectable()
 export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInputSchema, typeof RunOrchestratorTurnOutputSchema> {
