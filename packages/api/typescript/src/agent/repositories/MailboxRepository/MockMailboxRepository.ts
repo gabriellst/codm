@@ -47,6 +47,12 @@ export class MockMailboxRepository extends MailboxRepository {
 		}
 	}
 
+	async renewLease(id: string, _claimedBy: string, leaseMs: number): Promise<void> {
+		const row = this.rows.find(r => r.id === id)
+		if (!row || row.consumed || row.dead) return
+		row.leaseUntil = Date.now() + leaseMs
+	}
+
 	async complete(id: string): Promise<void> {
 		const row = this.rows.find(r => r.id === id)
 		if (row) {

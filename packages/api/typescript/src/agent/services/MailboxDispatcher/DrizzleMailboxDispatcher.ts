@@ -11,6 +11,13 @@ import { MailboxDispatcher } from './MailboxDispatcher'
 
 /** How long a claimed item stays leased before a crashed worker's item becomes claimable again. */
 const LEASE_MS = 10 * 60 * 1000
+/**
+ * How often a RUNNING turn pushes its own lease forward.
+ *
+ * A third of the lease, so two consecutive heartbeats can be lost before the item looks abandoned —
+ * the point is to survive a hiccup, not to be exact.
+ */
+const HEARTBEAT_MS = LEASE_MS / 3
 /** Past this many failed turns an item is POISONED rather than retried — it is blocking its target. */
 const MAX_ATTEMPTS = 3
 const POLL_MIN_MS = 250
@@ -47,6 +54,17 @@ const MAX_CONCURRENT_TURNS = 4
 export class DrizzleMailboxDispatcher extends MailboxDispatcher implements PollingService {
 	private timer: ReturnType<typeof setTimeout> | null = null
 	private stopping = false
+	/**
+	 * Lease and heartbeat as FIELDS rather than bare constants — so a turn can be driven long enough to
+	 * observe a renewal without a test sleeping for ten minutes.
+	 *
+	 * These are extension points, not test backdoors: production never reassigns them, the defaults are
+	 * the only values that ship, and no branch reads them. The alternative is what shipped the bug this
+	 * fixes — scheduling wiring nobody could exercise, excused by the comment "the loop is three lines
+	 * over `claimNext`". A property that cannot be tested is a property that is not true yet.
+	 */
+	protected leaseMs = LEASE_MS
+	protected heartbeatMs = HEARTBEAT_MS
 	private draining: Promise<number> | null = null
 	private pollIntervalMs = POLL_MIN_MS
 	private readonly workerId = `mailbox-${crypto.randomUUID()}`
@@ -176,7 +194,7 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 		const inflight = new Set<Promise<void>>()
 
 		for (;;) {
-			const item = inflight.size < MAX_CONCURRENT_TURNS ? await this.mailbox.claimNext(this.workerId, LEASE_MS) : undefined
+			const item = inflight.size < MAX_CONCURRENT_TURNS ? await this.mailbox.claimNext(this.workerId, this.leaseMs) : undefined
 
 			if (item) {
 				handled++
@@ -228,7 +246,38 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 		}
 	}
 
+	/**
+	 * Run one turn, holding its lease open for as long as the turn actually takes.
+	 *
+	 * ### Why the heartbeat is not optional
+	 * `LEASE_MS` is documented as the CRASH budget — how long until a dead worker's item returns to the
+	 * queue. Without a heartbeat it silently doubles as a TURN-DURATION budget, and an issue turn is a
+	 * coding agent that routinely outlives ten minutes. What follows is not a slow turn, it is a
+	 * destroyed one: the lease lapses under a healthy run, `claimNext` hands the SAME item out again,
+	 * `beginSession` rejects the duplicate with `TERMINAL_ALREADY_RUNNING`, and each rejection spends an
+	 * attempt until the item poisons. Measured 2026-08-04: two issues died this way three minutes after
+	 * a restart, while their original runs were still going and finished normally twelve minutes later.
+	 *
+	 * The failure was previously MASKED: the old drain loop parked in `Promise.race(inflight)` and never
+	 * re-polled mid-turn, so nobody was around to reclaim the lapsed lease. Fixing that park (so new work
+	 * is not stranded behind a long turn) removed the accident that was protecting long turns — which is
+	 * why the two land together.
+	 */
 	private async runTurn(item: ClaimedMailboxItem): Promise<void> {
+		const heartbeat = setInterval(() => {
+			// Fire-and-forget by design: a missed renewal is survivable (the lease still has two beats of
+			// slack), and awaiting here would make the turn's progress depend on the queue's write path.
+			void this.mailbox.renewLease(item.id, this.workerId, this.leaseMs).catch(error => {
+				this.logging.warn({
+					content: {
+						message: 'mailbox lease renewal failed',
+						itemId: item.id,
+						error: error instanceof Error ? error.message : String(error),
+					},
+				})
+			})
+		}, this.heartbeatMs)
+
 		try {
 			if (item.targetKind === MailboxTargetKind.THREAD) await this.runThreadTurn(item)
 			else await this.runIssueWork(item)
@@ -248,6 +297,8 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 			// attempts++ and the lease released. Past MAX_ATTEMPTS the row is poisoned — it is ordered
 			// AHEAD of everything else for its target, so retrying forever would silence that thread.
 			await this.mailbox.fail(item.id, message, MAX_ATTEMPTS)
+		} finally {
+			clearInterval(heartbeat)
 		}
 	}
 
