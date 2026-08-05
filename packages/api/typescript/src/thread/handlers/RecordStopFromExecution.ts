@@ -5,14 +5,6 @@ import { StopKind } from '@codm/contracts-typescript/wire/enums'
 import { Id } from '@codm/core-typescript'
 import { RaiseStop } from '../usecases/RaiseStop'
 
-const STOP_TITLES: Record<StopKind, string> = {
-	[StopKind.SERVER_ERROR]: 'Server error — the agent hit an API limit or outage',
-	[StopKind.BLOCKED_BY_CLASSIFICATION]: 'Reply blocked by classification',
-	[StopKind.HUMAN_REQUESTED]: 'A participant asked for a human',
-	[StopKind.APPROVAL_NEEDED]: 'An action needs your approval',
-	[StopKind.AUTH_REQUIRED]: 'The agent CLI needs you to sign in again',
-}
-
 /**
  * The stop fact from the terminal engine → a Stop on the thread it belongs to.
  *
@@ -35,19 +27,16 @@ export class RecordStopFromExecution extends EventHandler<typeof ThreadStopRaise
 	async handle(event: this['input']): Promise<void> {
 		try {
 			// `detail` is the agent's OWN words, additive on the frozen event since Fase 6 (§4.4 item (i)) —
-			// before it existed this was hardcoded `''` and every Needs-you card rendered the generic
-			// `STOP_TITLES` line with no body.
+			// before it existed this was hardcoded `''` and every Needs-you card rendered the generic title
+			// with no body.
 			//
 			// HUMAN_REQUESTED is the one kind whose title is the text: it is what `AskOperator` raises, and
-			// the operator needs to read the QUESTION on the card, not "A participant asked for a human".
-			// The other four keep the generic title, which describes a condition rather than a sentence
-			// somebody wrote. Empty `detail` falls back so a producer that carries no text still renders
-			// something.
+			// the operator needs to read the QUESTION on the card, not the generic catalog line. The other
+			// four kinds leave `title` undefined — `RaiseStop` resolves the generic title from
+			// `THREAD_MESSAGES.stopTitle`, with the operator's language in hand, which this handler has no
+			// way to know.
 			const detail = event.payload.detail
-			const title =
-				event.payload.kind === StopKind.HUMAN_REQUESTED && detail.length > 0
-					? detail
-					: (STOP_TITLES[event.payload.kind] ?? 'The agent needs you')
+			const title = event.payload.kind === StopKind.HUMAN_REQUESTED && detail.length > 0 ? detail : undefined
 			await this.raiseStop.execute({
 				stopId: event.payload.stopId || Id.value(),
 				threadId: event.payload.threadId,
