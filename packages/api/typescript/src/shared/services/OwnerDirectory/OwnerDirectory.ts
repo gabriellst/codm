@@ -1,5 +1,5 @@
 import type { Transaction } from '@codm/core-typescript'
-import type { OwnerKind } from '@codm/contracts-typescript/wire/enums'
+import type { Language, OwnerKind } from '@codm/contracts-typescript/wire/enums'
 
 /**
  * TENANCY facts behind an ownerId — what kind of tenant it is and which user
@@ -10,6 +10,18 @@ import type { OwnerKind } from '@codm/contracts-typescript/wire/enums'
 export interface OwnerTenancy {
 	kind: OwnerKind
 	responsibleUserId: string
+	/**
+	 * O idioma do responsável, para as superfícies que o FRONTEND não traduz — o canal, onde quem
+	 * renderiza é o WhatsApp e nenhum `t()` roda.
+	 *
+	 * Viaja aqui e não é buscado no ponto de emissão de propósito: quem resolve um owner já pagou a
+	 * leitura, e a alternativa seria cada emissor conhecer o perfil de outro contexto. Segue a forma do
+	 * medscall, onde `OwnerIdentity.language` é o que alimenta e-mails e checkout.
+	 *
+	 * OPCIONAL porque o operador pode nunca ter escolhido: `resolveLanguage` (`@shared/i18n`) colapsa a
+	 * ausência em `DEFAULT_LANGUAGE`, então nenhum chamador ramifica sobre idioma.
+	 */
+	language?: Language
 }
 
 /**
