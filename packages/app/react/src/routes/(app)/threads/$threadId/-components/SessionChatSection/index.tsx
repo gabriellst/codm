@@ -43,7 +43,7 @@ export function SessionChatSection({ threadId, className, ...props }: ComponentP
 
 	return (
 		<div className={cn('flex min-h-0 grow flex-col', className)} {...props}>
-			<NeedsYouPanel threadId={threadId} />
+			<NeedsYouPanel className={"shrink-0"} threadId={threadId} />
 
 			{data.transcript.length === 0 ? (
 				<Empty className="grow py-16">
