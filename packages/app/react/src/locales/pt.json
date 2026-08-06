@@ -217,9 +217,11 @@
 			"HAIKU": "Haiku"
 		},
 		"ArtifactKind": {
+			"AUDIO": "Áudio",
 			"FILE": "Arquivo",
 			"IMAGE": "Captura de tela",
-			"LINK": "Deploy de preview"
+			"LINK": "Deploy de preview",
+			"VIDEO": "Vídeo"
 		},
 		"ChannelKind": {
 			"WHATSAPP": "WhatsApp",
@@ -392,6 +394,8 @@
 		"AGENT_RUN_TOKEN_INVALID": "O token da execução do agente está ausente, expirou ou foi revogado. A execução a que pertencia não está mais ativa.",
 		"AGENT_TOOLS_UNSUPPORTED": "Este agente precisa de ferramentas, mas a CLI selecionada não as suporta.",
 		"AGENT_TRANSPORT_STOP_NOT_DECLARABLE": "Esse tipo de parada é observado pelo runtime e não pode ser declarado pelo agente.",
+		"ARTIFACT_NOT_FOUND": "Artefato não encontrado, ou o arquivo dele não está mais no disco.",
+		"ARTIFACT_NOT_PREVIEWABLE": "Este artefato é um link — abra a URL em vez de pedir o conteúdo.",
 		"CANNOT_CONVERT_INPUT": "Não foi possível processar a requisição. Revise os dados enviados.",
 		"CHANNEL_NOT_CONNECTED": "O canal não está conectado.",
 		"CLARIFICATION_ALREADY_PENDING": "Já há uma clarificação pendente para este remetente.",
@@ -541,6 +545,8 @@
 		"allIssues": "Todas as tarefas",
 		"archive": "Arquivar",
 		"archived": "Arquivadas",
+		"artifactOpenExternally": "Abrir fora do console",
+		"artifactOpenFull": "Ver {{name}} em tamanho cheio",
 		"artifactsEmptyDescription": "Deploys de preview, capturas de tela e arquivos produzidos pelos seus agentes aparecem aqui.",
 		"artifactsEmptyTitle": "Nenhum artefato ainda",
 		"autoArchiveNote": "Issues concluídas são arquivadas automaticamente após 24 horas.",

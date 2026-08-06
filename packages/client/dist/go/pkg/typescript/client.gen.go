@@ -50,6 +50,8 @@ const (
 	AGENTRUNTOKENINVALID            ApiErrors = "AGENT_RUN_TOKEN_INVALID"
 	AGENTTOOLSUNSUPPORTED           ApiErrors = "AGENT_TOOLS_UNSUPPORTED"
 	AGENTTRANSPORTSTOPNOTDECLARABLE ApiErrors = "AGENT_TRANSPORT_STOP_NOT_DECLARABLE"
+	ARTIFACTNOTFOUND                ApiErrors = "ARTIFACT_NOT_FOUND"
+	ARTIFACTNOTPREVIEWABLE          ApiErrors = "ARTIFACT_NOT_PREVIEWABLE"
 	CANNOTCONVERTINPUT              ApiErrors = "CANNOT_CONVERT_INPUT"
 	CHANNELNOTCONNECTED             ApiErrors = "CHANNEL_NOT_CONNECTED"
 	CLARIFICATIONALREADYPENDING     ApiErrors = "CLARIFICATION_ALREADY_PENDING"
@@ -149,6 +151,10 @@ func (e ApiErrors) Valid() bool {
 	case AGENTTOOLSUNSUPPORTED:
 		return true
 	case AGENTTRANSPORTSTOPNOTDECLARABLE:
+		return true
+	case ARTIFACTNOTFOUND:
+		return true
+	case ARTIFACTNOTPREVIEWABLE:
 		return true
 	case CANNOTCONVERTINPUT:
 		return true
@@ -327,19 +333,25 @@ func (e ApiErrors) Valid() bool {
 
 // Defines values for ArtifactKind.
 const (
+	ArtifactKindAUDIO ArtifactKind = "AUDIO"
 	ArtifactKindFILE  ArtifactKind = "FILE"
 	ArtifactKindIMAGE ArtifactKind = "IMAGE"
 	ArtifactKindLINK  ArtifactKind = "LINK"
+	ArtifactKindVIDEO ArtifactKind = "VIDEO"
 )
 
 // Valid indicates whether the value is a known member of the ArtifactKind enum.
 func (e ArtifactKind) Valid() bool {
 	switch e {
+	case ArtifactKindAUDIO:
+		return true
 	case ArtifactKindFILE:
 		return true
 	case ArtifactKindIMAGE:
 		return true
 	case ArtifactKindLINK:
+		return true
+	case ArtifactKindVIDEO:
 		return true
 	default:
 		return false
@@ -2150,6 +2162,9 @@ type ClientInterface interface {
 
 	RecordArtifact(ctx context.Context, threadId string, body RecordArtifactJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetArtifactContent request
+	GetArtifactContent(ctx context.Context, threadId string, artifactId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ConfigureContextBufferWithBody request with any body
 	ConfigureContextBufferWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -2628,6 +2643,18 @@ func (c *Client) RecordArtifactWithBody(ctx context.Context, threadId string, co
 
 func (c *Client) RecordArtifact(ctx context.Context, threadId string, body RecordArtifactJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRecordArtifactRequest(c.Server, threadId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetArtifactContent(ctx context.Context, threadId string, artifactId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetArtifactContentRequest(c.Server, threadId, artifactId)
 	if err != nil {
 		return nil, err
 	}
@@ -4053,6 +4080,47 @@ func NewRecordArtifactRequestWithBody(server string, threadId string, contentTyp
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetArtifactContentRequest generates requests for GetArtifactContent
+func NewGetArtifactContentRequest(server string, threadId string, artifactId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "artifactId", artifactId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/artifacts/%s/content", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	return req, nil
 }
@@ -5629,6 +5697,9 @@ type ClientWithResponsesInterface interface {
 
 	RecordArtifactWithResponse(ctx context.Context, threadId string, body RecordArtifactJSONRequestBody, reqEditors ...RequestEditorFn) (*RecordArtifactResponse, error)
 
+	// GetArtifactContentWithResponse request
+	GetArtifactContentWithResponse(ctx context.Context, threadId string, artifactId string, reqEditors ...RequestEditorFn) (*GetArtifactContentResponse, error)
+
 	// ConfigureContextBufferWithBodyWithResponse request with any body
 	ConfigureContextBufferWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfigureContextBufferResponse, error)
 
@@ -6451,6 +6522,7 @@ type ListArtifactsResponse struct {
 			Meta       string              `json:"meta"`
 			Name       string              `json:"name"`
 			RecordedAt string              `json:"recordedAt"`
+			Ref        string              `json:"ref"`
 		} `json:"artifacts"`
 	}
 }
@@ -6505,6 +6577,35 @@ func (r RecordArtifactResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r RecordArtifactResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetArtifactContentResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r GetArtifactContentResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetArtifactContentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetArtifactContentResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -8081,6 +8182,15 @@ func (c *ClientWithResponses) RecordArtifactWithResponse(ctx context.Context, th
 	return ParseRecordArtifactResponse(rsp)
 }
 
+// GetArtifactContentWithResponse request returning *GetArtifactContentResponse
+func (c *ClientWithResponses) GetArtifactContentWithResponse(ctx context.Context, threadId string, artifactId string, reqEditors ...RequestEditorFn) (*GetArtifactContentResponse, error) {
+	rsp, err := c.GetArtifactContent(ctx, threadId, artifactId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetArtifactContentResponse(rsp)
+}
+
 // ConfigureContextBufferWithBodyWithResponse request with arbitrary body returning *ConfigureContextBufferResponse
 func (c *ClientWithResponses) ConfigureContextBufferWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfigureContextBufferResponse, error) {
 	rsp, err := c.ConfigureContextBufferWithBody(ctx, threadId, contentType, body, reqEditors...)
@@ -9141,6 +9251,7 @@ func ParseListArtifactsResponse(rsp *http.Response) (*ListArtifactsResponse, err
 				Meta       string              `json:"meta"`
 				Name       string              `json:"name"`
 				RecordedAt string              `json:"recordedAt"`
+				Ref        string              `json:"ref"`
 			} `json:"artifacts"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -9176,6 +9287,22 @@ func ParseRecordArtifactResponse(rsp *http.Response) (*RecordArtifactResponse, e
 		}
 		response.JSON200 = &dest
 
+	}
+
+	return response, nil
+}
+
+// ParseGetArtifactContentResponse parses an HTTP response from a GetArtifactContentWithResponse call
+func ParseGetArtifactContentResponse(rsp *http.Response) (*GetArtifactContentResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetArtifactContentResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
 	}
 
 	return response, nil

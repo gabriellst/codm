@@ -47,13 +47,15 @@ type ArtifactKind string
 
 const (
 	ArtifactKindIMAGE ArtifactKind = "IMAGE"
+	ArtifactKindAUDIO ArtifactKind = "AUDIO"
+	ArtifactKindVIDEO ArtifactKind = "VIDEO"
 	ArtifactKindFILE ArtifactKind = "FILE"
 	ArtifactKindLINK ArtifactKind = "LINK"
 )
 
 func ParseArtifactKind(s string) (ArtifactKind, error) {
 	switch ArtifactKind(s) {
-	case ArtifactKindIMAGE, ArtifactKindFILE, ArtifactKindLINK:
+	case ArtifactKindIMAGE, ArtifactKindAUDIO, ArtifactKindVIDEO, ArtifactKindFILE, ArtifactKindLINK:
 		return ArtifactKind(s), nil
 	default:
 		return "", fmt.Errorf("invalid ArtifactKind: %q", s)

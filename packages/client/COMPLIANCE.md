@@ -26,11 +26,28 @@ External `$ref: 'other.yaml#/...'` MUST NOT appear. Internal
 the three generators reliably resolve cross-file refs; upstream emitters
 should bundle.
 
-### R-04 — Request/response content-type MUST be `application/json`
+### R-04 — Request content-type MUST be `application/json`; responses may also be a declared transport
 
-`multipart/form-data`, `application/x-www-form-urlencoded`, and binary
-content types are NOT supported in v1. **Rationale:** generator
-post-processing for non-JSON shapes diverges per language.
+`multipart/form-data` and `application/x-www-form-urlencoded` are NOT
+supported anywhere. **Rationale:** generator post-processing for
+non-JSON REQUEST shapes (multipart builders, form encoders) diverges
+per language, and nothing in this template sends one.
+
+Responses additionally accept two content types, both of which name a
+TRANSPORT the generated code is expected to leave alone — the operation
+is in the SDK for its URL and its types, and no generated call site
+parses the body:
+
+| Content type | Who | How it is consumed |
+|---|---|---|
+| `text/event-stream` | `StreamTerminalSession`, `ListenEvents` | `fetch-event-source`, off the generated query key |
+| `application/octet-stream` | `GetArtifactContent` | an `<img>`/`<video>`/`<audio>` `src`, off the generated query key |
+
+`application/octet-stream` is the DECLARED type, not the served one:
+the artifact endpoint answers `image/png`, `video/mp4`, … per file, and
+only the artifact row knows which. What a generator needs from the
+declaration is "not JSON — do not parse", and octet-stream is how
+OpenAPI 3.0 spells that.
 
 ### R-05 — Nullable values MUST use the OAS 3.0 form `{ ..., nullable: true }`
 
