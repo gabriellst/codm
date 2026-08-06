@@ -2,6 +2,7 @@ import { injectable } from 'tsyringe-neo'
 import type { DependencyContainer } from 'tsyringe-neo'
 import { LoggingService, type PollingService } from '@codm/core-typescript'
 import { MailboxItemKind, MailboxTargetKind, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { CloudSession } from '@auth/services'
 import { ThreadRepository } from '@thread/repositories'
 import { RaiseStop } from '@thread/usecases'
 import { WorkspaceRepository } from '@workspace/repositories'
@@ -110,6 +111,9 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 		// from — see `runIssueWork`.
 		private readonly sessions: AgentSessionRepository,
 		private readonly logging: LoggingService,
+		// SP2 T7 — the login gate (AC-4). LAST param, additive: every pre-existing call site keeps its
+		// first five positional args unchanged. See the gate itself, at the top of `drainLoop`, for why.
+		private readonly cloudSession: CloudSession,
 	) {
 		super()
 	}
@@ -209,6 +213,16 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 	 * to overlap. `settleOrPoll` is the second wakeup; see its docblock for the production trace.
 	 */
 	private async drainLoop(): Promise<number> {
+		// THE LOGIN GATE (Task T7, AC-4) — BEFORE `claimNext`, never after, and never on an item already
+		// in flight. An item that got claimed and then aborted would still burn one of its
+		// MAX_ATTEMPTS via `fail()` — the defer/contention lesson of 2026-08-05: undoing a claim is
+		// never free. Checking here instead means an unauthenticated install simply never asks the
+		// queue for work — items sit PENDING, untouched, attempts unspent — and the very next drain
+		// (after `SetCloudToken` logs the daemon in) resumes exactly where it left off, no restart
+		// needed. Dev-compat: with no CODM_CLOUD_URL configured, `CloudSession.isEntitled()` always
+		// answers true (spec T7.1 rollout note), so this is a no-op for every install that predates SP2.
+		if (!this.cloudSession.isEntitled()) return 0
+
 		let handled = 0
 		const inflight = new Set<Promise<void>>()
 

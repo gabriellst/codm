@@ -39,6 +39,9 @@ export const CONTEXT_MAP: Partial<Record<ContextModule, Partial<Record<ContextMo
 		issue: { note: NOTE_MCP_EXPOSURE },
 		ui: { note: NOTE_MCP_EXPOSURE },
 		owner: { note: NOTE_MCP_EXPOSURE },
+		auth: {
+			note: 'DrizzleMailboxDispatcher reads CloudSession (services surface) BEFORE claimNext — the login gate (SP2 Task T7, AC-4/AC-5): no live device-token session, no turn starts; items wait, no attempts spent. The daemon-local login policy lives in auth (the mirror image of BetterAuth, its cloud-profile counterpart — see auth/registry.ts), and the dispatcher is the sole write-side consumer of the gate it exposes.',
+		},
 		thread: {
 			note: "The MailboxDispatcher resolves each turn run context — thread providers/workspaceId, and the conversation window — via BC4 read seams (ThreadRepository/OpenIssuesReader; the transcript window is the thread aggregate's own persistence surface since B4). ForkIssue slugs an issue key against the same reader (an open issue of a thread is a THREAD concept and lives there).",
 		},

@@ -1,4 +1,5 @@
 export { GetSessionController } from './GetSession'
+export { SetCloudTokenController } from './SetCloudToken'
 export { UploadAvatarController } from './UploadAvatar'
 export { DesktopCallbackController } from './cloud/DesktopCallback'
 export { ExchangeDeviceCodeController } from './cloud/ExchangeDeviceCode'
