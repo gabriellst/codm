@@ -68,8 +68,8 @@ async function main() {
 	// it (and the resumed turn re-ran e2e on relaunch, murdering the app in a loop). With a port
 	// range only e2e ever binds, the pre-kill can only ever hit e2e's own orphans — correct by
 	// construction, no "is it stale or is it production?" heuristic.
-	const apiPort = process.env.API_PORT ?? '3130'
-	const vitePort = process.env.VITE_PORT ?? '5273'
+	const apiPort = process.env.E2E_API_PORT ?? '3130'
+	const vitePort = process.env.E2E_VITE_PORT ?? '5273'
 	const nodeBin = resolveNodeBin()
 
 	// Build the daemon as a Node bundle BEFORE Playwright boots it (the webServer runs
