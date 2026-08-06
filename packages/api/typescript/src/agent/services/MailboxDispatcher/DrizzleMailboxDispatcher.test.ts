@@ -575,4 +575,61 @@ describe('DrizzleMailboxDispatcher — the drain loop wakes for work that arrive
 			mailbox.complete = realComplete
 		}
 	})
+
+	/**
+	 * A DUPLICATA É PIOR QUE A DEMORA, e esta é a invariante que o caminho feliz não vê.
+	 *
+	 * `RunOrchestratorTurn` transmite por cortes progressivos. Um turno que já entregou um corte e só
+	 * então morreu no transporte JÁ FALOU no grupo real do operador — retentá-lo produz a segunda
+	 * mensagem que o próprio use case documenta como o motivo de nunca retentar turno de thread.
+	 *
+	 * O falsificador é exato: apague o `&& !report.spoke` do ramo de transporte no `runTurn` e este
+	 * teste fica vermelho, enquanto o caso MUDO logo acima continua verde.
+	 */
+	it('um turno que JÁ FALOU e depois morre no transporte é consumido via complete(), nunca reenfileirado via fail()', async () => {
+		const ownerId = uuidv7()
+		const thread = await givenThread(testBed, { ownerId })
+
+		class SpokeThenDiedDispatcher extends DrizzleMailboxDispatcher {
+			protected override async runThreadTurn(): Promise<TurnReport> {
+				return { spoke: true, transportStop: { detail: 'died after speaking' } }
+			}
+		}
+
+		const dispatcher = testBed.resolve(SpokeThenDiedDispatcher)
+		const mailbox = testBed.resolve(MailboxRepository)
+
+		const realFail = mailbox.fail.bind(mailbox)
+		const realComplete = mailbox.complete.bind(mailbox)
+		const failCalls: { error: string; maxAttempts: number }[] = []
+		let completeCalls = 0
+		mailbox.fail = async (id, error, maxAttempts, tx) => {
+			failCalls.push({ error, maxAttempts })
+			return realFail(id, error, maxAttempts, tx)
+		}
+		mailbox.complete = async (id, tx) => {
+			completeCalls += 1
+			return realComplete(id, tx)
+		}
+
+		try {
+			await mailbox.enqueue({
+				ownerId,
+				targetKind: MailboxTargetKind.THREAD,
+				targetId: thread.id.value,
+				kind: MailboxItemKind.OPERATOR_MESSAGE,
+				payload: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: uuidv7(), speaker: 'operator', text: 'oi' },
+				dedupKey: `spoke:${thread.id.value}`,
+			})
+
+			await dispatcher.drain()
+
+			// CONSUMIDO: uma segunda tentativa falaria duas vezes no grupo real.
+			expect(completeCalls).toBe(1)
+			expect(failCalls).toHaveLength(0)
+		} finally {
+			mailbox.fail = realFail
+			mailbox.complete = realComplete
+		}
+	})
 })
