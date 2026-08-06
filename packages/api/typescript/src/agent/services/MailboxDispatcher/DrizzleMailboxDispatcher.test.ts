@@ -8,7 +8,7 @@ import { OPERATOR_ID } from '@auth/operator'
 import { ThreadRepository } from '@thread/repositories'
 import { WorkspaceRepository } from '@workspace/repositories'
 import { AgentSessionRepository, MailboxRepository, type ClaimedMailboxItem } from '../../repositories'
-import { DrizzleMailboxDispatcher } from './DrizzleMailboxDispatcher'
+import { DrizzleMailboxDispatcher, type TurnReport } from './DrizzleMailboxDispatcher'
 
 /**
  * T5 — the scheduling guarantees, exercised against the REAL table.
@@ -262,12 +262,13 @@ describe('DrizzleMailboxDispatcher — the drain loop wakes for work that arrive
 		const turns: string[] = []
 
 		class SequencingDispatcher extends DrizzleMailboxDispatcher {
-			protected override async runIssueWork(item: ClaimedMailboxItem): Promise<void> {
+			protected override async runIssueWork(item: ClaimedMailboxItem): Promise<TurnReport> {
 				inFlight += 1
 				concurrentPeak = Math.max(concurrentPeak, inFlight)
 				turns.push(item.id)
 				await new Promise(resolve => setTimeout(resolve, 20))
 				inFlight -= 1
+				return { spoke: true }
 			}
 		}
 
@@ -493,6 +494,85 @@ describe('DrizzleMailboxDispatcher — the drain loop wakes for work that arrive
 		} finally {
 			threads.findById = realFindById
 			releaseIssueTurn()
+		}
+	})
+
+	/**
+	 * TRANSPORTE NÃO É FRACASSO DO TRABALHO — é a hora errada de tentar.
+	 *
+	 * Medido em 2026-08-05: o classificador de permissão do provider caiu, o turno morreu sem ter dito
+	 * nada, e o item foi CONSUMIDO como se tivesse sido atendido. O operador ficou 20 minutos sem
+	 * resposta, sem retry e sem sinal — a única recuperação era o lease expirar.
+	 *
+	 * O falsificador é exato: troque o `fail` de volta por `complete` no ramo de transporte e este
+	 * teste fica vermelho, porque `completeCalls` deixa de ser zero.
+	 *
+	 * ### Por que `drain()` e não `start()` + sleep + `stop()`
+	 * Um runner que SEMPRE morre no transporte, sem latência real de provider, esgota `MAX_ATTEMPTS`
+	 * dentro de um ÚNICO `drainLoop`: `fail()` libera o lease e a MESMA volta do laço já reclama o item
+	 * de novo, tudo em microtasks — não há janela de relógio em que o item fique "reclamável mas ainda
+	 * não reclamado pelo próprio dispatcher" para um sleep observar de fora. `drain()` devolve uma
+	 * promise que só resolve quando o laço genuinely para (nada reclamável, nada em voo), o que torna
+	 * "todas as tentativas já rodaram" um fato determinístico em vez de uma corrida contra um timer.
+	 */
+	it('um turno MUDO que morre no transporte é reenfileirado via fail(), nunca consumido via complete()', async () => {
+		const ownerId = uuidv7()
+		const thread = await givenThread(testBed, { ownerId })
+
+		class TransportFailingDispatcher extends DrizzleMailboxDispatcher {
+			protected override async runThreadTurn(): Promise<TurnReport> {
+				return { spoke: false, transportStop: { detail: 'provider unavailable' } }
+			}
+		}
+
+		const dispatcher = testBed.resolve(TransportFailingDispatcher)
+		const mailbox = testBed.resolve(MailboxRepository)
+
+		// AC-2/AC-5, at the call boundary rather than a raw row read: `testBed`'s only sanctioned path
+		// for reading persisted state is `testBed.probe()`, and `PersistenceProbe` does not expose
+		// mailbox columns (it counts rows, it does not read them) — same class of gap
+		// `DeliverChannelMessage.test.ts` and friends hit for `shared_scheduled_commands`.
+		// `MailboxRepository.fail` writing `last_error` verbatim is FROZEN, already-covered infra; what
+		// THIS test owns is proving the dispatcher calls `fail` — never `complete` — for a transport stop,
+		// and hands it the REAL detail string every time. `mailbox` here is the same singleton the
+		// dispatcher's constructor received, so wrapping it observes exactly what `runTurn` calls.
+		const realFail = mailbox.fail.bind(mailbox)
+		const realComplete = mailbox.complete.bind(mailbox)
+		const failCalls: { error: string; maxAttempts: number }[] = []
+		let completeCalls = 0
+		mailbox.fail = async (id, error, maxAttempts, tx) => {
+			failCalls.push({ error, maxAttempts })
+			return realFail(id, error, maxAttempts, tx)
+		}
+		mailbox.complete = async (id, tx) => {
+			completeCalls += 1
+			return realComplete(id, tx)
+		}
+
+		try {
+			await mailbox.enqueue({
+				ownerId,
+				targetKind: MailboxTargetKind.THREAD,
+				targetId: thread.id.value,
+				kind: MailboxItemKind.OPERATOR_MESSAGE,
+				payload: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: uuidv7(), speaker: 'operator', text: 'oi' },
+				dedupKey: `transport:${thread.id.value}`,
+			})
+
+			await dispatcher.drain()
+
+			// NUNCA consumido como se tivesse sido atendido.
+			expect(completeCalls).toBe(0)
+
+			// AC-3: o item foi reenfileirado e reclamado de novo pelo MESMO drain, sem esperar o lease de
+			// 10 minutos — a prova é que houve MAIS de uma tentativa dentro de um `drain()` só.
+			expect(failCalls.length).toBeGreaterThan(1)
+
+			// AC-5 — o detalhe REAL do transporte, não um placeholder genérico, em toda tentativa.
+			for (const call of failCalls) expect(call.error).toBe('provider unavailable')
+		} finally {
+			mailbox.fail = realFail
+			mailbox.complete = realComplete
 		}
 	})
 })

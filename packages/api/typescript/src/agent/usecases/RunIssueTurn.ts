@@ -54,6 +54,14 @@ export const RunIssueTurnOutputSchema = z.object({
 	outcome: z.enum(AgentRunOutcome),
 	replyText: z.string().optional(),
 	stopId: z.string().optional(),
+	/**
+	 * Whether this turn already told the operator something — the dispatcher's retry gate
+	 * (`TurnReport.spoke`). False only for a TRANSPORT stop: `persistOutcome` skips `enqueueResult` for
+	 * it, so nothing was queued and nothing was said.
+	 */
+	spoke: z.boolean(),
+	/** Present only for a TRANSPORT stop kind — the dispatcher's cue to retry via `fail()` instead of consuming the item with `complete()`. */
+	transportStop: z.object({ detail: z.string() }).optional(),
 })
 
 /** What the drain loop observed beyond transport — the run's conclusion and its session identity. */
@@ -82,6 +90,14 @@ interface SessionPlan {
  *   FACTS     — the run's conclusion is persisted as context-private domain events; the internal
  *               bridge maps them to the FROZEN integration events (issue.opened
  *               / issue.completed / issue.stop_raised).
+ *
+ * ### The one conclusion that does NOT always become a fact here
+ * `persistOutcome` is otherwise the place a conclusion always becomes fact — but a TRANSPORT stop
+ * (`AUTH_REQUIRED` / `SERVER_ERROR`) is the exception: it returns before `enqueueResult` and before
+ * minting `AgentRunStopRaisedEvent`, and `handle` reports it as `transportStop` with `spoke: false`
+ * instead. The dispatcher decides what happens next — `fail()` and a retry, or, once attempts are
+ * exhausted, `raiseStopForPoisoned` — so a transport stop becomes a RETRY in the dispatcher rather
+ * than a fact minted on the first miss.
  *
  * ### What this use case STOPPED doing in Fase 3, and why each removal is structural
  * - **No `resumed` / `killed` lifecycle facts.** Both were PTY vocabulary: "the live REPL was reused"
@@ -163,11 +179,18 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 			await this.upsertSessionRecord(input, observed.agentSessionId ?? session.id, tx)
 		})
 
+		const transportStop =
+			observed.outcome.kind === 'STOPPED' && isTransportStopKind(observed.outcome.stopKind)
+				? { detail: observed.outcome.detail }
+				: undefined
+
 		return {
 			issueId: input.issueId,
 			outcome: observed.outcome.kind === 'COMPLETED' ? AgentRunOutcome.COMPLETED : AgentRunOutcome.STOPPED,
 			replyText: observed.outcome.kind === 'COMPLETED' ? observed.outcome.replyText : undefined,
 			stopId,
+			spoke: !transportStop,
+			transportStop,
 		}
 	}
 
@@ -273,6 +296,13 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 	 * branch (§8 rule 4 forbids `if (provider === 'x')`, not this).
 	 */
 	private async persistOutcome(input: this['input'], outcome: TerminalOutcome, stopId: string | undefined, tx: Transaction): Promise<void> {
+		// A TRANSPORT stop is not a fact YET. Enqueueing the ISSUE_RESULT here would announce a failure
+		// the dispatcher's retry is about to contradict, and persisting the Stop would give the operator
+		// two signals for one event — the alarm now, the answer a minute later. `handle` reports this
+		// case as `transportStop` with `spoke: false` instead, and the dispatcher decides what happens
+		// next: `fail()` and retry, or — once attempts are exhausted — `raiseStopForPoisoned`.
+		if (outcome.kind === 'STOPPED' && isTransportStopKind(outcome.stopKind)) return
+
 		// THE RESULT GOES BACK TO THE CONVERSATION (§6.3, B1) — in THIS transaction, beside the outcome
 		// facts. Transactional ⇒ exactly-once: an outcome that commits always has a result queued, and
 		// one that rolls back queues nothing, so "the summary had no source" cannot happen by

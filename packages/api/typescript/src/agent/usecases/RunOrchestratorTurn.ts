@@ -23,6 +23,7 @@ import { AgentSession } from '../entities/AgentSession'
 import { OrchestratorRepliedEvent } from '../events/OrchestratorRepliedEvent'
 import { GetOpenStops } from './GetOpenStops'
 import type { AgentApplicationErrors } from '../errors'
+import { isTransportStopKind } from '../enums/TransportStopKind'
 
 export const RunOrchestratorTurnInputSchema = z.object({
 	ownerId: z.uuid(),
@@ -57,6 +58,15 @@ export const RunOrchestratorTurnInputSchema = z.object({
 export const RunOrchestratorTurnOutputSchema = z.object({
 	text: z.string(),
 	replyToEntryId: z.uuid().optional(),
+	/**
+	 * Whether this turn already put a message in the operator's real chat — the dispatcher's retry gate
+	 * (`TurnReport.spoke`). True as soon as a progressive cut streamed (`streamed.cut`), because that
+	 * cut already landed in WhatsApp; a turn that never streamed one and then ended without completing
+	 * has said nothing yet.
+	 */
+	spoke: z.boolean(),
+	/** Present only when the ending was a TRANSPORT stop kind — the dispatcher's cue to retry via `fail()` instead of consuming the item with `complete()`. */
+	transportStop: z.object({ detail: z.string() }).optional(),
 })
 
 /**
@@ -209,6 +219,9 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 		// carries the canonical string, so anything the frames got slightly wrong is overwritten at the end.
 		let settledText = ''
 		let pendingDelta = ''
+		// TRUE the moment a cut is streamed — this turn has then already put words in the real WhatsApp
+		// group, and `TurnReport.spoke` is read straight off this variable on every return path below.
+		let spoke = false
 
 		const accumulator = new TerminalOutputAccumulator({ issueId: input.threadId })
 		for await (const event of this.agent.run(runner, {
@@ -249,6 +262,7 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 				if (decision.cut) {
 					cutState = advanceCutState(decision, nowMs)
 					await streamed.cut(decision.text)
+					spoke = true
 				}
 			}
 		}
@@ -256,7 +270,10 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 		const outcome = accumulator.outcome()
 		// A stopped turn said nothing worth delivering. Logged rather than thrown: the dispatcher would
 		// treat a throw as a failed turn and retry it, and re-running a conversational turn produces a
-		// SECOND message in a real group.
+		// SECOND message in a real group — which is exactly why the dispatcher's retry for a transport
+		// stop now requires `spoke === false` rather than applying to every stop: a turn that already
+		// streamed a cut has already spoken in that same group, and retrying it would reproduce the very
+		// duplicate this comment has warned about since before retries existed.
 		if (outcome.kind !== 'COMPLETED') {
 			this.logging.warn({
 				content: {
@@ -266,7 +283,11 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 					detail: outcome.detail,
 				},
 			})
-			return { text: '' }
+			return {
+				text: '',
+				spoke,
+				...(isTransportStopKind(outcome.stopKind) ? { transportStop: { detail: outcome.detail ?? outcome.stopKind } } : {}),
+			}
 		}
 
 		const reply = parseReply(outcome.replyText)
@@ -290,7 +311,7 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 			await this.upsertSession(input, accumulator.sessionId ?? session.id, tx)
 		})
 
-		return { text: reply.text, replyToEntryId }
+		return { text: reply.text, replyToEntryId, spoke }
 	}
 
 	private async resolveProvider(provider: ProviderKind): Promise<ProviderDetection> {
