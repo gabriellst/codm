@@ -66,6 +66,21 @@ O beta não tem assinatura Apple, então o macOS avisa na primeira abertura:
 Um panic do shell grava `…/app.codm.desktop/data/crashes/shell-<ts>.log` (payload + backtrace,
 últimos 20 mantidos). Ao reportar um problema, anexe o mais recente. Telemetria remota: SP4.
 
+## Limitação conhecida — repo privado (decisão do founder, 2026-08-06)
+
+O repo `gabriellst/codm` é PRIVADO e o founder decidiu mantê-lo assim por ora, publicando as
+releases NELE mesmo ("somente fazer essa parte do publish depois no mesmo repo"). Consequências:
+
+- **Publicar funciona** — o `GITHUB_TOKEN` nativo dos workflows escreve releases no próprio repo.
+- **Consumir NÃO funciona anonimamente** — assets de release em repo privado exigem auth até para
+  download, então o check do updater nos apps instalados recebe 404. O auto-update fica
+  efetivamente inerte até a parte pública existir.
+- Quando chegar a hora do publish público, o caminho já desenhado é um repo público só de
+  releases (`codm-releases`): endpoints em `config/updater.ts` + `--repo` nos workflows + um
+  secret `RELEASES_TOKEN` (PAT fine-grained com contents:write) — ~15 min de ajuste.
+- Alternativa interina para dogfooding, se desejada antes disso: o updater aceita header de auth
+  (builder Rust) com um token nas máquinas do founder — não implementado, registrado apenas.
+
 ## O que este pipeline NÃO faz (ainda)
 
 Windows/Linux, rollout percentual, `minVersion` forçado, notarização Apple — ver roadmap (SP2/SP4).
