@@ -1,7 +1,7 @@
 # SP3 — Billing de fundação: assinatura grátis sem Stripe — Design Spec
 
 **Date:** 2026-08-06
-**Status:** Draft (aguardando aprovação do founder)
+**Status:** Approved (founder em chat 2026-08-06: nome do plano = "Community")
 **Bounded Context:** billing (novo, greenfield, montado APENAS no perfil cloud) · toca auth (GetEntitlement) e contracts (enum)
 **Kind:** feature
 **Story Points:** 5 — um bounded context novo porém pequeno (1 aggregate, 1 handler, 1 query), enum de contrato, e a troca do literal do entitlement; zero integração externa.
@@ -95,8 +95,9 @@ linha na conta.
 
 ## Open Questions
 
-- **Nome do plano na UI/landing** — "Free"/"Grátis" simples ou um nome de marca (ex.:
-  "Community")? A landing (SP2.5) e o console devem usar o mesmo nome.
+- ~~Nome do plano na UI/landing~~ — **RESOLVIDO (founder, 2026-08-06): "Community"** — mesmo
+  nome na landing (SP2.5) e no console; o enum de contrato permanece `PlanKind.FREE` (código é
+  semântica, "Community" é copy).
 - **`status` da Subscription** — com um único plano gratuito, existe estado além de ACTIVE?
   (Sugerido: enum `SubscriptionStatus { ACTIVE }` — valores novos só quando um fluxo real os
   criar; nunca especular estados.)

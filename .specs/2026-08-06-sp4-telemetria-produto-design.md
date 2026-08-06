@@ -1,7 +1,7 @@
 # SP4 — Telemetria de produto: OTel até o cloud + PostHog nas superfícies web — Design Spec
 
 **Date:** 2026-08-06
-**Status:** Draft (aguardando aprovação do founder)
+**Status:** Approved (founder em chat 2026-08-06: PostHog Cloud US + LGTM self-hosted)
 **Bounded Context:** cross-context: infra de observabilidade (collector cloud) · daemon/gateway (destino OTLP) · console react + landing astro (PostHog) · desktop-shell (crash upload)
 **Kind:** feature
 **Story Points:** 8 — nenhuma instrumentação nova nos backends (decisão 1), mas três superfícies novas de configuração (collector, PostHog em duas apps, consent) e a primeira infra de ingestão autenticada.
@@ -46,8 +46,10 @@ um collector autenticado no cloud, e PostHog nas superfícies web. Usuário tem 
    (landing astro + console react). Backend não fala com PostHog.
 2. **OTel Collector como serviço do perfil cloud** (imagem `otel/opentelemetry-collector-contrib`
    no compose/Railway, ao lado da fatia cloud). Recebe OTLP dos installs, faz batch/rate/filter e
-   **encaminha para Grafana Cloud free tier** (LGTM gerenciado, OTLP nativo — zero ops). O LGTM
-   local em Docker permanece intocado para dev.
+   **encaminha para um LGTM SELF-HOSTED** (decisão do founder, 2026-08-06 — mesma imagem
+   `grafana/otel-lgtm` que o dev usa, deployada como serviço próprio no compose cloud/Railway com
+   volume para retenção). O LGTM local em Docker permanece intocado para dev; dois LGTMs, dois
+   propósitos.
 3. **Resolução de destino contract-first, por ambiente**: dev = `OTEL_COLLECTOR_*` explícitos
    (localhost, como hoje); install de usuário = derivado de `CODM_CLOUD_URL` (endpoint do
    collector publicado junto da fatia cloud), com override declarado possível. A relação entra no
@@ -117,8 +119,8 @@ orchestrion já emite.
 
 ## Open Questions
 
-- **PostHog Cloud US ou EU** (residência de dados; EU é o default conservador) — decisão do
-  founder no plan.
-- **Grafana Cloud vs LGTM self-hosted na Railway** — recomendação: Grafana Cloud free tier
-  (zero ops); self-host só se o free tier estourar.
-- **Default do toggle** — spec propõe ON com disclosure; founder confirma ou inverte.
+- ~~PostHog Cloud US ou EU~~ — **RESOLVIDO (founder, 2026-08-06): US**.
+- ~~Grafana Cloud vs LGTM self-hosted~~ — **RESOLVIDO (founder, 2026-08-06): LGTM
+  self-hosted** (absorvido na decisão 2; dimensionar retenção/volume no plan).
+- **Default do toggle** — spec propõe ON com disclosure; founder não inverteu no grilling —
+  segue ON salvo contraordem no plan.

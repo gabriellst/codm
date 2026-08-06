@@ -1,7 +1,7 @@
 # SP2.5 — Distribuição pública: R2 + landing com download real — Design Spec
 
 **Date:** 2026-08-06
-**Status:** Draft (aguardando aprovação do founder; Cloudflare em setup pelo founder neste momento)
+**Status:** Approved (founder resolveu as open questions e entregou credenciais em chat, 2026-08-06 — ver "Estado do provisionamento")
 **Bounded Context:** cross-context: desktop-shell (updater) · CI/release · app-astro (landing)
 **Kind:** feature
 **Story Points:** 5 — mudanças contidas em consts declarativos + workflows + conteúdo da landing; nenhum bounded context novo; o risco mora na verificação ponta-a-ponta de um ciclo de update via R2.
@@ -105,9 +105,21 @@ Builds Windows/Linux (open question do roadmap continua), domínio/branding defi
 Apple (decisão 8 do SP2 inalterada), qualquer mudança no fluxo de login/entitlement (SP2 fechado),
 analytics da landing (SP4).
 
-## Open Questions
+## Decisões fechadas no grilling (2026-08-06, founder em chat)
 
-- **Nome do bucket/URL r2.dev** — sai do setup que o founder está fazendo agora; entra como env
-  registrada (`consumers: ['ci']` ou const de shell, a decidir no plan).
-- **Retenção de versões antigas no R2** — manter N últimas? (Sem custo de egress, o custo de
-  guardar é ~zero; sugerido: manter tudo até segunda ordem.)
+- **Retenção**: manter TODAS as versões anteriores no R2 (custo ~zero sem egress).
+- **Nome do plano na landing**: **Community** (mesmo nome no console — spec SP3).
+- **Bucket**: `codm-releases`.
+
+## Estado do provisionamento (2026-08-06, noite)
+
+- Credenciais entregues e guardadas: `.env` raiz (gitignorado) + GitHub Actions secrets
+  (`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`).
+- Token verificado válido, **expira 2026-08-13** (curta duração) — antes do primeiro release via
+  CI, criar token permanente no dashboard e atualizar o secret + `.env`.
+- **BLOQUEADOR user-side**: a conta ainda não tem R2 habilitado — a API retorna 10042 "Please
+  enable R2 through the Cloudflare Dashboard". Habilitar no dashboard (pede confirmação de
+  billing mesmo no free tier); depois disso o bucket `codm-releases` é criado e o dev-url
+  (`r2.dev`) habilitado — a URL pública resultante entra como const/env no plan.
+- Secret `TAURI_SIGNING_PRIVATE_KEY` (SP1) segue pendente no GitHub — os workflows de release
+  falham sem ele; necessário para o AC-2 deste spec.
