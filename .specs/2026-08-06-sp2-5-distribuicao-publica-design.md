@@ -117,9 +117,14 @@ analytics da landing (SP4).
   (`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`).
 - Token verificado válido, **expira 2026-08-13** (curta duração) — antes do primeiro release via
   CI, criar token permanente no dashboard e atualizar o secret + `.env`.
-- **BLOQUEADOR user-side**: a conta ainda não tem R2 habilitado — a API retorna 10042 "Please
-  enable R2 through the Cloudflare Dashboard". Habilitar no dashboard (pede confirmação de
-  billing mesmo no free tier); depois disso o bucket `codm-releases` é criado e o dev-url
-  (`r2.dev`) habilitado — a URL pública resultante entra como const/env no plan.
-- Secret `TAURI_SIGNING_PRIVATE_KEY` (SP1) segue pendente no GitHub — os workflows de release
-  falham sem ele; necessário para o AC-2 deste spec.
+- ~~Bloqueador R2~~ **RESOLVIDO (founder habilitou R2, 2026-08-06 noite)**: bucket
+  `codm-releases` criado (ENAM), URL pública ativa e PROVADA com download anônimo HTTP 200:
+  **`https://pub-ae0c8cac60c94920b35464575c09e67d.r2.dev`**. Esta é a base dos endpoints do
+  updater e do botão da landing até existir domínio próprio.
+- **Upload no CI: usar `wrangler` com `CLOUDFLARE_API_TOKEN`** (provado via REST; as chaves S3
+  derivadas do token deram erro genérico no smoke — não depender delas no pipeline).
+- **Dependência de merge**: os arquivos-alvo (updater.ts/rs, workflows, make-manifest) existem
+  apenas no PR #17 (`feat/sp1-release-autoupdate`) — o plano do SP2.5 assume base = main
+  pós-#17; mergear #17 antes do /build.
+- ~~Secret TAURI_SIGNING_PRIVATE_KEY~~ **RESOLVIDO (2026-08-06 noite)**: setado via gh CLI a
+  partir de `~/.tauri/codm-updater.key` (348 bytes). 5 secrets ativos no repo.
