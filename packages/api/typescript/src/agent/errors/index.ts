@@ -1,17 +1,15 @@
 import { HttpStatusCode, registerErrorCodes } from '@codm/core-typescript'
 import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codm/core-typescript'
 
-// Domain Errors — invariants of the agent runtime (single-active RUN per issue, single SSE observer
-// per issue). Descend from whatscode's AgentStreamRegistry error vocabulary
-// (CHAT_ALREADY_STREAMING → SESSION_ALREADY_STREAMING), rekeyed chatId → issueId.
+// Domain Errors — invariants of the agent runtime (single SSE observer per issue). Descend from
+// whatscode's AgentStreamRegistry error vocabulary (CHAT_ALREADY_STREAMING → SESSION_ALREADY_STREAMING),
+// rekeyed chatId → issueId.
 //
-// The CODES keep the `TERMINAL_*` spelling on purpose, and Fase 5 did not touch them
-// (GOAL-agent-abstraction §5.1): an error code is PUBLIC vocabulary — an HTTP status, an i18n key in
+// These codes are PUBLIC vocabulary — an HTTP status, an i18n key in
 // packages/app/react/src/locales/{en,pt}.json, and a regenerated member of the SDK's `ErrorCode`
 // union. Renaming one costs a four-stop ripple and buys nothing. The type ALIASES around them DID
 // rename with the context, because those are internal symbols.
 export type AgentDomainErrors =
-	| 'TERMINAL_ALREADY_RUNNING'
 	| 'SESSION_ALREADY_STREAMING'
 	// A model tried to DECLARE a transport stop (AUTH_REQUIRED / SERVER_ERROR). Those are observed by
 	// the runner on the process and the stream — a declared one would be an observation about a
@@ -52,8 +50,8 @@ export type InfrastructureErrors = BaseInfrastructureErrors | AgentInfrastructur
 export type Errors = ApplicationErrors | DomainErrors | InfrastructureErrors | InterfaceErrors
 
 registerErrorCodes({
-	// Domain — a second run/observer for an issue that already has one.
-	TERMINAL_ALREADY_RUNNING: HttpStatusCode.CONFLICT,
+	// Domain — um segundo OBSERVER para uma issue que já tem um. A exclusão de RUN não vive mais
+	// aqui: é o lease por alvo do mailbox.
 	SESSION_ALREADY_STREAMING: HttpStatusCode.CONFLICT,
 	AGENT_TRANSPORT_STOP_NOT_DECLARABLE: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	// Application.

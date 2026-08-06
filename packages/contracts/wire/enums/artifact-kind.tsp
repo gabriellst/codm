@@ -1,8 +1,10 @@
 namespace TemplateContracts;
 
-@doc("Kind of non-code output an agent recorded. IMAGE/FILE reference a local path; LINK references a URL (e.g. a preview deploy).")
+@doc("Kind of non-code output an agent recorded, and the SHAPE of it: IMAGE/AUDIO/VIDEO each render as themselves, FILE is the one with no player, LINK is the one with no local bytes. IMAGE/AUDIO/VIDEO/FILE reference a local path; LINK references a URL (e.g. a preview deploy). The console dispatches its preview on this member — never on the extension of the ref — so a new medium is a member here before it is UI anywhere.")
 enum ArtifactKind {
   IMAGE: "IMAGE",
+  AUDIO: "AUDIO",
+  VIDEO: "VIDEO",
   FILE: "FILE",
   LINK: "LINK",
 }

@@ -1,6 +1,7 @@
 import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
 import {
 	ProviderKind,
+	AgentModelId,
 	ContactKind,
 	ThreadStatus,
 	BufferSize,
@@ -9,6 +10,7 @@ import {
 	StopKind,
 	StopResolution,
 	DayOfWeek,
+	LoopScheduleKind,
 } from '../../generated/typescript/src/wire/enums'
 import { enumCheck } from './_enum'
 
@@ -51,6 +53,25 @@ export const threads = sqliteTable(
 		participants: text('participants', { mode: 'json' }).$type<ThreadParticipant[]>().notNull(),
 		// BufferSize string tiers (25 | 50 | 100 | 200).
 		bufferSize: text('buffer_size').$type<BufferSize>().notNull(),
+
+		/**
+		 * WHICH MODEL this conversation asks each of its CLIs for — a PARTIAL map, `{}` until chosen.
+		 *
+		 * A map and not a single column because the choice is per PROVIDER: `providers` is an array, and
+		 * `opus` is vocabulary of one binary, so a lone `model` column would hold a value that is right for
+		 * at most one of the CLIs the thread declares and silently wrong for the rest. The catalog of what
+		 * each provider offers is declared once in `contracts/catalog/agent-models.ts`.
+		 *
+		 * PARTIAL, and that is the invariant: an entry is written only for a NON-default choice.
+		 * `AgentModelId.DEFAULT` means "omit `--model`, let the CLI pick", which is exactly what an absent
+		 * key already means — so `Thread.configureModel(p, DEFAULT)` DELETES the key rather than storing it.
+		 * Two spellings of one fact is the defect `custom_prompt` above documents; this column refuses to
+		 * repeat it.
+		 *
+		 * `NOT NULL DEFAULT '{}'` for the same reason: null would be a third spelling of "nothing chosen".
+		 * Every pre-existing row backfills to the empty map, which is what those threads already behave as.
+		 */
+		modelByProvider: text('model_by_provider', { mode: 'json' }).$type<Partial<Record<ProviderKind, AgentModelId>>>().notNull().default({}),
 
 		/**
 		 * The operator's own standing instructions for THIS conversation — null while unset.
@@ -113,6 +134,24 @@ export const transcriptEntries = sqliteTable(
 		issueId: text('issue_id'),
 		quotedEntryId: text('quoted_entry_id'),
 		senderExternalId: text('sender_external_id'),
+
+		/**
+		 * WHICH LOOP fired this whisper — NULL ⟺ a human typed it.
+		 *
+		 * A `WHISPER` is the operator instructing the agents without the room seeing it, and until this
+		 * column existed a scheduled one was indistinguishable from a typed one: both landed with no
+		 * sender, both rendered to the model as `operator`, and the agent answered a timer as if somebody
+		 * had just spoken. The prompt grammar reads this to write `de="loop:<label>"` instead.
+		 *
+		 * It stores the loop's LABEL (derived from its schedule — `09:00 mon,wed,fri`, `every 15min`),
+		 * denormalized at fire time rather than a foreign key. A transcript records what happened: a loop
+		 * edited to another hour, or deleted, must not rewrite who spoke yesterday.
+		 *
+		 * Its ONE writer is `SteerThread`, which only ever records `WHISPER` — so "only a whisper carries
+		 * a loop" holds by construction rather than by a validator.
+		 */
+		firedByLoop: text('fired_by_loop'),
+
 		// ProviderKind — present for kind AGENT.
 		provider: text('provider').$type<ProviderKind>(),
 		// ClassificationMethod — present on ACTION lines.
@@ -181,11 +220,19 @@ export const stops = sqliteTable(
 /**
  * `thread_loops` — the recurring prompt an operator schedules INTO one conversation.
  *
- * A loop is a whisper with a clock: the same text `SteerThread` puts in the transcript, delivered by
- * the product itself at the hour and on the weekdays the operator chose ("toda segunda, quarta e
- * sexta às 09:00, pergunte como está o deploy"). Its own table, and not columns on `thread_threads`,
- * because a conversation has MANY of them and each has its own lifecycle — edit one, pause one, delete
- * one — which a set of columns cannot express.
+ * A loop is a whisper on a timer: the same text `SteerThread` puts in the transcript, delivered by
+ * the product itself when the operator's schedule says so ("toda segunda, quarta e sexta às 09:00,
+ * pergunte como está o deploy", or "a cada 15 minutos, verifique se o build quebrou"). Its own table,
+ * and not columns on `thread_threads`, because a conversation has MANY of them and each has its own
+ * lifecycle — edit one, pause one, delete one — which a set of columns cannot express.
+ *
+ * ### The schedule is a DISCRIMINATED UNION, flattened
+ * `kind` says which shape the row carries, and only that shape's columns are filled: `DAILY` fills
+ * `time_of_day` + `weekdays` + `timezone`; `INTERVAL` fills `every_minutes`. Hence the nullability —
+ * these are not optional fields of one schedule, they are the columns of two. A JSON blob would store
+ * the same data and give up both the enum check and a readable row; a table per member would turn the
+ * one hot question ("which loops are due?") into a join. `next_run_at` is what the sweep reads, and it
+ * is the same column for both members — which is why they cost nothing to keep side by side.
  *
  * ### `next_run_at` is DERIVED, and stored anyway
  * It is `schedule.nextRunAfter(now)` and nothing else — recomputed by the aggregate on every write
@@ -209,15 +256,27 @@ export const loops = sqliteTable(
 		/** What gets whispered. The operator's words, verbatim — never a template we expand. */
 		prompt: text('prompt').notNull(),
 
-		// LoopSchedule VO (flattened): the wall-clock time, the weekdays it repeats on, and the zone
-		// those two are read in. `HH:MM` as text rather than minutes-since-midnight because it is what
-		// the operator typed and what the console renders back — a number would need the same
-		// conversion in three places to say the same thing.
-		timeOfDay: text('time_of_day').notNull(),
+		/** WHICH schedule shape this row carries — see the table docblock. */
+		kind: text('kind').$type<LoopScheduleKind>().notNull().default(LoopScheduleKind.DAILY),
+
+		// LoopSchedule DAILY member (flattened): the wall-clock time, the weekdays it repeats on, and
+		// the zone those two are read in. `HH:MM` as text rather than minutes-since-midnight because it
+		// is what the operator typed and what the console renders back — a number would need the same
+		// conversion in three places to say the same thing. NULL on an INTERVAL row.
+		timeOfDay: text('time_of_day'),
 		// DayOfWeek[] — sqlite json, same convention as `threads.providers`.
-		weekdays: text('weekdays', { mode: 'json' }).$type<DayOfWeek[]>().notNull(),
+		weekdays: text('weekdays', { mode: 'json' }).$type<DayOfWeek[]>(),
 		/** IANA zone. 09:00 means 09:00 WHERE THE OPERATOR IS, which an instant alone cannot say. */
-		timezone: text('timezone').notNull(),
+		timezone: text('timezone'),
+
+		/**
+		 * LoopSchedule INTERVAL member: the cadence in minutes, and nothing else. NULL on a DAILY row.
+		 *
+		 * No zone and no anchor stored beside it on purpose — the next run is derived from the last
+		 * thing that happened to the loop (`next_run_at` below), not from a grid a timezone would be
+		 * needed to place.
+		 */
+		everyMinutes: integer('every_minutes'),
 
 		enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
 
@@ -235,6 +294,7 @@ export const loops = sqliteTable(
 		version: integer('version').notNull().default(1),
 	},
 	t => [
+		enumCheck('thread_loops_kind_check', t.kind, Object.values(LoopScheduleKind)),
 		index('loops_thread_id_idx').on(t.threadId),
 		// THE SWEEP'S index — `FireDueLoops` runs every minute for as long as the daemon is up, so the
 		// one query it makes must never be a table scan.

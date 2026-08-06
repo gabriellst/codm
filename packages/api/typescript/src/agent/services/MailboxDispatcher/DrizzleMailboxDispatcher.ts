@@ -1,8 +1,9 @@
 import { injectable } from 'tsyringe-neo'
 import type { DependencyContainer } from 'tsyringe-neo'
 import { LoggingService, type PollingService } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
+import { MailboxItemKind, MailboxTargetKind, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { ThreadRepository } from '@thread/repositories'
+import { RaiseStop } from '@thread/usecases'
 import { WorkspaceRepository } from '@workspace/repositories'
 import { AgentSessionRepository, MailboxRepository, type ClaimedMailboxItem } from '../../repositories'
 import { RunOrchestratorTurn } from '../../usecases/RunOrchestratorTurn'
@@ -40,6 +41,24 @@ const POLL_BACKOFF_FACTOR = 2
  * which is the real resource.
  */
 const MAX_CONCURRENT_TURNS = 4
+
+/**
+ * What a turn reports back to `runTurn`, which is the ONLY place that writes to the mailbox.
+ *
+ * `spoke` exists because retrying is not always safe: `RunOrchestratorTurn` streams via progressive
+ * cuts, so a turn that already delivered a cut and only then died has ALREADY SPOKEN in the operator's
+ * real chat, and a second attempt would produce a second message. `transportStop` without `spoke` is
+ * the only combination that returns the item to the queue.
+ *
+ * `dropped` distinguishes "the target vanished" (a detached thread, an unbound workspace) from "the
+ * turn ran": `dropSilently` no longer writes to the mailbox on its own — the double-write it used to do
+ * here was harmless while `complete` was the only outcome, and becomes ambiguous now that there are two.
+ */
+export interface TurnReport {
+	spoke: boolean
+	transportStop?: { detail: string }
+	dropped?: boolean
+}
 
 /**
  * The concrete scheduler (§7.4). See `MailboxDispatcher` for WHY each property exists.
@@ -253,9 +272,9 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 	 * `LEASE_MS` is documented as the CRASH budget — how long until a dead worker's item returns to the
 	 * queue. Without a heartbeat it silently doubles as a TURN-DURATION budget, and an issue turn is a
 	 * coding agent that routinely outlives ten minutes. What follows is not a slow turn, it is a
-	 * destroyed one: the lease lapses under a healthy run, `claimNext` hands the SAME item out again,
-	 * `beginSession` rejects the duplicate with `TERMINAL_ALREADY_RUNNING`, and each rejection spends an
-	 * attempt until the item poisons. Measured 2026-08-04: two issues died this way three minutes after
+	 * destroyed one: o lease lapsa sob um run saudável, `claimNext` entrega o MESMO item de novo, e o
+	 * dispatcher começa um SEGUNDO turno para o mesmo alvo — dois processos escrevendo na mesma issue.
+	 * Measured 2026-08-04: two issues died this way three minutes after
 	 * a restart, while their original runs were still going and finished normally twelve minutes later.
 	 *
 	 * The failure was previously MASKED: the old drain loop parked in `Promise.race(inflight)` and never
@@ -279,11 +298,26 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 		}, this.heartbeatMs)
 
 		try {
-			if (item.targetKind === MailboxTargetKind.THREAD) await this.runThreadTurn(item)
-			else await this.runIssueWork(item)
+			const report = item.targetKind === MailboxTargetKind.THREAD ? await this.runThreadTurn(item) : await this.runIssueWork(item)
+
+			// TRANSPORT + MUTE RETURNS TO THE QUEUE. `fail` bumps `attempts`, records the cause in
+			// `last_error` and releases the lease NOW — the item is claimable on the next poll (250ms)
+			// instead of waiting out the ten-minute lease clock. Past the cap, `raiseStopForPoisoned`
+			// turns the exhaustion into a Stop, which is the only warning the operator gets, and only then.
+			//
+			// The `&& !report.spoke` is not caution, it preserves a prior decision: a turn that already
+			// streamed a cut has already spoken in the operator's real chat, and retrying it would
+			// reproduce the duplicate-message bug `RunOrchestratorTurn` documents at its own stop branch.
+			if (report.transportStop && !report.spoke) {
+				await this.mailbox.fail(item.id, report.transportStop.detail, MAX_ATTEMPTS)
+				if (item.attempts >= MAX_ATTEMPTS) await this.raiseStopForPoisoned(item, report.transportStop.detail)
+				return
+			}
+
 			await this.mailbox.complete(item.id)
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error)
+
 			this.logging.error({
 				content: {
 					message: 'mailbox turn failed',
@@ -297,6 +331,15 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 			// attempts++ and the lease released. Past MAX_ATTEMPTS the row is poisoned — it is ordered
 			// AHEAD of everything else for its target, so retrying forever would silence that thread.
 			await this.mailbox.fail(item.id, message, MAX_ATTEMPTS)
+
+			// A POISONED ITEM IS A NEEDS-YOU, and until now it was a silent one.
+			//
+			// `attempts` was already incremented at claim, so reaching MAX here means this failure was the
+			// last one and the row is now dead. Before this line the only trace was a log nobody reads:
+			// the item stopped existing for the queue, the issue stayed `WORKING` forever, and the
+			// operator found out by asking. Raising a stop puts it on the Needs-you panel — and since
+			// stops of this kind now reach the channel, on the operator's phone.
+			if (item.attempts >= MAX_ATTEMPTS) await this.raiseStopForPoisoned(item, message)
 		} finally {
 			clearInterval(heartbeat)
 		}
@@ -307,7 +350,7 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 	 * is resolved HERE rather than carried in the payload, because it is a property of the thread NOW
 	 * and an item may have been queued minutes ago; a workspace rebound in between should take effect.
 	 */
-	private async runThreadTurn(item: ClaimedMailboxItem): Promise<void> {
+	protected async runThreadTurn(item: ClaimedMailboxItem): Promise<TurnReport> {
 		const thread = await this.threads.findById(item.targetId)
 		if (!thread) return this.dropSilently(item, 'thread no longer exists')
 
@@ -318,11 +361,16 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 		if (!provider) return this.dropSilently(item, 'thread has no provider')
 
 		const payload = item.payload as { entryId?: string; originEntryId?: string }
-		await this.handlerFor(RunOrchestratorTurn).execute({
+		const result = await this.handlerFor(RunOrchestratorTurn).execute({
 			ownerId: item.ownerId,
 			threadId: item.targetId,
 			workspacePath: workspace.path,
 			provider,
+			// WHICH MODEL, resolved here for the same reason the provider and the workspace are: it is a
+			// property of the thread NOW, and the item may have been queued minutes ago. `modelFor` always
+			// answers — a conversation that chose nothing reads as `DEFAULT`, which is the instruction to
+			// omit `--model` — so there is no absence for the use case to interpret.
+			model: thread.modelFor(provider),
 			item: item.payload as Parameters<RunOrchestratorTurn['execute']>[0]['item'],
 			// Only an OPERATOR_MESSAGE has an originating entry; an ISSUE_RESULT turn is triggered by a
 			// subagent finishing, and the entry it will CITE is carried on the item, not on the token.
@@ -332,6 +380,7 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 			// message — there is no entry to mint a claim from.
 			originEntryId: item.kind === MailboxItemKind.ISSUE_RESULT ? payload.originEntryId : undefined,
 		})
+		return { spoke: result.spoke, transportStop: result.transportStop }
 	}
 
 	/**
@@ -361,7 +410,7 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 	 * callers keep passing their own). What changes is that this caller now answers the question
 	 * instead of leaving it blank.
 	 */
-	private async runIssueWork(item: ClaimedMailboxItem): Promise<void> {
+	protected async runIssueWork(item: ClaimedMailboxItem): Promise<TurnReport> {
 		const payload = item.payload as {
 			threadId: string
 			key: string
@@ -370,6 +419,7 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 			text?: string
 			provider: string
 			originEntryId?: string
+			firedByLoop?: string
 		}
 		const thread = await this.threads.findById(payload.threadId)
 		if (!thread) return this.dropSilently(item, 'thread no longer exists')
@@ -379,18 +429,33 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 
 		const session = await this.sessions.findByIssueId(item.targetId)
 
-		await this.handlerFor(RunIssueTurn).execute({
+		const provider = thread.providers[0] ?? (payload.provider as never)
+
+		const result = await this.handlerFor(RunIssueTurn).execute({
 			ownerId: item.ownerId,
 			issueId: item.targetId,
 			threadId: payload.threadId,
 			key: payload.key,
 			title: payload.title,
-			provider: thread.providers[0] ?? (payload.provider as never),
+			provider,
+			// THE ISSUE INHERITS THE CONVERSATION'S MODEL, and does not have one of its own. An issue is
+			// work the operator asked for IN a thread — the choice they made there is the one they meant,
+			// and giving the issue a second selector would be a second place to configure one thing, in a
+			// screen (the issue detail) where the CLI is not even named.
+			model: thread.modelFor(provider),
 			workspacePath: workspace.path,
 			// The issue OWNS its goal since the pivot — the prompt is what the operator asked for, not
 			// the raw inbound text re-read from a transcript. A STEER carries its own text instead: the
 			// session is resumed, so the turn needs the NEW instruction, not the original brief again.
 			prompt: item.kind === MailboxItemKind.STEER ? (payload.text ?? '') : (payload.goal ?? ''),
+			// The same discriminant, handed on instead of being thrown away. Until the prompt grammar it
+			// only chose WHICH string to send; the working agent received the two under one shape and had
+			// to guess whether it was being briefed or corrected. `WORK` is the widened default because
+			// `MailboxTargetKind.ISSUE` admits exactly these two kinds and this method handles both.
+			turnKind: item.kind === MailboxItemKind.STEER ? MailboxItemKind.STEER : MailboxItemKind.WORK,
+			// Present only on a steer a SCHEDULE produced (`SteerThread`), so the turn is not told a person
+			// is standing there when what fired was a timer.
+			firedByLoop: payload.firedByLoop,
 			customPrompt: thread.customPrompt,
 			messageId: item.id,
 			// The position this turn continues FROM — the item the previous turn consumed. Absent on the
@@ -399,19 +464,66 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 			// Carried through so `persistOutcome` can put it on the ISSUE_RESULT it queues.
 			originEntryId: payload.originEntryId,
 		})
+		return { spoke: result.spoke, transportStop: result.transportStop }
+	}
+
+	/**
+	 * Turn a poisoned item into a Needs-you card — the leg that was missing.
+	 *
+	 * ### Why `SERVER_ERROR` and not a kind of its own
+	 * The frozen `StopKind` set has no member for "the queue gave up on this item", and minting one is a
+	 * contract change, not a hotfix. `SERVER_ERROR` is the least-wrong home: its admissible resolutions
+	 * are exactly the two that apply here (`RETRY` / `TAKE_OVER`), and its catalog title already reads as
+	 * a condition rather than a sentence somebody wrote. The `detail` carries what actually happened, so
+	 * nothing is hidden. A dedicated kind is the follow-up, and it belongs in a spec.
+	 *
+	 * ### Why this is best-effort
+	 * The turn already failed. If raising the stop ALSO fails, rethrowing would replace a recorded
+	 * failure with an unrecorded one and hand the outbox a second thing to retry. The item is already
+	 * dead in the queue either way; the worst case here is the silence we had before, never worse.
+	 */
+	private async raiseStopForPoisoned(item: ClaimedMailboxItem, cause: string): Promise<void> {
+		try {
+			// A THREAD item names its thread directly; an ISSUE item carries it on the payload, which is
+			// where `runIssueWork` already reads it from.
+			const payload = item.payload as { threadId?: string }
+			const threadId = item.targetKind === MailboxTargetKind.THREAD ? item.targetId : payload.threadId
+			if (!threadId) return
+
+			await this.handlerFor(RaiseStop).execute({
+				stopId: crypto.randomUUID(),
+				threadId,
+				issueId: item.targetKind === MailboxTargetKind.ISSUE ? item.targetId : undefined,
+				kind: StopKind.SERVER_ERROR,
+				detail: `O trabalho parou depois de ${item.attempts} tentativas: ${cause}`,
+			})
+		} catch (error) {
+			this.logging.error({
+				content: {
+					message: 'could not raise a stop for a poisoned mailbox item',
+					itemId: item.id,
+					error: error instanceof Error ? error.message : String(error),
+				},
+			})
+		}
 	}
 
 	/**
 	 * A precondition that will never become true again — the thread was detached, the workspace
-	 * unbound. Completed rather than failed: `fail` would retry three times and then poison, which
-	 * spends three CLI spawns and leaves a dead row implying something is wrong. Logged at `warn`
-	 * because a vanished target IS worth noticing, just not worth retrying.
+	 * unbound. Reported as COMPLETED rather than failed: `fail` would retry three times and then
+	 * poison, which spends three CLI spawns and leaves a dead row implying something is wrong. Logged
+	 * at `warn` because a vanished target IS worth noticing, just not worth retrying.
+	 *
+	 * Does NOT write to the mailbox itself — `runTurn` is the only place that does, and it reads
+	 * `dropped`/`spoke` off this report the same way it reads a real turn's outcome. Writing here too
+	 * used to be harmless when `complete` was the only possible outcome; now that a report can also
+	 * carry a `transportStop`, a second writer would race the first.
 	 */
-	private async dropSilently(item: ClaimedMailboxItem, why: string): Promise<void> {
+	private dropSilently(item: ClaimedMailboxItem, why: string): TurnReport {
 		this.logging.warn({
 			content: { message: `mailbox item dropped — ${why}`, itemId: item.id, targetKind: item.targetKind, targetId: item.targetId },
 		})
-		await this.mailbox.complete(item.id)
+		return { spoke: false, dropped: true }
 	}
 
 	private async tick(): Promise<void> {

@@ -433,6 +433,48 @@ describe('ClaudeAgentRunner — transport stops and the watchdog backstop', () =
 		expect(finished).toMatchObject({ type: 'finished', result: { outcome: AgentRunOutcome.STOPPED, stop: { kind: 'SERVER_ERROR' } } })
 	})
 
+	/**
+	 * O WATCHDOG MEDE AVANÇO, NÃO TAGARELICE.
+	 *
+	 * Medido em 2026-08-05: um turno ficou 8m12s parado esperando o classificador de permissão do
+	 * provider responder, com o orçamento de inatividade em 3 minutos, e não foi morto. O relógio
+	 * reiniciava a cada CHUNK de stdout, então qualquer byte que o CLI emitisse enquanto não progredia
+	 * — retries, mensagens parciais — o mantinha vivo indefinidamente. O item do mailbox só voltou à
+	 * fila quando o lease expirou, 20 minutos depois.
+	 *
+	 * O falsificador é exato: volte o reset para o chunk e este teste pendura, porque o spawner abaixo
+	 * emite para sempre e nunca fecha um frame.
+	 */
+	it('mata um run que emite bytes sem nunca completar um frame', async () => {
+		const spawner = (): AgentProcess => {
+			let stop = false
+			return {
+				stdout: (async function* () {
+					while (!stop) {
+						// Meio de uma linha JSON: o codec bufferiza e NÃO entrega frame algum.
+						yield new TextEncoder().encode('{"type":"assis')
+						await new Promise(resolve => setTimeout(resolve, 10))
+					}
+				})(),
+				stderr: (async function* () {})(),
+				write: () => {},
+				endStdin: () => {},
+				kill: () => {
+					stop = true
+				},
+				exited: Promise.resolve(0),
+			}
+		}
+
+		const finished = (await drain(makeRunner(spawner, 60).run(request()))).at(-1) as {
+			type: string
+			result: { stop?: { detail: string } }
+		}
+
+		expect(finished.type).toBe('finished')
+		expect(finished.result.stop?.detail).toContain('inactivity watchdog')
+	}, 5_000)
+
 	it('surfaces a spawn failure as the terminal event instead of throwing out of run()', async () => {
 		const runner = ClaudeAgentRunner.withOptions(new MockLoggingService(), new InMemoryAgentIdentityService(), {
 			spawner: () => {

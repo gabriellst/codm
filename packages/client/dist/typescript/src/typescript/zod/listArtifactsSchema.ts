@@ -21,6 +21,7 @@ get "kind"(){
                 return artifactKindSchema
               },
 "name": z.string(),
+"ref": z.string(),
 "meta": z.string(),
 "recordedAt": z.string()
     }))

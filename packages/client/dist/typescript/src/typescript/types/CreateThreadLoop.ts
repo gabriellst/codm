@@ -27,6 +27,18 @@ export type CreateThreadLoop200 = {
     nextRunAt: string;
 };
 
+export const ScheduleKindEnum = {
+    DAILY: "DAILY"
+} as const;
+
+export type ScheduleKindEnumKey = (typeof ScheduleKindEnum)[keyof typeof ScheduleKindEnum];
+
+export const ScheduleKindEnum2 = {
+    INTERVAL: "INTERVAL"
+} as const;
+
+export type ScheduleKindEnum2Key = (typeof ScheduleKindEnum2)[keyof typeof ScheduleKindEnum2];
+
 export type CreateThreadLoopMutationRequest = {
     /**
      * @minLength 1
@@ -34,10 +46,11 @@ export type CreateThreadLoopMutationRequest = {
      * @type string
     */
     prompt: string;
-    /**
-     * @type object
-    */
-    schedule: {
+    schedule: ({
+        /**
+         * @type string
+        */
+        kind: ScheduleKindEnumKey;
         /**
          * @pattern ^([01]\d|2[0-3]):[0-5]\d$
          * @type string
@@ -51,7 +64,18 @@ export type CreateThreadLoopMutationRequest = {
          * @type string
         */
         timezone: Timezone;
-    };
+    } | {
+        /**
+         * @type string
+        */
+        kind: ScheduleKindEnum2Key;
+        /**
+         * @minLength 1
+         * @maxLength 1440
+         * @type integer
+        */
+        everyMinutes: number;
+    });
 };
 
 export type CreateThreadLoopMutationResponse = CreateThreadLoop200;

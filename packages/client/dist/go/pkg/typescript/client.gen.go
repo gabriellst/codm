@@ -19,6 +19,30 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for AgentModelId.
+const (
+	DEFAULT AgentModelId = "DEFAULT"
+	HAIKU   AgentModelId = "HAIKU"
+	OPUS    AgentModelId = "OPUS"
+	SONNET  AgentModelId = "SONNET"
+)
+
+// Valid indicates whether the value is a known member of the AgentModelId enum.
+func (e AgentModelId) Valid() bool {
+	switch e {
+	case DEFAULT:
+		return true
+	case HAIKU:
+		return true
+	case OPUS:
+		return true
+	case SONNET:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ApiErrors.
 const (
 	AGENTENTRYFORBIDSSENDER         ApiErrors = "AGENT_ENTRY_FORBIDS_SENDER"
@@ -26,6 +50,8 @@ const (
 	AGENTRUNTOKENINVALID            ApiErrors = "AGENT_RUN_TOKEN_INVALID"
 	AGENTTOOLSUNSUPPORTED           ApiErrors = "AGENT_TOOLS_UNSUPPORTED"
 	AGENTTRANSPORTSTOPNOTDECLARABLE ApiErrors = "AGENT_TRANSPORT_STOP_NOT_DECLARABLE"
+	ARTIFACTNOTFOUND                ApiErrors = "ARTIFACT_NOT_FOUND"
+	ARTIFACTNOTPREVIEWABLE          ApiErrors = "ARTIFACT_NOT_PREVIEWABLE"
 	CANNOTCONVERTINPUT              ApiErrors = "CANNOT_CONVERT_INPUT"
 	CHANNELNOTCONNECTED             ApiErrors = "CHANNEL_NOT_CONNECTED"
 	CLARIFICATIONALREADYPENDING     ApiErrors = "CLARIFICATION_ALREADY_PENDING"
@@ -50,6 +76,7 @@ const (
 	INVALIDID                       ApiErrors = "INVALID_ID"
 	INVALIDIDVALUESLENGTH           ApiErrors = "INVALID_ID_VALUES_LENGTH"
 	INVALIDLANGUAGE                 ApiErrors = "INVALID_LANGUAGE"
+	INVALIDLOOPINTERVAL             ApiErrors = "INVALID_LOOP_INTERVAL"
 	INVALIDLOOPTIME                 ApiErrors = "INVALID_LOOP_TIME"
 	INVALIDOUTBOXPAYLOAD            ApiErrors = "INVALID_OUTBOX_PAYLOAD"
 	INVALIDPHONE                    ApiErrors = "INVALID_PHONE"
@@ -69,6 +96,7 @@ const (
 	LOOPWITHOUTWEEKDAY              ApiErrors = "LOOP_WITHOUT_WEEKDAY"
 	MISSINGENVIRONMENTVARIABLE      ApiErrors = "MISSING_ENVIRONMENT_VARIABLE"
 	MISSINGLOGCONTENT               ApiErrors = "MISSING_LOG_CONTENT"
+	MODELNOTAVAILABLE               ApiErrors = "MODEL_NOT_AVAILABLE"
 	NOCHANNELCONNECTED              ApiErrors = "NO_CHANNEL_CONNECTED"
 	NOPROVIDERSELECTED              ApiErrors = "NO_PROVIDER_SELECTED"
 	NOTFOUND                        ApiErrors = "NOT_FOUND"
@@ -84,6 +112,7 @@ const (
 	PATHNOTFOUND                    ApiErrors = "PATH_NOT_FOUND"
 	PROMPTTOOLONG                   ApiErrors = "PROMPT_TOO_LONG"
 	PROVIDERCOMINGSOON              ApiErrors = "PROVIDER_COMING_SOON"
+	PROVIDERNOTBOUND                ApiErrors = "PROVIDER_NOT_BOUND"
 	PROVIDERNOTDETECTED             ApiErrors = "PROVIDER_NOT_DETECTED"
 	QUOTEDENTRYNOTINTHREAD          ApiErrors = "QUOTED_ENTRY_NOT_IN_THREAD"
 	RATELIMITED                     ApiErrors = "RATE_LIMITED"
@@ -93,7 +122,6 @@ const (
 	STOPCRITERIONDISABLED           ApiErrors = "STOP_CRITERION_DISABLED"
 	STOPNOTFOUND                    ApiErrors = "STOP_NOT_FOUND"
 	STOPNOTINTHREAD                 ApiErrors = "STOP_NOT_IN_THREAD"
-	TERMINALALREADYRUNNING          ApiErrors = "TERMINAL_ALREADY_RUNNING"
 	TERMINALSPAWNFAILED             ApiErrors = "TERMINAL_SPAWN_FAILED"
 	THREADALREADYATTACHED           ApiErrors = "THREAD_ALREADY_ATTACHED"
 	THREADALREADYDELETED            ApiErrors = "THREAD_ALREADY_DELETED"
@@ -123,6 +151,10 @@ func (e ApiErrors) Valid() bool {
 	case AGENTTOOLSUNSUPPORTED:
 		return true
 	case AGENTTRANSPORTSTOPNOTDECLARABLE:
+		return true
+	case ARTIFACTNOTFOUND:
+		return true
+	case ARTIFACTNOTPREVIEWABLE:
 		return true
 	case CANNOTCONVERTINPUT:
 		return true
@@ -172,6 +204,8 @@ func (e ApiErrors) Valid() bool {
 		return true
 	case INVALIDLANGUAGE:
 		return true
+	case INVALIDLOOPINTERVAL:
+		return true
 	case INVALIDLOOPTIME:
 		return true
 	case INVALIDOUTBOXPAYLOAD:
@@ -210,6 +244,8 @@ func (e ApiErrors) Valid() bool {
 		return true
 	case MISSINGLOGCONTENT:
 		return true
+	case MODELNOTAVAILABLE:
+		return true
 	case NOCHANNELCONNECTED:
 		return true
 	case NOPROVIDERSELECTED:
@@ -240,6 +276,8 @@ func (e ApiErrors) Valid() bool {
 		return true
 	case PROVIDERCOMINGSOON:
 		return true
+	case PROVIDERNOTBOUND:
+		return true
 	case PROVIDERNOTDETECTED:
 		return true
 	case QUOTEDENTRYNOTINTHREAD:
@@ -257,8 +295,6 @@ func (e ApiErrors) Valid() bool {
 	case STOPNOTFOUND:
 		return true
 	case STOPNOTINTHREAD:
-		return true
-	case TERMINALALREADYRUNNING:
 		return true
 	case TERMINALSPAWNFAILED:
 		return true
@@ -297,19 +333,25 @@ func (e ApiErrors) Valid() bool {
 
 // Defines values for ArtifactKind.
 const (
+	ArtifactKindAUDIO ArtifactKind = "AUDIO"
 	ArtifactKindFILE  ArtifactKind = "FILE"
 	ArtifactKindIMAGE ArtifactKind = "IMAGE"
 	ArtifactKindLINK  ArtifactKind = "LINK"
+	ArtifactKindVIDEO ArtifactKind = "VIDEO"
 )
 
 // Valid indicates whether the value is a known member of the ArtifactKind enum.
 func (e ArtifactKind) Valid() bool {
 	switch e {
+	case ArtifactKindAUDIO:
+		return true
 	case ArtifactKindFILE:
 		return true
 	case ArtifactKindIMAGE:
 		return true
 	case ArtifactKindLINK:
+		return true
+	case ArtifactKindVIDEO:
 		return true
 	default:
 		return false
@@ -814,6 +856,24 @@ func (e Language) Valid() bool {
 	}
 }
 
+// Defines values for LoopScheduleKind.
+const (
+	DAILY    LoopScheduleKind = "DAILY"
+	INTERVAL LoopScheduleKind = "INTERVAL"
+)
+
+// Valid indicates whether the value is a known member of the LoopScheduleKind enum.
+func (e LoopScheduleKind) Valid() bool {
+	switch e {
+	case DAILY:
+		return true
+	case INTERVAL:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MessageAuthor.
 const (
 	MessageAuthorHUMAN  MessageAuthor = "HUMAN"
@@ -1135,6 +1195,9 @@ func (e WorkspaceBadge) Valid() bool {
 	}
 }
 
+// AgentModelId defines model for AgentModelId.
+type AgentModelId string
+
 // ApiErrors All possible error codes
 type ApiErrors string
 
@@ -1176,6 +1239,9 @@ type IssueStatus string
 
 // Language defines model for Language.
 type Language string
+
+// LoopScheduleKind defines model for LoopScheduleKind.
+type LoopScheduleKind string
 
 // MessageAuthor defines model for MessageAuthor.
 type MessageAuthor string
@@ -1354,24 +1420,73 @@ type RaiseStopJSONBody struct {
 	Kind   StopKind `json:"kind"`
 }
 
+// ListThreadLoops200JSONResponseBodyLoopsSchedule0 defines parameters for ListThreadLoops.
+type ListThreadLoops200JSONResponseBodyLoopsSchedule0 struct {
+	Kind      string      `json:"kind"`
+	TimeOfDay string      `json:"timeOfDay"`
+	Timezone  Timezone    `json:"timezone"`
+	Weekdays  []DayOfWeek `json:"weekdays"`
+}
+
+// ListThreadLoops200JSONResponseBodyLoopsSchedule1 defines parameters for ListThreadLoops.
+type ListThreadLoops200JSONResponseBodyLoopsSchedule1 struct {
+	EveryMinutes int    `json:"everyMinutes"`
+	Kind         string `json:"kind"`
+}
+
+// ListThreadLoops200JSONResponseBody_Loops_Schedule defines parameters for ListThreadLoops.
+type ListThreadLoops200JSONResponseBody_Loops_Schedule struct {
+	union json.RawMessage
+}
+
 // CreateThreadLoopJSONBody defines parameters for CreateThreadLoop.
 type CreateThreadLoopJSONBody struct {
-	Prompt   string `json:"prompt"`
-	Schedule struct {
-		TimeOfDay string      `json:"timeOfDay"`
-		Timezone  Timezone    `json:"timezone"`
-		Weekdays  []DayOfWeek `json:"weekdays"`
-	} `json:"schedule"`
+	Prompt   string                            `json:"prompt"`
+	Schedule CreateThreadLoopJSONBody_Schedule `json:"schedule"`
+}
+
+// CreateThreadLoopJSONBodySchedule0 defines parameters for CreateThreadLoop.
+type CreateThreadLoopJSONBodySchedule0 struct {
+	Kind      string      `json:"kind"`
+	TimeOfDay string      `json:"timeOfDay"`
+	Timezone  Timezone    `json:"timezone"`
+	Weekdays  []DayOfWeek `json:"weekdays"`
+}
+
+// CreateThreadLoopJSONBodySchedule1 defines parameters for CreateThreadLoop.
+type CreateThreadLoopJSONBodySchedule1 struct {
+	EveryMinutes int    `json:"everyMinutes"`
+	Kind         string `json:"kind"`
+}
+
+// CreateThreadLoopJSONBody_Schedule defines parameters for CreateThreadLoop.
+type CreateThreadLoopJSONBody_Schedule struct {
+	union json.RawMessage
 }
 
 // UpdateThreadLoopJSONBody defines parameters for UpdateThreadLoop.
 type UpdateThreadLoopJSONBody struct {
-	Prompt   string `json:"prompt"`
-	Schedule struct {
-		TimeOfDay string      `json:"timeOfDay"`
-		Timezone  Timezone    `json:"timezone"`
-		Weekdays  []DayOfWeek `json:"weekdays"`
-	} `json:"schedule"`
+	Prompt   string                            `json:"prompt"`
+	Schedule UpdateThreadLoopJSONBody_Schedule `json:"schedule"`
+}
+
+// UpdateThreadLoopJSONBodySchedule0 defines parameters for UpdateThreadLoop.
+type UpdateThreadLoopJSONBodySchedule0 struct {
+	Kind      string      `json:"kind"`
+	TimeOfDay string      `json:"timeOfDay"`
+	Timezone  Timezone    `json:"timezone"`
+	Weekdays  []DayOfWeek `json:"weekdays"`
+}
+
+// UpdateThreadLoopJSONBodySchedule1 defines parameters for UpdateThreadLoop.
+type UpdateThreadLoopJSONBodySchedule1 struct {
+	EveryMinutes int    `json:"everyMinutes"`
+	Kind         string `json:"kind"`
+}
+
+// UpdateThreadLoopJSONBody_Schedule defines parameters for UpdateThreadLoop.
+type UpdateThreadLoopJSONBody_Schedule struct {
+	union json.RawMessage
 }
 
 // SetThreadLoopEnabledJSONBody defines parameters for SetThreadLoopEnabled.
@@ -1398,6 +1513,12 @@ type ConfigureMentionGateJSONBodyMentionGate1 struct {
 // ConfigureMentionGateJSONBody_MentionGate defines parameters for ConfigureMentionGate.
 type ConfigureMentionGateJSONBody_MentionGate struct {
 	union json.RawMessage
+}
+
+// ConfigureModelJSONBody defines parameters for ConfigureModel.
+type ConfigureModelJSONBody struct {
+	Model    AgentModelId `json:"model"`
+	Provider ProviderKind `json:"provider"`
 }
 
 // SetParticipantInvocationJSONBody defines parameters for SetParticipantInvocation.
@@ -1502,6 +1623,9 @@ type SetThreadLoopEnabledJSONRequestBody SetThreadLoopEnabledJSONBody
 // ConfigureMentionGateJSONRequestBody defines body for ConfigureMentionGate for application/json ContentType.
 type ConfigureMentionGateJSONRequestBody ConfigureMentionGateJSONBody
 
+// ConfigureModelJSONRequestBody defines body for ConfigureModel for application/json ContentType.
+type ConfigureModelJSONRequestBody ConfigureModelJSONBody
+
 // SetParticipantInvocationJSONRequestBody defines body for SetParticipantInvocation for application/json ContentType.
 type SetParticipantInvocationJSONRequestBody SetParticipantInvocationJSONBody
 
@@ -1572,6 +1696,192 @@ func (t GetSessionChat200JSONResponseBody_MentionGate) MarshalJSON() ([]byte, er
 }
 
 func (t *GetSessionChat200JSONResponseBody_MentionGate) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsListThreadLoops200JSONResponseBodyLoopsSchedule0 returns the union data inside the ListThreadLoops200JSONResponseBody_Loops_Schedule as a ListThreadLoops200JSONResponseBodyLoopsSchedule0
+func (t ListThreadLoops200JSONResponseBody_Loops_Schedule) AsListThreadLoops200JSONResponseBodyLoopsSchedule0() (ListThreadLoops200JSONResponseBodyLoopsSchedule0, error) {
+	var body ListThreadLoops200JSONResponseBodyLoopsSchedule0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromListThreadLoops200JSONResponseBodyLoopsSchedule0 overwrites any union data inside the ListThreadLoops200JSONResponseBody_Loops_Schedule as the provided ListThreadLoops200JSONResponseBodyLoopsSchedule0
+func (t *ListThreadLoops200JSONResponseBody_Loops_Schedule) FromListThreadLoops200JSONResponseBodyLoopsSchedule0(v ListThreadLoops200JSONResponseBodyLoopsSchedule0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeListThreadLoops200JSONResponseBodyLoopsSchedule0 performs a merge with any union data inside the ListThreadLoops200JSONResponseBody_Loops_Schedule, using the provided ListThreadLoops200JSONResponseBodyLoopsSchedule0
+func (t *ListThreadLoops200JSONResponseBody_Loops_Schedule) MergeListThreadLoops200JSONResponseBodyLoopsSchedule0(v ListThreadLoops200JSONResponseBodyLoopsSchedule0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsListThreadLoops200JSONResponseBodyLoopsSchedule1 returns the union data inside the ListThreadLoops200JSONResponseBody_Loops_Schedule as a ListThreadLoops200JSONResponseBodyLoopsSchedule1
+func (t ListThreadLoops200JSONResponseBody_Loops_Schedule) AsListThreadLoops200JSONResponseBodyLoopsSchedule1() (ListThreadLoops200JSONResponseBodyLoopsSchedule1, error) {
+	var body ListThreadLoops200JSONResponseBodyLoopsSchedule1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromListThreadLoops200JSONResponseBodyLoopsSchedule1 overwrites any union data inside the ListThreadLoops200JSONResponseBody_Loops_Schedule as the provided ListThreadLoops200JSONResponseBodyLoopsSchedule1
+func (t *ListThreadLoops200JSONResponseBody_Loops_Schedule) FromListThreadLoops200JSONResponseBodyLoopsSchedule1(v ListThreadLoops200JSONResponseBodyLoopsSchedule1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeListThreadLoops200JSONResponseBodyLoopsSchedule1 performs a merge with any union data inside the ListThreadLoops200JSONResponseBody_Loops_Schedule, using the provided ListThreadLoops200JSONResponseBodyLoopsSchedule1
+func (t *ListThreadLoops200JSONResponseBody_Loops_Schedule) MergeListThreadLoops200JSONResponseBodyLoopsSchedule1(v ListThreadLoops200JSONResponseBodyLoopsSchedule1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ListThreadLoops200JSONResponseBody_Loops_Schedule) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ListThreadLoops200JSONResponseBody_Loops_Schedule) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsCreateThreadLoopJSONBodySchedule0 returns the union data inside the CreateThreadLoopJSONBody_Schedule as a CreateThreadLoopJSONBodySchedule0
+func (t CreateThreadLoopJSONBody_Schedule) AsCreateThreadLoopJSONBodySchedule0() (CreateThreadLoopJSONBodySchedule0, error) {
+	var body CreateThreadLoopJSONBodySchedule0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCreateThreadLoopJSONBodySchedule0 overwrites any union data inside the CreateThreadLoopJSONBody_Schedule as the provided CreateThreadLoopJSONBodySchedule0
+func (t *CreateThreadLoopJSONBody_Schedule) FromCreateThreadLoopJSONBodySchedule0(v CreateThreadLoopJSONBodySchedule0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeCreateThreadLoopJSONBodySchedule0 performs a merge with any union data inside the CreateThreadLoopJSONBody_Schedule, using the provided CreateThreadLoopJSONBodySchedule0
+func (t *CreateThreadLoopJSONBody_Schedule) MergeCreateThreadLoopJSONBodySchedule0(v CreateThreadLoopJSONBodySchedule0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsCreateThreadLoopJSONBodySchedule1 returns the union data inside the CreateThreadLoopJSONBody_Schedule as a CreateThreadLoopJSONBodySchedule1
+func (t CreateThreadLoopJSONBody_Schedule) AsCreateThreadLoopJSONBodySchedule1() (CreateThreadLoopJSONBodySchedule1, error) {
+	var body CreateThreadLoopJSONBodySchedule1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCreateThreadLoopJSONBodySchedule1 overwrites any union data inside the CreateThreadLoopJSONBody_Schedule as the provided CreateThreadLoopJSONBodySchedule1
+func (t *CreateThreadLoopJSONBody_Schedule) FromCreateThreadLoopJSONBodySchedule1(v CreateThreadLoopJSONBodySchedule1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeCreateThreadLoopJSONBodySchedule1 performs a merge with any union data inside the CreateThreadLoopJSONBody_Schedule, using the provided CreateThreadLoopJSONBodySchedule1
+func (t *CreateThreadLoopJSONBody_Schedule) MergeCreateThreadLoopJSONBodySchedule1(v CreateThreadLoopJSONBodySchedule1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t CreateThreadLoopJSONBody_Schedule) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *CreateThreadLoopJSONBody_Schedule) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsUpdateThreadLoopJSONBodySchedule0 returns the union data inside the UpdateThreadLoopJSONBody_Schedule as a UpdateThreadLoopJSONBodySchedule0
+func (t UpdateThreadLoopJSONBody_Schedule) AsUpdateThreadLoopJSONBodySchedule0() (UpdateThreadLoopJSONBodySchedule0, error) {
+	var body UpdateThreadLoopJSONBodySchedule0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromUpdateThreadLoopJSONBodySchedule0 overwrites any union data inside the UpdateThreadLoopJSONBody_Schedule as the provided UpdateThreadLoopJSONBodySchedule0
+func (t *UpdateThreadLoopJSONBody_Schedule) FromUpdateThreadLoopJSONBodySchedule0(v UpdateThreadLoopJSONBodySchedule0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeUpdateThreadLoopJSONBodySchedule0 performs a merge with any union data inside the UpdateThreadLoopJSONBody_Schedule, using the provided UpdateThreadLoopJSONBodySchedule0
+func (t *UpdateThreadLoopJSONBody_Schedule) MergeUpdateThreadLoopJSONBodySchedule0(v UpdateThreadLoopJSONBodySchedule0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsUpdateThreadLoopJSONBodySchedule1 returns the union data inside the UpdateThreadLoopJSONBody_Schedule as a UpdateThreadLoopJSONBodySchedule1
+func (t UpdateThreadLoopJSONBody_Schedule) AsUpdateThreadLoopJSONBodySchedule1() (UpdateThreadLoopJSONBodySchedule1, error) {
+	var body UpdateThreadLoopJSONBodySchedule1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromUpdateThreadLoopJSONBodySchedule1 overwrites any union data inside the UpdateThreadLoopJSONBody_Schedule as the provided UpdateThreadLoopJSONBodySchedule1
+func (t *UpdateThreadLoopJSONBody_Schedule) FromUpdateThreadLoopJSONBodySchedule1(v UpdateThreadLoopJSONBodySchedule1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeUpdateThreadLoopJSONBodySchedule1 performs a merge with any union data inside the UpdateThreadLoopJSONBody_Schedule, using the provided UpdateThreadLoopJSONBodySchedule1
+func (t *UpdateThreadLoopJSONBody_Schedule) MergeUpdateThreadLoopJSONBodySchedule1(v UpdateThreadLoopJSONBodySchedule1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t UpdateThreadLoopJSONBody_Schedule) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *UpdateThreadLoopJSONBody_Schedule) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }
@@ -1852,6 +2162,9 @@ type ClientInterface interface {
 
 	RecordArtifact(ctx context.Context, threadId string, body RecordArtifactJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetArtifactContent request
+	GetArtifactContent(ctx context.Context, threadId string, artifactId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ConfigureContextBufferWithBody request with any body
 	ConfigureContextBufferWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -1926,6 +2239,11 @@ type ClientInterface interface {
 	ConfigureMentionGateWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	ConfigureMentionGate(ctx context.Context, threadId string, body ConfigureMentionGateJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ConfigureModelWithBody request with any body
+	ConfigureModelWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ConfigureModel(ctx context.Context, threadId string, body ConfigureModelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetNeedsYouPanel request
 	GetNeedsYouPanel(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2335,6 +2653,18 @@ func (c *Client) RecordArtifact(ctx context.Context, threadId string, body Recor
 	return c.Client.Do(req)
 }
 
+func (c *Client) GetArtifactContent(ctx context.Context, threadId string, artifactId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetArtifactContentRequest(c.Server, threadId, artifactId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) ConfigureContextBufferWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewConfigureContextBufferRequestWithBody(c.Server, threadId, contentType, body)
 	if err != nil {
@@ -2673,6 +3003,30 @@ func (c *Client) ConfigureMentionGateWithBody(ctx context.Context, threadId stri
 
 func (c *Client) ConfigureMentionGate(ctx context.Context, threadId string, body ConfigureMentionGateJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewConfigureMentionGateRequest(c.Server, threadId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ConfigureModelWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConfigureModelRequestWithBody(c.Server, threadId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ConfigureModel(ctx context.Context, threadId string, body ConfigureModelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConfigureModelRequest(c.Server, threadId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -3730,6 +4084,47 @@ func NewRecordArtifactRequestWithBody(server string, threadId string, contentTyp
 	return req, nil
 }
 
+// NewGetArtifactContentRequest generates requests for GetArtifactContent
+func NewGetArtifactContentRequest(server string, threadId string, artifactId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "artifactId", artifactId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/artifacts/%s/content", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewConfigureContextBufferRequest calls the generic ConfigureContextBuffer builder with application/json body
 func NewConfigureContextBufferRequest(server string, threadId string, body ConfigureContextBufferJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -4520,6 +4915,53 @@ func NewConfigureMentionGateRequestWithBody(server string, threadId string, cont
 	return req, nil
 }
 
+// NewConfigureModelRequest calls the generic ConfigureModel builder with application/json body
+func NewConfigureModelRequest(server string, threadId string, body ConfigureModelJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewConfigureModelRequestWithBody(server, threadId, "application/json", bodyReader)
+}
+
+// NewConfigureModelRequestWithBody generates requests for ConfigureModel with any type of body
+func NewConfigureModelRequestWithBody(server string, threadId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/model", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewGetNeedsYouPanelRequest generates requests for GetNeedsYouPanel
 func NewGetNeedsYouPanelRequest(server string, threadId string) (*http.Request, error) {
 	var err error
@@ -5255,6 +5697,9 @@ type ClientWithResponsesInterface interface {
 
 	RecordArtifactWithResponse(ctx context.Context, threadId string, body RecordArtifactJSONRequestBody, reqEditors ...RequestEditorFn) (*RecordArtifactResponse, error)
 
+	// GetArtifactContentWithResponse request
+	GetArtifactContentWithResponse(ctx context.Context, threadId string, artifactId string, reqEditors ...RequestEditorFn) (*GetArtifactContentResponse, error)
+
 	// ConfigureContextBufferWithBodyWithResponse request with any body
 	ConfigureContextBufferWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfigureContextBufferResponse, error)
 
@@ -5329,6 +5774,11 @@ type ClientWithResponsesInterface interface {
 	ConfigureMentionGateWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfigureMentionGateResponse, error)
 
 	ConfigureMentionGateWithResponse(ctx context.Context, threadId string, body ConfigureMentionGateJSONRequestBody, reqEditors ...RequestEditorFn) (*ConfigureMentionGateResponse, error)
+
+	// ConfigureModelWithBodyWithResponse request with any body
+	ConfigureModelWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfigureModelResponse, error)
+
+	ConfigureModelWithResponse(ctx context.Context, threadId string, body ConfigureModelJSONRequestBody, reqEditors ...RequestEditorFn) (*ConfigureModelResponse, error)
 
 	// GetNeedsYouPanelWithResponse request
 	GetNeedsYouPanelWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*GetNeedsYouPanelResponse, error)
@@ -6072,6 +6522,7 @@ type ListArtifactsResponse struct {
 			Meta       string              `json:"meta"`
 			Name       string              `json:"name"`
 			RecordedAt string              `json:"recordedAt"`
+			Ref        string              `json:"ref"`
 		} `json:"artifacts"`
 	}
 }
@@ -6126,6 +6577,35 @@ func (r RecordArtifactResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r RecordArtifactResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetArtifactContentResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r GetArtifactContentResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetArtifactContentResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetArtifactContentResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -6547,16 +7027,16 @@ type ListThreadLoopsResponse struct {
 	HTTPResponse *http.Response
 	JSON200      *struct {
 		Loops []struct {
-			Enabled     bool               `json:"enabled"`
-			LastFiredAt *string            `json:"lastFiredAt,omitempty"`
-			LoopId      openapi_types.UUID `json:"loopId"`
-			NextRunAt   *string            `json:"nextRunAt,omitempty"`
-			Prompt      string             `json:"prompt"`
-			TimeOfDay   string             `json:"timeOfDay"`
-			Timezone    string             `json:"timezone"`
-			Weekdays    []DayOfWeek        `json:"weekdays"`
+			Enabled     bool                                              `json:"enabled"`
+			LastFiredAt *string                                           `json:"lastFiredAt,omitempty"`
+			LoopId      openapi_types.UUID                                `json:"loopId"`
+			NextRunAt   *string                                           `json:"nextRunAt,omitempty"`
+			Prompt      string                                            `json:"prompt"`
+			Schedule    ListThreadLoops200JSONResponseBody_Loops_Schedule `json:"schedule"`
 		} `json:"loops"`
-		PromptMaxLength int `json:"promptMaxLength"`
+		MaxIntervalMinutes int `json:"maxIntervalMinutes"`
+		MinIntervalMinutes int `json:"minIntervalMinutes"`
+		PromptMaxLength    int `json:"promptMaxLength"`
 	}
 }
 
@@ -6741,6 +7221,36 @@ func (r ConfigureMentionGateResponse) ContentType() string {
 	return ""
 }
 
+type ConfigureModelResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r ConfigureModelResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ConfigureModelResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ConfigureModelResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetNeedsYouPanelResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -6918,8 +7428,10 @@ type GetThreadSettingsResponse struct {
 			Source        string `json:"source"`
 		} `json:"participants"`
 		Providers []struct {
-			ComingSoon bool         `json:"comingSoon"`
-			Provider   ProviderKind `json:"provider"`
+			ComingSoon bool           `json:"comingSoon"`
+			Model      AgentModelId   `json:"model"`
+			Models     []AgentModelId `json:"models"`
+			Provider   ProviderKind   `json:"provider"`
 		} `json:"providers"`
 	}
 }
@@ -7670,6 +8182,15 @@ func (c *ClientWithResponses) RecordArtifactWithResponse(ctx context.Context, th
 	return ParseRecordArtifactResponse(rsp)
 }
 
+// GetArtifactContentWithResponse request returning *GetArtifactContentResponse
+func (c *ClientWithResponses) GetArtifactContentWithResponse(ctx context.Context, threadId string, artifactId string, reqEditors ...RequestEditorFn) (*GetArtifactContentResponse, error) {
+	rsp, err := c.GetArtifactContent(ctx, threadId, artifactId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetArtifactContentResponse(rsp)
+}
+
 // ConfigureContextBufferWithBodyWithResponse request with arbitrary body returning *ConfigureContextBufferResponse
 func (c *ClientWithResponses) ConfigureContextBufferWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfigureContextBufferResponse, error) {
 	rsp, err := c.ConfigureContextBufferWithBody(ctx, threadId, contentType, body, reqEditors...)
@@ -7917,6 +8438,23 @@ func (c *ClientWithResponses) ConfigureMentionGateWithResponse(ctx context.Conte
 		return nil, err
 	}
 	return ParseConfigureMentionGateResponse(rsp)
+}
+
+// ConfigureModelWithBodyWithResponse request with arbitrary body returning *ConfigureModelResponse
+func (c *ClientWithResponses) ConfigureModelWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfigureModelResponse, error) {
+	rsp, err := c.ConfigureModelWithBody(ctx, threadId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConfigureModelResponse(rsp)
+}
+
+func (c *ClientWithResponses) ConfigureModelWithResponse(ctx context.Context, threadId string, body ConfigureModelJSONRequestBody, reqEditors ...RequestEditorFn) (*ConfigureModelResponse, error) {
+	rsp, err := c.ConfigureModel(ctx, threadId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConfigureModelResponse(rsp)
 }
 
 // GetNeedsYouPanelWithResponse request returning *GetNeedsYouPanelResponse
@@ -8713,6 +9251,7 @@ func ParseListArtifactsResponse(rsp *http.Response) (*ListArtifactsResponse, err
 				Meta       string              `json:"meta"`
 				Name       string              `json:"name"`
 				RecordedAt string              `json:"recordedAt"`
+				Ref        string              `json:"ref"`
 			} `json:"artifacts"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -8748,6 +9287,22 @@ func ParseRecordArtifactResponse(rsp *http.Response) (*RecordArtifactResponse, e
 		}
 		response.JSON200 = &dest
 
+	}
+
+	return response, nil
+}
+
+// ParseGetArtifactContentResponse parses an HTTP response from a GetArtifactContentWithResponse call
+func ParseGetArtifactContentResponse(rsp *http.Response) (*GetArtifactContentResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetArtifactContentResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
 	}
 
 	return response, nil
@@ -9136,16 +9691,16 @@ func ParseListThreadLoopsResponse(rsp *http.Response) (*ListThreadLoopsResponse,
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
 			Loops []struct {
-				Enabled     bool               `json:"enabled"`
-				LastFiredAt *string            `json:"lastFiredAt,omitempty"`
-				LoopId      openapi_types.UUID `json:"loopId"`
-				NextRunAt   *string            `json:"nextRunAt,omitempty"`
-				Prompt      string             `json:"prompt"`
-				TimeOfDay   string             `json:"timeOfDay"`
-				Timezone    string             `json:"timezone"`
-				Weekdays    []DayOfWeek        `json:"weekdays"`
+				Enabled     bool                                              `json:"enabled"`
+				LastFiredAt *string                                           `json:"lastFiredAt,omitempty"`
+				LoopId      openapi_types.UUID                                `json:"loopId"`
+				NextRunAt   *string                                           `json:"nextRunAt,omitempty"`
+				Prompt      string                                            `json:"prompt"`
+				Schedule    ListThreadLoops200JSONResponseBody_Loops_Schedule `json:"schedule"`
 			} `json:"loops"`
-			PromptMaxLength int `json:"promptMaxLength"`
+			MaxIntervalMinutes int `json:"maxIntervalMinutes"`
+			MinIntervalMinutes int `json:"minIntervalMinutes"`
+			PromptMaxLength    int `json:"promptMaxLength"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
@@ -9277,6 +9832,32 @@ func ParseConfigureMentionGateResponse(rsp *http.Response) (*ConfigureMentionGat
 	}
 
 	response := &ConfigureMentionGateResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseConfigureModelResponse parses an HTTP response from a ConfigureModelWithResponse call
+func ParseConfigureModelResponse(rsp *http.Response) (*ConfigureModelResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ConfigureModelResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -9463,8 +10044,10 @@ func ParseGetThreadSettingsResponse(rsp *http.Response) (*GetThreadSettingsRespo
 				Source        string `json:"source"`
 			} `json:"participants"`
 			Providers []struct {
-				ComingSoon bool         `json:"comingSoon"`
-				Provider   ProviderKind `json:"provider"`
+				ComingSoon bool           `json:"comingSoon"`
+				Model      AgentModelId   `json:"model"`
+				Models     []AgentModelId `json:"models"`
+				Provider   ProviderKind   `json:"provider"`
 			} `json:"providers"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {

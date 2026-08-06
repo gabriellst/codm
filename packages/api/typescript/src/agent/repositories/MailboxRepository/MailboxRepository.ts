@@ -61,9 +61,8 @@ export abstract class MailboxRepository {
 	 *
 	 * Without it the two meanings collapse, and the collapse is not theoretical: an issue turn is a
 	 * coding agent that routinely runs longer than the lease. Its item then became claimable while the
-	 * run was healthy and still going, the dispatcher started a SECOND run for the same target, the
-	 * single-active guard threw `TERMINAL_ALREADY_RUNNING`, and the retry burnt attempts until the item
-	 * poisoned — killing work that never actually failed. Measured 2026-08-04: two issues died that way
+	 * run was healthy and still going, and the dispatcher started a SECOND turn for the same target
+	 * while the first was still healthy and running. Measured 2026-08-04: two issues died that way
 	 * within three minutes of a daemon restart.
 	 *
 	 * Only the CURRENT holder may renew (`claimedBy` is part of the predicate), so a worker whose lease

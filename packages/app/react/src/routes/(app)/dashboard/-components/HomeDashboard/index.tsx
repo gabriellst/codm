@@ -8,8 +8,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { formatDurationSeconds } from '@/lib/format'
 import { enumLabel } from '@/lib'
-import { useServerEvents } from '@/hooks'
+import { useLocale, useServerEvents } from '@/hooks'
 import { greetingKey } from '@/components/console/time'
 import { channelGlyph } from '@/components/console/glyphs'
 import { Dot, ThreadStatusDot } from '@/components/console/StatusDot'
@@ -151,11 +152,14 @@ function LatestActivity({ items }: { items: Dashboard['latestActivity'] }) {
  */
 function TodayCard({ today }: { today: Dashboard['today'] }) {
 	const { t } = useTranslation()
+	const locale = useLocale()
 	const rows = [
 		{ label: t('dashboard.issuesOpened'), value: String(today.issuesOpened) },
 		{ label: t('dashboard.issuesClosed'), value: String(today.issuesClosed) },
 	]
-	const last = { label: t('dashboard.medianResponse'), value: `${Math.round(today.medianResponseSeconds)}s` }
+	// Seconds are the WIRE unit, not the reading unit — the card used to print them raw, so a
+	// half-hour median would have read "1847s".
+	const last = { label: t('dashboard.medianResponse'), value: formatDurationSeconds(today.medianResponseSeconds, locale) }
 	return (
 		<Card>
 			<CardHeader>

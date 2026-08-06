@@ -6,7 +6,8 @@
 	"exports": {
 		".": "./db/schema/index.ts",
 		"./db": "./db/schema/index.ts",
-		"./db/migrations": "./db/migrations.ts"
+		"./db/migrations": "./db/migrations.ts",
+		"./catalog": "./catalog/index.ts"
 	},
 	"scripts": {
 		"tsp:compile": "tsp compile wire/",
@@ -22,7 +23,7 @@
 		"db:check-go": "bun ../../scripts/db/sync-sqlite-migrations.ts --check",
 		"drizzle:generate": "drizzle-kit generate --config=db/schema/drizzle.config.ts",
 		"all": "bun run tsp:compile && bun run codegen:wire && bun run codegen:fixtures && bun run drizzle:generate",
-		"test": "bun test codegen/ && bun run test:rust && bun run test:go"
+		"test": "bun test codegen/ catalog/ && bun run test:rust && bun run test:go"
 	},
 	"dependencies": {
 		"drizzle-orm": "^0.45.2",

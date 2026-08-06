@@ -75,6 +75,10 @@ describe('RunIssueTurn use case', () => {
 		provider: ProviderKind.CLAUDE_CODE,
 		workspacePath: '/tmp/workspace',
 		prompt: 'fix the coupon focus bug',
+		// The turn's KIND, which the mailbox dispatcher reads off the item it is draining. REQUIRED and
+		// undefaulted on the schema for the reason stated there — a missing one must not silently mean
+		// "brief" — so every fixture states it, and the steer cases override.
+		turnKind: MailboxItemKind.WORK,
 		messageId: testId('run-issue-turn', 'entry-1'),
 	})
 
@@ -128,9 +132,39 @@ describe('RunIssueTurn use case', () => {
 		expect(queued?.kind).toBe(MailboxItemKind.ISSUE_RESULT)
 		expect(queued?.targetKind).toBe(MailboxTargetKind.THREAD)
 		expect((queued?.payload as { outcome: { replyText: string } } | undefined)?.outcome.replyText).toBeTruthy()
+	})
 
-		// TEARDOWN — the single-active claim is released.
-		expect(registry.isActive(issueId)).toBe(false)
+	/**
+	 * O SEGUNDO desfecho de uma issue também precisa ser anunciado.
+	 *
+	 * O `dedupKey` do `ISSUE_RESULT` existe para que a REENTREGA de um desfecho não agende um segundo
+	 * anúncio do mesmo turno. Ele era a issue inteira, sob a premissa de que "uma issue conclui uma
+	 * vez" — premissa que a reabertura tornou falsa. O efeito medido em 2026-08-05: a issue da
+	 * dashboard concluiu às 23:57 (anunciada) e de novo às 00:38 (silêncio), e o operador perguntou
+	 * "deu certo? você não me avisou nada". Pior no caso da issue de loops, onde o slot foi queimado
+	 * por um STOP às 21:23 e a conclusão real das 02:38 não teve como falar.
+	 *
+	 * O falsificador é exato: troque a chave de volta para `result:${issueId}` e o segundo
+	 * `claimNext` volta `undefined` — o enqueue bate no `onConflictDoNothing` e devolve `false`, que
+	 * ninguém lê.
+	 */
+	it('a segunda conclusão da MESMA issue também é anunciada — o dedupKey é do turno, não da issue', async () => {
+		const useCase = testBed.resolve(RunIssueTurn)
+		const mailbox = testBed.resolve(MailboxRepository)
+		const issueId = testId('run-issue-turn', 'issue-reopened')
+
+		await useCase.execute({ ...baseInput(issueId), messageId: testId('run-issue-turn', 'entry-first') })
+		const first = await mailbox.claimNext('run-issue-turn-test', 60_000)
+		expect(first?.kind).toBe(MailboxItemKind.ISSUE_RESULT)
+		// Consumido, senão o lease por alvo esconderia o segundo item em vez do dedupKey.
+		await mailbox.complete(first?.id ?? '')
+
+		// A issue é retomada e conclui DE NOVO — turno novo, cursor novo.
+		await useCase.execute({ ...baseInput(issueId), messageId: testId('run-issue-turn', 'entry-second') })
+		const second = await mailbox.claimNext('run-issue-turn-test', 60_000)
+
+		expect(second?.kind).toBe(MailboxItemKind.ISSUE_RESULT)
+		expect(second?.id).not.toBe(first?.id)
 	})
 
 	it('upserts the durable session row from the session id the terminal event reported', async () => {
@@ -195,7 +229,14 @@ describe('RunIssueTurn use case', () => {
 		const request = runner.requests[0]
 		expect(request?.cwd).toBe('/tmp/workspace')
 		expect(request?.messages).toHaveLength(1)
-		expect(request?.messages[0]?.content).toBe('fix the coupon focus bug')
+		// ONE message, and it is the ask RENDERED — the turn's own clock, then a single `<msg>` block
+		// carrying the text verbatim and saying which KIND of message it is. The raw string this used to
+		// be could not say either, which is the whole of what the grammar added here.
+		const content = request?.messages[0]?.content as string
+		expect(content).toContain('fix the coupon focus bug')
+		expect(content.startsWith('agora: ')).toBe(true)
+		expect(content).toContain('tipo="pedido"')
+		expect(content.match(/<msg /g)).toHaveLength(1)
 		expect(request?.outputSchema).toBeUndefined()
 		// `mcp` IS present now, and its presence is the same fact the completion predicate reads from the
 		// other side: `request.mcp` present ⟺ `agent.tools.length > 0` (§4.3 rule 7). The use case cannot
@@ -205,21 +246,6 @@ describe('RunIssueTurn use case', () => {
 		expect(request?.mcp?.allowedTools.length).toBeGreaterThan(0)
 		// `binaryPath` is threaded from detection, never read from an ambient map (§4.7).
 		expect(request?.binaryPath).toBeDefined()
-	})
-
-	it('enforces one session per issue (single-active invariant)', async () => {
-		const useCase = testBed.resolve(RunIssueTurn)
-		const registry = testBed.resolve(AgentStreamRegistry)
-		const issueId = testId('run-issue-turn', 'issue-2')
-
-		registry.beginSession(issueId) // simulate an already-running session
-		try {
-			await expect(useCase.execute(baseInput(issueId))).rejects.toThrow(
-				expect.objectContaining({ name: 'TERMINAL_ALREADY_RUNNING' }) as BaseError,
-			)
-		} finally {
-			registry.endSession(issueId)
-		}
 	})
 
 	it('rejects a provider that is not installed', async () => {
@@ -277,7 +303,14 @@ describe('RunIssueTurn use case', () => {
 		expect((failure as BaseError).message).toContain(ProviderKind.CODEX)
 	})
 
-	it('maps a TRANSPORT stop to a STOPPED outcome + a stop-raised fact (runner overridden last)', async () => {
+	/**
+	 * Turno travado (Task T2, decisão 4): um stop de TRANSPORTE não vira fato na primeira falha —
+	 * `persistOutcome` retorna antes de mintar `AgentRunStopRaisedEvent`, e o use case reporta
+	 * `transportStop` para o dispatcher decidir (retry via `fail()`, ou — esgotadas as tentativas —
+	 * `raiseStopForPoisoned`). Este caso costumava esperar o Stop persistido na hora; agora é o
+	 * `spoke: false` + `transportStop` que carregam a notícia.
+	 */
+	it('maps a TRANSPORT stop to a STOPPED outcome and reports it as unspoken transport, WITHOUT persisting a stop-raised fact', async () => {
 		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(new StoppingRunner()))
 		const useCase = testBed.resolve(RunIssueTurn)
 		const eventRepo = testBed.resolve(DomainEventRepository)
@@ -287,17 +320,14 @@ describe('RunIssueTurn use case', () => {
 
 		expect(out.outcome).toBe(AgentRunOutcome.STOPPED)
 		expect(out.stopId).toBeDefined()
+		expect(out.spoke).toBe(false)
+		expect(out.transportStop).toEqual({ detail: 'provider exited with code 1' })
 		expect(await eventRepo.findByType(AgentRunStartedEvent)).toHaveLength(1)
 		expect(await eventRepo.findByType(AgentRunCompletedEvent)).toHaveLength(0)
 
-		// AC-6.7(c), the parenthetical half: "and the same holds for an agent WITH a tool scope — the
-		// transport stop is minted just the same". This agent's scope is NON-empty, and the stop lands
-		// anyway, tagged INFERRED: the runner OBSERVED it on the process, no tool was involved, and no
-		// model could have declared it (`DeclareStop` refuses the transport kinds outright).
-		const stops = await eventRepo.findByType(AgentRunStopRaisedEvent)
-		expect(stops).toHaveLength(1)
-		expect(stops[0]?.payload.kind).toBe(StopKind.SERVER_ERROR)
-		expect(stops[0]?.payload.source).toBe(FactSource.INFERRED)
+		// AC-4 (Task T2): um stop de transporte NÃO persiste fato na primeira falha — o dispatcher é
+		// quem decide, via retry (`fail()`) ou, esgotadas as tentativas, `raiseStopForPoisoned`.
+		expect(await eventRepo.findByType(AgentRunStopRaisedEvent)).toHaveLength(0)
 	})
 
 	/**
@@ -417,6 +447,7 @@ describe('RunIssueTurn — the agent with an EMPTY tool scope (AC-6.4(c), AC-6.7
 		provider: ProviderKind.CLAUDE_CODE,
 		workspacePath: '/tmp/workspace',
 		prompt: 'fix the coupon focus bug',
+		turnKind: MailboxItemKind.WORK,
 		messageId: testId('run-issue-turn-toolless', 'entry-1'),
 	})
 
@@ -469,7 +500,10 @@ describe('RunIssueTurn — the agent with an EMPTY tool scope (AC-6.4(c), AC-6.7
 
 	/**
 	 * AC-6.7(c) — degradation is VISIBLE, not silent: a run with no tools can still be stopped by the
-	 * TRANSPORT, and that stop is minted whatever the scope is, always INFERRED.
+	 * TRANSPORT. Since Task T2, that visibility no longer means an immediate persisted fact — it means
+	 * the use case REPORTS the transport stop (`spoke: false`, `transportStop`), whatever the tool
+	 * scope, and the dispatcher decides retry vs. `raiseStopForPoisoned`. What stays true regardless of
+	 * scope is that `persistOutcome` never mints anything for it on the first miss.
 	 *
 	 * This is the alínea that keeps "no tools" from meaning "no observations". The runner watches the
 	 * process and the stream; `AUTH_REQUIRED` / `SERVER_ERROR` are its findings, and they never needed a
@@ -478,7 +512,7 @@ describe('RunIssueTurn — the agent with an EMPTY tool scope (AC-6.4(c), AC-6.7
 	 * Declared LAST in this bed because the runner override persists — every earlier test must have
 	 * already observed the ordinary stub.
 	 */
-	it('AC-6.7(c) — still raises a TRANSPORT stop with no tools, marked INFERRED, and mints no completion', async () => {
+	it('AC-6.7(c) — still reports a TRANSPORT stop with no tools, and mints no fact of any kind', async () => {
 		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(new StoppingRunner()))
 		injectToollessAgent()
 		const useCase = testBed.resolve(RunIssueTurn)
@@ -487,11 +521,35 @@ describe('RunIssueTurn — the agent with an EMPTY tool scope (AC-6.4(c), AC-6.7
 
 		const out = await useCase.execute(baseInput(issueId))
 		expect(out.outcome).toBe(AgentRunOutcome.STOPPED)
+		expect(out.spoke).toBe(false)
+		expect(out.transportStop).toEqual({ detail: 'provider exited with code 1' })
 
-		const stops = await eventRepo.findByType(AgentRunStopRaisedEvent)
-		expect(stops).toHaveLength(1)
-		expect(stops[0]?.payload.kind).toBe(StopKind.SERVER_ERROR)
-		expect(stops[0]?.payload.source).toBe(FactSource.INFERRED)
+		expect(await eventRepo.findByType(AgentRunStopRaisedEvent)).toHaveLength(0)
 		expect(await eventRepo.findByType(AgentRunCompletedEvent)).toHaveLength(0)
+	})
+
+	/**
+	 * A METADE SILENCIOSA (Task T2, Step T2.7). `persistOutcome` retorna ANTES de `enqueueResult` para
+	 * um stop de transporte — enfileirar o ISSUE_RESULT ali anunciaria uma falha que a próxima
+	 * tentativa está prestes a desmentir, e persistir o Stop daria ao operador dois sinais para um fato
+	 * só. O falsificador é exato: mova o `if (isTransportStopKind(...)) return` para DEPOIS de
+	 * `enqueueResult` e este teste fica vermelho, porque `claimNext` volta um item.
+	 */
+	it('a transport stop enqueues NO ISSUE_RESULT and persists NO stop-raised fact', async () => {
+		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(new StoppingRunner()))
+		const useCase = testBed.resolve(RunIssueTurn)
+		const eventRepo = testBed.resolve(DomainEventRepository)
+		const mailbox = testBed.resolve(MailboxRepository)
+		const issueId = testId('run-issue-turn', 'issue-transport-silent')
+
+		const out = await useCase.execute(baseInput(issueId))
+
+		expect(out.outcome).toBe(AgentRunOutcome.STOPPED)
+		expect(out.spoke).toBe(false)
+		expect(out.transportStop).toEqual({ detail: 'provider exited with code 1' })
+
+		// NADA foi dito: nem o resultado composto, nem o alarme do Stop.
+		expect(await mailbox.claimNext('run-issue-turn-silent-test', 60_000)).toBeUndefined()
+		expect(await eventRepo.findByType(AgentRunStopRaisedEvent)).toHaveLength(0)
 	})
 })

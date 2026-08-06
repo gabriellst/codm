@@ -467,10 +467,10 @@ func TestConcurrentBoot(t *testing.T) {
 	).Scan(&tables); err != nil {
 		t.Fatalf("count tables: %v", err)
 	}
-	// 25 drizzle tables. No whatsmeow here: that schema is upgraded by the channel module's own
+	// 26 drizzle tables. No whatsmeow here: that schema is upgraded by the channel module's own
 	// store, which this test does not boot.
-	if tables != 25 {
-		t.Fatalf("found %d application tables, want 25", tables)
+	if tables != 26 {
+		t.Fatalf("found %d application tables, want 26", tables)
 	}
 
 	var foreign int

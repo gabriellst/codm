@@ -234,15 +234,20 @@ describe('IngestChannelMessage gate matrix', () => {
 	 * and the transcript row it returns already holds the text — so the item the mailbox was always going
 	 * to write simply carries it. Asserted on the ENQUEUED PAYLOAD, because that is the only place the
 	 * fact crosses out of this context.
+	 *
+	 * The AUTHOR and the INSTANT travel with the text because the prompt renders this as
+	 * `responde: <autor>, <hora> — «…»`: an excerpt attributed to nobody reads as the speaker's own words.
 	 */
 	describe('the mailbox item carries what the message replied to', () => {
+		type QuotedRef = { speaker: string; at: Date; text: string }
+
 		/** The one turn queued for this thread, as the DISPATCHER reads it. Asserts nothing — callers do. */
 		const queuedItem = async () => {
 			const item = await testBed.resolve(MailboxRepository).claimNext('ingest-test', 60_000)
-			return { targetId: item?.targetId, payload: item?.payload as { text: string; quotedAgentText?: string } | undefined }
+			return { targetId: item?.targetId, payload: item?.payload as { text: string; quoted?: QuotedRef } | undefined }
 		}
 
-		it('a reply to the agent hands the turn the QUOTED text', async () => {
+		it('a reply to the agent hands the turn the QUOTED text, as the agent’s own words', async () => {
 			const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
 			// The agent's own line, written the way `RecordOrchestratorReply` writes it: kind SYSTEM.
 			const agentLine = thread.recordEntry({ kind: TranscriptKind.SYSTEM, text: 'rodo a migration agora ou depois do deploy?' })
@@ -262,15 +267,26 @@ describe('IngestChannelMessage gate matrix', () => {
 			const { targetId, payload } = await queuedItem()
 			expect(targetId).toBe(thread.id.value)
 			expect(payload?.text).toBe('depois')
-			expect(payload?.quotedAgentText).toBe('rodo a migration agora ou depois do deploy?')
+			expect(payload?.quoted?.text).toBe('rodo a migration agora ou depois do deploy?')
+			// SECOND PERSON, and the same word the conversation window labels a SYSTEM row with — the two
+			// must agree, or one reply arrives attributed to `you` in the history and to somebody else in
+			// the quote, which is how a model ends up answering its own words as if a human had said them.
+			expect(payload?.quoted?.speaker).toBe('you')
 		})
 
 		/**
-		 * A quote of ANOTHER PARTICIPANT is not the agent being replied to. It does not lower the mention
-		 * gate, and it must not put words in the prompt as though the agent had said them — the field
-		 * names the agent's OWN line, and a contact's line arriving under it would be rendered as `you:`.
+		 * THE QUIETER DEFECT THIS FRENTE FIXED — and the assertion that INVERTED.
+		 *
+		 * A reply to another PERSON used to be dropped: the quote survived only when it had already done
+		 * the gate's job of lowering the mention bar, so it was `repliesToAgent`'s verdict wearing a second
+		 * hat. But a fragment reaches the agent by the tag too, and "fui eu" read against the wrong
+		 * antecedent produces a confident answer to a question nobody asked — strictly worse than reading
+		 * it against none.
+		 *
+		 * The gate is UNCHANGED: quoting a human still grants no invocation, which is why the tag is
+		 * still required here. What changed is only what the turn is TOLD.
 		 */
-		it('a reply to a CONTACT line carries no quoted text', async () => {
+		it('a reply to ANOTHER PERSON travels too, attributed to them', async () => {
 			const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
 			const humanLine = thread.recordEntry({ kind: TranscriptKind.CONTACT, senderExternalId: 'marina', text: 'alguém mexeu no toggle?' })
 			await testBed.resolve(ThreadRepository).save(thread)
@@ -287,7 +303,11 @@ describe('IngestChannelMessage gate matrix', () => {
 			expect(out.invocable).toBe(true)
 			const { targetId, payload } = await queuedItem()
 			expect(targetId).toBe(thread.id.value)
-			expect(payload?.quotedAgentText).toBeUndefined()
+			expect(payload?.quoted?.text).toBe('alguém mexeu no toggle?')
+			// NOT `you`: attributing a contact's line to the agent is the exact misreading this carries the
+			// author to prevent. Absent from the roster, the raw id is the fallback — an ugly name beats a
+			// hole, because losing WHO said something makes a transcript unreadable.
+			expect(payload?.quoted?.speaker).toBe('marina')
 		})
 
 		it('an ordinary message with no quote at all carries none', async () => {
@@ -302,7 +322,7 @@ describe('IngestChannelMessage gate matrix', () => {
 
 			const { targetId, payload } = await queuedItem()
 			expect(targetId).toBe(thread.id.value)
-			expect(payload?.quotedAgentText).toBeUndefined()
+			expect(payload?.quoted).toBeUndefined()
 		})
 	})
 })

@@ -1,13 +1,13 @@
 import { AggregateRoot, z } from '@codm/core-typescript'
 import type Z from 'zod'
-import { LoopSchedule, type LoopScheduleProps } from '../objects/LoopSchedule'
+import { LoopScheduleFieldSchema, loopScheduleOf, type LoopScheduleInput } from '../objects/LoopSchedule'
 import { LoopPromptSchema } from '../schemas'
 
 export const LoopSchema = z.object({
 	ownerId: z.uuid(),
 	threadId: z.uuid(),
 	prompt: LoopPromptSchema,
-	schedule: z.instance(LoopSchedule),
+	schedule: LoopScheduleFieldSchema,
 	enabled: z.boolean(),
 	/**
 	 * When this loop fires next — ABSENT iff it is disabled, and derived from `schedule` in every other
@@ -25,7 +25,9 @@ export type LoopProps = Z.infer<typeof LoopSchema>
  * `Loop` — a recurring prompt the operator schedules into ONE conversation.
  *
  * The product's threads answer when spoken to. A loop is the operator speaking on a timer: "toda
- * segunda às 9h, pergunte ao time como está o deploy". What it delivers is a WHISPER — the same
+ * segunda às 9h, pergunte ao time como está o deploy", or "a cada 15 minutos, veja se o build quebrou".
+ * WHICH of those two a loop is lives entirely in its `schedule` — this class asks it "when is the next
+ * run?" and never learns the answer's shape. What a loop delivers is a WHISPER — the same
  * agents-only line `SteerThread` writes, never a message on the channel — so a loop can never surprise
  * the contact with a message the operator did not read first.
  *
@@ -45,11 +47,11 @@ export class Loop extends AggregateRoot<typeof LoopSchema> {
 
 	/** A loop is born ENABLED and already armed — scheduling something and having to switch it on
 	 *  afterwards is a second step nobody wants. */
-	static create(data: { ownerId: string; threadId: string; prompt: string; schedule: LoopScheduleProps; now: Date }): Loop {
-		// The VO is built HERE, from the primitives the use case carries: an invalid time or an empty
-		// weekday set must be refused before anything is armed, and `nextRunAfter` below needs the
-		// constructed schedule to answer at all.
-		const schedule = new LoopSchedule(data.schedule)
+	static create(data: { ownerId: string; threadId: string; prompt: string; schedule: LoopScheduleInput; now: Date }): Loop {
+		// The VO is built HERE, from the primitives the use case carries: an invalid time, an empty
+		// weekday set or a cadence outside the allowed range must be refused before anything is armed,
+		// and `nextRunAfter` below needs the constructed schedule to answer at all.
+		const schedule = loopScheduleOf(data.schedule)
 		return new Loop({
 			ownerId: data.ownerId,
 			threadId: data.threadId,
@@ -64,12 +66,14 @@ export class Loop extends AggregateRoot<typeof LoopSchema> {
 	 * Edit what is whispered and/or when — the console's "save" on an existing loop.
 	 *
 	 * The next run is RE-DERIVED from the new schedule, never carried over: moving a loop from 18:00 to
-	 * 09:00 must move tonight's run, not take effect only after the pending one has fired. A disabled
-	 * loop stays disabled and stays unarmed — editing is not a way to switch something on by accident.
+	 * 09:00 must move tonight's run, not take effect only after the pending one has fired. The same
+	 * holds across SHAPES — a loop switched from "toda segunda às 09:00" to "a cada 30 minutos" is next
+	 * due half an hour from now, not on Monday. A disabled loop stays disabled and stays unarmed —
+	 * editing is not a way to switch something on by accident.
 	 */
-	reschedule(data: { prompt?: string; schedule?: LoopScheduleProps; now: Date }): void {
+	reschedule(data: { prompt?: string; schedule?: LoopScheduleInput; now: Date }): void {
 		if (data.prompt !== undefined) this.prompt = data.prompt
-		if (data.schedule !== undefined) this.schedule = new LoopSchedule(data.schedule)
+		if (data.schedule !== undefined) this.schedule = loopScheduleOf(data.schedule)
 		if (this.enabled) this.nextRunAt = this.schedule.nextRunAfter(data.now)
 		this.validate()
 	}

@@ -1,13 +1,16 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
-import { TestBed } from '@test/support'
+import { uuidv7 } from 'uuidv7'
+import { TestBed, givenThread, givenWorkspace } from '@test/support'
 import { LoggingService } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
+import { MailboxItemKind, MailboxTargetKind, ProviderKind, AgentModelId } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { ThreadRepository } from '@thread/repositories'
 import { WorkspaceRepository } from '@workspace/repositories'
-import { AgentSessionRepository, MailboxRepository } from '../../repositories'
-import { DrizzleMailboxDispatcher } from './DrizzleMailboxDispatcher'
+import { AgentSessionRepository, MailboxRepository, type ClaimedMailboxItem } from '../../repositories'
+import { RunOrchestratorTurn } from '../../usecases/RunOrchestratorTurn'
+import { RunIssueTurn } from '../../usecases/RunIssueTurn'
+import { DrizzleMailboxDispatcher, type TurnReport } from './DrizzleMailboxDispatcher'
 
 /**
  * T5 — the scheduling guarantees, exercised against the REAL table.
@@ -106,18 +109,14 @@ describe('MailboxRepository — the guarantees the dispatcher is built on', () =
 	})
 
 	/**
-	 * AC-T5.1 — the BOOT SWEEP, which is not a special code path: an item leased by a process that died
-	 * simply has an expired lease, and the ordinary claim picks it up. Simulated with a zero lease,
-	 * because the alternative is sleeping past a real one.
-	 */
-	/**
 	 * The heartbeat — and why it is a CORRECTNESS test, not a latency one.
 	 *
 	 * `leaseMs` is the crash budget. Without renewal it silently doubles as a turn-duration budget, and
 	 * an issue turn is a coding agent that routinely outlives it. The lease then lapses under a HEALTHY
-	 * run, this queue hands the same item out again, and the single-active guard rejects the duplicate
-	 * with `TERMINAL_ALREADY_RUNNING` — burning attempts until the item poisons. Measured 2026-08-04:
-	 * two issues died exactly that way while their original runs were still going.
+	 * run, this queue hands the same item out again, the dispatcher starts a SECOND turn for the target
+	 * while the first is still healthy and running, and the duplicates burn attempts until the item
+	 * poisons. Measured 2026-08-04: two issues died exactly that way while their original runs were
+	 * still going.
 	 *
 	 * The falsifier is exact: delete the `renewLease` call in `runTurn` and this goes RED, because a
 	 * lease that is never pushed forward is indistinguishable from a worker that died.
@@ -154,6 +153,11 @@ describe('MailboxRepository — the guarantees the dispatcher is built on', () =
 		expect(await repo.claimNext('worker-third', 60_000)).toBeUndefined()
 	})
 
+	/**
+	 * AC-T5.1 — the BOOT SWEEP, which is not a special code path: an item leased by a process that died
+	 * simply has an expired lease, and the ordinary claim picks it up. Simulated with a zero lease,
+	 * because the alternative is sleeping past a real one.
+	 */
 	it('AC-T5.1 — an item stranded by a crashed worker is claimable again once its lease expires', async () => {
 		const repo = testBed.resolve(MailboxRepository)
 		await enqueue(repo, THREAD_A, 'a-1')
@@ -244,12 +248,115 @@ describe('DrizzleMailboxDispatcher — the drain loop wakes for work that arrive
 	}
 
 	/**
+	 * A invariante que sobrevive à remoção do guard em memória: dois itens ISSUE para a MESMA issue
+	 * rodam em sequência, nunca ao mesmo tempo, e nenhum dos dois queima tentativa por contenção.
+	 *
+	 * O falsificador é exato: afrouxe o `NOT EXISTS` correlacionado de `claimNext` (o predicado que
+	 * recusa um alvo com lease vivo) e os dois turnos passam a se sobrepor — `concurrentPeak` vira 2 e
+	 * este teste fica vermelho. É a única trava que resta, então é a única que precisa de rede.
+	 */
+	it('dois itens para a MESMA issue rodam em sequência — a exclusão é do lease, e só dele', async () => {
+		const ownerId = 'owner-lease-only'
+		const issueId = uuidv7()
+
+		let inFlight = 0
+		let concurrentPeak = 0
+		const turns: string[] = []
+
+		class SequencingDispatcher extends DrizzleMailboxDispatcher {
+			protected override async runIssueWork(item: ClaimedMailboxItem): Promise<TurnReport> {
+				inFlight += 1
+				concurrentPeak = Math.max(concurrentPeak, inFlight)
+				turns.push(item.id)
+				await new Promise(resolve => setTimeout(resolve, 20))
+				inFlight -= 1
+				return { spoke: true }
+			}
+		}
+
+		const dispatcher = testBed.resolve(SequencingDispatcher)
+		const mailbox = testBed.resolve(MailboxRepository)
+
+		for (const seq of ['first', 'second']) {
+			await mailbox.enqueue({
+				ownerId,
+				targetKind: MailboxTargetKind.ISSUE,
+				targetId: issueId,
+				kind: MailboxItemKind.STEER,
+				payload: { threadId: uuidv7(), key: 'ISS-1', title: 'lease only', text: seq, provider: 'CLAUDE' },
+				dedupKey: `${issueId}:${seq}`,
+			})
+		}
+
+		await dispatcher.start()
+		await new Promise(resolve => setTimeout(resolve, 300))
+		await dispatcher.stop()
+
+		expect(turns).toHaveLength(2)
+		expect(concurrentPeak).toBe(1)
+	})
+
+	/**
+	 * Morrer em silêncio é o defeito, não a morte.
+	 *
+	 * Envenenar é uma decisão defensável: um item que falha sempre não pode bloquear o alvo para
+	 * sempre. O que não é defensável é o item sumir da fila sem que NADA apareça em lugar nenhum — a
+	 * issue fica `WORKING` para sempre e o operador descobre horas depois, perguntando. Medido em
+	 * 2026-08-05: 2h38 nesse estado, com três itens mortos e zero sinal.
+	 *
+	 * O falsificador é exato: remova a chamada a `raiseStopForPoisoned` e este teste fica vermelho,
+	 * porque o item morre igual e o Needs-you continua vazio.
+	 */
+	it('um item envenenado levanta um Stop em vez de sumir calado', async () => {
+		const mailbox = testBed.resolve(MailboxRepository)
+		const threads = testBed.resolve(ThreadRepository)
+		const thread = await givenThread(testBed)
+
+		// A falha é injetada no WORKSPACE, não na thread: `RaiseStop` também lê a thread, e derrubá-la
+		// impediria o próprio Stop de nascer — o teste passaria a medir a injeção, não o comportamento.
+		const workspaces = testBed.resolve(WorkspaceRepository)
+		const realWorkspaceFindById = workspaces.findById.bind(workspaces)
+		workspaces.findById = async () => {
+			throw new Error('boom')
+		}
+
+		const dispatcher = new DrizzleMailboxDispatcher(
+			mailbox,
+			threads,
+			workspaces,
+			testBed.resolve(AgentSessionRepository),
+			testBed.resolve(LoggingService),
+		).bind(testContainer)
+
+		await mailbox.enqueue({
+			ownerId: testBed.ownerId,
+			targetKind: MailboxTargetKind.THREAD,
+			targetId: thread.id.value,
+			kind: MailboxItemKind.OPERATOR_MESSAGE,
+			payload: { entryId: '019e4d24-6524-7041-9e1c-8108180cddae' },
+			dedupKey: 'poison-1',
+		})
+
+		// Uma passada basta: o drain reivindica de novo assim que o `fail` solta o lease, então as três
+		// tentativas se esgotam dentro do mesmo laço.
+		try {
+			await dispatcher.drain()
+
+			expect(await mailbox.hasPending(MailboxTargetKind.THREAD, thread.id.value)).toBe(false)
+			expect(await threads.openStops(thread.id.value)).not.toHaveLength(0)
+		} finally {
+			workspaces.findById = realWorkspaceFindById
+		}
+	})
+
+	/**
 	 * A turn that outlives its lease must keep its own item — the wiring, not the primitive.
 	 *
 	 * The repository-level tests above prove `renewLease` behaves; they say NOTHING about whether the
 	 * dispatcher ever calls it, and that gap is the whole bug. Measured 2026-08-04: two issues poisoned
-	 * because their leases lapsed under healthy runs, `claimNext` re-handed the same items out, and
-	 * `beginSession` rejected each duplicate with `TERMINAL_ALREADY_RUNNING` until attempts ran out.
+	 * because their leases lapsed under healthy runs, `claimNext` re-handed the same items out, the
+	 * dispatcher started a SECOND turn for each target while the first was still healthy and running,
+	 * and the duplicates burnt attempts until the items poisoned.
 	 *
 	 * The falsifier is exact: drop the `renewLease` call from `runTurn` and this goes RED, because a
 	 * lease nobody pushes forward is indistinguishable from a worker that died.
@@ -390,5 +497,255 @@ describe('DrizzleMailboxDispatcher — the drain loop wakes for work that arrive
 			threads.findById = realFindById
 			releaseIssueTurn()
 		}
+	})
+
+	/**
+	 * TRANSPORTE NÃO É FRACASSO DO TRABALHO — é a hora errada de tentar.
+	 *
+	 * Medido em 2026-08-05: o classificador de permissão do provider caiu, o turno morreu sem ter dito
+	 * nada, e o item foi CONSUMIDO como se tivesse sido atendido. O operador ficou 20 minutos sem
+	 * resposta, sem retry e sem sinal — a única recuperação era o lease expirar.
+	 *
+	 * O falsificador é exato: troque o `fail` de volta por `complete` no ramo de transporte e este
+	 * teste fica vermelho, porque `completeCalls` deixa de ser zero.
+	 *
+	 * ### Por que `drain()` e não `start()` + sleep + `stop()`
+	 * Um runner que SEMPRE morre no transporte, sem latência real de provider, esgota `MAX_ATTEMPTS`
+	 * dentro de um ÚNICO `drainLoop`: `fail()` libera o lease e a MESMA volta do laço já reclama o item
+	 * de novo, tudo em microtasks — não há janela de relógio em que o item fique "reclamável mas ainda
+	 * não reclamado pelo próprio dispatcher" para um sleep observar de fora. `drain()` devolve uma
+	 * promise que só resolve quando o laço genuinely para (nada reclamável, nada em voo), o que torna
+	 * "todas as tentativas já rodaram" um fato determinístico em vez de uma corrida contra um timer.
+	 */
+	it('um turno MUDO que morre no transporte é reenfileirado via fail(), nunca consumido via complete()', async () => {
+		const ownerId = uuidv7()
+		const thread = await givenThread(testBed, { ownerId })
+
+		class TransportFailingDispatcher extends DrizzleMailboxDispatcher {
+			protected override async runThreadTurn(): Promise<TurnReport> {
+				return { spoke: false, transportStop: { detail: 'provider unavailable' } }
+			}
+		}
+
+		const dispatcher = testBed.resolve(TransportFailingDispatcher)
+		const mailbox = testBed.resolve(MailboxRepository)
+
+		// AC-2/AC-5, at the call boundary rather than a raw row read: `testBed`'s only sanctioned path
+		// for reading persisted state is `testBed.probe()`, and `PersistenceProbe` does not expose
+		// mailbox columns (it counts rows, it does not read them) — same class of gap
+		// `DeliverChannelMessage.test.ts` and friends hit for `shared_scheduled_commands`.
+		// `MailboxRepository.fail` writing `last_error` verbatim is FROZEN, already-covered infra; what
+		// THIS test owns is proving the dispatcher calls `fail` — never `complete` — for a transport stop,
+		// and hands it the REAL detail string every time. `mailbox` here is the same singleton the
+		// dispatcher's constructor received, so wrapping it observes exactly what `runTurn` calls.
+		const realFail = mailbox.fail.bind(mailbox)
+		const realComplete = mailbox.complete.bind(mailbox)
+		const failCalls: { error: string; maxAttempts: number }[] = []
+		let completeCalls = 0
+		mailbox.fail = async (id, error, maxAttempts, tx) => {
+			failCalls.push({ error, maxAttempts })
+			return realFail(id, error, maxAttempts, tx)
+		}
+		mailbox.complete = async (id, tx) => {
+			completeCalls += 1
+			return realComplete(id, tx)
+		}
+
+		try {
+			await mailbox.enqueue({
+				ownerId,
+				targetKind: MailboxTargetKind.THREAD,
+				targetId: thread.id.value,
+				kind: MailboxItemKind.OPERATOR_MESSAGE,
+				payload: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: uuidv7(), speaker: 'operator', text: 'oi' },
+				dedupKey: `transport:${thread.id.value}`,
+			})
+
+			await dispatcher.drain()
+
+			// NUNCA consumido como se tivesse sido atendido.
+			expect(completeCalls).toBe(0)
+
+			// AC-3: o item foi reenfileirado e reclamado de novo pelo MESMO drain, sem esperar o lease de
+			// 10 minutos — a prova é que houve MAIS de uma tentativa dentro de um `drain()` só.
+			expect(failCalls.length).toBeGreaterThan(1)
+
+			// AC-5 — o detalhe REAL do transporte, não um placeholder genérico, em toda tentativa.
+			for (const call of failCalls) expect(call.error).toBe('provider unavailable')
+		} finally {
+			mailbox.fail = realFail
+			mailbox.complete = realComplete
+		}
+	})
+
+	/**
+	 * A DUPLICATA É PIOR QUE A DEMORA, e esta é a invariante que o caminho feliz não vê.
+	 *
+	 * `RunOrchestratorTurn` transmite por cortes progressivos. Um turno que já entregou um corte e só
+	 * então morreu no transporte JÁ FALOU no grupo real do operador — retentá-lo produz a segunda
+	 * mensagem que o próprio use case documenta como o motivo de nunca retentar turno de thread.
+	 *
+	 * O falsificador é exato: apague o `&& !report.spoke` do ramo de transporte no `runTurn` e este
+	 * teste fica vermelho, enquanto o caso MUDO logo acima continua verde.
+	 */
+	it('um turno que JÁ FALOU e depois morre no transporte é consumido via complete(), nunca reenfileirado via fail()', async () => {
+		const ownerId = uuidv7()
+		const thread = await givenThread(testBed, { ownerId })
+
+		class SpokeThenDiedDispatcher extends DrizzleMailboxDispatcher {
+			protected override async runThreadTurn(): Promise<TurnReport> {
+				return { spoke: true, transportStop: { detail: 'died after speaking' } }
+			}
+		}
+
+		const dispatcher = testBed.resolve(SpokeThenDiedDispatcher)
+		const mailbox = testBed.resolve(MailboxRepository)
+
+		const realFail = mailbox.fail.bind(mailbox)
+		const realComplete = mailbox.complete.bind(mailbox)
+		const failCalls: { error: string; maxAttempts: number }[] = []
+		let completeCalls = 0
+		mailbox.fail = async (id, error, maxAttempts, tx) => {
+			failCalls.push({ error, maxAttempts })
+			return realFail(id, error, maxAttempts, tx)
+		}
+		mailbox.complete = async (id, tx) => {
+			completeCalls += 1
+			return realComplete(id, tx)
+		}
+
+		try {
+			await mailbox.enqueue({
+				ownerId,
+				targetKind: MailboxTargetKind.THREAD,
+				targetId: thread.id.value,
+				kind: MailboxItemKind.OPERATOR_MESSAGE,
+				payload: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: uuidv7(), speaker: 'operator', text: 'oi' },
+				dedupKey: `spoke:${thread.id.value}`,
+			})
+
+			await dispatcher.drain()
+
+			// CONSUMIDO: uma segunda tentativa falaria duas vezes no grupo real.
+			expect(completeCalls).toBe(1)
+			expect(failCalls).toHaveLength(0)
+		} finally {
+			mailbox.fail = realFail
+			mailbox.complete = realComplete
+		}
+	})
+
+	/**
+	 * A ESCOLHA DE MODELO DA THREAD CHEGA AO TURNO — nos DOIS caminhos.
+	 *
+	 * É aqui que a feature inteira liga ou não liga. O eixo do modelo já existia do enum ao argv
+	 * (`RunOrchestratorTurn.model` → `CLAUDE_MODEL_ALIASES` → `--model`), e o que faltava era alguém
+	 * ESCOLHER: este despachante resolvia provider e workspace e chamava o turno sem `model`, caindo em
+	 * `DEFAULT` para toda conversa do produto. O falsificador é exato — apague `model:` de qualquer um
+	 * dos dois `execute` e esta linha fica vermelha, enquanto todo o resto da suíte segue verde.
+	 *
+	 * Os turnos são substituídos por espiões no container: o que está sob teste é o que o despachante
+	 * DECIDE passar, e rodar um CLI de verdade para descobrir isso seria medir outra coisa.
+	 */
+	it('a escolha de modelo da thread chega ao turno do orquestrador E ao turno da issue', async () => {
+		const mailbox = testBed.resolve(MailboxRepository)
+		const threads = testBed.resolve(ThreadRepository)
+		const workspace = await givenWorkspace(testBed, { ownerId: OPERATOR_ID })
+		const thread = await givenThread(testBed, {
+			ownerId: OPERATOR_ID,
+			workspaceId: workspace.id.value,
+			providers: [ProviderKind.CLAUDE_CODE],
+		})
+		thread.configureModel(ProviderKind.CLAUDE_CODE, AgentModelId.OPUS)
+		await threads.save(thread)
+
+		const seen: Record<string, AgentModelId | undefined> = {}
+		const spy = (label: string) => ({
+			bindContainer() {
+				return this
+			},
+			async execute(input: { model?: AgentModelId }) {
+				seen[label] = input.model
+				return { spoke: true }
+			},
+		})
+		const spyContainer = testContainer.createChildContainer()
+		spyContainer.registerInstance(RunOrchestratorTurn as never, spy('thread') as never)
+		spyContainer.registerInstance(RunIssueTurn as never, spy('issue') as never)
+
+		const dispatcher = new DrizzleMailboxDispatcher(
+			mailbox,
+			threads,
+			testBed.resolve(WorkspaceRepository),
+			testBed.resolve(AgentSessionRepository),
+			testBed.resolve(LoggingService),
+		).bind(spyContainer)
+
+		await mailbox.enqueue({
+			ownerId: OPERATOR_ID,
+			targetKind: MailboxTargetKind.THREAD,
+			targetId: thread.id.value,
+			kind: MailboxItemKind.OPERATOR_MESSAGE,
+			payload: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: uuidv7(), speaker: 'operator', text: 'oi' },
+			dedupKey: `model:${thread.id.value}`,
+		})
+		await mailbox.enqueue({
+			ownerId: OPERATOR_ID,
+			targetKind: MailboxTargetKind.ISSUE,
+			targetId: uuidv7(),
+			kind: MailboxItemKind.WORK,
+			payload: { threadId: thread.id.value, key: 'ISS-1', title: 'work', goal: 'faz', provider: ProviderKind.CLAUDE_CODE },
+			dedupKey: `model-issue:${thread.id.value}`,
+		})
+
+		await dispatcher.drain()
+
+		expect(seen.thread).toBe(AgentModelId.OPUS)
+		// A ISSUE HERDA a escolha da conversa que a abriu — ela não tem eixo próprio, de propósito.
+		expect(seen.issue).toBe(AgentModelId.OPUS)
+	})
+
+	/** Sem escolha nenhuma, o turno pede `DEFAULT` — que é a instrução de omitir `--model`. */
+	it('uma thread que nunca escolheu modelo manda DEFAULT, não ausência', async () => {
+		const mailbox = testBed.resolve(MailboxRepository)
+		const threads = testBed.resolve(ThreadRepository)
+		const workspace = await givenWorkspace(testBed, { ownerId: OPERATOR_ID })
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID, workspaceId: workspace.id.value })
+
+		let seen: AgentModelId | undefined
+		const spyContainer = testContainer.createChildContainer()
+		spyContainer.registerInstance(
+			RunOrchestratorTurn as never,
+			{
+				bindContainer() {
+					return this
+				},
+				async execute(input: { model?: AgentModelId }) {
+					seen = input.model
+					return { spoke: true }
+				},
+			} as never,
+		)
+
+		const dispatcher = new DrizzleMailboxDispatcher(
+			mailbox,
+			threads,
+			testBed.resolve(WorkspaceRepository),
+			testBed.resolve(AgentSessionRepository),
+			testBed.resolve(LoggingService),
+		).bind(spyContainer)
+
+		await mailbox.enqueue({
+			ownerId: OPERATOR_ID,
+			targetKind: MailboxTargetKind.THREAD,
+			targetId: thread.id.value,
+			kind: MailboxItemKind.OPERATOR_MESSAGE,
+			payload: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: uuidv7(), speaker: 'operator', text: 'oi' },
+			dedupKey: `default:${thread.id.value}`,
+		})
+
+		await dispatcher.drain()
+
+		expect(seen).toBe(AgentModelId.DEFAULT)
 	})
 })

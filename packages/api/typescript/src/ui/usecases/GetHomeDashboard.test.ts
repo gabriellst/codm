@@ -1,8 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenIssue, givenThread, givenWorkspace } from '@test/support'
-import { IssueStatus, ThreadStatus } from '@codm/contracts-typescript/wire/enums'
+import { IssueStatus, ThreadStatus, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
+import type { Thread } from '@thread/entities/Thread'
 import { ThreadRepository } from '@thread/repositories'
 import { GetHomeDashboard } from './GetHomeDashboard'
 
@@ -85,5 +86,158 @@ describe('GetHomeDashboard — threads vs activeSessions', () => {
 		expect(dashboard.threads.find(t => t.threadId === thread.id.value)?.status).toBe(ThreadStatus.PAUSED)
 		// Paused is not "active" — the operator asked for silence.
 		expect(dashboard.activeSessions.map(t => t.threadId)).not.toContain(thread.id.value)
+	})
+})
+
+/**
+ * THE BUG THE FOUNDER SAW: "Resposta mediana — 0s", every day, on a console with real conversations in
+ * it. `today.medianResponseSeconds` was the literal `0` in the return object; nothing on the read path
+ * had ever looked at a clock.
+ *
+ * FALSIFIER for the whole block: put `medianResponseSeconds: 0` back and every test below goes red.
+ * None of them can pass on a constant, because each asserts a DIFFERENT number off different timings.
+ */
+describe('GetHomeDashboard — today.medianResponseSeconds', () => {
+	let testBed: TestBed
+	let testContainer: DependencyContainer
+
+	beforeAll(async () => {
+		testContainer = container.createChildContainer()
+		testBed = await TestBed.create('integration', { testContainer, ownerId: OPERATOR_ID })
+	})
+	beforeEach(async () => {
+		await testBed.reset()
+	})
+	afterAll(async () => {
+		await testBed.destroy()
+	})
+
+	/** Today at a fixed hour, so a suite run at 23:59 cannot push a seeded line into tomorrow. */
+	const todayAt = (minutesPastNoon: number) => new Date(new Date().setHours(12, 0, 0, 0) + minutesPastNoon * 60_000)
+
+	/** Seeds a transcript through the aggregate that owns it — `recordEntry` + `save`, never a raw insert. */
+	const givenTranscript = async (thread: Thread, lines: { kind: TranscriptKind; at: Date }[]) => {
+		for (const line of lines) {
+			thread.recordEntry({
+				kind: line.kind,
+				text: `${line.kind} line`,
+				senderExternalId: line.kind === TranscriptKind.CONTACT ? 'contact-1' : undefined,
+				at: line.at,
+			})
+		}
+		await testBed.resolve(ThreadRepository).save(thread)
+	}
+
+	const newThread = async () => {
+		const workspace = await givenWorkspace(testBed, { ownerId: OPERATOR_ID })
+		return givenThread(testBed, { ownerId: OPERATOR_ID, workspaceId: workspace.id.value })
+	}
+
+	it('measures the wait from the inbound message to the reply that answered it', async () => {
+		const thread = await newThread()
+		await givenTranscript(thread, [
+			{ kind: TranscriptKind.CONTACT, at: todayAt(0) },
+			{ kind: TranscriptKind.SYSTEM, at: todayAt(2) },
+		])
+
+		const dashboard = await testBed.resolve(GetHomeDashboard).execute({ ownerId: OPERATOR_ID })
+
+		expect(dashboard.today.medianResponseSeconds).toBe(120)
+	})
+
+	/**
+	 * THE MEDIAN, not the mean — with waits of 60/120/1800 the average is 660s, a number no conversation
+	 * in the set actually took. Three samples with a lopsided tail is the smallest shape that tells the
+	 * two apart.
+	 */
+	it('reports the median of the day, so one conversation left hanging cannot move the number', async () => {
+		for (const [start, reply] of [
+			[0, 1],
+			[10, 12],
+			[20, 50],
+		]) {
+			const thread = await newThread()
+			await givenTranscript(thread, [
+				{ kind: TranscriptKind.CONTACT, at: todayAt(start!) },
+				{ kind: TranscriptKind.SYSTEM, at: todayAt(reply!) },
+			])
+		}
+
+		const dashboard = await testBed.resolve(GetHomeDashboard).execute({ ownerId: OPERATOR_ID })
+
+		expect(dashboard.today.medianResponseSeconds).toBe(120)
+	})
+
+	/**
+	 * A contact who writes four lines in a row waited from the FIRST one. Pairing the reply with the last
+	 * line instead would report 60s here — a real answer measured as if the earlier three minutes hadn't
+	 * happened.
+	 */
+	it('a burst of inbound lines is ONE wait, timed from the first of them', async () => {
+		const thread = await newThread()
+		await givenTranscript(thread, [
+			{ kind: TranscriptKind.CONTACT, at: todayAt(0) },
+			{ kind: TranscriptKind.CONTACT, at: todayAt(1) },
+			{ kind: TranscriptKind.CONTACT, at: todayAt(3) },
+			{ kind: TranscriptKind.SYSTEM, at: todayAt(4) },
+		])
+
+		const dashboard = await testBed.resolve(GetHomeDashboard).execute({ ownerId: OPERATOR_ID })
+
+		expect(dashboard.today.medianResponseSeconds).toBe(240)
+	})
+
+	/**
+	 * `WHISPER` is an in-app steer the contact never sees. Letting it stop the clock would report the
+	 * operator talking to the agent as if the contact had been answered.
+	 */
+	it('an in-app whisper does not answer the contact — only what reaches the channel stops the clock', async () => {
+		const thread = await newThread()
+		await givenTranscript(thread, [
+			{ kind: TranscriptKind.CONTACT, at: todayAt(0) },
+			{ kind: TranscriptKind.WHISPER, at: todayAt(1) },
+			{ kind: TranscriptKind.SYSTEM, at: todayAt(5) },
+		])
+
+		const dashboard = await testBed.resolve(GetHomeDashboard).execute({ ownerId: OPERATOR_ID })
+
+		expect(dashboard.today.medianResponseSeconds).toBe(300)
+	})
+
+	/** The operator answering by hand from the console is still an answer the contact received. */
+	it('counts a DIRECT reply from the operator, not just the agent', async () => {
+		const thread = await newThread()
+		await givenTranscript(thread, [
+			{ kind: TranscriptKind.CONTACT, at: todayAt(0) },
+			{ kind: TranscriptKind.DIRECT, at: todayAt(3) },
+		])
+
+		const dashboard = await testBed.resolve(GetHomeDashboard).execute({ ownerId: OPERATOR_ID })
+
+		expect(dashboard.today.medianResponseSeconds).toBe(180)
+	})
+
+	/** An unanswered inbound has no wait to report yet — it must not be counted as an instant reply. */
+	it('an inbound nobody has answered contributes nothing', async () => {
+		const thread = await newThread()
+		await givenTranscript(thread, [{ kind: TranscriptKind.CONTACT, at: todayAt(0) }])
+
+		const dashboard = await testBed.resolve(GetHomeDashboard).execute({ ownerId: OPERATOR_ID })
+
+		expect(dashboard.today.medianResponseSeconds).toBe(0)
+	})
+
+	/** Yesterday's conversation is not today's number — the window matches the two counters beside it. */
+	it('ignores waits from before today', async () => {
+		const thread = await newThread()
+		const yesterdayAt = (minutes: number) => new Date(todayAt(minutes).getTime() - 24 * 60 * 60_000)
+		await givenTranscript(thread, [
+			{ kind: TranscriptKind.CONTACT, at: yesterdayAt(0) },
+			{ kind: TranscriptKind.SYSTEM, at: yesterdayAt(9) },
+		])
+
+		const dashboard = await testBed.resolve(GetHomeDashboard).execute({ ownerId: OPERATOR_ID })
+
+		expect(dashboard.today.medianResponseSeconds).toBe(0)
 	})
 })

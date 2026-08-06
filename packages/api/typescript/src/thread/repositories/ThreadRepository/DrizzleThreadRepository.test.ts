@@ -3,7 +3,7 @@ import { container, type DependencyContainer } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
 import { threads, transcriptEntries, stops } from '@codm/contracts/db'
 import { DrizzleClient, DrizzleDatabaseDriver } from '@codm/core-typescript'
-import { TranscriptKind, StopKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
+import { TranscriptKind, StopKind, StopResolution, ProviderKind, AgentModelId } from '@codm/contracts-typescript/wire/enums'
 import { TestBed, givenThread } from '@test/support'
 import { OPERATOR_ID } from '@auth/operator'
 import { ThreadRepository } from './ThreadRepository'
@@ -163,5 +163,37 @@ describe('DrizzleThreadRepository — the thread row and its transcript entries 
 		).rejects.toThrow('rollback')
 
 		expect(await repo.openStops(thread.id.value)).toHaveLength(0)
+	})
+
+	/**
+	 * The per-provider model map survives the round trip in the SHAPE the aggregate keeps it in.
+	 *
+	 * The falsifier is the second assertion, not the first: a mapper that wrote `DEFAULT` instead of
+	 * dropping the key would still read back a thread whose `modelFor` answers `DEFAULT` — the bug is
+	 * invisible from the domain side and only the ROW shows it. So the row is read directly.
+	 */
+	it('persists the per-provider model map, and a cleared choice leaves no key behind', async () => {
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID, providers: [ProviderKind.CLAUDE_CODE] })
+
+		thread.configureModel(ProviderKind.CLAUDE_CODE, AgentModelId.OPUS)
+		await repo.save(thread)
+
+		expect((await repo.findById(thread.id.value))!.modelFor(ProviderKind.CLAUDE_CODE)).toBe(AgentModelId.OPUS)
+
+		const reloaded = (await repo.findById(thread.id.value))!
+		reloaded.configureModel(ProviderKind.CLAUDE_CODE, AgentModelId.DEFAULT)
+		await repo.save(reloaded)
+
+		const [row] = await db.select().from(threads).where(eq(threads.id, thread.id.value))
+		expect(row!.modelByProvider).toEqual({})
+	})
+
+	/**
+	 * A thread written before migration 0012 backfills to `'{}'` — it must LOAD, not throw. The column
+	 * is `NOT NULL DEFAULT '{}'` precisely so this is the only legacy shape there is.
+	 */
+	it('loads a thread that never chose a model', async () => {
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+		expect((await repo.findById(thread.id.value))!.modelByProvider).toEqual({})
 	})
 })

@@ -79,19 +79,25 @@ func (e AgentStopReason) Valid() bool {
 
 // Defines values for ArtifactKind.
 const (
+	ArtifactKindAUDIO ArtifactKind = "AUDIO"
 	ArtifactKindFILE  ArtifactKind = "FILE"
 	ArtifactKindIMAGE ArtifactKind = "IMAGE"
 	ArtifactKindLINK  ArtifactKind = "LINK"
+	ArtifactKindVIDEO ArtifactKind = "VIDEO"
 )
 
 // Valid indicates whether the value is a known member of the ArtifactKind enum.
 func (e ArtifactKind) Valid() bool {
 	switch e {
+	case ArtifactKindAUDIO:
+		return true
 	case ArtifactKindFILE:
 		return true
 	case ArtifactKindIMAGE:
 		return true
 	case ArtifactKindLINK:
+		return true
+	case ArtifactKindVIDEO:
 		return true
 	default:
 		return false
@@ -884,6 +890,24 @@ func (e LogLevel) Valid() bool {
 	case LogLevelInfo:
 		return true
 	case LogLevelWarn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LoopScheduleKind.
+const (
+	LoopScheduleKindDAILY    LoopScheduleKind = "DAILY"
+	LoopScheduleKindINTERVAL LoopScheduleKind = "INTERVAL"
+)
+
+// Valid indicates whether the value is a known member of the LoopScheduleKind enum.
+func (e LoopScheduleKind) Valid() bool {
+	switch e {
+	case LoopScheduleKindDAILY:
+		return true
+	case LoopScheduleKindINTERVAL:
 		return true
 	default:
 		return false
@@ -3719,6 +3743,9 @@ type LogoutChannelOutput struct {
 	Id    string `json:"id"`
 	State string `json:"state"`
 }
+
+// LoopScheduleKind defines model for LoopScheduleKind.
+type LoopScheduleKind string
 
 // MailboxItemKind defines model for MailboxItemKind.
 type MailboxItemKind string

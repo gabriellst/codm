@@ -21,15 +21,19 @@ export const updateThreadLoop200Schema = z.object({
 
 export const updateThreadLoopMutationRequestSchema = z.object({
     "prompt": z.string().min(1).max(2000),
-"schedule": z.object({
-    "timeOfDay": z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+"schedule": z.union([z.object({
+    "kind": z.enum(["DAILY"]),
+"timeOfDay": z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
 get "weekdays"(){
                 return z.array(dayOfWeekSchema).min(1)
               },
 get "timezone"(){
                 return timezoneSchema
               }
-    })
+    }), z.object({
+    "kind": z.enum(["INTERVAL"]),
+"everyMinutes": z.int().min(1).max(1440)
+    })])
     })
 
 export const updateThreadLoopMutationResponseSchema = z.lazy(() => updateThreadLoop200Schema)

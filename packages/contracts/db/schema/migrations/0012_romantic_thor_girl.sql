@@ -1,0 +1,1 @@
+ALTER TABLE `thread_threads` ADD `model_by_provider` text DEFAULT '{}' NOT NULL;

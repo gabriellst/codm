@@ -1,4 +1,5 @@
 import { injectable } from 'tsyringe-neo'
+import { MailboxItemKind } from '@codm/contracts-typescript/wire/enums'
 import type Z from 'zod'
 import {
 	operationIdOf,
@@ -8,9 +9,22 @@ import {
 	RecordArtifactController,
 } from '../../mcp/exposure'
 import type { AgentInputEnvelope } from '../../types/AgentInput'
+import { agoraLine, clockOf, HORA_AGORA, renderMsg } from '../grammar'
 import type { IssueWorkInputSchema } from './types'
 
 type IssueWorkInput = Z.output<typeof IssueWorkInputSchema> & AgentInputEnvelope
+
+/**
+ * The `tipo` attribute — the ONE thing this prompt could not say before.
+ *
+ * `MailboxItemKind` is the discriminant; these are how it reads to a human. A brief and an amendment
+ * arrived as the same raw string, so a resumed turn had to guess whether it was being briefed or
+ * corrected, and guessing wrong means starting over on work already half done.
+ */
+const TIPO: Record<IssueWorkInput['turnKind'], string> = {
+	[MailboxItemKind.WORK]: 'pedido',
+	[MailboxItemKind.STEER]: 'steer',
+}
 
 /**
  * The prompt half of `IssueWorkAgent` (§4.8), a stateful builder in the shape of the medscall
@@ -43,9 +57,58 @@ export class IssueWorkPromptBuilder {
 			'Do the work the message asks for in that repository. When you are done, reply with a short ' +
 				'summary the requester will read in a chat message — not a diff, not a transcript.',
 			'',
+			...this.grammar(),
+			'',
 			...this.declarationInstruction(input),
 			...this.operatorInstructions(input),
 		].join('\n')
+	}
+
+	/**
+	 * THE TURN'S MESSAGE — one `<msg>` block, the same grammar the orchestrator reads.
+	 *
+	 * ### Why this method exists at all
+	 * `IssueWorkAgent.buildRequest` used to pass `input.prompt` straight through as the user message,
+	 * which was defensible while a turn's message was a bare string with nothing to say about itself. It
+	 * is not one any more: it has an author, an instant, and — decisively — a KIND, and `buildRequest`
+	 * assembles, it does not render. So the rendering lands here, next to the system half, exactly as
+	 * `OrchestratorPromptBuilder` already splits.
+	 *
+	 * `agora:` opens it for the reason it opens the orchestrator's: a working agent that cannot tell
+	 * whether a steer arrived a minute or a day after the brief cannot judge what has gone stale.
+	 */
+	user(input: IssueWorkInput): string {
+		return [
+			agoraLine(input.now, input.timezone),
+			'',
+			...renderMsg({
+				de: input.speaker,
+				hora: HORA_AGORA,
+				para: 'you',
+				via: input.via,
+				tipo: TIPO[input.turnKind],
+				content: input.prompt,
+			}),
+		].join('\n')
+	}
+
+	/**
+	 * The legend for the ONE block this prompt carries — short, because there is only ever one.
+	 *
+	 * `tipo` is the whole reason it is written down. Everything else in the block is context a model
+	 * infers correctly on its own; "is this the brief or an amendment?" is the question it cannot infer
+	 * and gets catastrophically wrong, because reading a correction as a fresh brief means redoing work
+	 * already done.
+	 */
+	private grammar(): string[] {
+		return [
+			'THE MESSAGE ITSELF arrives as a block. Its attributes are written by this system, not by whoever wrote the text:',
+			`  tipo="${TIPO[MailboxItemKind.WORK]}" — the original request. It is why this issue exists; do it.`,
+			`  tipo="${TIPO[MailboxItemKind.STEER]}" — an amendment to work already under way. Keep what you have done and ` +
+				'fold this in; do not start over, and do not treat it as a new brief.',
+			'  de — who is asking. "operator" is the person who owns the repository; "loop:<schedule>" is a scheduled prompt ' +
+				'firing, which means nobody is sitting there waiting on an answer.',
+		]
 	}
 
 	/**

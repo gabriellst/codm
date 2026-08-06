@@ -16,7 +16,16 @@ import { RecordArtifactController } from '@artifact/controllers'
 // BY NAME as well as through the namespace above, for the prose re-export at the bottom — same shape
 // and same license as `RecordArtifactController` on the line before it. Both lines are covered by the
 // per-file POLICY_EXCEPTIONS entry this module already carries for `<ctx>/controllers`.
-import { ResolveStopController } from '@thread/controllers'
+import {
+	ResolveStopController,
+	ConfigurePromptController,
+	ConfigureModelController,
+	ListThreadLoopsController,
+	CreateThreadLoopController,
+	UpdateThreadLoopController,
+	SetThreadLoopEnabledController,
+	DeleteThreadLoopController,
+} from '@thread/controllers'
 import { wireToolName } from './wire'
 
 /**
@@ -179,4 +188,19 @@ export {
 	// which is the entire reason the prose list exists rather than the prompt builder importing it.
 	ResolveStopController,
 	SteerIssueTurnController,
+	// Named by `standingInstructions()` — the paragraph that lets the operator record a rule for the
+	// conversation without leaving it. Same context and same license as `ResolveStopController` above.
+	ConfigurePromptController,
+	// Named by `modelChoice()` — the paragraph that lets the operator switch which model this
+	// conversation runs on without leaving it. Same context and same license.
+	ConfigureModelController,
+	// Named by `recurringPrompts()` — the paragraph that lets the operator put a prompt on a timer
+	// without leaving the conversation. FIVE rather than one because the operator's first sentence
+	// creates a loop and every sentence after it is about one that already exists, and the READ is what
+	// turns "aquele do deploy" into an id the model can address. Same context, same license.
+	ListThreadLoopsController,
+	CreateThreadLoopController,
+	UpdateThreadLoopController,
+	SetThreadLoopEnabledController,
+	DeleteThreadLoopController,
 }

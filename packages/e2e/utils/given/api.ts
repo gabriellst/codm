@@ -1,7 +1,7 @@
 import type { BrowserContext } from 'playwright'
 import { createClient, type RequestConfig, type ResponseConfig } from '@codm/client-typescript/http'
 
-const API_BASE_URL = process.env.API_URL ?? 'http://localhost:3030'
+const API_BASE_URL = process.env.API_URL ?? 'http://localhost:3130'
 const baseClient = createClient('typescript')
 
 export interface ApiSession {

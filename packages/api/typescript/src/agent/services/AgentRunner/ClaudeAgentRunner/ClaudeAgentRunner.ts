@@ -113,7 +113,10 @@ export interface ClaudeBuildArgsOptions {
  *
  * ### The watchdog is NOT optional
  * It is the backstop for the case above going wrong on some future CLI build, and for a child that
- * simply stops talking. It fires on INACTIVITY, not on total duration — a long tool call is not a hang.
+ * simply stops talking. It fires on INACTIVITY, not on total duration — a long tool call is not a
+ * hang. And inactivity is counted in FRAMES, not bytes: the clock only resets when the codec decodes
+ * at least one frame, so bytes that never close a frame (a retry, a partial message) do not count as
+ * a sign of life.
  * It is also ONLY a backstop: a turn the terminal `result` frame already closed structurally wins over
  * a watchdog that fires afterward (e.g. while the child lingers post-close, measured 17.4s alive with
  * zero further frames in `phase2-smoke/raw/stdin-hold-control.json`). The watchdog exists to bound a
@@ -319,13 +322,14 @@ export class ClaudeAgentRunner extends AgentRunner {
 
 			const iterator = proc.stdout[Symbol.asyncIterator]()
 			let pending: Promise<IteratorResult<Uint8Array | string>> | null = null
+			let deadlineAt = Date.now() + this.inactivityMs
 
 			for (;;) {
 				let timer: ReturnType<typeof setTimeout> | undefined
 				const step = pending ?? iterator.next()
 				pending = step
 				const timeout = new Promise<'timeout'>(resolve => {
-					timer = setTimeout(() => resolve('timeout'), this.inactivityMs)
+					timer = setTimeout(() => resolve('timeout'), Math.max(deadlineAt - Date.now(), 0))
 				})
 				const settled = await Promise.race([step, timeout])
 				clearTimeout(timer)
@@ -341,8 +345,10 @@ export class ClaudeAgentRunner extends AgentRunner {
 				pending = null
 				if (settled.done) break
 
+				let sawFrame = false
 				for (const decoded of codec.push(settled.value)) {
 					for (const frame of decoded.frames) {
+						sawFrame = true
 						if (frame.kind === 'system_init') sessionId = frame.sessionId
 						yield { type: 'frame', frame }
 						const fact = accumulator.apply(frame)
@@ -355,6 +361,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 						if (decoded.terminal.stopReason !== AgentStopReason.TOOL_USE) closeStdin()
 					}
 				}
+				if (sawFrame) deadlineAt = Date.now() + this.inactivityMs
 			}
 
 			for (const decoded of codec.flush()) {

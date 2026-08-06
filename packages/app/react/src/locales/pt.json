@@ -210,10 +210,18 @@
 		"itemsPerPage": "itens por página"
 	},
 	"enums": {
+		"AgentModelId": {
+			"DEFAULT": "Automático",
+			"OPUS": "Opus",
+			"SONNET": "Sonnet",
+			"HAIKU": "Haiku"
+		},
 		"ArtifactKind": {
+			"AUDIO": "Áudio",
 			"FILE": "Arquivo",
 			"IMAGE": "Captura de tela",
-			"LINK": "Deploy de preview"
+			"LINK": "Deploy de preview",
+			"VIDEO": "Vídeo"
 		},
 		"ChannelKind": {
 			"WHATSAPP": "WhatsApp",
@@ -331,6 +339,10 @@
 			"en-US": "English (US)",
 			"pt-BR": "Português (Brasil)"
 		},
+		"LoopScheduleKind": {
+			"DAILY": "Horário fixo",
+			"INTERVAL": "De tempos em tempos"
+		},
 		"NotificationCategory": {
 			"DAILY_DIGEST": "Resumo diário",
 			"FEATURE_ANNOUNCEMENT": "Anúncio de novidade",
@@ -382,6 +394,8 @@
 		"AGENT_RUN_TOKEN_INVALID": "O token da execução do agente está ausente, expirou ou foi revogado. A execução a que pertencia não está mais ativa.",
 		"AGENT_TOOLS_UNSUPPORTED": "Este agente precisa de ferramentas, mas a CLI selecionada não as suporta.",
 		"AGENT_TRANSPORT_STOP_NOT_DECLARABLE": "Esse tipo de parada é observado pelo runtime e não pode ser declarado pelo agente.",
+		"ARTIFACT_NOT_FOUND": "Artefato não encontrado, ou o arquivo dele não está mais no disco.",
+		"ARTIFACT_NOT_PREVIEWABLE": "Este artefato é um link — abra a URL em vez de pedir o conteúdo.",
 		"CANNOT_CONVERT_INPUT": "Não foi possível processar a requisição. Revise os dados enviados.",
 		"CHANNEL_NOT_CONNECTED": "O canal não está conectado.",
 		"CLARIFICATION_ALREADY_PENDING": "Já há uma clarificação pendente para este remetente.",
@@ -406,6 +420,7 @@
 		"INVALID_ID": "Identificador inválido.",
 		"INVALID_ID_VALUES_LENGTH": "Valores de identificador inválidos.",
 		"INVALID_LANGUAGE": "Idioma inválido. Use uma tag BCP-47 como \"pt-BR\".",
+		"INVALID_LOOP_INTERVAL": "O intervalo do loop precisa ser um número inteiro de minutos, de 1 a 1440.",
 		"INVALID_LOOP_TIME": "O horário do loop precisa estar no formato HH:MM (24 horas).",
 		"INVALID_OUTBOX_PAYLOAD": "Erro interno no processamento de eventos. Tente novamente em instantes.",
 		"INVALID_PHONE": "Número de telefone inválido.",
@@ -423,6 +438,7 @@
 		"LOOP_NOT_FOUND": "Esse loop não existe mais nesta conversa.",
 		"LOOP_PROMPT_TOO_LONG": "O prompt do loop passou do limite de caracteres.",
 		"LOOP_WITHOUT_WEEKDAY": "Escolha pelo menos um dia da semana para o loop se repetir.",
+		"MODEL_NOT_AVAILABLE": "Este agente não oferece esse modelo.",
 		"MISSING_ENVIRONMENT_VARIABLE": "Erro de configuração do servidor. Contate o suporte.",
 		"MISSING_LOG_CONTENT": "Erro interno de logging.",
 		"NETWORK_ERROR": "Erro de rede",
@@ -441,6 +457,7 @@
 		"PATH_NOT_FOUND": "O caminho selecionado não existe.",
 		"PROMPT_TOO_LONG": "O prompt personalizado é longo demais para uma conversa.",
 		"PROVIDER_COMING_SOON": "Este agente ainda não pode ser dirigido. Escolha um que já pode.",
+		"PROVIDER_NOT_BOUND": "Esta conversa não roda esse agente.",
 		"PROVIDER_NOT_DETECTED": "Provedor de agente não detectado.",
 		"QUOTED_ENTRY_NOT_IN_THREAD": "A mensagem citada pertence a outra conversa.",
 		"RATE_LIMITED": "Muitas tentativas. Aguarde um momento e tente novamente.",
@@ -451,7 +468,6 @@
 		"STOP_CRITERION_DISABLED": "Este critério de stop está desativado nas configurações.",
 		"STOP_NOT_FOUND": "Stop não encontrado.",
 		"STOP_NOT_IN_THREAD": "Este stop pertence a outra thread.",
-		"TERMINAL_ALREADY_RUNNING": "Já existe uma sessão de terminal ativa para esta issue.",
 		"TERMINAL_SPAWN_FAILED": "Falha ao iniciar a sessão de terminal.",
 		"THREAD_ALREADY_ATTACHED": "Já existe uma thread para este contato.",
 		"THREAD_ALREADY_DELETED": "Esta conversa já foi apagada.",
@@ -529,6 +545,8 @@
 		"allIssues": "Todas as tarefas",
 		"archive": "Arquivar",
 		"archived": "Arquivadas",
+		"artifactOpenExternally": "Abrir fora do console",
+		"artifactOpenFull": "Ver {{name}} em tamanho cheio",
 		"artifactsEmptyDescription": "Deploys de preview, capturas de tela e arquivos produzidos pelos seus agentes aparecem aqui.",
 		"artifactsEmptyTitle": "Nenhum artefato ainda",
 		"autoArchiveNote": "Issues concluídas são arquivadas automaticamente após 24 horas.",
@@ -538,6 +556,8 @@
 		"back": "Voltar",
 		"boundAgents": "Agentes desta conversa",
 		"boundAgentsComingSoonHint": "Esta conversa está ligada a um agente que esta versão ainda não sabe dirigir, então ela não responde. Apague a conversa e anexe o contato a um agente disponível.",
+		"agentModel": "Modelo",
+		"agentModelRestartHint": "Trocar o modelo recomeça a conversa no agente: ele volta sem o contexto que tinha, a partir da próxima mensagem.",
 		"bufferMessages": "mensagens",
 		"canInvokeToggle": "Pode invocar",
 		"chatEmptyDescription": "Mensagens deste contato e dos seus agentes aparecerão aqui.",
@@ -574,10 +594,14 @@
 			"deleteConfirmDescription": "Este prompt agendado para de ser enviado. O que ele já sussurrou continua no histórico da conversa.",
 			"deleteConfirmTitle": "Apagar este loop?",
 			"edit": "Editar loop",
-			"emptyDescription": "Um loop é um prompt que a CODM sussurra sozinha nesta conversa, no horário e nos dias que você escolher.",
+			"emptyDescription": "Um loop é um prompt que a CODM sussurra sozinha nesta conversa — num horário fixo, nos dias que você escolher, ou de X em X minutos.",
 			"emptyTitle": "Nenhum loop ainda",
 			"enabledToggle": "Ativo",
 			"hint": "Prompts que se repetem sozinhos nesta conversa. Cada disparo chega como um sussurro — só os agentes leem, nunca o contato.",
+			"intervalBadge": "A cada {{minutes}} min",
+			"intervalLabel": "A cada (minutos)",
+			"intervalNote": "De {{min}} a {{max}} minutos.",
+			"kindLabel": "Repetição",
 			"lastFired": "Último: {{when}}",
 			"never": "nunca",
 			"nextRun": "Próximo: {{when}}",

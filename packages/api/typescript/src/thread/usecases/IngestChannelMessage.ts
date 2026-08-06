@@ -4,6 +4,7 @@ import type { Transaction } from '@codm/core-typescript'
 import { MailboxItemKind, MailboxTargetKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { MailboxRepository } from '@agent/repositories'
 import { ThreadRepository } from '../repositories/ThreadRepository'
+import { AGENT_SPEAKER } from '../objects'
 import { MessageIngestedEvent } from '../events'
 import { CUE_ACKNOWLEDGED } from '../utils'
 import { OPERATOR_PARTICIPANT_ID } from '../entities/Thread'
@@ -129,22 +130,35 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 						payload: {
 							kind: MailboxItemKind.OPERATOR_MESSAGE,
 							entryId: entry.entryId,
-							speaker: input.senderExternalId,
+							// The NAME, resolved off the roster — not the raw JID this used to send. The prompt puts
+							// the author in an attribute, and the conversation window has always resolved the same id
+							// to the same name, so sending the JID here made one person appear twice under two
+							// identities in one prompt.
+							speaker: thread.displayNameOf(input.senderExternalId),
 							text: thread.textWithoutMention(input.text),
-							// WHAT THE AGENT IS BEING ANSWERED ABOUT. `repliesToAgent` decided, ten lines up, that
-							// this message may summon the agent without a tag; until now that verdict was spent
-							// entirely on the gate and the quote itself was dropped. So the turn arrived knowing it
-							// had been replied to and not to WHAT — and a reply is usually a fragment ("depois",
-							// "pode") that means nothing without the line it lands on.
+							// WHAT THIS MESSAGE IS ANSWERING — carried for ANY resolved quote, not only the agent's.
 							//
-							// Same predicate, not a second one: the field is present exactly when the gate stood
-							// down, so there is one notion of "this replies to me" rather than two that can drift.
-							// The text costs no read — `quoted` was already resolved above for the gate, and the
-							// transcript row it returned already carries it.
+							// It used to ride on `repliesToAgent`, and that was the gate's verdict wearing a second
+							// hat: quoting the agent lowers the mention gate, so the quote only survived when it had
+							// already done that other job. A reply to ANOTHER PERSON in the room reaches the agent
+							// too (the tag, or a group where everything does) and is exactly as unreadable without
+							// its antecedent — "depois", "o segundo", "pode" mean nothing on their own, and mean
+							// something WRONG against the wrong line.
 							//
-							// NOT run through `textWithoutMention`: a SYSTEM entry is the agent's own reply and
-							// never carries the tag, so stripping would be a no-op that implies otherwise.
-							quotedAgentText: repliesToAgent ? quoted?.text : undefined,
+							// The author and the instant travel with the text because the prompt renders this as
+							// `responde: <autor>, <hora> — «…»`: a quote attributed to nobody reads as the speaker's
+							// own words. It costs no extra read — `quoted` was already resolved above for the gate,
+							// and the row it returned carries both.
+							//
+							// NOT run through `textWithoutMention`: this is somebody's line as the transcript keeps
+							// it, and the excerpt is quoted, not spoken.
+							quoted: quoted
+								? {
+										speaker: quoted.kind === TranscriptKind.SYSTEM ? AGENT_SPEAKER : thread.displayNameOf(quoted.senderExternalId),
+										at: quoted.at,
+										text: quoted.text,
+									}
+								: undefined,
 						},
 						dedupKey: entry.entryId,
 					},

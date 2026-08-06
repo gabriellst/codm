@@ -6,6 +6,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import '@/lib/i18n'
 import { installVirtualLayout, silenceLibraryFlushSyncWarning } from '../../../../../../../tests/support/virtualLayout'
 import { SessionChatSection } from './index'
+import type { Artifact } from '../ArtifactPreview'
 
 /**
  * THE TRANSCRIPT IS WINDOWED — asserted on the SCREEN, not on the primitive.
@@ -74,11 +75,12 @@ describe('SessionChatSection — 1000 mensagens não são 1000 subárvores de DO
 		return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
 	}
 
-	/** Answer the two reads this section mounts; anything else would be a surprise worth failing on. */
-	function seed(entries: ReturnType<typeof transcript>): void {
+	/** Answer the three reads this section mounts; anything else would be a surprise worth failing on. */
+	function seed(entries: ReturnType<typeof transcript>, artifacts: Artifact[] = []): void {
 		fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(async input => {
 			const url = String(input instanceof Request ? input.url : input)
 			if (url.includes('/needs-you')) return json({ stops: [] })
+			if (url.includes('/artifacts')) return json({ artifacts })
 			if (url.includes('/chat')) return json({ composerMode: 'DIRECT', activeStops: [], transcript: entries })
 			throw new Error(`unexpected request: ${url}`)
 		})
@@ -89,8 +91,8 @@ describe('SessionChatSection — 1000 mensagens não são 1000 subárvores de DO
 	 * the virtualizer's measurement pass lands in the third. Inside each the wait is on the CLIENT
 	 * settling rather than on a fixed clock.
 	 */
-	async function render(entries: ReturnType<typeof transcript>): Promise<HTMLElement> {
-		seed(entries)
+	async function render(entries: ReturnType<typeof transcript>, artifacts: Artifact[] = []): Promise<HTMLElement> {
+		seed(entries, artifacts)
 		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 		client = queryClient
 		host = document.createElement('div')
@@ -162,5 +164,49 @@ describe('SessionChatSection — 1000 mensagens não são 1000 subárvores de DO
 
 		expect(el.querySelector('[data-slot="virtual-list"]')).toBeNull()
 		expect(el.querySelector('[data-slot="empty"]')).not.toBeNull()
+	})
+
+	/**
+	 * O ARTEFATO APARECE NA CONVERSA, NO INSTANTE EM QUE FOI PRODUZIDO.
+	 *
+	 * A linha do tempo é composta AQUI (a conversa e os artefatos são duas leituras independentes —
+	 * ver o docblock de `TimelineItem` para por que o backend não as funde), então o que precisa de
+	 * prova é a fusão: a imagem entra ENTRE as duas mensagens cujos horários a cercam, e não no fim
+	 * da lista nem numa aba separada.
+	 */
+	function artifactAt(recordedAt: string, overrides: Partial<Artifact> = {}): Artifact {
+		return {
+			artifactId: `019e4d24-6524-7041-9e1c-9${recordedAt.slice(-11).replace(/\D/g, '')}`.slice(0, 36),
+			kind: 'IMAGE',
+			name: 'shot.png',
+			ref: '/tmp/shot.png',
+			meta: '',
+			recordedAt,
+			...overrides,
+		}
+	}
+
+	function entryAt(id: string, at: string) {
+		return { entryId: `019e4d24-6524-7041-9e1c-${id.padStart(12, '0')}`, kind: 'CONTACT' as const, text: `mensagem ${id}`, at }
+	}
+
+	it('intercala o artefato entre as mensagens, pela hora em que foi gravado', async () => {
+		const entries = [entryAt('1', '2026-08-06T10:00:00.000Z'), entryAt('2', '2026-08-06T12:00:00.000Z')]
+		const el = await render(entries, [artifactAt('2026-08-06T11:00:00.000Z')])
+
+		const rows = [...bubbles(el)]
+		expect(rows).toHaveLength(3)
+		// A do meio é o artefato: é a única linha que carrega uma imagem.
+		expect(rows[1]!.querySelector('img')).not.toBeNull()
+		expect(rows[0]!.textContent).toContain('mensagem 1')
+		expect(rows[2]!.textContent).toContain('mensagem 2')
+	})
+
+	/** Uma conversa sem transcript mas COM artefato não é uma conversa vazia. */
+	it('um artefato sozinho já é uma linha do tempo', async () => {
+		const el = await render(transcript(0), [artifactAt('2026-08-06T11:00:00.000Z')])
+
+		expect(el.querySelector('[data-slot="empty"]')).toBeNull()
+		expect(bubbles(el)).toHaveLength(1)
 	})
 })

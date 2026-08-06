@@ -47,13 +47,15 @@ type ArtifactKind string
 
 const (
 	ArtifactKindIMAGE ArtifactKind = "IMAGE"
+	ArtifactKindAUDIO ArtifactKind = "AUDIO"
+	ArtifactKindVIDEO ArtifactKind = "VIDEO"
 	ArtifactKindFILE ArtifactKind = "FILE"
 	ArtifactKindLINK ArtifactKind = "LINK"
 )
 
 func ParseArtifactKind(s string) (ArtifactKind, error) {
 	switch ArtifactKind(s) {
-	case ArtifactKindIMAGE, ArtifactKindFILE, ArtifactKindLINK:
+	case ArtifactKindIMAGE, ArtifactKindAUDIO, ArtifactKindVIDEO, ArtifactKindFILE, ArtifactKindLINK:
 		return ArtifactKind(s), nil
 	default:
 		return "", fmt.Errorf("invalid ArtifactKind: %q", s)
@@ -392,6 +394,22 @@ func ParseLanguage(s string) (Language, error) {
 		return Language(s), nil
 	default:
 		return "", fmt.Errorf("invalid Language: %q", s)
+	}
+}
+
+type LoopScheduleKind string
+
+const (
+	LoopScheduleKindDAILY LoopScheduleKind = "DAILY"
+	LoopScheduleKindINTERVAL LoopScheduleKind = "INTERVAL"
+)
+
+func ParseLoopScheduleKind(s string) (LoopScheduleKind, error) {
+	switch LoopScheduleKind(s) {
+	case LoopScheduleKindDAILY, LoopScheduleKindINTERVAL:
+		return LoopScheduleKind(s), nil
+	default:
+		return "", fmt.Errorf("invalid LoopScheduleKind: %q", s)
 	}
 }
 

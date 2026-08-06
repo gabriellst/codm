@@ -210,10 +210,18 @@
 		"itemsPerPage": "items per page"
 	},
 	"enums": {
+		"AgentModelId": {
+			"DEFAULT": "Automatic",
+			"OPUS": "Opus",
+			"SONNET": "Sonnet",
+			"HAIKU": "Haiku"
+		},
 		"ArtifactKind": {
+			"AUDIO": "Audio",
 			"FILE": "File",
 			"IMAGE": "Screenshot",
-			"LINK": "Preview deploy"
+			"LINK": "Preview deploy",
+			"VIDEO": "Video"
 		},
 		"ChannelKind": {
 			"WHATSAPP": "WhatsApp",
@@ -331,6 +339,10 @@
 			"en-US": "English (US)",
 			"pt-BR": "Português (Brasil)"
 		},
+		"LoopScheduleKind": {
+			"DAILY": "Fixed time",
+			"INTERVAL": "Every so often"
+		},
 		"NotificationCategory": {
 			"DAILY_DIGEST": "Daily digest",
 			"FEATURE_ANNOUNCEMENT": "Feature announcement",
@@ -382,6 +394,8 @@
 		"AGENT_RUN_TOKEN_INVALID": "The agent run token is missing, expired or was revoked. The run it belonged to is no longer active.",
 		"AGENT_TOOLS_UNSUPPORTED": "This agent needs tools, but the selected CLI does not support them.",
 		"AGENT_TRANSPORT_STOP_NOT_DECLARABLE": "That stop kind is observed by the runtime and cannot be declared by the agent.",
+		"ARTIFACT_NOT_FOUND": "Artifact not found, or its file is no longer on disk.",
+		"ARTIFACT_NOT_PREVIEWABLE": "This artifact is a link — open the URL instead of requesting its content.",
 		"CANNOT_CONVERT_INPUT": "The request could not be processed. Review the submitted data.",
 		"CHANNEL_NOT_CONNECTED": "The channel is not connected.",
 		"CLARIFICATION_ALREADY_PENDING": "A clarification is already pending for this sender.",
@@ -406,6 +420,7 @@
 		"INVALID_ID": "Invalid identifier.",
 		"INVALID_ID_VALUES_LENGTH": "Invalid identifier values.",
 		"INVALID_LANGUAGE": "Invalid language. Use a BCP-47 tag such as \"en-US\".",
+		"INVALID_LOOP_INTERVAL": "The loop's interval must be a whole number of minutes, from 1 to 1440.",
 		"INVALID_LOOP_TIME": "The loop's time must be in HH:MM (24-hour) format.",
 		"INVALID_OUTBOX_PAYLOAD": "Internal event processing error. Try again shortly.",
 		"INVALID_PHONE": "Invalid phone number.",
@@ -423,6 +438,7 @@
 		"LOOP_NOT_FOUND": "That loop no longer exists in this conversation.",
 		"LOOP_PROMPT_TOO_LONG": "The loop's prompt is past the character limit.",
 		"LOOP_WITHOUT_WEEKDAY": "Pick at least one day of the week for the loop to repeat on.",
+		"MODEL_NOT_AVAILABLE": "That agent does not offer that model.",
 		"MISSING_ENVIRONMENT_VARIABLE": "Server configuration error. Contact support.",
 		"MISSING_LOG_CONTENT": "Internal logging error.",
 		"NETWORK_ERROR": "Network error",
@@ -441,6 +457,7 @@
 		"PATH_NOT_FOUND": "The selected path does not exist.",
 		"PROMPT_TOO_LONG": "That custom prompt is too long for one conversation.",
 		"PROVIDER_COMING_SOON": "That agent can't be driven yet. Pick one that can.",
+		"PROVIDER_NOT_BOUND": "This conversation does not run that agent.",
 		"PROVIDER_NOT_DETECTED": "Agent provider not detected.",
 		"QUOTED_ENTRY_NOT_IN_THREAD": "The quoted message belongs to a different conversation.",
 		"RATE_LIMITED": "Too many attempts. Please wait a moment and try again.",
@@ -451,7 +468,6 @@
 		"STOP_CRITERION_DISABLED": "This stop criterion is disabled in settings.",
 		"STOP_NOT_FOUND": "Stop not found.",
 		"STOP_NOT_IN_THREAD": "This stop belongs to a different thread.",
-		"TERMINAL_ALREADY_RUNNING": "A terminal session is already running for this issue.",
 		"TERMINAL_SPAWN_FAILED": "Failed to start the terminal session.",
 		"THREAD_ALREADY_ATTACHED": "A thread is already attached to this contact.",
 		"THREAD_ALREADY_DELETED": "This conversation has already been deleted.",
@@ -529,6 +545,8 @@
 		"allIssues": "All issues",
 		"archive": "Archive",
 		"archived": "Archived",
+		"artifactOpenExternally": "Open outside the console",
+		"artifactOpenFull": "View {{name}} full size",
 		"artifactsEmptyDescription": "Preview deploys, screenshots and files produced by your agents land here.",
 		"artifactsEmptyTitle": "No artifacts yet",
 		"autoArchiveNote": "Completed issues auto-archive after 24 hours.",
@@ -538,6 +556,8 @@
 		"back": "Back",
 		"boundAgents": "Agents on this conversation",
 		"boundAgentsComingSoonHint": "This conversation is bound to an agent this build can't drive yet, so it won't reply. Delete it and re-attach the contact to an available agent.",
+		"agentModel": "Model",
+		"agentModelRestartHint": "Switching the model restarts the conversation on the agent: it comes back without the context it had, from the next message on.",
 		"bufferMessages": "messages",
 		"canInvokeToggle": "Can invoke",
 		"chatEmptyDescription": "Messages from this contact and your agents will appear here.",
@@ -574,10 +594,14 @@
 			"deleteConfirmDescription": "This scheduled prompt stops being sent. Whatever it already whispered stays in the conversation history.",
 			"deleteConfirmTitle": "Delete this loop?",
 			"edit": "Edit loop",
-			"emptyDescription": "A loop is a prompt CODM whispers into this conversation on its own, at the time and on the days you choose.",
+			"emptyDescription": "A loop is a prompt CODM whispers into this conversation on its own — at a fixed time on the days you choose, or every so many minutes.",
 			"emptyTitle": "No loops yet",
 			"enabledToggle": "Active",
 			"hint": "Prompts that repeat on their own in this conversation. Each run arrives as a whisper — only the agents read it, never the contact.",
+			"intervalBadge": "Every {{minutes}} min",
+			"intervalLabel": "Every (minutes)",
+			"intervalNote": "From {{min}} to {{max}} minutes.",
+			"kindLabel": "Repeats",
 			"lastFired": "Last: {{when}}",
 			"never": "never",
 			"nextRun": "Next: {{when}}",

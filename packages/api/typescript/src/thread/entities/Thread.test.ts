@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { BaseError } from '@codm/core-typescript'
-import { ProviderKind, ContactKind, TranscriptKind, StopKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
+import { ProviderKind, AgentModelId, ContactKind, TranscriptKind, StopKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
 import { ThreadStopResolvedEvent } from '../events/ThreadStopResolvedEvent'
 import { CUSTOM_PROMPT_MAX_LENGTH } from '../schemas'
 import { INVOCATION_FRESHNESS_WINDOW_MS, Thread } from './Thread'
@@ -214,7 +214,10 @@ describe('Thread entity', () => {
 	it('canInvoke: the freshness window is INCLUSIVE at exactly 5 minutes, and refuses one ms past it', () => {
 		const t = Thread.create(base)
 		const now = new Date('2026-07-31T12:00:00.000Z')
-		const summon = { senderExternalId: 'operator', text: '@base ship it', now }
+		// A THIRD PARTY, deliberately — not the operator, who is exempt from the window (next test).
+		// Pinning the boundary with the exempt sender would assert nothing: it would return true on
+		// both sides of the tie.
+		const summon = { senderExternalId: 'teammate', text: '@base ship it', now }
 
 		expect(INVOCATION_FRESHNESS_WINDOW_MS).toBe(5 * 60 * 1000)
 
@@ -228,6 +231,49 @@ describe('Thread entity', () => {
 	})
 
 	/**
+	 * THE OPERATOR IS NOT A BACKLOG.
+	 *
+	 * Measured 2026-08-05: the gateway lost its socket and, on reconnect, replayed eleven minutes of
+	 * traffic with every `observedAt` collapsed onto one instant. Among it was the operator's own
+	 * "Consegue mergear esse pr na main?", sent 650s earlier — 350s past the window. It was
+	 * transcribed like any other message and never got a turn, so it sat in the chat looking
+	 * delivered while nothing answered it.
+	 *
+	 * The window exists to stop a REPLAY OF CONVERSATION from scheduling a turn per message — the
+	 * constant's own note names the fear exactly: "the agent answers an hour of conversation in one
+	 * burst, in someone's real chat". The operator's own line is not conversation to react to, it is
+	 * the INSTRUCTION, and a late instruction is still the instruction. Third parties keep the window,
+	 * which is where the flood actually comes from.
+	 *
+	 * Why the rule is not "the latest operator message": at ingest time nothing knows it is the
+	 * latest. A replay arrives oldest-first, so each message in turn IS the newest the thread has
+	 * seen, and "latest" would admit all of them — identical behaviour to this rule, with a lookup
+	 * bolted on to disguise it.
+	 */
+	it('canInvoke: the operator is exempt from the freshness window; a third party is not', () => {
+		const t = Thread.create(base)
+		const now = new Date('2026-07-31T12:00:00.000Z')
+		// 11 minutes — the measured 2026-08-05 gap, rounded up. More than twice the window.
+		const longStale = new Date(now.getTime() - 11 * 60 * 1000)
+
+		expect(t.canInvoke({ senderExternalId: 'operator', text: '@base ship it', sentAt: longStale, now })).toBe(true)
+		expect(t.canInvoke({ senderExternalId: 'teammate', text: '@base ship it', sentAt: longStale, now })).toBe(false)
+	})
+
+	/**
+	 * The exemption is about FRESHNESS ONLY — it does not make the operator omnipotent. A paused
+	 * thread still refuses them, because pause is a decision the operator themselves made and a stale
+	 * message must not sneak past it.
+	 */
+	it('canInvoke: the operator exemption does not survive a paused thread', () => {
+		const t = Thread.create(base)
+		t.pause()
+		const now = new Date('2026-07-31T12:00:00.000Z')
+
+		expect(t.canInvoke({ senderExternalId: 'operator', text: '@base ship it', sentAt: now, now })).toBe(false)
+	})
+
+	/**
 	 * Clock skew on the PLATFORM side must not mute anybody. A `sentAt` in the future yields a negative
 	 * age, and `age <= window` admits it — deliberately, and asserted so nobody "fixes" it into a
 	 * `Math.abs` that would start dropping messages from a phone whose clock runs fast.
@@ -238,6 +284,112 @@ describe('Thread entity', () => {
 		const sentAt = new Date(now.getTime() + 60 * 1000) // the phone thinks it is one minute later
 
 		expect(t.canInvoke({ senderExternalId: 'operator', text: '@base ship it', sentAt, now })).toBe(true)
+	})
+})
+
+/**
+ * The per-provider model choice. Pure entity, no DB.
+ *
+ * THE FALSIFIER of the whole feature is the first two cases: `DEFAULT` must not be STORED, because a
+ * stored `DEFAULT` is a second spelling of "nothing chosen" that the dispatcher, the mapper and the
+ * settings DTO would each have to normalize on their own — and the first one to forget hands
+ * `--model DEFAULT` to a binary with no such alias. Delete the collapse in `configureModel` and the
+ * `erases` case goes red on the persisted shape, not merely on the read.
+ */
+describe('Thread.configureModel / modelFor — one model per provider, absence IS the default', () => {
+	const bothProviders = { ...base, providers: [ProviderKind.CLAUDE_CODE, ProviderKind.CODEX] }
+
+	it('starts with no choice at all, and reads back as DEFAULT', () => {
+		const t = Thread.create(base)
+		expect(t.modelByProvider).toEqual({})
+		expect(t.modelFor(ProviderKind.CLAUDE_CODE)).toBe(AgentModelId.DEFAULT)
+	})
+
+	it('records a choice and reads it back', () => {
+		const t = Thread.create(base)
+		t.configureModel(ProviderKind.CLAUDE_CODE, AgentModelId.OPUS)
+		expect(t.modelFor(ProviderKind.CLAUDE_CODE)).toBe(AgentModelId.OPUS)
+		expect(t.modelByProvider).toEqual({ [ProviderKind.CLAUDE_CODE]: AgentModelId.OPUS })
+	})
+
+	it('erases the key on DEFAULT rather than storing it — one spelling of "nothing chosen"', () => {
+		const t = Thread.create(base)
+		t.configureModel(ProviderKind.CLAUDE_CODE, AgentModelId.OPUS)
+		t.configureModel(ProviderKind.CLAUDE_CODE, AgentModelId.DEFAULT)
+
+		expect(t.modelByProvider).toEqual({})
+		expect(t.modelFor(ProviderKind.CLAUDE_CODE)).toBe(AgentModelId.DEFAULT)
+	})
+
+	it('keeps the choices of the OTHER providers when one changes', () => {
+		const t = Thread.create(bothProviders)
+		t.configureModel(ProviderKind.CLAUDE_CODE, AgentModelId.SONNET)
+		t.configureModel(ProviderKind.CLAUDE_CODE, AgentModelId.HAIKU)
+
+		expect(t.modelFor(ProviderKind.CLAUDE_CODE)).toBe(AgentModelId.HAIKU)
+		// CODEX offers nothing, so it was never choosable — and it still reads as the default.
+		expect(t.modelFor(ProviderKind.CODEX)).toBe(AgentModelId.DEFAULT)
+	})
+
+	it('refuses a provider this conversation does not run (PROVIDER_NOT_BOUND), leaving the map untouched', () => {
+		const t = Thread.create(base)
+		expect(() => t.configureModel(ProviderKind.CODEX, AgentModelId.OPUS)).toThrow(BaseError)
+		expect(t.modelByProvider).toEqual({})
+	})
+
+	it('refuses a model the provider does not offer (MODEL_NOT_AVAILABLE), leaving the map untouched', () => {
+		const t = Thread.create(bothProviders)
+		t.configureModel(ProviderKind.CLAUDE_CODE, AgentModelId.OPUS)
+		// CODEX is BOUND here — so this can only be refused by the catalog lookup, not by the bound check.
+		expect(() => t.configureModel(ProviderKind.CODEX, AgentModelId.OPUS)).toThrow(BaseError)
+		expect(t.modelByProvider).toEqual({ [ProviderKind.CLAUDE_CODE]: AgentModelId.OPUS })
+	})
+
+	it('names the two refusals apart — the codes are what the console renders', () => {
+		const t = Thread.create(bothProviders)
+		expect(() => t.configureModel(ProviderKind.OPENCODE, AgentModelId.OPUS)).toThrow(
+			expect.objectContaining({ name: 'PROVIDER_NOT_BOUND' }),
+		)
+		expect(() => t.configureModel(ProviderKind.CODEX, AgentModelId.OPUS)).toThrow(expect.objectContaining({ name: 'MODEL_NOT_AVAILABLE' }))
+	})
+
+	/**
+	 * `revive()` keeps the choice — the wizard never asks for a model, so clearing it would destroy a
+	 * setting with nothing in the flow that hints it happened (the same argument `customPrompt` makes).
+	 * But it keeps it NARROWED: re-attaching with a different CLI must not leave behind a choice for a
+	 * provider this conversation no longer runs, which is exactly what `PROVIDER_NOT_BOUND` forbids on
+	 * the write path. Without the filter, that invariant would be true of writes and false of states.
+	 */
+	it('revive keeps the choices of providers still bound and drops the rest', () => {
+		const t = Thread.create(bothProviders)
+		t.configureModel(ProviderKind.CLAUDE_CODE, AgentModelId.OPUS)
+		t.delete()
+
+		t.revive({
+			contactRef: base.contactRef,
+			workspaceId: base.workspaceId,
+			providers: [ProviderKind.CODEX],
+			mentionTag: '@base',
+			participants: base.participants,
+		})
+
+		expect(t.modelByProvider).toEqual({})
+	})
+
+	it('revive keeps a choice whose provider is re-chosen', () => {
+		const t = Thread.create(base)
+		t.configureModel(ProviderKind.CLAUDE_CODE, AgentModelId.HAIKU)
+		t.delete()
+
+		t.revive({
+			contactRef: base.contactRef,
+			workspaceId: base.workspaceId,
+			providers: [ProviderKind.CLAUDE_CODE],
+			mentionTag: '@base',
+			participants: base.participants,
+		})
+
+		expect(t.modelFor(ProviderKind.CLAUDE_CODE)).toBe(AgentModelId.HAIKU)
 	})
 })
 

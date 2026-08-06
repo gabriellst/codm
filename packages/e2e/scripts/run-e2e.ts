@@ -60,8 +60,16 @@ async function main() {
 	// boot (idempotent). A fresh dir per run = a fresh database with no cross-run state.
 	const dataDir = mkdtempSync(join(tmpdir(), 'codm-e2e-data-'))
 
-	const apiPort = process.env.API_PORT ?? '3030'
-	const vitePort = process.env.VITE_PORT ?? '5173'
+	// E2E-OWNED PORT RANGE — deliberately NOT the dev/production ports (3030/5173), and this is a
+	// lesson written in blood, 2026-08-06: the pre-kill below sends kill -9 to whatever holds these
+	// ports, on the assumption that a listener here is a stale watch-mode orphan. When the defaults
+	// were the production ports, an issue agent running `bun e2e` from its worktree killed the LIVE
+	// daemon + vite — its own grandparent — taking down the whole app and every in-flight turn with
+	// it (and the resumed turn re-ran e2e on relaunch, murdering the app in a loop). With a port
+	// range only e2e ever binds, the pre-kill can only ever hit e2e's own orphans — correct by
+	// construction, no "is it stale or is it production?" heuristic.
+	const apiPort = process.env.E2E_API_PORT ?? '3130'
+	const vitePort = process.env.E2E_VITE_PORT ?? '5273'
 	const nodeBin = resolveNodeBin()
 
 	// Build the daemon as a Node bundle BEFORE Playwright boots it (the webServer runs
@@ -88,6 +96,12 @@ async function main() {
 		API_PORT: apiPort,
 		PORT: apiPort,
 		VITE_PORT: vitePort,
+		// Pin the api URL for BOTH consumers that would otherwise fall back to the root .env's
+		// production address (localhost:3030): the node-side given helpers read API_URL, and the
+		// BROWSER reads VITE_API_URL (vite gives process-env precedence over .env files). Without
+		// these, moving the api off :3030 would silently point e2e specs at the production daemon.
+		API_URL: `http://127.0.0.1:${apiPort}`,
+		VITE_API_URL: `http://127.0.0.1:${apiPort}`,
 		// The node binary the playwright webServer uses to boot `dist/server.js` (nvm-resolved).
 		CODM_NODE_BIN: nodeBin,
 		// One host runs the whole suite — per-IP auth windows would 429 legitimate specs.

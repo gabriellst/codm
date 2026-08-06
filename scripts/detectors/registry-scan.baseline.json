@@ -22,6 +22,7 @@
 	"packages/api/typescript/core/src/utils/schema/InputSchema.ts::universal#ts-expect-error",
 	"packages/api/typescript/core/src/utils/schema/Transforms.ts::universal#as-any",
 	"packages/api/typescript/core/src/utils/schema/index.ts::universal#as-any",
+	"packages/api/typescript/src/artifact/usecases/GetArtifactContent.ts::usecase#bp-01",
 	"packages/api/typescript/src/artifact/usecases/ListArtifacts.ts::usecase#bp-01",
 	"packages/api/typescript/src/index.ts::universal#as-any",
 	"packages/api/typescript/src/issue/repositories/StopPolicyConfigRepository/StopPolicyConfigRepository.ts::repository#bp-03",

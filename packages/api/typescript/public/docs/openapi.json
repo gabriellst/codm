@@ -2090,11 +2090,78 @@
         ]
       }
     },
+    "/v1/threads/{threadId}/model": {
+      "put": {
+        "tags": [
+          "thread",
+          "mcp:system",
+          "mcp:orchestration"
+        ],
+        "description": "Choose which model this conversation asks one of its agent CLIs for. DEFAULT means let the CLI pick (C16)",
+        "operationId": "ConfigureModel",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "$ref": "#/components/schemas/ProviderKind"
+                  },
+                  "model": {
+                    "$ref": "#/components/schemas/AgentModelId"
+                  }
+                },
+                "required": [
+                  "provider",
+                  "model"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "provider": "CLAUDE_CODE",
+                    "model": "OPUS"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Choose which model this conversation asks one of its agent CLIs for. DEFAULT means let the CLI pick (C16)",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "x-mcp-scope": [
+          "system",
+          "orchestration"
+        ]
+      }
+    },
     "/v1/threads/{threadId}/prompt": {
       "put": {
         "tags": [
           "thread",
-          "mcp:system"
+          "mcp:system",
+          "mcp:orchestration"
         ],
         "description": "Set (or clear, with an empty body value) the operator's custom prompt for this conversation (C15)",
         "operationId": "ConfigurePrompt",
@@ -2143,14 +2210,16 @@
           }
         },
         "x-mcp-scope": [
-          "system"
+          "system",
+          "orchestration"
         ]
       }
     },
     "/v1/threads/{threadId}/loops": {
       "post": {
         "tags": [
-          "thread"
+          "thread",
+          "mcp:orchestration"
         ],
         "description": "Schedule a recurring whisper into this conversation (C21)",
         "operationId": "CreateThreadLoop",
@@ -2166,27 +2235,54 @@
                     "maxLength": 2000
                   },
                   "schedule": {
-                    "type": "object",
-                    "properties": {
-                      "timeOfDay": {
-                        "type": "string",
-                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "DAILY"
+                          },
+                          "timeOfDay": {
+                            "type": "string",
+                            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                          },
+                          "weekdays": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/components/schemas/DayOfWeek"
+                            }
+                          },
+                          "timezone": {
+                            "$ref": "#/components/schemas/Timezone"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "timeOfDay",
+                          "weekdays",
+                          "timezone"
+                        ]
                       },
-                      "weekdays": {
-                        "minItems": 1,
-                        "type": "array",
-                        "items": {
-                          "$ref": "#/components/schemas/DayOfWeek"
-                        }
-                      },
-                      "timezone": {
-                        "$ref": "#/components/schemas/Timezone"
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "INTERVAL"
+                          },
+                          "everyMinutes": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 1440
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "everyMinutes"
+                        ]
                       }
-                    },
-                    "required": [
-                      "timeOfDay",
-                      "weekdays",
-                      "timezone"
                     ]
                   }
                 },
@@ -2200,6 +2296,7 @@
                   "value": {
                     "prompt": "Pergunte ao time como está o deploy de hoje e resuma em três linhas.",
                     "schedule": {
+                      "kind": "DAILY",
                       "timeOfDay": "09:00",
                       "weekdays": [
                         "MONDAY",
@@ -2267,12 +2364,16 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "orchestration"
+        ]
       },
       "get": {
         "tags": [
           "thread",
-          "mcp:system"
+          "mcp:system",
+          "mcp:orchestration"
         ],
         "description": "This conversation's scheduled prompts (loops) (T11)",
         "operationId": "ListThreadLoops",
@@ -2308,17 +2409,58 @@
                           "prompt": {
                             "type": "string"
                           },
-                          "timeOfDay": {
-                            "type": "string"
-                          },
-                          "weekdays": {
-                            "type": "array",
-                            "items": {
-                              "$ref": "#/components/schemas/DayOfWeek"
-                            }
-                          },
-                          "timezone": {
-                            "type": "string"
+                          "schedule": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "DAILY"
+                                  },
+                                  "timeOfDay": {
+                                    "type": "string",
+                                    "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                                  },
+                                  "weekdays": {
+                                    "minItems": 1,
+                                    "type": "array",
+                                    "items": {
+                                      "$ref": "#/components/schemas/DayOfWeek"
+                                    }
+                                  },
+                                  "timezone": {
+                                    "$ref": "#/components/schemas/Timezone"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "timeOfDay",
+                                  "weekdays",
+                                  "timezone"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "INTERVAL"
+                                  },
+                                  "everyMinutes": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 1440
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "everyMinutes"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
                           },
                           "enabled": {
                             "type": "boolean"
@@ -2333,9 +2475,7 @@
                         "required": [
                           "loopId",
                           "prompt",
-                          "timeOfDay",
-                          "weekdays",
-                          "timezone",
+                          "schedule",
                           "enabled"
                         ],
                         "additionalProperties": false
@@ -2346,11 +2486,25 @@
                       "minimum": 0,
                       "exclusiveMinimum": true,
                       "maximum": 9007199254740991
+                    },
+                    "minIntervalMinutes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991
+                    },
+                    "maxIntervalMinutes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991
                     }
                   },
                   "required": [
                     "loops",
-                    "promptMaxLength"
+                    "promptMaxLength",
+                    "minIntervalMinutes",
+                    "maxIntervalMinutes"
                   ],
                   "additionalProperties": false
                 }
@@ -2359,7 +2513,8 @@
           }
         },
         "x-mcp-scope": [
-          "system"
+          "system",
+          "orchestration"
         ]
       }
     },
@@ -2396,7 +2551,8 @@
     "/v1/threads/{threadId}/loops/{loopId}": {
       "delete": {
         "tags": [
-          "thread"
+          "thread",
+          "mcp:orchestration"
         ],
         "description": "Remove a loop (C24)",
         "operationId": "DeleteThreadLoop",
@@ -2429,11 +2585,15 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "orchestration"
+        ]
       },
       "put": {
         "tags": [
-          "thread"
+          "thread",
+          "mcp:orchestration"
         ],
         "description": "Edit a loop — its prompt and its schedule (C22)",
         "operationId": "UpdateThreadLoop",
@@ -2449,27 +2609,54 @@
                     "maxLength": 2000
                   },
                   "schedule": {
-                    "type": "object",
-                    "properties": {
-                      "timeOfDay": {
-                        "type": "string",
-                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "DAILY"
+                          },
+                          "timeOfDay": {
+                            "type": "string",
+                            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                          },
+                          "weekdays": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/components/schemas/DayOfWeek"
+                            }
+                          },
+                          "timezone": {
+                            "$ref": "#/components/schemas/Timezone"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "timeOfDay",
+                          "weekdays",
+                          "timezone"
+                        ]
                       },
-                      "weekdays": {
-                        "minItems": 1,
-                        "type": "array",
-                        "items": {
-                          "$ref": "#/components/schemas/DayOfWeek"
-                        }
-                      },
-                      "timezone": {
-                        "$ref": "#/components/schemas/Timezone"
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "INTERVAL"
+                          },
+                          "everyMinutes": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 1440
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "everyMinutes"
+                        ]
                       }
-                    },
-                    "required": [
-                      "timeOfDay",
-                      "weekdays",
-                      "timezone"
                     ]
                   }
                 },
@@ -2483,13 +2670,8 @@
                   "value": {
                     "prompt": "Pergunte ao time como está o deploy de hoje e resuma em três linhas.",
                     "schedule": {
-                      "timeOfDay": "09:00",
-                      "weekdays": [
-                        "MONDAY",
-                        "WEDNESDAY",
-                        "FRIDAY"
-                      ],
-                      "timezone": "America/Sao_Paulo"
+                      "kind": "INTERVAL",
+                      "everyMinutes": 15
                     }
                   },
                   "summary": "Example"
@@ -2548,7 +2730,10 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "orchestration"
+        ]
       }
     },
     "/v1/threads/{threadId}/needs-you": {
@@ -2960,11 +3145,22 @@
                           },
                           "comingSoon": {
                             "type": "boolean"
+                          },
+                          "model": {
+                            "$ref": "#/components/schemas/AgentModelId"
+                          },
+                          "models": {
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/components/schemas/AgentModelId"
+                            }
                           }
                         },
                         "required": [
                           "provider",
-                          "comingSoon"
+                          "comingSoon",
+                          "model",
+                          "models"
                         ],
                         "additionalProperties": false
                       }
@@ -3262,7 +3458,8 @@
     "/v1/threads/{threadId}/loops/{loopId}/enabled": {
       "put": {
         "tags": [
-          "thread"
+          "thread",
+          "mcp:orchestration"
         ],
         "description": "Pause or resume a loop (C23)",
         "operationId": "SetThreadLoopEnabled",
@@ -3337,7 +3534,10 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "orchestration"
+        ]
       }
     },
     "/v1/threads/{threadId}/steer": {
@@ -3988,6 +4188,56 @@
         }
       }
     },
+    "/v1/threads/{threadId}/artifacts/{artifactId}/content": {
+      "get": {
+        "tags": [
+          "artifact"
+        ],
+        "description": "The bytes of one recorded artifact, for the console preview",
+        "operationId": "GetArtifactContent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          },
+          {
+            "in": "path",
+            "name": "artifactId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddaf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The bytes of one recorded artifact, for the console preview",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "examples": [
+                    "<binary>"
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": "<binary>",
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/threads/{threadId}/artifacts": {
       "get": {
         "tags": [
@@ -4036,6 +4286,9 @@
                           "name": {
                             "type": "string"
                           },
+                          "ref": {
+                            "type": "string"
+                          },
                           "meta": {
                             "type": "string"
                           },
@@ -4047,6 +4300,7 @@
                           "artifactId",
                           "kind",
                           "name",
+                          "ref",
                           "meta",
                           "recordedAt"
                         ],
@@ -8226,6 +8480,8 @@
           "AGENT_RUN_TOKEN_INVALID",
           "AGENT_TOOLS_UNSUPPORTED",
           "AGENT_TRANSPORT_STOP_NOT_DECLARABLE",
+          "ARTIFACT_NOT_FOUND",
+          "ARTIFACT_NOT_PREVIEWABLE",
           "CANNOT_CONVERT_INPUT",
           "CHANNEL_NOT_CONNECTED",
           "CLARIFICATION_ALREADY_PENDING",
@@ -8250,6 +8506,7 @@
           "INVALID_ID",
           "INVALID_ID_VALUES_LENGTH",
           "INVALID_LANGUAGE",
+          "INVALID_LOOP_INTERVAL",
           "INVALID_LOOP_TIME",
           "INVALID_OUTBOX_PAYLOAD",
           "INVALID_PHONE",
@@ -8269,6 +8526,7 @@
           "LOOP_WITHOUT_WEEKDAY",
           "MISSING_ENVIRONMENT_VARIABLE",
           "MISSING_LOG_CONTENT",
+          "MODEL_NOT_AVAILABLE",
           "NOT_FOUND",
           "NOT_IMPLEMENTED",
           "NO_CHANNEL_CONNECTED",
@@ -8284,6 +8542,7 @@
           "PATH_NOT_FOUND",
           "PROMPT_TOO_LONG",
           "PROVIDER_COMING_SOON",
+          "PROVIDER_NOT_BOUND",
           "PROVIDER_NOT_DETECTED",
           "QUOTED_ENTRY_NOT_IN_THREAD",
           "RATE_LIMITED",
@@ -8293,7 +8552,6 @@
           "STOP_CRITERION_DISABLED",
           "STOP_NOT_FOUND",
           "STOP_NOT_IN_THREAD",
-          "TERMINAL_ALREADY_RUNNING",
           "TERMINAL_SPAWN_FAILED",
           "THREAD_ALREADY_ATTACHED",
           "THREAD_ALREADY_DELETED",
@@ -8398,6 +8656,15 @@
           "200"
         ]
       },
+      "AgentModelId": {
+        "type": "string",
+        "enum": [
+          "DEFAULT",
+          "SONNET",
+          "OPUS",
+          "HAIKU"
+        ]
+      },
       "Timezone": {
         "type": "string",
         "x-tpl-zod-refinements": [
@@ -8405,6 +8672,13 @@
             "function": "(tz) => tryCatch(() => new Intl.DateTimeFormat(\"en-US\", { timeZone: tz }).format(new Date)).success",
             "error": "INVALID_TIMEZONE"
           }
+        ]
+      },
+      "LoopScheduleKind": {
+        "type": "string",
+        "enum": [
+          "DAILY",
+          "INTERVAL"
         ]
       },
       "DayOfWeek": {
@@ -8475,6 +8749,8 @@
         "type": "string",
         "enum": [
           "IMAGE",
+          "AUDIO",
+          "VIDEO",
           "FILE",
           "LINK"
         ]
@@ -8637,6 +8913,8 @@
     "AGENT_RUN_TOKEN_INVALID",
     "AGENT_TOOLS_UNSUPPORTED",
     "AGENT_TRANSPORT_STOP_NOT_DECLARABLE",
+    "ARTIFACT_NOT_FOUND",
+    "ARTIFACT_NOT_PREVIEWABLE",
     "CANNOT_CONVERT_INPUT",
     "CHANNEL_NOT_CONNECTED",
     "CLARIFICATION_ALREADY_PENDING",
@@ -8661,6 +8939,7 @@
     "INVALID_ID",
     "INVALID_ID_VALUES_LENGTH",
     "INVALID_LANGUAGE",
+    "INVALID_LOOP_INTERVAL",
     "INVALID_LOOP_TIME",
     "INVALID_OUTBOX_PAYLOAD",
     "INVALID_PHONE",
@@ -8680,6 +8959,7 @@
     "LOOP_WITHOUT_WEEKDAY",
     "MISSING_ENVIRONMENT_VARIABLE",
     "MISSING_LOG_CONTENT",
+    "MODEL_NOT_AVAILABLE",
     "NOT_FOUND",
     "NOT_IMPLEMENTED",
     "NO_CHANNEL_CONNECTED",
@@ -8695,6 +8975,7 @@
     "PATH_NOT_FOUND",
     "PROMPT_TOO_LONG",
     "PROVIDER_COMING_SOON",
+    "PROVIDER_NOT_BOUND",
     "PROVIDER_NOT_DETECTED",
     "QUOTED_ENTRY_NOT_IN_THREAD",
     "RATE_LIMITED",
@@ -8704,7 +8985,6 @@
     "STOP_CRITERION_DISABLED",
     "STOP_NOT_FOUND",
     "STOP_NOT_IN_THREAD",
-    "TERMINAL_ALREADY_RUNNING",
     "TERMINAL_SPAWN_FAILED",
     "THREAD_ALREADY_ATTACHED",
     "THREAD_ALREADY_DELETED",
@@ -8731,17 +9011,25 @@
       "TransitionIssueStatus"
     ],
     "orchestration": [
+      "ConfigureModel",
+      "ConfigurePrompt",
+      "CreateThreadLoop",
+      "DeleteThreadLoop",
       "ForkIssue",
       "GetIssueStatus",
       "GetSessionIssues",
+      "ListThreadLoops",
       "RaiseStop",
       "ResolveStop",
-      "SteerIssueTurn"
+      "SetThreadLoopEnabled",
+      "SteerIssueTurn",
+      "UpdateThreadLoop"
     ],
     "system": [
       "AddWorkspace",
       "ConfigureContextBuffer",
       "ConfigureMentionGate",
+      "ConfigureModel",
       "ConfigurePrompt",
       "CreateOwner",
       "DisableOwner",

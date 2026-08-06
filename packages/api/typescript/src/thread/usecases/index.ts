@@ -15,6 +15,9 @@ export {
 	ConfigurePrompt,
 	ConfigurePromptInputSchema,
 	ConfigurePromptOutputSchema,
+	ConfigureModel,
+	ConfigureModelInputSchema,
+	ConfigureModelOutputSchema,
 } from './ConfigureThreadSettings'
 export { SteerThread, SteerThreadInputSchema, SteerThreadOutputSchema } from './SteerThread'
 export { SendDirectMessage, SendDirectMessageInputSchema, SendDirectMessageOutputSchema } from './SendDirectMessage'

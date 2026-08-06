@@ -10,19 +10,22 @@ import {
 	ProviderStatus,
 	TranscriptKind,
 } from '@codm/contracts-typescript/wire/enums'
+import { modelsFor } from '@codm/contracts/catalog'
 import { ThreadRepository } from '@thread/repositories'
 import { ReplyStreamer, beginTypingPresence } from '@thread/services'
-import { INITIAL_CUT_STATE, advanceCutState, decideCut, type ReplyCutState } from '@thread/objects'
+import { AGENT_SPEAKER, INITIAL_CUT_STATE, advanceCutState, decideCut, type ReplyCutState } from '@thread/objects'
 import { OrchestratorAgent, OrchestratorInputSchema } from '../agents/OrchestratorAgent'
 import { parseReply } from '../agents/OrchestratorAgent/citation'
 import { AgentRunnerFactory } from '../services/AgentRunnerFactory'
 import { ProviderDetector, type ProviderDetection } from '../services/ProviderDetector'
 import { TerminalOutputAccumulator } from '../services/TerminalOutputAccumulator'
 import { AgentSessionRepository } from '../repositories'
+import { MessageVia } from '../enums'
 import { AgentSession } from '../entities/AgentSession'
 import { OrchestratorRepliedEvent } from '../events/OrchestratorRepliedEvent'
 import { GetOpenStops } from './GetOpenStops'
 import type { AgentApplicationErrors } from '../errors'
+import { isTransportStopKind } from '../enums/TransportStopKind'
 
 export const RunOrchestratorTurnInputSchema = z.object({
 	ownerId: z.uuid(),
@@ -57,6 +60,15 @@ export const RunOrchestratorTurnInputSchema = z.object({
 export const RunOrchestratorTurnOutputSchema = z.object({
 	text: z.string(),
 	replyToEntryId: z.uuid().optional(),
+	/**
+	 * Whether this turn already put a message in the operator's real chat — the dispatcher's retry gate
+	 * (`TurnReport.spoke`). True as soon as a progressive cut streamed (`streamed.cut`), because that
+	 * cut already landed in WhatsApp; a turn that never streamed one and then ended without completing
+	 * has said nothing yet.
+	 */
+	spoke: z.boolean(),
+	/** Present only when the ending was a TRANSPORT stop kind — the dispatcher's cue to retry via `fail()` instead of consuming the item with `complete()`. */
+	transportStop: z.object({ detail: z.string() }).optional(),
 })
 
 /**
@@ -113,9 +125,9 @@ interface SessionPlan {
  * be delivered verbatim into somebody's chat.
  *
  * ### What it does NOT do, said out loud
- * No single-active guard (`AgentStreamRegistry.beginSession`). `RunIssueTurn` needs one because two
- * runs could target one issue; here the DISPATCHER's per-target lease is the mutex (§3), and adding a
- * second one keyed by thread would be a second source of truth about whether a turn is in flight.
+ * No single-active guard. O lease por alvo do dispatcher é o mutex (§3), aqui e em `RunIssueTurn` —
+ * que até 2026-08-05 carregava um segundo guard em memória, exatamente a "segunda fonte de verdade"
+ * que este parágrafo já advertia contra, e que divergiu do lease em produção.
  */
 @injectable()
 export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInputSchema, typeof RunOrchestratorTurnOutputSchema> {
@@ -209,8 +221,17 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 		// carries the canonical string, so anything the frames got slightly wrong is overwritten at the end.
 		let settledText = ''
 		let pendingDelta = ''
+		// TRUE the moment a cut is streamed — this turn has then already put words in the real WhatsApp
+		// group, and `TurnReport.spoke` is read straight off this variable on every return path below.
+		let spoke = false
 
 		const accumulator = new TerminalOutputAccumulator({ issueId: input.threadId })
+		// THE TURN'S OWN INSTANT, read ONCE and handed down — the clock the prompt renders as `agora:` and
+		// the reference every `hora` attribute is formatted against. Read here rather than in the prompt
+		// builder for the reason `Thread.canInvoke` and `LoopSchedule` state for themselves: a renderer
+		// that reads a clock is a renderer no test can pin. Once, and not per line, so a long window
+		// cannot straddle midnight halfway through and date its own lines inconsistently.
+		const now = new Date()
 		for await (const event of this.agent.run(runner, {
 			ownerId: input.ownerId,
 			threadId: input.threadId,
@@ -226,7 +247,18 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 			// after the session happens to be invalidated. It works because the runner folds `systemPrompt`
 			// into the first stdin line of every run, resumed ones included.
 			customPrompt: thread.customPrompt,
+			// The machine's zone, read here rather than stored anywhere: CODM runs on the operator's own
+			// machine, which is the same equivalence the console relies on for this very field when it
+			// fills the loop form. Read per turn, like `customPrompt` above — a daemon that outlives a
+			// timezone change should not keep scheduling in the old one.
+			timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+			now,
 			model: input.model ?? AgentModelId.DEFAULT,
+			// WHAT THE CLI DRIVING THIS TURN OFFERS — a lookup in the declared relation, resolved here
+			// because this is the layer that holds the provider and the agent deliberately does not (see
+			// `availableModels` on the input schema, and `AgentRunRequest`'s note on why there is no
+			// `provider` field). Empty for a CLI nothing has ever driven, and the section then stays out.
+			availableModels: [...modelsFor(input.provider)],
 			session: session.resumed ? { resumeId: session.id } : { newId: session.id },
 			binaryPath: detection.binaryPath,
 			caps: detection.caps,
@@ -249,6 +281,7 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 				if (decision.cut) {
 					cutState = advanceCutState(decision, nowMs)
 					await streamed.cut(decision.text)
+					spoke = true
 				}
 			}
 		}
@@ -256,7 +289,10 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 		const outcome = accumulator.outcome()
 		// A stopped turn said nothing worth delivering. Logged rather than thrown: the dispatcher would
 		// treat a throw as a failed turn and retry it, and re-running a conversational turn produces a
-		// SECOND message in a real group.
+		// SECOND message in a real group — which is exactly why the dispatcher's retry for a transport
+		// stop now requires `spoke === false` rather than applying to every stop: a turn that already
+		// streamed a cut has already spoken in that same group, and retrying it would reproduce the very
+		// duplicate this comment has warned about since before retries existed.
 		if (outcome.kind !== 'COMPLETED') {
 			this.logging.warn({
 				content: {
@@ -266,7 +302,11 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 					detail: outcome.detail,
 				},
 			})
-			return { text: '' }
+			return {
+				text: '',
+				spoke,
+				...(isTransportStopKind(outcome.stopKind) ? { transportStop: { detail: outcome.detail ?? outcome.stopKind } } : {}),
+			}
 		}
 
 		const reply = parseReply(outcome.replyText)
@@ -290,7 +330,7 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 			await this.upsertSession(input, accumulator.sessionId ?? session.id, tx)
 		})
 
-		return { text: reply.text, replyToEntryId }
+		return { text: reply.text, replyToEntryId, spoke }
 	}
 
 	private async resolveProvider(provider: ProviderKind): Promise<ProviderDetection> {
@@ -344,18 +384,13 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 	 */
 	private async buildWindow(thread: LoadedThread) {
 		const rows = await this.threads.recentEntries(thread.id.value, this.bufferLimit(thread.bufferSize))
-		// Roster lookup by the JID the gateway recorded. A participant the snapshot has since dropped
-		// still has their words in the transcript, so the fallback is the raw id rather than a hole —
-		// losing WHO said something would make the window unreadable.
-		const nameOf = (senderExternalId?: string): string => {
-			if (!senderExternalId) return 'operator'
-			return thread.participants.find(p => p.participantId === senderExternalId)?.name ?? senderExternalId
-		}
 
 		return rows.map(row => ({
+			// The `de` attribute, decided here because this is where the row's kind and the roster meet.
 			// The agent's OWN past lines are labelled `you`, not by the operator's name: a model reading
-			// its own words attributed to somebody else answers them.
-			speaker: row.kind === TranscriptKind.SYSTEM ? 'you' : nameOf(row.senderExternalId),
+			// its own words attributed to somebody else answers them. A whisper the SCHEDULER fired says
+			// so — `fired_by_loop` exists precisely so a tick stops arriving as `operator`.
+			speaker: this.speakerOf(thread, row),
 			// Already stripped of the tag — it is noise to the model, and leaving it in put `@codm` at
 			// the head of every rendered line.
 			text: thread.textWithoutMention(row.text),
@@ -372,7 +407,28 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 				row.kind === TranscriptKind.SYSTEM
 					? false
 					: thread.addressedToAgent({ senderExternalId: row.senderExternalId ?? '', text: row.text }),
+			// The `hora` and the `ref` — the row's own instant, and its address. The address is what makes
+			// a citation of an OLD message expressible at all: before the grammar the prompt printed one
+			// id (the live item's), so "attach this to what Marina asked an hour ago" had no spelling.
+			at: row.at,
+			ref: row.entryId,
+			// Absent unless the room was excluded. A `WHISPER` is the operator (or their schedule) talking
+			// to the agents only, and it used to render exactly like a message the group could see.
+			via: row.kind === TranscriptKind.WHISPER ? (row.firedByLoop ? MessageVia.LOOP : MessageVia.STEER) : undefined,
 		}))
+	}
+
+	/**
+	 * WHO a transcript row is from, as the `de` attribute spells it.
+	 *
+	 * Three cases and no fourth: the agent's own line, a scheduled whisper, and everybody else — whom
+	 * the roster names (`Thread.displayNameOf`, shared with the ingest so the same person cannot appear
+	 * under two identities in one prompt).
+	 */
+	private speakerOf(thread: LoadedThread, row: { kind: TranscriptKind; senderExternalId?: string; firedByLoop?: string }): string {
+		if (row.kind === TranscriptKind.SYSTEM) return AGENT_SPEAKER
+		if (row.firedByLoop) return `${MessageVia.LOOP}:${row.firedByLoop}`
+		return thread.displayNameOf(row.senderExternalId)
 	}
 
 	/** `BufferSize` is a STRING enum of numerals — the same parse `ClassifyMessage` used, inherited with it. */

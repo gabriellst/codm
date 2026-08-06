@@ -1,5 +1,6 @@
 import { z } from '@codm/core-typescript'
-import { AgentModelId } from '@codm/contracts-typescript/wire/enums'
+import { AgentModelId, MailboxItemKind } from '@codm/contracts-typescript/wire/enums'
+import { MessageVia } from '../../enums'
 import { ProviderCapabilitiesSchema } from '../../types/ProviderCapabilities'
 
 /**
@@ -28,6 +29,31 @@ import { ProviderCapabilitiesSchema } from '../../types/ProviderCapabilities'
 export const IssueWorkInputSchema = z.agentInput({
 	/** The classified inbound message — the turn's single user message. */
 	prompt: z.string().min(1),
+	/**
+	 * WHICH KIND of message `prompt` is: `WORK` is the brief that opened this issue, `STEER` is an
+	 * amendment to work already in flight.
+	 *
+	 * The distinction is the point of the field. The two used to arrive as the SAME raw string, so a
+	 * resumed turn could not tell "here is what to build" from "and also do X" — and a model that reads
+	 * an amendment as a brief starts over. The discriminant is not invented for the prompt: it is the
+	 * mailbox item's own kind, which the dispatcher has in hand at the call site.
+	 */
+	turnKind: z.union([z.literal(MailboxItemKind.WORK), z.literal(MailboxItemKind.STEER)]),
+	/** The `de` attribute: `operator`, or `loop:<label>` when a schedule produced the steer. */
+	speaker: z.string().min(1),
+	/**
+	 * HOW it reached the issue, when nobody in the room saw it — the same vocabulary the orchestrator's
+	 * blocks use, so the two prompts do not describe one fact in two ways.
+	 */
+	via: z.enum(MessageVia).optional(),
+	/**
+	 * The turn's own instant, and the zone it is read in — the clock this agent also never had.
+	 *
+	 * PARAMETERS, not a `new Date()` inside the prompt builder: a renderer that reads a clock is a
+	 * renderer no test can pin. `RunIssueTurn` reads both once per turn.
+	 */
+	now: z.date(),
+	timezone: z.string().min(1),
 	/** The issue's thread-unique slug key and title, for the standing prompt. */
 	key: z.string().min(1),
 	title: z.string().min(1),

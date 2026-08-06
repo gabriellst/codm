@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { DayOfWeek } from '@codm/contracts-typescript/wire/enums'
+import { DayOfWeek, LoopScheduleKind } from '@codm/contracts-typescript/wire/enums'
 import { LOOP_PROMPT_MAX_LENGTH } from '../schemas'
 import { Loop } from './Loop'
 
@@ -20,7 +20,17 @@ const aLoop = (weekdays: DayOfWeek[] = [DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY], 
 		ownerId: OWNER,
 		threadId: THREAD,
 		prompt: 'pergunte como está o deploy',
-		schedule: { timeOfDay, weekdays, timezone: SP },
+		schedule: { kind: LoopScheduleKind.DAILY, timeOfDay, weekdays, timezone: SP },
+		now: TUESDAY_0900,
+	})
+
+/** The same loop, on a cadence instead of a clock. */
+const anIntervalLoop = (everyMinutes = 15) =>
+	Loop.create({
+		ownerId: OWNER,
+		threadId: THREAD,
+		prompt: 'veja se o build quebrou',
+		schedule: { kind: LoopScheduleKind.INTERVAL, everyMinutes },
 		now: TUESDAY_0900,
 	})
 
@@ -39,10 +49,19 @@ describe('Loop.create', () => {
 				ownerId: OWNER,
 				threadId: THREAD,
 				prompt: 'x'.repeat(LOOP_PROMPT_MAX_LENGTH + 1),
-				schedule: { timeOfDay: '09:00', weekdays: [DayOfWeek.MONDAY], timezone: SP },
+				schedule: { kind: LoopScheduleKind.DAILY, timeOfDay: '09:00', weekdays: [DayOfWeek.MONDAY], timezone: SP },
 				now: TUESDAY_0900,
 			}),
 		).toThrow(expect.objectContaining({ name: 'INVALID_ENTITY' }))
+	})
+
+	it('on a CADENCE, is armed one interval out — never immediately', () => {
+		const loop = anIntervalLoop(15)
+		expect(loop.enabled).toBe(true)
+		expect(loop.nextRunAt?.toISOString()).toBe('2026-08-04T12:15:00.000Z')
+		// The one thing an operator would notice instantly if it were wrong: creating the loop must not
+		// whisper right now.
+		expect(loop.isDue(TUESDAY_0900)).toBe(false)
 	})
 })
 
@@ -53,13 +72,36 @@ describe('Loop.reschedule', () => {
 
 		loop.reschedule({
 			prompt: 'outra coisa',
-			schedule: { timeOfDay: '10:00', weekdays: [DayOfWeek.TUESDAY], timezone: SP },
+			schedule: { kind: LoopScheduleKind.DAILY, timeOfDay: '10:00', weekdays: [DayOfWeek.TUESDAY], timezone: SP },
 			now: TUESDAY_0900,
 		})
 
 		expect(loop.prompt).toBe('outra coisa')
 		// Today at 10:00 local, an hour away — not next Tuesday at 18:00.
 		expect(loop.nextRunAt?.toISOString()).toBe('2026-08-04T13:00:00.000Z')
+	})
+
+	it('swaps the SHAPE of the schedule — a wall clock becomes a cadence, and the pending run moves', () => {
+		const loop = aLoop([DayOfWeek.MONDAY])
+		// Monday-only, asked on Tuesday: six days out.
+		expect(loop.nextRunAt?.toISOString()).toBe('2026-08-10T12:00:00.000Z')
+
+		loop.reschedule({ schedule: { kind: LoopScheduleKind.INTERVAL, everyMinutes: 30 }, now: TUESDAY_0900 })
+
+		expect(loop.schedule.kind).toBe(LoopScheduleKind.INTERVAL)
+		expect(loop.nextRunAt?.toISOString()).toBe('2026-08-04T12:30:00.000Z')
+	})
+
+	it('swaps back — a cadence becomes a wall clock, and nothing of the cadence survives', () => {
+		const loop = anIntervalLoop(15)
+
+		loop.reschedule({
+			schedule: { kind: LoopScheduleKind.DAILY, timeOfDay: '18:00', weekdays: [DayOfWeek.TUESDAY], timezone: SP },
+			now: TUESDAY_0900,
+		})
+
+		expect(loop.schedule).toMatchObject({ kind: LoopScheduleKind.DAILY, timeOfDay: '18:00' })
+		expect(loop.nextRunAt?.toISOString()).toBe('2026-08-04T21:00:00.000Z')
 	})
 
 	it('does NOT re-arm a disabled loop — editing is not a way to switch something back on', () => {
@@ -104,6 +146,19 @@ describe('Loop.markFired / skipRun', () => {
 		expect(loop.lastFiredAt).toEqual(firedAt)
 		// Strictly after — never the same instant again, which is what stops the sweep from spinning.
 		expect(loop.nextRunAt?.toISOString()).toBe('2026-08-18T12:00:00.000Z')
+		expect(loop.isDue(firedAt)).toBe(false)
+	})
+
+	it('a CADENCE re-anchors on the instant it fired — which is why downtime cannot become a burst', () => {
+		const loop = anIntervalLoop(15)
+		// The daemon was shut and woke up three hours after the run came due.
+		const firedAt = new Date('2026-08-04T15:15:00.000Z')
+
+		loop.markFired(firedAt)
+
+		expect(loop.lastFiredAt).toEqual(firedAt)
+		expect(loop.nextRunAt?.toISOString()).toBe('2026-08-04T15:30:00.000Z')
+		// Not due again on the spot: the missed occurrences are gone, not queued.
 		expect(loop.isDue(firedAt)).toBe(false)
 	})
 

@@ -2,6 +2,7 @@ import { AggregateRoot, BaseError, Id, z } from '@codm/core-typescript'
 import type Z from 'zod'
 import {
 	ProviderKind,
+	AgentModelId,
 	ContactKind,
 	ThreadStatus,
 	BufferSize,
@@ -10,7 +11,12 @@ import {
 	StopKind,
 	StopResolution,
 } from '@codm/contracts-typescript/wire/enums'
+// The DECLARED provider → models relation. A constant, no I/O — same family of import as the wire
+// enums above, and deliberately the `/catalog` subpath rather than `/db`, so nothing about this line
+// reads as persistence leaking into the domain.
+import { effectiveModel, offersModel } from '@codm/contracts/catalog'
 import type { DomainErrors } from '../errors'
+import { OPERATOR_PARTICIPANT_ID } from '../objects/TranscriptSpeaker'
 import { mentionsTag, stripMentionTag, MentionGateSchema, CustomPromptSchema } from '../schemas'
 import { isResolutionApplicable } from '../utils/StopResolutions'
 import { ThreadStopResolvedEvent } from '../events/ThreadStopResolvedEvent'
@@ -48,6 +54,23 @@ export const TranscriptEntrySchema = z.object({
 	issueId: z.string().optional(),
 	quotedEntryId: z.string().optional(),
 	senderExternalId: z.string().optional(),
+	/**
+	 * WHICH LOOP fired this whisper — ABSENT ⟺ a human typed it.
+	 *
+	 * A `WHISPER` is the operator instructing the agents privately, and a scheduled one used to be
+	 * indistinguishable from a typed one: no sender on either, so both rendered to the model as
+	 * `operator` and the agent answered a timer as if somebody had just spoken. The prompt grammar
+	 * reads this to write `de="loop:<label>"` instead of lying.
+	 *
+	 * It carries the loop's LABEL (derived from its schedule) rather than its id, denormalized at fire
+	 * time: a transcript records what happened, and a loop edited to another hour — or deleted — must
+	 * not rewrite who spoke yesterday.
+	 *
+	 * NO ENTITY INVARIANT ties it to `WHISPER`. `SteerThread` is the only writer and records nothing
+	 * else, so the pairing holds by construction; a named domain error for a state no caller can reach
+	 * would cost an i18n catalog and an SDK regeneration to guard a hypothetical.
+	 */
+	firedByLoop: z.string().min(1).optional(),
 	provider: z.enum(ProviderKind).optional(),
 	classification: z.enum(ClassificationMethod).optional(),
 	at: z.date(),
@@ -114,6 +137,21 @@ export const ThreadSchema = z.object({
 	participants: z.array(ParticipantSchema),
 	bufferSize: z.enum(BufferSize),
 	/**
+	 * WHICH MODEL this conversation asks each of its CLIs for — `{}` until the operator picks one.
+	 *
+	 * A MAP because the choice is per provider. `providers` is an array, and `opus` is vocabulary of one
+	 * binary (`CLAUDE_MODEL_ALIASES` says so where it lives), so a single `model` field would hold a
+	 * value that is right for at most one of the CLIs this thread declares and silently wrong for the
+	 * rest. What each provider offers is declared once, in `contracts/catalog/agent-models.ts`.
+	 *
+	 * PARTIAL, and that is the invariant, not an accident of typing: a key exists only for a NON-default
+	 * choice. `AgentModelId.DEFAULT` already means "omit `--model`, let the CLI pick" — exactly what an
+	 * absent key means — so `configureModel(p, DEFAULT)` deletes rather than stores. Same rule, same
+	 * reason as `customPrompt`: one fact gets one spelling. `modelFor()` is the read that collapses the
+	 * other way, so no caller ever handles `undefined`.
+	 */
+	modelByProvider: z.partialRecord(z.enum(ProviderKind), z.enum(AgentModelId)),
+	/**
 	 * The operator's own standing instructions for this conversation — ABSENT until they write some.
 	 *
 	 * It lives on the aggregate rather than only on the row because the thread is what the instruction
@@ -152,16 +190,14 @@ export interface PendingThreadWrites {
 }
 
 /**
- * The roster id the OWNER always occupies — seeded by `AttachThread`, always `canInvoke: true`.
+ * The roster id the OWNER always occupies — DECLARED in `objects/TranscriptSpeaker.ts` and re-exported
+ * here, where every caller in this context has always read it from.
  *
- * The roster is about OTHER PEOPLE: it exists so the operator can mute specific participants, and
- * muting yourself is meaningless. So a message the owner typed is attributed to THIS id whichever
- * device it came from — the phone, another web client, or the console — rather than to their own
- * phone-number JID, which the gateway snapshot also puts in the roster with `canInvoke: false`
- * (it enumerates every group participant with no self filter). Without this, the owner's own message
- * is denied by the participant check BEFORE the mention gate is ever consulted.
+ * It moved because the agent context needs the same word (the `de` attribute of an operator's block)
+ * and may not import an entity across a boundary — `objects` is the sanctioned surface. One
+ * declaration, two readers, no mirror.
  */
-export const OPERATOR_PARTICIPANT_ID = 'operator'
+export { OPERATOR_PARTICIPANT_ID }
 
 /**
  * How long an inbound stays SUMMONABLE — the freshness window `canInvoke` judges an inbound against.
@@ -179,6 +215,14 @@ export const OPERATOR_PARTICIPANT_ID = 'operator'
  *
  * The stale message is NOT discarded. It is transcribed, buffered, quotable and visible in the console
  * exactly like any other (observation ≠ invocation) — it simply does not get a turn of its own.
+ *
+ * THE OPERATOR IS EXEMPT (`canInvoke`, 2026-08-05). Read the paragraph above again and notice what it
+ * is afraid of: "an hour of CONVERSATION", "someone's real chat" — a replay of other people talking.
+ * The operator's own message is not that. It is the instruction, and the cost of muting a late one is
+ * the opposite of a flood: the operator watches a message sit delivered and unanswered, with nothing
+ * anywhere saying why. That happened — a reconnect delivered "Consegue mergear esse pr na main?" 650s
+ * after it was sent, 350s past this window, and it was swallowed in silence. So the window now judges
+ * THIRD PARTIES, which is where the enxurrada actually comes from.
  */
 export const INVOCATION_FRESHNESS_WINDOW_MS = 5 * 60 * 1000
 
@@ -255,6 +299,10 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 			mentionGate: { enabled: true, tag: data.mentionTag },
 			participants: data.participants,
 			bufferSize: data.bufferSize ?? BufferSize._50,
+			// A fresh conversation has chosen nothing, and "chosen nothing" is the empty map — never a
+			// pre-seeded `{ [provider]: DEFAULT }`, which would be the second spelling this field refuses.
+			// The attach wizard does not ask for a model, so there is nothing here for it to carry.
+			modelByProvider: {},
 			status: ThreadStatus.IDLE,
 		})
 	}
@@ -307,6 +355,13 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 * destroy hand-written text with nothing in the flow that hints it happened — while the promise the
 	 * delete confirmation makes is that re-attaching brings the conversation back.
 	 *
+	 * `modelByProvider` survives on the same argument — the wizard never asks for a model either — but
+	 * NARROWED to the providers just re-chosen. It is the one field of the two that the wizard can
+	 * contradict: re-attaching with a different CLI would otherwise leave behind a choice for a provider
+	 * this conversation no longer runs, which is precisely the orphaned configuration `PROVIDER_NOT_BOUND`
+	 * exists to make unrepresentable. Filtering here keeps that invariant true of every reachable state,
+	 * not merely of the write path.
+	 *
 	 * There is deliberately no "this thread is not deleted" guard. `AttachThread` is the only caller and
 	 * it reaches this method only on the deleted branch — the live branch raises THREAD_ALREADY_ATTACHED
 	 * before getting here. Inventing a domain code for a state the one call site cannot produce would be
@@ -330,6 +385,9 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 		this.mentionGate = { enabled: true, tag: data.mentionTag }
 		this.participants = data.participants
 		this.bufferSize = data.bufferSize ?? BufferSize._50
+		this.modelByProvider = Object.fromEntries(
+			Object.entries(this.modelByProvider).filter(([provider]) => data.providers.includes(provider as ProviderKind)),
+		)
 		this.paused = false
 		this.status = ThreadStatus.IDLE
 		this.validate()
@@ -352,6 +410,61 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 
 	configureContextBuffer(size: BufferSize): void {
 		this.bufferSize = size
+	}
+
+	/**
+	 * Choose which model this conversation asks ONE of its CLIs for.
+	 *
+	 * ### `DEFAULT` is the ERASE, not a value
+	 * Same shape as `configurePrompt('')`, and for the same reason: `DEFAULT` means "omit `--model` and
+	 * let the binary choose", which is already what an absent key means. Storing it would create a second
+	 * spelling that the persistence mapper, the settings DTO and the dispatcher would each have to
+	 * normalize on their own, and the first one to forget would send `--model DEFAULT` to a CLI that has
+	 * no such alias. So the collapse is decided ONCE, here — and the console does not need a second
+	 * control for "back to automatic", because the catalog lists `DEFAULT` as a real option.
+	 *
+	 * ### Two invariants, and both are the SAME class of mistake: configuration nobody will ever read
+	 * - `PROVIDER_NOT_BOUND` — the thread does not run that CLI. The dispatcher only ever asks
+	 *   `modelFor(thread.providers[0])`, so a choice for an unbound provider is written, persisted,
+	 *   re-rendered in the dialog as if it were in force, and never consulted by anything.
+	 * - `MODEL_NOT_AVAILABLE` — the CLI does not offer that model. Answered by LOOKUP against the declared
+	 *   relation (`offersModel`), never by parsing the member's name. It also covers "this provider offers
+	 *   nothing at all" for free: an empty catalog rejects every model, including `DEFAULT`, which is the
+	 *   honest answer for a binary this engine has never driven.
+	 *
+	 * It is a DOMAIN error rather than an application one — unlike `PROVIDER_COMING_SOON`, its neighbour —
+	 * because the question is about the declared catalog, which the aggregate can see in full, not about
+	 * which runners this deployment happens to have bound, which it cannot see at all.
+	 */
+	configureModel(provider: ProviderKind, model: AgentModelId): void {
+		if (!this.providers.includes(provider)) {
+			throw new BaseError<DomainErrors>('PROVIDER_NOT_BOUND', `this thread does not run ${provider}`)
+		}
+		if (!offersModel(provider, model)) {
+			throw new BaseError<DomainErrors>('MODEL_NOT_AVAILABLE', `${provider} does not offer ${model}`)
+		}
+
+		const { [provider]: _dropped, ...rest } = this.modelByProvider
+		this.modelByProvider = model === AgentModelId.DEFAULT ? rest : { ...rest, [provider]: model }
+		this.validate()
+	}
+
+	/**
+	 * WHICH MODEL a turn on `provider` must ask for — the read half of the collapse above.
+	 *
+	 * Always an `AgentModelId`, never `undefined`, so the dispatcher has no absence to interpret and the
+	 * settings DTO has no optional field for the console to `?? DEFAULT` on its own. Absent key ⇒
+	 * `DEFAULT` ⇒ the runner omits the flag, which is where the chain ends.
+	 *
+	 * Deliberately does NOT check that `provider` is bound: this answers "what would we ask for", and the
+	 * honest answer for a CLI nobody chose anything on is the same as for a bound one with no choice.
+	 * Refusing here would make the read stricter than the fallback it exists to provide.
+	 *
+	 * The collapse itself is `effectiveModel`, in contracts beside the catalog, because the settings BFF
+	 * reads the ROW (no aggregate hydrated, by design) and must answer identically.
+	 */
+	modelFor(provider: ProviderKind): AgentModelId {
+		return effectiveModel(this.modelByProvider, provider)
 	}
 
 	/**
@@ -422,6 +535,7 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 		senderExternalId?: string
 		quotedEntry?: QuotedEntryRef
 		issueId?: string
+		firedByLoop?: string
 		provider?: ProviderKind
 		classification?: ClassificationMethod
 		at?: Date
@@ -448,6 +562,7 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 			issueId: input.issueId,
 			quotedEntryId: input.quotedEntry?.entryId,
 			senderExternalId: input.senderExternalId,
+			firedByLoop: input.firedByLoop,
 			provider: input.provider,
 			classification: input.classification,
 			at: input.at ?? new Date(),
@@ -602,6 +717,12 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 */
 	canInvoke(input: { senderExternalId: string; text: string; repliesToAgent?: boolean; sentAt: Date; now: Date }): boolean {
 		if (!this.addressedToAgent(input)) return false
+		// THE OPERATOR IS NOT A BACKLOG, and the window was never aimed at them. What it exists to stop
+		// is a replay of CONVERSATION scheduling a turn per message; the operator's own line is the
+		// INSTRUCTION, and a late instruction is still the instruction. Measured 2026-08-05: a reconnect
+		// delivered "Consegue mergear esse pr na main?" 650s after it was sent, and it was transcribed
+		// and silently never answered. Third parties keep the window — that is where the flood is.
+		if (input.senderExternalId === OPERATOR_PARTICIPANT_ID) return true
 		return input.now.getTime() - input.sentAt.getTime() <= INVOCATION_FRESHNESS_WINDOW_MS
 	}
 
@@ -619,6 +740,28 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	textWithoutMention(text: string): string {
 		if (!this.mentionGate.enabled) return text
 		return stripMentionTag(text, this.mentionGate.tag) || text
+	}
+
+	/**
+	 * WHO a JID is, as a human reads it — the roster's job, done in ONE place.
+	 *
+	 * The prompt grammar puts the author in an attribute (`de="…"`), so it has to be a NAME. Two call
+	 * sites need the same answer and used to disagree: the conversation window resolved the roster while
+	 * the live message went in as the raw JID, so the same person appeared twice under two identities in
+	 * one prompt and the model read them as two people.
+	 *
+	 * A participant the gateway snapshot has since dropped falls back to the raw id rather than to a
+	 * hole: losing WHO said something makes a transcript unreadable, and an empty attribute is worse than
+	 * an ugly one. Absent sender ⟺ this system's own line (`SYSTEM` / `WHISPER` / `DIRECT`), which is
+	 * the operator speaking through the console.
+	 *
+	 * The OWNER resolves to the sentinel itself rather than to their roster `name`, and that is the one
+	 * deliberate exception. Every other paragraph of the prompt calls them "the operator"; rendering
+	 * `de="Operator"` here would hand the model a second name for the person its instructions are about.
+	 */
+	displayNameOf(senderExternalId?: string): string {
+		if (!senderExternalId || senderExternalId === OPERATOR_PARTICIPANT_ID) return OPERATOR_PARTICIPANT_ID
+		return this.participants.find(p => p.participantId === senderExternalId)?.name ?? senderExternalId
 	}
 
 	/*

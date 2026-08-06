@@ -246,13 +246,17 @@ describe("DeliverChannelMessage — the agent's own words become quotable, so a 
 		})
 
 	/**
-	 * The turn that was (or was not) queued. `quotedAgentText` is present EXACTLY when `repliesToAgent`
-	 * was true — same predicate, one notion — so it is the honest read of the verdict from outside the
-	 * use case: no item at all means the gate refused the message, which is the bug.
+	 * The turn that was (or was not) queued. What this suite reads off it is `quoted.speaker`: the reply
+	 * carried no tag, so the ONLY thing that can have opened the gate is `repliesToAgent`, and a quote
+	 * attributed to `you` is that verdict crossing out of the context. No item at all means the gate
+	 * refused the message, which is the bug.
 	 */
 	const queuedTurn = async () => {
 		const item = await testBed.resolve(MailboxRepository).claimNext('deliver-cycle-test', 60_000)
-		return { targetId: item?.targetId, payload: item?.payload as { text: string; quotedAgentText?: string } | undefined }
+		return {
+			targetId: item?.targetId,
+			payload: item?.payload as { text: string; quoted?: { speaker: string; at: Date; text: string } } | undefined,
+		}
 	}
 
 	it('FALSEADOR — plain send: the sent message resolves to its entry, and a reply to it invokes with no `@`', async () => {
@@ -278,12 +282,12 @@ describe("DeliverChannelMessage — the agent's own words become quotable, so a 
 		expect(entries.find(e => e.text === 'depois')?.quotedEntryId).toBe(agentLine.entryId)
 
 		// 4. AND THE AGENT WAS ACTUALLY SUMMONED — the reply carried no tag, so the only thing that can
-		// have opened the gate is `repliesToAgent`, and `quotedAgentText` is that same verdict crossing out
-		// of the context. This is the assertion that fails today.
+		// have opened the gate is `repliesToAgent`, and a quote attributed to `you` is that same verdict
+		// crossing out of the context. This is the assertion that fails today.
 		const { targetId, payload } = await queuedTurn()
 		expect(targetId).toBe(thread.id.value)
 		expect(payload?.text).toBe('depois')
-		expect(payload?.quotedAgentText).toBe(AGENT_LINE)
+		expect(payload?.quoted).toMatchObject({ speaker: 'you', text: AGENT_LINE })
 	})
 
 	/**
@@ -346,7 +350,7 @@ describe("DeliverChannelMessage — the agent's own words become quotable, so a 
 
 		const { targetId, payload } = await queuedTurn()
 		expect(targetId).toBe(thread.id.value)
-		expect(payload?.quotedAgentText).toBe(AGENT_LINE)
+		expect(payload?.quoted).toMatchObject({ speaker: 'you', text: AGENT_LINE })
 	})
 })
 

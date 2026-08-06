@@ -6,6 +6,7 @@ import {
 	attachThread,
 	configureContextBuffer,
 	configureMentionGate,
+	configureModel,
 	configurePrompt,
 	createIssue,
 	createOwner,
@@ -16,6 +17,7 @@ import {
 	disableOwner,
 	enableOwner,
 	forkIssue,
+	getArtifactContent,
 	getAttachThreadWizard,
 	getHomeDashboard,
 	getIssueDetail,
@@ -93,6 +95,10 @@ export class TypescriptClient {
 		return (configureMentionGate as (...a: any[]) => ReturnType<typeof configureMentionGate>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	configureModel(...args: Parameters<typeof configureModel>): ReturnType<typeof configureModel> {
+		return (configureModel as (...a: any[]) => ReturnType<typeof configureModel>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	configurePrompt(...args: Parameters<typeof configurePrompt>): ReturnType<typeof configurePrompt> {
 		return (configurePrompt as (...a: any[]) => ReturnType<typeof configurePrompt>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
@@ -131,6 +137,10 @@ export class TypescriptClient {
 
 	forkIssue(...args: Parameters<typeof forkIssue>): ReturnType<typeof forkIssue> {
 		return (forkIssue as (...a: any[]) => ReturnType<typeof forkIssue>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	getArtifactContent(...args: Parameters<typeof getArtifactContent>): ReturnType<typeof getArtifactContent> {
+		return (getArtifactContent as (...a: any[]) => ReturnType<typeof getArtifactContent>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	getAttachThreadWizard(...args: Parameters<typeof getAttachThreadWizard>): ReturnType<typeof getAttachThreadWizard> {

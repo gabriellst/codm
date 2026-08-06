@@ -39,6 +39,10 @@ export type ListArtifacts200 = {
         /**
          * @type string
         */
+        ref: string;
+        /**
+         * @type string
+        */
         meta: string;
         /**
          * @type string

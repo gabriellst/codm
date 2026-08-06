@@ -19,11 +19,21 @@ export type ThreadDomainErrors =
 	// The operator's custom prompt is capped: it rides in EVERY turn this conversation answers, so an
 	// unbounded box is an unbounded per-message cost. Raised by `CustomPromptSchema`'s `.max()`.
 	| 'PROMPT_TOO_LONG'
+	// The per-provider model choice (`Thread.configureModel`). Both refuse the same class of mistake —
+	// configuration nobody would ever read: a model chosen for a CLI this conversation does not run, and
+	// a model that CLI does not offer. The second is answered by lookup against the declared catalog
+	// (`contracts/catalog/agent-models.ts`), never by parsing the member name — which is why it is a
+	// DOMAIN code, unlike its neighbour `PROVIDER_COMING_SOON`: the catalog is a fact the aggregate can
+	// see, the bound runners are a fact about this deployment's wiring, which it cannot.
+	| 'PROVIDER_NOT_BOUND'
+	| 'MODEL_NOT_AVAILABLE'
 	// Loop invariants — raised by `LoopSchedule` / `LoopPromptSchema` at construction, so an unfireable
 	// loop never reaches the table. A schedule with no weekday would sit enabled and never run; a
-	// `09:70` would parse as a date nobody chose.
+	// `09:70` would parse as a date nobody chose; a cadence of half a minute is finer than the sweep
+	// that would have to honour it, and one of a week is an hour wearing a cadence's clothes.
 	| 'INVALID_LOOP_TIME'
 	| 'LOOP_WITHOUT_WEEKDAY'
+	| 'INVALID_LOOP_INTERVAL'
 	| 'LOOP_PROMPT_TOO_LONG'
 export type DomainErrors = BaseDomainErrors | ThreadDomainErrors
 
@@ -93,6 +103,11 @@ registerErrorCodes({
 	// 422 like the other "well-formed, but the value breaks a rule of the aggregate" codes: the payload
 	// IS a string, it is simply longer than one conversation is allowed to carry.
 	PROMPT_TOO_LONG: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	// 422 for both, beside PROMPT_TOO_LONG: the payload IS a valid `ProviderKind` / `AgentModelId` — it
+	// simply names a CLI this conversation does not run, or a model that CLI does not offer. Never 404:
+	// nothing was looked up and missed; the value exists, it just does not apply here.
+	PROVIDER_NOT_BOUND: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	MODEL_NOT_AVAILABLE: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	// 422 like every other "the state forbids this right now" code in this context (THREAD_PAUSED,
 	// ISSUE_ARCHIVED): the operator resolves the stop or lets the issue finish, then deletes.
 	THREAD_HAS_ACTIVE_WORK: HttpStatusCode.UNPROCESSABLE_ENTITY,
@@ -100,6 +115,7 @@ registerErrorCodes({
 	// with the right types — it simply says something a schedule may not say.
 	INVALID_LOOP_TIME: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	LOOP_WITHOUT_WEEKDAY: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	INVALID_LOOP_INTERVAL: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	LOOP_PROMPT_TOO_LONG: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	LOOP_NOT_FOUND: HttpStatusCode.NOT_FOUND,
 	THREAD_NOT_FOUND: HttpStatusCode.NOT_FOUND,
