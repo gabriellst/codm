@@ -50,6 +50,7 @@ import {
 	revokeDevice,
 	sendDirectMessage,
 	setActiveOwner,
+	setCloudToken,
 	setParticipantInvocation,
 	setThreadLoopEnabled,
 	steerIssue,
@@ -273,6 +274,10 @@ export class TypescriptClient {
 
 	setActiveOwner(...args: Parameters<typeof setActiveOwner>): ReturnType<typeof setActiveOwner> {
 		return (setActiveOwner as (...a: any[]) => ReturnType<typeof setActiveOwner>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	setCloudToken(...args: Parameters<typeof setCloudToken>): ReturnType<typeof setCloudToken> {
+		return (setCloudToken as (...a: any[]) => ReturnType<typeof setCloudToken>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	setParticipantInvocation(...args: Parameters<typeof setParticipantInvocation>): ReturnType<typeof setParticipantInvocation> {

@@ -1329,6 +1329,11 @@ type UpdateOwnerSettingsJSONBody struct {
 	Timezone   *string                   `json:"timezone,omitempty"`
 }
 
+// SetCloudTokenJSONBody defines parameters for SetCloudToken.
+type SetCloudTokenJSONBody struct {
+	Token string `json:"token"`
+}
+
 // UpdateStopCriteriaJSONBody defines parameters for UpdateStopCriteria.
 type UpdateStopCriteriaJSONBody struct {
 	StopCriteria struct {
@@ -1588,6 +1593,9 @@ type DisableOwnerJSONRequestBody DisableOwnerJSONBody
 
 // UpdateOwnerSettingsJSONRequestBody defines body for UpdateOwnerSettings for application/json ContentType.
 type UpdateOwnerSettingsJSONRequestBody UpdateOwnerSettingsJSONBody
+
+// SetCloudTokenJSONRequestBody defines body for SetCloudToken for application/json ContentType.
+type SetCloudTokenJSONRequestBody SetCloudTokenJSONBody
 
 // UpdateStopCriteriaJSONRequestBody defines body for UpdateStopCriteria for application/json ContentType.
 type UpdateStopCriteriaJSONRequestBody UpdateStopCriteriaJSONBody
@@ -2158,6 +2166,11 @@ type ClientInterface interface {
 	// GetSession request
 	GetSession(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// SetCloudTokenWithBody request with any body
+	SetCloudTokenWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SetCloudToken(ctx context.Context, body SetCloudTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// UpdateStopCriteriaWithBody request with any body
 	UpdateStopCriteriaWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -2587,6 +2600,30 @@ func (c *Client) SetActiveOwner(ctx context.Context, ownerId string, reqEditors 
 
 func (c *Client) GetSession(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetSessionRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SetCloudTokenWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetCloudTokenRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SetCloudToken(ctx context.Context, body SetCloudTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetCloudTokenRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -3959,6 +3996,46 @@ func NewGetSessionRequest(server string) (*http.Request, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	return req, nil
+}
+
+// NewSetCloudTokenRequest calls the generic SetCloudToken builder with application/json body
+func NewSetCloudTokenRequest(server string, body SetCloudTokenJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSetCloudTokenRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewSetCloudTokenRequestWithBody generates requests for SetCloudToken with any type of body
+func NewSetCloudTokenRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/session/cloud-token")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -5888,6 +5965,11 @@ type ClientWithResponsesInterface interface {
 	// GetSessionWithResponse request
 	GetSessionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetSessionResponse, error)
 
+	// SetCloudTokenWithBodyWithResponse request with any body
+	SetCloudTokenWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetCloudTokenResponse, error)
+
+	SetCloudTokenWithResponse(ctx context.Context, body SetCloudTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*SetCloudTokenResponse, error)
+
 	// UpdateStopCriteriaWithBodyWithResponse request with any body
 	UpdateStopCriteriaWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateStopCriteriaResponse, error)
 
@@ -6665,6 +6747,36 @@ func (r GetSessionResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetSessionResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SetCloudTokenResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r SetCloudTokenResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SetCloudTokenResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SetCloudTokenResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -8471,6 +8583,23 @@ func (c *ClientWithResponses) GetSessionWithResponse(ctx context.Context, reqEdi
 	return ParseGetSessionResponse(rsp)
 }
 
+// SetCloudTokenWithBodyWithResponse request with arbitrary body returning *SetCloudTokenResponse
+func (c *ClientWithResponses) SetCloudTokenWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetCloudTokenResponse, error) {
+	rsp, err := c.SetCloudTokenWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetCloudTokenResponse(rsp)
+}
+
+func (c *ClientWithResponses) SetCloudTokenWithResponse(ctx context.Context, body SetCloudTokenJSONRequestBody, reqEditors ...RequestEditorFn) (*SetCloudTokenResponse, error) {
+	rsp, err := c.SetCloudToken(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetCloudTokenResponse(rsp)
+}
+
 // UpdateStopCriteriaWithBodyWithResponse request with arbitrary body returning *UpdateStopCriteriaResponse
 func (c *ClientWithResponses) UpdateStopCriteriaWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateStopCriteriaResponse, error) {
 	rsp, err := c.UpdateStopCriteriaWithBody(ctx, contentType, body, reqEditors...)
@@ -9565,6 +9694,32 @@ func ParseGetSessionResponse(rsp *http.Response) (*GetSessionResponse, error) {
 				Name          nullable.Nullable[string] `json:"name"`
 			} `json:"user"`
 		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSetCloudTokenResponse parses an HTTP response from a SetCloudTokenWithResponse call
+func ParseSetCloudTokenResponse(rsp *http.Response) (*SetCloudTokenResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetCloudTokenResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

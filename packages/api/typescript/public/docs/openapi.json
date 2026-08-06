@@ -358,6 +358,52 @@
         }
       }
     },
+    "/v1/session/cloud-token": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "description": "Push a freshly-exchanged device token into the local daemon's CloudSession cache",
+        "operationId": "SetCloudToken",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "token"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "token": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Push a freshly-exchanged device token into the local daemon's CloudSession cache",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/identity/account/avatar": {
       "post": {
         "tags": [
