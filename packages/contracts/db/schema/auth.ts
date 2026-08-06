@@ -35,6 +35,10 @@ export const accounts = sqliteTable('authentication_accounts', {
 	refreshToken: text('refresh_token'),
 	idToken: text('id_token'),
 	accessTokenExpiresAt: integer('access_token_expires_at', { mode: 'timestamp_ms' }),
+	// better-auth@1.6's account schema declares this alongside accessTokenExpiresAt (both nullish) —
+	// Google's offline-access grant returns a refresh-token expiry; without the column the drizzle
+	// adapter's checkMissingFields throws the first time that value is present (SP2 T1).
+	refreshTokenExpiresAt: integer('refresh_token_expires_at', { mode: 'timestamp_ms' }),
 	scope: text('scope'),
 	createdAt: integer('created_at', { mode: 'timestamp_ms' })
 		.notNull()
