@@ -1,6 +1,5 @@
 import { injectable } from 'tsyringe-neo'
 import { createReadStream } from 'node:fs'
-import { Readable } from 'node:stream'
 import { Controller, HttpStatusCode, MimeTypes, z } from '@codm/core-typescript'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { GetArtifactContent, GetArtifactContentInputSchema } from '../usecases/GetArtifactContent'
@@ -112,10 +111,36 @@ export class GetArtifactContentController extends Controller<
 	}
 }
 
-/** A node read stream as the web stream a `Response` body wants (the inverse of what the router does). */
-function webStreamOf(path: string, start?: number, end?: number): ReadableStream {
-	const stream = start === undefined ? createReadStream(path) : createReadStream(path, { start, end })
-	return Readable.toWeb(stream) as unknown as ReadableStream
+/**
+ * The file (or a window of it) as the web stream a `Response` body wants.
+ *
+ * Built by hand rather than with `Readable.toWeb`, and the reason is not style: `toWeb` returns
+ * `node:stream/web`'s ReadableStream, which is not the DOM one `Response` is typed against, so
+ * handing it over costs a double cast through `unknown` — the escape hatch the repo's own detector
+ * flags (`universal#as-unknown`) and Non-Negotiable #1 forbids. The explicit source is cast-free AND
+ * strictly better behaved: `cancel` closes the file descriptor when the browser abandons a request
+ * (every video seek abandons one), and `pull`/`pause` gives the read real backpressure instead of
+ * buffering a whole file into memory because the socket is slower than the disk.
+ */
+function webStreamOf(path: string, start?: number, end?: number): ReadableStream<Uint8Array> {
+	const file = start === undefined ? createReadStream(path) : createReadStream(path, { start, end })
+	return new ReadableStream<Uint8Array>({
+		start(controller) {
+			file.on('data', chunk => {
+				controller.enqueue(new Uint8Array(chunk as Buffer))
+				// Stop reading once the consumer is saturated; `pull` resumes us.
+				if ((controller.desiredSize ?? 1) <= 0) file.pause()
+			})
+			file.on('end', () => controller.close())
+			file.on('error', error => controller.error(error))
+		},
+		pull() {
+			file.resume()
+		},
+		cancel() {
+			file.destroy()
+		},
+	})
 }
 
 export interface ByteRange {
