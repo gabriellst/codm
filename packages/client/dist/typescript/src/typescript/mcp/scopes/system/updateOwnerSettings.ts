@@ -17,7 +17,7 @@ export async function updateOwnerSettingsHandler({ data }: { data?: UpdateOwnerS
               content: [
                 {
                   type: 'text',
-                  text: JSON.stringify(res.data)
+                  text: res.data === undefined ? 'OK' : JSON.stringify(res.data)
                 }
               ],
               structuredContent: { data: res.data }

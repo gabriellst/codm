@@ -17,7 +17,7 @@ export async function steerIssueTurnHandler({ threadId, issueId, data }: { threa
               content: [
                 {
                   type: 'text',
-                  text: JSON.stringify(res.data)
+                  text: res.data === undefined ? 'OK' : JSON.stringify(res.data)
                 }
               ],
               structuredContent: { data: res.data }
