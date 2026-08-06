@@ -13,13 +13,14 @@ import {
 import { modelsFor } from '@codm/contracts/catalog'
 import { ThreadRepository } from '@thread/repositories'
 import { ReplyStreamer, beginTypingPresence } from '@thread/services'
-import { INITIAL_CUT_STATE, advanceCutState, decideCut, type ReplyCutState } from '@thread/objects'
+import { AGENT_SPEAKER, INITIAL_CUT_STATE, advanceCutState, decideCut, type ReplyCutState } from '@thread/objects'
 import { OrchestratorAgent, OrchestratorInputSchema } from '../agents/OrchestratorAgent'
 import { parseReply } from '../agents/OrchestratorAgent/citation'
 import { AgentRunnerFactory } from '../services/AgentRunnerFactory'
 import { ProviderDetector, type ProviderDetection } from '../services/ProviderDetector'
 import { TerminalOutputAccumulator } from '../services/TerminalOutputAccumulator'
 import { AgentSessionRepository } from '../repositories'
+import { MessageVia } from '../enums'
 import { AgentSession } from '../entities/AgentSession'
 import { OrchestratorRepliedEvent } from '../events/OrchestratorRepliedEvent'
 import { GetOpenStops } from './GetOpenStops'
@@ -225,6 +226,12 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 		let spoke = false
 
 		const accumulator = new TerminalOutputAccumulator({ issueId: input.threadId })
+		// THE TURN'S OWN INSTANT, read ONCE and handed down — the clock the prompt renders as `agora:` and
+		// the reference every `hora` attribute is formatted against. Read here rather than in the prompt
+		// builder for the reason `Thread.canInvoke` and `LoopSchedule` state for themselves: a renderer
+		// that reads a clock is a renderer no test can pin. Once, and not per line, so a long window
+		// cannot straddle midnight halfway through and date its own lines inconsistently.
+		const now = new Date()
 		for await (const event of this.agent.run(runner, {
 			ownerId: input.ownerId,
 			threadId: input.threadId,
@@ -245,6 +252,7 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 			// fills the loop form. Read per turn, like `customPrompt` above — a daemon that outlives a
 			// timezone change should not keep scheduling in the old one.
 			timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+			now,
 			model: input.model ?? AgentModelId.DEFAULT,
 			// WHAT THE CLI DRIVING THIS TURN OFFERS — a lookup in the declared relation, resolved here
 			// because this is the layer that holds the provider and the agent deliberately does not (see
@@ -376,18 +384,13 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 	 */
 	private async buildWindow(thread: LoadedThread) {
 		const rows = await this.threads.recentEntries(thread.id.value, this.bufferLimit(thread.bufferSize))
-		// Roster lookup by the JID the gateway recorded. A participant the snapshot has since dropped
-		// still has their words in the transcript, so the fallback is the raw id rather than a hole —
-		// losing WHO said something would make the window unreadable.
-		const nameOf = (senderExternalId?: string): string => {
-			if (!senderExternalId) return 'operator'
-			return thread.participants.find(p => p.participantId === senderExternalId)?.name ?? senderExternalId
-		}
 
 		return rows.map(row => ({
+			// The `de` attribute, decided here because this is where the row's kind and the roster meet.
 			// The agent's OWN past lines are labelled `you`, not by the operator's name: a model reading
-			// its own words attributed to somebody else answers them.
-			speaker: row.kind === TranscriptKind.SYSTEM ? 'you' : nameOf(row.senderExternalId),
+			// its own words attributed to somebody else answers them. A whisper the SCHEDULER fired says
+			// so — `fired_by_loop` exists precisely so a tick stops arriving as `operator`.
+			speaker: this.speakerOf(thread, row),
 			// Already stripped of the tag — it is noise to the model, and leaving it in put `@codm` at
 			// the head of every rendered line.
 			text: thread.textWithoutMention(row.text),
@@ -404,7 +407,28 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 				row.kind === TranscriptKind.SYSTEM
 					? false
 					: thread.addressedToAgent({ senderExternalId: row.senderExternalId ?? '', text: row.text }),
+			// The `hora` and the `ref` — the row's own instant, and its address. The address is what makes
+			// a citation of an OLD message expressible at all: before the grammar the prompt printed one
+			// id (the live item's), so "attach this to what Marina asked an hour ago" had no spelling.
+			at: row.at,
+			ref: row.entryId,
+			// Absent unless the room was excluded. A `WHISPER` is the operator (or their schedule) talking
+			// to the agents only, and it used to render exactly like a message the group could see.
+			via: row.kind === TranscriptKind.WHISPER ? (row.firedByLoop ? MessageVia.LOOP : MessageVia.STEER) : undefined,
 		}))
+	}
+
+	/**
+	 * WHO a transcript row is from, as the `de` attribute spells it.
+	 *
+	 * Three cases and no fourth: the agent's own line, a scheduled whisper, and everybody else — whom
+	 * the roster names (`Thread.displayNameOf`, shared with the ingest so the same person cannot appear
+	 * under two identities in one prompt).
+	 */
+	private speakerOf(thread: LoadedThread, row: { kind: TranscriptKind; senderExternalId?: string; firedByLoop?: string }): string {
+		if (row.kind === TranscriptKind.SYSTEM) return AGENT_SPEAKER
+		if (row.firedByLoop) return `${MessageVia.LOOP}:${row.firedByLoop}`
+		return thread.displayNameOf(row.senderExternalId)
 	}
 
 	/** `BufferSize` is a STRING enum of numerals — the same parse `ClassifyMessage` used, inherited with it. */

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'bun:test'
 import type { ZodType } from 'zod'
 import type { BaseError } from '@codm/core-typescript'
-import { AgentModelId, McpScope } from '@codm/contracts-typescript/wire/enums'
+import { AgentModelId, MailboxItemKind, McpScope } from '@codm/contracts-typescript/wire/enums'
 import { AgentRunner } from '../../services/AgentRunner'
-import { AgentName, AgentRunOutcome } from '../../enums'
+import { AgentName, AgentRunOutcome, MessageVia } from '../../enums'
 import type { AgentRunRequest, AgentRuntimeEvent, ProviderCapabilities } from '../../types'
 import { IssueWorkPromptBuilder } from './prompt'
 import { IssueWorkAgent } from './IssueWorkAgent'
@@ -38,12 +38,21 @@ class CapturingRunner extends AgentRunner {
 	async shutdown(): Promise<void> {}
 }
 
+/** A fixed instant, so the rendered `agora:` line and every `hora` are assertable rather than raced. */
+const NOW = new Date('2026-08-06T06:09:00.000Z')
+
 const input = (overrides: Partial<Parameters<IssueWorkAgent['run']>[1]> = {}): Parameters<IssueWorkAgent['run']>[1] => ({
 	ownerId: '00000000-0000-4000-8000-0000000000aa',
 	issueId: '00000000-0000-4000-8000-0000000000cc',
 	threadId: '00000000-0000-4000-8000-0000000000bb',
 	cwd: '/Users/dev/project',
 	prompt: 'fix the coupon focus bug',
+	// The DEFAULT is the brief that opened the issue — the case every test below that does not say
+	// otherwise is also asserting, silently.
+	turnKind: MailboxItemKind.WORK,
+	speaker: 'operator',
+	now: NOW,
+	timezone: 'America/Sao_Paulo',
 	key: 'coupon-focus',
 	title: 'Coupon focus bug',
 	...overrides,
@@ -75,10 +84,66 @@ describe('IssueWorkAgent (and the Agent template method under it)', () => {
 		const request = runner.requests[0]
 		expect(request?.cwd).toBe('/Users/dev/project')
 		expect(request?.messages).toHaveLength(1)
-		expect(request?.messages[0]?.content).toBe('fix the coupon focus bug')
+		// ONE user message, and it is RENDERED now rather than passed through: the message has an author,
+		// an instant and a kind, and `buildRequest` assembles rather than renders. The operator's words are
+		// still verbatim inside the block — that is the half that must never change.
+		expect(request?.messages[0]?.content).toContain('fix the coupon focus bug')
+		expect(request?.messages[0]?.content).toContain('<msg ')
 		// The standing prompt carries the workspace and the issue under work.
 		expect(request?.systemPrompt).toContain('/Users/dev/project')
 		expect(request?.systemPrompt).toContain('coupon-focus')
+	})
+
+	/**
+	 * THE FIELD THIS PROMPT DID NOT HAVE — brief vs amendment.
+	 *
+	 * A steer used to reach the agent as the same raw string a brief did, so a turn resumed mid-work
+	 * could not tell "here is what to build" from "and also do X". Reading the second as the first means
+	 * starting over on work already half done, which is invisible to every other assertion here: nothing
+	 * errors, the turn simply redoes an hour.
+	 *
+	 * Asserted on BOTH values, because either alone passes by accident — a renderer that hardcoded one
+	 * `tipo` would satisfy a single-sided check.
+	 */
+	it('says whether the message is the original request or an amendment to work in flight', async () => {
+		const { runner, agent } = build()
+
+		for await (const _ of agent.run(runner, input())) {
+			// drain
+		}
+		for await (const _ of agent.run(runner, input({ turnKind: MailboxItemKind.STEER, prompt: 'e roda o lint também' }))) {
+			// drain
+		}
+
+		expect(runner.requests[0]?.messages[0]?.content).toContain('tipo="pedido"')
+		expect(runner.requests[1]?.messages[0]?.content).toContain('tipo="steer"')
+		// The legend is standing context, so it lives in the system half and explains both values.
+		expect(runner.requests[0]?.systemPrompt).toContain('do not start over')
+	})
+
+	/**
+	 * THE CLOCK, and WHO is asking. Both were absent, and their absence was silent.
+	 *
+	 * A scheduled nudge used to arrive indistinguishable from the operator leaning over the issue, so a
+	 * turn answered a timer as if somebody were waiting on it. And with no instant anywhere in the
+	 * prompt, an agent could not tell a steer that arrived a minute after the brief from one that
+	 * arrived a day later — which is exactly the judgement "is this still relevant?" needs.
+	 */
+	it('carries the clock and names a scheduled steer as the loop it came from', async () => {
+		const { runner, agent } = build()
+
+		for await (const _ of agent.run(
+			runner,
+			input({ turnKind: MailboxItemKind.STEER, speaker: 'loop:09:00 mon,wed,fri', via: MessageVia.LOOP }),
+		)) {
+			// drain
+		}
+
+		const content = runner.requests[0]?.messages[0]?.content as string
+		expect(content).toContain('agora: ')
+		expect(content).toContain('America/Sao_Paulo')
+		expect(content).toContain('de="loop:09:00 mon,wed,fri"')
+		expect(content).toContain('via="loop"')
 	})
 
 	it('DECLARES the issue-handling scope, derived from the manifest and never typed by hand (AC-6.5)', async () => {

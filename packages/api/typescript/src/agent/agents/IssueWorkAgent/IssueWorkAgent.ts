@@ -77,7 +77,10 @@ export class IssueWorkAgent extends Agent<typeof IssueWorkInputSchema> {
 		return {
 			cwd: input.cwd,
 			systemPrompt: this.prompt.system(input),
-			messages: [{ role: AgentMessageRole.USER, content: input.prompt }],
+			// RENDERED, not passed through. The turn's message carries an author, an instant and a kind
+			// (brief vs amendment), and turning those into text is the prompt builder's job — `buildRequest`
+			// assembles. Same split `OrchestratorAgent` has always had, for the same reason.
+			messages: [{ role: AgentMessageRole.USER, content: this.prompt.user(input) }],
 			model: input.model ?? AgentModelId.DEFAULT,
 			session: input.session,
 			binaryPath: input.binaryPath,

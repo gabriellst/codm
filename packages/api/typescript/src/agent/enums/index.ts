@@ -9,3 +9,5 @@ export * from './FactSource'
 export * from './TransportStopKind'
 // Durable session + native resume (GOAL-agent-abstraction §4.10, Fase 4).
 export * from './ResumeInvalidationReason'
+// The `<msg>` prompt grammar — how a line reached the conversation when the room did not see it.
+export * from './MessageVia'
