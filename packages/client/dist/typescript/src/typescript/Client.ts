@@ -6,6 +6,7 @@ import {
 	attachThread,
 	configureContextBuffer,
 	configureMentionGate,
+	configureModel,
 	configurePrompt,
 	createIssue,
 	createOwner,
@@ -91,6 +92,10 @@ export class TypescriptClient {
 
 	configureMentionGate(...args: Parameters<typeof configureMentionGate>): ReturnType<typeof configureMentionGate> {
 		return (configureMentionGate as (...a: any[]) => ReturnType<typeof configureMentionGate>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	configureModel(...args: Parameters<typeof configureModel>): ReturnType<typeof configureModel> {
+		return (configureModel as (...a: any[]) => ReturnType<typeof configureModel>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	configurePrompt(...args: Parameters<typeof configurePrompt>): ReturnType<typeof configurePrompt> {

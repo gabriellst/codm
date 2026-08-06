@@ -1,13 +1,15 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
-import { TestBed, givenThread } from '@test/support'
+import { TestBed, givenThread, givenWorkspace } from '@test/support'
 import { LoggingService } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
+import { MailboxItemKind, MailboxTargetKind, ProviderKind, AgentModelId } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { ThreadRepository } from '@thread/repositories'
 import { WorkspaceRepository } from '@workspace/repositories'
 import { AgentSessionRepository, MailboxRepository, type ClaimedMailboxItem } from '../../repositories'
+import { RunOrchestratorTurn } from '../../usecases/RunOrchestratorTurn'
+import { RunIssueTurn } from '../../usecases/RunIssueTurn'
 import { DrizzleMailboxDispatcher, type TurnReport } from './DrizzleMailboxDispatcher'
 
 /**
@@ -631,5 +633,119 @@ describe('DrizzleMailboxDispatcher — the drain loop wakes for work that arrive
 			mailbox.fail = realFail
 			mailbox.complete = realComplete
 		}
+	})
+
+	/**
+	 * A ESCOLHA DE MODELO DA THREAD CHEGA AO TURNO — nos DOIS caminhos.
+	 *
+	 * É aqui que a feature inteira liga ou não liga. O eixo do modelo já existia do enum ao argv
+	 * (`RunOrchestratorTurn.model` → `CLAUDE_MODEL_ALIASES` → `--model`), e o que faltava era alguém
+	 * ESCOLHER: este despachante resolvia provider e workspace e chamava o turno sem `model`, caindo em
+	 * `DEFAULT` para toda conversa do produto. O falsificador é exato — apague `model:` de qualquer um
+	 * dos dois `execute` e esta linha fica vermelha, enquanto todo o resto da suíte segue verde.
+	 *
+	 * Os turnos são substituídos por espiões no container: o que está sob teste é o que o despachante
+	 * DECIDE passar, e rodar um CLI de verdade para descobrir isso seria medir outra coisa.
+	 */
+	it('a escolha de modelo da thread chega ao turno do orquestrador E ao turno da issue', async () => {
+		const mailbox = testBed.resolve(MailboxRepository)
+		const threads = testBed.resolve(ThreadRepository)
+		const workspace = await givenWorkspace(testBed, { ownerId: OPERATOR_ID })
+		const thread = await givenThread(testBed, {
+			ownerId: OPERATOR_ID,
+			workspaceId: workspace.id.value,
+			providers: [ProviderKind.CLAUDE_CODE],
+		})
+		thread.configureModel(ProviderKind.CLAUDE_CODE, AgentModelId.OPUS)
+		await threads.save(thread)
+
+		const seen: Record<string, AgentModelId | undefined> = {}
+		const spy = (label: string) => ({
+			bindContainer() {
+				return this
+			},
+			async execute(input: { model?: AgentModelId }) {
+				seen[label] = input.model
+				return { spoke: true }
+			},
+		})
+		const spyContainer = testContainer.createChildContainer()
+		spyContainer.registerInstance(RunOrchestratorTurn as never, spy('thread') as never)
+		spyContainer.registerInstance(RunIssueTurn as never, spy('issue') as never)
+
+		const dispatcher = new DrizzleMailboxDispatcher(
+			mailbox,
+			threads,
+			testBed.resolve(WorkspaceRepository),
+			testBed.resolve(AgentSessionRepository),
+			testBed.resolve(LoggingService),
+		).bind(spyContainer)
+
+		await mailbox.enqueue({
+			ownerId: OPERATOR_ID,
+			targetKind: MailboxTargetKind.THREAD,
+			targetId: thread.id.value,
+			kind: MailboxItemKind.OPERATOR_MESSAGE,
+			payload: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: uuidv7(), speaker: 'operator', text: 'oi' },
+			dedupKey: `model:${thread.id.value}`,
+		})
+		await mailbox.enqueue({
+			ownerId: OPERATOR_ID,
+			targetKind: MailboxTargetKind.ISSUE,
+			targetId: uuidv7(),
+			kind: MailboxItemKind.WORK,
+			payload: { threadId: thread.id.value, key: 'ISS-1', title: 'work', goal: 'faz', provider: ProviderKind.CLAUDE_CODE },
+			dedupKey: `model-issue:${thread.id.value}`,
+		})
+
+		await dispatcher.drain()
+
+		expect(seen.thread).toBe(AgentModelId.OPUS)
+		// A ISSUE HERDA a escolha da conversa que a abriu — ela não tem eixo próprio, de propósito.
+		expect(seen.issue).toBe(AgentModelId.OPUS)
+	})
+
+	/** Sem escolha nenhuma, o turno pede `DEFAULT` — que é a instrução de omitir `--model`. */
+	it('uma thread que nunca escolheu modelo manda DEFAULT, não ausência', async () => {
+		const mailbox = testBed.resolve(MailboxRepository)
+		const threads = testBed.resolve(ThreadRepository)
+		const workspace = await givenWorkspace(testBed, { ownerId: OPERATOR_ID })
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID, workspaceId: workspace.id.value })
+
+		let seen: AgentModelId | undefined
+		const spyContainer = testContainer.createChildContainer()
+		spyContainer.registerInstance(
+			RunOrchestratorTurn as never,
+			{
+				bindContainer() {
+					return this
+				},
+				async execute(input: { model?: AgentModelId }) {
+					seen = input.model
+					return { spoke: true }
+				},
+			} as never,
+		)
+
+		const dispatcher = new DrizzleMailboxDispatcher(
+			mailbox,
+			threads,
+			testBed.resolve(WorkspaceRepository),
+			testBed.resolve(AgentSessionRepository),
+			testBed.resolve(LoggingService),
+		).bind(spyContainer)
+
+		await mailbox.enqueue({
+			ownerId: OPERATOR_ID,
+			targetKind: MailboxTargetKind.THREAD,
+			targetId: thread.id.value,
+			kind: MailboxItemKind.OPERATOR_MESSAGE,
+			payload: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: uuidv7(), speaker: 'operator', text: 'oi' },
+			dedupKey: `default:${thread.id.value}`,
+		})
+
+		await dispatcher.drain()
+
+		expect(seen).toBe(AgentModelId.DEFAULT)
 	})
 })

@@ -7,6 +7,7 @@ import {
 	ResolveStopController,
 	SteerIssueTurnController,
 	ConfigurePromptController,
+	ConfigureModelController,
 	ListThreadLoopsController,
 	CreateThreadLoopController,
 	UpdateThreadLoopController,
@@ -71,6 +72,7 @@ export class OrchestratorPromptBuilder {
 			...this.issues(),
 			...this.redirectingWork(),
 			...this.standingInstructions(input),
+			...this.modelChoice(input),
 			...this.recurringPrompts(input),
 			...this.stops(input),
 			...this.quoting(input),
@@ -308,6 +310,49 @@ export class OrchestratorPromptBuilder {
 			'It takes effect on the NEXT message, not on this turn: you are still running under the instructions you ' +
 				'were given when this turn started. Say what you recorded, in one line, and do not claim you are already ' +
 				'behaving differently. And if you did not call it, do not say you did.',
+		]
+	}
+
+	/**
+	 * O MODELO DESTA CONVERSA — a mesma situação que `standingInstructions()`, um eixo ao lado.
+	 *
+	 * O operador percebe que o modelo está errado para a conversa ESTANDO nela: uma thread de triagem
+	 * queimando o modelo caro em dezenas de mensagens curtas, uma de arquitetura respondendo com o
+	 * fraco. Mandá-lo ao console para trocar é a mesma falha que o custom prompt tinha — a instrução
+	 * chega a quem não pode executá-la.
+	 *
+	 * ### A LISTA é renderizada, e é isso que torna a ferramenta usável
+	 * O schema de `ConfigureModel` aceita qualquer `AgentModelId` — é um enum plano, e quem diz de quem
+	 * é cada membro é a relação declarada em contracts, que o modelo não vê. Sem a lista aqui, ele chuta
+	 * um membro do enum, o domínio recusa com `MODEL_NOT_AVAILABLE`, e a ferramenta só sabe errar. Com
+	 * ela, o catálogo do CLI deste turno chega como fato (`availableModels`), resolvido por
+	 * `RunOrchestratorTurn`, que é a camada que conhece o provider.
+	 *
+	 * ### A seção some quando não há o que escolher
+	 * Um CLI que este build nunca dirigiu tem catálogo vazio, e uma seção oferecendo uma escolha
+	 * inexistente é pior que nenhuma: convida o modelo a tentar e a errar.
+	 *
+	 * ### As duas consequências são ditas em voz alta, e a segunda é a que parece bug
+	 * (1) Vale a partir da próxima mensagem, pelo mesmo motivo do custom prompt — o `systemPrompt` e o
+	 * modelo são fixados quando o turno começa. (2) Trocar o modelo DERRUBA a sessão do CLI:
+	 * `AgentSession.resumeDecision` recusa retomar sob outro modelo (`MODEL_CHANGED`), porque o CLI fixa
+	 * o modelo na sessão que retoma e ignoraria o pedido em silêncio. Isso é o comportamento correto, e
+	 * não dizê-lo é o que faz o operador ver o agente "esquecer" a conversa e concluir que quebrou.
+	 */
+	private modelChoice(input: OrchestratorInput): string[] {
+		if (input.availableModels.length === 0) return []
+		const configureModel = toolNameOf(ConfigureModelController)
+		return [
+			'',
+			'WHICH MODEL THIS CONVERSATION RUNS ON',
+			`This conversation asks its agent CLI for a specific model, and ${configureModel} is how you change it. ` +
+				`The ones it offers: ${input.availableModels.join(', ')}. DEFAULT means let the CLI decide.`,
+			'Only when the operator asks out loud — same rule as standing instructions and issues. A remark about ' +
+				'cost or speed is not a request to switch.',
+			'Two things happen, and you say both in the one line you reply with: it applies from the NEXT message, ' +
+				'not this turn; and it RESTARTS this conversation on the CLI, so the working context you have right now ' +
+				'is gone from the next message on. Never claim you are already answering on the new model. And if you ' +
+				'did not call it, do not say you did.',
 		]
 	}
 

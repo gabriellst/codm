@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import { configureModelHandler } from "./configureModel.ts";
 import { configurePromptHandler } from "./configurePrompt.ts";
 import { createThreadLoopHandler } from "./createThreadLoop.ts";
 import { deleteThreadLoopHandler } from "./deleteThreadLoop.ts";
@@ -15,6 +16,7 @@ import { resolveStopHandler } from "./resolveStop.ts";
 import { setThreadLoopEnabledHandler } from "./setThreadLoopEnabled.ts";
 import { steerIssueTurnHandler } from "./steerIssueTurn.ts";
 import { updateThreadLoopHandler } from "./updateThreadLoop.ts";
+import { configureModelMutationRequestSchema, configureModelMutationResponseSchema } from "../../../zod/configureModelSchema.ts";
 import { configurePromptMutationRequestSchema, configurePromptMutationResponseSchema } from "../../../zod/configurePromptSchema.ts";
 import { createThreadLoopMutationRequestSchema, createThreadLoopMutationResponseSchema } from "../../../zod/createThreadLoopSchema.ts";
 import { deleteThreadLoopMutationResponseSchema } from "../../../zod/deleteThreadLoopSchema.ts";
@@ -79,6 +81,15 @@ server.registerTool("GetIssueStatus", {
   inputSchema: { threadId: z.string(), issueId: z.string() },
 }, async ({ threadId, issueId }) => {
   return getIssueStatusHandler({ threadId, issueId })
+})
+          
+
+server.registerTool("ConfigureModel", {
+  description: "Choose which model this conversation asks one of its agent CLIs for. DEFAULT means let the CLI pick (C16)",
+  outputSchema: { data: configureModelMutationResponseSchema },
+  inputSchema: { threadId: z.string(), data: configureModelMutationRequestSchema },
+}, async ({ threadId, data }) => {
+  return configureModelHandler({ threadId, data })
 })
           
 

@@ -10,6 +10,7 @@ import {
 	ProviderStatus,
 	TranscriptKind,
 } from '@codm/contracts-typescript/wire/enums'
+import { modelsFor } from '@codm/contracts/catalog'
 import { ThreadRepository } from '@thread/repositories'
 import { ReplyStreamer, beginTypingPresence } from '@thread/services'
 import { INITIAL_CUT_STATE, advanceCutState, decideCut, type ReplyCutState } from '@thread/objects'
@@ -245,6 +246,11 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 			// timezone change should not keep scheduling in the old one.
 			timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 			model: input.model ?? AgentModelId.DEFAULT,
+			// WHAT THE CLI DRIVING THIS TURN OFFERS — a lookup in the declared relation, resolved here
+			// because this is the layer that holds the provider and the agent deliberately does not (see
+			// `availableModels` on the input schema, and `AgentRunRequest`'s note on why there is no
+			// `provider` field). Empty for a CLI nothing has ever driven, and the section then stays out.
+			availableModels: [...modelsFor(input.provider)],
 			session: session.resumed ? { resumeId: session.id } : { newId: session.id },
 			binaryPath: detection.binaryPath,
 			caps: detection.caps,

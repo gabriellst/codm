@@ -366,6 +366,11 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 			threadId: item.targetId,
 			workspacePath: workspace.path,
 			provider,
+			// WHICH MODEL, resolved here for the same reason the provider and the workspace are: it is a
+			// property of the thread NOW, and the item may have been queued minutes ago. `modelFor` always
+			// answers — a conversation that chose nothing reads as `DEFAULT`, which is the instruction to
+			// omit `--model` — so there is no absence for the use case to interpret.
+			model: thread.modelFor(provider),
 			item: item.payload as Parameters<RunOrchestratorTurn['execute']>[0]['item'],
 			// Only an OPERATOR_MESSAGE has an originating entry; an ISSUE_RESULT turn is triggered by a
 			// subagent finishing, and the entry it will CITE is carried on the item, not on the token.
@@ -423,13 +428,20 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 
 		const session = await this.sessions.findByIssueId(item.targetId)
 
+		const provider = thread.providers[0] ?? (payload.provider as never)
+
 		const result = await this.handlerFor(RunIssueTurn).execute({
 			ownerId: item.ownerId,
 			issueId: item.targetId,
 			threadId: payload.threadId,
 			key: payload.key,
 			title: payload.title,
-			provider: thread.providers[0] ?? (payload.provider as never),
+			provider,
+			// THE ISSUE INHERITS THE CONVERSATION'S MODEL, and does not have one of its own. An issue is
+			// work the operator asked for IN a thread — the choice they made there is the one they meant,
+			// and giving the issue a second selector would be a second place to configure one thing, in a
+			// screen (the issue detail) where the CLI is not even named.
+			model: thread.modelFor(provider),
 			workspacePath: workspace.path,
 			// The issue OWNS its goal since the pivot — the prompt is what the operator asked for, not
 			// the raw inbound text re-read from a transcript. A STEER carries its own text instead: the

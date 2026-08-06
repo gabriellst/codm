@@ -210,6 +210,12 @@
 		"itemsPerPage": "items per page"
 	},
 	"enums": {
+		"AgentModelId": {
+			"DEFAULT": "Automatic",
+			"OPUS": "Opus",
+			"SONNET": "Sonnet",
+			"HAIKU": "Haiku"
+		},
 		"ArtifactKind": {
 			"FILE": "File",
 			"IMAGE": "Screenshot",
@@ -428,6 +434,7 @@
 		"LOOP_NOT_FOUND": "That loop no longer exists in this conversation.",
 		"LOOP_PROMPT_TOO_LONG": "The loop's prompt is past the character limit.",
 		"LOOP_WITHOUT_WEEKDAY": "Pick at least one day of the week for the loop to repeat on.",
+		"MODEL_NOT_AVAILABLE": "That agent does not offer that model.",
 		"MISSING_ENVIRONMENT_VARIABLE": "Server configuration error. Contact support.",
 		"MISSING_LOG_CONTENT": "Internal logging error.",
 		"NETWORK_ERROR": "Network error",
@@ -446,6 +453,7 @@
 		"PATH_NOT_FOUND": "The selected path does not exist.",
 		"PROMPT_TOO_LONG": "That custom prompt is too long for one conversation.",
 		"PROVIDER_COMING_SOON": "That agent can't be driven yet. Pick one that can.",
+		"PROVIDER_NOT_BOUND": "This conversation does not run that agent.",
 		"PROVIDER_NOT_DETECTED": "Agent provider not detected.",
 		"QUOTED_ENTRY_NOT_IN_THREAD": "The quoted message belongs to a different conversation.",
 		"RATE_LIMITED": "Too many attempts. Please wait a moment and try again.",
@@ -542,6 +550,8 @@
 		"back": "Back",
 		"boundAgents": "Agents on this conversation",
 		"boundAgentsComingSoonHint": "This conversation is bound to an agent this build can't drive yet, so it won't reply. Delete it and re-attach the contact to an available agent.",
+		"agentModel": "Model",
+		"agentModelRestartHint": "Switching the model restarts the conversation on the agent: it comes back without the context it had, from the next message on.",
 		"bufferMessages": "messages",
 		"canInvokeToggle": "Can invoke",
 		"chatEmptyDescription": "Messages from this contact and your agents will appear here.",

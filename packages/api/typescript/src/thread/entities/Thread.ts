@@ -2,6 +2,7 @@ import { AggregateRoot, BaseError, Id, z } from '@codm/core-typescript'
 import type Z from 'zod'
 import {
 	ProviderKind,
+	AgentModelId,
 	ContactKind,
 	ThreadStatus,
 	BufferSize,
@@ -10,6 +11,10 @@ import {
 	StopKind,
 	StopResolution,
 } from '@codm/contracts-typescript/wire/enums'
+// The DECLARED provider → models relation. A constant, no I/O — same family of import as the wire
+// enums above, and deliberately the `/catalog` subpath rather than `/db`, so nothing about this line
+// reads as persistence leaking into the domain.
+import { effectiveModel, offersModel } from '@codm/contracts/catalog'
 import type { DomainErrors } from '../errors'
 import { mentionsTag, stripMentionTag, MentionGateSchema, CustomPromptSchema } from '../schemas'
 import { isResolutionApplicable } from '../utils/StopResolutions'
@@ -113,6 +118,21 @@ export const ThreadSchema = z.object({
 	mentionGate: MentionGateSchema,
 	participants: z.array(ParticipantSchema),
 	bufferSize: z.enum(BufferSize),
+	/**
+	 * WHICH MODEL this conversation asks each of its CLIs for — `{}` until the operator picks one.
+	 *
+	 * A MAP because the choice is per provider. `providers` is an array, and `opus` is vocabulary of one
+	 * binary (`CLAUDE_MODEL_ALIASES` says so where it lives), so a single `model` field would hold a
+	 * value that is right for at most one of the CLIs this thread declares and silently wrong for the
+	 * rest. What each provider offers is declared once, in `contracts/catalog/agent-models.ts`.
+	 *
+	 * PARTIAL, and that is the invariant, not an accident of typing: a key exists only for a NON-default
+	 * choice. `AgentModelId.DEFAULT` already means "omit `--model`, let the CLI pick" — exactly what an
+	 * absent key means — so `configureModel(p, DEFAULT)` deletes rather than stores. Same rule, same
+	 * reason as `customPrompt`: one fact gets one spelling. `modelFor()` is the read that collapses the
+	 * other way, so no caller ever handles `undefined`.
+	 */
+	modelByProvider: z.partialRecord(z.enum(ProviderKind), z.enum(AgentModelId)),
 	/**
 	 * The operator's own standing instructions for this conversation — ABSENT until they write some.
 	 *
@@ -263,6 +283,10 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 			mentionGate: { enabled: true, tag: data.mentionTag },
 			participants: data.participants,
 			bufferSize: data.bufferSize ?? BufferSize._50,
+			// A fresh conversation has chosen nothing, and "chosen nothing" is the empty map — never a
+			// pre-seeded `{ [provider]: DEFAULT }`, which would be the second spelling this field refuses.
+			// The attach wizard does not ask for a model, so there is nothing here for it to carry.
+			modelByProvider: {},
 			status: ThreadStatus.IDLE,
 		})
 	}
@@ -315,6 +339,13 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 * destroy hand-written text with nothing in the flow that hints it happened — while the promise the
 	 * delete confirmation makes is that re-attaching brings the conversation back.
 	 *
+	 * `modelByProvider` survives on the same argument — the wizard never asks for a model either — but
+	 * NARROWED to the providers just re-chosen. It is the one field of the two that the wizard can
+	 * contradict: re-attaching with a different CLI would otherwise leave behind a choice for a provider
+	 * this conversation no longer runs, which is precisely the orphaned configuration `PROVIDER_NOT_BOUND`
+	 * exists to make unrepresentable. Filtering here keeps that invariant true of every reachable state,
+	 * not merely of the write path.
+	 *
 	 * There is deliberately no "this thread is not deleted" guard. `AttachThread` is the only caller and
 	 * it reaches this method only on the deleted branch — the live branch raises THREAD_ALREADY_ATTACHED
 	 * before getting here. Inventing a domain code for a state the one call site cannot produce would be
@@ -338,6 +369,9 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 		this.mentionGate = { enabled: true, tag: data.mentionTag }
 		this.participants = data.participants
 		this.bufferSize = data.bufferSize ?? BufferSize._50
+		this.modelByProvider = Object.fromEntries(
+			Object.entries(this.modelByProvider).filter(([provider]) => data.providers.includes(provider as ProviderKind)),
+		)
 		this.paused = false
 		this.status = ThreadStatus.IDLE
 		this.validate()
@@ -360,6 +394,61 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 
 	configureContextBuffer(size: BufferSize): void {
 		this.bufferSize = size
+	}
+
+	/**
+	 * Choose which model this conversation asks ONE of its CLIs for.
+	 *
+	 * ### `DEFAULT` is the ERASE, not a value
+	 * Same shape as `configurePrompt('')`, and for the same reason: `DEFAULT` means "omit `--model` and
+	 * let the binary choose", which is already what an absent key means. Storing it would create a second
+	 * spelling that the persistence mapper, the settings DTO and the dispatcher would each have to
+	 * normalize on their own, and the first one to forget would send `--model DEFAULT` to a CLI that has
+	 * no such alias. So the collapse is decided ONCE, here — and the console does not need a second
+	 * control for "back to automatic", because the catalog lists `DEFAULT` as a real option.
+	 *
+	 * ### Two invariants, and both are the SAME class of mistake: configuration nobody will ever read
+	 * - `PROVIDER_NOT_BOUND` — the thread does not run that CLI. The dispatcher only ever asks
+	 *   `modelFor(thread.providers[0])`, so a choice for an unbound provider is written, persisted,
+	 *   re-rendered in the dialog as if it were in force, and never consulted by anything.
+	 * - `MODEL_NOT_AVAILABLE` — the CLI does not offer that model. Answered by LOOKUP against the declared
+	 *   relation (`offersModel`), never by parsing the member's name. It also covers "this provider offers
+	 *   nothing at all" for free: an empty catalog rejects every model, including `DEFAULT`, which is the
+	 *   honest answer for a binary this engine has never driven.
+	 *
+	 * It is a DOMAIN error rather than an application one — unlike `PROVIDER_COMING_SOON`, its neighbour —
+	 * because the question is about the declared catalog, which the aggregate can see in full, not about
+	 * which runners this deployment happens to have bound, which it cannot see at all.
+	 */
+	configureModel(provider: ProviderKind, model: AgentModelId): void {
+		if (!this.providers.includes(provider)) {
+			throw new BaseError<DomainErrors>('PROVIDER_NOT_BOUND', `this thread does not run ${provider}`)
+		}
+		if (!offersModel(provider, model)) {
+			throw new BaseError<DomainErrors>('MODEL_NOT_AVAILABLE', `${provider} does not offer ${model}`)
+		}
+
+		const { [provider]: _dropped, ...rest } = this.modelByProvider
+		this.modelByProvider = model === AgentModelId.DEFAULT ? rest : { ...rest, [provider]: model }
+		this.validate()
+	}
+
+	/**
+	 * WHICH MODEL a turn on `provider` must ask for — the read half of the collapse above.
+	 *
+	 * Always an `AgentModelId`, never `undefined`, so the dispatcher has no absence to interpret and the
+	 * settings DTO has no optional field for the console to `?? DEFAULT` on its own. Absent key ⇒
+	 * `DEFAULT` ⇒ the runner omits the flag, which is where the chain ends.
+	 *
+	 * Deliberately does NOT check that `provider` is bound: this answers "what would we ask for", and the
+	 * honest answer for a CLI nobody chose anything on is the same as for a bound one with no choice.
+	 * Refusing here would make the read stricter than the fallback it exists to provide.
+	 *
+	 * The collapse itself is `effectiveModel`, in contracts beside the catalog, because the settings BFF
+	 * reads the ROW (no aggregate hydrated, by design) and must answer identically.
+	 */
+	modelFor(provider: ProviderKind): AgentModelId {
+		return effectiveModel(this.modelByProvider, provider)
 	}
 
 	/**

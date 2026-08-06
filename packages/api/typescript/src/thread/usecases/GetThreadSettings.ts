@@ -2,7 +2,8 @@ import { injectable } from 'tsyringe-neo'
 import { and, eq, inArray, isNull } from 'drizzle-orm'
 import { Handler, z, BaseError, DrizzleClient } from '@codm/core-typescript'
 import { threads, remotes } from '@codm/contracts/db'
-import { BufferSize, ProviderKind } from '@codm/contracts-typescript/wire/enums'
+import { BufferSize, ProviderKind, AgentModelId } from '@codm/contracts-typescript/wire/enums'
+import { effectiveModel, modelsFor } from '@codm/contracts/catalog'
 // The LEAF, not the barrel — see `AttachThread` and that barrel's header.
 import { AgentRunnerFactory } from '@agent/services/AgentRunnerFactory/AgentRunnerFactory'
 import { OPERATOR_PARTICIPANT_ID, type Participant } from '../entities/Thread'
@@ -46,8 +47,27 @@ export const GetThreadSettingsOutputSchema = z.object({
 	 * `AgentRunnerFactory.supported`. Deliberately NOT `available`: the wizard's `available` composes
 	 * detection with drivability, and this read does not probe the filesystem — what a bound thread
 	 * knows is what it declared, not whether the binary is on PATH right now.
+	 *
+	 * ### `model` and `models` ride HERE, on the provider entry, and not as a sibling field
+	 * The choice is per CLI, so the pair belongs to the row that names the CLI — which is also the row
+	 * the dialog already renders one of per provider. A parallel `models: Record<provider, …>` beside
+	 * this array would be the same relation, spelled twice, for the console to zip back together.
+	 *
+	 * `model` is the EFFECTIVE one and never absent: `Thread.modelFor` collapses "no key" into `DEFAULT`
+	 * server-side, so the console holds a `<Select>` with a value from the first render instead of a
+	 * `?? DEFAULT` it has to remember. `models` is that provider's declared catalog — empty for a CLI
+	 * this build has never driven, which is the console's cue that there is nothing to choose. It
+	 * travels rather than being re-typed on the front for the same reason `customPromptMaxLength` does:
+	 * a client that restates the contract is a client that can disagree with it.
 	 */
-	providers: z.array(z.object({ provider: z.enum(ProviderKind), comingSoon: z.boolean() })),
+	providers: z.array(
+		z.object({
+			provider: z.enum(ProviderKind),
+			comingSoon: z.boolean(),
+			model: z.enum(AgentModelId),
+			models: z.array(z.enum(AgentModelId)),
+		}),
+	),
 })
 
 /** Read — ThreadSettings (T10). The per-thread behavior modal: mention gate, participants +
@@ -114,7 +134,17 @@ export class GetThreadSettings extends Handler<typeof GetThreadSettingsInputSche
 			bufferSize: thread.bufferSize as BufferSize,
 			customPrompt: thread.customPrompt ?? '',
 			customPromptMaxLength: CUSTOM_PROMPT_MAX_LENGTH,
-			providers: (thread.providers as ProviderKind[]).map(provider => ({ provider, comingSoon: !drivable.includes(provider) })),
+			providers: (thread.providers as ProviderKind[]).map(provider => ({
+				provider,
+				comingSoon: !drivable.includes(provider),
+				// The SAME collapse the aggregate uses (`Thread.modelFor` delegates to this function) — this
+				// read holds a row, not an entity, and the two must not answer "no choice" differently.
+				model: effectiveModel(thread.modelByProvider, provider),
+				// `modelsFor`, not `drivable`: what a CLI OFFERS and whether this engine can drive it are two
+				// declared facts that happen to agree today. Deriving one from the other would make binding a
+				// runner silently invent a model list.
+				models: [...modelsFor(provider)],
+			})),
 		}
 	}
 }

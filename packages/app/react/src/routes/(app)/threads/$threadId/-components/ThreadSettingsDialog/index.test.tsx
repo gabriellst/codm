@@ -25,6 +25,22 @@ import { ThreadSettingsDialog } from '.'
 
 const THREAD_ID = '019e4d24-6524-7041-9e1c-8108180cddae'
 
+/**
+ * Os providers do fixture, como função — vários casos os trocam e precisam DEVOLVER o original no
+ * `finally`, e um literal repetido em cada um deles é a forma de os dois ficarem diferentes.
+ */
+const DEFAULT_PROVIDERS = () => [
+	{
+		provider: 'CLAUDE_CODE',
+		comingSoon: false,
+		model: 'DEFAULT',
+		models: ['DEFAULT', 'OPUS', 'SONNET', 'HAIKU'],
+	},
+	// Catálogo VAZIO, e é um fato declarado à parte de `comingSoon`: esta versão nunca dirigiu o
+	// binário do codex, então não sabe o que oferecer — e a linha não ganha seletor.
+	{ provider: 'CODEX', comingSoon: true, model: 'DEFAULT', models: [] },
+]
+
 /** A resposta de `GET /v1/threads/:id/settings` com um binding morto (CODEX) e um vivo. */
 const SETTINGS = {
 	mentionGate: { enabled: true, tag: '@codm' },
@@ -33,10 +49,7 @@ const SETTINGS = {
 	bufferSize: '50',
 	customPrompt: 'Fale sempre em inglês com este cliente.',
 	customPromptMaxLength: 8000,
-	providers: [
-		{ provider: 'CLAUDE_CODE', comingSoon: false },
-		{ provider: 'CODEX', comingSoon: true },
-	],
+	providers: DEFAULT_PROVIDERS(),
 }
 
 /**
@@ -198,7 +211,7 @@ describe('ThreadSettingsDialog — o provider sem runner aparece como "Em breve"
 
 	/** Sem binding morto NÃO há aviso — uma tarja permanente vira decoração e ninguém a lê. */
 	it('não avisa nada quando todos os agentes são dirigíveis', async () => {
-		SETTINGS.providers = [{ provider: 'CLAUDE_CODE', comingSoon: false }]
+		SETTINGS.providers = [{ provider: 'CLAUDE_CODE', comingSoon: false, model: 'DEFAULT', models: ['DEFAULT', 'OPUS', 'SONNET', 'HAIKU'] }]
 		try {
 			await mount()
 
@@ -206,11 +219,68 @@ describe('ThreadSettingsDialog — o provider sem runner aparece como "Em breve"
 			expect(text).toContain('Claude Code')
 			expect(text).not.toContain(i18n.t('session.boundAgentsComingSoonHint'))
 		} finally {
-			SETTINGS.providers = [
-				{ provider: 'CLAUDE_CODE', comingSoon: false },
-				{ provider: 'CODEX', comingSoon: true },
-			]
+			SETTINGS.providers = DEFAULT_PROVIDERS()
 		}
+	})
+
+	/**
+	 * O SELETOR DE MODELO — presente onde há o que escolher, ausente onde não há.
+	 *
+	 * As duas metades importam. Um seletor na linha do CODEX ofereceria uma escolha que o backend recusa
+	 * (`MODEL_NOT_AVAILABLE`), e o operador levaria o erro por ter feito o que a tela ofereceu.
+	 */
+	it('renderiza um seletor de modelo por agente com catálogo, e nenhum para o agente sem catálogo', async () => {
+		await mount()
+
+		const selectors = document.querySelectorAll(`[aria-label="${i18n.t('session.agentModel')}"]`)
+		expect(selectors).toHaveLength(1)
+		// O valor efetivo vem do DTO — a thread não escolheu nada, então lê "Automático".
+		expect(selectors[0]?.textContent).toContain(i18n.t('enums.AgentModelId.DEFAULT'))
+	})
+
+	/**
+	 * O AVISO DO REINÍCIO. Trocar o modelo invalida a sessão do CLI (`MODEL_CHANGED`) — comportamento
+	 * correto e, calado, indistinguível de amnésia. Só aparece quando existe seletor: sem escolha
+	 * possível, o aviso é sobre uma ação que a tela não oferece.
+	 */
+	it('avisa que trocar o modelo recomeça a conversa', async () => {
+		await mount()
+
+		expect(document.body.textContent ?? '').toContain(i18n.t('session.agentModelRestartHint'))
+	})
+
+	it('não avisa nada sobre modelo quando nenhum agente tem o que escolher', async () => {
+		SETTINGS.providers = [{ provider: 'CODEX', comingSoon: true, model: 'DEFAULT', models: [] }]
+		try {
+			await mount()
+
+			expect(document.body.textContent ?? '').not.toContain(i18n.t('session.agentModelRestartHint'))
+			expect(document.querySelectorAll(`[aria-label="${i18n.t('session.agentModel')}"]`)).toHaveLength(0)
+		} finally {
+			SETTINGS.providers = DEFAULT_PROVIDERS()
+		}
+	})
+
+	/**
+	 * A ESCRITA. Escolher salva sozinho (é escolha de um clique, como as pilhas de buffer) e o corpo
+	 * carrega os DOIS eixos: a escolha só significa alguma coisa emparelhada com o CLI a que pertence.
+	 */
+	it('escolher um modelo dispara a mutação com o provider e o modelo', async () => {
+		await mount()
+
+		const trigger = document.querySelector<HTMLElement>(`[aria-label="${i18n.t('session.agentModel')}"]`)
+		await act(async () => {
+			trigger?.click()
+		})
+		const option = [...document.querySelectorAll<HTMLElement>('[role="option"]')].find(
+			el => el.textContent === i18n.t('enums.AgentModelId.OPUS'),
+		)
+		await act(async () => {
+			option?.click()
+		})
+
+		const put = await sentRequest(r => r.method.toUpperCase() === 'PUT' && r.url.includes(`/threads/${THREAD_ID}/model`))
+		expect(JSON.parse(put.body ?? '{}')).toEqual({ provider: 'CLAUDE_CODE', model: 'OPUS' })
 	})
 })
 

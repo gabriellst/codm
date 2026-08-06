@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import { agentModelIdSchema } from "./agentModelIdSchema.ts";
 import { bufferSizeSchema } from "./bufferSizeSchema.ts";
 import { providerKindSchema } from "./providerKindSchema.ts";
 import { z } from "zod/v4";
@@ -37,7 +38,13 @@ get "bufferSize"(){
     get "provider"(){
                 return providerKindSchema
               },
-"comingSoon": z.boolean()
+"comingSoon": z.boolean(),
+get "model"(){
+                return agentModelIdSchema
+              },
+get "models"(){
+                return z.array(agentModelIdSchema)
+              }
     }))
     })
 

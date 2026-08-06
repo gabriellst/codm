@@ -252,6 +252,7 @@ pub mod types {
     ///    "LOOP_WITHOUT_WEEKDAY",
     ///    "MISSING_ENVIRONMENT_VARIABLE",
     ///    "MISSING_LOG_CONTENT",
+    ///    "MODEL_NOT_AVAILABLE",
     ///    "NOT_FOUND",
     ///    "NOT_IMPLEMENTED",
     ///    "NO_CHANNEL_CONNECTED",
@@ -267,6 +268,7 @@ pub mod types {
     ///    "PATH_NOT_FOUND",
     ///    "PROMPT_TOO_LONG",
     ///    "PROVIDER_COMING_SOON",
+    ///    "PROVIDER_NOT_BOUND",
     ///    "PROVIDER_NOT_DETECTED",
     ///    "QUOTED_ENTRY_NOT_IN_THREAD",
     ///    "RATE_LIMITED",
@@ -406,6 +408,8 @@ pub mod types {
         MissingEnvironmentVariable,
         #[serde(rename = "MISSING_LOG_CONTENT")]
         MissingLogContent,
+        #[serde(rename = "MODEL_NOT_AVAILABLE")]
+        ModelNotAvailable,
         #[serde(rename = "NOT_FOUND")]
         NotFound,
         #[serde(rename = "NOT_IMPLEMENTED")]
@@ -436,6 +440,8 @@ pub mod types {
         PromptTooLong,
         #[serde(rename = "PROVIDER_COMING_SOON")]
         ProviderComingSoon,
+        #[serde(rename = "PROVIDER_NOT_BOUND")]
+        ProviderNotBound,
         #[serde(rename = "PROVIDER_NOT_DETECTED")]
         ProviderNotDetected,
         #[serde(rename = "QUOTED_ENTRY_NOT_IN_THREAD")]
@@ -556,6 +562,7 @@ pub mod types {
                     f.write_str("MISSING_ENVIRONMENT_VARIABLE")
                 }
                 Self::MissingLogContent => f.write_str("MISSING_LOG_CONTENT"),
+                Self::ModelNotAvailable => f.write_str("MODEL_NOT_AVAILABLE"),
                 Self::NotFound => f.write_str("NOT_FOUND"),
                 Self::NotImplemented => f.write_str("NOT_IMPLEMENTED"),
                 Self::NoChannelConnected => f.write_str("NO_CHANNEL_CONNECTED"),
@@ -571,6 +578,7 @@ pub mod types {
                 Self::PathNotFound => f.write_str("PATH_NOT_FOUND"),
                 Self::PromptTooLong => f.write_str("PROMPT_TOO_LONG"),
                 Self::ProviderComingSoon => f.write_str("PROVIDER_COMING_SOON"),
+                Self::ProviderNotBound => f.write_str("PROVIDER_NOT_BOUND"),
                 Self::ProviderNotDetected => f.write_str("PROVIDER_NOT_DETECTED"),
                 Self::QuotedEntryNotInThread => f.write_str("QUOTED_ENTRY_NOT_IN_THREAD"),
                 Self::RateLimited => f.write_str("RATE_LIMITED"),
@@ -657,6 +665,7 @@ pub mod types {
                 "LOOP_WITHOUT_WEEKDAY" => Ok(Self::LoopWithoutWeekday),
                 "MISSING_ENVIRONMENT_VARIABLE" => Ok(Self::MissingEnvironmentVariable),
                 "MISSING_LOG_CONTENT" => Ok(Self::MissingLogContent),
+                "MODEL_NOT_AVAILABLE" => Ok(Self::ModelNotAvailable),
                 "NOT_FOUND" => Ok(Self::NotFound),
                 "NOT_IMPLEMENTED" => Ok(Self::NotImplemented),
                 "NO_CHANNEL_CONNECTED" => Ok(Self::NoChannelConnected),
@@ -672,6 +681,7 @@ pub mod types {
                 "PATH_NOT_FOUND" => Ok(Self::PathNotFound),
                 "PROMPT_TOO_LONG" => Ok(Self::PromptTooLong),
                 "PROVIDER_COMING_SOON" => Ok(Self::ProviderComingSoon),
+                "PROVIDER_NOT_BOUND" => Ok(Self::ProviderNotBound),
                 "PROVIDER_NOT_DETECTED" => Ok(Self::ProviderNotDetected),
                 "QUOTED_ENTRY_NOT_IN_THREAD" => Ok(Self::QuotedEntryNotInThread),
                 "RATE_LIMITED" => Ok(Self::RateLimited),
@@ -1414,6 +1424,38 @@ pub mod types {
                 .map_err(|e: self::error::ConversionError| {
                     <D::Error as ::serde::de::Error>::custom(e.to_string())
                 })
+        }
+    }
+    ///`ConfigureModelBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "model",
+    ///    "provider"
+    ///  ],
+    ///  "properties": {
+    ///    "model": {
+    ///      "$ref": "#/components/schemas/AgentModelId"
+    ///    },
+    ///    "provider": {
+    ///      "$ref": "#/components/schemas/ProviderKind"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct ConfigureModelBody {
+        pub model: ::codm_contracts_rust::wire::enums::AgentModelId,
+        pub provider: ::codm_contracts_rust::wire::enums::ProviderKind,
+    }
+    impl ::std::convert::From<&ConfigureModelBody> for ConfigureModelBody {
+        fn from(value: &ConfigureModelBody) -> Self {
+            value.clone()
         }
     }
     ///`ConfigurePromptBody`
@@ -6410,11 +6452,22 @@ pub mod types {
     ///        "type": "object",
     ///        "required": [
     ///          "comingSoon",
+    ///          "model",
+    ///          "models",
     ///          "provider"
     ///        ],
     ///        "properties": {
     ///          "comingSoon": {
     ///            "type": "boolean"
+    ///          },
+    ///          "model": {
+    ///            "$ref": "#/components/schemas/AgentModelId"
+    ///          },
+    ///          "models": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "$ref": "#/components/schemas/AgentModelId"
+    ///            }
     ///          },
     ///          "provider": {
     ///            "$ref": "#/components/schemas/ProviderKind"
@@ -6561,11 +6614,22 @@ pub mod types {
     ///  "type": "object",
     ///  "required": [
     ///    "comingSoon",
+    ///    "model",
+    ///    "models",
     ///    "provider"
     ///  ],
     ///  "properties": {
     ///    "comingSoon": {
     ///      "type": "boolean"
+    ///    },
+    ///    "model": {
+    ///      "$ref": "#/components/schemas/AgentModelId"
+    ///    },
+    ///    "models": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "$ref": "#/components/schemas/AgentModelId"
+    ///      }
     ///    },
     ///    "provider": {
     ///      "$ref": "#/components/schemas/ProviderKind"
@@ -6580,6 +6644,8 @@ pub mod types {
     pub struct GetThreadSettingsResponseProvidersItem {
         #[serde(rename = "comingSoon")]
         pub coming_soon: bool,
+        pub model: ::codm_contracts_rust::wire::enums::AgentModelId,
+        pub models: ::std::vec::Vec<::codm_contracts_rust::wire::enums::AgentModelId>,
         pub provider: ::codm_contracts_rust::wire::enums::ProviderKind,
     }
     impl ::std::convert::From<&GetThreadSettingsResponseProvidersItem>
@@ -11245,6 +11311,43 @@ Sends a `PUT` request to `/v1/threads/{threadId}/mention-gate`
         let url = format!(
             "{}/v1/threads/{}/mention-gate", self.baseurl, encode_path(& thread_id
             .to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .put(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Choose which model this conversation asks one of its agent CLIs for. DEFAULT means let the CLI pick (C16)
+
+Sends a `PUT` request to `/v1/threads/{threadId}/model`
+
+*/
+    pub async fn configure_model<'a>(
+        &'a self,
+        thread_id: &'a str,
+        body: &'a types::ConfigureModelBody,
+    ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
+        let url = format!(
+            "{}/v1/threads/{}/model", self.baseurl, encode_path(& thread_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map

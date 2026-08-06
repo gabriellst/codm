@@ -19,6 +19,7 @@ import { RecordArtifactController } from '@artifact/controllers'
 import {
 	ResolveStopController,
 	ConfigurePromptController,
+	ConfigureModelController,
 	ListThreadLoopsController,
 	CreateThreadLoopController,
 	UpdateThreadLoopController,
@@ -190,6 +191,9 @@ export {
 	// Named by `standingInstructions()` — the paragraph that lets the operator record a rule for the
 	// conversation without leaving it. Same context and same license as `ResolveStopController` above.
 	ConfigurePromptController,
+	// Named by `modelChoice()` — the paragraph that lets the operator switch which model this
+	// conversation runs on without leaving it. Same context and same license.
+	ConfigureModelController,
 	// Named by `recurringPrompts()` — the paragraph that lets the operator put a prompt on a timer
 	// without leaving the conversation. FIVE rather than one because the operator's first sentence
 	// creates a loop and every sentence after it is about one that already exists, and the READ is what

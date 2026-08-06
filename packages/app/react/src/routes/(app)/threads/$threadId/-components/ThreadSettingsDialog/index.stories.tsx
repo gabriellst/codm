@@ -24,8 +24,15 @@ const meta: Meta<typeof ThreadSettingsDialog> = {
 					customPrompt: 'Fale sempre em inglês com este cliente. Nunca prometa prazo.',
 					customPromptMaxLength: 8000,
 					providers: [
-						{ provider: 'CLAUDE_CODE', comingSoon: false },
-						{ provider: 'CODEX', comingSoon: true },
+						// Um agente com catálogo (seletor de modelo, já numa escolha explícita para a escolha
+						// aparecer selecionada) e um sem (só o selo "Em breve") — as duas metades da linha.
+						{
+							provider: 'CLAUDE_CODE',
+							comingSoon: false,
+							model: 'OPUS',
+							models: ['DEFAULT', 'OPUS', 'SONNET', 'HAIKU'],
+						},
+						{ provider: 'CODEX', comingSoon: true, model: 'DEFAULT', models: [] },
 					],
 				}),
 				mockQuery(getSessionChatQueryOptions(THREAD_ID), { thread: { displayName: 'Ada Lovelace' } }),

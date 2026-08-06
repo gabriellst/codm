@@ -168,6 +168,24 @@ export const OrchestratorInputSchema = z.agentInput({
 	timezone: z.string().min(1),
 	/** Which model to ask the CLI for. Omitted ⇒ `DEFAULT` ⇒ the CLI's own choice. */
 	model: z.enum(AgentModelId).optional(),
+	/**
+	 * The models the CLI driving THIS turn offers — the catalog, so the model can name a real one.
+	 *
+	 * It is a LIST OF FACTS, never the provider itself, and the distinction is the same one
+	 * `AgentRunRequest` makes when it explains why it has no `provider` field: WHICH CLI is settled
+	 * before the agent runs, so handing the agent a provider would be handing it a resolution key it
+	 * could only branch on. What it actually needs is the answer, and the answer comes from the declared
+	 * relation in contracts (`modelsFor`), resolved once by `RunOrchestratorTurn`.
+	 *
+	 * Without it the tool would be unusable in the way that is hardest to see: `ConfigureModel`'s schema
+	 * accepts every `AgentModelId`, so a model that cannot see the catalog picks one of the others and
+	 * the domain refuses it. A tool that only ever errors is worse than no tool.
+	 *
+	 * REQUIRED like `timezone` and for the same reason — the turn always knows — and EMPTY is a real,
+	 * meaningful value: a CLI this build has never driven offers nothing, and the prompt section then
+	 * does not render at all.
+	 */
+	availableModels: z.array(z.enum(AgentModelId)),
 	/** EXACTLY ONE is set by `RunOrchestratorTurn` — continue the thread's session or open a new one. */
 	session: z.object({ resumeId: z.string().optional(), newId: z.string().optional() }).optional(),
 	/** Resolved by `ProviderDetector`; absent lets the runner fall back to the bare binary name. */

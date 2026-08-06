@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { ContactKind, MailboxItemKind, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { ContactKind, MailboxItemKind, StopKind, AgentModelId } from '@codm/contracts-typescript/wire/enums'
 import { AgentRunOutcome } from '../../enums'
 import {
 	toolNameOf,
@@ -7,6 +7,7 @@ import {
 	ResolveStopController,
 	SteerIssueTurnController,
 	ConfigurePromptController,
+	ConfigureModelController,
 	ListThreadLoopsController,
 	CreateThreadLoopController,
 	UpdateThreadLoopController,
@@ -41,6 +42,11 @@ const base = {
 	// The machine's zone. Every turn carries one — it is REQUIRED on the schema for the reason stated
 	// there — so the fixture carries one too, and the case that cares about it overrides with another.
 	timezone: 'America/Sao_Paulo',
+	// What the CLI of this turn offers. Also REQUIRED, and also for the "the turn always knows" reason —
+	// the default here is the drivable CLI's real catalog, so every case that does not say otherwise is
+	// silently also asserting that the model section behaves for a normal conversation. The case that
+	// cares about the empty catalog overrides with `[]`.
+	availableModels: [AgentModelId.DEFAULT, AgentModelId.OPUS, AgentModelId.SONNET, AgentModelId.HAIKU],
 }
 
 const operatorTurn = (overrides: Record<string, unknown> = {}) =>
@@ -315,6 +321,49 @@ describe('OrchestratorPromptBuilder', () => {
 
 		expect(system).toContain('never turn a passing remark into a schedule')
 		expect(system).toContain('do not say you did')
+	})
+
+	/**
+	 * THE MODEL OF THIS CONVERSATION — the situation, and the catalog that makes the tool usable.
+	 *
+	 * The list is the load-bearing half. `ConfigureModel`'s schema accepts every `AgentModelId` because
+	 * the enum is FLAT — who owns each member is the declared relation in contracts, which the model
+	 * cannot see. Without the catalog rendered here it picks another provider's member, the domain
+	 * refuses with `MODEL_NOT_AVAILABLE`, and the tool only ever errors. Asserted through `toolNameOf`
+	 * so a rename follows the symbol.
+	 */
+	it('(m1) the model-choice situation renders, naming the tool by class and listing what the CLI offers', () => {
+		const system = builder.system(operatorTurn())
+
+		expect(system).toContain('WHICH MODEL THIS CONVERSATION RUNS ON')
+		expect(system).toContain(toolNameOf(ConfigureModelController))
+		expect(system).toContain(`${AgentModelId.DEFAULT}, ${AgentModelId.OPUS}, ${AgentModelId.SONNET}, ${AgentModelId.HAIKU}`)
+	})
+
+	/**
+	 * The two consequences, and the second is the one that reads as a bug when unsaid: switching the
+	 * model INVALIDATES the CLI session (`ResumeInvalidationReason.MODEL_CHANGED`), so the conversation
+	 * restarts from the next message. A model that promises continuity it will not have has lied about
+	 * something the operator will notice within one turn.
+	 */
+	it('(m2) it says the change lands on the next message AND that it restarts the CLI conversation', () => {
+		const system = builder.system(operatorTurn())
+
+		expect(system).toContain('applies from the NEXT message')
+		expect(system).toContain('RESTARTS this conversation on the CLI')
+		expect(system).toContain('do not say you did')
+	})
+
+	/**
+	 * A CLI this build has never driven offers nothing, and the section then does not render AT ALL —
+	 * an offer of a choice that does not exist invites the model to try and to fail. The empty catalog
+	 * is a declared fact of its own, not `comingSoon` read sideways.
+	 */
+	it('(m3) a provider with an empty catalog renders no model section', () => {
+		const system = builder.system(operatorTurn({ availableModels: [] }))
+
+		expect(system).not.toContain('WHICH MODEL THIS CONVERSATION RUNS ON')
+		expect(system).not.toContain(toolNameOf(ConfigureModelController))
 	})
 
 	/**
