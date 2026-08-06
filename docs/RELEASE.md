@@ -40,6 +40,9 @@ O beta não pede nada: mergear na main já publica `<versão-base>-beta.<run>` n
 - **Pública**: `packages/app/tauri/config/updater.ts` → renderizada na conf. Material público.
 - **Privada**: `~/.tauri/codm-updater.key` na máquina do founder **e** secret
   `TAURI_SIGNING_PRIVATE_KEY` no GitHub (Settings → Secrets → Actions). **Nunca no repo.**
+- A chave foi gerada com `--ci` (senha vazia): builds fora de TTY exigem
+  `TAURI_SIGNING_PRIVATE_KEY_PASSWORD=""` no ambiente — os workflows já o fazem; num build local
+  headless, exporte-o também (sem isso: `Device not configured`).
 - **Backup é obrigatório**: perder a privada significa que todo app instalado recusará qualquer
   update futuro — o caminho de recuperação é reinstalação manual por todos os usuários.
 - Rotação: gerar novo par (`bun x tauri signer generate`), trocar pubkey na config + secret, e

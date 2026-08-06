@@ -43,6 +43,10 @@ jobs:
       - name: tauri build
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # Chave gerada com --ci = senha vazia; sem esta linha o build tenta abrir um prompt de
+          # senha num runner sem TTY e morre com "Device not configured" (medido localmente).
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+
         run: cd packages/app/tauri && bun x tauri build
 
       - name: stage
