@@ -217,9 +217,11 @@
 			"HAIKU": "Haiku"
 		},
 		"ArtifactKind": {
+			"AUDIO": "Audio",
 			"FILE": "File",
 			"IMAGE": "Screenshot",
-			"LINK": "Preview deploy"
+			"LINK": "Preview deploy",
+			"VIDEO": "Video"
 		},
 		"ChannelKind": {
 			"WHATSAPP": "WhatsApp",
@@ -392,6 +394,8 @@
 		"AGENT_RUN_TOKEN_INVALID": "The agent run token is missing, expired or was revoked. The run it belonged to is no longer active.",
 		"AGENT_TOOLS_UNSUPPORTED": "This agent needs tools, but the selected CLI does not support them.",
 		"AGENT_TRANSPORT_STOP_NOT_DECLARABLE": "That stop kind is observed by the runtime and cannot be declared by the agent.",
+		"ARTIFACT_NOT_FOUND": "Artifact not found, or its file is no longer on disk.",
+		"ARTIFACT_NOT_PREVIEWABLE": "This artifact is a link — open the URL instead of requesting its content.",
 		"CANNOT_CONVERT_INPUT": "The request could not be processed. Review the submitted data.",
 		"CHANNEL_NOT_CONNECTED": "The channel is not connected.",
 		"CLARIFICATION_ALREADY_PENDING": "A clarification is already pending for this sender.",
@@ -541,6 +545,8 @@
 		"allIssues": "All issues",
 		"archive": "Archive",
 		"archived": "Archived",
+		"artifactOpenExternally": "Open outside the console",
+		"artifactOpenFull": "View {{name}} full size",
 		"artifactsEmptyDescription": "Preview deploys, screenshots and files produced by your agents land here.",
 		"artifactsEmptyTitle": "No artifacts yet",
 		"autoArchiveNote": "Completed issues auto-archive after 24 hours.",

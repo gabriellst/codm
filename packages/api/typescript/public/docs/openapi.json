@@ -4188,6 +4188,56 @@
         }
       }
     },
+    "/v1/threads/{threadId}/artifacts/{artifactId}/content": {
+      "get": {
+        "tags": [
+          "artifact"
+        ],
+        "description": "The bytes of one recorded artifact, for the console preview",
+        "operationId": "GetArtifactContent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          },
+          {
+            "in": "path",
+            "name": "artifactId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddaf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The bytes of one recorded artifact, for the console preview",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "examples": [
+                    "<binary>"
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": "<binary>",
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/threads/{threadId}/artifacts": {
       "get": {
         "tags": [
@@ -4236,6 +4286,9 @@
                           "name": {
                             "type": "string"
                           },
+                          "ref": {
+                            "type": "string"
+                          },
                           "meta": {
                             "type": "string"
                           },
@@ -4247,6 +4300,7 @@
                           "artifactId",
                           "kind",
                           "name",
+                          "ref",
                           "meta",
                           "recordedAt"
                         ],
@@ -8426,6 +8480,8 @@
           "AGENT_RUN_TOKEN_INVALID",
           "AGENT_TOOLS_UNSUPPORTED",
           "AGENT_TRANSPORT_STOP_NOT_DECLARABLE",
+          "ARTIFACT_NOT_FOUND",
+          "ARTIFACT_NOT_PREVIEWABLE",
           "CANNOT_CONVERT_INPUT",
           "CHANNEL_NOT_CONNECTED",
           "CLARIFICATION_ALREADY_PENDING",
@@ -8693,6 +8749,8 @@
         "type": "string",
         "enum": [
           "IMAGE",
+          "AUDIO",
+          "VIDEO",
           "FILE",
           "LINK"
         ]
@@ -8855,6 +8913,8 @@
     "AGENT_RUN_TOKEN_INVALID",
     "AGENT_TOOLS_UNSUPPORTED",
     "AGENT_TRANSPORT_STOP_NOT_DECLARABLE",
+    "ARTIFACT_NOT_FOUND",
+    "ARTIFACT_NOT_PREVIEWABLE",
     "CANNOT_CONVERT_INPUT",
     "CHANNEL_NOT_CONNECTED",
     "CLARIFICATION_ALREADY_PENDING",

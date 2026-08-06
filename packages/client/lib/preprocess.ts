@@ -17,6 +17,22 @@ function fail(rule: string, message: string): never {
 
 const ID_RE = /^[A-Za-z_][A-Za-z0-9_]*$/
 
+/**
+ * R-04 for RESPONSES. JSON is the rule; the other two are named TRANSPORTS whose operations exist in
+ * the SDK for their URL and their types, and which no generated call site ever parses:
+ *
+ *  - `text/event-stream` — the live tails (`StreamTerminalSession`, `ListenEvents`), consumed by
+ *    `fetch-event-source` off the generated query key.
+ *  - `application/octet-stream` — the artifact content endpoint, whose bytes reach an `<img>` /
+ *    `<video>` / `<audio>` `src` built from the generated query key. The declared type is
+ *    octet-stream because the REAL one is per-file (image/png, video/mp4, …) and only the row knows
+ *    it; what a generator needs to know is "not JSON, do not parse".
+ *
+ * Requests stay JSON-only: a non-JSON REQUEST body is what actually diverges per language
+ * (multipart builders, form encoders), and nothing in this repo sends one.
+ */
+const RESPONSE_CONTENT_TYPES = new Set(['application/json', 'text/event-stream', 'application/octet-stream'])
+
 export interface PreprocessedSpec {
 	spec: Record<string, unknown>
 	skippedSse: number
@@ -89,7 +105,7 @@ export async function preprocessSpec(specPath: string): Promise<PreprocessedSpec
 				if (status === '204') continue
 				const content = (resp.content ?? {}) as Record<string, unknown>
 				for (const ct of Object.keys(content)) {
-					if (ct !== 'application/json' && ct !== 'text/event-stream') {
+					if (!RESPONSE_CONTENT_TYPES.has(ct)) {
 						fail('R-04', `${method.toUpperCase()} ${pathKey} response ${status} content-type ${ct} not allowed`)
 					}
 				}

@@ -54,7 +54,7 @@ pub enum AgentStopReason {
 	UNKNOWN,
 }
 
-/// Kind of non-code output an agent recorded. IMAGE/FILE reference a local path; LINK references a URL (e.g. a preview deploy).
+/// Kind of non-code output an agent recorded, and the SHAPE of it: IMAGE/AUDIO/VIDEO each render as themselves, FILE is the one with no player, LINK is the one with no local bytes. IMAGE/AUDIO/VIDEO/FILE reference a local path; LINK references a URL (e.g. a preview deploy). The console dispatches its preview on this member — never on the extension of the ref — so a new medium is a member here before it is UI anywhere.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
 	serde::Serialize, serde::Deserialize,
@@ -65,6 +65,12 @@ pub enum ArtifactKind {
 	#[serde(rename = "IMAGE")]
 	#[strum(serialize = "IMAGE")]
 	IMAGE,
+	#[serde(rename = "AUDIO")]
+	#[strum(serialize = "AUDIO")]
+	AUDIO,
+	#[serde(rename = "VIDEO")]
+	#[strum(serialize = "VIDEO")]
+	VIDEO,
 	#[serde(rename = "FILE")]
 	#[strum(serialize = "FILE")]
 	FILE,

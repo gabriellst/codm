@@ -17,6 +17,7 @@ import {
 	disableOwner,
 	enableOwner,
 	forkIssue,
+	getArtifactContent,
 	getAttachThreadWizard,
 	getHomeDashboard,
 	getIssueDetail,
@@ -136,6 +137,10 @@ export class TypescriptClient {
 
 	forkIssue(...args: Parameters<typeof forkIssue>): ReturnType<typeof forkIssue> {
 		return (forkIssue as (...a: any[]) => ReturnType<typeof forkIssue>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	getArtifactContent(...args: Parameters<typeof getArtifactContent>): ReturnType<typeof getArtifactContent> {
+		return (getArtifactContent as (...a: any[]) => ReturnType<typeof getArtifactContent>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	getAttachThreadWizard(...args: Parameters<typeof getAttachThreadWizard>): ReturnType<typeof getAttachThreadWizard> {

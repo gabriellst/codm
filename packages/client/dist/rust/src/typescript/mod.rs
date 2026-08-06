@@ -208,6 +208,8 @@ pub mod types {
     ///    "AGENT_RUN_TOKEN_INVALID",
     ///    "AGENT_TOOLS_UNSUPPORTED",
     ///    "AGENT_TRANSPORT_STOP_NOT_DECLARABLE",
+    ///    "ARTIFACT_NOT_FOUND",
+    ///    "ARTIFACT_NOT_PREVIEWABLE",
     ///    "CANNOT_CONVERT_INPUT",
     ///    "CHANNEL_NOT_CONNECTED",
     ///    "CLARIFICATION_ALREADY_PENDING",
@@ -320,6 +322,10 @@ pub mod types {
         AgentToolsUnsupported,
         #[serde(rename = "AGENT_TRANSPORT_STOP_NOT_DECLARABLE")]
         AgentTransportStopNotDeclarable,
+        #[serde(rename = "ARTIFACT_NOT_FOUND")]
+        ArtifactNotFound,
+        #[serde(rename = "ARTIFACT_NOT_PREVIEWABLE")]
+        ArtifactNotPreviewable,
         #[serde(rename = "CANNOT_CONVERT_INPUT")]
         CannotConvertInput,
         #[serde(rename = "CHANNEL_NOT_CONNECTED")]
@@ -508,6 +514,8 @@ pub mod types {
                 Self::AgentTransportStopNotDeclarable => {
                     f.write_str("AGENT_TRANSPORT_STOP_NOT_DECLARABLE")
                 }
+                Self::ArtifactNotFound => f.write_str("ARTIFACT_NOT_FOUND"),
+                Self::ArtifactNotPreviewable => f.write_str("ARTIFACT_NOT_PREVIEWABLE"),
                 Self::CannotConvertInput => f.write_str("CANNOT_CONVERT_INPUT"),
                 Self::ChannelNotConnected => f.write_str("CHANNEL_NOT_CONNECTED"),
                 Self::ClarificationAlreadyPending => {
@@ -621,6 +629,8 @@ pub mod types {
                 "AGENT_TRANSPORT_STOP_NOT_DECLARABLE" => {
                     Ok(Self::AgentTransportStopNotDeclarable)
                 }
+                "ARTIFACT_NOT_FOUND" => Ok(Self::ArtifactNotFound),
+                "ARTIFACT_NOT_PREVIEWABLE" => Ok(Self::ArtifactNotPreviewable),
                 "CANNOT_CONVERT_INPUT" => Ok(Self::CannotConvertInput),
                 "CHANNEL_NOT_CONNECTED" => Ok(Self::ChannelNotConnected),
                 "CLARIFICATION_ALREADY_PENDING" => Ok(Self::ClarificationAlreadyPending),
@@ -7001,7 +7011,8 @@ pub mod types {
     ///          "kind",
     ///          "meta",
     ///          "name",
-    ///          "recordedAt"
+    ///          "recordedAt",
+    ///          "ref"
     ///        ],
     ///        "properties": {
     ///          "artifactId": {
@@ -7024,6 +7035,9 @@ pub mod types {
     ///            "type": "string"
     ///          },
     ///          "recordedAt": {
+    ///            "type": "string"
+    ///          },
+    ///          "ref": {
     ///            "type": "string"
     ///          }
     ///        },
@@ -7057,7 +7071,8 @@ pub mod types {
     ///    "kind",
     ///    "meta",
     ///    "name",
-    ///    "recordedAt"
+    ///    "recordedAt",
+    ///    "ref"
     ///  ],
     ///  "properties": {
     ///    "artifactId": {
@@ -7081,6 +7096,9 @@ pub mod types {
     ///    },
     ///    "recordedAt": {
     ///      "type": "string"
+    ///    },
+    ///    "ref": {
+    ///      "type": "string"
     ///    }
     ///  },
     ///  "additionalProperties": false
@@ -7103,6 +7121,8 @@ pub mod types {
         pub name: ::std::string::String,
         #[serde(rename = "recordedAt")]
         pub recorded_at: ::std::string::String,
+        #[serde(rename = "ref")]
+        pub ref_: ::std::string::String,
     }
     impl ::std::convert::From<&ListArtifactsResponseArtifactsItem>
     for ListArtifactsResponseArtifactsItem {
@@ -10692,6 +10712,35 @@ Sends a `POST` request to `/v1/threads/{threadId}/artifacts`
         let response = result?;
         match response.status().as_u16() {
             200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**The bytes of one recorded artifact, for the console preview
+
+Sends a `GET` request to `/v1/threads/{threadId}/artifacts/{artifactId}/content`
+
+*/
+    pub async fn get_artifact_content<'a>(
+        &'a self,
+        thread_id: &'a str,
+        artifact_id: &'a str,
+    ) -> Result<ResponseValue<ByteStream>, Error<()>> {
+        let url = format!(
+            "{}/v1/threads/{}/artifacts/{}/content", self.baseurl, encode_path(&
+            thread_id.to_string()), encode_path(& artifact_id.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self.client.get(url).headers(header_map).build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => Ok(ResponseValue::stream(response)),
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }

@@ -6,6 +6,8 @@
 
 export const ArtifactKindEnum = {
     IMAGE: "IMAGE",
+    AUDIO: "AUDIO",
+    VIDEO: "VIDEO",
     FILE: "FILE",
     LINK: "LINK"
 } as const;
