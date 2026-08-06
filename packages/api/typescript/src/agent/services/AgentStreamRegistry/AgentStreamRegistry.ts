@@ -60,11 +60,7 @@ interface StreamEntry {
 
 /**
  * Whatscode's `AgentStreamRegistry`, ADOPTED WHOLE (Fork C, ratified: option 1 — not the fold)
- * and rekeyed `chatId → issueId` (Fork B). It additionally ABSORBS the single-active-run guard that
- * codm's interim per-issue session registry carried — that guard is an INVARIANT ("one agent run
- * per issue") and migrates INTO the adopted registry; the interim registry is superseded and deleted.
- * (Its class name is not repeated: Fase 5 dissolved the `terminal` context and AC-5.11 keeps the dead
- * `Terminal*` symbols out of the tree, prose included.)
+ * and rekeyed `chatId → issueId` (Fork B).
  *
  *   1. OBSERVER channel — at most one live SSE writer per issue (`register`/`send`/`unregister`).
  *      Double-register throws `SESSION_ALREADY_STREAMING`; a per-owner soft cap throws
@@ -77,10 +73,6 @@ interface StreamEntry {
  *      wherever the run happened to be, and leaving the screen discarded everything said meanwhile.
  *      Bounded twice — frames per issue, and issues holding a buffer — so neither a long run nor a
  *      busy day can grow the daemon without limit.
- *
- *   2. SINGLE-ACTIVE-RUN guard — `beginSession`/`endSession` enforce one run per issue
- *      independent of whether a browser is observing. `RunIssueTurn` brackets its run with
- *      these; a second concurrent run for the same issue throws `TERMINAL_ALREADY_RUNNING`.
  *
  * TODO(scale): both maps are process-local — shard by issueId at the ingress before horizontal
  * scale (same documented limitation as the whatscode original).
@@ -103,7 +95,6 @@ export class AgentStreamRegistry {
 
 	private writers = new Map<string, StreamEntry>()
 	private ownerCounts = new Map<string, number>()
-	private activeSessions = new Set<string>()
 	// Insertion-ordered by design: a `Map` iterates in insertion order, and `record` re-inserts the
 	// issue it touches, so the FIRST key is always the least-recently-written one to evict.
 	private history = new Map<string, TerminalSseFrame[]>()
@@ -215,26 +206,5 @@ export class AgentStreamRegistry {
 			if (oldest.done) break
 			this.history.delete(oldest.value)
 		}
-	}
-
-	// ── Single-active-run guard (absorbed from the superseded interim session registry) ──────────
-
-	/**
-	 * Claim the single terminal session for `issueId`. Throws `TERMINAL_ALREADY_RUNNING` if a run
-	 * is already active for that issue. Pair with `endSession` in a `finally`.
-	 */
-	beginSession(issueId: string): void {
-		if (this.activeSessions.has(issueId)) {
-			throw new BaseError<DomainErrors>('TERMINAL_ALREADY_RUNNING', `Issue ${issueId} already has an active terminal session`)
-		}
-		this.activeSessions.add(issueId)
-	}
-
-	endSession(issueId: string): void {
-		this.activeSessions.delete(issueId)
-	}
-
-	isActive(issueId: string): boolean {
-		return this.activeSessions.has(issueId)
 	}
 }

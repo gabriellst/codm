@@ -98,43 +98,6 @@ describe('AgentStreamRegistry — observer channel (whatscode port adopted whole
 	})
 })
 
-describe('AgentStreamRegistry — absorbed single-active-run guard (one session per issue)', () => {
-	it('marks an issue active on beginSession and clears it on endSession', () => {
-		const registry = new AgentStreamRegistry()
-		expect(registry.isActive('issue-1')).toBe(false)
-
-		registry.beginSession('issue-1')
-		expect(registry.isActive('issue-1')).toBe(true)
-
-		registry.endSession('issue-1')
-		expect(registry.isActive('issue-1')).toBe(false)
-	})
-
-	it('throws TERMINAL_ALREADY_RUNNING on a second concurrent begin for the same issue', () => {
-		const registry = new AgentStreamRegistry()
-		registry.beginSession('issue-1')
-
-		expect(() => registry.beginSession('issue-1')).toThrow(
-			expect.objectContaining({ name: 'TERMINAL_ALREADY_RUNNING' }) as BaseError<DomainErrors>,
-		)
-	})
-
-	it('allows re-running an issue after its session ended', () => {
-		const registry = new AgentStreamRegistry()
-		registry.beginSession('issue-1')
-		registry.endSession('issue-1')
-		expect(() => registry.beginSession('issue-1')).not.toThrow()
-	})
-
-	it('tracks distinct issues independently', () => {
-		const registry = new AgentStreamRegistry()
-		registry.beginSession('issue-1')
-		expect(() => registry.beginSession('issue-2')).not.toThrow()
-		expect(registry.isActive('issue-1')).toBe(true)
-		expect(registry.isActive('issue-2')).toBe(true)
-	})
-})
-
 /**
  * F3 — THE PANEL SHOWS WHAT ALREADY HAPPENED.
  *

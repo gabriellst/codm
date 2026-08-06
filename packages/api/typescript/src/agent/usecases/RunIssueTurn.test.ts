@@ -128,9 +128,6 @@ describe('RunIssueTurn use case', () => {
 		expect(queued?.kind).toBe(MailboxItemKind.ISSUE_RESULT)
 		expect(queued?.targetKind).toBe(MailboxTargetKind.THREAD)
 		expect((queued?.payload as { outcome: { replyText: string } } | undefined)?.outcome.replyText).toBeTruthy()
-
-		// TEARDOWN — the single-active claim is released.
-		expect(registry.isActive(issueId)).toBe(false)
 	})
 
 	/**
@@ -238,21 +235,6 @@ describe('RunIssueTurn use case', () => {
 		expect(request?.mcp?.allowedTools.length).toBeGreaterThan(0)
 		// `binaryPath` is threaded from detection, never read from an ambient map (§4.7).
 		expect(request?.binaryPath).toBeDefined()
-	})
-
-	it('enforces one session per issue (single-active invariant)', async () => {
-		const useCase = testBed.resolve(RunIssueTurn)
-		const registry = testBed.resolve(AgentStreamRegistry)
-		const issueId = testId('run-issue-turn', 'issue-2')
-
-		registry.beginSession(issueId) // simulate an already-running session
-		try {
-			await expect(useCase.execute(baseInput(issueId))).rejects.toThrow(
-				expect.objectContaining({ name: 'TERMINAL_ALREADY_RUNNING' }) as BaseError,
-			)
-		} finally {
-			registry.endSession(issueId)
-		}
 	})
 
 	it('rejects a provider that is not installed', async () => {

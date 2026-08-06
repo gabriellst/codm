@@ -94,7 +94,6 @@ const (
 	STOPCRITERIONDISABLED           ApiErrors = "STOP_CRITERION_DISABLED"
 	STOPNOTFOUND                    ApiErrors = "STOP_NOT_FOUND"
 	STOPNOTINTHREAD                 ApiErrors = "STOP_NOT_IN_THREAD"
-	TERMINALALREADYRUNNING          ApiErrors = "TERMINAL_ALREADY_RUNNING"
 	TERMINALSPAWNFAILED             ApiErrors = "TERMINAL_SPAWN_FAILED"
 	THREADALREADYATTACHED           ApiErrors = "THREAD_ALREADY_ATTACHED"
 	THREADALREADYDELETED            ApiErrors = "THREAD_ALREADY_DELETED"
@@ -260,8 +259,6 @@ func (e ApiErrors) Valid() bool {
 	case STOPNOTFOUND:
 		return true
 	case STOPNOTINTHREAD:
-		return true
-	case TERMINALALREADYRUNNING:
 		return true
 	case TERMINALSPAWNFAILED:
 		return true

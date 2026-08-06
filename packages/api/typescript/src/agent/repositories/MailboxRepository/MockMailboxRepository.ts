@@ -53,13 +53,6 @@ export class MockMailboxRepository extends MailboxRepository {
 		row.leaseUntil = Date.now() + leaseMs
 	}
 
-	async defer(id: string, delayMs: number): Promise<void> {
-		const row = this.rows.find(r => r.id === id)
-		if (!row || row.consumed || row.dead) return
-		row.leaseUntil = Date.now() + delayMs
-		row.attempts = Math.max(row.attempts - 1, 0)
-	}
-
 	async complete(id: string): Promise<void> {
 		const row = this.rows.find(r => r.id === id)
 		if (row) {

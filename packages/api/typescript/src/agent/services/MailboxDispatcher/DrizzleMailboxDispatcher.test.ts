@@ -1,12 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
+import { uuidv7 } from 'uuidv7'
 import { TestBed, givenThread } from '@test/support'
-import { BaseError, LoggingService } from '@codm/core-typescript'
+import { LoggingService } from '@codm/core-typescript'
 import { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { ThreadRepository } from '@thread/repositories'
 import { WorkspaceRepository } from '@workspace/repositories'
-import { AgentSessionRepository, MailboxRepository } from '../../repositories'
+import { AgentSessionRepository, MailboxRepository, type ClaimedMailboxItem } from '../../repositories'
 import { DrizzleMailboxDispatcher } from './DrizzleMailboxDispatcher'
 
 /**
@@ -106,18 +107,14 @@ describe('MailboxRepository — the guarantees the dispatcher is built on', () =
 	})
 
 	/**
-	 * AC-T5.1 — the BOOT SWEEP, which is not a special code path: an item leased by a process that died
-	 * simply has an expired lease, and the ordinary claim picks it up. Simulated with a zero lease,
-	 * because the alternative is sleeping past a real one.
-	 */
-	/**
 	 * The heartbeat — and why it is a CORRECTNESS test, not a latency one.
 	 *
 	 * `leaseMs` is the crash budget. Without renewal it silently doubles as a turn-duration budget, and
 	 * an issue turn is a coding agent that routinely outlives it. The lease then lapses under a HEALTHY
-	 * run, this queue hands the same item out again, and the single-active guard rejects the duplicate
-	 * with `TERMINAL_ALREADY_RUNNING` — burning attempts until the item poisons. Measured 2026-08-04:
-	 * two issues died exactly that way while their original runs were still going.
+	 * run, this queue hands the same item out again, the dispatcher starts a SECOND turn for the target
+	 * while the first is still healthy and running, and the duplicates burn attempts until the item
+	 * poisons. Measured 2026-08-04: two issues died exactly that way while their original runs were
+	 * still going.
 	 *
 	 * The falsifier is exact: delete the `renewLease` call in `runTurn` and this goes RED, because a
 	 * lease that is never pushed forward is indistinguishable from a worker that died.
@@ -154,6 +151,11 @@ describe('MailboxRepository — the guarantees the dispatcher is built on', () =
 		expect(await repo.claimNext('worker-third', 60_000)).toBeUndefined()
 	})
 
+	/**
+	 * AC-T5.1 — the BOOT SWEEP, which is not a special code path: an item leased by a process that died
+	 * simply has an expired lease, and the ordinary claim picks it up. Simulated with a zero lease,
+	 * because the alternative is sleeping past a real one.
+	 */
 	it('AC-T5.1 — an item stranded by a crashed worker is claimable again once its lease expires', async () => {
 		const repo = testBed.resolve(MailboxRepository)
 		await enqueue(repo, THREAD_A, 'a-1')
@@ -244,71 +246,51 @@ describe('DrizzleMailboxDispatcher — the drain loop wakes for work that arrive
 	}
 
 	/**
-	 * A turn that outlives its lease must keep its own item — the wiring, not the primitive.
+	 * A invariante que sobrevive à remoção do guard em memória: dois itens ISSUE para a MESMA issue
+	 * rodam em sequência, nunca ao mesmo tempo, e nenhum dos dois queima tentativa por contenção.
 	 *
-	 * The repository-level tests above prove `renewLease` behaves; they say NOTHING about whether the
-	 * dispatcher ever calls it, and that gap is the whole bug. Measured 2026-08-04: two issues poisoned
-	 * because their leases lapsed under healthy runs, `claimNext` re-handed the same items out, and
-	 * `beginSession` rejected each duplicate with `TERMINAL_ALREADY_RUNNING` until attempts ran out.
-	 *
-	 * The falsifier is exact: drop the `renewLease` call from `runTurn` and this goes RED, because a
-	 * lease nobody pushes forward is indistinguishable from a worker that died.
+	 * O falsificador é exato: afrouxe o `NOT EXISTS` correlacionado de `claimNext` (o predicado que
+	 * recusa um alvo com lease vivo) e os dois turnos passam a se sobrepor — `concurrentPeak` vira 2 e
+	 * este teste fica vermelho. É a única trava que resta, então é a única que precisa de rede.
 	 */
-	/**
-	 * Contenção não pode matar trabalho — e a diferença é o `attempts`.
-	 *
-	 * `TERMINAL_ALREADY_RUNNING` diz que OUTRO run segura o alvo; não diz nada sobre a qualidade deste
-	 * item. Enquanto ele passava pelo `fail`, três momentos ruins seguidos envenenavam trabalho que
-	 * nunca esteve quebrado. Medido em 2026-08-05: uma issue ficou `WORKING` por 2h38 com três itens
-	 * mortos e nenhum sinal em lugar nenhum.
-	 *
-	 * O falsificador é exato: troque o `defer` por `fail` no ramo de contenção e este teste fica
-	 * vermelho, porque o `attempts` volta a subir.
-	 */
-	it('contenção devolve o item à fila SEM gastar tentativa', async () => {
+	it('dois itens para a MESMA issue rodam em sequência — a exclusão é do lease, e só dele', async () => {
+		const ownerId = 'owner-lease-only'
+		const issueId = uuidv7()
+
+		let inFlight = 0
+		let concurrentPeak = 0
+		const turns: string[] = []
+
+		class SequencingDispatcher extends DrizzleMailboxDispatcher {
+			protected override async runIssueWork(item: ClaimedMailboxItem): Promise<void> {
+				inFlight += 1
+				concurrentPeak = Math.max(concurrentPeak, inFlight)
+				turns.push(item.id)
+				await new Promise(resolve => setTimeout(resolve, 20))
+				inFlight -= 1
+			}
+		}
+
+		const dispatcher = testBed.resolve(SequencingDispatcher)
 		const mailbox = testBed.resolve(MailboxRepository)
-		const threads = testBed.resolve(ThreadRepository)
 
-		// O turno morre com o erro de contenção, que é o que o guard de sessão única levanta.
-		// SALVO e restaurado no finally: o repositório é um singleton do container, e deixá-lo
-		// envenenado vaza para os testes seguintes — que foi exatamente o que aconteceu ao escrever isto.
-		const realFindById = threads.findById.bind(threads)
-		threads.findById = async () => {
-			throw new BaseError('TERMINAL_ALREADY_RUNNING', 'Issue x already has an active terminal session')
+		for (const seq of ['first', 'second']) {
+			await mailbox.enqueue({
+				ownerId,
+				targetKind: MailboxTargetKind.ISSUE,
+				targetId: issueId,
+				kind: MailboxItemKind.STEER,
+				payload: { threadId: uuidv7(), key: 'ISS-1', title: 'lease only', text: seq, provider: 'CLAUDE' },
+				dedupKey: `${issueId}:${seq}`,
+			})
 		}
 
-		// Backoff curtíssimo: o teste mede o REFUND da tentativa, não a cadência da espera.
-		class FastBackoffDispatcher extends DrizzleMailboxDispatcher {
-			protected override contentionBackoffMs = 5
-		}
-		const dispatcher = new FastBackoffDispatcher(
-			mailbox,
-			threads,
-			testBed.resolve(WorkspaceRepository),
-			testBed.resolve(AgentSessionRepository),
-			testBed.resolve(LoggingService),
-		).bind(testContainer)
+		await dispatcher.start()
+		await new Promise(resolve => setTimeout(resolve, 300))
+		await dispatcher.stop()
 
-		await mailbox.enqueue({
-			ownerId: OPERATOR_ID,
-			targetKind: MailboxTargetKind.THREAD,
-			targetId: OTHER_THREAD,
-			kind: MailboxItemKind.OPERATOR_MESSAGE,
-			payload: { entryId: '019e4d24-6524-7041-9e1c-8108180cddae' },
-			dedupKey: 'contended-1',
-		})
-
-		try {
-			await dispatcher.drain()
-
-			// Vivo, não morto: o item continua reivindicável depois do backoff, e o contador está zerado.
-			expect(await mailbox.hasPending(MailboxTargetKind.THREAD, OTHER_THREAD)).toBe(true)
-			await new Promise(resolve => setTimeout(resolve, 20))
-			const again = await mailbox.claimNext('worker-depois', -1)
-			expect(again?.attempts).toBe(1)
-		} finally {
-			threads.findById = realFindById
-		}
+		expect(turns).toHaveLength(2)
+		expect(concurrentPeak).toBe(1)
 	})
 
 	/**
@@ -364,6 +346,18 @@ describe('DrizzleMailboxDispatcher — the drain loop wakes for work that arrive
 		}
 	})
 
+	/**
+	 * A turn that outlives its lease must keep its own item — the wiring, not the primitive.
+	 *
+	 * The repository-level tests above prove `renewLease` behaves; they say NOTHING about whether the
+	 * dispatcher ever calls it, and that gap is the whole bug. Measured 2026-08-04: two issues poisoned
+	 * because their leases lapsed under healthy runs, `claimNext` re-handed the same items out, the
+	 * dispatcher started a SECOND turn for each target while the first was still healthy and running,
+	 * and the duplicates burnt attempts until the items poisoned.
+	 *
+	 * The falsifier is exact: drop the `renewLease` call from `runTurn` and this goes RED, because a
+	 * lease nobody pushes forward is indistinguishable from a worker that died.
+	 */
 	it('renova o lease do item enquanto o turno ainda está rodando', async () => {
 		const mailbox = testBed.resolve(MailboxRepository)
 		const threads = testBed.resolve(ThreadRepository)

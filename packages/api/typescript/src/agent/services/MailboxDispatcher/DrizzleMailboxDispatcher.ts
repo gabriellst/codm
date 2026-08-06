@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import type { DependencyContainer } from 'tsyringe-neo'
-import { BaseError, LoggingService, type PollingService } from '@codm/core-typescript'
+import { LoggingService, type PollingService } from '@codm/core-typescript'
 import { MailboxItemKind, MailboxTargetKind, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { ThreadRepository } from '@thread/repositories'
 import { RaiseStop } from '@thread/usecases'
@@ -21,14 +21,6 @@ const LEASE_MS = 10 * 60 * 1000
 const HEARTBEAT_MS = LEASE_MS / 3
 /** Past this many failed turns an item is POISONED rather than retried — it is blocking its target. */
 const MAX_ATTEMPTS = 3
-/**
- * How long a CONTENDED item waits before becoming claimable again.
- *
- * Long enough that the poll floor cannot spin on it, short enough that a turn finishing early is not
- * punished by a long silence. Contention resolves when the running turn ends, and nothing here can
- * know when that is — so this is a retry cadence, not an estimate.
- */
-const CONTENTION_BACKOFF_MS = 15_000
 const POLL_MIN_MS = 250
 /**
  * The idle ceiling — deliberately LOW for a conversational product.
@@ -74,7 +66,6 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 	 */
 	protected leaseMs = LEASE_MS
 	protected heartbeatMs = HEARTBEAT_MS
-	protected contentionBackoffMs = CONTENTION_BACKOFF_MS
 	private draining: Promise<number> | null = null
 	private pollIntervalMs = POLL_MIN_MS
 	private readonly workerId = `mailbox-${crypto.randomUUID()}`
@@ -263,9 +254,9 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 	 * `LEASE_MS` is documented as the CRASH budget — how long until a dead worker's item returns to the
 	 * queue. Without a heartbeat it silently doubles as a TURN-DURATION budget, and an issue turn is a
 	 * coding agent that routinely outlives ten minutes. What follows is not a slow turn, it is a
-	 * destroyed one: the lease lapses under a healthy run, `claimNext` hands the SAME item out again,
-	 * `beginSession` rejects the duplicate with `TERMINAL_ALREADY_RUNNING`, and each rejection spends an
-	 * attempt until the item poisons. Measured 2026-08-04: two issues died this way three minutes after
+	 * destroyed one: o lease lapsa sob um run saudável, `claimNext` entrega o MESMO item de novo, e o
+	 * dispatcher começa um SEGUNDO turno para o mesmo alvo — dois processos escrevendo na mesma issue.
+	 * Measured 2026-08-04: two issues died this way three minutes after
 	 * a restart, while their original runs were still going and finished normally twelve minutes later.
 	 *
 	 * The failure was previously MASKED: the old drain loop parked in `Promise.race(inflight)` and never
@@ -294,20 +285,6 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 			await this.mailbox.complete(item.id)
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error)
-
-			// CONTENTION IS NOT FAILURE — and conflating the two is what killed real work.
-			//
-			// `TERMINAL_ALREADY_RUNNING` means "a run already holds this issue", which says nothing about
-			// whether this item's work is good. It went through `fail` like any error, so three unlucky
-			// moments poisoned it. Measured 2026-08-04: an issue sat `WORKING` for two and a half hours
-			// because every retry died here while the operator watched a Needs-you card that never moved.
-			if (error instanceof BaseError && error.name === 'TERMINAL_ALREADY_RUNNING') {
-				this.logging.info({
-					content: { message: 'mailbox turn deferred — target busy', itemId: item.id, targetId: item.targetId },
-				})
-				await this.mailbox.defer(item.id, this.contentionBackoffMs)
-				return
-			}
 
 			this.logging.error({
 				content: {
@@ -395,7 +372,7 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 	 * callers keep passing their own). What changes is that this caller now answers the question
 	 * instead of leaving it blank.
 	 */
-	private async runIssueWork(item: ClaimedMailboxItem): Promise<void> {
+	protected async runIssueWork(item: ClaimedMailboxItem): Promise<void> {
 		const payload = item.payload as {
 			threadId: string
 			key: string

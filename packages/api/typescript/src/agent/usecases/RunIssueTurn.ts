@@ -112,8 +112,10 @@ interface SessionPlan {
  * starts (so `issue.opened` fires at spawn time), the stream runs outside any transaction, and the
  * conclusion + session row commit together afterwards.
  *
- * The single-active invariant ("one agent run per issue") is claimed on `beginSession` and released in
- * a `finally` — a second concurrent run for the same issue throws TERMINAL_ALREADY_RUNNING.
+ * A exclusão "um run por issue" NÃO mora aqui: é o lease por alvo do dispatcher (`claimNext` recusa um
+ * alvo com lease vivo, renovado por heartbeat enquanto o turno roda). Um segundo item para a mesma
+ * issue espera o lease em vez de disputar — mesma regra que `RunOrchestratorTurn` já seguia do lado
+ * thread.
  */
 @injectable()
 export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof RunIssueTurnOutputSchema> {
@@ -134,45 +136,38 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 	}
 
 	protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
-		// Single-active-run guard (independent of whether a browser is observing).
-		this.registry.beginSession(input.issueId)
-		try {
-			const { detection, runner } = await this.resolveProvider(input.provider)
-			// Decided BEFORE the opened fact commits: it is a read of durable state, and the argv it
-			// produces has to exist by the time the stream starts.
-			const session = await this.resolveSession(input, detection)
+		const { detection, runner } = await this.resolveProvider(input.provider)
+		// Decided BEFORE the opened fact commits: it is a read of durable state, and the argv it
+		// produces has to exist by the time the stream starts.
+		const session = await this.resolveSession(input, detection)
 
-			// FACT — spawn/opened, persisted before streaming so issue.opened fires at spawn time.
-			await this.withTransaction(tx, async tx => {
-				await this.domainEventRepository.save(
-					new AgentRunStartedEvent({
-						entityId: input.issueId,
-						ownerId: input.ownerId,
-						payload: { issueId: input.issueId, threadId: input.threadId, key: input.key, title: input.title, provider: input.provider },
-					}),
-					tx,
-				)
-			})
+		// FACT — spawn/opened, persisted before streaming so issue.opened fires at spawn time.
+		await this.withTransaction(tx, async tx => {
+			await this.domainEventRepository.save(
+				new AgentRunStartedEvent({
+					entityId: input.issueId,
+					ownerId: input.ownerId,
+					payload: { issueId: input.issueId, threadId: input.threadId, key: input.key, title: input.title, provider: input.provider },
+				}),
+				tx,
+			)
+		})
 
-			// TRANSPORT — stream the run's frames to the SSE observer, strictly outside any tx.
-			const observed = await this.drainRun(input, runner, detection, session)
+		// TRANSPORT — stream the run's frames to the SSE observer, strictly outside any tx.
+		const observed = await this.drainRun(input, runner, detection, session)
 
-			// FACT — the run's conclusion.
-			const stopId = observed.outcome.kind === 'STOPPED' ? uuidv7() : undefined
-			await this.withTransaction(tx, async tx => {
-				await this.persistOutcome(input, observed.outcome, stopId, tx)
-				await this.upsertSessionRecord(input, observed.agentSessionId ?? session.id, tx)
-			})
+		// FACT — the run's conclusion.
+		const stopId = observed.outcome.kind === 'STOPPED' ? uuidv7() : undefined
+		await this.withTransaction(tx, async tx => {
+			await this.persistOutcome(input, observed.outcome, stopId, tx)
+			await this.upsertSessionRecord(input, observed.agentSessionId ?? session.id, tx)
+		})
 
-			return {
-				issueId: input.issueId,
-				outcome: observed.outcome.kind === 'COMPLETED' ? AgentRunOutcome.COMPLETED : AgentRunOutcome.STOPPED,
-				replyText: observed.outcome.kind === 'COMPLETED' ? observed.outcome.replyText : undefined,
-				stopId,
-			}
-		} finally {
-			// Teardown — release the single-active claim whether the run completed or threw.
-			this.registry.endSession(input.issueId)
+		return {
+			issueId: input.issueId,
+			outcome: observed.outcome.kind === 'COMPLETED' ? AgentRunOutcome.COMPLETED : AgentRunOutcome.STOPPED,
+			replyText: observed.outcome.kind === 'COMPLETED' ? observed.outcome.replyText : undefined,
+			stopId,
 		}
 	}
 
