@@ -2,7 +2,7 @@ import { configureClient } from '@codm/client-typescript/http'
 import { generateEmail } from '../generators'
 import { apiOperatorSession, type ApiSession } from './api'
 
-const API_BASE_URL = process.env.API_URL ?? 'http://localhost:3030'
+const API_BASE_URL = process.env.API_URL ?? 'http://localhost:3130'
 // `go` rides the api-ts ChannelProxy shape (the canonical map in app lib/config.ts) — never :3032.
 configureClient({ typescript: API_BASE_URL, go: `${API_BASE_URL}/v1/external/channel` })
 

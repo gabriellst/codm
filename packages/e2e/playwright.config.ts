@@ -12,7 +12,7 @@ export default defineConfig({
 	// more than parallelism bought. Raise this only with a measurement proving otherwise.
 	workers: 1,
 	use: {
-		baseURL: 'http://localhost:5173',
+		baseURL: `http://localhost:${Number(process.env.VITE_PORT ?? 5273)}`,
 		viewport: { width: 1512, height: 982 },
 		locale: 'pt-BR',
 		video: 'off',
@@ -34,7 +34,7 @@ export default defineConfig({
 			// 127.0.0.1 accepts any response, but 404 does NOT prove the daemon is up (a stale listener
 			// 404s too), so probe a route that returns 200 only once the daemon is serving: the operator
 			// session echo (/v1/session), which needs no seeded state.
-			url: `http://127.0.0.1:${Number(process.env.API_PORT ?? 3030)}/v1/session`,
+			url: `http://127.0.0.1:${Number(process.env.API_PORT ?? 3130)}/v1/session`,
 			reuseExistingServer: false,
 			timeout: 120_000,
 			cwd: '../api/typescript',
@@ -44,8 +44,8 @@ export default defineConfig({
 			// runner's env (inherited); pinned here so a bare `bun x playwright` invocation still boots
 			// hermetically.
 			env: {
-				PORT: String(process.env.API_PORT ?? 3030),
-				API_PORT: String(process.env.API_PORT ?? 3030),
+				PORT: String(process.env.API_PORT ?? 3130),
+				API_PORT: String(process.env.API_PORT ?? 3130),
 				CODM_E2E: process.env.CODM_E2E ?? 'true',
 				...(process.env.CODM_DATA_DIR ? { CODM_DATA_DIR: process.env.CODM_DATA_DIR } : {}),
 				RATE_LIMIT_DISABLED: 'true',
@@ -53,12 +53,12 @@ export default defineConfig({
 		},
 		{
 			command: 'bun x vite --host',
-			url: `http://127.0.0.1:${Number(process.env.VITE_PORT ?? 5173)}/app/`,
+			url: `http://127.0.0.1:${Number(process.env.VITE_PORT ?? 5273)}/app/`,
 			reuseExistingServer: false,
 			timeout: 120_000,
 			cwd: '../app/react',
 			stdout: 'pipe',
-			env: { PORT: String(process.env.VITE_PORT ?? 5173) },
+			env: { PORT: String(process.env.VITE_PORT ?? 5273) },
 		},
 	],
 	projects: [
