@@ -217,6 +217,20 @@ abstract class BaseLoopSchedule<S extends ZodObject> extends BaseValueObject<S> 
 	 * `FireDueLoops` turns a `true` here into a `skipRun` instead of a whisper.
 	 */
 	abstract isRunStale(scheduledFor: Date, now: Date): boolean
+
+	/**
+	 * HOW TO NAME this loop in one attribute — `09:00 mon,wed,fri`, `every 15min`.
+	 *
+	 * A `Loop` has no name field and deliberately gets none here: naming loops is a product change (the
+	 * console form, five MCP tools, the wire contract) and this is a prompt problem. What the prompt
+	 * needs is for a scheduled whisper to stop arriving as `de="operator"`, and the schedule is both the
+	 * shortest true thing to say about a loop and the way the operator already refers to one ("aquele das
+	 * 9h"). The loop's own prompt is the CONTENT of the block, so the two together identify it.
+	 *
+	 * DERIVED, and denormalized onto the transcript entry at fire time — see `fired_by_loop`. Two loops
+	 * on the same schedule share a label; their text does not.
+	 */
+	abstract get label(): string
 }
 
 /** "Toda segunda e quarta às 09:00" — a wall clock, a weekday set, and the zone both are read in. */
@@ -258,6 +272,11 @@ export class DailyLoopSchedule extends BaseLoopSchedule<typeof DailyLoopSchedule
 	isRunStale(scheduledFor: Date, now: Date): boolean {
 		return now.getTime() - scheduledFor.getTime() > MISSED_RUN_GRACE_MS
 	}
+
+	/** `09:00 mon,wed,fri` — the clock, then the days, in week order (the set is already normalized). */
+	get label(): string {
+		return `${this.timeOfDay} ${this.weekdays.map(day => day.slice(0, 3).toLowerCase()).join(',')}`
+	}
 }
 
 export interface DailyLoopSchedule extends DailyLoopScheduleProps {}
@@ -290,6 +309,11 @@ export class IntervalLoopSchedule extends BaseLoopSchedule<typeof IntervalLoopSc
 	 */
 	isRunStale(): boolean {
 		return false
+	}
+
+	/** `every 15min` — the cadence is the whole of what this member is. */
+	get label(): string {
+		return `every ${this.everyMinutes}min`
 	}
 }
 

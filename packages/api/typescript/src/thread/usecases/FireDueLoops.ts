@@ -87,7 +87,18 @@ export class FireDueLoops extends Handler<typeof FireDueLoopsInputSchema, typeof
 
 			const outcome = await tryCatchAsync(async () =>
 				this.withTransaction(tx, async tx => {
-					await this.steer.execute({ ownerId: loop.ownerId, threadId: loop.threadId, text: loop.prompt }, tx)
+					await this.steer.execute(
+						{
+							ownerId: loop.ownerId,
+							threadId: loop.threadId,
+							text: loop.prompt,
+							// WHICH loop is speaking, in one attribute's worth of text. Without it the whisper is
+							// indistinguishable from one the operator typed, and the agent answers a timer as if
+							// somebody were waiting — see `LoopSchedule.label` for why the schedule is the name.
+							firedByLoop: loop.schedule.label,
+						},
+						tx,
+					)
 					loop.markFired(now)
 					await this.loops.save(loop, tx)
 				}),

@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
-import { ProviderKind } from '@codm/contracts-typescript/wire/enums'
+import { MailboxItemKind, ProviderKind } from '@codm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
 import { RunIssueTurn } from '../usecases/RunIssueTurn'
 
@@ -72,6 +72,11 @@ export class TestRunIssueTurnController extends Controller<typeof TestRunIssueTu
 		const result = await this.runIssueTurn.execute({
 			ownerId: request.ctx.ownerId,
 			...request.body,
+			// This door hands the agent a BRIEF — it is how an e2e triggers a turn from nothing, so there is
+			// no work in flight for a steer to amend. Stated rather than defaulted: the discriminant now
+			// changes how the working prompt reads the message, and "whatever the schema falls back to" is
+			// not a decision anybody made.
+			turnKind: MailboxItemKind.WORK,
 			// The turn's cursor. A fresh id rather than a transcript entry: this door exists to trigger a
 			// turn, and inventing a link to a message that was never routed here would be a lie the
 			// resume guard would later read as truth.

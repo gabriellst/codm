@@ -1,3 +1,4 @@
+export { AGENT_SPEAKER, OPERATOR_PARTICIPANT_ID } from './TranscriptSpeaker'
 export {
 	decideCut,
 	advanceCutState,

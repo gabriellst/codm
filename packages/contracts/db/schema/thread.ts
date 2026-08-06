@@ -134,6 +134,24 @@ export const transcriptEntries = sqliteTable(
 		issueId: text('issue_id'),
 		quotedEntryId: text('quoted_entry_id'),
 		senderExternalId: text('sender_external_id'),
+
+		/**
+		 * WHICH LOOP fired this whisper — NULL ⟺ a human typed it.
+		 *
+		 * A `WHISPER` is the operator instructing the agents without the room seeing it, and until this
+		 * column existed a scheduled one was indistinguishable from a typed one: both landed with no
+		 * sender, both rendered to the model as `operator`, and the agent answered a timer as if somebody
+		 * had just spoken. The prompt grammar reads this to write `de="loop:<label>"` instead.
+		 *
+		 * It stores the loop's LABEL (derived from its schedule — `09:00 mon,wed,fri`, `every 15min`),
+		 * denormalized at fire time rather than a foreign key. A transcript records what happened: a loop
+		 * edited to another hour, or deleted, must not rewrite who spoke yesterday.
+		 *
+		 * Its ONE writer is `SteerThread`, which only ever records `WHISPER` — so "only a whisper carries
+		 * a loop" holds by construction rather than by a validator.
+		 */
+		firedByLoop: text('fired_by_loop'),
+
 		// ProviderKind — present for kind AGENT.
 		provider: text('provider').$type<ProviderKind>(),
 		// ClassificationMethod — present on ACTION lines.

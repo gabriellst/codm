@@ -1,6 +1,6 @@
 import { z } from '@codm/core-typescript'
 import { AgentModelId, ContactKind, MailboxItemKind, StopKind } from '@codm/contracts-typescript/wire/enums'
-import { AgentRunOutcome } from '../../enums'
+import { AgentRunOutcome, MessageVia } from '../../enums'
 import { ProviderCapabilitiesSchema } from '../../types/ProviderCapabilities'
 import { OpenStopSchema } from '../../usecases/GetOpenStops'
 
@@ -14,9 +14,9 @@ import { OpenStopSchema } from '../../usecases/GetOpenStops'
  */
 const WindowEntrySchema = z.object({
 	/**
-	 * Rendered verbatim as the label: `operator` for the owner (`OPERATOR_PARTICIPANT_ID`), the roster
-	 * `name` for other participants, `you` for the agent's own SYSTEM lines. Never a raw JID — the
-	 * window is read by a model that will echo what it sees.
+	 * The `de` attribute, rendered VERBATIM: `operator` for the owner (`OPERATOR_PARTICIPANT_ID`), the
+	 * roster `name` for other participants, `you` for the agent's own SYSTEM lines, `loop:<label>` for a
+	 * scheduled whisper. Never a raw JID — the window is read by a model that will echo what it sees.
 	 */
 	speaker: z.string().min(1),
 	/** Already through `Thread.textWithoutMention` (`Thread.ts:147`) — the tag is noise to the model. */
@@ -29,6 +29,59 @@ const WindowEntrySchema = z.object({
 	 * fails by construction.
 	 */
 	addressed: z.boolean(),
+	/**
+	 * WHEN it was said. The `hora` attribute, formatted against the machine's zone at render time.
+	 *
+	 * A conversation the model reads without timestamps is a conversation it cannot place in time: "de
+	 * manhã eu te falei" has no referent, and a message from yesterday reads exactly like one from a
+	 * minute ago. It is the transcript row's own `at`, never a re-derivation.
+	 */
+	at: z.date(),
+	/**
+	 * The `ref` attribute — this line's transcript entry id, and the reason quoting an OLD message is
+	 * possible at all.
+	 *
+	 * ADDRESS, never identity: the model uses it in `[quote: <ref>]` and is forbidden from putting it in
+	 * prose. Before the grammar the only id in the prompt was the live message's own, so "attach this to
+	 * what Marina asked an hour ago" was a thing the model could want and could not express.
+	 */
+	ref: z.uuid(),
+	/**
+	 * HOW this line reached the conversation, when the room never saw it — absent ⟺ it was said in the
+	 * chat, in front of everyone. See `MessageVia`.
+	 */
+	via: z.enum(MessageVia).optional(),
+})
+
+/**
+ * ONE line this message is a REPLY to, embedded in the block as `responde: <autor>, <hora> — «…»`.
+ *
+ * ### Why the whole excerpt and not an id
+ * The model cannot dereference one, and the window is no substitute: it is capped by `bufferSize`, a
+ * RESUMED session only carries the tail since the cursor, and even when the line IS present nothing
+ * marks WHICH of forty lines was answered. A reply is typically a FRAGMENT ("depois", "o segundo",
+ * "pode") whose meaning lives entirely in the line it lands on.
+ *
+ * ### Why it is no longer only the AGENT's own line
+ * It used to be, and that was the invocation gate's verdict wearing a second hat: quoting the agent
+ * lowers the mention gate, so `IngestChannelMessage` had the text in hand exactly when the gate stood
+ * down and dropped it in every other case. A reply to somebody ELSE in the room reaches the agent just
+ * as often and is exactly as unreadable alone — worse, actually, because a fragment read against the
+ * wrong antecedent produces a confident answer to a question nobody asked.
+ */
+const QuotedMessageSchema = z.object({
+	/** `you` for the agent's own line (`AGENT_SPEAKER`), the roster name for anyone else. */
+	speaker: z.string().min(1),
+	/**
+	 * When the quoted line was said.
+	 *
+	 * `coerce` because this rides the MAILBOX payload, which is a JSON column: a `Date` written by
+	 * `IngestChannelMessage` comes back out of SQLite as an ISO string, and a bare `z.date()` would
+	 * reject the very turn it was added for. The window's `at` next door needs no coercion — it is built
+	 * in-process by `RunOrchestratorTurn` and never serialized.
+	 */
+	at: z.coerce.date(),
+	text: z.string().min(1),
 })
 
 /** The operator (or another invoker) said something. The conversational turn. */
@@ -40,33 +93,32 @@ const OperatorMessageItemSchema = z.object({
 	 * (`MailboxRepository.ts:22-30`).
 	 */
 	entryId: z.uuid(),
-	/** Not always the owner: any roster participant with `canInvoke` may address the agent (`Thread.ts:115`). */
+	/**
+	 * The `de` attribute of the live block, rendered verbatim — the same vocabulary `WindowEntrySchema`
+	 * uses above, because the live message is the LAST block of that same list.
+	 *
+	 * Not always the owner: any roster participant with `canInvoke` may address the agent
+	 * (`Thread.ts:115`), and a scheduled whisper arrives as `loop:<label>`.
+	 */
 	speaker: z.string().min(1),
 	text: z.string().min(1),
 	/**
-	 * The agent's OWN earlier line that this message is a reply to — the other half of the rule that
-	 * lets a reply summon the agent without a mention tag.
+	 * HOW it reached the conversation, when the room never saw it — absent ⟺ typed in the chat.
 	 *
-	 * PRESENT ⟺ the message quotes a `SYSTEM` entry. That is the identical predicate `IngestChannelMessage`
-	 * already computes as `repliesToAgent` and hands to `Thread.canInvoke`, reused rather than re-derived:
-	 * one notion of "this replies to me", with the gate and the prompt reading the same fact. A quote of
-	 * another participant, or one that does not resolve, is absent here — it is not the agent being
-	 * answered, and rendering someone else's words as the agent's own would invite it to answer itself.
-	 *
-	 * WHY THE TEXT AND NOT AN ID: the model cannot dereference one. A reply is typically a FRAGMENT
-	 * ("depois", "o segundo", "pode") whose meaning lives entirely in the line it lands on, and the
-	 * window is no substitute — it is capped by `bufferSize`, so the quoted line may be long gone, and
-	 * even when present nothing marks WHICH of forty lines was answered.
-	 *
-	 * It rides the mailbox payload rather than being re-read here because the ingest already resolved
-	 * the entry for the gate (`ThreadRepository.findEntry`) and the row it returns already carries the
-	 * text. A read in this context would be a second query for a fact the producer had in hand, and it
-	 * would have to reach into `thread`'s transcript to get it.
-	 *
-	 * `min(1)`, mirroring `mentionTag` and `customPrompt`: absent ⟺ not a reply to the agent. The empty
-	 * string is not a state — a `SYSTEM` entry with no text is not written.
+	 * This is the field that stops the author from lying. A console whisper and a loop tick used to
+	 * arrive as `speaker: 'operator'`, byte-identical to something a human had just typed, so the agent
+	 * answered a timer with "pronto, respondi" and thanked the room for a message the room never sent.
 	 */
-	quotedAgentText: z.string().min(1).optional(),
+	via: z.enum(MessageVia).optional(),
+	/**
+	 * The line this message is a REPLY to, when it quotes one that resolves.
+	 *
+	 * It rides the mailbox payload rather than being re-read here because the ingest already resolved the
+	 * entry for the invocation gate (`ThreadRepository.findEntry`) and the row it returned carries the
+	 * text, the author and the instant. A read in this context would be a second query for a fact the
+	 * producer had in hand, and it would have to reach into `thread`'s transcript to get it.
+	 */
+	quoted: QuotedMessageSchema.optional(),
 })
 
 /**
@@ -166,6 +218,21 @@ export const OrchestratorInputSchema = z.agentInput({
 	 * DEFAULTED zone is precisely the failure this field exists to prevent, not a fallback for it.
 	 */
 	timezone: z.string().min(1),
+	/**
+	 * WHAT TIME IT IS — the turn's own instant, rendered at the top of the prompt as `agora: …`.
+	 *
+	 * The agent had no clock. Not "an imprecise one" — none: no line of the prompt said what time it
+	 * was, and none said when any message had been sent, so "de manhã eu te falei" and "isso foi ontem"
+	 * were unanswerable, and a conversation resumed after a night's sleep read as continuous.
+	 *
+	 * A PARAMETER and not a `new Date()` inside the prompt builder — the same discipline `Loop`,
+	 * `LoopSchedule` and `Thread.canInvoke` already hold. A renderer that reads a clock is a renderer no
+	 * test can pin, and this one's whole output would move under it.
+	 *
+	 * REQUIRED, like `timezone` and `openStops`: every turn knows what time it started, so "absent"
+	 * would mean nothing except that somebody forgot to wire it.
+	 */
+	now: z.date(),
 	/** Which model to ask the CLI for. Omitted ⇒ `DEFAULT` ⇒ the CLI's own choice. */
 	model: z.enum(AgentModelId).optional(),
 	/**

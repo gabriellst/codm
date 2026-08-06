@@ -223,7 +223,7 @@ describe('RunOrchestratorTurn — the cues the turn is responsible for lighting'
 	 * session already holds those.
 	 */
 	describe('the message being replied to travels from the item into the turn', () => {
-		const capturedUserPrompt = async (thread: Thread, quotedAgentText?: string): Promise<string> => {
+		const capturedUserPrompt = async (thread: Thread, quoted?: { speaker: string; at: Date; text: string }): Promise<string> => {
 			const runner = new CapturingRunner()
 			testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(runner))
 			await testBed.resolve(RunOrchestratorTurn).execute({
@@ -236,7 +236,7 @@ describe('RunOrchestratorTurn — the cues the turn is responsible for lighting'
 					entryId: crypto.randomUUID(),
 					speaker: 'operator',
 					text: 'depois',
-					quotedAgentText,
+					quoted,
 				},
 			})
 			return (runner.requests[0]?.messages[0]?.content as string) ?? ''
@@ -245,16 +245,21 @@ describe('RunOrchestratorTurn — the cues the turn is responsible for lighting'
 		it('an item carrying a quoted agent line puts that line in the prompt', async () => {
 			const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
 
-			const user = await capturedUserPrompt(thread, 'rodo a migration agora ou depois do deploy?')
+			const user = await capturedUserPrompt(thread, {
+				speaker: 'you',
+				at: new Date(),
+				text: 'rodo a migration agora ou depois do deploy?',
+			})
 
-			expect(user).toContain('THE MESSAGE THEY REPLIED TO')
+			// EMBEDDED in the block, as the line the live message answers — not a section above it.
+			expect(user).toContain('responde: you,')
 			expect(user).toContain('rodo a migration agora ou depois do deploy?')
 		})
 
-		it('an item without one renders no section — the common turn is untouched', async () => {
+		it('an item without one renders no quoted line — the common turn is untouched', async () => {
 			const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
 
-			expect(await capturedUserPrompt(thread)).not.toContain('THE MESSAGE THEY REPLIED TO')
+			expect(await capturedUserPrompt(thread)).not.toContain('responde:')
 		})
 	})
 })

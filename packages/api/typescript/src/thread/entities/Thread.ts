@@ -16,6 +16,7 @@ import {
 // reads as persistence leaking into the domain.
 import { effectiveModel, offersModel } from '@codm/contracts/catalog'
 import type { DomainErrors } from '../errors'
+import { OPERATOR_PARTICIPANT_ID } from '../objects/TranscriptSpeaker'
 import { mentionsTag, stripMentionTag, MentionGateSchema, CustomPromptSchema } from '../schemas'
 import { isResolutionApplicable } from '../utils/StopResolutions'
 import { ThreadStopResolvedEvent } from '../events/ThreadStopResolvedEvent'
@@ -53,6 +54,23 @@ export const TranscriptEntrySchema = z.object({
 	issueId: z.string().optional(),
 	quotedEntryId: z.string().optional(),
 	senderExternalId: z.string().optional(),
+	/**
+	 * WHICH LOOP fired this whisper — ABSENT ⟺ a human typed it.
+	 *
+	 * A `WHISPER` is the operator instructing the agents privately, and a scheduled one used to be
+	 * indistinguishable from a typed one: no sender on either, so both rendered to the model as
+	 * `operator` and the agent answered a timer as if somebody had just spoken. The prompt grammar
+	 * reads this to write `de="loop:<label>"` instead of lying.
+	 *
+	 * It carries the loop's LABEL (derived from its schedule) rather than its id, denormalized at fire
+	 * time: a transcript records what happened, and a loop edited to another hour — or deleted — must
+	 * not rewrite who spoke yesterday.
+	 *
+	 * NO ENTITY INVARIANT ties it to `WHISPER`. `SteerThread` is the only writer and records nothing
+	 * else, so the pairing holds by construction; a named domain error for a state no caller can reach
+	 * would cost an i18n catalog and an SDK regeneration to guard a hypothetical.
+	 */
+	firedByLoop: z.string().min(1).optional(),
 	provider: z.enum(ProviderKind).optional(),
 	classification: z.enum(ClassificationMethod).optional(),
 	at: z.date(),
@@ -172,16 +190,14 @@ export interface PendingThreadWrites {
 }
 
 /**
- * The roster id the OWNER always occupies — seeded by `AttachThread`, always `canInvoke: true`.
+ * The roster id the OWNER always occupies — DECLARED in `objects/TranscriptSpeaker.ts` and re-exported
+ * here, where every caller in this context has always read it from.
  *
- * The roster is about OTHER PEOPLE: it exists so the operator can mute specific participants, and
- * muting yourself is meaningless. So a message the owner typed is attributed to THIS id whichever
- * device it came from — the phone, another web client, or the console — rather than to their own
- * phone-number JID, which the gateway snapshot also puts in the roster with `canInvoke: false`
- * (it enumerates every group participant with no self filter). Without this, the owner's own message
- * is denied by the participant check BEFORE the mention gate is ever consulted.
+ * It moved because the agent context needs the same word (the `de` attribute of an operator's block)
+ * and may not import an entity across a boundary — `objects` is the sanctioned surface. One
+ * declaration, two readers, no mirror.
  */
-export const OPERATOR_PARTICIPANT_ID = 'operator'
+export { OPERATOR_PARTICIPANT_ID }
 
 /**
  * How long an inbound stays SUMMONABLE — the freshness window `canInvoke` judges an inbound against.
@@ -519,6 +535,7 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 		senderExternalId?: string
 		quotedEntry?: QuotedEntryRef
 		issueId?: string
+		firedByLoop?: string
 		provider?: ProviderKind
 		classification?: ClassificationMethod
 		at?: Date
@@ -545,6 +562,7 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 			issueId: input.issueId,
 			quotedEntryId: input.quotedEntry?.entryId,
 			senderExternalId: input.senderExternalId,
+			firedByLoop: input.firedByLoop,
 			provider: input.provider,
 			classification: input.classification,
 			at: input.at ?? new Date(),
@@ -722,6 +740,28 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	textWithoutMention(text: string): string {
 		if (!this.mentionGate.enabled) return text
 		return stripMentionTag(text, this.mentionGate.tag) || text
+	}
+
+	/**
+	 * WHO a JID is, as a human reads it — the roster's job, done in ONE place.
+	 *
+	 * The prompt grammar puts the author in an attribute (`de="…"`), so it has to be a NAME. Two call
+	 * sites need the same answer and used to disagree: the conversation window resolved the roster while
+	 * the live message went in as the raw JID, so the same person appeared twice under two identities in
+	 * one prompt and the model read them as two people.
+	 *
+	 * A participant the gateway snapshot has since dropped falls back to the raw id rather than to a
+	 * hole: losing WHO said something makes a transcript unreadable, and an empty attribute is worse than
+	 * an ugly one. Absent sender ⟺ this system's own line (`SYSTEM` / `WHISPER` / `DIRECT`), which is
+	 * the operator speaking through the console.
+	 *
+	 * The OWNER resolves to the sentinel itself rather than to their roster `name`, and that is the one
+	 * deliberate exception. Every other paragraph of the prompt calls them "the operator"; rendering
+	 * `de="Operator"` here would hand the model a second name for the person its instructions are about.
+	 */
+	displayNameOf(senderExternalId?: string): string {
+		if (!senderExternalId || senderExternalId === OPERATOR_PARTICIPANT_ID) return OPERATOR_PARTICIPANT_ID
+		return this.participants.find(p => p.participantId === senderExternalId)?.name ?? senderExternalId
 	}
 
 	/*

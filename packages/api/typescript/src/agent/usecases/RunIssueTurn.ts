@@ -3,6 +3,7 @@ import { uuidv7 } from 'uuidv7'
 import { Handler, z, BaseError, LoggingService } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
 import { AgentModelId, MailboxItemKind, MailboxTargetKind, ProviderKind, ProviderStatus } from '@codm/contracts-typescript/wire/enums'
+import { OPERATOR_PARTICIPANT_ID } from '@thread/objects'
 import { IssueWorkAgent } from '../agents/IssueWorkAgent'
 import { AgentRunnerFactory } from '../services/AgentRunnerFactory'
 import type { AgentRunner } from '../services/AgentRunner'
@@ -15,7 +16,7 @@ import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
 import type { AgentApplicationErrors } from '../errors'
-import { ResumeInvalidationReason, AgentRunOutcome, FactSource } from '../enums'
+import { ResumeInvalidationReason, AgentRunOutcome, FactSource, MessageVia } from '../enums'
 import { isTransportStopKind } from '../enums/TransportStopKind'
 
 export const RunIssueTurnInputSchema = z.object({
@@ -27,6 +28,29 @@ export const RunIssueTurnInputSchema = z.object({
 	provider: z.enum(ProviderKind),
 	workspacePath: z.string().trim().min(1),
 	prompt: z.string().trim().min(1),
+	/**
+	 * WHICH KIND of message this turn is carrying — the original ask, or an amendment to work already in
+	 * flight. `WORK` and `STEER`, reusing the mailbox's own discriminant.
+	 *
+	 * The two used to arrive as the SAME raw string and the agent could not tell them apart: a steer read
+	 * as a fresh brief, so a turn resumed mid-work was as likely to restart as to continue. It is
+	 * declared here rather than inferred from `priorMessageId` or from session state, because the
+	 * producer knows it exactly (`MailboxDispatcher` reads `item.kind`) and nobody downstream can
+	 * reconstruct it.
+	 *
+	 * REQUIRED, with no default. `execute` takes the schema's OUTPUT, so a `.default()` here would not
+	 * spare a caller one keystroke — it would only make "nobody decided" silently mean `WORK`, which is
+	 * the wrong half of the guess to make silently: reading an amendment as a brief restarts work.
+	 */
+	turnKind: z.union([z.literal(MailboxItemKind.WORK), z.literal(MailboxItemKind.STEER)]),
+	/**
+	 * The LABEL of the loop whose tick produced this steer — absent ⟺ a human is on the other end.
+	 *
+	 * Same fact `SteerThread` writes onto the transcript entry, carried through so the working agent's
+	 * prompt can say `de="loop:<label>"`. Without it a scheduled nudge reads as the operator standing
+	 * over the issue, and the turn answers a timer as if somebody were waiting.
+	 */
+	firedByLoop: z.string().trim().min(1).optional(),
 	/** A instrução permanente da thread — repassada ao prompt do agente. */
 	customPrompt: z.string().trim().min(1).optional(),
 	/** The transcript entry being fed — becomes the session's cursor once the turn commits. */
@@ -249,6 +273,15 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 			threadId: input.threadId,
 			cwd: input.workspacePath,
 			prompt: input.prompt,
+			turnKind: input.turnKind,
+			// WHO is asking, in the grammar's own terms. A steer fired by a schedule is not the operator
+			// leaning over the issue, and the prompt says so instead of flattening both to `operator`.
+			speaker: input.firedByLoop ? `${MessageVia.LOOP}:${input.firedByLoop}` : OPERATOR_PARTICIPANT_ID,
+			via: input.firedByLoop ? MessageVia.LOOP : input.turnKind === MailboxItemKind.STEER ? MessageVia.STEER : undefined,
+			// The turn's own instant, read once — same discipline as `RunOrchestratorTurn`, and the reason
+			// the prompt builder is a pure renderer with no clock of its own.
+			now: new Date(),
+			timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 			key: input.key,
 			title: input.title,
 			customPrompt: input.customPrompt,

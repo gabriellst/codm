@@ -419,6 +419,7 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 			text?: string
 			provider: string
 			originEntryId?: string
+			firedByLoop?: string
 		}
 		const thread = await this.threads.findById(payload.threadId)
 		if (!thread) return this.dropSilently(item, 'thread no longer exists')
@@ -447,6 +448,14 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 			// the raw inbound text re-read from a transcript. A STEER carries its own text instead: the
 			// session is resumed, so the turn needs the NEW instruction, not the original brief again.
 			prompt: item.kind === MailboxItemKind.STEER ? (payload.text ?? '') : (payload.goal ?? ''),
+			// The same discriminant, handed on instead of being thrown away. Until the prompt grammar it
+			// only chose WHICH string to send; the working agent received the two under one shape and had
+			// to guess whether it was being briefed or corrected. `WORK` is the widened default because
+			// `MailboxTargetKind.ISSUE` admits exactly these two kinds and this method handles both.
+			turnKind: item.kind === MailboxItemKind.STEER ? MailboxItemKind.STEER : MailboxItemKind.WORK,
+			// Present only on a steer a SCHEDULE produced (`SteerThread`), so the turn is not told a person
+			// is standing there when what fired was a timer.
+			firedByLoop: payload.firedByLoop,
 			customPrompt: thread.customPrompt,
 			messageId: item.id,
 			// The position this turn continues FROM — the item the previous turn consumed. Absent on the
