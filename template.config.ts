@@ -297,6 +297,18 @@ export const REPO = {
 			example: '',
 			doc: 'test-only gateway ingress seam (internal/channel/testseam); refused under PRODUCTION',
 		},
+		// NO `schema:` on purpose — same ENV-05 dodge as CODM_E2E above, one step further: NO backend
+		// declares 'apiTs' here at all (there is no Go reader to hang the declaration on instead), so
+		// the registry consumer is 'compose' — the literal place this key is SET (docker/cloud.compose.yml
+		// hard-overrides it to 'cloud' regardless of what the shared root .env says, so the local
+		// daemon's own boot never sees it flip). Read as raw process.env.CODM_PROFILE in
+		// src/index.ts / src/shared/cloud-profile.ts (SP2 Task T4), never through Config.env —
+		// booting WITHOUT this var (the desktop daemon's default) is unchanged behavior.
+		CODM_PROFILE: {
+			consumers: ['compose'],
+			example: '',
+			doc: "cloud profile switch — 'cloud' boots only auth+owner (docker/cloud.compose.yml); unset boots the full desktop daemon",
+		},
 		RATE_LIMIT_DISABLED: {
 			consumers: ['apiTs'],
 			schema: 'kernel',
@@ -329,6 +341,24 @@ export const REPO = {
 		// ── auth / secrets ──
 		BETTER_AUTH_SECRET: { consumers: ['apiTs'], schema: 'kernel', example: 'CHANGE_ME', secret: true },
 		BETTER_AUTH_URL: { consumers: ['apiTs'], schema: 'kernel', example: 'http://localhost:3030/v1/authentication' },
+		// Cloud profile only (SP2 Task T1/T4): social-provider credentials for the resurrected
+		// better-auth instance (auth/services/Authentication/BetterAuth.ts), kernel-scoped like
+		// BETTER_AUTH_SECRET/URL above — the auth bounded context ships in the base template, not a
+		// per-product add-on. Empty defaults keep the LOCAL daemon profile (which never constructs
+		// BetterAuth) booting without them.
+		GITHUB_CLIENT_ID: { consumers: ['apiTs'], schema: 'kernel', example: '' },
+		GITHUB_CLIENT_SECRET: { consumers: ['apiTs'], schema: 'kernel', example: '', secret: true },
+		GOOGLE_CLIENT_ID: { consumers: ['apiTs'], schema: 'kernel', example: '' },
+		GOOGLE_CLIENT_SECRET: { consumers: ['apiTs'], schema: 'kernel', example: '', secret: true },
+		// Cloud profile's own public origin — better-auth's trustedOrigins/baseURL (distinct from
+		// CORS_ALLOWED_ORIGINS, which governs the general API's cross-origin allowlist). Defaults to
+		// API_URL when unset (core Config.ts cross-field default).
+		CODM_CLOUD_URL: {
+			consumers: ['apiTs'],
+			schema: 'kernel',
+			example: 'http://localhost:3030',
+			doc: 'cloud profile public origin (better-auth baseURL/trustedOrigins); defaults to API_URL',
+		},
 		JWT_SECRET: {
 			consumers: ['apiTs'],
 			schema: 'kernel',
@@ -389,6 +419,26 @@ export const REPO = {
 			example: '',
 			doc: 'app-astro canonical origin (sitemap/RSS/canonical) at build time; MUST be set in production builds — empty falls back to http://localhost:4321',
 		},
+		// ── parked (documented, no active consumer) ──
+		// SP2 pivoted the product to free/single-plan (.specs/2026-08-06-sp2-conta-oauth-design.md
+		// Decision 1: "Gratuito, plano único, sem Stripe") — no billing bounded context, no webhook,
+		// no checkout screen ships this SP. These test-mode keys already live in the founder's own
+		// .env; declared here with `consumers: []` DELIBERATELY, so they are documented in
+		// .env.example instead of silently undeclared, without implying any workspace currently
+		// reads them. Re-add real `consumers`/`schema` if/when billing gets re-planned.
+		STRIPE_SECRET_KEY: {
+			consumers: [],
+			group: 'parked',
+			secret: true,
+			example: '',
+			doc: 'parked — no billing code ships this SP (Decision 1); test-mode key',
+		},
+		STRIPE_PUBLISHABLE_KEY: {
+			consumers: [],
+			group: 'parked',
+			example: '',
+			doc: 'parked — no billing code ships this SP (Decision 1); test-mode key',
+		},
 	},
 	// ── STAMP-MANAGED-END: env ──
 } as const
@@ -398,12 +448,21 @@ export type RepoConfig = typeof REPO
 export type EnvConsumer = WorkspaceId | 'compose'
 export interface EnvDecl {
 	/** Declared relation: the workspaces that read this key. A stamped repo keeps the key iff at
-	 *  least one consumer ships — pure set membership, no special cases. */
+	 *  least one consumer ships — pure set membership, no special cases. The ONE declared
+	 *  exception is `group: 'parked'` (see below): a parked key carries `consumers: []` on
+	 *  purpose (nothing reads it yet) and ships in EVERY stamp regardless — set membership over
+	 *  an empty set is vacuously false, so "parked" is its own membership rule, not a consumer. */
 	consumers: readonly EnvConsumer[]
 	/** Which api-ts Zod schema declares the key (required iff 'apiTs' is a consumer). */
 	schema?: 'kernel' | 'product'
-	/** Presentational grouping for .env.example sections (e.g. 'billing-gateway'). */
-	group?: string
+	/** Grouping with TWO effects, both driven by this ONE declared field (never inferred from a
+	 *  string convention elsewhere): (1) presentational — which `.env.example` section renders it
+	 *  (`scripts/env/generate.ts` SECTIONS). (2) for `'parked'` ONLY — a set-algebra override read
+	 *  by the create-template planner (`scripts/create-template/plan.ts`): a parked key (zero
+	 *  active consumers, by design) ships in every stamp unconditionally, the same posture as the
+	 *  literal `'compose'` consumer, instead of being silently pruned because no workspace
+	 *  "consumes" it. `'billing-gateway'` is presentational-only. */
+	group?: 'billing-gateway' | 'parked'
 	example: string
 	doc?: string
 	secret?: boolean

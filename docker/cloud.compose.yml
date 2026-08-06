@@ -1,0 +1,34 @@
+# docker/cloud.compose.yml — the cloud PROFILE (CODM_PROFILE=cloud): identity (better-auth,
+# GitHub+Google) + owner tenancy, nothing else (packages/api/typescript/src/shared/cloud-profile.ts).
+# One service, one named volume for the embedded SQLite file — no Postgres, no Redis (the cloud
+# profile mounts no agent runtime, so it never touches the outbox's external-mediator transport).
+#
+# `docker compose -f docker/cloud.compose.yml up` is the LOCAL convenience; the SAME
+# docker/cloud.Dockerfile is what Railway builds for the real deploy (AC-1,
+# .specs/2026-08-06-sp2-conta-oauth-design.md) — this compose file is not itself a deploy target.
+#
+# Run from the repo root: `docker compose -f docker/cloud.compose.yml up`.
+# Requires a root .env (copy from .env.example) with GITHUB_CLIENT_ID/SECRET,
+# GOOGLE_CLIENT_ID/SECRET, BETTER_AUTH_SECRET filled in — see CLAUDE.md Environment Setup.
+services:
+  cloud:
+    build:
+      context: ..
+      dockerfile: docker/cloud.Dockerfile
+    container_name: codm-cloud
+    env_file:
+      # Root .env is the single source of truth for every workspace (CLAUDE.md Environment Setup)
+      # — GITHUB/GOOGLE OAuth credentials, BETTER_AUTH_SECRET, JWT_SECRET, etc. all come from here.
+      - ../.env
+    environment:
+      # Hard-overrides whatever CODM_PROFILE is (or isn't) set to in the shared root .env — this
+      # service is ALWAYS the cloud profile, regardless of the local daemon's own configuration.
+      CODM_PROFILE: cloud
+    ports:
+      - '3030:3030'
+    volumes:
+      - cloud_data:/data
+    restart: unless-stopped
+
+volumes:
+  cloud_data:
