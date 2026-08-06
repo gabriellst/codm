@@ -1,1 +1,5 @@
 export { UploadAvatar, UploadAvatarInputSchema, UploadAvatarOutputSchema } from './UploadAvatar'
+export { IssueDeviceCode, IssueDeviceCodeInputSchema, IssueDeviceCodeOutputSchema } from './IssueDeviceCode'
+export { ExchangeDeviceCode, ExchangeDeviceCodeInputSchema, ExchangeDeviceCodeOutputSchema } from './ExchangeDeviceCode'
+export { RevokeDevice, RevokeDeviceInputSchema, RevokeDeviceOutputSchema } from './RevokeDevice'
+export { GetEntitlement, GetEntitlementInputSchema, GetEntitlementOutputSchema } from './GetEntitlement'

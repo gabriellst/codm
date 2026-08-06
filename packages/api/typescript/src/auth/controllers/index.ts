@@ -1,2 +1,6 @@
 export { GetSessionController } from './GetSession'
 export { UploadAvatarController } from './UploadAvatar'
+export { DesktopCallbackController } from './cloud/DesktopCallback'
+export { ExchangeDeviceCodeController } from './cloud/ExchangeDeviceCode'
+export { GetEntitlementController } from './cloud/GetEntitlement'
+export { RevokeDeviceController } from './cloud/RevokeDevice'
