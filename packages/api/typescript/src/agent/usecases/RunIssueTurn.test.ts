@@ -292,7 +292,14 @@ describe('RunIssueTurn use case', () => {
 		expect((failure as BaseError).message).toContain(ProviderKind.CODEX)
 	})
 
-	it('maps a TRANSPORT stop to a STOPPED outcome + a stop-raised fact (runner overridden last)', async () => {
+	/**
+	 * Turno travado (Task T2, decisão 4): um stop de TRANSPORTE não vira fato na primeira falha —
+	 * `persistOutcome` retorna antes de mintar `AgentRunStopRaisedEvent`, e o use case reporta
+	 * `transportStop` para o dispatcher decidir (retry via `fail()`, ou — esgotadas as tentativas —
+	 * `raiseStopForPoisoned`). Este caso costumava esperar o Stop persistido na hora; agora é o
+	 * `spoke: false` + `transportStop` que carregam a notícia.
+	 */
+	it('maps a TRANSPORT stop to a STOPPED outcome and reports it as unspoken transport, WITHOUT persisting a stop-raised fact', async () => {
 		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(new StoppingRunner()))
 		const useCase = testBed.resolve(RunIssueTurn)
 		const eventRepo = testBed.resolve(DomainEventRepository)
@@ -302,17 +309,14 @@ describe('RunIssueTurn use case', () => {
 
 		expect(out.outcome).toBe(AgentRunOutcome.STOPPED)
 		expect(out.stopId).toBeDefined()
+		expect(out.spoke).toBe(false)
+		expect(out.transportStop).toEqual({ detail: 'provider exited with code 1' })
 		expect(await eventRepo.findByType(AgentRunStartedEvent)).toHaveLength(1)
 		expect(await eventRepo.findByType(AgentRunCompletedEvent)).toHaveLength(0)
 
-		// AC-6.7(c), the parenthetical half: "and the same holds for an agent WITH a tool scope — the
-		// transport stop is minted just the same". This agent's scope is NON-empty, and the stop lands
-		// anyway, tagged INFERRED: the runner OBSERVED it on the process, no tool was involved, and no
-		// model could have declared it (`DeclareStop` refuses the transport kinds outright).
-		const stops = await eventRepo.findByType(AgentRunStopRaisedEvent)
-		expect(stops).toHaveLength(1)
-		expect(stops[0]?.payload.kind).toBe(StopKind.SERVER_ERROR)
-		expect(stops[0]?.payload.source).toBe(FactSource.INFERRED)
+		// AC-4 (Task T2): um stop de transporte NÃO persiste fato na primeira falha — o dispatcher é
+		// quem decide, via retry (`fail()`) ou, esgotadas as tentativas, `raiseStopForPoisoned`.
+		expect(await eventRepo.findByType(AgentRunStopRaisedEvent)).toHaveLength(0)
 	})
 
 	/**
@@ -484,7 +488,10 @@ describe('RunIssueTurn — the agent with an EMPTY tool scope (AC-6.4(c), AC-6.7
 
 	/**
 	 * AC-6.7(c) — degradation is VISIBLE, not silent: a run with no tools can still be stopped by the
-	 * TRANSPORT, and that stop is minted whatever the scope is, always INFERRED.
+	 * TRANSPORT. Since Task T2, that visibility no longer means an immediate persisted fact — it means
+	 * the use case REPORTS the transport stop (`spoke: false`, `transportStop`), whatever the tool
+	 * scope, and the dispatcher decides retry vs. `raiseStopForPoisoned`. What stays true regardless of
+	 * scope is that `persistOutcome` never mints anything for it on the first miss.
 	 *
 	 * This is the alínea that keeps "no tools" from meaning "no observations". The runner watches the
 	 * process and the stream; `AUTH_REQUIRED` / `SERVER_ERROR` are its findings, and they never needed a
@@ -493,7 +500,7 @@ describe('RunIssueTurn — the agent with an EMPTY tool scope (AC-6.4(c), AC-6.7
 	 * Declared LAST in this bed because the runner override persists — every earlier test must have
 	 * already observed the ordinary stub.
 	 */
-	it('AC-6.7(c) — still raises a TRANSPORT stop with no tools, marked INFERRED, and mints no completion', async () => {
+	it('AC-6.7(c) — still reports a TRANSPORT stop with no tools, and mints no fact of any kind', async () => {
 		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(new StoppingRunner()))
 		injectToollessAgent()
 		const useCase = testBed.resolve(RunIssueTurn)
@@ -502,11 +509,35 @@ describe('RunIssueTurn — the agent with an EMPTY tool scope (AC-6.4(c), AC-6.7
 
 		const out = await useCase.execute(baseInput(issueId))
 		expect(out.outcome).toBe(AgentRunOutcome.STOPPED)
+		expect(out.spoke).toBe(false)
+		expect(out.transportStop).toEqual({ detail: 'provider exited with code 1' })
 
-		const stops = await eventRepo.findByType(AgentRunStopRaisedEvent)
-		expect(stops).toHaveLength(1)
-		expect(stops[0]?.payload.kind).toBe(StopKind.SERVER_ERROR)
-		expect(stops[0]?.payload.source).toBe(FactSource.INFERRED)
+		expect(await eventRepo.findByType(AgentRunStopRaisedEvent)).toHaveLength(0)
 		expect(await eventRepo.findByType(AgentRunCompletedEvent)).toHaveLength(0)
+	})
+
+	/**
+	 * A METADE SILENCIOSA (Task T2, Step T2.7). `persistOutcome` retorna ANTES de `enqueueResult` para
+	 * um stop de transporte — enfileirar o ISSUE_RESULT ali anunciaria uma falha que a próxima
+	 * tentativa está prestes a desmentir, e persistir o Stop daria ao operador dois sinais para um fato
+	 * só. O falsificador é exato: mova o `if (isTransportStopKind(...)) return` para DEPOIS de
+	 * `enqueueResult` e este teste fica vermelho, porque `claimNext` volta um item.
+	 */
+	it('a transport stop enqueues NO ISSUE_RESULT and persists NO stop-raised fact', async () => {
+		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(new StoppingRunner()))
+		const useCase = testBed.resolve(RunIssueTurn)
+		const eventRepo = testBed.resolve(DomainEventRepository)
+		const mailbox = testBed.resolve(MailboxRepository)
+		const issueId = testId('run-issue-turn', 'issue-transport-silent')
+
+		const out = await useCase.execute(baseInput(issueId))
+
+		expect(out.outcome).toBe(AgentRunOutcome.STOPPED)
+		expect(out.spoke).toBe(false)
+		expect(out.transportStop).toEqual({ detail: 'provider exited with code 1' })
+
+		// NADA foi dito: nem o resultado composto, nem o alarme do Stop.
+		expect(await mailbox.claimNext('run-issue-turn-silent-test', 60_000)).toBeUndefined()
+		expect(await eventRepo.findByType(AgentRunStopRaisedEvent)).toHaveLength(0)
 	})
 })

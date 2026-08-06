@@ -43,6 +43,24 @@ const POLL_BACKOFF_FACTOR = 2
 const MAX_CONCURRENT_TURNS = 4
 
 /**
+ * What a turn reports back to `runTurn`, which is the ONLY place that writes to the mailbox.
+ *
+ * `spoke` exists because retrying is not always safe: `RunOrchestratorTurn` streams via progressive
+ * cuts, so a turn that already delivered a cut and only then died has ALREADY SPOKEN in the operator's
+ * real chat, and a second attempt would produce a second message. `transportStop` without `spoke` is
+ * the only combination that returns the item to the queue.
+ *
+ * `dropped` distinguishes "the target vanished" (a detached thread, an unbound workspace) from "the
+ * turn ran": `dropSilently` no longer writes to the mailbox on its own — the double-write it used to do
+ * here was harmless while `complete` was the only outcome, and becomes ambiguous now that there are two.
+ */
+export interface TurnReport {
+	spoke: boolean
+	transportStop?: { detail: string }
+	dropped?: boolean
+}
+
+/**
  * The concrete scheduler (§7.4). See `MailboxDispatcher` for WHY each property exists.
  *
  * ### Why `drain()` loops instead of claiming once per tick
@@ -280,8 +298,22 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 		}, this.heartbeatMs)
 
 		try {
-			if (item.targetKind === MailboxTargetKind.THREAD) await this.runThreadTurn(item)
-			else await this.runIssueWork(item)
+			const report = item.targetKind === MailboxTargetKind.THREAD ? await this.runThreadTurn(item) : await this.runIssueWork(item)
+
+			// TRANSPORT + MUTE RETURNS TO THE QUEUE. `fail` bumps `attempts`, records the cause in
+			// `last_error` and releases the lease NOW — the item is claimable on the next poll (250ms)
+			// instead of waiting out the ten-minute lease clock. Past the cap, `raiseStopForPoisoned`
+			// turns the exhaustion into a Stop, which is the only warning the operator gets, and only then.
+			//
+			// The `&& !report.spoke` is not caution, it preserves a prior decision: a turn that already
+			// streamed a cut has already spoken in the operator's real chat, and retrying it would
+			// reproduce the duplicate-message bug `RunOrchestratorTurn` documents at its own stop branch.
+			if (report.transportStop && !report.spoke) {
+				await this.mailbox.fail(item.id, report.transportStop.detail, MAX_ATTEMPTS)
+				if (item.attempts >= MAX_ATTEMPTS) await this.raiseStopForPoisoned(item, report.transportStop.detail)
+				return
+			}
+
 			await this.mailbox.complete(item.id)
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error)
@@ -318,7 +350,7 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 	 * is resolved HERE rather than carried in the payload, because it is a property of the thread NOW
 	 * and an item may have been queued minutes ago; a workspace rebound in between should take effect.
 	 */
-	private async runThreadTurn(item: ClaimedMailboxItem): Promise<void> {
+	protected async runThreadTurn(item: ClaimedMailboxItem): Promise<TurnReport> {
 		const thread = await this.threads.findById(item.targetId)
 		if (!thread) return this.dropSilently(item, 'thread no longer exists')
 
@@ -329,7 +361,7 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 		if (!provider) return this.dropSilently(item, 'thread has no provider')
 
 		const payload = item.payload as { entryId?: string; originEntryId?: string }
-		await this.handlerFor(RunOrchestratorTurn).execute({
+		const result = await this.handlerFor(RunOrchestratorTurn).execute({
 			ownerId: item.ownerId,
 			threadId: item.targetId,
 			workspacePath: workspace.path,
@@ -343,6 +375,7 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 			// message — there is no entry to mint a claim from.
 			originEntryId: item.kind === MailboxItemKind.ISSUE_RESULT ? payload.originEntryId : undefined,
 		})
+		return { spoke: result.spoke, transportStop: result.transportStop }
 	}
 
 	/**
@@ -372,7 +405,7 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 	 * callers keep passing their own). What changes is that this caller now answers the question
 	 * instead of leaving it blank.
 	 */
-	protected async runIssueWork(item: ClaimedMailboxItem): Promise<void> {
+	protected async runIssueWork(item: ClaimedMailboxItem): Promise<TurnReport> {
 		const payload = item.payload as {
 			threadId: string
 			key: string
@@ -390,7 +423,7 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 
 		const session = await this.sessions.findByIssueId(item.targetId)
 
-		await this.handlerFor(RunIssueTurn).execute({
+		const result = await this.handlerFor(RunIssueTurn).execute({
 			ownerId: item.ownerId,
 			issueId: item.targetId,
 			threadId: payload.threadId,
@@ -410,6 +443,7 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 			// Carried through so `persistOutcome` can put it on the ISSUE_RESULT it queues.
 			originEntryId: payload.originEntryId,
 		})
+		return { spoke: result.spoke, transportStop: result.transportStop }
 	}
 
 	/**
@@ -455,15 +489,20 @@ export class DrizzleMailboxDispatcher extends MailboxDispatcher implements Polli
 
 	/**
 	 * A precondition that will never become true again — the thread was detached, the workspace
-	 * unbound. Completed rather than failed: `fail` would retry three times and then poison, which
-	 * spends three CLI spawns and leaves a dead row implying something is wrong. Logged at `warn`
-	 * because a vanished target IS worth noticing, just not worth retrying.
+	 * unbound. Reported as COMPLETED rather than failed: `fail` would retry three times and then
+	 * poison, which spends three CLI spawns and leaves a dead row implying something is wrong. Logged
+	 * at `warn` because a vanished target IS worth noticing, just not worth retrying.
+	 *
+	 * Does NOT write to the mailbox itself — `runTurn` is the only place that does, and it reads
+	 * `dropped`/`spoke` off this report the same way it reads a real turn's outcome. Writing here too
+	 * used to be harmless when `complete` was the only possible outcome; now that a report can also
+	 * carry a `transportStop`, a second writer would race the first.
 	 */
-	private async dropSilently(item: ClaimedMailboxItem, why: string): Promise<void> {
+	private dropSilently(item: ClaimedMailboxItem, why: string): TurnReport {
 		this.logging.warn({
 			content: { message: `mailbox item dropped — ${why}`, itemId: item.id, targetKind: item.targetKind, targetId: item.targetId },
 		})
-		await this.mailbox.complete(item.id)
+		return { spoke: false, dropped: true }
 	}
 
 	private async tick(): Promise<void> {
