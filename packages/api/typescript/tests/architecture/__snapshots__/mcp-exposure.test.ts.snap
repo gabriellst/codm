@@ -11,6 +11,7 @@ exports[`AC-16 — the golden snapshot: scope → the tools a model can call the
     "mcp__codm__TransitionIssueStatus",
   ],
   "orchestration": [
+    "mcp__codm__ConfigureModel",
     "mcp__codm__ConfigurePrompt",
     "mcp__codm__CreateThreadLoop",
     "mcp__codm__DeleteThreadLoop",
@@ -28,6 +29,7 @@ exports[`AC-16 — the golden snapshot: scope → the tools a model can call the
     "mcp__codm__AddWorkspace",
     "mcp__codm__ConfigureContextBuffer",
     "mcp__codm__ConfigureMentionGate",
+    "mcp__codm__ConfigureModel",
     "mcp__codm__ConfigurePrompt",
     "mcp__codm__CreateOwner",
     "mcp__codm__DisableOwner",

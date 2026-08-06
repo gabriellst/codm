@@ -69,6 +69,11 @@ export class DrizzleThreadRepository extends ThreadRepository {
 						mentionGateTag: data.mentionGateTag,
 						participants: data.participants,
 						bufferSize: data.bufferSize,
+						// Both directions too, and for the same reason the custom prompt is: `configureModel`
+						// writes a choice AND erases it (`DEFAULT` deletes the key), and `revive` narrows the map
+						// to the providers just re-chosen. Missing from the update set, every one of those is a
+						// write the console reports as saved and the dispatcher never sees.
+						modelByProvider: data.modelByProvider,
 						// Both directions, like `deletedAt` above: `configurePrompt` writes text AND erases it, and
 						// an erase that never reaches the UPDATE set is the worst kind of no-op — the console shows
 						// an empty box, the agent keeps obeying the instruction nobody can see any more.
@@ -186,6 +191,7 @@ export class DrizzleThreadRepository extends ThreadRepository {
 			mentionGate,
 			participants: row.participants as Participant[],
 			bufferSize: row.bufferSize as BufferSize,
+			modelByProvider: row.modelByProvider,
 			customPrompt: row.customPrompt ?? undefined,
 			status: row.status as ThreadStatus,
 			deletedAt: row.deletedAt ?? undefined,
@@ -208,6 +214,7 @@ export class DrizzleThreadRepository extends ThreadRepository {
 			mentionGateTag: entity.mentionGate.enabled ? entity.mentionGate.tag : null,
 			participants: entity.participants,
 			bufferSize: entity.bufferSize,
+			modelByProvider: entity.modelByProvider,
 			customPrompt: entity.customPrompt ?? null,
 			status: entity.status,
 			deletedAt: entity.deletedAt ?? null,

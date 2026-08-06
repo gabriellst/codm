@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import type { ZodType } from 'zod'
-import { ContactKind, MailboxItemKind } from '@codm/contracts-typescript/wire/enums'
+import { ContactKind, MailboxItemKind, AgentModelId } from '@codm/contracts-typescript/wire/enums'
 import { AgentRunner } from '../../services/AgentRunner'
 import { AgentName, AgentRunOutcome } from '../../enums'
 import type { AgentRunRequest, AgentRuntimeEvent } from '../../types'
@@ -44,6 +44,10 @@ const input = () =>
 		// Required for the same reason, and answering a different question: which zone a wall-clock loop
 		// is scheduled in. Absent, a model would guess one from the language of the conversation.
 		timezone: 'America/Sao_Paulo',
+		// Required for the same reason once more: which models the CLI of THIS turn offers. The turn
+		// always knows (its caller resolved the provider), and empty is a real value — a CLI nothing has
+		// ever driven — not a missing wire.
+		availableModels: [AgentModelId.DEFAULT, AgentModelId.OPUS, AgentModelId.SONNET, AgentModelId.HAIKU],
 		item: {
 			kind: MailboxItemKind.OPERATOR_MESSAGE,
 			entryId: '00000000-0000-4000-8000-0000000000dd',

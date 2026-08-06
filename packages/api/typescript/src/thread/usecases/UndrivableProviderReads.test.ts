@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenThread, givenWorkspace } from '@test/support'
-import { ProviderKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
+import { ProviderKind, TranscriptKind, AgentModelId } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { AgentRunnerFactory } from '@agent/services/AgentRunnerFactory/AgentRunnerFactory'
 import { GetHomeDashboard } from '@ui/usecases/GetHomeDashboard'
@@ -100,7 +100,17 @@ describe('a thread bound to an undrivable provider still LOADS everywhere', () =
 
 		const settings = await testBed.resolve(GetThreadSettings).execute({ ownerId: OPERATOR_ID, threadId: thread.id.value })
 
-		expect(settings.providers).toEqual([{ provider: ProviderKind.CODEX, comingSoon: true }])
+		expect(settings.providers).toEqual([
+			{
+				provider: ProviderKind.CODEX,
+				comingSoon: true,
+				model: AgentModelId.DEFAULT,
+				// EMPTY, and that is a SEPARATE declared fact from `comingSoon`: this build has never driven
+				// the codex binary, so it does not know what to offer. The console reads the empty list as
+				// "there is nothing to choose here" and renders no selector on this row.
+				models: [],
+			},
+		])
 	})
 
 	/** The healthy binding is NOT flagged — a screen that marks everything marks nothing. */
@@ -115,7 +125,16 @@ describe('a thread bound to an undrivable provider still LOADS everywhere', () =
 
 		const settings = await testBed.resolve(GetThreadSettings).execute({ ownerId: OPERATOR_ID, threadId: thread.id.value })
 
-		expect(settings.providers).toEqual([{ provider: ProviderKind.CLAUDE_CODE, comingSoon: false }])
+		expect(settings.providers).toEqual([
+			{
+				provider: ProviderKind.CLAUDE_CODE,
+				comingSoon: false,
+				// The EFFECTIVE model, never absent: a thread that chose nothing reads as `DEFAULT`, so the
+				// console holds a `<Select>` with a value from the first render.
+				model: AgentModelId.DEFAULT,
+				models: [AgentModelId.DEFAULT, AgentModelId.OPUS, AgentModelId.SONNET, AgentModelId.HAIKU],
+			},
+		])
 	})
 
 	/** Same premise pin as the write suite: the flag is the FACTORY's answer, not this file's opinion. */

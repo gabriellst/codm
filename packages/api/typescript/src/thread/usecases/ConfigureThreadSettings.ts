@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { Handler, z, BaseError } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { BufferSize } from '@codm/contracts-typescript/wire/enums'
+import { BufferSize, ProviderKind, AgentModelId } from '@codm/contracts-typescript/wire/enums'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { CUSTOM_PROMPT_MAX_LENGTH, MentionGateSchema } from '../schemas'
 import type { ApplicationErrors } from '../errors'
@@ -73,6 +73,47 @@ export class ConfigureContextBuffer extends Handler<typeof ConfigureContextBuffe
 		if (!thread || thread.ownerId !== input.ownerId)
 			throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
 		thread.configureContextBuffer(input.bufferSize)
+		await this.withTransaction(tx, async tx => this.threads.save(thread, tx))
+	}
+}
+
+/**
+ * C16 ConfigureModel — WHICH MODEL this conversation asks ONE of its CLIs for.
+ *
+ * ### Why the input carries a `provider`, and is not just a model
+ * `providers` is an array and `opus` is vocabulary of one binary, so "the thread's model" is not a
+ * well-formed idea — the choice only means something paired with the CLI it is for. The catalog of what
+ * each provider offers is declared once (`contracts/catalog/agent-models.ts`) and `Thread.configureModel`
+ * is what enforces both halves: the provider must be one this conversation runs, and the model must be
+ * one that provider offers.
+ *
+ * ### Why the model is REQUIRED, unlike the custom prompt's optional text
+ * `AgentModelId.DEFAULT` is a real member and a real option in the catalog — it is the instruction to
+ * omit `--model` — so "back to automatic" already has a value to send and does not need absence to
+ * spell it. The erase happens inside the aggregate (the key is deleted, never stored as `DEFAULT`),
+ * which is why the door can stay total.
+ */
+export const ConfigureModelInputSchema = z.object({
+	ownerId: z.uuid(),
+	threadId: z.uuid(),
+	provider: z.enum(ProviderKind),
+	model: z.enum(AgentModelId),
+})
+export const ConfigureModelOutputSchema = z.void()
+
+@injectable()
+export class ConfigureModel extends Handler<typeof ConfigureModelInputSchema, typeof ConfigureModelOutputSchema> {
+	readonly name = 'configure_model' as const
+	readonly inputSchema = ConfigureModelInputSchema
+	readonly outputSchema = ConfigureModelOutputSchema
+	constructor(private readonly threads: ThreadRepository) {
+		super()
+	}
+	protected async handle(input: this['input'], tx?: Transaction): Promise<void> {
+		const thread = await this.threads.findById(input.threadId)
+		if (!thread || thread.ownerId !== input.ownerId)
+			throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
+		thread.configureModel(input.provider, input.model)
 		await this.withTransaction(tx, async tx => this.threads.save(thread, tx))
 	}
 }

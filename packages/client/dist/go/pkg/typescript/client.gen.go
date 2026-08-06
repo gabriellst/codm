@@ -19,6 +19,30 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for AgentModelId.
+const (
+	DEFAULT AgentModelId = "DEFAULT"
+	HAIKU   AgentModelId = "HAIKU"
+	OPUS    AgentModelId = "OPUS"
+	SONNET  AgentModelId = "SONNET"
+)
+
+// Valid indicates whether the value is a known member of the AgentModelId enum.
+func (e AgentModelId) Valid() bool {
+	switch e {
+	case DEFAULT:
+		return true
+	case HAIKU:
+		return true
+	case OPUS:
+		return true
+	case SONNET:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ApiErrors.
 const (
 	AGENTENTRYFORBIDSSENDER         ApiErrors = "AGENT_ENTRY_FORBIDS_SENDER"
@@ -70,6 +94,7 @@ const (
 	LOOPWITHOUTWEEKDAY              ApiErrors = "LOOP_WITHOUT_WEEKDAY"
 	MISSINGENVIRONMENTVARIABLE      ApiErrors = "MISSING_ENVIRONMENT_VARIABLE"
 	MISSINGLOGCONTENT               ApiErrors = "MISSING_LOG_CONTENT"
+	MODELNOTAVAILABLE               ApiErrors = "MODEL_NOT_AVAILABLE"
 	NOCHANNELCONNECTED              ApiErrors = "NO_CHANNEL_CONNECTED"
 	NOPROVIDERSELECTED              ApiErrors = "NO_PROVIDER_SELECTED"
 	NOTFOUND                        ApiErrors = "NOT_FOUND"
@@ -85,6 +110,7 @@ const (
 	PATHNOTFOUND                    ApiErrors = "PATH_NOT_FOUND"
 	PROMPTTOOLONG                   ApiErrors = "PROMPT_TOO_LONG"
 	PROVIDERCOMINGSOON              ApiErrors = "PROVIDER_COMING_SOON"
+	PROVIDERNOTBOUND                ApiErrors = "PROVIDER_NOT_BOUND"
 	PROVIDERNOTDETECTED             ApiErrors = "PROVIDER_NOT_DETECTED"
 	QUOTEDENTRYNOTINTHREAD          ApiErrors = "QUOTED_ENTRY_NOT_IN_THREAD"
 	RATELIMITED                     ApiErrors = "RATE_LIMITED"
@@ -212,6 +238,8 @@ func (e ApiErrors) Valid() bool {
 		return true
 	case MISSINGLOGCONTENT:
 		return true
+	case MODELNOTAVAILABLE:
+		return true
 	case NOCHANNELCONNECTED:
 		return true
 	case NOPROVIDERSELECTED:
@@ -241,6 +269,8 @@ func (e ApiErrors) Valid() bool {
 	case PROMPTTOOLONG:
 		return true
 	case PROVIDERCOMINGSOON:
+		return true
+	case PROVIDERNOTBOUND:
 		return true
 	case PROVIDERNOTDETECTED:
 		return true
@@ -1153,6 +1183,9 @@ func (e WorkspaceBadge) Valid() bool {
 	}
 }
 
+// AgentModelId defines model for AgentModelId.
+type AgentModelId string
+
 // ApiErrors All possible error codes
 type ApiErrors string
 
@@ -1470,6 +1503,12 @@ type ConfigureMentionGateJSONBody_MentionGate struct {
 	union json.RawMessage
 }
 
+// ConfigureModelJSONBody defines parameters for ConfigureModel.
+type ConfigureModelJSONBody struct {
+	Model    AgentModelId `json:"model"`
+	Provider ProviderKind `json:"provider"`
+}
+
 // SetParticipantInvocationJSONBody defines parameters for SetParticipantInvocation.
 type SetParticipantInvocationJSONBody struct {
 	CanInvoke bool `json:"canInvoke"`
@@ -1571,6 +1610,9 @@ type SetThreadLoopEnabledJSONRequestBody SetThreadLoopEnabledJSONBody
 
 // ConfigureMentionGateJSONRequestBody defines body for ConfigureMentionGate for application/json ContentType.
 type ConfigureMentionGateJSONRequestBody ConfigureMentionGateJSONBody
+
+// ConfigureModelJSONRequestBody defines body for ConfigureModel for application/json ContentType.
+type ConfigureModelJSONRequestBody ConfigureModelJSONBody
 
 // SetParticipantInvocationJSONRequestBody defines body for SetParticipantInvocation for application/json ContentType.
 type SetParticipantInvocationJSONRequestBody SetParticipantInvocationJSONBody
@@ -2182,6 +2224,11 @@ type ClientInterface interface {
 	ConfigureMentionGateWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	ConfigureMentionGate(ctx context.Context, threadId string, body ConfigureMentionGateJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ConfigureModelWithBody request with any body
+	ConfigureModelWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ConfigureModel(ctx context.Context, threadId string, body ConfigureModelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetNeedsYouPanel request
 	GetNeedsYouPanel(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2929,6 +2976,30 @@ func (c *Client) ConfigureMentionGateWithBody(ctx context.Context, threadId stri
 
 func (c *Client) ConfigureMentionGate(ctx context.Context, threadId string, body ConfigureMentionGateJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewConfigureMentionGateRequest(c.Server, threadId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ConfigureModelWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConfigureModelRequestWithBody(c.Server, threadId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ConfigureModel(ctx context.Context, threadId string, body ConfigureModelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConfigureModelRequest(c.Server, threadId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -4776,6 +4847,53 @@ func NewConfigureMentionGateRequestWithBody(server string, threadId string, cont
 	return req, nil
 }
 
+// NewConfigureModelRequest calls the generic ConfigureModel builder with application/json body
+func NewConfigureModelRequest(server string, threadId string, body ConfigureModelJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewConfigureModelRequestWithBody(server, threadId, "application/json", bodyReader)
+}
+
+// NewConfigureModelRequestWithBody generates requests for ConfigureModel with any type of body
+func NewConfigureModelRequestWithBody(server string, threadId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/threads/%s/model", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewGetNeedsYouPanelRequest generates requests for GetNeedsYouPanel
 func NewGetNeedsYouPanelRequest(server string, threadId string) (*http.Request, error) {
 	var err error
@@ -5585,6 +5703,11 @@ type ClientWithResponsesInterface interface {
 	ConfigureMentionGateWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfigureMentionGateResponse, error)
 
 	ConfigureMentionGateWithResponse(ctx context.Context, threadId string, body ConfigureMentionGateJSONRequestBody, reqEditors ...RequestEditorFn) (*ConfigureMentionGateResponse, error)
+
+	// ConfigureModelWithBodyWithResponse request with any body
+	ConfigureModelWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfigureModelResponse, error)
+
+	ConfigureModelWithResponse(ctx context.Context, threadId string, body ConfigureModelJSONRequestBody, reqEditors ...RequestEditorFn) (*ConfigureModelResponse, error)
 
 	// GetNeedsYouPanelWithResponse request
 	GetNeedsYouPanelWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*GetNeedsYouPanelResponse, error)
@@ -6997,6 +7120,36 @@ func (r ConfigureMentionGateResponse) ContentType() string {
 	return ""
 }
 
+type ConfigureModelResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r ConfigureModelResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ConfigureModelResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ConfigureModelResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetNeedsYouPanelResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -7174,8 +7327,10 @@ type GetThreadSettingsResponse struct {
 			Source        string `json:"source"`
 		} `json:"participants"`
 		Providers []struct {
-			ComingSoon bool         `json:"comingSoon"`
-			Provider   ProviderKind `json:"provider"`
+			ComingSoon bool           `json:"comingSoon"`
+			Model      AgentModelId   `json:"model"`
+			Models     []AgentModelId `json:"models"`
+			Provider   ProviderKind   `json:"provider"`
 		} `json:"providers"`
 	}
 }
@@ -8173,6 +8328,23 @@ func (c *ClientWithResponses) ConfigureMentionGateWithResponse(ctx context.Conte
 		return nil, err
 	}
 	return ParseConfigureMentionGateResponse(rsp)
+}
+
+// ConfigureModelWithBodyWithResponse request with arbitrary body returning *ConfigureModelResponse
+func (c *ClientWithResponses) ConfigureModelWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfigureModelResponse, error) {
+	rsp, err := c.ConfigureModelWithBody(ctx, threadId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConfigureModelResponse(rsp)
+}
+
+func (c *ClientWithResponses) ConfigureModelWithResponse(ctx context.Context, threadId string, body ConfigureModelJSONRequestBody, reqEditors ...RequestEditorFn) (*ConfigureModelResponse, error) {
+	rsp, err := c.ConfigureModel(ctx, threadId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConfigureModelResponse(rsp)
 }
 
 // GetNeedsYouPanelWithResponse request returning *GetNeedsYouPanelResponse
@@ -9550,6 +9722,32 @@ func ParseConfigureMentionGateResponse(rsp *http.Response) (*ConfigureMentionGat
 	return response, nil
 }
 
+// ParseConfigureModelResponse parses an HTTP response from a ConfigureModelWithResponse call
+func ParseConfigureModelResponse(rsp *http.Response) (*ConfigureModelResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ConfigureModelResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetNeedsYouPanelResponse parses an HTTP response from a GetNeedsYouPanelWithResponse call
 func ParseGetNeedsYouPanelResponse(rsp *http.Response) (*GetNeedsYouPanelResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -9719,8 +9917,10 @@ func ParseGetThreadSettingsResponse(rsp *http.Response) (*GetThreadSettingsRespo
 				Source        string `json:"source"`
 			} `json:"participants"`
 			Providers []struct {
-				ComingSoon bool         `json:"comingSoon"`
-				Provider   ProviderKind `json:"provider"`
+				ComingSoon bool           `json:"comingSoon"`
+				Model      AgentModelId   `json:"model"`
+				Models     []AgentModelId `json:"models"`
+				Provider   ProviderKind   `json:"provider"`
 			} `json:"providers"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {

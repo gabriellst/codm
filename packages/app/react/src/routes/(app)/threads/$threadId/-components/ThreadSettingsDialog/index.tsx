@@ -9,16 +9,19 @@ import {
 	getThreadSettingsQueryKey,
 	useConfigureContextBuffer,
 	useConfigureMentionGate,
+	useConfigureModel,
 	useConfigurePrompt,
 	useDeleteThread,
 	useGetSessionChat,
 	useGetThreadSettings,
 	useSetParticipantInvocation,
+	AgentModelIdEnum,
 } from '@codm/client-typescript/typescript'
 import type { BufferSize } from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
 import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -185,6 +188,7 @@ function ThreadSettingsBody({ threadId }: { threadId: string }) {
 	const { data, isLoading } = useGetThreadSettings(threadId)
 	const configureMentionGate = useConfigureMentionGate()
 	const configureBuffer = useConfigureContextBuffer()
+	const configureModel = useConfigureModel()
 	const setInvocation = useSetParticipantInvocation()
 
 	const [gateEnabled, setGateEnabled] = useState(false)
@@ -258,7 +262,7 @@ function ThreadSettingsBody({ threadId }: { threadId: string }) {
 			<section className="flex flex-col gap-3">
 				<SectionLabel>{t('session.boundAgents')}</SectionLabel>
 				<div className="flex flex-col gap-1">
-					{data.providers.map(({ provider, comingSoon }) => {
+					{data.providers.map(({ provider, comingSoon, model, models }) => {
 						const Glyph = providerGlyph[provider]
 						return (
 							<div key={provider} className="flex items-center gap-3 py-1.5">
@@ -267,10 +271,50 @@ function ThreadSettingsBody({ threadId }: { threadId: string }) {
 								</span>
 								<span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">{providerLabel[provider]}</span>
 								{comingSoon ? <Badge variant="outline">{t('common.comingSoon')}</Badge> : null}
+								{/*
+								 * O MODELO, na linha do agente a que ele pertence — não numa seção própria.
+								 *
+								 * A escolha é POR CLI (`opus` é vocabulário de um binário só), então ela pertence à
+								 * linha que nomeia o CLI, que já existe e já é uma por provider. Uma seção separada
+								 * teria que reimprimir o nome do agente para dizer de quem é cada seletor.
+								 *
+								 * Só aparece quando há o que escolher: um provider que esta versão nunca dirigiu tem
+								 * catálogo vazio, e um select de uma opção só é ruído. As opções vêm do DTO
+								 * (`models`) — nada de lista de modelos redigitada aqui, pelo mesmo motivo que o
+								 * contador do prompt lê `customPromptMaxLength` em vez de repetir o número.
+								 *
+								 * Salva no `onValueChange`, como as pilhas de buffer e ao contrário do prompt: é uma
+								 * escolha de um clique, não um texto escrito aos poucos.
+								 */}
+								{models.length > 0 ? (
+									<Select
+										enum={AgentModelIdEnum}
+										i18nPrefix="enums.AgentModelId"
+										values={models}
+										value={model}
+										onValueChange={value =>
+											configureModel.mutate({ threadId, data: { provider, model: value } }, { onSuccess: invalidate })
+										}
+										aria-label={t('session.agentModel')}
+										className="w-36 shrink-0"
+									/>
+								) : null}
 							</div>
 						)
 					})}
 				</div>
+				{/*
+				 * O AVISO QUE EVITA UM BUG APARENTE. Trocar o modelo invalida a sessão do CLI
+				 * (`ResumeInvalidationReason.MODEL_CHANGED`: o binário fixa o modelo na sessão que retoma, então
+				 * retomar ignoraria o pedido em silêncio). É o comportamento certo — e, sem estar escrito, o
+				 * operador vê o agente "esquecer" a conversa e conclui que quebrou.
+				 *
+				 * Só quando há pelo menos um seletor: um aviso sobre uma ação indisponível é decoração, pela
+				 * mesma razão que o aviso de `comingSoon` logo abaixo só aparece quando há um provider morto.
+				 */}
+				{data.providers.some(p => p.models.length > 0) ? (
+					<p className="text-sm text-muted-foreground">{t('session.agentModelRestartHint')}</p>
+				) : null}
 				{/* A explicação só aparece quando há algo a explicar — um aviso permanente vira decoração. */}
 				{data.providers.some(p => p.comingSoon) ? (
 					<p className="text-sm text-muted-foreground">{t('session.boundAgentsComingSoonHint')}</p>

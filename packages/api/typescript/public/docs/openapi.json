@@ -2090,6 +2090,72 @@
         ]
       }
     },
+    "/v1/threads/{threadId}/model": {
+      "put": {
+        "tags": [
+          "thread",
+          "mcp:system",
+          "mcp:orchestration"
+        ],
+        "description": "Choose which model this conversation asks one of its agent CLIs for. DEFAULT means let the CLI pick (C16)",
+        "operationId": "ConfigureModel",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "$ref": "#/components/schemas/ProviderKind"
+                  },
+                  "model": {
+                    "$ref": "#/components/schemas/AgentModelId"
+                  }
+                },
+                "required": [
+                  "provider",
+                  "model"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "provider": "CLAUDE_CODE",
+                    "model": "OPUS"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Choose which model this conversation asks one of its agent CLIs for. DEFAULT means let the CLI pick (C16)",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "x-mcp-scope": [
+          "system",
+          "orchestration"
+        ]
+      }
+    },
     "/v1/threads/{threadId}/prompt": {
       "put": {
         "tags": [
@@ -3079,11 +3145,22 @@
                           },
                           "comingSoon": {
                             "type": "boolean"
+                          },
+                          "model": {
+                            "$ref": "#/components/schemas/AgentModelId"
+                          },
+                          "models": {
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/components/schemas/AgentModelId"
+                            }
                           }
                         },
                         "required": [
                           "provider",
-                          "comingSoon"
+                          "comingSoon",
+                          "model",
+                          "models"
                         ],
                         "additionalProperties": false
                       }
@@ -8393,6 +8470,7 @@
           "LOOP_WITHOUT_WEEKDAY",
           "MISSING_ENVIRONMENT_VARIABLE",
           "MISSING_LOG_CONTENT",
+          "MODEL_NOT_AVAILABLE",
           "NOT_FOUND",
           "NOT_IMPLEMENTED",
           "NO_CHANNEL_CONNECTED",
@@ -8408,6 +8486,7 @@
           "PATH_NOT_FOUND",
           "PROMPT_TOO_LONG",
           "PROVIDER_COMING_SOON",
+          "PROVIDER_NOT_BOUND",
           "PROVIDER_NOT_DETECTED",
           "QUOTED_ENTRY_NOT_IN_THREAD",
           "RATE_LIMITED",
@@ -8519,6 +8598,15 @@
           "50",
           "100",
           "200"
+        ]
+      },
+      "AgentModelId": {
+        "type": "string",
+        "enum": [
+          "DEFAULT",
+          "SONNET",
+          "OPUS",
+          "HAIKU"
         ]
       },
       "Timezone": {
@@ -8811,6 +8899,7 @@
     "LOOP_WITHOUT_WEEKDAY",
     "MISSING_ENVIRONMENT_VARIABLE",
     "MISSING_LOG_CONTENT",
+    "MODEL_NOT_AVAILABLE",
     "NOT_FOUND",
     "NOT_IMPLEMENTED",
     "NO_CHANNEL_CONNECTED",
@@ -8826,6 +8915,7 @@
     "PATH_NOT_FOUND",
     "PROMPT_TOO_LONG",
     "PROVIDER_COMING_SOON",
+    "PROVIDER_NOT_BOUND",
     "PROVIDER_NOT_DETECTED",
     "QUOTED_ENTRY_NOT_IN_THREAD",
     "RATE_LIMITED",
@@ -8861,6 +8951,7 @@
       "TransitionIssueStatus"
     ],
     "orchestration": [
+      "ConfigureModel",
       "ConfigurePrompt",
       "CreateThreadLoop",
       "DeleteThreadLoop",
@@ -8878,6 +8969,7 @@
       "AddWorkspace",
       "ConfigureContextBuffer",
       "ConfigureMentionGate",
+      "ConfigureModel",
       "ConfigurePrompt",
       "CreateOwner",
       "DisableOwner",

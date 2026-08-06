@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import type { AgentModelId } from "./AgentModelId.ts";
 import type { BufferSize } from "./BufferSize.ts";
 import type { ProviderKind } from "./ProviderKind.ts";
 
@@ -96,6 +97,14 @@ export type GetThreadSettings200 = {
          * @type boolean
         */
         comingSoon: boolean;
+        /**
+         * @type string
+        */
+        model: AgentModelId;
+        /**
+         * @type array
+        */
+        models: AgentModelId[];
     }[];
 };
 

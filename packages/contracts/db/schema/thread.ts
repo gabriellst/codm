@@ -1,6 +1,7 @@
 import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
 import {
 	ProviderKind,
+	AgentModelId,
 	ContactKind,
 	ThreadStatus,
 	BufferSize,
@@ -52,6 +53,25 @@ export const threads = sqliteTable(
 		participants: text('participants', { mode: 'json' }).$type<ThreadParticipant[]>().notNull(),
 		// BufferSize string tiers (25 | 50 | 100 | 200).
 		bufferSize: text('buffer_size').$type<BufferSize>().notNull(),
+
+		/**
+		 * WHICH MODEL this conversation asks each of its CLIs for — a PARTIAL map, `{}` until chosen.
+		 *
+		 * A map and not a single column because the choice is per PROVIDER: `providers` is an array, and
+		 * `opus` is vocabulary of one binary, so a lone `model` column would hold a value that is right for
+		 * at most one of the CLIs the thread declares and silently wrong for the rest. The catalog of what
+		 * each provider offers is declared once in `contracts/catalog/agent-models.ts`.
+		 *
+		 * PARTIAL, and that is the invariant: an entry is written only for a NON-default choice.
+		 * `AgentModelId.DEFAULT` means "omit `--model`, let the CLI pick", which is exactly what an absent
+		 * key already means — so `Thread.configureModel(p, DEFAULT)` DELETES the key rather than storing it.
+		 * Two spellings of one fact is the defect `custom_prompt` above documents; this column refuses to
+		 * repeat it.
+		 *
+		 * `NOT NULL DEFAULT '{}'` for the same reason: null would be a third spelling of "nothing chosen".
+		 * Every pre-existing row backfills to the empty map, which is what those threads already behave as.
+		 */
+		modelByProvider: text('model_by_provider', { mode: 'json' }).$type<Partial<Record<ProviderKind, AgentModelId>>>().notNull().default({}),
 
 		/**
 		 * The operator's own standing instructions for THIS conversation — null while unset.

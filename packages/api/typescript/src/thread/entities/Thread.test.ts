@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { BaseError } from '@codm/core-typescript'
-import { ProviderKind, ContactKind, TranscriptKind, StopKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
+import { ProviderKind, AgentModelId, ContactKind, TranscriptKind, StopKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
 import { ThreadStopResolvedEvent } from '../events/ThreadStopResolvedEvent'
 import { CUSTOM_PROMPT_MAX_LENGTH } from '../schemas'
 import { INVOCATION_FRESHNESS_WINDOW_MS, Thread } from './Thread'
@@ -284,6 +284,112 @@ describe('Thread entity', () => {
 		const sentAt = new Date(now.getTime() + 60 * 1000) // the phone thinks it is one minute later
 
 		expect(t.canInvoke({ senderExternalId: 'operator', text: '@base ship it', sentAt, now })).toBe(true)
+	})
+})
+
+/**
+ * The per-provider model choice. Pure entity, no DB.
+ *
+ * THE FALSIFIER of the whole feature is the first two cases: `DEFAULT` must not be STORED, because a
+ * stored `DEFAULT` is a second spelling of "nothing chosen" that the dispatcher, the mapper and the
+ * settings DTO would each have to normalize on their own — and the first one to forget hands
+ * `--model DEFAULT` to a binary with no such alias. Delete the collapse in `configureModel` and the
+ * `erases` case goes red on the persisted shape, not merely on the read.
+ */
+describe('Thread.configureModel / modelFor — one model per provider, absence IS the default', () => {
+	const bothProviders = { ...base, providers: [ProviderKind.CLAUDE_CODE, ProviderKind.CODEX] }
+
+	it('starts with no choice at all, and reads back as DEFAULT', () => {
+		const t = Thread.create(base)
+		expect(t.modelByProvider).toEqual({})
+		expect(t.modelFor(ProviderKind.CLAUDE_CODE)).toBe(AgentModelId.DEFAULT)
+	})
+
+	it('records a choice and reads it back', () => {
+		const t = Thread.create(base)
+		t.configureModel(ProviderKind.CLAUDE_CODE, AgentModelId.OPUS)
+		expect(t.modelFor(ProviderKind.CLAUDE_CODE)).toBe(AgentModelId.OPUS)
+		expect(t.modelByProvider).toEqual({ [ProviderKind.CLAUDE_CODE]: AgentModelId.OPUS })
+	})
+
+	it('erases the key on DEFAULT rather than storing it — one spelling of "nothing chosen"', () => {
+		const t = Thread.create(base)
+		t.configureModel(ProviderKind.CLAUDE_CODE, AgentModelId.OPUS)
+		t.configureModel(ProviderKind.CLAUDE_CODE, AgentModelId.DEFAULT)
+
+		expect(t.modelByProvider).toEqual({})
+		expect(t.modelFor(ProviderKind.CLAUDE_CODE)).toBe(AgentModelId.DEFAULT)
+	})
+
+	it('keeps the choices of the OTHER providers when one changes', () => {
+		const t = Thread.create(bothProviders)
+		t.configureModel(ProviderKind.CLAUDE_CODE, AgentModelId.SONNET)
+		t.configureModel(ProviderKind.CLAUDE_CODE, AgentModelId.HAIKU)
+
+		expect(t.modelFor(ProviderKind.CLAUDE_CODE)).toBe(AgentModelId.HAIKU)
+		// CODEX offers nothing, so it was never choosable — and it still reads as the default.
+		expect(t.modelFor(ProviderKind.CODEX)).toBe(AgentModelId.DEFAULT)
+	})
+
+	it('refuses a provider this conversation does not run (PROVIDER_NOT_BOUND), leaving the map untouched', () => {
+		const t = Thread.create(base)
+		expect(() => t.configureModel(ProviderKind.CODEX, AgentModelId.OPUS)).toThrow(BaseError)
+		expect(t.modelByProvider).toEqual({})
+	})
+
+	it('refuses a model the provider does not offer (MODEL_NOT_AVAILABLE), leaving the map untouched', () => {
+		const t = Thread.create(bothProviders)
+		t.configureModel(ProviderKind.CLAUDE_CODE, AgentModelId.OPUS)
+		// CODEX is BOUND here — so this can only be refused by the catalog lookup, not by the bound check.
+		expect(() => t.configureModel(ProviderKind.CODEX, AgentModelId.OPUS)).toThrow(BaseError)
+		expect(t.modelByProvider).toEqual({ [ProviderKind.CLAUDE_CODE]: AgentModelId.OPUS })
+	})
+
+	it('names the two refusals apart — the codes are what the console renders', () => {
+		const t = Thread.create(bothProviders)
+		expect(() => t.configureModel(ProviderKind.OPENCODE, AgentModelId.OPUS)).toThrow(
+			expect.objectContaining({ name: 'PROVIDER_NOT_BOUND' }),
+		)
+		expect(() => t.configureModel(ProviderKind.CODEX, AgentModelId.OPUS)).toThrow(expect.objectContaining({ name: 'MODEL_NOT_AVAILABLE' }))
+	})
+
+	/**
+	 * `revive()` keeps the choice — the wizard never asks for a model, so clearing it would destroy a
+	 * setting with nothing in the flow that hints it happened (the same argument `customPrompt` makes).
+	 * But it keeps it NARROWED: re-attaching with a different CLI must not leave behind a choice for a
+	 * provider this conversation no longer runs, which is exactly what `PROVIDER_NOT_BOUND` forbids on
+	 * the write path. Without the filter, that invariant would be true of writes and false of states.
+	 */
+	it('revive keeps the choices of providers still bound and drops the rest', () => {
+		const t = Thread.create(bothProviders)
+		t.configureModel(ProviderKind.CLAUDE_CODE, AgentModelId.OPUS)
+		t.delete()
+
+		t.revive({
+			contactRef: base.contactRef,
+			workspaceId: base.workspaceId,
+			providers: [ProviderKind.CODEX],
+			mentionTag: '@base',
+			participants: base.participants,
+		})
+
+		expect(t.modelByProvider).toEqual({})
+	})
+
+	it('revive keeps a choice whose provider is re-chosen', () => {
+		const t = Thread.create(base)
+		t.configureModel(ProviderKind.CLAUDE_CODE, AgentModelId.HAIKU)
+		t.delete()
+
+		t.revive({
+			contactRef: base.contactRef,
+			workspaceId: base.workspaceId,
+			providers: [ProviderKind.CLAUDE_CODE],
+			mentionTag: '@base',
+			participants: base.participants,
+		})
+
+		expect(t.modelFor(ProviderKind.CLAUDE_CODE)).toBe(AgentModelId.HAIKU)
 	})
 })
 

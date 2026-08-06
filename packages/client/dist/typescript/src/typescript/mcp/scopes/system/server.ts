@@ -6,6 +6,7 @@
 import { addWorkspaceHandler } from "./addWorkspace.ts";
 import { configureContextBufferHandler } from "./configureContextBuffer.ts";
 import { configureMentionGateHandler } from "./configureMentionGate.ts";
+import { configureModelHandler } from "./configureModel.ts";
 import { configurePromptHandler } from "./configurePrompt.ts";
 import { createOwnerHandler } from "./createOwner.ts";
 import { disableOwnerHandler } from "./disableOwner.ts";
@@ -31,6 +32,7 @@ import { updateOwnerSettingsHandler } from "./updateOwnerSettings.ts";
 import { addWorkspaceMutationRequestSchema, addWorkspaceMutationResponseSchema } from "../../../zod/addWorkspaceSchema.ts";
 import { configureContextBufferMutationRequestSchema, configureContextBufferMutationResponseSchema } from "../../../zod/configureContextBufferSchema.ts";
 import { configureMentionGateMutationRequestSchema, configureMentionGateMutationResponseSchema } from "../../../zod/configureMentionGateSchema.ts";
+import { configureModelMutationRequestSchema, configureModelMutationResponseSchema } from "../../../zod/configureModelSchema.ts";
 import { configurePromptMutationRequestSchema, configurePromptMutationResponseSchema } from "../../../zod/configurePromptSchema.ts";
 import { createOwnerMutationRequestSchema, createOwnerMutationResponseSchema } from "../../../zod/createOwnerSchema.ts";
 import { disableOwnerMutationRequestSchema, disableOwnerMutationResponseSchema } from "../../../zod/disableOwnerSchema.ts";
@@ -157,6 +159,15 @@ server.registerTool("ConfigureMentionGate", {
   inputSchema: { threadId: z.string(), data: configureMentionGateMutationRequestSchema },
 }, async ({ threadId, data }) => {
   return configureMentionGateHandler({ threadId, data })
+})
+          
+
+server.registerTool("ConfigureModel", {
+  description: "Choose which model this conversation asks one of its agent CLIs for. DEFAULT means let the CLI pick (C16)",
+  outputSchema: { data: configureModelMutationResponseSchema },
+  inputSchema: { threadId: z.string(), data: configureModelMutationRequestSchema },
+}, async ({ threadId, data }) => {
+  return configureModelHandler({ threadId, data })
 })
           
 
