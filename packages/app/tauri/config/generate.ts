@@ -23,6 +23,7 @@ import { resolve } from 'node:path'
 import { REPO } from '../../../../template.config'
 import { CONSOLE, DISPLAY_NAME, IDENTIFIER } from './app'
 import { CAPABILITIES, CAPABILITY_PERMISSIONS } from './capabilities'
+import { DEEPLINK } from './deeplink'
 import { SIDECARS, type SidecarManifestEntry } from './sidecars'
 import { BOOT_ERROR_FRAME, WINDOW, WINDOW_FRAME } from './window'
 
@@ -130,6 +131,17 @@ export function renderTauriConf(): string {
 			// under `binaries/<subpath>` and copied into the app resource dir at `<subpath>`; the Rust
 			// supervisor resolves `resource_dir/<subpath>` (boot env + spawn cwd).
 			resources: STAGED_RESOURCES,
+		},
+		// The `codm://` scheme (./deeplink.ts) — registers the OS-level URL handler the
+		// tauri-plugin-deep-link crate (src-tauri/src/lib.rs) hands back to the shell. `desktop.schemes`
+		// is the plugin's config surface for Windows/Linux/macOS; mobile associated-domains config is
+		// out of scope (this shell targets desktop only).
+		plugins: {
+			'deep-link': {
+				desktop: {
+					schemes: [DEEPLINK.scheme],
+				},
+			},
 		},
 	}
 	return `${JSON.stringify(conf, null, '\t')}\n`

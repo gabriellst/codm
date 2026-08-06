@@ -34,8 +34,22 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
+        // codm:// (config/deeplink.ts DEEPLINK.scheme, rendered into tauri.conf.json
+        // plugins.deep-link.desktop.schemes) — SP2's device-token flow (spec Decision 4) redirects
+        // the system browser here once OAuth completes. The console listens for the resulting
+        // event (`@tauri-apps/plugin-deep-link` onOpenUrl) — that is T6's job, not this shell's.
+        .plugin(tauri_plugin_deep_link::init())
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
+            // Windows/Linux have no installer registering the scheme during `tauri dev` — this call
+            // is what makes `codm://` resolve to the dev binary. macOS reads CFBundleURLTypes
+            // (generated from the SAME tauri.conf.json schemes) and needs no runtime registration.
+            #[cfg(any(windows, target_os = "linux"))]
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                app.deep_link().register_all()?;
+            }
+
             // Registers the typed event map. `SupervisionChanged::emit` panics without it, so this
             // line is the difference between the console hearing transitions and hearing nothing.
             builder.mount_events(app);

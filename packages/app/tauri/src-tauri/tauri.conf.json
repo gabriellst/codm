@@ -57,5 +57,14 @@
 			"binaries/migrations": "migrations",
 			"binaries/daemon-runtime": "daemon-runtime"
 		}
+	},
+	"plugins": {
+		"deep-link": {
+			"desktop": {
+				"schemes": [
+					"codm"
+				]
+			}
+		}
 	}
 }
