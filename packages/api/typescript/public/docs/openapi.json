@@ -2152,7 +2152,8 @@
     "/v1/threads/{threadId}/loops": {
       "post": {
         "tags": [
-          "thread"
+          "thread",
+          "mcp:orchestration"
         ],
         "description": "Schedule a recurring whisper into this conversation (C21)",
         "operationId": "CreateThreadLoop",
@@ -2297,12 +2298,16 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "orchestration"
+        ]
       },
       "get": {
         "tags": [
           "thread",
-          "mcp:system"
+          "mcp:system",
+          "mcp:orchestration"
         ],
         "description": "This conversation's scheduled prompts (loops) (T11)",
         "operationId": "ListThreadLoops",
@@ -2442,7 +2447,8 @@
           }
         },
         "x-mcp-scope": [
-          "system"
+          "system",
+          "orchestration"
         ]
       }
     },
@@ -2479,7 +2485,8 @@
     "/v1/threads/{threadId}/loops/{loopId}": {
       "delete": {
         "tags": [
-          "thread"
+          "thread",
+          "mcp:orchestration"
         ],
         "description": "Remove a loop (C24)",
         "operationId": "DeleteThreadLoop",
@@ -2512,11 +2519,15 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "orchestration"
+        ]
       },
       "put": {
         "tags": [
-          "thread"
+          "thread",
+          "mcp:orchestration"
         ],
         "description": "Edit a loop — its prompt and its schedule (C22)",
         "operationId": "UpdateThreadLoop",
@@ -2653,7 +2664,10 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "orchestration"
+        ]
       }
     },
     "/v1/threads/{threadId}/needs-you": {
@@ -3367,7 +3381,8 @@
     "/v1/threads/{threadId}/loops/{loopId}/enabled": {
       "put": {
         "tags": [
-          "thread"
+          "thread",
+          "mcp:orchestration"
         ],
         "description": "Pause or resume a loop (C23)",
         "operationId": "SetThreadLoopEnabled",
@@ -3442,7 +3457,10 @@
               }
             }
           }
-        }
+        },
+        "x-mcp-scope": [
+          "orchestration"
+        ]
       }
     },
     "/v1/threads/{threadId}/steer": {
@@ -8844,12 +8862,17 @@
     ],
     "orchestration": [
       "ConfigurePrompt",
+      "CreateThreadLoop",
+      "DeleteThreadLoop",
       "ForkIssue",
       "GetIssueStatus",
       "GetSessionIssues",
+      "ListThreadLoops",
       "RaiseStop",
       "ResolveStop",
-      "SteerIssueTurn"
+      "SetThreadLoopEnabled",
+      "SteerIssueTurn",
+      "UpdateThreadLoop"
     ],
     "system": [
       "AddWorkspace",

@@ -226,6 +226,11 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 			// after the session happens to be invalidated. It works because the runner folds `systemPrompt`
 			// into the first stdin line of every run, resumed ones included.
 			customPrompt: thread.customPrompt,
+			// The machine's zone, read here rather than stored anywhere: CODM runs on the operator's own
+			// machine, which is the same equivalence the console relies on for this very field when it
+			// fills the loop form. Read per turn, like `customPrompt` above — a daemon that outlives a
+			// timezone change should not keep scheduling in the old one.
+			timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 			model: input.model ?? AgentModelId.DEFAULT,
 			session: session.resumed ? { resumeId: session.id } : { newId: session.id },
 			binaryPath: detection.binaryPath,

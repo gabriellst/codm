@@ -7,6 +7,11 @@ import {
 	ResolveStopController,
 	SteerIssueTurnController,
 	ConfigurePromptController,
+	ListThreadLoopsController,
+	CreateThreadLoopController,
+	UpdateThreadLoopController,
+	SetThreadLoopEnabledController,
+	DeleteThreadLoopController,
 } from '../../mcp/exposure'
 import { AgentRunOutcome } from '../../enums'
 import type { AgentInputEnvelope } from '../../types/AgentInput'
@@ -66,6 +71,7 @@ export class OrchestratorPromptBuilder {
 			...this.issues(),
 			...this.redirectingWork(),
 			...this.standingInstructions(input),
+			...this.recurringPrompts(input),
 			...this.stops(input),
 			...this.quoting(input),
 			...this.operatorInstructions(input),
@@ -302,6 +308,66 @@ export class OrchestratorPromptBuilder {
 			'It takes effect on the NEXT message, not on this turn: you are still running under the instructions you ' +
 				'were given when this turn started. Say what you recorded, in one line, and do not claim you are already ' +
 				'behaving differently. And if you did not call it, do not say you did.',
+		]
+	}
+
+	/**
+	 * PROMPTS RECORRENTES — o operador falando no timer, de dentro da conversa em que o timer vai bater.
+	 *
+	 * `standingInstructions()` acima é o irmão desta seção, e a diferença entre as duas é o custo do
+	 * erro. Uma instrução permanente escrita por engano é uma frase que o operador reescreve; um loop
+	 * criado por engano é uma conversa que passa a se interromper sozinha, a cada quinze minutos, até
+	 * alguém abrir o console e notar. Por isso a regra de nunca inferir aparece aqui com o motivo colado
+	 * nela em vez de por referência: uma regra geral longe do caso que a motiva é uma frase que o modelo
+	 * lê e não aplica.
+	 *
+	 * ### Por que CINCO ferramentas e não uma
+	 * A primeira frase do operador cria um loop. Todas as seguintes são sobre um que já existe — "muda
+	 * para as 8", "para com isso uns dias", "pode apagar". Expor só a criação produziria um agente capaz
+	 * de armar alarmes e incapaz de desarmá-los, e o operador voltaria ao console exatamente para a parte
+	 * chata. A LEITURA é o que torna as outras alcançáveis: a identidade do run carrega `threadId` e nada
+	 * com forma de loop, e nenhuma seção deste prompt imprime a lista, então sem ela "aquele do deploy" é
+	 * uma frase que o modelo não tem como transformar numa linha endereçável.
+	 *
+	 * ### Por que os limites de `everyMinutes` NÃO estão escritos aqui
+	 * `LoopIntervalMinutesSchema` já carrega `.min()`/`.max()`, e eles são emitidos como `minimum` e
+	 * `maximum` no schema JSON da ferramenta gerada — o modelo os lê na própria definição da tool.
+	 * Repetir os números nesta prosa criaria uma segunda fonte de verdade que só sabe derivar, e a
+	 * primeira delas mora em outro contexto, que este arquivo não tem licença para importar.
+	 *
+	 * ### Por que o fuso é IMPRESSO
+	 * O membro por relógio exige uma zona IANA e o modelo não tem de onde tirar uma: adivinhar pelo
+	 * idioma da conversa é escrever um horário errado com cara de certo. `input.timezone` é o fuso da
+	 * máquina, que é o mesmo que o console lê do browser para preencher esse mesmo campo.
+	 */
+	private recurringPrompts(input: OrchestratorInput): string[] {
+		const listLoops = toolNameOf(ListThreadLoopsController)
+		const createLoop = toolNameOf(CreateThreadLoopController)
+		const updateLoop = toolNameOf(UpdateThreadLoopController)
+		const pauseLoop = toolNameOf(SetThreadLoopEnabledController)
+		const deleteLoop = toolNameOf(DeleteThreadLoopController)
+		return [
+			'',
+			'RECURRING PROMPTS IN THIS CONVERSATION',
+			'The operator can put a prompt on a timer here: a message this conversation whispers to itself on a ' +
+				`schedule, which you then answer as an ordinary turn. ${createLoop} is how you schedule one, and it ` +
+				'belongs to THIS conversation and no other.',
+			'Only when they ask for it out loud. You never infer one, and you never turn a passing remark into a ' +
+				'schedule. Getting a standing instruction wrong costs a sentence; getting a schedule wrong costs a ' +
+				'conversation that interrupts itself until somebody notices.',
+			'A schedule is ONE of two shapes, and never a mixture of the two:',
+			`  - by the clock — a time of day, the weekdays it runs on, and the timezone, which is ${input.timezone} ` +
+				'unless the operator names another;',
+			'  - by cadence — every N minutes, a whole number within the bounds the tool declares. The first run is ' +
+				'N minutes from now, never immediately.',
+			`You hold no loop ids. To change, pause or remove something already scheduled, call ${listLoops} first, ` +
+				'find the one the operator means by its text, and use the id it hands you.',
+			`${updateLoop} replaces BOTH the prompt and the schedule of one loop, so send the whole of both — the ` +
+				'half you leave out is the half you erase.',
+			`When the operator just wants it to stop, PAUSE it with ${pauseLoop}; it keeps its place and the same ` +
+				`call brings it back. ${deleteLoop} is for when they ask you to remove it, and there is no undo.`,
+			'Say what you scheduled in one line, in your own voice, and never put a loop id in a reply. And if you ' +
+				'did not call the tool, do not say you did.',
 		]
 	}
 

@@ -7,6 +7,11 @@ import {
 	ResolveStopController,
 	SteerIssueTurnController,
 	ConfigurePromptController,
+	ListThreadLoopsController,
+	CreateThreadLoopController,
+	UpdateThreadLoopController,
+	SetThreadLoopEnabledController,
+	DeleteThreadLoopController,
 } from '../../mcp/exposure'
 import { OrchestratorPromptBuilder } from './prompt'
 
@@ -33,6 +38,9 @@ const base = {
 	// The DEFAULT is "nothing pending" — the state most turns are in. Every case below that does not
 	// say otherwise is therefore also asserting, silently, that the section does not leak in.
 	openStops: [],
+	// The machine's zone. Every turn carries one — it is REQUIRED on the schema for the reason stated
+	// there — so the fixture carries one too, and the case that cares about it overrides with another.
+	timezone: 'America/Sao_Paulo',
 }
 
 const operatorTurn = (overrides: Record<string, unknown> = {}) =>
@@ -232,6 +240,81 @@ describe('OrchestratorPromptBuilder', () => {
 		expect(without).not.toContain('send the existing text back')
 		// The situation itself is unconditional — recording the FIRST instruction is the main case.
 		expect(without).toContain('STANDING INSTRUCTIONS FOR THIS CONVERSATION')
+	})
+
+	/**
+	 * AC-10 — the recurring-prompt situation renders, naming all FIVE tools by their classes.
+	 *
+	 * Five and not one: the operator's first sentence creates a loop and every sentence after it is
+	 * about one that already exists, so a paragraph naming only the create door would leave a model able
+	 * to set alarms and unable to turn them off. Asserted through `toolNameOf` rather than spelled out
+	 * so a rename follows the symbol — swap any of them for a literal and this goes red.
+	 */
+	it('(h5) AC-10 — the recurring-prompt situation renders, naming all five loop tools by class', () => {
+		const system = builder.system(operatorTurn())
+
+		expect(system).toContain('RECURRING PROMPTS IN THIS CONVERSATION')
+		for (const controller of [
+			ListThreadLoopsController,
+			CreateThreadLoopController,
+			UpdateThreadLoopController,
+			SetThreadLoopEnabledController,
+			DeleteThreadLoopController,
+		]) {
+			expect(system).toContain(toolNameOf(controller))
+		}
+	})
+
+	/**
+	 * AC-11 — the two halves a model gets wrong on its own.
+	 *
+	 * The schedule is a DISCRIMINATED union, so "one of two shapes, never a mixture" is the contract
+	 * restated in prose the model reads before it composes a body — a flattened attempt is a validation
+	 * error the operator experiences as a failed request. And the model holds NO loop id: the identity
+	 * carries none and no section prints one, so "list first" is not advice, it is the only path from
+	 * "aquele do deploy" to an addressable row.
+	 */
+	it('(h6) AC-11 — it presents the two schedule shapes as exclusive and sends the model to list first', () => {
+		const system = builder.system(operatorTurn())
+
+		expect(system).toContain('ONE of two shapes')
+		expect(system).toContain(`call ${toolNameOf(ListThreadLoopsController)} first`)
+	})
+
+	/**
+	 * AC-12 — pausing and deleting are different answers to the same sentence, and only one is
+	 * reversible. A model that reads "não me manda mais isso" and deletes has destroyed a configuration
+	 * the operator believed was merely off.
+	 */
+	it('(h7) AC-12 — it makes pausing the default for "stop" and marks deleting as the one with no undo', () => {
+		const system = builder.system(operatorTurn())
+
+		expect(system).toContain(`PAUSE it with ${toolNameOf(SetThreadLoopEnabledController)}`)
+		expect(system).toContain('no undo')
+	})
+
+	/**
+	 * AC-13 — the zone travels and is RENDERED, because a zone the model cannot see is a zone it
+	 * invents. Asserted with a value the fixture does NOT default to, so a section that hardcoded a
+	 * timezone instead of reading the input would fail here rather than pass by coincidence.
+	 */
+	it('(h8) AC-13 — the machine timezone reaches the prompt as the value to send', () => {
+		const system = builder.system(operatorTurn({ timezone: 'Europe/Lisbon' }))
+
+		expect(system).toContain('Europe/Lisbon')
+	})
+
+	/**
+	 * AC-14 — the two rules that keep a schedule from being an autonomy. "Never infer" is `issues()`'s
+	 * rule and it is restated here because the cost is higher: a standing instruction inferred wrongly
+	 * is a sentence, a schedule inferred wrongly is a conversation that interrupts itself until somebody
+	 * notices.
+	 */
+	it('(h9) AC-14 — it repeats never-infer and never-claim-what-you-did-not-call', () => {
+		const system = builder.system(operatorTurn())
+
+		expect(system).toContain('never turn a passing remark into a schedule')
+		expect(system).toContain('do not say you did')
 	})
 
 	/**
