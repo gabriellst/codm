@@ -17,7 +17,7 @@ export async function getIssuesOverviewHandler({ params }: { params?: GetIssuesO
               content: [
                 {
                   type: 'text',
-                  text: JSON.stringify(res.data)
+                  text: res.data === undefined ? 'OK' : JSON.stringify(res.data)
                 }
               ],
               structuredContent: { data: res.data }

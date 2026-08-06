@@ -17,7 +17,7 @@ export async function getIssueDetailHandler({ issueId }: { issueId: GetIssueDeta
               content: [
                 {
                   type: 'text',
-                  text: JSON.stringify(res.data)
+                  text: res.data === undefined ? 'OK' : JSON.stringify(res.data)
                 }
               ],
               structuredContent: { data: res.data }

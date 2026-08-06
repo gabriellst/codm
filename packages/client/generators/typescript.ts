@@ -5,7 +5,7 @@
 import { REPO } from '../../../template.config'
 import path from 'node:path'
 import { existsSync } from 'node:fs'
-import { writeFile, mkdir } from 'node:fs/promises'
+import { writeFile, mkdir, readdir } from 'node:fs/promises'
 import { safeBuild } from '@kubb/core'
 import { pluginOas } from '@kubb/plugin-oas'
 import { pluginTs } from '@kubb/plugin-ts'
@@ -308,7 +308,7 @@ export type { Client, RequestConfig, ResponseConfig, ResponseErrorConfig }
 }
 
 /**
- * TWO POST-GENERATION FIXUPS, plus the assertion that keeps an empty tool surface from shipping green.
+ * THREE POST-GENERATION FIXUPS, plus the assertion that keeps an empty tool surface from shipping green.
  *
  * (a) THE EMITTED SERVER TYPECHECKS BUT DOES NOT RUN. `serverGenerator` writes
  *     `import … from "@modelcontextprotocol/sdk/server/mcp"` with no `.js`. The SDK's exports map is
@@ -332,6 +332,15 @@ export type { Client, RequestConfig, ResponseConfig, ResponseErrorConfig }
  *     because service discovery is generic. That case is caught one layer up, by
  *     `tests/architecture/mcp-manifest.test.ts`, which reads the TYPED manifest and the committed
  *     `openapi.json` and requires set-equality in both directions.
+ *
+ * (c) A BODYLESS RESPONSE MUST STILL BE A VALID TOOL RESULT. Every handler `mcpGenerator` emits closes
+ *     with `text: JSON.stringify(res.data)` — but the http core returns `undefined` for a 204 / empty
+ *     body (http/client.ts), and `JSON.stringify(undefined)` IS `undefined`, so the CallToolResult of
+ *     every void mutation (ConfigurePrompt, ResolveStop, DeleteThreadLoop, …) ships `text: undefined`
+ *     and fails the SDK's `text: z.string()` content validation AT THE FIRST CALL — another surface
+ *     `tsc` waves through, since `JSON.stringify` is typed as returning plain `string`. A bodyless
+ *     success still has to say something, so the handler answers a literal 'OK'. (`structuredContent`
+ *     is fine as-is: these operations' output schema is `{ data: z.any() }`, which admits `undefined`.)
  */
 async function fixupAndVerifyMcpOutput(plan: Plan): Promise<void> {
 	for (const [scope, operationIds] of plan.mcpScopes) {
@@ -344,6 +353,18 @@ async function fixupAndVerifyMcpOutput(plan: Plan): Promise<void> {
 			.replace(/@modelcontextprotocol\/sdk\/server\/mcp"/g, '@modelcontextprotocol/sdk/server/mcp.js"')
 			.replace(/@modelcontextprotocol\/sdk\/server\/stdio"/g, '@modelcontextprotocol/sdk/server/stdio.js"')
 		if (patched !== original) await writeFile(serverFile, patched)
+
+		// Fixup (c): every handler file in the scope, i.e. everything that is not the server or the shim.
+		for (const file of await readdir(dir)) {
+			if (!file.endsWith('.ts') || file === 'server.ts' || file === '_http.ts') continue
+			const handlerFile = path.join(dir, file)
+			const handlerOriginal = await Bun.file(handlerFile).text()
+			const handlerPatched = handlerOriginal.replaceAll(
+				'text: JSON.stringify(res.data)',
+				"text: res.data === undefined ? 'OK' : JSON.stringify(res.data)",
+			)
+			if (handlerPatched !== handlerOriginal) await writeFile(handlerFile, handlerPatched)
+		}
 
 		// Count `registerTool(` in the emitted server, not handler FILES: the server is what an MCP
 		// client actually sees, and a handler file nobody registered would be an invisible tool.
