@@ -3,7 +3,7 @@ import { container, type DependencyContainer } from 'tsyringe-neo'
 import type { ZodType } from 'zod'
 import { TestBed, givenIssue, givenThread, givenWorkspace } from '@test/support'
 import { LoggingService, MockLoggingService } from '@codm/core-typescript'
-import { AgentModelId, ProviderKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
+import { AgentModelId, MailboxItemKind, ProviderKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { RunIssueTurn } from '@agent/usecases'
@@ -142,6 +142,11 @@ describe('Flow (integration): two inbound messages on one issue → the second R
 			provider: ProviderKind.CLAUDE_CODE,
 			workspacePath: ctx.workspacePath,
 			prompt,
+			// DERIVED from the one fact this helper already has, and the same rule the dispatcher applies:
+			// a turn that continues from an earlier message is an amendment to work in flight, a turn that
+			// starts from nothing is the brief. Stating it per call site would have every case repeat what
+			// `priorMessageId` on the line below already says.
+			turnKind: priorMessageId ? MailboxItemKind.STEER : MailboxItemKind.WORK,
 			messageId: entryId,
 			// The conversation position this turn CONTINUES FROM. `resumeDecision` compares it against the
 			// persisted cursor, so omitting it makes every turn look like it skipped ahead and invalidates
@@ -207,9 +212,13 @@ describe('Flow (integration): two inbound messages on one issue → the second R
 		expect(afterTurn2?.version).toBeGreaterThan(afterTurn1?.version ?? 0)
 
 		// The multi-turn context came from the CLI's own session — NOT from a rendered transcript
-		// stuffed back into the prompt. The second prompt is the second message and nothing else.
+		// stuffed back into the prompt. The second prompt is the second message and nothing else: ONE
+		// `<msg>` block, marked as the amendment it is, and no history above it.
 		expect(runner.requests[1]?.messages).toHaveLength(1)
-		expect(runner.requests[1]?.messages[0]?.content).toBe('also fix the coupon label')
+		const secondPrompt = runner.requests[1]?.messages[0]?.content as string
+		expect(secondPrompt).toContain('also fix the coupon label')
+		expect(secondPrompt).toContain('tipo="steer"')
+		expect(secondPrompt.match(/<msg /g)).toHaveLength(1)
 	})
 
 	it('AC-4.4 — a conversation that advanced past the cursor starts fresh AND logs the named reason', async () => {

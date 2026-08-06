@@ -732,28 +732,35 @@ export class OrchestratorPromptBuilder {
 	 * stop kind plus detail — and a lie in the schema becomes a hallucinated summary in the group.
 	 */
 	private issueResult(item: Extract<MailboxItem, { kind: typeof MailboxItemKind.ISSUE_RESULT }>): string[] {
-		// Narrowed by a `switch`-shaped read rather than a boolean flag: `outcome` is a discriminated union
-		// and the two branches carry DIFFERENT fields, which is exactly the lie a flat `replyText` would
-		// have told (a stop has no reply — it has a kind and a reason).
-		const completed = item.outcome.kind === AgentRunOutcome.COMPLETED
-		const { notes, outcome } =
+		// ONE read of the discriminant, producing all three things that differ by branch. `outcome` is a
+		// discriminated union whose two members carry DIFFERENT fields — which is exactly the lie a flat
+		// `replyText` would have told (a stop has no reply, it has a kind and a reason) — so the narrowing
+		// has to happen inline. Reading the discriminant a second time for the instruction would be a
+		// second place to keep in step with the first.
+		const { body, instruction } =
 			item.outcome.kind === AgentRunOutcome.COMPLETED
-				? { notes: item.outcome.replyText, outcome: 'COMPLETED' }
-				: { notes: item.outcome.detail, outcome: `STOPPED (${item.outcome.stopKind})` }
+				? {
+						body: ['outcome: COMPLETED', 'notes:', item.outcome.replyText],
+						instruction:
+							'Say what happened YOURSELF, to the person who asked, in this conversation’s voice. Lead with the outcome. ' +
+							'Do not paste the notes, do not narrate the work, do not list the files. One or two lines.',
+					}
+				: {
+						body: [`outcome: STOPPED (${item.outcome.stopKind})`, 'reason:', item.outcome.detail],
+						instruction:
+							'Say what happened and what you need from them, in this conversation’s voice. Lead with the fact that it is ' +
+							'stuck. Do not paste the notes. One or two lines.',
+					}
 		return [
 			...renderMsg({
 				de: `issue:${item.issueKey}`,
 				hora: HORA_AGORA,
 				para: ADDRESSED_TO_AGENT,
-				content: [`outcome: ${outcome}`, 'notes:', notes].join('\n'),
+				content: body.join('\n'),
 			}),
 			'',
 			"An issue of yours finished. What is inside that block is the worker's notes, written to YOU, not to the room.",
-			completed
-				? 'Say what happened YOURSELF, to the person who asked, in this conversation’s voice. Lead with the outcome. ' +
-					'Do not paste the notes, do not narrate the work, do not list the files. One or two lines.'
-				: 'Say what happened and what you need from them, in this conversation’s voice. Lead with the fact that it is ' +
-					'stuck. Do not paste the notes. One or two lines.',
+			instruction,
 			'This reply is attached to the message that asked for it automatically. Do not write a [quote: …] line.',
 		]
 	}

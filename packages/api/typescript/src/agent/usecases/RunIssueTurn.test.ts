@@ -75,6 +75,10 @@ describe('RunIssueTurn use case', () => {
 		provider: ProviderKind.CLAUDE_CODE,
 		workspacePath: '/tmp/workspace',
 		prompt: 'fix the coupon focus bug',
+		// The turn's KIND, which the mailbox dispatcher reads off the item it is draining. REQUIRED and
+		// undefaulted on the schema for the reason stated there — a missing one must not silently mean
+		// "brief" — so every fixture states it, and the steer cases override.
+		turnKind: MailboxItemKind.WORK,
 		messageId: testId('run-issue-turn', 'entry-1'),
 	})
 
@@ -225,7 +229,14 @@ describe('RunIssueTurn use case', () => {
 		const request = runner.requests[0]
 		expect(request?.cwd).toBe('/tmp/workspace')
 		expect(request?.messages).toHaveLength(1)
-		expect(request?.messages[0]?.content).toBe('fix the coupon focus bug')
+		// ONE message, and it is the ask RENDERED — the turn's own clock, then a single `<msg>` block
+		// carrying the text verbatim and saying which KIND of message it is. The raw string this used to
+		// be could not say either, which is the whole of what the grammar added here.
+		const content = request?.messages[0]?.content as string
+		expect(content).toContain('fix the coupon focus bug')
+		expect(content.startsWith('agora: ')).toBe(true)
+		expect(content).toContain('tipo="pedido"')
+		expect(content.match(/<msg /g)).toHaveLength(1)
 		expect(request?.outputSchema).toBeUndefined()
 		// `mcp` IS present now, and its presence is the same fact the completion predicate reads from the
 		// other side: `request.mcp` present ⟺ `agent.tools.length > 0` (§4.3 rule 7). The use case cannot
@@ -436,6 +447,7 @@ describe('RunIssueTurn — the agent with an EMPTY tool scope (AC-6.4(c), AC-6.7
 		provider: ProviderKind.CLAUDE_CODE,
 		workspacePath: '/tmp/workspace',
 		prompt: 'fix the coupon focus bug',
+		turnKind: MailboxItemKind.WORK,
 		messageId: testId('run-issue-turn-toolless', 'entry-1'),
 	})
 

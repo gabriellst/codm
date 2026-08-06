@@ -1,0 +1,1 @@
+ALTER TABLE `thread_transcript_entries` ADD `fired_by_loop` text;
