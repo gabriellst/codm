@@ -404,6 +404,8 @@
 		"COMMAND_QUEUE_NOT_FOUND": "Internal error while queuing the operation. Try again shortly.",
 		"CONTACT_ENTRY_REQUIRES_SENDER": "A contact message must carry the sender that spoke.",
 		"CREDENTIAL_DECRYPT_FAILED": "Stored credentials could not be read. Contact support.",
+		"DEVICE_CODE_INVALID": "This sign-in link expired or was already used. Try signing in again.",
+		"DEVICE_TOKEN_INVALID": "Your device session is no longer valid. Sign in again.",
 		"EMAIL_ALREADY_REGISTERED": "This email is already registered.",
 		"ENTITY_NOT_FOUND_WHILE_SAVING": "The record no longer exists and could not be saved.",
 		"ENTRY_NOT_FOUND": "Message entry not found.",

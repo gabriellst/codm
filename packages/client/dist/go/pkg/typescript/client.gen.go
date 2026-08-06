@@ -60,6 +60,8 @@ const (
 	COMMANDQUEUENOTFOUND            ApiErrors = "COMMAND_QUEUE_NOT_FOUND"
 	CONTACTENTRYREQUIRESSENDER      ApiErrors = "CONTACT_ENTRY_REQUIRES_SENDER"
 	CREDENTIALDECRYPTFAILED         ApiErrors = "CREDENTIAL_DECRYPT_FAILED"
+	DEVICECODEINVALID               ApiErrors = "DEVICE_CODE_INVALID"
+	DEVICETOKENINVALID              ApiErrors = "DEVICE_TOKEN_INVALID"
 	EMAILALREADYREGISTERED          ApiErrors = "EMAIL_ALREADY_REGISTERED"
 	ENTITYNOTFOUNDWHILESAVING       ApiErrors = "ENTITY_NOT_FOUND_WHILE_SAVING"
 	ENTRYNOTFOUND                   ApiErrors = "ENTRY_NOT_FOUND"
@@ -171,6 +173,10 @@ func (e ApiErrors) Valid() bool {
 	case CONTACTENTRYREQUIRESSENDER:
 		return true
 	case CREDENTIALDECRYPTFAILED:
+		return true
+	case DEVICECODEINVALID:
+		return true
+	case DEVICETOKENINVALID:
 		return true
 	case EMAILALREADYREGISTERED:
 		return true
@@ -1288,6 +1294,11 @@ type TranscriptKind string
 // WorkspaceBadge defines model for WorkspaceBadge.
 type WorkspaceBadge string
 
+// ExchangeDeviceCodeJSONBody defines parameters for ExchangeDeviceCode.
+type ExchangeDeviceCodeJSONBody struct {
+	Code openapi_types.UUID `json:"code"`
+}
+
 // GetIssuesOverviewParams defines parameters for GetIssuesOverview.
 type GetIssuesOverviewParams struct {
 	IncludeArchived *bool `form:"includeArchived,omitempty" json:"includeArchived,omitempty"`
@@ -1562,6 +1573,9 @@ type GetAttachThreadWizardParams struct {
 type AddWorkspaceJSONBody struct {
 	Path string `json:"path"`
 }
+
+// ExchangeDeviceCodeJSONRequestBody defines body for ExchangeDeviceCode for application/json ContentType.
+type ExchangeDeviceCodeJSONRequestBody ExchangeDeviceCodeJSONBody
 
 // SteerIssueJSONRequestBody defines body for SteerIssue for application/json ContentType.
 type SteerIssueJSONRequestBody SteerIssueJSONBody
@@ -2083,6 +2097,20 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
+	// DesktopCallback request
+	DesktopCallback(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ExchangeDeviceCodeWithBody request with any body
+	ExchangeDeviceCodeWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ExchangeDeviceCode(ctx context.Context, body ExchangeDeviceCodeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RevokeDevice request
+	RevokeDevice(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetEntitlement request
+	GetEntitlement(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// Health request
 	Health(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -2303,6 +2331,66 @@ type ClientInterface interface {
 
 	// RemoveWorkspace request
 	RemoveWorkspace(ctx context.Context, workspaceId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
+
+func (c *Client) DesktopCallback(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDesktopCallbackRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ExchangeDeviceCodeWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewExchangeDeviceCodeRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ExchangeDeviceCode(ctx context.Context, body ExchangeDeviceCodeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewExchangeDeviceCodeRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RevokeDevice(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRevokeDeviceRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetEntitlement(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetEntitlementRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 func (c *Client) Health(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -3287,6 +3375,127 @@ func (c *Client) RemoveWorkspace(ctx context.Context, workspaceId string, reqEdi
 		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+// NewDesktopCallbackRequest generates requests for DesktopCallback
+func NewDesktopCallbackRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/cloud/desktop-callback")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewExchangeDeviceCodeRequest calls the generic ExchangeDeviceCode builder with application/json body
+func NewExchangeDeviceCodeRequest(server string, body ExchangeDeviceCodeJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewExchangeDeviceCodeRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewExchangeDeviceCodeRequestWithBody generates requests for ExchangeDeviceCode with any type of body
+func NewExchangeDeviceCodeRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/cloud/devices/exchange")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewRevokeDeviceRequest generates requests for RevokeDevice
+func NewRevokeDeviceRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/cloud/devices/revoke")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetEntitlementRequest generates requests for GetEntitlement
+func NewGetEntitlementRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/cloud/entitlement")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }
 
 // NewHealthRequest generates requests for Health
@@ -5618,6 +5827,20 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
+	// DesktopCallbackWithResponse request
+	DesktopCallbackWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*DesktopCallbackResponse, error)
+
+	// ExchangeDeviceCodeWithBodyWithResponse request with any body
+	ExchangeDeviceCodeWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ExchangeDeviceCodeResponse, error)
+
+	ExchangeDeviceCodeWithResponse(ctx context.Context, body ExchangeDeviceCodeJSONRequestBody, reqEditors ...RequestEditorFn) (*ExchangeDeviceCodeResponse, error)
+
+	// RevokeDeviceWithResponse request
+	RevokeDeviceWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*RevokeDeviceResponse, error)
+
+	// GetEntitlementWithResponse request
+	GetEntitlementWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetEntitlementResponse, error)
+
 	// HealthWithResponse request
 	HealthWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*HealthResponse, error)
 
@@ -5838,6 +6061,132 @@ type ClientWithResponsesInterface interface {
 
 	// RemoveWorkspaceWithResponse request
 	RemoveWorkspaceWithResponse(ctx context.Context, workspaceId string, reqEditors ...RequestEditorFn) (*RemoveWorkspaceResponse, error)
+}
+
+type DesktopCallbackResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *string
+}
+
+// Status returns HTTPResponse.Status
+func (r DesktopCallbackResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DesktopCallbackResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DesktopCallbackResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ExchangeDeviceCodeResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Token string `json:"token"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r ExchangeDeviceCodeResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ExchangeDeviceCodeResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ExchangeDeviceCodeResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RevokeDeviceResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r RevokeDeviceResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RevokeDeviceResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RevokeDeviceResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetEntitlementResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Active bool               `json:"active"`
+		Plan   string             `json:"plan"`
+		UserId openapi_types.UUID `json:"userId"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetEntitlementResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetEntitlementResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetEntitlementResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
 }
 
 type HealthResponse struct {
@@ -7929,6 +8278,50 @@ func (r RemoveWorkspaceResponse) ContentType() string {
 	return ""
 }
 
+// DesktopCallbackWithResponse request returning *DesktopCallbackResponse
+func (c *ClientWithResponses) DesktopCallbackWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*DesktopCallbackResponse, error) {
+	rsp, err := c.DesktopCallback(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDesktopCallbackResponse(rsp)
+}
+
+// ExchangeDeviceCodeWithBodyWithResponse request with arbitrary body returning *ExchangeDeviceCodeResponse
+func (c *ClientWithResponses) ExchangeDeviceCodeWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ExchangeDeviceCodeResponse, error) {
+	rsp, err := c.ExchangeDeviceCodeWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseExchangeDeviceCodeResponse(rsp)
+}
+
+func (c *ClientWithResponses) ExchangeDeviceCodeWithResponse(ctx context.Context, body ExchangeDeviceCodeJSONRequestBody, reqEditors ...RequestEditorFn) (*ExchangeDeviceCodeResponse, error) {
+	rsp, err := c.ExchangeDeviceCode(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseExchangeDeviceCodeResponse(rsp)
+}
+
+// RevokeDeviceWithResponse request returning *RevokeDeviceResponse
+func (c *ClientWithResponses) RevokeDeviceWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*RevokeDeviceResponse, error) {
+	rsp, err := c.RevokeDevice(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRevokeDeviceResponse(rsp)
+}
+
+// GetEntitlementWithResponse request returning *GetEntitlementResponse
+func (c *ClientWithResponses) GetEntitlementWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetEntitlementResponse, error) {
+	rsp, err := c.GetEntitlement(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetEntitlementResponse(rsp)
+}
+
 // HealthWithResponse request returning *HealthResponse
 func (c *ClientWithResponses) HealthWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*HealthResponse, error) {
 	rsp, err := c.Health(ctx, reqEditors...)
@@ -8640,6 +9033,116 @@ func (c *ClientWithResponses) RemoveWorkspaceWithResponse(ctx context.Context, w
 		return nil, err
 	}
 	return ParseRemoveWorkspaceResponse(rsp)
+}
+
+// ParseDesktopCallbackResponse parses an HTTP response from a DesktopCallbackWithResponse call
+func ParseDesktopCallbackResponse(rsp *http.Response) (*DesktopCallbackResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DesktopCallbackResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest string
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseExchangeDeviceCodeResponse parses an HTTP response from a ExchangeDeviceCodeWithResponse call
+func ParseExchangeDeviceCodeResponse(rsp *http.Response) (*ExchangeDeviceCodeResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ExchangeDeviceCodeResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Token string `json:"token"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRevokeDeviceResponse parses an HTTP response from a RevokeDeviceWithResponse call
+func ParseRevokeDeviceResponse(rsp *http.Response) (*RevokeDeviceResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RevokeDeviceResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetEntitlementResponse parses an HTTP response from a GetEntitlementWithResponse call
+func ParseGetEntitlementResponse(rsp *http.Response) (*GetEntitlementResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetEntitlementResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Active bool               `json:"active"`
+			Plan   string             `json:"plan"`
+			UserId openapi_types.UUID `json:"userId"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
 }
 
 // ParseHealthResponse parses an HTTP response from a HealthWithResponse call

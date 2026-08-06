@@ -218,6 +218,8 @@ pub mod types {
     ///    "COMMAND_QUEUE_NOT_FOUND",
     ///    "CONTACT_ENTRY_REQUIRES_SENDER",
     ///    "CREDENTIAL_DECRYPT_FAILED",
+    ///    "DEVICE_CODE_INVALID",
+    ///    "DEVICE_TOKEN_INVALID",
     ///    "EMAIL_ALREADY_REGISTERED",
     ///    "ENTITY_NOT_FOUND_WHILE_SAVING",
     ///    "ENTRY_NOT_FOUND",
@@ -342,6 +344,10 @@ pub mod types {
         ContactEntryRequiresSender,
         #[serde(rename = "CREDENTIAL_DECRYPT_FAILED")]
         CredentialDecryptFailed,
+        #[serde(rename = "DEVICE_CODE_INVALID")]
+        DeviceCodeInvalid,
+        #[serde(rename = "DEVICE_TOKEN_INVALID")]
+        DeviceTokenInvalid,
         #[serde(rename = "EMAIL_ALREADY_REGISTERED")]
         EmailAlreadyRegistered,
         #[serde(rename = "ENTITY_NOT_FOUND_WHILE_SAVING")]
@@ -528,6 +534,8 @@ pub mod types {
                     f.write_str("CONTACT_ENTRY_REQUIRES_SENDER")
                 }
                 Self::CredentialDecryptFailed => f.write_str("CREDENTIAL_DECRYPT_FAILED"),
+                Self::DeviceCodeInvalid => f.write_str("DEVICE_CODE_INVALID"),
+                Self::DeviceTokenInvalid => f.write_str("DEVICE_TOKEN_INVALID"),
                 Self::EmailAlreadyRegistered => f.write_str("EMAIL_ALREADY_REGISTERED"),
                 Self::EntityNotFoundWhileSaving => {
                     f.write_str("ENTITY_NOT_FOUND_WHILE_SAVING")
@@ -639,6 +647,8 @@ pub mod types {
                 "COMMAND_QUEUE_NOT_FOUND" => Ok(Self::CommandQueueNotFound),
                 "CONTACT_ENTRY_REQUIRES_SENDER" => Ok(Self::ContactEntryRequiresSender),
                 "CREDENTIAL_DECRYPT_FAILED" => Ok(Self::CredentialDecryptFailed),
+                "DEVICE_CODE_INVALID" => Ok(Self::DeviceCodeInvalid),
+                "DEVICE_TOKEN_INVALID" => Ok(Self::DeviceTokenInvalid),
                 "EMAIL_ALREADY_REGISTERED" => Ok(Self::EmailAlreadyRegistered),
                 "ENTITY_NOT_FOUND_WHILE_SAVING" => Ok(Self::EntityNotFoundWhileSaving),
                 "ENTRY_NOT_FOUND" => Ok(Self::EntryNotFound),
@@ -2651,6 +2661,65 @@ pub mod types {
             value.clone()
         }
     }
+    ///`ExchangeDeviceCodeBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "code"
+    ///  ],
+    ///  "properties": {
+    ///    "code": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct ExchangeDeviceCodeBody {
+        pub code: ::uuid::Uuid,
+    }
+    impl ::std::convert::From<&ExchangeDeviceCodeBody> for ExchangeDeviceCodeBody {
+        fn from(value: &ExchangeDeviceCodeBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`ExchangeDeviceCodeResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "token"
+    ///  ],
+    ///  "properties": {
+    ///    "token": {
+    ///      "type": "string"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct ExchangeDeviceCodeResponse {
+        pub token: ::std::string::String,
+    }
+    impl ::std::convert::From<&ExchangeDeviceCodeResponse>
+    for ExchangeDeviceCodeResponse {
+        fn from(value: &ExchangeDeviceCodeResponse) -> Self {
+            value.clone()
+        }
+    }
     ///`ForkIssueBody`
     ///
     /// <details><summary>JSON schema</summary>
@@ -3199,6 +3268,130 @@ pub mod types {
     for GetAttachThreadWizardResponseWorkspacesItem {
         fn from(value: &GetAttachThreadWizardResponseWorkspacesItem) -> Self {
             value.clone()
+        }
+    }
+    ///`GetEntitlementResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "active",
+    ///    "plan",
+    ///    "userId"
+    ///  ],
+    ///  "properties": {
+    ///    "active": {
+    ///      "type": "boolean",
+    ///      "enum": [
+    ///        true
+    ///      ]
+    ///    },
+    ///    "plan": {
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "free"
+    ///      ]
+    ///    },
+    ///    "userId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetEntitlementResponse {
+        pub active: bool,
+        pub plan: GetEntitlementResponsePlan,
+        #[serde(rename = "userId")]
+        pub user_id: ::uuid::Uuid,
+    }
+    impl ::std::convert::From<&GetEntitlementResponse> for GetEntitlementResponse {
+        fn from(value: &GetEntitlementResponse) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetEntitlementResponsePlan`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "free"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum GetEntitlementResponsePlan {
+        #[serde(rename = "free")]
+        Free,
+    }
+    impl ::std::convert::From<&Self> for GetEntitlementResponsePlan {
+        fn from(value: &GetEntitlementResponsePlan) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for GetEntitlementResponsePlan {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Free => f.write_str("free"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for GetEntitlementResponsePlan {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "free" => Ok(Self::Free),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for GetEntitlementResponsePlan {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for GetEntitlementResponsePlan {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for GetEntitlementResponsePlan {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`GetHomeDashboardResponse`
@@ -9995,6 +10188,136 @@ impl Client {
 #[allow(clippy::all)]
 #[allow(elided_named_lifetimes)]
 impl Client {
+    /**Bridges a better-auth browser session into a one-time device code, handed to the app via the codm:// deep link
+
+Sends a `GET` request to `/v1/cloud/desktop-callback`
+
+*/
+    pub async fn desktop_callback<'a>(
+        &'a self,
+    ) -> Result<ResponseValue<::std::string::String>, Error<()>> {
+        let url = format!("{}/v1/cloud/desktop-callback", self.baseurl,);
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .get(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Trade a one-time device code for a long-lived device token
+
+Sends a `POST` request to `/v1/cloud/devices/exchange`
+
+*/
+    pub async fn exchange_device_code<'a>(
+        &'a self,
+        body: &'a types::ExchangeDeviceCodeBody,
+    ) -> Result<ResponseValue<types::ExchangeDeviceCodeResponse>, Error<()>> {
+        let url = format!("{}/v1/cloud/devices/exchange", self.baseurl,);
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Revoke the device token presented as a Bearer credential
+
+Sends a `POST` request to `/v1/cloud/devices/revoke`
+
+*/
+    pub async fn revoke_device<'a>(
+        &'a self,
+    ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
+        let url = format!("{}/v1/cloud/devices/revoke", self.baseurl,);
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Resolve a device token (Bearer) into the account entitlement
+
+Sends a `GET` request to `/v1/cloud/entitlement`
+
+*/
+    pub async fn get_entitlement<'a>(
+        &'a self,
+    ) -> Result<ResponseValue<types::GetEntitlementResponse>, Error<()>> {
+        let url = format!("{}/v1/cloud/entitlement", self.baseurl,);
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .get(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
     /**Readiness do daemon: banco, migrações e os timers de poll (canal WhatsApp entra só como diagnóstico)
 
 Sends a `GET` request to `/v1/health`
