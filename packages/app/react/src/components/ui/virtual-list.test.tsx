@@ -203,6 +203,73 @@ describe('end-anchored mount — a thread opens on its newest message', () => {
 		expect(scroller.scrollTop).toBe(0)
 		expect(rows(scroller)).toHaveLength(0)
 	})
+
+	/**
+	 * THE CASE PRODUCTION ACTUALLY HAS — and the one every other test in this describe misses by
+	 * handing the component the exact height its rows turn out to be.
+	 *
+	 * A chat bubble is as tall as its text, so `estimatedItemHeight` is a guess and is routinely wrong
+	 * by a multiple (88px seeded against bubbles that wrap past 200). On the first commit the only
+	 * content height that exists is `count × estimate`, so a single `scrollTop = scrollHeight` is
+	 * clamped against a box that is merely the guess — and the list opens the same FRACTION of the way
+	 * down that the guess is wrong by. At 20 against 100 that was one fifth in: the top, to a reader.
+	 *
+	 * The assertion is the END STATE, and it is stated as position rather than as a pixel offset on
+	 * purpose. The total size of a windowed list with a bad estimate stays wrong until the rows are
+	 * actually mounted and measured — 155 rows in the middle here are still 20px guesses — so
+	 * `scrollTop` settles on a number that means nothing on its own. What the operator asked for is
+	 * `199`, on screen, at the bottom.
+	 */
+	it('opens on the newest item even when the height estimate is far too small', () => {
+		const scroller = render(list(200), 20)
+
+		expect(scroller.scrollTop).toBe(scroller.scrollHeight - scroller.clientHeight)
+
+		const indices = renderedIndices(scroller)
+		expect(indices).toContain(199)
+		expect(indices).not.toContain(0)
+	})
+
+	/**
+	 * The mirror case, and the reason the release condition is `min(lastPin, maxOffset)` rather than
+	 * the last pin alone: a too-GENEROUS estimate makes the box SHRINK as the real heights arrive, and
+	 * the browser clamps the offset down along with it. Read naively that looks exactly like a reader
+	 * scrolling up, and retiring the pin there would strand the list short of the end.
+	 */
+	it('opens on the newest item even when the height estimate is far too large', () => {
+		const scroller = render(list(200), 400)
+
+		expect(scroller.scrollTop).toBe(scroller.scrollHeight - scroller.clientHeight)
+
+		const indices = renderedIndices(scroller)
+		expect(indices).toContain(199)
+		expect(indices).not.toContain(0)
+	})
+
+	/**
+	 * The pin is held across the settling passes rather than fired once, so the thing that ends it has
+	 * to be the reader — and it has to end for good. A reader who scrolls up while the heights are
+	 * still arriving must not be dragged back down by the next measurement pass.
+	 */
+	it('a reader who scrolls up mid-settle keeps the pin off for good', () => {
+		const items = list(200, 'm')
+		const scroller = render(items, 20)
+
+		act(() => setScrollTop(scroller, 500))
+		settle()
+		// Not `toBe(500)`: with an estimate this wrong, measuring the rows the scroll just mounted
+		// corrects the content above the fold, and the virtualizer shifts the offset to keep the item
+		// under the eye where it is. What matters is that the reader is somewhere in the history and
+		// demonstrably NOT at the end.
+		const readingAt = scroller.scrollTop
+		expect(scroller.scrollHeight - scroller.clientHeight - readingAt).toBeGreaterThan(32)
+
+		// Appending is what would drag back a list whose pin never retired.
+		render([...items, item('new')], 20)
+
+		expect(scroller.scrollTop).toBe(readingAt)
+		expect(renderedIndices(scroller)).not.toContain(200)
+	})
 })
 
 // ── behaviour 3: conditional stick-to-bottom ────────────────────────────────────────────────────
