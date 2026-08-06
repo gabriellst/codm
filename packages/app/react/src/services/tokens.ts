@@ -6,6 +6,7 @@
 import { token } from './core/token'
 import type { AutostartService } from './AutostartService/AutostartService'
 import type { BadgeService } from './BadgeService/BadgeService'
+import type { CloudSessionService } from './CloudSessionService/CloudSessionService'
 import type { FilePickerService } from './FilePickerService/FilePickerService'
 import type { HostInfoService } from './HostInfoService/HostInfoService'
 import type { NotificationService } from './NotificationService/NotificationService'
@@ -19,3 +20,4 @@ export const SecretsToken = token<SecretsService>('SecretsService')
 export const AutostartToken = token<AutostartService>('AutostartService')
 export const HostInfoToken = token<HostInfoService>('HostInfoService')
 export const SupervisionToken = token<SupervisionService>('SupervisionService')
+export const CloudSessionToken = token<CloudSessionService>('CloudSessionService')

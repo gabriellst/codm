@@ -414,6 +414,17 @@ export const REPO = {
 		API_VERSION: { consumers: ['apiGo'], example: 'v1', doc: 'read by api-go; api-typescript reads VERSION (defaults ok in dev)' },
 		// ── frontend (only VITE_* reach the browser) ──
 		VITE_API_URL: { consumers: ['appReact'], example: 'http://localhost:3030' },
+		// The desktop console's OWN VITE_-mirrored twin of CODM_CLOUD_URL (SP2 Task T6): the browser
+		// the console opens for OAuth sign-in, and the base URL for the exchange/revoke device-token
+		// calls, must hit the CLOUD deployment (Railway in prod) — a DIFFERENT origin than the local
+		// daemon's own VITE_API_URL once the two are deployed separately, even though both default to
+		// the same localhost:3030 in dev (CODM_CLOUD_URL falls back to API_URL there too). Defaults to
+		// VITE_API_URL when unset (Config.cloudUrl, src/lib/config.ts) so a fresh .env keeps working.
+		VITE_CODM_CLOUD_URL: {
+			consumers: ['appReact'],
+			example: 'http://localhost:3030',
+			doc: 'cloud profile public origin the desktop console opens for OAuth sign-in (mirrors CODM_CLOUD_URL for the browser; defaults to VITE_API_URL)',
+		},
 		SITE_URL: {
 			consumers: ['appAstro'],
 			example: '',

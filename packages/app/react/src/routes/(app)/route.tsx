@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { Sidebar } from '@/components/Navbar'
 import { AgentsRunningPill } from '@/components/console/AgentsRunningPill'
+import { CloudSessionGate } from '@/components/console/CloudSessionGate'
 import { SupervisionBanner } from '@/components/console/SupervisionBanner'
 import { Dialog } from '@/components/ui/dialog'
 import { useDialogStore } from '@/stores/useDialogStore'
@@ -37,7 +38,12 @@ function AuthLayout() {
 						</div>
 					</div>
 					<div className="flex-1 overflow-auto">
-						<Outlet />
+						{/* Sem login os agentes param; console pede conta (spec Decision 5, AC-3) — gates the
+						    Outlet only, never the sidebar/chrome around it, so a logged-out console still
+						    reads as "the app, asking for an account" rather than a blank shell. */}
+						<CloudSessionGate>
+							<Outlet />
+						</CloudSessionGate>
 					</div>
 				</main>
 			</div>
