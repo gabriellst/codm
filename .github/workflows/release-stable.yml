@@ -49,6 +49,18 @@ jobs:
       - name: sidecars
         run: cd packages/app/tauri && bun config/build-sidecars.ts
 
+      # Um release sem esta variável produz um app cujo login abre localhost:3030 — defeito
+      # INVISÍVEL no artefato (os assets do frontend vão comprimidos dentro do binário, então
+      # nenhum grep no .app prova que a URL foi assada). Medido na v0.1.3; a única defesa é
+      # falhar aqui, no insumo, em vez de tentar verificar na saída.
+      - name: cloud url presente
+        run: |
+          test -n "${{ vars.CODM_CLOUD_URL }}" || {
+            echo "::error::vars.CODM_CLOUD_URL vazia — o app sairia apontando o daemon local. Defina a repo variable antes de publicar."
+            exit 1
+          }
+          echo "cloud: ${{ vars.CODM_CLOUD_URL }}"
+
       - name: tauri build
         env:
           # O console é compilado DENTRO do tauri build (beforeBuildCommand) e o Vite resolve
