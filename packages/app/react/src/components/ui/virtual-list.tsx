@@ -22,7 +22,9 @@ import { cn } from '@/lib/utils'
  *      is what makes (4) possible: an item that shifts index keeps its measurement.
  *   2. MOUNTS AT THE END. Opening a thread must land on the newest message. The pin is written in a
  *      LAYOUT effect (pre-paint), so the first frame the user sees is already at the bottom rather
- *      than at the top followed by a jump.
+ *      than at the top followed by a jump — and it is HELD across the measurement passes that
+ *      follow, because a first frame can only be pinned to the estimate. It retires the moment the
+ *      reader scrolls up, and never engages again for that list.
  *   3. STICK-TO-BOTTOM, CONDITIONALLY. A new message follows the viewport only if the reader was
  *      already at the bottom. A reader scrolled up into history is left exactly where they are —
  *      that is `followOnAppend`, which the virtualizer gates on its own `isAtEnd(scrollEndThreshold)`
@@ -115,20 +117,57 @@ export function VirtualList<TItem>({
 	const virtualItems = virtualizer.getVirtualItems()
 	const totalSize = virtualizer.getTotalSize()
 
-	// (2) MOUNT AT THE END. `scrollTop = scrollHeight` is deliberately a raw DOM write rather than
-	// `scrollToEnd()`: it lands before paint, with no dependency on measurements that have not been
-	// taken yet, and the virtualizer picks it up from its own scroll listener. `scrollToEnd()`
-	// afterwards keeps the instance's offset in step for the very first `isAtEnd` question, which is
-	// what decides whether the next arriving message is allowed to follow.
-	const hasAnchoredRef = useRef(false)
+	// (2) MOUNT AT THE END — and STAY there until the reader takes over, which is one behaviour and
+	// not two. A single write on mount cannot land at the end, because on the first commit the only
+	// content height that exists is `count × estimatedItemHeight`: measurement runs off the row refs
+	// and reaches the virtualizer AFTER this effect, so the write is clamped against a box that is
+	// merely the GUESS of the list, and it lands the same FRACTION of the way down that the guess is
+	// wrong by. Seeded at 88px against bubbles that wrap to 200, a thread opens a third of the way
+	// in — at the top, to the operator reading it — and no test whose estimate happens to be exact
+	// can see it.
+	//
+	// So the pin is held across the settling instead of fired once. Each commit re-pins to the end of
+	// whatever the content measures NOW; every pass mounts the window one step nearer the end,
+	// measuring it grows the box, and the next commit follows it down until the box stops moving —
+	// at which point it is writing the offset already held and the browser does nothing with it. Note
+	// that the box it converges on is NOT the true height of the list: rows that were never mounted
+	// keep their estimate, so the scrollbar stays a guess until they are scrolled through. What
+	// converges is the only thing that was asked for — the LAST row, on screen, at the bottom.
+	//
+	// IT IS RELEASED BY THE READER, NOT BY A HEURISTIC. Nothing here can tell "the box is still
+	// settling" from "the box is done" at the moment it has to decide — the whole bug above is what
+	// guessing that costs. What IS unambiguous is direction: every write in this file, and every
+	// adjustment the virtualizer makes while anchored to the end, moves the offset DOWN or leaves it.
+	// Only the reader moves it UP. So an offset found above where the pin last left it means the
+	// reader is reading, and the pin retires for the lifetime of the list — from there on
+	// `followOnAppend` alone decides whether an arriving message follows, exactly as (3) says.
+	const isPinnedRef = useRef(true)
+	const pinnedOffsetRef = useRef(0)
 	useIsomorphicLayoutEffect(() => {
-		if (hasAnchoredRef.current || count === 0) return
+		if (!isPinnedRef.current || count === 0) return
 		const element = scrollRef.current
 		if (!element) return
-		hasAnchoredRef.current = true
-		element.scrollTop = element.scrollHeight
+
+		const maxOffset = Math.max(element.scrollHeight - element.clientHeight, 0)
+		// Against `min(…)`, not against the last pin alone: an estimate that was too GENEROUS shrinks
+		// the box as the real heights come in, and the browser clamps the offset down with it. That is
+		// the content moving, not the reader, and reading it as a scroll-up would strand the list short
+		// of the end in precisely the case this exists to fix.
+		if (element.scrollTop < Math.min(pinnedOffsetRef.current, maxOffset)) {
+			isPinnedRef.current = false
+			return
+		}
+
+		pinnedOffsetRef.current = maxOffset
+		// Written every commit rather than only when it would move, and both halves are load-bearing.
+		// The raw assignment lands pre-paint against the box as it stands right now; `scrollToEnd()`
+		// then puts the virtualizer's own offset in step with it, which is what `isAtEnd` reads to
+		// decide whether the next arriving message follows. Skipping the pair once the offset already
+		// matches looks free and is not: it also skips the notification that flushes the pending
+		// measurements into a render, and the list settles one pass early on the estimate.
+		element.scrollTop = maxOffset
 		virtualizer.scrollToEnd()
-	}, [count, virtualizer])
+	})
 
 	return (
 		<div ref={scrollRef} data-slot="virtual-list" className={cn('relative min-h-0 overflow-y-auto', className)} {...props}>

@@ -10,6 +10,7 @@ import { REPO } from '../../../../template.config'
 import { CONSOLE, IDENTIFIER } from './app'
 import { CAPABILITIES, CAPABILITY_PERMISSIONS } from './capabilities'
 import { DEEPLINK } from './deeplink'
+import { UPDATER } from './updater'
 import { cargoNameDrift, OUTPUTS, renderCapabilities, renderTauriConf } from './generate'
 import { SIDECARS } from './sidecars'
 import { BOOT_ERROR_FRAME, WINDOW_FRAME } from './window'
@@ -113,5 +114,26 @@ describe('desktop config (packages/app/tauri/config)', () => {
 		}
 		expect(DEEPLINK.scheme).toBe('codm')
 		expect(conf.plugins['deep-link'].desktop.schemes).toEqual([DEEPLINK.scheme])
+	})
+
+	it('DSK-07: the Rust updater mirrors config/updater.ts betaEndpoint verbatim (cross-lang seam gate)', () => {
+		// Rust cannot import the TS config, so src/updater.rs carries a MIRROR of the beta endpoint
+		// and names config/updater.ts as its source of truth — this rail is what keeps the two
+		// copies from drifting (same posture as walker.go mirroring template.config.ts).
+		const rust = readFileSync(resolve(import.meta.dir, '../src-tauri/src/updater.rs'), 'utf8')
+		expect(rust).toContain(`const BETA_ENDPOINT: &str = "${UPDATER.betaEndpoint}"`)
+	})
+
+	it('DSK-08: the generated conf carries the updater plugin (pubkey + STABLE endpoint) and update artifacts', () => {
+		// Stable is the default every installed app boots with; beta is a RUNTIME override in
+		// src/updater.rs (spec decision 2). createUpdaterArtifacts is what makes `tauri build`
+		// emit the signed .app.tar.gz the updater consumes (spec decision 8).
+		const conf = JSON.parse(renderTauriConf()) as {
+			plugins?: { updater?: { pubkey?: string; endpoints?: string[] } }
+			bundle: { createUpdaterArtifacts?: boolean }
+		}
+		expect(conf.plugins?.updater?.pubkey).toBe(UPDATER.pubkey)
+		expect(conf.plugins?.updater?.endpoints).toEqual([UPDATER.stableEndpoint])
+		expect(conf.bundle.createUpdaterArtifacts).toBe(true)
 	})
 })

@@ -21,12 +21,15 @@ use tauri::Manager;
 
 mod api;
 mod commands;
+mod crash;
 mod sidecars;
+mod updater;
 
 pub fn run() {
     let builder = commands::specta_builder();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
@@ -59,6 +62,11 @@ pub fn run() {
                 .app_data_dir()
                 .expect("app data dir resolvable")
                 .join("data");
+            // Crash capture + auto-update — both rooted at the same data dir the sidecars use.
+            // The panic hook goes in FIRST: an update-path panic without it would be exactly the
+            // invisible field crash SP1's decision 6 exists to prevent.
+            crash::install_panic_hook(data_dir.clone());
+            updater::spawn_startup_check(app.handle().clone(), data_dir.clone());
 
             // Bundle resource dir — staged sidecar assets (e.g. the Drizzle migrations copied by
             // build-sidecars) live here; sidecars() resolves resource_dir/<subpath> for their boot env.
