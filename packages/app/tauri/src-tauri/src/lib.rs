@@ -120,7 +120,7 @@ pub fn run() {
             // `tauri::State`, the identical wiring `gate`/`monitor` use below.
             let update_state = Arc::new(updater::UpdateState::default());
             app.manage(update_state.clone());
-            updater::spawn_startup_check(app.handle().clone(), data_dir.clone(), update_state);
+            updater::spawn_periodic_check(app.handle().clone(), data_dir.clone(), update_state);
 
             // Bundle resource dir — staged sidecar assets (e.g. the Drizzle migrations copied by
             // build-sidecars) live here; sidecars() resolves resource_dir/<subpath> for their boot env.
