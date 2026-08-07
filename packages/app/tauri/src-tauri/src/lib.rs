@@ -120,7 +120,37 @@ pub fn run() {
             // `tauri::State`, the identical wiring `gate`/`monitor` use below.
             let update_state = Arc::new(updater::UpdateState::default());
             app.manage(update_state.clone());
-            updater::spawn_periodic_check(app.handle().clone(), data_dir.clone(), update_state);
+            updater::spawn_periodic_check(
+                app.handle().clone(),
+                data_dir.clone(),
+                update_state.clone(),
+            );
+
+            // FOCUS-TRIGGERED CHECK (2026-08-07 incident, part three) — the periodic loop above only
+            // looks once an hour; whoever comes BACK to the app is exactly who wants a fresh answer.
+            // Scoped to the `main` `WebviewWindow` specifically (not the builder-wide
+            // `.on_window_event`, which would also fire for the `boot-error` splash) — the debounce
+            // and reentrancy guard both live in `updater::spawn_focus_check` / `attempt_check`, this
+            // closure only forwards the one event that matters (`Focused(true)`).
+            match app.get_webview_window("main") {
+                Some(main_window) => {
+                    let focus_handle = app.handle().clone();
+                    let focus_data_dir = data_dir.clone();
+                    let focus_update_state = update_state.clone();
+                    main_window.on_window_event(move |event| {
+                        if let tauri::WindowEvent::Focused(true) = event {
+                            updater::spawn_focus_check(
+                                focus_handle.clone(),
+                                focus_data_dir.clone(),
+                                focus_update_state.clone(),
+                            );
+                        }
+                    });
+                }
+                None => log::error!(
+                    "[updater] main window not found during setup — focus-triggered checks disabled"
+                ),
+            }
 
             // Bundle resource dir — staged sidecar assets (e.g. the Drizzle migrations copied by
             // build-sidecars) live here; sidecars() resolves resource_dir/<subpath> for their boot env.

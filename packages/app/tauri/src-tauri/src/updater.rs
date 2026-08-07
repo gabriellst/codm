@@ -30,10 +30,20 @@
 //! this, the ONLY updater lines that ever reached disk were `tauri_plugin_updater`'s own internal
 //! ones; nothing here said whether a check even ran, which channel it resolved, or why it gave up —
 //! so "the pill never showed up" had no trace to read.
+//!
+//! ### Focus-triggered check (2026-08-07 incident, part three)
+//! Measured in the founder's own log: a check ran at 19:52 and found nothing; the release went out
+//! at 20:04 — twelve minutes later — and the next scheduled look was not until 20:52, up to an hour
+//! of blindness with no way to force a fresh answer. Whoever comes BACK to the app (`lib.rs` wires
+//! `WindowEvent::Focused(true)` on the `main` window to [`spawn_focus_check`]) is exactly the person
+//! who wants to know "is there something new" — so a focus regain now asks too, debounced by
+//! [`should_check_on_focus`] so alt-tabbing does not turn into a request storm, and funneled through
+//! the same [`attempt_check`] reentrancy guard the periodic loop uses so the two triggers never race.
 
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tauri::AppHandle;
 use tauri_plugin_updater::UpdaterExt;
 // The typed-event trait — `UpdateReady::emit` is its method, not an inherent one. Same import the
@@ -43,18 +53,39 @@ use tauri_specta::Event as _;
 /// Runtime state: is a downloaded update sitting on disk, waiting for the operator to restart into
 /// it? The PULL half of the ask+listen pattern — [`crate::commands::pending_update`] reads this
 /// verbatim, covering a console window that mounts AFTER `run_check` already finished (the same
-/// reason `boot_failures` exists next to the boot-error splash's events).
+/// reason `boot_failures` exists next to the boot-error splash's events). Also carries the two bits
+/// [`attempt_check`] needs to arbitrate between the periodic loop and the focus-triggered check: when
+/// the last attempt ran (debounce) and whether one is in flight right now (reentrancy).
 #[derive(Default)]
-pub struct UpdateState(Mutex<Option<String>>);
+pub struct UpdateState {
+    pending: Mutex<Option<String>>,
+    /// Instant of the last check ATTEMPT, successful or not — set once per attempt inside
+    /// [`attempt_check`], read by [`should_check_on_focus`]. Shared between the periodic loop and the
+    /// focus handler via the same `Arc<UpdateState>` both already receive, so whichever ran most
+    /// recently — a scheduled tick or a focus regain — resets the other's debounce window too.
+    last_check: Mutex<Option<Instant>>,
+    /// Reentrancy guard: `true` while a check is in flight. The periodic loop and the focus handler
+    /// both go through [`attempt_check`], the only place this is touched — never set directly by
+    /// either caller.
+    in_progress: AtomicBool,
+}
 
 impl UpdateState {
     fn set_ready(&self, version: String) {
-        *self.0.lock().expect("update state mutex") = Some(version);
+        *self.pending.lock().expect("update state mutex") = Some(version);
     }
 
     /// The version waiting for a restart, or `None` when nothing has been installed this run.
     pub fn pending(&self) -> Option<String> {
-        self.0.lock().expect("update state mutex").clone()
+        self.pending.lock().expect("update state mutex").clone()
+    }
+
+    fn record_check(&self) {
+        *self.last_check.lock().expect("update state mutex") = Some(Instant::now());
+    }
+
+    fn last_check(&self) -> Option<Instant> {
+        *self.last_check.lock().expect("update state mutex")
     }
 }
 
@@ -102,6 +133,34 @@ const SETTLE_DELAY: Duration = Duration::from_secs(10);
 /// hour keeps that true without turning every open console into a standing poller of its own.
 const CHECK_INTERVAL: Duration = Duration::from_secs(60 * 60);
 
+/// Minimum time between checks triggered by the `main` window regaining focus. Debounced separately
+/// from [`CHECK_INTERVAL`] because the trigger is a human action (alt-tab, click back into the app),
+/// not a clock — switching between apps fires `WindowEvent::Focused(true)` on every return trip, and
+/// without a floor that becomes a check per switch. Five minutes: short enough that coming back to
+/// the app after stepping away gets a genuinely fresh answer within the same work session (nowhere
+/// near the up-to-an-hour blindness the 2026-08-07 incident measured), long enough that no realistic
+/// window-switching cadence — flipping between the console and a terminal/browser every few seconds
+/// while working — turns into a request storm against the update endpoint.
+const FOCUS_DEBOUNCE: Duration = Duration::from_secs(5 * 60);
+
+/// Whether a focus-regain should trigger a fresh check. Pure over its inputs — same discipline as
+/// [`should_stop_checking`] — so the debounce and the "never checked yet" / "update already pending"
+/// edges are provable in `cargo test` without a real window, thread, or clock.
+///
+/// `last_check: None` means no check has run yet this process (e.g. focus lands before the periodic
+/// loop's own [`SETTLE_DELAY`] first tick) — that counts as "due", not as "just checked". A pending
+/// update always wins over the debounce: [`should_stop_checking`] already means nothing left to look
+/// for, and re-checking would only re-download the same bits `run_check` already installed.
+fn should_check_on_focus(last_check: Option<Instant>, now: Instant, update_pending: bool) -> bool {
+    if update_pending {
+        return false;
+    }
+    match last_check {
+        None => true,
+        Some(last) => now.saturating_duration_since(last) >= FOCUS_DEBOUNCE,
+    }
+}
+
 /// Whether [`spawn_periodic_check`]'s loop should keep going. Extracted to a pure function so the
 /// STOP condition — the second half of this correction, sitting right next to the "never checked
 /// again" bug — is provable in `cargo test` without spawning a thread or a real updater: once an
@@ -117,7 +176,9 @@ fn should_stop_checking(update_state: &UpdateState) -> bool {
 /// boot. Stops for good once [`should_stop_checking`] says an install is pending a restart; a fresh
 /// process (the one the operator restarts into) starts this loop over from a clean [`UpdateState`].
 /// Failures are logged and swallowed either way — an unreachable update endpoint must never cost the
-/// app, and must never break the loop either.
+/// app, and must never break the loop either. Goes through [`attempt_check`], same as
+/// [`spawn_focus_check`], so a tick landing while a focus-triggered check is already running is a
+/// skipped no-op rather than a second concurrent download.
 pub fn spawn_periodic_check(handle: AppHandle, data_dir: PathBuf, update_state: Arc<UpdateState>) {
     if cfg!(debug_assertions) {
         return;
@@ -125,11 +186,7 @@ pub fn spawn_periodic_check(handle: AppHandle, data_dir: PathBuf, update_state: 
     std::thread::spawn(move || {
         std::thread::sleep(SETTLE_DELAY);
         loop {
-            tauri::async_runtime::block_on(async {
-                if let Err(e) = run_check(&handle, &data_dir, &update_state).await {
-                    log::warn!("[updater] check failed (non-fatal): {e}");
-                }
-            });
+            tauri::async_runtime::block_on(attempt_check(&handle, &data_dir, &update_state));
             if should_stop_checking(&update_state) {
                 log::info!(
                     "[updater] update installed and pending restart — stopping periodic checks"
@@ -139,6 +196,55 @@ pub fn spawn_periodic_check(handle: AppHandle, data_dir: PathBuf, update_state: 
             std::thread::sleep(CHECK_INTERVAL);
         }
     });
+}
+
+/// Fired from `lib.rs` on `WindowEvent::Focused(true)` for the `main` window. Debug builds never
+/// check (same gate as [`spawn_periodic_check`]); otherwise the decision is [`should_check_on_focus`]
+/// — a debounced, pure read of [`UpdateState`] — and only a `true` spawns a thread at all, so a
+/// debounced-out focus event costs nothing beyond that read. The spawned thread still goes through
+/// [`attempt_check`]'s reentrancy guard: if the periodic loop is mid-check when focus lands (or two
+/// focus events raced past the debounce check itself), the second one is a logged no-op, not a second
+/// download stacked on the first.
+pub fn spawn_focus_check(handle: AppHandle, data_dir: PathBuf, update_state: Arc<UpdateState>) {
+    if cfg!(debug_assertions) {
+        return;
+    }
+    let due = should_check_on_focus(
+        update_state.last_check(),
+        Instant::now(),
+        update_state.pending().is_some(),
+    );
+    if !due {
+        return;
+    }
+    std::thread::spawn(move || {
+        tauri::async_runtime::block_on(attempt_check(&handle, &data_dir, &update_state));
+    });
+}
+
+/// Single entry point [`spawn_periodic_check`] and [`spawn_focus_check`] both go through — never call
+/// [`run_check`] directly from either. `AtomicBool::compare_exchange` is enough (no `Mutex<()>`
+/// critical section needed): both callers attempt at most once per tick/event and neither blocks
+/// waiting on the other — losing the race just means "someone else is already checking, skip this
+/// one", not a corrupted count or a queued retry. Records [`UpdateState::record_check`]
+/// unconditionally once the guard is won, before the network call — the debounce in
+/// [`should_check_on_focus`] cares about "we just tried", not about what that try found, and an
+/// endpoint hanging for seconds must not leave the debounce window looking stale to a focus event
+/// that lands mid-request.
+async fn attempt_check(handle: &AppHandle, data_dir: &Path, update_state: &UpdateState) {
+    if update_state
+        .in_progress
+        .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+        .is_err()
+    {
+        log::info!("[updater] a check is already running — skipping (periodic/focus overlap)");
+        return;
+    }
+    update_state.record_check();
+    if let Err(e) = run_check(handle, data_dir, update_state).await {
+        log::warn!("[updater] check failed (non-fatal): {e}");
+    }
+    update_state.in_progress.store(false, Ordering::Release);
 }
 
 /// One complete check. Every branch logs, per the module doc's "Logging" section above — the trail
@@ -193,8 +299,15 @@ async fn run_check(
 mod tests {
     use super::*;
 
-    fn scratch() -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("codm-updater-test-{}", std::process::id()));
+    /// `name` is a per-test discriminator, not decoration: `cargo test` runs these in parallel
+    /// threads WITHIN the same process, so keying only on `std::process::id()` (the original shape)
+    /// let `env_wins_over_file_and_default`, `file_wins_over_default_and_is_trimmed`, and
+    /// `default_is_stable_when_nothing_opted_in` — three tests that all write `update-channel` with
+    /// different content into what was the SAME directory — race each other into a flaky red. Each
+    /// caller passes its own test name so every test gets an isolated directory regardless of
+    /// scheduling.
+    fn scratch(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("codm-updater-test-{}-{name}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir
@@ -202,21 +315,21 @@ mod tests {
 
     #[test]
     fn env_wins_over_file_and_default() {
-        let dir = scratch();
+        let dir = scratch("env_wins_over_file_and_default");
         std::fs::write(dir.join("update-channel"), "beta\n").unwrap();
         assert_eq!(resolve_channel(Some("stable".into()), &dir), "stable");
     }
 
     #[test]
     fn file_wins_over_default_and_is_trimmed() {
-        let dir = scratch();
+        let dir = scratch("file_wins_over_default_and_is_trimmed");
         std::fs::write(dir.join("update-channel"), "  Beta \n").unwrap();
         assert_eq!(resolve_channel(None, &dir), "beta");
     }
 
     #[test]
     fn default_is_stable_when_nothing_opted_in() {
-        let dir = scratch();
+        let dir = scratch("default_is_stable_when_nothing_opted_in");
         assert_eq!(resolve_channel(None, &dir), "stable");
         // An EMPTY env var must not shadow the file/default chain.
         assert_eq!(resolve_channel(Some("  ".into()), &dir), "stable");
@@ -248,5 +361,59 @@ mod tests {
         assert!(!should_stop_checking(&state));
         state.set_ready("1.4.0".into());
         assert!(should_stop_checking(&state));
+    }
+
+    /// [`UpdateState::last_check`] is what [`should_check_on_focus`] reads for the debounce —
+    /// `None` before [`attempt_check`] has ever run, per-process just like `pending`.
+    #[test]
+    fn last_check_is_none_before_any_attempt() {
+        let state = UpdateState::default();
+        assert_eq!(state.last_check(), None);
+    }
+
+    /// The write [`attempt_check`] performs before calling [`run_check`] — proven directly, same
+    /// discipline as `set_ready_makes_pending_return_the_installed_version` above.
+    #[test]
+    fn record_check_makes_last_check_return_a_recent_instant() {
+        let state = UpdateState::default();
+        let before = Instant::now();
+        state.record_check();
+        let after = Instant::now();
+        let recorded = state.last_check().expect("just recorded");
+        assert!(recorded >= before && recorded <= after);
+    }
+
+    /// FOCO — dentro da janela de debounce: um foco que chega logo depois de outra checagem não deve
+    /// disparar uma nova.
+    #[test]
+    fn focus_check_is_not_due_within_the_debounce_window() {
+        let now = Instant::now();
+        let last_check = now - Duration::from_secs(60); // 1 minute ago, well under FOCUS_DEBOUNCE
+        assert!(!should_check_on_focus(Some(last_check), now, false));
+    }
+
+    /// FOCO — fora da janela de debounce: um foco que chega depois de FOCUS_DEBOUNCE deve disparar.
+    #[test]
+    fn focus_check_is_due_once_the_debounce_window_has_elapsed() {
+        let now = Instant::now();
+        let last_check = now - FOCUS_DEBOUNCE - Duration::from_secs(1);
+        assert!(should_check_on_focus(Some(last_check), now, false));
+    }
+
+    /// FOCO — nunca checou neste processo ainda: conta como "devido", não como "acabou de checar".
+    /// Cobre o foco que chega antes do primeiro tick do laço periódico (que espera SETTLE_DELAY).
+    #[test]
+    fn focus_check_is_due_when_nothing_has_been_checked_yet() {
+        assert!(should_check_on_focus(None, Instant::now(), false));
+    }
+
+    /// FOCO — com update pendente: nunca dispara, mesmo que a última checagem tenha sido há muito
+    /// tempo (ou nunca tenha existido) — não há nada a procurar além de restart.
+    #[test]
+    fn focus_check_is_never_due_when_an_update_is_already_pending() {
+        let now = Instant::now();
+        let long_ago = now - FOCUS_DEBOUNCE * 10;
+        assert!(!should_check_on_focus(Some(long_ago), now, true));
+        assert!(!should_check_on_focus(None, now, true));
     }
 }

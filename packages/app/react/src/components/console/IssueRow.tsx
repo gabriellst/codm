@@ -3,6 +3,7 @@ import { IconAsterisk, IconChevronRight } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import type { IssueStatus } from '@codm/client-typescript/typescript'
 import { cn } from '@/lib/utils'
+import { row } from '@/components/ui/surfaces'
 import { Dot } from './StatusDot'
 import { ThreadAvatar } from './ThreadAvatar'
 import { issueStatusDot } from './glyphs'
@@ -27,10 +28,7 @@ export function IssueRow({ item, className }: { item: IssueRowItem } & Pick<Comp
 		<Link
 			to="/threads/$threadId/issues/$issueId"
 			params={{ threadId: item.threadId, issueId: item.issueId }}
-			className={cn(
-				'flex items-center gap-2 rounded-asymmetric-lg border border-border bg-background p-3.5 transition-colors hover:bg-muted',
-				className,
-			)}
+			className={cn('group flex items-center gap-2 rounded-asymmetric-lg bg-background p-3.5', row, className)}
 		>
 			<span className="flex w-5 shrink-0 justify-center text-muted-foreground">
 				{item.status === 'NEEDS_INPUT' ? <IconAsterisk className="size-4" /> : <Dot className={issueStatusDot[item.status]} />}
@@ -65,7 +63,7 @@ export function IssueRow({ item, className }: { item: IssueRowItem } & Pick<Comp
 					{item.meta}
 				</span>
 			)}
-			<IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
+			<IconChevronRight className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
 		</Link>
 	)
 }

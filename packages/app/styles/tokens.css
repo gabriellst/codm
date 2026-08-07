@@ -69,7 +69,11 @@
 	   chip/avatar/icon "on" surface at the SAME hex, #EAF6D3 (36× — the single most-used color
 	   in the reference after the neutrals). --secondary-foreground pairs with it with zero
 	   exceptions across the whole reference (chips, avatars, task pills, the archive toggle) at
-	   #3D660A — which is ALSO the measured `a{color:...}` link color, so it doubles as that. */
+	   #3D660A — which is ALSO the measured `a{color:...}` link color, so it doubles as that.
+
+	   THIS IS ALSO THE SYSTEM'S SELECTED/ACTIVE-SURFACE TOKEN — the "Interaction states" table
+	   under "Lines & interaction" below documents it alongside --hover/--hover-accent as one family;
+	   it stays declared here (not moved) because it doubles as a plain neutral-surface color too. */
 	--secondary: oklch(0.955 0.048 123); /* #EAF6D3 */
 	--secondary-foreground: oklch(0.462 0.123 132); /* #3D660A — also the link color */
 	--muted: oklch(0.958 0 0); /* #f1f1f1 — soft badge bg / hover. UNCHANGED: "paused/idle" chips measure plain grey (#f2f2f2), not green — muted stays the truly-off neutral. */
@@ -110,8 +114,58 @@
 	--info: oklch(0.6 0.13 250);
 	--info-foreground: oklch(0.99 0 0);
 
-	/* ── Lines & interaction ─────────────────────────── */
-	--border: oklch(0.94 0 0); /* #ebebeb — section divider hairline. UNCHANGED — measured identically in the reference (border-bottom:1px solid #ebebeb). */
+	/* ── Interaction states (lines, hover, selected) ───────────────────────────
+	   D2 CORRECTION, founder-confirmed — this block used to carry a comment on --hover claiming
+	   "generic list/nav hovers measure plain grey ... not green", stated as a blanket rule. That
+	   comment was WRONG and is exactly the recurring bug: components kept reaching for a single
+	   grey `--hover` (or worse, ad-hoc `hover:bg-muted`/`hover:bg-accent` picked per screen) for
+	   rows the reference measures as green, so the mismatch kept coming back in different
+	   components instead of getting fixed once. Re-measured from every `style-hover=` in
+	   `.design-ref-app.html` across all 7 screens — one token per ROLE, not per screen or guess:
+
+	     ROLE                                    TOKEN                    VALUE    MEASURED AT
+	     ──────────────────────────────────────  ──────────────────────  -------  ─────────────────────────────
+	     neutral hover (plain/utility rows)       --hover                 #f4f4f4  nav rail item, thread-list row,
+	                                                                                recent-activity row, dropdown/
+	                                                                                select/table row, modal pick row
+	                                                                                (participant toggle, channel pick)
+	     content-row hover surface (brand)        --hover-accent          #F7FBEF  workspace row, channel row, issue
+	                                                                                row, agent-session row
+	     content-row hover border (brand)         --hover-accent-border   #d8ecb4  same rows' border-color — pairs
+	                                                                                1:1 with --hover-accent, never
+	                                                                                used alone
+	     selected / active surface                --secondary (above)     #EAF6D3  active nav pill, chips, avatar/
+	                                                                                icon "on" fill; also what
+	                                                                                icon-only buttons hover TO
+	                                                                                (button.tsx ghost+icon compound)
+	     text on selected surface                 --secondary-foreground  #3D660A  pairs with --secondary with zero
+	                                                                                exceptions in the reference
+	     border at rest (section/row hairline)     --border (below)        #ebebeb  row/section dividers
+	     border at rest (control outline)          --input (below)         #dcdcdc  toggle track, outline-button
+	                                                                                border, dashed callout border
+	     focus ring                                --ring (below)          derived  no rendered :focus-visible
+	                                                                                state in the static reference
+
+	   `--hover` and `--hover-accent` are two DIFFERENT tokens on purpose, not one shade reused at
+	   two opacities — they measure to genuinely different hues (neutral grey vs. brand-tinted
+	   green) and a component picks its row by ROLE ("is this a plain utility row (menu/table/
+	   sidebar), or a piece of primary list content (workspace/channel/issue/session)?"), never by
+	   eyeballing an opacity. `--hover-accent` always pairs with `--hover-accent-border` — a content
+	   row's background and border move together on hover (never bg alone), so treat the pair as one
+	   unit. `components/ui/surfaces.ts` composes both roles into ready Tailwind presets (`trigger`
+	   for --hover, `row` for --hover-accent/--hover-accent-border) — reach for those instead of
+	   hand-rolling `hover:bg-*` per component, which is how this drifted in the first place.
+
+	   GROUP CONVENTION for rows that pair background + border + a descendant on hover: put `group`
+	   on the interactive row root. The row's OWN bg/border react via plain `hover:*` (they live on
+	   the group root itself); any DESCENDANT that should echo the row's hover (a trailing chevron,
+	   a secondary icon) reacts via `group-hover:*` instead of its own `hover:`, so the whole row's
+	   affordance moves as one unit. See `IssueRow` for the canonical example. */
+	--hover: oklch(from var(--foreground) l c h / 0.05); /* ≈ #f4f4f4 — neutral hover, see table above */
+	--hover-accent: oklch(0.982 0.016 122); /* #F7FBEF — brand-tinted content-row hover surface */
+	--hover-accent-border: oklch(0.914 0.077 124); /* #d8ecb4 — border companion to --hover-accent */
+	--focus: oklch(from var(--foreground) l c h / 0.08); /* UNCHANGED — same neutral family as --hover */
+	--border: oklch(0.94 0 0); /* #ebebeb — section divider hairline, border at rest. UNCHANGED — measured identically in the reference (border-bottom:1px solid #ebebeb). */
 	--input: oklch(0.894 0 0); /* #dcdcdc — UNCHANGED — the reference's toggle-track "off" state and dashed-outline color measure the same #dcdcdc already. */
 	/* --ring: base swapped from --foreground to --primary. Not a literal measurement (the static
 	   reference has no rendered :focus-visible state), but a direct continuation of what IS
@@ -119,8 +173,6 @@
 	   '#dcdcdc'` on every selectable avatar/checkbox in the reference) — the brand green is the
 	   system's own selection-ring color, so the generic focus ring follows it. DERIVED, not measured. */
 	--ring: oklch(from var(--primary) l c h / 0.35);
-	--hover: oklch(from var(--foreground) l c h / 0.05); /* UNCHANGED — generic list/nav hovers measure plain grey (style-hover="background:#f4f4f4"), not green */
-	--focus: oklch(from var(--foreground) l c h / 0.08); /* UNCHANGED — same reasoning as --hover */
 
 	/* ── Brand alias ──────────────────────────────────── */
 	/* No longer a "kept mono so nothing breaks" shim — --primary IS the brand hex now, so this
@@ -202,6 +254,14 @@
 	--input: oklch(from var(--foreground) l c h / 0.16);
 	--ring: oklch(from var(--primary) l c h / 0.4);
 	--hover: oklch(from var(--foreground) l c h / 0.08);
+	/* --hover-accent/--hover-accent-border — DERIVED, not measured (no dark screens in the
+	   reference), same rule as --secondary/--accent above: keep the ~130-133° hue family, move
+	   lightness to work on a near-black canvas. --hover-accent sits one step above --card (the
+	   dark mirror of "one step off white" in light mode); --hover-accent-border is brighter still,
+	   the same relationship light mode's #F7FBEF/#d8ecb4 pair has (border reads clearly darker/
+	   more saturated than its surface). */
+	--hover-accent: oklch(0.24 0.03 133);
+	--hover-accent-border: oklch(0.38 0.08 133);
 	--focus: oklch(from var(--foreground) l c h / 0.12);
 
 	--chart-1: oklch(0.97 0 0);

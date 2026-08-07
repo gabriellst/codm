@@ -7,6 +7,7 @@ import { getHomeDashboardQueryKey, useGetHomeDashboard } from '@codm/client-type
 import type { GetHomeDashboardQueryResponse, ThreadStatus, TranscriptKind } from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { alertActionButton, alertSurface, row } from '@/components/ui/surfaces'
 import { cn } from '@/lib/utils'
 import { formatDurationSeconds } from '@/lib/format'
 import { enumLabel } from '@/lib'
@@ -84,7 +85,12 @@ function NeedsYouCallout({ needsYou }: { needsYou: NonNullable<Dashboard['needsY
 	const { t } = useTranslation()
 	const detail = needsYou.stopKinds.map(k => enumLabel('StopKind', k)).join(' · ')
 	return (
-		<div className="animate-in fade-in slide-in-from-bottom-1 relative flex items-center gap-3.5 rounded-asymmetric-xl bg-foreground px-5 py-4 text-background duration-300">
+		<div
+			className={cn(
+				'animate-in fade-in slide-in-from-bottom-1 relative flex items-center gap-3.5 rounded-asymmetric-xl px-5 py-4 duration-300',
+				alertSurface,
+			)}
+		>
 			<Dot className="size-2.5 shrink-0 animate-pulse bg-success-bright" />
 			<div className="flex min-w-0 flex-1 flex-col">
 				<span className="text-[15.5px] font-extrabold">{t('dashboard.needsYouName', { name: needsYou.threadDisplayName })}</span>
@@ -95,7 +101,7 @@ function NeedsYouCallout({ needsYou }: { needsYou: NonNullable<Dashboard['needsY
 				size="sm"
 				nativeButton={false}
 				render={<Link to="/threads/$threadId" params={{ threadId: needsYou.threadId }} />}
-				className="shrink-0 bg-success-bright text-success-bright-foreground hover:bg-success-bright/90"
+				className={cn('shrink-0', alertActionButton)}
 			>
 				{t('dashboard.resolve')}
 			</Button>
@@ -188,7 +194,7 @@ function ActiveSessionRow({ session }: { session: Dashboard['activeSessions'][nu
 		<Link
 			to="/threads/$threadId"
 			params={{ threadId: session.threadId }}
-			className="flex items-center gap-3.5 rounded-asymmetric-lg border border-border p-3.5 transition-colors hover:border-secondary hover:bg-accent"
+			className={cn('group flex items-center gap-3.5 rounded-asymmetric-lg p-3.5', row)}
 		>
 			<ThreadAvatar name={session.displayName} channelKind={session.channelKind} size="lg" />
 			<div className="flex min-w-0 flex-1 flex-col gap-0.5">
