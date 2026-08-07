@@ -92,12 +92,13 @@ jobs:
 
         run: cd packages/app/tauri && nice -n 10 bun x tauri build
 
+      # Caminhos derivados de $CARGO_TARGET_DIR — ver o comentário em release-beta.yml.
       - name: stage
         run: |
           mkdir -p dist-release
-          cp packages/app/tauri/src-tauri/target/release/bundle/macos/*.app.tar.gz dist-release/codm-aarch64.app.tar.gz
-          cp packages/app/tauri/src-tauri/target/release/bundle/macos/*.app.tar.gz.sig dist-release/codm-aarch64.app.tar.gz.sig
-          cp packages/app/tauri/src-tauri/target/release/bundle/dmg/*.dmg dist-release/codm-aarch64.dmg
+          cp "$CARGO_TARGET_DIR"/release/bundle/macos/*.app.tar.gz dist-release/codm-aarch64.app.tar.gz
+          cp "$CARGO_TARGET_DIR"/release/bundle/macos/*.app.tar.gz.sig dist-release/codm-aarch64.app.tar.gz.sig
+          cp "$CARGO_TARGET_DIR"/release/bundle/dmg/*.dmg dist-release/codm-aarch64.dmg
 
       - name: manifest
         run: >

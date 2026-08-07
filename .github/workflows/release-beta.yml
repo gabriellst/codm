@@ -120,12 +120,16 @@ jobs:
         run: cd packages/app/tauri && nice -n 10 bun x tauri build --config "{\"version\":\"${{ steps.v.outputs.version }}\"}"
 
       # Nomes FIXOS de asset — a URL do manifest não muda entre versões (config/updater.ts).
+      # Os caminhos derivam de $CARGO_TARGET_DIR (definido lá em cima), nunca do antigo
+      # `src-tauri/target` fixo: quem decide onde o cargo escreve é aquela variável, e um caminho
+      # repetido aqui volta a divergir dela no dia em que ela mudar — foi exatamente o que
+      # aconteceu ao movê-la, com o `tauri build` verde e o `stage` falhando logo depois.
       - name: stage
         run: |
           mkdir -p dist-release
-          cp packages/app/tauri/src-tauri/target/release/bundle/macos/*.app.tar.gz dist-release/codm-aarch64.app.tar.gz
-          cp packages/app/tauri/src-tauri/target/release/bundle/macos/*.app.tar.gz.sig dist-release/codm-aarch64.app.tar.gz.sig
-          cp packages/app/tauri/src-tauri/target/release/bundle/dmg/*.dmg dist-release/codm-aarch64.dmg
+          cp "$CARGO_TARGET_DIR"/release/bundle/macos/*.app.tar.gz dist-release/codm-aarch64.app.tar.gz
+          cp "$CARGO_TARGET_DIR"/release/bundle/macos/*.app.tar.gz.sig dist-release/codm-aarch64.app.tar.gz.sig
+          cp "$CARGO_TARGET_DIR"/release/bundle/dmg/*.dmg dist-release/codm-aarch64.dmg
 
       - name: manifest
         run: >
