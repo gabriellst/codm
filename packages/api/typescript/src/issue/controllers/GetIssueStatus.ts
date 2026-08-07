@@ -1,9 +1,8 @@
 import { injectable } from 'tsyringe-neo'
-import { BaseError, Controller, HttpStatusCode, z } from '@codm/core-typescript'
+import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 import { IssueStatus, McpScope } from '@codm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
-import { IssueRepository } from '../repositories/IssueRepository'
-import type { IssueApplicationErrors } from '../errors'
+import { GetIssueStatus, GetIssueStatusOutputSchema } from '../usecases/GetIssueStatus'
 
 export const GetIssueStatusControllerInputSchema = z
 	.object({
@@ -17,23 +16,15 @@ export const GetIssueStatusControllerInputSchema = z
 		},
 	])
 
-export const GetIssueStatusControllerOutputSchema = z
-	.object({
-		issueId: z.uuid(),
-		key: z.string(),
-		title: z.string(),
-		status: z.enum(IssueStatus),
-		archived: z.boolean(),
-	})
-	.example([
-		{
-			issueId: '019e4d24-6524-7041-9e1c-8108180cddaf',
-			key: 'dark-mode-toggle',
-			title: 'põe um toggle de dark mode',
-			status: IssueStatus.WORKING,
-			archived: false,
-		},
-	])
+export const GetIssueStatusControllerOutputSchema = GetIssueStatusOutputSchema.example([
+	{
+		issueId: '019e4d24-6524-7041-9e1c-8108180cddaf',
+		key: 'dark-mode-toggle',
+		title: 'põe um toggle de dark mode',
+		status: IssueStatus.WORKING,
+		archived: false,
+	},
+])
 
 /**
  * `GetIssueStatus` — "how is that issue doing?", the read the orchestrator makes mid-conversation.
@@ -46,9 +37,9 @@ export const GetIssueStatusControllerOutputSchema = z
  * reads messages written by strangers in a group.
  *
  * Putting `threadId` in the path restores half of it for free (the comparison DOES confine `threadId`,
- * which the identity always carries), and the ownership check below closes the other half: a caller
- * that supplies its OWN threadId with SOMEBODY ELSE'S issueId passes the comparison and must be
- * stopped here.
+ * which the identity always carries), and the ownership check inside `GetIssueStatus` (the use case)
+ * closes the other half: a caller that supplies its OWN threadId with SOMEBODY ELSE'S issueId passes
+ * the comparison and must be stopped there.
  * That pairing — a claim-confined path segment plus an explicit ownership assertion — is the shape
  * §7.2.1 requires of every `orchestration` tool that accepts an `issueId`.
  *
@@ -70,30 +61,16 @@ export class GetIssueStatusController extends Controller<
 	readonly outputSchema = GetIssueStatusControllerOutputSchema
 	override middlewares = [OperatorMiddleware]
 
-	constructor(private readonly issues: IssueRepository) {
+	constructor(private readonly query: GetIssueStatus) {
 		super()
 	}
 
 	async handle(request: this['input']): Promise<this['output']> {
-		const issue = await this.issues.findById(request.params.issueId)
-
-		// T2f — THREAD OWNERSHIP. The two failures are deliberately indistinguishable: a caller asking
-		// about an issue of another thread learns exactly what a caller asking about a nonexistent one
-		// learns, which is that it is not theirs. Answering "exists, but not yours" would turn this read
-		// into an oracle for issue ids.
-		if (!issue || issue.threadId !== request.params.threadId) {
-			throw new BaseError<IssueApplicationErrors>('ISSUE_NOT_FOUND', 'no such issue on this thread')
-		}
-
-		return {
-			status: HttpStatusCode.OK,
-			data: {
-				issueId: issue.id.value,
-				key: issue.key,
-				title: issue.title,
-				status: issue.status,
-				archived: issue.archived,
-			},
-		}
+		const data = await this.query.execute({
+			ownerId: request.ctx.ownerId,
+			threadId: request.params.threadId,
+			issueId: request.params.issueId,
+		})
+		return { status: HttpStatusCode.OK, data }
 	}
 }

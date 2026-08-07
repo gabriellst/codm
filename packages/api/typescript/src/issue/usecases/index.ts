@@ -11,4 +11,5 @@ export {
 export { GetIssuesOverview, GetIssuesOverviewInputSchema, GetIssuesOverviewOutputSchema } from './GetIssuesOverview'
 export { GetSessionIssues, GetSessionIssuesInputSchema, GetSessionIssuesOutputSchema } from './GetSessionIssues'
 export { GetIssueDetail, GetIssueDetailInputSchema, GetIssueDetailOutputSchema } from './GetIssueDetail'
+export { GetIssueStatus, GetIssueStatusInputSchema, GetIssueStatusOutputSchema } from './GetIssueStatus'
 export * from './ReopenIssue'

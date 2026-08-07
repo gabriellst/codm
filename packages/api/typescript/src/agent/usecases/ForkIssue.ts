@@ -1,17 +1,19 @@
 import { injectable } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
-import { Handler, z } from '@codm/core-typescript'
+import { Handler, z, BaseError } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind, ProviderKind } from '@codm/contracts-typescript/wire/enums'
+import { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
 import { uniqueSlugKey } from '@shared/services'
 import { OpenIssuesReader } from '@thread/services'
+import { ThreadRepository } from '@thread/repositories'
 import { MailboxRepository } from '../repositories'
 import { IssueForkedEvent } from '../events/IssueForkedEvent'
+import type { AgentApplicationErrors, AgentInterfaceErrors } from '../errors'
 
 export const ForkIssueInputSchema = z.object({
 	ownerId: z.uuid(),
 	threadId: z.uuid(),
-	/** The operator's ask, in their words (§7.2 — `{ goal }` is all the tool takes from the model). */
+	/** What the operator asked for, in their words (§7.2 — `{ goal }` is all the tool takes from the model). */
 	goal: z.string().trim().min(1).max(2000),
 	/**
 	 * The transcript entry that asked. INJECTED from the run token's claims, never an argument the
@@ -20,8 +22,10 @@ export const ForkIssueInputSchema = z.object({
 	 * wrote it about.
 	 */
 	originEntryId: z.uuid(),
-	/** The CLI that will work it — the thread's choice, not the model's. */
-	provider: z.enum(ProviderKind),
+	// NO `provider` FIELD. It used to arrive on the wire — the controller resolved it via
+	// `ThreadRepository` and forwarded it. import-direction#R1 moved that repository lookup HERE
+	// (controllers never touch repositories), so `handle()` now resolves it itself from `threadId`
+	// instead of trusting a caller-supplied value.
 })
 
 export const ForkIssueOutputSchema = z.object({ issueId: z.uuid(), key: z.string() })
@@ -56,6 +60,14 @@ export const ForkIssueOutputSchema = z.object({ issueId: z.uuid(), key: z.string
  * is read by a human in a chat message. `OpenIssuesReader` is the read seam this context already uses
  * for exactly this — the same one `IssueRouter` slugs against today — which is why no new dependency
  * appears here.
+ *
+ * ### Why the thread + provider lookup lives HERE (moved from `ForkIssueController`, import-direction#R1)
+ * `ThreadRepository` was injected in the controller only to answer two questions the use case needs
+ * anyway before it can act: "does this thread still exist" and "which CLI does it run". Both gate what
+ * `handle()` does next (the mailbox payload and the event both carry `provider`), so the read belongs
+ * on this side of the HTTP boundary — the controller's job is validating the request shape and calling
+ * a use case, not resolving domain state. `agent → thread` is already the documented partnership edge
+ * (`context-map.ts`) other use cases in this context read through (`GetOpenStops`, `RunOrchestratorTurn`).
  */
 @injectable()
 export class ForkIssue extends Handler<typeof ForkIssueInputSchema, typeof ForkIssueOutputSchema> {
@@ -64,6 +76,7 @@ export class ForkIssue extends Handler<typeof ForkIssueInputSchema, typeof ForkI
 	readonly outputSchema = ForkIssueOutputSchema
 
 	constructor(
+		private readonly threads: ThreadRepository,
 		private readonly openIssues: OpenIssuesReader,
 		private readonly mailbox: MailboxRepository,
 	) {
@@ -71,6 +84,15 @@ export class ForkIssue extends Handler<typeof ForkIssueInputSchema, typeof ForkI
 	}
 
 	protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
+		// A thread that vanished between minting and this call. Reported as a SCOPE failure rather than a
+		// new error code: the run is confined to a thread that no longer resolves, so the call is out of
+		// scope in the most literal sense.
+		const thread = await this.threads.findById(input.threadId)
+		if (!thread) throw new BaseError<AgentInterfaceErrors>('AGENT_RUN_SCOPE_MISMATCH', 'the thread this run is scoped to no longer exists')
+
+		const provider = thread.providers[0]
+		if (!provider) throw new BaseError<AgentApplicationErrors>('PROVIDER_NOT_DETECTED', 'this thread has no provider bound')
+
 		const issueId = uuidv7()
 		// The title IS the goal, truncated: the operator described the work in words and there is no
 		// second field to invent one from. The key stays short because a human reads it in a chat
@@ -98,7 +120,7 @@ export class ForkIssue extends Handler<typeof ForkIssueInputSchema, typeof ForkI
 						key,
 						title,
 						goal: input.goal,
-						provider: input.provider,
+						provider,
 						originEntryId: input.originEntryId,
 					},
 					// The issue can be forked exactly once, so its own id IS the idempotency key. A redelivered
@@ -118,7 +140,7 @@ export class ForkIssue extends Handler<typeof ForkIssueInputSchema, typeof ForkI
 						title,
 						goal: input.goal,
 						originEntryId: input.originEntryId,
-						provider: input.provider,
+						provider,
 					},
 				}),
 				tx,
