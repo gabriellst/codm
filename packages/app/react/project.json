@@ -51,7 +51,7 @@
 				}
 			],
 			"options": {
-				"command": "vite --host",
+				"command": "CODM_DEV_OVERLAYS=true vite --host",
 				"cwd": "packages/app/react"
 			}
 		},
@@ -65,7 +65,7 @@
 				}
 			],
 			"options": {
-				"command": "PORT= CODM_DESKTOP=true CODM_DESKTOP_DEV=true vite --host",
+				"command": "CODM_DEV_OVERLAYS=true PORT= CODM_DESKTOP=true CODM_DESKTOP_DEV=true vite --host",
 				"cwd": "packages/app/react"
 			}
 		},

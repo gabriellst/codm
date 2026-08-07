@@ -19,7 +19,14 @@ const desktop = process.env.CODM_DESKTOP === 'true'
 const desktopDev = process.env.CODM_DESKTOP_DEV === 'true'
 const nitroOn = !desktop || desktopDev
 
+// Overlays de desenvolvimento (devtools do Router/Query): flag EXPLÍCITA, pelo mesmo motivo que
+// `desktopDev` acima não deriva de `command` — e por um motivo a mais, medido em 2026-08-07:
+// `import.meta.env.DEV` é TRUE no `build-spa` (o app EMPACOTADO exibia os dois overlays), então
+// gatear por ele é gatear por uma mentira. Os alvos de dev declaram a flag; o build não.
+const devOverlays = process.env.CODM_DEV_OVERLAYS === 'true'
+
 export default defineConfig({
+	define: { __DEV_OVERLAYS__: JSON.stringify(devOverlays) },
 	base: desktop ? '/' : '/app/',
 	envDir: '..',
 	plugins: [

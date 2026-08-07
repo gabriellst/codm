@@ -54,6 +54,10 @@ jobs:
 
       - name: tauri build
         env:
+          # O console é compilado DENTRO do tauri build (beforeBuildCommand) e o Vite resolve
+          # VITE_* no BUILD: sem isto o app empacotado nasce apontando o daemon local e o login
+          # abre localhost:3030 (medido na v0.1.3). Repo variable, não secret — é URL pública.
+          VITE_CODM_CLOUD_URL: ${{ vars.CODM_CLOUD_URL }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           # Chave gerada com --ci = senha vazia; sem esta linha o build tenta abrir um prompt de
           # senha num runner sem TTY e morre com "Device not configured" (medido localmente).
