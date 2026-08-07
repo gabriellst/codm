@@ -23,6 +23,7 @@ import { resolve } from 'node:path'
 import { REPO } from '../../../../template.config'
 import { CONSOLE, DISPLAY_NAME, IDENTIFIER } from './app'
 import { CAPABILITIES, CAPABILITY_PERMISSIONS } from './capabilities'
+import { ANALYTICS } from './analytics'
 import { CLOUD } from './cloud'
 import { DEEPLINK } from './deeplink'
 import { SIDECARS, type SidecarManifestEntry } from './sidecars'
@@ -90,11 +91,15 @@ export function renderTauriConf(): string {
 		// revogar no logout. Sem esta origem o webview bloqueia a requisição antes de sair (ver
 		// ./cloud.ts — foi o que quebrou o login até a v0.1.8).
 		.concat(CLOUD.origin)
+		// O PostHog entra na MESMA lista pela MESMA razão (ver ./analytics.ts): telemetria bloqueada
+		// pela CSP falha em silêncio — pior que o login, porque ninguém percebe, os números só ficam
+		// vazios.
+		.concat(ANALYTICS.origin)
 		.join(' ')
 	const conf = {
 		$schema: 'https://schema.tauri.app/config/2',
 		productName: DISPLAY_NAME,
-		version: '0.2.2',
+		version: '0.3.0',
 		identifier: IDENTIFIER,
 		build: {
 			// Desktop dev serves the root-based SPA (dev-spa → base '/'), so the webview loads the

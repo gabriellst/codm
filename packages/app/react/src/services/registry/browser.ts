@@ -7,6 +7,7 @@ import {
 	HostInfoToken,
 	LoggingToken,
 	NotificationToken,
+	AnalyticsToken,
 	SecretsToken,
 	SupervisionToken,
 	UpdateToken,
@@ -18,6 +19,7 @@ import { BrowserFilePickerService } from '../FilePickerService/BrowserFilePicker
 import { BrowserHostInfoService } from '../HostInfoService/BrowserHostInfoService'
 import { BrowserLoggingService } from '../LoggingService/BrowserLoggingService'
 import { BrowserNotificationService } from '../NotificationService/BrowserNotificationService'
+import { AnalyticsServiceImpl } from '../AnalyticsService'
 import { BrowserSecretsService } from '../SecretsService/BrowserSecretsService'
 import { BrowserSupervisionService } from '../SupervisionService/BrowserSupervisionService'
 import { BrowserUpdateService } from '../UpdateService/BrowserUpdateService'
@@ -41,4 +43,5 @@ export default [
 	[CloudSessionToken, BrowserCloudSessionService],
 	[LoggingToken, BrowserLoggingService],
 	[UpdateToken, BrowserUpdateService],
+	[AnalyticsToken, AnalyticsServiceImpl],
 ] as const satisfies Bindings

@@ -4,8 +4,10 @@ import { Toaster } from '@/components/ui/sonner'
 import { AppChrome } from '@/components/console/AppChrome'
 import { RouteError } from '@/components/RouteError'
 import { SupervisionGate } from '@/components/console/SupervisionGate'
+import { useAnalyticsConsent, useAnalyticsPageview } from '@/hooks'
 import { ServicesProvider } from '@/services'
 import { useDeepLinkAuth } from '@/routes/(app)/-hooks/useDeepLinkAuth'
+import { useAnalyticsIdentity } from '@/routes/(app)/-hooks/useAnalyticsIdentity'
 import { type QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from '@tanstack/react-router'
 import { lazy, Suspense, type ReactNode } from 'react'
@@ -76,6 +78,11 @@ function RootComponent() {
 						    away and unmounted. Root-level, and OUTSIDE SupervisionGate on purpose, so the
 						    subscription itself is never gated behind the daemon's own readiness check. */}
 						<DeepLinkAuthListener />
+						{/* SP4 — product telemetry (PostHog). Root-level like DeepLinkAuthListener: pageviews
+						    and consent are process-wide (every route, not just (app)), and identify() has to
+						    react to the SAME status CloudSessionGate/useDeepLinkAuth flip from whichever
+						    screen is showing. */}
+						<PostHogListener />
 						{/* Supervision decides whether the console's server work can succeed AT ALL: with the
 						    daemon down every request is doomed (it is the origin of all of them, the gateway's
 						    proxied ones included), so they get paused rather than fired, failed and retried.
@@ -102,5 +109,15 @@ function RootComponent() {
  *  itself (whose own render body sits above that context boundary). Renders nothing. */
 function DeepLinkAuthListener() {
 	useDeepLinkAuth()
+	return null
+}
+
+/** Thin mount point, same reasoning as `DeepLinkAuthListener` — all three PostHog hooks resolve
+ *  `useAnalytics()` from the DI container, so they can only run inside `ServicesProvider`. One
+ *  component so the three root-level effects are visibly a single concern in the tree. */
+function PostHogListener() {
+	useAnalyticsPageview()
+	useAnalyticsConsent()
+	useAnalyticsIdentity()
 	return null
 }

@@ -1,7 +1,9 @@
+import { useEffect } from 'react'
 import type { ComponentProps } from 'react'
 import { useGetSetupChecklist } from '@codm/client-typescript/typescript'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { useAnalytics } from '@/services'
 import { SetupChecklist } from '../SetupChecklist'
 import { HomeDashboard } from '../HomeDashboard'
 
@@ -12,6 +14,20 @@ import { HomeDashboard } from '../HomeDashboard'
  */
 export function HomeSection({ className, ...props }: ComponentProps<'div'>) {
 	const { data, isLoading } = useGetSetupChecklist()
+	const analytics = useAnalytics()
+
+	// SP4 — the activation funnel "for free": no bespoke "onboarding step completed" event, just
+	// the SAME checklist this section already reads folded onto the identified person as
+	// properties. Re-running on every resolve is fine — `setPersonProperties` is a merge/set, not
+	// an event, so it is idempotent.
+	useEffect(() => {
+		if (!data) return
+		analytics.setPersonProperties({
+			channelDone: data.channelDone,
+			workspaceDone: data.workspaceDone,
+			threadDone: data.threadDone,
+		})
+	}, [data, analytics])
 
 	if (isLoading || !data) {
 		return (

@@ -7,6 +7,7 @@ import {
 	HostInfoToken,
 	LoggingToken,
 	NotificationToken,
+	AnalyticsToken,
 	SecretsToken,
 	SupervisionToken,
 	UpdateToken,
@@ -18,6 +19,7 @@ import type { FilePickerService } from '../FilePickerService/FilePickerService'
 import type { HostInfoService, NativePlatform } from '../HostInfoService/HostInfoService'
 import type { LoggingService } from '../LoggingService/LoggingService'
 import type { NotificationService } from '../NotificationService/NotificationService'
+import type { AnalyticsService } from '../AnalyticsService/AnalyticsService'
 import type { SecretsService } from '../SecretsService/SecretsService'
 import type { SupervisionService, SupervisionState } from '../SupervisionService/SupervisionService'
 import type { UpdateService } from '../UpdateService/UpdateService'
@@ -197,6 +199,42 @@ export class FakeUpdateService implements UpdateService {
 	}
 }
 
+/** Records every call instead of touching the real `posthog-js` singleton — the seam that makes
+ *  opt-out (and identify/reset/pageview wiring) testable without a network boundary to mock. */
+export class FakeAnalyticsService implements AnalyticsService {
+	readonly identified: Array<{ userId: string; properties?: Record<string, unknown> }> = []
+	resets = 0
+	readonly personProperties: Record<string, unknown>[] = []
+	readonly pageviews: string[] = []
+	/** Mirrors posthog-js's own default (opted IN) — flips via `optIn`/`optOut`, the same verbs the
+	 *  Settings toggle and `useAnalyticsConsent` call on the real service. */
+	optedOut = false
+
+	identify(userId: string, properties?: Record<string, unknown>): void {
+		this.identified.push({ userId, properties })
+	}
+
+	reset(): void {
+		this.resets += 1
+	}
+
+	setPersonProperties(properties: Record<string, unknown>): void {
+		this.personProperties.push(properties)
+	}
+
+	capturePageview(url: string): void {
+		this.pageviews.push(url)
+	}
+
+	optIn(): void {
+		this.optedOut = false
+	}
+
+	optOut(): void {
+		this.optedOut = true
+	}
+}
+
 export default [
 	[FilePickerToken, FakeFilePickerService],
 	[NotificationToken, FakeNotificationService],
@@ -208,4 +246,5 @@ export default [
 	[CloudSessionToken, FakeCloudSessionService],
 	[LoggingToken, FakeLoggingService],
 	[UpdateToken, FakeUpdateService],
+	[AnalyticsToken, FakeAnalyticsService],
 ] as const satisfies Bindings

@@ -684,6 +684,9 @@
 		"rescanProviders": "Rescan",
 		"stopCriteria": "Stop criteria",
 		"stopCriteriaDescription": "When any of these happen the agent stops, the thread is flagged \"Needs you\", and the stop shows up in the session until you resolve it.",
+		"telemetry": "Telemetry",
+		"telemetryConsentDescription": "Anonymous usage analytics (PostHog) — page views and clicks in this console. Off stops every request immediately.",
+		"telemetryConsentLabel": "Share telemetry",
 		"title": "Settings"
 	},
 	"time": {
