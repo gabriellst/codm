@@ -9,6 +9,7 @@ import {
 	NotificationToken,
 	SecretsToken,
 	SupervisionToken,
+	UpdateToken,
 } from '../tokens'
 import { TauriAutostartService } from '../AutostartService/TauriAutostartService'
 import { TauriBadgeService } from '../BadgeService/TauriBadgeService'
@@ -19,6 +20,7 @@ import { TauriLoggingService } from '../LoggingService/TauriLoggingService'
 import { TauriNotificationService } from '../NotificationService/TauriNotificationService'
 import { TauriSecretsService } from '../SecretsService/TauriSecretsService'
 import { TauriSupervisionService } from '../SupervisionService/TauriSupervisionService'
+import { TauriUpdateService } from '../UpdateService/TauriUpdateService'
 
 /**
  * Tauri composition root — the desktop webview. DECLARATIVE: a record of
@@ -37,4 +39,5 @@ export default [
 	[SupervisionToken, TauriSupervisionService],
 	[CloudSessionToken, TauriCloudSessionService],
 	[LoggingToken, TauriLoggingService],
+	[UpdateToken, TauriUpdateService],
 ] as const satisfies Bindings

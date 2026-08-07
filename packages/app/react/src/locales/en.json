@@ -203,7 +203,11 @@
 			"gatewayDownTitle": "Channel offline",
 			"restart": "Restart"
 		},
-		"threads": "Threads"
+		"threads": "Threads",
+		"update": {
+			"restartTitle": "Restart to update",
+			"version": "Version {{version}}"
+		}
 	},
 	"dashboard": {
 		"activeSessions": "Active sessions",

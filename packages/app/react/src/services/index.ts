@@ -28,6 +28,7 @@ export {
 	useSecrets,
 	useService,
 	useSupervision,
+	useUpdate,
 } from './hooks'
 export { ServicesProvider, useContainer } from './providers/ServicesProvider'
 export {
@@ -40,6 +41,7 @@ export {
 	NotificationToken,
 	SecretsToken,
 	SupervisionToken,
+	UpdateToken,
 } from './tokens'
 
 // Port types — for consumers that need to annotate against a capability contract.
@@ -53,3 +55,4 @@ export type { LoggingService } from './LoggingService/LoggingService'
 export type { NotificationService } from './NotificationService/NotificationService'
 export type { SecretsService } from './SecretsService/SecretsService'
 export type { SupervisedSidecar, SupervisionService, SupervisionState } from './SupervisionService/SupervisionService'
+export type { UpdateService } from './UpdateService/UpdateService'

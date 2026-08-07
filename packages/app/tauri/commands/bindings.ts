@@ -42,6 +42,17 @@ async retryBoot() : Promise<void> {
 },
 async supervisionState() : Promise<SupervisionState> {
     return await TAURI_INVOKE("supervision_state");
+},
+async pendingUpdate() : Promise<string | null> {
+    return await TAURI_INVOKE("pending_update");
+},
+/**
+ * The operator's one action once `pending_update` (or the `UpdateReady` event) says a version is
+ * ready: relaunch into the bits `run_check` already installed. Same primitive as `retry_boot` —
+ * `handle.restart()` — behind a different trigger.
+ */
+async restartForUpdate() : Promise<void> {
+    await TAURI_INVOKE("restart_for_update");
 }
 }
 
@@ -49,9 +60,11 @@ async supervisionState() : Promise<SupervisionState> {
 
 
 export const events = __makeEvents__<{
-supervisionChanged: SupervisionChanged
+supervisionChanged: SupervisionChanged,
+updateReady: UpdateReady
 }>({
-supervisionChanged: "supervision-changed"
+supervisionChanged: "supervision-changed",
+updateReady: "update-ready"
 })
 
 /** user-defined constants **/
@@ -100,6 +113,12 @@ export type SupervisionChanged = { state: SupervisionState }
  * sidecar (spec Decision 6): the daemon is the whole app, the gateway is the channel.
  */
 export type SupervisionState = { kind: "healthy" } | { kind: "degraded"; sidecar: SidecarService } | { kind: "down"; sidecar: SidecarService }
+/**
+ * PUSH half — mirrors `SupervisionChanged`'s shape and purpose: typed end-to-end by tauri-specta,
+ * so the console gets `events.updateReady.listen(...)`, never a stringly `listen('update-ready')`.
+ * Fires (at most) once per run, the moment a background check finishes installing.
+ */
+export type UpdateReady = { version: string }
 
 /** tauri-specta globals **/
 

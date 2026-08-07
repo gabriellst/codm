@@ -9,6 +9,7 @@ import {
 	NotificationToken,
 	SecretsToken,
 	SupervisionToken,
+	UpdateToken,
 } from '../tokens'
 import type { AutostartService } from '../AutostartService/AutostartService'
 import type { BadgeService } from '../BadgeService/BadgeService'
@@ -19,6 +20,7 @@ import type { LoggingService } from '../LoggingService/LoggingService'
 import type { NotificationService } from '../NotificationService/NotificationService'
 import type { SecretsService } from '../SecretsService/SecretsService'
 import type { SupervisionService, SupervisionState } from '../SupervisionService/SupervisionService'
+import type { UpdateService } from '../UpdateService/UpdateService'
 
 /**
  * Test composition root — in-memory fakes, no host present. The frontend analogue
@@ -165,6 +167,36 @@ export class FakeLoggingService implements LoggingService {
 	}
 }
 
+/**
+ * Seeded with the pending version a console would find on mount (the PULL); `emit` drives the
+ * subscriber the way the shell's `UpdateReady` event does (the PUSH) — same split as
+ * `FakeSupervisionService`.
+ */
+export class FakeUpdateService implements UpdateService {
+	readonly listeners = new Set<(version: string) => void>()
+	restarts = 0
+	constructor(private version: string | null = null) {}
+
+	async pending(): Promise<string | null> {
+		return this.version
+	}
+
+	async subscribe(listener: (version: string) => void): Promise<() => void> {
+		this.listeners.add(listener)
+		return () => this.listeners.delete(listener)
+	}
+
+	async restart(): Promise<void> {
+		this.restarts += 1
+	}
+
+	/** Drive an install completing, as the shell would. */
+	emit(version: string): void {
+		this.version = version
+		for (const listener of this.listeners) listener(version)
+	}
+}
+
 export default [
 	[FilePickerToken, FakeFilePickerService],
 	[NotificationToken, FakeNotificationService],
@@ -175,4 +207,5 @@ export default [
 	[SupervisionToken, FakeSupervisionService],
 	[CloudSessionToken, FakeCloudSessionService],
 	[LoggingToken, FakeLoggingService],
+	[UpdateToken, FakeUpdateService],
 ] as const satisfies Bindings

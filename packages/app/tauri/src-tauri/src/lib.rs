@@ -114,7 +114,13 @@ pub fn run() {
             // The panic hook goes in FIRST: an update-path panic without it would be exactly the
             // invisible field crash SP1's decision 6 exists to prevent.
             crash::install_panic_hook(data_dir.clone());
-            updater::spawn_startup_check(app.handle().clone(), data_dir.clone());
+
+            // Managed BEFORE the background check spawns (though the check itself sleeps 10s, so
+            // there is no real race) — `commands::pending_update` reads this same `Arc` via
+            // `tauri::State`, the identical wiring `gate`/`monitor` use below.
+            let update_state = Arc::new(updater::UpdateState::default());
+            app.manage(update_state.clone());
+            updater::spawn_startup_check(app.handle().clone(), data_dir.clone(), update_state);
 
             // Bundle resource dir — staged sidecar assets (e.g. the Drizzle migrations copied by
             // build-sidecars) live here; sidecars() resolves resource_dir/<subpath> for their boot env.

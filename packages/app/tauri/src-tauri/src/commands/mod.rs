@@ -15,6 +15,9 @@ pub use secrets::*;
 mod supervision;
 pub use supervision::*;
 
+mod update;
+pub use update::*;
+
 /// The single `tauri_specta::Builder` collecting every `#[specta::specta]`
 /// custom command AND every typed event. See the module docs for why there is exactly one.
 ///
@@ -30,10 +33,13 @@ pub fn specta_builder() -> tauri_specta::Builder {
             secret_delete,
             boot_failures,
             retry_boot,
-            supervision_state
+            supervision_state,
+            pending_update,
+            restart_for_update
         ])
         .events(tauri_specta::collect_events![
-            crate::sidecars::SupervisionChanged
+            crate::sidecars::SupervisionChanged,
+            crate::updater::UpdateReady
         ])
 }
 

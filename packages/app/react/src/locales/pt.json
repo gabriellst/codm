@@ -203,7 +203,11 @@
 			"gatewayDownTitle": "Canal offline",
 			"restart": "Reiniciar"
 		},
-		"threads": "Conversas"
+		"threads": "Conversas",
+		"update": {
+			"restartTitle": "Reinicie para atualizar",
+			"version": "Versão {{version}}"
+		}
 	},
 	"dashboard": {
 		"activeSessions": "Sessões de agente ativas",

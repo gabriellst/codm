@@ -1,0 +1,71 @@
+import type { ComponentProps } from 'react'
+import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { IconRefresh } from '@tabler/icons-react'
+import { cn } from '@/lib/utils'
+import { useUpdate } from '@/services'
+
+/**
+ * Claude-Desktop-style restart prompt. The shell installs updates silently and automatically in
+ * the background (`updater.rs`'s `run_check`) but deliberately stops short of restarting itself —
+ * a self-triggered relaunch could drop the operator mid-conversation with zero warning. This pill
+ * is the ONE surface that tells them a version is ready and lets THEM pick the moment; clicking it
+ * is the only thing that restarts the app.
+ *
+ * PULL then PUSH, same shape as `SupervisionBanner`/`AgentsRunningPill`: `pending()` covers a
+ * console that mounts AFTER the background check already finished installing (the ask+listen
+ * pattern `commands/boot.rs` documents — an event fired before the page mounted is simply lost, so
+ * the page also ASKS), `subscribe` covers an install completing while the console is already open.
+ *
+ * Renders nothing until a version is pending — most sessions never see this at all.
+ */
+export function UpdateReadyPill({ className, ...props }: ComponentProps<'button'>) {
+	const { t } = useTranslation()
+	const update = useUpdate()
+	const [version, setVersion] = useState<string | null>(null)
+
+	useEffect(() => {
+		let cancelled = false
+		let unsubscribe: (() => void) | undefined
+
+		void update.pending().then(v => {
+			if (!cancelled) setVersion(v)
+		})
+		void update
+			.subscribe(v => {
+				if (!cancelled) setVersion(v)
+			})
+			.then(fn => {
+				// The subscription can resolve after teardown; drop it rather than leak a listener.
+				if (cancelled) fn()
+				else unsubscribe = fn
+			})
+
+		return () => {
+			cancelled = true
+			unsubscribe?.()
+		}
+	}, [update])
+
+	if (!version) return null
+
+	return (
+		<button
+			type="button"
+			data-testid="update-ready-pill"
+			data-version={version}
+			onClick={() => void update.restart()}
+			className={cn(
+				'flex items-center gap-2.5 rounded-xl border border-border/60 bg-popover px-3.5 py-2.5 text-left shadow-lg transition-colors hover:bg-accent',
+				className,
+			)}
+			{...props}
+		>
+			<IconRefresh className="size-4 shrink-0 text-muted-foreground" />
+			<span className="flex flex-col leading-tight">
+				<span className="text-sm font-medium text-popover-foreground">{t('console.update.restartTitle')}</span>
+				<span className="text-xs text-muted-foreground">{t('console.update.version', { version })}</span>
+			</span>
+		</button>
+	)
+}
