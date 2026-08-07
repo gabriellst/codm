@@ -23,6 +23,7 @@ import { resolve } from 'node:path'
 import { REPO } from '../../../../template.config'
 import { CONSOLE, DISPLAY_NAME, IDENTIFIER } from './app'
 import { CAPABILITIES, CAPABILITY_PERMISSIONS } from './capabilities'
+import { CLOUD } from './cloud'
 import { DEEPLINK } from './deeplink'
 import { SIDECARS, type SidecarManifestEntry } from './sidecars'
 import { UPDATER } from './updater'
@@ -85,11 +86,15 @@ export function renderTauriConf(): string {
 			return sidecar
 		})
 		.flatMap(s => [`http://localhost:${sidecarPort(s)}`, `http://127.0.0.1:${sidecarPort(s)}`])
+		// A cloud entra na MESMA lista: o console fala com ela para trocar o código do deep link e
+		// revogar no logout. Sem esta origem o webview bloqueia a requisição antes de sair (ver
+		// ./cloud.ts — foi o que quebrou o login até a v0.1.8).
+		.concat(CLOUD.origin)
 		.join(' ')
 	const conf = {
 		$schema: 'https://schema.tauri.app/config/2',
 		productName: DISPLAY_NAME,
-		version: '0.1.8',
+		version: '0.1.9',
 		identifier: IDENTIFIER,
 		build: {
 			// Desktop dev serves the root-based SPA (dev-spa → base '/'), so the webview loads the
