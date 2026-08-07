@@ -29,7 +29,8 @@ function InputGroup({ className, variant = 'default', ...props }: React.Componen
 				isTrigger ? triggerBorder : inputGroupBorder,
 				isTrigger ? triggerHover : inputGroupBorderHover,
 				inputGroupBorderFocus,
-				'rounded-lg',
+				// D2 — height-tier derivation (h-8 → xs), matching `SelectTrigger`/`ComboboxSelectTrigger`.
+				'rounded-asymmetric-xs',
 				'h-8',
 				'has-disabled:opacity-50',
 				'has-[>textarea]:h-auto',
@@ -83,9 +84,10 @@ function InputGroupAddon({
 const inputGroupButtonVariants = cva('gap-2 text-sm shadow-none flex items-center', {
 	variants: {
 		size: {
-			xs: "h-6 gap-1 rounded-sm px-1.5 [&>svg:not([class*='size-'])]:size-3.5",
+			// D2 — matches Button's own icon-xs mapping (h-6 tier → 3xs) for the same visual role.
+			xs: "h-6 gap-1 rounded-asymmetric-3xs px-1.5 [&>svg:not([class*='size-'])]:size-3.5",
 			sm: '',
-			'icon-xs': 'size-6 rounded-sm p-0 has-[>svg]:p-0',
+			'icon-xs': 'size-6 rounded-asymmetric-3xs p-0 has-[>svg]:p-0',
 			'icon-sm': 'size-8 p-0 has-[>svg]:p-0',
 		},
 	},

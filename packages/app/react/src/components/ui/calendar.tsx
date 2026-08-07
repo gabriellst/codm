@@ -86,7 +86,7 @@ function Calendar({
 			className={cn(
 				!showPresets && surface,
 				'group/calendar p-3 [--cell-size:--spacing(8)]',
-				!showPresets && 'rounded-lg',
+				!showPresets && 'rounded-asymmetric-lg',
 				String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
 				String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
 				!showPresets && className,
@@ -182,7 +182,7 @@ function Calendar({
 	if (!showPresets) return dayPicker
 
 	return (
-		<div className={cn(surface, 'flex w-fit rounded-lg', className)}>
+		<div className={cn(surface, 'flex w-fit rounded-asymmetric-lg', className)}>
 			<div className="flex flex-col gap-1 border-r border-border p-3">
 				{presets.map(preset => (
 					<Button key={preset.label} variant="ghost" size="sm" className="justify-start font-normal" onClick={e => handlePreset(preset, e)}>

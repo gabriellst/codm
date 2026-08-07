@@ -55,7 +55,10 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
 				// Active state — apply the trigger fill as a plain background-image (no border, no clip).
 				// Both default and line variants get it; line additionally shows the underline (::after below).
 				`${tabsTriggerActiveBg} data-active:text-foreground`,
-				'after:bg-foreground after:absolute after:opacity-0 after:transition-opacity group-data-[orientation=horizontal]/tabs:after:inset-x-0 group-data-[orientation=horizontal]/tabs:after:-bottom-[0.3125rem] group-data-[orientation=horizontal]/tabs:after:h-0.5 group-data-[orientation=vertical]/tabs:after:inset-y-0 group-data-[orientation=vertical]/tabs:after:-right-1 group-data-[orientation=vertical]/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-active:after:opacity-100',
+				// D2 — the reference's `line` session tabs (Chat/Tarefas/Artefatos) underline the active
+				// tab in `--primary` while its TEXT stays foreground/black (`underline:'#76C410'` vs
+				// `fg:'#161616'`) — only the bar recolors, matching the "text stays neutral" pattern.
+				'after:bg-primary after:absolute after:opacity-0 after:transition-opacity group-data-[orientation=horizontal]/tabs:after:inset-x-0 group-data-[orientation=horizontal]/tabs:after:-bottom-[0.3125rem] group-data-[orientation=horizontal]/tabs:after:h-0.5 group-data-[orientation=vertical]/tabs:after:inset-y-0 group-data-[orientation=vertical]/tabs:after:-right-1 group-data-[orientation=vertical]/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-active:after:opacity-100',
 				className,
 			)}
 			{...props}

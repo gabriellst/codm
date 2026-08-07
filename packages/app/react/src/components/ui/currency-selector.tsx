@@ -156,7 +156,8 @@ function CurrencySelector({
 					disabled={disabled}
 					className={cn(
 						trigger,
-						'cursor-pointer gap-1.5 rounded-lg py-2 pr-2 pl-2.5 text-sm select-none h-7',
+						// D2 — height-tier derivation (h-7 → 2xs), matching `SelectTrigger`'s `sm` size.
+						'cursor-pointer gap-1.5 rounded-asymmetric-2xs py-2 pr-2 pl-2.5 text-sm select-none h-7',
 						'flex w-fit items-center whitespace-nowrap outline-none',
 						'disabled:cursor-not-allowed disabled:opacity-50',
 						'[&_svg]:pointer-events-none [&_svg]:shrink-0',

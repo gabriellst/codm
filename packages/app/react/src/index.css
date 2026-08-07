@@ -54,6 +54,8 @@ body {
 	--color-info: var(--info);
 	--color-info-foreground: var(--info-foreground);
 	--color-hover: var(--hover);
+	--color-hover-accent: var(--hover-accent);
+	--color-hover-accent-border: var(--hover-accent-border);
 	--color-focus: var(--focus);
 	--color-brand-green: var(--brand-green);
 	--color-sidebar-ring: var(--sidebar-ring);
@@ -213,9 +215,9 @@ body {
 	/* Eyebrow / section labels — small, uppercase, letter-spaced, muted. */
 	.label-eyebrow {
 		font-size: 0.6875rem;
-		font-weight: 600;
+		font-weight: 800;
 		text-transform: uppercase;
-		letter-spacing: 0.08em;
+		letter-spacing: 0.7px;
 		color: var(--muted-foreground);
 	}
 

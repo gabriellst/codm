@@ -30,3 +30,38 @@
 @utility gradient-border-* {
 	--tw-gradient-border: linear-gradient(--value([*]));
 }
+
+/* ── Asymmetric radius (D2 redesign signature) ───────────────────────────
+   Three matched corners + a small bottom-left corner, composed from the radius ladder +
+   `--radius-corner-ratio` declared once in tokens.css — see that file for the measurements
+   behind both. One utility per ladder step so no component ever hardcodes a literal shape
+   like "16px 16px 16px 5px"; components reach for e.g. `rounded-asymmetric-sm` instead. */
+@utility rounded-asymmetric-3xs {
+	border-radius: var(--radius-3xs) var(--radius-3xs) var(--radius-3xs) calc(var(--radius-3xs) * var(--radius-corner-ratio));
+}
+@utility rounded-asymmetric-2xs {
+	border-radius: var(--radius-2xs) var(--radius-2xs) var(--radius-2xs) calc(var(--radius-2xs) * var(--radius-corner-ratio));
+}
+@utility rounded-asymmetric-xs {
+	border-radius: var(--radius-xs) var(--radius-xs) var(--radius-xs) calc(var(--radius-xs) * var(--radius-corner-ratio));
+}
+@utility rounded-asymmetric-sm {
+	border-radius: var(--radius-sm) var(--radius-sm) var(--radius-sm) calc(var(--radius-sm) * var(--radius-corner-ratio));
+}
+@utility rounded-asymmetric-md {
+	border-radius: var(--radius-md) var(--radius-md) var(--radius-md) calc(var(--radius-md) * var(--radius-corner-ratio));
+}
+@utility rounded-asymmetric-lg {
+	border-radius: var(--radius-lg) var(--radius-lg) var(--radius-lg) calc(var(--radius-lg) * var(--radius-corner-ratio));
+}
+@utility rounded-asymmetric-xl {
+	border-radius: var(--radius-xl) var(--radius-xl) var(--radius-xl) calc(var(--radius-xl) * var(--radius-corner-ratio));
+}
+@utility rounded-asymmetric-2xl {
+	border-radius: var(--radius-2xl) var(--radius-2xl) var(--radius-2xl) calc(var(--radius-2xl) * var(--radius-corner-ratio));
+}
+
+/* Exception, not a rule — see `--radius-callout-flip` in tokens.css. */
+@utility rounded-callout-flip {
+	border-radius: var(--radius-callout-flip);
+}

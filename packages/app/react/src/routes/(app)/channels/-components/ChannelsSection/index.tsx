@@ -43,7 +43,7 @@ export function ChannelsSection({ className, ...props }: ComponentProps<'div'>) 
 						<Skeleton className="h-16 rounded-2xl" />
 					</div>
 				) : (
-					<div className="flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+					<div className="flex flex-col divide-y divide-border">
 						{CHANNEL_KINDS.map(kind => {
 							const connectable = CONNECTABLE.includes(kind)
 							const status = statusByKind.get(kind) ?? 'DISCONNECTED'
@@ -79,11 +79,15 @@ export function ChannelsSection({ className, ...props }: ComponentProps<'div'>) 
 									size="none"
 									key={kind}
 									type="button"
-									className="flex w-full items-center gap-4 rounded-none p-4 text-left transition-colors hover:bg-muted"
+									// D2 — a channel row is a "divided list row" (bottom hairline from the parent's
+									// `divide-y`, no per-row border) — only background + radius are set here,
+									// matching the reference's `18px 18px 18px 6px` (rounded-asymmetric-md) +
+									// `#F7FBEF` hover surface (`--hover-accent`, tokens.css).
+									className="group flex w-full items-center gap-4 rounded-asymmetric-md p-4 text-left transition-colors hover:bg-hover-accent"
 									onClick={() => show(<ConnectChannelDialog />)}
 								>
 									{body}
-									<IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
+									<IconChevronRight className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
 								</Button>
 							)
 						})}

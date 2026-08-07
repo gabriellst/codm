@@ -44,7 +44,11 @@ function Toaster({ theme = 'system', className, ...props }: ToasterProps) {
 			}
 			toastOptions={{
 				classNames: {
-					toast: `${surface} group toast rounded-lg group-[.toaster]:shadow-lg`,
+					// NOTE: `src/index.css` sets `[data-sonner-toast] { border-radius: var(--radius) !important }`
+					// (plain, symmetric) — that `!important` wins over this class regardless, so this step is
+					// updated for source-correctness but the rendered toast radius is governed by index.css,
+					// outside this pass's `components/ui/**` scope.
+					toast: `${surface} group toast rounded-asymmetric-lg group-[.toaster]:shadow-lg`,
 					description: 'group-[.toast]:text-muted-foreground',
 					actionButton: 'group-[.toast]:bg-primary group-[.toast]:text-primary-foreground',
 					cancelButton: 'group-[.toast]:bg-muted group-[.toast]:text-muted-foreground',

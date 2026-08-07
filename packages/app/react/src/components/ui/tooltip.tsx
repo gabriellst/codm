@@ -50,7 +50,7 @@ function TooltipContent({
 						// settles (the "twitch" / half-pixel). Fading in place keeps the arrow pixel-stable.
 						// `pointer-events-none` so an open tooltip never intercepts the pointer — you can hover
 						// the trigger behind/below it and open the next tooltip (no dead "safe zone").
-						'transform-gpu backface-hidden pointer-events-none data-open:animate-in data-open:fade-in-0 data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in-0 data-closed:animate-out data-closed:fade-out-0 rounded-md px-3 py-2 text-xs z-50 w-fit max-w-xs',
+						'transform-gpu backface-hidden pointer-events-none data-open:animate-in data-open:fade-in-0 data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in-0 data-closed:animate-out data-closed:fade-out-0 rounded-asymmetric-md px-3 py-2 text-xs z-50 w-fit max-w-xs',
 						className,
 					)}
 					{...props}

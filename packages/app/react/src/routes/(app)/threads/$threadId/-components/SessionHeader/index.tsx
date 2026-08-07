@@ -170,7 +170,14 @@ export function SessionHeader({ threadId, className, ...props }: ComponentProps<
 						params={{ threadId }}
 						className={cn(
 							'-mb-px border-b-2 px-1 pb-2.5 pt-1 text-sm font-semibold transition-colors',
-							activeTab === tab.to ? 'border-foreground text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
+							// D2 — this is a hand-rolled `line`-style tab strip (route Links, not the `Tabs`
+							// primitive — Base UI's Tabs.Root doesn't compose with per-tab routes). The reference
+							// measures the SAME pattern the `Tabs` primitive already encodes for its `line`
+							// variant: only the underline recolors to `--primary`, the label stays foreground —
+							// see `components/ui/tabs.tsx`'s `after:bg-primary` for the primitive's own version
+							// of this rule. This strip was drifting from it with a plain `border-foreground`
+							// (black) underline — that's the "tabs sem verde" the founder was seeing.
+							activeTab === tab.to ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
 						)}
 					>
 						{t(tab.labelKey)}

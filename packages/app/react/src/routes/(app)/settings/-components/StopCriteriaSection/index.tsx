@@ -48,13 +48,16 @@ export function StopCriteriaSection({ className, ...props }: ComponentProps<'sec
 			</div>
 			{isLoading || !criteria ? (
 				<div className="flex flex-col gap-3">
-					<Skeleton className="h-12 rounded-xl" />
-					<Skeleton className="h-12 rounded-xl" />
+					<Skeleton className="h-12 rounded-asymmetric-sm" />
+					<Skeleton className="h-12 rounded-asymmetric-sm" />
 				</div>
 			) : (
-				<div className="flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+				// Lista SOLTA no branco, não um bloco: na referência só "Geral" é cartão (fundo cinza com
+				// divisórias) — provedores e critérios são linhas sobre o fundo da página, separadas por
+				// espaço em vez de régua. Envolvê-las num cartão empilhava três molduras na mesma tela.
+				<div className="flex flex-col gap-4">
 					{CRITERIA.map(item => (
-						<label key={item.key} className="flex cursor-pointer items-center gap-4 p-4">
+						<label key={item.key} className="flex cursor-pointer items-center gap-4">
 							<div className="flex flex-1 flex-col gap-0.5">
 								<span className="font-medium text-foreground">{t(item.labelKey)}</span>
 								<span className="text-sm text-muted-foreground">{t(item.descKey)}</span>

@@ -71,6 +71,7 @@
 		"tsc:scripts": "tsc -p tsconfig.scripts.json --noEmit",
 		"env:generate": "bun scripts/env/generate.ts",
 		"check:generated": "bun scripts/check-generated.ts",
+		"og:generate": "bun scripts/og/generate.ts",
 		"examples:promote": "bun scripts/examples/promote.ts",
 		"sync:check": "bun scripts/sync/check.ts",
 		"sync:pull": "bun scripts/sync/pull.ts"
@@ -97,6 +98,7 @@
 		"jiti": "^2.7.0",
 		"lint-staged": "^16.2.6",
 		"nx": "^22.6.5",
+		"playwright": "^1.59.1",
 		"ts-morph": "^24.0.0",
 		"typescript": "^5.9.3",
 		"typescript-eslint": "^8.46.2",

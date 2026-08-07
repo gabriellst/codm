@@ -31,7 +31,10 @@ function BreadcrumbLink({ className, render, ...props }: useRender.ComponentProp
 		defaultTagName: 'a',
 		props: mergeProps<'a'>(
 			{
-				className: cn('hover:text-foreground transition-colors', className),
+				// D2 — the reference's global link rule (`a{color:#3D660A} a:hover{color:#161616}`) maps
+				// to `--secondary-foreground` (rest) darkening to `--foreground` (hover); overrides the
+				// inherited `text-muted-foreground` from `BreadcrumbList`.
+				className: cn('text-secondary-foreground hover:text-foreground transition-colors', className),
 			},
 			props,
 		),

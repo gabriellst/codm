@@ -146,3 +146,5 @@ graphify-out/
 # → MultipleProjectsWithSameNameError on every nx target).
 .claude/worktrees/
 scoreboard/*.patch
+.design-ref-*.html
+.design-ref/

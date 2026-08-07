@@ -6,6 +6,7 @@ import type { ListWorkspacesQueryResponse } from '@codm/client-typescript/typesc
 import { PageHeader } from '@/components/console/PageHeader'
 import { enumLabel } from '@/lib'
 import { cn } from '@/lib/utils'
+import { workspaceBadgeVariant } from '@/components/console/glyphs'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -46,7 +47,7 @@ export function WorkspacesSection({ className, ...props }: ComponentProps<'div'>
 						<EmptyDescription>{t('workspaces.emptyDescription')}</EmptyDescription>
 					</Empty>
 				) : (
-					<div className="flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+					<div className="flex flex-col divide-y divide-border">
 						{workspaces.map(workspace => (
 							<WorkspaceRow key={workspace.workspaceId} workspace={workspace} />
 						))}
@@ -68,7 +69,7 @@ function WorkspaceRow({ workspace }: { workspace: Workspace }) {
 				<span className="truncate font-mono text-sm font-semibold text-foreground">{workspace.path}</span>
 				<div className="flex flex-wrap gap-1.5">
 					{workspace.badges.map(badge => (
-						<Badge key={badge} variant="outline">
+						<Badge key={badge} variant={workspaceBadgeVariant[badge]}>
 							{enumLabel('WorkspaceBadge', badge)}
 						</Badge>
 					))}

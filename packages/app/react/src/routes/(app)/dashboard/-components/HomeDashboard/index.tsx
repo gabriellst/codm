@@ -2,23 +2,24 @@ import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
+import { IconPlus } from '@tabler/icons-react'
 import { getHomeDashboardQueryKey, useGetHomeDashboard } from '@codm/client-typescript/typescript'
-import type { GetHomeDashboardQueryResponse } from '@codm/client-typescript/typescript'
+import type { GetHomeDashboardQueryResponse, ThreadStatus, TranscriptKind } from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { alertActionButton, alertSurface, row } from '@/components/ui/surfaces'
 import { cn } from '@/lib/utils'
 import { formatDurationSeconds } from '@/lib/format'
 import { enumLabel } from '@/lib'
 import { useLocale, useServerEvents } from '@/hooks'
-import { greetingKey } from '@/components/console/time'
-import { channelGlyph } from '@/components/console/glyphs'
-import { Dot, ThreadStatusDot } from '@/components/console/StatusDot'
+import { PageHeader } from '@/components/console/PageHeader'
+import { relativeTime } from '@/components/console/time'
+import { Dot } from '@/components/console/StatusDot'
 import { ThreadAvatar } from '@/components/console/ThreadAvatar'
 
 type Dashboard = GetHomeDashboardQueryResponse
 
-/** The operating overview (T03): agents live, who needs you, active sessions, today's numbers, channel health. */
+/** The operating overview (T03): agents live, who needs you, today's numbers, active sessions, latest activity. */
 export function HomeDashboard({ className, ...props }: ComponentProps<'div'>) {
 	const { t } = useTranslation()
 	const queryClient = useQueryClient()
@@ -34,83 +35,151 @@ export function HomeDashboard({ className, ...props }: ComponentProps<'div'>) {
 	if (isLoading || !data) return <DashboardSkeleton className={className} {...props} />
 
 	const running = data.agentsRunningNow
-	const headline = running === 0 ? t('dashboard.agentsWorkingNone') : t('dashboard.agentsWorking', { count: running })
+	const heroLine = running === 0 ? t('dashboard.agentsWorkingNone') : t('dashboard.agentsWorking', { count: running })
 
 	return (
-		<div className={cn('mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 pb-16 pt-20 md:px-10', className)} {...props}>
-			<div className="flex flex-col gap-2">
-				<p className="text-sm text-muted-foreground">{t(greetingKey())}</p>
-				<h1 className="heading-display text-4xl text-foreground md:text-5xl">{headline}</h1>
-			</div>
+		<div className={cn('relative mx-auto flex w-full max-w-5xl flex-col gap-7 px-6 pb-16 pt-16 md:px-10', className)} {...props}>
+			<DecorativeBlob />
 
-			<div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
-				<div className="flex flex-col gap-6">
-					{data.needsYou && <NeedsYouCallout needsYou={data.needsYou} />}
-					<ActiveSessions sessions={data.activeSessions} />
-					{data.latestActivity.length > 0 && <LatestActivity items={data.latestActivity} />}
-				</div>
-				<div className="flex flex-col gap-6">
-					<TodayCard today={data.today} />
-					<ChannelsCard channels={data.channels} />
-				</div>
-			</div>
+			<PageHeader
+				back={false}
+				title={t('nav.home')}
+				subtitle={heroLine}
+				action={
+					<Button nativeButton={false} render={<Link to="/attach" />}>
+						<IconPlus data-icon="inline-start" /> {t('dashboard.newConversation')}
+					</Button>
+				}
+			/>
+
+			{data.needsYou && <NeedsYouCallout needsYou={data.needsYou} />}
+
+			<TodayStats today={data.today} />
+
+			<ActiveSessionsSection sessions={data.activeSessions} />
+
+			<LatestActivitySection items={data.latestActivity} />
 		</div>
+	)
+}
+
+/** Purely decorative — the redesign's soft bean-shape behind the masthead. No data, so no i18n. */
+function DecorativeBlob() {
+	return (
+		<svg
+			width="420"
+			height="320"
+			viewBox="0 0 340 270"
+			aria-hidden="true"
+			className="pointer-events-none absolute -right-16 -top-8 -z-10 opacity-45"
+		>
+			<path
+				d="M60 30 Q20 40 25 110 L28 190 Q30 240 95 238 L250 232 Q315 230 312 150 L308 75 Q305 18 230 22 L95 27 Q70 28 60 30 Z"
+				className="fill-secondary"
+			/>
+		</svg>
 	)
 }
 
 function NeedsYouCallout({ needsYou }: { needsYou: NonNullable<Dashboard['needsYou']> }) {
 	const { t } = useTranslation()
-	const detail = needsYou.stopKinds.map(k => enumLabel('StopKind', k)).join(' · ') || t('session.agentStopped')
+	const detail = needsYou.stopKinds.map(k => enumLabel('StopKind', k)).join(' · ')
 	return (
-		<Card className="border-warning/50">
-			<CardContent className="flex items-center gap-4">
-				<span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-foreground text-lg font-bold text-background">
-					!
-				</span>
-				<div className="flex flex-1 flex-col">
-					<span className="font-semibold text-foreground">{t('dashboard.needsYouName', { name: needsYou.threadDisplayName })}</span>
-					<span className="text-sm text-muted-foreground">{detail}</span>
-				</div>
-				{/* `nativeButton={false}` — this renders an <a>, not a <button>. */}
-				<Button size="sm" nativeButton={false} render={<Link to="/threads/$threadId" params={{ threadId: needsYou.threadId }} />}>
-					{t('dashboard.openSession')}
-				</Button>
-			</CardContent>
-		</Card>
+		<div
+			className={cn(
+				'animate-in fade-in slide-in-from-bottom-1 relative flex items-center gap-3.5 rounded-asymmetric-xl px-5 py-4 duration-300',
+				alertSurface,
+			)}
+		>
+			<Dot className="size-2.5 shrink-0 animate-pulse bg-success-bright" />
+			<div className="flex min-w-0 flex-1 flex-col">
+				<span className="text-[15.5px] font-extrabold">{t('dashboard.needsYouName', { name: needsYou.threadDisplayName })}</span>
+				<span className="truncate text-[13px] text-background/60">{detail}</span>
+			</div>
+			{/* `nativeButton={false}` — this renders an <a>, not a <button>. */}
+			<Button
+				size="sm"
+				nativeButton={false}
+				render={<Link to="/threads/$threadId" params={{ threadId: needsYou.threadId }} />}
+				className={cn('shrink-0', alertActionButton)}
+			>
+				{t('dashboard.resolve')}
+			</Button>
+		</div>
 	)
 }
 
-function ActiveSessions({ sessions }: { sessions: Dashboard['activeSessions'] }) {
+/**
+ * Today's numbers (D2/D4) as a 3-up grid of flat stat tiles — the redesign's own shape, replacing the
+ * previous vertical rows-in-a-card. The last tile (median response) is the highlighted one, matching
+ * the reference's single `--secondary` accent among three stat cards.
+ */
+function TodayStats({ today }: { today: Dashboard['today'] }) {
+	const { t } = useTranslation()
+	const locale = useLocale()
+	return (
+		<div className="grid grid-cols-3 gap-3.5">
+			<StatTile label={t('dashboard.issuesOpened')} value={String(today.issuesOpened)} radius="rounded-asymmetric-xl" />
+			<StatTile label={t('dashboard.issuesClosed')} value={String(today.issuesClosed)} radius="rounded-callout-flip" />
+			<StatTile
+				label={t('dashboard.medianResponse')}
+				value={formatDurationSeconds(today.medianResponseSeconds, locale)}
+				radius="rounded-asymmetric-xl"
+				highlight
+			/>
+		</div>
+	)
+}
+
+function StatTile({ label, value, radius, highlight = false }: { label: string; value: string; radius: string; highlight?: boolean }) {
+	return (
+		<div className={cn('min-w-0 p-4', radius, highlight ? 'bg-secondary' : 'bg-card')}>
+			<div
+				className={cn(
+					'text-[28px] font-extrabold tracking-tight tabular-nums',
+					highlight ? 'text-secondary-foreground' : 'text-foreground',
+				)}
+			>
+				{value}
+			</div>
+			<div className={cn('mt-0.5 truncate text-[12.5px]', highlight ? 'text-secondary-foreground/70' : 'text-caption-foreground')}>
+				{label}
+			</div>
+		</div>
+	)
+}
+
+// Style-only dispatch (bp-23: labels come from enumLabel, never a literal here). Mirrors the
+// reference's per-status chip: RUNNING is the brand-green "on" chip, NEEDS_ATTENTION is the
+// highest-emphasis dark chip, PAUSED/IDLE are the plain neutral chip.
+const THREAD_STATUS_CHIP: Record<ThreadStatus, string> = {
+	RUNNING: 'bg-secondary text-secondary-foreground',
+	NEEDS_ATTENTION: 'bg-foreground text-background',
+	PAUSED: 'bg-muted text-muted-foreground',
+	IDLE: 'bg-muted text-muted-foreground',
+}
+const THREAD_STATUS_DOT: Record<ThreadStatus, string> = {
+	RUNNING: 'bg-primary animate-pulse',
+	NEEDS_ATTENTION: 'bg-success-bright',
+	PAUSED: 'bg-muted-foreground/40',
+	IDLE: 'bg-muted-foreground/40',
+}
+
+/**
+ * `sessions` is already the server-filtered `RUNNING | NEEDS_ATTENTION` set (see
+ * `GetHomeDashboard`'s `activeSessions`) — this section renders it as-is, no re-filtering.
+ */
+function ActiveSessionsSection({ sessions }: { sessions: Dashboard['activeSessions'] }) {
 	const { t } = useTranslation()
 	return (
-		<section className="flex flex-col gap-3">
-			<h2 className="text-lg font-semibold text-foreground">{t('dashboard.activeSessions')}</h2>
+		<section className="flex flex-col gap-2.5">
+			<h2 className="border-b border-border pb-2.5 text-sm font-extrabold text-foreground">{t('dashboard.activeSessions')}</h2>
 			{sessions.length === 0 ? (
-				<p className="text-sm text-muted-foreground">{t('dashboard.noActiveSessions')}</p>
+				<p className="px-0.5 py-1 text-sm text-caption-foreground">{t('dashboard.noActiveSessions')}</p>
 			) : (
-				<div className="flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+				<div className="flex flex-col gap-2">
 					{sessions.map(session => (
-						<Link
-							key={session.threadId}
-							to="/threads/$threadId"
-							params={{ threadId: session.threadId }}
-							className="flex items-center gap-3 p-4 transition-colors hover:bg-muted"
-						>
-							<ThreadAvatar name={session.displayName} channelKind={session.channelKind} />
-							<div className="flex min-w-0 flex-1 flex-col gap-1.5">
-								<span className="truncate font-medium text-foreground">{session.displayName}</span>
-								<span className="truncate text-sm text-muted-foreground">{session.lastActivity}</span>
-							</div>
-							<span
-								className={cn(
-									'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium',
-									session.status === 'RUNNING' ? 'bg-primary text-primary-foreground' : 'border border-border text-foreground',
-								)}
-							>
-								<ThreadStatusDot status={session.status} />
-								{enumLabel('ThreadStatus', session.status)}
-							</span>
-						</Link>
+						<ActiveSessionRow key={session.threadId} session={session} />
 					))}
 				</div>
 			)}
@@ -118,113 +187,98 @@ function ActiveSessions({ sessions }: { sessions: Dashboard['activeSessions'] })
 	)
 }
 
-function LatestActivity({ items }: { items: Dashboard['latestActivity'] }) {
+function ActiveSessionRow({ session }: { session: Dashboard['activeSessions'][number] }) {
 	const { t } = useTranslation()
+	const relative = relativeTime(session.lastActivity)
 	return (
-		<section className="flex flex-col gap-3">
-			<h2 className="text-lg font-semibold text-foreground">{t('dashboard.latestActivity')}</h2>
-			<div className="flex flex-col gap-3">
+		<Link
+			to="/threads/$threadId"
+			params={{ threadId: session.threadId }}
+			className={cn('group flex items-center gap-3.5 rounded-asymmetric-lg p-3.5', row)}
+		>
+			<ThreadAvatar name={session.displayName} channelKind={session.channelKind} size="lg" />
+			<div className="flex min-w-0 flex-1 flex-col gap-0.5">
+				<span className="truncate text-[14.5px] font-bold text-foreground">{session.displayName}</span>
+				<span className="truncate text-[12.5px] text-caption-foreground">{t(relative.key, { count: relative.count })}</span>
+			</div>
+			<span
+				className={cn(
+					'inline-flex shrink-0 items-center gap-1.5 rounded-asymmetric-2xs px-3 py-1.5 text-[11.5px] font-extrabold',
+					THREAD_STATUS_CHIP[session.status],
+				)}
+			>
+				<Dot className={cn('size-1.5', THREAD_STATUS_DOT[session.status])} />
+				{enumLabel('ThreadStatus', session.status)}
+			</span>
+		</Link>
+	)
+}
+
+// Style-only dispatch, same reasoning as THREAD_STATUS_CHIP above — labels stay on enumLabel.
+const TRANSCRIPT_KIND_DOT: Record<TranscriptKind, string> = {
+	SYSTEM: 'bg-primary',
+	CONTACT: 'bg-muted-foreground/30',
+	DIRECT: 'bg-foreground',
+	ACTION: 'bg-foreground',
+	WHISPER: 'bg-muted-foreground/30',
+}
+
+function LatestActivitySection({ items }: { items: Dashboard['latestActivity'] }) {
+	const { t } = useTranslation()
+	if (items.length === 0) return null
+	return (
+		<section className="flex flex-col gap-0.5">
+			<h2 className="border-b border-border pb-2.5 text-sm font-extrabold text-foreground">{t('dashboard.latestActivity')}</h2>
+			<div className="flex flex-col">
 				{items.map(item => (
-					<Link
-						key={`${item.threadId}-${item.at}`}
-						to="/threads/$threadId"
-						params={{ threadId: item.threadId }}
-						className="flex items-baseline gap-3 text-sm"
-					>
-						<Dot className="mt-1.5 bg-muted-foreground/40" />
-						<span className="flex-1">
-							<span className="font-medium text-foreground">{enumLabel('TranscriptKind', item.kind)}</span>{' '}
-							<span className="text-muted-foreground">{item.subtitle}</span>
-						</span>
-					</Link>
+					<ActivityRow key={`${item.threadId}-${item.at}`} item={item} />
 				))}
 			</div>
 		</section>
 	)
 }
 
-/**
- * Today's numbers (D2/D4), in the design's own shape: a stat is a ROW — quiet label on the left, big
- * value on the right, sharing a baseline — with a hairline between rows, not a stack of label-above-
- * value blocks. The last row sits in `CardFooter` so the card visibly CLOSES; the footer is flush by
- * construction (no rule, no tint) and drops the divider it would otherwise carry, which is what makes
- * the run of rows read as one continuous list rather than a body with a lid.
- */
-function TodayCard({ today }: { today: Dashboard['today'] }) {
+function ActivityRow({ item }: { item: Dashboard['latestActivity'][number] }) {
 	const { t } = useTranslation()
-	const locale = useLocale()
-	const rows = [
-		{ label: t('dashboard.issuesOpened'), value: String(today.issuesOpened) },
-		{ label: t('dashboard.issuesClosed'), value: String(today.issuesClosed) },
-	]
-	// Seconds are the WIRE unit, not the reading unit — the card used to print them raw, so a
-	// half-hour median would have read "1847s".
-	const last = { label: t('dashboard.medianResponse'), value: formatDurationSeconds(today.medianResponseSeconds, locale) }
+	const relative = relativeTime(item.at)
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle>{t('dashboard.today')}</CardTitle>
-			</CardHeader>
-			<CardContent className="flex flex-col">
-				{rows.map(row => (
-					<StatRow key={row.label} label={row.label} value={row.value} />
-				))}
-				<StatRow label={last.label} value={last.value} last />
-			</CardContent>
-			<CardFooter />
-		</Card>
-	)
-}
-
-function StatRow({ label, value, last = false }: { label: string; value: string; last?: boolean }) {
-	return (
-		<div className={cn('flex items-baseline justify-between gap-3 py-2', !last && 'border-b border-border')}>
-			<span className="label-eyebrow">{label}</span>
-			<span className="text-2xl font-bold tabular-nums text-foreground">{value}</span>
-		</div>
-	)
-}
-
-function ChannelsCard({ channels }: { channels: Dashboard['channels'] }) {
-	const { t } = useTranslation()
-	if (channels.length === 0) return null
-	return (
-		<Card>
-			<CardHeader>
-				<CardTitle>{t('dashboard.channels')}</CardTitle>
-			</CardHeader>
-			<CardContent className="flex flex-col gap-3">
-				{channels.map(channel => {
-					const Glyph = channelGlyph[channel.kind]
-					const connected = channel.status === 'CONNECTED'
-					return (
-						<div key={channel.kind} className="flex items-center gap-3">
-							<span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground">
-								<Glyph className="size-4" />
-							</span>
-							<span className="flex-1 text-sm font-medium text-foreground">{enumLabel('ChannelKind', channel.kind)}</span>
-							<span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-								<Dot className={connected ? 'bg-success' : 'bg-muted-foreground/40'} />
-								{enumLabel('ChannelStatus', channel.status)}
-							</span>
-						</div>
-					)
-				})}
-			</CardContent>
-		</Card>
+		<Link
+			to="/threads/$threadId"
+			params={{ threadId: item.threadId }}
+			className="flex items-start gap-2.5 rounded-asymmetric-xs px-2 py-2.5 transition-colors hover:bg-muted"
+		>
+			<Dot className={cn('mt-1.5 size-2 shrink-0', TRANSCRIPT_KIND_DOT[item.kind])} />
+			<span className="min-w-0 flex-1 text-pretty text-[13.5px] leading-relaxed text-muted-foreground">
+				<span className="font-bold text-foreground">{enumLabel('TranscriptKind', item.kind)}</span> {item.subtitle}
+			</span>
+			<span className="mt-0.5 shrink-0 text-[11.5px] text-caption-foreground">{t(relative.key, { count: relative.count })}</span>
+		</Link>
 	)
 }
 
 function DashboardSkeleton({ className, ...props }: ComponentProps<'div'>) {
 	return (
-		<div className={cn('mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 pb-16 pt-20 md:px-10', className)} {...props}>
-			<div className="flex flex-col gap-3">
-				<Skeleton className="h-4 w-28" />
-				<Skeleton className="h-12 w-96" />
+		<div className={cn('relative mx-auto flex w-full max-w-5xl flex-col gap-7 px-6 pb-16 pt-16 md:px-10', className)} {...props}>
+			<div className="flex items-start justify-between gap-4">
+				<div className="flex flex-col gap-2.5">
+					<Skeleton className="h-9 w-44" />
+					<Skeleton className="h-4 w-56" />
+				</div>
+				<Skeleton className="h-8 w-40 rounded-full" />
 			</div>
-			<div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
-				<Skeleton className="h-64 rounded-2xl" />
-				<Skeleton className="h-64 rounded-2xl" />
+			<div className="grid grid-cols-3 gap-3.5">
+				<Skeleton className="h-20 rounded-asymmetric-xl" />
+				<Skeleton className="h-20 rounded-asymmetric-xl" />
+				<Skeleton className="h-20 rounded-asymmetric-xl" />
+			</div>
+			<div className="flex flex-col gap-2">
+				<Skeleton className="h-16 rounded-asymmetric-lg" />
+				<Skeleton className="h-16 rounded-asymmetric-lg" />
+			</div>
+			<div className="flex flex-col gap-2">
+				<Skeleton className="h-10 rounded-asymmetric-xs" />
+				<Skeleton className="h-10 rounded-asymmetric-xs" />
+				<Skeleton className="h-10 rounded-asymmetric-xs" />
 			</div>
 		</div>
 	)

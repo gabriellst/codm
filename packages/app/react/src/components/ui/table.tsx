@@ -23,17 +23,16 @@ function TableFooter({ className, ...props }: React.ComponentProps<'tfoot'>) {
 }
 
 function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
-	return <tr data-slot="table-row" className={cn('hover:bg-muted/50 border-b transition-colors', className)} {...props} />
+	// D2 — the reference's plain list-row hover is a flat neutral tint (`--hover`), not the `--muted`
+	// fill token; matches the same fix applied to `surfaces.ts`' shared `trigger` const.
+	return <tr data-slot="table-row" className={cn('hover:bg-hover border-b transition-colors', className)} {...props} />
 }
 
 function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
 	return (
 		<th
 			data-slot="table-head"
-			className={cn(
-				'px-6 py-7 text-left align-middle font-medium whitespace-nowrap [&:has([role=checkbox])]:pr-0',
-				className,
-			)}
+			className={cn('px-6 py-7 text-left align-middle font-medium whitespace-nowrap [&:has([role=checkbox])]:pr-0', className)}
 			{...props}
 		/>
 	)

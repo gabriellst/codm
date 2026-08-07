@@ -12,7 +12,9 @@ import type { FileRouteTypes } from '@/routeTree.gen'
 
 type AppRoute = FileRouteTypes['to']
 
-const rowBase = 'flex items-center gap-3 rounded-xl px-3 h-10 text-sm font-medium transition-colors'
+// D2 — the reference measures every sidebar nav/thread row at the asymmetric ladder's `sm` step
+// ("16px 16px 16px 5px"), never a symmetric radius — see `rounded-asymmetric-*` in web-utilities.css.
+const rowBase = 'flex items-center gap-3 rounded-asymmetric-sm px-3 h-10 text-sm font-medium transition-colors'
 const rowIdle = 'text-sidebar-foreground/80 hover:bg-sidebar-accent/60'
 const rowActive = 'bg-sidebar-accent text-sidebar-foregroundr'
 
@@ -55,7 +57,8 @@ export function Sidebar({ className, ...props }: React.ComponentProps<'aside'>) 
 					<Link
 						to="/attach"
 						aria-label={t('console.attachThread')}
-						className="flex size-6 items-center justify-center rounded-full text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+						// Verde na referência — é a única ação de criar da sidebar, e o verde é a cor de ação do sistema.
+						className="flex size-6 items-center justify-center rounded-full text-primary transition-colors hover:bg-sidebar-accent"
 					>
 						<IconPlus className="size-4" />
 					</Link>
@@ -88,9 +91,26 @@ export function Sidebar({ className, ...props }: React.ComponentProps<'aside'>) 
 function NavItem({ to, icon: Glyph, label, count }: { to: AppRoute; icon: Icon; label: string; count?: number }) {
 	return (
 		<Link to={to} className={cn(rowBase, rowIdle)} activeProps={{ className: cn(rowBase, rowActive) }}>
-			<Glyph className="size-5 shrink-0" />
-			<span className="flex-1 truncate">{label}</span>
-			{count !== undefined && <span className="text-sm tabular-nums text-muted-foreground">{count}</span>}
+			{({ isActive }) => (
+				<>
+					<Glyph className="size-5 shrink-0" />
+					<span className="flex-1 truncate">{label}</span>
+					{count !== undefined && (
+						// D2 — the selected nav item's counter gets its own chip: brand-green fill, the
+						// asymmetric ladder's `3xs` step ("9px 9px 9px 3px"), WHITE text for contrast
+						// (--primary-foreground — not --secondary-foreground, which is dark green and
+						// reads illegibly on this fill). Idle stays a plain muted number, no chip.
+						<span
+							className={cn(
+								'text-sm tabular-nums',
+								isActive ? 'rounded-asymmetric-3xs bg-primary px-1.5 py-0.5 font-bold text-primary-foreground' : 'text-muted-foreground',
+							)}
+						>
+							{count}
+						</span>
+					)}
+				</>
+			)}
 		</Link>
 	)
 }

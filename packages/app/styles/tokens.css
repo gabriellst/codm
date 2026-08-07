@@ -1,13 +1,41 @@
 /* CODM design tokens — the product's own identity.
-   Monochrome: near-black / white / light-gray. Black is the sole action color;
-   status is expressed only through small colored dots. Pill-heavy radii, hairline
-   borders, heavy uppercase display type, generous whitespace, subtle/no shadows.
+   D2 redesign: brand green enters the system. OBSOLETE premise this file used to state —
+   "monochrome, black is the sole action color" — no longer holds; `.design-ref-app.html`
+   (7 screens, gitignored insumo) measures a real green palette used with intent (primary
+   action, a brighter high-emphasis accent, a soft selected/chip surface, and dark-green
+   text-on-that-surface that doubles as the link color). Neutrals (near-black text, white/
+   light-gray surfaces, hairline borders) are UNCHANGED — only the "single brand value"
+   claim is gone. Status hues beyond success (warning/destructive/info) are unchanged too:
+   the reference's 7 screens carry no evidence for them, so this pass leaves them alone.
 
    Consumed by @codm/app-react (index.css) and @codm/app-astro (global.css).
    Fonts are system/open stacks (declared in index.css @theme inline) — no external fetch. */
 
 @theme {
 	--spacing: 0.3rem;
+}
+
+/* ── Radius scale (react + astro both need the FULL ladder — see note below) ───
+   `@codm/app-react`'s index.css already derives a symmetric sm→4xl ladder off a single
+   `--radius` via calc() offsets (-4/-2/0/+4/+8/+12/+16px). That ladder happens to line up
+   almost exactly with the reference's measured symmetric clusters (16/18/20/24/28px), so
+   the base `--radius` stays 20px — but it's declared react-only, and astro has NO ladder
+   at all (global.css only imports this file). Since this file is the ONE thing both apps
+   share, the full ladder is re-declared here (identical calc() formulas — harmless overlap
+   on react, load-bearing on astro) PLUS three smaller steps (xs/2xs/3xs) the reference
+   needs that the original react-only ladder didn't reach. Follow-up cleanup (out of scope
+   here): the react-only copy in index.css can be deleted once primitives read from here. */
+@theme inline {
+	--radius-3xs: calc(var(--radius) - 11px); /* 9px  — "9px 9px 9px 3px", 6× in the reference (tiny badges/icon-buttons) */
+	--radius-2xs: calc(var(--radius) - 8px); /* 12px — "12px 12px 12px 4px", 10× — 2nd most common shape overall */
+	--radius-xs: calc(var(--radius) - 6px); /* 14px — "14px 14px 14px 4|5px", 7× (compact rows) */
+	--radius-sm: calc(var(--radius) - 4px); /* 16px — "16px 16px 16px 5px", 11× — the MOST common shape in the reference */
+	--radius-md: calc(var(--radius) - 2px); /* 18px — "18px 18px 18px 6px", 6× */
+	--radius-lg: var(--radius); /* 20px — "20px 20px 20px 6|7px", 5×; also the plain-symmetric card default */
+	--radius-xl: calc(var(--radius) + 4px); /* 24px — "24px 24px 24px 8px", 3× */
+	--radius-2xl: calc(var(--radius) + 8px); /* 28px — "28px 28px 28px 10px", 1×; kept for ladder continuity */
+	--radius-3xl: calc(var(--radius) + 12px); /* 32px — no direct measurement; ladder continuity only */
+	--radius-4xl: calc(var(--radius) + 16px); /* 36px — no direct measurement; ladder continuity only */
 }
 
 :root {
@@ -19,30 +47,66 @@
 	   the figure/ground was backwards, which no amount of tuning either grey could fix. */
 	--route-background: oklch(1 0 0); /* #ffffff — page canvas */
 	--background: oklch(1 0 0); /* #ffffff — base surface: dialogs, popovers, inputs */
-	--foreground: oklch(0.2 0 0); /* #161616 — near-black text AND the sole action colour */
-	--card: oklch(0.976 0 0); /* #f7f7f7 — DECOUPLED from --background on purpose (see above) */
+	--foreground: oklch(0.2 0 0); /* #161616 — near-black text; UNCHANGED — still the text color, just no longer also the action color */
+	--card: oklch(0.976 0 0); /* #f7f7f7 — DECOUPLED from --background on purpose (see above). Unchanged: generic stat cards measure the same plain grey (cardBg:'#f7f7f7'); only a highlighted card swaps to --secondary. */
 	--card-foreground: var(--foreground);
 	--popover: var(--background); /* modals stay white over the scrim, as in the design */
 	--popover-foreground: var(--foreground);
 
-	/* ── Action (the ONE color) ──────────────────────── */
-	--primary: oklch(0.2 0 0); /* #161616 — the design's single brand value, same as text */
-	--primary-foreground: oklch(1 0 0);
+	/* ── Action (brand green enters here) ────────────── */
+	/* D2 — #76C410 measured in `background`(5×+)/`color`/`border-color` throughout the reference:
+	   the primary CTA fill ("Nova conversa", "Conectar canal"), every "on" toggle/checkbox/ring,
+	   and the plain status dot for "running/active". Darken-on-hover (#63a80c, measured on the
+	   same buttons) is NOT a token — it's handled the same way the codebase already handles
+	   primary hover today (`hover:bg-primary/90`, see button.tsx), so the primitives frontier
+	   composes it from this value via opacity, no new token needed. */
+	--primary: oklch(0.741 0.204 133); /* #76C410 */
+	--primary-foreground: oklch(1 0 0); /* #ffffff — measured directly (color:#ffffff on every primary-filled CTA) */
 
 	/* ── Neutral surfaces ────────────────────────────── */
-	--secondary: oklch(0.943 0 0); /* #ececec — soft chip / active nav pill */
-	--secondary-foreground: var(--foreground);
-	--muted: oklch(0.958 0 0); /* #f1f1f1 — soft badge bg / hover */
+	/* --secondary was already commented "soft chip / active nav pill" before this pass — that
+	   ROLE didn't change, only its hue: D2 measures the active nav-pill background AND every
+	   chip/avatar/icon "on" surface at the SAME hex, #EAF6D3 (36× — the single most-used color
+	   in the reference after the neutrals). --secondary-foreground pairs with it with zero
+	   exceptions across the whole reference (chips, avatars, task pills, the archive toggle) at
+	   #3D660A — which is ALSO the measured `a{color:...}` link color, so it doubles as that.
+
+	   THIS IS ALSO THE SYSTEM'S SELECTED/ACTIVE-SURFACE TOKEN — the "Interaction states" table
+	   under "Lines & interaction" below documents it alongside --hover/--hover-accent as one family;
+	   it stays declared here (not moved) because it doubles as a plain neutral-surface color too. */
+	--secondary: oklch(0.955 0.048 123); /* #EAF6D3 */
+	--secondary-foreground: oklch(0.462 0.123 132); /* #3D660A — also the link color */
+	--muted: oklch(0.958 0 0); /* #f1f1f1 — soft badge bg / hover. UNCHANGED: "paused/idle" chips measure plain grey (#f2f2f2), not green — muted stays the truly-off neutral. */
 	--muted-foreground: oklch(0.524 0 0); /* #6a6a6a — secondary text */
 	--caption-foreground: oklch(0.633 0 0); /* #8a8a8a — timestamps, metadata, the quietest tier */
-	--accent: oklch(0.955 0 0);
+	/* --accent was already the barely-there neutral hover/soft-surface token (near #f3f3f3).
+	   D2 measures its closest reference sibling, #F4F6F1, consistently as the "off" partner of
+	   --secondary's "on" state (iconBg/avatarBg/chipBg ternaries: connected/running/active →
+	   #EAF6D3, otherwise → #F4F6F1) — i.e. even the neutral-ish surface picked up a hint of the
+	   brand hue. Numerically it's a rounding error away from the old value, so nothing that
+	   already renders `bg-accent` should look broken, just very slightly warmer. */
+	--accent: oklch(0.97 0.007 124); /* #F4F6F1 */
 	--accent-foreground: var(--foreground);
 
-	/* ── Status hues — used ONLY as small dots / deltas ─ */
-	--success: oklch(0.62 0.15 149);
-	--success-foreground: oklch(0.99 0 0);
-	--success-bright: oklch(0.7 0.17 150);
-	--success-bright-foreground: oklch(0.22 0.05 150);
+	/* ── Status hues ──────────────────────────────────── */
+	/* --success now points at --primary rather than owning a separate literal: the reference's
+	   "running/working" status dot IS #76C410, the identical hex used for primary CTAs — the
+	   brand's green doubles as the positive/active status hue (this is a measured fact, not a
+	   simplification: dot / chipBg / chipFg for "running" all match primary/secondary exactly).
+	   --success-foreground follows --primary-foreground for the same reason. */
+	--success: var(--primary);
+	--success-foreground: var(--primary-foreground);
+	/* --success-bright is the reference's OTHER green — #8BE414 — used for the single
+	   highest-emphasis case: the pulsing "needs you" dot and the "Resolver" CTA that sits on a
+	   near-black surface. --success-bright-foreground is deliberately the LITERAL near-black
+	   (not `var(--foreground)`): text on this bright chip must stay dark in both themes (see
+	   `.dark`, below), whereas `--foreground` itself flips to near-white there. */
+	--success-bright: oklch(0.83 0.228 132); /* #8BE414 */
+	--success-bright-foreground: oklch(0.2 0 0); /* #161616, measured (color:#161616 on the bright-green "Resolver" CTA) — intentionally NOT aliased to --foreground */
+	/* warning/destructive/info — UNCHANGED. No red/orange/blue hex appears anywhere in the
+	   7 reference screens (verified by scanning every literal hex + every color-bearing prop);
+	   nothing to remeasure against, so these keep their pre-redesign values rather than being
+	   invented. */
 	--warning: oklch(0.75 0.15 71);
 	--warning-foreground: oklch(0.22 0 0);
 	--destructive: oklch(0.585 0.2 25);
@@ -50,42 +114,121 @@
 	--info: oklch(0.6 0.13 250);
 	--info-foreground: oklch(0.99 0 0);
 
-	/* ── Lines & interaction ─────────────────────────── */
-	--border: oklch(0.94 0 0); /* #ebebeb — section divider hairline */
-	--input: oklch(0.894 0 0); /* #dcdcdc — the design draws control outlines a step darker */
-	--ring: oklch(from var(--foreground) l c h / 0.35);
-	--hover: oklch(from var(--foreground) l c h / 0.05);
-	--focus: oklch(from var(--foreground) l c h / 0.08);
+	/* ── Interaction states (lines, hover, selected) ───────────────────────────
+	   D2 CORRECTION, founder-confirmed — this block used to carry a comment on --hover claiming
+	   "generic list/nav hovers measure plain grey ... not green", stated as a blanket rule. That
+	   comment was WRONG and is exactly the recurring bug: components kept reaching for a single
+	   grey `--hover` (or worse, ad-hoc `hover:bg-muted`/`hover:bg-accent` picked per screen) for
+	   rows the reference measures as green, so the mismatch kept coming back in different
+	   components instead of getting fixed once. Re-measured from every `style-hover=` in
+	   `.design-ref-app.html` across all 7 screens — one token per ROLE, not per screen or guess:
 
-	/* ── Legacy brand aliases (kept mono so nothing breaks) ─ */
-	--brand-green: var(--success);
+	     ROLE                                    TOKEN                    VALUE    MEASURED AT
+	     ──────────────────────────────────────  ──────────────────────  -------  ─────────────────────────────
+	     neutral hover (plain/utility rows)       --hover                 #f4f4f4  nav rail item, thread-list row,
+	                                                                                recent-activity row, dropdown/
+	                                                                                select/table row, modal pick row
+	                                                                                (participant toggle, channel pick)
+	     content-row hover surface (brand)        --hover-accent          #F7FBEF  workspace row, channel row, issue
+	                                                                                row, agent-session row
+	     content-row hover border (brand)         --hover-accent-border   #d8ecb4  same rows' border-color — pairs
+	                                                                                1:1 with --hover-accent, never
+	                                                                                used alone
+	     selected / active surface                --secondary (above)     #EAF6D3  active nav pill, chips, avatar/
+	                                                                                icon "on" fill; also what
+	                                                                                icon-only buttons hover TO
+	                                                                                (button.tsx ghost+icon compound)
+	     text on selected surface                 --secondary-foreground  #3D660A  pairs with --secondary with zero
+	                                                                                exceptions in the reference
+	     border at rest (section/row hairline)     --border (below)        #ebebeb  row/section dividers
+	     border at rest (control outline)          --input (below)         #dcdcdc  toggle track, outline-button
+	                                                                                border, dashed callout border
+	     focus ring                                --ring (below)          derived  no rendered :focus-visible
+	                                                                                state in the static reference
 
-	/* ── Charts — monochrome ramp (color stays out of data) ─ */
+	   `--hover` and `--hover-accent` are two DIFFERENT tokens on purpose, not one shade reused at
+	   two opacities — they measure to genuinely different hues (neutral grey vs. brand-tinted
+	   green) and a component picks its row by ROLE ("is this a plain utility row (menu/table/
+	   sidebar), or a piece of primary list content (workspace/channel/issue/session)?"), never by
+	   eyeballing an opacity. `--hover-accent` always pairs with `--hover-accent-border` — a content
+	   row's background and border move together on hover (never bg alone), so treat the pair as one
+	   unit. `components/ui/surfaces.ts` composes both roles into ready Tailwind presets (`trigger`
+	   for --hover, `row` for --hover-accent/--hover-accent-border) — reach for those instead of
+	   hand-rolling `hover:bg-*` per component, which is how this drifted in the first place.
+
+	   GROUP CONVENTION for rows that pair background + border + a descendant on hover: put `group`
+	   on the interactive row root. The row's OWN bg/border react via plain `hover:*` (they live on
+	   the group root itself); any DESCENDANT that should echo the row's hover (a trailing chevron,
+	   a secondary icon) reacts via `group-hover:*` instead of its own `hover:`, so the whole row's
+	   affordance moves as one unit. See `IssueRow` for the canonical example. */
+	--hover: oklch(from var(--foreground) l c h / 0.05); /* ≈ #f4f4f4 — neutral hover, see table above */
+	--hover-accent: oklch(0.982 0.016 122); /* #F7FBEF — brand-tinted content-row hover surface */
+	--hover-accent-border: oklch(0.914 0.077 124); /* #d8ecb4 — border companion to --hover-accent */
+	--focus: oklch(from var(--foreground) l c h / 0.08); /* UNCHANGED — same neutral family as --hover */
+	--border: oklch(0.94 0 0); /* #ebebeb — section divider hairline, border at rest. UNCHANGED — measured identically in the reference (border-bottom:1px solid #ebebeb). */
+	--input: oklch(0.894 0 0); /* #dcdcdc — UNCHANGED — the reference's toggle-track "off" state and dashed-outline color measure the same #dcdcdc already. */
+	/* --ring: base swapped from --foreground to --primary. Not a literal measurement (the static
+	   reference has no rendered :focus-visible state), but a direct continuation of what IS
+	   measured everywhere else an "on/selected" ring appears (`ringColor: on ? '#76C410' :
+	   '#dcdcdc'` on every selectable avatar/checkbox in the reference) — the brand green is the
+	   system's own selection-ring color, so the generic focus ring follows it. DERIVED, not measured. */
+	--ring: oklch(from var(--primary) l c h / 0.35);
+
+	/* ── Brand alias ──────────────────────────────────── */
+	/* No longer a "kept mono so nothing breaks" shim — --primary IS the brand hex now, so this
+	   alias is genuinely redundant with it. Kept anyway for any consumer reaching for
+	   `--color-brand-green` / `bg-brand-green` directly instead of `--color-primary`. */
+	--brand-green: var(--primary);
+
+	/* ── Charts — monochrome ramp (unchanged; color stays out of data) ─ */
 	--chart-1: oklch(0.2 0 0);
 	--chart-2: oklch(0.38 0 0);
 	--chart-3: oklch(0.55 0 0);
 	--chart-4: oklch(0.72 0 0);
 	--chart-5: oklch(0.86 0 0);
 
-	/* ── Radius — pill-heavy. Base tuned for cards; buttons/badges/inputs go full. ─ */
-	--radius: 1.25rem; /* 20px — the design's large content-card radius */
+	/* ── Radius — base + asymmetric derivation ───────────────────────────
+	   The redesign's signature shape: three matched corners plus a SMALL bottom-left corner.
+	   Measured ratio across every asymmetric shape in the reference clusters tightly around
+	   1/3 — exactly 1/3 at the four most literal pairs (12→4px, 9→3px, 18→6px, 24→8px) and
+	   ~31% at the single most-used shape (16→5px, 11× — see the ladder above). `--radius-corner-ratio`
+	   declares that ratio ONCE; `web-utilities.css` composes it against each ladder step into a
+	   named `rounded-asymmetric-*` utility, so no component ever hardcodes "16px 16px 16px 5px". */
+	--radius: 1.25rem; /* 20px — the design's large content-card radius (= --radius-lg on the ladder above) */
+	--radius-corner-ratio: 0.333; /* ≈ 1/3 — see measurement above */
+
+	/* Exception, NOT a rule: this ONE shape (a dashed-border empty-state/CTA callout, 2× in the
+	   reference) flips which corner is small — bottom-RIGHT instead of bottom-left. Hardcoded
+	   directly rather than folded into the ratio system above; see the matching
+	   `rounded-callout-flip` utility in web-utilities.css. */
+	--radius-callout-flip: 22px 22px 6px 22px;
+	/* 999px (pill) and 50% (avatar/circle) stay symmetric and need no token — they're already
+	   Tailwind's native `rounded-full` either way (a 999px pill and an exact-circle 50% resolve
+	   to the same utility once width == height). */
 
 	/* ── Sidebar (light — CODM chrome) ─────────────── */
 	--sidebar: oklch(0.976 0 0);
 	--sidebar-foreground: oklch(0.18 0 0);
 	--sidebar-primary: oklch(0.16 0 0);
 	--sidebar-primary-foreground: oklch(1 0 0);
-	--sidebar-accent: oklch(0.93 0 0); /* active nav pill */
-	--sidebar-accent-foreground: oklch(0.18 0 0);
+	--sidebar-accent: var(--secondary); /* active nav pill — this role was already documented pre-redesign; D2 measures it at the exact --secondary hex (#EAF6D3) */
+	--sidebar-accent-foreground: var(--secondary-foreground); /* by strong analogy: every #EAF6D3 surface in the reference pairs with #3D660A text with zero exceptions. Not literally pixel-confirmed for the nav label itself (only the row background + bold weight are), but the pairing is the reference's own hard rule. */
 	--sidebar-border: oklch(0.9 0 0);
 	--sidebar-ring: var(--ring);
 }
 
 .dark {
-	/* Genuine dark inversion — canvas goes near-black, action pills go white.
-	   The design ships LIGHT ONLY (no dark values exist to copy), so this half stays the product's
-	   own: what it mirrors from D1 is the STRUCTURE — the canvas is the base and a card is one step
-	   off it — not the light theme's greys. */
+	/* Genuine dark inversion — canvas goes near-black, action pills go white... except the brand
+	   hue itself, which this pass makes THEME-INVARIANT: the reference ships light-only, and the
+	   most defensible derivation is "the brand color doesn't change with theme, only the
+	   surfaces/neutrals around it do" — the same rule every mature brand system uses. Concretely:
+	   --primary, --primary-foreground, --success, --success-foreground and --success-bright-foreground
+	   are deliberately ABSENT from this block — they inherit the :root value unchanged (this file
+	   already relies on that inheritance for --sidebar-ring, see :root above). Everything below
+	   IS redeclared because it's a genuine surface/neutral that must invert, or (secondary/accent/
+	   success-bright) a green whose LIGHTNESS needs to move to keep working on a near-black canvas —
+	   none of this half is measured (the reference has no dark screens), all of it is derived
+	   judgment, kept in the same hue family (~130-133°) as the measured light-mode greens. */
 	--route-background: oklch(0.145 0 0);
 	--background: oklch(0.185 0 0);
 	--foreground: oklch(0.97 0 0);
@@ -95,26 +238,30 @@
 	--popover: oklch(0.205 0 0);
 	--popover-foreground: var(--foreground);
 
-	--primary: oklch(0.97 0 0); /* white pills */
-	--primary-foreground: oklch(0.16 0 0);
-
-	--secondary: oklch(0.27 0 0);
-	--secondary-foreground: oklch(0.97 0 0);
+	--secondary: oklch(0.32 0.06 133); /* derived: a dark forest-green chip surface, one step off --card the way the light mode's pastel chip is one step off white */
+	--secondary-foreground: oklch(0.88 0.1 130); /* derived: light minty-green text, the inverse pairing of light mode's dark-green-on-pale-green */
 	--muted: oklch(0.24 0 0);
 	--muted-foreground: oklch(0.68 0 0);
-	--accent: oklch(0.27 0 0);
+	--accent: oklch(0.27 0.015 133); /* derived: same lightness step as the old neutral dark accent, tiny brand-hue tint added (mirrors the light mode's barely-tinted --accent) */
 	--accent-foreground: oklch(0.97 0 0);
 
-	--success: oklch(0.72 0.17 150);
-	--success-bright: oklch(0.78 0.18 150);
+	--success-bright: oklch(0.85 0.23 133); /* derived: slightly brighter/more chroma than light mode's measured #8BE414, for pop against a near-black canvas — same reasoning the pre-existing dark success/warning/destructive bumps already used */
 	--warning: oklch(0.8 0.15 75);
 	--destructive: oklch(0.65 0.19 25);
 	--info: oklch(0.68 0.14 250);
 
 	--border: oklch(from var(--foreground) l c h / 0.14);
 	--input: oklch(from var(--foreground) l c h / 0.16);
-	--ring: oklch(from var(--foreground) l c h / 0.4);
+	--ring: oklch(from var(--primary) l c h / 0.4);
 	--hover: oklch(from var(--foreground) l c h / 0.08);
+	/* --hover-accent/--hover-accent-border — DERIVED, not measured (no dark screens in the
+	   reference), same rule as --secondary/--accent above: keep the ~130-133° hue family, move
+	   lightness to work on a near-black canvas. --hover-accent sits one step above --card (the
+	   dark mirror of "one step off white" in light mode); --hover-accent-border is brighter still,
+	   the same relationship light mode's #F7FBEF/#d8ecb4 pair has (border reads clearly darker/
+	   more saturated than its surface). */
+	--hover-accent: oklch(0.24 0.03 133);
+	--hover-accent-border: oklch(0.38 0.08 133);
 	--focus: oklch(from var(--foreground) l c h / 0.12);
 
 	--chart-1: oklch(0.97 0 0);
@@ -127,7 +274,7 @@
 	--sidebar-foreground: oklch(0.97 0 0);
 	--sidebar-primary: oklch(0.97 0 0);
 	--sidebar-primary-foreground: oklch(0.16 0 0);
-	--sidebar-accent: oklch(0.26 0 0);
-	--sidebar-accent-foreground: oklch(0.97 0 0);
+	--sidebar-accent: var(--secondary); /* same alias as :root, now resolving to this block's dark-green --secondary */
+	--sidebar-accent-foreground: var(--secondary-foreground);
 	--sidebar-border: oklch(from var(--sidebar-foreground) l c h / 0.12);
 }
