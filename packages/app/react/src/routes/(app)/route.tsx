@@ -3,6 +3,7 @@ import { Sidebar } from '@/components/Navbar'
 import { AgentsRunningPill } from '@/components/console/AgentsRunningPill'
 import { CloudSessionGate } from '@/components/console/CloudSessionGate'
 import { SupervisionBanner } from '@/components/console/SupervisionBanner'
+import { UpdateReadyPill } from '@/components/console/UpdateReadyPill'
 import { Dialog } from '@/components/ui/dialog'
 import { useDialogStore } from '@/stores/useDialogStore'
 import { useDrawerStore } from '@/stores/useDrawerStore'
@@ -28,7 +29,7 @@ function AuthLayout() {
 			    channel is deaf, and the operator has to see that from any screen. Renders null while
 			    the fleet is healthy. */}
 			<SupervisionBanner />
-			<div className="flex min-h-0 flex-1">
+			<div className="relative flex min-h-0 flex-1">
 				<Sidebar />
 				<main className="relative flex flex-1 flex-col overflow-hidden">
 					{/* Persistent operating pulse, pinned above the scrolling content. */}
@@ -46,6 +47,14 @@ function AuthLayout() {
 						</CloudSessionGate>
 					</div>
 				</main>
+				{/* Floating over the sidebar's bottom-left corner (Claude Desktop's own placement) —
+				    outside `main` so it hovers above BOTH the thread list and the routed content, and
+				    reads from every authenticated screen. Renders null until an update is pending. */}
+				<div className="pointer-events-none absolute bottom-4 left-4 z-30">
+					<div className="pointer-events-auto">
+						<UpdateReadyPill />
+					</div>
+				</div>
 			</div>
 			<Dialog open={open} onOpenChange={isOpen => !isOpen && hide()}>
 				{content}

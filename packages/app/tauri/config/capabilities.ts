@@ -46,6 +46,12 @@ export const CAPABILITY_PERMISSIONS = {
 	// dragging never worked at all. No react service backs this one: the capability is consumed by a
 	// DOM attribute rather than an injected port, which is why it has no <Name>Service counterpart.
 	windowDrag: ['core:window:allow-start-dragging'],
+	// DIAGNOSTICABILITY (2026-08-07 incident, part 2) — `LoggingService.attachConsole()` forwards
+	// the webview's own `console.*` calls to the `tauri-plugin-log` file target (src/lib.rs) via
+	// the plugin's `log` invoke command. Permission verified against the plugin's own
+	// `permissions/default.toml` (identifier "log", default set `["allow-log"]`) — the name keeps
+	// the tauri plugin's own spelling, same convention as `filePicker`'s `dialog:*`.
+	logging: ['log:default'],
 } as const satisfies Record<string, readonly string[]>
 
 export type CapabilityKey = keyof typeof CAPABILITY_PERMISSIONS
@@ -62,4 +68,5 @@ export const CAPABILITIES = [
 	'windowDrag',
 	'deepLink',
 	'cloudSession',
+	'logging',
 ] as const satisfies readonly CapabilityKey[]

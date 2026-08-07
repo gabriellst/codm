@@ -10,6 +10,7 @@ import { REPO } from '../../../../template.config'
 import { CONSOLE, IDENTIFIER } from './app'
 import { CAPABILITIES, CAPABILITY_PERMISSIONS } from './capabilities'
 import { DEEPLINK } from './deeplink'
+import { CLOUD } from './cloud'
 import { UPDATER } from './updater'
 import { cargoNameDrift, OUTPUTS, renderCapabilities, renderTauriConf } from './generate'
 import { SIDECARS } from './sidecars'
@@ -116,6 +117,13 @@ describe('desktop config (packages/app/tauri/config)', () => {
 		// library validation e o daemon morre no dlopen do prebuild nativo (v0.1.2, 2026-08-07). Os
 		// dois andam sempre juntos — por isso a asserção mora no mesmo rail.
 		expect(conf.bundle.macOS?.entitlements).toBe('entitlements.plist')
+	})
+
+	it('DSK-11: a CSP autoriza a origem da cloud — sem ela o login morre antes de sair do webview', () => {
+		// `connect-src` é lista fechada: o que não está nela o WKWebView recusa com um TypeError sem
+		// status, indistinguível de servidor fora do ar. A v0.1.8 falhava exatamente assim.
+		const conf = JSON.parse(renderTauriConf()) as { app: { security: { csp: string } } }
+		expect(conf.app.security.csp).toContain(CLOUD.origin)
 	})
 
 	it('DSK-09: tauri.conf declares the codm:// deep link scheme from config/deeplink.ts', () => {

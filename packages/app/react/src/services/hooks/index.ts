@@ -6,18 +6,22 @@ import {
 	CloudSessionToken,
 	FilePickerToken,
 	HostInfoToken,
+	LoggingToken,
 	NotificationToken,
 	SecretsToken,
 	SupervisionToken,
+	UpdateToken,
 } from '../tokens'
 import type { AutostartService } from '../AutostartService/AutostartService'
 import type { BadgeService } from '../BadgeService/BadgeService'
 import type { CloudSessionService } from '../CloudSessionService/CloudSessionService'
 import type { FilePickerService } from '../FilePickerService/FilePickerService'
 import type { HostInfoService } from '../HostInfoService/HostInfoService'
+import type { LoggingService } from '../LoggingService/LoggingService'
 import type { NotificationService } from '../NotificationService/NotificationService'
 import type { SecretsService } from '../SecretsService/SecretsService'
 import type { SupervisionService } from '../SupervisionService/SupervisionService'
+import type { UpdateService } from '../UpdateService/UpdateService'
 
 /** Resolve any service by its token from the bound Container. Throws outside the provider. */
 export function useService<T>(t: Token<T>): T {
@@ -33,3 +37,5 @@ export const useAutostart = (): AutostartService => useService(AutostartToken)
 export const useHostInfo = (): HostInfoService => useService(HostInfoToken)
 export const useSupervision = (): SupervisionService => useService(SupervisionToken)
 export const useCloudSession = (): CloudSessionService => useService(CloudSessionToken)
+export const useLogging = (): LoggingService => useService(LoggingToken)
+export const useUpdate = (): UpdateService => useService(UpdateToken)

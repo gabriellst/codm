@@ -11,8 +11,23 @@ import { StopPolicyConfigRepository } from '@thread/repositories/StopPolicyConfi
 
 import pkg from '../../../package.json' with { type: 'json' }
 
-/** App version — SOURCED from package.json so the About row can never drift from the real version. */
-const APP_VERSION: string = pkg.version
+/**
+ * Versão do APP para a linha "Sobre".
+ *
+ * O shell injeta `CODM_APP_VERSION` (sidecars/mod.rs) porque a versão é fato do BUNDLE, não deste
+ * workspace: lendo só o package.json daqui, a tela mostrava 0.0.1 enquanto o app instalado era
+ * 0.1.10 — o comentário anterior prometia "nunca desviar da versão real" e apontava para o arquivo
+ * errado. O package.json fica como fallback do `bun dev`, onde não existe bundle.
+ */
+export function resolveAppVersion(env: NodeJS.ProcessEnv = process.env): string {
+	// `||` e não `??`: a chave é DECLARADA no registry com exemplo vazio, então todo `.env` gerado a
+	// define como string vazia — e `??` aceitaria o vazio como valor válido, publicando uma linha
+	// "Sobre" em branco. Aconteceu no CI em 2026-08-07 (esperava 0.0.1, recebeu ""). Vazio aqui
+	// significa "ninguém injetou", que é exatamente o caso do fallback.
+	return env.CODM_APP_VERSION || pkg.version
+}
+
+const APP_VERSION: string = resolveAppVersion()
 
 const ProviderAvailabilitySchema = z.object({
 	provider: z.enum(ProviderKind),

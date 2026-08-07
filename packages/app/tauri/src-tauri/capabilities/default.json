@@ -16,6 +16,7 @@
 		"autostart:allow-disable",
 		"core:window:allow-start-dragging",
 		"deep-link:default",
-		"shell:default"
+		"shell:default",
+		"log:default"
 	]
 }

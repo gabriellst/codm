@@ -6,6 +6,7 @@ import { ProviderKind } from '@codm/contracts-typescript/wire/enums'
 import { GetSetupChecklist } from './GetSetupChecklist'
 import { GetSettings } from './GetSettings'
 import { GetAttachThreadWizard } from './GetAttachThreadWizard'
+import pkg from '../../../package.json' with { type: 'json' }
 
 /** The phase-6b BFF reads (T08 Settings / T15 Attach wizard / onboarding checklist) against real reads. */
 describe('UI BFF reads', () => {
@@ -36,7 +37,10 @@ describe('UI BFF reads', () => {
 		expect(out.providers.length).toBeGreaterThan(0)
 		expect(out.stopCriteria).toMatchObject({ serverErrors: expect.any(Boolean), humanRequested: expect.any(Boolean) })
 		expect(out.general).toHaveProperty('dataDir')
-		expect(out.appVersion).toBe('0.0.1')
+		// A versão do BUNDLE quando o shell a injeta, o package.json do workspace quando não há bundle
+		// (`bun dev`, testes). Asserção contra o pkg em vez de um literal: um bump do workspace não
+		// deve quebrar um teste que não é sobre número de versão.
+		expect(out.appVersion).toBe(pkg.version)
 	})
 
 	/**

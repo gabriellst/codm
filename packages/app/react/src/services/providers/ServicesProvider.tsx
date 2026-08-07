@@ -16,6 +16,7 @@
 import { createContext, type ReactNode, useContext, useEffect, useState } from 'react'
 import { Container } from '../core/container'
 import { detectEnvironment, ENVIRONMENTS } from '../registry'
+import { LoggingToken } from '../tokens'
 
 const ContainerContext = createContext<Container | null>(null)
 
@@ -26,10 +27,18 @@ export function ServicesProvider({ children, container: injected }: { children: 
 		if (injected) return
 		let cancelled = false
 		const env = detectEnvironment()
-		ENVIRONMENTS[env]().then(bindings => {
+		ENVIRONMENTS[env]().then(async bindings => {
 			if (cancelled) return
 			const built = new Container()
 			built.load(bindings)
+			// DIAGNOSTICABILITY (2026-08-07 incident) — forward console.{error,warn,...} to the
+			// host's persisted log file BEFORE anything below this provider gets a chance to render
+			// and log. This IS the console's boot: the ONE place every capability binding already
+			// gets wired, so it is also the one place the console's own error output gets wired to
+			// somewhere a diagnosis can actually find it (BrowserLoggingService no-ops outside
+			// Tauri — see LoggingService/BrowserLoggingService.ts).
+			await built.resolve(LoggingToken).attachConsole()
+			if (cancelled) return
 			setContainer(built)
 		})
 		return () => {

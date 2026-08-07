@@ -305,6 +305,15 @@ export const REPO = {
 		// class of key: an apiTs boot flag deliberately outside the Zod schemas (ENV-05 coherence
 		// without forcing a Config.ts entry). The value is BAKED as ENV in docker/cloud.Dockerfile —
 		// the deploy surface is Railway (compose aposentado, decisão do founder 2026-08-07).
+		// Injetada pelo SHELL em cada sidecar (packages/app/tauri/src-tauri/src/sidecars/mod.rs): a
+		// versão do bundle instalado. Lida como process.env cru na linha "Sobre" das configurações —
+		// daí schema 'raw'. Ausente no `bun dev`, onde o fallback é o package.json do workspace.
+		CODM_APP_VERSION: {
+			consumers: ['apiTs'],
+			schema: 'raw',
+			example: '',
+			doc: 'versão do bundle desktop, injetada pelo shell nos sidecars',
+		},
 		CODM_PROFILE: {
 			consumers: ['apiTs'],
 			schema: 'raw',

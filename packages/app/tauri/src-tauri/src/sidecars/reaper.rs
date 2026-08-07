@@ -138,12 +138,11 @@ fn sidecar_binary_paths(names: &[&str]) -> Vec<String> {
     paths
 }
 
-/// Sweep, then report. Returns what was removed — and prints it, because this crate has no logging
-/// backend (`tauri-plugin-log` is deliberately absent, so every `log::*` macro is a no-op) and the
-/// shell's own stderr is the only channel that reaches a terminal.
+/// Sweep, then report. Returns what was removed — and logs it, via `log::warn!` so it survives into
+/// `shell.log` on a packaged build, not just a dev terminal's stderr.
 ///
 /// Silence when nothing matched is intentional: the sweep runs on EVERY boot and the normal case
-/// must not print anything.
+/// must not log anything.
 pub fn reap_previous_run(names: &[&str]) -> Vec<Reaped> {
     reap_within(names, TERM_GRACE)
 }
@@ -158,7 +157,7 @@ fn reap_within(names: &[&str], grace: Duration) -> Vec<Reaped> {
         return Vec::new();
     }
 
-    eprintln!(
+    log::warn!(
         "codm-shell: startup sweep — {} sidecar process(es) left by a previous run",
         found.len()
     );
@@ -173,7 +172,7 @@ fn reap_within(names: &[&str], grace: Duration) -> Vec<Reaped> {
         .map(|(pid, path)| {
             let forced = forced.contains(&pid);
             let how = if forced { "SIGKILL" } else { "SIGTERM" };
-            eprintln!("codm-shell: reaped pid {pid} via {how} — {path}");
+            log::warn!("codm-shell: reaped pid {pid} via {how} — {path}");
             Reaped { pid, path, forced }
         })
         .collect()

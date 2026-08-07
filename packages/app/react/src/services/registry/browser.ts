@@ -5,18 +5,22 @@ import {
 	CloudSessionToken,
 	FilePickerToken,
 	HostInfoToken,
+	LoggingToken,
 	NotificationToken,
 	SecretsToken,
 	SupervisionToken,
+	UpdateToken,
 } from '../tokens'
 import { BrowserAutostartService } from '../AutostartService/BrowserAutostartService'
 import { BrowserBadgeService } from '../BadgeService/BrowserBadgeService'
 import { BrowserCloudSessionService } from '../CloudSessionService/BrowserCloudSessionService'
 import { BrowserFilePickerService } from '../FilePickerService/BrowserFilePickerService'
 import { BrowserHostInfoService } from '../HostInfoService/BrowserHostInfoService'
+import { BrowserLoggingService } from '../LoggingService/BrowserLoggingService'
 import { BrowserNotificationService } from '../NotificationService/BrowserNotificationService'
 import { BrowserSecretsService } from '../SecretsService/BrowserSecretsService'
 import { BrowserSupervisionService } from '../SupervisionService/BrowserSupervisionService'
+import { BrowserUpdateService } from '../UpdateService/BrowserUpdateService'
 
 /**
  * Browser composition root — dev server / e2e / any plain tab. DECLARATIVE: a
@@ -35,4 +39,6 @@ export default [
 	[HostInfoToken, BrowserHostInfoService],
 	[SupervisionToken, BrowserSupervisionService],
 	[CloudSessionToken, BrowserCloudSessionService],
+	[LoggingToken, BrowserLoggingService],
+	[UpdateToken, BrowserUpdateService],
 ] as const satisfies Bindings

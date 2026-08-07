@@ -22,6 +22,15 @@ tauri-plugin-dialog = "2"
 tauri-plugin-notification = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-deep-link = "2"
+# PERSISTED SHELL LOG (2026-08-07 incident, part 2) — see src/lib.rs. Backs the `log` facade with a
+# real target for the first time in this shell: every `log::*` call was previously a no-op in a
+# packaged build.
+tauri-plugin-log = "2"
+# Same crate + version tauri's own `PathResolver::app_data_dir` uses internally
+# (`dirs::data_dir().join(identifier)`, verified against tauri 2.11.5's vendored source) — the log
+# plugin needs that path BEFORE an App exists, so src/lib.rs computes it once, standalone, with the
+# same primitive rather than inventing a second one.
+dirs = "6"
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
 log = "0.4"
 serde = { version = "1", features = ["derive"] }

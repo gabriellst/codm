@@ -186,15 +186,14 @@ impl ChildRegistry {
         if children.is_empty() {
             return;
         }
-        // `eprintln!` and not `log::info!`: this crate has no logging backend wired
-        // (`tauri-plugin-log` is deliberately absent), so every `log::*` macro is a no-op and the
-        // only channel that actually reaches a terminal is the shell's own stderr.
-        eprintln!(
+        log::info!(
             "codm-shell: shutting down — SIGTERM to {} sidecar process(es)",
             children.len()
         );
         for pid in terminate_then_force(children, grace) {
-            eprintln!("codm-shell: sidecar pid {pid} ignored SIGTERM within the grace — SIGKILLed");
+            log::warn!(
+                "codm-shell: sidecar pid {pid} ignored SIGTERM within the grace — SIGKILLed"
+            );
         }
     }
 }
@@ -228,17 +227,17 @@ pub fn install_signal_handlers(app: &tauri::AppHandle, children: Arc<ChildRegist
         let children = children.clone();
         tauri::async_runtime::spawn(async move {
             let Ok(mut stream) = signal(kind) else {
-                eprintln!("codm-shell: could not install handler for signal {signo}");
+                log::error!("codm-shell: could not install handler for signal {signo}");
                 return;
             };
             if stream.recv().await.is_none() {
                 return;
             }
-            eprintln!("codm-shell: signal {signo} — taking the sidecars down first");
+            log::info!("codm-shell: signal {signo} — taking the sidecars down first");
             children.kill_all();
             app.exit(0);
             tokio::time::sleep(EXIT_BACKSTOP).await;
-            eprintln!("codm-shell: event loop did not exit — leaving by hand");
+            log::error!("codm-shell: event loop did not exit — leaving by hand");
             std::process::exit(128 + signo);
         });
     }

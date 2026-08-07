@@ -3,8 +3,15 @@ import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { setCloudToken, useExchangeDeviceCode } from '@codm/client-typescript/typescript'
 import { Config } from '@/lib/config'
+import { extractErrorCode } from '@/lib/errors'
 import { CLOUD_DEVICE_TOKEN_SECRET_KEY, useCloudSession, useSecrets } from '@/services'
 import { useCloudSessionStore } from '@/stores'
+
+/** Login step names — carried on every diagnostic log line so a future failure names WHERE it
+ *  happened instead of just THAT it happened (the exact gap that made the 2026-08-07 login failure
+ *  unrecoverable without a debugger on the failing machine): listener signature, code exchange,
+ *  keychain write, or the best-effort daemon push. */
+type LoginStep = 'listen' | 'exchange' | 'keychain' | 'daemon'
 
 /**
  * `codm://auth?code=<uuid>` → the code, or `undefined` for anything this hook doesn't recognize
@@ -26,14 +33,37 @@ function extractDeviceCode(url: string): string | undefined {
  * explicitly targets `Config.cloudUrl`; this endpoint only ever exists on the machine's own daemon.
  * Tolerant on purpose — by the time this call is attempted the token is already safely in the
  * keychain, the actual source of truth (spec Decision 4); an offline daemon must never turn a
- * successful login into a visible error.
+ * successful login into a visible error — hence no toast here, only a diagnostic trace (now that
+ * `console.warn` actually lands somewhere, see LoggingService) for the case where the daemon really
+ * was the problem.
  */
 async function pushToDaemon(token: string): Promise<void> {
 	try {
 		await setCloudToken({ token }, { baseURL: Config.baseUrl })
-	} catch {
-		// offline daemon — the keychain write already happened, nothing to undo.
+	} catch (error) {
+		const step: LoginStep = 'daemon'
+		console.warn('[useDeepLinkAuth] daemon push failed (best-effort, tolerated — keychain already has the token)', {
+			step,
+			code: extractErrorCode(error),
+			status: (error as { status?: number } | null)?.status,
+			error,
+		})
 	}
+}
+
+/**
+ * The ONE place a login failure gets written down before the toast fires. `step` is what makes this
+ * more than `console.error(error)`: the 2026-08-07 incident's actual cost was not the absence of a
+ * log line, it was not knowing WHICH of listener-signature / code-exchange / keychain broke — three
+ * causes with three different fixes, indistinguishable from "login failed" alone.
+ */
+function logLoginFailure(step: LoginStep, error: unknown): void {
+	console.error(`[useDeepLinkAuth] login failed at step '${step}'`, {
+		step,
+		code: extractErrorCode(error),
+		status: (error as { status?: number } | null)?.status,
+		error,
+	})
 }
 
 /**
@@ -57,29 +87,49 @@ export function useDeepLinkAuth(): void {
 	useEffect(() => {
 		let cancelled = false
 		let unsubscribe: (() => void) | undefined
+		// DUPLICATE DELIVERY (measured 2026-08-07): `TauriCloudSessionService.onAuthCallback` reads
+		// BOTH `getCurrent()` (launch URLs) AND the live `onOpenUrl` listener — and with the app
+		// already open, macOS delivers the SAME url through both at once, so `handleUrl` runs twice
+		// for one login. Exchange is exactly-once BY DESIGN on the backend
+		// (`DeviceTokenRepository.consumeCode` — a single atomic `UPDATE ... RETURNING`, spec
+		// decision 4, and that is a property to preserve, not a bug to route around) — so the SECOND
+		// delivery always fails DEVICE_CODE_INVALID even though the login already succeeded, and the
+		// operator saw a failure toast for a login that worked. Dedupe by CODE, never by URL: the
+		// code is the thing that is single-use, and a genuinely new login (new code) must never be
+		// blocked by an old one.
+		const processedCodes = new Set<string>()
 
 		const handleUrl = (url: string) => {
 			const code = extractDeviceCode(url)
 			if (!code) return
+			if (processedCodes.has(code)) return
+			processedCodes.add(code)
 
-			void exchangeDeviceCode({ data: { code } })
-				.then(async ({ token }) => {
+			void (async () => {
+				let step: LoginStep = 'exchange'
+				try {
+					const { token } = await exchangeDeviceCode({ data: { code } })
 					if (cancelled) return
+					step = 'keychain'
 					await secrets.set(CLOUD_DEVICE_TOKEN_SECRET_KEY, token)
 					await pushToDaemon(token)
 					if (cancelled) return
 					setAuthenticated()
 					toast.success(t('cloudAuth.login.success'))
-				})
-				.catch((error: unknown) => {
+				} catch (error) {
 					// Um código inválido/expirado/já consumido não pode derrubar o console — mas TAMBÉM
 					// não pode sumir em silêncio, que é o que acontecia: a tela ficava no login sem uma
-					// palavra e não havia como saber se o link chegou (medido em 2026-08-07). O toast é
-					// o mínimo; a mensagem distingue expirado de falha genérica porque a ação do
-					// usuário é diferente (entrar de novo vs tentar de novo).
-					const expired = String(error).includes('DEVICE_CODE_INVALID')
+					// palavra e não havia como saber se o link chegou, nem em qual etapa (medido em
+					// 2026-08-07). O toast é o mínimo; a mensagem distingue expirado de falha genérica
+					// porque a ação do usuário é diferente (entrar de novo vs tentar de novo) — e agora
+					// essa distinção lê o CÓDIGO real do erro (a SDK anexa `.code`/`.status` ao Error
+					// que lança), não um `String(error).includes(...)` que nunca batia com a mensagem
+					// HTTP genérica.
+					logLoginFailure(step, error)
+					const expired = extractErrorCode(error) === 'DEVICE_CODE_INVALID'
 					toast.error(t(expired ? 'cloudAuth.login.expired' : 'cloudAuth.login.failed'))
-				})
+				}
+			})()
 		}
 
 		void cloudSession
@@ -89,9 +139,10 @@ export function useDeepLinkAuth(): void {
 				if (cancelled) fn()
 				else unsubscribe = fn
 			})
-			.catch(() => {
+			.catch((error: unknown) => {
 				// Sem assinatura não há login possível — e o usuário precisa saber, em vez de clicar
 				// em "entrar" para sempre.
+				logLoginFailure('listen', error)
 				toast.error(t('cloudAuth.login.failed'))
 			})
 
