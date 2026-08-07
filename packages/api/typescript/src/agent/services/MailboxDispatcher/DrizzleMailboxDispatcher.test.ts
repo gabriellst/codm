@@ -127,13 +127,21 @@ describe('MailboxRepository — the guarantees the dispatcher is built on', () =
 		await enqueue(repo, THREAD_A, 'a-1')
 
 		// A turn claims it with a lease far shorter than the turn will take.
-		const claimed = await repo.claimNext('worker-long-turn', 40)
+		//
+		// The margins below are deliberately ASYMMETRIC, so the test is immune to scheduler jitter on a
+		// loaded runner: a generous window to land the renewal BEFORE the original lease expires (400ms
+		// budget, renew at ~100ms — ~300ms of slack), and a renewed lease far longer than any plausible
+		// jitter (10s, against a ~500ms total test window — ~9.6s of slack). A razor-thin version of this
+		// (40ms lease, two 30ms sleeps) flaked on a loaded CI runner: a sleep overshooting by >10ms made
+		// the renewal land AFTER the original lease had already lapsed.
+		const claimed = await repo.claimNext('worker-long-turn', 400)
 		expect(claimed).toBeDefined()
 
 		// The turn is still running, so its heartbeat pushes the lease forward before it lapses.
-		await new Promise(resolve => setTimeout(resolve, 30))
-		await repo.renewLease(claimed?.id ?? '', 'worker-long-turn', 40)
-		await new Promise(resolve => setTimeout(resolve, 30))
+		await new Promise(resolve => setTimeout(resolve, 100))
+		await repo.renewLease(claimed?.id ?? '', 'worker-long-turn', 10_000)
+		// Bring total elapsed since the claim safely PAST the original 400ms expiry (~500ms total).
+		await new Promise(resolve => setTimeout(resolve, 400))
 
 		// Past the ORIGINAL expiry, and still nobody else may take it — the run owns it.
 		expect(await repo.claimNext('worker-other', 60_000)).toBeUndefined()
@@ -383,9 +391,16 @@ describe('DrizzleMailboxDispatcher — the drain loop wakes for work that arrive
 
 		// Um lease curto e um heartbeat mais curto ainda: sem a renovação, o item volta à fila no meio
 		// do turno — que é exatamente o estado que envenenou as duas issues em produção.
+		//
+		// Os valores absolutos são deliberadamente maiores que o mínimo que provaria a propriedade.
+		// 60ms/15ms não foi observado falhando aqui, mas carrega a MESMA classe de inversão do teste de
+		// `renewLease` acima em `MailboxRepository` (que flakou em runner sob carga): margens de dígito
+		// único/duas dezenas de ms contra jitter de scheduler. 300/40 mantém ~7 chances de renovação antes
+		// do lease original expirar — e o heartbeat continua disparando durante TODO o sleep abaixo, não
+		// só até o lease original, então tolera várias renovações perdidas seguidas.
 		class FastHeartbeatDispatcher extends DrizzleMailboxDispatcher {
-			protected override leaseMs = 60
-			protected override heartbeatMs = 15
+			protected override leaseMs = 300
+			protected override heartbeatMs = 40
 		}
 		const dispatcher = new FastHeartbeatDispatcher(
 			mailbox,
@@ -409,8 +424,9 @@ describe('DrizzleMailboxDispatcher — the drain loop wakes for work that arrive
 			const draining = dispatcher.drain()
 			await turnStarted.promise
 
-			// Bem além do lease que o dispatcher usaria se nada o renovasse.
-			await new Promise(resolve => setTimeout(resolve, 120))
+			// Bem além do lease que o dispatcher usaria se nada o renovasse (300ms), com folga grande o
+			// bastante para não flakar sob runner carregado.
+			await new Promise(resolve => setTimeout(resolve, 500))
 
 			// Ninguém mais consegue reivindicar: o turno em voo ainda é o dono.
 			expect(await mailbox.claimNext('worker-intruso', 60_000)).toBeUndefined()

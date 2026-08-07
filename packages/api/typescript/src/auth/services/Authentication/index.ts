@@ -1,1 +1,1 @@
-export { BetterAuth, type BetterAuthInstance } from './BetterAuth'
+export { BetterAuth, type BetterAuthInstance, BetterAuthSocialProviders } from './BetterAuth'
