@@ -10,7 +10,7 @@
 		"download": "Baixar"
 	},
 	"hero": {
-		"badge": "Open source · roda na sua máquina · sem conta",
+		"badge": "Open source · roda na sua máquina · grátis",
 		"titleBold": "Mande mensagem pro seu código.",
 		"titleLight": "Ele te responde.",
 		"subtitle": "As issues chegam no seu chat em grupo. Os agentes resolvem por você.",
@@ -21,7 +21,7 @@
 		"otherOs": "Windows e Linux em breve."
 	},
 	"marquee": {
-		"items": ["WhatsApp", "Instagram DM", "Telegram", "Claude Code", "Codex", "OpenCode"]
+		"items": ["WhatsApp", "Claude Code", "Codex", "OpenCode"]
 	},
 	"demo": {
 		"eyebrow": "SEUS PROJETOS, DE PLANTÃO",
@@ -107,7 +107,7 @@
 			{
 				"kicker": "LOCAL",
 				"title": "Nada sai da sua máquina",
-				"body": "Sem servidores de relay, sem telemetria, sem conta. Seu código, suas chaves e seus chats nunca saem da máquina que é sua."
+				"body": "Sem servidores de relay no caminho dos seus dados: código, chaves e conversas ficam na máquina que é sua. A conta só autentica o app — nada do seu trabalho sobe."
 			}
 		],
 		"controls": [

@@ -10,7 +10,7 @@
 		"download": "Download"
 	},
 	"hero": {
-		"badge": "Open source · runs on your machine · no account",
+		"badge": "Open source · runs on your machine · free",
 		"titleBold": "Text your codebase.",
 		"titleLight": "It texts you back.",
 		"subtitle": "Issues land on your group chat. Agents solve them for you.",
@@ -21,7 +21,7 @@
 		"otherOs": "Windows and Linux coming soon."
 	},
 	"marquee": {
-		"items": ["WhatsApp", "Instagram DM", "Telegram", "Claude Code", "Codex", "OpenCode"]
+		"items": ["WhatsApp", "Claude Code", "Codex", "OpenCode"]
 	},
 	"demo": {
 		"eyebrow": "YOUR PROJECTS, ON CALL",
@@ -107,7 +107,7 @@
 			{
 				"kicker": "LOCAL",
 				"title": "Nothing leaves your machine",
-				"body": "No relay servers, no telemetry, no account. Your code, keys and chats never leave the machine you own."
+				"body": "No relay servers in your data path: code, keys and chats stay on the machine you own. Your account only signs you in — none of your work leaves."
 			}
 		],
 		"controls": [
