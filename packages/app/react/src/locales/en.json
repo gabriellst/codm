@@ -158,7 +158,10 @@
 			"github": "Continue with GitHub",
 			"google": "Continue with Google",
 			"subtitle": "Sign in with your account to unlock the agents",
-			"title": "Sign in to continue"
+			"title": "Sign in to continue",
+			"failed": "Could not finish signing in. Try again.",
+			"expired": "This sign-in link expired. Sign in again.",
+			"success": "Signed in"
 		}
 	},
 	"common": {

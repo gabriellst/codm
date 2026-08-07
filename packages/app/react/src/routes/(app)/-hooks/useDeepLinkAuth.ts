@@ -1,4 +1,6 @@
 import { useEffect } from 'react'
+import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 import { setCloudToken, useExchangeDeviceCode } from '@codm/client-typescript/typescript'
 import { Config } from '@/lib/config'
 import { CLOUD_DEVICE_TOKEN_SECRET_KEY, useCloudSession, useSecrets } from '@/services'
@@ -50,6 +52,7 @@ export function useDeepLinkAuth(): void {
 	const secrets = useSecrets()
 	const setAuthenticated = useCloudSessionStore(s => s.setAuthenticated)
 	const { mutateAsync: exchangeDeviceCode } = useExchangeDeviceCode({ client: { baseURL: Config.cloudUrl } })
+	const { t } = useTranslation()
 
 	useEffect(() => {
 		let cancelled = false
@@ -64,11 +67,18 @@ export function useDeepLinkAuth(): void {
 					if (cancelled) return
 					await secrets.set(CLOUD_DEVICE_TOKEN_SECRET_KEY, token)
 					await pushToDaemon(token)
-					if (!cancelled) setAuthenticated()
+					if (cancelled) return
+					setAuthenticated()
+					toast.success(t('cloudAuth.login.success'))
 				})
-				.catch(() => {
-					// An invalid/expired/already-consumed code (DEVICE_CODE_INVALID) must not crash the
-					// console — the operator is still on /login (or gets sent back there) and can retry.
+				.catch((error: unknown) => {
+					// Um código inválido/expirado/já consumido não pode derrubar o console — mas TAMBÉM
+					// não pode sumir em silêncio, que é o que acontecia: a tela ficava no login sem uma
+					// palavra e não havia como saber se o link chegou (medido em 2026-08-07). O toast é
+					// o mínimo; a mensagem distingue expirado de falha genérica porque a ação do
+					// usuário é diferente (entrar de novo vs tentar de novo).
+					const expired = String(error).includes('DEVICE_CODE_INVALID')
+					toast.error(t(expired ? 'cloudAuth.login.expired' : 'cloudAuth.login.failed'))
 				})
 		}
 
@@ -79,11 +89,15 @@ export function useDeepLinkAuth(): void {
 				if (cancelled) fn()
 				else unsubscribe = fn
 			})
-			.catch(() => undefined)
+			.catch(() => {
+				// Sem assinatura não há login possível — e o usuário precisa saber, em vez de clicar
+				// em "entrar" para sempre.
+				toast.error(t('cloudAuth.login.failed'))
+			})
 
 		return () => {
 			cancelled = true
 			unsubscribe?.()
 		}
-	}, [cloudSession, secrets, exchangeDeviceCode, setAuthenticated])
+	}, [cloudSession, secrets, exchangeDeviceCode, setAuthenticated, t])
 }

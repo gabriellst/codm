@@ -158,7 +158,10 @@
 			"github": "Continuar com GitHub",
 			"google": "Continuar com Google",
 			"subtitle": "Faça login com sua conta para liberar os agentes",
-			"title": "Entre para continuar"
+			"title": "Entre para continuar",
+			"failed": "Não foi possível concluir o login. Tente novamente.",
+			"expired": "Este link de login expirou. Entre novamente.",
+			"success": "Login concluído"
 		}
 	},
 	"common": {
