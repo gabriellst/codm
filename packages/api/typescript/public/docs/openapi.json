@@ -59,6 +59,66 @@
         }
       }
     },
+    "/v1/auth/*": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "description": "better-auth passthrough",
+        "operationId": "AuthPassthroughGet",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "better-auth passthrough",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "examples": [
+                    {}
+                  ],
+                  "x-tpl-unknown": true
+                },
+                "examples": {
+                  "default": {
+                    "value": {},
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "description": "better-auth passthrough",
+        "operationId": "AuthPassthroughPost",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "better-auth passthrough",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "examples": [
+                    {}
+                  ],
+                  "x-tpl-unknown": true
+                },
+                "examples": {
+                  "default": {
+                    "value": {},
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/cloud/desktop-callback": {
       "get": {
         "tags": [

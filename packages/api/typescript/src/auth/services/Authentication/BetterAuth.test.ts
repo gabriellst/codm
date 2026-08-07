@@ -32,8 +32,8 @@ describe('BetterAuth (integration)', () => {
 		await testBed.destroy()
 	})
 
-	it('mounts a working handler — GET /api/auth/ok responds', async () => {
-		const request = new Request(`${Config.env.CODM_CLOUD_URL}/api/auth/ok`)
+	it('mounts a working handler — GET /v1/auth/ok responds', async () => {
+		const request = new Request(`${Config.env.CODM_CLOUD_URL}/v1/auth/ok`)
 		const response = await betterAuth.auth.handler(request)
 
 		expect(response.status).toBe(200)

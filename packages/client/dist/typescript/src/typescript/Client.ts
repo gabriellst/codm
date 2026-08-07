@@ -4,6 +4,8 @@ import {
 	archiveIssue,
 	askOperator,
 	attachThread,
+	authPassthroughGet,
+	authPassthroughPost,
 	configureContextBuffer,
 	configureMentionGate,
 	configureModel,
@@ -91,6 +93,14 @@ export class TypescriptClient {
 
 	attachThread(...args: Parameters<typeof attachThread>): ReturnType<typeof attachThread> {
 		return (attachThread as (...a: any[]) => ReturnType<typeof attachThread>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	authPassthroughGet(...args: Parameters<typeof authPassthroughGet>): ReturnType<typeof authPassthroughGet> {
+		return (authPassthroughGet as (...a: any[]) => ReturnType<typeof authPassthroughGet>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	authPassthroughPost(...args: Parameters<typeof authPassthroughPost>): ReturnType<typeof authPassthroughPost> {
+		return (authPassthroughPost as (...a: any[]) => ReturnType<typeof authPassthroughPost>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	configureContextBuffer(...args: Parameters<typeof configureContextBuffer>): ReturnType<typeof configureContextBuffer> {

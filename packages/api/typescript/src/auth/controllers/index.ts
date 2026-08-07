@@ -1,3 +1,4 @@
+export { AuthPassthroughController } from './AuthPassthrough'
 export { GetSessionController } from './GetSession'
 export { SetCloudTokenController } from './SetCloudToken'
 export { UploadAvatarController } from './UploadAvatar'

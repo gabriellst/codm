@@ -10374,6 +10374,62 @@ impl Client {
 #[allow(clippy::all)]
 #[allow(elided_named_lifetimes)]
 impl Client {
+    #[doc = "better-auth passthrough\n\nSends a `GET` request to `/v1/auth/*`\n\n"]
+    pub async fn auth_passthrough_get<'a>(
+        &'a self,
+    ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
+        let url = format!("{}/v1/auth/*", self.baseurl,);
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .get(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    #[doc = "better-auth passthrough\n\nSends a `POST` request to `/v1/auth/*`\n\n"]
+    pub async fn auth_passthrough_post<'a>(
+        &'a self,
+    ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
+        let url = format!("{}/v1/auth/*", self.baseurl,);
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
     /**Bridges a better-auth browser session into a one-time device code, handed to the app via the codm:// deep link
 
 Sends a `GET` request to `/v1/cloud/desktop-callback`

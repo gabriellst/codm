@@ -2131,6 +2131,12 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
+	// AuthPassthroughGet request
+	AuthPassthroughGet(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AuthPassthroughPost request
+	AuthPassthroughPost(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// DesktopCallback request
 	DesktopCallback(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -2373,6 +2379,30 @@ type ClientInterface interface {
 
 	// RemoveWorkspace request
 	RemoveWorkspace(ctx context.Context, workspaceId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
+
+func (c *Client) AuthPassthroughGet(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAuthPassthroughGetRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AuthPassthroughPost(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAuthPassthroughPostRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 func (c *Client) DesktopCallback(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -3453,6 +3483,60 @@ func (c *Client) RemoveWorkspace(ctx context.Context, workspaceId string, reqEdi
 		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+// NewAuthPassthroughGetRequest generates requests for AuthPassthroughGet
+func NewAuthPassthroughGetRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/auth/*")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewAuthPassthroughPostRequest generates requests for AuthPassthroughPost
+func NewAuthPassthroughPostRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/auth/*")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }
 
 // NewDesktopCallbackRequest generates requests for DesktopCallback
@@ -5995,6 +6079,12 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
+	// AuthPassthroughGetWithResponse request
+	AuthPassthroughGetWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*AuthPassthroughGetResponse, error)
+
+	// AuthPassthroughPostWithResponse request
+	AuthPassthroughPostWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*AuthPassthroughPostResponse, error)
+
 	// DesktopCallbackWithResponse request
 	DesktopCallbackWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*DesktopCallbackResponse, error)
 
@@ -6237,6 +6327,66 @@ type ClientWithResponsesInterface interface {
 
 	// RemoveWorkspaceWithResponse request
 	RemoveWorkspaceWithResponse(ctx context.Context, workspaceId string, reqEditors ...RequestEditorFn) (*RemoveWorkspaceResponse, error)
+}
+
+type AuthPassthroughGetResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r AuthPassthroughGetResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AuthPassthroughGetResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r AuthPassthroughGetResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type AuthPassthroughPostResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r AuthPassthroughPostResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AuthPassthroughPostResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r AuthPassthroughPostResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
 }
 
 type DesktopCallbackResponse struct {
@@ -8514,6 +8664,24 @@ func (r RemoveWorkspaceResponse) ContentType() string {
 	return ""
 }
 
+// AuthPassthroughGetWithResponse request returning *AuthPassthroughGetResponse
+func (c *ClientWithResponses) AuthPassthroughGetWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*AuthPassthroughGetResponse, error) {
+	rsp, err := c.AuthPassthroughGet(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAuthPassthroughGetResponse(rsp)
+}
+
+// AuthPassthroughPostWithResponse request returning *AuthPassthroughPostResponse
+func (c *ClientWithResponses) AuthPassthroughPostWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*AuthPassthroughPostResponse, error) {
+	rsp, err := c.AuthPassthroughPost(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAuthPassthroughPostResponse(rsp)
+}
+
 // DesktopCallbackWithResponse request returning *DesktopCallbackResponse
 func (c *ClientWithResponses) DesktopCallbackWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*DesktopCallbackResponse, error) {
 	rsp, err := c.DesktopCallback(ctx, reqEditors...)
@@ -9295,6 +9463,58 @@ func (c *ClientWithResponses) RemoveWorkspaceWithResponse(ctx context.Context, w
 		return nil, err
 	}
 	return ParseRemoveWorkspaceResponse(rsp)
+}
+
+// ParseAuthPassthroughGetResponse parses an HTTP response from a AuthPassthroughGetWithResponse call
+func ParseAuthPassthroughGetResponse(rsp *http.Response) (*AuthPassthroughGetResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AuthPassthroughGetResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseAuthPassthroughPostResponse parses an HTTP response from a AuthPassthroughPostWithResponse call
+func ParseAuthPassthroughPostResponse(rsp *http.Response) (*AuthPassthroughPostResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AuthPassthroughPostResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
 }
 
 // ParseDesktopCallbackResponse parses an HTTP response from a DesktopCallbackWithResponse call

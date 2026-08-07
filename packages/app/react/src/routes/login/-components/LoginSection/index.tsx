@@ -18,7 +18,7 @@ type OAuthProvider = 'github' | 'google'
  * `${cloudUrl}/v1/cloud/sign-in?provider=<p>` — NOSSA porta na origem da cloud (`Config.cloudUrl`,
  * nunca o daemon local; ver o comentário em `cloudUrl`), que responde 302 para o provedor.
  *
- * Apontava direto para `/api/auth/sign-in/social` do better-auth e o usuário via 404 na v0.1.4:
+ * Apontava direto para `/v1/auth/sign-in/social` do better-auth e o usuário via 404 na v0.1.4:
  * aquele endpoint é POST com corpo JSON, e abrir o browser do sistema é sempre um GET. Fazer o POST
  * daqui também não serve — a origem do webview não está no `trustedOrigins`, o CORS barraria. Por
  * isso o servidor orquestra (auth/controllers/cloud/SignIn.ts).
