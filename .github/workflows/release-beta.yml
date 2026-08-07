@@ -64,7 +64,7 @@ jobs:
         run: >
           bun scripts/release/make-manifest.ts
           --version "${{ steps.v.outputs.version }}"
-          --url "https://github.com/${{ github.repository }}/releases/download/beta/codm-aarch64.app.tar.gz"
+          --url "https://pub-ae0c8cac60c94920b35464575c09e67d.r2.dev/beta/codm-aarch64.app.tar.gz"
           --sig-file dist-release/codm-aarch64.app.tar.gz.sig
           --notes "beta — main@${{ github.sha }}"
           --out dist-release/latest.json
@@ -83,3 +83,16 @@ jobs:
             dist-release/codm-aarch64.app.tar.gz.sig \
             dist-release/codm-aarch64.dmg \
             dist-release/latest.json
+
+      # A ORIGEM PÚBLICA é o R2 (spec SP2.5): repo privado ⇒ assets do GitHub 404am anônimos —
+      # tanto para o download da landing quanto para o auto-updater. O canal beta é ROLANTE:
+      # sobrescreve os mesmos objetos a cada merge; a versão vive no latest.json.
+      - name: upload r2
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          bunx wrangler r2 object put codm-releases/beta/codm-aarch64.app.tar.gz --file dist-release/codm-aarch64.app.tar.gz --content-type application/gzip --remote
+          bunx wrangler r2 object put codm-releases/beta/codm-aarch64.app.tar.gz.sig --file dist-release/codm-aarch64.app.tar.gz.sig --content-type text/plain --remote
+          bunx wrangler r2 object put codm-releases/beta/codm-aarch64.dmg --file dist-release/codm-aarch64.dmg --content-type application/x-apple-diskimage --remote
+          bunx wrangler r2 object put codm-releases/beta/latest.json --file dist-release/latest.json --content-type application/json --remote
