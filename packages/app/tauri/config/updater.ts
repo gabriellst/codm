@@ -2,11 +2,14 @@
  * Auto-update — the declarative half (SP1, `.specs/2026-08-06-sp1-release-autoupdate-design.md`).
  *
  * ### Two channels, one mechanism (roadmap decision 3)
- * `stable` rides GitHub's own `releases/latest` pointer, which SKIPS prereleases by nature — that
- * is exactly the stable semantic, no server needed. `beta` is a ROLLING prerelease under the fixed
- * tag `beta`, whose assets the beta workflow replaces on every merge to main. The asset filename is
- * FIXED (`codm-aarch64.app.tar.gz`) so the manifest URL never changes across beta versions — the
- * version lives in `latest.json`, not in the URL.
+ * `stable` is cut from a `vX.Y.Z` tag and keeps every version addressable forever, so its asset
+ * name CARRIES the version (`CODM_v0.3.2_aarch64.app.tar.gz`). `beta` is a ROLLING prerelease under
+ * the fixed tag `beta`, replaced on every merge to main, so its asset name is FIXED
+ * (`codm-aarch64.app.tar.gz`) and the version lives only inside `latest.json`.
+ *
+ * The asymmetry is deliberate and it is the one thing to remember here: a rolling channel wants a
+ * stable URL, an archival channel wants a unique one. Both `latest.json` paths are fixed either
+ * way, and that file is the only thing the app ever fetches by a hardcoded URL.
  *
  * ### Who reads what
  * `generate.ts` renders `pubkey` + the STABLE endpoint into `tauri.conf.json` (`plugins.updater`) —
@@ -37,8 +40,6 @@ export const UPDATER = {
 	repo: 'gabriellst/codm',
 	pubkey:
 		'dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQzMjEzMzQwOTY5MkUxMjcKUldRbjRaS1dRRE1oMDVKSTE2UFZiaVNZYjNTeU4wYnl3RUdXN1V4eG5zSjRiQ3V3QXVIamtxMkgK',
-	/** The fixed asset name both workflows upload and both endpoints' manifests point at. */
-	updateAsset: 'codm-aarch64.app.tar.gz',
 	stableEndpoint: 'https://pub-ae0c8cac60c94920b35464575c09e67d.r2.dev/stable/latest.json',
 	betaEndpoint: 'https://pub-ae0c8cac60c94920b35464575c09e67d.r2.dev/beta/latest.json',
 } as const
