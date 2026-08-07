@@ -3,6 +3,13 @@ import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, Base
 
 // The auth context owns the whole user surface since the identity collapse: BetterAuth identity +
 // the supplementary UserProfile aggregate. Former identity error codes live here now.
+//
+// DEVICE_TOKEN_INVALID is deliberately a member of BOTH unions below (SP2 T2). `DeviceToken.revoke()`
+// throws it as a DOMAIN error (idempotent-refuse: revoking an already-revoked token is an aggregate
+// invariant). GetEntitlement/RevokeDevice throw the SAME code as an APPLICATION error when a bearer
+// token's hash resolves to no live row at all. One HTTP-facing code either way — the caller can never
+// tell "never existed" from "already revoked" apart, by design (same posture as artifact's
+// ARTIFACT_NOT_FOUND folding four causes into one code).
 export type AuthDomainErrors =
 	| 'WEAK_PASSWORD'
 	| 'INVALID_EMAIL_FORMAT'
@@ -12,9 +19,16 @@ export type AuthDomainErrors =
 	| 'INVALID_TIMEZONE'
 	| 'INVALID_LANGUAGE'
 	| 'INVALID_PICTURE_URL'
+	| 'DEVICE_TOKEN_INVALID'
 export type DomainErrors = BaseDomainErrors | AuthDomainErrors
 
-export type AuthApplicationErrors = 'USER_NOT_FOUND' | 'EMAIL_ALREADY_REGISTERED' | 'INVALID_AUTH_TOKEN' | 'INVALIDATED_AUTH_TOKEN'
+export type AuthApplicationErrors =
+	| 'USER_NOT_FOUND'
+	| 'EMAIL_ALREADY_REGISTERED'
+	| 'INVALID_AUTH_TOKEN'
+	| 'INVALIDATED_AUTH_TOKEN'
+	| 'DEVICE_CODE_INVALID'
+	| 'DEVICE_TOKEN_INVALID'
 export type ApplicationErrors = BaseApplicationErrors | AuthApplicationErrors
 
 export type AuthInterfaceErrors = 'PASSWORDS_DONT_MATCH'
@@ -41,4 +55,8 @@ registerErrorCodes({
 	INVALID_TIMEZONE: HttpStatusCode.BAD_REQUEST,
 	INVALID_LANGUAGE: HttpStatusCode.BAD_REQUEST,
 	INVALID_PICTURE_URL: HttpStatusCode.BAD_REQUEST,
+	// Device tokens (SP2 T2) — both answer 401: the caller's credential (code or bearer token)
+	// didn't work, and neither leaks WHY.
+	DEVICE_CODE_INVALID: HttpStatusCode.UNAUTHORIZED,
+	DEVICE_TOKEN_INVALID: HttpStatusCode.UNAUTHORIZED,
 })

@@ -9,6 +9,7 @@ import { resolve } from 'node:path'
 import { REPO } from '../../../../template.config'
 import { CONSOLE, IDENTIFIER } from './app'
 import { CAPABILITIES, CAPABILITY_PERMISSIONS } from './capabilities'
+import { DEEPLINK } from './deeplink'
 import { UPDATER } from './updater'
 import { cargoNameDrift, OUTPUTS, renderCapabilities, renderTauriConf } from './generate'
 import { SIDECARS } from './sidecars'
@@ -103,6 +104,18 @@ describe('desktop config (packages/app/tauri/config)', () => {
 		expect(console_.devTarget).toBe('dev-spa')
 		expect(conf.build.beforeDevCommand).toBe(`bun x nx run ${consoleWs.nxProject}:${console_.devTarget}`)
 	})
+
+	it('DSK-09: tauri.conf declares the codm:// deep link scheme from config/deeplink.ts', () => {
+		// SP2 device-token flow (spec Decision 4): the system browser redirects to
+		// `codm://auth?code=…` after OAuth completes. The scheme is declared ONCE in
+		// ./deeplink.ts and rendered here — a literal scheme string anywhere else is a bug.
+		const conf = JSON.parse(renderTauriConf()) as {
+			plugins: { 'deep-link': { desktop: { schemes: string[] } } }
+		}
+		expect(DEEPLINK.scheme).toBe('codm')
+		expect(conf.plugins['deep-link'].desktop.schemes).toEqual([DEEPLINK.scheme])
+	})
+
 	it('DSK-07: the Rust updater mirrors config/updater.ts betaEndpoint verbatim (cross-lang seam gate)', () => {
 		// Rust cannot import the TS config, so src/updater.rs carries a MIRROR of the beta endpoint
 		// and names config/updater.ts as its source of truth — this rail is what keeps the two
@@ -123,5 +136,4 @@ describe('desktop config (packages/app/tauri/config)', () => {
 		expect(conf.plugins?.updater?.endpoints).toEqual([UPDATER.stableEndpoint])
 		expect(conf.bundle.createUpdaterArtifacts).toBe(true)
 	})
-
 })

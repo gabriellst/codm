@@ -59,6 +59,168 @@
         }
       }
     },
+    "/v1/cloud/desktop-callback": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "description": "Bridges a better-auth browser session into a one-time device code, handed to the app via the codm:// deep link",
+        "operationId": "DesktopCallback",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Bridges a better-auth browser session into a one-time device code, handed to the app via the codm:// deep link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "examples": [
+                    "<html>…</html>"
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": "<html>…</html>",
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/cloud/devices/exchange": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "description": "Trade a one-time device code for a long-lived device token",
+        "operationId": "ExchangeDeviceCode",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  }
+                },
+                "required": [
+                  "code"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "code": "019e4d24-6524-7041-9e1c-8108180cddae"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Trade a one-time device code for a long-lived device token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "token"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "token": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "token": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/cloud/entitlement": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "description": "Resolve a device token (Bearer) into the account entitlement",
+        "operationId": "GetEntitlement",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Resolve a device token (Bearer) into the account entitlement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "active": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "plan": {
+                      "type": "string",
+                      "const": "free"
+                    },
+                    "userId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  },
+                  "required": [
+                    "active",
+                    "plan",
+                    "userId"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "active": true,
+                      "plan": "free",
+                      "userId": "019e4d24-6524-7041-9e1c-8108180cddae"
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "active": true,
+                      "plan": "free",
+                      "userId": "019e4d24-6524-7041-9e1c-8108180cddae"
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/session": {
       "get": {
         "tags": [
@@ -170,6 +332,72 @@
                     "summary": "Example"
                   }
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/cloud/devices/revoke": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "description": "Revoke the device token presented as a Bearer credential",
+        "operationId": "RevokeDevice",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Revoke the device token presented as a Bearer credential",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/session/cloud-token": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "description": "Push a freshly-exchanged device token into the local daemon's CloudSession cache",
+        "operationId": "SetCloudToken",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "token"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "token": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Push a freshly-exchanged device token into the local daemon's CloudSession cache",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           }
@@ -8490,6 +8718,8 @@
           "COMMAND_QUEUE_NOT_FOUND",
           "CONTACT_ENTRY_REQUIRES_SENDER",
           "CREDENTIAL_DECRYPT_FAILED",
+          "DEVICE_CODE_INVALID",
+          "DEVICE_TOKEN_INVALID",
           "EMAIL_ALREADY_REGISTERED",
           "ENTITY_NOT_FOUND_WHILE_SAVING",
           "ENTRY_NOT_FOUND",
@@ -8923,6 +9153,8 @@
     "COMMAND_QUEUE_NOT_FOUND",
     "CONTACT_ENTRY_REQUIRES_SENDER",
     "CREDENTIAL_DECRYPT_FAILED",
+    "DEVICE_CODE_INVALID",
+    "DEVICE_TOKEN_INVALID",
     "EMAIL_ALREADY_REGISTERED",
     "ENTITY_NOT_FOUND_WHILE_SAVING",
     "ENTRY_NOT_FOUND",

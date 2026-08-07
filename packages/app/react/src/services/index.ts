@@ -20,6 +20,7 @@ export { detectEnvironment, ENVIRONMENTS } from './registry'
 export {
 	useAutostart,
 	useBadge,
+	useCloudSession,
 	useFilePicker,
 	useHostInfo,
 	useNotification,
@@ -31,6 +32,7 @@ export { ServicesProvider, useContainer } from './providers/ServicesProvider'
 export {
 	AutostartToken,
 	BadgeToken,
+	CloudSessionToken,
 	FilePickerToken,
 	HostInfoToken,
 	NotificationToken,
@@ -41,6 +43,8 @@ export {
 // Port types — for consumers that need to annotate against a capability contract.
 export type { AutostartService } from './AutostartService/AutostartService'
 export type { BadgeService } from './BadgeService/BadgeService'
+export { CLOUD_DEVICE_TOKEN_SECRET_KEY } from './CloudSessionService/CloudSessionService'
+export type { CloudSessionService } from './CloudSessionService/CloudSessionService'
 export type { FilePickerService } from './FilePickerService/FilePickerService'
 export type { HostInfoService, NativePlatform } from './HostInfoService/HostInfoService'
 export type { NotificationService } from './NotificationService/NotificationService'

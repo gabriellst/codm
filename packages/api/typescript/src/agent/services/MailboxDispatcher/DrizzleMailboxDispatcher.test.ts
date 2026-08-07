@@ -5,6 +5,7 @@ import { TestBed, givenThread, givenWorkspace } from '@test/support'
 import { LoggingService } from '@codm/core-typescript'
 import { MailboxItemKind, MailboxTargetKind, ProviderKind, AgentModelId } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
+import { CloudSession, MockCloudSession } from '@auth/services'
 import { ThreadRepository } from '@thread/repositories'
 import { WorkspaceRepository } from '@workspace/repositories'
 import { AgentSessionRepository, MailboxRepository, type ClaimedMailboxItem } from '../../repositories'
@@ -326,6 +327,7 @@ describe('DrizzleMailboxDispatcher — the drain loop wakes for work that arrive
 			workspaces,
 			testBed.resolve(AgentSessionRepository),
 			testBed.resolve(LoggingService),
+			testBed.resolve(CloudSession),
 		).bind(testContainer)
 
 		await mailbox.enqueue({
@@ -391,6 +393,7 @@ describe('DrizzleMailboxDispatcher — the drain loop wakes for work that arrive
 			testBed.resolve(WorkspaceRepository),
 			testBed.resolve(AgentSessionRepository),
 			testBed.resolve(LoggingService),
+			testBed.resolve(CloudSession),
 		).bind(testContainer)
 
 		try {
@@ -456,6 +459,7 @@ describe('DrizzleMailboxDispatcher — the drain loop wakes for work that arrive
 			testBed.resolve(WorkspaceRepository),
 			testBed.resolve(AgentSessionRepository),
 			testBed.resolve(LoggingService),
+			testBed.resolve(CloudSession),
 		).bind(testContainer)
 
 		try {
@@ -679,6 +683,7 @@ describe('DrizzleMailboxDispatcher — the drain loop wakes for work that arrive
 			testBed.resolve(WorkspaceRepository),
 			testBed.resolve(AgentSessionRepository),
 			testBed.resolve(LoggingService),
+			testBed.resolve(CloudSession),
 		).bind(spyContainer)
 
 		await mailbox.enqueue({
@@ -733,6 +738,7 @@ describe('DrizzleMailboxDispatcher — the drain loop wakes for work that arrive
 			testBed.resolve(WorkspaceRepository),
 			testBed.resolve(AgentSessionRepository),
 			testBed.resolve(LoggingService),
+			testBed.resolve(CloudSession),
 		).bind(spyContainer)
 
 		await mailbox.enqueue({
@@ -747,5 +753,93 @@ describe('DrizzleMailboxDispatcher — the drain loop wakes for work that arrive
 		await dispatcher.drain()
 
 		expect(seen).toBe(AgentModelId.DEFAULT)
+	})
+
+	/**
+	 * THE LOGIN GATE (Task T7, AC-4) — the property is "never even ASKS the queue for work", not
+	 * "asks and then backs off". `claimNext`/`fail`/`complete` are spied so a claim-then-abort (which
+	 * WOULD burn one of `MAX_ATTEMPTS` via `fail()` — the defer/contention lesson of 2026-08-05) is
+	 * distinguishable from a gate that never reaches the queue at all.
+	 *
+	 * A fresh `MockCloudSession` is constructed directly here rather than resolved off the shared
+	 * container (`testBed.resolve(CloudSession)`, used by every OTHER test in this file): that instance
+	 * is a container-wide SINGLETON, and flipping it to `setEntitled(false)` here would leak into every
+	 * test that runs after this one in the same file — all of which assume the default entitled state.
+	 *
+	 * The falsifier is exact: move the `isEntitled()` check to AFTER `claimNext` (or drop it) and this
+	 * goes RED on the first assertion, because `claimCalls` stops being zero.
+	 */
+	it('sem sessão entitled o drain nunca chama claimNext e o item fica pendente; ao logar, o próximo drain o processa', async () => {
+		const mailbox = testBed.resolve(MailboxRepository)
+		const threads = testBed.resolve(ThreadRepository)
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID })
+
+		const cloudSession = new MockCloudSession()
+		cloudSession.setEntitled(false)
+
+		class NoopTurnDispatcher extends DrizzleMailboxDispatcher {
+			protected override async runThreadTurn(): Promise<TurnReport> {
+				return { spoke: true }
+			}
+		}
+		const dispatcher = new NoopTurnDispatcher(
+			mailbox,
+			threads,
+			testBed.resolve(WorkspaceRepository),
+			testBed.resolve(AgentSessionRepository),
+			testBed.resolve(LoggingService),
+			cloudSession,
+		).bind(testContainer)
+
+		const realClaimNext = mailbox.claimNext.bind(mailbox)
+		const realFail = mailbox.fail.bind(mailbox)
+		const realComplete = mailbox.complete.bind(mailbox)
+		let claimCalls = 0
+		let failCalls = 0
+		let completeCalls = 0
+		mailbox.claimNext = async (claimedBy, leaseMs, tx) => {
+			claimCalls++
+			return realClaimNext(claimedBy, leaseMs, tx)
+		}
+		mailbox.fail = async (id, error, maxAttempts, tx) => {
+			failCalls++
+			return realFail(id, error, maxAttempts, tx)
+		}
+		mailbox.complete = async (id, tx) => {
+			completeCalls++
+			return realComplete(id, tx)
+		}
+
+		try {
+			await mailbox.enqueue({
+				ownerId: OPERATOR_ID,
+				targetKind: MailboxTargetKind.THREAD,
+				targetId: thread.id.value,
+				kind: MailboxItemKind.OPERATOR_MESSAGE,
+				payload: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: uuidv7(), speaker: 'operator', text: 'oi' },
+				dedupKey: `gate:${thread.id.value}`,
+			})
+
+			await dispatcher.drain()
+
+			// The queue was never even ASKED — not claimed-then-reverted, not claimed-then-failed.
+			expect(claimCalls).toBe(0)
+			expect(failCalls).toBe(0)
+			expect(completeCalls).toBe(0)
+			// The item is exactly where it was: PENDING, no attempt spent (only claimNext/fail move that
+			// counter, and neither ran).
+			expect(await mailbox.hasPending(MailboxTargetKind.THREAD, thread.id.value)).toBe(true)
+
+			// Logging in resumes processing on the VERY NEXT drain — no restart needed (AC-3/AC-4).
+			cloudSession.setEntitled(true)
+			await dispatcher.drain()
+
+			expect(claimCalls).toBeGreaterThan(0)
+			expect(await mailbox.hasPending(MailboxTargetKind.THREAD, thread.id.value)).toBe(false)
+		} finally {
+			mailbox.claimNext = realClaimNext
+			mailbox.fail = realFail
+			mailbox.complete = realComplete
+		}
 	})
 })

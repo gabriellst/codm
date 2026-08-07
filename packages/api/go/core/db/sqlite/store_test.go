@@ -467,10 +467,11 @@ func TestConcurrentBoot(t *testing.T) {
 	).Scan(&tables); err != nil {
 		t.Fatalf("count tables: %v", err)
 	}
-	// 26 drizzle tables. No whatsmeow here: that schema is upgraded by the channel module's own
-	// store, which this test does not boot.
-	if tables != 26 {
-		t.Fatalf("found %d application tables, want 26", tables)
+	// 28 drizzle tables (SP2 T2 added authentication_device_tokens + authentication_device_codes,
+	// migration 0016 — was 26). No whatsmeow here: that schema is upgraded by the channel module's
+	// own store, which this test does not boot.
+	if tables != 28 {
+		t.Fatalf("found %d application tables, want 28", tables)
 	}
 
 	var foreign int

@@ -39,6 +39,18 @@ const RawEnvSchema = z.object({
 	JWT_SECRET: z.string().default('SECRET'),
 	BETTER_AUTH_SECRET: z.string().default('SECRET'),
 	BETTER_AUTH_URL: z.string().optional(),
+	// Cloud profile only (SP2): social-provider credentials for the resurrected better-auth instance
+	// (auth/services/Authentication/BetterAuth.ts). Kernel-scoped like BETTER_AUTH_SECRET/URL above —
+	// the auth bounded context itself ships in the base template, not a per-product add-on. Empty
+	// defaults keep the LOCAL daemon profile (which never constructs BetterAuth) booting without them.
+	GITHUB_CLIENT_ID: z.string().default(''),
+	GITHUB_CLIENT_SECRET: z.string().default(''),
+	GOOGLE_CLIENT_ID: z.string().default(''),
+	GOOGLE_CLIENT_SECRET: z.string().default(''),
+	// Cloud profile's own public origin — better-auth's trustedOrigins (distinct from
+	// CORS_ALLOWED_ORIGINS, which governs the general API's cross-origin allowlist). Cross-field
+	// default (falls back to API_URL) resolved in the .transform() below.
+	CODM_CLOUD_URL: z.string().optional(),
 	REDIS_URL: z.string().default('redis://localhost:6379'),
 	// api-go public base URL — targeted by the SDK aggregate client (shared/registry) AND the
 	// external/ChannelProxy reverse proxy (`${API_GO_URL}/api`). No apikey seam here: the gateway's
@@ -106,12 +118,14 @@ export const EnvSchema = RawEnvSchema.transform(data => {
 	const API_URL = data.API_URL ?? `http://localhost:${data.API_PORT}`
 	const APP_URL = data.APP_URL ?? (data.NODE_ENV === 'development' ? 'http://localhost:5173' : API_URL)
 	const BETTER_AUTH_URL = data.BETTER_AUTH_URL ?? `http://localhost:${data.API_PORT}/v1/authentication`
+	const CODM_CLOUD_URL = data.CODM_CLOUD_URL ?? API_URL
 
 	return {
 		...data,
 		API_URL,
 		APP_URL,
 		BETTER_AUTH_URL,
+		CODM_CLOUD_URL,
 	}
 }).superRefine((data, ctx) => {
 	if (data.NODE_ENV !== 'production') return

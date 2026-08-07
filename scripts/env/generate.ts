@@ -24,6 +24,11 @@ const SECTIONS: { title: string; match: (d: EnvDecl) => boolean; note?: string }
 		title: 'Frontend (only VITE_* reach the browser)',
 		match: d => d.consumers.some(c => c !== 'compose' && REPO.workspaces[c].kind === 'frontend'),
 	},
+	{
+		title: 'Parked (documented, no active consumer)',
+		match: d => d.group === 'parked',
+		note: 'Declared with consumers: [] on purpose — no workspace reads these yet; see each entry doc for why it is kept.',
+	},
 ]
 
 /** Render .env.example from an env registry — defaults to the full REPO.env; create-template

@@ -46,6 +46,13 @@
 			"endpoints": [
 				"https://github.com/gabriellst/codm/releases/latest/download/latest.json"
 			]
+		},
+		"deep-link": {
+			"desktop": {
+				"schemes": [
+					"codm"
+				]
+			}
 		}
 	},
 	"bundle": {

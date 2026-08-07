@@ -5,6 +5,7 @@ import { AppChrome } from '@/components/console/AppChrome'
 import { RouteError } from '@/components/RouteError'
 import { SupervisionGate } from '@/components/console/SupervisionGate'
 import { ServicesProvider } from '@/services'
+import { useDeepLinkAuth } from '@/routes/(app)/-hooks/useDeepLinkAuth'
 import { type QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from '@tanstack/react-router'
@@ -61,6 +62,12 @@ function RootComponent() {
 				<div className="min-h-0 flex-1 overflow-auto">
 					{/* Client-side services — environment detected & bound ONCE here (see @/services). */}
 					<ServicesProvider>
+						{/* SP2 (spec Decisions 4/7): listens for the codm://auth deep link no matter which
+						    screen is showing — the OS can hand the callback back while the operator is on
+						    /login, i.e. exactly when CloudSessionGate (nested inside (app)) has redirected
+						    away and unmounted. Root-level, and OUTSIDE SupervisionGate on purpose, so the
+						    subscription itself is never gated behind the daemon's own readiness check. */}
+						<DeepLinkAuthListener />
 						{/* Supervision decides whether the console's server work can succeed AT ALL: with the
 						    daemon down every request is doomed (it is the origin of all of them, the gateway's
 						    proxied ones included), so they get paused rather than fired, failed and retried.
@@ -77,4 +84,12 @@ function RootComponent() {
 			<ReactQueryDevtools />
 		</QueryClientProvider>
 	)
+}
+
+/** Thin mount point — `useDeepLinkAuth` needs the DI container (`useCloudSession`/`useSecrets`),
+ *  so it can only be called from a descendant of `ServicesProvider`, never from `RootComponent`
+ *  itself (whose own render body sits above that context boundary). Renders nothing. */
+function DeepLinkAuthListener() {
+	useDeepLinkAuth()
+	return null
 }
