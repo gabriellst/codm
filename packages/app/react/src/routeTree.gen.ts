@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as appRouteRouteImport } from './routes/(app)/route'
 import { Route as AttachIndexRouteImport } from './routes/attach/index'
+import { Route as LoginIndexRouteImport } from './routes/login/index'
 import { Route as OnboardingIndexRouteImport } from './routes/onboarding/index'
 import { Route as StyleguideIndexRouteImport } from './routes/styleguide/index'
 import { Route as appChannelsIndexRouteImport } from './routes/(app)/channels/index'
@@ -38,6 +39,11 @@ const appRouteRoute = appRouteRouteImport.update({
 const AttachIndexRoute = AttachIndexRouteImport.update({
   id: '/attach/',
   path: '/attach/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginIndexRoute = LoginIndexRouteImport.update({
+  id: '/login/',
+  path: '/login/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingIndexRoute = OnboardingIndexRouteImport.update({
@@ -112,6 +118,7 @@ const appThreadsThreadIdIssuesIssueIdIndexRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/attach/': typeof AttachIndexRoute
+  '/login/': typeof LoginIndexRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/styleguide/': typeof StyleguideIndexRoute
   '/threads/$threadId': typeof appThreadsThreadIdRouteRouteWithChildren
@@ -129,6 +136,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/attach': typeof AttachIndexRoute
+  '/login': typeof LoginIndexRoute
   '/onboarding': typeof OnboardingIndexRoute
   '/styleguide': typeof StyleguideIndexRoute
   '/channels': typeof appChannelsIndexRoute
@@ -147,6 +155,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/(app)': typeof appRouteRouteWithChildren
   '/attach/': typeof AttachIndexRoute
+  '/login/': typeof LoginIndexRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/styleguide/': typeof StyleguideIndexRoute
   '/(app)/threads/$threadId': typeof appThreadsThreadIdRouteRouteWithChildren
@@ -166,6 +175,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/attach/'
+    | '/login/'
     | '/onboarding/'
     | '/styleguide/'
     | '/threads/$threadId'
@@ -183,6 +193,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/attach'
+    | '/login'
     | '/onboarding'
     | '/styleguide'
     | '/channels'
@@ -200,6 +211,7 @@ export interface FileRouteTypes {
     | '/'
     | '/(app)'
     | '/attach/'
+    | '/login/'
     | '/onboarding/'
     | '/styleguide/'
     | '/(app)/threads/$threadId'
@@ -219,6 +231,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   appRouteRoute: typeof appRouteRouteWithChildren
   AttachIndexRoute: typeof AttachIndexRoute
+  LoginIndexRoute: typeof LoginIndexRoute
   OnboardingIndexRoute: typeof OnboardingIndexRoute
   StyleguideIndexRoute: typeof StyleguideIndexRoute
 }
@@ -244,6 +257,13 @@ declare module '@tanstack/react-router' {
       path: '/attach'
       fullPath: '/attach/'
       preLoaderRoute: typeof AttachIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login/': {
+      id: '/login/'
+      path: '/login'
+      fullPath: '/login/'
+      preLoaderRoute: typeof LoginIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding/': {
@@ -390,6 +410,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   appRouteRoute: appRouteRouteWithChildren,
   AttachIndexRoute: AttachIndexRoute,
+  LoginIndexRoute: LoginIndexRoute,
   OnboardingIndexRoute: OnboardingIndexRoute,
   StyleguideIndexRoute: StyleguideIndexRoute,
 }

@@ -8,9 +8,8 @@ interface Props {
 	t: CollectionEntry<'landing'>['data']['pricing']
 }
 
-// Built per D8 but NOT mounted on the landing yet (founder page has no pricing).
-// Mounting is a one-line addition in Landing.astro when product says go:
-// <PricingSection locale={locale} t={t.pricing} />
+// Mounted in Home.astro before ClosingCta. Single Community plan today (Task T4) —
+// grid centers a lone card; a future paid tier just adds another entry to plans.json.
 const { locale, t } = Astro.props
 const plans = (await getCollection('plans')).sort((a, b) => a.data.order - b.data.order)
 
@@ -25,7 +24,7 @@ const priceLabel = (monthly: number, currency: string) =>
 ---
 
 <section id="pricing" class="px-6 pb-[110px] md:px-11">
-	<div class="mx-auto grid max-w-[1080px] gap-3 md:grid-cols-3">
+	<div class="mx-auto grid max-w-[420px] gap-3">
 		{
 			plans.map(plan => {
 				const copy = plan.data.copy[locale]

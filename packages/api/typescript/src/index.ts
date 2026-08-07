@@ -34,7 +34,9 @@ import {
 	HttpRouter,
 	Middleware,
 	Router,
+	z,
 } from '@codm/core-typescript'
+import type { HttpMethod } from '@codm/core-typescript'
 
 // The embedded-database migration step — a plain function, NOT a side-effect import: it must run
 // BEFORE the composition root, and awaiting a top-level-await side-effect module does NOT serialize
@@ -43,6 +45,10 @@ import {
 // Calling it explicitly in start(), then DYNAMICALLY importing `./routers` after it, is what forces
 // the ordering: migrate → then contexts create against the already-migrated singleton.
 import { migrateEmbeddedDatabase } from '@shared/registry'
+// The CODM_PROFILE=cloud filter (Task T4) — a pure module, deliberately NOT declared inline here,
+// so tests/architecture/cloud-profile.test.ts can import it without booting the daemon (this file
+// has import-time side effects — see `./boot` and `start().catch(...)` at the bottom).
+import { isCloudProfile, filterRoutersForCloudProfile } from '@shared/cloud-profile'
 // The agent runtime's WIRING token, imported for SHUTDOWN only (see the 'agent runs' step below).
 // Statically: a pure type + abstract class module with no DB reach, so it does not need the deferral
 // that `./routers` does, and a dynamic import here is what forced the duck-typed `any` this phase
@@ -54,6 +60,40 @@ import { container } from 'tsyringe-neo'
 
 // Prevent concurrent shutdown attempts.
 let isShuttingDown = false
+
+/**
+ * Better-auth passthrough — mounted directly on the raw `HttpRouter` (bypassing MainRouter's
+ * `/${version}` prefix) at the LITERAL `/api/auth/*`, because the OAuth apps' callback URLs
+ * (`http://localhost:3030/api/auth/callback/{google,github}`) already point there with the
+ * founder's dev credentials — adding a version segment would break them (spec Decision 3).
+ *
+ * `resolveAuthHandler()` — exported by `@auth/index.ts` (Task T1) — resolves the SAME `BetterAuth`
+ * singleton the auth context's own DI graph uses; this class only adapts its raw
+ * `(request: Request) => Promise<Response>` handler to the `Controller` contract `HttpRouter.on()`
+ * expects (mirrors the resurrected `AuthController` at `f21be114^`, whose `handle()` did the same
+ * `this.rawResponse(await this.betterAuth.auth.handler(request.raw))` passthrough).
+ *
+ * Constructed and mounted ONLY when `isCloudProfile()` — see the cloud-profile block in `start()`
+ * below. The local daemon profile never imports `@auth/index`'s `resolveAuthHandler` and never
+ * constructs this class, so it never resolves `BetterAuth` (whose `mock`/local binding is absent).
+ */
+const AuthPassthroughSchema = z.unknown()
+
+class AuthPassthroughController extends Controller<typeof AuthPassthroughSchema, typeof AuthPassthroughSchema> {
+	readonly path = '/api/auth/*' as const
+	readonly method: HttpMethod[] = ['get', 'post']
+	readonly description = 'better-auth passthrough (cloud profile only)'
+	readonly inputSchema = AuthPassthroughSchema
+	readonly outputSchema = AuthPassthroughSchema
+
+	constructor(private readonly authHandler: (request: Request) => Promise<Response>) {
+		super()
+	}
+
+	async handle(request: this['input']): Promise<this['output']> {
+		return this.rawResponse(await this.authHandler(request.raw))
+	}
+}
 
 async function start(): Promise<void> {
 	// Trace all framework classes for OpenTelemetry span injection.
@@ -69,10 +109,13 @@ async function start(): Promise<void> {
 	// (not static) so it evaluates strictly after the migration above.
 	const { ALL_ROUTERS } = await import('./routers')
 
-	// Collect routers from all contexts (composition root — checked against the manifest).
-	const routers = ALL_ROUTERS
+	// CLOUD PROFILE (Task T4) — CODM_PROFILE=cloud narrows the mounted/emitted routers to
+	// auth+owner+shared (see src/shared/cloud-profile.ts for the filter + its documented scope).
+	// A no-op without CODM_PROFILE=cloud: `routers` is exactly `ALL_ROUTERS`, unchanged.
+	const routers = filterRoutersForCloudProfile(ALL_ROUTERS, process.env.CODM_PROFILE)
 
-	// Build OpenAPI spec (used by scripts/emit-openapi.ts when EMIT_OPENAPI=true).
+	// Build OpenAPI spec (used by scripts/emit-openapi.ts when EMIT_OPENAPI=true). Reuses the SAME
+	// filtered `routers` — a cloud-profile emission (if ever run) documents only what it serves.
 	await openapi.generateSpecification(routers)
 
 	// If we only need the spec (emit-openapi mode), exit after writing.
@@ -84,9 +127,24 @@ async function start(): Promise<void> {
 	// HTTP router — resolved by the abstract `HttpRouter` DI token, not the Fastify concrete class.
 	// The real registry binds `{ token: HttpRouter, instance: FastifyHttpRouter }`, so swapping the
 	// transport is a one-line registry change and the composition root never names the impl.
+	// Resolved ONCE (not inline inside `new MainRouter(...)`) — the cloud-profile passthrough below
+	// registers a route directly on this SAME instance, before MainRouter mounts its own and starts
+	// listening (Fastify refuses new routes once listening).
+	// biome-ignore lint/suspicious/noExplicitAny: tsyringe-neo can't type an abstract class as an injection token — resolve is narrowed on the same expression.
+	const httpRouter = container.resolve(HttpRouter as any) as HttpRouter
+
+	if (isCloudProfile()) {
+		// resolveAuthHandler()'s own docblock (src/auth/index.ts) names this mount as the "later
+		// task" it exists for. Dynamically imported: `@auth/index` already evaluated as part of the
+		// `./routers` import above (ESM caches the module — this does not re-run its side effects),
+		// and a static import here would defeat the migrate-before-contexts-create ordering the
+		// dynamic `./routers` import exists to enforce (see the comment on `migrateEmbeddedDatabase`).
+		const { resolveAuthHandler } = await import('@auth/index')
+		httpRouter.on('/api/auth/*', ['get', 'post'], new AuthPassthroughController(resolveAuthHandler()))
+	}
+
 	const mainRouter = new MainRouter({
-		// biome-ignore lint/suspicious/noExplicitAny: tsyringe-neo can't type an abstract class as an injection token — resolve is narrowed on the same expression.
-		httpRouter: container.resolve(HttpRouter as any) as HttpRouter,
+		httpRouter,
 		version: Config.version,
 		routers,
 	})
@@ -101,8 +159,16 @@ async function start(): Promise<void> {
 	// caught by the e2e suite, not by any gate above it, which is the same shape as the bug that left
 	// this product dead for weeks. Its first act is the boot sweep, so a turn stranded by a crashed
 	// process is picked up here.
-	// biome-ignore lint/suspicious/noExplicitAny: tsyringe-neo can't type an abstract class as an injection token.
-	;(container.resolve(MailboxDispatcher as any) as MailboxDispatcher).bind(container).start()
+	//
+	// SKIPPED under the cloud profile: the mailbox is an `agent`-context table no cloud request ever
+	// writes to (the profile filter above already keeps `agent`'s router unmounted) — starting the
+	// dispatcher there would just poll it forever for nothing. It is a plain resolve+start call, not
+	// a router-mounted controller, so it needs this explicit guard (the router filter alone doesn't
+	// reach it).
+	if (!isCloudProfile()) {
+		// biome-ignore lint/suspicious/noExplicitAny: tsyringe-neo can't type an abstract class as an injection token.
+		;(container.resolve(MailboxDispatcher as any) as MailboxDispatcher).bind(container).start()
+	}
 
 	// Start OpenTelemetry tracer (no-op when OTEL_COLLECTOR_TRACE_URL is empty).
 	await startTelemetry()
@@ -128,16 +194,21 @@ async function start(): Promise<void> {
 		}
 
 		await step('http server', () => mainRouter.stop())
-		// Agent runtime: kill every live provider PROCESS GROUP before the outbox/db drain, so no CLI —
-		// nor any child it spawned — outlives the daemon. `shutdown()` is DECLARED on the `AgentRunner`
-		// seam (§4.11) and FANNED OUT by the factory, which is exactly what removed the duck-typing this
-		// step used to need: it dynamically imported the old token and probed `typeof runner.shutdown ===
-		// 'function'` because only one of four implementations had the method. The factory is a container
-		// SINGLETON, so the runners it shuts down are the same instances it handed to the agents.
-		// biome-ignore lint/suspicious/noExplicitAny: abstract class as tsyringe token — same pattern as the resolves below.
-		await step('agent runs', () => (container.resolve(AgentRunnerFactory as any) as AgentRunnerFactory).shutdown())
-		// biome-ignore lint/suspicious/noExplicitAny: tsyringe-neo can't type an abstract class as an injection token.
-		await step('mailbox dispatcher', () => (container.resolve(MailboxDispatcher as any) as MailboxDispatcher).stop())
+		// Agent runtime + mailbox dispatcher: SKIPPED under the cloud profile, mirroring the boot-side
+		// guard above — neither was ever started there, so stopping/shutting them down would resolve
+		// (and no-op against) an agent-context runtime the cloud profile never touches.
+		if (!isCloudProfile()) {
+			// Agent runtime: kill every live provider PROCESS GROUP before the outbox/db drain, so no CLI —
+			// nor any child it spawned — outlives the daemon. `shutdown()` is DECLARED on the `AgentRunner`
+			// seam (§4.11) and FANNED OUT by the factory, which is exactly what removed the duck-typing this
+			// step used to need: it dynamically imported the old token and probed `typeof runner.shutdown ===
+			// 'function'` because only one of four implementations had the method. The factory is a container
+			// SINGLETON, so the runners it shuts down are the same instances it handed to the agents.
+			// biome-ignore lint/suspicious/noExplicitAny: abstract class as tsyringe token — same pattern as the resolves below.
+			await step('agent runs', () => (container.resolve(AgentRunnerFactory as any) as AgentRunnerFactory).shutdown())
+			// biome-ignore lint/suspicious/noExplicitAny: tsyringe-neo can't type an abstract class as an injection token.
+			await step('mailbox dispatcher', () => (container.resolve(MailboxDispatcher as any) as MailboxDispatcher).stop())
+		}
 		await step('outbox dispatcher', () => (container.resolve(OutboxDispatcher as any) as OutboxDispatcher).stop())
 		await step('mediator listeners', () => {
 			;(container.resolve(InternalMediator as any) as InternalMediator).removeAllListeners()

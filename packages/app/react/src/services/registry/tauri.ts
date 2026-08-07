@@ -1,7 +1,17 @@
 import type { Bindings } from '../core/container'
-import { AutostartToken, BadgeToken, FilePickerToken, HostInfoToken, NotificationToken, SecretsToken, SupervisionToken } from '../tokens'
+import {
+	AutostartToken,
+	BadgeToken,
+	CloudSessionToken,
+	FilePickerToken,
+	HostInfoToken,
+	NotificationToken,
+	SecretsToken,
+	SupervisionToken,
+} from '../tokens'
 import { TauriAutostartService } from '../AutostartService/TauriAutostartService'
 import { TauriBadgeService } from '../BadgeService/TauriBadgeService'
+import { TauriCloudSessionService } from '../CloudSessionService/TauriCloudSessionService'
 import { TauriFilePickerService } from '../FilePickerService/TauriFilePickerService'
 import { TauriHostInfoService } from '../HostInfoService/TauriHostInfoService'
 import { TauriNotificationService } from '../NotificationService/TauriNotificationService'
@@ -23,4 +33,5 @@ export default [
 	[AutostartToken, TauriAutostartService],
 	[HostInfoToken, TauriHostInfoService],
 	[SupervisionToken, TauriSupervisionService],
+	[CloudSessionToken, TauriCloudSessionService],
 ] as const satisfies Bindings

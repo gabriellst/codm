@@ -1,0 +1,100 @@
+# Canal STABLE = tags vX.Y.Z (roadmap decisão 3). O endpoint do cliente é
+# releases/latest/download/latest.json — o `latest` do GitHub ignora prereleases, então o beta
+# rolante nunca alcança quem está no stable. A tag só vira release se casar com a versão da conf:
+# um manifest cuja versão diverge do bundle instalado é um updater quebrado em silêncio.
+name: release-stable
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  stable:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: packages/api/go/go.mod
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/app/tauri/src-tauri
+
+      - name: deps
+        run: bun install --frozen-lockfile
+
+      # O GATE da decisão 4: tag == versão da conf, ou nada é publicado.
+      - name: verify tag matches conf version
+        run: |
+          CONF="v$(jq -r .version packages/app/tauri/src-tauri/tauri.conf.json)"
+          if [ "$CONF" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} != versão da conf ${CONF} — suba a versão em config/ e regenere antes de taggear"
+            exit 1
+          fi
+
+      # O gateway Go embute public/docs/openapi.json (//go:embed) e o arquivo é GERADO —
+      # existe em qualquer checkout de dev, mas nunca num runner limpo. Sem este step o build
+      # do sidecar morre com "pattern docs/openapi.json: no matching files found" (1º run real,
+      # 2026-08-07). O .env de exemplo basta: o emit curto-circuita o boot após gerar o spec.
+      - name: openapi (insumo gerado do embed)
+        run: |
+          cp -n .env.example .env
+          bun emit-openapi
+
+      - name: sidecars
+        run: cd packages/app/tauri && bun config/build-sidecars.ts
+
+      - name: tauri build
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # Chave gerada com --ci = senha vazia; sem esta linha o build tenta abrir um prompt de
+          # senha num runner sem TTY e morre com "Device not configured" (medido localmente).
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+
+        run: cd packages/app/tauri && bun x tauri build
+
+      - name: stage
+        run: |
+          mkdir -p dist-release
+          cp packages/app/tauri/src-tauri/target/release/bundle/macos/*.app.tar.gz dist-release/codm-aarch64.app.tar.gz
+          cp packages/app/tauri/src-tauri/target/release/bundle/macos/*.app.tar.gz.sig dist-release/codm-aarch64.app.tar.gz.sig
+          cp packages/app/tauri/src-tauri/target/release/bundle/dmg/*.dmg dist-release/codm-aarch64.dmg
+
+      - name: manifest
+        run: >
+          bun scripts/release/make-manifest.ts
+          --version "${GITHUB_REF_NAME#v}"
+          --url "https://pub-ae0c8cac60c94920b35464575c09e67d.r2.dev/stable/CODM_${GITHUB_REF_NAME}_aarch64.app.tar.gz"
+          --sig-file dist-release/codm-aarch64.app.tar.gz.sig
+          --notes "stable ${GITHUB_REF_NAME}"
+          --out dist-release/latest.json
+
+      - name: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "codm ${GITHUB_REF_NAME}" \
+            --notes "Release estável. Instalação e canais: docs/RELEASE.md." \
+            dist-release/codm-aarch64.app.tar.gz \
+            dist-release/codm-aarch64.app.tar.gz.sig \
+            dist-release/codm-aarch64.dmg \
+            dist-release/latest.json
+
+      # stable = retenção TOTAL (decisão do founder): cada versão fica no R2 sob nome versionado;
+      # latest.json e o alias do DMG apontam sempre para a mais nova (o botão da landing usa o alias).
+      - name: upload r2
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          bunx wrangler r2 object put "codm-releases/stable/CODM_${GITHUB_REF_NAME}_aarch64.app.tar.gz" --file dist-release/codm-aarch64.app.tar.gz --content-type application/gzip --remote
+          bunx wrangler r2 object put "codm-releases/stable/CODM_${GITHUB_REF_NAME}_aarch64.app.tar.gz.sig" --file dist-release/codm-aarch64.app.tar.gz.sig --content-type text/plain --remote
+          bunx wrangler r2 object put "codm-releases/stable/CODM_${GITHUB_REF_NAME}_aarch64.dmg" --file dist-release/codm-aarch64.dmg --content-type application/x-apple-diskimage --remote
+          bunx wrangler r2 object put codm-releases/stable/codm-aarch64.dmg --file dist-release/codm-aarch64.dmg --content-type application/x-apple-diskimage --remote
+          bunx wrangler r2 object put codm-releases/stable/latest.json --file dist-release/latest.json --content-type application/json --remote

@@ -1,7 +1,17 @@
 import type { Bindings } from '../core/container'
-import { AutostartToken, BadgeToken, FilePickerToken, HostInfoToken, NotificationToken, SecretsToken, SupervisionToken } from '../tokens'
+import {
+	AutostartToken,
+	BadgeToken,
+	CloudSessionToken,
+	FilePickerToken,
+	HostInfoToken,
+	NotificationToken,
+	SecretsToken,
+	SupervisionToken,
+} from '../tokens'
 import { BrowserAutostartService } from '../AutostartService/BrowserAutostartService'
 import { BrowserBadgeService } from '../BadgeService/BrowserBadgeService'
+import { BrowserCloudSessionService } from '../CloudSessionService/BrowserCloudSessionService'
 import { BrowserFilePickerService } from '../FilePickerService/BrowserFilePickerService'
 import { BrowserHostInfoService } from '../HostInfoService/BrowserHostInfoService'
 import { BrowserNotificationService } from '../NotificationService/BrowserNotificationService'
@@ -24,4 +34,5 @@ export default [
 	[AutostartToken, BrowserAutostartService],
 	[HostInfoToken, BrowserHostInfoService],
 	[SupervisionToken, BrowserSupervisionService],
+	[CloudSessionToken, BrowserCloudSessionService],
 ] as const satisfies Bindings

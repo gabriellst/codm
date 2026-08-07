@@ -210,3 +210,27 @@ graça) acontece na sub-spec do SP3, com dados reais de uso do founder colhidos 
 - **O gateway Go e os limites do WhatsApp** — distribuição em massa de um cliente whatsmeow merece
   uma leitura de risco (ToS/ban) antes do lançamento público; fora do escopo técnico deste roadmap,
   registrado para não ser esquecido.
+
+## Emenda de 2026-08-06 (noite — pós-SP2, grilling de distribuição/billing/telemetria)
+
+Decisões do founder em chat, após o build do SP2 (`build/sp2-conta-oauth`):
+
+1. **Repo permanece privado; distribuição via Cloudflare R2** (egress zero). O CI passa a subir
+   os artefatos de release para R2; os endpoints do updater (SP1) re-apontam. GitHub Releases
+   vira registro interno. Conta Cloudflare em criação pelo founder. → spec
+   `.specs/2026-08-06-sp2-5-distribuicao-publica-design.md` (novo **SP2.5**, inclui landing:
+   download direto, plans.json corrigido pro plano único, PricingSection montada, deploy no
+   Cloudflare Pages).
+2. **SP3 redefinido: billing de fundação SEM Stripe.** Corrigindo proposta anterior — nenhum
+   Customer no signup; o usuário nasce com assinatura FREE **no nosso modelo** (contexto
+   `billing` novo, greenfield — verificado: não existe billing no pré-collapse para ressuscitar).
+   Stripe entra somente no SP que lançar o primeiro plano pago. Controle de uso/quota sai do SP3
+   e vira SP próprio pós-SP4 (medir exige o pipe de telemetria). → spec
+   `.specs/2026-08-06-sp3-billing-fundacao-gratis-design.md`.
+3. **SP4 ganha forma: OTel até o cloud + PostHog no web.** Backends mantêm a instrumentação
+   atual (orchestrion no Go, OTel SDK no TS) — muda só o destino: collector no perfil cloud →
+   Grafana Cloud. PostHog apenas landing+console (analytics, funil, replay com masking), com
+   `identify` pela identidade do SP2. Consent toggle no console. → spec
+   `.specs/2026-08-06-sp4-telemetria-produto-design.md`.
+
+Sequência vigente: **SP2 (PR aberto) → SP2.5 → SP3 → SP4 → SP-abuso/quota** (consome SP4).

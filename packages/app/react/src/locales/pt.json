@@ -131,22 +131,35 @@
 		"connectTitle": "Conectar um canal",
 		"emailImap": "E-mail (IMAP)",
 		"gatewayWaiting": "Aguardando o gateway local do WhatsApp iniciar para gerar o código de pareamento…",
+		"pairConnectedHint": "Este canal está vinculado e pronto para rotear mensagens.",
+		"pairConnectedTitle": "WhatsApp conectado",
 		"pairDescription": "Abra o Telegram no seu celular e escaneie este código para vincular o canal.",
+		"pairExpiredHint": "Os códigos de pareamento expiram após alguns minutos. Gere um novo para continuar.",
+		"pairExpiredTitle": "Código expirado",
+		"pairRegenerate": "Gerar novo código",
+		"pairStarting": "Iniciando o gateway do WhatsApp…",
 		"pairTitle": "Parear Telegram",
 		"pairViaQr": "Parear via QR code",
 		"pairWaiting": "Aguardando o gateway local gerar um código de pareamento…",
+		"pairWaitingScan": "Aguardando você escanear o código…",
 		"title": "Canais",
 		"whatsappPairDescription": "O pareamento acontece pelo gateway local do WhatsApp. Assim que ele estiver ativo, escaneie este QR code com o WhatsApp no seu celular para vincular o canal.",
-		"whatsappPairTitle": "Parear WhatsApp",
 		"whatsappPairScanHint": "Abra o WhatsApp › Aparelhos conectados › Conectar aparelho e escaneie este código.",
-		"pairStarting": "Iniciando o gateway do WhatsApp…",
-		"pairWaitingScan": "Aguardando você escanear o código…",
-		"pairConnectedTitle": "WhatsApp conectado",
-		"pairConnectedHint": "Este canal está vinculado e pronto para rotear mensagens.",
-		"pairExpiredTitle": "Código expirado",
-		"pairExpiredHint": "Os códigos de pareamento expiram após alguns minutos. Gere um novo para continuar.",
-		"pairRegenerate": "Gerar novo código",
+		"whatsappPairTitle": "Parear WhatsApp",
 		"yourChannels": "Seus canais"
+	},
+	"cloudAuth": {
+		"account": {
+			"logoutSuccess": "Sessão encerrada",
+			"sectionDescription": "Sua conta codm e a sessão deste dispositivo",
+			"sectionTitle": "Conta"
+		},
+		"login": {
+			"github": "Continuar com GitHub",
+			"google": "Continuar com Google",
+			"subtitle": "Faça login com sua conta para liberar os agentes",
+			"title": "Entre para continuar"
+		}
 	},
 	"common": {
 		"anonymous": "Anônimo",
@@ -212,9 +225,9 @@
 	"enums": {
 		"AgentModelId": {
 			"DEFAULT": "Automático",
+			"HAIKU": "Haiku",
 			"OPUS": "Opus",
-			"SONNET": "Sonnet",
-			"HAIKU": "Haiku"
+			"SONNET": "Sonnet"
 		},
 		"ArtifactKind": {
 			"AUDIO": "Áudio",
@@ -224,20 +237,20 @@
 			"VIDEO": "Vídeo"
 		},
 		"ChannelKind": {
-			"WHATSAPP": "WhatsApp",
-			"INTERNAL": "Interno"
+			"INTERNAL": "Interno",
+			"WHATSAPP": "WhatsApp"
 		},
 		"ChannelStatus": {
-			"CREATED": "Criado",
-			"CONNECTING": "Conectando…",
 			"CONNECTED": "Conectado",
-			"DISCONNECTED": "Não conectado",
-			"DELETED": "Excluído"
+			"CONNECTING": "Conectando…",
+			"CREATED": "Criado",
+			"DELETED": "Excluído",
+			"DISCONNECTED": "Não conectado"
 		},
 		"ContactKind": {
-			"USER": "Contato",
+			"BROADCAST": "Transmissão",
 			"GROUP": "Grupo",
-			"BROADCAST": "Transmissão"
+			"USER": "Contato"
 		},
 		"CurrencyCode": {
 			"AED": "Dirham (AED)",
@@ -322,13 +335,13 @@
 			"ZMW": "Kwacha zambiano (ZMW)"
 		},
 		"DayOfWeek": {
-			"MONDAY": "Segunda",
-			"TUESDAY": "Terça",
-			"WEDNESDAY": "Quarta",
-			"THURSDAY": "Quinta",
 			"FRIDAY": "Sexta",
+			"MONDAY": "Segunda",
 			"SATURDAY": "Sábado",
-			"SUNDAY": "Domingo"
+			"SUNDAY": "Domingo",
+			"THURSDAY": "Quinta",
+			"TUESDAY": "Terça",
+			"WEDNESDAY": "Quarta"
 		},
 		"IssueStatus": {
 			"COMPLETED": "Concluída",
@@ -358,10 +371,10 @@
 		},
 		"StopKind": {
 			"APPROVAL_NEEDED": "Aprovação necessária",
+			"AUTH_REQUIRED": "Login necessário",
 			"BLOCKED_BY_CLASSIFICATION": "Bloqueada",
 			"HUMAN_REQUESTED": "Humano solicitado",
-			"SERVER_ERROR": "Erro de servidor",
-			"AUTH_REQUIRED": "Login necessário"
+			"SERVER_ERROR": "Erro de servidor"
 		},
 		"StopResolution": {
 			"APPROVE": "Aprovar",
@@ -377,11 +390,11 @@
 			"RUNNING": "Em execução"
 		},
 		"TranscriptKind": {
+			"ACTION": "Ação",
 			"CONTACT": "Contato",
-			"SYSTEM": "Agente",
 			"DIRECT": "Você",
-			"WHISPER": "Sussurro",
-			"ACTION": "Ação"
+			"SYSTEM": "Agente",
+			"WHISPER": "Sussurro"
 		},
 		"WorkspaceBadge": {
 			"CLAUDE_PROJECT": "Projeto Claude",
@@ -404,6 +417,8 @@
 		"COMMAND_QUEUE_NOT_FOUND": "Erro interno ao enfileirar a operação. Tente novamente em instantes.",
 		"CONTACT_ENTRY_REQUIRES_SENDER": "Uma mensagem de contato precisa informar quem enviou.",
 		"CREDENTIAL_DECRYPT_FAILED": "Não foi possível ler as credenciais armazenadas. Contate o suporte.",
+		"DEVICE_CODE_INVALID": "Este link de acesso expirou ou já foi usado. Tente entrar novamente.",
+		"DEVICE_TOKEN_INVALID": "Sua sessão neste dispositivo não é mais válida. Entre novamente.",
 		"EMAIL_ALREADY_REGISTERED": "Este email já está cadastrado.",
 		"ENTITY_NOT_FOUND_WHILE_SAVING": "O registro não existe mais e não pôde ser salvo.",
 		"ENTRY_NOT_FOUND": "Mensagem não encontrada.",
@@ -438,9 +453,9 @@
 		"LOOP_NOT_FOUND": "Esse loop não existe mais nesta conversa.",
 		"LOOP_PROMPT_TOO_LONG": "O prompt do loop passou do limite de caracteres.",
 		"LOOP_WITHOUT_WEEKDAY": "Escolha pelo menos um dia da semana para o loop se repetir.",
-		"MODEL_NOT_AVAILABLE": "Este agente não oferece esse modelo.",
 		"MISSING_ENVIRONMENT_VARIABLE": "Erro de configuração do servidor. Contate o suporte.",
 		"MISSING_LOG_CONTENT": "Erro interno de logging.",
+		"MODEL_NOT_AVAILABLE": "Este agente não oferece esse modelo.",
 		"NETWORK_ERROR": "Erro de rede",
 		"NOT_FOUND": "Recurso não encontrado.",
 		"NOT_IMPLEMENTED": "Este recurso ainda não está disponível.",
@@ -513,6 +528,7 @@
 		"comingSoon": "Em breve",
 		"home": "Início",
 		"issues": "Tarefas",
+		"login": "Entrar",
 		"settings": "Configurações",
 		"workspaces": "Espaços de trabalho"
 	},
@@ -541,6 +557,8 @@
 		"stepWorkspaceTitle": "Adicione um espaço de trabalho"
 	},
 	"session": {
+		"agentModel": "Modelo",
+		"agentModelRestartHint": "Trocar o modelo recomeça a conversa no agente: ele volta sem o contexto que tinha, a partir da próxima mensagem.",
 		"agentStopped": "O agente parou e está aguardando",
 		"allIssues": "Todas as tarefas",
 		"archive": "Arquivar",
@@ -556,8 +574,6 @@
 		"back": "Voltar",
 		"boundAgents": "Agentes desta conversa",
 		"boundAgentsComingSoonHint": "Esta conversa está ligada a um agente que esta versão ainda não sabe dirigir, então ela não responde. Apague a conversa e anexe o contato a um agente disponível.",
-		"agentModel": "Modelo",
-		"agentModelRestartHint": "Trocar o modelo recomeça a conversa no agente: ele volta sem o contexto que tinha, a partir da próxima mensagem.",
 		"bufferMessages": "mensagens",
 		"canInvokeToggle": "Pode invocar",
 		"chatEmptyDescription": "Mensagens deste contato e dos seus agentes aparecerão aqui.",
@@ -664,13 +680,13 @@
 		"title": "Configurações"
 	},
 	"time": {
-		"goodMorning": "Olá, bom dia!",
+		"daysAgo": "{{count}} d atrás",
 		"goodAfternoon": "Olá, boa tarde!",
 		"goodEvening": "Olá, boa noite!",
-		"justNow": "agora mesmo",
-		"minutesAgo": "{{count}} min atrás",
+		"goodMorning": "Olá, bom dia!",
 		"hoursAgo": "{{count}} h atrás",
-		"daysAgo": "{{count}} d atrás"
+		"justNow": "agora mesmo",
+		"minutesAgo": "{{count}} min atrás"
 	},
 	"workspaces": {
 		"addDescription": "Aponte para uma pasta de projeto neste Mac. Selos de Git e de projeto Claude são detectados automaticamente.",

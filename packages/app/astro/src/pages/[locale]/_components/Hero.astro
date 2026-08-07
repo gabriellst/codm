@@ -34,7 +34,7 @@ const { t, downloadHref, githubHref } = Astro.props
 				href={downloadHref}
 				class="whitespace-nowrap rounded-full bg-[var(--primary)] px-[26px] py-[13px] text-[14.5px] font-bold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
 			>
-				{t.primaryCta}
+				{t.downloadMac}
 			</a>
 			<a
 				href={githubHref}
@@ -43,5 +43,9 @@ const { t, downloadHref, githubHref } = Astro.props
 				{t.secondaryCta}
 			</a>
 		</div>
+		<p class="mx-auto mt-4 max-w-[420px] text-balance text-[12.5px] leading-[1.5] text-[var(--muted-foreground)]">
+			{t.gatekeeperNote}
+		</p>
+		<p class="mt-1 text-[12.5px] text-[var(--muted-foreground)]">{t.otherOs}</p>
 	</div>
 </header>

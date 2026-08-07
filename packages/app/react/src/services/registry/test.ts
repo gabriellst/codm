@@ -1,7 +1,17 @@
 import type { Bindings } from '../core/container'
-import { AutostartToken, BadgeToken, FilePickerToken, HostInfoToken, NotificationToken, SecretsToken, SupervisionToken } from '../tokens'
+import {
+	AutostartToken,
+	BadgeToken,
+	CloudSessionToken,
+	FilePickerToken,
+	HostInfoToken,
+	NotificationToken,
+	SecretsToken,
+	SupervisionToken,
+} from '../tokens'
 import type { AutostartService } from '../AutostartService/AutostartService'
 import type { BadgeService } from '../BadgeService/BadgeService'
+import type { CloudSessionService } from '../CloudSessionService/CloudSessionService'
 import type { FilePickerService } from '../FilePickerService/FilePickerService'
 import type { HostInfoService, NativePlatform } from '../HostInfoService/HostInfoService'
 import type { NotificationService } from '../NotificationService/NotificationService'
@@ -119,6 +129,31 @@ export class FakeSupervisionService implements SupervisionService {
 	}
 }
 
+/**
+ * `emit` simulates the OS handing the `codm://` deep link back to the running process — the PUSH
+ * half a real test drives (`useDeepLinkAuth` tests mount the hook, call `fake.emit(url)`, assert
+ * the exchange/persist/store-flip that followed), mirroring `FakeSupervisionService.emit`.
+ * `openBrowser` records calls instead of doing anything — no host to open a URL against in a test.
+ */
+export class FakeCloudSessionService implements CloudSessionService {
+	readonly opened: string[] = []
+	readonly listeners = new Set<(url: string) => void>()
+
+	async openBrowser(url: string): Promise<void> {
+		this.opened.push(url)
+	}
+
+	async onAuthCallback(listener: (url: string) => void): Promise<() => void> {
+		this.listeners.add(listener)
+		return () => this.listeners.delete(listener)
+	}
+
+	/** Drive a deep-link arrival, as the host would. */
+	emit(url: string): void {
+		for (const listener of this.listeners) listener(url)
+	}
+}
+
 export default [
 	[FilePickerToken, FakeFilePickerService],
 	[NotificationToken, FakeNotificationService],
@@ -127,4 +162,5 @@ export default [
 	[AutostartToken, FakeAutostartService],
 	[HostInfoToken, FakeHostInfoService],
 	[SupervisionToken, FakeSupervisionService],
+	[CloudSessionToken, FakeCloudSessionService],
 ] as const satisfies Bindings

@@ -1,0 +1,107 @@
+# Canal BETA = main (roadmap decisão 3): cada merge substitui a prerelease rolante `beta`.
+# As máquinas do founder assinam este canal (echo beta > $CODM_DATA_DIR/update-channel) — o
+# incidente do "daemon com binário de 15h" morre aqui. Sem assinatura Apple nesta fase (decisão 7):
+# o DMG beta instala via bypass documentado em docs/RELEASE.md; os ARTEFATOS DE UPDATE são sempre
+# assinados com a chave minisign (TAURI_SIGNING_PRIVATE_KEY), que é o que o cliente verifica.
+name: release-beta
+
+on:
+  push:
+    branches: [main]
+
+# Um beta por vez; um merge novo cancela o build do anterior — o canal só quer o mais recente.
+concurrency:
+  group: release-beta
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  beta:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: packages/api/go/go.mod
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/app/tauri/src-tauri
+
+      - name: deps
+        run: bun install --frozen-lockfile
+
+      # Versão do beta: base da conf + `-beta.<run>` — semver crescente por merge, sem commit de
+      # bump (spec decisão 4). Injetada via --config, nunca escrita no repo.
+      - name: version
+        id: v
+        run: echo "version=$(jq -r .version packages/app/tauri/src-tauri/tauri.conf.json)-beta.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      # O gateway Go embute public/docs/openapi.json (//go:embed) e o arquivo é GERADO —
+      # existe em qualquer checkout de dev, mas nunca num runner limpo. Sem este step o build
+      # do sidecar morre com "pattern docs/openapi.json: no matching files found" (1º run real,
+      # 2026-08-07). O .env de exemplo basta: o emit curto-circuita o boot após gerar o spec.
+      - name: openapi (insumo gerado do embed)
+        run: |
+          cp -n .env.example .env
+          bun emit-openapi
+
+      - name: sidecars
+        run: cd packages/app/tauri && bun config/build-sidecars.ts
+
+      - name: tauri build
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # Chave gerada com --ci = senha vazia; sem esta linha o build tenta abrir um prompt de
+          # senha num runner sem TTY e morre com "Device not configured" (medido localmente).
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+
+        run: cd packages/app/tauri && bun x tauri build --config "{\"version\":\"${{ steps.v.outputs.version }}\"}"
+
+      # Nomes FIXOS de asset — a URL do manifest não muda entre versões (config/updater.ts).
+      - name: stage
+        run: |
+          mkdir -p dist-release
+          cp packages/app/tauri/src-tauri/target/release/bundle/macos/*.app.tar.gz dist-release/codm-aarch64.app.tar.gz
+          cp packages/app/tauri/src-tauri/target/release/bundle/macos/*.app.tar.gz.sig dist-release/codm-aarch64.app.tar.gz.sig
+          cp packages/app/tauri/src-tauri/target/release/bundle/dmg/*.dmg dist-release/codm-aarch64.dmg
+
+      - name: manifest
+        run: >
+          bun scripts/release/make-manifest.ts
+          --version "${{ steps.v.outputs.version }}"
+          --url "https://pub-ae0c8cac60c94920b35464575c09e67d.r2.dev/beta/codm-aarch64.app.tar.gz"
+          --sig-file dist-release/codm-aarch64.app.tar.gz.sig
+          --notes "beta — main@${{ github.sha }}"
+          --out dist-release/latest.json
+
+      # Prerelease ROLANTE: recria a release `beta` inteira a cada merge. Prerelease nunca é vista
+      # pelo endpoint stable (releases/latest ignora prereleases por natureza).
+      - name: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete beta --yes --cleanup-tag || true
+          gh release create beta --prerelease \
+            --title "beta ${{ steps.v.outputs.version }}" \
+            --notes "Canal beta (main@${{ github.sha }}). Instalação: ver docs/RELEASE.md (bypass do Gatekeeper — beta não tem assinatura Apple por decisão)." \
+            dist-release/codm-aarch64.app.tar.gz \
+            dist-release/codm-aarch64.app.tar.gz.sig \
+            dist-release/codm-aarch64.dmg \
+            dist-release/latest.json
+
+      # A ORIGEM PÚBLICA é o R2 (spec SP2.5): repo privado ⇒ assets do GitHub 404am anônimos —
+      # tanto para o download da landing quanto para o auto-updater. O canal beta é ROLANTE:
+      # sobrescreve os mesmos objetos a cada merge; a versão vive no latest.json.
+      - name: upload r2
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          bunx wrangler r2 object put codm-releases/beta/codm-aarch64.app.tar.gz --file dist-release/codm-aarch64.app.tar.gz --content-type application/gzip --remote
+          bunx wrangler r2 object put codm-releases/beta/codm-aarch64.app.tar.gz.sig --file dist-release/codm-aarch64.app.tar.gz.sig --content-type text/plain --remote
+          bunx wrangler r2 object put codm-releases/beta/codm-aarch64.dmg --file dist-release/codm-aarch64.dmg --content-type application/x-apple-diskimage --remote
+          bunx wrangler r2 object put codm-releases/beta/latest.json --file dist-release/latest.json --content-type application/json --remote

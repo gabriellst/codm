@@ -1,8 +1,18 @@
 import type { Token } from '../core/token'
 import { useContainer } from '../providers/ServicesProvider'
-import { AutostartToken, BadgeToken, FilePickerToken, HostInfoToken, NotificationToken, SecretsToken, SupervisionToken } from '../tokens'
+import {
+	AutostartToken,
+	BadgeToken,
+	CloudSessionToken,
+	FilePickerToken,
+	HostInfoToken,
+	NotificationToken,
+	SecretsToken,
+	SupervisionToken,
+} from '../tokens'
 import type { AutostartService } from '../AutostartService/AutostartService'
 import type { BadgeService } from '../BadgeService/BadgeService'
+import type { CloudSessionService } from '../CloudSessionService/CloudSessionService'
 import type { FilePickerService } from '../FilePickerService/FilePickerService'
 import type { HostInfoService } from '../HostInfoService/HostInfoService'
 import type { NotificationService } from '../NotificationService/NotificationService'
@@ -22,3 +32,4 @@ export const useSecrets = (): SecretsService => useService(SecretsToken)
 export const useAutostart = (): AutostartService => useService(AutostartToken)
 export const useHostInfo = (): HostInfoService => useService(HostInfoToken)
 export const useSupervision = (): SupervisionService => useService(SupervisionToken)
+export const useCloudSession = (): CloudSessionService => useService(CloudSessionToken)

@@ -23,7 +23,9 @@ import { resolve } from 'node:path'
 import { REPO } from '../../../../template.config'
 import { CONSOLE, DISPLAY_NAME, IDENTIFIER } from './app'
 import { CAPABILITIES, CAPABILITY_PERMISSIONS } from './capabilities'
+import { DEEPLINK } from './deeplink'
 import { SIDECARS, type SidecarManifestEntry } from './sidecars'
+import { UPDATER } from './updater'
 import { BOOT_ERROR_FRAME, WINDOW, WINDOW_FRAME } from './window'
 
 // config/ → tauri → app → packages → repo root (four levels up). Output paths stay repo-relative
@@ -120,8 +122,31 @@ export function renderTauriConf(): string {
 				csp: `default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' ${connectSrc} ipc: http://ipc.localhost`,
 			},
 		},
+		// Auto-update (SP1). Pubkey verifies minisign signatures; the endpoint here is the STABLE
+		// channel default — the Rust side overrides it to beta when the machine opted in (see
+		// config/updater.ts for the channel design and src/updater.rs for the runtime half).
+		//
+		// `codm://` (SP2, ./deeplink.ts) — registers the OS-level URL handler the
+		// tauri-plugin-deep-link crate (src-tauri/src/lib.rs) hands back to the shell.
+		// `desktop.schemes` is the plugin's config surface; mobile is out of scope.
+		// ONE `plugins` object on purpose: a duplicated key silently drops the first in JS —
+		// exactly the merge accident that ate the updater block once (2026-08-06).
+		plugins: {
+			updater: {
+				pubkey: UPDATER.pubkey,
+				endpoints: [UPDATER.stableEndpoint],
+			},
+			'deep-link': {
+				desktop: {
+					schemes: [DEEPLINK.scheme],
+				},
+			},
+		},
 		bundle: {
 			active: true,
+			// `tauri build` additionally emits the signed update artifact (.app.tar.gz + .sig) the
+			// updater consumes — the DMG stays the human install path (SP1 decision 8).
+			createUpdaterArtifacts: true,
 			targets: 'all',
 			externalBin: SIDECARS.map(s => `binaries/${binName(s)}`),
 			icon: ['icons/icon.icns', 'icons/icon.ico', 'icons/32x32.png', 'icons/128x128.png'],

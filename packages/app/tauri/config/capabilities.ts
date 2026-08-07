@@ -26,6 +26,19 @@ export const CAPABILITY_PERMISSIONS = {
 	secrets: [],
 	autostart: ['autostart:allow-is-enabled', 'autostart:allow-enable', 'autostart:allow-disable'],
 	hostInfo: [],
+	// SP2's device-token flow (spec Decision 4): the system browser redirects to `codm://auth?code=…`
+	// after OAuth completes, and the console listens for the resulting event
+	// (`@tauri-apps/plugin-deep-link` `onOpenUrl`) — that listen call is what this permission grants.
+	// The scheme itself is declared in ./deeplink.ts and registered by the Rust plugin (lib.rs).
+	deepLink: ['deep-link:default'],
+	// CloudSessionService's `openBrowser` (SP2 Task T6) hands the OAuth sign-in URL to the OS's
+	// default browser via `@tauri-apps/plugin-shell`'s `open` — the desktop shell must never render
+	// the cloud's sign-in page in its OWN webview (no cookie jar to share, and it would defeat the
+	// point of a system-trusted browser for the OAuth consent screen). `shell:default` is the
+	// plugin's own pre-scoped permission set (allows `http(s)://`, `tel:`, `mailto:` — see
+	// gen/schemas/acl-manifests.json `shell.default_permission`), which already covers the
+	// `https://…/api/auth/sign-in/social` URL this capability opens.
+	cloudSession: ['shell:default'],
 	// The integrated title bar (AppChrome) drags the window through `data-tauri-drag-region`. That
 	// attribute is INERT without this permission — verified in gen/schemas/acl-manifests.json, where
 	// `core:window` declares `allow-start-dragging` but its `default` set does NOT contain it, and
@@ -47,4 +60,6 @@ export const CAPABILITIES = [
 	'autostart',
 	'hostInfo',
 	'windowDrag',
+	'deepLink',
+	'cloudSession',
 ] as const satisfies readonly CapabilityKey[]

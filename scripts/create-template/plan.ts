@@ -345,9 +345,14 @@ export function planStamp(repo: RepoLike, selection: StampSelection): StampPlan 
 	const lineStrips: LineStrip[] =
 		strippedRows.length > 0 ? [{ file: 'CLAUDE.md', patterns: strippedRows.map(root => `^\\| \`${escapeRegex(root)}\`.*\\n`) }] : []
 
-	// ── env registry — a key ships iff at least one kept consumer remains (pure set algebra) ──
+	// ── env registry — a key ships iff at least one kept consumer remains (pure set algebra),
+	// OR it is declared `group: 'parked'` (EnvDecl's own contract: zero active consumers BY
+	// DESIGN, ships in every stamp unconditionally — same posture as the literal 'compose'
+	// consumer above, not a special case invented here) ──
 	const keptConsumers = new Set<string>(['compose', ...kept])
-	const keptEnvEntries = Object.entries(repo.env).filter(([, decl]) => decl.consumers.some(c => keptConsumers.has(c)))
+	const keptEnvEntries = Object.entries(repo.env).filter(
+		([, decl]) => decl.group === 'parked' || decl.consumers.some(c => keptConsumers.has(c)),
+	)
 	const keptEnv = keptEnvEntries.map(([key]) => key)
 	const prunedEnv = Object.fromEntries(keptEnvEntries)
 

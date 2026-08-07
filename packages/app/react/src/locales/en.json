@@ -131,22 +131,35 @@
 		"connectTitle": "Connect a channel",
 		"emailImap": "Email (IMAP)",
 		"gatewayWaiting": "Waiting for the local WhatsApp gateway to start so it can generate the pairing code…",
+		"pairConnectedHint": "This channel is now linked and ready to route messages.",
+		"pairConnectedTitle": "WhatsApp connected",
 		"pairDescription": "Open Telegram on your phone, then scan this code to link the channel.",
+		"pairExpiredHint": "Pairing codes expire after a few minutes. Generate a fresh one to continue.",
+		"pairExpiredTitle": "Code expired",
+		"pairRegenerate": "Generate a new code",
+		"pairStarting": "Starting the WhatsApp gateway…",
 		"pairTitle": "Pair Telegram",
 		"pairViaQr": "Pair via QR code",
 		"pairWaiting": "Waiting for the local gateway to generate a pairing code…",
+		"pairWaitingScan": "Waiting for you to scan the code…",
 		"title": "Channels",
 		"whatsappPairDescription": "Pairing happens through the local WhatsApp gateway. Once it's running, scan this QR code with WhatsApp on your phone to link the channel.",
-		"whatsappPairTitle": "Pair WhatsApp",
 		"whatsappPairScanHint": "Open WhatsApp › Linked devices › Link a device, then scan this code.",
-		"pairStarting": "Starting the WhatsApp gateway…",
-		"pairWaitingScan": "Waiting for you to scan the code…",
-		"pairConnectedTitle": "WhatsApp connected",
-		"pairConnectedHint": "This channel is now linked and ready to route messages.",
-		"pairExpiredTitle": "Code expired",
-		"pairExpiredHint": "Pairing codes expire after a few minutes. Generate a fresh one to continue.",
-		"pairRegenerate": "Generate a new code",
+		"whatsappPairTitle": "Pair WhatsApp",
 		"yourChannels": "Your channels"
+	},
+	"cloudAuth": {
+		"account": {
+			"logoutSuccess": "Signed out",
+			"sectionDescription": "Your codm account and this device's session",
+			"sectionTitle": "Account"
+		},
+		"login": {
+			"github": "Continue with GitHub",
+			"google": "Continue with Google",
+			"subtitle": "Sign in with your account to unlock the agents",
+			"title": "Sign in to continue"
+		}
 	},
 	"common": {
 		"anonymous": "Anonymous",
@@ -212,9 +225,9 @@
 	"enums": {
 		"AgentModelId": {
 			"DEFAULT": "Automatic",
+			"HAIKU": "Haiku",
 			"OPUS": "Opus",
-			"SONNET": "Sonnet",
-			"HAIKU": "Haiku"
+			"SONNET": "Sonnet"
 		},
 		"ArtifactKind": {
 			"AUDIO": "Audio",
@@ -224,20 +237,20 @@
 			"VIDEO": "Video"
 		},
 		"ChannelKind": {
-			"WHATSAPP": "WhatsApp",
-			"INTERNAL": "Internal"
+			"INTERNAL": "Internal",
+			"WHATSAPP": "WhatsApp"
 		},
 		"ChannelStatus": {
-			"CREATED": "Created",
-			"CONNECTING": "Connecting…",
 			"CONNECTED": "Connected",
-			"DISCONNECTED": "Not connected",
-			"DELETED": "Deleted"
+			"CONNECTING": "Connecting…",
+			"CREATED": "Created",
+			"DELETED": "Deleted",
+			"DISCONNECTED": "Not connected"
 		},
 		"ContactKind": {
-			"USER": "Contact",
+			"BROADCAST": "Broadcast",
 			"GROUP": "Group",
-			"BROADCAST": "Broadcast"
+			"USER": "Contact"
 		},
 		"CurrencyCode": {
 			"AED": "UAE Dirham (AED)",
@@ -322,13 +335,13 @@
 			"ZMW": "Zambian Kwacha (ZMW)"
 		},
 		"DayOfWeek": {
-			"MONDAY": "Monday",
-			"TUESDAY": "Tuesday",
-			"WEDNESDAY": "Wednesday",
-			"THURSDAY": "Thursday",
 			"FRIDAY": "Friday",
+			"MONDAY": "Monday",
 			"SATURDAY": "Saturday",
-			"SUNDAY": "Sunday"
+			"SUNDAY": "Sunday",
+			"THURSDAY": "Thursday",
+			"TUESDAY": "Tuesday",
+			"WEDNESDAY": "Wednesday"
 		},
 		"IssueStatus": {
 			"COMPLETED": "Completed",
@@ -358,10 +371,10 @@
 		},
 		"StopKind": {
 			"APPROVAL_NEEDED": "Approval needed",
+			"AUTH_REQUIRED": "Sign-in required",
 			"BLOCKED_BY_CLASSIFICATION": "Blocked",
 			"HUMAN_REQUESTED": "Human requested",
-			"SERVER_ERROR": "Server error",
-			"AUTH_REQUIRED": "Sign-in required"
+			"SERVER_ERROR": "Server error"
 		},
 		"StopResolution": {
 			"APPROVE": "Approve",
@@ -377,11 +390,11 @@
 			"RUNNING": "Running"
 		},
 		"TranscriptKind": {
+			"ACTION": "Action",
 			"CONTACT": "Contact",
-			"SYSTEM": "Agent",
 			"DIRECT": "You",
-			"WHISPER": "Whisper",
-			"ACTION": "Action"
+			"SYSTEM": "Agent",
+			"WHISPER": "Whisper"
 		},
 		"WorkspaceBadge": {
 			"CLAUDE_PROJECT": "Claude project",
@@ -404,6 +417,8 @@
 		"COMMAND_QUEUE_NOT_FOUND": "Internal error while queuing the operation. Try again shortly.",
 		"CONTACT_ENTRY_REQUIRES_SENDER": "A contact message must carry the sender that spoke.",
 		"CREDENTIAL_DECRYPT_FAILED": "Stored credentials could not be read. Contact support.",
+		"DEVICE_CODE_INVALID": "This sign-in link expired or was already used. Try signing in again.",
+		"DEVICE_TOKEN_INVALID": "Your device session is no longer valid. Sign in again.",
 		"EMAIL_ALREADY_REGISTERED": "This email is already registered.",
 		"ENTITY_NOT_FOUND_WHILE_SAVING": "The record no longer exists and could not be saved.",
 		"ENTRY_NOT_FOUND": "Message entry not found.",
@@ -438,9 +453,9 @@
 		"LOOP_NOT_FOUND": "That loop no longer exists in this conversation.",
 		"LOOP_PROMPT_TOO_LONG": "The loop's prompt is past the character limit.",
 		"LOOP_WITHOUT_WEEKDAY": "Pick at least one day of the week for the loop to repeat on.",
-		"MODEL_NOT_AVAILABLE": "That agent does not offer that model.",
 		"MISSING_ENVIRONMENT_VARIABLE": "Server configuration error. Contact support.",
 		"MISSING_LOG_CONTENT": "Internal logging error.",
+		"MODEL_NOT_AVAILABLE": "That agent does not offer that model.",
 		"NETWORK_ERROR": "Network error",
 		"NOT_FOUND": "Resource not found.",
 		"NOT_IMPLEMENTED": "This feature is not available yet.",
@@ -513,6 +528,7 @@
 		"comingSoon": "Coming soon",
 		"home": "Home",
 		"issues": "Issues",
+		"login": "Sign in",
 		"settings": "Settings",
 		"workspaces": "Workspaces"
 	},
@@ -541,6 +557,8 @@
 		"stepWorkspaceTitle": "Add a workspace"
 	},
 	"session": {
+		"agentModel": "Model",
+		"agentModelRestartHint": "Switching the model restarts the conversation on the agent: it comes back without the context it had, from the next message on.",
 		"agentStopped": "Agent stopped and is waiting",
 		"allIssues": "All issues",
 		"archive": "Archive",
@@ -556,8 +574,6 @@
 		"back": "Back",
 		"boundAgents": "Agents on this conversation",
 		"boundAgentsComingSoonHint": "This conversation is bound to an agent this build can't drive yet, so it won't reply. Delete it and re-attach the contact to an available agent.",
-		"agentModel": "Model",
-		"agentModelRestartHint": "Switching the model restarts the conversation on the agent: it comes back without the context it had, from the next message on.",
 		"bufferMessages": "messages",
 		"canInvokeToggle": "Can invoke",
 		"chatEmptyDescription": "Messages from this contact and your agents will appear here.",
@@ -664,13 +680,13 @@
 		"title": "Settings"
 	},
 	"time": {
-		"goodMorning": "Good morning",
+		"daysAgo": "{{count}} d ago",
 		"goodAfternoon": "Good afternoon",
 		"goodEvening": "Good evening",
-		"justNow": "just now",
-		"minutesAgo": "{{count}} min ago",
+		"goodMorning": "Good morning",
 		"hoursAgo": "{{count}} h ago",
-		"daysAgo": "{{count}} d ago"
+		"justNow": "just now",
+		"minutesAgo": "{{count}} min ago"
 	},
 	"workspaces": {
 		"addDescription": "Point at a project folder on this Mac. Git and Claude-project badges are detected automatically.",
