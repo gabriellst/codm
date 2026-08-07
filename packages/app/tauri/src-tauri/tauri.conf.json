@@ -72,6 +72,9 @@
 		"resources": {
 			"binaries/migrations": "migrations",
 			"binaries/daemon-runtime": "daemon-runtime"
+		},
+		"macOS": {
+			"signingIdentity": "-"
 		}
 	}
 }

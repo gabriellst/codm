@@ -17,7 +17,7 @@
 		"primaryCta": "Baixar — macOS · Windows · Linux",
 		"secondaryCta": "Dar estrela no GitHub",
 		"downloadMac": "Download para macOS (Apple Silicon)",
-		"gatekeeperNote": "Sem assinatura Apple por enquanto: no primeiro uso, clique com o botão direito → Abrir.",
+		"gatekeeperNote": "Sem assinatura Apple por enquanto: no primeiro uso, clique com o botão direito → Abrir. Se o macOS disser que o app está “danificado”, rode no Terminal: xattr -cr /Applications/CODM.app",
 		"otherOs": "Windows e Linux em breve."
 	},
 	"marquee": {
@@ -28,9 +28,18 @@
 		"title": "Rode seus projetos de onde você conseguir mandar mensagem",
 		"body": "O CODM transforma qualquer conversa numa mesa de operações para os seus projetos — código, deploys, arquivos, o que os seus agentes puderem fazer. Seu cliente reporta o bug no almoço; na hora do café o fix já está no ar e a resposta está no chat dele.",
 		"steps": [
-			{ "body": "mensagem classificada → issue", "title": "coupon-focus" },
-			{ "body": "sessão de terminal aberta na pasta", "title": "" },
-			{ "body": "fix no ar → resposta enviada com o label", "title": "" }
+			{
+				"body": "mensagem classificada → issue",
+				"title": "coupon-focus"
+			},
+			{
+				"body": "sessão de terminal aberta na pasta",
+				"title": ""
+			},
+			{
+				"body": "fix no ar → resposta enviada com o label",
+				"title": ""
+			}
 		],
 		"chat": {
 			"initials": "RL",
@@ -38,15 +47,27 @@
 			"meta": "WhatsApp · ~/dev/acme-storefront",
 			"status": "Running",
 			"messages": [
-				{ "kind": "in", "text": "the coupon field is broken on mobile, can you check?" },
-				{ "kind": "system", "text": "classified → issue coupon-focus · terminal started" },
+				{
+					"kind": "in",
+					"text": "the coupon field is broken on mobile, can you check?"
+				},
+				{
+					"kind": "system",
+					"text": "classified → issue coupon-focus · terminal started"
+				},
 				{
 					"kind": "out",
 					"label": "✳ coupon-focus · Claude Code",
 					"text": "Found it — the input remounts on every keystroke. Fixing now."
 				},
-				{ "kind": "out", "text": "Done. Pushed fix/coupon-focus — preview is live." },
-				{ "kind": "in", "text": "works!! thank you 🙌" }
+				{
+					"kind": "out",
+					"text": "Done. Pushed fix/coupon-focus — preview is live."
+				},
+				{
+					"kind": "in",
+					"text": "works!! thank you 🙌"
+				}
 			]
 		}
 	},
@@ -56,22 +77,66 @@
 		"titleLight": "Várias issues.",
 		"body": "Dez pedidos na mesma thread não entram em fila — eles rodam. Cada um vira uma issue com sua própria sessão de terminal, trabalhando em paralelo na sua máquina. As respostas carregam o label de volta, então responder um quote acerta a sessão certa toda vez.",
 		"rows": [
-			{ "key": "reply-quote", "text": "vai pra aquela issue exata, sempre" },
-			{ "key": "context", "text": "casa com o que já está aberto" },
-			{ "key": "new work", "text": "abre uma issue e um terminal novo" },
-			{ "key": "ambiguous", "text": "pergunta — “o do Pix, ou o bug da nav?”" }
+			{
+				"key": "reply-quote",
+				"text": "vai pra aquela issue exata, sempre"
+			},
+			{
+				"key": "context",
+				"text": "casa com o que já está aberto"
+			},
+			{
+				"key": "new work",
+				"text": "abre uma issue e um terminal novo"
+			},
+			{
+				"key": "ambiguous",
+				"text": "pergunta — “o do Pix, ou o bug da nav?”"
+			}
 		],
 		"terminal": {
 			"header": "~/dev/acme-storefront · 3 sessions",
 			"lines": [
-				{ "key": "coupon-focus", "tone": "dim", "text": "pnpm test — 42 passed · pushed fix/coupon-focus" },
-				{ "key": "coupon-focus", "tone": "mid", "text": "reply sent → WhatsApp · Rafa Lima" },
-				{ "key": "pix-payment", "tone": "dim", "text": "scaffolding PixProvider.ts behind feature flag" },
-				{ "key": "pix-payment", "tone": "mid", "text": "steer: keep the flag off until legal signs off" },
-				{ "key": "mobile-nav", "tone": "dim", "text": "waiting: which iPhone / iOS version?" },
-				{ "key": "router", "tone": "mid", "text": "clarify → “the Pix one, or the nav bug?”" },
-				{ "key": "invoice-500", "tone": "dim", "text": "stopped · 429 rate limit · waiting for operator" },
-				{ "key": "router", "tone": "faint", "text": "watching 3 threads · buffer 100 msgs" }
+				{
+					"key": "coupon-focus",
+					"tone": "dim",
+					"text": "pnpm test — 42 passed · pushed fix/coupon-focus"
+				},
+				{
+					"key": "coupon-focus",
+					"tone": "mid",
+					"text": "reply sent → WhatsApp · Rafa Lima"
+				},
+				{
+					"key": "pix-payment",
+					"tone": "dim",
+					"text": "scaffolding PixProvider.ts behind feature flag"
+				},
+				{
+					"key": "pix-payment",
+					"tone": "mid",
+					"text": "steer: keep the flag off until legal signs off"
+				},
+				{
+					"key": "mobile-nav",
+					"tone": "dim",
+					"text": "waiting: which iPhone / iOS version?"
+				},
+				{
+					"key": "router",
+					"tone": "mid",
+					"text": "clarify → “the Pix one, or the nav bug?”"
+				},
+				{
+					"key": "invoice-500",
+					"tone": "dim",
+					"text": "stopped · 429 rate limit · waiting for operator"
+				},
+				{
+					"key": "router",
+					"tone": "faint",
+					"text": "watching 3 threads · buffer 100 msgs"
+				}
 			]
 		}
 	},
