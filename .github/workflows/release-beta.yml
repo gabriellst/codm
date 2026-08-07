@@ -74,6 +74,17 @@ jobs:
           # Chave gerada com --ci = senha vazia; sem esta linha o build tenta abrir um prompt de
           # senha num runner sem TTY e morre com "Device not configured" (medido localmente).
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+          # Assinatura Apple — NÃO é a chave acima (aquela é minisign, do updater). Sem estas o
+          # build sai ad-hoc, e o grant de TCC de um app ad-hoc fica preso ao cdhash: todo update
+          # invalida a permissão de disco e os agentes gerados pelo daemon perdem o workspace
+          # (medido na v0.2.0, 07/08/2026 — "System Policy: deny file-read-data /Users/.../Desktop").
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: "Developer ID Application: BK COMPANY LTDA (V4F6T68S5B)"
+          # Notarização: sem ela o Gatekeeper barra o .dmg baixado do R2.
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: V4F6T68S5B
 
         run: cd packages/app/tauri && bun x tauri build --config "{\"version\":\"${{ steps.v.outputs.version }}\"}"
 

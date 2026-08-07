@@ -74,7 +74,7 @@
 			"binaries/daemon-runtime": "daemon-runtime"
 		},
 		"macOS": {
-			"signingIdentity": "-",
+			"signingIdentity": "Developer ID Application: BK COMPANY LTDA (V4F6T68S5B)",
 			"entitlements": "entitlements.plist"
 		}
 	}
