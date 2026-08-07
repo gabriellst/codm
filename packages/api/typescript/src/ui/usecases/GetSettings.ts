@@ -19,7 +19,15 @@ import pkg from '../../../package.json' with { type: 'json' }
  * 0.1.10 — o comentário anterior prometia "nunca desviar da versão real" e apontava para o arquivo
  * errado. O package.json fica como fallback do `bun dev`, onde não existe bundle.
  */
-const APP_VERSION: string = process.env.CODM_APP_VERSION ?? pkg.version
+export function resolveAppVersion(env: NodeJS.ProcessEnv = process.env): string {
+	// `||` e não `??`: a chave é DECLARADA no registry com exemplo vazio, então todo `.env` gerado a
+	// define como string vazia — e `??` aceitaria o vazio como valor válido, publicando uma linha
+	// "Sobre" em branco. Aconteceu no CI em 2026-08-07 (esperava 0.0.1, recebeu ""). Vazio aqui
+	// significa "ninguém injetou", que é exatamente o caso do fallback.
+	return env.CODM_APP_VERSION || pkg.version
+}
+
+const APP_VERSION: string = resolveAppVersion()
 
 const ProviderAvailabilitySchema = z.object({
 	provider: z.enum(ProviderKind),
