@@ -94,7 +94,13 @@ disponíveis), derrubando TODOS os workflows — inclusive os de Linux, que eram
 runner self-hosted não contam na cota.
 
 A máquina já era o ambiente de build: mesmo toolchain, a chave de assinatura mora nela, e os caches
-de cargo/bun ficam quentes entre execuções (o build cai de ~5,7 min para 2–3).
+de cargo/bun ficam quentes entre execuções.
+
+**Não espere que fique mais rápido de imediato.** O primeiro build self-hosted levou 11,9 min contra
+~5,7 no runner do GitHub — `actions/checkout` roda `git clean -ffdx`, então cada execução começa sem
+`node_modules` e recompila o Rust do zero. O ganho vem das execuções seguintes, quando o
+`Swatinem/rust-cache` e o cache do bun estão quentes; e o `nice -n 10` em todos os passos pesados faz
+o CI ceder CPU ao daemon de produção, o que troca alguns minutos de build por uma máquina usável.
 
 **Se o runner estiver offline**, os jobs de macOS ficam na fila em vez de falhar. Para publicar
 mesmo assim, troque `runs-on: [self-hosted, macOS, ARM64]` por `macos-14` no workflow — e conte com
@@ -103,5 +109,13 @@ o custo em minutos.
 **Antes de tornar este repositório público**, remova o runner self-hosted: um PR de fork passaria a
 executar código arbitrário na máquina. As duas decisões são mutuamente exclusivas.
 
-`correctness` e `deploy-landing` continuam nos runners do GitHub (Linux, 1×, baratos) de propósito —
-se o Mac mini cair, o type-check, os testes e a landing seguem funcionando.
+`correctness` e `deploy-landing` **também** migraram para o runner self-hosted, e essa é a parte
+contraintuitiva: os dois rodam em Linux com multiplicador 1× e nunca foram o problema de custo. Mas a
+cota é **uma só para a conta inteira** — quando o macOS a esgotou, esses dois pararam junto, e o gate
+de merge deixou de existir. Enquanto a cota não reseta, mantê-los na nuvem significa mantê-los
+mortos.
+
+O trade-off é real e vale dizer em voz alta: o gate de merge agora depende do Mac mini estar ligado.
+Na prática ele está ligado exatamente quando há merge para gatear (é a máquina de trabalho), mas se o
+`correctness` ficar `queued` para sempre, a causa é essa. Voltar qualquer um deles à nuvem é trocar
+uma linha por `ubuntu-latest`.

@@ -10,7 +10,10 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    # Self-hosted pelo mesmo motivo do correctness.yml: a cota estourou em 2026-08-07 e derrubou
+    # todos os workflows, este incluso. Nada aqui é específico de Linux (bun + wrangler), então
+    # roda igual no Mac. Voltar à nuvem = trocar por `runs-on: ubuntu-latest`.
+    runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
