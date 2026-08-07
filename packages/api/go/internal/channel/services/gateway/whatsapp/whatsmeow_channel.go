@@ -17,6 +17,7 @@ import (
 	"template/api-go/internal/channel/services/gateway"
 	waevents "template/api-go/internal/channel/services/gateway/whatsapp/events"
 	mapperpkg "template/api-go/internal/channel/services/gateway/whatsapp/mapper"
+	coreenums "template/core-go/enums"
 	repositories "template/core-go/repositories"
 	"time"
 
@@ -78,7 +79,7 @@ func NewWhatsmeowChannel(
 	remoteRepo remoterepo.RemoteProjectionRepository,
 	messageRepo messagerepo.MessageProjectionRepository,
 ) *WhatsmeowChannel {
-	client := whatsmeow.NewClient(device, waLog.Stdout("whatsmeow", "INFO", true))
+	client := whatsmeow.NewClient(device, waLog.Stdout("whatsmeow", string(coreenums.LogLevelInfo), true))
 	client.EnableAutoReconnect = true
 	client.AutoTrustIdentity = true
 
@@ -711,7 +712,7 @@ func (c *WhatsmeowChannel) fetchAppStateSkipValidation(ctx context.Context, name
 		return fmt.Errorf("fetch patches: %w", err)
 	}
 
-	proc := appstate.NewProcessor(c.device, waLog.Stdout("appstate-noverify", "WARN", true))
+	proc := appstate.NewProcessor(c.device, waLog.Stdout("appstate-noverify", string(coreenums.LogLevelWarn), true))
 	_, newState, err := proc.DecodePatches(ctx, patches, appstate.HashState{}, false)
 	if err != nil {
 		return fmt.Errorf("decode patches: %w", err)

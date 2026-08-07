@@ -126,7 +126,7 @@ var _ messagerepo.MessageProjectionRepository = (*mockMessageProjectionRepo)(nil
 
 func TestMessageReceivedProjector_InsertsRow(t *testing.T) {
 	repo := newMockMessageRepo()
-	p := NewMessageReceivedProjector(repo)
+	p := NewMessageProjector(repo)
 
 	channelID := uuid.New()
 	expectedInternalID := uuid.New()
@@ -175,7 +175,7 @@ func TestMessageReceivedProjector_InsertsRow(t *testing.T) {
 
 func TestMessageReceivedProjector_IdempotentOnDuplicate(t *testing.T) {
 	repo := newMockMessageRepo()
-	p := NewMessageReceivedProjector(repo)
+	p := NewMessageProjector(repo)
 
 	channelID := uuid.New()
 	dupTs := time.Now().Unix()
@@ -212,7 +212,7 @@ func TestMessageReceivedProjector_IdempotentOnDuplicate(t *testing.T) {
 
 func TestMessageSentProjector_InsertsRow(t *testing.T) {
 	repo := newMockMessageRepo()
-	p := NewMessageSentProjector(repo)
+	p := NewMessageProjector(repo)
 
 	channelID := uuid.New()
 	expectedInternalID := uuid.New()
@@ -274,7 +274,7 @@ func TestMessageEditedProjector_UpdatesContent(t *testing.T) {
 	repo.rowsByPlatformID[repo.platformKey(channelID.String(), "msg-edit")] = existing
 	repo.rowsByID[existing.ID] = existing
 
-	p := NewMessageEditedProjector(repo)
+	p := NewMessageProjector(repo)
 	ts := time.Now().Unix()
 	evt := ctxevents.NewMessageEditedEvent(channelID, "tenant", ctxevents.ChannelMessageEditedPayload{
 		ChannelID:   channelID,
@@ -305,7 +305,7 @@ func TestMessageEditedProjector_UpdatesContent(t *testing.T) {
 
 func TestMessageEditedProjector_NotFoundIsNonFatal(t *testing.T) {
 	repo := newMockMessageRepo()
-	p := NewMessageEditedProjector(repo)
+	p := NewMessageProjector(repo)
 	channelID := uuid.New()
 	evt := ctxevents.NewMessageEditedEvent(channelID, "tenant", ctxevents.ChannelMessageEditedPayload{
 		ChannelID:   channelID,
@@ -339,7 +339,7 @@ func TestMessageDeletedProjector_SoftDeletes(t *testing.T) {
 	repo.rowsByPlatformID[repo.platformKey(channelID.String(), "msg-del")] = existing
 	repo.rowsByID[existing.ID] = existing
 
-	p := NewMessageDeletedProjector(repo)
+	p := NewMessageProjector(repo)
 	evt := ctxevents.NewMessageDeletedEvent(channelID, "tenant", ctxevents.ChannelMessageDeletedPayload{
 		ChannelID: channelID,
 		MessageID: "msg-del",
@@ -375,7 +375,7 @@ func TestMessageDeliveredProjector_UpdatesDeliveredAt(t *testing.T) {
 	repo.rowsByPlatformID[repo.platformKey(channelID.String(), "msg-dlv")] = existing
 	repo.rowsByID[existing.ID] = existing
 
-	p := NewMessageDeliveredProjector(repo)
+	p := NewMessageProjector(repo)
 	ts := time.Now().Unix()
 	evt := ctxevents.NewMessageDeliveredEvent(channelID, "tenant", ctxevents.ChannelMessageDeliveredPayload{
 		ChannelID:  channelID,
@@ -400,7 +400,7 @@ func TestMessageDeliveredProjector_UpdatesDeliveredAt(t *testing.T) {
 
 func TestMessageDeliveredProjector_EmptyMessageIDsIsNoop(t *testing.T) {
 	repo := newMockMessageRepo()
-	p := NewMessageDeliveredProjector(repo)
+	p := NewMessageProjector(repo)
 	channelID := uuid.New()
 	evt := ctxevents.NewMessageDeliveredEvent(channelID, "tenant", ctxevents.ChannelMessageDeliveredPayload{
 		ChannelID:  channelID,
@@ -435,7 +435,7 @@ func TestMessageSeenProjector_UpdatesSeenAt(t *testing.T) {
 	repo.rowsByPlatformID[repo.platformKey(channelID.String(), "msg-seen")] = existing
 	repo.rowsByID[existing.ID] = existing
 
-	p := NewMessageSeenProjector(repo)
+	p := NewMessageProjector(repo)
 	ts := time.Now().Unix()
 	evt := ctxevents.NewMessageSeenEvent(channelID, "tenant", ctxevents.ChannelMessageSeenPayload{
 		ChannelID:  channelID,
@@ -460,7 +460,7 @@ func TestMessageSeenProjector_UpdatesSeenAt(t *testing.T) {
 
 func TestMessageSeenProjector_EmptyMessageIDsIsNoop(t *testing.T) {
 	repo := newMockMessageRepo()
-	p := NewMessageSeenProjector(repo)
+	p := NewMessageProjector(repo)
 	channelID := uuid.New()
 	evt := ctxevents.NewMessageSeenEvent(channelID, "tenant", ctxevents.ChannelMessageSeenPayload{
 		ChannelID:  channelID,
@@ -485,7 +485,7 @@ func TestMessageSeenProjector_EmptyMessageIDsIsNoop(t *testing.T) {
 // the channel Kafka consumer, but this guard is belt-and-suspenders for the projector.
 func TestMessageReceivedProjector_SkipsPlatformInternal(t *testing.T) {
 	repo := newMockMessageRepo()
-	p := NewMessageReceivedProjector(repo)
+	p := NewMessageProjector(repo)
 
 	channelID := uuid.New()
 	ts := time.Now().Unix()
@@ -523,7 +523,7 @@ func TestMessageReceivedProjector_SkipsPlatformInternal(t *testing.T) {
 // the bus (or any other replay path) is defensively covered.
 func TestMessageSentProjector_SkipsPlatformInternal(t *testing.T) {
 	repo := newMockMessageRepo()
-	p := NewMessageSentProjector(repo)
+	p := NewMessageProjector(repo)
 
 	channelID := uuid.New()
 	ts := time.Now().Unix()

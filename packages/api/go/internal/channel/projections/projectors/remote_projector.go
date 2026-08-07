@@ -12,7 +12,6 @@ import (
 	channelrepo "template/api-go/internal/channel/repositories/channel"
 	messagerepo "template/api-go/internal/channel/repositories/message"
 	remoterepo "template/api-go/internal/channel/repositories/remote"
-	"template/core-go/services/mediator"
 	"template/core-go/types"
 )
 
@@ -39,27 +38,108 @@ func applyToRemote(
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// RemoteCreatedProjector
+// RemoteProjector
+//
+// The single event-driven writer of the remotes projection. All fourteen
+// events below — including the cross-aggregate message_received/sent/deleted
+// events, which advance last-message/unread state on the remote row — target
+// the SAME projection repository (RemoteProjectionRepository), so they own
+// one struct rather than one per event. One projector per projection (never
+// one per event — that split is the HANDLER pattern): dispatches internally
+// via a switch on the event name, keeping the read-model's whole transition
+// surface in one place.
+//
+// channelRepo and msgRepo are read-only lookups that feed a write into THIS
+// same projection (platform resolution for RemoteUpdated stubs; internal
+// message id resolution for RemoteOnMessageDeleted) — they do not make this a
+// second projection.
+// ──────────────────────────────────────────────────────────────────────────────
+
+type RemoteProjector struct {
+	repo        remoterepo.RemoteProjectionRepository
+	channelRepo channelrepo.ChannelRepository
+	msgRepo     messagerepo.MessageProjectionRepository
+}
+
+// NewRemoteProjector takes the channel repository (platform resolution for the
+// RemoteUpdated stub path) and the message projection repository (internal id
+// resolution for RemoteOnMessageDeleted) in addition to the remotes projection
+// repository itself.
+func NewRemoteProjector(
+	repo remoterepo.RemoteProjectionRepository,
+	channelRepo channelrepo.ChannelRepository,
+	msgRepo messagerepo.MessageProjectionRepository,
+) *RemoteProjector {
+	return &RemoteProjector{repo: repo, channelRepo: channelRepo, msgRepo: msgRepo}
+}
+
+// compile-time interface check.
+var _ MultiEventProjector = (*RemoteProjector)(nil)
+
+// EventNames lists every event this projector subscribes to.
+func (p *RemoteProjector) EventNames() []string {
+	return []string{
+		ctxevents.RemoteCreatedEventName,
+		ctxevents.RemoteDeletedEventName,
+		ctxevents.RemoteUpdatedEventName,
+		ctxevents.RemotePinnedEventName,
+		ctxevents.RemoteUnpinnedEventName,
+		ctxevents.RemoteArchivedEventName,
+		ctxevents.RemoteUnarchivedEventName,
+		ctxevents.RemoteMutedEventName,
+		ctxevents.RemoteUnmutedEventName,
+		ctxevents.RemoteMarkedAsUnreadEventName,
+		ctxevents.RemoteChatSeenEventName,
+		ctxevents.MessageReceivedEventName,
+		ctxevents.MessageSentEventName,
+		ctxevents.MessageDeletedEventName,
+	}
+}
+
+func (p *RemoteProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+	switch event.GetEventName() {
+	case ctxevents.RemoteCreatedEventName:
+		return p.handleCreated(ctx, event)
+	case ctxevents.RemoteDeletedEventName:
+		return p.handleDeleted(ctx, event)
+	case ctxevents.RemoteUpdatedEventName:
+		return p.handleUpdated(ctx, event)
+	case ctxevents.RemotePinnedEventName:
+		return p.handlePinned(ctx, event)
+	case ctxevents.RemoteUnpinnedEventName:
+		return p.handleUnpinned(ctx, event)
+	case ctxevents.RemoteArchivedEventName:
+		return p.handleArchived(ctx, event)
+	case ctxevents.RemoteUnarchivedEventName:
+		return p.handleUnarchived(ctx, event)
+	case ctxevents.RemoteMutedEventName:
+		return p.handleMuted(ctx, event)
+	case ctxevents.RemoteUnmutedEventName:
+		return p.handleUnmuted(ctx, event)
+	case ctxevents.RemoteMarkedAsUnreadEventName:
+		return p.handleMarkedAsUnread(ctx, event)
+	case ctxevents.RemoteChatSeenEventName:
+		return p.handleChatSeen(ctx, event)
+	case ctxevents.MessageReceivedEventName:
+		return p.handleOnMessageReceived(ctx, event)
+	case ctxevents.MessageSentEventName:
+		return p.handleOnMessageSent(ctx, event)
+	case ctxevents.MessageDeletedEventName:
+		return p.handleOnMessageDeleted(ctx, event)
+	default:
+		return nil
+	}
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// handleCreated
 //
 // Upserts a minimal row into remotes when a new Remote aggregate is
 // first constructed. Name, AvatarURL, and other mirror fields arrive later via
 // remote_updated events.
 // ──────────────────────────────────────────────────────────────────────────────
 
-type RemoteCreatedProjector struct {
-	repo remoterepo.RemoteProjectionRepository
-}
-
-func NewRemoteCreatedProjector(repo remoterepo.RemoteProjectionRepository) *RemoteCreatedProjector {
-	return &RemoteCreatedProjector{repo: repo}
-}
-
-// compile-time interface check.
-var _ mediator.DomainEventHandler = (*RemoteCreatedProjector)(nil)
-
-func (p *RemoteCreatedProjector) EventName() string { return ctxevents.RemoteCreatedEventName }
-
-func (p *RemoteCreatedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+func (p *RemoteProjector) handleCreated(ctx context.Context, event types.DomainEventI) error {
 	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelRemoteCreatedPayload](event)
 	if err != nil {
 		return err
@@ -87,25 +167,12 @@ func (p *RemoteCreatedProjector) Handle(ctx context.Context, event types.DomainE
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// RemoteDeletedProjector
+// handleDeleted
 //
 // Sets deleted_at on the projection row when the Remote aggregate is soft-deleted.
 // ──────────────────────────────────────────────────────────────────────────────
 
-type RemoteDeletedProjector struct {
-	repo remoterepo.RemoteProjectionRepository
-}
-
-func NewRemoteDeletedProjector(repo remoterepo.RemoteProjectionRepository) *RemoteDeletedProjector {
-	return &RemoteDeletedProjector{repo: repo}
-}
-
-// compile-time interface check.
-var _ mediator.DomainEventHandler = (*RemoteDeletedProjector)(nil)
-
-func (p *RemoteDeletedProjector) EventName() string { return ctxevents.RemoteDeletedEventName }
-
-func (p *RemoteDeletedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+func (p *RemoteProjector) handleDeleted(ctx context.Context, event types.DomainEventI) error {
 	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelRemoteDeletedPayload](event)
 	if err != nil {
 		return err
@@ -127,33 +194,13 @@ func (p *RemoteDeletedProjector) Handle(ctx context.Context, event types.DomainE
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// RemoteUpdatedProjector
+// handleUpdated
 //
 // Applies mirror fields (name, description is not stored in projection) that
 // arrive from a live profile change or bootstrap observation.
 // ──────────────────────────────────────────────────────────────────────────────
 
-type RemoteUpdatedProjector struct {
-	repo        remoterepo.RemoteProjectionRepository
-	channelRepo channelrepo.ChannelRepository
-}
-
-// NewRemoteUpdatedProjector takes the channel repository in addition to the
-// projection repo: the stub path below has to resolve the remote's platform, and
-// a remote's platform is by definition its channel's.
-func NewRemoteUpdatedProjector(
-	repo remoterepo.RemoteProjectionRepository,
-	channelRepo channelrepo.ChannelRepository,
-) *RemoteUpdatedProjector {
-	return &RemoteUpdatedProjector{repo: repo, channelRepo: channelRepo}
-}
-
-// compile-time interface check.
-var _ mediator.DomainEventHandler = (*RemoteUpdatedProjector)(nil)
-
-func (p *RemoteUpdatedProjector) EventName() string { return ctxevents.RemoteUpdatedEventName }
-
-func (p *RemoteUpdatedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+func (p *RemoteProjector) handleUpdated(ctx context.Context, event types.DomainEventI) error {
 	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelRemoteUpdatedPayload](event)
 	if err != nil {
 		return err
@@ -195,7 +242,7 @@ func (p *RemoteUpdatedProjector) Handle(ctx context.Context, event types.DomainE
 // hard error rather than a silent empty write: without it the row cannot satisfy
 // the platform CHECK, so failing here lets the outbox retry (the channel row may
 // simply not be committed yet) instead of poisoning the projection.
-func (p *RemoteUpdatedProjector) resolvePlatform(ctx context.Context, channelID string) (channelenums.Platform, error) {
+func (p *RemoteProjector) resolvePlatform(ctx context.Context, channelID string) (channelenums.Platform, error) {
 	ch, err := p.channelRepo.Find(ctx, channelID)
 	if err != nil {
 		return "", err
@@ -207,23 +254,10 @@ func (p *RemoteUpdatedProjector) resolvePlatform(ctx context.Context, channelID 
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// RemotePinnedProjector
+// handlePinned
 // ──────────────────────────────────────────────────────────────────────────────
 
-type RemotePinnedProjector struct {
-	repo remoterepo.RemoteProjectionRepository
-}
-
-func NewRemotePinnedProjector(repo remoterepo.RemoteProjectionRepository) *RemotePinnedProjector {
-	return &RemotePinnedProjector{repo: repo}
-}
-
-// compile-time interface check.
-var _ mediator.DomainEventHandler = (*RemotePinnedProjector)(nil)
-
-func (p *RemotePinnedProjector) EventName() string { return ctxevents.RemotePinnedEventName }
-
-func (p *RemotePinnedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+func (p *RemoteProjector) handlePinned(ctx context.Context, event types.DomainEventI) error {
 	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelRemotePinnedPayload](event)
 	if err != nil {
 		return err
@@ -234,23 +268,10 @@ func (p *RemotePinnedProjector) Handle(ctx context.Context, event types.DomainEv
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// RemoteUnpinnedProjector
+// handleUnpinned
 // ──────────────────────────────────────────────────────────────────────────────
 
-type RemoteUnpinnedProjector struct {
-	repo remoterepo.RemoteProjectionRepository
-}
-
-func NewRemoteUnpinnedProjector(repo remoterepo.RemoteProjectionRepository) *RemoteUnpinnedProjector {
-	return &RemoteUnpinnedProjector{repo: repo}
-}
-
-// compile-time interface check.
-var _ mediator.DomainEventHandler = (*RemoteUnpinnedProjector)(nil)
-
-func (p *RemoteUnpinnedProjector) EventName() string { return ctxevents.RemoteUnpinnedEventName }
-
-func (p *RemoteUnpinnedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+func (p *RemoteProjector) handleUnpinned(ctx context.Context, event types.DomainEventI) error {
 	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelRemoteUnpinnedPayload](event)
 	if err != nil {
 		return err
@@ -261,23 +282,10 @@ func (p *RemoteUnpinnedProjector) Handle(ctx context.Context, event types.Domain
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// RemoteArchivedProjector
+// handleArchived
 // ──────────────────────────────────────────────────────────────────────────────
 
-type RemoteArchivedProjector struct {
-	repo remoterepo.RemoteProjectionRepository
-}
-
-func NewRemoteArchivedProjector(repo remoterepo.RemoteProjectionRepository) *RemoteArchivedProjector {
-	return &RemoteArchivedProjector{repo: repo}
-}
-
-// compile-time interface check.
-var _ mediator.DomainEventHandler = (*RemoteArchivedProjector)(nil)
-
-func (p *RemoteArchivedProjector) EventName() string { return ctxevents.RemoteArchivedEventName }
-
-func (p *RemoteArchivedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+func (p *RemoteProjector) handleArchived(ctx context.Context, event types.DomainEventI) error {
 	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelRemoteArchivedPayload](event)
 	if err != nil {
 		return err
@@ -288,23 +296,10 @@ func (p *RemoteArchivedProjector) Handle(ctx context.Context, event types.Domain
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// RemoteUnarchivedProjector
+// handleUnarchived
 // ──────────────────────────────────────────────────────────────────────────────
 
-type RemoteUnarchivedProjector struct {
-	repo remoterepo.RemoteProjectionRepository
-}
-
-func NewRemoteUnarchivedProjector(repo remoterepo.RemoteProjectionRepository) *RemoteUnarchivedProjector {
-	return &RemoteUnarchivedProjector{repo: repo}
-}
-
-// compile-time interface check.
-var _ mediator.DomainEventHandler = (*RemoteUnarchivedProjector)(nil)
-
-func (p *RemoteUnarchivedProjector) EventName() string { return ctxevents.RemoteUnarchivedEventName }
-
-func (p *RemoteUnarchivedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+func (p *RemoteProjector) handleUnarchived(ctx context.Context, event types.DomainEventI) error {
 	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelRemoteUnarchivedPayload](event)
 	if err != nil {
 		return err
@@ -315,23 +310,10 @@ func (p *RemoteUnarchivedProjector) Handle(ctx context.Context, event types.Doma
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// RemoteMutedProjector
+// handleMuted
 // ──────────────────────────────────────────────────────────────────────────────
 
-type RemoteMutedProjector struct {
-	repo remoterepo.RemoteProjectionRepository
-}
-
-func NewRemoteMutedProjector(repo remoterepo.RemoteProjectionRepository) *RemoteMutedProjector {
-	return &RemoteMutedProjector{repo: repo}
-}
-
-// compile-time interface check.
-var _ mediator.DomainEventHandler = (*RemoteMutedProjector)(nil)
-
-func (p *RemoteMutedProjector) EventName() string { return ctxevents.RemoteMutedEventName }
-
-func (p *RemoteMutedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+func (p *RemoteProjector) handleMuted(ctx context.Context, event types.DomainEventI) error {
 	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelRemoteMutedPayload](event)
 	if err != nil {
 		return err
@@ -351,23 +333,10 @@ func (p *RemoteMutedProjector) Handle(ctx context.Context, event types.DomainEve
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// RemoteUnmutedProjector
+// handleUnmuted
 // ──────────────────────────────────────────────────────────────────────────────
 
-type RemoteUnmutedProjector struct {
-	repo remoterepo.RemoteProjectionRepository
-}
-
-func NewRemoteUnmutedProjector(repo remoterepo.RemoteProjectionRepository) *RemoteUnmutedProjector {
-	return &RemoteUnmutedProjector{repo: repo}
-}
-
-// compile-time interface check.
-var _ mediator.DomainEventHandler = (*RemoteUnmutedProjector)(nil)
-
-func (p *RemoteUnmutedProjector) EventName() string { return ctxevents.RemoteUnmutedEventName }
-
-func (p *RemoteUnmutedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+func (p *RemoteProjector) handleUnmuted(ctx context.Context, event types.DomainEventI) error {
 	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelRemoteUnmutedPayload](event)
 	if err != nil {
 		return err
@@ -378,25 +347,10 @@ func (p *RemoteUnmutedProjector) Handle(ctx context.Context, event types.DomainE
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// RemoteMarkedAsUnreadProjector
+// handleMarkedAsUnread
 // ──────────────────────────────────────────────────────────────────────────────
 
-type RemoteMarkedAsUnreadProjector struct {
-	repo remoterepo.RemoteProjectionRepository
-}
-
-func NewRemoteMarkedAsUnreadProjector(repo remoterepo.RemoteProjectionRepository) *RemoteMarkedAsUnreadProjector {
-	return &RemoteMarkedAsUnreadProjector{repo: repo}
-}
-
-// compile-time interface check.
-var _ mediator.DomainEventHandler = (*RemoteMarkedAsUnreadProjector)(nil)
-
-func (p *RemoteMarkedAsUnreadProjector) EventName() string {
-	return ctxevents.RemoteMarkedAsUnreadEventName
-}
-
-func (p *RemoteMarkedAsUnreadProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+func (p *RemoteProjector) handleMarkedAsUnread(ctx context.Context, event types.DomainEventI) error {
 	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelRemoteMarkedAsUnreadPayload](event)
 	if err != nil {
 		return err
@@ -407,26 +361,13 @@ func (p *RemoteMarkedAsUnreadProjector) Handle(ctx context.Context, event types.
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// RemoteChatSeenProjector
+// handleChatSeen
 //
 // Clears unread state when the user opens the chat. Uses ApplyChatSeen which
 // zeroes both UnreadMessageCount and MarkedAsUnread.
 // ──────────────────────────────────────────────────────────────────────────────
 
-type RemoteChatSeenProjector struct {
-	repo remoterepo.RemoteProjectionRepository
-}
-
-func NewRemoteChatSeenProjector(repo remoterepo.RemoteProjectionRepository) *RemoteChatSeenProjector {
-	return &RemoteChatSeenProjector{repo: repo}
-}
-
-// compile-time interface check.
-var _ mediator.DomainEventHandler = (*RemoteChatSeenProjector)(nil)
-
-func (p *RemoteChatSeenProjector) EventName() string { return ctxevents.RemoteChatSeenEventName }
-
-func (p *RemoteChatSeenProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+func (p *RemoteProjector) handleChatSeen(ctx context.Context, event types.DomainEventI) error {
 	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelRemoteChatSeenPayload](event)
 	if err != nil {
 		return err
@@ -437,29 +378,14 @@ func (p *RemoteChatSeenProjector) Handle(ctx context.Context, event types.Domain
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// RemoteOnMessageReceivedProjector
+// handleOnMessageReceived
 //
 // Cross-aggregate: reacts to message_received to bump unread count and advance
 // last_message_at. Uses atomic repository methods to avoid read-modify-write
 // races when multiple messages arrive concurrently.
 // ──────────────────────────────────────────────────────────────────────────────
 
-type RemoteOnMessageReceivedProjector struct {
-	repo remoterepo.RemoteProjectionRepository
-}
-
-func NewRemoteOnMessageReceivedProjector(repo remoterepo.RemoteProjectionRepository) *RemoteOnMessageReceivedProjector {
-	return &RemoteOnMessageReceivedProjector{repo: repo}
-}
-
-// compile-time interface check.
-var _ mediator.DomainEventHandler = (*RemoteOnMessageReceivedProjector)(nil)
-
-func (p *RemoteOnMessageReceivedProjector) EventName() string {
-	return ctxevents.MessageReceivedEventName
-}
-
-func (p *RemoteOnMessageReceivedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+func (p *RemoteProjector) handleOnMessageReceived(ctx context.Context, event types.DomainEventI) error {
 	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelMessageReceivedPayload](event)
 	if err != nil {
 		return err
@@ -488,7 +414,7 @@ func (p *RemoteOnMessageReceivedProjector) Handle(ctx context.Context, event typ
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// RemoteOnMessageDeletedProjector
+// handleOnMessageDeleted
 //
 // Cross-aggregate: reacts to channel.message_deleted. If the deleted message is
 // the current last_message_id on any remote, recomputes the preview to the
@@ -499,26 +425,7 @@ func (p *RemoteOnMessageReceivedProjector) Handle(ctx context.Context, event typ
 // projection UUID.
 // ──────────────────────────────────────────────────────────────────────────────
 
-type RemoteOnMessageDeletedProjector struct {
-	msgRepo    messagerepo.MessageProjectionRepository
-	remoteRepo remoterepo.RemoteProjectionRepository
-}
-
-func NewRemoteOnMessageDeletedProjector(
-	msgRepo messagerepo.MessageProjectionRepository,
-	remoteRepo remoterepo.RemoteProjectionRepository,
-) *RemoteOnMessageDeletedProjector {
-	return &RemoteOnMessageDeletedProjector{msgRepo: msgRepo, remoteRepo: remoteRepo}
-}
-
-// compile-time interface check.
-var _ mediator.DomainEventHandler = (*RemoteOnMessageDeletedProjector)(nil)
-
-func (p *RemoteOnMessageDeletedProjector) EventName() string {
-	return ctxevents.MessageDeletedEventName
-}
-
-func (p *RemoteOnMessageDeletedProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+func (p *RemoteProjector) handleOnMessageDeleted(ctx context.Context, event types.DomainEventI) error {
 	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelMessageDeletedPayload](event)
 	if err != nil {
 		return err
@@ -532,30 +439,17 @@ func (p *RemoteOnMessageDeletedProjector) Handle(ctx context.Context, event type
 			"channelId", e.Payload.ChannelID, "messageId", e.Payload.MessageID)
 		return nil
 	}
-	return p.remoteRepo.RecomputePreviewIfLatest(ctx, msg.ChannelID, msg.RemoteID, msg.ID)
+	return p.repo.RecomputePreviewIfLatest(ctx, msg.ChannelID, msg.RemoteID, msg.ID)
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// RemoteOnMessageSentProjector
+// handleOnMessageSent
 //
 // Cross-aggregate: reacts to message_sent to advance last_message_at only.
 // Sent messages do not bump the unread counter.
 // ──────────────────────────────────────────────────────────────────────────────
 
-type RemoteOnMessageSentProjector struct {
-	repo remoterepo.RemoteProjectionRepository
-}
-
-func NewRemoteOnMessageSentProjector(repo remoterepo.RemoteProjectionRepository) *RemoteOnMessageSentProjector {
-	return &RemoteOnMessageSentProjector{repo: repo}
-}
-
-// compile-time interface check.
-var _ mediator.DomainEventHandler = (*RemoteOnMessageSentProjector)(nil)
-
-func (p *RemoteOnMessageSentProjector) EventName() string { return ctxevents.MessageSentEventName }
-
-func (p *RemoteOnMessageSentProjector) Handle(ctx context.Context, event types.DomainEventI) error {
+func (p *RemoteProjector) handleOnMessageSent(ctx context.Context, event types.DomainEventI) error {
 	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelMessageSentPayload](event)
 	if err != nil {
 		return err

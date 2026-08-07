@@ -375,29 +375,14 @@ func registerDomainEventHandlers(
 	m.Register(handlers.NewMembershipAddedIntegrationHandler(ext))
 	m.Register(handlers.NewMembershipRemovedIntegrationHandler(ext))
 
-	// Remote projectors — write to remotes projection (T8).
-	m.Register(projectors.NewRemoteCreatedProjector(remoteProjRepo))
-	m.Register(projectors.NewRemoteDeletedProjector(remoteProjRepo))
-	m.Register(projectors.NewRemoteUpdatedProjector(remoteProjRepo, repo))
-	m.Register(projectors.NewRemotePinnedProjector(remoteProjRepo))
-	m.Register(projectors.NewRemoteUnpinnedProjector(remoteProjRepo))
-	m.Register(projectors.NewRemoteArchivedProjector(remoteProjRepo))
-	m.Register(projectors.NewRemoteUnarchivedProjector(remoteProjRepo))
-	m.Register(projectors.NewRemoteMutedProjector(remoteProjRepo))
-	m.Register(projectors.NewRemoteUnmutedProjector(remoteProjRepo))
-	m.Register(projectors.NewRemoteMarkedAsUnreadProjector(remoteProjRepo))
-	m.Register(projectors.NewRemoteChatSeenProjector(remoteProjRepo))
-	m.Register(projectors.NewRemoteOnMessageReceivedProjector(remoteProjRepo))
-	m.Register(projectors.NewRemoteOnMessageSentProjector(remoteProjRepo))
-	m.Register(projectors.NewRemoteOnMessageDeletedProjector(msgProjRepo, remoteProjRepo))
+	// Remote projector — single projector for the remotes projection (T8),
+	// subscribed to every event that mutates a remote row, including the
+	// cross-aggregate message_received/sent/deleted events.
+	projectors.RegisterAll(m, projectors.NewRemoteProjector(remoteProjRepo, repo, msgProjRepo))
 
-	// Message projectors — write to messages projection (T8).
-	m.Register(projectors.NewMessageReceivedProjector(msgProjRepo))
-	m.Register(projectors.NewMessageSentProjector(msgProjRepo))
-	m.Register(projectors.NewMessageEditedProjector(msgProjRepo))
-	m.Register(projectors.NewMessageDeletedProjector(msgProjRepo))
-	m.Register(projectors.NewMessageDeliveredProjector(msgProjRepo))
-	m.Register(projectors.NewMessageSeenProjector(msgProjRepo))
+	// Message projector — single projector for the messages projection (T8),
+	// subscribed to every event that mutates a message row.
+	projectors.RegisterAll(m, projectors.NewMessageProjector(msgProjRepo))
 
 	// Own-message ingress — REGISTERED AFTER THE PROJECTORS ON PURPOSE. `ChannelMediator.Dispatch`
 	// runs a name's handlers in registration order and RETURNS ON THE FIRST ERROR, so a bridge that
@@ -406,9 +391,9 @@ func registerDomainEventHandlers(
 	// `channel.message_sent` with two, and the projection is the more important of the two jobs.
 	m.Register(handlers.NewMessageSentHandler(ext, reg))
 
-	// Membership projectors — write to remote_memberships projection (T8/T13).
-	m.Register(projectors.NewMembershipAddedProjector(remoteProjRepo))
-	m.Register(projectors.NewMembershipRemovedProjector(remoteProjRepo))
+	// Membership projector — single projector for the remote_memberships
+	// projection (T8/T13), subscribed to every membership-mutating event.
+	projectors.RegisterAll(m, projectors.NewMembershipProjector(remoteProjRepo))
 }
 
 // No message persistence handlers needed: messages are themselves the
