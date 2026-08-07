@@ -139,7 +139,7 @@ pub fn run() {
             // querying a port still applying migrations. Every exit path in `boot_sidecar` reports to
             // the gate, and a single failure routes the boot to the error splash instead of the
             // console — the `boot_failures` command reads the failures back out of this same gate.
-            let fleet = sidecars::sidecars(&data_dir.to_string_lossy(), &resource_dir);
+            let fleet = sidecars::sidecars(&data_dir.to_string_lossy(), &resource_dir, &app.package_info().version.to_string());
             let gate = Arc::new(sidecars::ReadinessGate::new(fleet.len()));
             app.manage(gate.clone());
 

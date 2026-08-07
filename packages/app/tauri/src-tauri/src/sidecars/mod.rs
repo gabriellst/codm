@@ -96,7 +96,11 @@ fn port_from_env(key: &str, default: u16) -> u16 {
 /// `api/typescript/src/watchdog.ts` and `api/go/internal/shared/watchdog.go`. Unset (a sidecar
 /// started by hand, or by `bun dev`) DISABLES the watchdog, which is why it is passed here, at the
 /// one place that actually knows a supervising shell exists.
-pub fn sidecars(data_dir: &str, resource_dir: &std::path::Path) -> Vec<Sidecar> {
+/// `app_version` vem do `package_info()` do Tauri (que lê `tauri.conf.json`) — NÃO de
+/// `CARGO_PKG_VERSION`, que é a versão da crate e não acompanha a do bundle (0.1.0 contra 0.1.10 em
+/// 2026-08-07). A linha "Sobre" das configurações lia o package.json do workspace do daemon e
+/// mostrava 0.0.1; a versão é fato do BUNDLE, e o shell é quem o conhece.
+pub fn sidecars(data_dir: &str, resource_dir: &std::path::Path, app_version: &str) -> Vec<Sidecar> {
     let api_port = port_from_env("API_PORT", 3030);
     let channel_port = port_from_env("CHANNEL_PORT", 3032);
     let migrations_dir = resource_dir
@@ -119,6 +123,7 @@ pub fn sidecars(data_dir: &str, resource_dir: &std::path::Path) -> Vec<Sidecar> 
                 ("API_GO_URL".into(), "http://localhost:3032".into()),
                 ("NODE_ENV".into(), "production".into()),
                 ("CODM_PARENT_PID".into(), parent_pid.clone()),
+                ("CODM_APP_VERSION".into(), app_version.to_string()),
             ],
         },
         Sidecar {

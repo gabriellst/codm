@@ -11,8 +11,15 @@ import { StopPolicyConfigRepository } from '@thread/repositories/StopPolicyConfi
 
 import pkg from '../../../package.json' with { type: 'json' }
 
-/** App version — SOURCED from package.json so the About row can never drift from the real version. */
-const APP_VERSION: string = pkg.version
+/**
+ * Versão do APP para a linha "Sobre".
+ *
+ * O shell injeta `CODM_APP_VERSION` (sidecars/mod.rs) porque a versão é fato do BUNDLE, não deste
+ * workspace: lendo só o package.json daqui, a tela mostrava 0.0.1 enquanto o app instalado era
+ * 0.1.10 — o comentário anterior prometia "nunca desviar da versão real" e apontava para o arquivo
+ * errado. O package.json fica como fallback do `bun dev`, onde não existe bundle.
+ */
+const APP_VERSION: string = process.env.CODM_APP_VERSION ?? pkg.version
 
 const ProviderAvailabilitySchema = z.object({
 	provider: z.enum(ProviderKind),
