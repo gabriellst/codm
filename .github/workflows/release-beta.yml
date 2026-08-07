@@ -70,6 +70,11 @@ jobs:
           # VITE_* no BUILD: sem isto o app empacotado nasce apontando o daemon local e o login
           # abre localhost:3030 (medido na v0.1.3). Repo variable, não secret — é URL pública.
           VITE_CODM_CLOUD_URL: ${{ vars.CODM_CLOUD_URL }}
+          # Telemetria de produto (SP4). O Vite resolve VITE_* no BUILD: sem estas linhas o app sai
+          # com a chave vazia e a telemetria fica desligada EM SILÊNCIO — sem erro, só um dashboard
+          # que nunca enche. Repo variables, não secrets: a chave de ingest do PostHog é pública.
+          VITE_POSTHOG_KEY: ${{ vars.VITE_POSTHOG_KEY }}
+          VITE_POSTHOG_HOST: ${{ vars.VITE_POSTHOG_HOST }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           # Chave gerada com --ci = senha vazia; sem esta linha o build tenta abrir um prompt de
           # senha num runner sem TTY e morre com "Device not configured" (medido localmente).
