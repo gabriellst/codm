@@ -536,6 +536,7 @@ Background jobs and isolated feature work run in git worktrees under `.claude/wo
 - **`docs/CLI.md`** — frontend scaffolder reference (verbs, recipes, blocks, flags, worked examples, cookbook).
 - **`docs/CORRECTNESS.md`** — the optimization system behind the patterns: rung ladder (eliminate > detect > document > measure), axes/canons/carriers/detectors/probes and how they relate, the eval loop protocols, and how the rails change the building process.
 - **`docs/COMPONENTS.md`** — primitivos de UI.
+- **`docs/RELEASE.md`** — canais stable/beta, auto-update, e as DUAS assinaturas do desktop (minisign do updater × Developer ID da Apple): por que a assinatura do shell é a permissão de disco dos agentes, como emitir, recuperar e reconceder o Acesso Total ao Disco.
 - **`.specs/`** — design specs (event-sourcing playbook, projection architecture, etc.). See `.specs/2026-05-26-audit-distillation-what-we-got-wrong.md` for the distilled cross-session rework retrospective behind many of the rules here.
 - **`.plans/`** — implementation plans (histórico).
 - **`.claude/skills/<name>/SKILL.md`** — playbook por artefato.

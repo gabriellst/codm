@@ -234,14 +234,9 @@ Entitlements stay as they are: a Bun single-file executable was measured running
 hardened runtime with only `com.apple.security.cs.disable-library-validation`. No JIT entitlement
 needed.
 
-After the *first* Developer-ID build the cdhash changes once more, so Full Disk Access must be
-granted one last time — clear the recorded denial first, or the stored "no" sticks:
-
-```bash
-tccutil reset SystemPolicyAllFiles app.codm.desktop
-tccutil reset SystemPolicyDesktopFolder app.codm.desktop
-# then: System Settings → Privacy & Security → Full Disk Access → add CODM.app → restart it
-```
+Procedures — issuing a certificate, recovering on a new machine, and re-granting Full Disk Access
+after a cdhash change — live in `docs/RELEASE.md`, section *"A assinatura Apple (Developer ID)"*.
+Keep them there, not here: this section is the rule, that one is the runbook.
 
 Diagnosing a suspected recurrence (`log` is a zsh builtin — the absolute path is required, or the
 query silently returns nothing):
