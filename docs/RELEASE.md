@@ -84,3 +84,24 @@ releases NELE mesmo ("somente fazer essa parte do publish depois no mesmo repo")
 ## O que este pipeline NÃO faz (ainda)
 
 Windows/Linux, rollout percentual, `minVersion` forçado, notarização Apple — ver roadmap (SP2/SP4).
+
+## Runner self-hosted (macOS)
+
+Os builds macOS (`release-beta`, `release-stable`) rodam num **runner self-hosted** no Mac mini do
+founder, não nos runners do GitHub. A razão é custo: repo privado consome cota, macOS conta **10×**,
+e em 2026-08-07 isso estourou o teto (57 builds macOS num dia ≈ 3.250 minutos faturados contra 2.000
+disponíveis), derrubando TODOS os workflows — inclusive os de Linux, que eram baratos. Minutos de
+runner self-hosted não contam na cota.
+
+A máquina já era o ambiente de build: mesmo toolchain, a chave de assinatura mora nela, e os caches
+de cargo/bun ficam quentes entre execuções (o build cai de ~5,7 min para 2–3).
+
+**Se o runner estiver offline**, os jobs de macOS ficam na fila em vez de falhar. Para publicar
+mesmo assim, troque `runs-on: [self-hosted, macOS, ARM64]` por `macos-14` no workflow — e conte com
+o custo em minutos.
+
+**Antes de tornar este repositório público**, remova o runner self-hosted: um PR de fork passaria a
+executar código arbitrário na máquina. As duas decisões são mutuamente exclusivas.
+
+`correctness` e `deploy-landing` continuam nos runners do GitHub (Linux, 1×, baratos) de propósito —
+se o Mac mini cair, o type-check, os testes e a landing seguem funcionando.

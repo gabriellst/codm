@@ -13,7 +13,15 @@ permissions:
 
 jobs:
   stable:
-    runs-on: macos-14
+    # Runner SELF-HOSTED no Mac mini do founder: minutos self-hosted não contam na cota do GitHub
+    # (nem em repo privado), e o build macOS custava 10x lá. Em 2026-08-07 a cota estourou — 57
+    # builds macOS num dia, ~3.250 minutos faturados contra 2.000 disponíveis — e TODOS os workflows
+    # pararam. A máquina já era o ambiente de build (mesmo toolchain, chave de assinatura local,
+    # caches quentes), então o custo vai a zero e o build fica mais rápido.
+    #
+    # CUIDADO ao tornar este repo público: runner self-hosted + repo público deixa qualquer PR de
+    # fork executar código nesta máquina. As duas coisas são mutuamente exclusivas na prática.
+    runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v4
 
@@ -61,6 +69,9 @@ jobs:
           }
           echo "cloud: ${{ vars.CODM_CLOUD_URL }}"
 
+      # `nice`: esta máquina também roda o daemon de produção do founder (agentes atendendo
+      # WhatsApp). Um build de release competindo por CPU já causou contenção aqui; a prioridade
+      # baixa faz o build ceder ao trabalho real em vez do contrário.
       - name: tauri build
         env:
           # O console é compilado DENTRO do tauri build (beforeBuildCommand) e o Vite resolve
@@ -77,7 +88,7 @@ jobs:
           # senha num runner sem TTY e morre com "Device not configured" (medido localmente).
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
 
-        run: cd packages/app/tauri && bun x tauri build
+        run: cd packages/app/tauri && nice -n 10 bun x tauri build
 
       - name: stage
         run: |
