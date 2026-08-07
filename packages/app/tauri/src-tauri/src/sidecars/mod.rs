@@ -34,6 +34,11 @@ pub use lifecycle::*;
 mod reaper;
 pub use reaper::*;
 
+// Not `pub use`d — only `boot_sidecar` below constructs one; nothing outside this module needs to
+// name the type.
+mod sidecar_log;
+use sidecar_log::SidecarLog;
+
 /// Sidecar bootstrap descriptor: binary name (as in `bundle.externalBin`), the port
 /// it listens on, which SDK sub-client probes it, the working directory it must be
 /// spawned in, and the env the process boots with.
@@ -147,7 +152,13 @@ pub fn sidecars(data_dir: &str, resource_dir: &std::path::Path) -> Vec<Sidecar> 
 /// `Healthy`; nothing about the readiness semantics moved.
 async fn probe(api: &Api, service: SidecarService) -> ProbeOutcome {
     let status = match service {
-        SidecarService::Daemon => api.client.typescript.health().await.err().map(|e| e.status()),
+        SidecarService::Daemon => api
+            .client
+            .typescript
+            .health()
+            .await
+            .err()
+            .map(|e| e.status()),
         SidecarService::Gateway => api.client.go.health().await.err().map(|e| e.status()),
     };
     match status {
@@ -182,7 +193,11 @@ fn apply(app: &tauri::AppHandle, reveal: Reveal) {
             // before that page loads would be lost); this line is the same fact in the shell log,
             // for whoever is tailing a terminal instead of looking at the window.
             let names: Vec<&str> = failures.iter().map(|f| f.name.as_str()).collect();
-            log::error!("boot failed for {} sidecar(s): {}", failures.len(), names.join(", "));
+            log::error!(
+                "boot failed for {} sidecar(s): {}",
+                failures.len(),
+                names.join(", ")
+            );
             ("boot-error", "main")
         }
     };
@@ -270,12 +285,28 @@ fn react(
     log::warn!("supervision state changed: {state:?}");
     // PUSH half of spec Decision 9. The PULL half (`supervision_state`) exists because this emit is
     // lost on anyone who was not mounted yet — the `boot_failures` lesson.
-    if let Err(e) = (SupervisionChanged { state: state.clone() }).emit(app) {
+    if let Err(e) = (SupervisionChanged {
+        state: state.clone(),
+    })
+    .emit(app)
+    {
         log::error!("failed to emit supervision change: {e}");
     }
-    if state == (SupervisionState::Down { sidecar: SidecarService::Daemon }) {
+    if state
+        == (SupervisionState::Down {
+            sidecar: SidecarService::Daemon,
+        })
+    {
         let name = monitor.name_of(SidecarService::Daemon);
-        let reveal = gate.note_runtime_failure(&name, "sidecar died while the app was running");
+        // The splash's whole reason for being ACTIONABLE (2026-08-07 incident) is this path — the
+        // operator reading it needs to know WHERE the persisted stderr lives, not just that the
+        // daemon died.
+        let log_path = monitor.log_path_of(SidecarService::Daemon);
+        let reveal = gate.note_runtime_failure(
+            &name,
+            "sidecar died while the app was running",
+            log_path.as_deref(),
+        );
         apply(app, reveal);
     }
 }
@@ -297,15 +328,20 @@ pub fn boot_sidecar(
     gate: Arc<ReadinessGate>,
     monitor: Arc<SupervisionMonitor>,
     children: Arc<ChildRegistry>,
+    log_dir: &std::path::Path,
 ) {
     // FAIL LOUD BEFORE SPAWNING (spec Decision 8b / AC-7). A port already held by somebody else is
     // the incident's first domino: spawn anyway and the new child loses the bind while the OLD
     // process keeps answering, so the fresh window converses with the previous session's backend and
     // every health probe passes. Refusing here routes it to the splash with the reason instead.
+    //
+    // No log file is opened for this branch (and the two spawn-failure branches below): nothing has
+    // run yet, so there is no stderr to persist — the in-memory `reason` already carries the whole
+    // story for these, and the splash renders it without needing a file.
     if let Some(reason) = port_conflict(sidecar.port) {
         let _ = app.emit("sidecar:error", format!("{}: {reason}", sidecar.name));
         log::error!("[{}] {reason}", sidecar.name);
-        if let Some(reveal) = gate.note_failed(sidecar.name, &reason) {
+        if let Some(reveal) = gate.note_failed(sidecar.name, &reason, None) {
             apply(app, reveal);
         }
         return;
@@ -324,7 +360,7 @@ pub fn boot_sidecar(
             let reason = format!("spawn setup failed: {e}");
             let _ = app.emit("sidecar:error", format!("{}: {reason}", sidecar.name));
             // Report it, or the gate never reaches `total` and NO window is ever revealed.
-            if let Some(reveal) = gate.note_failed(sidecar.name, &reason) {
+            if let Some(reveal) = gate.note_failed(sidecar.name, &reason, None) {
                 apply(app, reveal);
             }
             return;
@@ -337,7 +373,7 @@ pub fn boot_sidecar(
             let reason = format!("spawn failed: {e}");
             let _ = app.emit("sidecar:error", format!("{}: {reason}", sidecar.name));
             // Same reason as above: every exit from this function must report to the gate.
-            if let Some(reveal) = gate.note_failed(sidecar.name, &reason) {
+            if let Some(reveal) = gate.note_failed(sidecar.name, &reason, None) {
                 apply(app, reveal);
             }
             return;
@@ -348,22 +384,40 @@ pub fn boot_sidecar(
     // that is exactly how a shell's children outlive it and start holding ports for nobody.
     children.adopt(child);
 
-    // ONE reader, TWO jobs. Stderr goes to the shell log AND to the gate's ring buffer (the log is
-    // for the developer tailing a terminal, the ring is what the boot-error splash shows the
-    // operator). `Terminated` is the death signal itself — the child is gone the instant this
-    // arrives, so supervision hears it without waiting a single probe cycle.
+    // PERSISTED STDERR (2026-08-07 incident) — best-effort disk mirror of the ring buffer the gate
+    // already keeps in memory. `None` here just means the splash's reason has no file to point the
+    // operator to; boot proceeds exactly as it did before this existed. Recorded on the monitor
+    // (not just held locally) so a RUNTIME death — reported from the probe loop in `supervise()`,
+    // which never touches this stack frame — can still attach the same path.
+    let sidecar_log = SidecarLog::open(log_dir, sidecar.name);
+    if let Some(log) = &sidecar_log {
+        monitor.set_log_path(sidecar.service, log.path().to_string_lossy().into_owned());
+    }
+
+    // ONE reader, THREE jobs. Stderr goes to the shell log, the gate's ring buffer, AND — the
+    // point of this whole module — the persisted file (the log is for the developer tailing a
+    // terminal, the ring is what the boot-error splash shows live, the file is what survives after
+    // both are gone). `Terminated` is the death signal itself — the child is gone the instant this
+    // arrives, so supervision hears it without waiting a single probe cycle; its exit code/signal is
+    // exactly the line that used to only reach `log::error!` (a no-op in a packaged build) and now
+    // also lands in the file.
     let log_handle = app.clone();
     let log_name = sidecar.name;
     let log_service = sidecar.service;
     let log_gate = gate.clone();
     let log_monitor = monitor.clone();
+    let reader_log = sidecar_log.clone();
     tauri::async_runtime::spawn(async move {
         while let Some(event) = rx.recv().await {
             match event {
                 CommandEvent::Stderr(line) => {
                     let line = String::from_utf8_lossy(&line);
                     log::warn!("[{}] {}", log_name, line);
-                    log_gate.record_stderr(log_name, line.trim_end());
+                    let trimmed = line.trim_end();
+                    log_gate.record_stderr(log_name, trimmed);
+                    if let Some(log) = &reader_log {
+                        log.append(trimmed);
+                    }
                 }
                 CommandEvent::Terminated(payload) => {
                     log::error!(
@@ -372,6 +426,12 @@ pub fn boot_sidecar(
                         payload.code,
                         payload.signal
                     );
+                    if let Some(log) = &reader_log {
+                        log.append(&format!(
+                            "process exited (code {:?}, signal {:?})",
+                            payload.code, payload.signal
+                        ));
+                    }
                     if let Some(state) = log_monitor.note_exit(log_service) {
                         react(&log_handle, &log_gate, &log_monitor, state);
                     }
@@ -386,6 +446,7 @@ pub fn boot_sidecar(
     // `sleep`, and its `block_on` is `Runtime::block_on` (panics when called from inside the
     // runtime) — so this is a real async loop over the tokio the tauri dependency already carries.
     let health_handle = app.clone();
+    let health_log = sidecar_log.clone();
     tauri::async_runtime::spawn(async move {
         let api = health_handle.state::<Api>();
         let deadline = Instant::now() + Duration::from_secs(60);
@@ -408,8 +469,18 @@ pub fn boot_sidecar(
                 // dashboard querying ports nobody was listening on, with the reason buried in an
                 // event the UI may never have rendered. The give-up now reports a FAILURE, and the
                 // gate sends the last arrival to the boot-error splash instead.
-                log::warn!("[{}] never became healthy — routing boot to the error splash", sidecar.name);
-                if let Some(reveal) = gate.note_failed(sidecar.name, &reason) {
+                log::warn!(
+                    "[{}] never became healthy — routing boot to the error splash",
+                    sidecar.name
+                );
+                // By the time we give up, the reader task above has had the full 60s to persist
+                // whatever the process printed BEFORE it (maybe) died — the exact stderr the
+                // 2026-08-07 incident needed and only had 60 seconds' worth of an in-memory buffer
+                // for.
+                let log_path = health_log
+                    .as_ref()
+                    .map(|log| log.path().to_string_lossy().into_owned());
+                if let Some(reveal) = gate.note_failed(sidecar.name, &reason, log_path.as_deref()) {
                     apply(&health_handle, reveal);
                 }
                 return;

@@ -33,9 +33,13 @@
 			invoke('boot_failures').then(failures => {
 				document.getElementById('failures').innerHTML = failures
 					.map(
+						// O caminho do log é o que transforma esta tela em algo acionável: o ring buffer abaixo
+						// mostra as últimas linhas, o ARQUIVO tem a corrida inteira — e sobrevive ao fechar
+						// a janela. (Incidente de 2026-08-07: um daemon que morria no boot custou uma tarde
+						// de arqueologia porque o stderr só existia aqui, em memória.)
 						f => `<section><header><b>${escape(f.name)}</b><span>${escape(f.reason)}</span></header><pre>${
 							f.stderr.length ? escape(f.stderr.join('\n')) : 'sem stderr capturado'
-						}</pre></section>`,
+						}</pre>${f.logPath ? `<footer>log completo: <code>${escape(f.logPath)}</code></footer>` : ''}</section>`,
 					)
 					.join('')
 			})
