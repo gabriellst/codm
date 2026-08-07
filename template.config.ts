@@ -299,15 +299,17 @@ export const REPO = {
 		},
 		// NO `schema:` on purpose — same ENV-05 dodge as CODM_E2E above, one step further: NO backend
 		// declares 'apiTs' here at all (there is no Go reader to hang the declaration on instead), so
-		// the registry consumer is 'compose' — the literal place this key is SET (docker/cloud.compose.yml
-		// hard-overrides it to 'cloud' regardless of what the shared root .env says, so the local
-		// daemon's own boot never sees it flip). Read as raw process.env.CODM_PROFILE in
-		// src/index.ts / src/shared/cloud-profile.ts (SP2 Task T4), never through Config.env —
-		// booting WITHOUT this var (the desktop daemon's default) is unchanged behavior.
+		// Read as raw process.env.CODM_PROFILE in src/index.ts / src/shared/cloud-profile.ts (SP2
+		// Task T4), never through Config.env — booting WITHOUT this var (the desktop daemon's
+		// default) is unchanged behavior. schema: 'raw' is the DECLARED semantics for exactly this
+		// class of key: an apiTs boot flag deliberately outside the Zod schemas (ENV-05 coherence
+		// without forcing a Config.ts entry). The value is BAKED as ENV in docker/cloud.Dockerfile —
+		// the deploy surface is Railway (compose aposentado, decisão do founder 2026-08-07).
 		CODM_PROFILE: {
-			consumers: ['compose'],
+			consumers: ['apiTs'],
+			schema: 'raw',
 			example: '',
-			doc: "cloud profile switch — 'cloud' boots only auth+owner (docker/cloud.compose.yml); unset boots the full desktop daemon",
+			doc: "cloud profile switch — 'cloud' boots only auth+owner (baked as ENV in docker/cloud.Dockerfile; Railway-only deploy, compose aposentado 2026-08-07); unset boots the full desktop daemon",
 		},
 		RATE_LIMIT_DISABLED: {
 			consumers: ['apiTs'],
@@ -465,7 +467,7 @@ export interface EnvDecl {
 	 *  an empty set is vacuously false, so "parked" is its own membership rule, not a consumer. */
 	consumers: readonly EnvConsumer[]
 	/** Which api-ts Zod schema declares the key (required iff 'apiTs' is a consumer). */
-	schema?: 'kernel' | 'product'
+	schema?: 'kernel' | 'product' | 'raw'
 	/** Grouping with TWO effects, both driven by this ONE declared field (never inferred from a
 	 *  string convention elsewhere): (1) presentational — which `.env.example` section renders it
 	 *  (`scripts/env/generate.ts` SECTIONS). (2) for `'parked'` ONLY — a set-algebra override read

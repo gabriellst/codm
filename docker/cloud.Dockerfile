@@ -96,12 +96,15 @@ ENV NODE_ENV=production
 # core Config.ts — see that file's own docblock). Only the LITERAL string 'cloud' arms the filter;
 # this is the ONE line that makes this image a cloud image instead of the desktop daemon build.
 ENV CODM_PROFILE=cloud
-# Embedded SQLite lives on a volume, not the image's writable layer — the container is disposable,
-# the data is not. Mirrors the Go gateway's co-tenancy on the same file (see CODM_DATA_DIR doc in
-# template.config.ts REPO.env) — nothing gateway-specific runs in this profile, but the SAME
-# codm.db shape/migrations apply, so a future gateway sidecar could share this volume unmodified.
+# Embedded SQLite lives on a Railway Volume, not the image's writable layer — the container is
+# disposable, the data is not. NO `VOLUME` instruction: Railway's builder rejects it ("docker
+# VOLUME is not supported, use Railway Volumes" — build error de 2026-08-07). Operação na Railway:
+#   1. Attach a Railway Volume ao serviço com mount path /data (Settings → Volumes).
+#   2. O container roda como USER 1000 (non-root): se o mount vier root-owned e o boot falhar com
+#      EACCES ao criar codm.db, setar a service variable RAILWAY_RUN_UID=1000.
+#   3. Public networking: target port 3030 (o EXPOSE abaixo; o server binda API_PORT, não PORT).
+# O shape/migrations do codm.db são os mesmos do daemon (ver CODM_DATA_DIR em template.config.ts).
 ENV CODM_DATA_DIR=/data
-VOLUME /data
 
 # The server binds Config.env.API_PORT (see packages/api/typescript/src/index.ts).
 ARG API_PORT=3030

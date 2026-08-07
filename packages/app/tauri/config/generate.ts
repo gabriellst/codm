@@ -89,7 +89,7 @@ export function renderTauriConf(): string {
 	const conf = {
 		$schema: 'https://schema.tauri.app/config/2',
 		productName: DISPLAY_NAME,
-		version: '0.1.0',
+		version: '0.1.3',
 		identifier: IDENTIFIER,
 		build: {
 			// Desktop dev serves the root-based SPA (dev-spa → base '/'), so the webview loads the
@@ -155,6 +155,31 @@ export function renderTauriConf(): string {
 			// under `binaries/<subpath>` and copied into the app resource dir at `<subpath>`; the Rust
 			// supervisor resolves `resource_dir/<subpath>` (boot env + spawn cwd).
 			resources: STAGED_RESOURCES,
+			macOS: {
+				// AD-HOC signature over the ASSEMBLED bundle. Without this the app ships with only the
+				// linker's own signature on the main binary (`adhoc, linker-signed`), which DECLARES
+				// sealed resources the bundle never got — Tauri assembles sidecars/resources around it
+				// afterwards. `codesign --verify` then fails with "code has no resources but signature
+				// indicates they must be present", and macOS shows the WORST dialog: "CODM está
+				// danificado e não pode ser aberto" (measured on the shipped v0.1.0 DMG, 2026-08-07).
+				// That one has no right-click → Abrir escape — only `xattr -cr` does.
+				//
+				// Signing the whole bundle makes the signature coherent, so an unsigned-by-Apple app
+				// degrades to the NORMAL "desenvolvedor não identificado" dialog, which right-click →
+				// Abrir does bypass — which is exactly what the landing's microcopy promises.
+				//
+				// '-' is codesign's ad-hoc identity. When the Developer ID arrives (roadmap decision 7,
+				// deferred), the real identity comes from the APPLE_SIGNING_IDENTITY env in CI, which
+				// overrides this — notarization is the other half and neither touches the updater
+				// (minisign is independent of Apple).
+				signingIdentity: '-',
+				// Assinar liga o HARDENED RUNTIME (o Tauri passa --options runtime), e com ele a library
+				// validation: o processo só carrega código do MESMO Team ID. O daemon faz dlopen do
+				// prebuild nativo do libsql, que tem assinatura ad-hoc própria — duas identidades
+				// distintas, ambas sem Team ID — e o macOS recusava, matando o daemon no boot da v0.1.2.
+				// O arquivo (não gerado, versionado ao lado) documenta a medição e a verificação.
+				entitlements: 'entitlements.plist',
+			},
 		},
 	}
 	return `${JSON.stringify(conf, null, '\t')}\n`

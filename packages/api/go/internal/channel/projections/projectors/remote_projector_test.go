@@ -238,7 +238,7 @@ func seedRemote(repo *mockRemoteProjectionRepo, channelID, remoteID string) *pro
 
 func TestRemoteCreatedProjector_SavesRow(t *testing.T) {
 	repo := newMockRemoteRepo()
-	p := NewRemoteCreatedProjector(repo)
+	p := NewRemoteProjector(repo, nil, nil)
 
 	channelID := uuid.New()
 	evt := ctxevents.NewRemoteCreatedEvent(channelID, "tenant", ctxevents.ChannelRemoteCreatedPayload{
@@ -272,7 +272,7 @@ func TestRemoteDeletedProjector_SetsDeletedAt(t *testing.T) {
 	remoteID := "remote-1@s.whatsapp.net"
 	seedRemote(repo, channelID.String(), remoteID)
 
-	p := NewRemoteDeletedProjector(repo)
+	p := NewRemoteProjector(repo, nil, nil)
 	at := time.Now().UTC()
 	evt := ctxevents.NewRemoteDeletedEvent(channelID, "tenant", ctxevents.ChannelRemoteDeletedPayload{
 		ChannelID: channelID,
@@ -295,7 +295,7 @@ func TestRemoteDeletedProjector_SetsDeletedAt(t *testing.T) {
 
 func TestRemoteDeletedProjector_NotFoundIsNonFatal(t *testing.T) {
 	repo := newMockRemoteRepo()
-	p := NewRemoteDeletedProjector(repo)
+	p := NewRemoteProjector(repo, nil, nil)
 	channelID := uuid.New()
 	evt := ctxevents.NewRemoteDeletedEvent(channelID, "tenant", ctxevents.ChannelRemoteDeletedPayload{
 		ChannelID: channelID,
@@ -314,7 +314,7 @@ func TestRemoteUpdatedProjector_UpdatesNameAndType(t *testing.T) {
 	remoteID := "group-1@g.us"
 	seedRemote(repo, channelID.String(), remoteID)
 
-	p := NewRemoteUpdatedProjector(repo, newMockChannelRepo())
+	p := NewRemoteProjector(repo, newMockChannelRepo(), nil)
 	evt := ctxevents.NewRemoteUpdatedEvent(channelID, "tenant", ctxevents.ChannelRemoteUpdatedPayload{
 		ChannelID:  channelID,
 		RemoteID:   remoteID,
@@ -346,7 +346,7 @@ func TestRemoteUpdatedProjector_StubResolvesPlatformFromChannel(t *testing.T) {
 	channelID := uuid.New()
 	channels.seed(channelID, channelenums.PlatformWhatsApp)
 
-	p := NewRemoteUpdatedProjector(repo, channels)
+	p := NewRemoteProjector(repo, channels, nil)
 	evt := ctxevents.NewRemoteUpdatedEvent(channelID, "tenant", ctxevents.ChannelRemoteUpdatedPayload{
 		ChannelID:  channelID,
 		RemoteID:   "ghost@s.whatsapp.net",
@@ -375,7 +375,7 @@ func TestRemoteUpdatedProjector_StubFailsWhenChannelUnknown(t *testing.T) {
 	repo := newMockRemoteRepo()
 	channelID := uuid.New()
 
-	p := NewRemoteUpdatedProjector(repo, newMockChannelRepo())
+	p := NewRemoteProjector(repo, newMockChannelRepo(), nil)
 	evt := ctxevents.NewRemoteUpdatedEvent(channelID, "tenant", ctxevents.ChannelRemoteUpdatedPayload{
 		ChannelID:  channelID,
 		RemoteID:   "ghost@s.whatsapp.net",
@@ -399,7 +399,7 @@ func TestRemotePinnedProjector_SetsPinnedAt(t *testing.T) {
 	remoteID := "remote-1@s.whatsapp.net"
 	seedRemote(repo, channelID.String(), remoteID)
 
-	p := NewRemotePinnedProjector(repo)
+	p := NewRemoteProjector(repo, nil, nil)
 	at := time.Now().UTC()
 	evt := ctxevents.NewRemotePinnedEvent(channelID, "tenant", ctxevents.ChannelRemotePinnedPayload{
 		ChannelID: channelID,
@@ -428,7 +428,7 @@ func TestRemoteUnpinnedProjector_ClearsPinnedAt(t *testing.T) {
 	at := time.Now().UTC()
 	r.PinnedAt = &at
 
-	p := NewRemoteUnpinnedProjector(repo)
+	p := NewRemoteProjector(repo, nil, nil)
 	evt := ctxevents.NewRemoteUnpinnedEvent(channelID, "tenant", ctxevents.ChannelRemoteUnpinnedPayload{
 		ChannelID: channelID,
 		RemoteID:  remoteID,
@@ -451,7 +451,7 @@ func TestRemoteArchivedProjector_SetsArchived(t *testing.T) {
 	remoteID := "remote-1@s.whatsapp.net"
 	seedRemote(repo, channelID.String(), remoteID)
 
-	p := NewRemoteArchivedProjector(repo)
+	p := NewRemoteProjector(repo, nil, nil)
 	evt := ctxevents.NewRemoteArchivedEvent(channelID, "tenant", ctxevents.ChannelRemoteArchivedPayload{
 		ChannelID: channelID,
 		RemoteID:  remoteID,
@@ -475,7 +475,7 @@ func TestRemoteUnarchivedProjector_ClearsArchived(t *testing.T) {
 	r := seedRemote(repo, channelID.String(), remoteID)
 	r.Archived = true
 
-	p := NewRemoteUnarchivedProjector(repo)
+	p := NewRemoteProjector(repo, nil, nil)
 	evt := ctxevents.NewRemoteUnarchivedEvent(channelID, "tenant", ctxevents.ChannelRemoteUnarchivedPayload{
 		ChannelID: channelID,
 		RemoteID:  remoteID,
@@ -498,7 +498,7 @@ func TestRemoteMutedProjector_SetsMuteExpiration(t *testing.T) {
 	remoteID := "remote-1@s.whatsapp.net"
 	seedRemote(repo, channelID.String(), remoteID)
 
-	p := NewRemoteMutedProjector(repo)
+	p := NewRemoteProjector(repo, nil, nil)
 	until := time.Now().Add(24 * time.Hour).UTC()
 	evt := ctxevents.NewRemoteMutedEvent(channelID, "tenant", ctxevents.ChannelRemoteMutedPayload{
 		ChannelID:  channelID,
@@ -526,7 +526,7 @@ func TestRemoteMutedProjector_NilUntilUsesFarFuture(t *testing.T) {
 	remoteID := "remote-1@s.whatsapp.net"
 	seedRemote(repo, channelID.String(), remoteID)
 
-	p := NewRemoteMutedProjector(repo)
+	p := NewRemoteProjector(repo, nil, nil)
 	evt := ctxevents.NewRemoteMutedEvent(channelID, "tenant", ctxevents.ChannelRemoteMutedPayload{
 		ChannelID:  channelID,
 		RemoteID:   remoteID,
@@ -555,7 +555,7 @@ func TestRemoteUnmutedProjector_ClearsMuteExpiration(t *testing.T) {
 	until := time.Now().Add(24 * time.Hour).UTC()
 	r.MuteExpiration = &until
 
-	p := NewRemoteUnmutedProjector(repo)
+	p := NewRemoteProjector(repo, nil, nil)
 	evt := ctxevents.NewRemoteUnmutedEvent(channelID, "tenant", ctxevents.ChannelRemoteUnmutedPayload{
 		ChannelID: channelID,
 		RemoteID:  remoteID,
@@ -578,7 +578,7 @@ func TestRemoteMarkedAsUnreadProjector_SetsFlag(t *testing.T) {
 	remoteID := "remote-1@s.whatsapp.net"
 	seedRemote(repo, channelID.String(), remoteID)
 
-	p := NewRemoteMarkedAsUnreadProjector(repo)
+	p := NewRemoteProjector(repo, nil, nil)
 	evt := ctxevents.NewRemoteMarkedAsUnreadEvent(channelID, "tenant", ctxevents.ChannelRemoteMarkedAsUnreadPayload{
 		ChannelID: channelID,
 		RemoteID:  remoteID,
@@ -603,7 +603,7 @@ func TestRemoteChatSeenProjector_ClearsUnreadState(t *testing.T) {
 	r.UnreadMessageCount = 5
 	r.MarkedAsUnread = true
 
-	p := NewRemoteChatSeenProjector(repo)
+	p := NewRemoteProjector(repo, nil, nil)
 	evt := ctxevents.NewRemoteChatSeenEvent(channelID, "tenant", ctxevents.ChannelRemoteChatSeenPayload{
 		ChannelID: channelID,
 		RemoteID:  remoteID,
@@ -631,7 +631,7 @@ func TestRemoteOnMessageReceivedProjector_CallsApplyLatestMessage(t *testing.T) 
 
 	expectedInternalID := uuid.New()
 
-	p := NewRemoteOnMessageReceivedProjector(repo)
+	p := NewRemoteProjector(repo, nil, nil)
 	ts := time.Now().Unix()
 	evt := ctxevents.NewMessageReceivedEvent(channelID, "tenant", ctxevents.ChannelMessageReceivedPayload{
 		ChannelID:         channelID,
@@ -678,7 +678,7 @@ func TestRemoteOnMessageSentProjector_CallsApplyLatestMessage(t *testing.T) {
 
 	expectedInternalID := uuid.New()
 
-	p := NewRemoteOnMessageSentProjector(repo)
+	p := NewRemoteProjector(repo, nil, nil)
 	ts := time.Now().Unix()
 	evt := ctxevents.NewMessageSentEvent(channelID, "tenant", ctxevents.ChannelMessageSentPayload{
 		ChannelID:         channelID,
@@ -724,7 +724,7 @@ func TestRemoteCreatedProjector_IsNoOpWhenRowAlreadyExists(t *testing.T) {
 	existing := seedRemote(repo, channelID.String(), remoteID)
 	existing.Name = "Already Named"
 
-	p := NewRemoteCreatedProjector(repo)
+	p := NewRemoteProjector(repo, nil, nil)
 	evt := ctxevents.NewRemoteCreatedEvent(channelID, "tenant", ctxevents.ChannelRemoteCreatedPayload{
 		ChannelID:  channelID,
 		RemoteID:   remoteID,
@@ -753,7 +753,7 @@ func TestRemoteUpdatedProjector_CreatesStubWhenNotFound(t *testing.T) {
 	channels := newMockChannelRepo()
 	channels.seed(channelID, channelenums.PlatformWhatsApp)
 
-	p := NewRemoteUpdatedProjector(repo, channels)
+	p := NewRemoteProjector(repo, channels, nil)
 	evt := ctxevents.NewRemoteUpdatedEvent(channelID, "tenant", ctxevents.ChannelRemoteUpdatedPayload{
 		ChannelID:  channelID,
 		RemoteID:   remoteID,
@@ -810,7 +810,7 @@ func TestRemoteOnMessageReceivedProjector_SkipsWhenRemoteNotProjected(t *testing
 	remoteID := "not-yet-projected@s.whatsapp.net"
 	// No seedRemote — remote doesn't exist yet.
 
-	p := NewRemoteOnMessageReceivedProjector(repo)
+	p := NewRemoteProjector(repo, nil, nil)
 	ts := time.Now().Unix()
 	evt := ctxevents.NewMessageReceivedEvent(channelID, "tenant", ctxevents.ChannelMessageReceivedPayload{
 		ChannelID:   channelID,
@@ -861,7 +861,7 @@ func TestRemoteOnMessageDeletedProjector_DeletingCurrentLatest_CallsRecompute(t 
 	r := remoteRepo.rows[remoteRepo.key(channelID.String(), remoteID)]
 	r.LastMessageID = &newerInternalID
 
-	p := NewRemoteOnMessageDeletedProjector(msgRepo, remoteRepo)
+	p := NewRemoteProjector(remoteRepo, nil, msgRepo)
 	evt := ctxevents.NewMessageDeletedEvent(channelID, "tenant", ctxevents.ChannelMessageDeletedPayload{
 		ChannelID: channelID,
 		MessageID: "plat-new",
@@ -912,7 +912,7 @@ func TestRemoteOnMessageDeletedProjector_DeletingNonLatest_StillCallsRecompute(t
 	r := remoteRepo.rows[remoteRepo.key(channelID.String(), remoteID)]
 	r.LastMessageID = &msgAInternalID
 
-	p := NewRemoteOnMessageDeletedProjector(msgRepo, remoteRepo)
+	p := NewRemoteProjector(remoteRepo, nil, msgRepo)
 	evt := ctxevents.NewMessageDeletedEvent(channelID, "tenant", ctxevents.ChannelMessageDeletedPayload{
 		ChannelID: channelID,
 		MessageID: "plat-b", // not the current preview
@@ -950,7 +950,7 @@ func TestRemoteOnMessageDeletedProjector_MessageNotProjected_NoOp(t *testing.T) 
 	seedRemote(remoteRepo, channelID.String(), remoteID)
 	// Do NOT seed any message — msgRepo returns nil for all FindByPlatformID.
 
-	p := NewRemoteOnMessageDeletedProjector(msgRepo, remoteRepo)
+	p := NewRemoteProjector(remoteRepo, nil, msgRepo)
 	evt := ctxevents.NewMessageDeletedEvent(channelID, "tenant", ctxevents.ChannelMessageDeletedPayload{
 		ChannelID: channelID,
 		MessageID: "ghost-platform-id",

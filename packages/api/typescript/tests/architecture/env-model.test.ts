@@ -8,7 +8,7 @@ import { PRODUCT_ENV_KEYS } from '@shared/config'
 // resolves fine; tsc doesn't try to project-check non-literal dynamic imports).
 type EnvDecl = {
 	consumers: readonly string[]
-	schema?: 'kernel' | 'product'
+	schema?: 'kernel' | 'product' | 'raw'
 	group?: string
 	example: string
 	doc?: string

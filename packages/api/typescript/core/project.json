@@ -7,12 +7,24 @@
 		"tsc": {
 			"executor": "nx:run-commands",
 			"cache": true,
-			"options": { "command": "bun x tsc --noEmit", "cwd": "packages/api/typescript/core" }
+			"options": {
+				"command": "bun x tsc --noEmit",
+				"cwd": "packages/api/typescript/core"
+			}
 		},
 		"test": {
 			"executor": "nx:run-commands",
 			"cache": true,
-			"options": { "command": "bun test", "cwd": "packages/api/typescript/core" }
+			"options": {
+				"command": "bun test",
+				"cwd": "packages/api/typescript/core"
+			},
+			"inputs": [
+				"{projectRoot}/src/**/*",
+				"{projectRoot}/tests/**/*",
+				"{projectRoot}/bunfig.toml",
+				"sharedGlobals"
+			]
 		}
 	}
 }

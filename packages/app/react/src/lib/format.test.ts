@@ -38,24 +38,34 @@ describe('formatPercent', () => {
 })
 
 describe('formatDurationSeconds', () => {
+	/**
+	 * Expected string built by the SAME Intl call the implementation makes — because what this
+	 * function decides is the UNIT and the VALUE, not how a given ICU build spells "second".
+	 * Hard-coding the label made the suite pass on macOS ("45 seg") and fail on the Linux CI
+	 * runner ("45 s") — a real red build on 2026-08-07 caused by ICU data, not by our logic.
+	 * Falsifiability is unchanged: a wrong unit choice or a lossy round still mismatches.
+	 */
+	const asUnit = (value: number, unit: 'second' | 'minute' | 'hour', locale: 'pt-BR' | 'en-US' = 'pt-BR') =>
+		new Intl.NumberFormat(locale, { style: 'unit', unit, unitDisplay: 'short', maximumFractionDigits: 0 }).format(value)
+
 	it('keeps small waits in seconds', () => {
-		expect(formatDurationSeconds(45, 'pt-BR')).toBe(`45 seg`)
-		expect(formatDurationSeconds(45, 'en-US')).toBe(`45 sec`)
+		expect(formatDurationSeconds(45, 'pt-BR')).toBe(asUnit(45, 'second'))
+		expect(formatDurationSeconds(45, 'en-US')).toBe(asUnit(45, 'second', 'en-US'))
 	})
 
 	/** The card printed raw seconds, so a half-hour median read "1847s" — a number nobody converts on sight. */
 	it('scales past a minute and a half into minutes, and past ninety minutes into hours', () => {
-		expect(formatDurationSeconds(1847, 'pt-BR')).toBe(`31 min`)
-		expect(formatDurationSeconds(9000, 'pt-BR')).toBe(`3 h`)
+		expect(formatDurationSeconds(1847, 'pt-BR')).toBe(asUnit(31, 'minute'))
+		expect(formatDurationSeconds(9000, 'pt-BR')).toBe(asUnit(3, 'hour'))
 	})
 
 	/** Just past the boundary stays in the smaller unit rather than snapping to a lossy "1 min". */
 	it('does not round a value to a unit that loses it', () => {
-		expect(formatDurationSeconds(75, 'pt-BR')).toBe(`75 seg`)
+		expect(formatDurationSeconds(75, 'pt-BR')).toBe(asUnit(75, 'second'))
 	})
 
 	it('clamps zero and non-finite to zero', () => {
-		expect(formatDurationSeconds(0, 'pt-BR')).toBe(`0 seg`)
-		expect(formatDurationSeconds(Number.NaN, 'pt-BR')).toBe(`0 seg`)
+		expect(formatDurationSeconds(0, 'pt-BR')).toBe(asUnit(0, 'second'))
+		expect(formatDurationSeconds(Number.NaN, 'pt-BR')).toBe(asUnit(0, 'second'))
 	})
 })

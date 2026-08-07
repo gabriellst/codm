@@ -21,6 +21,11 @@ pub struct SidecarFailure {
     pub reason: String,
     /// The retained tail of captured stderr, in chronological order.
     pub stderr: Vec<String>,
+    /// Where the FULL stderr for this run was persisted (`sidecar_log::SidecarLog`), so the splash
+    /// can tell the operator where to look instead of only showing the 50-line tail above. `None`
+    /// when no process ever ran (port conflict, spawn setup failure) — there is nothing on disk to
+    /// point to — or when the write itself was best-effort-skipped.
+    pub log_path: Option<String>,
 }
 
 /// Which window to reveal. Returned ONLY to whoever arrives last — everyone before gets `None`.
@@ -75,8 +80,11 @@ impl ReadinessGate {
         self.arrive(None)
     }
 
-    pub fn note_failed(&self, name: &str, reason: &str) -> Option<Reveal> {
-        self.arrive(Some(self.build_failure(name, reason)))
+    /// `log_path` is the persisted stderr file for this sidecar's run (`sidecar_log::SidecarLog`),
+    /// or `None` when no process ever ran (port conflict, spawn setup failure) — see
+    /// `SidecarFailure::log_path`.
+    pub fn note_failed(&self, name: &str, reason: &str, log_path: Option<&str>) -> Option<Reveal> {
+        self.arrive(Some(self.build_failure(name, reason, log_path)))
     }
 
     /// A sidecar died AFTER the boot finished. Records the failure and hands back the SAME
@@ -86,8 +94,8 @@ impl ReadinessGate {
     ///
     /// It does NOT touch `arrived`: the boot already reached `total` and its verdict is history.
     /// This answers a different question ("what is broken NOW?") in the same vocabulary.
-    pub fn note_runtime_failure(&self, name: &str, reason: &str) -> Reveal {
-        let failure = self.build_failure(name, reason);
+    pub fn note_runtime_failure(&self, name: &str, reason: &str, log_path: Option<&str>) -> Reveal {
+        let failure = self.build_failure(name, reason, log_path);
         let mut state = self.state.lock().expect("gate mutex");
         state.failures.push(failure);
         Reveal::BootError(state.failures.clone())
@@ -98,9 +106,10 @@ impl ReadinessGate {
         self.state.lock().expect("gate mutex").failures.clone()
     }
 
-    /// A failure record with that sidecar's retained stderr tail attached. Locks and releases before
-    /// the caller takes the lock again — the two paths differ only in what they do with the record.
-    fn build_failure(&self, name: &str, reason: &str) -> SidecarFailure {
+    /// A failure record with that sidecar's retained stderr tail (and persisted log path) attached.
+    /// Locks and releases before the caller takes the lock again — the two paths differ only in what
+    /// they do with the record.
+    fn build_failure(&self, name: &str, reason: &str, log_path: Option<&str>) -> SidecarFailure {
         let stderr = {
             let state = self.state.lock().expect("gate mutex");
             state
@@ -114,6 +123,7 @@ impl ReadinessGate {
             name: name.to_owned(),
             reason: reason.to_owned(),
             stderr,
+            log_path: log_path.map(|p| p.to_owned()),
         }
     }
 
@@ -144,19 +154,32 @@ mod tests {
     #[test]
     fn every_sidecar_ready_reveals_the_main_window_exactly_once() {
         let gate = ReadinessGate::new(2);
-        assert!(gate.note_ready("codm-daemon").is_none(), "o primeiro a chegar nao revela nada");
-        assert!(matches!(gate.note_ready("codm-gateway"), Some(Reveal::Main)));
+        assert!(
+            gate.note_ready("codm-daemon").is_none(),
+            "o primeiro a chegar nao revela nada"
+        );
+        assert!(matches!(
+            gate.note_ready("codm-gateway"),
+            Some(Reveal::Main)
+        ));
     }
 
     /// FALSEADOR AC-9 — o give-up NUNCA revela a janela principal.
     #[test]
     fn a_single_failure_reveals_the_error_splash_and_never_main() {
         let gate = ReadinessGate::new(2);
-        gate.record_stderr("codm-gateway", "panic: dial tcp 127.0.0.1:3032: connection refused");
+        gate.record_stderr(
+            "codm-gateway",
+            "panic: dial tcp 127.0.0.1:3032: connection refused",
+        );
         assert!(gate.note_ready("codm-daemon").is_none());
 
         let reveal = gate
-            .note_failed("codm-gateway", "no 200 within 60s")
+            .note_failed(
+                "codm-gateway",
+                "no 200 within 60s",
+                Some("/data/logs/codm-gateway-1.log"),
+            )
             .expect("o ultimo a chegar revela");
         let failures = match reveal {
             Reveal::Main => panic!("AC-9: give-up nao pode revelar a janela principal"),
@@ -169,6 +192,11 @@ mod tests {
             failures[0].stderr,
             vec!["panic: dial tcp 127.0.0.1:3032: connection refused"]
         );
+        assert_eq!(
+            failures[0].log_path.as_deref(),
+            Some("/data/logs/codm-gateway-1.log"),
+            "a splash precisa do caminho do arquivo persistido, nao so da cauda em memoria"
+        );
     }
 
     /// Nenhum caminho termina sem revelar janela: para todo par de desfechos, o ULTIMO a chegar
@@ -177,10 +205,21 @@ mod tests {
     fn the_last_arrival_always_reveals_something() {
         for (a_ok, b_ok) in [(true, true), (true, false), (false, true), (false, false)] {
             let gate = ReadinessGate::new(2);
-            let first = if a_ok { gate.note_ready("a") } else { gate.note_failed("a", "boom") };
+            let first = if a_ok {
+                gate.note_ready("a")
+            } else {
+                gate.note_failed("a", "boom", None)
+            };
             assert!(first.is_none());
-            let last = if b_ok { gate.note_ready("b") } else { gate.note_failed("b", "boom") };
-            assert!(last.is_some(), "combinacao ({a_ok},{b_ok}) terminou sem revelar janela nenhuma");
+            let last = if b_ok {
+                gate.note_ready("b")
+            } else {
+                gate.note_failed("b", "boom", None)
+            };
+            assert!(
+                last.is_some(),
+                "combinacao ({a_ok},{b_ok}) terminou sem revelar janela nenhuma"
+            );
             if !a_ok || !b_ok {
                 assert!(
                     matches!(last, Some(Reveal::BootError(_))),
@@ -202,7 +241,11 @@ mod tests {
             "o boot terminou bem — a splash so entra em cena depois"
         );
 
-        let reveal = gate.note_runtime_failure("codm-daemon", "process exited (code Some(1))");
+        let reveal = gate.note_runtime_failure(
+            "codm-daemon",
+            "process exited (code Some(1))",
+            Some("/data/logs/codm-daemon-2.log"),
+        );
         let Reveal::BootError(failures) = reveal else {
             panic!("AC-5: daemon caido em runtime tem de revelar a splash");
         };
@@ -213,6 +256,11 @@ mod tests {
             failures[0].stderr,
             vec!["FATAL: database is locked"],
             "a cauda de stderr capturada durante a vida do processo e o que o operador le"
+        );
+        assert_eq!(
+            failures[0].log_path.as_deref(),
+            Some("/data/logs/codm-daemon-2.log"),
+            "uma morte em runtime tambem precisa apontar pro arquivo persistido"
         );
         assert_eq!(
             gate.failures().len(),
@@ -227,7 +275,7 @@ mod tests {
         for i in 0..(STDERR_TAIL_LINES + 10) {
             gate.record_stderr("x", &format!("line {i}"));
         }
-        let Some(Reveal::BootError(failures)) = gate.note_failed("x", "spawn failed") else {
+        let Some(Reveal::BootError(failures)) = gate.note_failed("x", "spawn failed", None) else {
             panic!("esperava a splash");
         };
         assert_eq!(failures[0].stderr.len(), STDERR_TAIL_LINES);

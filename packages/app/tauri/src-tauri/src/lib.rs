@@ -95,7 +95,10 @@ pub fn run() {
             // decided by the pure `SupervisionMonitor`. Managed here because BOTH the boot tasks
             // (which own each child's event stream) and the `supervision_state` command read it.
             let monitor = Arc::new(sidecars::SupervisionMonitor::new(
-                fleet.iter().map(|s| (s.service(), s.name().to_owned())).collect(),
+                fleet
+                    .iter()
+                    .map(|s| (s.service(), s.name().to_owned()))
+                    .collect(),
             ));
             app.manage(monitor.clone());
 
@@ -119,6 +122,11 @@ pub fn run() {
             let names: Vec<&str> = fleet.iter().map(|s| s.name()).collect();
             sidecars::reap_previous_run(&names);
 
+            // PERSISTED STDERR (2026-08-07 incident) — same root as `crash::install_panic_hook`
+            // above, so a diagnosis never has to hunt across two different data trees for "what
+            // happened on this machine". See `sidecars::sidecar_log` for why this is a directory of
+            // one file per sidecar per run rather than a single shared log.
+            let log_dir = data_dir.join("logs");
             for sidecar in fleet {
                 sidecars::boot_sidecar(
                     app.handle(),
@@ -126,6 +134,7 @@ pub fn run() {
                     gate.clone(),
                     monitor.clone(),
                     children.clone(),
+                    &log_dir,
                 );
             }
             Ok(())

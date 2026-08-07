@@ -26,6 +26,14 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      # O //go:embed do gateway (public/embed.go) aponta docs/openapi.json — GERADO, presente em
+      # todo checkout de dev e ausente num runner limpo. Sem isto o type-check (que compila o Go)
+      # morre com "no matching files found" — mesmo fix do release-beta (2026-08-07).
+      - name: Generated embed inputs (openapi)
+        run: |
+          cp -n .env.example .env
+          bun emit-openapi
+
       - name: Mechanical detectors (rung-2 gate)
         run: bun run detect
 

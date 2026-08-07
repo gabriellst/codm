@@ -17,17 +17,24 @@ import (
 // Tests — MembershipAddedProjector
 // ──────────────────────────────────────────────────────────────────────────────
 
-func TestMembershipAddedProjector_EventName(t *testing.T) {
+func TestMembershipProjector_EventNames(t *testing.T) {
 	repo := newMockRemoteRepo()
-	p := NewMembershipAddedProjector(repo)
-	if got := p.EventName(); got != ctxevents.MembershipAddedEventName {
-		t.Errorf("EventName() = %q, want %q", got, ctxevents.MembershipAddedEventName)
+	p := NewMembershipProjector(repo)
+	want := []string{ctxevents.MembershipAddedEventName, ctxevents.MembershipRemovedEventName}
+	got := p.EventNames()
+	if len(got) != len(want) {
+		t.Fatalf("EventNames() = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("EventNames()[%d] = %q, want %q", i, got[i], want[i])
+		}
 	}
 }
 
 func TestMembershipAddedProjector_CallsAddMember(t *testing.T) {
 	repo := newMockRemoteRepo()
-	p := NewMembershipAddedProjector(repo)
+	p := NewMembershipProjector(repo)
 
 	channelID := uuid.New()
 	joinedAt := time.Now().UTC()
@@ -72,17 +79,9 @@ func TestMembershipAddedProjector_CallsAddMember(t *testing.T) {
 // Tests — MembershipRemovedProjector
 // ──────────────────────────────────────────────────────────────────────────────
 
-func TestMembershipRemovedProjector_EventName(t *testing.T) {
-	repo := newMockRemoteRepo()
-	p := NewMembershipRemovedProjector(repo)
-	if got := p.EventName(); got != ctxevents.MembershipRemovedEventName {
-		t.Errorf("EventName() = %q, want %q", got, ctxevents.MembershipRemovedEventName)
-	}
-}
-
 func TestMembershipRemovedProjector_CallsRemoveMember(t *testing.T) {
 	repo := newMockRemoteRepo()
-	p := NewMembershipRemovedProjector(repo)
+	p := NewMembershipProjector(repo)
 
 	channelID := uuid.New()
 	evt := ctxevents.NewMembershipRemovedEvent(channelID, "tenant", ctxevents.ChannelMembershipRemovedPayload{

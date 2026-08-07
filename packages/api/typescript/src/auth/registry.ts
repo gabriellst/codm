@@ -1,7 +1,14 @@
 // Recipe: dev:packages/api/src/auth/registry.ts — per-env bindings for auth context.
 // Stripped: no clinic-switching, no doctor/collaborator.
 import './errors' // Side-effect: registers this context's error codes with the framework runtime registry.
-import { type InstanceRegistry, expandBindings, RateLimitStore, InMemoryRateLimitStore, RedisRateLimitStore } from '@codm/core-typescript'
+import {
+	type InstanceRegistry,
+	expandBindings,
+	Config,
+	RateLimitStore,
+	InMemoryRateLimitStore,
+	RedisRateLimitStore,
+} from '@codm/core-typescript'
 import { UserRepository } from './repositories/UserRepository/UserRepository'
 import { DrizzleUserRepository } from './repositories/UserRepository/DrizzleUserRepository'
 import { MockUserRepository } from './repositories/UserRepository/MockUserRepository'
@@ -10,8 +17,18 @@ import { UserProfileRepository, DrizzleUserProfileRepository, MockUserProfileRep
 import { DrizzleAccountRepository } from './repositories/AccountRepository/DrizzleAccountRepository'
 import { MockAccountRepository } from './repositories/AccountRepository/MockAccountRepository'
 import { DeviceTokenRepository, DrizzleDeviceTokenRepository, MockDeviceTokenRepository } from './repositories/DeviceTokenRepository'
-import { BetterAuth } from './services/Authentication'
+import { BetterAuth, BetterAuthSocialProviders } from './services/Authentication'
 import { CloudSession, FileCloudSession, MockCloudSession } from './services/CloudSession'
+
+// Known fixture asserted on by BetterAuth.test.ts (GitHub + Google "authorize URL carries the
+// injected client id" cases) — single source so the registry's integration binding and the test's
+// assertions never drift apart silently.
+export const INTEGRATION_SOCIAL_PROVIDERS_FIXTURE: BetterAuthSocialProviders = {
+	githubClientId: 'test-github-client-id',
+	githubClientSecret: 'test-github-client-secret',
+	googleClientId: 'test-google-client-id',
+	googleClientSecret: 'test-google-client-secret',
+}
 
 export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	{ token: UserRepository, mock: MockUserRepository, real: DrizzleUserRepository },
@@ -20,8 +37,25 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	{ token: DeviceTokenRepository, mock: MockDeviceTokenRepository, real: DrizzleDeviceTokenRepository },
 	// better-auth touches real identity tables and needs GITHUB/GOOGLE credentials to be meaningful —
 	// declared absent in mock (flow tests never boot the cloud profile); integration/real self-bind
-	// the concrete service (same self-token pattern as the pre-collapse IdentityAuthHooks).
+	// the concrete service (same self-token pattern as the pre-collapse IdentityAuthHooks). Its
+	// social-provider credentials are NOT a constructor default — see BetterAuthSocialProviders below
+	// — so tsyringe's own paramtype auto-injection resolves both constructor args correctly.
 	{ token: BetterAuth, mock: null, real: BetterAuth },
+	// BetterAuth's social-provider credentials (see BetterAuth.ts docblock for why this is a class
+	// token rather than a constructor default). `real` mirrors Config.env exactly like before this
+	// seam existed; `integration` binds the known fixture BetterAuth.test.ts asserts on — mock stays
+	// absent, same as BetterAuth itself (no cloud profile in mock, so nothing ever resolves this).
+	{
+		token: BetterAuthSocialProviders,
+		mock: null,
+		integration: INTEGRATION_SOCIAL_PROVIDERS_FIXTURE,
+		real: {
+			githubClientId: Config.env.GITHUB_CLIENT_ID,
+			githubClientSecret: Config.env.GITHUB_CLIENT_SECRET,
+			googleClientId: Config.env.GOOGLE_CLIENT_ID,
+			googleClientSecret: Config.env.GOOGLE_CLIENT_SECRET,
+		},
+	},
 	// The LOCAL daemon's login gate (SP2 T7) — the mirror image of BetterAuth above: bound `real`
 	// EVERYWHERE (the daemon profile always has one, unlike the cloud-only BetterAuth), by CLASS
 	// REFERENCE rather than `useFactory` so it stays a true singleton — see FileCloudSession's

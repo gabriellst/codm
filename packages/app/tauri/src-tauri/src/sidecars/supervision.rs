@@ -101,6 +101,12 @@ struct Watched {
     /// we watched die cannot come back, so a later healthy probe on its port is NOT a recovery — it
     /// is somebody else's process holding the port, which is the incident this front exists to stop.
     exited: bool,
+    /// Where `sidecar_log::SidecarLog` persisted this sidecar's stderr for this boot, set once by
+    /// `boot_sidecar` right after opening the file. Kept HERE (not only in the boot task's own
+    /// stack) so a RUNTIME death — reacted to from this same monitor's `note_exit`/`note_probe`
+    /// callers, a different call stack entirely — can still tell the operator where to look
+    /// (2026-08-07 incident).
+    log_path: Option<String>,
 }
 
 struct Inner {
@@ -130,6 +136,7 @@ impl SupervisionMonitor {
                         consecutive_failures: 0,
                         status: SidecarStatus::Healthy,
                         exited: false,
+                        log_path: None,
                     })
                     .collect(),
             }),
@@ -163,6 +170,28 @@ impl SupervisionMonitor {
             .find(|w| w.service == service)
             .map(|w| w.name.clone())
             .unwrap_or_else(|| "unknown sidecar".to_owned())
+    }
+
+    /// Record where `boot_sidecar` persisted this sidecar's stderr for this boot. Called once, right
+    /// after `sidecar_log::SidecarLog::open` succeeds — a `None` from `open` (best-effort) simply
+    /// means this is never called, and `log_path_of` stays `None` for the run.
+    pub fn set_log_path(&self, service: SidecarService, path: String) {
+        let mut inner = self.state.lock().expect("supervision mutex");
+        if let Some(watched) = inner.watched.iter_mut().find(|w| w.service == service) {
+            watched.log_path = Some(path);
+        }
+    }
+
+    /// The persisted log path behind a service, for whoever reports a runtime failure — the
+    /// boot-error splash speaks in `SidecarFailure.log_path`, this is where `react()` reads it from.
+    pub fn log_path_of(&self, service: SidecarService) -> Option<String> {
+        self.state
+            .lock()
+            .expect("supervision mutex")
+            .watched
+            .iter()
+            .find(|w| w.service == service)
+            .and_then(|w| w.log_path.clone())
     }
 
     /// The current aggregate — the PULL half of spec Decision 9 (`supervision_state`).
@@ -307,11 +336,20 @@ mod tests {
         let monitor = armed_fleet();
 
         for _ in 0..2 {
-            assert_eq!(monitor.note_probe(SidecarService::Gateway, ProbeOutcome::Unreachable), None);
+            assert_eq!(
+                monitor.note_probe(SidecarService::Gateway, ProbeOutcome::Unreachable),
+                None
+            );
         }
-        assert_eq!(monitor.note_probe(SidecarService::Gateway, ProbeOutcome::Healthy), None);
+        assert_eq!(
+            monitor.note_probe(SidecarService::Gateway, ProbeOutcome::Healthy),
+            None
+        );
         for _ in 0..2 {
-            assert_eq!(monitor.note_probe(SidecarService::Gateway, ProbeOutcome::Unreachable), None);
+            assert_eq!(
+                monitor.note_probe(SidecarService::Gateway, ProbeOutcome::Unreachable),
+                None
+            );
         }
 
         assert_eq!(
@@ -418,11 +456,15 @@ mod tests {
     /// Supervision must not decide anything while the boot gate still owns the windows.
     #[test]
     fn nothing_is_declared_before_the_gate_hands_over() {
-        let monitor = SupervisionMonitor::new(vec![(SidecarService::Daemon, "codm-daemon".to_owned())]);
+        let monitor =
+            SupervisionMonitor::new(vec![(SidecarService::Daemon, "codm-daemon".to_owned())]);
 
         assert_eq!(monitor.note_exit(SidecarService::Daemon), None);
         for _ in 0..(FAILURE_THRESHOLD * 2) {
-            assert_eq!(monitor.note_probe(SidecarService::Daemon, ProbeOutcome::Unreachable), None);
+            assert_eq!(
+                monitor.note_probe(SidecarService::Daemon, ProbeOutcome::Unreachable),
+                None
+            );
         }
         assert_eq!(
             monitor.state(),
@@ -438,8 +480,14 @@ mod tests {
         let monitor = armed_fleet();
 
         for _ in 0..2 {
-            assert_eq!(monitor.note_probe(SidecarService::Daemon, ProbeOutcome::Unreachable), None);
-            assert_eq!(monitor.note_probe(SidecarService::Gateway, ProbeOutcome::Unreachable), None);
+            assert_eq!(
+                monitor.note_probe(SidecarService::Daemon, ProbeOutcome::Unreachable),
+                None
+            );
+            assert_eq!(
+                monitor.note_probe(SidecarService::Gateway, ProbeOutcome::Unreachable),
+                None
+            );
         }
 
         assert_eq!(

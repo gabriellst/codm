@@ -1,7 +1,6 @@
 {
 	"extends": "../tsconfig.json",
 	"compilerOptions": {
-		"rootDir": "./src",
 		"noEmit": true,
 		"skipLibCheck": true,
 		"paths": {},
@@ -10,6 +9,6 @@
 		"exactOptionalPropertyTypes": false,
 		"typeRoots": ["../../../../node_modules/@types", "./node_modules/@types"]
 	},
-	"include": ["src/**/*"],
+	"include": ["src/**/*", "tests/**/*.ts"],
 	"exclude": ["src/__tests__/**"]
 }

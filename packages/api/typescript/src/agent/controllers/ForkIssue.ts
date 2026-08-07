@@ -2,7 +2,6 @@ import { injectable } from 'tsyringe-neo'
 import { BaseError, Controller, HttpStatusCode, z } from '@codm/core-typescript'
 import { McpScope } from '@codm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
-import { ThreadRepository } from '@thread/repositories'
 import { AgentRunIdentityCtxSchema } from '../types/AgentRunIdentity'
 import { ForkIssue, ForkIssueOutputSchema } from '../usecases/ForkIssue'
 import type { AgentApplicationErrors, AgentInterfaceErrors } from '../errors'
@@ -79,10 +78,7 @@ export class ForkIssueController extends Controller<typeof ForkIssueControllerIn
 	// `Controller.executeMiddlewares`. A tool-callable door cannot be built without it.
 	override middlewares = [OperatorMiddleware]
 
-	constructor(
-		private readonly useCase: ForkIssue,
-		private readonly threads: ThreadRepository,
-	) {
+	constructor(private readonly useCase: ForkIssue) {
 		super()
 	}
 
@@ -119,23 +115,14 @@ export class ForkIssueController extends Controller<typeof ForkIssueControllerIn
 			)
 		}
 
-		// A thread that vanished between minting and this call. Reported as a SCOPE failure rather than a
-		// new error code: the run is confined to a thread that no longer resolves, so the call is out of
-		// scope in the most literal sense. (The sibling handler `RunIssueTurnOnClassification` drops
-		// silently on the same condition — correct for an event handler, impossible for a door that owes
-		// the caller an answer.)
-		const thread = await this.threads.findById(threadId)
-		if (!thread) throw new BaseError<AgentInterfaceErrors>('AGENT_RUN_SCOPE_MISMATCH', 'the thread this run is scoped to no longer exists')
-
-		const provider = thread.providers[0]
-		if (!provider) throw new BaseError<AgentApplicationErrors>('PROVIDER_NOT_DETECTED', 'this thread has no provider bound')
-
+		// The thread-existence check and the provider resolution both moved into `ForkIssue` itself
+		// (import-direction#R1 — controllers never touch repositories). This door's job stops at
+		// validating the request and the identity stamped on it.
 		const data = await this.useCase.execute({
 			ownerId: request.ctx.ownerId,
 			threadId,
 			goal: request.body.goal,
 			originEntryId: identity.entryId,
-			provider,
 		})
 		return { status: HttpStatusCode.CREATED, data }
 	}

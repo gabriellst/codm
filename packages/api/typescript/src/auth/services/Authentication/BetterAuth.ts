@@ -15,6 +15,26 @@ import * as schema from '@codm/contracts/db'
 
 export type BetterAuthInstance = ReturnType<typeof betterAuth>
 
+/**
+ * Social-provider credentials threaded into better-auth's `socialProviders`. A proper DI TOKEN
+ * (abstract class, not an interface/plain-object type) so tsyringe's own paramtype auto-injection
+ * resolves it like any other constructor dependency — see the per-env binding in `auth/registry.ts`
+ * (`real` derives from `Config.env.GITHUB_*`/`GOOGLE_*`; `integration` binds a known fixture).
+ *
+ * The seam exists so a test can assert against a KNOWN fake id instead of the ambient `.env` value
+ * (CI has no real secrets; BetterAuth.test.ts owns the value it asserts on). Earlier revision of
+ * this seam used a plain-object constructor param with a `Config.env`-reading default — that traded
+ * this problem for a worse one: tsyringe auto-resolves an interface-typed param as `Object` (no
+ * runtime type to look up), silently injecting `{}` and wiping every credential in PRODUCTION, not
+ * just tests. Making this an actual class turns it into a normal, correctly-resolved DI dependency.
+ */
+export abstract class BetterAuthSocialProviders {
+	abstract githubClientId: string
+	abstract githubClientSecret: string
+	abstract googleClientId: string
+	abstract googleClientSecret: string
+}
+
 // @injectable(), not @singleton() — this token's singleton-ness is owned by the registry
 // ({ token: BetterAuth, mock: null, real: BetterAuth } in auth/registry.ts), same pattern as the
 // original file's IdentityAuthHooks sibling.
@@ -22,7 +42,10 @@ export type BetterAuthInstance = ReturnType<typeof betterAuth>
 export class BetterAuth {
 	readonly auth: BetterAuthInstance
 
-	constructor(private client: DrizzleClient) {
+	constructor(
+		private client: DrizzleClient,
+		private socialProviders: BetterAuthSocialProviders,
+	) {
 		// Annotate as BetterAuthOptions so the literal widens before betterAuth() infers its
 		// generic — same reasoning as the original file (see git blame f21be114^).
 		const options: BetterAuthOptions = {
@@ -64,12 +87,12 @@ export class BetterAuth {
 			},
 			socialProviders: {
 				github: {
-					clientId: Config.env.GITHUB_CLIENT_ID,
-					clientSecret: Config.env.GITHUB_CLIENT_SECRET,
+					clientId: this.socialProviders.githubClientId,
+					clientSecret: this.socialProviders.githubClientSecret,
 				},
 				google: {
-					clientId: Config.env.GOOGLE_CLIENT_ID,
-					clientSecret: Config.env.GOOGLE_CLIENT_SECRET,
+					clientId: this.socialProviders.googleClientId,
+					clientSecret: this.socialProviders.googleClientSecret,
 				},
 			},
 		}

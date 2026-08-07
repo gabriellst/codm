@@ -105,6 +105,19 @@ describe('desktop config (packages/app/tauri/config)', () => {
 		expect(conf.build.beforeDevCommand).toBe(`bun x nx run ${consoleWs.nxProject}:${console_.devTarget}`)
 	})
 
+	it('DSK-10: the bundle is ad-hoc signed, so macOS says "unidentified developer" and not "damaged"', () => {
+		// The shipped v0.1.0 DMG carried only the linker's signature on the main binary, which claims
+		// sealed resources the assembled bundle never had — `codesign --verify` failed and macOS
+		// refused it as DAMAGED (no right-click → Abrir escape). Signing the assembled bundle is what
+		// keeps the landing's Gatekeeper microcopy true.
+		const conf = JSON.parse(renderTauriConf()) as { bundle: { macOS?: { signingIdentity?: string; entitlements?: string } } }
+		expect(conf.bundle.macOS?.signingIdentity).toBe('-')
+		// Assinar sem o entitlement é PIOR que não assinar: o hardened runtime que vem junto liga a
+		// library validation e o daemon morre no dlopen do prebuild nativo (v0.1.2, 2026-08-07). Os
+		// dois andam sempre juntos — por isso a asserção mora no mesmo rail.
+		expect(conf.bundle.macOS?.entitlements).toBe('entitlements.plist')
+	})
+
 	it('DSK-09: tauri.conf declares the codm:// deep link scheme from config/deeplink.ts', () => {
 		// SP2 device-token flow (spec Decision 4): the system browser redirects to
 		// `codm://auth?code=…` after OAuth completes. The scheme is declared ONCE in

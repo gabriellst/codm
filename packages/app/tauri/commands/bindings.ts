@@ -71,7 +71,14 @@ reason: string;
 /**
  * The retained tail of captured stderr, in chronological order.
  */
-stderr: string[] }
+stderr: string[]; 
+/**
+ * Where the FULL stderr for this run was persisted (`sidecar_log::SidecarLog`), so the splash
+ * can tell the operator where to look instead of only showing the 50-line tail above. `None`
+ * when no process ever ran (port conflict, spawn setup failure) — there is nothing on disk to
+ * point to — or when the write itself was best-effort-skipped.
+ */
+logPath: string | null }
 /**
  * Which SDK sub-client answers for a sidecar — and, since supervision, which one the console is
  * being told about. A fact of the SHELL (which binary is which service), never a contract enum:
