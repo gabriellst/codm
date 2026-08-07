@@ -164,6 +164,58 @@ describe('useDeepLinkAuth', () => {
 		expect(await secrets.get('codm.cloud.deviceToken')).toBeNull()
 	})
 
+	it('duplicate delivery of the SAME code (getCurrent() + onOpenUrl both firing) exchanges it only once', async () => {
+		// Regression (measured 2026-08-07): `TauriCloudSessionService.onAuthCallback` reads BOTH
+		// `getCurrent()` (launch urls) and the live `onOpenUrl` listener — with the app already
+		// open, macOS delivers the SAME url through both, so the fake mirrors that by emitting it
+		// twice back to back. Exchange is exactly-once on the backend
+		// (`DeviceTokenRepository.consumeCode`), so a second live exchange call would 400 even
+		// though the login already worked — the dedupe-by-code guard is what this proves.
+		let exchangeCalls = 0
+		fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(
+			mockFetch(() => {
+				exchangeCalls += 1
+				return jsonResponse({ token: TOKEN })
+			}),
+		)
+		await mount()
+
+		act(() => {
+			cloudSession.emit(`codm://auth?code=${CODE}`)
+			cloudSession.emit(`codm://auth?code=${CODE}`)
+		})
+		await waitFor(() => useCloudSessionStore.getState().status === 'authenticated')
+
+		expect(exchangeCalls).toBe(1)
+	})
+
+	it('an exchange failure is diagnosed by the REAL error code/status, not a message substring', async () => {
+		// Regression (measured 2026-08-07): the old check was `String(error).includes
+		// ('DEVICE_CODE_INVALID')`, but the thrown Error's message is ky's own HTTP phrasing
+		// ("Request failed with status code 400: …") — the backend `code` never appears in
+		// `String(error)`, so this exact scenario (the mocked body below) NEVER matched under the
+		// old code, and both the toast and the diagnostic silently misclassified every failure as
+		// generic. This proves the fix reads the structured `.code`/`.status` the generated client
+		// attaches to the thrown Error, and names WHICH step failed.
+		fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(mockFetch(() => jsonResponse({ code: 'DEVICE_CODE_INVALID' }, 400)))
+		const diagnostics: unknown[][] = []
+		const restoreError = console.error
+		console.error = (...args: unknown[]) => {
+			diagnostics.push(args)
+		}
+		await mount()
+
+		act(() => cloudSession.emit(`codm://auth?code=${CODE}`))
+		await act(async () => {
+			await new Promise(resolve => setTimeout(resolve, 50))
+		})
+		console.error = restoreError
+
+		const call = diagnostics.find(([message]) => String(message).includes("step 'exchange'"))
+		expect(call).toBeDefined()
+		expect(call?.[1]).toMatchObject({ step: 'exchange', code: 'DEVICE_CODE_INVALID', status: 400 })
+	})
+
 	it('unmounting stops the subscription — a deep link after teardown exchanges nothing', async () => {
 		fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(mockFetch(() => jsonResponse({ token: TOKEN })))
 		await mount()

@@ -5,6 +5,7 @@ import {
 	CloudSessionToken,
 	FilePickerToken,
 	HostInfoToken,
+	LoggingToken,
 	NotificationToken,
 	SecretsToken,
 	SupervisionToken,
@@ -14,6 +15,7 @@ import type { BadgeService } from '../BadgeService/BadgeService'
 import type { CloudSessionService } from '../CloudSessionService/CloudSessionService'
 import type { FilePickerService } from '../FilePickerService/FilePickerService'
 import type { HostInfoService, NativePlatform } from '../HostInfoService/HostInfoService'
+import type { LoggingService } from '../LoggingService/LoggingService'
 import type { NotificationService } from '../NotificationService/NotificationService'
 import type { SecretsService } from '../SecretsService/SecretsService'
 import type { SupervisionService, SupervisionState } from '../SupervisionService/SupervisionService'
@@ -154,6 +156,15 @@ export class FakeCloudSessionService implements CloudSessionService {
 	}
 }
 
+/** Records calls instead of touching `window.console` — a unit test suite shares ONE process
+ *  (bun:test), so actually monkey-patching console here would leak into every other file's output. */
+export class FakeLoggingService implements LoggingService {
+	attached = 0
+	async attachConsole(): Promise<void> {
+		this.attached += 1
+	}
+}
+
 export default [
 	[FilePickerToken, FakeFilePickerService],
 	[NotificationToken, FakeNotificationService],
@@ -163,4 +174,5 @@ export default [
 	[HostInfoToken, FakeHostInfoService],
 	[SupervisionToken, FakeSupervisionService],
 	[CloudSessionToken, FakeCloudSessionService],
+	[LoggingToken, FakeLoggingService],
 ] as const satisfies Bindings

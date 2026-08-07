@@ -6,6 +6,13 @@
 //!    with a bootstrap HTTP health-check per service — see `sidecars`.
 //! 3. Expose the keychain-backed `secret_*` commands the native contract's tauri
 //!    platform services invoke — see `commands`.
+//! 4. Back the `log` facade with a real file target (`$data_dir/logs/shell.log`) — see the
+//!    `tauri_plugin_log` wiring below. Until 2026-08-07 this shell had NONE: every `log::*`
+//!    call anywhere in this crate, and every `console.error`/`warn` in the webview, vanished
+//!    in a packaged build. A login failure ("Não foi possível concluir o login") had no trace
+//!    of which step broke it — the sidecar logs (`sidecars::sidecar_log`) and `crash.rs` only
+//!    cover the sidecars and Rust panics, never an ordinary caught error on either side of
+//!    this boundary.
 //!
 //! Transport is the INTERIM local-HTTP one (console → daemon :3030 → gateway :3032),
 //! documented as reversible in BUILD-LOG — the shell only needs the two readiness
@@ -18,6 +25,7 @@
 use std::sync::Arc;
 
 use tauri::Manager;
+use tauri_plugin_log::{RotationStrategy, Target, TargetKind};
 
 mod api;
 mod commands;
@@ -25,10 +33,50 @@ mod crash;
 mod sidecars;
 mod updater;
 
+/// Cap for `shell.log` before `tauri_plugin_log::RotationStrategy::KeepOne` rotates it — same
+/// order of magnitude as the sidecar/crash rotation budgets (`sidecar_log::KEEP`, `crash::KEEP`),
+/// bounded so a noisy run cannot grow the data dir without limit.
+const SHELL_LOG_MAX_BYTES: u128 = 10 * 1024 * 1024;
+
 pub fn run() {
     let builder = commands::specta_builder();
+    // Captured before `.build()` — the log plugin's `Folder` target needs a literal path, and
+    // `.plugin()` calls only compose the `Builder`, which `.build()` then consumes. That is
+    // BEFORE any `App`/`AppHandle` exists, so `app.path().app_data_dir()` (what `setup()` below
+    // used to call) is not reachable yet.
+    let context = tauri::generate_context!();
+
+    // SAME formula `PathResolver::app_data_dir` uses internally (`dirs::data_dir().join(identifier)`
+    // — verified against tauri 2.11.5's vendored source), read off the SAME generated `context` the
+    // Builder is about to consume — never a hand-copied identifier literal that could drift from
+    // config/app.ts's IDENTIFIER. Computed ONCE here and reused by `setup()` below, rather than
+    // recomputed a second time via `app.path()`, so there is exactly one place this path is derived.
+    let data_dir = dirs::data_dir()
+        .expect("app data dir resolvable")
+        .join(&context.config().identifier)
+        .join("data");
+    let log_dir = data_dir.join("logs");
 
     tauri::Builder::default()
+        // FIRST in the chain on purpose: plugins initialize in registration order during
+        // `.build()`, and any `log::*` call from a LATER plugin's own init should still land in
+        // the file rather than being dropped because the logger wasn't installed yet.
+        //
+        // Same directory the sidecars already write to (`sidecars::sidecar_log`) — `shell.log`
+        // sits right next to `codm-daemon-<ts>.log` / `codm-gateway-<ts>.log`, one tree to search
+        // instead of a third one at the OS-specific log dir (`TargetKind::LogDir`, deliberately
+        // NOT used here). `KeepOne` + a size cap bounds growth without the per-boot file-per-run
+        // scheme `sidecar_log.rs` needs (this is one continuously-open file per shell install).
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .target(Target::new(TargetKind::Folder {
+                    path: log_dir,
+                    file_name: Some("shell".into()),
+                }))
+                .max_file_size(SHELL_LOG_MAX_BYTES)
+                .rotation_strategy(RotationStrategy::KeepOne)
+                .build(),
+        )
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
@@ -57,11 +105,11 @@ pub fn run() {
             // line is the difference between the console hearing transitions and hearing nothing.
             builder.mount_events(app);
 
-            let data_dir = app
-                .path()
-                .app_data_dir()
-                .expect("app data dir resolvable")
-                .join("data");
+            // `data_dir` is the OUTER binding computed above, before `.build()` — reused here
+            // rather than a second `app.path().app_data_dir()` call, so the shell log's directory
+            // and every other consumer below (crash capture, sidecars, the updater) agree on the
+            // path by construction instead of by two formulas staying in sync by hand.
+            //
             // Crash capture + auto-update — both rooted at the same data dir the sidecars use.
             // The panic hook goes in FIRST: an update-path panic without it would be exactly the
             // invisible field crash SP1's decision 6 exists to prevent.
@@ -139,7 +187,12 @@ pub fn run() {
             }
             Ok(())
         })
-        .build(tauri::generate_context!())
+        // `context` — captured at the top of `run()`, not `generate_context!()` called fresh here
+        // — is what let the log plugin's target read `context.config().identifier` before the App
+        // existed. Passing the SAME value in means the identifier the shell logs against and the
+        // identifier the running app reports are provably the same value, not two macro expansions
+        // that happen to agree.
+        .build(context)
         .expect("error while building tauri application")
         .run(|app, event| {
             // `Exit` and not `ExitRequested`: the latter is a REQUEST, and it can be prevented (a

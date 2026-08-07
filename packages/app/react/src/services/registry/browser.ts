@@ -5,6 +5,7 @@ import {
 	CloudSessionToken,
 	FilePickerToken,
 	HostInfoToken,
+	LoggingToken,
 	NotificationToken,
 	SecretsToken,
 	SupervisionToken,
@@ -14,6 +15,7 @@ import { BrowserBadgeService } from '../BadgeService/BrowserBadgeService'
 import { BrowserCloudSessionService } from '../CloudSessionService/BrowserCloudSessionService'
 import { BrowserFilePickerService } from '../FilePickerService/BrowserFilePickerService'
 import { BrowserHostInfoService } from '../HostInfoService/BrowserHostInfoService'
+import { BrowserLoggingService } from '../LoggingService/BrowserLoggingService'
 import { BrowserNotificationService } from '../NotificationService/BrowserNotificationService'
 import { BrowserSecretsService } from '../SecretsService/BrowserSecretsService'
 import { BrowserSupervisionService } from '../SupervisionService/BrowserSupervisionService'
@@ -35,4 +37,5 @@ export default [
 	[HostInfoToken, BrowserHostInfoService],
 	[SupervisionToken, BrowserSupervisionService],
 	[CloudSessionToken, BrowserCloudSessionService],
+	[LoggingToken, BrowserLoggingService],
 ] as const satisfies Bindings

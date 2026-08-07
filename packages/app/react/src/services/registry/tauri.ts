@@ -5,6 +5,7 @@ import {
 	CloudSessionToken,
 	FilePickerToken,
 	HostInfoToken,
+	LoggingToken,
 	NotificationToken,
 	SecretsToken,
 	SupervisionToken,
@@ -14,6 +15,7 @@ import { TauriBadgeService } from '../BadgeService/TauriBadgeService'
 import { TauriCloudSessionService } from '../CloudSessionService/TauriCloudSessionService'
 import { TauriFilePickerService } from '../FilePickerService/TauriFilePickerService'
 import { TauriHostInfoService } from '../HostInfoService/TauriHostInfoService'
+import { TauriLoggingService } from '../LoggingService/TauriLoggingService'
 import { TauriNotificationService } from '../NotificationService/TauriNotificationService'
 import { TauriSecretsService } from '../SecretsService/TauriSecretsService'
 import { TauriSupervisionService } from '../SupervisionService/TauriSupervisionService'
@@ -34,4 +36,5 @@ export default [
 	[HostInfoToken, TauriHostInfoService],
 	[SupervisionToken, TauriSupervisionService],
 	[CloudSessionToken, TauriCloudSessionService],
+	[LoggingToken, TauriLoggingService],
 ] as const satisfies Bindings

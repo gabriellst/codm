@@ -9,6 +9,7 @@ import type { BadgeService } from './BadgeService/BadgeService'
 import type { CloudSessionService } from './CloudSessionService/CloudSessionService'
 import type { FilePickerService } from './FilePickerService/FilePickerService'
 import type { HostInfoService } from './HostInfoService/HostInfoService'
+import type { LoggingService } from './LoggingService/LoggingService'
 import type { NotificationService } from './NotificationService/NotificationService'
 import type { SecretsService } from './SecretsService/SecretsService'
 import type { SupervisionService } from './SupervisionService/SupervisionService'
@@ -21,3 +22,4 @@ export const AutostartToken = token<AutostartService>('AutostartService')
 export const HostInfoToken = token<HostInfoService>('HostInfoService')
 export const SupervisionToken = token<SupervisionService>('SupervisionService')
 export const CloudSessionToken = token<CloudSessionService>('CloudSessionService')
+export const LoggingToken = token<LoggingService>('LoggingService')

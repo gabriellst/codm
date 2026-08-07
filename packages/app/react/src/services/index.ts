@@ -23,6 +23,7 @@ export {
 	useCloudSession,
 	useFilePicker,
 	useHostInfo,
+	useLogging,
 	useNotification,
 	useSecrets,
 	useService,
@@ -35,6 +36,7 @@ export {
 	CloudSessionToken,
 	FilePickerToken,
 	HostInfoToken,
+	LoggingToken,
 	NotificationToken,
 	SecretsToken,
 	SupervisionToken,
@@ -47,6 +49,7 @@ export { CLOUD_DEVICE_TOKEN_SECRET_KEY } from './CloudSessionService/CloudSessio
 export type { CloudSessionService } from './CloudSessionService/CloudSessionService'
 export type { FilePickerService } from './FilePickerService/FilePickerService'
 export type { HostInfoService, NativePlatform } from './HostInfoService/HostInfoService'
+export type { LoggingService } from './LoggingService/LoggingService'
 export type { NotificationService } from './NotificationService/NotificationService'
 export type { SecretsService } from './SecretsService/SecretsService'
 export type { SupervisedSidecar, SupervisionService, SupervisionState } from './SupervisionService/SupervisionService'
