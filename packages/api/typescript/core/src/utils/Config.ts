@@ -102,8 +102,22 @@ const REQUIRED_SECRETS_IN_PROD = [] as const satisfies readonly EnvKey[]
 /**
  * Secrets that ship a placeholder default for local dev but MUST be overridden in production —
  * booting prod with the literal `'SECRET'` signing key is a security hole, not a valid config.
+ *
+ * Keyed by the PROFILE that actually consumes the secret, because "must be real" is a property of
+ * who signs with it, not of NODE_ENV. The desktop daemon runs with `NODE_ENV=production` too (the
+ * Tauri shell hard-codes it for the sidecar), so a flat list meant the packaged app refused to boot
+ * over `BETTER_AUTH_SECRET` — a secret only `auth/services/Authentication/BetterAuth.ts` reads, and
+ * that context is mounted ONLY under `CODM_PROFILE=cloud`. Measured 2026-08-07: no install could
+ * open; the daemon died on this guard before serving a single request.
+ *
+ * `JWT_SECRET` is deliberately absent: it has ZERO consumers in this fork (grep across ts/go/rust —
+ * only its own declaration). Guarding a key nothing signs with buys no security and costs a boot.
+ * It stays declared as template lineage; the day something signs with it, it joins a profile below.
  */
-const NO_PLACEHOLDER_IN_PROD = ['JWT_SECRET', 'BETTER_AUTH_SECRET'] as const satisfies readonly EnvKey[]
+const NO_PLACEHOLDER_BY_PROFILE = {
+	/** better-auth signs sessions with it — the cloud slice is the only place it runs. */
+	cloud: ['BETTER_AUTH_SECRET'],
+} as const satisfies Record<string, readonly EnvKey[]>
 const PLACEHOLDER_SECRET = 'SECRET'
 
 /**
@@ -135,7 +149,11 @@ export const EnvSchema = RawEnvSchema.transform(data => {
 		ctx.addIssue({ code: 'custom', message: `Missing required secrets in production: ${missingSecrets.join(', ')}` })
 	}
 
-	const placeholderSecrets = NO_PLACEHOLDER_IN_PROD.filter(key => data[key] === PLACEHOLDER_SECRET)
+	// The profile is a raw boot flag (see template.config.ts CODM_PROFILE, schema: 'raw') — read here
+	// rather than through the schema for the same reason src/index.ts does: it selects what boots.
+	const profile = process.env.CODM_PROFILE ?? ''
+	const guarded: readonly EnvKey[] = NO_PLACEHOLDER_BY_PROFILE[profile as keyof typeof NO_PLACEHOLDER_BY_PROFILE] ?? []
+	const placeholderSecrets = guarded.filter(key => data[key] === PLACEHOLDER_SECRET)
 	if (placeholderSecrets.length > 0) {
 		ctx.addIssue({
 			code: 'custom',
