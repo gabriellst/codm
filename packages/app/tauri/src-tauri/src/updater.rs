@@ -18,7 +18,7 @@ use tauri_plugin_updater::UpdaterExt;
 /// MIRROR of `config/updater.ts` `betaEndpoint` — Rust cannot import the TS config, so this names
 /// that file as its source of truth, and `config/generate.test.ts` (DSK-07) gates the two copies
 /// against drift. Same seam rule as `walker.go` mirroring `template.config.ts`.
-const BETA_ENDPOINT: &str = "https://github.com/gabriellst/codm/releases/download/beta/latest.json";
+const BETA_ENDPOINT: &str = "https://pub-ae0c8cac60c94920b35464575c09e67d.r2.dev/beta/latest.json";
 
 /// Which update channel this machine follows. Pure over its inputs — unit-tested below.
 pub fn resolve_channel(env_channel: Option<String>, data_dir: &Path) -> String {

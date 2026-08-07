@@ -25,6 +25,13 @@
  *
  * The repo slug is a genuine shell decision (it names where releases live, not a workspace fact),
  * so it is a constant here rather than a `REPO` read — the same rule that keeps window sizing local.
+ *
+ * ### Endpoints point at R2, not GitHub (SP2.5)
+ * `repo` is private, so an anonymous `GET` against `releases/.../latest.json` 404s for every
+ * installed app — GitHub has no concept of a public, unauthenticated release asset on a private
+ * repo. The upload workflow (Task T1) mirrors both channels' `latest.json` + the update asset to a
+ * public Cloudflare R2 bucket on every release, and these two endpoints read from there instead.
+ * `repo` itself stays — it is still where releases live, just no longer where the updater reads.
  */
 export const UPDATER = {
 	repo: 'gabriellst/codm',
@@ -32,6 +39,6 @@ export const UPDATER = {
 		'dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQzMjEzMzQwOTY5MkUxMjcKUldRbjRaS1dRRE1oMDVKSTE2UFZiaVNZYjNTeU4wYnl3RUdXN1V4eG5zSjRiQ3V3QXVIamtxMkgK',
 	/** The fixed asset name both workflows upload and both endpoints' manifests point at. */
 	updateAsset: 'codm-aarch64.app.tar.gz',
-	stableEndpoint: 'https://github.com/gabriellst/codm/releases/latest/download/latest.json',
-	betaEndpoint: 'https://github.com/gabriellst/codm/releases/download/beta/latest.json',
+	stableEndpoint: 'https://pub-ae0c8cac60c94920b35464575c09e67d.r2.dev/stable/latest.json',
+	betaEndpoint: 'https://pub-ae0c8cac60c94920b35464575c09e67d.r2.dev/beta/latest.json',
 } as const
