@@ -404,6 +404,46 @@
         }
       }
     },
+    "/v1/cloud/sign-in": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "description": "Redireciona o browser do sistema para o provedor social escolhido, iniciando o login do desktop",
+        "operationId": "SignIn",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "provider",
+            "schema": {
+              "$ref": "#/components/schemas/SocialProvider"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Redireciona o browser do sistema para o provedor social escolhido, iniciando o login do desktop",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "examples": [
+                    "<redirect>"
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": "<redirect>",
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/identity/account/avatar": {
       "post": {
         "tags": [
@@ -8812,6 +8852,13 @@
         "enum": [
           "up",
           "down"
+        ]
+      },
+      "SocialProvider": {
+        "type": "string",
+        "enum": [
+          "github",
+          "google"
         ]
       },
       "OwnerKind": {

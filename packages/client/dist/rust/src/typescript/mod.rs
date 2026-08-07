@@ -8673,6 +8673,87 @@ pub mod types {
             }
         }
     }
+    ///`SocialProvider`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "github",
+    ///    "google"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum SocialProvider {
+        #[serde(rename = "github")]
+        Github,
+        #[serde(rename = "google")]
+        Google,
+    }
+    impl ::std::convert::From<&Self> for SocialProvider {
+        fn from(value: &SocialProvider) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for SocialProvider {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Github => f.write_str("github"),
+                Self::Google => f.write_str("google"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for SocialProvider {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "github" => Ok(Self::Github),
+                "google" => Ok(Self::Google),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for SocialProvider {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for SocialProvider {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for SocialProvider {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
     ///`Status`
     ///
     /// <details><summary>JSON schema</summary>
@@ -10414,6 +10495,40 @@ Sends a `GET` request to `/v1/cloud/entitlement`
                 ::reqwest::header::ACCEPT,
                 ::reqwest::header::HeaderValue::from_static("application/json"),
             )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Redireciona o browser do sistema para o provedor social escolhido, iniciando o login do desktop
+
+Sends a `GET` request to `/v1/cloud/sign-in`
+
+*/
+    pub async fn sign_in<'a>(
+        &'a self,
+        provider: types::SocialProvider,
+    ) -> Result<ResponseValue<::std::string::String>, Error<()>> {
+        let url = format!("{}/v1/cloud/sign-in", self.baseurl,);
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .get(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .query(&progenitor_client::QueryParam::new("provider", &provider))
             .headers(header_map)
             .build()?;
         let result = self.client.execute(request).await;
