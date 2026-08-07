@@ -1,6 +1,7 @@
 ---
 import { getEntry } from 'astro:content'
 import LocaleSwitcher from '~/components/LocaleSwitcher.astro'
+import { DMG_DOWNLOAD_URL } from '~/config/download'
 import { type Locale, routeFor } from '~/i18n'
 
 interface Props {
@@ -15,7 +16,8 @@ const t = entry!.data
 const homeHref = routeFor(locale, '/')
 const blogHref = routeFor(locale, '/blog')
 const githubHref = t.footer.links.github
-const downloadHref = `${githubHref}/releases`
+// Direct DMG link (Task T3) — no longer derived from the GitHub releases page.
+const downloadHref = DMG_DOWNLOAD_URL
 
 const anchors = [
 	{ href: '#demo', label: t.nav.links.demo },

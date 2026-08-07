@@ -5,10 +5,13 @@ import DotWave from '../_islands/DotWave.tsx'
 interface Props {
 	t: CollectionEntry<'landing'>['data']['closingCta']
 	downloadHref: string
+	// Same honest label as the Hero's primary CTA (t.hero.downloadMac) — macOS
+	// (Apple Silicon) only, no OS detection (Task T3).
+	downloadLabel: string
 	docsHref: string
 }
 
-const { t, downloadHref, docsHref } = Astro.props
+const { t, downloadHref, downloadLabel, docsHref } = Astro.props
 ---
 
 <section class="px-6 pb-6">
@@ -31,7 +34,7 @@ const { t, downloadHref, docsHref } = Astro.props
 					href={downloadHref}
 					class="whitespace-nowrap rounded-full bg-[var(--primary)] px-[26px] py-[13px] text-[14.5px] font-bold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
 				>
-					{t.primary}
+					{downloadLabel}
 				</a>
 				<a
 					href={docsHref}

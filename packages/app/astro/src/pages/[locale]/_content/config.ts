@@ -48,6 +48,9 @@ export const landing = defineCollection({
 			subtitle: z.string(),
 			primaryCta: z.string(),
 			secondaryCta: z.string(),
+			downloadMac: z.string(), // honest primary CTA label — macOS (Apple Silicon) only, no OS detection
+			gatekeeperNote: z.string(), // unsigned build disclaimer shown under the download button
+			otherOs: z.string(), // "Windows/Linux coming soon" microcopy
 		}),
 		marquee: z.object({ items: z.array(z.string()).min(4) }),
 		demo: z.object({
