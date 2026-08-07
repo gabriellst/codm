@@ -7,6 +7,7 @@ import DemoSection from './DemoSection.astro'
 import FeaturesSection from './FeaturesSection.astro'
 import Hero from './Hero.astro'
 import Marquee from './Marquee.astro'
+import PricingSection from './PricingSection.astro'
 import RouterSection from './RouterSection.astro'
 
 interface Props {
@@ -15,8 +16,7 @@ interface Props {
 
 // Composition root for the home page: one getEntry, typed slices down. Sibling
 // sections live next to this file in `_components/`; the interactive island lives
-// in `../_islands/`. PricingSection is built (PricingSection.astro) but
-// intentionally NOT mounted — D8.
+// in `../_islands/`.
 const { locale } = Astro.props
 const entry = await getEntry('landing', `home.${locale}`)
 const t = entry!.data
@@ -34,4 +34,5 @@ const docsHref = `${githubHref}#readme`
 <DemoSection t={t.demo} />
 <RouterSection t={t.router} />
 <FeaturesSection t={t.features} />
+<PricingSection locale={locale} t={t.pricing} />
 <ClosingCta t={t.closingCta} downloadHref={downloadHref} downloadLabel={t.hero.downloadMac} docsHref={docsHref} />
