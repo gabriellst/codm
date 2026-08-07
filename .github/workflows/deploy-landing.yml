@@ -1,0 +1,30 @@
+# Deploy da landing no Cloudflare Pages (spec SP2.5 decisão 7). Projeto criado idempotente no
+# primeiro run; a URL *.pages.dev serve até existir domínio próprio (open question do roadmap).
+name: deploy-landing
+
+on:
+  push:
+    branches: [main]
+    paths: ['packages/app/astro/**', '.github/workflows/deploy-landing.yml']
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+
+      - name: deps
+        run: bun install --frozen-lockfile
+
+      - name: build
+        run: bun x nx run app-astro:build
+
+      - name: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          bunx wrangler pages project create codm-landing --production-branch=main 2>/dev/null || true
+          bunx wrangler pages deploy packages/app/astro/dist --project-name=codm-landing --branch=main
