@@ -19,6 +19,11 @@ const SECTIONS: { title: string; match: (d: EnvDecl) => boolean; note?: string }
 	},
 	{ title: 'Backend — kernel (api-typescript core Config)', match: d => d.schema === 'kernel' },
 	{ title: 'Backend — product (ProductConfig: brand + billing policy)', match: d => d.schema === 'product' },
+	{
+		title: 'Backend — boot flags (raw process.env, outside the Zod schemas)',
+		match: d => d.schema === 'raw',
+		note: "schema: 'raw' — read before/without Config.env by design (profile/test seams); see each entry doc.",
+	},
 	{ title: 'Go worker (api-go)', match: d => d.consumers.includes('apiGo') },
 	{
 		title: 'Frontend (only VITE_* reach the browser)',

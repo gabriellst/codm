@@ -127,3 +127,13 @@ menu com e-mail/logout), assinatura Apple (ver Open Question), multi-conta por m
   criados quando o domínio existir — os de dev cobrem todo o desenvolvimento).
 - O roadmap precisa de emenda refletindo o pivô (SP2 sem billing; SP3 re-motivado como controle de
   abuso do plano gratuito) — fazer na aprovação deste spec.
+
+## Emenda de 2026-08-07 (deploy)
+
+Decisão do founder: **compose aposentado — deploy é Railway-only**, direto do
+`docker/cloud.Dockerfile`. O `VOLUME` saiu do Dockerfile (o builder da Railway o rejeita; volume é
+attachado no serviço com mount path `/data`), o `docker/cloud.compose.yml` foi removido, e
+`CODM_PROFILE` passou a `consumers: ['apiTs'], schema: 'raw'` — classe declarada nova no env
+registry para boot flags lidos como `process.env` cru fora dos Zod schemas (fecha o gap que fazia
+a chave mentir um consumer 'compose'). Operação Railway documentada no próprio Dockerfile
+(mount, RAILWAY_RUN_UID, target port).
