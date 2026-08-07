@@ -56,15 +56,20 @@ export function UpdateReadyPill({ className, ...props }: ComponentProps<'button'
 			data-version={version}
 			onClick={() => void update.restart()}
 			className={cn(
-				'flex items-center gap-2.5 rounded-xl border border-border/60 bg-popover px-3.5 py-2.5 text-left shadow-lg transition-colors hover:bg-accent',
+				// Cor do botão primário (mesma do variante `default` do Button): o aviso PRECISA chamar
+				// atenção sobre o conteúdo, e o resto do console é deliberadamente plano. Sem sombra —
+				// nenhuma outra superfície da UI tem, e a que existia aqui denunciava um componente
+				// desenhado fora do sistema. A largura casa com a área interna da sidebar (w-60 menos o
+				// px-4 dos dois lados = w-52), então o pill fica alinhado com os itens de navegação.
+				'flex w-52 items-center gap-2.5 rounded-xl bg-primary px-3.5 py-2.5 text-left text-primary-foreground transition-colors hover:bg-primary/90 active:bg-primary/85',
 				className,
 			)}
 			{...props}
 		>
-			<IconRefresh className="size-4 shrink-0 text-muted-foreground" />
+			<IconRefresh className="size-4 shrink-0" />
 			<span className="flex flex-col leading-tight">
-				<span className="text-sm font-medium text-popover-foreground">{t('console.update.restartTitle')}</span>
-				<span className="text-xs text-muted-foreground">{t('console.update.version', { version })}</span>
+				<span className="text-sm font-semibold">{t('console.update.restartTitle')}</span>
+				<span className="text-xs text-primary-foreground/75">{t('console.update.version', { version })}</span>
 			</span>
 		</button>
 	)
