@@ -46,9 +46,24 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: packages/api/go/go.mod
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: packages/app/tauri/src-tauri
+      # NÃO reintroduza Swatinem/rust-cache aqui. Ela existe para dar cache de Rust a runners
+      # DESCARTÁVEIS, e para isso o passo de save PODA `~/.cargo/bin` — em 2026-08-07, 4 segundos
+      # depois de entrar no `Post Run`, apagou o binário `rustup` da máquina do founder e deixou
+      # todos os symlinks (cargo, rustc, rustfmt) pendurados. O build passou; o que quebrou foi o
+      # ambiente de desenvolvimento DEPOIS, e o sintoma apareceu longe da causa: o correctness
+      # seguinte falhou com `Executable not found in $PATH: "cargo"`.
+      #
+      # Num runner PERSISTENTE o cache de disco é o próprio disco — não há nada para restaurar.
+      # O que `git clean -ffdx` do checkout apagaria é o `target/`, e por isso ele mora FORA do
+      # workspace (passo abaixo): sobrevive entre execuções sem nenhuma action.
+      #
+      # Só o `target/` sai do workspace, de propósito. Ele é cache de compilador puro — o cargo
+      # revalida por fingerprint, então um target quente não consegue mascarar bug de fonte. O
+      # resto do checkout continua limpo a cada execução, que é o que impede um ARTEFATO GERADO
+      # sobrevivente (o openapi.json do //go:embed já foi essa pegadinha) de fingir que o build
+      # funciona num clone frio.
+      - name: cargo target fora do workspace
+        run: echo "CARGO_TARGET_DIR=$HOME/.cache/codm-cargo-target" >> "$GITHUB_ENV"
 
       - name: deps
         run: bun install --frozen-lockfile

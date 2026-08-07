@@ -109,6 +109,33 @@ o custo em minutos.
 **Antes de tornar este repositório público**, remova o runner self-hosted: um PR de fork passaria a
 executar código arbitrário na máquina. As duas decisões são mutuamente exclusivas.
 
+### O CI agora escreve na SUA máquina — actions de cache são o risco real
+
+Num runner descartável, uma action que "limpa" o ambiente não tem vítima. Aqui tem, e a primeira
+apareceu no primeiro build: `Swatinem/rust-cache@v2` **apagou o binário `rustup`** de
+`~/.cargo/bin` no passo `Post Run`, deixando `cargo`, `rustc` e `rustfmt` como symlinks pendurados.
+A action faz isso por design — poda `~/.cargo/bin` para salvar um cache enxuto, partindo do
+princípio de que a máquina é descartável.
+
+O que torna isso traiçoeiro é a distância entre causa e sintoma: **o build que causou o estrago
+passou**, verde. Quem falhou foi o workflow seguinte, com `Executable not found in $PATH: "cargo"`,
+e o desenvolvimento local teria falhado igual na próxima vez que alguém rodasse `bun contracts`.
+
+A action foi removida dos dois workflows de release e **não deve voltar**. Num runner persistente
+ela não tem função: o disco já persiste. O `target/` do Rust — a única coisa que o
+`git clean -ffdx` do checkout apagaria — vive fora do workspace via `CARGO_TARGET_DIR`, e sobrevive
+sem action nenhuma.
+
+Para reparar, se acontecer de novo (as toolchains em `~/.rustup` sobrevivem; falta só o shim):
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
+```
+
+A regra geral: ao adicionar qualquer action de cache/setup a estes workflows, verifique o que o
+passo `Post` dela escreve **fora** do workspace. Dentro do workspace é descartável; no `$HOME`, é a
+máquina do founder.
+
 `correctness` e `deploy-landing` **também** migraram para o runner self-hosted, e essa é a parte
 contraintuitiva: os dois rodam em Linux com multiplicador 1× e nunca foram o problema de custo. Mas a
 cota é **uma só para a conta inteira** — quando o macOS a esgotou, esses dois pararam junto, e o gate
