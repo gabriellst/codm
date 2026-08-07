@@ -1,7 +1,7 @@
 # SP4 — Telemetria de produto: OTel até o cloud + PostHog nas superfícies web — Design Spec
 
 **Date:** 2026-08-06
-**Status:** Approved (founder em chat 2026-08-06: PostHog Cloud US + LGTM self-hosted)
+**Status:** Approved — emendado em 2026-08-07 (ver "Emenda de 2026-08-07" no fim)
 **Bounded Context:** cross-context: infra de observabilidade (collector cloud) · daemon/gateway (destino OTLP) · console react + landing astro (PostHog) · desktop-shell (crash upload)
 **Kind:** feature
 **Story Points:** 8 — nenhuma instrumentação nova nos backends (decisão 1), mas três superfícies novas de configuração (collector, PostHog em duas apps, consent) e a primeira infra de ingestão autenticada.
@@ -124,3 +124,42 @@ orchestrion já emite.
   self-hosted** (absorvido na decisão 2; dimensionar retenção/volume no plan).
 - **Default do toggle** — spec propõe ON com disclosure; founder não inverteu no grilling —
   segue ON salvo contraordem no plan.
+
+
+## Emenda de 2026-08-07 (pós-incidente de login sem rastro)
+
+Contexto: o login OAuth do desktop falhou com um toast genérico e **não havia nenhum lugar para
+olhar** — o console do webview não escreve em disco, o `log::*` do shell Rust não tem backend, e os
+únicos rastros existentes eram os logs de sidecar (criados horas antes) e os crash dumps. Uma
+investigação inteira ficou cega. Isso reordena e ajusta o SP4:
+
+1. **Fatia zero — diagnosticabilidade local, ANTES de qualquer vendor.** `tauri-plugin-log` no shell
+   gravando em `$data_dir/logs/` (mesma árvore dos sidecars), `attachConsole()` levando o console do
+   webview para o mesmo arquivo, e os `catch` do fluxo de login registrando o erro completo com a
+   etapa que falhou. Sem isto, telemetria remota seria construída às cegas sobre um app que não
+   consegue nem contar a própria falha localmente. **Em implementação em 2026-08-07.**
+2. **Ferramenta de frontend: PostHog SOZINHO** (founder, 2026-08-07). Cobre comportamento
+   (funil, coorte, replay) e error tracking numa chave só — uma chave a menos embutida no binário.
+   Sentry entra depois **se e quando** um stack trace minificado deixar a depuração na mão; o
+   critério é esse, não preferência.
+3. **Consentimento: ligado por padrão, com aviso** (founder, 2026-08-07) — toggle nas settings e
+   uma linha transparente na landing. A copy da landing já foi corrigida (não promete mais "zero
+   telemetria").
+4. **O que PostHog NÃO mede, e por que isso importa mais aqui do que no comum:** a maior parte do
+   valor do codm acontece com o console FECHADO — a pessoa fala no WhatsApp, o agente roda, a
+   resposta volta no chat. Medir só o frontend subestima o uso de forma grosseira. Os eventos de uso
+   real (`turn_ran`, `issue_completed`, `message_ingested`) continuam no OTel do daemon, como a
+   decisão 5 já dizia — a emenda só torna explícito que essa metade é a que responde "o produto está
+   sendo usado?".
+
+### Postgres na cloud — ADIADO (founder, 2026-08-07)
+
+Levantado no mesmo grilling: o SQLite em volume da Railway é single-instance, sem réplica nem
+backup gerenciado. Medição que dimensiona a migração: a fatia cloud usa **12 das 28 tabelas** —
+auth (7), owner (1) e infraestrutura compartilhada (4: outbox, eventos, comandos agendados, ledger
+de migração). As outras 16 (agent, thread, issue, channel, artifact, workspace) são dado local da
+máquina do usuário e nunca sobem. Logo, "Postgres na cloud" custaria dialeto duplo apenas para as 4
+de infra (as únicas que rodam nos dois lados) — não uma conversão do schema inteiro.
+
+**Decisão: adiar.** Gatilhos que reabrem: precisar de réplica/escala horizontal, backup gerenciado,
+ou o volume virar gargalo. Enquanto isso, a fatia cloud continua no SQLite em `/data`.
