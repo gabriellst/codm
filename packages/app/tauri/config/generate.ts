@@ -89,7 +89,7 @@ export function renderTauriConf(): string {
 	const conf = {
 		$schema: 'https://schema.tauri.app/config/2',
 		productName: DISPLAY_NAME,
-		version: '0.1.2',
+		version: '0.1.3',
 		identifier: IDENTIFIER,
 		build: {
 			// Desktop dev serves the root-based SPA (dev-spa → base '/'), so the webview loads the
@@ -173,6 +173,12 @@ export function renderTauriConf(): string {
 				// overrides this — notarization is the other half and neither touches the updater
 				// (minisign is independent of Apple).
 				signingIdentity: '-',
+				// Assinar liga o HARDENED RUNTIME (o Tauri passa --options runtime), e com ele a library
+				// validation: o processo só carrega código do MESMO Team ID. O daemon faz dlopen do
+				// prebuild nativo do libsql, que tem assinatura ad-hoc própria — duas identidades
+				// distintas, ambas sem Team ID — e o macOS recusava, matando o daemon no boot da v0.1.2.
+				// O arquivo (não gerado, versionado ao lado) documenta a medição e a verificação.
+				entitlements: 'entitlements.plist',
 			},
 		},
 	}

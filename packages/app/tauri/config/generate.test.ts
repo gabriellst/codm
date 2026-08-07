@@ -110,8 +110,12 @@ describe('desktop config (packages/app/tauri/config)', () => {
 		// sealed resources the assembled bundle never had — `codesign --verify` failed and macOS
 		// refused it as DAMAGED (no right-click → Abrir escape). Signing the assembled bundle is what
 		// keeps the landing's Gatekeeper microcopy true.
-		const conf = JSON.parse(renderTauriConf()) as { bundle: { macOS?: { signingIdentity?: string } } }
+		const conf = JSON.parse(renderTauriConf()) as { bundle: { macOS?: { signingIdentity?: string; entitlements?: string } } }
 		expect(conf.bundle.macOS?.signingIdentity).toBe('-')
+		// Assinar sem o entitlement é PIOR que não assinar: o hardened runtime que vem junto liga a
+		// library validation e o daemon morre no dlopen do prebuild nativo (v0.1.2, 2026-08-07). Os
+		// dois andam sempre juntos — por isso a asserção mora no mesmo rail.
+		expect(conf.bundle.macOS?.entitlements).toBe('entitlements.plist')
 	})
 
 	it('DSK-09: tauri.conf declares the codm:// deep link scheme from config/deeplink.ts', () => {
