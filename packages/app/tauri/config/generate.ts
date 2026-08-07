@@ -173,10 +173,17 @@ export function renderTauriConf(): string {
 				// degrades to the NORMAL "desenvolvedor não identificado" dialog, which right-click →
 				// Abrir does bypass — which is exactly what the landing's microcopy promises.
 				//
-				// '-' is codesign's ad-hoc identity. When the Developer ID arrives (roadmap decision 7,
-				// deferred), the real identity comes from the APPLE_SIGNING_IDENTITY env in CI, which
-				// overrides this — notarization is the other half and neither touches the updater
-				// (minisign is independent of Apple).
+				// '-' is codesign's ad-hoc identity, and it stays here ON PURPOSE: this file is
+				// committed, so a real identity baked in would make every local `tauri build` demand
+				// the certificate. The Developer ID exists since 07/08/2026 and reaches the RELEASE
+				// builds through the APPLE_SIGNING_IDENTITY env, which overrides this value.
+				//
+				// That override is the whole load-bearing assumption, and a failed override is
+				// invisible in the artifact — so both release workflows re-check the OUTPUT
+				// (`codesign -dv` must report `Authority=Developer ID Application`) and fail the run
+				// otherwise. Shipping ad-hoc is not a cosmetic Gatekeeper wart: TCC pins an ad-hoc
+				// app's disk permission to its cdhash, so every update revokes it and the agents the
+				// daemon spawns lose the workspace. See docs/RELEASE.md.
 				signingIdentity: '-',
 				// Assinar liga o HARDENED RUNTIME (o Tauri assina com a opção `runtime`), e com ele a
 				// library validation: o processo só carrega código do MESMO Team ID. O daemon faz

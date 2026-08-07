@@ -1,8 +1,10 @@
 # Canal BETA = main (roadmap decisão 3): cada merge substitui a prerelease rolante `beta`.
 # As máquinas do founder assinam este canal (echo beta > $CODM_DATA_DIR/update-channel) — o
-# incidente do "daemon com binário de 15h" morre aqui. Sem assinatura Apple nesta fase (decisão 7):
-# o DMG beta instala via bypass documentado em docs/RELEASE.md; os ARTEFATOS DE UPDATE são sempre
-# assinados com a chave minisign (TAURI_SIGNING_PRIVATE_KEY), que é o que o cliente verifica.
+# incidente do "daemon com binário de 15h" morre aqui. Desde 07/08/2026 o beta TAMBÉM é assinado
+# com Developer ID e notarizado — não por causa do Gatekeeper, mas porque um app ad-hoc perde a
+# permissão de disco a cada update e derruba os agentes (ver docs/RELEASE.md). Os ARTEFATOS DE
+# UPDATE seguem assinados com a chave minisign (TAURI_SIGNING_PRIVATE_KEY), que é outra coisa e é
+# o que o cliente verifica.
 name: release-beta
 
 on:
@@ -88,6 +90,21 @@ jobs:
 
         run: cd packages/app/tauri && bun x tauri build --config "{\"version\":\"${{ steps.v.outputs.version }}\"}"
 
+      # A conf fica com signingIdentity '-' de propósito (rail DSK-10: build local não deve exigir
+      # certificado); a identidade real vem do APPLE_SIGNING_IDENTITY acima, que a sobrepõe. Se essa
+      # sobreposição falhar, o app sai ad-hoc e o defeito é INVISÍVEL no artefato — só aparece na
+      # máquina do usuário, quando o TCC prende a permissão de disco ao cdhash e os agentes perdem o
+      # workspace no update seguinte (v0.2.0, 07/08/2026). Verificar na saída é a única defesa.
+      - name: assinatura Apple presente no bundle
+        run: |
+          APP=$(ls -d packages/app/tauri/src-tauri/target/release/bundle/macos/*.app | head -1)
+          if ! codesign -dv --verbose=2 "$APP" 2>&1 | grep -q "^Authority=Developer ID Application"; then
+            echo "::error::$APP saiu SEM Developer ID (provavelmente ad-hoc). Confira os secrets APPLE_*."
+            codesign -dv --verbose=2 "$APP" 2>&1 | head -20
+            exit 1
+          fi
+          codesign -dv --verbose=2 "$APP" 2>&1 | grep -E "^Authority=|^TeamIdentifier="
+
       # Nomes FIXOS de asset — a URL do manifest não muda entre versões (config/updater.ts).
       - name: stage
         run: |
@@ -114,7 +131,7 @@ jobs:
           gh release delete beta --yes --cleanup-tag || true
           gh release create beta --prerelease \
             --title "beta ${{ steps.v.outputs.version }}" \
-            --notes "Canal beta (main@${{ github.sha }}). Instalação: ver docs/RELEASE.md (bypass do Gatekeeper — beta não tem assinatura Apple por decisão)." \
+            --notes "Canal beta (main@${{ github.sha }}). Assinado com Developer ID e notarizado — abre sem bypass. Instalação e canais: docs/RELEASE.md." \
             dist-release/codm-aarch64.app.tar.gz \
             dist-release/codm-aarch64.app.tar.gz.sig \
             dist-release/codm-aarch64.dmg \

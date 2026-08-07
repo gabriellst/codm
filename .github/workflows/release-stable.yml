@@ -85,6 +85,21 @@ jobs:
 
         run: cd packages/app/tauri && bun x tauri build
 
+      # A conf fica com signingIdentity '-' de propósito (rail DSK-10: build local não deve exigir
+      # certificado); a identidade real vem do APPLE_SIGNING_IDENTITY acima, que a sobrepõe. Se essa
+      # sobreposição falhar, o app sai ad-hoc e o defeito é INVISÍVEL no artefato — só aparece na
+      # máquina do usuário, quando o TCC prende a permissão de disco ao cdhash e os agentes perdem o
+      # workspace no update seguinte (v0.2.0, 07/08/2026). Verificar na saída é a única defesa.
+      - name: assinatura Apple presente no bundle
+        run: |
+          APP=$(ls -d packages/app/tauri/src-tauri/target/release/bundle/macos/*.app | head -1)
+          if ! codesign -dv --verbose=2 "$APP" 2>&1 | grep -q "^Authority=Developer ID Application"; then
+            echo "::error::$APP saiu SEM Developer ID (provavelmente ad-hoc). Confira os secrets APPLE_*."
+            codesign -dv --verbose=2 "$APP" 2>&1 | head -20
+            exit 1
+          fi
+          codesign -dv --verbose=2 "$APP" 2>&1 | grep -E "^Authority=|^TeamIdentifier="
+
       - name: stage
         run: |
           mkdir -p dist-release

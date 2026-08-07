@@ -63,8 +63,17 @@ plano, onde o macOS não pode exibir diálogo — ele então *grava* a negação
 v0.2.0: ~640 negações `System Policy: deny(1) file-read-data /Users/work/Desktop/…` e agentes
 morrendo com `provider exited with code 1 (EPERM)`, que é o Bun falhando ao ler o próprio cwd.
 
-**A assinatura do shell É a permissão de disco dos agentes.** Por isso a identidade está fixa na
-conf (build sem certificado falha alto) em vez de cair no ad-hoc em silêncio.
+**A assinatura do shell É a permissão de disco dos agentes.**
+
+Onde a identidade mora: `tauri.conf.json` é **gerado** (`config/generate.ts`) e commitado, então cravar
+o Developer ID nele obrigaria todo build local a ter o certificado. Ele fica com `'-'` — o rail
+**DSK-10** guarda isso — e a identidade real chega aos builds de release pela env
+`APPLE_SIGNING_IDENTITY`, que sobrepõe o valor da conf.
+
+Essa sobreposição é a premissa que sustenta tudo, e uma sobreposição que falha é **invisível no
+artefato**. Por isso os dois workflows conferem a SAÍDA depois do build: `codesign -dv` tem de
+reportar `Authority=Developer ID Application`, senão o run falha. Sem esse gate, um secret errado
+publicaria um app ad-hoc que só quebra semanas depois, na máquina do usuário, no update seguinte.
 
 - **Identidade**: `Developer ID Application: BK COMPANY LTDA (V4F6T68S5B)`, Team ID `V4F6T68S5B`,
   emitida em 07/08/2026, expira em 08/08/2031.
