@@ -15,7 +15,10 @@
 		"titleLight": "Ele te responde.",
 		"subtitle": "As issues chegam no seu chat em grupo. Os agentes resolvem por você.",
 		"primaryCta": "Baixar — macOS · Windows · Linux",
-		"secondaryCta": "Dar estrela no GitHub"
+		"secondaryCta": "Dar estrela no GitHub",
+		"downloadMac": "Download para macOS (Apple Silicon)",
+		"gatekeeperNote": "Sem assinatura Apple por enquanto: no primeiro uso, clique com o botão direito → Abrir.",
+		"otherOs": "Windows e Linux em breve."
 	},
 	"marquee": {
 		"items": ["WhatsApp", "Instagram DM", "Telegram", "Claude Code", "Codex", "OpenCode"]
@@ -123,7 +126,7 @@
 	"closingCta": {
 		"titleBold": "Entregue de qualquer lugar",
 		"titleLight": "onde dê pra mandar mensagem",
-		"note": "Licença MIT · zero telemetria · macOS · Windows · Linux",
+		"note": "Licença MIT · macOS (Apple Silicon) · Windows e Linux em breve",
 		"primary": "Baixar para o seu OS",
 		"secondary": "Ler a documentação"
 	},

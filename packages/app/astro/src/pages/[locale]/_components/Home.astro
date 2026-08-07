@@ -1,5 +1,6 @@
 ---
 import { getEntry } from 'astro:content'
+import { DMG_DOWNLOAD_URL } from '~/config/download'
 import type { Locale } from '~/i18n'
 import ClosingCta from './ClosingCta.astro'
 import DemoSection from './DemoSection.astro'
@@ -21,7 +22,9 @@ const entry = await getEntry('landing', `home.${locale}`)
 const t = entry!.data
 
 const githubHref = t.footer.links.github
-const downloadHref = `${githubHref}/releases`
+// Direct download link (Task T3) — fixed R2 alias, no OS detection, no
+// GitHub-releases redirect. Single source of truth in ~/config/download.
+const downloadHref = DMG_DOWNLOAD_URL
 // /docs doesn't exist yet — anchor to the repo README until it ships (arch doc, out-of-scope list).
 const docsHref = `${githubHref}#readme`
 ---
@@ -31,4 +34,4 @@ const docsHref = `${githubHref}#readme`
 <DemoSection t={t.demo} />
 <RouterSection t={t.router} />
 <FeaturesSection t={t.features} />
-<ClosingCta t={t.closingCta} downloadHref={downloadHref} docsHref={docsHref} />
+<ClosingCta t={t.closingCta} downloadHref={downloadHref} downloadLabel={t.hero.downloadMac} docsHref={docsHref} />

@@ -15,7 +15,10 @@
 		"titleLight": "It texts you back.",
 		"subtitle": "Issues land on your group chat. Agents solve them for you.",
 		"primaryCta": "Download — macOS · Windows · Linux",
-		"secondaryCta": "Star on GitHub"
+		"secondaryCta": "Star on GitHub",
+		"downloadMac": "Download for macOS (Apple Silicon)",
+		"gatekeeperNote": "No Apple signing yet: on first launch, right-click → Open.",
+		"otherOs": "Windows and Linux coming soon."
 	},
 	"marquee": {
 		"items": ["WhatsApp", "Instagram DM", "Telegram", "Claude Code", "Codex", "OpenCode"]
@@ -123,7 +126,7 @@
 	"closingCta": {
 		"titleBold": "Ship from anywhere",
 		"titleLight": "you can text",
-		"note": "MIT license · zero telemetry · macOS · Windows · Linux",
+		"note": "MIT license · macOS (Apple Silicon) · Windows and Linux coming soon",
 		"primary": "Download for your OS",
 		"secondary": "Read the docs"
 	},
