@@ -1,4 +1,4 @@
-import { onOpenUrl } from '@tauri-apps/plugin-deep-link'
+import { getCurrent, onOpenUrl } from '@tauri-apps/plugin-deep-link'
 import { open } from '@tauri-apps/plugin-shell'
 import type { CloudSessionService } from './CloudSessionService'
 
@@ -18,7 +18,20 @@ export class TauriCloudSessionService implements CloudSessionService {
 		await open(url)
 	}
 
+	/**
+	 * Entrega TANTO a URL que iniciou o app quanto as que chegam com ele já aberto.
+	 *
+	 * `onOpenUrl` do plugin só faz `listen('deep-link://new-url')` — nada mais. Quando o macOS ABRE o
+	 * app por causa do link (o caso normal: o usuário estava no browser e clicou em "abrir o codm"),
+	 * a URL chega antes do webview existir, o evento se perde e o login travava na tela de login sem
+	 * dizer nada (medido em 2026-08-07). `getCurrent()` é a única forma de recuperá-la, e por isso
+	 * esta porta consulta as duas fontes — quem consome não deveria precisar saber se o app já
+	 * estava aberto.
+	 */
 	async onAuthCallback(listener: (url: string) => void): Promise<() => void> {
+		const launchUrls = await getCurrent()
+		for (const url of launchUrls ?? []) listener(url)
+
 		return await onOpenUrl(urls => {
 			for (const url of urls) listener(url)
 		})

@@ -34,9 +34,7 @@ import {
 	HttpRouter,
 	Middleware,
 	Router,
-	z,
 } from '@codm/core-typescript'
-import type { HttpMethod } from '@codm/core-typescript'
 
 // The embedded-database migration step — a plain function, NOT a side-effect import: it must run
 // BEFORE the composition root, and awaiting a top-level-await side-effect module does NOT serialize
@@ -60,40 +58,6 @@ import { container } from 'tsyringe-neo'
 
 // Prevent concurrent shutdown attempts.
 let isShuttingDown = false
-
-/**
- * Better-auth passthrough — mounted directly on the raw `HttpRouter` (bypassing MainRouter's
- * `/${version}` prefix) at the LITERAL `/api/auth/*`, because the OAuth apps' callback URLs
- * (`http://localhost:3030/api/auth/callback/{google,github}`) already point there with the
- * founder's dev credentials — adding a version segment would break them (spec Decision 3).
- *
- * `resolveAuthHandler()` — exported by `@auth/index.ts` (Task T1) — resolves the SAME `BetterAuth`
- * singleton the auth context's own DI graph uses; this class only adapts its raw
- * `(request: Request) => Promise<Response>` handler to the `Controller` contract `HttpRouter.on()`
- * expects (mirrors the resurrected `AuthController` at `f21be114^`, whose `handle()` did the same
- * `this.rawResponse(await this.betterAuth.auth.handler(request.raw))` passthrough).
- *
- * Constructed and mounted ONLY when `isCloudProfile()` — see the cloud-profile block in `start()`
- * below. The local daemon profile never imports `@auth/index`'s `resolveAuthHandler` and never
- * constructs this class, so it never resolves `BetterAuth` (whose `mock`/local binding is absent).
- */
-const AuthPassthroughSchema = z.unknown()
-
-class AuthPassthroughController extends Controller<typeof AuthPassthroughSchema, typeof AuthPassthroughSchema> {
-	readonly path = '/api/auth/*' as const
-	readonly method: HttpMethod[] = ['get', 'post']
-	readonly description = 'better-auth passthrough (cloud profile only)'
-	readonly inputSchema = AuthPassthroughSchema
-	readonly outputSchema = AuthPassthroughSchema
-
-	constructor(private readonly authHandler: (request: Request) => Promise<Response>) {
-		super()
-	}
-
-	async handle(request: this['input']): Promise<this['output']> {
-		return this.rawResponse(await this.authHandler(request.raw))
-	}
-}
 
 async function start(): Promise<void> {
 	// Trace all framework classes for OpenTelemetry span injection.
@@ -127,21 +91,10 @@ async function start(): Promise<void> {
 	// HTTP router — resolved by the abstract `HttpRouter` DI token, not the Fastify concrete class.
 	// The real registry binds `{ token: HttpRouter, instance: FastifyHttpRouter }`, so swapping the
 	// transport is a one-line registry change and the composition root never names the impl.
-	// Resolved ONCE (not inline inside `new MainRouter(...)`) — the cloud-profile passthrough below
-	// registers a route directly on this SAME instance, before MainRouter mounts its own and starts
-	// listening (Fastify refuses new routes once listening).
+	// Resolvido UMA vez (não inline dentro de `new MainRouter(...)`) — a mesma instância é
+	// compartilhada com o MainRouter, que monta as rotas dos contextos e sobe o servidor.
 	// biome-ignore lint/suspicious/noExplicitAny: tsyringe-neo can't type an abstract class as an injection token — resolve is narrowed on the same expression.
 	const httpRouter = container.resolve(HttpRouter as any) as HttpRouter
-
-	if (isCloudProfile()) {
-		// resolveAuthHandler()'s own docblock (src/auth/index.ts) names this mount as the "later
-		// task" it exists for. Dynamically imported: `@auth/index` already evaluated as part of the
-		// `./routers` import above (ESM caches the module — this does not re-run its side effects),
-		// and a static import here would defeat the migrate-before-contexts-create ordering the
-		// dynamic `./routers` import exists to enforce (see the comment on `migrateEmbeddedDatabase`).
-		const { resolveAuthHandler } = await import('@auth/index')
-		httpRouter.on('/api/auth/*', ['get', 'post'], new AuthPassthroughController(resolveAuthHandler()))
-	}
 
 	const mainRouter = new MainRouter({
 		httpRouter,

@@ -15,16 +15,19 @@ interface LoginSectionProps extends React.ComponentProps<'section'> {}
 type OAuthProvider = 'github' | 'google'
 
 /**
- * `${cloudUrl}/api/auth/sign-in/social?provider=<p>&callbackURL=/v1/cloud/desktop-callback`
- * (SP2 spec Decision 4) — better-auth's social sign-in entry on the CLOUD origin (`Config.cloudUrl`,
- * never the local daemon's own `Config.baseUrl` — see the doc comment on `cloudUrl`). Once the
- * provider completes, better-auth redirects the system browser back to that SAME origin's
- * `/v1/cloud/desktop-callback`, which bridges the fresh browser session into the one-time
- * `codm://auth?code=…` deep link `useDeepLinkAuth` listens for.
+ * `${cloudUrl}/v1/cloud/sign-in?provider=<p>` — NOSSA porta na origem da cloud (`Config.cloudUrl`,
+ * nunca o daemon local; ver o comentário em `cloudUrl`), que responde 302 para o provedor.
+ *
+ * Apontava direto para `/v1/auth/sign-in/social` do better-auth e o usuário via 404 na v0.1.4:
+ * aquele endpoint é POST com corpo JSON, e abrir o browser do sistema é sempre um GET. Fazer o POST
+ * daqui também não serve — a origem do webview não está no `trustedOrigins`, o CORS barraria. Por
+ * isso o servidor orquestra (auth/controllers/cloud/SignIn.ts).
+ *
+ * Concluído o provedor, o better-auth manda o browser para `/v1/cloud/desktop-callback` na MESMA
+ * origem, que converte a sessão recém-criada no `codm://auth?code=…` que o `useDeepLinkAuth` espera.
  */
 function buildSignInUrl(provider: OAuthProvider): string {
-	const params = new URLSearchParams({ provider, callbackURL: '/v1/cloud/desktop-callback' })
-	return `${Config.cloudUrl}/api/auth/sign-in/social?${params.toString()}`
+	return `${Config.cloudUrl}/v1/cloud/sign-in?${new URLSearchParams({ provider }).toString()}`
 }
 
 /**

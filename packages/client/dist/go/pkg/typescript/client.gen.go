@@ -1006,6 +1006,24 @@ func (e ProviderStatus) Valid() bool {
 	}
 }
 
+// Defines values for SocialProvider.
+const (
+	Github SocialProvider = "github"
+	Google SocialProvider = "google"
+)
+
+// Valid indicates whether the value is a known member of the SocialProvider enum.
+func (e SocialProvider) Valid() bool {
+	switch e {
+	case Github:
+		return true
+	case Google:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Status.
 const (
 	NotReady Status = "not_ready"
@@ -1264,6 +1282,9 @@ type ProviderKind string
 // ProviderStatus defines model for ProviderStatus.
 type ProviderStatus string
 
+// SocialProvider defines model for SocialProvider.
+type SocialProvider string
+
 // Status defines model for Status.
 type Status string
 
@@ -1297,6 +1318,11 @@ type WorkspaceBadge string
 // ExchangeDeviceCodeJSONBody defines parameters for ExchangeDeviceCode.
 type ExchangeDeviceCodeJSONBody struct {
 	Code openapi_types.UUID `json:"code"`
+}
+
+// SignInParams defines parameters for SignIn.
+type SignInParams struct {
+	Provider SocialProvider `form:"provider" json:"provider"`
 }
 
 // GetIssuesOverviewParams defines parameters for GetIssuesOverview.
@@ -2105,6 +2131,12 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
+	// AuthPassthroughGet request
+	AuthPassthroughGet(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AuthPassthroughPost request
+	AuthPassthroughPost(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// DesktopCallback request
 	DesktopCallback(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -2118,6 +2150,9 @@ type ClientInterface interface {
 
 	// GetEntitlement request
 	GetEntitlement(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SignIn request
+	SignIn(ctx context.Context, params *SignInParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// Health request
 	Health(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2346,6 +2381,30 @@ type ClientInterface interface {
 	RemoveWorkspace(ctx context.Context, workspaceId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
+func (c *Client) AuthPassthroughGet(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAuthPassthroughGetRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AuthPassthroughPost(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAuthPassthroughPostRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) DesktopCallback(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDesktopCallbackRequest(c.Server)
 	if err != nil {
@@ -2396,6 +2455,18 @@ func (c *Client) RevokeDevice(ctx context.Context, reqEditors ...RequestEditorFn
 
 func (c *Client) GetEntitlement(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetEntitlementRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SignIn(ctx context.Context, params *SignInParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSignInRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -3414,6 +3485,60 @@ func (c *Client) RemoveWorkspace(ctx context.Context, workspaceId string, reqEdi
 	return c.Client.Do(req)
 }
 
+// NewAuthPassthroughGetRequest generates requests for AuthPassthroughGet
+func NewAuthPassthroughGetRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/auth/*")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewAuthPassthroughPostRequest generates requests for AuthPassthroughPost
+func NewAuthPassthroughPostRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/auth/*")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewDesktopCallbackRequest generates requests for DesktopCallback
 func NewDesktopCallbackRequest(server string) (*http.Request, error) {
 	var err error
@@ -3525,6 +3650,56 @@ func NewGetEntitlementRequest(server string) (*http.Request, error) {
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewSignInRequest generates requests for SignIn
+func NewSignInRequest(server string, params *SignInParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/cloud/sign-in")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if queryFrag, err := runtime.StyleParamWithOptions("form", true, "provider", params.Provider, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
+			}
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
@@ -5904,6 +6079,12 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
+	// AuthPassthroughGetWithResponse request
+	AuthPassthroughGetWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*AuthPassthroughGetResponse, error)
+
+	// AuthPassthroughPostWithResponse request
+	AuthPassthroughPostWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*AuthPassthroughPostResponse, error)
+
 	// DesktopCallbackWithResponse request
 	DesktopCallbackWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*DesktopCallbackResponse, error)
 
@@ -5917,6 +6098,9 @@ type ClientWithResponsesInterface interface {
 
 	// GetEntitlementWithResponse request
 	GetEntitlementWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetEntitlementResponse, error)
+
+	// SignInWithResponse request
+	SignInWithResponse(ctx context.Context, params *SignInParams, reqEditors ...RequestEditorFn) (*SignInResponse, error)
 
 	// HealthWithResponse request
 	HealthWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*HealthResponse, error)
@@ -6145,6 +6329,66 @@ type ClientWithResponsesInterface interface {
 	RemoveWorkspaceWithResponse(ctx context.Context, workspaceId string, reqEditors ...RequestEditorFn) (*RemoveWorkspaceResponse, error)
 }
 
+type AuthPassthroughGetResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r AuthPassthroughGetResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AuthPassthroughGetResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r AuthPassthroughGetResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type AuthPassthroughPostResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r AuthPassthroughPostResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AuthPassthroughPostResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r AuthPassthroughPostResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type DesktopCallbackResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -6265,6 +6509,36 @@ func (r GetEntitlementResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetEntitlementResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SignInResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *string
+}
+
+// Status returns HTTPResponse.Status
+func (r SignInResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SignInResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SignInResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -8390,6 +8664,24 @@ func (r RemoveWorkspaceResponse) ContentType() string {
 	return ""
 }
 
+// AuthPassthroughGetWithResponse request returning *AuthPassthroughGetResponse
+func (c *ClientWithResponses) AuthPassthroughGetWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*AuthPassthroughGetResponse, error) {
+	rsp, err := c.AuthPassthroughGet(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAuthPassthroughGetResponse(rsp)
+}
+
+// AuthPassthroughPostWithResponse request returning *AuthPassthroughPostResponse
+func (c *ClientWithResponses) AuthPassthroughPostWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*AuthPassthroughPostResponse, error) {
+	rsp, err := c.AuthPassthroughPost(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAuthPassthroughPostResponse(rsp)
+}
+
 // DesktopCallbackWithResponse request returning *DesktopCallbackResponse
 func (c *ClientWithResponses) DesktopCallbackWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*DesktopCallbackResponse, error) {
 	rsp, err := c.DesktopCallback(ctx, reqEditors...)
@@ -8432,6 +8724,15 @@ func (c *ClientWithResponses) GetEntitlementWithResponse(ctx context.Context, re
 		return nil, err
 	}
 	return ParseGetEntitlementResponse(rsp)
+}
+
+// SignInWithResponse request returning *SignInResponse
+func (c *ClientWithResponses) SignInWithResponse(ctx context.Context, params *SignInParams, reqEditors ...RequestEditorFn) (*SignInResponse, error) {
+	rsp, err := c.SignIn(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSignInResponse(rsp)
 }
 
 // HealthWithResponse request returning *HealthResponse
@@ -9164,6 +9465,58 @@ func (c *ClientWithResponses) RemoveWorkspaceWithResponse(ctx context.Context, w
 	return ParseRemoveWorkspaceResponse(rsp)
 }
 
+// ParseAuthPassthroughGetResponse parses an HTTP response from a AuthPassthroughGetWithResponse call
+func ParseAuthPassthroughGetResponse(rsp *http.Response) (*AuthPassthroughGetResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AuthPassthroughGetResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseAuthPassthroughPostResponse parses an HTTP response from a AuthPassthroughPostWithResponse call
+func ParseAuthPassthroughPostResponse(rsp *http.Response) (*AuthPassthroughPostResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AuthPassthroughPostResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseDesktopCallbackResponse parses an HTTP response from a DesktopCallbackWithResponse call
 func ParseDesktopCallbackResponse(rsp *http.Response) (*DesktopCallbackResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -9264,6 +9617,32 @@ func ParseGetEntitlementResponse(rsp *http.Response) (*GetEntitlementResponse, e
 			Plan   string             `json:"plan"`
 			UserId openapi_types.UUID `json:"userId"`
 		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSignInResponse parses an HTTP response from a SignInWithResponse call
+func ParseSignInResponse(rsp *http.Response) (*SignInResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SignInResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest string
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

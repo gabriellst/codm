@@ -59,6 +59,66 @@
         }
       }
     },
+    "/v1/auth/*": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "description": "better-auth passthrough",
+        "operationId": "AuthPassthroughGet",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "better-auth passthrough",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "examples": [
+                    {}
+                  ],
+                  "x-tpl-unknown": true
+                },
+                "examples": {
+                  "default": {
+                    "value": {},
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "description": "better-auth passthrough",
+        "operationId": "AuthPassthroughPost",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "better-auth passthrough",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "examples": [
+                    {}
+                  ],
+                  "x-tpl-unknown": true
+                },
+                "examples": {
+                  "default": {
+                    "value": {},
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/cloud/desktop-callback": {
       "get": {
         "tags": [
@@ -398,6 +458,46 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/cloud/sign-in": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "description": "Redireciona o browser do sistema para o provedor social escolhido, iniciando o login do desktop",
+        "operationId": "SignIn",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "provider",
+            "schema": {
+              "$ref": "#/components/schemas/SocialProvider"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Redireciona o browser do sistema para o provedor social escolhido, iniciando o login do desktop",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "examples": [
+                    "<redirect>"
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": "<redirect>",
+                    "summary": "Example"
+                  }
+                }
               }
             }
           }
@@ -8812,6 +8912,13 @@
         "enum": [
           "up",
           "down"
+        ]
+      },
+      "SocialProvider": {
+        "type": "string",
+        "enum": [
+          "github",
+          "google"
         ]
       },
       "OwnerKind": {

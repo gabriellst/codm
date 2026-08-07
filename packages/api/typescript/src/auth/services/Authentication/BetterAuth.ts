@@ -2,7 +2,7 @@
 // social-only (GitHub + Google), no email/password, no MailSender.
 //
 // Scope of this cut: T1 wires the better-auth INSTANCE and its social providers so
-// GET/POST /api/auth/* answers with GitHub + Google configured. The lifecycle bridge the original
+// GET/POST /v1/auth/* answers with GitHub + Google configured. The lifecycle bridge the original
 // file had (`IdentityAuthHooks` — domain events on user/session create, password-reset emails) was
 // removed with the operator collapse and is NOT recreated here: SP2 has no email/password screens
 // (spec decision — social-only v1) and no BC1 identity domain-event flow in scope. `databaseHooks`
@@ -50,7 +50,7 @@ export class BetterAuth {
 		// generic — same reasoning as the original file (see git blame f21be114^).
 		const options: BetterAuthOptions = {
 			baseURL: Config.env.CODM_CLOUD_URL,
-			basePath: '/api/auth',
+			basePath: '/v1/auth',
 			secret: Config.env.BETTER_AUTH_SECRET,
 			// better-auth's OWN CSRF/cookie trust list — the cloud deployment's own origin. Distinct
 			// from CORS_ALLOWED_ORIGINS, which governs the general API's cross-origin JSON allowlist.

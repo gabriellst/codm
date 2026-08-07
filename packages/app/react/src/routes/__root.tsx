@@ -7,10 +7,18 @@ import { SupervisionGate } from '@/components/console/SupervisionGate'
 import { ServicesProvider } from '@/services'
 import { useDeepLinkAuth } from '@/routes/(app)/-hooks/useDeepLinkAuth'
 import { type QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
-import type { ReactNode } from 'react'
+import { lazy, Suspense, type ReactNode } from 'react'
+
+/**
+ * Só existe no bundle de DESENVOLVIMENTO — ver ./-devtools para o porquê do módulo separado.
+ *
+ * A flag vem do `define` do vite (ver vite.config.ts) e NÃO de `import.meta.env.DEV`, que neste
+ * projeto é `true` até no `build-spa` — foi por isso que o app empacotado exibia os overlays. A
+ * condição precisa envolver o próprio `import()`: com o `lazy(...)` solto no topo, o Vite enxerga
+ * um import dinâmico sempre alcançável e emite o chunk mesmo com a renderização gateada.
+ */
+const Devtools = __DEV_OVERLAYS__ ? lazy(() => import('./-devtools').then(m => ({ default: m.Devtools }))) : () => null
 
 export interface RouterContext {
 	queryClient: QueryClient
@@ -80,8 +88,11 @@ function RootComponent() {
 					</ServicesProvider>
 				</div>
 			</div>
-			<TanStackRouterDevtools />
-			<ReactQueryDevtools />
+			{/* Overlays de dev — apareciam no app EMPACOTADO por estarem montados sem condição
+			    (reportado em 2026-08-07, v0.1.3). Ver ./-devtools por que o import é dinâmico. */}
+			<Suspense fallback={null}>
+				<Devtools />
+			</Suspense>
 		</QueryClientProvider>
 	)
 }

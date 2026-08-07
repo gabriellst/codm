@@ -15,12 +15,15 @@ export const Config = {
 	 * The CLOUD deployment's own origin (SP2 Task T6) — where the desktop console opens the system
 	 * browser for OAuth sign-in and where the `/v1/cloud/devices/{exchange,revoke}` calls land.
 	 * DELIBERATELY separate from `baseUrl`: `baseUrl` is THIS machine's local daemon, `cloudUrl` is
-	 * the shared identity service (Railway in prod) — they only coincide in dev, where
-	 * `VITE_CODM_CLOUD_URL` defaults to the same `localhost:3030` as `VITE_API_URL` because the
-	 * local daemon's default profile mounts the auth context too (backend CODM_PROFILE=cloud filter,
-	 * Task T4). The device code minted by `/v1/cloud/desktop-callback` only exists in WHICHEVER
-	 * process's database issued it — the exchange/revoke calls must target that same origin, not
-	 * assume it is the local daemon.
+	 * the shared identity service (Railway). O device code cunhado por `/v1/cloud/desktop-callback`
+	 * só existe no banco do processo que o emitiu — exchange/revoke têm que bater NAQUELA origem.
+	 *
+	 * O fallback para `baseUrl` é um beco sem saída, não uma coincidência de dev: `/api/auth/*` é
+	 * montado APENAS sob `CODM_PROFILE=cloud` (src/index.ts), então o daemon local devolve 404 ali.
+	 * (O comentário anterior afirmava o contrário e estava errado — medido em 2026-08-07, quando o
+	 * app empacotado, sem `VITE_CODM_CLOUD_URL` assado no build, abriu o login em localhost:3030.)
+	 * Os releases assam a URL real via `vars.CODM_CLOUD_URL` nos workflows; em dev, aponte a
+	 * variável para a cloud de verdade se quiser exercitar login.
 	 */
 	cloudUrl: import.meta.env.VITE_CODM_CLOUD_URL ?? baseUrl,
 } as const
