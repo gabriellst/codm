@@ -173,11 +173,23 @@ export function renderTauriConf(): string {
 				// overrides this — notarization is the other half and neither touches the updater
 				// (minisign is independent of Apple).
 				signingIdentity: '-',
-				// Assinar liga o HARDENED RUNTIME (o Tauri passa --options runtime), e com ele a library
-				// validation: o processo só carrega código do MESMO Team ID. O daemon faz dlopen do
-				// prebuild nativo do libsql, que tem assinatura ad-hoc própria — duas identidades
-				// distintas, ambas sem Team ID — e o macOS recusava, matando o daemon no boot da v0.1.2.
-				// O arquivo (não gerado, versionado ao lado) documenta a medição e a verificação.
+				// Assinar liga o HARDENED RUNTIME (o Tauri assina com a opção `runtime`), e com ele a
+				// library validation: o processo só carrega código do MESMO Team ID. O daemon faz
+				// dlopen do prebuild nativo do libsql, que tem assinatura ad-hoc PRÓPRIA — duas
+				// identidades, ambas sem Team ID — e o macOS recusava:
+				//   dlopen(.../index.node): ... mapping process and mapped file (non-platform) have
+				//   different Team IDs
+				// Medido na v0.1.2 instalada: daemon morto no boot, portão de 60s disparado, usuário
+				// vendo só "um ou mais serviços não responderam". Verificado: com o entitlement, o
+				// daemon do bundle sobe e GET /v1/health responde 200.
+				//
+				// O plist fica SEM COMENTÁRIOS de propósito: o parser do AMFI (dentro do codesign)
+				// rejeita XML com hífen duplo em comentário, e a primeira versão deste arquivo
+				// documentava justamente a flag `runtime` com hífens — o build quebrou com
+				// "AMFIUnserializeXML: syntax error". A razão mora aqui, no código que o referencia;
+				// o plist fica mínimo e legível por máquina.
+				// Continua necessário DEPOIS do Developer ID: app notarizado roda hardened runtime, e
+				// o prebuild nativo segue não sendo nosso para assinar.
 				entitlements: 'entitlements.plist',
 			},
 		},

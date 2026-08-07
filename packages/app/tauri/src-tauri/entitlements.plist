@@ -1,29 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!--
-  Entitlements applied to every binary Tauri signs in this bundle (see config/generate.ts
-  bundle.macOS.entitlements — this file is REFERENCED there, not generated).
-
-  disable-library-validation is load-bearing, not boilerplate. Signing the bundle (SP2.5 fix for the
-  "app está danificado" dialog) makes Tauri sign with `--options runtime` = HARDENED RUNTIME, and
-  hardened runtime turns on LIBRARY VALIDATION: a process may only dlopen code signed by the same
-  Team ID. The daemon sidecar loads a native module at runtime —
-  `daemon-runtime/node_modules/@libsql/darwin-arm64/index.node` — which carries its own, separate
-  ad-hoc signature. Two ad-hoc signatures are two identities (neither has a Team ID), so macOS
-  refused the load:
-
-    dlopen(.../index.node): code signature not valid for use in process:
-    mapping process and mapped file (non-platform) have different Team IDs
-
-  Measured on the shipped v0.1.2 (2026-08-07): the daemon died at boot, the shell's 60s readiness
-  gate fired, and the user saw only "um ou mais serviços não responderam". Verified fix: re-signing
-  that binary with this entitlement makes the daemon boot and answer GET /v1/health with 200.
-
-  This stays necessary after a real Developer ID arrives — a notarized app still runs the hardened
-  runtime, and the prebuilt .node still is not ours to sign as a team member. The alternative would
-  be signing every native prebuild with the same identity at build time; that is more moving parts
-  for the same outcome.
--->
 <plist version="1.0">
 <dict>
 	<key>com.apple.security.cs.disable-library-validation</key>
