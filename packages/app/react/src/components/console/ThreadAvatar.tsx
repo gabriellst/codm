@@ -30,7 +30,9 @@ export function ThreadAvatar({
 	size?: Size
 }) {
 	const Glyph = channelKind ? channelGlyph[channelKind] : undefined
-	const badgeSize = size === 'lg' ? 'size-4' : 'size-3.5'
+	// Badge is ~50% of the avatar's diameter (reference measurement). `sm` gets its own step —
+	// at `size-3.5` it read as 58% of a `size-6` avatar and ate into the initials.
+	const badgeSize = size === 'lg' ? 'size-4' : size === 'sm' ? 'size-3' : 'size-3.5'
 	return (
 		<div className={cn('relative shrink-0', className)} {...props}>
 			<Avatar size={size}>
@@ -39,7 +41,9 @@ export function ThreadAvatar({
 			{Glyph && (
 				<span
 					className={cn(
-						'absolute -bottom-0.5 -right-0.5 flex items-center justify-center rounded-full bg-primary text-primary-foreground ring-2 ring-background',
+						// Escuro, não verde: na referência o selo é um círculo quase preto com o glifo branco. O
+						// verde já é a cor do avatar; repeti-lo aqui apagava o contraste entre os dois.
+						'absolute -bottom-0.5 -right-0.5 flex items-center justify-center rounded-full bg-foreground text-background ring-2 ring-background',
 						badgeSize,
 					)}
 				>

@@ -6,6 +6,7 @@ import { attachThreadMutationRequestSchema } from '@codm/client-typescript/types
 import type { GetAttachThreadWizardQueryResponse } from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { workspaceBadgeVariant } from '@/components/console/glyphs'
 import { enumLabel, type DeepPartial } from '@/lib'
 import { cn } from '@/lib/utils'
 import { StepHeading } from '../StepHeading'
@@ -91,7 +92,7 @@ export function WorkspaceStep({ workspaces, defaultValues, onSubmit, onBack, cla
 									<span className="truncate font-mono text-sm font-semibold text-foreground">{workspace.path}</span>
 									<div className="flex flex-wrap gap-1.5">
 										{workspace.badges.map(badge => (
-											<Badge key={badge} variant="outline">
+											<Badge key={badge} variant={workspaceBadgeVariant[badge]}>
 												{enumLabel('WorkspaceBadge', badge)}
 											</Badge>
 										))}

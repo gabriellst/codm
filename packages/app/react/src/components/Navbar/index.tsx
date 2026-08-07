@@ -55,7 +55,8 @@ export function Sidebar({ className, ...props }: React.ComponentProps<'aside'>) 
 					<Link
 						to="/attach"
 						aria-label={t('console.attachThread')}
-						className="flex size-6 items-center justify-center rounded-full text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+						// Verde na referência — é a única ação de criar da sidebar, e o verde é a cor de ação do sistema.
+						className="flex size-6 items-center justify-center rounded-full text-primary transition-colors hover:bg-sidebar-accent"
 					>
 						<IconPlus className="size-4" />
 					</Link>

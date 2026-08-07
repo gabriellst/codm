@@ -27,7 +27,10 @@ export function IssueRow({ item, className }: { item: IssueRowItem } & Pick<Comp
 		<Link
 			to="/threads/$threadId/issues/$issueId"
 			params={{ threadId: item.threadId, issueId: item.issueId }}
-			className={cn('flex items-center gap-2 rounded-2xl px-2 py-3 transition-colors hover:bg-muted', className)}
+			className={cn(
+				'flex items-center gap-2 rounded-asymmetric-lg border border-border bg-background p-3.5 transition-colors hover:bg-muted',
+				className,
+			)}
 		>
 			<span className="flex w-5 shrink-0 justify-center text-muted-foreground">
 				{item.status === 'NEEDS_INPUT' ? <IconAsterisk className="size-4" /> : <Dot className={issueStatusDot[item.status]} />}
@@ -36,7 +39,7 @@ export function IssueRow({ item, className }: { item: IssueRowItem } & Pick<Comp
 				// `shrink-0`: without it flexbox splits the shortfall between this pill and the title, so a
 				// long issue name ate the CONVERSATION's name instead of its own. The issue name is the one
 				// that should give way — it is the field this row is already devoting its width to.
-				<span className="hidden shrink-0 items-center gap-2 rounded-full border border-border px-2.5 py-1 sm:inline-flex">
+				<span className="hidden shrink-0 items-center gap-2 rounded-full bg-accent px-2.5 py-1 sm:inline-flex">
 					<ThreadAvatar name={item.threadDisplayName} size="sm" />
 					<span className="max-w-32 truncate text-sm text-foreground">{item.threadDisplayName}</span>
 				</span>

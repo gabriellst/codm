@@ -31,10 +31,10 @@ export function PageHeader({
 			<div className="flex min-w-0 flex-1 items-center gap-3">
 				{back && (
 					<Button
-						variant="secondary"
-						size="icon"
+						variant="ghost"
+						size="icon-lg"
 						aria-label={t('console.back')}
-						className="size-9 shrink-0 rounded-full"
+						className="bg-muted shrink-0"
 						onClick={() => router.history.back()}
 					>
 						<IconChevronLeft />

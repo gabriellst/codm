@@ -1,6 +1,6 @@
 import { IconBrandWhatsapp, IconHexagon, IconMessageDots, IconSparkles, IconTerminal2 } from '@tabler/icons-react'
 import type { Icon } from '@tabler/icons-react'
-import type { ChannelKind, IssueStatus, ProviderKind, StopResolution } from '@codm/client-typescript/typescript'
+import type { ChannelKind, IssueStatus, ProviderKind, StopResolution, WorkspaceBadge } from '@codm/client-typescript/typescript'
 
 // ── Channels ──────────────────────────────────────────────────────────────────
 
@@ -37,17 +37,29 @@ export const providerLabel: Record<ProviderKind, string> = {
 	OPENCODE: 'OpenCode',
 }
 
+// ── Workspaces ────────────────────────────────────────────────────────────────────
+
+/** GIT is a plain/unfilled tag (no pill fill); CLAUDE_PROJECT is the filled brand chip. */
+export const workspaceBadgeVariant: Record<WorkspaceBadge, 'ghost' | 'secondary'> = {
+	GIT: 'ghost',
+	CLAUDE_PROJECT: 'secondary',
+}
+
 // ── Issues ──────────────────────────────────────────────────────────────────────
 // Human labels for IssueStatus / StopKind / StopResolution / ArtifactKind / ThreadStatus live in
 // the typed i18n catalog (`enums.<Enum>.<VALUE>`), rendered via `enumLabel(...)` — never a
 // `Record<Enum,string>` label map in code (react CLAUDE.md bp-23). Only STYLE maps (dot colors,
 // primary/secondary intent) and ICON maps stay here.
 
-/** Small leading dot color per issue status. NEEDS_INPUT uses the asterisk glyph, not a dot. */
+/**
+ * Small leading dot color per issue status. NEEDS_INPUT uses the asterisk glyph, not a dot.
+ * COMPLETED is neutral grey (`bg-muted-foreground/40`, the same "idle/paused" tone StatusDot and
+ * AgentsRunningPill already use) — green is reserved for active work, never for a finished state.
+ */
 export const issueStatusDot: Record<IssueStatus, string> = {
 	NEEDS_INPUT: 'bg-warning',
 	WORKING: 'bg-info',
-	COMPLETED: 'bg-success',
+	COMPLETED: 'bg-muted-foreground/40',
 }
 
 // ── Stops ────────────────────────────────────────────────────────────────────────

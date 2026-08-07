@@ -13,6 +13,11 @@ import { Dot } from './StatusDot'
  * issue starting or finishing work, or a stop raising/clearing NEEDS_ATTENTION.
  * Direct wire events since B5 — the synthesized `browser.thread_status_changed`
  * frame (and the `BrowserFrameEnricher` that computed it) are gone.
+ *
+ * Renders NOTHING while no agent is running (visual audit finding: the reference design
+ * has no equivalent chrome and "0 agente em execução" is pure noise). The signal — an agent
+ * IS running — still surfaces the moment the count goes above zero; only the zero-state chip
+ * is gone.
  */
 export function AgentsRunningPill({ className, ...props }: ComponentProps<'span'>) {
 	const { t } = useTranslation()
@@ -27,7 +32,7 @@ export function AgentsRunningPill({ className, ...props }: ComponentProps<'span'
 	)
 
 	const count = data?.agentsRunningNow ?? 0
-	const running = count > 0
+	if (count === 0) return null
 
 	return (
 		<span
@@ -37,7 +42,7 @@ export function AgentsRunningPill({ className, ...props }: ComponentProps<'span'
 			)}
 			{...props}
 		>
-			<Dot className={running ? 'bg-success' : 'bg-muted-foreground/40'} />
+			<Dot className="bg-success" />
 			{t('console.agentsRunning', { count })}
 		</span>
 	)

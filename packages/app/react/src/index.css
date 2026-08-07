@@ -213,9 +213,9 @@ body {
 	/* Eyebrow / section labels — small, uppercase, letter-spaced, muted. */
 	.label-eyebrow {
 		font-size: 0.6875rem;
-		font-weight: 600;
+		font-weight: 800;
 		text-transform: uppercase;
-		letter-spacing: 0.08em;
+		letter-spacing: 0.7px;
 		color: var(--muted-foreground);
 	}
 

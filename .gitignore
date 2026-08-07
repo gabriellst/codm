@@ -147,3 +147,4 @@ graphify-out/
 .claude/worktrees/
 scoreboard/*.patch
 .design-ref-*.html
+.design-ref/

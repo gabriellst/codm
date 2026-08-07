@@ -43,7 +43,7 @@ export function ChannelsSection({ className, ...props }: ComponentProps<'div'>) 
 						<Skeleton className="h-16 rounded-2xl" />
 					</div>
 				) : (
-					<div className="flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+					<div className="flex flex-col divide-y divide-border">
 						{CHANNEL_KINDS.map(kind => {
 							const connectable = CONNECTABLE.includes(kind)
 							const status = statusByKind.get(kind) ?? 'DISCONNECTED'
