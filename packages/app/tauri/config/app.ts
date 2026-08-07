@@ -12,7 +12,9 @@ import { REPO, type WorkspaceId } from '../../../../template.config'
 
 /** OS-facing display name (window title, productName). The ONE place the cased brand spelling
  *  lives — REPO.brand stays the lowercase token, so this is a deliberate literal, not derived. */
-export const DISPLAY_NAME = 'CODM'
+// Grafia da marca: "CoDM" — a única usada no redesign (2026-08-07), e a que o lockup da sidebar
+// mostra ao lado do símbolo. Era 'CODM' (tudo maiúsculo), herança do rebrand de julho.
+export const DISPLAY_NAME = 'CoDM'
 
 /** Reverse-DNS bundle identifier — DERIVED from brand. Rendered into tauri.conf.json `identifier`;
  *  the shell reads it back at runtime (`app.config().identifier`) as the keychain service name. */

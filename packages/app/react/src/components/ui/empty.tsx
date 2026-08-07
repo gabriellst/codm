@@ -7,7 +7,7 @@ function Empty({ className, ...props }: React.ComponentProps<'div'>) {
 		<div
 			data-slot="empty"
 			className={cn(
-				'gap-4 rounded-lg border-dashed p-6 flex w-full min-w-0 flex-1 flex-col items-center justify-center text-center text-balance',
+				'gap-4 rounded-asymmetric-lg border-dashed p-6 flex w-full min-w-0 flex-1 flex-col items-center justify-center text-center text-balance',
 				className,
 			)}
 			{...props}
@@ -23,7 +23,8 @@ const emptyMediaVariants = cva('mb-2 flex shrink-0 items-center justify-center [
 	variants: {
 		variant: {
 			default: 'bg-transparent',
-			icon: "bg-muted flex size-8 shrink-0 items-center justify-center rounded-lg [&_svg:not([class*='size-'])]:size-4",
+			// D2 — height-tier derivation (size-8 → xs), matching Button's own icon-default mapping.
+			icon: "bg-muted flex size-8 shrink-0 items-center justify-center rounded-asymmetric-xs [&_svg:not([class*='size-'])]:size-4",
 		},
 	},
 	defaultVariants: {
@@ -43,7 +44,12 @@ function EmptyDescription({ className, ...props }: React.ComponentProps<'p'>) {
 	return (
 		<div
 			data-slot="empty-description"
-			className={cn('text-sm/relaxed text-muted-foreground [&>a:hover]:text-primary [&>a]:underline [&>a]:underline-offset-4', className)}
+			// D2 — link rest color follows the reference's link rule (`--secondary-foreground`); hover
+			// DARKENS to `--foreground`, replacing the old hover-to-`primary` (brighten) direction.
+			className={cn(
+				'text-sm/relaxed text-muted-foreground [&>a]:text-secondary-foreground [&>a:hover]:text-foreground [&>a]:underline [&>a]:underline-offset-4',
+				className,
+			)}
 			{...props}
 		/>
 	)

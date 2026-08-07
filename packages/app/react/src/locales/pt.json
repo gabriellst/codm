@@ -214,14 +214,14 @@
 		"agentsWorkingNone": "Sem agentes trabalhando agora",
 		"agentsWorking_one": "{{count}} agente trabalhando agora",
 		"agentsWorking_other": "{{count}} agentes trabalhando agora",
-		"channels": "Canais",
 		"issuesClosed": "Tarefas fechadas",
 		"issuesOpened": "Tarefas abertas",
 		"latestActivity": "Atividade recente",
 		"medianResponse": "Resposta mediana",
 		"needsYouName": "{{name}} precisa de você",
+		"newConversation": "Nova conversa",
 		"noActiveSessions": "Nenhuma sessão ativa.",
-		"openSession": "Abrir sessão",
+		"resolve": "Resolver",
 		"today": "Hoje"
 	},
 	"dataTable": {

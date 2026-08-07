@@ -1,6 +1,6 @@
 {
 	"$schema": "https://schema.tauri.app/config/2",
-	"productName": "CODM",
+	"productName": "CoDM",
 	"version": "0.1.13",
 	"identifier": "app.codm.desktop",
 	"build": {
@@ -14,7 +14,7 @@
 		"windows": [
 			{
 				"label": "main",
-				"title": "CODM",
+				"title": "CoDM",
 				"width": 1280,
 				"height": 800,
 				"minWidth": 980,

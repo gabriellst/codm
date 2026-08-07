@@ -63,6 +63,21 @@ function mapScanSeverity(rule: Rule): Finding['severity'] {
 
 // ─── Per-file scan (content-based — tests feed fixture strings) ─────
 
+/**
+ * O mesmo texto com todo COMENTÁRIO substituído por espaços — posições e números de linha
+ * preservados, para o `line`/`excerpt` do achado continuarem apontando o lugar certo.
+ *
+ * Existe porque comentário não é código: em 2026-08-07 o redesign documentou as cores MEDIDAS na
+ * referência ("mapeia `#3D660A` para o token X") e o detector de cor hard-coded acusou os próprios
+ * comentários que explicavam a decisão — punindo justamente a documentação que queremos. Só o que o
+ * navegador executa conta.
+ */
+function withoutComments(content: string): string {
+	return content
+		.replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '))
+		.replace(/(^|[^:])\/\/[^\n]*/g, (m, p1) => p1 + ' '.repeat(m.length - p1.length))
+}
+
 export function scanContent(file: string, content: string): Finding[] {
 	const rel = isAbsolute(file) ? relative(SCAN_ROOT, file) : file
 	const match = matchSkill(rel, loadComponentsIndex())
@@ -70,11 +85,12 @@ export function scanContent(file: string, content: string): Finding[] {
 
 	// runRules is the engine's matcher (whole-text detect minus whole-text detect_skip);
 	// join its hits back to the Rule objects for severity + line/excerpt emission.
-	const matched = new Set(runRules(rules, content).map(m => `${m.skill}::${m.id}`))
+	const code = withoutComments(content)
+	const matched = new Set(runRules(rules, code).map(m => `${m.skill}::${m.id}`))
 	if (matched.size === 0) return []
 
 	const findings: Finding[] = []
-	const lines = content.split('\n')
+	const lines = code.split('\n')
 	const seen = new Set<string>()
 	for (const r of rules) {
 		const key = `${r.skill}::${r.id}`

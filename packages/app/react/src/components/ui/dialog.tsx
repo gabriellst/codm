@@ -50,7 +50,11 @@ function DialogContent({
 			<DialogPrimitive.Popup
 				data-slot="dialog-content"
 				className={cn(
-					'bg-background data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-98 data-open:zoom-in-100 data-closed:slide-out-to-top-2 data-open:slide-in-from-top-2 border border-border shadow-[0_16px_48px_-12px_rgb(0_0_0/0.22)] grid max-w-[calc(100%-2rem)] gap-4 rounded-2xl p-6 text-sm duration-150 ease-out sm:max-w-md fixed top-1/2 left-1/2 z-50 w-full -translate-x-1/2 -translate-y-1/2 outline-none',
+					// D2 — was `rounded-2xl` symmetric; now the asymmetric ladder step, matching the
+					// reference's modal card ("28px 28px 28px 10px"). `overflow-hidden` added so
+					// `DialogFooter`'s flush background bar clips to this exact asymmetric shape instead of
+					// needing hand-matched corner math of its own.
+					'bg-background data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-98 data-open:zoom-in-100 data-closed:slide-out-to-top-2 data-open:slide-in-from-top-2 border border-border shadow-[0_16px_48px_-12px_rgb(0_0_0/0.22)] grid max-w-[calc(100%-2rem)] gap-4 rounded-asymmetric-2xl overflow-hidden p-6 text-sm duration-150 ease-out sm:max-w-md fixed top-1/2 left-1/2 z-50 w-full -translate-x-1/2 -translate-y-1/2 outline-none',
 					className,
 				)}
 				{...props}
@@ -59,9 +63,10 @@ function DialogContent({
 				{showCloseButton && (
 					<DialogPrimitive.Close
 						data-slot="dialog-close"
-						// Circular, per the design — the whole system is pill-heavy (999px is its dominant radius),
-						// and a squared close button was the one control that read as a different vocabulary.
-						render={<Button variant="secondary" className="absolute top-4 right-4 rounded-full" size="icon" />}
+						// D2 — no longer forced circular: the reference's modal close button measures
+						// "13px 13px 13px 4px" (asymmetric), matching the `icon` size's own default radius now
+						// that Button gives icon-only sizes the asymmetric ladder instead of a circle.
+						render={<Button variant="secondary" className="absolute top-4 right-4" size="icon" />}
 					>
 						<IconX />
 						<span className="sr-only">{t('common.close')}</span>
@@ -108,7 +113,14 @@ function DialogDescription({ className, ...props }: DialogPrimitive.Description.
 	return (
 		<DialogPrimitive.Description
 			data-slot="dialog-description"
-			className={cn('text-muted-foreground *:[a]:hover:text-foreground text-sm *:[a]:underline *:[a]:underline-offset-3', className)}
+			className={cn(
+				// D2 — the reference's global link rule is `a{color:#3D660A} a:hover{color:#161616}`:
+				// links rest at `--secondary-foreground` (documented as doubling for the link color) and
+				// DARKEN to `--foreground` on hover — the existing hover target was already right, the
+				// rest-state color was missing (inherited the paragraph's muted-foreground instead).
+				'text-muted-foreground *:[a]:text-secondary-foreground *:[a]:hover:text-foreground text-sm *:[a]:underline *:[a]:underline-offset-3',
+				className,
+			)}
 			{...props}
 		/>
 	)

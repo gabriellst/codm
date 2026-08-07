@@ -66,7 +66,13 @@ const USER_FACING_ATTRS = new Set(['aria-label', 'placeholder', 'title', 'alt'])
 const HAS_LETTER = /[A-Za-zÀ-ÿ]/
 // A dotted, space-free token is an i18n KEY or identifier (`enums.X.Y`, `a.b.c`), not display text.
 const KEY_LIKE = /^[\w-]+(\.[\w-]+)+$/
-const isDisplayText = (s: string) => HAS_LETTER.test(s) && !KEY_LIKE.test(s.trim())
+// O NOME DA MARCA não se traduz: "CoDM" é o mesmo em pt, en e em qualquer locale futura, e passá-lo
+// por t() criaria uma chave cujo valor é idêntico em todo catálogo — cerimônia que finge tradução.
+// Fica como exceção NOMEADA (não um regex frouxo): só este literal exato escapa, e qualquer outro
+// texto solto no JSX continua vermelho. Deriva da grafia canônica de packages/app/tauri/config/app.ts
+// (DISPLAY_NAME) — duplicada aqui de propósito, porque a config do eslint não importa código do app.
+const BRAND_NAME = 'CoDM'
+const isDisplayText = (s: string) => HAS_LETTER.test(s) && !KEY_LIKE.test(s.trim()) && s.trim() !== BRAND_NAME
 
 // A string-literal leaf reached in a JSX-child expression position is display text that bypassed
 // t() — the `{cond ? 'Connected' : 'Not connected'}` / `{String(x ? 'A' : 'B')}` family the plain

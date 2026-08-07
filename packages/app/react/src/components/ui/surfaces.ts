@@ -31,6 +31,10 @@ export const triggerBg = 'bg-background'
 
 export const triggerBorder = 'border border-border'
 
-export const triggerHover = 'hover:bg-muted'
+// D2 — the reference measures every plain list-row/trigger hover at a flat neutral tint
+// (`background:#f4f4f4`/`#f2f2f2`), which is exactly what the dedicated `--hover` token already
+// renders (`oklch(from var(--foreground) l c h / 0.05)` ≈ #f2f2f2) — closer in intent than
+// `--muted` (a fill token, not a hover token) even though the two are numerically near-identical.
+export const triggerHover = 'hover:bg-hover'
 
-export const trigger = 'bg-background border border-border hover:bg-muted'
+export const trigger = 'bg-background border border-border hover:bg-hover'
