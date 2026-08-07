@@ -37,6 +37,15 @@ jobs:
             exit 1
           fi
 
+      # O gateway Go embute public/docs/openapi.json (//go:embed) e o arquivo é GERADO —
+      # existe em qualquer checkout de dev, mas nunca num runner limpo. Sem este step o build
+      # do sidecar morre com "pattern docs/openapi.json: no matching files found" (1º run real,
+      # 2026-08-07). O .env de exemplo basta: o emit curto-circuita o boot após gerar o spec.
+      - name: openapi (insumo gerado do embed)
+        run: |
+          cp -n .env.example .env
+          bun emit-openapi
+
       - name: sidecars
         run: cd packages/app/tauri && bun config/build-sidecars.ts
 
