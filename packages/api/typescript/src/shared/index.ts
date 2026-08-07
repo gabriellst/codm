@@ -26,19 +26,20 @@ import * as sharedEnums from './enums'
 import * as authEnums from '@auth/enums'
 import * as uiEnums from '@ui/enums'
 import * as sharedObjects from './objects'
-import { HealthController, TestIngressController } from './controllers'
+import * as controllers from './controllers'
 import { PruneOutbox } from './usecases/PruneOutbox'
 
 // TEST-ONLY gateway ingress seam — mounted ONLY under CODM_E2E (the Playwright harness), refused
 // under NODE_ENV=production by src/boot.ts, and never emitted to the SDK/OpenAPI
 // (emission runs under EMIT_OPENAPI with CODM_E2E unset). Lets a spec simulate the Go gateway's side
 // effects (seed a connected channel / inject an inbound message) against the TS-only daemon.
-const testControllers: Record<string, typeof TestIngressController> = process.env.CODM_E2E === 'true' ? { TestIngressController } : {}
+const testControllers: Record<string, typeof controllers.TestIngressController> =
+	process.env.CODM_E2E === 'true' ? { TestIngressController: controllers.TestIngressController } : {}
 
 const ctx = await BoundedContext.create({
 	name: CONTEXT_NAMES.shared,
 	root: true,
-	controllers: { HealthController, ...testControllers },
+	controllers: { HealthController: controllers.HealthController, ...testControllers },
 	registry: ALL_REGISTRIES,
 	// Outbox retention. Both claimants TOMBSTONE on success instead of deleting (a deleted id is a
 	// re-insertable id for the Go `INSERT ... ON CONFLICT DO NOTHING` re-persist), so nothing
