@@ -14,12 +14,18 @@ jobs:
     # todos os workflows, este incluso. Nada aqui é específico de Linux (bun + wrangler), então
     # roda igual no Mac. Voltar à nuvem = trocar por `runs-on: ubuntu-latest`.
     runs-on: [self-hosted, macOS, ARM64]
-    # Um nome, um lugar. Ele aparece no create, no deploy e na verificacao — e ha DOIS projetos
-    # Pages nesta conta com nomes parecidos (`codm-landing`, que e este, e um `codm` orfao que
-    # ficou dono do subdominio `codm-landing.pages.dev` e serve um build de 07/08). Digitar o nome
-    # errado em um dos tres lugares publica no projeto errado sem nenhum erro.
+    # ATENCAO ao nome: ele NAO casa com o subdominio, e essa e a pegadinha.
+    #
+    # Ha dois projetos Pages nesta conta. O chamado `codm` e dono de `codm-landing.pages.dev` — a
+    # URL sem sufixo, que e a que se divulga. O chamado `codm-landing` ficou com
+    # `codm-landing-6d5.pages.dev`, porque o subdominio e escolhido na CRIACAO e o nome bonito ja
+    # estava tomado pelo outro. O CI publicava no `codm-landing` e por isso a URL divulgada passou
+    # dois dias servindo um build velho, sem telemetria, enquanto todo workflow ficava verde.
+    #
+    # Entao o alvo e `codm`: publicar onde a URL vive, em vez de pedir que a URL mude. Renomear
+    # projeto no Pages NAO renomeia o subdominio, entao trocar o nome nao resolveria.
     env:
-      PROJECT: codm-landing
+      PROJECT: codm
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -122,14 +128,20 @@ jobs:
             echo "::error::o deployment mais novo e ANTERIOR a este run — o 'pages deploy' saiu 0 sem publicar."
             exit 1; }
 
-          # (2) e o que ele serve tem que carregar a chave
-          echo "verificando https://$SUB/pt/"
+          # (2) e o que ele serve tem que carregar a chave — nos DOIS locales, porque cada um e uma
+          # pagina propria gerada pelo BaseLayout; verificar so um deixaria o outro sem cobertura.
+          # A raiz `/` fica de fora de proposito: e um stub de redirect que nunca teve script algum,
+          # e foi medindo ELA que eu conclui, errado, que a landing inteira estava sem telemetria.
           for _ in $(seq 1 10); do
-            if curl -sf "https://$SUB/pt/" | grep -q "$POSTHOG_KEY"; then
-              echo "landing no ar com a chave do PostHog: https://$SUB/pt/"
+            OK=1
+            for L in pt en; do
+              curl -sf "https://$SUB/$L/" | grep -q "$POSTHOG_KEY" || OK=0
+            done
+            if [ "$OK" = 1 ]; then
+              echo "landing no ar com a chave do PostHog em /pt/ e /en/: https://$SUB/"
               exit 0
             fi
             sleep 6
           done
-          echo "::error::https://$SUB/pt/ nao serve a chave do PostHog — o deploy subiu arquivos mas nao publicou."
+          echo "::error::https://$SUB/ nao serve a chave do PostHog nos dois locales."
           exit 1
