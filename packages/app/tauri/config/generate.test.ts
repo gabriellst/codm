@@ -10,6 +10,7 @@ import { REPO } from '../../../../template.config'
 import { CONSOLE, IDENTIFIER } from './app'
 import { CAPABILITIES, CAPABILITY_PERMISSIONS } from './capabilities'
 import { DEEPLINK } from './deeplink'
+import { ANALYTICS } from './analytics'
 import { CLOUD } from './cloud'
 import { UPDATER } from './updater'
 import { cargoNameDrift, OUTPUTS, renderCapabilities, renderTauriConf } from './generate'
@@ -124,6 +125,36 @@ describe('desktop config (packages/app/tauri/config)', () => {
 		// status, indistinguível de servidor fora do ar. A v0.1.8 falhava exatamente assim.
 		const conf = JSON.parse(renderTauriConf()) as { app: { security: { csp: string } } }
 		expect(conf.app.security.csp).toContain(CLOUD.origin)
+		// Telemetria bloqueada pela CSP não dá erro visível — só um dashboard vazio que ninguém
+		// associa a um bug. Por isso a origem do PostHog é gateada junto com a da cloud.
+		expect(conf.app.security.csp).toContain(ANALYTICS.origin)
+	})
+
+	it('DSK-12: img-src alcança o daemon (que serve artefato e avatar) e NÃO a CDN do WhatsApp', () => {
+		// O daemon serve bytes que o webview desenha: os artefatos gravados pelos agentes e a foto do
+		// contato em cada balão do chat. Se a origem dele não estiver no `img-src`, o WKWebView recusa
+		// a imagem em silêncio — nada no console distingue isso de "esse contato não tem foto".
+		//
+		// A CDN da Meta (`pps.whatsapp.net`) fica FORA de propósito, e é por isso que o endpoint de
+		// avatar existe: a url é assinada e expira, e cada avatar pintado direto da CDN entregaria o IP
+		// do operador. Esta asserção é o que impede alguém de "consertar" o avatar liberando a origem.
+		const conf = JSON.parse(renderTauriConf()) as { app: { security: { csp: string } } }
+		const imgSrc = conf.app.security.csp.split(';').find(directive => directive.trim().startsWith('img-src'))
+		expect(imgSrc).toBeDefined()
+		// As MESMAS origens que o connect-src deriva de console.connectsTo — nunca uma porta literal.
+		for (const role of CONSOLE.connectsTo) {
+			const sidecar = SIDECARS.find(s => s.role === role)
+			const port = (REPO.env as Record<string, { example: string }>)[sidecar?.portEnvKey ?? ''].example
+			expect(imgSrc).toContain(`http://localhost:${port}`)
+			expect(imgSrc).toContain(`http://127.0.0.1:${port}`)
+		}
+		// data:/blob: continuam (ícones inline, previews de upload); a CDN não entra.
+		expect(imgSrc).toContain("'self'")
+		expect(imgSrc).toContain('data:')
+		expect(imgSrc).toContain('blob:')
+		expect(conf.app.security.csp).not.toContain('whatsapp.net')
+		// A cloud é do connect-src, não do img-src: ela não serve imagem nenhuma.
+		expect(imgSrc).not.toContain(CLOUD.origin)
 	})
 
 	it('DSK-09: tauri.conf declares the codm:// deep link scheme from config/deeplink.ts', () => {

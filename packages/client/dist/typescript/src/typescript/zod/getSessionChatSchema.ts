@@ -23,6 +23,9 @@ export const getSessionChat200Schema = z.object({
     "thread": z.object({
     "threadId": z.uuid(),
 "displayName": z.string(),
+"channelId": z.uuid(),
+"externalId": z.string(),
+"hasAvatar": z.boolean(),
 get "channelKind"(){
                 return channelKindSchema
               },
@@ -65,7 +68,13 @@ get "provider"(){
 "quotedEntryId": z.optional(z.string()),
 get "classification"(){
                 return classificationMethodSchema.optional()
-              }
+              },
+"sender": z.optional(z.object({
+    "channelId": z.uuid(),
+"externalId": z.string(),
+"displayName": z.string(),
+"hasAvatar": z.boolean()
+    }))
     })),
 get "composerMode"(){
                 return threadModeSchema

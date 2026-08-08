@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { workspaceBadgeVariant } from '@/components/console/glyphs'
 import { enumLabel, type DeepPartial } from '@/lib'
 import { cn } from '@/lib/utils'
+import { row } from '@/components/ui/surfaces'
 import { StepHeading } from '../StepHeading'
 
 export const WorkspaceStepSchema = attachThreadMutationRequestSchema.pick({ workspaceId: true })
@@ -75,7 +76,8 @@ export function WorkspaceStep({ workspaces, defaultValues, onSubmit, onBack, cla
 
 			<form.Subscribe selector={state => state.values.workspaceId}>
 				{selected => (
-					<div className="flex flex-col gap-1">
+					// `gap-2`, não `gap-1`: cada linha tem borda própria agora — a folga é a das outras telas.
+					<div className="flex flex-col gap-2">
 						{workspaces.map(workspace => (
 							<Button
 								variant={'ghost'}
@@ -83,9 +85,16 @@ export function WorkspaceStep({ workspaces, defaultValues, onSubmit, onBack, cla
 								key={workspace.workspaceId}
 								type="button"
 								onClick={() => selectAndAdvance(workspace.workspaceId)}
+								// Mesma CONTENT ROW da lista de workspaces (`workspaces/-components/WorkspacesSection`):
+								// preset `row` + `rounded-asymmetric-*`. Nenhuma linha aqui é inerte, então o composto
+								// `row` (borda + hover junto) serve inteiro — ao contrário do passo de contato, onde a
+								// linha já anexada precisa da borda sem o hover.
 								className={cn(
-									'flex items-center gap-3 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-muted',
-									selected === workspace.workspaceId && 'bg-muted',
+									'group flex items-center gap-3 rounded-asymmetric-lg bg-background p-3.5 text-left',
+									row,
+									// ESCOLHIDO = o pastel do hover, fixo, + a borda de marca — o mesmo par nos três
+									// passos do assistente; ver o docblock do `AgentsStep`.
+									selected === workspace.workspaceId && 'border-primary bg-hover-accent',
 								)}
 							>
 								<div className="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -98,7 +107,8 @@ export function WorkspaceStep({ workspaces, defaultValues, onSubmit, onBack, cla
 										))}
 									</div>
 								</div>
-								<IconChevronRight className="size-4 text-muted-foreground" />
+								{/* GROUP CONVENTION (surfaces): o chevron ecoa o hover da linha, sem `hover:` próprio. */}
+								<IconChevronRight className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
 							</Button>
 						))}
 					</div>

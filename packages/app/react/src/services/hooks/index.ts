@@ -8,6 +8,7 @@ import {
 	HostInfoToken,
 	LoggingToken,
 	NotificationToken,
+	AnalyticsToken,
 	SecretsToken,
 	SupervisionToken,
 	UpdateToken,
@@ -19,6 +20,7 @@ import type { FilePickerService } from '../FilePickerService/FilePickerService'
 import type { HostInfoService } from '../HostInfoService/HostInfoService'
 import type { LoggingService } from '../LoggingService/LoggingService'
 import type { NotificationService } from '../NotificationService/NotificationService'
+import type { AnalyticsService } from '../AnalyticsService/AnalyticsService'
 import type { SecretsService } from '../SecretsService/SecretsService'
 import type { SupervisionService } from '../SupervisionService/SupervisionService'
 import type { UpdateService } from '../UpdateService/UpdateService'
@@ -39,3 +41,4 @@ export const useSupervision = (): SupervisionService => useService(SupervisionTo
 export const useCloudSession = (): CloudSessionService => useService(CloudSessionToken)
 export const useLogging = (): LoggingService => useService(LoggingToken)
 export const useUpdate = (): UpdateService => useService(UpdateToken)
+export const useAnalytics = (): AnalyticsService => useService(AnalyticsToken)

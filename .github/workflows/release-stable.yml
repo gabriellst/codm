@@ -13,7 +13,15 @@ permissions:
 
 jobs:
   stable:
-    runs-on: macos-14
+    # Runner SELF-HOSTED no Mac mini do founder: minutos self-hosted não contam na cota do GitHub
+    # (nem em repo privado), e o build macOS custava 10x lá. Em 2026-08-07 a cota estourou — 57
+    # builds macOS num dia, ~3.250 minutos faturados contra 2.000 disponíveis — e TODOS os workflows
+    # pararam. A máquina já era o ambiente de build (mesmo toolchain, chave de assinatura local,
+    # caches quentes), então o custo vai a zero e o build fica mais rápido.
+    #
+    # CUIDADO ao tornar este repo público: runner self-hosted + repo público deixa qualquer PR de
+    # fork executar código nesta máquina. As duas coisas são mutuamente exclusivas na prática.
+    runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v4
 
@@ -21,9 +29,17 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: packages/api/go/go.mod
-      - uses: Swatinem/rust-cache@v2
+      # O wrangler (upload R2, mais abaixo) roda sob NODE, nao sob bun: sob bun ele sai com codigo
+      # 0 sem subir nada em cerca de metade das execucoes — o que aqui publicaria um latest.json
+      # apontando para um asset inexistente. Ver o comentario longo em deploy-landing.yml.
+      - uses: actions/setup-node@v4
         with:
-          workspaces: packages/app/tauri/src-tauri
+          node-version: '22'
+      # NÃO reintroduza Swatinem/rust-cache — ver o comentário longo em release-beta.yml: o passo
+      # de save dela poda `~/.cargo/bin` e apagou o `rustup` da máquina do founder em 2026-08-07.
+      # Runner persistente não precisa dela; o `target/` mora fora do workspace (passo abaixo).
+      - name: cargo target fora do workspace
+        run: echo "CARGO_TARGET_DIR=$HOME/.cache/codm-cargo-target" >> "$GITHUB_ENV"
 
       - name: deps
         run: bun install --frozen-lockfile
@@ -61,12 +77,36 @@ jobs:
           }
           echo "cloud: ${{ vars.CODM_CLOUD_URL }}"
 
+      # MESMO defeito invisível, uma camada mais fundo: com a chave vazia o console não quebra nem
+      # avisa — `AnalyticsService/index.ts` resolve para o NoopAnalyticsService e a telemetria some
+      # em silêncio. Um dashboard vazio é indistinguível de "ninguém usou o app", então o erro só
+      # apareceria semanas depois, como uma pergunta sobre os números. A v0.3.0 saiu exatamente
+      # assim. Repo variable existir não basta — o que falhou nas duas vezes foi ela não CHEGAR ao
+      # passo de build, e é isso que este teste cobre.
+      - name: posthog presente
+        run: |
+          test -n "${{ vars.VITE_POSTHOG_KEY }}" || {
+            echo "::error::vars.VITE_POSTHOG_KEY vazia — o app sairia com a telemetria desligada em silêncio. Defina a repo variable antes de publicar."
+            exit 1
+          }
+          echo "posthog: ${{ vars.VITE_POSTHOG_HOST }} (chave presente, ${#POSTHOG_KEY} chars)"
+        env:
+          POSTHOG_KEY: ${{ vars.VITE_POSTHOG_KEY }}
+
+      # `nice`: esta máquina também roda o daemon de produção do founder (agentes atendendo
+      # WhatsApp). Um build de release competindo por CPU já causou contenção aqui; a prioridade
+      # baixa faz o build ceder ao trabalho real em vez do contrário.
       - name: tauri build
         env:
           # O console é compilado DENTRO do tauri build (beforeBuildCommand) e o Vite resolve
           # VITE_* no BUILD: sem isto o app empacotado nasce apontando o daemon local e o login
           # abre localhost:3030 (medido na v0.1.3). Repo variable, não secret — é URL pública.
           VITE_CODM_CLOUD_URL: ${{ vars.CODM_CLOUD_URL }}
+          # Telemetria de produto (SP4). O Vite resolve VITE_* no BUILD: sem estas linhas o app sai
+          # com a chave vazia e a telemetria fica desligada EM SILÊNCIO — sem erro, só um dashboard
+          # que nunca enche. Repo variables, não secrets: a chave de ingest do PostHog é pública.
+          VITE_POSTHOG_KEY: ${{ vars.VITE_POSTHOG_KEY }}
+          VITE_POSTHOG_HOST: ${{ vars.VITE_POSTHOG_HOST }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           # Chave gerada com --ci = senha vazia; sem esta linha o build tenta abrir um prompt de
           # senha num runner sem TTY e morre com "Device not configured" (medido localmente).
@@ -83,16 +123,20 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: V4F6T68S5B
 
-        run: cd packages/app/tauri && bun x tauri build
+        run: cd packages/app/tauri && nice -n 10 bun x tauri build
 
       # A conf fica com signingIdentity '-' de propósito (rail DSK-10: build local não deve exigir
       # certificado); a identidade real vem do APPLE_SIGNING_IDENTITY acima, que a sobrepõe. Se essa
       # sobreposição falhar, o app sai ad-hoc e o defeito é INVISÍVEL no artefato — só aparece na
       # máquina do usuário, quando o TCC prende a permissão de disco ao cdhash e os agentes perdem o
       # workspace no update seguinte (v0.2.0, 07/08/2026). Verificar na saída é a única defesa.
+      #
+      # O caminho sai de $CARGO_TARGET_DIR como o `stage` abaixo: o target mora FORA do workspace
+      # desde que o CI virou self-hosted, e um gate apontando para o caminho antigo não acharia o
+      # bundle — falharia por motivo errado, ou pior, passaria por não encontrar nada para reprovar.
       - name: assinatura Apple presente no bundle
         run: |
-          APP=$(ls -d packages/app/tauri/src-tauri/target/release/bundle/macos/*.app | head -1)
+          APP=$(ls -d "$CARGO_TARGET_DIR"/release/bundle/macos/*.app | head -1)
           if ! codesign -dv --verbose=2 "$APP" 2>&1 | grep -q "^Authority=Developer ID Application"; then
             echo "::error::$APP saiu SEM Developer ID (provavelmente ad-hoc). Confira os secrets APPLE_*."
             codesign -dv --verbose=2 "$APP" 2>&1 | head -20
@@ -100,12 +144,13 @@ jobs:
           fi
           codesign -dv --verbose=2 "$APP" 2>&1 | grep -E "^Authority=|^TeamIdentifier="
 
+      # Caminhos derivados de $CARGO_TARGET_DIR — ver o comentário em release-beta.yml.
       - name: stage
         run: |
           mkdir -p dist-release
-          cp packages/app/tauri/src-tauri/target/release/bundle/macos/*.app.tar.gz dist-release/codm-aarch64.app.tar.gz
-          cp packages/app/tauri/src-tauri/target/release/bundle/macos/*.app.tar.gz.sig dist-release/codm-aarch64.app.tar.gz.sig
-          cp packages/app/tauri/src-tauri/target/release/bundle/dmg/*.dmg dist-release/codm-aarch64.dmg
+          cp "$CARGO_TARGET_DIR"/release/bundle/macos/*.app.tar.gz dist-release/codm-aarch64.app.tar.gz
+          cp "$CARGO_TARGET_DIR"/release/bundle/macos/*.app.tar.gz.sig dist-release/codm-aarch64.app.tar.gz.sig
+          cp "$CARGO_TARGET_DIR"/release/bundle/dmg/*.dmg dist-release/codm-aarch64.dmg
 
       - name: manifest
         run: >
@@ -135,8 +180,8 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          bunx wrangler r2 object put "codm-releases/stable/CODM_${GITHUB_REF_NAME}_aarch64.app.tar.gz" --file dist-release/codm-aarch64.app.tar.gz --content-type application/gzip --remote
-          bunx wrangler r2 object put "codm-releases/stable/CODM_${GITHUB_REF_NAME}_aarch64.app.tar.gz.sig" --file dist-release/codm-aarch64.app.tar.gz.sig --content-type text/plain --remote
-          bunx wrangler r2 object put "codm-releases/stable/CODM_${GITHUB_REF_NAME}_aarch64.dmg" --file dist-release/codm-aarch64.dmg --content-type application/x-apple-diskimage --remote
-          bunx wrangler r2 object put codm-releases/stable/codm-aarch64.dmg --file dist-release/codm-aarch64.dmg --content-type application/x-apple-diskimage --remote
-          bunx wrangler r2 object put codm-releases/stable/latest.json --file dist-release/latest.json --content-type application/json --remote
+          npx --yes wrangler@4.120.0 r2 object put "codm-releases/stable/CODM_${GITHUB_REF_NAME}_aarch64.app.tar.gz" --file dist-release/codm-aarch64.app.tar.gz --content-type application/gzip --remote
+          npx --yes wrangler@4.120.0 r2 object put "codm-releases/stable/CODM_${GITHUB_REF_NAME}_aarch64.app.tar.gz.sig" --file dist-release/codm-aarch64.app.tar.gz.sig --content-type text/plain --remote
+          npx --yes wrangler@4.120.0 r2 object put "codm-releases/stable/CODM_${GITHUB_REF_NAME}_aarch64.dmg" --file dist-release/codm-aarch64.dmg --content-type application/x-apple-diskimage --remote
+          npx --yes wrangler@4.120.0 r2 object put codm-releases/stable/codm-aarch64.dmg --file dist-release/codm-aarch64.dmg --content-type application/x-apple-diskimage --remote
+          npx --yes wrangler@4.120.0 r2 object put codm-releases/stable/latest.json --file dist-release/latest.json --content-type application/json --remote

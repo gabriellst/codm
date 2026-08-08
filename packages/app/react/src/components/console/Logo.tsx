@@ -13,9 +13,7 @@ import CodmLogoIcon from '@/components/ui/icons/codmLogo'
 export function Logo({ className, ...props }: ComponentProps<'span'>) {
 	return (
 		<span className={cn('inline-flex items-center gap-2.5 text-foreground', className)} {...props}>
-			<CodmLogoIcon className="h-7 w-auto" />
-			{/* -0.4px de tracking e peso 800, medidos na referência. */}
-			<span className="text-lg font-extrabold tracking-[-0.4px]">CoDM</span>
+			<CodmLogoIcon className="h-8 w-auto" />
 		</span>
 	)
 }

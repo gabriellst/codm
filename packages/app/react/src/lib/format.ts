@@ -55,6 +55,25 @@ export function formatDurationSeconds(seconds: number, locale: Locale = DEFAULT_
 	}).format(scale.value)
 }
 
+/**
+ * O HORÁRIO LOCAL CURTO de um instante ISO — `"2026-08-08T08:25:00.000Z"` → `"05:25"` em pt-BR,
+ * `"05:25 AM"` em en-US.
+ *
+ * A hora é a única parte que interessa a quem lê uma linha de conversa: o dia já é dado pela posição
+ * dela na transcrição. O formato (24h ou AM/PM, separador) é decisão do LOCALE, nunca desta função —
+ * é exatamente por isso que ela recebe um `Locale` tipado em vez de chamar `toLocaleTimeString()`
+ * sem argumento e herdar o do sistema operacional, que não é o do app.
+ *
+ * Um valor que não é um instante volta como veio: uma transcrição não pode deixar de renderizar
+ * porque uma linha trouxe algo que `Date` não sabe ler — degradação, nunca exceção (`Intl` lança
+ * `RangeError` num `Invalid Date`).
+ */
+export function formatTimeOfDay(iso: string, locale: Locale = DEFAULT_LOCALE): string {
+	const date = new Date(iso)
+	if (Number.isNaN(date.getTime())) return iso
+	return new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(date)
+}
+
 /** Format a ratio (0..1) as a percent string, one decimal, pt-BR by default: 0.75 -> "75,0%". */
 export function formatPercent(ratio: number, locale: Locale = DEFAULT_LOCALE, fractionDigits = 1): string {
 	const safe = Number.isFinite(ratio) ? ratio : 0

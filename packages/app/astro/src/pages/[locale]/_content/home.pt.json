@@ -197,6 +197,7 @@
 	},
 	"footer": {
 		"copyright": "© 2026 · Licença MIT",
+		"telemetryNotice": "Coletamos analytics de produto leve e anônimo (PostHog) — visitas de tela e cliques. Desligue quando quiser nas Configurações do console.",
 		"links": {
 			"github": "https://github.com/codm",
 			"docs": "Docs",

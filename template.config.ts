@@ -431,6 +431,20 @@ export const REPO = {
 		// daemon's own VITE_API_URL once the two are deployed separately, even though both default to
 		// the same localhost:3030 in dev (CODM_CLOUD_URL falls back to API_URL there too). Defaults to
 		// VITE_API_URL when unset (Config.cloudUrl, src/lib/config.ts) so a fresh .env keeps working.
+		// Telemetria de PRODUTO (SP4). A chave de ingest do PostHog é pública por desenho — vai
+		// dentro do binário e do bundle da landing, e o rate limit mora do lado deles; por isso é
+		// repo VARIABLE nos workflows, nunca secret. Consumida pelas duas superfícies web; o daemon
+		// NÃO fala com o PostHog (uso real acontece com o console fechado — essa metade é OTel).
+		VITE_POSTHOG_KEY: {
+			consumers: ['appReact', 'appAstro'],
+			example: '',
+			doc: 'chave de ingest do PostHog (pública); vazia desliga a telemetria de produto',
+		},
+		VITE_POSTHOG_HOST: {
+			consumers: ['appReact', 'appAstro'],
+			example: 'https://us.i.posthog.com',
+			doc: 'host do PostHog — US cloud (decisão do founder, 2026-08-07); a região é imutável na criação da conta',
+		},
 		VITE_CODM_CLOUD_URL: {
 			consumers: ['appReact'],
 			example: 'http://localhost:3030',

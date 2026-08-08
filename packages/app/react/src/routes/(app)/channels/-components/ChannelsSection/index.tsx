@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { CHANNEL_KINDS, channelGlyph } from '@/components/console/glyphs'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { row } from '@/components/ui/surfaces'
 import { useDialogStore } from '@/stores/useDialogStore'
 import { ConnectChannelDialog } from '../ConnectChannelDialog'
 
@@ -43,7 +44,9 @@ export function ChannelsSection({ className, ...props }: ComponentProps<'div'>) 
 						<Skeleton className="h-16 rounded-2xl" />
 					</div>
 				) : (
-					<div className="flex flex-col divide-y divide-border">
+					// Sem `divide-y`: cada linha traz a própria borda agora, e a hairline do pai somaria
+					// uma segunda linha entre elas. Espaçamento no lugar da divisória, como na de tarefas.
+					<div className="flex flex-col gap-2">
 						{CHANNEL_KINDS.map(kind => {
 							const connectable = CONNECTABLE.includes(kind)
 							const status = statusByKind.get(kind) ?? 'DISCONNECTED'
@@ -79,11 +82,13 @@ export function ChannelsSection({ className, ...props }: ComponentProps<'div'>) 
 									size="none"
 									key={kind}
 									type="button"
-									// D2 — a channel row is a "divided list row" (bottom hairline from the parent's
-									// `divide-y`, no per-row border) — only background + radius are set here,
-									// matching the reference's `18px 18px 18px 6px` (rounded-asymmetric-md) +
-									// `#F7FBEF` hover surface (`--hover-accent`, tokens.css).
-									className="group flex w-full items-center gap-4 rounded-asymmetric-md p-4 text-left transition-colors hover:bg-hover-accent"
+									// A linha de canal passa a ser uma CONTENT ROW com borda própria, igual à de
+									// tarefa (`console/IssueRow.tsx`) — decisão do founder, 07/08/2026. Antes era
+									// "divided list row" (só a hairline do `divide-y` do pai, sem borda), o que a
+									// deixava visualmente mais fraca que a de tarefa apesar de ser a mesma coisa:
+									// um item de conteúdo clicável. Agora compõe do preset `row`, então herda
+									// borda em repouso e a borda verde no hover de uma fonte só.
+									className={cn('group flex w-full items-center gap-4 rounded-asymmetric-lg bg-background p-3.5 text-left', row)}
 									onClick={() => show(<ConnectChannelDialog />)}
 								>
 									{body}

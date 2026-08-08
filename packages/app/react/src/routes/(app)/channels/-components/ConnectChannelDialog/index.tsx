@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { QRCodeSVG } from 'qrcode.react'
 import { useQueryClient } from '@tanstack/react-query'
 import { IconAlertTriangle, IconCircleCheck, IconRefresh } from '@tabler/icons-react'
-import { getHomeDashboardQueryKey } from '@codm/client-typescript/typescript'
+import { getAttachThreadWizardQueryKey, getHomeDashboardQueryKey } from '@codm/client-typescript/typescript'
 import { ChannelKindEnum, ChannelStatusEnum, useConnectChannel, useGetChannel, useGetOrCreateChannel } from '@codm/client-typescript/go'
 import { extractErrorCode, getErrorTranslation } from '@/lib'
 import { cn } from '@/lib/utils'
@@ -89,8 +89,13 @@ export function ConnectChannelDialog({ className }: Pick<ComponentProps<typeof D
 	}, [qr, isConnected])
 
 	// Reflect the freshly linked channel in the channels list the moment pairing completes.
+	// O wizard de anexar conversa lê de OUTRA key (`getAttachThreadWizardQueryKey`) e é ela que
+	// carrega `noChannelConnected` — sem invalidar aqui, quem conecta o canal a partir do wizard
+	// continua vendo "nenhum canal conectado" até um refetch acidental.
 	useEffect(() => {
-		if (isConnected) queryClient.invalidateQueries({ queryKey: getHomeDashboardQueryKey() })
+		if (!isConnected) return
+		queryClient.invalidateQueries({ queryKey: getHomeDashboardQueryKey() })
+		queryClient.invalidateQueries({ queryKey: getAttachThreadWizardQueryKey() })
 	}, [isConnected, queryClient])
 
 	let body: ReactNode

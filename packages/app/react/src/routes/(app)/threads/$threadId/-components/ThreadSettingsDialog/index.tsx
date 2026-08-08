@@ -26,7 +26,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
-import { ThreadAvatar } from '@/components/console/ThreadAvatar'
+import { ThreadAvatar, contactAvatarUrl } from '@/components/console/ThreadAvatar'
 import { providerGlyph, providerLabel } from '@/components/console/glyphs'
 import { useDialogStore } from '@/stores/useDialogStore'
 import { cn } from '@/lib/utils'
@@ -328,7 +328,13 @@ function ThreadSettingsBody({ threadId }: { threadId: string }) {
 				<div className="flex flex-col gap-1">
 					{data.participants.map(participant => (
 						<label key={participant.participantId} className="flex items-center gap-3 py-1.5">
-							<ThreadAvatar name={participant.name} />
+							{/* A CARA do participante quando a agenda do gateway tem uma — o `operator` nunca tem
+							    (é uma palavra, não um JID), e um membro que a sincronização ainda não escreveu
+							    também não: os dois caem nas iniciais sem caso especial aqui. */}
+							<ThreadAvatar
+								name={participant.name}
+								src={participant.hasAvatar ? contactAvatarUrl(participant.channelId, participant.participantId) : undefined}
+							/>
 							<div className="flex min-w-0 flex-1 flex-col gap-1.5">
 								<span className="truncate text-sm font-semibold text-foreground">{participant.name}</span>
 								<span className="truncate text-xs text-muted-foreground">{participant.source}</span>

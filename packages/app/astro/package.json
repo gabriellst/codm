@@ -20,6 +20,7 @@
 		"@fontsource/poppins": "^5.2.5",
 		"@tailwindcss/vite": "^4.1.16",
 		"astro": "^5.0.0",
+		"posthog-js": "^1.414.0",
 		"react": "^18.3.0",
 		"react-dom": "^18.3.0",
 		"sharp": "^0.34.0",

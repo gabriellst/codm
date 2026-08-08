@@ -26,8 +26,17 @@ const ContactOptionSchema = z.object({
 	externalId: z.string(),
 	displayName: z.string(),
 	kind: z.enum(ContactKind),
-	// Avatar from the gateway remote projection (medscall parity: null when the platform has none yet).
-	avatarUrl: z.string().nullable(),
+	/**
+	 * Whether this contact has a photo — NOT the photo's url.
+	 *
+	 * It used to ship `avatarUrl` verbatim off the gateway projection, which is the PLATFORM's own url:
+	 * signed, expiring, and blocked by the desktop shell's CSP (rail DSK-12 refuses to widen `img-src`
+	 * to WhatsApp's CDN). No console ever rendered it, so the field was a hand-maintained copy of a
+	 * secret that could not be used. The browser addresses the daemon's cached copy instead, through the
+	 * SDK's generated query key for `GET /ui/avatars/:channelId/:remoteId` — `channelId` and
+	 * `externalId` right above are that route's two halves.
+	 */
+	hasAvatar: z.boolean(),
 	// Last inbound/outbound activity — drives the "most recent first" order and a UI timestamp.
 	lastMessageAt: z.string().nullable(),
 	// Member count for GROUP remotes (from remote_memberships); null for 1:1 CONTACT/BROADCAST.
@@ -117,7 +126,7 @@ function decodeCursor(raw: string): ContactCursor {
  *   - channels        — the CONNECTED platform sessions a thread can ride on; `noChannelConnected`
  *                       is the up-front gate flag (empty → the wizard blocks).
  *   - contacts        — the operator's known counterparties, sourced from the gateway `remotes` read
- *                       model (name / avatar / kind / lastMessageAt), server-side searchable and
+ *                       model (name / photo presence / kind / lastMessageAt), server-side searchable and
  *                       keyset-paginated most-recent-first. Each is flagged `alreadyAttached` so the
  *                       operator can't double-attach one that already has a thread; GROUP remotes
  *                       carry a `participantCount` from `remote_memberships`.
@@ -263,7 +272,7 @@ export class GetAttachThreadWizard extends Handler<typeof GetAttachThreadWizardI
 			externalId: r.remoteId,
 			displayName: r.name,
 			kind: r.type as ContactKind,
-			avatarUrl: r.avatarUrl,
+			hasAvatar: Boolean(r.avatarUrl),
 			lastMessageAt: r.lastMessageAt ? new Date(r.lastMessageAt).toISOString() : null,
 			participantCount: r.type === ContactKind.GROUP ? (memberCounts.get(`${r.channelId}:${r.remoteId}`) ?? 0) : null,
 			alreadyAttached: attachedKeys.has(`${r.channelId}:${r.remoteId}`),

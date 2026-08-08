@@ -4,3 +4,5 @@ export { GetHomeDashboard, GetHomeDashboardInputSchema, GetHomeDashboardOutputSc
 export { GetAttachThreadWizard, GetAttachThreadWizardInputSchema, GetAttachThreadWizardOutputSchema } from './GetAttachThreadWizard'
 export { GetSettings, GetSettingsInputSchema, GetSettingsOutputSchema } from './GetSettings'
 export { GetSetupChecklist, GetSetupChecklistInputSchema, GetSetupChecklistOutputSchema } from './GetSetupChecklist'
+export { GetContactAvatar, GetContactAvatarInputSchema, GetContactAvatarOutputSchema } from './GetContactAvatar'
+export { GetOperatorIdentity, GetOperatorIdentityInputSchema, GetOperatorIdentityOutputSchema } from './GetOperatorIdentity'

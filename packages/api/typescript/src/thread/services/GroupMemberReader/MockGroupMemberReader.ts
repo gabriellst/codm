@@ -7,4 +7,8 @@ export class MockGroupMemberReader extends GroupMemberReader {
 	async listMembers(_channelId: string, _groupId: string): Promise<GroupMember[]> {
 		return []
 	}
+
+	async isMember(_channelId: string, _groupId: string, _memberId: string): Promise<boolean> {
+		return false
+	}
 }

@@ -23,6 +23,7 @@ import {
 	forkIssue,
 	getArtifactContent,
 	getAttachThreadWizard,
+	getContactAvatar,
 	getEntitlement,
 	getHomeDashboard,
 	getIssueDetail,
@@ -30,6 +31,7 @@ import {
 	getIssuesOverview,
 	getMyAccount,
 	getNeedsYouPanel,
+	getOperatorIdentity,
 	getSession,
 	getSessionChat,
 	getSessionIssues,
@@ -171,6 +173,10 @@ export class TypescriptClient {
 		return (getAttachThreadWizard as (...a: any[]) => ReturnType<typeof getAttachThreadWizard>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	getContactAvatar(...args: Parameters<typeof getContactAvatar>): ReturnType<typeof getContactAvatar> {
+		return (getContactAvatar as (...a: any[]) => ReturnType<typeof getContactAvatar>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	getEntitlement(...args: Parameters<typeof getEntitlement>): ReturnType<typeof getEntitlement> {
 		return (getEntitlement as (...a: any[]) => ReturnType<typeof getEntitlement>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
@@ -197,6 +203,10 @@ export class TypescriptClient {
 
 	getNeedsYouPanel(...args: Parameters<typeof getNeedsYouPanel>): ReturnType<typeof getNeedsYouPanel> {
 		return (getNeedsYouPanel as (...a: any[]) => ReturnType<typeof getNeedsYouPanel>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	getOperatorIdentity(...args: Parameters<typeof getOperatorIdentity>): ReturnType<typeof getOperatorIdentity> {
+		return (getOperatorIdentity as (...a: any[]) => ReturnType<typeof getOperatorIdentity>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	getSession(...args: Parameters<typeof getSession>): ReturnType<typeof getSession> {
