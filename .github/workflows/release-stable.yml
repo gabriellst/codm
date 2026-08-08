@@ -71,6 +71,22 @@ jobs:
           }
           echo "cloud: ${{ vars.CODM_CLOUD_URL }}"
 
+      # MESMO defeito invisível, uma camada mais fundo: com a chave vazia o console não quebra nem
+      # avisa — `AnalyticsService/index.ts` resolve para o NoopAnalyticsService e a telemetria some
+      # em silêncio. Um dashboard vazio é indistinguível de "ninguém usou o app", então o erro só
+      # apareceria semanas depois, como uma pergunta sobre os números. A v0.3.0 saiu exatamente
+      # assim. Repo variable existir não basta — o que falhou nas duas vezes foi ela não CHEGAR ao
+      # passo de build, e é isso que este teste cobre.
+      - name: posthog presente
+        run: |
+          test -n "${{ vars.VITE_POSTHOG_KEY }}" || {
+            echo "::error::vars.VITE_POSTHOG_KEY vazia — o app sairia com a telemetria desligada em silêncio. Defina a repo variable antes de publicar."
+            exit 1
+          }
+          echo "posthog: ${{ vars.VITE_POSTHOG_HOST }} (chave presente, ${#POSTHOG_KEY} chars)"
+        env:
+          POSTHOG_KEY: ${{ vars.VITE_POSTHOG_KEY }}
+
       # `nice`: esta máquina também roda o daemon de produção do founder (agentes atendendo
       # WhatsApp). Um build de release competindo por CPU já causou contenção aqui; a prioridade
       # baixa faz o build ceder ao trabalho real em vez do contrário.

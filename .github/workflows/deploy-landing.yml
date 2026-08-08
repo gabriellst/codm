@@ -21,6 +21,19 @@ jobs:
       - name: deps
         run: bun install --frozen-lockfile
 
+      # Mesmo guarda dos releases (ver release-beta.yml): com a chave vazia o BaseLayout.astro
+      # resolve `process.env.VITE_POSTHOG_KEY ?? ''` e a landing sai sem telemetria nenhuma, sem
+      # erro. Foi o que aconteceu: a landing no ar em 2026-08-07 não tinha uma linha de PostHog,
+      # porque o último deploy bem-sucedido é ANTERIOR à criação das repo variables e este workflow
+      # só dispara quando packages/app/astro/** muda — a variável nasceu e ninguém reimplantou.
+      - name: posthog presente
+        run: |
+          test -n "${{ vars.VITE_POSTHOG_KEY }}" || {
+            echo "::error::vars.VITE_POSTHOG_KEY vazia — a landing sairia sem telemetria. Defina a repo variable antes de publicar."
+            exit 1
+          }
+          echo "posthog: ${{ vars.VITE_POSTHOG_HOST }}"
+
       - name: build
         # Mesmo motivo do release: o bundle da landing assa VITE_* no build.
         env:
