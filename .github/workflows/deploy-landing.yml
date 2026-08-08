@@ -23,6 +23,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+      # O wrangler roda sob NODE, não sob bun — ver o comentário no passo `deploy`. A máquina do
+      # runner não tem node instalado, então quem o traz é esta action.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
       - name: deps
         run: bun install --frozen-lockfile
@@ -47,12 +52,8 @@ jobs:
           VITE_POSTHOG_HOST: ${{ vars.VITE_POSTHOG_HOST }}
         run: bun x nx run app-astro:build
 
-      # Criar o projeto e bootstrap de UMA vez, nao acao de cada deploy — e modelar assim nao e
-      # preferencia estetica, e o conserto de um bug real: rodar `project create` imediatamente
-      # antes de `pages deploy` no MESMO shell faz o deploy sair com codigo 0 sem subir um arquivo
-      # sequer (so o banner do wrangler no log). Reproduzido em 2026-08-08: a mesma sequencia falha
-      # sempre, e o `pages deploy` sozinho publica sempre. Foi assim que dois runs verdes seguidos
-      # deixaram no ar um build da vespera, sem telemetria.
+      # Criar o projeto e bootstrap de UMA vez, nao acao de cada deploy. Tambem tira uma chamada de
+      # wrangler do caminho quente de todo deploy, o que importa pelo motivo explicado abaixo.
       - name: garante o projeto
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -62,14 +63,30 @@ jobs:
             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT"; then
             echo "projeto $PROJECT ja existe"
           else
-            bunx wrangler pages project create "$PROJECT" --production-branch=main
+            npx --yes wrangler@4.120.0 pages project create "$PROJECT" --production-branch=main
           fi
 
+      # `npx`, NAO `bunx`. Sob bun este comando sai com codigo 0 sem publicar nada em cerca de
+      # metade das execucoes: imprime so o banner, abre o GET do projeto na API e o processo morre
+      # ali — sem upload, sem deployment, sem erro. Reproduzido em 2026-08-08 rodando o MESMO
+      # comando duas vezes seguidas na mesma maquina: a primeira nao fez nada, a segunda publicou.
+      # O wrangler e uma CLI escrita para Node e `bunx` a executa sob o runtime do bun; o trabalho
+      # assincrono e abandonado antes de terminar. Dois runs verdes ja deixaram no ar um build da
+      # vespera por causa disso.
+      #
+      # Vale para TODA invocacao de wrangler no repo, incluindo os `r2 object put` dos releases —
+      # la o mesmo no-op silencioso publicaria um latest.json apontando para um asset que nunca
+      # subiu, e o updater de todo mundo tomaria 404.
       - name: deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: bunx wrangler pages deploy packages/app/astro/dist --project-name="$PROJECT" --branch=main
+        run: |
+          # Marco do instante ANTES de publicar. A verificacao compara contra isto — uma janela
+          # fixa de minutos aceitaria um deployment feito pouco antes do run comecar, que foi
+          # exatamente como o passo de verificacao passou verde sem este run ter publicado.
+          echo "DEPLOY_STARTED_AT=$(date -u +%s)" >> "$GITHUB_ENV"
+          npx --yes wrangler@4.120.0 pages deploy packages/app/astro/dist --project-name="$PROJECT" --branch=main
 
       # Duas perguntas distintas, porque uma so nao basta.
       #
@@ -95,15 +112,14 @@ jobs:
           test -n "$SUB" && test "$SUB" != "null" || {
             echo "::error::nao consegui descobrir o subdominio do projeto $PROJECT"; exit 1; }
 
-          # (1) o deployment mais novo tem que ser DESTE run — 15 min de folga cobre um build lento
-          # sem aceitar o de ontem.
+          # (1) o deployment mais novo tem que ser POSTERIOR ao inicio do nosso deploy
           NEWEST=$(curl -sf -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT/deployments?per_page=1" \
             | jq -r '.result[0].created_on')
-          AGE=$(( $(date -u +%s) - $(date -u -j -f "%Y-%m-%dT%H:%M:%S" "${NEWEST%.*}" +%s) ))
-          echo "deployment mais novo: $NEWEST (${AGE}s atras)"
-          test "$AGE" -lt 900 || {
-            echo "::error::o deployment mais novo tem ${AGE}s — este run nao publicou nada. O 'pages deploy' saiu 0 sem criar deployment."
+          NEWEST_TS=$(date -u -j -f "%Y-%m-%dT%H:%M:%S" "${NEWEST%.*}" +%s)
+          echo "deployment mais novo: $NEWEST | deploy comecou em $(date -u -r "$DEPLOY_STARTED_AT" +%Y-%m-%dT%H:%M:%S)"
+          test "$NEWEST_TS" -ge "$DEPLOY_STARTED_AT" || {
+            echo "::error::o deployment mais novo e ANTERIOR a este run — o 'pages deploy' saiu 0 sem publicar."
             exit 1; }
 
           # (2) e o que ele serve tem que carregar a chave
