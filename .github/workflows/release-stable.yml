@@ -111,8 +111,38 @@ jobs:
           # Chave gerada com --ci = senha vazia; sem esta linha o build tenta abrir um prompt de
           # senha num runner sem TTY e morre com "Device not configured" (medido localmente).
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+          # Assinatura Apple — NÃO é a chave acima (aquela é minisign, do updater). Sem estas o
+          # build sai ad-hoc, e o grant de TCC de um app ad-hoc fica preso ao cdhash: todo update
+          # invalida a permissão de disco e os agentes gerados pelo daemon perdem o workspace
+          # (medido na v0.2.0, 07/08/2026 — "System Policy: deny file-read-data /Users/.../Desktop").
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: "Developer ID Application: BK COMPANY LTDA (V4F6T68S5B)"
+          # Notarização: sem ela o Gatekeeper barra o .dmg baixado do R2.
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: V4F6T68S5B
 
         run: cd packages/app/tauri && nice -n 10 bun x tauri build
+
+      # A conf fica com signingIdentity '-' de propósito (rail DSK-10: build local não deve exigir
+      # certificado); a identidade real vem do APPLE_SIGNING_IDENTITY acima, que a sobrepõe. Se essa
+      # sobreposição falhar, o app sai ad-hoc e o defeito é INVISÍVEL no artefato — só aparece na
+      # máquina do usuário, quando o TCC prende a permissão de disco ao cdhash e os agentes perdem o
+      # workspace no update seguinte (v0.2.0, 07/08/2026). Verificar na saída é a única defesa.
+      #
+      # O caminho sai de $CARGO_TARGET_DIR como o `stage` abaixo: o target mora FORA do workspace
+      # desde que o CI virou self-hosted, e um gate apontando para o caminho antigo não acharia o
+      # bundle — falharia por motivo errado, ou pior, passaria por não encontrar nada para reprovar.
+      - name: assinatura Apple presente no bundle
+        run: |
+          APP=$(ls -d "$CARGO_TARGET_DIR"/release/bundle/macos/*.app | head -1)
+          if ! codesign -dv --verbose=2 "$APP" 2>&1 | grep -q "^Authority=Developer ID Application"; then
+            echo "::error::$APP saiu SEM Developer ID (provavelmente ad-hoc). Confira os secrets APPLE_*."
+            codesign -dv --verbose=2 "$APP" 2>&1 | head -20
+            exit 1
+          fi
+          codesign -dv --verbose=2 "$APP" 2>&1 | grep -E "^Authority=|^TeamIdentifier="
 
       # Caminhos derivados de $CARGO_TARGET_DIR — ver o comentário em release-beta.yml.
       - name: stage

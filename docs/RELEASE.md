@@ -48,17 +48,116 @@ O beta não pede nada: mergear na main já publica `<versão-base>-beta.<run>` n
 - Rotação: gerar novo par (`bun x tauri signer generate`), trocar pubkey na config + secret, e
   publicar uma release de transição assinada com a chave antiga que já embarque a nova pubkey.
 
-> Assinatura **Apple** (Developer ID + notarização) é outra coisa e está deliberadamente FORA do
-> beta — entra no SP2 como gate de cobrança (roadmap decisão 7).
+> Não confunda com a assinatura **Apple** da seção abaixo: minisign autentica o *pacote de
+> update*, Developer ID autentica o *app*. São chaves distintas, com backups distintos.
+
+## A assinatura Apple (Developer ID) — 07/08/2026
+
+Antes desta data o app saía **ad-hoc** (`"signingIdentity": "-"`), e isso não era só um aviso do
+Gatekeeper: era um defeito funcional. Tudo que o daemon gera é atribuído pelo macOS ao app como
+*processo responsável* (o log do `tccd` diz literalmente
+`responsible={identifier=app.codm.desktop}`), e os workspaces vivem sob `~/Desktop`, pasta
+protegida por TCC. Num app ad-hoc o TCC prende a permissão ao **cdhash** do binário, então **cada
+update invalida o acesso ao disco**. Quando isso acontece o pedido parte de um sidecar em segundo
+plano, onde o macOS não pode exibir diálogo — ele então *grava* a negação e ela gruda. Medido na
+v0.2.0: ~640 negações `System Policy: deny(1) file-read-data /Users/work/Desktop/…` e agentes
+morrendo com `provider exited with code 1 (EPERM)`, que é o Bun falhando ao ler o próprio cwd.
+
+**A assinatura do shell É a permissão de disco dos agentes.**
+
+Onde a identidade mora: `tauri.conf.json` é **gerado** (`config/generate.ts`) e commitado, então cravar
+o Developer ID nele obrigaria todo build local a ter o certificado. Ele fica com `'-'` — o rail
+**DSK-10** guarda isso — e a identidade real chega aos builds de release pela env
+`APPLE_SIGNING_IDENTITY`, que sobrepõe o valor da conf.
+
+Essa sobreposição é a premissa que sustenta tudo, e uma sobreposição que falha é **invisível no
+artefato**. Por isso os dois workflows conferem a SAÍDA depois do build: `codesign -dv` tem de
+reportar `Authority=Developer ID Application`, senão o run falha. Sem esse gate, um secret errado
+publicaria um app ad-hoc que só quebra semanas depois, na máquina do usuário, no update seguinte.
+
+- **Identidade**: `Developer ID Application: BK COMPANY LTDA (V4F6T68S5B)`, Team ID `V4F6T68S5B`,
+  emitida em 07/08/2026, expira em 08/08/2031.
+- **Onde vive**: `~/apple-signing/developer_id.p12` na máquina do founder; cópia em
+  `iCloud Drive/CODM - Assinatura Apple/codm-apple-signing-backup.zip`; senhas no Bitwarden
+  (item `Apple Developer ID — CODM`). **Nunca no repo.**
+- **Secrets do CI**: `APPLE_CERTIFICATE` (o `.p12` em base64), `APPLE_CERTIFICATE_PASSWORD`,
+  `APPLE_ID`, `APPLE_PASSWORD` (senha de app, não a senha da conta). `APPLE_SIGNING_IDENTITY` e
+  `APPLE_TEAM_ID` são literais nos workflows — não são segredo.
+- **Entitlements**: ficam como estão. Um executável Bun foi medido rodando sob hardened runtime
+  apenas com `com.apple.security.cs.disable-library-validation`; nenhuma entitlement de JIT.
+
+### Emitir um certificado novo
+
+Só é preciso se o `.p12` E a senha se perderem, ou perto de 2031. Custa um dos **5 slots** de
+Developer ID da conta, e revogar é chato — então não crie um "por garantia".
+
+```bash
+openssl req -new -newkey rsa:2048 -nodes -keyout developer_id.key -out developer_id.csr \
+  -subj "/emailAddress=<email>/CN=<nome>/C=BR"
+# enviar o .csr em developer.apple.com → Certificates → + → Developer ID Application (perfil G2)
+# baixar o .cer e montar o p12 (o intermediário na cadeia é obrigatório, senão o runner falha):
+openssl x509 -inform DER -in developerID_application.cer -out developer_id.pem
+security find-certificate -a -c "Developer ID Certification Authority" -p | \
+  awk '/BEGIN/{f=1} f' > ca.pem   # ficar com o bloco cujo subject tem OU=G2
+openssl pkcs12 -export -out developer_id.p12 -inkey developer_id.key \
+  -in developer_id.pem -certfile apple_g2_ca.pem
+```
+
+Conferir que o `.cer` casa com a chave antes de seguir — os dois md5 têm de bater:
+
+```bash
+openssl x509 -inform DER -in developerID_application.cer -noout -modulus | openssl md5
+openssl rsa -in developer_id.key -noout -modulus | openssl md5
+```
+
+### Recuperar numa máquina nova
+
+Precisa de **duas fontes independentes**: o zip (iCloud) e a senha (Bitwarden). O zip não contém
+senha alguma — de propósito, para que sozinho ele não assine nada.
+
+```bash
+# 1. descompactar o zip do iCloud, depois:
+security import developer_id.p12 -k ~/Library/Keychains/login.keychain-db \
+  -P '<senha do Bitwarden>' -T /usr/bin/codesign -T /usr/bin/security
+security find-identity -v -p codesigning     # deve listar a identidade acima
+
+# 2. religar o CI — secrets do GitHub são write-only, não voltam sozinhos
+base64 -i developer_id.p12 | pbcopy          # → secret APPLE_CERTIFICATE
+```
+
+Ensaiado em 07/08/2026 num keychain descartável: import → `find-identity` → assinatura real de um
+binário → `codesign -v` devolvendo `valid on disk` com a cadeia até a Apple Root CA.
+
+### Depois de restaurar (ou do primeiro build assinado): o Acesso Total ao Disco
+
+O cdhash muda, então a permissão precisa ser concedida **uma vez**. Limpe a negação gravada antes,
+ou o "não" persiste:
+
+```bash
+tccutil reset SystemPolicyAllFiles app.codm.desktop
+tccutil reset SystemPolicyDesktopFolder app.codm.desktop
+# Ajustes do Sistema → Privacidade e Segurança → Acesso Total ao Disco → adicionar CODM.app → reiniciar
+```
+
+Suspeita de recaída (`log` é builtin do zsh — sem o caminho absoluto a consulta volta vazia e
+parece que não há nada):
+
+```bash
+/usr/bin/log show --last 30m --predicate 'eventMessage CONTAINS "deny"' --info --debug \
+  | grep "System Policy"
+```
 
 ## Instalação do beta (texto para a página de download)
 
-O beta não tem assinatura Apple, então o macOS avisa na primeira abertura:
+A partir dos builds de 07/08/2026 os dois canais são assinados com Developer ID e notarizados:
+baixe o `codm-aarch64.dmg`, arraste para **Aplicativos** e abra normalmente — sem aviso do
+Gatekeeper, sem "Abrir Mesmo Assim".
 
-1. Baixe o `codm-aarch64.dmg` e arraste o app para **Aplicativos**.
-2. Abra o app; o macOS vai bloquear com *"não foi possível verificar…"*.
-3. **Ajustes → Privacidade e Segurança** → role até o aviso do codm → **Abrir Mesmo Assim**.
-4. Só na primeira vez: os auto-updates seguintes não passam pelo Gatekeeper (o updater baixa e
+Builds **anteriores** a essa data saíram ad-hoc e ainda exigem o contorno:
+
+1. Abra o app; o macOS bloqueia com *"não foi possível verificar…"*.
+2. **Ajustes → Privacidade e Segurança** → role até o aviso do codm → **Abrir Mesmo Assim**.
+3. Só na primeira vez: os auto-updates seguintes não passam pelo Gatekeeper (o updater baixa e
    aplica direto, verificando a assinatura minisign própria).
 
 ## Crash logs

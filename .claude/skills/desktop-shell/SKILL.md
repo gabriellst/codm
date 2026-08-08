@@ -208,3 +208,40 @@ bun desktop:bundle     # production shell build (build-spa + sidecars first)
 toolchain. Rust is required for dev/bundle; icons must be generated once
 (`bun x tauri icon <1024.png>`) before the first bundle. See
 `packages/app/tauri/README.md`.
+
+## macOS signing — the shell's TCC identity (non-negotiable)
+
+**Never ship an ad-hoc build.** Everything the daemon spawns (`claude`, and every `zsh`/`git`/`gh`
+under it) is attributed by macOS to the app as *responsible process* — the TCC log says it
+verbatim: `responsible={identifier=app.codm.desktop}`. So the shell's signature IS the agents'
+filesystem permission, and workspaces live under `~/Desktop`, a TCC-protected folder.
+
+An ad-hoc signature (`"signingIdentity": "-"`) pins the TCC grant to the binary's *cdhash*, so
+**every update invalidates the disk permission**. When the grant lapses, macOS is asked from a
+background sidecar, where it cannot show a dialog — it then *records* a denial
+(`Service kTCCServiceSystemPolicyAllFiles does not allow prompting; recording denied`) and the
+whole spawned tree loses the workspace. Measured on v0.2.0 (2026-08-07): ~640 kernel denials
+`System Policy: … deny(1) file-read-data /Users/work/Desktop/…`, agents crashing with
+`provider exited with code 1 (EPERM)` — Bun dies at startup when it cannot read its own cwd.
+
+Therefore `bundle.macOS.signingIdentity` carries the real Developer ID
+(`Developer ID Application: BK COMPANY LTDA (V4F6T68S5B)`), and both release workflows pass
+`APPLE_CERTIFICATE` / `APPLE_CERTIFICATE_PASSWORD` / `APPLE_ID` / `APPLE_PASSWORD` /
+`APPLE_TEAM_ID`. A missing secret now fails the build loudly instead of silently shipping ad-hoc.
+`TAURI_SIGNING_PRIVATE_KEY` is a different thing entirely — minisign, for the updater manifest.
+
+Entitlements stay as they are: a Bun single-file executable was measured running fine under
+hardened runtime with only `com.apple.security.cs.disable-library-validation`. No JIT entitlement
+needed.
+
+Procedures — issuing a certificate, recovering on a new machine, and re-granting Full Disk Access
+after a cdhash change — live in `docs/RELEASE.md`, section *"A assinatura Apple (Developer ID)"*.
+Keep them there, not here: this section is the rule, that one is the runbook.
+
+Diagnosing a suspected recurrence (`log` is a zsh builtin — the absolute path is required, or the
+query silently returns nothing):
+
+```bash
+/usr/bin/log show --last 30m --predicate 'eventMessage CONTAINS "deny"' --info --debug \
+  | grep "System Policy"
+```
