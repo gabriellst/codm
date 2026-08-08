@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { and, asc, desc, eq, gte, inArray, isNull } from 'drizzle-orm'
 import { Handler, z, DrizzleClient } from '@codm/core-typescript'
-import { threads, issues, stops, transcriptEntries, workspaces, channels } from '@codm/contracts/db'
+import { threads, issues, stops, transcriptEntries, workspaces, channels, remotes } from '@codm/contracts/db'
 import {
 	ThreadStatus,
 	ChannelKind,
@@ -12,15 +12,45 @@ import {
 	TranscriptKind,
 } from '@codm/contracts-typescript/wire/enums'
 import { ThreadStatusDeriver } from '@thread/services/ThreadStatusDeriver'
+// The LEAF, not the barrel — the barrel re-exports the loop schedules and the cut policy, none of
+// which this read needs; see `GetSessionChat`'s own import of the same constant.
+import { OPERATOR_PARTICIPANT_ID } from '@thread/objects/TranscriptSpeaker'
 
 const ThreadSummarySchema = z.object({
 	threadId: z.uuid(),
 	displayName: z.string(),
+	/**
+	 * WHERE THE CONTACT'S FACE IS SERVED FROM — the two halves of the avatar endpoint's address
+	 * (`GET /ui/avatars/:channelId/:remoteId`) plus whether there is anything at it.
+	 *
+	 * The same four facts `GetSessionChat.sender` carries, spelled FLAT here because the fourth
+	 * (`displayName`) is already this row's own field: nesting a `contact` object would put the same
+	 * name on the payload twice and let the two disagree.
+	 *
+	 * `hasAvatar` rather than a url, for the reason documented at length on `GetSessionChat.sender`:
+	 * the platform's own url is signed, expiring and off-CSP, and the route belongs to the SDK's
+	 * generated query key — a url on the wire would be a second, hand-maintained copy of it.
+	 */
+	channelId: z.uuid(),
+	externalId: z.string(),
+	hasAvatar: z.boolean(),
 	channelKind: z.enum(ChannelKind),
 	workspacePath: z.string(),
 	providers: z.array(z.enum(ProviderKind)),
 	status: z.enum(ThreadStatus),
 	lastActivity: z.string(),
+})
+
+/**
+ * WHO SPOKE on one recent line — identical in shape and in meaning to `GetSessionChat.sender`, and
+ * absent for exactly the same lines: everything the product itself produced (`SYSTEM`, the operator's
+ * own `DIRECT`/`WHISPER`, the `ACTION` narration) has a caption the console composes from `kind`.
+ */
+const ActivitySenderSchema = z.object({
+	channelId: z.uuid(),
+	externalId: z.string(),
+	displayName: z.string(),
+	hasAvatar: z.boolean(),
 })
 
 export const GetHomeDashboardInputSchema = z.object({ ownerId: z.uuid() })
@@ -43,7 +73,9 @@ export const GetHomeDashboardOutputSchema = z.object({
 	 * to be printed verbatim in a Portuguese list. Typed as the enum the browser runs it through
 	 * `enumLabel` and the i18n rail can see it; as a bare `string` it was invisible to both.
 	 */
-	latestActivity: z.array(z.object({ kind: z.enum(TranscriptKind), subtitle: z.string(), threadId: z.uuid(), at: z.string() })),
+	latestActivity: z.array(
+		z.object({ kind: z.enum(TranscriptKind), subtitle: z.string(), threadId: z.uuid(), at: z.string(), sender: ActivitySenderSchema.optional() }),
+	),
 	/**
 	 * `medianResponseSeconds` is HOW LONG THE CONTACT WAITED, in seconds, for the median reply sent
 	 * today — measured on the transcript, from the first message of an unanswered inbound burst to the
@@ -81,6 +113,9 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 			.select({
 				threadId: threads.id,
 				displayName: threads.contactDisplayName,
+				channelId: threads.channelId,
+				externalId: threads.contactExternalId,
+				avatarUrl: remotes.avatarUrl,
 				workspacePath: workspaces.path,
 				channelKind: channels.platform,
 				providers: threads.providers,
@@ -90,6 +125,11 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 			.from(threads)
 			.leftJoin(workspaces, eq(threads.workspaceId, workspaces.id))
 			.leftJoin(channels, eq(threads.channelId, channels.id))
+			// THE CONTACT BOOK, joined rather than queried — the face of every conversation on the sidebar
+			// and on the active-sessions list comes from the same `(channel_id, remote_id)` primary key the
+			// avatar endpoint walks, so one LEFT JOIN answers it for every row at once. LEFT because a
+			// thread attached to a contact the gateway sync has not written yet still has to render.
+			.leftJoin(remotes, and(eq(remotes.channelId, threads.channelId), eq(remotes.remoteId, threads.contactExternalId)))
 			// Apagadas are out (thread-deletion spec, decision 5). This one predicate covers BOTH `threads`
 			// and `activeSessions` below, because the second is derived from the first.
 			.where(and(eq(threads.ownerId, input.ownerId), isNull(threads.deletedAt)))
@@ -115,6 +155,9 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 		const toSummary = (t: (typeof threadRows)[number]) => ({
 			threadId: t.threadId,
 			displayName: t.displayName,
+			channelId: t.channelId,
+			externalId: t.externalId,
+			hasAvatar: Boolean(t.avatarUrl),
 			channelKind: (t.channelKind ?? ChannelKind.WHATSAPP) as ChannelKind,
 			workspacePath: t.workspacePath ?? '',
 			providers: t.providers as ProviderKind[],
@@ -135,6 +178,10 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 				threadId: transcriptEntries.threadId,
 				at: transcriptEntries.at,
 				kind: transcriptEntries.kind,
+				channelId: threads.channelId,
+				senderExternalId: transcriptEntries.senderExternalId,
+				senderName: remotes.name,
+				senderAvatarUrl: remotes.avatarUrl,
 			})
 			.from(transcriptEntries)
 			// THE READ THE SPEC NAMES BY HAND (thread-deletion spec, decision 5): this one reads the
@@ -142,6 +189,10 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 			// home screen prints the words of a conversation the operator believes they deleted. Inner join
 			// because every entry has a NOT NULL `thread_id` whose row exists.
 			.innerJoin(threads, and(eq(transcriptEntries.threadId, threads.id), isNull(threads.deletedAt)))
+			// WHO SPOKE, on the same `(channel_id, remote_id)` key the avatar endpoint walks. The thread is
+			// already scoped to the owner by the predicate below, and `gateway_remotes` carries no owner of
+			// its own, so the channel equality IS the gate — the same path `GetContactAvatar` documents.
+			.leftJoin(remotes, and(eq(remotes.channelId, threads.channelId), eq(remotes.remoteId, transcriptEntries.senderExternalId)))
 			.where(eq(transcriptEntries.ownerId, input.ownerId))
 			.orderBy(desc(transcriptEntries.at))
 			.limit(8)
@@ -150,6 +201,7 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 			subtitle: r.text.slice(0, 120),
 			threadId: r.threadId,
 			at: r.at.toISOString(),
+			sender: this.senderOf(r),
 		}))
 
 		const dayStart = new Date(new Date().setHours(0, 0, 0, 0))
@@ -171,6 +223,30 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 			latestActivity,
 			today: { issuesOpened, issuesClosed, medianResponseSeconds },
 			channels: channelRows.map(c => ({ kind: c.kind as ChannelKind, status: c.status as ChannelStatus })),
+		}
+	}
+
+	/**
+	 * The identity to hang on one recent line, or nothing — the same rule (and the same fallback)
+	 * `GetSessionChat.senderOf` applies, so a line reads the same on the home screen and in the
+	 * conversation it came from.
+	 *
+	 * A contact the gateway sync has not written yet still gets a sender, with their JID standing in for
+	 * the name: the alternative is dropping the attribution entirely, which is the state this field
+	 * exists to end.
+	 */
+	private senderOf(row: {
+		channelId: string
+		senderExternalId: string | null
+		senderName: string | null
+		senderAvatarUrl: string | null
+	}): { channelId: string; externalId: string; displayName: string; hasAvatar: boolean } | undefined {
+		if (row.senderExternalId === null || row.senderExternalId === OPERATOR_PARTICIPANT_ID) return undefined
+		return {
+			channelId: row.channelId,
+			externalId: row.senderExternalId,
+			displayName: row.senderName || row.senderExternalId,
+			hasAvatar: Boolean(row.senderAvatarUrl),
 		}
 	}
 

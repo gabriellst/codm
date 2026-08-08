@@ -14,7 +14,7 @@ import type { GetSessionChatQueryResponse } from '@codm/client-typescript/typesc
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import { ThreadAvatar } from '@/components/console/ThreadAvatar'
+import { ThreadAvatar, contactAvatarUrl } from '@/components/console/ThreadAvatar'
 import { enumLabel } from '@/lib'
 import { Dot } from '@/components/console/StatusDot'
 import { providerLabel } from '@/components/console/glyphs'
@@ -90,7 +90,12 @@ export function SessionHeader({ threadId, className, ...props }: ComponentProps<
 					<Skeleton className="h-12 w-64" />
 				) : (
 					<>
-						<ThreadAvatar name={data.thread.displayName} channelKind={data.thread.channelKind} size="lg" />
+						<ThreadAvatar
+							name={data.thread.displayName}
+							src={data.thread.hasAvatar ? contactAvatarUrl(data.thread.channelId, data.thread.externalId) : undefined}
+							channelKind={data.thread.channelKind}
+							size="lg"
+						/>
 						<div className="flex min-w-0 flex-1 flex-col gap-1.5">
 							<div className="flex flex-wrap items-center gap-2">
 								<h1 className="heading-display truncate text-xl text-foreground md:text-2xl">{data.thread.displayName}</h1>

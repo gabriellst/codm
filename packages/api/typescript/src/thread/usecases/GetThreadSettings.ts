@@ -17,7 +17,31 @@ export const GetThreadSettingsOutputSchema = z.object({
 		z.object({ enabled: z.literal(false) }),
 		z.object({ enabled: z.literal(true), tag: z.string() }),
 	]),
-	participants: z.array(z.object({ participantId: z.string(), name: z.string(), source: z.string(), canInvoke: z.boolean() })),
+	/**
+	 * The roster, each member carrying the address of their FACE alongside their name.
+	 *
+	 * `participantId` is already the platform's own id for them — the `externalId` half of
+	 * `GET /ui/avatars/:channelId/:remoteId` — so the row only gains the channel and the flag. Same
+	 * three facts `GetSessionChat.sender` carries, and for the same reason: the console addresses the
+	 * daemon's cached copy through the SDK's generated query key, never the platform's signed url.
+	 *
+	 * `channelId` is the thread's own on every row (a roster cannot span channels) and repeats for that
+	 * reason — the alternative is a sibling field the console has to zip back together per member.
+	 *
+	 * The OPERATOR sentinel has no entry in the contact book — it is a word, not a JID — so it reports
+	 * `hasAvatar: false` and falls back to initials, exactly like a member the gateway sync has not
+	 * written yet.
+	 */
+	participants: z.array(
+		z.object({
+			participantId: z.string(),
+			name: z.string(),
+			source: z.string(),
+			canInvoke: z.boolean(),
+			channelId: z.uuid(),
+			hasAvatar: z.boolean(),
+		}),
+	),
 	invokerCount: z.number().int(),
 	bufferSize: z.enum(BufferSize),
 	/**
@@ -115,11 +139,13 @@ export class GetThreadSettings extends Handler<typeof GetThreadSettingsInputSche
 		const externalIds = participants.map(p => p.participantId).filter(id => id !== OPERATOR_PARTICIPANT_ID)
 		const contacts = externalIds.length
 			? await this.db
-					.select({ remoteId: remotes.remoteId, name: remotes.name })
+					.select({ remoteId: remotes.remoteId, name: remotes.name, avatarUrl: remotes.avatarUrl })
 					.from(remotes)
 					.where(and(eq(remotes.channelId, thread.channelId), inArray(remotes.remoteId, externalIds)))
 			: []
-		const nameByRemoteId = new Map(contacts.filter(c => c.name).map(c => [c.remoteId, c.name]))
+		// ONE map, not two: the name and the photo are the same contact's, resolved by the same key, and a
+		// second `avatarByRemoteId` would be the same lookup written twice.
+		const contactByRemoteId = new Map(contacts.map(c => [c.remoteId, c]))
 
 		// NO GUARD HERE, on purpose. An undrivable provider is REPORTED, never refused: this read is the
 		// one place a legacy thread's dead binding is visible, so throwing would hide the very fact the
@@ -129,7 +155,12 @@ export class GetThreadSettings extends Handler<typeof GetThreadSettingsInputSche
 
 		return {
 			mentionGate: thread.mentionGateEnabled ? { enabled: true, tag: thread.mentionGateTag ?? '' } : { enabled: false },
-			participants: participants.map(p => ({ ...p, name: nameByRemoteId.get(p.participantId) ?? p.name })),
+			participants: participants.map(p => {
+				const contact = contactByRemoteId.get(p.participantId)
+				// `||`, not `??`: `gateway_remotes.name` is `NOT NULL DEFAULT ''`, so a synced-but-unnamed
+				// contact stores the empty string — which `??` would accept as a name and render as a blank row.
+				return { ...p, name: contact?.name || p.name, channelId: thread.channelId, hasAvatar: Boolean(contact?.avatarUrl) }
+			}),
 			invokerCount: participants.filter(p => p.canInvoke).length,
 			bufferSize: thread.bufferSize as BufferSize,
 			customPrompt: thread.customPrompt ?? '',

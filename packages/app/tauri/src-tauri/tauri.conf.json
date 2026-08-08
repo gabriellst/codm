@@ -37,7 +37,7 @@
 			}
 		],
 		"security": {
-			"csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' http://localhost:3030 http://127.0.0.1:3030 https://codm.up.railway.app ipc: http://ipc.localhost"
+			"csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http://localhost:3030 http://127.0.0.1:3030; connect-src 'self' http://localhost:3030 http://127.0.0.1:3030 https://codm.up.railway.app ipc: http://ipc.localhost"
 		}
 	},
 	"plugins": {

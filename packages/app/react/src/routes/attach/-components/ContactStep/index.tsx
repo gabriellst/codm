@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import type { DeepPartial } from '@/lib'
 import { cn } from '@/lib/utils'
-import { ThreadAvatar } from '@/components/console/ThreadAvatar'
+import { ThreadAvatar, contactAvatarUrl } from '@/components/console/ThreadAvatar'
 import { StepHeading } from '../StepHeading'
 
 // The step's slice of the accumulated attach payload — derived from the SDK request schema, never
@@ -141,7 +141,11 @@ export function ContactStep({ channelKindById, defaultValues, onSubmit, classNam
 										isSelected && 'bg-muted',
 									)}
 								>
-									<ThreadAvatar name={contact.displayName} channelKind={channelKind} />
+									<ThreadAvatar
+									name={contact.displayName}
+									src={contact.hasAvatar ? contactAvatarUrl(contact.channelId, contact.externalId) : undefined}
+									channelKind={channelKind}
+								/>
 									<div className="flex min-w-0 flex-1 flex-col gap-1.5">
 										<span className="flex min-w-0 items-center gap-2">
 											<span className="truncate font-semibold text-foreground">{contact.displayName}</span>

@@ -38,7 +38,10 @@ describe('GetThreadSettings — participant names come from the contact book', (
 		return givenThread(testBed, { ownerId: OPERATOR_ID, workspaceId: workspace.id.value, channelId: CHANNEL, contactExternalId })
 	}
 
-	const contact = (remoteId: string, name: string) => givenRemote(testBed, { channelId: CHANNEL, remoteId, name })
+	const contact = (remoteId: string, name: string, avatarUrl?: string) =>
+		givenRemote(testBed, { channelId: CHANNEL, remoteId, name, avatarUrl })
+
+	const PHOTO_URL = 'https://pps.whatsapp.net/v/t61.24694-24/gabriel.jpg'
 
 	const settingsFor = async (threadId: string) => testBed.resolve(GetThreadSettings).execute({ ownerId: OPERATOR_ID, threadId })
 
@@ -122,6 +125,59 @@ describe('GetThreadSettings — participant names come from the contact book', (
 	it('reports an empty prompt when the operator never wrote one', async () => {
 		const thread = await threadWithContact(JID)
 		expect((await settingsFor(thread.id.value)).customPrompt).toBe('')
+	})
+
+	/**
+	 * THE FACE, alongside the name — the roster is where the founder first noticed their own row
+	 * rendering as initials while `gateway_remotes` plainly held a photo for that JID.
+	 *
+	 * `hasAvatar`, never the url: the console composes the daemon's own address from `channelId` +
+	 * `participantId`, and the platform's signed url must not cross the wire (rail DSK-12).
+	 */
+	it('flags the member who HAS a photo, and hands the console the channel to fetch it from', async () => {
+		const thread = await threadWithContact(JID)
+		await contact(JID, 'Gabriel Araújo', PHOTO_URL)
+
+		const { participants } = await settingsFor(thread.id.value)
+
+		const member = participants.find(p => p.participantId === JID)
+		expect(member?.hasAvatar).toBe(true)
+		expect(member?.channelId).toBe(CHANNEL)
+	})
+
+	/**
+	 * DEGRADES TO INITIALS, never breaks. A JID with no entry in the contact book — the fresh group
+	 * member, the remote the Go sync has not written yet — still renders: a name (the roster's) and
+	 * `hasAvatar: false`, which is what the console draws initials from.
+	 */
+	it('a JID absent from the contact book reports no photo instead of failing', async () => {
+		const thread = await threadWithContact(JID)
+
+		const { participants } = await settingsFor(thread.id.value)
+
+		const member = participants.find(p => p.participantId === JID)
+		expect(member?.hasAvatar).toBe(false)
+		expect(member?.name).toBe(ROSTER_NAME)
+	})
+
+	/** A synced contact whose photo the platform has never published is the same case as an absent one. */
+	it('a known contact with no photo reports no photo', async () => {
+		const thread = await threadWithContact(JID)
+		await contact(JID, 'Gabriel Araújo')
+
+		const { participants } = await settingsFor(thread.id.value)
+
+		expect(participants.find(p => p.participantId === JID)?.hasAvatar).toBe(false)
+	})
+
+	/** The operator sentinel is a WORD, not a JID — no contact book entry, so no face, and no crash. */
+	it('the operator row reports no photo', async () => {
+		const thread = await threadWithContact(JID)
+		await contact(JID, 'Gabriel Araújo', PHOTO_URL)
+
+		const { participants } = await settingsFor(thread.id.value)
+
+		expect(participants.find(p => p.participantId === 'operator')?.hasAvatar).toBe(false)
 	})
 
 	/** A contact of ANOTHER channel with the same JID must not leak in — the key is (channel, remote). */

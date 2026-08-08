@@ -15,7 +15,7 @@ import { useLocale, useServerEvents } from '@/hooks'
 import { PageHeader } from '@/components/console/PageHeader'
 import { relativeTime } from '@/components/console/time'
 import { Dot } from '@/components/console/StatusDot'
-import { ThreadAvatar } from '@/components/console/ThreadAvatar'
+import { ThreadAvatar, contactAvatarUrl } from '@/components/console/ThreadAvatar'
 
 type Dashboard = GetHomeDashboardQueryResponse
 
@@ -196,7 +196,12 @@ function ActiveSessionRow({ session }: { session: Dashboard['activeSessions'][nu
 			params={{ threadId: session.threadId }}
 			className={cn('group flex items-center gap-3.5 rounded-asymmetric-lg p-3.5', row)}
 		>
-			<ThreadAvatar name={session.displayName} channelKind={session.channelKind} size="lg" />
+			<ThreadAvatar
+				name={session.displayName}
+				src={session.hasAvatar ? contactAvatarUrl(session.channelId, session.externalId) : undefined}
+				channelKind={session.channelKind}
+				size="lg"
+			/>
 			<div className="flex min-w-0 flex-1 flex-col gap-0.5">
 				<span className="truncate text-[14.5px] font-bold text-foreground">{session.displayName}</span>
 				<span className="truncate text-[12.5px] text-caption-foreground">{t(relative.key, { count: relative.count })}</span>
@@ -238,18 +243,37 @@ function LatestActivitySection({ items }: { items: Dashboard['latestActivity'] }
 	)
 }
 
+/**
+ * Uma linha de atividade recente — e, quando alguém de fora falou, QUEM falou.
+ *
+ * O prefixo em negrito era sempre o `kind` ("Contato", "Sistema"), o que num GRUPO diz o mínimo: toda
+ * linha de entrada é uma pessoa diferente e nenhuma delas aparecia. Agora o discriminante é a presença
+ * de `sender` — o backend só o envia para uma linha que uma pessoa digitou (as do próprio produto
+ * seguem sem ele, pela mesma regra que `GetSessionChat` documenta) — então a linha troca o ponto
+ * colorido pela CARA de quem escreveu e o rótulo do kind pelo nome dela. Sem sender, nada muda.
+ */
 function ActivityRow({ item }: { item: Dashboard['latestActivity'][number] }) {
 	const { t } = useTranslation()
 	const relative = relativeTime(item.at)
+	const sender = item.sender
 	return (
 		<Link
 			to="/threads/$threadId"
 			params={{ threadId: item.threadId }}
 			className="flex items-start gap-2.5 rounded-asymmetric-xs px-2 py-2.5 transition-colors hover:bg-muted"
 		>
-			<Dot className={cn('mt-1.5 size-2 shrink-0', TRANSCRIPT_KIND_DOT[item.kind])} />
+			{sender ? (
+				<ThreadAvatar
+					name={sender.displayName}
+					src={sender.hasAvatar ? contactAvatarUrl(sender.channelId, sender.externalId) : undefined}
+					size="sm"
+				/>
+			) : (
+				<Dot className={cn('mt-1.5 size-2 shrink-0', TRANSCRIPT_KIND_DOT[item.kind])} />
+			)}
 			<span className="min-w-0 flex-1 text-pretty text-[13.5px] leading-relaxed text-muted-foreground">
-				<span className="font-bold text-foreground">{enumLabel('TranscriptKind', item.kind)}</span> {item.subtitle}
+				<span className="font-bold text-foreground">{sender ? sender.displayName : enumLabel('TranscriptKind', item.kind)}</span>{' '}
+				{item.subtitle}
 			</span>
 			<span className="mt-0.5 shrink-0 text-[11.5px] text-caption-foreground">{t(relative.key, { count: relative.count })}</span>
 		</Link>

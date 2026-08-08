@@ -11,6 +11,12 @@ export interface ChannelOverrides {
 	name?: string
 	status?: ChannelStatus
 	ownerRemoteId?: string
+	/**
+	 * When the row was last touched. `now` by default — override only when the ORDERING between two
+	 * channels is the subject, which is the one thing two rows stamped in the same tick cannot express
+	 * (`GetOperatorIdentity` picks the most recently updated connected channel).
+	 */
+	updatedAt?: Date
 }
 
 /**
@@ -41,7 +47,7 @@ export async function givenChannel(testBed: TestBed, overrides: ChannelOverrides
 			ownerRemoteId: overrides.ownerRemoteId ?? `acct-${channelId}`,
 			credentials: {},
 			createdAt: now,
-			updatedAt: now,
+			updatedAt: overrides.updatedAt ?? now,
 		})
 	return { channelId }
 }

@@ -47,6 +47,18 @@ export type GetSessionChat200 = {
         */
         displayName: string;
         /**
+         * @type string, uuid
+        */
+        channelId: string;
+        /**
+         * @type string
+        */
+        externalId: string;
+        /**
+         * @type boolean
+        */
+        hasAvatar: boolean;
+        /**
          * @type string
         */
         channelKind: ChannelKind;
@@ -147,6 +159,27 @@ export type GetSessionChat200 = {
          * @type string | undefined
         */
         classification?: ClassificationMethod;
+        /**
+         * @type object | undefined
+        */
+        sender?: {
+            /**
+             * @type string, uuid
+            */
+            channelId: string;
+            /**
+             * @type string
+            */
+            externalId: string;
+            /**
+             * @type string
+            */
+            displayName: string;
+            /**
+             * @type boolean
+            */
+            hasAvatar: boolean;
+        };
     }[];
     /**
      * @type string

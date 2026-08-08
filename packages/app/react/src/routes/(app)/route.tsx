@@ -38,7 +38,13 @@ function AuthLayout() {
 							<AgentsRunningPill />
 						</div>
 					</div>
-					<div className="flex-1 overflow-auto">
+					{/* `min-h-0` é load-bearing, não cosmético: sem ele o flex item herda `min-height: auto`
+					    e não encolhe abaixo do conteúdo. O `h-full` das telas passa a resolver contra uma
+					    altura indefinida, a cadeia de altura quebra, e o scroller interno do `VirtualList`
+					    nunca recebe caixa limitada — quem rolava era ESTE container, a partir do topo, e o
+					    chat abria na mensagem mais antiga apesar do mount ancorado no fim já existir e ter
+					    teste. O irmão em `__root.tsx` já trazia o `min-h-0`; este ficou para trás. */}
+					<div className="min-h-0 flex-1 overflow-auto overflow-x-hidden">
 						{/* Sem login os agentes param; console pede conta (spec Decision 5, AC-3) — gates the
 						    Outlet only, never the sidebar/chrome around it, so a logged-out console still
 						    reads as "the app, asking for an account" rather than a blank shell. */}

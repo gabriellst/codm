@@ -3,7 +3,7 @@
               "codm-backend": {
                 "type": "stdio",
                 "command": "npx",
-                "args": ["tsx", "/Users/gabriel/Desktop/Projetos/codm/packages/client/dist/typescript/src/typescript/mcp/scopes/system/server.ts"]
+                "args": ["tsx", "/Users/work/Desktop/Projetos/pessoal/codm/packages/client/dist/typescript/src/typescript/mcp/scopes/system/server.ts"]
               }
             }
           }

@@ -7,6 +7,7 @@ import { attachThreadMutationRequestSchema, useAttachThread, useGetAttachThreadW
 import type { ChannelKind } from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Empty, EmptyDescription, EmptyTitle } from '@/components/ui/empty'
 import type { DeepPartial } from '@/lib'
 import { cn } from '@/lib/utils'
@@ -130,28 +131,29 @@ export function AttachThreadWizard({ className, ...props }: ComponentProps<'div'
 		<div className={cn('flex min-h-full flex-col bg-route-background text-foreground', className)} {...props}>
 			<header className="grid grid-cols-[auto_1fr_auto] items-center gap-4 px-6 py-5 md:px-10">
 				<Logo className="text-base" />
-				<nav className="flex items-center justify-center gap-6">
-					{STEPS.map((id, i) => (
-						<button
-							key={id}
-							type="button"
-							disabled={i > currentStepIndex}
-							onClick={() => {
-								if (i <= currentStepIndex) {
-									setDirection(i < currentStepIndex ? -1 : 1)
-									setCurrentStepIndex(i)
-								}
-							}}
-							className={cn(
-								'border-b-2 pb-1 text-sm font-medium transition-colors',
-								i === currentStepIndex ? 'border-foreground text-foreground' : 'border-transparent text-muted-foreground',
-								i > currentStepIndex && 'cursor-not-allowed opacity-50',
-							)}
-						>
-							{t(STEP_NAV[id])}
-						</button>
-					))}
-				</nav>
+				{/* O primitivo `Tabs` variante `line` foi feito para ESTE caso — o comentário dele diz
+				    "wizard-step tabs" — e o stepper vinha reimplementando uma versão divergente: sublinhado
+				    em `border-foreground` (preto) em vez de `--primary`, sem hover e sem anel de foco.
+				    A variante entrega os três de graça e alinha à regra que a auditoria mediu: só a barra
+				    recolore, o texto do ativo fica neutro. */}
+				<Tabs
+					value={STEPS[currentStepIndex]}
+					onValueChange={value => {
+						const next = STEPS.indexOf(value as AttachStepId)
+						if (next > currentStepIndex) return
+						setDirection(next < currentStepIndex ? -1 : 1)
+						setCurrentStepIndex(next)
+					}}
+					className="items-center"
+				>
+					<TabsList variant="line" className="gap-6">
+						{STEPS.map((id, i) => (
+							<TabsTrigger key={id} value={id} disabled={i > currentStepIndex}>
+								{t(STEP_NAV[id])}
+							</TabsTrigger>
+						))}
+					</TabsList>
+				</Tabs>
 				<Button variant="secondary" size="icon" aria-label={t('attach.close')} className="rounded-full" onClick={close}>
 					<IconX />
 				</Button>

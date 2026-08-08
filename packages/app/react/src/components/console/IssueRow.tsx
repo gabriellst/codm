@@ -37,7 +37,7 @@ export function IssueRow({ item, className }: { item: IssueRowItem } & Pick<Comp
 				// `shrink-0`: without it flexbox splits the shortfall between this pill and the title, so a
 				// long issue name ate the CONVERSATION's name instead of its own. The issue name is the one
 				// that should give way — it is the field this row is already devoting its width to.
-				<span className="hidden shrink-0 items-center gap-2 rounded-full bg-accent px-2.5 py-1 sm:inline-flex">
+				<span className="hidden shrink-0 items-center gap-2 rounded-full px-2.5 py-1 sm:inline-flex">
 					<ThreadAvatar name={item.threadDisplayName} size="sm" />
 					<span className="max-w-32 truncate text-sm text-foreground">{item.threadDisplayName}</span>
 				</span>

@@ -422,6 +422,7 @@
 		"CLASSIFICATION_FAILED": "Could not classify the message.",
 		"COMMAND_HANDLER_NOT_FOUND": "Internal error while processing the operation. Try again shortly.",
 		"COMMAND_QUEUE_NOT_FOUND": "Internal error while queuing the operation. Try again shortly.",
+		"CONTACT_AVATAR_NOT_FOUND": "This contact has no photo.",
 		"CONTACT_ENTRY_REQUIRES_SENDER": "A contact message must carry the sender that spoke.",
 		"CREDENTIAL_DECRYPT_FAILED": "Stored credentials could not be read. Contact support.",
 		"DEVICE_CODE_INVALID": "This sign-in link expired or was already used. Try signing in again.",
@@ -706,6 +707,10 @@
 		"pathPlaceholder": "~/dev/acme-storefront",
 		"projectFolder": "Project folder",
 		"projectFolders": "Project folders",
+		"remove": "Remove folder",
+		"removeConfirmAction": "Remove",
+		"removeConfirmDescription": "The folder \"{{name}}\" stops being registered in CODM. No files on your Mac are deleted.",
+		"removeConfirmTitle": "Remove this workspace?",
 		"threadCount_one": "{{count}} thread",
 		"threadCount_other": "{{count}} threads",
 		"title": "Workspaces"

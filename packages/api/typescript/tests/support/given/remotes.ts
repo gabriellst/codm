@@ -10,6 +10,12 @@ export interface RemoteOverrides {
 	/** USER or GROUP — the column is enum-typed, so a bare string does not satisfy the insert. */
 	type?: ContactKind
 	platform?: ChannelKind
+	/**
+	 * The platform's signed photo url. Absent by default, which is the majority state in the real
+	 * table (513 of 845 rows carry one) AND the one that exercises every "no photo" branch for free —
+	 * a suite that needs a face seeds this explicitly.
+	 */
+	avatarUrl?: string
 }
 
 /**
@@ -31,6 +37,7 @@ export async function givenRemote(testBed: TestBed, overrides: RemoteOverrides):
 			type: overrides.type ?? ContactKind.USER,
 			platform: overrides.platform ?? ChannelKind.WHATSAPP,
 			name: overrides.name,
+			avatarUrl: overrides.avatarUrl,
 			createdAt: now,
 			updatedAt: now,
 		})

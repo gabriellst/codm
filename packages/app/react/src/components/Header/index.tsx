@@ -2,7 +2,6 @@ import { Fragment } from 'react'
 import { Link } from '@tanstack/react-router'
 import { cn } from '@/lib/utils'
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
-import { useSession } from '@/hooks'
 import { useBreadcrumbs } from '@/hooks/useBreadcrumbs'
 import { NotificationsPopover } from './NotificationsPopover'
 import { UserProfile } from './UserProfile'
@@ -14,7 +13,6 @@ type HeaderProps = ComponentProps<'header'>
 const MOCK_NOTIFICATIONS: { items: never[] } = { items: [] }
 
 export function Header({ className, ...props }: HeaderProps) {
-	const session = useSession()
 	const breadcrumbs = useBreadcrumbs()
 
 	return (
@@ -45,7 +43,9 @@ export function Header({ className, ...props }: HeaderProps) {
 			<div className="flex items-center gap-4">
 				<NotificationsPopover notifications={MOCK_NOTIFICATIONS.items} />
 				<div className="h-10 w-px bg-border" />
-				<UserProfile user={session?.user} />
+				{/* Sem prop de dado: o perfil resolve a própria identidade (canal conectado → sessão
+				    constante). Ver o docblock de `UserProfile` para os termos desse empréstimo. */}
+				<UserProfile />
 			</div>
 		</header>
 	)
