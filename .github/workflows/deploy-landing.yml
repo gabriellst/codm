@@ -38,24 +38,41 @@ jobs:
       - name: deps
         run: bun install --frozen-lockfile
 
-      # Mesmo guarda dos releases (ver release-beta.yml): com a chave vazia o BaseLayout.astro
-      # resolve `process.env.VITE_POSTHOG_KEY ?? ''` e a landing sai sem telemetria nenhuma, sem
-      # erro. Foi o que aconteceu: a landing no ar em 2026-08-07 não tinha uma linha de PostHog,
-      # porque o último deploy bem-sucedido é ANTERIOR à criação das repo variables e este workflow
-      # só dispara quando packages/app/astro/** muda — a variável nasceu e ninguém reimplantou.
-      - name: posthog presente
+      # UM guarda para tudo que o build assa, nao um passo por variavel. Todas falham do mesmo
+      # jeito — vazias, o build passa e produz um site errado em silencio:
+      #
+      #   VITE_POSTHOG_KEY  vazia → BaseLayout resolve '' e nao renderiza script nenhum: zero
+      #                             telemetria, e um painel vazio e indistinguivel de "ninguem
+      #                             acessou". Aconteceu.
+      #   SITE_URL          vazia → o astro.config cai no fallback http://localhost:4321, e a
+      #                             landing publica canonical, og:url e og:image apontando para
+      #                             localhost: previa de link quebrada no WhatsApp/Twitter e o
+      #                             Google informado de que a pagina canonica e a maquina de
+      #                             alguem. Ficou assim desde o primeiro deploy.
+      #
+      # As tres variaveis ja estavam declaradas no registro de env (template.config.ts) — o que
+      # falhou as tres vezes foi so a fiacao ate o passo de build. Por isso o teste e aqui.
+      - name: variaveis de build presentes
         run: |
-          test -n "${{ vars.VITE_POSTHOG_KEY }}" || {
-            echo "::error::vars.VITE_POSTHOG_KEY vazia — a landing sairia sem telemetria. Defina a repo variable antes de publicar."
-            exit 1
-          }
-          echo "posthog: ${{ vars.VITE_POSTHOG_HOST }}"
+          fail=0
+          for pair in "VITE_POSTHOG_KEY=${{ vars.VITE_POSTHOG_KEY }}" "SITE_URL=${{ vars.SITE_URL }}"; do
+            name=${pair%%=*}; value=${pair#*=}
+            if [ -z "$value" ]; then
+              echo "::error::repo variable $name vazia — o build sairia errado em silencio. Defina antes de publicar."
+              fail=1
+            else
+              echo "$name: ok"
+            fi
+          done
+          exit $fail
 
       - name: build
-        # Mesmo motivo do release: o bundle da landing assa VITE_* no build.
+        # O Astro resolve estas no BUILD (o site e estatico): o que nao estiver aqui nasce com o
+        # fallback assado no HTML e so aparece depois, no ar.
         env:
           VITE_POSTHOG_KEY: ${{ vars.VITE_POSTHOG_KEY }}
           VITE_POSTHOG_HOST: ${{ vars.VITE_POSTHOG_HOST }}
+          SITE_URL: ${{ vars.SITE_URL }}
         run: bun x nx run app-astro:build
 
       # Criar o projeto e bootstrap de UMA vez, nao acao de cada deploy. Tambem tira uma chamada de
@@ -138,7 +155,14 @@ jobs:
               curl -sf "https://$SUB/$L/" | grep -q "$POSTHOG_KEY" || OK=0
             done
             if [ "$OK" = 1 ]; then
-              echo "landing no ar com a chave do PostHog em /pt/ e /en/: https://$SUB/"
+              # E o que esta no ar nao pode se declarar hospedado na maquina de alguem. Esta linha
+              # existe porque a landing passou meses publicando canonical/og:url/og:image em
+              # http://localhost:4321 sem que nada reclamasse.
+              if curl -sf "https://$SUB/en/" | grep -q "localhost:4321"; then
+                echo "::error::a landing no ar contem localhost:4321 (canonical/og) — SITE_URL nao chegou ao build."
+                exit 1
+              fi
+              echo "landing no ar em https://$SUB/ — PostHog em /pt/ e /en/, sem localhost nos metadados"
               exit 0
             fi
             sleep 6
