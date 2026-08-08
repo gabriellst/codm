@@ -47,23 +47,40 @@ jobs:
           VITE_POSTHOG_HOST: ${{ vars.VITE_POSTHOG_HOST }}
         run: bun x nx run app-astro:build
 
-      - name: deploy
+      # Criar o projeto e bootstrap de UMA vez, nao acao de cada deploy — e modelar assim nao e
+      # preferencia estetica, e o conserto de um bug real: rodar `project create` imediatamente
+      # antes de `pages deploy` no MESMO shell faz o deploy sair com codigo 0 sem subir um arquivo
+      # sequer (so o banner do wrangler no log). Reproduzido em 2026-08-08: a mesma sequencia falha
+      # sempre, e o `pages deploy` sozinho publica sempre. Foi assim que dois runs verdes seguidos
+      # deixaram no ar um build da vespera, sem telemetria.
+      - name: garante o projeto
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          bunx wrangler pages project create "$PROJECT" --production-branch=main 2>/dev/null || true
-          bunx wrangler pages deploy packages/app/astro/dist --project-name="$PROJECT" --branch=main
+          if curl -sf -o /dev/null -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT"; then
+            echo "projeto $PROJECT ja existe"
+          else
+            bunx wrangler pages project create "$PROJECT" --production-branch=main
+          fi
 
-      # O passo acima ja "teve sucesso" sem publicar nada: em 2026-08-08 08:43 UTC ele imprimiu
-      # "Success! Uploaded 11 files", saiu com codigo 0, e a API do Cloudflare nao registrou
-      # deployment nenhum — o site no ar continuou sendo o build da vespera, sem telemetria. Subir
-      # os arquivos e criar o deployment sao duas etapas, e o wrangler pode fazer a primeira e
-      # engasgar na segunda sem reclamar.
+      - name: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: bunx wrangler pages deploy packages/app/astro/dist --project-name="$PROJECT" --branch=main
+
+      # Duas perguntas distintas, porque uma so nao basta.
       #
-      # Ao contrario do app desktop (assets comprimidos dentro do binario, onde so da para validar
-      # o INSUMO), a landing e HTML publico: da para verificar a SAIDA, e por isso aqui verificamos.
-      # O laco existe porque a propagacao do Pages leva alguns segundos apos o deploy retornar.
+      # (1) ESTE run publicou? Um `pages deploy` que sai com codigo 0 sem criar deployment ja
+      #     aconteceu duas vezes hoje, entao o codigo de saida nao e prova — a API e. Sem esta
+      #     checagem o passo (2) passaria de graca sempre que o conteudo correto ja estivesse no ar
+      #     por um deploy anterior, que foi exatamente o falso positivo observado em 08:52 UTC.
+      #
+      # (2) O que esta no ar tem a chave? Ao contrario do app desktop (assets comprimidos dentro do
+      #     binario, onde so da para validar o INSUMO), a landing e HTML publico: da para verificar
+      #     a SAIDA. O laco existe porque a propagacao do Pages leva alguns segundos.
       - name: verifica a landing no ar
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -77,6 +94,19 @@ jobs:
             | jq -r '.result.subdomain')
           test -n "$SUB" && test "$SUB" != "null" || {
             echo "::error::nao consegui descobrir o subdominio do projeto $PROJECT"; exit 1; }
+
+          # (1) o deployment mais novo tem que ser DESTE run — 15 min de folga cobre um build lento
+          # sem aceitar o de ontem.
+          NEWEST=$(curl -sf -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT/deployments?per_page=1" \
+            | jq -r '.result[0].created_on')
+          AGE=$(( $(date -u +%s) - $(date -u -j -f "%Y-%m-%dT%H:%M:%S" "${NEWEST%.*}" +%s) ))
+          echo "deployment mais novo: $NEWEST (${AGE}s atras)"
+          test "$AGE" -lt 900 || {
+            echo "::error::o deployment mais novo tem ${AGE}s — este run nao publicou nada. O 'pages deploy' saiu 0 sem criar deployment."
+            exit 1; }
+
+          # (2) e o que ele serve tem que carregar a chave
           echo "verificando https://$SUB/pt/"
           for _ in $(seq 1 10); do
             if curl -sf "https://$SUB/pt/" | grep -q "$POSTHOG_KEY"; then
