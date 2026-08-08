@@ -673,6 +673,9 @@
 		"generalDataDir": "Diretório de dados",
 		"providerNotFound": "não encontrado no PATH",
 		"rescanProviders": "Reescanear",
+		"telemetry": "Telemetria",
+		"telemetryConsentDescription": "Analytics de uso anônimo (PostHog) — visitas de tela e cliques neste console. Desligado interrompe todo envio na hora.",
+		"telemetryConsentLabel": "Compartilhar telemetria",
 		"title": "Configurações"
 	},
 	"time": {

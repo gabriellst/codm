@@ -23,6 +23,7 @@ import { resolve } from 'node:path'
 import { REPO } from '../../../../template.config'
 import { CONSOLE, DISPLAY_NAME, IDENTIFIER } from './app'
 import { CAPABILITIES, CAPABILITY_PERMISSIONS } from './capabilities'
+import { ANALYTICS } from './analytics'
 import { CLOUD } from './cloud'
 import { DEEPLINK } from './deeplink'
 import { SIDECARS, type SidecarManifestEntry } from './sidecars'
@@ -88,11 +89,15 @@ export function renderTauriConf(): string {
 			return sidecar
 		})
 		.flatMap(s => [`http://localhost:${sidecarPort(s)}`, `http://127.0.0.1:${sidecarPort(s)}`])
-	// A cloud entra na MESMA lista do `connect-src`: o console fala com ela para trocar o código do
-	// deep link e revogar no logout. Sem esta origem o webview bloqueia a requisição antes de sair
-	// (ver ./cloud.ts — foi o que quebrou o login até a v0.1.8).
-	const connectSrc = [...sidecarOrigins, CLOUD.origin].join(' ')
-	// `img-src` alcança os MESMOS sidecars — e só eles, porque a cloud não serve imagem nenhuma.
+	// `connect-src` alcança os sidecars MAIS os dois destinos remotos que o console chama por XHR.
+	// A cloud: o console fala com ela para trocar o código do deep link e revogar no logout — sem
+	// esta origem o webview bloqueia a requisição antes de sair (ver ./cloud.ts, foi o que quebrou o
+	// login até a v0.1.8). O PostHog, pela MESMA razão (ver ./analytics.ts): telemetria bloqueada
+	// pela CSP falha em silêncio — pior que o login, porque ninguém percebe, os números só ficam
+	// vazios.
+	const connectSrc = [...sidecarOrigins, CLOUD.origin, ANALYTICS.origin].join(' ')
+	// `img-src` alcança os MESMOS sidecars — e SÓ eles, porque nem a cloud nem o PostHog servem
+	// imagem alguma.
 	//
 	// O daemon serve bytes que o webview desenha: os artefatos que os agentes gravam e, desde a foto
 	// no balão do chat, os avatares dos contatos. A CDN do WhatsApp (`pps.whatsapp.net`)
@@ -103,7 +108,7 @@ export function renderTauriConf(): string {
 	const conf = {
 		$schema: 'https://schema.tauri.app/config/2',
 		productName: DISPLAY_NAME,
-		version: '0.2.2',
+		version: '0.3.2',
 		identifier: IDENTIFIER,
 		build: {
 			// Desktop dev serves the root-based SPA (dev-spa → base '/'), so the webview loads the

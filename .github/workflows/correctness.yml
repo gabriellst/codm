@@ -11,7 +11,12 @@ on:
 
 jobs:
   detect:
-    runs-on: ubuntu-latest
+    # Mesmo runner self-hosted dos releases. Este job é BARATO no ubuntu (multiplicador 1x) e
+    # foi o macOS que estourou a cota em 2026-08-07 — mas a cota é uma só, então enquanto ela
+    # não reseta NADA roda na nuvem, gate de merge incluso. Aqui o custo é zero e o gate volta
+    # a existir. Trade-off consciente: o gate passa a depender do Mac estar ligado. Para voltar
+    # à nuvem quando a cota resetar, basta trocar esta linha por `runs-on: ubuntu-latest`.
+    runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,11 +39,13 @@ jobs:
           cp -n .env.example .env
           bun emit-openapi
 
+      # `nice` porque o runner divide a máquina com o daemon de produção do founder: o CI cede
+      # CPU em vez de disputar. Sem isto um `bun run test` deixa o app perceptivelmente lento.
       - name: Mechanical detectors (rung-2 gate)
-        run: bun run detect
+        run: nice -n 10 bun run detect
 
       - name: Type-check
-        run: bun tsc
+        run: nice -n 10 bun tsc
 
       - name: Tests
-        run: bun run test
+        run: nice -n 10 bun run test

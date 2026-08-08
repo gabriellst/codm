@@ -84,3 +84,65 @@ releases NELE mesmo ("somente fazer essa parte do publish depois no mesmo repo")
 ## O que este pipeline NÃO faz (ainda)
 
 Windows/Linux, rollout percentual, `minVersion` forçado, notarização Apple — ver roadmap (SP2/SP4).
+
+## Runner self-hosted (macOS)
+
+Os builds macOS (`release-beta`, `release-stable`) rodam num **runner self-hosted** no Mac mini do
+founder, não nos runners do GitHub. A razão é custo: repo privado consome cota, macOS conta **10×**,
+e em 2026-08-07 isso estourou o teto (57 builds macOS num dia ≈ 3.250 minutos faturados contra 2.000
+disponíveis), derrubando TODOS os workflows — inclusive os de Linux, que eram baratos. Minutos de
+runner self-hosted não contam na cota.
+
+A máquina já era o ambiente de build: mesmo toolchain, a chave de assinatura mora nela, e os caches
+de cargo/bun ficam quentes entre execuções.
+
+**Não espere que fique mais rápido de imediato.** O primeiro build self-hosted levou 11,9 min contra
+~5,7 no runner do GitHub — `actions/checkout` roda `git clean -ffdx`, então cada execução começa sem
+`node_modules` e recompila o Rust do zero. O ganho vem das execuções seguintes, quando o
+`Swatinem/rust-cache` e o cache do bun estão quentes; e o `nice -n 10` em todos os passos pesados faz
+o CI ceder CPU ao daemon de produção, o que troca alguns minutos de build por uma máquina usável.
+
+**Se o runner estiver offline**, os jobs de macOS ficam na fila em vez de falhar. Para publicar
+mesmo assim, troque `runs-on: [self-hosted, macOS, ARM64]` por `macos-14` no workflow — e conte com
+o custo em minutos.
+
+**Antes de tornar este repositório público**, remova o runner self-hosted: um PR de fork passaria a
+executar código arbitrário na máquina. As duas decisões são mutuamente exclusivas.
+
+### O CI agora escreve na SUA máquina — actions de cache são o risco real
+
+Num runner descartável, uma action que "limpa" o ambiente não tem vítima. Aqui tem, e a primeira
+apareceu no primeiro build: `Swatinem/rust-cache@v2` **apagou o binário `rustup`** de
+`~/.cargo/bin` no passo `Post Run`, deixando `cargo`, `rustc` e `rustfmt` como symlinks pendurados.
+A action faz isso por design — poda `~/.cargo/bin` para salvar um cache enxuto, partindo do
+princípio de que a máquina é descartável.
+
+O que torna isso traiçoeiro é a distância entre causa e sintoma: **o build que causou o estrago
+passou**, verde. Quem falhou foi o workflow seguinte, com `Executable not found in $PATH: "cargo"`,
+e o desenvolvimento local teria falhado igual na próxima vez que alguém rodasse `bun contracts`.
+
+A action foi removida dos dois workflows de release e **não deve voltar**. Num runner persistente
+ela não tem função: o disco já persiste. O `target/` do Rust — a única coisa que o
+`git clean -ffdx` do checkout apagaria — vive fora do workspace via `CARGO_TARGET_DIR`, e sobrevive
+sem action nenhuma.
+
+Para reparar, se acontecer de novo (as toolchains em `~/.rustup` sobrevivem; falta só o shim):
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
+```
+
+A regra geral: ao adicionar qualquer action de cache/setup a estes workflows, verifique o que o
+passo `Post` dela escreve **fora** do workspace. Dentro do workspace é descartável; no `$HOME`, é a
+máquina do founder.
+
+`correctness` e `deploy-landing` **também** migraram para o runner self-hosted, e essa é a parte
+contraintuitiva: os dois rodam em Linux com multiplicador 1× e nunca foram o problema de custo. Mas a
+cota é **uma só para a conta inteira** — quando o macOS a esgotou, esses dois pararam junto, e o gate
+de merge deixou de existir. Enquanto a cota não reseta, mantê-los na nuvem significa mantê-los
+mortos.
+
+O trade-off é real e vale dizer em voz alta: o gate de merge agora depende do Mac mini estar ligado.
+Na prática ele está ligado exatamente quando há merge para gatear (é a máquina de trabalho), mas se o
+`correctness` ficar `queued` para sempre, a causa é essa. Voltar qualquer um deles à nuvem é trocar
+uma linha por `ubuntu-latest`.

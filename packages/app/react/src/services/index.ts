@@ -25,6 +25,7 @@ export {
 	useHostInfo,
 	useLogging,
 	useNotification,
+	useAnalytics,
 	useSecrets,
 	useService,
 	useSupervision,
@@ -39,6 +40,7 @@ export {
 	HostInfoToken,
 	LoggingToken,
 	NotificationToken,
+	AnalyticsToken,
 	SecretsToken,
 	SupervisionToken,
 	UpdateToken,
@@ -53,6 +55,7 @@ export type { FilePickerService } from './FilePickerService/FilePickerService'
 export type { HostInfoService, NativePlatform } from './HostInfoService/HostInfoService'
 export type { LoggingService } from './LoggingService/LoggingService'
 export type { NotificationService } from './NotificationService/NotificationService'
+export type { AnalyticsService } from './AnalyticsService/AnalyticsService'
 export type { SecretsService } from './SecretsService/SecretsService'
 export type { SupervisedSidecar, SupervisionService, SupervisionState } from './SupervisionService/SupervisionService'
 export type { UpdateService } from './UpdateService/UpdateService'

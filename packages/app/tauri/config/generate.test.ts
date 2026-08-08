@@ -10,6 +10,7 @@ import { REPO } from '../../../../template.config'
 import { CONSOLE, IDENTIFIER } from './app'
 import { CAPABILITIES, CAPABILITY_PERMISSIONS } from './capabilities'
 import { DEEPLINK } from './deeplink'
+import { ANALYTICS } from './analytics'
 import { CLOUD } from './cloud'
 import { UPDATER } from './updater'
 import { cargoNameDrift, OUTPUTS, renderCapabilities, renderTauriConf } from './generate'
@@ -124,6 +125,9 @@ describe('desktop config (packages/app/tauri/config)', () => {
 		// status, indistinguível de servidor fora do ar. A v0.1.8 falhava exatamente assim.
 		const conf = JSON.parse(renderTauriConf()) as { app: { security: { csp: string } } }
 		expect(conf.app.security.csp).toContain(CLOUD.origin)
+		// Telemetria bloqueada pela CSP não dá erro visível — só um dashboard vazio que ninguém
+		// associa a um bug. Por isso a origem do PostHog é gateada junto com a da cloud.
+		expect(conf.app.security.csp).toContain(ANALYTICS.origin)
 	})
 
 	it('DSK-12: img-src alcança o daemon (que serve artefato e avatar) e NÃO a CDN do WhatsApp', () => {

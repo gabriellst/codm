@@ -90,6 +90,9 @@ export const landing = defineCollection({
 		}),
 		footer: z.object({
 			copyright: z.string(),
+			// SP4 — transparency disclosure (Emenda 2026-08-07: the "zero telemetria" promise is
+			// gone; this is its honest replacement). Rendered on every page via Footer.astro.
+			telemetryNotice: z.string(),
 			links: z.object({ github: z.string().url(), docs: z.string(), changelog: z.string() }),
 		}),
 	}),
