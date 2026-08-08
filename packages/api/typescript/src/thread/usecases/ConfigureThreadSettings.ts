@@ -1,8 +1,9 @@
 import { injectable } from 'tsyringe-neo'
 import { Handler, z, BaseError } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { BufferSize, ProviderKind, AgentModelId } from '@codm/contracts-typescript/wire/enums'
+import { BufferSize, ProviderKind, AgentModelId, ContactKind } from '@codm/contracts-typescript/wire/enums'
 import { ThreadRepository } from '../repositories/ThreadRepository'
+import { GroupMemberReader } from '../services/GroupMemberReader'
 import { CUSTOM_PROMPT_MAX_LENGTH, MentionGateSchema } from '../schemas'
 import type { ApplicationErrors } from '../errors'
 
@@ -36,6 +37,22 @@ export const SetParticipantInvocationInputSchema = z.object({
 })
 export const SetParticipantInvocationOutputSchema = z.void()
 
+/**
+ * C13 SetParticipantInvocation.
+ *
+ * ### Admitting a live member the JSON roster has never recorded
+ * `GetThreadSettings` now renders a GROUP thread's roster from the LIVE `gateway_remote_memberships`
+ * projection, unioned with the JSON for `canInvoke`/name-fallback/the operator sentinel — so the
+ * dialog can show a toggle for someone the JSON has never heard of. Toggling that row used to explode
+ * with `PARTICIPANT_NOT_FOUND` (`Thread.setParticipantInvocation` only ever knew the JSON). Before
+ * calling it, this use case checks whether the target is already on the JSON roster; if not, it
+ * verifies the id against the SAME live projection (`GroupMemberReader.isMember`) and, only if it
+ * checks out, admits it (`Thread.admitParticipant`) before flipping the toggle.
+ *
+ * An id that is neither on the JSON roster nor a live group member falls through untouched — the
+ * pre-existing `Thread.setParticipantInvocation` guard still raises `PARTICIPANT_NOT_FOUND` for it, so
+ * the admission door does not become a way to grant invocation rights to an arbitrary id.
+ */
 @injectable()
 export class SetParticipantInvocation extends Handler<
 	typeof SetParticipantInvocationInputSchema,
@@ -44,13 +61,30 @@ export class SetParticipantInvocation extends Handler<
 	readonly name = 'set_participant_invocation' as const
 	readonly inputSchema = SetParticipantInvocationInputSchema
 	readonly outputSchema = SetParticipantInvocationOutputSchema
-	constructor(private readonly threads: ThreadRepository) {
+	constructor(
+		private readonly threads: ThreadRepository,
+		private readonly groupMembers: GroupMemberReader,
+	) {
 		super()
 	}
 	protected async handle(input: this['input'], tx?: Transaction): Promise<void> {
 		const thread = await this.threads.findById(input.threadId)
 		if (!thread || thread.ownerId !== input.ownerId)
 			throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
+
+		const onJsonRoster = thread.participants.some(p => p.participantId === input.participantId)
+		if (!onJsonRoster && thread.contactRef.kind === ContactKind.GROUP) {
+			const isLiveMember = await this.groupMembers.isMember(thread.channelId, thread.contactRef.externalId, input.participantId)
+			if (isLiveMember) {
+				thread.admitParticipant({
+					participantId: input.participantId,
+					name: input.participantId,
+					source: 'Channel group member',
+					canInvoke: false,
+				})
+			}
+		}
+
 		thread.setParticipantInvocation(input.participantId, input.canInvoke)
 		await this.withTransaction(tx, async tx => this.threads.save(thread, tx))
 	}

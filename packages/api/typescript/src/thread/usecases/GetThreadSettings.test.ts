@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
-import { TestBed, givenRemote, givenThread, givenWorkspace } from '@test/support'
+import { TestBed, givenRemote, givenRemoteMembership, givenThread, givenWorkspace } from '@test/support'
 import { OPERATOR_ID } from '@auth/operator'
+import { ContactKind } from '@codm/contracts-typescript/wire/enums'
 import { CUSTOM_PROMPT_MAX_LENGTH } from '../schemas'
 import { ConfigurePrompt } from './ConfigureThreadSettings'
 import { GetThreadSettings } from './GetThreadSettings'
@@ -188,5 +189,103 @@ describe('GetThreadSettings — participant names come from the contact book', (
 		const { participants } = await settingsFor(thread.id.value)
 
 		expect(participants.find(p => p.participantId === JID)?.name).toBe(ROSTER_NAME)
+	})
+})
+
+/**
+ * The roster's WHO now comes from the LIVE `gateway_remote_memberships` projection for a GROUP thread,
+ * not from `thread_threads.participants` — the JSON snapshot `AttachThread` freezes at bind time and
+ * nobody rewrites when the gateway reprojects membership afterwards.
+ *
+ * Measured on the founder's own base, group "BK DASH BOT": `gateway_remote_memberships` had 4 members,
+ * the JSON roster only ever recorded 3 — Carlos Almeida's row never rendered, so the operator could
+ * not grant him invocation rights. This suite proves the join fixes exactly that class of miss, and
+ * that it does not regress the two cases the join could break: a 1:1 thread (no membership rows at
+ * all) and a member who has genuinely left the group.
+ */
+describe('GetThreadSettings — group roster reflects LIVE membership, not the frozen JSON snapshot', () => {
+	let testBed: TestBed
+	let testContainer: DependencyContainer
+
+	beforeAll(async () => {
+		testContainer = container.createChildContainer()
+		testBed = await TestBed.create('integration', { testContainer, ownerId: OPERATOR_ID })
+	})
+	beforeEach(async () => {
+		await testBed.reset()
+	})
+	afterAll(async () => {
+		await testBed.destroy()
+	})
+
+	const GROUP_CHANNEL = '019e4d24-0000-7041-9e1c-0000000000d1'
+	const GROUP_ID = '120363000000000000@g.us'
+	const MEMBER_A = '5513996493030@s.whatsapp.net'
+	const MEMBER_B = '558393047676@s.whatsapp.net'
+
+	const settingsFor = async (threadId: string) => testBed.resolve(GetThreadSettings).execute({ ownerId: OPERATOR_ID, threadId })
+
+	const givenGroup = async () =>
+		givenRemote(testBed, { channelId: GROUP_CHANNEL, remoteId: GROUP_ID, type: ContactKind.GROUP, name: 'BK DASH BOT' })
+
+	it('a member the live membership projection knows about, absent from the JSON roster, APPEARS', async () => {
+		await givenGroup()
+		const workspace = await givenWorkspace(testBed, { ownerId: OPERATOR_ID })
+		const thread = await givenThread(testBed, {
+			ownerId: OPERATOR_ID,
+			workspaceId: workspace.id.value,
+			channelId: GROUP_CHANNEL,
+			contactExternalId: GROUP_ID,
+			contactKind: ContactKind.GROUP,
+			// The JSON roster the operator's dialog would otherwise be stuck with — no MEMBER_A row at all.
+			participants: [{ participantId: 'operator', name: 'Operator', source: 'Operator on this machine', canInvoke: true }],
+		})
+		await givenRemoteMembership(testBed, { channelId: GROUP_CHANNEL, groupId: GROUP_ID, memberId: MEMBER_A })
+
+		const { participants } = await settingsFor(thread.id.value)
+
+		const member = participants.find(p => p.participantId === MEMBER_A)
+		expect(member).toBeDefined()
+		// New to the JSON ⇒ defaults to NOT invoking, same default a fresh AttachThread seeds.
+		expect(member?.canInvoke).toBe(false)
+	})
+
+	it('a member the JSON roster still lists, but who has LEFT the group, disappears', async () => {
+		await givenGroup()
+		const workspace = await givenWorkspace(testBed, { ownerId: OPERATOR_ID })
+		const thread = await givenThread(testBed, {
+			ownerId: OPERATOR_ID,
+			workspaceId: workspace.id.value,
+			channelId: GROUP_CHANNEL,
+			contactExternalId: GROUP_ID,
+			contactKind: ContactKind.GROUP,
+			participants: [
+				{ participantId: 'operator', name: 'Operator', source: 'Operator on this machine', canInvoke: true },
+				{ participantId: MEMBER_A, name: MEMBER_A, source: 'Channel group member', canInvoke: false },
+				{ participantId: MEMBER_B, name: MEMBER_B, source: 'Channel group member', canInvoke: false },
+			],
+		})
+		// Only MEMBER_A is still live in the gateway projection — MEMBER_B left the group.
+		await givenRemoteMembership(testBed, { channelId: GROUP_CHANNEL, groupId: GROUP_ID, memberId: MEMBER_A })
+
+		const { participants } = await settingsFor(thread.id.value)
+
+		expect(participants.find(p => p.participantId === MEMBER_A)).toBeDefined()
+		expect(participants.find(p => p.participantId === MEMBER_B)).toBeUndefined()
+	})
+
+	it('a 1:1 thread (no membership rows exist for it) keeps reading the JSON roster unchanged', async () => {
+		const workspace = await givenWorkspace(testBed, { ownerId: OPERATOR_ID })
+		const thread = await givenThread(testBed, {
+			ownerId: OPERATOR_ID,
+			workspaceId: workspace.id.value,
+			channelId: GROUP_CHANNEL,
+			contactExternalId: JID,
+			contactKind: ContactKind.USER,
+		})
+
+		const { participants } = await settingsFor(thread.id.value)
+
+		expect(participants.map(p => p.participantId).sort()).toEqual(['operator', JID].sort())
 	})
 })

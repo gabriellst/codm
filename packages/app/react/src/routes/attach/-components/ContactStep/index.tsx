@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import type { DeepPartial } from '@/lib'
 import { cn } from '@/lib/utils'
+import { rowBorder, rowHover } from '@/components/ui/surfaces'
 import { ThreadAvatar, contactAvatarUrl } from '@/components/console/ThreadAvatar'
 import { StepHeading } from '../StepHeading'
 
@@ -116,7 +117,9 @@ export function ContactStep({ channelKindById, defaultValues, onSubmit, classNam
 
 			<form.Subscribe selector={state => state.values.contactRef}>
 				{selected => (
-					<div className="flex flex-col gap-1">
+					// `gap-2`, não `gap-1`: cada linha tem borda própria agora, e a folga de uma lista de
+					// cartões é a mesma das outras telas (canais, workspaces, tarefas).
+					<div className="flex flex-col gap-2">
 						{contacts.map(contact => {
 							const channelKind = channelKindById.get(contact.channelId)
 							const isSelected = selected?.externalId === contact.externalId && selected?.channelId === contact.channelId
@@ -135,17 +138,30 @@ export function ContactStep({ channelKindById, defaultValues, onSubmit, classNam
 											kind: contact.kind,
 										})
 									}
+									// A LINHA DO ASSISTENTE É UMA CONTENT ROW, igual à de canal, workspace e tarefa —
+									// compõe do preset `row` (`components/ui/surfaces`) com a escada
+									// `rounded-asymmetric-*`, nunca um raio simétrico literal + `hover:bg-muted`, que
+									// era o que a deixava fora do padrão do resto do console.
+									//
+									// `rowBorder` + `rowHover` em vez do composto `row` porque a linha JÁ ANEXADA não
+									// pode reagir ao mouse: ela mantém a borda de repouso e não ganha o par
+									// fundo+borda do hover, que prometeria um clique que o `disabled` recusa.
 									className={cn(
-										'flex items-center gap-3 rounded-2xl px-2 py-3 text-left transition-colors',
-										contact.alreadyAttached ? 'cursor-not-allowed opacity-50' : 'hover:bg-muted',
-										isSelected && 'bg-muted',
+										'group flex items-center gap-3 rounded-asymmetric-lg bg-background p-3.5 text-left transition-colors',
+										rowBorder,
+										contact.alreadyAttached ? 'cursor-not-allowed opacity-50' : rowHover,
+										// ESCOLHIDO = o pastel do hover, fixo, + a borda de marca — o mesmo par nos três
+										// passos. Não o `--secondary` que os tokens chamam de selected-active: o avatar de
+										// iniciais desta linha JÁ é `bg-secondary`, e um fundo igual o apagaria contra a
+										// própria linha. Ver o docblock do `AgentsStep`, onde a escolha está por extenso.
+										isSelected && 'border-primary bg-hover-accent',
 									)}
 								>
 									<ThreadAvatar
-									name={contact.displayName}
-									src={contact.hasAvatar ? contactAvatarUrl(contact.channelId, contact.externalId) : undefined}
-									channelKind={channelKind}
-								/>
+										name={contact.displayName}
+										src={contact.hasAvatar ? contactAvatarUrl(contact.channelId, contact.externalId) : undefined}
+										channelKind={channelKind}
+									/>
 									<div className="flex min-w-0 flex-1 flex-col gap-1.5">
 										<span className="flex min-w-0 items-center gap-2">
 											<span className="truncate font-semibold text-foreground">{contact.displayName}</span>
@@ -159,7 +175,9 @@ export function ContactStep({ channelKindById, defaultValues, onSubmit, classNam
 									{contact.alreadyAttached ? (
 										<Badge variant="outline">{t('attach.attached')}</Badge>
 									) : (
-										<IconChevronRight className="size-4 text-muted-foreground" />
+										// GROUP CONVENTION (surfaces): o descendente ecoa o hover da linha via
+										// `group-hover:`, nunca com um `hover:` próprio — a linha toda se move junta.
+										<IconChevronRight className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
 									)}
 								</Button>
 							)

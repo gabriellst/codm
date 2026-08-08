@@ -139,7 +139,13 @@ export class GetSessionChat extends Handler<typeof GetSessionChatInputSchema, ty
 			.from(workspaces)
 			.where(eq(workspaces.id, thread.workspaceId))
 			.limit(1)
-		const [channelRow] = await this.db.select({ kind: channels.platform }).from(channels).where(eq(channels.id, thread.channelId)).limit(1)
+		// `ownerRemoteId` vem junto porque é ele que dá rosto às linhas do PRÓPRIO operador — ver
+		// `senderOf`. Uma query a mais seria uma query a mais para o mesmo id que já estamos lendo.
+		const [channelRow] = await this.db
+			.select({ kind: channels.platform, ownerRemoteId: channels.ownerRemoteId })
+			.from(channels)
+			.where(eq(channels.id, thread.channelId))
+			.limit(1)
 
 		const entries = await this.db
 			.select()
@@ -166,14 +172,20 @@ export class GetSessionChat extends Handler<typeof GetSessionChatInputSchema, ty
 		//
 		// The THREAD'S OWN counterparty rides in the same lookup rather than in a second query: it lives
 		// on the same `(channel_id, remote_id)` key, and in a 1:1 it is usually one of the senders anyway.
+		// O SENTINELA DO OPERADOR TEM ROSTO, e é aqui que ele o recupera. As linhas do operador são
+		// atribuídas a `OPERATOR_PARTICIPANT_ID` — não é um JID e nunca terá linha na agenda. Mas a
+		// conta por trás dele tem: é o `owner_remote_id` do canal, a mesma que o cabeçalho resolve.
+		// Trocamos um pelo outro no INSUMO da busca, então a linha do operador sai com nome e foto em
+		// vez de ficar anônima só porque a atribuição usa um sentinela.
+		//
+		// Vazio (o default da coluna) e canal ausente degradam para o comportamento antigo: sem rosto,
+		// nunca um erro — o chat não pode deixar de abrir porque a conta não foi projetada ainda.
+		const operatorRemoteId = channelRow?.ownerRemoteId || null
 		const lookupIds = [
 			...new Set([
 				thread.contactExternalId,
-				...entries
-					.map(e => e.senderExternalId)
-					// The operator's lines are attributed to a SENTINEL, not to a JID (see
-					// OPERATOR_PARTICIPANT_ID) — there is no contact row behind it and no face to draw.
-					.filter((id): id is string => id !== null && id !== OPERATOR_PARTICIPANT_ID),
+				...(operatorRemoteId === null ? [] : [operatorRemoteId]),
+				...entries.map(e => e.senderExternalId).filter((id): id is string => id !== null && id !== OPERATOR_PARTICIPANT_ID),
 			]),
 		]
 		const remoteRows = await this.db
@@ -218,7 +230,7 @@ export class GetSessionChat extends Handler<typeof GetSessionChatInputSchema, ty
 				provider: (e.provider ?? undefined) as ProviderKind | undefined,
 				quotedEntryId: e.quotedEntryId ?? undefined,
 				classification: (e.classification ?? undefined) as ClassificationMethod | undefined,
-				sender: this.senderOf(e.senderExternalId, thread.channelId, contactBook),
+				sender: this.senderOf(e.senderExternalId, thread.channelId, contactBook, operatorRemoteId),
 			})),
 			composerMode: thread.paused ? 'STEER' : 'DIRECT',
 		}
@@ -235,13 +247,19 @@ export class GetSessionChat extends Handler<typeof GetSessionChatInputSchema, ty
 		senderExternalId: string | null,
 		channelId: string,
 		contactBook: Map<string, { name: string; avatarUrl: string | null }>,
+		operatorRemoteId: string | null,
 	): { channelId: string; externalId: string; displayName: string; hasAvatar: boolean } | undefined {
-		if (senderExternalId === null || senderExternalId === OPERATOR_PARTICIPANT_ID) return undefined
-		const contact = contactBook.get(senderExternalId)
+		if (senderExternalId === null) return undefined
+		// O sentinela vira a conta conectada — a mesma troca feita no insumo da busca acima. Sem
+		// `owner_remote_id` (canal antigo, ainda não projetado, ou desconectado) não há a quem apontar,
+		// e a linha volta a ser anônima como era antes: degradação, nunca erro.
+		const resolvedId = senderExternalId === OPERATOR_PARTICIPANT_ID ? operatorRemoteId : senderExternalId
+		if (resolvedId === null) return undefined
+		const contact = contactBook.get(resolvedId)
 		return {
 			channelId,
-			externalId: senderExternalId,
-			displayName: contact?.name || senderExternalId,
+			externalId: resolvedId,
+			displayName: contact?.name || resolvedId,
 			hasAvatar: Boolean(contact?.avatarUrl),
 		}
 	}

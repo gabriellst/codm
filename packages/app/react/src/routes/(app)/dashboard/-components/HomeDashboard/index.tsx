@@ -260,7 +260,7 @@ function ActivityRow({ item }: { item: Dashboard['latestActivity'][number] }) {
 		<Link
 			to="/threads/$threadId"
 			params={{ threadId: item.threadId }}
-			className="flex items-start gap-2.5 rounded-asymmetric-xs px-2 py-2.5 transition-colors hover:bg-muted"
+			className="flex items-center gap-2.5 rounded-asymmetric-xs px-2 py-2.5 transition-colors hover:bg-muted"
 		>
 			{sender ? (
 				<ThreadAvatar

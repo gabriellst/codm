@@ -2,11 +2,12 @@ import { injectable } from 'tsyringe-neo'
 import { and, eq, inArray, isNull } from 'drizzle-orm'
 import { Handler, z, BaseError, DrizzleClient } from '@codm/core-typescript'
 import { threads, remotes } from '@codm/contracts/db'
-import { BufferSize, ProviderKind, AgentModelId } from '@codm/contracts-typescript/wire/enums'
+import { BufferSize, ProviderKind, AgentModelId, ContactKind } from '@codm/contracts-typescript/wire/enums'
 import { effectiveModel, modelsFor } from '@codm/contracts/catalog'
 // The LEAF, not the barrel — see `AttachThread` and that barrel's header.
 import { AgentRunnerFactory } from '@agent/services/AgentRunnerFactory/AgentRunnerFactory'
 import { OPERATOR_PARTICIPANT_ID, type Participant } from '../entities/Thread'
+import { GroupMemberReader } from '../services/GroupMemberReader'
 import { CUSTOM_PROMPT_MAX_LENGTH } from '../schemas'
 import type { ApplicationErrors } from '../errors'
 
@@ -105,6 +106,7 @@ export class GetThreadSettings extends Handler<typeof GetThreadSettingsInputSche
 	constructor(
 		private readonly db: DrizzleClient,
 		private readonly runners: AgentRunnerFactory,
+		private readonly groupMembers: GroupMemberReader,
 	) {
 		super()
 	}
@@ -121,7 +123,39 @@ export class GetThreadSettings extends Handler<typeof GetThreadSettingsInputSche
 		if (!thread || thread.ownerId !== input.ownerId)
 			throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
 
-		const participants = thread.participants as Participant[]
+		const jsonParticipants = thread.participants as Participant[]
+
+		/**
+		 * WHO is on the roster — for a GROUP thread, driven by the LIVE `gateway_remote_memberships`
+		 * projection, never by the JSON snapshot `AttachThread` froze at bind time.
+		 *
+		 * The JSON is written ONCE, at attach, and nobody rewrites it when the gateway reprojects
+		 * membership afterwards — a member who joined the group later, or whose sync landed after the
+		 * attach, is a real member right now and was invisible here. Measured on the founder's own base:
+		 * `gateway_remote_memberships` held 4 members for a group whose JSON roster only ever recorded 3
+		 * — the operator could not grant invocation rights to the missing one because their row never
+		 * rendered.
+		 *
+		 * The JSON still supplies `canInvoke` (below) and the OPERATOR sentinel — a word
+		 * (`OPERATOR_PARTICIPANT_ID`), never a group member, that only ever exists in this JSON and has no
+		 * row in `gateway_remote_memberships` to join against.
+		 *
+		 * A member the JSON still lists but the live projection no longer does has LEFT the group — they
+		 * fall out of `rosterIds` here, same as they fell out of the group itself. Their `canInvoke`
+		 * stays whatever it last was, harmlessly, in the JSON: if they rejoin, the toggle they left
+		 * behind is exactly what comes back.
+		 *
+		 * A 1:1 thread has no membership rows at all (`gateway_remote_memberships` only exists for
+		 * `ContactKind.GROUP`), so that shape keeps reading the JSON roster exactly as before.
+		 */
+		const rosterIds =
+			thread.contactKind === ContactKind.GROUP
+				? [
+						OPERATOR_PARTICIPANT_ID,
+						...(await this.groupMembers.listMembers(thread.channelId, thread.contactExternalId)).map(m => m.memberId),
+					]
+				: jsonParticipants.map(p => p.participantId)
+		const jsonByParticipantId = new Map(jsonParticipants.map(p => [p.participantId, p]))
 
 		/**
 		 * Display names come from the gateway's CONTACT BOOK, not from the roster.
@@ -134,17 +168,16 @@ export class GetThreadSettings extends Handler<typeof GetThreadSettingsInputSche
 		 * Resolved on READ rather than backfilled into the roster, for two reasons: it fixes threads that
 		 * are already attached without a migration, and a contact who renames themselves on WhatsApp is
 		 * reflected the next time this opens. `participantId` stays the identity; the name is only ever
-		 * presentation. Falls back to the stored value, so a member with no contact entry still renders.
+		 * presentation. Falls back to the JSON's stored name, then to the bare id, so a member with no
+		 * contact entry AND no JSON row (admitted purely by the live join above) still renders.
 		 */
-		const externalIds = participants.map(p => p.participantId).filter(id => id !== OPERATOR_PARTICIPANT_ID)
+		const externalIds = rosterIds.filter(id => id !== OPERATOR_PARTICIPANT_ID)
 		const contacts = externalIds.length
 			? await this.db
 					.select({ remoteId: remotes.remoteId, name: remotes.name, avatarUrl: remotes.avatarUrl })
 					.from(remotes)
 					.where(and(eq(remotes.channelId, thread.channelId), inArray(remotes.remoteId, externalIds)))
 			: []
-		// ONE map, not two: the name and the photo are the same contact's, resolved by the same key, and a
-		// second `avatarByRemoteId` would be the same lookup written twice.
 		const contactByRemoteId = new Map(contacts.map(c => [c.remoteId, c]))
 
 		// NO GUARD HERE, on purpose. An undrivable provider is REPORTED, never refused: this read is the
@@ -153,14 +186,27 @@ export class GetThreadSettings extends Handler<typeof GetThreadSettingsInputSche
 		// with it.
 		const drivable = this.runners.supported
 
-		return {
-			mentionGate: thread.mentionGateEnabled ? { enabled: true, tag: thread.mentionGateTag ?? '' } : { enabled: false },
-			participants: participants.map(p => {
-				const contact = contactByRemoteId.get(p.participantId)
+		const participants = rosterIds.map(participantId => {
+			const contact = contactByRemoteId.get(participantId)
+			const json = jsonByParticipantId.get(participantId)
+			return {
+				participantId,
 				// `||`, not `??`: `gateway_remotes.name` is `NOT NULL DEFAULT ''`, so a synced-but-unnamed
 				// contact stores the empty string — which `??` would accept as a name and render as a blank row.
-				return { ...p, name: contact?.name || p.name, channelId: thread.channelId, hasAvatar: Boolean(contact?.avatarUrl) }
-			}),
+				name: contact?.name || json?.name || participantId,
+				source: json?.source ?? 'Channel group member',
+				// A live member the JSON has never recorded defaults to NOT invoking — the same default
+				// `AttachThread` seeds a fresh group roster with, and what `SetParticipantInvocation` writes
+				// into the JSON the first time this row's toggle is flipped.
+				canInvoke: json?.canInvoke ?? false,
+				channelId: thread.channelId,
+				hasAvatar: Boolean(contact?.avatarUrl),
+			}
+		})
+
+		return {
+			mentionGate: thread.mentionGateEnabled ? { enabled: true, tag: thread.mentionGateTag ?? '' } : { enabled: false },
+			participants,
 			invokerCount: participants.filter(p => p.canInvoke).length,
 			bufferSize: thread.bufferSize as BufferSize,
 			customPrompt: thread.customPrompt ?? '',

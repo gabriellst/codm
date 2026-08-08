@@ -1,10 +1,11 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
-import { TestBed, givenIssue, givenRemote, givenThread, givenWorkspace } from '@test/support'
+import { TestBed, givenChannel, givenIssue, givenRemote, givenThread, givenWorkspace } from '@test/support'
 import { IssueStatus, ThreadStatus, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import type { Thread } from '@thread/entities/Thread'
 import { ThreadRepository } from '@thread/repositories'
+import { OPERATOR_PARTICIPANT_ID } from '@thread/objects/TranscriptSpeaker'
 import { GetHomeDashboard } from './GetHomeDashboard'
 
 /**
@@ -351,5 +352,100 @@ describe('GetHomeDashboard — conversation and sender faces', () => {
 		await testBed.resolve(ThreadRepository).save(thread)
 
 		expect((await dashboard()).latestActivity.find(a => a.subtitle === 'resposta do agente')?.sender).toBeUndefined()
+	})
+})
+
+/**
+ * O ROSTO DO OPERADOR NA HOME — o par exato dos dois testes de `GetSessionChat`, e por isso escrito
+ * ao lado deles em espírito: uma linha tem de se ler igual na home e na conversa de onde veio.
+ *
+ * As linhas do próprio operador são atribuídas ao sentinela `operator`, que não é um JID e nunca terá
+ * linha em `gateway_remotes`. Esta leitura DESCARTAVA o sender por causa disso, e sem `sender` o
+ * console cai no rótulo do `kind` — a atividade recente escrevia "Você" onde devia estar o nome e a
+ * foto da conta conectada.
+ *
+ * FALSIFICADOR: tire o `case` do join (ou a troca no `senderOf`) e o primeiro teste volta a
+ * `undefined` enquanto o segundo — a degradação — segue verde. É essa meia-falha silenciosa que o par
+ * existe para pegar.
+ */
+describe('GetHomeDashboard — a linha do operador tem o rosto da conta conectada', () => {
+	let testBed: TestBed
+	let testContainer: DependencyContainer
+
+	beforeAll(async () => {
+		testContainer = container.createChildContainer()
+		testBed = await TestBed.create('integration', { testContainer, ownerId: OPERATOR_ID })
+	})
+	beforeEach(async () => {
+		await testBed.reset()
+	})
+	afterAll(async () => {
+		await testBed.destroy()
+	})
+
+	const GROUP_JID = '120363000000000001@g.us'
+	/** A conta CONECTADA — o JID por trás do sentinela, vindo de `channels.owner_remote_id`. */
+	const OWNER = '5511900000009@s.whatsapp.net'
+	const OWNER_PHOTO = 'https://pps.whatsapp.net/v/t61.24694-24/owner_n.jpg'
+
+	const threadOnChannelWith = async (ownerRemoteId: string) => {
+		const { channelId } = await givenChannel(testBed, { ownerId: OPERATOR_ID, ownerRemoteId })
+		const workspace = await givenWorkspace(testBed, { ownerId: OPERATOR_ID })
+		const thread = await givenThread(testBed, {
+			ownerId: OPERATOR_ID,
+			workspaceId: workspace.id.value,
+			channelId,
+			contactExternalId: GROUP_JID,
+		})
+		return { thread, channelId }
+	}
+
+	const dashboard = () => testBed.resolve(GetHomeDashboard).execute({ ownerId: OPERATOR_ID })
+
+	it('resolve o sentinela `operator` na conta do canal — nome e foto, não o rótulo do kind', async () => {
+		const { thread, channelId } = await threadOnChannelWith(OWNER)
+		await givenRemote(testBed, { channelId, remoteId: OWNER, name: 'Gabriel Araújo', avatarUrl: OWNER_PHOTO })
+		thread.recordEntry({ kind: TranscriptKind.DIRECT, text: 'já subi', senderExternalId: OPERATOR_PARTICIPANT_ID, at: new Date() })
+		await testBed.resolve(ThreadRepository).save(thread)
+
+		expect((await dashboard()).latestActivity.find(a => a.subtitle === 'já subi')?.sender).toEqual({
+			channelId,
+			externalId: OWNER,
+			displayName: 'Gabriel Araújo',
+			hasAvatar: true,
+		})
+	})
+
+	/**
+	 * O par do teste acima: sem `owner_remote_id` (canal antigo — a coluna nasceu com default `''` — ou
+	 * desconectado) não há a quem apontar, e a linha volta a ser anônima. Degradação, nunca erro: a home
+	 * não pode deixar de carregar porque a conta ainda não foi projetada.
+	 */
+	it('deixa a linha do operador anônima quando o canal não tem conta conectada', async () => {
+		const { thread } = await threadOnChannelWith('')
+		thread.recordEntry({ kind: TranscriptKind.DIRECT, text: 'já subi', senderExternalId: OPERATOR_PARTICIPANT_ID, at: new Date() })
+		await testBed.resolve(ThreadRepository).save(thread)
+
+		expect((await dashboard()).latestActivity.find(a => a.subtitle === 'já subi')?.sender).toBeUndefined()
+	})
+
+	/**
+	 * A troca é do SENTINELA e de mais nada. Um contato de verdade continua resolvendo por si — se o
+	 * `case` casasse largo demais, toda linha de entrada herdaria o rosto do dono do canal.
+	 */
+	it('não empresta a conta conectada para a linha de um contato', async () => {
+		const CONTACT = '5511900000001@s.whatsapp.net'
+		const { thread, channelId } = await threadOnChannelWith(OWNER)
+		await givenRemote(testBed, { channelId, remoteId: OWNER, name: 'Gabriel Araújo', avatarUrl: OWNER_PHOTO })
+		await givenRemote(testBed, { channelId, remoteId: CONTACT, name: 'Ada Lovelace' })
+		thread.recordEntry({ kind: TranscriptKind.CONTACT, text: 'e aí?', senderExternalId: CONTACT, at: new Date() })
+		await testBed.resolve(ThreadRepository).save(thread)
+
+		expect((await dashboard()).latestActivity.find(a => a.subtitle === 'e aí?')?.sender).toEqual({
+			channelId,
+			externalId: CONTACT,
+			displayName: 'Ada Lovelace',
+			hasAvatar: false,
+		})
 	})
 })

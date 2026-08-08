@@ -104,6 +104,9 @@ describe('GetSessionChat — every inbound line names the person who typed it', 
 	const ADA = '5511900000001@s.whatsapp.net'
 	const RAFA = '5511900000002@s.whatsapp.net'
 	const ADA_PHOTO = 'https://pps.whatsapp.net/v/t61.24694-24/ada_n.jpg?oh=sig&oe=6900'
+	/** A conta CONECTADA — o JID por trás do sentinela `operator`, vindo de `channels.owner_remote_id`. */
+	const OWNER = '5511900000009@s.whatsapp.net'
+	const OWNER_PHOTO = 'https://pps.whatsapp.net/v/t61.24694-24/owner_n.jpg?oh=sig&oe=6900'
 
 	beforeAll(async () => {
 		testContainer = container.createChildContainer()
@@ -118,7 +121,8 @@ describe('GetSessionChat — every inbound line names the person who typed it', 
 
 	/** A group thread with two named contacts in the channel's book — only one of them has a photo. */
 	const groupThread = async () => {
-		const { channelId } = await givenChannel(testBed, { ownerId: OPERATOR_ID })
+		const { channelId } = await givenChannel(testBed, { ownerId: OPERATOR_ID, ownerRemoteId: OWNER })
+		await givenRemote(testBed, { channelId, remoteId: OWNER, name: 'Gabriel Araújo', avatarUrl: OWNER_PHOTO })
 		await givenRemote(testBed, { channelId, remoteId: ADA, name: 'Ada Lovelace', avatarUrl: ADA_PHOTO })
 		await givenRemote(testBed, { channelId, remoteId: RAFA, name: 'Rafa Lima' })
 		const workspace = await givenWorkspace(testBed, { ownerId: OPERATOR_ID })
@@ -149,8 +153,28 @@ describe('GetSessionChat — every inbound line names the person who typed it', 
 	 * device they type from collapses onto it. There is no contact row behind that word, so a read
 	 * that resolved it would either invent a face or hand the console a 404 to draw.
 	 */
-	it('gives the operator’s own line no identity at all', async () => {
-		const { thread } = await groupThread()
+	it('gives the operator’s own line the CONNECTED ACCOUNT’s face — the sentinel is not anonymity', async () => {
+		const { thread, channelId } = await groupThread()
+		thread.recordEntry({ kind: TranscriptKind.DIRECT, text: 'operator answers', senderExternalId: OPERATOR_PARTICIPANT_ID })
+		await testBed.resolve(ThreadRepository).save(thread)
+
+		expect((await senderByText(thread.id.value)).get('operator answers')).toEqual({
+			channelId,
+			externalId: OWNER,
+			displayName: 'Gabriel Araújo',
+			hasAvatar: true,
+		})
+	})
+
+	/**
+	 * O par do teste acima: sem `owner_remote_id` não há a quem apontar. A linha volta a ser anônima —
+	 * que é degradação, não erro. O chat de um canal antigo (a coluna nasceu com default `''`) ou
+	 * desconectado tem de abrir do mesmo jeito.
+	 */
+	it('leaves the operator’s line anonymous when the channel has no connected account on it', async () => {
+		const { channelId } = await givenChannel(testBed, { ownerId: OPERATOR_ID, ownerRemoteId: '' })
+		const workspace = await givenWorkspace(testBed, { ownerId: OPERATOR_ID })
+		const thread = await givenThread(testBed, { ownerId: OPERATOR_ID, channelId, workspaceId: workspace.id.value })
 		thread.recordEntry({ kind: TranscriptKind.DIRECT, text: 'operator answers', senderExternalId: OPERATOR_PARTICIPANT_ID })
 		await testBed.resolve(ThreadRepository).save(thread)
 

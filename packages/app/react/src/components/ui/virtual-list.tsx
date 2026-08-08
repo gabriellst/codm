@@ -186,7 +186,7 @@ export function VirtualList<TItem>({
 		// Padrão emprestado do medscall (`ChatPanel`: `relative flex-1 min-h-0` + `absolute inset-0
 		// overflow-y-auto`), que nunca teve este defeito.
 		<div data-slot="virtual-list-viewport" className={cn('relative min-h-0', className)}>
-			<div ref={scrollRef} data-slot="virtual-list" className="absolute inset-0 overflow-y-auto" {...props}>
+			<div ref={scrollRef} data-slot="virtual-list" className="absolute inset-0 overflow-y-auto pl-1 pr-4" {...props}>
 				{/* The scroller's full height lives here, so the scrollbar reflects ALL items and not just
 				    the mounted window — a windowed list whose spacer lies is a list with a lying scrollbar. */}
 				<div data-slot="virtual-list-spacer" className={cn('relative w-full', listClassName)} style={{ height: `${totalSize}px` }}>

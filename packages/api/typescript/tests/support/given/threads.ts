@@ -3,7 +3,7 @@ import type { TestBed } from '../TestBed'
 import { Id } from '@codm/core-typescript'
 import { ProviderKind, ContactKind, BufferSize } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
-import { Thread } from '@thread/entities/Thread'
+import { Thread, type Participant } from '@thread/entities/Thread'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { givenWorkspace } from './workspaces'
 
@@ -21,6 +21,9 @@ type ThreadOverrides = Partial<{
 	bufferSize: BufferSize
 	/** The citation tag. Defaults to the production-shaped `@test-workspace`; pass `undefined` explicitly to vary it. */
 	mentionTag: string
+	/** Overrides the default two-entry roster (operator + the contact). A GROUP-thread suite exercising
+	 *  the live-membership join passes its own JSON roster here, alongside `givenRemoteMembership` rows. */
+	participants: Participant[]
 }>
 
 /**
@@ -50,7 +53,7 @@ export async function givenThread(testBed: TestBed, overrides: ThreadOverrides =
 		// tests assert against it by name, and a derived value would make every citation in the suite a
 		// second implementation of `mintMentionTag`.
 		mentionTag: overrides.mentionTag ?? GIVEN_MENTION_TAG,
-		participants: [
+		participants: overrides.participants ?? [
 			{ participantId: 'operator', name: 'Operator', source: 'Operator on this machine', canInvoke: true },
 			{ participantId: contactExternalId, name: 'Test Contact', source: 'Channel contact', canInvoke: false },
 		],

@@ -668,23 +668,11 @@
 	},
 	"settings": {
 		"agentProviders": "Provedores de agentes",
-		"criteriaApprovalNeeded": "Aprovação necessária",
-		"criteriaApprovalNeededDesc": "O agente quer rodar um comando que precisa de aval.",
-		"criteriaAuthRequired": "Login necessário",
-		"criteriaAuthRequiredDesc": "A CLI do agente precisa que você faça login de novo.",
-		"criteriaBlocked": "Bloqueada pela classificação",
-		"criteriaBlockedDesc": "Uma resposta rascunhada é sinalizada antes de ser enviada.",
-		"criteriaHumanRequested": "Humano solicitado",
-		"criteriaHumanRequestedDesc": "O contato pede explicitamente por uma pessoa.",
-		"criteriaServerErrors": "Erros de servidor",
-		"criteriaServerErrorsDesc": "A CLI do provedor falha (429s, crashes, timeouts).",
 		"general": "Geral",
 		"generalAppVersion": "Versão do app",
 		"generalDataDir": "Diretório de dados",
 		"providerNotFound": "não encontrado no PATH",
 		"rescanProviders": "Reescanear",
-		"stopCriteria": "Critérios de parada",
-		"stopCriteriaDescription": "Quando qualquer um desses ocorre, o agente para, a conversa é marcada como \"Precisa de você\" e a parada aparece na sessão até você resolvê-la.",
 		"title": "Configurações"
 	},
 	"time": {

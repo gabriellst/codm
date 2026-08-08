@@ -4,11 +4,49 @@ import { Link } from '@tanstack/react-router'
 import type { GetSessionChatQueryResponse } from '@codm/client-typescript/typescript'
 import { cn } from '@/lib/utils'
 import { enumLabel } from '@/lib'
+import { formatTimeOfDay } from '@/lib/format'
+import { useLocale } from '@/hooks'
 import { providerLabel } from '@/components/console/glyphs'
 import { Dot } from '@/components/console/StatusDot'
 import { ThreadAvatar, contactAvatarUrl } from '@/components/console/ThreadAvatar'
 
 type Entry = GetSessionChatQueryResponse['transcript'][number]
+
+/**
+ * O HORÁRIO DENTRO DO BALÃO, no canto inferior direito — o gesto do WhatsApp, e não um rótulo solto
+ * embaixo da bolha (que era o que havia aqui: um `<span>` irmão, empurrando cada linha da conversa
+ * uma altura de texto para baixo sem dizer nada a mais).
+ *
+ * SÃO DOIS ELEMENTOS PARA UM SÓ HORÁRIO, e o par é a técnica inteira:
+ *
+ *  1. O ESPAÇADOR (`invisible`, mas ocupando espaço) entra no fluxo do texto, logo depois dele.
+ *     `visibility:hidden` reserva a caixa; `display:none` não reservaria nada. Ele é uma cópia do
+ *     próprio horário, então mede a largura EXATA em qualquer locale — `"05:25"` em pt-BR e
+ *     `"05:25 AM"` em en-US não são a mesma coisa, e uma largura fixa chutada erraria uma das duas.
+ *     É ele que faz o texto fluir ao redor: se a última linha não comporta o horário, o espaçador
+ *     quebra sozinho e o balão cresce uma linha — exatamente o que o WhatsApp faz.
+ *  2. O HORÁRIO DE VERDADE sai do fluxo (`absolute`), ancorado no canto do balão. Fora do fluxo ele
+ *     não interfere na quebra do texto; dentro do espaço que o espaçador reservou, não o cobre.
+ *
+ * A COR vem do PRÓPRIO balão com opacidade, nunca de `text-muted-foreground`: o balão de saída é
+ * `bg-primary` (verde de marca) e o de entrada `bg-secondary` (verde pastel) — um cinza de texto
+ * neutro por cima de qualquer um dos dois é ilegível. `text-primary-foreground/70` é o mesmo texto
+ * que o balão já usa, só mais discreto, então o contraste é o do par de tokens, por construção.
+ */
+function BubbleTime({ at, className, ...props }: ComponentProps<'span'> & { at: string }) {
+	const locale = useLocale()
+	const time = formatTimeOfDay(at, locale)
+	return (
+		<>
+			<span aria-hidden="true" className="invisible ml-2 inline-block select-none text-[11px] leading-none">
+				{time}
+			</span>
+			<span className={cn('absolute bottom-2 right-4 text-[11px] leading-none', className)} {...props}>
+				{time}
+			</span>
+		</>
+	)
+}
 
 /**
  * One transcript line. CONTACT sits left in a soft bubble; SYSTEM / DIRECT sit
@@ -48,15 +86,14 @@ export function TranscriptBubble({ entry, threadId, className, ...props }: Compo
 						src={sender.hasAvatar ? contactAvatarUrl(sender.channelId, sender.externalId) : undefined}
 					/>
 				)}
-				<div className="flex min-w-0 flex-col items-start gap-1">
-					{/* bg-secondary carries text-secondary-foreground — the pair is the design system's one
-					    rule with no exceptions (tokens.css). It read `text-foreground` before, which in light
-					    mode put near-black on the pale green instead of the green the pairing specifies. */}
-					<div className="max-w-full whitespace-pre-wrap rounded-2xl rounded-tl-md bg-secondary px-4 py-2.5 text-secondary-foreground">
-						{sender && <span className="mb-0.5 block text-xs font-medium text-secondary-foreground/70">{sender.displayName}</span>}
-						{entry.text}
-					</div>
-					<span className="px-1 text-xs text-muted-foreground">{entry.at}</span>
+				{/* bg-secondary carries text-secondary-foreground — the pair is the design system's one
+				    rule with no exceptions (tokens.css). It read `text-foreground` before, which in light
+				    mode put near-black on the pale green instead of the green the pairing specifies.
+				    `relative` é a âncora do horário; ver `BubbleTime`. */}
+				<div className="relative min-w-0 max-w-full whitespace-pre-wrap rounded-2xl rounded-tl-md bg-secondary px-4 py-2.5 text-secondary-foreground">
+					{sender && <span className="mb-0.5 block text-xs font-medium text-secondary-foreground/70">{sender.displayName}</span>}
+					{entry.text}
+					<BubbleTime at={entry.at} className="text-secondary-foreground/60" />
 				</div>
 			</div>
 		)
@@ -85,13 +122,13 @@ export function TranscriptBubble({ entry, threadId, className, ...props }: Compo
 			</div>
 			<div
 				className={cn(
-					'max-w-full whitespace-pre-wrap rounded-2xl rounded-tr-md px-4 py-2.5',
+					'relative max-w-full whitespace-pre-wrap rounded-2xl rounded-tr-md px-4 py-2.5',
 					isWhisper ? 'border border-dashed border-border bg-muted italic text-muted-foreground' : 'bg-primary text-primary-foreground',
 				)}
 			>
 				{entry.text}
+				<BubbleTime at={entry.at} className={isWhisper ? 'not-italic text-muted-foreground/70' : 'text-primary-foreground/70'} />
 			</div>
-			<span className="px-1 text-xs text-muted-foreground">{entry.at}</span>
 		</div>
 	)
 }
