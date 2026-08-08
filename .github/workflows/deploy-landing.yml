@@ -14,6 +14,12 @@ jobs:
     # todos os workflows, este incluso. Nada aqui é específico de Linux (bun + wrangler), então
     # roda igual no Mac. Voltar à nuvem = trocar por `runs-on: ubuntu-latest`.
     runs-on: [self-hosted, macOS, ARM64]
+    # Um nome, um lugar. Ele aparece no create, no deploy e na verificacao — e ha DOIS projetos
+    # Pages nesta conta com nomes parecidos (`codm-landing`, que e este, e um `codm` orfao que
+    # ficou dono do subdominio `codm-landing.pages.dev` e serve um build de 07/08). Digitar o nome
+    # errado em um dos tres lugares publica no projeto errado sem nenhum erro.
+    env:
+      PROJECT: codm-landing
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -46,5 +52,38 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          bunx wrangler pages project create codm-landing --production-branch=main 2>/dev/null || true
-          bunx wrangler pages deploy packages/app/astro/dist --project-name=codm-landing --branch=main
+          bunx wrangler pages project create "$PROJECT" --production-branch=main 2>/dev/null || true
+          bunx wrangler pages deploy packages/app/astro/dist --project-name="$PROJECT" --branch=main
+
+      # O passo acima ja "teve sucesso" sem publicar nada: em 2026-08-08 08:43 UTC ele imprimiu
+      # "Success! Uploaded 11 files", saiu com codigo 0, e a API do Cloudflare nao registrou
+      # deployment nenhum — o site no ar continuou sendo o build da vespera, sem telemetria. Subir
+      # os arquivos e criar o deployment sao duas etapas, e o wrangler pode fazer a primeira e
+      # engasgar na segunda sem reclamar.
+      #
+      # Ao contrario do app desktop (assets comprimidos dentro do binario, onde so da para validar
+      # o INSUMO), a landing e HTML publico: da para verificar a SAIDA, e por isso aqui verificamos.
+      # O laco existe porque a propagacao do Pages leva alguns segundos apos o deploy retornar.
+      - name: verifica a landing no ar
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          POSTHOG_KEY: ${{ vars.VITE_POSTHOG_KEY }}
+        run: |
+          # O subdominio NAO e derivavel do nome do projeto: quando o nome ja esta tomado o
+          # Cloudflare acrescenta um sufixo (aqui, codm-landing-6d5.pages.dev). Perguntamos a ele.
+          SUB=$(curl -sf -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT" \
+            | jq -r '.result.subdomain')
+          test -n "$SUB" && test "$SUB" != "null" || {
+            echo "::error::nao consegui descobrir o subdominio do projeto $PROJECT"; exit 1; }
+          echo "verificando https://$SUB/pt/"
+          for _ in $(seq 1 10); do
+            if curl -sf "https://$SUB/pt/" | grep -q "$POSTHOG_KEY"; then
+              echo "landing no ar com a chave do PostHog: https://$SUB/pt/"
+              exit 0
+            fi
+            sleep 6
+          done
+          echo "::error::https://$SUB/pt/ nao serve a chave do PostHog — o deploy subiu arquivos mas nao publicou."
+          exit 1
