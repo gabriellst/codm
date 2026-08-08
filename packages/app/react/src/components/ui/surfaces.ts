@@ -56,11 +56,19 @@ export const trigger = 'bg-background border border-border hover:bg-hover'
 // DESCENDANT that should echo the row's hover (a trailing chevron, a secondary icon) reacts via
 // `group-hover:*` instead of its own `hover:`, so the whole row moves as one unit. See
 // `components/console/IssueRow.tsx` for the canonical example.
+// CORREÇÃO (founder, 07/08/2026) — duas coisas mudaram aqui.
+// 1. A borda de hover usava `hover:border-hover-accent`, que é o token da SUPERFÍCIE (#F7FBEF,
+//    quase branco): a borda praticamente sumia no hover em vez de acompanhar. Era exatamente o
+//    drift que o parágrafo acima adverte, com o código contradizendo o próprio comentário.
+// 2. A borda passa a ser o verde de marca CHEIO (`--primary`, #76C410), não o pastel
+//    `--hover-accent-border` (#d8ecb4) que o D2 media — decisão do founder: o contorno é a
+//    afordância da linha e precisa ler como ação, não como sombra.
+// O fundo segue em `--hover-accent`: o par continua se movendo junto, só que agora com contraste.
 export const rowBorder = 'border border-border'
 
-export const rowHover = 'hover:bg-hover-accent hover:border-hover-accent'
+export const rowHover = 'hover:bg-hover-accent hover:border-primary'
 
-export const row = 'border border-border transition-colors hover:bg-hover-accent hover:border-hover-accent'
+export const row = 'border border-border transition-colors hover:bg-hover-accent hover:border-primary'
 
 // ──────────────────────────────────────────────
 // alert — the "precisa de você" dark surface (D2)

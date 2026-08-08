@@ -26,6 +26,9 @@ get "stopKinds"(){
 "threads": z.array(z.object({
     "threadId": z.uuid(),
 "displayName": z.string(),
+"channelId": z.uuid(),
+"externalId": z.string(),
+"hasAvatar": z.boolean(),
 get "channelKind"(){
                 return channelKindSchema
               },
@@ -41,6 +44,9 @@ get "status"(){
 "activeSessions": z.array(z.object({
     "threadId": z.uuid(),
 "displayName": z.string(),
+"channelId": z.uuid(),
+"externalId": z.string(),
+"hasAvatar": z.boolean(),
 get "channelKind"(){
                 return channelKindSchema
               },
@@ -59,7 +65,13 @@ get "status"(){
               },
 "subtitle": z.string(),
 "threadId": z.uuid(),
-"at": z.string()
+"at": z.string(),
+"sender": z.optional(z.object({
+    "channelId": z.uuid(),
+"externalId": z.string(),
+"displayName": z.string(),
+"hasAvatar": z.boolean()
+    }))
     })),
 "today": z.object({
     "issuesOpened": z.int().min(-9007199254740991).max(9007199254740991),

@@ -62,9 +62,9 @@ export type GetAttachThreadWizard200 = {
         */
         kind: ContactKind;
         /**
-         * @type string
+         * @type boolean
         */
-        avatarUrl: string | null;
+        hasAvatar: boolean;
         /**
          * @type string
         */

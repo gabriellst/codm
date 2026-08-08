@@ -20,4 +20,18 @@ export class DrizzleGroupMemberReader extends GroupMemberReader {
 		})
 		return result.success ? result.data : []
 	}
+
+	async isMember(channelId: string, groupId: string, memberId: string): Promise<boolean> {
+		const result = await tryCatchAsync(async () => {
+			const rows = await this.db
+				.select({ memberId: remoteMemberships.memberId })
+				.from(remoteMemberships)
+				.where(
+					and(eq(remoteMemberships.channelId, channelId), eq(remoteMemberships.groupId, groupId), eq(remoteMemberships.memberId, memberId)),
+				)
+				.limit(1)
+			return rows.length > 0
+		})
+		return result.success ? result.data : false
+	}
 }

@@ -78,24 +78,33 @@ export function renderTauriConf(): string {
 	if (consoleWs.nxProject === null) throw new Error(`console workspace '${console_.workspace}' has no nx project`)
 	// Config paths resolve relative to src-tauri/ (where tauri.conf.json lives).
 	const frontendDist = posix.relative(srcTauriDir, posix.join(consoleWs.pkgRoot, console_.distSubpath))
-	// CSP connect-src derives from the DECLARED console→sidecar relation (console.connectsTo),
-	// resolving each role against the package manifest for its port.
-	const connectSrc = console_.connectsTo
+	// The sidecar origins the console addresses DIRECTLY, derived from the DECLARED console→sidecar
+	// relation (console.connectsTo) and resolved against the package manifest for each port. Both CSP
+	// fetch directives below are built from this ONE list — a literal port in either would be a second
+	// copy of the manifest, and the one nobody remembers to update.
+	const sidecarOrigins = console_.connectsTo
 		.map(role => {
 			const sidecar = SIDECARS.find(s => s.role === role)
 			if (sidecar === undefined) throw new Error(`console.connectsTo names unknown sidecar role '${role}'`)
 			return sidecar
 		})
 		.flatMap(s => [`http://localhost:${sidecarPort(s)}`, `http://127.0.0.1:${sidecarPort(s)}`])
-		// A cloud entra na MESMA lista: o console fala com ela para trocar o código do deep link e
-		// revogar no logout. Sem esta origem o webview bloqueia a requisição antes de sair (ver
-		// ./cloud.ts — foi o que quebrou o login até a v0.1.8).
-		.concat(CLOUD.origin)
-		// O PostHog entra na MESMA lista pela MESMA razão (ver ./analytics.ts): telemetria bloqueada
-		// pela CSP falha em silêncio — pior que o login, porque ninguém percebe, os números só ficam
-		// vazios.
-		.concat(ANALYTICS.origin)
-		.join(' ')
+	// `connect-src` alcança os sidecars MAIS os dois destinos remotos que o console chama por XHR.
+	// A cloud: o console fala com ela para trocar o código do deep link e revogar no logout — sem
+	// esta origem o webview bloqueia a requisição antes de sair (ver ./cloud.ts, foi o que quebrou o
+	// login até a v0.1.8). O PostHog, pela MESMA razão (ver ./analytics.ts): telemetria bloqueada
+	// pela CSP falha em silêncio — pior que o login, porque ninguém percebe, os números só ficam
+	// vazios.
+	const connectSrc = [...sidecarOrigins, CLOUD.origin, ANALYTICS.origin].join(' ')
+	// `img-src` alcança os MESMOS sidecars — e SÓ eles, porque nem a cloud nem o PostHog servem
+	// imagem alguma.
+	//
+	// O daemon serve bytes que o webview desenha: os artefatos que os agentes gravam e, desde a foto
+	// no balão do chat, os avatares dos contatos. A CDN do WhatsApp (`pps.whatsapp.net`)
+	// deliberadamente NÃO entra: a url é assinada e expira, e cada avatar pintado anunciaria o IP do
+	// operador para a Meta. O daemon busca uma vez, guarda em disco e serve dali — então a origem a
+	// liberar é a DELE, derivada da mesma relação declarada que o connect-src usa.
+	const imgSrc = ["'self'", 'data:', 'blob:', ...sidecarOrigins].join(' ')
 	const conf = {
 		$schema: 'https://schema.tauri.app/config/2',
 		productName: DISPLAY_NAME,
@@ -129,7 +138,7 @@ export function renderTauriConf(): string {
 				{ ...BOOT_ERROR_FRAME },
 			],
 			security: {
-				csp: `default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' ${connectSrc} ipc: http://ipc.localhost`,
+				csp: `default-src 'self'; style-src 'self' 'unsafe-inline'; img-src ${imgSrc}; connect-src 'self' ${connectSrc} ipc: http://ipc.localhost`,
 			},
 		},
 		// Auto-update (SP1). Pubkey verifies minisign signatures; the endpoint here is the STABLE

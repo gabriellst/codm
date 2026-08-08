@@ -50,6 +50,18 @@ export type GetHomeDashboard200 = {
         */
         displayName: string;
         /**
+         * @type string, uuid
+        */
+        channelId: string;
+        /**
+         * @type string
+        */
+        externalId: string;
+        /**
+         * @type boolean
+        */
+        hasAvatar: boolean;
+        /**
          * @type string
         */
         channelKind: ChannelKind;
@@ -82,6 +94,18 @@ export type GetHomeDashboard200 = {
          * @type string
         */
         displayName: string;
+        /**
+         * @type string, uuid
+        */
+        channelId: string;
+        /**
+         * @type string
+        */
+        externalId: string;
+        /**
+         * @type boolean
+        */
+        hasAvatar: boolean;
         /**
          * @type string
         */
@@ -123,6 +147,27 @@ export type GetHomeDashboard200 = {
          * @type string
         */
         at: string;
+        /**
+         * @type object | undefined
+        */
+        sender?: {
+            /**
+             * @type string, uuid
+            */
+            channelId: string;
+            /**
+             * @type string
+            */
+            externalId: string;
+            /**
+             * @type string
+            */
+            displayName: string;
+            /**
+             * @type boolean
+            */
+            hasAvatar: boolean;
+        };
     }[];
     /**
      * @type object

@@ -3,10 +3,16 @@ import React, { SVGProps } from 'react'
  * The CODM brand mark: a green "speech bubble" enclosing the cursive "dm"
  * wordmark. Fixed brand colors (not `currentColor`) — a two-tone brand mark
  * stays consistent across the light/dark theme instead of adapting to text color.
+ *
+ * The viewBox is the mark's measured bounding box, NOT the 1080x1080 canvas the
+ * paths were traced in — that canvas carried ~200px of dead space on each side
+ * horizontally and ~287px vertically, which letterboxed the mark inside every
+ * caller's icon slot. Do not "round" it back to `0 0 1080 1080`: the padding
+ * comes back. `width`/`height` carry the same 4:3 ratio so `w-auto` sizes right.
  */
 export default React.forwardRef(function CodmLogoIcon(props: SVGProps<SVGSVGElement>, ref: React.Ref<SVGSVGElement>) {
 	return (
-		<svg ref={ref} width="48" height="48" viewBox="0 0 1080 1080" fill="none" {...props}>
+		<svg ref={ref} width="64" height="48" viewBox="202.1 287.3 677.5 506.4" fill="none" {...props}>
 			<g transform="translate(0,1080) scale(0.1,-0.1)" stroke="none">
 				<path
 					fill="#8ad12e"

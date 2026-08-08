@@ -33,7 +33,7 @@ get "kind"(){
 get "kind"(){
                 return contactKindSchema
               },
-"avatarUrl": z.nullable(z.string()),
+"hasAvatar": z.boolean(),
 "lastMessageAt": z.nullable(z.string()),
 "participantCount": z.nullable(z.int().min(-9007199254740991).max(9007199254740991)),
 "alreadyAttached": z.boolean()

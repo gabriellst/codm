@@ -58,6 +58,7 @@ const (
 	CLASSIFICATIONFAILED            ApiErrors = "CLASSIFICATION_FAILED"
 	COMMANDHANDLERNOTFOUND          ApiErrors = "COMMAND_HANDLER_NOT_FOUND"
 	COMMANDQUEUENOTFOUND            ApiErrors = "COMMAND_QUEUE_NOT_FOUND"
+	CONTACTAVATARNOTFOUND           ApiErrors = "CONTACT_AVATAR_NOT_FOUND"
 	CONTACTENTRYREQUIRESSENDER      ApiErrors = "CONTACT_ENTRY_REQUIRES_SENDER"
 	CREDENTIALDECRYPTFAILED         ApiErrors = "CREDENTIAL_DECRYPT_FAILED"
 	DEVICECODEINVALID               ApiErrors = "DEVICE_CODE_INVALID"
@@ -169,6 +170,8 @@ func (e ApiErrors) Valid() bool {
 	case COMMANDHANDLERNOTFOUND:
 		return true
 	case COMMANDQUEUENOTFOUND:
+		return true
+	case CONTACTAVATARNOTFOUND:
 		return true
 	case CONTACTENTRYREQUIRESSENDER:
 		return true
@@ -2354,11 +2357,17 @@ type ClientInterface interface {
 	// GetAttachThreadWizard request
 	GetAttachThreadWizard(ctx context.Context, params *GetAttachThreadWizardParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetContactAvatar request
+	GetContactAvatar(ctx context.Context, channelId string, remoteId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListenEvents request
 	ListenEvents(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetHomeDashboard request
 	GetHomeDashboard(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetOperatorIdentity request
+	GetOperatorIdentity(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetSettings request
 	GetSettings(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -3377,6 +3386,18 @@ func (c *Client) GetAttachThreadWizard(ctx context.Context, params *GetAttachThr
 	return c.Client.Do(req)
 }
 
+func (c *Client) GetContactAvatar(ctx context.Context, channelId string, remoteId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetContactAvatarRequest(c.Server, channelId, remoteId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) ListenEvents(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListenEventsRequest(c.Server)
 	if err != nil {
@@ -3391,6 +3412,18 @@ func (c *Client) ListenEvents(ctx context.Context, reqEditors ...RequestEditorFn
 
 func (c *Client) GetHomeDashboard(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetHomeDashboardRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetOperatorIdentity(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetOperatorIdentityRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -5800,6 +5833,47 @@ func NewGetAttachThreadWizardRequest(server string, params *GetAttachThreadWizar
 	return req, nil
 }
 
+// NewGetContactAvatarRequest generates requests for GetContactAvatar
+func NewGetContactAvatarRequest(server string, channelId string, remoteId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "channelId", channelId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "remoteId", remoteId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/ui/avatars/%s/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewListenEventsRequest generates requests for ListenEvents
 func NewListenEventsRequest(server string) (*http.Request, error) {
 	var err error
@@ -5837,6 +5911,33 @@ func NewGetHomeDashboardRequest(server string) (*http.Request, error) {
 	}
 
 	operationPath := fmt.Sprintf("/v1/ui/home")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetOperatorIdentityRequest generates requests for GetOperatorIdentity
+func NewGetOperatorIdentityRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/ui/operator")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -6302,11 +6403,17 @@ type ClientWithResponsesInterface interface {
 	// GetAttachThreadWizardWithResponse request
 	GetAttachThreadWizardWithResponse(ctx context.Context, params *GetAttachThreadWizardParams, reqEditors ...RequestEditorFn) (*GetAttachThreadWizardResponse, error)
 
+	// GetContactAvatarWithResponse request
+	GetContactAvatarWithResponse(ctx context.Context, channelId string, remoteId string, reqEditors ...RequestEditorFn) (*GetContactAvatarResponse, error)
+
 	// ListenEventsWithResponse request
 	ListenEventsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListenEventsResponse, error)
 
 	// GetHomeDashboardWithResponse request
 	GetHomeDashboardWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetHomeDashboardResponse, error)
+
+	// GetOperatorIdentityWithResponse request
+	GetOperatorIdentityWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetOperatorIdentityResponse, error)
 
 	// GetSettingsWithResponse request
 	GetSettingsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetSettingsResponse, error)
@@ -7392,8 +7499,11 @@ type GetSessionChatResponse struct {
 		MentionGate  GetSessionChat200JSONResponseBody_MentionGate `json:"mentionGate"`
 		Paused       bool                                          `json:"paused"`
 		Thread       struct {
+			ChannelId     openapi_types.UUID `json:"channelId"`
 			ChannelKind   ChannelKind        `json:"channelKind"`
 			DisplayName   string             `json:"displayName"`
+			ExternalId    string             `json:"externalId"`
+			HasAvatar     bool               `json:"hasAvatar"`
 			LastActivity  string             `json:"lastActivity"`
 			Providers     []ProviderKind     `json:"providers"`
 			Status        ThreadStatus       `json:"status"`
@@ -7408,7 +7518,13 @@ type GetSessionChatResponse struct {
 			Kind           TranscriptKind        `json:"kind"`
 			Provider       *ProviderKind         `json:"provider,omitempty"`
 			QuotedEntryId  *string               `json:"quotedEntryId,omitempty"`
-			Text           string                `json:"text"`
+			Sender         *struct {
+				ChannelId   openapi_types.UUID `json:"channelId"`
+				DisplayName string             `json:"displayName"`
+				ExternalId  string             `json:"externalId"`
+				HasAvatar   bool               `json:"hasAvatar"`
+			} `json:"sender,omitempty"`
+			Text string `json:"text"`
 		} `json:"transcript"`
 	}
 }
@@ -8157,10 +8273,12 @@ type GetThreadSettingsResponse struct {
 		InvokerCount          int                                              `json:"invokerCount"`
 		MentionGate           GetThreadSettings200JSONResponseBody_MentionGate `json:"mentionGate"`
 		Participants          []struct {
-			CanInvoke     bool   `json:"canInvoke"`
-			Name          string `json:"name"`
-			ParticipantId string `json:"participantId"`
-			Source        string `json:"source"`
+			CanInvoke     bool               `json:"canInvoke"`
+			ChannelId     openapi_types.UUID `json:"channelId"`
+			HasAvatar     bool               `json:"hasAvatar"`
+			Name          string             `json:"name"`
+			ParticipantId string             `json:"participantId"`
+			Source        string             `json:"source"`
 		} `json:"participants"`
 		Providers []struct {
 			ComingSoon bool           `json:"comingSoon"`
@@ -8285,10 +8403,10 @@ type GetAttachThreadWizardResponse struct {
 		} `json:"channels"`
 		Contacts []struct {
 			AlreadyAttached  bool                      `json:"alreadyAttached"`
-			AvatarUrl        nullable.Nullable[string] `json:"avatarUrl"`
 			ChannelId        openapi_types.UUID        `json:"channelId"`
 			DisplayName      string                    `json:"displayName"`
 			ExternalId       string                    `json:"externalId"`
+			HasAvatar        bool                      `json:"hasAvatar"`
 			Kind             ContactKind               `json:"kind"`
 			LastMessageAt    nullable.Nullable[string] `json:"lastMessageAt"`
 			ParticipantCount nullable.Nullable[int]    `json:"participantCount"`
@@ -8334,6 +8452,35 @@ func (r GetAttachThreadWizardResponse) ContentType() string {
 	return ""
 }
 
+type GetContactAvatarResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// Status returns HTTPResponse.Status
+func (r GetContactAvatarResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetContactAvatarResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetContactAvatarResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ListenEventsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -8368,8 +8515,11 @@ type GetHomeDashboardResponse struct {
 	HTTPResponse *http.Response
 	JSON200      *struct {
 		ActiveSessions []struct {
+			ChannelId     openapi_types.UUID `json:"channelId"`
 			ChannelKind   ChannelKind        `json:"channelKind"`
 			DisplayName   string             `json:"displayName"`
+			ExternalId    string             `json:"externalId"`
+			HasAvatar     bool               `json:"hasAvatar"`
 			LastActivity  string             `json:"lastActivity"`
 			Providers     []ProviderKind     `json:"providers"`
 			Status        ThreadStatus       `json:"status"`
@@ -8382,8 +8532,14 @@ type GetHomeDashboardResponse struct {
 			Status ChannelStatus `json:"status"`
 		} `json:"channels"`
 		LatestActivity []struct {
-			At       string             `json:"at"`
-			Kind     TranscriptKind     `json:"kind"`
+			At     string         `json:"at"`
+			Kind   TranscriptKind `json:"kind"`
+			Sender *struct {
+				ChannelId   openapi_types.UUID `json:"channelId"`
+				DisplayName string             `json:"displayName"`
+				ExternalId  string             `json:"externalId"`
+				HasAvatar   bool               `json:"hasAvatar"`
+			} `json:"sender,omitempty"`
 			Subtitle string             `json:"subtitle"`
 			ThreadId openapi_types.UUID `json:"threadId"`
 		} `json:"latestActivity"`
@@ -8393,8 +8549,11 @@ type GetHomeDashboardResponse struct {
 			ThreadId          openapi_types.UUID `json:"threadId"`
 		} `json:"needsYou,omitempty"`
 		Threads []struct {
+			ChannelId     openapi_types.UUID `json:"channelId"`
 			ChannelKind   ChannelKind        `json:"channelKind"`
 			DisplayName   string             `json:"displayName"`
+			ExternalId    string             `json:"externalId"`
+			HasAvatar     bool               `json:"hasAvatar"`
 			LastActivity  string             `json:"lastActivity"`
 			Providers     []ProviderKind     `json:"providers"`
 			Status        ThreadStatus       `json:"status"`
@@ -8427,6 +8586,43 @@ func (r GetHomeDashboardResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetHomeDashboardResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetOperatorIdentityResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Identity *struct {
+			ChannelId   openapi_types.UUID `json:"channelId"`
+			DisplayName string             `json:"displayName"`
+			ExternalId  string             `json:"externalId"`
+			HasAvatar   bool               `json:"hasAvatar"`
+		} `json:"identity,omitempty"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetOperatorIdentityResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetOperatorIdentityResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetOperatorIdentityResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -9385,6 +9581,15 @@ func (c *ClientWithResponses) GetAttachThreadWizardWithResponse(ctx context.Cont
 	return ParseGetAttachThreadWizardResponse(rsp)
 }
 
+// GetContactAvatarWithResponse request returning *GetContactAvatarResponse
+func (c *ClientWithResponses) GetContactAvatarWithResponse(ctx context.Context, channelId string, remoteId string, reqEditors ...RequestEditorFn) (*GetContactAvatarResponse, error) {
+	rsp, err := c.GetContactAvatar(ctx, channelId, remoteId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetContactAvatarResponse(rsp)
+}
+
 // ListenEventsWithResponse request returning *ListenEventsResponse
 func (c *ClientWithResponses) ListenEventsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListenEventsResponse, error) {
 	rsp, err := c.ListenEvents(ctx, reqEditors...)
@@ -9401,6 +9606,15 @@ func (c *ClientWithResponses) GetHomeDashboardWithResponse(ctx context.Context, 
 		return nil, err
 	}
 	return ParseGetHomeDashboardResponse(rsp)
+}
+
+// GetOperatorIdentityWithResponse request returning *GetOperatorIdentityResponse
+func (c *ClientWithResponses) GetOperatorIdentityWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetOperatorIdentityResponse, error) {
+	rsp, err := c.GetOperatorIdentity(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetOperatorIdentityResponse(rsp)
 }
 
 // GetSettingsWithResponse request returning *GetSettingsResponse
@@ -10398,8 +10612,11 @@ func ParseGetSessionChatResponse(rsp *http.Response) (*GetSessionChatResponse, e
 			MentionGate  GetSessionChat200JSONResponseBody_MentionGate `json:"mentionGate"`
 			Paused       bool                                          `json:"paused"`
 			Thread       struct {
+				ChannelId     openapi_types.UUID `json:"channelId"`
 				ChannelKind   ChannelKind        `json:"channelKind"`
 				DisplayName   string             `json:"displayName"`
+				ExternalId    string             `json:"externalId"`
+				HasAvatar     bool               `json:"hasAvatar"`
 				LastActivity  string             `json:"lastActivity"`
 				Providers     []ProviderKind     `json:"providers"`
 				Status        ThreadStatus       `json:"status"`
@@ -10414,7 +10631,13 @@ func ParseGetSessionChatResponse(rsp *http.Response) (*GetSessionChatResponse, e
 				Kind           TranscriptKind        `json:"kind"`
 				Provider       *ProviderKind         `json:"provider,omitempty"`
 				QuotedEntryId  *string               `json:"quotedEntryId,omitempty"`
-				Text           string                `json:"text"`
+				Sender         *struct {
+					ChannelId   openapi_types.UUID `json:"channelId"`
+					DisplayName string             `json:"displayName"`
+					ExternalId  string             `json:"externalId"`
+					HasAvatar   bool               `json:"hasAvatar"`
+				} `json:"sender,omitempty"`
+				Text string `json:"text"`
 			} `json:"transcript"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -11075,10 +11298,12 @@ func ParseGetThreadSettingsResponse(rsp *http.Response) (*GetThreadSettingsRespo
 			InvokerCount          int                                              `json:"invokerCount"`
 			MentionGate           GetThreadSettings200JSONResponseBody_MentionGate `json:"mentionGate"`
 			Participants          []struct {
-				CanInvoke     bool   `json:"canInvoke"`
-				Name          string `json:"name"`
-				ParticipantId string `json:"participantId"`
-				Source        string `json:"source"`
+				CanInvoke     bool               `json:"canInvoke"`
+				ChannelId     openapi_types.UUID `json:"channelId"`
+				HasAvatar     bool               `json:"hasAvatar"`
+				Name          string             `json:"name"`
+				ParticipantId string             `json:"participantId"`
+				Source        string             `json:"source"`
 			} `json:"participants"`
 			Providers []struct {
 				ComingSoon bool           `json:"comingSoon"`
@@ -11191,10 +11416,10 @@ func ParseGetAttachThreadWizardResponse(rsp *http.Response) (*GetAttachThreadWiz
 			} `json:"channels"`
 			Contacts []struct {
 				AlreadyAttached  bool                      `json:"alreadyAttached"`
-				AvatarUrl        nullable.Nullable[string] `json:"avatarUrl"`
 				ChannelId        openapi_types.UUID        `json:"channelId"`
 				DisplayName      string                    `json:"displayName"`
 				ExternalId       string                    `json:"externalId"`
+				HasAvatar        bool                      `json:"hasAvatar"`
 				Kind             ContactKind               `json:"kind"`
 				LastMessageAt    nullable.Nullable[string] `json:"lastMessageAt"`
 				ParticipantCount nullable.Nullable[int]    `json:"participantCount"`
@@ -11219,6 +11444,22 @@ func ParseGetAttachThreadWizardResponse(rsp *http.Response) (*GetAttachThreadWiz
 		}
 		response.JSON200 = &dest
 
+	}
+
+	return response, nil
+}
+
+// ParseGetContactAvatarResponse parses an HTTP response from a GetContactAvatarWithResponse call
+func ParseGetContactAvatarResponse(rsp *http.Response) (*GetContactAvatarResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetContactAvatarResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
 	}
 
 	return response, nil
@@ -11257,8 +11498,11 @@ func ParseGetHomeDashboardResponse(rsp *http.Response) (*GetHomeDashboardRespons
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
 			ActiveSessions []struct {
+				ChannelId     openapi_types.UUID `json:"channelId"`
 				ChannelKind   ChannelKind        `json:"channelKind"`
 				DisplayName   string             `json:"displayName"`
+				ExternalId    string             `json:"externalId"`
+				HasAvatar     bool               `json:"hasAvatar"`
 				LastActivity  string             `json:"lastActivity"`
 				Providers     []ProviderKind     `json:"providers"`
 				Status        ThreadStatus       `json:"status"`
@@ -11271,8 +11515,14 @@ func ParseGetHomeDashboardResponse(rsp *http.Response) (*GetHomeDashboardRespons
 				Status ChannelStatus `json:"status"`
 			} `json:"channels"`
 			LatestActivity []struct {
-				At       string             `json:"at"`
-				Kind     TranscriptKind     `json:"kind"`
+				At     string         `json:"at"`
+				Kind   TranscriptKind `json:"kind"`
+				Sender *struct {
+					ChannelId   openapi_types.UUID `json:"channelId"`
+					DisplayName string             `json:"displayName"`
+					ExternalId  string             `json:"externalId"`
+					HasAvatar   bool               `json:"hasAvatar"`
+				} `json:"sender,omitempty"`
 				Subtitle string             `json:"subtitle"`
 				ThreadId openapi_types.UUID `json:"threadId"`
 			} `json:"latestActivity"`
@@ -11282,8 +11532,11 @@ func ParseGetHomeDashboardResponse(rsp *http.Response) (*GetHomeDashboardRespons
 				ThreadId          openapi_types.UUID `json:"threadId"`
 			} `json:"needsYou,omitempty"`
 			Threads []struct {
+				ChannelId     openapi_types.UUID `json:"channelId"`
 				ChannelKind   ChannelKind        `json:"channelKind"`
 				DisplayName   string             `json:"displayName"`
+				ExternalId    string             `json:"externalId"`
+				HasAvatar     bool               `json:"hasAvatar"`
 				LastActivity  string             `json:"lastActivity"`
 				Providers     []ProviderKind     `json:"providers"`
 				Status        ThreadStatus       `json:"status"`
@@ -11295,6 +11548,39 @@ func ParseGetHomeDashboardResponse(rsp *http.Response) (*GetHomeDashboardRespons
 				IssuesOpened          int     `json:"issuesOpened"`
 				MedianResponseSeconds float32 `json:"medianResponseSeconds"`
 			} `json:"today"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetOperatorIdentityResponse parses an HTTP response from a GetOperatorIdentityWithResponse call
+func ParseGetOperatorIdentityResponse(rsp *http.Response) (*GetOperatorIdentityResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetOperatorIdentityResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Identity *struct {
+				ChannelId   openapi_types.UUID `json:"channelId"`
+				DisplayName string             `json:"displayName"`
+				ExternalId  string             `json:"externalId"`
+				HasAvatar   bool               `json:"hasAvatar"`
+			} `json:"identity,omitempty"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err

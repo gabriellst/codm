@@ -65,6 +65,14 @@ export type GetThreadSettings200 = {
          * @type boolean
         */
         canInvoke: boolean;
+        /**
+         * @type string, uuid
+        */
+        channelId: string;
+        /**
+         * @type boolean
+        */
+        hasAvatar: boolean;
     }[];
     /**
      * @minLength -9007199254740991

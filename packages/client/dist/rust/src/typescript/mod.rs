@@ -216,6 +216,7 @@ pub mod types {
     ///    "CLASSIFICATION_FAILED",
     ///    "COMMAND_HANDLER_NOT_FOUND",
     ///    "COMMAND_QUEUE_NOT_FOUND",
+    ///    "CONTACT_AVATAR_NOT_FOUND",
     ///    "CONTACT_ENTRY_REQUIRES_SENDER",
     ///    "CREDENTIAL_DECRYPT_FAILED",
     ///    "DEVICE_CODE_INVALID",
@@ -340,6 +341,8 @@ pub mod types {
         CommandHandlerNotFound,
         #[serde(rename = "COMMAND_QUEUE_NOT_FOUND")]
         CommandQueueNotFound,
+        #[serde(rename = "CONTACT_AVATAR_NOT_FOUND")]
+        ContactAvatarNotFound,
         #[serde(rename = "CONTACT_ENTRY_REQUIRES_SENDER")]
         ContactEntryRequiresSender,
         #[serde(rename = "CREDENTIAL_DECRYPT_FAILED")]
@@ -530,6 +533,7 @@ pub mod types {
                 Self::ClassificationFailed => f.write_str("CLASSIFICATION_FAILED"),
                 Self::CommandHandlerNotFound => f.write_str("COMMAND_HANDLER_NOT_FOUND"),
                 Self::CommandQueueNotFound => f.write_str("COMMAND_QUEUE_NOT_FOUND"),
+                Self::ContactAvatarNotFound => f.write_str("CONTACT_AVATAR_NOT_FOUND"),
                 Self::ContactEntryRequiresSender => {
                     f.write_str("CONTACT_ENTRY_REQUIRES_SENDER")
                 }
@@ -645,6 +649,7 @@ pub mod types {
                 "CLASSIFICATION_FAILED" => Ok(Self::ClassificationFailed),
                 "COMMAND_HANDLER_NOT_FOUND" => Ok(Self::CommandHandlerNotFound),
                 "COMMAND_QUEUE_NOT_FOUND" => Ok(Self::CommandQueueNotFound),
+                "CONTACT_AVATAR_NOT_FOUND" => Ok(Self::ContactAvatarNotFound),
                 "CONTACT_ENTRY_REQUIRES_SENDER" => Ok(Self::ContactEntryRequiresSender),
                 "CREDENTIAL_DECRYPT_FAILED" => Ok(Self::CredentialDecryptFailed),
                 "DEVICE_CODE_INVALID" => Ok(Self::DeviceCodeInvalid),
@@ -2910,10 +2915,10 @@ pub mod types {
     ///        "type": "object",
     ///        "required": [
     ///          "alreadyAttached",
-    ///          "avatarUrl",
     ///          "channelId",
     ///          "displayName",
     ///          "externalId",
+    ///          "hasAvatar",
     ///          "kind",
     ///          "lastMessageAt",
     ///          "participantCount"
@@ -2921,12 +2926,6 @@ pub mod types {
     ///        "properties": {
     ///          "alreadyAttached": {
     ///            "type": "boolean"
-    ///          },
-    ///          "avatarUrl": {
-    ///            "type": [
-    ///              "string",
-    ///              "null"
-    ///            ]
     ///          },
     ///          "channelId": {
     ///            "type": "string",
@@ -2938,6 +2937,9 @@ pub mod types {
     ///          },
     ///          "externalId": {
     ///            "type": "string"
+    ///          },
+    ///          "hasAvatar": {
+    ///            "type": "boolean"
     ///          },
     ///          "kind": {
     ///            "$ref": "#/components/schemas/ContactKind"
@@ -3097,10 +3099,10 @@ pub mod types {
     ///  "type": "object",
     ///  "required": [
     ///    "alreadyAttached",
-    ///    "avatarUrl",
     ///    "channelId",
     ///    "displayName",
     ///    "externalId",
+    ///    "hasAvatar",
     ///    "kind",
     ///    "lastMessageAt",
     ///    "participantCount"
@@ -3108,12 +3110,6 @@ pub mod types {
     ///  "properties": {
     ///    "alreadyAttached": {
     ///      "type": "boolean"
-    ///    },
-    ///    "avatarUrl": {
-    ///      "type": [
-    ///        "string",
-    ///        "null"
-    ///      ]
     ///    },
     ///    "channelId": {
     ///      "type": "string",
@@ -3125,6 +3121,9 @@ pub mod types {
     ///    },
     ///    "externalId": {
     ///      "type": "string"
+    ///    },
+    ///    "hasAvatar": {
+    ///      "type": "boolean"
     ///    },
     ///    "kind": {
     ///      "$ref": "#/components/schemas/ContactKind"
@@ -3153,14 +3152,14 @@ pub mod types {
     pub struct GetAttachThreadWizardResponseContactsItem {
         #[serde(rename = "alreadyAttached")]
         pub already_attached: bool,
-        #[serde(rename = "avatarUrl")]
-        pub avatar_url: ::std::option::Option<::std::string::String>,
         #[serde(rename = "channelId")]
         pub channel_id: ::uuid::Uuid,
         #[serde(rename = "displayName")]
         pub display_name: ::std::string::String,
         #[serde(rename = "externalId")]
         pub external_id: ::std::string::String,
+        #[serde(rename = "hasAvatar")]
+        pub has_avatar: bool,
         pub kind: ::codm_contracts_rust::wire::enums::ContactKind,
         #[serde(rename = "lastMessageAt")]
         pub last_message_at: ::std::option::Option<::std::string::String>,
@@ -3415,8 +3414,11 @@ pub mod types {
     ///      "items": {
     ///        "type": "object",
     ///        "required": [
+    ///          "channelId",
     ///          "channelKind",
     ///          "displayName",
+    ///          "externalId",
+    ///          "hasAvatar",
     ///          "lastActivity",
     ///          "providers",
     ///          "status",
@@ -3424,11 +3426,22 @@ pub mod types {
     ///          "workspacePath"
     ///        ],
     ///        "properties": {
+    ///          "channelId": {
+    ///            "type": "string",
+    ///            "format": "uuid",
+    ///            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///          },
     ///          "channelKind": {
     ///            "$ref": "#/components/schemas/ChannelKind"
     ///          },
     ///          "displayName": {
     ///            "type": "string"
+    ///          },
+    ///          "externalId": {
+    ///            "type": "string"
+    ///          },
+    ///          "hasAvatar": {
+    ///            "type": "boolean"
     ///          },
     ///          "lastActivity": {
     ///            "type": "string"
@@ -3495,6 +3508,32 @@ pub mod types {
     ///          "kind": {
     ///            "$ref": "#/components/schemas/TranscriptKind"
     ///          },
+    ///          "sender": {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "channelId",
+    ///              "displayName",
+    ///              "externalId",
+    ///              "hasAvatar"
+    ///            ],
+    ///            "properties": {
+    ///              "channelId": {
+    ///                "type": "string",
+    ///                "format": "uuid",
+    ///                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///              },
+    ///              "displayName": {
+    ///                "type": "string"
+    ///              },
+    ///              "externalId": {
+    ///                "type": "string"
+    ///              },
+    ///              "hasAvatar": {
+    ///                "type": "boolean"
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          },
     ///          "subtitle": {
     ///            "type": "string"
     ///          },
@@ -3537,8 +3576,11 @@ pub mod types {
     ///      "items": {
     ///        "type": "object",
     ///        "required": [
+    ///          "channelId",
     ///          "channelKind",
     ///          "displayName",
+    ///          "externalId",
+    ///          "hasAvatar",
     ///          "lastActivity",
     ///          "providers",
     ///          "status",
@@ -3546,11 +3588,22 @@ pub mod types {
     ///          "workspacePath"
     ///        ],
     ///        "properties": {
+    ///          "channelId": {
+    ///            "type": "string",
+    ///            "format": "uuid",
+    ///            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///          },
     ///          "channelKind": {
     ///            "$ref": "#/components/schemas/ChannelKind"
     ///          },
     ///          "displayName": {
     ///            "type": "string"
+    ///          },
+    ///          "externalId": {
+    ///            "type": "string"
+    ///          },
+    ///          "hasAvatar": {
+    ///            "type": "boolean"
     ///          },
     ///          "lastActivity": {
     ///            "type": "string"
@@ -3637,8 +3690,11 @@ pub mod types {
     ///{
     ///  "type": "object",
     ///  "required": [
+    ///    "channelId",
     ///    "channelKind",
     ///    "displayName",
+    ///    "externalId",
+    ///    "hasAvatar",
     ///    "lastActivity",
     ///    "providers",
     ///    "status",
@@ -3646,11 +3702,22 @@ pub mod types {
     ///    "workspacePath"
     ///  ],
     ///  "properties": {
+    ///    "channelId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
     ///    "channelKind": {
     ///      "$ref": "#/components/schemas/ChannelKind"
     ///    },
     ///    "displayName": {
     ///      "type": "string"
+    ///    },
+    ///    "externalId": {
+    ///      "type": "string"
+    ///    },
+    ///    "hasAvatar": {
+    ///      "type": "boolean"
     ///    },
     ///    "lastActivity": {
     ///      "type": "string"
@@ -3680,10 +3747,16 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct GetHomeDashboardResponseActiveSessionsItem {
+        #[serde(rename = "channelId")]
+        pub channel_id: ::uuid::Uuid,
         #[serde(rename = "channelKind")]
         pub channel_kind: ::codm_contracts_rust::wire::enums::ChannelKind,
         #[serde(rename = "displayName")]
         pub display_name: ::std::string::String,
+        #[serde(rename = "externalId")]
+        pub external_id: ::std::string::String,
+        #[serde(rename = "hasAvatar")]
+        pub has_avatar: bool,
         #[serde(rename = "lastActivity")]
         pub last_activity: ::std::string::String,
         pub providers: ::std::vec::Vec<::codm_contracts_rust::wire::enums::ProviderKind>,
@@ -3754,6 +3827,32 @@ pub mod types {
     ///    "kind": {
     ///      "$ref": "#/components/schemas/TranscriptKind"
     ///    },
+    ///    "sender": {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "channelId",
+    ///        "displayName",
+    ///        "externalId",
+    ///        "hasAvatar"
+    ///      ],
+    ///      "properties": {
+    ///        "channelId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "displayName": {
+    ///          "type": "string"
+    ///        },
+    ///        "externalId": {
+    ///          "type": "string"
+    ///        },
+    ///        "hasAvatar": {
+    ///          "type": "boolean"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
     ///    "subtitle": {
     ///      "type": "string"
     ///    },
@@ -3772,6 +3871,10 @@ pub mod types {
     pub struct GetHomeDashboardResponseLatestActivityItem {
         pub at: ::std::string::String,
         pub kind: ::codm_contracts_rust::wire::enums::TranscriptKind,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub sender: ::std::option::Option<
+            GetHomeDashboardResponseLatestActivityItemSender,
+        >,
         pub subtitle: ::std::string::String,
         #[serde(rename = "threadId")]
         pub thread_id: ::uuid::Uuid,
@@ -3779,6 +3882,57 @@ pub mod types {
     impl ::std::convert::From<&GetHomeDashboardResponseLatestActivityItem>
     for GetHomeDashboardResponseLatestActivityItem {
         fn from(value: &GetHomeDashboardResponseLatestActivityItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetHomeDashboardResponseLatestActivityItemSender`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "channelId",
+    ///    "displayName",
+    ///    "externalId",
+    ///    "hasAvatar"
+    ///  ],
+    ///  "properties": {
+    ///    "channelId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
+    ///    "displayName": {
+    ///      "type": "string"
+    ///    },
+    ///    "externalId": {
+    ///      "type": "string"
+    ///    },
+    ///    "hasAvatar": {
+    ///      "type": "boolean"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetHomeDashboardResponseLatestActivityItemSender {
+        #[serde(rename = "channelId")]
+        pub channel_id: ::uuid::Uuid,
+        #[serde(rename = "displayName")]
+        pub display_name: ::std::string::String,
+        #[serde(rename = "externalId")]
+        pub external_id: ::std::string::String,
+        #[serde(rename = "hasAvatar")]
+        pub has_avatar: bool,
+    }
+    impl ::std::convert::From<&GetHomeDashboardResponseLatestActivityItemSender>
+    for GetHomeDashboardResponseLatestActivityItemSender {
+        fn from(value: &GetHomeDashboardResponseLatestActivityItemSender) -> Self {
             value.clone()
         }
     }
@@ -3838,8 +3992,11 @@ pub mod types {
     ///{
     ///  "type": "object",
     ///  "required": [
+    ///    "channelId",
     ///    "channelKind",
     ///    "displayName",
+    ///    "externalId",
+    ///    "hasAvatar",
     ///    "lastActivity",
     ///    "providers",
     ///    "status",
@@ -3847,11 +4004,22 @@ pub mod types {
     ///    "workspacePath"
     ///  ],
     ///  "properties": {
+    ///    "channelId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
     ///    "channelKind": {
     ///      "$ref": "#/components/schemas/ChannelKind"
     ///    },
     ///    "displayName": {
     ///      "type": "string"
+    ///    },
+    ///    "externalId": {
+    ///      "type": "string"
+    ///    },
+    ///    "hasAvatar": {
+    ///      "type": "boolean"
     ///    },
     ///    "lastActivity": {
     ///      "type": "string"
@@ -3881,10 +4049,16 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct GetHomeDashboardResponseThreadsItem {
+        #[serde(rename = "channelId")]
+        pub channel_id: ::uuid::Uuid,
         #[serde(rename = "channelKind")]
         pub channel_kind: ::codm_contracts_rust::wire::enums::ChannelKind,
         #[serde(rename = "displayName")]
         pub display_name: ::std::string::String,
+        #[serde(rename = "externalId")]
+        pub external_id: ::std::string::String,
+        #[serde(rename = "hasAvatar")]
+        pub has_avatar: bool,
         #[serde(rename = "lastActivity")]
         pub last_activity: ::std::string::String,
         pub providers: ::std::vec::Vec<::codm_contracts_rust::wire::enums::ProviderKind>,
@@ -5222,6 +5396,115 @@ pub mod types {
             value.clone()
         }
     }
+    ///`GetOperatorIdentityResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "properties": {
+    ///    "identity": {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "channelId",
+    ///        "displayName",
+    ///        "externalId",
+    ///        "hasAvatar"
+    ///      ],
+    ///      "properties": {
+    ///        "channelId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "displayName": {
+    ///          "type": "string"
+    ///        },
+    ///        "externalId": {
+    ///          "type": "string"
+    ///        },
+    ///        "hasAvatar": {
+    ///          "type": "boolean"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetOperatorIdentityResponse {
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub identity: ::std::option::Option<GetOperatorIdentityResponseIdentity>,
+    }
+    impl ::std::convert::From<&GetOperatorIdentityResponse>
+    for GetOperatorIdentityResponse {
+        fn from(value: &GetOperatorIdentityResponse) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::default::Default for GetOperatorIdentityResponse {
+        fn default() -> Self {
+            Self {
+                identity: Default::default(),
+            }
+        }
+    }
+    ///`GetOperatorIdentityResponseIdentity`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "channelId",
+    ///    "displayName",
+    ///    "externalId",
+    ///    "hasAvatar"
+    ///  ],
+    ///  "properties": {
+    ///    "channelId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
+    ///    "displayName": {
+    ///      "type": "string"
+    ///    },
+    ///    "externalId": {
+    ///      "type": "string"
+    ///    },
+    ///    "hasAvatar": {
+    ///      "type": "boolean"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetOperatorIdentityResponseIdentity {
+        #[serde(rename = "channelId")]
+        pub channel_id: ::uuid::Uuid,
+        #[serde(rename = "displayName")]
+        pub display_name: ::std::string::String,
+        #[serde(rename = "externalId")]
+        pub external_id: ::std::string::String,
+        #[serde(rename = "hasAvatar")]
+        pub has_avatar: bool,
+    }
+    impl ::std::convert::From<&GetOperatorIdentityResponseIdentity>
+    for GetOperatorIdentityResponseIdentity {
+        fn from(value: &GetOperatorIdentityResponseIdentity) -> Self {
+            value.clone()
+        }
+    }
     ///`GetSessionChatResponse`
     ///
     /// <details><summary>JSON schema</summary>
@@ -5318,8 +5601,11 @@ pub mod types {
     ///    "thread": {
     ///      "type": "object",
     ///      "required": [
+    ///        "channelId",
     ///        "channelKind",
     ///        "displayName",
+    ///        "externalId",
+    ///        "hasAvatar",
     ///        "lastActivity",
     ///        "providers",
     ///        "status",
@@ -5327,11 +5613,22 @@ pub mod types {
     ///        "workspacePath"
     ///      ],
     ///      "properties": {
+    ///        "channelId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
     ///        "channelKind": {
     ///          "$ref": "#/components/schemas/ChannelKind"
     ///        },
     ///        "displayName": {
     ///          "type": "string"
+    ///        },
+    ///        "externalId": {
+    ///          "type": "string"
+    ///        },
+    ///        "hasAvatar": {
+    ///          "type": "boolean"
     ///        },
     ///        "lastActivity": {
     ///          "type": "string"
@@ -5391,6 +5688,32 @@ pub mod types {
     ///          },
     ///          "quotedEntryId": {
     ///            "type": "string"
+    ///          },
+    ///          "sender": {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "channelId",
+    ///              "displayName",
+    ///              "externalId",
+    ///              "hasAvatar"
+    ///            ],
+    ///            "properties": {
+    ///              "channelId": {
+    ///                "type": "string",
+    ///                "format": "uuid",
+    ///                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///              },
+    ///              "displayName": {
+    ///                "type": "string"
+    ///              },
+    ///              "externalId": {
+    ///                "type": "string"
+    ///              },
+    ///              "hasAvatar": {
+    ///                "type": "boolean"
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
     ///          },
     ///          "text": {
     ///            "type": "string"
@@ -5540,8 +5863,11 @@ pub mod types {
     ///{
     ///  "type": "object",
     ///  "required": [
+    ///    "channelId",
     ///    "channelKind",
     ///    "displayName",
+    ///    "externalId",
+    ///    "hasAvatar",
     ///    "lastActivity",
     ///    "providers",
     ///    "status",
@@ -5549,11 +5875,22 @@ pub mod types {
     ///    "workspacePath"
     ///  ],
     ///  "properties": {
+    ///    "channelId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
     ///    "channelKind": {
     ///      "$ref": "#/components/schemas/ChannelKind"
     ///    },
     ///    "displayName": {
     ///      "type": "string"
+    ///    },
+    ///    "externalId": {
+    ///      "type": "string"
+    ///    },
+    ///    "hasAvatar": {
+    ///      "type": "boolean"
     ///    },
     ///    "lastActivity": {
     ///      "type": "string"
@@ -5583,10 +5920,16 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct GetSessionChatResponseThread {
+        #[serde(rename = "channelId")]
+        pub channel_id: ::uuid::Uuid,
         #[serde(rename = "channelKind")]
         pub channel_kind: ::codm_contracts_rust::wire::enums::ChannelKind,
         #[serde(rename = "displayName")]
         pub display_name: ::std::string::String,
+        #[serde(rename = "externalId")]
+        pub external_id: ::std::string::String,
+        #[serde(rename = "hasAvatar")]
+        pub has_avatar: bool,
         #[serde(rename = "lastActivity")]
         pub last_activity: ::std::string::String,
         pub providers: ::std::vec::Vec<::codm_contracts_rust::wire::enums::ProviderKind>,
@@ -5641,6 +5984,32 @@ pub mod types {
     ///    "quotedEntryId": {
     ///      "type": "string"
     ///    },
+    ///    "sender": {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "channelId",
+    ///        "displayName",
+    ///        "externalId",
+    ///        "hasAvatar"
+    ///      ],
+    ///      "properties": {
+    ///        "channelId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "displayName": {
+    ///          "type": "string"
+    ///        },
+    ///        "externalId": {
+    ///          "type": "string"
+    ///        },
+    ///        "hasAvatar": {
+    ///          "type": "boolean"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
     ///    "text": {
     ///      "type": "string"
     ///    }
@@ -5676,11 +6045,64 @@ pub mod types {
             skip_serializing_if = "::std::option::Option::is_none"
         )]
         pub quoted_entry_id: ::std::option::Option<::std::string::String>,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub sender: ::std::option::Option<GetSessionChatResponseTranscriptItemSender>,
         pub text: ::std::string::String,
     }
     impl ::std::convert::From<&GetSessionChatResponseTranscriptItem>
     for GetSessionChatResponseTranscriptItem {
         fn from(value: &GetSessionChatResponseTranscriptItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetSessionChatResponseTranscriptItemSender`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "channelId",
+    ///    "displayName",
+    ///    "externalId",
+    ///    "hasAvatar"
+    ///  ],
+    ///  "properties": {
+    ///    "channelId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
+    ///    "displayName": {
+    ///      "type": "string"
+    ///    },
+    ///    "externalId": {
+    ///      "type": "string"
+    ///    },
+    ///    "hasAvatar": {
+    ///      "type": "boolean"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetSessionChatResponseTranscriptItemSender {
+        #[serde(rename = "channelId")]
+        pub channel_id: ::uuid::Uuid,
+        #[serde(rename = "displayName")]
+        pub display_name: ::std::string::String,
+        #[serde(rename = "externalId")]
+        pub external_id: ::std::string::String,
+        #[serde(rename = "hasAvatar")]
+        pub has_avatar: bool,
+    }
+    impl ::std::convert::From<&GetSessionChatResponseTranscriptItemSender>
+    for GetSessionChatResponseTranscriptItemSender {
+        fn from(value: &GetSessionChatResponseTranscriptItemSender) -> Self {
             value.clone()
         }
     }
@@ -6628,12 +7050,22 @@ pub mod types {
     ///        "type": "object",
     ///        "required": [
     ///          "canInvoke",
+    ///          "channelId",
+    ///          "hasAvatar",
     ///          "name",
     ///          "participantId",
     ///          "source"
     ///        ],
     ///        "properties": {
     ///          "canInvoke": {
+    ///            "type": "boolean"
+    ///          },
+    ///          "channelId": {
+    ///            "type": "string",
+    ///            "format": "uuid",
+    ///            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///          },
+    ///          "hasAvatar": {
     ///            "type": "boolean"
     ///          },
     ///          "name": {
@@ -6770,12 +7202,22 @@ pub mod types {
     ///  "type": "object",
     ///  "required": [
     ///    "canInvoke",
+    ///    "channelId",
+    ///    "hasAvatar",
     ///    "name",
     ///    "participantId",
     ///    "source"
     ///  ],
     ///  "properties": {
     ///    "canInvoke": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "channelId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
+    ///    "hasAvatar": {
     ///      "type": "boolean"
     ///    },
     ///    "name": {
@@ -6797,6 +7239,10 @@ pub mod types {
     pub struct GetThreadSettingsResponseParticipantsItem {
         #[serde(rename = "canInvoke")]
         pub can_invoke: bool,
+        #[serde(rename = "channelId")]
+        pub channel_id: ::uuid::Uuid,
+        #[serde(rename = "hasAvatar")]
+        pub has_avatar: bool,
         pub name: ::std::string::String,
         #[serde(rename = "participantId")]
         pub participant_id: ::std::string::String,
@@ -12380,6 +12826,35 @@ Sends a `GET` request to `/v1/ui/attach-thread-wizard`
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
+    /**The photo of one channel contact, cached daemon-side (the console renders it in chat bubbles and rosters)
+
+Sends a `GET` request to `/v1/ui/avatars/{channelId}/{remoteId}`
+
+*/
+    pub async fn get_contact_avatar<'a>(
+        &'a self,
+        channel_id: &'a str,
+        remote_id: &'a str,
+    ) -> Result<ResponseValue<ByteStream>, Error<()>> {
+        let url = format!(
+            "{}/v1/ui/avatars/{}/{}", self.baseurl, encode_path(& channel_id
+            .to_string()), encode_path(& remote_id.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self.client.get(url).headers(header_map).build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => Ok(ResponseValue::stream(response)),
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
     /**Owner-scoped real-time integration events via SSE
 
 Sends a `GET` request to `/v1/ui/events`
@@ -12413,6 +12888,38 @@ Sends a `GET` request to `/v1/ui/home`
         &'a self,
     ) -> Result<ResponseValue<types::GetHomeDashboardResponse>, Error<()>> {
         let url = format!("{}/v1/ui/home", self.baseurl,);
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .get(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**The operator's displayed identity — name and photo borrowed from the connected channel's own account
+
+Sends a `GET` request to `/v1/ui/operator`
+
+*/
+    pub async fn get_operator_identity<'a>(
+        &'a self,
+    ) -> Result<ResponseValue<types::GetOperatorIdentityResponse>, Error<()>> {
+        let url = format!("{}/v1/ui/operator", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(

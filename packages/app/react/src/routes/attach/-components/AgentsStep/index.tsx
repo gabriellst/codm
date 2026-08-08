@@ -7,6 +7,7 @@ import type { GetAttachThreadWizardQueryResponse, ProviderKind } from '@codm/cli
 import { Button } from '@/components/ui/button'
 import { enumLabel, type DeepPartial } from '@/lib'
 import { cn } from '@/lib/utils'
+import { rowBorder, rowHover } from '@/components/ui/surfaces'
 import { providerGlyph, providerLabel } from '@/components/console/glyphs'
 import { StepHeading } from '../StepHeading'
 
@@ -111,13 +112,27 @@ export function AgentsStep({ providers, defaultValues, onSubmit, onBack, classNa
 									type="button"
 									disabled={!available}
 									onClick={() => selectAndAdvance(entry.provider)}
+									// CONTENT ROW, como as outras listas do console: preset `row` +
+									// `rounded-asymmetric-*`. Granular (`rowBorder` + `rowHover`) porque o provedor sem
+									// runner é `disabled` e não pode reagir ao mouse — mantém a borda de repouso e não
+									// ganha o par fundo+borda do hover.
 									className={cn(
-										'flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors',
-										available ? 'hover:bg-muted' : 'cursor-not-allowed opacity-50',
-										isSelected ? 'border-foreground bg-muted' : 'border-border',
+										'group flex items-center gap-3 rounded-asymmetric-lg bg-background p-3.5 text-left transition-colors',
+										rowBorder,
+										available ? rowHover : 'cursor-not-allowed opacity-50',
+										// ESCOLHIDO = o pastel do hover, fixo, + a borda de marca — o mesmo par nos três
+										// passos do assistente. Era `border-foreground bg-muted`: preto e cinza, um
+										// terceiro vocabulário que só existia nesta tela.
+										//
+										// Por que `--hover-accent` e não o `--secondary` que os tokens chamam de
+										// selected-active: as linhas destes passos carregam CHIPS `bg-secondary` dentro
+										// delas (o avatar de iniciais do contato, este emblema do provedor), e um fundo
+										// `bg-secondary` os apagaria contra a própria linha. A linha escolhida fica com
+										// exatamente a cor que o ponteiro lhe deu, e a borda verde é o sinal forte.
+										isSelected && 'border-primary bg-hover-accent',
 									)}
 								>
-									<span className="flex size-10 items-center justify-center rounded-full bg-secondary text-foreground">
+									<span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground">
 										<Glyph className="size-5" />
 									</span>
 									<div className="flex flex-1 flex-col">

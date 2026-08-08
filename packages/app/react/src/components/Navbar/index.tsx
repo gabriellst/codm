@@ -6,7 +6,7 @@ import { useGetHomeDashboard, useGetIssuesOverview, useListWorkspaces } from '@c
 
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/console/Logo'
-import { ThreadAvatar } from '@/components/console/ThreadAvatar'
+import { ThreadAvatar, contactAvatarUrl } from '@/components/console/ThreadAvatar'
 import { ThreadStatusDot } from '@/components/console/StatusDot'
 import type { FileRouteTypes } from '@/routeTree.gen'
 
@@ -14,9 +14,19 @@ type AppRoute = FileRouteTypes['to']
 
 // D2 — the reference measures every sidebar nav/thread row at the asymmetric ladder's `sm` step
 // ("16px 16px 16px 5px"), never a symmetric radius — see `rounded-asymmetric-*` in web-utilities.css.
-const rowBase = 'flex items-center gap-3 rounded-asymmetric-sm px-3 h-10 text-sm font-medium transition-colors'
-const rowIdle = 'text-sidebar-foreground/80 hover:bg-sidebar-accent/60'
-const rowActive = 'bg-sidebar-accent text-sidebar-foregroundr'
+// `activeProps` SOMA ao className, não substitui — o Link concatena as duas strings
+// (`link.js`: `out = \`${out} ${activeClassName}\``). Duas consequências que este trio respeita:
+//
+// 1. Os estilos de idle vão em `inactiveProps`, NUNCA no className base — senão continuam
+//    aplicados quando a rota está ativa (era o caso do hover, que clareava a linha selecionada).
+// 2. Nenhuma propriedade CSS pode aparecer em `rowBase` E em rowIdle/rowActive. O `cn()` de cada
+//    lado roda isolado, então o twMerge nunca vê o par e quem decide é a ordem do stylesheet —
+//    que no Tailwind 4 é ALFABÉTICA, não por peso: `.font-bold` sai antes de `.font-medium`, logo
+//    `font-medium` vencia e a linha ativa nunca ficava bold. Por isso o peso saiu daqui.
+//    Ver `.specs/2026-08-07-conflitos-de-utilitario-fora-do-twmerge.md`.
+const rowBase = 'flex items-center gap-3 rounded-asymmetric-sm px-3 h-10 text-sm transition-colors'
+const rowIdle = 'font-medium text-sidebar-foreground hover:bg-sidebar-accent/60'
+const rowActive = 'font-bold bg-sidebar-accent text-sidebar-foreground'
 
 /**
  * The CODM console rail: primary destinations with live counts, then the THREADS
@@ -38,7 +48,7 @@ export function Sidebar({ className, ...props }: React.ComponentProps<'aside'>) 
 	const threads = dashboard?.threads ?? []
 
 	return (
-		<aside className={cn('bg-sidebar flex w-60 shrink-0 flex-col gap-6 border-r border-sidebar-border px-4 py-6', className)} {...props}>
+		<aside className={cn('flex w-60 shrink-0 flex-col gap-6 border-r border-sidebar-border px-4 py-6', className)} {...props}>
 			<div className="px-1">
 				<Logo />
 			</div>
@@ -58,7 +68,7 @@ export function Sidebar({ className, ...props }: React.ComponentProps<'aside'>) 
 						to="/attach"
 						aria-label={t('console.attachThread')}
 						// Verde na referência — é a única ação de criar da sidebar, e o verde é a cor de ação do sistema.
-						className="flex size-6 items-center justify-center rounded-full text-primary transition-colors hover:bg-sidebar-accent"
+						className="flex size-6 items-center justify-center rounded-asymmetric-sm text-primary transition-colors hover:bg-sidebar-accent"
 					>
 						<IconPlus className="size-4" />
 					</Link>
@@ -73,10 +83,18 @@ export function Sidebar({ className, ...props }: React.ComponentProps<'aside'>) 
 								key={thread.threadId}
 								to="/threads/$threadId"
 								params={{ threadId: thread.threadId }}
-								className={cn(rowBase, rowIdle, 'h-12')}
-								activeProps={{ className: cn(rowBase, rowActive, 'h-12') }}
+								className={cn(rowBase, 'h-12')}
+								activeProps={{ className: rowActive }}
+								inactiveProps={{ className: rowIdle }}
 							>
-								<ThreadAvatar name={thread.displayName} channelKind={thread.channelKind} size="sm" />
+								{/* A FOTO quando o contato (ou o GRUPO) tem uma, iniciais quando não — o `src` sai da
+								    função da SDK, nunca de uma url montada à mão. */}
+								<ThreadAvatar
+									name={thread.displayName}
+									src={thread.hasAvatar ? contactAvatarUrl(thread.channelId, thread.externalId) : undefined}
+									channelKind={thread.channelKind}
+									size="sm"
+								/>
 								<span className="flex-1 truncate">{thread.displayName}</span>
 								<ThreadStatusDot status={thread.status} />
 							</Link>
@@ -90,11 +108,11 @@ export function Sidebar({ className, ...props }: React.ComponentProps<'aside'>) 
 
 function NavItem({ to, icon: Glyph, label, count }: { to: AppRoute; icon: Icon; label: string; count?: number }) {
 	return (
-		<Link to={to} className={cn(rowBase, rowIdle)} activeProps={{ className: cn(rowBase, rowActive) }}>
+		<Link to={to} className={rowBase} activeProps={{ className: rowActive }} inactiveProps={{ className: rowIdle }}>
 			{({ isActive }) => (
 				<>
-					<Glyph className="size-5 shrink-0" />
-					<span className="flex-1 truncate">{label}</span>
+					<Glyph className="size-4 shrink-0" />
+					<span className="flex-1 truncate text-md">{label}</span>
 					{count !== undefined && (
 						// D2 — the selected nav item's counter gets its own chip: brand-green fill, the
 						// asymmetric ladder's `3xs` step ("9px 9px 9px 3px"), WHITE text for contrast

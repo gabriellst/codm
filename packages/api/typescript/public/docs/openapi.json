@@ -3192,6 +3192,17 @@
                         "displayName": {
                           "type": "string"
                         },
+                        "channelId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "externalId": {
+                          "type": "string"
+                        },
+                        "hasAvatar": {
+                          "type": "boolean"
+                        },
                         "channelKind": {
                           "$ref": "#/components/schemas/ChannelKind"
                         },
@@ -3214,6 +3225,9 @@
                       "required": [
                         "threadId",
                         "displayName",
+                        "channelId",
+                        "externalId",
+                        "hasAvatar",
                         "channelKind",
                         "workspacePath",
                         "providers",
@@ -3324,6 +3338,32 @@
                           },
                           "classification": {
                             "$ref": "#/components/schemas/ClassificationMethod"
+                          },
+                          "sender": {
+                            "type": "object",
+                            "properties": {
+                              "channelId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "externalId": {
+                                "type": "string"
+                              },
+                              "displayName": {
+                                "type": "string"
+                              },
+                              "hasAvatar": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "channelId",
+                              "externalId",
+                              "displayName",
+                              "hasAvatar"
+                            ],
+                            "additionalProperties": false
                           }
                         },
                         "required": [
@@ -3435,13 +3475,23 @@
                           },
                           "canInvoke": {
                             "type": "boolean"
+                          },
+                          "channelId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "hasAvatar": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
                           "participantId",
                           "name",
                           "source",
-                          "canInvoke"
+                          "canInvoke",
+                          "channelId",
+                          "hasAvatar"
                         ],
                         "additionalProperties": false
                       }
@@ -4835,9 +4885,8 @@
                           "kind": {
                             "$ref": "#/components/schemas/ContactKind"
                           },
-                          "avatarUrl": {
-                            "nullable": true,
-                            "type": "string"
+                          "hasAvatar": {
+                            "type": "boolean"
                           },
                           "lastMessageAt": {
                             "nullable": true,
@@ -4858,7 +4907,7 @@
                           "externalId",
                           "displayName",
                           "kind",
-                          "avatarUrl",
+                          "hasAvatar",
                           "lastMessageAt",
                           "participantCount",
                           "alreadyAttached"
@@ -4948,6 +4997,56 @@
         ]
       }
     },
+    "/v1/ui/avatars/{channelId}/{remoteId}": {
+      "get": {
+        "tags": [
+          "ui"
+        ],
+        "description": "The photo of one channel contact, cached daemon-side (the console renders it in chat bubbles and rosters)",
+        "operationId": "GetContactAvatar",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channelId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          },
+          {
+            "in": "path",
+            "name": "remoteId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "5511999999999@s.whatsapp.net"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The photo of one channel contact, cached daemon-side (the console renders it in chat bubbles and rosters)",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "examples": [
+                    "<binary>"
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": "<binary>",
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/ui/home": {
       "get": {
         "tags": [
@@ -5008,6 +5107,17 @@
                           "displayName": {
                             "type": "string"
                           },
+                          "channelId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "externalId": {
+                            "type": "string"
+                          },
+                          "hasAvatar": {
+                            "type": "boolean"
+                          },
                           "channelKind": {
                             "$ref": "#/components/schemas/ChannelKind"
                           },
@@ -5030,6 +5140,9 @@
                         "required": [
                           "threadId",
                           "displayName",
+                          "channelId",
+                          "externalId",
+                          "hasAvatar",
                           "channelKind",
                           "workspacePath",
                           "providers",
@@ -5052,6 +5165,17 @@
                           "displayName": {
                             "type": "string"
                           },
+                          "channelId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "externalId": {
+                            "type": "string"
+                          },
+                          "hasAvatar": {
+                            "type": "boolean"
+                          },
                           "channelKind": {
                             "$ref": "#/components/schemas/ChannelKind"
                           },
@@ -5074,6 +5198,9 @@
                         "required": [
                           "threadId",
                           "displayName",
+                          "channelId",
+                          "externalId",
+                          "hasAvatar",
                           "channelKind",
                           "workspacePath",
                           "providers",
@@ -5101,6 +5228,32 @@
                           },
                           "at": {
                             "type": "string"
+                          },
+                          "sender": {
+                            "type": "object",
+                            "properties": {
+                              "channelId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "externalId": {
+                                "type": "string"
+                              },
+                              "displayName": {
+                                "type": "string"
+                              },
+                              "hasAvatar": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "channelId",
+                              "externalId",
+                              "displayName",
+                              "hasAvatar"
+                            ],
+                            "additionalProperties": false
                           }
                         },
                         "required": [
@@ -5281,6 +5434,57 @@
         "x-mcp-scope": [
           "system"
         ]
+      }
+    },
+    "/v1/ui/operator": {
+      "get": {
+        "tags": [
+          "ui"
+        ],
+        "description": "The operator's displayed identity — name and photo borrowed from the connected channel's own account",
+        "operationId": "GetOperatorIdentity",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The operator's displayed identity — name and photo borrowed from the connected channel's own account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "identity": {
+                      "type": "object",
+                      "properties": {
+                        "channelId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "externalId": {
+                          "type": "string"
+                        },
+                        "displayName": {
+                          "type": "string"
+                        },
+                        "hasAvatar": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "channelId",
+                        "externalId",
+                        "displayName",
+                        "hasAvatar"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/ui/settings": {
@@ -8816,6 +9020,7 @@
           "CLASSIFICATION_FAILED",
           "COMMAND_HANDLER_NOT_FOUND",
           "COMMAND_QUEUE_NOT_FOUND",
+          "CONTACT_AVATAR_NOT_FOUND",
           "CONTACT_ENTRY_REQUIRES_SENDER",
           "CREDENTIAL_DECRYPT_FAILED",
           "DEVICE_CODE_INVALID",
@@ -9258,6 +9463,7 @@
     "CLASSIFICATION_FAILED",
     "COMMAND_HANDLER_NOT_FOUND",
     "COMMAND_QUEUE_NOT_FOUND",
+    "CONTACT_AVATAR_NOT_FOUND",
     "CONTACT_ENTRY_REQUIRES_SENDER",
     "CREDENTIAL_DECRYPT_FAILED",
     "DEVICE_CODE_INVALID",

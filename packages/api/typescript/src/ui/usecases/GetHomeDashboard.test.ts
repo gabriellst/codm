@@ -1,10 +1,11 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
-import { TestBed, givenIssue, givenThread, givenWorkspace } from '@test/support'
+import { TestBed, givenChannel, givenIssue, givenRemote, givenThread, givenWorkspace } from '@test/support'
 import { IssueStatus, ThreadStatus, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import type { Thread } from '@thread/entities/Thread'
 import { ThreadRepository } from '@thread/repositories'
+import { OPERATOR_PARTICIPANT_ID } from '@thread/objects/TranscriptSpeaker'
 import { GetHomeDashboard } from './GetHomeDashboard'
 
 /**
@@ -239,5 +240,212 @@ describe('GetHomeDashboard — today.medianResponseSeconds', () => {
 		const dashboard = await testBed.resolve(GetHomeDashboard).execute({ ownerId: OPERATOR_ID })
 
 		expect(dashboard.today.medianResponseSeconds).toBe(0)
+	})
+})
+
+/**
+ * THE FACES. The sidebar and the active-sessions list drew initials for every conversation, including
+ * the ~55% of the founder's real contact book that `gateway_remotes` holds a photo for. Nothing on
+ * this read had ever joined the two.
+ *
+ * The payload carries `hasAvatar` plus the two halves of the daemon's own avatar route
+ * (`channelId` + `externalId`) — never the platform url, which is signed, expiring, and off-CSP
+ * (rail DSK-12).
+ *
+ * FALSIFIER: drop the `remotes` LEFT JOIN and every `hasAvatar: true` below goes false while the
+ * "no entry" cases stay green — which is exactly the silent half-failure the join is here to prevent.
+ */
+describe('GetHomeDashboard — conversation and sender faces', () => {
+	let testBed: TestBed
+	let testContainer: DependencyContainer
+
+	beforeAll(async () => {
+		testContainer = container.createChildContainer()
+		testBed = await TestBed.create('integration', { testContainer, ownerId: OPERATOR_ID })
+	})
+	beforeEach(async () => {
+		await testBed.reset()
+	})
+	afterAll(async () => {
+		await testBed.destroy()
+	})
+
+	const CHANNEL = '019e4d24-0000-7041-9e1c-0000000000d1'
+	const JID = '558386387518@s.whatsapp.net'
+	const GROUP_JID = '120363000000000000@g.us'
+	const PHOTO_URL = 'https://pps.whatsapp.net/v/t61.24694-24/group.jpg'
+
+	const threadOn = async (contactExternalId: string) => {
+		const workspace = await givenWorkspace(testBed, { ownerId: OPERATOR_ID })
+		return givenThread(testBed, { ownerId: OPERATOR_ID, workspaceId: workspace.id.value, channelId: CHANNEL, contactExternalId })
+	}
+
+	const dashboard = () => testBed.resolve(GetHomeDashboard).execute({ ownerId: OPERATOR_ID })
+
+	it('a conversation whose contact has a photo is flagged, with the address to fetch it from', async () => {
+		const thread = await threadOn(GROUP_JID)
+		await givenRemote(testBed, { channelId: CHANNEL, remoteId: GROUP_JID, name: 'Time CODM', avatarUrl: PHOTO_URL })
+
+		const row = (await dashboard()).threads.find(t => t.threadId === thread.id.value)
+
+		expect(row?.hasAvatar).toBe(true)
+		expect(row?.channelId).toBe(CHANNEL)
+		expect(row?.externalId).toBe(GROUP_JID)
+	})
+
+	/** DEGRADES TO INITIALS: a thread whose contact the gateway sync has not written must still list. */
+	it('a conversation with no contact-book entry still lists, reporting no photo', async () => {
+		const thread = await threadOn(GROUP_JID)
+
+		const row = (await dashboard()).threads.find(t => t.threadId === thread.id.value)
+
+		expect(row?.hasAvatar).toBe(false)
+		expect(row?.externalId).toBe(GROUP_JID)
+	})
+
+	/** The key is (channel, remote) — another channel's row with the same JID must not lend its face. */
+	it('does not borrow a photo from a different channel', async () => {
+		const thread = await threadOn(GROUP_JID)
+		await givenRemote(testBed, {
+			channelId: '019e4d24-0000-7041-9e1c-0000000000d2',
+			remoteId: GROUP_JID,
+			name: 'Outro grupo',
+			avatarUrl: PHOTO_URL,
+		})
+
+		expect((await dashboard()).threads.find(t => t.threadId === thread.id.value)?.hasAvatar).toBe(false)
+	})
+
+	/**
+	 * WHO SPOKE on the latest-activity list. It printed the transcript KIND and the text and never the
+	 * person — which in a group is a different person on every line.
+	 */
+	it('attributes a recent inbound line to the contact who sent it, with their face', async () => {
+		const thread = await threadOn(GROUP_JID)
+		await givenRemote(testBed, { channelId: CHANNEL, remoteId: JID, name: 'Gabriel Araújo', avatarUrl: PHOTO_URL })
+		thread.recordEntry({ kind: TranscriptKind.CONTACT, text: 'bom dia', senderExternalId: JID, at: new Date() })
+		await testBed.resolve(ThreadRepository).save(thread)
+
+		const line = (await dashboard()).latestActivity.find(a => a.subtitle === 'bom dia')
+
+		expect(line?.sender).toEqual({ channelId: CHANNEL, externalId: JID, displayName: 'Gabriel Araújo', hasAvatar: true })
+	})
+
+	/** A sender with no contact-book row keeps the attribution, falling back to the JID for a name. */
+	it('an unknown sender keeps the attribution and reports no photo', async () => {
+		const thread = await threadOn(GROUP_JID)
+		thread.recordEntry({ kind: TranscriptKind.CONTACT, text: 'quem sou eu', senderExternalId: JID, at: new Date() })
+		await testBed.resolve(ThreadRepository).save(thread)
+
+		const line = (await dashboard()).latestActivity.find(a => a.subtitle === 'quem sou eu')
+
+		expect(line?.sender).toEqual({ channelId: CHANNEL, externalId: JID, displayName: JID, hasAvatar: false })
+	})
+
+	/**
+	 * The product's OWN lines have no face to borrow — the agent's `SYSTEM` reply carries no sender at
+	 * all, exactly as in `GetSessionChat`, so the console keeps composing their caption from `kind`.
+	 */
+	it('a line the product produced carries no sender', async () => {
+		const thread = await threadOn(GROUP_JID)
+		thread.recordEntry({ kind: TranscriptKind.SYSTEM, text: 'resposta do agente', at: new Date() })
+		await testBed.resolve(ThreadRepository).save(thread)
+
+		expect((await dashboard()).latestActivity.find(a => a.subtitle === 'resposta do agente')?.sender).toBeUndefined()
+	})
+})
+
+/**
+ * O ROSTO DO OPERADOR NA HOME — o par exato dos dois testes de `GetSessionChat`, e por isso escrito
+ * ao lado deles em espírito: uma linha tem de se ler igual na home e na conversa de onde veio.
+ *
+ * As linhas do próprio operador são atribuídas ao sentinela `operator`, que não é um JID e nunca terá
+ * linha em `gateway_remotes`. Esta leitura DESCARTAVA o sender por causa disso, e sem `sender` o
+ * console cai no rótulo do `kind` — a atividade recente escrevia "Você" onde devia estar o nome e a
+ * foto da conta conectada.
+ *
+ * FALSIFICADOR: tire o `case` do join (ou a troca no `senderOf`) e o primeiro teste volta a
+ * `undefined` enquanto o segundo — a degradação — segue verde. É essa meia-falha silenciosa que o par
+ * existe para pegar.
+ */
+describe('GetHomeDashboard — a linha do operador tem o rosto da conta conectada', () => {
+	let testBed: TestBed
+	let testContainer: DependencyContainer
+
+	beforeAll(async () => {
+		testContainer = container.createChildContainer()
+		testBed = await TestBed.create('integration', { testContainer, ownerId: OPERATOR_ID })
+	})
+	beforeEach(async () => {
+		await testBed.reset()
+	})
+	afterAll(async () => {
+		await testBed.destroy()
+	})
+
+	const GROUP_JID = '120363000000000001@g.us'
+	/** A conta CONECTADA — o JID por trás do sentinela, vindo de `channels.owner_remote_id`. */
+	const OWNER = '5511900000009@s.whatsapp.net'
+	const OWNER_PHOTO = 'https://pps.whatsapp.net/v/t61.24694-24/owner_n.jpg'
+
+	const threadOnChannelWith = async (ownerRemoteId: string) => {
+		const { channelId } = await givenChannel(testBed, { ownerId: OPERATOR_ID, ownerRemoteId })
+		const workspace = await givenWorkspace(testBed, { ownerId: OPERATOR_ID })
+		const thread = await givenThread(testBed, {
+			ownerId: OPERATOR_ID,
+			workspaceId: workspace.id.value,
+			channelId,
+			contactExternalId: GROUP_JID,
+		})
+		return { thread, channelId }
+	}
+
+	const dashboard = () => testBed.resolve(GetHomeDashboard).execute({ ownerId: OPERATOR_ID })
+
+	it('resolve o sentinela `operator` na conta do canal — nome e foto, não o rótulo do kind', async () => {
+		const { thread, channelId } = await threadOnChannelWith(OWNER)
+		await givenRemote(testBed, { channelId, remoteId: OWNER, name: 'Gabriel Araújo', avatarUrl: OWNER_PHOTO })
+		thread.recordEntry({ kind: TranscriptKind.DIRECT, text: 'já subi', senderExternalId: OPERATOR_PARTICIPANT_ID, at: new Date() })
+		await testBed.resolve(ThreadRepository).save(thread)
+
+		expect((await dashboard()).latestActivity.find(a => a.subtitle === 'já subi')?.sender).toEqual({
+			channelId,
+			externalId: OWNER,
+			displayName: 'Gabriel Araújo',
+			hasAvatar: true,
+		})
+	})
+
+	/**
+	 * O par do teste acima: sem `owner_remote_id` (canal antigo — a coluna nasceu com default `''` — ou
+	 * desconectado) não há a quem apontar, e a linha volta a ser anônima. Degradação, nunca erro: a home
+	 * não pode deixar de carregar porque a conta ainda não foi projetada.
+	 */
+	it('deixa a linha do operador anônima quando o canal não tem conta conectada', async () => {
+		const { thread } = await threadOnChannelWith('')
+		thread.recordEntry({ kind: TranscriptKind.DIRECT, text: 'já subi', senderExternalId: OPERATOR_PARTICIPANT_ID, at: new Date() })
+		await testBed.resolve(ThreadRepository).save(thread)
+
+		expect((await dashboard()).latestActivity.find(a => a.subtitle === 'já subi')?.sender).toBeUndefined()
+	})
+
+	/**
+	 * A troca é do SENTINELA e de mais nada. Um contato de verdade continua resolvendo por si — se o
+	 * `case` casasse largo demais, toda linha de entrada herdaria o rosto do dono do canal.
+	 */
+	it('não empresta a conta conectada para a linha de um contato', async () => {
+		const CONTACT = '5511900000001@s.whatsapp.net'
+		const { thread, channelId } = await threadOnChannelWith(OWNER)
+		await givenRemote(testBed, { channelId, remoteId: OWNER, name: 'Gabriel Araújo', avatarUrl: OWNER_PHOTO })
+		await givenRemote(testBed, { channelId, remoteId: CONTACT, name: 'Ada Lovelace' })
+		thread.recordEntry({ kind: TranscriptKind.CONTACT, text: 'e aí?', senderExternalId: CONTACT, at: new Date() })
+		await testBed.resolve(ThreadRepository).save(thread)
+
+		expect((await dashboard()).latestActivity.find(a => a.subtitle === 'e aí?')?.sender).toEqual({
+			channelId,
+			externalId: CONTACT,
+			displayName: 'Ada Lovelace',
+			hasAvatar: false,
+		})
 	})
 })

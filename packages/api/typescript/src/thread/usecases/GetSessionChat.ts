@@ -1,8 +1,9 @@
 import { injectable } from 'tsyringe-neo'
-import { and, asc, eq, isNull } from 'drizzle-orm'
+import { and, asc, eq, inArray, isNull } from 'drizzle-orm'
 import { Handler, z, BaseError, DrizzleClient } from '@codm/core-typescript'
-import { threads, transcriptEntries, workspaces, channels, stops } from '@codm/contracts/db'
+import { threads, transcriptEntries, workspaces, channels, remotes, stops } from '@codm/contracts/db'
 import { ThreadStatusDeriver } from '../services/ThreadStatusDeriver'
+import { OPERATOR_PARTICIPANT_ID } from '../objects'
 import {
 	ThreadStatus,
 	ChannelKind,
@@ -19,6 +20,16 @@ export const GetSessionChatOutputSchema = z.object({
 	thread: z.object({
 		threadId: z.uuid(),
 		displayName: z.string(),
+		/**
+		 * The conversation's OWN face — the same three facts every `sender` below carries, for the
+		 * counterparty this whole thread is with (a person in a 1:1, the group itself in a group).
+		 *
+		 * Flat rather than nested because `displayName` right above completes the quartet; see the note
+		 * on `GetHomeDashboard`'s `ThreadSummarySchema`, which spells the identical shape for the sidebar.
+		 */
+		channelId: z.uuid(),
+		externalId: z.string(),
+		hasAvatar: z.boolean(),
 		channelKind: z.enum(ChannelKind),
 		workspacePath: z.string(),
 		providers: z.array(z.enum(ProviderKind)),
@@ -46,6 +57,34 @@ export const GetSessionChatOutputSchema = z.object({
 			provider: z.enum(ProviderKind).optional(),
 			quotedEntryId: z.string().optional(),
 			classification: z.enum(ClassificationMethod).optional(),
+			/**
+			 * WHO SPOKE — present only for a line somebody outside this system typed.
+			 *
+			 * Absent for every line the product itself produced: the agent's (`SYSTEM`), the operator's
+			 * own (`DIRECT` / `WHISPER`, which the ingest attributes to the `operator` sentinel however
+			 * many devices they were typed from), and the system's narration (`ACTION`). Those already
+			 * have a caption the console composes from `kind`; borrowing a contact's face for them is
+			 * exactly the confusion `Thread.recordEntry`'s kind×sender invariant exists to prevent.
+			 *
+			 * It matters most in a GROUP, where every inbound line is a different person and the bubble
+			 * used to carry no attribution at all — the transcript said what was said and never who.
+			 *
+			 * `hasAvatar` rather than a url: the photo is served by `GET /ui/avatars/:channelId/:remoteId`
+			 * (the daemon caches it — the platform's own url is signed, expiring and off-CSP), and the
+			 * console addresses that endpoint through the SDK's generated query key, exactly as it does
+			 * for artifact bytes. A url on the wire would be a second, hand-maintained copy of a route
+			 * the SDK already describes.
+			 */
+			sender: z
+				.object({
+					/** The channel the contact lives on — half of the avatar endpoint's address. */
+					channelId: z.uuid(),
+					/** The platform's own id for them (a WhatsApp JID) — the other half. */
+					externalId: z.string(),
+					displayName: z.string(),
+					hasAvatar: z.boolean(),
+				})
+				.optional(),
 		}),
 	),
 	composerMode: z.enum(['STEER', 'DIRECT']),
@@ -100,7 +139,13 @@ export class GetSessionChat extends Handler<typeof GetSessionChatInputSchema, ty
 			.from(workspaces)
 			.where(eq(workspaces.id, thread.workspaceId))
 			.limit(1)
-		const [channelRow] = await this.db.select({ kind: channels.platform }).from(channels).where(eq(channels.id, thread.channelId)).limit(1)
+		// `ownerRemoteId` vem junto porque é ele que dá rosto às linhas do PRÓPRIO operador — ver
+		// `senderOf`. Uma query a mais seria uma query a mais para o mesmo id que já estamos lendo.
+		const [channelRow] = await this.db
+			.select({ kind: channels.platform, ownerRemoteId: channels.ownerRemoteId })
+			.from(channels)
+			.where(eq(channels.id, thread.channelId))
+			.limit(1)
 
 		const entries = await this.db
 			.select()
@@ -118,6 +163,37 @@ export class GetSessionChat extends Handler<typeof GetSessionChatInputSchema, ty
 		// payload needs the STOPS THEMSELVES (`activeStops`), not the boolean.
 		const status = await this.statuses.forThread(input.threadId)
 
+		// WHO SPOKE, resolved against the gateway's contact book — ONE query for the whole transcript,
+		// keyed by the distinct senders on it, never one lookup per line.
+		//
+		// The scope is the thread's OWN channel, and the thread is already gated by owner above, so the
+		// `channel_id` equality is the same `remotes → channels → owner` path the avatar endpoint walks
+		// — `gateway_remotes` carries no owner of its own.
+		//
+		// The THREAD'S OWN counterparty rides in the same lookup rather than in a second query: it lives
+		// on the same `(channel_id, remote_id)` key, and in a 1:1 it is usually one of the senders anyway.
+		// O SENTINELA DO OPERADOR TEM ROSTO, e é aqui que ele o recupera. As linhas do operador são
+		// atribuídas a `OPERATOR_PARTICIPANT_ID` — não é um JID e nunca terá linha na agenda. Mas a
+		// conta por trás dele tem: é o `owner_remote_id` do canal, a mesma que o cabeçalho resolve.
+		// Trocamos um pelo outro no INSUMO da busca, então a linha do operador sai com nome e foto em
+		// vez de ficar anônima só porque a atribuição usa um sentinela.
+		//
+		// Vazio (o default da coluna) e canal ausente degradam para o comportamento antigo: sem rosto,
+		// nunca um erro — o chat não pode deixar de abrir porque a conta não foi projetada ainda.
+		const operatorRemoteId = channelRow?.ownerRemoteId || null
+		const lookupIds = [
+			...new Set([
+				thread.contactExternalId,
+				...(operatorRemoteId === null ? [] : [operatorRemoteId]),
+				...entries.map(e => e.senderExternalId).filter((id): id is string => id !== null && id !== OPERATOR_PARTICIPANT_ID),
+			]),
+		]
+		const remoteRows = await this.db
+			.select({ remoteId: remotes.remoteId, name: remotes.name, avatarUrl: remotes.avatarUrl })
+			.from(remotes)
+			.where(and(eq(remotes.channelId, thread.channelId), inArray(remotes.remoteId, lookupIds)))
+		const contactBook = new Map(remoteRows.map(r => [r.remoteId, r]))
+
 		const mentionGate = thread.mentionGateEnabled
 			? ({ enabled: true, tag: thread.mentionGateTag ?? '' } as const)
 			: ({ enabled: false } as const)
@@ -127,6 +203,9 @@ export class GetSessionChat extends Handler<typeof GetSessionChatInputSchema, ty
 			thread: {
 				threadId: thread.id,
 				displayName: thread.contactDisplayName,
+				channelId: thread.channelId,
+				externalId: thread.contactExternalId,
+				hasAvatar: Boolean(contactBook.get(thread.contactExternalId)?.avatarUrl),
 				channelKind: (channelRow?.kind ?? ChannelKind.WHATSAPP) as ChannelKind,
 				workspacePath: workspaceRow?.path ?? '',
 				providers: thread.providers as ProviderKind[],
@@ -151,8 +230,37 @@ export class GetSessionChat extends Handler<typeof GetSessionChatInputSchema, ty
 				provider: (e.provider ?? undefined) as ProviderKind | undefined,
 				quotedEntryId: e.quotedEntryId ?? undefined,
 				classification: (e.classification ?? undefined) as ClassificationMethod | undefined,
+				sender: this.senderOf(e.senderExternalId, thread.channelId, contactBook, operatorRemoteId),
 			})),
 			composerMode: thread.paused ? 'STEER' : 'DIRECT',
+		}
+	}
+
+	/**
+	 * The identity to hang on one line, or nothing.
+	 *
+	 * A contact who is not (yet) in the gateway's book still gets a sender — with their JID as the
+	 * name. The transcript knows somebody spoke; refusing to say so because the contact sync hasn't
+	 * caught up would drop the attribution entirely, which is the state this whole field exists to end.
+	 */
+	private senderOf(
+		senderExternalId: string | null,
+		channelId: string,
+		contactBook: Map<string, { name: string; avatarUrl: string | null }>,
+		operatorRemoteId: string | null,
+	): { channelId: string; externalId: string; displayName: string; hasAvatar: boolean } | undefined {
+		if (senderExternalId === null) return undefined
+		// O sentinela vira a conta conectada — a mesma troca feita no insumo da busca acima. Sem
+		// `owner_remote_id` (canal antigo, ainda não projetado, ou desconectado) não há a quem apontar,
+		// e a linha volta a ser anônima como era antes: degradação, nunca erro.
+		const resolvedId = senderExternalId === OPERATOR_PARTICIPANT_ID ? operatorRemoteId : senderExternalId
+		if (resolvedId === null) return undefined
+		const contact = contactBook.get(resolvedId)
+		return {
+			channelId,
+			externalId: resolvedId,
+			displayName: contact?.name || resolvedId,
+			hasAvatar: Boolean(contact?.avatarUrl),
 		}
 	}
 }

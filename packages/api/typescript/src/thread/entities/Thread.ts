@@ -491,6 +491,26 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 		this.validate()
 	}
 
+	/**
+	 * Admit into the JSON roster a participant it has never recorded — the write-side counterpart of
+	 * `GetThreadSettings`' live-membership join.
+	 *
+	 * The JSON roster (`this.participants`) is a snapshot `AttachThread` freezes at bind time; a GROUP
+	 * member who joined afterward, or whose sync landed after the attach, is a real member the LIVE
+	 * `gateway_remote_memberships` projection knows about and this JSON does not. Without this door,
+	 * `setParticipantInvocation` on such a member always raised `PARTICIPANT_NOT_FOUND` — a toggle the
+	 * settings dialog rendered but could never actually flip.
+	 *
+	 * No I/O here, same as every other mutator: the caller (`SetParticipantInvocation`) has already
+	 * verified membership against `GroupMemberReader.isMember` before calling this. IDEMPOTENT rather
+	 * than a guarded throw — the caller only calls it when the id is absent, so a second admission of
+	 * the same id is not a business mistake worth a named error, just a no-op safety net.
+	 */
+	admitParticipant(participant: Participant): void {
+		if (this.participants.some(p => p.participantId === participant.participantId)) return
+		this.participants = [...this.participants, participant]
+	}
+
 	setParticipantInvocation(participantId: string, canInvoke: boolean): void {
 		const participant = this.participants.find(p => p.participantId === participantId)
 		if (!participant) throw new BaseError<DomainErrors>('PARTICIPANT_NOT_FOUND', `no participant ${participantId}`)

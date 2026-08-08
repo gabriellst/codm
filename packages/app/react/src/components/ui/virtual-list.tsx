@@ -170,28 +170,45 @@ export function VirtualList<TItem>({
 	})
 
 	return (
-		<div ref={scrollRef} data-slot="virtual-list" className={cn('relative min-h-0 overflow-y-auto', className)} {...props}>
-			{/* The scroller's full height lives here, so the scrollbar reflects ALL items and not just
-			    the mounted window — a windowed list whose spacer lies is a list with a lying scrollbar. */}
-			<div data-slot="virtual-list-spacer" className={cn('relative w-full', listClassName)} style={{ height: `${totalSize}px` }}>
-				{virtualItems.map(virtualItem => {
-					const item = items[virtualItem.index]
-					if (item === undefined) return null
-					return (
-						<div
-							key={virtualItem.key}
-							// `data-index` is the virtualizer's own `indexAttribute`: it is how a measured
-							// element reports WHICH row it is. Without it every measurement lands on row 0.
-							data-index={virtualItem.index}
-							data-slot="virtual-list-item"
-							ref={virtualizer.measureElement}
-							className={cn('absolute left-0 top-0 w-full', itemClassName)}
-							style={{ transform: `translateY(${virtualItem.start}px)` }}
-						>
-							{renderItem(item, virtualItem.index)}
-						</div>
-					)
-				})}
+		// DOIS elementos, e a separação é o que faz a ancoragem funcionar de verdade.
+		//
+		// O VIEWPORT abaixo é quem negocia altura com o layout (é ele que recebe o `className` do
+		// consumidor, tipicamente `grow`). O SCROLLER é `absolute inset-0`: sua altura vem do bloco
+		// container, não do conteúdo. Um filho absoluto não infla o pai — então nenhuma quantidade de
+		// mensagens faz o scroller crescer, mesmo que algum ancestral perca o `min-h-0`.
+		//
+		// Isso importa porque a versão anterior era um elemento só, `min-h-0 overflow-y-auto`, cuja
+		// altura dependia de uma cadeia de flex de cinco níveis resolver inteira. Quando um elo
+		// quebrava, `clientHeight` passava a valer o conteúdo todo, `scrollHeight - clientHeight` dava
+		// ZERO, e a ancoragem escrevia `scrollTop = 0` — tecnicamente "no fim", visualmente no topo, e
+		// quem rolava era um container de fora. Nenhum teste pega isso: happy-dom não roda layout, e o
+		// próprio teste do chat admite que a cadeia de altura é "eyes-on-screen".
+		// Padrão emprestado do medscall (`ChatPanel`: `relative flex-1 min-h-0` + `absolute inset-0
+		// overflow-y-auto`), que nunca teve este defeito.
+		<div data-slot="virtual-list-viewport" className={cn('relative min-h-0', className)}>
+			<div ref={scrollRef} data-slot="virtual-list" className="absolute inset-0 overflow-y-auto pl-1 pr-4" {...props}>
+				{/* The scroller's full height lives here, so the scrollbar reflects ALL items and not just
+				    the mounted window — a windowed list whose spacer lies is a list with a lying scrollbar. */}
+				<div data-slot="virtual-list-spacer" className={cn('relative w-full', listClassName)} style={{ height: `${totalSize}px` }}>
+					{virtualItems.map(virtualItem => {
+						const item = items[virtualItem.index]
+						if (item === undefined) return null
+						return (
+							<div
+								key={virtualItem.key}
+								// `data-index` is the virtualizer's own `indexAttribute`: it is how a measured
+								// element reports WHICH row it is. Without it every measurement lands on row 0.
+								data-index={virtualItem.index}
+								data-slot="virtual-list-item"
+								ref={virtualizer.measureElement}
+								className={cn('absolute left-0 top-0 w-full', itemClassName)}
+								style={{ transform: `translateY(${virtualItem.start}px)` }}
+							>
+								{renderItem(item, virtualItem.index)}
+							</div>
+						)
+					})}
+				</div>
 			</div>
 		</div>
 	)

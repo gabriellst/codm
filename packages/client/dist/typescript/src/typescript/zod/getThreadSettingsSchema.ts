@@ -26,7 +26,9 @@ export const getThreadSettings200Schema = z.object({
     "participantId": z.string(),
 "name": z.string(),
 "source": z.string(),
-"canInvoke": z.boolean()
+"canInvoke": z.boolean(),
+"channelId": z.uuid(),
+"hasAvatar": z.boolean()
     })),
 "invokerCount": z.int().min(-9007199254740991).max(9007199254740991),
 get "bufferSize"(){

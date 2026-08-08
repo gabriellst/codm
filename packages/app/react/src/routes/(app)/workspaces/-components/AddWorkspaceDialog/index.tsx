@@ -3,7 +3,12 @@ import { useTranslation } from 'react-i18next'
 import { IconFolderOpen } from '@tabler/icons-react'
 import { useForm } from '@tanstack/react-form'
 import { useQueryClient } from '@tanstack/react-query'
-import { addWorkspaceMutationRequestSchema, listWorkspacesQueryKey, useAddWorkspace } from '@codm/client-typescript/typescript'
+import {
+	addWorkspaceMutationRequestSchema,
+	getAttachThreadWizardQueryKey,
+	listWorkspacesQueryKey,
+	useAddWorkspace,
+} from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
 import { DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
@@ -31,6 +36,10 @@ export function AddWorkspaceDialog({ className }: Pick<ComponentProps<typeof Dia
 				{
 					onSuccess: () => {
 						queryClient.invalidateQueries({ queryKey: listWorkspacesQueryKey() })
+						// O passo "Espaço" do wizard NÃO lê `listWorkspaces` — ele recebe os workspaces do
+						// `getAttachThreadWizard`. Sem esta segunda invalidação, criar uma pasta a partir do
+						// wizard deixaria a lista dele vazia até um refetch acidental.
+						queryClient.invalidateQueries({ queryKey: getAttachThreadWizardQueryKey() })
 						hide()
 					},
 				},
