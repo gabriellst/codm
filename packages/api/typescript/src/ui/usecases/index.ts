@@ -3,7 +3,6 @@ export { GetMyAccount, GetMyAccountInputSchema, GetMyAccountOutputSchema } from 
 export { GetHomeDashboard, GetHomeDashboardInputSchema, GetHomeDashboardOutputSchema } from './GetHomeDashboard'
 export { GetAttachThreadWizard, GetAttachThreadWizardInputSchema, GetAttachThreadWizardOutputSchema } from './GetAttachThreadWizard'
 export { GetSettings, GetSettingsInputSchema, GetSettingsOutputSchema } from './GetSettings'
-export { GetSetupChecklist, GetSetupChecklistInputSchema, GetSetupChecklistOutputSchema } from './GetSetupChecklist'
 export { GetOnboarding, GetOnboardingInputSchema, GetOnboardingOutputSchema } from './GetOnboarding'
 export { GetContactAvatar, GetContactAvatarInputSchema, GetContactAvatarOutputSchema } from './GetContactAvatar'
 export { GetOperatorIdentity, GetOperatorIdentityInputSchema, GetOperatorIdentityOutputSchema } from './GetOperatorIdentity'

@@ -6,7 +6,7 @@ import { OPERATOR_ID } from '@auth/operator'
 import { GetIssuesOverview } from '@issue/usecases/GetIssuesOverview'
 import { GetAttachThreadWizard } from '@ui/usecases/GetAttachThreadWizard'
 import { GetHomeDashboard } from '@ui/usecases/GetHomeDashboard'
-import { GetSetupChecklist } from '@ui/usecases/GetSetupChecklist'
+import { GetOnboarding } from '@ui/usecases/GetOnboarding'
 import { ListWorkspaces } from '@workspace/usecases/ListWorkspaces'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { ThreadStatusDeriver } from '../services/ThreadStatusDeriver'
@@ -114,12 +114,12 @@ describe('AC-3 — a deleted thread is absent from every console read', () => {
 		expect(panel.stops).toHaveLength(0)
 	})
 
-	it('GetSetupChecklist — deleting the only thread un-ticks threadDone', async () => {
+	it('GetOnboarding — deleting the only thread un-ticks threadDone', async () => {
 		await deletedThread()
 
-		const checklist = await testBed.resolve(GetSetupChecklist).execute({ ownerId: OPERATOR_ID })
+		const onboarding = await testBed.resolve(GetOnboarding).execute({ ownerId: OPERATOR_ID })
 
-		expect(checklist.threadDone).toBe(false)
+		expect(onboarding.threadDone).toBe(false)
 	})
 
 	/**

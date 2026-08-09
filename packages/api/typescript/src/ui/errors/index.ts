@@ -10,7 +10,7 @@ export type DomainErrors = BaseDomainErrors | UiDomainErrors
 // CONTACT_AVATAR_NOT_FOUND answers FIVE conditions with one code (see GetContactAvatar): unknown
 // channel, another owner's channel, a remote that is not in it, a remote with no photo, and an
 // origin that would not hand the photo over. The console draws initials for all five.
-export type UiApplicationErrors = 'CONTACT_AVATAR_NOT_FOUND'
+export type UiApplicationErrors = 'CONTACT_AVATAR_NOT_FOUND' | 'ONBOARDING_NOT_COMPLETED'
 export type ApplicationErrors = BaseApplicationErrors | UiApplicationErrors
 
 export type UiInfrastructureErrors = never
@@ -23,4 +23,5 @@ export type Errors = ApplicationErrors | DomainErrors | InfrastructureErrors | I
 
 registerErrorCodes({
 	CONTACT_AVATAR_NOT_FOUND: HttpStatusCode.NOT_FOUND,
+	ONBOARDING_NOT_COMPLETED: HttpStatusCode.FORBIDDEN,
 })
