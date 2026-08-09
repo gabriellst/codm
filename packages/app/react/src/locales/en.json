@@ -514,7 +514,6 @@
 		"setupChannelDesc": "WhatsApp, Instagram or Telegram",
 		"setupChannelTitle": "Connect a channel",
 		"setupCta": "Set up",
-		"setupDone": "Done",
 		"setupThreadDesc": "Contact + folder + agent",
 		"setupThreadTitle": "Attach your first thread",
 		"setupWorkspaceDesc": "Point at a project folder on this Mac",
@@ -549,19 +548,11 @@
 		"unreadCount_other": "{{count}} unread"
 	},
 	"onboarding": {
-		"agentsStepBody": "Pick which coding agents handle this conversation.",
-		"agentsStepTitle": "Choose the agents",
 		"back": "Back",
-		"channelStepBody": "Pair WhatsApp via QR code to start receiving messages.",
-		"channelStepTitle": "Connect a channel",
-		"contactStepBody": "Pick the contact or group that will talk to the agent.",
-		"contactStepTitle": "Attach a contact",
 		"finalBody": "You finished CODM's initial setup.",
 		"finalTitle": "All set",
 		"getStarted": "Get started",
 		"next": "Next",
-		"reviewStepBody": "Review what was configured before finishing.",
-		"reviewStepTitle": "Review and confirm",
 		"skip": "Skip",
 		"slide1Body": "CODM connects WhatsApp, Instagram and Telegram to coding agents running on this Mac — DM your codebase like it's any DM platform. Open source, no account, everything stays local.",
 		"slide1Title": "DM your codebase",
@@ -573,9 +564,7 @@
 		"stepThreadDesc": "Bind a contact or group to a folder and pick the agents",
 		"stepThreadTitle": "Attach a thread",
 		"stepWorkspaceDesc": "Point at a project folder — Claude projects are detected",
-		"stepWorkspaceTitle": "Add a workspace",
-		"workspaceStepBody": "Point at a project folder for the agents to work in.",
-		"workspaceStepTitle": "Add a workspace"
+		"stepWorkspaceTitle": "Add a workspace"
 	},
 	"systemPreconditions": {
 		"slideTitle": "One permission is missing",

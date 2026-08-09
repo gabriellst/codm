@@ -11,8 +11,9 @@ import { type Bindings, Container, ServicesProvider } from '@/services'
 import testBindings, { FakeSystemPreconditionsService } from '@/services/registry/test'
 import { SystemPreconditionsToken } from '@/services/tokens'
 import { useSystemPreconditionsStore } from '@/stores/useSystemPreconditionsStore'
+import { useOnboardingSetupStore } from '../../-stores/useOnboardingSetupStore'
 import { useOnboardingStore } from '../../-stores/useOnboardingStore'
-import { onboardingSteps } from '../steps'
+import { onboardingSteps, type StepId } from '../steps'
 import { OnboardingFlow } from './index'
 
 /**
@@ -48,6 +49,7 @@ describe('OnboardingFlow', () => {
 		document.body.appendChild(host)
 		queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 		useOnboardingStore.getState().reset()
+		useOnboardingSetupStore.getState().reset()
 		useSystemPreconditionsStore.getState().reset()
 		serve(FRESH_ONBOARDING)
 	})
@@ -59,9 +61,16 @@ describe('OnboardingFlow', () => {
 		host.remove()
 	})
 
+	// URL-aware: só `/v1/ui/onboarding` recebe o payload semeado — as peças REAIS dos passos de setup
+	// (AC-14) batem em endpoints próprios (`attach-thread-wizard`, `channel/channels/*`, `workspaces`)
+	// que precisam de uma resposta 200 válida para não quebrar a montagem; um objeto vazio basta, já
+	// que essas suítes só afirmam que a peça real renderizou, nunca um estado de dado específico dela.
 	function serve(payload: GetOnboardingQueryResponse): void {
-		globalThis.fetch = (async () =>
-			new Response(JSON.stringify(payload), { status: 200, headers: { 'content-type': 'application/json' } })) as typeof globalThis.fetch
+		globalThis.fetch = (async (input: RequestInfo | URL) => {
+			const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+			const body = url.includes('/v1/ui/onboarding') ? payload : {}
+			return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
+		}) as typeof globalThis.fetch
 	}
 
 	async function mount() {
@@ -93,6 +102,7 @@ describe('OnboardingFlow', () => {
 		await act(async () => {
 			await new Promise(resolve => setTimeout(resolve, 60))
 		})
+		return { router }
 	}
 
 	function clickButton(text: string) {
@@ -149,5 +159,43 @@ describe('OnboardingFlow', () => {
 		expect(useOnboardingStore.getState().currentSlide).toBe(steps.indexOf('FULL_DISK_ACCESS'))
 		expect(useOnboardingStore.getState().currentSlide).not.toBe(0)
 		expect(host.textContent).toContain('Acesso Total ao Disco')
+	})
+
+	/**
+	 * AC-14 — os cinco passos de setup deixaram de ser o placeholder genérico (frente ONB-4b): cada um
+	 * dispatcha para a peça REAL (`ConnectChannelForm`/`AddWorkspaceForm` de ONB-4a; `ContactStep`/
+	 * `AgentsStep`/`ReviewStep` de `/attach`, por trás de um adaptador fino cada). Monta o wizard,
+	 * navega até cada passo clicando "Próximo", e afirma em algo que SÓ a peça real renderiza — nunca
+	 * o antigo título/corpo de placeholder — e que nenhum deles navegou para fora de `/onboarding`.
+	 */
+	describe('passos de setup — AC-14', () => {
+		const SETUP_MARKERS: Record<'CHANNEL' | 'WORKSPACE' | 'CONTACT' | 'AGENTS' | 'REVIEW', string> = {
+			CHANNEL: 'channels.pairStarting',
+			WORKSPACE: 'workspaces.projectFolder',
+			CONTACT: 'attach.noContacts',
+			AGENTS: 'attach.stepAgentsTitle',
+			REVIEW: 'attach.stepReviewTitle',
+		}
+
+		for (const [stepId, markerKey] of Object.entries(SETUP_MARKERS) as [StepId, string][]) {
+			it(`${stepId}: renderiza a peça real e não navega para fora de /onboarding`, async () => {
+				const { router } = await mount()
+
+				const steps = onboardingSteps([])
+				const index = steps.indexOf(stepId)
+				for (let i = 0; i < index; i++) clickButton(i18n.t('onboarding.next'))
+				await act(async () => {
+					await new Promise(resolve => setTimeout(resolve, 60))
+				})
+
+				expect(host.textContent).toContain(i18n.t(markerKey))
+				// Nada aqui pertence ao antigo placeholder genérico (só título+corpo, sem os textos de
+				// domínio acima).
+				expect(router.state.location.pathname).toBe('/')
+				expect(host.querySelector('a[href="/channels"]')).toBeNull()
+				expect(host.querySelector('a[href="/workspaces"]')).toBeNull()
+				expect(host.querySelector('a[href="/attach"]')).toBeNull()
+			})
+		}
 	})
 })

@@ -38,9 +38,5 @@ export function HomeSection({ className, ...props }: ComponentProps<'div'>) {
 		)
 	}
 
-	return data.threadDone ? (
-		<HomeDashboard className={className} {...props} />
-	) : (
-		<SetupChecklist checklist={data} className={className} {...props} />
-	)
+	return data.threadDone ? <HomeDashboard className={className} {...props} /> : <SetupChecklist className={className} {...props} />
 }
