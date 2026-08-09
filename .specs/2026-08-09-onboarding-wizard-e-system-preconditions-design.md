@@ -159,10 +159,15 @@ por fazer.
 
 ### Persistência e propriedade dos fatos
 
-6. **Agregado `Onboarding` por `ownerId`, no contexto `owner`.** Campos: `ownerId`, `currentStep`,
+6. **Agregado `Onboarding` por `ownerId`, no contexto `ui`.** Campos: `ownerId`, `currentStep`,
    `completedAt`. **Sem campo `state`**: nenhum passo coleta dado que não tenha tabela própria, e um
-   saco genérico agora é convite a preenchê-lo com o que não devia. Vai para `owner` porque o `ui` do
-   codm é BFF de leitura pura, sem entidade nem repositório.
+   saco genérico agora é convite a preenchê-lo com o que não devia.
+   O contexto `ui` do codm é hoje BFF de leitura pura — sem `entities/`, sem `repositories/`, sem
+   `middlewares/` — e **ganha os três por causa desta spec**, exatamente como no medscall, onde
+   `Onboarding` e seu repositório vivem em `packages/api/src/ui/`. A alternativa considerada era o
+   contexto `owner` (que já é completo e já é a fatia por dono); o founder escolheu `ui` em 09/08 para
+   que o agregado, a leitura unificada, os comandos e o middleware vivam todos no mesmo contexto, em
+   vez de espalhar o onboarding entre dois. Consequência aceita: o `ui` deixa de ser somente-leitura.
 
 7. **Persistência no SQLite local, uma linha por `ownerId`.**
 
