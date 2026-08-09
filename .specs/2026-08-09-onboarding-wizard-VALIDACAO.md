@@ -26,11 +26,11 @@ sustenta, e cada falseador com o número medido dos dois lados (implementação 
 | **AC-13** | `packages/app/react/src/routes/(app)/dashboard/-components/SetupChecklist/index.test.tsx` :: `"um feito, dois não: só os dois não-feitos aparecem"`, `"nada feito: os três aparecem"`, `"tudo feito: o painel não renderiza nada"`. A morte do endpoint é provada por `grep -rn "GetSetupChecklist" packages/api/typescript` retornando vazio. |
 | **AC-14** | `.../OnboardingFlow/index.test.tsx` — cinco casos, um por passo de setup, asseverando que a peça real renderiza dentro do `/onboarding` sem navegação. |
 | **AC-15** | `packages/app/react/src/hooks/useSystemPreconditionProbe.test.tsx` :: `"Story 3: ao reganhar foco a sonda roda de novo e a pendência resolvida desaparece — sem navegar"` |
-| **AC-16** | `ls packages/app/react/src/routes/onboarding/-components/` — `SystemPreconditionList`, `SystemPreconditionsSlide` e `system-preconditions.ts` não existem; console verde em 218 pass. |
+| **AC-16** | `ls packages/app/react/src/routes/onboarding/-components/` — `SystemPreconditionList`, `SystemPreconditionsSlide` e `system-preconditions.ts` não existem; console verde em 225 pass. |
 | **AC-17** | `grep -rn "Precondition\|PRECONDITION\|precondition" --include='*.ts' --include='*.tsx' --include='*.rs' packages/app/ \| grep -v "SystemPrecondition\|SYSTEM_PRECONDITION\|system_precondition\|system-precondition\|systemPreconditions"` → **vazio**. |
 | **AC-18** | `.../useSystemPreconditionProbe.test.tsx` :: `"AC-18: sonda no mount e publica as pendências no store"` e `"AC-18: com tudo satisfeito, publica pendência vazia e continua sem navegar"` |
-| **AC-19** | `docs/FRONTEND.md`, seção `## Onboarding Step Taxonomy`. Sem gate automático — é entrega de documentação, verificada por leitura. |
-| **AC-20** | Os dois arquivos de locale foram mantidos em lock-step a cada frente. **Sem gate automático neste repo**: a augmentação `typeof pt` está desligada em `packages/app/react/src/@types/i18next.d.ts` (estourava a profundidade de instanciação do TS), então `tsc` não pega chave faltando. Verificado por leitura. |
+| **AC-19** | `packages/app/react/src/routes/onboarding/-components/taxonomy-doc.test.ts` :: `"a seção existe em docs/FRONTEND.md"`, `"todo valor de STEP_KINDS aparece na documentação"`, `"todo valor de STEP_IMPACTS aparece na documentação"`, `"a regra do fato revogável está registrada"` |
+| **AC-20** | `packages/app/react/src/locales/parity.test.ts` :: `"toda chave de pt existe em en"`, `"toda chave de en existe em pt"`, `"nenhuma tradução é a string vazia"` |
 | **AC-21** | `packages/api/typescript/tests/architecture/__snapshots__/mcp-exposure.test.ts.snap` não lista `mcp__codm__GetSetupChecklist` e lista `mcp__codm__GetOnboarding` / `CompleteOnboarding` / `SaveOnboardingStep`; o rail passa em 18 pass. |
 | **AC-22** | `packages/app/react/src/routes/(app)/dashboard/-components/HomeSection/index.tsx` segue chamando `setPersonProperties` com `channelDone` / `workspaceDone` / `threadDone`; console verde. |
 
@@ -45,6 +45,8 @@ Cada linha: implementação desligada → contagem vermelha; religada → contag
 | 3 | **Reanúncio uma vez por execução** (AC-11) | `&& !announced` removido de `OnboardingGate.tsx` | **2 pass / 1 fail** | **3 pass / 0 fail** |
 | 4 | **`STEP_COMPONENTS` exaustivo** (AC-5) | entrada `FULL_DISK_ACCESS` removida do `Record` | **2 erros de `tsc`**, sendo o load-bearing `TS2741: Property 'FULL_DISK_ACCESS' is missing` | **0 erros** |
 | 5 | **Satisfação derivada, nunca persistida** (AC-9) | `isNull(threads.deletedAt)` removido de `GetOnboarding.ts` | **11 pass / 1 fail** | **12 pass / 0 fail** |
+| 6 | **Paridade de locales** (AC-20) | chave `onboarding.back` apagada de `en.json` | **2 pass / 1 fail**, nomeando a chave | **3 pass / 0 fail** |
+| 7 | **Taxonomia documentada** (AC-19) | `REQUIRED` renomeado no `docs/FRONTEND.md` | **3 pass / 1 fail** | **4 pass / 0 fail** |
 
 O falseador nº 5 é o que mais importa conceitualmente: sem ele, um passo "vencido" continuaria
 vencido depois de a linha que o satisfazia sumir — que é exatamente a diferença entre satisfação
@@ -60,12 +62,12 @@ derivada do mundo e progresso persistido da jornada.
 | `cd packages/api/typescript && bun test` | 1363 pass / 0 fail |
 | `cd packages/api/typescript && bun scripts/dump-sqlite-schema.ts --check` | ✔ bate com as migrações |
 | `bun run --cwd packages/contracts db:check-go` | ✔ byte-idêntico |
-| `cd packages/app/react && bun test` | 218 pass / 0 fail |
+| `cd packages/app/react && bun test` | 225 pass / 0 fail |
 | `cd packages/app/tauri/src-tauri && cargo test` · `cargo build` | 58 + 2 passed · 0 warnings |
 | `cd packages/api/go && go build ./... && go test ./...` | verde |
 | `bun run test:tooling` | 471 pass / 0 fail |
 | `bun check:generated` | ✔ em sincronia |
-| `cd packages/e2e && bun run test` | 8 passed, 2 skipped, **2 failed** — ver abaixo |
+| `cd packages/e2e && bun run test` | **10 passed, 2 skipped, 0 failed** |
 
 ## Divergência assumida — AC-3 fora do e2e
 
@@ -80,13 +82,13 @@ SDK-only desta suíte) ou uma segunda identidade real (que não existe).
 A garantia está provada na camada onde ela mora — o repositório —, e o caso e2e está **comentado
 com essa explicação**, não `skip`-ado em silêncio.
 
-## Os 2 e2e vermelhos — defeito pré-existente, não desta remodelagem
+## Os 2 e2e que estavam vermelhos — resolvidos
 
-`10-terminal-tool-frame.spec.ts` e `11-artifact-preview.spec.ts` caem em `/login`. Causa: o
+`10-terminal-tool-frame.spec.ts` e `11-artifact-preview.spec.ts` caíam em `/login`. Causa: o
 `CloudSessionGate` passou a envolver as rotas `(app)` **depois** que esses specs foram escritos, e
-nenhum helper de e2e semeia o token de device do lado cliente. Confirmado revertendo apenas as
-mudanças desta branch e reproduzindo a falha idêntica.
+nenhum helper semeava o token de device do lado cliente — confirmado revertendo apenas as mudanças
+desta branch e reproduzindo a falha idêntica.
 
-O helper que o caso novo de navegador usa — `packages/e2e/utils/given/cloud.ts` — é exatamente o
-que falta wirar nesses dois. Fica como follow-up: está fora do escopo das cinco frentes e
-consertá-lo aqui teria sido mexer em teste alheio sem pedir.
+O helper que o caso novo de navegador já usava (`packages/e2e/utils/given/cloud.ts`) foi wirado nos
+dois. A suíte fecha em **10 passed, 2 skipped, 0 failed**. Os 2 `skipped` são pulos intencionais
+pré-existentes (specs 08 e 09), sem relação com esta spec.
