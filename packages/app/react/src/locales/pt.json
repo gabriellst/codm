@@ -549,9 +549,19 @@
 		"unreadCount_other": "{{count}} não lidas"
 	},
 	"onboarding": {
+		"agentsStepBody": "Selecione quais agentes de código atendem esta conversa.",
+		"agentsStepTitle": "Escolha os agentes",
 		"back": "Voltar",
+		"channelStepBody": "Pareie o WhatsApp por QR code para começar a receber mensagens.",
+		"channelStepTitle": "Conecte um canal",
+		"contactStepBody": "Escolha o contato ou grupo que vai conversar com o agente.",
+		"contactStepTitle": "Vincule um contato",
+		"finalBody": "Você concluiu a configuração inicial do CODM.",
+		"finalTitle": "Tudo pronto",
 		"getStarted": "Começar",
 		"next": "Próximo",
+		"reviewStepBody": "Confira o que foi configurado antes de concluir.",
+		"reviewStepTitle": "Revise e confirme",
 		"skip": "Pular",
 		"slide1Body": "O CODM conecta WhatsApp, Instagram e Telegram a agentes de código rodando neste Mac — converse com seu código como em qualquer plataforma de mensagens. Código aberto, sem conta, tudo permanece local.",
 		"slide1Title": "Converse com seu código",
@@ -563,7 +573,9 @@
 		"stepThreadDesc": "Ligue um contato ou grupo a uma pasta e escolha os agentes",
 		"stepThreadTitle": "Vincule uma conversa",
 		"stepWorkspaceDesc": "Aponte para uma pasta de projeto — projetos Claude são detectados",
-		"stepWorkspaceTitle": "Adicione um espaço de trabalho"
+		"stepWorkspaceTitle": "Adicione um espaço de trabalho",
+		"workspaceStepBody": "Aponte para uma pasta de projeto para os agentes trabalharem nela.",
+		"workspaceStepTitle": "Adicione um espaço de trabalho"
 	},
 	"systemPreconditions": {
 		"slideTitle": "Falta uma permissão",

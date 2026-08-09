@@ -1,98 +1,91 @@
-import { type ComponentProps, type ReactNode, useEffect } from 'react'
+import { type ComponentProps, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { IconArrowRight } from '@tabler/icons-react'
-import { Link, useNavigate } from '@tanstack/react-router'
+import { useNavigate } from '@tanstack/react-router'
+import { useCompleteOnboarding } from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/console/Logo'
 import { useSystemPreconditionsStore } from '@/stores/useSystemPreconditionsStore'
 import { useOnboardingStore } from '../../-stores/useOnboardingStore'
-import { ValueSlide } from '../ValueSlide'
-import { HowItWorksSlide } from '../HowItWorksSlide'
-import { ControlSlide } from '../ControlSlide'
-import { SystemPreconditionsSlide } from '../SystemPreconditionsSlide'
-
-// Sequência de slides como tupla const-asserted; despachada por um Record, nunca por cadeia de if.
-const INTRO_SLIDES = ['VALUE', 'HOW', 'CONTROL'] as const
-const BLOCKED_SLIDES = ['SYSTEM_PRECONDITIONS', ...INTRO_SLIDES] as const
-type SlideId = (typeof BLOCKED_SLIDES)[number]
-
-const SLIDE_COMPONENTS: Record<SlideId, ReactNode> = {
-	SYSTEM_PRECONDITIONS: <SystemPreconditionsSlide />,
-	VALUE: <ValueSlide />,
-	HOW: <HowItWorksSlide />,
-	CONTROL: <ControlSlide />,
-}
+import { canComplete, onboardingSteps, STEP_TAXONOMY } from '../steps'
+import { STEP_COMPONENTS } from '../step-components'
 
 /**
- * O fluxo de entrada (T01) — e, desde a spec de pré-condições, também o de PENDÊNCIA. A rota
- * `/onboarding` deixou de significar "primeira execução" e passou a significar "há algo faltando"
- * (spec Decision 6): não existe flag de "já vi", então primeira execução e revogação posterior são
- * o mesmo caso, com uma superfície só.
+ * O fluxo de entrada e de pendência — agora um wizard COMPOSTO pela função pura `onboardingSteps`
+ * (spec Decision 4), não mais uma lista fixa de três slides com um quarto prefixado sob condição.
+ * Uma `SystemPrecondition` pendente é só mais um `StepId` na lista — dispatchado por `STEP_COMPONENTS`
+ * — e não um caso especial (spec Decisions 1/2).
  *
- * A CONSEQUÊNCIA ACEITA (spec Decision 7): quando uma permissão cai, o operador revê a apresentação
- * inteira. Isso é deliberado e está registrado para ninguém "consertar" depois achando que foi
- * descuido — o slide da pendência entra no fluxo existente em vez de virar uma tela paralela.
+ * O `blocked`/"Pular" escondido de antes MORREU (spec Decision 13): a conclusão só é barrada por um
+ * passo REQUIRED insatisfeito (`canComplete`), e nenhum `StepId` real carrega esse `kind` hoje — o
+ * botão final fica sempre habilitado na prática, como CONSEQUÊNCIA da tabela `STEP_TAXONOMY`, não
+ * como regra imposta aqui. Não existe mais link de saída nenhum: quem sai é o botão final, que
+ * conclui o onboarding de verdade (`useCompleteOnboarding`) antes de navegar.
  *
- * ENQUANTO HÁ PENDÊNCIA NÃO HÁ SAÍDA, e essa é a única forma que não vira laço: o
- * `SystemPreconditionsGate` traz o operador de volta para cá a cada tentativa de sair, então um "Pular"
- * ativo seria um botão que devolve a pessoa ao ponto de partida — e, se o gate fosse afrouxado para
- * evitar isso, o resultado seria o console aberto sem a permissão, que é a falha de origem. O
- * destravamento não depende de o operador apertar nada: o gate re-sonda quando a janela reganha
- * foco, então conceder nos Ajustes e voltar já basta.
+ * A POSIÇÃO DE ABERTURA (spec Decision 12 / AC-10 — sempre no primeiro passo não vencido, nunca
+ * "índice 0" depois de já ter concluído) é responsabilidade da GUARDA (ONB-3b, que lê `currentStep`
+ * do servidor antes de redirecionar para cá) — este componente segue resetando para o índice 0 a
+ * cada entrada, como sempre fez.
  */
 export function OnboardingFlow({ className, ...props }: ComponentProps<'div'>) {
 	const { t } = useTranslation()
 	const navigate = useNavigate()
 	const { currentSlide, direction, setCurrentSlide, setDirection, reset } = useOnboardingStore()
-	const pending = useSystemPreconditionsStore(state => state.pending)
+	const pendingStatuses = useSystemPreconditionsStore(state => state.pending)
+	// O erro não precisa de tratamento aqui — o `MutationCache` global (`router.tsx`) já vira toast
+	// via `handleApiError`; o sucesso é o único efeito que este componente precisa amarrar.
+	const completeOnboarding = useCompleteOnboarding({
+		mutation: { onSuccess: () => navigate({ to: '/dashboard' }) },
+	})
 
-	// Fresh intro on every entry (the store persists across navigations).
+	// Fresh entry on every mount (the store persists across navigations).
 	useEffect(() => reset(), [reset])
 
-	const blocked = (pending?.length ?? 0) > 0
-	const slides: readonly SlideId[] = blocked ? BLOCKED_SLIDES : INTRO_SLIDES
+	const pending = (pendingStatuses ?? []).map(status => status.id)
+	const steps = onboardingSteps(pending)
 
-	const lastIndex = slides.length - 1
+	const lastIndex = steps.length - 1
 	// Clamp, e não só fallback: quando a pendência é resolvida no meio do fluxo a lista ENCOLHE, e o
 	// índice guardado no store pode passar do fim.
 	const index = Math.min(currentSlide, lastIndex)
-	const slideId = slides[index] ?? slides[0]
-	const done = () => navigate({ to: '/dashboard' })
+	const stepId = steps[index] ?? steps[0]
 
 	const goTo = (target: number) => {
 		setDirection(target < index ? -1 : 1)
 		setCurrentSlide(Math.min(lastIndex, Math.max(0, target)))
 	}
 
+	// Nenhum StepId real é REQUIRED hoje (STEP_TAXONOMY), então isto avalia sempre `true` na prática —
+	// ver o comentário de `canComplete` em `../steps`.
+	const completionAllowed = canComplete(
+		steps.map(id => ({ id, kind: STEP_TAXONOMY[id].kind })),
+		[],
+	)
+
 	return (
 		// `min-h-full`, not `min-h-dvh`: sized against the box the root layout left under the AppChrome
 		// title bar, never against the viewport (which no longer belongs entirely to the route).
 		<div className={cn('flex min-h-full flex-col bg-route-background text-foreground', className)} {...props}>
-			<header className="flex items-center justify-between px-6 py-6 md:px-10">
+			<header className="px-6 py-6 md:px-10">
 				<Logo />
-				{!blocked && (
-					<Link to="/dashboard" className="text-sm font-medium text-foreground underline-offset-4 hover:underline">
-						{t('onboarding.skip')}
-					</Link>
-				)}
 			</header>
 
 			<main className="flex flex-1 flex-col items-center justify-center px-6 pb-16">
 				<div className="flex w-full max-w-xl flex-col items-center gap-8 text-center">
 					<div
-						key={slideId}
+						key={stepId}
 						className={cn(
 							'flex w-full flex-col items-center gap-8 text-center',
 							'animate-in fade-in duration-300 ease-out',
 							direction === 1 ? 'slide-in-from-right-10' : 'slide-in-from-left-10',
 						)}
 					>
-						{SLIDE_COMPONENTS[slideId]}
+						{STEP_COMPONENTS[stepId]}
 					</div>
 
 					<div className="flex items-center gap-2">
-						{slides.map((id, i) => (
+						{steps.map((id, i) => (
 							<span
 								key={id}
 								className={cn('h-2 rounded-full transition-all duration-300', i === index ? 'w-6 bg-primary' : 'w-2 bg-border')}
@@ -111,7 +104,7 @@ export function OnboardingFlow({ className, ...props }: ComponentProps<'div'>) {
 								{t('onboarding.next')} <IconArrowRight data-icon="inline-end" />
 							</Button>
 						) : (
-							<Button onClick={done} disabled={blocked}>
+							<Button onClick={() => completeOnboarding.mutate()} disabled={!completionAllowed || completeOnboarding.isPending}>
 								{t('onboarding.getStarted')} <IconArrowRight data-icon="inline-end" />
 							</Button>
 						)}

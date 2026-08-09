@@ -27,10 +27,11 @@ import { useSystemPreconditionsStore } from '@/stores/useSystemPreconditionsStor
  * despacho por `repairAvailability` é por MAPA (canon CMP-P18), nunca `if`/ternário: um terceiro
  * valor de `RepairAvailability` que não tivesse entrada aqui pararia de compilar.
  */
-// O parâmetro tem default (`= {}`) porque este componente também é usado como `SystemPreconditionModule.Component`
-// (`() => ReactNode`, zero args — `SystemPreconditionList` despacha via `<Component key={id} />`, sem props). Sem o
-// default, a assinatura exige 1 argumento e a atribuição em `system-preconditions.ts` não compila (tsc: "Expected 1
-// or more, but got 0"). `ComponentProps<'div'>` já é só campos opcionais, então `{}` é um valor válido.
+// O parâmetro tem default (`= {}`) porque este componente também é usado como entrada de
+// `STEP_COMPONENTS` (`Record<StepId, ReactNode>` — instanciado como `<FullDiskAccessCard />`, sem
+// props, em `step-components.tsx`). Sem o default, a assinatura exige 1 argumento e a instanciação
+// não compila (tsc: "Expected 1 or more, but got 0"). `ComponentProps<'div'>` já é só campos
+// opcionais, então `{}` é um valor válido.
 export function FullDiskAccessCard({ className, ...props }: ComponentProps<'div'> = {}) {
 	const { t } = useTranslation()
 	const systemPreconditions = useSystemPreconditions()
