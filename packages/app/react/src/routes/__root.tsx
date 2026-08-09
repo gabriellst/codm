@@ -2,6 +2,7 @@ import '@/index.css'
 import '@/lib/i18n'
 import { Toaster } from '@/components/ui/sonner'
 import { AppChrome } from '@/components/console/AppChrome'
+import { PreconditionsGate } from '@/components/console/PreconditionsGate'
 import { RouteError } from '@/components/RouteError'
 import { SupervisionGate } from '@/components/console/SupervisionGate'
 import { useAnalyticsConsent, useAnalyticsPageview } from '@/hooks'
@@ -78,6 +79,11 @@ function RootComponent() {
 						    away and unmounted. Root-level, and OUTSIDE SupervisionGate on purpose, so the
 						    subscription itself is never gated behind the daemon's own readiness check. */}
 						<DeepLinkAuthListener />
+						{/* Pré-condições do ambiente (spec Decision 6): a rota /onboarding passa a significar "há
+						    pendência", não "primeira execução". Root-level como o DeepLinkAuthListener porque a
+						    verificação é do processo — vale de qualquer tela — e porque re-sondar no foco da janela
+						    precisa estar montado enquanto o operador está nos Ajustes do macOS. */}
+						<PreconditionsGate />
 						{/* SP4 — product telemetry (PostHog). Root-level like DeepLinkAuthListener: pageviews
 						    and consent are process-wide (every route, not just (app)), and identify() has to
 						    react to the SAME status CloudSessionGate/useDeepLinkAuth flip from whichever
