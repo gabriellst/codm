@@ -94,6 +94,32 @@ jobs:
       - name: sidecars
         run: cd packages/app/tauri && bun config/build-sidecars.ts
 
+      # A Apple exige que TODO Mach-O dentro do bundle seja assinado com Developer ID E com
+      # timestamp seguro. O Tauri assina o .app e os binários declarados em `externalBin`, mas NÃO o
+      # que entra por `bundle.resources` — e o closure do libsql traz um `.node`, que é Mach-O. A
+      # notarização da v0.4.0 reprovou exatamente nele, com as duas mensagens: "not signed with a
+      # valid Developer ID certificate" e "does not include a secure timestamp".
+      #
+      # Assina por BUSCA, não por caminho fixo: o dia em que outro prebuild nativo entrar no closure
+      # ele já sai assinado, em vez de reprovar numa notarização 12 minutos build adentro. `file`
+      # decide o que é Mach-O — extensão não decide (`.node` é Mach-O, `.js` ao lado não é).
+      - name: assina os Mach-O aninhados nos resources
+        env:
+          IDENTITY: "Developer ID Application: BK COMPANY LTDA (V4F6T68S5B)"
+        run: |
+          set -euo pipefail
+          found=0
+          # Só os diretórios STAGED COMO RESOURCE. Os sidecars (`codm-daemon`, `codm-gateway`) ficam
+          # de fora de propósito: o Tauri os assina como `externalBin`, e a notarização confirmou —
+          # ela reclamou do `.node` e de mais nada.
+          while IFS= read -r f; do
+            file "$f" | grep -q "Mach-O" || continue
+            found=$((found + 1))
+            echo "assinando $f"
+            codesign --force --timestamp --options runtime -s "$IDENTITY" "$f"
+          done < <(find packages/app/tauri/src-tauri/binaries/daemon-runtime packages/app/tauri/src-tauri/binaries/migrations -type f 2>/dev/null)
+          echo "Mach-O aninhados assinados: $found"
+
       # Um release sem esta variável produz um app cujo login abre localhost:3030 — defeito
       # INVISÍVEL no artefato (os assets do frontend vão comprimidos dentro do binário, então
       # nenhum grep no .app prova que a URL foi assada). Medido na v0.1.3; a única defesa é
