@@ -1,5 +1,5 @@
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core'
-import { OwnerKind } from '../../generated/typescript/src/wire/enums'
+import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import { OwnerKind, OnboardingStep } from '../../generated/typescript/src/wire/enums'
 import { enumCheck } from './_enum'
 
 /**
@@ -37,5 +37,38 @@ export const owners = sqliteTable(
 		enumCheck('owner_owners_kind_check', t.kind, Object.values(OwnerKind)),
 		index('owners_is_disabled_idx').on(t.isDisabled),
 		index('owners_responsible_user_id_idx').on(t.responsibleUserId),
+	],
+)
+
+/**
+ * `owner_onboardings` — uma linha por operador (spec Decision 7, AC-3). Guarda a JORNADA, nunca o
+ * mundo: a satisfação dos passos de setup é derivada por consulta de existência a cada leitura, e
+ * pré-condição do sistema não é assunto do servidor.
+ */
+export const onboardings = sqliteTable(
+	'owner_onboardings',
+	{
+		id: text('id').primaryKey(),
+
+		// Uma linha por dono — o índice único é o que garante a AC-3.
+		ownerId: text('owner_id').notNull(),
+
+		// OnboardingStep wire enum. text + CHECK, mesma forma de `owner_owners.kind`.
+		currentStep: text('current_step').$type<OnboardingStep>().notNull(),
+
+		// NULL = não concluído. É o único fato que barra a API (spec Decision 10).
+		completedAt: integer('completed_at', { mode: 'timestamp_ms' }),
+
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		version: integer('version').notNull().default(1),
+	},
+	t => [
+		enumCheck('owner_onboardings_current_step_check', t.currentStep, Object.values(OnboardingStep)),
+		uniqueIndex('onboardings_owner_id_idx').on(t.ownerId),
 	],
 )
