@@ -5,6 +5,7 @@ import { expect } from '@playwright/test'
 import { sendDirectMessage } from '@codm/client-typescript/typescript'
 import { test } from '../utils/test'
 import { givenArtifact, givenAttachedThread, writeSampleFile, writeSampleWav } from '../utils/given'
+import { authenticateCloudSession } from '../utils/given/cloud'
 
 /**
  * ARTIFACT PREVIEW — the artifacts of a thread, rendered as themselves, in the conversation.
@@ -53,6 +54,10 @@ test('preview de artefatos — imagem, áudio, vídeo, link e arquivo na convers
 	//    its whole life (`useServerEventSource`, mounted by the `(app)` layout), so there is always one
 	//    request in flight and the network is never idle — that wait can only ever time out here.
 	//    Waiting on rendered CONTENT is both correct and what the screenshot actually needs.
+	// CloudSessionGate passou a envolver as rotas (app) DEPOIS que este spec foi escrito; sem o
+	// token semeado toda navegação cai em /login. Ver utils/given/cloud.ts.
+	await authenticateCloudSession(page)
+
 	await goto('/dashboard')
 	await expect(page.locator('main')).toBeVisible()
 	await page.waitForTimeout(600)
