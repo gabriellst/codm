@@ -1,5 +1,5 @@
-// packages/app/react/src/services/PreconditionsService/BrowserPreconditionsService.ts — COMPLETE final file
-import type { PreconditionId, PreconditionStatus, PreconditionsService } from './PreconditionsService'
+// packages/app/react/src/services/SystemPreconditionsService/BrowserSystemPreconditionsService.ts — COMPLETE final file
+import type { SystemPreconditionId, SystemPreconditionStatus, SystemPreconditionsService } from './SystemPreconditionsService'
 
 /**
  * DEGRADAÇÃO HONESTA, e vale ser preciso sobre por que "nada pendente" é a VERDADE aqui e não um
@@ -12,12 +12,12 @@ import type { PreconditionId, PreconditionStatus, PreconditionsService } from '.
  * `repair` é inerte pela mesma razão: não há nada para reparar num host onde a pré-condição não
  * existe, e a UI que chamaria isto nunca é renderizada aqui.
  */
-export class BrowserPreconditionsService implements PreconditionsService {
-	async statuses(): Promise<PreconditionStatus[]> {
+export class BrowserSystemPreconditionsService implements SystemPreconditionsService {
+	async statuses(): Promise<SystemPreconditionStatus[]> {
 		return []
 	}
 
-	async repair(_id: PreconditionId): Promise<void> {
+	async repair(_id: SystemPreconditionId): Promise<void> {
 		return undefined
 	}
 }

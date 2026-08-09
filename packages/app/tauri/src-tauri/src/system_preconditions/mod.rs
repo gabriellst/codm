@@ -1,11 +1,11 @@
 //! PRÉ-CONDIÇÕES DO AMBIENTE — o registro, e a única coisa que muda para somar a próxima.
 //!
 //! Uma pré-condição é um módulo com responsabilidades DECLARADAS: em que plataformas ela existe,
-//! como detectá-la e como repará-la. `PRECONDITIONS` lista os módulos; somar uma é criar um arquivo
+//! como detectá-la e como repará-la. `SYSTEM_PRECONDITIONS` lista os módulos; somar uma é criar um arquivo
 //! e acrescentar uma linha aqui — nenhum módulo existente muda (spec Decision 2).
 //!
 //! PLATAFORMA É CAMPO, NÃO `#[cfg]`, e a razão é o contrato: as bindings do tauri-specta são
-//! geradas no mac e COMMITADAS (`../commands/bindings.ts`). Se o enum `PreconditionId` encolhesse
+//! geradas no mac e COMMITADAS (`../commands/bindings.ts`). Se o enum `SystemPreconditionId` encolhesse
 //! por alvo, o arquivo commitado nomearia um id inexistente no build do Windows e o mapa exaustivo
 //! do console (spec Decision 3) deixaria de fechar. Então o union de ids é o mesmo em toda
 //! plataforma e o que varia é quais são APLICÁVEIS — dado, avaliado por lookup uniforme em
@@ -22,7 +22,7 @@ use specta::Type;
 /// Os ids. Estável em toda plataforma — ver o doc do módulo.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum PreconditionId {
+pub enum SystemPreconditionId {
     FullDiskAccess,
 }
 
@@ -77,8 +77,8 @@ pub enum RepairScope {
 }
 
 /// O módulo. Quatro responsabilidades declaradas + onde ele vale.
-pub struct Precondition {
-    pub id: PreconditionId,
+pub struct SystemPrecondition {
+    pub id: SystemPreconditionId,
     /// Onde ela EXISTE. Nunca vazio (asseverado).
     pub platforms: &'static [Platform],
     /// A sonda. `true` = satisfeita.
@@ -91,14 +91,14 @@ pub struct Precondition {
 
 /// O REGISTRO. Somar uma pré-condição = um arquivo + uma linha aqui.
 ///
-/// `static` e não `const`: um `const` é inlinado em cada uso, então `PRECONDITIONS.iter()` tomaria
-/// emprestado um temporário e `applicable()` não poderia devolver `&'static Precondition`. Um
+/// `static` e não `const`: um `const` é inlinado em cada uso, então `SYSTEM_PRECONDITIONS.iter()` tomaria
+/// emprestado um temporário e `applicable()` não poderia devolver `&'static SystemPrecondition`. Um
 /// `static` tem endereço estável, que é exatamente o que o iterador precisa emprestar.
-pub static PRECONDITIONS: &[Precondition] = &[full_disk_access::PRECONDITION];
+pub static SYSTEM_PRECONDITIONS: &[SystemPrecondition] = &[full_disk_access::SYSTEM_PRECONDITION];
 
 /// O que vale nesta máquina — lookup uniforme sobre o campo declarado.
-pub fn applicable() -> impl Iterator<Item = &'static Precondition> {
-    PRECONDITIONS
+pub fn applicable() -> impl Iterator<Item = &'static SystemPrecondition> {
+    SYSTEM_PRECONDITIONS
         .iter()
         .filter(|p| p.platforms.contains(&current_platform()))
 }
@@ -140,15 +140,15 @@ fn repair_availability(scope: RepairScope) -> RepairAvailability {
 
 /// O que atravessa para o console. Só os aplicáveis.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
-pub struct PreconditionStatus {
-    pub id: PreconditionId,
+pub struct SystemPreconditionStatus {
+    pub id: SystemPreconditionId,
     pub satisfied: bool,
     pub repair: RepairAvailability,
 }
 
-pub fn statuses() -> Vec<PreconditionStatus> {
+pub fn statuses() -> Vec<SystemPreconditionStatus> {
     applicable()
-        .map(|p| PreconditionStatus {
+        .map(|p| SystemPreconditionStatus {
             id: p.id,
             satisfied: (p.probe)(),
             repair: repair_availability(p.repair_scope),
@@ -156,7 +156,7 @@ pub fn statuses() -> Vec<PreconditionStatus> {
         .collect()
 }
 
-pub fn repair_steps(id: PreconditionId, bundle_id: &str) -> Vec<RepairStep> {
+pub fn repair_steps(id: SystemPreconditionId, bundle_id: &str) -> Vec<RepairStep> {
     applicable()
         .find(|p| p.id == id)
         .map(|p| (p.repair)(bundle_id))
@@ -170,11 +170,11 @@ pub fn repair_steps(id: PreconditionId, bundle_id: &str) -> Vec<RepairStep> {
 /// nunca negou nada —, e abortar ali deixaria os Ajustes fechados exatamente para o operador de
 /// primeira viagem. Falha de SPAWN (binário ausente) é outra coisa: essa sobe, porque significa
 /// que o reparo não aconteceu de forma alguma.
-pub fn run_repair(id: PreconditionId, bundle_id: &str) -> Result<(), String> {
-    if let Some(precondition) = applicable().find(|p| p.id == id) {
-        if repair_availability(precondition.repair_scope) == RepairAvailability::NoAppIdentity {
+pub fn run_repair(id: SystemPreconditionId, bundle_id: &str) -> Result<(), String> {
+    if let Some(system_precondition) = applicable().find(|p| p.id == id) {
+        if repair_availability(system_precondition.repair_scope) == RepairAvailability::NoAppIdentity {
             return Err(format!(
-                "precondition repair: {id:?} exige identidade de app atribuível (este processo roda fora de um bundle `.app`) — recusado antes de tentar qualquer coisa"
+                "system_precondition repair: {id:?} exige identidade de app atribuível (este processo roda fora de um bundle `.app`) — recusado antes de tentar qualquer coisa"
             ));
         }
     }
@@ -183,9 +183,9 @@ pub fn run_repair(id: PreconditionId, bundle_id: &str) -> Result<(), String> {
         let status = std::process::Command::new(step.program)
             .args(&step.args)
             .status()
-            .map_err(|e| format!("precondition repair: `{}` não iniciou: {e}", step.program))?;
+            .map_err(|e| format!("system_precondition repair: `{}` não iniciou: {e}", step.program))?;
         log::info!(
-            "[preconditions] {} {:?} -> {status}",
+            "[system_preconditions] {} {:?} -> {status}",
             step.program,
             step.args
         );
@@ -200,12 +200,12 @@ mod tests {
     /// Uma pré-condição que não vale em plataforma nenhuma não é uma pré-condição — é código morto
     /// que o `applicable()` filtraria para sempre, silenciosamente.
     #[test]
-    fn every_precondition_declares_at_least_one_platform() {
-        for precondition in PRECONDITIONS {
+    fn every_system_precondition_declares_at_least_one_platform() {
+        for system_precondition in SYSTEM_PRECONDITIONS {
             assert!(
-                !precondition.platforms.is_empty(),
+                !system_precondition.platforms.is_empty(),
                 "{:?} não declara plataforma nenhuma",
-                precondition.id
+                system_precondition.id
             );
         }
     }
@@ -214,10 +214,10 @@ mod tests {
     /// muda é quem passa por `applicable()`. É isso que mantém o union de ids estável nas bindings.
     #[test]
     fn applicable_filters_by_the_declared_platform_field() {
-        let ids: Vec<PreconditionId> = applicable().map(|p| p.id).collect();
+        let ids: Vec<SystemPreconditionId> = applicable().map(|p| p.id).collect();
 
         #[cfg(target_os = "macos")]
-        assert_eq!(ids, vec![PreconditionId::FullDiskAccess]);
+        assert_eq!(ids, vec![SystemPreconditionId::FullDiskAccess]);
 
         #[cfg(not(target_os = "macos"))]
         assert!(
@@ -230,8 +230,8 @@ mod tests {
     /// decidir sozinho o que fazer com ela, e essa decisão é justamente o que o campo evita.
     #[test]
     fn statuses_reports_exactly_the_applicable_ids() {
-        let reported: Vec<PreconditionId> = statuses().into_iter().map(|s| s.id).collect();
-        let expected: Vec<PreconditionId> = applicable().map(|p| p.id).collect();
+        let reported: Vec<SystemPreconditionId> = statuses().into_iter().map(|s| s.id).collect();
+        let expected: Vec<SystemPreconditionId> = applicable().map(|p| p.id).collect();
         assert_eq!(reported, expected);
     }
 
@@ -241,12 +241,12 @@ mod tests {
     #[test]
     fn repair_steps_of_a_non_applicable_id_are_empty() {
         #[cfg(not(target_os = "macos"))]
-        assert!(repair_steps(PreconditionId::FullDiskAccess, "app.codm.desktop").is_empty());
+        assert!(repair_steps(SystemPreconditionId::FullDiskAccess, "app.codm.desktop").is_empty());
 
         // No macOS o id É aplicável — a asserção equivalente é que ele TEM passos (a ordem deles é
         // asseverada em full_disk_access.rs, onde os passos são declarados).
         #[cfg(target_os = "macos")]
-        assert!(!repair_steps(PreconditionId::FullDiskAccess, "app.codm.desktop").is_empty());
+        assert!(!repair_steps(SystemPreconditionId::FullDiskAccess, "app.codm.desktop").is_empty());
     }
 
     /// O binário de teste vive em `target/debug/deps/`, fora de qualquer `.app` — exatamente a
@@ -258,14 +258,14 @@ mod tests {
         assert!(!has_attributable_identity());
     }
 
-    /// Asserção de registro, como `every_precondition_declares_at_least_one_platform`: o `match`
+    /// Asserção de registro, como `every_system_precondition_declares_at_least_one_platform`: o `match`
     /// exaustivo (sem `_`) garante em tempo de compilação que toda variante de `RepairScope` segue
     /// coberta se `repair_scope` crescer — e o loop garante que TODA pré-condição do registro tem
     /// um valor válido.
     #[test]
-    fn every_precondition_declares_a_repair_scope() {
-        for precondition in PRECONDITIONS {
-            match precondition.repair_scope {
+    fn every_system_precondition_declares_a_repair_scope() {
+        for system_precondition in SYSTEM_PRECONDITIONS {
+            match system_precondition.repair_scope {
                 RepairScope::AppGrant | RepairScope::Standalone => {}
             }
         }
@@ -282,7 +282,7 @@ mod tests {
             let reported = statuses();
             let fda = reported
                 .iter()
-                .find(|s| s.id == PreconditionId::FullDiskAccess)
+                .find(|s| s.id == SystemPreconditionId::FullDiskAccess)
                 .expect("FDA é aplicável no macOS");
             assert_eq!(fda.repair, RepairAvailability::NoAppIdentity);
         }
@@ -294,7 +294,7 @@ mod tests {
     fn run_repair_refuses_without_spawning_when_no_app_identity() {
         #[cfg(target_os = "macos")]
         {
-            let result = run_repair(PreconditionId::FullDiskAccess, "app.codm.desktop");
+            let result = run_repair(SystemPreconditionId::FullDiskAccess, "app.codm.desktop");
             assert!(result.is_err(), "sem identidade de app, o reparo tem que recusar");
         }
     }

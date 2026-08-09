@@ -1,4 +1,4 @@
-// packages/app/react/src/services/PreconditionsService/PreconditionsService.ts — COMPLETE final file
+// packages/app/react/src/services/SystemPreconditionsService/SystemPreconditionsService.ts — COMPLETE final file
 /**
  * PRÉ-CONDIÇÕES PORT — o ambiente desta máquina permite que o app funcione?
  *
@@ -13,15 +13,15 @@
  * (desktop-shell bp-02 — ramifique no que a porta REPORTA, nunca no nome do host).
  *
  * Tipos puros, sem SDK de plataforma — como toda porta aqui, esta é a forma que uma implementação
- * expo/nativa futura satisfaria verbatim. `PreconditionId` é declarado à mão (e não importado das
+ * expo/nativa futura satisfaria verbatim. `SystemPreconditionId` é declarado à mão (e não importado das
  * bindings) pela mesma razão que `SupervisedSidecar`: a porta não conhece tauri. A implementação
  * Tauri é onde os dois se encontram, e é lá que uma divergência de nome para de compilar.
  */
 
 /** Os ids conhecidos. Estrutura o mapa exaustivo de componentes no onboarding (spec Decision 3). */
-export const PRECONDITION_IDS = ['FULL_DISK_ACCESS'] as const
+export const SYSTEM_PRECONDITION_IDS = ['FULL_DISK_ACCESS'] as const
 
-export type PreconditionId = (typeof PRECONDITION_IDS)[number]
+export type SystemPreconditionId = (typeof SYSTEM_PRECONDITION_IDS)[number]
 
 /**
  * Se o REPARO de uma pré-condição tem efeito NESTE host. Existe porque sob `tauri dev` o shell roda
@@ -39,18 +39,18 @@ export const REPAIR_AVAILABILITIES = ['AVAILABLE', 'NO_APP_IDENTITY'] as const
 
 export type RepairAvailability = (typeof REPAIR_AVAILABILITIES)[number]
 
-export interface PreconditionStatus {
-	id: PreconditionId
+export interface SystemPreconditionStatus {
+	id: SystemPreconditionId
 	satisfied: boolean
 	repair: RepairAvailability
 }
 
-export interface PreconditionsService {
+export interface SystemPreconditionsService {
 	/** O estado agora (PULL). Só as pré-condições APLICÁVEIS a este host aparecem. */
-	statuses(): Promise<PreconditionStatus[]>
+	statuses(): Promise<SystemPreconditionStatus[]>
 	/**
 	 * O reparo. Os passos e — sobretudo — a ORDEM deles pertencem ao host: o console pede "repare
 	 * isto", não "rode tccutil e depois abra os Ajustes". Se a sequência mudar, muda no host.
 	 */
-	repair(id: PreconditionId): Promise<void>
+	repair(id: SystemPreconditionId): Promise<void>
 }

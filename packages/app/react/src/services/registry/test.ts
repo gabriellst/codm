@@ -11,7 +11,7 @@ import {
 	SecretsToken,
 	SupervisionToken,
 	UpdateToken,
-	PreconditionsToken,
+	SystemPreconditionsToken,
 } from '../tokens'
 import type { AutostartService } from '../AutostartService/AutostartService'
 import type { BadgeService } from '../BadgeService/BadgeService'
@@ -21,7 +21,11 @@ import type { HostInfoService, NativePlatform } from '../HostInfoService/HostInf
 import type { LoggingService } from '../LoggingService/LoggingService'
 import type { NotificationService } from '../NotificationService/NotificationService'
 import type { AnalyticsService } from '../AnalyticsService/AnalyticsService'
-import type { PreconditionId, PreconditionStatus, PreconditionsService } from '../PreconditionsService/PreconditionsService'
+import type {
+	SystemPreconditionId,
+	SystemPreconditionStatus,
+	SystemPreconditionsService,
+} from '../SystemPreconditionsService/SystemPreconditionsService'
 import type { SecretsService } from '../SecretsService/SecretsService'
 import type { SupervisionService, SupervisionState } from '../SupervisionService/SupervisionService'
 import type { UpdateService } from '../UpdateService/UpdateService'
@@ -244,20 +248,20 @@ export class FakeAnalyticsService implements AnalyticsService {
  * registra as chamadas porque "o botão realmente pediu o reparo" é a asserção que interessa: um
  * teste não pode executar `tccutil`.
  */
-export class FakePreconditionsService implements PreconditionsService {
-	readonly repaired: PreconditionId[] = []
-	constructor(private current: PreconditionStatus[] = []) {}
+export class FakeSystemPreconditionsService implements SystemPreconditionsService {
+	readonly repaired: SystemPreconditionId[] = []
+	constructor(private current: SystemPreconditionStatus[] = []) {}
 
-	async statuses(): Promise<PreconditionStatus[]> {
+	async statuses(): Promise<SystemPreconditionStatus[]> {
 		return this.current
 	}
 
-	async repair(id: PreconditionId): Promise<void> {
+	async repair(id: SystemPreconditionId): Promise<void> {
 		this.repaired.push(id)
 	}
 
 	/** Reencena o que a sonda passaria a reportar — como o host faria depois de uma concessão. */
-	set(statuses: PreconditionStatus[]): void {
+	set(statuses: SystemPreconditionStatus[]): void {
 		this.current = statuses
 	}
 }
@@ -274,5 +278,5 @@ export default [
 	[LoggingToken, FakeLoggingService],
 	[UpdateToken, FakeUpdateService],
 	[AnalyticsToken, FakeAnalyticsService],
-	[PreconditionsToken, FakePreconditionsService],
+	[SystemPreconditionsToken, FakeSystemPreconditionsService],
 ] as const satisfies Bindings

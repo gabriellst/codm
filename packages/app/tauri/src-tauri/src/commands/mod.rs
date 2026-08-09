@@ -9,8 +9,8 @@
 mod boot;
 pub use boot::*;
 
-mod preconditions;
-pub use preconditions::*;
+mod system_preconditions;
+pub use system_preconditions::*;
 
 mod secrets;
 pub use secrets::*;
@@ -39,8 +39,8 @@ pub fn specta_builder() -> tauri_specta::Builder {
             supervision_state,
             pending_update,
             restart_for_update,
-            precondition_statuses,
-            repair_precondition
+            system_precondition_statuses,
+            repair_system_precondition
         ])
         .events(tauri_specta::collect_events![
             crate::sidecars::SupervisionChanged,

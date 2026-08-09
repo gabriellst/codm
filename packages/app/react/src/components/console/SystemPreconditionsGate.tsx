@@ -1,8 +1,8 @@
-// packages/app/react/src/components/console/PreconditionsGate.tsx — COMPLETE final file
+// packages/app/react/src/components/console/SystemPreconditionsGate.tsx — COMPLETE final file
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { useEffect } from 'react'
-import { usePreconditions } from '@/services'
-import { usePreconditionsStore } from '@/stores/usePreconditionsStore'
+import { useSystemPreconditions } from '@/services'
+import { useSystemPreconditionsStore } from '@/stores/useSystemPreconditionsStore'
 
 /**
  * O QUE FAZ O APP DIZER QUE NÃO PODE FUNCIONAR — e o que faz essa fala aparecer sem o operador
@@ -21,10 +21,10 @@ import { usePreconditionsStore } from '@/stores/usePreconditionsStore'
  * O `catch` silencioso é o caminho de default-satisfeito: um host que não responde não nos disse
  * nada, e nada não é motivo para mandar o operador para uma tela de permissão.
  */
-export function PreconditionsGate() {
-	const preconditions = usePreconditions()
-	const apply = usePreconditionsStore(state => state.apply)
-	const pending = usePreconditionsStore(state => state.pending)
+export function SystemPreconditionsGate() {
+	const system_preconditions = useSystemPreconditions()
+	const apply = useSystemPreconditionsStore(state => state.apply)
+	const pending = useSystemPreconditionsStore(state => state.pending)
 	const pathname = useRouterState({ select: state => state.location.pathname })
 	const navigate = useNavigate()
 
@@ -32,7 +32,7 @@ export function PreconditionsGate() {
 		let cancelled = false
 
 		const probe = () => {
-			void preconditions
+			void system_preconditions
 				.statuses()
 				.then(statuses => {
 					if (!cancelled) apply(statuses)
@@ -47,7 +47,7 @@ export function PreconditionsGate() {
 			cancelled = true
 			window.removeEventListener('focus', probe)
 		}
-	}, [preconditions, apply])
+	}, [system_preconditions, apply])
 
 	useEffect(() => {
 		// `pending === null` é "ainda não sondado" e não decide nada — ver o store.

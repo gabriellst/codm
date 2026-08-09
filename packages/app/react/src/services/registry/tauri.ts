@@ -11,7 +11,7 @@ import {
 	SecretsToken,
 	SupervisionToken,
 	UpdateToken,
-	PreconditionsToken,
+	SystemPreconditionsToken,
 } from '../tokens'
 import { TauriAutostartService } from '../AutostartService/TauriAutostartService'
 import { TauriBadgeService } from '../BadgeService/TauriBadgeService'
@@ -21,7 +21,7 @@ import { TauriHostInfoService } from '../HostInfoService/TauriHostInfoService'
 import { TauriLoggingService } from '../LoggingService/TauriLoggingService'
 import { TauriNotificationService } from '../NotificationService/TauriNotificationService'
 import { AnalyticsServiceImpl } from '../AnalyticsService'
-import { TauriPreconditionsService } from '../PreconditionsService/TauriPreconditionsService'
+import { TauriSystemPreconditionsService } from '../SystemPreconditionsService/TauriSystemPreconditionsService'
 import { TauriSecretsService } from '../SecretsService/TauriSecretsService'
 import { TauriSupervisionService } from '../SupervisionService/TauriSupervisionService'
 import { TauriUpdateService } from '../UpdateService/TauriUpdateService'
@@ -44,6 +44,6 @@ export default [
 	[CloudSessionToken, TauriCloudSessionService],
 	[LoggingToken, TauriLoggingService],
 	[UpdateToken, TauriUpdateService],
-	[PreconditionsToken, TauriPreconditionsService],
+	[SystemPreconditionsToken, TauriSystemPreconditionsService],
 	[AnalyticsToken, AnalyticsServiceImpl],
 ] as const satisfies Bindings

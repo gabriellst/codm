@@ -6,8 +6,8 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { type RepairAvailability, usePreconditions } from '@/services'
-import { usePreconditionsStore } from '@/stores/usePreconditionsStore'
+import { type RepairAvailability, useSystemPreconditions } from '@/services'
+import { useSystemPreconditionsStore } from '@/stores/useSystemPreconditionsStore'
 
 /**
  * A EXPLICAÇÃO e o BOTÃO de uma pré-condição — as duas responsabilidades que sobram para o console.
@@ -27,15 +27,15 @@ import { usePreconditionsStore } from '@/stores/usePreconditionsStore'
  * despacho por `repairAvailability` é por MAPA (canon CMP-P18), nunca `if`/ternário: um terceiro
  * valor de `RepairAvailability` que não tivesse entrada aqui pararia de compilar.
  */
-// O parâmetro tem default (`= {}`) porque este componente também é usado como `PreconditionModule.Component`
-// (`() => ReactNode`, zero args — `PreconditionList` despacha via `<Component key={id} />`, sem props). Sem o
-// default, a assinatura exige 1 argumento e a atribuição em `preconditions.ts` não compila (tsc: "Expected 1
+// O parâmetro tem default (`= {}`) porque este componente também é usado como `SystemPreconditionModule.Component`
+// (`() => ReactNode`, zero args — `SystemPreconditionList` despacha via `<Component key={id} />`, sem props). Sem o
+// default, a assinatura exige 1 argumento e a atribuição em `system-preconditions.ts` não compila (tsc: "Expected 1
 // or more, but got 0"). `ComponentProps<'div'>` já é só campos opcionais, então `{}` é um valor válido.
 export function FullDiskAccessCard({ className, ...props }: ComponentProps<'div'> = {}) {
 	const { t } = useTranslation()
-	const preconditions = usePreconditions()
+	const systemPreconditions = useSystemPreconditions()
 	const [repairing, setRepairing] = useState(false)
-	const pending = usePreconditionsStore(state => state.pending)
+	const pending = useSystemPreconditionsStore(state => state.pending)
 	// Nada pendente ainda respondido (ou esta pré-condição não está entre as pendências) degrada
 	// para AVAILABLE — o comportamento de hoje — em vez de deixar o cartão em branco.
 	const repairAvailability: RepairAvailability = pending?.find(status => status.id === 'FULL_DISK_ACCESS')?.repair ?? 'AVAILABLE'
@@ -43,9 +43,9 @@ export function FullDiskAccessCard({ className, ...props }: ComponentProps<'div'
 	const repair = async () => {
 		setRepairing(true)
 		try {
-			await preconditions.repair('FULL_DISK_ACCESS')
+			await systemPreconditions.repair('FULL_DISK_ACCESS')
 		} catch {
-			toast.error(t('preconditions.repairFailed'))
+			toast.error(t('systemPreconditions.repairFailed'))
 		} finally {
 			setRepairing(false)
 		}
@@ -54,14 +54,14 @@ export function FullDiskAccessCard({ className, ...props }: ComponentProps<'div'
 	const REPAIR_CONTENT: Record<RepairAvailability, ReactNode> = {
 		AVAILABLE: (
 			<>
-				<p className="text-sm text-muted-foreground">{t('preconditions.fullDiskAccess.actionHint')}</p>
+				<p className="text-sm text-muted-foreground">{t('systemPreconditions.fullDiskAccess.actionHint')}</p>
 				<Button onClick={repair} disabled={repairing} className="self-start">
-					{t('preconditions.fullDiskAccess.action')}
+					{t('systemPreconditions.fullDiskAccess.action')}
 				</Button>
-				<p className="text-xs text-muted-foreground">{t('preconditions.fullDiskAccess.afterHint')}</p>
+				<p className="text-xs text-muted-foreground">{t('systemPreconditions.fullDiskAccess.afterHint')}</p>
 			</>
 		),
-		NO_APP_IDENTITY: <p className="text-sm text-muted-foreground">{t('preconditions.noAppIdentity')}</p>,
+		NO_APP_IDENTITY: <p className="text-sm text-muted-foreground">{t('systemPreconditions.noAppIdentity')}</p>,
 	}
 
 	return (
@@ -70,10 +70,10 @@ export function FullDiskAccessCard({ className, ...props }: ComponentProps<'div'
 				<span className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
 					<IconLock className="size-5" />
 				</span>
-				<h2 className="text-lg font-bold text-foreground">{t('preconditions.fullDiskAccess.title')}</h2>
+				<h2 className="text-lg font-bold text-foreground">{t('systemPreconditions.fullDiskAccess.title')}</h2>
 			</div>
 
-			<p className="text-sm text-muted-foreground">{t('preconditions.fullDiskAccess.body')}</p>
+			<p className="text-sm text-muted-foreground">{t('systemPreconditions.fullDiskAccess.body')}</p>
 			{REPAIR_CONTENT[repairAvailability]}
 		</div>
 	)

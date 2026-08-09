@@ -11,7 +11,7 @@ import {
 	SecretsToken,
 	SupervisionToken,
 	UpdateToken,
-	PreconditionsToken,
+	SystemPreconditionsToken,
 } from '../tokens'
 import { BrowserAutostartService } from '../AutostartService/BrowserAutostartService'
 import { BrowserBadgeService } from '../BadgeService/BrowserBadgeService'
@@ -21,7 +21,7 @@ import { BrowserHostInfoService } from '../HostInfoService/BrowserHostInfoServic
 import { BrowserLoggingService } from '../LoggingService/BrowserLoggingService'
 import { BrowserNotificationService } from '../NotificationService/BrowserNotificationService'
 import { AnalyticsServiceImpl } from '../AnalyticsService'
-import { BrowserPreconditionsService } from '../PreconditionsService/BrowserPreconditionsService'
+import { BrowserSystemPreconditionsService } from '../SystemPreconditionsService/BrowserSystemPreconditionsService'
 import { BrowserSecretsService } from '../SecretsService/BrowserSecretsService'
 import { BrowserSupervisionService } from '../SupervisionService/BrowserSupervisionService'
 import { BrowserUpdateService } from '../UpdateService/BrowserUpdateService'
@@ -45,6 +45,6 @@ export default [
 	[CloudSessionToken, BrowserCloudSessionService],
 	[LoggingToken, BrowserLoggingService],
 	[UpdateToken, BrowserUpdateService],
-	[PreconditionsToken, BrowserPreconditionsService],
+	[SystemPreconditionsToken, BrowserSystemPreconditionsService],
 	[AnalyticsToken, AnalyticsServiceImpl],
 ] as const satisfies Bindings

@@ -3,11 +3,11 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { createMemoryHistory, createRootRoute, createRoute, createRouter, RouterProvider } from '@tanstack/react-router'
 import { type Bindings, Container, ServicesProvider } from '@/services'
-import type { PreconditionStatus } from '@/services'
-import testBindings, { FakePreconditionsService } from '@/services/registry/test'
-import { PreconditionsToken } from '@/services/tokens'
-import { usePreconditionsStore } from '@/stores/usePreconditionsStore'
-import { PreconditionsGate } from './PreconditionsGate'
+import type { SystemPreconditionStatus } from '@/services'
+import testBindings, { FakeSystemPreconditionsService } from '@/services/registry/test'
+import { SystemPreconditionsToken } from '@/services/tokens'
+import { useSystemPreconditionsStore } from '@/stores/useSystemPreconditionsStore'
+import { SystemPreconditionsGate } from './SystemPreconditionsGate'
 
 /**
  * A PERGUNTA É "PARA ONDE O OPERADOR FOI", e ela só tem resposta num router de verdade — por isso
@@ -18,23 +18,23 @@ import { PreconditionsGate } from './PreconditionsGate'
  * direção possível — um gate que nunca renderizasse nada passaria por "não redirecionou".
  */
 
-function containerWith(statuses: PreconditionStatus[]): { container: Container; fake: FakePreconditionsService } {
-	class Seeded extends FakePreconditionsService {
+function containerWith(statuses: SystemPreconditionStatus[]): { container: Container; fake: FakeSystemPreconditionsService } {
+	class Seeded extends FakeSystemPreconditionsService {
 		constructor() {
 			super(statuses)
 		}
 	}
 	const container = new Container()
 	container.load(testBindings)
-	container.load([[PreconditionsToken, Seeded]] as unknown as Bindings)
-	return { container, fake: container.resolve(PreconditionsToken) as FakePreconditionsService }
+	container.load([[SystemPreconditionsToken, Seeded]] as unknown as Bindings)
+	return { container, fake: container.resolve(SystemPreconditionsToken) as FakeSystemPreconditionsService }
 }
 
 function routerAt(pathname: string, container: Container) {
 	const rootRoute = createRootRoute({
 		component: () => (
 			<ServicesProvider container={container}>
-				<PreconditionsGate />
+				<SystemPreconditionsGate />
 				<div data-testid="console">console</div>
 			</ServicesProvider>
 		),
@@ -47,14 +47,14 @@ function routerAt(pathname: string, container: Container) {
 	})
 }
 
-describe('PreconditionsGate', () => {
+describe('SystemPreconditionsGate', () => {
 	let root: Root | null = null
 	let host: HTMLDivElement
 
 	beforeEach(() => {
 		host = document.createElement('div')
 		document.body.appendChild(host)
-		usePreconditionsStore.getState().reset()
+		useSystemPreconditionsStore.getState().reset()
 	})
 
 	afterEach(() => {
@@ -90,7 +90,7 @@ describe('PreconditionsGate', () => {
 
 		expect(host.querySelector('[data-testid="console"]')).not.toBeNull()
 		expect(router.state.location.pathname).toBe('/dashboard')
-		expect(usePreconditionsStore.getState().pending).toEqual([])
+		expect(useSystemPreconditionsStore.getState().pending).toEqual([])
 	})
 
 	it('AC-4: o gatilho é o conjunto de pendências, não uma flag de "já visto"', async () => {
@@ -101,7 +101,7 @@ describe('PreconditionsGate', () => {
 
 		act(() => root?.unmount())
 		root = null
-		usePreconditionsStore.getState().reset()
+		useSystemPreconditionsStore.getState().reset()
 
 		const second = containerWith([{ id: 'FULL_DISK_ACCESS', satisfied: false, repair: 'AVAILABLE' }])
 		const secondRouter = await mount('/dashboard', second.container)
@@ -111,7 +111,7 @@ describe('PreconditionsGate', () => {
 	it('Story 1: ao reganhar foco a sonda roda de novo e a pendência resolvida desaparece', async () => {
 		const { container, fake } = containerWith([{ id: 'FULL_DISK_ACCESS', satisfied: false, repair: 'AVAILABLE' }])
 		await mount('/onboarding', container)
-		expect(usePreconditionsStore.getState().pending).toEqual([{ id: 'FULL_DISK_ACCESS', satisfied: false, repair: 'AVAILABLE' }])
+		expect(useSystemPreconditionsStore.getState().pending).toEqual([{ id: 'FULL_DISK_ACCESS', satisfied: false, repair: 'AVAILABLE' }])
 
 		// O operador concedeu a permissão nos Ajustes e voltou para a janela.
 		fake.set([{ id: 'FULL_DISK_ACCESS', satisfied: true, repair: 'AVAILABLE' }])
@@ -120,6 +120,6 @@ describe('PreconditionsGate', () => {
 			await Promise.resolve()
 		})
 
-		expect(usePreconditionsStore.getState().pending).toEqual([])
+		expect(useSystemPreconditionsStore.getState().pending).toEqual([])
 	})
 })

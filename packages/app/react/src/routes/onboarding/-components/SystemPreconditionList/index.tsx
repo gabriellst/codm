@@ -1,21 +1,21 @@
-// packages/app/react/src/routes/onboarding/-components/PreconditionList/index.tsx — COMPLETE final file.
+// packages/app/react/src/routes/onboarding/-components/SystemPreconditionList/index.tsx — COMPLETE final file.
 // MANTENHA a forma do scaffold: export nomeado, props estendendo ComponentProps, `{ className, ...props }`, `cn(...)`.
 import type { ComponentProps, ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 /**
  * Um módulo de pré-condição do lado do console: o id e como EXPLICAR essa pendência ao operador. A
- * detecção e o reparo pertencem ao host (services/PreconditionsService) — o que sobra para cá é a
+ * detecção e o reparo pertencem ao host (services/SystemPreconditionsService) — o que sobra para cá é a
  * única responsabilidade que uma webview pode ter das três.
  */
-export interface PreconditionModule<Id extends string> {
+export interface SystemPreconditionModule<Id extends string> {
 	id: Id
 	Component: () => ReactNode
 }
 
-interface PreconditionListProps<Id extends string> extends Omit<ComponentProps<'div'>, 'children'> {
+interface SystemPreconditionListProps<Id extends string> extends Omit<ComponentProps<'div'>, 'children'> {
 	pending: readonly Id[]
-	modules: Record<Id, PreconditionModule<Id>>
+	modules: Record<Id, SystemPreconditionModule<Id>>
 }
 
 /**
@@ -28,7 +28,7 @@ interface PreconditionListProps<Id extends string> extends Omit<ComponentProps<'
  * A exaustividade vem do tipo: `Record<Id, …>` faz um id sem entrada parar de compilar (AC-5), então
  * o acesso por índice aqui não precisa de guarda em runtime — não existe caso ausente.
  */
-export function PreconditionList<Id extends string>({ pending, modules, className, ...props }: PreconditionListProps<Id>) {
+export function SystemPreconditionList<Id extends string>({ pending, modules, className, ...props }: SystemPreconditionListProps<Id>) {
 	return (
 		<div className={cn('flex w-full flex-col gap-4', className)} {...props}>
 			{pending.map(id => {

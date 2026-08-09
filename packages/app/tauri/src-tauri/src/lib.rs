@@ -30,7 +30,7 @@ use tauri_plugin_log::{RotationStrategy, Target, TargetKind};
 mod api;
 mod commands;
 mod crash;
-mod preconditions;
+mod system_preconditions;
 mod sidecars;
 mod updater;
 

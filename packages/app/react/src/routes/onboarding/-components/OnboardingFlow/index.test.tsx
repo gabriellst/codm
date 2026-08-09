@@ -5,9 +5,9 @@ import { createRoot, type Root } from 'react-dom/client'
 import { createMemoryHistory, createRootRoute, createRoute, createRouter, RouterProvider } from '@tanstack/react-router'
 import i18n from '@/lib/i18n'
 import { type Bindings, Container, ServicesProvider } from '@/services'
-import testBindings, { FakePreconditionsService } from '@/services/registry/test'
-import { PreconditionsToken } from '@/services/tokens'
-import { usePreconditionsStore } from '@/stores/usePreconditionsStore'
+import testBindings, { FakeSystemPreconditionsService } from '@/services/registry/test'
+import { SystemPreconditionsToken } from '@/services/tokens'
+import { useSystemPreconditionsStore } from '@/stores/useSystemPreconditionsStore'
 import { useOnboardingStore } from '../../-stores/useOnboardingStore'
 import { OnboardingFlow } from './index'
 
@@ -31,7 +31,7 @@ describe('OnboardingFlow', () => {
 		host = document.createElement('div')
 		document.body.appendChild(host)
 		useOnboardingStore.getState().reset()
-		usePreconditionsStore.getState().reset()
+		useSystemPreconditionsStore.getState().reset()
 	})
 
 	afterEach(() => {
@@ -43,7 +43,7 @@ describe('OnboardingFlow', () => {
 	async function mount() {
 		const container = new Container()
 		container.load(testBindings)
-		container.load([[PreconditionsToken, FakePreconditionsService]] as unknown as Bindings)
+		container.load([[SystemPreconditionsToken, FakeSystemPreconditionsService]] as unknown as Bindings)
 
 		const rootRoute = createRootRoute({
 			component: () => (
@@ -63,14 +63,14 @@ describe('OnboardingFlow', () => {
 			root.render(<RouterProvider router={router} />)
 		})
 		// Deixa o roteador assentar a rota inicial antes de qualquer asserção sobre o DOM — o mesmo
-		// tick que o idioma de `PreconditionsGate.test.tsx` usa para o PULL do gate.
+		// tick que o idioma de `SystemPreconditionsGate.test.tsx` usa para o PULL do gate.
 		await act(async () => {
 			await Promise.resolve()
 		})
 	}
 
 	it('com pendência, abre no slide da permissão e não oferece saída', async () => {
-		usePreconditionsStore.getState().apply([{ id: 'FULL_DISK_ACCESS', satisfied: false, repair: 'AVAILABLE' }])
+		useSystemPreconditionsStore.getState().apply([{ id: 'FULL_DISK_ACCESS', satisfied: false, repair: 'AVAILABLE' }])
 		await mount()
 
 		expect(host.textContent).toContain('Acesso Total ao Disco')
@@ -78,7 +78,7 @@ describe('OnboardingFlow', () => {
 	})
 
 	it('sem pendência, é o fluxo de apresentação de sempre — com o Pular no lugar', async () => {
-		usePreconditionsStore.getState().apply([{ id: 'FULL_DISK_ACCESS', satisfied: true, repair: 'AVAILABLE' }])
+		useSystemPreconditionsStore.getState().apply([{ id: 'FULL_DISK_ACCESS', satisfied: true, repair: 'AVAILABLE' }])
 		await mount()
 
 		expect(host.textContent).not.toContain('Acesso Total ao Disco')
@@ -86,7 +86,7 @@ describe('OnboardingFlow', () => {
 	})
 
 	it('o slide da permissão vem PRIMEIRO — o operador não precisa caçá-lo', async () => {
-		usePreconditionsStore.getState().apply([{ id: 'FULL_DISK_ACCESS', satisfied: false, repair: 'AVAILABLE' }])
+		useSystemPreconditionsStore.getState().apply([{ id: 'FULL_DISK_ACCESS', satisfied: false, repair: 'AVAILABLE' }])
 		await mount()
 
 		// Quatro marcadores de slide (permissão + os três de apresentação), com o primeiro ativo.

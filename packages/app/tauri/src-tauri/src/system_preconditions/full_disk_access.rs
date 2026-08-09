@@ -24,10 +24,10 @@ use std::fs::File;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use super::{Platform, Precondition, PreconditionId, RepairScope, RepairStep};
+use super::{Platform, SystemPrecondition, SystemPreconditionId, RepairScope, RepairStep};
 
-pub const PRECONDITION: Precondition = Precondition {
-    id: PreconditionId::FullDiskAccess,
+pub const SYSTEM_PRECONDITION: SystemPrecondition = SystemPrecondition {
+    id: SystemPreconditionId::FullDiskAccess,
     platforms: &[Platform::Macos],
     probe,
     repair,
@@ -108,7 +108,7 @@ mod tests {
     /// runners deste repo não são root.
     #[test]
     fn an_unreadable_file_reports_unsatisfied() {
-        let path = std::env::temp_dir().join("codm-precondition-probe-unreadable");
+        let path = std::env::temp_dir().join("codm-system_precondition-probe-unreadable");
         let mut file = std::fs::File::create(&path).expect("criar o arquivo de sonda");
         file.write_all(b"x").expect("escrever no arquivo de sonda");
         drop(file);
@@ -127,7 +127,7 @@ mod tests {
     /// AC-2.
     #[test]
     fn a_readable_file_reports_satisfied() {
-        let path = std::env::temp_dir().join("codm-precondition-probe-readable");
+        let path = std::env::temp_dir().join("codm-system_precondition-probe-readable");
         std::fs::write(&path, b"x").expect("criar o arquivo de sonda");
 
         let verdict = satisfied_from(open(&path));

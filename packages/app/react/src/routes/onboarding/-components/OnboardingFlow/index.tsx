@@ -5,20 +5,20 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/console/Logo'
-import { usePreconditionsStore } from '@/stores/usePreconditionsStore'
+import { useSystemPreconditionsStore } from '@/stores/useSystemPreconditionsStore'
 import { useOnboardingStore } from '../../-stores/useOnboardingStore'
 import { ValueSlide } from '../ValueSlide'
 import { HowItWorksSlide } from '../HowItWorksSlide'
 import { ControlSlide } from '../ControlSlide'
-import { PreconditionsSlide } from '../PreconditionsSlide'
+import { SystemPreconditionsSlide } from '../SystemPreconditionsSlide'
 
 // Sequência de slides como tupla const-asserted; despachada por um Record, nunca por cadeia de if.
 const INTRO_SLIDES = ['VALUE', 'HOW', 'CONTROL'] as const
-const BLOCKED_SLIDES = ['PRECONDITIONS', ...INTRO_SLIDES] as const
+const BLOCKED_SLIDES = ['SYSTEM_PRECONDITIONS', ...INTRO_SLIDES] as const
 type SlideId = (typeof BLOCKED_SLIDES)[number]
 
 const SLIDE_COMPONENTS: Record<SlideId, ReactNode> = {
-	PRECONDITIONS: <PreconditionsSlide />,
+	SYSTEM_PRECONDITIONS: <SystemPreconditionsSlide />,
 	VALUE: <ValueSlide />,
 	HOW: <HowItWorksSlide />,
 	CONTROL: <ControlSlide />,
@@ -35,7 +35,7 @@ const SLIDE_COMPONENTS: Record<SlideId, ReactNode> = {
  * descuido — o slide da pendência entra no fluxo existente em vez de virar uma tela paralela.
  *
  * ENQUANTO HÁ PENDÊNCIA NÃO HÁ SAÍDA, e essa é a única forma que não vira laço: o
- * `PreconditionsGate` traz o operador de volta para cá a cada tentativa de sair, então um "Pular"
+ * `SystemPreconditionsGate` traz o operador de volta para cá a cada tentativa de sair, então um "Pular"
  * ativo seria um botão que devolve a pessoa ao ponto de partida — e, se o gate fosse afrouxado para
  * evitar isso, o resultado seria o console aberto sem a permissão, que é a falha de origem. O
  * destravamento não depende de o operador apertar nada: o gate re-sonda quando a janela reganha
@@ -45,7 +45,7 @@ export function OnboardingFlow({ className, ...props }: ComponentProps<'div'>) {
 	const { t } = useTranslation()
 	const navigate = useNavigate()
 	const { currentSlide, direction, setCurrentSlide, setDirection, reset } = useOnboardingStore()
-	const pending = usePreconditionsStore(state => state.pending)
+	const pending = useSystemPreconditionsStore(state => state.pending)
 
 	// Fresh intro on every entry (the store persists across navigations).
 	useEffect(() => reset(), [reset])

@@ -565,7 +565,7 @@
 		"stepWorkspaceDesc": "Point at a project folder — Claude projects are detected",
 		"stepWorkspaceTitle": "Add a workspace"
 	},
-	"preconditions": {
+	"systemPreconditions": {
 		"slideTitle": "One permission is missing",
 		"slideBody": "CODM needs this before it can do any work on this Mac.",
 		"repairFailed": "Could not start the repair.",

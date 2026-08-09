@@ -12,7 +12,7 @@ import {
 	SecretsToken,
 	SupervisionToken,
 	UpdateToken,
-	PreconditionsToken,
+	SystemPreconditionsToken,
 } from '../tokens'
 import type { AutostartService } from '../AutostartService/AutostartService'
 import type { BadgeService } from '../BadgeService/BadgeService'
@@ -22,7 +22,7 @@ import type { HostInfoService } from '../HostInfoService/HostInfoService'
 import type { LoggingService } from '../LoggingService/LoggingService'
 import type { NotificationService } from '../NotificationService/NotificationService'
 import type { AnalyticsService } from '../AnalyticsService/AnalyticsService'
-import type { PreconditionsService } from '../PreconditionsService/PreconditionsService'
+import type { SystemPreconditionsService } from '../SystemPreconditionsService/SystemPreconditionsService'
 import type { SecretsService } from '../SecretsService/SecretsService'
 import type { SupervisionService } from '../SupervisionService/SupervisionService'
 import type { UpdateService } from '../UpdateService/UpdateService'
@@ -44,4 +44,4 @@ export const useCloudSession = (): CloudSessionService => useService(CloudSessio
 export const useLogging = (): LoggingService => useService(LoggingToken)
 export const useUpdate = (): UpdateService => useService(UpdateToken)
 export const useAnalytics = (): AnalyticsService => useService(AnalyticsToken)
-export const usePreconditions = (): PreconditionsService => useService(PreconditionsToken)
+export const useSystemPreconditions = (): SystemPreconditionsService => useService(SystemPreconditionsToken)

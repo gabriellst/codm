@@ -565,7 +565,7 @@
 		"stepWorkspaceDesc": "Aponte para uma pasta de projeto — projetos Claude são detectados",
 		"stepWorkspaceTitle": "Adicione um espaço de trabalho"
 	},
-	"preconditions": {
+	"systemPreconditions": {
 		"slideTitle": "Falta uma permissão",
 		"slideBody": "O CODM precisa disto antes de conseguir trabalhar neste Mac.",
 		"repairFailed": "Não foi possível iniciar o reparo.",
