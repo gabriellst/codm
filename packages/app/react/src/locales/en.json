@@ -564,6 +564,18 @@
 		"stepWorkspaceDesc": "Point at a project folder — Claude projects are detected",
 		"stepWorkspaceTitle": "Add a workspace"
 	},
+	"preconditions": {
+		"slideTitle": "One permission is missing",
+		"slideBody": "CODM needs this before it can do any work on this Mac.",
+		"repairFailed": "Could not start the repair.",
+		"fullDiskAccess": {
+			"title": "Full Disk Access",
+			"body": "Agents read your project folders through CODM — as far as macOS is concerned, the app is the reader. Without this permission the system blocks those reads and tasks stop with no explanation.",
+			"action": "Grant Full Disk Access",
+			"actionHint": "Two steps, in this order: CODM clears the denial already on record, then opens Privacy & Security › Full Disk Access, where you switch CODM on.",
+			"afterHint": "Come back to this window after granting — the check runs again on its own."
+		}
+	},
 	"session": {
 		"agentModel": "Model",
 		"agentModelRestartHint": "Switching the model restarts the conversation on the agent: it comes back without the context it had, from the next message on.",

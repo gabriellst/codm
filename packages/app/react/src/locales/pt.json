@@ -564,6 +564,18 @@
 		"stepWorkspaceDesc": "Aponte para uma pasta de projeto — projetos Claude são detectados",
 		"stepWorkspaceTitle": "Adicione um espaço de trabalho"
 	},
+	"preconditions": {
+		"slideTitle": "Falta uma permissão",
+		"slideBody": "O CODM precisa disto antes de conseguir trabalhar neste Mac.",
+		"repairFailed": "Não foi possível iniciar o reparo.",
+		"fullDiskAccess": {
+			"title": "Acesso Total ao Disco",
+			"body": "Os agentes leem suas pastas de projeto através do CODM — para o macOS, quem lê é o app. Sem esta permissão o sistema bloqueia a leitura e as tarefas param sem explicação.",
+			"action": "Liberar Acesso Total ao Disco",
+			"actionHint": "Dois passos, nesta ordem: o CODM apaga a negação já registrada e depois abre Privacidade e Segurança › Acesso Total ao Disco, onde você liga o CODM.",
+			"afterHint": "Volte para esta janela depois de conceder — a verificação roda de novo sozinha."
+		}
+	},
 	"session": {
 		"agentModel": "Modelo",
 		"agentModelRestartHint": "Trocar o modelo recomeça a conversa no agente: ele volta sem o contexto que tinha, a partir da próxima mensagem.",
