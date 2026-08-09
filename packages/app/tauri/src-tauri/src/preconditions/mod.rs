@@ -57,7 +57,26 @@ pub struct RepairStep {
     pub args: Vec<String>,
 }
 
-/// O módulo. Três responsabilidades declaradas + onde ele vale.
+/// Sobre o que o reparo de uma pré-condição age — DECLARADO pelo módulo, como `platforms`
+/// (Decision 9). É o que permite ao host decidir se aquele reparo tem efeito aqui sem que
+/// nenhuma sonda precise saber em que build está rodando.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RepairScope {
+    /// Age sobre a concessão DESTE bundle (`tccutil reset <bundle id>`). Sem bundle atribuível
+    /// não há entrada para limpar nem app para listar nos Ajustes.
+    AppGrant,
+    /// Não depende da identidade do app.
+    ///
+    /// Nenhuma pré-condição do registro usa esta variante ainda — `FullDiskAccess` é a única e
+    /// declara `AppGrant`. Ela existe porque o CAMPO precisa cobrir os dois casos desde já (a
+    /// mesma razão de `Platform` ter `Windows`/`Linux` antes de existir sonda para eles); fica
+    /// `#[allow(dead_code)]` até a primeira pré-condição `Standalone` chegar, em vez de sumir do
+    /// enum e o campo mentir que só existe um jeito de reparo.
+    #[allow(dead_code)]
+    Standalone,
+}
+
+/// O módulo. Quatro responsabilidades declaradas + onde ele vale.
 pub struct Precondition {
     pub id: PreconditionId,
     /// Onde ela EXISTE. Nunca vazio (asseverado).
@@ -66,6 +85,8 @@ pub struct Precondition {
     pub probe: fn() -> bool,
     /// Os passos, EM ORDEM, dado o bundle id do app (o alvo do `tccutil`).
     pub repair: fn(&str) -> Vec<RepairStep>,
+    /// Sobre o que o reparo age — ver `RepairScope`.
+    pub repair_scope: RepairScope,
 }
 
 /// O REGISTRO. Somar uma pré-condição = um arquivo + uma linha aqui.
@@ -82,11 +103,47 @@ pub fn applicable() -> impl Iterator<Item = &'static Precondition> {
         .filter(|p| p.platforms.contains(&current_platform()))
 }
 
+/// Este processo tem identidade que o macOS consiga usar para atribuir uma concessão?
+///
+/// DERIVADO do executável, nunca de `debug_assertions`: aquilo descreve o perfil de build, e um
+/// binário release rodado fora de um bundle teria a mesma ausência de identidade que o de `tauri
+/// dev`. O fato é o `.app` ancestral — `/Applications/CoDM.app/Contents/MacOS/codm-desktop` tem;
+/// `target/debug/codm-desktop` não.
+pub fn has_attributable_identity() -> bool {
+    match std::env::current_exe() {
+        Ok(path) => path
+            .ancestors()
+            .any(|ancestor| ancestor.extension().is_some_and(|ext| ext == "app")),
+        // `current_exe()` sem resolver não prova identidade nenhuma.
+        Err(_) => false,
+    }
+}
+
+/// Se o reparo de uma pré-condição TEM efeito neste host — cruza `repair_scope` (declarado) com
+/// `has_attributable_identity()` (derivado do processo). Um `AppGrant` sem identidade atribuível
+/// não tem bundle para o `tccutil` limpar nem app para listar nos Ajustes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum RepairAvailability {
+    Available,
+    /// O host não consegue atribuir a concessão a este app — quem a carrega é o processo
+    /// responsável (em `tauri dev`, o terminal).
+    NoAppIdentity,
+}
+
+fn repair_availability(scope: RepairScope) -> RepairAvailability {
+    match scope {
+        RepairScope::AppGrant if !has_attributable_identity() => RepairAvailability::NoAppIdentity,
+        RepairScope::AppGrant | RepairScope::Standalone => RepairAvailability::Available,
+    }
+}
+
 /// O que atravessa para o console. Só os aplicáveis.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 pub struct PreconditionStatus {
     pub id: PreconditionId,
     pub satisfied: bool,
+    pub repair: RepairAvailability,
 }
 
 pub fn statuses() -> Vec<PreconditionStatus> {
@@ -94,6 +151,7 @@ pub fn statuses() -> Vec<PreconditionStatus> {
         .map(|p| PreconditionStatus {
             id: p.id,
             satisfied: (p.probe)(),
+            repair: repair_availability(p.repair_scope),
         })
         .collect()
 }
@@ -113,6 +171,14 @@ pub fn repair_steps(id: PreconditionId, bundle_id: &str) -> Vec<RepairStep> {
 /// primeira viagem. Falha de SPAWN (binário ausente) é outra coisa: essa sobe, porque significa
 /// que o reparo não aconteceu de forma alguma.
 pub fn run_repair(id: PreconditionId, bundle_id: &str) -> Result<(), String> {
+    if let Some(precondition) = applicable().find(|p| p.id == id) {
+        if repair_availability(precondition.repair_scope) == RepairAvailability::NoAppIdentity {
+            return Err(format!(
+                "precondition repair: {id:?} exige identidade de app atribuível (este processo roda fora de um bundle `.app`) — recusado antes de tentar qualquer coisa"
+            ));
+        }
+    }
+
     for step in repair_steps(id, bundle_id) {
         let status = std::process::Command::new(step.program)
             .args(&step.args)
@@ -181,5 +247,55 @@ mod tests {
         // asseverada em full_disk_access.rs, onde os passos são declarados).
         #[cfg(target_os = "macos")]
         assert!(!repair_steps(PreconditionId::FullDiskAccess, "app.codm.desktop").is_empty());
+    }
+
+    /// O binário de teste vive em `target/debug/deps/`, fora de qualquer `.app` — exatamente a
+    /// mesma forma que `tauri dev` tem (`target/debug/codm-desktop`, também sem `.app` ancestral).
+    /// É por isso que este teste pode assertar `false` sem consultar variável de ambiente nenhuma:
+    /// o fato é o caminho do executável, não o perfil de build.
+    #[test]
+    fn has_attributable_identity_is_false_for_the_test_harness_binary() {
+        assert!(!has_attributable_identity());
+    }
+
+    /// Asserção de registro, como `every_precondition_declares_at_least_one_platform`: o `match`
+    /// exaustivo (sem `_`) garante em tempo de compilação que toda variante de `RepairScope` segue
+    /// coberta se `repair_scope` crescer — e o loop garante que TODA pré-condição do registro tem
+    /// um valor válido.
+    #[test]
+    fn every_precondition_declares_a_repair_scope() {
+        for precondition in PRECONDITIONS {
+            match precondition.repair_scope {
+                RepairScope::AppGrant | RepairScope::Standalone => {}
+            }
+        }
+    }
+
+    /// A situação de quem roda `cargo test` é a mesma de `tauri dev`: sem `.app` ancestral, logo
+    /// sem identidade atribuível. FDA declara `RepairScope::AppGrant`, então `statuses()` tem que
+    /// reportar `NoAppIdentity` para ela — nunca `Available`, que seria a mesma mentira que a spec
+    /// pede para não contar.
+    #[test]
+    fn statuses_reports_no_app_identity_for_fda_without_a_bundle() {
+        #[cfg(target_os = "macos")]
+        {
+            let reported = statuses();
+            let fda = reported
+                .iter()
+                .find(|s| s.id == PreconditionId::FullDiskAccess)
+                .expect("FDA é aplicável no macOS");
+            assert_eq!(fda.repair, RepairAvailability::NoAppIdentity);
+        }
+    }
+
+    /// `run_repair` recusa ANTES de montar `Command::new` — o teste passa mesmo sem `tccutil` no
+    /// PATH do runner, porque nenhum processo chega a ser criado.
+    #[test]
+    fn run_repair_refuses_without_spawning_when_no_app_identity() {
+        #[cfg(target_os = "macos")]
+        {
+            let result = run_repair(PreconditionId::FullDiskAccess, "app.codm.desktop");
+            assert!(result.is_err(), "sem identidade de app, o reparo tem que recusar");
+        }
     }
 }

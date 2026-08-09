@@ -24,13 +24,14 @@ use std::fs::File;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use super::{Platform, Precondition, PreconditionId, RepairStep};
+use super::{Platform, Precondition, PreconditionId, RepairScope, RepairStep};
 
 pub const PRECONDITION: Precondition = Precondition {
     id: PreconditionId::FullDiskAccess,
     platforms: &[Platform::Macos],
     probe,
     repair,
+    repair_scope: RepairScope::AppGrant,
 };
 
 /// Privacidade e Segurança › Acesso Total ao Disco.

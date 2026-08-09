@@ -96,7 +96,18 @@ export type PreconditionId = "FULL_DISK_ACCESS"
 /**
  * O que atravessa para o console. Só os aplicáveis.
  */
-export type PreconditionStatus = { id: PreconditionId; satisfied: boolean }
+export type PreconditionStatus = { id: PreconditionId; satisfied: boolean; repair: RepairAvailability }
+/**
+ * Se o reparo de uma pré-condição TEM efeito neste host — cruza `repair_scope` (declarado) com
+ * `has_attributable_identity()` (derivado do processo). Um `AppGrant` sem identidade atribuível
+ * não tem bundle para o `tccutil` limpar nem app para listar nos Ajustes.
+ */
+export type RepairAvailability = "AVAILABLE" | 
+/**
+ * O host não consegue atribuir a concessão a este app — quem a carrega é o processo
+ * responsável (em `tauri dev`, o terminal).
+ */
+"NO_APP_IDENTITY"
 /**
  * What a sidecar that never came up leaves for the operator to read.
  */
