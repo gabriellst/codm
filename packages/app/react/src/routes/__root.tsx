@@ -2,10 +2,9 @@ import '@/index.css'
 import '@/lib/i18n'
 import { Toaster } from '@/components/ui/sonner'
 import { AppChrome } from '@/components/console/AppChrome'
-import { SystemPreconditionsGate } from '@/components/console/SystemPreconditionsGate'
 import { RouteError } from '@/components/RouteError'
 import { SupervisionGate } from '@/components/console/SupervisionGate'
-import { useAnalyticsConsent, useAnalyticsPageview } from '@/hooks'
+import { useAnalyticsConsent, useAnalyticsPageview, useSystemPreconditionProbe } from '@/hooks'
 import { ServicesProvider } from '@/services'
 import { useDeepLinkAuth } from '@/routes/(app)/-hooks/useDeepLinkAuth'
 import { useAnalyticsIdentity } from '@/routes/(app)/-hooks/useAnalyticsIdentity'
@@ -79,11 +78,12 @@ function RootComponent() {
 						    away and unmounted. Root-level, and OUTSIDE SupervisionGate on purpose, so the
 						    subscription itself is never gated behind the daemon's own readiness check. */}
 						<DeepLinkAuthListener />
-						{/* Pré-condições do ambiente (spec Decision 6): a rota /onboarding passa a significar "há
-						    pendência", não "primeira execução". Root-level como o DeepLinkAuthListener porque a
-						    verificação é do processo — vale de qualquer tela — e porque re-sondar no foco da janela
-						    precisa estar montado enquanto o operador está nos Ajustes do macOS. */}
-						<SystemPreconditionsGate />
+						{/* Pré-condições do ambiente (spec Decision 16): sonda e publica no store — NÃO navega.
+						    Root-level como o DeepLinkAuthListener porque a verificação é do processo — vale de
+						    qualquer tela — e porque re-sondar no foco da janela precisa estar montado enquanto o
+						    operador está nos Ajustes do macOS. Quem decide "isso pede /onboarding" é o
+						    `OnboardingGate`, montado em `(app)/route.tsx`, lendo o MESMO store. */}
+						<SystemPreconditionProbe />
 						{/* SP4 — product telemetry (PostHog). Root-level like DeepLinkAuthListener: pageviews
 						    and consent are process-wide (every route, not just (app)), and identify() has to
 						    react to the SAME status CloudSessionGate/useDeepLinkAuth flip from whichever
@@ -115,6 +115,13 @@ function RootComponent() {
  *  itself (whose own render body sits above that context boundary). Renders nothing. */
 function DeepLinkAuthListener() {
 	useDeepLinkAuth()
+	return null
+}
+
+/** Thin mount point, same reasoning as `DeepLinkAuthListener` — `useSystemPreconditionProbe` resolves
+ *  `useSystemPreconditions()` from the DI container, so it can only run inside `ServicesProvider`. */
+function SystemPreconditionProbe() {
+	useSystemPreconditionProbe()
 	return null
 }
 

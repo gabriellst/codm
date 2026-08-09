@@ -19,7 +19,7 @@ import { FullDiskAccessCard } from './index'
  *
  * AC-12 é o terceiro caso: num host sem identidade atribuível (`tauri dev`), o reparo não tem
  * efeito, então o cartão não pode oferecer o botão — teria que afirmar consertar sem consertar. A
- * disponibilidade vem do `useSystemPreconditionsStore` (o que o `SystemPreconditionsGate` já aplicou), não de
+ * disponibilidade vem do `useSystemPreconditionsStore` (o que o `useSystemPreconditionProbe` já aplicou), não de
  * um novo pull direto à porta — por isso o teste semeia o STORE, não o fake.
  */
 describe('FullDiskAccessCard', () => {

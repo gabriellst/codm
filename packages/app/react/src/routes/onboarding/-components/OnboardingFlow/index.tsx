@@ -1,14 +1,14 @@
-import { type ComponentProps, useEffect } from 'react'
+import { type ComponentProps, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { IconArrowRight } from '@tabler/icons-react'
 import { useNavigate } from '@tanstack/react-router'
-import { useCompleteOnboarding } from '@codm/client-typescript/typescript'
+import { useCompleteOnboarding, useGetOnboarding } from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/console/Logo'
 import { useSystemPreconditionsStore } from '@/stores/useSystemPreconditionsStore'
 import { useOnboardingStore } from '../../-stores/useOnboardingStore'
-import { canComplete, onboardingSteps, STEP_TAXONOMY } from '../steps'
+import { canComplete, firstUnvanquishedStep, onboardingSteps, STEP_TAXONOMY } from '../steps'
 import { STEP_COMPONENTS } from '../step-components'
 
 /**
@@ -24,26 +24,42 @@ import { STEP_COMPONENTS } from '../step-components'
  * conclui o onboarding de verdade (`useCompleteOnboarding`) antes de navegar.
  *
  * A POSIÇÃO DE ABERTURA (spec Decision 12 / AC-10 — sempre no primeiro passo não vencido, nunca
- * "índice 0" depois de já ter concluído) é responsabilidade da GUARDA (ONB-3b, que lê `currentStep`
- * do servidor antes de redirecionar para cá) — este componente segue resetando para o índice 0 a
- * cada entrada, como sempre fez.
+ * "índice 0" depois de já ter concluído) é responsabilidade DESTE componente: ele lê `useGetOnboarding()`
+ * e semeia o índice via `firstUnvanquishedStep` assim que a leitura chega, em vez do `reset()`
+ * incondicional para 0 que havia antes.
  */
 export function OnboardingFlow({ className, ...props }: ComponentProps<'div'>) {
 	const { t } = useTranslation()
 	const navigate = useNavigate()
-	const { currentSlide, direction, setCurrentSlide, setDirection, reset } = useOnboardingStore()
+	const { currentSlide, direction, setCurrentSlide, setDirection } = useOnboardingStore()
 	const pendingStatuses = useSystemPreconditionsStore(state => state.pending)
+	const { data: onboarding } = useGetOnboarding()
 	// O erro não precisa de tratamento aqui — o `MutationCache` global (`router.tsx`) já vira toast
 	// via `handleApiError`; o sucesso é o único efeito que este componente precisa amarrar.
 	const completeOnboarding = useCompleteOnboarding({
 		mutation: { onSuccess: () => navigate({ to: '/dashboard' }) },
 	})
 
-	// Fresh entry on every mount (the store persists across navigations).
-	useEffect(() => reset(), [reset])
-
 	const pending = (pendingStatuses ?? []).map(status => status.id)
 	const steps = onboardingSteps(pending)
+
+	// Semeia o índice UMA VEZ por entrada, assim que a leitura de onboarding chega — nunca de novo
+	// depois (o `seededRef` é por instância de componente, então uma NOVA entrada em `/onboarding`
+	// sempre semeia de novo, mas navegar pelos passos dentro da mesma visita não é sobrescrito).
+	// `pending`/`steps` são recalculados AQUI DENTRO a partir de `pendingStatuses` (a dependência
+	// reativa de verdade) — a versão de fora existe só para o render; usá-la faria o efeito depender
+	// de um array novo a cada render (o `.map()` do corpo do componente) e reexecutar sempre.
+	const seededRef = useRef(false)
+	useEffect(() => {
+		if (seededRef.current || !onboarding) return
+		seededRef.current = true
+		const seedPending = (pendingStatuses ?? []).map(status => status.id)
+		const seedSteps = onboardingSteps(seedPending)
+		const target = firstUnvanquishedStep(seedSteps, onboarding)
+		const index = seedSteps.indexOf(target)
+		setCurrentSlide(index === -1 ? 0 : index)
+		setDirection(1)
+	}, [onboarding, pendingStatuses, setCurrentSlide, setDirection])
 
 	const lastIndex = steps.length - 1
 	// Clamp, e não só fallback: quando a pendência é resolvida no meio do fluxo a lista ENCOLHE, e o

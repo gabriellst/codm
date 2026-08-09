@@ -5,11 +5,11 @@ import { create } from 'zustand'
 import type { SystemPreconditionStatus } from '@/services'
 
 /**
- * AS PENDÊNCIAS DO AMBIENTE, com DOIS consumidores em subárvores diferentes — o `SystemPreconditionsGate`
- * (que decide para onde o operador vai) e o slide do onboarding (que decide o que renderizar). É
- * exatamente o caso do store: dois irmãos precisando coordenar sem um pai comum que possa segurar o
- * estado, e um dado que não pertence à URL (não é compartilhável nem sobrevive a nada — é fato da
- * máquina, relido a cada foco).
+ * AS PENDÊNCIAS DO AMBIENTE, com TRÊS consumidores em subárvores diferentes — o `useSystemPreconditionProbe`
+ * (que sonda e publica, montado na raiz), o `OnboardingGate` (que decide para onde o operador vai) e
+ * o slide do onboarding (que decide o que renderizar). É exatamente o caso do store: irmãos
+ * precisando coordenar sem um pai comum que possa segurar o estado, e um dado que não pertence à URL
+ * (não é compartilhável nem sobrevive a nada — é fato da máquina, relido a cada foco).
  *
  * NÃO É PERSISTIDO, e isso é uma decisão e não um esquecimento: a spec (AC-4) proíbe qualquer flag
  * de "já visto" governar a exibição. O gatilho é sempre o conjunto de pendências de AGORA.

@@ -2,6 +2,7 @@ import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { Sidebar } from '@/components/Navbar'
 import { AgentsRunningPill } from '@/components/console/AgentsRunningPill'
 import { CloudSessionGate } from '@/components/console/CloudSessionGate'
+import { OnboardingGate } from '@/components/console/OnboardingGate'
 import { SupervisionBanner } from '@/components/console/SupervisionBanner'
 import { UpdateReadyPill } from '@/components/console/UpdateReadyPill'
 import { Dialog } from '@/components/ui/dialog'
@@ -49,7 +50,12 @@ function AuthLayout() {
 						    Outlet only, never the sidebar/chrome around it, so a logged-out console still
 						    reads as "the app, asking for an account" rather than a blank shell. */}
 						<CloudSessionGate>
-							<Outlet />
+							{/* Onboarding guard (spec Decision 14), nested one level further in — same "gates
+							    the Outlet only" property, checked AFTER the cloud session so an operator who
+							    isn't logged in sees /login first, not /onboarding. */}
+							<OnboardingGate>
+								<Outlet />
+							</OnboardingGate>
 						</CloudSessionGate>
 					</div>
 				</main>

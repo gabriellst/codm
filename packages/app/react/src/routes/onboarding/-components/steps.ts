@@ -86,3 +86,58 @@ const REQUIRED_KIND: StepKind = STEP_KINDS[1]
 export function canComplete<Id extends string>(steps: readonly { id: Id; kind: StepKind }[], satisfied: readonly Id[]): boolean {
 	return steps.every(step => step.kind !== REQUIRED_KIND || satisfied.includes(step.id))
 }
+
+/** A ordem "de conteúdo" que o `OnboardingStep` do servidor enxerga — sem as `SystemPrecondition`s,
+ *  que o servidor nunca vê (spec Decision 8). É contra ESTA ordem que `currentStep` é posicionado. */
+const CONTENT_STEPS = [...INTRO_STEPS, ...SETUP_STEPS, 'FINAL'] as const
+type ContentStepId = (typeof CONTENT_STEPS)[number]
+
+/** O que o wizard precisa saber do servidor + do banco para decidir onde reabrir (spec Decision 12). */
+export interface OnboardingProgress {
+	currentStep: ContentStepId
+	completedAt: string | null
+	channelDone: boolean
+	workspaceDone: boolean
+	threadDone: boolean
+}
+
+/**
+ * O PRIMEIRO PASSO NÃO VENCIDO — a posição de abertura do wizard (spec Decision 12 / AC-10). NUNCA
+ * "índice 0": reabrir do zero um fluxo em andamento, ou reapresentar passos de conteúdo que o
+ * operador já viu depois de concluir, é exatamente o custo que a Decision 7 da spec anterior tinha
+ * aceitado e que esta elimina.
+ *
+ * Satisfação por tipo de passo:
+ *   · intro (`VALUE`/`HOW`/`CONTROL`) — pela POSIÇÃO do `currentStep` do servidor: um passo de
+ *     intro está vencido se vem ANTES de `currentStep` em `CONTENT_STEPS`. Cobre sozinho o "antes de
+ *     concluir, é o currentStep" (Decision 12): antes de concluir `currentStep` ainda não é `FINAL`,
+ *     então os passos de intro vencidos são exatamente os que o operador já passou.
+ *   · setup (`CHANNEL`/`WORKSPACE`/`CONTACT`/`AGENTS`/`REVIEW`) — pela satisfação DERIVADA do banco
+ *     (Decision 8/9), nunca pela posição: `channelDone`/`workspaceDone` mapeiam 1:1; `CONTACT`,
+ *     `AGENTS` e `REVIEW` são os três passos do `/attach` que produzem uma thread (Decision 11), e
+ *     por isso compartilham `threadDone` — nenhum dos três tem satisfação própria hoje.
+ *   · `FINAL` e `SystemPrecondition` — nunca "vencem" por aqui de propósito: `FINAL` é o destino de
+ *     fallback quando tudo o mais já venceu, e uma `SystemPrecondition` só existe dentro de `steps`
+ *     ENQUANTO pendente (Decision 4 — a composição já filtra por `pending`), então "vencer" para ela
+ *     é sair da lista, não um estado que se observa de dentro dela. É o que faz "depois de concluir,
+ *     os passos de conteúdo já estão vencidos, e o primeiro não vencido é a pendência" (Decision 12)
+ *     cair para fora deste `switch` sem um branch dedicado: com `currentStep === 'FINAL'` todo passo
+ *     de intro vence pela posição, cada setup vence pelo seu flag, e o que sobra é a precondição.
+ */
+// Referências nomeadas em vez de literais soltos na comparação (bp-14) — `SETUP_STEPS` é a mesma
+// fonte única de verdade que compõe o wizard, só que endereçada por nome no ponto de uso.
+const [CHANNEL_STEP, WORKSPACE_STEP, CONTACT_STEP, AGENTS_STEP, REVIEW_STEP] = SETUP_STEPS
+
+export function firstUnvanquishedStep(steps: readonly StepId[], progress: OnboardingProgress): StepId {
+	const currentIndex = CONTENT_STEPS.indexOf(progress.currentStep)
+
+	const vanquished = (id: StepId): boolean => {
+		if ((INTRO_STEPS as readonly string[]).includes(id)) return CONTENT_STEPS.indexOf(id as ContentStepId) < currentIndex
+		if (id === CHANNEL_STEP) return progress.channelDone
+		if (id === WORKSPACE_STEP) return progress.workspaceDone
+		if (id === CONTACT_STEP || id === AGENTS_STEP || id === REVIEW_STEP) return progress.threadDone
+		return false
+	}
+
+	return steps.find(id => !vanquished(id)) ?? steps[steps.length - 1]
+}
