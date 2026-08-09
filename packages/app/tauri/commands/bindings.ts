@@ -53,6 +53,22 @@ async pendingUpdate() : Promise<string | null> {
  */
 async restartForUpdate() : Promise<void> {
     await TAURI_INVOKE("restart_for_update");
+},
+async preconditionStatuses() : Promise<PreconditionStatus[]> {
+    return await TAURI_INVOKE("precondition_statuses");
+},
+/**
+ * O bundle id NÃO é literal aqui: sai de `config().identifier`, o mesmo valor de onde `lib.rs`
+ * deriva o data dir. `tccutil` apagando a entrada de outro app seria uma limpeza silenciosa que
+ * não conserta nada e mexe onde não devia.
+ */
+async repairPrecondition(id: PreconditionId) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("repair_precondition", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -73,6 +89,14 @@ updateReady: "update-ready"
 
 /** user-defined types **/
 
+/**
+ * Os ids. Estável em toda plataforma — ver o doc do módulo.
+ */
+export type PreconditionId = "FULL_DISK_ACCESS"
+/**
+ * O que atravessa para o console. Só os aplicáveis.
+ */
+export type PreconditionStatus = { id: PreconditionId; satisfied: boolean }
 /**
  * What a sidecar that never came up leaves for the operator to read.
  */
