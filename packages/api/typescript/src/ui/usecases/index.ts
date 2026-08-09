@@ -7,3 +7,5 @@ export { GetSetupChecklist, GetSetupChecklistInputSchema, GetSetupChecklistOutpu
 export { GetOnboarding, GetOnboardingInputSchema, GetOnboardingOutputSchema } from './GetOnboarding'
 export { GetContactAvatar, GetContactAvatarInputSchema, GetContactAvatarOutputSchema } from './GetContactAvatar'
 export { GetOperatorIdentity, GetOperatorIdentityInputSchema, GetOperatorIdentityOutputSchema } from './GetOperatorIdentity'
+export { CompleteOnboarding, CompleteOnboardingInputSchema, CompleteOnboardingOutputSchema } from './CompleteOnboarding'
+export { SaveOnboardingStep, SaveOnboardingStepInputSchema, SaveOnboardingStepOutputSchema } from './SaveOnboardingStep'
