@@ -115,7 +115,10 @@ jobs:
           find packages/app/tauri/src-tauri/binaries/daemon-runtime \
                packages/app/tauri/src-tauri/binaries/migrations \
                -type f 2>/dev/null | while IFS= read -r f; do
-            file "$f" | grep -q "Mach-O" && printf '%s\n' "$f" >> "$LIST"
+            # `if`, nunca `cmd && cmd`: sob `set -e` o `&&` que falha no ÚLTIMO comando do corpo
+            # mata o laço, e o primeiro `.js` do node_modules (não é Mach-O) fazia grep sair 1 e o
+            # passo morrer sem imprimir uma linha sequer. Reproduzido no /bin/bash 3.2 do runner.
+            if file "$f" | grep -q "Mach-O"; then printf '%s\n' "$f" >> "$LIST"; fi
           done
           if [ ! -s "$LIST" ]; then echo "nenhum Mach-O aninhado — nada a assinar"; exit 0; fi
 
