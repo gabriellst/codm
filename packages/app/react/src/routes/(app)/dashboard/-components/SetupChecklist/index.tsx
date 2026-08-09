@@ -2,7 +2,7 @@ import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { IconCheck } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
-import type { GetSetupChecklistQueryResponse } from '@codm/client-typescript/typescript'
+import type { GetOnboardingQueryResponse } from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -22,7 +22,7 @@ interface Step {
  * guided checklist. Each row deep-links to the screen that completes it and flips to
  * a check once the corresponding read reports it done.
  */
-export function SetupChecklist({ checklist, className, ...props }: ComponentProps<'div'> & { checklist: GetSetupChecklistQueryResponse }) {
+export function SetupChecklist({ checklist, className, ...props }: ComponentProps<'div'> & { checklist: GetOnboardingQueryResponse }) {
 	const { t } = useTranslation()
 	const steps: Step[] = [
 		{ n: 1, title: t('home.setupChannelTitle'), description: t('home.setupChannelDesc'), to: '/channels', done: checklist.channelDone },

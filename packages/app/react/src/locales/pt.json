@@ -469,6 +469,7 @@
 		"NOT_IMPLEMENTED": "Este recurso ainda não está disponível.",
 		"NO_CHANNEL_CONNECTED": "Conecte um canal primeiro.",
 		"NO_PROVIDER_SELECTED": "Selecione ao menos um provider.",
+		"ONBOARDING_NOT_COMPLETED": "Conclua o onboarding para continuar.",
 		"OPTIMISTIC_LOCK_CONFLICT": "O registro foi alterado por outra operação. Recarregue e tente novamente.",
 		"OWNER_ALREADY_DISABLED": "Esta conta já está desativada.",
 		"OWNER_NOT_DISABLED": "Esta conta não está desativada.",

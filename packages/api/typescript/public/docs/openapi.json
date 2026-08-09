@@ -4807,6 +4807,30 @@
         ]
       }
     },
+    "/v1/ui/onboarding/complete": {
+      "post": {
+        "tags": [
+          "ui",
+          "mcp:system"
+        ],
+        "description": "Conclui o onboarding do operador — grava completedAt",
+        "operationId": "CompleteOnboarding",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Conclui o onboarding do operador — grava completedAt",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
+      }
+    },
     "/v1/ui/attach-thread-wizard": {
       "get": {
         "tags": [
@@ -5436,6 +5460,60 @@
         ]
       }
     },
+    "/v1/ui/onboarding": {
+      "get": {
+        "tags": [
+          "ui",
+          "mcp:system"
+        ],
+        "description": "Onboarding — jornada persistida (currentStep/completedAt) + satisfação derivada dos passos de setup",
+        "operationId": "GetOnboarding",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Onboarding — jornada persistida (currentStep/completedAt) + satisfação derivada dos passos de setup",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "currentStep": {
+                      "$ref": "#/components/schemas/OnboardingStep"
+                    },
+                    "completedAt": {
+                      "nullable": true,
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                    },
+                    "channelDone": {
+                      "type": "boolean"
+                    },
+                    "workspaceDone": {
+                      "type": "boolean"
+                    },
+                    "threadDone": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "currentStep",
+                    "completedAt",
+                    "channelDone",
+                    "workspaceDone",
+                    "threadDone"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
+      }
+    },
     "/v1/ui/operator": {
       "get": {
         "tags": [
@@ -5591,49 +5669,6 @@
                     "stopCriteria",
                     "general",
                     "appVersion"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
-          }
-        },
-        "x-mcp-scope": [
-          "system"
-        ]
-      }
-    },
-    "/v1/ui/setup-checklist": {
-      "get": {
-        "tags": [
-          "ui",
-          "mcp:system"
-        ],
-        "description": "Onboarding checklist — channel/workspace/thread done flags (cross-context)",
-        "operationId": "GetSetupChecklist",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Onboarding checklist — channel/workspace/thread done flags (cross-context)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "channelDone": {
-                      "type": "boolean"
-                    },
-                    "workspaceDone": {
-                      "type": "boolean"
-                    },
-                    "threadDone": {
-                      "type": "boolean"
-                    }
-                  },
-                  "required": [
-                    "channelDone",
-                    "workspaceDone",
-                    "threadDone"
                   ],
                   "additionalProperties": false
                 }
@@ -9000,6 +9035,55 @@
           }
         }
       }
+    },
+    "/v1/ui/onboarding/step": {
+      "patch": {
+        "tags": [
+          "ui",
+          "mcp:system"
+        ],
+        "description": "Salva onde o operador parou no wizard",
+        "operationId": "SaveOnboardingStep",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "step": {
+                    "$ref": "#/components/schemas/OnboardingStep"
+                  }
+                },
+                "required": [
+                  "step"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "step": "CHANNEL"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Salva onde o operador parou no wizard",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "x-mcp-scope": [
+          "system"
+        ]
+      }
     }
   },
   "components": {
@@ -9066,6 +9150,7 @@
           "NOT_IMPLEMENTED",
           "NO_CHANNEL_CONNECTED",
           "NO_PROVIDER_SELECTED",
+          "ONBOARDING_NOT_COMPLETED",
           "OPTIMISTIC_LOCK_CONFLICT",
           "OWNER_ALREADY_DISABLED",
           "OWNER_NOT_DISABLED",
@@ -9399,6 +9484,20 @@
           "ZMW"
         ]
       },
+      "OnboardingStep": {
+        "type": "string",
+        "enum": [
+          "VALUE",
+          "HOW",
+          "CONTROL",
+          "CHANNEL",
+          "WORKSPACE",
+          "CONTACT",
+          "AGENTS",
+          "REVIEW",
+          "FINAL"
+        ]
+      },
       "MessageType": {
         "type": "string",
         "enum": [
@@ -9509,6 +9608,7 @@
     "NOT_IMPLEMENTED",
     "NO_CHANNEL_CONNECTED",
     "NO_PROVIDER_SELECTED",
+    "ONBOARDING_NOT_COMPLETED",
     "OPTIMISTIC_LOCK_CONFLICT",
     "OWNER_ALREADY_DISABLED",
     "OWNER_NOT_DISABLED",
@@ -9572,6 +9672,7 @@
     ],
     "system": [
       "AddWorkspace",
+      "CompleteOnboarding",
       "ConfigureContextBuffer",
       "ConfigureMentionGate",
       "ConfigureModel",
@@ -9585,16 +9686,17 @@
       "GetIssuesOverview",
       "GetMyAccount",
       "GetNeedsYouPanel",
+      "GetOnboarding",
       "GetSessionChat",
       "GetSessionIssues",
       "GetSettings",
-      "GetSetupChecklist",
       "GetThreadSettings",
       "GetUserInfo",
       "ListArtifacts",
       "ListThreadLoops",
       "ListWorkspaces",
       "RemoveWorkspace",
+      "SaveOnboardingStep",
       "SetActiveOwner",
       "UpdateOwnerSettings"
     ]

@@ -469,6 +469,7 @@
 		"NOT_IMPLEMENTED": "This feature is not available yet.",
 		"NO_CHANNEL_CONNECTED": "Connect a channel first.",
 		"NO_PROVIDER_SELECTED": "Select at least one provider.",
+		"ONBOARDING_NOT_COMPLETED": "Complete onboarding to continue.",
 		"OPTIMISTIC_LOCK_CONFLICT": "The record was changed by another operation. Reload and try again.",
 		"OWNER_ALREADY_DISABLED": "This account is already disabled.",
 		"OWNER_NOT_DISABLED": "This account is not disabled.",

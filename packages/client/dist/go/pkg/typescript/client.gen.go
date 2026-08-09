@@ -104,6 +104,7 @@ const (
 	NOPROVIDERSELECTED              ApiErrors = "NO_PROVIDER_SELECTED"
 	NOTFOUND                        ApiErrors = "NOT_FOUND"
 	NOTIMPLEMENTED                  ApiErrors = "NOT_IMPLEMENTED"
+	ONBOARDINGNOTCOMPLETED          ApiErrors = "ONBOARDING_NOT_COMPLETED"
 	OPTIMISTICLOCKCONFLICT          ApiErrors = "OPTIMISTIC_LOCK_CONFLICT"
 	OWNERALREADYDISABLED            ApiErrors = "OWNER_ALREADY_DISABLED"
 	OWNERNOTDISABLED                ApiErrors = "OWNER_NOT_DISABLED"
@@ -262,6 +263,8 @@ func (e ApiErrors) Valid() bool {
 	case NOTFOUND:
 		return true
 	case NOTIMPLEMENTED:
+		return true
+	case ONBOARDINGNOTCOMPLETED:
 		return true
 	case OPTIMISTICLOCKCONFLICT:
 		return true
@@ -952,6 +955,45 @@ func (e MessageType) Valid() bool {
 	}
 }
 
+// Defines values for OnboardingStep.
+const (
+	AGENTS    OnboardingStep = "AGENTS"
+	CHANNEL   OnboardingStep = "CHANNEL"
+	CONTACT   OnboardingStep = "CONTACT"
+	CONTROL   OnboardingStep = "CONTROL"
+	FINAL     OnboardingStep = "FINAL"
+	HOW       OnboardingStep = "HOW"
+	REVIEW    OnboardingStep = "REVIEW"
+	VALUE     OnboardingStep = "VALUE"
+	WORKSPACE OnboardingStep = "WORKSPACE"
+)
+
+// Valid indicates whether the value is a known member of the OnboardingStep enum.
+func (e OnboardingStep) Valid() bool {
+	switch e {
+	case AGENTS:
+		return true
+	case CHANNEL:
+		return true
+	case CONTACT:
+		return true
+	case CONTROL:
+		return true
+	case FINAL:
+		return true
+	case HOW:
+		return true
+	case REVIEW:
+		return true
+	case VALUE:
+		return true
+	case WORKSPACE:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OwnerKind.
 const (
 	INDIVIDUAL   OwnerKind = "INDIVIDUAL"
@@ -1275,6 +1317,9 @@ type MessageAuthor string
 
 // MessageType defines model for MessageType.
 type MessageType string
+
+// OnboardingStep defines model for OnboardingStep.
+type OnboardingStep string
 
 // OwnerKind defines model for OwnerKind.
 type OwnerKind string
@@ -1603,6 +1648,11 @@ type GetAttachThreadWizardParams struct {
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
+// SaveOnboardingStepJSONBody defines parameters for SaveOnboardingStep.
+type SaveOnboardingStepJSONBody struct {
+	Step OnboardingStep `json:"step"`
+}
+
 // AddWorkspaceJSONBody defines parameters for AddWorkspace.
 type AddWorkspaceJSONBody struct {
 	Path string `json:"path"`
@@ -1685,6 +1735,9 @@ type ConfigurePromptJSONRequestBody ConfigurePromptJSONBody
 
 // SteerThreadJSONRequestBody defines body for SteerThread for application/json ContentType.
 type SteerThreadJSONRequestBody SteerThreadJSONBody
+
+// SaveOnboardingStepJSONRequestBody defines body for SaveOnboardingStep for application/json ContentType.
+type SaveOnboardingStepJSONRequestBody SaveOnboardingStepJSONBody
 
 // AddWorkspaceJSONRequestBody defines body for AddWorkspace for application/json ContentType.
 type AddWorkspaceJSONRequestBody AddWorkspaceJSONBody
@@ -2366,14 +2419,22 @@ type ClientInterface interface {
 	// GetHomeDashboard request
 	GetHomeDashboard(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetOnboarding request
+	GetOnboarding(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CompleteOnboarding request
+	CompleteOnboarding(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SaveOnboardingStepWithBody request with any body
+	SaveOnboardingStepWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SaveOnboardingStep(ctx context.Context, body SaveOnboardingStepJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetOperatorIdentity request
 	GetOperatorIdentity(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetSettings request
 	GetSettings(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// GetSetupChecklist request
-	GetSetupChecklist(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetUserInfo request
 	GetUserInfo(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -3422,6 +3483,54 @@ func (c *Client) GetHomeDashboard(ctx context.Context, reqEditors ...RequestEdit
 	return c.Client.Do(req)
 }
 
+func (c *Client) GetOnboarding(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetOnboardingRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CompleteOnboarding(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCompleteOnboardingRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SaveOnboardingStepWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSaveOnboardingStepRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SaveOnboardingStep(ctx context.Context, body SaveOnboardingStepJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSaveOnboardingStepRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) GetOperatorIdentity(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetOperatorIdentityRequest(c.Server)
 	if err != nil {
@@ -3436,18 +3545,6 @@ func (c *Client) GetOperatorIdentity(ctx context.Context, reqEditors ...RequestE
 
 func (c *Client) GetSettings(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetSettingsRequest(c.Server)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) GetSetupChecklist(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetSetupChecklistRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -5928,6 +6025,100 @@ func NewGetHomeDashboardRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
+// NewGetOnboardingRequest generates requests for GetOnboarding
+func NewGetOnboardingRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/ui/onboarding")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCompleteOnboardingRequest generates requests for CompleteOnboarding
+func NewCompleteOnboardingRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/ui/onboarding/complete")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewSaveOnboardingStepRequest calls the generic SaveOnboardingStep builder with application/json body
+func NewSaveOnboardingStepRequest(server string, body SaveOnboardingStepJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSaveOnboardingStepRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewSaveOnboardingStepRequestWithBody generates requests for SaveOnboardingStep with any type of body
+func NewSaveOnboardingStepRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/ui/onboarding/step")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPatch, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewGetOperatorIdentityRequest generates requests for GetOperatorIdentity
 func NewGetOperatorIdentityRequest(server string) (*http.Request, error) {
 	var err error
@@ -5965,33 +6156,6 @@ func NewGetSettingsRequest(server string) (*http.Request, error) {
 	}
 
 	operationPath := fmt.Sprintf("/v1/ui/settings")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewGetSetupChecklistRequest generates requests for GetSetupChecklist
-func NewGetSetupChecklistRequest(server string) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/v1/ui/setup-checklist")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -6412,14 +6576,22 @@ type ClientWithResponsesInterface interface {
 	// GetHomeDashboardWithResponse request
 	GetHomeDashboardWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetHomeDashboardResponse, error)
 
+	// GetOnboardingWithResponse request
+	GetOnboardingWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetOnboardingResponse, error)
+
+	// CompleteOnboardingWithResponse request
+	CompleteOnboardingWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*CompleteOnboardingResponse, error)
+
+	// SaveOnboardingStepWithBodyWithResponse request with any body
+	SaveOnboardingStepWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SaveOnboardingStepResponse, error)
+
+	SaveOnboardingStepWithResponse(ctx context.Context, body SaveOnboardingStepJSONRequestBody, reqEditors ...RequestEditorFn) (*SaveOnboardingStepResponse, error)
+
 	// GetOperatorIdentityWithResponse request
 	GetOperatorIdentityWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetOperatorIdentityResponse, error)
 
 	// GetSettingsWithResponse request
 	GetSettingsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetSettingsResponse, error)
-
-	// GetSetupChecklistWithResponse request
-	GetSetupChecklistWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetSetupChecklistResponse, error)
 
 	// GetUserInfoWithResponse request
 	GetUserInfoWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetUserInfoResponse, error)
@@ -8592,6 +8764,102 @@ func (r GetHomeDashboardResponse) ContentType() string {
 	return ""
 }
 
+type GetOnboardingResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		ChannelDone   bool                         `json:"channelDone"`
+		CompletedAt   nullable.Nullable[time.Time] `json:"completedAt"`
+		CurrentStep   OnboardingStep               `json:"currentStep"`
+		ThreadDone    bool                         `json:"threadDone"`
+		WorkspaceDone bool                         `json:"workspaceDone"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetOnboardingResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetOnboardingResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetOnboardingResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type CompleteOnboardingResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r CompleteOnboardingResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CompleteOnboardingResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CompleteOnboardingResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SaveOnboardingStepResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r SaveOnboardingStepResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SaveOnboardingStepResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SaveOnboardingStepResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetOperatorIdentityResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -8674,40 +8942,6 @@ func (r GetSettingsResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetSettingsResponse) ContentType() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Header.Get("Content-Type")
-	}
-	return ""
-}
-
-type GetSetupChecklistResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *struct {
-		ChannelDone   bool `json:"channelDone"`
-		ThreadDone    bool `json:"threadDone"`
-		WorkspaceDone bool `json:"workspaceDone"`
-	}
-}
-
-// Status returns HTTPResponse.Status
-func (r GetSetupChecklistResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetSetupChecklistResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
-func (r GetSetupChecklistResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -9608,6 +9842,41 @@ func (c *ClientWithResponses) GetHomeDashboardWithResponse(ctx context.Context, 
 	return ParseGetHomeDashboardResponse(rsp)
 }
 
+// GetOnboardingWithResponse request returning *GetOnboardingResponse
+func (c *ClientWithResponses) GetOnboardingWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetOnboardingResponse, error) {
+	rsp, err := c.GetOnboarding(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetOnboardingResponse(rsp)
+}
+
+// CompleteOnboardingWithResponse request returning *CompleteOnboardingResponse
+func (c *ClientWithResponses) CompleteOnboardingWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*CompleteOnboardingResponse, error) {
+	rsp, err := c.CompleteOnboarding(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCompleteOnboardingResponse(rsp)
+}
+
+// SaveOnboardingStepWithBodyWithResponse request with arbitrary body returning *SaveOnboardingStepResponse
+func (c *ClientWithResponses) SaveOnboardingStepWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SaveOnboardingStepResponse, error) {
+	rsp, err := c.SaveOnboardingStepWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSaveOnboardingStepResponse(rsp)
+}
+
+func (c *ClientWithResponses) SaveOnboardingStepWithResponse(ctx context.Context, body SaveOnboardingStepJSONRequestBody, reqEditors ...RequestEditorFn) (*SaveOnboardingStepResponse, error) {
+	rsp, err := c.SaveOnboardingStep(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSaveOnboardingStepResponse(rsp)
+}
+
 // GetOperatorIdentityWithResponse request returning *GetOperatorIdentityResponse
 func (c *ClientWithResponses) GetOperatorIdentityWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetOperatorIdentityResponse, error) {
 	rsp, err := c.GetOperatorIdentity(ctx, reqEditors...)
@@ -9624,15 +9893,6 @@ func (c *ClientWithResponses) GetSettingsWithResponse(ctx context.Context, reqEd
 		return nil, err
 	}
 	return ParseGetSettingsResponse(rsp)
-}
-
-// GetSetupChecklistWithResponse request returning *GetSetupChecklistResponse
-func (c *ClientWithResponses) GetSetupChecklistWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetSetupChecklistResponse, error) {
-	rsp, err := c.GetSetupChecklist(ctx, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetSetupChecklistResponse(rsp)
 }
 
 // GetUserInfoWithResponse request returning *GetUserInfoResponse
@@ -11559,6 +11819,90 @@ func ParseGetHomeDashboardResponse(rsp *http.Response) (*GetHomeDashboardRespons
 	return response, nil
 }
 
+// ParseGetOnboardingResponse parses an HTTP response from a GetOnboardingWithResponse call
+func ParseGetOnboardingResponse(rsp *http.Response) (*GetOnboardingResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetOnboardingResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			ChannelDone   bool                         `json:"channelDone"`
+			CompletedAt   nullable.Nullable[time.Time] `json:"completedAt"`
+			CurrentStep   OnboardingStep               `json:"currentStep"`
+			ThreadDone    bool                         `json:"threadDone"`
+			WorkspaceDone bool                         `json:"workspaceDone"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCompleteOnboardingResponse parses an HTTP response from a CompleteOnboardingWithResponse call
+func ParseCompleteOnboardingResponse(rsp *http.Response) (*CompleteOnboardingResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CompleteOnboardingResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSaveOnboardingStepResponse parses an HTTP response from a SaveOnboardingStepWithResponse call
+func ParseSaveOnboardingStepResponse(rsp *http.Response) (*SaveOnboardingStepResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SaveOnboardingStepResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetOperatorIdentityResponse parses an HTTP response from a GetOperatorIdentityWithResponse call
 func ParseGetOperatorIdentityResponse(rsp *http.Response) (*GetOperatorIdentityResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -11628,36 +11972,6 @@ func ParseGetSettingsResponse(rsp *http.Response) (*GetSettingsResponse, error) 
 				HumanRequested          bool `json:"humanRequested"`
 				ServerErrors            bool `json:"serverErrors"`
 			} `json:"stopCriteria"`
-		}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseGetSetupChecklistResponse parses an HTTP response from a GetSetupChecklistWithResponse call
-func ParseGetSetupChecklistResponse(rsp *http.Response) (*GetSetupChecklistResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetSetupChecklistResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest struct {
-			ChannelDone   bool `json:"channelDone"`
-			ThreadDone    bool `json:"threadDone"`
-			WorkspaceDone bool `json:"workspaceDone"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err

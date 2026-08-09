@@ -6,6 +6,7 @@ import {
 	attachThread,
 	authPassthroughGet,
 	authPassthroughPost,
+	completeOnboarding,
 	configureContextBuffer,
 	configureMentionGate,
 	configureModel,
@@ -31,12 +32,12 @@ import {
 	getIssuesOverview,
 	getMyAccount,
 	getNeedsYouPanel,
+	getOnboarding,
 	getOperatorIdentity,
 	getSession,
 	getSessionChat,
 	getSessionIssues,
 	getSettings,
-	getSetupChecklist,
 	getThreadSettings,
 	getUserInfo,
 	health,
@@ -52,6 +53,7 @@ import {
 	restoreIssue,
 	resumeThread,
 	revokeDevice,
+	saveOnboardingStep,
 	sendDirectMessage,
 	setActiveOwner,
 	setCloudToken,
@@ -103,6 +105,10 @@ export class TypescriptClient {
 
 	authPassthroughPost(...args: Parameters<typeof authPassthroughPost>): ReturnType<typeof authPassthroughPost> {
 		return (authPassthroughPost as (...a: any[]) => ReturnType<typeof authPassthroughPost>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	completeOnboarding(...args: Parameters<typeof completeOnboarding>): ReturnType<typeof completeOnboarding> {
+		return (completeOnboarding as (...a: any[]) => ReturnType<typeof completeOnboarding>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	configureContextBuffer(...args: Parameters<typeof configureContextBuffer>): ReturnType<typeof configureContextBuffer> {
@@ -205,6 +211,10 @@ export class TypescriptClient {
 		return (getNeedsYouPanel as (...a: any[]) => ReturnType<typeof getNeedsYouPanel>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	getOnboarding(...args: Parameters<typeof getOnboarding>): ReturnType<typeof getOnboarding> {
+		return (getOnboarding as (...a: any[]) => ReturnType<typeof getOnboarding>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	getOperatorIdentity(...args: Parameters<typeof getOperatorIdentity>): ReturnType<typeof getOperatorIdentity> {
 		return (getOperatorIdentity as (...a: any[]) => ReturnType<typeof getOperatorIdentity>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
@@ -223,10 +233,6 @@ export class TypescriptClient {
 
 	getSettings(...args: Parameters<typeof getSettings>): ReturnType<typeof getSettings> {
 		return (getSettings as (...a: any[]) => ReturnType<typeof getSettings>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
-	}
-
-	getSetupChecklist(...args: Parameters<typeof getSetupChecklist>): ReturnType<typeof getSetupChecklist> {
-		return (getSetupChecklist as (...a: any[]) => ReturnType<typeof getSetupChecklist>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	getThreadSettings(...args: Parameters<typeof getThreadSettings>): ReturnType<typeof getThreadSettings> {
@@ -287,6 +293,10 @@ export class TypescriptClient {
 
 	revokeDevice(...args: Parameters<typeof revokeDevice>): ReturnType<typeof revokeDevice> {
 		return (revokeDevice as (...a: any[]) => ReturnType<typeof revokeDevice>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	saveOnboardingStep(...args: Parameters<typeof saveOnboardingStep>): ReturnType<typeof saveOnboardingStep> {
+		return (saveOnboardingStep as (...a: any[]) => ReturnType<typeof saveOnboardingStep>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	sendDirectMessage(...args: Parameters<typeof sendDirectMessage>): ReturnType<typeof sendDirectMessage> {

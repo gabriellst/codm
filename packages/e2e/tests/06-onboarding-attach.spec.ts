@@ -1,5 +1,5 @@
 import { test, expect } from '../utils/test'
-import { getSetupChecklist, getAttachThreadWizard } from '@codm/client-typescript/typescript'
+import { getOnboarding, getAttachThreadWizard } from '@codm/client-typescript/typescript'
 import { givenAttachedThread } from '../utils/given'
 
 /**
@@ -25,7 +25,10 @@ test('onboarding checklist completes once channel + workspace + thread exist', a
 	// Complete the flow the wizard performs (connected channel → workspace → attached thread).
 	await givenAttachedThread(user.session)
 
-	const checklist = await getSetupChecklist({ client })
+	// Repontado do extinto `getSetupChecklist` para a leitura unificada (ONB-1): os três campos
+	// derivados mantiveram o nome, então o que este caso assevera não mudou. A reescrita para o
+	// wizard — conclusão, bloqueio e painel — é a frente ONB-5.
+	const checklist = await getOnboarding({ client })
 	expect(checklist.channelDone).toBe(true)
 	expect(checklist.workspaceDone).toBe(true)
 	expect(checklist.threadDone).toBe(true)

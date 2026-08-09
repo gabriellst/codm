@@ -1070,6 +1070,45 @@ func (e MessageType) Valid() bool {
 	}
 }
 
+// Defines values for OnboardingStep.
+const (
+	OnboardingStepAGENTS    OnboardingStep = "AGENTS"
+	OnboardingStepCHANNEL   OnboardingStep = "CHANNEL"
+	OnboardingStepCONTACT   OnboardingStep = "CONTACT"
+	OnboardingStepCONTROL   OnboardingStep = "CONTROL"
+	OnboardingStepFINAL     OnboardingStep = "FINAL"
+	OnboardingStepHOW       OnboardingStep = "HOW"
+	OnboardingStepREVIEW    OnboardingStep = "REVIEW"
+	OnboardingStepVALUE     OnboardingStep = "VALUE"
+	OnboardingStepWORKSPACE OnboardingStep = "WORKSPACE"
+)
+
+// Valid indicates whether the value is a known member of the OnboardingStep enum.
+func (e OnboardingStep) Valid() bool {
+	switch e {
+	case OnboardingStepAGENTS:
+		return true
+	case OnboardingStepCHANNEL:
+		return true
+	case OnboardingStepCONTACT:
+		return true
+	case OnboardingStepCONTROL:
+		return true
+	case OnboardingStepFINAL:
+		return true
+	case OnboardingStepHOW:
+		return true
+	case OnboardingStepREVIEW:
+		return true
+	case OnboardingStepVALUE:
+		return true
+	case OnboardingStepWORKSPACE:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OutboxSource.
 const (
 	OutboxSourceapi         OutboxSource = "api"
@@ -3764,6 +3803,9 @@ type MessageAuthor string
 
 // MessageType defines model for MessageType.
 type MessageType string
+
+// OnboardingStep defines model for OnboardingStep.
+type OnboardingStep string
 
 // OutboxSource defines model for OutboxSource.
 type OutboxSource string
