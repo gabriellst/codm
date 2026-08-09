@@ -77,7 +77,7 @@ describe('PreconditionsGate', () => {
 	}
 
 	it('AC-3: com uma pendência, leva o operador ao /onboarding', async () => {
-		const { container } = containerWith([{ id: 'FULL_DISK_ACCESS', satisfied: false }])
+		const { container } = containerWith([{ id: 'FULL_DISK_ACCESS', satisfied: false, repair: 'AVAILABLE' }])
 		const router = await mount('/dashboard', container)
 
 		expect(host.querySelector('[data-testid="console"]')).not.toBeNull()
@@ -85,7 +85,7 @@ describe('PreconditionsGate', () => {
 	})
 
 	it('AC-3: com tudo satisfeito, não retém nem move o operador', async () => {
-		const { container } = containerWith([{ id: 'FULL_DISK_ACCESS', satisfied: true }])
+		const { container } = containerWith([{ id: 'FULL_DISK_ACCESS', satisfied: true, repair: 'AVAILABLE' }])
 		const router = await mount('/dashboard', container)
 
 		expect(host.querySelector('[data-testid="console"]')).not.toBeNull()
@@ -95,7 +95,7 @@ describe('PreconditionsGate', () => {
 
 	it('AC-4: o gatilho é o conjunto de pendências, não uma flag de "já visto"', async () => {
 		// Segunda montagem com a MESMA pendência: se houvesse flag persistida, esta não redirecionaria.
-		const first = containerWith([{ id: 'FULL_DISK_ACCESS', satisfied: false }])
+		const first = containerWith([{ id: 'FULL_DISK_ACCESS', satisfied: false, repair: 'AVAILABLE' }])
 		const firstRouter = await mount('/dashboard', first.container)
 		expect(firstRouter.state.location.pathname).toBe('/onboarding')
 
@@ -103,18 +103,18 @@ describe('PreconditionsGate', () => {
 		root = null
 		usePreconditionsStore.getState().reset()
 
-		const second = containerWith([{ id: 'FULL_DISK_ACCESS', satisfied: false }])
+		const second = containerWith([{ id: 'FULL_DISK_ACCESS', satisfied: false, repair: 'AVAILABLE' }])
 		const secondRouter = await mount('/dashboard', second.container)
 		expect(secondRouter.state.location.pathname).toBe('/onboarding')
 	})
 
 	it('Story 1: ao reganhar foco a sonda roda de novo e a pendência resolvida desaparece', async () => {
-		const { container, fake } = containerWith([{ id: 'FULL_DISK_ACCESS', satisfied: false }])
+		const { container, fake } = containerWith([{ id: 'FULL_DISK_ACCESS', satisfied: false, repair: 'AVAILABLE' }])
 		await mount('/onboarding', container)
-		expect(usePreconditionsStore.getState().pending).toEqual(['FULL_DISK_ACCESS'])
+		expect(usePreconditionsStore.getState().pending).toEqual([{ id: 'FULL_DISK_ACCESS', satisfied: false, repair: 'AVAILABLE' }])
 
 		// O operador concedeu a permissão nos Ajustes e voltou para a janela.
-		fake.set([{ id: 'FULL_DISK_ACCESS', satisfied: true }])
+		fake.set([{ id: 'FULL_DISK_ACCESS', satisfied: true, repair: 'AVAILABLE' }])
 		await act(async () => {
 			window.dispatchEvent(new Event('focus'))
 			await Promise.resolve()

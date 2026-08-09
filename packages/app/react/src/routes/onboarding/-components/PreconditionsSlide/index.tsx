@@ -13,6 +13,10 @@ import { PRECONDITION_MODULES } from '../preconditions'
  *
  * `pending ?? []` cobre o "ainda não sondado": o slide só é montado quando já há pendência (o fluxo
  * decide isso), mas um render antes da primeira resposta não pode explodir no acesso ao mapa.
+ *
+ * `PreconditionList` continua genérica sobre IDS (não sobre status inteiros — sua genericidade é o
+ * que prova a extensibilidade da AC-8), então o mapeamento para `.id` acontece aqui, na borda entre
+ * o store (que guarda o status inteiro, repair incluso, para o cartão) e a lista (que só precisa do id).
  */
 export function PreconditionsSlide({ className, ...props }: ComponentProps<'div'>) {
 	const { t } = useTranslation()
@@ -22,7 +26,7 @@ export function PreconditionsSlide({ className, ...props }: ComponentProps<'div'
 		<div className={cn('flex flex-col items-center gap-6', className)} {...props}>
 			<h1 className="heading-display text-4xl text-foreground md:text-5xl">{t('preconditions.slideTitle')}</h1>
 			<p className="text-muted-foreground">{t('preconditions.slideBody')}</p>
-			<PreconditionList pending={pending ?? []} modules={PRECONDITION_MODULES} />
+			<PreconditionList pending={(pending ?? []).map(status => status.id)} modules={PRECONDITION_MODULES} />
 		</div>
 	)
 }

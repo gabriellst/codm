@@ -23,9 +23,26 @@ export const PRECONDITION_IDS = ['FULL_DISK_ACCESS'] as const
 
 export type PreconditionId = (typeof PRECONDITION_IDS)[number]
 
+/**
+ * Se o REPARO de uma pré-condição tem efeito NESTE host. Existe porque sob `tauri dev` o shell roda
+ * um Mach-O cru (`target/debug/codm-desktop`): sem `.app`, sem `Info.plist`, `Identifier` gerado
+ * pelo cargo e assinatura ad-hoc cujo cdhash muda a cada build. O macOS não tem a que atribuir a
+ * concessão — quem a carrega é o processo RESPONSÁVEL, o terminal que lançou o comando. Um
+ * `tccutil reset` ali não encontra entrada nenhuma e os Ajustes abrem numa lista onde o app não
+ * aparece: o botão afirmaria consertar sem consertar.
+ *
+ * A DETECÇÃO não some junto — em dev a leitura falha de verdade quando o terminal não tem a
+ * permissão, e é a mesma falha invisível que esta porta existe para matar; apagá-la só a
+ * transferiria para quem desenvolve. O que muda é só a oferta do reparo (spec Decision 11).
+ */
+export const REPAIR_AVAILABILITIES = ['AVAILABLE', 'NO_APP_IDENTITY'] as const
+
+export type RepairAvailability = (typeof REPAIR_AVAILABILITIES)[number]
+
 export interface PreconditionStatus {
 	id: PreconditionId
 	satisfied: boolean
+	repair: RepairAvailability
 }
 
 export interface PreconditionsService {

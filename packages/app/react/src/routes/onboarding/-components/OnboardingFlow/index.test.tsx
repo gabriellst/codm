@@ -70,7 +70,7 @@ describe('OnboardingFlow', () => {
 	}
 
 	it('com pendência, abre no slide da permissão e não oferece saída', async () => {
-		usePreconditionsStore.getState().apply([{ id: 'FULL_DISK_ACCESS', satisfied: false }])
+		usePreconditionsStore.getState().apply([{ id: 'FULL_DISK_ACCESS', satisfied: false, repair: 'AVAILABLE' }])
 		await mount()
 
 		expect(host.textContent).toContain('Acesso Total ao Disco')
@@ -78,7 +78,7 @@ describe('OnboardingFlow', () => {
 	})
 
 	it('sem pendência, é o fluxo de apresentação de sempre — com o Pular no lugar', async () => {
-		usePreconditionsStore.getState().apply([{ id: 'FULL_DISK_ACCESS', satisfied: true }])
+		usePreconditionsStore.getState().apply([{ id: 'FULL_DISK_ACCESS', satisfied: true, repair: 'AVAILABLE' }])
 		await mount()
 
 		expect(host.textContent).not.toContain('Acesso Total ao Disco')
@@ -86,7 +86,7 @@ describe('OnboardingFlow', () => {
 	})
 
 	it('o slide da permissão vem PRIMEIRO — o operador não precisa caçá-lo', async () => {
-		usePreconditionsStore.getState().apply([{ id: 'FULL_DISK_ACCESS', satisfied: false }])
+		usePreconditionsStore.getState().apply([{ id: 'FULL_DISK_ACCESS', satisfied: false, repair: 'AVAILABLE' }])
 		await mount()
 
 		// Quatro marcadores de slide (permissão + os três de apresentação), com o primeiro ativo.

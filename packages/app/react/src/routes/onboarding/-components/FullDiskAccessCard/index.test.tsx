@@ -5,6 +5,7 @@ import i18n from '@/lib/i18n'
 import { type Bindings, Container, ServicesProvider } from '@/services'
 import testBindings, { FakePreconditionsService } from '@/services/registry/test'
 import { PreconditionsToken } from '@/services/tokens'
+import { usePreconditionsStore } from '@/stores/usePreconditionsStore'
 import { FullDiskAccessCard } from './index'
 
 /**
@@ -15,6 +16,11 @@ import { FullDiskAccessCard } from './index'
  *
  * A ORDEM dos dois passos não é asseverada aqui de propósito — ela pertence ao host e já é provada
  * em `preconditions/full_disk_access.rs`. Reasseverá-la aqui seria testar o dublê.
+ *
+ * AC-12 é o terceiro caso: num host sem identidade atribuível (`tauri dev`), o reparo não tem
+ * efeito, então o cartão não pode oferecer o botão — teria que afirmar consertar sem consertar. A
+ * disponibilidade vem do `usePreconditionsStore` (o que o `PreconditionsGate` já aplicou), não de
+ * um novo pull direto à porta — por isso o teste semeia o STORE, não o fake.
  */
 describe('FullDiskAccessCard', () => {
 	let root: Root | null = null
@@ -26,6 +32,7 @@ describe('FullDiskAccessCard', () => {
 		await i18n.changeLanguage('pt')
 		host = document.createElement('div')
 		document.body.appendChild(host)
+		usePreconditionsStore.getState().reset()
 	})
 
 	afterEach(() => {
@@ -71,5 +78,13 @@ describe('FullDiskAccessCard', () => {
 		// A ordem embutida na ação tem que estar dita: limpar a negação, depois abrir os Ajustes.
 		expect(text).toContain('apaga a negação')
 		expect(text).toContain('Acesso Total ao Disco')
+	})
+
+	it('AC-12: sem identidade atribuível, não há botão de reparo — só a orientação sobre o terminal', () => {
+		usePreconditionsStore.getState().apply([{ id: 'FULL_DISK_ACCESS', satisfied: false, repair: 'NO_APP_IDENTITY' }])
+		mount()
+
+		expect(host.querySelector('button')).toBeNull()
+		expect(host.textContent).toContain('identidade própria')
 	})
 })

@@ -59,7 +59,12 @@ export type { LoggingService } from './LoggingService/LoggingService'
 export type { NotificationService } from './NotificationService/NotificationService'
 export type { AnalyticsService } from './AnalyticsService/AnalyticsService'
 export { PRECONDITION_IDS } from './PreconditionsService/PreconditionsService'
-export type { PreconditionId, PreconditionStatus, PreconditionsService } from './PreconditionsService/PreconditionsService'
+export type {
+	PreconditionId,
+	PreconditionStatus,
+	PreconditionsService,
+	RepairAvailability,
+} from './PreconditionsService/PreconditionsService'
 export type { SecretsService } from './SecretsService/SecretsService'
 export type { SupervisedSidecar, SupervisionService, SupervisionState } from './SupervisionService/SupervisionService'
 export type { UpdateService } from './UpdateService/UpdateService'

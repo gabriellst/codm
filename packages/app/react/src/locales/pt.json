@@ -568,6 +568,7 @@
 		"slideTitle": "Falta uma permissão",
 		"slideBody": "O CODM precisa disto antes de conseguir trabalhar neste Mac.",
 		"repairFailed": "Não foi possível iniciar o reparo.",
+		"noAppIdentity": "Neste build o CODM roda sem identidade própria, então a permissão não pertence a ele — pertence ao terminal de onde você o iniciou. Libere o acesso a esse terminal nos Ajustes e reinicie-o.",
 		"fullDiskAccess": {
 			"title": "Acesso Total ao Disco",
 			"body": "Os agentes leem suas pastas de projeto através do CODM — para o macOS, quem lê é o app. Sem esta permissão o sistema bloqueia a leitura e as tarefas param sem explicação.",

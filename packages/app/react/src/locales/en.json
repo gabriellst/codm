@@ -568,6 +568,7 @@
 		"slideTitle": "One permission is missing",
 		"slideBody": "CODM needs this before it can do any work on this Mac.",
 		"repairFailed": "Could not start the repair.",
+		"noAppIdentity": "In this build CODM runs without an identity of its own, so the permission does not belong to it — it belongs to the terminal you launched it from. Grant access to that terminal in Settings and restart it.",
 		"fullDiskAccess": {
 			"title": "Full Disk Access",
 			"body": "Agents read your project folders through CODM — as far as macOS is concerned, the app is the reader. Without this permission the system blocks those reads and tasks stop with no explanation.",

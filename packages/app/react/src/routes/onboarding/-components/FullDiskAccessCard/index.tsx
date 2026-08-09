@@ -1,12 +1,13 @@
 // packages/app/react/src/routes/onboarding/-components/FullDiskAccessCard/index.tsx — COMPLETE final file.
 // MANTENHA a forma do scaffold: export nomeado, props estendendo ComponentProps, `{ className, ...props }`, `cn(...)`.
 import { IconLock } from '@tabler/icons-react'
-import { type ComponentProps, useState } from 'react'
+import { type ComponentProps, type ReactNode, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { usePreconditions } from '@/services'
+import { type RepairAvailability, usePreconditions } from '@/services'
+import { usePreconditionsStore } from '@/stores/usePreconditionsStore'
 
 /**
  * A EXPLICAÇÃO e o BOTÃO de uma pré-condição — as duas responsabilidades que sobram para o console.
@@ -19,6 +20,12 @@ import { usePreconditions } from '@/services'
  *
  * O reparo é pedido à PORTA, nunca a `commands.*`: quais são os passos e em que ordem é decisão do
  * host, e um componente que soubesse disso teria que ser reescrito junto do host a cada mudança.
+ *
+ * O BOTÃO NÃO É SEMPRE OFERECIDO (spec Decision 11 / AC-12). Sob `tauri dev` o host não tem
+ * identidade atribuível — o Mach-O cru não tem `.app` para o macOS anexar a concessão —, e um botão
+ * (mesmo desabilitado) afirmaria que o reparo existe quando ele não tem efeito nenhum ali. O
+ * despacho por `repairAvailability` é por MAPA (canon CMP-P18), nunca `if`/ternário: um terceiro
+ * valor de `RepairAvailability` que não tivesse entrada aqui pararia de compilar.
  */
 // O parâmetro tem default (`= {}`) porque este componente também é usado como `PreconditionModule.Component`
 // (`() => ReactNode`, zero args — `PreconditionList` despacha via `<Component key={id} />`, sem props). Sem o
@@ -28,6 +35,10 @@ export function FullDiskAccessCard({ className, ...props }: ComponentProps<'div'
 	const { t } = useTranslation()
 	const preconditions = usePreconditions()
 	const [repairing, setRepairing] = useState(false)
+	const pending = usePreconditionsStore(state => state.pending)
+	// Nada pendente ainda respondido (ou esta pré-condição não está entre as pendências) degrada
+	// para AVAILABLE — o comportamento de hoje — em vez de deixar o cartão em branco.
+	const repairAvailability: RepairAvailability = pending?.find(status => status.id === 'FULL_DISK_ACCESS')?.repair ?? 'AVAILABLE'
 
 	const repair = async () => {
 		setRepairing(true)
@@ -40,6 +51,19 @@ export function FullDiskAccessCard({ className, ...props }: ComponentProps<'div'
 		}
 	}
 
+	const REPAIR_CONTENT: Record<RepairAvailability, ReactNode> = {
+		AVAILABLE: (
+			<>
+				<p className="text-sm text-muted-foreground">{t('preconditions.fullDiskAccess.actionHint')}</p>
+				<Button onClick={repair} disabled={repairing} className="self-start">
+					{t('preconditions.fullDiskAccess.action')}
+				</Button>
+				<p className="text-xs text-muted-foreground">{t('preconditions.fullDiskAccess.afterHint')}</p>
+			</>
+		),
+		NO_APP_IDENTITY: <p className="text-sm text-muted-foreground">{t('preconditions.noAppIdentity')}</p>,
+	}
+
 	return (
 		<div className={cn('flex w-full flex-col gap-4 rounded-asymmetric border border-border bg-card p-6 text-left', className)} {...props}>
 			<div className="flex items-center gap-3">
@@ -50,13 +74,7 @@ export function FullDiskAccessCard({ className, ...props }: ComponentProps<'div'
 			</div>
 
 			<p className="text-sm text-muted-foreground">{t('preconditions.fullDiskAccess.body')}</p>
-			<p className="text-sm text-muted-foreground">{t('preconditions.fullDiskAccess.actionHint')}</p>
-
-			<Button onClick={repair} disabled={repairing} className="self-start">
-				{t('preconditions.fullDiskAccess.action')}
-			</Button>
-
-			<p className="text-xs text-muted-foreground">{t('preconditions.fullDiskAccess.afterHint')}</p>
+			{REPAIR_CONTENT[repairAvailability]}
 		</div>
 	)
 }

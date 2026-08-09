@@ -2,7 +2,7 @@
 // MANTENHA a forma do scaffold: interfaces State/Actions separadas, `initialState` nomeado, e o
 // `create<Store>()(set => ({...}))`.
 import { create } from 'zustand'
-import type { PreconditionId, PreconditionStatus } from '@/services'
+import type { PreconditionStatus } from '@/services'
 
 /**
  * AS PENDÊNCIAS DO AMBIENTE, com DOIS consumidores em subárvores diferentes — o `PreconditionsGate`
@@ -20,12 +20,16 @@ interface PreconditionsState {
 	 * não pode redirecionar com base em "ainda não sei", e sem os dois valores "não sondado" seria
 	 * indistinguível de "tudo certo" — o operador chegaria ao console por um instante antes de ser
 	 * mandado de volta, a cada boot.
+	 *
+	 * Guarda o `PreconditionStatus` INTEIRO, não só o id: o cartão (`FullDiskAccessCard`) precisa da
+	 * `repair` de cada pendência para saber se o botão de reparo tem efeito neste host (spec Decision
+	 * 11) — informação que um `PreconditionId[]` já teria descartado antes de chegar lá.
 	 */
-	pending: PreconditionId[] | null
+	pending: PreconditionStatus[] | null
 }
 
 interface PreconditionsActions {
-	/** Recebe o que a porta reportou e guarda só o que ficou pendente. */
+	/** Recebe o que a porta reportou e guarda os status que ficaram pendentes (satisfeitos são descartados). */
 	apply: (statuses: PreconditionStatus[]) => void
 	reset: () => void
 }
@@ -38,6 +42,6 @@ const initialState: PreconditionsState = {
 
 export const usePreconditionsStore = create<PreconditionsStore>()(set => ({
 	...initialState,
-	apply: statuses => set({ pending: statuses.filter(status => !status.satisfied).map(status => status.id) }),
+	apply: statuses => set({ pending: statuses.filter(status => !status.satisfied) }),
 	reset: () => set(initialState),
 }))

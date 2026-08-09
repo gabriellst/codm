@@ -107,6 +107,21 @@ checagem enfiada no boot.
     guarda para evitar isso entregaria o console sem permissão, que é a falha de origem. O
     destravamento não exige ação: a verificação roda de novo quando a janela reganha foco, então
     conceder nos Ajustes e voltar basta.
+11. **Uma pré-condição declara do que o REPARO dela precisa; onde o host não oferece isso, ela
+    detecta e explica, mas não oferece o botão.** Sob `tauri dev` o shell roda um Mach-O cru
+    (`target/debug/codm-desktop`): sem `.app`, sem `Info.plist`, `Identifier` gerado pelo cargo e
+    assinatura ad-hoc cujo cdhash muda a cada build. O macOS não tem a que atribuir a concessão, e
+    quem a carrega passa a ser o processo responsável — o terminal que lançou o comando. Um
+    `tccutil reset app.codm.desktop` ali não encontra entrada nenhuma e os Ajustes abrem numa lista
+    onde o app não aparece: o botão afirmaria consertar sem consertar.
+    A detecção NÃO some junto, e essa é a parte deliberada: em dev a leitura falha de verdade
+    quando o terminal não tem a permissão, e é a mesma falha invisível que esta spec existe para
+    matar — apagá-la só a transfere para quem desenvolve. O que muda é a orientação: em vez do
+    botão, o cartão diz que a permissão pertence ao terminal.
+    A avaliação segue sendo lookup uniforme sobre campo declarado (Decision 9): a pré-condição
+    declara o ESCOPO do seu reparo, e o host DERIVA se tem identidade atribuível — do executável
+    estar dentro de um `.app`, nunca de `debug_assertions`, que descreve o perfil de build e não o
+    fato. Ratificado pelo founder em 09/08/2026.
 
 ## User Stories
 
@@ -152,6 +167,12 @@ checagem enfiada no boot.
       vem filtrado por essa declaração — nenhuma sonda ramifica em sistema operacional.
 - [ ] AC-11: Com pendência aberta, o fluxo de onboarding não expõe rota de saída para o console; sem
       pendência, ele é o fluxo de apresentação de sempre, com o "Pular" no lugar.
+- [ ] AC-12: Num host sem identidade atribuível (executável fora de um `.app`, como em `tauri dev`),
+      a pré-condição de Acesso Total ao Disco continua sendo detectada e explicada, mas o cartão não
+      oferece o botão de reparo — apresenta no lugar a orientação de que a permissão pertence ao
+      processo responsável. Pedir o reparo nesse host falha explicitamente em vez de virar no-op.
+- [ ] AC-13: A disponibilidade do reparo sai de lookup sobre um campo declarado no módulo mais um
+      fato derivado do executável — nunca de `debug_assertions` nem de qualquer desvio por ambiente.
 
 ## Risks & Migration
 
