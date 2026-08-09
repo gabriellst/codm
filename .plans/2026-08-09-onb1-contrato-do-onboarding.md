@@ -21,7 +21,7 @@
 **Files to write:**
 - Create: `packages/contracts/wire/enums/onboarding-step.tsp`
 - Modify: `packages/contracts/wire/main.tsp` — acrescenta o import do enum novo
-- Regen: `packages/contracts/generated/typescript/src/wire/enums.ts` (e as cópias go/rust — geradas, nunca editadas à mão)
+- Regen: `packages/contracts/generated/typescript/src/wire/enums/onboarding-step.ts` (e as cópias go/rust — geradas, nunca editadas à mão)
 
 **Files to read:**
 - `packages/contracts/wire/enums/attach-flow-style.tsp`
@@ -34,7 +34,7 @@
 **Depends on:** (none)
 **Consumes (frozen):** nada — esta Task É o contrato. Ela CONGELA, para T2–T6, o enum `OnboardingStep` importável de `@codm/contracts-typescript/wire/enums` com EXATAMENTE estes nove membros, nesta ordem: `VALUE`, `HOW`, `CONTROL`, `CHANNEL`, `WORKSPACE`, `CONTACT`, `AGENTS`, `REVIEW`, `FINAL`.
 **Scope fence:** OUT — nenhum arquivo em `packages/api/`, `packages/app/` ou `packages/contracts/db/` é tocado aqui. NÃO crie tabela, NÃO crie entidade. DONE elsewhere — nada; esta é a Task raiz.
-**Gate:** `bun contracts` verde, e `grep -n "OnboardingStep" packages/contracts/generated/typescript/src/wire/enums.ts` mostrando os nove membros.
+**Gate:** `bun contracts` verde, e `grep -n "OnboardingStep" packages/contracts/generated/typescript/src/wire/enums/onboarding-step.ts` mostrando os nove membros.
 
 ### Step T1.1 — Escreva o enum TypeSpec
 
@@ -68,7 +68,7 @@ Expected: sem erro; o `cargo check` do crate rust ao final também passa.
 ### Step T1.4 — Verifique o contrato congelado
 
 ```bash
-grep -n "OnboardingStep" packages/contracts/generated/typescript/src/wire/enums.ts
+grep -n "OnboardingStep" packages/contracts/generated/typescript/src/wire/enums/onboarding-step.ts
 ```
 
 Expected: um `export const OnboardingStep = {...}` (ou `enum`) com os nove membros `VALUE`, `HOW`, `CONTROL`, `CHANNEL`, `WORKSPACE`, `CONTACT`, `AGENTS`, `REVIEW`, `FINAL`.

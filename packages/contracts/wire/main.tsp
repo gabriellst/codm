@@ -61,6 +61,7 @@ import "./enums/day-of-week.tsp";
 // value object that answers "when is the next run?".
 import "./enums/loop-schedule-kind.tsp";
 import "./enums/attach-flow-style.tsp";
+import "./enums/onboarding-step.tsp";
 // Persistence-lane discriminator of the SINGLE shared_outbox table in the shared SQLite
 // store. Cross-boundary because BOTH backends write rows into that one table and each
 // consumer claims only its own lane — the value is a contract between two processes.
