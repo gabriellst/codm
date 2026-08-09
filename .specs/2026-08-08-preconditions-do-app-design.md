@@ -1,10 +1,24 @@
 # Pré-condições do app como conjunto extensível — Design Spec
 
 **Date:** 2026-08-08
-**Status:** Approved
+**Status:** Approved — **PARCIALMENTE SUPERSEDIDA** (ver aviso abaixo)
 **Bounded Context:** desktop-shell (Tauri host + o DI de services do console)
 **Kind:** feature
 **Story Points:** 5 — um contexto ponta a ponta: comando Rust novo, porta com duas implementações, registro, slide de UI, guarda de rota e i18n nos dois idiomas. Sem migração e sem contrato de fio.
+
+> **⚠️ REVERSÃO PARCIAL — `.specs/2026-08-09-onboarding-wizard-e-system-preconditions-design.md`
+> (Decision 19) revoga a Decision 6 e a AC-4 desta spec.** Elas dizem que `/onboarding` significa
+> "há pendência" e que nenhuma flag persistida pode governar a exibição. A spec de 09/08 inverte
+> isso: o onboarding vira um wizard com conclusão persistida (`completedAt` por `ownerId`), a
+> pendência deixa de ser o motivo da tela e passa a ser um passo dela, e uma pré-condição do sistema
+> passa a se chamar `SystemPrecondition` — espécie de `Step`, não categoria à parte. Motivo da
+> reversão: modelar a pendência como motor do fluxo fez uma falha de permissão sequestrar a
+> apresentação inteira e produziu um beco sem saída medido em `desktop:dev`.
+>
+> **O que desta spec continua valendo:** as Decisions 1–5 e 8–11 (o registro de módulos com
+> `platforms` declarado, a sonda por tentativa de leitura, a porta com implementação Tauri e Browser,
+> a ordem `tccutil reset` → Ajustes embutida na ação, e o reparo que se recusa onde não há identidade
+> atribuível). Só o acoplamento ao fluxo (Decisions 6, 7 e 10, e a AC-4) foi revogado.
 
 ## Context
 
