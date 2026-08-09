@@ -31,6 +31,8 @@ describe('OnboardingFlow', () => {
 	let host: HTMLDivElement
 	let queryClient: QueryClient
 	const realFetch = globalThis.fetch
+	/** GETs a `/v1/ui/onboarding` — o contador que denuncia (ou não) a invalidação. */
+	let onboardingReads = 0
 
 	const FRESH_ONBOARDING: GetOnboardingQueryResponse = {
 		currentStep: 'VALUE',
@@ -51,6 +53,7 @@ describe('OnboardingFlow', () => {
 		useOnboardingStore.getState().reset()
 		useOnboardingSetupStore.getState().reset()
 		useSystemPreconditionsStore.getState().reset()
+		onboardingReads = 0
 		serve(FRESH_ONBOARDING)
 	})
 
@@ -68,7 +71,9 @@ describe('OnboardingFlow', () => {
 	function serve(payload: GetOnboardingQueryResponse): void {
 		globalThis.fetch = (async (input: RequestInfo | URL) => {
 			const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
-			const body = url.includes('/v1/ui/onboarding') ? payload : {}
+			const isOnboardingRead = url.includes('/v1/ui/onboarding') && !url.includes('/complete') && !url.includes('/step')
+			if (isOnboardingRead) onboardingReads += 1
+			const body = isOnboardingRead ? payload : {}
 			return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
 		}) as typeof globalThis.fetch
 	}
@@ -197,5 +202,40 @@ describe('OnboardingFlow', () => {
 				expect(host.querySelector('a[href="/attach"]')).toBeNull()
 			})
 		}
+	})
+
+	describe('concluir', () => {
+		/**
+		 * REGRESSÃO RELATADA EM 09/08: "tive que clicar em concluir duas vezes, a primeira não pegou".
+		 *
+		 * A mutation gravava `completedAt` no servidor e o componente navegava direto para
+		 * `/dashboard` — que monta dentro do `OnboardingGate`, e o gate decide pelo `completedAt` de
+		 * `useGetOnboarding()`. Com o cache ainda carregando a resposta ANTERIOR (`completedAt: null`),
+		 * o gate devolvia o operador ao `/onboarding` no mesmo instante. A segunda tentativa
+		 * funcionava só porque o React Query já tinha refeito o fetch nesse meio-tempo.
+		 *
+		 * O que este caso trava é a INVALIDAÇÃO: depois de concluir, a leitura de onboarding tem de
+		 * ser refeita antes de a navegação acontecer. Contar os GETs é o jeito de asseverar isso sem
+		 * depender de tempo — um refetch a mais é a assinatura da invalidação.
+		 */
+		it('invalida a leitura de onboarding ANTES de navegar — senão o gate lê o cache velho e devolve', async () => {
+			const { router } = await mount()
+
+			// O botão de concluir só existe no ÚLTIMO passo — avança até lá antes de medir.
+			const steps = onboardingSteps([])
+			for (let i = 0; i < steps.length - 1; i++) clickButton(i18n.t('onboarding.next'))
+			await act(async () => {
+				await new Promise(resolve => setTimeout(resolve, 60))
+			})
+
+			const before = onboardingReads
+			clickButton(i18n.t('onboarding.getStarted'))
+			await act(async () => {
+				await new Promise(resolve => setTimeout(resolve, 80))
+			})
+
+			expect(onboardingReads).toBeGreaterThan(before)
+			expect(router.state.location.pathname).toBe('/dashboard')
+		})
 	})
 })

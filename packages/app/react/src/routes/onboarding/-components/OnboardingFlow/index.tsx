@@ -2,7 +2,8 @@ import { type ComponentProps, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { IconArrowRight } from '@tabler/icons-react'
 import { useNavigate } from '@tanstack/react-router'
-import { useCompleteOnboarding, useGetOnboarding } from '@codm/client-typescript/typescript'
+import { useQueryClient } from '@tanstack/react-query'
+import { getOnboardingQueryKey, useCompleteOnboarding, useGetOnboarding } from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/console/Logo'
@@ -31,13 +32,27 @@ import { STEP_COMPONENTS } from '../step-components'
 export function OnboardingFlow({ className, ...props }: ComponentProps<'div'>) {
 	const { t } = useTranslation()
 	const navigate = useNavigate()
+	const queryClient = useQueryClient()
 	const { currentSlide, direction, setCurrentSlide, setDirection } = useOnboardingStore()
 	const pendingStatuses = useSystemPreconditionsStore(state => state.pending)
 	const { data: onboarding } = useGetOnboarding()
 	// O erro não precisa de tratamento aqui — o `MutationCache` global (`router.tsx`) já vira toast
 	// via `handleApiError`; o sucesso é o único efeito que este componente precisa amarrar.
+	//
+	// INVALIDAR ANTES DE NAVEGAR, e o `await` é a parte que importa. `/dashboard` monta dentro do
+	// `OnboardingGate`, que decide pelo `completedAt` de `useGetOnboarding()`. Navegar com o cache
+	// ainda velho faz o gate ler `completedAt: null` — o valor de ANTES desta mutation — e devolver
+	// o operador ao `/onboarding` no mesmo instante. Foi o sintoma relatado em 09/08: "cliquei em
+	// concluir duas vezes, a primeira não pegou". A segunda pegava porque o React Query já tinha
+	// refeito o fetch nesse meio-tempo. Sem o `await`, invalidar não basta: a navegação corre junto
+	// com o refetch e a corrida volta.
 	const completeOnboarding = useCompleteOnboarding({
-		mutation: { onSuccess: () => navigate({ to: '/dashboard' }) },
+		mutation: {
+			onSuccess: async () => {
+				await queryClient.invalidateQueries({ queryKey: getOnboardingQueryKey() })
+				await navigate({ to: '/dashboard' })
+			},
+		},
 	})
 
 	const pending = (pendingStatuses ?? []).map(status => status.id)
