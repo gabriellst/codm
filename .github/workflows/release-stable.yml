@@ -74,21 +74,65 @@ jobs:
       # Assina por BUSCA, não por caminho fixo: o dia em que outro prebuild nativo entrar no closure
       # ele já sai assinado, em vez de reprovar numa notarização 12 minutos build adentro. `file`
       # decide o que é Mach-O — extensão não decide (`.node` é Mach-O, `.js` ao lado não é).
+      # O CERTIFICADO NÃO ESTÁ NO KEYCHAIN DESTE PROCESSO, e é por isso que o passo monta um. O
+      # runner é self-hosted, então a máquina TEM o certificado — no keychain de login do founder.
+      # Mas o Actions roda como serviço, com sessão e keychain próprios, e um `codesign` daqui
+      # responde `no identity found` (medido). O Tauri não sofre disso porque importa o `.p12` dos
+      # secrets num keychain temporário dentro do próprio passo dele; aqui fazemos o mesmo, antes.
       - name: assina os Mach-O aninhados nos resources
         env:
           IDENTITY: "Developer ID Application: BK COMPANY LTDA (V4F6T68S5B)"
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         run: |
           set -euo pipefail
-          found=0
+
           # Só os diretórios STAGED COMO RESOURCE. Os sidecars (`codm-daemon`, `codm-gateway`) ficam
           # de fora de propósito: o Tauri os assina como `externalBin`, e a notarização confirmou —
           # ela reclamou do `.node` e de mais nada.
+          LIST="$RUNNER_TEMP/nested-machos.txt"
+          : > "$LIST"
+          find packages/app/tauri/src-tauri/binaries/daemon-runtime \
+               packages/app/tauri/src-tauri/binaries/migrations \
+               -type f 2>/dev/null | while IFS= read -r f; do
+            file "$f" | grep -q "Mach-O" && printf '%s\n' "$f" >> "$LIST"
+          done
+          if [ ! -s "$LIST" ]; then echo "nenhum Mach-O aninhado — nada a assinar"; exit 0; fi
+
+          KEYCHAIN="$RUNNER_TEMP/codm-nested-signing.keychain-db"
+          KEYCHAIN_PW="$(openssl rand -base64 24)"
+          CERT="$RUNNER_TEMP/codm-nested-cert.p12"
+          # O keychain e o .p12 saem do disco aconteça o que acontecer, e a lista de busca volta ao
+          # que era: este runner é a máquina de trabalho do founder, não um descartável.
+          PREV_KEYCHAINS="$(security list-keychains -d user | sed 's/[",]//g' | xargs)"
+          cleanup() {
+            security list-keychains -d user -s $PREV_KEYCHAINS >/dev/null 2>&1 || true
+            security delete-keychain "$KEYCHAIN" >/dev/null 2>&1 || true
+            rm -f "$CERT"
+          }
+          trap cleanup EXIT
+
+          printf '%s' "$APPLE_CERTIFICATE" | base64 --decode > "$CERT"
+          security create-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN"
+          security import "$CERT" -k "$KEYCHAIN" -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign >/dev/null
+          # Sem isto o codesign trava num prompt de autorização que não existe num runner sem TTY.
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PW" "$KEYCHAIN" >/dev/null
+          # `codesign` procura na LISTA DE BUSCA, não no keychain que acabamos de criar — sem
+          # acrescentá-lo aqui, a identidade importada segue invisível.
+          security list-keychains -d user -s "$KEYCHAIN" $PREV_KEYCHAINS >/dev/null
+
+          found=0
           while IFS= read -r f; do
-            file "$f" | grep -q "Mach-O" || continue
             found=$((found + 1))
             echo "assinando $f"
-            codesign --force --timestamp --options runtime -s "$IDENTITY" "$f"
-          done < <(find packages/app/tauri/src-tauri/binaries/daemon-runtime packages/app/tauri/src-tauri/binaries/migrations -type f 2>/dev/null)
+            codesign --force --timestamp --options runtime --keychain "$KEYCHAIN" -s "$IDENTITY" "$f"
+            codesign -dv --verbose=2 "$f" 2>&1 | grep -E "^Authority=Developer ID Application" || {
+              echo "::error::$f não ficou com Developer ID depois do codesign"
+              exit 1
+            }
+          done < "$LIST"
           echo "Mach-O aninhados assinados: $found"
 
       # Um release sem esta variável produz um app cujo login abre localhost:3030 — defeito
