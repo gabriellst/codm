@@ -81,6 +81,25 @@ const unitOfWorkFactory = { useFactory: (c: DependencyContainer) => (c.resolve(D
 const healthServiceFactory = { useFactory: (c: DependencyContainer) => new HealthService(healthChecksFrom(c)) }
 const resolveDriver = (c: DependencyContainer) => c.resolve(DrizzleDatabaseDriver as any) as DrizzleDatabaseDriver
 
+// The `real` health checks, hoisted so the `e2e` column can DECLARE the same value instead of
+// inheriting `integration`'s declared absence. e2e is a REAL boot — same driver, same outbox
+// dispatcher, same lane poller, same mailbox dispatcher — so `/v1/health` there must answer with the
+// same five checks a production daemon answers with; the `null` in mock/integration is about TestBed
+// suites building HealthService by hand (Health.test.ts), which the harness does not do.
+const databaseHealthCheck = { useFactory: (c: DependencyContainer) => new DatabaseHealthCheck(resolveDriver(c)) }
+const migrationsHealthCheck = { useFactory: (c: DependencyContainer) => new MigrationsHealthCheck(resolveDriver(c)) }
+const outboxDispatcherHealthCheck = {
+	useFactory: (c: DependencyContainer) =>
+		new PollingHealthCheck('outboxDispatcher', c.resolve(OutboxDispatcher as any) as DrizzleOutboxDispatcher),
+}
+const externalMediatorHealthCheck = {
+	useFactory: (c: DependencyContainer) =>
+		new PollingHealthCheck('sqlExternalMediator', c.resolve(ExternalMediator as any) as SqlExternalMediator),
+}
+const channelStatusHealthCheck = {
+	useFactory: (c: DependencyContainer) => new ChannelStatusHealthCheck(c.resolve(DrizzleClient as any) as DrizzleClient),
+}
+
 // Kernel bindings — one declaration per token, envs as columns (divergence is visible, absence is
 // a declared null, `integration` omitted mirrors `real`).
 const CORE_REGISTRY: InstanceRegistry = expandBindings([
@@ -96,6 +115,15 @@ const CORE_REGISTRY: InstanceRegistry = expandBindings([
 		// SAME instance from the SAME root container. See FileLibsqlDriver.ts for the EMIT_OPENAPI
 		// carve-out this replaces.
 		real: FileLibsqlDriver,
+		// e2e = REAL. Declared, not inherited: the chain (`e2e → integration → real`) would hand this
+		// column the `integration` temp-file driver, and the Playwright harness is the ONE test that
+		// must NOT get one. `run-e2e.ts` mints a scratch `CODM_DATA_DIR`, `src/boot.ts` locks THAT dir,
+		// and the runner drops it on exit — all three are statements about `<CODM_DATA_DIR>/codm.db`,
+		// which only FileLibsqlDriver opens. Inheriting the temp driver moved the daemon's database
+		// OUT of the locked scratch dir (a `mkdtemp` nobody removes, leaked per run) and left the e2e
+		// suite with zero evidence for the shared-file/WAL path it exists to exercise — the exact
+		// "two databases" split FileLibsqlDriver's docblock warns about.
+		e2e: FileLibsqlDriver,
 	},
 	// The SHAPE of this binding is unchanged; its MEANING is not. `driver.db` is now the driver's
 	// dedicated READ connection, never the write one — which is precisely why this stayed a
@@ -131,16 +159,37 @@ const CORE_REGISTRY: InstanceRegistry = expandBindings([
 	// driver's temp file that outlives the suite's afterAll — writes into a torn-down world, log
 	// noise, flakiness. TestBed swaps in a SpyMediator for both mock and integration anyway, so the
 	// pin only ever guards that stray resolve.
-	{ token: ExternalMediator, mock: MockExternalMediator, integration: EventEmitter2Mediator, real: SqlExternalMediator },
+	//
+	// e2e = REAL, and this one is LOAD-BEARING (measured: without it, 04-inbound-issue and
+	// 07-issue-archive-restore time out with an empty issue list). `TestIngressController` simulates the
+	// Go gateway by INSERTING a `source = 'integration'` outbox row — deliberately the row, not an
+	// in-process publish, so the e2e run exercises lane filter → lease → raw-TEXT payload → date
+	// reviver. SqlExternalMediator is the ONLY claimant of that lane; EventEmitter2Mediator has no
+	// poller at all, so under the inherited `integration` binding every injected inbound message sat in
+	// the table forever and no orchestrator turn ever ran. The `integration` pin exists to stop a stray
+	// resolve from arming a 2s timer inside a TestBed suite — the e2e daemon is a REAL boot that WANTS
+	// that poller, which is why the pin must not reach it.
+	{
+		token: ExternalMediator,
+		mock: MockExternalMediator,
+		integration: EventEmitter2Mediator,
+		e2e: SqlExternalMediator,
+		real: SqlExternalMediator,
+	},
 	{ token: OutboxDispatcher, mock: MockOutboxDispatcher, real: DrizzleOutboxDispatcher },
 	// DefaultLoggingService (spec D13): a single declared class whose constructor reads Config and
 	// picks the transport — OTLP when OTEL_COLLECTOR_LOG_URL is present, console otherwise. A bare
 	// class value, same singleton mechanism as the driver above; no useFactory indirection needed.
+	// e2e = REAL: the harness boots the production logging class and lets ITS constructor decide the
+	// transport, exactly like a real daemon. (With no OTEL_COLLECTOR_LOG_URL configured that decision
+	// lands on the console path anyway — so this is behaviour-identical to the inherited
+	// MockLoggingService here, and faithful to production wiring when the operator does configure one.)
 	{
 		token: LoggingService,
 		mock: MockLoggingService,
 		integration: MockLoggingService,
 		real: DefaultLoggingService,
+		e2e: DefaultLoggingService,
 	},
 	{ token: MailSender, mock: ConsoleMailSender, real: ConsoleMailSender },
 	{ token: IdempotencyGuard, mock: MockIdempotencyGuard, real: DrizzleIdempotencyGuard },
@@ -154,42 +203,11 @@ const CORE_REGISTRY: InstanceRegistry = expandBindings([
 	// HealthService à mão (Health.test.ts), e registrar checks reais num container de teste só criaria
 	// um segundo caminho, pior, para provar a mesma coisa.
 	{ token: HealthService, mock: healthServiceFactory, integration: healthServiceFactory, real: healthServiceFactory },
-	{
-		token: HEALTH_CHECKS,
-		mock: null,
-		integration: null,
-		real: { useFactory: (c: DependencyContainer) => new DatabaseHealthCheck(resolveDriver(c)) },
-	},
-	{
-		token: HEALTH_CHECKS,
-		mock: null,
-		integration: null,
-		real: { useFactory: (c: DependencyContainer) => new MigrationsHealthCheck(resolveDriver(c)) },
-	},
-	{
-		token: HEALTH_CHECKS,
-		mock: null,
-		integration: null,
-		real: {
-			useFactory: (c: DependencyContainer) =>
-				new PollingHealthCheck('outboxDispatcher', c.resolve(OutboxDispatcher as any) as DrizzleOutboxDispatcher),
-		},
-	},
-	{
-		token: HEALTH_CHECKS,
-		mock: null,
-		integration: null,
-		real: {
-			useFactory: (c: DependencyContainer) =>
-				new PollingHealthCheck('sqlExternalMediator', c.resolve(ExternalMediator as any) as SqlExternalMediator),
-		},
-	},
-	{
-		token: HEALTH_CHECKS,
-		mock: null,
-		integration: null,
-		real: { useFactory: (c: DependencyContainer) => new ChannelStatusHealthCheck(c.resolve(DrizzleClient as any) as DrizzleClient) },
-	},
+	{ token: HEALTH_CHECKS, mock: null, integration: null, real: databaseHealthCheck, e2e: databaseHealthCheck },
+	{ token: HEALTH_CHECKS, mock: null, integration: null, real: migrationsHealthCheck, e2e: migrationsHealthCheck },
+	{ token: HEALTH_CHECKS, mock: null, integration: null, real: outboxDispatcherHealthCheck, e2e: outboxDispatcherHealthCheck },
+	{ token: HEALTH_CHECKS, mock: null, integration: null, real: externalMediatorHealthCheck, e2e: externalMediatorHealthCheck },
+	{ token: HEALTH_CHECKS, mock: null, integration: null, real: channelStatusHealthCheck, e2e: channelStatusHealthCheck },
 	// The agent run identity — the SINGLE source of "on whose behalf" for every MCP tool call.
 	//
 	// It lives HERE and not in `agent/registry.ts` for a mechanical reason: `AgentIdentityMiddleware`

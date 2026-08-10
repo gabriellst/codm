@@ -26,6 +26,11 @@ import {
 // (bidirectional stream-json over plain pipes) + SystemProviderDetector — the swap is a DECLARED `e2e`
 // column below (T5, NN-5), never a raw-flag `if`.
 
+const mailboxDispatcherHealthCheck = {
+	useFactory: (c: DependencyContainer) =>
+		new PollingHealthCheck('mailboxDispatcher', c.resolve(MailboxDispatcher as any) as DrizzleMailboxDispatcher),
+}
+
 export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// WHERE `ProviderKind` → RUNNER IS RESOLVED (Fase 4.5's rule; the factory is where it finally
 	// lives). One class per CLI means the choice of CLI is a WIRING decision — which is why no runner
@@ -77,15 +82,10 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// O contexto que POSSUI o dispatcher possui o check dele. Uma declaração a mais do token de
 	// multi-inject `HEALTH_CHECKS` — todo registry de contexto é aplicado ao MESMO rootContainer
 	// (`BoundedContext.create`), então este check é agregado junto com os do shared por `resolveAll`.
-	{
-		token: HEALTH_CHECKS,
-		mock: null,
-		integration: null,
-		real: {
-			useFactory: (c: DependencyContainer) =>
-				new PollingHealthCheck('mailboxDispatcher', c.resolve(MailboxDispatcher as any) as DrizzleMailboxDispatcher),
-		},
-	},
+	// `e2e` declares the SAME check as `real` (hoisted to one value so the two columns cannot drift):
+	// the harness is a real boot with a real MailboxDispatcher polling, so `/v1/health` must report on
+	// it there too. Inheriting `integration`'s declared absence would have silently dropped it.
+	{ token: HEALTH_CHECKS, mock: null, integration: null, real: mailboxDispatcherHealthCheck, e2e: mailboxDispatcherHealthCheck },
 	// ── The internal agents (§4.8) ────────────────────────────────────────────────────────────────
 	//
 	// CLASS TOKENS, same implementation in all three envs — an agent has no mock/real split because it

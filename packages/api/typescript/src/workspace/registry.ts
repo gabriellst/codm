@@ -8,7 +8,11 @@ import { WorkspaceUsageQuery, DrizzleWorkspaceUsageQuery, MockWorkspaceUsageQuer
 
 export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	{ token: WorkspaceRepository, mock: MockWorkspaceRepository, real: DrizzleWorkspaceRepository },
-	// FS/git probing: canned in tests, real OS probing in `real`.
+	// FS/git probing: canned in tests, real OS probing in `real`. `e2e` INHERITS the canned detector ON
+	// PURPOSE (no declaration needed) — a Playwright spec must not depend on a path existing (or being
+	// a git checkout) on the host that runs it, which is the same rule the mock/integration columns
+	// encode. The pre-front raw-flag world probed the real filesystem here only because the flag never
+	// touched this token.
 	{ token: WorkspaceDetector, mock: MockWorkspaceDetector, integration: MockWorkspaceDetector, real: SystemWorkspaceDetector },
 	// In-use check reads the issue/thread tables directly — real query in `real`+`integration`, no-op in mock.
 	{ token: WorkspaceUsageQuery, mock: MockWorkspaceUsageQuery, integration: DrizzleWorkspaceUsageQuery, real: DrizzleWorkspaceUsageQuery },

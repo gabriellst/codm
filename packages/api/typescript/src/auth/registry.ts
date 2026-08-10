@@ -30,6 +30,15 @@ export const INTEGRATION_SOCIAL_PROVIDERS_FIXTURE: BetterAuthSocialProviders = {
 	googleClientSecret: 'test-google-client-secret',
 }
 
+// The `real` social-provider credentials, hoisted so the `e2e` column can DECLARE them rather than
+// inherit `integration`'s test fixture — see the binding below.
+const REAL_SOCIAL_PROVIDERS: BetterAuthSocialProviders = {
+	githubClientId: Config.env.GITHUB_CLIENT_ID,
+	githubClientSecret: Config.env.GITHUB_CLIENT_SECRET,
+	googleClientId: Config.env.GOOGLE_CLIENT_ID,
+	googleClientSecret: Config.env.GOOGLE_CLIENT_SECRET,
+}
+
 export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	{ token: UserRepository, mock: MockUserRepository, real: DrizzleUserRepository },
 	{ token: AccountRepository, mock: MockAccountRepository, real: DrizzleAccountRepository },
@@ -45,22 +54,30 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// token rather than a constructor default). `real` mirrors Config.env exactly like before this
 	// seam existed; `integration` binds the known fixture BetterAuth.test.ts asserts on — mock stays
 	// absent, same as BetterAuth itself (no cloud profile in mock, so nothing ever resolves this).
+	// e2e = REAL: the harness boots the production auth wiring, so it reads the operator's own
+	// credentials from Config. Declared because the chain would otherwise hand the e2e daemon
+	// BetterAuth.test.ts's fixture — an integration-suite artifact with no business in a real boot.
 	{
 		token: BetterAuthSocialProviders,
 		mock: null,
 		integration: INTEGRATION_SOCIAL_PROVIDERS_FIXTURE,
-		real: {
-			githubClientId: Config.env.GITHUB_CLIENT_ID,
-			githubClientSecret: Config.env.GITHUB_CLIENT_SECRET,
-			googleClientId: Config.env.GOOGLE_CLIENT_ID,
-			googleClientSecret: Config.env.GOOGLE_CLIENT_SECRET,
-		},
+		real: REAL_SOCIAL_PROVIDERS,
+		e2e: REAL_SOCIAL_PROVIDERS,
 	},
 	// The LOCAL daemon's login gate (SP2 T7) — the mirror image of BetterAuth above: bound `real`
 	// EVERYWHERE (the daemon profile always has one, unlike the cloud-only BetterAuth), by CLASS
 	// REFERENCE rather than `useFactory` so it stays a true singleton — see FileCloudSession's
 	// docblock for why that specific property matters here.
-	{ token: CloudSession, mock: MockCloudSession, integration: MockCloudSession, real: FileCloudSession },
-	// In-memory limiter everywhere except production, which needs the shared Redis window.
+	// e2e = REAL: the harness boots the daemon's own login gate over its scratch data dir, exactly like
+	// a desktop install. Declared because the chain would inherit MockCloudSession and quietly remove
+	// the gate from the only test that boots a real daemon. (With no CODM_CLOUD_URL configured,
+	// FileCloudSession's dev-compat path is entitled anyway — so this changes no spec, it just keeps
+	// e2e on the class production runs.)
+	{ token: CloudSession, mock: MockCloudSession, integration: MockCloudSession, real: FileCloudSession, e2e: FileCloudSession },
+	// In-memory limiter everywhere except production, which needs the shared Redis window. `e2e`
+	// INHERITS the in-memory store ON PURPOSE (no declaration needed): the harness boots no Redis —
+	// the same operational rule ChannelSender follows in thread/registry.ts — and it runs with
+	// RATE_LIMIT_DISABLED anyway, so the pre-front binding was a production adapter that stayed
+	// harmless only because nothing ever resolved it.
 	{ token: RateLimitStore, mock: InMemoryRateLimitStore, integration: InMemoryRateLimitStore, real: RedisRateLimitStore },
 ])
