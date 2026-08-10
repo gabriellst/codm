@@ -22,7 +22,6 @@ import { startParentWatchdog } from './watchdog'
 
 import {
 	Config,
-	MainRouter,
 	OutboxDispatcher,
 	InternalMediator,
 	ExternalMediator,
@@ -34,7 +33,11 @@ import {
 	HttpRouter,
 	Middleware,
 	Router,
+	MainRouter,
 } from '@codm/core-typescript'
+// The MainRouter assembly — shared with the integration test harness (spec Decision 5); see
+// src/server.ts for why this is no longer wired inline here.
+import { assembleMainRouter } from './server'
 
 // The embedded-database migration step — a plain function, NOT a side-effect import: it must run
 // BEFORE the composition root, and awaiting a top-level-await side-effect module does NOT serialize
@@ -91,16 +94,9 @@ async function start(): Promise<void> {
 	// HTTP router — resolved by the abstract `HttpRouter` DI token, not the Fastify concrete class.
 	// The real registry binds `{ token: HttpRouter, instance: FastifyHttpRouter }`, so swapping the
 	// transport is a one-line registry change and the composition root never names the impl.
-	// Resolvido UMA vez (não inline dentro de `new MainRouter(...)`) — a mesma instância é
-	// compartilhada com o MainRouter, que monta as rotas dos contextos e sobe o servidor.
-	// biome-ignore lint/suspicious/noExplicitAny: tsyringe-neo can't type an abstract class as an injection token — resolve is narrowed on the same expression.
-	const httpRouter = container.resolve(HttpRouter as any) as HttpRouter
-
-	const mainRouter = new MainRouter({
-		httpRouter,
-		version: Config.version,
-		routers,
-	})
+	// Assembly itself lives in `./server` (shared with the integration test harness) — behavior here
+	// is byte-identical to the inline construction this replaced.
+	const mainRouter = assembleMainRouter(routers)
 
 	// Start HTTP server.
 	await mainRouter.start()

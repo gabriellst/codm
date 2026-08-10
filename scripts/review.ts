@@ -409,7 +409,7 @@ const BACKEND_EXT = '(?:\\.ts|\\.tsx|\\.go)'
 // Exported for the taxonomy-parity gate (scripts/taxonomy-parity.test.ts): every artifact named
 // here must exist as a component in .claude/registry.yaml, and every reviewable yaml component
 // must have a rule — that parity is what kills the "jobs/ silently dropped" class for good.
-export const CLASSIFICATION_RULES: Array<{ match: RegExp; artifact: string; skill: string }> = [
+export const CLASSIFICATION_RULES: Array<{ match: RegExp; artifact: string; skill: string; matchesTestFiles?: boolean }> = [
 	// Drizzle schema lives only on the TS side (contracts package)
 	{ match: /(?:contracts|shared)\/db\/(?:drizzle\/)?schema\/[^/]+\.ts$/, artifact: 'db-schema', skill: 'db-modelling' },
 
@@ -452,6 +452,12 @@ export const CLASSIFICATION_RULES: Array<{ match: RegExp; artifact: string; skil
 	{ match: /components\/ui\/.*\.tsx$/, artifact: 'primitive', skill: 'primitive' },
 	{ match: /(-components|components)\/.*\.tsx$/, artifact: 'component', skill: 'component' },
 	{ match: /routes\/.*\.tsx$/, artifact: 'route', skill: 'route' },
+
+	// Frontend tests — colocated behavior tests + composeStories/play (spec Decision 14: the
+	// storybook skill's scope widened to own every packages/app/react test). `matchesTestFiles:
+	// true` is the explicit opt-in that lets THIS rule alone see .test.ts(x)/.spec.ts(x) files —
+	// see the guard in classifyFile for why no other rule gets that by accident.
+	{ match: /packages\/app\/react\/src\/.*\.test\.(ts|tsx)$/, artifact: 'storybook', skill: 'storybook', matchesTestFiles: true },
 ]
 
 // ─── Skill ↔ language dispatch ───────────────────────────────────────
@@ -510,11 +516,20 @@ export function classifyFile(
 	// Backend (.ts/.tsx/.go) or frontend (.tsx)
 	if (!/\.(?:tsx?|go)$/.test(name)) return null
 
-	// Skip tests, generated, stories, index
-	if (/\.(gen|test|spec)\.(ts|tsx)$/.test(name)) return null // ts test files
+	// Skip generated, stories, index — unconditional (no rule ever claims these).
+	if (/\.gen\.(ts|tsx)$/.test(name)) return null
 	if (/_test\.go$/.test(name)) return null // go colocated tests
 	if (name.endsWith('.stories.tsx')) return null
 	if (name === 'index.ts') return null
+
+	// A *.test.ts(x)/*.spec.ts(x) file is skipped by DEFAULT — but the skip is a FALLBACK, not a
+	// veto (spec Decision 14: "/review passa a enxergar os testes"). A CLASSIFICATION_RULES entry
+	// that explicitly opts in via `matchesTestFiles: true` (the storybook skill's frontend test
+	// glob) can still claim it below. Every OTHER rule's regex is not anchored against
+	// `.test./.spec.` and would false-positive on a colocated backend test if allowed through (e.g.
+	// `ui/usecases/.*\.ts$` also matches `GetOnboarding.test.ts`) — so a test file is only ever
+	// tried against rules that opted in, never the general population.
+	const isTestFile = /\.(test|spec)\.(ts|tsx)$/.test(name)
 
 	// Skip non-project files
 	if (/\/(node_modules|dist|sdk|\.claude|target)\//.test(file)) return null
@@ -539,10 +554,17 @@ export function classifyFile(
 	}
 
 	for (const rule of CLASSIFICATION_RULES) {
+		if (isTestFile && !rule.matchesTestFiles) continue
 		if (rule.match.test(file)) {
 			return { artifact: rule.artifact, skill: rule.skill, lang: detectLang(file), file }
 		}
 	}
+
+	// A test file that cleared every guard but matched no opted-in rule keeps today's behavior:
+	// skipped, silently — this is the pre-existing, INTENTIONAL disposition for backend colocated
+	// tests and e2e specs (see DISPOSITIONS in taxonomy-parity.test.ts), not the silent-drop bug the
+	// warning below exists to catch.
+	if (isTestFile) return null
 
 	// Reached the end with no rule match: a real candidate file (it cleared every
 	// intentional-skip guard above and the scope/context filters) that NO

@@ -15,9 +15,18 @@ import '../src/index.css'
 const apiUrl = import.meta.env.VITE_API_URL
 if (apiUrl) configureClient(serviceBaseUrls)
 
+// MSW é SÓ-VISUAL (decisão do founder pós-spike da consolidação de teste frontend): inicializa
+// SOMENTE onde existe Service Worker de verdade — o browser do Storybook. Sob bun/happy-dom
+// `navigator.serviceWorker` não existe (medido: `'serviceWorker' in navigator` é `false` ali,
+// `true` em qualquer browser real que o Storybook roda) — e o addon, quando forçado a subir lá
+// mesmo assim, não serve mock ALGUM e ainda ENGOLE requisições reais (medido em 10/08: um teste
+// que batia no backend real recebia corpo vazio — `SyntaxError: Unexpected EOF`). O guard evita as
+// duas consequências: nenhuma story sob bun tenta instalar o interceptor quebrado.
+const canUseMsw = typeof navigator !== 'undefined' && 'serviceWorker' in navigator
+
 // Start the MSW worker once for all stories. Unhandled requests pass through so non-mocked
 // stories are unaffected; stories opt into network mocking via `parameters.msw.handlers`.
-initialize({ onUnhandledRequest: 'bypass' })
+if (canUseMsw) initialize({ onUnhandledRequest: 'bypass' })
 
 const preview: Preview = {
 	// Theme + locale toggles in toolbar
@@ -86,7 +95,7 @@ const preview: Preview = {
 		withConnected,
 	],
 
-	loaders: [mswLoader],
+	loaders: canUseMsw ? [mswLoader] : [],
 
 	parameters: {
 		controls: {

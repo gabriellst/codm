@@ -7,6 +7,16 @@
 		"skipLibCheck": true,
 		"jsx": "react-jsx",
 
+		/* tsyringe-neo decorator metadata (spec Decision 5) — Bun resolves ONE tsconfig for the whole
+		 * test run (the nearest to CWD, i.e. this file), not per-source-file, so classes pulled in
+		 * transitively from packages/api/typescript/src/** (the integration harness's backend
+		 * controllers/use cases) need these enabled HERE too, even though this console itself never
+		 * declares a decorator. Without this, tsyringe-neo throws `TypeInfo not known for "<Class>"` —
+		 * `Reflect.getMetadata('design:paramtypes', …)` comes back empty because Bun's transpiler
+		 * never emitted it. Mirrors packages/api/typescript/tsconfig.json. */
+		"experimentalDecorators": true,
+		"emitDecoratorMetadata": true,
+
 		/* Bundler mode */
 		"moduleResolution": "bundler",
 		"allowImportingTsExtensions": true,

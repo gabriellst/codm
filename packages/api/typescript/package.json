@@ -4,6 +4,10 @@
 	"version": "0.0.1",
 	"private": true,
 	"type": "module",
+	"exports": {
+		"./testing": "./tests/support/integration-server.ts",
+		"./testing-contract": "./tests/support/integration-contract.ts"
+	},
 	"scripts": {
 		"build": "bun run scripts/build.ts",
 		"smoke:node": "bun run scripts/smoke-node-boot.ts",

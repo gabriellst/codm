@@ -524,6 +524,121 @@ See `packages/app/react/src/routes/onboarding/-components/steps.ts` for the conc
 
 ---
 
+## Frontend Testing — layers & boundary rule
+
+The console's tests are not split by tool (Storybook vs. a test runner) — they're split by **whether
+the unit under test has a screen**. Getting that placement right the first time is a single question,
+not a case-by-case judgment call; the layers below are the mechanical consequence of answering it.
+
+### The boundary rule
+
+> **Has a screen → story (with `play` for behavior). Is an absence or a decision with no screen →
+> colocated test. Crosses the stack with real processes and a real browser → e2e.**
+
+A component that already has a `*.stories.tsx` never gets an independent `.test.tsx` sibling that
+mounts it again — its behavior lives in `play`, executed by `bun test` via `composeStories`, not in a
+second, parallel mount. A hook, a route guard, a pure module, or a service port has no screen to put a
+story on, so it gets a colocated `.test.ts(x)` next to the file it tests. Anything that needs a real
+browser and real backend processes together — the thing neither of the first two layers can honestly
+simulate — is an e2e spec, unchanged.
+
+### The four layers
+
+| Layer | Runs in | Guarantees | Does **not** guarantee |
+|---|---|---|---|
+| **Story (visual)** | Storybook browser | The component renders correctly across its declared variants; states the real backend can't produce (forced error, eternal loading) are visible via MSW, which only works here (a real Service Worker) | Nothing about `bun test` — the browser never runs the commit gate |
+| **Story `play` (behavior, in `bun test`)** | `bun test`, via `composeStories` (`tests/support/storybook`) + the smoke test | The story compiles and mounts on every commit (`stories-smoke.test.tsx` composes and renders every `*.stories.tsx` in the repo, generically, by glob); `play` interactions exercise real component behavior against the integration harness | Visual correctness (happy-dom has no layout) — that's the browser layer's job, not this one |
+| **Colocated test (behavior, in `bun test`)** | `bun test`, next to the file under test | The same as `play`, for anything with no screen: a hook, a gate, a pure module — real Container, real assertions at the boundary that answers the question | A screen exists to look at — if you're describing what renders, you're in the wrong layer |
+| **e2e** | Playwright, real browser + real processes | The path of truth end-to-end: file-backed SQLite, real migrations on disk, a real node bundle, a real browser | Fast feedback — it's the slowest, most expensive layer on purpose, and stays that way |
+
+**Both `bun test` layers (story `play` and colocated) share one network rule:** behavior assertions
+hit the **integration harness** by default — a real backend booted in-process. MSW is not banned, but
+it is now VISUAL-ONLY: it works in the Storybook browser (a real Service Worker) and nowhere `bun test`
+runs, because MSW measurably does not intercept under bun (see below). Nothing in `bun test` mocks the
+network by hand — the harness computes the answer instead.
+
+### The integration harness
+
+`useIntegrationBackend()` (`packages/app/react/tests/support/integration-harness.ts`) boots the
+**same production composition root** the console talks to in real life: `assembleMainRouter()`
+(`packages/api/typescript/src/server.ts` — the one function both `src/index.ts`'s production boot and
+this harness call, so the two can never drift apart) wired with `ALL_REGISTRIES.integration` (in-process
+driver, real migrations, in-memory mediator), started on an ephemeral port, with the SDK client pointed
+at it via `configureClient`. An SDK hook call inside a story `play` or a colocated test goes through a
+real controller, real middleware, and a real use case — the test asserts the **computed** result
+(`getOnboarding().completedAt`), never a mock's echo of what it was told to return.
+
+**Why by default, not an occasional upgrade:** a typed mock only ever returns what was seeded, which
+forces the test to assert by proxy (a call count, a request signature). The harness computing the
+response lets the assertion be the behavior itself — the same category of trust the backend's own
+integration tests already place in PGlite-backed suites.
+
+**What it costs (measured):** boot happens once per `bun test` process — the module caches the booted
+backend, so every subsequent `useIntegrationBackend()` call in the same run returns the same instance;
+observed boot time is on the order of ~750–1080ms for that one-time cost, and a subsequent SDK round
+trip (SDK → Fastify → SQLite) is on the order of ~20ms. The react side's `tsc` is **unaffected** — the
+harness is reached through a frozen, structural, type-only contract
+(`@codm/api-typescript/testing-contract`, zero internal backend aliases) plus a dynamic `import()` with
+a **computed** specifier for the implementation, so react's `tsc` never has to walk the backend's
+internal module graph to type this file. Seeding is composed by the **consuming test**
+(`createGivenHelpers(backend.asTestBed())`, from `loadBackendGivens()`) — the harness itself knows no
+product-specific `given` helper, which is what keeps it portable tooling rather than product code.
+
+This is a **ratified exception** to "frontend only consumes the backend through the SDK": test code may
+import the backend's test support (`@codm/api-typescript/testing`, `/testing-contract`) — production
+code never may.
+
+### The two rails
+
+Two architecture tests in `packages/app/react/tests/architecture/` turn the canon's easiest-to-violate
+rules into commit-time failures instead of tribal knowledge:
+
+- **`router-load.test.ts`** — globs every `*.test.{ts,tsx}` under `src/`; a file that mounts
+  `<RouterProvider` without a `router.load()` call first (and isn't using the shared `mountRouter`
+  helper, which already includes it) fails, naming the file. The trap this closes was measured, not
+  theoretical: without `load()`, `RouterProvider` mounts empty and only resolves on a future tick —
+  production React's build swallows that render without honoring `act()`, so a test can pass by
+  accident under the wrong build. 18 tests were green for exactly that reason before the rail existed.
+- **`fetch-stub.test.ts`** — globs the same tree for `globalThis.fetch =`; any manual fetch stub
+  outside a hardcoded `INVENTORY` array fails, naming the file. The inventory is **shrink-only**: it
+  was seeded with today's pre-harness offenders so the tooling commit itself could land green without
+  waiting on every consumer to migrate; each one that moves to the harness (or, for a genuinely
+  unproducible state, to MSW-in-Storybook) comes out of the list. A new stub added anywhere outside the
+  inventory is a fresh violation.
+
+### MSW under bun — measured, not assumed
+
+Both fallbacks the design considered were implemented and measured in isolation before being ruled
+out: `msw-storybook-addon`'s `initialize()` needs a real browser Service Worker
+(`'serviceWorker' in navigator` is `false` under bun/happy-dom — `worker.start()` doesn't throw, it
+just never intercepts anything), and the `msw/node` fallback (`setupServer`) was built and measured
+separately — even after fixing the "relative URL" root cause with an absolute `configureClient` base,
+requests never reached the interceptor and hit the real network instead (`ECONNREFUSED`). An isolated
+probe (a bare `http.request()`, no happy-dom/ky/story in the loop) reproduced the identical gap:
+`@mswjs/interceptors`'s `ClientRequestInterceptor` does not hook `node:http` under bun — a runtime
+incompatibility, not a wiring defect in this repo.
+
+The founder's ruling from that measurement: unproducible states are **visual-only** — a story with MSW
+handlers, viewed in the Storybook browser, where MSW genuinely works. There is no sanctioned network
+double inside `bun test`; every behavior assertion that needs network hits the integration harness,
+full stop. `packages/app/react/tests/support/storybook.spike.test.tsx` is a standing **canary**: it
+asserts today's measured gap (a mocked participant's name never arrives in the rendered story) and
+turns red the day msw-under-bun starts working — the trigger to revisit this ruling, not a routine
+assertion to keep green forever. `.storybook/preview.tsx` guards MSW's `initialize()` to run only where
+a real Service Worker exists, so no story under bun/happy-dom even attempts to install the broken
+interceptor.
+
+### Where the how-to lives
+
+The `/storybook` skill (`.claude/skills/storybook/SKILL.md`) is the single playbook for all four
+layers above — dumb vs. connected stories, the mock helper table, the colocated-test canon (mount
+against the real Container, assert at the boundary, `mountRouter`, wait by condition, no layout
+assertions in happy-dom), and the harness usage pattern. `packages/app/react/**/*.test.{ts,tsx}` is
+classified to it in `.claude/registry.yaml`, so `/review` and `bun review` apply its checklist to
+colocated tests the same way they already did to stories.
+
+---
+
 ## References
 
 - `docs/BACKEND.md` — Backend architecture (controllers, schemas, events, auth model)

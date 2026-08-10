@@ -47,6 +47,28 @@ export interface BoundedContextOptions<TName extends string = string> {
 	setup?: (container: DependencyContainer) => void | Promise<void>
 }
 
+/**
+ * SELEÇÃO DE AMBIENTE DO BOOT (spec Decision 6). O default é `real` e o caller de produção não
+ * muda: a seleção é uma CHAMADA explícita feita ANTES dos imports dos contextos (os boots são
+ * side-effect de módulo), nunca uma env var ambiente. `integration` sob produção é recusado —
+ * um servidor real com bindings em memória seria o desastre silencioso.
+ * Consumidor: o harness de integração do console (`@codm/api-typescript/testing`).
+ */
+export type BoundedContextEnvironment = 'real' | 'integration'
+
+let selectedEnvironment: BoundedContextEnvironment = 'real'
+
+export function setBoundedContextEnvironment(env: BoundedContextEnvironment): void {
+	if (env === 'integration' && process.env.NODE_ENV === 'production') {
+		throw new Error('setBoundedContextEnvironment: integration é recusado sob NODE_ENV=production')
+	}
+	selectedEnvironment = env
+}
+
+export function getBoundedContextEnvironment(): BoundedContextEnvironment {
+	return selectedEnvironment
+}
+
 export class BoundedContext {
 	private constructor(
 		readonly container: DependencyContainer,
@@ -57,7 +79,7 @@ export class BoundedContext {
 		const container = options.root ? rootContainer : rootContainer.createChildContainer()
 
 		if (options.registry) {
-			registerAll(options.root ? container : rootContainer, options.registry.real)
+			registerAll(options.root ? container : rootContainer, options.registry[selectedEnvironment])
 		}
 
 		autoTrace(container)

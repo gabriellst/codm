@@ -228,8 +228,9 @@ components:
     patterns:
       - "packages/app/react/src/**/*.stories.tsx"
       - "packages/app/react/src/storybook/*.ts"
+      - "packages/app/react/src/**/*.test.{ts,tsx}"
     layer: presentation
-    note: "Stories + the connected-stories framework (@/storybook). React-only; dumb→args, connected→typed SDK mocks."
+    note: "Stories + the connected-stories framework (@/storybook), and all frontend tests — colocated behavior tests + composeStories; canon/harness/rails na skill. React-only; dumb→args, connected→typed SDK mocks."
 
   primitive:
     skill: primitive
