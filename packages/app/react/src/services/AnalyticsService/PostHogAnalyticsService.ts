@@ -11,6 +11,10 @@ let initialized = false
 
 function ensureInit(): void {
 	if (initialized) return
+	// Sem chave configurada não há telemetria para iniciar — e o `KEY` é `string | undefined` de
+	// verdade (import.meta.env), o que o programa de tipos só revela quando os tipos do Storybook
+	// entram no tsc (medido em 10/08: o smoke de stories expôs isto).
+	if (!KEY) return
 	initialized = true
 	posthog.init(KEY, {
 		api_host: HOST,

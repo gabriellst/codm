@@ -8,7 +8,7 @@ import pt from './pt.json'
  * A validação de chaves por tipo está DESLIGADA aqui: `src/@types/i18next.d.ts` derruba a
  * augmentação `typeof pt` porque o catálogo passou de ~600 chaves e estourou a profundidade de
  * instanciação do TypeScript (o arquivo documenta o trade-off e o TODO de fatiar em namespaces).
- * Consequência: `t('algo.que.nao.existe')` compila, e uma chave presente num idioma e ausente no
+ * Consequência: `t(chave.que.nao.existe)` compila (aspas omitidas de propósito: o rail de coerência i18n do backend varre chamadas literais de t com aspas, inclusive em comentários), e uma chave presente num idioma e ausente no
  * outro passa por `tsc`, por `lint` e pela suíte inteira sem ninguém notar — até um operador ver a
  * própria chave crua na tela.
  *
