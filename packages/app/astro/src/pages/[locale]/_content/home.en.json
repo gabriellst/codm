@@ -197,7 +197,7 @@
 	},
 	"footer": {
 		"copyright": "© 2026 · MIT license",
-		"telemetryNotice": "We collect lightweight, anonymous product analytics (PostHog) — page views and clicks. Turn it off anytime in the console's Settings.",
+		"telemetryNotice": "We collect lightweight, anonymous product analytics — page views and clicks. Turn it off anytime in the console's Settings.",
 		"links": {
 			"github": "https://github.com/codm",
 			"docs": "Docs",

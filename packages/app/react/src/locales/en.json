@@ -689,7 +689,7 @@
 		"providerNotFound": "not found in PATH",
 		"rescanProviders": "Rescan",
 		"telemetry": "Telemetry",
-		"telemetryConsentDescription": "Anonymous usage analytics (PostHog) — page views and clicks in this console. Off stops every request immediately.",
+		"telemetryConsentDescription": "Anonymous usage analytics — page views and clicks in this console. Off stops every request immediately.",
 		"telemetryConsentLabel": "Share telemetry",
 		"title": "Settings"
 	},
