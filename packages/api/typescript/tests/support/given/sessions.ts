@@ -1,10 +1,10 @@
 // Creates a session row directly in the database for testing auth endpoints.
 import { DrizzleClient } from '@codm/core-typescript'
 import { sessions } from '@codm/contracts/db'
-import type { TestBed } from '../TestBed'
+import type { TestBedLike } from './types'
 import { uniqueId } from './sequence'
 
-export async function givenActiveSession(testBed: TestBed, userId: string): Promise<{ sessionId: string; token: string }> {
+export async function givenActiveSession(testBed: TestBedLike, userId: string): Promise<{ sessionId: string; token: string }> {
 	const db = testBed.resolve(DrizzleClient)
 	const sessionId = `session-${uniqueId()}`
 	const token = `token-${sessionId}`

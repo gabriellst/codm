@@ -1,5 +1,5 @@
 // Thread given helper — sets up a Thread via the repository directly (never the use case).
-import type { TestBed } from '../TestBed'
+import type { TestBedLike } from './types'
 import { Id } from '@codm/core-typescript'
 import { ProviderKind, ContactKind, BufferSize } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
@@ -33,7 +33,7 @@ type ThreadOverrides = Partial<{
  * like a test bug the first time something downstream read the path. Nested givens are the documented
  * shape for exactly this (`givenAppointment → givenClinicWithOwner → …`).
  */
-export async function givenThread(testBed: TestBed, overrides: ThreadOverrides = {}): Promise<Thread> {
+export async function givenThread(testBed: TestBedLike, overrides: ThreadOverrides = {}): Promise<Thread> {
 	const repo = testBed.resolve(ThreadRepository)
 	const contactExternalId = overrides.contactExternalId ?? `contact-${Id.value()}`
 	const workspaceId = overrides.workspaceId ?? (await givenWorkspace(testBed, { ownerId: overrides.ownerId })).id.value

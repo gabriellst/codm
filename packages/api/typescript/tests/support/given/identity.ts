@@ -1,18 +1,18 @@
 // Identity given-helpers — repo-direct, compose givenUser for FK satisfaction.
 // Replaces the per-file `seedAuthUser` duplicated across 8 identity test files (bp-17).
-import type { TestBed } from '../TestBed'
+import type { TestBedLike } from './types'
 import { UserProfile } from '@auth/entities/UserProfile'
 import { UserProfileRepository } from '@auth/repositories/UserProfileRepository'
 import { givenUser } from './users'
 
-async function resolveUserId(testBed: TestBed, userId?: string): Promise<string> {
+async function resolveUserId(testBed: TestBedLike, userId?: string): Promise<string> {
 	if (userId) return userId
 	const user = await givenUser(testBed)
 	return user.id.value
 }
 
 export async function givenUserProfile(
-	testBed: TestBed,
+	testBed: TestBedLike,
 	overrides: Partial<{ userId: string; timezone: string; language: string }> = {},
 ): Promise<UserProfile> {
 	const userId = await resolveUserId(testBed, overrides.userId)

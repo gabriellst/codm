@@ -4,24 +4,27 @@ import { DrizzleDatabaseDriver } from '@codm/core-typescript'
 import { OPERATOR_ID } from '@auth/operator'
 import { start, type RunningServer } from '../../src/server'
 import type { TestingSurface } from '../../testing'
+import type { TestBedLike } from './given/types'
 import {
-	givenUser as rawGivenUser,
-	givenAccount as rawGivenAccount,
-	givenUserWithAccount as rawGivenUserWithAccount,
-	givenActiveSession as rawGivenActiveSession,
-	givenOwner as rawGivenOwner,
-	givenOwnerWithResponsible as rawGivenOwnerWithResponsible,
-	givenWorkspace as rawGivenWorkspace,
-	givenThread as rawGivenThread,
+	givenUser,
+	givenAccount,
+	givenUserWithAccount,
+	givenActiveSession,
+	givenOwner,
+	givenOwnerWithResponsible,
+	givenWorkspace,
+	givenThread,
 	GIVEN_MENTION_TAG,
-	givenChannel as rawGivenChannel,
-	givenRemote as rawGivenRemote,
-	givenRemoteMembership as rawGivenRemoteMembership,
-	givenIssue as rawGivenIssue,
-	givenStop as rawGivenStop,
-	givenDomainEvent as rawGivenDomainEvent,
-	givenUserProfile as rawGivenUserProfile,
+	givenChannel,
+	givenRemote,
+	givenRemoteMembership,
+	givenIssue,
+	givenStop,
+	givenDomainEvent,
+	givenUserProfile,
 } from './given'
+
+export type { TestBedLike } from './given/types'
 
 /**
  * THE TEST SHELL over the production boot (spec Decision 5, T7). `start({ env: 'integration',
@@ -41,11 +44,6 @@ import {
  * contract, or backend `tsc` fails right there. A consumer (the react harness, T8) imports types
  * from `@codm/api-typescript/testing` and never redeclares this shape locally.
  */
-
-export interface TestBedLike {
-	resolve<T>(token: unknown): T
-	readonly ownerId: string
-}
 
 export interface IntegrationBackend {
 	url: string
@@ -98,53 +96,30 @@ async function boot(options?: { ownerId?: string }): Promise<IntegrationBackend>
 	}
 }
 
-/**
- * Every `given*` in `./given` types its `testBed` parameter as the CONCRETE `TestBed` class
- * (`../TestBed.ts`) — which carries private fields (`mode`, `testContainer`, …), so TypeScript
- * nominal-types it: no structurally-compatible object can stand in for it without a cast. But every
- * given helper (verified: `users.ts`, `owners.ts`, `workspaces.ts`, `threads.ts`, `channels.ts`,
- * `remotes.ts`, `issues.ts`, `stops.ts`, `events.ts`, `identity.ts`, `sessions.ts`) calls ONLY
- * `testBed.resolve(...)` on it — never `.given`, `.spy`, `.mode`, or any private field. `TestBedLike`
- * IS that narrower real dependency; `asTestBed()` above already hands out exactly that shape. This
- * is the ONE cast that bridges the two (same convention as `resolveToken`'s single escape hatch
- * above), so no given file needs its parameter type widened and no external caller needs its own
- * cast — every wrapped export below keeps the given's real logic, typed by `TestBedLike` outward.
- */
-function withTestBedLike<TB, Args extends unknown[], R>(fn: (testBed: TB, ...args: Args) => R): (testBed: TestBedLike, ...args: Args) => R {
-	return (testBed, ...args) => fn(testBed as unknown as TB, ...args)
-}
-
 // THE COMPLETE CATALOG (spec Decision 8) — the bare `givenX` helpers, never the deprecated
-// `createGivenHelpers` facade (TST-18; it does not enter this public surface).
-export const givenUser = withTestBedLike(rawGivenUser)
-export const givenAccount = withTestBedLike(rawGivenAccount)
-export const givenUserWithAccount = withTestBedLike(rawGivenUserWithAccount)
-export const givenActiveSession = withTestBedLike(rawGivenActiveSession)
-export const givenOwner = withTestBedLike(rawGivenOwner)
-export const givenOwnerWithResponsible = withTestBedLike(rawGivenOwnerWithResponsible)
-export const givenWorkspace = withTestBedLike(rawGivenWorkspace)
-export const givenThread = withTestBedLike(rawGivenThread)
-export { GIVEN_MENTION_TAG }
-export const givenChannel = withTestBedLike(rawGivenChannel)
-export const givenRemote = withTestBedLike(rawGivenRemote)
-export const givenRemoteMembership = withTestBedLike(rawGivenRemoteMembership)
-export const givenIssue = withTestBedLike(rawGivenIssue)
-export const givenStop = withTestBedLike(rawGivenStop)
-/**
- * NOT `withTestBedLike` — `givenDomainEvent`'s real `event` parameter is `BaseDomainEvent` at its
- * DEFAULT generic (`typeof BaseDomainEventSchema`), whose `payload` Zod infers as `Record<string,
- * never>` (an empty-schema artifact, not a meaningful domain shape — see `testing.d.ts`'s
- * `SeedDomainEvent.payload` doc). Real callers (`given/events.test.ts`) pass a concrete subclass
- * (`OwnerCreatedEvent`, its own payload shape) directly to the raw given and that already works via
- * ordinary class covariance; only THIS wrapper's boundary — bridging the public `SeedDomainEvent`
- * contract to the real class type — needs the second cast alongside `testBed`'s.
- */
-export const givenDomainEvent = (testBed: TestBedLike, event: Parameters<TestingSurface['givenDomainEvent']>[1]): Promise<void> =>
-	rawGivenDomainEvent(
-		testBed as unknown as Parameters<typeof rawGivenDomainEvent>[0],
-		event as unknown as Parameters<typeof rawGivenDomainEvent>[1],
-	)
-export const givenUserProfile = withTestBedLike(rawGivenUserProfile)
+// `createGivenHelpers` facade (TST-18; it does not enter this public surface). Every given in
+// `./given` already declares its `testBed` parameter as `TestBedLike` at the SOURCE (interface
+// segregation, not a boundary bridge — see `./given/types.ts`), so these are PLAIN re-exports: no
+// wrapper, no cast. `asTestBed()` above hands out exactly `TestBedLike`, and a `TestBed` instance
+// (the suites that still pass the concrete class) satisfies it structurally for free.
+export {
+	givenUser,
+	givenAccount,
+	givenUserWithAccount,
+	givenActiveSession,
+	givenOwner,
+	givenOwnerWithResponsible,
+	givenWorkspace,
+	givenThread,
+	GIVEN_MENTION_TAG,
+	givenChannel,
+	givenRemote,
+	givenRemoteMembership,
+	givenIssue,
+	givenStop,
+	givenDomainEvent,
+	givenUserProfile,
+} from './given'
 
 /**
  * THE FRESHNESS GATE (spec Decision 9 fallback — see `../../testing.d.ts`'s docblock for why this

@@ -2,7 +2,7 @@ import { DrizzleClient, Id } from '@codm/core-typescript'
 import { channels } from '@codm/contracts/db'
 import { ChannelKind, ChannelStatus } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
-import type { TestBed } from '../TestBed'
+import type { TestBedLike } from './types'
 
 export interface ChannelOverrides {
 	channelId?: string
@@ -32,7 +32,7 @@ export interface ChannelOverrides {
  * of the owner's OWN channels, so a `givenRemote` with no channel behind it is invisible — an assertion
  * against it passes vacuously on `undefined`.
  */
-export async function givenChannel(testBed: TestBed, overrides: ChannelOverrides = {}): Promise<{ channelId: string }> {
+export async function givenChannel(testBed: TestBedLike, overrides: ChannelOverrides = {}): Promise<{ channelId: string }> {
 	const channelId = overrides.channelId ?? Id.value()
 	const now = new Date()
 	await testBed

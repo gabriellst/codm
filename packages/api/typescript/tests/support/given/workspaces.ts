@@ -1,5 +1,5 @@
 // Workspace given helper — sets up a Workspace via the repository directly (never the use case).
-import type { TestBed } from '../TestBed'
+import type { TestBedLike } from './types'
 import { WorkspaceBadge } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { Workspace } from '@workspace/entities/Workspace'
@@ -12,7 +12,7 @@ type WorkspaceOverrides = Partial<{
 	badges: WorkspaceBadge[]
 }>
 
-export async function givenWorkspace(testBed: TestBed, overrides: WorkspaceOverrides = {}): Promise<Workspace> {
+export async function givenWorkspace(testBed: TestBedLike, overrides: WorkspaceOverrides = {}): Promise<Workspace> {
 	const repo = testBed.resolve(WorkspaceRepository)
 	const workspace = Workspace.create({
 		ownerId: overrides.ownerId ?? OPERATOR_ID,

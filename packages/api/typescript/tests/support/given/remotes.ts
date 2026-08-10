@@ -1,7 +1,7 @@
 import { DrizzleClient } from '@codm/core-typescript'
 import { remotes, remoteMemberships } from '@codm/contracts/db'
 import { ChannelKind, ContactKind } from '@codm/contracts-typescript/wire/enums'
-import type { TestBed } from '../TestBed'
+import type { TestBedLike } from './types'
 
 export interface RemoteOverrides {
 	channelId: string
@@ -26,7 +26,7 @@ export interface RemoteOverrides {
  * probe-discipline rail — the infrastructure coupling lives in `tests/support/`, so a schema rename
  * is one edit here instead of a grep across every suite that needs a named contact.
  */
-export async function givenRemote(testBed: TestBed, overrides: RemoteOverrides): Promise<RemoteOverrides> {
+export async function givenRemote(testBed: TestBedLike, overrides: RemoteOverrides): Promise<RemoteOverrides> {
 	const now = new Date()
 	await testBed
 		.resolve(DrizzleClient)
@@ -64,7 +64,10 @@ export interface RemoteMembershipOverrides {
  * Written through the raw client for the same reason `givenRemote` is: the Go sync owns this table,
  * the TS side has no repository for it.
  */
-export async function givenRemoteMembership(testBed: TestBed, overrides: RemoteMembershipOverrides): Promise<RemoteMembershipOverrides> {
+export async function givenRemoteMembership(
+	testBed: TestBedLike,
+	overrides: RemoteMembershipOverrides,
+): Promise<RemoteMembershipOverrides> {
 	await testBed
 		.resolve(DrizzleClient)
 		.insert(remoteMemberships)

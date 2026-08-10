@@ -1,5 +1,5 @@
 // Issue given helper — sets up an Issue via the repository directly (never the use case).
-import type { TestBed } from '../TestBed'
+import type { TestBedLike } from './types'
 import { Id } from '@codm/core-typescript'
 import { IssueStatus, ProviderKind } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
@@ -16,7 +16,7 @@ type IssueOverrides = Partial<{
 	completedAt: Date
 }>
 
-export async function givenIssue(testBed: TestBed, overrides: IssueOverrides = {}): Promise<Issue> {
+export async function givenIssue(testBed: TestBedLike, overrides: IssueOverrides = {}): Promise<Issue> {
 	const repo = testBed.resolve(IssueRepository)
 	// Open WORKING first; a COMPLETED request transitions via complete() (open() can't start COMPLETED).
 	const wantsCompleted = overrides.status === IssueStatus.COMPLETED || overrides.completedAt !== undefined

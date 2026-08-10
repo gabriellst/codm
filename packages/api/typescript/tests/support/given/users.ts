@@ -1,6 +1,6 @@
 // Recipe: dev:packages/api/tests/support/given/auth.ts
 // Simplified: no document (CPF), no clinic, video-streaming User shape.
-import type { TestBed } from '../TestBed'
+import type { TestBedLike } from './types'
 import { User } from '@auth/entities/User'
 import { Account } from '@auth/entities/Account'
 import { UserRepository } from '@auth/repositories/UserRepository'
@@ -8,7 +8,7 @@ import { AccountRepository } from '@auth/repositories/AccountRepository'
 import { defaultEmail, defaultName, uniqueId } from './sequence'
 
 export async function givenUser(
-	testBed: TestBed,
+	testBed: TestBedLike,
 	overrides: Partial<{ name: string | null; email: string; emailVerified: boolean; image: string | null }> = {},
 ): Promise<User> {
 	const repository = testBed.resolve(UserRepository)
@@ -24,7 +24,7 @@ export async function givenUser(
 }
 
 export async function givenAccount(
-	testBed: TestBed,
+	testBed: TestBedLike,
 	userId: string,
 	overrides: Partial<{ accountId: string; providerId: string }> = {},
 ): Promise<Account> {
@@ -40,7 +40,7 @@ export async function givenAccount(
 }
 
 export async function givenUserWithAccount(
-	testBed: TestBed,
+	testBed: TestBedLike,
 	overrides: {
 		user?: Partial<{ name: string | null; email: string; emailVerified: boolean; image: string | null }>
 		account?: Partial<{ accountId: string; providerId: string }>

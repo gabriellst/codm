@@ -3,7 +3,7 @@
 //
 // Since B4 the Stop is a child of `Thread` (spec decision 4), so the helper needs a thread: it nests
 // `givenThread` when the caller passes none, which is the documented shape for exactly this.
-import type { TestBed } from '../TestBed'
+import type { TestBedLike } from './types'
 import { StopKind } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
@@ -21,7 +21,7 @@ type StopOverrides = Partial<{
 	detail: string
 }>
 
-export async function givenStop(testBed: TestBed, overrides: StopOverrides = {}): Promise<Stop> {
+export async function givenStop(testBed: TestBedLike, overrides: StopOverrides = {}): Promise<Stop> {
 	const repo = testBed.resolve(ThreadRepository)
 	const ownerId = overrides.ownerId ?? OPERATOR_ID
 	const thread = overrides.threadId ? (await repo.findById(overrides.threadId))! : await givenThread(testBed, { ownerId })

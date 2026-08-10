@@ -1,6 +1,6 @@
 // Owner given helpers — set up Owners via the repository directly.
 import { Id } from '@codm/core-typescript'
-import type { TestBed } from '../TestBed'
+import type { TestBedLike } from './types'
 import { OwnerKind } from '@codm/contracts-typescript/wire/enums'
 import { Owner } from '@owner/entities/Owner'
 import { OwnerRepository } from '@owner/repositories/OwnerRepository'
@@ -15,7 +15,7 @@ type OwnerOverrides = Partial<{
 	pictureUrl: string
 }>
 
-export async function givenOwner(testBed: TestBed, overrides: OwnerOverrides = {}): Promise<Owner> {
+export async function givenOwner(testBed: TestBedLike, overrides: OwnerOverrides = {}): Promise<Owner> {
 	const repository = testBed.resolve(OwnerRepository)
 
 	const owner = Owner.create({
@@ -36,7 +36,7 @@ export async function givenOwner(testBed: TestBed, overrides: OwnerOverrides = {
  * owner-scoped use case / controller test (RequireOwner passes for this user).
  */
 export async function givenOwnerWithResponsible(
-	testBed: TestBed,
+	testBed: TestBedLike,
 	overrides: {
 		user?: Parameters<typeof givenUserWithAccount>[1]
 		owner?: OwnerOverrides
