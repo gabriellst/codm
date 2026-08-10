@@ -1,10 +1,9 @@
-import type { DependencyContainer } from 'tsyringe-neo'
+import { container as rootContainer, type DependencyContainer } from 'tsyringe-neo'
 import type { ContextModule } from './contexts'
 import {
 	type InstanceRegistry,
 	expandBindings,
 	LibsqlDriver,
-	resolveDataDir,
 	DrizzleDatabaseDriver,
 	DrizzleClient,
 	UnitOfWorkFactory,
@@ -20,7 +19,7 @@ import {
 	MockOutboxDispatcher,
 	LoggingService,
 	MockLoggingService,
-	createLoggingServiceFactory,
+	DefaultLoggingService,
 	MailSender,
 	ConsoleMailSender,
 	HttpRouter,
@@ -42,7 +41,7 @@ import {
 	PollingHealthCheck,
 } from '@codm/core-typescript'
 import { ChannelStatusHealthCheck } from './services'
-import { join } from 'node:path'
+import { FileLibsqlDriver } from './db/FileLibsqlDriver'
 import * as schema from '@codm/contracts/db'
 import { migrationsDir } from '@codm/contracts/db/migrations'
 
@@ -56,20 +55,17 @@ import { INSTANCE_REGISTRY as artifactRegistry } from '@artifact/registry'
 import { INSTANCE_REGISTRY as uiRegistry } from '@ui/registry'
 import { INSTANCE_REGISTRY as externalRegistry } from '@external/registry'
 
-// Lazy singleton resolver for the `real` LoggingService binding below — see LoggingBinding.ts for why
-// this can't be a plain `{ instance: OtlpLoggingService }` binding (constructor args come from Config,
-// and boot must fall back to MockLoggingService when OTEL_COLLECTOR_LOG_URL is unset).
-const resolveRealLoggingService = createLoggingServiceFactory()
-
-// MEMOIZATION IS MANDATORY ON EVERY PATH — this file already documents the hard fact (see the
-// SINGLETON note below): tsyringe-neo invokes a `useFactory` on EVERY resolve, with no caching.
-// Under the old in-memory engine an extra resolve in mock/integration minted a cheap, disposable
-// database and the cost was invisible. Under LibsqlDriver it is NOT: every extra resolve does a
-// `mkdtemp` — a real directory and a real file on disk that nobody removes (and nobody may remove;
-// see `close()` in LibsqlDriver) — and hands back an EMPTY, UN-MIGRATED database to anything that
-// resolves outside TestBed's `registerInstance`. Two silent failure modes: leaked temp dirs per
-// resolve, and queries against a schema that does not exist. Hence a module-scope memo per path,
-// the same shape `getRealDatabaseDriver()` has always used.
+// MEMOIZATION IS MANDATORY ON EVERY PATH — tsyringe-neo invokes a `useFactory` on EVERY resolve, with
+// no caching. Under the old in-memory engine an extra resolve in mock/integration minted a cheap,
+// disposable database and the cost was invisible. Under LibsqlDriver it is NOT: every extra resolve
+// does a `mkdtemp` — a real directory and a real file on disk that nobody removes (and nobody may
+// remove; see `close()` in LibsqlDriver) — and hands back an EMPTY, UN-MIGRATED database to anything
+// that resolves outside TestBed's `registerInstance`. Two silent failure modes: leaked temp dirs per
+// resolve, and queries against a schema that does not exist. Hence a module-scope memo here for
+// `mock`/`integration`, which stay `useFactory` (test-only, no lifecycle owner needed beyond the
+// process). The `real` driver below does NOT need this: it is a bare class binding, and
+// `expandBindings`/`registerAll` turns that into `container.registerSingleton` — the container itself
+// is the memoization, per-token, per-resolve, with no module-scope var required.
 let testDriverSingleton: LibsqlDriver | undefined
 function getTestDatabaseDriver(): LibsqlDriver {
 	if (!testDriverSingleton) testDriverSingleton = new LibsqlDriver({ schema, migrationsDir })
@@ -77,64 +73,21 @@ function getTestDatabaseDriver(): LibsqlDriver {
 }
 const libsqlDriver = { useFactory: () => getTestDatabaseDriver() }
 
-// Real persistence: the SHARED, file-backed SQLite database at <CODM_DATA_DIR>/codm.db — the
-// very same file the Go gateway opens (`dbFileName` in core/db/sqlite/store.go). That co-tenancy is
-// the entire point of the phase; WAL is what makes it safe. Migrations apply on boot, from either
-// process, in any order (see shared/index.ts and LibsqlDriver.runMigrations).
-//
-// CODEGEN CARVE-OUT — under EMIT_OPENAPI the real driver must be INERT: `bun sdk`/emit-openapi
-// imports the composition root only to collect routers, and Router.registerControllers eagerly
-// resolves every controller (→ its query use cases → this driver). Constructing the real driver
-// there would touch the user's data dir and (before this phase) take a lock that a live `bun dev`
-// daemon already held — DataDirLockedError, swallowed by Router's try/catch, controller silently
-// DROPPED from openapi.json + the SDK. So during emission we fall back to a temp-file driver —
-// MEMOIZED too, because emission resolves the driver once PER CONTROLLER and each unmemoized
-// resolve would leave another temp dir behind.
-//
-// SINGLETON — the `real` binding is a `useFactory` and tsyringe-neo invokes it on EVERY resolve with
-// no caching, so it MUST return a memoized instance; the outbox dispatcher / a repo / a job could
-// each otherwise mint a separate one. The former fix memoized the driver in shared/index's
-// setup (`registerInstance`), but that runs too LATE: ESM top-level `await BoundedContext.create`
-// across the sibling context modules INTERLEAVES, and shared's setup (migrations + memoize) resolves
-// AFTER a context whose `registerJobs` already enqueued a repeatable command against a fresh,
-// un-migrated database (real-boot only — masked in tests by MockCommandQueue). Memoizing HERE
-// (module scope) + migrating EARLY (migrateEmbeddedDatabase in src/boot, before the composition
-// root) guarantees every resolve — including a racing job enqueue — gets the ONE migrated instance.
-// Found by the first real e2e boot (phase 9-2).
-let emitDriverSingleton: LibsqlDriver | undefined
-let realDriverSingleton: LibsqlDriver | undefined
-export function getRealDatabaseDriver(): LibsqlDriver {
-	// CODEGEN CARVE-OUT (see comment above): under EMIT_OPENAPI the driver must be INERT (temp file,
-	// no data dir, no lock) so route collection never touches the real persistence path.
-	if (process.env.EMIT_OPENAPI === 'true') {
-		if (!emitDriverSingleton) emitDriverSingleton = new LibsqlDriver({ schema, migrationsDir })
-		return emitDriverSingleton
-	}
-	if (!realDriverSingleton) {
-		realDriverSingleton = new LibsqlDriver({
-			schema,
-			migrationsDir,
-			// EXACTLY the Go gateway's file name — a different name here means two databases and the
-			// `DISCONNECTED` console this phase exists to kill.
-			dbPath: join(resolveDataDir(Config.env.CODM_DATA_DIR), 'codm.db'),
-		})
-	}
-	return realDriverSingleton
-}
-
 /**
- * Apply the shared-SQLite migrations on the ONE real driver singleton. Called as an EARLY boot step
+ * Apply the shared-SQLite migrations on the ONE real driver singleton — the container's
+ * `FileLibsqlDriver` instance, resolved by its abstract token from the root container (same instance
+ * every other `real`-env consumer of `DrizzleDatabaseDriver` gets). Called as an EARLY boot step
  * (src/boot/migrate-embedded.ts) BEFORE the composition root imports any context, so the schema
  * exists before any `registerJobs` enqueue can race it. Idempotent, and symmetric with the Go
- * gateway's applier over the same `_sqlite_migrations` ledger: whichever process boots first
- * applies, the second applies zero. No-op under EMIT_OPENAPI.
+ * gateway's applier over the same `_sqlite_migrations` ledger: whichever process boots first applies,
+ * the second applies zero. No-op under EMIT_OPENAPI.
+ *
+ * T4 inlines this inside `start()` and deletes the helper.
  */
 export async function migrateEmbeddedDatabase(): Promise<void> {
-	if (process.env.EMIT_OPENAPI === 'true') return
-	await getRealDatabaseDriver().runMigrations()
+	if (Config.env.EMIT_OPENAPI === 'true') return
+	await (rootContainer.resolve(DrizzleDatabaseDriver as any) as DrizzleDatabaseDriver).runMigrations()
 }
-
-const fileLibsqlDriver = { useFactory: () => getRealDatabaseDriver() }
 
 const drizzleClient = { useFactory: (c: DependencyContainer) => (c.resolve(DrizzleDatabaseDriver as any) as any).db }
 const unitOfWorkFactory = { useFactory: (c: DependencyContainer) => (c.resolve(DrizzleDatabaseDriver as any) as any).unitOfWorkFactory }
@@ -152,8 +105,14 @@ const CORE_REGISTRY: InstanceRegistry = expandBindings([
 		token: DrizzleDatabaseDriver,
 		mock: libsqlDriver,
 		integration: libsqlDriver,
-		// real = the SHARED, file-backed SQLite database, co-tenanted with the Go gateway.
-		real: fileLibsqlDriver,
+		// real = the SHARED, file-backed SQLite database, co-tenanted with the Go gateway. A bare
+		// class value (not `useFactory`) — expandBindings/registerAll turns this into
+		// `container.registerSingleton(DrizzleDatabaseDriver, FileLibsqlDriver)`, so the container is
+		// the ONE owner of the instance's lifecycle; every resolver (migrateEmbeddedDatabase,
+		// drizzleClient, unitOfWorkFactory, resolveDriver, HEALTH_CHECKS factories below) gets the
+		// SAME instance from the SAME root container. See FileLibsqlDriver.ts for the EMIT_OPENAPI
+		// carve-out this replaces.
+		real: FileLibsqlDriver,
 	},
 	// The SHAPE of this binding is unchanged; its MEANING is not. `driver.db` is now the driver's
 	// dedicated READ connection, never the write one — which is precisely why this stayed a
@@ -165,8 +124,11 @@ const CORE_REGISTRY: InstanceRegistry = expandBindings([
 	// mock: declared absence — flow tests wire OutboxAwareMockDomainEventRepository per-suite (TestBed).
 	{ token: DomainEventRepository, mock: null, real: DrizzleDomainEventRepository },
 	// Boot resolves the abstract HttpRouter token (src/index.ts) — bind the Fastify transport here
-	// so the composition root never names the concrete class. real-only: tests never boot the server.
-	{ token: HttpRouter, mock: null, integration: null, real: FastifyHttpRouter },
+	// so the composition root never names the concrete class. mock-only absence: flow/unit suites
+	// never boot the server. `integration`/`e2e` declare the SAME Fastify transport as `real` (spec
+	// D4) — the harness/e2e boot a real HTTP server too; binding is lazy, so declaring it here costs
+	// nothing when a TestBed suite never resolves the token.
+	{ token: HttpRouter, mock: null, integration: FastifyHttpRouter, e2e: FastifyHttpRouter, real: FastifyHttpRouter },
 	{ token: InternalMediator, mock: EventEmitter2Mediator, real: EventEmitter2Mediator },
 	// mock: capture-only mediator — flow tests assert integration events without publishing.
 	//
@@ -188,14 +150,14 @@ const CORE_REGISTRY: InstanceRegistry = expandBindings([
 	// pin only ever guards that stray resolve.
 	{ token: ExternalMediator, mock: MockExternalMediator, integration: EventEmitter2Mediator, real: SqlExternalMediator },
 	{ token: OutboxDispatcher, mock: MockOutboxDispatcher, real: DrizzleOutboxDispatcher },
-	// OTLP-backed in production; falls back to MockLoggingService if OTEL_COLLECTOR_LOG_URL is
-	// unset. useFactory (not a class) because construction needs Config-derived args and must
-	// stay a lazy singleton — see resolveRealLoggingService / LoggingBinding.ts.
+	// DefaultLoggingService (spec D13): a single declared class whose constructor reads Config and
+	// picks the transport — OTLP when OTEL_COLLECTOR_LOG_URL is present, console otherwise. A bare
+	// class value, same singleton mechanism as the driver above; no useFactory indirection needed.
 	{
 		token: LoggingService,
 		mock: MockLoggingService,
 		integration: MockLoggingService,
-		real: { useFactory: () => resolveRealLoggingService() },
+		real: DefaultLoggingService,
 	},
 	{ token: MailSender, mock: ConsoleMailSender, real: ConsoleMailSender },
 	{ token: IdempotencyGuard, mock: MockIdempotencyGuard, real: DrizzleIdempotencyGuard },
