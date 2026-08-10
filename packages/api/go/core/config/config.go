@@ -5,6 +5,7 @@ import (
 	"strings"
 	"template/core-go/enums"
 	"template/core-go/errors"
+	"template/core-go/registry"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
@@ -18,6 +19,13 @@ type Config struct {
 	Port                string            `validate:"required"`
 	ChannelEventGroupID string            `validate:"required"`
 	Environment         enums.Environment `validate:"required,oneof=DEVELOPMENT STAGING PRODUCTION"`
+
+	// Env is the WIRING axis (real | integration | e2e) — parsed from CODM_ENV,
+	// the same var and column names the TS side uses (registry.ParseEnv). It is
+	// a DISTINCT axis from Environment above: Environment is the deploy target
+	// (DEVELOPMENT/STAGING/PRODUCTION), Env is which fx overlay a service
+	// composes (core/registry). No collision, no shared meaning.
+	Env registry.Env
 
 	// DataDir is the SQLite substrate location — the ONE store the gateway rows,
 	// the event log, the outbox and whatsmeow's session tables all live in. Empty
@@ -51,10 +59,16 @@ func Load() (*Config, error) {
 	_ = godotenv.Load("../../.env")
 	_ = godotenv.Overload(".env")
 
+	env, err := registry.ParseEnv(getEnvOrDefault("CODM_ENV", ""))
+	if err != nil {
+		return nil, errors.NewBaseError(errors.CodeMissingEnvVar, err.Error())
+	}
+
 	cfg := &Config{
 		Port:                getEnvOrDefault("CHANNEL_PORT", getEnvOrDefault("PORT", "3032")),
 		ChannelEventGroupID: getEnvOrDefault("CHANNEL_EVENT_GROUP_ID", "codm-gateway"),
 		Environment:         enums.Environment(getEnvOrDefault("CHANNEL_ENVIRONMENT", getEnvOrDefault("ENVIRONMENT", "DEVELOPMENT"))),
+		Env:                 env,
 
 		GlobalAPIKey:      getEnvOrDefault("CHANNEL_GLOBAL_API_KEY", os.Getenv("GLOBAL_API_KEY")),
 		WhatsmeowLogLevel: enums.LogLevel(getEnvOrDefault("WHATSMEOW_LOG_LEVEL", "WARN")),

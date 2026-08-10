@@ -6,6 +6,7 @@ package shared
 import (
 	"context"
 	"log/slog"
+	"net"
 	"net/http"
 
 	"template/contracts-go/wire"
@@ -242,17 +243,32 @@ func startSqliteOutboxDispatcher(lc fx.Lifecycle, dispatcher *outbox.SqliteOutbo
 //
 // NOTE(core-adequation): unlike the template's core, the handler is wrapped in
 // the CORS middleware — codm's console talks to the gateway cross-origin.
-func StartHTTPServer(lc fx.Lifecycle, router *httprouter.HttpRouter, cfg *config.Config) {
+//
+// cfg.Port accepts "0" — an ephemeral port, the mechanism testenv (T5) and the
+// cross-service harness need to run many instances without a fixed port
+// colliding. The listener binds up front (so a bind failure surfaces before
+// OnStart, not inside the goroutine), and the EFFECTIVE port — which is what
+// callers must use when they asked for 0 — is read back off the listener and
+// logged. Returning an error from an fx.Invoke function is the idiomatic fx
+// way to abort boot on a bind failure; nothing else references StartHTTPServer
+// or depends on its (previously empty) return value, so this is not a breaking
+// change to any consumer (grepped: only cmd/api/main.go's fx.Invoke call site).
+func StartHTTPServer(lc fx.Lifecycle, router *httprouter.HttpRouter, cfg *config.Config) error {
+	listener, err := net.Listen("tcp", ":"+cfg.Port)
+	if err != nil {
+		return err
+	}
+	effectivePort := listener.Addr().(*net.TCPAddr).Port
+
 	server := &http.Server{
-		Addr:    ":" + cfg.Port,
 		Handler: middleware.CORS(cfg.AllowedOrigins, router.Handler()),
 	}
 
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			go func() {
-				slog.Info("http server started", "addr", server.Addr)
-				if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				slog.Info("http server started", "addr", listener.Addr().String(), "port", effectivePort)
+				if err := server.Serve(listener); err != nil && err != http.ErrServerClosed {
 					slog.Error("http server error", "error", err)
 				}
 			}()
@@ -263,4 +279,6 @@ func StartHTTPServer(lc fx.Lifecycle, router *httprouter.HttpRouter, cfg *config
 			return server.Shutdown(ctx)
 		},
 	})
+
+	return nil
 }
