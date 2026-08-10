@@ -71,6 +71,11 @@ describe('useSystemPreconditionProbe', () => {
 
 	async function mount(pathname: string, container: Container) {
 		const router = routerAt(pathname, container)
+		// O router precisa estar CARREGADO antes do primeiro render: sem isto o `RouterProvider` monta
+		// vazio e só resolve num tick futuro que a suíte cheia não garante. Sob `nx` o `.env` entra no
+		// processo com NODE_ENV=development, o Bun resolve o build de DEV do React (que honra `act()`
+		// estritamente em vez de descarregar de qualquer jeito), e a ausência disto vira 18 falhas.
+		await router.load()
 		await act(async () => {
 			root = createRoot(host)
 			root.render(<RouterProvider router={router} />)

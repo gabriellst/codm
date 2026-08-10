@@ -67,6 +67,11 @@ describe('OnboardingGate', () => {
 		document.body.appendChild(host)
 		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 		const router = routerAt(pathname, queryClient)
+		// O router precisa estar CARREGADO antes do primeiro render: sem isto o `RouterProvider` monta
+		// vazio e só resolve num tick futuro que a suíte cheia não garante. Sob `nx` o `.env` entra no
+		// processo com NODE_ENV=development, o Bun resolve o build de DEV do React (que honra `act()`
+		// estritamente em vez de descarregar de qualquer jeito), e a ausência disto vira falha.
+		await router.load()
 		await act(async () => {
 			root = createRoot(host as HTMLDivElement)
 			root.render(<RouterProvider router={router} />)
