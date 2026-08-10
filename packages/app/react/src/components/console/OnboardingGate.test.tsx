@@ -1,11 +1,9 @@
 // packages/app/react/src/components/console/OnboardingGate.test.tsx
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import { act } from 'react'
-import { createRoot, type Root } from 'react-dom/client'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { createMemoryHistory, createRootRoute, createRoute, createRouter, RouterProvider } from '@tanstack/react-router'
-import { configureClient } from '@codm/client-typescript/http'
-import type { GetOnboardingQueryResponse } from '@codm/client-typescript/typescript'
+import { completeOnboarding } from '@codm/client-typescript/typescript'
+import { mountRouter, type MountedRouter } from '../../../tests/support/mountRouter'
+import { useIntegrationBackend, type IntegrationBackend } from '../../../tests/support/integration-harness'
 import { useSystemPreconditionsStore } from '@/stores/useSystemPreconditionsStore'
 import { OnboardingGate, resetOnboardingGateForTests } from './OnboardingGate'
 
@@ -18,104 +16,102 @@ import { OnboardingGate, resetOnboardingGateForTests } from './OnboardingGate'
  *     (AC-11) — provado montando a guarda DUAS VEZES na mesma "execução" (o marcador é módulo,
  *     nunca resetado em produção) e checando que a segunda não bate no `/onboarding`.
  *
- * Cada caso monta um router de verdade e assevera a LOCALIZAÇÃO — nunca um spy de `navigate`.
+ * Cada caso monta um router de verdade (via o helper canônico `mountRouter`) e assevera a
+ * LOCALIZAÇÃO — nunca um spy de `navigate`.
+ *
+ * A FRONTEIRA DE REDE É O BACKEND DE INTEGRAÇÃO, não um stub manual de fetch: o app é
+ * single-operator (spec `auth/operator.ts` — sem sign-up, toda requisição É o operador), então
+ * `backend.reset()` sozinho já produz o estado "onboarding nunca começou" (computado pelo
+ * `GET /ui/onboarding` real), e `completeOnboarding({})` grava o `completedAt` pelo caminho de
+ * produção — nada aqui é dublado.
  */
 describe('OnboardingGate', () => {
-	let root: Root | null = null
-	let host: HTMLDivElement | null = null
-	const realFetch = globalThis.fetch
+	let backend: IntegrationBackend
+	let mounted: MountedRouter | null = null
 
-	beforeEach(() => {
-		configureClient({ typescript: 'http://localhost:3030', go: 'http://localhost:3032' })
+	beforeAll(async () => {
+		backend = await useIntegrationBackend()
+	})
+
+	afterAll(async () => {
+		await backend.stop()
+	})
+
+	beforeEach(async () => {
+		await backend.reset()
 		useSystemPreconditionsStore.getState().reset()
 		resetOnboardingGateForTests()
 	})
 
 	afterEach(() => {
-		globalThis.fetch = realFetch
-		act(() => root?.unmount())
-		root = null
-		host?.remove()
-		host = null
+		mounted?.unmount()
+		mounted = null
 	})
 
-	function serve(payload: GetOnboardingQueryResponse): void {
-		globalThis.fetch = (async () =>
-			new Response(JSON.stringify(payload), { status: 200, headers: { 'content-type': 'application/json' } })) as typeof globalThis.fetch
-	}
-
-	function routerAt(pathname: string, queryClient: QueryClient) {
-		const rootRoute = createRootRoute({
-			component: () => (
-				<QueryClientProvider client={queryClient}>
-					<OnboardingGate>
-						<div data-testid="console">console</div>
-					</OnboardingGate>
-				</QueryClientProvider>
-			),
-		})
-		const dashboard = createRoute({ getParentRoute: () => rootRoute, path: '/dashboard', component: () => null })
-		const onboarding = createRoute({ getParentRoute: () => rootRoute, path: '/onboarding', component: () => null })
-		return createRouter({
-			routeTree: rootRoute.addChildren([dashboard, onboarding]),
-			history: createMemoryHistory({ initialEntries: [pathname] }),
-		})
-	}
-
-	async function mount(pathname: string) {
-		host = document.createElement('div')
-		document.body.appendChild(host)
+	/** `/dashboard` and `/onboarding` are `mountRouter`'s own defaults — exactly the two this gate chooses between. */
+	async function mount(pathname: string): Promise<MountedRouter> {
 		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-		const router = routerAt(pathname, queryClient)
-		// O router precisa estar CARREGADO antes do primeiro render: sem isto o `RouterProvider` monta
-		// vazio e só resolve num tick futuro que a suíte cheia não garante. Sob `nx` o `.env` entra no
-		// processo com NODE_ENV=development, o Bun resolve o build de DEV do React (que honra `act()`
-		// estritamente em vez de descarregar de qualquer jeito), e a ausência disto vira falha.
-		await router.load()
-		await act(async () => {
-			root = createRoot(host as HTMLDivElement)
-			root.render(<RouterProvider router={router} />)
-		})
-		// Deixa a leitura de onboarding resolver (fetch real, ainda que dublado) e o roteador assentar
-		// a navegação antes de qualquer asserção — dois microtasks não bastam para o round-trip do
-		// React Query mais o redirect do TanStack Router.
-		await act(async () => {
-			await new Promise(resolve => setTimeout(resolve, 60))
-		})
-		return router
+		mounted = await mountRouter(
+			<QueryClientProvider client={queryClient}>
+				<OnboardingGate>
+					<div data-testid="console">console</div>
+				</OnboardingGate>
+			</QueryClientProvider>,
+			{ path: pathname },
+		)
+		// Duas condições, nunca um sleep fixo — mas `queryClient.isFetching()` é um contador que o
+		// QueryClient mantém por FORA do React, então checá-lo no attempt 0 (antes de qualquer volta
+		// real pelo event loop) pode ler "0" um instante antes de React sequer ter re-renderizado com
+		// o novo `data` — medido como flakiness. Por isso a checagem exige pelo menos UMA volta real
+		// (attempt > 0) antes de aceitar "concluído": o helper `settled` já faz o resto do polling.
+		let pass1Attempts = 0
+		await mounted.settled(() => {
+			pass1Attempts++
+			return pass1Attempts > 1 && queryClient.isFetching() === 0
+		}, 'a leitura de onboarding concluir')
+		// (2) com a leitura concluída, o gate já reagiu — navegou para /onboarding ou liberou os
+		// children — mas o redirect do router e o re-render que ele dispara ainda podem levar mais um
+		// passo de assentamento além do attempt imediato.
+		let pass2Attempts = 0
+		await mounted.settled(() => {
+			pass2Attempts++
+			return (
+				pass2Attempts > 1 &&
+				(mounted!.router.state.location.pathname === '/onboarding' || mounted!.host.querySelector('[data-testid="console"]') !== null)
+			)
+		}, 'OnboardingGate reagir (navegar ou liberar os children)')
+		return mounted
 	}
 
 	it('AC-1: sem completedAt, leva SEMPRE ao /onboarding — fato do servidor, sem flag', async () => {
-		serve({ currentStep: 'VALUE', completedAt: null, channelDone: false, workspaceDone: false, threadDone: false })
-		const router = await mount('/dashboard')
+		// backend.reset() sozinho já é "onboarding nunca começou" — nada a semear.
+		const { router } = await mount('/dashboard')
 
 		expect(router.state.location.pathname).toBe('/onboarding')
 	})
 
 	it('com completedAt e nada pendente, não navega — console abre normalmente', async () => {
-		serve({ currentStep: 'FINAL', completedAt: '2026-08-09T00:00:00.000Z', channelDone: true, workspaceDone: true, threadDone: true })
-		const router = await mount('/dashboard')
+		await completeOnboarding({})
+		const { router, host } = await mount('/dashboard')
 
 		expect(router.state.location.pathname).toBe('/dashboard')
-		expect(host?.querySelector('[data-testid="console"]')).not.toBeNull()
+		expect(host.querySelector('[data-testid="console"]')).not.toBeNull()
 	})
 
 	it('AC-11: com completedAt e algo pendente, leva ao /onboarding UMA VEZ por execução', async () => {
-		serve({ currentStep: 'FINAL', completedAt: '2026-08-09T00:00:00.000Z', channelDone: true, workspaceDone: true, threadDone: true })
+		await completeOnboarding({})
 		useSystemPreconditionsStore.getState().apply([{ id: 'FULL_DISK_ACCESS', satisfied: false, repair: 'AVAILABLE' }])
 
 		const first = await mount('/dashboard')
-		expect(first.state.location.pathname).toBe('/onboarding')
+		expect(first.router.state.location.pathname).toBe('/onboarding')
 
-		act(() => root?.unmount())
-		root = null
-		host?.remove()
-		host = null
+		first.unmount()
+		mounted = null
 
 		// Mesma execução (o marcador de módulo NÃO foi resetado) — o operador voltou para /dashboard
 		// (ex.: concluiu o wizard) e a MESMA pendência do host continua lá. Uma segunda guarda fresca
 		// não pode bater de volta no /onboarding.
 		const second = await mount('/dashboard')
-		expect(second.state.location.pathname).toBe('/dashboard')
+		expect(second.router.state.location.pathname).toBe('/dashboard')
 	})
 })

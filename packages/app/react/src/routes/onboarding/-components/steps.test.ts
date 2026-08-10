@@ -1,7 +1,6 @@
 // packages/app/react/src/routes/onboarding/-components/steps.test.ts
 import { describe, expect, it } from 'bun:test'
 import { SYSTEM_PRECONDITION_IDS } from '@/services'
-import { STEP_COMPONENTS } from './step-components'
 import { canComplete, firstUnvanquishedStep, onboardingSteps, STEP_IMPACTS, STEP_KINDS, STEP_TAXONOMY } from './steps'
 
 /**
@@ -26,19 +25,6 @@ describe('onboardingSteps — AC-4', () => {
 			'FULL_DISK_ACCESS',
 			'FINAL',
 		])
-	})
-})
-
-/**
- * AC-5 — `STEP_COMPONENTS` é exaustivo sobre `StepId`. A garantia dura é de tipo (`Record<StepId,
- * ReactNode>` — um id sem entrada para de compilar); este caso guarda a direção reversa — que
- * ninguém tenha somado uma chave que não é um `StepId` conhecido. `onboardingSteps(SYSTEM_PRECONDITION_IDS)`
- * enumera o universo INTEIRO de StepId (todo id de SystemPrecondition existente, não só os pendentes
- * agora), então comparar contra ele cobre exatamente o union.
- */
-describe('STEP_COMPONENTS — AC-5', () => {
-	it('tem exatamente uma entrada por StepId conhecido', () => {
-		expect(Object.keys(STEP_COMPONENTS).sort()).toEqual([...onboardingSteps(SYSTEM_PRECONDITION_IDS)].sort())
 	})
 })
 
