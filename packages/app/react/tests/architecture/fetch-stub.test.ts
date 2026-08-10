@@ -11,11 +11,7 @@ import { Glob } from 'bun'
  * (Decision 15) — e a onda B o esvazia até []. A fronteira de rede sancionada é o harness de
  * integração (padrão) ou MSW (estados improduzíveis + Storybook).
  */
-const INVENTORY: readonly string[] = [
-	'src/components/Header/UserProfile/index.test.tsx',
-	'src/routes/(app)/dashboard/-components/SetupChecklist/index.test.tsx',
-	'src/routes/onboarding/-components/OnboardingFlow/index.test.tsx',
-]
+const INVENTORY: readonly string[] = []
 
 describe('rail: stub manual de fetch só no inventário (que só encolhe)', () => {
 	it('nenhum ofensor fora do inventário', () => {

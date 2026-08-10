@@ -1,100 +1,89 @@
 // packages/app/react/src/routes/(app)/dashboard/-components/SetupChecklist/index.test.tsx
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import { act } from 'react'
-import { createRoot, type Root } from 'react-dom/client'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { createMemoryHistory, createRootRoute, createRoute, createRouter, RouterProvider } from '@tanstack/react-router'
-import { configureClient } from '@codm/client-typescript/http'
-import type { GetOnboardingQueryResponse } from '@codm/client-typescript/typescript'
+import { addWorkspace } from '@codm/client-typescript/typescript'
 import i18n from '@/lib/i18n'
-import { SetupChecklist } from './index'
+import { mountRouter, type MountedRouter } from '../../../../../../tests/support/mountRouter'
+import { loadBackendGivens, useIntegrationBackend, type IntegrationBackend } from '../../../../../../tests/support/integration-harness'
+import { SetupChecklist } from '.'
 
 /**
- * AC-13 — o painel deixou de listar os três passos incondicionalmente (spec Decision 15): ele agora
- * é a superfície do que ficou `DEFERRABLE` e ainda NÃO satisfeito, derivado do mesmo `STEP_TAXONOMY`
- * que `/onboarding` usa, alimentado pela mesma leitura (`useGetOnboarding`). Um passo satisfeito SOME
- * da lista por inteiro — não fica com um check — e sem nenhum pendente o painel não renderiza nada.
+ * REDUZIDO (T11, onda B) — comportamento contra o backend REAL, sem `globalThis.fetch` manual.
+ *
+ * `workspaceDone` e `threadDone` são PRODUZÍVEIS pelo harness: `addWorkspace({ path })` é a
+ * mutation REAL (não um given) e resolve determinística sob `integration` — o binding do
+ * `WorkspaceDetector` ali é o `MockWorkspaceDetector` ("never touches the filesystem", canned
+ * `{ exists: true, isDirectory: true }`), o mesmo tipo de determinismo que `ProvidersSection` (T9)
+ * já provou para `MockProviderDetector`. `threadDone` vem de `givenThread` (tooling congelado).
+ *
+ * `channelDone` NÃO é produzível: `channels`/`remotes` são tabelas do gateway Go sem given exposto
+ * em `@codm/api-typescript/testing` (mesmo gap documentado em `ContactStep`, T9) — o caso "tudo
+ * feito" (que exige os três) fica SÓ-VISUAL em `index.stories.tsx`.
  */
-describe('SetupChecklist — AC-13', () => {
-	let root: Root | null = null
-	let host: HTMLDivElement
-	let queryClient: QueryClient
-	const realFetch = globalThis.fetch
+describe('SetupChecklist — contra o backend real', () => {
+	let backend: IntegrationBackend
+	let mounted: MountedRouter | null = null
+
+	beforeAll(async () => {
+		backend = await useIntegrationBackend()
+	})
+
+	afterAll(async () => {
+		await backend.stop()
+	})
 
 	beforeEach(async () => {
-		// O texto de cada linha é o que distingue um passo do outro — sem idioma fixado, `t()` devolve
-		// a chave.
 		await i18n.changeLanguage('pt')
-		configureClient({ typescript: 'http://localhost:3030', go: 'http://localhost:3032' })
-		host = document.createElement('div')
-		document.body.appendChild(host)
-		queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+		await backend.reset()
 	})
 
 	afterEach(() => {
-		globalThis.fetch = realFetch
-		act(() => root?.unmount())
-		root = null
-		host.remove()
+		mounted?.unmount()
+		mounted = null
 	})
 
-	function serve(payload: GetOnboardingQueryResponse): void {
-		globalThis.fetch = (async () =>
-			new Response(JSON.stringify(payload), { status: 200, headers: { 'content-type': 'application/json' } })) as typeof globalThis.fetch
-	}
-
-	async function mount() {
-		const rootRoute = createRootRoute({
-			component: () => (
-				<QueryClientProvider client={queryClient}>
-					<SetupChecklist />
-				</QueryClientProvider>
-			),
-		})
-		const children = ['/channels', '/workspaces', '/attach', '/onboarding'].map(path =>
-			createRoute({ getParentRoute: () => rootRoute, path, component: () => null }),
+	async function mount(): Promise<MountedRouter> {
+		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+		mounted = await mountRouter(
+			<QueryClientProvider client={queryClient}>
+				<SetupChecklist />
+			</QueryClientProvider>,
+			{ extraPaths: ['/dashboard', '/onboarding', '/channels', '/workspaces', '/attach'] },
 		)
-		const router = createRouter({
-			routeTree: rootRoute.addChildren(children),
-			history: createMemoryHistory({ initialEntries: ['/'] }),
-		})
-
-		// O router precisa estar CARREGADO antes do primeiro render: sem isto o `RouterProvider` monta
-		// vazio e só resolve num tick futuro que a suíte cheia não garante. Sob `nx` o `.env` entra no
-		// processo com NODE_ENV=development, o Bun resolve o build de DEV do React (que honra `act()`
-		// estritamente em vez de descarregar de qualquer jeito), e a ausência disto vira 18 falhas.
-		await router.load()
-		await act(async () => {
-			root = createRoot(host)
-			root.render(<RouterProvider router={router} />)
-		})
-		await act(async () => {
-			await new Promise(resolve => setTimeout(resolve, 30))
-		})
+		await mounted.settled(() => mounted?.host.querySelector('[data-slot="skeleton"]') === null, 'o skeleton sair')
+		return mounted
 	}
 
-	it('um feito, dois não: só os dois não-feitos aparecem', async () => {
-		serve({ currentStep: 'FINAL', completedAt: null, channelDone: true, workspaceDone: false, threadDone: false })
+	it('nada feito: os três passos aparecem', async () => {
 		await mount()
 
-		expect(host.textContent).not.toContain(i18n.t('home.setupChannelTitle'))
-		expect(host.textContent).toContain(i18n.t('home.setupWorkspaceTitle'))
-		expect(host.textContent).toContain(i18n.t('home.setupThreadTitle'))
+		expect(mounted?.host.textContent).toContain(i18n.t('home.setupChannelTitle'))
+		expect(mounted?.host.textContent).toContain(i18n.t('home.setupWorkspaceTitle'))
+		expect(mounted?.host.textContent).toContain(i18n.t('home.setupThreadTitle'))
 	})
 
-	it('nada feito: os três aparecem', async () => {
-		serve({ currentStep: 'VALUE', completedAt: null, channelDone: false, workspaceDone: false, threadDone: false })
+	it('workspace feito de verdade (addWorkspace real): a linha some, os outros dois ficam', async () => {
+		await addWorkspace({ path: '/tmp/setup-checklist-fixture' })
 		await mount()
 
-		expect(host.textContent).toContain(i18n.t('home.setupChannelTitle'))
-		expect(host.textContent).toContain(i18n.t('home.setupWorkspaceTitle'))
-		expect(host.textContent).toContain(i18n.t('home.setupThreadTitle'))
+		expect(mounted?.host.textContent).not.toContain(i18n.t('home.setupWorkspaceTitle'))
+		expect(mounted?.host.textContent).toContain(i18n.t('home.setupChannelTitle'))
+		expect(mounted?.host.textContent).toContain(i18n.t('home.setupThreadTitle'))
 	})
 
-	it('tudo feito: o painel não renderiza nada', async () => {
-		serve({ currentStep: 'FINAL', completedAt: '2026-08-09T00:00:00.000Z', channelDone: true, workspaceDone: true, threadDone: true })
+	/**
+	 * `givenThread` ANINHA `givenWorkspace` (uma thread não pode existir sem workspace — ver
+	 * `tests/support/given/threads.ts`), então este caso derruba as DUAS linhas de uma vez —
+	 * medido, não assumido: a primeira versão deste teste esperava só a linha de thread sumir e
+	 * quebrou porque `workspaceDone` também virava `true`. Só o canal (improduzível) sobra.
+	 */
+	it('thread feita de verdade (givenThread, que também cria o workspace que ela referencia): só o canal sobra', async () => {
+		const { givenThread } = await loadBackendGivens()
+		await givenThread(backend.asTestBed(), {})
 		await mount()
 
-		expect(host.textContent?.trim()).toBe('')
+		expect(mounted?.host.textContent).not.toContain(i18n.t('home.setupThreadTitle'))
+		expect(mounted?.host.textContent).not.toContain(i18n.t('home.setupWorkspaceTitle'))
+		expect(mounted?.host.textContent).toContain(i18n.t('home.setupChannelTitle'))
 	})
 })
