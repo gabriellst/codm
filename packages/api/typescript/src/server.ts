@@ -43,8 +43,9 @@ export interface RunningServer {
 /**
  * Resolve the transport (whatever `HttpRouter` is bound to in the caller's active environment) and
  * assemble the `MainRouter` that mounts `routers` on it. Does NOT call `.start()` — the caller
- * decides when to listen. Kept EXPORTED (not folded fully private into `start()`) because
- * `tests/support/integration-server.ts` still imports it until T7 migrates the harness onto `start()`.
+ * decides when to listen. Kept EXPORTED (not folded fully private into `start()`) — `start()` itself
+ * calls it below, and it stays a usable seam for anything that needs the router assembled without
+ * also starting the listener.
  */
 export function assembleMainRouter(routers: Router[]): MainRouter {
 	// Resolvido UMA vez aqui (não inline dentro de `new MainRouter(...)`) — a mesma instância é

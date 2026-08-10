@@ -46,6 +46,7 @@
 		"sdk:go": "nx run client:generate",
 		"sdk:build": "nx run client:build",
 		"contracts": "cd packages/contracts && bun run all",
+		"testing:check-dts": "bun scripts/testing-dts.ts",
 		"emit-openapi": "nx run-many -t emit-openapi",
 		"migrate:create": "cd packages/contracts && bun run drizzle:generate",
 		"migrate:dev": "cd packages/api/typescript && bun scripts/migrate.ts",

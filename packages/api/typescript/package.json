@@ -5,8 +5,10 @@
 	"private": true,
 	"type": "module",
 	"exports": {
-		"./testing": "./tests/support/integration-server.ts",
-		"./testing-contract": "./tests/support/integration-contract.ts"
+		"./testing": {
+			"types": "./testing.d.ts",
+			"default": "./tests/support/testing.ts"
+		}
 	},
 	"scripts": {
 		"build": "bun run scripts/build.ts",

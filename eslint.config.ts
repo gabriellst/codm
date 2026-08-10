@@ -9,6 +9,7 @@ import tseslint, { type ConfigArray } from 'typescript-eslint'
 export default tseslint.config([
 	{
 		ignores: [
+			'**/*.d.ts',
 			'**/.astro/**',
 			'**/.claude/**',
 			'**/.next/**',
