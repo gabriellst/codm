@@ -287,4 +287,5 @@ export const ALL_REGISTRIES: InstanceRegistry = {
 	mock: merge('mock'),
 	integration: merge('integration'),
 	real: merge('real'),
+	e2e: merge('e2e'),
 }

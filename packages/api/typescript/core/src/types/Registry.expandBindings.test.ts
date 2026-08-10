@@ -31,6 +31,27 @@ describe('expandBindings (declarative per-token bindings → per-env InstanceReg
 		expect(r.integration).toEqual([])
 	})
 
+	test('e2e omitted mirrors integration (which mirrors real when integration is also omitted)', () => {
+		const r = expandBindings([{ token: Port, mock: MockImpl, real: RealImpl }])
+		expect(r.e2e).toEqual([{ token: Port, instance: RealImpl }])
+	})
+
+	test('e2e omitted mirrors explicit integration', () => {
+		const r = expandBindings([{ token: Port, mock: MockImpl, integration: IntImpl, real: RealImpl }])
+		expect(r.e2e).toEqual([{ token: Port, instance: IntImpl }])
+	})
+
+	test('explicit e2e overrides the mirror', () => {
+		class E2eImpl {}
+		const r = expandBindings([{ token: Port, mock: MockImpl, integration: IntImpl, real: RealImpl, e2e: E2eImpl }])
+		expect(r.e2e).toEqual([{ token: Port, instance: E2eImpl }])
+	})
+
+	test('e2e: null is a DECLARED absence — does NOT inherit integration', () => {
+		const r = expandBindings([{ token: Port, mock: MockImpl, integration: IntImpl, real: RealImpl, e2e: null }])
+		expect(r.e2e).toEqual([])
+	})
+
 	test('{ useFactory } values become factory entries; declaration order is preserved', () => {
 		const factory = { useFactory: () => new RealImpl() }
 		const r = expandBindings([

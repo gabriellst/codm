@@ -50,23 +50,33 @@ export interface BoundedContextOptions<TName extends string = string> {
 /**
  * SELEÇÃO DE AMBIENTE DO BOOT (spec Decision 6). O default é `real` e o caller de produção não
  * muda: a seleção é uma CHAMADA explícita feita ANTES dos imports dos contextos (os boots são
- * side-effect de módulo), nunca uma env var ambiente. `integration` sob produção é recusado —
- * um servidor real com bindings em memória seria o desastre silencioso.
- * Consumidor: o harness de integração do console (`@codm/api-typescript/testing`).
+ * side-effect de módulo), nunca uma env var ambiente. Qualquer ambiente NÃO-real sob produção é
+ * recusado — um servidor real com bindings em memória (ou de e2e) seria o desastre silencioso.
+ * Consumidores: o harness de integração do console (`@codm/api-typescript/testing`), o Playwright
+ * do e2e (`CODM_ENV=e2e`).
  */
-export type BoundedContextEnvironment = 'real' | 'integration'
+export type BoundedContextEnvironment = 'real' | 'integration' | 'e2e'
 
 let selectedEnvironment: BoundedContextEnvironment = 'real'
 
 export function setBoundedContextEnvironment(env: BoundedContextEnvironment): void {
-	if (env === 'integration' && process.env.NODE_ENV === 'production') {
-		throw new Error('setBoundedContextEnvironment: integration é recusado sob NODE_ENV=production')
+	if (env !== 'real' && process.env.NODE_ENV === 'production') {
+		throw new Error(`setBoundedContextEnvironment: ${env} é recusado sob NODE_ENV=production`)
 	}
 	selectedEnvironment = env
 }
 
 export function getBoundedContextEnvironment(): BoundedContextEnvironment {
 	return selectedEnvironment
+}
+
+/**
+ * Dispatch declarado sobre o eixo (NN-5): edge case por ambiente vira coluna preenchida, nunca
+ * `if (process.env.X)`. Consumidores: montagem de controllers de teste (`shared/index.ts`,
+ * `agent/index.ts`).
+ */
+export function byEnvironment<T>(columns: { default: T } & Partial<Record<BoundedContextEnvironment, T>>): T {
+	return columns[getBoundedContextEnvironment()] ?? columns.default
 }
 
 export class BoundedContext {

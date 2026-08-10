@@ -297,14 +297,12 @@ export const REPO = {
 			example: '',
 			doc: 'test-only gateway ingress seam (internal/channel/testseam); refused under PRODUCTION',
 		},
-		// NO `schema:` on purpose — same ENV-05 dodge as CODM_E2E above, one step further: NO backend
-		// declares 'apiTs' here at all (there is no Go reader to hang the declaration on instead), so
-		// Read as raw process.env.CODM_PROFILE in src/index.ts / src/shared/cloud-profile.ts (SP2
-		// Task T4), never through Config.env — booting WITHOUT this var (the desktop daemon's
-		// default) is unchanged behavior. schema: 'raw' is the DECLARED semantics for exactly this
-		// class of key: an apiTs boot flag deliberately outside the Zod schemas (ENV-05 coherence
-		// without forcing a Config.ts entry). The value is BAKED as ENV in docker/cloud.Dockerfile —
-		// the deploy surface is Railway (compose aposentado, decisão do founder 2026-08-07).
+		// schema: 'kernel' (eixo-único-de-ambiente T1): CODM_PROFILE joined RawEnvSchema, so
+		// `Config.env.CODM_PROFILE` is now the typed read — the raw `process.env.CODM_PROFILE`
+		// call sites in src/index.ts / src/shared/cloud-profile.ts sweep to it in T5 (process.env
+		// exclusive-to-Config rail; previously this key was deliberately kept schema: 'raw' to
+		// dodge a Config.ts entry). The value is BAKED as ENV in docker/cloud.Dockerfile — the
+		// deploy surface is Railway (compose aposentado, decisão do founder 2026-08-07).
 		// Injetada pelo SHELL em cada sidecar (packages/app/tauri/src-tauri/src/sidecars/mod.rs): a
 		// versão do bundle instalado. Lida como process.env cru na linha "Sobre" das configurações —
 		// daí schema 'raw'. Ausente no `bun dev`, onde o fallback é o package.json do workspace.
@@ -316,9 +314,26 @@ export const REPO = {
 		},
 		CODM_PROFILE: {
 			consumers: ['apiTs'],
-			schema: 'raw',
+			schema: 'kernel',
 			example: '',
 			doc: "cloud profile switch — 'cloud' boots only auth+owner (baked as ENV in docker/cloud.Dockerfile; Railway-only deploy, compose aposentado 2026-08-07); unset boots the full desktop daemon",
+		},
+		// Eixo-único-de-ambiente (spec Decision 7, T1): a única env var que seleciona o ambiente do
+		// boot POR PROCESSO — `index.ts` repassa a `start({ env: Config.env.CODM_ENV })`.
+		// `mock`/`integration` continuam seleção programática (TestBed/harness), nunca por env var.
+		CODM_ENV: {
+			consumers: ['apiTs'],
+			schema: 'kernel',
+			example: 'real',
+			doc: "boot environment selector — 'real' (default) or 'e2e' (Playwright); mock/integration are programmatic-only",
+		},
+		// Modo de emissão de OpenAPI (bun sdk / emit-openapi project.json target): sob 'true' o boot
+		// só coleta rotas para gerar o spec, sem tocar persistência real nem enfileirar jobs/comandos.
+		EMIT_OPENAPI: {
+			consumers: ['apiTs'],
+			schema: 'kernel',
+			example: '',
+			doc: 'openapi emission mode — set by the emit-openapi nx target; boot collects routes only',
 		},
 		RATE_LIMIT_DISABLED: {
 			consumers: ['apiTs'],

@@ -12,6 +12,7 @@ export interface InstanceRegistry {
 	mock: RegistryEntry[]
 	integration: RegistryEntry[]
 	real: RegistryEntry[]
+	e2e: RegistryEntry[]
 }
 
 /**
@@ -66,6 +67,8 @@ export interface BindingDecl {
 	real: BindingValue | null
 	/** integration-env binding. OMITTED = mirrors `real`; `null` = declared absence. */
 	integration?: BindingValue | null
+	/** e2e-env binding. OMITTED = mirrors `integration` (which mirrors `real` when also omitted); `null` = declared absence. */
+	e2e?: BindingValue | null
 }
 
 /** Expand per-token declarations into the per-env InstanceRegistry the runtime consumes. */
@@ -75,12 +78,14 @@ export function expandBindings(decls: readonly BindingDecl[]): InstanceRegistry 
 		if (typeof value === 'object' && value !== null && 'useClass' in value) return { token, useClass: value.useClass }
 		return { token, instance: value }
 	}
-	const registry: InstanceRegistry = { mock: [], integration: [], real: [] }
+	const registry: InstanceRegistry = { mock: [], integration: [], real: [], e2e: [] }
 	for (const decl of decls) {
 		const integration = decl.integration === undefined ? decl.real : decl.integration
+		const e2e = decl.e2e === undefined ? integration : decl.e2e
 		if (decl.mock !== null) registry.mock.push(toEntry(decl.token, decl.mock))
 		if (integration !== null) registry.integration.push(toEntry(decl.token, integration))
 		if (decl.real !== null) registry.real.push(toEntry(decl.token, decl.real))
+		if (e2e !== null) registry.e2e.push(toEntry(decl.token, e2e))
 	}
 	return registry
 }

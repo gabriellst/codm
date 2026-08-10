@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'bun:test'
-import { getBoundedContextEnvironment, setBoundedContextEnvironment } from './BoundedContext'
+import { byEnvironment, getBoundedContextEnvironment, setBoundedContextEnvironment } from './BoundedContext'
 
 /**
  * A COSTURA DA SPEC (Decision 6) E SEUS DOIS FALSEADORES.
@@ -32,5 +32,23 @@ describe('seleção de ambiente do BoundedContext', () => {
 		process.env.NODE_ENV = 'production'
 		expect(() => setBoundedContextEnvironment('integration')).toThrow(/production/)
 		expect(getBoundedContextEnvironment()).toBe('real')
+	})
+
+	it('e2e é selecionável e lida de volta', () => {
+		setBoundedContextEnvironment('e2e')
+		expect(getBoundedContextEnvironment()).toBe('e2e')
+	})
+
+	it('FALSEADOR: e2e sob NODE_ENV=production é recusado, alto', () => {
+		process.env.NODE_ENV = 'production'
+		expect(() => setBoundedContextEnvironment('e2e')).toThrow(/production/)
+		expect(getBoundedContextEnvironment()).toBe('real')
+	})
+
+	it('byEnvironment devolve a coluna do ambiente selecionado, com default', () => {
+		setBoundedContextEnvironment('e2e')
+		expect(byEnvironment({ default: 'a', e2e: 'b' })).toBe('b')
+		setBoundedContextEnvironment('real')
+		expect(byEnvironment({ default: 'a', e2e: 'b' })).toBe('a')
 	})
 })

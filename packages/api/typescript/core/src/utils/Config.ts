@@ -80,6 +80,18 @@ const RawEnvSchema = z.object({
 	// the credential-exchange endpoint). Sent as the `x-internal-service-key`
 	// header. Empty in dev rejects all S2S calls — set in any env that uses them.
 	INTERNAL_SERVICE_KEY: z.string().default(''),
+	// Seleção de ambiente do boot por PROCESSO (spec Decision 7, eixo-único-de-ambiente): o único
+	// gatilho por env var — `index.ts` repassa a `start({ env: Config.env.CODM_ENV })`. `mock`/
+	// `integration` continuam seleção programática (TestBed/harness), nunca por env var; daí o
+	// enum aqui ser um subconjunto de `BoundedContextEnvironment`.
+	CODM_ENV: z.enum(['real', 'e2e']).default('real'),
+	// Raw boot flag que seleciona QUAIS contextos montam (ex.: 'cloud') — lido cru em alguns pontos
+	// pré-Config por necessidade de boot (ver superRefine acima); tipado aqui para os consumidores
+	// pós-Config.
+	CODM_PROFILE: z.string().default(''),
+	// Modo de emissão de OpenAPI (bun sdk / emit-openapi): sob 'true' o boot só coleta rotas para
+	// gerar o spec — sem tocar persistência real, sem enfileirar jobs/comandos.
+	EMIT_OPENAPI: z.string().default(''),
 })
 
 /** Structural parity export — the env-model architecture rail compares these against the
