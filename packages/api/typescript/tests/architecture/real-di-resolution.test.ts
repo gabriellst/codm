@@ -4,7 +4,7 @@ import { registerAll } from '@codm/core-typescript'
 import { ProviderKind } from '@codm/contracts-typescript/wire/enums'
 import { ALL_REGISTRIES } from '@shared/registry'
 import { AgentRunnerFactory } from '@agent/services/AgentRunnerFactory'
-import { ClaudeAgentRunner, E2eStubAgentRunner } from '@agent/services/AgentRunner'
+import { ClaudeAgentRunner } from '@agent/services/AgentRunner'
 import { IssueWorkAgent, OrchestratorAgent } from '@agent/agents'
 import { MailboxDispatcher } from '@agent/services'
 // By FILE, never the `controllers` barrel — the barrel pulls in every other controller in the
@@ -25,7 +25,7 @@ import { McpDoorController } from '@agent/mcp/door'
  * inbound WhatsApp message sat at `attempts = 0` forever. No error, no retry, no symptom.
  *
  * ### Why every existing gate stayed green
- * Nothing built the class. `mock`/`integration` bind stubs, `CODM_E2E` swaps in a stub, and the unit
+ * Nothing built the class. `mock`/`integration` bind stubs, the `e2e` DI column swaps in a stub, and the unit
  * tests construct runners by hand with `new`. PRODUCTION WAS THE ONLY CALLER THAT WENT THROUGH THE
  * CONTAINER — which makes a `real`-only binding a permanent blind spot unless something resolves it on
  * purpose. This file is that something.
@@ -44,12 +44,6 @@ describe('real-env DI resolution — the bindings no other test ever constructs'
 		registerAll(child, ALL_REGISTRIES.real)
 		return child
 	}
-
-	// The agent graph is bound in `real` by `agent/registry.ts`, whose E2E ternary reads the env at
-	// module load: under `CODM_E2E=true` the `real` column deliberately holds the hermetic stub. The
-	// flag is therefore read and ASSERTED AGAINST rather than used to skip — a rail that opts out under
-	// a flag is a rail that proves nothing in exactly the configuration CI runs Playwright in.
-	const hermetic = process.env.CODM_E2E === 'true'
 
 	/**
 	 * The graph the pivot left behind: the classifier and the router are gone, and the ORCHESTRATOR and
@@ -82,8 +76,11 @@ describe('real-env DI resolution — the bindings no other test ever constructs'
 		const factory = realContainer().resolve(AgentRunnerFactory as never) as AgentRunnerFactory
 
 		// The POINT of resolving: the concrete runner is reachable only through this factory now, so this
-		// line is the only thing in the suite that builds it the way production does.
-		expect(factory.for(ProviderKind.CLAUDE_CODE)).toBeInstanceOf(hermetic ? E2eStubAgentRunner : ClaudeAgentRunner)
+		// line is the only thing in the suite that builds it the way production does. `real` no longer
+		// branches on a raw flag (T5, eixo-único-de-ambiente) — the hermetic stub swap moved to its own
+		// `e2e` DI column (agent/registry.ts), so `ALL_REGISTRIES.real` always yields the production
+		// runner here.
+		expect(factory.for(ProviderKind.CLAUDE_CODE)).toBeInstanceOf(ClaudeAgentRunner)
 		expect(factory.supported).toEqual([ProviderKind.CLAUDE_CODE])
 		// The misrouting guard, at the layer that owns it: codex is DETECT-ONLY, so a thread declaring it
 		// must be refused by the WIRING rather than silently driven by claude's argv and stream parser.

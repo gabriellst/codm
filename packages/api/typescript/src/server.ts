@@ -90,7 +90,7 @@ export async function start(options: { env: BoundedContextEnvironment; port?: nu
 	// `setBoundedContextEnvironment` itself is what makes skipping this safe to reason about: T1's
 	// falsifier (`core/src/types/BoundedContext.environment.test.ts`, "e2e sob NODE_ENV=production é
 	// recusado") proves the selector refuses ANY non-real env under production — which is why the old
-	// `CODM_E2E` guard that used to live in `src/boot.ts` is gone; this call is the single fail-closed
+	// raw-flag guard that used to live in `src/boot.ts` is gone; this call is the single fail-closed
 	// gate now.
 	registerAll(container, ALL_REGISTRIES[options.env])
 
@@ -117,7 +117,7 @@ export async function start(options: { env: BoundedContextEnvironment; port?: nu
 
 	// If we only need the spec (emit-openapi mode), exit after writing. Boot behavior, not
 	// process-shell behavior — stays inside `start()` (spec scope fence).
-	if (Config.env.EMIT_OPENAPI === 'true' && process.env.START_SERVER !== 'true') {
+	if (Config.env.EMIT_OPENAPI === 'true' && Config.env.START_SERVER !== 'true') {
 		console.log('✅ openapi.json written — exiting (emit-only mode)')
 		process.exit(0)
 	}

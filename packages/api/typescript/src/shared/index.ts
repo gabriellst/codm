@@ -9,6 +9,8 @@
 
 import {
 	BoundedContext,
+	byEnvironment,
+	Config,
 	OutboxDispatcher,
 	ExternalMediator,
 	DrizzleDatabaseDriver,
@@ -29,12 +31,21 @@ import * as sharedObjects from './objects'
 import * as controllers from './controllers'
 import { PruneOutbox } from './usecases/PruneOutbox'
 
-// TEST-ONLY gateway ingress seam — mounted ONLY under CODM_E2E (the Playwright harness), refused
-// under NODE_ENV=production by src/boot.ts, and never emitted to the SDK/OpenAPI
-// (emission runs under EMIT_OPENAPI with CODM_E2E unset). Lets a spec simulate the Go gateway's side
-// effects (seed a connected channel / inject an inbound message) against the TS-only daemon.
-const testControllers: Record<string, typeof controllers.TestIngressController> =
-	process.env.CODM_E2E === 'true' ? { TestIngressController: controllers.TestIngressController } : {}
+// TEST-ONLY gateway ingress seam — mounted ONLY under the `e2e` boot environment (the Playwright
+// harness, `CODM_ENV=e2e`), refused under NODE_ENV=production by `setBoundedContextEnvironment`
+// (src/server.ts), and never emitted to the SDK/OpenAPI (emission runs under EMIT_OPENAPI, which never
+// selects `e2e`). Lets a spec simulate the Go gateway's side effects (seed a connected channel / inject
+// an inbound message) against the TS-only daemon.
+//
+// Declared dispatch (T5, NN-5), not a raw-flag `if`: `byEnvironment` reads whichever
+// environment `start()` selected. This is SAFE to evaluate at module scope only because `start()`'s
+// sacred order (src/server.ts) calls `setBoundedContextEnvironment` BEFORE it dynamically imports
+// `./routers` — this module is a routers side-effect, so the environment is already selected by the
+// time this line runs.
+const testControllers = byEnvironment<Record<string, typeof controllers.TestIngressController>>({
+	default: {},
+	e2e: { TestIngressController: controllers.TestIngressController },
+})
 
 const ctx = await BoundedContext.create({
 	name: CONTEXT_NAMES.shared,
@@ -50,7 +61,7 @@ const ctx = await BoundedContext.create({
 		// Spec emission (bun sdk / emit-openapi) imports the composition root ONLY to collect routers —
 		// booting infra there would open the real data dir and poll an empty DB.
 		// Same guard as BoundedContext.registerJobs.
-		if (process.env.EMIT_OPENAPI === 'true') return
+		if (Config.env.EMIT_OPENAPI === 'true') return
 
 		// Migrations apply ON BOOT, before any context serves a request or the outbox polls: the real
 		// driver is the shared, file-backed SQLite database (see shared/registry.ts) whose

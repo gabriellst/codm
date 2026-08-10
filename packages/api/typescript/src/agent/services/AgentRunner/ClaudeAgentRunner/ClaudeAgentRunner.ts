@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { z, type ZodType } from 'zod'
 import { AgentModelId, AgentStopReason, StopKind } from '@codm/contracts-typescript/wire/enums'
-import { LoggingService } from '@codm/core-typescript'
+import { Config, LoggingService } from '@codm/core-typescript'
 import { AgentRunOutcome, type TransportStopKind } from '../../../enums'
 import type {
 	AgentMcpInvocation,
@@ -19,9 +19,6 @@ import { nodeAgentProcessSpawner, type AgentProcess, type AgentProcessSpawner } 
 // another would drag a subprocess-spawning module into a pure state machine.
 import { MCP_SERVER_KEY } from '../../../mcp/wire'
 import { AgentIdentityService } from '@codm/core-typescript'
-
-/** No frame for this long ⇒ the run is wedged. The BACKSTOP of §4.3 rule 5, never the primary signal. */
-const DEFAULT_INACTIVITY_MS = 180_000
 
 export interface ClaudeAgentRunnerOptions {
 	spawner?: AgentProcessSpawner
@@ -151,7 +148,8 @@ export class ClaudeAgentRunner extends AgentRunner {
 
 	// NOT `readonly`, and NOT constructor parameters — see `withOptions` below for why.
 	private spawner: AgentProcessSpawner = nodeAgentProcessSpawner
-	private inactivityMs = Number(process.env.CODM_AGENT_INACTIVITY_MS ?? DEFAULT_INACTIVITY_MS)
+	/** No frame for this long ⇒ the run is wedged. The BACKSTOP of §4.3 rule 5, never the primary signal. */
+	private inactivityMs = Config.env.CODM_AGENT_INACTIVITY_MS
 	private readonly live = new Set<AgentProcess>()
 
 	/**
@@ -169,8 +167,8 @@ export class ClaudeAgentRunner extends AgentRunner {
 	 * so every `integration.channel_message.received` row sat in the outbox untouched at
 	 * `attempts = 0`: inbound messages produced nothing, forever, with no error anywhere.
 	 *
-	 * Nothing caught it because nothing exercised this path: `mock`/`integration` bind a stub,
-	 * `CODM_E2E` swaps in `E2eStubAgentRunner` (whose one parameter IS resolvable), and the unit
+	 * Nothing caught it because nothing exercised this path: `mock`/`integration` bind a stub, the `e2e`
+	 * DI column swaps in `E2eStubAgentRunner` (whose one parameter IS resolvable), and the unit
 	 * tests construct this class by hand. Production was the only caller that went through the
 	 * container.
 	 */

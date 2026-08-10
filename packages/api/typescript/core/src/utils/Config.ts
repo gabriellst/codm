@@ -92,6 +92,15 @@ const RawEnvSchema = z.object({
 	// Modo de emissão de OpenAPI (bun sdk / emit-openapi): sob 'true' o boot só coleta rotas para
 	// gerar o spec — sem tocar persistência real, sem enfileirar jobs/comandos.
 	EMIT_OPENAPI: z.string().default(''),
+	// Companion flag to EMIT_OPENAPI (T5, process.env exclusive-to-Config rail): under emission mode
+	// the boot normally exits right after writing the spec (`server.ts`); the `emit-openapi` nx target
+	// sets this to 'false' explicitly (project.json) to make that intent visible at the call site. A
+	// future combined "emit + keep serving" boot sets it 'true'.
+	START_SERVER: z.string().default(''),
+	// Inactivity watchdog backstop for `ClaudeAgentRunner` (§4.3 rule 5) — no frame for this long means
+	// the run is wedged. `z.coerce` mirrors the previous `Number(process.env.X ?? default)` behavior for
+	// a set value; an unparseable override now fails loud at boot instead of silently becoming `NaN`.
+	CODM_AGENT_INACTIVITY_MS: z.coerce.number().default(180_000),
 })
 
 /** Structural parity export — the env-model architecture rail compares these against the
@@ -144,6 +153,12 @@ export const EnvSchema = RawEnvSchema.transform(data => {
 	const API_URL = data.API_URL ?? `http://localhost:${data.API_PORT}`
 	const APP_URL = data.APP_URL ?? (data.NODE_ENV === 'development' ? 'http://localhost:5173' : API_URL)
 	const BETTER_AUTH_URL = data.BETTER_AUTH_URL ?? `http://localhost:${data.API_PORT}/v1/authentication`
+	// Computed BEFORE the CODM_CLOUD_URL cross-field default below overwrites it — `Config.env.
+	// CODM_CLOUD_URL` cross-field-defaults to API_URL and is therefore ALWAYS a truthy string, so it
+	// cannot express "the operator never set this". CLOUD_CONFIGURED is the typed answer to that
+	// question (FileCloudSession.isCloudConfigured, T5): no raw env var of its own, purely derived from
+	// whether the RAW field was present.
+	const CLOUD_CONFIGURED = Boolean(data.CODM_CLOUD_URL)
 	const CODM_CLOUD_URL = data.CODM_CLOUD_URL ?? API_URL
 
 	return {
@@ -152,6 +167,7 @@ export const EnvSchema = RawEnvSchema.transform(data => {
 		APP_URL,
 		BETTER_AUTH_URL,
 		CODM_CLOUD_URL,
+		CLOUD_CONFIGURED,
 	}
 }).superRefine((data, ctx) => {
 	if (data.NODE_ENV !== 'production') return

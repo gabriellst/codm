@@ -288,10 +288,12 @@ export const REPO = {
 		},
 		GLOBAL_API_KEY: { consumers: ['apiGo'], secret: true, example: '', doc: 'generic apikey fallback' },
 		WHATSMEOW_LOG_LEVEL: { consumers: ['apiGo'], example: 'WARN', doc: 'whatsmeow client log level' },
-		// NO `schema:` on purpose — ENV-05 requires one EXACTLY when apiTs is a consumer, and the TS
-		// side reads this flag as raw process.env (src/shared/index.ts, src/boot.ts), outside
-		// RawEnvSchema. Declared with apiGo as the consumer because config.go is where it is now read,
-		// which is what puts it under the ENV-03 rail.
+		// NO `schema:` on purpose — ENV-05 requires one EXACTLY when apiTs is a consumer, and apiTs no
+		// longer reads this flag AT ALL (eixo-único-de-ambiente T5): the TS-side hermetic swaps that used
+		// to branch on `process.env.CODM_E2E` (shared/index.ts, agent/registry.ts, agent/index.ts,
+		// thread/registry.ts) are now the declared `e2e` DI column, selected by `Config.env.CODM_ENV`
+		// instead. Only api-go's OWN test seam (`internal/channel/testseam`, config.go) still reads this
+		// var directly — hence `apiGo` as the sole consumer, which is what puts it under the ENV-03 rail.
 		CODM_E2E: {
 			consumers: ['apiGo'],
 			example: '',
@@ -334,6 +336,15 @@ export const REPO = {
 			schema: 'kernel',
 			example: '',
 			doc: 'openapi emission mode — set by the emit-openapi nx target; boot collects routes only',
+		},
+		// Companion to EMIT_OPENAPI (T5): under emission the boot exits right after writing the spec
+		// unless this is 'true'. The emit-openapi nx target sets it 'false' explicitly (project.json).
+		START_SERVER: {
+			consumers: ['apiTs'],
+			schema: 'kernel',
+			example: '',
+			doc: "under EMIT_OPENAPI=true, 'true' keeps serving after the spec is written instead of exiting",
+			advanced: true,
 		},
 		RATE_LIMIT_DISABLED: {
 			consumers: ['apiTs'],
@@ -438,6 +449,15 @@ export const REPO = {
 		// only ever drove the Postgres search_path.)
 		// ── misc ──
 		API_VERSION: { consumers: ['apiGo'], example: 'v1', doc: 'read by api-go; api-typescript reads VERSION (defaults ok in dev)' },
+		// No frame for this long ⇒ ClaudeAgentRunner treats the run as wedged and kills it (§4.3 rule
+		// 5 backstop). T5: previously read raw (`process.env.CODM_AGENT_INACTIVITY_MS ?? 180_000`).
+		CODM_AGENT_INACTIVITY_MS: {
+			consumers: ['apiTs'],
+			schema: 'kernel',
+			example: '180000',
+			doc: 'ClaudeAgentRunner inactivity watchdog backstop, ms',
+			advanced: true,
+		},
 		// ── frontend (only VITE_* reach the browser) ──
 		VITE_API_URL: { consumers: ['appReact'], example: 'http://localhost:3030' },
 		// The desktop console's OWN VITE_-mirrored twin of CODM_CLOUD_URL (SP2 Task T6): the browser

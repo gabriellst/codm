@@ -45,10 +45,10 @@ export const TestRunIssueTurnOutputSchema = z.object({
  * agent, same stub runner, same MCP round trip, same SSE registry. What this door replaces is only the
  * TRIGGER, exactly like the Go gateway's `POST /api/channel/_test/connect` replaces a pairing.
  *
- * Mounted ONLY under `CODM_E2E` (`agent/index.ts`), refused under NODE_ENV=production by
- * `src/boot/assert-e2e-safe.ts`, and never emitted to the SDK/OpenAPI — emission runs with
- * `EMIT_OPENAPI=true`, where `CODM_E2E` is unset, so this controller is not in the map the emitter
- * walks. Same discipline as `McpDoorController` beside it.
+ * Mounted ONLY under the `e2e` boot environment (`agent/index.ts`, `byEnvironment`), refused under
+ * NODE_ENV=production by `setBoundedContextEnvironment` (src/server.ts), and never emitted to the
+ * SDK/OpenAPI — emission runs with `EMIT_OPENAPI=true`, which never selects `e2e`, so this controller
+ * is not in the map the emitter walks. Same discipline as `McpDoorController` beside it.
  *
  * It lives in the `agent` context, not beside the gateway simulator in `shared/`, because the use case
  * it drives is an `agent` use case: a door in `shared/` would make the root context import a leaf's

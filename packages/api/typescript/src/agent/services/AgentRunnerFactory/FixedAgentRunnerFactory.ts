@@ -61,9 +61,9 @@ export class StubAgentRunnerFactory extends FixedAgentRunnerFactory {
 }
 
 /**
- * The factory bound in `real` under `CODM_E2E` — the Playwright harness boots the REAL daemon over
- * the real SQLite and must never spawn a provider CLI, so the hermetic seam swaps the FACTORY rather
- * than the runner. Same ternary position in `agent/registry.ts` the runner ternary held.
+ * The factory bound in the `e2e` DI column — the Playwright harness boots the REAL daemon over the
+ * real SQLite and must never spawn a provider CLI, so the hermetic seam swaps the FACTORY rather than
+ * the runner. Declared as its own column in `agent/registry.ts`, alongside the `real` one.
  */
 @injectable()
 export class E2eAgentRunnerFactory extends FixedAgentRunnerFactory {

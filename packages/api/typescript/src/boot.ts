@@ -10,17 +10,17 @@
  * file-backed driver re-acquires as a no-op). Skipped under EMIT_OPENAPI (codegen never boots the
  * real daemon and binds the in-memory driver).
  *
- * The former E2E FAIL-CLOSED GUARD (refusing `CODM_E2E=true` under NODE_ENV=production) is GONE from
+ * The former E2E FAIL-CLOSED GUARD (refusing the e2e boot flag under NODE_ENV=production) is GONE from
  * HERE (T4) — its job is subsumed by `setBoundedContextEnvironment` (called inside `start()`,
  * src/server.ts): T1's falsifier (`core/src/types/BoundedContext.environment.test.ts`, "e2e sob
  * NODE_ENV=production é recusado") proves the selector refuses ANY non-real `BoundedContextEnvironment`
  * — `e2e` included — under production, so this file no longer needs its own copy of that check. The
- * `CODM_E2E` env var ITSELF (its 6 other read sites — testControllers, agent runner factory,
- * provider detector, etc.) is still alive; retiring it in favor of the `e2e` registry column is T5's
- * job, not this file's.
+ * raw flag that used to select the e2e hermetic swaps is dead (T5): its read sites — testControllers,
+ * agent runner factory, provider detector, the thread ChannelSender — are now the declared `e2e`
+ * registry column, selected by `Config.env.CODM_ENV` instead of a raw flag.
  */
 import { Config, acquireDataDirLock, resolveDataDir } from '@codm/core-typescript'
 
-if (process.env.EMIT_OPENAPI !== 'true') {
+if (Config.env.EMIT_OPENAPI !== 'true') {
 	acquireDataDirLock(resolveDataDir(Config.env.CODM_DATA_DIR))
 }

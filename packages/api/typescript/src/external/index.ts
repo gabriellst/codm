@@ -1,4 +1,4 @@
-import { BoundedContext } from '@codm/core-typescript'
+import { BoundedContext, Config } from '@codm/core-typescript'
 import { CONTEXT_NAMES } from '@shared/contexts'
 import * as controllers from './controllers'
 import { INSTANCE_REGISTRY } from './registry'
@@ -8,7 +8,7 @@ import { INSTANCE_REGISTRY } from './registry'
 // choke a meaningless `channel/*` catch-all into every client). Mirror of the TestIngress pattern
 // (shared/index.ts): emission runs with EMIT_OPENAPI=true and collects routers only, so mounting
 // zero controllers there keeps the spec clean while every real boot mounts the proxy.
-const runtimeControllers: typeof controllers | Record<string, never> = process.env.EMIT_OPENAPI === 'true' ? {} : controllers
+const runtimeControllers: typeof controllers | Record<string, never> = Config.env.EMIT_OPENAPI === 'true' ? {} : controllers
 
 const ctx = await BoundedContext.create({
 	name: CONTEXT_NAMES.external,

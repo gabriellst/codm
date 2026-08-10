@@ -18,15 +18,13 @@ import {
 } from './repositories'
 
 // E2E HERMETIC SEAM (see shared/registry.ts + src/boot.ts). The Playwright harness boots the REAL
-// daemon but must never spawn a provider CLI or probe host PATH: under CODM_E2E the `real`
-// AgentRunnerFactory drops to one over a deterministic stub (NEW_ISSUE decision + canned reply
-// frames, no subprocess) and the `real` ProviderDetector drops to the canned catalog (claude-code
+// daemon but must never spawn a provider CLI or probe host PATH: under the `e2e` boot environment
+// (`CODM_ENV=e2e`) the AgentRunnerFactory drops to one over a deterministic stub (NEW_ISSUE decision +
+// canned reply frames, no subprocess) and the ProviderDetector drops to the canned catalog (claude-code
 // DETECTED), so AttachThread's provider check and the inbound → classify → session → reply chain run
-// without a host toolchain. Production (flag unset) keeps DefaultAgentRunnerFactory over
-// ClaudeAgentRunner (bidirectional stream-json over plain pipes) + SystemProviderDetector.
-const E2E = process.env.CODM_E2E === 'true'
-const realRunnerFactory = E2E ? E2eAgentRunnerFactory : DefaultAgentRunnerFactory
-const realProviderDetector = E2E ? MockProviderDetector : SystemProviderDetector
+// without a host toolchain. Production (`real`) keeps DefaultAgentRunnerFactory over ClaudeAgentRunner
+// (bidirectional stream-json over plain pipes) + SystemProviderDetector — the swap is a DECLARED `e2e`
+// column below (T5, NN-5), never a raw-flag `if`.
 
 export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// WHERE `ProviderKind` → RUNNER IS RESOLVED (Fase 4.5's rule; the factory is where it finally
@@ -44,9 +42,21 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	//
 	// A test swaps the FACTORY, not the runner: `testBed.override(AgentRunnerFactory, new
 	// FixedAgentRunnerFactory(myStub))`.
-	{ token: AgentRunnerFactory, mock: StubAgentRunnerFactory, integration: StubAgentRunnerFactory, real: realRunnerFactory },
+	{
+		token: AgentRunnerFactory,
+		mock: StubAgentRunnerFactory,
+		integration: StubAgentRunnerFactory,
+		real: DefaultAgentRunnerFactory,
+		e2e: E2eAgentRunnerFactory,
+	},
 	// CLI detection: canned catalog in tests, PATH/install-dir probing in `real`.
-	{ token: ProviderDetector, mock: MockProviderDetector, integration: MockProviderDetector, real: realProviderDetector },
+	{
+		token: ProviderDetector,
+		mock: MockProviderDetector,
+		integration: MockProviderDetector,
+		real: SystemProviderDetector,
+		e2e: MockProviderDetector,
+	},
 	// The adopted whatscode AgentStreamRegistry (Fork C): SSE observer channel + the absorbed
 	// single-active-run guard — one shared in-memory instance per process.
 	{ token: AgentStreamRegistry, mock: AgentStreamRegistry, integration: AgentStreamRegistry, real: AgentStreamRegistry },

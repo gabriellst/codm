@@ -1,4 +1,4 @@
-import { BoundedContext } from '@codm/core-typescript'
+import { BoundedContext, byEnvironment, Config } from '@codm/core-typescript'
 import { CONTEXT_NAMES } from '@shared/contexts'
 import * as controllers from './controllers'
 import { McpDoorController } from './mcp/door'
@@ -24,13 +24,25 @@ const { TestRunIssueTurnController, ...productionControllers } = controllers
 // conditionally keeps the spec clean while every real boot serves it. AC-6.8(d) checks BOTH halves —
 // zero hits in openapi.json AND an actual `initialize` round trip — because "not emitted" is not the
 // same claim as "not implemented".
-const runtimeControllers = process.env.EMIT_OPENAPI === 'true' ? productionControllers : { ...productionControllers, McpDoorController }
+const runtimeControllers = Config.env.EMIT_OPENAPI === 'true' ? productionControllers : { ...productionControllers, McpDoorController }
 
-// The test trigger takes the same carve-out, one condition tighter: emission never sets CODM_E2E,
-// so it is doubly absent from the spec, and a production boot refuses the flag outright
-// (`src/boot/assert-e2e-safe.ts`). It exists so a spec can attach the console's SSE observer BEFORE
-// the run it means to watch; the controller documents why nothing on the production path can.
-const mountedControllers = process.env.CODM_E2E === 'true' ? { ...runtimeControllers, TestRunIssueTurnController } : runtimeControllers
+// The test trigger takes the same carve-out, one environment tighter: emission never selects `e2e`,
+// so it is doubly absent from the spec, and a production boot refuses any non-`real` environment
+// outright (`setBoundedContextEnvironment`, src/server.ts). It exists so a spec can attach the
+// console's SSE observer BEFORE the run it means to watch; the controller documents why nothing on the
+// production path can.
+//
+// Declared dispatch (T5, NN-5): `byEnvironment` reads whichever environment `start()` selected before
+// this module (a routers side-effect) was imported — see the ordering note in shared/index.ts.
+// Explicit type argument: without it, TS infers the column type from `default`/`e2e` independently and
+// produces a non-overlapping union that fails structural assignment — declaring it as the union of the
+// two ACTUAL branch shapes keeps both members precise.
+const mountedControllers = byEnvironment<
+	typeof runtimeControllers | (typeof runtimeControllers & { TestRunIssueTurnController: typeof TestRunIssueTurnController })
+>({
+	default: runtimeControllers,
+	e2e: { ...runtimeControllers, TestRunIssueTurnController },
+})
 
 const ctx = await BoundedContext.create({
 	name: CONTEXT_NAMES.agent,

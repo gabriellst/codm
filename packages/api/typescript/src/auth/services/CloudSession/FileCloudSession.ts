@@ -62,8 +62,9 @@ export class FileCloudSession extends CloudSession {
 		this.ensureBootstrapped()
 		// Dev-compat (spec T7.1 rollout note): an install with no CODM_CLOUD_URL in the RAW env never
 		// gates on login. `Config.env.CODM_CLOUD_URL` cannot express "unset" — it cross-field-defaults
-		// to API_URL (core/utils/Config.ts) and is therefore ALWAYS a truthy string — same reason
-		// CODM_E2E/CODM_PROFILE are read raw elsewhere (agent/registry.ts) instead of through Config.
+		// to API_URL (core/utils/Config.ts) and is therefore ALWAYS a truthy string, so
+		// `isCloudConfigured()` reads the derived `Config.env.CLOUD_CONFIGURED` instead (computed from
+		// the RAW field before the cross-field default overwrites it — see Config.ts's `.transform()`).
 		if (!this.isCloudConfigured()) return true
 		const state = this.getState()
 		return Boolean(state.token) && !state.revoked
@@ -143,9 +144,9 @@ export class FileCloudSession extends CloudSession {
 		return this.state
 	}
 
-	/** Overridden in tests to avoid mutating `process.env` (order-dependent across parallel suites). */
+	/** Overridden in tests to avoid depending on which env `Config` happened to parse at import time. */
 	protected isCloudConfigured(): boolean {
-		return Boolean(process.env.CODM_CLOUD_URL)
+		return Config.env.CLOUD_CONFIGURED
 	}
 
 	/** The one network call this class makes. `protected` so a test fakes it without opening a socket. */
