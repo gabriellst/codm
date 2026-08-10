@@ -40,6 +40,7 @@ const registry: Record<string, HttpStatusCode> = {
 	MISSING_LOG_CONTENT: HttpStatusCode.INTERNAL_SERVER_ERROR,
 	OPTIMISTIC_LOCK_CONFLICT: HttpStatusCode.CONFLICT,
 	CREDENTIAL_DECRYPT_FAILED: HttpStatusCode.INTERNAL_SERVER_ERROR,
+	DATA_DIR_LOCKED: HttpStatusCode.LOCKED,
 }
 
 /**

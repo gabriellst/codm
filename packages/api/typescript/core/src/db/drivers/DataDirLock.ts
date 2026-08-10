@@ -1,9 +1,13 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { BaseError } from '../../types/BaseError'
+import type { BaseInfrastructureErrors } from '../../errors/codes'
 
 /**
- * Thrown when a SECOND DAEMON tries to start on a data dir a live daemon already holds.
+ * Builds the error thrown when a SECOND DAEMON tries to start on a data dir a live daemon already
+ * holds — `BaseError<BaseInfrastructureErrors>` with code `DATA_DIR_LOCKED` (spec D12), so this
+ * infra failure speaks the same taxonomy as every other framework error instead of a bespoke class.
  *
  * The meaning narrowed with the SQLite flip. It used to mean "this database file has an exclusive
  * owner"; it now means "another process IN THIS ROLE is already running here". Exclusivity of the
@@ -12,19 +16,13 @@ import path from 'node:path'
  * starts two copies of the SAME process on one data dir (duplicate outbox dispatchers, duplicate
  * schedulers).
  */
-export class DataDirLockedError extends Error {
-	readonly code = 'DATA_DIR_LOCKED'
-	constructor(
-		readonly dataDir: string,
-		readonly heldByPid: number,
-	) {
-		super(
-			`Another CODM daemon is already running on this data dir "${dataDir}" (pid ${heldByPid}). ` +
-				`Stop the other daemon or point this one at a different CODM_DATA_DIR. ` +
-				`The Go gateway sharing this dir is expected and fine — it takes a different lock.`,
-		)
-		this.name = 'DataDirLockedError'
-	}
+function dataDirLockedError(dataDir: string, heldByPid: number): BaseError<BaseInfrastructureErrors> {
+	return new BaseError<BaseInfrastructureErrors>(
+		'DATA_DIR_LOCKED',
+		`Another CODM daemon is already running on this data dir "${dataDir}" (pid ${heldByPid}). ` +
+			`Stop the other daemon or point this one at a different CODM_DATA_DIR. ` +
+			`The Go gateway sharing this dir is expected and fine — it takes a different lock.`,
+	)
 }
 
 /**
@@ -75,8 +73,9 @@ function isProcessAlive(pid: number): boolean {
 /**
  * Single-instance-per-ROLE guard for the real daemon. Acquires an exclusive PID lockfile at
  * `<dataDir>/daemon.lock` (created O_EXCL, so the acquire is atomic against a racing daemon). If
- * the lockfile already exists and its PID is a LIVE process, throws {@link DataDirLockedError}; if
- * the PID is dead (stale lock from a crashed daemon), the lock is reclaimed. Registers a
+ * the lockfile already exists and its PID is a LIVE process, throws a `DATA_DIR_LOCKED`
+ * `BaseError` (see {@link dataDirLockedError}); if the PID is dead (stale lock from a crashed
+ * daemon), the lock is reclaimed. Registers a
  * process-exit cleanup that removes the lockfile iff this process owns it.
  *
  * This is a BOOT concern and boot is its only call site (`src/boot.ts`) — the database driver does
@@ -98,7 +97,7 @@ export function acquireDataDirLock(dataDir: string): void {
 		// so this is a no-op (no re-throw, no duplicate exit handler). Only a DIFFERENT live pid is a
 		// genuine second daemon and must fail loud.
 		if (holder === process.pid) return
-		if (isProcessAlive(holder)) throw new DataDirLockedError(dataDir, holder)
+		if (isProcessAlive(holder)) throw dataDirLockedError(dataDir, holder)
 
 		// Stale lock (previous daemon crashed without cleanup) — reclaim it. The retry is still O_EXCL,
 		// so a live daemon that acquired in the gap wins and we surface its lock instead of stomping it.
@@ -108,7 +107,7 @@ export function acquireDataDirLock(dataDir: string): void {
 		} catch (retryErr) {
 			if ((retryErr as NodeJS.ErrnoException).code === 'EEXIST') {
 				const winner = Number.parseInt(fs.readFileSync(lockPath, 'utf-8').trim(), 10)
-				throw new DataDirLockedError(dataDir, winner)
+				throw dataDirLockedError(dataDir, winner)
 			}
 			throw retryErr
 		}

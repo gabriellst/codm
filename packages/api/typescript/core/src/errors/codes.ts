@@ -30,6 +30,7 @@ export type BaseInfrastructureErrors =
 	| 'MISSING_LOG_CONTENT'
 	| 'OPTIMISTIC_LOCK_CONFLICT'
 	| 'CREDENTIAL_DECRYPT_FAILED'
+	| 'DATA_DIR_LOCKED'
 
 export type Errors = BaseApplicationErrors | BaseDomainErrors | BaseInfrastructureErrors | BaseInterfaceErrors
 
