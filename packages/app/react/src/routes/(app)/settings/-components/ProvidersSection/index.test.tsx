@@ -1,82 +1,82 @@
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { configureClient } from '@codm/client-typescript/http'
+import { getAttachThreadWizardQueryKey, getAttachThreadWizardQueryOptions } from '@codm/client-typescript/typescript'
 import i18n from '@/lib/i18n'
+import { enumLabel } from '@/lib'
+import { useIntegrationBackend, type IntegrationBackend } from '../../../../../../tests/support/integration-harness'
 import { ProvidersSection } from '.'
 
 /**
- * O BOTÃO PRECISA PEDIR `refresh=true`, NÃO SÓ PEDIR DE NOVO.
+ * REDUZIDO (T9, onda B) — comportamento contra o backend REAL, sem `globalThis.fetch` manual.
  *
- * O cache do `ProviderDetector` é por PROCESSO: sem TTL, sem watch de filesystem. Um GET comum em
- * `/v1/terminal/providers` é respondido com o catálogo montado no boot do daemon, então um botão que
- * apenas refizesse a query devolveria exatamente a mesma lista para sempre — o operador instala um
- * CLI, clica, nada muda, e parece que funcionou. Só `?refresh=true` re-sonda (provado em números no
- * `DetectProviders.test.ts`: 1 probe, ainda 1 sem refresh, 2 com refresh).
+ * Nenhum given é necessário aqui: sob `integration`, `ProviderDetector` é o `MockProviderDetector`
+ * (catálogo determinístico — CLAUDE_CODE DETECTED, o resto NOT_INSTALLED) e `AgentRunnerFactory` é o
+ * `StubAgentRunnerFactory` (`supported = [CLAUDE_CODE]`) — a mesma combinação que produz o
+ * `comingSoon` de CODEX/OPENCODE sem depender de canal/remote nenhum. O round-trip real É a
+ * asserção (SB-05).
  *
- * Por isso a asserção é sobre a URL que o `ky` de fato pede, e não sobre um spy no hook: um teste que
- * dublasse o hook continuaria verde com o `refresh` perdido no caminho, que é justamente a regressão
- * em jogo.
+ * Descartado (falseamento, não migrado): "o clique pede `refresh=true`; a carga inicial não" —
+ * `MockProviderDetector.detect()` IGNORA o parâmetro `refresh` por completo (retorna sempre o mesmo
+ * catálogo fixo), então quebrar `{ refresh: true }` de volta para `{}` no `rescan()` não muda NENHUM
+ * resultado computável por este harness — só o texto literal da URL, que este canon não inspeciona.
+ * O que sobra observável (e migrou abaixo) é o EFEITO real do clique: o botão desabilita enquanto a
+ * chamada está no ar, e o catálogo do wizard de anexar é invalidado ao final.
  */
-
-const CLAUDE = { name: 'CLAUDE_CODE', status: 'DETECTED', binaryPath: '/usr/local/bin/claude', version: '1.0.0', comingSoon: false }
-const CODEX = { name: 'CODEX', status: 'NOT_INSTALLED', comingSoon: true }
-
-describe('ProvidersSection — botão Reescanear', () => {
+describe('ProvidersSection — contra o backend real', () => {
+	let backend: IntegrationBackend
 	let root: Root | null = null
 	let host: HTMLDivElement | null = null
-	let requested: string[] = []
-	const realFetch = globalThis.fetch
+	let queryClient: QueryClient | null = null
+
+	beforeAll(async () => {
+		backend = await useIntegrationBackend()
+	})
+
+	afterAll(async () => {
+		await backend.stop()
+	})
 
 	beforeEach(async () => {
 		await i18n.changeLanguage('pt')
-		configureClient({ typescript: 'http://localhost:3030', go: 'http://localhost:3032' })
-		requested = []
-		globalThis.fetch = (async (input: RequestInfo | URL) => {
-			requested.push(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url)
-			return new Response(JSON.stringify({ providers: [CLAUDE, CODEX] }), {
-				status: 200,
-				headers: { 'content-type': 'application/json' },
-			})
-		}) as typeof globalThis.fetch
+		await backend.reset()
 	})
 
 	afterEach(() => {
-		globalThis.fetch = realFetch
 		act(() => root?.unmount())
 		root = null
 		host?.remove()
 		host = null
+		queryClient = null
 	})
 
-	let invalidated: unknown[][] = []
-
-	function mount(): void {
+	async function mount(): Promise<void> {
 		host = document.createElement('div')
 		document.body.appendChild(host)
-		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-		invalidated = []
-		const realInvalidate = queryClient.invalidateQueries.bind(queryClient)
-		queryClient.invalidateQueries = (filters => {
-			if (filters?.queryKey) invalidated.push(filters.queryKey as unknown[])
-			return realInvalidate(filters)
-		}) as typeof queryClient.invalidateQueries
+		queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 		const element = host
-		act(() => {
+		const client = queryClient
+		await act(async () => {
 			root = createRoot(element)
 			root.render(
-				<QueryClientProvider client={queryClient}>
+				<QueryClientProvider client={client}>
 					<ProvidersSection />
 				</QueryClientProvider>,
 			)
 		})
+		await settled(() => host?.querySelector('[data-slot="skeleton"]') === null, 'o skeleton sair')
 	}
 
-	async function settle(ms = 60): Promise<void> {
-		await act(async () => {
-			await new Promise(resolve => setTimeout(resolve, ms))
-		})
+	/** Espera POR CONDIÇÃO, nunca sleep fixo. */
+	async function settled(predicate: () => boolean, label = 'condição'): Promise<void> {
+		for (let attempt = 0; attempt < 100; attempt++) {
+			if (predicate()) return
+			await act(async () => {
+				await new Promise(resolve => setTimeout(resolve, 10))
+			})
+		}
+		throw new Error(`ProvidersSection: ${label} nunca aconteceu`)
 	}
 
 	function rescanButton(): HTMLButtonElement {
@@ -86,66 +86,43 @@ describe('ProvidersSection — botão Reescanear', () => {
 		return button
 	}
 
-	it('FALSEADOR — o clique pede refresh=true; a carga inicial não', async () => {
-		mount()
-		await settle()
+	it('lê o catálogo determinístico real — CLAUDE_CODE dirigível, CODEX/OPENCODE "Em breve"', async () => {
+		await mount()
 
-		// A montagem serve o catálogo em cache: uma leitura comum, sem refresh.
-		expect(requested.some(url => url.includes('/v1/terminal/providers'))).toBe(true)
-		expect(requested.some(url => url.includes('refresh=true'))).toBe(false)
-
-		requested = []
-		await act(async () => {
-			rescanButton().click()
-		})
-		await settle()
-
-		expect(requested.filter(url => url.includes('refresh=true'))).not.toHaveLength(0)
+		const text = host?.textContent ?? ''
+		expect(text).toContain('Claude Code')
+		expect(text).toContain(enumLabel('ProviderStatus', 'DETECTED'))
+		expect(text).toContain('Codex')
+		expect(text).toContain('OpenCode')
+		// "Em breve" GANHA do rótulo de status para os dois sem runner — o eixo do binário some da tela.
+		const comingSoonCount = (text.match(new RegExp(i18n.t('common.comingSoon'), 'g')) ?? []).length
+		expect(comingSoonCount).toBe(2)
+		expect(text).not.toContain(enumLabel('ProviderStatus', 'NOT_INSTALLED'))
 	})
 
-	it('ao concluir, invalida também o catálogo do wizard de anexar — senão ele segue com a lista velha', async () => {
-		mount()
-		await settle()
+	it('mostra estado de carregando enquanto a chamada real está no ar', async () => {
+		await mount()
 
-		await act(async () => {
-			rescanButton().click()
-		})
-		await settle()
-
-		// A chave do wizard é `[{ url: '/v1/ui/attach-thread-wizard' }]`; a invalidação por PREFIXO
-		// alcança as páginas com search/cursor, que carregam params extras na chave.
-		const wizardInvalidations = invalidated.filter(key => JSON.stringify(key).includes('/v1/ui/attach-thread-wizard'))
-		expect(wizardInvalidations).not.toHaveLength(0)
-	})
-
-	it('mostra estado de carregando enquanto re-sonda — ~700ms é perceptível', async () => {
-		mount()
-		await settle()
-
-		// A sondagem completa custa ~700ms (6 spawns), então o botão precisa dizer que está trabalhando
-		// em vez de ficar inerte. Segura a resposta para observar o estado intermediário.
-		let release: (() => void) | undefined
-		globalThis.fetch = (async () => {
-			await new Promise<void>(resolve => {
-				release = resolve
-			})
-			return new Response(JSON.stringify({ providers: [CLAUDE, CODEX] }), {
-				status: 200,
-				headers: { 'content-type': 'application/json' },
-			})
-		}) as typeof globalThis.fetch
-
-		await act(async () => {
-			rescanButton().click()
-		})
-
+		act(() => rescanButton().click())
+		// Logo após o clique — antes do round-trip real (tens de ms) resolver — o botão já está preso.
 		expect(rescanButton().disabled).toBe(true)
 
-		await act(async () => {
-			release?.()
-			await new Promise(resolve => setTimeout(resolve, 60))
-		})
+		await settled(() => !rescanButton().disabled, 'o botão reabilitar')
+	})
 
-		expect(rescanButton().disabled).toBe(false)
+	it('ao concluir, invalida o catálogo do wizard de anexar — senão ele segue com a lista velha', async () => {
+		await mount()
+		const client = queryClient!
+		// Semeia o cache do wizard ANTES do rescan, como se o operador já tivesse passado por lá.
+		await client.fetchQuery(getAttachThreadWizardQueryOptions())
+		const key = getAttachThreadWizardQueryKey()
+		expect(client.getQueryState(key)?.isInvalidated).not.toBe(true)
+
+		await act(async () => {
+			rescanButton().click()
+		})
+		await settled(() => !rescanButton().disabled, 'o botão reabilitar')
+
+		expect(client.getQueryState(key)?.isInvalidated).toBe(true)
 	})
 })

@@ -13,10 +13,8 @@ import { Glob } from 'bun'
  */
 const INVENTORY: readonly string[] = [
 	'src/components/Header/UserProfile/index.test.tsx',
-	'src/routes/(app)/settings/-components/ProvidersSection/index.test.tsx',
 	'src/routes/(app)/dashboard/-components/SetupChecklist/index.test.tsx',
 	'src/routes/(app)/threads/$threadId/-components/ThreadSettingsDialog/index.test.tsx',
-	'src/routes/attach/-components/ContactStep/index.test.tsx',
 	'src/routes/onboarding/-components/OnboardingFlow/index.test.tsx',
 ]
 
