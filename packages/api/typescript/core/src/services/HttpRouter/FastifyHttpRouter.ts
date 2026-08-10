@@ -51,9 +51,15 @@ export class FastifyHttpRouter implements HttpRouter {
 		}
 	}
 
-	async listen(port: number): Promise<void> {
+	async listen(port: number): Promise<number> {
 		await this.app.listen({ port, host: '0.0.0.0' })
 		this.listening = true
+		// `port: 0` binds an OS-assigned ephemeral port (spec D1 port mechanics — the integration
+		// harness needs one); `server.address()` is the only place the ACTUAL bound port is knowable
+		// after listen resolves. Falls back to the requested port for the (non-TCP) case where
+		// `address()` returns null/string, which never happens for the `{port, host}` form above.
+		const address = this.app.server.address()
+		return typeof address === 'object' && address !== null ? address.port : port
 	}
 
 	async stop(): Promise<void> {

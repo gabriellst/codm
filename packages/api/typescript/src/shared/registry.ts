@@ -1,4 +1,4 @@
-import { container as rootContainer, type DependencyContainer } from 'tsyringe-neo'
+import type { DependencyContainer } from 'tsyringe-neo'
 import type { ContextModule } from './contexts'
 import {
 	type InstanceRegistry,
@@ -32,7 +32,6 @@ import {
 	SqliteCommandQueue,
 	AgentIdentityService,
 	InMemoryAgentIdentityService,
-	Config,
 	HEALTH_CHECKS,
 	HealthService,
 	healthChecksFrom,
@@ -72,22 +71,6 @@ function getTestDatabaseDriver(): LibsqlDriver {
 	return testDriverSingleton
 }
 const libsqlDriver = { useFactory: () => getTestDatabaseDriver() }
-
-/**
- * Apply the shared-SQLite migrations on the ONE real driver singleton — the container's
- * `FileLibsqlDriver` instance, resolved by its abstract token from the root container (same instance
- * every other `real`-env consumer of `DrizzleDatabaseDriver` gets). Called as an EARLY boot step
- * (src/boot/migrate-embedded.ts) BEFORE the composition root imports any context, so the schema
- * exists before any `registerJobs` enqueue can race it. Idempotent, and symmetric with the Go
- * gateway's applier over the same `_sqlite_migrations` ledger: whichever process boots first applies,
- * the second applies zero. No-op under EMIT_OPENAPI.
- *
- * T4 inlines this inside `start()` and deletes the helper.
- */
-export async function migrateEmbeddedDatabase(): Promise<void> {
-	if (Config.env.EMIT_OPENAPI === 'true') return
-	await (rootContainer.resolve(DrizzleDatabaseDriver as any) as DrizzleDatabaseDriver).runMigrations()
-}
 
 const drizzleClient = { useFactory: (c: DependencyContainer) => (c.resolve(DrizzleDatabaseDriver as any) as any).db }
 const unitOfWorkFactory = { useFactory: (c: DependencyContainer) => (c.resolve(DrizzleDatabaseDriver as any) as any).unitOfWorkFactory }

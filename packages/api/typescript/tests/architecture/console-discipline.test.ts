@@ -24,9 +24,15 @@ import { join, relative } from 'node:path'
  * regex and never needs an exemption.
  *
  * Named EXEMPTIONS (why inline) cover:
- *   - index.ts — the composition root / bootstrap + graceful-shutdown handlers; runs before (and
- *     after) the DI-driven request-handling window, so it must survive even a broken LoggingService
- *     binding and cannot resolve one during startup/shutdown.
+ *   - server.ts — the boot CHOREOGRAPHY (T4, spec 2026-08-10-eixo-unico-ambiente): `start()` runs
+ *     the `EMIT_OPENAPI` emit-only exit before any HTTP server (or even the driver migration) comes
+ *     up, and its `stop()` drain warns about a FAILED shutdown step (which may be the very
+ *     LoggingService binding misbehaving) — both are the same class of DI-window-edge bootstrap
+ *     output that used to live inline in index.ts pre-T4. index.ts itself shrank to a process shell
+ *     that only calls `start()`/`server.stop()`, so this exemption moved with the code.
+ *   - index.ts — the process shell: signal handlers + the top-level `start().catch(...)` failure
+ *     handler; runs before (and after) the DI-driven request-handling window, so it must survive
+ *     even a broken LoggingService binding and cannot resolve one during startup/shutdown.
  *   - auth/handlers/UserRegisteredHandler.ts — a scaffold handler whose body is a placeholder
  *     `console.log`; carries a `// TODO` to migrate to the injected LoggingService once handler-side
  *     logging is wired (this exemption is temporary, not a sanctioned bottom like index.ts).
@@ -43,6 +49,10 @@ import { join, relative } from 'node:path'
 const API_SRC = join(import.meta.dir, '..', '..', 'src')
 
 const EXEMPTIONS: { file: string; why: string }[] = [
+	{
+		file: 'server.ts',
+		why: 'boot choreography (T4): the EMIT_OPENAPI emit-only exit runs before the driver migration/HTTP server exist, and the shutdown-step warning must survive a failing LoggingService itself — same DI-window-edge bootstrap class as index.ts, which this code moved out of.',
+	},
 	{
 		file: 'index.ts',
 		why: 'composition root / bootstrap + graceful-shutdown + start-failure handlers — must survive even a broken LoggingService binding, and run both before and after the DI-driven request-handling window, so it cannot resolve the injected LoggingService for its startup/shutdown console output.',

@@ -14,6 +14,8 @@ export abstract class HttpRouter {
 		router?: Router,
 	) => void
 
-	abstract listen: (port: number) => Promise<void>
+	/** Binds the transport and returns the EFFECTIVE port — `port: 0` asks the OS for an ephemeral
+	 *  one, and the caller (`MainRouter.start`) needs the real bound port back to report it. */
+	abstract listen: (port: number) => Promise<number>
 	abstract stop: () => Promise<void>
 }

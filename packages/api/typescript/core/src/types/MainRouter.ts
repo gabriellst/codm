@@ -15,9 +15,14 @@ interface MainRouterConfig {
 export class MainRouter {
 	constructor(readonly config: MainRouterConfig) {}
 
-	async start(): Promise<void> {
+	/**
+	 * `port` overrides `Config.env.API_PORT` — the seam `start()` (src/server.ts) uses to hand the
+	 * harness/e2e an ephemeral `0` instead of the production port. Returns the EFFECTIVE bound port
+	 * (relevant when `port` is `0`), so the caller can report the real listening address.
+	 */
+	async start(port?: number): Promise<number> {
 		this.configureRoutes()
-		await this.config.httpRouter.listen(Config.env.API_PORT)
+		return this.config.httpRouter.listen(port ?? Config.env.API_PORT)
 	}
 
 	/**
