@@ -501,7 +501,7 @@ git commit -m "feat(e2e): gateway no stack com canal roteirizado — a tela de Q
 
 ## Notes
 
-- **Pré-flight do /build:** `validate-plan` reporta EXATAMENTE 1 achado conhecido (PR-27 sobre o mock Go de T3) até o T0 executar — é o próprio defeito que T0 conserta. O orquestrador prossegue SE E SOMENTE SE o conjunto de achados for exatamente esse; T0 roda primeiro e o re-run do validate-plan após T0 deve dar exit 0 (gate do T0).
+- **Pré-flight do /build:** `validate-plan` reporta EXATAMENTE 4 achados conhecidos (PR-27 sobre os 4 arquivos do mock Go de T3 — scenario/channel/factory/channel_test) até o T0 executar — é o próprio defeito que T0 conserta. O orquestrador prossegue SE E SOMENTE SE o conjunto de achados for exatamente esse; T0 roda primeiro e o re-run do validate-plan após T0 deve dar exit 0 (gate do T0).
 - **Nenhum verbo de `bun cli` se aplica aos artefatos Go** — o generator Go não existe (`bun cli --help`: "NOT YET implemented"); T0 torna essa exempção declarada em vez de conhecimento tribal.
 - **O veredito do spike do reset (T7) é LEI para T8/T9** — não re-derivem o mecanismo.
 - **Os blocos Go são forma final intencional com fiação a verificar** — em especial: como o auto-pareamento do mock alcança o mapper real (T3, com NEEDS_CONTEXT sancionado), a mecânica de porta efêmera do StartHTTPServer (T1), e a shape exata da receita `testBoot` que a gramática STAMP-MANAGED do manifesto aceitar (T7).
