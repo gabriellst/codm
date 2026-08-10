@@ -5,7 +5,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
-import { BaseDomainEvent, DomainEventRepository, DrizzleClient } from '@codm/core-typescript'
+import { BaseDomainEvent, DomainEventRepository, DrizzleDatabaseDriver, DrizzleTransaction } from '@codm/core-typescript'
 import { events } from '@codm/contracts/db'
 import { TestBed, testId } from '@test/support'
 
@@ -23,13 +23,13 @@ describe('DomainEventRepository.listByNameSince (integration)', () => {
 	let testBed: TestBed
 	let testContainer: DependencyContainer
 	let repo: DomainEventRepository
-	let db: DrizzleClient
+	let db: DrizzleTransaction
 
 	beforeAll(async () => {
 		testContainer = container.createChildContainer()
 		testBed = await TestBed.create('integration', { testContainer, ownerId: 'integration-tenant' })
 		repo = testBed.resolve(DomainEventRepository)
-		db = testBed.resolve(DrizzleClient)
+		db = testBed.resolve(DrizzleDatabaseDriver).db
 	})
 	beforeEach(async () => {
 		await testBed.reset()

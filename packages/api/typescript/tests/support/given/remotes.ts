@@ -1,4 +1,4 @@
-import { DrizzleClient } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver } from '@codm/core-typescript'
 import { remotes, remoteMemberships } from '@codm/contracts/db'
 import { ChannelKind, ContactKind } from '@codm/contracts-typescript/wire/enums'
 import type { TestBedLike } from './types'
@@ -29,8 +29,8 @@ export interface RemoteOverrides {
 export async function givenRemote(testBed: TestBedLike, overrides: RemoteOverrides): Promise<RemoteOverrides> {
 	const now = new Date()
 	await testBed
-		.resolve(DrizzleClient)
-		.insert(remotes)
+		.resolve(DrizzleDatabaseDriver)
+		.db.insert(remotes)
 		.values({
 			channelId: overrides.channelId,
 			remoteId: overrides.remoteId,
@@ -69,8 +69,8 @@ export async function givenRemoteMembership(
 	overrides: RemoteMembershipOverrides,
 ): Promise<RemoteMembershipOverrides> {
 	await testBed
-		.resolve(DrizzleClient)
-		.insert(remoteMemberships)
+		.resolve(DrizzleDatabaseDriver)
+		.db.insert(remoteMemberships)
 		.values({
 			channelId: overrides.channelId,
 			groupId: overrides.groupId,

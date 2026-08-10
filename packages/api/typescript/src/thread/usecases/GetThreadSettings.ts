@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq, inArray, isNull } from 'drizzle-orm'
-import { Handler, z, BaseError, DrizzleClient } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, Handler, z, BaseError } from '@codm/core-typescript'
 import { threads, remotes } from '@codm/contracts/db'
 import { BufferSize, ProviderKind, AgentModelId, ContactKind } from '@codm/contracts-typescript/wire/enums'
 import { effectiveModel, modelsFor } from '@codm/contracts/catalog'
@@ -104,7 +104,7 @@ export class GetThreadSettings extends Handler<typeof GetThreadSettingsInputSche
 	readonly outputSchema = GetThreadSettingsOutputSchema
 
 	constructor(
-		private readonly db: DrizzleClient,
+		private readonly driver: DrizzleDatabaseDriver,
 		private readonly runners: AgentRunnerFactory,
 		private readonly groupMembers: GroupMemberReader,
 	) {
@@ -115,7 +115,7 @@ export class GetThreadSettings extends Handler<typeof GetThreadSettingsInputSche
 		// Filtered on `deletedAt` like its sibling `GetSessionChat` (thread-deletion spec, decision 5). It
 		// matters here in particular because THIS dialog is where the delete is triggered from: the settings
 		// of a conversation that no longer exists must not keep rendering after the action succeeds.
-		const [thread] = await this.db
+		const [thread] = await this.driver.db
 			.select()
 			.from(threads)
 			.where(and(eq(threads.id, input.threadId), isNull(threads.deletedAt)))
@@ -173,7 +173,7 @@ export class GetThreadSettings extends Handler<typeof GetThreadSettingsInputSche
 		 */
 		const externalIds = rosterIds.filter(id => id !== OPERATOR_PARTICIPANT_ID)
 		const contacts = externalIds.length
-			? await this.db
+			? await this.driver.db
 					.select({ remoteId: remotes.remoteId, name: remotes.name, avatarUrl: remotes.avatarUrl })
 					.from(remotes)
 					.where(and(eq(remotes.channelId, thread.channelId), inArray(remotes.remoteId, externalIds)))

@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { and, asc, eq, inArray, isNull } from 'drizzle-orm'
-import { Handler, z, BaseError, DrizzleClient } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, Handler, z, BaseError } from '@codm/core-typescript'
 import { threads, transcriptEntries, workspaces, channels, remotes, stops } from '@codm/contracts/db'
 import { ThreadStatusDeriver } from '../services/ThreadStatusDeriver'
 import { OPERATOR_PARTICIPANT_ID } from '../objects'
@@ -113,7 +113,7 @@ export class GetSessionChat extends Handler<typeof GetSessionChatInputSchema, ty
 	readonly outputSchema = GetSessionChatOutputSchema
 
 	constructor(
-		private readonly db: DrizzleClient,
+		private readonly driver: DrizzleDatabaseDriver,
 		private readonly statuses: ThreadStatusDeriver,
 	) {
 		super()
@@ -125,7 +125,7 @@ export class GetSessionChat extends Handler<typeof GetSessionChatInputSchema, ty
 		// and another owner's thread get. One indistinguishable 404 is the right answer — the console
 		// routes away from all three identically, and the operator who just deleted it is not owed a
 		// different word for "it is gone".
-		const rows = await this.db
+		const rows = await this.driver.db
 			.select()
 			.from(threads)
 			.where(and(eq(threads.id, input.threadId), isNull(threads.deletedAt)))
@@ -134,25 +134,25 @@ export class GetSessionChat extends Handler<typeof GetSessionChatInputSchema, ty
 		if (!thread || thread.ownerId !== input.ownerId)
 			throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
 
-		const [workspaceRow] = await this.db
+		const [workspaceRow] = await this.driver.db
 			.select({ path: workspaces.path })
 			.from(workspaces)
 			.where(eq(workspaces.id, thread.workspaceId))
 			.limit(1)
 		// `ownerRemoteId` vem junto porque é ele que dá rosto às linhas do PRÓPRIO operador — ver
 		// `senderOf`. Uma query a mais seria uma query a mais para o mesmo id que já estamos lendo.
-		const [channelRow] = await this.db
+		const [channelRow] = await this.driver.db
 			.select({ kind: channels.platform, ownerRemoteId: channels.ownerRemoteId })
 			.from(channels)
 			.where(eq(channels.id, thread.channelId))
 			.limit(1)
 
-		const entries = await this.db
+		const entries = await this.driver.db
 			.select()
 			.from(transcriptEntries)
 			.where(eq(transcriptEntries.threadId, input.threadId))
 			.orderBy(asc(transcriptEntries.at))
-		const stopRows = await this.db
+		const stopRows = await this.driver.db
 			.select()
 			.from(stops)
 			.where(and(eq(stops.threadId, input.threadId), isNull(stops.resolvedAt)))
@@ -188,7 +188,7 @@ export class GetSessionChat extends Handler<typeof GetSessionChatInputSchema, ty
 				...entries.map(e => e.senderExternalId).filter((id): id is string => id !== null && id !== OPERATOR_PARTICIPANT_ID),
 			]),
 		]
-		const remoteRows = await this.db
+		const remoteRows = await this.driver.db
 			.select({ remoteId: remotes.remoteId, name: remotes.name, avatarUrl: remotes.avatarUrl })
 			.from(remotes)
 			.where(and(eq(remotes.channelId, thread.channelId), inArray(remotes.remoteId, lookupIds)))

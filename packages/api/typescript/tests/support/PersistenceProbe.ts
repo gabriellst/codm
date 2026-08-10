@@ -1,6 +1,6 @@
 import { and, getTableColumns, is, sql, type SQL } from 'drizzle-orm'
 import { SQLiteTable } from 'drizzle-orm/sqlite-core'
-import { DrizzleClient } from '@codm/core-typescript'
+import type { DrizzleTransaction } from '@codm/core-typescript'
 import * as schema from '@codm/contracts/db'
 
 export type PersistedEventRow = typeof schema.events.$inferSelect
@@ -65,7 +65,7 @@ const PROBE_TABLES = Object.fromEntries(
 ) as Record<ProbeTable, SQLiteTable>
 
 /**
- * The ONLY test-support seam authorized to resolve `DrizzleClient` for READS. Assertions on
+ * The ONLY test-support seam authorized to resolve the driver's `.db` for READS. Assertions on
  * persisted events, outbox rows, and cross-table invariant snapshots go through here instead of
  * every test file importing raw schema tables + `eq`/`and` itself.
  *
@@ -82,7 +82,7 @@ const PROBE_TABLES = Object.fromEntries(
  * `probe.snapshot(['events', 'outbox'] as const)`.
  */
 export class PersistenceProbe {
-	constructor(private readonly db: DrizzleClient) {}
+	constructor(private readonly db: DrizzleTransaction) {}
 
 	/** Rows from the permanent `events` audit log, optionally filtered by name/owner/entity. */
 	async persistedEvents(filter?: EventRowFilter): Promise<PersistedEventRow[]> {

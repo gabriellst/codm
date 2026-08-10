@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import type { ZodType } from 'zod'
-import { DrizzleClient } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, DrizzleTransaction } from '@codm/core-typescript'
 import { scheduledCommands } from '@codm/contracts/db'
 import { MailboxItemKind, ProviderKind, StopKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
 import { TestBed, givenIssue, givenStop, givenThread } from '@test/support'
@@ -52,13 +52,13 @@ class CapturingRunner extends AgentRunner {
 describe('RunOrchestratorTurn — the cues the turn is responsible for lighting', () => {
 	let testBed: TestBed
 	let testContainer: DependencyContainer
-	let db: DrizzleClient
+	let db: DrizzleTransaction
 
 	beforeEach(async () => {
 		testContainer = container.createChildContainer()
 		testBed = await TestBed.create('integration', { testContainer, ownerId: OPERATOR_ID })
 		await testBed.reset()
-		db = testBed.resolve(DrizzleClient)
+		db = testBed.resolve(DrizzleDatabaseDriver).db
 	})
 	afterAll(async () => {
 		await testBed.destroy()

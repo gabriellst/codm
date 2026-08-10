@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
-import { Handler, z, BaseError, DrizzleClient } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, Handler, z, BaseError } from '@codm/core-typescript'
 import { issues } from '@codm/contracts/db'
 import { IssueStatus } from '@codm/contracts-typescript/wire/enums'
 import type { ApplicationErrors } from '../errors'
@@ -18,7 +18,7 @@ export const GetIssueStatusOutputSchema = z.object({
  * Read — IssueStatus (T2f). "How is that issue doing?" — the read the orchestrator makes mid-conversation.
  *
  * Moved from `GetIssueStatusController` (import-direction#R1 — controllers never touch repositories,
- * they validate and call a use case). Reads straight off `issues` via `DrizzleClient`, the same shape
+ * they validate and call a use case). Reads straight off `issues` via `DrizzleDatabaseDriver.db`, the same shape
  * as its sibling query use cases in this context (`GetIssueDetail`, `GetSessionIssues`): a lean status
  * read has no aggregate invariant to enforce, so there is nothing `IssueRepository.findById`'s full
  * entity rehydration buys here that a flat row read does not.
@@ -35,12 +35,12 @@ export class GetIssueStatus extends Handler<typeof GetIssueStatusInputSchema, ty
 	readonly inputSchema = GetIssueStatusInputSchema
 	readonly outputSchema = GetIssueStatusOutputSchema
 
-	constructor(private readonly db: DrizzleClient) {
+	constructor(private readonly driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
 	protected async handle(input: this['input']): Promise<this['output']> {
-		const [issue] = await this.db.select().from(issues).where(eq(issues.id, input.issueId)).limit(1)
+		const [issue] = await this.driver.db.select().from(issues).where(eq(issues.id, input.issueId)).limit(1)
 
 		if (!issue || issue.threadId !== input.threadId) {
 			throw new BaseError<ApplicationErrors>('ISSUE_NOT_FOUND', 'no such issue on this thread')

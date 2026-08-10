@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { and, desc, eq, ne } from 'drizzle-orm'
-import { Handler, z, DrizzleClient } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, Handler, z } from '@codm/core-typescript'
 import { channels, remotes } from '@codm/contracts/db'
 import { ChannelStatus } from '@codm/contracts-typescript/wire/enums'
 
@@ -81,7 +81,7 @@ export class GetOperatorIdentity extends Handler<typeof GetOperatorIdentityInput
 	readonly inputSchema = GetOperatorIdentityInputSchema
 	readonly outputSchema = GetOperatorIdentityOutputSchema
 
-	constructor(private readonly db: DrizzleClient) {
+	constructor(private readonly driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
@@ -90,7 +90,7 @@ export class GetOperatorIdentity extends Handler<typeof GetOperatorIdentityInput
 		// `ListReconnectable` query uses (`status = CONNECTED AND owner_remote_id != ''`), because the two
 		// facts are separable: a channel can be marked connected before the pairing writes the JID, and a
 		// row keeps the JID after it disconnects. Either alone would hand the header half an identity.
-		const [channel] = await this.db
+		const [channel] = await this.driver.db
 			.select({ id: channels.id, ownerRemoteId: channels.ownerRemoteId })
 			.from(channels)
 			.where(and(eq(channels.ownerId, input.ownerId), eq(channels.status, ChannelStatus.CONNECTED), ne(channels.ownerRemoteId, '')))
@@ -105,7 +105,7 @@ export class GetOperatorIdentity extends Handler<typeof GetOperatorIdentityInput
 		// endpoint walks — so `contactAvatarUrl(channelId, externalId)` on the console resolves through
 		// `GetContactAvatar` with no second path to keep in sync. The channel is already owner-gated
 		// above, and `gateway_remotes` carries no owner of its own, so that gate covers this row too.
-		const [remote] = await this.db
+		const [remote] = await this.driver.db
 			.select({ name: remotes.name, avatarUrl: remotes.avatarUrl })
 			.from(remotes)
 			.where(and(eq(remotes.channelId, channel.id), eq(remotes.remoteId, channel.ownerRemoteId)))

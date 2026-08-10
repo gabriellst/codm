@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq, isNull, sql } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, tryCatchAsync } from '@codm/core-typescript'
 import { issues, threads } from '@codm/contracts/db'
 import { IssueStatus } from '@codm/contracts-typescript/wire/enums'
 
@@ -12,13 +12,13 @@ import { WorkspaceUsageQuery } from './WorkspaceUsageQuery'
  */
 @injectable()
 export class DrizzleWorkspaceUsageQuery extends WorkspaceUsageQuery {
-	constructor(private db: DrizzleClient) {
+	constructor(private driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
 	async hasWorkingIssues(workspaceId: string): Promise<boolean> {
 		const result = await tryCatchAsync(async () => {
-			const rows = await this.db
+			const rows = await this.driver.db
 				.select({ one: sql`1` })
 				.from(issues)
 				// Apagadas do not hold a workspace hostage (thread-deletion spec, decision 5). Reaching this

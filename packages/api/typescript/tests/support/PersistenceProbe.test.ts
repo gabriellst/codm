@@ -42,7 +42,7 @@ describe('PersistenceProbe', () => {
 		await testBed.destroy()
 	})
 
-	it('throws in mock mode — no real DrizzleClient to read from', async () => {
+	it('throws in mock mode — no real database driver to read from', async () => {
 		const mockContainer = container.createChildContainer()
 		const mockBed = await TestBed.create('mock', { testContainer: mockContainer })
 		expect(() => mockBed.probe()).toThrow(/integration mode/)

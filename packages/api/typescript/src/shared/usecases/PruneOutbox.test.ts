@@ -47,7 +47,7 @@ describe('PruneOutbox (integration)', () => {
 		)
 	}
 
-	// Reads go through the probe — the ONE seam authorized to resolve DrizzleClient
+	// Reads go through the probe — the ONE seam authorized to resolve the driver for reads
 	// (tests/architecture/probe-discipline). Writes above use the driver's write seam, which is the
 	// sanctioned raw-DB use for a seed.
 	const remainingIds = async () => (await testBed.probe().outboxRows()).map(row => row.id).sort((a, b) => a.localeCompare(b))

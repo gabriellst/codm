@@ -1,4 +1,4 @@
-import { DrizzleClient, Id } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, Id } from '@codm/core-typescript'
 import { channels } from '@codm/contracts/db'
 import { ChannelKind, ChannelStatus } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
@@ -36,8 +36,8 @@ export async function givenChannel(testBed: TestBedLike, overrides: ChannelOverr
 	const channelId = overrides.channelId ?? Id.value()
 	const now = new Date()
 	await testBed
-		.resolve(DrizzleClient)
-		.insert(channels)
+		.resolve(DrizzleDatabaseDriver)
+		.db.insert(channels)
 		.values({
 			id: channelId,
 			ownerId: overrides.ownerId ?? OPERATOR_ID,

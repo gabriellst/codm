@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { scheduledCommands } from '@codm/contracts/db'
-import { DrizzleClient, DrizzleDatabaseDriver } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, DrizzleTransaction } from '@codm/core-typescript'
 import { TestBed, givenThread } from '@test/support'
 import { MessageAuthor, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_ID } from '@auth/operator'
@@ -25,13 +25,13 @@ import { ConsumedMessageRepository } from '../repositories/ConsumedMessageReposi
 describe('RecordOrchestratorReply — the reply is transcribed and its delivery ordered, atomically', () => {
 	let testBed: TestBed
 	let testContainer: DependencyContainer
-	let db: DrizzleClient
+	let db: DrizzleTransaction
 	let driver: DrizzleDatabaseDriver
 
 	beforeAll(async () => {
 		testContainer = container.createChildContainer()
 		testBed = await TestBed.create('integration', { testContainer, ownerId: OPERATOR_ID })
-		db = testBed.resolve(DrizzleClient)
+		db = testBed.resolve(DrizzleDatabaseDriver).db
 		driver = testBed.resolve(DrizzleDatabaseDriver)
 	})
 	beforeEach(async () => {

@@ -11,7 +11,6 @@ import {
 	OutboxDispatcher,
 	MockOutboxDispatcher,
 	DrizzleDatabaseDriver,
-	DrizzleClient,
 	registerAll,
 	DomainEventRepository,
 	OutboxAwareMockDomainEventRepository,
@@ -90,7 +89,6 @@ export class TestBed {
 
 		const databaseDriver = TestBed.databaseDriver
 		testContainer.registerInstance(DrizzleDatabaseDriver as any, databaseDriver)
-		testContainer.registerInstance(DrizzleClient as any, databaseDriver.db)
 
 		const spyMediator = TestBed.createSpyMediator(testContainer, InternalMediator, true)
 		const externalSpy = TestBed.createSpyMediator(testContainer, ExternalMediator)
@@ -147,7 +145,7 @@ export class TestBed {
 	 * case the registry can't provide — a controllable collaborator double (e.g. a
 	 * Mock query service fed test data), a clock, a third-party stub. Call AFTER
 	 * create() and BEFORE resolving the consumer. NEVER override infra TestBed owns
-	 * (DomainEventRepository, UnitOfWorkFactory, InternalMediator/ExternalMediator,
+	 * (DomainEventRepository, DrizzleDatabaseDriver, InternalMediator/ExternalMediator,
 	 * OutboxDispatcher) — that removes the spy + outbox wiring; assert events via
 	 * testBed.spy instead. The `as any` (tsyringe registration limitation) lives
 	 * here once, so tests never cast.
@@ -160,14 +158,14 @@ export class TestBed {
 	/**
 	 * The only sanctioned seam for reading persisted events/outbox rows and cross-table invariant
 	 * snapshots in a test — see `PersistenceProbe` and `tests/architecture/README.md` ("Reading
-	 * Persisted State"). Integration-mode only: mock mode has no real `DrizzleClient` to read from,
+	 * Persisted State"). Integration-mode only: mock mode has no real database driver to read from,
 	 * so this throws instead of handing back a probe that would fail confusingly on first query.
 	 */
 	probe(): PersistenceProbe {
 		if (this.mode !== 'integration') {
-			throw new Error('testBed.probe() requires integration mode — mock mode has no real DrizzleClient to read from.')
+			throw new Error('testBed.probe() requires integration mode — mock mode has no real database driver to read from.')
 		}
-		return new PersistenceProbe(this.resolve(DrizzleClient))
+		return new PersistenceProbe(this.resolve(DrizzleDatabaseDriver).db)
 	}
 
 	async reset(): Promise<void> {

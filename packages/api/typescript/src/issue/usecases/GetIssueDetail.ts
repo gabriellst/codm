@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { and, asc, eq, isNull } from 'drizzle-orm'
-import { Handler, z, BaseError, DrizzleClient } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, Handler, z, BaseError } from '@codm/core-typescript'
 import { issues, stops, terminalLines, transcriptEntries } from '@codm/contracts/db'
 import { IssueStatus, ProviderKind, StopKind, TranscriptKind, ClassificationMethod } from '@codm/contracts-typescript/wire/enums'
 import type { ApplicationErrors } from '../errors'
@@ -37,21 +37,25 @@ export class GetIssueDetail extends Handler<typeof GetIssueDetailInputSchema, ty
 	readonly inputSchema = GetIssueDetailInputSchema
 	readonly outputSchema = GetIssueDetailOutputSchema
 
-	constructor(private readonly db: DrizzleClient) {
+	constructor(private readonly driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
 	protected async handle(input: this['input']): Promise<this['output']> {
-		const [issue] = await this.db.select().from(issues).where(eq(issues.id, input.issueId)).limit(1)
+		const [issue] = await this.driver.db.select().from(issues).where(eq(issues.id, input.issueId)).limit(1)
 		if (!issue || issue.ownerId !== input.ownerId) throw new BaseError<ApplicationErrors>('ISSUE_NOT_FOUND', `no issue ${input.issueId}`)
 
-		const lines = await this.db.select().from(terminalLines).where(eq(terminalLines.issueId, input.issueId)).orderBy(asc(terminalLines.seq))
-		const routed = await this.db
+		const lines = await this.driver.db
+			.select()
+			.from(terminalLines)
+			.where(eq(terminalLines.issueId, input.issueId))
+			.orderBy(asc(terminalLines.seq))
+		const routed = await this.driver.db
 			.select()
 			.from(transcriptEntries)
 			.where(eq(transcriptEntries.issueId, input.issueId))
 			.orderBy(asc(transcriptEntries.at))
-		const openStops = await this.db
+		const openStops = await this.driver.db
 			.select()
 			.from(stops)
 			.where(and(eq(stops.issueId, input.issueId), isNull(stops.resolvedAt)))

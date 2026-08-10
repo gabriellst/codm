@@ -1,7 +1,6 @@
 import { container } from 'tsyringe-neo'
 import { DrizzleDatabaseDriver } from './drivers/DrizzleDatabaseDriver'
 
-export * from './client'
 export * from './utils'
 export * from './saveWithOptimisticLock'
 export * from './drivers'

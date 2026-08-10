@@ -1,7 +1,7 @@
 // packages/api/typescript/src/ui/repositories/OnboardingRepository/DrizzleOnboardingRepository.ts — arquivo final COMPLETO
 import { injectable } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, tryCatchAsync, DrizzleTransaction } from '@codm/core-typescript'
 import { onboardings } from '@codm/contracts/db'
 import type { OnboardingStep } from '@codm/contracts-typescript/wire/enums'
 import { Onboarding, OnboardingSchema } from '../../entities/Onboarding'
@@ -9,12 +9,12 @@ import { OnboardingRepository } from './OnboardingRepository'
 
 @injectable()
 export class DrizzleOnboardingRepository extends OnboardingRepository {
-	constructor(private db: DrizzleClient) {
+	constructor(private driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
-	async findByOwnerId(ownerId: string, tx?: DrizzleClient): Promise<Onboarding | undefined> {
-		const dbc = tx ?? this.db
+	async findByOwnerId(ownerId: string, tx?: DrizzleTransaction): Promise<Onboarding | undefined> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			const rows = await dbc.select().from(onboardings).where(eq(onboardings.ownerId, ownerId)).limit(1)
 			return rows[0]
@@ -23,9 +23,9 @@ export class DrizzleOnboardingRepository extends OnboardingRepository {
 		return this.toDomain(result.data)
 	}
 
-	async save(entity: Onboarding, tx?: DrizzleClient): Promise<Onboarding> {
+	async save(entity: Onboarding, tx?: DrizzleTransaction): Promise<Onboarding> {
 		entity.incrementVersion()
-		const dbc = tx ?? this.db
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			const data = this.toPersistence(entity)
 			await dbc
@@ -46,8 +46,8 @@ export class DrizzleOnboardingRepository extends OnboardingRepository {
 		return result.data
 	}
 
-	async delete(id: string, tx?: DrizzleClient): Promise<void> {
-		const dbc = tx ?? this.db
+	async delete(id: string, tx?: DrizzleTransaction): Promise<void> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			await dbc.delete(onboardings).where(eq(onboardings.id, id))
 		})

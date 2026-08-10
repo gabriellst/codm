@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { eq, like } from 'drizzle-orm'
 import { scheduledCommands } from '@codm/contracts/db'
-import { CommandQueue, DrizzleClient, DrizzleDatabaseDriver, MockLoggingService, SqliteCommandQueue } from '@codm/core-typescript'
+import { CommandQueue, DrizzleDatabaseDriver, MockLoggingService, SqliteCommandQueue, DrizzleTransaction } from '@codm/core-typescript'
 import { MessageAuthor, MailboxTargetKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { TestBed, givenThread, GIVEN_MENTION_TAG } from '@test/support'
 import { OPERATOR_ID } from '@auth/operator'
@@ -35,7 +35,7 @@ import { CUE_ACKNOWLEDGED, TYPING_FIRST_BEAT_SLOT, typingBeatJobId } from '../ut
 describe('the instant cues — 👀 on the trigger, "digitando…" while it thinks, and neither may cost anything', () => {
 	let testBed: TestBed
 	let testContainer: DependencyContainer
-	let db: DrizzleClient
+	let db: DrizzleTransaction
 	let driver: DrizzleDatabaseDriver
 	let queue: SqliteCommandQueue
 	let sender: MockChannelSender
@@ -43,7 +43,7 @@ describe('the instant cues — 👀 on the trigger, "digitando…" while it thin
 	beforeAll(async () => {
 		testContainer = container.createChildContainer()
 		testBed = await TestBed.create('integration', { testContainer, ownerId: OPERATOR_ID })
-		db = testBed.resolve(DrizzleClient)
+		db = testBed.resolve(DrizzleDatabaseDriver).db
 		driver = testBed.resolve(DrizzleDatabaseDriver)
 	})
 

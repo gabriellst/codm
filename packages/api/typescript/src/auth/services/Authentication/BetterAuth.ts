@@ -10,7 +10,7 @@
 import { injectable } from 'tsyringe-neo'
 import { betterAuth, type BetterAuthOptions } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import { DrizzleClient, Config, Id } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, Config, Id } from '@codm/core-typescript'
 import * as schema from '@codm/contracts/db'
 
 export type BetterAuthInstance = ReturnType<typeof betterAuth>
@@ -43,7 +43,7 @@ export class BetterAuth {
 	readonly auth: BetterAuthInstance
 
 	constructor(
-		private client: DrizzleClient,
+		private driver: DrizzleDatabaseDriver,
 		private socialProviders: BetterAuthSocialProviders,
 	) {
 		// Annotate as BetterAuthOptions so the literal widens before betterAuth() infers its
@@ -59,7 +59,7 @@ export class BetterAuth {
 			// every other entity id in the system (Id.value()) instead of better-auth's default
 			// alphanumeric generator.
 			advanced: { database: { generateId: () => Id.value() } },
-			database: drizzleAdapter(this.client, {
+			database: drizzleAdapter(this.driver.db, {
 				// CODM persists to a single SQLite file (libsql), not Postgres — the resurrected file
 				// targeted 'pg'; this is the load-bearing delta for this fork.
 				provider: 'sqlite',

@@ -8,7 +8,7 @@ import { MailboxRepository } from '@agent/repositories'
 import { MailboxDispatcher } from '@agent/services/MailboxDispatcher'
 import { AgentRunOutcome } from '@agent/enums'
 import { OrchestratorRepliedEvent } from '@agent/events/OrchestratorRepliedEvent'
-import { CommandQueue, DomainEventRepository, DrizzleClient, MockOutboxDispatcher, OutboxDispatcher } from '@codm/core-typescript'
+import { CommandQueue, DomainEventRepository, MockOutboxDispatcher, OutboxDispatcher, DrizzleDatabaseDriver } from '@codm/core-typescript'
 import { PublishAgentIntegrationEvents } from '@agent/handlers/PublishAgentIntegrationEvents'
 import { ConsumedMessageRepository, ThreadRepository } from '@thread/repositories'
 import { DeliverOrchestratorReply } from '@thread/handlers/DeliverOrchestratorReply'
@@ -244,7 +244,7 @@ describe('Flow (integration): the issue result quotes the request ON THE WIRE', 
 		const replied = testBed.externalSpy.getPublishedOfType('integration.orchestrator.replied')
 		for (const event of replied) await testBed.resolve(DeliverOrchestratorReply).handle(event as never)
 
-		const rows = await testBed.resolve(DrizzleClient).select().from(scheduledCommands)
+		const rows = await testBed.resolve(DrizzleDatabaseDriver).db.select().from(scheduledCommands)
 		const orders = rows
 			.filter(row => row.name === 'deliver_channel_message')
 			.map(row => row.input as { text: string; quotedMessageId?: string; replyEntryId?: string })

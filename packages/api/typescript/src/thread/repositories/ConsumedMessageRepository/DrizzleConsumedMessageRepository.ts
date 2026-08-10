@@ -1,17 +1,17 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq } from 'drizzle-orm'
-import { DrizzleClient } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, DrizzleTransaction } from '@codm/core-typescript'
 import { consumedMessages } from '@codm/contracts/db'
 import { ConsumedMessageRepository, type ConsumeInput } from './ConsumedMessageRepository'
 
 @injectable()
 export class DrizzleConsumedMessageRepository extends ConsumedMessageRepository {
-	constructor(private db: DrizzleClient) {
+	constructor(private driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
-	async claim(input: ConsumeInput, tx?: DrizzleClient): Promise<boolean> {
-		const dbc = tx ?? this.db
+	async claim(input: ConsumeInput, tx?: DrizzleTransaction): Promise<boolean> {
+		const dbc = tx ?? this.driver.db
 		// The exactly-once latch: ON CONFLICT DO NOTHING against the unique constraint. `returning`
 		// yields the inserted row ONLY when no conflict occurred — so a non-empty result === first
 		// delivery, an empty result === redelivery (no-op). This is atomic at the DB, race-free.
@@ -34,9 +34,9 @@ export class DrizzleConsumedMessageRepository extends ConsumedMessageRepository 
 
 	async linkEntry(
 		input: { channelId: string; platformMessageId: string; threadId: string; entryId: string },
-		tx?: DrizzleClient,
+		tx?: DrizzleTransaction,
 	): Promise<void> {
-		const dbc = tx ?? this.db
+		const dbc = tx ?? this.driver.db
 		await dbc
 			.update(consumedMessages)
 			.set({ threadId: input.threadId, entryId: input.entryId })
@@ -46,9 +46,9 @@ export class DrizzleConsumedMessageRepository extends ConsumedMessageRepository 
 	async findEntry(
 		channelId: string,
 		platformMessageId: string,
-		tx?: DrizzleClient,
+		tx?: DrizzleTransaction,
 	): Promise<{ threadId: string; entryId: string } | undefined> {
-		const dbc = tx ?? this.db
+		const dbc = tx ?? this.driver.db
 		const rows = await dbc
 			.select({ threadId: consumedMessages.threadId, entryId: consumedMessages.entryId })
 			.from(consumedMessages)
@@ -61,8 +61,8 @@ export class DrizzleConsumedMessageRepository extends ConsumedMessageRepository 
 		return { threadId: row.threadId, entryId: row.entryId }
 	}
 
-	async findPlatformId(entryId: string, tx?: DrizzleClient): Promise<string | undefined> {
-		const dbc = tx ?? this.db
+	async findPlatformId(entryId: string, tx?: DrizzleTransaction): Promise<string | undefined> {
+		const dbc = tx ?? this.driver.db
 		const rows = await dbc
 			.select({ platformMessageId: consumedMessages.platformMessageId })
 			.from(consumedMessages)
@@ -71,8 +71,8 @@ export class DrizzleConsumedMessageRepository extends ConsumedMessageRepository 
 		return rows[0]?.platformMessageId
 	}
 
-	async has(channelId: string, platformMessageId: string, tx?: DrizzleClient): Promise<boolean> {
-		const dbc = tx ?? this.db
+	async has(channelId: string, platformMessageId: string, tx?: DrizzleTransaction): Promise<boolean> {
+		const dbc = tx ?? this.driver.db
 		const rows = await dbc
 			.select({ id: consumedMessages.id })
 			.from(consumedMessages)

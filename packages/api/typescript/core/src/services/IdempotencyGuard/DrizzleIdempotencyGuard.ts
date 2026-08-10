@@ -1,14 +1,15 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq } from 'drizzle-orm'
 import { idempotencyKeys } from '@codm/contracts/db'
-import { DrizzleClient } from '../../db'
+import { DrizzleDatabaseDriver } from '../../db'
+import type { DrizzleTransaction } from '../UnitOfWork/DrizzleUnitOfWork'
 import type { Transaction } from '../UnitOfWork/UnitOfWork'
 import { IdempotencyGuard } from './IdempotencyGuard'
 
 /** Resolve the query executor: the ambient transaction when threaded, else the base client.
  *  `Transaction` is intentionally `unknown` at the UnitOfWork layer; this is the one narrowed spot. */
-function txClient(tx: Transaction | undefined, db: DrizzleClient): DrizzleClient {
-	return (tx ?? db) as DrizzleClient
+function txClient(tx: Transaction | undefined, db: DrizzleTransaction): DrizzleTransaction {
+	return (tx ?? db) as DrizzleTransaction
 }
 
 /**
@@ -23,12 +24,12 @@ function txClient(tx: Transaction | undefined, db: DrizzleClient): DrizzleClient
  */
 @injectable()
 export class DrizzleIdempotencyGuard extends IdempotencyGuard {
-	constructor(private db: DrizzleClient) {
+	constructor(private driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
 	async claim(scope: string, key: string, tx?: Transaction): Promise<boolean> {
-		const dbClient = txClient(tx, this.db)
+		const dbClient = txClient(tx, this.driver.db)
 		const rows = await dbClient.insert(idempotencyKeys).values({ scope, key }).onConflictDoNothing().returning({ key: idempotencyKeys.key })
 		return rows.length === 1
 	}
@@ -37,7 +38,7 @@ export class DrizzleIdempotencyGuard extends IdempotencyGuard {
 	// pool. In-transaction callers (a handler releasing a latch it claimed earlier in the SAME tx, so it
 	// doesn't persist past commit) pass `tx` so the delete commits atomically with the rest of that tx.
 	async release(scope: string, key: string, tx?: Transaction): Promise<void> {
-		const dbClient = txClient(tx, this.db)
+		const dbClient = txClient(tx, this.driver.db)
 		await dbClient.delete(idempotencyKeys).where(and(eq(idempotencyKeys.scope, scope), eq(idempotencyKeys.key, key)))
 	}
 }

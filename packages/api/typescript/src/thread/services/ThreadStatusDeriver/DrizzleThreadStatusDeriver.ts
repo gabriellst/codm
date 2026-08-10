@@ -1,13 +1,13 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq, isNull } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, tryCatchAsync } from '@codm/core-typescript'
 import { threads, stops, issues } from '@codm/contracts/db'
 import { IssueStatus, ThreadStatus } from '@codm/contracts-typescript/wire/enums'
 import { ThreadStatusDeriver } from './ThreadStatusDeriver'
 
 @injectable()
 export class DrizzleThreadStatusDeriver extends ThreadStatusDeriver {
-	constructor(private db: DrizzleClient) {
+	constructor(private driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
@@ -19,7 +19,7 @@ export class DrizzleThreadStatusDeriver extends ThreadStatusDeriver {
 			// screen somehow still asks. Both of this deriver's callers already refuse a deleted thread
 			// outright (`GetSessionChat` throws, `GetHomeDashboard` never lists it), so this is the floor
 			// under them, not the gate.
-			const [threadRow] = await this.db
+			const [threadRow] = await this.driver.db
 				.select({ paused: threads.paused })
 				.from(threads)
 				.where(and(eq(threads.id, threadId), isNull(threads.deletedAt)))
@@ -27,12 +27,12 @@ export class DrizzleThreadStatusDeriver extends ThreadStatusDeriver {
 			if (!threadRow) return undefined
 			// `limit(1)` on both: the question is EXISTENCE, and a thread with forty open stops must not
 			// pay for thirty-nine rows nobody reads.
-			const openStop = await this.db
+			const openStop = await this.driver.db
 				.select({ id: stops.id })
 				.from(stops)
 				.where(and(eq(stops.threadId, threadId), isNull(stops.resolvedAt)))
 				.limit(1)
-			const working = await this.db
+			const working = await this.driver.db
 				.select({ id: issues.id })
 				.from(issues)
 				.where(and(eq(issues.threadId, threadId), eq(issues.status, IssueStatus.WORKING), eq(issues.archived, false)))
@@ -48,15 +48,15 @@ export class DrizzleThreadStatusDeriver extends ThreadStatusDeriver {
 		const result = await tryCatchAsync(async () => {
 			// The owner-wide map keys on live threads only: an entry for an apagada conversation is a status
 			// nothing can render, and the dashboard that consumes this map has already dropped the row.
-			const threadRows = await this.db
+			const threadRows = await this.driver.db
 				.select({ id: threads.id, paused: threads.paused })
 				.from(threads)
 				.where(and(eq(threads.ownerId, ownerId), isNull(threads.deletedAt)))
-			const openStops = await this.db
+			const openStops = await this.driver.db
 				.select({ threadId: stops.threadId })
 				.from(stops)
 				.where(and(eq(stops.ownerId, ownerId), isNull(stops.resolvedAt)))
-			const workingIssues = await this.db
+			const workingIssues = await this.driver.db
 				.select({ threadId: issues.threadId })
 				.from(issues)
 				.where(and(eq(issues.ownerId, ownerId), eq(issues.status, IssueStatus.WORKING), eq(issues.archived, false)))

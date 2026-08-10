@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { and, asc, desc, eq, isNull } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, tryCatchAsync, DrizzleTransaction } from '@codm/core-typescript'
 import { threads, transcriptEntries, stops } from '@codm/contracts/db'
 import type { ProviderKind, ContactKind, ThreadStatus, BufferSize } from '@codm/contracts-typescript/wire/enums'
 import { Thread, ThreadSchema, type MentionGate, type Participant, type Stop, type TranscriptEntry } from '../../entities/Thread'
@@ -8,12 +8,12 @@ import { ThreadRepository } from './ThreadRepository'
 
 @injectable()
 export class DrizzleThreadRepository extends ThreadRepository {
-	constructor(private db: DrizzleClient) {
+	constructor(private driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
-	async findById(id: string, tx?: DrizzleClient): Promise<Thread | undefined> {
-		const dbc = tx ?? this.db
+	async findById(id: string, tx?: DrizzleTransaction): Promise<Thread | undefined> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			const rows = await dbc.select().from(threads).where(eq(threads.id, id)).limit(1)
 			return rows[0]
@@ -22,8 +22,8 @@ export class DrizzleThreadRepository extends ThreadRepository {
 		return this.toDomain(result.data)
 	}
 
-	async findByChannelContact(channelId: string, contactExternalId: string, tx?: DrizzleClient): Promise<Thread | undefined> {
-		const dbc = tx ?? this.db
+	async findByChannelContact(channelId: string, contactExternalId: string, tx?: DrizzleTransaction): Promise<Thread | undefined> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			const rows = await dbc
 				.select()
@@ -36,8 +36,8 @@ export class DrizzleThreadRepository extends ThreadRepository {
 		return this.toDomain(result.data)
 	}
 
-	async listByOwner(ownerId: string, tx?: DrizzleClient): Promise<Thread[]> {
-		const dbc = tx ?? this.db
+	async listByOwner(ownerId: string, tx?: DrizzleTransaction): Promise<Thread[]> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => dbc.select().from(threads).where(eq(threads.ownerId, ownerId)))
 		if (!result.success || !result.data) return []
 		return result.data.map(row => this.toDomain(row))
@@ -52,9 +52,9 @@ export class DrizzleThreadRepository extends ThreadRepository {
 	 * the whole difference from the `DrizzleTranscriptRepository.append()` this replaces (it minted with
 	 * `crypto.randomUUID()` inside the insert, so no aggregate could reference the row it was creating).
 	 */
-	async save(entity: Thread, tx?: DrizzleClient): Promise<Thread> {
+	async save(entity: Thread, tx?: DrizzleTransaction): Promise<Thread> {
 		entity.incrementVersion()
-		const dbc = tx ?? this.db
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			const data = this.toPersistence(entity)
 			await dbc
@@ -114,8 +114,8 @@ export class DrizzleThreadRepository extends ThreadRepository {
 		return result.data
 	}
 
-	async delete(id: string, tx?: DrizzleClient): Promise<void> {
-		const dbc = tx ?? this.db
+	async delete(id: string, tx?: DrizzleTransaction): Promise<void> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			await dbc.delete(threads).where(eq(threads.id, id))
 		})
@@ -124,8 +124,8 @@ export class DrizzleThreadRepository extends ThreadRepository {
 
 	// ── Child reads ───────────────────────────────────────────────────────────────────────────────
 
-	async recentEntries(threadId: string, limit: number, tx?: DrizzleClient): Promise<TranscriptEntry[]> {
-		const dbc = tx ?? this.db
+	async recentEntries(threadId: string, limit: number, tx?: DrizzleTransaction): Promise<TranscriptEntry[]> {
+		const dbc = tx ?? this.driver.db
 		// DESC + limit is the only way to take the LAST N; `.reverse()` hands them back chronological,
 		// which is the order the agent's context window must read them in.
 		const rows = await dbc
@@ -137,8 +137,8 @@ export class DrizzleThreadRepository extends ThreadRepository {
 		return rows.map(row => this.toEntry(row)).reverse()
 	}
 
-	async listEntries(threadId: string, tx?: DrizzleClient): Promise<TranscriptEntry[]> {
-		const dbc = tx ?? this.db
+	async listEntries(threadId: string, tx?: DrizzleTransaction): Promise<TranscriptEntry[]> {
+		const dbc = tx ?? this.driver.db
 		const rows = await dbc
 			.select()
 			.from(transcriptEntries)
@@ -147,20 +147,20 @@ export class DrizzleThreadRepository extends ThreadRepository {
 		return rows.map(row => this.toEntry(row))
 	}
 
-	async findEntry(entryId: string, tx?: DrizzleClient): Promise<TranscriptEntry | undefined> {
-		const dbc = tx ?? this.db
+	async findEntry(entryId: string, tx?: DrizzleTransaction): Promise<TranscriptEntry | undefined> {
+		const dbc = tx ?? this.driver.db
 		const rows = await dbc.select().from(transcriptEntries).where(eq(transcriptEntries.id, entryId)).limit(1)
 		return rows[0] ? this.toEntry(rows[0]) : undefined
 	}
 
-	async findStop(stopId: string, tx?: DrizzleClient): Promise<Stop | undefined> {
-		const dbc = tx ?? this.db
+	async findStop(stopId: string, tx?: DrizzleTransaction): Promise<Stop | undefined> {
+		const dbc = tx ?? this.driver.db
 		const rows = await dbc.select().from(stops).where(eq(stops.id, stopId)).limit(1)
 		return rows[0] ? this.toStop(rows[0]) : undefined
 	}
 
-	async openStops(threadId: string, tx?: DrizzleClient): Promise<Stop[]> {
-		const dbc = tx ?? this.db
+	async openStops(threadId: string, tx?: DrizzleTransaction): Promise<Stop[]> {
+		const dbc = tx ?? this.driver.db
 		const rows = await dbc
 			.select()
 			.from(stops)
@@ -168,8 +168,8 @@ export class DrizzleThreadRepository extends ThreadRepository {
 		return rows.map(row => this.toStop(row))
 	}
 
-	async openStopsByIssue(issueId: string, tx?: DrizzleClient): Promise<Stop[]> {
-		const dbc = tx ?? this.db
+	async openStopsByIssue(issueId: string, tx?: DrizzleTransaction): Promise<Stop[]> {
+		const dbc = tx ?? this.driver.db
 		const rows = await dbc
 			.select()
 			.from(stops)

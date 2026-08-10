@@ -68,7 +68,7 @@ describe('SqlExternalMediator (shared-outbox ingress)', () => {
 
 	beforeEach(async () => {
 		await driver.reset()
-		mediator = new SqlExternalMediator(driver, new DrizzleDomainEventRepository(driver.db))
+		mediator = new SqlExternalMediator(driver, new DrizzleDomainEventRepository(driver))
 	})
 
 	it('claims NOTHING while no external handler is registered', async () => {

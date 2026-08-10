@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
 import { scheduledCommands } from '@codm/contracts/db'
-import { DrizzleClient, DrizzleDatabaseDriver, MockLoggingService, SqliteCommandQueue } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, MockLoggingService, SqliteCommandQueue, DrizzleTransaction } from '@codm/core-typescript'
 import { TestBed, givenThread } from '@test/support'
 import { ChannelKind, MessageAuthor, MessageType, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { ChannelMessageReceivedInProcessEvent } from '@codm/contracts-typescript/wire/events'
@@ -32,13 +32,13 @@ import type { Thread } from '../entities/Thread'
 describe('DeliverChannelMessage — the reply leaves, its echo cannot come back as speech, and a failed send is retried', () => {
 	let testBed: TestBed
 	let testContainer: DependencyContainer
-	let db: DrizzleClient
+	let db: DrizzleTransaction
 	let driver: DrizzleDatabaseDriver
 
 	beforeAll(async () => {
 		testContainer = container.createChildContainer()
 		testBed = await TestBed.create('integration', { testContainer, ownerId: OPERATOR_ID })
-		db = testBed.resolve(DrizzleClient)
+		db = testBed.resolve(DrizzleDatabaseDriver).db
 		driver = testBed.resolve(DrizzleDatabaseDriver)
 	})
 	beforeEach(async () => {
@@ -373,12 +373,12 @@ describe("DeliverChannelMessage — the agent's own words become quotable, so a 
 describe('DeliverChannelMessage — the citation reaches the wire, which is the only place the contact can see it', () => {
 	let testBed: TestBed
 	let testContainer: DependencyContainer
-	let db: DrizzleClient
+	let db: DrizzleTransaction
 
 	beforeAll(async () => {
 		testContainer = container.createChildContainer()
 		testBed = await TestBed.create('integration', { testContainer, ownerId: OPERATOR_ID })
-		db = testBed.resolve(DrizzleClient)
+		db = testBed.resolve(DrizzleDatabaseDriver).db
 	})
 	beforeEach(async () => {
 		await testBed.reset()

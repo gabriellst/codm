@@ -1,19 +1,19 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, tryCatchAsync } from '@codm/core-typescript'
 import { channels } from '@codm/contracts/db'
 import { ChannelStatus } from '@codm/contracts-typescript/wire/enums'
 import { ChannelConnectivity } from './ChannelConnectivity'
 
 @injectable()
 export class DrizzleChannelConnectivity extends ChannelConnectivity {
-	constructor(private db: DrizzleClient) {
+	constructor(private driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
 	async isConnected(channelId: string): Promise<boolean> {
 		const result = await tryCatchAsync(async () => {
-			const rows = await this.db
+			const rows = await this.driver.db
 				.select({ id: channels.id })
 				.from(channels)
 				.where(and(eq(channels.id, channelId), eq(channels.status, ChannelStatus.CONNECTED)))
@@ -25,7 +25,7 @@ export class DrizzleChannelConnectivity extends ChannelConnectivity {
 
 	async anyConnected(ownerId: string): Promise<boolean> {
 		const result = await tryCatchAsync(async () => {
-			const rows = await this.db
+			const rows = await this.driver.db
 				.select({ id: channels.id })
 				.from(channels)
 				.where(and(eq(channels.ownerId, ownerId), eq(channels.status, ChannelStatus.CONNECTED)))

@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { desc, eq } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, tryCatchAsync, DrizzleTransaction } from '@codm/core-typescript'
 import { artifacts } from '@codm/contracts/db'
 import type { ArtifactKind } from '@codm/contracts-typescript/wire/enums'
 import { Artifact, ArtifactSchema } from '../../entities/Artifact'
@@ -8,12 +8,12 @@ import { ArtifactRepository } from './ArtifactRepository'
 
 @injectable()
 export class DrizzleArtifactRepository extends ArtifactRepository {
-	constructor(private db: DrizzleClient) {
+	constructor(private driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
-	async findById(id: string, tx?: DrizzleClient): Promise<Artifact | undefined> {
-		const dbc = tx ?? this.db
+	async findById(id: string, tx?: DrizzleTransaction): Promise<Artifact | undefined> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			const rows = await dbc.select().from(artifacts).where(eq(artifacts.id, id)).limit(1)
 			return rows[0]
@@ -22,8 +22,8 @@ export class DrizzleArtifactRepository extends ArtifactRepository {
 		return this.toDomain(result.data)
 	}
 
-	async listByThread(threadId: string, tx?: DrizzleClient): Promise<Artifact[]> {
-		const dbc = tx ?? this.db
+	async listByThread(threadId: string, tx?: DrizzleTransaction): Promise<Artifact[]> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () =>
 			dbc.select().from(artifacts).where(eq(artifacts.threadId, threadId)).orderBy(desc(artifacts.recordedAt)),
 		)
@@ -31,8 +31,8 @@ export class DrizzleArtifactRepository extends ArtifactRepository {
 		return result.data.map(r => this.toDomain(r))
 	}
 
-	async save(entity: Artifact, tx?: DrizzleClient): Promise<Artifact> {
-		const dbc = tx ?? this.db
+	async save(entity: Artifact, tx?: DrizzleTransaction): Promise<Artifact> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			await dbc.insert(artifacts).values(this.toPersistence(entity)).onConflictDoNothing({ target: artifacts.id })
 			return entity
@@ -41,8 +41,8 @@ export class DrizzleArtifactRepository extends ArtifactRepository {
 		return result.data
 	}
 
-	async delete(id: string, tx?: DrizzleClient): Promise<void> {
-		const dbc = tx ?? this.db
+	async delete(id: string, tx?: DrizzleTransaction): Promise<void> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			await dbc.delete(artifacts).where(eq(artifacts.id, id))
 		})

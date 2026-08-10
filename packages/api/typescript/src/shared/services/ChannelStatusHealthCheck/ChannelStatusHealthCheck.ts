@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { desc } from 'drizzle-orm'
-import { DrizzleClient, HealthCheck, type HealthComponentReport, tryCatchAsync } from '@codm/core-typescript'
+import { type DrizzleTransaction, HealthCheck, type HealthComponentReport, tryCatchAsync } from '@codm/core-typescript'
 import { channels } from '@codm/contracts/db'
 
 /**
@@ -18,7 +18,7 @@ export class ChannelStatusHealthCheck extends HealthCheck {
 	readonly name = 'channel'
 	readonly gate = false
 
-	constructor(private readonly db: DrizzleClient) {
+	constructor(private readonly db: DrizzleTransaction) {
 		super()
 	}
 

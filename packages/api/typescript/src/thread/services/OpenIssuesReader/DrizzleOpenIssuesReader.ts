@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq, ne } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, tryCatchAsync } from '@codm/core-typescript'
 import { issues, transcriptEntries } from '@codm/contracts/db'
 import { IssueStatus } from '@codm/contracts-typescript/wire/enums'
 import type { OpenIssueRef, SteerableIssueRef } from './OpenIssuesReader'
@@ -8,13 +8,13 @@ import { OpenIssuesReader } from './OpenIssuesReader'
 
 @injectable()
 export class DrizzleOpenIssuesReader extends OpenIssuesReader {
-	constructor(private db: DrizzleClient) {
+	constructor(private driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
 	async openIssues(threadId: string): Promise<OpenIssueRef[]> {
 		const result = await tryCatchAsync(async () =>
-			this.db
+			this.driver.db
 				.select({ issueId: issues.id, key: issues.key, title: issues.title })
 				.from(issues)
 				.where(and(eq(issues.threadId, threadId), eq(issues.archived, false), ne(issues.status, IssueStatus.COMPLETED))),
@@ -32,7 +32,7 @@ export class DrizzleOpenIssuesReader extends OpenIssuesReader {
 	 * CLOSED, and the honest way to fail closed is to let the error out.
 	 */
 	async hasWorkingIssue(threadId: string): Promise<boolean> {
-		const rows = await this.db
+		const rows = await this.driver.db
 			.select({ id: issues.id })
 			.from(issues)
 			.where(and(eq(issues.threadId, threadId), eq(issues.status, IssueStatus.WORKING), eq(issues.archived, false)))
@@ -42,7 +42,7 @@ export class DrizzleOpenIssuesReader extends OpenIssuesReader {
 
 	async issueIdForEntry(entryId: string): Promise<string | undefined> {
 		const result = await tryCatchAsync(async () => {
-			const rows = await this.db
+			const rows = await this.driver.db
 				.select({ issueId: transcriptEntries.issueId })
 				.from(transcriptEntries)
 				.where(eq(transcriptEntries.id, entryId))
@@ -60,7 +60,7 @@ export class DrizzleOpenIssuesReader extends OpenIssuesReader {
 	 * sair é a forma honesta de falhar.
 	 */
 	async steerableIssue(threadId: string, issueId: string): Promise<SteerableIssueRef | undefined> {
-		const rows = await this.db
+		const rows = await this.driver.db
 			.select({ issueId: issues.id, key: issues.key, title: issues.title, status: issues.status })
 			.from(issues)
 			.where(and(eq(issues.threadId, threadId), eq(issues.id, issueId), eq(issues.archived, false)))

@@ -4,9 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createClient, type Client } from '@libsql/client'
 import { drizzle } from 'drizzle-orm/libsql'
-import { UnitOfWorkFactory } from '../../services/UnitOfWork/UnitOfWork'
 import { DrizzleUnitOfWorkFactory, type DrizzleTransaction } from '../../services/UnitOfWork/DrizzleUnitOfWork'
-import type { DrizzleClient } from '../client'
 import { DrizzleDatabaseDriver, type MigrationStatus } from './DrizzleDatabaseDriver'
 import { resetAllTables } from './utils'
 
@@ -126,18 +124,18 @@ export interface LibsqlDriverOptions {
  * THE READ/WRITE SPLIT IS LOAD-BEARING, and it is created BY that correction. With the write
  * connection stable, a read issued on it during an open transaction sees uncommitted state
  * (measured: DIRTY_READ_ON_WRITE_CLIENT=yes) and that value leaks into another request. Hence a
- * SECOND, dedicated read connection, which is what the abstract `db` member exposes and what the
- * composition root binds to the `DrizzleClient` token — every HTTP/BFF read lands there
- * (measured: DIRTY_READ_ON_READ_CLIENT=no, and it does see committed writes with 0ms lag, from
- * this process and from the Go gateway alike).
+ * SECOND, dedicated read connection, which is what the abstract `db` member exposes — every
+ * consumer injects `DrizzleDatabaseDriver` and reads `.db` off it, so every HTTP/BFF read lands
+ * there (measured: DIRTY_READ_ON_READ_CLIENT=no, and it does see committed writes with 0ms lag,
+ * from this process and from the Go gateway alike).
  *
  * NOT PROVIDED, deliberately: rollback-to-savepoint and nested transactions. Driving BEGIN by
  * hand bypasses drizzle's transaction bookkeeping, so a `tx.rollback()` would not work — throw
  * instead. There are zero call sites of it in the repo today; this note is what keeps that true.
  */
 export class LibsqlDriver extends DrizzleDatabaseDriver {
-	readonly db: DrizzleClient
-	readonly unitOfWorkFactory: UnitOfWorkFactory
+	readonly db: DrizzleTransaction
+	readonly unitOfWorkFactory: DrizzleUnitOfWorkFactory
 
 	readonly #url: string
 	readonly #migrationsDir: string
@@ -165,7 +163,7 @@ export class LibsqlDriver extends DrizzleDatabaseDriver {
 		void this.#pragmasReady.catch(() => {})
 
 		this.#write = drizzle({ client: this.#writeClient, schema: options.schema }) as unknown as DrizzleTransaction
-		this.db = drizzle({ client: this.#readClient, schema: options.schema }) as unknown as DrizzleClient
+		this.db = drizzle({ client: this.#readClient, schema: options.schema }) as unknown as DrizzleTransaction
 		this.unitOfWorkFactory = new DrizzleUnitOfWorkFactory(this)
 	}
 

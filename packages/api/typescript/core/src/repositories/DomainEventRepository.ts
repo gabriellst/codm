@@ -21,7 +21,7 @@ export abstract class DomainEventRepository extends Repository<BaseDomainEvent> 
 	 * Read-side: all persisted events of a given type, oldest-first, rehydrated
 	 * into typed event instances (payload typed from the event class). This is
 	 * how tests and read flows assert "this domain event was persisted" WITHOUT
-	 * resolving DrizzleClient or hand-querying the events table.
+	 * resolving the driver or hand-querying the events table.
 	 *
 	 *   const evs = await repo.findByType(StoreMemberRoleChangedEvent)
 	 *   expect(evs[0].payload.newRole).toBe(Role.ADMIN)   // fully typed, no cast

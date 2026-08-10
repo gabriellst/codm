@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq, isNull } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, tryCatchAsync, DrizzleTransaction } from '@codm/core-typescript'
 import { agentSessions } from '@codm/contracts/db'
 import type { AgentModelId, ProviderKind } from '@codm/contracts-typescript/wire/enums'
 import { AgentSession, AgentSessionSchema } from '../../entities/AgentSession'
@@ -8,12 +8,12 @@ import { AgentSessionRepository } from './AgentSessionRepository'
 
 @injectable()
 export class DrizzleAgentSessionRepository extends AgentSessionRepository {
-	constructor(private db: DrizzleClient) {
+	constructor(private driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
-	async findById(id: string, tx?: DrizzleClient): Promise<AgentSession | undefined> {
-		const dbc = tx ?? this.db
+	async findById(id: string, tx?: DrizzleTransaction): Promise<AgentSession | undefined> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			const rows = await dbc.select().from(agentSessions).where(eq(agentSessions.id, id)).limit(1)
 			return rows[0]
@@ -22,8 +22,8 @@ export class DrizzleAgentSessionRepository extends AgentSessionRepository {
 		return this.toDomain(result.data)
 	}
 
-	async findByIssueId(issueId: string, tx?: DrizzleClient): Promise<AgentSession | undefined> {
-		const dbc = tx ?? this.db
+	async findByIssueId(issueId: string, tx?: DrizzleTransaction): Promise<AgentSession | undefined> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			const rows = await dbc.select().from(agentSessions).where(eq(agentSessions.issueId, issueId)).limit(1)
 			return rows[0]
@@ -40,8 +40,8 @@ export class DrizzleAgentSessionRepository extends AgentSessionRepository {
 	 * needed its own uniqueness story and would have made every `findByIssueId` caller responsible for
 	 * not matching it by accident.
 	 */
-	async findOrchestratorByThreadId(threadId: string, tx?: DrizzleClient): Promise<AgentSession | undefined> {
-		const dbc = tx ?? this.db
+	async findOrchestratorByThreadId(threadId: string, tx?: DrizzleTransaction): Promise<AgentSession | undefined> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			const rows = await dbc
 				.select()
@@ -54,9 +54,9 @@ export class DrizzleAgentSessionRepository extends AgentSessionRepository {
 		return this.toDomain(result.data)
 	}
 
-	async save(entity: AgentSession, tx?: DrizzleClient): Promise<AgentSession> {
+	async save(entity: AgentSession, tx?: DrizzleTransaction): Promise<AgentSession> {
 		entity.incrementVersion()
-		const dbc = tx ?? this.db
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			const data = this.toPersistence(entity)
 			await dbc
@@ -86,8 +86,8 @@ export class DrizzleAgentSessionRepository extends AgentSessionRepository {
 		return result.data
 	}
 
-	async delete(id: string, tx?: DrizzleClient): Promise<void> {
-		const dbc = tx ?? this.db
+	async delete(id: string, tx?: DrizzleTransaction): Promise<void> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			await dbc.delete(agentSessions).where(eq(agentSessions.id, id))
 		})

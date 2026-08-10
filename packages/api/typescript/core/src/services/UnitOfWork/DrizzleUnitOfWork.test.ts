@@ -71,7 +71,7 @@ describe('DrizzleUnitOfWork', () => {
 			await insert(tx, 'uow.inflight')
 			const [inside] = await tx.all<{ n: number }>(sql`SELECT count(*) AS n FROM shared_events`)
 			expect(Number(inside?.n)).toBe(1)
-			// The injected DrizzleClient is the READ connection — it must still see the old state.
+			// The driver's `.db` is the READ connection — it must still see the old state.
 			expect(await countEvents()).toBe(0)
 		})
 

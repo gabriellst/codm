@@ -1,7 +1,8 @@
 import { BaseInterfaceErrors, type BaseInfrastructureErrors } from '../errors/codes'
 import { tryCatchAsync } from '../utils/TryCatch'
 import { BaseError } from './BaseError'
-import { UnitOfWorkFactory, type Transaction } from '../services/UnitOfWork/UnitOfWork'
+import type { Transaction } from '../services/UnitOfWork/UnitOfWork'
+import { DrizzleDatabaseDriver } from '../db/drivers/DrizzleDatabaseDriver'
 import { z, type ZodType, type ZodIssue } from 'zod'
 import type { DependencyContainer } from 'tsyringe-neo'
 
@@ -12,9 +13,9 @@ import { InternalMediator, type Mediator } from '../services/Mediator/Mediator'
 export abstract class Handler<
 	InputSchema extends ZodType = ZodType,
 	OutputSchema extends ZodType = ZodType,
-	// Default to the persistence-agnostic Transaction, NOT DrizzleClient: withTransaction
+	// Default to the persistence-agnostic Transaction, NOT the drizzle handle: withTransaction
 	// yields this to handlers/use cases, which pass it straight to repos. Only the Drizzle
-	// repo impls narrow it to DrizzleClient. Keeps infra out of the write-side flow.
+	// repo impls narrow it to DrizzleTransaction. Keeps infra out of the write-side flow.
 	Tx extends Transaction = Transaction,
 > {
 	private _container?: DependencyContainer
@@ -69,8 +70,8 @@ export abstract class Handler<
 	}
 
 	// Core infrastructure — lazily resolved from the handler DI container
-	protected get unitOfWorkFactory(): UnitOfWorkFactory {
-		return this.di.resolve(UnitOfWorkFactory as any)
+	protected get unitOfWorkFactory() {
+		return (this.di.resolve(DrizzleDatabaseDriver as any) as DrizzleDatabaseDriver).unitOfWorkFactory
 	}
 
 	protected get domainEventRepository(): DomainEventRepository {

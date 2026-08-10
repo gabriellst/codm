@@ -3,19 +3,19 @@
 // uses a plain upsert (no optimistic lock needed — better-auth owns this table).
 import { injectable } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, tryCatchAsync, DrizzleTransaction } from '@codm/core-typescript'
 import { users } from '@codm/contracts/db'
 import { User } from '../../entities'
 import { UserRepository } from './UserRepository'
 
 @injectable()
 export class DrizzleUserRepository extends UserRepository {
-	constructor(private db: DrizzleClient) {
+	constructor(private driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
-	async findById(userId: string, tx?: DrizzleClient): Promise<User | undefined> {
-		const dbClient = tx ?? this.db
+	async findById(userId: string, tx?: DrizzleTransaction): Promise<User | undefined> {
+		const dbClient = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			const rows = await dbClient.select().from(users).where(eq(users.id, userId)).limit(1)
 			return rows[0]
@@ -24,8 +24,8 @@ export class DrizzleUserRepository extends UserRepository {
 		return this.toDomain(result.data)
 	}
 
-	async findByEmail(email: string, tx?: DrizzleClient): Promise<User | undefined> {
-		const dbClient = tx ?? this.db
+	async findByEmail(email: string, tx?: DrizzleTransaction): Promise<User | undefined> {
+		const dbClient = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			const rows = await dbClient.select().from(users).where(eq(users.email, email)).limit(1)
 			return rows[0]
@@ -34,9 +34,9 @@ export class DrizzleUserRepository extends UserRepository {
 		return this.toDomain(result.data)
 	}
 
-	async save(entity: User, tx?: DrizzleClient): Promise<User> {
+	async save(entity: User, tx?: DrizzleTransaction): Promise<User> {
 		entity.incrementVersion()
-		const dbClient = tx ?? this.db
+		const dbClient = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			const data = this.toPersistence(entity)
 			await dbClient
@@ -58,8 +58,8 @@ export class DrizzleUserRepository extends UserRepository {
 		return result.data
 	}
 
-	async delete(id: string, tx?: DrizzleClient): Promise<void> {
-		const dbClient = tx ?? this.db
+	async delete(id: string, tx?: DrizzleTransaction): Promise<void> {
+		const dbClient = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			await dbClient.delete(users).where(eq(users.id, id))
 		})

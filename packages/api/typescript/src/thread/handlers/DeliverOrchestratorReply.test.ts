@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { scheduledCommands } from '@codm/contracts/db'
-import { DrizzleClient } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, DrizzleTransaction } from '@codm/core-typescript'
 import { TestBed, givenThread } from '@test/support'
 import { OrchestratorRepliedEvent } from '@codm/contracts-typescript/wire/events'
 import { TranscriptKind } from '@codm/contracts-typescript/wire/enums'
@@ -18,12 +18,12 @@ import { DeliverOrchestratorReply } from './DeliverOrchestratorReply'
 describe('DeliverOrchestratorReply — the envelope guard and the delegation', () => {
 	let testBed: TestBed
 	let testContainer: DependencyContainer
-	let db: DrizzleClient
+	let db: DrizzleTransaction
 
 	beforeAll(async () => {
 		testContainer = container.createChildContainer()
 		testBed = await TestBed.create('integration', { testContainer, ownerId: OPERATOR_ID })
-		db = testBed.resolve(DrizzleClient)
+		db = testBed.resolve(DrizzleDatabaseDriver).db
 	})
 	beforeEach(async () => {
 		await testBed.reset()

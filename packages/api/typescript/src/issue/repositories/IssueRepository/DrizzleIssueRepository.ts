@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq, lte } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, tryCatchAsync, DrizzleTransaction } from '@codm/core-typescript'
 import { issues } from '@codm/contracts/db'
 import { IssueStatus, ProviderKind, IssueArchiveReason } from '@codm/contracts-typescript/wire/enums'
 import { Issue, IssueSchema } from '../../entities/Issue'
@@ -8,12 +8,12 @@ import { IssueRepository } from './IssueRepository'
 
 @injectable()
 export class DrizzleIssueRepository extends IssueRepository {
-	constructor(private db: DrizzleClient) {
+	constructor(private driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
-	async findById(id: string, tx?: DrizzleClient): Promise<Issue | undefined> {
-		const dbc = tx ?? this.db
+	async findById(id: string, tx?: DrizzleTransaction): Promise<Issue | undefined> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			const rows = await dbc.select().from(issues).where(eq(issues.id, id)).limit(1)
 			return rows[0]
@@ -22,8 +22,8 @@ export class DrizzleIssueRepository extends IssueRepository {
 		return this.toDomain(result.data)
 	}
 
-	async findByThreadAndKey(threadId: string, key: string, tx?: DrizzleClient): Promise<Issue | undefined> {
-		const dbc = tx ?? this.db
+	async findByThreadAndKey(threadId: string, key: string, tx?: DrizzleTransaction): Promise<Issue | undefined> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			const rows = await dbc
 				.select()
@@ -36,22 +36,22 @@ export class DrizzleIssueRepository extends IssueRepository {
 		return this.toDomain(result.data)
 	}
 
-	async listByThread(threadId: string, tx?: DrizzleClient): Promise<Issue[]> {
-		const dbc = tx ?? this.db
+	async listByThread(threadId: string, tx?: DrizzleTransaction): Promise<Issue[]> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => dbc.select().from(issues).where(eq(issues.threadId, threadId)))
 		if (!result.success || !result.data) return []
 		return result.data.map(r => this.toDomain(r))
 	}
 
-	async existingKeys(threadId: string, tx?: DrizzleClient): Promise<string[]> {
-		const dbc = tx ?? this.db
+	async existingKeys(threadId: string, tx?: DrizzleTransaction): Promise<string[]> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => dbc.select({ key: issues.key }).from(issues).where(eq(issues.threadId, threadId)))
 		if (!result.success || !result.data) return []
 		return result.data.map(r => r.key)
 	}
 
-	async completedBefore(cutoff: Date, tx?: DrizzleClient): Promise<Issue[]> {
-		const dbc = tx ?? this.db
+	async completedBefore(cutoff: Date, tx?: DrizzleTransaction): Promise<Issue[]> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () =>
 			dbc
 				.select()
@@ -62,9 +62,9 @@ export class DrizzleIssueRepository extends IssueRepository {
 		return result.data.map(r => this.toDomain(r))
 	}
 
-	async save(entity: Issue, tx?: DrizzleClient): Promise<Issue> {
+	async save(entity: Issue, tx?: DrizzleTransaction): Promise<Issue> {
 		entity.incrementVersion()
-		const dbc = tx ?? this.db
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			const data = this.toPersistence(entity)
 			await dbc
@@ -101,8 +101,8 @@ export class DrizzleIssueRepository extends IssueRepository {
 		return result.data
 	}
 
-	async delete(id: string, tx?: DrizzleClient): Promise<void> {
-		const dbc = tx ?? this.db
+	async delete(id: string, tx?: DrizzleTransaction): Promise<void> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			await dbc.delete(issues).where(eq(issues.id, id))
 		})

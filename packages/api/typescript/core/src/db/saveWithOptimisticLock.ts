@@ -9,8 +9,8 @@ type ColumnsOf<T extends SQLiteTable> = T['_']['columns'][keyof T['_']['columns'
 
 interface SaveWithOptimisticLockOptions<T extends SQLiteTable> {
 	/**
-	 * The WRITE handle — i.e. the `tx` a `uow.transaction(...)` callback receives. Never the
-	 * injected `DrizzleClient`, which is the read connection.
+	 * The WRITE handle — i.e. the `tx` a `uow.transaction(...)` callback receives. Never
+	 * `DrizzleDatabaseDriver.db`, which is the read connection.
 	 */
 	db: DrizzleTransaction
 	table: T

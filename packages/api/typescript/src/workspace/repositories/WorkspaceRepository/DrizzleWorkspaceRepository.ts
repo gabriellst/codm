@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, tryCatchAsync, DrizzleTransaction } from '@codm/core-typescript'
 import { workspaces } from '@codm/contracts/db'
 import type { WorkspaceBadge } from '@codm/contracts-typescript/wire/enums'
 import { Workspace, WorkspaceSchema } from '../../entities/Workspace'
@@ -8,12 +8,12 @@ import { WorkspaceRepository } from './WorkspaceRepository'
 
 @injectable()
 export class DrizzleWorkspaceRepository extends WorkspaceRepository {
-	constructor(private db: DrizzleClient) {
+	constructor(private driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
-	async findById(id: string, tx?: DrizzleClient): Promise<Workspace | undefined> {
-		const dbc = tx ?? this.db
+	async findById(id: string, tx?: DrizzleTransaction): Promise<Workspace | undefined> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			const rows = await dbc.select().from(workspaces).where(eq(workspaces.id, id)).limit(1)
 			return rows[0]
@@ -22,8 +22,8 @@ export class DrizzleWorkspaceRepository extends WorkspaceRepository {
 		return this.toDomain(result.data)
 	}
 
-	async findByOwnerAndPath(ownerId: string, path: string, tx?: DrizzleClient): Promise<Workspace | undefined> {
-		const dbc = tx ?? this.db
+	async findByOwnerAndPath(ownerId: string, path: string, tx?: DrizzleTransaction): Promise<Workspace | undefined> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			const rows = await dbc
 				.select()
@@ -36,16 +36,16 @@ export class DrizzleWorkspaceRepository extends WorkspaceRepository {
 		return this.toDomain(result.data)
 	}
 
-	async listByOwner(ownerId: string, tx?: DrizzleClient): Promise<Workspace[]> {
-		const dbc = tx ?? this.db
+	async listByOwner(ownerId: string, tx?: DrizzleTransaction): Promise<Workspace[]> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => dbc.select().from(workspaces).where(eq(workspaces.ownerId, ownerId)))
 		if (!result.success || !result.data) return []
 		return result.data.map(row => this.toDomain(row))
 	}
 
-	async save(entity: Workspace, tx?: DrizzleClient): Promise<Workspace> {
+	async save(entity: Workspace, tx?: DrizzleTransaction): Promise<Workspace> {
 		entity.incrementVersion()
-		const dbc = tx ?? this.db
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			const data = this.toPersistence(entity)
 			await dbc
@@ -61,8 +61,8 @@ export class DrizzleWorkspaceRepository extends WorkspaceRepository {
 		return result.data
 	}
 
-	async delete(id: string, tx?: DrizzleClient): Promise<void> {
-		const dbc = tx ?? this.db
+	async delete(id: string, tx?: DrizzleTransaction): Promise<void> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			await dbc.delete(workspaces).where(eq(workspaces.id, id))
 		})

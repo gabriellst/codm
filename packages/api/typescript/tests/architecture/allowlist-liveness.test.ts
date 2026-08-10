@@ -188,7 +188,7 @@ interface RailContract {
 
 const RAIL_CONTRACTS: RailContract[] = [
 	{ rail: 'console-discipline.test.ts', key: 'file', base: 'src', match: 'exact', pattern: /console\.(log|error|warn|info|debug)\(/ },
-	{ rail: 'probe-discipline.test.ts', key: 'path', base: 'package', match: 'exact', pattern: /resolve\(DrizzleClient\)/ },
+	{ rail: 'probe-discipline.test.ts', key: 'path', base: 'package', match: 'exact', pattern: /resolve\(DrizzleDatabaseDriver\)\.db\b/ },
 	{ rail: 'tx-discipline.test.ts', key: 'file', base: 'src', match: 'substring', pattern: null },
 ]
 
@@ -257,14 +257,20 @@ function deadRailExemptions(railDir: string, bases: { src: string; package: stri
 				rail: contract.rail,
 				line: 1,
 				entry: '(EXEMPTIONS declaration)',
-				reason: 'no `const EXEMPTIONS ... = [...]` found — the liveness parse would be checking nothing; realign RAIL_CONTRACTS with the rail',
+				reason:
+					'no `const EXEMPTIONS ... = [...]` found — the liveness parse would be checking nothing; realign RAIL_CONTRACTS with the rail',
 			})
 			continue
 		}
 		for (const entry of entries) {
 			const pattern = contract.pattern ?? entry.call
 			if (!pattern) {
-				dead.push({ rail: contract.rail, line: entry.line, entry: entry.target, reason: 'entry declares no `call:` regex to prove liveness against' })
+				dead.push({
+					rail: contract.rail,
+					line: entry.line,
+					entry: entry.target,
+					reason: 'entry declares no `call:` regex to prove liveness against',
+				})
 				continue
 			}
 			if (contract.match === 'exact') {
@@ -272,7 +278,12 @@ function deadRailExemptions(railDir: string, bases: { src: string; package: stri
 				if (!existsSync(target)) {
 					dead.push({ rail: contract.rail, line: entry.line, entry: entry.target, reason: 'exempted file no longer exists' })
 				} else if (!pattern.test(readFileSync(target, 'utf8'))) {
-					dead.push({ rail: contract.rail, line: entry.line, entry: entry.target, reason: `exempted pattern ${String(pattern)} no longer occurs in the file` })
+					dead.push({
+						rail: contract.rail,
+						line: entry.line,
+						entry: entry.target,
+						reason: `exempted pattern ${String(pattern)} no longer occurs in the file`,
+					})
 				}
 			} else {
 				const candidates = existsSync(bases.src)
@@ -281,9 +292,19 @@ function deadRailExemptions(railDir: string, bases: { src: string; package: stri
 							.filter(f => relative(bases.src, f).split('\\').join('/').includes(entry.target))
 					: []
 				if (candidates.length === 0) {
-					dead.push({ rail: contract.rail, line: entry.line, entry: entry.target, reason: 'no production file under src/ matches the exempted path' })
+					dead.push({
+						rail: contract.rail,
+						line: entry.line,
+						entry: entry.target,
+						reason: 'no production file under src/ matches the exempted path',
+					})
 				} else if (!candidates.some(f => pattern.test(readFileSync(f, 'utf8')))) {
-					dead.push({ rail: contract.rail, line: entry.line, entry: entry.target, reason: `exempted call ${String(pattern)} no longer occurs in any matching file` })
+					dead.push({
+						rail: contract.rail,
+						line: entry.line,
+						entry: entry.target,
+						reason: `exempted call ${String(pattern)} no longer occurs in any matching file`,
+					})
 				}
 			}
 		}
@@ -440,8 +461,8 @@ describe('allowlist-liveness (every allowlist/exemption entry still matches some
 				].join('\n'),
 			)
 
-			// Probe: Live.test.ts still resolves the client (live); Gone.test.ts is deleted (dead).
-			writeFileSync(join(pkgRoot, 'tests', 'kernel', 'Live.test.ts'), 'const db = testBed.resolve(DrizzleClient)\n')
+			// Probe: Live.test.ts still resolves the driver (live); Gone.test.ts is deleted (dead).
+			writeFileSync(join(pkgRoot, 'tests', 'kernel', 'Live.test.ts'), 'const db = testBed.resolve(DrizzleDatabaseDriver).db\n')
 			writeFileSync(
 				join(railDir, 'probe-discipline.test.ts'),
 				[

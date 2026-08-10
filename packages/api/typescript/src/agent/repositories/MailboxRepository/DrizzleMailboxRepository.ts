@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { and, asc, eq, isNull, lt, notExists, or, sql } from 'drizzle-orm'
-import { DrizzleClient } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, DrizzleTransaction } from '@codm/core-typescript'
 import { agentMailbox } from '@codm/contracts/db'
 import type { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
 import { MailboxRepository, type ClaimedMailboxItem, type EnqueueMailboxItem } from './MailboxRepository'
@@ -13,12 +13,12 @@ const unleased = (now: Date) => or(isNull(agentMailbox.leaseUntil), lt(agentMail
 
 @injectable()
 export class DrizzleMailboxRepository extends MailboxRepository {
-	constructor(private db: DrizzleClient) {
+	constructor(private driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
-	async enqueue(item: EnqueueMailboxItem, tx?: DrizzleClient): Promise<boolean> {
-		const dbc = tx ?? this.db
+	async enqueue(item: EnqueueMailboxItem, tx?: DrizzleTransaction): Promise<boolean> {
+		const dbc = tx ?? this.driver.db
 		const inserted = await dbc
 			.insert(agentMailbox)
 			.values({
@@ -44,8 +44,8 @@ export class DrizzleMailboxRepository extends MailboxRepository {
 	 * pollers racing cannot both win: SQLite serializes writers, and the loser's UPDATE matches
 	 * nothing and returns empty rather than throwing.
 	 */
-	async claimNext(claimedBy: string, leaseMs: number, tx?: DrizzleClient): Promise<ClaimedMailboxItem | undefined> {
-		const dbc = tx ?? this.db
+	async claimNext(claimedBy: string, leaseMs: number, tx?: DrizzleTransaction): Promise<ClaimedMailboxItem | undefined> {
+		const dbc = tx ?? this.driver.db
 		const now = new Date()
 
 		const busy = dbc
@@ -83,8 +83,8 @@ export class DrizzleMailboxRepository extends MailboxRepository {
 		return { ...row, targetKind: row.targetKind as MailboxTargetKind, kind: row.kind as MailboxItemKind }
 	}
 
-	async renewLease(id: string, claimedBy: string, leaseMs: number, tx?: DrizzleClient): Promise<void> {
-		const dbc = tx ?? this.db
+	async renewLease(id: string, claimedBy: string, leaseMs: number, tx?: DrizzleTransaction): Promise<void> {
+		const dbc = tx ?? this.driver.db
 		// `claimedBy` is in the predicate, not just the id: if this worker's lease already lapsed and
 		// another claimed the item, the UPDATE matches nothing rather than yanking the lease back from
 		// under the new holder. A heartbeat that could steal would be worse than no heartbeat.
@@ -96,13 +96,13 @@ export class DrizzleMailboxRepository extends MailboxRepository {
 			)
 	}
 
-	async complete(id: string, tx?: DrizzleClient): Promise<void> {
-		const dbc = tx ?? this.db
+	async complete(id: string, tx?: DrizzleTransaction): Promise<void> {
+		const dbc = tx ?? this.driver.db
 		await dbc.update(agentMailbox).set({ consumedAt: new Date(), claimedBy: null, leaseUntil: null }).where(eq(agentMailbox.id, id))
 	}
 
-	async fail(id: string, error: string, maxAttempts: number, tx?: DrizzleClient): Promise<void> {
-		const dbc = tx ?? this.db
+	async fail(id: string, error: string, maxAttempts: number, tx?: DrizzleTransaction): Promise<void> {
+		const dbc = tx ?? this.driver.db
 		// `attempts` was already incremented at claim, so the comparison here reads the real count of
 		// runs, not of scheduling opportunities.
 		await dbc
@@ -116,8 +116,8 @@ export class DrizzleMailboxRepository extends MailboxRepository {
 			.where(eq(agentMailbox.id, id))
 	}
 
-	async hasPending(targetKind: MailboxTargetKind, targetId: string, tx?: DrizzleClient): Promise<boolean> {
-		const dbc = tx ?? this.db
+	async hasPending(targetKind: MailboxTargetKind, targetId: string, tx?: DrizzleTransaction): Promise<boolean> {
+		const dbc = tx ?? this.driver.db
 		const rows = await dbc
 			.select({ id: agentMailbox.id })
 			.from(agentMailbox)

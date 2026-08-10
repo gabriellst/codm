@@ -134,7 +134,7 @@ describe('shared_outbox lanes (api / gateway / integration) over one file', () =
 	beforeEach(async () => {
 		await driver.reset()
 		internal = new ScriptedInternalMediator()
-		external = new SqlExternalMediator(driver, new DrizzleDomainEventRepository(driver.db))
+		external = new SqlExternalMediator(driver, new DrizzleDomainEventRepository(driver))
 		dispatcher = new DrizzleOutboxDispatcher(driver, internal, external, new MockLoggingService())
 	})
 

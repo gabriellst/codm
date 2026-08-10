@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq } from 'drizzle-orm'
-import { Handler, z, BaseError, DrizzleClient } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, Handler, z, BaseError } from '@codm/core-typescript'
 import { channels, remotes } from '@codm/contracts/db'
 import { ContactAvatarStore } from '../services/ContactAvatarStore'
 import type { ApplicationErrors } from '../errors'
@@ -56,7 +56,7 @@ export class GetContactAvatar extends Handler<typeof GetContactAvatarInputSchema
 	readonly outputSchema = GetContactAvatarOutputSchema
 
 	constructor(
-		private readonly db: DrizzleClient,
+		private readonly driver: DrizzleDatabaseDriver,
 		private readonly avatars: ContactAvatarStore,
 	) {
 		super()
@@ -66,14 +66,14 @@ export class GetContactAvatar extends Handler<typeof GetContactAvatarInputSchema
 		const missing = () =>
 			new BaseError<ApplicationErrors>('CONTACT_AVATAR_NOT_FOUND', `no avatar for remote ${input.remoteId} on channel ${input.channelId}`)
 
-		const [channel] = await this.db
+		const [channel] = await this.driver.db
 			.select({ id: channels.id })
 			.from(channels)
 			.where(and(eq(channels.id, input.channelId), eq(channels.ownerId, input.ownerId)))
 			.limit(1)
 		if (!channel) throw missing()
 
-		const [remote] = await this.db
+		const [remote] = await this.driver.db
 			.select({ avatarUrl: remotes.avatarUrl })
 			.from(remotes)
 			.where(and(eq(remotes.channelId, input.channelId), eq(remotes.remoteId, input.remoteId)))

@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq, isNull } from 'drizzle-orm'
-import { DrizzleClient, Handler, z } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, Handler, z } from '@codm/core-typescript'
 import { channels, workspaces, threads } from '@codm/contracts/db'
 import { ChannelStatus, OnboardingStep } from '@codm/contracts-typescript/wire/enums'
 import { OnboardingRepository } from '../repositories/OnboardingRepository'
@@ -35,7 +35,7 @@ export class GetOnboarding extends Handler<typeof GetOnboardingInputSchema, type
 	readonly outputSchema = GetOnboardingOutputSchema
 
 	constructor(
-		private readonly db: DrizzleClient,
+		private readonly driver: DrizzleDatabaseDriver,
 		private readonly onboardingRepo: OnboardingRepository,
 	) {
 		super()
@@ -44,16 +44,16 @@ export class GetOnboarding extends Handler<typeof GetOnboardingInputSchema, type
 	protected async handle(input: this['input']): Promise<this['output']> {
 		const [onboarding, connectedChannels, ownerWorkspaces, ownerThreads] = await Promise.all([
 			this.onboardingRepo.findByOwnerId(input.ownerId),
-			this.db
+			this.driver.db
 				.select({ id: channels.id })
 				.from(channels)
 				.where(and(eq(channels.ownerId, input.ownerId), eq(channels.status, ChannelStatus.CONNECTED)))
 				.limit(1),
-			this.db.select({ id: workspaces.id }).from(workspaces).where(eq(workspaces.ownerId, input.ownerId)).limit(1),
+			this.driver.db.select({ id: workspaces.id }).from(workspaces).where(eq(workspaces.ownerId, input.ownerId)).limit(1),
 			// Uma thread apagada não conta (thread-deletion spec, decision 5): apagar a última conversa
 			// devolve o passo ao estado anterior, em vez de deixá-lo marcado por uma linha que mais
 			// nada no console enxerga.
-			this.db
+			this.driver.db
 				.select({ id: threads.id })
 				.from(threads)
 				.where(and(eq(threads.ownerId, input.ownerId), isNull(threads.deletedAt)))

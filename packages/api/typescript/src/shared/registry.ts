@@ -5,8 +5,6 @@ import {
 	expandBindings,
 	LibsqlDriver,
 	DrizzleDatabaseDriver,
-	DrizzleClient,
-	UnitOfWorkFactory,
 	DomainEventRepository,
 	DrizzleDomainEventRepository,
 	InternalMediator,
@@ -72,22 +70,22 @@ function getTestDatabaseDriver(): LibsqlDriver {
 }
 const libsqlDriver = { useFactory: () => getTestDatabaseDriver() }
 
-const drizzleClient = { useFactory: (c: DependencyContainer) => (c.resolve(DrizzleDatabaseDriver as any) as any).db }
-const unitOfWorkFactory = { useFactory: (c: DependencyContainer) => (c.resolve(DrizzleDatabaseDriver as any) as any).unitOfWorkFactory }
-
 // The aggregator is the SAME in every env — what differs is how many checks answer it. `resolveAll`
 // over the multi-inject token is not expressable as injection-by-type, which is why this is a
 // factory and `HealthService` is not `@injectable()`.
 const healthServiceFactory = { useFactory: (c: DependencyContainer) => new HealthService(healthChecksFrom(c)) }
-const resolveDriver = (c: DependencyContainer) => c.resolve(DrizzleDatabaseDriver as any) as DrizzleDatabaseDriver
 
 // The `real` health checks, hoisted so the `e2e` column can DECLARE the same value instead of
 // inheriting `integration`'s declared absence. e2e is a REAL boot — same driver, same outbox
 // dispatcher, same lane poller, same mailbox dispatcher — so `/v1/health` there must answer with the
 // same five checks a production daemon answers with; the `null` in mock/integration is about TestBed
 // suites building HealthService by hand (Health.test.ts), which the harness does not do.
-const databaseHealthCheck = { useFactory: (c: DependencyContainer) => new DatabaseHealthCheck(resolveDriver(c)) }
-const migrationsHealthCheck = { useFactory: (c: DependencyContainer) => new MigrationsHealthCheck(resolveDriver(c)) }
+const databaseHealthCheck = {
+	useFactory: (c: DependencyContainer) => new DatabaseHealthCheck(c.resolve(DrizzleDatabaseDriver as any) as DrizzleDatabaseDriver),
+}
+const migrationsHealthCheck = {
+	useFactory: (c: DependencyContainer) => new MigrationsHealthCheck(c.resolve(DrizzleDatabaseDriver as any) as DrizzleDatabaseDriver),
+}
 const outboxDispatcherHealthCheck = {
 	useFactory: (c: DependencyContainer) =>
 		new PollingHealthCheck('outboxDispatcher', c.resolve(OutboxDispatcher as any) as DrizzleOutboxDispatcher),
@@ -97,7 +95,8 @@ const externalMediatorHealthCheck = {
 		new PollingHealthCheck('sqlExternalMediator', c.resolve(ExternalMediator as any) as SqlExternalMediator),
 }
 const channelStatusHealthCheck = {
-	useFactory: (c: DependencyContainer) => new ChannelStatusHealthCheck(c.resolve(DrizzleClient as any) as DrizzleClient),
+	useFactory: (c: DependencyContainer) =>
+		new ChannelStatusHealthCheck((c.resolve(DrizzleDatabaseDriver as any) as DrizzleDatabaseDriver).db),
 }
 
 // Kernel bindings — one declaration per token, envs as columns (divergence is visible, absence is
@@ -111,9 +110,9 @@ const CORE_REGISTRY: InstanceRegistry = expandBindings([
 		// class value (not `useFactory`) — expandBindings/registerAll turns this into
 		// `container.registerSingleton(DrizzleDatabaseDriver, FileLibsqlDriver)`, so the container is
 		// the ONE owner of the instance's lifecycle; every resolver (migrateEmbeddedDatabase,
-		// drizzleClient, unitOfWorkFactory, resolveDriver, HEALTH_CHECKS factories below) gets the
-		// SAME instance from the SAME root container. See FileLibsqlDriver.ts for the EMIT_OPENAPI
-		// carve-out this replaces.
+		// every repository/use-case that injects the driver, the HEALTH_CHECKS factories below) gets
+		// the SAME instance from the SAME root container. See FileLibsqlDriver.ts for the
+		// EMIT_OPENAPI carve-out this replaces.
 		real: FileLibsqlDriver,
 		// e2e = REAL. Declared, not inherited: the chain (`e2e → integration → real`) would hand this
 		// column the `integration` temp-file driver, and the Playwright harness is the ONE test that
@@ -125,13 +124,6 @@ const CORE_REGISTRY: InstanceRegistry = expandBindings([
 		// "two databases" split FileLibsqlDriver's docblock warns about.
 		e2e: FileLibsqlDriver,
 	},
-	// The SHAPE of this binding is unchanged; its MEANING is not. `driver.db` is now the driver's
-	// dedicated READ connection, never the write one — which is precisely why this stayed a
-	// one-line change instead of touching the 58 files that inject DrizzleClient. Do NOT "improve"
-	// it by pointing at the write handle: that reopens cross-request dirty reads, and the only
-	// thing that would complain is the dirty-read case in LibsqlDriver.test.ts.
-	{ token: DrizzleClient, mock: drizzleClient, real: drizzleClient },
-	{ token: UnitOfWorkFactory, mock: unitOfWorkFactory, real: unitOfWorkFactory },
 	// mock: declared absence — flow tests wire OutboxAwareMockDomainEventRepository per-suite (TestBed).
 	{ token: DomainEventRepository, mock: null, real: DrizzleDomainEventRepository },
 	// Boot resolves the abstract HttpRouter token (src/index.ts) — bind the Fastify transport here

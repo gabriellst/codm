@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
-import { Handler, z, DrizzleClient, Config } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, Handler, z, Config } from '@codm/core-typescript'
 import { owners } from '@codm/contracts/db'
 import { ProviderKind, ProviderStatus } from '@codm/contracts-typescript/wire/enums'
 import { ProviderDetector } from '@agent/services/ProviderDetector'
@@ -72,7 +72,7 @@ export class GetSettings extends Handler<typeof GetSettingsInputSchema, typeof G
 	readonly outputSchema = GetSettingsOutputSchema
 
 	constructor(
-		private readonly db: DrizzleClient,
+		private readonly driver: DrizzleDatabaseDriver,
 		private readonly providerDetector: ProviderDetector,
 		private readonly stopPolicy: StopPolicyConfigRepository,
 		private readonly agentRunnerFactory: AgentRunnerFactory,
@@ -97,7 +97,7 @@ export class GetSettings extends Handler<typeof GetSettingsInputSchema, typeof G
 
 		const stopCriteria = await this.stopPolicy.get(input.ownerId)
 
-		const ownerRow = await this.db
+		const ownerRow = await this.driver.db
 			.select({ name: owners.name, timezone: owners.timezone })
 			.from(owners)
 			.where(eq(owners.id, input.ownerId))

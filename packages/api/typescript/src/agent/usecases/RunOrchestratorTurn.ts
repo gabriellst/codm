@@ -380,7 +380,7 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 	 *
 	 * Reads through `ThreadRepository` (B4, decision 3): the window is a READ and stays outside the
 	 * aggregate, but it is a read of the thread's OWN rows, so it is the thread repository's surface. One
-	 * fewer injection than before, and no `DrizzleClient` in an agent use case.
+	 * fewer injection than before, and no direct drizzle handle in an agent use case.
 	 */
 	private async buildWindow(thread: LoadedThread) {
 		const rows = await this.threads.recentEntries(thread.id.value, this.bufferLimit(thread.bufferSize))

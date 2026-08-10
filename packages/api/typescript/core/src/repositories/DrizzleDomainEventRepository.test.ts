@@ -15,7 +15,7 @@ import { events, outbox } from '@codm/contracts/db'
 import { migrationsDir } from '@codm/contracts/db/migrations'
 import { OutboxSource } from '@codm/contracts-typescript/wire/enums'
 import { LibsqlDriver } from '../db/drivers/LibsqlDriver'
-import type { DrizzleClient } from '../db/client'
+import type { DrizzleTransaction } from '../services/UnitOfWork/DrizzleUnitOfWork'
 import { BaseDomainEvent } from '../types/BaseDomainEvent'
 import { BaseIntegrationEvent } from '../types/BaseIntegrationEvent'
 import { z } from '../utils/schema'
@@ -43,7 +43,7 @@ describe('DrizzleDomainEventRepository', () => {
 		dir = mkdtempSync(join(tmpdir(), 'libsql-events-test-'))
 		driver = new LibsqlDriver({ schema, migrationsDir, dbPath: join(dir, 'codm.db') })
 		await driver.runMigrations()
-		repo = new DrizzleDomainEventRepository(driver.db as DrizzleClient)
+		repo = new DrizzleDomainEventRepository(driver)
 	})
 
 	afterAll(() => {
@@ -56,7 +56,7 @@ describe('DrizzleDomainEventRepository', () => {
 
 	const save = (marker: string, Event: typeof ProbeEvent | typeof OtherEvent = ProbeEvent) =>
 		driver.transaction(tx =>
-			repo.save(new Event({ entityId: crypto.randomUUID(), ownerId: OWNER, payload: { marker } }), tx as DrizzleClient),
+			repo.save(new Event({ entityId: crypto.randomUUID(), ownerId: OWNER, payload: { marker } }), tx as DrizzleTransaction),
 		)
 
 	it('writes the audit row AND the outbox row, both on the `api` lane', async () => {
@@ -81,7 +81,7 @@ describe('DrizzleDomainEventRepository', () => {
 
 	it('an INTEGRATION event lands on the `integration` lane — the lane whose claimant is SqlExternalMediator', async () => {
 		await driver.transaction(tx =>
-			repo.saveIntegrationEvent(new ProbeIntegrationEvent({ ownerId: OWNER, payload: { marker: 'crossing' } }), tx as DrizzleClient),
+			repo.saveIntegrationEvent(new ProbeIntegrationEvent({ ownerId: OWNER, payload: { marker: 'crossing' } }), tx as DrizzleTransaction),
 		)
 
 		const [auditRow] = await driver.db.select().from(events)
@@ -112,8 +112,8 @@ describe('DrizzleDomainEventRepository', () => {
 	it('saveIfNotExists is idempotent at the database level', async () => {
 		const event = new ProbeEvent({ entityId: crypto.randomUUID(), ownerId: OWNER, payload: { marker: 'once' } })
 
-		expect(await driver.transaction(tx => repo.saveIfNotExists(event, tx as DrizzleClient))).toBe(true)
-		expect(await driver.transaction(tx => repo.saveIfNotExists(event, tx as DrizzleClient))).toBe(false)
+		expect(await driver.transaction(tx => repo.saveIfNotExists(event, tx as DrizzleTransaction))).toBe(true)
+		expect(await driver.transaction(tx => repo.saveIfNotExists(event, tx as DrizzleTransaction))).toBe(false)
 		expect(await driver.db.select().from(events)).toHaveLength(1)
 	})
 

@@ -14,7 +14,6 @@ import {
 	OutboxDispatcher,
 	ExternalMediator,
 	DrizzleDatabaseDriver,
-	DrizzleClient,
 	LoggingService,
 	openapi,
 } from '@codm/core-typescript'
@@ -75,11 +74,10 @@ const ctx = await BoundedContext.create({
 		// path would each mint a SEPARATE driver, i.e. another pair of connections AND another FIFO
 		// write gate over the same file: the gates would not know about each other, so two "serialized"
 		// writers would contend for the single SQLite write lock and take SQLITE_BUSY. Pinning the
-		// resolved driver + its db here (before migrations, outbox, or any context
-		// serves) makes DrizzleClient / UnitOfWorkFactory factories resolve this same instance forever.
-		// Mirrors TestBed.ts:92-93.
+		// resolved driver here (before migrations, outbox, or any context serves) makes every
+		// repository/use-case that injects `DrizzleDatabaseDriver` resolve this same instance forever.
+		// Mirrors TestBed.ts:92.
 		container.registerInstance(DrizzleDatabaseDriver as any, databaseDriver)
-		container.registerInstance(DrizzleClient as any, databaseDriver.db)
 		await databaseDriver.runMigrations()
 		const loggingService = container.resolve(LoggingService as any) as LoggingService
 		loggingService.info({ content: { message: 'Migrations applied (shared SQLite)' } })

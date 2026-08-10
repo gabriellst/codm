@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq, isNull, sql } from 'drizzle-orm'
-import { Handler, z, DrizzleClient } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, Handler, z } from '@codm/core-typescript'
 import { workspaces, threads } from '@codm/contracts/db'
 import { WorkspaceBadge } from '@codm/contracts-typescript/wire/enums'
 
@@ -31,13 +31,13 @@ export class ListWorkspaces extends Handler<typeof ListWorkspacesInputSchema, ty
 	readonly inputSchema = ListWorkspacesInputSchema
 	readonly outputSchema = ListWorkspacesOutputSchema
 
-	constructor(private readonly db: DrizzleClient) {
+	constructor(private readonly driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
 	protected async handle(input: this['input']): Promise<this['output']> {
 		const threadCount = sql<number>`cast(count(${threads.id}) as int)`
-		const rows = await this.db
+		const rows = await this.driver.db
 			.select({
 				workspaceId: workspaces.id,
 				path: workspaces.path,

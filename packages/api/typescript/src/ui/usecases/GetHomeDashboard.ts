@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { and, asc, desc, eq, gte, inArray, isNull, sql } from 'drizzle-orm'
-import { Handler, z, DrizzleClient } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, Handler, z } from '@codm/core-typescript'
 import { threads, issues, stops, transcriptEntries, workspaces, channels, remotes } from '@codm/contracts/db'
 import {
 	ThreadStatus,
@@ -74,7 +74,13 @@ export const GetHomeDashboardOutputSchema = z.object({
 	 * `enumLabel` and the i18n rail can see it; as a bare `string` it was invisible to both.
 	 */
 	latestActivity: z.array(
-		z.object({ kind: z.enum(TranscriptKind), subtitle: z.string(), threadId: z.uuid(), at: z.string(), sender: ActivitySenderSchema.optional() }),
+		z.object({
+			kind: z.enum(TranscriptKind),
+			subtitle: z.string(),
+			threadId: z.uuid(),
+			at: z.string(),
+			sender: ActivitySenderSchema.optional(),
+		}),
 	),
 	/**
 	 * `medianResponseSeconds` is HOW LONG THE CONTACT WAITED, in seconds, for the median reply sent
@@ -99,17 +105,17 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 	readonly outputSchema = GetHomeDashboardOutputSchema
 
 	constructor(
-		private readonly db: DrizzleClient,
+		private readonly driver: DrizzleDatabaseDriver,
 		private readonly statuses: ThreadStatusDeriver,
 	) {
 		super()
 	}
 
 	protected async handle(input: this['input']): Promise<this['output']> {
-		const allIssues = await this.db.select().from(issues).where(eq(issues.ownerId, input.ownerId))
+		const allIssues = await this.driver.db.select().from(issues).where(eq(issues.ownerId, input.ownerId))
 		const agentsRunningNow = allIssues.filter(i => i.status === IssueStatus.WORKING && !i.archived).length
 
-		const threadRows = await this.db
+		const threadRows = await this.driver.db
 			.select({
 				threadId: threads.id,
 				displayName: threads.contactDisplayName,
@@ -137,7 +143,7 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 		// PROJECTED, not `select()` — the join below would otherwise nest the row per table
 		// (`{ issue_stops: …, thread_threads: … }`) and silently change what `buildNeedsYou` reads. Only
 		// the two columns it uses travel.
-		const openStops = await this.db
+		const openStops = await this.driver.db
 			.select({ threadId: stops.threadId, kind: stops.kind })
 			.from(stops)
 			// Stops are read owner-wide here, so the join is how a deleted thread's stop is kept out of the
@@ -172,7 +178,7 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 
 		const needsYou = this.buildNeedsYou(openStops, threadRows)
 
-		const recent = await this.db
+		const recent = await this.driver.db
 			.select({
 				text: transcriptEntries.text,
 				threadId: transcriptEntries.threadId,
@@ -236,7 +242,7 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 
 		const medianResponseSeconds = await this.medianResponse(input.ownerId, dayStart)
 
-		const channelRows = await this.db
+		const channelRows = await this.driver.db
 			.select({ kind: channels.platform, status: channels.status })
 			.from(channels)
 			.where(eq(channels.ownerId, input.ownerId))
@@ -308,7 +314,7 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 	private async medianResponse(ownerId: string, dayStart: Date): Promise<number> {
 		const OUTBOUND = [TranscriptKind.SYSTEM, TranscriptKind.DIRECT]
 
-		const entries = await this.db
+		const entries = await this.driver.db
 			.select({ threadId: transcriptEntries.threadId, kind: transcriptEntries.kind, at: transcriptEntries.at })
 			.from(transcriptEntries)
 			// Same join as `latestActivity` above, for the same reason: a deleted thread's lines must not

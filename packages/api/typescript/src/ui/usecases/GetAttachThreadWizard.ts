@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq, like, inArray, isNull, sql } from 'drizzle-orm'
-import { Handler, z, DrizzleClient, BaseError } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, Handler, z, BaseError } from '@codm/core-typescript'
 import type { BaseInterfaceErrors } from '@codm/core-typescript'
 import type { z as zt } from 'zod'
 import { channels, workspaces, threads, remotes, remoteMemberships } from '@codm/contracts/db'
@@ -141,7 +141,7 @@ export class GetAttachThreadWizard extends Handler<typeof GetAttachThreadWizardI
 	readonly outputSchema = GetAttachThreadWizardOutputSchema
 
 	constructor(
-		private readonly db: DrizzleClient,
+		private readonly driver: DrizzleDatabaseDriver,
 		private readonly providerDetector: ProviderDetector,
 		private readonly agentRunnerFactory: AgentRunnerFactory,
 	) {
@@ -151,7 +151,7 @@ export class GetAttachThreadWizard extends Handler<typeof GetAttachThreadWizardI
 	protected async handle(input: this['input']): Promise<this['output']> {
 		// Every channel the operator owns (any status) scopes the contact directory; the CONNECTED
 		// subset drives the attach gate + the channel picker.
-		const ownerChannels = await this.db
+		const ownerChannels = await this.driver.db
 			.select({ channelId: channels.id, kind: channels.platform, status: channels.status })
 			.from(channels)
 			.where(eq(channels.ownerId, input.ownerId))
@@ -159,7 +159,7 @@ export class GetAttachThreadWizard extends Handler<typeof GetAttachThreadWizardI
 		const ownerChannelIds = ownerChannels.map(c => c.channelId)
 		const connectedChannels = ownerChannels.filter(c => c.status === ChannelStatus.CONNECTED)
 
-		const workspaceRows = await this.db
+		const workspaceRows = await this.driver.db
 			.select({ workspaceId: workspaces.id, path: workspaces.path, badges: workspaces.badges })
 			.from(workspaces)
 			.where(eq(workspaces.ownerId, input.ownerId))
@@ -225,7 +225,7 @@ export class GetAttachThreadWizard extends Handler<typeof GetAttachThreadWizardI
 			)
 		}
 
-		const rows = await this.db
+		const rows = await this.driver.db
 			.select({
 				channelId: remotes.channelId,
 				remoteId: remotes.remoteId,
@@ -249,7 +249,7 @@ export class GetAttachThreadWizard extends Handler<typeof GetAttachThreadWizardI
 		// counting an apagada thread here would leave its contact flagged "já anexado" in the only screen
 		// that can re-attach it, so the revive decision 4 promises would be unreachable from the UI while
 		// the conversation stays invisible everywhere else.
-		const threadRows = await this.db
+		const threadRows = await this.driver.db
 			.select({ channelId: threads.channelId, externalId: threads.contactExternalId })
 			.from(threads)
 			.where(and(eq(threads.ownerId, input.ownerId), isNull(threads.deletedAt)))
@@ -259,7 +259,7 @@ export class GetAttachThreadWizard extends Handler<typeof GetAttachThreadWizardI
 		const groupRemoteIds = page.filter(r => r.type === ContactKind.GROUP).map(r => r.remoteId)
 		const memberCounts = new Map<string, number>()
 		if (groupRemoteIds.length > 0) {
-			const counts = await this.db
+			const counts = await this.driver.db
 				.select({ channelId: remoteMemberships.channelId, groupId: remoteMemberships.groupId, count: sql<number>`count(*)` })
 				.from(remoteMemberships)
 				.where(and(inArray(remoteMemberships.channelId, ownerChannelIds), inArray(remoteMemberships.groupId, groupRemoteIds)))

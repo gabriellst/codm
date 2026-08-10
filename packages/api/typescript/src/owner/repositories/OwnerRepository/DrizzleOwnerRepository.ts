@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, tryCatchAsync, DrizzleTransaction } from '@codm/core-typescript'
 import { owners } from '@codm/contracts/db'
 import type { OwnerKind } from '@codm/contracts-typescript/wire/enums'
 import { Owner, OwnerSchema } from '../../entities/Owner'
@@ -8,12 +8,12 @@ import { OwnerRepository } from './OwnerRepository'
 
 @injectable()
 export class DrizzleOwnerRepository extends OwnerRepository {
-	constructor(private db: DrizzleClient) {
+	constructor(private driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
-	async findById(id: string, tx?: DrizzleClient): Promise<Owner | undefined> {
-		const dbc = tx ?? this.db
+	async findById(id: string, tx?: DrizzleTransaction): Promise<Owner | undefined> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			const rows = await dbc.select().from(owners).where(eq(owners.id, id)).limit(1)
 			return rows[0]
@@ -22,12 +22,12 @@ export class DrizzleOwnerRepository extends OwnerRepository {
 		return this.toDomain(result.data)
 	}
 
-	async findByOwnerId(ownerId: string, tx?: DrizzleClient): Promise<Owner | null> {
+	async findByOwnerId(ownerId: string, tx?: DrizzleTransaction): Promise<Owner | null> {
 		return (await this.findById(ownerId, tx)) ?? null
 	}
 
-	async findByResponsibleUserId(userId: string, tx?: DrizzleClient): Promise<Owner[]> {
-		const dbc = tx ?? this.db
+	async findByResponsibleUserId(userId: string, tx?: DrizzleTransaction): Promise<Owner[]> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			return dbc.select().from(owners).where(eq(owners.responsibleUserId, userId))
 		})
@@ -35,9 +35,9 @@ export class DrizzleOwnerRepository extends OwnerRepository {
 		return result.data.map(row => this.toDomain(row))
 	}
 
-	async save(entity: Owner, tx?: DrizzleClient): Promise<Owner> {
+	async save(entity: Owner, tx?: DrizzleTransaction): Promise<Owner> {
 		entity.incrementVersion()
-		const dbc = tx ?? this.db
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			const data = this.toPersistence(entity)
 			await dbc
@@ -63,8 +63,8 @@ export class DrizzleOwnerRepository extends OwnerRepository {
 		return result.data
 	}
 
-	async delete(id: string, tx?: DrizzleClient): Promise<void> {
-		const dbc = tx ?? this.db
+	async delete(id: string, tx?: DrizzleTransaction): Promise<void> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			await dbc.delete(owners).where(eq(owners.id, id))
 		})

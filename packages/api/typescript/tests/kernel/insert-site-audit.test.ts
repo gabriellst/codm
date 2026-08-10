@@ -15,7 +15,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { eq, sql } from 'drizzle-orm'
 import { givenIssue, givenOwner, givenStop, givenThread, givenWorkspace, TestBed } from '@test/support'
-import { DrizzleClient, DrizzleDatabaseDriver } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, DrizzleTransaction } from '@codm/core-typescript'
 import {
 	artifacts,
 	channels,
@@ -48,13 +48,13 @@ class AuditProbeEvent extends BaseDomainEvent<{ marker: string }> {
 describe('insert-site audit — every db-generated id and notNull timestamp survives the real write path', () => {
 	let testBed: TestBed
 	let testContainer: DependencyContainer
-	let db: DrizzleClient
+	let db: DrizzleTransaction
 	let driver: DrizzleDatabaseDriver
 
 	beforeAll(async () => {
 		testContainer = container.createChildContainer()
 		testBed = await TestBed.create('integration', { testContainer, ownerId: OWNER })
-		db = testBed.resolve(DrizzleClient)
+		db = testBed.resolve(DrizzleDatabaseDriver).db
 		driver = testBed.resolve(DrizzleDatabaseDriver)
 	})
 

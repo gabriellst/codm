@@ -68,7 +68,7 @@ describe('a TS publisher rides the SAME lane as the Go gateway, and only the pol
 
 	beforeEach(async () => {
 		await driver.reset()
-		mediator = new SqlExternalMediator(driver, new DrizzleDomainEventRepository(driver.db))
+		mediator = new SqlExternalMediator(driver, new DrizzleDomainEventRepository(driver))
 	})
 
 	it('publica → linha na lane `integration`, ZERO handlers rodados; drainOnce entrega e tombstona', async () => {
@@ -107,7 +107,7 @@ describe('a TS publisher rides the SAME lane as the Go gateway, and only the pol
 
 		// "O processo caiu antes de qualquer entrega." Uma instância NOVA — sem nada em memória — reclama
 		// a mesma linha do arquivo. É a garantia que o caminho antigo não tinha: não havia linha.
-		const reborn = new SqlExternalMediator(driver, new DrizzleDomainEventRepository(driver.db))
+		const reborn = new SqlExternalMediator(driver, new DrizzleDomainEventRepository(driver))
 		const { handler, calls } = makeHandler(PUBLISHED)
 		await reborn.register(handler)
 

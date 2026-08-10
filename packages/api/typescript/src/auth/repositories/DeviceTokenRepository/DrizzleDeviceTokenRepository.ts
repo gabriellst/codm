@@ -1,18 +1,18 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq, gt, isNull } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, tryCatchAsync, DrizzleTransaction } from '@codm/core-typescript'
 import { deviceCodes, deviceTokens } from '@codm/contracts/db'
 import { DeviceToken } from '../../entities/DeviceToken'
 import { DeviceTokenRepository, type ConsumedDeviceCode } from './DeviceTokenRepository'
 
 @injectable()
 export class DrizzleDeviceTokenRepository extends DeviceTokenRepository {
-	constructor(private db: DrizzleClient) {
+	constructor(private driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
-	async findById(id: string, tx?: DrizzleClient): Promise<DeviceToken | undefined> {
-		const dbClient = tx ?? this.db
+	async findById(id: string, tx?: DrizzleTransaction): Promise<DeviceToken | undefined> {
+		const dbClient = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			const rows = await dbClient.select().from(deviceTokens).where(eq(deviceTokens.id, id)).limit(1)
 			return rows[0]
@@ -21,8 +21,8 @@ export class DrizzleDeviceTokenRepository extends DeviceTokenRepository {
 		return this.toDomain(result.data)
 	}
 
-	async findByHash(tokenHash: string, tx?: DrizzleClient): Promise<DeviceToken | undefined> {
-		const dbClient = tx ?? this.db
+	async findByHash(tokenHash: string, tx?: DrizzleTransaction): Promise<DeviceToken | undefined> {
+		const dbClient = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			const rows = await dbClient.select().from(deviceTokens).where(eq(deviceTokens.tokenHash, tokenHash)).limit(1)
 			return rows[0]
@@ -31,9 +31,9 @@ export class DrizzleDeviceTokenRepository extends DeviceTokenRepository {
 		return this.toDomain(result.data)
 	}
 
-	async save(entity: DeviceToken, tx?: DrizzleClient): Promise<DeviceToken> {
+	async save(entity: DeviceToken, tx?: DrizzleTransaction): Promise<DeviceToken> {
 		entity.incrementVersion()
-		const dbClient = tx ?? this.db
+		const dbClient = tx ?? this.driver.db
 		const data = this.toPersistence(entity)
 		const result = await tryCatchAsync(async () => {
 			await dbClient
@@ -54,16 +54,16 @@ export class DrizzleDeviceTokenRepository extends DeviceTokenRepository {
 		return result.data
 	}
 
-	async delete(id: string, tx?: DrizzleClient): Promise<void> {
-		const dbClient = tx ?? this.db
+	async delete(id: string, tx?: DrizzleTransaction): Promise<void> {
+		const dbClient = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			await dbClient.delete(deviceTokens).where(eq(deviceTokens.id, id))
 		})
 		if (!result.success) throw result.error
 	}
 
-	async issueCode(code: string, userId: string, expiresAt: Date, tx?: DrizzleClient): Promise<void> {
-		const dbClient = tx ?? this.db
+	async issueCode(code: string, userId: string, expiresAt: Date, tx?: DrizzleTransaction): Promise<void> {
+		const dbClient = tx ?? this.driver.db
 		await dbClient.insert(deviceCodes).values({ code, userId, expiresAt })
 	}
 
@@ -73,8 +73,8 @@ export class DrizzleDeviceTokenRepository extends DeviceTokenRepository {
 	 * race between two exchanges of the same code and a slow exchange of an expired code both resolve
 	 * to zero rows updated, never a false claim.
 	 */
-	async consumeCode(code: string, now: Date, tx?: DrizzleClient): Promise<ConsumedDeviceCode | undefined> {
-		const dbClient = tx ?? this.db
+	async consumeCode(code: string, now: Date, tx?: DrizzleTransaction): Promise<ConsumedDeviceCode | undefined> {
+		const dbClient = tx ?? this.driver.db
 		const claimed = await dbClient
 			.update(deviceCodes)
 			.set({ consumedAt: now })

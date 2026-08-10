@@ -1,6 +1,6 @@
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import type * as schema from '@codm/contracts/db'
-import { UnitOfWork, UnitOfWorkFactory } from './UnitOfWork'
+import { UnitOfWork } from './UnitOfWork'
 import { DrizzleDatabaseDriver } from '../../db/drivers/DrizzleDatabaseDriver'
 import { injectable } from 'tsyringe-neo'
 
@@ -28,7 +28,7 @@ export type DrizzleTransaction = LibSQLDatabase<typeof schema>
  * `BEGIN IMMEDIATE` path gives 4 descriptors after 500 transactions and the pragmas intact.
  *
  * Hence: the driver owns the write connection and the BEGIN/COMMIT/ROLLBACK strings, and this
- * class is a thin adapter onto it. The injected `DrizzleClient` is the READ handle — the unit of
+ * class is a thin adapter onto it. The driver's injected `.db` is the READ handle — the unit of
  * work must never write through it.
  */
 @injectable()
@@ -43,10 +43,8 @@ export class DrizzleUnitOfWork extends UnitOfWork<DrizzleTransaction> {
 }
 
 @injectable()
-export class DrizzleUnitOfWorkFactory extends UnitOfWorkFactory {
-	constructor(private driver: DrizzleDatabaseDriver) {
-		super()
-	}
+export class DrizzleUnitOfWorkFactory {
+	constructor(private driver: DrizzleDatabaseDriver) {}
 
 	create(): UnitOfWork<DrizzleTransaction> {
 		return new DrizzleUnitOfWork(this.driver)

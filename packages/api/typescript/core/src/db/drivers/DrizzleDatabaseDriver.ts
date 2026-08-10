@@ -1,6 +1,4 @@
-import type { UnitOfWorkFactory } from '../../services/UnitOfWork/UnitOfWork'
-import type { DrizzleTransaction } from '../../services/UnitOfWork/DrizzleUnitOfWork'
-import type { DrizzleClient } from '../client'
+import type { DrizzleTransaction, DrizzleUnitOfWorkFactory } from '../../services/UnitOfWork/DrizzleUnitOfWork'
 
 /**
  * What `readMigrations()` answers, read from the shared `_sqlite_migrations` ledger plus the
@@ -20,11 +18,12 @@ export interface MigrationStatus {
 
 export abstract class DrizzleDatabaseDriver {
 	/**
-	 * The READ handle. Bound to the `DrizzleClient` token by the composition root, so every query
-	 * use case and repository read goes through it. It is NOT a write handle — see `transaction`.
+	 * The READ handle. Consumers inject `DrizzleDatabaseDriver` itself and read `.db` off it, so
+	 * every query use case and repository read goes through it. It is NOT a write handle — see
+	 * `transaction`.
 	 */
-	abstract readonly db: DrizzleClient
-	abstract readonly unitOfWorkFactory: UnitOfWorkFactory
+	abstract readonly db: DrizzleTransaction
+	abstract readonly unitOfWorkFactory: DrizzleUnitOfWorkFactory
 
 	/**
 	 * The ONLY write path. Runs `fn` inside a real write transaction on a dedicated write

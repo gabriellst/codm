@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { and, asc, eq, isNotNull, lte } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, tryCatchAsync, DrizzleTransaction } from '@codm/core-typescript'
 import { loops } from '@codm/contracts/db'
 import { LoopScheduleKind, type DayOfWeek } from '@codm/contracts-typescript/wire/enums'
 import { Loop } from '../../entities/Loop'
@@ -16,12 +16,12 @@ type ScheduleColumn = 'kind' | 'timeOfDay' | 'weekdays' | 'timezone' | 'everyMin
 
 @injectable()
 export class DrizzleLoopRepository extends LoopRepository {
-	constructor(private db: DrizzleClient) {
+	constructor(private driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
-	async findById(id: string, tx?: DrizzleClient): Promise<Loop | undefined> {
-		const dbc = tx ?? this.db
+	async findById(id: string, tx?: DrizzleTransaction): Promise<Loop | undefined> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			const rows = await dbc.select().from(loops).where(eq(loops.id, id)).limit(1)
 			return rows[0]
@@ -30,8 +30,8 @@ export class DrizzleLoopRepository extends LoopRepository {
 		return this.toDomain(result.data)
 	}
 
-	async listByThread(threadId: string, tx?: DrizzleClient): Promise<Loop[]> {
-		const dbc = tx ?? this.db
+	async listByThread(threadId: string, tx?: DrizzleTransaction): Promise<Loop[]> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () =>
 			// Next run first, so the console's list reads as a timetable. A disabled loop has no next run
 			// and sorts last on `NULLS LAST`-less SQLite… which puts NULLs FIRST — hence the second key:
@@ -42,8 +42,8 @@ export class DrizzleLoopRepository extends LoopRepository {
 		return result.data.map(row => this.toDomain(row))
 	}
 
-	async findDue(now: Date, limit: number, tx?: DrizzleClient): Promise<Loop[]> {
-		const dbc = tx ?? this.db
+	async findDue(now: Date, limit: number, tx?: DrizzleTransaction): Promise<Loop[]> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () =>
 			dbc
 				.select()
@@ -59,8 +59,8 @@ export class DrizzleLoopRepository extends LoopRepository {
 		return result.data.map(row => this.toDomain(row))
 	}
 
-	async save(entity: Loop, tx?: DrizzleClient): Promise<Loop> {
-		const dbc = tx ?? this.db
+	async save(entity: Loop, tx?: DrizzleTransaction): Promise<Loop> {
+		const dbc = tx ?? this.driver.db
 		const data = this.toPersistence(entity)
 		const result = await tryCatchAsync(async () => {
 			await dbc
@@ -92,8 +92,8 @@ export class DrizzleLoopRepository extends LoopRepository {
 		return result.data
 	}
 
-	async delete(id: string, tx?: DrizzleClient): Promise<void> {
-		const dbc = tx ?? this.db
+	async delete(id: string, tx?: DrizzleTransaction): Promise<void> {
+		const dbc = tx ?? this.driver.db
 		const result = await tryCatchAsync(async () => {
 			await dbc.delete(loops).where(eq(loops.id, id))
 		})

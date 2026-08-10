@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq, isNull } from 'drizzle-orm'
-import { Handler, z, DrizzleClient } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, Handler, z } from '@codm/core-typescript'
 import { issues, threads } from '@codm/contracts/db'
 import { IssueStatus } from '@codm/contracts-typescript/wire/enums'
 
@@ -35,12 +35,12 @@ export class GetIssuesOverview extends Handler<typeof GetIssuesOverviewInputSche
 	readonly inputSchema = GetIssuesOverviewInputSchema
 	readonly outputSchema = GetIssuesOverviewOutputSchema
 
-	constructor(private readonly db: DrizzleClient) {
+	constructor(private readonly driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
 	protected async handle(input: this['input']): Promise<this['output']> {
-		const rows = await this.db
+		const rows = await this.driver.db
 			.select({
 				issueId: issues.id,
 				key: issues.key,

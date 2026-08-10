@@ -4,26 +4,26 @@ import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
 
 /**
- * Probe-discipline guard — the mechanical half of the "tests never resolve DrizzleClient directly"
- * convention documented in `tests/architecture/README.md` ("Reading Persisted State").
+ * Probe-discipline guard — the mechanical half of the "tests never resolve DrizzleDatabaseDriver
+ * directly" convention documented in `tests/architecture/README.md` ("Reading Persisted State").
  *
  * Asserts on persisted events/outbox rows and cross-table invariant snapshots go through
  * `testBed.probe()` (`PersistenceProbe`, `tests/support/PersistenceProbe.ts`) instead of every test
- * file resolving `DrizzleClient` and importing raw schema tables itself — that's infrastructure
- * coupling: a schema rename becomes a grep-and-replace across dozens of test files instead of a
- * one-file change to the probe.
+ * file resolving `DrizzleDatabaseDriver` and importing raw schema tables itself — that's
+ * infrastructure coupling: a schema rename becomes a grep-and-replace across dozens of test files
+ * instead of a one-file change to the probe.
  *
  * Scope: every `src/**\/*.test.ts` and `tests/**\/*.test.ts` in the `api/typescript` package (the
  * `core/` sub-package, which owns the Drizzle*Repository tests, is out of scope by construction).
  *
- * How it checks: for every in-scope test file, flag any `resolve(DrizzleClient)` occurrence whose
- * file isn't in EXEMPTIONS. Exemptions are named files/directories with a `why` — never a weakened
- * regex.
+ * How it checks: for every in-scope test file, flag any `resolve(DrizzleDatabaseDriver).db` occurrence
+ * whose file isn't in EXEMPTIONS. Exemptions are named files/directories with a `why` — never a
+ * weakened regex.
  */
 
 const API_ROOT = join(import.meta.dir, '..', '..')
 
-/** Files legitimately allowed to resolve DrizzleClient — each needs a `why`. */
+/** Files legitimately allowed to resolve DrizzleDatabaseDriver — each needs a `why`. */
 const EXEMPTIONS: { path: string; why: string }[] = [
 	{
 		path: 'tests/kernel/SqliteCommandQueue.test.ts',
@@ -71,11 +71,11 @@ const EXEMPTIONS: { path: string; why: string }[] = [
 	},
 	{
 		path: 'tests/architecture/probe-discipline.test.ts',
-		why: "this detector's own source contains the literal `resolve(DrizzleClient)` string (inside its regex and the negative fixture) — matching itself is a false positive, not a violation",
+		why: "this detector's own source contains the literal `resolve(DrizzleDatabaseDriver).db` string (inside its regex and the negative fixture) — matching itself is a false positive, not a violation",
 	},
 	{
 		path: 'tests/architecture/allowlist-liveness.test.ts',
-		why: "the liveness rail's negative fixture writes a fake exempted file whose content is the literal `resolve(DrizzleClient)` — fixture material in a temp dir, not a persisted-business-data read; same self-match class as this detector's own entry",
+		why: "the liveness rail's negative fixture writes a fake exempted file whose content is the literal `resolve(DrizzleDatabaseDriver).db` — fixture material in a temp dir, not a persisted-business-data read; same self-match class as this detector's own entry",
 	},
 ]
 
@@ -99,7 +99,7 @@ function listTestFiles(dir: string): string[] {
 	return out
 }
 
-/** Scans `root` for `resolve(DrizzleClient)` occurrences in in-scope test files, honoring EXEMPTIONS. */
+/** Scans `root` for `resolve(DrizzleDatabaseDriver).db` occurrences in in-scope test files, honoring EXEMPTIONS. */
 function scanForViolations(root: string): string[] {
 	const violations: string[] = []
 
@@ -111,7 +111,7 @@ function scanForViolations(root: string): string[] {
 			if (EXEMPTIONS.some(e => e.path === rel)) continue
 
 			const content = readFileSync(file, 'utf8')
-			if (/resolve\(DrizzleClient\)/.test(content)) {
+			if (/resolve\(DrizzleDatabaseDriver\)\.db\b/.test(content)) {
 				violations.push(rel)
 			}
 		}
@@ -120,14 +120,14 @@ function scanForViolations(root: string): string[] {
 	return violations
 }
 
-describe('probe-discipline (tests never resolve DrizzleClient directly)', () => {
-	test('src + tests read persisted state via testBed.probe(), not a raw DrizzleClient resolve', () => {
+describe('probe-discipline (tests never resolve DrizzleDatabaseDriver directly)', () => {
+	test('src + tests read persisted state via testBed.probe(), not a raw DrizzleDatabaseDriver resolve', () => {
 		const violations = scanForViolations(API_ROOT)
 
 		const report = violations.map(v => `  ${v}`).join('\n')
 		expect(
 			violations.length,
-			`File(s) resolve(DrizzleClient) directly instead of going through testBed.probe() ` +
+			`File(s) resolve(DrizzleDatabaseDriver).db directly instead of going through testBed.probe() ` +
 				`(see tests/architecture/README.md — "Reading Persisted State"). Migrate the read to ` +
 				`PersistenceProbe, or add a named EXEMPTIONS entry with a why if this is a legitimate raw-DB ` +
 				`use (schema-drift, repository/transaction test, or a write-only seed):\n${report}`,
@@ -137,7 +137,7 @@ describe('probe-discipline (tests never resolve DrizzleClient directly)', () => 
 	// Negative fixture — proves the scan actually catches an offender, using a real temp directory
 	// (not the real repo tree) so this can't accidentally pass just because nothing in the real tree
 	// happens to violate the rule right now.
-	test('fixture: a non-exempted test file with resolve(DrizzleClient) is flagged', () => {
+	test('fixture: a non-exempted test file with resolve(DrizzleDatabaseDriver).db is flagged', () => {
 		const tmpRoot = mkdtempSync(join(tmpdir(), 'probe-discipline-fixture-'))
 		try {
 			const offenderDir = join(tmpRoot, 'src', 'sales', 'jobs')
@@ -146,8 +146,11 @@ describe('probe-discipline (tests never resolve DrizzleClient directly)', () => 
 			mkdirSync(cleanDir, { recursive: true })
 
 			// Offender — a plain unit, not in EXEMPTIONS, reading persisted state via a raw
-			// resolve(DrizzleClient).
-			writeFileSync(join(offenderDir, 'SomeJob.test.ts'), `const db = testBed.resolve(DrizzleClient)\nawait db.select().from(events)\n`)
+			// resolve(DrizzleDatabaseDriver).db.
+			writeFileSync(
+				join(offenderDir, 'SomeJob.test.ts'),
+				`const db = testBed.resolve(DrizzleDatabaseDriver).db\nawait db.select().from(events)\n`,
+			)
 
 			// Control — same tree, uses the sanctioned probe instead. Must NOT be flagged.
 			writeFileSync(join(cleanDir, 'SomeHandler.test.ts'), `await testBed.probe().persistedEvents({ entityId })\n`)

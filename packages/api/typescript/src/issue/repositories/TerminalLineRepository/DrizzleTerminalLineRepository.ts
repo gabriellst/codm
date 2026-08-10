@@ -1,17 +1,17 @@
 import { injectable } from 'tsyringe-neo'
 import { asc, eq, sql } from 'drizzle-orm'
-import { DrizzleClient, Id } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, Id, DrizzleTransaction } from '@codm/core-typescript'
 import { terminalLines } from '@codm/contracts/db'
 import { TerminalLineRepository, type TerminalLineRow } from './TerminalLineRepository'
 
 @injectable()
 export class DrizzleTerminalLineRepository extends TerminalLineRepository {
-	constructor(private db: DrizzleClient) {
+	constructor(private driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
-	async append(issueId: string, ownerId: string, line: string, tx?: DrizzleClient): Promise<TerminalLineRow> {
-		const dbc = tx ?? this.db
+	async append(issueId: string, ownerId: string, line: string, tx?: DrizzleTransaction): Promise<TerminalLineRow> {
+		const dbc = tx ?? this.driver.db
 		// Next monotonic seq per issue (COALESCE(max)+1). Racy under concurrency, but a single issue
 		// has one active session (single-active invariant), so appends are serialized in practice.
 		const seqRows = await dbc
@@ -25,8 +25,8 @@ export class DrizzleTerminalLineRepository extends TerminalLineRepository {
 		return { id, seq: next, line, at }
 	}
 
-	async listByIssue(issueId: string, tx?: DrizzleClient): Promise<TerminalLineRow[]> {
-		const dbc = tx ?? this.db
+	async listByIssue(issueId: string, tx?: DrizzleTransaction): Promise<TerminalLineRow[]> {
+		const dbc = tx ?? this.driver.db
 		const rows = await dbc
 			.select({ id: terminalLines.id, seq: terminalLines.seq, line: terminalLines.line, at: terminalLines.at })
 			.from(terminalLines)

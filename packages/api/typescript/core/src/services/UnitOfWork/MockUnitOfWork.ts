@@ -1,4 +1,4 @@
-import { UnitOfWork, UnitOfWorkFactory } from './UnitOfWork'
+import { UnitOfWork } from './UnitOfWork'
 import { injectable } from 'tsyringe-neo'
 
 export interface MockTransaction {
@@ -68,7 +68,7 @@ export class MockUnitOfWork extends UnitOfWork<MockTransaction> {
 }
 
 @injectable()
-export class MockUnitOfWorkFactory extends UnitOfWorkFactory {
+export class MockUnitOfWorkFactory {
 	create(): UnitOfWork<unknown> {
 		return new MockUnitOfWork()
 	}

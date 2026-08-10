@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq, isNull } from 'drizzle-orm'
-import { Handler, z, DrizzleClient } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, Handler, z } from '@codm/core-typescript'
 import { stops, issues, threads } from '@codm/contracts/db'
 import { StopKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
 import { resolutionsForKind } from '../utils/StopResolutions'
@@ -43,12 +43,12 @@ export class GetNeedsYouPanel extends Handler<typeof GetNeedsYouPanelInputSchema
 	readonly inputSchema = GetNeedsYouPanelInputSchema
 	readonly outputSchema = GetNeedsYouPanelOutputSchema
 
-	constructor(private readonly db: DrizzleClient) {
+	constructor(private readonly driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
 	protected async handle(input: this['input']): Promise<this['output']> {
-		const rows = await this.db
+		const rows = await this.driver.db
 			.select({
 				stopId: stops.id,
 				issueId: stops.issueId,

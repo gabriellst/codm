@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq, isNull } from 'drizzle-orm'
-import { Handler, z, BaseError, DrizzleClient } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, Handler, z, BaseError } from '@codm/core-typescript'
 import { threads } from '@codm/contracts/db'
 import { LoopRepository } from '../repositories/LoopRepository'
 import { LoopScheduleInputSchema, LOOP_MIN_INTERVAL_MINUTES, LOOP_MAX_INTERVAL_MINUTES } from '../objects/LoopSchedule'
@@ -56,7 +56,7 @@ export class ListThreadLoops extends Handler<typeof ListThreadLoopsInputSchema, 
 	readonly outputSchema = ListThreadLoopsOutputSchema
 
 	constructor(
-		private readonly db: DrizzleClient,
+		private readonly driver: DrizzleDatabaseDriver,
 		private readonly loops: LoopRepository,
 	) {
 		super()
@@ -65,7 +65,7 @@ export class ListThreadLoops extends Handler<typeof ListThreadLoopsInputSchema, 
 	protected async handle(input: this['input']): Promise<this['output']> {
 		// Filtered on `deletedAt` like every other per-thread read (thread-deletion spec, decision 5):
 		// the loops of a conversation that no longer exists must not keep rendering.
-		const [thread] = await this.db
+		const [thread] = await this.driver.db
 			.select({ ownerId: threads.ownerId })
 			.from(threads)
 			.where(and(eq(threads.id, input.threadId), isNull(threads.deletedAt)))

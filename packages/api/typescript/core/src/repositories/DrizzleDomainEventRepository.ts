@@ -1,7 +1,8 @@
 import { DomainEventRepository, type DomainEventConstructor } from './DomainEventRepository'
 import { BaseDomainEvent } from '../types/BaseDomainEvent'
 import type { AnyIntegrationEvent } from '../types/BaseIntegrationEvent'
-import { DrizzleClient } from '../db'
+import { DrizzleDatabaseDriver } from '../db'
+import type { DrizzleTransaction } from '../services/UnitOfWork/DrizzleUnitOfWork'
 import { events, outbox } from '@codm/contracts/db'
 // The lane literal comes from the FROZEN cross-boundary enum, not a retyped string —
 // the Go side discriminates on these exact values.
@@ -12,12 +13,12 @@ import { tryCatchAsync } from '../utils/TryCatch'
 
 @injectable()
 export class DrizzleDomainEventRepository extends DomainEventRepository {
-	constructor(private db: DrizzleClient) {
+	constructor(private driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
-	async findById(id: string, transaction?: DrizzleClient): Promise<BaseDomainEvent | undefined> {
-		const dbClient = transaction ?? this.db
+	async findById(id: string, transaction?: DrizzleTransaction): Promise<BaseDomainEvent | undefined> {
+		const dbClient = transaction ?? this.driver.db
 
 		const result = await tryCatchAsync(async () => {
 			const rows = await dbClient.select().from(events).where(eq(events.id, id)).limit(1)
@@ -30,8 +31,8 @@ export class DrizzleDomainEventRepository extends DomainEventRepository {
 		return this.toDomain(result.data)
 	}
 
-	async save(event: BaseDomainEvent, transaction?: DrizzleClient): Promise<BaseDomainEvent> {
-		const dbClient = transaction ?? this.db
+	async save(event: BaseDomainEvent, transaction?: DrizzleTransaction): Promise<BaseDomainEvent> {
+		const dbClient = transaction ?? this.driver.db
 
 		await dbClient.insert(events).values(this.toPersistence(event))
 		await dbClient.insert(outbox).values(this.toOutboxRow(event))
@@ -39,10 +40,10 @@ export class DrizzleDomainEventRepository extends DomainEventRepository {
 		return event
 	}
 
-	async saveMany(domainEvents: BaseDomainEvent[], transaction?: DrizzleClient): Promise<void> {
+	async saveMany(domainEvents: BaseDomainEvent[], transaction?: DrizzleTransaction): Promise<void> {
 		if (domainEvents.length === 0) return
 
-		const dbClient = transaction ?? this.db
+		const dbClient = transaction ?? this.driver.db
 
 		// Two bulk inserts instead of 2N per-row inserts. Drizzle's
 		// `.insert().values([...])` batches into a single statement.
@@ -50,8 +51,8 @@ export class DrizzleDomainEventRepository extends DomainEventRepository {
 		await dbClient.insert(outbox).values(domainEvents.map(e => this.toOutboxRow(e)))
 	}
 
-	async saveIfNotExists(event: BaseDomainEvent, transaction?: DrizzleClient): Promise<boolean> {
-		const dbClient = transaction ?? this.db
+	async saveIfNotExists(event: BaseDomainEvent, transaction?: DrizzleTransaction): Promise<boolean> {
+		const dbClient = transaction ?? this.driver.db
 
 		// ON CONFLICT DO NOTHING catches any unique constraint — including
 		// partial indexes like events_billing_webhook_received_entity_unq.
@@ -67,8 +68,8 @@ export class DrizzleDomainEventRepository extends DomainEventRepository {
 		return true
 	}
 
-	async delete(id: string, transaction?: DrizzleClient): Promise<void> {
-		const dbClient = transaction ?? this.db
+	async delete(id: string, transaction?: DrizzleTransaction): Promise<void> {
+		const dbClient = transaction ?? this.driver.db
 
 		const result = await tryCatchAsync(async () => {
 			await dbClient.delete(events).where(eq(events.id, id))
@@ -81,9 +82,9 @@ export class DrizzleDomainEventRepository extends DomainEventRepository {
 		ownerId: string,
 		nameLike: string,
 		opts: { limit: number; offset: number },
-		transaction?: DrizzleClient,
+		transaction?: DrizzleTransaction,
 	): Promise<{ items: BaseDomainEvent[]; total: number }> {
-		const dbClient = transaction ?? this.db
+		const dbClient = transaction ?? this.driver.db
 
 		const filters = and(eq(events.ownerId, ownerId), like(events.name, nameLike))
 
@@ -108,8 +109,12 @@ export class DrizzleDomainEventRepository extends DomainEventRepository {
 		return result.data
 	}
 
-	async findLatestByEntityIdAndName(entityId: string, name: string, transaction?: DrizzleClient): Promise<BaseDomainEvent | undefined> {
-		const dbClient = transaction ?? this.db
+	async findLatestByEntityIdAndName(
+		entityId: string,
+		name: string,
+		transaction?: DrizzleTransaction,
+	): Promise<BaseDomainEvent | undefined> {
+		const dbClient = transaction ?? this.driver.db
 
 		const result = await tryCatchAsync(async () => {
 			const rows = await dbClient
@@ -127,8 +132,8 @@ export class DrizzleDomainEventRepository extends DomainEventRepository {
 		return this.toDomain(result.data)
 	}
 
-	async saveIntegrationEvent(event: AnyIntegrationEvent, transaction?: DrizzleClient): Promise<AnyIntegrationEvent> {
-		const dbClient = transaction ?? this.db
+	async saveIntegrationEvent(event: AnyIntegrationEvent, transaction?: DrizzleTransaction): Promise<AnyIntegrationEvent> {
+		const dbClient = transaction ?? this.driver.db
 
 		await dbClient.insert(events).values(this.toIntegrationPersistence(event))
 		await dbClient.insert(outbox).values(this.toIntegrationOutboxRow(event))
@@ -136,18 +141,18 @@ export class DrizzleDomainEventRepository extends DomainEventRepository {
 		return event
 	}
 
-	override async saveIntegrationEventMany(integrationEvents: AnyIntegrationEvent[], transaction?: DrizzleClient): Promise<void> {
+	override async saveIntegrationEventMany(integrationEvents: AnyIntegrationEvent[], transaction?: DrizzleTransaction): Promise<void> {
 		if (integrationEvents.length === 0) return
 
-		const dbClient = transaction ?? this.db
+		const dbClient = transaction ?? this.driver.db
 
 		// Two bulk inserts instead of 2N per-row inserts (mirrors saveMany).
 		await dbClient.insert(events).values(integrationEvents.map(e => this.toIntegrationPersistence(e)))
 		await dbClient.insert(outbox).values(integrationEvents.map(e => this.toIntegrationOutboxRow(e)))
 	}
 
-	async listByNameSince(name: string, since: Date, transaction?: DrizzleClient): Promise<BaseDomainEvent[]> {
-		const dbClient = transaction ?? this.db
+	async listByNameSince(name: string, since: Date, transaction?: DrizzleTransaction): Promise<BaseDomainEvent[]> {
+		const dbClient = transaction ?? this.driver.db
 
 		const result = await tryCatchAsync(async () => {
 			return await dbClient
@@ -162,8 +167,8 @@ export class DrizzleDomainEventRepository extends DomainEventRepository {
 		return result.data.map(row => this.toDomain(row))
 	}
 
-	async findByType<E extends BaseDomainEvent>(eventClass: DomainEventConstructor<E>, transaction?: DrizzleClient): Promise<E[]> {
-		const dbClient = transaction ?? this.db
+	async findByType<E extends BaseDomainEvent>(eventClass: DomainEventConstructor<E>, transaction?: DrizzleTransaction): Promise<E[]> {
+		const dbClient = transaction ?? this.driver.db
 
 		const result = await tryCatchAsync(async () => {
 			const rows = await dbClient.select().from(events).where(eq(events.name, eventClass.name)).orderBy(events.occurredAt)

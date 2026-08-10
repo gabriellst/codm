@@ -6,20 +6,20 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
 import { TestBed } from '@test/support'
-import { DrizzleClient, DrizzleDatabaseDriver, MockLoggingService, SqliteCommandQueue, type Handler } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, MockLoggingService, SqliteCommandQueue, type Handler, DrizzleTransaction } from '@codm/core-typescript'
 import { scheduledCommands } from '@codm/contracts/db'
 
 describe('SqliteCommandQueue (integration)', () => {
 	let testBed: TestBed
 	let testContainer: DependencyContainer
-	let db: DrizzleClient
+	let db: DrizzleTransaction
 	let driver: DrizzleDatabaseDriver
 	let queue: SqliteCommandQueue
 
 	beforeAll(async () => {
 		testContainer = container.createChildContainer()
 		testBed = await TestBed.create('integration', { testContainer, ownerId: 'pgq-owner' })
-		db = testBed.resolve(DrizzleClient)
+		db = testBed.resolve(DrizzleDatabaseDriver).db
 		driver = testBed.resolve(DrizzleDatabaseDriver)
 	})
 
