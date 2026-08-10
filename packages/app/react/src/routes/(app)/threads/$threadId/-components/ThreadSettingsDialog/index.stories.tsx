@@ -81,6 +81,14 @@ export default meta
 
 type Story = StoryObj<typeof ThreadSettingsDialog>
 
+/**
+ * SÓ-VISUAL (T10, onda B) — MSW não intercepta sob bun (medido), então esta story nunca ganhou
+ * `play`. O comportamento que o `.test.tsx` antigo asseverava contra um stub manual de `fetch`
+ * (agentes marcados, prompt persistindo, seleção de modelo, e a exclusão real) migrou inteiro para o
+ * harness de integração em `index.test.tsx` — o backend REAL responde exatamente o que esta story só
+ * finge, e a exclusão vira uma ausência computável (a releitura pós-DELETE falha de verdade) em vez
+ * de uma contagem de requisições contra um dublê.
+ */
 export const Default: Story = {
 	render: () => (
 		<Dialog open>

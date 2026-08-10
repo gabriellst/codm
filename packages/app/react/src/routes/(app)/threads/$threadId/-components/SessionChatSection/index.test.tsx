@@ -26,6 +26,19 @@ import type { Artifact } from '../ArtifactPreview'
  * What this does NOT claim: that the chat LOOKS right. happy-dom runs no layout, so the `min-h-0`
  * flex chain that gives the scroller its height is not verifiable here at any price — that one is
  * eyes-on-screen, and it is called out as such in the hand-off.
+ *
+ * PERMANECE REDUZIDO, MAS NÃO MIGRA PARA `play` (T10, onda B — decisão registrada, não um
+ * esquecimento). A seção GANHOU `index.stories.tsx` (SÓ-VISUAL — MSW não intercepta sob bun, medido)
+ * para a metade "tem tela → story" da boundary rule. O COMPORTAMENTO daqui — janela virtualizada com
+ * 1000 linhas, altura de rolagem, âncora na última mensagem, intercalação por horário — não é
+ * reproduzível pelo harness de integração: `@codm/api-typescript/testing` (tooling CONGELADO nesta
+ * task) só reexporta `createGivenHelpers`/`givenThread`; não existe `given` para popular transcript
+ * ou artefatos, então o backend real não tem como responder 1000 entradas sintéticas num timestamp
+ * escolhido. `spyOn(globalThis, 'fetch')` não é a atribuição manual que o rail de
+ * `fetch-stub.test.ts` proíbe (a regex casa só a atribuição direta) — nunca esteve no INVENTORY, e
+ * aqui ele injeta DADOS (volume, timing), nunca é o alvo da asserção (ao contrário do
+ * `ThreadSettingsDialog` antigo, que asseverava o PUT/DELETE em si — esse migrou para o harness).
+ * Candidato a follow-up de tooling (um `given` de transcript/artefato) fora do escopo desta task.
  */
 
 // A real absolute base URL so ky builds a real Request; the spy is what stops it from leaving.
