@@ -234,11 +234,13 @@ Run: `cd packages/api/typescript && bun x tsc -p tsconfig.build.json --noEmit` �
 ## Task T3: O console sobe o backend de verdade dentro do próprio teste (SPIKE + harness)
 
 **Files to write:**
-- Create: `packages/api/typescript/tests/support/integration-server.ts`
-- Modify: `packages/api/typescript/package.json` — export `"./testing": "./tests/support/integration-server.ts"`
-- Create: `packages/app/react/tests/support/integration-harness.ts` (casca fina)
+- Create: `packages/api/typescript/src/server.ts` — a montagem do servidor EXTRAÍDA (Decision 16: o harness herda a composição de produção, não a reencena)
+- Modify: `packages/api/typescript/src/index.ts` — passa a usar `assembleMainRouter()` (cirúrgico; comportamento byte-idêntico)
+- Create: `packages/api/typescript/tests/support/integration-contract.ts` — o CONTRATO tipado, zero aliases internos
+- Create: `packages/api/typescript/tests/support/integration-server.ts` — implementa o contrato
+- Modify: `packages/api/typescript/package.json` — exports `"./testing"` e `"./testing-contract"`
+- Create: `packages/app/react/tests/support/integration-harness.ts` — importa o CONTRATO estaticamente e a implementação por import dinâmico COMPUTADO (o tsc do react nunca desce no backend; a opção (a) de paths foi REVOGADA pela Decision 16)
 - Modify: `packages/app/react/package.json` — devDependency `"@codm/api-typescript": "workspace:*"`
-- Modify: `packages/app/react/tsconfig.json` — paths do api (opção (a) ratificada)
 - Modify: `packages/app/react/tests/setup.ts` — `import 'reflect-metadata'` como PRIMEIRA linha
 - Create: `packages/app/react/tests/support/integration-harness.spike.test.tsx` — o spike que mede
 
@@ -464,7 +466,7 @@ antes e depois do paths — registre o delta no relato. `bun tsc` na raiz → 0 
 **Model:** sonnet
 **Skills:** /storybook
 **Depends on:** T1
-**Consumes (frozen):** de T1 — o caminho e a forma do smoke. Existentes: `composeStories`/`setProjectAnnotations` de `@storybook/react`; os mocks tipados de `@/storybook` (`mockQuery`, `mockMutation`, `loadingQuery`, `errorQuery`, `mockSession`); `msw` (para `setupServer` de `msw/node`, se necessário). CONGELA para T9–T11: `composeConsoleStories(module)` exportado de `packages/app/react/tests/support/storybook.ts` — aplica as anotações uma vez e devolve as stories compostas prontas para `await Story.run()`/render.
+**Consumes (frozen):** de T1 — o caminho e a forma do smoke. Existentes: `composeStories`/`setProjectAnnotations` de `@storybook/react`; os mocks tipados de `@/storybook` (`mockQuery`, `mockMutation`, `loadingQuery`, `errorQuery`, `mockSession`); `msw` (para `setupServer` de `msw/node`, se necessário). CONGELA para T9–T11: `composeStories(module)` exportado de `packages/app/react/tests/support/storybook.ts` — o NOME do upstream, embrulhado (correção do founder: nada de vocabulário de produto em tooling portável; o caminho do módulo é o namespace, padrão custom-render do Testing Library) — aplica as anotações uma vez e devolve as stories compostas prontas para `await Story.run()`/render.
 **Scope fence:** DONE elsewhere — o smoke (T1). OUT — mountRouter/rails (T5), harness (T3), skill (T6). NÃO migrar nenhum teste de produto (T9–T11).
 **Gate:** `cd packages/app/react && bun test tests/support/storybook.spike.test.tsx tests/architecture/stories-smoke.test.tsx` verde, com o veredito do MSW-sob-bun impresso (`[spike] msw/node sob bun: OK` ou o fallback ativado e registrado); `bun x tsc --noEmit` 0 erros. NÃO COMMITAR (T7).
 
@@ -490,7 +492,7 @@ export function ensureProjectAnnotations(): void {
 	applied = true
 }
 
-export function composeConsoleStories<T>(storiesModule: T): ReturnType<typeof composeStories<T>> {
+export function composeStories (o wrapper de tests/support/storybook)<T>(storiesModule: T): ReturnType<typeof composeStories<T>> {
 	ensureProjectAnnotations()
 	return composeStories(storiesModule)
 }
@@ -503,7 +505,7 @@ export function composeConsoleStories<T>(storiesModule: T): ReturnType<typeof co
 import { describe, expect, it } from 'bun:test'
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
-import { composeConsoleStories } from './storybook'
+import { composeStories (o wrapper de tests/support/storybook) } from './storybook'
 // A story real mais conectada que já existe — usa os mocks tipados + msw:
 import * as stories from '../../src/routes/(app)/threads/$threadId/-components/ThreadSettingsDialog/index.stories.tsx'
 
@@ -516,7 +518,7 @@ import * as stories from '../../src/routes/(app)/threads/$threadId/-components/T
  */
 describe('composeStories + msw sob bun — spike', () => {
 	it('uma story conectada real monta com seus handlers', async () => {
-		const composed = composeConsoleStories(stories)
+		const composed = composeStories (o wrapper de tests/support/storybook)(stories)
 		const [name, Story] = Object.entries(composed)[0]!
 		const host = document.createElement('div')
 		document.body.appendChild(host)
@@ -543,7 +545,7 @@ describe('composeStories + msw sob bun — spike', () => {
 ### Step T4.3 — Religue o smoke ao support
 
 Modifique `stories-smoke.test.tsx`: troque o bloco local de anotações por
-`import { ensureProjectAnnotations, composeConsoleStories } from '../support/storybook'` e use-os.
+`import { ensureProjectAnnotations, composeStories (o wrapper de tests/support/storybook) } from '../support/storybook'` e use-os.
 
 ### Step T4.4 — Gates
 
@@ -756,7 +758,7 @@ Run: `bun x tsc --noEmit` → 0 erros. NÃO commite.
 **Model:** sonnet
 **Skills:** /storybook
 **Depends on:** T3, T4, T5
-**Consumes (frozen):** os nomes congelados — `useIntegrationBackend`, `startIntegrationBackend`, `asTestBed()`, `composeConsoleStories`, `ensureProjectAnnotations`, `mountRouter`, os dois rails — exatamente como T3/T4/T5 os criaram (verifique nos arquivos, não invente variações).
+**Consumes (frozen):** os nomes congelados — `useIntegrationBackend`, `startIntegrationBackend`, `asTestBed()`, `composeStories (o wrapper de tests/support/storybook)`, `ensureProjectAnnotations`, `mountRouter`, os dois rails — exatamente como T3/T4/T5 os criaram (verifique nos arquivos, não invente variações).
 **Scope fence:** OUT — nenhum código de produto ou de teste; só os quatro artefatos de governança. DONE elsewhere — todo o tooling (T1–T5).
 **Gate:** `bun run test:tooling` verde (valida os registries); `bun review` de um teste do console devolve checklist da skill storybook (AC-8 — rode `bun scripts/review.ts packages/app/react/src/hooks/useSystemPreconditionProbe.test.tsx --print` e confirme a skill resolvida); grep da seção nova em `docs/FRONTEND.md` com os cinco elementos do canon. NÃO COMMITAR (T7).
 
@@ -767,12 +769,14 @@ Reescreva `.claude/skills/storybook/SKILL.md` mantendo TODO o conteúdo atual so
 voz do arquivo atual:
 
 1. **Scope** (nova abertura): a skill cobre TODO teste de frontend — stories, `play` via
-   `composeConsoleStories`, testes colocados, o harness de integração e os rails. A regra de
+   `composeStories (o wrapper de tests/support/storybook)`, testes colocados, o harness de integração e os rails. A regra de
    fronteira: *tem tela → story com play; ausência/decisão sem tela → teste colocado; atravessa a
    pilha → e2e*.
-2. **Behavior in stories**: `play` + `composeConsoleStories(module)`; smoke garante que toda story
-   monta; asserções de comportamento batem no harness por padrão, MSW só para estados improduzíveis
-   e para o contexto visual do Storybook (com o veredito do spike da T4 registrado).
+2. **Behavior in stories**: `play` + `composeStories(module) — de tests/support/storybook, não do @storybook/react direto`; smoke garante que toda story
+   monta; asserções de comportamento batem no harness — SEMPRE, no bun: o veredito medido da T4 é que MSW
+   NÃO intercepta sob bun, e o founder decidiu que estados improduzíveis são SÓ-VISUAIS (story com
+   MSW no browser do Storybook). Não existe dublê de rede sancionado no bun; o canário da T4 avisa
+   se isso um dia mudar.
 3. **The integration harness**: `useIntegrationBackend()` → SDK real contra backend `integration`;
    seeding via `createGivenHelpers(backend.asTestBed())`; nunca `TestBed.create` (dois bancos);
    as medições da T3 (boot/round-trip) como expectativa de custo.
@@ -785,7 +789,7 @@ voz do arquivo atual:
 
 Reescreva `.claude/skills/storybook/registry.yaml` preservando os patterns/bad_practices atuais de
 stories e adicionando (ids na sequência existente): pattern *story-as-fixture* (`play` +
-`composeConsoleStories`; `.test.tsx` de componente com tela só como import de composeStories);
+`composeStories (o wrapper de tests/support/storybook)`; `.test.tsx` de componente com tela só como import de composeStories);
 pattern *integration-harness-default* (comportamento → harness; MSW → improduzível/visual); pattern
 *mount-via-helper* (`mountRouter`, nunca RouterProvider manual); bad_practice *manual-fetch-stub*
 (`globalThis.fetch =` — mechanical: true, aponta o rail); bad_practice *sleep-based-wait* (espera
@@ -908,7 +912,7 @@ git commit -m "test(console): varredura por falseamento dos 21 sem tela — tabe
 
 **Files to write:**
 - Create/Modify: stories com `play` para `ContactStep`, `AgentsStep`, `ReviewStep`, `StepHeading`, `WorkspaceStep` (em `routes/attach/-components/*/`) e `ProvidersSection` (em `routes/(app)/settings/-components/`)
-- Delete: os `.test.tsx` correspondentes (ou reduzir a import de `composeConsoleStories` quando houver asserção que o `play` não expresse)
+- Delete: os `.test.tsx` correspondentes (ou reduzir a import de `composeStories (o wrapper de tests/support/storybook)` quando houver asserção que o `play` não expresse)
 - Modify: `packages/app/react/tests/architecture/fetch-stub.test.ts` — remover do INVENTORY os arquivos migrados
 
 **Files to read:**
@@ -921,7 +925,7 @@ git commit -m "test(console): varredura por falseamento dos 21 sem tela — tabe
 **Model:** sonnet
 **Skills:** /storybook
 **Depends on:** T7, T8
-**Consumes (frozen):** `composeConsoleStories`, `useIntegrationBackend`, `createGivenHelpers(backend.asTestBed())`, `mountRouter` — nomes exatos de T3/T4/T5. O protocolo de migração por componente: (1) varredura por falseamento dos casos atuais (o que não prova, não migra); (2) variantes visuais → story com mocks tipados; (3) comportamento → `play` batendo no harness (MSW só para o improduzível, com comentário dizendo por quê); (4) apagar o `.test.tsx`; (5) tirar o arquivo do INVENTORY do rail.
+**Consumes (frozen):** `composeStories (o wrapper de tests/support/storybook)`, `useIntegrationBackend`, `createGivenHelpers(backend.asTestBed())`, `mountRouter` — nomes exatos de T3/T4/T5. O protocolo de migração por componente: (1) varredura por falseamento dos casos atuais (o que não prova, não migra); (2) variantes visuais → story com mocks tipados; (3) comportamento → `play` batendo no harness (estados improduzíveis NÃO se asseveram no bun — viram variante visual da story, decisão do founder pós-spike); (4) apagar o `.test.tsx`; (5) tirar o arquivo do INVENTORY do rail.
 **Scope fence:** OUT — threads (T10), onboarding/dashboard/header (T11), tooling (commitado).
 **Gate:** `cd packages/app/react && bun test` verde (smoke cobre as stories novas; contagem de casos de comportamento ≥ sobreviventes da varredura — nenhuma asserção sobrevivente perdida, listado no relato); rail do fetch-stub verde com INVENTORY menor; commit de produto.
 
@@ -936,7 +940,7 @@ export const Default: Story = {
 export const SelecionaContato: Story = {
 	parameters: { msw: contactHandlers },
 	play: async ({ canvasElement }) => {
-		// comportamento que era do .test.tsx, agora executável pelo bun via composeConsoleStories
+		// comportamento que era do .test.tsx, agora executável pelo bun via composeStories (o wrapper de tests/support/storybook)
 	},
 }
 ```
@@ -966,7 +970,7 @@ sobrevivente↔migrado no corpo.
 **Model:** sonnet
 **Skills:** /storybook
 **Depends on:** T7, T8
-**Consumes (frozen):** os mesmos nomes e o mesmo protocolo de 5 passos da T9 — aplicados a estes 5 arquivos. `ThreadSettingsDialog` é o exemplar do canon antigo: suas asserções de fronteira (o PUT que sai, o DELETE que NÃO dispara requisição) migram para o harness (a ausência assevera-se com o backend real: a thread apagada de verdade responde 404/não responde) ou permanecem num `.test.tsx` reduzido de `composeConsoleStories` — o que expressar melhor, com o porquê no relato.
+**Consumes (frozen):** os mesmos nomes e o mesmo protocolo de 5 passos da T9 — aplicados a estes 5 arquivos. `ThreadSettingsDialog` é o exemplar do canon antigo: suas asserções de fronteira (o PUT que sai, o DELETE que NÃO dispara requisição) migram para o harness (a ausência assevera-se com o backend real: a thread apagada de verdade responde 404/não responde) ou permanecem num `.test.tsx` reduzido de `composeStories (o wrapper de tests/support/storybook)` — o que expressar melhor, com o porquê no relato.
 **Scope fence:** OUT — attach/settings (T9), onboarding/dashboard/header (T11), tooling.
 **Gate:** idem T9; commit de produto próprio.
 

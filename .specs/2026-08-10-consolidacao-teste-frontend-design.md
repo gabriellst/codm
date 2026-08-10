@@ -163,6 +163,17 @@ memória.
     de sair verde sozinho — se o smoke test revelar story do produto já quebrada hoje (nada a
     verifica), o conserto dela vem num commit de produto ANTES do commit de tooling.
 
+16. **Herança, nunca redeclaração** (correção do founder em 10/08, durante a execução): o servidor
+    de integração HERDA tudo que o backend já define — a montagem do servidor é extraída para o
+    próprio backend (`src/server.ts`, usada pelo boot de produção E pelo harness), e o front consome
+    por FRONTEIRA DE CONTRATO: um arquivo de contrato do lado do api sem nenhum alias interno
+    (`testing-contract`), importado estaticamente pelo react só em tipo, com a implementação vindo
+    por import dinâmico computado. Espelhar os aliases do backend no tsconfig do react (a opção (a)
+    discutida no plano) fica REVOGADO — seria redeclarar a estrutura do backend no front, o que o
+    não-negociável nº 5 do CLAUDE.md proíbe, além de colidir (`@/*` × `@*`). Consequência: o `tsc`
+    do react nunca desce nos internos do backend, e o custo de tsc da aposta (1) dos Risks deixa de
+    existir.
+
 ## User Stories
 
 - **Story 1:** Como desenvolvedor criando um componente novo, quero um lugar único e uma regra
@@ -245,11 +256,14 @@ memória.
 onda.** (1) O tempo: a estimativa 15–25s (contra 8s atuais) é chute educado ancorado nos 13s/1363 do
 backend; se o medido passar disso, a válvula é reduzir o escopo do padrão (harness só onde há
 mutação/corrida; MSW no resto) — ajuste que o founder decide com o número na mão. (2) MSW sob bun:
-o `play` executado por `composeStories` roda no processo do `bun test`, onde MSW precisa dos
-interceptors node (`msw/node`) — mecanismo diferente do service worker que o Storybook usa no
-browser, e NÃO medido nesta sessão. Se não funcionar sob Bun, a válvula é o próprio harness (estados
-de erro semeáveis por given) mais um dublê fino só para o improduzível — mas isso é decisão de
-plano, tomada com o spike na mão.
+**RESOLVIDA em 10/08, com o spike na mão.** Veredito medido: NÃO INTERCEPTA — nem o worker de
+browser (sem Service Worker no happy-dom) nem o `setupServer` de `msw/node` (o
+`ClientRequestInterceptor` não engancha a camada node:http do bun; reproduzido em isolamento).
+Decisão do founder: estados improduzíveis ficam SÓ-VISUAIS (story com MSW no browser do Storybook,
+onde ele funciona) — sem dublê sancionado, sem asserção automatizada desses estados no bun. O
+comportamento no bun bate exclusivamente no harness, e o rail de fetch-stub termina em inventário
+VAZIO, sem lista branca. Um canário (`storybook.spike.test.tsx`) fica vermelho no dia em que
+msw-sob-bun for consertado, forçando a revisita da unificação.
 
 **A costura no `BoundedContext` toca o boot de produção.** A mudança é seleção explícita com default
 `real` e recusa guardada — mas é o coração do DI, e o teste da AC-4 existe exatamente porque um erro
