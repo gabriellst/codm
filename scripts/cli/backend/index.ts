@@ -7,7 +7,15 @@ import type { BackendLang } from './helpers'
 import * as go from './go'
 import * as typescript from './typescript'
 
-export { backendContextCommands, contextExists, apiRoot, resolveLang, type BackendLang } from './helpers'
+export {
+	backendContextCommands,
+	contextExists,
+	apiRoot,
+	resolveLang,
+	type BackendLang,
+	GENERATOR_SUPPORT,
+	hasGenerator,
+} from './helpers'
 
 const PER_LANG_GENERATORS: Record<BackendLang, Record<string, Generator>> = {
 	typescript: typescript.backendGenerators,

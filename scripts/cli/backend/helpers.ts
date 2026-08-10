@@ -21,6 +21,31 @@ export type BackendLang = 'typescript' | 'go'
 
 export const SUPPORTED_LANGS: readonly BackendLang[] = ['typescript', 'go']
 
+/**
+ * Declares, per backend language, whether `bun cli` has a wired-up scaffolder — the single
+ * source of truth for "go generator NOT YET implemented". Two consumers derive from this map
+ * instead of re-declaring the claim as prose/hardcode:
+ *   - `scripts/cli.ts`'s `--help` banner (BACKEND LANG SUPPORT block)
+ *   - PR-27 (`scripts/graph/cli/validate-plan-cmd.ts`) — exempts scaffoldable artifacts in a
+ *     language with no generator from the "must have a `bun cli <verb>` step" requirement,
+ *     via `hasGenerator()` below, never an `if (lang === 'go')` in the rule itself.
+ * Flip a value here once a language's generator ships end-to-end — both derived surfaces and
+ * the PR-27 exemption follow automatically.
+ */
+export const GENERATOR_SUPPORT: Record<BackendLang, boolean> = {
+	typescript: true,
+	go: false,
+}
+
+/**
+ * Whether `bun cli` can scaffold artifacts in `lang` today. Keyed off `GENERATOR_SUPPORT` for
+ * the two backend languages; any other `SkillLang` (react/astro/rust — not a `bun cli --lang`
+ * target) is treated as supported by default, so PR-27 only exempts on an explicit `false`.
+ */
+export function hasGenerator(lang: string): boolean {
+	return GENERATOR_SUPPORT[lang as BackendLang] ?? true
+}
+
 /** Commands that require an existing bounded context as their first positional. */
 export const backendContextCommands = [
 	'entity',

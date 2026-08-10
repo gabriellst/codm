@@ -38,4 +38,15 @@ describe('validatePlan', () => {
 		expect(pr19.some(f => f.taskId === 'T2')).toBe(true)
 		expect(pr19.some(f => f.taskId === 'T3')).toBe(false)
 	})
+
+	it('PR-27: exempts a net-new artifact in a lang with no `bun cli` generator (Go), but still flags one in a lang that has a generator (TS) with no scaffold step', async () => {
+		const r = await validatePlan('scripts/graph/tests/__fixtures__/plan-generator-capability.md')
+		const pr27 = r.findings.filter(f => f.rule === 'PR-27')
+		// T1 hand-authors a new Go service with no `bun cli service` step — GENERATOR_SUPPORT.go is
+		// false, so PR-27 must consult that declared capability and exempt it (T0 fix).
+		expect(pr27.some(f => f.taskId === 'T1')).toBe(false)
+		// T2 hand-authors a new TS entity with no `bun cli entity` step — GENERATOR_SUPPORT.typescript
+		// is true, so PR-27 must still fire: the falsifier proving the fix didn't neuter the rule.
+		expect(pr27.some(f => f.taskId === 'T2')).toBe(true)
+	})
 })

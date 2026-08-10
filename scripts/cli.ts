@@ -2,7 +2,7 @@
 
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { backendContextCommands, contextExists, generateFullContext, resolveLang } from './cli/backend'
+import { backendContextCommands, contextExists, generateFullContext, GENERATOR_SUPPORT, resolveLang } from './cli/backend'
 import { getGenerators, resolvePlatform } from './cli/resolve'
 import type { GeneratedFile } from './cli/types'
 import { wireGeneratedFile } from './cli/wire'
@@ -101,6 +101,22 @@ async function output(files: GeneratedFile[]): Promise<void> {
 
 // --- Help ---
 
+/** Renders the BACKEND LANG SUPPORT block from `GENERATOR_SUPPORT` (scripts/cli/backend/helpers.ts) —
+ *  the single declared source; never re-typed prose here. */
+function backendLangSupportBlock(): string {
+	const lines: string[] = []
+	for (const [lang, supported] of Object.entries(GENERATOR_SUPPORT)) {
+		const label = `  ${lang}`.padEnd(23)
+		if (supported) {
+			lines.push(`${label}Fully implemented${lang === 'typescript' ? ' (default)' : ''}`)
+		} else {
+			lines.push(`${label}Skill playbooks ready in .claude/skills/<skill>/${lang}/SKILL.md;`)
+			lines.push(`${' '.repeat(23)}template code generator NOT YET implemented`)
+		}
+	}
+	return lines.join('\n')
+}
+
 function showHelp() {
 	console.log(`
 Scaffold CLI — Generate backend & frontend artifacts
@@ -116,9 +132,7 @@ GLOBAL FLAGS:
   --help, -h           Show this help
 
 BACKEND LANG SUPPORT:
-  typescript           Fully implemented (default)
-  go                   Skill playbooks ready in .claude/skills/<skill>/go/SKILL.md;
-                       template code generator NOT YET implemented
+${backendLangSupportBlock()}
 
 BACKEND COMMANDS:
   context <name>                                      Full context structure

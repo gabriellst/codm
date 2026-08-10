@@ -4,6 +4,8 @@ import { parsePlan, type PlanTask } from './plan-parser'
 import { loadQueryContext } from '../core/review-query'
 import { buildAdjacency } from '../core/query'
 import { ROOT } from '../core/paths'
+import { hasGenerator } from '../../cli/backend/helpers'
+import { detectLang } from '../../lib/repo-model'
 
 export type ValidationFinding = {
 	rule: 'PR-18' | 'PR-19' | 'PR-20' | 'PR-21' | 'PR-26' | 'PR-27' | 'PR-28'
@@ -510,6 +512,9 @@ export async function validatePlan(planPath: string): Promise<ValidationResult> 
 			if (deletedPaths.has(filePath)) continue // Delete/Regen — not scaffolded
 			const verb = scaffoldableArtifactVerb(filePath)
 			if (!verb) continue
+			// Language without a wired-up `bun cli` generator (declared in GENERATOR_SUPPORT) is
+			// exempt from the scaffold-step requirement — consulted, never `if (lang === 'go')`.
+			if (!hasGenerator(detectLang(filePath))) continue
 			const inGraph = ctx ? (ctx.index.byFile[filePath]?.length ?? 0) > 0 : false
 			if (inGraph || existsSync(join(ROOT, filePath))) continue // existing file → Modify, exempt
 			const accepted = VERB_ALIASES[verb] ?? [verb]
