@@ -525,6 +525,29 @@ func ParseMessageType(s string) (MessageType, error) {
 	}
 }
 
+type OnboardingStep string
+
+const (
+	OnboardingStepVALUE OnboardingStep = "VALUE"
+	OnboardingStepHOW OnboardingStep = "HOW"
+	OnboardingStepCONTROL OnboardingStep = "CONTROL"
+	OnboardingStepCHANNEL OnboardingStep = "CHANNEL"
+	OnboardingStepWORKSPACE OnboardingStep = "WORKSPACE"
+	OnboardingStepCONTACT OnboardingStep = "CONTACT"
+	OnboardingStepAGENTS OnboardingStep = "AGENTS"
+	OnboardingStepREVIEW OnboardingStep = "REVIEW"
+	OnboardingStepFINAL OnboardingStep = "FINAL"
+)
+
+func ParseOnboardingStep(s string) (OnboardingStep, error) {
+	switch OnboardingStep(s) {
+	case OnboardingStepVALUE, OnboardingStepHOW, OnboardingStepCONTROL, OnboardingStepCHANNEL, OnboardingStepWORKSPACE, OnboardingStepCONTACT, OnboardingStepAGENTS, OnboardingStepREVIEW, OnboardingStepFINAL:
+		return OnboardingStep(s), nil
+	default:
+		return "", fmt.Errorf("invalid OnboardingStep: %q", s)
+	}
+}
+
 type OutboxSource string
 
 const (

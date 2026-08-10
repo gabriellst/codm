@@ -4,6 +4,7 @@
 */
 
 import { addWorkspaceHandler } from "./addWorkspace.ts";
+import { completeOnboardingHandler } from "./completeOnboarding.ts";
 import { configureContextBufferHandler } from "./configureContextBuffer.ts";
 import { configureMentionGateHandler } from "./configureMentionGate.ts";
 import { configureModelHandler } from "./configureModel.ts";
@@ -17,19 +18,21 @@ import { getIssueDetailHandler } from "./getIssueDetail.ts";
 import { getIssuesOverviewHandler } from "./getIssuesOverview.ts";
 import { getMyAccountHandler } from "./getMyAccount.ts";
 import { getNeedsYouPanelHandler } from "./getNeedsYouPanel.ts";
+import { getOnboardingHandler } from "./getOnboarding.ts";
 import { getSessionChatHandler } from "./getSessionChat.ts";
 import { getSessionIssuesHandler } from "./getSessionIssues.ts";
 import { getSettingsHandler } from "./getSettings.ts";
-import { getSetupChecklistHandler } from "./getSetupChecklist.ts";
 import { getThreadSettingsHandler } from "./getThreadSettings.ts";
 import { getUserInfoHandler } from "./getUserInfo.ts";
 import { listArtifactsHandler } from "./listArtifacts.ts";
 import { listThreadLoopsHandler } from "./listThreadLoops.ts";
 import { listWorkspacesHandler } from "./listWorkspaces.ts";
 import { removeWorkspaceHandler } from "./removeWorkspace.ts";
+import { saveOnboardingStepHandler } from "./saveOnboardingStep.ts";
 import { setActiveOwnerHandler } from "./setActiveOwner.ts";
 import { updateOwnerSettingsHandler } from "./updateOwnerSettings.ts";
 import { addWorkspaceMutationRequestSchema, addWorkspaceMutationResponseSchema } from "../../../zod/addWorkspaceSchema.ts";
+import { completeOnboardingMutationResponseSchema } from "../../../zod/completeOnboardingSchema.ts";
 import { configureContextBufferMutationRequestSchema, configureContextBufferMutationResponseSchema } from "../../../zod/configureContextBufferSchema.ts";
 import { configureMentionGateMutationRequestSchema, configureMentionGateMutationResponseSchema } from "../../../zod/configureMentionGateSchema.ts";
 import { configureModelMutationRequestSchema, configureModelMutationResponseSchema } from "../../../zod/configureModelSchema.ts";
@@ -43,16 +46,17 @@ import { getIssueDetailQueryResponseSchema } from "../../../zod/getIssueDetailSc
 import { getIssuesOverviewQueryParamsSchema, getIssuesOverviewQueryResponseSchema } from "../../../zod/getIssuesOverviewSchema.ts";
 import { getMyAccountQueryResponseSchema } from "../../../zod/getMyAccountSchema.ts";
 import { getNeedsYouPanelQueryResponseSchema } from "../../../zod/getNeedsYouPanelSchema.ts";
+import { getOnboardingQueryResponseSchema } from "../../../zod/getOnboardingSchema.ts";
 import { getSessionChatQueryResponseSchema } from "../../../zod/getSessionChatSchema.ts";
 import { getSessionIssuesQueryResponseSchema } from "../../../zod/getSessionIssuesSchema.ts";
 import { getSettingsQueryResponseSchema } from "../../../zod/getSettingsSchema.ts";
-import { getSetupChecklistQueryResponseSchema } from "../../../zod/getSetupChecklistSchema.ts";
 import { getThreadSettingsQueryResponseSchema } from "../../../zod/getThreadSettingsSchema.ts";
 import { getUserInfoQueryResponseSchema } from "../../../zod/getUserInfoSchema.ts";
 import { listArtifactsQueryResponseSchema } from "../../../zod/listArtifactsSchema.ts";
 import { listThreadLoopsQueryResponseSchema } from "../../../zod/listThreadLoopsSchema.ts";
 import { listWorkspacesQueryResponseSchema } from "../../../zod/listWorkspacesSchema.ts";
 import { removeWorkspaceMutationResponseSchema } from "../../../zod/removeWorkspaceSchema.ts";
+import { saveOnboardingStepMutationRequestSchema, saveOnboardingStepMutationResponseSchema } from "../../../zod/saveOnboardingStepSchema.ts";
 import { setActiveOwnerMutationResponseSchema } from "../../../zod/setActiveOwnerSchema.ts";
 import { updateOwnerSettingsMutationRequestSchema, updateOwnerSettingsMutationResponseSchema } from "../../../zod/updateOwnerSettingsSchema.ts";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -243,6 +247,14 @@ server.registerTool("ListArtifacts", {
 })
           
 
+server.registerTool("CompleteOnboarding", {
+  description: "Conclui o onboarding do operador — grava completedAt",
+  outputSchema: { data: completeOnboardingMutationResponseSchema },
+}, async () => {
+  return completeOnboardingHandler()
+})
+          
+
 server.registerTool("GetAttachThreadWizard", {
   description: "Attach-thread wizard — contacts, workspaces, providers + attached/no-channel flags (T15)",
   outputSchema: { data: getAttachThreadWizardQueryResponseSchema },
@@ -268,6 +280,14 @@ server.registerTool("GetMyAccount", {
 })
           
 
+server.registerTool("GetOnboarding", {
+  description: "Onboarding — jornada persistida (currentStep/completedAt) + satisfação derivada dos passos de setup",
+  outputSchema: { data: getOnboardingQueryResponseSchema },
+}, async () => {
+  return getOnboardingHandler()
+})
+          
+
 server.registerTool("GetSettings", {
   description: "Settings — providers, stop criteria, general, app version (T08)",
   outputSchema: { data: getSettingsQueryResponseSchema },
@@ -276,19 +296,20 @@ server.registerTool("GetSettings", {
 })
           
 
-server.registerTool("GetSetupChecklist", {
-  description: "Onboarding checklist — channel/workspace/thread done flags (cross-context)",
-  outputSchema: { data: getSetupChecklistQueryResponseSchema },
-}, async () => {
-  return getSetupChecklistHandler()
-})
-          
-
 server.registerTool("GetUserInfo", {
   description: "Header context — user identity, all member owners (role), active owner, and profile alerts",
   outputSchema: { data: getUserInfoQueryResponseSchema },
 }, async () => {
   return getUserInfoHandler()
+})
+          
+
+server.registerTool("SaveOnboardingStep", {
+  description: "Salva onde o operador parou no wizard",
+  outputSchema: { data: saveOnboardingStepMutationResponseSchema },
+  inputSchema: { data: saveOnboardingStepMutationRequestSchema },
+}, async ({ data }) => {
+  return saveOnboardingStepHandler({ data })
 })
           
   return server

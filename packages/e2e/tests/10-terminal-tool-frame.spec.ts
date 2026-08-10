@@ -1,6 +1,7 @@
 import { test, expect } from '../utils/test'
 import { createIssue, getSessionIssues } from '@codm/client-typescript/typescript'
 import { givenAttachedThread, runIssueTurn } from '../utils/given'
+import { authenticateCloudSession } from '../utils/given/cloud'
 
 /**
  * Canonical flow (g) — AC-7.3: the re-keyed SSE action frame, END TO END, in a real browser.
@@ -49,6 +50,10 @@ test('the console panel receives the REAL tool name on the re-keyed SSE action f
 	// Attach the panel. `terminal-stream-connected` renders on the SSE `onopen`, and the daemon claims
 	// this browser as the issue's observer synchronously, before those response headers exist — so
 	// seeing the badge means the slot is held and no frame can be dropped from here on.
+	// CloudSessionGate passou a envolver as rotas (app) DEPOIS que este spec foi escrito; sem o
+	// token semeado toda navegação cai em /login. Ver utils/given/cloud.ts.
+	await authenticateCloudSession(page)
+
 	await goto('/threads/$threadId/issues/$issueId', { threadId: thread.threadId, issueId: opened.issueId })
 	await expect(page.getByTestId('terminal-stream-connected')).toBeVisible({ timeout: 60_000 })
 

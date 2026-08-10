@@ -12,6 +12,7 @@ import type { HostInfoService } from './HostInfoService/HostInfoService'
 import type { LoggingService } from './LoggingService/LoggingService'
 import type { NotificationService } from './NotificationService/NotificationService'
 import type { AnalyticsService } from './AnalyticsService/AnalyticsService'
+import type { SystemPreconditionsService } from './SystemPreconditionsService/SystemPreconditionsService'
 import type { SecretsService } from './SecretsService/SecretsService'
 import type { SupervisionService } from './SupervisionService/SupervisionService'
 import type { UpdateService } from './UpdateService/UpdateService'
@@ -27,3 +28,4 @@ export const CloudSessionToken = token<CloudSessionService>('CloudSessionService
 export const LoggingToken = token<LoggingService>('LoggingService')
 export const UpdateToken = token<UpdateService>('UpdateService')
 export const AnalyticsToken = token<AnalyticsService>('AnalyticsService')
+export const SystemPreconditionsToken = token<SystemPreconditionsService>('SystemPreconditionsService')

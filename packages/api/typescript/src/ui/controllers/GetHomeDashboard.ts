@@ -2,6 +2,7 @@ import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 import { McpScope } from '@codm/contracts-typescript/wire/enums'
 import { OperatorMiddleware } from '@auth/middlewares'
+import { OnboardingMiddleware } from '../middlewares'
 import { GetHomeDashboard, GetHomeDashboardOutputSchema } from '../usecases/GetHomeDashboard'
 
 export const GetHomeDashboardControllerInputSchema = z
@@ -22,7 +23,7 @@ export class GetHomeDashboardController extends Controller<
 	readonly inputSchema = GetHomeDashboardControllerInputSchema
 	readonly outputSchema = GetHomeDashboardControllerOutputSchema
 
-	override middlewares = [OperatorMiddleware]
+	override middlewares = [OperatorMiddleware, OnboardingMiddleware]
 
 	constructor(private query: GetHomeDashboard) {
 		super()

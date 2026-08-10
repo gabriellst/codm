@@ -3,7 +3,6 @@ import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenWorkspace, givenThread } from '@test/support'
 import { OPERATOR_ID } from '@auth/operator'
 import { ProviderKind } from '@codm/contracts-typescript/wire/enums'
-import { GetSetupChecklist } from './GetSetupChecklist'
 import { GetSettings } from './GetSettings'
 import { GetAttachThreadWizard } from './GetAttachThreadWizard'
 import pkg from '../../../package.json' with { type: 'json' }
@@ -22,14 +21,6 @@ describe('UI BFF reads', () => {
 	})
 	afterAll(async () => {
 		await testBed.destroy()
-	})
-
-	it('GetSetupChecklist reflects workspace/thread done, channel not connected', async () => {
-		const workspace = await givenWorkspace(testBed, { ownerId: OPERATOR_ID })
-		await givenThread(testBed, { ownerId: OPERATOR_ID, workspaceId: workspace.id.value })
-
-		const out = await testBed.resolve(GetSetupChecklist).execute({ ownerId: OPERATOR_ID })
-		expect(out).toMatchObject({ workspaceDone: true, threadDone: true, channelDone: false })
 	})
 
 	it('GetSettings composes providers + stop criteria + general + appVersion', async () => {

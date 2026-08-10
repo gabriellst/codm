@@ -764,6 +764,43 @@ pub enum MessageType {
 	STATUS,
 }
 
+/// Onde o operador está no wizard de onboarding. SÓ os passos que o SERVIDOR conhece: os três informativos, os cinco de setup, e o final. Uma SystemPrecondition NUNCA entra aqui — o servidor não enxerga o TCC da máquina, e o mesmo ownerId em dois Macs teria respostas diferentes (spec Decision 8).
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum OnboardingStep {
+	#[serde(rename = "VALUE")]
+	#[strum(serialize = "VALUE")]
+	VALUE,
+	#[serde(rename = "HOW")]
+	#[strum(serialize = "HOW")]
+	HOW,
+	#[serde(rename = "CONTROL")]
+	#[strum(serialize = "CONTROL")]
+	CONTROL,
+	#[serde(rename = "CHANNEL")]
+	#[strum(serialize = "CHANNEL")]
+	CHANNEL,
+	#[serde(rename = "WORKSPACE")]
+	#[strum(serialize = "WORKSPACE")]
+	WORKSPACE,
+	#[serde(rename = "CONTACT")]
+	#[strum(serialize = "CONTACT")]
+	CONTACT,
+	#[serde(rename = "AGENTS")]
+	#[strum(serialize = "AGENTS")]
+	AGENTS,
+	#[serde(rename = "REVIEW")]
+	#[strum(serialize = "REVIEW")]
+	REVIEW,
+	#[serde(rename = "FINAL")]
+	#[strum(serialize = "FINAL")]
+	FINAL,
+}
+
 /// Producer lane inside the SINGLE shared_outbox table of the shared SQLite store. Both processes write to the same table, so every row carries the lane that produced it and each consumer claims only its own slice — the Go domain-event dispatcher claims `gateway`, the Go SqlExternalMediator claims `integration`, and the TS daemon claims `api`. Lowercase wire values are frozen: rows discriminated by these exact strings already exist in user databases, so changing a value is a data migration, not cosmetics.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,

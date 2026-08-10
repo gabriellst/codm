@@ -26,7 +26,7 @@ export interface AnalyticsService {
 	/**
 	 * Sets/merges properties on the CURRENTLY identified person without emitting a new event — used
 	 * to fold the onboarding checklist (`channelDone`/`workspaceDone`/`threadDone` from
-	 * `useGetSetupChecklist`) into the person record for free, no bespoke "onboarding step
+	 * `useGetOnboarding`) into the person record for free, no bespoke "onboarding step
 	 * completed" event needed.
 	 */
 	setPersonProperties(properties: Record<string, unknown>): void

@@ -52,6 +52,12 @@ export const CAPABILITY_PERMISSIONS = {
 	// `permissions/default.toml` (identifier "log", default set `["allow-log"]`) — the name keeps
 	// the tauri plugin's own spelling, same convention as `filePicker`'s `dialog:*`.
 	logging: ['log:default'],
+	// PRÉ-CONDIÇÕES (contract: SystemPreconditionsService) — respaldada pelos comandos custom
+	// `system_precondition_statuses` / `repair_system_precondition`
+	// (src-tauri/src/commands/system_preconditions.rs), que `core:default` já cobre por serem
+	// `invoke`. Os passos de reparo são `std::process::Command` do lado Rust, não o plugin de shell,
+	// então nenhuma permissão de `shell:*` entra aqui.
+	systemPreconditions: [],
 } as const satisfies Record<string, readonly string[]>
 
 export type CapabilityKey = keyof typeof CAPABILITY_PERMISSIONS
@@ -69,4 +75,5 @@ export const CAPABILITIES = [
 	'deepLink',
 	'cloudSession',
 	'logging',
+	'systemPreconditions',
 ] as const satisfies readonly CapabilityKey[]

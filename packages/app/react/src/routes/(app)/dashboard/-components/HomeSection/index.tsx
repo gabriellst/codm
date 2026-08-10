@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import type { ComponentProps } from 'react'
-import { useGetSetupChecklist } from '@codm/client-typescript/typescript'
+import { useGetOnboarding } from '@codm/client-typescript/typescript'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { useAnalytics } from '@/services'
@@ -13,7 +13,7 @@ import { HomeDashboard } from '../HomeDashboard'
  * dashboard (T03). The checklist read owns that decision.
  */
 export function HomeSection({ className, ...props }: ComponentProps<'div'>) {
-	const { data, isLoading } = useGetSetupChecklist()
+	const { data, isLoading } = useGetOnboarding()
 	const analytics = useAnalytics()
 
 	// SP4 — the activation funnel "for free": no bespoke "onboarding step completed" event, just
@@ -38,9 +38,5 @@ export function HomeSection({ className, ...props }: ComponentProps<'div'>) {
 		)
 	}
 
-	return data.threadDone ? (
-		<HomeDashboard className={className} {...props} />
-	) : (
-		<SetupChecklist checklist={data} className={className} {...props} />
-	)
+	return data.threadDone ? <HomeDashboard className={className} {...props} /> : <SetupChecklist className={className} {...props} />
 }

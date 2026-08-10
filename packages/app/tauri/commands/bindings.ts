@@ -53,6 +53,22 @@ async pendingUpdate() : Promise<string | null> {
  */
 async restartForUpdate() : Promise<void> {
     await TAURI_INVOKE("restart_for_update");
+},
+async systemPreconditionStatuses() : Promise<SystemPreconditionStatus[]> {
+    return await TAURI_INVOKE("system_precondition_statuses");
+},
+/**
+ * O bundle id NÃO é literal aqui: sai de `config().identifier`, o mesmo valor de onde `lib.rs`
+ * deriva o data dir. `tccutil` apagando a entrada de outro app seria uma limpeza silenciosa que
+ * não conserta nada e mexe onde não devia.
+ */
+async repairSystemPrecondition(id: SystemPreconditionId) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("repair_system_precondition", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -73,6 +89,17 @@ updateReady: "update-ready"
 
 /** user-defined types **/
 
+/**
+ * Se o reparo de uma pré-condição TEM efeito neste host — cruza `repair_scope` (declarado) com
+ * `has_attributable_identity()` (derivado do processo). Um `AppGrant` sem identidade atribuível
+ * não tem bundle para o `tccutil` limpar nem app para listar nos Ajustes.
+ */
+export type RepairAvailability = "AVAILABLE" | 
+/**
+ * O host não consegue atribuir a concessão a este app — quem a carrega é o processo
+ * responsável (em `tauri dev`, o terminal).
+ */
+"NO_APP_IDENTITY"
 /**
  * What a sidecar that never came up leaves for the operator to read.
  */
@@ -113,6 +140,14 @@ export type SupervisionChanged = { state: SupervisionState }
  * sidecar (spec Decision 6): the daemon is the whole app, the gateway is the channel.
  */
 export type SupervisionState = { kind: "healthy" } | { kind: "degraded"; sidecar: SidecarService } | { kind: "down"; sidecar: SidecarService }
+/**
+ * Os ids. Estável em toda plataforma — ver o doc do módulo.
+ */
+export type SystemPreconditionId = "FULL_DISK_ACCESS"
+/**
+ * O que atravessa para o console. Só os aplicáveis.
+ */
+export type SystemPreconditionStatus = { id: SystemPreconditionId; satisfied: boolean; repair: RepairAvailability }
 /**
  * PUSH half — mirrors `SupervisionChanged`'s shape and purpose: typed end-to-end by tauri-specta,
  * so the console gets `events.updateReady.listen(...)`, never a stringly `listen('update-ready')`.

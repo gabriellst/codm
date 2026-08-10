@@ -469,6 +469,7 @@
 		"NOT_IMPLEMENTED": "This feature is not available yet.",
 		"NO_CHANNEL_CONNECTED": "Connect a channel first.",
 		"NO_PROVIDER_SELECTED": "Select at least one provider.",
+		"ONBOARDING_NOT_COMPLETED": "Complete onboarding to continue.",
 		"OPTIMISTIC_LOCK_CONFLICT": "The record was changed by another operation. Reload and try again.",
 		"OWNER_ALREADY_DISABLED": "This account is already disabled.",
 		"OWNER_NOT_DISABLED": "This account is not disabled.",
@@ -513,7 +514,6 @@
 		"setupChannelDesc": "WhatsApp, Instagram or Telegram",
 		"setupChannelTitle": "Connect a channel",
 		"setupCta": "Set up",
-		"setupDone": "Done",
 		"setupThreadDesc": "Contact + folder + agent",
 		"setupThreadTitle": "Attach your first thread",
 		"setupWorkspaceDesc": "Point at a project folder on this Mac",
@@ -549,6 +549,8 @@
 	},
 	"onboarding": {
 		"back": "Back",
+		"finalBody": "You finished CODM's initial setup.",
+		"finalTitle": "All set",
 		"getStarted": "Get started",
 		"next": "Next",
 		"skip": "Skip",
@@ -563,6 +565,19 @@
 		"stepThreadTitle": "Attach a thread",
 		"stepWorkspaceDesc": "Point at a project folder — Claude projects are detected",
 		"stepWorkspaceTitle": "Add a workspace"
+	},
+	"systemPreconditions": {
+		"slideTitle": "One permission is missing",
+		"slideBody": "CODM needs this before it can do any work on this Mac.",
+		"repairFailed": "Could not start the repair.",
+		"noAppIdentity": "In this build CODM runs without an identity of its own, so the permission does not belong to it — it belongs to the terminal you launched it from. Grant access to that terminal in Settings and restart it.",
+		"fullDiskAccess": {
+			"title": "Full Disk Access",
+			"body": "Agents read your project folders through CODM — as far as macOS is concerned, the app is the reader. Without this permission the system blocks those reads and tasks stop with no explanation.",
+			"action": "Grant Full Disk Access",
+			"actionHint": "Two steps, in this order: CODM clears the denial already on record, then opens Privacy & Security › Full Disk Access, where you switch CODM on.",
+			"afterHint": "Come back to this window after granting — the check runs again on its own."
+		}
 	},
 	"session": {
 		"agentModel": "Model",

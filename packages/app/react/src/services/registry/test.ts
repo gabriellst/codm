@@ -11,6 +11,7 @@ import {
 	SecretsToken,
 	SupervisionToken,
 	UpdateToken,
+	SystemPreconditionsToken,
 } from '../tokens'
 import type { AutostartService } from '../AutostartService/AutostartService'
 import type { BadgeService } from '../BadgeService/BadgeService'
@@ -20,6 +21,11 @@ import type { HostInfoService, NativePlatform } from '../HostInfoService/HostInf
 import type { LoggingService } from '../LoggingService/LoggingService'
 import type { NotificationService } from '../NotificationService/NotificationService'
 import type { AnalyticsService } from '../AnalyticsService/AnalyticsService'
+import type {
+	SystemPreconditionId,
+	SystemPreconditionStatus,
+	SystemPreconditionsService,
+} from '../SystemPreconditionsService/SystemPreconditionsService'
 import type { SecretsService } from '../SecretsService/SecretsService'
 import type { SupervisionService, SupervisionState } from '../SupervisionService/SupervisionService'
 import type { UpdateService } from '../UpdateService/UpdateService'
@@ -235,6 +241,31 @@ export class FakeAnalyticsService implements AnalyticsService {
 	}
 }
 
+/**
+ * Semeado com o que uma máquina reportaria no mount (o PULL), e `set` reencena o que muda quando o
+ * operador volta dos Ajustes — as duas metades que um consumidor de pré-condição tem que acertar,
+ * do mesmo jeito que `FakeSupervisionService` expõe PULL e PUSH em vez de só o fácil. `repaired`
+ * registra as chamadas porque "o botão realmente pediu o reparo" é a asserção que interessa: um
+ * teste não pode executar `tccutil`.
+ */
+export class FakeSystemPreconditionsService implements SystemPreconditionsService {
+	readonly repaired: SystemPreconditionId[] = []
+	constructor(private current: SystemPreconditionStatus[] = []) {}
+
+	async statuses(): Promise<SystemPreconditionStatus[]> {
+		return this.current
+	}
+
+	async repair(id: SystemPreconditionId): Promise<void> {
+		this.repaired.push(id)
+	}
+
+	/** Reencena o que a sonda passaria a reportar — como o host faria depois de uma concessão. */
+	set(statuses: SystemPreconditionStatus[]): void {
+		this.current = statuses
+	}
+}
+
 export default [
 	[FilePickerToken, FakeFilePickerService],
 	[NotificationToken, FakeNotificationService],
@@ -247,4 +278,5 @@ export default [
 	[LoggingToken, FakeLoggingService],
 	[UpdateToken, FakeUpdateService],
 	[AnalyticsToken, FakeAnalyticsService],
+	[SystemPreconditionsToken, FakeSystemPreconditionsService],
 ] as const satisfies Bindings

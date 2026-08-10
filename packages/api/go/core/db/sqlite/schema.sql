@@ -45,7 +45,7 @@ CREATE TABLE "artifact_artifacts" (
 	"meta" text NOT NULL,
 	"recorded_at" integer NOT NULL,
 	"created_at" integer NOT NULL,
-	CONSTRAINT "artifact_artifacts_kind_check" CHECK("artifact_artifacts"."kind" IN ('IMAGE', 'FILE', 'LINK'))
+	CONSTRAINT "artifact_artifacts_kind_check" CHECK("artifact_artifacts"."kind" IN ('IMAGE', 'AUDIO', 'VIDEO', 'FILE', 'LINK'))
 );
 CREATE TABLE "authentication_accounts" (
 	"id" text PRIMARY KEY NOT NULL,
@@ -59,7 +59,26 @@ CREATE TABLE "authentication_accounts" (
 	"access_token_expires_at" integer,
 	"scope" text,
 	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL, "refresh_token_expires_at" integer,
+	FOREIGN KEY ("user_id") REFERENCES "authentication_users"("id") ON UPDATE no action ON DELETE cascade
+);
+CREATE TABLE "authentication_device_codes" (
+	"code" text PRIMARY KEY NOT NULL,
+	"user_id" text NOT NULL,
+	"expires_at" integer NOT NULL,
+	"consumed_at" integer,
+	"created_at" integer NOT NULL,
+	FOREIGN KEY ("user_id") REFERENCES "authentication_users"("id") ON UPDATE no action ON DELETE cascade
+);
+CREATE TABLE "authentication_device_tokens" (
+	"id" text PRIMARY KEY NOT NULL,
+	"user_id" text NOT NULL,
+	"token_hash" text NOT NULL,
+	"label" text NOT NULL,
+	"revoked_at" integer,
+	"created_at" integer NOT NULL,
 	"updated_at" integer NOT NULL,
+	"version" integer DEFAULT 1 NOT NULL,
 	FOREIGN KEY ("user_id") REFERENCES "authentication_users"("id") ON UPDATE no action ON DELETE cascade
 );
 CREATE TABLE "authentication_sessions" (
@@ -216,6 +235,16 @@ CREATE TABLE "issue_terminal_lines" (
 	"line" text NOT NULL,
 	"at" integer NOT NULL
 );
+CREATE TABLE "owner_onboardings" (
+	"id" text PRIMARY KEY NOT NULL,
+	"owner_id" text NOT NULL,
+	"current_step" text NOT NULL,
+	"completed_at" integer,
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL,
+	"version" integer DEFAULT 1 NOT NULL,
+	CONSTRAINT "owner_onboardings_current_step_check" CHECK("owner_onboardings"."current_step" IN ('VALUE', 'HOW', 'CONTROL', 'CHANNEL', 'WORKSPACE', 'CONTACT', 'AGENTS', 'REVIEW', 'FINAL'))
+);
 CREATE TABLE "owner_owners" (
 	"id" text PRIMARY KEY NOT NULL,
 	"name" text NOT NULL,
@@ -282,6 +311,24 @@ CREATE TABLE "thread_consumed_messages" (
 	"entry_id" text,
 	"consumed_at" integer NOT NULL
 );
+CREATE TABLE "thread_loops" (
+	"id" text PRIMARY KEY NOT NULL,
+	"owner_id" text NOT NULL,
+	"thread_id" text NOT NULL,
+	"prompt" text NOT NULL,
+	"kind" text DEFAULT 'DAILY' NOT NULL,
+	"time_of_day" text,
+	"weekdays" text,
+	"timezone" text,
+	"every_minutes" integer,
+	"enabled" integer DEFAULT true NOT NULL,
+	"next_run_at" integer,
+	"last_fired_at" integer,
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL,
+	"version" integer DEFAULT 1 NOT NULL,
+	CONSTRAINT "thread_loops_kind_check" CHECK("thread_loops"."kind" IN ('DAILY', 'INTERVAL'))
+);
 CREATE TABLE "thread_threads" (
 	"id" text PRIMARY KEY NOT NULL,
 	"owner_id" text NOT NULL,
@@ -299,7 +346,7 @@ CREATE TABLE "thread_threads" (
 	"status" text NOT NULL,
 	"created_at" integer NOT NULL,
 	"updated_at" integer NOT NULL,
-	"version" integer DEFAULT 1 NOT NULL, "deleted_at" integer, "custom_prompt" text,
+	"version" integer DEFAULT 1 NOT NULL, "deleted_at" integer, "custom_prompt" text, "model_by_provider" text DEFAULT '{}' NOT NULL,
 	CONSTRAINT "thread_threads_contact_kind_check" CHECK("thread_threads"."contact_kind" IN ('USER', 'GROUP', 'BROADCAST')),
 	CONSTRAINT "thread_threads_buffer_size_check" CHECK("thread_threads"."buffer_size" IN ('25', '50', '100', '200')),
 	CONSTRAINT "thread_threads_status_check" CHECK("thread_threads"."status" IN ('RUNNING', 'IDLE', 'NEEDS_ATTENTION', 'PAUSED'))
@@ -316,7 +363,7 @@ CREATE TABLE "thread_transcript_entries" (
 	"provider" text,
 	"classification" text,
 	"at" integer NOT NULL,
-	"created_at" integer NOT NULL,
+	"created_at" integer NOT NULL, "fired_by_loop" text,
 	CONSTRAINT "thread_transcript_entries_kind_check" CHECK("thread_transcript_entries"."kind" IN ('CONTACT', 'SYSTEM', 'DIRECT', 'WHISPER', 'ACTION')),
 	CONSTRAINT "thread_transcript_entries_provider_check" CHECK("thread_transcript_entries"."provider" IN ('CLAUDE_CODE', 'CODEX', 'OPENCODE')),
 	CONSTRAINT "thread_transcript_entries_classification_check" CHECK("thread_transcript_entries"."classification" IN ('REPLY_QUOTE', 'CONTEXT_MATCH', 'NEW_ISSUE', 'CLARIFIED'))
@@ -338,10 +385,12 @@ CREATE INDEX "agent_sessions_last_turn_idx" ON "agent_agent_sessions" ("last_tur
 CREATE UNIQUE INDEX "agent_sessions_orchestrator_unq" ON "agent_agent_sessions" ("thread_id") WHERE issue_id IS NULL;
 CREATE INDEX "artifacts_issue_id_idx" ON "artifact_artifacts" ("issue_id");
 CREATE INDEX "artifacts_thread_id_idx" ON "artifact_artifacts" ("thread_id");
+CREATE UNIQUE INDEX "authentication_device_tokens_token_hash_unique" ON "authentication_device_tokens" ("token_hash");
 CREATE UNIQUE INDEX "authentication_sessions_token_unique" ON "authentication_sessions" ("token");
 CREATE UNIQUE INDEX "authentication_users_email_unique" ON "authentication_users" ("email");
 CREATE UNIQUE INDEX "consumed_messages_channel_message_unq" ON "thread_consumed_messages" ("channel_id","platform_message_id");
 CREATE INDEX "consumed_messages_entry_idx" ON "thread_consumed_messages" ("entry_id");
+CREATE INDEX "device_tokens_user_id_idx" ON "authentication_device_tokens" ("user_id");
 CREATE UNIQUE INDEX "events_billing_webhook_received_entity_unq" ON "shared_events" ("entity_id") WHERE name = 'billing.webhook.received';
 CREATE INDEX "events_entity_idx" ON "shared_events" ("entity_id","occurred_at");
 CREATE INDEX "events_name_idx" ON "shared_events" ("name","occurred_at");
@@ -360,6 +409,9 @@ CREATE INDEX "issues_completed_at_idx" ON "issue_issues" ("completed_at");
 CREATE INDEX "issues_owner_status_idx" ON "issue_issues" ("owner_id","status");
 CREATE INDEX "issues_thread_id_idx" ON "issue_issues" ("thread_id");
 CREATE UNIQUE INDEX "issues_thread_key_unq" ON "issue_issues" ("thread_id","key");
+CREATE INDEX "loops_next_run_at_idx" ON "thread_loops" ("next_run_at");
+CREATE INDEX "loops_thread_id_idx" ON "thread_loops" ("thread_id");
+CREATE UNIQUE INDEX "onboardings_owner_id_idx" ON "owner_onboardings" ("owner_id");
 CREATE INDEX "outbox_claim_idx" ON "shared_outbox" ("source","processed_at","lease_until");
 CREATE INDEX "outbox_unprocessed_idx" ON "shared_outbox" ("source","processed_at","created_at");
 CREATE INDEX "owners_is_disabled_idx" ON "owner_owners" ("is_disabled");

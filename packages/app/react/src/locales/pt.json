@@ -469,6 +469,7 @@
 		"NOT_IMPLEMENTED": "Este recurso ainda não está disponível.",
 		"NO_CHANNEL_CONNECTED": "Conecte um canal primeiro.",
 		"NO_PROVIDER_SELECTED": "Selecione ao menos um provider.",
+		"ONBOARDING_NOT_COMPLETED": "Conclua o onboarding para continuar.",
 		"OPTIMISTIC_LOCK_CONFLICT": "O registro foi alterado por outra operação. Recarregue e tente novamente.",
 		"OWNER_ALREADY_DISABLED": "Esta conta já está desativada.",
 		"OWNER_NOT_DISABLED": "Esta conta não está desativada.",
@@ -513,7 +514,6 @@
 		"setupChannelDesc": "WhatsApp, Instagram ou Telegram",
 		"setupChannelTitle": "Conecte um canal",
 		"setupCta": "Configurar",
-		"setupDone": "Concluído",
 		"setupThreadDesc": "Contato + pasta + agente",
 		"setupThreadTitle": "Vincule sua primeira conversa",
 		"setupWorkspaceDesc": "Aponte para uma pasta de projeto neste Mac",
@@ -549,6 +549,8 @@
 	},
 	"onboarding": {
 		"back": "Voltar",
+		"finalBody": "Você concluiu a configuração inicial do CODM.",
+		"finalTitle": "Tudo pronto",
 		"getStarted": "Começar",
 		"next": "Próximo",
 		"skip": "Pular",
@@ -563,6 +565,19 @@
 		"stepThreadTitle": "Vincule uma conversa",
 		"stepWorkspaceDesc": "Aponte para uma pasta de projeto — projetos Claude são detectados",
 		"stepWorkspaceTitle": "Adicione um espaço de trabalho"
+	},
+	"systemPreconditions": {
+		"slideTitle": "Falta uma permissão",
+		"slideBody": "O CODM precisa disto antes de conseguir trabalhar neste Mac.",
+		"repairFailed": "Não foi possível iniciar o reparo.",
+		"noAppIdentity": "Neste build o CODM roda sem identidade própria, então a permissão não pertence a ele — pertence ao terminal de onde você o iniciou. Libere o acesso a esse terminal nos Ajustes e reinicie-o.",
+		"fullDiskAccess": {
+			"title": "Acesso Total ao Disco",
+			"body": "Os agentes leem suas pastas de projeto através do CODM — para o macOS, quem lê é o app. Sem esta permissão o sistema bloqueia a leitura e as tarefas param sem explicação.",
+			"action": "Liberar Acesso Total ao Disco",
+			"actionHint": "Dois passos, nesta ordem: o CODM apaga a negação já registrada e depois abre Privacidade e Segurança › Acesso Total ao Disco, onde você liga o CODM.",
+			"afterHint": "Volte para esta janela depois de conceder — a verificação roda de novo sozinha."
+		}
 	},
 	"session": {
 		"agentModel": "Modelo",

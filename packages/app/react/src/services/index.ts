@@ -26,6 +26,7 @@ export {
 	useLogging,
 	useNotification,
 	useAnalytics,
+	useSystemPreconditions,
 	useSecrets,
 	useService,
 	useSupervision,
@@ -44,6 +45,7 @@ export {
 	SecretsToken,
 	SupervisionToken,
 	UpdateToken,
+	SystemPreconditionsToken,
 } from './tokens'
 
 // Port types — for consumers that need to annotate against a capability contract.
@@ -56,6 +58,13 @@ export type { HostInfoService, NativePlatform } from './HostInfoService/HostInfo
 export type { LoggingService } from './LoggingService/LoggingService'
 export type { NotificationService } from './NotificationService/NotificationService'
 export type { AnalyticsService } from './AnalyticsService/AnalyticsService'
+export { SYSTEM_PRECONDITION_IDS } from './SystemPreconditionsService/SystemPreconditionsService'
+export type {
+	SystemPreconditionId,
+	SystemPreconditionStatus,
+	SystemPreconditionsService,
+	RepairAvailability,
+} from './SystemPreconditionsService/SystemPreconditionsService'
 export type { SecretsService } from './SecretsService/SecretsService'
 export type { SupervisedSidecar, SupervisionService, SupervisionState } from './SupervisionService/SupervisionService'
 export type { UpdateService } from './UpdateService/UpdateService'

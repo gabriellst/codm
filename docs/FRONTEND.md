@@ -452,6 +452,78 @@ await auth.signIn.email({
 
 ---
 
+## Onboarding Step Taxonomy
+
+The `/onboarding` wizard and the dashboard's deferred-items panel are both driven by the same
+vocabulary of **steps** — declared once, in `packages/app/react/src/routes/onboarding/-components/steps.ts`.
+
+### `Step` is the genus, `SystemPrecondition` is a species
+
+Every screen the wizard shows — an intro slide, a setup task, a host permission — is a `Step`. A
+`SystemPrecondition` is not a special case bolted on top: it's just the species of `Step` whose
+existence and satisfaction come from a fact about the operator's machine (a macOS permission) rather
+than from the product's own data. It slots into the same `StepId` union, the same
+`STEP_COMPONENTS` dispatch map, and the same taxonomy table as every other step — it just happens to
+appear and disappear from the wizard's step list on its own, driven by a host probe instead of a
+persisted flag.
+
+### Two orthogonal axes, two different readers
+
+A step declares exactly two properties, and each one is read by a **different surface**. Keeping
+them orthogonal — never inferring one from the other — is what stops the wizard from needing to know
+anything about the dashboard, and vice versa.
+
+| Axis | Values | Governs | Question it answers |
+|---|---|---|---|
+| **`kind`** | `INFORMATIVE` \| `REQUIRED` \| `DEFERRABLE` | The **wizard** | What happens if the operator leaves this step undone right now? |
+| **`impact`** | `BLOCKING` \| `ADVISORY` | The **dashboard** | What stays broken later, while it's undone? |
+
+`INFORMATIVE` means seeing the step **is** completing it (an intro slide — there's nothing to
+satisfy). `REQUIRED` means the wizard's "Concluir" button stays disabled until it's satisfied.
+`DEFERRABLE` means the operator can finish onboarding without it, and the step reappears somewhere
+else afterward. `BLOCKING` means some real capability doesn't work while the step is outstanding;
+`ADVISORY` means only the step itself is missing — nothing else breaks.
+
+A step's `kind` never determines its `impact`, and the wizard component never reads `impact` (nor
+does the dashboard panel read `kind`). Today every setup step and the `FULL_DISK_ACCESS`
+`SystemPrecondition` are `DEFERRABLE` + `BLOCKING`, and the three intro slides plus the final step
+are `INFORMATIVE` + `ADVISORY` — but `REQUIRED` and `ADVISORY`-without-`BLOCKING` combinations are
+first-class, deliberately unused-but-declared members of each union. `STEP_TAXONOMY` is a
+`Record<StepId, …>`, not a `Partial` — a new `StepId` without an entry fails `tsc`, not silently
+renders a blank card.
+
+### Four sources of satisfaction — and the one that can never be persisted
+
+A step's `kind`/`impact` say what it means to be undone; a **separate** question is where the
+wizard learns whether it's *currently* done. There are exactly four sources, one per species:
+
+| Species | Satisfaction comes from |
+|---|---|
+| Presentation (intro slides) | Persisted journey position (`currentStep`, from the server) |
+| Setup (channel, workspace, thread) | Derived from the database — an existence query, re-run on every read |
+| `SystemPrecondition` | The host — a live probe (`SystemPreconditionsService.statuses()`) |
+| Final | None — it's the destination, not something that gets satisfied |
+
+**A host fact can never be persisted as "satisfied," full stop.** A macOS permission is revocable at
+any moment, outside the app, with no event the console can subscribe to — so the only honest way to
+know whether Full Disk Access is granted right now is to ask the host right now. If a
+`SystemPrecondition`'s "done" state were written to the database once and read back later, revoking
+the permission after that write would leave the wizard and the dashboard both confidently wrong. This
+is why the server *never* receives or stores anything about `SystemPrecondition`s — it doesn't run on
+the operator's machine and can't answer the question — and why the probe re-runs on every window
+`focus`, not just on mount: focus is the only signal available that the operator might have changed
+something in System Settings while the app was in the background.
+
+The database-derived sources follow the same never-persist discipline for a related reason: a setup
+step's "done" flag is a query ("does a `CONNECTED` channel exist?"), not a record of "the operator
+once passed through here." Deleting the only channel un-does the `CHANNEL` step on the very next read
+— there is no separate "completed setup steps" ledger to fall out of sync with reality.
+
+See `packages/app/react/src/routes/onboarding/-components/steps.ts` for the concrete `StepId` union,
+`STEP_TAXONOMY` table, and the pure `onboardingSteps(pending)` composition function.
+
+---
+
 ## References
 
 - `docs/BACKEND.md` — Backend architecture (controllers, schemas, events, auth model)

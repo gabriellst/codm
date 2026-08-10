@@ -262,6 +262,7 @@ pub mod types {
     ///    "NOT_IMPLEMENTED",
     ///    "NO_CHANNEL_CONNECTED",
     ///    "NO_PROVIDER_SELECTED",
+    ///    "ONBOARDING_NOT_COMPLETED",
     ///    "OPTIMISTIC_LOCK_CONFLICT",
     ///    "OWNER_ALREADY_DISABLED",
     ///    "OWNER_NOT_DISABLED",
@@ -433,6 +434,8 @@ pub mod types {
         NoChannelConnected,
         #[serde(rename = "NO_PROVIDER_SELECTED")]
         NoProviderSelected,
+        #[serde(rename = "ONBOARDING_NOT_COMPLETED")]
+        OnboardingNotCompleted,
         #[serde(rename = "OPTIMISTIC_LOCK_CONFLICT")]
         OptimisticLockConflict,
         #[serde(rename = "OWNER_ALREADY_DISABLED")]
@@ -587,6 +590,7 @@ pub mod types {
                 Self::NotImplemented => f.write_str("NOT_IMPLEMENTED"),
                 Self::NoChannelConnected => f.write_str("NO_CHANNEL_CONNECTED"),
                 Self::NoProviderSelected => f.write_str("NO_PROVIDER_SELECTED"),
+                Self::OnboardingNotCompleted => f.write_str("ONBOARDING_NOT_COMPLETED"),
                 Self::OptimisticLockConflict => f.write_str("OPTIMISTIC_LOCK_CONFLICT"),
                 Self::OwnerAlreadyDisabled => f.write_str("OWNER_ALREADY_DISABLED"),
                 Self::OwnerNotDisabled => f.write_str("OWNER_NOT_DISABLED"),
@@ -695,6 +699,7 @@ pub mod types {
                 "NOT_IMPLEMENTED" => Ok(Self::NotImplemented),
                 "NO_CHANNEL_CONNECTED" => Ok(Self::NoChannelConnected),
                 "NO_PROVIDER_SELECTED" => Ok(Self::NoProviderSelected),
+                "ONBOARDING_NOT_COMPLETED" => Ok(Self::OnboardingNotCompleted),
                 "OPTIMISTIC_LOCK_CONFLICT" => Ok(Self::OptimisticLockConflict),
                 "OWNER_ALREADY_DISABLED" => Ok(Self::OwnerAlreadyDisabled),
                 "OWNER_NOT_DISABLED" => Ok(Self::OwnerNotDisabled),
@@ -5396,6 +5401,67 @@ pub mod types {
             value.clone()
         }
     }
+    ///`GetOnboardingResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "channelDone",
+    ///    "completedAt",
+    ///    "currentStep",
+    ///    "threadDone",
+    ///    "workspaceDone"
+    ///  ],
+    ///  "properties": {
+    ///    "channelDone": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "completedAt": {
+    ///      "type": [
+    ///        "string",
+    ///        "null"
+    ///      ],
+    ///      "format": "date-time",
+    ///      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+    ///    },
+    ///    "currentStep": {
+    ///      "$ref": "#/components/schemas/OnboardingStep"
+    ///    },
+    ///    "threadDone": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "workspaceDone": {
+    ///      "type": "boolean"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetOnboardingResponse {
+        #[serde(rename = "channelDone")]
+        pub channel_done: bool,
+        #[serde(rename = "completedAt")]
+        pub completed_at: ::std::option::Option<
+            ::chrono::DateTime<::chrono::offset::Utc>,
+        >,
+        #[serde(rename = "currentStep")]
+        pub current_step: ::codm_contracts_rust::wire::enums::OnboardingStep,
+        #[serde(rename = "threadDone")]
+        pub thread_done: bool,
+        #[serde(rename = "workspaceDone")]
+        pub workspace_done: bool,
+    }
+    impl ::std::convert::From<&GetOnboardingResponse> for GetOnboardingResponse {
+        fn from(value: &GetOnboardingResponse) -> Self {
+            value.clone()
+        }
+    }
     ///`GetOperatorIdentityResponse`
     ///
     /// <details><summary>JSON schema</summary>
@@ -6928,48 +6994,6 @@ pub mod types {
     impl ::std::convert::From<&GetSettingsResponseStopCriteria>
     for GetSettingsResponseStopCriteria {
         fn from(value: &GetSettingsResponseStopCriteria) -> Self {
-            value.clone()
-        }
-    }
-    ///`GetSetupChecklistResponse`
-    ///
-    /// <details><summary>JSON schema</summary>
-    ///
-    /// ```json
-    ///{
-    ///  "type": "object",
-    ///  "required": [
-    ///    "channelDone",
-    ///    "threadDone",
-    ///    "workspaceDone"
-    ///  ],
-    ///  "properties": {
-    ///    "channelDone": {
-    ///      "type": "boolean"
-    ///    },
-    ///    "threadDone": {
-    ///      "type": "boolean"
-    ///    },
-    ///    "workspaceDone": {
-    ///      "type": "boolean"
-    ///    }
-    ///  },
-    ///  "additionalProperties": false
-    ///}
-    /// ```
-    /// </details>
-    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
-    #[serde(deny_unknown_fields)]
-    pub struct GetSetupChecklistResponse {
-        #[serde(rename = "channelDone")]
-        pub channel_done: bool,
-        #[serde(rename = "threadDone")]
-        pub thread_done: bool,
-        #[serde(rename = "workspaceDone")]
-        pub workspace_done: bool,
-    }
-    impl ::std::convert::From<&GetSetupChecklistResponse> for GetSetupChecklistResponse {
-        fn from(value: &GetSetupChecklistResponse) -> Self {
             value.clone()
         }
     }
@@ -8749,6 +8773,33 @@ pub mod types {
     }
     impl ::std::convert::From<&ResolveStopBody> for ResolveStopBody {
         fn from(value: &ResolveStopBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`SaveOnboardingStepBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "step"
+    ///  ],
+    ///  "properties": {
+    ///    "step": {
+    ///      "$ref": "#/components/schemas/OnboardingStep"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct SaveOnboardingStepBody {
+        pub step: ::codm_contracts_rust::wire::enums::OnboardingStep,
+    }
+    impl ::std::convert::From<&SaveOnboardingStepBody> for SaveOnboardingStepBody {
+        fn from(value: &SaveOnboardingStepBody) -> Self {
             value.clone()
         }
     }
@@ -12911,6 +12962,104 @@ Sends a `GET` request to `/v1/ui/home`
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
+    /**Onboarding — jornada persistida (currentStep/completedAt) + satisfação derivada dos passos de setup
+
+Sends a `GET` request to `/v1/ui/onboarding`
+
+*/
+    pub async fn get_onboarding<'a>(
+        &'a self,
+    ) -> Result<ResponseValue<types::GetOnboardingResponse>, Error<()>> {
+        let url = format!("{}/v1/ui/onboarding", self.baseurl,);
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .get(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Conclui o onboarding do operador — grava completedAt
+
+Sends a `POST` request to `/v1/ui/onboarding/complete`
+
+*/
+    pub async fn complete_onboarding<'a>(
+        &'a self,
+    ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
+        let url = format!("{}/v1/ui/onboarding/complete", self.baseurl,);
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Salva onde o operador parou no wizard
+
+Sends a `PATCH` request to `/v1/ui/onboarding/step`
+
+*/
+    pub async fn save_onboarding_step<'a>(
+        &'a self,
+        body: &'a types::SaveOnboardingStepBody,
+    ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
+        let url = format!("{}/v1/ui/onboarding/step", self.baseurl,);
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .patch(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
     /**The operator's displayed identity — name and photo borrowed from the connected channel's own account
 
 Sends a `GET` request to `/v1/ui/operator`
@@ -12952,38 +13101,6 @@ Sends a `GET` request to `/v1/ui/settings`
         &'a self,
     ) -> Result<ResponseValue<types::GetSettingsResponse>, Error<()>> {
         let url = format!("{}/v1/ui/settings", self.baseurl,);
-        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
-        header_map
-            .append(
-                ::reqwest::header::HeaderName::from_static("api-version"),
-                ::reqwest::header::HeaderValue::from_static(self.api_version()),
-            );
-        #[allow(unused_mut)]
-        let mut request = self
-            .client
-            .get(url)
-            .header(
-                ::reqwest::header::ACCEPT,
-                ::reqwest::header::HeaderValue::from_static("application/json"),
-            )
-            .headers(header_map)
-            .build()?;
-        let result = self.client.execute(request).await;
-        let response = result?;
-        match response.status().as_u16() {
-            200u16 => ResponseValue::from_response(response).await,
-            _ => Err(Error::UnexpectedResponse(response)),
-        }
-    }
-    /**Onboarding checklist — channel/workspace/thread done flags (cross-context)
-
-Sends a `GET` request to `/v1/ui/setup-checklist`
-
-*/
-    pub async fn get_setup_checklist<'a>(
-        &'a self,
-    ) -> Result<ResponseValue<types::GetSetupChecklistResponse>, Error<()>> {
-        let url = format!("{}/v1/ui/setup-checklist", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
