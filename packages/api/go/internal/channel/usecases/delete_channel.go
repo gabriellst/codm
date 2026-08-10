@@ -5,7 +5,7 @@ import (
 	ctxerrors "template/api-go/internal/channel/errors"
 	ctxevents "template/api-go/internal/channel/events"
 	channelrepo "template/api-go/internal/channel/repositories/channel"
-	"template/api-go/internal/channel/services/registry"
+	"template/api-go/internal/channel/services/pool"
 	"template/core-go/errors"
 	"template/core-go/services/unitofwork"
 
@@ -21,17 +21,17 @@ type DeleteChannelOutput struct {
 }
 
 type DeleteChannelHandler struct {
-	repo     channelrepo.ChannelRepository
-	registry registry.ChannelRegistry
-	uow      unitofwork.UnitOfWork
+	repo channelrepo.ChannelRepository
+	pool pool.ChannelPool
+	uow  unitofwork.UnitOfWork
 }
 
 func NewDeleteChannelHandler(
 	repo channelrepo.ChannelRepository,
-	registry registry.ChannelRegistry,
+	pool pool.ChannelPool,
 	uow unitofwork.UnitOfWork,
 ) *DeleteChannelHandler {
-	return &DeleteChannelHandler{repo: repo, registry: registry, uow: uow}
+	return &DeleteChannelHandler{repo: repo, pool: pool, uow: uow}
 }
 
 func (h *DeleteChannelHandler) Name() string { return "delete_channel" }
@@ -45,12 +45,12 @@ func (h *DeleteChannelHandler) Execute(ctx context.Context, input DeleteChannelI
 		return DeleteChannelOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNotFound, "channel not found")
 	}
 
-	// Remove from registry (disconnects if connected)
+	// Remove from pool (disconnects if connected)
 	channelUUID, err := uuid.Parse(input.ID)
 	if err != nil {
 		return DeleteChannelOutput{}, errors.NewBaseError(errors.CodeValidationFailed, "invalid channel id: "+input.ID)
 	}
-	h.registry.Remove(channelUUID)
+	h.pool.Remove(channelUUID)
 
 	// Raise the ChannelDeletedEvent so ChannelDeletedHandler fires via outbox.
 	// Save must happen BEFORE the physical DELETE so the event log is written

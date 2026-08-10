@@ -6,7 +6,7 @@ import (
 	channelerrors "template/api-go/internal/channel/errors"
 	channelevents "template/api-go/internal/channel/events"
 	channelrepo "template/api-go/internal/channel/repositories/channel"
-	"template/api-go/internal/channel/services/registry"
+	"template/api-go/internal/channel/services/pool"
 	"template/core-go/errors"
 	"template/core-go/repositories"
 	"template/core-go/services/unitofwork"
@@ -24,20 +24,20 @@ type DeleteMessageOutput struct {
 
 type DeleteMessageHandler struct {
 	integrationRepo channelrepo.ChannelRepository
-	registry        registry.ChannelRegistry
+	pool            pool.ChannelPool
 	domainEventRepo repositories.DomainEventRepository
 	uow             unitofwork.UnitOfWork
 }
 
 func NewDeleteMessageHandler(
 	integrationRepo channelrepo.ChannelRepository,
-	registry registry.ChannelRegistry,
+	pool pool.ChannelPool,
 	domainEventRepo repositories.DomainEventRepository,
 	uow unitofwork.UnitOfWork,
 ) *DeleteMessageHandler {
 	return &DeleteMessageHandler{
 		integrationRepo: integrationRepo,
-		registry:        registry,
+		pool:            pool,
 		domainEventRepo: domainEventRepo,
 		uow:             uow,
 	}
@@ -57,7 +57,7 @@ func (h *DeleteMessageHandler) Execute(ctx context.Context, input DeleteMessageI
 		return DeleteMessageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel is not connected")
 	}
 
-	ch, ok := h.registry.Get(channel.ID.UUID())
+	ch, ok := h.pool.Get(channel.ID.UUID())
 	if !ok {
 		return DeleteMessageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel not available")
 	}

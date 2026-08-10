@@ -6,7 +6,7 @@ import (
 	channelerrors "template/api-go/internal/channel/errors"
 	channelrepo "template/api-go/internal/channel/repositories/channel"
 	"template/api-go/internal/channel/services/gateway"
-	"template/api-go/internal/channel/services/registry"
+	"template/api-go/internal/channel/services/pool"
 	"template/core-go/errors"
 	"time"
 )
@@ -27,16 +27,16 @@ type SendMediaOutput struct {
 
 type SendMediaHandler struct {
 	integrationRepo channelrepo.ChannelRepository
-	registry        registry.ChannelRegistry
+	pool            pool.ChannelPool
 }
 
 func NewSendMediaHandler(
 	integrationRepo channelrepo.ChannelRepository,
-	registry registry.ChannelRegistry,
+	pool pool.ChannelPool,
 ) *SendMediaHandler {
 	return &SendMediaHandler{
 		integrationRepo: integrationRepo,
-		registry:        registry,
+		pool:            pool,
 	}
 }
 
@@ -54,7 +54,7 @@ func (h *SendMediaHandler) Execute(ctx context.Context, input SendMediaInput) (S
 		return SendMediaOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel is not connected")
 	}
 
-	ch, ok := h.registry.Get(channel.ID.UUID())
+	ch, ok := h.pool.Get(channel.ID.UUID())
 	if !ok {
 		return SendMediaOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel not available")
 	}

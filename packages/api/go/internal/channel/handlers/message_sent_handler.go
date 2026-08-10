@@ -6,7 +6,7 @@ import (
 
 	msgenums "template/api-go/internal/channel/enums"
 	ctxevents "template/api-go/internal/channel/events"
-	"template/api-go/internal/channel/services/registry"
+	"template/api-go/internal/channel/services/pool"
 	"template/contracts-go/wire"
 	"template/core-go/services/mediator"
 	"template/core-go/types"
@@ -39,11 +39,11 @@ import (
 // rather than guessed at here.
 type MessageSentHandler struct {
 	externalMediator mediator.ExternalMediator
-	registry         registry.ChannelRegistry
+	pool             pool.ChannelPool
 }
 
-func NewMessageSentHandler(ext mediator.ExternalMediator, reg registry.ChannelRegistry) *MessageSentHandler {
-	return &MessageSentHandler{externalMediator: ext, registry: reg}
+func NewMessageSentHandler(ext mediator.ExternalMediator, pool pool.ChannelPool) *MessageSentHandler {
+	return &MessageSentHandler{externalMediator: ext, pool: pool}
 }
 
 // compile-time interface check.
@@ -83,13 +83,13 @@ func (h *MessageSentHandler) Handle(ctx context.Context, event types.DomainEvent
 		OwnerID:      sent.OwnerID,
 	}
 
-	// Mirrors MessageReceivedHandler: the registry is the only place that knows whether a remote id
+	// Mirrors MessageReceivedHandler: the pool is the only place that knows whether a remote id
 	// is a group, and the projection's own IsGroup can be stale for a chat observed before the
 	// snapshot landed.
-	if ch, ok := h.registry.Get(inbound.ChannelID); ok {
+	if ch, ok := h.pool.Get(inbound.ChannelID); ok {
 		inbound.IsGroup = ch.IsGroupJID(inbound.RemoteID)
 	} else {
-		slog.Warn("message_sent: channel not in registry, IsGroup may be inaccurate", "channelId", inbound.ChannelID)
+		slog.Warn("message_sent: channel not in pool, IsGroup may be inaccurate", "channelId", inbound.ChannelID)
 	}
 
 	integrationEvent := types.NewIntegrationEvent(wire.ChannelMessageReceivedEventName, e.OwnerID, inbound)

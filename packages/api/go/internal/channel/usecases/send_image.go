@@ -8,7 +8,7 @@ import (
 	channelrepo "template/api-go/internal/channel/repositories/channel"
 	"template/api-go/internal/channel/services/gateway"
 	"template/api-go/internal/channel/services/gateway/whatsapp"
-	"template/api-go/internal/channel/services/registry"
+	"template/api-go/internal/channel/services/pool"
 	"template/core-go/errors"
 	"time"
 )
@@ -28,16 +28,16 @@ type SendImageOutput struct {
 
 type SendImageHandler struct {
 	integrationRepo channelrepo.ChannelRepository
-	registry        registry.ChannelRegistry
+	pool            pool.ChannelPool
 }
 
 func NewSendImageHandler(
 	integrationRepo channelrepo.ChannelRepository,
-	registry registry.ChannelRegistry,
+	pool pool.ChannelPool,
 ) *SendImageHandler {
 	return &SendImageHandler{
 		integrationRepo: integrationRepo,
-		registry:        registry,
+		pool:            pool,
 	}
 }
 
@@ -55,7 +55,7 @@ func (h *SendImageHandler) Execute(ctx context.Context, input SendImageInput) (S
 		return SendImageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel is not connected")
 	}
 
-	ch, ok := h.registry.Get(channel.ID.UUID())
+	ch, ok := h.pool.Get(channel.ID.UUID())
 	if !ok {
 		return SendImageOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel not available")
 	}

@@ -6,7 +6,7 @@ import (
 
 	remoteevents "template/api-go/internal/channel/events"
 	channelrepo "template/api-go/internal/channel/repositories/channel"
-	"template/api-go/internal/channel/services/registry"
+	"template/api-go/internal/channel/services/pool"
 	"template/api-go/internal/channel/utils"
 	sharedrepos "template/core-go/repositories"
 	"template/core-go/services/unitofwork"
@@ -23,24 +23,24 @@ type UnarchiveRemoteOutput struct{}
 
 type UnarchiveRemoteHandler struct {
 	channelRepo     channelrepo.ChannelRepository
-	registry        registry.ChannelRegistry
+	pool            pool.ChannelPool
 	domainEventRepo sharedrepos.DomainEventRepository
 	uow             unitofwork.UnitOfWork
 }
 
 func NewUnarchiveRemoteHandler(
 	channelRepo channelrepo.ChannelRepository,
-	reg registry.ChannelRegistry,
+	pool pool.ChannelPool,
 	domainEventRepo sharedrepos.DomainEventRepository,
 	uow unitofwork.UnitOfWork,
 ) *UnarchiveRemoteHandler {
-	return &UnarchiveRemoteHandler{channelRepo: channelRepo, registry: reg, domainEventRepo: domainEventRepo, uow: uow}
+	return &UnarchiveRemoteHandler{channelRepo: channelRepo, pool: pool, domainEventRepo: domainEventRepo, uow: uow}
 }
 
 func (h *UnarchiveRemoteHandler) Name() string { return "unarchive_remote" }
 
 func (h *UnarchiveRemoteHandler) Execute(ctx context.Context, input UnarchiveRemoteInput) (UnarchiveRemoteOutput, error) {
-	channelID, live, ownerID, err := utils.ResolveActiveChannel(ctx, input.ChannelID, h.channelRepo, h.registry)
+	channelID, live, ownerID, err := utils.ResolveActiveChannel(ctx, input.ChannelID, h.channelRepo, h.pool)
 	if err != nil {
 		return UnarchiveRemoteOutput{}, err
 	}

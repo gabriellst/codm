@@ -6,7 +6,7 @@ import (
 
 	remoteevents "template/api-go/internal/channel/events"
 	channelrepo "template/api-go/internal/channel/repositories/channel"
-	"template/api-go/internal/channel/services/registry"
+	"template/api-go/internal/channel/services/pool"
 	"template/api-go/internal/channel/utils"
 	sharedrepos "template/core-go/repositories"
 	"template/core-go/services/unitofwork"
@@ -26,24 +26,24 @@ type MuteRemoteOutput struct{}
 
 type MuteRemoteHandler struct {
 	channelRepo     channelrepo.ChannelRepository
-	registry        registry.ChannelRegistry
+	pool            pool.ChannelPool
 	domainEventRepo sharedrepos.DomainEventRepository
 	uow             unitofwork.UnitOfWork
 }
 
 func NewMuteRemoteHandler(
 	channelRepo channelrepo.ChannelRepository,
-	reg registry.ChannelRegistry,
+	pool pool.ChannelPool,
 	domainEventRepo sharedrepos.DomainEventRepository,
 	uow unitofwork.UnitOfWork,
 ) *MuteRemoteHandler {
-	return &MuteRemoteHandler{channelRepo: channelRepo, registry: reg, domainEventRepo: domainEventRepo, uow: uow}
+	return &MuteRemoteHandler{channelRepo: channelRepo, pool: pool, domainEventRepo: domainEventRepo, uow: uow}
 }
 
 func (h *MuteRemoteHandler) Name() string { return "mute_remote" }
 
 func (h *MuteRemoteHandler) Execute(ctx context.Context, input MuteRemoteInput) (MuteRemoteOutput, error) {
-	channelID, live, ownerID, err := utils.ResolveActiveChannel(ctx, input.ChannelID, h.channelRepo, h.registry)
+	channelID, live, ownerID, err := utils.ResolveActiveChannel(ctx, input.ChannelID, h.channelRepo, h.pool)
 	if err != nil {
 		return MuteRemoteOutput{}, err
 	}

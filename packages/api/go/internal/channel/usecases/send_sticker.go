@@ -8,7 +8,7 @@ import (
 	channelrepo "template/api-go/internal/channel/repositories/channel"
 	"template/api-go/internal/channel/services/gateway"
 	"template/api-go/internal/channel/services/gateway/whatsapp"
-	"template/api-go/internal/channel/services/registry"
+	"template/api-go/internal/channel/services/pool"
 	"template/core-go/errors"
 	"time"
 )
@@ -26,16 +26,16 @@ type SendStickerOutput struct {
 
 type SendStickerHandler struct {
 	integrationRepo channelrepo.ChannelRepository
-	registry        registry.ChannelRegistry
+	pool            pool.ChannelPool
 }
 
 func NewSendStickerHandler(
 	integrationRepo channelrepo.ChannelRepository,
-	registry registry.ChannelRegistry,
+	pool pool.ChannelPool,
 ) *SendStickerHandler {
 	return &SendStickerHandler{
 		integrationRepo: integrationRepo,
-		registry:        registry,
+		pool:            pool,
 	}
 }
 
@@ -53,7 +53,7 @@ func (h *SendStickerHandler) Execute(ctx context.Context, input SendStickerInput
 		return SendStickerOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel is not connected")
 	}
 
-	ch, ok := h.registry.Get(channel.ID.UUID())
+	ch, ok := h.pool.Get(channel.ID.UUID())
 	if !ok {
 		return SendStickerOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel not available")
 	}

@@ -5,7 +5,7 @@ import (
 	msgenums "template/api-go/internal/channel/enums"
 	channelerrors "template/api-go/internal/channel/errors"
 	channelrepo "template/api-go/internal/channel/repositories/channel"
-	"template/api-go/internal/channel/services/registry"
+	"template/api-go/internal/channel/services/pool"
 	"template/core-go/errors"
 )
 
@@ -21,16 +21,16 @@ type SendChatPresenceOutput struct {
 
 type SendChatPresenceHandler struct {
 	integrationRepo channelrepo.ChannelRepository
-	registry        registry.ChannelRegistry
+	pool            pool.ChannelPool
 }
 
 func NewSendChatPresenceHandler(
 	integrationRepo channelrepo.ChannelRepository,
-	registry registry.ChannelRegistry,
+	pool pool.ChannelPool,
 ) *SendChatPresenceHandler {
 	return &SendChatPresenceHandler{
 		integrationRepo: integrationRepo,
-		registry:        registry,
+		pool:            pool,
 	}
 }
 
@@ -48,7 +48,7 @@ func (h *SendChatPresenceHandler) Execute(ctx context.Context, input SendChatPre
 		return SendChatPresenceOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel is not connected")
 	}
 
-	ch, ok := h.registry.Get(channel.ID.UUID())
+	ch, ok := h.pool.Get(channel.ID.UUID())
 	if !ok {
 		return SendChatPresenceOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel not available")
 	}

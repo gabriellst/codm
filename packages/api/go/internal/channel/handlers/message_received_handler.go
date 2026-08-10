@@ -5,7 +5,7 @@ import (
 	"log/slog"
 
 	ctxevents "template/api-go/internal/channel/events"
-	"template/api-go/internal/channel/services/registry"
+	"template/api-go/internal/channel/services/pool"
 	"template/contracts-go/wire"
 	"template/core-go/services/mediator"
 	"template/core-go/types"
@@ -15,11 +15,11 @@ import (
 // integration event so the TS backend picks it up via Kafka.
 type MessageReceivedHandler struct {
 	externalMediator mediator.ExternalMediator
-	registry         registry.ChannelRegistry
+	pool             pool.ChannelPool
 }
 
-func NewMessageReceivedHandler(ext mediator.ExternalMediator, reg registry.ChannelRegistry) *MessageReceivedHandler {
-	return &MessageReceivedHandler{externalMediator: ext, registry: reg}
+func NewMessageReceivedHandler(ext mediator.ExternalMediator, pool pool.ChannelPool) *MessageReceivedHandler {
+	return &MessageReceivedHandler{externalMediator: ext, pool: pool}
 }
 
 // compile-time interface check.
@@ -36,10 +36,10 @@ func (h *MessageReceivedHandler) Handle(ctx context.Context, event types.DomainE
 	}
 
 	payload := e.Payload
-	if ch, ok := h.registry.Get(payload.ChannelID); ok {
+	if ch, ok := h.pool.Get(payload.ChannelID); ok {
 		payload.IsGroup = ch.IsGroupJID(payload.RemoteID)
 	} else {
-		slog.Warn("message_received: channel not in registry, IsGroup may be inaccurate",
+		slog.Warn("message_received: channel not in pool, IsGroup may be inaccurate",
 			"channelId", payload.ChannelID,
 		)
 	}

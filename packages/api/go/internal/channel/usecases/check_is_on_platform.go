@@ -6,7 +6,7 @@ import (
 	channelerrors "template/api-go/internal/channel/errors"
 	msgerrors "template/api-go/internal/channel/errors"
 	channelrepo "template/api-go/internal/channel/repositories/channel"
-	"template/api-go/internal/channel/services/registry"
+	"template/api-go/internal/channel/services/pool"
 	"template/core-go/errors"
 )
 
@@ -27,16 +27,16 @@ type CheckIsOnPlatformOutput struct {
 
 type CheckIsOnPlatformHandler struct {
 	integrationRepo channelrepo.ChannelRepository
-	registry        registry.ChannelRegistry
+	pool            pool.ChannelPool
 }
 
 func NewCheckIsOnPlatformHandler(
 	integrationRepo channelrepo.ChannelRepository,
-	registry registry.ChannelRegistry,
+	pool pool.ChannelPool,
 ) *CheckIsOnPlatformHandler {
 	return &CheckIsOnPlatformHandler{
 		integrationRepo: integrationRepo,
-		registry:        registry,
+		pool:            pool,
 	}
 }
 
@@ -58,7 +58,7 @@ func (h *CheckIsOnPlatformHandler) Execute(ctx context.Context, input CheckIsOnP
 		return CheckIsOnPlatformOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel is not connected")
 	}
 
-	ch, ok := h.registry.Get(channel.ID.UUID())
+	ch, ok := h.pool.Get(channel.ID.UUID())
 	if !ok {
 		return CheckIsOnPlatformOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel not available")
 	}

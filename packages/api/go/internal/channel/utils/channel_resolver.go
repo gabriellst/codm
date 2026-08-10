@@ -10,7 +10,7 @@ import (
 	channelerrors "template/api-go/internal/channel/errors"
 	channelrepo "template/api-go/internal/channel/repositories/channel"
 	"template/api-go/internal/channel/services/gateway"
-	"template/api-go/internal/channel/services/registry"
+	"template/api-go/internal/channel/services/pool"
 	"template/core-go/errors"
 )
 
@@ -20,7 +20,7 @@ func ResolveActiveChannel(
 	ctx context.Context,
 	channelID string,
 	repo channelrepo.ChannelRepository,
-	reg registry.ChannelRegistry,
+	pool pool.ChannelPool,
 ) (uuid.UUID, gateway.Channel, string, error) {
 	id, err := uuid.Parse(channelID)
 	if err != nil {
@@ -33,7 +33,7 @@ func ResolveActiveChannel(
 	if ch == nil {
 		return uuid.Nil, nil, "", errors.NewBaseError(channelerrors.CodeChannelNotFound, "channel not found")
 	}
-	live, ok := reg.Get(id)
+	live, ok := pool.Get(id)
 	if !ok || live.Status() != gateway.ConnectionStatusConnected {
 		return uuid.Nil, nil, "", errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel is not connected")
 	}

@@ -1,4 +1,4 @@
-package registry
+package pool
 
 import (
 	"context"
@@ -10,28 +10,28 @@ import (
 	"github.com/google/uuid"
 )
 
-// ChannelRegistryImpl maintains the in-process map of live gateway channels.
+// ChannelPoolImpl maintains the in-process map of live gateway channels.
 //
-// The registry has no repository dependency and no batch bootstrap method.
+// The pool has no repository dependency and no batch bootstrap method.
 // Users re-authenticate after deploy via the Connect command, which
 // repopulates this map with fresh WhatsApp sessions.
-type ChannelRegistryImpl struct {
+type ChannelPoolImpl struct {
 	channels map[uuid.UUID]gateway.Channel
 	mu       sync.RWMutex
 	factory  gateway.ChannelFactory
 }
 
 // compile-time interface check.
-var _ ChannelRegistry = (*ChannelRegistryImpl)(nil)
+var _ ChannelPool = (*ChannelPoolImpl)(nil)
 
-func NewChannelRegistry(factory gateway.ChannelFactory) *ChannelRegistryImpl {
-	return &ChannelRegistryImpl{
+func NewChannelPool(factory gateway.ChannelFactory) *ChannelPoolImpl {
+	return &ChannelPoolImpl{
 		channels: make(map[uuid.UUID]gateway.Channel),
 		factory:  factory,
 	}
 }
 
-func (r *ChannelRegistryImpl) Register(ctx context.Context, channelID uuid.UUID, config gateway.ChannelConfig) (gateway.Channel, error) {
+func (r *ChannelPoolImpl) Register(ctx context.Context, channelID uuid.UUID, config gateway.ChannelConfig) (gateway.Channel, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -46,29 +46,29 @@ func (r *ChannelRegistryImpl) Register(ctx context.Context, channelID uuid.UUID,
 
 	r.channels[channelID] = ch
 
-	slog.Info("channel registered in registry", "channelId", channelID)
+	slog.Info("channel registered in pool", "channelId", channelID)
 	return ch, nil
 }
 
-func (r *ChannelRegistryImpl) Get(channelID uuid.UUID) (gateway.Channel, bool) {
+func (r *ChannelPoolImpl) Get(channelID uuid.UUID) (gateway.Channel, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	ch, ok := r.channels[channelID]
 	return ch, ok
 }
 
-func (r *ChannelRegistryImpl) Remove(channelID uuid.UUID) {
+func (r *ChannelPoolImpl) Remove(channelID uuid.UUID) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	if ch, ok := r.channels[channelID]; ok {
 		ch.Disconnect()
 		delete(r.channels, channelID)
-		slog.Info("channel removed from registry", "channelId", channelID)
+		slog.Info("channel removed from pool", "channelId", channelID)
 	}
 }
 
-func (r *ChannelRegistryImpl) DisconnectAll() {
+func (r *ChannelPoolImpl) DisconnectAll() {
 	r.mu.Lock()
 	for id, ch := range r.channels {
 		ch.Disconnect()
@@ -78,7 +78,7 @@ func (r *ChannelRegistryImpl) DisconnectAll() {
 	r.mu.Unlock()
 }
 
-func (r *ChannelRegistryImpl) Count() int {
+func (r *ChannelPoolImpl) Count() int {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return len(r.channels)

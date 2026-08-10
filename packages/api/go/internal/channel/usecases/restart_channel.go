@@ -9,7 +9,7 @@ import (
 	ctxerrors "template/api-go/internal/channel/errors"
 	channelrepo "template/api-go/internal/channel/repositories/channel"
 	"template/api-go/internal/channel/services/gateway"
-	"template/api-go/internal/channel/services/registry"
+	"template/api-go/internal/channel/services/pool"
 	"template/core-go/errors"
 
 	"github.com/google/uuid"
@@ -25,15 +25,15 @@ type RestartChannelOutput struct {
 }
 
 type RestartChannelHandler struct {
-	repo     channelrepo.ChannelRepository
-	registry registry.ChannelRegistry
+	repo channelrepo.ChannelRepository
+	pool pool.ChannelPool
 }
 
 func NewRestartChannelHandler(
 	repo channelrepo.ChannelRepository,
-	registry registry.ChannelRegistry,
+	pool pool.ChannelPool,
 ) *RestartChannelHandler {
-	return &RestartChannelHandler{repo: repo, registry: registry}
+	return &RestartChannelHandler{repo: repo, pool: pool}
 }
 
 func (h *RestartChannelHandler) Name() string { return "restart_channel" }
@@ -53,10 +53,10 @@ func (h *RestartChannelHandler) Execute(ctx context.Context, input RestartChanne
 	}
 
 	// Remove existing connection
-	h.registry.Remove(channelUUID)
+	h.pool.Remove(channelUUID)
 
 	// Re-register and connect
-	ch, err := h.registry.Register(ctx, channelUUID, gateway.ChannelConfig{
+	ch, err := h.pool.Register(ctx, channelUUID, gateway.ChannelConfig{
 		OwnerID:       channel.OwnerID,
 		OwnerRemoteID: channel.OwnerRemoteID,
 	})

@@ -9,7 +9,7 @@ import (
 	ctxerrors "template/api-go/internal/channel/errors"
 	channelrepo "template/api-go/internal/channel/repositories/channel"
 	"template/api-go/internal/channel/services/gateway"
-	"template/api-go/internal/channel/services/registry"
+	"template/api-go/internal/channel/services/pool"
 	"template/core-go/errors"
 
 	"github.com/google/uuid"
@@ -26,15 +26,15 @@ type ConnectChannelOutput struct {
 }
 
 type ConnectChannelHandler struct {
-	repo     channelrepo.ChannelRepository
-	registry registry.ChannelRegistry
+	repo channelrepo.ChannelRepository
+	pool pool.ChannelPool
 }
 
 func NewConnectChannelHandler(
 	repo channelrepo.ChannelRepository,
-	registry registry.ChannelRegistry,
+	pool pool.ChannelPool,
 ) *ConnectChannelHandler {
-	return &ConnectChannelHandler{repo: repo, registry: registry}
+	return &ConnectChannelHandler{repo: repo, pool: pool}
 }
 
 func (h *ConnectChannelHandler) Name() string { return "connect_channel" }
@@ -53,7 +53,7 @@ func (h *ConnectChannelHandler) Execute(ctx context.Context, input ConnectChanne
 		return ConnectChannelOutput{}, errors.NewBaseError(errors.CodeValidationFailed, "invalid channel id: "+input.ID)
 	}
 
-	ch, err := h.registry.Register(ctx, channelUUID, gateway.ChannelConfig{
+	ch, err := h.pool.Register(ctx, channelUUID, gateway.ChannelConfig{
 		OwnerID:       channel.OwnerID,
 		OwnerRemoteID: channel.OwnerRemoteID,
 	})

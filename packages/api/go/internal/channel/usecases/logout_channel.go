@@ -6,7 +6,7 @@ import (
 	"template/api-go/internal/channel/enums"
 	ctxerrors "template/api-go/internal/channel/errors"
 	channelrepo "template/api-go/internal/channel/repositories/channel"
-	"template/api-go/internal/channel/services/registry"
+	"template/api-go/internal/channel/services/pool"
 	"template/core-go/errors"
 
 	"github.com/google/uuid"
@@ -22,15 +22,15 @@ type LogoutChannelOutput struct {
 }
 
 type LogoutChannelHandler struct {
-	repo     channelrepo.ChannelRepository
-	registry registry.ChannelRegistry
+	repo channelrepo.ChannelRepository
+	pool pool.ChannelPool
 }
 
 func NewLogoutChannelHandler(
 	repo channelrepo.ChannelRepository,
-	registry registry.ChannelRegistry,
+	pool pool.ChannelPool,
 ) *LogoutChannelHandler {
-	return &LogoutChannelHandler{repo: repo, registry: registry}
+	return &LogoutChannelHandler{repo: repo, pool: pool}
 }
 
 func (h *LogoutChannelHandler) Name() string { return "logout_channel" }
@@ -49,8 +49,8 @@ func (h *LogoutChannelHandler) Execute(ctx context.Context, input LogoutChannelI
 		return LogoutChannelOutput{}, errors.NewBaseError(errors.CodeValidationFailed, "invalid channel id: "+input.ID)
 	}
 
-	// Get channel from registry
-	ch, ok := h.registry.Get(channelUUID)
+	// Get channel from pool
+	ch, ok := h.pool.Get(channelUUID)
 	if !ok {
 		return LogoutChannelOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNotConnected, "channel is not connected")
 	}
@@ -60,8 +60,8 @@ func (h *LogoutChannelHandler) Execute(ctx context.Context, input LogoutChannelI
 		return LogoutChannelOutput{}, err
 	}
 
-	// Remove from registry
-	h.registry.Remove(channelUUID)
+	// Remove from pool
+	h.pool.Remove(channelUUID)
 
 	return LogoutChannelOutput{
 		ID:    input.ID,

@@ -11,7 +11,7 @@ import (
 	remoterepo "template/api-go/internal/channel/repositories/remote"
 	gateway "template/api-go/internal/channel/services/gateway"
 	whatsapp "template/api-go/internal/channel/services/gateway/whatsapp"
-	"template/api-go/internal/channel/services/registry"
+	"template/api-go/internal/channel/services/pool"
 	"template/api-go/internal/channel/testseam"
 	"template/api-go/internal/channel/usecases"
 	"template/core-go/config"
@@ -70,10 +70,10 @@ var Module = fx.Module("channel",
 		fx.As(new(messagerepo.MessageRepository)),
 	)),
 
-	// Registry service
+	// Pool service
 	fx.Provide(fx.Annotate(
-		registry.NewChannelRegistry,
-		fx.As(new(registry.ChannelRegistry)),
+		pool.NewChannelPool,
+		fx.As(new(pool.ChannelPool)),
 	)),
 
 	// Use cases — channel management
@@ -288,7 +288,7 @@ var Module = fx.Module("channel",
 	fx.Invoke(registerDomainEventHandlers),
 )
 
-func registerLifecycleHooks(lc fx.Lifecycle, reg registry.ChannelRegistry, repo channelrepo.ChannelRepository, factory gateway.ChannelFactory) {
+func registerLifecycleHooks(lc fx.Lifecycle, pool pool.ChannelPool, repo channelrepo.ChannelRepository, factory gateway.ChannelFactory) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			channels, err := repo.FindAllActive(ctx)
@@ -308,7 +308,7 @@ func registerLifecycleHooks(lc fx.Lifecycle, reg registry.ChannelRegistry, repo 
 					id := ch.ID
 					ownerID := ch.OwnerID
 					ownerRemoteID := ch.OwnerRemoteID
-					live, err := reg.Register(context.Background(), id.UUID(), gateway.ChannelConfig{
+					live, err := pool.Register(context.Background(), id.UUID(), gateway.ChannelConfig{
 						OwnerID:       ownerID,
 						OwnerRemoteID: ownerRemoteID,
 					})
@@ -325,7 +325,7 @@ func registerLifecycleHooks(lc fx.Lifecycle, reg registry.ChannelRegistry, repo 
 		},
 		OnStop: func(ctx context.Context) error {
 			slog.Info("disconnecting all instances...")
-			reg.DisconnectAll()
+			pool.DisconnectAll()
 			if c, ok := factory.(interface{ Close() error }); ok {
 				_ = c.Close()
 			}
@@ -338,7 +338,7 @@ func registerDomainEventHandlers(
 	m mediator.InternalMediator,
 	ext mediator.ExternalMediator,
 	repo channelrepo.ChannelRepository,
-	reg registry.ChannelRegistry,
+	pool pool.ChannelPool,
 	domainEventRepo repositories.DomainEventRepository,
 	uow unitofwork.UnitOfWork,
 	remoteProjRepo remoterepo.RemoteProjectionRepository,
@@ -346,10 +346,10 @@ func registerDomainEventHandlers(
 ) {
 	m.Register(handlers.NewChannelCreatedHandler())
 	m.Register(handlers.NewChannelDeletedHandler())
-	m.Register(handlers.NewChannelConnectedHandler(repo, reg, ext, uow))
+	m.Register(handlers.NewChannelConnectedHandler(repo, pool, ext, uow))
 	m.Register(handlers.NewChannelDisconnectedHandler(repo, ext, uow))
 	m.Register(handlers.NewChannelLoggedOutHandler(repo, ext, uow))
-	m.Register(handlers.NewMessageReceivedHandler(ext, reg))
+	m.Register(handlers.NewMessageReceivedHandler(ext, pool))
 	m.Register(handlers.NewMessageDeliveredHandler(ext))
 	m.Register(handlers.NewMessageSeenHandler(ext))
 	m.Register(handlers.NewGatewayPlatformEventHandler(ext))
@@ -389,7 +389,7 @@ func registerDomainEventHandlers(
 	// fails ahead of the projectors would take the projection down with it. The other integration
 	// bridges sit with their siblings above because their events have no projector; this one shares
 	// `channel.message_sent` with two, and the projection is the more important of the two jobs.
-	m.Register(handlers.NewMessageSentHandler(ext, reg))
+	m.Register(handlers.NewMessageSentHandler(ext, pool))
 
 	// Membership projector — single projector for the remote_memberships
 	// projection (T8/T13), subscribed to every membership-mutating event.

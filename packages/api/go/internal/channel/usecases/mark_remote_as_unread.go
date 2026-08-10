@@ -6,7 +6,7 @@ import (
 
 	remoteevents "template/api-go/internal/channel/events"
 	channelrepo "template/api-go/internal/channel/repositories/channel"
-	"template/api-go/internal/channel/services/registry"
+	"template/api-go/internal/channel/services/pool"
 	"template/api-go/internal/channel/utils"
 	sharedrepos "template/core-go/repositories"
 	"template/core-go/services/unitofwork"
@@ -23,24 +23,24 @@ type MarkRemoteAsUnreadOutput struct{}
 
 type MarkRemoteAsUnreadHandler struct {
 	channelRepo     channelrepo.ChannelRepository
-	registry        registry.ChannelRegistry
+	pool            pool.ChannelPool
 	domainEventRepo sharedrepos.DomainEventRepository
 	uow             unitofwork.UnitOfWork
 }
 
 func NewMarkRemoteAsUnreadHandler(
 	channelRepo channelrepo.ChannelRepository,
-	reg registry.ChannelRegistry,
+	pool pool.ChannelPool,
 	domainEventRepo sharedrepos.DomainEventRepository,
 	uow unitofwork.UnitOfWork,
 ) *MarkRemoteAsUnreadHandler {
-	return &MarkRemoteAsUnreadHandler{channelRepo: channelRepo, registry: reg, domainEventRepo: domainEventRepo, uow: uow}
+	return &MarkRemoteAsUnreadHandler{channelRepo: channelRepo, pool: pool, domainEventRepo: domainEventRepo, uow: uow}
 }
 
 func (h *MarkRemoteAsUnreadHandler) Name() string { return "mark_remote_as_unread" }
 
 func (h *MarkRemoteAsUnreadHandler) Execute(ctx context.Context, input MarkRemoteAsUnreadInput) (MarkRemoteAsUnreadOutput, error) {
-	channelID, live, ownerID, err := utils.ResolveActiveChannel(ctx, input.ChannelID, h.channelRepo, h.registry)
+	channelID, live, ownerID, err := utils.ResolveActiveChannel(ctx, input.ChannelID, h.channelRepo, h.pool)
 	if err != nil {
 		return MarkRemoteAsUnreadOutput{}, err
 	}

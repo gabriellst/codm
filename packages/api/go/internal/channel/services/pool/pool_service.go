@@ -1,4 +1,4 @@
-package registry
+package pool
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"template/api-go/internal/channel/services/gateway"
 )
 
-type ChannelRegistry interface {
+type ChannelPool interface {
 	Register(ctx context.Context, instanceID uuid.UUID, config gateway.ChannelConfig) (gateway.Channel, error)
 	Get(instanceID uuid.UUID) (gateway.Channel, bool)
 	Remove(instanceID uuid.UUID)

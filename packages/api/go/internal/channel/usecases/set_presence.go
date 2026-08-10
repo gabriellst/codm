@@ -6,7 +6,7 @@ import (
 	ctxerrors "template/api-go/internal/channel/errors"
 	channelrepo "template/api-go/internal/channel/repositories/channel"
 	"template/api-go/internal/channel/services/gateway"
-	"template/api-go/internal/channel/services/registry"
+	"template/api-go/internal/channel/services/pool"
 	"template/core-go/errors"
 
 	"github.com/google/uuid"
@@ -20,15 +20,15 @@ type SetPresenceInput struct {
 type SetPresenceOutput struct{}
 
 type SetPresenceHandler struct {
-	repo     channelrepo.ChannelRepository
-	registry registry.ChannelRegistry
+	repo channelrepo.ChannelRepository
+	pool pool.ChannelPool
 }
 
 func NewSetPresenceHandler(
 	repo channelrepo.ChannelRepository,
-	registry registry.ChannelRegistry,
+	pool pool.ChannelPool,
 ) *SetPresenceHandler {
-	return &SetPresenceHandler{repo: repo, registry: registry}
+	return &SetPresenceHandler{repo: repo, pool: pool}
 }
 
 func (h *SetPresenceHandler) Name() string { return "set_presence" }
@@ -47,7 +47,7 @@ func (h *SetPresenceHandler) Execute(ctx context.Context, input SetPresenceInput
 		return SetPresenceOutput{}, errors.NewBaseError(errors.CodeValidationFailed, "invalid channel id: "+input.ID)
 	}
 
-	ch, ok := h.registry.Get(channelUUID)
+	ch, ok := h.pool.Get(channelUUID)
 	if !ok || ch.Status() != gateway.ConnectionStatusConnected {
 		return SetPresenceOutput{}, errors.NewBaseError(ctxerrors.CodeChannelNotConnected, "channel is not connected")
 	}

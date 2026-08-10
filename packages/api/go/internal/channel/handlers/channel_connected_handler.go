@@ -7,7 +7,7 @@ import (
 	"template/api-go/internal/channel/entities"
 	ctxevents "template/api-go/internal/channel/events"
 	channelrepo "template/api-go/internal/channel/repositories/channel"
-	"template/api-go/internal/channel/services/registry"
+	"template/api-go/internal/channel/services/pool"
 	"template/contracts-go/wire"
 	"template/core-go/services/mediator"
 	"template/core-go/services/unitofwork"
@@ -16,20 +16,20 @@ import (
 
 type ChannelConnectedHandler struct {
 	repo             channelrepo.ChannelRepository
-	registry         registry.ChannelRegistry
+	pool             pool.ChannelPool
 	externalMediator mediator.ExternalMediator
 	uow              unitofwork.UnitOfWork
 }
 
 func NewChannelConnectedHandler(
 	repo channelrepo.ChannelRepository,
-	reg registry.ChannelRegistry,
+	pool pool.ChannelPool,
 	ext mediator.ExternalMediator,
 	uow unitofwork.UnitOfWork,
 ) *ChannelConnectedHandler {
 	return &ChannelConnectedHandler{
 		repo:             repo,
-		registry:         reg,
+		pool:             pool,
 		externalMediator: ext,
 		uow:              uow,
 	}
@@ -60,13 +60,13 @@ func (h *ChannelConnectedHandler) Handle(ctx context.Context, event types.Domain
 			return fmt.Errorf("channel %s not found", e.Payload.ChannelID)
 		}
 
-		// Resolve ownerRemoteID: prefer live registry (has latest JID), fall back to
+		// Resolve ownerRemoteID: prefer live pool (has latest JID), fall back to
 		// the value already persisted in the DB (handles startup race).
 		ownerRemoteID := inst.OwnerRemoteID
-		if ch, ok := h.registry.Get(e.Payload.ChannelID); ok {
+		if ch, ok := h.pool.Get(e.Payload.ChannelID); ok {
 			ownerRemoteID = ch.GetOwnerRemoteID()
 		} else {
-			slog.Warn("channel_connected: channel not in registry, falling back to persisted ownerRemoteID",
+			slog.Warn("channel_connected: channel not in pool, falling back to persisted ownerRemoteID",
 				"channelId", e.Payload.ChannelID,
 			)
 		}
