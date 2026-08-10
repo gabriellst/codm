@@ -26,7 +26,7 @@ export default defineConfig({
 		{
 			// Real-mode daemon over the embedded SQLite store, booted the RUN-UNDER-NODE way: `node dist/server.js`
 			// (the artifact we ship), NOT `bun run ./src` (a runtime we don't). scripts/run-e2e.ts builds
-			// the node bundle first and exports CODM_NODE_BIN (nvm-resolved), CODM_E2E + the scratch
+			// the node bundle first and exports CODM_NODE_BIN (nvm-resolved), CODM_ENV=e2e + the scratch
 			// CODM_DATA_DIR. A bare `bun x playwright` (no runner) falls back to PATH `node`.
 			command: `${process.env.CODM_NODE_BIN ?? 'node'} --enable-source-maps ./dist/server.js`,
 			// url (not port): the raw port poll resolves localhost to ::1 first on macOS while the
@@ -40,13 +40,13 @@ export default defineConfig({
 			cwd: '../api/typescript',
 			stdout: 'pipe',
 			// PORT is honored by BOTH stacks (fastify api AND nitro/vite) — pin it per server or they
-			// collide on whichever value the runner exported. CODM_DATA_DIR/CODM_E2E come from the
+			// collide on whichever value the runner exported. CODM_DATA_DIR/CODM_ENV come from the
 			// runner's env (inherited); pinned here so a bare `bun x playwright` invocation still boots
 			// hermetically.
 			env: {
 				PORT: String(process.env.API_PORT ?? 3130),
 				API_PORT: String(process.env.API_PORT ?? 3130),
-				CODM_E2E: process.env.CODM_E2E ?? 'true',
+				CODM_ENV: process.env.CODM_ENV ?? 'e2e',
 				...(process.env.CODM_DATA_DIR ? { CODM_DATA_DIR: process.env.CODM_DATA_DIR } : {}),
 				RATE_LIMIT_DISABLED: 'true',
 			},

@@ -33,7 +33,7 @@ function resolveNodeBin(): string {
  * the app-react console — and runs Playwright against it.
  *
  * The Go Channel Gateway is NOT booted; gateway ingress is simulated at the integration-event seam by
- * the TEST-ONLY `/v1/_test/gateway` endpoint (mounted only under CODM_E2E). So this runner needs no
+ * the TEST-ONLY `/v1/_test/gateway` endpoint (mounted only under CODM_ENV=e2e). So this runner needs no
  * Postgres, no Redis, no Docker — just a scratch data dir the daemon migrates on boot.
  *
  * What it owns:
@@ -41,8 +41,9 @@ function resolveNodeBin(): string {
  *     dropped on exit);
  *   - the two dev ports (pre-kills stale listeners — a watch-mode orphan pointing at a dropped dir is
  *     always wrong), pinned per-server so the api (fastify) and app (vite) don't collide on $PORT;
- *   - CODM_E2E=true, which flips the daemon's `real` bindings to the hermetic seams (in-process
- *     ExternalMediator, stub AgentRunner, canned ProviderDetector, test ingress controller).
+ *   - CODM_ENV=e2e, which selects the daemon's declared `e2e` registry column: real-shaped
+ *     infrastructure (SqlExternalMediator, FileLibsqlDriver on the scratch dir) with the hermetic
+ *     seams declared per token (stub AgentRunner, canned ProviderDetector, test ingress controller).
  */
 function runCaptureExitCode(command: string, args: string[], env: NodeJS.ProcessEnv, cwd: string) {
 	return new Promise<number>(resolvePromise => {
@@ -90,7 +91,7 @@ async function main() {
 		...process.env,
 		// Hermetic seam: real-mode daemon with the in-process mediator + test ingress endpoint + stub
 		// runner (no Redis, no Go gateway, no provider CLI). Refused under NODE_ENV=production.
-		CODM_E2E: 'true',
+		CODM_ENV: 'e2e',
 		CODM_DATA_DIR: dataDir,
 		// Pin ports so the webServer entries don't collide on $PORT from the root .env.
 		API_PORT: apiPort,

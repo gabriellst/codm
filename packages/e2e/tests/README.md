@@ -6,9 +6,9 @@ on its own: the TS daemon in `real` mode over an EMBEDDED file-backed SQLite sto
 `playwright.config.ts` webServer, orchestrated by `scripts/run-e2e.ts`.
 
 The Go Channel Gateway is **not** booted. Gateway ingress is simulated at the integration-event seam by
-the test-only `POST /v1/_test/gateway` endpoint (mounted only under `CODM_E2E`): it seeds a CONNECTED
+the test-only `POST /v1/_test/gateway` endpoint (mounted only under `CODM_ENV=e2e`): it seeds a CONNECTED
 channel row and publishes `channel_message.received` straight into the daemon's in-process
-ExternalMediator. The agent runner + provider detector are stubbed under `CODM_E2E` (no real CLI).
+ExternalMediator. The agent runner + provider detector are stubbed under `CODM_ENV=e2e` (no real CLI).
 
 | # | Spec | Flow | State |
 |---|------|------|-------|

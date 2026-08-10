@@ -2,7 +2,7 @@ import type { ApiSession } from './api'
 
 /**
  * Test-only gateway ingress helpers — the spec-side counterpart of the daemon's `/v1/_test/gateway`
- * controller (mounted only under CODM_E2E). The harness boots ONLY the TS daemon; the Go Channel
+ * controller (mounted only under CODM_ENV=e2e). The harness boots ONLY the TS daemon; the Go Channel
  * Gateway is simulated at the integration-event seam by these two calls. Not part of the generated
  * SDK, so they go through the operator client's raw request (it adds the Origin header + base URL).
  */
