@@ -425,6 +425,7 @@
 		"CONTACT_AVATAR_NOT_FOUND": "This contact has no photo.",
 		"CONTACT_ENTRY_REQUIRES_SENDER": "A contact message must carry the sender that spoke.",
 		"CREDENTIAL_DECRYPT_FAILED": "Stored credentials could not be read. Contact support.",
+		"DATA_DIR_LOCKED": "Another CODM instance is already using this data folder. Close the other instance and try again.",
 		"DEVICE_CODE_INVALID": "This sign-in link expired or was already used. Try signing in again.",
 		"DEVICE_TOKEN_INVALID": "Your device session is no longer valid. Sign in again.",
 		"EMAIL_ALREADY_REGISTERED": "This email is already registered.",
