@@ -581,6 +581,27 @@ func (e Direction) Valid() bool {
 	}
 }
 
+// Defines values for Env.
+const (
+	EnvE2e         Env = "e2e"
+	EnvIntegration Env = "integration"
+	EnvReal        Env = "real"
+)
+
+// Valid indicates whether the value is a known member of the Env enum.
+func (e Env) Valid() bool {
+	switch e {
+	case EnvE2e:
+		return true
+	case EnvIntegration:
+		return true
+	case EnvReal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Environment.
 const (
 	EnvironmentDevelopment Environment = "DEVELOPMENT"
@@ -3410,6 +3431,9 @@ type DocumentMessageData struct {
 type EditMessageOutput struct {
 	Success bool `json:"success"`
 }
+
+// Env defines model for Env.
+type Env string
 
 // Environment defines model for Environment.
 type Environment string

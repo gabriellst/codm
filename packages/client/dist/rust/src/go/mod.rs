@@ -12240,6 +12240,97 @@ pub mod types {
             value.clone()
         }
     }
+    ///`Env`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "real",
+    ///    "integration",
+    ///    "e2e"
+    ///  ],
+    ///  "x-enum-varnames": [
+    ///    "EnvReal",
+    ///    "EnvIntegration",
+    ///    "EnvE2e"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum Env {
+        #[serde(rename = "real")]
+        Real,
+        #[serde(rename = "integration")]
+        Integration,
+        #[serde(rename = "e2e")]
+        E2e,
+    }
+    impl ::std::convert::From<&Self> for Env {
+        fn from(value: &Env) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for Env {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Real => f.write_str("real"),
+                Self::Integration => f.write_str("integration"),
+                Self::E2e => f.write_str("e2e"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for Env {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "real" => Ok(Self::Real),
+                "integration" => Ok(Self::Integration),
+                "e2e" => Ok(Self::E2e),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for Env {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for Env {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for Env {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
     ///`Environment`
     ///
     /// <details><summary>JSON schema</summary>
