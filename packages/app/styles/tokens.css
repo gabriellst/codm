@@ -21,10 +21,10 @@
    almost exactly with the reference's measured symmetric clusters (16/18/20/24/28px), so
    the base `--radius` stays 20px — but it's declared react-only, and astro has NO ladder
    at all (global.css only imports this file). Since this file is the ONE thing both apps
-   share, the full ladder is re-declared here (identical calc() formulas — harmless overlap
-   on react, load-bearing on astro) PLUS three smaller steps (xs/2xs/3xs) the reference
-   needs that the original react-only ladder didn't reach. Follow-up cleanup (out of scope
-   here): the react-only copy in index.css can be deleted once primitives read from here. */
+   share, the full ladder is re-declared here PLUS three smaller steps (xs/2xs/3xs) the
+   reference needs that the original react-only ladder didn't reach. This is now the ONLY
+   declaration: the react-only copy that used to shadow it in index.css was deleted
+   (D3 Fase 1) — both apps read the ladder from here. */
 @theme inline {
 	--radius-3xs: calc(var(--radius) - 11px); /* 9px  — "9px 9px 9px 3px", 6× in the reference (tiny badges/icon-buttons) */
 	--radius-2xs: calc(var(--radius) - 8px); /* 12px — "12px 12px 12px 4px", 10× — 2nd most common shape overall */
@@ -36,6 +36,18 @@
 	--radius-2xl: calc(var(--radius) + 8px); /* 28px — "28px 28px 28px 10px", 1×; kept for ladder continuity */
 	--radius-3xl: calc(var(--radius) + 12px); /* 32px — no direct measurement; ladder continuity only */
 	--radius-4xl: calc(var(--radius) + 16px); /* 36px — no direct measurement; ladder continuity only */
+
+	/* ── Elevation (D3) — two shadows, and ONLY two ─────────────────────────
+	   Measured in the design file (every shadow in the .pen collapses to exactly these two):
+	   · float — cards/chips/badges that sit ON the page (hero floating cards, update card):
+	     y 4 · blur 15 · spread -6 · black at 10% (#0000001A, measured — plain black, NOT the
+	     foreground hue).
+	   · modal — dialogs over the scrim (all four modals measure identically):
+	     y 18 · blur 48 · #16161640 — that hex IS --foreground at 25%, so it's derived from the
+	     token (same reasoning as the alpha neutrals above: dark theme adapts for free).
+	   Anything reaching for a third elevation is off-design. */
+	--shadow-float: 0 4px 15px -6px rgb(0 0 0 / 0.1);
+	--shadow-modal: 0 18px 48px 0 oklch(from var(--foreground) l c h / 0.25);
 }
 
 :root {
@@ -161,6 +173,16 @@
 	   the group root itself); any DESCENDANT that should echo the row's hover (a trailing chevron,
 	   a secondary icon) reacts via `group-hover:*` instead of its own `hover:`, so the whole row's
 	   affordance moves as one unit. See `IssueRow` for the canonical example. */
+	/* ── Alpha-derived neutrals (D3) ────────────────────
+	   The design file declares `fg-60` (#16161699) and `fg-20` (#16161633) and uses them as the
+	   neutral-button vocabulary: 60 is ghost/cancel TEXT, 20 is the outlined-secondary BORDER.
+	   Declared as derivations of --foreground — same pattern as --hover/--focus below — so the
+	   dark theme inverts them for free. The design's `fg-inverse-60`/`fg-inverse-20` variables
+	   are deliberately NOT ported: they only exist because .pen files can't derive colors; here
+	   the derivation IS the inversion, and an explicit "inverse" pair would drift. */
+	--fg-60: oklch(from var(--foreground) l c h / 0.6);
+	--fg-20: oklch(from var(--foreground) l c h / 0.2);
+
 	--hover: oklch(from var(--foreground) l c h / 0.05); /* ≈ #f4f4f4 — neutral hover, see table above */
 	--hover-accent: oklch(0.982 0.016 122); /* #F7FBEF — brand-tinted content-row hover surface */
 	--hover-accent-border: oklch(0.914 0.077 124); /* #d8ecb4 — border companion to --hover-accent */
