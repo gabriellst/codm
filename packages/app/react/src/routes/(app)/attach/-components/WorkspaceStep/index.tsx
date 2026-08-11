@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm } from '@tanstack/react-form'
-import { IconChevronRight } from '@tabler/icons-react'
+import { IconCheck, IconChevronRight } from '@tabler/icons-react'
 import { attachThreadMutationRequestSchema } from '@codm/client-typescript/typescript'
 import type { GetAttachThreadWizardQueryResponse } from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
@@ -107,8 +107,15 @@ export function WorkspaceStep({ workspaces, defaultValues, onSubmit, onBack, cla
 										))}
 									</div>
 								</div>
-								{/* GROUP CONVENTION (surfaces): o chevron ecoa o hover da linha, sem `hover:` próprio. */}
-								<IconChevronRight className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
+								{selected === workspace.workspaceId ? (
+									// D3 (screen EWECP) — same filled check badge as the contact/agents rows.
+									<span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+										<IconCheck className="size-3.5" />
+									</span>
+								) : (
+									// GROUP CONVENTION (surfaces): o chevron ecoa o hover da linha, sem `hover:` próprio.
+									<IconChevronRight className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
+								)}
 							</Button>
 						))}
 					</div>

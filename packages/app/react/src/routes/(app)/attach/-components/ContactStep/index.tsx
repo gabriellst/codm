@@ -2,7 +2,7 @@ import { type ComponentProps, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm } from '@tanstack/react-form'
 import { keepPreviousData } from '@tanstack/react-query'
-import { IconChevronRight } from '@tabler/icons-react'
+import { IconCheck, IconChevronRight } from '@tabler/icons-react'
 import { attachThreadMutationRequestSchema, useGetAttachThreadWizard } from '@codm/client-typescript/typescript'
 import type { ChannelKind } from '@codm/client-typescript/typescript'
 import { useDebouncedSearch } from '@/hooks'
@@ -174,6 +174,13 @@ export function ContactStep({ channelKindById, defaultValues, onSubmit, classNam
 									</div>
 									{contact.alreadyAttached ? (
 										<Badge variant="outline">{t('attach.attached')}</Badge>
+									) : isSelected ? (
+										// D3 (screen PENI6) — a filled check badge marks the row that reopens
+										// pre-selected (voltar a este passo depois de escolher em outro), replacing
+										// the chevron for exactly that one row.
+										<span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+											<IconCheck className="size-3.5" />
+										</span>
 									) : (
 										// GROUP CONVENTION (surfaces): o descendente ecoa o hover da linha via
 										// `group-hover:`, nunca com um `hover:` próprio — a linha toda se move junta.

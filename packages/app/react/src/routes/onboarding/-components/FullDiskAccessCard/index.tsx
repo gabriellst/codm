@@ -1,6 +1,6 @@
 // packages/app/react/src/routes/onboarding/-components/FullDiskAccessCard/index.tsx — COMPLETE final file.
 // MANTENHA a forma do scaffold: export nomeado, props estendendo ComponentProps, `{ className, ...props }`, `cn(...)`.
-import { IconLock } from '@tabler/icons-react'
+import { IconShieldCheck } from '@tabler/icons-react'
 import { type ComponentProps, type ReactNode, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -52,30 +52,36 @@ export function FullDiskAccessCard({ className, ...props }: ComponentProps<'div'
 		}
 	}
 
+	// D3 (screen d4bKAl) — the button comes FIRST, `actionHint` (the two-step explanation) moves
+	// BELOW it, and `afterHint` (the short "come back to this window" note) closes the card in
+	// `caption-foreground` — reordered from the old actionHint-above-button layout to match the
+	// design's card exactly. Same three pieces of copy, same `RepairAvailability` dispatch by map.
 	const REPAIR_CONTENT: Record<RepairAvailability, ReactNode> = {
 		AVAILABLE: (
 			<>
-				<p className="text-sm text-muted-foreground">{t('systemPreconditions.fullDiskAccess.actionHint')}</p>
 				<Button onClick={repair} disabled={repairing} className="self-start">
+					<IconShieldCheck data-icon="inline-start" />
 					{t('systemPreconditions.fullDiskAccess.action')}
 				</Button>
-				<p className="text-xs text-muted-foreground">{t('systemPreconditions.fullDiskAccess.afterHint')}</p>
+				<p className="text-sm text-muted-foreground">{t('systemPreconditions.fullDiskAccess.actionHint')}</p>
+				<p className="text-xs text-caption-foreground">{t('systemPreconditions.fullDiskAccess.afterHint')}</p>
 			</>
 		),
 		NO_APP_IDENTITY: <p className="text-sm text-muted-foreground">{t('systemPreconditions.noAppIdentity')}</p>,
 	}
 
 	return (
-		<div className={cn('flex w-full flex-col gap-4 rounded-asymmetric border border-border bg-card p-6 text-left', className)} {...props}>
-			<div className="flex items-center gap-3">
-				<span className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
-					<IconLock className="size-5" />
-				</span>
-				<h2 className="text-lg font-bold text-foreground">{t('systemPreconditions.fullDiskAccess.title')}</h2>
-			</div>
+		<div className={cn('flex w-full flex-col gap-9', className)} {...props}>
+			<header className="flex flex-col gap-2">
+				<h1 className="heading-display text-4xl text-foreground">{t('systemPreconditions.slideTitle')}</h1>
+				<p className="text-muted-foreground">{t('systemPreconditions.slideBody')}</p>
+			</header>
 
-			<p className="text-sm text-muted-foreground">{t('systemPreconditions.fullDiskAccess.body')}</p>
-			{REPAIR_CONTENT[repairAvailability]}
+			<div className="flex w-full flex-col gap-4 rounded-asymmetric-xl border border-border bg-background p-6.5">
+				<h2 className="text-lg font-bold text-foreground">{t('systemPreconditions.fullDiskAccess.title')}</h2>
+				<p className="text-sm text-muted-foreground">{t('systemPreconditions.fullDiskAccess.body')}</p>
+				{REPAIR_CONTENT[repairAvailability]}
+			</div>
 		</div>
 	)
 }

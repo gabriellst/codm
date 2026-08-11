@@ -70,19 +70,21 @@
 		"back": "Back",
 		"close": "Close",
 		"continue": "Continue",
+		"edit": "Edit",
 		"finish": "Attach thread",
 		"goToChannels": "Go to Channels",
 		"navAgents": "Agents",
 		"navContact": "Contact",
 		"navReview": "Review",
-		"navWorkspace": "Workspace",
+		"navWorkspace": "Project",
 		"needChannelDescription": "You need at least one connected channel before you can attach a thread.",
 		"needChannelTitle": "Connect a channel first",
 		"noContacts": "No contacts found on this channel.",
 		"noContactsFound": "No contacts for “{{term}}”.",
+		"reviewFooterNote": "Once attached, messages on this thread open tasks in this folder. You can pause or undo at any time.",
 		"rowAgents": "Agents",
 		"rowContact": "Contact",
-		"rowWorkspace": "Workspace",
+		"rowWorkspace": "Project",
 		"searchContacts": "Search contacts and groups",
 		"stepAgentsSubtitle": "Which provider CLIs can work in this thread.",
 		"stepAgentsTitle": "Pick the agents",
@@ -91,7 +93,7 @@
 		"stepThreadSubtitle": "Choose the contact, group or inbox your agent will live in.",
 		"stepThreadTitle": "Pick a thread",
 		"stepWorkspaceSubtitle": "The project folder your agents will work in.",
-		"stepWorkspaceTitle": "Pick a workspace"
+		"stepWorkspaceTitle": "Pick a project"
 	},
 	"auth": {
 		"resetPassword": {
@@ -557,6 +559,10 @@
 	},
 	"onboarding": {
 		"back": "Back",
+		"diagramIssue": "issue",
+		"diagramMessage": "message",
+		"diagramReply": "reply",
+		"diagramTerminal": "terminal session",
 		"finalBody": "You finished CODM's initial setup.",
 		"finalTitle": "All set",
 		"getStarted": "Get started",
@@ -566,13 +572,7 @@
 		"slide1Title": "DM your codebase",
 		"slide2Title": "How it works",
 		"slide3Body": "Agents pause on server errors, blocked replies, or when someone asks for a human. You review, steer with a whisper, or take over — nothing ships without your say.",
-		"slide3Title": "You stay in control",
-		"stepChannelDesc": "Pair WhatsApp via QR code",
-		"stepChannelTitle": "Connect a channel",
-		"stepThreadDesc": "Bind a contact or group to a folder and pick the agents",
-		"stepThreadTitle": "Attach a thread",
-		"stepWorkspaceDesc": "Point at a project folder — Claude projects are detected",
-		"stepWorkspaceTitle": "Add a workspace"
+		"slide3Title": "You stay in control"
 	},
 	"systemPreconditions": {
 		"slideTitle": "One permission is missing",
