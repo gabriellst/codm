@@ -132,8 +132,9 @@
 	   paused status hues, a dedicated skeleton-loading grey). Per the reconciliation rule (Fase 0,
 	   R1): these tokens enter the sheet only when the FIRST screen that consumes them lands, not
 	   speculatively — so only what the Projetos/Canais group (a5AkeG) actually uses is declared
-	   here. `status-attention`/`status-idle`/`status-paused`/`attention-foreground` stay
-	   undeclared until a later group's screen needs them.
+	   here. `status-idle`/`status-paused` stay undeclared until a later group's screen needs them;
+	   `status-attention`/`attention-foreground` are declared below — the Início group's "canal
+	   offline" screen (m4Q5K) is their first consumer.
 	   --skeleton / --skeleton-strong: the loading-card placeholder greys (project-card skeleton,
 	   Fase 4). Two steps, not one — the design's skeleton cards use the lighter grey for
 	   thin/quiet shapes (path, count) and the darker one for the shape carrying the most visual
@@ -144,6 +145,13 @@
 	   modal). Warm, low-chroma tint of the SAME hue as --destructive, not a separate literal —
 	   consistent with how --hover-accent-border pairs with --hover-accent above. */
 	--attention-surface: oklch(0.942 0.024 43.2); /* #FBE7DF */
+	/* --status-attention / --attention-foreground — measured on m4Q5K (Início · canal offline):
+	   the Warning Badge fill (#E4572E, a warmer/more-orange hue than --destructive's #DC2626 — a
+	   distinct semantic color, not a reuse) and the banner title/description text (#8A3417). Both
+	   sit on the SAME hue family as --attention-surface above (its tint), just carried further:
+	   badge = full-chroma accent, foreground = dark warm text for contrast against the pale tint. */
+	--status-attention: oklch(0.637 0.184 36.5); /* #E4572E */
+	--attention-foreground: oklch(0.443 0.124 38.1); /* #8A3417 */
 
 	/* ── Interaction states (lines, hover, selected) ───────────────────────────
 	   D2 CORRECTION, founder-confirmed — this block used to carry a comment on --hover claiming
@@ -332,6 +340,13 @@
 	--skeleton: oklch(0.26 0 0);
 	--skeleton-strong: oklch(0.32 0 0);
 	--attention-surface: oklch(from var(--destructive) l c h / 0.16);
+	/* --status-attention / --attention-foreground — DERIVED, not measured (no dark screens in the
+	   reference), same rule as --skeleton/--attention-surface above: keep the role, move lightness
+	   to work on a near-black canvas. --status-attention bumps lighter by the same delta the
+	   measured --destructive dark bump already uses (0.585→0.65, +0.065); --attention-foreground
+	   flips from dark-on-pale to light-on-dark, same direction --secondary-foreground took above. */
+	--status-attention: oklch(0.7 0.18 36.5);
+	--attention-foreground: oklch(0.88 0.08 38.1);
 
 	--border: oklch(from var(--foreground) l c h / 0.14);
 	--input: oklch(from var(--foreground) l c h / 0.16);

@@ -2,12 +2,12 @@ import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { IconPlus } from '@tabler/icons-react'
-import { getHomeDashboardQueryKey, useGetHomeDashboard } from '@codm/client-typescript/typescript'
+import { IconAlertTriangle, IconMessage, IconPlus, IconRobot, IconRotate } from '@tabler/icons-react'
+import { ChannelStatusEnum, getHomeDashboardQueryKey, useGetHomeDashboard } from '@codm/client-typescript/typescript'
 import type { GetHomeDashboardQueryResponse, ThreadStatus, TranscriptKind } from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { alertActionButton, alertSurface, row } from '@/components/ui/surfaces'
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
+import { alertActionButton, alertSurface, row, sectionLabel } from '@/components/ui/surfaces'
 import { cn } from '@/lib/utils'
 import { formatDurationSeconds } from '@/lib/format'
 import { enumLabel } from '@/lib'
@@ -26,7 +26,14 @@ export function HomeDashboard({ className, ...props }: ComponentProps<'div'>) {
 	const { data, isLoading } = useGetHomeDashboard()
 
 	useServerEvents(
-		['integration.issue.opened', 'integration.issue.completed', 'integration.thread.stop_raised', 'integration.thread.stop_resolved'],
+		[
+			'integration.issue.opened',
+			'integration.issue.completed',
+			'integration.thread.stop_raised',
+			'integration.thread.stop_resolved',
+			'integration.channel.connected',
+			'integration.channel.disconnected',
+		],
 		() => {
 			queryClient.invalidateQueries({ queryKey: getHomeDashboardQueryKey() })
 		},
@@ -35,21 +42,32 @@ export function HomeDashboard({ className, ...props }: ComponentProps<'div'>) {
 	if (isLoading || !data) return <DashboardSkeleton className={className} {...props} />
 
 	const running = data.agentsRunningNow
+	// A DISCONNECTED channel (was answering, stopped) is the one status worth surfacing here —
+	// CREATED/CONNECTING are setup-in-progress (already covered by onboarding, C1) and DELETED means
+	// "no channel at all", neither of which reads as "went offline".
+	const offlineChannel = data.channels.some(channel => channel.status === ChannelStatusEnum.DISCONNECTED)
 	const heroLine = running === 0 ? t('dashboard.agentsWorkingNone') : t('dashboard.agentsWorking', { count: running })
+	const statusLine = offlineChannel ? `${heroLine} · ${t('dashboard.channelOfflineSuffix')}` : heroLine
 
 	return (
-		<div className={cn('relative mx-auto flex w-full max-w-5xl flex-col gap-7 px-6 pb-16 pt-16 md:px-10', className)} {...props}>
-			<DecorativeBlob />
+		<div
+			className={cn('relative mx-auto flex w-full max-w-5xl flex-col gap-7 overflow-hidden px-6 pb-16 pt-16 md:px-10', className)}
+			{...props}
+		>
+			{offlineChannel && <ChannelOfflineBanner />}
 
-			<PageHeader
-				title={t('nav.home')}
-				subtitle={heroLine}
-				action={
-					<Button nativeButton={false} render={<Link to="/attach" />}>
-						<IconPlus data-icon="inline-start" /> {t('dashboard.newConversation')}
-					</Button>
-				}
-			/>
+			<div className="relative">
+				<DecorBlobs />
+				<PageHeader
+					title={t('nav.home')}
+					subtitle={statusLine}
+					action={
+						<Button nativeButton={false} render={<Link to="/attach" />}>
+							<IconPlus data-icon="inline-start" /> {t('dashboard.newConversation')}
+						</Button>
+					}
+				/>
+			</div>
 
 			{data.needsYou && <NeedsYouCallout needsYou={data.needsYou} />}
 
@@ -62,33 +80,67 @@ export function HomeDashboard({ className, ...props }: ComponentProps<'div'>) {
 	)
 }
 
-/** Purely decorative — the redesign's soft bean-shape behind the masthead. No data, so no i18n. */
-function DecorativeBlob() {
+/**
+ * The redesign's two measured blur blobs behind the masthead (R28) — a $secondary and an $accent
+ * ellipse, blurred, positioned behind the title/status line. Every Início screen in the design
+ * (cheio, vazio, carregando, canal offline) carries this pair. Purely decorative, no data, so no
+ * i18n — same treatment the astro landing's Hero.astro uses for its own hero backdrop.
+ */
+function DecorBlobs() {
 	return (
-		<svg
-			width="420"
-			height="320"
-			viewBox="0 0 340 270"
-			aria-hidden="true"
-			className="pointer-events-none absolute -right-16 -top-8 -z-10 opacity-45"
-		>
-			<path
-				d="M60 30 Q20 40 25 110 L28 190 Q30 240 95 238 L250 232 Q315 230 312 150 L308 75 Q305 18 230 22 L95 27 Q70 28 60 30 Z"
-				className="fill-secondary"
-			/>
-		</svg>
+		<div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
+			<div className="absolute -left-16 -top-16 h-[210px] w-[420px] rounded-full bg-secondary blur-[36px]" />
+			<div className="absolute left-32 -top-9 h-[150px] w-[250px] rounded-full bg-accent blur-[30px]" />
+		</div>
 	)
 }
 
-function NeedsYouCallout({ needsYou }: { needsYou: NonNullable<Dashboard['needsYou']> }) {
+/**
+ * A DISCONNECTED channel (m4Q5K, "canal offline"). The design shows this as a full-bleed banner
+ * ABOVE the rail — out of reach here (that's `routes/(app)/route.tsx`, outside this section's
+ * ownership and actively worked by another agent). This is the content-column-scoped equivalent:
+ * same tokens (`attention-surface`/`status-attention`), same copy, same action. The "Reiniciar"
+ * action has no restart mutation on the wire (channels/** owns that bounded context, out of scope
+ * here too) — it navigates to `/channels`, where reconnecting a channel actually happens today
+ * (`ConnectChannelDialog`), rather than wiring a command that doesn't exist.
+ */
+function ChannelOfflineBanner({ className, ...props }: ComponentProps<'div'>) {
+	const { t } = useTranslation()
+	return (
+		<div
+			className={cn('flex items-center gap-3.5 rounded-asymmetric-lg bg-attention-surface px-5 py-4 text-attention-foreground', className)}
+			{...props}
+		>
+			<span className="flex size-8 shrink-0 items-center justify-center rounded-asymmetric-2xs bg-status-attention text-primary-foreground">
+				<IconAlertTriangle className="size-[19px]" />
+			</span>
+			<div className="flex min-w-0 flex-1 flex-col gap-0.5">
+				<span className="text-[15px] font-bold">{t('dashboard.channelOfflineTitle')}</span>
+				<span className="text-[13px] opacity-80">{t('dashboard.channelOfflineDescription')}</span>
+			</div>
+			<Button
+				size="sm"
+				nativeButton={false}
+				render={<Link to="/channels" />}
+				className="shrink-0 border border-destructive bg-transparent text-destructive hover:bg-destructive/10 active:bg-destructive/15"
+			>
+				<IconRotate data-icon="inline-start" /> {t('dashboard.channelOfflineAction')}
+			</Button>
+		</div>
+	)
+}
+
+function NeedsYouCallout({ needsYou, className, ...props }: ComponentProps<'div'> & { needsYou: NonNullable<Dashboard['needsYou']> }) {
 	const { t } = useTranslation()
 	const detail = needsYou.stopKinds.map(k => enumLabel('StopKind', k)).join(' · ')
 	return (
 		<div
 			className={cn(
-				'animate-in fade-in slide-in-from-bottom-1 relative flex items-center gap-3.5 rounded-asymmetric-xl px-5 py-4 duration-300',
+				'animate-in fade-in slide-in-from-bottom-1 relative flex items-center gap-3.5 rounded-callout-flip px-5 py-4 duration-300',
 				alertSurface,
+				className,
 			)}
+			{...props}
 		>
 			<Dot className="size-2.5 shrink-0 animate-pulse bg-success-bright" />
 			<div className="flex min-w-0 flex-1 flex-col">
@@ -109,30 +161,35 @@ function NeedsYouCallout({ needsYou }: { needsYou: NonNullable<Dashboard['needsY
 }
 
 /**
- * Today's numbers (D2/D4) as a 3-up grid of flat stat tiles — the redesign's own shape, replacing the
- * previous vertical rows-in-a-card. The last tile (median response) is the highlighted one, matching
- * the reference's single `--secondary` accent among three stat cards.
+ * Today's numbers (D2/D4) as a 3-up grid of flat stat tiles. Matches the reference exactly: the
+ * two plain tiles are a hairline-bordered card over the page's own white (no `$card` grey fill —
+ * that token is reserved for window chrome/inert fills), the median-response tile is the single
+ * `--secondary` highlight among the three, borderless.
  */
-function TodayStats({ today }: { today: Dashboard['today'] }) {
+function TodayStats({ today, className, ...props }: ComponentProps<'div'> & { today: Dashboard['today'] }) {
 	const { t } = useTranslation()
 	const locale = useLocale()
 	return (
-		<div className="grid grid-cols-3 gap-3.5">
-			<StatTile label={t('dashboard.issuesOpened')} value={String(today.issuesOpened)} radius="rounded-asymmetric-xl" />
-			<StatTile label={t('dashboard.issuesClosed')} value={String(today.issuesClosed)} radius="rounded-callout-flip" />
-			<StatTile
-				label={t('dashboard.medianResponse')}
-				value={formatDurationSeconds(today.medianResponseSeconds, locale)}
-				radius="rounded-asymmetric-xl"
-				highlight
-			/>
+		<div className={cn('grid grid-cols-3 gap-3.5', className)} {...props}>
+			<StatTile label={t('dashboard.issuesOpened')} value={String(today.issuesOpened)} />
+			<StatTile label={t('dashboard.issuesClosed')} value={String(today.issuesClosed)} />
+			<StatTile label={t('dashboard.medianResponse')} value={formatDurationSeconds(today.medianResponseSeconds, locale)} highlight />
 		</div>
 	)
 }
 
-function StatTile({ label, value, radius, highlight = false }: { label: string; value: string; radius: string; highlight?: boolean }) {
+function StatTile({
+	label,
+	value,
+	highlight = false,
+	className,
+	...props
+}: ComponentProps<'div'> & { label: string; value: string; highlight?: boolean }) {
 	return (
-		<div className={cn('min-w-0 p-4', radius, highlight ? 'bg-secondary' : 'bg-card')}>
+		<div
+			className={cn('min-w-0 rounded-asymmetric-lg p-4', highlight ? 'bg-secondary' : 'border border-border bg-background', className)}
+			{...props}
+		>
 			<div
 				className={cn(
 					'text-[28px] font-extrabold tracking-tight tabular-nums',
@@ -168,13 +225,21 @@ const THREAD_STATUS_DOT: Record<ThreadStatus, string> = {
  * `sessions` is already the server-filtered `RUNNING | NEEDS_ATTENTION` set (see
  * `GetHomeDashboard`'s `activeSessions`) — this section renders it as-is, no re-filtering.
  */
-function ActiveSessionsSection({ sessions }: { sessions: Dashboard['activeSessions'] }) {
+function ActiveSessionsSection({ sessions, className, ...props }: ComponentProps<'section'> & { sessions: Dashboard['activeSessions'] }) {
 	const { t } = useTranslation()
 	return (
-		<section className="flex flex-col gap-2.5">
-			<h2 className="border-b border-border pb-2.5 text-sm font-extrabold text-foreground">{t('dashboard.activeSessions')}</h2>
+		<section className={cn('flex flex-col gap-2.5', className)} {...props}>
+			<h2 className={sectionLabel}>{t('dashboard.activeSessions')}</h2>
 			{sessions.length === 0 ? (
-				<p className="px-0.5 py-1 text-sm text-caption-foreground">{t('dashboard.noActiveSessions')}</p>
+				<Empty className="border border-solid border-border bg-background">
+					<EmptyHeader>
+						<EmptyMedia variant="icon" className="size-14 rounded-asymmetric-md bg-secondary text-secondary-foreground [&_svg]:size-6">
+							<IconRobot />
+						</EmptyMedia>
+						<EmptyTitle className="text-base font-bold text-foreground">{t('dashboard.noActiveSessionsTitle')}</EmptyTitle>
+						<EmptyDescription className="max-w-[420px]">{t('dashboard.noActiveSessionsDescription')}</EmptyDescription>
+					</EmptyHeader>
+				</Empty>
 			) : (
 				<div className="flex flex-col gap-2">
 					{sessions.map(session => (
@@ -186,14 +251,17 @@ function ActiveSessionsSection({ sessions }: { sessions: Dashboard['activeSessio
 	)
 }
 
-function ActiveSessionRow({ session }: { session: Dashboard['activeSessions'][number] }) {
+function ActiveSessionRow({
+	session,
+	className,
+}: { session: Dashboard['activeSessions'][number] } & Pick<ComponentProps<'a'>, 'className'>) {
 	const { t } = useTranslation()
 	const relative = relativeTime(session.lastActivity)
 	return (
 		<Link
 			to="/threads/$threadId"
 			params={{ threadId: session.threadId }}
-			className={cn('group flex items-center gap-3.5 rounded-asymmetric-lg p-3.5', row)}
+			className={cn('group flex items-center gap-3.5 rounded-asymmetric-sm bg-background p-3.5', row, className)}
 		>
 			<ThreadAvatar
 				name={session.displayName}
@@ -227,17 +295,28 @@ const TRANSCRIPT_KIND_DOT: Record<TranscriptKind, string> = {
 	WHISPER: 'bg-muted-foreground/30',
 }
 
-function LatestActivitySection({ items }: { items: Dashboard['latestActivity'] }) {
+function LatestActivitySection({ items, className, ...props }: ComponentProps<'section'> & { items: Dashboard['latestActivity'] }) {
 	const { t } = useTranslation()
-	if (items.length === 0) return null
 	return (
-		<section className="flex flex-col gap-0.5">
-			<h2 className="border-b border-border pb-2.5 text-sm font-extrabold text-foreground">{t('dashboard.latestActivity')}</h2>
-			<div className="flex flex-col">
-				{items.map(item => (
-					<ActivityRow key={`${item.threadId}-${item.at}`} item={item} />
-				))}
-			</div>
+		<section className={cn('flex flex-col gap-2.5', className)} {...props}>
+			<h2 className={sectionLabel}>{t('dashboard.latestActivity')}</h2>
+			{items.length === 0 ? (
+				<Empty className="border border-solid border-border bg-background">
+					<EmptyHeader>
+						<EmptyMedia variant="icon" className="size-14 rounded-asymmetric-md bg-secondary text-secondary-foreground [&_svg]:size-6">
+							<IconMessage />
+						</EmptyMedia>
+						<EmptyTitle className="text-base font-bold text-foreground">{t('dashboard.noActivityTitle')}</EmptyTitle>
+						<EmptyDescription className="max-w-[420px]">{t('dashboard.noActivityDescription')}</EmptyDescription>
+					</EmptyHeader>
+				</Empty>
+			) : (
+				<div className="flex flex-col">
+					{items.map(item => (
+						<ActivityRow key={`${item.threadId}-${item.at}`} item={item} />
+					))}
+				</div>
+			)}
 		</section>
 	)
 }
@@ -251,7 +330,7 @@ function LatestActivitySection({ items }: { items: Dashboard['latestActivity'] }
  * seguem sem ele, pela mesma regra que `GetSessionChat` documenta) — então a linha troca o ponto
  * colorido pela CARA de quem escreveu e o rótulo do kind pelo nome dela. Sem sender, nada muda.
  */
-function ActivityRow({ item }: { item: Dashboard['latestActivity'][number] }) {
+function ActivityRow({ item, className }: { item: Dashboard['latestActivity'][number] } & Pick<ComponentProps<'a'>, 'className'>) {
 	const { t } = useTranslation()
 	const relative = relativeTime(item.at)
 	const sender = item.sender
@@ -259,7 +338,7 @@ function ActivityRow({ item }: { item: Dashboard['latestActivity'][number] }) {
 		<Link
 			to="/threads/$threadId"
 			params={{ threadId: item.threadId }}
-			className="flex items-center gap-2.5 rounded-asymmetric-xs px-2 py-2.5 transition-colors hover:bg-muted"
+			className={cn('flex items-center gap-2.5 rounded-asymmetric-xs px-2 py-2.5 transition-colors hover:bg-muted', className)}
 		>
 			{sender ? (
 				<ThreadAvatar
@@ -279,29 +358,84 @@ function ActivityRow({ item }: { item: Dashboard['latestActivity'][number] }) {
 	)
 }
 
+/** A single metric-tile skeleton — bordered white card, two stacked skeleton shapes (value + caption). */
+function StatTileSkeleton() {
+	return (
+		<div className="flex h-[109px] flex-col justify-center gap-3.5 rounded-asymmetric-lg border border-border bg-background p-[20px_22px]">
+			<div className="h-[38px] w-[104px] rounded-asymmetric-xs bg-skeleton-strong" />
+			<div className="h-[13px] w-[132px] rounded-asymmetric-3xs bg-skeleton" />
+		</div>
+	)
+}
+
+/** A section-header skeleton — same hairline-underline shape `sectionLabel` renders, label swapped for a bar. */
+function SectionHeaderSkeleton({ width }: { width: string }) {
+	return (
+		<div className="flex h-[27px] items-center border-b border-border pb-2">
+			<div className={cn('h-[15px] rounded-asymmetric-3xs bg-skeleton-strong', width)} />
+		</div>
+	)
+}
+
+function SessionRowSkeleton({ chipWidth }: { chipWidth: string }) {
+	return (
+		<div className="flex h-16 items-center gap-3.5 rounded-asymmetric-sm border border-border bg-background p-[12px_16px]">
+			<div className="size-10 shrink-0 rounded-full bg-skeleton-strong" />
+			<div className="flex flex-1 flex-col gap-1.5">
+				<div className="h-3.5 w-[168px] rounded-asymmetric-3xs bg-skeleton-strong" />
+				<div className="h-3 w-[92px] rounded-asymmetric-3xs bg-skeleton" />
+			</div>
+			<div className={cn('h-[29px] shrink-0 rounded-asymmetric-2xs bg-skeleton', chipWidth)} />
+		</div>
+	)
+}
+
+function ActivityRowSkeleton({ messageWidth }: { messageWidth: string }) {
+	return (
+		<div className="flex h-10 items-center gap-2.5 rounded-asymmetric-xs px-2 py-2.5">
+			<div className="size-[26px] shrink-0 rounded-full bg-skeleton-strong" />
+			<div className="h-3.5 w-28 shrink-0 rounded-asymmetric-3xs bg-skeleton-strong" />
+			<div className={cn('h-3.5 rounded-asymmetric-3xs bg-skeleton', messageWidth)} />
+			<div className="ml-auto h-3 w-16 shrink-0 rounded-asymmetric-3xs bg-skeleton" />
+		</div>
+	)
+}
+
 function DashboardSkeleton({ className, ...props }: ComponentProps<'div'>) {
 	return (
-		<div className={cn('relative mx-auto flex w-full max-w-5xl flex-col gap-7 px-6 pb-16 pt-16 md:px-10', className)} {...props}>
-			<div className="flex items-start justify-between gap-4">
-				<div className="flex flex-col gap-2.5">
-					<Skeleton className="h-9 w-44" />
-					<Skeleton className="h-4 w-56" />
+		<div
+			className={cn('relative mx-auto flex w-full max-w-5xl flex-col gap-7 overflow-hidden px-6 pb-16 pt-16 md:px-10', className)}
+			{...props}
+		>
+			<div className="relative flex items-start justify-between gap-4">
+				<DecorBlobs />
+				<div className="flex flex-col gap-1.5">
+					<div className="h-[34px] w-44 rounded-asymmetric-xs bg-skeleton-strong" />
+					<div className="h-3.5 w-[200px] rounded-asymmetric-3xs bg-skeleton" />
 				</div>
-				<Skeleton className="h-8 w-40 rounded-full" />
+				<div className="h-10 w-[178px] shrink-0 rounded-asymmetric-sm bg-skeleton-strong" />
 			</div>
 			<div className="grid grid-cols-3 gap-3.5">
-				<Skeleton className="h-20 rounded-asymmetric-xl" />
-				<Skeleton className="h-20 rounded-asymmetric-xl" />
-				<Skeleton className="h-20 rounded-asymmetric-xl" />
+				<StatTileSkeleton />
+				<StatTileSkeleton />
+				<StatTileSkeleton />
 			</div>
-			<div className="flex flex-col gap-2">
-				<Skeleton className="h-16 rounded-asymmetric-lg" />
-				<Skeleton className="h-16 rounded-asymmetric-lg" />
+			<div className="flex flex-col gap-2.5">
+				<SectionHeaderSkeleton width="w-[196px]" />
+				<div className="flex flex-col gap-2.5">
+					<SessionRowSkeleton chipWidth="w-32" />
+					<SessionRowSkeleton chipWidth="w-[150px]" />
+				</div>
 			</div>
-			<div className="flex flex-col gap-2">
-				<Skeleton className="h-10 rounded-asymmetric-xs" />
-				<Skeleton className="h-10 rounded-asymmetric-xs" />
-				<Skeleton className="h-10 rounded-asymmetric-xs" />
+			<div className="flex flex-col gap-2.5">
+				<SectionHeaderSkeleton width="w-[150px]" />
+				<div className="flex flex-col">
+					<ActivityRowSkeleton messageWidth="w-48" />
+					<ActivityRowSkeleton messageWidth="w-36" />
+					<ActivityRowSkeleton messageWidth="w-80" />
+					<ActivityRowSkeleton messageWidth="w-52" />
+					<ActivityRowSkeleton messageWidth="w-64" />
+				</div>
 			</div>
 		</div>
 	)
