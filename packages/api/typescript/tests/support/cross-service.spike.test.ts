@@ -109,6 +109,8 @@ describe('AC-6 — o gateway declarado no manifesto sobe no MESMO arquivo SQLite
 })
 
 describe('THE RESET SPIKE — reset() cross-processo (o veredito vira contrato para T8/T9)', () => {
+	// Timeout explícito: dois seeds pareados × AutoPairAfter 2s do cenário e2e — T10 (default de
+	// 5000ms do bun:test não sobra margem para dois ciclos create→connect→CONNECTED sequenciais).
 	it('truncate do lado TS limpa as tabelas do gateway E o gateway continua funcional depois', async () => {
 		// Arrange: state the gateway owns, produced by the gateway. No intermediate response to
 		// assert on here (unlike the AC-6 test above), so the create→connect→poll-until-CONNECTED
@@ -142,7 +144,7 @@ describe('THE RESET SPIKE — reset() cross-processo (o veredito vira contrato p
 		// And the wiped channel is GONE, not resurrected by gateway memory.
 		const [ghost] = await db().select().from(channels).where(eq(channels.id, before))
 		expect(ghost).toBeUndefined()
-	})
+	}, 20_000)
 
 	it('MEDIÇÃO da via (ii): re-spawnar o serviço por reset custa isto (build já em cache)', async () => {
 		// A SECOND scratch dir, not the harness's: the Go store takes an EXCLUSIVE per-data-dir lock

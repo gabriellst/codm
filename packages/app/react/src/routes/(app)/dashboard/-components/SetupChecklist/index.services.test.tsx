@@ -67,6 +67,9 @@ describe('SetupChecklist — services: apiGo (T9) — channelDone contra o gatew
 		return mounted
 	}
 
+	// Timeout explícito: um seed via givenConnectedGatewayChannel (AutoPairAfter 2s do cenário e2e) —
+	// T10 deixou o default de 5000ms do bun:test com margem apertada (observado ~4.3-4.5s). 15s dá
+	// folga real sem mascarar uma regressão de verdade.
 	it('canal pareado de verdade (mock do gateway): a linha do canal some, workspace/thread ficam', async () => {
 		await givenConnectedGatewayChannel(backend, { name: 'setup-checklist-services-test-channel' })
 
@@ -75,5 +78,5 @@ describe('SetupChecklist — services: apiGo (T9) — channelDone contra o gatew
 		expect(mounted?.host.textContent).not.toContain(i18n.t('home.setupChannelTitle'))
 		expect(mounted?.host.textContent).toContain(i18n.t('home.setupWorkspaceTitle'))
 		expect(mounted?.host.textContent).toContain(i18n.t('home.setupThreadTitle'))
-	})
+	}, 15_000)
 })

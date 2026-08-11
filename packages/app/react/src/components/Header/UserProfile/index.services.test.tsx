@@ -87,6 +87,9 @@ describe('UserProfile — services: apiGo (T9) — com um canal real, realmente 
 		return mounted
 	}
 
+	// Timeout explícito: um seed via givenConnectedGatewayChannel (AutoPairAfter 2s do cenário e2e) —
+	// T10 deixou o default de 5000ms do bun:test com margem apertada (observado ~4.6-4.9s). 15s dá
+	// folga real sem mascarar uma regressão de verdade.
 	it('canal real conectado (channelDone=true) mas sem o remote do PRÓPRIO operador: continua caindo na sessão constante', async () => {
 		await givenConnectedGatewayChannel(backend, { name: 'user-profile-services-test-channel' })
 
@@ -105,5 +108,5 @@ describe('UserProfile — services: apiGo (T9) — com um canal real, realmente 
 		expect(queryClient.getQueryData(getOperatorIdentityQueryKey())).toEqual({})
 		expect(host.textContent).toContain('Operator')
 		expect(host.textContent).toContain('OperatorO')
-	})
+	}, 15_000)
 })

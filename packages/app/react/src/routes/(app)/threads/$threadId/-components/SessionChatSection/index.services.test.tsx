@@ -153,6 +153,9 @@ describe('SessionChatSection — services: apiGo (T9) — contra um thread real,
 		throw new Error('SessionChatSection nunca saiu do skeleton')
 	}
 
+	// Timeout explícito: um seed via givenConnectedGatewayChannel (AutoPairAfter 2s do cenário e2e) —
+	// T10 deixou o default de 5000ms do bun:test com margem apertada (observado até ~4.93s, quase no
+	// limite). 15s dá folga real sem mascarar uma regressão de verdade.
 	it('monta contra um threadId real — anexado só porque um canal do gateway pareou de verdade — e lê o transcript vazio real', async () => {
 		const { channelId } = await givenConnectedGatewayChannel(backend, { name: 'session-chat-services-test-channel' })
 
@@ -180,5 +183,5 @@ describe('SessionChatSection — services: apiGo (T9) — contra um thread real,
 		expect(el.querySelector('[data-slot="virtual-list"]')).toBeNull()
 		expect(el.querySelector('[data-slot="empty"]')).not.toBeNull()
 		expect(el.textContent).toContain(i18n.t('session.chatEmptyTitle'))
-	})
+	}, 15_000)
 })

@@ -106,6 +106,9 @@ describe('ContactStep — services: apiGo (T9) — contra o gateway subprocess r
 	// the HTTP connect call `givenConnectedGatewayChannel` awaits, so a fixed sleep would be a race.
 	const CONTACTS_DEADLINE_MS = 5_000
 
+	// Timeout explícito: um seed via givenConnectedGatewayChannel (AutoPairAfter 2s do cenário e2e) +
+	// poll próprio por wizard.contacts — T10 deixou o default de 5000ms do bun:test com margem
+	// apertada (observado ~4.5-4.6s). 15s dá folga real sem mascarar uma regressão de verdade.
 	it('o canal pareia de verdade pelo mock do gateway, e os dois contatos roteirizados chegam pelo pipeline real (T13)', async () => {
 		const { channelId } = await givenConnectedGatewayChannel(backend, { name: 'contact-step-services-test-channel' })
 
@@ -142,5 +145,5 @@ describe('ContactStep — services: apiGo (T9) — contra o gateway subprocess r
 		expect(host?.textContent).toContain('Ada Lovelace')
 		expect(host?.textContent).toContain('Alan Turing')
 		expect(host?.querySelectorAll('button[type="button"]')).toHaveLength(2)
-	})
+	}, 15_000)
 })
