@@ -5,9 +5,20 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { lockPathFor } from '@codm/core-typescript/db/lock'
+import { REPO } from '../../../template.config'
 
 const E2E_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const API_TS_ROOT = resolve(E2E_ROOT, '../api/typescript')
+// Repo root, derived rather than hand-walked a second time — mirrors
+// `packages/api/typescript/tests/support/testBoot.ts`'s own `REPO_ROOT`, which resolves the SAME
+// manifest recipe this runner reuses below (T10).
+const REPO_ROOT = resolve(E2E_ROOT, '../..')
+const API_GO_ROOT = resolve(REPO_ROOT, REPO.workspaces.apiGo.pkgRoot)
+// The DECLARED co-tenant recipe (template.config.ts `WORKSPACES.apiGo.testBoot`, T7/T8) — build
+// argv and the fixed env (CODM_ENV + the two empty apikey keys) are read from the SAME manifest
+// entry `startIntegrationBackend({ services: ['apiGo'] })` resolves, so the godotenv-trap
+// workaround (see that entry's docblock) is declared exactly once, not re-typed here.
+const apiGoRecipe = REPO.workspaces.apiGo.testBoot
 
 /**
  * Resolve a Node binary to boot the daemon the RUN-UNDER-NODE way (the daemon is built with Bun but
@@ -29,21 +40,31 @@ function resolveNodeBin(): string {
 
 /**
  * CODM e2e runner. Boots the REAL stack the harness can stand up on its own — the TS daemon in
- * `real` mode over the EMBEDDED, file-backed SQLite store (founder decision 3: no external Postgres), plus
- * the app-react console — and runs Playwright against it.
+ * `real` mode over the EMBEDDED, file-backed SQLite store (founder decision 3: no external Postgres),
+ * the Go channel gateway (T10), and the app-react console — and runs Playwright against it.
  *
- * The Go Channel Gateway is NOT booted; gateway ingress is simulated at the integration-event seam by
- * the TEST-ONLY `/v1/_test/gateway` endpoint (mounted only under CODM_ENV=e2e). So this runner needs no
- * Postgres, no Redis, no Docker — just a scratch data dir the daemon migrates on boot.
+ * The Go Channel Gateway IS booted (T10, .specs/2026-08-10-eixo-ambiente-go-design.md D12/AC-9) —
+ * this stopped being true the moment the gateway grew its own `e2e` wiring column (T1-T4): it now
+ * boots CODM_ENV=e2e over the SAME scratch CODM_DATA_DIR the TS daemon writes to, with
+ * `channel.Overlays[EnvE2e]` swapping in the scripted `MockChannelFactory` (defaultE2eScenario,
+ * internal/channel/overlay.go) — QR frames, auto-pairing, and contacts flow through the REAL
+ * mapper/outbox/handler/projector pipeline, no phone involved. The TEST-ONLY `/v1/_test/gateway`
+ * endpoint (TS-side, mounted only under CODM_ENV=e2e) still exists and is still used by specs that
+ * only need a CONNECTED channel row as background state (givenAttachedThread) — the two seams are
+ * complementary, not a replacement of one by the other: this runner needs no Postgres, no Redis, no
+ * Docker either way — just a scratch data dir both processes migrate/open on boot.
  *
  * What it owns:
  *   - a fresh scratch CODM_DATA_DIR per run (codm.db + its -wal/-shm and daemon.lock root here;
- *     dropped on exit);
- *   - the two dev ports (pre-kills stale listeners — a watch-mode orphan pointing at a dropped dir is
- *     always wrong), pinned per-server so the api (fastify) and app (vite) don't collide on $PORT;
+ *     dropped on exit) — shared by BOTH the TS daemon and the Go gateway subprocess (spec D10: one
+ *     store, no re-spawn between tests, the topology production already uses);
+ *   - the three dev ports (pre-kills stale listeners — a watch-mode orphan pointing at a dropped dir
+ *     is always wrong), pinned per-server so the api (fastify), the gateway, and the app (vite) don't
+ *     collide on $PORT;
  *   - CODM_ENV=e2e, which selects the daemon's declared `e2e` registry column: real-shaped
  *     infrastructure (SqlExternalMediator, FileLibsqlDriver on the scratch dir) with the hermetic
- *     seams declared per token (stub AgentRunner, canned ProviderDetector, test ingress controller).
+ *     seams declared per token (stub AgentRunner, canned ProviderDetector, test ingress controller) —
+ *     and, on the Go side, the SAME column name selecting `channel.Overlays[EnvE2e]`.
  */
 function runCaptureExitCode(command: string, args: string[], env: NodeJS.ProcessEnv, cwd: string) {
 	return new Promise<number>(resolvePromise => {
@@ -71,6 +92,9 @@ async function main() {
 	// construction, no "is it stale or is it production?" heuristic.
 	const apiPort = process.env.E2E_API_PORT ?? '3130'
 	const vitePort = process.env.E2E_VITE_PORT ?? '5273'
+	// E2E-owned, third port in the same deliberately-not-dev/production range as the two above
+	// (T10) — 3132, not 3032 (dev) or the api's own 3130 here.
+	const gatewayPort = process.env.E2E_GATEWAY_PORT ?? '3132'
 	const nodeBin = resolveNodeBin()
 
 	// Build the daemon as a Node bundle BEFORE Playwright boots it (the webServer runs
@@ -87,10 +111,29 @@ async function main() {
 		process.exit(build.exitCode ?? 1)
 	}
 
+	// Build the gateway binary BEFORE Playwright boots it too (T10) — same reasoning as the node
+	// bundle above: `go build` runs ONCE here, the webServer entry just execs the prebuilt `./api`,
+	// so a slow compile fails loudly on this line instead of hiding behind the webServer timeout.
+	// argv comes from the manifest recipe (template.config.ts `WORKSPACES.apiGo.testBoot.build`) —
+	// not re-typed, so this can never drift from what `startIntegrationBackend({ services })` builds.
+	console.log('[e2e] building gateway binary (go build)…')
+	const [goBuildCmd, ...goBuildArgs] = apiGoRecipe.build
+	if (goBuildCmd === undefined) throw new Error('run-e2e: apiGo testBoot recipe declares an empty build command')
+	const gatewayBuild = Bun.spawnSync([goBuildCmd, ...goBuildArgs], {
+		cwd: API_GO_ROOT,
+		stdout: 'inherit',
+		stderr: 'inherit',
+	})
+	if (gatewayBuild.exitCode !== 0) {
+		console.error('[e2e] gateway build failed')
+		process.exit(gatewayBuild.exitCode ?? 1)
+	}
+
 	const childEnv: NodeJS.ProcessEnv = {
 		...process.env,
 		// Hermetic seam: real-mode daemon with the in-process mediator + test ingress endpoint + stub
-		// runner (no Redis, no Go gateway, no provider CLI). Refused under NODE_ENV=production.
+		// runner (no Redis, no provider CLI) — plus, since T10, the REAL Go gateway as a co-tenant
+		// subprocess (see this file's docblock). Refused under NODE_ENV=production.
 		CODM_ENV: 'e2e',
 		CODM_DATA_DIR: dataDir,
 		// Pin ports so the webServer entries don't collide on $PORT from the root .env.
@@ -107,12 +150,24 @@ async function main() {
 		CODM_NODE_BIN: nodeBin,
 		// One host runs the whole suite — per-IP auth windows would 429 legitimate specs.
 		RATE_LIMIT_DISABLED: 'true',
+		// Gateway co-tenant (T10). CHANNEL_PORT is the wire var BOTH the Go binary (config.go's
+		// CHANNEL-prefixed resolveEnv) and playwright.config.ts's third webServer read. The two apikey
+		// keys are READ off the manifest recipe (not re-typed as literals) — CODM_ENV is already set
+		// above with the same value the recipe declares, so only the two it uniquely contributes are
+		// pulled in here (spreading the whole `apiGoRecipe.env` would redeclare CODM_ENV a second time
+		// in this same object, which tsc rightly flags as TS2783). API_GO_URL is the SERVER-SIDE var
+		// api-ts's `forwardToChannel` proxies through — the browser never learns this port directly
+		// (app-react `lib/config.ts`: "No VITE_GATEWAY_URL exists on purpose").
+		CHANNEL_PORT: gatewayPort,
+		CHANNEL_GLOBAL_API_KEY: apiGoRecipe.env.CHANNEL_GLOBAL_API_KEY,
+		GLOBAL_API_KEY: apiGoRecipe.env.GLOBAL_API_KEY,
+		API_GO_URL: `http://127.0.0.1:${gatewayPort}`,
 	}
 
-	// This runner OWNS the two dev ports for the duration of the run: its servers must be wired to
+	// This runner OWNS the three dev ports for the duration of the run: its servers must be wired to
 	// THIS run's scratch data dir, so a leftover listener from a previous run (watch-mode orphan
 	// pointing at a dropped dir) is always wrong — kill it, never reuse it.
-	for (const port of [apiPort, vitePort]) {
+	for (const port of [apiPort, vitePort, gatewayPort]) {
 		const found = Bun.spawnSync(['lsof', '-ti', `:${port}`])
 			.stdout.toString()
 			.trim()

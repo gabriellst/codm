@@ -15,6 +15,6 @@
 		"skipLibCheck": true,
 		"types": ["node", "bun"]
 	},
-	"include": ["utils", "tests", "scripts", "playwright.config.ts"],
+	"include": ["utils", "tests", "scripts", "playwright.config.ts", "../../template.config.ts"],
 	"exclude": ["node_modules", "recordings"]
 }

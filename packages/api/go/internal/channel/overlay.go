@@ -1,6 +1,8 @@
 package channel
 
 import (
+	"time"
+
 	"template/api-go/internal/channel/services/gateway"
 	"template/api-go/internal/channel/services/gateway/mock"
 	"template/core-go/registry"
@@ -54,14 +56,25 @@ var Overlays = registry.Overlays{
 // determinism with NO runtime control plane: no endpoint, no config file,
 // mutates a Scenario after construction). A plain Go function rather than a
 // config field or a scenario file — the SIMPLEST option that still serves the
-// QR-pairing e2e spec (plan T10): two QR frames to render, immediate
-// auto-pairing (AutoPairAfter: 0 — no sleep in CI), and two contacts so
+// QR-pairing e2e spec (plan T10): two QR frames to render, and two contacts so
 // ContactStep (plan T9) has real data to show. Grows on demand, same policy as
 // MockChannel's no-op methods (services/gateway/mock/channel.go).
+//
+// AutoPairAfter: 2s — NOT 0 (T10, measured against the real Playwright spec,
+// 12-channel-qr.spec.ts). The first QR frame is always returned SYNCHRONOUSLY
+// by ConnectChannelHandler (it reads off GetQRChannel before responding), so
+// the browser always sees it — but with AutoPairAfter: 0 the pairing clock
+// (runPairingClock, mock/channel.go) races that same HTTP response on a
+// SEPARATE goroutine and can flip the projected status to CONNECTED before
+// ConnectChannelForm's first `useGetChannel` poll ever fires, so the QR
+// visibility assertion would be racing an unobservable window rather than
+// asserting a real state. 2s gives that poll (POLL_INTERVAL_MS = 2000 in
+// ConnectChannelForm) a comfortable window to observe CONNECTING before the
+// scenario pairs — a Go-side timing fix, not a spec-side sleep/retry.
 func defaultE2eScenario() mock.Scenario {
 	return mock.Scenario{
 		QRFrames:      []string{"codm-e2e-qr-1", "codm-e2e-qr-2"},
-		AutoPairAfter: 0,
+		AutoPairAfter: 2 * time.Second,
 		Contacts: []mock.ContactSeed{
 			{RemoteID: "5511999990001@s.whatsapp.net", RemoteType: "USER", Name: "Ada Lovelace"},
 			{RemoteID: "5511999990002@s.whatsapp.net", RemoteType: "USER", Name: "Alan Turing"},

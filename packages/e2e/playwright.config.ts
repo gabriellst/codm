@@ -49,6 +49,13 @@ export default defineConfig({
 				CODM_ENV: process.env.CODM_ENV ?? 'e2e',
 				...(process.env.CODM_DATA_DIR ? { CODM_DATA_DIR: process.env.CODM_DATA_DIR } : {}),
 				RATE_LIMIT_DISABLED: 'true',
+				// SERVER-SIDE only — the browser never learns this (app-react lib/config.ts: "No
+				// VITE_GATEWAY_URL exists on purpose"). external/utils/forwardToChannel.ts reads this to
+				// proxy `/v1/external/channel/*` to the gateway webServer below. scripts/run-e2e.ts exports
+				// the real value (derived from its own gatewayPort); this fallback keeps a bare
+				// `bunx playwright` invocation (no runner) pointed at the SAME default port the gateway
+				// webServer entry falls back to.
+				API_GO_URL: process.env.API_GO_URL ?? `http://127.0.0.1:${Number(process.env.CHANNEL_PORT ?? 3132)}`,
 			},
 		},
 		{
@@ -59,6 +66,38 @@ export default defineConfig({
 			cwd: '../app/react',
 			stdout: 'pipe',
 			env: { PORT: String(process.env.VITE_PORT ?? 5273) },
+		},
+		{
+			// Prebuilt Go binary — scripts/run-e2e.ts runs `go build -o api ./cmd/api` ONCE before
+			// Playwright boots anything (mirrors the TS daemon above: build once, run the artifact,
+			// never `go run` under a webServer restart cycle). `./api` is the SAME argv
+			// template.config.ts's `WORKSPACES.apiGo.testBoot.run` declares.
+			//
+			// CODM_ENV=e2e selects `channel.Overlays[EnvE2e]` (internal/channel/overlay.go) — the
+			// scripted MockChannelFactory playing `defaultE2eScenario()` (QR frames, auto-pairing,
+			// contacts) through the REAL mapper/outbox/handler/projector pipeline, no phone involved.
+			// CHANNEL_GLOBAL_API_KEY / GLOBAL_API_KEY are pinned EMPTY for the exact reason
+			// template.config.ts's `WORKSPACES.apiGo.testBoot` docblock spells out: godotenv turns an
+			// empty `A=  # comment` env line into the apikey guard's literal SECRET unless the
+			// launching cwd's own .env was preloaded — pinned here so the boot is identical however
+			// it's invoked, not just when scripts/run-e2e.ts's env happens to carry it.
+			command: './api',
+			// The gateway's HttpRouter serves every controller under `/api/{context}{path}` — its own
+			// OpenAPI spec omits that mount (see forwardToChannel.ts), so `/api/health` (public,
+			// core/services/httprouter) is the probe both this webServer and testBoot.ts's
+			// bootService poll.
+			url: `http://127.0.0.1:${Number(process.env.CHANNEL_PORT ?? 3132)}/api/health`,
+			reuseExistingServer: false,
+			timeout: 120_000,
+			cwd: '../api/go',
+			stdout: 'pipe',
+			env: {
+				CODM_ENV: process.env.CODM_ENV ?? 'e2e',
+				CHANNEL_PORT: String(process.env.CHANNEL_PORT ?? 3132),
+				CHANNEL_GLOBAL_API_KEY: '',
+				GLOBAL_API_KEY: '',
+				...(process.env.CODM_DATA_DIR ? { CODM_DATA_DIR: process.env.CODM_DATA_DIR } : {}),
+			},
 		},
 	],
 	projects: [
