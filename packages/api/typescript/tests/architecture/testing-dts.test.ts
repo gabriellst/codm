@@ -17,7 +17,17 @@ import * as testing from '../support/testing'
  *
  * Importing `../support/testing` here is cheap and side-effect-free for this purpose: nothing at
  * module top level calls `start()` — it only runs inside `startIntegrationBackend()`'s lazy
- * `boot()`, which this file never invokes. No server, no database, no network.
+ * `boot()`, which this file never invokes. No server, no database, no network. Its ONE top-level
+ * side effect is `./support/harnessDataDir`'s `CODM_DATA_DIR` assignment, which the `bun test`
+ * preload (`tests/setup.ts`) has already performed by the time any suite loads.
+ *
+ * T7 grew the harness a `services` OPTION (co-tenant subprocesses over the shared SQLite file) and
+ * an `IntegrationBackend.services` field, but NOT a new name: `IntegrationBackendOptions` is a type
+ * (erased at runtime, so it cannot appear in `Object.keys`), and the machinery behind it
+ * (`support/testBoot.ts`, `support/harnessDataDir.ts`) is deliberately NOT re-exported — the
+ * `/testing` subpath is a catalog of things a consumer composes with, and a recipe runner is not
+ * one of them. So the name set below is unchanged BY DESIGN; if a future change adds a runtime
+ * export, this is the file that must grow with it.
  */
 const CATALOG = [
 	'startIntegrationBackend',

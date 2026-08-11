@@ -26,6 +26,13 @@
 		"strict": true,
 		"typeRoots": ["../../../node_modules/@types", "./node_modules/@types"]
 	},
-	"include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "tests/**/*.tsx", "../scripts/**/*.ts"],
+	"include": [
+		"src/**/*.ts",
+		"src/**/*.tsx",
+		"tests/**/*.ts",
+		"tests/**/*.tsx",
+		"../scripts/**/*.ts",
+		"../../../template.config.ts"
+	],
 	"exclude": []
 }

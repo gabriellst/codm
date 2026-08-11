@@ -41,6 +41,15 @@
 // FALSIFIED per the Gate (see the T7 report): narrowing a given's overrides here without touching
 // `testing.ts` turns the check red; reverting turns it green again.
 
+// The SECOND non-flat dependency, and deliberate for the same reason as the first: `services` names
+// WORKSPACES, and the manifest is where workspaces are declared (CLAUDE.md Non-Negotiable §5 —
+// language/workspace facts are looked up, never spelled out). `TestBootWorkspaceId` is DERIVED from
+// the `testBoot` recipes themselves, so this file cannot drift from what is actually bootable, and a
+// stamped copy that dropped every bootable workspace collapses it to `never` — the call sites go red
+// with it instead of naming a ghost. `template.config.ts` is dependency-free by construction (its own
+// docblock), so this import drags nothing into a consumer's `tsc`; the precedent is
+// `packages/app/tauri/config/*.ts`, which imports `type WorkspaceId` from it the same way.
+import type { TestBootWorkspaceId } from '../../../template.config'
 import type {
 	OwnerKind,
 	WorkspaceBadge,
@@ -69,6 +78,19 @@ export interface IntegrationBackend {
 	asTestBed(): TestBedLike
 	reset(): Promise<void>
 	stop(): Promise<void>
+	/** Base URLs of the co-tenant services this backend booted, keyed by workspace id (empty on the
+	 *  default path — same shape either way, so a consumer never branches on presence). */
+	services: Readonly<Partial<Record<TestBootWorkspaceId, string>>>
+}
+
+export interface IntegrationBackendOptions {
+	ownerId?: string
+	/** Workspaces to boot as co-tenant subprocesses over the same SQLite file (spec D9/AC-6). Only
+	 *  workspaces that DECLARE a `testBoot` recipe are nameable — the type is derived from the
+	 *  recipes in `template.config.ts`, so a typo or an un-bootable workspace is a compile error.
+	 *  With services the TS side boots the `e2e` column (file driver + SQL outbox lanes), which is
+	 *  the only column where a second process on the same file is a topology that exists. */
+	services?: readonly TestBootWorkspaceId[]
 }
 
 /** The one field every `AggregateRoot`-backed given exposes that a consumer has ever navigated. */
@@ -156,7 +178,7 @@ export interface RemoteMembershipOverrides {
 	isAdmin?: boolean
 }
 
-export function startIntegrationBackend(options?: { ownerId?: string }): Promise<IntegrationBackend>
+export function startIntegrationBackend(options?: IntegrationBackendOptions): Promise<IntegrationBackend>
 
 export function givenUser(
 	testBed: TestBedLike,

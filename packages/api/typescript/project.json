@@ -54,7 +54,7 @@
 				"{projectRoot}/bunfig.toml",
 				"sharedGlobals"
 			],
-			"options": { "command": "bun test", "cwd": "packages/api/typescript" }
+			"options": { "command": "bun test && bun run test:cross-service", "cwd": "packages/api/typescript" }
 		}
 	}
 }

@@ -74,6 +74,27 @@ const WORKSPACES = {
 		alias: 'go',
 		nxProject: 'api-go',
 		devServer: 'aggregate',
+		// The DECLARED recipe for booting this workspace as a co-tenant of a test harness
+		// (see TestBoot below). `-o api` is the path .gitignore already reserves for this
+		// workspace's compiled binary ("Compiled Go binaries"); `run` names the same artifact,
+		// and both resolve against `pkgRoot` — which is also what puts config.Load's
+		// `godotenv.Load("../../../.env")` on the repo root, exactly like `bun dev:api:go`.
+		testBoot: {
+			build: ['go', 'build', '-o', 'api', './cmd/api'],
+			run: ['./api'],
+			// CODM_ENV picks the axis column (scripted mock ChannelFactory, no phone). The two apikey
+			// keys are DECLARED EMPTY because a harness talks to the gateway DIRECTLY — there is no
+			// api-ts proxy hop to stamp the key (`external/utils/forwardToChannel` does that in
+			// production) — and because leaving them undeclared makes the boot depend on the caller's
+			// cwd: MEASURED, `godotenv` (config.go) keeps an inline `#` comment as the VALUE when the
+			// key is empty (`A=  # doc` parses to `"# doc"`, while `B=v  # doc` parses to `"v"`), so a
+			// gateway launched from a cwd whose `.env` bun did not preload turns its guard ON with a
+			// comment as the secret and answers 401 to everything. Both keys, because config.go's
+			// fallback chain is CHANNEL_GLOBAL_API_KEY → GLOBAL_API_KEY.
+			env: { CODM_ENV: 'e2e', CHANNEL_GLOBAL_API_KEY: '', GLOBAL_API_KEY: '' },
+			binds: { port: 'CHANNEL_PORT', dataDir: 'CODM_DATA_DIR' },
+			healthPath: '/api/health',
+		},
 	},
 	appReact: {
 		pkgRoot: 'packages/app/react',
@@ -135,6 +156,52 @@ const WORKSPACES = {
 // ── STAMP-MANAGED-END: workspaces ──
 
 export type WorkspaceId = keyof typeof WORKSPACES
+
+/**
+ * THE SLOTS a test harness can fill when it boots a workspace as a co-tenant — the CLOSED set of
+ * facts only the harness knows (it picks the free port, it mints the scratch data dir). A recipe
+ * declares which env var carries each slot; the harness never knows a service's env-var names,
+ * and a service never knows the harness's port-picking. Growing this set is a contract change on
+ * both sides, which is the point: a new slot cannot be smuggled in as a string convention.
+ */
+export type TestBootSlot = 'port' | 'dataDir'
+
+/**
+ * TEST-BOOT RECIPE — how a workspace boots as a SUBPROCESS co-tenant of another workspace's test
+ * harness (spec .specs/2026-08-10-eixo-ambiente-go-design.md D9/AC-6; the consumer is
+ * `startIntegrationBackend({ services })` in packages/api/typescript/tests/support/testing.ts).
+ *
+ * DECLARED, not inferred (CLAUDE.md Non-Negotiable §5): the harness resolves a service id to this
+ * record by lookup and does exactly what it says — it never branches on `lang`, never guesses that
+ * a Go service is built with `go build`, and never hardcodes a service name. A workspace WITHOUT a
+ * recipe is simply not test-bootable, and asking for it is a typed error (see TestBootWorkspaceId).
+ *
+ * `build` and `run` are argv arrays (no shell, no quoting rules) resolved against the workspace's
+ * `pkgRoot`. `build` runs at most ONCE per test process; `run` is spawned per boot.
+ */
+export interface TestBoot {
+	/** argv, run in `pkgRoot`, at most once per test process, before the first spawn. */
+	build: readonly string[]
+	/** argv, run in `pkgRoot`, one process per harness boot. */
+	run: readonly string[]
+	/** Fixed env this recipe declares — the axis column the subprocess must boot in. */
+	env: Readonly<Record<string, string>>
+	/** Harness-provided slot → the env var it travels in. The whole binding, declared. */
+	binds: Readonly<Record<TestBootSlot, string>>
+	/** Path the harness polls (on the bound port) until the subprocess answers 2xx. */
+	healthPath: string
+}
+
+/**
+ * The workspaces that DECLARE a test-boot recipe — DERIVED from the table, never re-listed. This
+ * is what types `startIntegrationBackend({ services })`, so asking for a workspace that has no
+ * recipe is a compile error rather than a runtime surprise; in a stamped copy that dropped every
+ * bootable workspace it collapses to `never`, and the harness call sites go red with it.
+ */
+export type TestBootWorkspaceId = {
+	[K in WorkspaceId]: (typeof WORKSPACES)[K] extends { testBoot: TestBoot } ? K : never
+}[WorkspaceId]
+
 export interface Workspace {
 	pkgRoot: string
 	srcRoot: string
@@ -150,6 +217,9 @@ export interface Workspace {
 	/** How the workspace joins local dev: 'aggregate' = part of the root `bun dev` run-many;
 	 *  'standalone' = runs its own dev server; null = no dev target. */
 	devServer: 'aggregate' | 'standalone' | null
+	/** How a test harness boots this workspace as a co-tenant subprocess (see TestBoot).
+	 *  Absent = not test-bootable, which is the honest default for most workspaces. */
+	testBoot?: TestBoot
 }
 
 export const REPO = {
