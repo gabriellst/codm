@@ -219,6 +219,7 @@ pub mod types {
     ///    "CONTACT_AVATAR_NOT_FOUND",
     ///    "CONTACT_ENTRY_REQUIRES_SENDER",
     ///    "CREDENTIAL_DECRYPT_FAILED",
+    ///    "DATA_DIR_LOCKED",
     ///    "DEVICE_CODE_INVALID",
     ///    "DEVICE_TOKEN_INVALID",
     ///    "EMAIL_ALREADY_REGISTERED",
@@ -348,6 +349,8 @@ pub mod types {
         ContactEntryRequiresSender,
         #[serde(rename = "CREDENTIAL_DECRYPT_FAILED")]
         CredentialDecryptFailed,
+        #[serde(rename = "DATA_DIR_LOCKED")]
+        DataDirLocked,
         #[serde(rename = "DEVICE_CODE_INVALID")]
         DeviceCodeInvalid,
         #[serde(rename = "DEVICE_TOKEN_INVALID")]
@@ -541,6 +544,7 @@ pub mod types {
                     f.write_str("CONTACT_ENTRY_REQUIRES_SENDER")
                 }
                 Self::CredentialDecryptFailed => f.write_str("CREDENTIAL_DECRYPT_FAILED"),
+                Self::DataDirLocked => f.write_str("DATA_DIR_LOCKED"),
                 Self::DeviceCodeInvalid => f.write_str("DEVICE_CODE_INVALID"),
                 Self::DeviceTokenInvalid => f.write_str("DEVICE_TOKEN_INVALID"),
                 Self::EmailAlreadyRegistered => f.write_str("EMAIL_ALREADY_REGISTERED"),
@@ -656,6 +660,7 @@ pub mod types {
                 "CONTACT_AVATAR_NOT_FOUND" => Ok(Self::ContactAvatarNotFound),
                 "CONTACT_ENTRY_REQUIRES_SENDER" => Ok(Self::ContactEntryRequiresSender),
                 "CREDENTIAL_DECRYPT_FAILED" => Ok(Self::CredentialDecryptFailed),
+                "DATA_DIR_LOCKED" => Ok(Self::DataDirLocked),
                 "DEVICE_CODE_INVALID" => Ok(Self::DeviceCodeInvalid),
                 "DEVICE_TOKEN_INVALID" => Ok(Self::DeviceTokenInvalid),
                 "EMAIL_ALREADY_REGISTERED" => Ok(Self::EmailAlreadyRegistered),
