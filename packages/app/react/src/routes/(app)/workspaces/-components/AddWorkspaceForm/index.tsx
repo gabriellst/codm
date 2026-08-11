@@ -92,7 +92,9 @@ export function AddWorkspaceForm({ className, onDone, ...props }: AddWorkspaceFo
 									onChange={e => field.handleChange(e.target.value)}
 								/>
 								{canPickFolder && (
-									<Button type="button" variant="outline" onClick={pickFolder}>
+									// D3 — the folder-picker trigger is chrome-free (utility action inline in the
+									// field row), which is what `ghost` means post-Fase-2, not `outline`.
+									<Button type="button" variant="ghost" onClick={pickFolder}>
 										<IconFolderOpen data-icon="inline-start" /> {t('workspaces.browse')}
 									</Button>
 								)}
@@ -103,7 +105,9 @@ export function AddWorkspaceForm({ className, onDone, ...props }: AddWorkspaceFo
 				</form.Field>
 
 				<DialogFooter className="mt-4">
-					<Button type="button" variant="ghost" onClick={onDone}>
+					{/* D3 — Cancelar is the modal's secondary action (hollow, `fg-20` border), which is
+					    `outline` post-Fase-2, not `ghost` (borderless). */}
+					<Button type="button" variant="outline" onClick={onDone}>
 						{t('common.cancel')}
 					</Button>
 					<form.Subscribe selector={s => [s.canSubmit, s.isSubmitting] as const}>

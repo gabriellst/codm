@@ -2,7 +2,7 @@ import { useEffect, useState, type ComponentProps, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { QRCodeSVG } from 'qrcode.react'
 import { useQueryClient } from '@tanstack/react-query'
-import { IconAlertTriangle, IconCircleCheck, IconRefresh } from '@tabler/icons-react'
+import { IconAlertTriangle, IconCheck, IconQrcode, IconRefresh } from '@tabler/icons-react'
 import { getAttachThreadWizardQueryKey, getHomeDashboardQueryKey } from '@codm/client-typescript/typescript'
 import { ChannelKindEnum, ChannelStatusEnum, useConnectChannel, useGetChannel, useGetOrCreateChannel } from '@codm/client-typescript/go'
 import { extractErrorCode, getErrorTranslation } from '@/lib'
@@ -19,6 +19,10 @@ const POLL_INTERVAL_MS = 2000
 interface ConnectChannelFormProps extends ComponentProps<'div'> {
 	/** Called where the dialog shell used to call `hide()` on success — e.g. when pairing completes. */
 	onDone?: () => void
+	/** D3 — the dialog shell's description line disappears once paired; this is how the shell
+	 *  (which owns that static header text) learns the form's connected state without re-deriving
+	 *  it from its own query. */
+	onConnectedChange?: (connected: boolean) => void
 }
 
 /**
@@ -43,7 +47,7 @@ interface ConnectChannelFormProps extends ComponentProps<'div'> {
  * to set `open` to true, and unmounting is what used to reset the pairing state. Nothing about the QR
  * machine changed; only who owns "open" did.
  */
-export function ConnectChannelForm({ className, onDone, ...props }: ConnectChannelFormProps) {
+export function ConnectChannelForm({ className, onDone, onConnectedChange, ...props }: ConnectChannelFormProps) {
 	const { t } = useTranslation()
 	const queryClient = useQueryClient()
 
@@ -74,6 +78,10 @@ export function ConnectChannelForm({ className, onDone, ...props }: ConnectChann
 	})
 	const isConnected = connectedOnConnect || pairing.data?.status === ChannelStatusEnum.CONNECTED
 
+	useEffect(() => {
+		onConnectedChange?.(isConnected)
+	}, [isConnected, onConnectedChange])
+
 	const startPairing = () => {
 		setExpired(false)
 		connect.reset()
@@ -100,17 +108,22 @@ export function ConnectChannelForm({ className, onDone, ...props }: ConnectChann
 
 	let body: ReactNode
 	if (isConnected) {
+		// D3 (e6hOKJ) — no boxed container: a small ring+check mark (secondary halo behind a
+		// primary-colored circle-check glyph approximates the design's ring/halo/check trio),
+		// the title and description as plain centered text, then the primary "Fechar" action.
 		body = (
 			<>
-				<div className="flex size-52 flex-col items-center justify-center gap-3 rounded-2xl border border-border bg-muted text-center">
-					<IconCircleCheck className="size-16 text-primary" />
-					<p className="font-semibold text-foreground">{t('channels.pairConnectedTitle')}</p>
+				<div className="flex size-[76px] items-center justify-center rounded-full bg-secondary">
+					<IconCheck className="size-9 text-primary" strokeWidth={3} />
 				</div>
-				<p className="text-center text-sm text-muted-foreground">{t('channels.pairConnectedHint')}</p>
+				<p className="text-center text-base font-extrabold text-foreground">{t('channels.pairConnectedTitle')}</p>
+				<p className="text-center text-[13px] text-muted-foreground">{t('channels.pairConnectedHint')}</p>
 				<Button onClick={onDone}>{t('common.close')}</Button>
 			</>
 		)
 	} else if (resolve.isError || connect.isError) {
+		// No design screen covers the error path (none of the 8 assigned screens is an error
+		// state) — left as-is rather than invented.
 		const code = extractErrorCode(resolve.error ?? connect.error)
 		body = (
 			<>
@@ -124,38 +137,43 @@ export function ConnectChannelForm({ className, onDone, ...props }: ConnectChann
 			</>
 		)
 	} else if (expired) {
+		// D3 (oilhX) — the placeholder box goes skeleton-toned (not `bg-muted`) with a faded QR
+		// glyph, radius asymmetric-lg (matching the QR-active box below); the retry action is the
+		// primary solid button, not `outline`.
 		body = (
 			<>
-				<div className="flex size-52 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-muted p-4 text-center">
-					<IconRefresh className="size-12 text-muted-foreground" />
-					<p className="text-sm font-medium text-foreground">{t('channels.pairExpiredTitle')}</p>
+				<div className="flex size-[176px] items-center justify-center rounded-asymmetric-lg border border-border bg-skeleton">
+					<IconQrcode className="size-16 text-skeleton-strong" />
 				</div>
-				<p className="text-center text-sm text-muted-foreground">{t('channels.pairExpiredHint')}</p>
-				<Button variant="outline" onClick={startPairing}>
-					<IconRefresh data-icon="inline-start" /> {t('channels.pairRegenerate')}
-				</Button>
+				<p className="text-center text-base font-extrabold text-foreground">{t('channels.pairExpiredTitle')}</p>
+				<p className="text-center text-[13px] text-muted-foreground">{t('channels.pairExpiredHint')}</p>
+				<Button onClick={startPairing}>{t('channels.pairRegenerate')}</Button>
 			</>
 		)
 	} else if (qr) {
 		body = (
 			<>
-				{/* White plate + dark modules regardless of theme so the code stays scannable in dark mode. */}
-				<div className="flex size-52 items-center justify-center rounded-2xl border border-border bg-white p-3">
-					<QRCodeSVG value={qr} size={184} level="M" marginSize={0} bgColor="#ffffff" fgColor="#000000" className="size-full" />
+				{/* White plate + dark modules regardless of theme so the code stays scannable in dark
+				    mode — código vence sobre o placeholder cinza do design aqui (a referência é
+				    estática; um QR de verdade precisa da placa branca pra manter contraste de scan
+				    em qualquer tema). Raio/tamanho seguem a medição (176px, asymmetric-lg). */}
+				<div className="flex size-[176px] items-center justify-center rounded-asymmetric-lg border border-border bg-white p-3">
+					<QRCodeSVG value={qr} size={152} level="M" marginSize={0} bgColor="#ffffff" fgColor="#000000" className="size-full" />
 				</div>
-				<p className="text-center text-sm text-muted-foreground">{t('channels.whatsappPairScanHint')}</p>
-				<p className="flex items-center gap-2 text-xs text-muted-foreground">
-					<Spinner className="size-3" /> {t('channels.pairWaitingScan')}
-				</p>
+				<p className="text-center text-[13px] text-muted-foreground">{t('channels.whatsappPairScanHint')}</p>
+				<p className="text-center text-[13px] font-semibold text-foreground">{t('channels.pairWaitingScan')}</p>
 			</>
 		)
 	} else {
+		// D3 (TfUe4) — no box at all: a small spinner inline with the bold status line, then a
+		// quieter description underneath.
 		body = (
 			<>
-				<div className="flex size-52 items-center justify-center rounded-2xl border border-dashed border-border bg-muted">
-					<Spinner className="size-10 text-muted-foreground" />
+				<div className="flex items-center gap-2.5">
+					<Spinner className="size-5 text-primary" />
+					<p className="text-[15px] font-bold text-foreground">{t('channels.pairStarting')}</p>
 				</div>
-				<p className="text-center text-sm text-muted-foreground">{t('channels.pairStarting')}</p>
+				<p className="text-center text-[13px] text-muted-foreground">{t('channels.pairWaiting')}</p>
 			</>
 		)
 	}
