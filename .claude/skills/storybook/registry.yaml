@@ -75,14 +75,68 @@ registry:
     # --- Frontend testing (stories + colocated + harness) ---
 
     - id: SB-04
-      name: "Story-as-fixture — no independent .test.tsx sibling"
+      name: "Story-as-fixture — sibling test files prove a DIFFERENT boundary than play, never the same one twice"
       when: always
       rule: |
-        A component with a *.stories.tsx never gets a sibling .test.tsx that mounts it independently.
-        Behavior lives in the story's `play`; when an assertion doesn't fit `play`, the test imports
+        A component with a *.stories.tsx never gets a sibling .test.tsx that RE-PROVES a case the
+        story's `play` already covers — but two siblings are SANCTIONED because each proves a
+        boundary `play` structurally cannot reach: a `*.services.test.tsx` (cross-service, real
+        apiGo gateway subprocess — SB-05's boundary, its own file per bunfig's
+        `pathIgnorePatterns` + the one-process-per-file finding) and a harness-backed `.test.tsx`
+        asserting real backend behavior via `useIntegrationBackend()` that a browser-compatible
+        `play` cannot host. When an assertion DOES fit inside `play`, it still goes through
         composeStories (from tests/support/storybook — the project's wrapper, never
-        @storybook/react directly) around the SAME composed story instead of remounting from scratch.
-      wrong: "Writing Foo.test.tsx that re-mounts <Foo /> with its own ad-hoc providers/mocks when Foo.stories.tsx already exists."
+        @storybook/react directly) around the SAME composed story — never a fresh ad-hoc mount.
+        Full three-lane breakdown + canonical files in this entry's `exception`.
+      wrong: "Foo.test.tsx re-mounting <Foo/> with its own ad-hoc mocks to RE-ASSERT a case Foo.stories.tsx's play (or the file's own harness describe) already proves — that's a second proof of the same boundary, not a new one."
+      right: |
+        SessionChatSection/: index.stories.tsx (visual+play) + index.test.tsx (harness/reduced,
+        see exception) + index.services.test.tsx (apiGo) — three DIFFERENT boundaries, one file each.
+      exception: |
+        Three named lanes are sanctioned as a `.test.tsx`/`.services.test.tsx` sibling of a story —
+        none of them re-proves what `play` already covers, so none is the "parallel test" this rule
+        forbids:
+
+        1. **Cross-service lane (`*.services.test.tsx`)** — mounts the component against the REAL
+           `apiGo` gateway subprocess (`useIntegrationBackend({ services: ['apiGo'] })`). Signal: the
+           filename suffix itself. `bunfig.toml`'s `pathIgnorePatterns` excludes
+           `**/*.services.test.tsx` from the default suite for a STRUCTURAL reason, not convenience:
+           re-booting `services: ['apiGo']` in a process that already booted without it (or reusing
+           one after a prior file's `backend.stop()`) corrupts the DB handle (T9's one-process-per-file
+           finding — see bunfig.toml's docblock) — a story's `play` cannot spawn a subprocess and stay
+           Storybook-browser-compatible, so this behavior has nowhere else to live. It proves a fact
+           `play` never renders: a thread born from a REAL paired channel, a real
+           `CHANNEL_NOT_CONNECTED` — never a visual state the story already shows.
+
+        2. **Harness lane (plain `.test.tsx`, SB-05's boundary)** — mounts the component
+           independently (`mountRouter`/direct render, not through `composeStories`) against
+           `useIntegrationBackend()` (no `services`) to assert real backend behavior across a
+           bun:test-only async lifecycle (`beforeAll`/`beforeEach` boot+reset) that a `play` callback
+           — constrained to also run inside the Storybook browser — cannot invoke. `OnboardingFlow`'s
+           `index.test.tsx` composes BOTH lanes in one file: a `describe` that runs `composeStories`
+           against every story (the `play`-fits case), followed by a SEPARATE `describe` that mounts
+           the real `/onboarding` → `/dashboard` route pair against the harness to prove the
+           two-completions regression `play` cannot reach (no subprocess, no cross-route navigation
+           inside a story).
+
+        3. **Reduced lane, kept off `play` BY NAME, not by convenience** — when the behavior is
+           unreachable by BOTH lanes above: `play` can't reach it because MSW does not intercept
+           under bun (this SKILL.md's measured ruling — a story stays VISUAL-ONLY), AND the harness
+           can't produce it because no `given` helper exists yet to seed that shape/volume
+           server-side (a tooling gap, not a shortcut). The file must carry a docblock naming which
+           lane it tried and why each is closed, so the exception is legible at the call site, never
+           inferred. `SessionChatSection/index.test.tsx` (1000-row virtualization,
+           `spyOn(globalThis, 'fetch')` supplying DATA volume only — never the assertion target,
+           and never the bare `globalThis.fetch =` assignment bp-06 forbids) is the canonical case;
+           its own docblock names the closed lanes.
+
+        The trio is legal together on the SAME component — `index.stories.tsx` (visual + `play`),
+        `index.test.tsx` (lane 2 or 3), `index.services.test.tsx` (lane 1) — because each covers a
+        DIFFERENT boundary (mock/visual, real-backend-same-process, real-backend-cross-process). A
+        `.test.tsx` sibling stays a violation the moment it re-mounts the component with its OWN
+        ad-hoc mocks to re-assert a case `play` (or an already-passing lane in the same file)
+        already covers — the exception is for a genuinely different boundary, never a second proof
+        of the same one.
 
     - id: SB-05
       name: "Integration harness is the default network boundary"

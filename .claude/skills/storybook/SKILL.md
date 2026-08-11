@@ -29,8 +29,12 @@ classified in `.claude/registry.yaml` pointing here.
 | Is an absence or a decision with no screen (hook, gate, pure module, port) | **Colocated test** |
 | Crosses the stack with a real browser and real processes | **e2e** |
 
-Never write a `.test.tsx` sibling for a component that has a story — that's the story's job (see
-"Story-as-fixture" below). Never story a hook, a gate, or a pure function that renders nothing.
+Never write a `.test.tsx` sibling for a component that has a story to RE-PROVE a case its `play`
+already covers — that's the story's job (see "Story-as-fixture" below). Two NAMED siblings prove a
+DIFFERENT boundary instead and are sanctioned (SB-04's `exception` — see "Sanctioned siblings"
+below): a `*.services.test.tsx` (cross-service, a real gateway subprocess) and a harness-backed
+`.test.tsx` (`useIntegrationBackend()` behavior a browser-compatible `play` cannot host). Never
+story a hook, a gate, or a pure function that renders nothing.
 
 ## Core decision — dumb vs connected
 
@@ -159,6 +163,46 @@ which is the trigger to revisit this ruling. `.storybook/preview.tsx` guards MSW
 run only where `'serviceWorker' in navigator` is real (i.e. never under bun/happy-dom) — that guard
 is existing infrastructure this skill documents, not something a story or test needs to reason about.
 
+## Sanctioned siblings — when a storied component ALSO gets a `.test.tsx` / `.services.test.tsx`
+
+SB-04 forbids a `.test.tsx` sibling that **re-proves** a case `play` already covers — it does not
+forbid a sibling that proves a **different** boundary `play` structurally cannot reach. `play` runs
+in two places at once (the Storybook browser AND `bun test`, via `composeStories`), which is exactly
+what rules network out of it (MSW doesn't intercept under bun, and a real backend/subprocess has no
+browser equivalent). Three named lanes exist for what `play` can't hold, and every one of them
+already ships in this repo:
+
+1. **Cross-service lane — `*.services.test.tsx`.** Mounts the component against a REAL `apiGo`
+   gateway subprocess (`useIntegrationBackend({ services: ['apiGo'] })`). Its own file is not a style
+   choice: `bunfig.toml`'s `pathIgnorePatterns` excludes `**/*.services.test.tsx` from the default
+   suite because re-booting `services: ['apiGo']` inside a process that already booted without it (or
+   re-using one after a prior file's `backend.stop()`) corrupts the DB handle — one process per file,
+   empirically (see `bunfig.toml`'s docblock and `SessionChatSection/index.services.test.tsx`'s). A
+   `play` cannot spawn a subprocess and stay Storybook-browser-compatible, so this proof — a thread
+   born from a channel that REALLY paired, a real `CHANNEL_NOT_CONNECTED` — has nowhere else to live.
+2. **Harness lane — a plain `.test.tsx`, SB-05's boundary landing beside a story.** Mounts the
+   component independently (`mountRouter` / a direct render, not through `composeStories`) against
+   `useIntegrationBackend()` (no `services`) to assert real backend behavior that needs
+   `bun:test`-only async setup (`beforeAll`/`beforeEach` boot + reset) a `play` callback can't invoke
+   without breaking its Storybook-browser contract. `OnboardingFlow/index.test.tsx` runs BOTH the
+   `play`-fits lane and this one in the same file: one `describe` executes `composeStories(stories)`
+   against every story, a second, separate `describe` mounts the real `/onboarding` → `/dashboard`
+   route pair against the harness to prove the two-completions regression (`play` can't cross routes
+   or await a real invalidation).
+3. **Reduced lane — closed by name, not by convenience.** For behavior BOTH lanes above cannot reach:
+   `play` is out because MSW doesn't intercept under bun (previous section); the harness is out
+   because no `given` helper yet exists to seed that shape/volume server-side (a tooling gap, not a
+   shortcut taken). The file's docblock must name which lane it tried and why each is closed — legible
+   at the call site, never inferred. `SessionChatSection/index.test.tsx` (1000-row virtualization,
+   `spyOn(globalThis, 'fetch')` supplying DATA volume only, never the assertion itself — and never the
+   bare `globalThis.fetch =` bp-06 forbids) is the canonical case.
+
+**The trio is legal on the same component.** `SessionChatSection/` ships all three files at once:
+`index.stories.tsx` (visual + `play`), `index.test.tsx` (lane 3 here), `index.services.test.tsx`
+(lane 1) — each proving a different boundary (mock/visual, real-backend-same-process,
+real-backend-cross-process), never the same case twice. The full breakdown with signals is SB-04's
+`exception` in `registry.yaml`; keep this section and that entry in sync when either changes.
+
 ## The integration harness — where behavior assertions bat
 
 `useIntegrationBackend()` (`tests/support/integration-harness.ts`) is the default network boundary
@@ -271,8 +315,9 @@ or a fixed `sleep` — the canon and the rails above cover both.
 
 - Adding or reviewing any `*.stories.tsx`.
 - Showcasing a data-owning Section/card/dialog (use the connected framework).
-- Adding or reviewing any `packages/app/react/**/*.test.{ts,tsx}` — a hook, a gate, a pure module, or
-  a leftover `.test.tsx` sibling of a storied component.
+- Adding or reviewing any `packages/app/react/**/*.test.{ts,tsx}` — a hook, a gate, a pure module, a
+  `.test.tsx`/`.services.test.tsx` sibling of a storied component in one of SB-04's sanctioned lanes
+  ("Sanctioned siblings" above), or a leftover `.test.tsx` that re-proves what `play` already covers.
 
 ## When NOT to use
 
