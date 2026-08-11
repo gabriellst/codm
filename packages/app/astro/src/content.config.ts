@@ -21,7 +21,35 @@ const blog = defineCollection({
 			// Links a post to its sibling in the other locale (same key on both).
 			// Absent = this post has no translation; that is normal, not an error.
 			translationKey: z.string().optional(),
+			// D3 (design/codm.pen `ji2y3` → `VQNHl`, blog index filters/chips): one of a
+			// closed set — label text lives in `blog/_content/categories.ts`, never inline.
+			category: z.enum(['product', 'engineering', 'use-cases']),
 		}),
 })
 
-export const collections = { blog, landing, plans }
+/** UI copy for the blog index/post chrome that isn't per-post content — index
+ * heading/subtitle, empty state, and the post page's back-link/reading-time/next-post
+ * microcopy (design/codm.pen `ji2y3` → `VQNHl`/`oB3An`). */
+const blogUi = defineCollection({
+	loader: glob({
+		pattern: 'ui.*.json',
+		base: './src/pages/[locale]/blog/_content',
+		generateId: ({ entry }) => entry.replace(/\.json$/, ''),
+	}),
+	schema: z.object({
+		index: z.object({
+			title: z.string(),
+			subtitle: z.string(),
+			empty: z.string(),
+			filterAll: z.string(),
+			readPost: z.string(),
+		}),
+		post: z.object({
+			back: z.string(),
+			minReadSuffix: z.string(), // composed as `${n} ${minReadSuffix}`
+			nextPost: z.string(),
+		}),
+	}),
+})
+
+export const collections = { blog, landing, plans, blogUi }

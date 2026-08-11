@@ -1,0 +1,14 @@
+{
+	"index": {
+		"title": "Blog",
+		"subtitle": "Notes from the people building the bridge between the group chat and the codebase.",
+		"empty": "No posts yet.",
+		"filterAll": "All",
+		"readPost": "Read the post"
+	},
+	"post": {
+		"back": "All posts",
+		"minReadSuffix": "min read",
+		"nextPost": "Next post"
+	}
+}

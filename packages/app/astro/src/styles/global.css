@@ -25,7 +25,6 @@
 	--animate-pulse-dot: pulse-dot 2s ease-in-out infinite;
 	--animate-pulse-dot-fast: pulse-dot 1.6s ease-in-out infinite;
 	--animate-rise-in: rise-in 0.5s ease both;
-	--animate-marquee: marquee 26s linear infinite;
 }
 
 @keyframes pulse-dot {
@@ -47,12 +46,6 @@
 		transform: none;
 	}
 }
-@keyframes marquee {
-	to {
-		transform: translateX(-50%);
-	}
-}
-
 /* D6 — CSS-only cross-document view transitions; zero JS, inert where unsupported. */
 @view-transition {
 	navigation: auto;
@@ -82,7 +75,6 @@ body {
 	html {
 		scroll-behavior: auto;
 	}
-	.animate-marquee,
 	.animate-rise-in {
 		animation: none;
 	}

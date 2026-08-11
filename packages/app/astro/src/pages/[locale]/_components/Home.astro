@@ -2,11 +2,9 @@
 import { getEntry } from 'astro:content'
 import { DMG_DOWNLOAD_URL } from '~/config/download'
 import type { Locale } from '~/i18n'
-import ClosingCta from './ClosingCta.astro'
 import DemoSection from './DemoSection.astro'
 import FeaturesSection from './FeaturesSection.astro'
 import Hero from './Hero.astro'
-import Marquee from './Marquee.astro'
 import PricingSection from './PricingSection.astro'
 import RouterSection from './RouterSection.astro'
 
@@ -17,22 +15,26 @@ interface Props {
 // Composition root for the home page: one getEntry, typed slices down. Sibling
 // sections live next to this file in `_components/`; the interactive island lives
 // in `../_islands/`.
+//
+// R22/Marquee removal (design/codm.pen `ji2y3` → `asqga`): the design's landing has no
+// closing-CTA section (its copy moved into Footer.astro, R22) and no logo marquee
+// between Hero and "Como funciona" — both are gone from this composition root. Section
+// order + names now mirror the design 1:1: Hero → DemoSection ("Como funciona") →
+// RouterSection ("Casos de uso") → FeaturesSection ("Capacidades") → PricingSection
+// ("Preço"). File names are unchanged (R27 mapping in the plan) even though their
+// content/id no longer says "demo"/"router"/"features".
 const { locale } = Astro.props
 const entry = await getEntry('landing', `home.${locale}`)
 const t = entry!.data
 
-const githubHref = t.footer.links.github
+const githubHref = t.footer.project.links.find(l => l.label.includes('GitHub'))?.href ?? 'https://github.com/codm'
 // Direct download link (Task T3) — fixed R2 alias, no OS detection, no
 // GitHub-releases redirect. Single source of truth in ~/config/download.
 const downloadHref = DMG_DOWNLOAD_URL
-// /docs doesn't exist yet — anchor to the repo README until it ships (arch doc, out-of-scope list).
-const docsHref = `${githubHref}#readme`
 ---
 
 <Hero t={t.hero} downloadHref={downloadHref} githubHref={githubHref} />
-<Marquee t={t.marquee} />
-<DemoSection t={t.demo} />
-<RouterSection t={t.router} />
-<FeaturesSection t={t.features} />
-<PricingSection locale={locale} t={t.pricing} />
-<ClosingCta t={t.closingCta} downloadHref={downloadHref} downloadLabel={t.hero.downloadMac} docsHref={docsHref} />
+<DemoSection t={t.howItWorks} />
+<RouterSection t={t.useCases} />
+<FeaturesSection t={t.capabilities} />
+<PricingSection locale={locale} t={t.pricing} downloadLabel={t.hero.ctaMac} downloadHref={downloadHref} />

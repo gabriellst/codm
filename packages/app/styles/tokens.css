@@ -196,6 +196,43 @@
 	   system's own selection-ring color, so the generic focus ring follows it. DERIVED, not measured. */
 	--ring: oklch(from var(--primary) l c h / 0.35);
 
+	/* ── Site (astro landing/blog) — dark sections + floating-card chrome ──────
+	   D3 (design/codm.pen, group `ji2y3` — Site público). Two things the console's
+	   token set didn't need yet, both measured off the SAME `.pen` nodes:
+
+	   1. `--site-dark` — the "Como funciona" (zwRb8) and footer (JLnsz) sections fill
+	      literal `#111111`, NOT `--route-background` (`--background` in `.dark`, which
+	      resolves to oklch(0.185 0 0) ≈ #171717 — visibly lighter). Sampled directly:
+	      #111111 → oklch(0.164 0 0). Kept as its own token rather than overloading
+	      `--route-background`, since the console's dark surface and the site's dark
+	      section are two different measured blacks, not the same value under two names.
+	   2. `--fg-60` / `--fg-20` — alpha-derived off `--foreground` (`oklch(from var(--foreground)
+	      l c h / …)`), same pattern `--hover`/`--focus` already use above. Design's outline
+	      buttons/dividers reference `$fg-60`/`$fg-20` on light surfaces AND `$fg-inverse-60`/
+	      `$fg-inverse-20` on dark ones (Hero's GitHub button vs. the footer's) — one alpha-
+	      derived pair covers both: nested inside a `.dark`-scoped element (the existing
+	      `class="dark ..."` wrapper pattern already used by RouterSection/ClosingCta),
+	      `--foreground` itself flips to near-white, so `--fg-60`/`--fg-20` invert for free.
+	   3. `--shadow-float` — every floating card/chip in the site (hero cards, bento
+	      tags, pricing chips, blog cards) repeats the identical outer shadow spec:
+	      `offset 0 4, blur 15, spread -6, color #0000001a`. One token, not a rule
+	      re-typed at every call site. */
+	--site-dark: oklch(0.164 0 0); /* #111111 */
+	--fg-60: oklch(from var(--foreground) l c h / 0.6);
+	--fg-20: oklch(from var(--foreground) l c h / 0.2);
+	--shadow-float: 0 4px 15px -6px oklch(0 0 0 / 0.102); /* #0000001a */
+
+	/* Illustration surfaces — the "Como funciona" mock-UI cards (zwRb8/cxUJS) and the blog
+	   cover art repeat these two near-black bases under a green radial gradient. Flat and
+	   reused ≥2x, so tokenized like everything else; the gradient HIGHLIGHT stops layered on
+	   top of them are NOT tokenized — each is a one-off multi-stop radial composition unique
+	   to its own card (never reused as a semantic/brand color elsewhere), so turning every
+	   stop into a named token would misrepresent decorative illustration as design-system
+	   color. Those stay as literal, commented `style` gradients at their call sites. */
+	--illustration-surface-a: oklch(0.201 0.045 141); /* #16240c */
+	--illustration-surface-b: oklch(0.155 0.03 141); /* #101a08 */
+	--illustration-terminal: oklch(0.145 0 0); /* #141414 — hero terminal card + blog code block */
+
 	/* ── Brand alias ──────────────────────────────────── */
 	/* No longer a "kept mono so nothing breaks" shim — --primary IS the brand hex now, so this
 	   alias is genuinely redundant with it. Kept anyway for any consumer reaching for
