@@ -182,8 +182,14 @@ Se algum PR pedir regeneração de contrato, saiu do escopo.
 ## Fase 0 — Lista de reconciliação (Sessão 1, 11/08/2026)
 
 Varredura dos arquivos ainda não auditados contra o `.pen`. Classificação:
-**DESIGN VENCE** (aplicar na fase indicada) · **CÓDIGO VENCE** (design cede) ·
-**PERGUNTAR** (bloqueia a fase que tocar no item; não bloqueia a Sessão 1).
+**DESIGN VENCE** (aplicar na fase indicada) · **CÓDIGO VENCE** (design cede).
+
+> **Decisão do founder (11/08, pós-Sessão 1): "Tudo vai ser como o design diz."**
+> Os dois itens que estavam PERGUNTAR (R11, R12) viraram DESIGN VENCE. A regra vale
+> como default daqui em diante: divergência estética resolve a favor do design sem
+> nova consulta. As exceções continuam sendo as já ratificadas onde o código sabe
+> algo que o design ignora (C1 checklist no dashboard, C3 hover não modelado, R4
+> variável morta) — dado, estado e gate não são estética.
 
 ### Tokens / sistema
 
@@ -209,13 +215,13 @@ Varredura dos arquivos ainda não auditados contra o `.pen`. Classificação:
 | # | Divergência | Veredicto | Fase |
 |---|---|---|---|
 | R10 | Nenhuma tela do design tem botão de voltar; subtítulo só no Início (status line) e Tarefas (stats line vira 1ª linha do corpo) | DESIGN VENCE (já no handoff da Fase 3) | Fase 3 |
-| R11 | Título de página: design `fs=30 fw=800 sentence-case` em TODAS as telas; código `.heading-display text-4xl` = 36px UPPERCASE. O D3 não tem NENHUM display uppercase (nem no site: H1 fs=76 sentence-case). `.heading-display` tem 17 usos e é "a voz DM YOUR CODEBASE" | **PERGUNTAR** — redefinir `.heading-display` globalmente (matar o uppercase como identidade) ou trocar só o PageHeader? | Fase 3 |
+| R11 | Título de página: design `fs=30 fw=800 sentence-case` em TODAS as telas; código `.heading-display text-4xl` = 36px UPPERCASE. O D3 não tem NENHUM display uppercase (nem no site: H1 fs=76 sentence-case). `.heading-display` tem 17 usos e é "a voz DM YOUR CODEBASE" | **DESIGN VENCE** *(founder, 11/08: "tudo vai ser como o design diz")* — o uppercase morre como identidade: redefinir `.heading-display` (sentence-case, 800) e ajustar o tamanho no PageHeader (30px); reescrever o comentário "DM YOUR CODEBASE voice" | Fase 3 |
 
 ### ThreadSettingsDialog
 
 | # | Divergência | Veredicto | Fase |
 |---|---|---|---|
-| R12 | Design: modal 640×840 **coluna única** com scroll (telas 02+03 são o mesmo modal em dois estados de rolagem, header fixo). Código: 2 colunas em `lg` (`lg:max-w-4xl`) com racional documentado (prompt abaixo da dobra; janela mínima do shell 520px) | **PERGUNTAR** — o racional das 2 colunas foi construído com dor de operador real; o D3 aceita rolagem | Fase 4 (grupo yrVGJ) |
+| R12 | Design: modal 640×840 **coluna única** com scroll (telas 02+03 são o mesmo modal em dois estados de rolagem, header fixo). Código: 2 colunas em `lg` (`lg:max-w-4xl`) com racional documentado (prompt abaixo da dobra; janela mínima do shell 520px) | **DESIGN VENCE** *(founder, 11/08: "tudo vai ser como o design diz")* — coluna única com scroll e header fixo; o teto `max-h` existente segue valendo para a janela de 520px; REMOVER os comentários que defendem as 2 colunas ao aplicar | Fase 4 (grupo yrVGJ) |
 | R13 | Ordem das seções: design Gatilho → Agentes → Buffer → Prompt → Participantes → Loops → Perigo. Código: Gatilho → Agentes → Participantes → Buffer ∥ Prompt ∥ Loops ∥ Perigo. (Participantes/Loops/Perigo EXISTEM no design — tela 03, abaixo da dobra) | DESIGN VENCE (na ordem; condicionado ao R12) | Fase 4 |
 | R14 | Buffer de contexto: design usa **stepper** (− · valor · +); código usa 4 pílulas discretas. Nota dura: os valores continuam sendo o enum `BufferSize` ('25'\|'50'\|'100'\|'200') — o stepper navega a lista fechada, nunca incremento livre | DESIGN VENCE | Fase 4 |
 | R15 | Tag de menção: design tem campo próprio com label "Tag de menção"; código embute o input na linha do switch | DESIGN VENCE | Fase 4 |
