@@ -23,7 +23,7 @@ import { TelemetrySection } from '../TelemetrySection'
 export function SettingsSection({ className, ...props }: ComponentProps<'div'>) {
 	const { t } = useTranslation()
 	return (
-		<div className={cn('mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 pb-16 pt-20', className)} {...props}>
+		<div className={cn('mx-auto flex w-full flex-col gap-8 px-6 pb-16 pt-20', className)} {...props}>
 			<PageHeader title={t('settings.title')} />
 			<ProvidersSection />
 			<TelemetrySection />

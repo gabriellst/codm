@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 import { CHANNEL_KINDS, channelGlyph, channelStatusBadgeVariant } from '@/components/console/glyphs'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { row, sectionLabel } from '@/components/ui/surfaces'
+import { row, sectionLabelBare } from '@/components/ui/surfaces'
 import { useDialogStore } from '@/stores/useDialogStore'
 import { ConnectChannelDialog } from '../ConnectChannelDialog'
 
@@ -29,7 +29,7 @@ export function ChannelsSection({ className, ...props }: ComponentProps<'div'>) 
 	const statusByKind = new Map<ChannelKind, ChannelStatus>((data?.channels ?? []).map(c => [c.kind, c.status]))
 
 	return (
-		<div className={cn('mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 pb-16 pt-20', className)} {...props}>
+		<div className={cn('mx-auto flex w-full flex-col gap-8 px-6 pb-16 pt-20', className)} {...props}>
 			<PageHeader
 				title={t('channels.title')}
 				action={
@@ -40,7 +40,7 @@ export function ChannelsSection({ className, ...props }: ComponentProps<'div'>) 
 			/>
 
 			<div className="flex flex-col gap-2.5">
-				<h2 className={sectionLabel}>{t('channels.yourChannels')}</h2>
+				<h2 className={sectionLabelBare}>{t('channels.yourChannels')}</h2>
 				{isLoading ? (
 					<div className="flex flex-col gap-3">
 						<ChannelRowSkeleton />

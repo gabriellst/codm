@@ -88,6 +88,12 @@ export const row = 'border border-border transition-colors hover:bg-hover-accent
 // the weight does the labeling.
 export const sectionLabel = 'border-b border-border pb-2 text-sm font-bold text-foreground'
 
+// Founder (11/08, teste visual no desktop): quando o rótulo senta DIRETAMENTE sobre uma
+// LISTAGEM (rows/cards que já carregam a própria borda), o hairline vira régua dupla — o
+// título de lista usa a voz sem régua. A versão com hairline continua valendo onde a régua
+// é o separador (seções de modal, o header de Conversas do rail — ambos medidos no design).
+export const sectionLabelBare = 'text-sm font-bold text-foreground'
+
 // ──────────────────────────────────────────────
 // alert — the "precisa de você" dark surface (D2)
 // ──────────────────────────────────────────────

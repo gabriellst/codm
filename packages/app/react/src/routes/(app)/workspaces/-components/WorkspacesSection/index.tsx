@@ -11,7 +11,7 @@ import { workspaceBadgeVariant } from '@/components/console/glyphs'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
-import { row, sectionLabel } from '@/components/ui/surfaces'
+import { row, sectionLabelBare } from '@/components/ui/surfaces'
 import { useDialogStore } from '@/stores/useDialogStore'
 import { AddWorkspaceDialog } from '../AddWorkspaceDialog'
 
@@ -33,7 +33,7 @@ export function WorkspacesSection({ className, ...props }: ComponentProps<'div'>
 	const workspaces = data?.workspaces ?? []
 
 	return (
-		<div className={cn('mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 pb-16 pt-20', className)} {...props}>
+		<div className={cn('mx-auto flex w-full flex-col gap-8 px-6 pb-16 pt-20', className)} {...props}>
 			<PageHeader
 				title={t('workspaces.title')}
 				action={
@@ -44,7 +44,7 @@ export function WorkspacesSection({ className, ...props }: ComponentProps<'div'>
 			/>
 
 			<div className="flex flex-col gap-2.5">
-				<h2 className={sectionLabel}>{t('workspaces.projectFolders')}</h2>
+				<h2 className={sectionLabelBare}>{t('workspaces.projectFolders')}</h2>
 				{isLoading ? (
 					<div className={workspaceGrid}>
 						<WorkspaceCardSkeleton />

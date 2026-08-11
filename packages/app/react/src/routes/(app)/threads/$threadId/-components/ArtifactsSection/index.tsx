@@ -5,7 +5,7 @@ import { ArtifactKindEnum, useListArtifacts } from '@codm/client-typescript/type
 import type { ArtifactKind } from '@codm/client-typescript/typescript'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Empty, EmptyDescription, EmptyTitle } from '@/components/ui/empty'
-import { sectionLabel } from '@/components/ui/surfaces'
+import { sectionLabelBare } from '@/components/ui/surfaces'
 import { enumLabel } from '@/lib'
 import { formatRelativeTime } from '@/lib/format'
 import { useLocale } from '@/hooks'
@@ -59,7 +59,7 @@ export function ArtifactsSection({ threadId, className, ...props }: ComponentPro
 
 	return (
 		<div className={cn('flex flex-col gap-4 py-4', className)} {...props}>
-			<h2 className={cn(sectionLabel, 'px-2')}>{t('session.tabArtifacts')}</h2>
+			<h2 className={cn(sectionLabelBare, 'px-2')}>{t('session.tabArtifacts')}</h2>
 			<div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
 				{artifacts.map(artifact => (
 					<ArtifactCard key={artifact.artifactId} artifact={artifact} threadId={threadId} />

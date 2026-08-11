@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/console/PageHeader'
 import { IssueRow } from '@/components/console/IssueRow'
 import { enumLabel } from '@/lib'
 import { cn } from '@/lib/utils'
-import { sectionLabel } from '@/components/ui/surfaces'
+import { sectionLabelBare } from '@/components/ui/surfaces'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Empty, EmptyDescription, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
@@ -38,7 +38,7 @@ export function IssuesOverviewSection({ className, ...props }: ComponentProps<'d
 	)
 
 	return (
-		<div className={cn('mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 pb-16 pt-20', className)} {...props}>
+		<div className={cn('mx-auto flex w-full flex-col gap-8 px-6 pb-16 pt-20', className)} {...props}>
 			{/* D3 — the stats line left the PageHeader subtitle slot and became the BODY's first
 			    line (the header keeps a subtitle only on Home). It still loads with the page shape:
 			    the skeleton keeps this row's height so the groups below don't jump. */}
@@ -81,7 +81,7 @@ export function IssuesOverviewSection({ className, ...props }: ComponentProps<'d
 				<div className="flex flex-col gap-8">
 					{orderedGroups.map(group => (
 						<section key={group.status} className="flex flex-col gap-2">
-							<h2 className={sectionLabel}>{enumLabel('IssueStatus', group.status)}</h2>
+							<h2 className={sectionLabelBare}>{enumLabel('IssueStatus', group.status)}</h2>
 							{group.items.map(item => (
 								<IssueRow key={item.issueId} item={item} />
 							))}
@@ -90,7 +90,7 @@ export function IssuesOverviewSection({ className, ...props }: ComponentProps<'d
 
 					{archived && data && data.archived.length > 0 && (
 						<section className="flex flex-col gap-2">
-							<h2 className={sectionLabel}>{t('issues.archived')}</h2>
+							<h2 className={sectionLabelBare}>{t('issues.archived')}</h2>
 							{data.archived.map(item => (
 								<IssueRow key={item.issueId} item={item} />
 							))}

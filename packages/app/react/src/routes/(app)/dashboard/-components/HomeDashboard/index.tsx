@@ -7,7 +7,7 @@ import { ChannelStatusEnum, getHomeDashboardQueryKey, useGetHomeDashboard } from
 import type { GetHomeDashboardQueryResponse, ThreadStatus, TranscriptKind } from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
-import { alertActionButton, alertSurface, row, sectionLabel } from '@/components/ui/surfaces'
+import { alertActionButton, alertSurface, row, sectionLabelBare } from '@/components/ui/surfaces'
 import { cn } from '@/lib/utils'
 import { formatDurationSeconds } from '@/lib/format'
 import { enumLabel } from '@/lib'
@@ -50,13 +50,12 @@ export function HomeDashboard({ className, ...props }: ComponentProps<'div'>) {
 	const statusLine = offlineChannel ? `${heroLine} · ${t('dashboard.channelOfflineSuffix')}` : heroLine
 
 	return (
-		<div
-			className={cn('relative mx-auto flex w-full max-w-5xl flex-col gap-7 overflow-hidden px-6 pb-16 pt-16 md:px-10', className)}
-			{...props}
-		>
+		<div className={cn('relative mx-auto flex w-full flex-col gap-7 overflow-hidden px-6 pb-16 pt-16 md:px-10', className)} {...props}>
 			{offlineChannel && <ChannelOfflineBanner />}
 
-			<div className="relative">
+			{/* `isolate` is load-bearing: DecorBlobs sits at -z-10, and without a local stacking
+			    context that puts it BEHIND the page's opaque white background — invisible. */}
+			<div className="relative isolate">
 				<DecorBlobs />
 				<PageHeader
 					title={t('nav.home')}
@@ -108,7 +107,10 @@ function ChannelOfflineBanner({ className, ...props }: ComponentProps<'div'>) {
 	const { t } = useTranslation()
 	return (
 		<div
-			className={cn('flex items-center gap-3.5 rounded-asymmetric-lg bg-attention-surface px-5 py-4 text-attention-foreground', className)}
+			className={cn(
+				'relative z-10 flex items-center gap-3.5 rounded-asymmetric-lg bg-attention-surface px-5 py-4 text-attention-foreground',
+				className,
+			)}
 			{...props}
 		>
 			<span className="flex size-8 shrink-0 items-center justify-center rounded-asymmetric-2xs bg-status-attention text-primary-foreground">
@@ -169,8 +171,11 @@ function NeedsYouCallout({ needsYou, className, ...props }: ComponentProps<'div'
 function TodayStats({ today, className, ...props }: ComponentProps<'div'> & { today: Dashboard['today'] }) {
 	const { t } = useTranslation()
 	const locale = useLocale()
+	// `relative` (aqui e nas seções irmãs): o header é positioned e pinta DEPOIS dos irmãos
+	// estáticos, então o transbordo dos DecorBlobs cobriria estes cards — positioned em ordem
+	// de DOM devolve cada seção para CIMA do gradiente.
 	return (
-		<div className={cn('grid grid-cols-3 gap-3.5', className)} {...props}>
+		<div className={cn('relative grid grid-cols-3 gap-3.5', className)} {...props}>
 			<StatTile label={t('dashboard.issuesOpened')} value={String(today.issuesOpened)} />
 			<StatTile label={t('dashboard.issuesClosed')} value={String(today.issuesClosed)} />
 			<StatTile label={t('dashboard.medianResponse')} value={formatDurationSeconds(today.medianResponseSeconds, locale)} highlight />
@@ -228,8 +233,8 @@ const THREAD_STATUS_DOT: Record<ThreadStatus, string> = {
 function ActiveSessionsSection({ sessions, className, ...props }: ComponentProps<'section'> & { sessions: Dashboard['activeSessions'] }) {
 	const { t } = useTranslation()
 	return (
-		<section className={cn('flex flex-col gap-2.5', className)} {...props}>
-			<h2 className={sectionLabel}>{t('dashboard.activeSessions')}</h2>
+		<section className={cn('relative flex flex-col gap-2.5', className)} {...props}>
+			<h2 className={sectionLabelBare}>{t('dashboard.activeSessions')}</h2>
 			{sessions.length === 0 ? (
 				<Empty className="border border-solid border-border bg-background">
 					<EmptyHeader>
@@ -298,8 +303,8 @@ const TRANSCRIPT_KIND_DOT: Record<TranscriptKind, string> = {
 function LatestActivitySection({ items, className, ...props }: ComponentProps<'section'> & { items: Dashboard['latestActivity'] }) {
 	const { t } = useTranslation()
 	return (
-		<section className={cn('flex flex-col gap-2.5', className)} {...props}>
-			<h2 className={sectionLabel}>{t('dashboard.latestActivity')}</h2>
+		<section className={cn('relative flex flex-col gap-2.5', className)} {...props}>
+			<h2 className={sectionLabelBare}>{t('dashboard.latestActivity')}</h2>
 			{items.length === 0 ? (
 				<Empty className="border border-solid border-border bg-background">
 					<EmptyHeader>
@@ -403,11 +408,8 @@ function ActivityRowSkeleton({ messageWidth }: { messageWidth: string }) {
 
 function DashboardSkeleton({ className, ...props }: ComponentProps<'div'>) {
 	return (
-		<div
-			className={cn('relative mx-auto flex w-full max-w-5xl flex-col gap-7 overflow-hidden px-6 pb-16 pt-16 md:px-10', className)}
-			{...props}
-		>
-			<div className="relative flex items-start justify-between gap-4">
+		<div className={cn('relative mx-auto flex w-full flex-col gap-7 overflow-hidden px-6 pb-16 pt-16 md:px-10', className)} {...props}>
+			<div className="relative isolate flex items-start justify-between gap-4">
 				<DecorBlobs />
 				<div className="flex flex-col gap-1.5">
 					<div className="h-[34px] w-44 rounded-asymmetric-xs bg-skeleton-strong" />
@@ -415,19 +417,19 @@ function DashboardSkeleton({ className, ...props }: ComponentProps<'div'>) {
 				</div>
 				<div className="h-10 w-[178px] shrink-0 rounded-asymmetric-sm bg-skeleton-strong" />
 			</div>
-			<div className="grid grid-cols-3 gap-3.5">
+			<div className="relative grid grid-cols-3 gap-3.5">
 				<StatTileSkeleton />
 				<StatTileSkeleton />
 				<StatTileSkeleton />
 			</div>
-			<div className="flex flex-col gap-2.5">
+			<div className="relative flex flex-col gap-2.5">
 				<SectionHeaderSkeleton width="w-[196px]" />
 				<div className="flex flex-col gap-2.5">
 					<SessionRowSkeleton chipWidth="w-32" />
 					<SessionRowSkeleton chipWidth="w-[150px]" />
 				</div>
 			</div>
-			<div className="flex flex-col gap-2.5">
+			<div className="relative flex flex-col gap-2.5">
 				<SectionHeaderSkeleton width="w-[150px]" />
 				<div className="flex flex-col">
 					<ActivityRowSkeleton messageWidth="w-48" />
