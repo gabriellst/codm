@@ -181,13 +181,15 @@ function DailyScheduleSummary({ schedule }: { schedule: DailyScheduleValue }) {
 	const { t } = useTranslation()
 	return (
 		<>
-			<Badge variant="secondary" className="font-mono">
+			<Badge variant="secondary" size="compact" className="font-mono">
 				{schedule.timeOfDay}
 			</Badge>
 			{/* The weekday set, in week order — the same order the picker renders, so editing a loop
-			    never reshuffles what the operator just read. */}
+			    never reshuffles what the operator just read. `size="compact"` (D3, R9): the design's
+			    loop chips are the one place that keeps the smaller 3xs step; everywhere else moved to
+			    the new 2xs default. */}
 			{WEEK.filter(day => schedule.weekdays.includes(day)).map(day => (
-				<Badge key={day} variant="outline">
+				<Badge key={day} variant="outline" size="compact">
 					{t(`enums.DayOfWeek.${day}`)}
 				</Badge>
 			))}
@@ -198,7 +200,11 @@ function DailyScheduleSummary({ schedule }: { schedule: DailyScheduleValue }) {
 /** The cadence of an interval schedule — one badge, because there is one thing to say. */
 function IntervalScheduleSummary({ schedule }: { schedule: IntervalScheduleValue }) {
 	const { t } = useTranslation()
-	return <Badge variant="secondary">{t('session.loops.intervalBadge', { minutes: schedule.everyMinutes })}</Badge>
+	return (
+		<Badge variant="secondary" size="compact">
+			{t('session.loops.intervalBadge', { minutes: schedule.everyMinutes })}
+		</Badge>
+	)
 }
 
 /**
