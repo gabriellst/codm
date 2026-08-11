@@ -34,6 +34,9 @@ import (
 var Module = fx.Module("channel",
 	// Infrastructure — whatsmeow's device/session store on a dedicated FK-on
 	// handle over the SAME file, plus the channel factory built on it.
+	// LoadConfig reads the adapter's OWN env var (WHATSMEOW_LOG_LEVEL) — core
+	// no longer carries that field (spec T11).
+	fx.Provide(whatsapp.LoadConfig),
 	fx.Provide(whatsapp.NewWhatsmeowStore),
 	fx.Provide(fx.Annotate(
 		whatsapp.NewWhatsmeowChannelFactory,

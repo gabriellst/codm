@@ -34,76 +34,84 @@ import (
 // processes. string(...) keeps it a plain string constant for the call site below.
 const integrationOutboxSource = string(wire.OutboxSourceintegration)
 
-var Module = fx.Module("shared",
-	// Config
-	fx.Provide(config.Load),
+// Module returns the framework's fx module, parameterized by the caller's
+// declared config.Service (spec T11 AC-1): the env-var prefix — and any
+// default core itself can't know, like EventGroupID's — belongs to the
+// SERVICE composing this module, not to core. Every provider below this
+// parameter is already completely service-agnostic; svc only threads through
+// to the single config.Load call.
+func Module(svc config.Service) fx.Option {
+	return fx.Module("shared",
+		// Config
+		fx.Provide(func() (*config.Config, error) { return config.Load(svc) }),
 
-	// Database — the SINGLE shared SQLite store. Postgres is gone: there is no
-	// *sql.DB provider in the graph any more, so the process boots with no server
-	// to reach and no Ping to fail. The store owns its whole lifecycle behind
-	// NewSqliteStore; provideSqliteStore only hands it the data-dir from config
-	// (the single boot hop) and closes it on shutdown.
-	fx.Provide(provideSqliteStore),
+		// Database — the SINGLE shared SQLite store. Postgres is gone: there is no
+		// *sql.DB provider in the graph any more, so the process boots with no server
+		// to reach and no Ping to fail. The store owns its whole lifecycle behind
+		// NewSqliteStore; provideSqliteStore only hands it the data-dir from config
+		// (the single boot hop) and closes it on shutdown.
+		fx.Provide(provideSqliteStore),
 
-	// Unit of Work — the REAL SQLite one (BEGIN IMMEDIATE), replacing the Noop.
-	// An aggregate's row writes, its shared_events audit rows and its shared_outbox
-	// dispatch rows now commit (or roll back) atomically, and a successful commit
-	// nudges the domain notify strategy so the dispatcher drains without poll latency.
-	fx.Provide(fx.Annotate(provideSqliteUnitOfWork, fx.As(new(unitofwork.UnitOfWork)))),
+		// Unit of Work — the REAL SQLite one (BEGIN IMMEDIATE), replacing the Noop.
+		// An aggregate's row writes, its shared_events audit rows and its shared_outbox
+		// dispatch rows now commit (or roll back) atomically, and a successful commit
+		// nudges the domain notify strategy so the dispatcher drains without poll latency.
+		fx.Provide(fx.Annotate(provideSqliteUnitOfWork, fx.As(new(unitofwork.UnitOfWork)))),
 
-	// Outbox-as-transport external mediator over the same store (Redis retired).
-	fx.Provide(fx.Annotate(provideSqlExternalMediator, fx.As(new(mediator.ExternalMediator)))),
+		// Outbox-as-transport external mediator over the same store (Redis retired).
+		fx.Provide(fx.Annotate(provideSqlExternalMediator, fx.As(new(mediator.ExternalMediator)))),
 
-	// Domain-event wake-up strategy for the SQLite substrate — SHARED between the
-	// SqliteOutboxDispatcher (waits on it) and the SqliteUnitOfWork (nudges it on
-	// commit). The integration SqlExternalMediator keeps its OWN strategy (built
-	// inside provideSqlExternalMediator), so this is the only one in the fx graph.
-	fx.Provide(provideDomainOutboxNotify),
+		// Domain-event wake-up strategy for the SQLite substrate — SHARED between the
+		// SqliteOutboxDispatcher (waits on it) and the SqliteUnitOfWork (nudges it on
+		// commit). The integration SqlExternalMediator keeps its OWN strategy (built
+		// inside provideSqlExternalMediator), so this is the only one in the fx graph.
+		fx.Provide(provideDomainOutboxNotify),
 
-	// SQLite domain-event OutboxDispatcher — claims the rows the dual-write stamps
-	// (source = OutboxSource) and fans them to the InternalMediator, running the
-	// write→claim→dispatch loop against the SqliteStore.
-	fx.Provide(provideSqliteOutboxDispatcher),
+		// SQLite domain-event OutboxDispatcher — claims the rows the dual-write stamps
+		// (source = OutboxSource) and fans them to the InternalMediator, running the
+		// write→claim→dispatch loop against the SqliteStore.
+		fx.Provide(provideSqliteOutboxDispatcher),
 
-	// Internal Mediator (domain events via channels)
-	fx.Provide(fx.Annotate(mediator.NewChannelMediator, fx.As(new(mediator.InternalMediator)))),
+		// Internal Mediator (domain events via channels)
+		fx.Provide(fx.Annotate(mediator.NewChannelMediator, fx.As(new(mediator.InternalMediator)))),
 
-	// Domain Event Repository — the SQLite dual-write (shared_events audit log +
-	// shared_outbox dispatch queue) is now THE implementation for every context.
-	// Provided once as its concrete type and re-exposed as the interface, so the
-	// repos that ask for either get the SAME instance over the SAME store.
-	fx.Provide(repositories.NewSqliteDomainEventRepository),
-	fx.Provide(asDomainEventRepository),
+		// Domain Event Repository — the SQLite dual-write (shared_events audit log +
+		// shared_outbox dispatch queue) is now THE implementation for every context.
+		// Provided once as its concrete type and re-exposed as the interface, so the
+		// repos that ask for either get the SAME instance over the SAME store.
+		fx.Provide(repositories.NewSqliteDomainEventRepository),
+		fx.Provide(asDomainEventRepository),
 
-	// HTTP Router
-	fx.Provide(httprouter.NewHttpRouter),
+		// HTTP Router
+		fx.Provide(httprouter.NewHttpRouter),
 
-	// Effective server address — populated synchronously by StartHTTPServer
-	// (below): fx.Invoke functions run eagerly while fx.New builds the graph,
-	// and net.Listen binds before Serve is deferred into the OnStart hook
-	// goroutine, so by the time fx.New(...) returns this already holds the
-	// REAL port even when cfg.Port was "0" (ephemeral). main.go only needs
-	// the log line StartHTTPServer already emits; a caller that builds the
-	// app itself (core/testenv, T5) fx.Populate's this to learn which port
-	// got picked.
-	fx.Provide(provideServerAddr),
+		// Effective server address — populated synchronously by StartHTTPServer
+		// (below): fx.Invoke functions run eagerly while fx.New builds the graph,
+		// and net.Listen binds before Serve is deferred into the OnStart hook
+		// goroutine, so by the time fx.New(...) returns this already holds the
+		// REAL port even when cfg.Port was "0" (ephemeral). main.go only needs
+		// the log line StartHTTPServer already emits; a caller that builds the
+		// app itself (core/testenv, T5) fx.Populate's this to learn which port
+		// got picked.
+		fx.Provide(provideServerAddr),
 
-	// Lifecycle hooks
-	fx.Invoke(
-		fx.Annotate(
-			registerMiddlewares,
-			fx.ParamTags(``, `group:"app_middlewares"`),
+		// Lifecycle hooks
+		fx.Invoke(
+			fx.Annotate(
+				registerMiddlewares,
+				fx.ParamTags(``, `group:"app_middlewares"`),
+			),
 		),
-	),
-	fx.Invoke(
-		fx.Annotate(
-			registerControllers,
-			fx.ParamTags(``, `group:"controllers"`),
+		fx.Invoke(
+			fx.Annotate(
+				registerControllers,
+				fx.ParamTags(``, `group:"controllers"`),
+			),
 		),
-	),
-	fx.Invoke(startMediators),
-	fx.Invoke(startSqliteOutboxDispatcher),
-)
+		fx.Invoke(startMediators),
+		fx.Invoke(startSqliteOutboxDispatcher),
+	)
+}
 
 // asDomainEventRepository re-exposes the concrete SQLite repository under the
 // interface every context depends on. A plain widening provider (not a second

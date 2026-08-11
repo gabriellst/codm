@@ -4,11 +4,12 @@
 // scratch SQLite file and an ephemeral HTTP port, and hands the test a
 // {URL, DB} handle to drive real HTTP calls and assert real rows.
 //
-// Generic on purpose, same rule as core/registry (spec AC-1): base and
-// overlays are supplied by the CALLER (the service under test and its own
-// bounded contexts), so this package carries zero service-specific symbol. A
-// test that needs a scripted scenario composes its OWN registry.Overlays and
-// passes it in; testenv never knows what shape that overlay takes.
+// Generic on purpose, same rule as core/registry and core/config (spec
+// AC-1): base, overlays and the config prefix are all supplied by the
+// CALLER (the service under test and its own bounded contexts), so this
+// package carries zero service-specific symbol. A test that needs a
+// scripted scenario composes its OWN registry.Overlays and passes it in;
+// testenv never knows what shape that overlay takes.
 package testenv
 
 import (
@@ -21,6 +22,7 @@ import (
 	"go.uber.org/fx"
 
 	core "template/core-go"
+	"template/core-go/config"
 	"template/core-go/db/sqlite"
 	"template/core-go/registry"
 )
@@ -46,14 +48,20 @@ type Backend struct {
 // Start boots base+overlays[env] as a real fx app for the duration of the
 // test: CODM_ENV selects the column, CODM_DATA_DIR points at a fresh
 // t.TempDir() (so the run never touches a developer's real data dir or
-// collides with a parallel test), and CHANNEL_PORT=0 asks the OS for an
-// ephemeral port (config.Load reads CHANNEL_PORT before its PORT fallback —
-// see core/config/config.go). All three are set via t.Setenv BEFORE the fx
-// app is built, because config.Load runs as an fx provider inside fx.New and
-// reads the process env at that point.
+// collides with a parallel test), and the port env var config.Load will read
+// for prefix — derived via config.EnvKey(prefix, "PORT"), the EXACT same
+// precedence rule config.Load itself applies — is set to "0" to ask the OS
+// for an ephemeral port. All are set via t.Setenv BEFORE the fx app is
+// built, because config.Load runs as an fx provider inside fx.New and reads
+// the process env at that point.
 //
-// The caller's base MUST already include core.Module (it is what provides
-// *config.Config, the SQLite store, the outbox dispatcher, and
+// prefix is the SAME config.Service.Prefix the caller's own composition root
+// declares (e.g. a gateway test passes its service's ConfigService.Prefix) —
+// testenv does not hardcode any service's prefix, it only knows the
+// PRECEDENCE RULE (spec T11 AC-1: this package carries zero service name).
+//
+// The caller's base MUST already include core.Module(svc) (it is what
+// provides *config.Config, the SQLite store, the outbox dispatcher, and
 // core.ServerAddr) — the same base the service's own main() composes.
 // overlays is registry.Overlays exactly as registry.App consumes it; the
 // TEST decides its composition (spec: "testenv accepts (base, overlays) as
@@ -63,12 +71,12 @@ type Backend struct {
 //
 // t.Cleanup stops the app (HTTP server, mediators, outbox dispatcher, store)
 // when the test ends.
-func Start(t *testing.T, env registry.Env, base fx.Option, overlays registry.Overlays) *Backend {
+func Start(t *testing.T, env registry.Env, prefix string, base fx.Option, overlays registry.Overlays) *Backend {
 	t.Helper()
 
 	t.Setenv("CODM_ENV", string(env))
 	t.Setenv("CODM_DATA_DIR", t.TempDir())
-	t.Setenv("CHANNEL_PORT", "0")
+	t.Setenv(config.EnvKey(prefix, "PORT"), "0")
 
 	var (
 		addr  *core.ServerAddr

@@ -18,9 +18,12 @@ import (
 // base is the gateway's fx composition BEFORE any environment overlay — the
 // SAME symbol main() and the wiring rail (main_test.go, spec AC-5) build
 // against, so there is exactly one source for "what this service is made of".
+// core.Module takes channel.ConfigService — the declared prefix/defaults
+// THIS service names itself with; core carries none of that vocabulary on
+// its own (spec T11 AC-1).
 var base = fx.Options(
 	// Framework infrastructure (core): DB, mediators, outbox dispatcher, HTTP router.
-	core.Module,
+	core.Module(channel.ConfigService),
 
 	// api-go-local wiring: auth middlewares, SSE controller, docs + SPA.
 	// Must come after core.Module so middleware order stays
@@ -41,12 +44,13 @@ func main() {
 
 	// registry.App needs cfg.Env to pick the overlay BEFORE the fx graph is
 	// built, so it cannot come from inside the graph — this pre-load learns it.
-	// core.Module ALSO provides *config.Config via fx.Provide(config.Load) (its
-	// own file, out of this task's scope fence): that provider is left
-	// untouched and is what the graph actually resolves at runtime. Reading
-	// the same env vars twice is pure (same input, same Config), so this costs
+	// core.Module(channel.ConfigService) ALSO provides *config.Config via its
+	// own fx.Provide (core/module.go, out of this task's scope fence): that
+	// provider is left untouched and is what the graph actually resolves at
+	// runtime. Reading the same env vars twice under the SAME
+	// channel.ConfigService is pure (same input, same Config), so this costs
 	// one extra parse at boot, not a second source of truth.
-	cfg, err := config.Load()
+	cfg, err := config.Load(channel.ConfigService)
 	if err != nil {
 		slog.Error("config load failed", "error", err)
 		os.Exit(1)

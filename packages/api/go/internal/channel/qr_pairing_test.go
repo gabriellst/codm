@@ -49,12 +49,20 @@ func scriptedOverlays(scenario mock.Scenario) registry.Overlays {
 // gatewayBase mirrors cmd/api/main.go's unexported `base` var — the same
 // three modules (core, api-go-local shared, channel), just reconstructed here
 // because `main.base` is package-private to `main` and this test cannot
-// import a main package.
+// import a main package. core.Module takes channel.ConfigService — the SAME
+// declared prefix/defaults main.go composes against (spec T11 AC-1).
 var gatewayBase = fx.Options(
-	core.Module,
+	core.Module(channel.ConfigService),
 	internalshared.Module,
 	channel.Module,
 )
+
+// gatewayConfigPrefix is the config prefix testenv.Start needs to pin the
+// SAME port env var config.Load will read — derived from channel.ConfigService
+// rather than a raw literal, so this test file and cmd/api/main.go can never
+// drift apart on what "this service's identity" means. Shared with
+// inbound_emission_test.go (same package, same dir).
+var gatewayConfigPrefix = channel.ConfigService.Prefix
 
 func TestQRPairing(t *testing.T) {
 	overlays := scriptedOverlays(mock.Scenario{
@@ -62,7 +70,7 @@ func TestQRPairing(t *testing.T) {
 		AutoPairAfter: 100 * time.Millisecond,
 	})
 
-	backend := testenv.Start(t, registry.EnvIntegration, gatewayBase, overlays)
+	backend := testenv.Start(t, registry.EnvIntegration, gatewayConfigPrefix, gatewayBase, overlays)
 	client := &http.Client{Timeout: 5 * time.Second}
 
 	// 1. Create the channel — real HTTP, real use case, real repository.

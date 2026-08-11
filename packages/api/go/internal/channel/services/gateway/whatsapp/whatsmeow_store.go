@@ -10,7 +10,6 @@ import (
 	waLog "go.mau.fi/whatsmeow/util/log"
 	"go.uber.org/fx"
 
-	"template/core-go/config"
 	"template/core-go/db/sqlite"
 
 	_ "modernc.org/sqlite"
@@ -42,8 +41,10 @@ type WhatsmeowStore struct {
 // lifecycle, so shutdown releases the pool.
 //
 // No data-dir appears here: the path comes from the already-constructed
-// SqliteStore, the single owner of the filesystem layout.
-func NewWhatsmeowStore(lc fx.Lifecycle, store *sqlite.SqliteStore, cfg *config.Config) (*WhatsmeowStore, error) {
+// SqliteStore, the single owner of the filesystem layout. cfg is THIS
+// adapter's own Config (config.go, colocated) — not core's *config.Config;
+// the log-level knob is this adapter's vocabulary, not core's (spec T11).
+func NewWhatsmeowStore(lc fx.Lifecycle, store *sqlite.SqliteStore, cfg *Config) (*WhatsmeowStore, error) {
 	dsn := "file:" + store.Path() +
 		"?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)"
 
@@ -60,7 +61,7 @@ func NewWhatsmeowStore(lc fx.Lifecycle, store *sqlite.SqliteStore, cfg *config.C
 	// the "sqlite" prefix) — that is what rewrites its $N queries to ?N and what
 	// makes Upgrade check the foreign_keys pragma.
 	container := sqlstore.NewWithDB(db, "sqlite",
-		waLog.Stdout("whatsmeow-db", string(cfg.WhatsmeowLogLevel), true))
+		waLog.Stdout("whatsmeow-db", string(cfg.LogLevel), true))
 	if err := container.Upgrade(context.Background()); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("whatsmeow store: upgrade schema: %w", err)

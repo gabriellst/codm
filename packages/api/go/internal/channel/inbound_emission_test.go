@@ -60,7 +60,7 @@ func TestInboundEmission(t *testing.T) {
 		},
 	})
 
-	backend := testenv.Start(t, registry.EnvIntegration, gatewayBase, overlays)
+	backend := testenv.Start(t, registry.EnvIntegration, gatewayConfigPrefix, gatewayBase, overlays)
 	client := &http.Client{Timeout: 5 * time.Second}
 
 	// 1. Create the channel — real HTTP, real use case, real repository.
