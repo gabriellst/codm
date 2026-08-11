@@ -236,7 +236,7 @@ updatePrice(newPrice: number): void {
 }
 
 // CORRECT - Repository calls incrementVersion() on save
-async save(entity: Product, transaction?: DrizzleClient): Promise<Product> {
+async save(entity: Product, transaction?: DrizzleTransaction): Promise<Product> {
   entity.incrementVersion()  // Version is incremented when persisting
   // ... persistence logic
 }

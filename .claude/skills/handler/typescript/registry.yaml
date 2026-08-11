@@ -281,23 +281,23 @@ registry:
         }
 
     - id: bp-03
-      name: "Handler typing tx as DrizzleClient instead of Transaction"
+      name: "Handler typing tx as DrizzleTransaction instead of Transaction"
       severity: moderate
       mechanical: true
       detect:
-        - 'tx\??:\s*DrizzleClient'
+        - 'tx\??:\s*DrizzleTransaction'
       wrong: |
         // Handler names the infra type — Drizzle leaks into the write-side flow
-        import { DrizzleClient } from '@codm/core-typescript'
-        protected async handle(event: this['input'], tx?: DrizzleClient): Promise<void> {
+        import { DrizzleTransaction } from '@codm/core-typescript'
+        protected async handle(event: this['input'], tx?: DrizzleTransaction): Promise<void> {
           await this.withTransaction(tx, async tx => {
-            await this.applyCancelled(event, tx) // private method also typed DrizzleClient
+            await this.applyCancelled(event, tx) // private method also typed DrizzleTransaction
           })
         }
-        private async applyCancelled(event: this['input'], tx: DrizzleClient): Promise<void> { ... }
+        private async applyCancelled(event: this['input'], tx: DrizzleTransaction): Promise<void> { ... }
       right: |
         // Handler speaks Transaction (the EventHandler base contract); repos accept it,
-        // and only the Drizzle repo impl narrows to DrizzleClient.
+        // and only the Drizzle repo impl narrows to DrizzleTransaction.
         import type { Transaction } from '@codm/core-typescript'
         protected async handle(event: this['input'], tx?: Transaction): Promise<void> {
           await this.withTransaction(tx, async tx => {

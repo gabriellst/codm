@@ -22,12 +22,12 @@ registry:
       wrong: "Creating CreatePatientQuery use case in the patient context for listing patients"
       mechanical: false
     - id: bp-04
-      name: "DrizzleClient injected in controller instead of use case"
-      rule: "Controllers delegate to use cases (Handlers). Only the use case has direct DrizzleClient access — controllers never hold DrizzleClient."
-      wrong: "UI controller with constructor(private db: DrizzleClient) doing queries directly"
+      name: "DrizzleDatabaseDriver injected in controller instead of use case"
+      rule: "Controllers delegate to use cases (Handlers). Only the use case has direct DrizzleDatabaseDriver access — controllers never hold DrizzleDatabaseDriver."
+      wrong: "UI controller with constructor(private driver: DrizzleDatabaseDriver) doing queries directly"
       mechanical: true
       detect:
-        - 'class\s+\w+Controller[\s\S]{0,800}DrizzleClient'
+        - 'class\s+\w+Controller[\s\S]{0,800}DrizzleDatabaseDriver'
     - id: bp-05
       name: "Filtering data in memory after fetching from database"
       rule: "All filtering must happen in SQL via Drizzle where/ilike/eq — never fetch all rows then .filter() in JS"
@@ -64,12 +64,12 @@ registry:
 
     - id: bp-10
       name: "Faker/stub data in a BFF query whose real read source already exists"
-      rule: "A query use case reads REAL tables via Drizzle (this.db.select()...). faker/hardcoded fixtures are sanctioned ONLY while the underlying source genuinely does not exist yet — and then the file must carry a `// TODO(stub): unblocked by <controller/table>` marker so the stub is visibly temporary (and skipped by this detect). If the table/read model exists (orders, products, costs…), query it — a stub of an existing source also erases the NOT_FOUND path (bp-09 follows for free). Existing unmarked stubs are baselined debt, not precedent to imitate."
+      rule: "A query use case reads REAL tables via Drizzle (this.driver.db.select()...). faker/hardcoded fixtures are sanctioned ONLY while the underlying source genuinely does not exist yet — and then the file must carry a `// TODO(stub): unblocked by <controller/table>` marker so the stub is visibly temporary (and skipped by this detect). If the table/read model exists (orders, products, costs…), query it — a stub of an existing source also erases the NOT_FOUND path (bp-09 follows for free). Existing unmarked stubs are baselined debt, not precedent to imitate."
       wrong: |
         import { faker } from '../../shared/testing/mock'   // orders table EXISTS — read it
         const order = { id: input.orderId, total: faker.number.int() }
       right: |
-        const [row] = await this.db.select({ ... }).from(orders).where(eq(orders.id, input.orderId))
+        const [row] = await this.driver.db.select({ ... }).from(orders).where(eq(orders.id, input.orderId))
         if (!row) throw new BaseError<BaseApplicationErrors>('NOT_FOUND')
       mechanical: true
       detect:
@@ -87,11 +87,11 @@ registry:
     - id: QRY-02
       name: "Direct Drizzle access in use case"
       when: always
-      rule: "Use case (Handler) has constructor(private db: DrizzleClient) — no repository abstraction. Controller delegates to the use case, never holds DrizzleClient directly."
+      rule: "Use case (Handler) has constructor(private driver: DrizzleDatabaseDriver) — no repository abstraction. Reads go through `this.driver.db`. Controller delegates to the use case, never holds DrizzleDatabaseDriver directly."
       applies_to: "packages/api/typescript/src/ui/usecases/**/*.ts"
       note: >
         This pattern applies ONLY to use case files (packages/api/typescript/src/ui/usecases/).
-        Query controllers delegate to use cases and do NOT have DrizzleClient —
+        Query controllers delegate to use cases and do NOT have DrizzleDatabaseDriver —
         they follow the standard controller pattern (CTRL-03..CTRL-05).
         When reviewing a controller file, mark this as N/A.
     - id: QRY-03
@@ -113,11 +113,11 @@ registry:
 
     # Patterns extracted from codebase
     - id: QRY-P01
-      name: "Handler class with DrizzleClient"
+      name: "Handler class with DrizzleDatabaseDriver"
       when: always
-      rule: "@injectable() class extends Handler<InputSchema, OutputSchema> with readonly name, inputSchema, outputSchema, constructor(private db: DrizzleClient)"
+      rule: "@injectable() class extends Handler<InputSchema, OutputSchema> with readonly name, inputSchema, outputSchema, constructor(private driver: DrizzleDatabaseDriver)"
       wrong: "Using Controller base class for use cases or missing @injectable()"
-      note: "Reads extend Handler by DESIGN — read-vs-write is decided by path (ui/usecases), not base class. usecase bp-01 bans Get*/List* extends Handler only in WRITE contexts; here it is the canon, and direct DrizzleClient injection is the sanctioned BFF exemption (cc-bp-20)."
+      note: "Reads extend Handler by DESIGN — read-vs-write is decided by path (ui/usecases), not base class. usecase bp-01 bans Get*/List* extends Handler only in WRITE contexts; here it is the canon, and direct DrizzleDatabaseDriver injection is the sanctioned BFF exemption (cc-bp-20)."
       refs: ["packages/api/typescript/src/ui/usecases/appointments/ListAppointments.ts", "packages/api/typescript/src/ui/usecases/patients/ListPatients.ts"]
     - id: QRY-P02
       name: "Multi-table leftJoin chain"
@@ -145,7 +145,7 @@ registry:
     - id: QRY-P06
       name: "Subquery with .as() for derived data"
       when: "query needs aggregated data per row (e.g., last appointment date)"
-      rule: "const sub = this.db.select({...}).from(...).groupBy(...).as('alias'); then .leftJoin(sub, eq(...))"
+      rule: "const sub = this.driver.db.select({...}).from(...).groupBy(...).as('alias'); then .leftJoin(sub, eq(...))"
       refs: ["packages/api/typescript/src/ui/usecases/patients/ListPatients.ts", "packages/api/typescript/src/ui/usecases/patients/ListPatients.ts"]
     - id: QRY-P07
       name: "SQL aggregations with FILTER"
@@ -172,7 +172,7 @@ registry:
     - id: QRY-P11
       name: "Raw SQL with CTE for complex queries"
       when: "query requires UNION, recursive CTE, or Drizzle builder is insufficient"
-      rule: "this.db.execute<T>(sql`WITH cte AS (...) SELECT ...`) with explicit result type"
+      rule: "this.driver.db.execute<T>(sql`WITH cte AS (...) SELECT ...`) with explicit result type"
       refs: ["packages/api/typescript/src/ui/usecases/collaborators/ListCollaborators.ts"]
     - id: QRY-P12
       name: "Dashboard composite endpoint"
@@ -217,7 +217,7 @@ registry:
       rule: |
         // Base conditions (no status filter) for aggregation
         const baseConditions: SQL[] = [eq(t.unitId, unitId), gte(t.startDate, startDate), lte(t.startDate, endDate)]
-        const countRows = await this.db
+        const countRows = await this.driver.db
           .select({ status: t.status, count: sql<number>`count(*)`.mapWith(Number) })
           .from(t)
           .where(and(...baseConditions)!)
@@ -266,7 +266,7 @@ registry:
   snippet:
     skeleton: |
       import { injectable } from 'tsyringe-neo'
-      import { Handler, DrizzleClient, z } from '@codm/core-typescript'
+      import { Handler, DrizzleDatabaseDriver, z } from '@codm/core-typescript'
 
       export const {{Name}}InputSchema = z.object({
       	// Define input (e.g., userId, filters)
@@ -282,20 +282,20 @@ registry:
       	readonly inputSchema = {{Name}}InputSchema
       	readonly outputSchema = {{Name}}OutputSchema
 
-      	constructor(private db: DrizzleClient) {
+      	constructor(private driver: DrizzleDatabaseDriver) {
       		super()
       	}
 
       	protected async handle(input: this['input']): Promise<this['output']> {
       		// Direct Drizzle access — no repository abstraction
-      		// const rows = await this.db.select().from(table).where(eq(table.id, input.id))
+      		// const rows = await this.driver.db.select().from(table).where(eq(table.id, input.id))
       		return {} as this['output']
       	}
       }
     exemplar: |
       // --- Use case (packages/api/typescript/src/<ctx>/usecases/ListX.ts) ---
       import { injectable } from 'tsyringe-neo'
-      import { Handler, z, DrizzleClient } from '@codm/core-typescript'
+      import { Handler, z, DrizzleDatabaseDriver } from '@codm/core-typescript'
       // import { xTable } from '@codm/contracts/db'  // real Drizzle table from contracts
 
       const ListXInputSchema = z.object({
@@ -310,15 +310,15 @@ registry:
         readonly name = 'list_x' as const
         readonly inputSchema = ListXInputSchema
         readonly outputSchema = ListXOutputSchema
-        constructor(private db: DrizzleClient) { super() }
+        constructor(private driver: DrizzleDatabaseDriver) { super() }
         protected async handle(input: this['input']): Promise<this['output']> {
           // Replace xTable with the imported Drizzle table from '@codm/contracts/db'
-          const rows = await this.db.select().from(xTable).limit(input.query.limit)
+          const rows = await this.driver.db.select().from(xTable).limit(input.query.limit)
           return this.outputSchema.parse({ items: rows, total: rows.length, totalPages: 1 })
         }
       }
 
       // --- Controller (packages/api/typescript/src/<ctx>/controllers/ListXController.ts) ---
-      // Controller delegates to the use case — no DrizzleClient here
+      // Controller delegates to the use case — no DrizzleDatabaseDriver here
 
   scaffold: "bun cli query <name>"

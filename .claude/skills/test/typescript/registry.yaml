@@ -20,7 +20,7 @@ registry:
     - id: TST-03
       name: "Integration TestBed for use case, handler, and repository tests"
       when: "testing a use case, handler, or repository that extends Handler or depends on container-bound infrastructure"
-      reason: "Integration mode uses PGlite with real Drizzle repositories, enforcing FK constraints and real persistence. Given helpers set up prerequisite data via repos directly."
+      reason: "Integration mode uses LibsqlDriver's temp-file SQLite database with real Drizzle repositories, enforcing FK constraints and real persistence. Given helpers set up prerequisite data via repos directly."
       rule: |
         const testContainer = container.createChildContainer()
         const testBed = await TestBed.create('integration', {
@@ -33,7 +33,7 @@ registry:
       when: "test uses TestBed"
       reason: >
         TestBed.create(mode) already calls registerAll(ALL_REGISTRIES[mode]) — so EVERY infra
-        binding (DomainEventRepository, UnitOfWorkFactory, InternalMediator, ExternalMediator,
+        binding (DomainEventRepository, DrizzleDatabaseDriver, InternalMediator, ExternalMediator,
         OutboxDispatcher, LoggingService, the SDK Client, all repos/services) is already
         registered. It then OVERRIDES the mediators with a SpyMediator (both modes) and, in
         mock mode, DomainEventRepository with the outbox-aware mock. So tests only ever RESOLVE;
@@ -43,14 +43,14 @@ registry:
       wrong: "const useCase = new UpdatePatient(repo)  // or testContainer.registerInstance(DomainEventRepository as any, ...)"
 
     - id: TST-16
-      name: "Assert events via testBed.spy or DomainEventRepository.findByType — never DrizzleClient"
+      name: "Assert events via testBed.spy or DomainEventRepository.findByType — never DrizzleDatabaseDriver"
       when: "a test asserts that domain or integration events were emitted/persisted"
       reason: >
         Two channels, both Drizzle-free: (1) testBed.spy/externalSpy capture events PUBLISHED via
         the mediator (TestBed wraps the mediators in a SpyMediator over the registry's plain
         EventEmitter2Mediator — re-registering a mediator silently removes the spy). (2) Domain
         events PERSISTED to the events table (saved via the outbox) are read back, typed, with
-        DomainEventRepository.findByType(EventClass). NEVER resolve DrizzleClient to hand-query
+        DomainEventRepository.findByType(EventClass). NEVER resolve DrizzleDatabaseDriver to hand-query
         the events table — if a repo lacks a needed read, add the method to the repo (see bp-15).
       rule: |
         // published (mediator) — internal/domain + integration:
@@ -99,7 +99,7 @@ registry:
     - id: TST-09
       name: "Repository integration tests cover save/findById/delete + queries"
       when: "creating or modifying a Drizzle repository"
-      reason: "Every DrizzleXRepository must have a colocated integration test that validates persistence, retrieval, deletion, and all query methods against real PGlite."
+      reason: "Every DrizzleXRepository must have a colocated integration test that validates persistence, retrieval, deletion, and all query methods against a real LibsqlDriver-backed SQLite database."
       rule: |
         // DrizzleXRepository.test.ts — colocated next to the repository
         import { TestBed, givenUser } from '@test/support'
@@ -124,15 +124,15 @@ registry:
         })
 
     - id: TST-10
-      name: "PGlite integration fidelity caveat"
-      when: "writing PGlite integration tests"
-      reason: "PGliteDriver uses a PGlite-specific UnitOfWork that bypasses real transaction nesting due single-connection constraints."
+      name: "LibsqlDriver integration fidelity caveat"
+      when: "writing integration tests against LibsqlDriver"
+      reason: "The write seam drives BEGIN IMMEDIATE manually on a dedicated write connection (see DrizzleUnitOfWork.ts docstring — measured connection-leak/pragma-reset bugs in @libsql/client's native transaction() ruled it out), which is not identical to production's transaction nesting/locking semantics."
       rule: "Use integration mode to validate repository mappings, migrations, and outbox persistence. Do not present it as full production transaction parity."
 
     - id: TST-11
       name: "Lifecycle: beforeAll/beforeEach(reset)/afterAll(destroy)"
       when: always
-      reason: "PGlite boot is expensive. Create TestBed once per suite, reset DB between tests, close on teardown."
+      reason: "Booting the integration-mode driver (migrations included) is expensive. Create TestBed once per suite, reset DB between tests, close on teardown."
       rule: |
         // Standard lifecycle for ALL TestBed-backed tests (repos, use cases, handlers, flows)
         beforeAll(async () => {
@@ -156,7 +156,7 @@ registry:
     - id: TST-13
       name: "Given helpers for test data setup"
       when: "test needs prerequisite entities (users, clinics, patients, etc.)"
-      reason: "Given helpers create entities via repos directly (never use cases), enforcing FK constraints in PGlite. They compose into higher-level builders (e.g., givenClinicWithOwner)."
+      reason: "Given helpers create entities via repos directly (never use cases), enforcing FK constraints in the LibsqlDriver-backed test database. They compose into higher-level builders (e.g., givenClinicWithOwner)."
       rule: |
         // Import from @test/support
         import { TestBed, givenClinicWithOwner, givenPatient } from '@test/support'
@@ -171,7 +171,7 @@ registry:
     - id: TST-14
       name: "Use case tests use given helpers + integration mode"
       when: "writing a use case test"
-      reason: "Integration mode enforces FK constraints via PGlite. Given helpers set up prerequisite entities that satisfy those constraints without calling use cases."
+      reason: "Integration mode enforces FK constraints via the LibsqlDriver-backed test database. Given helpers set up prerequisite entities that satisfy those constraints without calling use cases."
       rule: |
         // Given helpers replace inline entity creation and mock seeding
         const { unit } = await givenClinicWithOwner(testBed)
@@ -325,11 +325,11 @@ registry:
       right: "After a successful flow, assert persisted state and the relevant internal/external event activity."
 
     - id: bp-05
-      name: "Overclaiming PGlite integration fidelity"
+      name: "Overclaiming LibsqlDriver integration fidelity"
       severity: high
       mechanical: false
-      wrong: "Using PGlite integration tests as proof of exact production transaction or locking semantics."
-      right: "Use them as embedded Postgres/Drizzle repository tests and call out the PGlite transaction limitations."
+      wrong: "Using integration-mode tests as proof of exact production transaction or locking semantics."
+      right: "Use them as embedded SQLite/Drizzle repository tests and call out the LibsqlDriver write-seam transaction limitations (TST-10)."
 
     - id: bp-06
       name: "Assuming integration reset truncates the database"
@@ -398,7 +398,7 @@ registry:
         → handler delivery. It also forces `as any` casts on the tokens.
       wrong: |
         testContainer.registerInstance(DomainEventRepository as any, new MockDomainEventRepository())
-        testContainer.registerInstance(UnitOfWorkFactory as any, new MockUnitOfWorkFactory())
+        testContainer.registerInstance(DrizzleDatabaseDriver as any, someFakeDriver)
         testContainer.registerInstance(InternalMediator as any, new EventEmitter2Mediator())
       right: |
         // create once; everything is already registered
@@ -414,11 +414,11 @@ registry:
       detect:
         - 'import\s*\{[^}]*\b(Mock\w+|EventEmitter2Mediator|OutboxDispatcher)\b[^}]*\}\s*from\s*[''"]@codm/core-typescript[''"]'
       reason: >
-        The Mock* repositories, MockUnitOfWorkFactory, EventEmitter2Mediator, and OutboxDispatcher
-        in @codm/core-typescript exist for the REGISTRIES to wire per mode — never for tests
-        to import and instantiate. A test importing them is about to bypass TestBed.
+        The Mock* repositories, EventEmitter2Mediator, and OutboxDispatcher in @codm/core-typescript
+        exist for the REGISTRIES (or TestBed itself, e.g. MockOutboxDispatcher) to wire per mode —
+        never for tests to import and instantiate. A test importing them is about to bypass TestBed.
       wrong: |
-        import { MockUnitOfWorkFactory, EventEmitter2Mediator, MockDomainEventRepository } from '@codm/core-typescript'
+        import { MockOutboxDispatcher, EventEmitter2Mediator, MockDomainEventRepository } from '@codm/core-typescript'
       right: |
         import { TestBed } from '@test/support'   // TestBed owns infra wiring; tests resolve, never construct it
 
@@ -433,35 +433,35 @@ registry:
         testBed.resolve takes a class token directly — no cast. A `{} as unknown as XRepo` stub
         means a given/mock helper is missing; build the helper instead of casting a partial object.
       wrong: |
-        const db = testBed.resolve(DrizzleClient as any) as DrizzleClient
+        const driver = testBed.resolve(DrizzleDatabaseDriver as any) as DrizzleDatabaseDriver
         const handshaker = {} as unknown as ShopifyHandshaker   // fake stub
       right: |
-        const db = testBed.resolve(DrizzleClient)               // no cast
+        const driver = testBed.resolve(DrizzleDatabaseDriver)   // no cast
         const { store } = await givenStoreWithOwner(testBed)    // real state via a given helper
         // For an error-path stub, spyOn the resolved instance — don't cast a fake:
         // spyOn(testBed.resolve(StoreRepository), 'findById').mockResolvedValue(null)
         // To swap a collaborator the registry can't feed (e.g. a Mock query service fed test
         // data), use the sanctioned escape hatch — typed, no cast, after create():
         // testBed.override(ProductCostQueryService, costQuery)
-        // NEVER override infra TestBed owns (DomainEventRepository / mediators / UnitOfWorkFactory).
+        // NEVER override infra TestBed owns (DomainEventRepository / DrizzleDatabaseDriver / mediators / OutboxDispatcher).
 
     - id: bp-15
-      name: "Resolving DrizzleClient to hand-query a table in a test"
+      name: "Resolving DrizzleDatabaseDriver to hand-query a table in a test"
       severity: critical
       mechanical: true
       detect:
-        - 'testBed\.resolve\(\s*DrizzleClient'
+        - 'testBed\.resolve\(\s*DrizzleDatabaseDriver'
         - '\.select\(\)\.from\('
       detect_skip: 'describe\(\s*[''"]Drizzle\w+(Repository|QueryService)'
       reason: >
-        A test resolving DrizzleClient and doing `db.select().from(<table>)` is a symptom that
-        the repository it should use lacks a read method. Hand-querying also forces `as any` /
-        JSONB-`unknown` casts at every assertion. EXCEPTION: the Drizzle<X>Repository.test.ts /
-        Drizzle<X>QueryService.test.ts files legitimately resolve DrizzleClient — they ARE the
+        A test resolving DrizzleDatabaseDriver and doing `driver.db.select().from(<table>)` is a
+        symptom that the repository it should use lacks a read method. Hand-querying also forces
+        `as any` / JSONB-`unknown` casts at every assertion. EXCEPTION: the Drizzle<X>Repository.test.ts /
+        Drizzle<X>QueryService.test.ts files legitimately resolve DrizzleDatabaseDriver — they ARE the
         infra-layer tests of that Drizzle impl.
       wrong: |
-        const db = testBed.resolve(DrizzleClient)
-        const rows = await db.select().from(events).where(eq(events.name, StoreMemberRoleChangedEvent.name))
+        const driver = testBed.resolve(DrizzleDatabaseDriver)
+        const rows = await driver.db.select().from(events).where(eq(events.name, StoreMemberRoleChangedEvent.name))
         expect((rows[0] as any).payload.newRole).toBe(Role.ADMIN)
       right: |
         // read domain events via the repository — typed, no Drizzle, no cast
@@ -469,7 +469,7 @@ registry:
         const evs = await events.findByType(StoreMemberRoleChangedEvent)
         expect(evs[0]!.payload.newRole).toBe(Role.ADMIN)
         // missing a read your test needs? ADD it to the repo port + Drizzle + Mock impls,
-        // then call it — never reach past the repo into DrizzleClient.
+        // then call it — never reach past the repo into DrizzleDatabaseDriver.
 
     - id: bp-16
       name: "Using givenEvent / seeding shared.events to test in-process handlers"

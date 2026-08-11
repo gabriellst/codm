@@ -296,13 +296,13 @@ registry:
       mechanical: false
 
     - id: bp-08
-      name: "Non-auth middleware injecting DrizzleClient (infrastructure leak)"
+      name: "Non-auth middleware injecting DrizzleDatabaseDriver (infrastructure leak)"
       severity: critical
-      rule: "Middlewares inject repository PORTS (or services), never DrizzleClient — the only sanctioned carve-out is the auth-bootstrap middleware (AuthAccountMiddleware: it resolves the session/account row BEFORE any context's repositories are guaranteed wired, per the middleware SKILL canonical snippet). Every other middleware that needs data goes through a repository port. See cc-bp-20 and import-direction R6."
+      rule: "Middlewares inject repository PORTS (or services), never DrizzleDatabaseDriver — the only sanctioned carve-out is the auth-bootstrap middleware (AuthAccountMiddleware: it resolves the session/account row BEFORE any context's repositories are guaranteed wired, per the middleware SKILL canonical snippet). Every other middleware that needs data goes through a repository port. See cc-bp-20 and import-direction R6."
       wrong: |
         @singleton()
         export class TenancyMiddleware extends Middleware {
-          constructor(private db: DrizzleClient) { super() }   // infra leaked above repositories
+          constructor(private driver: DrizzleDatabaseDriver) { super() }   // infra leaked above repositories
         }
       right: |
         @singleton()

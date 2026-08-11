@@ -200,7 +200,7 @@ registry:
     - id: UC-P15
       name: "Integration test with given helpers"
       when: always
-      reason: "Use case tests use integration mode (PGlite) with given helpers for FK-safe test data setup. Given helpers use repos directly, never use cases."
+      reason: "Use case tests use integration mode (an in-process, temp-file SQLite database via LibsqlDriver) with given helpers for FK-safe test data setup. Given helpers use repos directly, never use cases."
       rule: |
         // Colocated: packages/api/typescript/src/<context>/usecases/<name>/<Name>.test.ts
         // Uses TestBed.create('integration', ...) with beforeAll/beforeEach(reset)/afterAll(destroy)
@@ -445,22 +445,22 @@ registry:
         status: z.enum(OrderStatus)
 
     - id: bp-12
-      name: "Command use case typing tx as DrizzleClient instead of Transaction"
+      name: "Command use case typing tx as DrizzleTransaction instead of Transaction"
       severity: moderate
       mechanical: true
       detect:
-        - 'tx\?:\s*DrizzleClient\b'
-      detect_skip: 'db\??:\s*DrizzleClient\b'
+        - 'tx\?:\s*DrizzleTransaction\b'
+      detect_skip: 'driver\??:\s*DrizzleDatabaseDriver\b'
       wrong: |
         // Command use case names the infra type — orchestration shouldn't know Drizzle
-        import { DrizzleClient } from '@codm/core-typescript'
-        protected async handle(input: this['input'], tx?: DrizzleClient): Promise<this['output']> {
+        import { DrizzleTransaction } from '@codm/core-typescript'
+        protected async handle(input: this['input'], tx?: DrizzleTransaction): Promise<this['output']> {
           await this.withTransaction(tx, async tx => {
             await this.orders.save(order, tx)
           })
         }
       right: |
-        // Command use case speaks Transaction; repos accept it, only Drizzle repos cast.
+        // Command use case speaks Transaction; repos accept it, only Drizzle repos narrow.
         import type { Transaction } from '@codm/core-typescript'
         protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
           await this.withTransaction(tx, async tx => {
@@ -468,5 +468,6 @@ registry:
           })
         }
         // EXEMPT: query use cases (BFF, read-side) query Drizzle directly via an injected
-        // `db: DrizzleClient` — they have no port/impl split, so DrizzleClient is fine there.
+        // `driver: DrizzleDatabaseDriver` (reads via `driver.db`) — they have no port/impl split,
+        // so DrizzleDatabaseDriver is fine there.
 

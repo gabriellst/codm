@@ -228,7 +228,7 @@ The `Handler` base class provides three lazy-resolved infrastructure getters. **
 |-----------------|------|----------|
 | `this.internalMediator` | `Mediator` | Publishing domain events within the same context |
 | `this.domainEventRepository` | `DomainEventRepository` | Persisting outbox events |
-| `this.unitOfWorkFactory` | `UnitOfWorkFactory` | Creating manual transactions (rare) |
+| `this.unitOfWorkFactory` | `DrizzleUnitOfWorkFactory` | Creating manual transactions (rare) |
 | `this.withTransaction(fn)` | `(fn: (tx) => Promise<T>) => Promise<T>` | Wrapping handler logic in a transaction via `unitOfWorkFactory` |
 
 ```typescript

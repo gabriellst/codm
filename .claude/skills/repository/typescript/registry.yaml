@@ -26,9 +26,9 @@ registry:
       when: always
       rule: "@injectable() class DrizzleXRepository extends XRepository"
     - id: REPOI-02
-      name: "DrizzleClient injection"
+      name: "DrizzleDatabaseDriver injection"
       when: always
-      rule: "constructor(private db: DrizzleClient) { super() }"
+      rule: "constructor(private driver: DrizzleDatabaseDriver) { super() } — the driver, not a raw db client, is what's injected; reads go through `this.driver.db`, writes through `this.driver.transaction(...)`"
     - id: REPOI-03
       name: "toDomain method"
       when: always
@@ -47,7 +47,7 @@ registry:
     - id: REPOI-06
       name: "Transaction parameter"
       when: always
-      rule: "PORT/Mock: tx?: Transaction (from @codm/core-typescript). Drizzle impl: tx?: DrizzleClient (sanctioned narrowing override). Body: const dbClient = tx ?? this.db"
+      rule: "PORT/Mock: tx?: Transaction (from @codm/core-typescript). Drizzle impl: tx?: DrizzleTransaction (sanctioned narrowing override). Body: const dbClient = tx ?? this.driver.db"
 
     # ── Conditional patterns ──
     - id: REPO-C03
@@ -105,12 +105,12 @@ registry:
       when: "upsert needs to set multiple columns on conflict"
       reason: "Using sql`excluded.column_name` references the row being inserted, which avoids repeating data values and handles snake_case column names correctly."
       rule: |
-        async save(entity: Entity, tx?: DrizzleClient): Promise<Entity> {
+        async save(entity: Entity, tx?: DrizzleTransaction): Promise<Entity> {
           entity.incrementVersion()
 
           const result = await tryCatchAsync(async () => {
             const data = this.toPersistence(entity)
-            const dbClient = tx ?? this.db
+            const dbClient = tx ?? this.driver.db
 
             await dbClient
               .insert(table)
@@ -138,10 +138,10 @@ registry:
       when: "upsert needs to set columns on conflict using persistence data"
       reason: "Alternative to sql`excluded.*` — uses the toPersistence() data object directly. Works well when column names match camelCase JS property names."
       rule: |
-        async save(entity: Entity, tx?: DrizzleClient): Promise<Entity> {
+        async save(entity: Entity, tx?: DrizzleTransaction): Promise<Entity> {
           entity.incrementVersion()
 
-          const dbClient = tx ?? this.db
+          const dbClient = tx ?? this.driver.db
           const data = this.toPersistence(entity)
 
           await tryCatchAsync(async () => {
@@ -185,9 +185,9 @@ registry:
       when: always
       reason: "Delete uses the same transaction-or-default pattern as save and throws on failure."
       rule: |
-        async delete(id: string, tx?: DrizzleClient): Promise<void> {
+        async delete(id: string, tx?: DrizzleTransaction): Promise<void> {
           const result = await tryCatchAsync(async () => {
-            const dbClient = tx ?? this.db
+            const dbClient = tx ?? this.driver.db
             await dbClient.delete(table).where(eq(table.id, id))
           })
 
@@ -282,9 +282,9 @@ registry:
       when: "need to load multiple entities by a list of IDs"
       reason: "Batch loading avoids N+1 queries. Uses Drizzle's inArray operator and guards against empty array (which would produce invalid SQL)."
       rule: |
-        async findByIds(ids: string[], tx?: DrizzleClient): Promise<Entity[]> {
+        async findByIds(ids: string[], tx?: DrizzleTransaction): Promise<Entity[]> {
           if (ids.length === 0) return []
-          const dbClient = tx ?? this.db
+          const dbClient = tx ?? this.driver.db
 
           const result = await tryCatchAsync(async () => {
             const rows = await dbClient
@@ -304,8 +304,8 @@ registry:
       when: "query requires multiple equality conditions"
       reason: "Compound lookups (e.g., findByUnitAndDoctor) combine multiple eq() calls with and(). Each Id param extracts .value for Drizzle queries."
       rule: |
-        async findByUnitAndDoctor(unitId: Id, doctorId: Id, tx?: DrizzleClient): Promise<Entity | undefined> {
-          const dbClient = tx ?? this.db
+        async findByUnitAndDoctor(unitId: Id, doctorId: Id, tx?: DrizzleTransaction): Promise<Entity | undefined> {
+          const dbClient = tx ?? this.driver.db
 
           const result = await tryCatchAsync(async () => {
             const rows = await dbClient
@@ -330,9 +330,9 @@ registry:
           doctorId: Id,
           startDate: Date,
           endDate: Date,
-          tx?: DrizzleClient,
+          tx?: DrizzleTransaction,
         ): Promise<Entity[]> {
-          const dbClient = tx ?? this.db
+          const dbClient = tx ?? this.driver.db
 
           const result = await tryCatchAsync(async () => {
             const rows = await dbClient
@@ -406,7 +406,7 @@ registry:
     - id: REPO-P20
       name: "Integration test for every Drizzle repository"
       when: always
-      reason: "Every DrizzleXRepository must have a colocated integration test (DrizzleXRepository.test.ts) that validates save/findById/delete plus all query methods against real PGlite."
+      reason: "Every DrizzleXRepository must have a colocated integration test (DrizzleXRepository.test.ts) that validates save/findById/delete plus all query methods against a real in-process, temp-file SQLite database (LibsqlDriver)."
       rule: |
         // Colocated: packages/api/typescript/src/<context>/repositories/XRepository/DrizzleXRepository.test.ts
         // Uses TestBed.create('integration', ...) with beforeAll/beforeEach(reset)/afterAll(destroy)
@@ -511,7 +511,7 @@ registry:
       wrong: |
         // Repository decides business logic — should be in entity
         async deactivateTool(id: Id): Promise<void> {
-          await this.db.update(toolTable)
+          await this.driver.db.update(toolTable)
             .set({ status: 'INACTIVE', deactivatedAt: new Date() })
             .where(eq(toolTable.id, id.value))
         }
@@ -567,10 +567,10 @@ registry:
         // Injected via constructor — supports testing and transactions
         @injectable()
         export class DrizzleCustomerRepository extends CustomerRepository {
-          constructor(private db: DrizzleClient) { super() }
+          constructor(private driver: DrizzleDatabaseDriver) { super() }
 
           async findById(id: Id): Promise<Customer | undefined> {
-            const result = await this.db.select()...
+            const result = await this.driver.db.select()...
           }
         }
 
@@ -601,7 +601,7 @@ registry:
       wrong: |
         // Repo queries junction table for membership check
         async isToolAssignedToAgent(toolId: string, agentId: string): Promise<boolean> {
-          const [row] = await this.db.select().from(agentTools)
+          const [row] = await this.driver.db.select().from(agentTools)
             .where(and(eq(agentTools.toolId, toolId), eq(agentTools.agentId, agentId)))
           return !!row
         }
@@ -646,19 +646,19 @@ registry:
         { token: DomainEventRepository, mock: null, real: DrizzleDomainEventRepository },
 
     - id: bp-11
-      name: "Repository port (or Mock) typing tx as DrizzleClient — leaks infra into the contract"
+      name: "Repository port (or Mock) typing tx as DrizzleTransaction — leaks infra into the contract"
       severity: critical
       mechanical: true
       detect:
-        - 'abstract\s+\w+\s*\([^)]*:\s*DrizzleClient'
-        - '_tx\??:\s*DrizzleClient'
+        - 'abstract\s+\w+\s*\([^)]*:\s*DrizzleTransaction'
+        - '_tx\??:\s*DrizzleTransaction'
       wrong: |
         // PORT names a Drizzle type — the abstraction now depends on infra
         export abstract class SubscriptionRepository extends Repository<Subscription> {
-          abstract findByPlatformAndExternalId(platform: BillingPlatform, externalId: string, tx?: DrizzleClient): Promise<Subscription | undefined>
+          abstract findByPlatformAndExternalId(platform: BillingPlatform, externalId: string, tx?: DrizzleTransaction): Promise<Subscription | undefined>
         }
         // Mock also leaks it
-        async findByPlatformAndExternalId(p, e, _tx?: DrizzleClient) { ... }
+        async findByPlatformAndExternalId(p, e, _tx?: DrizzleTransaction) { ... }
       right: |
         // PORT speaks Transaction (persistence-agnostic handle from the UnitOfWork)
         import type { Transaction } from '@codm/core-typescript'
@@ -668,14 +668,14 @@ registry:
         // Mock: Transaction, ignored, never casts
         async findByPlatformAndExternalId(p, e, _tx?: Transaction) { ... }
 
-        // ONLY the Drizzle impl is allowed to name DrizzleClient: declare the param
-        // as DrizzleClient directly (the narrowing override of the port's Transaction
+        // ONLY the Drizzle impl is allowed to name DrizzleTransaction: declare the param
+        // as DrizzleTransaction directly (the narrowing override of the port's Transaction
         // is the sanctioned "cast" — no helper, no `as` needed) and use it directly.
-        async findByPlatformAndExternalId(p, e, tx?: DrizzleClient) {
-          const dbc = tx ?? this.db
+        async findByPlatformAndExternalId(p, e, tx?: DrizzleTransaction) {
+          const dbc = tx ?? this.driver.db
           // ...
         }
-        // (Query/BFF use cases that query Drizzle directly may also use DrizzleClient.)
+        // (Query/BFF use cases that query Drizzle directly inject DrizzleDatabaseDriver and read via `driver.db` — see the /query skill.)
 
     - id: bp-12
       name: "Repositório de tabela-filha sem entidade correspondente, sem justificativa de lifecycle/escala no agregado PAI"
@@ -796,19 +796,19 @@ registry:
       drizzle: |
         import { injectable } from 'tsyringe-neo'
         import { eq } from 'drizzle-orm'
-        import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
+        import { DrizzleDatabaseDriver, DrizzleTransaction, tryCatchAsync } from '@codm/core-typescript'
         import { {{Name}}Repository } from './{{Name}}Repository'
         import { {{Name}} } from '@{{contextName}}/entities'
         // import { {{camelName}} } from '@codm/contracts/db'
 
         @injectable()
         export class Drizzle{{Name}}Repository extends {{Name}}Repository {
-        	constructor(private db: DrizzleClient) {
+        	constructor(private driver: DrizzleDatabaseDriver) {
         		super()
         	}
 
-        	async findById(id: string, tx?: DrizzleClient): Promise<{{Name}} | undefined> {
-        		const dbClient = tx ?? this.db
+        	async findById(id: string, tx?: DrizzleTransaction): Promise<{{Name}} | undefined> {
+        		const dbClient = tx ?? this.driver.db
 
         		const result = await tryCatchAsync(async () => {
         			// const rows = await dbClient.select().from({{camelName}}).where(eq({{camelName}}.id, id)).limit(1)
@@ -820,8 +820,8 @@ registry:
         		return this.toDomain(result.data)
         	}
 
-        	async save(entity: {{Name}}, tx?: DrizzleClient): Promise<{{Name}}> {
-        		const dbClient = tx ?? this.db
+        	async save(entity: {{Name}}, tx?: DrizzleTransaction): Promise<{{Name}}> {
+        		const dbClient = tx ?? this.driver.db
         		entity.incrementVersion()
         		const data = this.toPersistence(entity)
 
@@ -836,8 +836,8 @@ registry:
         		return entity
         	}
 
-        	async delete(id: string, tx?: DrizzleClient): Promise<void> {
-        		const dbClient = tx ?? this.db
+        	async delete(id: string, tx?: DrizzleTransaction): Promise<void> {
+        		const dbClient = tx ?? this.driver.db
         		// await dbClient.delete({{camelName}}).where(eq({{camelName}}.id, id))
         	}
 
@@ -864,14 +864,14 @@ registry:
         abstract findById(id: string, tx?: Transaction): Promise<Product | undefined>
       }
 
-      // Drizzle impl — narrows tx to DrizzleClient (sanctioned override; no `as` cast needed)
-      import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
+      // Drizzle impl — narrows tx to DrizzleTransaction (sanctioned override; no `as` cast needed)
+      import { DrizzleDatabaseDriver, DrizzleTransaction, tryCatchAsync } from '@codm/core-typescript'
 
       @injectable()
       export class DrizzleProductRepository extends ProductRepository {
-        constructor(private db: DrizzleClient) { super() }
-        async findById(id: string, tx?: DrizzleClient): Promise<Product | undefined> {
-          const dbClient = tx ?? this.db
+        constructor(private driver: DrizzleDatabaseDriver) { super() }
+        async findById(id: string, tx?: DrizzleTransaction): Promise<Product | undefined> {
+          const dbClient = tx ?? this.driver.db
           const result = await tryCatchAsync(async () => {
             const rows = await dbClient.select().from(products).where(eq(products.id, id)).limit(1)
             return rows[0]

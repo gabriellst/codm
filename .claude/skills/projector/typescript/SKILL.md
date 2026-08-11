@@ -167,17 +167,22 @@ When a use case must see the projection update in the same request, it takes the
 
 ```ts
 @injectable()
-export class ConfirmAppointment {
+export class ConfirmAppointment extends Handler<typeof ConfirmAppointmentInputSchema, typeof ConfirmAppointmentOutputSchema> {
+  readonly name = 'confirm_appointment' as const
+  readonly inputSchema = ConfirmAppointmentInputSchema
+  readonly outputSchema = ConfirmAppointmentOutputSchema
+
   constructor(
     private appointmentRepository: AppointmentRepository,
-    private domainEventRepository: DomainEventRepository,
     private patientProjector: PatientProjector,  // ← inline dependency
-    private unitOfWorkFactory: UnitOfWorkFactory,
-  ) {}
+  ) {
+    super()
+  }
 
-  async execute(input: { appointmentId: string }): Promise<void> {
-    const uow = this.unitOfWorkFactory.create()
-    await uow.transaction(async tx => {
+  // No UnitOfWorkFactory injection — `this.withTransaction` and `this.domainEventRepository`
+  // come from the Handler base class (see usecase skill UC-P14 / "Do NOT inject UnitOfWorkFactory").
+  protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
+    return this.withTransaction(tx, async tx => {
       const appointment = await this.appointmentRepository.findById(new Id(input.appointmentId), tx)
       // ...
       appointment.confirm()

@@ -72,22 +72,23 @@ Create `<context>/repositories/Drizzle<Entity>Repository.ts`:
 // customer/repositories/DrizzleCustomerRepository.ts
 import { injectable } from 'tsyringe-neo'
 import { and, eq } from 'drizzle-orm'
-import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
+import { DrizzleDatabaseDriver, DrizzleTransaction, tryCatchAsync } from '@codm/core-typescript'
 import { CustomerRepository } from './CustomerRepository'
 import { Customer } from '../entities'
 import { customerTable } from '@codm/contracts/db'
 
 @injectable()
 export class DrizzleCustomerRepository extends CustomerRepository {
-  // CRITICAL: db is injected via constructor (NOT imported as global)
-  constructor(private db: DrizzleClient) {
+  // CRITICAL: the driver is injected via constructor (NOT imported as global) — it exposes the
+  // READ handle (`driver.db`) and the write seam (`driver.transaction`); it is NOT a raw db client.
+  constructor(private driver: DrizzleDatabaseDriver) {
     super()
   }
 
   // Find/query methods accept optional transaction for read-after-write consistency
-  // Drizzle impl narrows tx to DrizzleClient — PORT uses Transaction (infra-agnostic)
-  async findById(id: string, tx?: DrizzleClient): Promise<Customer | undefined> {
-    const dbClient = tx ?? this.db
+  // Drizzle impl narrows tx to DrizzleTransaction — PORT uses Transaction (infra-agnostic)
+  async findById(id: string, tx?: DrizzleTransaction): Promise<Customer | undefined> {
+    const dbClient = tx ?? this.driver.db
     // CRITICAL: tryCatchAsync wraps an async function
     const result = await tryCatchAsync(async () => {
       const rows = await dbClient
@@ -110,11 +111,11 @@ export class DrizzleCustomerRepository extends CustomerRepository {
   async findByCpfAndOrganizationId(
     cpf: string,
     organizationId: string,
-    tx?: DrizzleClient,
+    tx?: DrizzleTransaction,
   ): Promise<Customer | undefined> {
     const cpfValue = cpf.replace(/\D/g, '') // Clean CPF
 
-    const dbClient = tx ?? this.db
+    const dbClient = tx ?? this.driver.db
     const result = await tryCatchAsync(async () => {
       const rows = await dbClient
         .select()
@@ -133,10 +134,10 @@ export class DrizzleCustomerRepository extends CustomerRepository {
 
   // Save - insert or update
   // CRITICAL: Always call incrementVersion() before persisting
-  async save(entity: Customer, tx?: DrizzleClient): Promise<Customer> {
+  async save(entity: Customer, tx?: DrizzleTransaction): Promise<Customer> {
     entity.incrementVersion()  // Version must be incremented on save
 
-    const dbClient = tx ?? this.db
+    const dbClient = tx ?? this.driver.db
     const data = this.toPersistence(entity)
 
     await tryCatchAsync(async () => {
@@ -164,8 +165,8 @@ export class DrizzleCustomerRepository extends CustomerRepository {
   }
 
   // Delete
-  async delete(id: string, tx?: DrizzleClient): Promise<void> {
-    const dbClient = tx ?? this.db
+  async delete(id: string, tx?: DrizzleTransaction): Promise<void> {
+    const dbClient = tx ?? this.driver.db
 
     await tryCatchAsync(async () => {
       await dbClient.delete(customerTable).where(eq(customerTable.id, id))
@@ -267,10 +268,10 @@ Both find and mutation methods accept an optional transaction parameter. This is
 // import type { Transaction } from '@codm/core-typescript'
 abstract findById(id: string, tx?: Transaction): Promise<Customer | undefined>
 
-// DRIZZLE IMPL — narrows tx to DrizzleClient (the sanctioned override)
-// CORRECT - Find methods accept optional DrizzleClient (overrides Transaction from port)
-async findById(id: string, tx?: DrizzleClient): Promise<Customer | undefined> {
-  const dbClient = tx ?? this.db
+// DRIZZLE IMPL — narrows tx to DrizzleTransaction (the sanctioned override)
+// CORRECT - Find methods accept optional DrizzleTransaction (overrides Transaction from port)
+async findById(id: string, tx?: DrizzleTransaction): Promise<Customer | undefined> {
+  const dbClient = tx ?? this.driver.db
   const result = await tryCatchAsync(async () => {
     const rows = await dbClient
       .select()
@@ -288,10 +289,10 @@ async findById(id: string, tx?: DrizzleClient): Promise<Customer | undefined> {
 }
 
 // CORRECT - Mutation operations also have transaction parameter
-async save(entity: Customer, tx?: DrizzleClient): Promise<Customer> {
+async save(entity: Customer, tx?: DrizzleTransaction): Promise<Customer> {
   entity.incrementVersion()  // CRITICAL: Always increment version on save
 
-  const dbClient = tx ?? this.db
+  const dbClient = tx ?? this.driver.db
   const data = this.toPersistence(entity)
 
   await tryCatchAsync(async () => {
@@ -301,8 +302,8 @@ async save(entity: Customer, tx?: DrizzleClient): Promise<Customer> {
 }
 
 // CORRECT - Delete has transaction parameter
-async delete(id: string, tx?: DrizzleClient): Promise<void> {
-  const dbClient = tx ?? this.db
+async delete(id: string, tx?: DrizzleTransaction): Promise<void> {
+  const dbClient = tx ?? this.driver.db
   await tryCatchAsync(async () => {
     await dbClient.delete(customerTable).where(eq(customerTable.id, id))
   })
@@ -311,9 +312,9 @@ async delete(id: string, tx?: DrizzleClient): Promise<void> {
 
 **Why tx on reads too?** Use cases pass `tx` to EVERY repo call inside `withTransaction()` (see usecase skill UC-P14). When a parent use case saves entity A then a child use case reads entity A, the read MUST use the same `tx` — uncommitted writes are invisible outside the transaction.
 
-### db is Injected via Constructor (NOT imported) [REPOI-02, bp-07]
+### DrizzleDatabaseDriver Is Injected via Constructor (NOT imported) [REPOI-02, bp-07]
 
-The database client must be injected via constructor, never imported as a global. See `bp-07` in registry.yaml for the wrong/right pattern.
+The `DrizzleDatabaseDriver` must be injected via constructor, never imported as a global. Consumers inject the driver itself and read `.db` off it for reads (`this.driver.db`) — the driver is the seam that also carries the write-transaction (`driver.transaction(...)`) and `unitOfWorkFactory`. See `bp-07` in registry.yaml for the wrong/right pattern.
 
 ### tryCatchAsync Pattern with result.success [REPO-P02]
 
@@ -328,7 +329,7 @@ if (!result || result.length === 0) {
 
 // CORRECT - New pattern with async function and result object
 const result = await tryCatchAsync(async () => {
-  const rows = await this.db
+  const rows = await this.driver.db
     .select()
     .from(customerTable)
     .where(eq(customerTable.id, id.value))
@@ -463,7 +464,7 @@ See `/projection` for the full Projection + ProjectionRepository pairing pattern
 
 ## References
 
-- `@codm/core-typescript` - Repository, DrizzleClient, Transaction, tryCatchAsync
+- `@codm/core-typescript` - Repository, DrizzleDatabaseDriver, DrizzleTransaction, Transaction, tryCatchAsync
 - `@codm/contracts/db` - Drizzle table schemas
 - `docs/BACKEND.md` - Architecture principles (why)
 - `/entity` skill - For creating entities to persist

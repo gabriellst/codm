@@ -35,7 +35,7 @@ Each query is an independent use case file with direct ORM (Drizzle) access, fol
 
 ## Key Principles [QRY-01, QRY-02, QRY-P01]
 
-1. **Direct Drizzle Access**: Inject `DrizzleClient`, query tables directly — no repository abstraction for reads
+1. **Direct Drizzle Access**: Inject `DrizzleDatabaseDriver`, read via `this.driver.db`, query tables directly — no repository abstraction for reads
 2. **Frontend-Shaped Output**: Output schemas match exactly what the UI component needs
 3. **Cross-Schema Joins**: Freely join tables from any DB schema (`clinic`, `patient`, `authentication`, etc.)
 4. **No Domain Coupling**: Don't import domain entities or value objects — work with raw DB rows and map inline
@@ -91,7 +91,7 @@ Keep sub-schemas (like `UnitSchema`) **inline in the same file** unless reused 3
 ### Step 3: Implement with Direct Drizzle Queries (Complete Example)
 
 ```typescript
-import { Handler, z, DrizzleClient } from '@codm/core-typescript'
+import { Handler, z, DrizzleDatabaseDriver } from '@codm/core-typescript'
 import { injectable } from 'tsyringe-neo'
 import { clinics } from '@codm/contracts/db'
 import { memberships, units } from '@codm/contracts/db'
@@ -106,7 +106,7 @@ export class GetUserInfo extends Handler<
   readonly inputSchema = GetUserInfoInputSchema
   readonly outputSchema = GetUserInfoOutputSchema
 
-  constructor(private db: DrizzleClient) {
+  constructor(private driver: DrizzleDatabaseDriver) {
     super()
   }
 
@@ -114,7 +114,7 @@ export class GetUserInfo extends Handler<
     const { userId, currentClinicId } = input
 
     // Query 1: membership + clinic via JOIN
-    const [membership] = await this.db
+    const [membership] = await this.driver.db
       .select({
         clinicId: clinics.id,
         clinicName: clinics.name,
@@ -128,7 +128,7 @@ export class GetUserInfo extends Handler<
       ))
 
     // Query 2: units for the clinic
-    const clinicUnits = await this.db
+    const clinicUnits = await this.driver.db
       .select({
         id: units.id,
         name: units.name,
@@ -192,7 +192,7 @@ When queries don't depend on each other, run them in parallel:
 
 ```typescript
 const [appointmentRows, patientRows] = await Promise.all([
-  this.db
+  this.driver.db
     .select({
       id: appointments.id,
       startDate: appointments.startDate,
@@ -205,7 +205,7 @@ const [appointmentRows, patientRows] = await Promise.all([
     ))
     .orderBy(desc(appointments.startDate))
     .limit(50),
-  this.db
+  this.driver.db
     .select({
       id: patients.id,
       name: patients.name,
@@ -281,8 +281,8 @@ protected async handle(input: this['input']): Promise<this['output']> {
 ## Common Imports
 
 ```typescript
-// Drizzle client
-import { DrizzleClient } from '@codm/core-typescript'
+// Drizzle driver — inject and read via `this.driver.db`
+import { DrizzleDatabaseDriver } from '@codm/core-typescript'
 
 // Tables (import from the contracts package)
 import { clinics } from '@codm/contracts/db'

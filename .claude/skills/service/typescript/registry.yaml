@@ -308,11 +308,11 @@ registry:
     - id: bp-05
       name: "Service touching the database directly or swallowing the transaction"
       severity: critical
-      rule: "Services hold NO DrizzleClient and run NO queries — persistence belongs to repositories; a service composes repository ports + domain logic. When a service participates in a use case's transaction, it accepts tx?: Transaction (infra-agnostic, cc-bp-20) and threads it to every repository call — it never opens its own transaction (the use case's withTransaction owns the boundary) and never drops tx on the floor mid-chain."
+      rule: "Services hold NO DrizzleDatabaseDriver and run NO queries — persistence belongs to repositories; a service composes repository ports + domain logic. When a service participates in a use case's transaction, it accepts tx?: Transaction (infra-agnostic, cc-bp-20) and threads it to every repository call — it never opens its own transaction (the use case's withTransaction owns the boundary) and never drops tx on the floor mid-chain."
       wrong: |
         export class PricingService {
-          constructor(private db: DrizzleClient) {}            // infra leak — cc-bp-20
-          async reprice(id: string) { await this.db.update(...) }
+          constructor(private driver: DrizzleDatabaseDriver) {}  // infra leak — cc-bp-20
+          async reprice(id: string) { await this.driver.db.update(...) }
         }
       right: |
         export class PricingService {

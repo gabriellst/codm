@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, DrizzleClient, z } from '@codm/core-typescript'
+import { Handler, DrizzleDatabaseDriver, z } from '@codm/core-typescript'
 
 export const ListDashboardOrdersInputSchema = z.object({
 	// Define input (e.g., userId, filters)
@@ -15,13 +15,13 @@ export class ListDashboardOrders extends Handler<typeof ListDashboardOrdersInput
 	readonly inputSchema = ListDashboardOrdersInputSchema
 	readonly outputSchema = ListDashboardOrdersOutputSchema
 
-	constructor(private db: DrizzleClient) {
+	constructor(private driver: DrizzleDatabaseDriver) {
 		super()
 	}
 
 	protected async handle(input: this['input']): Promise<this['output']> {
 		// Direct Drizzle access — no repository abstraction
-		// const rows = await this.db.select().from(table).where(eq(table.id, input.id))
+		// const rows = await this.driver.db.select().from(table).where(eq(table.id, input.id))
 		return {} as this['output']
 	}
 }

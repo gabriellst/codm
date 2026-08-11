@@ -200,7 +200,7 @@ protected async withTransaction<T>(tx: Tx | undefined, fn: (tx: Tx) => Promise<T
 - **Controllers always call `.execute()`** — which validates input and calls `handle()` with `tx` as `undefined`
 - **`handle(input, tx?)` receives an optional transaction** — wrap DB operations in `this.withTransaction(tx, async (tx) => { ... })`
 - **`this.withTransaction()` manages the transaction** — creates a new one if `tx` is `undefined`, reuses it if provided
-- **Use cases do NOT need `UnitOfWorkFactory` in their constructors** — `withTransaction` uses it internally via the Handler base class
+- **Use cases do NOT need to inject anything for transactions** — `withTransaction` resolves `this.unitOfWorkFactory` internally (a Handler base-class getter that reads `DrizzleDatabaseDriver.unitOfWorkFactory` off the injected driver — there is no standalone `UnitOfWorkFactory` DI token)
 - **External I/O before `withTransaction()`** — API calls, email sends, or other non-DB work can happen BEFORE `this.withTransaction()` without holding a DB transaction open, reducing lock contention and improving performance
 
 ```
@@ -223,18 +223,34 @@ All use cases wrap their DB operations in `this.withTransaction()`. The key scen
 
 ### How UnitOfWork Works
 
-The system provides a `UnitOfWorkFactory` that creates `UnitOfWork` instances wrapping Drizzle's native transactions:
+There is no standalone `UnitOfWorkFactory` DI token to inject. `Handler.unitOfWorkFactory` (the getter `withTransaction` calls internally) resolves `DrizzleDatabaseDriver` from the container and returns its `.unitOfWorkFactory` property — a concrete `DrizzleUnitOfWorkFactory` that wraps the driver's own write seam (`driver.transaction(fn)`, which drives `BEGIN IMMEDIATE` on the dedicated write connection — never the read handle):
 
 ```typescript
-// Abstract types (packages/api/typescript/src/shared/types/UnitOfWork.ts)
+// Abstract types (packages/api/typescript/core/src/services/UnitOfWork/UnitOfWork.ts)
 export type Transaction = unknown
-
-export abstract class UnitOfWorkFactory {
-  abstract create(): UnitOfWork
-}
 
 export abstract class UnitOfWork<T = Transaction> {
   abstract transaction<Return>(fn: (tx: T) => Promise<Return>): Promise<Return>
+}
+
+// Concrete Drizzle impl (packages/api/typescript/core/src/services/UnitOfWork/DrizzleUnitOfWork.ts)
+export type DrizzleTransaction = LibSQLDatabase<typeof schema>
+
+export class DrizzleUnitOfWork extends UnitOfWork<DrizzleTransaction> {
+  constructor(private driver: DrizzleDatabaseDriver) { super() }
+  async transaction<Return>(fn: (tx: DrizzleTransaction) => Promise<Return>): Promise<Return> {
+    return this.driver.transaction(fn)
+  }
+}
+
+export class DrizzleUnitOfWorkFactory {
+  constructor(private driver: DrizzleDatabaseDriver) {}
+  create(): UnitOfWork<DrizzleTransaction> { return new DrizzleUnitOfWork(this.driver) }
+}
+
+// Handler base class (packages/api/typescript/core/src/types/Handler.ts) — never inject this yourself:
+protected get unitOfWorkFactory() {
+  return (this.di.resolve(DrizzleDatabaseDriver) as DrizzleDatabaseDriver).unitOfWorkFactory
 }
 ```
 
@@ -246,14 +262,14 @@ Every repository method accepts an **optional** `transaction` parameter. When pr
 // Port (abstract repository): infra-agnostic — tx typed as Transaction
 abstract save(entity: Entity, transaction?: Transaction): Promise<Entity>
 
-// Drizzle impl: redeclares tx as DrizzleClient — type narrowing, never a cast (repository bp-11)
-async save(entity: Entity, transaction?: DrizzleClient): Promise<Entity> {
-  const dbClient = transaction ?? this.db  // tx if provided, else default
+// Drizzle impl: redeclares tx as DrizzleTransaction — type narrowing, never a cast (repository bp-11)
+async save(entity: Entity, transaction?: DrizzleTransaction): Promise<Entity> {
+  const dbClient = transaction ?? this.driver.db  // tx if provided, else default
   await dbClient.insert(table).values(data)...
 }
 
-async findById(id: Id | string, transaction?: DrizzleClient): Promise<Entity | undefined> {
-  const dbClient = transaction ?? this.db  // SAME pattern for reads
+async findById(id: Id | string, transaction?: DrizzleTransaction): Promise<Entity | undefined> {
+  const dbClient = transaction ?? this.driver.db  // SAME pattern for reads
   const rows = await dbClient.select().from(table).where(...)
 }
 ```

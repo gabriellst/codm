@@ -106,7 +106,7 @@ An auth middleware that attaches data to `request.ctx`:
 // packages/api/typescript/src/auth/middlewares/AuthAccountMiddleware.ts
 @singleton()
 export class AuthAccountMiddleware implements Middleware {
-  constructor(private betterAuth: BetterAuth, private client: DrizzleClient) {}
+  constructor(private betterAuth: BetterAuth, private driver: DrizzleDatabaseDriver) {}
 
   async execute(request: HttpControllerRequest<unknown>): Promise<HttpMiddlewareResponse<void>> {
     const response = await this.betterAuth.auth.api.getSession({ headers: request.raw.headers, asResponse: true })

@@ -351,7 +351,7 @@ registry:
       repository: |
         import { injectable } from 'tsyringe-neo'
         import { eq } from 'drizzle-orm'
-        import { DrizzleClient, tryCatchAsync } from '@codm/core-typescript'
+        import { DrizzleDatabaseDriver, DrizzleTransaction, tryCatchAsync } from '@codm/core-typescript'
         import type { Transaction } from '@codm/core-typescript'
         // import { {{camelName}}Projection } from '@codm/contracts/db'
         import { {{Name}}Projection, type {{Name}}ProjectionProps } from './{{Name}}'
@@ -385,12 +385,12 @@ registry:
 
         @injectable()
         export class Drizzle{{Name}}ProjectionRepository extends {{Name}}ProjectionRepository {
-        	constructor(private db: DrizzleClient) {
+        	constructor(private driver: DrizzleDatabaseDriver) {
         		super()
         	}
 
-        	async findByKey(key: unknown, tx?: DrizzleClient): Promise<{{Name}}Projection | null> {
-        		const dbClient = tx ?? this.db
+        	async findByKey(key: unknown, tx?: DrizzleTransaction): Promise<{{Name}}Projection | null> {
+        		const dbClient = tx ?? this.driver.db
         		const result = await tryCatchAsync(async () => {
         			// const rows = await dbClient.select().from({{camelName}}Projection).where(eq({{camelName}}Projection.id, key as string)).limit(1)
         			// return rows[0]
@@ -400,8 +400,8 @@ registry:
         		return this.toDomain(result.data)
         	}
 
-        	async save(projection: {{Name}}Projection, tx?: DrizzleClient): Promise<void> {
-        		const dbClient = tx ?? this.db
+        	async save(projection: {{Name}}Projection, tx?: DrizzleTransaction): Promise<void> {
+        		const dbClient = tx ?? this.driver.db
         		const row = this.toPersistence(projection)
         		// await dbClient.insert({{camelName}}Projection).values(row).onConflictDoUpdate({
         		//   target: [{{camelName}}Projection.id],
@@ -409,8 +409,8 @@ registry:
         		// })
         	}
 
-        	async insertIfNew(projection: {{Name}}Projection, tx?: DrizzleClient): Promise<boolean> {
-        		const dbClient = tx ?? this.db
+        	async insertIfNew(projection: {{Name}}Projection, tx?: DrizzleTransaction): Promise<boolean> {
+        		const dbClient = tx ?? this.driver.db
         		const row = this.toPersistence(projection)
         		// const result = await dbClient.insert({{camelName}}Projection).values(row).onConflictDoNothing().returning()
         		// return result.length > 0

@@ -17,7 +17,7 @@ In this codebase, test structure is intentionally split by purpose:
 - **Use case and handler tests** also stay colocated in `src/**`, but many of them are application-level tests, not pure unit tests
 - **Shared test infrastructure** lives in `packages/api/tests/support`
 - **Process/flow tests** live in `packages/api/tests/flows`
-- **Drizzle integration** uses the `DrizzleDatabaseDriver` contract, with `BunSQLDriver` for runtime and `PGliteDriver` for embedded integration tests
+- **Drizzle integration** uses the `DrizzleDatabaseDriver` contract, with `FileLibsqlDriver` for runtime/e2e and `LibsqlDriver` (temp-file) for `mock`/`integration` tests
 
 ## Source of Truth
 
@@ -26,10 +26,10 @@ When the framework behavior is unclear, read these files before inventing a new 
 - `packages/api/tests/support/TestBed.ts`
 - `packages/api/tests/support/PipeBuilder.ts`
 - `packages/api/tests/support/types.ts`
-- `packages/api/typescript/src/shared/db/drizzle/drivers/DrizzleDatabaseDriver.ts`
-- `packages/api/typescript/src/shared/db/drizzle/drivers/PGliteDriver.ts`
-- `packages/api/typescript/src/shared/db/drizzle/drivers/BunSQLDriver.ts`
-- `packages/api/typescript/src/shared/services/Mediator/SpyMediator.ts`
+- `packages/api/typescript/core/src/db/drivers/DrizzleDatabaseDriver.ts`
+- `packages/api/typescript/core/src/db/drivers/LibsqlDriver.ts`
+- `packages/api/typescript/src/shared/db/FileLibsqlDriver.ts`
+- `packages/api/typescript/core/src/services/Mediator/SpyMediator.ts`
 
 ## Folder Layout
 
@@ -142,17 +142,18 @@ Important consequence:
 
 ## Drizzle Database Driver
 
-`DrizzleDatabaseDriver` is the common abstraction for Drizzle-backed database environments.
+`DrizzleDatabaseDriver` is the common abstraction for Drizzle-backed database environments — an abstract class, not a client. Consumers (repositories, BFF use cases, tests) inject `DrizzleDatabaseDriver` itself, never a raw client: reads go through `driver.db`, writes exclusively through `driver.transaction(fn)` (the dedicated write connection — `driver.db` does not hold the write lock).
 
 Current implementations:
 
-- `BunSQLDriver`: runtime/real environment
-- `PGliteDriver`: embedded integration environment
+- `LibsqlDriver`: the base libsql/SQLite driver. `mock` and `integration` registries both resolve the SAME memoized instance via `getTestDatabaseDriver()` (a `mkdtemp` temp-file database, migrated once and reset between tests).
+- `FileLibsqlDriver` (extends `LibsqlDriver`): the shared, file-backed SQLite database at `$CODM_DATA_DIR`, co-tenanted with the Go gateway — used by `real` and `e2e`.
 
 Both expose:
 
-- `db`
-- `unitOfWorkFactory`
+- `db` — the READ handle (`DrizzleTransaction`, i.e. `LibSQLDatabase<typeof schema>`)
+- `unitOfWorkFactory` — a `DrizzleUnitOfWorkFactory`; resolved internally via `Handler.withTransaction`, never injected directly (see usecase skill UC-P14)
+- `transaction(fn)` — the ONLY write path
 - `reset()`
 - `runMigrations()`
 - `readMigrations()`
@@ -160,10 +161,10 @@ Both expose:
 
 Use this mental model:
 
-- `DrizzleClient` is the query client
-- `DrizzleDatabaseDriver` is the environment wrapper around that client
-- runtime uses `BunSQLDriver`
-- embedded integration tests use `PGliteDriver`
+- There is no separate "DrizzleClient" query-client type anymore — `DrizzleDatabaseDriver` IS the injected type, and `driver.db` is the read handle carved off it.
+- `DrizzleTransaction` is the write-transaction handle type; repository/handler `tx` params narrow to it (port signatures stay `Transaction`, infra-agnostic).
+- runtime uses `FileLibsqlDriver`
+- `mock`/`integration` tests use `LibsqlDriver`
 
 Do not bypass that distinction when writing integration tests or registry wiring.
 
@@ -443,13 +444,13 @@ Use integration mode when you need:
 - real Drizzle mappings
 - real schema/migrations
 - repository persistence checks
-- embedded Postgres behavior via PGlite
+- embedded SQLite behavior via `LibsqlDriver`'s temp-file database (no Docker required)
 
 Important:
 
 - this validates the **Drizzle + schema + repository** stack
 - this does **not** guarantee full production parity for transaction nesting/locking semantics
-- `PGliteDriver` uses a specialized unit-of-work strategy because of PGlite's single-connection constraints
+- the write seam (`driver.transaction(fn)`) drives `BEGIN IMMEDIATE` manually on a dedicated write connection rather than the libsql client's native transaction API — measured connection-leak/pragma-reset bugs in `@libsql/client` made that path unsafe (see `DrizzleUnitOfWork.ts` docstring); `db` (read handle) never writes
 
 ## Lifecycle Guidance
 
@@ -475,7 +476,7 @@ afterAll(async () => {
 ```
 
 Rules:
-- **`beforeAll`**: Create TestBed once per suite (expensive to boot PGlite)
+- **`beforeAll`**: Create TestBed once per suite (expensive to boot the integration-mode driver + run migrations)
 - **`beforeEach`**: Reset DB state between tests
 - **`afterAll`**: Close DB connections
 - Use `integration` mode for both use case tests and repository tests

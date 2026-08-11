@@ -26,7 +26,7 @@ Controllers are the system boundary — the only place where external HTTP input
 
 - **Internal use case orchestration** — one use case calls another directly, no controller needed
 - **Event-driven processing** — use `/handler` skill to react to domain/integration events
-- **Direct DB queries for UI** — use `/query` skill with DrizzleClient in the `ui` context
+- **Direct DB queries for UI** — use `/query` skill with `DrizzleDatabaseDriver` in the `ui` context
 - **Business rule validation** — belongs in entities or use cases, not controllers
 
 ## Prerequisites
