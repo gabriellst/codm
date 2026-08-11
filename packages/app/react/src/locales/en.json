@@ -12,11 +12,13 @@
 			"saveSuccess": "Preferences updated successfully",
 			"sectionDescription": "Configure language, timezone and notifications",
 			"sectionTitle": "Preferences",
+			"stub": "Editing preferences not yet available (SDK pending)",
 			"timezone": "Timezone"
 		},
 		"profile": {
 			"avatar": {
 				"remove": "Remove photo",
+				"removeStub": "Photo removal not yet available (SDK pending)",
 				"upload": "Upload photo",
 				"uploadAriaLabel": "Choose profile image",
 				"uploadStub": "Avatar upload not yet available"
@@ -28,7 +30,8 @@
 			"save": "Save changes",
 			"saveSuccess": "Profile updated successfully",
 			"sectionDescription": "Update your personal information",
-			"sectionTitle": "Profile"
+			"sectionTitle": "Profile",
+			"stub": "Editing profile not yet available (SDK pending)"
 		},
 		"security": {
 			"changePassword": {

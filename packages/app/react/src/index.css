@@ -78,11 +78,15 @@ body {
 	--color-destructive-foreground: var(--destructive-foreground);
 	--color-warning: var(--warning);
 	--color-warning-foreground: var(--warning-foreground);
-	/* Skeleton-loading greys + the danger-badge tint (D3, R1) — see tokens.css for why only these
-	   three (not the full attention/idle/paused status family) are declared yet. */
+	/* Skeleton-loading greys + the danger-badge tint (D3, R1). status-attention/attention-foreground/
+	   status-idle joined this family once the Tarefas group (JcWnl) became their first real
+	   consumer — see tokens.css for the measurement. status-paused stays undeclared (no consumer). */
 	--color-skeleton: var(--skeleton);
 	--color-skeleton-strong: var(--skeleton-strong);
 	--color-attention-surface: var(--attention-surface);
+	--color-status-attention: var(--status-attention);
+	--color-attention-foreground: var(--attention-foreground);
+	--color-status-idle: var(--status-idle);
 	--color-accent-foreground: var(--accent-foreground);
 	--color-accent: var(--accent);
 	--color-muted-foreground: var(--muted-foreground);

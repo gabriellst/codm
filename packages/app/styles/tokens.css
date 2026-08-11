@@ -144,6 +144,17 @@
 	   modal). Warm, low-chroma tint of the SAME hue as --destructive, not a separate literal —
 	   consistent with how --hover-accent-border pairs with --hover-accent above. */
 	--attention-surface: oklch(0.942 0.024 43.2); /* #FBE7DF */
+	/* --status-attention / --attention-foreground / --status-idle (D3, R1) — first consumer is
+	   THIS group's Tarefas screens (JcWnl): the status-grouped task row dot + chip. Measured
+	   directly off the design — "Precisa de entrada" row dot + chip label (wJXCG → I2WiqD
+	   #E4572E, KdcZL/aK4Br #8A3417) and the "Concluída" row dot (bYbFe → wrOWd #CFCFCF).
+	   attention-foreground pairs with the ALREADY-DECLARED --attention-surface above (#FBE7DF,
+	   same warm family — same pairing rule as every other surface/foreground pair in this file).
+	   status-paused (#9A9A9A) stays undeclared: no screen in this group consumes it (R1 rule —
+	   no bulk declarations, only what the first real consumer needs). */
+	--status-attention: oklch(0.637 0.184 36.5); /* #E4572E */
+	--attention-foreground: oklch(0.443 0.124 38.1); /* #8A3417 */
+	--status-idle: oklch(0.855 0 0); /* #CFCFCF */
 
 	/* ── Interaction states (lines, hover, selected) ───────────────────────────
 	   D2 CORRECTION, founder-confirmed — this block used to carry a comment on --hover claiming
@@ -332,6 +343,14 @@
 	--skeleton: oklch(0.26 0 0);
 	--skeleton-strong: oklch(0.32 0 0);
 	--attention-surface: oklch(from var(--destructive) l c h / 0.16);
+	/* --status-attention / --attention-foreground / --status-idle — DERIVED, not measured (no
+	   dark screens in the reference), same rule as --attention-surface above: keep the hue
+	   family, move lightness for a near-black canvas. --attention-foreground brightens (mirrors
+	   --muted-foreground's light→dark bump, 0.524→0.68) since it now sits on a darker warm tint
+	   instead of the light pastel. --status-idle brightens the same way, for the same reason. */
+	--status-attention: oklch(0.68 0.184 36.5);
+	--attention-foreground: oklch(0.75 0.1 38);
+	--status-idle: oklch(0.55 0 0);
 
 	--border: oklch(from var(--foreground) l c h / 0.14);
 	--input: oklch(from var(--foreground) l c h / 0.16);
