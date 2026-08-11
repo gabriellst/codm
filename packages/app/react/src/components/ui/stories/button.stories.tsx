@@ -8,7 +8,7 @@ const meta: Meta<typeof Button> = {
 	argTypes: {
 		variant: {
 			control: 'select',
-			options: ['default', 'destructive', 'outline', 'secondary', 'ghost', 'link'],
+			options: ['default', 'destructive', 'outline', 'ghost', 'soft', 'secondary', 'link'],
 		},
 		size: {
 			control: 'select',
@@ -45,9 +45,10 @@ export const Outline: Story = {
 	},
 }
 
+// `secondary` is the ON state of a toggle (D3), not "secondary action" — that's `outline`.
 export const Secondary: Story = {
 	args: {
-		children: 'Secondary',
+		children: 'Secondary (on)',
 		variant: 'secondary',
 	},
 }
@@ -56,6 +57,13 @@ export const Ghost: Story = {
 	args: {
 		children: 'Ghost',
 		variant: 'ghost',
+	},
+}
+
+export const Soft: Story = {
+	args: {
+		children: 'Soft',
+		variant: 'soft',
 	},
 }
 
@@ -70,10 +78,11 @@ export const AllVariants: Story = {
 	render: () => (
 		<div className="flex flex-wrap gap-4">
 			<Button variant="default">Default</Button>
-			<Button variant="destructive">Destructive</Button>
 			<Button variant="outline">Outline</Button>
-			<Button variant="secondary">Secondary</Button>
 			<Button variant="ghost">Ghost</Button>
+			<Button variant="soft">Soft</Button>
+			<Button variant="secondary">Secondary (on)</Button>
+			<Button variant="destructive">Destructive</Button>
 			<Button variant="link">Link</Button>
 		</div>
 	),

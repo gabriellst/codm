@@ -66,7 +66,7 @@ function DialogContent({
 						// D2 — no longer forced circular: the reference's modal close button measures
 						// "13px 13px 13px 4px" (asymmetric), matching the `icon` size's own default radius now
 						// that Button gives icon-only sizes the asymmetric ladder instead of a circle.
-						render={<Button variant="secondary" className="absolute top-4 right-4" size="icon" />}
+						render={<Button variant="ghost" className="absolute top-4 right-4" size="icon" />}
 					>
 						<IconX />
 						<span className="sr-only">{t('common.close')}</span>

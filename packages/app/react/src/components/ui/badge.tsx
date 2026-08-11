@@ -22,7 +22,8 @@ import { cn } from '@/lib/utils'
 // status chips (nav count, task-group count, "Precisa de você" count, workspace tag, whisper's
 // task-key chip) measure "9px 9px 9px 3px" 6× — the ladder comment in tokens.css calls this step
 // out BY NAME as "tiny badges/icon-buttons" (`--radius-3xs`). Pills (999px) stay reserved for
-// segmented controls and CTA buttons, which the reference keeps visually distinct from status tags.
+// segmented controls, which the reference keeps visually distinct from status tags (buttons left
+// the pill shape in the D3 merge, decision 6B — every button size rides the asymmetric ladder now).
 const badgeVariants = cva(
 	'h-5 gap-1.5 rounded-asymmetric-3xs border border-transparent px-2.5 py-0.5 text-xs font-medium transition-all has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&>svg]:size-3! inline-flex items-center justify-center w-fit whitespace-nowrap shrink-0 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/40 focus-visible:ring-[0.1875rem] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive overflow-hidden group/badge',
 	{

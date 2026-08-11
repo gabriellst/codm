@@ -48,7 +48,7 @@ export function StepHeading({
 				// 36px button share a center.
 				<Button
 					type="button"
-					variant="secondary"
+					variant="soft"
 					size="icon"
 					aria-label={t('attach.back')}
 					disabled={backDisabled}

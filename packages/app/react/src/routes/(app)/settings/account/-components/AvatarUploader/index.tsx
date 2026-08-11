@@ -60,7 +60,7 @@ export function AvatarUploader({ value, onUpload, onRemove, fallbackInitials, cl
 					aria-label={t('account.profile.avatar.uploadAriaLabel')}
 					onChange={handleFileChange}
 				/>
-				<Button type="button" variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()}>
+				<Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
 					<IconUpload className="size-3.5" />
 					{t('account.profile.avatar.upload')}
 				</Button>

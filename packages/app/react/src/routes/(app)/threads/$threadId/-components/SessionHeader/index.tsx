@@ -127,11 +127,10 @@ export function SessionHeader({ threadId, className, ...props }: ComponentProps<
 						<div className="flex shrink-0 items-center gap-2">
 							{data.paused ? (
 								<Button
-									variant="outline"
+									variant="soft"
 									size="icon"
 									aria-label={t('session.resume')}
 									title={t('session.resume')}
-									className="rounded-full"
 									disabled={resume.isPending}
 									onClick={() => resume.mutate({ threadId }, { onSuccess: invalidate })}
 								>
@@ -139,11 +138,10 @@ export function SessionHeader({ threadId, className, ...props }: ComponentProps<
 								</Button>
 							) : (
 								<Button
-									variant="outline"
+									variant="soft"
 									size="icon"
 									aria-label={t('session.pause')}
 									title={t('session.pause')}
-									className="rounded-full"
 									disabled={pause.isPending}
 									onClick={() => pause.mutate({ threadId }, { onSuccess: invalidate })}
 								>
@@ -152,11 +150,10 @@ export function SessionHeader({ threadId, className, ...props }: ComponentProps<
 							)}
 
 							<Button
-								variant="outline"
+								variant="soft"
 								size="icon"
 								aria-label={t('session.threadSettings')}
 								title={t('session.threadSettings')}
-								className="rounded-full"
 								onClick={() => show(<ThreadSettingsDialog threadId={threadId} />)}
 							>
 								<IconSettings2 />

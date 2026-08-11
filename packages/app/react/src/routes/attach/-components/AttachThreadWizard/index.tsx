@@ -154,7 +154,7 @@ export function AttachThreadWizard({ className, ...props }: ComponentProps<'div'
 						))}
 					</TabsList>
 				</Tabs>
-				<Button variant="secondary" size="icon" aria-label={t('attach.close')} className="rounded-full" onClick={close}>
+				<Button variant="ghost" size="icon" aria-label={t('attach.close')} className="rounded-full" onClick={close}>
 					<IconX />
 				</Button>
 			</header>

@@ -93,7 +93,7 @@ export function SecuritySection({ className, ...props }: ComponentProps<'div'>) 
 									<span className="text-sm font-medium text-foreground">{t('account.security.changePassword.label')}</span>
 									<span className="text-xs text-muted-foreground">{t('account.security.changePassword.description')}</span>
 								</div>
-								<Button variant="secondary" size="sm" onClick={() => show(<ChangePasswordDialog />)}>
+								<Button variant="outline" size="sm" onClick={() => show(<ChangePasswordDialog />)}>
 									<IconKey className="size-3.5" />
 									{t('account.security.changePassword.button')}
 								</Button>
