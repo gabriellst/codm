@@ -24,6 +24,7 @@ const GENERATED_ROOTS = [
 	PKG.contractsGenGo,
 	PKG.clientTsDist && `${PKG.clientTsDist}/src`,
 	PKG.apiTs && `${PKG.apiTs}/public/docs/openapi.json`,
+	PKG.apiGo && `${PKG.apiGo}/public/docs/openapi.json`,
 ].filter((p): p is string => typeof p === 'string')
 
 console.log('[check:generated] regenerating contracts wire bindings…')

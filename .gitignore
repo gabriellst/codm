@@ -114,7 +114,8 @@ target/
 
 # Backend GO build
 packages/api/go/dist/
-packages/api/go/public/docs/
+packages/api/go/public/docs/*
+!packages/api/go/public/docs/openapi.json
 
 # Superpowers brainstorming sessions
 .superpowers/

@@ -18,9 +18,10 @@ import { join } from 'node:path'
  *      COMPLETE oneOf (all declared variants):
  *        - the Go gateway's emitted openapi (public/docs/openapi.json — pkg/openapi AST output):
  *          the payload component must be a oneOf covering every declared content variant, with no
- *          `x-union-variant-missing` marker anywhere in the spec. The artifact is build output
- *          (gitignored); when absent the check falls back to the committed /go SDK, which is
- *          generated FROM that spec — one variant zod schema per declared variant.
+ *          `x-union-variant-missing` marker anywhere in the spec. The artifact is COMMITTED (same
+ *          policy as the TS twin — openapi-symmetry fix, drift-gated by scripts/check-generated.ts);
+ *          if it's ever absent the check fails loud with an actionable message instead of silently
+ *          diverging into a different check.
  *        - the TS daemon's emitted openapi (tracked): the response union of any endpoint that
  *          re-emits the event must carry every declared (discriminator-const) variant pair.
  *
@@ -207,45 +208,34 @@ describe('union-parity check 2 — every emitting surface publishes the COMPLETE
 			const declared = slot.variants.map(v => v.typeName).sort()
 
 			test(`gateway (Go): ${payloadName}.${slotName} materializes all ${slot.variants.length} declared variants`, () => {
-				if (existsSync(goSpecPath)) {
-					const spec = readFileSync(goSpecPath, 'utf-8')
-					expect(spec.includes('x-union-variant-missing'), 'gateway spec contains x-union-variant-missing markers').toBe(false)
-					const doc = JSON.parse(spec) as { components: { schemas: Record<string, unknown> } }
-					const payload = doc.components.schemas[payloadName] as { oneOf?: Array<{ $ref: string }> } | undefined
-					expect(payload?.oneOf, `${payloadName} must be a oneOf in the gateway spec`).toBeDefined()
-					// Across the payload's variant components, the slot field must resolve — directly or
-					// through a nested oneOf — to EXACTLY the declared variant types, and never be opaque.
-					const seen = new Set<string>()
-					for (const arm of payload!.oneOf!) {
-						const armName = arm.$ref.split('/').at(-1)!
-						const armSchema = doc.components.schemas[armName] as { properties?: Record<string, unknown> } | undefined
-						expect(armSchema?.properties, `gateway component ${armName} missing properties`).toBeDefined()
-						const slotField = armSchema!.properties![slotName]
-						expect(isMaterialized(slotField), `gateway ${armName}.${slotName} is opaque (x-unknown or empty) — slot not materialized`).toBe(
-							true,
-						)
-						for (const name of collectRefNames(slotField)) seen.add(name)
-					}
-					expect([...seen].sort(), `gateway ${payloadName}.${slotName} union does not cover the declared variants`).toEqual(declared)
-				} else {
-					// Build artifact absent (fresh clone): the committed /go SDK is generated FROM that spec —
-					// every declared variant type has a zod schema, and some payload-variant schema wires the
-					// slot field to it (proves the emitted union carried the slot, not just the type).
-					const zodDir = join(ROOT, 'packages/client/dist/typescript/src/go/zod')
-					const payloadCamel = camel(payloadName)
-					const payloadVariantFiles = walk(zodDir, '.ts').filter(f => f.includes(`/${payloadCamel}`))
-					for (const v of slot.variants) {
-						const schemaId = `${camel(v.typeName)}Schema`
-						expect(existsSync(join(zodDir, `${schemaId}.ts`)), `committed /go SDK lacks variant schema ${schemaId}.ts`).toBe(true)
-						expect(
-							payloadVariantFiles.some(f => {
-								const src = readFileSync(f, 'utf-8')
-								return src.includes(`${slotName}:`) && src.includes(schemaId)
-							}),
-							`no committed /go payload-variant schema wires slot "${slotName}" to ${schemaId}`,
-						).toBe(true)
-					}
+				// The gateway spec is COMMITTED (same policy as the TS twin — openapi-symmetry fix):
+				// a fresh clone/CI carries it, so absence means a broken checkout, never a real
+				// variant-parity gap. Fail loud with the fix instruction BEFORE the variant assertions,
+				// instead of silently diverging into a different (and misleading) check.
+				expect(
+					existsSync(goSpecPath),
+					`artefato gerado ausente: ${goSpecPath} — rode "bun emit-openapi" (o openapi.json do gateway Go é committed, igual ao do TS; ausência indica checkout quebrado, não uma falha real de variant-parity)`,
+				).toBe(true)
+
+				const spec = readFileSync(goSpecPath, 'utf-8')
+				expect(spec.includes('x-union-variant-missing'), 'gateway spec contains x-union-variant-missing markers').toBe(false)
+				const doc = JSON.parse(spec) as { components: { schemas: Record<string, unknown> } }
+				const payload = doc.components.schemas[payloadName] as { oneOf?: Array<{ $ref: string }> } | undefined
+				expect(payload?.oneOf, `${payloadName} must be a oneOf in the gateway spec`).toBeDefined()
+				// Across the payload's variant components, the slot field must resolve — directly or
+				// through a nested oneOf — to EXACTLY the declared variant types, and never be opaque.
+				const seen = new Set<string>()
+				for (const arm of payload!.oneOf!) {
+					const armName = arm.$ref.split('/').at(-1)!
+					const armSchema = doc.components.schemas[armName] as { properties?: Record<string, unknown> } | undefined
+					expect(armSchema?.properties, `gateway component ${armName} missing properties`).toBeDefined()
+					const slotField = armSchema!.properties![slotName]
+					expect(isMaterialized(slotField), `gateway ${armName}.${slotName} is opaque (x-unknown or empty) — slot not materialized`).toBe(
+						true,
+					)
+					for (const name of collectRefNames(slotField)) seen.add(name)
 				}
+				expect([...seen].sort(), `gateway ${payloadName}.${slotName} union does not cover the declared variants`).toEqual(declared)
 			})
 
 			test(`daemon (TS): the re-emitting response materializes ${payloadName}.${slotName} for every declared variant`, () => {
