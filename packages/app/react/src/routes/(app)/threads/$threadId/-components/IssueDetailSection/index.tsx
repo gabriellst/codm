@@ -1,17 +1,23 @@
 import { useState } from 'react'
 import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
-import { IconArrowUp, IconChevronLeft } from '@tabler/icons-react'
+import { IconArrowUp, IconChevronLeft, IconPlayerPause } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import {
 	getIssueDetailQueryKey,
+	getNeedsYouPanelQueryKey,
+	getSessionChatQueryKey,
 	getSessionIssuesQueryKey,
+	getHomeDashboardQueryKey,
 	useArchiveIssue,
 	useGetIssueDetail,
+	useGetNeedsYouPanel,
+	useResolveStop,
 	useSteerIssue,
+	IssueStatusEnum,
 } from '@codm/client-typescript/typescript'
-import type { GetIssueDetailQueryResponse } from '@codm/client-typescript/typescript'
+import type { GetIssueDetailQueryResponse, GetNeedsYouPanelQueryResponse, IssueStatus } from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
@@ -21,9 +27,25 @@ import { enumLabel } from '@/lib'
 import { cn } from '@/lib/utils'
 import { useTerminalStream, type TerminalStreamFrame } from '@/hooks'
 import { Dot } from '@/components/console/StatusDot'
+import { resolutionIsPrimary } from '@/components/console/glyphs'
 import { TranscriptBubble } from '../TranscriptBubble'
 
 type Detail = GetIssueDetailQueryResponse
+type NeedsYouStop = GetNeedsYouPanelQueryResponse['stops'][number]
+
+/**
+ * D3 (R8-style) — "Precisa de entrada" is the one status that reads as an ALERT in the reference:
+ * near-black fill, white text, a bright-green dot. The other two statuses keep the plain neutral
+ * `outline` badge (no override). A closed dispatch map keyed by the enum — never an if/ternary chain
+ * on the discriminant — colocated here because this exact near-black+success-bright pairing isn't in
+ * the shared Badge variant inventory; nothing outside this screen's identity chip needs it.
+ */
+const issueStatusChipClass: Record<IssueStatus, string | undefined> = {
+	[IssueStatusEnum.NEEDS_INPUT]:
+		"border-transparent bg-foreground text-background before:size-1.5 before:shrink-0 before:rounded-full before:bg-success-bright before:content-['']",
+	[IssueStatusEnum.WORKING]: undefined,
+	[IssueStatusEnum.COMPLETED]: undefined,
+}
 
 /** One issue drill-down (T12): the dark terminal panel, routed messages, and an issue-scoped steer. */
 export function IssueDetailSection({
@@ -70,34 +92,41 @@ export function IssueDetailSection({
 				<IconChevronLeft className="size-4" /> {t('session.allIssues')}
 			</Link>
 
-			{/* An issue title is a SENTENCE the operator dictated ("me manda um resumo do que o Odisseu
-			    fez…"), not a label, so it routinely outruns the column. Truncating it needs the whole flex
-			    chain to be ALLOWED to shrink — `min-w-0` on every ancestor down to the text — because a
-			    flex item defaults to `min-width: auto` and refuses to go below its content, so the row
-			    grows instead and shoves the archive button off the edge. The badge and the button are
-			    `shrink-0` so the NAME is what gives way, which is what puts the ellipsis on it. */}
+			{/* D3 — the reference leads with the TASK KEY (mono, bold, the short code — "invoice-500"),
+			    with the operator-dictated title as the smaller muted line under it; the old layout had
+			    that inverted (title as the big heading, key as a mono subtitle). The title is still the
+			    field that routinely outruns the column ("me manda um resumo do que o Odisseu fez…"), so
+			    it keeps `min-w-0`/`truncate` down the flex chain — the key is short by construction and
+			    doesn't need it, but gets it too in case a workspace ever mints a long one. The status chip
+			    and the archive button are `shrink-0` so the SUMMARY is what gives way. */}
 			<div className="flex items-start justify-between gap-4">
-				<div className="flex min-w-0 flex-1 flex-col gap-1.5">
-					<div className="flex min-w-0 items-center gap-3">
-						{/* `title` keeps the full text reachable on hover once it is visually cut. */}
-						<h1 className="heading-display truncate text-2xl text-foreground" title={data.issue.title}>
-							{data.issue.title}
-						</h1>
-						<Badge variant="outline" className="shrink-0">
-							{enumLabel('IssueStatus', data.issue.status)}
-						</Badge>
-					</div>
-					<p className="truncate font-mono text-sm text-muted-foreground">
+				<div className="flex min-w-0 flex-1 flex-col gap-1">
+					<h1 className="truncate font-mono text-xl font-bold text-foreground" title={data.issue.key}>
 						{data.issue.key}
+					</h1>
+					{/* `title` keeps the full sentence reachable on hover once it is visually cut. */}
+					<p className="truncate text-sm text-muted-foreground" title={data.issue.title}>
+						{data.issue.title}
 						{data.issue.meta ? ` · ${data.issue.meta}` : ''}
 					</p>
 				</div>
-				{!data.issue.archived && (
-					<Button variant="outline" size="sm" className="shrink-0" disabled={archive.isPending} onClick={onArchive}>
-						{t('session.archive')}
-					</Button>
-				)}
+				<div className="flex shrink-0 items-center gap-2">
+					{/* Dispatch by map (`issueStatusChipClass`, module scope) — never a chain on the discriminant. */}
+					<Badge variant="outline" className={issueStatusChipClass[data.issue.status]}>
+						{enumLabel('IssueStatus', data.issue.status)}
+					</Badge>
+					{/* Não aparece no mock do D3 (o exemplo mostrado é uma tarefa aberta, "Precisa de entrada"),
+					    mas a capacidade é real e não tem outro lugar no design para morar — código vence
+					    aqui: mantida ao lado do chip de status em vez de removida por ausência no canvas. */}
+					{!data.issue.archived && (
+						<Button variant="outline" size="sm" disabled={archive.isPending} onClick={onArchive}>
+							{t('session.archive')}
+						</Button>
+					)}
+				</div>
 			</div>
+
+			<IssueStopBanner threadId={threadId} issueId={issueId} />
 
 			<TerminalPanel issueId={issueId} lines={data.terminalLog} />
 
@@ -113,6 +142,81 @@ export function IssueDetailSection({
 			)}
 
 			<IssueSteerComposer issueId={issueId} />
+		</div>
+	)
+}
+
+/**
+ * The paused-agent alert card (D3 — "Card / Paused Alert"): a pastel-green banner with the stop's
+ * message and its resolution buttons, shown ABOVE the terminal while the issue's agent is stopped.
+ *
+ * Reuses `useGetNeedsYouPanel(threadId)` filtered to THIS issue rather than `data.stops` off
+ * `GetIssueDetail` — that response carries the stop's `kind`/`title`/`detail` but not
+ * `availableResolutions` (it's issue-scoped, no `stopId`-keyed action list), so there is nothing to
+ * put on the Retry/Assumir buttons the reference draws. `GetNeedsYouPanel`'s stops are the same
+ * `Stop` record with `availableResolutions` AND an optional `issueId` to filter by, and its
+ * `useResolveStop()` mutation is keyed purely by `stopId` — identical whichever query surfaced it. No
+ * new field, no invented client-side kind→resolution mapping.
+ *
+ * Renders NOTHING while there is no stop for this issue — the reference's card is conditional on the
+ * agent actually being paused, not a permanent fixture of the screen.
+ */
+function IssueStopBanner({ threadId, issueId }: { threadId: string; issueId: string }) {
+	const { data } = useGetNeedsYouPanel(threadId)
+	const stops = (data?.stops ?? []).filter(stop => stop.issueId === issueId)
+
+	if (stops.length === 0) return null
+
+	return (
+		<div className="flex flex-col gap-2">
+			{stops.map(stop => (
+				<IssueStopCard key={stop.stopId} threadId={threadId} issueId={issueId} stop={stop} />
+			))}
+		</div>
+	)
+}
+
+function IssueStopCard({ threadId, issueId, stop }: { threadId: string; issueId: string; stop: NeedsYouStop }) {
+	const queryClient = useQueryClient()
+	// onSuccess on the MUTATION (hook options), not on `mutate()`'s second argument — same reasoning as
+	// `NeedsYouPanel`'s `StopRow`: the observer's callback is dropped if this card unmounts (the stop
+	// clearing removes it from the list) before the response lands.
+	const resolve = useResolveStop({
+		mutation: {
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: getNeedsYouPanelQueryKey(threadId) })
+				queryClient.invalidateQueries({ queryKey: getIssueDetailQueryKey(issueId) })
+				queryClient.invalidateQueries({ queryKey: getSessionChatQueryKey(threadId) })
+				queryClient.invalidateQueries({ queryKey: getHomeDashboardQueryKey() })
+			},
+		},
+	})
+
+	return (
+		// D3 — measured pixel-for-pixel (`Get` on `Card / Paused Alert`): `fill:#EAF6D3`/`color:#3D660A`
+		// (= `bg-secondary`/`text-secondary-foreground`) with a solid `default` primary button and a
+		// hollow `outline` secondary — NOT the dark `alertSurface`/`alertActionButton` pairing
+		// `NeedsYouPanel` uses. Same `Stop` concept, a different surface for a different screen: this
+		// card sits inline in a light page, `NeedsYouPanel` is its own near-black panel.
+		<div className="flex flex-wrap items-center gap-3.5 rounded-asymmetric-md bg-secondary px-4 py-3.5 text-secondary-foreground">
+			<IconPlayerPause className="size-[1.1875rem] shrink-0" />
+			<p className="min-w-0 flex-1 text-sm font-medium">
+				{enumLabel('StopKind', stop.kind)}
+				{stop.detail ? ` — ${stop.detail}` : ''}
+			</p>
+			<div className="flex shrink-0 items-center gap-2">
+				{stop.availableResolutions.map(resolution => (
+					<Button
+						key={resolution}
+						size="sm"
+						variant={resolutionIsPrimary[resolution] ? 'default' : 'outline'}
+						disabled={resolve.isPending}
+						onClick={() => resolve.mutate({ stopId: stop.stopId, data: { resolution } })}
+					>
+						{enumLabel('StopResolution', resolution)}
+					</Button>
+				))}
+			</div>
 		</div>
 	)
 }

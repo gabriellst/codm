@@ -1,5 +1,6 @@
-import { type ComponentProps, type ReactNode, useEffect, useState } from 'react'
+import { type ComponentProps, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { IconMinus, IconPlus } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import {
@@ -17,7 +18,7 @@ import {
 	useSetParticipantInvocation,
 	AgentModelIdEnum,
 } from '@codm/client-typescript/typescript'
-import type { BufferSize } from '@codm/client-typescript/typescript'
+import type { BufferSize, ProviderKind } from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
 import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -26,6 +27,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
+import { sectionLabel } from '@/components/ui/surfaces'
 import { ThreadAvatar, contactAvatarUrl } from '@/components/console/ThreadAvatar'
 import { providerGlyph, providerLabel } from '@/components/console/glyphs'
 import { useDialogStore } from '@/stores/useDialogStore'
@@ -35,14 +37,17 @@ import { LoopsSection } from './LoopsSection'
 const BUFFER_SIZES: BufferSize[] = ['25', '50', '100', '200']
 
 /**
- * A section heading in this dialog — sentence case, muted, with a hairline under it.
+ * The agent CLI's own binary name — literally what the operator types, e.g. `codex` for CODEX.
  *
- * Deliberately NOT `label-eyebrow`: that class is uppercase with letter-spacing, which is the
- * console's eyebrow voice for page sections. Inside a modal the design uses a quieter, plain label
- * whose job is to separate three short groups, and the rule under it does the separating.
+ * A closed map keyed by the enum (same shape as `providerLabel`/`providerGlyph` in glyphs.tsx),
+ * not a string transform off `ProviderKind` (`CLAUDE_CODE` → `claude` is not a case conversion,
+ * it is a different word). Kept local rather than promoted to glyphs.tsx: nothing outside this
+ * dialog's agent cards needs it.
  */
-function SectionLabel({ children }: { children: ReactNode }) {
-	return <h3 className="border-b border-border pb-2 text-sm font-medium text-muted-foreground">{children}</h3>
+const providerCli: Record<ProviderKind, string> = {
+	CLAUDE_CODE: 'claude',
+	CODEX: 'codex',
+	OPENCODE: 'opencode',
 }
 
 /**
@@ -52,17 +57,18 @@ function SectionLabel({ children }: { children: ReactNode }) {
  * `show(<ThreadSettingsDialog threadId={…} />)` and MOUNTED is what "open" means here — which is why
  * the body is no longer gated on a local `open` flag. The store is what dismisses it.
  *
- * DUAS COLUNAS a partir de `lg`, e a divisão não é estética: as chaves da esquerda são escolhas de um
- * clique que salvam sozinhas, e a da direita é um texto que se escreve devagar e COMITA. Empilhá-las
- * numa coluna só empurrava o prompt para baixo da dobra — o operador rolava por quatro seções que ele
- * já configurou para chegar à única que ele voltou para editar. Lado a lado, as duas começam na mesma
- * linha e a caixa de texto cresce até a altura da coluna irmã (é o `flex-1` lá embaixo), que é o que
- * "equilibrado" quer dizer aqui.
+ * SINGLE COLUMN WITH SCROLL (D3, R12) — the design's 640×840 modal reads top to bottom as one list;
+ * the two-column layout this used to have (a "settings on the left, prompt on the right" split,
+ * justified by keeping the prompt off the fold) is retired. The header (`DialogHeader`) stays OUTSIDE
+ * the scroll container, so it never moves while the body scrolls under it — the `max-h` on the body
+ * is still governed by the 520px minimum window height the desktop shell allows, unchanged from
+ * before.
  *
- * Abaixo de `lg` a grade vira uma coluna e a ordem de leitura volta a ser a de antes — ajustes, prompt,
- * zona de perigo. Por isso a zona de perigo atravessa as DUAS colunas em vez de morar dentro da
- * primeira: empilhada, ela tem que continuar sendo a última coisa da tela, nunca o que separa os
- * ajustes do prompt.
+ * ORDER (D3, R13): Gatilho → Agentes → Buffer → Prompt → Participantes → Loops → Zona de perigo — the
+ * reference's own reading order, which is why each section below is its OWN component with its own
+ * `useGetThreadSettings` call (React Query dedupes to the one request) instead of one function
+ * returning them in a fixed bundle: reordering is now a matter of reordering JSX, not restructuring
+ * data flow.
  */
 export function ThreadSettingsDialog({
 	threadId,
@@ -74,11 +80,9 @@ export function ThreadSettingsDialog({
 	const { data: session } = useGetSessionChat(threadId)
 
 	return (
-		// A largura só cresce onde há espaço para duas colunas (`lg`), e cresce até um número escolhido, não
-		// redondo: `56rem` menos o padding e a calha dá ~25rem por coluna — que é EXATAMENTE a largura útil
-		// que este diálogo tinha quando era uma coluna só (`sm:max-w-md`). É o que mantém as linhas da
-		// esquerda quebrando como quebravam. Abaixo de `lg` a base do primitivo segue valendo, intocada.
-		<DialogContent className={cn('lg:max-w-4xl', className)}>
+		// 640px in the reference (D3, R12) — `sm:max-w-[40rem]` is that measurement, not a round Tailwind
+		// step. Below `sm` the primitive's own base width still applies, untouched.
+		<DialogContent className={cn('sm:max-w-[40rem]', className)}>
 			<DialogHeader>
 				<DialogTitle>{t('session.settingsTitle')}</DialogTitle>
 				<DialogDescription>
@@ -87,20 +91,20 @@ export function ThreadSettingsDialog({
 			</DialogHeader>
 			{/* O corpo rola, o cabeçalho e o botão de fechar não. O teto é o viewport menos a moldura do
 			    diálogo (margem + padding + cabeçalho): numa janela baixa — o mínimo do shell é 520px de
-			    altura — duas colunas ainda estouram, e um modal que cresce para fora da tela esconde o
-			    botão que o operador precisa clicar. */}
-			<div className="grid max-h-[calc(100dvh-11rem)] gap-6 overflow-y-auto lg:grid-cols-2 lg:gap-x-10">
-				<ThreadSettingsBody threadId={threadId} />
+			    altura — o modal ainda estoura, e um modal que cresce para fora da tela esconde o botão que
+			    o operador precisa clicar. */}
+			<div className="flex max-h-[calc(100dvh-11rem)] flex-col gap-6 overflow-y-auto">
+				<TriggerSection threadId={threadId} />
+				<AgentsSection threadId={threadId} />
+				<BufferSection threadId={threadId} />
 				<CustomPromptSection threadId={threadId} />
-				{/* Os LOOPS atravessam as duas colunas pela mesma razão que a zona de perigo: uma linha de loop
-				    carrega um texto, um horário, os dias e três controles, e espremida numa coluna de ~25rem ela
-				    quebra em quatro alturas diferentes. Empilhado, ela continua lendo entre o prompt e o perigo. */}
-				<LoopsSection threadId={threadId} className="lg:col-span-2" />
+				<ParticipantsSection threadId={threadId} />
+				<LoopsSection threadId={threadId} />
 				{/* The name is READ HERE and handed down, deliberately breaking the "each component owns its
 				    data" habit for one prop: the confirmation must say WHICH conversation is about to go, and
 				    this component already holds the query that knows. A second `useGetSessionChat` inside the
 				    danger zone would be the same cache entry read twice. */}
-				<DangerZone threadId={threadId} threadName={session?.thread.displayName} className="lg:col-span-2" />
+				<DangerZone threadId={threadId} threadName={session?.thread.displayName} />
 			</div>
 		</DialogContent>
 	)
@@ -109,10 +113,12 @@ export function ThreadSettingsDialog({
 /**
  * The destructive corner of the settings dialog (thread-deletion spec, decision 7).
  *
- * Set apart by a rule and its own muted heading rather than by a red panel: the console has exactly one
- * destructive action per screen and the `destructive` button carries the weight. What makes it safe is
- * the CONFIRMATION, not the decoration — and the confirmation names the conversation, because "Apagar
- * conversa" with no subject is the dialog people dismiss on autopilot and regret.
+ * Set apart by a rule and its own RED heading (D3 — `Section / Zona de perigo`'s label is the one
+ * `sectionLabel` in the whole modal that isn't foreground-black; the reference measures it at
+ * `$destructive`) rather than by a red panel: the console has exactly one destructive action per
+ * screen and the `destructive` button carries the weight. What makes it safe is the CONFIRMATION,
+ * not the decoration — and the confirmation names the conversation, because "Apagar conversa" with
+ * no subject is the dialog people dismiss on autopilot and regret.
  *
  * `confirm()` from `useDialogStore` replaces this dialog's content with the shared `ConfirmDialog` and
  * resolves a boolean, so cancelling costs the operator nothing but a re-open.
@@ -171,10 +177,10 @@ function DangerZone({ threadId, threadName, className, ...props }: { threadId: s
 
 	return (
 		<section className={cn('flex flex-col gap-3', className)} {...props}>
-			<SectionLabel>{t('session.deleteThread.sectionTitle')}</SectionLabel>
+			<h3 className={cn(sectionLabel, 'text-destructive')}>{t('session.deleteThread.sectionTitle')}</h3>
 			<div className="flex items-center justify-between gap-4">
 				<p className="text-sm text-muted-foreground">{t('session.deleteThread.hint')}</p>
-				<Button variant="destructive" className="shrink-0" disabled={deleteThread.isPending} onClick={onDelete}>
+				<Button variant="destructive" size="lg" className="shrink-0" disabled={deleteThread.isPending} onClick={onDelete}>
 					{t('session.deleteThread.action')}
 				</Button>
 			</div>
@@ -182,14 +188,12 @@ function DangerZone({ threadId, threadName, className, ...props }: { threadId: s
 	)
 }
 
-function ThreadSettingsBody({ threadId }: { threadId: string }) {
+/** Gatilho de resposta — the mention-gate switch, plus its own "Tag de menção" field (D3, R15). */
+function TriggerSection({ threadId, className, ...props }: { threadId: string } & ComponentProps<'section'>) {
 	const { t } = useTranslation()
 	const queryClient = useQueryClient()
 	const { data, isLoading } = useGetThreadSettings(threadId)
 	const configureMentionGate = useConfigureMentionGate()
-	const configureBuffer = useConfigureContextBuffer()
-	const configureModel = useConfigureModel()
-	const setInvocation = useSetParticipantInvocation()
 
 	const [gateEnabled, setGateEnabled] = useState(false)
 	const [tag, setTag] = useState('')
@@ -208,200 +212,298 @@ function ThreadSettingsBody({ threadId }: { threadId: string }) {
 	}
 
 	if (isLoading || !data) {
-		// Uma barra por seção, com o MESMO `gap-6` da coluna carregada — o esqueleto tem que ocupar a
-		// altura que o conteúdo vai ocupar, senão a grade encolhe e volta a crescer na frente do operador.
 		return (
-			<div className="flex flex-col gap-6">
-				<Skeleton className="h-14 rounded-xl" />
-				<Skeleton className="h-32 rounded-xl" />
-				<Skeleton className="h-24 rounded-xl" />
-				<Skeleton className="h-24 rounded-xl" />
+			<div className="flex flex-col gap-3">
+				<Skeleton className="h-7 rounded-lg" />
+				<Skeleton className="h-6 rounded-lg" />
+				<Skeleton className="h-10 rounded-xl" />
 			</div>
 		)
 	}
 
 	return (
-		<div className="flex flex-col gap-6">
-			<section className="flex flex-col gap-3">
-				<SectionLabel>{t('session.respondTrigger')}</SectionLabel>
-				{/* Switch FIRST, then the label, then the tag — the design reads left to right as
-				    "[on/off] only respond when mentioned, with [@tag]", which is the sentence the control
-				    actually makes. The tag input stays VISIBLE while the gate is off, just disabled: hiding
-				    it made the row jump height on every toggle and hid the value the operator was about to
-				    need. */}
-				<label className="flex items-center gap-3">
-					<Switch
-						checked={gateEnabled}
-						onCheckedChange={value => {
-							setGateEnabled(value)
-							saveGate(value, tag)
-						}}
-					/>
-					<span className="flex-1 text-sm font-medium text-foreground">{t('session.onlyWhenMentioned')}</span>
-					<Input
-						aria-label={t('session.mentionTag')}
-						placeholder={t('session.mentionTagPlaceholder')}
-						className="w-36 shrink-0 rounded-full text-sm"
-						disabled={!gateEnabled}
-						value={tag}
-						onChange={e => setTag(e.target.value)}
-						onBlur={() => saveGate(true, tag)}
-					/>
+		<section className={cn('flex flex-col gap-3', className)} {...props}>
+			<h3 className={sectionLabel}>{t('session.respondTrigger')}</h3>
+			<label className="flex items-center gap-3">
+				<Switch
+					checked={gateEnabled}
+					onCheckedChange={value => {
+						setGateEnabled(value)
+						saveGate(value, tag)
+					}}
+				/>
+				<span className="flex-1 text-sm font-semibold text-foreground">{t('session.onlyWhenMentioned')}</span>
+			</label>
+			{/* Its OWN row (D3, R15) — the reference gives the tag a labeled field of its own below the
+			    switch, not an input squeezed into the switch's row. Stays VISIBLE while the gate is off,
+			    just disabled: hiding it made the row jump height on every toggle and hid the value the
+			    operator was about to need. */}
+			<div className="flex items-center gap-3.5">
+				<label htmlFor="mention-tag" className="w-[9.375rem] shrink-0 text-sm text-muted-foreground">
+					{t('session.mentionTag')}
 				</label>
-			</section>
+				<Input
+					id="mention-tag"
+					placeholder={t('session.mentionTagPlaceholder')}
+					className="flex-1 font-mono text-sm"
+					disabled={!gateEnabled}
+					value={tag}
+					onChange={e => setTag(e.target.value)}
+					onBlur={() => saveGate(true, tag)}
+				/>
+			</div>
+		</section>
+	)
+}
 
-			{/*
-			 * OS AGENTES DESTA CONVERSA — e, quando é o caso, o agente MORTO.
-			 *
-			 * `AttachThread` agora recusa anexar um provider que a engine não sabe dirigir, mas conversas
-			 * anexadas ANTES disso continuam lá e continuam abrindo (é a decisão: fechar a escrita, não a
-			 * leitura). Esta seção é onde o operador finalmente VÊ por que aquela conversa nunca responde —
-			 * em vez de descobrir na primeira turn que morre. Mesma palavra do catálogo (`Em breve`) e mesma
-			 * fonte (`AgentRunnerFactory.supported`) que a tela de Ajustes e o passo de agentes do wizard.
-			 */}
-			<section className="flex flex-col gap-3">
-				<SectionLabel>{t('session.boundAgents')}</SectionLabel>
-				<div className="flex flex-col gap-1">
-					{data.providers.map(({ provider, comingSoon, model, models }) => {
-						const Glyph = providerGlyph[provider]
-						return (
-							<div key={provider} className="flex items-center gap-3 py-1.5">
-								<span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground">
-									<Glyph className="size-4" />
-								</span>
-								<span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">{providerLabel[provider]}</span>
-								{comingSoon ? <Badge variant="outline">{t('common.comingSoon')}</Badge> : null}
-								{/*
-								 * O MODELO, na linha do agente a que ele pertence — não numa seção própria.
-								 *
-								 * A escolha é POR CLI (`opus` é vocabulário de um binário só), então ela pertence à
-								 * linha que nomeia o CLI, que já existe e já é uma por provider. Uma seção separada
-								 * teria que reimprimir o nome do agente para dizer de quem é cada seletor.
-								 *
-								 * Só aparece quando há o que escolher: um provider que esta versão nunca dirigiu tem
-								 * catálogo vazio, e um select de uma opção só é ruído. As opções vêm do DTO
-								 * (`models`) — nada de lista de modelos redigitada aqui, pelo mesmo motivo que o
-								 * contador do prompt lê `customPromptMaxLength` em vez de repetir o número.
-								 *
-								 * Salva no `onValueChange`, como as pilhas de buffer e ao contrário do prompt: é uma
-								 * escolha de um clique, não um texto escrito aos poucos.
-								 */}
-								{models.length > 0 ? (
-									<Select
-										enum={AgentModelIdEnum}
-										i18nPrefix="enums.AgentModelId"
-										values={models}
-										value={model}
-										onValueChange={value =>
-											configureModel.mutate({ threadId, data: { provider, model: value } }, { onSuccess: invalidate })
-										}
-										aria-label={t('session.agentModel')}
-										className="w-36 shrink-0"
-									/>
-								) : null}
-							</div>
-						)
-					})}
-				</div>
-				{/*
-				 * O AVISO QUE EVITA UM BUG APARENTE. Trocar o modelo invalida a sessão do CLI
-				 * (`ResumeInvalidationReason.MODEL_CHANGED`: o binário fixa o modelo na sessão que retoma, então
-				 * retomar ignoraria o pedido em silêncio). É o comportamento certo — e, sem estar escrito, o
-				 * operador vê o agente "esquecer" a conversa e conclui que quebrou.
-				 *
-				 * Só quando há pelo menos um seletor: um aviso sobre uma ação indisponível é decoração, pela
-				 * mesma razão que o aviso de `comingSoon` logo abaixo só aparece quando há um provider morto.
-				 */}
-				{data.providers.some(p => p.models.length > 0) ? (
-					<p className="text-sm text-muted-foreground">{t('session.agentModelRestartHint')}</p>
-				) : null}
-				{/* A explicação só aparece quando há algo a explicar — um aviso permanente vira decoração. */}
-				{data.providers.some(p => p.comingSoon) ? (
-					<p className="text-sm text-muted-foreground">{t('session.boundAgentsComingSoonHint')}</p>
-				) : null}
-			</section>
+/**
+ * Agentes desta conversa (D3) — one CARD per bound provider, filled pastel-green while the daemon can
+ * actually drive it and flat grey once it can't (`comingSoon`), instead of the old plain row list.
+ *
+ * The per-provider MODEL SELECT stays inline in each card rather than moving to the single shared
+ * "Modelo" field the reference draws below the cards (código vence, C-style): the wire lets more than
+ * one provider carry its own `models` catalog and its own `configureModel({ provider, model })` call,
+ * so a single shared select would have nowhere to record WHICH provider it targets the moment two
+ * providers are both bound. The reference's mock only ever shows one provider "on" at a time, which is
+ * exactly the case this degrades to.
+ */
+function AgentsSection({ threadId, className, ...props }: { threadId: string } & ComponentProps<'section'>) {
+	const { t } = useTranslation()
+	const queryClient = useQueryClient()
+	const { data, isLoading } = useGetThreadSettings(threadId)
+	const configureModel = useConfigureModel()
 
-			<section className="flex flex-col gap-3">
-				<SectionLabel>{t('session.participantsWhoCanInvoke')}</SectionLabel>
-				{/* Plain rows, no bordered card: the heading's rule already groups them, and a second box
-				    inside a modal is one frame too many. The avatar is what makes a roster scannable. */}
-				<div className="flex flex-col gap-1">
-					{data.participants.map(participant => (
-						<label key={participant.participantId} className="flex items-center gap-3 py-1.5">
-							{/* A CARA do participante quando a agenda do gateway tem uma — o `operator` nunca tem
-							    (é uma palavra, não um JID), e um membro que a sincronização ainda não escreveu
-							    também não: os dois caem nas iniciais sem caso especial aqui. */}
-							<ThreadAvatar
-								name={participant.name}
-								src={participant.hasAvatar ? contactAvatarUrl(participant.channelId, participant.participantId) : undefined}
-							/>
-							<div className="flex min-w-0 flex-1 flex-col gap-1.5">
-								<span className="truncate text-sm font-semibold text-foreground">{participant.name}</span>
-								<span className="truncate text-xs text-muted-foreground">{participant.source}</span>
-							</div>
-							<span className="shrink-0 text-sm text-muted-foreground">{t('session.canInvokeToggle')}</span>
-							<Switch
-								checked={participant.canInvoke}
-								onCheckedChange={value =>
-									setInvocation.mutate(
-										{ threadId, participantId: participant.participantId, data: { canInvoke: value } },
-										{ onSuccess: invalidate },
-									)
-								}
-							/>
-						</label>
-					))}
-				</div>
-			</section>
+	const invalidate = () => queryClient.invalidateQueries({ queryKey: getThreadSettingsQueryKey(threadId) })
 
-			<section className="flex flex-col gap-3">
-				<SectionLabel>{t('session.contextBuffer')}</SectionLabel>
-				{/* Explanation ABOVE the control — it says what the numbers mean, so reading it after
-				    choosing is backwards. */}
-				<p className="text-sm text-muted-foreground">{t('session.contextBufferHint')}</p>
-				{/* Individual outlined pills rather than a segmented track: the sizes are four discrete
-				    choices, and the filled one is the current depth. `messages` trails them as the unit. */}
-				<div className="flex flex-wrap items-center gap-2">
-					{BUFFER_SIZES.map(size => (
-						<button
-							key={size}
-							type="button"
-							aria-pressed={data.bufferSize === size}
-							onClick={() => configureBuffer.mutate({ threadId, data: { bufferSize: size } }, { onSuccess: invalidate })}
-							className={cn(
-								'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
-								data.bufferSize === size
-									? 'border-transparent bg-primary text-primary-foreground'
-									: 'border-input text-foreground hover:bg-muted',
-							)}
+	if (isLoading || !data) {
+		return (
+			<div className="flex flex-col gap-3">
+				<Skeleton className="h-7 rounded-lg" />
+				<Skeleton className="h-14 rounded-xl" />
+				<Skeleton className="h-14 rounded-xl" />
+			</div>
+		)
+	}
+
+	return (
+		<section className={cn('flex flex-col gap-2.5', className)} {...props}>
+			<h3 className={sectionLabel}>{t('session.boundAgents')}</h3>
+			<div className="flex flex-col gap-2">
+				{data.providers.map(({ provider, comingSoon, model, models }) => {
+					const Glyph = providerGlyph[provider]
+					// "Bound" = the daemon can actually drive this CLI. The reference's card fill (pastel
+					// green vs. flat grey) and its badge (brand green vs. `input` grey) both key off this
+					// same boolean — there is no separate field for it on the wire.
+					const bound = !comingSoon
+					return (
+						<div
+							key={provider}
+							className={cn('flex items-center gap-3 rounded-asymmetric-sm px-3.5 py-2.5', bound ? 'bg-secondary' : 'bg-card')}
 						>
-							{String(size)}
-						</button>
-					))}
-					<span className="text-sm text-muted-foreground">{t('session.bufferMessages')}</span>
+							<span
+								className={cn(
+									'flex size-[1.875rem] shrink-0 items-center justify-center rounded-asymmetric-2xs',
+									bound ? 'bg-primary text-primary-foreground' : 'bg-input text-muted-foreground',
+								)}
+							>
+								<Glyph className="size-4" />
+							</span>
+							<div className="min-w-0 flex-1">
+								<p className={cn('truncate text-sm font-bold', bound ? 'text-secondary-foreground' : 'text-foreground')}>
+									{providerLabel[provider]}
+								</p>
+								<p className={cn('truncate font-mono text-xs', bound ? 'text-secondary-foreground/80' : 'text-muted-foreground')}>
+									{providerCli[provider]}
+								</p>
+							</div>
+							{comingSoon ? (
+								<Badge variant="outline" className="shrink-0">
+									{t('common.comingSoon')}
+								</Badge>
+							) : null}
+							{/*
+							 * O MODELO, na linha do agente a que ele pertence — não numa seção própria (ver o
+							 * comentário do componente). Só aparece quando há o que escolher: um provider que
+							 * esta versão nunca dirigiu tem catálogo vazio, e um select de uma opção só é ruído.
+							 * Salva no `onValueChange`, como as pilhas de buffer e ao contrário do prompt: é uma
+							 * escolha de um clique, não um texto escrito aos poucos.
+							 */}
+							{models.length > 0 ? (
+								<Select
+									enum={AgentModelIdEnum}
+									i18nPrefix="enums.AgentModelId"
+									values={models}
+									value={model}
+									onValueChange={value => configureModel.mutate({ threadId, data: { provider, model: value } }, { onSuccess: invalidate })}
+									aria-label={t('session.agentModel')}
+									className="w-36 shrink-0 bg-background"
+								/>
+							) : (
+								// The bound indicator the reference draws as a track/knob switch: it reflects
+								// whether the daemon can drive this CLI, not a per-thread setting the operator
+								// flips — so it renders read-only rather than as a `Switch` wired to a mutation
+								// that does not exist on the wire.
+								<Switch checked={bound} disabled aria-hidden className="shrink-0 opacity-100" />
+							)}
+						</div>
+					)
+				})}
+			</div>
+			{/*
+			 * O AVISO QUE EVITA UM BUG APARENTE. Trocar o modelo invalida a sessão do CLI
+			 * (`ResumeInvalidationReason.MODEL_CHANGED`: o binário fixa o modelo na sessão que retoma, então
+			 * retomar ignoraria o pedido em silêncio). É o comportamento certo — e, sem estar escrito, o
+			 * operador vê o agente "esquecer" a conversa e conclui que quebrou.
+			 *
+			 * Só quando há pelo menos um seletor: um aviso sobre uma ação indisponível é decoração, pela
+			 * mesma razão que o aviso de `comingSoon` logo abaixo só aparece quando há um provider morto.
+			 */}
+			{data.providers.some(p => p.models.length > 0) ? (
+				<p className="text-sm text-muted-foreground">{t('session.agentModelRestartHint')}</p>
+			) : null}
+			{/* A explicação só aparece quando há algo a explicar — um aviso permanente vira decoração. */}
+			{data.providers.some(p => p.comingSoon) ? (
+				<p className="text-sm text-muted-foreground">{t('session.boundAgentsComingSoonHint')}</p>
+			) : null}
+		</section>
+	)
+}
+
+/** Participantes — quem pode invocar. Split out of the old bundled body so it can move (D3, R13). */
+function ParticipantsSection({ threadId, className, ...props }: { threadId: string } & ComponentProps<'section'>) {
+	const { t } = useTranslation()
+	const queryClient = useQueryClient()
+	const { data, isLoading } = useGetThreadSettings(threadId)
+	const setInvocation = useSetParticipantInvocation()
+
+	const invalidate = () => queryClient.invalidateQueries({ queryKey: getThreadSettingsQueryKey(threadId) })
+
+	if (isLoading || !data) {
+		return (
+			<div className="flex flex-col gap-3">
+				<Skeleton className="h-7 rounded-lg" />
+				<Skeleton className="h-10 rounded-lg" />
+				<Skeleton className="h-10 rounded-lg" />
+			</div>
+		)
+	}
+
+	return (
+		<section className={cn('flex flex-col gap-2', className)} {...props}>
+			<h3 className={sectionLabel}>{t('session.participantsWhoCanInvoke')}</h3>
+			{/* Plain rows, no bordered card: the heading's rule already groups them, and a second box
+			    inside a modal is one frame too many. The avatar is what makes a roster scannable. */}
+			<div className="flex flex-col">
+				{data.participants.map(participant => (
+					<label key={participant.participantId} className="flex items-center gap-3 py-1.5">
+						{/* A CARA do participante quando a agenda do gateway tem uma — o `operator` nunca tem
+						    (é uma palavra, não um JID), e um membro que a sincronização ainda não escreveu
+						    também não: os dois caem nas iniciais sem caso especial aqui. */}
+						<ThreadAvatar
+							name={participant.name}
+							src={participant.hasAvatar ? contactAvatarUrl(participant.channelId, participant.participantId) : undefined}
+						/>
+						<div className="flex min-w-0 flex-1 flex-col gap-0.5">
+							<span className="truncate text-sm font-bold text-foreground">{participant.name}</span>
+							<span className="truncate text-xs text-muted-foreground">{participant.source}</span>
+						</div>
+						<span className="shrink-0 text-xs text-muted-foreground">{t('session.canInvokeToggle')}</span>
+						<Switch
+							checked={participant.canInvoke}
+							onCheckedChange={value =>
+								setInvocation.mutate(
+									{ threadId, participantId: participant.participantId, data: { canInvoke: value } },
+									{ onSuccess: invalidate },
+								)
+							}
+						/>
+					</label>
+				))}
+			</div>
+		</section>
+	)
+}
+
+/**
+ * Buffer de contexto (D3, R14) — a STEPPER (− · valor · +) navigating the closed `BufferSize` list,
+ * replacing the four discrete pills. The values are STILL the enum ('25'|'50'|'100'|'200'): the
+ * stepper only changes how the same four-item list is navigated, never opens it up to a free
+ * increment — `step()` clamps to the list's own bounds and looks up the neighbour by index, it never
+ * does arithmetic on the number itself.
+ */
+function BufferSection({ threadId, className, ...props }: { threadId: string } & ComponentProps<'section'>) {
+	const { t } = useTranslation()
+	const queryClient = useQueryClient()
+	const { data, isLoading } = useGetThreadSettings(threadId)
+	const configureBuffer = useConfigureContextBuffer()
+
+	const invalidate = () => queryClient.invalidateQueries({ queryKey: getThreadSettingsQueryKey(threadId) })
+
+	if (isLoading || !data) {
+		return (
+			<div className="flex flex-col gap-3">
+				<Skeleton className="h-7 rounded-lg" />
+				<Skeleton className="h-10 rounded-xl" />
+			</div>
+		)
+	}
+
+	const index = BUFFER_SIZES.indexOf(data.bufferSize)
+	const step = (delta: -1 | 1) => {
+		const next = BUFFER_SIZES[index + delta]
+		if (!next) return
+		configureBuffer.mutate({ threadId, data: { bufferSize: next } }, { onSuccess: invalidate })
+	}
+
+	return (
+		<section className={cn('flex flex-col gap-3', className)} {...props}>
+			<h3 className={sectionLabel}>{t('session.contextBuffer')}</h3>
+			<div className="flex items-center gap-3.5">
+				{/* Explanation LEFT of the control, same reading order as the reference — it says what the
+				    numbers mean before the operator reaches the control itself. */}
+				<p className="flex-1 text-sm text-muted-foreground">{t('session.contextBufferHint')}</p>
+				<div className="flex h-9 shrink-0 items-center overflow-hidden rounded-asymmetric-xs border border-input">
+					<button
+						type="button"
+						aria-label={t('session.bufferDecrease')}
+						disabled={index <= 0 || configureBuffer.isPending}
+						onClick={() => step(-1)}
+						className="flex h-full w-[2.125rem] items-center justify-center text-muted-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-40"
+					>
+						<IconMinus className="size-3.5" />
+					</button>
+					<span className="flex items-baseline gap-1 px-2.5">
+						<span className="text-sm font-bold text-foreground">{String(data.bufferSize)}</span>
+						<span className="text-xs text-muted-foreground">{t('session.bufferMessages')}</span>
+					</span>
+					<button
+						type="button"
+						aria-label={t('session.bufferIncrease')}
+						disabled={index >= BUFFER_SIZES.length - 1 || configureBuffer.isPending}
+						onClick={() => step(1)}
+						className="flex h-full w-[2.125rem] items-center justify-center text-muted-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-40"
+					>
+						<IconPlus className="size-3.5" />
+					</button>
 				</div>
-			</section>
-		</div>
+			</div>
+		</section>
 	)
 }
 
 /**
  * PROMPT PERSONALIZADO — as instruções que o operador escreve para ESTA conversa.
  *
- * A única seção deste diálogo que NÃO salva sozinha, e a diferença é deliberada. O switch, a tag e as
- * pilhas de buffer são escolhas de um clique: salvar no `onChange`/`onBlur` é o comportamento óbvio
+ * A única seção deste diálogo que NÃO salva sozinha, e a diferença é deliberada. O switch, a tag e o
+ * stepper de buffer são escolhas de um clique: salvar no `onChange`/`onBlur` é o comportamento óbvio
  * delas. Um prompt é texto escrito aos poucos, e um autosave no meio da frase muda como o agente fala
  * com pessoas de verdade antes de o operador ter terminado de pensar. Por isso ele COMITA, e o botão
  * habilitado é o que torna "não salvo" legível.
  *
  * Esvaziar a caixa e salvar é o caminho de apagar — `Thread.configurePrompt` transforma vazio em
  * ausência, então não há um segundo botão para a mesma intenção.
- *
- * É a SEGUNDA COLUNA do diálogo, e por isso lê a própria query em vez de receber `data` por prop
- * (CMP-P01): a chave já está no cache — a coluna irmã a montou — então é a mesma requisição, e a
- * coluna continua sendo dona do que mostra.
  */
-function CustomPromptSection({ threadId }: { threadId: string }) {
+function CustomPromptSection({ threadId, className, ...props }: { threadId: string } & ComponentProps<'section'>) {
 	const { t } = useTranslation()
 	const queryClient = useQueryClient()
 	const { data, isLoading } = useGetThreadSettings(threadId)
@@ -428,30 +530,25 @@ function CustomPromptSection({ threadId }: { threadId: string }) {
 	const invalidate = () => queryClient.invalidateQueries({ queryKey: getThreadSettingsQueryKey(threadId) })
 
 	if (isLoading || !data) {
-		// O esqueleto tem a FORMA da coluna carregada — rótulo, explicação, caixa alta e rodapé — para o
-		// diálogo não pular de altura quando as duas colunas chegam.
+		// O esqueleto tem a FORMA da seção carregada — rótulo, explicação, caixa alta e rodapé — para o
+		// diálogo não pular de altura enquanto os dados chegam.
 		return (
 			<div className="flex flex-col gap-3">
 				<Skeleton className="h-7 rounded-lg" />
 				<Skeleton className="h-10 rounded-lg" />
-				<Skeleton className="min-h-40 flex-1 rounded-2xl" />
+				<Skeleton className="min-h-40 rounded-2xl" />
 				<Skeleton className="h-9 rounded-lg" />
 			</div>
 		)
 	}
 
 	return (
-		<section className="flex flex-col gap-3">
-			<SectionLabel>{t('session.customPrompt')}</SectionLabel>
-			<p className="text-sm text-muted-foreground">{t('session.customPromptHint')}</p>
-			{/* `flex-1` é o que equilibra as alturas: a coluna é um item da grade, então ela já se estica
-			    até a altura da coluna de ajustes, e a caixa de texto absorve essa sobra em vez de deixar um
-			    vão. `resize-none` porque a altura passou a ser do LAYOUT — uma alça de arrastar aqui só
-			    brigaria com ela; empilhado, `min-h-40` é o piso. */}
+		<section className={cn('flex flex-col gap-3', className)} {...props}>
+			<h3 className={sectionLabel}>{t('session.customPrompt')}</h3>
 			<Textarea
 				aria-label={t('session.customPrompt')}
 				placeholder={t('session.customPromptPlaceholder')}
-				className="min-h-40 flex-1 resize-none"
+				className="min-h-24 resize-none"
 				maxLength={data.customPromptMaxLength}
 				value={prompt}
 				onChange={e => setPrompt(e.target.value)}
@@ -465,8 +562,12 @@ function CustomPromptSection({ threadId }: { threadId: string }) {
 						? t('session.customPromptSaved')
 						: t('session.customPromptCounter', { used: prompt.length, max: data.customPromptMaxLength })}
 				</span>
+				{/* D3 (R16) — "Salvar prompt" is the PRIMARY action in the reference (solid brand green),
+				    not the hollow `outline` it used to be: it is the one section in this dialog that
+				    requires an explicit commit, and the filled button is what makes that commit visible. */}
 				<Button
-					variant="outline"
+					variant="default"
+					size="lg"
 					className="shrink-0"
 					disabled={!promptDirty || configurePrompt.isPending}
 					onClick={() => configurePrompt.mutate({ threadId, data: { customPrompt: prompt } }, { onSuccess: invalidate })}
@@ -474,6 +575,7 @@ function CustomPromptSection({ threadId }: { threadId: string }) {
 					{t('session.customPromptSave')}
 				</Button>
 			</div>
+			<p className="text-sm text-muted-foreground">{t('session.customPromptHint')}</p>
 		</section>
 	)
 }
