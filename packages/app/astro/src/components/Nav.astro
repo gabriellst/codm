@@ -1,6 +1,7 @@
 ---
 import { getEntry } from 'astro:content'
 import LocaleSwitcher from '~/components/LocaleSwitcher.astro'
+import LogoMark from '~/components/LogoMark.astro'
 import { DMG_DOWNLOAD_URL } from '~/config/download'
 import { type Locale, routeFor } from '~/i18n'
 
@@ -31,12 +32,10 @@ const link = 'text-[14px] font-semibold text-[var(--muted-foreground)] transitio
 ---
 
 <nav class="mx-auto flex h-[76px] max-w-[1440px] items-center gap-8 px-6 md:px-16">
+	{/* The real brand mark (same SVG as the app icon/favicon) — the .pen's green square +
+	    script "dm" is its stand-in, not the source (founder, 11/08). */}
 	<a href={homeHref} class="flex items-center gap-2.5" aria-label="CODM">
-		<span
-			class="flex h-[38px] w-[38px] items-center justify-center rounded-asymmetric-2xs bg-[var(--primary)] font-mono text-[15px] font-bold text-[var(--primary-foreground)]"
-		>
-			dm
-		</span>
+		<LogoMark class="h-[34px] w-auto shrink-0" />
 		<span class="text-[16px] font-extrabold tracking-[0.4px] text-[var(--foreground)]">CODM</span>
 	</a>
 	<div class="flex flex-1 items-center justify-center gap-[26px]">
