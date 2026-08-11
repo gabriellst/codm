@@ -8,12 +8,12 @@
  *
  * WHY IT BOOTS THE WHOLE DAEMON, unlike the Fase-3 smoke (`phase3-smoke.ts`), which explicitly did
  * NOT. The Fase-3 smoke avoided booting the daemon because reaching its HTTP test-ingress requires
- * `CODM_E2E=true`, and that same flag swaps the real runner for a stub — the opposite of what that
+ * `CODM_ENV=e2e`, and that same value swaps the real runner for a stub — the opposite of what that
  * smoke needed to prove. This smoke does not go through the agent pipeline or the test-ingress AT
  * ALL: it seeds an `Issue` directly via the repository (the `given*` helper pattern, never a use
  * case) and mints a run token directly via the SAME `RunTokenService` singleton the router verifies
- * against — both in-process, in the SAME script that boots the HTTP listener. `CODM_E2E` stays
- * UNSET, so nothing is stubbed; the MCP router, the generated tool, the controller and the use case
+ * against — both in-process, in the SAME script that boots the HTTP listener. `CODM_ENV` stays
+ * unset (defaulting to `real`), so nothing is stubbed; the MCP router, the generated tool, the controller and the use case
  * are all the real production wiring. The only thing this script substitutes for is the `IssueWorkAgent`
  * itself minting the token — which is legitimate, because the claim this AC exists to verify is "does
  * a real `claude` process, given this MCP config, actually call this tool with this spelling", not

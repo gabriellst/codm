@@ -21,7 +21,7 @@
  *      and the frames it yielded are what the SSE panel would have shown.
  *
  * WHY NOT THE WHOLE DAEMON: the HTTP test-ingress that seeds an inbound message is guarded by
- * `CODM_E2E=true`, and that same flag is what swaps `StreamJsonAgentRunner` out for the e2e stub
+ * `CODM_ENV=e2e`, and that same value is what swaps `StreamJsonAgentRunner` out for the e2e stub
  * (`agent/registry.ts`). Booting the daemon to reach the ingress would therefore guarantee the CLI
  * is NEVER spawned — the opposite of what this smoke exists to prove. So the smoke drives the two
  * consumers directly, which is precisely the surface Fase 3 changed; the rest of the chain

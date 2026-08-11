@@ -11,6 +11,24 @@ import (
 	"template/api-go/internal/channel"
 	"template/api-go/internal/shared"
 	core "template/core-go"
+	"template/core-go/config"
+	"template/core-go/registry"
+)
+
+// base is the gateway's fx composition BEFORE any environment overlay — the
+// SAME symbol main() and the wiring rail (main_test.go, spec AC-5) build
+// against, so there is exactly one source for "what this service is made of".
+var base = fx.Options(
+	// Framework infrastructure (core): DB, mediators, outbox dispatcher, HTTP router.
+	core.Module,
+
+	// api-go-local wiring: auth middlewares, SSE controller, docs + SPA.
+	// Must come after core.Module so middleware order stays
+	// Recovery → Logging → Session → APIKey.
+	shared.Module,
+
+	// Single bounded context module — channel absorbs messaging and remote.
+	channel.Module,
 )
 
 func main() {
@@ -21,19 +39,23 @@ func main() {
 		}),
 	))
 
+	// registry.App needs cfg.Env to pick the overlay BEFORE the fx graph is
+	// built, so it cannot come from inside the graph — this pre-load learns it.
+	// core.Module ALSO provides *config.Config via fx.Provide(config.Load) (its
+	// own file, out of this task's scope fence): that provider is left
+	// untouched and is what the graph actually resolves at runtime. Reading
+	// the same env vars twice is pure (same input, same Config), so this costs
+	// one extra parse at boot, not a second source of truth.
+	cfg, err := config.Load()
+	if err != nil {
+		slog.Error("config load failed", "error", err)
+		os.Exit(1)
+	}
+
 	fx.New(
 		fx.StopTimeout(30*time.Second),
 
-		// Framework infrastructure (core): DB, mediators, outbox dispatcher, HTTP router.
-		core.Module,
-
-		// api-go-local wiring: auth middlewares, SSE controller, docs + SPA.
-		// Must come after core.Module so middleware order stays
-		// Recovery → Logging → Session → APIKey.
-		shared.Module,
-
-		// Single bounded context module — channel absorbs messaging and remote.
-		channel.Module,
+		registry.App(cfg.Env, base, channel.Overlays),
 
 		// Start HTTP server
 		fx.Invoke(core.StartHTTPServer),

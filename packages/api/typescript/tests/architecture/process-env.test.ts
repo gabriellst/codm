@@ -5,8 +5,8 @@ import { join } from 'node:path'
 /**
  * RAIL (spec D14/AC-4): `process.env.` fora do módulo Config é proibido em src/. O Config tipado
  * (`RawEnvSchema`) é a única porta de entrada de ambiente — um site cru é um eixo paralelo em
- * gestação (foi assim que CODM_E2E nasceu). Exceções vivem no INVENTORY (shrink-only, motivo
- * inline); a lista vazia é o estado final.
+ * gestação (foi assim que nasceram mais de um flag de teste solto por aí, extintos desde). Exceções
+ * vivem no INVENTORY (shrink-only, motivo inline); a lista vazia é o estado final.
  */
 const SRC = join(import.meta.dir, '../../src')
 const INVENTORY: string[] = [

@@ -288,17 +288,6 @@ export const REPO = {
 		},
 		GLOBAL_API_KEY: { consumers: ['apiGo'], secret: true, example: '', doc: 'generic apikey fallback' },
 		WHATSMEOW_LOG_LEVEL: { consumers: ['apiGo'], example: 'WARN', doc: 'whatsmeow client log level' },
-		// NO `schema:` on purpose — ENV-05 requires one EXACTLY when apiTs is a consumer, and apiTs no
-		// longer reads this flag AT ALL (eixo-único-de-ambiente T5): the TS-side hermetic swaps that used
-		// to branch on `process.env.CODM_E2E` (shared/index.ts, agent/registry.ts, agent/index.ts,
-		// thread/registry.ts) are now the declared `e2e` DI column, selected by `Config.env.CODM_ENV`
-		// instead. Only api-go's OWN test seam (`internal/channel/testseam`, config.go) still reads this
-		// var directly — hence `apiGo` as the sole consumer, which is what puts it under the ENV-03 rail.
-		CODM_E2E: {
-			consumers: ['apiGo'],
-			example: '',
-			doc: 'test-only gateway ingress seam (internal/channel/testseam); refused under PRODUCTION',
-		},
 		// schema: 'kernel' (eixo-único-de-ambiente T1): CODM_PROFILE joined RawEnvSchema, so
 		// `Config.env.CODM_PROFILE` is now the typed read — the raw `process.env.CODM_PROFILE`
 		// call sites in src/index.ts / src/shared/cloud-profile.ts sweep to it in T5 (process.env
@@ -320,14 +309,18 @@ export const REPO = {
 			example: '',
 			doc: "cloud profile switch — 'cloud' boots only auth+owner (baked as ENV in docker/cloud.Dockerfile; Railway-only deploy, compose aposentado 2026-08-07); unset boots the full desktop daemon",
 		},
-		// Eixo-único-de-ambiente (spec Decision 7, T1): a única env var que seleciona o ambiente do
-		// boot POR PROCESSO — `index.ts` repassa a `start({ env: Config.env.CODM_ENV })`.
-		// `mock`/`integration` continuam seleção programática (TestBed/harness), nunca por env var.
+		// Eixo-único-de-ambiente (spec Decision 7, T1) + eixo-ambiente-go (spec Decision 2): the SAME
+		// var and column names both backends select their environment axis by. `index.ts` repasses it
+		// as `start({ env: Config.env.CODM_ENV })` on the TS side; `core/registry.App(cfg.Env, base,
+		// overlays)` composes by it on the Go side (core/config/config.go: `registry.ParseEnv`).
+		// TS: `mock`/`integration` stay programmatic-only (TestBed/harness), never this var — only
+		// `real`/`e2e` are read from it. Go has no TestBed layer, so `integration`/`e2e` are ALSO
+		// selected by this var there (Go-internal tests read it directly too).
 		CODM_ENV: {
-			consumers: ['apiTs'],
+			consumers: ['apiTs', 'apiGo'],
 			schema: 'kernel',
 			example: 'real',
-			doc: "boot environment selector — 'real' (default) or 'e2e' (Playwright); mock/integration are programmatic-only",
+			doc: "boot environment selector — 'real' (default), 'integration', or 'e2e'; TS only reads this var for 'real'/'e2e' (mock/integration are programmatic-only there); apiGo (no TestBed layer) reads it for all three",
 		},
 		// Modo de emissão de OpenAPI (bun sdk / emit-openapi project.json target): sob 'true' o boot
 		// só coleta rotas para gerar o spec, sem tocar persistência real nem enfileirar jobs/comandos.

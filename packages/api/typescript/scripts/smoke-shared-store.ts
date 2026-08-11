@@ -200,11 +200,15 @@ async function main(): Promise<number> {
 	const gatewayEnv = {
 		...baseEnv,
 		CHANNEL_PORT: String(CHANNEL_PORT),
+		// CHANNEL_ENVIRONMENT stays DEVELOPMENT (never PRODUCTION) — registry.Refuse
+		// (core/registry, config.go) fail-closes CODM_ENV=e2e under a PRODUCTION deploy.
 		CHANNEL_ENVIRONMENT: 'DEVELOPMENT',
-		// The seam that makes the CONNECTED literal reachable unattended. Go-side ONLY: src/boot.ts
-		// refuses the flag on the TS side under NODE_ENV=production, and the daemon has no business
-		// simulating the gateway in a test whose whole point is that the gateway is real.
-		CODM_E2E: 'true',
+		// The wiring axis (core/registry — eixo-ambiente-go) that swaps the gateway's ChannelFactory
+		// for the scripted mock (internal/channel/overlay.go). The mock's default e2e Scenario
+		// auto-pairs (AutoPairAfter: 0) the instant /connect is called, which is what makes the
+		// CONNECTED literal reachable unattended — the same job internal/channel/testseam (deleted)
+		// used to do by injecting the domain event directly over HTTP.
+		CODM_ENV: 'e2e',
 		// BOTH keys, both empty — config.go falls back from the first to the second, so binding only
 		// one leaves the api-key guard on and turns every request below into a 401.
 		CHANNEL_GLOBAL_API_KEY: '',
@@ -277,17 +281,19 @@ async function main(): Promise<number> {
 		const before2 = (await daemonChannels())[0]?.status ?? '<none>'
 		check(before2 !== 'CONNECTED', 'control 2 — the daemon does NOT yet report CONNECTED', `daemon still reports status=${before2}`)
 
-		// The gateway's TEST-ONLY ingress seam (internal/channel/testseam). It raises the domain event
-		// and everything after it is untouched production code — handler → uow → entity.SetConnected →
-		// repo.Save. In production only a QR scanned on a phone produces this event, which is why an
-		// unattended run needs the seam to reach the literal at all.
-		const connected = await fetch(`http://127.0.0.1:${CHANNEL_PORT}/api/channel/channels/_test/gateway`, {
+		// The REAL production connect endpoint, over the mock ChannelFactory the CODM_ENV=e2e overlay
+		// swapped in (internal/channel/overlay.go). GetQRChannel starts the scripted pairing clock;
+		// with the default e2e Scenario's AutoPairAfter=0 it "scans" immediately, through the SAME
+		// mapper.MapEvent(*events.Connected{}) a real phone scan reaches — handler → uow →
+		// entity.SetConnected → repo.Save is untouched production code. No test-only HTTP surface is
+		// involved any more (internal/channel/testseam, which produced this same fact by injecting the
+		// domain event directly, is gone).
+		const connected = await fetch(`http://127.0.0.1:${CHANNEL_PORT}/api/channel/channels/${channelId}/connect`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json', 'X-Owner-Id': OPERATOR_ID },
-			body: JSON.stringify({ channelId }),
 		})
 		// A3 — recorded, never trusted as the verdict.
-		log(`  ..   gateway seam responded HTTP ${connected.status} (informational — the ROW is the verdict)`)
+		log(`  ..   gateway connect responded HTTP ${connected.status} (informational — the ROW is the verdict)`)
 
 		const status2 = await daemonSees('CONNECTED')
 		const crossing2 = check(
