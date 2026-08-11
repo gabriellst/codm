@@ -12,8 +12,9 @@ import (
 	remoterepo "template/api-go/internal/channel/repositories/remote"
 	"template/api-go/internal/channel/services/gateway"
 	"template/api-go/internal/channel/services/pool"
-	repositories "template/core-go/repositories"
 	"template/core-go/types"
+
+	"github.com/google/uuid"
 )
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -21,39 +22,34 @@ import (
 //
 // The single event-driven writer of the CONTACT-SNAPSHOT half of the remotes
 // projection (the other half — live remote/message mutations — is
-// RemoteProjector). Subscribes to channel.gateway.sync_complete and, on
-// dispatch, resolves the LIVE channel from the pool and streams its full
-// contact/group roster through the SAME two-phase write RemoteProjector's
-// sibling used to run inside the whatsmeow adapter
-// (services/gateway/whatsapp/whatsmeow_channel.go, pre-T13:
-// projectContactSnapshot/normalizeLIDMessages/hydrateContactAvatars — see git
-// history). Moved out per the repo's citizen model (CLAUDE.md): a Projector
-// writes projections via its ProjectionRepository, reacting to events; an
-// adapter adapts protocol. WhatsmeowChannel.projectContactSnapshot did both at
-// once — it held an injected RemoteProjectionRepository and wrote read-model
-// rows directly from inside the platform adapter. T13 splits that: the
-// adapter now only raises the fact (channel.gateway.sync_complete, via the
+// RemoteProjector). Its exported entry point, SyncContactSnapshot, resolves
+// the LIVE channel from the pool and streams its full contact/group roster
+// through the SAME two-phase write RemoteProjector's sibling used to run
+// inside the whatsmeow adapter (services/gateway/whatsapp/whatsmeow_channel.go,
+// pre-T13: projectContactSnapshot/normalizeLIDMessages/hydrateContactAvatars —
+// see git history). Moved out per the repo's citizen model (CLAUDE.md): a
+// Projector writes projections via its ProjectionRepository, reacting to
+// events; an adapter adapts protocol. WhatsmeowChannel.projectContactSnapshot
+// did both at once — it held an injected RemoteProjectionRepository and wrote
+// read-model rows directly from inside the platform adapter. T13 splits that:
+// the adapter now only raises the fact (channel.gateway.sync_complete, via the
 // mapper — unchanged), and this projector does 100% of the projection work,
 // resolving the channel it needs to stream from purely through the
 // gateway.Channel port (StreamContactSnapshot / HydrateAvatars /
 // ResolvePhoneJID) — never an adapter-internal field.
 //
-// Two events, two jobs (do not collapse them):
-//   - channel.gateway.sync_complete (this projector's trigger) fires once,
-//     synchronously, when the mapper observes AppStateSyncComplete(regular)
-//     (mapper/app_state_sync.go). It carries no counts — it only says "the
-//     store is ready to stream."
-//   - channel.remotes_synced (raised BY THIS PROJECTOR, below, after phase 1's
-//     rows have actually landed) is the completion signal: summary counts
-//     that let consumers invalidate a cache. The pre-existing
-//     RemotesSyncedIntegrationHandler (handlers/remotes_synced_handler.go,
-//     unchanged by T13) republishes it as the integration event
-//     integration.channel.remotes_synced, which
-//     packages/api/typescript/src/ui/handlers/ConsumeChannelRemotesSynced.ts
-//     depends on to invalidate the sidebar. Raising the trigger alone would
-//     let a TS listener refetch before rows land (silent staleness) — the
-//     two-event handoff is what makes an ASYNC (outbox-driven) projector safe
-//     to use here instead of the old synchronous in-adapter call.
+// Handler/projector split (canon-fix, .plans/2026-08-10-eixo-ambiente-go.md):
+// this projector does NOT subscribe to the mediator and does NOT raise
+// channel.remotes_synced itself — a projector's surface is its
+// ProjectionRepository, never a DomainEventRepository. The write-side
+// handlers.RemoteSnapshotSyncedHandler (internal/channel/handlers/) owns
+// channel.gateway.sync_complete: it calls SyncContactSnapshot below DIRECTLY
+// (a plain Go call, not mediator fan-out — fan-out doesn't guarantee this
+// runs before the handler raises the completion event) and, once phase 1's
+// rows have landed, raises channel.remotes_synced itself from the counts
+// SyncContactSnapshot returns. See that handler's docblock for the full
+// two-event rationale (trigger vs. completion) — unchanged by this split,
+// only which citizen raises the completion fact moved.
 //
 // Why this lived in the adapter originally (context for why it's safe to move
 // now, not just where):
@@ -84,66 +80,61 @@ import (
 // ──────────────────────────────────────────────────────────────────────────────
 
 type RemoteSnapshotProjector struct {
-	pool            pool.ChannelPool
-	repo            remoterepo.RemoteProjectionRepository
-	msgRepo         messagerepo.MessageProjectionRepository
-	domainEventRepo repositories.DomainEventRepository
+	pool    pool.ChannelPool
+	repo    remoterepo.RemoteProjectionRepository
+	msgRepo messagerepo.MessageProjectionRepository
 }
 
 // NewRemoteSnapshotProjector takes the channel pool (to resolve the live
-// gateway.Channel the event names by id), the remotes projection repository
-// (phase 1 writes), the message projection repository (LID normalization
-// reads/writes — same dependency the old adapter's normalizeLIDMessages used),
-// and the domain event repository — needed because, unlike RemoteProjector,
-// this projector also RAISES a new domain event (channel.remotes_synced) once
-// its own writes land; see the docblock above for why that is deliberate here
-// and not a generic "projectors may publish events" license.
+// gateway.Channel by id), the remotes projection repository (phase 1 writes),
+// and the message projection repository (LID normalization reads/writes —
+// same dependency the old adapter's normalizeLIDMessages used). No
+// DomainEventRepository here (canon-fix): raising channel.remotes_synced is
+// the calling handler's job, not this projector's — see the docblock above.
 func NewRemoteSnapshotProjector(
 	pool pool.ChannelPool,
 	repo remoterepo.RemoteProjectionRepository,
 	msgRepo messagerepo.MessageProjectionRepository,
-	domainEventRepo repositories.DomainEventRepository,
 ) *RemoteSnapshotProjector {
-	return &RemoteSnapshotProjector{pool: pool, repo: repo, msgRepo: msgRepo, domainEventRepo: domainEventRepo}
+	return &RemoteSnapshotProjector{pool: pool, repo: repo, msgRepo: msgRepo}
 }
 
-// compile-time interface check.
-var _ MultiEventProjector = (*RemoteSnapshotProjector)(nil)
-
-// EventNames lists every event this projector subscribes to.
-func (p *RemoteSnapshotProjector) EventNames() []string {
-	return []string{ctxevents.GatewaySyncCompleteEventName}
-}
-
-func (p *RemoteSnapshotProjector) Handle(ctx context.Context, event types.DomainEventI) error {
-	switch event.GetEventName() {
-	case ctxevents.GatewaySyncCompleteEventName:
-		return p.handleSyncComplete(ctx, event)
-	default:
-		return nil
-	}
+// SnapshotResult carries phase 1's write counts back to the caller. A nil
+// result (with a nil error) means the channel was not found in the pool —
+// see the "Lifecycle" note below; the caller must treat that as a no-op, not
+// an error, and must not raise channel.remotes_synced for it.
+type SnapshotResult struct {
+	ChannelID uuid.UUID
+	OwnerID   string
+	Total     int32
+	Inserted  int32
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// handleSyncComplete
+// SyncContactSnapshot
 //
 // Resolves the live channel from the pool and runs the two-phase snapshot:
 //
 //   - Phase 1 (synchronous): stream contacts/groups, bulk-upsert them plus
 //     group memberships, normalize any LID-keyed messages to PN now that
-//     resolution is possible, backfill preview columns, then raise
-//     channel.remotes_synced with the resulting counts.
-//   - Phase 2 (background, non-blocking): rate-limited avatar hydration.
+//     resolution is possible, backfill preview columns, then return the
+//     resulting counts so the caller can raise channel.remotes_synced.
+//   - Phase 2 (background, non-blocking): rate-limited avatar hydration,
+//     kicked off before returning so it overlaps the caller's own work.
 //
-// A channel absent from the pool (disconnected/removed between the fact
-// firing and this dispatch) is logged and treated as a no-op, not an error —
-// see the docblock's "Lifecycle" note.
+// Exported so handlers.RemoteSnapshotSyncedHandler can call it DIRECTLY (a
+// plain Go call, not mediator dispatch) — that direct call is what guarantees
+// phase 1's rows land before the handler raises the completion event; mediator
+// fan-out across sibling handlers does not order like that. A channel absent
+// from the pool (disconnected/removed between the fact firing and this call)
+// is logged and treated as a no-op, not an error — see the docblock's
+// "Lifecycle" note.
 // ──────────────────────────────────────────────────────────────────────────────
 
-func (p *RemoteSnapshotProjector) handleSyncComplete(ctx context.Context, event types.DomainEventI) error {
+func (p *RemoteSnapshotProjector) SyncContactSnapshot(ctx context.Context, event types.DomainEventI) (*SnapshotResult, error) {
 	e, err := types.UnmarshalDomainEvent[ctxevents.ChannelGatewaySyncCompletePayload](event)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	channelID := e.Payload.ChannelID
 	ownerID := e.Payload.OwnerID
@@ -152,7 +143,7 @@ func (p *RemoteSnapshotProjector) handleSyncComplete(ctx context.Context, event 
 	if !ok {
 		slog.Info("remote snapshot: channel not in pool — skipping",
 			"channelId", channelID)
-		return nil
+		return nil, nil
 	}
 
 	now := time.Now().UTC()
@@ -212,24 +203,19 @@ func (p *RemoteSnapshotProjector) handleSyncComplete(ctx context.Context, event 
 		"total", len(allRemotes),
 	)
 
-	// channel.remotes_synced is the COMPLETION signal (counts only) — raised
-	// here, after phase 1's rows have actually landed, not off the trigger
-	// event. RemotesSyncedIntegrationHandler (unchanged) republishes it as
-	// integration.channel.remotes_synced for the TS sidebar. See docblock.
-	summaryEvt := ctxevents.NewRemotesSyncedEvent(channelID, ownerID, ctxevents.ChannelRemotesSyncedPayload{
+	// ── Phase 2: avatar hydration in background (non-blocking) ────────────
+	go p.hydrateContactAvatars(ch, channelID.String(), allRemoteIDs)
+
+	// channel.remotes_synced is the COMPLETION signal (counts only). This
+	// method does not raise it — it returns the counts so the caller
+	// (handlers.RemoteSnapshotSyncedHandler) can raise it AFTER these rows
+	// have actually landed, not off the trigger event. See docblock.
+	return &SnapshotResult{
 		ChannelID: channelID,
 		OwnerID:   ownerID,
 		Total:     int32(len(allRemotes)),
 		Inserted:  int32(len(allRemotes)),
-	})
-	if err := p.domainEventRepo.Save(ctx, summaryEvt); err != nil {
-		slog.Warn("remote snapshot: failed to save remotes_synced event", "channelId", channelID, "error", err)
-	}
-
-	// ── Phase 2: avatar hydration in background (non-blocking) ────────────
-	go p.hydrateContactAvatars(ch, channelID.String(), allRemoteIDs)
-
-	return nil
+	}, nil
 }
 
 // normalizeLIDMessages rewrites messages stored with LID remote_ids to their

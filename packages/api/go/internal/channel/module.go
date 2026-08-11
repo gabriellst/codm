@@ -389,15 +389,23 @@ func registerDomainEventHandlers(
 	// Remote snapshot projector (T13) — the contact/group roster half of the
 	// remotes projection, moved out of the whatsmeow adapter
 	// (whatsmeow_channel.go used to hold remoteProjRepo itself and write rows
-	// directly). Reacts to channel.gateway.sync_complete (already raised by
-	// the mapper, unchanged) by resolving the live channel from the pool and
-	// streaming its contact snapshot through the port. Registered after the
-	// sync pipeline handlers above (which also listen on
-	// channel.gateway.sync_complete) so a pre-existing, near-infallible write
-	// (SyncCompletedHandler persisting channel.sync_completed) is never
-	// blocked by this newer, more failure-prone one — see
+	// directly). Its exported SyncContactSnapshot resolves the live channel
+	// from the pool and streams its contact snapshot through the port.
+	//
+	// Canon-fix (.plans/2026-08-10-eixo-ambiente-go.md): the projector no
+	// longer registers with the mediator directly — it has no
+	// DomainEventRepository dependency anymore, only its projection repos.
+	// RemoteSnapshotSyncedHandler owns channel.gateway.sync_complete,
+	// calling SyncContactSnapshot directly (ordering guarantee) and raising
+	// channel.remotes_synced itself once it returns — see that handler's
+	// docblock. Registered after the sync pipeline handlers above (which
+	// also listen on channel.gateway.sync_complete) so a pre-existing,
+	// near-infallible write (SyncCompletedHandler persisting
+	// channel.sync_completed) is never blocked by this newer, more
+	// failure-prone one — see
 	// projections/projectors/remote_snapshot_projector.go's docblock.
-	projectors.RegisterAll(m, projectors.NewRemoteSnapshotProjector(pool, remoteProjRepo, msgProjRepo, domainEventRepo))
+	snapshotProjector := projectors.NewRemoteSnapshotProjector(pool, remoteProjRepo, msgProjRepo)
+	m.Register(handlers.NewRemoteSnapshotSyncedHandler(snapshotProjector, domainEventRepo))
 }
 
 // No message persistence handlers needed: messages are themselves the
