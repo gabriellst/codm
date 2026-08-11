@@ -7,6 +7,7 @@ import { enumLabel } from '@/lib'
 import { cn } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Empty, EmptyDescription, EmptyTitle } from '@/components/ui/empty'
+import { sectionLabel } from '@/components/ui/surfaces'
 
 const STATUS_ORDER: IssueStatus[] = ['NEEDS_INPUT', 'WORKING', 'COMPLETED']
 
@@ -46,7 +47,7 @@ export function SessionIssuesSection({ threadId, className, ...props }: Componen
 				<div className="flex flex-col gap-8">
 					{orderedGroups.map(group => (
 						<section key={group.status} className="flex flex-col gap-1">
-							<h2 className="label-eyebrow px-2 pb-1">{enumLabel('IssueStatus', group.status)}</h2>
+							<h2 className={cn(sectionLabel, 'px-2')}>{enumLabel('IssueStatus', group.status)}</h2>
 							{group.items.map(item => (
 								<IssueRow key={item.issueId} item={{ ...item, threadId }} />
 							))}
@@ -55,7 +56,7 @@ export function SessionIssuesSection({ threadId, className, ...props }: Componen
 
 					{data.archived.length > 0 && (
 						<section className="flex flex-col gap-1">
-							<h2 className="label-eyebrow px-2 pb-1">{t('session.archived')}</h2>
+							<h2 className={cn(sectionLabel, 'px-2')}>{t('session.archived')}</h2>
 							{data.archived.map(item => (
 								<IssueRow key={item.issueId} item={{ ...item, threadId }} />
 							))}

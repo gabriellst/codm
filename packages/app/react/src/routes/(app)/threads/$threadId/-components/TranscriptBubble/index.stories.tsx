@@ -42,9 +42,10 @@ type Story = StoryObj<typeof meta>
 /**
  * WHO SAID THIS — a atribuição que uma conversa em grupo é ilegível sem.
  *
- * NÃO checa `.bg-secondary` aqui de propósito (falseamento medido): a Fallback de iniciais do
+ * NÃO checa `.bg-bubble-in` aqui de propósito (falseamento medido): a Fallback de iniciais do
  * `ThreadAvatar` (Base UI `Avatar.Fallback`, sempre visível sob happy-dom — nenhuma imagem carrega a
- * qualquer preço) TAMBÉM carrega `bg-secondary`, e vem ANTES do balão no DOM — um `querySelector`
+ * qualquer preço) carrega `bg-secondary` (o MESMO hex que `--bubble-in` aliasa), e vem ANTES do
+ * balão no DOM — um `querySelector`
  * casaria com o avatar, não com o balão, e a asserção do horário passaria por acidente sobre o texto
  * errado. O par balão+horário é coberto em `NoIdentity`, onde não há avatar nenhum para colidir.
  */
@@ -68,7 +69,7 @@ export const NoAvatarFallback: Story = {
 /**
  * O MESMO componente renderiza `GetIssueDetail.routedMessages`, um payload mais estreito sem
  * identidade nenhuma — isso tem que degradar para o balão que sempre foi, não para um avatar em
- * branco ou um crash. Sem avatar nenhum aqui, `.bg-secondary` só pode casar com o balão — é onde o
+ * branco ou um crash. Sem avatar nenhum aqui, `.bg-bubble-in` só pode casar com o balão — é onde o
  * formato do horário (curta, local, ISO nunca chega à tela) é provado dentro do balão de entrada.
  */
 export const NoIdentity: Story = {
@@ -78,14 +79,14 @@ export const NoIdentity: Story = {
 		await expect(canvasElement.querySelector('[data-slot="avatar"]')).toBeNull()
 		await expect(canvasElement).toHaveTextContent('05:25')
 		await expect(canvasElement).not.toHaveTextContent(AT)
-		await expect(canvasElement.querySelector('.bg-secondary')).toHaveTextContent('05:25')
+		await expect(canvasElement.querySelector('.bg-bubble-in')).toHaveTextContent('05:25')
 	},
 }
 
-/** O horário dentro do balão de SAÍDA (`bg-primary`) — não num rótulo separado embaixo dele. */
+/** O horário dentro do balão de SAÍDA (`bg-bubble-out`) — não num rótulo separado embaixo dele. */
 export const OutboundDirect: Story = {
 	args: { entry: { entryId: '019e4d24-6524-7041-9e1c-8108180cdd02', kind: 'DIRECT', text: 'subindo agora', at: AT } },
 	play: async ({ canvasElement }) => {
-		await expect(canvasElement.querySelector('.bg-primary')).toHaveTextContent('05:25')
+		await expect(canvasElement.querySelector('.bg-bubble-out')).toHaveTextContent('05:25')
 	},
 }

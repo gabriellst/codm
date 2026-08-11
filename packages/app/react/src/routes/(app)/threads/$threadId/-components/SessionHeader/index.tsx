@@ -10,7 +10,7 @@ import {
 	useResumeThread,
 	useGetSessionChat,
 } from '@codm/client-typescript/typescript'
-import type { GetSessionChatQueryResponse } from '@codm/client-typescript/typescript'
+import type { GetSessionChatQueryResponse, ThreadStatus } from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
@@ -41,6 +41,23 @@ const TABS = [
 	{ labelKey: 'session.tabIssues', to: '/threads/$threadId/issues' as const },
 	{ labelKey: 'session.tabArtifacts', to: '/threads/$threadId/artifacts' as const },
 ]
+
+/**
+ * The identity chip, per `ThreadStatus` (Q6TEB — hLcjH measures RUNNING, i1AQD2 measures PAUSED).
+ * Enum-keyed and exhaustive (`local/no-enum-widening`): a status the design hasn't shown yet
+ * (IDLE, NEEDS_ATTENTION) keeps the pre-D3 hollow-outline treatment rather than guessing a fill.
+ *
+ * PAUSED is a genuine addition, not a restyle — the code used to fold every non-RUNNING status into
+ * one hollow-outline look. The design gives PAUSED its own solid near-black chip (the same surface
+ * `alertSurface` uses for the stop panel) with the bright accent dot, because a paused thread is a
+ * state that needs the operator's attention, same family as "precisa de você".
+ */
+const STATUS_BADGE: Record<ThreadStatus, { chip: string; dot: string }> = {
+	RUNNING: { chip: 'bg-primary text-primary-foreground', dot: 'bg-primary-foreground' },
+	PAUSED: { chip: 'bg-foreground text-background', dot: 'bg-success-bright' },
+	NEEDS_ATTENTION: { chip: 'border border-input text-foreground', dot: 'bg-warning' },
+	IDLE: { chip: 'border border-input text-foreground', dot: 'bg-caption-foreground/50' },
+}
 
 /**
  * The session masthead shared by the Chat / Issues / Artifacts tabs (D3).
@@ -101,19 +118,11 @@ export function SessionHeader({ threadId, className, ...props }: ComponentProps<
 								<h1 className="heading-display truncate text-xl text-foreground md:text-2xl">{data.thread.displayName}</h1>
 								<span
 									className={cn(
-										'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium',
-										data.thread.status === 'RUNNING' ? 'bg-primary text-primary-foreground' : 'border border-input text-foreground',
+										'inline-flex items-center gap-1.5 rounded-asymmetric-2xs px-2.5 py-1 text-xs font-medium',
+										STATUS_BADGE[data.thread.status].chip,
 									)}
 								>
-									<Dot
-										className={
-											data.thread.status === 'RUNNING'
-												? 'bg-primary-foreground'
-												: data.thread.status === 'NEEDS_ATTENTION'
-													? 'bg-warning'
-													: 'bg-caption-foreground/50'
-										}
-									/>
+									<Dot className={STATUS_BADGE[data.thread.status].dot} />
 									{enumLabel('ThreadStatus', data.thread.status)}
 								</span>
 							</div>

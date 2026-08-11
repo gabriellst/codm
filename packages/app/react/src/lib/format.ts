@@ -74,6 +74,27 @@ export function formatTimeOfDay(iso: string, locale: Locale = DEFAULT_LOCALE): s
 	return new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(date)
 }
 
+/**
+ * Relative time from now, locale-aware: an artifact recorded 12 minutes ago reads "há 12 min" in
+ * pt-BR, "12 min. ago" in en-US. `Intl.RelativeTimeFormat` picks the wording; this function only
+ * picks the UNIT (second/minute/hour/day), the same threshold shape `formatDurationSeconds` uses —
+ * under a minute stays in seconds, under an hour in minutes, under a day in hours, otherwise days.
+ *
+ * Degrades like `formatTimeOfDay`: an unparseable instant returns the raw string instead of
+ * throwing, so a malformed timestamp doesn't blank a whole artifact card.
+ */
+export function formatRelativeTime(iso: string, locale: Locale = DEFAULT_LOCALE): string {
+	const date = new Date(iso)
+	if (Number.isNaN(date.getTime())) return iso
+	const diffSeconds = (date.getTime() - Date.now()) / 1000
+	const abs = Math.abs(diffSeconds)
+	const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style: 'short' })
+	if (abs < 60) return rtf.format(Math.round(diffSeconds), 'second')
+	if (abs < 3600) return rtf.format(Math.round(diffSeconds / 60), 'minute')
+	if (abs < 86400) return rtf.format(Math.round(diffSeconds / 3600), 'hour')
+	return rtf.format(Math.round(diffSeconds / 86400), 'day')
+}
+
 /** Format a ratio (0..1) as a percent string, one decimal, pt-BR by default: 0.75 -> "75,0%". */
 export function formatPercent(ratio: number, locale: Locale = DEFAULT_LOCALE, fractionDigits = 1): string {
 	const safe = Number.isFinite(ratio) ? ratio : 0
