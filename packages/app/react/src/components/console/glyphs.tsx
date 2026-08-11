@@ -1,12 +1,30 @@
 import { IconBrandWhatsapp, IconHexagon, IconMessageDots, IconSparkles, IconTerminal2 } from '@tabler/icons-react'
 import type { Icon } from '@tabler/icons-react'
-import type { ChannelKind, IssueStatus, ProviderKind, StopResolution, WorkspaceBadge } from '@codm/client-typescript/typescript'
+import type {
+	ChannelKind,
+	ChannelStatus,
+	IssueStatus,
+	ProviderKind,
+	StopResolution,
+	WorkspaceBadge,
+} from '@codm/client-typescript/typescript'
 
 // ── Channels ──────────────────────────────────────────────────────────────────
 
 export const channelGlyph: Record<ChannelKind, Icon> = {
 	WHATSAPP: IconBrandWhatsapp,
 	INTERNAL: IconTerminal2,
+}
+
+/** D3 — the channel-row status chip: `secondary` (filled brand pastel) only while CONNECTED,
+ *  `default` (muted) for every other state, including the "coming soon" chip on non-connectable
+ *  rows (`ChannelsSection` reuses `default` there directly, outside this map). */
+export const channelStatusBadgeVariant: Record<ChannelStatus, 'default' | 'secondary'> = {
+	CONNECTED: 'secondary',
+	CONNECTING: 'default',
+	CREATED: 'default',
+	DELETED: 'default',
+	DISCONNECTED: 'default',
 }
 
 /**
@@ -39,9 +57,11 @@ export const providerLabel: Record<ProviderKind, string> = {
 
 // ── Workspaces ────────────────────────────────────────────────────────────────────
 
-/** GIT is a plain/unfilled tag (no pill fill); CLAUDE_PROJECT is the filled brand chip. */
-export const workspaceBadgeVariant: Record<WorkspaceBadge, 'ghost' | 'secondary'> = {
-	GIT: 'ghost',
+/** GIT is the plain muted chip (`default` badge variant = `bg-muted`); CLAUDE_PROJECT is the
+ *  filled brand chip. D3 (R8) — measured directly on the project-card footer: the git chip fills
+ *  `$muted`, not a borderless/ghost tag. */
+export const workspaceBadgeVariant: Record<WorkspaceBadge, 'default' | 'secondary'> = {
+	GIT: 'default',
 	CLAUDE_PROJECT: 'secondary',
 }
 

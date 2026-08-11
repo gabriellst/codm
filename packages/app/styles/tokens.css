@@ -115,16 +115,35 @@
 	   `.dark`, below), whereas `--foreground` itself flips to near-white there. */
 	--success-bright: oklch(0.83 0.228 132); /* #8BE414 */
 	--success-bright-foreground: oklch(0.2 0 0); /* #161616, measured (color:#161616 on the bright-green "Resolver" CTA) — intentionally NOT aliased to --foreground */
-	/* warning/destructive/info — UNCHANGED. No red/orange/blue hex appears anywhere in the
-	   7 reference screens (verified by scanning every literal hex + every color-bearing prop);
-	   nothing to remeasure against, so these keep their pre-redesign values rather than being
-	   invented. */
+	/* warning/info — still unmeasured (no reference screen carries either hue). destructive is NOT
+	   "unchanged, no reference evidence" anymore — that was true of the D2 pass, but the D3 canvas
+	   (39 screens) DOES carry red: the delete-project/delete-account danger badges measure
+	   #DC2626 → oklch(0.577 0.215 27.3), a rounding error from the value already here. Read as
+	   confirmation, not as evidence to invent a new number. */
 	--warning: oklch(0.75 0.15 71);
 	--warning-foreground: oklch(0.22 0 0);
-	--destructive: oklch(0.585 0.2 25);
+	--destructive: oklch(0.585 0.2 25); /* ≈ #DC2626 — measured in D3 (delete-project/-account danger badges) */
 	--destructive-foreground: oklch(0.99 0 0);
 	--info: oklch(0.6 0.13 250);
 	--info-foreground: oklch(0.99 0 0);
+
+	/* ── Skeleton + attention surfaces (D3, R1) ─────────────────────────────
+	   The D3 canvas carries a status palette the D2 pass had no evidence for (attention/idle/
+	   paused status hues, a dedicated skeleton-loading grey). Per the reconciliation rule (Fase 0,
+	   R1): these tokens enter the sheet only when the FIRST screen that consumes them lands, not
+	   speculatively — so only what the Projetos/Canais group (a5AkeG) actually uses is declared
+	   here. `status-attention`/`status-idle`/`status-paused`/`attention-foreground` stay
+	   undeclared until a later group's screen needs them.
+	   --skeleton / --skeleton-strong: the loading-card placeholder greys (project-card skeleton,
+	   Fase 4). Two steps, not one — the design's skeleton cards use the lighter grey for
+	   thin/quiet shapes (path, count) and the darker one for the shape carrying the most visual
+	   weight (the name line, the icon tile). */
+	--skeleton: oklch(0.946 0 0); /* #EDEDED */
+	--skeleton-strong: oklch(0.91 0 0); /* #E1E1E1 */
+	/* --attention-surface: the danger-badge backing behind a destructive icon (remove-project
+	   modal). Warm, low-chroma tint of the SAME hue as --destructive, not a separate literal —
+	   consistent with how --hover-accent-border pairs with --hover-accent above. */
+	--attention-surface: oklch(0.942 0.024 43.2); /* #FBE7DF */
 
 	/* ── Interaction states (lines, hover, selected) ───────────────────────────
 	   D2 CORRECTION, founder-confirmed — this block used to carry a comment on --hover claiming
@@ -271,6 +290,15 @@
 	--warning: oklch(0.8 0.15 75);
 	--destructive: oklch(0.65 0.19 25);
 	--info: oklch(0.68 0.14 250);
+
+	/* --skeleton/--skeleton-strong/--attention-surface — DERIVED, not measured (no dark screens in
+	   the reference), same rule as --hover-accent above: keep the role (skeleton = a step off
+	   --card; attention-surface = a low-chroma tint of --destructive), move lightness down to work
+	   on a near-black canvas. --skeleton-strong stays the more prominent of the pair, so it moves
+	   LIGHTER than --skeleton here (inverted from light mode, where "prominent" meant darker). */
+	--skeleton: oklch(0.26 0 0);
+	--skeleton-strong: oklch(0.32 0 0);
+	--attention-surface: oklch(from var(--destructive) l c h / 0.16);
 
 	--border: oklch(from var(--foreground) l c h / 0.14);
 	--input: oklch(from var(--foreground) l c h / 0.16);
