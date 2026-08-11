@@ -80,7 +80,7 @@
 			],
 			"inputs": ["{projectRoot}/src/**/*", "{projectRoot}/tests/**/*", "{projectRoot}/bunfig.toml"],
 			"options": {
-				"command": "bun test",
+				"command": "bun test && bun run test:cross-service",
 				"cwd": "packages/app/react"
 			}
 		},

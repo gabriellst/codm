@@ -1,3 +1,14 @@
 [test]
 # Registers happy-dom globals BEFORE any module loads — React reads `document` at import time.
 preload = ["./tests/setup.ts"]
+# THE CROSS-SERVICE GO-BOUNDARY SUITE RUNS IN ITS OWN PROCESS (T8, mirrors api-typescript's T7
+# exclusion — see packages/api/typescript/bunfig.toml for the sibling doc). `bun test` shares ONE
+# process across every file, and `useIntegrationBackend({ services: ['apiGo'] })` performs a REAL
+# `go build` + subprocess spawn (template.config.ts's WORKSPACES.apiGo.testBoot) — booting that
+# inside the default suite would either violate T7's law (a process that already booted WITHOUT
+# services cannot later boot WITH them — go-boundary.test.ts, which runs in the default suite,
+# boots first) or pay the build+spawn cost on every default run, contaminating the byte-identical
+# boot time spec D9 requires for the no-services path. Excluding the file by NAME keeps the default
+# suite's boot path untouched. Run it with `bun run test:cross-service`; the nx `test` target runs
+# both.
+pathIgnorePatterns = ["**/tests/architecture/go-boundary-services.test.ts"]

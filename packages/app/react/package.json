@@ -10,7 +10,9 @@
 		"lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
 		"tsc": "bun x tsc --noEmit",
 		"storybook": "storybook dev -p 6006",
-		"storybook:build": "storybook build"
+		"storybook:build": "storybook build",
+		"test": "bun test",
+		"test:cross-service": "bun test --path-ignore-patterns='**/__run_everything__/**' tests/architecture/go-boundary-services.test.ts"
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.0.0",

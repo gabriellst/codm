@@ -5,13 +5,17 @@ import { useIntegrationBackend } from '../support/integration-harness'
 import type { IntegrationBackend } from '../support/integration-harness'
 
 /**
- * RAIL (spec Decision 10, AC-6): dentro do harness de integração do console, o gateway Go NÃO sobe
- * — só o backend TS sobe em-processo (`integration-harness.ts`'s `useIntegrationBackend()`). Antes
- * desta task, `configureClient` apontava a URL do Go de volta para o servidor TS, então qualquer
- * endpoint do gateway respondia um 404 silencioso que parecia bug do teste, não ausência de
- * tooling — foi isso (não falta de given) que deixou 3 componentes só-visuais nas migrações T9–T11.
+ * RAIL — CASO (a) do AC-8, sem opt-in (spec Decision 10/11): dentro do harness de integração do
+ * console SEM `services: ['apiGo']`, o gateway Go NÃO sobe — só o backend TS sobe em-processo
+ * (`integration-harness.ts`'s `useIntegrationBackend()`). Antes desta task, `configureClient`
+ * apontava a URL do Go de volta para o servidor TS, então qualquer endpoint do gateway respondia um
+ * 404 silencioso que parecia bug do teste, não ausência de tooling — foi isso (não falta de given)
+ * que deixou 3 componentes só-visuais nas migrações T9–T11. O CASO (b) — com opt-in, o mesmo
+ * endpoint respondendo do subprocesso real — vive em `go-boundary-services.test.ts`, num processo
+ * próprio (T7's law: um backend por processo — services é uma decisão do PRIMEIRO boot do
+ * processo, e este arquivo roda dentro da suíte default, que já bootou sem eles).
  *
- * DUAS asserções, de propósito:
+ * TRÊS asserções, de propósito:
  *
  * 1. A SDK REAL (`health()`, de `@codm/client-typescript/go`) chamada dentro do harness recebe
  *    `.status === 501` — nunca um 404 (a prova de que a fronteira falha ALTO, não silenciosamente).
@@ -31,11 +35,14 @@ import type { IntegrationBackend } from '../support/integration-harness'
  *    porque vem de `err.response.status`, sem reler o corpo. A asserção 2 prova o MESMO corpo que a
  *    SDK recebeu, sem depender do caminho quebrado.
  *
- * FALSEADO manualmente durante o T8 (não codificado aqui — apontar `go` de volta para `backend.url`
- * é uma mudança transitória de UMA linha em `integration-harness.ts`): com a URL do Go apontando
- * para o backend TS, a asserção 1 fica VERMELHA (`.status` vira 404, o Fastify real não tem rota
- * `/health` do Go) e a asserção 2 também (o corpo do 404 do TS não tem `code:
- * 'GO_GATEWAY_NOT_IN_HARNESS'`); revertido, GREEN de novo. Ver o relato da Task T8 para os números.
+ * 3. A MENSAGEM nomeia o vocabulário novo (T8, spec D11) — `services: ['apiGo']` — para quem bate
+ *    nessa fronteira saber exatamente que opt-in resolve, em vez de só "não participa".
+ *
+ * FALSEADO durante o T8 (apontar `go` de volta para `backend.url` é uma mudança transitória de UMA
+ * linha em `integration-harness.ts`): com a URL do Go apontando para o backend TS, a asserção 1 fica
+ * VERMELHA (`.status` vira 404, o Fastify real não tem rota `/health` do Go) e a asserção 2 também
+ * (o corpo do 404 do TS não tem `code: 'GO_GATEWAY_NOT_IN_HARNESS'`); revertido, GREEN de novo. Ver
+ * o relato da Task T8 para os números.
  */
 describe('rail: a fronteira do Go falha alto dentro do harness', () => {
 	let backend: IntegrationBackend
@@ -70,5 +77,6 @@ describe('rail: a fronteira do Go falha alto dentro do harness', () => {
 		const body = (await res.json()) as { code?: string; message?: string }
 		expect(body.code).toBe('GO_GATEWAY_NOT_IN_HARNESS')
 		expect(body.message).toContain('gateway Go')
+		expect(body.message).toContain("services: ['apiGo']")
 	})
 })
