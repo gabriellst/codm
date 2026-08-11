@@ -11,7 +11,6 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Empty, EmptyDescription, EmptyTitle } from '@/components/ui/empty'
 import type { DeepPartial } from '@/lib'
 import { cn } from '@/lib/utils'
-import { Logo } from '@/components/console/Logo'
 import { useAttachWizardStore } from '../../-stores/useAttachWizardStore'
 import { ContactStep, type ContactStepData } from '../ContactStep'
 import { WorkspaceStep, type WorkspaceStepData } from '../WorkspaceStep'
@@ -64,6 +63,14 @@ export function AttachThreadWizard({ className, ...props }: ComponentProps<'div'
 	const handleBack = () => {
 		setDirection(-1)
 		setCurrentStepIndex(Math.max(0, currentStepIndex - 1))
+	}
+	// D3 (screen du3gx) — each review row carries its own "Editar", jumping straight back to the step
+	// that produced it instead of clicking Voltar three times. Same store setters `handleBack` already
+	// uses, just aimed at a specific index.
+	const jumpTo = (target: AttachStepId) => {
+		const targetIndex = STEPS.indexOf(target)
+		setDirection(targetIndex < currentStepIndex ? -1 : 1)
+		setCurrentStepIndex(targetIndex)
 	}
 
 	// Each step validates its own slice; the parent merges via setFieldValue (FRM-P15) and advances.
@@ -120,6 +127,9 @@ export function AttachThreadWizard({ className, ...props }: ComponentProps<'div'
 				onBack={handleBack}
 				onFinish={handleFinish}
 				isSubmitting={attach.isPending}
+				onEditContact={() => jumpTo('CONTACT')}
+				onEditWorkspace={() => jumpTo('WORKSPACE')}
+				onEditAgents={() => jumpTo('AGENTS')}
 			/>
 		),
 	}
@@ -130,7 +140,10 @@ export function AttachThreadWizard({ className, ...props }: ComponentProps<'div'
 		// into the root's scroller when a step is tall.
 		<div className={cn('flex min-h-full flex-col bg-route-background text-foreground', className)} {...props}>
 			<header className="grid grid-cols-[auto_1fr_auto] items-center gap-4 px-6 py-5 md:px-10">
-				<Logo className="text-base" />
+				{/* D3 (screens PENI6/EWECP/ZbVfW/du3gx) — an empty spacer sized like the close button,
+				    not a `<Logo/>` (none of the design's four screens for this wizard show one): the two
+				    equal-width `auto` columns are what actually centers the step tabs in the middle. */}
+				<div aria-hidden className="size-8" />
 				{/* O primitivo `Tabs` variante `line` foi feito para ESTE caso — o comentário dele diz
 				    "wizard-step tabs" — e o stepper vinha reimplementando uma versão divergente: sublinhado
 				    em `border-foreground` (preto) em vez de `--primary`, sem hover e sem anel de foco.

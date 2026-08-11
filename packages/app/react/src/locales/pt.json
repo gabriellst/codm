@@ -70,19 +70,21 @@
 		"back": "Voltar",
 		"close": "Fechar",
 		"continue": "Continuar",
+		"edit": "Editar",
 		"finish": "Vincular conversa",
 		"goToChannels": "Ir para Canais",
 		"navAgents": "Agentes",
 		"navContact": "Contato",
 		"navReview": "Revisão",
-		"navWorkspace": "Espaço",
+		"navWorkspace": "Projeto",
 		"needChannelDescription": "Você precisa de ao menos um canal conectado antes de vincular uma conversa.",
 		"needChannelTitle": "Conecte um canal primeiro",
 		"noContacts": "Nenhum contato encontrado neste canal.",
 		"noContactsFound": "Nenhum contato para “{{term}}”.",
+		"reviewFooterNote": "Ao vincular, as mensagens desta conversa passam a abrir tarefas nesta pasta. Você pode pausar ou desfazer a qualquer momento.",
 		"rowAgents": "Agentes",
 		"rowContact": "Contato",
-		"rowWorkspace": "Espaço de trabalho",
+		"rowWorkspace": "Projeto",
 		"searchContacts": "Buscar contatos e grupos",
 		"stepAgentsSubtitle": "Quais CLIs de provedor podem trabalhar nesta conversa.",
 		"stepAgentsTitle": "Escolha os agentes",
@@ -91,7 +93,7 @@
 		"stepThreadSubtitle": "Escolha o contato, grupo ou caixa de entrada onde seu agente vai viver.",
 		"stepThreadTitle": "Escolha uma conversa",
 		"stepWorkspaceSubtitle": "A pasta de projeto em que seus agentes vão trabalhar.",
-		"stepWorkspaceTitle": "Escolha um espaço de trabalho"
+		"stepWorkspaceTitle": "Escolha um projeto"
 	},
 	"auth": {
 		"resetPassword": {
@@ -550,6 +552,10 @@
 	},
 	"onboarding": {
 		"back": "Voltar",
+		"diagramIssue": "issue",
+		"diagramMessage": "mensagem",
+		"diagramReply": "resposta",
+		"diagramTerminal": "sessão de terminal",
 		"finalBody": "Você concluiu a configuração inicial do CODM.",
 		"finalTitle": "Tudo pronto",
 		"getStarted": "Começar",
@@ -559,13 +565,7 @@
 		"slide1Title": "Converse com seu código",
 		"slide2Title": "Como funciona",
 		"slide3Body": "Os agentes pausam em erros de servidor, respostas bloqueadas ou quando alguém pede um humano. Você revisa, orienta com um sussurro ou assume o controle — nada é enviado sem a sua palavra.",
-		"slide3Title": "Você mantém o controle",
-		"stepChannelDesc": "Pareie o WhatsApp por QR code",
-		"stepChannelTitle": "Conecte um canal",
-		"stepThreadDesc": "Ligue um contato ou grupo a uma pasta e escolha os agentes",
-		"stepThreadTitle": "Vincule uma conversa",
-		"stepWorkspaceDesc": "Aponte para uma pasta de projeto — projetos Claude são detectados",
-		"stepWorkspaceTitle": "Adicione um espaço de trabalho"
+		"slide3Title": "Você mantém o controle"
 	},
 	"systemPreconditions": {
 		"slideTitle": "Falta uma permissão",

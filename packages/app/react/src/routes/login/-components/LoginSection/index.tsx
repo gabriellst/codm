@@ -7,6 +7,7 @@ import { IconBrandGithub, IconBrandGoogle } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 import { Config } from '@/lib/config'
 import { Button } from '@/components/ui/button'
+import CodmLogoIcon from '@/components/ui/icons/codmLogo'
 import { useCloudSession } from '@/services'
 import { useCloudSessionStore } from '@/stores'
 
@@ -49,20 +50,38 @@ export function LoginSection({ className, ...props }: LoginSectionProps) {
 	}, [status, navigate])
 
 	return (
-		<section className={cn('flex h-full w-full flex-col items-center justify-center gap-6 p-6 text-center', className)} {...props}>
-			<header className="flex flex-col gap-1">
-				<h2 className="text-xl font-semibold">{t('cloudAuth.login.title')}</h2>
-				<p className="text-sm text-muted-foreground">{t('cloudAuth.login.subtitle')}</p>
-			</header>
-			<div className="flex w-full max-w-xs flex-col gap-2">
-				<Button variant="outline" size="lg" onClick={() => void cloudSession.openBrowser(buildSignInUrl('github'))}>
-					<IconBrandGithub />
-					{t('cloudAuth.login.github')}
-				</Button>
-				<Button variant="outline" size="lg" onClick={() => void cloudSession.openBrowser(buildSignInUrl('google'))}>
-					<IconBrandGoogle />
-					{t('cloudAuth.login.google')}
-				</Button>
+		<section className={cn('flex h-full w-full items-center justify-center p-6', className)} {...props}>
+			{/* D3 (screen egPQt) — one white bordered card (seal, title/subtitle, both providers, a
+			    caption footer), swapped for the plain centered stack it replaces. Provider order flips
+			    to Google-then-GitHub to match the design; the brand mark is `CodmLogoIcon` (the fixed
+			    two-tone bubble+"dm" mark) — it already IS the seal, no extra colored square around it. */}
+			<div className="flex w-full max-w-md flex-col items-center gap-7 rounded-asymmetric-xl border border-border bg-background p-11 text-center">
+				<CodmLogoIcon className="h-14 w-auto" />
+				<header className="flex flex-col gap-1.5">
+					<h2 className="heading-display text-2xl text-foreground">{t('cloudAuth.login.title')}</h2>
+					<p className="text-sm text-muted-foreground">{t('cloudAuth.login.subtitle')}</p>
+				</header>
+				<div className="flex w-full flex-col gap-3">
+					<Button
+						variant="outline"
+						size="lg"
+						className="w-full justify-start gap-3.5 px-6 text-foreground"
+						onClick={() => void cloudSession.openBrowser(buildSignInUrl('google'))}
+					>
+						<IconBrandGoogle />
+						{t('cloudAuth.login.google')}
+					</Button>
+					<Button
+						variant="outline"
+						size="lg"
+						className="w-full justify-start gap-3.5 px-6 text-foreground"
+						onClick={() => void cloudSession.openBrowser(buildSignInUrl('github'))}
+					>
+						<IconBrandGithub />
+						{t('cloudAuth.login.github')}
+					</Button>
+				</div>
+				<p className="text-xs text-caption-foreground">{t('console.footerLocal')}</p>
 			</div>
 		</section>
 	)
