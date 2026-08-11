@@ -35,7 +35,7 @@ import (
 	"template/api-go/internal/channel/services/gateway/mock"
 	"template/contracts-go/wire"
 	"template/core-go/registry"
-	"template/core-go/testenv"
+	"template/core-go/pkg/testenv"
 )
 
 func TestContactSnapshot(t *testing.T) {

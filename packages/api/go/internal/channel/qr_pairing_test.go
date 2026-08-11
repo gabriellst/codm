@@ -23,7 +23,7 @@ import (
 	core "template/core-go"
 	"template/core-go/registry"
 	"template/core-go/repositories"
-	"template/core-go/testenv"
+	"template/core-go/pkg/testenv"
 )
 
 // testOwnerID is a fixed, valid UUID — the channel controllers require

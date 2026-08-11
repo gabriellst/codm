@@ -303,7 +303,7 @@ git commit -m "refactor(api-go): gateway boota pelo eixo; CODM_E2E e testseam mo
 ## Task T5: testenv no core + o fluxo de QR tem teste real
 
 **Files to write:**
-- Create: `packages/api/go/core/testenv/testenv.go` — `Start(t, env, opts)`: `CODM_DATA_DIR` temp + `PORT=0` via env do processo de teste (t.Setenv), fx app com `registry.App` + lifecycle start, `t.Cleanup(stop)`, retorna `{URL string, DB *sql.DB}` (o handle do SqliteStore); recebe `base fx.Option, overlays registry.Overlays` — genérico, zero import de channel (AC-1 vale aqui também)
+- Create: `packages/api/go/core/pkg/testenv/testenv.go` — `Start(t, env, opts)`: `CODM_DATA_DIR` temp + `PORT=0` via env do processo de teste (t.Setenv), fx app com `registry.App` + lifecycle start, `t.Cleanup(stop)`, retorna `{URL string, DB *sql.DB}` (o handle do SqliteStore); recebe `base fx.Option, overlays registry.Overlays` — genérico, zero import de channel (AC-1 vale aqui também)
 - Test: `packages/api/go/internal/channel/qr_pairing_test.go` — AC-3
 
 **Files to read:**
@@ -335,7 +335,7 @@ git commit -m "refactor(api-go): gateway boota pelo eixo; CODM_E2E e testseam mo
 ### Step T5.2 — Gates + commit
 
 ```bash
-git add packages/api/go/core/testenv/ packages/api/go/internal/channel/qr_pairing_test.go
+git add packages/api/go/core/pkg/testenv/ packages/api/go/internal/channel/qr_pairing_test.go
 git commit -m "feat(core-go): testenv.Start + o fluxo de QR tem teste real (T5)"
 ```
 
@@ -488,7 +488,7 @@ git commit -m "feat(e2e): gateway no stack com canal roteirizado — a tela de Q
 - [ ] `cd packages/e2e && bun run test` — 13+/2-skipped estável 2 rodadas
 - [ ] `grep -rn "CODM_E2E" . --exclude-dir=node_modules` → 0 fora de `.specs`/`.plans`/história git
 - [ ] AC mapping:
-  - AC-1 → grep de símbolos de serviço em `core/registry` + `core/testenv` = 0 (T1/T5); `channel.Overlays` colocado (T4)
+  - AC-1 → grep de símbolos de serviço em `core/registry` + `core/pkg/testenv` = 0 (T1/T5); `channel.Overlays` colocado (T4)
   - AC-2 → grep CODM_E2E = 0 (T4); recusa não-real-sob-PRODUCTION → `registry_test.go` (T1)
   - AC-3 → `qr_pairing_test.go` falseado (T5)
   - AC-4 → `inbound_emission_test.go` falseado (T6)
