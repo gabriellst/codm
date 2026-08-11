@@ -37,11 +37,16 @@ describe('composeStories + msw sob bun — spike', () => {
 		await act(async () => {
 			root.render(<Story />)
 		})
-		await act(async () => {
-			await new Promise(resolve => setTimeout(resolve, 50))
-		})
 		// Dialog (Base UI) portala seu conteúdo para `document.body`, não para `host` — a checagem
-		// que importa é no body, não no container local.
+		// que importa é no body, não no container local. Poll até o chrome estático aparecer (sob o
+		// PTY do Nx/pre-push, 50ms fixos estouravam em falso); a ausência dos dados msw é asserida
+		// DEPOIS do chrome montar, então a margem extra não fabrica um falso "chegou".
+		for (let attempt = 0; attempt < 200; attempt++) {
+			if ((document.body.textContent ?? '').includes('Configurações da conversa')) break
+			await act(async () => {
+				await new Promise(resolve => setTimeout(resolve, 10))
+			})
+		}
 		const rendered = document.body.textContent ?? ''
 		const mswDataArrived = rendered.includes('Ada Lovelace') // um dos participantes mockados via mockQuery
 		console.log(

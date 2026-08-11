@@ -60,7 +60,9 @@ export async function mountRouter(
 		router,
 		host,
 		async settled(predicate, label = 'condição') {
-			for (let attempt = 0; attempt < 100; attempt++) {
+			// 5s de margem (500×10ms): sob o PTY do Nx/pre-push o flush de log é mais lento e o
+			// orçamento de 1s estourava em falso (medido: StepWalking a 1005ms, REGRESSÃO a 1155ms).
+			for (let attempt = 0; attempt < 500; attempt++) {
 				if (predicate()) return
 				await act(async () => {
 					await new Promise(resolve => setTimeout(resolve, 10))
