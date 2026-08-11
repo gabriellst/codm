@@ -45,7 +45,12 @@ export function CloudAccountSection({ className, ...props }: CloudAccountSection
 	})
 
 	return (
-		<Card className={cn('gap-0 p-0', className)} {...props}>
+		// D3 doesn't picture this section (the group's screens skip straight from Perfil/Preferências
+		// to Segurança) — kept regardless: revoking the cloud session is a safety capability the design
+		// simply didn't model, not evidence to remove it (código vence). Restyled to the asymmetric-sm
+		// radius the rest of this page's row cards use, for visual consistency with its neighbors —
+		// `surface` itself (bg-background + hairline) already matches D3, unchanged from before.
+		<Card className={cn('gap-0 rounded-asymmetric-sm p-0', className)} {...props}>
 			<CardHeader className="flex flex-row items-center justify-between gap-3 border-b border-border/60 px-5 py-4">
 				<div className="flex min-w-0 flex-col gap-0.5">
 					<CardTitle className="text-sm font-semibold text-foreground">{t('cloudAuth.account.sectionTitle')}</CardTitle>
