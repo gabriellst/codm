@@ -12,11 +12,13 @@
 			"saveSuccess": "Preferências atualizadas com sucesso",
 			"sectionDescription": "Configure idioma, fuso horário e notificações",
 			"sectionTitle": "Preferências",
+			"stub": "Edição de preferências ainda não disponível (SDK pendente)",
 			"timezone": "Fuso horário"
 		},
 		"profile": {
 			"avatar": {
 				"remove": "Remover foto",
+				"removeStub": "Remoção de foto ainda não disponível (SDK pendente)",
 				"upload": "Enviar foto",
 				"uploadAriaLabel": "Escolher imagem de perfil",
 				"uploadStub": "Upload de avatar ainda não disponível"
@@ -28,7 +30,8 @@
 			"save": "Salvar alterações",
 			"saveSuccess": "Perfil atualizado com sucesso",
 			"sectionDescription": "Atualize suas informações pessoais",
-			"sectionTitle": "Perfil"
+			"sectionTitle": "Perfil",
+			"stub": "Alteração de perfil ainda não disponível (SDK pendente)"
 		},
 		"security": {
 			"changePassword": {

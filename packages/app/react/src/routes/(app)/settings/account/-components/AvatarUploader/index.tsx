@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
-import { IconUpload, IconTrash } from '@tabler/icons-react'
+import { IconUpload } from '@tabler/icons-react'
 
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -51,7 +51,7 @@ export function AvatarUploader({ value, onUpload, onRemove, fallbackInitials, cl
 				<AvatarFallback className="text-base">{fallbackInitials}</AvatarFallback>
 			</Avatar>
 
-			<div className="flex flex-col gap-2">
+			<div className="flex flex-row items-center gap-2.5">
 				<input
 					ref={fileInputRef}
 					type="file"
@@ -65,8 +65,16 @@ export function AvatarUploader({ value, onUpload, onRemove, fallbackInitials, cl
 					{t('account.profile.avatar.upload')}
 				</Button>
 				{displayUrl ? (
-					<Button type="button" variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={handleRemove}>
-						<IconTrash className="size-3.5" />
+					// D3 (jxl4Y) — measured plain muted text (pTGAx: no fill, no stroke, `#6a6a6a` label),
+					// not the destructive red this used to carry. Removing a photo isn't a dangerous action
+					// the way deleting the account is — the design keeps it visually quiet.
+					<Button
+						type="button"
+						variant="ghost"
+						size="sm"
+						className="text-muted-foreground hover:text-muted-foreground"
+						onClick={handleRemove}
+					>
 						{t('account.profile.avatar.remove')}
 					</Button>
 				) : null}

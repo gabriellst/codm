@@ -78,14 +78,15 @@ body {
 	--color-destructive-foreground: var(--destructive-foreground);
 	--color-warning: var(--warning);
 	--color-warning-foreground: var(--warning-foreground);
-	/* Skeleton-loading greys + the danger-badge tint (D3, R1) — see tokens.css for why status-idle/
-	   status-paused stay undeclared. status-attention/attention-foreground are declared (Início
-	   group, R1 first-consumer rule) alongside the surface they pair with. */
+	/* Skeleton-loading greys + the attention family (D3, R1) — see tokens.css for the
+	   measurements (Início's offline banner + Tarefas' status rows were the first consumers).
+	   status-paused stays undeclared (no consumer yet). */
 	--color-skeleton: var(--skeleton);
 	--color-skeleton-strong: var(--skeleton-strong);
 	--color-attention-surface: var(--attention-surface);
 	--color-status-attention: var(--status-attention);
 	--color-attention-foreground: var(--attention-foreground);
+	--color-status-idle: var(--status-idle);
 	--color-accent-foreground: var(--accent-foreground);
 	--color-accent: var(--accent);
 	--color-muted-foreground: var(--muted-foreground);
