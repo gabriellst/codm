@@ -13,12 +13,14 @@
 //   - SCRIPTED (this file) — Connect/Disconnect/Logout/Status/GetQRChannel/
 //     SendMessage/StreamContactSnapshot/IsGroupJID/identity
 //     (GetOwnerRemoteID/GetChannelID/GetDeviceID). Real, assertable behavior.
-//     Auto-pairing and connect/disconnect/logout all go through
-//     mapper.MapEvent (services/gateway/whatsapp/mapper) — the exact same
-//     exported function WhatsmeowChannel.handleEvent calls — followed by the
-//     injected repositories.DomainEventRepository.Save/SaveAll, so the outbox
-//     → handler → projection chain downstream runs completely untouched. See
-//     runPairingClock for the auto-pairing → connected-mapper path.
+//     Auto-pairing, connect/disconnect/logout, and the post-pair sync-complete
+//     signal all go through mapper.MapEvent (services/gateway/whatsapp/mapper)
+//     — the exact same exported function WhatsmeowChannel.handleEvent calls —
+//     followed by the injected repositories.DomainEventRepository.Save/SaveAll,
+//     so the outbox → handler → projector chain downstream (including
+//     RemoteSnapshotProjector consuming StreamContactSnapshot below, T13) runs
+//     completely untouched. See runPairingClock for the auto-pairing →
+//     connected/sync-complete-mapper path.
 //
 //   - NO-OP (honest zero-value + nil) — every other port method. The policy
 //     (spec D5) is to grow this set ONLY on concrete test demand, never
@@ -36,6 +38,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"go.mau.fi/whatsmeow/appstate"
 	waevents "go.mau.fi/whatsmeow/types/events"
 
 	channelenums "template/api-go/internal/channel/enums"
@@ -239,18 +242,29 @@ func (c *MockChannel) GetDeviceID() string {
 // ──────────────────────────────────────────────
 
 // runPairingClock waits scenario.AutoPairAfter (or proceeds immediately when
-// it's 0), then delivers the SAME fact a real phone scan eventually would:
-// it calls mapperpkg.MapEvent — the exact exported function
-// WhatsmeowChannel.handleEvent calls (whatsmeow_channel.go:787) — with a
-// synthetic *events.Connected{} (a trivial empty struct in whatsmeow; no
-// whatsmeow client/session is involved in constructing one, so this never
-// touches the whatsapp adapter or the port). MapEvent's *events.Connected
-// case (mapper/connected.go:12-20) builds channel.gateway_connected from
-// nothing but instanceID/ownerID, so this IS the real mapper running for
-// real, not a hand-rolled event with the same shape. The mapped event(s) are
-// then persisted through the injected DomainEventRepository — the same
+// it's 0), then delivers the SAME facts a real phone scan/sync eventually
+// would, in the same order whatsmeow fires them:
+//
+//  1. *events.Connected{} — mapperpkg.MapEvent, the exact exported function
+//     WhatsmeowChannel.handleEvent calls (whatsmeow_channel.go:787), maps
+//     this (a trivial empty struct in whatsmeow; no whatsmeow client/session
+//     is involved in constructing one, so this never touches the whatsapp
+//     adapter or the port) to channel.gateway_connected
+//     (mapper/connected.go:12-20).
+//  2. *events.AppStateSyncComplete{Name: appstate.WAPatchRegular} — the SAME
+//     event handleEvent's switch matches to trigger contact projection
+//     (whatsmeow_channel.go's handleEvent, pre-T13: c.markSyncComplete();
+//     T13: nothing extra needed there — MapEvent unconditionally maps this
+//     case too). mapAppStateSyncComplete (mapper/app_state_sync.go:17-30)
+//     turns it into channel.gateway.sync_complete, the trigger
+//     RemoteSnapshotProjector (projections/projectors/remote_snapshot_projector.go)
+//     subscribes to — which is what makes scenario.Contacts (served by this
+//     mock's StreamContactSnapshot, below) actually land in gateway_remotes
+//     for a scripted scenario, the same way a real sync does.
+//
+// Both are persisted through the injected DomainEventRepository — the same
 // outbox write handleEvent performs — so OutboxDispatcher → mediator →
-// handlers (channel_connected_handler.go) run untouched downstream.
+// handlers/projectors run untouched downstream.
 func (c *MockChannel) runPairingClock(stopCtx context.Context) {
 	if c.scenario.AutoPairAfter > 0 {
 		timer := time.NewTimer(c.scenario.AutoPairAfter)
@@ -274,6 +288,7 @@ func (c *MockChannel) runPairingClock(stopCtx context.Context) {
 
 	ctx := context.Background()
 	c.emitViaMapper(ctx, &waevents.Connected{})
+	c.emitViaMapper(ctx, &waevents.AppStateSyncComplete{Name: appstate.WAPatchRegular})
 	c.emitInboundMessages(ctx)
 }
 

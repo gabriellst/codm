@@ -11,7 +11,6 @@ import (
 	channelenums "template/api-go/internal/channel/enums"
 	msgenums "template/api-go/internal/channel/enums"
 	ctxevents "template/api-go/internal/channel/events"
-	"template/api-go/internal/channel/projections"
 	messagerepo "template/api-go/internal/channel/repositories/message"
 	remoterepo "template/api-go/internal/channel/repositories/remote"
 	"template/api-go/internal/channel/services/gateway"
@@ -763,10 +762,6 @@ func (c *WhatsmeowChannel) handleEvent(evt any) {
 		c.status = gateway.ConnectionStatusDisconnected
 		c.mu.Unlock()
 		slog.Info("whatsmeow logged out", "instanceId", c.instanceID)
-	case *events.AppStateSyncComplete:
-		if v.Name == appstate.WAPatchRegular {
-			c.markSyncComplete()
-		}
 	case *events.PairSuccess:
 		slog.Info("whatsmeow pair success", "instanceId", c.instanceID, "jid", v.ID.String())
 	}
@@ -806,9 +801,17 @@ func (c *WhatsmeowChannel) handleEvent(evt any) {
 // message projection table, bypassing the event system. This eliminates the
 // "2k event rows per reconnect" problem that the old event-per-message approach caused.
 //
-// Known contacts come from StreamContactSnapshot (called by projectContactSnapshot
-// after AppStateSyncComplete). Unknown contacts (not in address book) get stubs
-// when a live message arrives via the existing RemoteCreatedProjector.
+// Known contacts come from StreamContactSnapshot, streamed after
+// AppStateSyncComplete by RemoteSnapshotProjector
+// (projections/projectors/remote_snapshot_projector.go, T13) reacting to the
+// channel.gateway.sync_complete fact this adapter raises via the mapper —
+// contact projection itself no longer lives in this file. Unknown contacts
+// (not in address book) get stubs when a live message arrives via the
+// existing RemoteCreatedProjector.
+//
+// remoteProjRepo/messageProjRepo stay injected here — unlike the contact
+// snapshot, this bulk historical-message ACL is deliberately NOT event-driven
+// (see the "2k event rows" note above) and is out of T13's scope.
 //
 // Flow:
 //  1. Extract message records from all conversations in the HistorySync batch.
@@ -858,17 +861,6 @@ func (c *WhatsmeowChannel) applyHistorySyncBatch(ctx context.Context, hs *events
 			)
 		}
 	}
-}
-
-// markSyncComplete is triggered by AppStateSyncComplete (WAPatchRegular).
-// At this point all PN↔LID mappings are resolved in the device store, so
-// GetAllContacts() returns clean PN JIDs. Launches projectContactSnapshot
-// in a background goroutine so the event handler is not blocked.
-func (c *WhatsmeowChannel) markSyncComplete() {
-	slog.Info("channel: contacts ready, projecting snapshot", "instanceId", c.instanceID)
-	go func() {
-		c.projectContactSnapshot(c.stopCtx)
-	}()
 }
 
 // StreamContactSnapshot reads all contacts and joined groups from the whatsmeow
@@ -987,179 +979,6 @@ func bestContactName(info types.ContactInfo) string {
 	default:
 		return info.FirstName
 	}
-}
-
-// projectContactSnapshot reads all contacts and groups from whatsmeow's internal
-// store (fully populated after AppStateSyncComplete) and upserts them into the
-// remote projection table via a two-phase approach:
-//
-//   - Phase 1 (immediate, ~2 s): Collect all contacts/groups with NO avatar
-//     fetching. Single-batch upsert + single bulk membership insert. Run LID
-//     normalisation + backfill. Emits remotes_synced event. The sidebar is
-//     usable as soon as Phase 1 completes.
-//
-//   - Phase 2 (background, non-blocking): Rate-limited avatar fetch for every
-//     contact/group; update only avatar_url per row via UpdateAvatar.
-func (c *WhatsmeowChannel) projectContactSnapshot(ctx context.Context) {
-	if c.remoteProjRepo == nil {
-		slog.Warn("snapshot: remoteProjRepo not injected — skipping", "channelId", c.instanceID)
-		return
-	}
-
-	now := time.Now().UTC()
-	var allRemotes []*projections.Remote
-	allMemberships := make(map[string][]remoterepo.MembershipRow)
-	var allRemoteIDs []string
-
-	for snapshot := range c.StreamContactSnapshot(ctx) {
-		allRemoteIDs = append(allRemoteIDs, snapshot.RemoteID)
-		allRemotes = append(allRemotes, &projections.Remote{
-			ChannelID: c.instanceID.String(),
-			RemoteID:  snapshot.RemoteID,
-			Type:      snapshot.RemoteType,
-			Platform:  channelenums.PlatformWhatsApp,
-			Name:      snapshot.Name,
-			// AvatarURL is empty here — filled in by Phase 2 (hydrateContactAvatars).
-			CreatedAt: now,
-			UpdatedAt: now,
-		})
-
-		if snapshot.RemoteType == string(channelenums.RemoteTypeGroup) && len(snapshot.Members) > 0 {
-			rows := make([]remoterepo.MembershipRow, 0, len(snapshot.Members))
-			for _, m := range snapshot.Members {
-				rows = append(rows, remoterepo.MembershipRow{
-					MemberID: m.RemoteID,
-					IsAdmin:  m.IsAdmin,
-					JoinedAt: now,
-				})
-			}
-			allMemberships[snapshot.RemoteID] = rows
-		}
-	}
-
-	// ── Phase 1: write everything in two bulk operations ───────────────────
-
-	if len(allRemotes) > 0 {
-		if err := c.remoteProjRepo.UpsertContactSnapshot(ctx, allRemotes); err != nil {
-			slog.Warn("snapshot: upsert failed", "channelId", c.instanceID, "error", err)
-		}
-	}
-
-	if len(allMemberships) > 0 {
-		if err := c.remoteProjRepo.BulkUpdateMemberships(ctx, c.instanceID.String(), allMemberships); err != nil {
-			slog.Warn("snapshot: bulk memberships failed", "channelId", c.instanceID, "error", err)
-		}
-	}
-
-	c.normalizeLIDMessages(ctx)
-
-	if err := c.remoteProjRepo.BackfillLastMessagePreview(ctx, c.instanceID.String()); err != nil {
-		slog.Warn("snapshot: backfill last message preview failed",
-			"channelId", c.instanceID, "error", err)
-	}
-
-	slog.Info("snapshot: contact projection complete",
-		"channelId", c.instanceID,
-		"total", len(allRemotes),
-	)
-
-	summaryEvt := ctxevents.NewRemotesSyncedEvent(c.instanceID, c.ownerID, ctxevents.ChannelRemotesSyncedPayload{
-		ChannelID: c.instanceID,
-		OwnerID:   c.ownerID,
-		Total:     int32(len(allRemotes)),
-		Inserted:  int32(len(allRemotes)),
-	})
-	if err := c.domainEventRepo.Save(ctx, summaryEvt); err != nil {
-		slog.Warn("snapshot: failed to save remotes_synced event", "channelId", c.instanceID, "error", err)
-	}
-
-	// ── Phase 2: avatar hydration in background (non-blocking) ────────────
-	go c.hydrateContactAvatars(allRemoteIDs)
-}
-
-// hydrateContactAvatars fetches and persists profile pictures for all contacts
-// and groups in the snapshot. Runs in a background goroutine after Phase 1 so
-// the sidebar is usable immediately while avatars trickle in.
-func (c *WhatsmeowChannel) hydrateContactAvatars(remoteIDs []string) {
-	if c.remoteProjRepo == nil || len(remoteIDs) == 0 {
-		return
-	}
-	updated := 0
-	for update := range c.HydrateAvatars(c.stopCtx, remoteIDs) {
-		if update.AvatarURL == "" {
-			continue
-		}
-		if err := c.remoteProjRepo.UpdateAvatar(c.stopCtx, c.instanceID.String(), update.RemoteID, update.AvatarURL); err != nil {
-			slog.Warn("snapshot: update avatar failed",
-				"channelId", c.instanceID, "remoteId", update.RemoteID, "error", err)
-			continue
-		}
-		updated++
-	}
-	slog.Info("snapshot: avatar hydration complete",
-		"channelId", c.instanceID,
-		"total", len(remoteIDs),
-		"updated", updated,
-	)
-}
-
-// normalizeLIDMessages rewrites messages stored with LID remote_ids to their PN
-// equivalents, then re-applies them to remote rows so last_message_at and
-// last_message_id are populated correctly. Must be called after UpsertContactSnapshot
-// (remote PN rows exist) and after AppStateSyncComplete (device store is complete,
-// so resolvePN succeeds for all known contacts).
-func (c *WhatsmeowChannel) normalizeLIDMessages(ctx context.Context) {
-	if c.messageProjRepo == nil {
-		return
-	}
-
-	lidIDs, err := c.messageProjRepo.FindDistinctLIDRemoteIDs(ctx, c.instanceID.String())
-	if err != nil {
-		slog.Warn("snapshot: failed to find LID message remote_ids",
-			"channelId", c.instanceID, "error", err)
-		return
-	}
-	if len(lidIDs) == 0 {
-		return
-	}
-
-	lidToPN := make(map[string]string, len(lidIDs))
-	for _, lid := range lidIDs {
-		parsed, err := types.ParseJID(lid)
-		if err != nil || parsed.Server != types.HiddenUserServer {
-			continue
-		}
-		pn := resolvePN(c.device, parsed.ToNonAD()).ToNonAD()
-		if pn.Server == types.DefaultUserServer {
-			lidToPN[lid] = pn.String()
-		}
-	}
-
-	if len(lidToPN) == 0 {
-		slog.Info("snapshot: LID messages found but no PN mappings resolved — skipping normalization",
-			"channelId", c.instanceID, "lids", len(lidIDs))
-		return
-	}
-
-	rewritten, err := c.messageProjRepo.RewriteRemoteIDs(ctx, c.instanceID.String(), lidToPN)
-	if err != nil {
-		slog.Warn("snapshot: failed to rewrite LID message remote_ids",
-			"channelId", c.instanceID, "error", err)
-		return
-	}
-
-	if len(rewritten) > 0 {
-		if err := c.remoteProjRepo.ApplyHistoricalMessages(ctx, rewritten); err != nil {
-			slog.Warn("snapshot: failed to apply rewritten messages to remote projections",
-				"channelId", c.instanceID, "error", err)
-		}
-	}
-
-	slog.Info("snapshot: normalized LID messages to PN",
-		"channelId", c.instanceID,
-		"lids", len(lidToPN),
-		"messages", len(rewritten),
-	)
 }
 
 // --- private helpers ---

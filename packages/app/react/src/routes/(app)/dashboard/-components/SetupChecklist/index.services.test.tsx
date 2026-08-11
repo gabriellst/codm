@@ -10,12 +10,14 @@ import { SetupChecklist } from '.'
  * T9 (AC-7, item 3a) — `channelDone` REAL, contra o GATEWAY SUBPROCESS (`services: ['apiGo']`).
  *
  * `index.test.tsx` (sem `services`) já prova `workspaceDone`/`threadDone` reais — `channelDone` ficava
- * de fora porque `channels`/`remotes` são tabelas gateway-owned sem produtor no harness. Este arquivo
- * fecha exatamente esse buraco: um canal pareia de verdade pelo `MockChannel` do gateway (Connect →
- * runPairingClock → mapper.MapEvent(*events.Connected{}) → outbox → handler → projeção CONNECTED —
- * `gateway_channels.status`), `GetOnboarding` (ui/usecases/GetOnboarding.ts) lê essa MESMA coluna
- * (`channels.status = CONNECTED`, sem depender de `remotes` — ao contrário de `ContactStep`/
- * `UserProfile`, cujo gap está documentado nos irmãos deste arquivo), e o checklist reage.
+ * de fora porque, à época (T9), `channels`/`remotes` eram tabelas gateway-owned sem produtor no
+ * harness (`remotes` ganhou um em T13 — `RemoteSnapshotProjector`, ver `ContactStep/index.services.test.tsx`
+ * — mas isso não muda nada aqui, ver a seguir). Este arquivo fecha exatamente esse buraco para
+ * `channelDone`: um canal pareia de verdade pelo `MockChannel` do gateway (Connect → runPairingClock →
+ * mapper.MapEvent(*events.Connected{}) → outbox → handler → projeção CONNECTED — `gateway_channels.status`),
+ * `GetOnboarding` (ui/usecases/GetOnboarding.ts) lê essa MESMA coluna (`channels.status = CONNECTED`,
+ * sem depender de `remotes` — ao contrário de `ContactStep`/`UserProfile`, cujo gap está documentado
+ * nos irmãos deste arquivo), e o checklist reage.
  *
  * O CANAL É SEMEADO PELO CATÁLOGO, NÃO POR ESCOLHA LOCAL (founder correction, T9/T12): criar+conectar
  * um canal real contra o gateway subprocess é choreography repetida em TODOS os 4 arquivos

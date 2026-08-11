@@ -517,8 +517,9 @@ func (r *SqliteRemoteProjectionRepository) ApplyHistoricalMessages(ctx context.C
 
 // BackfillLastMessagePreview fills last_message_at/last_message_id for remote
 // rows that still have a NULL (or stale) preview but do have messages. Runs once
-// after projectContactSnapshot creates rows that ApplyHistoricalMessages could
-// not update because they did not exist at history-sync time.
+// after RemoteSnapshotProjector's contact snapshot creates rows that
+// ApplyHistoricalMessages could not update because they did not exist at
+// history-sync time.
 //
 // The pg version used UPDATE ... FROM (subquery). SQLite has no UPDATE ... FROM
 // with a per-row correlation of this shape, so the aggregate moves into

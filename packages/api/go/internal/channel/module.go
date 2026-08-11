@@ -385,6 +385,19 @@ func registerDomainEventHandlers(
 	// Membership projector — single projector for the remote_memberships
 	// projection (T8/T13), subscribed to every membership-mutating event.
 	projectors.RegisterAll(m, projectors.NewMembershipProjector(remoteProjRepo))
+
+	// Remote snapshot projector (T13) — the contact/group roster half of the
+	// remotes projection, moved out of the whatsmeow adapter
+	// (whatsmeow_channel.go used to hold remoteProjRepo itself and write rows
+	// directly). Reacts to channel.gateway.sync_complete (already raised by
+	// the mapper, unchanged) by resolving the live channel from the pool and
+	// streaming its contact snapshot through the port. Registered after the
+	// sync pipeline handlers above (which also listen on
+	// channel.gateway.sync_complete) so a pre-existing, near-infallible write
+	// (SyncCompletedHandler persisting channel.sync_completed) is never
+	// blocked by this newer, more failure-prone one — see
+	// projections/projectors/remote_snapshot_projector.go's docblock.
+	projectors.RegisterAll(m, projectors.NewRemoteSnapshotProjector(pool, remoteProjRepo, msgProjRepo, domainEventRepo))
 }
 
 // No message persistence handlers needed: messages are themselves the

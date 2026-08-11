@@ -8,20 +8,31 @@ import { useIntegrationBackend, type IntegrationBackend } from '../../../../test
 import { UserProfile } from '.'
 
 /**
- * T9 (AC-7, item 3b) — UserProfile contra o GATEWAY SUBPROCESS real (`services: ['apiGo']`), com um
- * canal REALMENTE pareado (`channelDone`), companheiro de `SetupChecklist/index.services.test.tsx`.
+ * T9 (AC-7, item 3b) / T13 — UserProfile contra o GATEWAY SUBPROCESS real (`services: ['apiGo']`), com
+ * um canal REALMENTE pareado (`channelDone`), companheiro de `SetupChecklist/index.services.test.tsx`.
  *
  * O QUE ESTE ARQUIVO PROVA, E O QUE NÃO — leia antes de estender:
  *
  * `UserProfile` lê `GetOperatorIdentity` (ui/usecases/GetOperatorIdentity.ts), que exige DUAS coisas —
  * não uma: (1) um canal CONNECTED com `owner_remote_id != ''` (satisfeito pelo pareamento real do mock
  * — MESMO pipeline provado em `SetupChecklist`), e (2) uma linha em `gateway_remotes` cuja chave
- * exata é `(channel_id, remote_id) = (channel.id, channel.owner_remote_id)`. A condição (2) NUNCA se
- * satisfaz aqui pelo MESMO gap documentado em `ContactStep/index.services.test.tsx`:
- * `MockChannel.StreamContactSnapshot` não é consumido por nenhum handler do pipeline de pareamento —
- * `gateway_remotes` fica vazia para qualquer canal que o mock pareia. Então `identity` continua
- * ausente mesmo com um canal REALMENTE conectado — o "empréstimo" (ver docblock de `UserProfile`)
- * nunca chega a acontecer neste harness hoje.
+ * exata é `(channel_id, remote_id) = (channel.id, channel.owner_remote_id)` — o PRÓPRIO cartão de
+ * contato do operador, não um contato qualquer.
+ *
+ * O GAP MUDOU DE NATUREZA EM T13, O RESULTADO NÃO. Em T9, a condição (2) nunca se satisfazia porque
+ * NADA escrevia em `gateway_remotes` pelo pipeline do mock — o gap era de PIPELINE (ver o antigo
+ * docblock de `ContactStep/index.services.test.tsx`, ou o histórico deste arquivo). T13 fechou esse
+ * gap: `RemoteSnapshotProjector` agora projeta `scenario.Contacts` de verdade (prova em
+ * `ContactStep/index.services.test.tsx`, fortalecida na mesma task). Mas `defaultE2eScenario()`
+ * (overlay.go) semeia Ada Lovelace/Alan Turing — DUAS OUTRAS PESSOAS, nunca um contato cujo
+ * `remote_id` seja o `mock-<ownerId>@s.whatsapp.net` que `MockChannel.GetOwnerRemoteID()` deriva para
+ * este owner (`services/gateway/mock/channel.go`'s `NewMockChannel`). A condição (2) continua vazia —
+ * agora porque o roteiro nunca inclui o PRÓPRIO operador como contato dele mesmo, não porque a escrita
+ * não acontece. Julgamento (T13): a asserção abaixo permanece correta e não muda — só a docblock, para
+ * não deixar a razão desatualizada depois que T13 mudou o pipeline por baixo dela. Fechar ESTE gap
+ * exigiria o roteiro semear um contato auto-referente, fora do escopo desta task (o mock não tem hoje
+ * um jeito declarado de "eu mesmo" em `Scenario.Contacts` — cresce sob demanda de teste concreto,
+ * mesma política do resto do `mock` package).
  *
  * O que muda em relação ao `index.test.tsx` (sem `services`): aquele arquivo prova a queda para a
  * sessão constante com NENHUM canal no sistema — um caso quase vazio por construção. Este arquivo
@@ -76,7 +87,7 @@ describe('UserProfile — services: apiGo (T9) — com um canal real, realmente 
 		return mounted
 	}
 
-	it('canal real conectado (channelDone=true) mas sem remotes casando: continua caindo na sessão constante', async () => {
+	it('canal real conectado (channelDone=true) mas sem o remote do PRÓPRIO operador: continua caindo na sessão constante', async () => {
 		await givenConnectedGatewayChannel(backend, { name: 'user-profile-services-test-channel' })
 
 		// O FALSEADOR: este diagnóstico muda de valor conforme o pareamento real acontece ou não.
@@ -86,7 +97,11 @@ describe('UserProfile — services: apiGo (T9) — com um canal real, realmente 
 		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 		const { host } = await mount(queryClient)
 
-		// O gap documentado (gateway_remotes vazia), provado com um canal real presente — não vacuamente.
+		// O gap documentado (nenhuma linha em gateway_remotes bate a chave own-remote — não que a tabela
+		// esteja vazia; T13 a preenche com Ada/Alan, mas nenhum dos dois É o operador), provado com um
+		// canal real presente — não vacuamente. Não há race aqui: diferente de `wizard.contacts`
+		// (`ContactStep`), esta ausência é estrutural ao roteiro (ver docblock), não uma escrita
+		// assíncrona ainda em trânsito — então não há nada a fazer poll.
 		expect(queryClient.getQueryData(getOperatorIdentityQueryKey())).toEqual({})
 		expect(host.textContent).toContain('Operator')
 		expect(host.textContent).toContain('OperatorO')

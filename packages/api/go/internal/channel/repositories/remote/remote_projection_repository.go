@@ -77,8 +77,9 @@ type RemoteProjectionRepository interface {
 
 	// BackfillLastMessagePreview populates last_message_at and last_message_id for
 	// remote rows that still have NULL last_message_at but have messages in the
-	// messages table. Used once after projectContactSnapshot creates remote rows
-	// that ApplyHistoricalMessages couldn't update (rows didn't exist yet at
+	// messages table. Used once after RemoteSnapshotProjector's contact
+	// snapshot creates remote rows that ApplyHistoricalMessages couldn't update
+	// (rows didn't exist yet at
 	// history-sync time).
 	BackfillLastMessagePreview(ctx context.Context, channelID string) error
 
