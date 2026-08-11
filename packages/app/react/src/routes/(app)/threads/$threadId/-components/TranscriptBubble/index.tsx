@@ -29,9 +29,11 @@ type Entry = GetSessionChatQueryResponse['transcript'][number]
  *     não interfere na quebra do texto; dentro do espaço que o espaçador reservou, não o cobre.
  *
  * A COR vem do PRÓPRIO balão com opacidade, nunca de `text-muted-foreground`: o balão de saída é
- * `bg-primary` (verde de marca) e o de entrada `bg-secondary` (verde pastel) — um cinza de texto
- * neutro por cima de qualquer um dos dois é ilegível. `text-primary-foreground/70` é o mesmo texto
- * que o balão já usa, só mais discreto, então o contraste é o do par de tokens, por construção.
+ * `bg-bubble-out` (verde de marca, alias de `--primary`) e o de entrada `bg-bubble-in` (verde
+ * pastel, alias de `--secondary`) — um cinza de texto neutro por cima de qualquer um dos dois é
+ * ilegível. `text-bubble-out-fg/70` é o mesmo texto que o balão já usa, só mais discreto, então o
+ * contraste é o do par de tokens, por construção. Os alias `--bubble-*` (tokens.css) existem para
+ * que a cor do balão possa um dia divergir da cor do botão sem tocar 64 call sites de `variant`.
  */
 function BubbleTime({ at, className, ...props }: ComponentProps<'span'> & { at: string }) {
 	const locale = useLocale()
@@ -58,7 +60,7 @@ export function TranscriptBubble({ entry, threadId, className, ...props }: Compo
 	if (entry.kind === 'ACTION') {
 		return (
 			<div className={cn('flex items-start gap-2 py-1 text-sm text-muted-foreground', className)} {...props}>
-				<Dot className="mt-1.5 bg-muted-foreground/50" />
+				<Dot className="mt-1.5 bg-primary" />
 				<span className="flex-1">{entry.text}</span>
 			</div>
 		)
@@ -86,14 +88,17 @@ export function TranscriptBubble({ entry, threadId, className, ...props }: Compo
 						src={sender.hasAvatar ? contactAvatarUrl(sender.channelId, sender.externalId) : undefined}
 					/>
 				)}
-				{/* bg-secondary carries text-secondary-foreground — the pair is the design system's one
-				    rule with no exceptions (tokens.css). It read `text-foreground` before, which in light
-				    mode put near-black on the pale green instead of the green the pairing specifies.
-				    `relative` é a âncora do horário; ver `BubbleTime`. */}
-				<div className="relative min-w-0 max-w-full whitespace-pre-wrap rounded-2xl rounded-tl-md bg-secondary px-4 py-2.5 text-secondary-foreground">
-					{sender && <span className="mb-0.5 block text-xs font-medium text-secondary-foreground/70">{sender.displayName}</span>}
+				{/* bg-bubble-in carries text-bubble-in-fg — the pair is the design system's one rule with
+				    no exceptions (tokens.css). It read `text-foreground` before, which in light mode put
+				    near-black on the pale green instead of the green the pairing specifies.
+				    `rounded-asymmetric-md` (Q6TEB, hLcjH: every bubble measures [18,18,18,6] — the flat
+				    corner is NOT mirrored per role, contrary to the old `rounded-tl-md`/`rounded-tr-md`
+				    per-side guess) replaces the old radius. `relative` é a âncora do horário; ver
+				    `BubbleTime`. */}
+				<div className="relative min-w-0 max-w-full whitespace-pre-wrap rounded-asymmetric-md bg-bubble-in px-4 py-2.5 text-bubble-in-fg">
+					{sender && <span className="mb-0.5 block text-xs font-medium text-bubble-in-fg/70">{sender.displayName}</span>}
 					{entry.text}
-					<BubbleTime at={entry.at} className="text-secondary-foreground/60" />
+					<BubbleTime at={entry.at} className="text-bubble-in-fg/60" />
 				</div>
 			</div>
 		)
@@ -113,21 +118,21 @@ export function TranscriptBubble({ entry, threadId, className, ...props }: Compo
 					<Link
 						to="/threads/$threadId/issues/$issueId"
 						params={{ threadId, issueId: entry.issueId }}
-						className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 font-mono hover:bg-muted"
+						className="inline-flex items-center gap-1.5 rounded-asymmetric-3xs bg-muted px-2.5 py-1 font-mono hover:bg-accent"
 					>
-						<Dot className="bg-info" /> {t('session.transcriptIssue')}
+						<Dot className="bg-primary" /> {t('session.transcriptIssue')}
 					</Link>
 				)}
 				<span>{caption}</span>
 			</div>
 			<div
 				className={cn(
-					'relative max-w-full whitespace-pre-wrap rounded-2xl rounded-tr-md px-4 py-2.5',
-					isWhisper ? 'border border-dashed border-border bg-muted italic text-muted-foreground' : 'bg-primary text-primary-foreground',
+					'relative max-w-full whitespace-pre-wrap rounded-asymmetric-md px-4 py-2.5',
+					isWhisper ? 'border border-input bg-background italic text-muted-foreground' : 'bg-bubble-out text-bubble-out-fg',
 				)}
 			>
 				{entry.text}
-				<BubbleTime at={entry.at} className={isWhisper ? 'not-italic text-muted-foreground/70' : 'text-primary-foreground/70'} />
+				<BubbleTime at={entry.at} className={isWhisper ? 'not-italic text-muted-foreground/70' : 'text-bubble-out-fg/70'} />
 			</div>
 		</div>
 	)

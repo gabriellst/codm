@@ -88,6 +88,20 @@
 	   it stays declared here (not moved) because it doubles as a plain neutral-surface color too. */
 	--secondary: oklch(0.955 0.048 123); /* #EAF6D3 */
 	--secondary-foreground: oklch(0.462 0.123 132); /* #3D660A — also the link color */
+
+	/* --bubble-* were declared in index.css's `@theme inline` (Fase 1) as a semantic layer over
+	   the chat bubble roles, but never assigned a value — any `bg-bubble-out`/`bg-bubble-in`
+	   utility resolved to nothing. Group Q6TEB (design/codm.pen, screens hLcjH/i1AQD2) measures
+	   the outgoing bubble (agent/direct replies) at the SAME hex as --primary/--primary-foreground
+	   and the incoming bubble (contact) at the SAME hex as --secondary/--secondary-foreground — so
+	   these alias rather than duplicate. The alias is still worth keeping as its own name: it lets
+	   a chat bubble's color diverge from a button's without touching every `variant="default"`
+	   call site, the same reasoning `--chat-bg`/`--composer-bg` exist for their own roles. */
+	--bubble-out: var(--primary);
+	--bubble-out-fg: var(--primary-foreground);
+	--bubble-in: var(--secondary);
+	--bubble-in-fg: var(--secondary-foreground);
+
 	--muted: oklch(0.958 0 0); /* #f1f1f1 — soft badge bg / hover. UNCHANGED: "paused/idle" chips measure plain grey (#f2f2f2), not green — muted stays the truly-off neutral. */
 	--muted-foreground: oklch(0.524 0 0); /* #6a6a6a — secondary text */
 	--caption-foreground: oklch(0.633 0 0); /* #8a8a8a — timestamps, metadata, the quietest tier */
@@ -322,6 +336,10 @@
 
 	--secondary: oklch(0.32 0.06 133); /* derived: a dark forest-green chip surface, one step off --card the way the light mode's pastel chip is one step off white */
 	--secondary-foreground: oklch(0.88 0.1 130); /* derived: light minty-green text, the inverse pairing of light mode's dark-green-on-pale-green */
+	--bubble-out: var(--primary);
+	--bubble-out-fg: var(--primary-foreground);
+	--bubble-in: var(--secondary);
+	--bubble-in-fg: var(--secondary-foreground);
 	--muted: oklch(0.24 0 0);
 	--muted-foreground: oklch(0.68 0 0);
 	--accent: oklch(0.27 0.015 133); /* derived: same lightness step as the old neutral dark accent, tiny brand-hue tint added (mirrors the light mode's barely-tinted --accent) */
