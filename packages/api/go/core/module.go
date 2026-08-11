@@ -78,6 +78,16 @@ var Module = fx.Module("shared",
 	// HTTP Router
 	fx.Provide(httprouter.NewHttpRouter),
 
+	// Effective server address — populated synchronously by StartHTTPServer
+	// (below): fx.Invoke functions run eagerly while fx.New builds the graph,
+	// and net.Listen binds before Serve is deferred into the OnStart hook
+	// goroutine, so by the time fx.New(...) returns this already holds the
+	// REAL port even when cfg.Port was "0" (ephemeral). main.go only needs
+	// the log line StartHTTPServer already emits; a caller that builds the
+	// app itself (core/testenv, T5) fx.Populate's this to learn which port
+	// got picked.
+	fx.Provide(provideServerAddr),
+
 	// Lifecycle hooks
 	fx.Invoke(
 		fx.Annotate(
@@ -239,6 +249,23 @@ func startSqliteOutboxDispatcher(lc fx.Lifecycle, dispatcher *outbox.SqliteOutbo
 	})
 }
 
+// ServerAddr reports the HTTP server's effective port once StartHTTPServer has
+// bound its listener. A caller that composes its own fx app (core/testenv)
+// fx.Populate's this to learn the port it got back for cfg.Port="0" — the
+// listener binds synchronously inside StartHTTPServer's fx.Invoke, which runs
+// eagerly during fx.New(...), so Port is already set by the time fx.New
+// returns (well before app.Start/the OnStart hook that calls Serve).
+type ServerAddr struct {
+	Port int
+}
+
+// provideServerAddr hands out the single mutable holder StartHTTPServer fills
+// in. fx memoizes providers, so every consumer in the graph (including a
+// fx.Populate call site) shares this exact instance.
+func provideServerAddr() *ServerAddr {
+	return &ServerAddr{}
+}
+
 // StartHTTPServer starts the HTTP server as an fx lifecycle hook.
 //
 // NOTE(core-adequation): unlike the template's core, the handler is wrapped in
@@ -248,17 +275,19 @@ func startSqliteOutboxDispatcher(lc fx.Lifecycle, dispatcher *outbox.SqliteOutbo
 // cross-service harness need to run many instances without a fixed port
 // colliding. The listener binds up front (so a bind failure surfaces before
 // OnStart, not inside the goroutine), and the EFFECTIVE port — which is what
-// callers must use when they asked for 0 — is read back off the listener and
-// logged. Returning an error from an fx.Invoke function is the idiomatic fx
-// way to abort boot on a bind failure; nothing else references StartHTTPServer
-// or depends on its (previously empty) return value, so this is not a breaking
-// change to any consumer (grepped: only cmd/api/main.go's fx.Invoke call site).
-func StartHTTPServer(lc fx.Lifecycle, router *httprouter.HttpRouter, cfg *config.Config) error {
+// callers must use when they asked for 0 — is read back off the listener,
+// stamped onto addr (see ServerAddr) and logged. Returning an error from an
+// fx.Invoke function is the idiomatic fx way to abort boot on a bind failure;
+// nothing else references StartHTTPServer directly (grepped: only
+// cmd/api/main.go's fx.Invoke call site) — adding the addr parameter is
+// resolved by fx reflection, not a breaking change to that call site.
+func StartHTTPServer(lc fx.Lifecycle, router *httprouter.HttpRouter, cfg *config.Config, addr *ServerAddr) error {
 	listener, err := net.Listen("tcp", ":"+cfg.Port)
 	if err != nil {
 		return err
 	}
 	effectivePort := listener.Addr().(*net.TCPAddr).Port
+	addr.Port = effectivePort
 
 	server := &http.Server{
 		Handler: middleware.CORS(cfg.AllowedOrigins, router.Handler()),
