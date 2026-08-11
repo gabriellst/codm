@@ -1,7 +1,6 @@
 ---
 import type { CollectionEntry } from 'astro:content'
 import Icon from '~/components/Icon.astro'
-import DotWave from '../_islands/DotWave.tsx'
 
 interface Props {
 	t: CollectionEntry<'landing'>['data']['hero']
@@ -25,8 +24,13 @@ const floatCards = [
 ---
 
 <header class="relative flex min-h-[88vh] flex-col items-center justify-center overflow-hidden px-6 pb-16 pt-[110px] text-center">
-	<div aria-hidden="true" class="pointer-events-none absolute inset-0">
-		<DotWave client:visible variant="hero" />
+	{/* D3 (founder, 11/08) — the hero backdrop is the design's two measured blur blobs
+	    (OnY7I/XAKBh: $secondary 760×380 blur 64 · OnY7I/w7tT1: $accent 420×260 blur 48),
+	    NOT the old three.js dot wave — the island and the `three` dependency were removed
+	    with it. Same treatment the pricing section already uses. */}
+	<div aria-hidden="true" class="pointer-events-none absolute inset-0 overflow-hidden">
+		<div class="absolute left-[25%] top-[-140px] h-[380px] w-[760px] rounded-full bg-[var(--secondary)] blur-[64px]"></div>
+		<div class="absolute left-[23%] top-[95px] h-[260px] w-[420px] rounded-full bg-[var(--accent)] blur-[48px]"></div>
 	</div>
 
 	<div aria-hidden="true" class="pointer-events-none absolute inset-0 hidden lg:block">

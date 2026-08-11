@@ -247,3 +247,12 @@ Varredura dos arquivos ainda não auditados contra o `.pen`. Classificação:
 | R25 | Strings a remover localizadas: `hero.gatekeeperNote` (nota de assinatura Apple), `hero.otherOs` ("Windows e Linux em breve."), e o "Windows e Linux em breve" dentro de `closingCta.note` (em `pages/[locale]/_content/home.{pt,en}.json`) | DESIGN VENCE (ordem do founder) | Fase 5 |
 | R26 | Seção de preço: 2 colunas ("O que está incluído" + "Plano Local") + **"Termo — planos futuros"** (`$secondary`) + chips flutuantes MIT/sem-conta. `PricingSection.astro` existe (rebrand) | DESIGN VENCE | Fase 5 |
 | R27 | Mapeamento seção↔componente: Como funciona (escura)↔DemoSection · Capacidades (bento)↔FeaturesSection · Casos de uso (numerada)↔RouterSection · Preço↔PricingSection · Marquee → REMOVER (founder) | — (inventário) | Fase 5 |
+
+### Adendos pós-review do founder (11/08, teste visual da landing)
+
+| # | Item | Veredicto | Fase |
+|---|---|---|---|
+| R28 | **Decor Blobs são parte do sistema**: elipses com blur ($secondary blur 64 / $accent blur 48) atrás do conteúdo — o hero os tinha no design e a primeira passada os trocou por three.js. Founder: gradientes valem também para o DASHBOARD e o ONBOARDING do app. Os handoffs dos grupos ciUsJ (Início) e m7WRD (Onboarding/Login) DEVEM verificar os nós de blob/gradiente das telas e portá-los | DESIGN VENCE | Fase 4 (ciUsJ, m7WRD) |
+| R29 | three.js REMOVIDO do site (DotWave.tsx deletado, dep `three` fora do package.json) — o fundo do hero são os dois blobs medidos, nunca WebGL | DESIGN VENCE (founder) | Fase 5 ✓ |
+| R30 | Ordem das seções da landing segue a ORDEM VISUAL (y no canvas), não a ordem dos filhos no .pen: Como funciona → Capacidades ("Combine a ponte…") → Casos de uso ("Você fala…"). Lição para os próximos grupos: sempre ordenar por `ctx.bounds.y` | DESIGN VENCE | Fase 5 ✓ |
+| R31 | Fonte do site: **Inter** (o $font-sans do próprio .pen) — Poppins removida. Pendente de decisão: o .pen declara $font-mono: JetBrains Mono; o site usa IBM Plex Mono (não trocado, aguardando founder) | DESIGN VENCE (sans) · PERGUNTAR (mono) | Fase 5 ✓ |

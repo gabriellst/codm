@@ -58,7 +58,7 @@
 				"body": "A terminal session opens on your project folder, with the skills already in your codebase.",
 				"terminalLabel": "$ claude — invoice-500",
 				"terminalLines": [
-					"→ investigating bk-dash-backend",
+					"→ investigating acme-storefront",
 					"→ 429 from provider · retrying",
 					"✓ fix applied · PR opened"
 				]

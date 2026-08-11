@@ -19,10 +19,12 @@ interface Props {
 // R22/Marquee removal (design/codm.pen `ji2y3` → `asqga`): the design's landing has no
 // closing-CTA section (its copy moved into Footer.astro, R22) and no logo marquee
 // between Hero and "Como funciona" — both are gone from this composition root. Section
-// order + names now mirror the design 1:1: Hero → DemoSection ("Como funciona") →
-// RouterSection ("Casos de uso") → FeaturesSection ("Capacidades") → PricingSection
-// ("Preço"). File names are unchanged (R27 mapping in the plan) even though their
-// content/id no longer says "demo"/"router"/"features".
+// order follows the design's VISUAL order (sorted by canvas y, founder-confirmed 11/08 —
+// the .pen children array lists them differently, which is how this briefly shipped
+// backwards): Hero → DemoSection ("Como funciona") → FeaturesSection ("Combine a ponte
+// com skills e scripts", bento) → RouterSection ("Você fala, o agente executa") →
+// PricingSection ("Preço"). File names are unchanged (R27 mapping in the plan) even
+// though their content/id no longer says "demo"/"router"/"features".
 const { locale } = Astro.props
 const entry = await getEntry('landing', `home.${locale}`)
 const t = entry!.data
@@ -35,6 +37,6 @@ const downloadHref = DMG_DOWNLOAD_URL
 
 <Hero t={t.hero} downloadHref={downloadHref} githubHref={githubHref} />
 <DemoSection t={t.howItWorks} />
-<RouterSection t={t.useCases} />
 <FeaturesSection t={t.capabilities} />
+<RouterSection t={t.useCases} />
 <PricingSection locale={locale} t={t.pricing} downloadLabel={t.hero.ctaMac} downloadHref={downloadHref} />
