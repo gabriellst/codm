@@ -24,6 +24,7 @@ import {
 	givenThread,
 	GIVEN_MENTION_TAG,
 	givenChannel,
+	givenConnectedGatewayChannel,
 	givenRemote,
 	givenRemoteMembership,
 	givenIssue,
@@ -33,6 +34,7 @@ import {
 } from './given'
 
 export type { TestBedLike } from './given/types'
+export type { GatewayChannelSeed } from './given'
 
 /**
  * THE TEST SHELL over the production boot (spec Decision 5, T7). `start({ env, port: 0 })` —
@@ -197,6 +199,7 @@ export {
 	givenThread,
 	GIVEN_MENTION_TAG,
 	givenChannel,
+	givenConnectedGatewayChannel,
 	givenRemote,
 	givenRemoteMembership,
 	givenIssue,
@@ -224,6 +227,7 @@ const _testingSurface = {
 	GIVEN_MENTION_TAG,
 	givenThread,
 	givenChannel,
+	givenConnectedGatewayChannel,
 	givenRemote,
 	givenRemoteMembership,
 	givenIssue,

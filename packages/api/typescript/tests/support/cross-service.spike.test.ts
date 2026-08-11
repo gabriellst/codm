@@ -5,9 +5,10 @@ import { join } from 'node:path'
 import { eq } from 'drizzle-orm'
 import { channels, outbox } from '@codm/contracts/db'
 import { DrizzleDatabaseDriver } from '@codm/core-typescript'
+import { createWhatsAppChannel, connectChannel as connectGatewayChannel } from '@codm/client-typescript/go'
 import { OPERATOR_ID } from '@auth/operator'
 import { HARNESS_DATA_DIR } from './harnessDataDir'
-import { startIntegrationBackend, type IntegrationBackend } from './testing'
+import { startIntegrationBackend, givenConnectedGatewayChannel, type IntegrationBackend } from './testing'
 import { bootService } from './testBoot'
 
 /**
@@ -37,28 +38,17 @@ function db() {
 	return (backend.container.resolve(DrizzleDatabaseDriver as any) as DrizzleDatabaseDriver).db
 }
 
-/** Create a channel through the gateway's real HTTP surface (the SAME call the console makes).
- *  Throws rather than asserts — an arrange step that fails is a broken setup, not a failed claim,
- *  and the response body is the only thing that says WHY (a 401 here once meant a stray apikey). */
+/** Create a channel through the gateway's real HTTP surface (the SAME call the console makes) —
+ *  the generated SDK now, not a hand-rolled `fetch` (T12: the SDK client is the wire contract,
+ *  CLAUDE.md Non-Negotiable #2). Throws rather than asserts — an arrange step that fails is a
+ *  broken setup, not a failed claim, and the SDK's own error is what says WHY. */
 async function createChannel(name: string): Promise<string> {
-	const response = await fetch(`${gatewayUrl}/api/channel/channels/whatsapp`, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json', 'X-Owner-Id': OWNER_ID },
-		body: JSON.stringify({ name }),
-	})
-	if (response.status !== 201) throw new Error(`create channel: expected 201, got ${response.status} — ${await response.text()}`)
-	const created = (await response.json()) as { id: string }
-	if (!created.id) throw new Error('create channel: gateway answered 201 with no id')
+	const created = await createWhatsAppChannel({ name }, { baseURL: `${gatewayUrl}/api`, headers: { 'X-Owner-Id': OWNER_ID } })
 	return created.id
 }
 
-async function connectChannel(channelId: string): Promise<{ state: string; qrCode: string }> {
-	const response = await fetch(`${gatewayUrl}/api/channel/channels/${channelId}/connect`, {
-		method: 'POST',
-		headers: { 'X-Owner-Id': OWNER_ID },
-	})
-	if (response.status !== 200) throw new Error(`connect channel: expected 200, got ${response.status} — ${await response.text()}`)
-	return (await response.json()) as { state: string; qrCode: string }
+async function connectChannel(channelId: string): Promise<{ state: string; qrCode?: string }> {
+	return await connectGatewayChannel(channelId, { baseURL: `${gatewayUrl}/api`, headers: { 'X-Owner-Id': OWNER_ID } })
 }
 
 /** Poll the TS side's OWN database handle — never the gateway's HTTP — until the gateway's pipeline
@@ -120,9 +110,12 @@ describe('AC-6 — o gateway declarado no manifesto sobe no MESMO arquivo SQLite
 
 describe('THE RESET SPIKE — reset() cross-processo (o veredito vira contrato para T8/T9)', () => {
 	it('truncate do lado TS limpa as tabelas do gateway E o gateway continua funcional depois', async () => {
-		// Arrange: state the gateway owns, produced by the gateway.
-		const before = await createChannel('spike-reset-before')
-		await connectChannel(before)
+		// Arrange: state the gateway owns, produced by the gateway. No intermediate response to
+		// assert on here (unlike the AC-6 test above), so the create→connect→poll-until-CONNECTED
+		// sequence goes through the flow-given (T12) instead of the raw create/connect pair — the
+		// DB-side `awaitChannelStatusFromTs` below still runs, because THAT read (never the gateway's
+		// HTTP/SDK) is the actual claim this suite makes about cross-process visibility.
+		const { channelId: before } = await givenConnectedGatewayChannel(backend, { name: 'spike-reset-before' })
 		expect((await awaitChannelStatusFromTs(before)).status).toBe('CONNECTED')
 
 		// Act (via i): the CHEAP path — the harness's existing `reset()`, which is `resetAllTables`

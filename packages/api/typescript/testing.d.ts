@@ -245,6 +245,27 @@ export function givenThread(
 
 export function givenChannel(testBed: TestBedLike, overrides?: ChannelOverrides): Promise<{ channelId: string }>
 
+/** The seed `givenConnectedGatewayChannel` resolves — a channel the Go gateway itself paired,
+ *  not a fabricated row (see `tests/support/given/gateway.ts`'s docblock for the contrast with
+ *  `givenChannel`/`ChannelOverrides` above). */
+export interface GatewayChannelSeed {
+	channelId: string
+	ownerId: string
+}
+
+/**
+ * Seeds a CONNECTED `gateway_channels` row through the co-tenant Go gateway's OWN HTTP surface
+ * (create → connect → poll `getChannel` until `CONNECTED`) rather than a direct DB insert — the
+ * row's PROVENANCE (only the gateway's own use cases legally produce `status: CONNECTED`) is the
+ * point. Requires `startIntegrationBackend({ services: ['apiGo'] })`; throws a legible error when
+ * that service was not booted. Overrides are limited to `name`/`ownerId` — everything else about
+ * the seeded channel is boot-declared by the gateway's `e2e` column scenario, not a caller knob.
+ */
+export function givenConnectedGatewayChannel(
+	backend: IntegrationBackend,
+	overrides?: { name?: string; ownerId?: string },
+): Promise<GatewayChannelSeed>
+
 export function givenRemote(testBed: TestBedLike, overrides: RemoteOverrides): Promise<RemoteOverrides>
 
 export function givenRemoteMembership(testBed: TestBedLike, overrides: RemoteMembershipOverrides): Promise<RemoteMembershipOverrides>
@@ -299,6 +320,7 @@ export interface TestingSurface {
 	GIVEN_MENTION_TAG: typeof GIVEN_MENTION_TAG
 	givenThread: typeof givenThread
 	givenChannel: typeof givenChannel
+	givenConnectedGatewayChannel: typeof givenConnectedGatewayChannel
 	givenRemote: typeof givenRemote
 	givenRemoteMembership: typeof givenRemoteMembership
 	givenIssue: typeof givenIssue

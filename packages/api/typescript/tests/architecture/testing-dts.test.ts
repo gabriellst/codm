@@ -12,7 +12,7 @@ import * as testing from '../support/testing'
  * touch this file when they touch that one, and TypeScript's `satisfies` on an object literal only
  * demands the properties the target TYPE declares, so a stray extra export on the runtime module
  * would sail through unnoticed by `tsc` alone. This test pins the exact NAME SET (spec AC-5): the
- * 15 bare `givenX` helpers + `GIVEN_MENTION_TAG` + `startIntegrationBackend` — never the deprecated
+ * 16 bare `givenX` helpers + `GIVEN_MENTION_TAG` + `startIntegrationBackend` — never the deprecated
  * `createGivenHelpers` facade (TST-18), which does not enter this public surface.
  *
  * Importing `../support/testing` here is cheap and side-effect-free for this purpose: nothing at
@@ -41,6 +41,7 @@ const CATALOG = [
 	'givenThread',
 	'GIVEN_MENTION_TAG',
 	'givenChannel',
+	'givenConnectedGatewayChannel',
 	'givenRemote',
 	'givenRemoteMembership',
 	'givenIssue',

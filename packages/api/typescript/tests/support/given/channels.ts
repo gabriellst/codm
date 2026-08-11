@@ -31,6 +31,11 @@ export interface ChannelOverrides {
  * Reach for it whenever a read filters by the owner's channels: `GetAttachThreadWizard` lists contacts
  * of the owner's OWN channels, so a `givenRemote` with no channel behind it is invisible — an assertion
  * against it passes vacuously on `undefined`.
+ *
+ * Contrast with `givenConnectedGatewayChannel` (`./gateway.ts`): this one fabricates a row of any shape
+ * straight through Drizzle, for tests where the row's SHAPE is what's under test. That one seeds through
+ * the Go gateway's own create → connect HTTP pipeline, for tests where the row's PROVENANCE matters —
+ * that only the gateway's own use cases legally produced `status: CONNECTED`.
  */
 export async function givenChannel(testBed: TestBedLike, overrides: ChannelOverrides = {}): Promise<{ channelId: string }> {
 	const channelId = overrides.channelId ?? Id.value()
