@@ -10,13 +10,18 @@ import { ContactStep } from '.'
  * REDUZIDO (T9, onda B) — o que sobrevive contra o backend REAL, sem `globalThis.fetch` manual.
  *
  * `ContactStep` é conectado (`useGetAttachThreadWizard`), então o round-trip real É a asserção
- * (SB-05). Mas `channels`/`remotes` são tabelas do gateway Go sem repositório no lado TS — os
- * `given*` que as semeariam (`givenChannel`/`givenRemote`) não são reexportados por
- * `@codm/api-typescript/testing` (tooling congelado nesta task). Sem canal seedável, a leitura real
- * sempre devolve `contacts: []` para qualquer owner — então este arquivo prova exatamente isso (o
- * round-trip real e o estado vazio computado), e o resto das asserções do `index.test.tsx` antigo
- * (busca chegando ao servidor, os dois rótulos de tipo, contato já anexado) viraram SÓ-VISUAIS em
- * `index.stories.tsx` — o caso que a ruling do founder pós-spike destina a MSW.
+ * (SB-05). Este arquivo sobe o backend TS sozinho (sem `services`) — sem gateway, `contacts: []` para
+ * qualquer owner por construção — então prova o round-trip real e o estado vazio computado. O resto
+ * das asserções do `index.test.tsx` antigo (busca chegando ao servidor, os dois rótulos de tipo,
+ * contato já anexado) viraram SÓ-VISUAIS em `index.stories.tsx` — o caso que a ruling do founder
+ * pós-spike destina a MSW.
+ *
+ * ATUALIZADO (eixo-ambiente-go T9/T12): o canal deixou de ser improduzível — ver
+ * `index.services.test.tsx` (`services: ['apiGo']`), que semeia um canal REAL, CONECTADO, via
+ * `givenConnectedGatewayChannel` e prova `contacts: []` por uma razão MAIS FORTE e diferente desta:
+ * não falta canal, falta `StreamContactSnapshot` ser consumido por algum handler do pipeline de
+ * pareamento (gap de produção Go, documentado lá). As duas suítes são complementares — esta prova o
+ * caso "sem canal nenhum", a `.services` prova "canal conectado, contatos ainda vazios".
  *
  * Descartado (falseamento, não migrado): "não manda `search` vazio na primeira carga" — o servidor
  * trata `search: ''` e `search: undefined` de forma IDÊNTICA (`input.search?.trim()` é falsy nos

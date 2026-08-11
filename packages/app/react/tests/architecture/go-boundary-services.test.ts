@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
 import { getBaseUrl } from '@codm/client-typescript/http'
-import { health } from '@codm/client-typescript/go'
+import { health, createWhatsAppChannel } from '@codm/client-typescript/go'
 import { useIntegrationBackend } from '../support/integration-harness'
 import type { IntegrationBackend } from '../support/integration-harness'
 
@@ -43,6 +43,23 @@ import type { IntegrationBackend } from '../support/integration-harness'
  * do gateway (`backend.services` continua com a entrada, mas o processo morreu) fez `health()`
  * lançar por conexão recusada — RED — revertido (novo boot), GREEN de novo. Ver o relato da Task T8
  * para os números.
+ *
+ * O TESTE ABAIXO (`carrega o body de um POST`, T9/T12) é o REGRESSION deste rail para um defeito que
+ * `health()` sozinho NUNCA teria pego: `ky` (o transporte por trás de TODA função gerada) sempre
+ * normaliza uma mutation numa instância de `Request` e chama `fetch(request, extra)` — um SEGUNDO
+ * argumento sem method/headers/body (traçado em `node_modules/.bun/ky@1.14.3/node_modules/ky/
+ * distribution/core/Ky.js`, `#fetch()`). O `nodeHttpFetch` original de `integration-harness.ts` só
+ * lia esses três campos do `init` (segundo argumento) — nunca de `input` quando `input` É o
+ * `Request` — então TODA mutation da SDK em modo `services` degradava silenciosamente para um GET
+ * sem corpo, invisível neste arquivo porque `health()` é a ÚNICA chamada (e é GET). Isso só foi
+ * descoberto quando T9 tentou uma mutation real (`createWhatsAppChannel`) através deste mesmo
+ * harness. Corrigido em `integration-harness.ts` (`input instanceof Request` vira seu próprio
+ * caminho — method/headers/body lidos DO Request, `init` ganha em conflito de header, body via
+ * `.clone().arrayBuffer()`); este teste chama a SDK DIRETO, sem `client` override nenhum — a MESMA
+ * forma que qualquer given/mutation chamaria — e prova que o `name` enviado sobrevive a viagem de
+ * ida e volta. Falseado durante a autoria (T9): comentar o branch `instanceof Request` de volta ao
+ * original fez este `it` falhar com `Invalid UUID`/`validation failed` do lado Go (o corpo sumia) —
+ * RED — restaurado, GREEN de novo.
  */
 describe('rail: com services["apiGo"], o boundary do Go aponta pro subprocesso real', () => {
 	let backend: IntegrationBackend
@@ -71,5 +88,15 @@ describe('rail: com services["apiGo"], o boundary do Go aponta pro subprocesso r
 
 		expect(result.status).toBeDefined()
 		expect(result.components.db?.status).toBe('up')
+	})
+
+	it('uma mutation real (POST com corpo) carrega o body pelo fetch remendado — regression do bug T9/T12', async () => {
+		const ownerId = backend.asTestBed().ownerId
+		const name = 'go-boundary-services-body-regression'
+
+		const created = await createWhatsAppChannel({ name }, { baseURL: `${backend.services.apiGo}/api`, headers: { 'X-Owner-Id': ownerId } })
+
+		expect(created.id).toBeDefined()
+		expect(created.name).toBe(name)
 	})
 })

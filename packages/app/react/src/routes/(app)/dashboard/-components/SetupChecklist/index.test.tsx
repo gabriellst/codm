@@ -16,9 +16,12 @@ import { SetupChecklist } from '.'
  * `{ exists: true, isDirectory: true }`), o mesmo tipo de determinismo que `ProvidersSection` (T9)
  * já provou para `MockProviderDetector`. `threadDone` vem de `givenThread` (tooling congelado).
  *
- * `channelDone` NÃO é produzível: `channels`/`remotes` são tabelas do gateway Go sem given exposto
- * em `@codm/api-typescript/testing` (mesmo gap documentado em `ContactStep`, T9) — o caso "tudo
- * feito" (que exige os três) fica SÓ-VISUAL em `index.stories.tsx`.
+ * `channelDone` NÃO é produzível AQUI (harness sem `services`): `channels`/`remotes` são tabelas do
+ * gateway Go, e este arquivo sobe o backend TS sozinho, sem o gateway subprocess. ATUALIZADO (T9/T12):
+ * `channelDone` isolado TEM cobertura real — `index.services.test.tsx` (`services: ['apiGo']`) semeia
+ * um canal de verdade via `givenConnectedGatewayChannel` e prova a linha do canal sumindo. O que
+ * continua SÓ-VISUAL em `index.stories.tsx` é só o caso "tudo feito" (os três ao mesmo tempo) — nenhum
+ * arquivo hoje combina canal conectado + workspace + thread na mesma seed.
  */
 describe('SetupChecklist — contra o backend real', () => {
 	let backend: IntegrationBackend

@@ -150,11 +150,50 @@ async function ensureGoBoundaryStub(): Promise<number> {
  * never calls this, so it stays byte-identical (spec D9) — the ONLY new state is process-global and
  * this file's own dedicated process (`bunfig.toml`'s `pathIgnorePatterns`) never shares it with a
  * default-suite file.
+ *
+ * `input instanceof Request` MUST be handled as its own case, not folded into the `init` reads below
+ * (T9/T12 fix, scope fence lifted for this defect only — founder-approved, .plans/2026-08-10-eixo-
+ * ambiente-go.md): every SDK mutation goes through `ky`, and `ky` NEVER calls `fetch(url, init)` for
+ * a request with a body — it always builds its own `Request` first and calls `fetch(request, extra)`
+ * with a SINGLE meaningful argument (traced in `node_modules/.bun/ky@1.14.3/node_modules/ky/
+ * distribution/core/Ky.js`, `#fetch()`: `return this.#options.fetch(this.#originalRequest, nonRequestOptions)` —
+ * `nonRequestOptions` is `ky`-internal config like `onDownloadProgress`, never method/headers/body).
+ * Reading `init?.method`/`init?.headers`/`init?.body` alone — the ORIGINAL shape of this function —
+ * silently dropped method/headers/body for every such call: it degraded to a bodyless, headerless GET
+ * indistinguishable from success until the server rejected the missing payload. Invisible through T8
+ * because `health()` (GET, no body) was the only call exercised; surfaced by T9's `services: ['apiGo']`
+ * migrations, whose POSTs (create/connect a channel) all silently 4xx'd this way. The `(input:
+ * string|URL, init)` path — the ORIGINAL two lines below — is UNCHANGED: `ky` never reaches it, so it
+ * carries no evidence either way, and narrowing its behavior isn't this fix's job.
  */
-function nodeHttpFetch(input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]): ReturnType<typeof fetch> {
-	const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
-	const method = init?.method ?? 'GET'
-	const headers = init?.headers as Record<string, string> | undefined
+async function nodeHttpFetch(input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]): ReturnType<typeof fetch> {
+	let url: string
+	let method: string
+	let headers: Record<string, string> | undefined
+	let body: Buffer | string | undefined
+
+	if (input instanceof Request) {
+		url = input.url
+		method = input.method
+		// `init` wins on conflict — matches real `fetch(request, init)` semantics, where the second
+		// argument overrides fields already on the Request. `Headers` normalizes casing on `.set()`,
+		// so two entries for the same header spelled differently can't survive the merge.
+		const merged = new Headers(input.headers)
+		if (init?.headers) new Headers(init.headers).forEach((value, key) => merged.set(key, value))
+		headers = Object.fromEntries(merged.entries())
+		// `arrayBuffer`, not `text` — a `Request` body is never assumed textual (could be JSON, could
+		// be binary); `node:http` accepts a `Buffer` directly. `.clone()` because `Request#arrayBuffer`
+		// consumes the body stream — `ky` itself still holds `this.#originalRequest` for its own retry
+		// logic, so consuming without cloning would race a legitimate retry against an empty stream.
+		body = Buffer.from(await input.clone().arrayBuffer())
+	} else {
+		// UNCHANGED — `ky` never calls this branch (see docblock above); kept byte-identical.
+		url = typeof input === 'string' ? input : input.toString()
+		method = init?.method ?? 'GET'
+		headers = init?.headers as Record<string, string> | undefined
+		if (typeof init?.body === 'string') body = init.body
+	}
+
 	return new Promise((resolveReq, rejectReq) => {
 		const req = http.request(url, { method, headers }, res => {
 			const chunks: Buffer[] = []
@@ -169,7 +208,7 @@ function nodeHttpFetch(input: Parameters<typeof fetch>[0], init?: Parameters<typ
 			})
 		})
 		req.on('error', rejectReq)
-		if (typeof init?.body === 'string') req.write(init.body)
+		if (body !== undefined) req.write(body)
 		req.end()
 	})
 }

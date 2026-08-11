@@ -11,15 +11,15 @@ import { ContactStep } from '.'
  * intercepta sob bun — medido, ver `tests/support/storybook.ts`): nenhuma tem `play`.
  *
  * O comportamento que PODE ser provado contra o backend real (round-trip real, rodapé ausente) mora
- * no `index.test.tsx` reduzido, via `useIntegrationBackend()`. O que fica só-visual aqui — busca
- * chegando ao servidor, os dois rótulos de tipo, contato já anexado — é assim porque `channels`/
- * `remotes` são tabelas do gateway Go sem repositório no lado TS: os `given*` que as semeiam
- * (`givenChannel`/`givenRemote`) existem em `packages/api/typescript/tests/support/given/`, mas o
- * subpath público `@codm/api-typescript/testing` (o único jeito do lado react alcançar o backend —
- * tooling congelado nesta task, spec Decision 15/16) só reexporta `createGivenHelpers`/`givenThread`.
- * Sem canal real seedável, `GetAttachThreadWizard` sempre devolve `contacts: []` para qualquer
- * owner — os estados COM contato são hoje improduzíveis pelo harness do console, exatamente o
- * caso que a ruling do founder pós-spike destina a MSW-só-visual.
+ * no `index.test.tsx` reduzido, via `useIntegrationBackend()`. `index.services.test.tsx`
+ * (`services: ['apiGo']`, eixo-ambiente-go T9/T12) prova ainda mais: um canal REAL, CONECTADO
+ * (`givenConnectedGatewayChannel`), com `contacts: []` continuando por uma razão de PRODUÇÃO —
+ * `MockChannel.StreamContactSnapshot` (Go) não é consumido por nenhum handler do pipeline de
+ * pareamento, então `gateway_remotes` nunca é escrita para um canal que o mock pareia (gap
+ * documentado lá, fora do escopo desta task de UI). O que fica só-visual aqui — busca chegando ao
+ * servidor, os dois rótulos de tipo, contato já anexado — são os estados COM contato: sem um produtor
+ * para `gateway_remotes`, nenhum harness real consegue popular a lista, exatamente o caso que a ruling
+ * do founder pós-spike destina a MSW-só-visual.
  */
 
 const CHANNEL = '019e4d24-6524-7041-9e1c-8108180cdd01'

@@ -39,7 +39,7 @@
 		/* Type resolution - use root node_modules for shared types */
 		"typeRoots": ["../node_modules/@types", "./node_modules/@types"]
 	},
-	"include": ["src", "tests"],
+	"include": ["src", "tests", "scripts"],
 	"exclude": [
 		"node_modules",
 		"dist",

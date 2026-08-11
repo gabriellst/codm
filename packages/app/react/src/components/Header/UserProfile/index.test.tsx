@@ -9,11 +9,16 @@ import { UserProfile } from '.'
 /**
  * REDUZIDO (T11, onda B) — comportamento contra o backend REAL, sem `globalThis.fetch` manual.
  *
- * `GetOperatorIdentity` lê `channels`/`remotes` — tabelas do gateway Go sem given exposto em
- * `@codm/api-typescript/testing` (mesmo gap de `ContactStep`, T9). Sem canal seedável, o read real
- * SEMPRE devolve `identity` ausente — então este arquivo prova exatamente o EMPRÉSTIMO devolvido: a
- * queda para a sessão constante, e que é o read do OPERADOR (não da sessão) quem preenche o cache. O
- * estado "identidade emprestada" ficou SÓ-VISUAL em `index.stories.tsx`.
+ * `GetOperatorIdentity` lê `channels`/`remotes` — tabelas do gateway Go. Este arquivo sobe o backend
+ * TS sozinho (sem `services`), então nenhum canal existe — o read real SEMPRE devolve `identity`
+ * ausente por essa razão vazia. Este arquivo prova o EMPRÉSTIMO devolvido: a queda para a sessão
+ * constante, e que é o read do OPERADOR (não da sessão) quem preenche o cache.
+ *
+ * ATUALIZADO (T9/T12): `channels` deixou de ser improduzível — `index.services.test.tsx`
+ * (`services: ['apiGo']`) semeia um canal REAL, CONECTADO, via `givenConnectedGatewayChannel`, e prova
+ * a MESMA queda por uma razão mais forte (canal presente, mas `remotes` ainda vazia — gap documentado
+ * lá). O estado "identidade emprestada" (com `remotes` casando) continua SÓ-VISUAL em
+ * `index.stories.tsx` — nenhum caminho hoje escreve `gateway_remotes` para um canal pareado pelo mock.
  */
 describe('UserProfile — contra o backend real', () => {
 	let backend: IntegrationBackend

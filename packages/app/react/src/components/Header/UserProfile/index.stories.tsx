@@ -6,13 +6,17 @@ import { UserProfile } from '.'
 
 /**
  * Migrado de `index.test.tsx` (T11, onda B). `UserProfile` é CONECTADO (`useGetOperatorIdentity`
- * interno) — MSW não intercepta sob bun (medido), então SÓ `BorrowedIdentity` é SÓ-VISUAL. Além
- * disso, `channels`/`remotes` (as tabelas que `GetOperatorIdentity` lê) são do gateway Go, sem given
- * exposto em `@codm/api-typescript/testing` — mesmo gap de `ContactStep` (T9): o estado "identidade
- * emprestada" é IMPRODUZÍVEL pelo harness, então esta story é a ÚNICA prova dele, mesmo visual.
+ * interno) — MSW não intercepta sob bun (medido), então SÓ `BorrowedIdentity` é SÓ-VISUAL. `channels`/
+ * `remotes` (as tabelas que `GetOperatorIdentity` lê) são do gateway Go — desde eixo-ambiente-go
+ * (T9/T12), `channels` deixou de ser improduzível (`givenConnectedGatewayChannel`, ver
+ * `index.services.test.tsx`), mas `remotes` continua sem produtor (`MockChannel.StreamContactSnapshot`
+ * não é consumido por nenhum handler do pipeline de pareamento — mesmo gap documentado em
+ * `ContactStep`): o estado "identidade emprestada" exige o PAR `(channel, remote)` casando, então
+ * segue IMPRODUZÍVEL pelo harness — esta story é a ÚNICA prova dele, mesmo visual.
  *
  * O comportamento produzível (sem canal ⇒ cai na sessão constante; a query certa é a que preenche o
- * cache) mora no `index.test.tsx` reduzido, via `useIntegrationBackend()`.
+ * cache) mora no `index.test.tsx` reduzido, via `useIntegrationBackend()`; a mesma queda com um canal
+ * REAL, CONECTADO, presente mora em `index.services.test.tsx`.
  */
 const opts = getOperatorIdentityQueryOptions()
 

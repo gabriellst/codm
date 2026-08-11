@@ -11,11 +11,12 @@ import { SetupChecklist } from '.'
  *
  * O comportamento real (um passo satisfeito some da lista) mora no `index.test.tsx` reduzido, via
  * `useIntegrationBackend()` — `workspaceDone`/`threadDone` são PRODUZÍVEIS pelo harness real
- * (`addWorkspace` real sob `MockWorkspaceDetector` determinístico; `givenThread`), mas `channelDone`
- * NÃO É: `channels`/`remotes` são tabelas do gateway Go sem given exposto em
- * `@codm/api-typescript/testing` (tooling congelado nesta task — o mesmo gap documentado em
- * `ContactStep`/T9). O caso "tudo feito" (que exige os TRÊS, incluindo `channelDone`) é por isso
- * IMPRODUZÍVEL pelo harness e fica só aqui, visual.
+ * (`addWorkspace` real sob `MockWorkspaceDetector` determinístico; `givenThread`). `channelDone`
+ * ISOLADO também é, desde a frente eixo-ambiente-go (T9/T12): `index.services.test.tsx`
+ * (`services: ['apiGo']`) semeia um canal REAL via `givenConnectedGatewayChannel` e prova a linha do
+ * canal sumindo. O que continua IMPRODUZÍVEL pelo harness — e fica só aqui, visual — é o caso "tudo
+ * feito" (os TRÊS ao mesmo tempo): nenhum arquivo hoje combina canal conectado + workspace + thread na
+ * mesma seed.
  */
 const opts = getOnboardingQueryOptions()
 
