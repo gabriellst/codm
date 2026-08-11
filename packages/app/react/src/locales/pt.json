@@ -598,6 +598,8 @@
 		"back": "Voltar",
 		"boundAgents": "Agentes desta conversa",
 		"boundAgentsComingSoonHint": "Esta conversa está ligada a um agente que esta versão ainda não sabe dirigir, então ela não responde. Apague a conversa e anexe o contato a um agente disponível.",
+		"bufferDecrease": "Diminuir o buffer de contexto",
+		"bufferIncrease": "Aumentar o buffer de contexto",
 		"bufferMessages": "mensagens",
 		"canInvokeToggle": "Pode invocar",
 		"chatEmptyDescription": "Mensagens deste contato e dos seus agentes aparecerão aqui.",
