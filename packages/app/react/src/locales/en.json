@@ -539,7 +539,7 @@
 		"issues": "Issues",
 		"login": "Sign in",
 		"settings": "Settings",
-		"workspaces": "Workspaces"
+		"workspaces": "Projects"
 	},
 	"notifications": {
 		"allCaughtUp": "You're all caught up.",
@@ -720,7 +720,7 @@
 		"removeConfirmTitle": "Remove this workspace?",
 		"threadCount_one": "{{count}} thread",
 		"threadCount_other": "{{count}} threads",
-		"title": "Workspaces"
+		"title": "Projects"
 	},
 	"zod": {
 		"invalidEmail": "Invalid email",

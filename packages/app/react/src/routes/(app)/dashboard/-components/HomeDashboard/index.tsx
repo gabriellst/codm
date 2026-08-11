@@ -42,7 +42,6 @@ export function HomeDashboard({ className, ...props }: ComponentProps<'div'>) {
 			<DecorativeBlob />
 
 			<PageHeader
-				back={false}
 				title={t('nav.home')}
 				subtitle={heroLine}
 				action={

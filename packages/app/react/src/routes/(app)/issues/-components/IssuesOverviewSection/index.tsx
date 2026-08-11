@@ -37,21 +37,26 @@ export function IssuesOverviewSection({ className, ...props }: ComponentProps<'d
 
 	return (
 		<div className={cn('mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 pb-16 pt-20', className)} {...props}>
-			<PageHeader
-				title={t('issues.title')}
-				subtitle={subtitle ?? <Skeleton className="h-4 w-64" />}
-				action={
-					// `nativeButton={false}` — this renders an <a>, not a <button>.
-					<Button
-						variant={archived ? 'secondary' : 'outline'}
-						size="sm"
-						nativeButton={false}
-						render={<Link to="/issues" search={{ archived: !archived }} />}
-					>
-						{archived ? t('issues.hideArchived') : t('issues.showArchived')}
-					</Button>
-				}
-			/>
+			{/* D3 — the stats line left the PageHeader subtitle slot and became the BODY's first
+			    line (the header keeps a subtitle only on Home). It still loads with the page shape:
+			    the skeleton keeps this row's height so the groups below don't jump. */}
+			<div className="flex flex-col gap-2">
+				<PageHeader
+					title={t('issues.title')}
+					action={
+						// `nativeButton={false}` — this renders an <a>, not a <button>.
+						<Button
+							variant={archived ? 'secondary' : 'outline'}
+							size="sm"
+							nativeButton={false}
+							render={<Link to="/issues" search={{ archived: !archived }} />}
+						>
+							{archived ? t('issues.hideArchived') : t('issues.showArchived')}
+						</Button>
+					}
+				/>
+				<div className="text-sm text-muted-foreground">{subtitle ?? <Skeleton className="h-4 w-64" />}</div>
+			</div>
 
 			{isLoading ? (
 				<div className="flex flex-col gap-4">

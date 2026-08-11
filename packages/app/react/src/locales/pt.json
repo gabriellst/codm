@@ -539,7 +539,7 @@
 		"issues": "Tarefas",
 		"login": "Entrar",
 		"settings": "Configurações",
-		"workspaces": "Espaços de trabalho"
+		"workspaces": "Projetos"
 	},
 	"notifications": {
 		"allCaughtUp": "Você está em dia.",
@@ -720,7 +720,7 @@
 		"removeConfirmTitle": "Remover este espaço de trabalho?",
 		"threadCount_one": "{{count}} conversa",
 		"threadCount_other": "{{count}} conversas",
-		"title": "Espaços de trabalho"
+		"title": "Projetos"
 	},
 	"zod": {
 		"invalidEmail": "E-mail inválido",
