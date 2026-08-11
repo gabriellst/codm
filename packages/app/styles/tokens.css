@@ -232,6 +232,15 @@
 	--illustration-surface-a: oklch(0.201 0.045 141); /* #16240c */
 	--illustration-surface-b: oklch(0.155 0.03 141); /* #101a08 */
 	--illustration-terminal: oklch(0.145 0 0); /* #141414 — hero terminal card + blog code block */
+	--site-dark-muted-foreground: oklch(0.68 0 0); /* #a8a8a8 — measured on the "Como funciona" dark
+		section subtitle (zwRb8/qvoZq). Same always-dark-surface reasoning as --site-dark itself and
+		Footer's literal white alphas: this text never runs against the light palette, so it's a
+		flat token rather than composed from --muted-foreground (which is tuned for light/`.dark`
+		toggling, not for a section that's permanently on `--site-dark`). */
+	--terminal-text-mid: oklch(0.85 0 0); /* #d8d8d8 / #cfcfcf — terminal mock "second line" tier,
+		repeated across the Hero terminal card, "Como funciona" card 2, and the blog post code block. */
+	--terminal-text-dim: oklch(0.58 0 0); /* #8a8a8a / #7a7a7a — terminal mock "quietest line" tier,
+		same repetition as above. */
 
 	/* ── Brand alias ──────────────────────────────────── */
 	/* No longer a "kept mono so nothing breaks" shim — --primary IS the brand hex now, so this

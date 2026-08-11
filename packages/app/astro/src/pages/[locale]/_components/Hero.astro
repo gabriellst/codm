@@ -79,16 +79,16 @@ const floatCards = [
 		</div>
 
 		<div
-			class="absolute w-[330px] rounded-asymmetric-lg bg-[#141414] p-[13px_16px] shadow-[var(--shadow-float)]"
+			class="absolute w-[330px] rounded-asymmetric-lg bg-[var(--illustration-terminal)] p-[13px_16px] shadow-[var(--shadow-float)]"
 			style={{ left: floatCards[4].left, top: floatCards[4].top, transform: `rotate(${floatCards[4].rotate})` }}
 		>
-			<div class="mb-1.5 flex items-center gap-2 text-[#8a8a8a]">
+			<div class="mb-1.5 flex items-center gap-2 text-[var(--terminal-text-dim)]">
 				<Icon name="terminal" size={12} />
 				<span class="font-mono text-[10.5px]">{t.cards.terminal.path}</span>
 			</div>
-			<p class="m-0 font-mono text-[11px] leading-[1.5] text-[#8BE414]">{t.cards.terminal.lines[0]}</p>
-			<p class="m-0 font-mono text-[11px] leading-[1.5] text-[#d8d8d8]">{t.cards.terminal.lines[1]}</p>
-			<p class="m-0 font-mono text-[11px] leading-[1.5] text-[#7a7a7a]">{t.cards.terminal.lines[2]}</p>
+			<p class="m-0 font-mono text-[11px] leading-[1.5] text-[var(--success-bright)]">{t.cards.terminal.lines[0]}</p>
+			<p class="m-0 font-mono text-[11px] leading-[1.5] text-[var(--terminal-text-mid)]">{t.cards.terminal.lines[1]}</p>
+			<p class="m-0 font-mono text-[11px] leading-[1.5] text-[var(--terminal-text-dim)]">{t.cards.terminal.lines[2]}</p>
 		</div>
 	</div>
 
