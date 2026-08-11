@@ -11,10 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as appRouteRouteImport } from './routes/(app)/route'
-import { Route as AttachIndexRouteImport } from './routes/attach/index'
 import { Route as LoginIndexRouteImport } from './routes/login/index'
 import { Route as OnboardingIndexRouteImport } from './routes/onboarding/index'
 import { Route as StyleguideIndexRouteImport } from './routes/styleguide/index'
+import { Route as appAttachIndexRouteImport } from './routes/(app)/attach/index'
 import { Route as appChannelsIndexRouteImport } from './routes/(app)/channels/index'
 import { Route as appDashboardIndexRouteImport } from './routes/(app)/dashboard/index'
 import { Route as appIssuesIndexRouteImport } from './routes/(app)/issues/index'
@@ -36,11 +36,6 @@ const appRouteRoute = appRouteRouteImport.update({
   id: '/(app)',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AttachIndexRoute = AttachIndexRouteImport.update({
-  id: '/attach/',
-  path: '/attach/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LoginIndexRoute = LoginIndexRouteImport.update({
   id: '/login/',
   path: '/login/',
@@ -55,6 +50,11 @@ const StyleguideIndexRoute = StyleguideIndexRouteImport.update({
   id: '/styleguide/',
   path: '/styleguide/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const appAttachIndexRoute = appAttachIndexRouteImport.update({
+  id: '/attach/',
+  path: '/attach/',
+  getParentRoute: () => appRouteRoute,
 } as any)
 const appChannelsIndexRoute = appChannelsIndexRouteImport.update({
   id: '/channels/',
@@ -117,11 +117,11 @@ const appThreadsThreadIdIssuesIssueIdIndexRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/attach/': typeof AttachIndexRoute
   '/login/': typeof LoginIndexRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/styleguide/': typeof StyleguideIndexRoute
   '/threads/$threadId': typeof appThreadsThreadIdRouteRouteWithChildren
+  '/attach/': typeof appAttachIndexRoute
   '/channels/': typeof appChannelsIndexRoute
   '/dashboard/': typeof appDashboardIndexRoute
   '/issues/': typeof appIssuesIndexRoute
@@ -135,10 +135,10 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/attach': typeof AttachIndexRoute
   '/login': typeof LoginIndexRoute
   '/onboarding': typeof OnboardingIndexRoute
   '/styleguide': typeof StyleguideIndexRoute
+  '/attach': typeof appAttachIndexRoute
   '/channels': typeof appChannelsIndexRoute
   '/dashboard': typeof appDashboardIndexRoute
   '/issues': typeof appIssuesIndexRoute
@@ -154,11 +154,11 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/(app)': typeof appRouteRouteWithChildren
-  '/attach/': typeof AttachIndexRoute
   '/login/': typeof LoginIndexRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/styleguide/': typeof StyleguideIndexRoute
   '/(app)/threads/$threadId': typeof appThreadsThreadIdRouteRouteWithChildren
+  '/(app)/attach/': typeof appAttachIndexRoute
   '/(app)/channels/': typeof appChannelsIndexRoute
   '/(app)/dashboard/': typeof appDashboardIndexRoute
   '/(app)/issues/': typeof appIssuesIndexRoute
@@ -174,11 +174,11 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/attach/'
     | '/login/'
     | '/onboarding/'
     | '/styleguide/'
     | '/threads/$threadId'
+    | '/attach/'
     | '/channels/'
     | '/dashboard/'
     | '/issues/'
@@ -192,10 +192,10 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/attach'
     | '/login'
     | '/onboarding'
     | '/styleguide'
+    | '/attach'
     | '/channels'
     | '/dashboard'
     | '/issues'
@@ -210,11 +210,11 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/(app)'
-    | '/attach/'
     | '/login/'
     | '/onboarding/'
     | '/styleguide/'
     | '/(app)/threads/$threadId'
+    | '/(app)/attach/'
     | '/(app)/channels/'
     | '/(app)/dashboard/'
     | '/(app)/issues/'
@@ -230,7 +230,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   appRouteRoute: typeof appRouteRouteWithChildren
-  AttachIndexRoute: typeof AttachIndexRoute
   LoginIndexRoute: typeof LoginIndexRoute
   OnboardingIndexRoute: typeof OnboardingIndexRoute
   StyleguideIndexRoute: typeof StyleguideIndexRoute
@@ -250,13 +249,6 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: ''
       preLoaderRoute: typeof appRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/attach/': {
-      id: '/attach/'
-      path: '/attach'
-      fullPath: '/attach/'
-      preLoaderRoute: typeof AttachIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login/': {
@@ -279,6 +271,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/styleguide/'
       preLoaderRoute: typeof StyleguideIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/(app)/attach/': {
+      id: '/(app)/attach/'
+      path: '/attach'
+      fullPath: '/attach/'
+      preLoaderRoute: typeof appAttachIndexRouteImport
+      parentRoute: typeof appRouteRoute
     }
     '/(app)/channels/': {
       id: '/(app)/channels/'
@@ -384,6 +383,7 @@ const appThreadsThreadIdRouteRouteWithChildren =
 
 interface appRouteRouteChildren {
   appThreadsThreadIdRouteRoute: typeof appThreadsThreadIdRouteRouteWithChildren
+  appAttachIndexRoute: typeof appAttachIndexRoute
   appChannelsIndexRoute: typeof appChannelsIndexRoute
   appDashboardIndexRoute: typeof appDashboardIndexRoute
   appIssuesIndexRoute: typeof appIssuesIndexRoute
@@ -394,6 +394,7 @@ interface appRouteRouteChildren {
 
 const appRouteRouteChildren: appRouteRouteChildren = {
   appThreadsThreadIdRouteRoute: appThreadsThreadIdRouteRouteWithChildren,
+  appAttachIndexRoute: appAttachIndexRoute,
   appChannelsIndexRoute: appChannelsIndexRoute,
   appDashboardIndexRoute: appDashboardIndexRoute,
   appIssuesIndexRoute: appIssuesIndexRoute,
@@ -409,7 +410,6 @@ const appRouteRouteWithChildren = appRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   appRouteRoute: appRouteRouteWithChildren,
-  AttachIndexRoute: AttachIndexRoute,
   LoginIndexRoute: LoginIndexRoute,
   OnboardingIndexRoute: OnboardingIndexRoute,
   StyleguideIndexRoute: StyleguideIndexRoute,

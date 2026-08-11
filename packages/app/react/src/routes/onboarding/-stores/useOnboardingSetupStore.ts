@@ -1,7 +1,7 @@
 // packages/app/react/src/routes/onboarding/-stores/useOnboardingSetupStore.ts — COMPLETE final file.
 import { create } from 'zustand'
-import type { AgentsStepData } from '@/routes/attach/-components/AgentsStep'
-import type { ContactStepData } from '@/routes/attach/-components/ContactStep'
+import type { AgentsStepData } from '@/routes/(app)/attach/-components/AgentsStep'
+import type { ContactStepData } from '@/routes/(app)/attach/-components/ContactStep'
 
 /**
  * Cross-mount accumulator for the onboarding CONTACT/AGENTS/WORKSPACE/REVIEW steps (spec Decision

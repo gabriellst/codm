@@ -31,7 +31,7 @@ const WHITELIST: Record<string, string> = {
 	// não existe). Os dois motivos são o mesmo fato visto de dois ângulos: a tela salva sozinha.
 	'routes/(app)/threads/$threadId/-components/ThreadSettingsDialog/index.tsx':
 		'recipe `live-settings` — o input da tag salva no onBlur; não existe submit para um form.Field pendurar.',
-	'routes/attach/-components/ContactStep/index.tsx':
+	'routes/(app)/attach/-components/ContactStep/index.tsx':
 		'busca: filtra uma lista já carregada dentro de um passo de wizard (STATE-LOCAL-FILTER). Busca nunca é form — form react.',
 }
 

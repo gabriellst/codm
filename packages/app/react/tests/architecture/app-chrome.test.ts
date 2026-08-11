@@ -74,8 +74,9 @@ describe('rail — AppChrome monta exatamente uma vez, na raiz', () => {
 		const files = await sourceFiles()
 		expect(files.length).toBeGreaterThanOrEqual(50)
 		expect(files).toContain(ROOT)
-		// As rotas irmãs de `(app)`, que são exatamente as que viviam sem barra.
-		expect(files).toContain('routes/attach/index.tsx')
+		// Uma rota irmã de `(app)` (attach mudou-se para DENTRO do grupo no C2/D3 — onboarding
+		// segue sendo o exemplo vivo de rota sem a casca) e o próprio layout do grupo.
+		expect(files).toContain('routes/onboarding/index.tsx')
 		expect(files).toContain('routes/(app)/route.tsx')
 	})
 })

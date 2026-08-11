@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { getAttachThreadWizard } from '@codm/client-typescript/typescript'
 import { givenConnectedGatewayChannel } from '@codm/api-typescript/testing'
 import i18n from '@/lib/i18n'
-import { useIntegrationBackend, type IntegrationBackend } from '../../../../../tests/support/integration-harness'
+import { useIntegrationBackend, type IntegrationBackend } from '../../../../../../tests/support/integration-harness'
 import { ContactStep } from '.'
 
 /**

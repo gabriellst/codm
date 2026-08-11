@@ -10,7 +10,7 @@ import {
 	useGetAttachThreadWizard,
 } from '@codm/client-typescript/typescript'
 import type { DeepPartial } from '@/lib'
-import { ReviewStep } from '@/routes/attach/-components/ReviewStep'
+import { ReviewStep } from '@/routes/(app)/attach/-components/ReviewStep'
 import { useOnboardingSetupStore } from '../../-stores/useOnboardingSetupStore'
 
 /**

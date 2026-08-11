@@ -1,19 +1,18 @@
 import { describe, it } from 'bun:test'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { composeStories } from '../../../../../tests/support/storybook'
+import { composeStories } from '../../../../../../tests/support/storybook'
 import * as stories from './index.stories'
 
 /**
  * A STORY É A FIXTURE; ESTE ARQUIVO SÓ A EXECUTA SOB `bun test` (SB-04).
  *
- * `AgentsStep` é pure/dumb (providers via prop, sem SDK) — todas as asserções do antigo
- * `index.test.tsx` migraram para `play` em `index.stories.tsx`. Este arquivo monta cada story (mesmo
- * padrão do smoke) e invoca o `play` dela.
+ * `WorkspaceStep` é pure/dumb (workspaces via prop, sem SDK) — todas as asserções do antigo
+ * `index.test.tsx` migraram para `play` em `index.stories.tsx`.
  */
 const composed = composeStories(stories)
 
-describe('AgentsStep — stories', () => {
+describe('WorkspaceStep — stories', () => {
 	for (const [name, Story] of Object.entries(composed)) {
 		it(name, async () => {
 			const host = document.createElement('div')
