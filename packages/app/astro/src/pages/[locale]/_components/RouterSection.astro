@@ -1,37 +1,35 @@
 ---
 import type { CollectionEntry } from 'astro:content'
-import TerminalMock from './TerminalMock.astro'
 
 interface Props {
-	t: CollectionEntry<'landing'>['data']['router']
+	t: CollectionEntry<'landing'>['data']['useCases']
 }
 
 const { t } = Astro.props
 ---
 
-<section id="router" class="px-6 pb-[110px]">
-	<div
-		class="dark mx-auto grid max-w-[1160px] items-center gap-[60px] rounded-[36px] bg-[var(--route-background)] p-10 text-[var(--foreground)] md:grid-cols-[1fr_0.85fr] md:px-[70px] md:py-[90px]"
-	>
-		<div>
-			<div class="mb-[18px] font-mono text-[11px] tracking-[2px] text-[var(--muted-foreground)]">{t.eyebrow}</div>
-			<h2 class="mb-[18px] mt-0 text-balance text-[38px] font-extrabold leading-[1.08] tracking-[-0.8px]">
-				{t.titleBold}<br /><span class="font-light">{t.titleLight}</span>
-			</h2>
-			<p class="mb-[26px] mt-0 max-w-[420px] text-pretty text-[15px] leading-[1.65] text-[var(--muted-foreground)]">
-				{t.body}
-			</p>
-			<div class="flex flex-col gap-[11px] text-sm">
-				{
-					t.rows.map(row => (
-						<div class="flex items-baseline gap-3">
-							<span class="w-24 shrink-0 font-mono text-[11px] text-[var(--muted-foreground)]">{row.key}</span>
-							<span class="text-[var(--foreground)]/85">{row.text}</span>
-						</div>
-					))
-				}
-			</div>
+<!--
+  D3 (design/codm.pen `ji2y3` → `ADhDZ`, "Seção — Casos de uso (numerada)"): the pre-D3
+  rounded dark card with the terminal mock is gone — the design puts this section back on
+  the plain page background, as four numbered columns with a top hairline each. TerminalMock
+  is no longer mounted anywhere on the landing (see the plan's handoff note on ChatMock/
+  TerminalMock disposition).
+-->
+<section id="use-cases" class="px-6 pb-24 pt-10 md:px-16">
+	<div class="mx-auto max-w-[1160px]">
+		<h2 class="m-0 text-balance text-[length:clamp(28px,4vw,40px)] font-extrabold leading-[1.12] tracking-[-1.2px] text-[var(--foreground)]">
+			{t.title}
+		</h2>
+		<div class="mt-9 grid gap-8 sm:grid-cols-2 md:grid-cols-4">
+			{
+				t.cases.map(useCase => (
+					<div class="flex flex-col gap-3 border-t border-[var(--border)] pt-[22px]">
+						<span class="font-mono text-sm font-bold text-[var(--secondary-foreground)]">{useCase.number}</span>
+						<h3 class="m-0 text-lg font-extrabold tracking-[-0.3px] text-[var(--foreground)]">{useCase.title}</h3>
+						<p class="m-0 text-pretty text-[13.5px] leading-[1.55] text-[var(--muted-foreground)]">{useCase.body}</p>
+					</div>
+				))
+			}
 		</div>
-		<TerminalMock t={t.terminal} />
 	</div>
 </section>

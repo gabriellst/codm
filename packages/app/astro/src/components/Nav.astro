@@ -1,6 +1,7 @@
 ---
 import { getEntry } from 'astro:content'
 import LocaleSwitcher from '~/components/LocaleSwitcher.astro'
+import LogoMark from '~/components/LogoMark.astro'
 import { DMG_DOWNLOAD_URL } from '~/config/download'
 import { type Locale, routeFor } from '~/i18n'
 
@@ -15,54 +16,38 @@ const t = entry!.data
 
 const homeHref = routeFor(locale, '/')
 const blogHref = routeFor(locale, '/blog')
-const githubHref = t.footer.links.github
-// Direct DMG link (Task T3) — no longer derived from the GitHub releases page.
+const githubHref = t.footer.project.links.find(l => l.label === 'GitHub')?.href ?? 'https://github.com/codm'
 const downloadHref = DMG_DOWNLOAD_URL
 
+// D3 (Nav — asqga/uw9ir): plain top bar, 76px, page-bg — the floating hide-on-scroll pill
+// from the pre-D3 nav is gone (design shows a static bar, no scroll choreography).
 const anchors = [
-	{ href: '#demo', label: t.nav.links.demo },
-	{ href: '#router', label: t.nav.links.router },
-	{ href: '#features', label: t.nav.links.features },
+	{ href: '#how-it-works', label: t.nav.links.howItWorks },
+	{ href: '#use-cases', label: t.nav.links.useCases },
+	{ href: '#pricing', label: t.nav.links.pricing },
+	{ href: blogHref, label: t.nav.links.blog },
+	{ href: githubHref, label: t.nav.links.github },
 ]
-const pill =
-	'whitespace-nowrap rounded-full px-[13px] py-2 text-[13px] font-semibold text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]'
+const link = 'text-[14px] font-semibold text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]'
 ---
 
-<nav
-	id="site-nav"
-	class="fixed left-6 right-6 top-4 z-50 flex items-center gap-0.5 pb-1.5 pl-5 pr-1.5 pt-1.5 transition-[transform,opacity] duration-300"
->
-	<a href={homeHref} class="mr-auto text-[14.5px] font-extrabold tracking-[-0.3px]" aria-label="CODM">
-		Code<span class="ml-[3px] rounded-md bg-[var(--primary)] px-1.5 py-px text-[var(--primary-foreground)]">DM</span>
+<nav class="mx-auto flex h-[76px] max-w-[1440px] items-center gap-8 px-6 md:px-16">
+	{/* The real brand mark (same SVG as the app icon/favicon) — the .pen's green square +
+	    script "dm" is its stand-in, not the source (founder, 11/08). */}
+	<a href={homeHref} class="flex items-center gap-2.5" aria-label="CODM">
+		<LogoMark class="h-[34px] w-auto shrink-0" />
+		<span class="text-[16px] font-extrabold tracking-[0.4px] text-[var(--foreground)]">CODM</span>
 	</a>
-	{anchors.map(anchor => <a href={anchor.href} class:list={['hidden sm:inline', pill]}>{anchor.label}</a>)}
-	<a href={githubHref} class={pill}>{t.nav.links.github}</a>
-	<a href={blogHref} class={pill}>{t.nav.links.blog}</a>
-	<LocaleSwitcher localeLinks={localeLinks} />
-	<a
-		href={downloadHref}
-		class="ml-3 whitespace-nowrap rounded-full bg-[var(--primary)] px-[18px] py-[9px] text-[13px] font-bold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
-	>
-		{t.nav.download}
-	</a>
+	<div class="flex flex-1 items-center justify-center gap-[26px]">
+		{anchors.map(anchor => <a href={anchor.href} class:list={['hidden sm:inline', link]}>{anchor.label}</a>)}
+	</div>
+	<div class="flex items-center gap-3">
+		<LocaleSwitcher localeLinks={localeLinks} />
+		<a
+			href={downloadHref}
+			class="whitespace-nowrap rounded-asymmetric-2xs bg-[var(--primary)] px-[18px] py-[10px] text-[14px] font-bold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
+		>
+			{t.nav.download}
+		</a>
+	</div>
 </nav>
-
-<script>
-	// Hide-on-scroll (D7): slide the pill row away scrolling down, bring it back
-	// scrolling up. Skipped entirely under prefers-reduced-motion.
-	const nav = document.getElementById('site-nav')
-	if (nav && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-		let lastY = 0
-		addEventListener(
-			'scroll',
-			() => {
-				const y = scrollY
-				const hidden = y > 80 && y > lastY
-				nav.classList.toggle('-translate-y-[140%]', hidden)
-				nav.classList.toggle('opacity-0', hidden)
-				lastY = y
-			},
-			{ passive: true },
-		)
-	}
-</script>

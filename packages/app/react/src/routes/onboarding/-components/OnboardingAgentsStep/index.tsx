@@ -1,7 +1,7 @@
 // packages/app/react/src/routes/onboarding/-components/OnboardingAgentsStep/index.tsx — COMPLETE final file.
 import type { ComponentProps } from 'react'
 import { useGetAttachThreadWizard } from '@codm/client-typescript/typescript'
-import { AgentsStep, type AgentsStepData } from '@/routes/attach/-components/AgentsStep'
+import { AgentsStep, type AgentsStepData } from '@/routes/(app)/attach/-components/AgentsStep'
 import { useOnboardingSetupStore } from '../../-stores/useOnboardingSetupStore'
 
 /**

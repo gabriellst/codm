@@ -21,10 +21,10 @@
    almost exactly with the reference's measured symmetric clusters (16/18/20/24/28px), so
    the base `--radius` stays 20px — but it's declared react-only, and astro has NO ladder
    at all (global.css only imports this file). Since this file is the ONE thing both apps
-   share, the full ladder is re-declared here (identical calc() formulas — harmless overlap
-   on react, load-bearing on astro) PLUS three smaller steps (xs/2xs/3xs) the reference
-   needs that the original react-only ladder didn't reach. Follow-up cleanup (out of scope
-   here): the react-only copy in index.css can be deleted once primitives read from here. */
+   share, the full ladder is re-declared here PLUS three smaller steps (xs/2xs/3xs) the
+   reference needs that the original react-only ladder didn't reach. This is now the ONLY
+   declaration: the react-only copy that used to shadow it in index.css was deleted
+   (D3 Fase 1) — both apps read the ladder from here. */
 @theme inline {
 	--radius-3xs: calc(var(--radius) - 11px); /* 9px  — "9px 9px 9px 3px", 6× in the reference (tiny badges/icon-buttons) */
 	--radius-2xs: calc(var(--radius) - 8px); /* 12px — "12px 12px 12px 4px", 10× — 2nd most common shape overall */
@@ -36,6 +36,18 @@
 	--radius-2xl: calc(var(--radius) + 8px); /* 28px — "28px 28px 28px 10px", 1×; kept for ladder continuity */
 	--radius-3xl: calc(var(--radius) + 12px); /* 32px — no direct measurement; ladder continuity only */
 	--radius-4xl: calc(var(--radius) + 16px); /* 36px — no direct measurement; ladder continuity only */
+
+	/* ── Elevation (D3) — two shadows, and ONLY two ─────────────────────────
+	   Measured in the design file (every shadow in the .pen collapses to exactly these two):
+	   · float — cards/chips/badges that sit ON the page (hero floating cards, update card):
+	     y 4 · blur 15 · spread -6 · black at 10% (#0000001A, measured — plain black, NOT the
+	     foreground hue).
+	   · modal — dialogs over the scrim (all four modals measure identically):
+	     y 18 · blur 48 · #16161640 — that hex IS --foreground at 25%, so it's derived from the
+	     token (same reasoning as the alpha neutrals above: dark theme adapts for free).
+	   Anything reaching for a third elevation is off-design. */
+	--shadow-float: 0 4px 15px -6px rgb(0 0 0 / 0.1);
+	--shadow-modal: 0 18px 48px 0 oklch(from var(--foreground) l c h / 0.25);
 }
 
 :root {
@@ -76,6 +88,20 @@
 	   it stays declared here (not moved) because it doubles as a plain neutral-surface color too. */
 	--secondary: oklch(0.955 0.048 123); /* #EAF6D3 */
 	--secondary-foreground: oklch(0.462 0.123 132); /* #3D660A — also the link color */
+
+	/* --bubble-* were declared in index.css's `@theme inline` (Fase 1) as a semantic layer over
+	   the chat bubble roles, but never assigned a value — any `bg-bubble-out`/`bg-bubble-in`
+	   utility resolved to nothing. Group Q6TEB (design/codm.pen, screens hLcjH/i1AQD2) measures
+	   the outgoing bubble (agent/direct replies) at the SAME hex as --primary/--primary-foreground
+	   and the incoming bubble (contact) at the SAME hex as --secondary/--secondary-foreground — so
+	   these alias rather than duplicate. The alias is still worth keeping as its own name: it lets
+	   a chat bubble's color diverge from a button's without touching every `variant="default"`
+	   call site, the same reasoning `--chat-bg`/`--composer-bg` exist for their own roles. */
+	--bubble-out: var(--primary);
+	--bubble-out-fg: var(--primary-foreground);
+	--bubble-in: var(--secondary);
+	--bubble-in-fg: var(--secondary-foreground);
+
 	--muted: oklch(0.958 0 0); /* #f1f1f1 — soft badge bg / hover. UNCHANGED: "paused/idle" chips measure plain grey (#f2f2f2), not green — muted stays the truly-off neutral. */
 	--muted-foreground: oklch(0.524 0 0); /* #6a6a6a — secondary text */
 	--caption-foreground: oklch(0.633 0 0); /* #8a8a8a — timestamps, metadata, the quietest tier */
@@ -103,16 +129,47 @@
 	   `.dark`, below), whereas `--foreground` itself flips to near-white there. */
 	--success-bright: oklch(0.83 0.228 132); /* #8BE414 */
 	--success-bright-foreground: oklch(0.2 0 0); /* #161616, measured (color:#161616 on the bright-green "Resolver" CTA) — intentionally NOT aliased to --foreground */
-	/* warning/destructive/info — UNCHANGED. No red/orange/blue hex appears anywhere in the
-	   7 reference screens (verified by scanning every literal hex + every color-bearing prop);
-	   nothing to remeasure against, so these keep their pre-redesign values rather than being
-	   invented. */
+	/* warning/info — still unmeasured (no reference screen carries either hue). destructive is NOT
+	   "unchanged, no reference evidence" anymore — that was true of the D2 pass, but the D3 canvas
+	   (39 screens) DOES carry red: the delete-project/delete-account danger badges measure
+	   #DC2626 → oklch(0.577 0.215 27.3), a rounding error from the value already here. Read as
+	   confirmation, not as evidence to invent a new number. */
 	--warning: oklch(0.75 0.15 71);
 	--warning-foreground: oklch(0.22 0 0);
-	--destructive: oklch(0.585 0.2 25);
+	--destructive: oklch(0.585 0.2 25); /* ≈ #DC2626 — measured in D3 (delete-project/-account danger badges) */
 	--destructive-foreground: oklch(0.99 0 0);
 	--info: oklch(0.6 0.13 250);
 	--info-foreground: oklch(0.99 0 0);
+
+	/* ── Skeleton + attention surfaces (D3, R1) ─────────────────────────────
+	   The D3 canvas carries a status palette the D2 pass had no evidence for (attention/idle/
+	   paused status hues, a dedicated skeleton-loading grey). Per the reconciliation rule (Fase 0,
+	   R1): these tokens enter the sheet only when the FIRST screen that consumes them lands, not
+	   speculatively — so only what the Projetos/Canais group (a5AkeG) actually uses is declared
+	   here. `status-idle`/`status-paused` stay undeclared until a later group's screen needs them;
+	   `status-attention`/`attention-foreground` are declared below — the Início group's "canal
+	   offline" screen (m4Q5K) is their first consumer.
+	   --skeleton / --skeleton-strong: the loading-card placeholder greys (project-card skeleton,
+	   Fase 4). Two steps, not one — the design's skeleton cards use the lighter grey for
+	   thin/quiet shapes (path, count) and the darker one for the shape carrying the most visual
+	   weight (the name line, the icon tile). */
+	--skeleton: oklch(0.946 0 0); /* #EDEDED */
+	--skeleton-strong: oklch(0.91 0 0); /* #E1E1E1 */
+	/* --attention-surface: the danger-badge backing behind a destructive icon (remove-project
+	   modal). Warm, low-chroma tint of the SAME hue as --destructive, not a separate literal —
+	   consistent with how --hover-accent-border pairs with --hover-accent above. */
+	--attention-surface: oklch(0.942 0.024 43.2); /* #FBE7DF */
+	/* --status-attention / --attention-foreground / --status-idle (D3, R1) — measured
+	   INDEPENDENTLY by two first consumers, identical values both times: Início's canal-offline
+	   banner (m4Q5K — Warning Badge fill #E4572E, a warmer/more-orange hue than --destructive's
+	   #DC2626, a distinct semantic color, not a reuse; banner text #8A3417) and Tarefas'
+	   status-grouped rows (JcWnl — "Precisa de entrada" dot/chip, "Concluída" idle dot #CFCFCF).
+	   attention-foreground pairs with --attention-surface above (#FBE7DF, same warm family —
+	   same pairing rule as every surface/foreground pair in this file). status-paused (#9A9A9A)
+	   stays undeclared: nothing consumes it yet (R1 rule — first consumer declares). */
+	--status-attention: oklch(0.637 0.184 36.5); /* #E4572E */
+	--attention-foreground: oklch(0.443 0.124 38.1); /* #8A3417 */
+	--status-idle: oklch(0.855 0 0); /* #CFCFCF */
 
 	/* ── Interaction states (lines, hover, selected) ───────────────────────────
 	   D2 CORRECTION, founder-confirmed — this block used to carry a comment on --hover claiming
@@ -161,6 +218,16 @@
 	   the group root itself); any DESCENDANT that should echo the row's hover (a trailing chevron,
 	   a secondary icon) reacts via `group-hover:*` instead of its own `hover:`, so the whole row's
 	   affordance moves as one unit. See `IssueRow` for the canonical example. */
+	/* ── Alpha-derived neutrals (D3) ────────────────────
+	   The design file declares `fg-60` (#16161699) and `fg-20` (#16161633) and uses them as the
+	   neutral-button vocabulary: 60 is ghost/cancel TEXT, 20 is the outlined-secondary BORDER.
+	   Declared as derivations of --foreground — same pattern as --hover/--focus below — so the
+	   dark theme inverts them for free. The design's `fg-inverse-60`/`fg-inverse-20` variables
+	   are deliberately NOT ported: they only exist because .pen files can't derive colors; here
+	   the derivation IS the inversion, and an explicit "inverse" pair would drift. */
+	--fg-60: oklch(from var(--foreground) l c h / 0.6);
+	--fg-20: oklch(from var(--foreground) l c h / 0.2);
+
 	--hover: oklch(from var(--foreground) l c h / 0.05); /* ≈ #f4f4f4 — neutral hover, see table above */
 	--hover-accent: oklch(0.982 0.016 122); /* #F7FBEF — brand-tinted content-row hover surface */
 	--hover-accent-border: oklch(0.914 0.077 124); /* #d8ecb4 — border companion to --hover-accent */
@@ -173,6 +240,39 @@
 	   '#dcdcdc'` on every selectable avatar/checkbox in the reference) — the brand green is the
 	   system's own selection-ring color, so the generic focus ring follows it. DERIVED, not measured. */
 	--ring: oklch(from var(--primary) l c h / 0.35);
+
+	/* ── Site (astro landing/blog) — dark sections + illustration chrome ──────
+	   D3 (design/codm.pen, group `ji2y3` — Site público). `--site-dark`: the "Como funciona"
+	   (zwRb8) and footer (JLnsz) sections fill literal `#111111`, NOT `--route-background`
+	   (`--background` in `.dark` resolves to oklch(0.185 0 0) ≈ #171717 — visibly lighter).
+	   Sampled directly: #111111 → oklch(0.164 0 0). Kept as its own token rather than
+	   overloading `--route-background`: the console's dark surface and the site's dark
+	   section are two different measured blacks, not one value under two names.
+	   The site's outline buttons/dividers and floating cards use `--fg-60`/`--fg-20` (declared
+	   with the interaction states above — inside a `.dark`-scoped wrapper `--foreground` flips,
+	   so they invert for free) and the `--shadow-float` elevation (declared in @theme inline at
+	   the top) — one declaration each, shared with the console. */
+	--site-dark: oklch(0.164 0 0); /* #111111 */
+
+	/* Illustration surfaces — the "Como funciona" mock-UI cards (zwRb8/cxUJS) and the blog
+	   cover art repeat these two near-black bases under a green radial gradient. Flat and
+	   reused ≥2x, so tokenized like everything else; the gradient HIGHLIGHT stops layered on
+	   top of them are NOT tokenized — each is a one-off multi-stop radial composition unique
+	   to its own card (never reused as a semantic/brand color elsewhere), so turning every
+	   stop into a named token would misrepresent decorative illustration as design-system
+	   color. Those stay as literal, commented `style` gradients at their call sites. */
+	--illustration-surface-a: oklch(0.201 0.045 141); /* #16240c */
+	--illustration-surface-b: oklch(0.155 0.03 141); /* #101a08 */
+	--illustration-terminal: oklch(0.145 0 0); /* #141414 — hero terminal card + blog code block */
+	--site-dark-muted-foreground: oklch(0.68 0 0); /* #a8a8a8 — measured on the "Como funciona" dark
+		section subtitle (zwRb8/qvoZq). Same always-dark-surface reasoning as --site-dark itself and
+		Footer's literal white alphas: this text never runs against the light palette, so it's a
+		flat token rather than composed from --muted-foreground (which is tuned for light/`.dark`
+		toggling, not for a section that's permanently on `--site-dark`). */
+	--terminal-text-mid: oklch(0.85 0 0); /* #d8d8d8 / #cfcfcf — terminal mock "second line" tier,
+		repeated across the Hero terminal card, "Como funciona" card 2, and the blog post code block. */
+	--terminal-text-dim: oklch(0.58 0 0); /* #8a8a8a / #7a7a7a — terminal mock "quietest line" tier,
+		same repetition as above. */
 
 	/* ── Brand alias ──────────────────────────────────── */
 	/* No longer a "kept mono so nothing breaks" shim — --primary IS the brand hex now, so this
@@ -240,6 +340,10 @@
 
 	--secondary: oklch(0.32 0.06 133); /* derived: a dark forest-green chip surface, one step off --card the way the light mode's pastel chip is one step off white */
 	--secondary-foreground: oklch(0.88 0.1 130); /* derived: light minty-green text, the inverse pairing of light mode's dark-green-on-pale-green */
+	--bubble-out: var(--primary);
+	--bubble-out-fg: var(--primary-foreground);
+	--bubble-in: var(--secondary);
+	--bubble-in-fg: var(--secondary-foreground);
 	--muted: oklch(0.24 0 0);
 	--muted-foreground: oklch(0.68 0 0);
 	--accent: oklch(0.27 0.015 133); /* derived: same lightness step as the old neutral dark accent, tiny brand-hue tint added (mirrors the light mode's barely-tinted --accent) */
@@ -249,6 +353,23 @@
 	--warning: oklch(0.8 0.15 75);
 	--destructive: oklch(0.65 0.19 25);
 	--info: oklch(0.68 0.14 250);
+
+	/* --skeleton/--skeleton-strong/--attention-surface — DERIVED, not measured (no dark screens in
+	   the reference), same rule as --hover-accent above: keep the role (skeleton = a step off
+	   --card; attention-surface = a low-chroma tint of --destructive), move lightness down to work
+	   on a near-black canvas. --skeleton-strong stays the more prominent of the pair, so it moves
+	   LIGHTER than --skeleton here (inverted from light mode, where "prominent" meant darker). */
+	--skeleton: oklch(0.26 0 0);
+	--skeleton-strong: oklch(0.32 0 0);
+	--attention-surface: oklch(from var(--destructive) l c h / 0.16);
+	/* --status-attention / --attention-foreground / --status-idle — DERIVED, not measured (no
+	   dark screens in the reference), same rule as --attention-surface above: keep the hue
+	   family, move lightness for a near-black canvas. --attention-foreground brightens (mirrors
+	   --muted-foreground's light→dark bump, 0.524→0.68) since it now sits on a darker warm tint
+	   instead of the light pastel. --status-idle brightens the same way, for the same reason. */
+	--status-attention: oklch(0.68 0.184 36.5);
+	--attention-foreground: oklch(0.75 0.1 38);
+	--status-idle: oklch(0.55 0 0);
 
 	--border: oklch(from var(--foreground) l c h / 0.14);
 	--input: oklch(from var(--foreground) l c h / 0.16);

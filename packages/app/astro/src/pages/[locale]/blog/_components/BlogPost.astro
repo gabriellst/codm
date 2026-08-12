@@ -1,7 +1,10 @@
 ---
 import { Image } from 'astro:assets'
-import { type CollectionEntry, render } from 'astro:content'
-import type { Locale } from '~/i18n'
+import { type CollectionEntry, getCollection, getEntry, render } from 'astro:content'
+import Icon from '~/components/Icon.astro'
+import { type Locale, routeFor } from '~/i18n'
+import { CATEGORY_LABELS } from '../_content/categories'
+import { readingTimeMinutes } from '../_content/readingTime'
 
 interface Props {
 	post: CollectionEntry<'blog'>
@@ -10,46 +13,206 @@ interface Props {
 
 const { post, locale } = Astro.props
 const { Content } = await render(post)
-const { title, description, publishedAt, author, coverImage, tags } = post.data
+const { title, description, publishedAt, author, coverImage, tags, category } = post.data
 const dateLabel = publishedAt.toLocaleDateString(locale === 'pt' ? 'pt-BR' : 'en-US', {
 	year: 'numeric',
 	month: 'long',
 	day: 'numeric',
 })
+const minutes = readingTimeMinutes(post.body)
+const initials = author
+	.split(' ')
+	.map(w => w[0])
+	.slice(0, 2)
+	.join('')
+	.toUpperCase()
+
+const ui = (await getEntry('blogUi', `ui.${locale}`))!.data
+
+// "Next post" — the next-newest post in the SAME locale, wrapping to the oldest. With a
+// single post in the locale there's nothing to link to, so the section is omitted.
+const slugOf = (id: string) => id.replace(new RegExp(`^${locale}/`), '').replace(/\.mdx?$/, '')
+const siblingPosts = (
+	await getCollection('blog', ({ id, data }) => id.startsWith(`${locale}/`) && id !== post.id && (import.meta.env.DEV || !data.draft))
+).sort((a, b) => a.data.publishedAt.getTime() - b.data.publishedAt.getTime())
+const currentIndexSorted = (
+	await getCollection('blog', ({ id, data }) => id.startsWith(`${locale}/`) && (import.meta.env.DEV || !data.draft))
+).sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime())
+const nextPost = currentIndexSorted[(currentIndexSorted.findIndex(p => p.id === post.id) + 1) % currentIndexSorted.length]
+const showNext = nextPost && nextPost.id !== post.id && siblingPosts.length > 0
 ---
 
-<article class="mx-auto flex max-w-[760px] flex-col gap-8 px-5 py-16 md:px-0">
-	<header class="flex flex-col gap-4">
-		<h1 class="text-4xl font-bold leading-tight tracking-tight">{title}</h1>
-		<p class="text-[var(--muted-foreground)]">{description}</p>
-		<div class="flex items-center gap-3 text-sm text-[var(--muted-foreground)]">
-			<span>{author}</span>
-			<span>·</span>
-			<time datetime={publishedAt.toISOString()}>{dateLabel}</time>
+<!-- D3 (design/codm.pen `ji2y3` → `oB3An`): back link → meta chip+date → centered title →
+     subtitle → author → cover art → article body → next-post card. The design's cover art
+     for THIS one post is bespoke editorial mock-UI (three fake terminal sessions) with no
+     source in the post schema — real posts drive their hero from `coverImage` (existing
+     field), styled with the design's radius/shadow chrome instead of reproducing fake
+     per-post decoration. -->
+<article class="px-6 pb-24 pt-[80px] md:px-16">
+	<div class="relative mx-auto flex max-w-[900px] flex-col items-center overflow-hidden pb-11 text-center">
+		<div aria-hidden="true" class="pointer-events-none absolute -top-[130px] left-1/2 h-[340px] w-[760px] -translate-x-1/4 rounded-full bg-[var(--secondary)] blur-[60px]"></div>
+		<a
+			href={routeFor(locale, '/blog')}
+			class="relative inline-flex items-center gap-[7px] rounded-asymmetric-md border border-[var(--fg-20)] px-[15px] py-2 text-[13px] font-semibold text-[var(--fg-60)] transition-colors hover:bg-[var(--muted)]"
+		>
+			<Icon name="arrow-left" size={14} />
+			{ui.post.back}
+		</a>
+
+		<div class="relative mt-[26px] flex items-center gap-[10px]">
+			<span class="rounded-[12px_12px_12px_4px] bg-[var(--secondary)] px-[11px] py-1 text-[11.5px] font-bold text-[var(--secondary-foreground)]">
+				{CATEGORY_LABELS[locale][category]}
+			</span>
+			<span class="font-mono text-[11.5px] text-[var(--caption-foreground)]">
+				{dateLabel} · {minutes} {ui.post.minReadSuffix}
+			</span>
 		</div>
-	</header>
+
+		<h1 class="relative m-0 mt-[18px] text-balance text-[length:clamp(32px,6vw,58px)] font-extrabold leading-[1.08] tracking-[-2px] text-[var(--foreground)]">
+			{title}
+		</h1>
+		<p class="relative mx-auto mt-5 max-w-[660px] text-pretty text-[17px] leading-[1.5] text-[var(--muted-foreground)]">{description}</p>
+
+		<div class="relative mt-6 flex items-center gap-[10px]">
+			<span class="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--secondary)] text-[11px] font-bold text-[var(--secondary-foreground)]">
+				{initials}
+			</span>
+			<span class="text-[13.5px] font-bold text-[var(--foreground)]">{author}</span>
+		</div>
+	</div>
+
 	{
 		coverImage && (
-			<Image
-				src={coverImage}
-				alt={title}
-				widths={[640, 960, 1200]}
-				sizes="(min-width: 768px) 760px, 100vw"
-				format="webp"
-				class="aspect-[16/9] w-full rounded-xl object-cover"
-			/>
+			<div class="mx-auto mb-13 max-w-[1312px]">
+				<Image
+					src={coverImage}
+					alt={title}
+					widths={[640, 960, 1200]}
+					sizes="(min-width: 768px) 1200px, 100vw"
+					format="webp"
+					class="aspect-[16/9] w-full rounded-asymmetric-xl object-cover"
+				/>
+			</div>
 		)
 	}
-	<div class="prose prose-neutral max-w-none">
-		<Content />
+
+	<div class="mx-auto max-w-[720px]">
+		<div class="post-body flex flex-col gap-[22px] text-[16.5px] leading-[1.72] text-[var(--foreground)]">
+			<Content />
+		</div>
+		{
+			tags.length > 0 && (
+				<footer class="mt-10 flex flex-wrap gap-1.5 border-t border-[var(--border)] pt-6">
+					{tags.map(tag => (
+						<span class="rounded-full bg-[var(--muted)] px-2.5 py-1 text-xs text-[var(--muted-foreground)]">#{tag}</span>
+					))}
+				</footer>
+			)
+		}
 	</div>
+
 	{
-		tags.length > 0 && (
-			<footer class="flex flex-wrap gap-1.5 border-t border-[var(--border)] pt-6">
-				{tags.map(tag => (
-					<span class="rounded-full bg-[var(--muted)] px-2.5 py-1 text-xs text-[var(--muted-foreground)]">#{tag}</span>
-				))}
-			</footer>
+		showNext && (
+			<div class="mx-auto mt-16 max-w-[720px]">
+				<span class="text-[13.5px] font-bold text-[var(--muted-foreground)]">{ui.post.nextPost}</span>
+				<a
+					href={`/${locale}/blog/${slugOf(nextPost!.id)}`}
+					class="mt-[14px] flex items-center gap-5 rounded-asymmetric-lg border border-[var(--border)] bg-[var(--background)] p-[22px_24px] shadow-[var(--shadow-float)] transition-transform hover:-translate-y-[2px]"
+				>
+					<span
+						class="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-asymmetric-md"
+						style={{
+							backgroundColor: 'var(--illustration-surface-b)',
+							backgroundImage: 'radial-gradient(140% 110% at 30% 25%, #3D660AE6, #3D660A00)',
+						}}
+					>
+						<Icon name="sparkles" size={24} class="text-white/90" />
+					</span>
+					<div class="flex flex-1 flex-col gap-[5px]">
+						<h3 class="m-0 text-[19px] font-extrabold leading-[1.25] tracking-[-0.4px] text-[var(--foreground)]">{nextPost!.data.title}</h3>
+						<p class="m-0 text-[13.5px] leading-[1.5] text-[var(--muted-foreground)]">{nextPost!.data.description}</p>
+					</div>
+					<Icon name="arrow-right" size={18} class="shrink-0 text-[var(--secondary-foreground)]" />
+				</a>
+			</div>
 		)
 	}
 </article>
+
+<style>
+	.post-body :global(h2) {
+		margin: 0.4em 0 0;
+		font-size: 26px;
+		font-weight: 800;
+		line-height: 1.25;
+		letter-spacing: -0.7px;
+	}
+	.post-body :global(h3) {
+		margin: 0.3em 0 0;
+		font-size: 21px;
+		font-weight: 700;
+		line-height: 1.3;
+	}
+	.post-body :global(p) {
+		margin: 0;
+	}
+	.post-body :global(ul),
+	.post-body :global(ol) {
+		margin: 0;
+		padding-left: 1.3em;
+		display: flex;
+		flex-direction: column;
+		gap: 0.4em;
+	}
+	.post-body :global(a) {
+		color: var(--secondary-foreground);
+		text-decoration: underline;
+		text-underline-offset: 2px;
+	}
+	.post-body :global(blockquote) {
+		margin: 0;
+		border-left: 3px solid var(--primary);
+		padding: 0.25em 0 0.25em 24px;
+		font-size: 21px;
+		font-weight: 600;
+		line-height: 1.55;
+		letter-spacing: -0.4px;
+	}
+	.post-body :global(pre) {
+		margin: 0;
+		overflow-x: auto;
+		border-radius: var(--radius-xl) var(--radius-xl) var(--radius-xl) calc(var(--radius-xl) * var(--radius-corner-ratio));
+		background: var(--illustration-terminal);
+		padding: 18px 22px;
+		font-family: var(--font-mono);
+		font-size: 13px;
+		line-height: 1.6;
+		color: var(--terminal-text-mid);
+	}
+	.post-body :global(code) {
+		font-family: var(--font-mono);
+	}
+	.post-body :global(p code),
+	.post-body :global(li code) {
+		border-radius: 5px;
+		background: var(--muted);
+		padding: 0.1em 0.4em;
+		font-size: 0.9em;
+	}
+	.post-body :global(table) {
+		width: 100%;
+		border-collapse: collapse;
+		overflow: hidden;
+		border-radius: var(--radius-lg) var(--radius-lg) var(--radius-lg) calc(var(--radius-lg) * var(--radius-corner-ratio));
+		border: 1px solid var(--border);
+	}
+	.post-body :global(tr:nth-child(even)) {
+		background: var(--card);
+	}
+	.post-body :global(td),
+	.post-body :global(th) {
+		padding: 14px 20px;
+		text-align: left;
+		font-size: 14.5px;
+	}
+</style>

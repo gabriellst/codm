@@ -71,6 +71,17 @@ export const AllVariants: Story = {
 	),
 }
 
+// D3 (R9) — `size="default"` (2xs, 12px) is the new majority shape (workspace/channel chips);
+// `size="compact"` (3xs, 9px) is reserved for the session-loop chips (`LoopsSection.tsx`).
+export const Sizes: Story = {
+	render: () => (
+		<div className="flex flex-wrap items-center gap-2">
+			<Badge size="default">Default (2xs)</Badge>
+			<Badge size="compact">Compact (3xs)</Badge>
+		</div>
+	),
+}
+
 export const WithIcons: Story = {
 	render: () => (
 		<div className="flex flex-wrap gap-2">

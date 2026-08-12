@@ -1,8 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
-import { AccountHeaderSection } from './-components/AccountHeaderSection'
+import { PageHeader } from '@/components/console/PageHeader'
 import { CloudAccountSection } from './-components/CloudAccountSection'
+import { PreferencesSection } from './-components/PreferencesSection'
+import { ProfileSection } from './-components/ProfileSection'
 import { SecuritySection } from './-components/SecuritySection'
 
 export const Route = createFileRoute('/(app)/settings/account/')({
@@ -10,14 +12,22 @@ export const Route = createFileRoute('/(app)/settings/account/')({
 	component: RouteComponent,
 })
 
+/**
+ * D3 (jxl4Y, JcWnl group) — same masthead + max-width shell as Tarefas/Configurações, its two
+ * neighbors in this design group (`mx-auto w-full px-6 pb-16 pt-20` — full-bleed, founder 11/08). Section order matches the
+ * design: Perfil → Preferências → Segurança. `CloudAccountSection` (logout) trails last — the design
+ * doesn't picture it, but it's a safety capability the code keeps regardless (see its own note).
+ */
 function RouteComponent() {
 	const { t } = useTranslation()
 
 	return (
-		<div className="flex flex-1 flex-col gap-6 overflow-y-auto p-6 md:p-8">
-			<AccountHeaderSection title={t('account.header.title')} />
-			<CloudAccountSection />
+		<div className="mx-auto flex w-full flex-col gap-8 px-6 pb-16 pt-20">
+			<PageHeader title={t('account.header.title')} />
+			<ProfileSection />
+			<PreferencesSection />
 			<SecuritySection />
+			<CloudAccountSection />
 		</div>
 	)
 }

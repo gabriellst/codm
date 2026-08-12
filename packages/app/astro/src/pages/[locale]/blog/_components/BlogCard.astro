@@ -1,44 +1,68 @@
 ---
-import { Image } from 'astro:assets'
 import type { CollectionEntry } from 'astro:content'
+import Icon, { type IconName } from '~/components/Icon.astro'
+import type { Locale } from '~/i18n'
+import { CATEGORY_LABELS } from '../_content/categories'
+import { readingTimeMinutes } from '../_content/readingTime'
 
 interface Props {
 	post: CollectionEntry<'blog'>
 	href: string
+	locale: Locale
+	minReadSuffix: string
+	/** 0-based position in the grid — picks one of three illustration gradients for
+	 * visual variety (design/codm.pen `ji2y3` → `OBIW0`), never a per-post literal. */
+	index: number
 }
 
-const { post, href } = Astro.props
-const { title, description, publishedAt, coverImage, tags } = post.data
-const dateLabel = publishedAt.toLocaleDateString(undefined, {
-	year: 'numeric',
-	month: 'short',
+const { post, href, locale, minReadSuffix, index } = Astro.props
+const { title, description, publishedAt, tags, category } = post.data
+const dateLabel = publishedAt.toLocaleDateString(locale === 'pt' ? 'pt-BR' : 'en-US', {
 	day: 'numeric',
+	month: 'short',
+	year: 'numeric',
 })
+const minutes = readingTimeMinutes(post.body)
+
+const categoryIcon: Record<typeof category, IconName> = {
+	product: 'sparkles',
+	engineering: 'terminal',
+	'use-cases': 'repeat',
+}
+
+// One-off illustration gradients (see tokens.css comment on `--illustration-surface-*`) —
+// cycled by grid position, not tied to post content.
+const gradients = [
+	{ base: 'var(--illustration-surface-a)', image: 'radial-gradient(140% 110% at 30% 25%, #3D660AE6, #3D660A00), radial-gradient(120% 90% at 80% 85%, #2c4a12CC, #2c4a1200)' },
+	{ base: 'var(--illustration-surface-b)', image: 'radial-gradient(140% 110% at 30% 25%, #4a7a16D9, #4a7a1600), radial-gradient(120% 90% at 80% 85%, #101a08CC, #101a0800)' },
+	{ base: 'var(--illustration-surface-a)', image: 'radial-gradient(140% 110% at 30% 25%, #5a9414D9, #5a941400), radial-gradient(120% 90% at 80% 85%, #233a10CC, #233a1000)' },
+] as const
+const gradient = gradients[index % gradients.length]!
 ---
 
 <a
 	href={href}
-	class="group flex flex-col gap-3 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--background)] transition-colors hover:bg-[var(--muted)]/40"
+	class="group flex flex-col overflow-hidden rounded-asymmetric-xl border border-[var(--border)] bg-[var(--background)] shadow-[var(--shadow-float)] transition-transform hover:-translate-y-[3px]"
 >
-	{
-		coverImage && (
-			<Image
-				src={coverImage}
-				alt={title}
-				widths={[480, 800, 1200]}
-				sizes="(min-width: 1024px) 33vw, 100vw"
-				format="webp"
-				class="aspect-[16/9] w-full object-cover"
-			/>
-		)
-	}
-	<div class="flex flex-col gap-2 p-5">
-		<time class="text-xs text-[var(--muted-foreground)]" datetime={publishedAt.toISOString()}>{dateLabel}</time>
-		<h2 class="text-lg font-semibold leading-tight">{title}</h2>
-		<p class="text-sm text-[var(--muted-foreground)]">{description}</p>
+	<div class="flex h-[168px] items-center justify-center" style={{ backgroundColor: gradient.base, backgroundImage: gradient.image }}>
+		<span class="flex h-[52px] w-[52px] items-center justify-center rounded-asymmetric-md border border-white/[0.16] bg-white/[0.12]">
+			<Icon name={categoryIcon[category]} size={22} class="text-white" />
+		</span>
+	</div>
+	<div class="flex flex-col gap-[10px] p-[20px_22px_24px_22px]">
+		<div class="flex items-center gap-[9px]">
+			<span class="rounded-[12px_12px_12px_4px] bg-[var(--secondary)] px-[11px] py-1 text-[11.5px] font-bold text-[var(--secondary-foreground)]">
+				{CATEGORY_LABELS[locale][category]}
+			</span>
+			<time class="font-mono text-[11.5px] text-[var(--caption-foreground)]" datetime={publishedAt.toISOString()}>
+				{dateLabel} · {minutes} {minReadSuffix}
+			</time>
+		</div>
+		<h2 class="m-0 text-[19px] font-extrabold leading-[1.25] tracking-[-0.4px] text-[var(--foreground)]">{title}</h2>
+		<p class="m-0 text-[13.5px] leading-[1.5] text-[var(--muted-foreground)]">{description}</p>
 		{
 			tags.length > 0 && (
-				<div class="mt-2 flex flex-wrap gap-1.5">
+				<div class="mt-1 flex flex-wrap gap-1.5">
 					{tags.map(tag => (
 						<span class="rounded-full bg-[var(--muted)] px-2 py-0.5 text-xs text-[var(--muted-foreground)]">{tag}</span>
 					))}

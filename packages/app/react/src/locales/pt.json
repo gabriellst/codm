@@ -12,11 +12,13 @@
 			"saveSuccess": "Preferências atualizadas com sucesso",
 			"sectionDescription": "Configure idioma, fuso horário e notificações",
 			"sectionTitle": "Preferências",
+			"stub": "Edição de preferências ainda não disponível (SDK pendente)",
 			"timezone": "Fuso horário"
 		},
 		"profile": {
 			"avatar": {
 				"remove": "Remover foto",
+				"removeStub": "Remoção de foto ainda não disponível (SDK pendente)",
 				"upload": "Enviar foto",
 				"uploadAriaLabel": "Escolher imagem de perfil",
 				"uploadStub": "Upload de avatar ainda não disponível"
@@ -28,7 +30,8 @@
 			"save": "Salvar alterações",
 			"saveSuccess": "Perfil atualizado com sucesso",
 			"sectionDescription": "Atualize suas informações pessoais",
-			"sectionTitle": "Perfil"
+			"sectionTitle": "Perfil",
+			"stub": "Alteração de perfil ainda não disponível (SDK pendente)"
 		},
 		"security": {
 			"changePassword": {
@@ -70,19 +73,21 @@
 		"back": "Voltar",
 		"close": "Fechar",
 		"continue": "Continuar",
+		"edit": "Editar",
 		"finish": "Vincular conversa",
 		"goToChannels": "Ir para Canais",
 		"navAgents": "Agentes",
 		"navContact": "Contato",
 		"navReview": "Revisão",
-		"navWorkspace": "Espaço",
+		"navWorkspace": "Projeto",
 		"needChannelDescription": "Você precisa de ao menos um canal conectado antes de vincular uma conversa.",
 		"needChannelTitle": "Conecte um canal primeiro",
 		"noContacts": "Nenhum contato encontrado neste canal.",
 		"noContactsFound": "Nenhum contato para “{{term}}”.",
+		"reviewFooterNote": "Ao vincular, as mensagens desta conversa passam a abrir tarefas nesta pasta. Você pode pausar ou desfazer a qualquer momento.",
 		"rowAgents": "Agentes",
 		"rowContact": "Contato",
-		"rowWorkspace": "Espaço de trabalho",
+		"rowWorkspace": "Projeto",
 		"searchContacts": "Buscar contatos e grupos",
 		"stepAgentsSubtitle": "Quais CLIs de provedor podem trabalhar nesta conversa.",
 		"stepAgentsTitle": "Escolha os agentes",
@@ -91,7 +96,7 @@
 		"stepThreadSubtitle": "Escolha o contato, grupo ou caixa de entrada onde seu agente vai viver.",
 		"stepThreadTitle": "Escolha uma conversa",
 		"stepWorkspaceSubtitle": "A pasta de projeto em que seus agentes vão trabalhar.",
-		"stepWorkspaceTitle": "Escolha um espaço de trabalho"
+		"stepWorkspaceTitle": "Escolha um projeto"
 	},
 	"auth": {
 		"resetPassword": {
@@ -143,7 +148,7 @@
 		"pairWaiting": "Aguardando o gateway local gerar um código de pareamento…",
 		"pairWaitingScan": "Aguardando você escanear o código…",
 		"title": "Canais",
-		"whatsappPairDescription": "O pareamento acontece pelo gateway local do WhatsApp. Assim que ele estiver ativo, escaneie este QR code com o WhatsApp no seu celular para vincular o canal.",
+		"whatsappPairDescription": "O pareamento acontece pelo gateway local do WhatsApp. Ele roda neste Mac e mantém a sessão do canal.",
 		"whatsappPairScanHint": "Abra o WhatsApp › Aparelhos conectados › Conectar aparelho e escaneie este código.",
 		"whatsappPairTitle": "Parear WhatsApp",
 		"yourChannels": "Seus canais"
@@ -214,13 +219,20 @@
 		"agentsWorkingNone": "Sem agentes trabalhando agora",
 		"agentsWorking_one": "{{count}} agente trabalhando agora",
 		"agentsWorking_other": "{{count}} agentes trabalhando agora",
+		"channelOfflineAction": "Reiniciar",
+		"channelOfflineDescription": "O serviço de mensagens parou de responder. Nada entra nem sai até reiniciar.",
+		"channelOfflineSuffix": "canal offline",
+		"channelOfflineTitle": "Canal offline",
 		"issuesClosed": "Tarefas fechadas",
 		"issuesOpened": "Tarefas abertas",
 		"latestActivity": "Atividade recente",
 		"medianResponse": "Resposta mediana",
 		"needsYouName": "{{name}} precisa de você",
 		"newConversation": "Nova conversa",
-		"noActiveSessions": "Nenhuma sessão ativa.",
+		"noActiveSessionsDescription": "Abra uma conversa em “Nova conversa” para colocar um agente para trabalhar. As sessões em andamento aparecem aqui.",
+		"noActiveSessionsTitle": "Nenhuma sessão ativa",
+		"noActivityDescription": "Assim que a primeira conversa começar, as mensagens e ações dos seus agentes aparecem nesta lista.",
+		"noActivityTitle": "Nenhuma atividade ainda",
 		"resolve": "Resolver",
 		"today": "Hoje"
 	},
@@ -425,6 +437,7 @@
 		"CONTACT_AVATAR_NOT_FOUND": "Não há foto para este contato.",
 		"CONTACT_ENTRY_REQUIRES_SENDER": "Uma mensagem de contato precisa informar quem enviou.",
 		"CREDENTIAL_DECRYPT_FAILED": "Não foi possível ler as credenciais armazenadas. Contate o suporte.",
+		"DATA_DIR_LOCKED": "Outra instância do CODM já está usando esta pasta de dados. Feche a outra instância e tente de novo.",
 		"DEVICE_CODE_INVALID": "Este link de acesso expirou ou já foi usado. Tente entrar novamente.",
 		"DEVICE_TOKEN_INVALID": "Sua sessão neste dispositivo não é mais válida. Entre novamente.",
 		"EMAIL_ALREADY_REGISTERED": "Este email já está cadastrado.",
@@ -538,7 +551,7 @@
 		"issues": "Tarefas",
 		"login": "Entrar",
 		"settings": "Configurações",
-		"workspaces": "Espaços de trabalho"
+		"workspaces": "Projetos"
 	},
 	"notifications": {
 		"allCaughtUp": "Você está em dia.",
@@ -549,6 +562,10 @@
 	},
 	"onboarding": {
 		"back": "Voltar",
+		"diagramIssue": "issue",
+		"diagramMessage": "mensagem",
+		"diagramReply": "resposta",
+		"diagramTerminal": "sessão de terminal",
 		"finalBody": "Você concluiu a configuração inicial do CODM.",
 		"finalTitle": "Tudo pronto",
 		"getStarted": "Começar",
@@ -558,13 +575,7 @@
 		"slide1Title": "Converse com seu código",
 		"slide2Title": "Como funciona",
 		"slide3Body": "Os agentes pausam em erros de servidor, respostas bloqueadas ou quando alguém pede um humano. Você revisa, orienta com um sussurro ou assume o controle — nada é enviado sem a sua palavra.",
-		"slide3Title": "Você mantém o controle",
-		"stepChannelDesc": "Pareie o WhatsApp por QR code",
-		"stepChannelTitle": "Conecte um canal",
-		"stepThreadDesc": "Ligue um contato ou grupo a uma pasta e escolha os agentes",
-		"stepThreadTitle": "Vincule uma conversa",
-		"stepWorkspaceDesc": "Aponte para uma pasta de projeto — projetos Claude são detectados",
-		"stepWorkspaceTitle": "Adicione um espaço de trabalho"
+		"slide3Title": "Você mantém o controle"
 	},
 	"systemPreconditions": {
 		"slideTitle": "Falta uma permissão",
@@ -597,6 +608,8 @@
 		"back": "Voltar",
 		"boundAgents": "Agentes desta conversa",
 		"boundAgentsComingSoonHint": "Esta conversa está ligada a um agente que esta versão ainda não sabe dirigir, então ela não responde. Apague a conversa e anexe o contato a um agente disponível.",
+		"bufferDecrease": "Diminuir o buffer de contexto",
+		"bufferIncrease": "Aumentar o buffer de contexto",
 		"bufferMessages": "mensagens",
 		"canInvokeToggle": "Pode invocar",
 		"chatEmptyDescription": "Mensagens deste contato e dos seus agentes aparecerão aqui.",
@@ -705,21 +718,21 @@
 	"workspaces": {
 		"addDescription": "Aponte para uma pasta de projeto neste Mac. Selos de Git e de projeto Claude são detectados automaticamente.",
 		"addFolder": "Adicionar pasta",
-		"addTitle": "Adicionar um espaço de trabalho",
+		"addTitle": "Adicionar um projeto",
 		"adding": "Adicionando…",
 		"browse": "Procurar…",
 		"emptyDescription": "Adicione uma pasta de projeto e o CODM detectará seu repositório git e o projeto Claude.",
-		"emptyTitle": "Nenhum espaço de trabalho ainda",
+		"emptyTitle": "Nenhum projeto ainda",
 		"pathPlaceholder": "~/dev/acme-storefront",
 		"projectFolder": "Pasta do projeto",
 		"projectFolders": "Pastas de projeto",
 		"remove": "Remover pasta",
 		"removeConfirmAction": "Remover",
 		"removeConfirmDescription": "A pasta \"{{name}}\" deixa de ficar registrada no CODM. Nenhum arquivo do seu Mac é apagado.",
-		"removeConfirmTitle": "Remover este espaço de trabalho?",
+		"removeConfirmTitle": "Remover este projeto?",
 		"threadCount_one": "{{count}} conversa",
 		"threadCount_other": "{{count}} conversas",
-		"title": "Espaços de trabalho"
+		"title": "Projetos"
 	},
 	"zod": {
 		"invalidEmail": "E-mail inválido",

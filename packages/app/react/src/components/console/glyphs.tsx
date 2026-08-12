@@ -1,12 +1,30 @@
 import { IconBrandWhatsapp, IconHexagon, IconMessageDots, IconSparkles, IconTerminal2 } from '@tabler/icons-react'
 import type { Icon } from '@tabler/icons-react'
-import type { ChannelKind, IssueStatus, ProviderKind, StopResolution, WorkspaceBadge } from '@codm/client-typescript/typescript'
+import type {
+	ChannelKind,
+	ChannelStatus,
+	IssueStatus,
+	ProviderKind,
+	StopResolution,
+	WorkspaceBadge,
+} from '@codm/client-typescript/typescript'
 
 // ── Channels ──────────────────────────────────────────────────────────────────
 
 export const channelGlyph: Record<ChannelKind, Icon> = {
 	WHATSAPP: IconBrandWhatsapp,
 	INTERNAL: IconTerminal2,
+}
+
+/** D3 — the channel-row status chip: `secondary` (filled brand pastel) only while CONNECTED,
+ *  `default` (muted) for every other state, including the "coming soon" chip on non-connectable
+ *  rows (`ChannelsSection` reuses `default` there directly, outside this map). */
+export const channelStatusBadgeVariant: Record<ChannelStatus, 'default' | 'secondary'> = {
+	CONNECTED: 'secondary',
+	CONNECTING: 'default',
+	CREATED: 'default',
+	DELETED: 'default',
+	DISCONNECTED: 'default',
 }
 
 /**
@@ -39,9 +57,11 @@ export const providerLabel: Record<ProviderKind, string> = {
 
 // ── Workspaces ────────────────────────────────────────────────────────────────────
 
-/** GIT is a plain/unfilled tag (no pill fill); CLAUDE_PROJECT is the filled brand chip. */
-export const workspaceBadgeVariant: Record<WorkspaceBadge, 'ghost' | 'secondary'> = {
-	GIT: 'ghost',
+/** GIT is the plain muted chip (`default` badge variant = `bg-muted`); CLAUDE_PROJECT is the
+ *  filled brand chip. D3 (R8) — measured directly on the project-card footer: the git chip fills
+ *  `$muted`, not a borderless/ghost tag. */
+export const workspaceBadgeVariant: Record<WorkspaceBadge, 'default' | 'secondary'> = {
+	GIT: 'default',
 	CLAUDE_PROJECT: 'secondary',
 }
 
@@ -52,14 +72,34 @@ export const workspaceBadgeVariant: Record<WorkspaceBadge, 'ghost' | 'secondary'
 // primary/secondary intent) and ICON maps stay here.
 
 /**
- * Small leading dot color per issue status. NEEDS_INPUT uses the asterisk glyph, not a dot.
- * COMPLETED is neutral grey (`bg-muted-foreground/40`, the same "idle/paused" tone StatusDot and
- * AgentsRunningPill already use) — green is reserved for active work, never for a finished state.
+ * Small leading dot color per issue status (D3 — measured on the Tarefas overview, JcWnl group).
+ * NEEDS_INPUT's dot doubles as the ONLY status that also gets the asterisk glyph on some rows
+ * (archived list); the grouped/active row always shows the dot. Measured directly: "Precisa de
+ * entrada" #E4572E → `--status-attention`, "Em andamento" #76C410 → the SAME hex as `--primary`
+ * (the reference's own running/active hue, not a separate token), "Concluída" #CFCFCF →
+ * `--status-idle`.
  */
 export const issueStatusDot: Record<IssueStatus, string> = {
-	NEEDS_INPUT: 'bg-warning',
-	WORKING: 'bg-info',
-	COMPLETED: 'bg-muted-foreground/40',
+	NEEDS_INPUT: 'bg-status-attention',
+	WORKING: 'bg-primary',
+	COMPLETED: 'bg-status-idle',
+}
+
+/**
+ * Status chip fill+text per issue status (D3 — the trailing colored chip on each task row in the
+ * Tarefas overview). Two of three land on EXISTING pairs: "Em andamento" is bg-secondary/
+ * secondary-foreground (the same pastel-green pair every other "on" chip in the app already
+ * uses), "Concluída" is bg-muted/muted-foreground (the Badge `default` variant's bg, with its
+ * text color overridden — `default` ships `text-foreground`, the design measures the quieter
+ * `text-muted-foreground` for a finished state). "Precisa de entrada" pairs the already-declared
+ * `--attention-surface` with the new `--attention-foreground` token (see tokens.css). Composed
+ * as Tailwind classes (not a Badge `variant`) because badge.tsx is a shared primitive outside
+ * this group's scope — these three are the only consumers today.
+ */
+export const issueStatusChipClass: Record<IssueStatus, string> = {
+	NEEDS_INPUT: 'bg-attention-surface text-attention-foreground',
+	WORKING: 'bg-secondary text-secondary-foreground',
+	COMPLETED: 'bg-muted text-muted-foreground',
 }
 
 // ── Stops ────────────────────────────────────────────────────────────────────────

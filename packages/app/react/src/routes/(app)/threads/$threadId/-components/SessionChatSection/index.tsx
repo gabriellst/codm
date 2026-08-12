@@ -90,9 +90,9 @@ export function SessionChatSection({ threadId, className, ...props }: ComponentP
 	if (isLoading || !data) {
 		return (
 			<div className={cn('flex flex-col gap-4 py-4', className)} {...props}>
-				<Skeleton className="h-16 w-2/3 rounded-2xl" />
-				<Skeleton className="ml-auto h-16 w-2/3 rounded-2xl" />
-				<Skeleton className="h-16 w-1/2 rounded-2xl" />
+				<Skeleton className="h-16 w-2/3 rounded-asymmetric-md" />
+				<Skeleton className="ml-auto h-16 w-2/3 rounded-asymmetric-md" />
+				<Skeleton className="h-16 w-1/2 rounded-asymmetric-md" />
 			</div>
 		)
 	}

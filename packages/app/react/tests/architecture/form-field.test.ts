@@ -31,8 +31,10 @@ const WHITELIST: Record<string, string> = {
 	// não existe). Os dois motivos são o mesmo fato visto de dois ângulos: a tela salva sozinha.
 	'routes/(app)/threads/$threadId/-components/ThreadSettingsDialog/index.tsx':
 		'recipe `live-settings` — o input da tag salva no onBlur; não existe submit para um form.Field pendurar.',
-	'routes/attach/-components/ContactStep/index.tsx':
+	'routes/(app)/attach/-components/ContactStep/index.tsx':
 		'busca: filtra uma lista já carregada dentro de um passo de wizard (STATE-LOCAL-FILTER). Busca nunca é form — form react.',
+	'routes/(app)/attach/-components/AgentsStep/index.tsx':
+		'select de modelo (D3, ZbVfW) é estado LOCAL ao passo, nunca submetido: `attachThreadMutationRequestSchema` (o que este passo grava) não carrega modelo nenhum, e o único lugar da SDK que modela "modelo por provider" (`session.models`) só existe DEPOIS que a thread é criada. Sem campo de contrato para pousar, não há form.Field para pendurar.',
 }
 
 async function componentFiles(): Promise<string[]> {

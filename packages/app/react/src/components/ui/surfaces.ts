@@ -17,11 +17,16 @@
 // surface — static elevated content
 // ──────────────────────────────────────────────
 
-export const surfaceBg = 'bg-card'
+// D3 REMAP (founder, 11/08/2026) — `surface` was `bg-card` (the #f7f7f7 grey); the D3 design
+// renders every static content card as WHITE + hairline (project cards, settings panels — all
+// measure `$rail`/#ffffff with a `$border` stroke), which is exactly what `trigger` below
+// already was. Remapped rather than adding a third preset: grey (`bg-card`) is now reserved
+// for the window chrome (title bar) and inert fills (loop rows), not content surfaces.
+export const surfaceBg = 'bg-background'
 
 export const surfaceBorder = 'border border-border'
 
-export const surface = 'bg-card border border-border'
+export const surface = 'bg-background border border-border'
 
 // ──────────────────────────────────────────────
 // trigger — interactive clickable surface
@@ -69,6 +74,25 @@ export const rowBorder = 'border border-border'
 export const rowHover = 'hover:bg-hover-accent hover:border-primary'
 
 export const row = 'border border-border transition-colors hover:bg-hover-accent hover:border-primary'
+
+// ──────────────────────────────────────────────
+// sectionLabel — the D3 section heading (replaces `.label-eyebrow`)
+// ──────────────────────────────────────────────
+
+// D3 — every section heading in the design (page sections "Pastas de projeto", every modal
+// section label) is BOLD AT BODY SIZE in full foreground with a hairline underneath —
+// fs 13.5–14 / w700 / $foreground + $border rule, measured identically across the console and
+// the settings modal. This retires BOTH older voices: `.label-eyebrow` (11px uppercase muted,
+// 16 uses — migrate to this when touching a screen) and the modal-local "quieter muted label"
+// (ThreadSettingsDialog's SectionLabel — same migration). The hairline does the separating;
+// the weight does the labeling.
+export const sectionLabel = 'border-b border-border pb-2 text-sm font-bold text-foreground'
+
+// Founder (11/08, teste visual no desktop): quando o rótulo senta DIRETAMENTE sobre uma
+// LISTAGEM (rows/cards que já carregam a própria borda), o hairline vira régua dupla — o
+// título de lista usa a voz sem régua. A versão com hairline continua valendo onde a régua
+// é o separador (seções de modal, o header de Conversas do rail — ambos medidos no design).
+export const sectionLabelBare = 'text-sm font-bold text-foreground'
 
 // ──────────────────────────────────────────────
 // alert — the "precisa de você" dark surface (D2)

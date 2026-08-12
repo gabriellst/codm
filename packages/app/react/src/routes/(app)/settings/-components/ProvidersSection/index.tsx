@@ -11,6 +11,7 @@ import {
 import { enumLabel } from '@/lib'
 import { cn } from '@/lib/utils'
 import { providerGlyph, providerLabel } from '@/components/console/glyphs'
+import { surface } from '@/components/ui/surfaces'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -58,7 +59,7 @@ export function ProvidersSection({ className, ...props }: ComponentProps<'sectio
 	return (
 		<section className={cn('flex flex-col gap-3', className)} {...props}>
 			<div className="flex items-center justify-between gap-3">
-				<h2 className="label-eyebrow">{t('settings.agentProviders')}</h2>
+				<h2 className="text-sm font-bold text-foreground">{t('settings.agentProviders')}</h2>
 				{/*
 				 * O RÓTULO NÃO MUDA enquanto sonda — só o ícone vira spinner e o botão desabilita. Trocar o
 				 * texto por "Reescaneando…" mexeria na largura do botão bem no momento em que o operador
@@ -70,23 +71,24 @@ export function ProvidersSection({ className, ...props }: ComponentProps<'sectio
 				</Button>
 			</div>
 			{isLoading ? (
-				<div className="flex flex-col gap-3">
-					<Skeleton className="h-14 rounded-2xl" />
-					<Skeleton className="h-14 rounded-2xl" />
+				<div className="flex flex-col gap-2.5">
+					<Skeleton className="h-16 rounded-asymmetric-sm" />
+					<Skeleton className="h-16 rounded-asymmetric-sm" />
+					<Skeleton className="h-16 rounded-asymmetric-sm" />
 				</div>
 			) : (
-				<div className="flex flex-col gap-1">
+				<div className="flex flex-col gap-2.5">
 					{providers.map(provider => {
 						const Glyph = providerGlyph[provider.name]
 						const detected = provider.status === 'DETECTED'
 						const path = provider.binaryPath ?? t('settings.providerNotFound')
 						return (
-							<div key={provider.name} className="flex items-center gap-4 rounded-2xl px-2 py-3">
-								<span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-foreground">
-									<Glyph className="size-5" />
+							<div key={provider.name} className={cn('flex items-center gap-3.5 rounded-asymmetric-sm px-4 py-3.5', surface)}>
+								<span className="flex size-8 shrink-0 items-center justify-center rounded-asymmetric-xs bg-secondary text-secondary-foreground">
+									<Glyph className="size-4" />
 								</span>
 								<div className="flex min-w-0 flex-1 flex-col gap-1.5">
-									<span className="font-semibold text-foreground">{providerLabel[provider.name]}</span>
+									<span className="font-bold text-foreground">{providerLabel[provider.name]}</span>
 									<span className="truncate font-mono text-xs text-muted-foreground">
 										{path}
 										{provider.version ? ` · v${provider.version}` : ''}
@@ -95,9 +97,14 @@ export function ProvidersSection({ className, ...props }: ComponentProps<'sectio
 								{/*
 								 * Mesmo eixo duplo do passo de agentes do wizard: `comingSoon` ganha do status, porque
 								 * nenhum valor de `ProviderStatus` consegue dizer "o binário está aqui, mas ainda não
-								 * sabemos dirigi-lo". A variante fica `outline` junto com o resto do que não dá para usar.
+								 * sabemos dirigi-lo". D3 (cixrK) — a variante "off" mede bg-muted/text-muted-foreground
+								 * (o `default` do Badge, com o texto sobrescrito — o `default` de fábrica é
+								 * text-foreground), não mais `outline`.
 								 */}
-								<Badge variant={detected && !provider.comingSoon ? 'secondary' : 'outline'}>
+								<Badge
+									variant={detected && !provider.comingSoon ? 'secondary' : 'default'}
+									className={!detected || provider.comingSoon ? 'text-muted-foreground' : undefined}
+								>
 									{provider.comingSoon ? t('common.comingSoon') : enumLabel('ProviderStatus', provider.status)}
 								</Badge>
 							</div>

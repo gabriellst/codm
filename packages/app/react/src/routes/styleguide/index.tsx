@@ -9,6 +9,7 @@ import { useState, type ReactNode } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { IconArrowRight, IconChevronRight, IconCheck, IconPlus, IconSearch, IconSparkles, IconX } from '@tabler/icons-react'
 
+import { RouteError } from '@/components/RouteError'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -34,6 +35,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 export const Route = createFileRoute('/styleguide/')({
 	component: StyleguideRoute,
+	errorComponent: RouteError,
 })
 
 // ── Small local helpers (module scope so they don't remount) ─────────────────
@@ -162,12 +164,16 @@ function StyleguideRoute() {
 					</Section>
 
 					{/* Buttons */}
-					<Section title="Buttons" hint="Fully-rounded pills. Black is the only filled action; the rest stay mono.">
+					<Section
+						title="Buttons"
+						hint="Asymmetric ladder on every size. Green is the only primary fill; secondary means a toggle's ON state, not a secondary action."
+					>
 						<Row label="variants">
 							<Button>Set up</Button>
-							<Button variant="secondary">Open session</Button>
-							<Button variant="outline">Pause</Button>
+							<Button variant="outline">Cancel</Button>
 							<Button variant="ghost">Skip</Button>
+							<Button variant="soft">Pause</Button>
+							<Button variant="secondary">Hide archived</Button>
 							<Button variant="destructive">Archive</Button>
 							<Button variant="link">Replay intro</Button>
 						</Row>
@@ -178,7 +184,7 @@ function StyleguideRoute() {
 							<Button variant="outline">
 								<IconPlus data-icon="inline-start" /> Add folder
 							</Button>
-							<Button variant="secondary">
+							<Button variant="soft">
 								<IconCheck data-icon="inline-start" /> Approve
 							</Button>
 						</Row>
@@ -189,7 +195,7 @@ function StyleguideRoute() {
 							<Button size="lg">lg</Button>
 						</Row>
 						<Row label="icon-only">
-							<Button size="icon-sm" variant="secondary" aria-label="search">
+							<Button size="icon-sm" variant="soft" aria-label="search">
 								<IconSearch />
 							</Button>
 							<Button size="icon" variant="outline" aria-label="add">

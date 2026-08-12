@@ -1,5 +1,6 @@
 import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
+import { sectionLabelBare, surface } from '@/components/ui/surfaces'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { useTelemetryConsentStore } from '@/stores'
@@ -18,10 +19,10 @@ export function TelemetrySection({ className, ...props }: ComponentProps<'sectio
 
 	return (
 		<section className={cn('flex flex-col gap-3', className)} {...props}>
-			<h2 className="label-eyebrow">{t('settings.telemetry')}</h2>
-			<label className="flex cursor-pointer items-center gap-4 rounded-asymmetric-xl bg-card px-4 py-4">
-				<div className="flex flex-1 flex-col gap-0.5">
-					<span className="font-medium text-foreground">{t('settings.telemetryConsentLabel')}</span>
+			<h2 className={sectionLabelBare}>{t('settings.telemetry')}</h2>
+			<label className={cn('flex cursor-pointer items-center gap-6 rounded-asymmetric-md p-4', surface)}>
+				<div className="flex flex-1 flex-col gap-1">
+					<span className="text-sm font-bold text-foreground">{t('settings.telemetryConsentLabel')}</span>
 					<span className="text-sm text-muted-foreground">{t('settings.telemetryConsentDescription')}</span>
 				</div>
 				<Switch checked={enabled} onCheckedChange={setEnabled} />

@@ -2,10 +2,12 @@ import { useTranslation } from 'react-i18next'
 import { IconAntennaBars5, IconFolder, IconHome, IconListDetails, IconPlus, IconSettings } from '@tabler/icons-react'
 import type { Icon } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
-import { useGetHomeDashboard, useGetIssuesOverview, useListWorkspaces } from '@codm/client-typescript/typescript'
+import { useGetHomeDashboard, useGetIssuesOverview, useGetSettings, useListWorkspaces } from '@codm/client-typescript/typescript'
 
 import { cn } from '@/lib/utils'
-import { Logo } from '@/components/console/Logo'
+import CodmLogoIcon from '@/components/ui/icons/codmLogo'
+import { Skeleton } from '@/components/ui/skeleton'
+import { sectionLabel } from '@/components/ui/surfaces'
 import { ThreadAvatar, contactAvatarUrl } from '@/components/console/ThreadAvatar'
 import { ThreadStatusDot } from '@/components/console/StatusDot'
 import type { FileRouteTypes } from '@/routeTree.gen'
@@ -26,7 +28,10 @@ type AppRoute = FileRouteTypes['to']
 //    Ver `.specs/2026-08-07-conflitos-de-utilitario-fora-do-twmerge.md`.
 const rowBase = 'flex items-center gap-3 rounded-asymmetric-sm px-3 h-10 text-sm transition-colors'
 const rowIdle = 'font-medium text-sidebar-foreground hover:bg-sidebar-accent/60'
-const rowActive = 'font-bold bg-sidebar-accent text-sidebar-foreground'
+// D3 — the active row's ink is the --secondary pastel's OWN foreground (#3D660A dark green), the
+// "pairs with zero exceptions" rule from tokens.css — it was near-black here, the one place the
+// pairing wasn't honored.
+const rowActive = 'font-bold bg-sidebar-accent text-sidebar-accent-foreground'
 
 /**
  * The CODM console rail: primary destinations with live counts, then the THREADS
@@ -38,6 +43,9 @@ export function Sidebar({ className, ...props }: React.ComponentProps<'aside'>) 
 	const { data: dashboard } = useGetHomeDashboard()
 	const { data: workspaces } = useListWorkspaces()
 	const { data: issues } = useGetIssuesOverview()
+	// The lockup's version line reads the SAME DTO field the settings page shows
+	// (`useGetSettings().appVersion`) — one source, cached; never a hand-mirrored constant.
+	const { data: settings } = useGetSettings()
 
 	const issueCount = issues ? issues.statsLine.awaitingInput + issues.statsLine.working + issues.statsLine.completed : undefined
 	const channelCount = dashboard?.channels.filter(c => c.status === 'CONNECTED').length
@@ -47,10 +55,22 @@ export function Sidebar({ className, ...props }: React.ComponentProps<'aside'>) 
 	// nobody is being answered in right now, rendered as "Nenhuma conversa ainda" while the row existed.
 	const threads = dashboard?.threads ?? []
 
+	// D3 — the rail is the grey band (`--sidebar`, same #f7f7f7 the design's `$card` measures)
+	// with a hairline on its right; the content column is the white surface next to it.
 	return (
-		<aside className={cn('flex w-60 shrink-0 flex-col gap-6 border-r border-sidebar-border px-4 py-6', className)} {...props}>
-			<div className="px-1">
-				<Logo />
+		<aside className={cn('flex w-60 shrink-0 flex-col gap-6 border-r border-sidebar-border bg-sidebar px-4 py-6', className)} {...props}>
+			{/* D3 logo lockup: the brand mark next to a two-line column — wordmark over the running
+			    version in mono. The design draws the mark as a green rounded square with a script "dm"
+			    because .pen can't embed the real SVG; the actual mark (green bubble + cursive dm,
+			    `CodmLogoIcon`) IS that shape's source, so it stays. */}
+			<div className="flex items-center gap-2.5 px-1">
+				<CodmLogoIcon className="h-9 w-auto shrink-0" />
+				<div className="flex min-w-0 flex-col gap-0.5">
+					{/* eslint-disable-next-line local/no-hardcoded-jsx-text -- "CODM" is the wordmark
+					    (brand iconography, same in every locale), not translatable copy. */}
+					<span className="text-[15px] leading-none font-extrabold tracking-tight text-foreground">CODM</span>
+					{settings && <span className="font-mono text-[11px] leading-none text-caption-foreground">{settings.appVersion}</span>}
+				</div>
 			</div>
 
 			<nav className="flex flex-col gap-1">
@@ -62,8 +82,11 @@ export function Sidebar({ className, ...props }: React.ComponentProps<'aside'>) 
 			</nav>
 
 			<div className="flex min-h-0 flex-1 flex-col gap-2">
-				<div className="flex items-center justify-between px-2">
-					<span className="label-eyebrow">{t('console.threads')}</span>
+				{/* D3 — the list header speaks the new section-label voice (bold at body size, hairline
+				    under the whole row), not the uppercase eyebrow. The hairline spans label AND the
+				    add action, so the preset sits on the row container and the label inherits its type. */}
+				<div className={cn(sectionLabel, 'flex items-center justify-between px-2')}>
+					<span>{t('console.threads')}</span>
 					<Link
 						to="/attach"
 						aria-label={t('console.attachThread')}
@@ -75,7 +98,11 @@ export function Sidebar({ className, ...props }: React.ComponentProps<'aside'>) 
 				</div>
 
 				<div className="flex flex-col gap-0.5 overflow-y-auto">
-					{threads.length === 0 ? (
+					{/* skeleton → empty → list: while the dashboard read is in flight the list shows
+					    placeholder rows — "Nenhuma conversa ainda" is reserved for a CONFIRMED empty. */}
+					{!dashboard ? (
+						<ThreadRowsSkeleton />
+					) : threads.length === 0 ? (
 						<p className="px-3 py-1 text-sm text-muted-foreground">{t('console.noThreadsYet')}</p>
 					) : (
 						threads.map(thread => (
@@ -130,5 +157,17 @@ function NavItem({ to, icon: Glyph, label, count }: { to: AppRoute; icon: Icon; 
 				</>
 			)}
 		</Link>
+	)
+}
+
+// Local, never exported: placeholder thread rows with the SAME height/inset as the real ones,
+// so the list doesn't jump when the dashboard read lands.
+function ThreadRowsSkeleton() {
+	return (
+		<div className="flex flex-col gap-0.5">
+			<Skeleton className="h-12 rounded-asymmetric-sm" />
+			<Skeleton className="h-12 rounded-asymmetric-sm" />
+			<Skeleton className="h-12 rounded-asymmetric-sm" />
+		</div>
 	)
 }

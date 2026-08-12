@@ -1,207 +1,192 @@
 {
 	"nav": {
 		"links": {
-			"demo": "Demo",
-			"router": "Router",
-			"features": "Features",
-			"github": "GitHub ↗",
-			"blog": "Blog"
+			"howItWorks": "How it works",
+			"useCases": "Use cases",
+			"pricing": "Pricing",
+			"blog": "Blog",
+			"github": "GitHub ↗"
 		},
 		"download": "Download"
 	},
 	"hero": {
-		"badge": "Open source · runs on your machine · free",
-		"titleBold": "Text your codebase.",
-		"titleLight": "It texts you back.",
-		"subtitle": "Issues land on your group chat. Agents solve them for you.",
-		"primaryCta": "Download — macOS · Windows · Linux",
-		"secondaryCta": "Star on GitHub",
-		"downloadMac": "Download for macOS (Apple Silicon)",
-		"gatekeeperNote": "No Apple signing yet: on first launch, right-click → Open. If macOS calls the app “damaged”, run in Terminal: xattr -cr /Applications/CODM.app",
-		"otherOs": "Windows and Linux coming soon."
-	},
-	"marquee": {
-		"items": ["WhatsApp", "Claude Code", "Codex", "OpenCode"]
-	},
-	"demo": {
-		"eyebrow": "YOUR PROJECTS, ON CALL",
-		"title": "Run your projects from anywhere you can text",
-		"body": "CODM turns any conversation into an operations desk for your projects — code, deploys, files, whatever your agents can do. Your client reports the bug at lunch; by coffee the fix is deployed and the reply is in their chat.",
-		"steps": [
-			{
-				"body": "message classified → issue",
-				"title": "coupon-focus"
+		"version": "v1.4.2",
+		"tagline": "Open source · runs on your machine",
+		"freeChip": "free",
+		"titleBold": "Talk to your agents",
+		"titleLight": "without leaving the group.",
+		"subtitle": "Codex, Claude Code, OpenCode. Any agent from your project folder,\ninvoked with the skills you already have, straight from WhatsApp.",
+		"ctaMac": "Download for macOS",
+		"ctaGithub": "GitHub",
+		"cards": {
+			"message": {
+				"sender": "Gabriel Araújo · WhatsApp",
+				"text": "the coupon field is broken on mobile, can you check?"
 			},
-			{
-				"body": "terminal session spawned on the folder",
-				"title": ""
+			"task": {
+				"key": "coupon-focus",
+				"status": "In progress",
+				"sub": "classified → task · terminal opened"
 			},
-			{
-				"body": "fix pushed → reply sent with the label",
-				"title": ""
+			"skill": {
+				"text": "/deploy-preview"
+			},
+			"reply": {
+				"label": "coupon-focus · Claude Code",
+				"text": "Done. Pushed fix/coupon-focus — the preview is already live."
+			},
+			"terminal": {
+				"path": "~/dev/acme-storefront",
+				"lines": ["$ pnpm test — 42 passed", "✓ pushed fix/coupon-focus", "→ reply sent · WhatsApp"]
 			}
-		],
-		"chat": {
-			"initials": "RL",
-			"name": "Rafa Lima",
-			"meta": "WhatsApp · ~/dev/acme-storefront",
-			"status": "Running",
-			"messages": [
-				{
-					"kind": "in",
-					"text": "the coupon field is broken on mobile, can you check?"
-				},
-				{
-					"kind": "system",
-					"text": "classified → issue coupon-focus · terminal started"
-				},
-				{
-					"kind": "out",
-					"label": "✳ coupon-focus · Claude Code",
-					"text": "Found it — the input remounts on every keystroke. Fixing now."
-				},
-				{
-					"kind": "out",
-					"text": "Done. Pushed fix/coupon-focus — preview is live."
-				},
-				{
-					"kind": "in",
-					"text": "works!! thank you 🙌"
-				}
-			]
 		}
 	},
-	"router": {
-		"eyebrow": "THE ROUTER",
-		"titleBold": "One chat.",
-		"titleLight": "Many issues.",
-		"body": "Ten requests in one thread don’t queue — they run. Each becomes an issue with its own terminal session, working in parallel on your machine. Replies carry the label back, so answering a quote hits the right session every time.",
-		"rows": [
-			{
-				"key": "reply-quote",
-				"text": "routes to that exact issue, always"
-			},
-			{
-				"key": "context",
-				"text": "matches against what’s already open"
-			},
-			{
-				"key": "new work",
-				"text": "opens an issue and a fresh terminal"
-			},
-			{
-				"key": "ambiguous",
-				"text": "asks — “the Pix one, or the nav bug?”"
-			}
-		],
-		"terminal": {
-			"header": "~/dev/acme-storefront · 3 sessions",
-			"lines": [
-				{
-					"key": "coupon-focus",
-					"tone": "dim",
-					"text": "pnpm test — 42 passed · pushed fix/coupon-focus"
-				},
-				{
-					"key": "coupon-focus",
-					"tone": "mid",
-					"text": "reply sent → WhatsApp · Rafa Lima"
-				},
-				{
-					"key": "pix-payment",
-					"tone": "dim",
-					"text": "scaffolding PixProvider.ts behind feature flag"
-				},
-				{
-					"key": "pix-payment",
-					"tone": "mid",
-					"text": "steer: keep the flag off until legal signs off"
-				},
-				{
-					"key": "mobile-nav",
-					"tone": "dim",
-					"text": "waiting: which iPhone / iOS version?"
-				},
-				{
-					"key": "router",
-					"tone": "mid",
-					"text": "clarify → “the Pix one, or the nav bug?”"
-				},
-				{
-					"key": "invoice-500",
-					"tone": "dim",
-					"text": "stopped · 429 rate limit · waiting for operator"
-				},
-				{
-					"key": "router",
-					"tone": "faint",
-					"text": "watching 3 threads · buffer 100 msgs"
-				}
-			]
-		}
-	},
-	"features": {
-		"title": "Everything between the ping and the pull request",
-		"intro": "Not a chatbot. Your agents can run anything the workspace allows — builds, tests, deploys, scripts, skills — driven entirely from chat.",
+	"howItWorks": {
+		"title": "How it works",
+		"subtitle": "Send instructions to the agents that manage your projects straight from your groups, and run processes without ever leaving the company chat.",
 		"cards": [
 			{
-				"kicker": "ISSUES",
-				"title": "One chat, parallel work",
-				"body": "Every request gets its own issue and terminal. Your backlog drains while you’re in a meeting — ten asks, ten sessions, zero collisions."
+				"number": "01",
+				"title": "Send it to the group",
+				"body": "One-off requests are delegated to an agent and flagged for a fast fix — from WhatsApp or Instagram.",
+				"bubble": "@codm the invoice for client Acme didn't generate, can you fix it?",
+				"status": "delegated → invoice-500"
 			},
 			{
-				"kicker": "LABELS",
-				"title": "Replies route themselves",
-				"body": "Agent messages carry the issue key. Anyone in the chat can quote one to answer it — no syntax to learn, replies just land in the right session."
+				"number": "02",
+				"title": "The agent gets to work",
+				"body": "A terminal session opens on your project folder, with the skills already in your codebase.",
+				"terminalLabel": "$ claude — invoice-500",
+				"terminalLines": [
+					"→ investigating acme-storefront",
+					"→ 429 from provider · retrying",
+					"✓ fix applied · PR opened"
+				]
 			},
 			{
-				"kicker": "WHISPERS",
-				"title": "A voice in the agent’s head",
-				"body": "Whisper “keep it behind the flag” mid-task — the agent adjusts, the client never sees it. Pause the thread and the mic is yours."
-			},
-			{
-				"kicker": "STOPS",
-				"title": "Knows when to wait",
-				"body": "Rate limit, risky command, someone asked for a human — the agent stops, flags you, and holds the line until you approve, deny or take over."
-			},
-			{
-				"kicker": "ARTIFACTS",
-				"title": "More than code",
-				"body": "Preview links, screenshots, exports, reports — every deliverable an agent produces is cataloged per thread, ready to reshare."
-			},
-			{
-				"kicker": "LOCAL",
-				"title": "Nothing leaves your machine",
-				"body": "No relay servers in your data path: code, keys and chats stay on the machine you own. Your account only signs you in — none of your work leaves."
+				"number": "03",
+				"title": "The reply lands back in the group",
+				"body": "Carrying the task's label — whoever asked follows along without leaving the conversation.",
+				"tag": "invoice-500 · Claude Code",
+				"bubble": "Invoice regenerated and sent. The fix's PR is up for review."
 			}
 		],
-		"controls": [
-			"pause / resume",
-			"whisper steering",
-			"@mention gate",
-			"per-person permissions",
-			"approval on risky commands",
-			"context buffer 25–200"
+		"chips": [
+			{ "icon": "sparkles", "text": "/fix-invoice" },
+			{ "icon": "ear", "text": "whisper — only the agent reads it" },
+			{ "icon": "dot", "text": "3 sessions running in parallel" }
+		]
+	},
+	"capabilities": {
+		"titleBold": "Pair the bridge with",
+		"titleLight": "skills and scripts.",
+		"cards": [
+			{
+				"icon": "sparkles",
+				"tag": "Skills",
+				"title": "Skills you already have",
+				"body": "Invoke /deploy, /triage, /report — any skill in your project folder or codebase, nothing to rewrite."
+			},
+			{
+				"icon": "ear",
+				"tag": "Whispers",
+				"title": "Private guidance",
+				"body": "Talk to the agent alone mid-conversation. The contact never sees it — only the result."
+			},
+			{
+				"icon": "repeat",
+				"tag": "Loops",
+				"title": "Scheduled processes",
+				"body": "Prompts that repeat on their own: on a fixed time, on the days you choose, or every N minutes."
+			},
+			{
+				"icon": "shield-check",
+				"tag": "Control",
+				"title": "You approve first",
+				"body": "Agents pause on errors and sensitive decisions. Nothing goes out without your word."
+			},
+			{
+				"icon": "hard-drive",
+				"tag": "Local",
+				"title": "Runs 100% on your Mac",
+				"body": "Your code, your credentials and your conversations never leave your machine."
+			},
+			{
+				"icon": "bot",
+				"tag": "Multi-agent",
+				"title": "Several agents per conversation",
+				"body": "Claude Code, Codex and OpenCode in the same thread — each task with the right agent."
+			}
+		]
+	},
+	"useCases": {
+		"title": "You talk, the agent executes",
+		"cases": [
+			{
+				"number": "01",
+				"title": "Bug triage",
+				"body": "The client reports it in the group, the message becomes a classified task, and the agent already opens the terminal on the right folder."
+			},
+			{
+				"number": "02",
+				"title": "Customer support",
+				"body": "Automated conversations with human approval: the agent drafts, you review, the channel receives it."
+			},
+			{
+				"number": "03",
+				"title": "Internal processes",
+				"body": "Deploy, report, billing — any script becomes a sentence in the company group."
+			},
+			{
+				"number": "04",
+				"title": "On-call without a queue",
+				"body": "Ten requests in the same thread don't queue up: each one runs in parallel on your machine."
+			}
 		]
 	},
 	"pricing": {
-		"free": "Free",
-		"perMonth": "/mo"
-	},
-	"closingCta": {
-		"titleBold": "Ship from anywhere",
-		"titleLight": "you can text",
-		"note": "MIT license · macOS (Apple Silicon) · Windows and Linux coming soon",
-		"primary": "Download for your OS",
-		"secondary": "Read the docs"
+		"badgeLine1": "Free. Open Source",
+		"badgeLine2": "Runs locally on your machine",
+		"explanation": "Everything that runs on your machine is free — the agents are yours, the code is MIT and there's no account to create.",
+		"includedTitle": "What's included",
+		"included": [
+			"Unlimited use — no cap on tasks or messages",
+			"Several agents per conversation: Claude Code, Codex, OpenCode",
+			"WhatsApp today · Instagram coming soon",
+			"Skills and scripts from your own codebase",
+			"Whispers, scheduled loops and approval before sending",
+			"Unlimited projects and channels",
+			"Runs 100% local — nothing leaves your Mac",
+			"Open source under the MIT license"
+		],
+		"perMonth": "/mo",
+		"forever": "/forever",
+		"futureNote": "Down the line, we may introduce paid features or plans. If that happens, the terms and price will be spelled out clearly before any charge.",
+		"chipMit": "MIT license",
+		"chipNoAccount": "no account, no card"
 	},
 	"footer": {
-		"copyright": "© 2026 · MIT license",
-		"telemetryNotice": "We collect lightweight, anonymous product analytics — page views and clicks. Turn it off anytime in the console's Settings.",
-		"links": {
-			"github": "https://github.com/codm",
-			"docs": "Docs",
-			"changelog": "Changelog"
-		}
+		"headline": "Your team is already in the group.\nNow your code is too.",
+		"explore": {
+			"title": "Explore",
+			"links": [
+				{ "label": "Home", "href": "/" },
+				{ "label": "How it works", "href": "#how-it-works" },
+				{ "label": "Use cases", "href": "#use-cases" },
+				{ "label": "Blog", "href": "/blog" }
+			]
+		},
+		"project": {
+			"title": "Project",
+			"links": [
+				{ "label": "GitHub", "href": "https://github.com/codm" },
+				{ "label": "Releases", "href": "https://github.com/codm/releases" },
+				{ "label": "MIT license", "href": "https://github.com/codm#readme" }
+			]
+		},
+		"copyright": "2026 CODM · Open source · runs locally",
+		"privacy": "Privacy",
+		"terms": "Terms",
+		"telemetryNotice": "We collect lightweight, anonymous product analytics — page views and clicks. Turn it off anytime in the console's Settings."
 	}
 }

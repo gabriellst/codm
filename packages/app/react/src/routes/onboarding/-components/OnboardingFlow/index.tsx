@@ -6,11 +6,24 @@ import { useQueryClient } from '@tanstack/react-query'
 import { getOnboardingQueryKey, useCompleteOnboarding, useGetOnboarding } from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { Logo } from '@/components/console/Logo'
 import { useSystemPreconditionsStore } from '@/stores/useSystemPreconditionsStore'
 import { useOnboardingStore } from '../../-stores/useOnboardingStore'
-import { canComplete, firstUnvanquishedStep, onboardingSteps, STEP_TAXONOMY } from '../steps'
+import { canComplete, firstUnvanquishedStep, onboardingSteps, type StepId, STEP_TAXONOMY } from '../steps'
 import { STEP_COMPONENTS } from '../step-components'
+
+// D3 (screens NN8IL/FPKgO/tBcCA) — the three intro slides sit over a pair of soft blurred
+// blobs ($secondary, radial); the permission/final/login screens the same group ships are flat
+// white. Scoped to INFO_STEPS_WITH_BLOB rather than "every step" so FULL_DISK_ACCESS/FINAL don't
+// inherit decoration the design never draws for them (R28 — decor blobs are sanctioned, but only
+// where measured).
+const INFO_STEPS_WITH_BLOB: readonly StepId[] = ['VALUE', 'HOW', 'CONTROL']
+
+// D3 — the permission screen (FULL_DISK_ACCESS) is left-aligned block copy, not the centered
+// carousel style the three intro slides and the final card use. One shared wrapper, one
+// conditional on alignment — every other step keeps the centered treatment.
+function stepAlignment(stepId: StepId): string {
+	return stepId === 'FULL_DISK_ACCESS' ? 'items-start text-left' : 'items-center text-center'
+}
 
 /**
  * O fluxo de entrada e de pendência — agora um wizard COMPOSTO pela função pura `onboardingSteps`
@@ -87,6 +100,14 @@ export function OnboardingFlow({ className, ...props }: ComponentProps<'div'>) {
 		setCurrentSlide(Math.min(lastIndex, Math.max(0, target)))
 	}
 
+	// D3 (screen NN8IL) — "Pular" only ever shows on the FIRST step (nothing to go back to), and
+	// only advances PAST the read-only intro slides (VALUE/HOW/CONTROL, all INFORMATIVE) into the
+	// first step that actually does something — never an exit from onboarding (that "Pular" died at
+	// spec Decision 13, before this front existed; see OnboardingFlow's test docblock). Presentation
+	// only: it calls the SAME `goTo` every other nav control uses.
+	const firstActionableIndex = steps.findIndex(id => STEP_TAXONOMY[id].kind !== 'INFORMATIVE')
+	const skipTarget = firstActionableIndex === -1 ? lastIndex : firstActionableIndex
+
 	// Nenhum StepId real é REQUIRED hoje (STEP_TAXONOMY), então isto avalia sempre `true` na prática —
 	// ver o comentário de `canComplete` em `../steps`.
 	const completionAllowed = canComplete(
@@ -96,18 +117,24 @@ export function OnboardingFlow({ className, ...props }: ComponentProps<'div'>) {
 
 	return (
 		// `min-h-full`, not `min-h-dvh`: sized against the box the root layout left under the AppChrome
-		// title bar, never against the viewport (which no longer belongs entirely to the route).
-		<div className={cn('flex min-h-full flex-col bg-route-background text-foreground', className)} {...props}>
-			<header className="px-6 py-6 md:px-10">
-				<Logo />
-			</header>
+		// title bar, never against the viewport (which no longer belongs entirely to the route). No
+		// `<Logo/>` header — none of the 11 D3 screens for this group show one; the brand lockup only
+		// lives in the OS title bar (`__root.tsx`) and the console rail, both outside this route's box.
+		<div className={cn('relative flex min-h-full flex-col overflow-hidden bg-route-background text-foreground', className)} {...props}>
+			{INFO_STEPS_WITH_BLOB.includes(stepId) && (
+				<div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+					<div className="absolute -top-40 right-[-10%] size-[560px] rounded-full bg-secondary opacity-60 blur-[90px]" />
+					<div className="absolute -bottom-52 left-[-15%] size-[680px] rounded-full bg-secondary opacity-50 blur-[100px]" />
+				</div>
+			)}
 
-			<main className="flex flex-1 flex-col items-center justify-center px-6 pb-16">
-				<div className="flex w-full max-w-xl flex-col items-center gap-8 text-center">
+			<main className="relative flex flex-1 flex-col items-center justify-center px-6 pb-28">
+				<div className={cn('flex w-full max-w-xl flex-col gap-8', stepAlignment(stepId))}>
 					<div
 						key={stepId}
 						className={cn(
-							'flex w-full flex-col items-center gap-8 text-center',
+							'flex w-full flex-col gap-8',
+							stepAlignment(stepId),
 							'animate-in fade-in duration-300 ease-out',
 							direction === 1 ? 'slide-in-from-right-10' : 'slide-in-from-left-10',
 						)}
@@ -115,33 +142,47 @@ export function OnboardingFlow({ className, ...props }: ComponentProps<'div'>) {
 						{STEP_COMPONENTS[stepId]}
 					</div>
 
-					<div className="flex items-center gap-2">
-						{steps.map((id, i) => (
-							<span
-								key={id}
-								className={cn('h-2 rounded-full transition-all duration-300', i === index ? 'w-6 bg-primary' : 'w-2 bg-border')}
-							/>
-						))}
-					</div>
-
-					<div className="flex items-center gap-3">
-						{index > 0 && (
-							<Button variant="outline" onClick={() => goTo(index - 1)}>
-								{t('onboarding.back')}
-							</Button>
-						)}
-						{index < lastIndex ? (
-							<Button onClick={() => goTo(index + 1)}>
-								{t('onboarding.next')} <IconArrowRight data-icon="inline-end" />
-							</Button>
-						) : (
-							<Button onClick={() => completeOnboarding.mutate()} disabled={!completionAllowed || completeOnboarding.isPending}>
-								{t('onboarding.getStarted')} <IconArrowRight data-icon="inline-end" />
-							</Button>
-						)}
-					</div>
+					{/* D3 — the progress dots are ALSO scoped to the three intro slides (neither d4bKAl nor
+					    fa1hL draw them; the permission/final cards stand alone), same set as the blobs. */}
+					{INFO_STEPS_WITH_BLOB.includes(stepId) && (
+						<div className="flex items-center gap-2 self-center">
+							{steps.map((id, i) => (
+								<span
+									key={id}
+									className={cn('h-2 rounded-full transition-all duration-300', i === index ? 'w-6 bg-primary' : 'w-2 bg-input')}
+								/>
+							))}
+						</div>
+					)}
 				</div>
 			</main>
+
+			{/* D3 — a footer bar pinned to the window edge, Voltar/Pular fixed left and the forward action
+			    fixed right, not clustered under the dots like before. */}
+			<footer className="relative flex items-center justify-between px-10 py-7">
+				<div>
+					{index > 0 ? (
+						<Button variant="outline" onClick={() => goTo(index - 1)}>
+							{t('onboarding.back')}
+						</Button>
+					) : (
+						firstActionableIndex > 0 && (
+							<Button variant="outline" onClick={() => goTo(skipTarget)}>
+								{t('onboarding.skip')}
+							</Button>
+						)
+					)}
+				</div>
+				{index < lastIndex ? (
+					<Button onClick={() => goTo(index + 1)}>
+						{t('onboarding.next')} <IconArrowRight data-icon="inline-end" />
+					</Button>
+				) : (
+					<Button onClick={() => completeOnboarding.mutate()} disabled={!completionAllowed || completeOnboarding.isPending}>
+						{t('onboarding.getStarted')} <IconArrowRight data-icon="inline-end" />
+					</Button>
+				)}
+			</footer>
 		</div>
 	)
 }

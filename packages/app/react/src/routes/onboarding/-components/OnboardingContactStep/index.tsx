@@ -2,7 +2,7 @@
 import { type ComponentProps, useMemo } from 'react'
 import type { ChannelKind } from '@codm/client-typescript/typescript'
 import { useGetAttachThreadWizard } from '@codm/client-typescript/typescript'
-import { ContactStep, type ContactStepData } from '@/routes/attach/-components/ContactStep'
+import { ContactStep, type ContactStepData } from '@/routes/(app)/attach/-components/ContactStep'
 import { useOnboardingSetupStore } from '../../-stores/useOnboardingSetupStore'
 
 /**

@@ -1,31 +1,32 @@
 @import "tailwindcss";
 @import "@codm/app-styles/tokens.css";
 @import "@codm/app-styles/web-utilities.css";
-@import "@fontsource/poppins/300.css";
-@import "@fontsource/poppins/400.css";
-@import "@fontsource/poppins/500.css";
-@import "@fontsource/poppins/600.css";
-@import "@fontsource/poppins/700.css";
-@import "@fontsource/poppins/800.css";
+@import "@fontsource/inter/300.css";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/inter/800.css";
 @import "@fontsource/ibm-plex-mono/400.css";
 @import "@fontsource/ibm-plex-mono/500.css";
 @import "@fontsource/ibm-plex-mono/600.css";
 
 /*
- * Landing typography (D3): Poppins w800 tight-tracked + w300 pairing carries the
- * hero voice. Anton stays registered as `--font-display` for non-landing surfaces
- * (console masthead) but is NOT used on the landing. IBM Plex Mono is the
- * first-class product-vocabulary face (labels, terminal, chips).
+ * Landing typography (D3, founder 11/08): INTER carries the whole site — it is the face the
+ * design file itself declares ($font-sans: Inter); the Poppins pairing this block used to
+ * ship was overruled ("o design usa inter"). Weight does the voice work (w800 tight-tracked
+ * hero + w300 pairing), same as before, just on Inter. IBM Plex Mono stays as the
+ * product-vocabulary face (labels, terminal, chips) — note the design declares JetBrains
+ * Mono; flagged, not yet switched.
  */
 @theme {
-	--font-sans: "Poppins", system-ui, sans-serif;
+	--font-sans: "Inter", system-ui, sans-serif;
 	--font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
-	--font-display: "Anton", "Poppins", system-ui, sans-serif;
+	--font-display: "Inter", system-ui, sans-serif;
 
 	--animate-pulse-dot: pulse-dot 2s ease-in-out infinite;
 	--animate-pulse-dot-fast: pulse-dot 1.6s ease-in-out infinite;
 	--animate-rise-in: rise-in 0.5s ease both;
-	--animate-marquee: marquee 26s linear infinite;
 }
 
 @keyframes pulse-dot {
@@ -47,12 +48,6 @@
 		transform: none;
 	}
 }
-@keyframes marquee {
-	to {
-		transform: translateX(-50%);
-	}
-}
-
 /* D6 — CSS-only cross-document view transitions; zero JS, inert where unsupported. */
 @view-transition {
 	navigation: auto;
@@ -82,7 +77,6 @@ body {
 	html {
 		scroll-behavior: auto;
 	}
-	.animate-marquee,
 	.animate-rise-in {
 		animation: none;
 	}

@@ -137,9 +137,13 @@ export function LoopsSection({ threadId, className, ...props }: { threadId: stri
 
 	return (
 		<section className={cn('flex flex-col gap-3', className)} {...props}>
+			{/* The border lives on the ROW, not the heading alone (D3): the reference's "Loops Header"
+			    hairline runs under the button too, not just under the label. */}
 			<div className="flex items-center justify-between gap-4 border-b border-border pb-2">
-				<h3 className="text-sm font-medium text-muted-foreground">{t('session.loops.sectionTitle')}</h3>
-				<Button variant="outline" size="sm" className="shrink-0" disabled={editing !== null} onClick={() => setEditing({})}>
+				<h3 className="text-sm font-bold text-foreground">{t('session.loops.sectionTitle')}</h3>
+				{/* D3 — "Novo loop" is borderless/transparent in the reference (fill and stroke both
+				    `#00000000`), which is the `ghost` role, not `outline`. */}
+				<Button variant="ghost" className="shrink-0" disabled={editing !== null} onClick={() => setEditing({})}>
 					<IconClockPlus data-icon="inline-start" /> {t('session.loops.add')}
 				</Button>
 			</div>
@@ -181,13 +185,15 @@ function DailyScheduleSummary({ schedule }: { schedule: DailyScheduleValue }) {
 	const { t } = useTranslation()
 	return (
 		<>
-			<Badge variant="secondary" className="font-mono">
+			<Badge variant="secondary" size="compact" className="font-mono">
 				{schedule.timeOfDay}
 			</Badge>
 			{/* The weekday set, in week order — the same order the picker renders, so editing a loop
-			    never reshuffles what the operator just read. */}
+			    never reshuffles what the operator just read. `size="compact"` (D3, R9): the design's
+			    loop chips are the one place that keeps the smaller 3xs step; everywhere else moved to
+			    the new 2xs default. */}
 			{WEEK.filter(day => schedule.weekdays.includes(day)).map(day => (
-				<Badge key={day} variant="outline">
+				<Badge key={day} variant="outline" size="compact">
 					{t(`enums.DayOfWeek.${day}`)}
 				</Badge>
 			))}
@@ -198,7 +204,11 @@ function DailyScheduleSummary({ schedule }: { schedule: DailyScheduleValue }) {
 /** The cadence of an interval schedule — one badge, because there is one thing to say. */
 function IntervalScheduleSummary({ schedule }: { schedule: IntervalScheduleValue }) {
 	const { t } = useTranslation()
-	return <Badge variant="secondary">{t('session.loops.intervalBadge', { minutes: schedule.everyMinutes })}</Badge>
+	return (
+		<Badge variant="secondary" size="compact">
+			{t('session.loops.intervalBadge', { minutes: schedule.everyMinutes })}
+		</Badge>
+	)
 }
 
 /**
@@ -253,7 +263,9 @@ function LoopRow({ threadId, loop, onEdit }: { threadId: string; loop: Loop; onE
 			: null
 
 	return (
-		<div className={cn('flex items-start gap-3 rounded-xl border border-border p-3', !loop.enabled && 'opacity-60')}>
+		// D3 — the reference's loop card is a FLAT `bg-card` fill with no hairline (`rounded-asymmetric-sm`,
+		// no stroke), not the bordered `rounded-xl` box this used to be.
+		<div className={cn('flex items-start gap-3 rounded-asymmetric-sm bg-card p-3.5', !loop.enabled && 'opacity-60')}>
 			<div className="flex min-w-0 flex-1 flex-col gap-2">
 				<p className="line-clamp-2 text-sm text-foreground">{loop.prompt}</p>
 				<div className="flex flex-wrap items-center gap-2">

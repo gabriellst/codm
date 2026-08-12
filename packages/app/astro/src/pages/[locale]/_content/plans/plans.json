@@ -1,33 +1,16 @@
 [
 	{
-		"id": "community",
+		"id": "local",
 		"order": 1,
-		"price": { "monthly": 0, "currency": "USD" },
-		"highlighted": true,
+		"price": { "monthly": 0 },
 		"copy": {
 			"en": {
-				"name": "Community",
-				"blurb": "Everything the product does, free. Sign in with GitHub or Google and go.",
-				"cta": "Download",
-				"features": [
-					"Unlimited projects and threads",
-					"WhatsApp as your operations channel",
-					"Any terminal agent — Claude Code, Codex, OpenCode",
-					"Steers, stops and whispers mid-run",
-					"Auto-updates, always on the latest"
-				]
+				"name": "Local",
+				"blurb": "For anyone running agents on their own Mac — the whole product, no hidden tier."
 			},
 			"pt": {
-				"name": "Community",
-				"blurb": "Tudo que o produto faz, de graça. Entre com GitHub ou Google e use.",
-				"cta": "Baixar",
-				"features": [
-					"Projetos e threads ilimitados",
-					"WhatsApp como seu canal de operações",
-					"Qualquer agente de terminal — Claude Code, Codex, OpenCode",
-					"Steers, stops e whispers no meio do run",
-					"Auto-update, sempre na última versão"
-				]
+				"name": "Local",
+				"blurb": "Para quem roda os agentes no próprio Mac — o produto inteiro, sem tier escondido."
 			}
 		}
 	}

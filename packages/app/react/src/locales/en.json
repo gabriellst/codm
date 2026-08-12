@@ -12,11 +12,13 @@
 			"saveSuccess": "Preferences updated successfully",
 			"sectionDescription": "Configure language, timezone and notifications",
 			"sectionTitle": "Preferences",
+			"stub": "Editing preferences not yet available (SDK pending)",
 			"timezone": "Timezone"
 		},
 		"profile": {
 			"avatar": {
 				"remove": "Remove photo",
+				"removeStub": "Photo removal not yet available (SDK pending)",
 				"upload": "Upload photo",
 				"uploadAriaLabel": "Choose profile image",
 				"uploadStub": "Avatar upload not yet available"
@@ -28,7 +30,8 @@
 			"save": "Save changes",
 			"saveSuccess": "Profile updated successfully",
 			"sectionDescription": "Update your personal information",
-			"sectionTitle": "Profile"
+			"sectionTitle": "Profile",
+			"stub": "Editing profile not yet available (SDK pending)"
 		},
 		"security": {
 			"changePassword": {
@@ -70,19 +73,21 @@
 		"back": "Back",
 		"close": "Close",
 		"continue": "Continue",
+		"edit": "Edit",
 		"finish": "Attach thread",
 		"goToChannels": "Go to Channels",
 		"navAgents": "Agents",
 		"navContact": "Contact",
 		"navReview": "Review",
-		"navWorkspace": "Workspace",
+		"navWorkspace": "Project",
 		"needChannelDescription": "You need at least one connected channel before you can attach a thread.",
 		"needChannelTitle": "Connect a channel first",
 		"noContacts": "No contacts found on this channel.",
 		"noContactsFound": "No contacts for “{{term}}”.",
+		"reviewFooterNote": "Once attached, messages on this thread open tasks in this folder. You can pause or undo at any time.",
 		"rowAgents": "Agents",
 		"rowContact": "Contact",
-		"rowWorkspace": "Workspace",
+		"rowWorkspace": "Project",
 		"searchContacts": "Search contacts and groups",
 		"stepAgentsSubtitle": "Which provider CLIs can work in this thread.",
 		"stepAgentsTitle": "Pick the agents",
@@ -91,7 +96,7 @@
 		"stepThreadSubtitle": "Choose the contact, group or inbox your agent will live in.",
 		"stepThreadTitle": "Pick a thread",
 		"stepWorkspaceSubtitle": "The project folder your agents will work in.",
-		"stepWorkspaceTitle": "Pick a workspace"
+		"stepWorkspaceTitle": "Pick a project"
 	},
 	"auth": {
 		"resetPassword": {
@@ -143,7 +148,7 @@
 		"pairWaiting": "Waiting for the local gateway to generate a pairing code…",
 		"pairWaitingScan": "Waiting for you to scan the code…",
 		"title": "Channels",
-		"whatsappPairDescription": "Pairing happens through the local WhatsApp gateway. Once it's running, scan this QR code with WhatsApp on your phone to link the channel.",
+		"whatsappPairDescription": "Pairing happens through the local WhatsApp gateway. It runs on this Mac and keeps the channel's session.",
 		"whatsappPairScanHint": "Open WhatsApp › Linked devices › Link a device, then scan this code.",
 		"whatsappPairTitle": "Pair WhatsApp",
 		"yourChannels": "Your channels"
@@ -214,13 +219,20 @@
 		"agentsWorkingNone": "No agents working right now",
 		"agentsWorking_one": "{{count}} agent working right now",
 		"agentsWorking_other": "{{count}} agents working right now",
+		"channelOfflineAction": "Restart",
+		"channelOfflineDescription": "The messaging service stopped responding. Nothing gets in or out until it restarts.",
+		"channelOfflineSuffix": "channel offline",
+		"channelOfflineTitle": "Channel offline",
 		"issuesClosed": "Issues closed",
 		"issuesOpened": "Issues opened",
 		"latestActivity": "Latest activity",
 		"medianResponse": "Median response",
 		"needsYouName": "{{name}} needs you",
 		"newConversation": "New conversation",
-		"noActiveSessions": "No active sessions.",
+		"noActiveSessionsDescription": "Open a conversation from “New conversation” to put an agent to work. Sessions in progress show up here.",
+		"noActiveSessionsTitle": "No active sessions",
+		"noActivityDescription": "As soon as the first conversation starts, your agents' messages and actions show up in this list.",
+		"noActivityTitle": "No activity yet",
 		"resolve": "Resolve",
 		"today": "Today"
 	},
@@ -425,6 +437,7 @@
 		"CONTACT_AVATAR_NOT_FOUND": "This contact has no photo.",
 		"CONTACT_ENTRY_REQUIRES_SENDER": "A contact message must carry the sender that spoke.",
 		"CREDENTIAL_DECRYPT_FAILED": "Stored credentials could not be read. Contact support.",
+		"DATA_DIR_LOCKED": "Another CODM instance is already using this data folder. Close the other instance and try again.",
 		"DEVICE_CODE_INVALID": "This sign-in link expired or was already used. Try signing in again.",
 		"DEVICE_TOKEN_INVALID": "Your device session is no longer valid. Sign in again.",
 		"EMAIL_ALREADY_REGISTERED": "This email is already registered.",
@@ -538,7 +551,7 @@
 		"issues": "Issues",
 		"login": "Sign in",
 		"settings": "Settings",
-		"workspaces": "Workspaces"
+		"workspaces": "Projects"
 	},
 	"notifications": {
 		"allCaughtUp": "You're all caught up.",
@@ -549,6 +562,10 @@
 	},
 	"onboarding": {
 		"back": "Back",
+		"diagramIssue": "issue",
+		"diagramMessage": "message",
+		"diagramReply": "reply",
+		"diagramTerminal": "terminal session",
 		"finalBody": "You finished CODM's initial setup.",
 		"finalTitle": "All set",
 		"getStarted": "Get started",
@@ -558,13 +575,7 @@
 		"slide1Title": "DM your codebase",
 		"slide2Title": "How it works",
 		"slide3Body": "Agents pause on server errors, blocked replies, or when someone asks for a human. You review, steer with a whisper, or take over — nothing ships without your say.",
-		"slide3Title": "You stay in control",
-		"stepChannelDesc": "Pair WhatsApp via QR code",
-		"stepChannelTitle": "Connect a channel",
-		"stepThreadDesc": "Bind a contact or group to a folder and pick the agents",
-		"stepThreadTitle": "Attach a thread",
-		"stepWorkspaceDesc": "Point at a project folder — Claude projects are detected",
-		"stepWorkspaceTitle": "Add a workspace"
+		"slide3Title": "You stay in control"
 	},
 	"systemPreconditions": {
 		"slideTitle": "One permission is missing",
@@ -597,6 +608,8 @@
 		"back": "Back",
 		"boundAgents": "Agents on this conversation",
 		"boundAgentsComingSoonHint": "This conversation is bound to an agent this build can't drive yet, so it won't reply. Delete it and re-attach the contact to an available agent.",
+		"bufferDecrease": "Decrease context buffer",
+		"bufferIncrease": "Increase context buffer",
 		"bufferMessages": "messages",
 		"canInvokeToggle": "Can invoke",
 		"chatEmptyDescription": "Messages from this contact and your agents will appear here.",
@@ -705,21 +718,21 @@
 	"workspaces": {
 		"addDescription": "Point at a project folder on this Mac. Git and Claude-project badges are detected automatically.",
 		"addFolder": "Add folder",
-		"addTitle": "Add a workspace",
+		"addTitle": "Add a project",
 		"adding": "Adding…",
 		"browse": "Browse…",
 		"emptyDescription": "Add a project folder and CODM will detect its git repo and Claude project.",
-		"emptyTitle": "No workspaces yet",
+		"emptyTitle": "No projects yet",
 		"pathPlaceholder": "~/dev/acme-storefront",
 		"projectFolder": "Project folder",
 		"projectFolders": "Project folders",
 		"remove": "Remove folder",
 		"removeConfirmAction": "Remove",
 		"removeConfirmDescription": "The folder \"{{name}}\" stops being registered in CODM. No files on your Mac are deleted.",
-		"removeConfirmTitle": "Remove this workspace?",
+		"removeConfirmTitle": "Remove this project?",
 		"threadCount_one": "{{count}} thread",
 		"threadCount_other": "{{count}} threads",
-		"title": "Workspaces"
+		"title": "Projects"
 	},
 	"zod": {
 		"invalidEmail": "Invalid email",

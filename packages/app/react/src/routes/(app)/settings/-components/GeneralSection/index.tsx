@@ -1,6 +1,7 @@
 import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useGetSettings } from '@codm/client-typescript/typescript'
+import { sectionLabelBare, surface } from '@/components/ui/surfaces'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
@@ -11,6 +12,10 @@ import { cn } from '@/lib/utils'
  * single local operator with no account to name, so "Operador — Sem nome" was a row asking to be
  * filled in by a screen that does not exist, and the timezone is the machine's. A settings list should
  * only hold things you can act on or facts you would go looking for.
+ *
+ * D3 (Configurações, cixrK) — each row is now its own bordered card (`surface` + rounded-asymmetric-sm,
+ * `gap-2.5` between them), not a single divided container. Order flips: "Versão do app" leads,
+ * "Diretório de dados" follows (measured hMUPO/OblJY).
  */
 export function GeneralSection({ className, ...props }: ComponentProps<'section'>) {
 	const { t } = useTranslation()
@@ -19,25 +24,26 @@ export function GeneralSection({ className, ...props }: ComponentProps<'section'
 	if (isLoading || !data) {
 		return (
 			<section className={cn('flex flex-col gap-3', className)} {...props}>
-				<h2 className="label-eyebrow">{t('settings.general')}</h2>
-				<Skeleton className="h-24 rounded-asymmetric-xl" />
+				<h2 className={sectionLabelBare}>{t('settings.general')}</h2>
+				<Skeleton className="h-14 rounded-asymmetric-sm" />
+				<Skeleton className="h-14 rounded-asymmetric-sm" />
 			</section>
 		)
 	}
 
 	const rows: { label: string; value: string; mono?: boolean }[] = [
-		{ label: t('settings.generalDataDir'), value: data.general.dataDir, mono: true },
 		{ label: t('settings.generalAppVersion'), value: data.appVersion, mono: true },
+		{ label: t('settings.generalDataDir'), value: data.general.dataDir, mono: true },
 	]
 
 	return (
 		<section className={cn('flex flex-col gap-3', className)} {...props}>
-			<h2 className="label-eyebrow">{t('settings.general')}</h2>
-			<div className="flex flex-col divide-y divide-border overflow-hidden rounded-asymmetric-xl bg-card px-4">
+			<h2 className={sectionLabelBare}>{t('settings.general')}</h2>
+			<div className="flex flex-col gap-2.5">
 				{rows.map(row => (
-					<div key={row.label} className="flex items-center justify-between gap-4 py-4">
-						<span className="text-sm font-medium text-foreground">{row.label}</span>
-						<span className={`truncate text-sm text-muted-foreground ${row.mono ? 'font-mono text-xs' : ''}`}>{row.value}</span>
+					<div key={row.label} className={cn('flex items-center justify-between gap-4 rounded-asymmetric-sm px-4 py-3.5', surface)}>
+						<span className="text-sm font-semibold text-foreground">{row.label}</span>
+						<span className={cn('truncate text-sm text-muted-foreground', row.mono && 'font-mono text-xs')}>{row.value}</span>
 					</div>
 				))}
 			</div>

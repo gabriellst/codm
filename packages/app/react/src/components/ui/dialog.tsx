@@ -27,7 +27,11 @@ function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) 
 		<DialogPrimitive.Backdrop
 			data-slot="dialog-overlay"
 			className={cn(
-				'data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 bg-black/20 dark:bg-black/40 duration-200 ease-in-out supports-backdrop-filter:backdrop-blur-sm fixed inset-0 isolate z-50',
+				// D3 (R3) — the reference measures every modal scrim at a SOLID `#161616B8`
+				// (foreground at 72%), never a blurred translucent black. `foreground/70` is the
+				// theme-aware approximation (dark mode inverts for free, same pattern as the
+				// alpha-derived neutrals in tokens.css); no `backdrop-blur` — the reference has none.
+				'data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 bg-foreground/70 duration-200 ease-in-out fixed inset-0 isolate z-50',
 				className,
 			)}
 			{...props}
@@ -50,11 +54,12 @@ function DialogContent({
 			<DialogPrimitive.Popup
 				data-slot="dialog-content"
 				className={cn(
-					// D2 — was `rounded-2xl` symmetric; now the asymmetric ladder step, matching the
-					// reference's modal card ("28px 28px 28px 10px"). `overflow-hidden` added so
-					// `DialogFooter`'s flush background bar clips to this exact asymmetric shape instead of
-					// needing hand-matched corner math of its own.
-					'bg-background data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-98 data-open:zoom-in-100 data-closed:slide-out-to-top-2 data-open:slide-in-from-top-2 border border-border shadow-[0_16px_48px_-12px_rgb(0_0_0/0.22)] grid max-w-[calc(100%-2rem)] gap-4 rounded-asymmetric-2xl overflow-hidden p-6 text-sm duration-150 ease-out sm:max-w-md fixed top-1/2 left-1/2 z-50 w-full -translate-x-1/2 -translate-y-1/2 outline-none',
+					// D3 (R3) — was `rounded-asymmetric-2xl` (28px, the D2 measurement); the D3 canvas
+					// measures every one of its four modals at "24px 24px 24px 8px" = `rounded-asymmetric-xl`
+					// instead. Shadow now reads the shared `--shadow-modal` token (Fase 1) instead of a
+					// hand-rolled value — same elevation, one declaration. `overflow-hidden` stays so
+					// `DialogFooter`'s flush background bar clips to this exact asymmetric shape.
+					'bg-background data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-98 data-open:zoom-in-100 data-closed:slide-out-to-top-2 data-open:slide-in-from-top-2 border border-border shadow-modal grid max-w-[calc(100%-2rem)] gap-4 rounded-asymmetric-xl overflow-hidden p-6 text-sm duration-150 ease-out sm:max-w-md fixed top-1/2 left-1/2 z-50 w-full -translate-x-1/2 -translate-y-1/2 outline-none',
 					className,
 				)}
 				{...props}
@@ -66,7 +71,7 @@ function DialogContent({
 						// D2 — no longer forced circular: the reference's modal close button measures
 						// "13px 13px 13px 4px" (asymmetric), matching the `icon` size's own default radius now
 						// that Button gives icon-only sizes the asymmetric ladder instead of a circle.
-						render={<Button variant="secondary" className="absolute top-4 right-4" size="icon" />}
+						render={<Button variant="ghost" className="absolute top-4 right-4" size="icon" />}
 					>
 						<IconX />
 						<span className="sr-only">{t('common.close')}</span>
