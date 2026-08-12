@@ -88,8 +88,8 @@ export function HomeDashboard({ className, ...props }: ComponentProps<'div'>) {
 function DecorBlobs() {
 	return (
 		<div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
-			<div className="absolute -left-16 -top-16 h-[210px] w-[420px] rounded-full bg-secondary blur-[36px]" />
-			<div className="absolute left-32 -top-9 h-[150px] w-[250px] rounded-full bg-accent blur-[30px]" />
+			<div className="absolute -left-16 -top-16 h-[210px] w-[420px] rounded-full bg-secondary/70 blur-[36px]" />
+			<div className="absolute left-32 -top-9 h-[150px] w-[250px] rounded-full bg-accent/70 blur-[30px]" />
 		</div>
 	)
 }
@@ -192,7 +192,7 @@ function StatTile({
 }: ComponentProps<'div'> & { label: string; value: string; highlight?: boolean }) {
 	return (
 		<div
-			className={cn('min-w-0 rounded-asymmetric-lg p-4', highlight ? 'bg-secondary' : 'border border-border bg-background', className)}
+			className={cn('min-w-0 rounded-asymmetric-lg p-4', highlight ? 'bg-secondary' : 'border border-border bg-transparent', className)}
 			{...props}
 		>
 			<div
@@ -236,7 +236,7 @@ function ActiveSessionsSection({ sessions, className, ...props }: ComponentProps
 		<section className={cn('relative flex flex-col gap-2.5', className)} {...props}>
 			<h2 className={sectionLabelBare}>{t('dashboard.activeSessions')}</h2>
 			{sessions.length === 0 ? (
-				<Empty className="border border-solid border-border bg-background">
+				<Empty className="border border-solid border-border bg-transparent">
 					<EmptyHeader>
 						<EmptyMedia variant="icon" className="size-14 rounded-asymmetric-md bg-secondary text-secondary-foreground [&_svg]:size-6">
 							<IconRobot />
@@ -266,7 +266,7 @@ function ActiveSessionRow({
 		<Link
 			to="/threads/$threadId"
 			params={{ threadId: session.threadId }}
-			className={cn('group flex items-center gap-3.5 rounded-asymmetric-sm bg-background p-3.5', row, className)}
+			className={cn('group flex items-center gap-3.5 rounded-asymmetric-sm bg-transparent p-3.5', row, className)}
 		>
 			<ThreadAvatar
 				name={session.displayName}
@@ -306,7 +306,7 @@ function LatestActivitySection({ items, className, ...props }: ComponentProps<'s
 		<section className={cn('relative flex flex-col gap-2.5', className)} {...props}>
 			<h2 className={sectionLabelBare}>{t('dashboard.latestActivity')}</h2>
 			{items.length === 0 ? (
-				<Empty className="border border-solid border-border bg-background">
+				<Empty className="border border-solid border-border bg-transparent">
 					<EmptyHeader>
 						<EmptyMedia variant="icon" className="size-14 rounded-asymmetric-md bg-secondary text-secondary-foreground [&_svg]:size-6">
 							<IconMessage />
