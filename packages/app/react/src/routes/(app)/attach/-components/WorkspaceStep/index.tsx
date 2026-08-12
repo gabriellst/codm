@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm } from '@tanstack/react-form'
-import { IconCheck, IconChevronRight } from '@tabler/icons-react'
+import { IconCheck, IconChevronRight, IconFolder } from '@tabler/icons-react'
 import { attachThreadMutationRequestSchema } from '@codm/client-typescript/typescript'
 import type { GetAttachThreadWizardQueryResponse } from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
@@ -15,14 +15,15 @@ import { StepHeading } from '../StepHeading'
 export const WorkspaceStepSchema = attachThreadMutationRequestSchema.pick({ workspaceId: true })
 export type WorkspaceStepData = (typeof WorkspaceStepSchema)['_zod']['output']
 
+// No `onBack` — the wizard's persistent footer (`AttachThreadWizard`) owns Voltar for every step now
+// (D3, founder review 12/08); `StepHeading` no longer renders a back button for any step to opt into.
 type WorkspaceStepProps = Omit<ComponentProps<'form'>, 'onSubmit'> & {
 	workspaces: GetAttachThreadWizardQueryResponse['workspaces']
 	defaultValues?: DeepPartial<WorkspaceStepData>
 	onSubmit: (data: WorkspaceStepData) => void
-	onBack?: () => void
 }
 
-export function WorkspaceStep({ workspaces, defaultValues, onSubmit, onBack, className, ...props }: WorkspaceStepProps) {
+export function WorkspaceStep({ workspaces, defaultValues, onSubmit, className, ...props }: WorkspaceStepProps) {
 	const { t } = useTranslation()
 
 	const form = useForm({
@@ -36,28 +37,23 @@ export function WorkspaceStep({ workspaces, defaultValues, onSubmit, onBack, cla
 	})
 
 	/**
-	 * ESCOLHER É RESPONDER — o clique na linha entrega o passo, sem passar pelo botão Continuar.
-	 *
-	 * `workspaceId` é um campo ESCALAR: clicar noutra linha SUBSTITUI a anterior, então não há estado
-	 * intermediário entre "escolhi" e "terminei". O Continuar cobrava um segundo clique que apenas
-	 * repetia o que o primeiro já dissera. (O passo de agentes NÃO ganha isto — lá a seleção é uma
-	 * lista, e o primeiro clique não é a resposta inteira; veja o docblock do AgentsStep.)
+	 * O CLIQUE GRAVA A ESCOLHA — NÃO AVANÇA MAIS O PASSO (D3, founder review 12/08). A versão anterior
+	 * ("escolher é responder") chamava `advance()` no mesmo gesto do clique; o founder testou essa
+	 * versão no desktop e revogou — o rodapé do wizard voltou, persistente, e é ele quem move o passo.
+	 * `workspaceId` é um campo ESCALAR: clicar noutra linha SUBSTITUI a anterior, sem estado
+	 * intermediário — mas "substituir" só grava agora, via `onSubmit`, no `useAttachWizardStore` do
+	 * pai, que por sua vez habilita o Continuar do footer.
 	 *
 	 * Entrega por `handleSubmit()` em vez de chamar `onSubmit` direto: assim o clique atravessa o portão
 	 * de validação do form (o `safeParse` acima) e não um caminho paralelo que pudesse aceitar o que o
 	 * form recusaria.
 	 *
-	 * O RODAPÉ SUMIU POR INTEIRO. O Continuar já era redundante desde que o clique entrega, e o Voltar
-	 * subiu para o `StepHeading` — sem ação e sem volta, não sobrou barra de baixo.
-	 *
-	 * A versão anterior deste docblock defendia manter o Continuar como "o que fecha o passo quando ele
-	 * reabre já preenchido por `defaultValues` (voltar e seguir sem reescolher)". Aquele caminho não se
-	 * perdeu, ele só mudou de gesto: `selectAndAdvance` não pergunta se o valor MUDOU, então clicar de
-	 * novo na linha que já está selecionada entrega o passo igual. É um teste, não uma promessa — veja
-	 * "voltar e seguir sem reescolher" na suíte. Um `if (workspaceId === selected) return` posto aqui
-	 * como otimização trancaria o operador no passo, e é ele que aquele caso derruba.
+	 * "Voltar e seguir sem reescolher" continua coberto: `selectWorkspace` não pergunta se o valor
+	 * MUDOU, então clicar de novo na linha já selecionada grava (e entrega) o mesmo valor — ver
+	 * `ReclickAlreadySelectedStillDelivers` na suíte. Um `if (workspaceId === selected) return` posto
+	 * aqui como otimização travaria esse caso.
 	 */
-	const selectAndAdvance = (workspaceId: string) => {
+	const selectWorkspace = (workspaceId: string) => {
 		form.setFieldValue('workspaceId', workspaceId)
 		void form.handleSubmit()
 	}
@@ -72,7 +68,7 @@ export function WorkspaceStep({ workspaces, defaultValues, onSubmit, onBack, cla
 				form.handleSubmit()
 			}}
 		>
-			<StepHeading title={t('attach.stepWorkspaceTitle')} subtitle={t('attach.stepWorkspaceSubtitle')} onBack={onBack} />
+			<StepHeading title={t('attach.stepWorkspaceTitle')} subtitle={t('attach.stepWorkspaceSubtitle')} />
 
 			<form.Subscribe selector={state => state.values.workspaceId}>
 				{selected => (
@@ -84,28 +80,30 @@ export function WorkspaceStep({ workspaces, defaultValues, onSubmit, onBack, cla
 								size={'none'}
 								key={workspace.workspaceId}
 								type="button"
-								onClick={() => selectAndAdvance(workspace.workspaceId)}
-								// Mesma CONTENT ROW da lista de workspaces (`workspaces/-components/WorkspacesSection`):
-								// preset `row` + `rounded-asymmetric-*`. Nenhuma linha aqui é inerte, então o composto
-								// `row` (borda + hover junto) serve inteiro — ao contrário do passo de contato, onde a
-								// linha já anexada precisa da borda sem o hover.
+								onClick={() => selectWorkspace(workspace.workspaceId)}
+								// D3 (screen EWECP) — mesma CONTENT ROW das outras listas: preset `row` +
+								// `rounded-asymmetric-md` (18/18/18/6 medido, não `-lg`). Nenhuma linha aqui é
+								// inerte, então o composto `row` (borda + hover junto) serve inteiro.
 								className={cn(
-									'group flex items-center gap-3 rounded-asymmetric-lg bg-background p-3.5 text-left',
+									'group flex items-center gap-4 rounded-asymmetric-md bg-background p-4 text-left',
 									row,
 									// ESCOLHIDO = o pastel do hover, fixo, + a borda de marca — o mesmo par nos três
 									// passos do assistente; ver o docblock do `AgentsStep`.
 									selected === workspace.workspaceId && 'border-primary bg-hover-accent',
 								)}
 							>
-								<div className="flex min-w-0 flex-1 flex-col gap-1.5">
-									<span className="truncate font-mono text-sm font-semibold text-foreground">{workspace.path}</span>
-									<div className="flex flex-wrap gap-1.5">
-										{workspace.badges.map(badge => (
-											<Badge key={badge} variant={workspaceBadgeVariant[badge]}>
-												{enumLabel('WorkspaceBadge', badge)}
-											</Badge>
-										))}
-									</div>
+								{/* D3 — folder icon tile (40px, `asymmetric-xs`) leading the row, same tile shape as
+								    the agent card's icon. Previous shape had no icon here — path + badges only. */}
+								<span className="flex size-10 shrink-0 items-center justify-center rounded-asymmetric-xs bg-muted text-muted-foreground">
+									<IconFolder className="size-4.5" />
+								</span>
+								<span className="min-w-0 flex-1 truncate font-mono text-sm font-semibold text-foreground">{workspace.path}</span>
+								<div className="flex shrink-0 flex-wrap items-center gap-1.5">
+									{workspace.badges.map(badge => (
+										<Badge key={badge} variant={workspaceBadgeVariant[badge]}>
+											{enumLabel('WorkspaceBadge', badge)}
+										</Badge>
+									))}
 								</div>
 								{selected === workspace.workspaceId ? (
 									// D3 (screen EWECP) — same filled check badge as the contact/agents rows.

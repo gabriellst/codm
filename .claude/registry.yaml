@@ -505,15 +505,34 @@ cross_cutting_bad_practices:
 
   - id: cc-bp-15
     scope: frontend
-    name: "Smart logic in a -components/ file (should be in -sections/)"
+    name: "Leaf component owns a query/store instead of receiving props (there is no separate -sections/ folder)"
     severity: critical
+    # CORRECTED (D3 audit, 12/08) — this entry used to describe a -sections/ vs -components/ FOLDER
+    # split. That split was never adopted: zero `-sections/` directories exist anywhere in the repo,
+    # and `.claude/skills/component/react/SKILL.md` ("Section Components — naming convention only")
+    # explicitly rules it out — "Colocated in -components/ — sections live in the route's -components/
+    # folder, not a separate -sections/ folder." `Section` is a NAME hint for a container that owns
+    # its own query/store/mutations; it is not a separate citizen and stays in `-components/` like
+    # every other component. The real distinction the component skill draws is leaf vs container,
+    # decided by "am I rendered N times in a .map()?" — a leaf (rendered N times: a card/row/badge)
+    # receives its item by prop; a container (rendered once: a list, a wizard, a `*Section`) owns its
+    # own data. Flag a LEAF reaching into a store/query for data it should have received as a prop —
+    # never flag a container (however the file is named) for owning what it orchestrates.
     wrong: |
-      // -components/ChatListItem/index.tsx uses store (lives in -components/ = dumb)
-      const { selectedChatId } = useChatStore()
+      // -components/ChatListItem/index.tsx is a LEAF (rendered N times in a .map()) — it should
+      // receive its item by prop, not read a store/query for data the parent already has:
+      function ChatListItem() {
+        const { selectedChatId } = useChatStore()
+        // ...
+      }
     right: |
-      // -sections/ChatSidebarSection/index.tsx reads store (lives in -sections/ = smart), passes as prop to -components/ChatListItem
-      const { chatId } = useSearch(...)
-      <ChatListItem isSelected={chatId === item.remoteId} />
+      // The container (rendered once — a `*Section`, a list, a wizard step) owns the query/store and
+      // maps items down; the leaf stays presentational. Both live in the SAME `-components/` folder.
+      function ChatSidebarSection() {
+        const { chatId } = useChatStore()
+        return items.map(item => <ChatListItem key={item.id} isSelected={chatId === item.remoteId} item={item} />)
+      }
+      function ChatListItem({ item, isSelected }: { item: ChatItem; isSelected: boolean }) { /* presentational */ }
 
   - id: cc-bp-16
     scope: backend
