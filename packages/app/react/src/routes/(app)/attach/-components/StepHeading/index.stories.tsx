@@ -1,14 +1,14 @@
 import type { Meta, StoryObj } from '@storybook/react'
-import { expect, fn, userEvent, within } from 'storybook/test'
-import i18n from '@/lib/i18n'
+import { expect, within } from 'storybook/test'
 import { StepHeading } from '.'
 
 /**
- * O VOLTAR MORA NO CABEÇALHO, E QUEM DECIDE SE ELE EXISTE É O `onBack`.
- *
- * Migrado de `index.test.tsx` (T9, onda B) — pure/dumb component (props apenas, sem SDK/rota), então
- * nenhum harness é necessário: toda asserção do teste antigo cabe em `play`. Ver o docblock do
- * componente para o porquê do botão viver aqui e ser posicionado fora do fluxo (`absolute`).
+ * D3 (founder review 12/08) — the back button that used to live here MOVED to the wizard's
+ * persistent footer (`AttachThreadWizard`). `StepHeading` is now a pure title+subtitle heading: no
+ * `onBack`, no button, ever. Previously (`WithBack`/`NoBack`/`BackDisabled`) this suite proved the
+ * back button's presence/absence/disabled state — that behavior now lives in
+ * `AttachThreadWizard`'s own tests. What survives here is the shape: left-aligned, no interactive
+ * element.
  */
 const meta = {
 	title: 'Attach/StepHeading',
@@ -22,46 +22,20 @@ export default meta
 
 type Story = StoryObj<typeof meta>
 
-export const WithBack: Story = {
-	args: { onBack: fn() },
+export const Default: Story = {
 	play: async ({ canvasElement, args }) => {
-		await i18n.changeLanguage('pt')
 		const canvas = within(canvasElement)
 
-		const button = canvas.getByRole('button')
-		await expect(button).toHaveAttribute('aria-label', i18n.t('attach.back'))
-		// FALSEADOR — fora do fluxo: o bloco centrado (título+subtítulo) é o ÚNICO filho em fluxo do
-		// cabeçalho — um Voltar em fluxo (linha flex, grid com espaçador) daria DOIS filhos aqui.
-		const heading = canvasElement.querySelector('[data-slot="step-heading"]')
-		const inFlowChildren = [...(heading?.children ?? [])].filter(child => !child.className.includes('absolute'))
-		await expect(inFlowChildren).toHaveLength(1)
-		await expect(button.className).toContain('absolute')
-
-		await userEvent.click(button)
-		await expect(args.onBack).toHaveBeenCalledTimes(1)
-	},
-}
-
-export const NoBack: Story = {
-	play: async ({ canvasElement }) => {
-		const canvas = within(canvasElement)
-		// Sem `onBack` não há Voltar — o primeiro passo não oferece uma volta que não existe.
+		// FALSEADOR — nenhum botão nasce daqui mais; o Voltar é do footer do wizard.
 		await expect(canvas.queryByRole('button')).toBeNull()
-		// E o bloco centrado continua sendo o único filho em fluxo — mesma forma, com ou sem o botão.
+
+		await expect(canvas.getByText(args.title as string)).toBeInTheDocument()
+		await expect(canvas.getByText(args.subtitle as string)).toBeInTheDocument()
+
+		// Alinhado à esquerda — o founder reclamou do centro do desenho anterior.
 		const heading = canvasElement.querySelector('[data-slot="step-heading"]')
-		const inFlowChildren = [...(heading?.children ?? [])].filter(child => !child.className.includes('absolute'))
-		await expect(inFlowChildren).toHaveLength(1)
-	},
-}
-
-export const BackDisabled: Story = {
-	args: { onBack: fn(), backDisabled: true },
-	play: async ({ canvasElement, args }) => {
-		const canvas = within(canvasElement)
-		const button = canvas.getByRole('button')
-		await expect(button).toBeDisabled()
-
-		await userEvent.click(button)
-		await expect(args.onBack).not.toHaveBeenCalled()
+		await expect(heading?.className).toContain('text-left')
+		await expect(heading?.className).not.toContain('items-center')
+		await expect(heading?.className).not.toContain('text-center')
 	},
 }

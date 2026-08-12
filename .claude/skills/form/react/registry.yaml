@@ -309,6 +309,7 @@ registry:
       name: "Step props contract"
       when: "multi-step wizard step component"
       rule: |
+        // Default shape — each step renders its own back affordance / submit-pending state:
         interface StepProps {
           defaultValues?: DeepPartial<StepData>
           onSubmit: (data: StepData) => void
@@ -316,7 +317,18 @@ registry:
           isSubmitting?: boolean
         }
         // Step is API/store/navigation-agnostic
-      refs: [DoctorInfoStep, ClinicStep, UnitStep]
+
+        // FOOTER-OWNS-NAVIGATION VARIANT (D3, founder review 12/08) — when the WIZARD renders a
+        // persistent footer (Voltar/Continuar) shared by every step, `onBack`/`isSubmitting` drop out
+        // of the step contract entirely: the step only ever RECORDS its selection via `onSubmit`, and
+        // navigation (back, advance, and the final commit) is the wizard's job alone, read off a
+        // Zustand store the wizard owns. `StepHeading` (or equivalent) renders no back button in this
+        // variant either — there is nowhere left for it to live.
+        interface StepProps {
+          defaultValues?: DeepPartial<StepData>
+          onSubmit: (data: StepData) => void
+        }
+      refs: [DoctorInfoStep, ClinicStep, UnitStep, "attach/-components/{ContactStep,WorkspaceStep,AgentsStep} (footer-owns-navigation variant)"]
 
     - id: FRM-P18
       name: "Form type inference via _infer helper"

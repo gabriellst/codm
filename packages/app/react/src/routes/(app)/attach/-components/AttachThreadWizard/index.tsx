@@ -1,15 +1,14 @@
 import { type ComponentProps, type ReactNode, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useForm } from '@tanstack/react-form'
 import { IconX } from '@tabler/icons-react'
 import { useNavigate } from '@tanstack/react-router'
 import { attachThreadMutationRequestSchema, useAttachThread, useGetAttachThreadWizard } from '@codm/client-typescript/typescript'
 import type { ChannelKind } from '@codm/client-typescript/typescript'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Spinner } from '@/components/ui/spinner'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Empty, EmptyDescription, EmptyTitle } from '@/components/ui/empty'
-import type { DeepPartial } from '@/lib'
 import { cn } from '@/lib/utils'
 import { useAttachWizardStore } from '../../-stores/useAttachWizardStore'
 import { ContactStep, type ContactStepData } from '../ContactStep'
@@ -29,27 +28,38 @@ const STEP_NAV: Record<AttachStepId, string> = {
 	REVIEW: 'attach.navReview',
 }
 
-// ─── The accumulated-form typing trick (FRM-P18) ─────────────────────────────────────────────────
-// An UNCALLED function wrapping useForm: its ReturnType IS the typed form instance. defaultValues is
-// the request's DeepPartial so each step merges its slice incrementally.
-function _inferAttachForm() {
-	return useForm({
-		defaultValues: {} as DeepPartial<(typeof attachThreadMutationRequestSchema)['_zod']['output']>,
-	})
-}
-export type AttachForm = ReturnType<typeof _inferAttachForm>
-
-/** Guided attach flow (T15): contact → workspace → agents → review on a chrome-less fullscreen. */
+/**
+ * Guided attach flow (T15): contact → workspace → agents → review on a chrome-less fullscreen.
+ *
+ * D3 (founder review 12/08, desktop build) REVOKED "escolher é responder": a step's row click now only
+ * RECORDS the selection into `useAttachWizardStore` — this component is the SOLE owner of a persistent
+ * footer (Voltar/Continuar) that decides when the step actually changes, on every one of the four
+ * steps, including the first (Voltar disabled there — nowhere to go back to) and the last (Continuar
+ * becomes the "Vincular conversa" commit). This retires the FRM-P18 accumulated-`useForm()` trick this
+ * component used to own: the store already re-renders this component on every field write, and
+ * `ReviewStep` now reads plain props instead of a form instance — see that component's docblock.
+ */
 export function AttachThreadWizard({ className, ...props }: ComponentProps<'div'>) {
 	const { t } = useTranslation()
 	const navigate = useNavigate()
 	const { data, isLoading } = useGetAttachThreadWizard()
 	const attach = useAttachThread()
 
-	const { currentStepIndex, direction, setCurrentStepIndex, setDirection, reset } = useAttachWizardStore()
-	const form = _inferAttachForm()
+	const {
+		currentStepIndex,
+		direction,
+		contactRef,
+		workspaceId,
+		providers,
+		setCurrentStepIndex,
+		setDirection,
+		setContactRef,
+		setWorkspaceId,
+		setProviders,
+		reset,
+	} = useAttachWizardStore()
 
-	// Fresh wizard on every entry — the store persists across navigations, the form does not.
+	// Fresh wizard on every entry — the store persists across navigations, so it must be cleared.
 	useEffect(() => reset(), [reset])
 
 	const stepId = STEPS[currentStepIndex] ?? STEPS[0]
@@ -73,66 +83,56 @@ export function AttachThreadWizard({ className, ...props }: ComponentProps<'div'
 		setCurrentStepIndex(targetIndex)
 	}
 
-	// Each step validates its own slice; the parent merges via setFieldValue (FRM-P15) and advances.
-	const handleContactSubmit = (d: ContactStepData) => {
-		form.setFieldValue('contactRef', d.contactRef)
-		advance()
-	}
-	const handleWorkspaceSubmit = (d: WorkspaceStepData) => {
-		form.setFieldValue('workspaceId', d.workspaceId)
-		advance()
-	}
-	const handleAgentsSubmit = (d: AgentsStepData) => {
-		form.setFieldValue('providers', d.providers)
-		advance()
-	}
+	// Each step now only RECORDS its slice into the store (D3) — no more `advance()` in the same
+	// gesture. The footer below is what moves the step index.
+	const handleContactSubmit = (d: ContactStepData) => setContactRef(d.contactRef)
+	const handleWorkspaceSubmit = (d: WorkspaceStepData) => setWorkspaceId(d.workspaceId)
+	const handleAgentsSubmit = (d: AgentsStepData) => setProviders(d.providers)
 
-	// Final submission gates through the full request schema, then navigates into the new thread.
+	// Final submission gates through the full request schema — reused both to enable REVIEW's footer
+	// commit button and to actually build the request.
+	const canFinish = attachThreadMutationRequestSchema.safeParse({ contactRef, workspaceId, providers }).success
 	const handleFinish = async () => {
-		const result = attachThreadMutationRequestSchema.safeParse(form.state.values)
+		const result = attachThreadMutationRequestSchema.safeParse({ contactRef, workspaceId, providers })
 		if (!result.success) return
 		const res = await attach.mutateAsync({ data: result.data })
 		navigate({ to: '/threads/$threadId', params: { threadId: res.threadId } })
 	}
 
+	// The footer's Continuar gate, per step — what a step's row click used to decide for itself
+	// (calling `advance()` only when its own local form validated) now lives here, read off the store.
+	const CAN_CONTINUE: Record<AttachStepId, boolean> = {
+		CONTACT: Boolean(contactRef),
+		WORKSPACE: Boolean(workspaceId),
+		AGENTS: Boolean(providers?.length),
+		REVIEW: canFinish,
+	}
+	const canContinue = CAN_CONTINUE[stepId]
+	const isFirstStep = currentStepIndex === 0
+	const isLastStep = stepId === 'REVIEW'
+
 	// Step dispatch by map — never a switch chain (CMP-P18). Each step gets the FRM-P17 props
-	// contract; the review step additionally receives the typed parent form + option lists.
-	const values = form.state.values
+	// contract; the review step additionally receives the accumulated selection + option lists.
 	const STEP_COMPONENTS: Record<AttachStepId, ReactNode> = {
 		// No `contacts` prop: the step owns that query, because it owns the search term that scopes it.
-		CONTACT: (
-			<ContactStep channelKindById={channelKindById} defaultValues={{ contactRef: values.contactRef }} onSubmit={handleContactSubmit} />
-		),
-		WORKSPACE: (
-			<WorkspaceStep
-				workspaces={data?.workspaces ?? []}
-				defaultValues={{ workspaceId: values.workspaceId }}
-				onSubmit={handleWorkspaceSubmit}
-				onBack={handleBack}
-			/>
-		),
-		AGENTS: (
-			<AgentsStep
-				providers={data?.providers ?? []}
-				defaultValues={{ providers: values.providers }}
-				onSubmit={handleAgentsSubmit}
-				onBack={handleBack}
-			/>
-		),
+		CONTACT: <ContactStep channelKindById={channelKindById} defaultValues={{ contactRef }} onSubmit={handleContactSubmit} />,
+		WORKSPACE: <WorkspaceStep workspaces={data?.workspaces ?? []} defaultValues={{ workspaceId }} onSubmit={handleWorkspaceSubmit} />,
+		AGENTS: <AgentsStep providers={data?.providers ?? []} defaultValues={{ providers }} onSubmit={handleAgentsSubmit} />,
 		REVIEW: (
 			<ReviewStep
-				form={form}
+				contactRef={contactRef}
+				workspaceId={workspaceId}
+				providers={providers}
 				channelKindById={channelKindById}
 				workspaces={data?.workspaces ?? []}
-				onBack={handleBack}
-				onFinish={handleFinish}
-				isSubmitting={attach.isPending}
 				onEditContact={() => jumpTo('CONTACT')}
 				onEditWorkspace={() => jumpTo('WORKSPACE')}
 				onEditAgents={() => jumpTo('AGENTS')}
 			/>
 		),
 	}
+
+	const showFooter = !isLoading && !!data && !data.noChannelConnected
 
 	return (
 		// `min-h-full`, not `min-h-dvh`: the AppChrome title bar (mounted in `__root.tsx`) already took
@@ -172,7 +172,7 @@ export function AttachThreadWizard({ className, ...props }: ComponentProps<'div'
 				</Button>
 			</header>
 
-			<main className="flex flex-1 justify-center px-6 pb-24">
+			<main className="flex flex-1 justify-center px-6 pb-10">
 				<div className="w-full max-w-xl pt-6">
 					{isLoading || !data ? (
 						<div className="flex flex-col gap-4">
@@ -198,6 +198,22 @@ export function AttachThreadWizard({ className, ...props }: ComponentProps<'div'
 					)}
 				</div>
 			</main>
+
+			{/* D3 — the persistent footer, present on every one of the four steps (screens
+			    PENI6/EWECP/ZbVfW/du3gx). Voltar is `outline`, disabled on the first step (nothing to go
+			    back to — the close button above covers "leave"); Continuar is `default`, disabled until
+			    the current step has a valid selection, and becomes the commit action on REVIEW. */}
+			{showFooter && (
+				<footer className="flex items-center justify-between px-10 py-7">
+					<Button type="button" variant="outline" size="lg" disabled={isFirstStep || attach.isPending} onClick={handleBack}>
+						{t('attach.back')}
+					</Button>
+					<Button type="button" size="lg" disabled={!canContinue || attach.isPending} onClick={isLastStep ? handleFinish : advance}>
+						{attach.isPending && <Spinner className="mr-2" />}
+						{isLastStep ? (attach.isPending ? t('attach.attaching') : t('attach.finish')) : t('attach.continue')}
+					</Button>
+				</footer>
+			)}
 		</div>
 	)
 }

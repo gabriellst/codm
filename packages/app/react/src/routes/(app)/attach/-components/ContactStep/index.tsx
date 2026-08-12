@@ -74,22 +74,20 @@ export function ContactStep({ channelKindById, defaultValues, onSubmit, classNam
 	})
 
 	/**
-	 * ESCOLHER É RESPONDER — o clique na linha entrega o passo, sem passar pelo botão Continuar.
-	 *
-	 * `contactRef` é uma escolha ÚNICA (um objeto, um só): clicar noutro contato SUBSTITUI o anterior,
-	 * então não há estado intermediário entre "escolhi" e "terminei", e o Continuar cobrava um segundo
-	 * clique que apenas repetia o primeiro. (O passo de agentes NÃO ganha isto — lá a seleção é uma
-	 * lista e o primeiro clique não é a resposta inteira; veja o docblock do AgentsStep.)
+	 * O CLIQUE GRAVA A ESCOLHA — NÃO AVANÇA MAIS O PASSO (D3, founder review 12/08). A versão anterior
+	 * deste docblock ("escolher é responder") tinha o clique chamando `advance()` no mesmo gesto; o
+	 * founder testou essa versão no desktop e revogou: o rodapé do wizard (`AttachThreadWizard`) volta a
+	 * existir, persistente, com Voltar/Continuar — e é ELE quem decide quando o passo muda. O que este
+	 * clique ainda faz sozinho é gravar: `contactRef` é uma escolha ÚNICA (um objeto, um só), então
+	 * clicar noutro contato SUBSTITUI o anterior sem estado intermediário — mas "substituir" não é mais
+	 * "terminar". `onSubmit` só entrega a seleção ao pai, que grava em `useAttachWizardStore` e habilita
+	 * o Continuar do footer.
 	 *
 	 * Entrega por `handleSubmit()` e não chamando `onSubmit` direto: o clique atravessa o portão de
 	 * validação do form (o `safeParse` acima), nunca um caminho paralelo mais permissivo. Contato já
 	 * anexado não chega aqui — a linha é `disabled`, e o clique nela não dispara evento.
-	 *
-	 * O RODAPÉ SUMIU POR INTEIRO daqui. Não sobrou Continuar (a linha já entrega) e nunca houve Voltar
-	 * (este é o primeiro passo). O `<form>` continua: ele é dono do estado validado, e mantém o Enter
-	 * no campo de busca como caminho de teclado para o passo.
 	 */
-	const selectAndAdvance = (contactRef: ContactStepData['contactRef']) => {
+	const selectContact = (contactRef: ContactStepData['contactRef']) => {
 		form.setFieldValue('contactRef', contactRef)
 		void form.handleSubmit()
 	}
@@ -117,9 +115,10 @@ export function ContactStep({ channelKindById, defaultValues, onSubmit, classNam
 
 			<form.Subscribe selector={state => state.values.contactRef}>
 				{selected => (
-					// `gap-2`, não `gap-1`: cada linha tem borda própria agora, e a folga de uma lista de
-					// cartões é a mesma das outras telas (canais, workspaces, tarefas).
-					<div className="flex flex-col gap-2">
+					// D3 (screen PENI6) — a FIXED-HEIGHT scroll box (328px), not a list that grows the page.
+					// The founder asked for explicit scroll here: a long contact list must never push the
+					// footer (Voltar/Continuar) further down the window.
+					<div className="flex max-h-[328px] flex-col gap-2 overflow-y-auto">
 						{contacts.map(contact => {
 							const channelKind = channelKindById.get(contact.channelId)
 							const isSelected = selected?.externalId === contact.externalId && selected?.channelId === contact.channelId
@@ -131,7 +130,7 @@ export function ContactStep({ channelKindById, defaultValues, onSubmit, classNam
 									type="button"
 									disabled={contact.alreadyAttached}
 									onClick={() =>
-										selectAndAdvance({
+										selectContact({
 											channelId: contact.channelId,
 											externalId: contact.externalId,
 											displayName: contact.displayName,
@@ -141,13 +140,14 @@ export function ContactStep({ channelKindById, defaultValues, onSubmit, classNam
 									// A LINHA DO ASSISTENTE É UMA CONTENT ROW, igual à de canal, workspace e tarefa —
 									// compõe do preset `row` (`components/ui/surfaces`) com a escada
 									// `rounded-asymmetric-*`, nunca um raio simétrico literal + `hover:bg-muted`, que
-									// era o que a deixava fora do padrão do resto do console.
+									// era o que a deixava fora do padrão do resto do console. D3 mede a linha em
+									// 18/18/18/6 = `asymmetric-md` (não `-lg`, que era 20/20/20/7).
 									//
 									// `rowBorder` + `rowHover` em vez do composto `row` porque a linha JÁ ANEXADA não
 									// pode reagir ao mouse: ela mantém a borda de repouso e não ganha o par
 									// fundo+borda do hover, que prometeria um clique que o `disabled` recusa.
 									className={cn(
-										'group flex items-center gap-3 rounded-asymmetric-lg bg-background p-3.5 text-left transition-colors',
+										'group flex shrink-0 items-center gap-3 rounded-asymmetric-md bg-background p-3.5 text-left transition-colors',
 										rowBorder,
 										contact.alreadyAttached ? 'cursor-not-allowed opacity-50' : rowHover,
 										// ESCOLHIDO = o pastel do hover, fixo, + a borda de marca — o mesmo par nos três

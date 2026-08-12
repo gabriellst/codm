@@ -6,10 +6,11 @@ import i18n from '@/lib/i18n'
 import { AgentsStep } from '.'
 
 /**
- * Migrado de `index.test.tsx` (T9, onda B). Pure/dumb component (providers via prop, sem SDK) —
- * toda asserção do teste antigo cabe em `play`, sem harness. Ver o docblock do componente para a
- * dívida conhecida (seleção única definindo, não alternando) e por que "Em breve" vence do rótulo
- * de status do enum.
+ * D3 (founder review 12/08) — redesenho completo do card (72px, ícone-tile, select de modelo inline,
+ * checkbox). O clique GRAVA a escolha (`onSubmit`) mas não avança mais o passo sozinho — sem back
+ * button aqui, `StepHeading` perdeu o Voltar por completo, e o rodapé persistente do wizard
+ * (`AttachThreadWizard`) é quem move o passo. A linha deixou de ser um `<button>` (o select de modelo
+ * aninhado, interativo, não pode viver dentro de um `<button>` real) — agora é `div[role=button]`.
  */
 
 const THREE_PROVIDERS: GetAttachThreadWizardQueryResponse['providers'] = [
@@ -33,19 +34,19 @@ export default meta
 
 // `fn()` is a SPY — sharing one instance via `meta.args` would accumulate calls across every story
 // composed in the same process (the smoke + this file's executor both compose the whole module), so
-// each story below mints its OWN `onSubmit`/`onBack` instead of relying on the meta default.
+// each story below mints its OWN `onSubmit` instead of relying on the meta default.
 
 type Story = StoryObj<typeof meta>
 
-function rowFor(canvasElement: HTMLElement, label: string): HTMLButtonElement {
-	const rows = [...canvasElement.querySelectorAll('button[type="button"]')] as HTMLButtonElement[]
+function rowFor(canvasElement: HTMLElement, label: string): HTMLElement {
+	const rows = [...canvasElement.querySelectorAll('[role="button"]')] as HTMLElement[]
 	const row = rows.find(r => r.textContent?.includes(label))
 	if (!row) throw new Error(`linha do provedor ${label} não renderizada`)
 	return row
 }
 
 export const Default: Story = {
-	args: { onSubmit: fn(), onBack: fn() },
+	args: { onSubmit: fn() },
 	play: async ({ canvasElement, args }) => {
 		await i18n.changeLanguage('pt')
 		const canvas = within(canvasElement)
@@ -54,37 +55,48 @@ export const Default: Story = {
 		const codex = rowFor(canvasElement, 'Codex')
 		await expect(codex.textContent).toContain(i18n.t('common.comingSoon'))
 		await expect(codex.textContent).not.toContain(enumLabel('ProviderStatus', 'DETECTED'))
-		await expect(codex).toBeDisabled()
+		await expect(codex).toHaveAttribute('aria-disabled', 'true')
 
 		const opencode = rowFor(canvasElement, 'OpenCode')
 		await expect(opencode.textContent).toContain(i18n.t('common.comingSoon'))
-		await expect(opencode.textContent).not.toContain(enumLabel('ProviderStatus', 'NOT_INSTALLED'))
-		await expect(opencode).toBeDisabled()
+		await expect(opencode).toHaveAttribute('aria-disabled', 'true')
 
 		const claude = rowFor(canvasElement, 'Claude Code')
 		await expect(claude.textContent).toContain(enumLabel('ProviderStatus', 'DETECTED'))
 		await expect(claude.textContent).not.toContain(i18n.t('common.comingSoon'))
-		await expect(claude).toBeEnabled()
+		await expect(claude).toHaveAttribute('aria-disabled', 'false')
 
-		// FALSEADOR — o clique na linha entrega o passo, sem passar por botão nenhum.
+		// D3 — o select de modelo só existe na linha DISPONÍVEL.
+		await expect(claude.querySelector(`[aria-label="${i18n.t('session.agentModel')}"]`)).not.toBeNull()
+		await expect(codex.querySelector(`[aria-label="${i18n.t('session.agentModel')}"]`)).toBeNull()
+
+		// FALSEADOR — o clique na linha GRAVA a escolha via `onSubmit`, sem passar por botão nenhum.
 		await userEvent.click(claude)
 		await expect(args.onSubmit).toHaveBeenCalledTimes(1)
 		await expect(args.onSubmit).toHaveBeenCalledWith({ providers: ['CLAUDE_CODE'] })
 
-		// Um provedor sem runner não entrega nada — a linha continua desabilitada e o clique é inerte.
+		// Um provedor sem runner não grava nada — a linha continua desabilitada e o clique é inerte.
 		await userEvent.click(codex, { pointerEventsCheck: 0 })
 		await expect(args.onSubmit).toHaveBeenCalledTimes(1)
 
-		// O rodapé sumiu por inteiro — não há mais Continuar neste passo.
+		// Nem Continuar, nem Voltar — nenhum controle de navegação nasce deste componente.
 		await expect(canvas.queryByRole('button', { name: i18n.t('attach.continue') })).toBeNull()
 		await expect(canvasElement.querySelector('button[type="submit"]')).toBeNull()
+		await expect(canvasElement.querySelector('[data-slot="step-heading"] button')).toBeNull()
+	},
+}
 
-		// O Voltar continua no cabeçalho, ao lado do título.
-		const back = canvasElement.querySelector('[data-slot="step-heading"] button') as HTMLButtonElement | null
-		await expect(back).not.toBeNull()
-		await expect(back).toHaveAttribute('aria-label', i18n.t('attach.back'))
-		await userEvent.click(back!)
-		await expect(args.onBack).toHaveBeenCalledTimes(1)
+export const ModelSelectDoesNotSelectRow: Story = {
+	args: { onSubmit: fn() },
+	play: async ({ canvasElement, args }) => {
+		await i18n.changeLanguage('pt')
+		const claude = rowFor(canvasElement, 'Claude Code')
+		const select = claude.querySelector(`[aria-label="${i18n.t('session.agentModel')}"]`) as HTMLElement
+
+		// FALSEADOR — abrir o select de modelo (nested interactive) não deve, sozinho, gravar a linha:
+		// o clique é interceptado (`stopPropagation`) antes de borbulhar para o `onClick` da linha.
+		await userEvent.click(select)
+		await expect(args.onSubmit).not.toHaveBeenCalled()
 	},
 }
 
@@ -92,7 +104,7 @@ export const SwitchDefinesNotAccumulates: Story = {
 	args: { providers: TWO_AVAILABLE, defaultValues: { providers: ['CLAUDE_CODE'] }, onSubmit: fn() },
 	play: async ({ canvasElement, args }) => {
 		await i18n.changeLanguage('pt')
-		// O clique DEFINE a escolha em vez de acumular — voltar e escolher outro entrega só o outro.
+		// O clique DEFINE a escolha em vez de acumular — voltar e escolher outro grava só o outro.
 		await userEvent.click(rowFor(canvasElement, 'OpenCode'))
 		await expect(args.onSubmit).toHaveBeenCalledTimes(1)
 		await expect(args.onSubmit).toHaveBeenCalledWith({ providers: ['OPENCODE'] })
@@ -103,8 +115,8 @@ export const ReclickAlreadySelectedStillDelivers: Story = {
 	args: { providers: TWO_AVAILABLE, defaultValues: { providers: ['CLAUDE_CODE'] }, onSubmit: fn() },
 	play: async ({ canvasElement, args }) => {
 		await i18n.changeLanguage('pt')
-		// FALSEADOR — clicar na linha JÁ escolhida entrega ela de novo: nunca desmarca, nunca entrega
-		// vazio (a aresta do alternar-e-entregar que a definição evita).
+		// FALSEADOR — clicar na linha JÁ escolhida grava ela de novo: nunca desmarca, nunca entrega
+		// vazio (a aresta do alternar que a definição evita).
 		await userEvent.click(rowFor(canvasElement, 'Claude Code'))
 		await expect(args.onSubmit).toHaveBeenCalledTimes(1)
 		await expect(args.onSubmit).toHaveBeenCalledWith({ providers: ['CLAUDE_CODE'] })
