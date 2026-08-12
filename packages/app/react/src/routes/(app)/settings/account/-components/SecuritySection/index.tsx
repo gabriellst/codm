@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useGetMyAccount } from '@codm/client-typescript/typescript'
 import { toast } from 'sonner'
 
-import { sectionLabel, surface } from '@/components/ui/surfaces'
+import { sectionLabelBare, surface } from '@/components/ui/surfaces'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -46,7 +46,7 @@ export function SecuritySection({ className, ...props }: ComponentProps<'div'>) 
 
 	return (
 		<section className={cn('flex flex-col gap-3', className)} {...props}>
-			<h2 className={sectionLabel}>{t('account.security.sectionTitle')}</h2>
+			<h2 className={sectionLabelBare}>{t('account.security.sectionTitle')}</h2>
 
 			{isPending ? (
 				<div className="flex flex-col gap-2.5">

@@ -16,8 +16,9 @@ import { cn } from '@/lib/utils'
  * centered title from drifting anymore.
  */
 export function StepHeading({ title, subtitle, className, ...props }: ComponentProps<'div'> & { title: string; subtitle: string }) {
+	// pb-2.5 = 0.75rem on this workspace's 0.3rem --spacing scale (founder, 12/08 — was pb-6/1.8rem).
 	return (
-		<div data-slot="step-heading" className={cn('flex flex-col gap-2.5 pb-6 text-left', className)} {...props}>
+		<div data-slot="step-heading" className={cn('flex flex-col gap-2.5 pb-2.5 text-left', className)} {...props}>
 			<h1 className="heading-display text-4xl text-foreground">{title}</h1>
 			<p className="text-muted-foreground">{subtitle}</p>
 		</div>

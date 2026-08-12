@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 import { getMyAccountQueryKey, useGetMyAccount, useUploadAvatar } from '@codm/client-typescript/typescript'
 import { initials } from '@/components/console/ThreadAvatar'
-import { sectionLabel } from '@/components/ui/surfaces'
+import { sectionLabelBare } from '@/components/ui/surfaces'
 import { Field, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -73,7 +73,7 @@ export function ProfileSection({ className, ...props }: ComponentProps<'section'
 	if (isPending) {
 		return (
 			<section className={cn('flex flex-col gap-3', className)} {...props}>
-				<h2 className={sectionLabel}>{t('account.profile.sectionTitle')}</h2>
+				<h2 className={sectionLabelBare}>{t('account.profile.sectionTitle')}</h2>
 				<Skeleton className="h-16 w-16 rounded-full" />
 				<div className="flex gap-3.5">
 					<Skeleton className="h-16 flex-1 rounded-asymmetric-sm" />
@@ -87,7 +87,7 @@ export function ProfileSection({ className, ...props }: ComponentProps<'section'
 	if (isError || !data) {
 		return (
 			<section className={cn('flex flex-col gap-3', className)} {...props}>
-				<h2 className={sectionLabel}>{t('account.profile.sectionTitle')}</h2>
+				<h2 className={sectionLabelBare}>{t('account.profile.sectionTitle')}</h2>
 				<p className="text-sm text-muted-foreground">{t('account.profile.loadError')}</p>
 			</section>
 		)
@@ -95,7 +95,7 @@ export function ProfileSection({ className, ...props }: ComponentProps<'section'
 
 	return (
 		<section className={cn('flex flex-col gap-4', className)} {...props}>
-			<h2 className={sectionLabel}>{t('account.profile.sectionTitle')}</h2>
+			<h2 className={sectionLabelBare}>{t('account.profile.sectionTitle')}</h2>
 
 			<AvatarUploader
 				value={data.profile.pictureUrl}

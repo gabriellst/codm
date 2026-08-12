@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useGetSettings } from '@codm/client-typescript/typescript'
-import { sectionLabel, surface } from '@/components/ui/surfaces'
+import { sectionLabelBare, surface } from '@/components/ui/surfaces'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
@@ -24,7 +24,7 @@ export function GeneralSection({ className, ...props }: ComponentProps<'section'
 	if (isLoading || !data) {
 		return (
 			<section className={cn('flex flex-col gap-3', className)} {...props}>
-				<h2 className={sectionLabel}>{t('settings.general')}</h2>
+				<h2 className={sectionLabelBare}>{t('settings.general')}</h2>
 				<Skeleton className="h-14 rounded-asymmetric-sm" />
 				<Skeleton className="h-14 rounded-asymmetric-sm" />
 			</section>
@@ -38,7 +38,7 @@ export function GeneralSection({ className, ...props }: ComponentProps<'section'
 
 	return (
 		<section className={cn('flex flex-col gap-3', className)} {...props}>
-			<h2 className={sectionLabel}>{t('settings.general')}</h2>
+			<h2 className={sectionLabelBare}>{t('settings.general')}</h2>
 			<div className="flex flex-col gap-2.5">
 				{rows.map(row => (
 					<div key={row.label} className={cn('flex items-center justify-between gap-4 rounded-asymmetric-sm px-4 py-3.5', surface)}>

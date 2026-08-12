@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { IconLock } from '@tabler/icons-react'
 import { useGetMyAccount } from '@codm/client-typescript/typescript'
 import { enumLabel } from '@/lib'
-import { sectionLabel } from '@/components/ui/surfaces'
+import { sectionLabelBare } from '@/components/ui/surfaces'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
@@ -47,7 +47,7 @@ export function PreferencesSection({ className, ...props }: ComponentProps<'sect
 	if (isPending) {
 		return (
 			<section className={cn('flex flex-col gap-3', className)} {...props}>
-				<h2 className={sectionLabel}>{t('account.preferences.sectionTitle')}</h2>
+				<h2 className={sectionLabelBare}>{t('account.preferences.sectionTitle')}</h2>
 				<div className="flex gap-3.5">
 					<Skeleton className="h-14 flex-1 rounded-asymmetric-xs" />
 					<Skeleton className="h-14 flex-1 rounded-asymmetric-xs" />
@@ -60,7 +60,7 @@ export function PreferencesSection({ className, ...props }: ComponentProps<'sect
 	if (isError || !data) {
 		return (
 			<section className={cn('flex flex-col gap-3', className)} {...props}>
-				<h2 className={sectionLabel}>{t('account.preferences.sectionTitle')}</h2>
+				<h2 className={sectionLabelBare}>{t('account.preferences.sectionTitle')}</h2>
 				<p className="text-sm text-muted-foreground">{t('account.preferences.loadError')}</p>
 			</section>
 		)
@@ -68,7 +68,7 @@ export function PreferencesSection({ className, ...props }: ComponentProps<'sect
 
 	return (
 		<section className={cn('flex flex-col gap-3', className)} {...props}>
-			<h2 className={sectionLabel}>{t('account.preferences.sectionTitle')}</h2>
+			<h2 className={sectionLabelBare}>{t('account.preferences.sectionTitle')}</h2>
 			<div className="flex flex-col gap-3.5 sm:flex-row">
 				<ReadonlyField label={t('account.preferences.language')} value={enumLabel('Language', data.preferences.language)} />
 				<ReadonlyField label={t('account.preferences.timezone')} value={data.preferences.timezone} />

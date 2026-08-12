@@ -58,7 +58,7 @@ export function ProvidersSection({ className, ...props }: ComponentProps<'sectio
 
 	return (
 		<section className={cn('flex flex-col gap-3', className)} {...props}>
-			<div className="flex items-center justify-between gap-3 border-b border-border pb-2">
+			<div className="flex items-center justify-between gap-3">
 				<h2 className="text-sm font-bold text-foreground">{t('settings.agentProviders')}</h2>
 				{/*
 				 * O RÓTULO NÃO MUDA enquanto sonda — só o ícone vira spinner e o botão desabilita. Trocar o
