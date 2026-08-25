@@ -15,7 +15,8 @@
 		"titleBold": "Sem ticket, sem fila,",
 		"titleLight": "sem sair do grupo.",
 		"subtitle": "Agentes na sua máquina executam projetos, clientes e processos\na partir de uma mensagem no WhatsApp. Você aprova antes.",
-		"ctaMac": "Download para macOS",
+		"ctaDownload": "Download para {platform}",
+		"otherPlatforms": "Outras plataformas",
 		"ctaGithub": "GitHub",
 		"cards": {
 			"message": {

@@ -53,7 +53,10 @@ export const landing = defineCollection({
 			titleBold: z.string(),
 			titleLight: z.string(),
 			subtitle: z.string(), // may contain \n — rendered with whitespace-pre-line
-			ctaMac: z.string(), // "Download para macOS" — also reused by the plan card + footer CTA
+			// "Download para {platform}" — `{platform}` vira macOS / Windows / Linux (config/download.ts,
+			// detecção no cliente). Reusado pelo card de preço + CTA do footer. Nomes de SO só aqui.
+			ctaDownload: z.string().includes('{platform}'),
+			otherPlatforms: z.string(), // "Outras plataformas" — título da lista completa sob o CTA
 			ctaGithub: z.string(),
 			cards: z.object({
 				message: z.object({ sender: z.string(), text: z.string() }),

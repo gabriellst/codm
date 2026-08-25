@@ -1,6 +1,5 @@
 ---
 import { getEntry } from 'astro:content'
-import { DMG_DOWNLOAD_URL } from '~/config/download'
 import type { Locale } from '~/i18n'
 import DemoSection from './DemoSection.astro'
 import FeaturesSection from './FeaturesSection.astro'
@@ -25,18 +24,19 @@ interface Props {
 // com skills e scripts", bento) → RouterSection ("Você fala, o agente executa") →
 // PricingSection ("Preço"). File names are unchanged (R27 mapping in the plan) even
 // though their content/id no longer says "demo"/"router"/"features".
+//
+// Download por sistema (plano 2026-08-25, D15): nenhum `downloadHref` desce daqui — cada CTA lê
+// `DEFAULT_DOWNLOAD` de ~/config/download (a única fonte) e `DownloadDetect.astro` (BaseLayout)
+// troca pelo sistema do visitante no cliente. O que desce é só o TEMPLATE do rótulo, que é copy.
 const { locale } = Astro.props
 const entry = await getEntry('landing', `home.${locale}`)
 const t = entry!.data
 
 const githubHref = t.footer.project.links.find(l => l.label.includes('GitHub'))?.href ?? 'https://github.com/codm'
-// Direct download link (Task T3) — fixed R2 alias, no OS detection, no
-// GitHub-releases redirect. Single source of truth in ~/config/download.
-const downloadHref = DMG_DOWNLOAD_URL
 ---
 
-<Hero t={t.hero} downloadHref={downloadHref} githubHref={githubHref} />
+<Hero t={t.hero} githubHref={githubHref} />
 <DemoSection t={t.howItWorks} />
 <FeaturesSection t={t.capabilities} />
 <RouterSection t={t.useCases} />
-<PricingSection locale={locale} t={t.pricing} downloadLabel={t.hero.ctaMac} downloadHref={downloadHref} />
+<PricingSection locale={locale} t={t.pricing} downloadTemplate={t.hero.ctaDownload} />

@@ -1,16 +1,17 @@
 ---
 import { getCollection } from 'astro:content'
 import type { CollectionEntry } from 'astro:content'
+import DownloadIcon from '~/components/DownloadIcon.astro'
 import Icon from '~/components/Icon.astro'
+import { DEFAULT_DOWNLOAD, downloadLabel } from '~/config/download'
 import type { Locale } from '~/i18n'
 
 interface Props {
 	locale: Locale
 	t: CollectionEntry<'landing'>['data']['pricing']
-	downloadHref: string
-	/** Same honest label as the Hero's primary CTA (t.hero.ctaMac) — macOS
-	 * (Apple Silicon) only, no OS detection (Task T3). */
-	downloadLabel: string
+	/** Template do rótulo (t.hero.ctaDownload, "Download para {platform}") — o mesmo do Hero; o
+	 * sistema é escolhido no cliente por DownloadDetect.astro (plano 2026-08-25, D15). */
+	downloadTemplate: string
 }
 
 // D3 (design/codm.pen `ji2y3` → `W8JSL`, "Seção — Preço"): rebrand of an existing section,
@@ -18,7 +19,7 @@ interface Props {
 // two title stamps, a future-plans disclosure, and two floating chips. Single Community
 // plan → renamed "Local" (plans.json); price prints via Intl using a per-LOCALE currency
 // (R$ pt / $ en) since that's a presentation choice, not per-plan data (see plans/config.ts).
-const { locale, t, downloadHref, downloadLabel } = Astro.props
+const { locale, t, downloadTemplate } = Astro.props
 const plans = (await getCollection('plans')).sort((a, b) => a.data.order - b.data.order)
 const plan = plans[0]!
 const copy = plan.data.copy[locale]!
@@ -94,11 +95,13 @@ const periodLabel = plan.data.price.monthly === 0 ? t.forever : t.perMonth
 					<div class="my-4 h-px w-full bg-[var(--border)]"></div>
 					<p class="m-0 text-[14px] leading-[1.5] text-[var(--muted-foreground)]">{copy.blurb}</p>
 					<a
-						href={downloadHref}
+						href={DEFAULT_DOWNLOAD.url}
+						data-download-cta
+						data-download-key={DEFAULT_DOWNLOAD.key}
 						class="mt-4 flex items-center justify-center gap-[9px] whitespace-nowrap rounded-asymmetric-md bg-[var(--primary)] py-[14px] text-[15px] font-bold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
 					>
-						<Icon name="apple" size={17} />
-						{downloadLabel}
+						<DownloadIcon size={17} />
+						<span data-download-label data-download-template={downloadTemplate}>{downloadLabel(downloadTemplate, DEFAULT_DOWNLOAD)}</span>
 					</a>
 				</div>
 

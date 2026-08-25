@@ -1,0 +1,25 @@
+---
+import { DOWNLOADS } from '~/config/download'
+
+/** "Outras plataformas" — a lista COMPLETA, estática (zero JS): quem cai num sistema que a detecção
+ *  não reconhece (ou quer o outro formato — Linux .deb) acha o instalador aqui. `title` vem do
+ *  content (`hero.otherPlatforms`); `label`/`detail` são nomes próprios e qualificadores neutros de
+ *  idioma da tabela. Alinhamento/cor vêm por `class` — o Hero centraliza, o Footer alinha à esquerda. */
+interface Props {
+	title: string
+	class?: string
+}
+
+const { title, class: className } = Astro.props
+---
+
+<p class:list={['m-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px]', className]}>
+	<span>{title}:</span>
+	{
+		DOWNLOADS.map(d => (
+			<a href={d.url} data-download-other={d.key} class="whitespace-nowrap underline-offset-2 transition-colors hover:underline">
+				{d.label} <span class="opacity-70">({d.detail})</span>
+			</a>
+		))
+	}
+</p>

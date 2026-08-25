@@ -15,7 +15,8 @@
 		"titleBold": "No tickets, no queue,",
 		"titleLight": "no leaving the group chat.",
 		"subtitle": "Agents on your machine run projects, clients and processes\nfrom a single WhatsApp message. You approve first.",
-		"ctaMac": "Download for macOS",
+		"ctaDownload": "Download for {platform}",
+		"otherPlatforms": "Other platforms",
 		"ctaGithub": "GitHub",
 		"cards": {
 			"message": {

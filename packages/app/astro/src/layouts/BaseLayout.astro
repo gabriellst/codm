@@ -1,4 +1,5 @@
 ---
+import DownloadDetect from '~/components/DownloadDetect.astro'
 import Footer from '~/components/Footer.astro'
 import Nav from '~/components/Nav.astro'
 import { type Locale, localizedPath } from '~/i18n'
@@ -108,6 +109,10 @@ const rssHref = `/${locale}/blog/rss.xml`
 			<slot />
 		</main>
 		<Footer locale={locale} />
+		{/* Download por sistema (plano 2026-08-25, D15) — troca href/rótulo/ícone de todo
+		    `a[data-download-cta]` (Nav, Hero, preço, Footer) pelo sistema do visitante. Uma montagem por
+		    página; sem JS o HTML já sai com o macOS + a lista "outras plataformas". */}
+		<DownloadDetect />
 		{
 			/* D-motion (2026-08-25) Decision 5/8 — plain IntersectionObserver, no framework: marks
 			 * `.reveal`/`.reveal-back` elements `.is-inview` once (threshold 0.15) then unobserves.

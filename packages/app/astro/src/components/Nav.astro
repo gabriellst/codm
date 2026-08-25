@@ -2,7 +2,7 @@
 import { getEntry } from 'astro:content'
 import LocaleSwitcher from '~/components/LocaleSwitcher.astro'
 import LogoMark from '~/components/LogoMark.astro'
-import { DMG_DOWNLOAD_URL } from '~/config/download'
+import { DEFAULT_DOWNLOAD } from '~/config/download'
 import { type Locale, routeFor } from '~/i18n'
 
 interface Props {
@@ -17,7 +17,6 @@ const t = entry!.data
 const homeHref = routeFor(locale, '/')
 const blogHref = routeFor(locale, '/blog')
 const githubHref = t.footer.project.links.find(l => l.label === 'GitHub')?.href ?? 'https://github.com/codm'
-const downloadHref = DMG_DOWNLOAD_URL
 
 // D3 (Nav — asqga/uw9ir): plain top bar, 76px, page-bg — the floating hide-on-scroll pill
 // from the pre-D3 nav is gone (design shows a static bar, no scroll choreography).
@@ -43,8 +42,12 @@ const link = 'text-[14px] font-semibold text-[var(--muted-foreground)] transitio
 	</div>
 	<div class="flex items-center gap-3">
 		<LocaleSwitcher localeLinks={localeLinks} />
+		{/* "Baixar" — rótulo curto, sem nome de sistema e sem ícone; só o href troca no cliente
+		    (DownloadDetect.astro, plano 2026-08-25 D15). Sem `data-download-label` de propósito. */}
 		<a
-			href={downloadHref}
+			href={DEFAULT_DOWNLOAD.url}
+			data-download-cta
+			data-download-key={DEFAULT_DOWNLOAD.key}
 			class="whitespace-nowrap rounded-asymmetric-2xs bg-[var(--primary)] px-[18px] py-[10px] text-[14px] font-bold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
 		>
 			{t.nav.download}

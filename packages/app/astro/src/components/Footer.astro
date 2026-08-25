@@ -1,7 +1,9 @@
 ---
 import { getEntry } from 'astro:content'
+import DownloadIcon from '~/components/DownloadIcon.astro'
+import DownloadOthers from '~/components/DownloadOthers.astro'
 import Icon from '~/components/Icon.astro'
-import { DMG_DOWNLOAD_URL } from '~/config/download'
+import { DEFAULT_DOWNLOAD, downloadLabel } from '~/config/download'
 import { type Locale, routeFor } from '~/i18n'
 
 interface Props {
@@ -11,7 +13,6 @@ interface Props {
 const { locale } = Astro.props
 const entry = await getEntry('landing', `home.${locale}`)
 const t = entry!.data
-const downloadHref = DMG_DOWNLOAD_URL
 
 // A link's kind decides its href source: `/…` is an in-site route (needs the locale
 // prefix), `#…` is a same-page anchor, anything else is external — never a per-label
@@ -31,6 +32,10 @@ const legalFallbackHref = `${githubHref}#readme`
   above the Explorar/Projeto columns — so the closing pitch now lives here, once, instead
   of as a separate section Home.astro mounted right before the footer.
 
+  Download por sistema (plano 2026-08-25, D15): o CTA sai do servidor com DEFAULT_DOWNLOAD (macOS)
+  e DownloadDetect.astro (BaseLayout) troca href/rótulo/ícone pelo sistema do visitante; a lista
+  DownloadOthers logo abaixo cobre quem não foi reconhecido ou quer outro formato.
+
   Colors here are literal `white/NN` alpha utilities, not `--fg-60`/`--fg-20` — this
   surface is unconditionally dark (it never runs against the light `:root` palette), so
   it doesn't need the theme-auto-inverting token (which composes `oklch(from var(--foreground)…)`
@@ -46,11 +51,13 @@ const legalFallbackHref = `${githubHref}#readme`
 			</h2>
 			<div class="flex flex-wrap items-center gap-3">
 				<a
-					href={downloadHref}
+					href={DEFAULT_DOWNLOAD.url}
+					data-download-cta
+					data-download-key={DEFAULT_DOWNLOAD.key}
 					class="inline-flex items-center gap-[9px] whitespace-nowrap rounded-asymmetric-md bg-[var(--primary)] px-6 py-[13px] text-[14.5px] font-bold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
 				>
-					<Icon name="apple" size={17} />
-					{t.hero.ctaMac}
+					<DownloadIcon size={17} />
+					<span data-download-label data-download-template={t.hero.ctaDownload}>{downloadLabel(t.hero.ctaDownload, DEFAULT_DOWNLOAD)}</span>
 				</a>
 				<a
 					href={githubHref}
@@ -60,6 +67,7 @@ const legalFallbackHref = `${githubHref}#readme`
 					{t.hero.ctaGithub}
 				</a>
 			</div>
+			<DownloadOthers title={t.hero.otherPlatforms} class="text-white/60 [&_a:hover]:text-white" />
 		</div>
 		<div class="flex w-[170px] flex-col gap-3">
 			<span class="text-[13px] font-bold text-white">{t.footer.explore.title}</span>

@@ -1,0 +1,22 @@
+---
+import Icon from '~/components/Icon.astro'
+import { DEFAULT_DOWNLOAD, DOWNLOAD_ICONS } from '~/config/download'
+
+/** Os três glifos que um CTA de download pode mostrar, TODOS no HTML — só o da `DEFAULT_DOWNLOAD`
+ *  visível no servidor; `DownloadDetect.astro` alterna o atributo `hidden` no cliente (o preflight do
+ *  Tailwind v4 dá `[hidden] { display: none !important }`, então vence o `inline-flex`). Icon.astro
+ *  não repassa atributos arbitrários, por isso o `data-download-icon` mora no <span>. */
+interface Props {
+	size?: number
+}
+
+const { size = 16 } = Astro.props
+---
+
+{
+	DOWNLOAD_ICONS.map(icon => (
+		<span data-download-icon={icon} hidden={icon !== DEFAULT_DOWNLOAD.icon} class="inline-flex">
+			<Icon name={icon} size={size} />
+		</span>
+	))
+}
