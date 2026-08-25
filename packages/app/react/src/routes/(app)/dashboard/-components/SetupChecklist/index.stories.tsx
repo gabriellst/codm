@@ -9,7 +9,7 @@ import { SetupChecklist } from '.'
  * interno) — MSW não intercepta sob bun (medido, `tests/support/storybook.ts`), então esta story é
  * SÓ-VISUAL (sem `play`).
  *
- * O comportamento real (um passo satisfeito some da lista) mora no `index.test.tsx` reduzido, via
+ * O comportamento real (um passo satisfeito fica na lista, marcado concluído — founder 2026-08-25) mora no `index.test.tsx` reduzido, via
  * `useIntegrationBackend()` — `workspaceDone`/`threadDone` são PRODUZÍVEIS pelo harness real
  * (`addWorkspace` real sob `MockWorkspaceDetector` determinístico; `givenThread`). `channelDone`
  * ISOLADO também é, desde a frente eixo-ambiente-go (T9/T12): `index.services.test.tsx`
@@ -24,6 +24,15 @@ const ALL_PENDING: GetOnboardingQueryResponse = {
 	currentStep: 'VALUE',
 	completedAt: null,
 	channelDone: false,
+	workspaceDone: false,
+	threadDone: false,
+}
+
+/** Um passo concluído (o canal) — a linha fica, com o `Marcador — Concluído` no lugar do CTA (screen 05). */
+const CHANNEL_DONE: GetOnboardingQueryResponse = {
+	currentStep: 'WORKSPACE',
+	completedAt: null,
+	channelDone: true,
 	workspaceDone: false,
 	threadDone: false,
 }
@@ -47,6 +56,10 @@ type Story = StoryObj<typeof meta>
 
 export const AllPending: Story = {
 	parameters: { msw: { handlers: [mockQuery(opts, ALL_PENDING)] } },
+}
+
+export const ChannelDone: Story = {
+	parameters: { msw: { handlers: [mockQuery(opts, CHANNEL_DONE)] } },
 }
 
 /** SÓ-VISUAL por necessidade (não só por ruling): `channelDone: true` é improduzível pelo harness — ver o docblock acima. */

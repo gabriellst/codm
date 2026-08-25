@@ -57,21 +57,32 @@ describe('SetupChecklist — contra o backend real', () => {
 		return mounted
 	}
 
-	it('nada feito: os três passos aparecem', async () => {
+	/** A linha do passo pelo título — e o estado que ela declara (`data-done`), nunca só o texto. */
+	function stepRow(titleKey: string): { done: boolean; hasCta: boolean } {
+		const rows = [...(mounted?.host.querySelectorAll('[data-slot="setup-step"]') ?? [])] as HTMLElement[]
+		const row = rows.find(r => r.textContent?.includes(i18n.t(titleKey)))
+		if (!row) throw new Error(`linha "${i18n.t(titleKey)}" não renderizada`)
+		return { done: row.dataset.done === 'true', hasCta: !!row.querySelector('a') }
+	}
+
+	it('nada feito: os três passos aparecem, todos pendentes e com CTA', async () => {
 		await mount()
 
-		expect(mounted?.host.textContent).toContain(i18n.t('home.setupChannelTitle'))
-		expect(mounted?.host.textContent).toContain(i18n.t('home.setupWorkspaceTitle'))
-		expect(mounted?.host.textContent).toContain(i18n.t('home.setupThreadTitle'))
+		expect(stepRow('home.setupChannelTitle')).toEqual({ done: false, hasCta: true })
+		expect(stepRow('home.setupWorkspaceTitle')).toEqual({ done: false, hasCta: true })
+		expect(stepRow('home.setupThreadTitle')).toEqual({ done: false, hasCta: true })
 	})
 
-	it('workspace feito de verdade (addWorkspace real): a linha some, os outros dois ficam', async () => {
+	// Founder, 2026-08-25: um passo satisfeito NÃO some mais — fica na lista marcado como concluído
+	// (check no lugar do CTA), senão "2 · 3" sem o "1" lê como buraco, não como progresso.
+	it('workspace feito de verdade (addWorkspace real): a linha fica, marcada concluída e sem CTA; os outros dois seguem pendentes', async () => {
 		await addWorkspace({ path: '/tmp/setup-checklist-fixture' })
 		await mount()
 
-		expect(mounted?.host.textContent).not.toContain(i18n.t('home.setupWorkspaceTitle'))
-		expect(mounted?.host.textContent).toContain(i18n.t('home.setupChannelTitle'))
-		expect(mounted?.host.textContent).toContain(i18n.t('home.setupThreadTitle'))
+		expect(stepRow('home.setupWorkspaceTitle')).toEqual({ done: true, hasCta: false })
+		expect(mounted?.host.querySelector(`[aria-label="${i18n.t('home.setupDone')}"]`)).not.toBeNull()
+		expect(stepRow('home.setupChannelTitle')).toEqual({ done: false, hasCta: true })
+		expect(stepRow('home.setupThreadTitle')).toEqual({ done: false, hasCta: true })
 	})
 
 	/**
@@ -80,13 +91,13 @@ describe('SetupChecklist — contra o backend real', () => {
 	 * medido, não assumido: a primeira versão deste teste esperava só a linha de thread sumir e
 	 * quebrou porque `workspaceDone` também virava `true`. Só o canal (improduzível) sobra.
 	 */
-	it('thread feita de verdade (givenThread, que também cria o workspace que ela referencia): só o canal sobra', async () => {
+	it('thread feita de verdade (givenThread, que também cria o workspace que ela referencia): duas linhas concluídas, só o canal pendente', async () => {
 		const { givenThread } = await loadBackendGivens()
 		await givenThread(backend.asTestBed(), {})
 		await mount()
 
-		expect(mounted?.host.textContent).not.toContain(i18n.t('home.setupThreadTitle'))
-		expect(mounted?.host.textContent).not.toContain(i18n.t('home.setupWorkspaceTitle'))
-		expect(mounted?.host.textContent).toContain(i18n.t('home.setupChannelTitle'))
+		expect(stepRow('home.setupThreadTitle')).toEqual({ done: true, hasCta: false })
+		expect(stepRow('home.setupWorkspaceTitle')).toEqual({ done: true, hasCta: false })
+		expect(stepRow('home.setupChannelTitle')).toEqual({ done: false, hasCta: true })
 	})
 })

@@ -1,6 +1,7 @@
 // packages/app/react/src/routes/(app)/dashboard/-components/SetupChecklist/index.tsx — COMPLETE final file.
 import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
+import { IconCheck } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import { useGetOnboarding } from '@codm/client-typescript/typescript'
 import { Button } from '@codm/app-ui/button'
@@ -33,10 +34,16 @@ const DEFERRABLE_SETUP_IDS = onboardingSteps([]).filter(id => STEP_TAXONOMY[id].
 /**
  * Setup checklist (dashboard) — spec Decision 15 / AC-13. No longer a second onboarding story: it
  * surfaces exactly the `DEFERRABLE` setup steps (the SAME `STEP_TAXONOMY` `/onboarding` dispatches
- * by) that are NOT yet satisfied, fed by the SAME read the wizard uses (`useGetOnboarding`) — the
- * component owns that read itself now, rather than receiving it as a prop. A satisfied step
- * disappears from the list ENTIRELY (not re-styled with a checkmark) — the "badge nos Ajustes" of the
- * Setup Assistant metaphor: gone once resolved. Nothing left to defer → nothing rendered.
+ * by), fed by the SAME read the wizard uses (`useGetOnboarding`) — the component owns that read
+ * itself now, rather than receiving it as a prop.
+ *
+ * SATISFIED STEPS STAY, MARKED DONE (founder request 2026-08-25 — REVERSES the original Decision 15
+ * reading "a satisfied step disappears from the list entirely"): seeing "2 · 3" with no "1" read as
+ * a gap, not as progress. The row now keeps its number and title and swaps the CTA for the design's
+ * `Marcador — Concluído` (`configuracao-inicial-wrapper.json`, screen 05: a 24px `$primary` circle
+ * with a check — the same filled badge the attach wizard's selected rows use). Only the panel as a
+ * whole disappears, once NOTHING is left to defer — the "badge nos Ajustes" of the Setup Assistant
+ * metaphor still holds at the panel level.
  */
 export function SetupChecklist({ className, ...props }: ComponentProps<'div'>) {
 	const { t } = useTranslation()
@@ -77,9 +84,9 @@ export function SetupChecklist({ className, ...props }: ComponentProps<'div'>) {
 			done: data.threadDone,
 		},
 	]
-	const steps = candidates.filter(step => DEFERRABLE_SETUP_IDS.includes(step.stepId) && !step.done)
+	const steps = candidates.filter(step => DEFERRABLE_SETUP_IDS.includes(step.stepId))
 
-	if (steps.length === 0) return null
+	if (steps.every(step => step.done)) return null
 
 	return (
 		<div className={cn('mx-auto flex w-full max-w-2xl flex-col items-center gap-8 px-6 pb-16 pt-24 text-center', className)} {...props}>
@@ -92,19 +99,36 @@ export function SetupChecklist({ className, ...props }: ComponentProps<'div'>) {
 			<Card className="w-full text-left bg-transparent">
 				<CardContent className="flex flex-col gap-1 p-2">
 					{steps.map(step => (
-						<div key={step.stepId} className="flex items-center gap-4 rounded-2xl p-3">
-							<span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border text-sm font-semibold text-foreground">
+						<div key={step.stepId} data-slot="setup-step" data-done={step.done} className="flex items-center gap-4 rounded-2xl p-3">
+							<span
+								className={cn(
+									'flex size-8 shrink-0 items-center justify-center rounded-full border border-border text-sm font-semibold',
+									step.done ? 'text-muted-foreground' : 'text-foreground',
+								)}
+							>
 								{step.n}
 							</span>
 							<div className="flex flex-1 flex-col">
-								<span className="text-sm font-semibold text-foreground">{step.title}</span>
+								<span className={cn('text-sm font-semibold', step.done ? 'text-muted-foreground' : 'text-foreground')}>{step.title}</span>
 								<span className="text-xs text-muted-foreground">{step.description}</span>
 							</div>
-							{/* `nativeButton={false}`: this renders an <a>, not a <button>. Base UI errors otherwise —
-							    it assumes native button semantics unless told the render target is something else. */}
-							<Button size="sm" nativeButton={false} render={<Link to={step.to} />}>
-								{t('home.setupCta')}
-							</Button>
+							{step.done ? (
+								// `Marcador — Concluído` (design screen 05): 24px `$primary` circle + check, in the CTA's
+								// slot — a done step has nothing left to configure.
+								<span
+									role="img"
+									aria-label={t('home.setupDone')}
+									className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"
+								>
+									<IconCheck className="size-3.5" />
+								</span>
+							) : (
+								// `nativeButton={false}`: this renders an <a>, not a <button>. Base UI errors otherwise —
+								// it assumes native button semantics unless told the render target is something else.
+								<Button size="sm" nativeButton={false} render={<Link to={step.to} />}>
+									{t('home.setupCta')}
+								</Button>
+							)}
 						</div>
 					))}
 				</CardContent>
