@@ -24,7 +24,8 @@ function withWindow(chrome: WindowChrome) {
 			}
 			const c = new Container()
 			c.load(testBindings)
-			c.load([[WindowToken, Seeded]] as unknown as Bindings)
+			const overrides: Bindings = [[WindowToken, Seeded]]
+			c.load(overrides)
 			return c
 		})
 		return (
