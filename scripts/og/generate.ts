@@ -158,7 +158,7 @@ export function buildOgHtml(input: { copy: OgCopy; logoMarkSvg: string; fonts: O
 }
 
 /** Lê o woff2 do @fontsource/poppins já declarado como dependência do app-astro e embute como data URI. */
-function fontDataUri(astroDir: string, weight: 300 | 400 | 600 | 800): string {
+export function fontDataUri(astroDir: string, weight: 300 | 400 | 600 | 800): string {
 	const pkgJsonPath = Bun.resolveSync('@fontsource/poppins/package.json', astroDir)
 	const filePath = join(dirname(pkgJsonPath), 'files', `poppins-latin-${weight}-normal.woff2`)
 	const buf = readFileSync(filePath)

@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/codm-banner.png" alt="CODM — coding agents in your WhatsApp, running 100% on your computer" width="100%" />
+</p>
+
 # codm
 
 **codm** is a desktop-first product: AI agents you operate through your messaging channels — **WhatsApp today**, more channels coming soon. You pair a channel, attach a conversation to a workspace, and drive real work (issues, artifacts, code) by talking to your agent from your phone.
