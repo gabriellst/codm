@@ -357,7 +357,11 @@ function deadImportDirectionExceptions(detectorFile: string, repoRoot: string): 
 			scanned.push(`${root}/${relative(abs, file).split('\\').join('/')}`)
 		}
 	}
-	return prefixes.filter(p => !scanned.some(f => f.startsWith(p.prefix)))
+	// Mirror of import-direction.ts's `matchesException` — a prefix matches from the start of the
+	// path, a leading `*` matches the END instead (e.g. `*.services.test.tsx`).
+	const matches = (file: string, prefix: string): boolean =>
+		prefix.startsWith('*') ? file.endsWith(prefix.slice(1)) : file.startsWith(prefix)
+	return prefixes.filter(p => !scanned.some(f => matches(f, p.prefix)))
 }
 
 // ─── The rail ───────────────────────────────────────────────────────

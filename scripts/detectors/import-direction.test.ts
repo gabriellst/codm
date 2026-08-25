@@ -85,6 +85,12 @@ describe('R2 react-sdk-only-no-raw-http', () => {
 		expect(r.findings).toEqual([])
 		expect(r.suppressed).toEqual([])
 	})
+
+	test('exception: the loopback-auth client resolving fetch at call time is suppressed', () => {
+		const r = checkFile('packages/app/react/src/lib/auth.ts', `customFetchImpl: (input, init) => globalThis.fetch(input, init),\n`)
+		expect(r.findings).toEqual([])
+		expect(r.suppressed.map(f => f.ruleId)).toEqual(['R2'])
+	})
 })
 
 describe('R3 no-cross-context-entity-imports', () => {
@@ -184,6 +190,23 @@ describe('R5 react-no-backend-package-imports', () => {
 	test('clean: SDK import is the sanctioned wire surface', () => {
 		const r = checkFile(path, `import type { Money } from '@codm/client-typescript/typescript'\n`)
 		expect(r.findings).toEqual([])
+	})
+
+	test('exception: a *.services.test.tsx cross-service suite importing /testing is suppressed', () => {
+		const r = checkFile(
+			'packages/app/react/src/routes/(app)/orders/-components/OrderListSection/index.services.test.tsx',
+			`import { givenConnectedGatewayChannel } from '@codm/api-typescript/testing'\n`,
+		)
+		expect(r.findings).toEqual([])
+		expect(r.suppressed.map(f => f.ruleId)).toEqual(['R5'])
+	})
+
+	test('a mis-scoped plain .test.tsx importing /testing still fires (the suffix IS the enforcement)', () => {
+		const r = checkFile(
+			'packages/app/react/src/routes/(app)/orders/-components/OrderListSection/index.test.tsx',
+			`import { givenConnectedGatewayChannel } from '@codm/api-typescript/testing'\n`,
+		)
+		expect(ruleIds(r)).toEqual(['R5'])
 	})
 })
 

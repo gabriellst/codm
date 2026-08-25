@@ -58,8 +58,16 @@ interface Rule {
 	/** All six rules calibrated with zero 'unclear' verdicts → error. */
 	severity: Finding['severity']
 	message: string
-	/** Repo-relative path prefixes; matches are skipped silently, counted as 'suppressed'. */
+	/**
+	 * Repo-relative path PREFIXES, or a `*<suffix>` glob matched against the end of the path
+	 * (e.g. `*.services.test.tsx`) — matches are skipped silently, counted as 'suppressed'.
+	 */
 	exceptions: string[]
+}
+
+/** A prefix exception matches from the start of the path; a leading `*` matches the END instead. */
+function matchesException(file: string, pattern: string): boolean {
+	return pattern.startsWith('*') ? file.endsWith(pattern.slice(1)) : file.startsWith(pattern)
 }
 
 // ─── Rules (recon-verbatim) ─────────────────────────────────────────
@@ -86,6 +94,13 @@ const RULES: Rule[] = [
 		exceptions: [
 			// MSW mock infrastructure (shared mock.ts / withConnected.tsx helpers).
 			'packages/app/react/src/storybook/',
+			// The loopback-auth deep-link exchange (`useLoopbackAuth`, documented in its own docblock)
+			// resolves `globalThis.fetch` at call time on purpose — it is the fix for a real bug (the
+			// better-auth client otherwise captures `fetch` at import time, making it unspyable in tests),
+			// not a raw-HTTP violation of the SDK-only rule: `auth.ts` is the better-auth CLIENT itself,
+			// the one piece of the app allowed to talk to the cloud auth server directly, since no SDK
+			// endpoint exists for it (auth is better-auth's own wire, not a codm controller).
+			'packages/app/react/src/lib/auth.ts',
 		],
 	},
 	{
@@ -121,7 +136,15 @@ const RULES: Rule[] = [
 		severity: 'error',
 		message:
 			'the app never imports backend workspace packages — the only wire surface is the generated SDK (CLAUDE.md); applies to tests/stories too',
-		exceptions: [],
+		exceptions: [
+			// Cross-service suites (`*.services.test.tsx`) are BY DESIGN the one place the app imports a
+			// backend workspace package: `scripts/test-cross-service.ts` boots `services: ['apiGo']` and
+			// seeds state straight through `@codm/api-typescript/testing`'s given-helpers, in a dedicated
+			// `bun test` process per file, never bundled into the shipped app. The naming convention IS
+			// the enforcement — a `.test.tsx` importing `/testing` outside this suffix is a mis-scoped
+			// cross-service test, not a sanctioned one (see the `component` skill's test-shape rules).
+			'*.services.test.tsx',
+		],
 	},
 	{
 		id: 'R6',
@@ -289,7 +312,7 @@ export function checkFile(file: string, content: string): { findings: Finding[];
 		}
 		if (hits.size === 0) continue
 
-		const bucket = rule.exceptions.some(prefix => file.startsWith(prefix)) ? suppressed : findings
+		const bucket = rule.exceptions.some(pattern => matchesException(file, pattern)) ? suppressed : findings
 		for (const [line, text] of [...hits.entries()].sort((a, b) => a[0] - b[0])) {
 			bucket.push({
 				detector: 'import-direction',
