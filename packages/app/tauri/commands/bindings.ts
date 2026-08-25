@@ -69,6 +69,9 @@ async repairSystemPrecondition(id: SystemPreconditionId) : Promise<Result<null, 
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async windowChrome() : Promise<WindowChrome> {
+    return await TAURI_INVOKE("window_chrome");
 }
 }
 
@@ -149,11 +152,30 @@ export type SystemPreconditionId = "FULL_DISK_ACCESS"
  */
 export type SystemPreconditionStatus = { id: SystemPreconditionId; satisfied: boolean; repair: RepairAvailability }
 /**
+ * Who draws the window controls, from the webview's point of view.
+ */
+export type TitleBar = 
+/**
+ * The OS overlays its controls ON the webview (macOS `titleBarStyle: Overlay`): the console
+ * owns the full window height and must reserve the traffic-light band.
+ */
+"overlay" | 
+/**
+ * The OS draws a decorated title bar ABOVE the webview (Windows, Linux — or any window that
+ * did not ask for Overlay): nothing overlaps the console, nothing to reserve.
+ */
+"native"
+/**
  * PUSH half — mirrors `SupervisionChanged`'s shape and purpose: typed end-to-end by tauri-specta,
  * so the console gets `events.updateReady.listen(...)`, never a stringly `listen('update-ready')`.
  * Fires (at most) once per run, the moment a background check finishes installing.
  */
 export type UpdateReady = { version: string }
+/**
+ * What crosses to the console — mirrors the react port `WindowService.chrome()` verbatim
+ * (`{ titleBar: 'overlay' | 'native' }`); the serde test below pins that shape.
+ */
+export type WindowChrome = { titleBar: TitleBar }
 
 /** tauri-specta globals **/
 

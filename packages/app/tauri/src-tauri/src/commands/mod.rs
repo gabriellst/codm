@@ -21,6 +21,9 @@ pub use supervision::*;
 mod update;
 pub use update::*;
 
+mod window;
+pub use window::*;
+
 /// The single `tauri_specta::Builder` collecting every `#[specta::specta]`
 /// custom command AND every typed event. See the module docs for why there is exactly one.
 ///
@@ -40,7 +43,8 @@ pub fn specta_builder() -> tauri_specta::Builder {
             pending_update,
             restart_for_update,
             system_precondition_statuses,
-            repair_system_precondition
+            repair_system_precondition,
+            window_chrome
         ])
         .events(tauri_specta::collect_events![
             crate::sidecars::SupervisionChanged,

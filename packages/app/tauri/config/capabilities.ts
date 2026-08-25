@@ -58,6 +58,11 @@ export const CAPABILITY_PERMISSIONS = {
 	// `invoke`. Os passos de reparo são `std::process::Command` do lado Rust, não o plugin de shell,
 	// então nenhuma permissão de `shell:*` entra aqui.
 	systemPreconditions: [],
+	// CHROME DA JANELA (contract: WindowService) — respaldada pelo comando custom `window_chrome`
+	// (src-tauri/src/commands/window.rs), que `core:default` já cobre por ser `invoke`. O console
+	// pergunta "quem desenha os controles desta janela?" e reserva a faixa dos semáforos só quando o
+	// host os sobrepõe ao webview — nunca pelo nome da plataforma (desktop-shell bp-02).
+	windowChrome: [],
 } as const satisfies Record<string, readonly string[]>
 
 export type CapabilityKey = keyof typeof CAPABILITY_PERMISSIONS
@@ -76,4 +81,5 @@ export const CAPABILITIES = [
 	'cloudSession',
 	'logging',
 	'systemPreconditions',
+	'windowChrome',
 ] as const satisfies readonly CapabilityKey[]

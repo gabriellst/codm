@@ -11,3 +11,4 @@
  */
 export { commands, events, type Result } from './bindings'
 export type { SidecarFailure, SupervisionState } from './bindings'
+export type { TitleBar, WindowChrome } from './bindings'
