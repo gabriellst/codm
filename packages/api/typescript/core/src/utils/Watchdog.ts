@@ -1,15 +1,18 @@
+import { isProcessAlive } from './ProcessLiveness'
+
 /**
  * PARENT WATCHDOG — the daemon's own answer to "the shell died and nobody told me".
  *
  * LIVES IN THE KERNEL, and the docblock below is the argument for why: not one line of this file
- * knows what product it is supervising. The condition is a pid comparison, the reaction is a signal,
- * and every dependency is injectable. It sat in `packages/api/typescript/src/watchdog.ts` under the
- * reasoning "it belongs to no bounded context" — which was the right observation and the wrong
- * conclusion: belonging to no context of THIS product is precisely what makes something kernel.
+ * knows what product it is supervising. The condition is a pid comparison plus a liveness probe,
+ * the reaction is whatever drain the caller hands in, and every dependency is injectable. It sat in
+ * `packages/api/typescript/src/watchdog.ts` under the reasoning "it belongs to no bounded context"
+ * — which was the right observation and the wrong conclusion: belonging to no context of THIS
+ * product is precisely what makes something kernel.
  *
- * The Go gateway independently grew the same mechanism (`internal/shared/watchdog.go`, same
- * `CODM_PARENT_PID` contract, same reparenting condition) — two implementations of one idea is the
- * strongest evidence available that the idea is not product-specific.
+ * The Go gateway independently grew the same mechanism (`core/pkg/watchdog/watchdog.go`, same
+ * `CODM_PARENT_PID` contract) — two implementations of one idea is the strongest evidence available
+ * that the idea is not product-specific.
  *
  * ## Why the CHILD has to do this
  *
@@ -24,20 +27,31 @@
  * shell on every recompile, and one of the surviving daemons went on serving a stale provider
  * catalog to a brand-new window — a bug with no error anywhere in it.
  *
- * ## The condition
+ * ## The condition — two observations, one rule, no branch per OS
  *
- * `process.ppid !== CODM_PARENT_PID`, and nothing else. A pid's parent changes for exactly one
- * reason — the parent died — so the comparison is exact, needs no liveness probe, and (unlike
- * `kill(parentPid, 0)`) cannot be fooled by pid reuse. It is also stronger than `ppid === 1`: on a
- * host with a subreaper the orphan is re-parented to something that is not init, and this still
- * sees it.
+ * Orphaned ⇔ a supervisor was declared AND (`process.ppid !== CODM_PARENT_PID` OR
+ * `kill(CODM_PARENT_PID, 0)` says it is gone).
  *
- * ## The reaction
+ * The ppid half is exact on POSIX: a pid's parent changes for exactly one reason — the parent died —
+ * so it needs no liveness probe and cannot be fooled by pid reuse. It is also stronger than
+ * `ppid === 1`: under a subreaper the orphan is re-parented to something that is not init.
  *
- * `SIGTERM` to ourselves. NOT `process.exit`: the graceful shutdown registered in `src/index.ts` is
- * the only thing that can reach the GRANDCHILDREN — every provider CLI is spawned `detached: true`
- * (`AgentProcess.ts`), i.e. in a process group of its own that nothing outside this process can
- * name. Exiting hard here would trade one orphan for several.
+ * The probe half is what Windows needs: there is NO reparenting there. The ppid a process reports is
+ * the pid of whoever created it, frozen at spawn, alive or not — the ppid half never fires. The probe
+ * (`ProcessLiveness.isProcessAlive`, the same one `DataDirLock` uses on a lock holder) is the only
+ * question Windows answers. Its weakness — a reused pid reads as "alive" — is exactly what the ppid
+ * half covers on POSIX, and on Windows is accepted (the shell's next-boot reaper is the belt to this
+ * suspenders). Both halves run every tick on every OS: the rule is uniform, the OS just decides which
+ * half turns true first.
+ *
+ * ## The reaction — the caller's drain, never a signal to ourselves
+ *
+ * `onOrphaned` is REQUIRED and `src/index.ts` hands in the very same `shutdown()` its SIGTERM/SIGINT
+ * handlers run. It used to be `process.kill(process.pid, 'SIGTERM')` by default, which reads as "run
+ * the graceful path" on POSIX and is an unconditional TerminateProcess on Windows — no listener runs,
+ * the whole outbox/mediator/DB drain is skipped, and the provider CLI trees (spawned in groups of
+ * their own, `AgentProcess.ts`) are leaked. Calling the drain directly is the same drain on every OS.
+ * NOT `process.exit`: only that drain can reach the grandchildren.
  *
  * ## Why `CODM_PARENT_PID` is not in `REPO.env`
  *
@@ -65,10 +79,22 @@ export function declaredSupervisorPid(raw: string | undefined): number | null {
 	return Number.isInteger(pid) && pid > 0 ? pid : null
 }
 
-/** PURE — orphaned iff a supervisor was declared AND it is no longer this process's parent. */
-export function isOrphaned(supervisorPid: string | undefined, currentParentPid: number): boolean {
+/** What ONE tick observed about the declared supervisor. */
+export interface SupervisorObservation {
+	/** `process.ppid` at this tick — changes under us when the parent dies (POSIX reparenting). */
+	readonly parentPid: number
+	/** `kill(supervisorPid, 0)` at this tick — the only signal Windows gives, where ppid is frozen. */
+	readonly supervisorAlive: boolean
+}
+
+/**
+ * PURE — orphaned iff a supervisor was declared AND it is no longer this process's parent OR it is
+ * no longer alive. Both halves are evaluated; see "The condition" above for why neither is enough.
+ */
+export function isOrphaned(supervisorPid: string | undefined, observed: SupervisorObservation): boolean {
 	const expected = declaredSupervisorPid(supervisorPid)
-	return expected !== null && currentParentPid !== expected
+	if (expected === null) return false
+	return observed.parentPid !== expected || !observed.supervisorAlive
 }
 
 export interface ParentWatchdogOptions {
@@ -76,8 +102,13 @@ export interface ParentWatchdogOptions {
 	readonly supervisorPid?: string | undefined
 	/** Defaults to reading `process.ppid` on every tick — it changes under us when the parent dies. */
 	readonly currentParentPid?: () => number
-	/** Defaults to raising SIGTERM on ourselves, i.e. the graceful shutdown in `src/index.ts`. */
-	readonly onOrphaned?: () => void
+	/** Defaults to `isProcessAlive` (`kill(pid, 0)`) — the half of the condition Windows relies on. */
+	readonly supervisorAlive?: (pid: number) => boolean
+	/**
+	 * THE DRAIN. Required, and the caller's — `src/index.ts` passes the same `shutdown()` its signal
+	 * handlers run. Never a signal to ourselves: that is a hard kill on Windows.
+	 */
+	readonly onOrphaned: () => void
 	readonly intervalMs?: number
 }
 
@@ -88,25 +119,28 @@ export interface ParentWatchdogOptions {
  * The timer is `unref`'d: a watchdog must never be the reason a process stays alive, and it must
  * never keep a test runner open either.
  */
-export function startParentWatchdog(options: ParentWatchdogOptions = {}): (() => void) | null {
+export function startParentWatchdog(options: ParentWatchdogOptions): (() => void) | null {
 	const supervisorPid = options.supervisorPid ?? process.env[PARENT_PID_ENV]
 	const currentParentPid = options.currentParentPid ?? (() => process.ppid)
-	const onOrphaned = options.onOrphaned ?? (() => process.kill(process.pid, 'SIGTERM'))
+	const supervisorAlive = options.supervisorAlive ?? isProcessAlive
 	const intervalMs = options.intervalMs ?? WATCHDOG_INTERVAL_MS
 
 	// Not supervised → nothing to watch. Returning null (rather than a no-op timer) keeps the
 	// "is this daemon under a shell?" question answerable by the caller.
-	if (declaredSupervisorPid(supervisorPid) === null) return null
+	const expected = declaredSupervisorPid(supervisorPid)
+	if (expected === null) return null
 
 	let fired = false
 	const timer = setInterval(() => {
-		if (fired || !isOrphaned(supervisorPid, currentParentPid())) return
+		if (fired) return
+		const observed: SupervisorObservation = { parentPid: currentParentPid(), supervisorAlive: supervisorAlive(expected) }
+		if (!isOrphaned(supervisorPid, observed)) return
 		fired = true
 		clearInterval(timer)
 		console.error(
-			`🛑 supervisor pid ${supervisorPid} is gone (now reparented to ${currentParentPid()}) — shutting down so no port is left held`,
+			`🛑 supervisor pid ${expected} is gone (parent now ${observed.parentPid}, alive=${observed.supervisorAlive}) — shutting down so no port is left held`,
 		)
-		onOrphaned()
+		options.onOrphaned()
 	}, intervalMs)
 	timer.unref?.()
 

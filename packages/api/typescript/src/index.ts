@@ -69,13 +69,15 @@ async function main(): Promise<void> {
 	process.on('SIGINT', () => shutdown('SIGINT'))
 	process.on('SIGUSR2', () => shutdown('SIGUSR2'))
 
-	// PARENT WATCHDOG — started HERE, and not before the handlers, precisely because it needs them to
-	// already exist: its reaction is a SIGTERM to ourselves, so the whole drain runs and the provider
-	// CLI process groups die with us. Started earlier it would only find the DataDirLock listener,
-	// which releases the lockfile and re-raises — a hard exit that leaks every agent.
+	// PARENT WATCHDOG — handed THE SAME `shutdown` the signal handlers run, so the whole drain runs and
+	// the provider CLI process trees die with us. Not a SIGTERM to ourselves: on Windows a self-signal
+	// is an unconditional TerminateProcess (no listener runs, every agent leaks); calling the drain is
+	// the same drain on every OS. The signal handlers above never arrive on Windows at all — there,
+	// this watchdog (ppid frozen at spawn, so the liveness probe half of its condition) is the ONLY
+	// path from "the shell is gone" to a clean exit.
 	//
 	// No-op unless a desktop shell stamped CODM_PARENT_PID on this process. See core's Watchdog.
-	startParentWatchdog()
+	startParentWatchdog({ onOrphaned: () => shutdown('CODM_PARENT_PID') })
 }
 
 main().catch(error => {

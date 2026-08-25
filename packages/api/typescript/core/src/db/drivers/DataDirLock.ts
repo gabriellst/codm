@@ -3,6 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { BaseError } from '../../types/BaseError'
 import type { BaseInfrastructureErrors } from '../../errors/codes'
+import { isProcessAlive } from '../../utils/ProcessLiveness'
 
 /**
  * Builds the error thrown when a SECOND DAEMON tries to start on a data dir a live daemon already
@@ -56,18 +57,6 @@ export function resolveDataDir(raw: string): string {
 	const expanded = raw.startsWith('~') ? path.join(os.homedir(), raw.slice(1)) : path.resolve(raw)
 	fs.mkdirSync(expanded, { recursive: true })
 	return expanded
-}
-
-/** True when `pid` names a process that is currently alive (signal 0 probes without delivering). */
-function isProcessAlive(pid: number): boolean {
-	if (!Number.isInteger(pid) || pid <= 0) return false
-	try {
-		process.kill(pid, 0)
-		return true
-	} catch (err) {
-		// EPERM ⇒ the process exists but we can't signal it (still alive). ESRCH ⇒ no such process.
-		return (err as NodeJS.ErrnoException).code === 'EPERM'
-	}
 }
 
 /**
