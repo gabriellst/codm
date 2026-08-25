@@ -1,0 +1,54 @@
+{
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"name": "client",
+	"sourceRoot": "packages/client",
+	"projectType": "library",
+	"targets": {
+		"generate": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "packages/client",
+				"command": "bun run generate"
+			},
+			"dependsOn": [
+				{ "projects": "api-typescript", "target": "emit-openapi" },
+				{ "projects": "api-go", "target": "emit-openapi" }
+			]
+		},
+		"check": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "packages/client",
+				"command": "bun run check"
+			}
+		},
+		"lint": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"inputs": [
+				"{projectRoot}/lib/**/*",
+				"{projectRoot}/generators/**/*",
+				"{projectRoot}/tsconfig.json",
+				"{workspaceRoot}/eslint.config.ts",
+				"{workspaceRoot}/scripts/eslint-rules/**/*",
+				"^production"
+			],
+			"options": {
+				"cwd": "packages/client",
+				"command": "eslint lib generators --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+			}
+		},
+		"test": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "packages/client",
+				"command": "bun test lib && bun run test:rust",
+				"env": {
+					"NODE_ENV": "test"
+				}
+			},
+			"inputs": ["{projectRoot}/dist/rust/**", "{projectRoot}/lib/**"],
+			"cache": true
+		}
+	}
+}

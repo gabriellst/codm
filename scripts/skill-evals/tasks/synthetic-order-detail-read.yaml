@@ -1,0 +1,71 @@
+id: synthetic-order-detail-read
+tier: holdout
+builder: sonnet
+title: Single-order detail read endpoint (synthetic — probes CQRS placement,
+  error vocab, envelope)
+sourceSpec: hand-authored
+goldRef: ""
+baseRef: ""
+prompt: >
+  In the template backend (packages/api/typescript), expose a single-order DETAIL
+  read endpoint for the app: given an order id (path parameter), return the
+  order's id, status, total price (cents + currency), and createdAt, scoped to
+  the caller's store. A list endpoint already exists (ListOrders) — this is the
+  missing detail read. Decide WHERE the read lives, how its input/output schemas
+  are shaped, and how a missing order is signaled, all per the house
+  architecture — read docs/BACKEND.md and the relevant .claude/skills playbooks
+  before writing code. Wire everything so the endpoint is actually live
+  (registration included) and finish with a green type-check: cd
+  packages/api/typescript && bun x tsc -p tsconfig.build.json --noEmit.
+axes:
+  - CQRS-SIDE
+  - ERR-VOCAB
+  - SCHEMA-DERIVE
+  - LAYOUT
+  - INFRA-LEAK
+graders:
+  - kind: tsc
+    spec: backend
+  - kind: grep-must
+    spec: packages/api/typescript/src/ui/usecases/**/*Order*.ts::class\s+Get\w*Order\w*\s+extends\s+Handler
+    id: query#QRY-01
+  - kind: grep-must-not
+    spec: packages/api/typescript/src/sales/**/*.ts::class\s+(Get|Find)\w*Order\w*\s+extends\s+Handler
+    id: usecase#bp-01
+  - kind: grep-must
+    spec: packages/api/typescript/src/ui/usecases/**/*Order*.ts::BaseError<(Base)?ApplicationErrors>
+    id: query#bp-09
+  - kind: grep-must
+    spec: packages/api/typescript/src/ui/usecases/**/*Order*.ts::NOT_FOUND
+    id: query#bp-09
+  - kind: grep-must
+    spec: packages/api/typescript/src/ui/controllers/**/*Order*.ts::extends\s+Controller[\s\S]*orderId
+    id: controller#CTRL-03
+  - kind: grep-must-not
+    spec: packages/api/typescript/src/ui/**/*Order*.ts::z\.instance\(
+    id: schema#bp-08
+  - kind: detect
+    spec: registry-scan
+  - kind: detect
+    spec: import-direction
+  - kind: judge
+    spec: >
+      A single-order detail read was just added under
+      packages/api/typescript/src/ui/. Verify ALL of: (a) the read lives in the
+      ui BFF context (ui/usecases) as a query Handler with direct DrizzleClient
+      access — NOT in the sales write context, NOT through
+      repositories/entities; (b) it returns a plain DTO shaped by an
+      OutputSchema (id, status, total as cents+currency, createdAt) — never a
+      domain entity instance; (c) the controller's InputSchema nests fields
+      under the params/ctx envelope keys and only delegates to the use case; (d)
+      the new controller is exported from ui's controllers barrel (index.ts) so
+      it actually registers; (e) a missing order throws a typed BaseError
+      NOT_FOUND, never returns null. Inspect the newly added *Order* files
+      (compare with git status / recently created files) plus the barrels.
+notes: >-
+  Synthetic probe authored by the orchestrating session to exercise the eval
+  loop. No gold tree — agent mode only, built from HEAD. The discriminating
+  question is PLACEMENT: a naive implementation puts GetOrder in sales/usecases
+  (write context); the house canon places single-entity reads in ui/usecases
+  with direct Drizzle (query skill QRY-01/bp-03).
+   Grader relaxed after iter2: the literal BaseApplicationErrors requirement was over-strict — the ui context union (ApplicationErrors, composing the base) is type-compatible canon; judge criterion (e) covers the typing judgment.

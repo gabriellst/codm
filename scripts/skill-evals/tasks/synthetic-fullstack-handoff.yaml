@@ -1,0 +1,209 @@
+id: synthetic-fullstack-handoff
+# L5/P0 hybrid — the MULTI-AGENT path P0's single-agent tail-drop pointed at. Agent A's backend
+# half (contracts + TS procurement BC + Go consumer + regenerated SDK, harvested from a real P0
+# run whose backend graded clean — iter8) is SEEDED as a working fixture via a git-apply patch;
+# a fresh agent B must finish ONLY the frontend + e2e from the handoff at .handoff/purchase-orders.md.
+# This is the framework's own prescription for a 7+-deliverable build ("split / hand off"),
+# already proven viable by synthetic-l5-handoff-continuity. Measures whether the dropped P0 tail
+# (create dialog + wired filter + real e2e) lands reliably when an agent starts fresh on JUST it.
+title: Finish the purchase-orders frontend + e2e from a handoff (backend seeded)
+tier: holdout
+builder: opus
+goldRef: ""
+baseRef: ""
+timeoutMs: 5400000
+prompt: >
+  You are agent B. The BACKEND half of the supplier purchase-orders slice is already DONE and on
+  disk — contracts (the integration event, the PurchaseOrderStatus enum, the purchase_orders table
+  + migration, both-language bindings), the TS `procurement` bounded context, the Go consumer, and
+  a regenerated SDK. READ .handoff/purchase-orders.md FIRST — it is the source of truth for what
+  exists, the exact SDK identifiers you build against, and your R1–R6 deliverables. Do NOT redefine
+  any contract, do NOT rerun `bun contracts`, do NOT rebuild or duplicate the backend, do NOT
+  hand-roll a fetch or a parallel zod schema — consume the seeded SDK from
+  '@codm/client-typescript/typescript'. Trust the SDK on disk over your memory of how these
+  shapes "should" look.
+  READ before you build: packages/app/react/CLAUDE.md END TO END (especially the Real-time, State
+  placement, Dialogs, and Enum-labels sections) +
+  .claude/skills/{route,component,form}/react/SKILL.md for the frontend, and
+  .claude/skills/e2e/SKILL.md + the existing packages/e2e/tests/*.spec.ts as the e2e exemplars.
+  Then deliver phases 4–5 per the handoff's R1–R6: the route shell under
+  packages/app/react/src/routes/(app)/procurement/purchase-orders/ (thin shell, status filter typed
+  by purchaseOrderStatusSchema and .default()ed), the list section that owns its data via
+  useListPurchaseOrders + routeApi.useSearch (the status filter THREADED into the hook call), inline
+  skeleton, an enum-keyed status badge map, labels via enums.PurchaseOrderStatus.* in BOTH locale
+  files; exactly one useServerEvents(PurchaseOrderRecordedEventName, …) that invalidates
+  listPurchaseOrdersQueryKey (no setQueryData/refetchInterval/second mount); the create dialog via
+  useDialogStore validating against createPurchaseOrderMutationRequestSchema and the cancel mutation
+  kept whole (no try/catch, no onError); and a REAL Playwright spec at
+  packages/e2e/tests/08-purchase-orders.spec.ts (API-context setup, role/label selectors, no
+  waitForTimeout, and a realtime assertion that creates a row via the API while the list is open and
+  asserts it appears without reload). Do NOT stub the e2e (no .skip, no expect(true).toBe(true)).
+  Gates before done: cd packages/app/react && bun x tsc --noEmit; cd packages/e2e && bun x tsc
+  --noEmit; from the repo root bun run detect; and confirm the handed-off backend still compiles
+  (packages/api/typescript tsc). Your final message must list what you built and which gates you ran.
+
+axes:
+  - DATA-OWNERSHIP
+  - STATE-PLACEMENT
+  - SDK-CONSUME
+  - ENUM-REPR
+  - LOCALE-MONEY
+  - E2E-DISCIPLINE
+  - HANDOFF-CONTINUITY
+
+# ── the handoff doc B finishes from (injected first) ──────────────────
+inject:
+  - from: scripts/skill-evals/seeds/synthetic-fullstack-handoff/HANDOFF.md
+    to: .handoff/purchase-orders.md
+
+# ── seed agent A's backend half: git-apply the harvested phases-1-3 patch (77 files:
+#    contracts + api-ts procurement BC + api-go consumer + regenerated client SDK) ──
+seedCommands:
+  - "git apply scripts/skill-evals/seeds/synthetic-fullstack-handoff/phases-1-3.patch"
+
+graders:
+  # ── regression: the seeded backend half must remain intact after B's frontend work ──
+  - kind: tsc
+    spec: backend
+    id: ts#seed-still-compiles
+  - kind: grep-must
+    spec: "packages/api/typescript/src/ui/controllers/ListenEvents.ts::PurchaseOrderRecordedEvent"
+    id: realtime#browser-union-intact
+  - kind: grep-must
+    spec: "packages/client/dist/typescript/src/typescript/zod/listenEventsSchema.ts::purchase_order"
+    id: realtime#sdk-intact
+  - kind: detect
+    spec: registry-scan
+    id: detect#registry-scan
+  - kind: detect
+    spec: import-direction
+    id: detect#import-direction
+  # ── react layer (B's work) ──────────────────────────────────────────
+  - kind: tsc
+    spec: app-react
+    id: react#tsc
+  - kind: file-exists
+    spec: "packages/app/react/src/routes/(app)/procurement/purchase-orders/index.tsx"
+    id: react#route
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/procurement/purchase-orders/**/*.{ts,tsx}::useServerEvents\\("
+    id: realtime#subscribe
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/procurement/purchase-orders/**/*.{ts,tsx}::invalidateQueries"
+    id: realtime#invalidate-not-surgery
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/procurement/purchase-orders/**/*.{ts,tsx}::setQueryData|refetchInterval"
+    id: realtime#no-surgery-no-poll
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/procurement/purchase-orders/**/*.{ts,tsx}::useDialogStore"
+    id: component#dialog-store
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/procurement/purchase-orders/**/*.{ts,tsx}::useListPurchaseOrders"
+    id: sdk#consume-seeded-hook
+  - kind: grep-must
+    spec: "packages/app/react/src/locales/pt.json::PurchaseOrderStatus"
+    id: enum#catalog-pt
+  - kind: grep-must
+    spec: "packages/app/react/src/locales/en.json::PurchaseOrderStatus"
+    id: enum#catalog-en
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/procurement/**/*.{ts,tsx}::fetch\\("
+    id: sdk#no-raw-fetch
+  - kind: detect
+    spec: component-props
+    id: detect#component-props
+  # ── e2e layer (B's work) ────────────────────────────────────────────
+  - kind: tsc
+    spec: e2e
+    id: e2e#tsc
+  - kind: file-exists
+    spec: "packages/e2e/tests/08-purchase-orders.spec.ts"
+    id: e2e#spec
+  - kind: grep-must-not
+    spec: "packages/e2e/tests/08-purchase-orders.spec.ts::waitForTimeout"
+    id: e2e#no-sleep
+  - kind: grep-must
+    spec: "packages/e2e/tests/08-purchase-orders.spec.ts::request\\.|APIRequestContext|api\\."
+    id: e2e#api-setup
+  - kind: grep-must-not
+    spec: "packages/e2e/tests/08-purchase-orders.spec.ts::expect\\(\\s*true\\s*\\)\\.toBe\\(\\s*true|expect\\(\\s*1\\s*\\)\\.toBe\\(\\s*1|TODO|placeholder|\\.skip\\("
+    id: e2e#not-stubbed
+  - kind: grep-must
+    spec: "packages/e2e/tests/08-purchase-orders.spec.ts::expect\\([\\s\\S]{0,400}(toContainText|toBeVisible|toHaveText|toHaveURL|getByRole|getByText)"
+    id: e2e#real-assertions
+  # ── the four per-layer frontend judges (shared with P0; sonnet) ─────
+  - kind: judge
+    model: sonnet
+    spec: >
+      Handoff slice, judge ONLY the REACT SHELL + LIST layer for the purchase-orders route under
+      packages/app/react/src/routes/(app)/procurement/purchase-orders/: the route index.tsx is a
+      thin shell (URL contract with the status filter typed by the SDK purchaseOrderStatusSchema and
+      .default()ed, NO data fetching in the route); the list section owns its data (useListPurchaseOrders
+      + routeApi.useSearch with the status filter ACTUALLY threaded into the hook call — a filter
+      defined in the search schema but never read/applied is a FAIL), renders an inline skeleton,
+      dispatches status badge styles via an enum-keyed map (no switch on status), labels ONLY via the
+      typed enums.PurchaseOrderStatus.* catalog in BOTH locale files. Scope: a small -hooks/ wrapper
+      around the typed search params is canon; realtime/dialog/e2e are judged by OTHER graders — out
+      of scope here; the seeded backend is out of scope.
+    id: judge#react-shell
+  - kind: judge
+    model: sonnet
+    spec: >
+      Handoff slice, judge ONLY the REAL-TIME layer per packages/app/react/CLAUDE.md: exactly one
+      useServerEvents subscription for PurchaseOrderRecordedEventName whose callback invalidates the
+      SDK list query key (listPurchaseOrdersQueryKey) — no setQueryData, no refetchInterval, no new
+      EventSource/fetchEventSource outside the shared hooks, no second useServerEventSource mount.
+      Scope: route/list shape, dialog, and e2e are judged by OTHER graders — out of scope here.
+    id: judge#realtime
+  - kind: judge
+    model: sonnet
+    spec: >
+      Handoff slice, judge ONLY the CREATE/CANCEL MUTATION layer: the create dialog goes through
+      useDialogStore and validates against createPurchaseOrderMutationRequestSchema (no parallel
+      z.object of the body); the cancel mutation keeps the mutation object whole, no try/catch around
+      mutate, no onError. A create dialog that is ABSENT entirely is a FAIL. Scope: route/list shape,
+      realtime, and e2e are judged by OTHER graders — out of scope here.
+    id: judge#dialog-mutation
+  - kind: judge
+    model: sonnet
+    spec: >
+      Handoff slice, judge ONLY E2E-DISCIPLINE: a new Playwright spec at
+      packages/e2e/tests/08-purchase-orders.spec.ts exists (not absent, not all-fixme/skip), setup
+      goes through the API request context (not UI click-paths), role/label selectors, no
+      waitForTimeout, and the realtime assertion creates a purchase order via the API while the list
+      is open and asserts the new row appears without reload/navigation. A generous expect timeout for
+      SSE latency is NOT a banned sleep. Scope: the route/dialog/realtime implementations are judged
+      by OTHER graders — out of scope here.
+    id: judge#e2e-discipline
+  # ── the handoff-continuity judge (the L5 axis: did B finish WITHOUT restarting?) ──
+  - kind: judge
+    model: sonnet
+    spec: >
+      Agent A built the purchase-orders BACKEND (contracts + the TS procurement bounded context + the
+      Go consumer + a regenerated SDK) and left a handoff at .handoff/purchase-orders.md; agent B had
+      to FINISH only the frontend + e2e from that handoff WITHOUT restarting or re-deriving the
+      backend. Judge CONTINUITY: (1) B did NOT redefine the frozen contract — no new
+      purchase-order-recorded.tsp, no second PurchaseOrderStatus enum, no new purchase_orders table or
+      migration, no `bun contracts` rerun (the seeded ones are authoritative). (2) B CONSUMED the
+      seeded SDK — the route/section import useListPurchaseOrders / useCreatePurchaseOrder /
+      useCancelPurchaseOrder / listPurchaseOrdersQueryKey / createPurchaseOrderMutationRequestSchema /
+      PurchaseOrderStatusEnum from '@codm/client-typescript/typescript', NOT a hand-rolled fetch or
+      a parallel zod schema of the body. (3) B did NOT rebuild the backend — no new
+      procurement use case/controller/entity (those are seeded and must remain the single
+      implementation). (4) the frontend integrates coherently with the handed-off contract (event
+      name, enum values DRAFT|PLACED|CANCELLED, the Money shape). Scope: B's OWN frontend/e2e quality
+      is judged by the other graders — here judge ONLY whether B respected the handoff and the frozen
+      backend. Files A built that B left untouched are the CORRECT outcome, not under-building.
+    id: judge#handoff-continuity
+
+notes: >-
+  MULTI-AGENT HANDOFF probe. The "agent A" half is SEEDED, not built live: phases-1-3.patch was
+  harvested from fullstack-composition-iter8 (a real P0 run whose backend graders all passed),
+  filtered to exclude packages/app/react/** and packages/e2e/** (agent B's job). seedCommands
+  git-applies it onto the worktree HEAD (verified `git apply --check` clean 2026-06-14); the patch
+  ships the regenerated client SDK + contracts bindings so NO regen step is needed (deterministic).
+  inject places HANDOFF.md at .handoff/purchase-orders.md. Validator note: at HEAD (no seed) the
+  seeded-backend grep-must graders (realtime#browser-union-intact, realtime#sdk-intact) and all
+  react#/e2e# graders FAIL = free real estate, as expected; ts#seed-still-compiles + react#tsc +
+  e2e#tsc pass at HEAD (HEAD compiles). RUNNER: AGENT_MODEL=sonnet, a dedicated window; the
+  frontend+e2e half is ~1/3 of full P0 so timeoutMs=5400000 (90m) with AGENT_RESUMES=2-3.

@@ -1,0 +1,230 @@
+registry:
+  type: frontend
+  layer: presentation
+  depends_on: []
+  depended_by: [component, form]
+  context_reads: []
+
+  patterns:
+    # --- Structural Rules (PRM-01..PRM-04) ---
+    - id: PRM-01
+      name: "CVA variants"
+      when: "component has size/variant props — mutually exclusive with PRM-P07"
+      rule: "const variants = cva('base-classes', { variants: { size, variant } })"
+      note: >
+        If a component uses data-* attributes for variant switching (PRM-P07), this pattern is N/A.
+        CVA and data-attribute variants are two valid approaches — a component uses one OR the other.
+    - id: PRM-02
+      name: "forwardRef pattern"
+      when: "component wraps Base UI interactive primitive or will be used with render prop"
+      rule: "React.forwardRef<HTMLElement, Props>(function Name(..., ref) => ...)"
+      severity_guidance: >
+        critical for interactive primitives used with render props or Base UI composition
+        (Button, Input, Checkbox, Switch, Select triggers). low for non-interactive display wrappers
+        (Card, Badge, Skeleton, Separator) that are never composed via render props.
+    - id: PRM-03
+      name: "Tailwind tokens from SYSTEM.md"
+      when: always
+      rule: "use design system tokens for colors, spacing, radius"
+      wrong: "hardcoded hex values or arbitrary Tailwind values"
+      note: >
+        Standard Tailwind utilities (px-2, py-1.5, text-sm, h-8, gap-4, rounded-md, w-full, etc.)
+        are NOT violations — they ARE the design system tokens. Only flag:
+        (1) arbitrary value syntax: bg-[#hex], min-w-[200px], text-[14px]
+        (2) inline style={{ }} with pixel values
+        (3) Tailwind color scale classes (blue-500, gray-300) where semantic tokens exist (primary, muted, border)
+    - id: PRM-04
+      name: "Props extend HTML element or Base UI"
+      when: always
+      rule: "interface Props extends React.ComponentProps<'el'> or Primitive.Root.Props"
+
+    # --- Conditional Rules (PRM-C01..PRM-C02) ---
+    - id: PRM-C01
+      name: "Base UI wrapper"
+      when: "wrapping a Base UI primitive"
+      rule: "import { X } from '@base-ui/react/X'"
+    - id: PRM-C02
+      name: "Default variant"
+      when: "component has variants"
+      rule: "defaultVariants: { size: 'md', variant: 'default' }"
+
+    # --- Extracted Real-Code Patterns (PRM-P01..PRM-P09) ---
+    - id: PRM-P01
+      name: "Simple wrapper with data-slot + cn"
+      when: always
+      rule: >
+        function Component({ className, ...props }: React.ComponentProps<'el'>) {
+          return <el data-slot="component-name" className={cn('...', className)} {...props} />
+        }
+      examples: [card.tsx, label.tsx, skeleton.tsx, separator.tsx, table.tsx]
+
+    - id: PRM-P02
+      name: "Base UI primitive delegation"
+      when: "wrapping a Base UI primitive"
+      rule: >
+        import { X as XPrimitive } from '@base-ui/react/x';
+        Delegate root props to XPrimitive.Root, add data-slot and cn(classes, className).
+        Use XPrimitive.Sub.Props for sub-component typing.
+      examples: [button.tsx, input.tsx, switch.tsx, checkbox.tsx, separator.tsx, tabs.tsx]
+
+    - id: PRM-P03
+      name: "Portal + Positioner + Popup trio"
+      when: "building floating/overlay components (popover, tooltip, dropdown, select)"
+      rule: >
+        Content component wraps: Portal > Positioner (side, align, sideOffset, alignOffset) > Popup.
+        Positioner props picked via Pick<Primitive.Positioner.Props, 'side' | 'align' | 'sideOffset' | 'alignOffset'>.
+        Positioner always has className="isolate z-50".
+      examples: [popover.tsx, tooltip.tsx, dropdown-menu.tsx, select.tsx, combobox.tsx]
+
+    - id: PRM-P04
+      name: "Compound component with named exports"
+      when: always
+      rule: >
+        Multiple subcomponents exported individually at file bottom:
+        export { Component, ComponentHeader, ComponentContent, ComponentFooter }
+        Never use Component.SubComponent pattern.
+      wrong: "export default or Component.SubComponent dot-notation pattern"
+      examples: [card.tsx, dialog.tsx, alert-dialog.tsx, table.tsx, sheet.tsx]
+
+    - id: PRM-P05
+      name: "forwardRef with named function"
+      when: "component needs ref forwarding (interactive primitive, used with render prop)"
+      rule: >
+        const Component = React.forwardRef<HTMLButtonElement, Props>(function Component(
+          { className, variant = 'default', ...props }, ref
+        ) { return <Primitive ref={ref} ... /> })
+        Always use named function inside forwardRef (not arrow).
+      wrong: "React.forwardRef<...>(({ ... }, ref) => ...) — anonymous arrow inside forwardRef"
+      examples: [button.tsx, input.tsx, textarea.tsx, combobox.tsx (ComboboxTrigger), input-group.tsx]
+      severity_guidance: >
+        critical for interactive primitives used with render props or Base UI composition
+        (Button, Input, Checkbox, Switch, Select triggers). low for non-interactive display wrappers
+        (Card, Badge, Skeleton, Separator) that are never composed via render props.
+
+    - id: PRM-P06
+      name: "Base UI render prop composition"
+      when: "composing Base UI trigger/close with styled Button"
+      rule: >
+        <Primitive.Close render={<Button variant="outline" />} />.
+        The render prop delegates rendering to another component while
+        preserving Base UI behavior (aria, keyboard, state).
+      examples: [alert-dialog.tsx (AlertDialogCancel), sheet.tsx (SheetClose), combobox.tsx (ComboboxClear), dialog.tsx (DialogFooter close)]
+
+    - id: PRM-P07
+      name: "data-* attributes for CSS variant switching"
+      when: "component has size/side/variant props AND does NOT use CVA (mutually exclusive with PRM-01)"
+      rule: >
+        Pass variant as data attribute: data-size={size}, data-side={side}, data-variant={variant}.
+        Style with CSS selectors: data-[size=sm]:..., data-[side=right]:....
+        Prefer data-* over JS conditional classes for complex multi-value variants.
+      examples: [avatar.tsx (data-size), card.tsx (data-size), sheet.tsx (data-side), select.tsx (data-size), alert-dialog.tsx (data-size)]
+
+    - id: PRM-P08
+      name: "React context for variant propagation"
+      when: "parent component needs to pass variant/size to children"
+      rule: >
+        const GroupContext = React.createContext<VariantProps<typeof variants>>({ size: 'default', variant: 'default' });
+        Parent wraps children with <GroupContext.Provider value={{ variant, size }}>.
+        Child reads context: const ctx = React.useContext(GroupContext); uses ctx.variant || variant.
+      examples: [toggle-group.tsx (ToggleGroupContext)]
+
+    - id: PRM-P09
+      name: "useRender for polymorphic components"
+      when: "component supports render prop for tag polymorphism"
+      rule: >
+        import { mergeProps } from '@base-ui/react/merge-props';
+        import { useRender } from '@base-ui/react/use-render';
+        return useRender({ defaultTagName: 'span', props: mergeProps<'span'>({ className: cn(...) }, props), render, state: { slot: 'name' } });
+      examples: [badge.tsx, breadcrumb.tsx (BreadcrumbLink)]
+
+  bad_practices:
+    - id: bp-01
+      name: "Missing data-slot attributes"
+      severity: critical
+      wrong: |
+        function Dialog({ children }) {
+          return (
+            <BaseDialog.Root>
+              <div className="overlay" />
+              <div className="content">{children}</div>
+            </BaseDialog.Root>
+          )
+        }
+      right: |
+        function Dialog({ children }) {
+          return (
+            <BaseDialog.Root>
+              <BaseDialog.Backdrop data-slot="overlay" className="..." />
+              <BaseDialog.Popup data-slot="content" className="...">{children}</BaseDialog.Popup>
+            </BaseDialog.Root>
+          )
+        }
+      mechanical: false
+
+    - id: bp-02
+      name: "Hardcoded colors instead of design system tokens"
+      severity: critical
+      wrong: |
+        <button className="bg-blue-500 text-white hover:bg-blue-600">
+      right: |
+        <button className="bg-primary text-primary-foreground hover:bg-primary/90">
+      note: >
+        ONLY flag Tailwind color scale classes (blue-500, red-600, gray-300) and hex values (#fff, #333).
+        NEVER flag spacing utilities (px-2, py-4, gap-3), sizing (h-8, w-full, max-w-sm),
+        typography (text-sm, font-medium), border-radius (rounded-md), or layout (flex, grid, items-center).
+        These are standard Tailwind utilities, not hardcoded values.
+      mechanical: true
+      detect:
+        - '\b(?:bg|text|border|ring|from|via|to|fill|stroke|outline|divide|accent|caret|decoration|shadow)-(?:red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|gray|grey|slate|zinc|neutral|stone)-(?:50|100|200|300|400|500|600|700|800|900|950)\b'
+        - '#(?:[0-9a-fA-F]{3}){1,2}\b'
+
+    - id: bp-03
+      name: "Missing forwardRef for composable components"
+      severity: critical
+      wrong: |
+        function MyButton({ children, ...props }) {
+          return <button {...props}>{children}</button>
+        }
+        // Won't work: <Tooltip.Trigger render={<MyButton />} />
+      right: |
+        const MyButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
+          function MyButton({ children, ...props }, ref) {
+            return <button ref={ref} {...props}>{children}</button>
+          }
+        )
+        // Works: <Tooltip.Trigger render={<MyButton />} />
+      mechanical: false
+
+    - id: bp-04
+      name: "Inline styles with pixel values instead of Tailwind utilities"
+      severity: moderate
+      wrong: |
+        <div style={{ padding: '16px', fontSize: '14px' }}>
+      right: |
+        <div className="p-4 text-sm">
+      note: >
+        ONLY applies to inline style={{}} objects with pixel/rem values.
+        NEVER applies to Tailwind class names — even numeric ones like p-4, text-sm, h-8.
+        Tailwind classes ARE the utility system; they are never a violation of this rule.
+      mechanical: true
+      detect:
+        - 'style=\{\{[^}]*\b\d+(?:px|rem)\b'
+
+  canonical_snippet: |
+    const buttonVariants = cva(
+      'inline-flex items-center justify-center rounded-md font-medium transition-colors',
+      {
+        variants: {
+          variant: { default: 'bg-primary text-white', outline: 'border border-input' },
+          size: { sm: 'h-8 px-3 text-sm', md: 'h-10 px-4', lg: 'h-12 px-6 text-lg' },
+        },
+        defaultVariants: { variant: 'default', size: 'md' },
+      }
+    )
+    const Button = React.forwardRef<HTMLButtonElement, ButtonPrimitive.Props & VariantProps<typeof buttonVariants>>(
+      function Button({ className, variant = 'default', size = 'default', ...props }, ref) {
+        return <ButtonPrimitive ref={ref} data-slot="button" className={cn(buttonVariants({ variant, size, className }))} {...props} />
+      }
+    )
+
+  scaffold: "bun cli primitive <name>"

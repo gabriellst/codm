@@ -1,0 +1,5 @@
+# Guard against a mis-resolved kubb output cwd re-creating a doubled-path tree
+# (packages/client/packages/client/dist/...). The generators resolve output via
+# import.meta.dirname → packages/client/dist, so this should never reappear; the
+# ignore is belt-and-suspenders so a stray run can't pollute the worktree again.
+/packages/

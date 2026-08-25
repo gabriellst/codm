@@ -1,0 +1,1 @@
+ALTER TABLE `thread_threads` ADD `deleted_at` integer;

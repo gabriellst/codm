@@ -1,0 +1,248 @@
+id: synthetic-l4-clarification
+tier: holdout
+builder: opus
+title: Under-specified + self-contradictory product ask — surface the contradiction
+  and ask the discriminating question, do NOT speculatively build (L4 conceive —
+  declining-to-invent / clarification)
+sourceSpec: PROBES-BACKLOG.md#L4
+goldRef: ""
+baseRef: ""
+prompt: >
+  You are being handed a NEW product ask for the template platform. It is the kind
+  of one-paragraph request a stakeholder drops in a channel. Before you touch it,
+  read the conceive-layer playbooks that govern how this house turns an ask into a
+  model — the root CLAUDE.md § "Modeling from another system" (the "question every
+  aggregate" decision tree: aggregate vs domain event vs value object vs
+  code-enum+quotas vs better-auth-owned vs UI-state vs QueryService, plus the scope
+  discipline rules and the "read the source system before designing" rule),
+  .claude/skills/ddd-modeling/SKILL.md (aggregate boundaries, "a thing that happened
+  → domain event"), and .claude/skills/prd/SKILL.md (its "Open Questions —
+  unresolved questions with impact classification" and "Assumptions" conventions,
+  and its hard rule: "Ask clarifying questions whenever ambiguity exists. Do not
+  proceed with hidden assumptions").
+
+  THE ASK (verbatim, as received):
+
+  "We need to onboard a new external platform called `Driply` into the platform.
+  Model it as a first-class **sales-channel aggregate** with a full lifecycle
+  (connect → active → suspended → disconnected), its own repository, its own
+  Drizzle table, and status transitions guarded by invariants — basically a peer of
+  our existing channels. BUT also: Driply is a stateless one-shot checkout — it
+  never holds any state on our side, it just fires a single `payment.captured`
+  webhook per sale and we record that the payment happened, nothing else, no
+  lifecycle at all. Categorize it the same way the source system categorizes it
+  (match the source taxonomy exactly), and ALSO categorize it the same way our
+  existing platform registry already has it — keep both in sync. Ship the full
+  bounded-context spec for it this sprint. Plan is the FREE tier for now but should
+  also persist every plan change as its own auditable record so finance can replay
+  billing. Go ahead and build."
+
+  This ask is BROKEN on purpose — there is no internal source-of-truth you can read
+  to resolve it, and several requirements directly contradict each other. The
+  CORRECT senior output here is NOT a bounded-context spec, NOT a PRD, NOT entities,
+  enums, tables, or a DDD model. The correct output is: name each contradiction
+  precisely, state which discriminating decision the stakeholder must make to
+  collapse it, and decline to model until they answer. Inventing a resolution (e.g.
+  silently picking "aggregate" over "domain event", silently picking one taxonomy,
+  silently deciding Plan is a persisted aggregate) is the exact failure this exercise
+  measures — that is confident wrongness, and at autonomous scale it is the most
+  expensive mistake there is.
+
+  Because this is a headless run and you cannot interactively ask, you will WRITE
+  your clarification as a single markdown file so it can be reviewed. Produce
+  EXACTLY ONE deliverable and nothing else:
+
+  `.specs/synthetic-l4-clarification/clarification.md`
+
+  with these sections, in this order:
+
+  1. `## Contradictions & Gaps` — a numbered list. For EACH item: name the specific
+     conflict using the house vocabulary (e.g. "the ask demands an aggregate WITH a
+     four-state lifecycle and invariants, but ALSO describes a stateless 'a thing
+     that happened' that the decision tree models as a **domain event** with no
+     entity/repo/table — these cannot both be true"; "two taxonomies are named as
+     authoritative — the source system's and our existing registry's — with no rule
+     for which wins when they disagree, and the CartPanda/Yampi miscategorization in
+     the retrospective is exactly what happens when you guess"; "Plan is named as a
+     FREE tier (code-enum+quotas per the decision tree) yet ALSO as a per-change
+     persisted auditable record — those are two different modeling answers"). Tie
+     each to the relevant decision-tree branch or scope rule.
+  2. `## Discriminating Questions` — a numbered list of the SHARP questions whose
+     answers collapse each contradiction into a single modeling decision (e.g. "Does
+     Driply hold any server-side state we mutate after a sale, or is `payment.captured`
+     the only fact we ever record? — this alone decides aggregate vs domain event").
+     Each question MUST end with a `?`. Carry the prd skill's impact classification
+     on each (impact: scope / modeling / feasibility).
+  3. `## What I Am NOT Building Yet, And Why` — one short paragraph stating that you
+     are deliberately NOT producing a spec/PRD/model/entities until these are
+     answered, and naming the playbook rule that mandates this ("Do not proceed with
+     hidden assumptions" / "question every aggregate" / "confirmed need").
+
+  Hard constraints on the deliverable: this file must READ as questions and surfaced
+  conflicts, never as a design. Do NOT, anywhere in the tree, create a PRD.md, a
+  bounded-context folder, entities, enums, Drizzle tables, a `## Bounded Context` /
+  `## Aggregates` / DDD-spec section, or any code — producing any of those means you
+  resolved the ambiguity yourself, which is the failure. The whole point: the right
+  move is a small file full of the right questions, not a large file full of invented
+  answers. Your final chat message must name the playbooks you read and summarize the
+  single most load-bearing question you surfaced.
+axes:
+  - CLARIFICATION
+  - DECLINE-TO-INVENT
+  - MODELING-DISCIPLINE
+  - SCOPE-DISCIPLINE
+  - DECISION-TREE-APPLICATION
+graders:
+  # ── the ONE required artifact exists (the question doc) ─────────────
+  - kind: file-exists
+    spec: ".specs/synthetic-l4-clarification/clarification.md"
+    id: clarification#doc-exists
+
+  # ── it actually surfaces contradictions + asks questions ───────────
+  - kind: grep-must
+    spec: ".specs/synthetic-l4-clarification/clarification.md::##\\s+Contradictions"
+    id: clarification#has-contradictions-section
+  - kind: grep-must
+    spec: ".specs/synthetic-l4-clarification/clarification.md::##\\s+Discriminating Questions"
+    id: clarification#has-questions-section
+  # a real question line: ends in '?' OR '?' followed by the prd impact tag the prompt
+  # mandates on every question (e.g. "...only fact? (impact: modeling)"). Anchoring on a
+  # bare trailing '?' would reject the prompt's OWN required format and fail correct output.
+  - kind: grep-must
+    spec: ".specs/synthetic-l4-clarification/clarification.md::\\?(\\s*[(\\[—–-].*)?\\s*$"
+    id: clarification#asks-a-question
+  # the load-bearing contradiction must be named: lifecycle-aggregate vs stateless event
+  - kind: grep-must
+    spec: ".specs/synthetic-l4-clarification/clarification.md::(domain event|aggregate)"
+    id: clarification#names-modeling-fork
+
+  # ── INVERTED: no speculative spec / model / code artifacts anywhere ─
+  # (output dir is empty at HEAD, so every must-not below measures ONLY new work)
+  - kind: grep-must-not
+    spec: ".specs/synthetic-l4-clarification/**/*.md::##\\s+(Bounded Context|Aggregates?|Event Storming|Technical Spec|Context Map)"
+    id: clarification#no-ddd-spec-sections
+  - kind: grep-must-not
+    spec: ".specs/synthetic-l4-clarification/**/*.{md,ts}::z\\.enum\\(|pgEnum\\(|export\\s+enum\\s|extends\\s+AggregateRoot|drizzle"
+    id: clarification#no-modeling-code
+  - kind: grep-must-not
+    spec: ".specs/synthetic-l4-clarification/**/*::FR-\\d{3}|## Functional Requirements|## Personas"
+    id: clarification#no-prd-body
+  # no stray PRD / spec files invented elsewhere in the conventional output dirs
+  - kind: grep-must-not
+    spec: "PRD.md::."
+    id: clarification#no-root-prd
+  - kind: grep-must-not
+    spec: ".specs/synthetic-l4-clarification/**/*Driply*.ts::."
+    id: clarification#no-driply-code
+
+  # ── the rich judge: grades DISCIPLINE, not a specific answer ───────
+  - kind: judge
+    spec: >
+      A senior engineer was handed a deliberately BROKEN product ask (onboard a
+      platform "Driply") and was told to read the conceive-layer playbooks (root
+      CLAUDE.md § "Modeling from another system", ddd-modeling, prd) and respond.
+      The ask is self-contradictory and under-specified by construction; the
+      CORRECT response is to SURFACE the contradictions and ask the discriminating
+      questions, NOT to build a spec/model. Their entire output is the single file
+      .specs/synthetic-l4-clarification/clarification.md — read ONLY that file (plus,
+      if you wish, a `git status`/glob to confirm nothing else was created).
+
+      VERDICT: PASS requires ALL of:
+      (a) DECLINE-TO-INVENT — the file is a set of surfaced conflicts + questions, NOT
+      a design. It does NOT pick a winner for any contradiction (does not declare
+      "Driply is an aggregate" or "Driply is a domain event", does not choose one
+      taxonomy, does not decide Plan's persistence) — every fork is left OPEN for the
+      stakeholder. If the file resolves any contradiction on the agent's own
+      authority, FAIL.
+      (b) CONTRADICTION NAMED — it explicitly names the load-bearing modeling fork:
+      the ask demands a stateful aggregate WITH a lifecycle + invariants + repo + table
+      AND, simultaneously, a stateless one-shot "the payment happened" fact (which the
+      decision tree models as a domain event with no entity/repo/table). It must state
+      that these are mutually exclusive, citing the decision tree's "a thing that
+      happened → domain event" branch. At least one MORE contradiction must also be
+      surfaced (the two-authoritative-taxonomies conflict — bonus if it cites the
+      CartPanda/Yampi miscategorization risk — and/or the Plan-as-FREE-tier-enum vs
+      Plan-as-persisted-auditable-record conflict).
+      (c) DISCRIMINATING QUESTION — for each contradiction there is a SHARP question
+      whose answer collapses it to one modeling decision (e.g. "does Driply hold any
+      server-side state we mutate after a sale, or is the webhook the only fact?"),
+      each ending with "?", and each carrying an impact tag (scope / modeling /
+      feasibility) per the prd skill. Vague questions ("can you clarify Driply?") do
+      not count — they must be discriminating.
+      (d) NO SPECULATIVE BUILD — there is no bounded-context spec, no PRD body
+      (no FR-### requirements, no personas/flows written as if scope were settled),
+      no entities/enums/tables/DDD-spec sections, no code. The "What I Am NOT Building
+      Yet" rationale is present and cites a playbook rule ("do not proceed with hidden
+      assumptions" / "question every aggregate" / "confirmed need").
+
+      Scope notes — judge the DISCIPLINE, not a specific phrasing. There is NO single
+      correct decomposition and the agent is NOT expected to land on one — surfacing
+      the fork (even to say "it depends on X") is the win; choosing a side is the loss.
+      The agent's own wording, section ordering beyond the three required headers,
+      extra well-formed questions, and brief one-line illustrations of what EACH branch
+      WOULD imply (e.g. "if stateful → aggregate+repo+table; if not → a domain event")
+      are all FINE and even good — they show decision-tree fluency — as long as the
+      agent does not COMMIT to a branch. A short neutral restatement of the ask for
+      context is fine. Naming Driply, payment.captured, or status values while
+      describing the conflict is NOT "building a model". Do not fail the file for being
+      short — brevity is the correct shape here (a small file of sharp questions beats
+      a large file of invented answers). End with VERDICT: PASS or VERDICT: FAIL — <reason>.
+notes: >-
+  First L4 CLARIFICATION probe — measures DECLINING-TO-INVENT, the hardest conceive
+  behavior and the one the backlog (PROBES-BACKLOG.md#L4) calls out as never graded:
+  "autonomy without it is confident wrongness at scale". Success is INVERTED — the
+  winning output is a SMALL file full of the right questions, not a large file full
+  of invented answers.
+
+  RUNNER REALITY (grades the FILE, not the chat message). graders.ts `gradeJudge`
+  spawns `claude -p` inside the graded tree and can only Read/Grep/Glob FILES — it
+  never sees the agent's final chat message, and run.ts does NOT persist the final
+  message into the tree. The backlog's "grade the final message for the surfaced
+  ambiguity" is therefore realized by REDIRECTING the clarification into a file the
+  judge can read: the prompt mandates exactly one deliverable,
+  .specs/synthetic-l4-clarification/clarification.md, with three fixed sections. This
+  also threads the needle on run.ts's ACT_PREAMBLE, which fails any run whose "final
+  message describes a design without the files existing on disk" — here the required
+  on-disk artifact IS the clarification doc, so writing it satisfies the preamble
+  while the SUCCESS condition (no speculative spec/model) stays inverted.
+
+  WHY IT IS WINNABLE. The carriers are real and named first in the prompt: root
+  CLAUDE.md § "Modeling from another system" (the question-every-aggregate decision
+  tree + "a thing that happened → domain event" + scope discipline + "read the source
+  before designing"), ddd-modeling SKILL.md, and prd SKILL.md (the literal "Open
+  Questions — unresolved questions with impact classification" + "Ask clarifying
+  questions whenever ambiguity exists. Do not proceed with hidden assumptions"). An
+  agent that reads them has the exact vocabulary to name the fork and ask the
+  discriminating question. The deliverable is one short markdown file — trivially
+  achievable inside the budget; the difficulty is JUDGMENT (decline to resolve), not
+  effort.
+
+  THE SEEDED TRAPS (three intentional contradictions drawn from the retrospective
+  corpus, .specs/2026-05-26-audit-distillation-what-we-got-wrong.md):
+  (1) RC-2/RC-6 modeling fork — Driply is described BOTH as a stateful sales-channel
+  aggregate (lifecycle+invariants+repo+table) AND as a stateless one-shot
+  "payment.captured" fact (which the decision tree models as a domain event, no
+  entity). A naive agent silently picks aggregate (over-modeling) and builds it.
+  (2) CartPanda/Yampi taxonomy trap — TWO sources are each named authoritative (the
+  source system AND the existing registry) with no tie-breaker; the retrospective's
+  CartPanda/Yampi miscategorization is exactly the cost of guessing. A naive agent
+  picks one silently.
+  (3) RC-2 Plan trap — Plan is named as a FREE code-enum-tier AND as a per-change
+  persisted auditable record (a SubscriptionEvent-style entity the retrospective
+  deleted). A naive agent builds the persisted aggregate.
+  The correct move on ALL THREE is to surface the fork and ask, not to choose.
+
+  FREE REAL ESTATE (verified at authoring HEAD): .specs/synthetic-l4-clarification/
+  does not exist, so every grep-must-not scoped to that dir measures only new work
+  and passes at HEAD; PRD.md absent at repo root (no-root-prd passes); clarification.md
+  absent (file-exists + grep-must fail at HEAD, as a synthetic probe requires). The
+  over-modeling sentinels (z.enum/pgEnum/AggregateRoot/drizzle/FR-###/## Bounded
+  Context) are deliberately scoped to the NEW output dir, NOT the whole .specs/ tree
+  (the existing .specs/*.md design docs legitimately contain those tokens — scoping
+  keeps the probe from blaming pre-existing work). Run `bun scripts/skill-evals/validate-task.ts
+  synthetic-l4-clarification` before the first agent build to confirm free real estate.
+  No tsc/cmd/detect gates — a clarification doc does not compile; the discipline is
+  semantic and lives in the inverted grep-must-nots + the single rich judge. The judge
+  is the oracle for the hard half (did it actually DECLINE to invent), so this is a
+  judge-heavy L4 probe — run at higher k and treat a split judge verdict as signal to
+  re-read the rubric, not to relax it.

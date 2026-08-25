@@ -1,0 +1,248 @@
+registry:
+  type: backend
+  layer: application
+  depends_on: [entity, repository, errors, service]
+  depended_by: [controller]
+  context_reads: [schema, entity, repository]
+  lang: go
+
+  snippet:
+    skeleton: |
+      // Package usecases contains application use cases for the {{ctx}} bounded context.
+      package usecases
+
+      import (
+      	"context"
+
+      	// ctxerrors "template/api-go/internal/{{ctx}}/errors"
+      	// "template/api-go/internal/{{ctx}}/repositories/<entity>"
+      	// "template/core-go/errors"
+      	"template/core-go/repositories"
+      	"template/core-go/services/unitofwork"
+      )
+
+      // {{Pascal}}Input holds the validated input for {{snake}}.
+      type {{Pascal}}Input struct {
+      	// TODO: add fields with validate tags
+      	// OwnerID string `validate:"required"`
+      }
+
+      // {{Pascal}}Output is the response returned after a successful {{snake}}.
+      type {{Pascal}}Output struct {
+      	// TODO: add output fields with json tags
+      	// ID string `json:"id"`
+      }
+
+      // {{Pascal}}Handler implements Handler[{{Pascal}}Input, {{Pascal}}Output].
+      type {{Pascal}}Handler struct {
+      	uow             unitofwork.UnitOfWork
+      	domainEventRepo repositories.DomainEventRepository
+      	// repo SomeRepository
+      }
+
+      // New{{Pascal}}Handler constructs the {{Pascal}}Handler.
+      func New{{Pascal}}Handler(
+      	uow unitofwork.UnitOfWork,
+      	domainEventRepo repositories.DomainEventRepository,
+      	// repo SomeRepository,
+      ) *{{Pascal}}Handler {
+      	return &{{Pascal}}Handler{
+      		uow:             uow,
+      		domainEventRepo: domainEventRepo,
+      		// repo: repo,
+      	}
+      }
+
+      func (h *{{Pascal}}Handler) Name() string { return "{{snake}}" }
+
+      // Execute orchestrates the {{snake}} operation.
+      // All DB mutations run inside h.uow.Execute; external I/O runs after.
+      func (h *{{Pascal}}Handler) Execute(ctx context.Context, input {{Pascal}}Input) ({{Pascal}}Output, error) {
+      	err := h.uow.Execute(ctx, func(txCtx context.Context) error {
+      		// 1. Load entity via repository (pass txCtx so the query joins the transaction)
+      		// entity, err := h.repo.Find(txCtx, input.ID)
+      		// if err != nil { return err }
+      		// if entity == nil {
+      		// 	return errors.NewBaseError(ctxerrors.Code{{Pascal}}NotFound, "{{snake}} not found")
+      		// }
+
+      		// 2. Apply business logic (entity validates invariants)
+      		// if err := entity.SomeBehavior(); err != nil { return err }
+
+      		// 3. Persist entity
+      		// if err := h.repo.Save(txCtx, entity); err != nil { return err }
+
+      		// 4. Persist domain events in the SAME transaction (outbox)
+      		// for _, e := range entity.PullDomainEvents() {
+      		// 	if err := h.domainEventRepo.Save(txCtx, e); err != nil { return err }
+      		// }
+
+      		return nil
+      	})
+      	if err != nil {
+      		return {{Pascal}}Output{}, err
+      	}
+
+      	// 5. External I/O (service calls, HTTP) AFTER the transaction commits.
+
+      	return {{Pascal}}Output{}, nil
+      }
+
+  patterns:
+    - id: UC-GO-01
+      when: always
+      title: Implement types.Handler[I,O] — Name() + Execute(ctx, in) (out, error)
+      description: >
+        Every use case struct must implement both methods of types.Handler[I,O].
+        Name() returns a non-empty snake_case string for tracing. Execute receives
+        a typed input and returns a typed output or error.
+
+    - id: UC-GO-02
+      when: always
+      title: All DB mutations run inside h.uow.Execute
+      description: >
+        Wrap every repository save and domainEventRepo.Save call inside
+        h.uow.Execute(ctx, func(txCtx context.Context) error { ... }).
+        The txCtx carries the transaction; pass it to every DB call inside the
+        closure. The UoW commits on nil return, rolls back on error.
+
+    - id: UC-GO-03
+      when: always
+      title: Domain events persisted inside the UoW transaction via domainEventRepo
+      description: >
+        After saving the entity, loop over entity.PullDomainEvents() and call
+        h.domainEventRepo.Save(txCtx, e) inside the same uow.Execute closure.
+        The outbox dispatcher delivers events asynchronously after the transaction
+        commits. Never call a mediator from a use case.
+
+    - id: UC-GO-04
+      when: always
+      title: External I/O runs after uow.Execute, never inside
+      description: >
+        Service calls (TranscoderService.Start, HTTP to other APIs) that do not
+        write to the DB must execute after uow.Execute returns. Running external
+        I/O inside uow.Execute holds the DB connection open and increases the
+        risk of partial state on failure.
+
+    - id: UC-GO-05
+      when: always
+      title: Handler registered via fx.Provide(usecases.NewXHandler) in module.go
+      description: >
+        Use case handlers are provided by their constructor through fx.Provide.
+        They are consumed as concrete pointer types (not interface tokens), so
+        no fx.As is needed. Controllers declare the handler by concrete type in
+        their constructor parameter list.
+
+    - id: UC-GO-06
+      when: use case returns empty output
+      title: Empty output struct is idiomatic for void mutations
+      description: >
+        When a mutation has no meaningful return value, define an empty struct
+        (type XOutput struct{}) and return it. Do not return nil or use
+        interface{}. The HTTP controller maps it to 204 No Content via Metadata.Status.
+
+  bad_practices:
+    - id: BP-GO-UC-01
+      severity: error
+      title: DB call outside uow.Execute
+      wrong: |
+        func (h *CompleteJobHandler) Execute(ctx context.Context, input CompleteJobInput) (CompleteJobOutput, error) {
+            job, err := h.repo.Find(ctx, input.JobID) // uses plain ctx, not txCtx
+            // ...
+            h.repo.Save(ctx, job) // NOT in a transaction
+        }
+      right: |
+        func (h *CompleteJobHandler) Execute(ctx context.Context, input CompleteJobInput) (CompleteJobOutput, error) {
+            err := h.uow.Execute(ctx, func(txCtx context.Context) error {
+                job, err := h.repo.Find(txCtx, input.JobID)
+                // ...
+                return h.repo.Save(txCtx, job)
+            })
+        }
+      mechanical: true
+      detect:
+        - '\.Save\(ctx,'
+
+    - id: BP-GO-UC-02
+      severity: error
+      title: Domain events not persisted via domainEventRepo
+      wrong: |
+        // Events accumulated on the entity but never persisted
+        job.MarkCompleted(url)
+        h.repo.Save(txCtx, job)
+        // PullDomainEvents() never called — events are lost
+      right: |
+        if err := job.MarkCompleted(url); err != nil {
+            return err
+        }
+        if err := h.repo.Save(txCtx, job); err != nil {
+            return err
+        }
+        for _, e := range job.PullDomainEvents() {
+            if err := h.domainEventRepo.Save(txCtx, e); err != nil {
+                return err
+            }
+        }
+      mechanical: false
+
+    - id: BP-GO-UC-03
+      severity: error
+      title: External service call inside uow.Execute
+      wrong: |
+        err := h.uow.Execute(ctx, func(txCtx context.Context) error {
+            h.repo.Save(txCtx, job)
+            h.transcoder.Start(ctx, ...) // holds DB connection during HTTP call
+            return nil
+        })
+      right: |
+        err := h.uow.Execute(ctx, func(txCtx context.Context) error {
+            return h.repo.Save(txCtx, job)
+        })
+        if err != nil { return out, err }
+        h.transcoder.Start(ctx, ...) // after transaction commits
+      mechanical: false
+
+    - id: BP-GO-UC-04
+      severity: error
+      title: Bare fmt.Errorf used for domain/application errors
+      wrong: |
+        if job == nil {
+            return out, fmt.Errorf("job not found: %s", input.JobID)
+            // client gets 500 + no code — never maps to 404
+        }
+      right: |
+        if job == nil {
+            return out, errors.NewBaseError(ctxerrors.CodeJobNotFound, "transcoding job not found: "+input.JobID)
+        }
+      mechanical: true
+      detect:
+        - 'fmt\.Errorf\('
+      detect_skip: '%w'
+
+    - id: BP-GO-UC-05
+      severity: warning
+      title: Name() returns PascalCase or empty string
+      wrong: |
+        func (h *StartJobHandler) Name() string { return "StartJob" }
+        func (h *StartJobHandler) Name() string { return "" }
+      right: |
+        func (h *StartJobHandler) Name() string { return "start_transcoding_job" }
+      mechanical: true
+      detect:
+        - 'Name\(\)\s*string\s*\{\s*return\s*""'
+        - 'Name\(\)\s*string\s*\{\s*return\s*"[A-Z]'
+
+    - id: BP-GO-UC-06
+      severity: warning
+      title: Input fields missing validate tags
+      wrong: |
+        type CompleteJobInput struct {
+            JobID     string  // no validate tag
+            OutputUrl string  // silently accepts empty string
+        }
+      right: |
+        type CompleteJobInput struct {
+            JobID     string `validate:"required,uuid"`
+            OutputUrl string `validate:"required,url"`
+        }
+      mechanical: false

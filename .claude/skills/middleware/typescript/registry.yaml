@@ -1,0 +1,369 @@
+registry:
+  type: backend
+  layer: interface
+  depends_on: [errors, repository]
+  depended_by: [controller]
+  context_reads: [errors, controller]
+
+  patterns:
+    # --- Always patterns ---
+
+    - id: MID-01
+      name: "Class implements Middleware"
+      when: always
+      rule: "@singleton() class XMiddleware implements Middleware"
+      wrong: "@injectable() (instance per resolution) OR no decorator OR plain function"
+
+    - id: MID-02
+      name: "execute signature"
+      when: always
+      rule: |
+        async execute(request: HttpControllerRequest<unknown>): Promise<HttpMiddlewareResponse<...>> {
+          // ...
+        }
+      wrong: "different signature, missing return type, or returning anything other than HttpMiddlewareResponse"
+
+    - id: MID-03
+      name: "Parse request.ctx with Zod before reading it"
+      when: always
+      rule: |
+        const CtxSchema = z.object({ user: z.object({ id: z.string() }) })
+        const ctx = CtxSchema.safeParse(request.ctx)
+        if (!ctx.success) throw new BaseError<...>('...', 'User not authenticated')
+      wrong: "(request.ctx as any).user.id — assumes earlier middlewares ran and populated ctx"
+
+    - id: MID-04
+      name: "Throw typed BaseError, never new Error or strings"
+      when: always
+      rule: "throw new BaseError<XErrors>('CODE')"
+      wrong: "throw new Error('message') — loses the wire contract; the frontend cannot route on it"
+
+    - id: MID-05
+      name: "Error code declared and mapped"
+      when: always
+      rule: "Every code in `throw new BaseError<X>('CODE')` is declared in `<ctx>/errors/index.ts` AND mapped in `GlobalErrorMapper` with the correct HTTP status"
+      wrong: "Throwing a code that isn't registered — frontend doesn't know about it, default status falls back to 500"
+
+    - id: MID-06
+      name: "One concern per middleware"
+      when: always
+      rule: "Auth, actor, onboarding, tenancy — each is its own class. Composition is the context's responsibility (default chain) or controller's (override)."
+      wrong: "Bundling auth + actor + onboarding in one big middleware"
+
+    # --- Conditional patterns ---
+
+    - id: MID-C01
+      name: "Wired into context default chain"
+      when: "middleware should run for every controller in the context"
+      rule: "Listed in `<ctx>/middlewares/index.ts` default export: `export default [AuthAccountMiddleware, OnboardingMiddleware]`"
+
+    - id: MID-C02
+      name: "Per-controller override (add)"
+      when: "controller needs an extra middleware on top of the context default"
+      rule: "override middlewares: (Middleware | MiddlewareClass)[] = [...]"
+
+    - id: MID-C03
+      name: "Per-controller override (skip)"
+      when: "controller is public OR opts out of a default middleware"
+      rule: "override skipMiddlewares: (Middleware | MiddlewareClass)[] = [...]"
+      wrong: "Adding a middleware that duplicates the default — redundant"
+
+    - id: MID-C04
+      name: "Routing-by-error frontend handler"
+      when: "middleware throws an error that should redirect (not toast) on the frontend"
+      rule: |
+        // packages/app/react/src/lib/errors.ts
+        const customErrorHandlers: Partial<Record<ErrorCode, ErrorHandler>> = {
+          YOUR_CODE: () => router.navigate({ to: '/your-route' }),
+        }
+      reason: "Without a custom handler the default behavior is toast.error(translatedMessage). Routing-by-error short-circuits the toast."
+
+    - id: MID-C05
+      name: "Attach data to request.ctx"
+      when: "middleware enriches the request context for downstream"
+      rule: "request.ctx = { ...request.ctx, <new-field>: <value> }"
+      reason: "Never overwrite request.ctx wholesale — spread the existing values to preserve what earlier middlewares attached"
+
+    - id: MID-C06
+      name: "A middleware may be auto-applied by a static on the controller"
+      when: "the protection is implied by something the controller already declared"
+      reason: "`OperatorMiddleware` is opted into per controller because 'who is this daemon' is a routing choice. `AgentIdentityMiddleware` is not: a controller with a non-empty `static mcpScopes` has already said the dangerous thing, and a protection that must be remembered on a SECOND line is one that can be forgotten exactly where it matters. This is the general shape, not a one-off — any future capability whose danger is declared by a static can use it."
+      rule: "The predicate lives in `Controller.executeMiddlewares` (core), which appends the middleware LAST — after `OperatorMiddleware` has stamped `ctx` — and skips when the controller listed it explicitly, so the dedup rule matches the router's. `skipMiddlewares` remains the visible escape hatch."
+      wrong: "applying it in `MainRouter.configureRouterControllers`. MainRouter is SKIPPABLE — spec emission never constructs it, and a test that calls `executeController` directly bypasses it. A security boundary with a bypass is not one."
+
+    - id: MID-C07
+      name: "What a middleware stamps on ctx must be DECLARED in a schema — once, shared"
+      when: "the middleware writes to request.ctx"
+      reason: "`Controller.execute` validates against `inputSchema` and merges the VALIDATED envelope over the raw one, and Zod objects STRIP unknown keys. A value a middleware injected but no schema named is silently removed before `handle` sees it — measured: a 500 on every fork, with the middleware provably correct and the key simply gone."
+      rule: "One shared ctx schema next to the identity type (`AgentRunIdentityCtxSchema`), composed by every controller that reads it: `ctx: z.object({ ownerId: z.uuid() }).extend(AgentRunIdentityCtxSchema.shape)`. `ctx` never reaches the OpenAPI spec (the emitter reads only body/query/params/headers), so the shape costs nothing downstream."
+      wrong: "a verbatim copy of the ctx schema in each controller that reads it — the shape this repo had in two controllers before B2."
+
+    # --- Patterns from real implementations ---
+
+    - id: MID-P01
+      name: "Standard middleware skeleton"
+      when: always
+      reason: "@singleton() ensures a single instance per process; implements Middleware enforces the execute signature; Zod parses ctx; BaseError is the wire contract."
+      rule: |
+        import { singleton } from 'tsyringe-neo'
+        import { BaseError, z } from '@codm/core-typescript'
+        import type { HttpControllerRequest, HttpMiddlewareResponse, Middleware } from '@codm/core-typescript'
+        import { ApplicationErrors } from '@<ctx>/errors'
+
+        const CtxSchema = z.object({ /* slice of ctx this middleware reads */ })
+
+        @singleton()
+        export class XMiddleware implements Middleware {
+          constructor(private repo: SomeRepository) {}
+
+          async execute(request: HttpControllerRequest<unknown>): Promise<HttpMiddlewareResponse<void>> {
+            const ctx = CtxSchema.safeParse(request.ctx)
+            if (!ctx.success) throw new BaseError<ApplicationErrors>('SOME_CODE', 'reason')
+
+            // validation logic
+            const data = await this.repo.findBy(...)
+            if (!data) throw new BaseError<ApplicationErrors>('SOME_CODE')
+
+            return {}
+          }
+        }
+
+    - id: MID-P02
+      name: "Middleware that enriches request.ctx"
+      when: "downstream controllers or middlewares need data this middleware fetched"
+      rule: |
+        request.ctx = {
+          ...request.ctx,
+          user: validated.user,
+          session: validated.session,
+        }
+        return {}
+      reason: "Spread preserves what earlier middlewares attached. Returning {} when no cookie / response headers need to flow back."
+
+    - id: MID-P03
+      name: "Middleware that returns refreshed cookies"
+      when: "session refresh or any Set-Cookie response needs to flow back through the response"
+      rule: |
+        const setCookieHeaders = response.headers.getSetCookie()
+        let refreshedCookies: Record<string, HttpCookie> | undefined
+        if (setCookieHeaders.length > 0) refreshedCookies = parseSetCookieHeaders(setCookieHeaders)
+        return { cookie: refreshedCookies }
+      reason: "HttpMiddlewareResponse carries optional cookies that the framework merges into the final HTTP response."
+
+    - id: MID-P04
+      name: "Default chain export"
+      when: "context has middlewares (every context except shared)"
+      rule: |
+        // packages/api/typescript/src/<ctx>/middlewares/index.ts
+        import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
+        import { AuthActorMiddleware } from '@auth/middlewares/AuthActorMiddleware'
+        export default [AuthAccountMiddleware, AuthActorMiddleware]
+      reason: "Default export (not `export * as`) — BoundedContext.create reads `middlewares` as the array of classes to run for every controller in the context."
+
+    - id: MID-P05
+      name: "Routing-by-error end-to-end"
+      when: "a middleware error should redirect the frontend"
+      rule: |
+        // 1. Backend — middleware throws
+        throw new BaseError<ApplicationErrors>('ONBOARDING_NOT_COMPLETED')
+
+        // 2. Backend — error registered
+        // <ctx>/errors/index.ts
+        export type UiApplicationErrors = 'ONBOARDING_NOT_COMPLETED' | ...
+
+        // GlobalErrorMapper.ts
+        ONBOARDING_NOT_COMPLETED: HttpStatusCode.FORBIDDEN,
+
+        // 3. SDK regenerates — code lands in ApiErrorsEnum (run `bun sdk`)
+
+        // 4. Frontend — custom handler in lib/errors.ts
+        const customErrorHandlers: Partial<Record<ErrorCode, ErrorHandler>> = {
+          ONBOARDING_NOT_COMPLETED: () => router.navigate({ to: '/onboarding' }),
+        }
+
+        // 5. Frontend — i18n keys for the fallback toast
+        // pt.json: "errors": { "ONBOARDING_NOT_COMPLETED": "Onboarding não concluído." }
+        // en.json: "errors": { "ONBOARDING_NOT_COMPLETED": "Onboarding has not been completed." }
+      reason: "Every query/mutation in the app automatically routes when the backend returns this code — no per-component code, no try/catch. The handler is the single point of behavior for that error name."
+
+  bad_practices:
+    - id: bp-01
+      name: "Throwing plain Error or strings"
+      severity: critical
+      wrong: |
+        throw new Error('Onboarding not completed')
+        throw 'ONBOARDING_NOT_COMPLETED'
+      right: |
+        throw new BaseError<ApplicationErrors>('ONBOARDING_NOT_COMPLETED')
+      reason: "Plain Error has no typed code — GlobalErrorMapper can't map status, frontend can't route. Strings are even worse."
+      mechanical: true
+      detect:
+        - 'throw\s+new\s+Error\s*\('
+        - 'throw\s+[''"]'
+
+    - id: bp-02
+      name: "Reading request.ctx without Zod parsing"
+      severity: critical
+      wrong: |
+        const userId = (request.ctx as { user: { id: string } }).user.id
+      right: |
+        const ctx = CtxSchema.safeParse(request.ctx)
+        if (!ctx.success) throw new BaseError<...>('CODE', 'reason')
+        const userId = ctx.data.user.id
+      reason: "Earlier middlewares may not have run (controller override) or may have failed. Always validate the slice you read."
+      mechanical: true
+      detect:
+        - 'request\.ctx\s+as\b'
+
+    - id: bp-03
+      name: "Bundling multiple concerns in one middleware"
+      severity: high
+      wrong: |
+        @singleton()
+        class AuthOnboardingTenantMiddleware {
+          async execute(req) {
+            // validate session
+            // validate onboarding
+            // validate tenant
+          }
+        }
+      right: |
+        // Three separate middlewares, composed in middlewares/index.ts
+        export default [AuthAccountMiddleware, OnboardingMiddleware, TenantMiddleware]
+      reason: "Bundling makes overrides impossible (you can't skip onboarding without skipping auth). Single-concern middlewares compose freely."
+      mechanical: false
+
+    - id: bp-04
+      name: "Adding a middleware that duplicates the context default"
+      severity: moderate
+      wrong: |
+        // Context default is [AuthAccountMiddleware, AuthActorMiddleware]
+        // Controller:
+        override middlewares = [AuthAccountMiddleware, AuthActorMiddleware]
+      right: |
+        // Don't override — context default already covers it
+        // OR override only what changes:
+        override middlewares = [AuthDoctorOnlyMiddleware]
+      reason: "Redundant; obscures intent. `override middlewares` ADDS to the default — don't restate what's already there."
+      mechanical: false
+
+    - id: bp-05
+      name: "Business logic in a middleware"
+      severity: high
+      wrong: |
+        async execute(request) {
+          // Load appointment, check status, mutate, save
+          const appointment = await this.repo.find(id)
+          if (appointment.status === 'CONFIRMED') {
+            await this.repo.save(appointment.cancel())
+          }
+        }
+      right: |
+        // Middleware enforces preconditions; the use case does the work
+        async execute(request) {
+          const ctx = CtxSchema.safeParse(request.ctx)
+          if (!ctx.success) throw new BaseError<...>('UNAUTHORIZED')
+          return {}
+        }
+      reason: "Middlewares guard the request pipeline. Mutations belong to use cases (which run inside a UnitOfWork)."
+      mechanical: true
+      detect:
+        - '\.save\s*\('
+
+    - id: bp-06
+      name: "Throwing an error code not registered in GlobalErrorMapper"
+      severity: critical
+      wrong: |
+        throw new BaseError<ApplicationErrors>('NEW_GUARD_CODE')
+        // ... but GlobalErrorMapper doesn't have NEW_GUARD_CODE
+      right: |
+        // 1. Add 'NEW_GUARD_CODE' to <ctx>/errors/index.ts
+        // 2. Add NEW_GUARD_CODE: HttpStatusCode.FORBIDDEN to GlobalErrorMapper
+        // 3. Run `bun sdk` so ApiErrorsEnum picks it up
+      reason: "Unmapped codes fall through to 500. The frontend's customErrorHandlers cannot reach a code that doesn't exist in ApiErrorsEnum."
+      mechanical: false
+
+    - id: bp-07
+      name: "Routing-by-error registered without i18n fallback"
+      severity: moderate
+      wrong: |
+        customErrorHandlers['MY_CODE'] = () => router.navigate({ ... })
+        // But no entry in pt.json / en.json for errors.MY_CODE
+      right: |
+        // Add the i18n key even when a custom handler exists — defensive fallback
+        // if the custom handler is ever removed or throws.
+      reason: "If the custom handler is removed or errors out, the default toast handler shows `errors.MY_CODE` as the message. Without translation, the user sees the raw code."
+      mechanical: false
+
+    - id: bp-08
+      name: "Non-auth middleware injecting DrizzleDatabaseDriver (infrastructure leak)"
+      severity: critical
+      rule: "Middlewares inject repository PORTS (or services), never DrizzleDatabaseDriver — the only sanctioned carve-out is the auth-bootstrap middleware (AuthAccountMiddleware: it resolves the session/account row BEFORE any context's repositories are guaranteed wired, per the middleware SKILL canonical snippet). Every other middleware that needs data goes through a repository port. See cc-bp-20 and import-direction R6."
+      wrong: |
+        @singleton()
+        export class TenancyMiddleware extends Middleware {
+          constructor(private driver: DrizzleDatabaseDriver) { super() }   // infra leaked above repositories
+        }
+      right: |
+        @singleton()
+        export class TenancyMiddleware extends Middleware {
+          constructor(private storeRepository: StoreRepository) { super() }
+        }
+      mechanical: false
+
+  snippet:
+    skeleton: |
+      import { singleton } from 'tsyringe-neo'
+      import { BaseError, z } from '@codm/core-typescript'
+      import type { HttpControllerRequest, HttpMiddlewareResponse, Middleware, BaseInterfaceErrors } from '@codm/core-typescript'
+
+      // Shape of request.ctx that this middleware expects downstream
+      const CtxSchema = z.object({
+      	// Add expected ctx fields here, e.g.:
+      	// user: z.object({ id: z.string() }),
+      })
+
+      @singleton()
+      export class {{Name}}Middleware implements Middleware {
+      	async execute(request: HttpControllerRequest<unknown>): Promise<HttpMiddlewareResponse<void>> {
+      		const ctx = CtxSchema.safeParse(request.ctx)
+
+      		if (!ctx.success) {
+      			throw new BaseError<BaseInterfaceErrors>('UNAUTHORIZED')
+      		}
+
+      		// Attach/extend ctx for downstream handlers:
+      		// request.ctx = { ...request.ctx, ... }
+      		return {}
+      	}
+      }
+    exemplar: |
+      // packages/api/typescript/src/<ctx>/middlewares/<Name>Middleware.ts
+      import { singleton } from 'tsyringe-neo'
+      import { BaseError, z } from '@codm/core-typescript'
+      import type { HttpControllerRequest, HttpMiddlewareResponse, Middleware } from '@codm/core-typescript'
+      import { ApplicationErrors } from '@<ctx>/errors'
+
+      const CtxSchema = z.object({
+        user: z.object({ id: z.string() }),
+      })
+
+      @singleton()
+      export class XMiddleware implements Middleware {
+        constructor(private repository: SomeRepository) {}
+
+        async execute(request: HttpControllerRequest<unknown>): Promise<HttpMiddlewareResponse<void>> {
+          const ctx = CtxSchema.safeParse(request.ctx)
+          if (!ctx.success) throw new BaseError<ApplicationErrors>('SOME_CODE', 'context invalid')
+
+          const data = await this.repository.findBy(ctx.data.user.id)
+          if (!data) throw new BaseError<ApplicationErrors>('SOME_CODE')
+
+          return {}
+        }
+      }
+
+  scaffold: |
+    # No CLI scaffold yet — create manually:
+    touch packages/api/typescript/src/<context>/middlewares/<Name>Middleware.ts
+    # Then update <context>/middlewares/index.ts to include it in the default chain.

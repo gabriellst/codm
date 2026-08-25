@@ -1,0 +1,57 @@
+import { injectable } from 'tsyringe-neo'
+import type { Transaction } from '@codm/core-typescript'
+import { Projector } from '@codm/core-typescript'
+import { MessageProjection, type MessageProjectionEvent } from '../Message'
+import { MessageProjectionRepository } from '../MessageProjectionRepository'
+
+/**
+ * Read-side counterpart of EventHandler. One per Projection.
+ *
+ * Canonical mutation flow: find → projection.applyEvent(event) → save
+ * Creation: repo.insertIfNew(MessageProjection.create(event), tx)
+ * Atomic ops on the repo are edge cases — see MessageProjectionRepository.
+ *
+ * Async via outbox by default. A use case MAY invoke this synchronously
+ * inside its UnitOfWork (`projector.handle(event, tx)`) for read-after-write
+ * consistency — opt-in coupling.
+ */
+@injectable()
+export class MessageProjector extends Projector<MessageProjectionEvent> {
+	constructor(private repo: MessageProjectionRepository) {
+		super()
+	}
+
+	readonly events = [
+		// '<context>.<event_a>',
+		// '<context>.<event_b>',
+	]
+
+	async handle(event: MessageProjectionEvent, tx?: Transaction): Promise<void> {
+		switch (event.name) {
+			// ── Creation: typed factory on the projection ─────────────
+			// case '<context>.<creating_event>':
+			//   await this.repo.insertIfNew(MessageProjection.create(event), tx)
+			//   return
+
+			// ── Canonical mutation: find → applyEvent → save ──────────
+			// case '<context>.<mutating_event>': {
+			//   const row = await this.repo.findByKey(/* key */, tx)
+			//   if (!row) return  // replay-safe no-op
+			//   row.applyEvent(event)
+			//   await this.repo.save(row, tx)
+			//   return
+			// }
+
+			// ── Atomic op (edge case — justify the trigger): ──────────
+			// hot row / bulk / monotonic / conditional / cache-mirror
+			// case '<context>.<atomic_event>':
+			//   await this.repo.atomicOp(/* key */, /* value */, tx)
+			//   return
+
+			default: {
+				const _exhaustive: never = event
+				return _exhaustive
+			}
+		}
+	}
+}

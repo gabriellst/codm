@@ -1,0 +1,239 @@
+id: synthetic-react-primitive-variant
+tier: holdout
+builder: sonnet
+title: Badge size axis + dismissible-chip a11y contract
+  (synthetic — probes primitive CVA variants, aria/keyboard/focus contract, stateless primitives)
+sourceSpec: PROBES-BACKLOG.md#12
+goldRef: ""
+baseRef: ""
+prompt: >
+  In the template web app (packages/app/react), product wants removable filter
+  chips for the upcoming dashboard filter bars, and design wants a badge size
+  scale — both land in the design system, not in feature code. Extend the
+  EXISTING Badge primitive at packages/app/react/src/components/ui/badge.tsx
+  in place (no new component file, no route or -components/ changes, no
+  backend, no SDK work). Deliverable 1 — size scale: add a size axis to the
+  existing badgeVariants CVA with exactly the values 'sm', 'default' and
+  'lg', registered in defaultVariants and threaded through the
+  badgeVariants({ ... }) call, such that every existing Badge call site
+  compiles and renders exactly as today (the default value keeps the current
+  metrics). Deliverable 2 — dismissible chip: when a caller passes an
+  onDismiss callback, the badge renders a trailing dismiss control carrying
+  data-slot="badge-dismiss". The control's accessibility contract: it is a
+  real native button that can never submit a surrounding form (the
+  InputGroupButton precedent in input-group.tsx); its accessible name comes
+  from a caller-supplied dismissLabel prop (a plain string — consumers
+  localize, see info-hint.tsx); the dismiss icon is decorative and hidden
+  from assistive tech; a keyboard-only user can reach and activate the
+  control, and — per chip conventions — Delete and Backspace on the focused
+  control also dismiss; the control shows its own visible focus indicator
+  built from semantic tokens (the badge root's focus-visible classes do not
+  apply to an inner control). The primitive stays stateless: dismissal is
+  the caller's state change — the badge never hides itself and holds no
+  open/visible flag. Mind the badge root's existing [&>svg] direct-child
+  rules when placing the icon. Update the existing story file at
+  packages/app/react/src/components/ui/stories/badge.stories.tsx with
+  coverage for the size scale and the dismissible chip (story-local demo
+  state is fine there — the primitive may not have any). Read
+  packages/app/react/CLAUDE.md first, then docs/COMPONENTS.md, the react
+  primitive skill (.claude/skills/primitive/react/SKILL.md + registry.yaml)
+  and the design-system skill (.claude/skills/design-system/SKILL.md) before
+  writing code; study the sibling primitives for the established idioms —
+  button.tsx for a CVA size axis, info-hint.tsx for caller-supplied
+  aria-labels, pagination.tsx and spinner.tsx for accessible-name precedent,
+  input-group.tsx for the non-submitting button. Finish with a green
+  type-check: cd packages/app/react && bun x tsc --noEmit.
+axes:
+  - PRIMITIVES-A11Y
+graders:
+  - kind: tsc
+    spec: app-react
+  # ── CVA size axis ──────────────────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/app/react/src/components/ui/badge.tsx::size:\\s*\\{"
+    id: primitive#PRM-01
+  - kind: grep-must
+    spec: "packages/app/react/src/components/ui/badge.tsx::size:\\s*\\{[^}]*\\bsm:"
+    id: primitive#PRM-01
+  - kind: grep-must
+    spec: "packages/app/react/src/components/ui/badge.tsx::size:\\s*\\{[^}]*\\blg:"
+    id: primitive#PRM-01
+  - kind: grep-must
+    spec: "packages/app/react/src/components/ui/badge.tsx::defaultVariants:\\s*\\{[^}]*\\bsize:"
+    id: primitive#PRM-C02
+  - kind: grep-must
+    spec: "packages/app/react/src/components/ui/badge.tsx::badgeVariants\\(\\{[^}]*\\bsize\\b"
+    id: primitive#PRM-01
+  # ── a11y contract (component-props detector excludes ui/ — grep-graded) ──
+  - kind: grep-must
+    spec: "packages/app/react/src/components/ui/badge.tsx::onDismiss"
+    id: atlas#PRIMITIVES-A11Y
+  - kind: grep-must
+    spec: "packages/app/react/src/components/ui/badge.tsx::dismissLabel"
+    id: atlas#PRIMITIVES-A11Y
+  - kind: grep-must
+    spec: "packages/app/react/src/components/ui/badge.tsx::aria-label"
+    id: atlas#PRIMITIVES-A11Y
+  - kind: grep-must
+    spec: "packages/app/react/src/components/ui/badge.tsx::aria-hidden"
+    id: atlas#PRIMITIVES-A11Y
+  - kind: grep-must
+    spec: "packages/app/react/src/components/ui/badge.tsx::type\\s*=\\s*[\"']button[\"']"
+    id: atlas#PRIMITIVES-A11Y
+  - kind: grep-must
+    spec: "packages/app/react/src/components/ui/badge.tsx::data-slot=[\"']badge-dismiss[\"']"
+    id: primitive#bp-01
+  - kind: grep-must
+    spec: "packages/app/react/src/components/ui/badge.tsx::onKeyDown"
+    id: atlas#PRIMITIVES-A11Y
+  - kind: grep-must
+    spec: "packages/app/react/src/components/ui/badge.tsx::['\"](Delete|Backspace)['\"]"
+    id: atlas#PRIMITIVES-A11Y
+  # ── stateless primitive + house shape ──────────────────────────────
+  - kind: grep-must-not
+    spec: "packages/app/react/src/components/ui/badge.tsx::\\buseState\\b"
+    id: primitive#stateless
+  - kind: grep-must-not
+    spec: "packages/app/react/src/components/ui/badge.tsx::role=[\"']button[\"']|tabIndex"
+    id: atlas#PRIMITIVES-A11Y
+  - kind: grep-must-not
+    spec: "packages/app/react/src/components/ui/badge.tsx::\\b(bg|text|border|ring|from|via|to|fill|stroke|outline|divide|placeholder|caret|accent|decoration)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(50|100|200|300|400|500|600|700|800|900|950)\\b"
+    id: primitive#bp-02
+  - kind: grep-must-not
+    spec: "packages/app/react/src/components/ui/badge.tsx::#[0-9a-fA-F]{3,8}\\b"
+    id: primitive#bp-02
+  - kind: grep-must-not
+    spec: "packages/app/react/src/components/ui/badge.tsx::style=\\{\\{[^}]*\\d+(px|rem)"
+    id: primitive#bp-04
+  - kind: grep-must-not
+    spec: "packages/app/react/src/components/ui/badge.tsx::export\\s+default"
+    id: primitive#PRM-P04
+  - kind: grep-must-not
+    spec: "packages/app/react/src/components/ui/badge.tsx::useTranslation|react-i18next"
+    id: primitive#label-by-prop
+  - kind: grep-must-not
+    spec: "packages/app/react/src/components/ui/**/badge*.tsx::throw new Error"
+    id: atlas#ERR-VOCAB
+  # ── story coverage ─────────────────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/app/react/src/components/ui/stories/badge.stories.tsx::onDismiss"
+    id: primitive#storybook
+  - kind: grep-must
+    spec: "packages/app/react/src/components/ui/stories/badge.stories.tsx::dismissLabel"
+    id: primitive#storybook
+  - kind: grep-must
+    spec: "packages/app/react/src/components/ui/stories/badge.stories.tsx::size[:=]"
+    id: primitive#storybook
+  # ── detectors + judge ──────────────────────────────────────────────
+  - kind: detect
+    spec: registry-scan
+  - kind: detect
+    spec: import-direction
+  - kind: detect
+    spec: component-props
+  - kind: judge
+    spec: >
+      The Badge primitive at packages/app/react/src/components/ui/badge.tsx
+      was just extended with a size scale and a dismissible-chip affordance,
+      and its story at
+      packages/app/react/src/components/ui/stories/badge.stories.tsx was
+      updated. Verify ALL of:
+      (a) CVA-VARIANT — the size scale is a new axis INSIDE the existing
+      badgeVariants cva config (variants.size with sm/default/lg plus
+      defaultVariants.size) — not a parallel Record<size, className> map,
+      not data-[size=...] CSS as the primary mechanism, not a second cva
+      call for sizing the root; the size prop flows through the existing
+      VariantProps typing and into the badgeVariants({...}) class
+      computation; the default size preserves today's badge metrics (the
+      h-5 px-2 text-xs shape) so existing call sites render unchanged; all
+      new classes use semantic design tokens / standard Tailwind utilities
+      (no color-scale classes, no hex, no arbitrary pixel values).
+      (b) A11Y NAME + ROLES — the dismiss affordance renders ONLY when
+      onDismiss is passed, as a real native button element with
+      type="button" (never a clickable span/svg/div, never role="button"
+      on a non-button); the badge root itself never becomes
+      focusable/interactive (no tabIndex or role on the root span — an
+      interactive control nested inside a focusable root is a defect); the
+      button's accessible name comes from the caller-supplied dismissLabel
+      prop applied as aria-label; the icon inside the button is decorative
+      (aria-hidden) and the button carries data-slot="badge-dismiss".
+      (c) KEYBOARD + FOCUS — the keyboard path is complete: native
+      Enter/Space activation preserved (the dismiss handler is wired to the
+      button's onClick), AND Delete/Backspace on the focused control also
+      call onDismiss via an onKeyDown handler; the button has its OWN
+      visible focus treatment (focus-visible ring/border classes built from
+      semantic tokens on the button itself — the badge ROOT's focus-visible
+      classes do not light up when the inner button is focused, so relying
+      on them alone is a defect); the dismiss icon is not a direct child of
+      the badge root (the root's [&>svg]:pointer-events-none and
+      [&>svg]:size-3! rules would hit it) — it sits inside the button.
+      (d) STATELESSNESS + API — the primitive stays stateless: no useState
+      or visibility flag inside badge.tsx, the badge never hides itself —
+      onDismiss is a plain callback and removal is the CALLER's state
+      change; the props stay on the file's established shape
+      (useRender.ComponentProps<'span'> & VariantProps<typeof
+      badgeVariants> extended with the new optional props); named exports
+      only; the cn() merge of caller className is preserved.
+      (e) STORY — badge.stories.tsx gained real coverage for the size scale
+      and the dismissible chip, rendering the actual Badge with onDismiss +
+      dismissLabel.
+      Scope notes — judge the idiom, not the variable name: dismissLabel
+      arriving as a plain string (stories pass literals) is the EXPECTED
+      primitive shape — primitives receive accessible names via props and
+      consumers localize (info-hint.tsx precedent); do not fail the absence
+      of i18n in the primitive or the story. A hardcoded English DEFAULT
+      for dismissLabel with caller override is acceptable (pagination.tsx
+      precedent). useState INSIDE the story file demoing caller-owned chip
+      removal is expected — only the primitive must stay stateless. The
+      Badge root keeping the useRender pattern instead of forwardRef is the
+      file's established mode (primitive PRM-P09) — do not fail it, and the
+      internal dismiss button needs no forwardRef (it is not composed via
+      render props). An ADDITIONAL data-size attribute alongside the CVA
+      axis is fine (CSS style hook), as long as the size classes come from
+      the cva axis. Internal handler names (handleDismiss etc.), the exact
+      icon choice (IconX or a ui/icons glyph), a dismissible flag derived
+      from onDismiss, or a small extracted sub-component within badge.tsx
+      are all free — the contract is behavioral.
+notes: >-
+  Synthetic probe authored from grounded HEAD facts — first PRIMITIVES-A11Y
+  probe (backlog #12); no gold tree, agent mode only. Free real estate
+  verified at authoring time: badge.tsx contains NO size axis (no 'size:'
+  token — the base classes only carry 'size-3' utilities), no aria-label /
+  aria-hidden / type="button" / data-slot / onKeyDown / Delete / Backspace /
+  onDismiss / dismissLabel / useState / role= / tabIndex / export default /
+  useTranslation / style={{ / color-scale / hex tokens, and
+  stories/badge.stories.tsx contains no onDismiss / dismissLabel / size[:=]
+  — so every grep-must is 0 at HEAD and every grep-must-not passes at HEAD;
+  tsc app-react is green and registry-scan / import-direction /
+  component-props all exit 0 with --all at HEAD. The component-props
+  detector EXCLUDES /ui/ by design (its EXCLUDE regex), which is exactly why
+  the a11y idioms are grep-graded here instead of detector-graded; the
+  detect rider still rides as a regression guard for any stray edits
+  outside ui/. Tabler icons do NOT emit aria-hidden by default (checked
+  @tabler/icons-react createReactComponent/defaultAttributes), so the
+  aria-hidden grep measures new work. badge.tsx ALREADY carries
+  focus-visible: classes on the root at HEAD — a bare focus-visible grep
+  would be satisfied by pre-existing code, so the inner-button focus
+  treatment is deliberately left to the judge (rubric c). Discriminating
+  questions: a naive implementation renders a clickable IconX svg with
+  onClick and no accessible name, hides the badge via an internal
+  useState(visible) flag, sizes via a parallel Record map or hand-typed
+  prop union, localizes the label inside the primitive with useTranslation,
+  or makes the root span role="button"/tabIndex (nested-interactive); the
+  canon is a CVA size axis flowing through VariantProps, a native
+  type="button" control named by the caller's dismissLabel prop
+  (info-hint/pagination precedent, InputGroupButton non-submit precedent),
+  an aria-hidden icon nested inside the button (dodging the root's
+  [&>svg]:pointer-events-none direct-child rule), onKeyDown
+  Delete/Backspace chip-convention dismissal, and a stateless callback. The
+  useState must-not is scoped to badge.tsx ONLY — the story may legitimately
+  own demo state (judge scope note covers it). Prop/slot names (onDismiss,
+  dismissLabel, badge-dismiss, sm/default/lg) are pinned in the prompt, so
+  the greps measure obedience, not guessing. Glob notes: no brace-with-slash
+  globs used (Bun.Glob limitation); "ui/**/badge*.tsx" relies on ** matching
+  zero segments so it spans both badge.tsx and stories/badge.stories.tsx;
+  "badge*" does not match gradient-icon-badge.* (prefix anchored). The
+  type=button grep is whitespace-tolerant (type\s*=\s*) because the prompt's
+  own cited precedent, InputGroupButton, spells the contract as a destructured
+  default (type = 'button') — a verbatim mirror of that precedent must pass.
+  All regexes compile through parseGrepSpec.

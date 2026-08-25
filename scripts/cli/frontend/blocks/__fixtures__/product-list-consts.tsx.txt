@@ -1,0 +1,19 @@
+import * as React from 'react'
+import { cn } from '@/lib/utils'
+
+export const maxItems = 20
+export const defaultSort = "name"
+
+interface ProductListProps extends React.ComponentProps<'div'> {}
+
+export function ProductList({ className, ...props }: ProductListProps) {
+
+	return (
+		<div
+			className={cn('', className)}
+			{...props}
+		>
+			{/* Implement */}
+		</div>
+	)
+}

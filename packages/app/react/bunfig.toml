@@ -1,0 +1,27 @@
+[test]
+# Registers happy-dom globals BEFORE any module loads — React reads `document` at import time.
+preload = ["./tests/setup.ts"]
+# THE CROSS-SERVICE GO-BOUNDARY SUITE RUNS IN ITS OWN PROCESS (T8, mirrors api-typescript's T7
+# exclusion — see packages/api/typescript/bunfig.toml for the sibling doc). `bun test` shares ONE
+# process across every file, and `useIntegrationBackend({ services: ['apiGo'] })` performs a REAL
+# `go build` + subprocess spawn (template.config.ts's WORKSPACES.apiGo.testBoot) — booting that
+# inside the default suite would either violate T7's law (a process that already booted WITHOUT
+# services cannot later boot WITH them — go-boundary.test.ts, which runs in the default suite,
+# boots first) or pay the build+spawn cost on every default run, contaminating the byte-identical
+# boot time spec D9 requires for the no-services path. Excluding the file by NAME keeps the default
+# suite's boot path untouched. Run it with `bun run test:cross-service`; the nx `test` target runs
+# both.
+#
+# T9 (`.services.test.tsx`, plural): the 3 payoff migrations (ContactStep, SessionChatSection,
+# SetupChecklist, UserProfile) join the SAME exclusion for the SAME reason — each colocates a
+# `services: ['apiGo']` suite beside its component's default-suite `index.test.tsx`. The glob keeps
+# colocation instead of a separate `tests/cross-service/` dir; `**/*.services.test.tsx` never matches
+# a plain `.test.tsx`, so the default suite's file count is otherwise untouched.
+#
+# ONE PROCESS PER FILE (T9, empirical finding): re-booting `services: ['apiGo']` in the SAME process
+# after a PRIOR file's `backend.stop()` leaves the TS side holding a stale/disconnected DB handle —
+# gateway writes made afterwards become invisible to the next file's assertions. So `test:cross-service`
+# (`package.json`) no longer does `bun test fileA fileB …` (one shared process) — it runs
+# `scripts/test-cross-service.ts`, which spawns one `bun test <file>` PER file (architecture suite +
+# every `.services.test.tsx`), sequentially, and fails if any exits non-zero.
+pathIgnorePatterns = ["**/tests/architecture/go-boundary-services.test.ts", "**/*.services.test.tsx"]

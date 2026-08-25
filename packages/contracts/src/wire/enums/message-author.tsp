@@ -1,0 +1,7 @@
+namespace TemplateContracts;
+
+@doc("Who WROTE a message — the hand, not the account. HUMAN (a person typed it: a contact in the conversation, or the owner, whether on their phone or in the console) or SYSTEM (this product composed it: an issue reply, a clarification question). Deliberately says nothing about WHICH machinery composed a SYSTEM message — a channel delivers messages and must not carry another context's vocabulary. Replaces SenderIdentity {AGENT, ROUTER, OPERATOR}, whose AGENT/ROUTER split existed only to decide a delivery LABEL: labelling is a property of the text, so it belongs to whoever composes the text. Load-bearing beyond naming: once the product can send, `fromMe` alone stops distinguishing the owner typing from the product replying, and a consumer that cannot tell them apart answers itself.")
+enum MessageAuthor {
+  HUMAN: "HUMAN",
+  SYSTEM: "SYSTEM",
+}

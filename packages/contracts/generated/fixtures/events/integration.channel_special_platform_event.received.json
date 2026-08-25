@@ -1,0 +1,17 @@
+{
+	"id": "0f0f0f0f-0f0f-4f0f-8f0f-0f0f0f0f0f0f",
+	"ownerId": "fixture-tenant",
+	"time": "2026-07-30T12:00:00Z",
+	"name": "integration.channel_special_platform_event.received",
+	"payload": {
+		"channelId": "0f0f0f0f-0f0f-4f0f-8f0f-0f0f0f0f0f0f",
+		"eventName": "eventName-sample",
+		"eventType": "qr_code_updated",
+		"platform": "platform-sample",
+		"payload": {
+			"field": "payload",
+			"sample": true
+		},
+		"ownerId": "ownerId-sample"
+	}
+}

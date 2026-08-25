@@ -1,0 +1,7 @@
+namespace TemplateContracts;
+
+@doc("Messaging platform a Channel bridges. Reconciled to the rich gateway value-set (Go domain is authoritative): WHATSAPP is the realized bridge; INTERNAL is the daemon's own in-process channel (used by the message projector). Descends the origin Platform enum. Persisted as the `platform` column on channel-side projections (Go-owned). The Go domain Platform enum aliases this wire enum.")
+enum ChannelKind {
+  WHATSAPP: "WHATSAPP",
+  INTERNAL: "INTERNAL",
+}

@@ -1,0 +1,160 @@
+id: synthetic-l6-saas-gating
+# L6 — THE MONETIZATION PROBE (user-directed, 2026-07-21). Input is a one-line idea; the eval agent
+# runs the full pipeline as an ORCHESTRATOR (extraTools: [Task]). What makes this l6 different from
+# the app probes: the build must INTEGRATE the template's existing billing + quota machinery through
+# its DECLARED seams (QuotaKey wire enum, PlanRegistry quotas, the merge-root counter/governor
+# override, QuotaGate, the live ExternalSubscriptionCanceled flow) — forking or re-implementing any
+# of it is the canonical failure. Gold rubric: scripts/skill-evals/seeds/l6-saas-gating/GOLD.md.
+title: Autonomous build — plan-gated Projects with quota limits and cancel→lock (monetization seams)
+tier: holdout
+builder: fable
+sourceSpec: scripts/skill-evals/seeds/l6-saas-gating/GOLD.md
+goldRef: ""
+baseRef: ""
+timeoutMs: 10800000
+extraTools:
+  - Task
+prompt: >
+  BUILD THE MONETIZATION LAYER for a minimal Projects app, end to end, in this monorepo, from this
+  one-line idea: "Projects, plan-gated: on the free plan an owner creates up to 2 projects;
+  subscribing to a paid plan (sandbox gateway, fake money) raises the limit; when the gateway
+  reports the subscription canceled, the owner is downgraded and excess projects are locked."
+  You are the ORCHESTRATOR (you have the Task tool) — model, lock the contract, plan with handoffs,
+  then DISPATCH worker subagents per Task.
+  ARCHITECTURE (non-negotiable, it is the grading rubric): DDD + Clean + CQRS + Event-Driven per
+  the root CLAUDE.md and docs/BACKEND.md / docs/FRONTEND.md. Model exactly ONE new bounded context,
+  `project` (Project aggregate with identity, lifecycle and at least one REAL invariant — a locked
+  project rejects mutations with a named domain error). The billing and quota contexts ALREADY
+  EXIST AND ARE COMPLETE — you must INTEGRATE through their declared seams, never fork them:
+  CONTRACT LOCK (freeze before building): add `PROJECTS` to the `QuotaKey` wire enum in
+  packages/contracts (the quota vocabulary is cross-boundary — it never lives in src), add the
+  projects table (Drizzle), then `bun contracts` + `bun sdk`.
+  GATING (the heart of this task, in seam order): (1) PlanRegistry quotas carry a PROJECTS policy
+  per plan (free: hard limit 2; paid: higher); (2) the merge root src/shared/registry.ts overrides
+  quota's placeholder QuotaUsageSource with a real PROJECTS counter (projects per owner) and
+  ResourceGovernorRegistry with a PROJECTS governor (locks/unlocks excess) — append the overrides
+  AFTER the context registries so last-write-wins replaces the placeholders, exactly as the file's
+  product-plug seam comment documents; (3) CreateProject consults QuotaGate and rejects at the
+  limit with QUOTA_LIMIT_EXCEEDED; (4) the cancellation arc: the billing webhook's
+  ExternalSubscriptionCanceledEvent (already raised by the Stripe mapper) → a handler downgrades
+  the owner's entitlement → ResourceLimitEnforcer runs the PROJECTS governor → excess projects
+  lock, and locked access surfaces RESOURCE_LOCKED_BY_PLAN.
+  READ SIDE: usage/limits surface through the EXISTING GetUsage / ListPlans BFF queries — extend
+  their catalog coverage for PROJECTS, do not build parallel queries.
+  FRONTEND (react, per packages/app/react/CLAUDE.md): a plans/paywall route (ListPlans + the
+  sandbox checkout hook), a projects route whose section owns its data (GetUsage indicator,
+  create-project dialog validating the SDK mutation schema, locked-state rendering). All states
+  through the typed errors.* / enums.* i18n catalogs in BOTH locales (the error codes already have
+  translations — reference, don't duplicate).
+  E2E (packages/e2e): ONE Playwright spec at the EXACT path
+  packages/e2e/tests/saas-gating-quota.spec.ts — API-first setup (request context, not UI),
+  role/label selectors, no waitForTimeout — asserting the full arc: subscribe on the sandbox →
+  create projects to the paid limit's edge → expect the quota rejection → simulate the gateway
+  cancellation webhook → assert excess projects are locked. This spec is graded by READING it:
+  write it COMPLETE with ACTIVE assertions (no .skip, no stubs, no commented bodies).
+  TESTS (TDD, colocated, must PASS): packages/api/typescript/src/project/ — (a) an entity test for
+  the locked-project invariant; (b) a use case test in TestBed integration mode covering
+  CreateProject under and AT the quota limit (assert QUOTA_LIMIT_EXCEEDED); (c) a handler-path test
+  for cancellation → enforcement → locked (TestBed integration; given helpers, probe for events).
+  Green: `cd packages/api/typescript && bun test src/project`.
+  GATES before done: `cd packages/api/typescript && bun x tsc -p tsconfig.build.json --noEmit` AND
+  `bun test src/project` green; `cd packages/app/react && bun x tsc --noEmit`; `cd packages/e2e &&
+  bun x tsc --noEmit`; `bun run detect` clean at the repo root. Your final message must name the
+  seams you wired (enum, PlanRegistry, merge-root overrides, QuotaGate, cancellation handler), the
+  frozen contract, the dispatch waves, and the test results.
+
+axes:
+  - APP-FROM-IDEA
+  - MONETIZATION-SEAMS
+  - CONTRACT-LOCK
+  - MULTI-AGENT-HANDOFF
+  - QUOTA-GATING
+  - EVENT-DRIVEN
+  - E2E-DISCIPLINE
+
+graders:
+  # ── model stage — seam-integration soundness (gold-rubric judge) ──
+  - kind: judge
+    model: sonnet
+    spec: >
+      Inspect the build under packages/api/typescript/src/ and packages/contracts. Judge the
+      MONETIZATION INTEGRATION SOUNDNESS against this gold standard: exactly ONE new context
+      (`project` or equivalent) with a Project aggregate carrying a real lifecycle invariant;
+      billing and quota are NOT forked (no parallel subscription state, no hand-rolled counters
+      inside project); gating flows through the declared seams — PlanRegistry quotas carry the new
+      key, the merge root (src/shared/registry.ts) overrides QuotaUsageSource +
+      ResourceGovernorRegistry with real PROJECTS entries appended AFTER the context spreads, and
+      CreateProject consults QuotaGate. FAIL if the quota vocabulary was declared outside the
+      contracts wire enum, if counters/governors were wired inside the quota context instead of the
+      merge root, or if any billing/quota logic was duplicated. Name each seam found and its verdict.
+    id: model#seam-integration
+  # ── contract-lock stage ──
+  - kind: grep-must
+    spec: "packages/contracts/**/*.tsp::PROJECTS"
+    id: lock#quotakey-projects
+  # ── gating stage — mechanical seam probes ──
+  - kind: grep-must
+    spec: "packages/api/typescript/src/billing/objects/PlanRegistry.ts::PROJECTS"
+    id: gating#planregistry-policy
+  - kind: grep-must
+    spec: "packages/api/typescript/src/shared/registry.ts::QuotaUsageSource"
+    id: gating#merge-root-counter
+  - kind: grep-must
+    spec: "packages/api/typescript/src/project/usecases/**/*.ts::QuotaGate"
+    id: gating#quotagate-in-create
+  # ── test stage — TDD, colocated, green ──
+  - kind: file-exists
+    spec: "packages/api/typescript/src/project/**/*.test.ts"
+    id: test#colocated-exists
+  - kind: grep-must
+    spec: "packages/api/typescript/src/project/**/*.test.ts::QUOTA_LIMIT_EXCEEDED"
+    id: test#quota-limit-asserted
+  - kind: grep-must
+    spec: "packages/api/typescript/src/project/**/*.test.ts::TestBed\\.create\\(\\s*'integration'"
+    id: test#integration-mode
+  - kind: test-green
+    spec: packages/api/typescript/src/project
+    id: test#green
+  # ── build stage — mechanical, naming-independent gates ──
+  - kind: tsc
+    spec: backend
+    id: build#tsc-backend
+  - kind: tsc
+    spec: app-react
+    id: build#tsc-react
+  - kind: tsc
+    spec: e2e
+    id: build#tsc-e2e
+  - kind: detect
+    spec: registry-scan
+    id: build#detect-registry
+  - kind: detect
+    spec: import-direction
+    id: build#detect-imports
+  - kind: detect
+    spec: slice-closure
+    id: build#detect-slice
+  # ── e2e stage — the spec exists and is judged by READING it ──
+  - kind: file-exists
+    spec: "packages/e2e/tests/saas-gating-quota.spec.ts"
+    id: e2e#spec-exists
+  - kind: judge
+    model: sonnet
+    spec: >
+      Read packages/e2e/tests/saas-gating-quota.spec.ts. PASS only if it is a COMPLETE, ACTIVE
+      Playwright spec (no .skip/.fixme, no commented-out body, no expect(true) stubs) that covers
+      the full monetization arc with real request-context calls and real assertions: subscribe on
+      the sandbox gateway, create projects up to the limit, assert the quota rejection surfaces,
+      simulate the gateway cancellation webhook, and assert excess projects are locked afterwards.
+      API-first setup, role/label selectors, no waitForTimeout.
+    id: e2e#arc-judged
+  # ── flows stage — the product surface exists ──
+  - kind: judge
+    model: sonnet
+    spec: >
+      Inspect packages/app/react/src/routes for the monetization surface. PASS only if there is a
+      plans/paywall route consuming ListPlans with the sandbox checkout hook, and a projects route
+      whose data-owning section renders a usage indicator from GetUsage, a create dialog validating
+      the SDK mutation schema, and a locked state driven by the typed errors/enums i18n catalogs
+      (keys present in BOTH pt.json and en.json). Name what was found per criterion.
+    id: flows#paywall-usage-locked

@@ -1,0 +1,28 @@
+# sqlc config — lado PRODUTO do substrato SQLite. Par do config do kernel em
+# packages/api/go/core/db/sqlite/sqlc.yaml.
+#
+# POR QUE SÃO DOIS. O sqlc gera models para TODO o schema que recebe — não há como excluir tabela.
+# Com um config só, o kernel (`template/core-go`) acabava dono de structs de sete bounded contexts
+# de produto (GatewayChannel, IssueIssue, ArtifactArtifact, …), invertendo a direção de dependência
+# que o resto da arquitetura mantém. Decisão do founder, 2026-08-14: o core tem sqlc próprio, com
+# schema e queries só dele; o produto tem o seu.
+#
+# Os dois schemas são DERIVADOS do transcrito único por script determinístico
+# (scripts/db/split-sqlite-schema.ts, com gate `--check`) — nunca escritos à mão. A regra do corte é
+# o prefixo `shared_`, e o script REPROVA se uma FK cruzar a fronteira.
+#
+# Regenerar depois de uma migração: os passos 1-3 do config do kernel (drizzle generate → db:sync-go
+# → re-transcrever schema.sql) valem para os dois; depois:
+#   4. bun scripts/db/split-sqlite-schema.ts
+#   5. (cd packages/api/go/core/db/sqlite && sqlc generate)
+#   6. (cd packages/api/go/internal/shared/db/sqlite && sqlc generate)
+# Os passos 5 e 6 têm gate: scripts/sqlc-parity.test.ts roda `sqlc diff` nos DOIS configs.
+version: "2"
+sql:
+  - engine: "sqlite"
+    schema: "schema.app.sql"
+    queries: "query"
+    gen:
+      go:
+        package: "sqlitedb"
+        out: "gen"

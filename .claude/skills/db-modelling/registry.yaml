@@ -1,0 +1,306 @@
+registry:
+  type: backend
+  layer: infrastructure
+  depends_on: [entity, value-object]
+  depended_by: [repository-impl]
+  context_reads: [entity, value-object]
+
+  patterns:
+    # === Always-on patterns ===
+    - id: DB-01
+      name: "Table declaration with pgTable/pgSchema"
+      when: always
+      rule: "export const tableName = contextSchema.table('table_name', { columns }, (t) => [...])"
+    - id: DB-02
+      name: "pgSchema namespace per bounded context"
+      when: always
+      rule: "const myContextSchema = pgSchema('my_context') — each bounded context gets its own PostgreSQL schema"
+    - id: DB-03
+      name: "BaseEntity fields block"
+      when: always
+      rule: |
+        id: text('id').primaryKey(),
+        createdAt: timestamp('created_at').defaultNow().notNull(),
+        updatedAt: timestamp('updated_at').defaultNow().$onUpdate(() => new Date()).notNull(),
+        version: integer('version').default(1).notNull(),
+    - id: DB-04
+      name: "Export in schema/index.ts"
+      when: always
+      rule: "export * from './myContext'"
+    - id: DB-05
+      name: "Enum declaration before tables"
+      when: always
+      rule: "export const myStatusEnum = contextSchema.enum('my_status_enum', enumValues(MyStatus)) — declared BEFORE tables that use them"
+
+    # === Conditional patterns ===
+    - id: DB-C01
+      name: "FK with references + onDelete"
+      when: "entity references another aggregate in same context"
+      rule: "entityId: text('entity_id').notNull().references(() => otherTable.id, { onDelete: 'cascade'|'restrict' })"
+    - id: DB-C02
+      name: "Index on every FK column"
+      when: "table has foreign key columns"
+      rule: "index('table_fk_idx').on(table.fkColumn) in the table's third argument"
+      wrong: "FK column without a corresponding index"
+    - id: DB-C03
+      name: "Enum column via pgEnum with $type"
+      when: "entity has enum field"
+      rule: "status: myStatusEnum('status').$type<MyStatus>().default(MyStatus.VALUE).notNull()"
+      reason: "pgSchema.enum() infers string literal unions, not the TypeScript enum type. Adding .$type<EnumType>() makes $inferSelect produce the TS enum type, eliminating unsafe `as` casts in toDomain()."
+      wrong: "Enum column without .$type<>() — forces `as EnumType` casts in repository toDomain()"
+    - id: DB-C04
+      name: "Flattened VO columns with prefix"
+      when: "entity has composite value object (non-array)"
+      rule: "addressStreet: text('address_street'), addressCity: text('address_city'), etc."
+      wrong: "separate table for non-array VO; single JSONB column for structured VO"
+    - id: DB-C05
+      name: "JSONB for array/list VOs"
+      when: "entity has array of value objects"
+      rule: "jsonb<Array<VOShape>>('col').default([]) — uses custom jsonb from '../types/jsonb' with generic type parameter"
+    - id: DB-C06
+      name: "Typed JSONB with generic parameter"
+      when: "column uses jsonb"
+      rule: "jsonb<TData>('col') — use custom jsonb import from '../types/jsonb' with a generic type parameter. Derive the type from the entity's props type or Zod schema when available."
+      wrong: "stock drizzle jsonb from 'drizzle-orm/pg-core' (breaks with BunSQL driver); untyped jsonb without generic parameter"
+    - id: DB-C07
+      name: "Cross-context ID as plain text"
+      when: "entity references aggregate in different bounded context"
+      rule: "otherContextId: text('other_context_id').notNull() — no FK, just plain text ID"
+      wrong: "FK reference to table in another bounded context"
+    - id: DB-C08
+      name: "Composite unique constraint"
+      when: "combination of columns must be unique"
+      rule: "unique('unique_table_cols').on(table.col1, table.col2) in table's third argument"
+    - id: DB-C09
+      name: "Drizzle relations declaration"
+      when: "table has FK or is referenced by other tables"
+      rule: "export const tableRelations = relations(table, ({ one, many }) => ({ ... }))"
+    - id: DB-C10
+      name: "Unique FK for 1:1 relationship"
+      when: "entity has one-to-one relation via FK"
+      rule: "userId: text('user_id').notNull().unique('unique_table_user').references(() => user.id, { onDelete: 'cascade' })"
+    - id: DB-C11
+      name: "Composite index"
+      when: "multi-column query pattern exists"
+      rule: "index('table_col1_col2_idx').on(table.col1, table.col2)"
+    - id: DB-C12
+      name: "Optional VO columns nullable"
+      when: "entire value object is optional"
+      rule: "all VO columns omit .notNull() — nullable columns for optional VOs"
+
+    # === Real-code pattern references (P## series) ===
+    - id: DB-P01
+      name: "pgSchema namespace"
+      source: "packages/api/typescript/src/shared/db/drizzle/schema/clinic.ts:12"
+      snippet: "export const clinicSchema = pgSchema('clinic')"
+    - id: DB-P02
+      name: "Enum with enumValues utility"
+      source: "packages/api/typescript/src/shared/db/drizzle/schema/appointment.ts:11"
+      snippet: "export const appointmentStatusEnum = appointmentSchema.enum('appointment_status_enum', enumValues(AppointmentStatus))"
+    - id: DB-P03
+      name: "BaseEntity fields"
+      source: "packages/api/typescript/src/shared/db/drizzle/schema/unit.ts:23-31"
+      snippet: |
+        id: text('id').primaryKey(),
+        createdAt: timestamp('created_at').defaultNow().notNull(),
+        updatedAt: timestamp('updated_at').defaultNow().$onUpdate(() => /* @__PURE__ */ new Date()).notNull(),
+        version: integer('version').default(1).notNull(),
+    - id: DB-P04
+      name: "FK with onDelete policy"
+      source: "packages/api/typescript/src/shared/db/drizzle/schema/unit.ts:66-68"
+      snippet: |
+        unitId: text('unit_id').notNull().references(() => units.id, { onDelete: 'cascade' }),
+        memberId: text('member_id').notNull(),
+    - id: DB-P05
+      name: "FK index in third argument"
+      source: "packages/api/typescript/src/shared/db/drizzle/schema/unit.ts:76-80"
+      snippet: |
+        table => [
+            unique('unique_membership').on(table.unitId, table.memberId),
+            index('membership_unit_idx').on(table.unitId),
+            index('membership_member_idx').on(table.memberId),
+        ]
+    - id: DB-P06
+      name: "Flattened address VO"
+      source: "packages/api/typescript/src/shared/db/drizzle/schema/patient.ts:44-51"
+      snippet: |
+        addressStreet: text('address_street'),
+        addressNumber: text('address_number'),
+        addressComplement: text('address_complement'),
+        addressNeighborhood: text('address_neighborhood'),
+        addressCity: text('address_city'),
+        addressState: text('address_state'),
+        addressZipCode: text('address_zip_code'),
+        addressCountry: patientCountryEnum('address_country'),
+    - id: DB-P07
+      name: "Flattened phone VO"
+      source: "packages/api/typescript/src/shared/db/drizzle/schema/patient.ts:39-41"
+      snippet: |
+        phoneCountryCode: text('phone_country_code').notNull(),
+        phoneAreaCode: text('phone_area_code').notNull(),
+        phoneNumber: text('phone_number').notNull(),
+    - id: DB-P08
+      name: "JSONB array with custom jsonb and inline type"
+      source: "packages/api/typescript/src/shared/db/drizzle/schema/doctor.ts:28"
+      snippet: |
+        import { jsonb } from '../types/jsonb'
+        specialties: jsonb<Array<{ specialty: string; rqe?: string }>>('specialties').default([])
+      note: "The custom jsonb wrapper uses a generic parameter for typing: jsonb<TData>('col'). In this case, the type is inlined rather than derived from a Zod schema."
+    - id: DB-P09
+      name: "Flattened value object columns (PriceRange)"
+      source: "packages/api/typescript/src/shared/db/drizzle/schema/service.ts:55-57"
+      snippet: |
+        priceRangeFromCents: integer('price_range_from_cents').notNull(),
+        priceRangeToCents: integer('price_range_to_cents').notNull(),
+        priceRangeCurrency: serviceCurrencyEnum('sa_price_range_currency').$type<Currency>().notNull(),
+      note: "PriceRange is flattened into three columns (fromCents, toCents, currency) rather than stored as JSONB — follows the 'flatten structured VOs' pattern."
+    - id: DB-P10
+      name: "Enum column with $type and default"
+      source: "packages/api/typescript/src/shared/db/drizzle/schema/appointment.ts:43"
+      snippet: "status: appointmentStatusEnum('status').$type<AppointmentStatus>().notNull().default(AppointmentStatus.PENDING)"
+    - id: DB-P11
+      name: "Cross-context ID (no FK)"
+      source: "packages/api/typescript/src/shared/db/drizzle/schema/appointment.ts:27-28"
+      snippet: |
+        patientId: text('patient_id').notNull(),
+        serviceId: text('service_id').notNull(),
+    - id: DB-P12
+      name: "Unique FK for 1:1"
+      source: "packages/api/typescript/src/shared/db/drizzle/schema/doctor.ts:28-30"
+      snippet: |
+        userId: text('user_id').notNull()
+            .unique('unique_doctor_user')
+            .references(() => user.id, { onDelete: 'cascade' }),
+    - id: DB-P13
+      name: "Composite unique + indexes"
+      source: "packages/api/typescript/src/shared/db/drizzle/schema/unit.ts:76-80"
+      snippet: |
+        table => [
+            unique('unique_membership').on(table.unitId, table.memberId),
+            index('membership_unit_idx').on(table.unitId),
+            index('membership_member_idx').on(table.memberId),
+        ]
+    - id: DB-P14
+      name: "Drizzle relations one/many"
+      source: "packages/api/typescript/src/shared/db/drizzle/schema/unit.ts:115-117"
+      snippet: |
+        export const unitsRelations = relations(units, ({ many }) => ({
+            memberships: many(memberships),
+        }))
+
+  bad_practices:
+    - id: bp-01
+      severity: critical
+      name: "Separate table for non-array value object"
+      wrong: |
+        export const addresses = mySchema.table('addresses', {
+            id: text('id').primaryKey(),
+            street: text('street').notNull(),
+            patientId: text('patient_id').references(() => patients.id),
+        })
+      right: |
+        // Flatten VO into parent table
+        addressStreet: text('address_street'),
+        addressCity: text('address_city'),
+      mechanical: false
+
+    - id: bp-02
+      severity: critical
+      name: "Floats/decimals for monetary values"
+      wrong: "price: numeric('price', { precision: 10, scale: 2 })"
+      right: "amountCents: integer('amount_cents').notNull()"
+      mechanical: true
+      detect:
+        - 'numeric\s*\('
+        - '\bdoublePrecision\s*\('
+        - '\breal\s*\('
+
+    - id: bp-03
+      severity: critical
+      name: "Missing BaseEntity fields"
+      wrong: |
+        export const products = mySchema.table('products', {
+            id: text('id').primaryKey(),
+            name: text('name').notNull(),
+            createdAt: timestamp('created_at').defaultNow().notNull(),
+        })
+      right: "Every table MUST have id, createdAt, updatedAt (with $onUpdate), version"
+      mechanical: false
+
+    - id: bp-04
+      severity: moderate
+      name: "FK column without index"
+      wrong: |
+        export const orders = mySchema.table('orders', {
+            customerId: text('customer_id').notNull().references(() => customers.id),
+        })
+      right: |
+        export const orders = mySchema.table('orders', {
+            customerId: text('customer_id').notNull().references(() => customers.id),
+        }, table => [
+            index('order_customer_idx').on(table.customerId),
+        ])
+      mechanical: false
+
+    - id: bp-05
+      severity: critical
+      name: "Schema before domain model"
+      wrong: "Schema -> Entity -> 'make entity match the table'"
+      right: "Entity -> Value Objects -> Schema mirrors domain"
+      mechanical: false
+
+    - id: bp-06
+      severity: moderate
+      name: "JSONB for single structured VO"
+      wrong: "address: jsonb('address').$type<{ street: string; city: string }>()"
+      right: |
+        addressStreet: text('address_street'),
+        addressCity: text('address_city'),
+      mechanical: true
+      detect:
+        - 'jsonb\s*\([^)]*\)\.\$type<\{'
+        - 'jsonb<\{'
+
+  canonical_snippet: |
+    import { pgSchema, text, integer, timestamp, index, unique } from 'drizzle-orm/pg-core'
+    import { jsonb } from '../types/jsonb'
+    import { relations } from 'drizzle-orm'
+    import { enumValues } from '../utils'
+    import { ProductStatus } from '@product/enums'
+    import type { TagProps } from '@product/objects/Tag'
+
+    export const productSchema = pgSchema('product')
+
+    // Enums — declared BEFORE tables
+    export const productStatusEnum = productSchema.enum('product_status_enum', enumValues(ProductStatus))
+
+    export const products = productSchema.table('products', {
+        // BaseEntity fields
+        id: text('id').primaryKey(),
+        createdAt: timestamp('created_at').defaultNow().notNull(),
+        updatedAt: timestamp('updated_at').defaultNow().$onUpdate(() => new Date()).notNull(),
+        version: integer('version').default(1).notNull(),
+
+        // Domain fields
+        name: text('name').notNull(),
+        status: productStatusEnum('status').$type<ProductStatus>().notNull().default(ProductStatus.ACTIVE),
+        organizationId: text('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+
+        // Flattened VO
+        addressStreet: text('address_street'),
+        addressCity: text('address_city'),
+
+        // JSONB array VO — custom jsonb with generic type parameter
+        tags: jsonb<TagProps[]>('tags').default([]),
+    }, (t) => [
+        index('products_organization_idx').on(t.organizationId),
+    ])
+
+    export const productsRelations = relations(products, ({ one }) => ({
+        organization: one(organizations, {
+            fields: [products.organizationId],
+            references: [organizations.id],
+        }),
+    }))
+
+  scaffold: "manual — use this skill's guidance"

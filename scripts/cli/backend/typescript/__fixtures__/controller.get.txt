@@ -1,0 +1,37 @@
+import { injectable } from 'tsyringe-neo'
+import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
+
+export const GetOrderInputSchema = z
+	.object({
+		ctx: z.object({ user: z.object({ id: z.string() }) }),
+		params: z.object({ id:z.string() }),
+	})
+	.example([{ params: { id: '123e4567-e89b-12d3-a456-426614174000' } }])
+
+export const GetOrderOutputSchema = z
+	.object({
+		id:z.string(),
+		name: z.string(),
+		createdAt: z.stringToDate(),
+		updatedAt: z.stringToDate(),
+	})
+	.example([{ id: '123e4567-e89b-12d3-a456-426614174000', name: 'Example', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' }])
+
+@injectable()
+export class GetOrderController extends Controller<typeof GetOrderInputSchema, typeof GetOrderOutputSchema> {
+	readonly path = '/sales/:id'
+	readonly method = 'get'
+	readonly description = 'GetOrder operation'
+	readonly inputSchema = GetOrderInputSchema
+	readonly outputSchema = GetOrderOutputSchema
+
+	async handle(request: this['input']): Promise<this['output']> {
+		const { params } = request
+
+		// TODO: Delegate to use case
+		return {
+			status: HttpStatusCode.OK,
+			data: {} as any,
+		}
+	}
+}

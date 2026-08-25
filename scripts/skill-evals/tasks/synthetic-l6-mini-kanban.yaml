@@ -1,0 +1,177 @@
+id: synthetic-l6-mini-kanban
+# L6 — THE APP-FROM-IDEA PROBE (app #1, scoped mini-Kanban). Input is a one-line idea; the eval
+# agent runs the FULL pipeline (model -> contract-lock -> plan -> build-by-dispatch -> e2e) as an
+# ORCHESTRATOR (extraTools: [Task] → it fans out worker subagents, never one-context marathon).
+# Graded as a STAGE VECTOR via id prefixes (model#/lock#/build#/e2e#/flows#). Gold rubric:
+# scripts/skill-evals/seeds/l6-mini-kanban/GOLD.md. "Without failing too much" = model+build clear
+# AND ≥4/5 flows covered; a single non-catastrophic stage miss is acceptable (the vector records it).
+title: Autonomous build — minimal Kanban app from a one-line idea (orchestrated, multi-agent)
+tier: holdout
+builder: fable
+sourceSpec: scripts/skill-evals/seeds/l6-mini-kanban/GOLD.md
+goldRef: ""
+baseRef: ""
+timeoutMs: 10800000
+extraTools:
+  - Task
+prompt: >
+  BUILD A MINIMAL KANBAN APP, end to end, in this monorepo, from this one-line idea:
+  "Workspaces of boards; each board has ordered lists (columns); cards move between lists; everyone
+  viewing a board sees moves live. Auth is handled by the template."
+  You are the ORCHESTRATOR (you have the Task tool) — model, lock the contract, plan with handoffs,
+  then DISPATCH worker subagents per Task. Follow the full pipeline in the preamble. Scope it to the
+  CORE only (no labels/comments/attachments/due-dates): just boards, ordered lists as part of the
+  board, cards, and card moves with realtime.
+  ARCHITECTURE (non-negotiable, it is the grading rubric): DDD + Clean + CQRS + Event-Driven per the
+  root CLAUDE.md and docs/BACKEND.md / docs/FRONTEND.md. Decompose into SOUND bounded contexts —
+  the Board aggregate owns its lists as ordered VALUE OBJECTS/columns (do NOT make List its own
+  aggregate or context), Card is its own aggregate (identity + moves), membership/collaboration may
+  be its own context or folded into board. Board + Card MUST own real invariants (an archived board
+  rejects new cards; a card may only sit on a list that exists on its board). No god-context, no
+  per-table sprawl.
+  CONTRACT LOCK (freeze before building any context): author the integration event named exactly
+  `CardMoved` (TypeSpec model `CardMovedEvent`, event name `integration.shared.card.moved`, payload
+  carrying `boardId` (REQUIRED — the SSE realtime tenancy filter depends on it), `cardId`,
+  `fromListId`, `toListId`); add it to the BROWSER_EVENTS union in the ui ListenEvents controller so
+  it is realtime-subscribable; add the boards/cards tables (Drizzle); run `bun contracts` + `bun sdk`.
+  READ-SIDE: a BoardView projection (board → ordered lists → ordered cards) driven by a projector
+  from CardCreated/CardMoved, exposed via a `ui` BFF query.
+  FRONTEND (react, per packages/app/react/CLAUDE.md): a board route (thin shell, params typed), a
+  data-owning BoardSection (owns the GetBoard hook + routeApi + exactly one
+  useServerEvents(CardMoved…) that invalidates the GetBoard query key), a CreateCardDialog via
+  useDialogStore validating the SDK create-card mutation schema, and a card-move mutation (kept
+  whole, no try/catch/onError). Any status labels via the typed enums.* i18n catalog in BOTH locales.
+  E2E (packages/e2e, per .claude/skills/e2e): a Playwright spec at the EXACT path
+  packages/e2e/tests/kanban-board-realtime.spec.ts that sets up via the API request
+  context (not UI), uses role/label selectors, no waitForTimeout, and asserts the REALTIME path —
+  with the board open, move a card via the API and assert the row appears in the new column WITHOUT
+  reload. CRITICAL: this spec is graded by READING it (static analysis + a judge), NOT by running
+  Playwright — you CANNOT and need NOT run it here. So write the spec COMPLETE, with the real
+  assertions ACTIVE: actual `request.post/patch` calls, actual `await expect(...).toBeVisible()` on
+  the moved card. Do NOT comment out the body, do NOT leave `expect(true).toBe(true)`, do NOT
+  `.skip`/`.fixme`. A complete-but-unrun spec is CORRECT; a stubbed or commented-out spec is the
+  single most common failure here and grades as FAIL.
+  TESTS (TDD — per .claude/skills/test/typescript, NOT optional): the Card aggregate's bounded context
+  lives at packages/api/typescript/src/card/. Write COLOCATED tests there that PASS: (a) an ENTITY test
+  asserting a Card invariant (a card may only sit on a list that exists on its board; moving a card on
+  an archived board is rejected with the named domain error); (b) a USE CASE test in TestBed integration
+  mode (`TestBed.create('integration', …)`) for CreateCard / MoveCard. Green:
+  `cd packages/api/typescript && bun test src/card`.
+  GATES before done: `cd packages/api/typescript && bun x tsc -p tsconfig.build.json --noEmit` AND
+  `bun test src/card` (green); `cd packages/app/react && bun x tsc --noEmit`; `cd packages/e2e && bun x
+  tsc --noEmit`; `bun run detect` clean at the repo root. Your final message must name the bounded
+  contexts you modeled, the frozen contract, the per-wave worker dispatch + gate results, the tests
+  written, and which core flows are covered.
+
+axes:
+  - APP-FROM-IDEA
+  - DDD-DECOMPOSITION
+  - CONTRACT-LOCK
+  - MULTI-AGENT-HANDOFF
+  - CQRS-PROJECTION
+  - REALTIME
+  - E2E-DISCIPLINE
+
+graders:
+  # ── model stage — the NOVEL bounded-context-decomposition grader (gold-rubric judge) ──
+  - kind: judge
+    model: sonnet
+    spec: >
+      Inspect the bounded contexts this build modeled under packages/api/typescript/src/ (each
+      context is a folder with entities/usecases/etc.). Judge the DDD DECOMPOSITION SOUNDNESS for a
+      minimal Kanban app, grading against this gold standard (names may differ — grade soundness, not
+      exact match): a SOUND carve-up has roughly a `board` context (Board aggregate owning its lists
+      as ordered VALUE OBJECTS/columns), a `card` context (Card aggregate with identity + moves), and
+      optionally a membership/collaboration context (or folded into board). PASS only if: (1) lists
+      are modeled as value objects/columns ON the board, NOT as their own aggregate or bounded
+      context (that is the canonical OVER-FRAGMENTATION trap — FAIL it); (2) there is NO god-context
+      (one `kanban` context owning board+list+card+everything = FAIL); (3) no per-table sprawl
+      (separate contexts for board/list/card/label/… = FAIL); (4) Board AND Card each own at least one
+      real INVARIANT (archived board rejects cards; card belongs to a list on its board) — anemic
+      CRUD bags FAIL. Name the contexts found and the verdict per criterion.
+    id: model#bc-decomposition
+  # ── test stage — the agent must WRITE tests (TDD) and they must RUN green ──
+  - kind: file-exists
+    spec: "packages/api/typescript/src/card/**/*.test.ts"
+    id: test#colocated-exists
+  - kind: grep-must
+    spec: "packages/api/typescript/src/card/**/*.test.ts::TestBed\\.create\\(\\s*'integration'"
+    id: test#integration-mode
+  - kind: test-green
+    spec: packages/api/typescript/src/card
+    id: test#green
+  # ── contract-lock stage — the realtime event frozen with its tenancy key ──
+  - kind: grep-must
+    spec: "packages/contracts/src/wire/events/**/*.tsp::CardMoved"
+    id: lock#cardmoved-event
+  - kind: grep-must
+    spec: "packages/contracts/src/wire/events/**/*.tsp::boardId"
+    id: lock#realtime-tenancy-key
+  # ── build stage — mechanical, naming-independent gates ──
+  - kind: tsc
+    spec: backend
+    id: build#tsc-backend
+  - kind: tsc
+    spec: app-react
+    id: build#tsc-react
+  - kind: tsc
+    spec: e2e
+    id: build#tsc-e2e
+  - kind: detect
+    spec: registry-scan
+    id: build#detect-registry
+  - kind: detect
+    spec: import-direction
+    id: build#detect-imports
+  - kind: detect
+    spec: slice-closure
+    id: build#detect-slice
+  - kind: detect
+    spec: projection-shape
+    id: build#detect-projection
+  - kind: detect
+    spec: component-props
+    id: build#detect-component-props
+  # ── e2e stage — mechanical anchors on the FIXED spec path (the template's own 02-06 specs
+  #    contain tautology asserts, so scope the anti-stub gate to the new file only). ──
+  - kind: file-exists
+    spec: "packages/e2e/tests/kanban-board-realtime.spec.ts"
+    id: e2e#spec-exists
+  - kind: grep-must-not
+    spec: "packages/e2e/tests/kanban-board-realtime.spec.ts::expect\\(\\s*true\\s*\\)\\.toBe\\(\\s*true|expect\\(\\s*1\\s*\\)\\.toBe\\(\\s*1|^\\s*//.*await expect"
+    id: e2e#not-stubbed
+  # ── e2e stage — a real spec exercising the realtime move (judge: naming varies) ──
+  - kind: judge
+    model: sonnet
+    spec: >
+      Find the NEW Playwright e2e spec for the Kanban/board feature under packages/e2e/tests/. PASS
+      only if it EXISTS and is REAL (not absent, not all-fixme/skip, no `expect(true).toBe(true)`),
+      sets up data through the API request context (not UI click-paths), uses role/label selectors,
+      has NO waitForTimeout, AND contains a realtime assertion: with a board open, a card is moved via
+      the API and the spec asserts the card appears in the new column WITHOUT a reload/navigation.
+      FAIL (naming which) if the spec is missing, stubbed, or lacks the realtime-move assertion.
+    id: e2e#realtime-move
+  # ── flows stage — are the core capabilities actually implemented end to end? ──
+  - kind: judge
+    model: sonnet
+    spec: >
+      Judge whether the build implements the CORE KANBAN FLOWS end to end (backend aggregate/usecase +
+      wire + frontend), per scripts/skill-evals/seeds/l6-mini-kanban/GOLD.md. Inspect the code and
+      report coverage of each: (1) create a board with ≥2 lists; (2) add a card to a list; (3) MOVE a
+      card to another list (a CardMoved/move use case on the Card aggregate emitting the event + the
+      BoardView projection reflecting it); (4) REALTIME — exactly one useServerEvents(CardMoved…) in
+      the board frontend invalidating the GetBoard query key (no setQueryData/refetchInterval); (5)
+      archiving a board rejects adding a card (the named domain error). PASS if ≥4 of the 5 flows are
+      genuinely implemented end to end (not just scaffolded shells); state the per-flow verdict. FAIL
+      if ≤3 are real.
+    id: flows#core-coverage
+
+notes: >-
+  L6 app-from-idea probe (app #1). ORCHESTRATED: extraTools [Task] → the eval agent fans out worker
+  subagents (P3 derisked viable 2026-06-14 in $TMPDIR worktrees). Builds FROM SCRATCH (no seed) — so
+  graders lean on JUDGES (naming varies) + naming-independent mechanical gates (tsc, the detect
+  suite) + the one frozen contract anchor (CardMoved + boardId, which the prompt fixes). Stage vector
+  via id prefixes model#/lock#/build#/e2e#/flows#. HEAVY run: timeoutMs 3h, AGENT_MODEL=sonnet,
+  AGENT_RESUMES=2-3, a dedicated window. First run is a MEASUREMENT (where does autonomy break?), not
+  expected perfect. Validator note: at HEAD every grader FAILs/empty = free real estate (nothing
+  kanban exists); tsc/detect pass at HEAD (HEAD is clean) so build#* pass vacuously pre-build.

@@ -1,0 +1,16 @@
+// Package coupon provides the CouponRepository interface and implementations.
+package coupon
+
+import (
+	"context"
+
+	"template/api-go/internal/sales/entities"
+)
+
+// CouponRepository defines persistence operations for the Coupon aggregate.
+type CouponRepository interface {
+	Find(ctx context.Context, id string) (*entities.Coupon, error)
+	Save(ctx context.Context, entity *entities.Coupon) error
+	// Add identifier queries as needed, e.g.:
+	// FindByOwnerID(ctx context.Context, ownerID string) ([]*entities.Coupon, error)
+}

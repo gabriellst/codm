@@ -1,0 +1,354 @@
+id: synthetic-react-table-route-search
+tier: holdout
+builder: sonnet
+title: >-
+  Server-paginated campaigns DataTable route — composed validateSearch
+  (synthetic — P2 react: SDK-composed search schema with .default() on every
+  field, SDK-enum-typed filters, useMemo column defs with a locale dep, bulk
+  selection in the ONE Zustand store, section owns its data CMP-P01)
+sourceSpec: PROBES-BACKLOG.md#P2
+goldRef: ""
+baseRef: ""
+prompt: >
+  In the template react app (packages/app/react — the TanStack Start app served
+  under /app) build the missing Ad Campaigns list screen: a SERVER-PAGINATED
+  DataTable whose page / limit / search / platform-filter / sort all live in the
+  URL via validateSearch. The backend endpoint already exists in the SDK
+  (GET /v1/ui/products/ad-campaigns → useListProductAdCampaigns); this is a
+  frontend-only, app-react-only task — do NOT touch the backend, the SDK, or
+  the astro app, and do NOT regenerate the SDK (you consume it as
+  shipped). Before writing code, read the react skill variants
+  .claude/skills/route/react/{SKILL.md,registry.yaml} and
+  .claude/skills/component/react/{SKILL.md,registry.yaml} and
+  .claude/skills/store/{SKILL.md,registry.yaml}, AND the two package CLAUDE.md
+  files (the root /CLAUDE.md and packages/app/react/CLAUDE.md — the latter pins
+  the locale / money / SDK-enum / state-placement / scaffold-first conventions
+  this task is graded on). Then ground every shape in the EXISTING exemplars
+  FIRST, because the repo spelling wins over any generic skill example:
+    - the SDK-composed bookmarkable search schema:
+      `dashboardSearchSchema` in src/routes/(app)/dashboard/index.tsx — it starts
+      from the SDK query-params schema (getDashboardQueryParamsSchema), `.omit()`s
+      the app-global-store-owned field (tenancyScope) and `.and()`s the
+      route-local additions, EVERY field carrying a `.default()`.
+    - the server-paginated section that owns its data:
+      src/routes/(app)/orders/-components/OrderTableSection/index.tsx — it reads
+      search via `getRouteApi('/(app)/orders/').useSearch()`, calls its own
+      `useListOrders(...)`, builds `useMemo` column defs with `useLocale()` in the
+      dependency array, renders money via `useMoney()`, owns its loading skeleton
+      inline, and dispatches a status Badge through an enum-keyed
+      `Record<PaymentStatus, …>` map (CMP-P18, no switch/ternary chains).
+    - the one-store bulk-selection pattern:
+      src/routes/(app)/orders/-stores/useOrdersStore.ts — selectedIds + toggle /
+      selectAll / clearSelection in a single Zustand store.
+    - the DataTable primitive + barrel: src/components/DataTable/* (DataTable,
+      DataTableContent, DataTableSearch, DataTablePagination, ColumnDef).
+  Deliverables (author by hand or scaffold with `bun cli` — scaffold-first is the
+  house rule, then wire the SDK identifiers; tsc errors right after a scaffold are
+  expected and you fix them):
+  (1) The route at EXACTLY
+  packages/app/react/src/routes/(app)/marketing/campaigns/index.tsx, a thin shell
+  (CMP-P01 / route bp-02): it exports a `campaignsSearchSchema` COMPOSED from the
+  SDK's `listProductAdCampaignsQueryParamsSchema` via `.and(z.object({…}))` (NOT a
+  hand-rolled parallel z.object re-listing page/limit/search/platform, and NOT a
+  hand-written `z.enum([...])` literal array of platform values — the SDK schema
+  already types `platform` with `marketingPlatformSchema`). EVERY field of the
+  final schema is concrete: keep the SDK defaults for page/limit/search, give the
+  optional `platform` filter and the route-local `sortBy` / `sortOrder` additions
+  a `.default()` so a garbage deep link still renders (sortOrder defaults to
+  'DESC'; sortBy defaults to a real campaign column id like 'name' or 'spend').
+  `validateSearch: zodValidator(campaignsSearchSchema)`. The shell renders the
+  section component and NOTHING data-related — no `useListProductAdCampaigns`
+  call, no `data={…}` / `search={…}` / `onSearchParamsChange={…}` props passed
+  down. Export the row item type from the SDK response
+  (`ListProductAdCampaignsQueryResponse['items'][number]`).
+  (2) The section at EXACTLY
+  .../marketing/campaigns/-components/CampaignTableSection/index.tsx — it OWNS its
+  data: reads the URL via `getRouteApi('/(app)/marketing/campaigns/').useSearch()`
+  and `.useNavigate()`, calls `useListProductAdCampaigns({ page, limit, search,
+  platform })`, renders the `<DataTable>` family with server pagination
+  (page/limit/total/totalPages wired from the response, page changes via
+  `navigate({ search: prev => ({ ...prev, page }) })`, never `useState`). Build
+  the column defs in a `useMemo` whose dependency array includes the active locale
+  (`const locale = useLocale()`), format the campaign `spend` money column via
+  `useMoney()` (never `formatMoney` from @/lib/format directly, never a hardcoded
+  'pt-BR'/'en-US'), and dispatch the campaign `status` (CampaignStatus enum on the
+  response) and `platform` (MarketingPlatform enum) cells through enum-keyed
+  exhaustive `Record<CampaignStatus, …>` / label lookups — labels come ONLY from
+  the typed i18n catalog `t(\`enums.CampaignStatus.${value}\`)` /
+  `t(\`enums.MarketingPlatform.${value}\`)`, never inline strings, never a switch.
+  Loading renders a skeleton INLINE (the surrounding header/toolbar stays
+  visible); do not gate the whole section from the route.
+  (3) The platform filter is a control bound to the URL search param typed by the
+  SDK enum — iterate `Object.values(MarketingPlatformEnum)` for the options;
+  changing it does `navigate({ search: prev => ({ ...prev, platform: next, page: 1
+  }) })`. Never widen the enum to `string` in a slot we own (no `status as string`
+  casts to dodge tsc — fix at the type level).
+  (4) Bulk selection lives in the ONE Zustand store at EXACTLY
+  .../marketing/campaigns/-stores/useCampaignSelectionStore.ts (mirroring
+  useOrdersStore: `selectedIds: string[]` + toggle / selectAll / clearSelection) —
+  the section reads selection from it and renders a batch-actions bar when
+  `selectedIds.length > 0`. Do NOT hold the selected-ids set in `useState`, and do
+  NOT put page/search/platform/sort (URL state) in the store.
+  (5) Enum labels: add the `enums.CampaignStatus.*` subtree (ACTIVE / PAUSED /
+  ARCHIVED) to BOTH src/locales/pt.json and src/locales/en.json (the
+  `enums.MarketingPlatform.*` subtree already exists) plus a small
+  `marketing.campaigns.*` subtree for the title / column headers / toolbar /
+  empty / loadError strings — t() keys are type-checked, so every key you use must
+  exist in both json files or tsc fails. No user-facing copy inlined in the .tsx.
+  Finish GREEN: from packages/app/react run `bun x tsc --noEmit` clean, and run
+  `bun tsr generate` after adding the route file so the route tree picks it up.
+axes:
+  - UI-COMPOSITION
+  - DATA-OWNERSHIP
+  - URL-STATE
+  - SDK-ENUMS
+  - LOCALE-MONEY
+  - STATE-PLACEMENT
+graders:
+  # ── type gate ──────────────────────────────────────────────────────
+  - kind: tsc
+    spec: app-react
+    id: tsc#app-react
+  # ── structure ──────────────────────────────────────────────────────
+  - kind: file-exists
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/index.tsx"
+  - kind: file-exists
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/-components/CampaignTableSection/index.tsx"
+  - kind: file-exists
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/-stores/useCampaignSelectionStore.ts"
+  # ── ROUTE: composed validateSearch + thin shell ───────────────────
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/index.tsx::listProductAdCampaignsQueryParamsSchema"
+    id: route-react#RTE-P13-compose-from-sdk
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/index.tsx::\\.and\\("
+    id: route-react#RTE-P02-and-extend
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/index.tsx::\\.default\\("
+    id: route-react#RTE-P12-defaults
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/index.tsx::validateSearch:\\s*zodValidator\\("
+    id: route-react#validate-search
+  # the platform filter must reuse the SDK enum, NOT a hand-rolled string-literal list
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/index.tsx::z\\.enum\\(\\s*\\[\\s*['\"]META['\"]"
+    id: route-react#no-handrolled-platform-enum
+  # thin shell: the route never fetches or prop-drills data/search down
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/index.tsx::useListProductAdCampaigns"
+    id: route-react#bp-02-shell-no-fetch
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/index.tsx::(data|search|onSearchParamsChange)=\\{"
+    id: route-react#bp-02-no-prop-drill
+  # ── SECTION: owns data via SDK + route api ────────────────────────
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/-components/CampaignTableSection/index.tsx::useListProductAdCampaigns\\("
+    id: component-react#CMP-P01-owns-data
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/-components/CampaignTableSection/index.tsx::getRouteApi\\(\\s*['\"]/\\(app\\)/marketing/campaigns/['\"]"
+    id: component-react#route-api-search
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/-components/CampaignTableSection/index.tsx::\\.useSearch\\("
+    id: component-react#reads-url-state
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/-components/CampaignTableSection/index.tsx::\\bnavigate\\(\\{\\s*search:"
+    id: component-react#navigate-writes-url
+  # useMemo column defs carrying the active locale in the dep array
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/-components/CampaignTableSection/index.tsx::useMemo\\("
+    id: component-react#memo-columns
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/-components/CampaignTableSection/index.tsx::useLocale\\("
+    id: component-react#locale-from-hook
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/-components/CampaignTableSection/index.tsx::useMoney\\("
+    id: component-react#money-from-hook
+  # DataTable primitive family is used (server-paginated table, not a hand-rolled <table>)
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/-components/CampaignTableSection/index.tsx::<DataTable"
+    id: component-react#uses-datatable
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/-components/CampaignTableSection/index.tsx::ColumnDef<"
+    id: component-react#typed-columns
+  # enum-keyed dispatch map for status (CMP-P18) — Record<CampaignStatus | MarketingPlatform, …>
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/-components/CampaignTableSection/index.tsx::Record<(CampaignStatus|MarketingPlatform)"
+    id: component-react#CMP-P18-enum-map
+  # enum labels come from the typed i18n catalog, never inline strings
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/-components/CampaignTableSection/index.tsx::enums\\.(CampaignStatus|MarketingPlatform)\\."
+    id: component-react#bp-23-i18n-enum-labels
+  # platform filter iterates the SDK enum
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/-components/CampaignTableSection/index.tsx::Object\\.values\\(\\s*MarketingPlatformEnum\\s*\\)"
+    id: component-react#enum-options
+  # ── STATE PLACEMENT: URL not useState, selection in store ─────────
+  # no useState mirroring URL-owned view state (page / search / platform / sort)
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/-components/CampaignTableSection/index.tsx::useState[^\\n]*\\b(page|search|platform|sort|selected|Ids)\\b"
+    id: component-react#bp-03-no-usestate-view-state
+  # bulk selection comes from the Zustand store, not local state
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/-components/CampaignTableSection/index.tsx::useCampaignSelectionStore\\("
+    id: component-react#selection-from-store
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/-stores/useCampaignSelectionStore.ts::create<"
+    id: store#zustand-create
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/-stores/useCampaignSelectionStore.ts::selectedIds"
+    id: store#selected-ids
+  # the store must NOT hold URL-owned view state (STR-P10 case 2 beats case 3)
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/-stores/useCampaignSelectionStore.ts::\\b(page|limit|sortBy|sortOrder)\\b"
+    id: store#STR-P10-no-url-state-in-store
+  # ── no widening / no locale hardcode / no raw fetch / no cache surgery
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/**/*.{ts,tsx}::as\\s+string\\b"
+    id: component-react#no-enum-widening
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/**/*.{ts,tsx}::['\"](pt-BR|en-US)['\"]"
+    id: component-react#no-locale-hardcode
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/**/*.tsx::(?<![\\w$.])fetch\\s*\\("
+    id: component-react#no-raw-fetch
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/marketing/campaigns/**/*.tsx::setQueryData"
+    id: component-react#no-cache-surgery
+  # ── i18n: enum + feature subtrees mirrored in BOTH locales ─────────
+  - kind: grep-must
+    spec: "packages/app/react/src/locales/pt.json::CampaignStatus"
+    id: i18n#campaignstatus-pt
+  - kind: grep-must
+    spec: "packages/app/react/src/locales/en.json::CampaignStatus"
+    id: i18n#campaignstatus-en
+  # ── detectors ──────────────────────────────────────────────────────
+  - kind: detect
+    spec: component-props
+  # ── judge (the ONE rich rubric, with scope notes) ──────────────────
+  - kind: judge
+    spec: >
+      A server-paginated Ad Campaigns DataTable screen was just added to the
+      react app under
+      packages/app/react/src/routes/(app)/marketing/campaigns/: index.tsx (the
+      route), -components/CampaignTableSection/index.tsx (the section) and
+      -stores/useCampaignSelectionStore.ts (the selection store), plus
+      enums.CampaignStatus.* and marketing.campaigns.* keys in
+      src/locales/{pt,en}.json. Verify ALL of:
+      (a) COMPOSED SEARCH SCHEMA — the route's `campaignsSearchSchema` is built
+      from the SDK's `listProductAdCampaignsQueryParamsSchema` via `.and(z.object({
+      … }))` (it does NOT re-list page/limit/search/platform in a parallel hand-
+      rolled z.object, and does NOT hand-write a `z.enum(['META','GOOGLE_ADS',…])`
+      literal for the platform filter — the platform field's type comes from the
+      SDK schema). EVERY field of the final schema resolves to a concrete value:
+      page/limit/search keep the SDK defaults, and the optional platform filter
+      plus the route-local sortBy/sortOrder additions each carry a `.default()`, so
+      a garbage deep link still renders. `validateSearch` uses
+      `zodValidator(campaignsSearchSchema)`.
+      (b) DATA OWNERSHIP / THIN SHELL — the route file is a thin shell: it does NOT
+      call `useListProductAdCampaigns` and does NOT pass data/search/callbacks down
+      as props; it just renders <CampaignTableSection/>. The section OWNS its data:
+      it reads the URL through `getRouteApi('/(app)/marketing/campaigns/')`
+      (.useSearch + .useNavigate), calls `useListProductAdCampaigns({ page, limit,
+      search, platform })` itself, wires server pagination from the response
+      (total/totalPages/page), and updates page/filter/sort by navigating the URL
+      search params — NOT via useState. Loading is handled inline (a skeleton),
+      not gated from the route.
+      (c) SDK ENUMS TYPE EVERYTHING — the platform filter control iterates
+      `Object.values(MarketingPlatformEnum)` and writes the SDK-enum value back to
+      the URL search param (typed by the same enum, not widened to string anywhere
+      we own — no `as string` casts to dodge tsc). The status and platform table
+      cells dispatch through enum-keyed exhaustive maps / lookups
+      (Record<CampaignStatus,…> / Record<MarketingPlatform,…> or a direct
+      `t(\`enums.X.${value}\`)`), never a switch/if-chain (CMP-P18), and the
+      human-readable labels come ONLY from the typed i18n catalog
+      (`enums.CampaignStatus.*` and `enums.MarketingPlatform.*`), never inline
+      strings or a Record<Enum,string> label map in code.
+      (d) LOCALE + MONEY — the section gets the active locale from `useLocale()`
+      and the money formatter from `useMoney()`; the `spend` column renders through
+      `useMoney()` (NOT `formatMoney` from @/lib/format directly, NOT a hardcoded
+      'pt-BR'/'en-US'); the `useMemo` column defs include `locale` (and the money
+      formatter / t) in their dependency array so the cells re-render on a locale
+      switch.
+      (e) STATE PLACEMENT — bulk selection (selectedIds + toggle/clear) lives in
+      the single Zustand store useCampaignSelectionStore and the section reads it
+      from there (a batch-actions bar appears when selectedIds is non-empty); the
+      store holds ONLY selection, never the URL-owned view state
+      (page/limit/sortBy/sortOrder/search/platform). The new i18n keys exist in
+      BOTH pt.json and en.json with matching structure.
+      Scope notes — judge the idiom, not the variable name: the agent's choices of
+      column ids, the sortBy default column, helper/map variable names, and whether
+      the platform filter is a Select / ToggleGroup / Popover are all free as long
+      as the mechanism holds. A small presentational toolbar/batch-bar sub-
+      component inside the section folder is fine (the orders section has them).
+      Using `useState` ONLY for truly-local transient UI (an open/closed popover, a
+      hover, an uncontrolled draft inside an inline-edit control) is the sanctioned
+      case-5 useState — do NOT fail (b)/(e) for that; fail only if page / search /
+      platform / sort / the selected-ids set are mirrored into useState instead of
+      the URL / the store. `sortBy`/`sortOrder` being route-local `.and()`
+      additions (the SDK params schema has no sort fields) is CORRECT, not a
+      contract violation. Mirroring the response total/totalPages into local
+      derived consts (`const total = data?.total ?? 0`) is fine — that is reading,
+      not mirroring server data into useState. Whether the section calls the hook
+      with a positional params object or wraps it is the agent's choice. The repo
+      spelling wins over the skill's generic examples: per-locale page pairs and
+      `t(locale,key)` helpers from other skills do NOT apply here (this is the
+      react app, not astro). Inspect the three new files plus
+      src/locales/{pt,en}.json, and compare against the exemplars
+      src/routes/(app)/orders/-components/OrderTableSection/index.tsx,
+      src/routes/(app)/orders/-stores/useOrdersStore.ts and
+      src/routes/(app)/dashboard/index.tsx.
+notes: >-
+  P2 react probe — synthetic, agent mode only, baseRef=HEAD (greenfield: no
+  committed gold tree, no seeds — a normal code probe). Grounds in a real
+  server-paginated list route: the chosen endpoint is
+  GET /v1/ui/products/ad-campaigns (useListProductAdCampaigns), which has NO
+  consuming route in the react app at HEAD (grep
+  'useListProductAdCampaigns|ad-campaigns' under src/routes is empty), so the
+  whole marketing/campaigns/ subtree is free real estate. The SDK params schema
+  `listProductAdCampaignsQueryParamsSchema` ships page/limit/search +
+  `platform` (typed by marketingPlatformSchema = z.enum(['META','GOOGLE_ADS',
+  'TIKTOK','TABOOLA'])) + profileId, and the 200 response items carry name,
+  profileId, platform (MarketingPlatform), spend (signedMoney → Money) and
+  status (campaignStatusSchema = z.enum(['ACTIVE','PAUSED','ARCHIVED'])) — so
+  the probe gets a real enum FILTER (platform, in the params) AND a real enum
+  CELL (status, in the response) plus a Money column, exercising the SDK-enum +
+  useMoney + useMemo-locale canons against repo identifiers (never invented
+  names).
+  Why it discriminates: the existing `productSearchSchema`
+  (src/routes/(app)/products/index.tsx) and `ordersSearchSchema`
+  (src/routes/(app)/orders/index.tsx) are both the ANTI-pattern this probe
+  closes — productSearchSchema hand-writes `z.enum(['ACTIVE','ARCHIVED',
+  'DRAFT']).optional()` (NOT composed from listProductsQueryParamsSchema, no
+  .default() on status), and OrderTableSection casts `status as ListOrders200[
+  'items'][number]['status']` to dodge tsc. A naive agent will copy that shape;
+  the canonical move is `listProductAdCampaignsQueryParamsSchema.and(z.object({
+  … }))` with `.default()` on every field (the dashboardSearchSchema exemplar),
+  no `as string` widening, and no parallel z.enum literal for platform. The
+  no-handrolled-platform-enum grader is scoped to the route file only and keys
+  on the literal `z.enum(['META',…])` opener so it fires only on the duplicated
+  list, not on legitimate route-local sort enums like z.enum(['ASC','DESC']).
+  Free real estate verified at authoring time (every grep-must = 0 / every
+  file-exists = 0 / every grep-must-not already clean at HEAD): no
+  marketing/campaigns/ directory, no campaignsSearchSchema /
+  CampaignTableSection / useCampaignSelectionStore anywhere, enums.CampaignStatus
+  absent from BOTH locale files (the agent must add it — enums.MarketingPlatform
+  already exists in both, so its labels are reused not re-authored), tsc green
+  at HEAD, component-props detector green at HEAD. The
+  no-locale-hardcode grep-must-not is scoped to the new subtree only so it never
+  blames pre-existing 'pt-BR' literals elsewhere; same for as-string,
+  raw-fetch, setQueryData (all scoped to marketing/campaigns/**). The judge is
+  the single rich rubric with explicit legitimate-exception traps: case-5
+  useState (popover open / hover / uncontrolled draft) is NOT a violation,
+  derived `const total = data?.total ?? 0` is reading not mirroring,
+  route-local sortBy/sortOrder via .and() is CORRECT (the SDK params schema has
+  no sort fields), and a presentational toolbar/batch-bar sub-component inside
+  the section folder is fine. Carrier: the prompt names BOTH the root CLAUDE.md
+  and packages/app/react/CLAUDE.md (the proven canon carrier for the locale /
+  money / SDK-enum / state-placement rules) plus the route/component/store
+  react skill variants and the three exemplar files. Validator caveat: this
+  probe is baseRef:"" (HEAD) with NO seeds, so the free-real-estate validator
+  runs fully — all mechanical graders are expected GREEN-as-clean at HEAD
+  except `tsc#app-react` which must be PASS (tsc is green at HEAD) and the
+  judge which the validator skips. `bun tsr generate` is part of the build
+  (the agent runs it); the routeTree is regenerated in the agent's tree, and
+  tsc grades the result.

@@ -1,0 +1,66 @@
+# sync.yaml — a FORK's declaration of its parent (pull-based sync, the git fork model).
+#
+# The template itself carries NO sync.yaml: it is a ROOT repo — `bun sync:check` on it
+# prints "root repo, nothing to check" and exits 0. A fork copies this file to its repo
+# root as `sync.yaml`, fills it in, and inherits the whole tool for free.
+#
+# USER DECISION (2026-07-21): "o template não sabe dos filhos; os filhos declaram o pai."
+# The parent never lists its children. Reverse flow (a fix born in a fork that belongs in
+# the parent) is always an explicit PR to the parent — never automation.
+#
+# The contract has exactly THREE keys (scripts/sync/contract.ts is the typed source):
+#
+#   parent     — { repo, ref }: where you forked from, pinned to a FULL commit sha.
+#                A branch name is a moving target, not a pin; sync:pull rewrites the sha.
+#   inherited  — path globs that MUST byte-match the parent at the pinned ref.
+#                sync:check fails per file on ANY divergence: modified content, a missing
+#                inherited file, or a child-only file that appeared under these globs.
+#                Fix menu: (a) re-pull · (b) reclassify to adapted WITH a why · (c) upstream a PR.
+#   owned      — paths (globs allowed) that are the CHILD's even though an inherited glob
+#                covers them. Each entry carries a mandatory `why`. Liveness-gated on
+#                PROVENANCE: the glob must match something here, and the parent must NOT
+#                have those paths at the pin — a file that came from the parent is
+#                `adapted` (it diverged) or `inherited` (it did not); `owned` claims it
+#                never came from the parent at all.
+#                This is the key that stops a pull from erasing child data: put the data in
+#                a sidecar (`<name>.local.yaml`, see scripts/lib/sidecar.ts) beside the
+#                inherited file, declare the sidecar here, and no pull can ever reach it.
+#   adapted    — exact files (never globs) that came from the parent and DELIBERATELY
+#                diverged. Each entry carries a mandatory `why`. Liveness-gated: the file
+#                must exist in the child AND differ from the parent at the pin — an adapted
+#                file that matches the parent again is a fossil and fails the gate.
+#
+# A path OUTSIDE every inherited glob needs no declaration at all; the tool never touches it.
+# Never list sync.yaml itself under `inherited` — it is the child's own declaration.
+#
+# Commands (shipped by the parent, inherited by every fork):
+#   bun sync:check              CI drift gate — exit 1 on any drift or dead adapted entry
+#   bun sync:pull [--to <ref>]  apply the parent's surface changes, advance the pin
+#   SYNC_PARENT_PATH=<path>     use a local clone of the parent (offline / tests)
+
+parent:
+  repo: git@github.com:acme/template-fullstack.git
+  ref: 4f1c9b2e7d3a5c8f0b6e1d4a9c2f7b3e8d5a0c1e # full 40-char sha — advance with `bun sync:pull`
+
+inherited:
+  - scripts/** # the tooling itself rides the train — including scripts/sync/**
+  - packages/api/typescript/core/**
+  - packages/api/go/core/**
+  # The desktop shell's MACHINE (sidecar supervisor, boot gate, reaper, lifecycle, log backend).
+  # The MARK is not here on purpose: tauri.conf.json, icons/, capabilities/, Cargo.toml and
+  # config/*.ts carry bundle ids, product name and this product's own sidecar fleet — `bun rebrand`
+  # owns those. Without this glob a shell fix stays in whichever fork found it (mira#53).
+  - packages/app/tauri/src-tauri/src/**
+  - .claude/skills/**
+
+owned:
+  - path: scripts/detectors/*.baseline.json
+    why: the ratchet is THIS repo's — a baseline that must byte-match the parent cannot ratchet, and the carve-out is what docs/CORRECTNESS.md §5 already promised ("the baseline file is the child's")
+  - path: packages/api/typescript/tests/architecture/*.local.yaml
+    why: the sidecars holding this product's rail exemptions; the inherited rail reads parent ∪ sidecar, so a pull rewrites the rail without ever touching the rows this repo wrote (mira#44)
+
+adapted:
+  - path: docs/BACKEND.md
+    why: rewritten around this product's bounded contexts; upstream shape no longer fits
+  - path: packages/api/typescript/core/src/config/defaults.ts
+    why: product-specific defaults (quota tiers) — upstreaming would leak product vocabulary

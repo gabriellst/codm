@@ -1,0 +1,22 @@
+{
+	"$schema": "../gen/schemas/desktop-schema.json",
+	"identifier": "default",
+	"description": "GENERATED from config/capabilities.ts (bun desktop:generate) — permissions derive from the capabilities the console consumes; do NOT hand-edit.",
+	"windows": [
+		"main",
+		"boot-error"
+	],
+	"permissions": [
+		"core:default",
+		"dialog:allow-open",
+		"notification:default",
+		"core:window:allow-set-badge-count",
+		"autostart:allow-is-enabled",
+		"autostart:allow-enable",
+		"autostart:allow-disable",
+		"core:window:allow-start-dragging",
+		"deep-link:default",
+		"shell:default",
+		"log:default"
+	]
+}

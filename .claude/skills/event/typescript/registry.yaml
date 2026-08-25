@@ -1,0 +1,317 @@
+registry:
+  type: backend
+  layer: application
+  depends_on: [entity]
+  depended_by: [handler]
+  context_reads: [entity]
+
+  patterns:
+    - id: EVT-01
+      name: "Event class extends BaseDomainEvent or BaseIntegrationEvent"
+      when: always
+      rule: "class XCreatedEvent extends BaseDomainEvent<typeof XCreatedEventSchema>"
+    - id: EVT-02
+      name: "Event schema with z.domainEvent()"
+      when: always
+      rule: "const XCreatedEventSchema = z.domainEvent({ field: z.string() })"
+      wrong: "plain z.object without z.domainEvent wrapper"
+    - id: EVT-03
+      name: "Static schema property"
+      when: always
+      rule: "static schema = XCreatedEventSchema (on the class, not exported from barrel)"
+    - id: EVT-04
+      name: "Barrel exports only the class, not the schema"
+      when: always
+      rule: "export { XCreatedEvent } from './XCreatedEvent' — schema is NOT re-exported from index.ts"
+      wrong: "export { XCreatedEvent, XCreatedEventSchema } — schema exported from barrel"
+    - id: EVT-C01
+      name: "Domain event (same context)"
+      when: "event consumed within same bounded context"
+      rule: "extends BaseDomainEvent — delivered via the OUTBOX: the authoring use case persists it; nobody calls InternalMediator.publish (the OutboxDispatcher delivers)"
+    - id: EVT-C02
+      name: "Integration event (cross-context)"
+      when: "event consumed by different bounded context"
+      rule: "extends BaseIntegrationEvent, publicado via ExternalMediator pelo publisher NOMEADO do contexto (`Publish<Ctx>IntegrationEvents`) — nunca por um use case, nunca por outro handler. `publish()` PERSISTE a linha na lane `integration` do outbox (B3); a entrega é sempre do poller, at-least-once, e o consumidor deduplica"
+    - id: EVT-C10
+      name: "Raising = the use case persists the event (declaring the class is NOT enough)"
+      when: always
+      rule: |
+        // The event artifact is only half the feature — wire the raise site too.
+        // In the authoring use case, SAME tx as the entity save (usecase UC-C05 owns this rule):
+        await this.xRepository.save(entity, tx)
+        await this.domainEventRepository.save(new XUpdatedEvent({ ... }), tx)
+        // (inject domainEventRepository via the use case constructor if not present)
+      wrong: "Declaring the event class without a raise site — a declared-never-raised event is dead code (slice-closure SCW-01a); or internalMediator.publish(...) from a use case"
+    - id: EVT-C11
+      name: "As três formas de ativação — e a intenção decide qual"
+      when: "você está a ponto de criar um evento para fazer algo acontecer"
+      rule: |
+        # Fato (reativo/auditoria) → EVENTO.
+        #   Domain event: persistido pelo use case na tx do agregado; o outbox entrega ao InternalMediator.
+        #   Integration event: republicado pelo publisher NOMEADO do contexto; `publish()` grava na lane
+        #   `integration` e o poller entrega (durável desde B3; antes era fan-out em memória).
+        # Comando durável de executor único → CommandQueue.enqueueCommand(nome, input, opts, tx).
+        # Turnos serializados por target → Mailbox.
+        # Síncrono na própria request → use case chamado direto.
+        #
+        # A REGRA DE INTENÇÃO (founder, 29-jul-2026), citada literalmente: "evento existe para fins
+        # reativos, auditoria ou event sourcing — nunca para comandar. Se a existência do evento é só
+        # para um handler executar algo que poderia ser um comando/use case direto, está errado."
+        #
+        # ESCADA DO PAYLOAD, nesta ordem:
+        #   1. O dado pertence ao fato? → o domain event o carrega desde o raise.
+        #   2. O consumidor consegue reler? → evento thin, o consumidor busca o resto.
+        #   3. Só então enrichment NO PUBLISHER do contexto, por um service injetado (exceção
+        #      justificada — nunca no consumidor, nunca no transporte).
+      wrong: "criar um evento novo porque 'aí um handler faz X' — X é um comando ou um use case"
+
+    # Patterns extracted from codebase implementations
+    - id: EVT-P01
+      name: "static readonly name with as const"
+      when: always
+      reason: "Static name shadows Function.prototype.name on the class, enabling EventHandler to derive the routing key without manual handler declarations. BaseEvent reads it in the constructor to set the instance name."
+      rule: "static override readonly name = 'context.entity.action' as const — every event class declares a static name property"
+      wrong: "get name() { return '...' as const } — instance getter is no longer the pattern"
+    - id: EVT-P02
+      name: "Domain event extends BaseDomainEvent with static name and static schema"
+      when: "event is a domain event (same context)"
+      reason: "BaseDomainEvent provides entityId/ownerId base fields; static name is read by BaseEvent constructor and EventHandler; static schema is read by EventHandler"
+      rule: |
+        export class PatientCreatedEvent extends BaseDomainEvent<typeof PatientCreatedEventSchema> {
+          static override readonly name = 'patient.patient.created' as const
+          static readonly schema = PatientCreatedEventSchema
+        }
+    - id: EVT-P03
+      name: "Integration event extends BaseIntegrationEvent with static name and static schema"
+      when: "event is an integration event (cross-context)"
+      reason: "BaseIntegrationEvent provides ownerId base field; static name and static schema enable EventHandler to derive routing and validation without manual handler declarations"
+      rule: |
+        export class AppointmentBookedEvent extends BaseIntegrationEvent<typeof AppointmentBookedEventSchema> {
+          static override readonly name = 'integration.appointment.booked' as const
+          static readonly schema = AppointmentBookedEventSchema
+        }
+    - id: EVT-P04
+      name: "Integration event name prefixed with integration."
+      when: "event is an integration event"
+      reason: "Distinguishes integration events from domain events in mediator routing and logging"
+      rule: "static override readonly name = 'integration.<entity>.<action>' as const"
+      wrong: "Integration event without 'integration.' prefix — e.g., static override readonly name = 'appointment.booked' as const"
+    - id: EVT-P05
+      name: "Integration events live in @shared/events/"
+      when: "event is an integration event"
+      reason: "Other contexts import integration events from @shared/events, keeping cross-context coupling explicit"
+      rule: "File path: packages/api/typescript/src/shared/events/<EventName>.ts, exported from packages/api/typescript/src/shared/events/index.ts"
+      wrong: "Integration event placed inside a context folder (e.g., packages/api/typescript/src/appointment/events/AppointmentBookedEvent.ts)"
+    - id: EVT-P06
+      name: "Domain events live in <context>/events/"
+      when: "event is a domain event"
+      reason: "Domain events are scoped to their bounded context and should not leak into shared"
+      rule: "File path: packages/api/typescript/src/<context>/events/<EventName>.ts, exported from packages/api/typescript/src/<context>/events/index.ts"
+      wrong: "Domain event placed in @shared/events/"
+    - id: EVT-P07
+      name: "Nested z.object for grouped payload fields"
+      when: "event payload contains logically related fields (e.g., chat, patient, appointment)"
+      reason: "Grouping related fields improves readability and makes event payloads self-documenting"
+      rule: |
+        z.domainEvent({
+          chat: z.object({ id: z.string(), platform: z.enum(ExternalPlatform) }),
+          message: z.object({ content: z.string(), author: z.enum(Author) }),
+        })
+      wrong: |
+        Flat listing of many unrelated fields:
+        z.domainEvent({ chatId: z.string(), chatPlatform: z.string(), messageContent: z.string(), messageAuthor: z.string() })
+    - id: EVT-P08
+      name: "Enum fields reference imported enum types"
+      when: "event payload contains status, role, type, or category fields"
+      reason: "Ensures type safety and single source of truth for allowed values"
+      rule: "z.enum(AppointmentStatus), z.enum(ExternalPlatform), z.enum(Specialty) — always import from @codm/contracts-typescript/wire/enums or @<context>/enums"
+      wrong: "z.enum(['PENDING', 'ACTIVE']) or z.string() for enum-like fields"
+    - id: EVT-P09
+      name: "Barrel exports only the class"
+      when: always
+      reason: "Consumers access the schema via EventClass.schema static property; only the class needs to be in the barrel"
+      rule: "export { PatientCreatedEvent } from './PatientCreatedEvent'"
+      wrong: "export { PatientCreatedEvent, PatientCreatedEventSchema } — schema should not be in the barrel"
+    - id: EVT-P10
+      name: "Flat payload for simple events"
+      when: "event has 1-3 primitive fields with no logical grouping"
+      reason: "Avoids unnecessary nesting for events with minimal payload"
+      rule: |
+        z.domainEvent({
+          clinicId: z.string(),
+          name: z.string(),
+        })
+    - id: EVT-P11
+      name: "Import z from @codm/core-typescript"
+      when: always
+      reason: "Project-extended Zod instance with domainEvent/integrationEvent helpers lives in the core package"
+      rule: "import { z } from '@codm/core-typescript'"
+      wrong: "import { z } from 'zod' — misses custom schema methods like z.domainEvent(); import { z } from '@shared/utils/schema' — dead path"
+    - id: EVT-P12
+      name: "Import base class from @codm/core-typescript"
+      when: always
+      reason: "BaseDomainEvent and BaseIntegrationEvent are exported from the core package"
+      rule: "import { BaseDomainEvent } from '@codm/core-typescript'. Same for BaseIntegrationEvent."
+      wrong: "Importing from '@shared/types' or '@shared/types/BaseDomainEvent' — those paths are dead"
+
+  bad_practices:
+    - id: bp-01
+      name: "Inline enum values in z.enum()"
+      severity: critical
+      wrong: |
+        z.enum(['PENDING', 'ACTIVE', 'CANCELLED'])
+      right: |
+        import { AppointmentStatus } from '@appointment/enums'
+        z.enum(AppointmentStatus)
+      mechanical: true
+      detect:
+        - 'z\.enum\(\['
+    - id: bp-02
+      name: "Publishing events directly from use cases"
+      severity: critical
+      wrong: |
+        // Use case publishing directly — outbox handles this
+        await this.domainEventRepository.save(event, tx)
+        await this.internalMediator.publish(event)  // NEVER in use cases
+      right: |
+        // Save event in transaction — OutboxDispatcher delivers
+        await this.domainEventRepository.save(event, tx)
+        // No publish call — outbox pattern handles async delivery
+      mechanical: true
+      detect:
+        - '\.internalMediator\.publish\('
+        - '\.externalMediator\.publish\('
+    - id: bp-03
+      name: "Using { message } in .refine() instead of { error } with typed code"
+      severity: critical
+      wrong: |
+        .refine(data => data.startDate < data.endDate, { message: 'INVALID_RANGE' })
+      right: |
+        .refine(data => data.startDate < data.endDate, { error: 'INVALID_RANGE' as DomainErrors })
+      mechanical: true
+      detect:
+        - ',\s*\{\s*message:'
+    - id: bp-04
+      name: "Using (typeof Schema)['_output'] instead of Z.infer"
+      severity: moderate
+      wrong: |
+        type EventPayload = (typeof MyEventSchema)['_output']
+      right: |
+        import Z from 'zod'
+        type EventPayload = Z.infer<typeof MyEventSchema>
+      mechanical: true
+      detect:
+        - '\[''_output''\]'
+        - '\["_output"\]'
+    - id: bp-05
+      name: "Passing the live entity instance (not its serialized form) into a payload"
+      severity: critical
+      reason: >
+        SUPERSEDES the old "use individual fields" guidance. For entity-related events
+        (*Created / *Updated), embed the entity's OWN serialized snapshot via the entity
+        schema's `.input()` — NOT the live class instance (methods/circular refs break the
+        outbox), and NOT a hand-picked list of primitive fields (drifts from the entity).
+      wrong: |
+        const event = new OrderCreatedEvent({ order: fullOrderEntity })   // live instance
+        // or over-decomposed primitives that drift from the entity:
+        const event = new OrderCreatedEvent({ orderId, customerId, totalAmount, status })
+      right: |
+        // schema embeds the entity via .input() (wire-safe: z.instance(Id) -> string)
+        const OrderCreatedEventSchema = z.domainEvent({ order: OrderSchema.input() })
+        const event = new OrderCreatedEvent({ order: order.toJSON() })
+      mechanical: false
+    - id: bp-06
+      name: "changedFields delta tracking on *Updated events"
+      severity: critical
+      reason: >
+        SUPERSEDES the old "changedFields" guidance. *Updated events carry the FULL entity
+        JSON so consumers never diff-check; no `changedFields` array, no per-field tracking
+        arrays in the entity or use case. (Exclude genuinely sensitive fields at the schema
+        level, not by hand-picking.)
+      wrong: |
+        const event = new UserUpdatedEvent({ userId: user.id, changedFields: ['email'] })
+        // and a `const changed: string[] = []` accumulator in the use case
+      right: |
+        const UserUpdatedEventSchema = z.domainEvent({ user: UserSchema.input() })
+        const event = new UserUpdatedEvent({ user: user.toJSON() })
+      mechanical: true
+      detect:
+        - 'changedFields'
+    - id: bp-07
+      name: "z.instanceof(Request) or other non-serializable runtime object in a payload"
+      severity: critical
+      wrong: |
+        const BillingWebhookReceivedEventSchema = z.domainEvent({
+          rawRequest: z.instanceof(Request),   // {} after JSON round-trip; body stream is one-shot
+        })
+      right: |
+        // snapshot to a plain serializable VO BEFORE the event is published
+        const BillingWebhookReceivedEventSchema = z.domainEvent({
+          rawRequest: SerializedRequestSchema,   // { method, url, headers, body } + deserialize()
+        })
+      mechanical: true
+      detect:
+        - 'z\.instanceof\('
+    - id: bp-08
+      name: "Embedding an entity/VO schema without .input()"
+      severity: critical
+      wrong: |
+        z.domainEvent({ goal: GoalSchema })            // carries Id/VO instances on the wire
+      right: |
+        z.domainEvent({ goal: GoalSchema.input() })    // serializes z.instance(Id) -> string
+      mechanical: false
+    - id: bp-09
+      name: "name passed into an integration-event constructor"
+      severity: moderate
+      reason: "The static class field already holds name; the constructor should mirror domain events (ownerId + payload only)."
+      wrong: |
+        new OrderOverriddenIntegrationEvent({ name: 'integration.shared.order.overridden', ... })
+      right: |
+        new OrderOverriddenIntegrationEvent({ ownerId, payload })   // name from static field
+      mechanical: true
+      detect:
+        - 'new\s+\w+Event\(\{[^}]*\bname:'
+    - id: bp-10
+      name: "Required entityId/ownerId on events that have no owning entity"
+      severity: moderate
+      reason: "Raw-ingest/system events (e.g. webhook received) have no single owning entity; BaseDomainEvent declares entityId and ownerId as OPTIONAL."
+      wrong: |
+        new BillingWebhookReceivedEvent({ entityId: 'n/a', ownerId: 'n/a', payload })
+      right: |
+        new BillingWebhookReceivedEvent({ payload })   // entityId/ownerId optional, omitted
+      mechanical: false
+
+  snippet:
+    skeleton: |
+      import { BaseDomainEvent, z } from '@codm/core-typescript'
+
+      const {{Name}}EventSchema = z.domainEvent({
+      	id: z.string(),
+      })
+
+      export class {{Name}}Event extends BaseDomainEvent<typeof {{Name}}EventSchema> {
+      	static override readonly name = '{{contextName}}.{{camelName}}' as const
+      	static readonly schema = {{Name}}EventSchema
+      }
+    skeletons:
+      integration: |
+        import { BaseIntegrationEvent, z } from '@codm/core-typescript'
+
+        const {{Name}}EventSchema = z.integrationEvent('integration.{{camelName}}', {
+        	id: z.string(),
+        })
+
+        export class {{Name}}Event extends BaseIntegrationEvent<typeof {{Name}}EventSchema> {
+        	static override readonly name = 'integration.{{camelName}}' as const
+        	static readonly schema = {{Name}}EventSchema
+        }
+    exemplar: |
+      const ProductCreatedEventSchema = z.domainEvent({
+        productId: z.string(), name: z.string(), organizationId: z.string(),
+      })
+      export class ProductCreatedEvent extends BaseDomainEvent<typeof ProductCreatedEventSchema> {
+        static override readonly name = 'product.product.created' as const
+        static readonly schema = ProductCreatedEventSchema
+      }
+
+  scaffold: "bun cli event <context> <name>"

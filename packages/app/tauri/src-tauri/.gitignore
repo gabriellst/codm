@@ -1,0 +1,6 @@
+# Cargo build output
+/target/
+# Tauri codegen (schemas for capabilities, bundles)
+/gen/
+# Sidecar binaries — rebuilt by `bun x nx run app-tauri:sidecars`
+/binaries/

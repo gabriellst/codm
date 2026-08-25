@@ -1,0 +1,112 @@
+id: synthetic-go-controller-summary
+tier: holdout
+builder: sonnet
+title: Go sync-jobs summary endpoint — per-status counts
+  (synthetic — Go controller canon + ENUM-REPR — exhaustive enum handling end to end)
+sourceSpec: PROBES-BACKLOG.md#P-Go
+goldRef: ""
+baseRef: ""
+prompt: >
+  In the template Go worker (packages/api/go), add GET /sync/jobs/summary — per-store
+  counts of sync jobs grouped by status, for the ops dashboard header. Go-only task; do
+  not touch other packages. READ FIRST: .claude/skills/controller/go/SKILL.md +
+  .claude/skills/enum/go/SKILL.md + .claude/skills/query/go/SKILL.md (the rubric), then
+  the live exemplars: internal/sync/controllers/list_sync_jobs.go (the sibling endpoint —
+  mirror its Metadata/request/response/registration shape end to end),
+  internal/sync/enums/sync_status.go (the SyncStatus enum and its conventions), and the
+  syncjob repository folder. DECISIONS (binding):
+  (1) Controller SyncJobsSummaryController at
+  packages/api/go/internal/sync/controllers/sync_jobs_summary.go (constructor
+  NewSyncJobsSummaryController), Metadata path /sync/jobs/summary, method GET, registered
+  in the sync module wiring exactly like its sibling.
+  (2) The response is ENUM-EXHAUSTIVE: one count field per SyncStatus member (the response
+  struct is keyed by the enum — a new SyncStatus member must force this endpoint to be
+  revisited; document how your shape achieves that, e.g. an iteration over the enum's
+  Values()/All() helper or an exhaustive switch with no default) plus a total. Status
+  strings in the response come from the SyncStatus constants — never re-typed string
+  literals.
+  (3) The read is a new repository method CountByStatus on the syncjob repository
+  (interface + pg implementation in internal/sync/repositories/syncjob/) — ONE grouped
+  SQL query (GROUP BY status), hand-written SQL constant over database/sql; never N
+  queries per status, never loading rows to count in Go.
+  (4) Tenancy: the store scope comes from the same auth/store mechanism the sibling
+  list_sync_jobs endpoint uses — mirror it; the store id is never a caller-controlled
+  query param if the sibling derives it from auth.
+  (5) Colocated tests: controller test mirroring list_sync_jobs_test.go and a repository
+  test for CountByStatus covering an empty store and a mixed-status store.
+  (6) Regenerate the Go openapi (cmd/emit-openapi, same flow the repo uses — inspect how
+  public/openapi.json is produced) so the new endpoint and its enum-shaped response are
+  published. Finish with: cd packages/api/go && go build ./... && go test ./...
+axes:
+  - ENUM-REPR
+  - SCHEMA-DERIVE
+  - DATA-OWNERSHIP
+  - NAME-CONSISTENCY
+graders:
+  - kind: cmd
+    spec: "packages/api/go::go build ./..."
+    id: go#build
+  - kind: cmd
+    spec: "packages/api/go::go test ./..."
+    id: go#test
+  - kind: file-exists
+    spec: "packages/api/go/internal/sync/controllers/*summary*.go"
+    id: controller#file
+  - kind: file-exists
+    spec: "packages/api/go/internal/sync/controllers/*summary*_test.go"
+    id: controller#test
+  - kind: grep-must
+    spec: "packages/api/go/internal/sync/controllers/*summary*.go::ControllerMetadata"
+    id: controller#metadata-shape
+  - kind: grep-must
+    spec: "packages/api/go/internal/sync/controllers/*summary*.go::/sync/jobs/summary"
+    id: controller#path
+  - kind: grep-must
+    spec: "packages/api/go/internal/sync/controllers/*summary*.go::enums\\.SyncStatus"
+    id: enum#typed-usage
+  - kind: grep-must-not
+    spec: "packages/api/go/internal/sync/controllers/*summary*.go::\"PENDING\"|\"RUNNING\"|\"COMPLETED\""
+    id: enum#no-retyped-literals
+  - kind: grep-must
+    spec: "packages/api/go/internal/sync/repositories/syncjob/syncjob_repository.go::CountByStatus"
+    id: repository#interface-extended
+  - kind: grep-must
+    spec: "packages/api/go/internal/sync/repositories/syncjob/syncjob_pg.go::GROUP BY"
+    id: repository#grouped-query
+  - kind: grep-must
+    spec: "packages/api/go/internal/sync/module.go::SyncJobsSummary"
+    id: controller#fx-wired
+  - kind: grep-must
+    spec: "packages/api/go/public/openapi.json::/sync/jobs/summary"
+    id: openapi#regenerated
+  - kind: judge
+    spec: >
+      A Go summary endpoint was added (GET /sync/jobs/summary: per-status sync-job counts).
+      Verify: (a) ENUM-REPR — the response shape is exhaustive over SyncStatus BY
+      CONSTRUCTION: either built by iterating the enum's canonical value list or via an
+      exhaustive switch with no default; adding a new SyncStatus member must break or
+      visibly demand a change here (a hand-maintained struct of four count fields with no
+      exhaustiveness mechanism FAILS); all status values originate from the SyncStatus
+      constants in internal/sync/enums — zero re-typed status string literals anywhere in
+      the new code (SQL string constants containing the column name are fine; status
+      VALUES inlined in SQL are not — the query should group, not enumerate). (b) the
+      controller mirrors the sibling list_sync_jobs shape: Metadata, request/response
+      structs, constructor, module registration, store scoping derived the same way (never
+      caller-controlled if the sibling derives from auth). (c) the count is ONE grouped
+      SQL query in the pg repository — not N per-status queries, not counting rows in Go.
+      (d) controller does not think: it delegates to the use case/repository and shapes
+      the response. (e) openapi.json was regenerated and includes the endpoint. Scope
+      notes: whether counts live in a map keyed by status or named fields is the agent's
+      choice PROVIDED the exhaustiveness mechanism exists; a small usecase layer between
+      controller and repository is fine if the sibling has one (mirror it); the agent's
+      names for the response struct are fine.
+    id: judge#go-controller-enum
+notes: >-
+  Go controller + enum probe ("importantly enums" — user ask 2026-06-11). Grounded:
+  internal/sync/controllers/list_sync_jobs.go is the live sibling exemplar (Metadata
+  shape, registration); SyncStatus enum at internal/sync/enums/sync_status.go with
+  PENDING/RUNNING/COMPLETED/... members; openapi emitted to packages/api/go/public/openapi.json
+  via cmd/emit-openapi. Free real estate verified: 'jobs/summary' 0, SyncJobsSummary 0,
+  CountByStatus not in the syncjob repository. The enum#no-retyped-literals must-not is
+  scoped to the NEW controller file only (the enum definition file itself legitimately
+  contains the literals). cmd graders green at HEAD. GRADERS WIDENED 2026-06-11 (iter3b): paths pinned in the prompt kept being re-spelled (get_sync_jobs_summary.go, k=4) while the canon held in the re-spelled files — graders now glob *summary* (idiom over pin; free real estate: 'summary' 0 at HEAD); the judge owns pin-fidelity. Also note: GEL-01 fires on enum values in JSON struct tags — drove lowercase wire keys at iter3b's gate fix; watch for FP classification if it recurs.

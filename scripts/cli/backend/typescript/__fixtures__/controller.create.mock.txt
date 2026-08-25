@@ -1,0 +1,31 @@
+import { injectable } from 'tsyringe-neo'
+import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
+
+export const CreateOrderInputSchema = z
+	.object({
+		ctx: z.object({ user: z.object({ id: z.string() }) }),
+		body: z.object({
+			name: z.string().min(1).max(255),
+		}),
+	})
+	.example([{ body: { name: 'Example' } }])
+
+export const CreateOrderOutputSchema = z
+	.object({
+		id:z.string(),
+		name: z.string(),
+		createdAt: z.stringToDate(),
+		updatedAt: z.stringToDate(),
+	})
+	.example([{ id: '123e4567-e89b-12d3-a456-426614174000', name: 'Example', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' }])
+
+@injectable()
+export class CreateOrderController extends Controller<typeof CreateOrderInputSchema, typeof CreateOrderOutputSchema> {
+	readonly path = '/sales'
+	readonly method = 'post'
+	readonly description = 'CreateOrder operation'
+	readonly inputSchema = CreateOrderInputSchema
+	readonly outputSchema = CreateOrderOutputSchema
+
+	override mockController = true
+}

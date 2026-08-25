@@ -1,0 +1,45 @@
+{
+	"compilerOptions": {
+		"target": "ES2020",
+		"useDefineForClassFields": true,
+		"lib": ["ES2020", "DOM", "DOM.Iterable"],
+		"module": "ESNext",
+		"skipLibCheck": true,
+		"jsx": "react-jsx",
+
+		/* tsyringe-neo decorator metadata (spec Decision 5) — Bun resolves ONE tsconfig for the whole
+		 * test run (the nearest to CWD, i.e. this file), not per-source-file, so classes pulled in
+		 * transitively from packages/api/typescript/src/** (the integration harness's backend
+		 * controllers/use cases) need these enabled HERE too, even though this console itself never
+		 * declares a decorator. Without this, tsyringe-neo throws `TypeInfo not known for "<Class>"` —
+		 * `Reflect.getMetadata('design:paramtypes', …)` comes back empty because Bun's transpiler
+		 * never emitted it. Mirrors packages/api/typescript/tsconfig.json. */
+		"experimentalDecorators": true,
+		"emitDecoratorMetadata": true,
+
+		/* Bundler mode */
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": true,
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"noEmit": true,
+		"allowSyntheticDefaultImports": true,
+
+		/* Linting */
+		"strict": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noFallthroughCasesInSwitch": true,
+
+		/* Path mapping */
+		"paths": {
+			"@/*": ["./src/*"]
+		},
+
+		/* Type resolution - use root node_modules for shared types */
+		"typeRoots": ["../node_modules/@types", "./node_modules/@types"]
+	},
+	"//tests": "Os `*.test.ts`/`*.test.tsx` ENTRAM no typecheck — não são excluídos. O `exclude` anterior (`src/**/*.test.ts`, `src/**/*.test.tsx`, `tests/**/*.test.ts`) era a fresta GÊMEA da que o api-typescript tinha: lá a mesma exclusão escondia 68 erros TS reais, entre eles uma função morta que referenciava símbolos inexistentes. Teste é código vivo — consome a mesma SDK (`@codm/client-typescript`), os mesmos schemas Zod e os mesmos hooks que a UI; se ele não compila, o contrato que ele afirma não existe. E `bun test` executa em RUNTIME via transpile, sem checar tipo nenhum, então o `tsc` é o único rail que cobre isso. Falsificador aplicado: um `src/__falsifier.test.ts` importando módulo inexistente deixa este typecheck VERMELHO nomeando o arquivo.",
+	"include": ["src", "tests", "scripts"],
+	"exclude": ["node_modules", "dist", "storybook-static"]
+}

@@ -1,0 +1,12 @@
+{
+	"files": [],
+	"references": [
+		{ "path": "packages/api/typescript" },
+		{ "path": "packages/api/typescript/core" },
+		{ "path": "packages/app/astro" },
+		{ "path": "packages/app/react" },
+		{ "path": "packages/app/tauri" },
+		{ "path": "packages/client" },
+		{ "path": "packages/e2e" }
+	]
+}

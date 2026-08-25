@@ -1,0 +1,14 @@
+{
+	"id": "0f0f0f0f-0f0f-4f0f-8f0f-0f0f0f0f0f0f",
+	"ownerId": "fixture-tenant",
+	"time": "2026-07-30T12:00:00Z",
+	"name": "integration.channel.outbound_delivered",
+	"payload": {
+		"channelId": "channelId-sample",
+		"contactExternalId": "contactExternalId-sample",
+		"contactDisplayName": "contactDisplayName-sample",
+		"contactKind": "USER",
+		"author": "HUMAN",
+		"deliveredAt": "2026-07-30T12:00:00Z"
+	}
+}

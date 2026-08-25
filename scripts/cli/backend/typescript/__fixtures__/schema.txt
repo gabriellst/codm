@@ -1,0 +1,8 @@
+import { z } from '@codm/core-typescript'
+import Z from 'zod'
+
+export const CreateOrderSchema = z.object({
+	// Define reusable schema
+})
+
+export type CreateOrderType = Z.infer<typeof CreateOrderSchema>

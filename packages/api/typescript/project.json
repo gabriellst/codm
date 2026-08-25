@@ -1,0 +1,108 @@
+{
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"name": "api-typescript",
+	"sourceRoot": "packages/api/typescript/src",
+	"projectType": "application",
+	"targets": {
+		"emit-openapi": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"inputs": [
+				"{projectRoot}/src/**/*.ts",
+				"!{projectRoot}/src/**/*.test.ts",
+				"{projectRoot}/scripts/**/*",
+				"{projectRoot}/tsconfig.json"
+			],
+			"outputs": ["{projectRoot}/public/docs/openapi.json", "{projectRoot}/public/docs/openapi.cloud.json"],
+			"options": {
+				"cwd": "packages/api/typescript",
+				"commands": [
+					"EMIT_OPENAPI=true START_SERVER=false bun run scripts/emit-openapi.ts",
+					"EMIT_OPENAPI=true START_SERVER=false CODM_PROFILE=cloud bun run scripts/emit-openapi.ts"
+				],
+				"parallel": false
+			}
+		},
+		"tsc": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"inputs": [
+				"{projectRoot}/src/**/*.ts",
+				"{projectRoot}/tests/**/*.ts",
+				"{projectRoot}/scripts/**/*.ts",
+				"{projectRoot}/tsconfig.build.json",
+				"{projectRoot}/tsconfig.json"
+			],
+			"options": {
+				"command": "bun x tsc -p tsconfig.build.json --noEmit",
+				"cwd": "packages/api/typescript"
+			}
+		},
+		"lint": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"//scripts": "The template also passes `scripts` to this eslint invocation. codm's `eslint.config.ts` carries a workspace-wide `'**/scripts/**'` ignore (not narrowed by this pass \u2014 out of Task B's stated scope, which only covers the `**/client/**` finding CHECK 3 flags) that swallows every file under this dir, so `eslint src tests scripts` aborts with the same 'all matching files are ignored' error CHECK 3 documents for `client`. Dropped until that ignore is narrowed.",
+			"inputs": [
+				"{projectRoot}/src/**/*",
+				"{projectRoot}/tests/**/*",
+				"{projectRoot}/tsconfig.json",
+				"{workspaceRoot}/eslint.config.ts",
+				"{workspaceRoot}/scripts/eslint-rules/**/*",
+				"^production"
+			],
+			"options": {
+				"command": "eslint src tests --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+				"cwd": "packages/api/typescript"
+			}
+		},
+		"build": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"dependsOn": ["tsc"],
+			"inputs": ["production", "{projectRoot}/tsconfig.build.json", "sharedGlobals"],
+			"outputs": ["{projectRoot}/dist"],
+			"options": {
+				"command": "bun run scripts/build.ts",
+				"cwd": "packages/api/typescript"
+			}
+		},
+		"dev": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"options": {
+				"command": "bun run --watch ./src",
+				"cwd": "packages/api/typescript"
+			}
+		},
+		"test": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"inputs": [
+				"{projectRoot}/src/**/*",
+				"{projectRoot}/tests/**/*",
+				"{projectRoot}/bunfig.toml",
+				"sharedGlobals"
+			],
+			"options": {
+				"command": "bun test && bun run test:cross-service",
+				"cwd": "packages/api/typescript",
+				"env": {
+					"NODE_ENV": "test"
+				}
+			}
+		},
+		"dev:cloud": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"options": {
+				"command": "bun run --watch ./src",
+				"cwd": "packages/api/typescript",
+				"env": {
+					"CODM_PROFILE": "cloud",
+					"API_PORT": "3033",
+					"CODM_DATA_DIR": "~/.codm/dev-cloud"
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,4 @@
+export enum OrderStatus {
+	// SCREAMING_SNAKE_CASE for both keys and values
+	// EXAMPLE = 'EXAMPLE',
+}

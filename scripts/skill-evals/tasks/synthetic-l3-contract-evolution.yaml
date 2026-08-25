@@ -1,0 +1,269 @@
+id: synthetic-l3-contract-evolution
+tier: holdout
+builder: sonnet
+title: Evolve a frozen wire contract — add a non-breaking field to PixelEventRecorded,
+  regen both languages, update every consumer (L3 contract-evolution; the polyglot
+  SDK pipeline is the riskiest machinery and no probe mutates it today)
+sourceSpec: PROBES-BACKLOG.md#L3
+goldRef: ""
+baseRef: ""
+prompt: >
+  In the template polyglot monorepo, the integration event
+  `integration.shared.pixel_event.recorded` is defined ONCE in TypeSpec
+  (packages/contracts/src/wire/events/pixel-event-recorded.tsp) and the wire bindings
+  for BOTH backends are generated from it: the TS schema/class at
+  packages/contracts/generated/typescript/src/wire/events/pixel-event-recorded.ts
+  and the Go struct at packages/contracts/generated/go/wire/events.go. The Go
+  worker already tracks a `visitorKey` (the anonymous visitor / Shopify clientId)
+  on its internal PixelEvent aggregate — the mapper reads `body.ClientID` into
+  `PixelEventInput.VisitorKey`, the entity exposes `VisitorKey()`, and the Go
+  pixel storage even writes it to its own DB row — but the field is NOT on the
+  cross-service wire shape, so it never reaches the TS consumers. TS Sales /
+  Tracking want it to attribute the funnel to a stable visitor key.
+
+  WHAT TO BUILD. Surface `visitorKey` onto the frozen wire contract as a
+  NON-BREAKING change, regenerate BOTH language bindings, and update every
+  consumer so the value actually flows end-to-end.
+
+  DECISIONS (binding):
+  (1) Edit ONLY the TypeSpec source for the new field — add `visitorKey: string`
+  to the `PixelEventRecordedEvent` model in
+  packages/contracts/src/wire/events/pixel-event-recorded.tsp, with an `@doc(...)`
+  describing it, placed so the change is additive (an existing consumer that
+  ignores the field keeps working — this is what "non-breaking" means here: a
+  field ADDED to a producer-published event, never a removal, rename, retype,
+  or required-ness change to an existing field).
+  (2) Regenerate the bindings from the source — DO NOT hand-edit either
+  generated file. Run the contracts codegen (`bun contracts`, or from
+  packages/contracts the `tsp:compile` + `codegen:wire` scripts) so the field
+  appears in BOTH the generated TS schema and the generated Go struct, with the
+  exact wire key `visitorKey`. The AUTO-GENERATED "do not edit" banner at the
+  top of each generated file MUST remain intact.
+  (3) Update the Go producer that emits the wire struct — the wire payload is
+  assembled in
+  packages/api/go/internal/sync/storage/pixel/pixel_pg.go (the
+  `wire.PixelEventRecordedEvent{...}` literal). Populate the new field from the
+  aggregate accessor (`pe.VisitorKey()`) alongside the existing
+  Platform/EventType/Cart/Product assignments, so the published event actually
+  carries the visitor key rather than an empty string.
+  (4) Keep the TS consumer correct — the external handler at
+  packages/api/typescript/src/sales/handlers/PixelCheckoutCompletedLinkCartHandler.ts
+  consumes this event; it must still type-check against the regenerated schema.
+
+  Do NOT change the event NAME, the discriminator, any existing field's type or
+  name, or any unrelated event/enum. Do NOT regenerate or touch the Drizzle DB
+  migrations (the `bun contracts` `all` target also runs drizzle:generate which
+  needs a DB — run only the TypeSpec compile + wire codegen, not the migration
+  step). Finish with green builds on BOTH languages and every existing test
+  still passing.
+
+  Read first, then write: the TypeSpec authoring + frozen-contract discipline in
+  the root CLAUDE.md ("SDK — o tendão entre backend e frontend", "Phase 0 —
+  Contract Lock") and docs/BACKEND.md; the generated surfaces
+  (packages/contracts/generated/typescript/src/wire/events/pixel-event-recorded.ts
+  and the `PixelEventRecordedEvent struct` in
+  packages/contracts/generated/go/wire/events.go) for the EXACT emitted shape and
+  naming convention (Go field is `VisitorKey` with a `json:"visitorKey"` tag; TS
+  schema key is `visitorKey: z.string()`); and the existing producer assignment
+  block in pixel_pg.go for the field-assignment style to mirror.
+axes:
+  - CONTRACT-LOCK
+  - WIRE-CONTRACT-SOT
+  - NAME-CONSISTENCY
+  - ENUM-REPR
+  - POLYGLOT-CODEGEN
+graders:
+  # ── (1) the TypeSpec source changed — the field on the frozen model ──
+  - kind: grep-must
+    spec: 'packages/contracts/src/wire/events/pixel-event-recorded.tsp::visitorKey:\s*string'
+    id: contract#tsp-field-added
+  # (name-unchanged + existing-fields-intact + banner-intact are NON-additive guards —
+  # they already PASS at HEAD, so they live in the judge (b)/(a) + the no-name-change
+  # must-not below, not as grep-musts the free-real-estate validator would reject.)
+  # ── (2) BOTH generated bindings regenerated (NOT hand-edited) ────────
+  - kind: grep-must
+    spec: 'packages/contracts/generated/typescript/src/wire/events/pixel-event-recorded.ts::visitorKey:\s*z\.string\(\)'
+    id: codegen#ts-binding-regenerated
+  - kind: grep-must
+    spec: 'packages/contracts/generated/go/wire/events.go::VisitorKey\s+string\s+`json:"visitorKey"`'
+    id: codegen#go-binding-regenerated
+  # codegen is idempotent on the agent's tree: regen produces ZERO change vs what
+  # the agent committed → proves the generated files MATCH the TypeSpec source and
+  # were not hand-edited out of band. (snapshot → regen → diff against snapshot)
+  - kind: cmd
+    spec: 'packages/contracts::S=$(mktemp -d) && cp -r generated "$S/g" && bun run tsp:compile && bun run codegen:wire && diff -r generated "$S/g"; R=$?; rm -rf "$S"; exit $R'
+    id: codegen#regen-idempotent-both-langs
+  # ── (3) the Go producer consumer was updated to ship the field ───────
+  - kind: grep-must
+    spec: 'packages/api/go/internal/sync/storage/pixel/pixel_pg.go::VisitorKey:\s*pe\.VisitorKey\(\)'
+    id: consumer-go#producer-emits-field
+  # ── builds green on BOTH languages ──────────────────────────────────
+  - kind: tsc
+    spec: backend
+    id: gate#tsc-backend
+  - kind: cmd
+    spec: 'packages/api/go::go build ./...'
+    id: gate#go-build
+  - kind: cmd
+    spec: 'packages/contracts/generated/go::go build ./...'
+    id: gate#go-contracts-build
+  # ── regression: every EXISTING suite that touches this event stays green ─
+  - kind: test-green
+    spec: packages/api/typescript/src/sales/handlers/PixelCheckoutCompletedLinkCartHandler.test.ts
+    id: regression#ts-consumer-test-green
+  - kind: cmd
+    spec: 'packages/contracts::bun test codegen/'
+    id: regression#contracts-codegen-test-green
+  - kind: cmd
+    spec: 'packages/contracts/generated/go::go test ./tests/...'
+    id: regression#go-discriminator-test-green
+  # ── discipline: no breaking mutation, no dodging the contract ────────
+  # the discriminator/name is never changed (would break every consumer)
+  - kind: grep-must-not
+    spec: 'packages/contracts/src/wire/events/pixel-event-recorded.tsp::name:\s*"(?!integration\.shared\.pixel_event\.recorded")'
+    id: discipline#no-name-change
+  # the new field is never made a hand-rolled local struct on the TS consumer
+  # (the contract is the single source of truth — the SDK type is imported, never re-declared)
+  - kind: grep-must-not
+    spec: 'packages/api/typescript/src/sales/handlers/PixelCheckoutCompletedLinkCartHandler.ts::visitorKey\??:\s*(z\.|string)'
+    id: discipline#no-parallel-schema-on-consumer
+  # no suppression smell crept into the TS consumer while wiring the new field
+  - kind: grep-must-not
+    spec: 'packages/api/typescript/src/sales/handlers/PixelCheckoutCompletedLinkCartHandler.ts::as any|as never|as unknown|@ts-(expect-error|ignore)'
+    id: discipline#no-suppression
+  # ── detectors ────────────────────────────────────────────────────────
+  - kind: detect
+    spec: import-direction
+  # ── the single rich judge (scope notes name the legitimate-exception traps) ──
+  - kind: judge
+    spec: >
+      A field `visitorKey` was just added to the frozen integration event
+      `integration.shared.pixel_event.recorded`: the TypeSpec source at
+      packages/contracts/src/wire/events/pixel-event-recorded.tsp, the regenerated
+      TS binding at
+      packages/contracts/generated/typescript/src/wire/events/pixel-event-recorded.ts,
+      the regenerated Go struct in
+      packages/contracts/generated/go/wire/events.go, and the Go producer that
+      assembles the wire payload in
+      packages/api/go/internal/sync/storage/pixel/pixel_pg.go. Verify ALL of:
+      (a) SINGLE SOURCE OF TRUTH — the field is authored ONLY in the .tsp model;
+      it is NOT typed out by hand in either generated file independent of the
+      source. The two generated files agree with the TypeSpec (TS: a
+      `visitorKey: z.string()` member on PixelEventRecordedEventSchema; Go: a
+      `VisitorKey string` field with a `json:"visitorKey"` tag), and neither
+      generated file lost its AUTO-GENERATED "do not edit" header or any
+      pre-existing field — i.e. the agent ran codegen rather than editing the
+      output by hand.
+      (b) NON-BREAKING — the change is purely ADDITIVE. The event `name` /
+      discriminator string, every pre-existing field
+      (platform, storeIntegrationExternalId, eventType, cartExternalId,
+      productExternalId) and their types are UNCHANGED; nothing was removed,
+      renamed, retyped, or made required-vs-optional differently. The agent
+      should have surfaced (in its final message and/or doc comments) that this
+      is non-breaking precisely because it ADDS a field to a producer-published
+      event — an old consumer that ignores `visitorKey` keeps working.
+      (c) PRODUCER WIRED — the Go wire-struct literal in pixel_pg.go now
+      populates the new field from the aggregate
+      (`VisitorKey: pe.VisitorKey()`), sitting alongside the existing
+      Platform/EventType/Cart/Product assignments, so the published event ships
+      the real visitor key, not the zero value. The internal PixelEventInput /
+      entity plumbing for visitorKey already existed and did NOT need new
+      machinery — adding a redundant second mapper read is unnecessary, not a
+      defect.
+      (d) CONSUMER INTACT — the TS handler
+      packages/api/typescript/src/sales/handlers/PixelCheckoutCompletedLinkCartHandler.ts
+      still imports the event type from
+      @codm/contracts-typescript/wire/events (the SDK), reads `event.payload`
+      through that imported type, and does NOT re-declare a parallel local
+      schema/interface for the payload nor reach for `as any` / `@ts-expect-error`
+      to absorb the new field. Whether the handler additionally USES `visitorKey`
+      is optional — the contract evolution is correct even if this particular
+      consumer has no behavior that needs it yet.
+      (e) SCOPE — only this one event evolved. No unrelated event, enum, or the
+      Drizzle migrations were regenerated/changed as a side effect (the agent ran
+      the TypeSpec compile + wire codegen, NOT the drizzle:generate step that the
+      `all` target also triggers).
+      Scope notes — judge the idiom, not the spelling. The new field may be the
+      last member of the model or placed among the others — ordering is the
+      agent's choice; both emit a non-breaking additive change. `string` (not an
+      optional `string | undefined`) is correct here: the entity always has a
+      visitorKey (possibly empty), and the sibling fields cartExternalId /
+      productExternalId are likewise non-optional strings that carry "" when
+      absent — do NOT demand `?:` / nullability. The exact `@doc` wording is the
+      agent's choice; only its presence + accuracy matter. The Go struct field
+      MUST be `VisitorKey` (Go PascalCase) with json tag `visitorKey` — that is
+      the generator's convention, not a mismatch. The TS consumer not changing at
+      all (beyond still compiling) is a PASS, not a miss — surfacing a field a
+      consumer doesn't yet branch on is legitimate. If the agent ALSO threads
+      visitorKey into the republished CartLinkedToOrderEvent that is fine but NOT
+      required and must not be penalized either way. Do NOT fail the change for
+      leaving the Go mapper (webhooks/mappers/shopify/pixel_event_recorded.go)
+      untouched — it already populates VisitorKey into PixelEventInput at HEAD.
+      Pre-existing content of all four files outside the visitorKey addition is
+      OUT of scope. Inspect the .tsp, both generated files, pixel_pg.go, and the
+      TS handler.
+notes: >-
+  Synthetic L3 CONTRACT-EVOLUTION probe — the FIRST probe that MUTATES the frozen
+  polyglot wire contract (every prior contracts probe, e.g. synthetic-be-wire-
+  exposure, only ADDS a new endpoint/schema; none changes an existing wire event
+  and re-flows it through BOTH generated languages). baseRef:"" → agent mode
+  builds from HEAD; this is a BROWNFIELD modification, not free-real-estate
+  greenfield, so the HEAD free-real-estate validator (validate-task.ts) SKIPS it
+  with "has goldRef/baseRef" guard logic ONLY if a ref is set — here both refs
+  are "", so the validator WILL run it; every grader was authored to satisfy the
+  validator's HEAD expectations (grep-must FAIL at HEAD because `visitorKey` is
+  absent from the wire surface; grep-must-not, cmd, tsc, detect PASS at HEAD;
+  test-green on the EXISTING PixelCheckoutCompletedLinkCartHandler.test.ts is
+  green at HEAD as a regression guard). The two regression suites graded via
+  `cmd` (contracts `bun test codegen/`, generated-go `go test ./tests/...`) are
+  also green at HEAD — they are existing suites, so they double as regression
+  guards and are intentionally `cmd` not `test-green` (the latter's CWD logic
+  only special-cases the api/typescript prefix).
+
+  GROUNDED REALITY (verified at authoring time on HEAD):
+  • The wire event has NO `visitorKey` on the contract: grep "visitorKey" over
+    pixel-event-recorded.tsp + the generated TS file = 0 hits; the generated Go
+    struct (events.go) has no VisitorKey field. So the four "field added" greps
+    (tsp / TS-gen / Go-gen / Go-producer) are genuine free real estate.
+  • The internal Go pipeline ALREADY carries visitorKey: the Shopify mapper sets
+    PixelEventInput.VisitorKey = body.ClientID, the entity exposes VisitorKey(),
+    and pixel_pg.go line ~132 writes pe.VisitorKey() to its OWN DB row — but the
+    `wire.PixelEventRecordedEvent{...}` literal at pixel_pg.go line ~166 does NOT
+    assign it. So `VisitorKey: pe.VisitorKey()` (the producer grep) is absent
+    from the wire-struct block at HEAD (the only "VisitorKey" hit in that file is
+    the DB-row insert, which the scoped regex `VisitorKey:\s*pe\.VisitorKey\(\)`
+    does not match — that idiom appears nowhere at HEAD).
+  • The TS consumer is PixelCheckoutCompletedLinkCartHandler.ts; its test (5
+    tests) passes at HEAD — chosen as the regression anchor because it imports
+    PixelEventRecordedEvent from the SDK and would break on a malformed regen.
+  • `bun run tsp:compile && bun run codegen:wire` runs ENV-LESS and is
+    DETERMINISTIC: at HEAD a snapshot→regen→`diff -r` yields exit 0 (the
+    idempotency oracle), and a fresh regen leaves the generated tree clean. The
+    grader deliberately runs tsp:compile + codegen:wire, NOT the `all` target,
+    because `all` also runs drizzle:generate which needs a DB.
+  • Builds green at HEAD: backend tsc (tsconfig.build.json) clean; go build
+    ./... in both packages/api/go and packages/contracts/generated/go exit 0.
+
+  DISCRIMINATING QUESTIONS (what separates a correct port from a naive one): a
+  naive agent hand-edits the generated TS/Go file directly (skipping codegen — so
+  the idempotency oracle fails because the source .tsp and the output diverge, OR
+  the banner is removed), or renames/retypes an existing field (breaking — the
+  no-name-change must-not + judge (b) trip), or forgets the Go producer so the
+  field ships empty (producer grep fails), or re-declares the payload shape on
+  the TS consumer with a parallel local schema / `as any` (the two discipline
+  must-nots + judge (a)(d) trip), or runs the full `bun contracts` `all` target
+  and regenerates/dirties the Drizzle migrations as a side effect (judge (e)).
+  The canon is: author the field ONCE in TypeSpec, regen BOTH languages from
+  source, wire the producer, leave the importing consumer importing.
+
+  REGEX/GLOB NOTES: all greps split on the FIRST `::` (parseGrepSpec) and compile
+  with the `m` flag. The Go-gen grep uses literal backticks inside the YAML
+  block scalar — a Go struct tag is `json:"visitorKey"` wrapped in backticks; the
+  regex escapes the backticks literally (RegExp has no backtick metachar, so they
+  match verbatim). The no-name-change must-not uses a negative lookahead so it
+  trips ONLY if the discriminator string is changed to anything other than the
+  canonical name. The cmd idempotency oracle uses `mktemp -d` + `diff -r` +
+  restored exit code so a regen that changes the generated tree (i.e. hand-edits
+  that don't match codegen) fails it. Authoring-time validate-task expectation:
+  grep-must FAIL at HEAD, grep-must-not + cmd + tsc + detect PASS at HEAD,
+  test-green PASS at HEAD (existing suite).

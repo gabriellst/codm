@@ -1,0 +1,64 @@
+#dom-snapshot-btn {
+	position: fixed;
+	bottom: 20px;
+	right: 20px;
+	z-index: 2147483647;
+	width: 48px;
+	height: 48px;
+	border-radius: 50%;
+	border: none;
+	background: #6366f1;
+	color: white;
+	font-size: 22px;
+	cursor: pointer;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition:
+		transform 0.15s,
+		background 0.15s;
+	font-family: system-ui;
+	line-height: 1;
+}
+#dom-snapshot-btn:hover {
+	background: #4f46e5;
+	transform: scale(1.1);
+}
+#dom-snapshot-btn.capturing {
+	background: #ef4444;
+	animation: pulse 0.6s infinite alternate;
+	pointer-events: none;
+}
+#dom-snapshot-btn.done {
+	background: #22c55e;
+}
+
+@keyframes pulse {
+	from {
+		transform: scale(1);
+	}
+	to {
+		transform: scale(1.15);
+	}
+}
+
+#dom-snapshot-toast {
+	position: fixed;
+	bottom: 80px;
+	right: 20px;
+	z-index: 2147483647;
+	background: #1e1e2e;
+	color: #cdd6f4;
+	padding: 10px 16px;
+	border-radius: 8px;
+	font-size: 13px;
+	font-family: system-ui;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+	opacity: 0;
+	transition: opacity 0.2s;
+	pointer-events: none;
+}
+#dom-snapshot-toast.visible {
+	opacity: 1;
+}

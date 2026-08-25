@@ -1,0 +1,14 @@
+{
+	"index": {
+		"title": "Blog",
+		"subtitle": "Notas de quem está construindo a ponte entre o grupo e a codebase.",
+		"empty": "Nenhum post ainda.",
+		"filterAll": "Todos",
+		"readPost": "Ler o post"
+	},
+	"post": {
+		"back": "Todos os posts",
+		"minReadSuffix": "min de leitura",
+		"nextPost": "Próximo post"
+	}
+}

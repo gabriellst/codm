@@ -1,0 +1,181 @@
+/* Web-only Tailwind 4 utilities — shared by @codm/app-react and @codm/app-astro.
+   NOT for React Native targets (uniwind): they have no CSS gradients / background-clip / @property.
+   Import AFTER `@import "tailwindcss"` so the @utility directives register with the engine. */
+
+@property --tw-gradient-bg {
+	syntax: "*";
+	inherits: false;
+	initial-value: linear-gradient(transparent, transparent);
+}
+@property --tw-gradient-border {
+	syntax: "*";
+	inherits: false;
+	initial-value: linear-gradient(transparent, transparent);
+}
+
+@utility gradient-box {
+	background-image:
+		var(--tw-gradient-bg, linear-gradient(transparent, transparent)),
+		var(--tw-gradient-border, linear-gradient(transparent, transparent)),
+		var(--tw-gradient-bg, linear-gradient(transparent, transparent));
+	background-origin: border-box;
+	background-clip: padding-box, border-box, border-box;
+	border: 1px double transparent;
+}
+
+@utility gradient-bg-* {
+	--tw-gradient-bg: linear-gradient(--value([*]));
+}
+
+@utility gradient-border-* {
+	--tw-gradient-border: linear-gradient(--value([*]));
+}
+
+/* ── Asymmetric radius (D2 redesign signature) ───────────────────────────
+   Three matched corners + a small bottom-left corner, composed from the radius ladder +
+   `--radius-corner-ratio` declared once in tokens.css — see that file for the measurements
+   behind both. One utility per ladder step so no component ever hardcodes a literal shape
+   like "16px 16px 16px 5px"; components reach for e.g. `rounded-asymmetric-sm` instead. */
+@utility rounded-asymmetric-3xs {
+	border-radius: var(--radius-3xs) var(--radius-3xs) var(--radius-3xs) calc(var(--radius-3xs) * var(--radius-corner-ratio));
+}
+@utility rounded-asymmetric-2xs {
+	border-radius: var(--radius-2xs) var(--radius-2xs) var(--radius-2xs) calc(var(--radius-2xs) * var(--radius-corner-ratio));
+}
+@utility rounded-asymmetric-xs {
+	border-radius: var(--radius-xs) var(--radius-xs) var(--radius-xs) calc(var(--radius-xs) * var(--radius-corner-ratio));
+}
+@utility rounded-asymmetric-sm {
+	border-radius: var(--radius-sm) var(--radius-sm) var(--radius-sm) calc(var(--radius-sm) * var(--radius-corner-ratio));
+}
+@utility rounded-asymmetric-md {
+	border-radius: var(--radius-md) var(--radius-md) var(--radius-md) calc(var(--radius-md) * var(--radius-corner-ratio));
+}
+@utility rounded-asymmetric-lg {
+	border-radius: var(--radius-lg) var(--radius-lg) var(--radius-lg) calc(var(--radius-lg) * var(--radius-corner-ratio));
+}
+@utility rounded-asymmetric-xl {
+	border-radius: var(--radius-xl) var(--radius-xl) var(--radius-xl) calc(var(--radius-xl) * var(--radius-corner-ratio));
+}
+@utility rounded-asymmetric-2xl {
+	border-radius: var(--radius-2xl) var(--radius-2xl) var(--radius-2xl) calc(var(--radius-2xl) * var(--radius-corner-ratio));
+}
+
+/* Exception, not a rule — see `--radius-callout-flip` in tokens.css. */
+@utility rounded-callout-flip {
+	border-radius: var(--radius-callout-flip);
+}
+
+/* ── Motion reveal (D-motion, 2026-08-25) ───────────────────────────────────────────────────
+   Entrance utilities for the landing (`packages/app/astro`) — see
+   `.specs/2026-08-25-motion-landing-design.md`. Driven by a plain IntersectionObserver in
+   `BaseLayout.astro` (`is:inline`, no framework): it adds `.is-inview` once per `.reveal`/
+   `.reveal-back` element then unobserves. Elements above the fold ship `.is-inview` already set
+   in the server-rendered markup (Decision 5) so the hero never flashes hidden — see Hero.astro.
+   `reveal` = text (Decision 2: `--ease-out-quart`, no scale, never oscillates — headline/subhead).
+   `reveal-back` = cards/CTA/badges/bubbles (Decision 1: `--ease-out-back`, ONE light overshoot,
+   never elastic). Only opacity + transform animate (Decision 6).
+
+   The `.is-inview` rules below use the LONGHAND `transition-property`/`-duration`/`-timing-function`
+   — deliberately NOT the `transition` shorthand — so they never declare `transition-delay` at all.
+   That leaves `reveal-stagger` (below) as the ONLY declaration of `transition-delay` for these
+   elements, so it applies with no specificity fight regardless of class order on the element. */
+/* INDIVIDUAL transform properties (`translate`/`scale`), never the `transform` shorthand: an
+   element can carry its own `transform` (the hero's floating cards ship an inline `rotate(…)`)
+   and still get the entrance — the shorthand would either clobber the rotation at rest or be
+   clobbered by the inline style and never animate. Baseline-supported since 2022 (Chrome 104,
+   Safari 14.1, Firefox 72). */
+@utility reveal {
+	opacity: 0;
+	translate: 0 12px;
+}
+@utility reveal-back {
+	opacity: 0;
+	translate: 0 12px;
+	scale: 0.97;
+}
+.reveal.is-inview {
+	opacity: 1;
+	translate: 0 0;
+	transition-property: opacity, translate;
+	transition-duration: var(--duration-slow);
+	transition-timing-function: var(--ease-out-quart);
+}
+.reveal-back.is-inview {
+	opacity: 1;
+	translate: 0 0;
+	scale: 1;
+	transition-property: opacity, translate, scale;
+	transition-duration: var(--duration-slow);
+	transition-timing-function: var(--ease-out-back);
+}
+
+/* Per-item entrance delay — the child carries `style="--i: n"` (or `--i: n*2` at the call site for
+   a slower sequential feel, e.g. DemoSection's bubbles — no separate token needed for that). See
+   the comment above for why this is the only rule allowed to set `transition-delay`. */
+@utility reveal-stagger {
+	transition-delay: calc(var(--i, 0) * var(--stagger));
+}
+
+/* Card hover lift (Decision 4) — opt-in per element (feature/pricing cards), not baked into
+   `reveal-back` itself: badges/bubbles/buttons that also use `reveal-back` for their entrance
+   keep their OWN hover treatment (opacity/color), not a lift. Written after the `.is-inview`
+   rules above on purpose: same specificity (two classes / one class + one pseudo-class), so
+   source order is what lets `:hover` win the transition speed back from the slower entrance one. */
+@utility card-hover-lift {
+	transition: transform var(--duration-fast) var(--ease-out-back);
+}
+.card-hover-lift:hover {
+	transform: translateY(-3px);
+	transition-duration: var(--duration-fast);
+	transition-timing-function: var(--ease-out-back);
+}
+
+/* Fidelity/no-motion determinism hook (Decision 8). `docs/UI-FIDELITY.md` documents the Astro
+   capture lane as NOT built yet ("3 telas do site público aguardam lane Astro" — Wave A, F1); this
+   is the hook a future runner reaches for instead of polling `transitionend`. `BaseLayout.astro`'s
+   inline script reads `?fidelity=1` off the URL, stamps `.is-capturing` on `<html>`, and marks
+   every `.reveal`/`.reveal-back` element `.is-inview` synchronously (before/without waiting on the
+   observer) — this rule makes that transition SNAP to rest instead of animating into it, so a
+   screenshot taken right after `page.goto()` resolves can never race a transition. */
+html.is-capturing .reveal,
+html.is-capturing .reveal-back {
+	transition: none !important;
+}
+
+/* ── Thin, translucent scrollbars — GLOBAL default (dialog-overflow-scrollbar fix) ──────────
+   Founder ask: every scrollbar in the app should read FINER and LESS OPAQUE than the platform
+   default, consistently across dialogs and rolling lists — not an opt-in a component has to
+   remember. `packages/app/react/src/index.css` already had the exact recipe on two hand-picked
+   classes (`.chat-scroll`, `.scrollbar-thin`): transparent track, a low-alpha `oklch(from
+   var(--foreground) l c h / <alpha>)` thumb (theme-aware for free — inverts with `--foreground`
+   the same way `--border`/`--hover` do in tokens.css), rounded ends. This promotes that recipe to
+   the default so any OTHER scrollable box — a dialog body with `overflow-y-auto`
+   (`ThreadSettingsDialog`), a future list — gets it without a class to remember.
+   `scrollbar-width: thin` + `scrollbar-color` cover Firefox; `::-webkit-scrollbar` covers
+   Chromium/WebKit (the desktop shell's webview + every dev browser). Selector is the bare `*` —
+   lowest possible specificity — so `.scrollbar-none` (`-ms-overflow-style`/`scrollbar-width:
+   none`) and any future override still win without `!important`; the two older opt-in classes
+   above still apply their own (slightly different) numbers on top, unaffected.
+   SCOPE — shared here, not react-only: `@codm/app-astro`'s `global.css` imports this same file.
+   A thin, quiet scrollbar is the same "less chrome" call on the landing/blog surface — least
+   surprise, not a scoping default. If a future astro page genuinely needs the OS-native scrollbar
+   back, scope a `.scrollbar-native` escape hatch there rather than un-sharing this file. */
+* {
+	scrollbar-width: thin;
+	scrollbar-color: oklch(from var(--foreground) l c h / 0.16) transparent;
+}
+*::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+*::-webkit-scrollbar-track {
+	background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+	background: oklch(from var(--foreground) l c h / 0.16);
+	border-radius: 9999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+	background: oklch(from var(--foreground) l c h / 0.28);
+}

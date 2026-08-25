@@ -1,0 +1,108 @@
+// Package coupon provides the CouponRepository interface and implementations.
+package coupon
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"time"
+
+	"template/api-go/internal/sales/entities"
+	coreentities "template/core-go/entities"
+	coreobjects "template/core-go/objects"
+	"template/core-go/repositories"
+	"template/core-go/services/unitofwork"
+)
+
+// Compile-time check: pgCouponRepository must implement CouponRepository.
+var _ CouponRepository = (*pgCouponRepository)(nil)
+
+type pgCouponRepository struct {
+	db              *sql.DB
+	domainEventRepo repositories.DomainEventRepository
+}
+
+// NewPgCouponRepository constructs the Postgres implementation.
+func NewPgCouponRepository(db *sql.DB, domainEventRepo repositories.DomainEventRepository) *pgCouponRepository {
+	return &pgCouponRepository{db: db, domainEventRepo: domainEventRepo}
+}
+
+func (r *pgCouponRepository) txOrDB(ctx context.Context) interface {
+	ExecContext(context.Context, string, ...any) (sql.Result, error)
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+} {
+	if tx, ok := unitofwork.TxFromContext(ctx); ok {
+		return tx
+	}
+	return r.db
+}
+
+// Save inserts or updates a Coupon row. Calls IncrementVersion (already called in entity
+// behavior methods) and persists domain events via domainEventRepo.
+func (r *pgCouponRepository) Save(ctx context.Context, entity *entities.Coupon) error {
+	_ = entity.IncrementVersion()
+	db := r.txOrDB(ctx)
+
+	_, err := db.ExecContext(ctx, `
+		INSERT INTO sales.coupons
+		  (id, owner_id, created_at, updated_at, version)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (id) DO UPDATE
+		  SET updated_at = EXCLUDED.updated_at,
+		      version    = EXCLUDED.version
+	`,
+		entity.ID.String(),
+		// entity.OwnerID,
+		entity.CreatedAt,
+		entity.UpdatedAt,
+		entity.Version,
+	)
+	if err != nil {
+		return fmt.Errorf("sales.coupons save: %w", err)
+	}
+
+	if err := r.domainEventRepo.SaveAll(ctx, entity.PullDomainEvents()); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Find retrieves a Coupon by its UUID string, returning nil when not found.
+func (r *pgCouponRepository) Find(ctx context.Context, id string) (*entities.Coupon, error) {
+	db := r.txOrDB(ctx)
+	row := db.QueryRowContext(ctx, `
+		SELECT id, created_at, updated_at, version
+		FROM sales.coupons WHERE id = $1
+	`, id)
+	return r.scanRow(row)
+}
+
+func (r *pgCouponRepository) scanRow(row *sql.Row) (*entities.Coupon, error) {
+	var (
+		rawID     string
+		createdAt time.Time
+		updatedAt time.Time
+		version   int
+	)
+	if err := row.Scan(&rawID, &createdAt, &updatedAt, &version); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("sales.coupons scan: %w", err)
+	}
+
+	id, err := coreobjects.IDFromString(rawID)
+	if err != nil {
+		return nil, err
+	}
+
+	base := coreentities.ReconstructBaseEntity(coreentities.ReconstructBaseEntityParams{
+		ID:        id.UUID(),
+		CreatedAt: createdAt,
+		UpdatedAt: updatedAt,
+		Version:   version,
+	})
+
+	return entities.ReconstructCoupon(base), nil
+}

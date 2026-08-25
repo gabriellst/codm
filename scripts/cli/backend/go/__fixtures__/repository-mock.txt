@@ -1,0 +1,50 @@
+package coupon
+
+import (
+	"context"
+	"sync"
+
+	"template/api-go/internal/sales/entities"
+)
+
+// Compile-time check: mockCouponRepository must implement CouponRepository.
+var _ CouponRepository = (*mockCouponRepository)(nil)
+
+// mockCouponRepository is an in-memory implementation for use in tests.
+type mockCouponRepository struct {
+	mu   sync.RWMutex
+	byID map[string]*entities.Coupon
+}
+
+// NewMockCouponRepository constructs an empty mock repository.
+func NewMockCouponRepository() CouponRepository {
+	return &mockCouponRepository{
+		byID: make(map[string]*entities.Coupon),
+	}
+}
+
+func (r *mockCouponRepository) Save(_ context.Context, entity *entities.Coupon) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	_ = entity.IncrementVersion()
+	entity.PullDomainEvents() // drain events — parity with Postgres impl
+	r.byID[entity.ID.String()] = entity
+	return nil
+}
+
+func (r *mockCouponRepository) Find(_ context.Context, id string) (*entities.Coupon, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	entity, ok := r.byID[id]
+	if !ok {
+		return nil, nil
+	}
+	return entity, nil
+}
+
+// Reset clears all accumulated state. Test helper.
+func (r *mockCouponRepository) Reset() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.byID = make(map[string]*entities.Coupon)
+}

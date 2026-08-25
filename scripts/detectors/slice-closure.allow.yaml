@@ -1,0 +1,18 @@
+# slice-closure.allow.yaml — documented-intentional integration-event gaps.
+#
+# Each entry suppresses a SCW-01c (published, no consumer) / SCW-01d (subscribed,
+# no publisher) finding for one wire event name:
+#
+#   - event: integration.shared.<context>.<fact>
+#     rule: SCW-01c        # optional — omit to cover both rules
+#     reason: why the gap is intentional, and what ships to close it
+#
+# Remove the entry when the missing side ships — and when the EVENT itself is
+# purged from the tree: a dead entry is a standing permission that pre-suppresses
+# the finding for any future event re-introduced under the same name
+# (liveness-gated by packages/api/typescript/tests/architecture/allowlist-liveness.test.ts).
+#
+# 2026-07-21: emptied — all 4 seeded entries (subscription.quota_updated,
+# integration.progress_updated, product.updated, variant.updated) referenced wire
+# events that no longer exist anywhere slice-closure walks.
+allow: []

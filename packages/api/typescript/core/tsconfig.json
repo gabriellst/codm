@@ -1,0 +1,14 @@
+{
+	"extends": "../tsconfig.json",
+	"compilerOptions": {
+		"noEmit": true,
+		"skipLibCheck": true,
+		"paths": {},
+		"noUnusedLocals": false,
+		"noUnusedParameters": false,
+		"exactOptionalPropertyTypes": false,
+		"typeRoots": ["../../../../node_modules/@types", "./node_modules/@types"]
+	},
+	"include": ["src/**/*", "tests/**/*.ts"],
+	"exclude": ["src/__tests__/**"]
+}

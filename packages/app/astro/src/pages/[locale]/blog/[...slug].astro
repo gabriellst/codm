@@ -1,0 +1,65 @@
+---
+import { getImage } from 'astro:assets'
+import { type CollectionEntry, getCollection } from 'astro:content'
+import BaseLayout from '~/layouts/BaseLayout.astro'
+import { type Locale, siblingLocale } from '~/i18n'
+import BlogPost from './_components/BlogPost.astro'
+
+const localeOf = (id: string) => id.split('/')[0] as Locale
+const slugOf = (id: string) => id.replace(/^(pt|en)\//, '').replace(/\.mdx?$/, '')
+
+export async function getStaticPaths() {
+	const posts = await getCollection('blog', ({ data }) => import.meta.env.DEV || !data.draft)
+	// Emit ONE path per real (locale, slug) pair. A post that exists only in pt
+	// yields only `/pt/blog/<slug>` — never a phantom `/en/blog/<slug>` (rule 4).
+	return posts.map(post => ({
+		params: { locale: post.id.split('/')[0] as Locale, slug: post.id.replace(/^(pt|en)\//, '').replace(/\.mdx?$/, '') },
+		props: { post },
+	}))
+}
+
+const { post } = Astro.props as { post: CollectionEntry<'blog'> }
+const locale = localeOf(post.id)
+const sib = siblingLocale(locale)
+
+// Sibling lookup by translationKey. Present → the two posts are a translated pair
+// (hreflang emitted for both, switcher visible); absent → single self-link, no
+// switcher, no cross-locale hreflang.
+const all = await getCollection('blog', ({ data }) => import.meta.env.DEV || !data.draft)
+const sibling = post.data.translationKey
+	? all.find(p => localeOf(p.id) === sib && p.data.translationKey === post.data.translationKey)
+	: undefined
+
+const localeLinks: Partial<Record<Locale, string>> = {
+	[locale]: Astro.url.pathname,
+	...(sibling ? { [sib]: `/${sib}/blog/${slugOf(sibling.id)}` } : {}),
+}
+
+const { title, description, publishedAt, updatedAt, author, coverImage } = post.data
+const ogImageAsset = coverImage ? await getImage({ src: coverImage, width: 1200, height: 630, format: 'webp' }) : undefined
+const absoluteOg = ogImageAsset ? new URL(ogImageAsset.src, Astro.site).href : undefined
+
+const jsonLd = {
+	'@context': 'https://schema.org',
+	'@type': 'BlogPosting',
+	headline: title,
+	description,
+	datePublished: publishedAt.toISOString(),
+	dateModified: (updatedAt ?? publishedAt).toISOString(),
+	author: { '@type': 'Person', name: author },
+	image: absoluteOg,
+	inLanguage: locale === 'pt' ? 'pt-BR' : 'en-US',
+	mainEntityOfPage: { '@type': 'WebPage', '@id': Astro.url.href },
+}
+---
+
+<BaseLayout
+	locale={locale}
+	title={title}
+	description={description}
+	ogImage={absoluteOg}
+	jsonLd={jsonLd}
+	localeLinks={localeLinks}
+>
+	<BlogPost post={post} locale={locale} />
+</BaseLayout>

@@ -1,0 +1,39 @@
+package projections
+
+import "context"
+
+// MockCouponProjectionRepository is an in-memory implementation for use in unit tests.
+type MockCouponProjectionRepository struct {
+	Rows    map[string]*CouponProjection
+	Upserts int
+	Deletes int
+}
+
+// NewMockCouponProjectionRepository constructs an empty mock repository.
+func NewMockCouponProjectionRepository() *MockCouponProjectionRepository {
+	return &MockCouponProjectionRepository{
+		Rows: make(map[string]*CouponProjection),
+	}
+}
+
+// Upsert stores the projection row in memory.
+func (r *MockCouponProjectionRepository) Upsert(_ context.Context, p *CouponProjection) error {
+	// TODO: use a meaningful key (e.g. p.EntityID)
+	r.Rows["key"] = p
+	r.Upserts++
+	return nil
+}
+
+// Delete removes the projection row from memory.
+func (r *MockCouponProjectionRepository) Delete(_ context.Context, key string) error {
+	delete(r.Rows, key)
+	r.Deletes++
+	return nil
+}
+
+// Reset clears all accumulated state. Test helper.
+func (r *MockCouponProjectionRepository) Reset() {
+	r.Rows = make(map[string]*CouponProjection)
+	r.Upserts = 0
+	r.Deletes = 0
+}

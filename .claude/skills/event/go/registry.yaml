@@ -1,0 +1,250 @@
+registry:
+  type: backend
+  layer: application
+  depends_on: [entity]
+  depended_by: [handler]
+  context_reads: [entity]
+  lang: go
+
+  snippet:
+    skeleton: |
+      // Package events defines domain events for the {{ctx}} bounded context.
+      package events
+
+      import (
+      	"github.com/google/uuid"
+
+      	"template/core-go/types"
+      )
+
+      // {{Pascal}}EventName is the canonical event name.
+      // Format: "<ctx>.<aggregate>.<past_tense_action>"
+      const {{Pascal}}EventName = "{{eventConst}}"
+
+      // {{Pascal}}Payload carries immutable data at the moment the event occurred.
+      // Use plain primitives only — no domain VOs, no pointers to mutable structs.
+      type {{Pascal}}Payload struct {
+      	// TODO: add payload fields with json tags
+      	// EntityID uuid.UUID `json:"entityId"`
+      	// OwnerID  string    `json:"ownerId"`
+      }
+
+      // {{Pascal}}Event is a type alias (not a new type) so it satisfies types.DomainEventI automatically.
+      type {{Pascal}}Event = types.DomainEvent[{{Pascal}}Payload]
+
+      // New{{Pascal}}Event constructs a {{Pascal}}Event.
+      // entityID: UUID of the affected aggregate.
+      // ownerID:  tenant/owner identifier for multi-tenancy.
+      func New{{Pascal}}Event(entityID uuid.UUID, ownerID string, payload {{Pascal}}Payload) {{Pascal}}Event {
+      	return types.NewDomainEvent({{Pascal}}EventName, entityID, ownerID, payload)
+      }
+
+    skeletons:
+      integration: |
+        // Package events defines integration events for the {{ctx}} bounded context.
+        package events
+
+        import "template/core-go/types"
+
+        // {{Pascal}}IntegrationEventName is the canonical integration event name.
+        // Format: "integration.<ctx>.<past_verb>"
+        const {{Pascal}}IntegrationEventName = "{{integrationEventConst}}"
+
+        // {{Pascal}}IntegrationPayload is the cross-service payload.
+        // Use plain primitives only — no domain VOs.
+        type {{Pascal}}IntegrationPayload struct {
+        	// TODO: add fields with json tags
+        	// EntityID string `json:"entityId"`
+        }
+
+        // {{Pascal}}IntegrationEvent is a type alias satisfying types.IntegrationEventI automatically.
+        type {{Pascal}}IntegrationEvent = types.IntegrationEvent[{{Pascal}}IntegrationPayload]
+
+        // New{{Pascal}}IntegrationEvent constructs a {{Pascal}}IntegrationEvent.
+        // ownerID: tenant/owner identifier for multi-tenancy.
+        func New{{Pascal}}IntegrationEvent(ownerID string, payload {{Pascal}}IntegrationPayload) {{Pascal}}IntegrationEvent {
+        	return types.NewIntegrationEvent({{Pascal}}IntegrationEventName, ownerID, payload)
+        }
+
+  patterns:
+    - id: EVT-GO-01
+      name: "Type alias, not new type"
+      when: always
+      rule: |
+        // = alias so DomainEvent[T] satisfies DomainEventI automatically
+        type TranscodingJobStartedEvent = types.DomainEvent[TranscodingJobStartedPayload]
+
+    - id: EVT-GO-02
+      name: "Const event name in past tense"
+      when: always
+      rule: |
+        // Domain:      "<ctx>.<aggregate>.<past_verb>"
+        const TranscodingJobStartedEventName = "transcoding.transcoding_job.started"
+        // Integration: "integration.<ctx>.<past_verb>"
+        const VideoUploadedIntegrationEventName = "integration.video.uploaded"
+
+    - id: EVT-GO-03
+      name: "NewXEvent constructor signature"
+      when: always
+      rule: |
+        func NewTranscodingJobStartedEvent(entityID uuid.UUID, ownerID string, payload TranscodingJobStartedPayload) TranscodingJobStartedEvent {
+            return types.NewDomainEvent(TranscodingJobStartedEventName, entityID, ownerID, payload)
+        }
+        // Integration event — no entityID field
+        func NewVideoUploadedIntegrationEvent(ownerID string, payload VideoUploadedPayload) VideoUploadedIntegrationEvent {
+            return types.NewIntegrationEvent(VideoUploadedIntegrationEventName, ownerID, payload)
+        }
+
+    - id: EVT-GO-04
+      name: "Payload uses plain primitives with json tags"
+      when: always
+      rule: |
+        type TranscodingJobStartedPayload struct {
+            JobID    uuid.UUID `json:"jobId"`
+            VideoID  string    `json:"videoId"`
+            InputUrl string    `json:"inputUrl"`
+            OwnerID  string    `json:"ownerId"`
+        }
+
+    - id: EVT-GO-05
+      name: "Domain events raised inside entity methods via AppendDomainEvent"
+      when: always
+      rule: |
+        func (j *TranscodingJob) Start(inputUrl string) error {
+            j.Status = enums.JobStatusRunning
+            j.AppendDomainEvent(events.NewTranscodingJobStartedEvent(
+                j.ID.UUID(), j.OwnerID,
+                events.TranscodingJobStartedPayload{JobID: j.ID.UUID(), VideoID: j.VideoID, InputUrl: inputUrl, OwnerID: j.OwnerID},
+            ))
+            return nil
+        }
+
+    - id: EVT-GO-06
+      name: "Repository Save drains events via domainEventRepo.SaveAll"
+      when: always
+      rule: |
+        func (r *pgFooRepository) Save(ctx context.Context, entity *entities.Foo) error {
+            _ = entity.IncrementVersion()
+            // ... INSERT ON CONFLICT DO UPDATE ...
+            return r.domainEventRepo.SaveAll(ctx, entity.PullDomainEvents())
+        }
+
+    - id: EVT-GO-07
+      name: "UnmarshalDomainEvent / UnmarshalIntegrationEvent in handlers"
+      when: always
+      rule: |
+        typed, err := types.UnmarshalDomainEvent[events.TranscodingJobStartedPayload](event)
+        // or for integration events from wire package:
+        typed, err := types.UnmarshalIntegrationEvent[wire.VideoUploadedEvent](event)
+
+    - id: EVT-GO-08
+      name: "Integration events published only from handlers, not use cases"
+      when: "event must cross service boundaries"
+      rule: |
+        // In an internal handler reacting to a domain event:
+        func (h *TranscodingJobCompletedHandler) Handle(ctx context.Context, event types.DomainEventI) error {
+            typed, err := types.UnmarshalDomainEvent[events.TranscodingJobCompletedPayload](event)
+            // ...
+            return h.externalMediator.Publish(ctx, events.NewTranscodingJobCompletedIntegrationEvent(
+                typed.OwnerID,
+                events.TranscodingJobCompletedIntegrationPayload{VideoID: typed.Payload.VideoID},
+            ))
+        }
+    - id: EVT-GO-09
+      name: "As três formas de ativação — e a intenção decide qual (par Go de EVT-C11)"
+      when: "você está a ponto de criar um evento para fazer algo acontecer"
+      rule: |
+        // Fato (reativo/auditoria) → EVENTO.
+        //   Domain event: acumulado no agregado (AppendDomainEvent) e entregue pelo outbox.
+        //   Integration event: publicado por um handler NOMEADO — a convenção Go é um handler POR
+        //   EVENTO com sufixo *IntegrationHandler, em internal/<ctx>/handlers/, registrado
+        //   nominalmente em module.go. Publish() INSERE a linha no outbox (durável) e faz fan-out dos
+        //   callbacks in-process.
+        // Comando durável de executor único → a fila de comandos, na transação do fato que o motiva.
+        // Síncrono na própria request → chamar o use case direto.
+        //
+        // A REGRA DE INTENÇÃO (founder, 29-jul-2026), citada literalmente: "evento existe para fins
+        // reativos, auditoria ou event sourcing — nunca para comandar. Se a existência do evento é só
+        // para um handler executar algo que poderia ser um comando/use case direto, está errado."
+        //
+        // ESCADA DO PAYLOAD: (1) o dado pertence ao fato → o domain event o carrega; (2) o consumidor
+        // relê → evento thin; (3) só então enrichment no handler publicador, por dependência injetada.
+      wrong: "declarar um evento de wire cuja razão de existir é um handler executar uma ação"
+
+  bad_practices:
+    - id: bp-GO-EVT-01
+      name: "New type instead of type alias"
+      severity: critical
+      wrong: |
+        type TranscodingJobStartedEvent types.DomainEvent[TranscodingJobStartedPayload]
+        // New type does NOT satisfy DomainEventI — missing GetEventName/GetEntityID methods.
+      right: |
+        type TranscodingJobStartedEvent = types.DomainEvent[TranscodingJobStartedPayload]
+      mechanical: true
+      detect:
+        - 'type\s+\w+\s+types\.(Domain|Integration)Event\['
+
+    - id: bp-GO-EVT-02
+      name: "Present-tense event name"
+      severity: moderate
+      wrong: |
+        const TranscodingJobStartEventName = "transcoding.transcoding_job.start"
+      right: |
+        const TranscodingJobStartedEventName = "transcoding.transcoding_job.started"
+      mechanical: false
+
+    - id: bp-GO-EVT-03
+      name: "Domain entity reference in payload"
+      severity: critical
+      wrong: |
+        type TranscodingJobStartedPayload struct {
+            Job *entities.TranscodingJob `json:"job"` // mutable pointer — breaks serialization
+        }
+      right: |
+        type TranscodingJobStartedPayload struct {
+            JobID   uuid.UUID `json:"jobId"`
+            VideoID string    `json:"videoId"`
+        }
+      mechanical: true
+      detect:
+        - '\*entities\.'
+
+    - id: bp-GO-EVT-04
+      name: "Use case publishes to mediator directly"
+      severity: critical
+      wrong: |
+        // In a use case Execute() method:
+        h.internalMediator.Publish(ctx, someEvent)
+      right: |
+        // Entity.SomeMethod() → AppendDomainEvent(...)
+        // Repository.Save() → domainEventRepo.SaveAll(ctx, entity.PullDomainEvents())
+        // OutboxDispatcher polls → InternalMediator.Dispatch() → handler
+      mechanical: true
+      detect:
+        - 'internalMediator\.Publish\('
+
+    - id: bp-GO-EVT-05
+      name: "Missing json tags on payload fields"
+      severity: moderate
+      wrong: |
+        type Payload struct {
+            JobID   uuid.UUID
+            VideoID string
+        }
+      right: |
+        type Payload struct {
+            JobID   uuid.UUID `json:"jobId"`
+            VideoID string    `json:"videoId"`
+        }
+      mechanical: false
+
+    - id: bp-GO-EVT-06
+      name: "Integration event published directly from use case"
+      severity: critical
+      wrong: |
+        // use case calls ExternalMediator directly
+        h.externalMediator.Publish(ctx, someIntegrationEvent)
+      right: |
+        // Use case raises domain event via entity → repository drains to outbox
+        // Internal handler reacts to domain event and calls ExternalMediator.Publish
+      mechanical: false

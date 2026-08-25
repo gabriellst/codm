@@ -1,0 +1,14 @@
+// Package projections provides the CouponProjection read model.
+package projections
+
+import "time"
+
+// CouponProjection mirrors the sales.coupons read-model table.
+// Written by CouponProjector; read by query use cases.
+// No domain logic, no invariants — plain data record.
+type CouponProjection struct {
+	// TODO: add fields matching the DB columns
+	// EntityID  string
+	// OwnerID   string
+	UpdatedAt time.Time
+}

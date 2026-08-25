@@ -1,0 +1,285 @@
+# Canal BETA = main (roadmap decisão 3): cada merge substitui a prerelease rolante `beta`.
+# As máquinas do founder assinam este canal (echo beta > $CODM_DATA_DIR/update-channel) — o
+# incidente do "daemon com binário de 15h" morre aqui. Desde 07/08/2026 o beta TAMBÉM é assinado
+# com Developer ID e notarizado — não por causa do Gatekeeper, mas porque um app ad-hoc perde a
+# permissão de disco a cada update e derruba os agentes (ver docs/RELEASE.md). Os ARTEFATOS DE
+# UPDATE seguem assinados com a chave minisign (TAURI_SIGNING_PRIVATE_KEY), que é outra coisa e é
+# o que o cliente verifica.
+name: release-beta
+
+on:
+  push:
+    branches: [main]
+    # Só o que ENTRA no app dispara um beta. Antes era todo push na main, e num único dia isso
+    # gerou 36 builds — a maioria por mudança em docs, spec ou backend que o bundle nem carrega.
+    # Mesmo filtro de caminho que o deploy-landing já usa (e por isso rodou 5 vezes no mesmo dia).
+    paths:
+      - 'packages/app/**'
+      - 'packages/api/**'
+      - 'packages/client/**'
+      - 'packages/contracts/**'
+      - '.github/workflows/release-beta.yml'
+  # Para publicar um beta sem esperar um push que case com os caminhos acima.
+  workflow_dispatch: {}
+
+# Um beta por vez; um merge novo cancela o build do anterior — o canal só quer o mais recente.
+concurrency:
+  group: release-beta
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  beta:
+    # Runner SELF-HOSTED no Mac mini do founder: minutos self-hosted não contam na cota do GitHub
+    # (nem em repo privado), e o build macOS custava 10x lá. Em 2026-08-07 a cota estourou — 57
+    # builds macOS num dia, ~3.250 minutos faturados contra 2.000 disponíveis — e TODOS os workflows
+    # pararam. A máquina já era o ambiente de build (mesmo toolchain, chave de assinatura local,
+    # caches quentes), então o custo vai a zero e o build fica mais rápido.
+    #
+    # CUIDADO ao tornar este repo público: runner self-hosted + repo público deixa qualquer PR de
+    # fork executar código nesta máquina. As duas coisas são mutuamente exclusivas na prática.
+    runs-on: [self-hosted, macOS, ARM64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: packages/api/go/go.mod
+      # O wrangler (upload R2, mais abaixo) roda sob NODE, nao sob bun: sob bun ele sai com codigo
+      # 0 sem subir nada em cerca de metade das execucoes — o que aqui publicaria um latest.json
+      # apontando para um asset inexistente. Ver o comentario longo em deploy-landing.yml.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # NÃO reintroduza Swatinem/rust-cache aqui. Ela existe para dar cache de Rust a runners
+      # DESCARTÁVEIS, e para isso o passo de save PODA `~/.cargo/bin` — em 2026-08-07, 4 segundos
+      # depois de entrar no `Post Run`, apagou o binário `rustup` da máquina do founder e deixou
+      # todos os symlinks (cargo, rustc, rustfmt) pendurados. O build passou; o que quebrou foi o
+      # ambiente de desenvolvimento DEPOIS, e o sintoma apareceu longe da causa: o correctness
+      # seguinte falhou com `Executable not found in $PATH: "cargo"`.
+      #
+      # Num runner PERSISTENTE o cache de disco é o próprio disco — não há nada para restaurar.
+      # O que `git clean -ffdx` do checkout apagaria é o `target/`, e por isso ele mora FORA do
+      # workspace (passo abaixo): sobrevive entre execuções sem nenhuma action.
+      #
+      # Só o `target/` sai do workspace, de propósito. Ele é cache de compilador puro — o cargo
+      # revalida por fingerprint, então um target quente não consegue mascarar bug de fonte. O
+      # resto do checkout continua limpo a cada execução, que é o que impede um ARTEFATO GERADO
+      # sobrevivente (o openapi.json do //go:embed já foi essa pegadinha) de fingir que o build
+      # funciona num clone frio.
+      - name: cargo target fora do workspace
+        run: echo "CARGO_TARGET_DIR=$HOME/.cache/codm-cargo-target" >> "$GITHUB_ENV"
+
+      - name: deps
+        run: bun install --frozen-lockfile
+
+      # Versão do beta: base da conf + `-beta.<run>` — semver crescente por merge, sem commit de
+      # bump (spec decisão 4). Injetada via --config, nunca escrita no repo.
+      - name: version
+        id: v
+        run: echo "version=$(jq -r .version packages/app/tauri/src-tauri/tauri.conf.json)-beta.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      # O gateway Go embute public/docs/openapi.json (//go:embed) e o arquivo é GERADO —
+      # existe em qualquer checkout de dev, mas nunca num runner limpo. Sem este step o build
+      # do sidecar morre com "pattern docs/openapi.json: no matching files found" (1º run real,
+      # 2026-08-07). O .env de exemplo basta: o emit curto-circuita o boot após gerar o spec.
+      - name: openapi (insumo gerado do embed)
+        run: |
+          cp -n .env.example .env
+          bun emit-openapi
+
+      - name: sidecars
+        run: cd packages/app/tauri && bun config/build-sidecars.ts
+
+      # O CERTIFICADO NÃO ESTÁ NO KEYCHAIN DESTE PROCESSO, e é por isso que o passo monta um. O
+      # runner é self-hosted, então a máquina TEM o certificado — no keychain de login do founder.
+      # Mas o Actions roda como serviço, com sessão e keychain próprios, e um `codesign` daqui
+      # responde `no identity found` (medido). O Tauri não sofre disso porque importa o `.p12` dos
+      # secrets num keychain temporário dentro do próprio passo dele; aqui fazemos o mesmo, antes.
+      - name: assina os Mach-O aninhados nos resources
+        env:
+          IDENTITY: "Developer ID Application: BK COMPANY LTDA (V4F6T68S5B)"
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          # Só os diretórios STAGED COMO RESOURCE. Os sidecars (`codm-daemon`, `codm-gateway`) ficam
+          # de fora de propósito: o Tauri os assina como `externalBin`, e a notarização confirmou —
+          # ela reclamou do `.node` e de mais nada.
+          LIST="$RUNNER_TEMP/nested-machos.txt"
+          : > "$LIST"
+          find packages/app/tauri/src-tauri/binaries/daemon-runtime \
+               packages/app/tauri/src-tauri/binaries/migrations \
+               -type f 2>/dev/null | while IFS= read -r f; do
+            # `if`, nunca `cmd && cmd`: sob `set -e` o `&&` que falha no ÚLTIMO comando do corpo
+            # mata o laço, e o primeiro `.js` do node_modules (não é Mach-O) fazia grep sair 1 e o
+            # passo morrer sem imprimir uma linha sequer. Reproduzido no /bin/bash 3.2 do runner.
+            if file "$f" | grep -q "Mach-O"; then printf '%s\n' "$f" >> "$LIST"; fi
+          done
+          if [ ! -s "$LIST" ]; then echo "nenhum Mach-O aninhado — nada a assinar"; exit 0; fi
+
+          KEYCHAIN="$RUNNER_TEMP/codm-nested-signing.keychain-db"
+          KEYCHAIN_PW="$(openssl rand -base64 24)"
+          CERT="$RUNNER_TEMP/codm-nested-cert.p12"
+          # O keychain e o .p12 saem do disco aconteça o que acontecer, e a lista de busca volta ao
+          # que era: este runner é a máquina de trabalho do founder, não um descartável.
+          PREV_KEYCHAINS="$(security list-keychains -d user | sed 's/[",]//g' | xargs)"
+          cleanup() {
+            security list-keychains -d user -s $PREV_KEYCHAINS >/dev/null 2>&1 || true
+            security delete-keychain "$KEYCHAIN" >/dev/null 2>&1 || true
+            rm -f "$CERT"
+          }
+          trap cleanup EXIT
+
+          printf '%s' "$APPLE_CERTIFICATE" | base64 --decode > "$CERT"
+          security create-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN"
+          security import "$CERT" -k "$KEYCHAIN" -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign >/dev/null
+          # Sem isto o codesign trava num prompt de autorização que não existe num runner sem TTY.
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PW" "$KEYCHAIN" >/dev/null
+          # `codesign` procura na LISTA DE BUSCA, não no keychain que acabamos de criar — sem
+          # acrescentá-lo aqui, a identidade importada segue invisível.
+          security list-keychains -d user -s "$KEYCHAIN" $PREV_KEYCHAINS >/dev/null
+
+          found=0
+          while IFS= read -r f; do
+            found=$((found + 1))
+            echo "assinando $f"
+            codesign --force --timestamp --options runtime --keychain "$KEYCHAIN" -s "$IDENTITY" "$f"
+            codesign -dv --verbose=2 "$f" 2>&1 | grep -E "^Authority=Developer ID Application" || {
+              echo "::error::$f não ficou com Developer ID depois do codesign"
+              exit 1
+            }
+          done < "$LIST"
+          echo "Mach-O aninhados assinados: $found"
+
+      # Um release sem esta variável produz um app cujo login abre localhost:3030 — defeito
+      # INVISÍVEL no artefato (os assets do frontend vão comprimidos dentro do binário, então
+      # nenhum grep no .app prova que a URL foi assada). Medido na v0.1.3; a única defesa é
+      # falhar aqui, no insumo, em vez de tentar verificar na saída.
+      - name: cloud url presente
+        run: |
+          test -n "${{ vars.CODM_CLOUD_URL }}" || {
+            echo "::error::vars.CODM_CLOUD_URL vazia — o app sairia apontando o daemon local. Defina a repo variable antes de publicar."
+            exit 1
+          }
+          echo "cloud: ${{ vars.CODM_CLOUD_URL }}"
+
+      # MESMO defeito invisível, uma camada mais fundo — ver o comentário gêmeo em
+      # release-stable.yml. Com a chave vazia o console resolve para o NoopAnalyticsService e a
+      # telemetria some SEM erro; a v0.3.0 saiu assim. O que falhou nas duas vezes não foi a repo
+      # variable não existir, foi ela não CHEGAR ao passo de build — que é o que este teste cobre.
+      - name: posthog presente
+        run: |
+          test -n "${{ vars.VITE_POSTHOG_KEY }}" || {
+            echo "::error::vars.VITE_POSTHOG_KEY vazia — o app sairia com a telemetria desligada em silêncio. Defina a repo variable antes de publicar."
+            exit 1
+          }
+          echo "posthog: ${{ vars.VITE_POSTHOG_HOST }} (chave presente, ${#POSTHOG_KEY} chars)"
+        env:
+          POSTHOG_KEY: ${{ vars.VITE_POSTHOG_KEY }}
+
+      # `nice`: esta máquina também roda o daemon de produção do founder (agentes atendendo
+      # WhatsApp). Um build de release competindo por CPU já causou contenção aqui; a prioridade
+      # baixa faz o build ceder ao trabalho real em vez do contrário.
+      - name: tauri build
+        env:
+          # O console é compilado DENTRO do tauri build (beforeBuildCommand) e o Vite resolve
+          # VITE_* no BUILD: sem isto o app empacotado nasce apontando o daemon local e o login
+          # abre localhost:3030 (medido na v0.1.3). Repo variable, não secret — é URL pública.
+          VITE_CODM_CLOUD_URL: ${{ vars.CODM_CLOUD_URL }}
+          # Telemetria de produto (SP4). O Vite resolve VITE_* no BUILD: sem estas linhas o app sai
+          # com a chave vazia e a telemetria fica desligada EM SILÊNCIO — sem erro, só um dashboard
+          # que nunca enche. Repo variables, não secrets: a chave de ingest do PostHog é pública.
+          VITE_POSTHOG_KEY: ${{ vars.VITE_POSTHOG_KEY }}
+          VITE_POSTHOG_HOST: ${{ vars.VITE_POSTHOG_HOST }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # Chave gerada com --ci = senha vazia; sem esta linha o build tenta abrir um prompt de
+          # senha num runner sem TTY e morre com "Device not configured" (medido localmente).
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+          # Assinatura Apple — NÃO é a chave acima (aquela é minisign, do updater). Sem estas o
+          # build sai ad-hoc, e o grant de TCC de um app ad-hoc fica preso ao cdhash: todo update
+          # invalida a permissão de disco e os agentes gerados pelo daemon perdem o workspace
+          # (medido na v0.2.0, 07/08/2026 — "System Policy: deny file-read-data /Users/.../Desktop").
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: "Developer ID Application: BK COMPANY LTDA (V4F6T68S5B)"
+          # Notarização: sem ela o Gatekeeper barra o .dmg baixado do R2.
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: V4F6T68S5B
+
+        run: cd packages/app/tauri && nice -n 10 bun x tauri build --config "{\"version\":\"${{ steps.v.outputs.version }}\"}"
+
+      # A conf fica com signingIdentity '-' de propósito (rail DSK-10: build local não deve exigir
+      # certificado); a identidade real vem do APPLE_SIGNING_IDENTITY acima, que a sobrepõe. Se essa
+      # sobreposição falhar, o app sai ad-hoc e o defeito é INVISÍVEL no artefato — só aparece na
+      # máquina do usuário, quando o TCC prende a permissão de disco ao cdhash e os agentes perdem o
+      # workspace no update seguinte (v0.2.0, 07/08/2026). Verificar na saída é a única defesa.
+      #
+      # O caminho sai de $CARGO_TARGET_DIR como o `stage` abaixo: o target mora FORA do workspace
+      # desde que o CI virou self-hosted, e um gate apontando para o caminho antigo não acharia o
+      # bundle — falharia por motivo errado, ou pior, passaria por não encontrar nada para reprovar.
+      - name: assinatura Apple presente no bundle
+        run: |
+          APP=$(ls -d "$CARGO_TARGET_DIR"/release/bundle/macos/*.app | head -1)
+          if ! codesign -dv --verbose=2 "$APP" 2>&1 | grep -q "^Authority=Developer ID Application"; then
+            echo "::error::$APP saiu SEM Developer ID (provavelmente ad-hoc). Confira os secrets APPLE_*."
+            codesign -dv --verbose=2 "$APP" 2>&1 | head -20
+            exit 1
+          fi
+          codesign -dv --verbose=2 "$APP" 2>&1 | grep -E "^Authority=|^TeamIdentifier="
+
+      # Nomes FIXOS de asset — a URL do manifest não muda entre versões (config/updater.ts).
+      # Os caminhos derivam de $CARGO_TARGET_DIR (definido lá em cima), nunca do antigo
+      # `src-tauri/target` fixo: quem decide onde o cargo escreve é aquela variável, e um caminho
+      # repetido aqui volta a divergir dela no dia em que ela mudar — foi exatamente o que
+      # aconteceu ao movê-la, com o `tauri build` verde e o `stage` falhando logo depois.
+      - name: stage
+        run: |
+          mkdir -p dist-release
+          cp "$CARGO_TARGET_DIR"/release/bundle/macos/*.app.tar.gz dist-release/codm-aarch64.app.tar.gz
+          cp "$CARGO_TARGET_DIR"/release/bundle/macos/*.app.tar.gz.sig dist-release/codm-aarch64.app.tar.gz.sig
+          cp "$CARGO_TARGET_DIR"/release/bundle/dmg/*.dmg dist-release/codm-aarch64.dmg
+
+      - name: manifest
+        run: >
+          bun scripts/release/make-manifest.ts
+          --version "${{ steps.v.outputs.version }}"
+          --url "https://pub-ae0c8cac60c94920b35464575c09e67d.r2.dev/beta/codm-aarch64.app.tar.gz"
+          --sig-file dist-release/codm-aarch64.app.tar.gz.sig
+          --notes "beta — main@${{ github.sha }}"
+          --out dist-release/latest.json
+
+      # Prerelease ROLANTE: recria a release `beta` inteira a cada merge. Prerelease nunca é vista
+      # pelo endpoint stable (releases/latest ignora prereleases por natureza).
+      - name: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete beta --yes --cleanup-tag || true
+          gh release create beta --prerelease \
+            --title "beta ${{ steps.v.outputs.version }}" \
+            --notes "Canal beta (main@${{ github.sha }}). Assinado com Developer ID e notarizado — abre sem bypass. Instalação e canais: docs/RELEASE.md." \
+            dist-release/codm-aarch64.app.tar.gz \
+            dist-release/codm-aarch64.app.tar.gz.sig \
+            dist-release/codm-aarch64.dmg \
+            dist-release/latest.json
+
+      # A ORIGEM PÚBLICA é o R2 (spec SP2.5): repo privado ⇒ assets do GitHub 404am anônimos —
+      # tanto para o download da landing quanto para o auto-updater. O canal beta é ROLANTE:
+      # sobrescreve os mesmos objetos a cada merge; a versão vive no latest.json.
+      - name: upload r2
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx --yes wrangler@4.120.0 r2 object put codm-releases/beta/codm-aarch64.app.tar.gz --file dist-release/codm-aarch64.app.tar.gz --content-type application/gzip --remote
+          npx --yes wrangler@4.120.0 r2 object put codm-releases/beta/codm-aarch64.app.tar.gz.sig --file dist-release/codm-aarch64.app.tar.gz.sig --content-type text/plain --remote
+          npx --yes wrangler@4.120.0 r2 object put codm-releases/beta/codm-aarch64.dmg --file dist-release/codm-aarch64.dmg --content-type application/x-apple-diskimage --remote
+          npx --yes wrangler@4.120.0 r2 object put codm-releases/beta/latest.json --file dist-release/latest.json --content-type application/json --remote

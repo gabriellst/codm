@@ -1,0 +1,17 @@
+[
+	{
+		"id": "local",
+		"order": 1,
+		"price": { "monthly": 0 },
+		"copy": {
+			"en": {
+				"name": "Local",
+				"blurb": "For anyone running agents on their own computer — the whole product, no hidden tier."
+			},
+			"pt": {
+				"name": "Local",
+				"blurb": "Para quem roda os agentes no próprio computador — o produto inteiro, sem tier escondido."
+			}
+		}
+	}
+]

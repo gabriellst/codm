@@ -1,0 +1,123 @@
+{
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"name": "app-react",
+	"sourceRoot": "packages/app/react/src",
+	"projectType": "application",
+	"targets": {
+		"tsc": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"dependsOn": [
+				{
+					"projects": "client-typescript",
+					"target": "build"
+				}
+			],
+			"inputs": [
+				"{projectRoot}/src/**/*",
+				"{projectRoot}/tsconfig.json",
+				"{projectRoot}/tsr.config.json",
+				"^production"
+			],
+			"options": {
+				"command": "bun x tsc --noEmit",
+				"cwd": "packages/app/react"
+			}
+		},
+		"build": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"dependsOn": ["tsc"],
+			"inputs": ["production", "{projectRoot}/vite.config.ts", "{projectRoot}/index.html"],
+			"outputs": ["{projectRoot}/dist"],
+			"options": {
+				"command": "vite build",
+				"cwd": "packages/app/react"
+			}
+		},
+		"build-spa": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"dependsOn": ["tsc"],
+			"inputs": ["production", "{projectRoot}/vite.config.ts"],
+			"outputs": ["{projectRoot}/dist"],
+			"options": {
+				"command": "CODM_DESKTOP=true vite build && if [ ! -f dist/client/_shell.html ]; then echo 'build-spa: dist/client/_shell.html missing — TanStack Start renamed its SPA shell output; update build-spa in project.json' >&2; exit 1; fi && cp dist/client/_shell.html dist/client/index.html",
+				"cwd": "packages/app/react"
+			}
+		},
+		"dev": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"dependsOn": [
+				{
+					"projects": "client-typescript",
+					"target": "build"
+				}
+			],
+			"options": {
+				"command": "CODM_DEV_OVERLAYS=true vite --host",
+				"cwd": "packages/app/react"
+			}
+		},
+		"dev-spa": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"dependsOn": [
+				{
+					"projects": "client-typescript",
+					"target": "build"
+				}
+			],
+			"options": {
+				"command": "CODM_DEV_OVERLAYS=true PORT= CODM_DESKTOP=true CODM_DESKTOP_DEV=true vite --host",
+				"cwd": "packages/app/react"
+			}
+		},
+		"storybook-build": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"//inputs": "mesma superfície do bundle vite de `build` + .storybook/** (main.ts/preview.tsx dirigem o que é buildado). Os primitivos + suas stories saíram para packages/app/ui (limpeza de identidade: @/components/ui/* → @codm/app-ui/*), mas `@codm/app-ui` é uma dependência DECLARADA de app-react (package.json) — nx resolve isso no grafo de projetos e `^production` (inputs de produção de toda dependência) inclui o src de app-ui automaticamente. É por isso que scripts/fidelity.ts NÃO precisa de --skip-nx-cache (o bk precisava porque suas stories moravam noutro workspace SEM essa relação de dependência declarada nos inputs).",
+			"inputs": ["production", "^production", "{projectRoot}/.storybook/**/*"],
+			"outputs": ["{projectRoot}/storybook-static"],
+			"options": {
+				"command": "storybook build",
+				"cwd": "packages/app/react"
+			}
+		},
+		"test": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"dependsOn": [
+				{
+					"projects": "client-typescript",
+					"target": "build"
+				}
+			],
+			"inputs": [
+				"{projectRoot}/src/**/*",
+				"{projectRoot}/tests/**/*",
+				"{projectRoot}/scripts/**/*",
+				"{projectRoot}/bunfig.toml",
+				"^production"
+			],
+			"//env": "NODE_ENV IS PINNED, and it is a correctness fix, not hygiene. `bun test` defaults to NODE_ENV=test, but nx is launched from the REPO ROOT, where bun loads the root .env (NODE_ENV=development) — and an inherited value beats bun's default. The suite then meant two different things depending on where you launched it: `bun test` in this package = 270 pass / 6.95s; `bun run test` via nx = 267 pass, 3 FAIL, 15.9s. Bisected 2026-08-18: VITE_API_URL alone changes nothing, NODE_ENV=development alone reproduces all three failures plus the 2.3x slowdown, because React/Storybook composeStories/msw each branch on it — a dev-mode module graph is a different program under test. Previously misdiagnosed as a load-sensitive flake (the failing set moves, and one case lands within ~3ms of a timeout, which disguises it well); it is deterministic and single-cause. tests/setup.ts asserts the same invariant so a violation names itself in one sentence instead of surfacing as three unrelated story failures.",
+			"options": {
+				"command": "bun test && bun run test:cross-service",
+				"cwd": "packages/app/react",
+				"env": {
+					"NODE_ENV": "test"
+				}
+			}
+		},
+		"lint": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"inputs": ["{projectRoot}/src/**/*", "{workspaceRoot}/eslint.config.ts"],
+			"options": {
+				"command": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+				"cwd": "packages/app/react"
+			}
+		}
+	}
+}

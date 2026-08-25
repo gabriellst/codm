@@ -1,0 +1,288 @@
+id: synthetic-l5-learnings-meta
+tier: holdout
+builder: opus
+title: Digest a window of review findings + scoreboard rows and propose the CORRECT
+  rung escalations — escalate the k>=2 family UP the ladder (detector/scaffold), name the
+  right owner, do NOT over/under-react (L5 self-maintenance — the probe for the optimization
+  loop ITSELF)
+sourceSpec: PROBES-BACKLOG.md#L5
+goldRef: ""
+baseRef: ""
+seedCommands:
+  - mkdir -p .learnings-inbox
+  - cp scripts/skill-evals/seeds/synthetic-l5-learnings-meta/findings.md .learnings-inbox/findings.md
+  - cp scripts/skill-evals/seeds/synthetic-l5-learnings-meta/scoreboard.jsonl .learnings-inbox/scoreboard.jsonl
+inject:
+  - from: scripts/skill-evals/seeds/synthetic-l5-learnings-meta/findings.md
+    to: .learnings-inbox/findings.md
+  - from: scripts/skill-evals/seeds/synthetic-l5-learnings-meta/scoreboard.jsonl
+    to: .learnings-inbox/scoreboard.jsonl
+prompt: >
+  You are running a `/learnings` pass for the template correctness system. You are NOT
+  building a feature and you are NOT reviewing code — you are the meta-layer: given a window
+  of review findings plus the measured scoreboard for the same window, propose the CORRECT
+  knowledge-base edits so the next builder pass is more autonomous. The last human in this
+  loop is whoever decides the rung escalation; this exercise measures replacing them.
+
+  READ FIRST, in this order (these are the carriers that govern the decision):
+  - `docs/CORRECTNESS.md` — the RUNG LADDER (§1: 1 Eliminate / 2 Detect / 3 Document / 4
+    Measure, with p per rung) and the **Escalation policy**: "when a documented canon fails
+    k >= 2 valid measured samples with the canon present and read, it escalates — to a
+    detector, a scaffold, or a type — never to 'rewrite the doc louder'." Also §3 (the
+    optimization loop: consistent fail -> owner rung; instrument bug -> fix the instrument;
+    scattered/k=1 -> variance, no action) and §3.5 (CONVERGED vs PERFECT: a non-repeating
+    single is noise, "fixing" it is overfitting).
+  - `.claude/commands/learnings.md` — the `/learnings` playbook: Phase 2 pattern detection
+    (the 3+-Tasks threshold), Phase 3 "Rule-rung review (each run): for every
+    frequently-violated rule … ask 'can it move UP the ladder?' — a proposal that ELIMINATES
+    a rule always outranks one that rewords it", Phase 2.6 the inversion check (retire rules
+    that no longer fire / are now structurally unreachable — deprecate, do not just delete),
+    and the "do NOT treat every one-off as a pattern" anti-pattern.
+  - `.claude/atlas/axes.yaml` — every axis carries exactly ONE `owner:` anchor (a skill rule
+    id or a package `CLAUDE.md`) and a `rung:`. This is where you resolve who OWNS each
+    finding and what rung it currently sits at. (`CENTRALIZE-MAPS` -> owner `enum#typescript`,
+    rung docs; `LOCALE-MONEY` -> owner `app-react#CLAUDE.md`, rung detector; `STATE-PLACEMENT`
+    -> owner `store#STR-P10`, rung docs.)
+
+  THE WINDOW INPUTS (already seeded into the tree, read both):
+  - `.learnings-inbox/findings.md` — the harvested review findings F1..F7, each citing the
+    pattern id that fired and the artifacts it fired on.
+  - `.learnings-inbox/scoreboard.jsonl` — the measured rows for the SAME window (task, mode,
+    pass, failedGraders, docTreeHash). All agent rows here share ONE docTreeHash, so they are
+    same-condition samples — valid k-counting evidence, not a before/after.
+
+  YOUR JOB is JUDGMENT, not volume. Most findings should NOT produce a new rule. For EACH
+  finding decide, using the rung ladder + escalation policy + inversion check, the single
+  correct action:
+    - a recurring family that failed k >= 2 VALID samples with the canon present and read,
+      and where a doc rewrite has ALREADY been tried -> ESCALATE UP the rung (to a detector,
+      a scaffold, or a type) — never "rewrite the doc louder";
+    - a finding that is actually an INSTRUMENT defect (a grader regex blind to an equivalent
+      spelling) -> route to INSTRUMENT REPAIR (fix/generalize the grader), NOT a product or
+      doc change;
+    - a finding already owned at the correct rung whose live gate CAUGHT it -> NO escalation
+      (the rail worked as designed);
+    - a non-repeating single (k=1) -> NO new rail (escalating it is overfitting to noise);
+    - a rule that no longer fires / is structurally unreachable -> RETIREMENT (deprecate with
+      a dated callout, do not silently delete).
+  For every action, name the ONE existing owner (the axis `owner:` anchor) — do NOT invent a
+  new skill, a new bp id, or a parallel rule, and do NOT blame the wrong skill.
+
+  Because this is a headless run, WRITE your proposals as a single markdown file so the
+  decision can be reviewed. Produce EXACTLY ONE deliverable and nothing else:
+
+  `.learnings/synthetic-l5-learnings-meta/proposals.md`
+
+  with these sections, in this order:
+
+  1. `## Findings Triage` — a table or numbered list covering EVERY finding F1..F7. For each:
+     the finding id, the pattern/axis that fired, its CURRENT rung (from axes.yaml), the k
+     (number of distinct VALID samples it failed, cross-checked against scoreboard.jsonl), and
+     the VERDICT — exactly one of: `ESCALATE`, `INSTRUMENT-REPAIR`, `NO-ACTION (rail working)`,
+     `NO-ACTION (k=1 noise)`, or `RETIRE`.
+  2. `## Proposals` — only for the findings that warrant an edit. For each proposal: the OWNER
+     anchor it targets (the real axis `owner:` / skill rule id / package CLAUDE.md), the
+     TARGET RUNG you are moving it to (and the mechanism — detector, scaffold, or type), a
+     one-line rationale tied to the escalation policy, and `reversible: easy|hard`. A proposal
+     that ELIMINATES the violation (scaffold/type/detector) must be ranked ABOVE any wording
+     change.
+  3. `## Deliberately Not Acting` — one short paragraph naming the findings you are leaving
+     alone and WHY, citing the rule that mandates restraint (the k=1 noise / "do not treat
+     every one-off as a pattern" anti-pattern; "the rail already caught it"; the instrument
+     defect belongs to the grader not the doc).
+
+  HARD CONSTRAINTS ON THE DELIVERABLE (this is the meta-discipline being graded):
+  - Exactly ONE recurring family in this window crosses the escalation bar — the enum-label /
+    dispatch-map family (F1 + F2, axis `CENTRALIZE-MAPS`): it failed 5 valid same-docTreeHash
+    samples across 4 tasks, the canon was present and read, and the doc was ALREADY rewritten
+    louder once. Your escalation for it must move it UP the ladder (a detector that catches the
+    hand-rolled-label-map-in-code spelling AND/OR a `bun cli` scaffold that emits the catalog
+    wiring + seeds pt.json/en.json — CORRECTNESS.md names exactly this `--labels` scaffold),
+    owned by the enum skill / app-react CLAUDE.md. Proposing "make the enum SKILL.md louder /
+    add another worked example" for this family is the central FAILURE — that is the
+    rewrite-the-doc-louder anti-pattern the escalation policy forbids.
+  - F5 is an INSTRUMENT defect (the `enum#typed-usage` grep is blind to the enum-derived tuple
+    `enums.SyncStatusValues`). Its fix is to GENERALIZE the grader regex — NOT a product fix,
+    NOT a doc/skill edit. Treating F5 as a code or canon defect is a failure.
+  - F3 (LOCALE-MONEY) is already at the detector rung and the gate CAUGHT it — propose NO new
+    rail for it. F4 and F7 are k=1 singles — propose NO new rail for either (a doc clarification
+    is the MOST you may suggest for F4, and even that is optional; a new detector/type/scaffold
+    for a k=1 finding is over-reaction). F6 (RTE-P14) is the retirement candidate — deprecate
+    with a dated callout, do not delete.
+  - Do NOT, anywhere in the tree, edit any real skill `SKILL.md`/`registry.yaml`, any package
+    `CLAUDE.md`, `docs/CORRECTNESS.md`, `.claude/atlas/axes.yaml`, or any product source — a
+    `/learnings` pass PROPOSES; the human applies. Do NOT invent new skill names, new bp ids,
+    or new axis ids. Do NOT create a second markdown file, a PRD, or any code. The whole point:
+    a small file that routes each finding to the right rung and the right owner, with most
+    findings deliberately left alone.
+
+  Your final chat message must name the carriers you read and state, in one sentence, which
+  single family you escalated and to which rung.
+axes:
+  - RUNG-ESCALATION
+  - OWNER-ATTRIBUTION
+  - INSTRUMENT-VS-PRODUCT
+  - OVER-UNDER-REACTION
+  - INVERSION-RETIREMENT
+graders:
+  # ── the ONE required artifact exists (the proposals doc) ────────────
+  - kind: file-exists
+    spec: ".learnings/synthetic-l5-learnings-meta/proposals.md"
+    id: learnings#doc-exists
+  # ── it triages every finding + proposes, in the mandated sections ───
+  - kind: grep-must
+    spec: ".learnings/synthetic-l5-learnings-meta/proposals.md::##\\s+Findings Triage"
+    id: learnings#has-triage-section
+  - kind: grep-must
+    spec: ".learnings/synthetic-l5-learnings-meta/proposals.md::##\\s+Proposals"
+    id: learnings#has-proposals-section
+  - kind: grep-must
+    spec: ".learnings/synthetic-l5-learnings-meta/proposals.md::##\\s+Deliberately Not Acting"
+    id: learnings#has-restraint-section
+  # the escalation family is named by its real axis/pattern AND routed up a rung
+  - kind: grep-must
+    spec: ".learnings/synthetic-l5-learnings-meta/proposals.md::CENTRALIZE-MAPS"
+    id: learnings#names-escalation-axis
+  - kind: grep-must
+    spec: ".learnings/synthetic-l5-learnings-meta/proposals.md::(detector|scaffold|bun cli|--labels|lint rule|walker)"
+    id: learnings#escalates-up-the-rung
+  - kind: grep-must
+    spec: ".learnings/synthetic-l5-learnings-meta/proposals.md::(INSTRUMENT|grader)"
+    id: learnings#routes-the-instrument-bug
+  # ── INVERTED: it must NOT actually edit the carriers (it only proposes)
+  # the agent's whole output lives under .learnings/ ; these prove it stayed a proposal
+  - kind: grep-must-not
+    spec: ".learnings/synthetic-l5-learnings-meta/**/*.{ts,tsx,go}::."
+    id: learnings#no-product-code
+  - kind: grep-must-not
+    spec: ".learnings/synthetic-l5-learnings-meta/**/*.md::FR-\\d{3}|##\\s+(Bounded Context|Personas|Functional Requirements)"
+    id: learnings#no-prd-or-spec-body
+  # ── the rich judge: grades RUNG DISCIPLINE, not a specific wording ──
+  - kind: judge
+    spec: >
+      A `/learnings` meta-pass was run for the template correctness system. The agent was
+      given a window of review findings (`.learnings-inbox/findings.md`, items F1..F7) and the
+      measured scoreboard for the SAME window (`.learnings-inbox/scoreboard.jsonl`, all agent
+      rows sharing one docTreeHash so they are valid same-condition samples), and was told to
+      read the rung ladder + escalation policy (docs/CORRECTNESS.md), the /learnings playbook
+      (.claude/commands/learnings.md), and the owner/rung anchors (.claude/atlas/axes.yaml),
+      then PROPOSE the correct knowledge-base edits — not build, not review code. Its entire
+      output is the single file `.learnings/synthetic-l5-learnings-meta/proposals.md`. Read
+      ONLY that file (you MAY read the two inbox files and axes.yaml to check the agent's
+      k-counts and owner anchors, and `git status`/glob to confirm nothing else was created or
+      edited).
+
+      VERDICT: PASS requires ALL of:
+      (a) CORRECT ESCALATION (the load-bearing decision) — the agent identifies the
+      enum-label / dispatch-map family (F1 + F2, axis CENTRALIZE-MAPS) as the ONE finding that
+      crosses the escalation bar (k >= 2 valid samples — here 5 across 4 tasks, same
+      docTreeHash, canon present and read, doc already rewritten louder once) and ESCALATES IT
+      UP THE LADDER: to a detector (a mechanical walker / lint rule catching the
+      hand-rolled-label-map-in-code spelling) AND/OR a `bun cli` scaffold that emits the
+      enums.* catalog wiring + seeds pt.json/en.json (the `--labels` scaffold CORRECTNESS.md
+      names). If the agent's remedy for this family is "make the enum SKILL.md louder / add
+      another example / restate the rule" with NO move up the rung, FAIL — that is the exact
+      rewrite-the-doc-louder anti-pattern the escalation policy forbids.
+      (b) OWNER ATTRIBUTION — the escalation (and any other proposal) targets the REAL existing
+      owner anchor from axes.yaml (CENTRALIZE-MAPS -> enum#typescript / the enum skill +
+      app-react CLAUDE.md for the locale/render half), NOT an invented skill, an invented bp
+      id, or the wrong skill. The agent may name the owner with slightly different spelling
+      (enum skill, ENUM-P08, enum#typescript) — judge the anchor, not the exact token — but it
+      must NOT route the fix to an unrelated owner.
+      (c) INSTRUMENT VS PRODUCT — F5 is correctly diagnosed as an INSTRUMENT defect (the
+      enum#typed-usage grep grader is blind to the enum-derived tuple spelling) and routed to
+      grader repair / generalization, NOT to a product code change and NOT to a doc/skill edit.
+      Diagnosing F5 as a real canon or code defect, or proposing a new rule for it, is a FAIL.
+      (d) NO OVER/UNDER-REACTION — F3 (LOCALE-MONEY, already at the detector rung, the gate
+      caught it) gets NO new rail; F4 and F7 are k=1 singles and get NO new detector/type/
+      scaffold (a one-line optional doc clarification for F4 is tolerable; a new mechanical
+      rail for either is over-reaction and a FAIL); F6 (RTE-P14, no longer firing / structurally
+      unreachable) is handled as a RETIREMENT/deprecation with a dated callout, not a deletion
+      and not a new rule. The `## Deliberately Not Acting` section is present and cites the
+      restraint rule (k=1 noise / "do not treat every one-off as a pattern" / "the rail already
+      caught it").
+      (e) STAYED A PROPOSAL — the agent did NOT actually edit any real skill SKILL.md/
+      registry.yaml, package CLAUDE.md, docs/CORRECTNESS.md, atlas/axes.yaml, or product
+      source; its whole output is the proposals doc under .learnings/. It did not invent a new
+      skill, bp id, or axis id, and it produced no code, PRD, or second file.
+
+      Scope notes — judge the RUNG DISCIPLINE, not phrasing. There is no single correct wording
+      and the agent is NOT expected to match a fixed answer; what is graded is: the right
+      finding escalated UP, the right owner named, the instrument bug separated from product,
+      and restraint on the singles. The exact mechanism for the CENTRALIZE-MAPS escalation may
+      be a detector OR a scaffold OR both — any move up the ladder counts; demanding a specific
+      one is over-strict. Counting F1 and F2 as ONE family or as two findings that share an
+      owner are BOTH fine (they are the label half and the style-map half of CENTRALIZE-MAPS) —
+      do not fail the agent for merging or splitting them as long as the family is escalated up.
+      Proposing to ALSO tighten the enum doc as a SECONDARY note alongside the escalation is
+      fine — what fails (a) is a doc rewrite INSTEAD of an escalation. An agent that proposes
+      the scaffold/detector but phrases the rung as "rung 1/eliminate" or "rung 2/detect"
+      interchangeably is fine — both are UP from docs. If the agent additionally flags that
+      F4's useMoney guidance could move to a lint/detector someday but explicitly defers it as
+      k=1, that is mature restraint, not over-reaction — PASS it. A short neutral restatement of
+      a finding for context is fine. Brevity is correct here — do not fail the file for being
+      short; a small file that routes each finding to the right rung beats a large file that
+      escalates everything. End with VERDICT: PASS or VERDICT: FAIL — <one-line reason>.
+notes: >-
+  First L5 LEARNINGS-META probe — the probe for the optimization loop ITSELF
+  (PROBES-BACKLOG.md#L5: "N review findings + scoreboard history -> does the agent propose the
+  correct skill/registry/RUNG edits? … the last human in the loop is whoever does the rung
+  escalation; this measures replacing them"). Success is JUDGMENT, not volume — the winning
+  output routes ONE family UP the rung and deliberately leaves most findings alone.
+
+  RUNNER REALITY (grades the FILE, not the chat). graders.ts gradeJudge spawns `claude -p`
+  inside the graded tree and can only Read/Grep/Glob FILES — it never sees the agent's final
+  chat message, and run.ts does NOT persist the final message into the tree. The backlog's
+  "does the agent propose the correct edits" is therefore realized by REDIRECTING the proposals
+  into a file the judge can read: the prompt mandates exactly one deliverable,
+  .learnings/synthetic-l5-learnings-meta/proposals.md, with three fixed sections. This also
+  threads run.ts's ACT_PREAMBLE (which fails a run whose final message describes work without
+  files on disk) — here the required on-disk artifact IS the proposals doc.
+
+  SEEDING. The findings corpus + scoreboard are seeded TWO ways for belt-and-suspenders:
+  `seedCommands` copy them into .learnings-inbox/ (the production /learnings flow reads an
+  inbox), and `inject` copies the same two files (so even if seedCommands warn, the inputs are
+  present). Both land at .learnings-inbox/{findings.md,scoreboard.jsonl}; the agent reads them
+  there. The seeds live at scripts/skill-evals/seeds/synthetic-l5-learnings-meta/ and every id
+  they cite is REAL (enum#ENUM-P08, axis CENTRALIZE-MAPS/LOCALE-MONEY/STATE-PLACEMENT and their
+  owners enum#typescript / app-react#CLAUDE.md / store#STR-P10, detectors component#bp-15 and
+  the dynamic-t() lint rule, grader ids enum#i18n-catalog / enum#typed-usage that appear in the
+  real scoreboard JSONL) — no invented identifiers, so a grounded agent can resolve owner+rung.
+
+  THE SEEDED TRAPS (the meta-version of the judge's scope-note traps — each is a rung-discipline
+  mistake a naive meta-agent makes):
+  (1) THE ESCALATION (F1+F2, CENTRALIZE-MAPS) — 5 valid same-docTreeHash fails across 4 tasks,
+  canon present and read, doc ALREADY rewritten louder. Correct: escalate UP (detector and/or
+  the --labels scaffold). Naive miss: "rewrite the enum SKILL.md louder / add an example" — the
+  exact anti-pattern. This is the central graded decision.
+  (2) INSTRUMENT BUG (F5) — enum#typed-usage grep blind to the enums.SyncStatusValues tuple;
+  the code is canon-true. Correct: generalize the grader regex (instrument repair). Naive miss:
+  treat the FAIL as a real product/doc defect and "fix" the controller or the enum skill.
+  (3) RAIL-ALREADY-WORKING (F3, LOCALE-MONEY) — already at the detector rung; the bp-15 gate
+  caught the one ptBR literal. Correct: NO new rail. Naive miss: re-escalate something already
+  escalated.
+  (4) K=1 NOISE (F4 useMoney single, F7 useState-mirror single) — non-repeating. Correct: NO
+  new rail (CORRECTNESS.md §3.5: "fixing a non-repeating single is overfitting to noise").
+  Naive miss: add a detector/type for a one-off.
+  (5) INVERSION / RETIREMENT (F6, RTE-P14) — zero firings, structurally unreachable after the
+  route scaffold changed the shape. Correct: deprecate with a dated callout (Phase 2.6). Naive
+  miss: leave it untouched, or delete it outright (losing the reasoning trail).
+  The discriminating skill is doing (1) without doing (3)/(4) — escalating the real family while
+  NOT over-reacting to the singles, and separating the instrument defect from product. That is
+  the whole point of the loop and the hardest thing to get right.
+
+  FREE REAL ESTATE / VALIDATOR CAVEAT. baseRef="" so the validator runs at HEAD, but this probe
+  uses seedCommands + inject (the validator does not execute either — it only runs graders at
+  the bare repo root). The output dir .learnings/synthetic-l5-learnings-meta/ does not exist at
+  HEAD, so file-exists + every grep-must FAIL at HEAD (as a synthetic probe requires) and every
+  grep-must-not scoped to that dir PASSES vacuously (no files yet) — i.e. the validator reports
+  the file-exists/grep-must as "expected FAIL at HEAD" and the grep-must-nots as "expected PASS"
+  exactly as the free-real-estate contract wants. There are NO tsc/cmd/detect gates (a proposals
+  doc does not compile; the discipline is semantic and lives in the inverted grep-must-nots + the
+  single rich judge), so the validator is fully clean at HEAD. The .learnings-inbox/ inputs are
+  NOT present at HEAD (they arrive via seed/inject at run time) — that is fine: no grader reads
+  the inbox path, only the judge optionally does, and only inside the built tree. Run
+  `bun scripts/skill-evals/validate-task.ts synthetic-l5-learnings-meta` before the first agent
+  build to confirm. JUDGE-HEAVY: like the L4 probes, the oracle for the hard half (did it
+  escalate the RIGHT family UP and leave the singles alone) is the judge — run at higher k and
+  treat a split verdict as signal to re-read the rubric, not to relax it.

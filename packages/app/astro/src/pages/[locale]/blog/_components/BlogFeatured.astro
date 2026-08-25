@@ -1,0 +1,62 @@
+---
+import type { CollectionEntry } from 'astro:content'
+import Icon from '~/components/Icon.astro'
+import type { Locale } from '~/i18n'
+import { CATEGORY_LABELS } from '../_content/categories'
+import { readingTimeMinutes } from '../_content/readingTime'
+
+interface Props {
+	post: CollectionEntry<'blog'>
+	href: string
+	locale: Locale
+	minReadSuffix: string
+	readPostLabel: string
+}
+
+const { post, href, locale, minReadSuffix, readPostLabel } = Astro.props
+const { title, description, publishedAt, category } = post.data
+const dateLabel = publishedAt.toLocaleDateString(locale === 'pt' ? 'pt-BR' : 'en-US', {
+	day: 'numeric',
+	month: 'short',
+	year: 'numeric',
+})
+const minutes = readingTimeMinutes(post.body)
+---
+
+<!-- D3 (design/codm.pen `ji2y3` → `p7sUnF`, "Post em destaque"): the newest post gets a
+     two-pane card — illustration left, copy right — above the regular grid. -->
+<a
+	href={href}
+	class="group flex flex-col overflow-hidden rounded-asymmetric-xl border border-[var(--border)] bg-[var(--background)] shadow-[var(--shadow-float)] md:h-[340px] md:flex-row"
+>
+	<div
+		class="flex h-[220px] items-center justify-center md:h-auto md:w-[560px] md:shrink-0"
+		style={{
+			backgroundColor: 'var(--illustration-surface-a)',
+			backgroundImage:
+				'radial-gradient(140% 110% at 25% 20%, #4a7a16E6, #4a7a1600), radial-gradient(120% 90% at 85% 90%, #2c4a12CC, #2c4a1200)',
+		}}
+	>
+		<div class="w-[260px] -rotate-1 rounded-[6px_16px_16px_16px] bg-white p-[12px_16px] shadow-[var(--shadow-float)] md:w-[300px]">
+			<p class="m-0 text-[13px] leading-[1.45] text-[var(--foreground)] md:text-[14px]">{description}</p>
+		</div>
+	</div>
+	<div class="flex flex-1 flex-col justify-center gap-[14px] p-[28px] md:p-[34px_38px]">
+		<div class="flex items-center gap-[10px]">
+			<span class="rounded-[12px_12px_12px_4px] bg-[var(--secondary)] px-[11px] py-1 text-[11.5px] font-bold text-[var(--secondary-foreground)]">
+				{CATEGORY_LABELS[locale][category]}
+			</span>
+			<span class="font-mono text-[11.5px] text-[var(--caption-foreground)]">
+				{dateLabel} · {minutes} {minReadSuffix}
+			</span>
+		</div>
+		<h2 class="m-0 text-balance text-[length:clamp(24px,3.5vw,34px)] font-extrabold leading-[1.15] tracking-[-1px] text-[var(--foreground)]">
+			{title}
+		</h2>
+		<p class="m-0 text-pretty text-[14.5px] leading-[1.55] text-[var(--muted-foreground)]">{description}</p>
+		<span class="inline-flex items-center gap-[7px] text-[14px] font-bold text-[var(--secondary-foreground)]">
+			{readPostLabel}
+			<Icon name="arrow-right" size={15} class="transition-transform group-hover:translate-x-1" />
+		</span>
+	</div>
+</a>

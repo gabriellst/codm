@@ -1,0 +1,51 @@
+name: correctness
+
+# Rung-2 merge gate (docs/CORRECTNESS.md §4): the mechanical detectors run on every push /
+# PR. New violations gate; pre-existing debt is frozen in the per-detector *.baseline.json
+# files and ratcheted down over time. Companion to tsc + test, which run in the same job.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  detect:
+    # Mesmo runner self-hosted dos releases. Este job é BARATO no ubuntu (multiplicador 1x) e
+    # foi o macOS que estourou a cota em 2026-08-07 — mas a cota é uma só, então enquanto ela
+    # não reseta NADA roda na nuvem, gate de merge incluso. Aqui o custo é zero e o gate volta
+    # a existir. Trade-off consciente: o gate passa a depender do Mac estar ligado. Para voltar
+    # à nuvem quando a cota resetar, basta trocar esta linha por `runs-on: ubuntu-latest`.
+    runs-on: [self-hosted, macOS, ARM64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # registry-scan / slice-closure walk `git ls-files` — need full history-free but
+          # complete tree; default fetch-depth 1 is fine since they read the working tree.
+          fetch-depth: 1
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # O //go:embed do gateway (public/embed.go) aponta docs/openapi.json — GERADO, presente em
+      # todo checkout de dev e ausente num runner limpo. Sem isto o type-check (que compila o Go)
+      # morre com "no matching files found" — mesmo fix do release-beta (2026-08-07).
+      - name: Generated embed inputs (openapi)
+        run: |
+          cp -n .env.example .env
+          bun emit-openapi
+
+      # `nice` porque o runner divide a máquina com o daemon de produção do founder: o CI cede
+      # CPU em vez de disputar. Sem isto um `bun run test` deixa o app perceptivelmente lento.
+      - name: Mechanical detectors (rung-2 gate)
+        run: nice -n 10 bun run detect
+
+      - name: Type-check
+        run: nice -n 10 bun tsc
+
+      - name: Tests
+        run: nice -n 10 bun run test

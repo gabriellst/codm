@@ -1,0 +1,42 @@
+---
+import type { CollectionEntry } from 'astro:content'
+import Icon from '~/components/Icon.astro'
+
+interface Props {
+	t: CollectionEntry<'landing'>['data']['capabilities']
+}
+
+const { t } = Astro.props
+---
+
+<!-- D3 (design/codm.pen `ji2y3` → `eifCO`, "Seção — Capacidades (bento)"): two rows of
+     three `--card`-surface tiles, each with an icon+label tag, a title, and body copy —
+     replaces the pre-D3 flat 6-card grid + mono chip row. -->
+<section id="features" class="px-6 pb-24 pt-12 md:px-16">
+	<div class="mx-auto max-w-[1160px]">
+		<h2 class="m-0 text-balance text-[length:clamp(28px,4.5vw,40px)] font-extrabold leading-[1.12] tracking-[-1.2px]">
+			<span class="block text-[var(--foreground)]">{t.titleBold}</span>
+			<span class="block font-light text-[var(--caption-foreground)]">{t.titleLight}</span>
+		</h2>
+		{/* D-motion (2026-08-25) Decision 7 — "cards de features" get `reveal-back` (back-eased,
+		    staggered entrance) + `card-hover-lift` (Decision 4). Below the fold: no `is-inview` in
+		    the markup — BaseLayout's IntersectionObserver adds it on scroll-into-view. */}
+		<div class="mt-11 grid gap-5 sm:grid-cols-2 md:grid-cols-3">
+			{
+				t.cards.map((card, i) => (
+					<div
+						class="reveal-back reveal-stagger card-hover-lift flex min-h-[210px] flex-col gap-3 rounded-asymmetric-xl bg-[var(--card)] px-6 py-[22px]"
+						style={{ '--i': i }}
+					>
+						<div class="inline-flex w-fit items-center gap-[6px] rounded-full border border-[var(--border)] px-[11px] py-1">
+							<Icon name={card.icon} size={12} class="text-[var(--secondary-foreground)]" />
+							<span class="text-[11.5px] font-bold text-[var(--muted-foreground)]">{card.tag}</span>
+						</div>
+						<h3 class="m-0 text-[19px] font-extrabold tracking-[-0.3px] text-[var(--foreground)]">{card.title}</h3>
+						<p class="m-0 text-pretty text-[13.5px] leading-[1.5] text-[var(--muted-foreground)]">{card.body}</p>
+					</div>
+				))
+			}
+		</div>
+	</div>
+</section>

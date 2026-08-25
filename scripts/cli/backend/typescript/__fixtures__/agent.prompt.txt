@@ -1,0 +1,19 @@
+import { injectable } from 'tsyringe-neo'
+import type Z from 'zod'
+import type { ClassifyIssueInputSchema } from './types'
+
+type ClassifyIssueInput = Z.output<typeof ClassifyIssueInputSchema>
+
+/** Prompt builder for `ClassifyIssueAgent`. A CLASS so a future repo/config read arrives by constructor. */
+@injectable()
+export class ClassifyIssuePromptBuilder {
+	/** Standing instructions — what the model is for. */
+	system(_input: ClassifyIssueInput): string {
+		return 'TODO: standing instructions'
+	}
+
+	/** The single user turn. */
+	user(input: ClassifyIssueInput): string {
+		return `TODO: render ${JSON.stringify(input)}`
+	}
+}

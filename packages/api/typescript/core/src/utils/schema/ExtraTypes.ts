@@ -1,0 +1,465 @@
+import { z, type ZodObject, type ZodRawShape, type ZodTypeAny, type ZodLiteral, ZodDiscriminatedUnion, type util } from 'zod'
+import { instanceInputSchemaMap } from './InstanceRegistry'
+import { stringToInteger } from './Transforms'
+
+/**
+ * Branded return type of `z.instance()`. Carries the VO schema type `S` as a
+ * phantom field so that the `.input()` type mapper can recover the wire-input
+ * shape at the type level — without changing any runtime behaviour.
+ *
+ * `ZodInstance<S, T>` extends `z.ZodType<T, T | z.input<S>>`, so it is
+ * assignable everywhere a `ZodType` is expected.
+ */
+export interface ZodInstance<S extends ZodTypeAny, T> extends z.ZodType<T, T | z.input<S>> {
+	/** Phantom — never set at runtime; lets `.input()` recover the VO schema type. */
+	readonly _voSchema?: S
+}
+import { BaseEventSchema } from '../../types/BaseEvent'
+import { BaseDomainEventSchema } from '../../types/BaseDomainEvent'
+import { BaseIntegrationEventSchema } from '../../types/BaseIntegrationEvent'
+
+/**
+ * The envelope EVERY agent input carries — the identity of one agent run
+ * (GOAL-agent-abstraction §4.6). It lives HERE, next to `domainEvent` /
+ * `integrationEvent`, because `z.agentInput()` has to extend it and this module
+ * is the one the `z` facade is assembled from; the agent context re-exports it
+ * as `AgentInputEnvelope` so the domain vocabulary still reads from `types/`.
+ *
+ * CONTEXT-ORIGIN: origin-fork `packages/api/src/shared/types/BaseAgentInput.ts`
+ * @ c58ed45677c473b0415c03cfc741fea3a00946f4 — the TECHNIQUE is copied, the
+ * FIELDS are not (the origin fork's envelope is `{chatId, sessionId, ownerId}`; the
+ * An agent run is identified by `{ownerId, issueId, threadId}` plus the absolute
+ * workspace it executes in).
+ *
+ * Contract notes that were paid for and must not be re-litigated:
+ * - `cwd` is NEVER optional. An agent with no absolute workspace has nothing to
+ *   execute against, and `cwd?` silently degrades to `process.cwd()` — the worst
+ *   possible default in a product that runs inside the user's real repositories.
+ * - `ownerId` is `z.uuid()`, not `z.string()` — aligned with entity, use case and
+ *   controller `ctx` across this repo. `z.string()` here would mint a second truth
+ *   about the same id.
+ * - `context` is the open slot, and it is where multi-tenant agent config lands
+ *   when it exists (D10) — never on `AgentRunRequest`.
+ *
+ * AMENDED IN FASE 5 — `issueId` is OPTIONAL, and the reason is structural, not
+ * temporary. This product's agent universe has exactly two members and one of them
+ * runs BEFORE an issue exists: `ClassifyIssueAgent` decides whether an inbound
+ * message CONTINUES an open issue, OPENS a new one, or is too ambiguous to route
+ * — the issue id is its OUTPUT, never its input. Fase 1 froze `issueId` as
+ * required because §4.6 was written from the `IssueWorkAgent` side only; nothing
+ * in the repo could supply one at classification time, and the two honest ways to
+ * satisfy a required field there were both worse: forge a uuid that identifies
+ * nothing (the exact "identity from nowhere" §4.4 exists to prevent), or mint a
+ * throwaway one per classification run. Overriding the key per-agent via
+ * `.extend()` is not available either — `AgentInputSchemaConstraint` pins the
+ * envelope's shape, so a `ZodOptional<ZodUUID>` and a `ZodUUID` are mutually
+ * unassignable there in EITHER direction.
+ *
+ * The identity guarantee is unchanged where it is actually load-bearing: the run
+ * token (§4.4) is minted only for an agent with a non-empty tool scope, and the
+ * only such agent is `IssueWorkAgent`, which always runs against a resolved
+ * issue. Fase 6 narrows `issueId` at the single mint site in `agent/types/Agent.ts`
+ * — the one place that holds both the envelope and the request.
+ */
+export const BaseAgentInputSchema = z.object({
+	ownerId: z.uuid(),
+	issueId: z.uuid().optional(),
+	threadId: z.uuid(),
+	cwd: z.string(),
+	/**
+	 * The transcript entry that TRIGGERED this run, when one did (orchestrator pivot §7.2).
+	 *
+	 * It lives on the envelope rather than on one agent's input because it becomes a RUN TOKEN CLAIM,
+	 * and the single mint site (`agent/types/Agent.ts`) is generic over the input — a field only the
+	 * orchestrator's schema declared would be invisible there under constraint erasure, which is the
+	 * whole reason this envelope exists (§4.6).
+	 *
+	 * It is what makes `originEntryId` un-forgeable: the `issue/create` tool does NOT take it as an
+	 * argument, the router injects it from the claims. A model that could name the entry it was
+	 * "replying to" could attribute its issue to any message in the conversation.
+	 *
+	 * Optional because most runs have no triggering entry: a subagent's turn is triggered by a mailbox
+	 * item, not by a message.
+	 */
+	entryId: z.uuid().optional(),
+	context: z.record(z.string(), z.unknown()).optional(),
+})
+
+/**
+ * Return type of `z.agentInput(props)`: the envelope shape extended with the per-agent shape,
+ * spelled with zod's OWN `util.Extend<…>` — the exact type its real `ZodObject.extend()` produces
+ * (`zod/v4/classic/schemas.d.ts`: `extend<U>(shape: U): ZodObject<util.Extend<Shape,
+ * util.Writeable<U>>, Config>`). A plain intersection (`Shape & T`) used to stand in here instead;
+ * it reads the same for the common case (no key overlap between the envelope and `T`), but it is
+ * not what the implementation actually returns, and for an OVERLAPPING key it is a different type
+ * altogether — `util.Extend` drops the envelope's field and keeps `T`'s (matching `.extend()`'s real
+ * override semantics), where a naive `Shape & T` would intersect two possibly-incompatible Zod
+ * schemas into a type nothing can construct. Still assignable to `AgentInputSchemaConstraint`
+ * (`ZodObject<envelope & ZodRawShape>`, `src/agent/types/AgentInput.ts`) because `Shape` is
+ * covariant (`out`) — `Extend<Shape, T>` carries every one of the envelope's fields.
+ */
+type AgentInputObjectSchema<T extends ZodRawShape> = ZodObject<util.Extend<(typeof BaseAgentInputSchema)['shape'], util.Writeable<T>>>
+
+// Meta options with examples
+interface SchemaOptions {
+	examples?: unknown[]
+}
+
+type IntegrationEventObjectSchema<T extends ZodRawShape> = ZodObject<
+	Omit<(typeof BaseIntegrationEventSchema)['shape'], 'payload' | 'name'> & { name: ZodLiteral<string>; payload: ZodObject<T> }
+>
+
+type IntegrationEventWithPayloadSchema<T extends ZodTypeAny> = ZodObject<
+	Omit<(typeof BaseIntegrationEventSchema)['shape'], 'payload' | 'name'> & { name: ZodLiteral<string>; payload: T }
+>
+
+type DomainEventObjectSchema<T extends ZodRawShape> = ZodObject<
+	Omit<(typeof BaseDomainEventSchema)['shape'], 'payload'> & { payload: ZodObject<T> }
+>
+
+type DomainEventWithPayloadSchema<T extends ZodTypeAny> = ZodObject<
+	Omit<(typeof BaseDomainEventSchema)['shape'], 'payload'> & { payload: T }
+>
+
+type BaseEventObjectSchema<T extends ZodRawShape> = ZodObject<
+	Omit<(typeof BaseEventSchema)['shape'], 'payload'> & { payload: ZodObject<T> }
+>
+
+// Helper to get examples from schema meta
+const getExamples = (schema: ZodTypeAny): unknown[] => {
+	// Access meta from the schema definition - Zod v4 uses 'def' property
+	const def = (schema as unknown as { def?: { meta?: SchemaOptions } }).def
+	return def?.meta?.examples ?? []
+}
+
+// Helper function to merge examples from two schemas
+const mergeExamples = (baseExamples: unknown[] = [], additionalExamples: unknown[] = []) => {
+	if (baseExamples.length === 0) return additionalExamples
+	if (additionalExamples.length === 0) return baseExamples
+
+	const merged: unknown[] = []
+
+	// Create all possible combinations
+	for (const baseExample of baseExamples) {
+		for (const additionalExample of additionalExamples) {
+			merged.push({
+				...(baseExample as object),
+				...(additionalExample as object),
+			})
+		}
+	}
+
+	return merged
+}
+
+// PaginatedQuery schema
+export const PaginatedQuery = z
+	.object({
+		page: stringToInteger({ minimum: 1 }).default(1),
+		limit: stringToInteger({ minimum: 1, maximum: 100 }).default(10),
+		search: z.string().optional(),
+	})
+	.meta({
+		examples: [
+			{
+				limit: 10,
+				page: 1,
+				search: 'Kitten drinking coffee.',
+			},
+		],
+	})
+
+/**
+ * Builds a paginated query schema with additional properties
+ */
+export function paginatedQuery(properties?: undefined, options?: SchemaOptions): typeof PaginatedQuery
+export function paginatedQuery<T extends ZodRawShape>(
+	properties: T,
+	options?: SchemaOptions,
+): ZodObject<(typeof PaginatedQuery)['shape'] & T>
+export function paginatedQuery<T extends ZodRawShape>(properties?: T, options?: SchemaOptions) {
+	if (!properties) return PaginatedQuery
+
+	const baseExamples = getExamples(PaginatedQuery)
+	const mergedExamples = mergeExamples(baseExamples, options?.examples)
+
+	return z
+		.object({
+			...PaginatedQuery.shape,
+			...properties,
+		})
+		.meta({ examples: mergedExamples })
+}
+
+// PaginatedData base schema
+export const PaginatedData = z
+	.object({
+		items: z.array(z.unknown()),
+		total: z.number(),
+		totalPages: z.number(),
+	})
+	.meta({ examples: [] })
+
+/**
+ * Builds a paginated response schema with typed items
+ */
+export function paginatedResponse<T extends ZodRawShape>(
+	properties: T,
+	options?: SchemaOptions,
+): ZodObject<{
+	items: z.ZodArray<ZodObject<T>>
+	total: z.ZodNumber
+	totalPages: z.ZodNumber
+}> {
+	const baseExamples = getExamples(PaginatedData)
+	const mergedExamples = mergeExamples(baseExamples, options?.examples)
+
+	const itemSchema = z.object(properties)
+	const itemsArraySchema = z.array(itemSchema)
+
+	return z
+		.object({
+			items: itemsArraySchema,
+			total: z.number(),
+			totalPages: z.number(),
+		})
+		.meta({ examples: mergedExamples }) as any
+}
+
+/**
+ * Builds a base event schema with custom payload properties
+ */
+export function baseEvent(properties?: undefined, options?: SchemaOptions): typeof BaseEventSchema
+export function baseEvent<T extends ZodRawShape>(properties: T, options?: SchemaOptions): BaseEventObjectSchema<T>
+export function baseEvent<T extends ZodRawShape>(properties?: T, options?: SchemaOptions) {
+	if (!properties) return BaseEventSchema.meta({ examples: options?.examples ?? [] })
+
+	const payloadSchema = z.object(properties)
+	const mergedExamples = options?.examples ?? []
+
+	const { payload: _payload, ...baseShape } = BaseEventSchema.shape
+
+	return z
+		.object({
+			...baseShape,
+			payload: payloadSchema,
+		})
+		.meta({ examples: mergedExamples })
+}
+
+/**
+ * Builds an agent-input schema on top of `BaseAgentInputSchema` — the third
+ * schema VERB of this module, next to `domainEvent` / `integrationEvent`
+ * (GOAL-agent-abstraction §4.6, Fase 1).
+ *
+ * Why it exists at all: `AgentInputSchemaConstraint` is what stops
+ * `z.output<InputSchema>` from collapsing to `Record<string, unknown>` under
+ * generic constraint erasure — which is what forces `as any` into every runner
+ * that wants to read `input.cwd`. A verb makes that constraint hold BY
+ * CONSTRUCTION: an agent that declares its input with `z.agentInput({...})`
+ * cannot forget the envelope.
+ *
+ * ```ts
+ * export const ClassifyIssueInputSchema = z.agentInput({
+ *   messageText: z.string(),
+ *   openIssues: z.array(OpenIssueRefSchema),
+ * })
+ * ```
+ *
+ * CONTEXT-ORIGIN: origin-fork `packages/api/src/shared/utils/schema/ExtraTypes.ts`
+ * (`agentInput`) @ c58ed45677c473b0415c03cfc741fea3a00946f4.
+ */
+export function agentInput(): typeof BaseAgentInputSchema
+export function agentInput<T extends ZodRawShape>(properties: T): AgentInputObjectSchema<T>
+export function agentInput<T extends ZodRawShape>(properties?: T) {
+	if (!properties) return BaseAgentInputSchema
+	return BaseAgentInputSchema.extend(properties)
+}
+
+/**
+ * Builds a domain event schema with custom payload properties
+ */
+export function domainEvent(properties?: undefined, options?: SchemaOptions): typeof BaseDomainEventSchema
+export function domainEvent<T extends ZodTypeAny>(schema: T, options?: SchemaOptions): DomainEventWithPayloadSchema<T>
+export function domainEvent<T extends ZodRawShape>(properties: T, options?: SchemaOptions): DomainEventObjectSchema<T>
+export function domainEvent(properties?: ZodRawShape | ZodTypeAny, options?: SchemaOptions) {
+	if (!properties) return BaseDomainEventSchema.meta({ examples: options?.examples ?? [] })
+
+	const mergedExamples = options?.examples ?? []
+	const { payload: _payload, ...baseShape } = BaseDomainEventSchema.shape
+
+	const payloadSchema = '_zod' in properties ? properties : z.object(properties as ZodRawShape)
+
+	return z
+		.object({
+			...baseShape,
+			payload: payloadSchema,
+		})
+		.meta({ examples: mergedExamples })
+}
+/**
+ * Builds an integration event schema with a baked-in z.literal name for discriminatedUnion support.
+ */
+export function integrationEvent(
+	name: string,
+	options?: SchemaOptions,
+): ZodObject<{
+	name: ZodLiteral<string>
+	payload: (typeof BaseIntegrationEventSchema)['shape']['payload']
+	ownerId: (typeof BaseIntegrationEventSchema)['shape']['ownerId']
+}>
+export function integrationEvent<T extends ZodTypeAny>(
+	name: string,
+	schema: T,
+	options?: SchemaOptions,
+): IntegrationEventWithPayloadSchema<T>
+export function integrationEvent<T extends ZodRawShape>(
+	name: string,
+	properties: T,
+	options?: SchemaOptions,
+): IntegrationEventObjectSchema<T>
+export function integrationEvent(name: string, properties?: ZodRawShape | ZodTypeAny | SchemaOptions, options?: SchemaOptions) {
+	// Allow (name) / (name, options) / (name, schema) / (name, schema, options) / (name, properties, options).
+	let resolvedProperties: ZodRawShape | ZodTypeAny | undefined
+	let resolvedOptions: SchemaOptions | undefined
+
+	if (properties && typeof properties === 'object' && !('_zod' in properties) && !Array.isArray(properties)) {
+		// Either ZodRawShape or SchemaOptions (which has only `examples`).
+		const keys = Object.keys(properties)
+		const looksLikeOptions = keys.length === 1 && keys[0] === 'examples'
+		if (looksLikeOptions) {
+			resolvedOptions = properties as SchemaOptions
+		} else {
+			resolvedProperties = properties as ZodRawShape
+			resolvedOptions = options
+		}
+	} else if (properties && '_zod' in (properties as object)) {
+		resolvedProperties = properties as ZodTypeAny
+		resolvedOptions = options
+	} else {
+		resolvedOptions = options
+	}
+
+	const mergedExamples = resolvedOptions?.examples ?? []
+	const { name: _name, payload: _payload, ...baseShape } = BaseIntegrationEventSchema.shape
+
+	if (resolvedProperties === undefined) {
+		return z
+			.object({ ...baseShape, name: z.literal(name), payload: BaseIntegrationEventSchema.shape.payload })
+			.meta({ examples: mergedExamples })
+	}
+
+	const payloadSchema =
+		'_zod' in (resolvedProperties as object) ? (resolvedProperties as ZodTypeAny) : z.object(resolvedProperties as ZodRawShape)
+
+	return z.object({ ...baseShape, name: z.literal(name), payload: payloadSchema }).meta({ examples: mergedExamples })
+}
+
+// Time-effective window appended to any schema by `z.historical`. `endDate`
+// null = open-ended / currently active. `z.coerce.date()` lets jsonb-stored
+// ISO strings rehydrate to Date on read without manual parsing.
+const TimeWindowShape = {
+	startDate: z.coerce.date(),
+	endDate: z.coerce.date().nullable().default(null),
+}
+
+// Cast to the broader refine callback type Zod v4 expects internally.
+const windowIsValid = (w: unknown) => {
+	const win = w as { startDate: Date; endDate: Date | null }
+	return win.endDate === null || win.startDate < win.endDate
+}
+const INVALID_RANGE = { error: 'INVALID_DATE_RANGE' } as const
+
+/**
+ * Extends a schema with a validated `[startDate, endDate)` window.
+ * Accepts a raw shape, a ZodObject, or a discriminated union (window
+ * applied per-variant so the discriminator stays narrowable).
+ *
+ * `endDate` is nullable with a default of `null` (open-ended / currently active).
+ * `z.coerce.date()` lets jsonb-stored ISO strings rehydrate to Date on read.
+ * A `startDate < endDate` refine emits `INVALID_DATE_RANGE` on violation.
+ */
+export function historical<T extends ZodRawShape>(shape: T): ZodObject<T & typeof TimeWindowShape>
+export function historical<T extends ZodTypeAny>(schema: T): z.ZodType<z.output<T> & { startDate: Date; endDate: Date | null }>
+export function historical(input: ZodRawShape | ZodTypeAny): ZodTypeAny {
+	if (!('_zod' in (input as object))) {
+		// Raw shape — wrap in ZodObject then extend + refine
+		return (z.object(input as ZodRawShape) as ZodObject<ZodRawShape>)
+			.extend(TimeWindowShape)
+			.refine(windowIsValid, INVALID_RANGE) as unknown as ZodTypeAny
+	}
+	const schema = input as ZodTypeAny
+	// Discriminated union — extend each variant so the discriminator stays narrowable.
+	// Zod v4: def.type is 'union' for discriminated unions; use instanceof instead.
+	if (schema instanceof ZodDiscriminatedUnion) {
+		// Access def via unknown cast — Zod v4 generics are complex; we only need
+		// the discriminator string and the options array of ZodObjects at runtime.
+		const du = schema as unknown as { def: { discriminator: string; options: ZodObject<ZodRawShape>[] } }
+		const widened = du.def.options.map(o => o.extend(TimeWindowShape))
+		return (z.discriminatedUnion(du.def.discriminator, widened as never) as ZodTypeAny).refine(windowIsValid, INVALID_RANGE)
+	}
+	// Plain ZodObject or any other schema — extend + refine
+	return (schema as ZodObject<ZodRawShape>).extend(TimeWindowShape).refine(windowIsValid, INVALID_RANGE)
+}
+
+/**
+ * Creates a schema that parses input and transforms it into a class instance.
+ * The class must have a static `schema` property (BaseValueObject, BasePrimitiveValueObject, or BaseEntity).
+ *
+ * @example
+ * ```ts
+ * crm: z.instance(CRM),
+ * userId: z.instance(Id),
+ * specialties: z.array(z.instance(DoctorSpecialty)).default([]),
+ * ```
+ */
+function instance<S extends ZodTypeAny, T>(Cls: { schema: S; new (props: any): T }): ZodInstance<S, T> {
+	// Accept already-constructed instances (idempotent for re-validation via
+	// this.validate()) OR raw input (the constructor validates via static
+	// schema). The declared input type mirrors both runtime branches so
+	// call sites can pass either an instance or a props object without casts.
+	const schema = z.unknown().transform((v: any) => (v instanceof Cls ? v : new Cls(v))) as unknown as ZodInstance<S, T>
+	// Register the underlying VO schema so that .input() can recover it instead
+	// of returning z.unknown(). This does NOT change parse-time behaviour.
+	instanceInputSchemaMap.set(schema as z.ZodTypeAny, Cls.schema as z.ZodTypeAny)
+	return schema
+}
+
+/**
+ * Like `z.record(z.enum(E), value)` but emits EXPLICIT per-member properties, so
+ * the generated OpenAPI/SDK is keyed by the enum members (`{ marketing: V, … }`)
+ * instead of a string-indexed map (`{ [k: string]: V }`). All members are
+ * required — segments always carry every key (0/empty when there's no data).
+ *
+ * The OpenAPI generator also emits E as a named enum component (so the SDK carries
+ * an iterable enum const) by matching the property-key set against the registered
+ * enums — see `OpenAPI.processSchemaForEnums`. So an enum used ONLY via `enumRecord`
+ * is still exported, exactly as a `z.enum()` field would be.
+ *
+ * @example
+ * ```ts
+ * segments: z.enumRecord(CostKind, MetricSchema),        // { marketing: Metric, … }
+ * byStatus: z.enumRecord(PaymentStatus, TallySchema),
+ * ```
+ */
+function enumRecord<T extends Record<string, string>, V extends ZodTypeAny>(
+	enumObject: T,
+	valueSchema: V,
+): ZodObject<Record<T[keyof T], V>> {
+	const shape = {} as Record<T[keyof T], V>
+	for (const key of Object.values(enumObject) as T[keyof T][]) shape[key] = valueSchema
+	return z.object(shape) as unknown as ZodObject<Record<T[keyof T], V>>
+}
+
+// Export all extra schema types with camelCase naming to match Zod convention
+export const ExtraSchemaTypes = {
+	paginatedQuery,
+	paginatedResponse,
+	baseEvent,
+	domainEvent,
+	integrationEvent,
+	agentInput,
+	instance,
+	historical,
+	enumRecord,
+}

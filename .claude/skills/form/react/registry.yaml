@@ -1,0 +1,1130 @@
+registry:
+  type: frontend
+  layer: presentation
+  depends_on: [sdk, primitive]
+  depended_by: []
+  context_reads: [schema]
+
+  patterns:
+    # === Structural patterns (always) ===
+    - id: FRM-01
+      name: "SDK schema as validation base"
+      when: always
+      rule: "import { xMutationRequestSchema } from '@codm/client-typescript/typescript'"
+      wrong: "redefining validation rules already in SDK"
+    - id: FRM-02
+      name: "useForm with validators"
+      when: always
+      rule: "const form = useForm({ defaultValues, validators: { onChange: schema } })"
+    - id: FRM-03
+      name: "form.Field pattern"
+      when: always
+      rule: "<form.Field name='x'>{field => <Input ... />}</form.Field>"
+
+    # === Conditional patterns ===
+    - id: FRM-C01
+      name: "Schema extension"
+      when: "form needs extra local validation"
+      rule: "schema.and(z.object({ confirm: z.boolean() }))"
+    - id: FRM-C02
+      name: "Masked input"
+      when: "field needs phone/CPF mask"
+      rule: "maskito with mask pattern"
+    - id: FRM-C03
+      name: "Mutation + query invalidation"
+      when: "form submits data"
+      rule: "mutateAsync({data}, { onSettled: () => queryClient.invalidateQueries() })"
+    - id: FRM-C04
+      name: "Edit form pre-populate"
+      when: "edit form with existing data"
+      rule: "defaultValues from fetched data"
+    - id: FRM-C05
+      name: "Multi-step wizard"
+      when: "form has multiple steps"
+      rule: "step state + per-step validation via safeParse in onSubmit (per bp-12) + shared form instance"
+
+    # === Real-code extracted patterns (P##) ===
+
+    # -- Form setup --
+    - id: FRM-P01
+      name: "DeepPartial default values"
+      when: always
+      rule: |
+        const defaultValues: DeepPartial<CreateItemMutationRequest> = {}
+        // Edit forms: DeepPartial<UpdateItemMutationRequest> = { name: item.name, ... }
+      wrong: "manual interface for form defaults when DeepPartial<T> works; defining all fields explicitly for create forms"
+      refs: [SignUpForm, CreatePatientDialog, CreateServiceDialog, CreateUnitDialog, CreateNoteDialog]
+
+    - id: FRM-P02
+      name: "safeParse guard in onSubmit"
+      when: always
+      rule: |
+        onSubmit: async form => {
+          const result = schema.safeParse(form.value)
+          if (!result.success) return
+          await mutation.mutateAsync({ data: result.data }, { onSuccess, onSettled })
+        }
+      wrong: "using raw form.value instead of result.data after safeParse"
+      refs: [CreatePatientDialog, UpdateServiceDialog, InviteDoctorDialog]
+
+    - id: FRM-P03
+      name: "form.Subscribe safeParse-driven submit button"
+      when: always
+      rule: |
+        <form.Subscribe selector={state => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting, values: state.values })}>
+          {({ canSubmit, isSubmitting, values }) => {
+            const isDisabled = !canSubmit || isSubmitting || mutation.isPending || !schema.safeParse(values).success
+            return <Button type="submit" disabled={isDisabled}>...</Button>
+          }}
+        </form.Subscribe>
+      wrong: "reading form.state.values directly in component body (not reactive); omitting safeParse check on submit button; OR no form.Subscribe wrapper around the submit button at all"
+      refs: [CreateServiceDialog, SignUpForm, CreatePatientDialog, InviteMemberDialog]
+
+    # -- Field rendering --
+    - id: FRM-P04
+      name: "Standard text field with isInvalid + FieldError"
+      when: always
+      rule: |
+        <form.Field name="fieldName">
+          {field => {
+            const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
+            return (
+              <Field>
+                <FieldLabel htmlFor={field.name}>Label</FieldLabel>
+                <Input id={field.name} value={field.state.value ?? ''} onBlur={field.handleBlur}
+                  onChange={e => field.handleChange(e.target.value)} aria-invalid={isInvalid} />
+                {isInvalid && <FieldError errors={field.state.meta.errors} />}
+              </Field>
+            )
+          }}
+        </form.Field>
+      wrong: "using data-invalid instead of aria-invalid; showing errors without isTouched guard; using FieldError without errors prop"
+      refs: [UnitStep, ClinicStep, CreateServiceDialog]
+
+    - id: FRM-P05
+      name: "Combobox/Select field with || null and id for testability"
+      when: "field uses Combobox or Select"
+      reason: "Compound inputs must forward id={field.name} so FieldLabel htmlFor connects. This enables accessibility (screen readers) and E2E testing (getByLabel, field() scoping)."
+      rule: |
+        <FieldLabel htmlFor={field.name}>{t('x.field')}</FieldLabel>
+        <Combobox value={field.state.value || null}
+          onValueChange={value => field.handleChange(value ?? undefined)} items={ITEMS}>
+          <ComboboxInput id={field.name} placeholder={t('x.placeholder')} aria-invalid={isInvalid} />
+          ...
+        </Combobox>
+        // Select:
+        <FieldLabel htmlFor={field.name}>{t('x.field')}</FieldLabel>
+        <Select value={field.state.value || undefined}
+          onValueChange={val => field.handleChange(val as EnumType)}>
+          <SelectTrigger id={field.name} aria-invalid={isInvalid}>
+            <SelectValue>...</SelectValue>  {/* see FRM-P09 — children, not placeholder */}
+          </SelectTrigger>
+          ...
+        </Select>
+      wrong: |
+        // Missing id on compound input trigger
+        <FieldLabel>Especialidade</FieldLabel>
+        <ComboboxInput placeholder="Select..." />
+        // Missing htmlFor on label
+        <FieldLabel>Unidade</FieldLabel>
+        <SelectTrigger aria-invalid={isInvalid}>...</SelectTrigger>
+      refs: [UnitStep(state Combobox), InviteMemberDialog(role Select), UpdateServiceDialog(specialty Select)]
+
+    - id: FRM-P09
+      name: "Select trigger renders enum label via t() — Base UI gotcha"
+      when: "field uses <Select> bound to an enum value"
+      reason: "Base UI's <Select.Value> does NOT auto-resolve the label from the matching <Select.Item> children. Passing only `placeholder=` makes the trigger show the raw value (e.g. 'PRO') after the user picks an option. You MUST pass children that compute the translated label. See enum skill ENUM-P11."
+      rule: |
+        const selectedPlan = field.state.value as PlanNameEnum | undefined
+        <Select value={selectedPlan} onValueChange={v => field.handleChange(v as PlanNameEnum)}>
+          <SelectTrigger id={field.name} aria-invalid={isInvalid}>
+            <SelectValue>
+              {selectedPlan ? t(`enums.PlanName.${selectedPlan}`) : t('billing.form.planPlaceholder')}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {ALL_PLANS.map(plan => (
+              <SelectItem key={plan} value={plan}>{t(`enums.PlanName.${plan}`)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      wrong: |
+        <SelectTrigger>
+          <SelectValue placeholder={t('billing.form.planPlaceholder')} />
+        </SelectTrigger>
+        {/* Trigger shows raw 'PRO' once a value is selected. */}
+
+    - id: FRM-P06
+      name: "DatePicker field"
+      when: "field needs date input"
+      rule: |
+        <DatePicker
+          date={field.state.value instanceof Date ? field.state.value : undefined}
+          onDateChange={date => field.handleChange(date)}
+          placeholder="Select date"
+        />
+      refs: [CreatePatientDialog]
+
+    # -- Maskito --
+    - id: FRM-P07
+      name: "Maskito masked input (store digits only)"
+      when: "field needs mask and backend expects clean digits"
+      rule: |
+        const maskRef = useMaskito({ options: phoneMaskOptions })
+        <Input ref={maskRef} defaultValue={field.state.value || ''}
+          onInput={e => field.handleChange(unmask(e.currentTarget.value))}
+          onBlur={field.handleBlur} />
+      wrong: "using onChange instead of onInput with Maskito; using value instead of defaultValue when unmasking; defining mask options inline instead of importing from @/lib/masks; defining unmask inline instead of importing from @/lib; OR no useMaskito ref at all on a field that needs masking (CPF, phone, CNPJ, CEP)"
+      refs: [SignUpForm(phone,document), CreatePatientDialog(cpf,rg,phone), UnitStep(phone,zipCode), ClinicStep(cnpj)]
+
+    - id: FRM-P08
+      name: "Maskito masked input (store formatted value)"
+      when: "field needs mask and backend accepts formatted value"
+      rule: |
+        const maskRef = useMaskito({ options: crmMaskOptions })
+        <Input ref={maskRef} defaultValue={field.state.value || ''}
+          onInput={e => field.handleChange(e.currentTarget.value)}
+          onBlur={field.handleBlur} />
+      refs: [DoctorInfoStep(crm,rqe)]
+
+    # -- Mutation patterns --
+    - id: FRM-P45
+      name: "mutateAsync callback pattern"
+      when: "form submits to API"
+      rule: |
+        await mutation.mutateAsync(
+          { data: result.data },
+          {
+            onSuccess: () => { toast.success('...'); onSuccess?.() },
+            onSettled: async () => {
+              await queryClient.invalidateQueries({ queryKey: listItemsQueryKey() })
+              onOpenChange(false) // or form.formApi.reset()
+            },
+          },
+        )
+      wrong: "using try/catch in mutations (MutationCache handles errors globally); destructuring mutation hooks; hardcoding query keys"
+      refs: [CreatePatientDialog, UpdateUnitDialog, InviteDoctorDialog, CreateServiceDialog]
+
+    - id: FRM-P10
+      name: "Mutation hook as direct object"
+      when: always
+      rule: |
+        const createItem = useCreateItem()
+        createItem.mutateAsync(...) // direct object access
+        createItem.isPending        // not destructured
+      wrong: "const { mutateAsync } = useCreateItem()"
+      refs: [all form files]
+
+    # -- Dialog form --
+    - id: FRM-P11
+      name: "Dialog form structure"
+      when: "form is inside a Dialog"
+      reason: "Dialogs are opened via useDialogStore.show(). The component renders <DialogContent> directly — no open/onOpenChange props. hide() unmounts the dialog, cleaning up form state automatically."
+      rule: |
+        import { useDialogStore } from '@/stores/useDialogStore'
+
+        export function CreateItemDialog() {
+          const { hide } = useDialogStore()
+          const form = useForm({ ... })
+          return (
+            <DialogContent>
+              <DialogHeader><DialogTitle>...</DialogTitle><DialogDescription>...</DialogDescription></DialogHeader>
+              <form noValidate onSubmit={e => { e.preventDefault(); e.stopPropagation(); form.handleSubmit() }}>
+                <FieldGroup>...</FieldGroup>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={hide}>Cancel</Button>
+                  <form.Subscribe selector={state => ({ canSubmit: state.canSubmit, isSubmitting: state.isSubmitting, values: state.values })}>
+                    {({ canSubmit, isSubmitting, values }) => {
+                      const isDisabled = !canSubmit || isSubmitting || mutation.isPending || !schema.safeParse(values).success
+                      return <Button type="submit" disabled={isDisabled}>Save</Button>
+                    }}
+                  </form.Subscribe>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          )
+        }
+        // Caller: show(<CreateItemDialog />)
+      wrong: |
+        // open/onOpenChange props — do not use
+        export function CreateItemDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+          return <Dialog open={open} onOpenChange={onOpenChange}>...</Dialog>
+        }
+      refs: [CreateUnitDialog, UpdateUnitDialog, CreateServiceDialog, InviteDoctorDialog, InviteMemberDialog]
+
+    - id: FRM-P12
+      name: "Dialog form reset + close on success"
+      when: "create form inside a Dialog"
+      rule: |
+        onSettled: async () => {
+          await queryClient.invalidateQueries(...)
+          form.formApi.reset()
+          onOpenChange(false)
+        }
+      refs: [CreateUnitDialog, CreateServiceDialog, CreateNoteDialog, InviteDoctorDialog, InviteMemberDialog]
+
+    # -- Multi-step wizard --
+    - id: FRM-P13
+      name: "Wizard step config (MODE_STEPS + MODE_INITIAL_STEP)"
+      when: "multi-step wizard"
+      rule: |
+        const DOCTOR_STEPS = [StepEnum.TYPE_SELECTION, StepEnum.DOCTOR_INFO, ...] as const
+        const MEMBER_STEPS = [StepEnum.TYPE_SELECTION, StepEnum.CLINIC_INFO, ...] as const
+        const MODE_STEPS: Record<MemberType, readonly Step[]> = { ... }
+        const MODE_INITIAL_STEP: Record<MemberType, Step> = { ... }
+      refs: [onboarding/index.tsx]
+
+    - id: FRM-P14
+      name: "Zustand wizard navigation store"
+      when: "multi-step wizard"
+      rule: |
+        // Pure UI state: selectedMode, currentStepIndex, direction (1|-1), reset()
+        export const useWizardStore = create<WizardStore>()(set => ({
+          selectedType: undefined,
+          currentStepIndex: 0,
+          direction: 1,
+          ...
+        }))
+      refs: [useOnboardingStore.ts]
+
+    - id: FRM-P15
+      name: "Parent form holds accumulated data"
+      when: "multi-step wizard"
+      rule: |
+        const form = useForm({ defaultValues: { ...defaultValues, ...initialState } })
+        // Steps merge data via form.setFieldValue('stepKey', data)
+      refs: [onboarding/index.tsx]
+
+    - id: FRM-P16
+      name: "Step schema extraction from complete mutation"
+      when: "multi-step wizard"
+      rule: |
+        const doctorVariant = completeOnboardingMutationRequestSchema.def.options[0]
+        export const ClinicStepSchema = doctorVariant.def.shape.clinicUnit.pick({ clinicName: true, clinicDocument: true })
+        type ClinicStepData = (typeof ClinicStepSchema)['_zod']['output']
+      wrong: "extracting step schemas from save/draft schema (all fields optional) instead of complete/strict mutation schema"
+      refs: [DoctorInfoStep, ClinicStep, UnitStep]
+
+    - id: FRM-P17
+      name: "Step props contract"
+      when: "multi-step wizard step component"
+      rule: |
+        // Default shape — each step renders its own back affordance / submit-pending state:
+        interface StepProps {
+          defaultValues?: DeepPartial<StepData>
+          onSubmit: (data: StepData) => void
+          onBack?: () => void
+          isSubmitting?: boolean
+        }
+        // Step is API/store/navigation-agnostic
+
+        // FOOTER-OWNS-NAVIGATION VARIANT (D3, founder review 12/08) — when the WIZARD renders a
+        // persistent footer (Voltar/Continuar) shared by every step, `onBack`/`isSubmitting` drop out
+        // of the step contract entirely: the step only ever RECORDS its selection via `onSubmit`, and
+        // navigation (back, advance, and the final commit) is the wizard's job alone, read off a
+        // Zustand store the wizard owns. `StepHeading` (or equivalent) renders no back button in this
+        // variant either — there is nowhere left for it to live.
+        interface StepProps {
+          defaultValues?: DeepPartial<StepData>
+          onSubmit: (data: StepData) => void
+        }
+      refs: [DoctorInfoStep, ClinicStep, UnitStep, "attach/-components/{ContactStep,WorkspaceStep,AgentsStep} (footer-owns-navigation variant)"]
+
+    - id: FRM-P18
+      name: "Form type inference via _infer helper"
+      when: "step passes form instance to child components"
+      rule: |
+        function _inferDoctorInfoForm() {
+          const defaults: DeepPartial<DoctorInfoStepData> = {}
+          return useForm({ defaultValues: defaults, validators: { onChange: DoctorInfoStepSchema } })
+        }
+        type DoctorInfoForm = ReturnType<typeof _inferDoctorInfoForm>
+        // _infer function is NEVER called — exists only for ReturnType inference
+      refs: [DoctorInfoStep]
+
+    - id: FRM-P19
+      name: "Array fields with mode='array'"
+      when: "form has dynamic list"
+      rule: |
+        <form.Field name="items" mode="array">
+          {field => (
+            <>
+              {(field.state.value ?? []).map((_, i) => (
+                <div key={i}>
+                  <ItemRow form={form} index={i} />
+                  {(field.state.value?.length ?? 0) > 1 && (
+                    <Button variant="ghost" size="icon" onClick={() => field.removeValue(i)}>
+                      <IconTrash />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              <Button variant="outline" size="sm" onClick={() => field.pushValue({})}>
+                <IconPlus /> Add
+              </Button>
+            </>
+          )}
+        </form.Field>
+      refs: [DoctorInfoStep(specialties)]
+
+    - id: FRM-P20
+      name: "Extracted field component receives form instance"
+      when: "form field is extracted to a child component"
+      rule: |
+        function SpecialtyRqeRow({ form, index }: { form: DoctorInfoForm; index: number }) {
+          return (
+            <form.Field name={`specialties[${index}].specialty`}>
+              {field => { ... }}
+            </form.Field>
+          )
+        }
+      refs: [DoctorInfoStep/SpecialtyRqeRow]
+
+    - id: FRM-P21
+      name: "Step handler merges data + advances + saves progress"
+      when: "multi-step wizard with progressive save"
+      rule: |
+        const handleStepSubmit = useCallback(async (data: StepData) => {
+          form.setFieldValue('stepKey', data)
+          const nextIndex = currentStepIndex + 1
+          setDirection(1)
+          setCurrentStepIndex(nextIndex)
+          await saveState.mutateAsync({
+            data: { type: selectedType, currentStep: steps[nextIndex], state: { ...form.state.values, stepKey: data } },
+          })
+        }, [deps])
+      refs: [onboarding/index.tsx(handleDoctorInfoSubmit, handleClinicSubmit)]
+
+    - id: FRM-P22
+      name: "Final step validates full payload with complete schema"
+      when: "multi-step wizard final step"
+      rule: |
+        const payload = { type: selectedType, doctorInfo: form.state.values.doctorInfo, clinicUnit }
+        const parsedData = completeOnboardingMutationRequestSchema.safeParse(payload)
+        if (!parsedData.success) return
+        await completeOnboarding.mutateAsync({ data: parsedData.data }, { onSuccess: ... })
+      refs: [onboarding/index.tsx(handleUnitSubmit)]
+
+    - id: FRM-P23
+      name: "stepComponents record maps step to component"
+      when: "multi-step wizard"
+      rule: |
+        const stepComponents: Record<OnboardingStep, React.ReactNode> = {
+          [StepEnum.TYPE_SELECTION]: <TypeSelection ... />,
+          [StepEnum.DOCTOR_INFO]: <DoctorInfoStep defaultValues={...} onSubmit={...} onBack={...} isSubmitting={...} />,
+          ...
+        }
+        return <div>{stepComponents[currentStepName]}</div>
+      refs: [onboarding/index.tsx]
+
+    - id: FRM-P24
+      name: "Number field with type='number'"
+      when: "field accepts numeric input"
+      rule: |
+        <Input type="number" step="0.01" min="0"
+          value={(field.state.value ?? 0) / 100}
+          onChange={e => field.handleChange(Math.round(Number(e.target.value) * 100))} />
+        // For cents-to-reais: divide by 100 for display, multiply by 100 for storage
+      refs: [CreateServiceDialog(priceRange), UpdateServiceDialog(priceRange)]
+
+    - id: FRM-P25
+      name: "Schema extension with .and()"
+      when: "form adds local-only fields beyond SDK schema"
+      rule: |
+        const signUpSchema = signUpMutationRequestSchema.and(
+          z.object({
+            termsAndConditions: z.boolean().refine(val => val === true, { message: '...' }),
+          }),
+        )
+      refs: [SignUpForm]
+
+    - id: FRM-P26
+      name: "Tooltip on disabled submit button"
+      when: "public-facing form needs disabled tooltip"
+      rule: |
+        <Tooltip>
+          <TooltipTrigger render={<span><Button disabled={isDisabled} type="submit">...</Button></span>} />
+          {isDisabled && <TooltipContent>Fill all fields</TooltipContent>}
+        </Tooltip>
+      refs: [SignUpForm]
+
+    - id: FRM-P27
+      name: "Checkbox field for terms/boolean"
+      when: "form has boolean checkbox field"
+      rule: |
+        <form.Field name="termsAndConditions">
+          {field => (
+            <Checkbox checked={field.state.value}
+              onCheckedChange={checked => field.handleChange(checked === true)}
+              onBlur={field.handleBlur} aria-invalid={isInvalid} />
+          )}
+        </form.Field>
+      refs: [SignUpForm]
+
+    - id: FRM-P28
+      name: "Textarea field"
+      when: "field needs multiline text"
+      rule: |
+        <Textarea id={field.name} value={field.state.value ?? ''}
+          onBlur={field.handleBlur} onChange={e => field.handleChange(e.target.value)}
+          aria-invalid={isInvalid} />
+      refs: [CreateNoteDialog, UpdateNoteDialog, CreateServiceDialog(description)]
+
+    - id: FRM-P29
+      name: "Complex form with extracted field components"
+      when: "form has reusable field groups shared across parent/child"
+      rule: |
+        // Export typed field components that accept form instance + config
+        // ComboboxField, AppointmentDateTimeFields receive AnyForm type
+        interface AnyForm {
+          Field: (props: { name: keyof FormValues; children: (field: AnyFieldApi) => React.ReactNode }) => React.ReactNode
+        }
+      refs: [CreateAppointmentDialog/fields.tsx]
+
+    - id: FRM-P30
+      name: "Conditional schema per mode"
+      when: "form uses different schemas based on user role or mode"
+      rule: |
+        const validationSchema = isMember
+          ? createAppointmentMutationRequestSchema
+          : createDoctorAppointmentMutationRequestSchema
+        // Separate safeParse per branch in onSubmit
+      refs: [CreateAppointmentDialog]
+
+    - id: FRM-P31
+      name: "Zustand store for complex dialog field dependencies"
+      when: "dialog form has cascading field selections"
+      rule: |
+        // Store tracks dependent selections: selectedDoctorId, selectedUnitId, startDateForSlots
+        // Form fields call store.setSelectedX on change, triggering dependent query enables
+        const handleDoctorChange = useCallback((doctorId) => {
+          store.setSelectedDoctorId(doctorId)
+          form.setFieldValue('serviceId', undefined) // reset dependent field
+        }, [form, store])
+      refs: [CreateAppointmentDialog, useAppointmentDialogStore.ts]
+
+    - id: FRM-P32
+      name: "Multiple query invalidations with Promise.all"
+      when: "mutation affects multiple cached queries"
+      rule: |
+        onSettled: async () => {
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: listMemberPatientsQueryKey() }),
+            queryClient.invalidateQueries({ queryKey: listDoctorPatientsQueryKey() }),
+          ])
+        }
+      refs: [CreatePatientDialog, UpdatePatientDialog, CreateServiceDialog, CreateUnitDialog]
+
+    - id: FRM-P33
+      name: "Nested object fields with dot notation"
+      when: "form has nested object fields"
+      rule: |
+        <form.Field name="address.street">...</form.Field>
+        <form.Field name="address.city">...</form.Field>
+        <form.Field name="unitAddress.zipCode">...</form.Field>
+      refs: [UnitStep, UpdateUnitDialog, CreateUnitDialog]
+
+    - id: FRM-P34
+      name: "Auth form (non-mutation, uses auth client)"
+      when: "form calls auth.signIn/signUp/resetPassword instead of SDK mutation"
+      rule: |
+        onSubmit: async form => {
+          const result = schema.safeParse(form.value)
+          if (!result.success) return
+          const { error } = await auth.signIn.email({ ...result.data })
+          if (error) { handleApiError(error); return }
+          toast.success('...')
+          await navigate({ to: '/...' })
+        }
+      refs: [SignInForm, SignUpForm, RequestPasswordResetForm, ResetPasswordForm]
+
+    - id: FRM-P35
+      name: "Dialog form — self-contained, no open/onOpenChange props"
+      when: "form is rendered inside a dialog"
+      reason: "Dialogs are opened via useDialogStore.show(<DialogContent>...</DialogContent>). The dialog owns its form, mutation, and close behavior. No open/onOpenChange props needed — hide() unmounts the dialog, cleaning up form state automatically."
+      rule: |
+        export function CreateItemDialog() {
+          const { hide } = useDialogStore()
+          const form = useForm({ ... })
+          return (
+            <DialogContent>
+              <form ...>{/* fields */}</form>
+              <DialogFooter>
+                <Button onClick={hide}>Cancel</Button>
+                <Button type="submit">Create</Button>
+              </DialogFooter>
+            </DialogContent>
+          )
+        }
+        // Called: show(<CreateItemDialog />)
+      source: "CreateUnitDialog.tsx"
+
+    - id: FRM-P36
+      name: "Update dialog — receive entity as props"
+      when: "dialog pre-fills form with existing entity data"
+      reason: "Update dialogs receive the full entity as props (e.g., patient: PatientDetail, unit: UnitItem, service: ServiceDetail). The parent already has the data from a list or detail query, so passing it avoids an extra fetch. The dialog handles its own mutation and query invalidation."
+      rule: |
+        export function UpdateItemDialog({ item }: { item: ItemResponse }) {
+          const { hide } = useDialogStore()
+          const form = useForm({ defaultValues: { name: item.name } })
+          return <DialogContent>{/* form */}</DialogContent>
+        }
+        // Caller: show(<UpdateItemDialog item={selectedItem} />)
+      source: "UpdateUnitDialog.tsx, UpdatePatientDialog.tsx, UpdateServiceDialog.tsx"
+
+    - id: FRM-P37
+      name: "Inline confirmation via useDialogStore.confirm()"
+      when: "simple confirmation before a mutation — no custom UI needed"
+      reason: "For simple yes/no confirmations, creating a dedicated dialog component is overkill. useDialogStore.confirm() renders a generic ConfirmDialog and returns Promise<boolean>. Use dedicated dialog components only when you need custom UI, loading states, or domain-specific layout."
+      rule: |
+        const { confirm } = useDialogStore()
+
+        const handleDelete = async () => {
+          const confirmed = await confirm({
+            title: 'Delete message?',
+            description: 'This action cannot be undone.',
+            variant: 'destructive',
+          })
+          if (!confirmed) return
+          await deleteMutation.mutateAsync({ id })
+        }
+      source: "MessageActions/index.tsx, OverviewTab.tsx"
+
+    # --- New patterns from 2026-06-05 dossier ---
+
+    - id: FRM-P38
+      name: "Enum-driven mode on Select / Combobox / ToggleGroup for closed SDK enums"
+      when: "field is bound to a closed SDK enum (Select, Combobox, or ToggleGroup)"
+      reason: "Passing enum={Enum} i18nPrefix='enums.X' to the existing Select / Combobox / ToggleGroup primitives activates enum-driven mode: items are derived from Object.values(enum) (or the optional values= subset), labels are rendered via t(`${i18nPrefix}.${v}`) (satisfying FRM-P09), and the typed enum value is emitted directly — eliminating the `v as EnumType` cast and the manual items array at every call site. The compound children API of these primitives is unchanged; enum= is opt-in."
+      rule: |
+        // Enum-driven mode props (generic E extends Record<string, string>):
+        // { enum: E; i18nPrefix: string; value: E[keyof E] | undefined;
+        //   onValueChange: (v: E[keyof E]) => void; placeholder?: string /*i18n key*/;
+        //   values?: E[keyof E][]; id?; className?; disabled?; 'aria-invalid'? }
+        // Narrowing uses isEnumValue from '@/lib' — NO 'as' casts.
+        // undefined value → null for the Base UI root.
+        // Label on trigger: t(`${i18nPrefix}.${value}`); per item: t(`${i18nPrefix}.${v}`)
+        // Items = values ?? Object.values(enum)
+
+        // Select — closed single-value enum field:
+        <Select enum={TaxTypeEnum} i18nPrefix="enums.TaxType"
+          value={field.state.value} onValueChange={field.handleChange}
+          placeholder="taxes.typePlaceholder"
+          id={field.name} aria-invalid={isInvalid} />
+
+        // Combobox — searchable single-value enum field:
+        <Combobox enum={CurrencyCode} i18nPrefix="enums.CurrencyCode"
+          value={field.state.value} onValueChange={field.handleChange}
+          placeholder="common.currencyPlaceholder" />
+
+        // ToggleGroup — single or multi-value enum field:
+        <ToggleGroup enum={OperationalCostFlowEnum} i18nPrefix="enums.OperationalCostFlow"
+          value={field.state.value} onValueChange={field.handleChange} />
+      wrong: |
+        // Manual items array + `as` cast — replaced by enum-driven mode:
+        <Select onValueChange={v => field.handleChange(v as TaxTypeEnumKey)}>
+          <SelectTrigger><SelectValue>{v ? t(`enums.TaxType.${v}`) : t('placeholder')}</SelectValue></SelectTrigger>
+          <SelectContent>{Object.values(TaxTypeEnum).map(item => <SelectItem key={item} value={item}>{t(`enums.TaxType.${item}`)}</SelectItem>)}</SelectContent>
+        </Select>
+        // isEnumValue must be used for narrowing inside the primitive; never `as SomeEnum`
+      refs: [A13-dossier]
+
+    - id: FRM-P39
+      name: "CurrencyInput for any money field ({amountCents, currency})"
+      when: "field maps to a Money / SignedMoney SDK shape"
+      reason: "A hand-rolled currency Select + number Input pair misses locale formatting, emits raw numbers, and locks currency. CurrencyInput handles amountCents storage, locale display, and currency selection in one primitive."
+      rule: |
+        <CurrencyInput
+          amountCents={field.state.value?.amountCents ?? 0}
+          currency={field.state.value?.currency ?? CurrencyCodeEnum.BRL}
+          onAmountChange={cents => field.handleChange({ ...field.state.value, amountCents: cents })}
+          onCurrencyChange={c => field.handleChange({ ...field.state.value, currency: c })}
+        />
+      wrong: |
+        <Select value={currency} onValueChange={v => setCurrency(v as CurrencyCode)}>...</Select>
+        <Input type="number" value={amount} onChange={e => setAmount(Number(e.target.value))} />
+      refs: [A12-dossier, AddProductCostDialog]
+
+    - id: FRM-P40
+      name: "ComponentProps<'form'> composition — forward className and native attrs"
+      when: always
+      reason: "Form components that don't extend ComponentProps<'form'> can't be placed, styled, or test-targeted by parents. Every form and section root must forward className + native attrs."
+      rule: |
+        type TaxesFormProps = React.ComponentProps<'form'> & {
+          defaultValues: DeepPartial<UpdateTaxesMutationRequest>
+        }
+        export function TaxesForm({ defaultValues, className, ...props }: TaxesFormProps) {
+          const form = useForm({ defaultValues, ... })
+          return (
+            <form
+              className={cn(className)}
+              {...props}
+              onSubmit={e => { e.preventDefault(); e.stopPropagation(); form.handleSubmit() }}
+            >
+              {/* fields */}
+            </form>
+          )
+        }
+      wrong: |
+        interface TaxesFormProps { defaultValues: DeepPartial<UpdateTaxesMutationRequest> }
+        export function TaxesForm({ defaultValues }: TaxesFormProps) {
+          return <form onSubmit={...}>{/* no className, no ...props */}</form>
+        }
+      refs: [A15-dossier]
+
+    - id: FRM-P41
+      name: "Hook-level onSuccess + combined isPending + named invalidate helper"
+      when: "form owns multiple mutations (create + update + delete) or has one consistent success behavior"
+      reason: "Hook-level onSuccess fires for every call site, keeps call sites clean, and reads top-to-bottom. A named invalidation helper deduplicates the invalidation set across all mutations. Combined isPending gives one disable source."
+      rule: |
+        const invalidateGoalQueries = () => {
+          queryClient.invalidateQueries({ queryKey: getGoalQueryKey() })
+          queryClient.invalidateQueries({ queryKey: listGoalsQueryKey() })
+        }
+        const updateGoal = useUpdateGoal({
+          mutation: {
+            onSuccess: () => {
+              toast.success(t('dashboard.goal.updateSuccess'))
+              invalidateGoalQueries()
+              hide()
+            },
+          },
+        })
+        const deleteGoal = useDeleteGoal({
+          mutation: { onSuccess: () => { invalidateGoalQueries(); hide() } },
+        })
+        const isPending = updateGoal.isPending || deleteGoal.isPending
+      wrong: |
+        await mutation.mutateAsync({ data }, {
+          onSuccess: () => toast.success('...'),
+          onSettled: () => queryClient.invalidateQueries({ queryKey: [{ url: '/api/goals' }] }),
+        })
+      refs: [H1-H3-dossier]
+
+    - id: FRM-P42
+      name: "Edit form props = read DTO, defaults = write DTO (no hand-rolled InitialValues)"
+      when: "form is an edit/update dialog pre-populated from existing entity data"
+      reason: "A custom *InitialValues interface is a third shape that diverges from both the read DTO and the write DTO, losing type safety at both boundaries. Use the SDK read query type as the prop and map to the write DTO for defaultValues."
+      rule: |
+        // Props typed from SDK read DTO — parent passes the already-fetched entity
+        export function EditGoalDrawer({ goal }: { goal: NonNullable<GetGoalQueryResponse['goal']> }) {
+          const defaultValues: DeepPartial<UpdateGoalMutationRequest> = {
+            targetAmount: goal.targetAmount,   // direct mapping — no re-nesting
+            type: goal.type,
+          }
+          const form = useForm({ defaultValues, validators: { onChange: updateGoalMutationRequestSchema } })
+          ...
+        }
+      wrong: |
+        interface GoalInitialValues { goalId: string; value: number; currency: string; startDate: string; endDate: string; type: string }
+        export function EditGoalDrawer({ initialValues }: { initialValues: GoalInitialValues }) { ... }
+      refs: [A14-dossier, GoalDrawer]
+
+    - id: FRM-P43
+      name: "Non-flat API body: dot-notation for nested; member-driven forms for discriminated/union — never a flat catch-all"
+      when: "SDK mutation body is nested OR is a discriminated/variant union"
+      reason: |
+        Nested body (e.g. revenueTax.type) → dot-notation field names so TanStack types resolve.
+        Discriminated/variant union body (ShippingFee by mode; ConnectIntegration's per-platform credentials)
+        → the discriminant is a SELECTOR and each variant is validated against its CONCRETE SDK member.
+        NEVER flatten a union into an all-optional catch-all (`uiSchema` / `z.record(z.string(),z.string())`)
+        that re-declares the union's members — that throws away the contract and hand-rolls shapes (incl. money).
+        Two shapes:
+          (a) union is a FIELD of the body → make the form field BE the SDK union via `.pick({ field: true })`;
+              the discriminant drives conditional rendering and the value comes from the member (no hand-roll).
+          (b) union IS the body → ONE small form component per variant (duplication is fine). The
+              WHOLE-MEMBER schema (`pickUnionVariant(...)`) can't be a `validators.onChange` (TS2322) —
+              gate the submit with `pickUnionVariant(union, match).safeParse(envelope)`. BUT a single
+              field's sub-schema (`pickUnionVariantField(union, match, 'credentials')`) IS a valid
+              `onChange` (its input type matches the flat field value) — see FRM-P44. Prefer the
+              `@/lib/union` helpers over hand-rolled `Extract<>` + a parallel validation schema.
+      rule: |
+        // Nested body — dot-notation:
+        <form.Field name="revenueTax.type">...</form.Field>
+
+        // (a) union is a field — pick it from the SDK, render by the discriminant (ShippingFeeForm):
+        const formSchema = updateFeesMutationRequestSchema.pick({ shippingFee: true })
+        <form.Field name="shippingFee.mode">{/* discriminant selector */}</form.Field>
+        {MODES_WITH_VALUE.includes(mode) && <form.Field name="shippingFee.value">{/* CurrencyInput, SDK-derived */}</form.Field>}
+
+        // (b) union IS the body — a form per variant, typed via Extract, validated by the SDK union (CredentialForms):
+        type ShopifyVariant = Extract<ConnectIntegrationMutationRequest, { platform: 'SHOPIFY'; connectionMode: 'CREDENTIALS' }>
+        const defaultValues: DeepPartial<ShopifyVariant> = { platform: 'SHOPIFY', connectionMode: 'CREDENTIALS', credentials: { shopDomain: '', ... } }
+        // submit + button gate use the SDK union (it narrows to the member):
+        const r = connectIntegrationMutationRequestSchema.safeParse(value); if (!r.success) return
+        const CREDENTIAL_FORMS = { 'SHOPIFY:CREDENTIALS': ShopifyCredentialsForm, ... } // map, no if-chains
+      wrong: |
+        // Flat field names when body is nested → TanStack types → `never`
+        <form.Field name="type">{/* revenueTax.type resolves to never */}</form.Field>
+        // Flattening a union into an all-optional catch-all / dynamic record that re-declares its members:
+        const uiSchema = z.object({ mode: ShippingModeEnum.optional(), averageFee: z.object({amountCents,currency}).optional() })
+        const formSchema = z.object({ credentials: z.record(z.string(), z.string()) }) // dynamic credential catch-all
+      refs: [A2-A3-dossier, ShippingFeeForm, ConnectIntegrationSheet/CredentialForms]
+
+    - id: FRM-P44
+      name: "Drive a discriminated union with @/lib/union helpers (don't hand-roll)"
+      when: "a form drives a discriminated SDK union — needs the variant set, the member schema, or one field's sub-schema"
+      reason: "The helpers keep the form bound to the SDK contract member (type + validation + parse from one source), instead of a parallel hand-rolled shape that drifts."
+      rule: |
+        Use the generic helpers in @/lib/union, never hand-rolled introspection or a parallel schema:
+        - unionVariantValues(union, 'connectionMode') → the discriminant's possible values (drive a selector).
+        - pickUnionVariant(union, { platform, connectionMode }).safeParse(envelope) → validate the WHOLE member (submit gate for a union-as-body form). NOT a validators.onChange.
+        - pickUnionVariantField(union, { platform, connectionMode }, 'credentials') → that member's FIELD sub-schema. IS a valid validators.onChange (input type matches the flat field value); also the .safeParse source AND the form value type via `type X = z.infer<typeof credentialsSchema>`.
+        Derive the value type from the extracted schema — one source for type + validation + parse.
+      wrong: "Hand-rolled union introspection; an all-optional catch-all; or Extract<> for the type alongside a separately hand-written validation schema."
+      refs:
+        - "packages/app/react/src/lib/union.ts"
+        - "ConnectIntegrationSheet/platforms/{shopify,shopify-payments,ticto}/credentials.tsx"
+        - "ShippingFeeForm.tsx"
+
+  # === Bad practices (migrated inline) ===
+  bad_practices:
+    - id: bp-01
+      name: "Duplicating search/filter schemas instead of extending SDK"
+      rule: "search schemas extend SDK schemas with .and() — never redefine"
+      mechanical: false
+
+    - id: bp-02
+      name: "Complex useEffect to synchronize form with props"
+      rule: "use computed defaultValues instead of useEffect that sets fields imperatively"
+      wrong: |
+        useEffect(() => { if (patient) { form.setFieldValue('fullName', patient.fullName || '') } }, [patient, form])
+      correct: |
+        const form = useForm({ defaultValues: patient ? mapPatientToFormValues(patient) : emptyFormValues })
+      mechanical: true
+      detect:
+        - 'useEffect\([\s\S]*?form\.setFieldValue'
+
+    - id: bp-03
+      name: "Defining mask options inline instead of importing"
+      rule: "always import mask options from @/lib/masks — never define inline"
+      mechanical: true
+      detect:
+        - 'useMaskito\(\{\s*options:\s*\{'
+
+    - id: bp-04
+      name: "Defining unmask inline"
+      rule: "import unmask from @/lib — never redefine"
+      mechanical: true
+      detect:
+        - '(?:const|function)\s+unmask\b'
+
+    - id: bp-05
+      name: "Complex error logic in form validators"
+      rule: "use SDK schema directly in validators.onChange — not complex safeParse + toast logic inside validators"
+      mechanical: false
+
+    - id: bp-06
+      name: "Using try/catch in mutations"
+      rule: "MutationCache.onError handles errors globally — use mutateAsync callback pattern (onSuccess for toast, onSettled for invalidation)"
+      mechanical: true
+      detect:
+        - 'try\s*\{[\s\S]*?mutateAsync'
+
+    - id: bp-07
+      name: "Using native HTML elements when project primitives exist"
+      rule: "always use project primitives (Select, DatePicker, Combobox) — never native <select>, <input type='date'>"
+      mechanical: true
+      detect:
+        - '<select[\s>]'
+        - '<input[^>]*type=[''"]date[''"]'
+
+    - id: bp-08
+      name: "Form fields without masks when applicable"
+      rule: "CPF, RG, phone, CNPJ, CEP fields MUST use Maskito masks from @/lib/masks"
+      mechanical: false
+
+    - id: bp-09
+      name: "Using as any in setFieldMeta for dynamic Zod paths"
+      rule: "use DeepKeys<TFormData> from @tanstack/react-form instead of as any"
+      mechanical: true
+      detect:
+        - 'setFieldMeta\([\s\S]*?as\s+any'
+        - 'as\s+any\b'
+
+    - id: bp-10
+      name: "Verbose Zod error path conversion"
+      rule: "use issue.path.map(String).join('.') — no defensive filter against symbols"
+      mechanical: true
+      detect:
+        - '\.path\.filter\('
+
+    - id: bp-11
+      name: "Manual interface for form defaults when DeepPartial<T> works"
+      rule: "use DeepPartial<T> to derive the type automatically instead of manual interfaces that desync"
+      mechanical: false
+
+    - id: bp-12
+      name: "Using validators.onChange with partial defaults in step forms"
+      rule: "when defaults are partial (undefined), use manual validation with safeParse + setFieldMeta instead of validators.onChange"
+      mechanical: false
+
+    - id: bp-13
+      name: "Extracting step schemas from save/draft schema instead of complete schema"
+      rule: "sub-schemas for steps must always be extracted from the final submission (complete/strict) schema"
+      mechanical: false
+
+    - id: bp-14
+      name: "Destructuring mutation hooks"
+      rule: "use the mutation hook as direct object (createItem.mutateAsync, createItem.isPending) — never destructure"
+      mechanical: true
+      detect:
+        - 'const\s*\{[^}]*\bmutateAsync\b[^}]*\}\s*=\s*use'
+
+    - id: bp-15
+      name: "Default string fields to '' when using .refine()"
+      rule: "string fields with .refine() must default to '' so the refine custom error shows instead of generic 'Expected string'"
+      mechanical: false
+
+    - id: bp-16
+      name: "Reading form.state.values directly (not reactive)"
+      rule: "always use form.Subscribe with a selector to get reactive derived values"
+      mechanical: false
+
+    - id: bp-17
+      name: "Missing ?? '' on Input value props"
+      rule: "when defaults are undefined, field.state.value starts as undefined — use ?? '' to keep the input controlled"
+      mechanical: true
+      detect:
+        - 'value=\{field\.state\.value\}'
+
+    - id: bp-18
+      name: "Dialog with open/onOpenChange props instead of useDialogStore"
+      severity: critical
+      wrong: |
+        interface CreateItemDialogProps {
+          open: boolean
+          onOpenChange: (open: boolean) => void
+        }
+        export function CreateItemDialog({ open, onOpenChange }: CreateItemDialogProps) {
+          return <Dialog open={open} onOpenChange={onOpenChange}>...</Dialog>
+        }
+      right: |
+        export function CreateItemDialog() {
+          const { hide } = useDialogStore()
+          return <DialogContent>...<Button onClick={hide}>Cancel</Button>...</DialogContent>
+        }
+        // Caller: show(<CreateItemDialog />)
+      mechanical: true
+      detect:
+        - 'onOpenChange:\s*\('
+        - '<Dialog\b[^>]*\bopen='
+
+    - id: bp-19
+      name: "Update dialog with open/onOpenChange props instead of useDialogStore"
+      severity: moderate
+      wrong: |
+        <UpdatePatientDialog patient={patient} open={open} onOpenChange={setOpen} />
+      right: |
+        show(<UpdateItemDialog item={item} />)
+        // Dialog receives entity data as props and handles its own mutation/invalidation
+      mechanical: true
+      detect:
+        - '<\w+Dialog\b[^>]*\bonOpenChange=\{'
+
+    - id: bp-20
+      name: "Manual form.formApi.reset() in dialog onSettled"
+      severity: moderate
+      wrong: |
+        onSettled: () => { form.formApi.reset(); onOpenChange(false) }
+      right: |
+        onSuccess: () => { toast.success('Created'); hide() }
+        // hide() unmounts dialog — form state is automatically cleaned up
+      mechanical: true
+      detect:
+        - 'form\.formApi\.reset\('
+
+    # --- New bad_practices from 2026-06-05 dossier ---
+
+    - id: bp-21
+      name: "Local z.object redefining the SDK mutation body"
+      rule: "never declare const formSchema = z.object({...}) in a form file that imports a use<Mutation> hook — import <name>MutationRequestSchema from the SDK and use it directly (or extend with .and() for genuine UI-only fields)"
+      wrong: |
+        const formSchema = z.object({ name: z.string(), price: z.number() }) // duplicates SDK
+        const form = useForm({ validators: { onChange: formSchema } })
+      right: |
+        import { createProductMutationRequestSchema } from '@codm/client-typescript/typescript'
+        const form = useForm({ validators: { onChange: createProductMutationRequestSchema } })
+      refs: [A1-dossier]
+      mechanical: true
+      detect:
+        - '=\s*z\.object\('
+      detect_skip: 'uiSchema\s*=\s*z\.object\('
+
+    - id: bp-22
+      name: "Inline 'as DeepPartial<>' or 'as FormValues' on defaultValues"
+      rule: "declare a typed const (const defaultValues: DeepPartial<Req> = {...}) instead of casting — the cast hides wrong field names/shapes"
+      wrong: |
+        useForm({ defaultValues: { name: item.name } as DeepPartial<UpdateItemRequest> })
+        useForm({ defaultValues: { name: '' } as FormValues })
+      right: |
+        const defaultValues: DeepPartial<UpdateItemMutationRequest> = { name: item.name }
+        useForm({ defaultValues })
+      refs: [A5-dossier]
+      mechanical: true
+      detect:
+        - 'as\s+DeepPartial\s*<'
+        - 'as\s+\w*FormValues\b'
+
+    - id: bp-23
+      name: "Explicit useForm<T>() type argument"
+      rule: "never pass a type arg to useForm — TanStack expects 12 type parameters; a single arg collapses every field to never. Infer TFormData via the typed defaultValues const."
+      wrong: |
+        const form = useForm<FormValues>({ defaultValues, validators: { onChange: schema } })
+      right: |
+        const defaultValues: DeepPartial<CreateItemMutationRequest> = {}
+        const form = useForm({ defaultValues, validators: { onChange: schema } })
+      refs: [A6-dossier]
+      mechanical: true
+      detect:
+        - 'useForm\s*<'
+
+    - id: bp-24
+      name: "'as never' on validators"
+      rule: "never write validators: { onChange: schema as never } — this masks type errors between TFormData and the schema shape; fix the mismatch with a typed defaultValues const instead"
+      wrong: |
+        validators: { onChange: operationalCostMutationRequestSchema as never }
+      right: |
+        const defaultValues: DeepPartial<CreateOperationalCostMutationRequest> = {}
+        const form = useForm({ defaultValues, validators: { onChange: operationalCostMutationRequestSchema } })
+      refs: [A5-dossier]
+      mechanical: true
+      detect:
+        - 'as\s+never\b'
+
+    - id: bp-25
+      name: "Hand-rolled *InitialValues props instead of the SDK read DTO"
+      rule: "edit form props must be typed from the SDK read query response — never declare a custom *InitialValues interface that mirrors SDK fields; use the read DTO directly and map to the write DTO for defaultValues"
+      wrong: |
+        interface GoalInitialValues { goalId: string; value: number; currency: string }
+        function EditGoalDrawer({ initialValues }: { initialValues: GoalInitialValues }) { ... }
+      right: |
+        function EditGoalDrawer({ goal }: { goal: NonNullable<GetGoalQueryResponse['goal']> }) { ... }
+      refs: [A14-dossier]
+      mechanical: true
+      detect:
+        - 'interface\s+\w*InitialValues\b'
+        - '\{\s*initialValues\s*\}'
+
+    - id: bp-26
+      name: "Form component not composing React.ComponentProps / not forwarding className and ...props"
+      rule: "every form component's props type must extend React.ComponentProps<'form'> & { ...domain }; the root <form> must spread className={cn(className)} {...props} onSubmit={...} (own handler last)"
+      wrong: |
+        interface TaxesFormProps { defaultValues: DeepPartial<UpdateTaxesMutationRequest> }
+        function TaxesForm({ defaultValues }: TaxesFormProps) {
+          return <form onSubmit={...}>{/* no className forwarding */}</form>
+        }
+      right: |
+        type TaxesFormProps = React.ComponentProps<'form'> & { defaultValues: DeepPartial<UpdateTaxesMutationRequest> }
+        function TaxesForm({ defaultValues, className, ...props }: TaxesFormProps) {
+          return <form className={cn(className)} {...props} onSubmit={e => { e.preventDefault(); form.handleSubmit() }}>{/* fields */}</form>
+        }
+      refs: [A15-dossier]
+      mechanical: false
+
+    - id: bp-27
+      name: "Split currency Select + amount Input instead of CurrencyInput"
+      rule: "any field that maps to a Money / SignedMoney shape ({amountCents, currency}) MUST render one <CurrencyInput> — never a hand-rolled currency Select + number Input pair"
+      wrong: |
+        <Select value={currency} onValueChange={v => setCurrency(v as CurrencyCode)}>...</Select>
+        <Input type="number" value={amountCents / 100} onChange={...} />
+      right: |
+        <CurrencyInput
+          amountCents={field.state.value?.amountCents ?? 0}
+          currency={field.state.value?.currency ?? CurrencyCodeEnum.BRL}
+          onAmountChange={cents => field.handleChange({ ...field.state.value, amountCents: cents })}
+          onCurrencyChange={c => field.handleChange({ ...field.state.value, currency: c })}
+        />
+      refs: [A12-dossier]
+      mechanical: false
+
+    - id: bp-28
+      name: "Hardcoded queryKey object literal [{ url: '...' }]"
+      rule: "never pass a hand-written object literal as a queryKey — always call the SDK-generated queryKey helper (<list/get>QueryKey(args))"
+      wrong: |
+        queryClient.invalidateQueries({ queryKey: [{ url: '/api/products' }] })
+      right: |
+        queryClient.invalidateQueries({ queryKey: listProductsQueryKey() })
+      refs: [A4-dossier]
+      mechanical: true
+      detect:
+        - 'queryKey:\s*\[\s*\{\s*url:'
+
+    - id: bp-29
+      name: "Per-mutation onError toast that double-toasts the global MutationCache handler"
+      rule: "do NOT add onError: (e) => toast.error(...) to individual mutations — MutationCache.onError (router.tsx) already handles all API errors globally with the translated domain error message; a local handler fires in addition and shows a more-generic message on top"
+      wrong: |
+        const updateGoal = useUpdateGoal({
+          mutation: { onError: e => toast.error(e.message) }, // fires on top of MutationCache
+        })
+      right: |
+        const updateGoal = useUpdateGoal({
+          mutation: { onSuccess: () => { toast.success(t('goal.updateSuccess')); hide() } },
+          // no onError — MutationCache handles it
+        })
+      refs: [H1-caveat-dossier]
+      mechanical: true
+      detect:
+        - 'onError:[^}]*toast\.error'
+
+    - id: bp-30
+      name: "Contract gap: void-typed mutations, variantIds min(1), batch body, loosely-typed BFF DTOs (needs backend fix)"
+      rule: |
+        These are NOT pure-frontend issues — they require a backend contract change + bun sdk:
+        • void-typed mutations (useUpdateProfile, useUpdateUserSettings) — controllers need a typed request body (E1/A9)
+        • variantIds: min(1) blocks submit when no picker exists — relax or add picker (E2)
+        • updateAdAccounts batch body shape mismatch — align controller with UI expectation (E3)
+        • BFF read DTOs typing enum/currency fields as plain string — type them with the enums to eliminate boundary casts (E4)
+        Reviewers: if you see a cast on a boundary between a BFF read DTO and a form/display component, check E4 first before adding workaround casts.
+      refs: [E1-E4-dossier]
+      mechanical: false
+
+    - id: bp-31
+      name: "Flattening a discriminated/union body into an all-optional catch-all instead of per-member forms"
+      rule: "Discriminated/variant body → discriminant selector + concrete SDK member per variant (pick the union field via .pick(), or one form component per variant typed via Extract). Never a z.record(z.string(),z.string()) credential catch-all, nor an all-optional uiSchema re-declaring the union's members (FRM-P43)."
+      wrong: "const formSchema = z.object({ credentials: z.record(z.string(), z.string()) }) // dynamic catch-all for a discriminated body"
+      right: "type V = Extract<Req,{platform:'SHOPIFY';connectionMode:'CREDENTIALS'}>; const defaultValues: DeepPartial<V> = {...}; sdkUnion.safeParse(value) at submit; CREDENTIAL_FORMS map by (platform:mode)"
+      mechanical: true
+      detect:
+        - 'z\.record\(\s*z\.string\(\)\s*,\s*z\.string\(\)'
+      refs: [FRM-P43, FRM-P44, ConnectIntegrationSheet/CredentialForms]
+
+    - id: bp-32
+      name: "Raw HTTP from a form instead of the SDK mutation (Non-Negotiable #2)"
+      severity: critical
+      rule: "Forms submit only through SDK mutation hooks (useCreateX/useUpdateX) validated by xMutationRequestSchema. Never fetch()/axios/ky directly."
+      wrong: |
+        await fetch('/api/products', { method: 'POST', body: JSON.stringify(value) })
+      right: |
+        await createProduct.mutateAsync({ data: result.data })
+      mechanical: true
+      detect:
+        - '(?<![\w$.])fetch\s*\('
+        - 'from\s+[''"](?:axios|ky|got|redaxios|superagent)[''"]'
+
+    - id: bp-33
+      name: "Search modeled as a form field"
+      severity: moderate
+      rule: >
+        Search/filter text over a list already loaded in memory (or a route search param) is
+        NEVER a `form.Field` — there is nothing to validate against an SDK schema and nothing to
+        submit. A field with no submit and no schema behind it is a `useState` that filters, not a
+        form. `bun cli form` is for a mutation payload; a search box scaffolds through `/component`
+        (or `/route` when it belongs in URL search params — STR-P10 case 2/5).
+      wrong: |
+        <form.Field name="search">
+          {field => <Input value={field.state.value} onChange={e => field.handleChange(e.target.value)} />}
+        </form.Field>
+      right: |
+        // ContactStep — filters an already-loaded list, inside one step of a wizard
+        const [search, setSearch] = useState('')
+        const filtered = contacts.filter(c => c.displayName.toLowerCase().includes(search.trim().toLowerCase()))
+        <Input placeholder={t('attach.searchContacts')} value={search} onChange={e => setSearch(e.target.value)} />
+      mechanical: false
+      note: >
+        The recipe `live-settings` (component react) is the other shape of "a control with no
+        submit" — save-on-change instead of filter-on-change. Both exist because TanStack Form
+        owns exactly one thing: fields that validate against a schema and submit. A control that
+        does neither is not a form, whichever direction it leans.
+
+  scaffold: "bun cli form <route> <name> (--from=<sdk.path> | --fields=<spec>) [--edit] [--mutation=<hookName>] --i18n=<prefix>"

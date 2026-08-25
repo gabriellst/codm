@@ -1,0 +1,373 @@
+id: synthetic-react-state-placement
+tier: holdout
+builder: sonnet
+title: Reports deep-dive page — composed search schema, comparison store,
+  subscribe-derived target preview (synthetic — probes all five STR-P10 cases)
+sourceSpec: PROBES-BACKLOG.md#5
+goldRef: ""
+baseRef: ""
+prompt: >
+  In the template web app (packages/app/react), build the missing Reports page
+  at /app/reports as the new route directory src/routes/(app)/reports/ —
+  nothing exists there yet: create its index.tsx (route id /(app)/reports/),
+  its components under
+  src/routes/(app)/reports/-components/ (one folder per component with an
+  index.tsx, like the dashboard's), and any route-scoped store under
+  src/routes/(app)/reports/-stores/. The backend surface already exists in the
+  SDK — read the generated surface under
+  packages/client/dist/typescript/src/typescript/{hooks,types,zod} FIRST for
+  the exact params and response shapes: useGetChart + getChartQueryParamsSchema
+  (the analytics chart read — the revenue-over-time view is the 'income'
+  recorte, and the query also wants tenancyScope, frequency, the period and
+  optional productIds), useListQuickProductRanking (top products for the same
+  window), useGetGoal + useCreateGoal + getGoalQueryKey +
+  createGoalMutationRequestSchema (the period target), and the
+  AnalyticsFrequencyEnum / GoalTypeEnum enums — all importable from
+  @codm/client-typescript/typescript. This is a frontend-only task: do not
+  touch the backend and do not regenerate the SDK. The page is a revenue
+  deep-dive report with three regions sharing one period: (1) a revenue-trend
+  chart (the income recorte only — do not build the other recortes) with a
+  granularity switch offering every frequency the wire contract offers; (2) a
+  top-products table for the same window (name, sales count, revenue); (3) an
+  always-visible inline "period target" editor card — NOT a drawer, NOT a
+  dialog; the dashboard's GoalDrawer is a different flow and both the
+  dashboard route and the drawer stay untouched — where the user picks a
+  REVENUE or PROFIT target, an amount and a from/to range, prefilled from the
+  active goal (GetGoal) and saved with the CreateGoal mutation, refreshing the
+  goal read afterwards. Product requirements that decide where every piece of
+  state lives: the period (defaults: last 30 days) and the granularity
+  (default: daily) must survive a refresh and be shareable with a teammate
+  as-is, and every filter change applies immediately as picked (no
+  apply-button draft); the single/multi-store consolidation mode is the
+  account-level mode the app already manages (see @/stores/useTenancyStore) —
+  every analytics query on this page must respect it without it ever
+  appearing in the URL; each table row carries a "compare" toggle that builds
+  a comparison basket — the basket count plus a clear action live in the page
+  toolbar and a side-by-side comparison panel shows the selected products'
+  figures — the basket is yours alone: a shared link or a refresh must NOT
+  carry it, several sibling sections read it simultaneously, and it holds
+  selections made over whatever rows the current fetch returned; while
+  editing the target, the card live-previews the implied daily run-rate (the
+  target amount spread over the chosen range, rendered as money) and shows an
+  unsaved-changes banner the moment the form diverges from the loaded goal —
+  both react as the user types, before any save. All copy is localized in
+  both app languages (add the new keys to src/locales/pt.json and en.json);
+  enum labels (the granularity options, the target type) come from the typed
+  enums.* catalog. Money renders via the house hooks; never hardcode a
+  locale. No sidebar/nav changes are needed — the page is reachable by URL.
+  Decide where every piece of UI state lives — URL, store, form, or hook —
+  per the house architecture: read packages/app/react/CLAUDE.md FIRST, then
+  docs/FRONTEND.md and the react variants of the route/component/form/store
+  skills under .claude/skills/, and study src/routes/(app)/dashboard/index.tsx
+  (the canonical composed search schema) plus one of its sections (e.g.
+  -components/RankingSection/) before writing code. Register the route
+  (cd packages/app/react && bun x tsr generate) and finish with a green
+  type-check: cd packages/app/react && bun x tsc --noEmit.
+axes:
+  - STATE-PLACEMENT
+  - FORM-SUBSCRIBE
+  - SCHEMA-DERIVE
+  - ENUM-REPR
+  - DATA-OWNERSHIP
+  - MUTATION-IDIOM
+  - SDK-CONSUME
+  - LOCALE-MONEY
+graders:
+  - kind: tsc
+    spec: app-react
+  - kind: test-green
+    spec: packages/app/react/src/lib/format.test.ts
+  # ── structure ──────────────────────────────────────────────────────
+  - kind: file-exists
+    spec: "packages/app/react/src/routes/(app)/reports/index.tsx"
+  - kind: file-exists
+    spec: "packages/app/react/src/routes/(app)/reports/-stores/*.{ts,tsx}"
+  - kind: file-exists
+    spec: "packages/app/react/src/routes/(app)/reports/-components/*/index.tsx"
+  # ── (a) SCHEMA-DERIVE — composed search schema (STR-P10 case 2) ────
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/index.tsx::validateSearch"
+    id: route#RTE-C01
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::(getChartQueryParamsSchema|listQuickProductRankingQueryParamsSchema)"
+    id: store#STR-P10-case2
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::\\.omit\\(\\s*\\{[^}]*tenancyScope"
+    id: store#STR-P10-case2
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::\\.and\\("
+    id: route#RTE-P13
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::\\.default\\("
+    id: route#RTE-P12
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::(analyticsFrequencySchema|AnalyticsFrequencyEnum\\s*\\))[\\s\\S]{0,40}?\\.default\\("
+    id: enum#typescript
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.{ts,tsx}::\\.useSearch\\("
+    id: component#CMP-P01
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.{ts,tsx}::search:\\s*\\(?\\s*\\w+\\s*(?::[^)]*)?\\)?\\s*=>"
+    id: store#STR-P10-case2
+  # ── tenancyScope relocation proof (omit + read from the app store) ─
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.{ts,tsx}::useTenancyStore\\(\\s*\\(?\\s*\\w+\\s*(?::[^)]*)?\\)?\\s*=>\\s*\\w+\\.tenancyScope\\s*\\)"
+    id: store#STR-C02
+  # ── (b) STR-P10 case 1 — server data via SDK hooks, sections own it ─
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.{ts,tsx}::useGetChart"
+    id: component#CMP-P01
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.{ts,tsx}::useListQuickProductRanking"
+    id: component#CMP-P01
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/reports/index.tsx::useGetChart|useListQuickProductRanking|useGetGoal|useCreateGoal"
+    id: route#RTE-C02
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.{ts,tsx}::Skeleton"
+    id: component#skeleton-inline
+  # ── (c) STR-P10 case 3 — route-scoped comparison store ─────────────
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-stores/*.{ts,tsx}::from\\s+['\"]zustand['\"]"
+    id: store#STR-01
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-stores/*.{ts,tsx}::export const use\\w+Store"
+    id: store#STR-P05
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-stores/*.{ts,tsx}::(reset|clear|Reset|Clear)"
+    id: store#STR-C03
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.{ts,tsx}::from\\s+['\"][^'\"]*-stores/"
+    id: store#STR-P05
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.{ts,tsx}::use\\w+Store\\(\\s*\\(?\\s*\\w+\\s*(?::[^)]*)?\\)?\\s*=>"
+    id: store#STR-C02
+  # ── (d) STR-P10 case 4 — form + Subscribe-derived state ────────────
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.{ts,tsx}::createGoalMutationRequestSchema"
+    id: form#FRM-01
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.{ts,tsx}::useForm\\("
+    id: form#FRM-02
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.{ts,tsx}::validators:"
+    id: form#FRM-02
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.{ts,tsx}::form\\.Subscribe"
+    id: form#FRM-P03
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.{ts,tsx}::<form\\.Subscribe[^>]*selector="
+    id: form#FRM-P03
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.{ts,tsx}::isDirty"
+    id: form#FRM-P03
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.{ts,tsx}::safeParse\\("
+    id: form#FRM-P02
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.{ts,tsx}::useCreateGoal"
+    id: form#FRM-01
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.{ts,tsx}::useGetGoal\\b"
+    id: form#FRM-C04
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.{ts,tsx}::on(Success|Settled)\\s*:"
+    id: form#bp-29
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.{ts,tsx}::invalidateQueries"
+    id: form#bp-29
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.{ts,tsx}::getGoalQueryKey"
+    id: form#bp-29
+  # ── ENUM-REPR + LOCALE-MONEY ───────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::enum=\\{\\s*AnalyticsFrequencyEnum|Object\\.values\\(\\s*AnalyticsFrequencyEnum|analyticsFrequencySchema\\.options"
+    id: enum#typescript
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::enums\\.AnalyticsFrequency"
+    id: enum#i18n-catalog
+  - kind: grep-must
+    spec: "packages/app/react/src/locales/en.json::\"AnalyticsFrequency\""
+    id: enum#i18n-catalog
+  - kind: grep-must
+    spec: "packages/app/react/src/locales/pt.json::\"AnalyticsFrequency\""
+    id: enum#i18n-catalog
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::enums\\.GoalType"
+    id: enum#i18n-catalog
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.{ts,tsx}::useMoney\\("
+    id: component#useMoney
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.tsx::useTranslation\\("
+    id: atlas#LOCALE-MONEY
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::['\"]pt-BR['\"]|['\"]en-US['\"]|locale:\\s*ptBR"
+    id: component#bp-15
+  # ── STATE-PLACEMENT must-nots (the traps) ──────────────────────────
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::\\buseState\\b"
+    id: store#STR-P10
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::useDrawerStore|GoalDrawer"
+    id: form#inline-not-drawer
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::switch\\s*\\("
+    id: component#CMP-P18
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::onError\\s*[:,(]"
+    id: form#bp-29
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::try\\s*\\{"
+    id: mutation#no-try-catch
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::(?<![\\w$.])fetch\\s*\\(|from\\s+['\"](axios|ky|got|redaxios|superagent)['\"]"
+    id: component#bp-21
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::throw new Error"
+    id: errors#ERR-VOCAB
+  # ── detectors + judge ──────────────────────────────────────────────
+  - kind: detect
+    spec: registry-scan
+  - kind: detect
+    spec: import-direction
+  - kind: detect
+    spec: component-props
+  - kind: judge
+    spec: >
+      A Reports deep-dive page was just added under
+      packages/app/react/src/routes/(app)/reports/. Verify ALL of:
+      (a) SCHEMA-DERIVE / state-placement case 2 — the route index.tsx is a
+      thin shell (URL contract + layout composition only, no SDK hook calls,
+      no business JSX); the search schema is COMPOSED from the wire contract:
+      it starts from an SDK query-params schema
+      (getChartQueryParamsSchema or listQuickProductRankingQueryParamsSchema),
+      .omit()s tenancyScope plus any required field being re-defaulted, and
+      .and()s the route-local fields; the WHOLE schema parses from an empty
+      search object — every re-added field carries .default() (period defaults
+      to the last 30 days, granularity to a daily-equivalent), including the
+      frequency field typed by the SDK AnalyticsFrequency enum — never a
+      hand-rolled z.object duplicating fields the SDK schema already declares
+      while ignoring it; period + granularity are READ in section components
+      via useSearch and WRITTEN via navigate with a functional search update,
+      so the filtered view deep-links and survives refresh; tenancyScope
+      never appears in the URL schema and IS read from the app-global
+      useTenancyStore via a selector at the analytics query call sites — the
+      omit is a relocation, not a deletion.
+      (b) state-placement case 3 — the comparison basket lives in ONE
+      route-scoped Zustand store under -stores/ holding only the selected
+      product ids plus actions (including a clear/reset); components access it
+      with selectors; it is read by at least the ranking table rows, the
+      toolbar (count + clear) and the comparison panel; it is NOT in the URL,
+      NOT a useState lifted into the page, and NOT prop-drilled callbacks from
+      a stateful parent; no server data is mirrored into the store (no row
+      objects, no query responses) — the comparison panel derives its rows
+      from its own SDK query data filtered by the stored ids.
+      (c) FORM-SUBSCRIBE / state-placement case 4 — the inline target editor
+      owns a TanStack useForm validated by createGoalMutationRequestSchema
+      (the SDK schema, no parallel hand-rolled schema); the implied daily
+      run-rate preview and the unsaved-changes banner derive from form state
+      via form.Subscribe with narrow selectors (value slices / isDirty) —
+      they are NEVER mirrored into useState or a store by onChange handlers,
+      and there are no raw form.state.values reads in render bodies; the
+      submit button is gated per FRM-P03 (form.Subscribe + safeParse) and the
+      mutation sends validated data.
+      (d) DATA-OWNERSHIP + MUTATION-IDIOM — each section owns its own query
+      (chart owns useGetChart with chartType income, ranking owns
+      useListQuickProductRanking, the target card owns useGetGoal); no query
+      data is prop-drilled between sections (leaf rows receiving their item
+      from the list-owning parent is fine); pending state renders inline
+      skeletons; the CreateGoal mutation invalidates the goal read via
+      getGoalQueryKey on success/settled, in-flight feedback comes from the
+      hook's isPending, and there is no try/catch and no onError handler.
+      (e) ENUM-REPR + LOCALE — the granularity options derive from the SDK
+      enum (Select enum={AnalyticsFrequencyEnum} / Object.values /
+      analyticsFrequencySchema.options — never a hand-typed parallel value
+      array); labels come from the typed i18n catalog
+      (enums.AnalyticsFrequency.* with keys in BOTH src/locales/pt.json and
+      en.json; the target type via enums.GoalType.*); all user-facing copy is
+      localized in both languages; money renders via useMoney(); no hardcoded
+      'pt-BR'/'en-US' anywhere under the new dir.
+      (f) state-placement case 5 — zero useState under the route dir: this
+      brief has no sanctioned transient (filters apply immediately, the
+      editor is always visible, the basket is store-owned).
+      Scope notes: the period/granularity filters are read by every section —
+      that does NOT make them store state; URL placement is the expected
+      shape, so do not fail (b) because the filters are not in the store. The
+      run-rate preview and dirty banner render inside the target card only —
+      form.Subscribe is the expected mechanism; do not fail (c) for the
+      preview not being shared through a store, and do not demand it render
+      outside the form component. tenancyScope still reaches the wire as a
+      query param on every analytics call — store-owned means URL-omitted,
+      not wire-omitted; do not fail (a) for tenancyScope appearing in hook
+      params. productIds inherited from the SDK schema part may survive in
+      the composed schema as optional WITHOUT .default(), or be omitted
+      entirely — both are acceptable; the every-field-defaulted bar applies
+      to the re-added route-local fields. Local naming varies (store, action,
+      selector and component names) — judge the idiom, not the name.
+      Pre-existing files (the dashboard route including its useState
+      fallbacks, components/drawers/GoalDrawer, the Header/Navbar) are OUT of
+      scope; judge only the files under src/routes/(app)/reports/ plus
+      src/locales/pt.json and en.json.
+notes: >-
+  Synthetic probe authored from grounded HEAD facts — the STATE-PLACEMENT deep
+  cut (PROBES-BACKLOG.md P1 #5): one screen forcing all five STR-P10 cases.
+  Free real estate verified at authoring time: src/routes/(app)/reports/
+  contains ZERO files (an empty UNTRACKED dir in the live checkout — git does
+  not materialize it in the runner's detached worktree, which is why the
+  prompt says "nothing exists there yet" rather than "the dir exists"), so
+  every dir-scoped grep-must is 0 at HEAD and the file-exists targets are
+  absent;
+  src/locales/{pt,en}.json contain no "AnalyticsFrequency" key (GoalType keys
+  DO exist at HEAD — that is why the GoalType grader checks usage in the new
+  dir only, never the locale files); tsc app-react is green, registry-scan
+  --all, import-direction --all and component-props --all all exit 0, and
+  bun test packages/app/react/src/lib/format.test.ts passes from the repo
+  root (the test-green regression guard). Grounded SDK reality (verified in
+  packages/client/dist/typescript/src/typescript): getChartQueryParamsSchema
+  = { chartType, tenancyScope, frequency, startDate, endDate, productIds? }
+  with chartType/frequency/tenancyScope as required SDK enums and the chart
+  response a kind-discriminated union (the brief pins the income recorte so
+  no per-kind dispatch is needed — the switch ban stays safe);
+  listQuickProductRankingQueryParamsSchema = { tenancyScope, startDate,
+  endDate, productIds? }; useGetGoal/getGoalQueryKey() take no params;
+  useCreateGoal body = { from, to, type: GoalType, targetAmount: {
+  amountCents, currency } }; AnalyticsFrequencyEnum / GoalTypeEnum /
+  analyticsFrequencySchema are all exported from the SDK index; the Select
+  primitive accepts enum={XEnum} + i18nPrefix and does Object.values
+  internally — hence the options grader accepts enum={AnalyticsFrequencyEnum}
+  OR Object.values(AnalyticsFrequencyEnum) OR analyticsFrequencySchema.options.
+  The discriminating questions: a naive build holds period/granularity in
+  useState (URL is right), puts the comparison basket in the URL or lifts it
+  into page useState with prop-drilled callbacks (a route-scoped -stores/
+  Zustand store is right — runtime-resolved, non-shareable, read by 3
+  siblings), mirrors form fields into useState/store onChange to compute the
+  run-rate (form.Subscribe narrow selectors are right), hand-rolls the search
+  z.object instead of composing .omit/.and/.default from the SDK schema, and
+  forgets that omitting tenancyScope means READING it from useTenancyStore at
+  the call sites. Deliberate tension notes: (1) the dir-wide useState ban is
+  safe because the prompt removes every case-5 need (filters apply
+  immediately — no draft state; the editor is always visible; no stories file
+  is requested — a *.stories.tsx with useState in a decorator would trip
+  store#STR-P10, same caveat as the notifications probe); (2) the isDirty
+  must-grep assumes the TanStack dirty flag — an agent hand-comparing values
+  to the loaded goal inside a Subscribe selector would fail it; accepted, the
+  flag IS the canonical API and hand-comparison is the mirror-flavored
+  anti-pattern this probe hunts; (3) GoalForm
+  (components/drawers/GoalDrawer) invalidates goal-progress via a hand-built
+  url-prefix queryKey array (documented SDK gap) — this page never shows
+  progress, so only getGoalQueryKey invalidation is demanded and no
+  queryKey:[ must-not is included (copying the drawer's workaround would not
+  fail a grader, the judge sees only the new dir); (4) the
+  useTenancyStore selector grep tolerates (s)/(state) param spellings, with or
+  without a type annotation ((prev: any) / (s: Foo) — HEAD's own navigate
+  updates in RevenueChartSection/IntegrationsListSection use typed params, so
+  the navigate functional-search grep and the generic store-selector grep carry
+  the same (?::[^)]*)? tolerance), but requires selector access — full-store
+  destructuring (STR-C02 wrong) fails it. Glob notes (Bun.Glob): "(app)" is a literal segment and matches fine;
+  filename braces *.{ts,tsx} are supported but "/" inside a brace branch is
+  not (never used here); "**" matches zero segments so reports/**/*.tsx
+  includes reports/index.tsx; the -stores/-components leading dash needs no
+  escaping. All regexes compile through parseGrepSpec (validated via
+  validate-task.ts at authoring time: every grep-must/file-exists FAILS at
+  HEAD, every must-not/tsc/detect/test-green PASSES).

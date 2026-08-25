@@ -1,0 +1,46 @@
+package projections
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+)
+
+// pgCouponProjectionRepository is the Postgres implementation.
+type pgCouponProjectionRepository struct {
+	db *sql.DB
+}
+
+// NewPgCouponProjectionRepository constructs the Postgres implementation.
+func NewPgCouponProjectionRepository(db *sql.DB) *pgCouponProjectionRepository {
+	return &pgCouponProjectionRepository{db: db}
+}
+
+// Upsert inserts or updates the coupon projection row.
+func (r *pgCouponProjectionRepository) Upsert(ctx context.Context, p *CouponProjection) error {
+	_, err := r.db.ExecContext(ctx, `
+		INSERT INTO sales.coupons
+		  (TODO_key, updated_at)
+		VALUES ($1, $2)
+		ON CONFLICT (TODO_key) DO UPDATE
+		  SET updated_at = EXCLUDED.updated_at
+	`,
+		// p.EntityID,
+		p.UpdatedAt,
+	)
+	if err != nil {
+		return fmt.Errorf("sales.coupons upsert: %w", err)
+	}
+	return nil
+}
+
+// Delete removes the row for the given key.
+func (r *pgCouponProjectionRepository) Delete(ctx context.Context, key string) error {
+	_, err := r.db.ExecContext(ctx, `
+		DELETE FROM sales.coupons WHERE TODO_key = $1
+	`, key)
+	if err != nil {
+		return fmt.Errorf("sales.coupons delete: %w", err)
+	}
+	return nil
+}

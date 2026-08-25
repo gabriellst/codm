@@ -1,0 +1,24 @@
+{
+	"name": "@codm/e2e",
+	"license": "MIT",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"test": "bun scripts/run-e2e.ts",
+		"test:headed": "bun scripts/run-e2e.ts --headed",
+		"generate:html": "bun scripts/generate-html.ts",
+		"generate:svg": "bun scripts/generate-svg.ts",
+		"tsc": "tsc --noEmit",
+		"build:extension": "bun extension/build.ts"
+	},
+	"devDependencies": {
+		"@codm/core-typescript": "workspace:*",
+		"@playwright/test": "^1.59.1",
+		"@types/bun": "^1.3.11",
+		"@types/node": "^25.6.0",
+		"playwright": "^1.59.1"
+	},
+	"dependencies": {
+		"@codm/client-typescript": "workspace:*"
+	}
+}

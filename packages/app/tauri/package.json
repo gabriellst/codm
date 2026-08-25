@@ -1,0 +1,24 @@
+{
+	"name": "@codm/app-tauri",
+	"version": "0.1.0",
+	"license": "MIT",
+	"private": true,
+	"type": "module",
+	"description": "CODM desktop shell — Tauri v2 host for the react console + TS daemon / Go gateway sidecars.",
+	"exports": {
+		"./commands": "./commands/index.ts"
+	},
+	"scripts": {
+		"tauri": "tauri",
+		"dev": "tauri dev",
+		"bundle": "tauri build",
+		"sidecars": "bun config/build-sidecars.ts",
+		"generate": "bun config/generate.ts"
+	},
+	"dependencies": {
+		"@tauri-apps/api": "^2.11.1"
+	},
+	"devDependencies": {
+		"@tauri-apps/cli": "^2.9.6"
+	}
+}

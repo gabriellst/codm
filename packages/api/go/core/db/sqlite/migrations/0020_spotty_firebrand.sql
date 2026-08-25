@@ -1,0 +1,1 @@
+ALTER TABLE `thread_threads` ADD `thinking_indicator_enabled` integer DEFAULT true NOT NULL;

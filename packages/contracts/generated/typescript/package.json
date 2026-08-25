@@ -1,0 +1,19 @@
+{
+	"name": "@codm/contracts-typescript",
+	"version": "0.0.1",
+	"license": "MIT",
+	"private": true,
+	"type": "module",
+	"main": "./src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./wire": "./src/wire/index.ts",
+		"./wire/enums": "./src/wire/enums/index.ts",
+		"./wire/events": "./src/wire/events/index.ts"
+	},
+	"dependencies": {
+		"@codm/core-typescript": "workspace:*",
+		"zod": "^4.0.0",
+		"@codm/client-typescript": "workspace:*"
+	}
+}

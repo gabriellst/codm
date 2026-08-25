@@ -1,0 +1,22 @@
+import { BaseValueObject, z } from '@codm/core-typescript'
+import Z from 'zod'
+import { DomainErrors } from '../errors'
+
+export const AddressSchema = z.object({
+	// Define value object properties
+})
+
+export class Address extends BaseValueObject<typeof AddressSchema> {
+	static override schema = AddressSchema
+
+	equals(other: Address): boolean {
+		return JSON.stringify(this.toJSON()) === JSON.stringify(other.toJSON())
+	}
+
+	override toString(): string {
+		return JSON.stringify(this.toJSON())
+	}
+}
+
+export interface Address extends Z.infer<typeof AddressSchema> {}
+export type AddressProps = Z.input<typeof AddressSchema>

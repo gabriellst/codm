@@ -1,0 +1,20 @@
+// Package enums defines closed vocabularies for the sales bounded context.
+package enums
+
+// CouponStatus represents a closed set of coupon_status values.
+// Values: EXAMPLE_A EXAMPLE_B
+type CouponStatus string
+
+const (
+	CouponStatusExampleA CouponStatus = "EXAMPLE_A"
+	CouponStatusExampleB CouponStatus = "EXAMPLE_B"
+)
+
+// IsValid reports whether s is a known CouponStatus value.
+func (s CouponStatus) IsValid() bool {
+	switch s {
+	case CouponStatusExampleA, CouponStatusExampleB:
+		return true
+	}
+	return false
+}

@@ -1,0 +1,71 @@
+// Package controllers exposes HTTP endpoints for the sales bounded context.
+package controllers
+
+import (
+	"net/http"
+
+	// ctxusecases "template/api-go/internal/sales/usecases"
+	"template/core-go/pkg/httputil"
+	"template/core-go/types"
+)
+
+// GetCouponRequest defines the shape of GET /get-coupon.
+type GetCouponRequest struct {
+	// from:"param"  → URL path parameters
+	// from:"query"  → URL query parameters
+	// from:"body"   → JSON body fields (add json:"..." + example:"..." tags)
+	// from:"header" → HTTP headers (add swaggerignore:"true")
+	//
+	// Example:
+	// ID      string             `from:"param"  name:"id"            validate:"required,uuid"`
+	// Name    string             `from:"body"   json:"name"          validate:"required,min=1,max=100"           example:"My name"`
+	// Status  enums.OrderStatus  `from:"query"  name:"status"        validate:"required,oneof=ACTIVE INACTIVE"  example:"ACTIVE"`  // typed enum — import "template/api-go/internal/sales/enums"
+	// OwnerID string             `from:"header" name:"X-Owner-Id"    validate:"required,uuid"                   swaggerignore:"true"`
+}
+
+// GetCouponController handles GET /get-coupon.
+type GetCouponController struct {
+	// handler *ctxusecases.GetCouponHandler
+}
+
+// NewGetCouponController constructs the controller.
+func NewGetCouponController(
+// handler *ctxusecases.GetCouponHandler,
+) *GetCouponController {
+	return &GetCouponController{
+		// handler: handler,
+	}
+}
+
+// Metadata returns the declarative route metadata for auto-registration.
+func (c *GetCouponController) Metadata() types.ControllerMetadata {
+	return types.ControllerMetadata{
+		Context:     "sales",
+		Path:        "/get-coupon",
+		Method:      "GET",
+		Description: "GetCoupon operation",
+		Tags:        []string{"sales"},
+		Request:     GetCouponRequest{},
+		Response:    nil, // set to usecases.GetCouponOutput{} when returning a body
+		Status:      http.StatusOK,
+		Errors:      nil, // list domain/app error codes this endpoint may return
+	}
+}
+
+// Handle decodes the request and delegates to the use case.
+func (c *GetCouponController) Handle(w http.ResponseWriter, r *http.Request) {
+	req, err := httputil.DecodeRequest[GetCouponRequest](r)
+	if err != nil {
+		httputil.RespondError(w, err)
+		return
+	}
+	_ = req // remove once used
+
+	// output, err := c.handler.Execute(r.Context(), usecases.GetCouponInput{})
+	// if err != nil {
+	// 	httputil.RespondError(w, err)
+	// 	return
+	// }
+
+	httputil.RespondJSON(w, http.StatusOK, nil)
+}

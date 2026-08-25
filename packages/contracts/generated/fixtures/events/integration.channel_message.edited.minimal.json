@@ -1,0 +1,16 @@
+{
+	"id": "0f0f0f0f-0f0f-4f0f-8f0f-0f0f0f0f0f0f",
+	"ownerId": "fixture-tenant",
+	"time": "2026-07-30T12:00:00Z",
+	"name": "integration.channel_message.edited",
+	"payload": {
+		"channelId": "channelId-sample",
+		"messageId": "messageId-sample",
+		"remoteId": "remoteId-sample",
+		"senderId": "senderId-sample",
+		"timestamp": 90071992547409,
+		"messageType": "TEXT",
+		"contentJson": "contentJson-sample",
+		"platform": "WHATSAPP"
+	}
+}

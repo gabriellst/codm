@@ -1,0 +1,83 @@
+FROM debian:bookworm-slim
+
+ARG TARGETARCH
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    supervisor \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Versions
+ENV OTEL_VERSION=0.114.0
+ENV TEMPO_VERSION=2.6.1
+ENV LOKI_VERSION=3.3.2
+ENV MIMIR_VERSION=2.14.1
+ENV GRAFANA_VERSION=11.4.0
+
+# Download and install OpenTelemetry Collector
+RUN curl -L -o /tmp/otelcol.tar.gz \
+    "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v${OTEL_VERSION}/otelcol-contrib_${OTEL_VERSION}_linux_${TARGETARCH}.tar.gz" \
+    && tar -xzf /tmp/otelcol.tar.gz -C /usr/local/bin otelcol-contrib \
+    && rm /tmp/otelcol.tar.gz \
+    && chmod +x /usr/local/bin/otelcol-contrib
+
+# Download and install Tempo
+RUN curl -L -o /tmp/tempo.tar.gz \
+    "https://github.com/grafana/tempo/releases/download/v${TEMPO_VERSION}/tempo_${TEMPO_VERSION}_linux_${TARGETARCH}.tar.gz" \
+    && tar -xzf /tmp/tempo.tar.gz -C /usr/local/bin tempo \
+    && rm /tmp/tempo.tar.gz \
+    && chmod +x /usr/local/bin/tempo
+
+# Download and install Loki
+RUN curl -L -o /tmp/loki.zip \
+    "https://github.com/grafana/loki/releases/download/v${LOKI_VERSION}/loki-linux-${TARGETARCH}.zip" \
+    && apt-get update && apt-get install -y unzip && rm -rf /var/lib/apt/lists/* \
+    && unzip /tmp/loki.zip -d /usr/local/bin \
+    && mv /usr/local/bin/loki-linux-${TARGETARCH} /usr/local/bin/loki \
+    && rm /tmp/loki.zip \
+    && chmod +x /usr/local/bin/loki
+
+# Download and install Mimir
+RUN curl -L -o /usr/local/bin/mimir \
+    "https://github.com/grafana/mimir/releases/download/mimir-${MIMIR_VERSION}/mimir-linux-${TARGETARCH}" \
+    && chmod +x /usr/local/bin/mimir
+
+# Download and install Grafana
+RUN curl -L -o /tmp/grafana.tar.gz \
+    "https://dl.grafana.com/oss/release/grafana-${GRAFANA_VERSION}.linux-${TARGETARCH}.tar.gz" \
+    && tar -xzf /tmp/grafana.tar.gz -C /opt \
+    && mv /opt/grafana-v${GRAFANA_VERSION} /opt/grafana \
+    && rm /tmp/grafana.tar.gz
+
+# Create data directories
+RUN mkdir -p /var/tempo /var/loki /var/mimir /var/lib/grafana /etc/grafana/provisioning/datasources
+
+# Copy configuration files
+COPY config/lgtm/otel-collector.yaml /etc/otel-collector/config.yaml
+COPY config/lgtm/tempo.yaml /etc/tempo/config.yaml
+COPY config/lgtm/loki.yaml /etc/loki/config.yaml
+COPY config/lgtm/mimir.yaml /etc/mimir/config.yaml
+COPY config/lgtm/datasources.yaml /etc/grafana/provisioning/datasources/datasources.yaml
+COPY config/lgtm/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Expose ports
+# OTEL Collector: 4317 (gRPC), 4318 (HTTP), 8126 (Datadog)
+# Tempo: 3200
+# Loki: 3100
+# Mimir: 9009
+# Grafana: 3000
+EXPOSE 4317 4318 8126 3200 3100 9009 3000
+
+# Set environment variables for Grafana
+ENV GF_AUTH_ANONYMOUS_ENABLED=true
+ENV GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+ENV GF_AUTH_DISABLE_LOGIN_FORM=true
+ENV GF_PATHS_CONFIG=/opt/grafana/conf/defaults.ini
+ENV GF_PATHS_DATA=/var/lib/grafana
+ENV GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+

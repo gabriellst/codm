@@ -1,0 +1,43 @@
+{
+	"name": "app-astro",
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "packages/app/astro/src",
+	"projectType": "application",
+	"targets": {
+		"build": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "packages/app/astro",
+				"command": "astro build"
+			},
+			"outputs": ["{projectRoot}/dist"]
+		},
+		"dev": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "packages/app/astro",
+				"command": "astro dev"
+			}
+		},
+		"preview": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "packages/app/astro",
+				"command": "astro preview"
+			}
+		},
+		"tsc": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "packages/app/astro",
+				"command": "astro check"
+			}
+		},
+		"lint": {
+			"executor": "nx:run-commands",
+			"options": {
+				"command": "bun x biome check --diagnostic-level=error packages/app/astro/src/i18n"
+			}
+		}
+	}
+}

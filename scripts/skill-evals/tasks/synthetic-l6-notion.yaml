@@ -1,0 +1,190 @@
+id: synthetic-l6-notion
+# L6 app #3 — scoped Notion clone, the HARDEST modeling test: RECURSION. A Page owns a TREE of Blocks
+# where a Block contains Blocks, AND pages nest in pages. Self-referential / tree-structured aggregate.
+# Same orchestrated harness (extraTools:[Task]); RUN WITH AGENT_MODEL=opus (the model split — judgment
+# matters most for recursion). Stage vector via id prefixes model#/recursion#/lock#/build#/e2e#/flows#.
+# Gold rubric: scripts/skill-evals/seeds/l6-notion/GOLD.md.
+title: Autonomous build — minimal Notion app from a one-line idea (recursive block tree)
+tier: holdout
+builder: fable
+sourceSpec: scripts/skill-evals/seeds/l6-notion/GOLD.md
+goldRef: ""
+baseRef: ""
+timeoutMs: 10800000
+extraTools:
+  - Task
+prompt: >
+  BUILD A MINIMAL NOTION APP, end to end, in this monorepo, from this one-line idea:
+  "A workspace has pages; pages nest inside pages; a page is a TREE of typed blocks (text, heading,
+  toggle); a toggle block contains child blocks; editing or adding a block shows up live for everyone
+  viewing the page. Auth is handled by the template."
+  You are the ORCHESTRATOR (you have the Task tool) — model, lock the contract, plan with handoffs,
+  then DISPATCH a fresh worker subagent per Task. Follow the full pipeline in the preamble; YOU own all
+  modeling JUDGMENT, workers execute.
+  ARCHITECTURE (non-negotiable, it is the grading rubric): DDD + Clean + CQRS + Event-Driven per the
+  root CLAUDE.md and docs/BACKEND.md / docs/FRONTEND.md.
+  THE MODELING CHALLENGE IS RECURSION — get it right (read .claude/skills/ddd-modeling): a `page`
+  context owns the **Page aggregate**, and a Page owns a RECURSIVE TREE of Blocks. A Block is a TYPED
+  VALUE OBJECT / child entity (type: TEXT|HEADING|TOGGLE, content, order) that can itself hold
+  `children: Block[]` — the domain Block must be RECURSIVE (self-referential), not a flat list. Blocks
+  are VALUE OBJECTS OWNED BY the page — NOT their own aggregates (no Block repository/usecase/
+  controller/event; the Page is the consistency boundary for its whole block tree). Pages also nest:
+  a Page may have a `parentPageId` (pages form a tree). A `workspace` context owns the page hierarchy.
+  Page owns an invariant over its block tree (well-formed: children only under container blocks like
+  toggle; no cycles). Do NOT: make Block its own aggregate (over-model), flatten the tree to a
+  parentId-only list with no recursive children, or god-context (one `notion` context owning
+  workspace+page+block). BlockType is an ENUM (TEXT|HEADING|TOGGLE), not a context.
+  CONTRACT LOCK (freeze before building any context): author the integration event named exactly
+  `PageContentChanged` (TypeSpec model `PageContentChangedEvent`, event name
+  `integration.shared.page.content_changed`, payload carrying `workspaceId` (REQUIRED — SSE realtime
+  tenancy), `pageId`, a change kind); the `BlockType` enum in TypeSpec used by both languages; add it
+  to the BROWSER_EVENTS union in the ui ListenEvents controller; add the workspaces/pages/blocks tables
+  (Drizzle — blocks may store the tree adjacency-list style with parent_block_id + order); run `bun
+  contracts` + `bun sdk`.
+  READ-SIDE: a PageViewProjection — the page denormalized as its NESTED block tree (+ the page's
+  child-page list) — driven by a projector from PageCreated/BlockAdded/BlockEdited.
+  FRONTEND (react, per packages/app/react/CLAUDE.md): a page route (thin shell, params typed) with a
+  data-owning section that renders the RECURSIVE block tree via a RECURSIVE Block component (a Block
+  component that renders its children Blocks), owns the GetPageView hook + exactly one
+  useServerEvents(PageContentChanged…) invalidating the page-view query key; a page-tree nav; a
+  create-block mutation (kept whole). Block-type labels via the typed enums.BlockType.* catalog in BOTH
+  locales. EVERY actionable button wired (no dead buttons); NO hardcoded user-facing text (use t()).
+  E2E (packages/e2e, per .claude/skills/e2e): a Playwright spec at the EXACT path
+  packages/e2e/tests/notion-page-realtime.spec.ts that sets up via the API request context (not UI),
+  role/label/text selectors (NEVER getByTestId), no waitForTimeout, and asserts the REALTIME path —
+  with the page open, add/edit a block via the API and assert it appears WITHOUT reload. Graded by
+  READING (static + judge), not by running Playwright — write it COMPLETE with ACTIVE assertions;
+  never comment out the body / expect(true).toBe(true) / .skip.
+  TESTS (TDD — per .claude/skills/test/typescript, NOT optional): the Page aggregate's bounded context
+  lives at packages/api/typescript/src/page/. Write COLOCATED tests there that actually PASS: (a) an
+  ENTITY test asserting the block-tree INVARIANT (e.g. a child block can only be added under a
+  container/toggle block; a cycle / a block under a non-container is rejected with the named domain
+  error); (b) a USE CASE test in TestBed integration mode (`TestBed.create('integration', …)`)
+  asserting AddBlock / EditBlock behavior end to end. The suite must be green:
+  `cd packages/api/typescript && bun test src/page`.
+  GATES before done: `cd packages/api/typescript && bun x tsc -p tsconfig.build.json --noEmit` AND
+  `bun test src/page` (green); `cd packages/app/react && bun x tsc --noEmit`; `cd packages/e2e && bun x
+  tsc --noEmit`; `bun run detect` clean. Final message: the bounded contexts, the frozen contract,
+  per-Task worker dispatch + gate results, the tests written, and which core flows are covered.
+
+axes:
+  - APP-FROM-IDEA
+  - DDD-DECOMPOSITION
+  - RECURSION
+  - CONTRACT-LOCK
+  - MULTI-AGENT-HANDOFF
+  - CQRS-PROJECTION
+  - REALTIME
+  - E2E-DISCIPLINE
+
+graders:
+  # ── model stage — decomposition incl. the recursion + VO-vs-aggregate ──
+  - kind: judge
+    model: sonnet
+    spec: >
+      Inspect the bounded contexts under packages/api/typescript/src/. Judge the DDD DECOMPOSITION for
+      a minimal Notion app (names may differ — grade soundness): a sound carve-up has a `workspace`
+      context (page hierarchy) and a `page` context (the Page aggregate owning a recursive block tree).
+      PASS only if: (1) a Block is a VALUE OBJECT / child entity OWNED BY the Page — NOT its own
+      aggregate (no Block repository/usecase/controller/event = the over-model trap → FAIL if present);
+      (2) BlockType is an ENUM, not a context/aggregate; (3) NO god-context (one `notion` context
+      owning workspace+page+block = FAIL); (4) the Page owns at least one real INVARIANT over its block
+      tree; (5) pages nest (a parentPageId / page tree exists). Name the contexts + verdict per criterion.
+    id: model#bc-decomposition
+  # ── recursion stage — the novel test: is the block tree genuinely RECURSIVE (not flattened)? ──
+  - kind: judge
+    model: sonnet
+    spec: >
+      Judge ONE thing: is the RECURSIVE BLOCK TREE genuinely modeled, both backend and frontend? PASS
+      only if (a) the domain Block is SELF-REFERENTIAL — a Block holds `children` (an array of Blocks)
+      or an equivalent recursive structure in the DOMAIN model (entities/value-objects), NOT merely a
+      flat list rows with a parentId foreign key and no recursive children type; AND (b) the frontend
+      renders the tree with a RECURSIVE component — a Block component that renders its own children
+      Blocks (direct or mutual recursion). FAIL (naming which) if blocks are a flat list with no
+      recursive children type, or the frontend renders only one flat level with no recursion.
+    id: recursion#modeled
+  # ── test stage — the agent must WRITE tests (TDD) and they must RUN green ──
+  - kind: file-exists
+    spec: "packages/api/typescript/src/page/**/*.test.ts"
+    id: test#colocated-exists
+  - kind: grep-must
+    spec: "packages/api/typescript/src/page/**/*.test.ts::TestBed\\.create\\(\\s*'integration'"
+    id: test#integration-mode
+  - kind: test-green
+    spec: packages/api/typescript/src/page
+    id: test#green
+  # ── contract-lock stage ──
+  - kind: grep-must
+    spec: "packages/contracts/src/wire/events/**/*.tsp::PageContentChanged"
+    id: lock#content-changed-event
+  - kind: grep-must
+    spec: "packages/contracts/src/wire/events/**/*.tsp::workspaceId"
+    id: lock#realtime-tenancy-key
+  - kind: grep-must
+    spec: "packages/contracts/src/wire/**/*.tsp::BlockType"
+    id: lock#blocktype-enum
+  # ── build stage — mechanical, naming-independent ──
+  - kind: tsc
+    spec: backend
+    id: build#tsc-backend
+  - kind: tsc
+    spec: app-react
+    id: build#tsc-react
+  - kind: tsc
+    spec: e2e
+    id: build#tsc-e2e
+  - kind: detect
+    spec: registry-scan
+    id: build#detect-registry
+  - kind: detect
+    spec: import-direction
+    id: build#detect-imports
+  - kind: detect
+    spec: slice-closure
+    id: build#detect-slice
+  - kind: detect
+    spec: projection-shape
+    id: build#detect-projection
+  - kind: detect
+    spec: component-props
+    id: build#detect-component-props
+  # ── e2e stage — pinned path, anti-stub, realtime ──
+  - kind: file-exists
+    spec: "packages/e2e/tests/notion-page-realtime.spec.ts"
+    id: e2e#spec-exists
+  - kind: grep-must-not
+    spec: "packages/e2e/tests/notion-page-realtime.spec.ts::expect\\(\\s*true\\s*\\)\\.toBe\\(\\s*true|expect\\(\\s*1\\s*\\)\\.toBe\\(\\s*1|^\\s*//.*await expect|getByTestId"
+    id: e2e#not-stubbed-no-testid
+  - kind: judge
+    model: sonnet
+    spec: >
+      Inspect packages/e2e/tests/notion-page-realtime.spec.ts. PASS only if it EXISTS and is REAL (not
+      absent, not all-fixme/skip, no expect(true).toBe(true)), sets up data through the API request
+      context (not UI click-paths), uses role/label/text selectors (NOT getByTestId), has NO
+      waitForTimeout, AND contains a realtime assertion: with a page open, a block is added/edited via
+      the API and the spec asserts it appears WITHOUT a reload/navigation. FAIL (naming why) if missing,
+      stubbed, testid-based, or lacking the realtime block-change assertion.
+    id: e2e#realtime-block
+  # ── flows stage ──
+  - kind: judge
+    model: sonnet
+    spec: >
+      Judge whether the build implements the CORE NOTION FLOWS end to end (backend aggregate/usecase +
+      wire + frontend), per scripts/skill-evals/seeds/l6-notion/GOLD.md. Report coverage of each: (1)
+      create a workspace + a page; (2) add typed blocks (text/heading/toggle) to a page; (3) NEST a
+      block inside a toggle block (the recursion reflected in the tree); (4) create a NESTED page
+      (parentPageId); (5) edit a block → BlockEdited → PageView projection reflects it; (6) REALTIME —
+      one useServerEvents(PageContentChanged…) invalidating the page-view query key. PASS if ≥4 of the 6
+      are genuinely implemented end to end (not just scaffolded shells); state the per-flow verdict.
+      FAIL if ≤3.
+    id: flows#core-coverage
+
+notes: >-
+  L6 app #3 (Notion) — the hardest MODELING probe: RECURSION (recursive block tree + nested pages).
+  ORCHESTRATED (extraTools [Task]); RUN WITH AGENT_MODEL=opus — judgment matters most here (the
+  model split converged ClickUp at k=2; Notion's recursion needs opus judgment more than any app).
+  New recursion#modeled judge is the novel grader. Builds FROM SCRATCH — judges (naming varies) +
+  mechanical gates (tsc, detect) + frozen contract anchors (PageContentChanged + workspaceId +
+  BlockType). Stage vector via id prefixes. HEAVY: 3h, AGENT_RESUMES=2-3, opus orchestrator ~2× slower.
+  First run = a measurement of where recursion breaks; not expected perfect. Validator: at HEAD every
+  grader FAILs/empty = free real estate; tsc/detect pass at HEAD so build#* pass vacuously pre-build.

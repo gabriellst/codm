@@ -1,0 +1,210 @@
+# SPEC — Union slots de provider no contrato (declaração única, forma com o dono, união em codegen)
+
+Status: **RATIFICADO** (founder, 2026-07-22 — três decisões em sequência: declaração única nos
+contracts; owner explícito resolvido pelo manifest; união completa em toda superfície emissora).
+Baseline: o padrão `@union/@variant` do fork clínico channel (verbatim em `packages/api/go`,
+`internal/channel/events/message_received.go`) + o pipeline openapi `pkg/openapi` (scanner AST).
+
+## 1. Problema
+
+Eventos como `channel.message_received` carregam payloads cuja forma varia por provider
+(`WhatsAppTextContent`, `WhatsAppPollContent`, futuro `TelegramTextContent`). Três forças em tensão:
+
+1. **Declaração única** — no codedm todo evento de integração é declarado UMA vez, em
+   `packages/contracts`. Redeclarar o payload no Go para carregar anotações = duas fontes de
+   verdade (o modelo fork clínico, onde o Go é a fonte, viola isso).
+2. **Formas são detalhe de provider** — adicionar um campo no poll do WhatsApp ou nascer o adapter
+   Telegram NÃO pode exigir emenda de contrato; a forma evolui com o adapter.
+3. **Tipagem rica ponta a ponta** — SDK/console precisam de uniões discriminadas completas
+   (narrowing por `platform`+`messageType`), em toda superfície que emite (HTTP, SSE, dos dois
+   backends).
+
+## 2. Design
+
+### 2.1 Contrato: estrutura + nomes + donos — nunca formas
+
+```typespec
+// packages/contracts/wire/events/channel-message-received.tsp
+@unionSlot("content", #["platform", "messageType"])
+@variant("WHATSAPP", "TEXT",     "WhatsAppTextContent",  #{ owner: "apiGo" })
+@variant("WHATSAPP", "IMAGE",    "WhatsAppImageContent", #{ owner: "apiGo" })
+@variant("WHATSAPP", "POLL",     "WhatsAppPollContent",  #{ owner: "apiGo" })
+@unionSlot("platformData", #["platform"])
+@variant("WHATSAPP", "WhatsAppChannelMessageReceivedPlatformData", #{ owner: "apiGo" })
+@variant("INTERNAL", "InternalChannelMessageReceivedPlatformData", #{ owner: "apiGo" })
+model ChannelMessageReceivedEvent {
+  ...EnvelopeFields;
+  channelId: string; messageId: string; platform: ChannelKind; messageType: MessageType;
+  content?: unknown;        // slot opaco — a união materializa em codegen
+  platformData?: unknown;
+}
+```
+
+Regras:
+- `owner` é um **id da tabela WORKSPACES** do `template.config.ts`. Owner inexistente = **erro de
+  compilação do contrato** (validação no codegen contra o manifest).
+- Os **enums discriminadores** (`ChannelKind`, `MessageType`) são material de contrato — conjuntos
+  fechados, congelados, como sempre.
+- Adicionar variante = 1 linha `@variant` (o contrato registra QUE ela existe e QUEM a possui).
+  Mudar a FORMA de uma variante existente não toca o contrato.
+
+### 2.2 Codegen: estampagem no binding gerado
+
+O codegen ts+go dos contracts, ao emitir o binding Go do evento
+(`packages/contracts/generated/go/wire/events.go`), **estampa os comentários** `// @union ...` /
+`// @variant ...` no struct gerado — sintaxe idêntica à do fork clínico. Consequência: o scanner AST
+verbatim (`pkg/openapi`) encontra as anotações no binding gerado em vez de num struct manual,
+com **quatro adaptações de infra confinadas ao scanner** (o binding estampado vive num módulo Go
+distinto — `template/contracts-go/` — que o scanner verbatim nunca visitava; a lista abaixo é
+exata e completa):
+
+- `unions.go` — o filtro de pacotes inclui, além de `template/api-go/`, o módulo do binding
+  gerado (`template/contracts-go/`), senão as anotações estampadas nunca são vistas.
+- `enums.go` — coleta em **dois tiers com precedência por NOME de enum**: o módulo próprio vence
+  integralmente; um enum declarado no tier próprio nunca é mesclado com um homônimo dos contracts
+  cujo value-set diverge (ex.: o `ChannelStatus` local do gateway — CREATED/CONNECTING/… — vs o
+  `ChannelStatus` de contracts — DISCONNECTED/PAIRING/CONNECTED). Sem o tiering, escanear o módulo
+  de contracts contamina o componente com valores estranhos. A precedência é pinada por rail em
+  `pkg/openapi/openapi_test.go` (asserção sobre o value-set emitido de `ChannelStatus`).
+- `events.go` / `schema.go` — **plumbing de `types.Unalias`** na fronteira de alias criada pela
+  troca de binding (`type ChannelMessageReceivedPayload = wire.ChannelMessageReceivedPayload`):
+  a resolução do payload do evento (o type-arg de `IntegrationEvent[T]` em `events.go`), a
+  conversão de tipos em `typeSchema` e a resolução de nomes de variante em `findTypeByName`
+  desembrulham `*types.Alias` antes do switch em `*types.Named` — sem isso, todo payload/variante
+  atrás de um alias `= wire.X` silenciosamente vira `x-unknown`.
+- `unions.go` / `schema.go` — **coleta e materialização de TODOS os slots estampados por struct**
+  (correção do judge do piloto): o verbatim guardava só a anotação "primária" (a de mais
+  variantes), então o segundo slot de um struct (`platformData` em `message_received`) emitia
+  `x-unknown` em toda superfície. `collectUnions` devolve a lista completa por struct; o slot com
+  mais variantes segue dirigindo o `oneOf` top-level e cada slot restante materializa dentro de
+  cada variante, **estreitado pelos consts pinados dos discriminadores compartilhados** (1 match →
+  `$ref` direto; >1 → `oneOf` + `x-discriminators`). Pinado em `pkg/openapi/openapi_test.go`
+  (check 10: 13/13 variantes nos dois slots) e no rail union-parity (check 2 itera todos os slots).
+
+Zero redeclaração: o Go importa o binding, as formas moram no adapter.
+
+No lado TS, o binding gerado exporta além do schema do evento um **manifest de união**
+(`ChannelMessageReceivedUnions`: slot → discriminadores → [{valores, nomeDoTipo, owner}]) para
+consumo do rail e da composição (2.4).
+
+### 2.3 Formas: sempre no serviço dono
+
+- `WhatsAppTextContent` etc. vivem em `packages/api/go/internal/channel/...` (colados no
+  adapter/eventos, como no verbatim). Um futuro gateway Rust teria as dele.
+- A **emissão OpenAPI do dono** materializa o schema concreto: `pkg/openapi` resolve cada nome de
+  variante nos pacotes do workspace dono e emite `oneOf` + `discriminator` (+ `x-` metadata dos
+  discriminadores compostos, como o fork clínico já faz).
+- Kubb consome o openapi do dono → SDK ganha os tipos + **schemas zod por variante**
+  (`whatsAppTextContentSchema`...). Esses schemas gerados são a ÚNICA forma pela qual outros
+  serviços conhecem as formas.
+
+### 2.4 União completa em TODA superfície emissora
+
+- **Go**: qualquer response/SSE cujo tipo carrega slot de união (ex.: `listen_events`) emite o
+  `oneOf` completo no openapi do gateway — automático via scanner + anotações estampadas.
+- **TS**: endpoints do daemon que re-emitem esses eventos (ex.: `ui/ListenEvents`) compõem o output
+  schema com `z.discriminatedUnion` **importando os schemas zod gerados do client do dono**
+  (`@codedm/client-.../gateway`), nunca redeclarando. O emitter openapi TS (discriminador const,
+  convenção da casa) publica a união completa no openapi do daemon → SDK do console tem narrowing
+  idêntico nas duas origens.
+- Cadeia canônica: forma no dono → openapi do dono → schema gerado → composição nos consumidores →
+  openapi dos consumidores → SDK final. **Um shape, N superfícies, zero redeclaração.**
+
+#### 2.4.1 DUAS materializações — emenda de 28-jul-2026
+
+A materialização é feita uma vez, na camada wire gerada, e sai em **duas** variantes que não são
+intercambiáveis. O que as separa não é o quanto estreitam — ambas estreitam por completo — e sim o
+**dialeto escalar**:
+
+| superfície | arquivo gerado | payload | datas | consumidor |
+|---|---|---|---|---|
+| **wire / JSON** | `wire/events/materialized.ts` | o agregado kubb do dono | strings ISO | SSE, browser, SDK |
+| **in-process** | `wire/events/in-process.ts` | os campos do CONTRATO, com só os slots + discriminadores trocados por variante | `Date` | `EventHandler` |
+
+A segunda existe porque o mediator **revive** as strings ISO em `Date` antes de qualquer `handle()`
+rodar, enquanto o frame SSE é JSON até o fim. Entregar a superfície do wire a um handler falha no
+primeiro campo de data — e essa falha é o objetivo, não um efeito colateral: é o que impede as duas
+de serem confundidas. O pino mecânico é `tests/architecture/union-narrowing.typecheck.ts`, que fixa
+as **três** origens e cujo `const occurredAt: Date` vira `TS2322` se alguém substituir uma pela outra.
+
+O conjunto de braços das duas é o mesmo, espelhado de `packages/api/go/pkg/openapi/schema.go`:
+primário = slot com MAIS variantes (empate: o primeiro declarado); slots secundários estreitados por
+igualdade na INTERSEÇÃO das chaves discriminadoras; zero correspondências ⇒ união completa do
+secundário. `emitTsInProcess` reproduz isso literalmente em vez de melhorar, para que os dois lados
+concordem por construção e não por revisão.
+
+### 2.5 Runtime: validação e forward-compat
+
+- O **dono valida** suas formas na borda (como o verbatim já faz).
+- **Regra de forward-compat**: consumidor que encontra valor de discriminador desconhecido trata o
+  slot como opaco (log + passthrough), nunca rejeita o evento — variantes novas não podem quebrar
+  consumidores antigos.
+
+**Emenda de 28-jul-2026 — como um consumidor interno estreita.** A redação anterior mandava o
+consumidor validar oportunisticamente com `safeParse` dos schemas por variante. Isso nasceu de uma
+limitação que não existe mais: com o slot emitido `z.unknown()`, não havia o que estreitar, porque o
+TypeScript **não correlaciona um campo-slot com um discriminador irmão do mesmo objeto** — só uma
+união do payload INTEIRO estreita. Agora que `wire/events/in-process.ts` emite essa união, um handler
+interno estreita **pelo discriminador** e lê o campo; não faz parse.
+
+Isso não afrouxa a regra de forward-compat, porque nada faz zod-parse de um payload de integration
+event no caminho do mediator: o envelope chega por `new Cls(input)`, cujo construtor apenas atribui.
+Uma variante desconhecida simplesmente não casa com nenhum guard e cai no drop, como antes.
+
+Duas consequências que valem dizer em voz alta, porque mudam comportamento:
+1. O guard tem de ser sobre o **valor**, não sobre a ausência (`typeof text !== 'string'`, não
+   `text === undefined`). O `safeParse` antigo rejeitava um `content.text` presente mas nulo; com a
+   leitura direta, um `null` passaria por um teste de `undefined` e viraria `VALIDATION_ERROR` lá
+   dentro do use case, queimando tentativas do outbox por uma mensagem que nem era para nós.
+2. Uma plataforma **nova** mandando `messageType: TEXT` agora é ingerida, onde a cadeia
+   `platform === 'WHATSAPP' | 'INTERNAL'` a descartava. Isso é o comportamento desejado — "variantes
+   novas não podem quebrar consumidores antigos" vale nas duas direções — mas é uma mudança, não uma
+   preservação.
+
+## 3. Rail `union-parity` (tests/architecture)
+
+Três checks, todos mecânicos:
+1. **Resolução no dono**: todo nome de `@variant` resolve para um tipo real no workspace dono —
+   resolver por linguagem, plugável (v1: Go = scan AST via a mesma infra do pkg/openapi; TS =
+   schema zod exportado com o nome; nova linguagem = novo resolver, padrão `detectLang`).
+2. **Emissão completa**: todo endpoint (Go e TS) cujo response carrega slot de união tem o `oneOf`
+   completo (todas as variantes declaradas) no openapi emitido.
+3. **Sem redeclaração**: nenhum workspace não-dono declara tipo com nome de variante alheia;
+   consumo cross-service só via binding gerado (grep de imports).
+
+## 4. Migração do estado atual (verbatim)
+
+O verbatim carrega os payloads declarados NO GO com anotações manuais (estilo fork clínico). Migração
+por evento, mecânica: 1) declarar o evento + `@unionSlot/@variant` no `.tsp` (campos estáveis do
+struct verbatim); 2) codegen (binding estampado); 3) o Go troca o struct local pelo binding
+importado (as FORMAS das variantes ficam onde estão); 4) rail verde. Ordem: `message_received`
+primeiro (o mais rico), depois `gateway_platform_event`, `connected/disconnected/logged_out`.
+
+## 5. Implementação (ordem)
+
+1. Decorators TypeSpec (`@unionSlot`, `@variant`) + validação de owner contra o manifest.
+2. Codegen: estampagem Go + manifest de união TS (+ testes de regressão no codegen, padrão dos
+   testes de arrays/digit-enums). **Efeito colateral sancionado do piloto** (divulgado,
+   regression-testado, zero diff nos demais eventos): `emit-wire-go.ts` passou a pular
+   `validate:"required"` em campos bool obrigatórios **em todo o codegen wire** — o `required` do
+   go-playground rejeita o `false` legítimo (paridade verbatim de `IsGroup`/`FromMe`). A derivação
+   de `required` no OpenAPI não muda (json tag sem `omitempty` continua contando); a regressão está
+   pinada em `emit-wire-go.test.ts` e o regen só alterou as duas linhas bool do
+   `ChannelMessageReceivedPayload`.
+3. Migração do `message_received` (piloto ponta a ponta: contrato → binding → openapi → SDK).
+4. Composição TS do `ListenEvents` com schemas gerados.
+5. Rail union-parity (3 checks) em tests/architecture + entrada no test:tooling.
+6. Migração dos demais eventos anotados; doc no `docs/BACKEND.md` (seção "Union slots").
+
+## 6. Não-objetivos
+
+- Versionamento de variante (a forma evolui com o adapter; consumidores toleram desconhecido).
+- Variantes cross-language para o MESMO valor de discriminador (um valor = um dono).
+- Modelar formas de provider no TypeSpec (explicitamente proibido por este spec).
+
+## 7. Aceite
+
+- `message_received` migrado: contrato declara, Go importa binding, openapi do gateway com oneOf
+  completo, SDK com narrowing, `ListenEvents` TS compondo schemas gerados, rail verde nos 3 checks,
+  diff do verbatim continua mecânico (imports/nomes + casts de adaptação de tipo divulgados —
+  ex.: `Platform` enum→string nos call sites enquanto a reconciliação `ChannelKind` não aterrissa).

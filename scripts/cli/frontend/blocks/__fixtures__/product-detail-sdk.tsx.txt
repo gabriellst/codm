@@ -1,0 +1,17 @@
+import * as React from 'react'
+import { cn } from '@/lib/utils'
+import { type Product } from '@codm/client-typescript/typescript'
+
+interface ProductDetailProps extends React.ComponentProps<'div'> {}
+
+export function ProductDetail({ className, ...props }: ProductDetailProps) {
+
+	return (
+		<div
+			className={cn('', className)}
+			{...props}
+		>
+			{/* Implement */}
+		</div>
+	)
+}

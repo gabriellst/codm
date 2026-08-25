@@ -1,0 +1,28 @@
+{
+	"name": "app-ui",
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "packages/app/ui/src",
+	"projectType": "library",
+	"targets": {
+		"lint": {
+			"executor": "nx:run-commands",
+			"inputs": ["default", "{workspaceRoot}/biome.jsonc"],
+			"options": {
+				"command": "bun x biome check --diagnostic-level=error packages/app/ui"
+			}
+		},
+		"test": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"inputs": ["{projectRoot}/src/**/*", "{projectRoot}/tests/**/*", "{projectRoot}/bunfig.toml"],
+			"//": "Mesmo runner do app-react (bun test), preload próprio de happy-dom — os primitivos saíram do react mas os .test.tsx colocados (badge, virtual-list) continuam precisando de DOM globals para montar.",
+			"options": {
+				"command": "bun test",
+				"cwd": "packages/app/ui",
+				"env": {
+					"NODE_ENV": "test"
+				}
+			}
+		}
+	}
+}

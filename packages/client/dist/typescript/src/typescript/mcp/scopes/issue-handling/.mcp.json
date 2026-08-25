@@ -1,0 +1,9 @@
+{
+            "mcpServers": {
+              "codm-backend": {
+                "type": "stdio",
+                "command": "npx",
+                "args": ["tsx", "packages/client/dist/typescript/src/typescript/mcp/scopes/issue-handling/server.ts"]
+              }
+            }
+          }

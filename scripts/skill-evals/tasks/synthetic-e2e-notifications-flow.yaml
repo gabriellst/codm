@@ -1,0 +1,329 @@
+id: synthetic-e2e-notifications-flow
+tier: holdout
+builder: sonnet
+title: Playwright coverage for the notifications flow — popover wiring, SDK given,
+  disciplined spec (synthetic — probes e2e discipline, API-not-UI setup, selectors)
+sourceSpec: PROBES-BACKLOG.md#8
+goldRef: ""
+baseRef: ""
+prompt: >
+  In the template repo, give the notifications flow its first real Playwright
+  coverage in packages/e2e — and make the flow testable first. This is an
+  E2E-discipline task: the e2e workspace playbook is the law here — read
+  .claude/skills/e2e/SKILL.md and .claude/skills/e2e/registry.yaml FIRST,
+  plus packages/app/react/CLAUDE.md and the react component skill
+  (.claude/skills/component/react/) for the one frontend slice below, and
+  study the existing harness before writing anything:
+  packages/e2e/utils/test.ts (fixtures: goto, loginAs, given, network),
+  packages/e2e/utils/given/{api,user,index}.ts, packages/e2e/utils/i18n.ts
+  (typed t() over the app's pt.json), packages/e2e/utils/mock.ts and
+  packages/e2e/utils/selectors.ts. Read the generated SDK surface FIRST for
+  the exact shapes: packages/client/dist/typescript/src/typescript/{client,
+  types,hooks} — sendNotification (POST /v1/notifications; requires a
+  non-empty targetUserIds; any signed-in account may call it; pushEnabled
+  defaults true), getSession / getMyAccount (the authenticated user's own
+  id), listNotifications + listNotificationsQueryKey +
+  ListNotificationsQueryResponse, and the NotificationCategory enum.
+  Grounded facts you must respect: the backend WRITE path is real
+  (SendNotification persists notification + delivery rows) but the READ
+  (ListNotifications) is a faker-backed stub at HEAD — REAL contract, FAKE
+  deterministic body, it does NOT reflect writes (see
+  packages/api/typescript/src/ui/usecases/ListNotifications.ts). There is no
+  notifications page on the web app and no mark-as-read UI — the ONLY inbox
+  surface is the header bell popover, and at HEAD it renders a hardcoded
+  empty array (the TODO in
+  packages/app/react/src/components/Header/index.tsx).
+
+  Step 1 — make the flow testable (e2e skill core principle: if the frontend
+  doesn't help, fix it): wire the bell popover to the SDK.
+  NotificationsPopover
+  (packages/app/react/src/components/Header/NotificationsPopover/index.tsx)
+  must own its own useListNotifications query — Header stops threading a
+  notifications prop and the MOCK_NOTIFICATIONS placeholder dies — and the
+  item row must render the SDK item shape (title, message, category, read,
+  createdAt) instead of the hand-rolled level-typed interface, per the house
+  component canon (component owns its data; enum-keyed style maps, never a
+  switch). Keep the existing visuals and i18n keys
+  (notifications.aria/title/allCaughtUp); do not build a notifications page,
+  do not touch the backend, do not regenerate the SDK.
+
+  Step 2 — a new composable given:
+  packages/e2e/utils/given/notifications.ts exporting
+  givenUserWithNotifications(context, params?). It composes givenFreshUser,
+  resolves the fresh user's own id through the SDK using the authenticated
+  session.client, seeds notifications via sendNotification (targetUserIds =
+  [own id]) — data setup is API/SDK calls only, never UI — and returns the
+  user plus the seeded notification shapes. Re-export it from
+  packages/e2e/utils/given/index.ts and register it on the `given` fixture
+  in packages/e2e/utils/test.ts as given.userWithNotifications (mirror how
+  freshUser is registered).
+
+  Step 3 — the spec: packages/e2e/tests/07-notifications-flow.spec.ts (do
+  NOT modify the placeholder specs 01–06). Three tests. (1) empty inbox — a
+  fresh user opens the bell from /dashboard and sees the all-caught-up copy;
+  because the real read returns random faker items, mock the list read EMPTY
+  with a TYPED mockRoute (SDK query key + ListNotificationsQueryResponse),
+  registered BEFORE navigating. (2) seeded inbox —
+  given.userWithNotifications seeds real rows; mirror the seeded items
+  through the same typed mockRoute (the bridge until the real read lands —
+  delete the mock when it does), deep-link straight into /dashboard with the
+  typed goto fixture, assert the URL contract with toHaveURL, open the bell
+  by its accessible name and assert the popover heading plus a seeded title
+  are visible. (3) notification preferences round-trip — deep-link DIRECTLY
+  to /settings/account (zero in-app navigation), assert the URL, flip the
+  email-notifications switch by role + accessible name, save, and assert the
+  success feedback copy; read PreferencesSection/PreferencesForm under
+  packages/app/react/src/routes/(app)/settings/account/ first — selectors
+  come from the component code, never guessed.
+
+  Discipline (this is what is graded): import test/expect from
+  ../utils/test, never @playwright/test; navigation only via the typed goto
+  fixture; ALL state setup via given helpers + SDK (no UI signups, no
+  hardcoded emails/passwords — the generators make unique data); selectors
+  are roles and accessible names; copy that ships through i18n is asserted
+  via the typed t() from ../utils/i18n and static copy stays inline pt-BR
+  (the Playwright config pins locale pt-BR — never English literals); ZERO
+  waitForTimeout/setTimeout sleeps — web-first assertions only, with
+  network.waitForFailure in a Promise.race when racing a navigation; mocks
+  only via mockRoute typed by SDK response types + query keys (never raw
+  page.route/route.fulfill), registered before navigating; never import
+  backend code into e2e. Finish green: cd packages/app/react && bun x tsc
+  --noEmit, and cd packages/e2e && bun x tsc --noEmit. Running the suite
+  itself (bun e2e) needs the full local stack (docker + dev servers) and is
+  NOT required for this task.
+axes:
+  - E2E-DISCIPLINE
+  - SDK-CONSUME
+  - DATA-OWNERSHIP
+  - NAME-CONSISTENCY
+graders:
+  # ── gates ──────────────────────────────────────────────────────────
+  - kind: tsc
+    spec: e2e
+  - kind: tsc
+    spec: app-react
+  - kind: detect
+    spec: registry-scan
+  - kind: detect
+    spec: import-direction
+  - kind: detect
+    spec: component-props
+  # ── structure ──────────────────────────────────────────────────────
+  - kind: file-exists
+    spec: "packages/e2e/tests/07-notifications-flow.spec.ts"
+  - kind: file-exists
+    spec: "packages/e2e/utils/given/notifications.ts"
+  # ── spec discipline ────────────────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/e2e/tests/07-notifications-flow.spec.ts::from\\s+['\"]\\.\\./utils/test['\"]"
+    id: e2e#E2E-01
+  - kind: grep-must-not
+    spec: "packages/e2e/tests/07-notifications-flow.spec.ts::from\\s+['\"]@playwright/test['\"]"
+    id: e2e#E2E-01
+  - kind: grep-must
+    spec: "packages/e2e/tests/07-notifications-flow.spec.ts::await goto\\("
+    id: e2e#E2E-02
+  - kind: grep-must-not
+    spec: "packages/e2e/tests/07-notifications-flow.spec.ts::page\\.goto\\("
+    id: e2e#E2E-02
+  - kind: grep-must
+    spec: "packages/e2e/tests/07-notifications-flow.spec.ts::given\\.userWithNotifications\\("
+    id: e2e#E2E-04
+  - kind: grep-must
+    spec: "packages/e2e/tests/07-notifications-flow.spec.ts::toHaveURL\\("
+    id: e2e#deep-link
+  - kind: grep-must
+    spec: "packages/e2e/tests/07-notifications-flow.spec.ts::getByRole\\("
+    id: e2e#selectors
+  - kind: grep-must
+    spec: "packages/e2e/tests/07-notifications-flow.spec.ts::(?<![\\w$.])t\\(['\"]notifications\\."
+    id: e2e#E2E-06
+  - kind: grep-must
+    spec: "packages/e2e/tests/07-notifications-flow.spec.ts::(?<![\\w$.])t\\(['\"]account\\.preferences\\."
+    id: e2e#E2E-06
+  - kind: grep-must
+    spec: "packages/e2e/tests/07-notifications-flow.spec.ts::mockRoute"
+    id: e2e#E2E-C01
+  - kind: grep-must
+    spec: "packages/e2e/tests/07-notifications-flow.spec.ts::ListNotificationsQueryResponse"
+    id: e2e#bp-e2e-04
+  - kind: grep-must
+    spec: "packages/e2e/tests/07-notifications-flow.spec.ts::listNotificationsQueryKey"
+    id: e2e#E2E-C03
+  - kind: grep-must-not
+    spec: "packages/e2e/tests/07-notifications-flow.spec.ts::page\\.route\\(|route\\.fulfill\\("
+    id: e2e#bp-e2e-04
+  - kind: grep-must-not
+    spec: "packages/e2e/tests/07-notifications-flow.spec.ts::getByTestId|data-testid"
+    id: e2e#bp-e2e-03
+  - kind: grep-must-not
+    spec: "packages/e2e/tests/07-notifications-flow.spec.ts::getByPlaceholder\\("
+    id: e2e#bp-e2e-08
+  - kind: grep-must-not
+    spec: "packages/e2e/tests/07-notifications-flow.spec.ts::\\.locator\\("
+    id: e2e#selectors
+  - kind: grep-must-not
+    spec: "packages/e2e/tests/07-notifications-flow.spec.ts::password:\\s*['\"]|email:\\s*['\"][^'\"]*@"
+    id: e2e#bp-e2e-05
+  - kind: grep-must-not
+    spec: "packages/e2e/tests/**/*.ts::waitForTimeout\\(|setTimeout\\(|networkidle"
+    id: e2e#bp-e2e-09
+  # ── given discipline ───────────────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/e2e/utils/given/notifications.ts::givenFreshUser\\("
+    id: e2e#given-compose
+  - kind: grep-must
+    spec: "packages/e2e/utils/given/notifications.ts::sendNotification\\("
+    id: e2e#E2E-04
+  - kind: grep-must
+    spec: "packages/e2e/utils/given/notifications.ts::session\\.client"
+    id: e2e#E2E-04
+  - kind: grep-must
+    spec: "packages/e2e/utils/given/notifications.ts::from\\s+['\"]@codm/client-typescript/typescript['\"]"
+    id: e2e#sdk-import
+  - kind: grep-must-not
+    spec: "packages/e2e/**/*.ts::from\\s+['\"]tsyringe|from\\s+['\"][^'\"]*api/src"
+    id: e2e#bp-e2e-01
+  - kind: grep-must
+    spec: "packages/e2e/utils/given/index.ts::\\./notifications"
+    id: e2e#given-export
+  - kind: grep-must
+    spec: "packages/e2e/utils/test.ts::userWithNotifications"
+    id: e2e#fixture-registration
+  # ── popover wiring (react) ─────────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/app/react/src/components/Header/**/*.tsx::useListNotifications"
+    id: component#CMP-P01
+  - kind: grep-must-not
+    spec: "packages/app/react/src/components/Header/**/*.tsx::switch\\s*\\("
+    id: component#CMP-P18
+  - kind: grep-must-not
+    spec: "packages/app/react/src/components/Header/**/*.tsx::(?<![\\w$.])fetch\\s*\\(|from\\s+['\"](axios|ky|got|redaxios|superagent)['\"]"
+    id: component#bp-21
+  # ── judge ──────────────────────────────────────────────────────────
+  - kind: judge
+    spec: >
+      The notifications flow just got its first Playwright coverage:
+      packages/e2e/tests/07-notifications-flow.spec.ts, a new given at
+      packages/e2e/utils/given/notifications.ts (re-exported via
+      utils/given/index.ts, registered on the `given` fixture in
+      utils/test.ts), and the header bell popover at
+      packages/app/react/src/components/Header/ was wired to the SDK.
+      Verify ALL of:
+      (a) SETUP-VIA-API — every piece of test state is created through given
+      helpers + SDK calls, never through the UI: givenUserWithNotifications
+      composes givenFreshUser, resolves the fresh user's own id through an
+      SDK read (getSession or getMyAccount) using the authenticated
+      session.client, seeds via sendNotification with that same client, and
+      returns the seeded shapes; no direct DB access, no backend imports, no
+      literal emails/passwords/CPFs (uniqueness comes from the generators
+      inside givenFreshUser).
+      (b) SELECTORS — every interaction targets a role or accessible
+      name/label: the bell opens via its aria accessible name, the switch
+      and save button via getByRole with name; i18n-rendered copy is
+      asserted through the typed t() from ../utils/i18n (notifications.*,
+      account.preferences.*); no data-testid, no getByPlaceholder as a
+      primary selector, no raw CSS .locator() calls inside the spec.
+      (c) WAITING — zero waitForTimeout/setTimeout sleeps anywhere; the
+      assertions are web-first (expect(...).toBeVisible() / toHaveURL with
+      built-in retry); if the spec waits on a navigation triggered by an
+      action, it races network.waitForFailure() instead of relying on a long
+      timeout.
+      (d) DEEP-LINK — at least one test enters an authenticated screen
+      directly via the typed goto fixture with zero prior in-app navigation
+      and asserts the URL contract with toHaveURL; the preferences test
+      starts at /settings/account directly, not by clicking through menus.
+      (e) MOCK DISCIPLINE — the ListNotifications read is the ONLY thing
+      mocked, via mockRoute typed against ListNotificationsQueryResponse
+      with the URL resolved from listNotificationsQueryKey, and each mock is
+      registered BEFORE the navigation that fires the query; sendNotification
+      and the preferences mutation run against the real stack.
+      (f) POPOVER WIRING — NotificationsPopover owns its own
+      useListNotifications query (Header no longer passes a notifications
+      array; the MOCK_NOTIFICATIONS placeholder is gone); rows are typed by
+      the SDK item shape rather than a parallel hand-rolled wire-shape
+      interface; any category-to-style resolution is a module-level map
+      keyed by the SDK NotificationCategory enum, not a switch/ternary
+      chain.
+      Scope notes — do NOT fail the task for any of these, they are the
+      expected shapes: mocking the INTERNAL ListNotifications read is
+      sanctioned here because the backend read is a faker stub at HEAD and
+      cannot reflect the seeded writes (the task pins this; "never mock
+      internal APIs" does not apply); the raw fetch inside
+      utils/given/api.ts for the Better Auth sign-up is pre-existing and
+      sanctioned; page.locator inside utils/selectors.ts helpers is the
+      established pattern — only the new spec file must stay
+      role/label-based; inline pt-BR string literals for static copy are the
+      contract (E2E-03) — do not demand t() for copy that does not ship
+      through i18n; the given returning seeded items that the spec mirrors
+      into the typed mock payload is the intended bridge until the real read
+      lands — do not flag the apparent redundancy; local aliases of fixtures
+      or helpers are fine — judge the idiom, not the variable name; the
+      pre-existing placeholder specs tests/01-*..06-* (raw @playwright/test
+      imports, getByTestId in comments) are OUT OF SCOPE, as is
+      NotificationItem's pre-existing formatDistanceToNow locale handling
+      (improving it is welcome, not required); do not require
+      enums.NotificationCategory i18n label keys — the popover renders no
+      category labels. Inspect the new spec, the new given,
+      utils/given/index.ts, utils/test.ts and the files under
+      packages/app/react/src/components/Header/.
+notes: >-
+  Synthetic probe authored from grounded HEAD facts — first e2e
+  (Playwright-workspace) probe; no gold tree, agent mode only. Closes the
+  E2E-DISCIPLINE axis (PROBES-BACKLOG.md#8). Deliberately NO playwright-run
+  cmd grader: running `bun e2e` in grading would hit the CI=1 hazard (the
+  grader env would force webServer to spin fresh api+app dev servers and
+  need docker postgres — nondeterministic and slow; noted as harnessGaps in
+  the backlog), so the probe grades the DISCIPLINE (tsc e2e + tsc app-react
+  + idiom greps + judge), not runtime green. Grounded SDK/backend reality
+  verified at authoring time: sendNotification (C53) is a REAL write
+  (AuthAccountMiddleware — any signed-in account; throws EMPTY_RECIPIENTS
+  without targetUserIds; pushEnabled defaults true) while ListNotifications
+  is a faker-backed stub ("FAKER body, REAL contract" — deterministic per
+  user/page seed, does not reflect writes), which is WHY the spec must
+  bridge UI assertions through a typed mockRoute on the internal read — the
+  judge's scope notes sanction this explicitly so it doesn't get failed
+  against the "never mock internal APIs" rule. The session does not carry
+  the user id; getSession/getMyAccount via session.client provide it (both
+  exist in the SDK client surface). The header popover is the only inbox UI
+  at HEAD and renders a hardcoded empty array (Header/index.tsx TODO says
+  "Replace with real notification data hook when SDK supports it" — the SDK
+  supports it now), so the wiring step is in-scope per the e2e skill's "if
+  the frontend doesn't help, fix it" principle, and without it no honest UI
+  assertion is possible. Free real estate verified at authoring time: no
+  tests/07-* spec and no utils/given/notifications.ts exist; nothing in
+  packages/e2e references userWithNotifications/sendNotification/
+  mockRoute-on-notifications; given/index.ts re-exports only ./user + ./api;
+  nothing under src/components/Header/ imports useListNotifications, uses
+  switch( or raw fetch; packages/e2e is clean of waitForTimeout/setTimeout/
+  networkidle under tests/ and of tsyringe/api-src imports package-wide
+  (lib/, scripts/, extension/ included) — so every grep-must is 0 at HEAD
+  and every must-not passes at HEAD. Removal assertions (MOCK_NOTIFICATIONS
+  gone, notifications prop gone) live in the JUDGE, not in grep-must-nots —
+  they exist at HEAD and a must-not would blame pre-existing code, failing
+  the validator by design. Gates at HEAD: tsc e2e green, tsc app-react
+  green, import-direction + component-props exit 0; registry-scan --all
+  flaked red ONCE (5 component#bp-25 findings in dashboard/orders/products
+  reported as fresh despite their keys being IN the baseline — running
+  --update-baseline produced a byte-identical 237-key file and every
+  subsequent run is green, 0 fresh / 237 baselined); flagged for the
+  orchestrator, no repo state was changed. Existing placeholder specs 01-06
+  import @playwright/test and keep getByTestId in comments — all
+  spec-discipline must-nots are therefore scoped to the NEW pinned spec file
+  only, while the sleep ban (waitForTimeout/setTimeout/networkidle) is safe
+  dir-wide over tests/**/*.ts (0 hits at HEAD). Glob notes: Bun.Glob does
+  not support "/" inside a brace branch, so the spec and given get separate
+  single-file graders instead of one braced glob; "**" matches zero
+  segments, so Header/**/*.tsx includes Header/index.tsx; node_modules is
+  pruned by the harness globFiles, so the package-wide
+  packages/e2e/**/*.ts must-not is safe. Regex notes: `await goto\(` cannot
+  match `await page.goto(` (the "page." breaks adjacency) — paired with the
+  page\.goto must-not it forces the typed fixture; the t() musts use
+  (?<![\w$.]) so getByText( does not false-positive; loginAs({ email:
+  user.email, ... }) passes the bp-e2e-05 must-not since it bans only
+  literal credential strings. i18n keys asserted by the spec all exist at
+  HEAD in pt.json (notifications.aria/title/allCaughtUp,
+  account.preferences.emailNotifications/save/saveSuccess); the e2e t()
+  helper does not interpolate, so the prompt steers asserts toward plain
+  keys (the unreadCount_* plural keys are unreachable through it). The
+  numbering 07- follows the existing 01-06 canonical-flow convention.

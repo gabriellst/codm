@@ -1,0 +1,19 @@
+{
+	"id": "0f0f0f0f-0f0f-4f0f-8f0f-0f0f0f0f0f0f",
+	"ownerId": "fixture-tenant",
+	"time": "2026-07-30T12:00:00Z",
+	"name": "integration.channel_message.sent",
+	"payload": {
+		"channelId": "channelId-sample",
+		"messageId": "messageId-sample",
+		"internalMessageId": "internalMessageId-sample",
+		"remoteId": "remoteId-sample",
+		"senderId": "senderId-sample",
+		"isGroup": true,
+		"timestamp": 90071992547409,
+		"observedAt": "2026-07-30T12:00:00Z",
+		"messageType": "TEXT",
+		"contentJson": "contentJson-sample",
+		"platform": "WHATSAPP"
+	}
+}

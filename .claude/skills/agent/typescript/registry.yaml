@@ -1,0 +1,455 @@
+registry:
+  type: backend
+  layer: application
+  depends_on: [enum, schema, service]
+  depended_by: [usecase, handler, service]
+  context_reads: [enum, schema, errors]
+
+  patterns:
+    - id: AGT-01
+      name: "One directory per agent"
+      when: always
+      rule: "`<context>/agents/<Name>Agent/{<Name>Agent.ts, prompt.ts, types.ts, index.ts}` — the class, the prompt builder, the schemas, the barrel. Never a single flat file, never a shared prompts/ folder."
+
+    - id: AGT-02
+      name: "Extends the base Agent, implements only buildRequest"
+      when: always
+      reason: "`run()` is a CONCRETE template method on the base — it is the one layer that sees both the input envelope and the request, which is why it is the only place allowed to stamp identity and mint the run token."
+      rule: "`export class XAgent extends Agent<typeof XInputSchema, typeof XOutputSchema?>` implementing `protected buildRequest(input)` and nothing else of the base's surface."
+
+    - id: AGT-03
+      name: "Identity is a static, assigned per agent"
+      when: always
+      rule: "`static override readonly NAME = AgentName.X`. The base DECLARES `static readonly NAME: AgentName`; each agent assigns. Used for logs/spans/token claims — never for resolution."
+
+    - id: AGT-04
+      name: "Input schema via z.agentInput()"
+      when: always
+      reason: "The verb extends `BaseAgentInputSchema`, so `AgentInputSchemaConstraint` holds BY CONSTRUCTION and `input.cwd` / `input.ownerId` stay readable inside a generic without a cast."
+      rule: "`export const XInputSchema = z.agentInput({ ...ownFields })` in `types.ts`. Never `z.object({ ownerId, threadId, cwd, ... })` by hand."
+
+    - id: AGT-05
+      name: "Prompt lives in an @injectable() builder"
+      when: always
+      reason: "The day the prompt needs a repository/config read, the dependency arrives through the builder's constructor and the agent's shape does not change."
+      rule: "`@injectable() export class XPromptBuilder { system(...): string; user(...): string }` in `prompt.ts`, injected into the agent."
+
+    - id: AGT-06
+      name: "One public method, only with an outputSchema"
+      when: "the agent declares an outputSchema"
+      rule: "Exactly ONE public method, named for the business purpose (`classify`, not `execute`/`generate`), whose body is `return this.collect(input)` and nothing else."
+
+    - id: AGT-07
+      name: "No public surface without an outputSchema"
+      when: "the agent has no outputSchema"
+      rule: "The agent exposes nothing beyond the inherited `run()` and does not implement it — its consumer drains the stream."
+
+    - id: AGT-08
+      name: "Named failure from collect()"
+      when: "the agent declares an outputSchema"
+      reason: "The seam NEVER throws mid-drain: a transport stop and a failed structural validation both arrive as fields on the terminal record. Translating that into a code is this layer's job."
+      rule: "Override `protected collectFailure(message)` to return `new BaseError<ApplicationErrors>('<YOUR_CODE>', message)`."
+
+    - id: AGT-09
+      name: "Tool scope is declared, never inferred"
+      when: always
+      rule: "`readonly tools = [AgentToolName.X, ...]` on the agent. `request.mcp` present ⟺ `tools.length > 0`; the base derives the invocation from the scope."
+
+    - id: AGT-10
+      name: "Class token DI in all three envs, transient"
+      when: always
+      rule: "`{ token: XAgent, mock: { useClass: XAgent }, real: { useClass: XAgent } }` in `<context>/registry.ts` via `expandBindings`. Transient: an agent holds no state, and a singleton would capture whichever `AgentRunner` was bound first."
+
+    - id: AGT-11
+      name: "Policy is a sibling service, not agent code"
+      when: "the decision needs a threshold, a fallback, an id minted, or a deterministic shortcut"
+      rule: "Put it in `<context>/services/<X>Router` (or similarly named policy service) which INJECTS the agent. The agent infers; the service decides."
+
+    - id: AGT-12
+      name: "Invoked by handler, job, or a use case that consumes the decision in its own transaction"
+      when: always
+      rule: "Never a controller, never the MCP router. A use case may inject an agent-context service only when the decision is consumed inside that use case's transaction."
+
+    - id: AGT-13
+      name: "Tested against a stubbed AgentRunner"
+      when: always
+      rule: "Construct the agent directly with a stub runner that records requests and yields canned events. Assert `buildRequest`'s output via the recorded request, and that the BASE stamped `agentName`."
+
+    - id: AGT-14
+      name: "Identity is a static schema, parsed at spawn"
+      when: "the agent declares an mcpScope"
+      reason: "It replaced `SCOPE_CONFINEMENT`, a `Record<McpScope,'issue'|'thread'>` in a central manifest whose ONLY reader was one line in the base's mint site. That made 'which id does this surface require' a property of the SCOPE, kept far from every agent, with the weaker confinement as the silent default when a new scope was forgotten. The requirement did not go away — it became the agent's own."
+      rule: "`static override readonly IdentitySchema = AgentRunIdentitySchema.extend({ issueId: z.uuid() })` for an agent confined to an issue; `.omit({ issueId: true })` for one that structurally has none. The base parses it inside `buildMcpInvocation` BEFORE calling `AgentIdentityService.issue(...)`, so an identity that does not parse never becomes a credential and the runner is never reached."
+      wrong: "a scope→confinement record read at the mint site; an `if (!input.issueId) throw` in the agent; or parsing AFTER `.issue(` (the order is the property — a test that only asserts the throw stays green against an implementation that issued first)."
+
+    - id: AGT-15
+      name: "The identity service is AgentIdentityService, with issue/resolve/revoke"
+      when: always
+      reason: "`RunTokenClaims` named an ENVELOPE that does not exist — the token is 32 random bytes and the identity never leaves the process. What travels is a lookup key. The abstract + the InMemory implementation live in `core` (they are a template capability); the product only narrows the type."
+      rule: "`AgentIdentityService<AgentRunIdentity>` from `@codm/core-typescript`, injected into the base `Agent`. `issue` is called ONLY by the base at spawn; `resolve` by the destination controller's middleware and by the MCP adapter's scope match; `revoke` by the runner at run end."
+      wrong: "`RunTokenService`, `RunTokenClaims`, `.mint(`, `.verify(` — all dead names. A runner that issues is the named bad practice: it would have to be handed the identity the seam exists to keep out of it."
+      exception: >
+        No `MockAgentIdentityService`, and this is deliberate, not a gap. `AgentIdentityService` binds
+        to `InMemoryAgentIdentityService` in ALL THREE envs (`shared/registry.ts`) because the service
+        IS in-memory by nature — the token lives one run inside a single daemon process, never crosses
+        a process boundary, never touches a store. A mock double would be a second implementation of
+        the same trivial logic the real one already is, and the integration/mock suites exercise the
+        401/403 boundary directly against the real thing. Inherited from `RunTokenService`'s identical
+        triple-env binding (`agent/registry.ts:98-101` documented the same reasoning pre-rename); the
+        rename carries the decision, it does not revisit it.
+
+  snippet:
+    skeleton: |
+      import { injectable } from 'tsyringe-neo'
+      import { AgentMessageRole, AgentName } from '../../enums'
+      import { AgentRunner } from '../../services/AgentRunner'
+      import { Agent } from '../../types/Agent'
+      import type { AgentRunRequest } from '../../types'
+      import { {{Name}}PromptBuilder } from './prompt'
+      import { {{Name}}InputSchema } from './types'
+
+      /**
+       * TODO: one paragraph — what business intention this agent turns into ONE run, and what it is
+       * deliberately NOT allowed to decide (that belongs to a policy service next door).
+       */
+      @injectable()
+      export class {{Name}}Agent extends Agent<typeof {{Name}}InputSchema> {
+      	static override readonly NAME = AgentName.{{NAME_CONST}}
+
+      	override readonly inputSchema = {{Name}}InputSchema
+
+      	// Declare the tool scope here when this agent is allowed to ACT:
+      	// override readonly tools = [AgentToolName.COMPLETE_ISSUE] as const
+
+      	constructor(
+      		runner: AgentRunner,
+      		private readonly prompt: {{Name}}PromptBuilder,
+      	) {
+      		super(runner)
+      	}
+
+      	/** The ONE point of variation. No `mcp`, no `agentName` — the base stamps both. */
+      	protected buildRequest(input: this['input']): Omit<AgentRunRequest, 'mcp' | 'agentName'> {
+      		return {
+      			cwd: input.cwd,
+      			systemPrompt: this.prompt.system(input),
+      			messages: [{ role: AgentMessageRole.USER, content: this.prompt.user(input) }],
+      		}
+      	}
+      }
+    skeletons:
+      prompt: |
+        import { injectable } from 'tsyringe-neo'
+        import type Z from 'zod'
+        import type { {{Name}}InputSchema } from './types'
+
+        type {{Name}}Input = Z.output<typeof {{Name}}InputSchema>
+
+        /** Prompt builder for `{{Name}}Agent`. A CLASS so a future repo/config read arrives by constructor. */
+        @injectable()
+        export class {{Name}}PromptBuilder {
+        	/** Standing instructions — what the model is for. */
+        	system(_input: {{Name}}Input): string {
+        		return 'TODO: standing instructions'
+        	}
+
+        	/** The single user turn. */
+        	user(input: {{Name}}Input): string {
+        		return `TODO: render ${JSON.stringify(input)}`
+        	}
+        }
+      types: |
+        import { z } from '@codm/core-typescript'
+
+        /**
+         * What `{{Name}}Agent` is asked. `z.agentInput()` carries the run envelope
+         * (`ownerId` / `threadId` / `cwd` / optional `issueId`) — never restate those fields here.
+         */
+        export const {{Name}}InputSchema = z.agentInput({
+        	// TODO: this agent's own fields
+        })
+
+        // If this agent returns STRUCTURED output, declare the schema here and pass it as the second
+        // generic of `Agent<...>`; the agent then exposes ONE public method delegating to `collect()`.
+        // export const {{Name}}OutputSchema = z.object({})
+      test: |
+        import { describe, expect, it } from 'bun:test'
+        import type { ZodType } from 'zod'
+        import { AgentRunner } from '../../services/AgentRunner'
+        import { AgentName, AgentRunOutcome } from '../../enums'
+        import type { AgentRunRequest, AgentRuntimeEvent } from '../../types'
+        import { {{Name}}PromptBuilder } from './prompt'
+        import { {{Name}}Agent } from './{{Name}}Agent'
+
+        /** Stubbed seam — never a subprocess, never a real model (a property of the DI env, not of discipline). */
+        class CapturingRunner extends AgentRunner {
+        	readonly requests: AgentRunRequest<ZodType | undefined>[] = []
+
+        	run<OutputSchema extends ZodType | undefined = undefined>(request: AgentRunRequest<OutputSchema>): AsyncIterable<AgentRuntimeEvent> {
+        		this.requests.push(request)
+        		return (async function* () {
+        			yield {
+        				type: 'finished',
+        				result: { outcome: AgentRunOutcome.COMPLETED, replyText: 'done', sessionId: null, failed: false },
+        			} satisfies AgentRuntimeEvent
+        		})()
+        	}
+
+        	async shutdown(): Promise<void> {}
+        }
+
+        describe('{{Name}}Agent', () => {
+        	it('the BASE stamps identity — buildRequest never sets agentName', async () => {
+        		const runner = new CapturingRunner()
+        		const agent = new {{Name}}Agent(runner, new {{Name}}PromptBuilder())
+
+        		for await (const _ of agent.run({} as Parameters<{{Name}}Agent['run']>[0])) {
+        			// drain
+        		}
+
+        		expect(runner.requests[0]?.agentName).toBe(AgentName.{{NAME_CONST}})
+        	})
+        })
+    exemplar: |
+      // agents/ClassifyIssueAgent/ClassifyIssueAgent.ts — an agent WITH structured output.
+      @injectable()
+      export class ClassifyIssueAgent extends Agent<typeof ClassifyIssueInputSchema, typeof LlmDecisionSchema> {
+        static override readonly NAME = AgentName.CLASSIFY_ISSUE
+
+        override readonly inputSchema = ClassifyIssueInputSchema
+        override readonly outputSchema = LlmDecisionSchema
+
+        constructor(runner: AgentRunner, private readonly prompt: ClassifyIssuePromptBuilder) { super(runner) }
+
+        /** THE one public method: named for the purpose, body is exactly this. */
+        async classify(input: this['input']): Promise<this['output']> {
+          return this.collect(input)
+        }
+
+        protected buildRequest(input: this['input']) {
+          return {
+            cwd: input.cwd,
+            systemPrompt: this.prompt.system(),
+            messages: [{ role: AgentMessageRole.USER, content: this.prompt.user(input) }],
+            outputSchema: this.outputSchema,
+          }
+        }
+
+        protected override collectFailure(message: string): Error {
+          return new BaseError<ApplicationErrors>('CLASSIFICATION_FAILED', message)
+        }
+      }
+
+  scaffold: "bun cli agent <context> <Name>"
+
+  bad_practices:
+    - id: bp-01
+      name: "A second method on the seam"
+      severity: critical
+      mechanical: false
+      reason: "Classify and work are the same spawn, the same stdin format, the same parser and the same end-of-turn signal. A `generate()` next to `run()` encodes ZERO domain information and immediately grows two parallel drain paths that disagree."
+      wrong: |
+        export abstract class AgentRunner {
+          abstract run(request): AsyncIterable<AgentRuntimeEvent>
+          abstract generate(request): Promise<unknown>   // second transport
+        }
+      right: |
+        export abstract class AgentRunner {
+          abstract run<S extends ZodType | undefined>(request: AgentRunRequest<S>): AsyncIterable<AgentRuntimeEvent>
+          abstract shutdown(): Promise<void>
+        }
+        // "just give me the object" is `collect()` — a helper OVER the same iteration, on the Agent base.
+
+    - id: bp-02
+      name: "A class per frame kind"
+      severity: high
+      mechanical: false
+      reason: "Transport frames are DATA. A class hierarchy over them turns a wire-format change into a refactor and invites domain logic into the parser."
+      wrong: |
+        class AssistantTextFrame extends Frame { toDomainEvent() { /* ... */ } }
+        class ToolUseFrame extends Frame { toDomainEvent() { /* ... */ } }
+      right: |
+        type AgentFrame = { kind: 'assistant_text'; ... } | { kind: 'tool_use'; ... }
+        // one pure fold from frames → the three turn facts, switch on `kind`
+
+    - id: bp-03
+      name: "Throwing mid-drain on a validation failure"
+      severity: critical
+      mechanical: false
+      reason: "A throw strands the consumer's partial state and, in the runner, leaks the child process whose stdin was never closed. The seam's contract is to REPORT, never throw."
+      wrong: |
+        for await (const event of this.runner.run(request)) {
+          if (event.type === 'finished') return schema.parse(event.result.output)  // throws mid-iteration
+        }
+      right: |
+        // the runner sets `output` only when safeParse SUCCEEDED, and reports failure as data:
+        if (result.failed || result.output === undefined) throw this.collectFailure(result.failure ?? '...')
+
+    - id: bp-04
+      name: "`if (provider === 'x')` inside a runner"
+      severity: critical
+      mechanical: true
+      reason: "A per-CLI difference is a MODELLING fact, not a branch. WHICH CLI a run belongs to is settled by the DI binding that produced the runner, before any request exists."
+      wrong: |
+        if (request.provider === ProviderKind.CODEX) args.push('--json')
+      right: |
+        // one runner class per CLI; the argv difference is that class's own buildArgs.
+        // The request carries no `provider` at all, which makes the branch UNREPRESENTABLE.
+
+    - id: bp-05
+      name: "`ownerId` / `issueId` / `threadId` in a tool input schema"
+      severity: critical
+      mechanical: true
+      reason: "A model does not get to choose on whose behalf it acts. Identity comes from the run token's claims; a payload field for it is a prompt-injection hole."
+      wrong: |
+        export const CompleteIssueInputSchema = z.object({ issueId: z.uuid(), summary: z.string() })
+      right: |
+        export const CompleteIssueInputSchema = z.object({ summary: z.string() })
+        // the handler reads ownerId/issueId/threadId from the verified run token
+
+    - id: bp-06
+      name: "A domain fact minted from a text heuristic"
+      severity: critical
+      mechanical: false
+      reason: "Regexing 'done' out of the model's prose is inference dressed as a declaration. A domain fact is either DECLARED by a tool call or INFERRED from the transport's terminal record — and which one it was must be visible."
+      wrong: |
+        if (/\bdone\b/i.test(replyText)) await save(new AgentRunCompletedEvent(...))
+      right: |
+        // the terminal record says how the run ended; a DECLARED completion arrives as a tool call.
+        // Facts carry `source: FactSource.DECLARED | INFERRED` so the difference is queryable.
+
+    - id: bp-07
+      name: "A synchronous MCP tool that blocks waiting for a human"
+      severity: critical
+      mechanical: false
+      reason: "The run is a live process with a watchdog. A tool that awaits an operator answer holds the turn open until the watchdog kills it, and the answer is lost."
+      wrong: |
+        async handle(input) { return { answer: await waitForOperatorReply(input.question) } }
+      right: |
+        async handle(input) {
+          await this.raiseStop({ kind: StopKind.HUMAN_REQUESTED, detail: input.question })
+          return { delivered: true }   // fire-and-forget; the answer arrives as the next turn
+        }
+
+    - id: bp-08
+      name: "A runner minting the run token"
+      severity: critical
+      mechanical: true
+      reason: "The runner would have to be handed the identity the seam exists to keep out. Only the base `Agent` sees both the input envelope and the request it is building."
+      wrong: |
+        // inside StreamJsonAgentRunner.run:
+        const token = this.runTokenService.mint({ ownerId: request.ownerId, ... })
+      right: |
+        // base Agent.run(): mints. Runner: only REVOKES at termination.
+
+    - id: bp-09
+      name: "A public method on an agent beyond run() / the single collect() delegator"
+      severity: high
+      mechanical: true
+      reason: "A second public method — or a delegator with a body beyond `return this.collect(input)` — is where routing policy leaks into the agent. Policy belongs to the sibling service."
+      wrong: |
+        async classify(input) {
+          const decision = await this.collect(input)
+          if ((decision.confidence ?? 0) < 0.6) return this.clarify(input)   // policy inside the agent
+          return decision
+        }
+      right: |
+        async classify(input: this['input']): Promise<this['output']> {
+          return this.collect(input)
+        }
+        // the threshold lives in IssueRouter, which injects this agent.
+
+    - id: bp-10
+      name: "A new domain event minted to serve a tool"
+      severity: high
+      mechanical: false
+      reason: "The class that bridges to the frozen integration event already exists. A parallel event doubles the bridge and eventually double-publishes."
+      wrong: |
+        export class AgentDeclaredCompletionEvent extends BaseDomainEvent { ... }  // parallel to AgentRunCompletedEvent
+      right: |
+        // REUSE the existing event class; add a `source` field if declared-vs-inferred must be visible.
+
+    - id: bp-11
+      name: "A tool that publishes an integration event with no consumer on the other side"
+      severity: high
+      mechanical: false
+      reason: "A tool is a thin controller of the context that OWNS the write it causes. Publishing across a boundary nobody listens on is a write that silently never lands."
+      wrong: |
+        // agent/mcp/tools/RecordArtifactTool.ts → publishes integration.artifact.recorded and hopes
+      right: |
+        // artifact/mcp/RecordArtifactTool.ts → dispatches the RecordArtifact use case that already exists
+
+    - id: bp-12
+      name: "Two publishers of the same frozen integration event"
+      severity: high
+      mechanical: false
+      reason: "Two authors of one wire name means no one owns it; the duplicate surfaces as a doubled downstream effect long after the change."
+      wrong: |
+        // both agent/handlers/PublishAgentIntegrationEvents and a tool handler publish issue.completed
+      right: |
+        // ONE declared publisher per frozen event, named in the bridge's docstring.
+
+    - id: bp-13
+      name: "A subclass overriding run()"
+      severity: critical
+      mechanical: true
+      reason: "`run()` is a concrete template method; the variation point is `buildRequest()`. An overridden `run()` re-opens a second place to mint the run token and a second place to stamp identity."
+      wrong: |
+        export class IssueWorkAgent extends Agent<typeof S> {
+          async *run(input) { yield* this.runner.run({ ...input, agentName: IssueWorkAgent.NAME }) }
+        }
+      right: |
+        export class IssueWorkAgent extends Agent<typeof S> {
+          protected buildRequest(input) { return { cwd: input.cwd, messages: [...] } }
+        }
+
+    - id: bp-14
+      name: "A use case conditioning on `request.mcp`"
+      severity: high
+      mechanical: true
+      reason: "The request is assembled INSIDE the agent; a use case never sees it. The observable predicate is the tool SCOPE of the agent it injected."
+      wrong: |
+        if (request.mcp) { /* the agent will declare its own completion */ }
+      right: |
+        if (this.agent.tools.length === 0) { /* nothing will be declared — infer the conclusion */ }
+
+    - id: bp-15
+      name: "A name→agent map or factory"
+      severity: critical
+      mechanical: true
+      reason: "It reintroduces the stringly-typed registry and makes 'which agent ran' a runtime lookup instead of a type. `AgentName` is identity, never a resolution key."
+      wrong: |
+        const AGENTS = { CLASSIFY_ISSUE: ClassifyIssueAgent, ISSUE_WORK: IssueWorkAgent }
+        container.resolve(AGENTS[name])
+      right: |
+        container.resolve(IssueWorkAgent)   // class token; a rename fails at compile time
+
+    - id: bp-16
+      name: "Restating the run envelope in an agent input schema"
+      severity: high
+      mechanical: true
+      reason: "`z.agentInput()` exists so the envelope holds BY CONSTRUCTION. A hand-written `ownerId`/`cwd` is a second declaration that can drift and can silently drop a field the runner needs."
+      wrong: |
+        export const XInputSchema = z.object({ ownerId: z.uuid(), cwd: z.string(), prompt: z.string() })
+      right: |
+        export const XInputSchema = z.agentInput({ prompt: z.string() })
+
+    - id: bp-17
+      name: "`cwd` defaulted to `process.cwd()`"
+      severity: critical
+      mechanical: true
+      reason: "In a product that runs inside the user's real repositories, an implicit process cwd points a coding agent at the daemon's own checkout."
+      wrong: |
+        cwd: input.cwd ?? process.cwd()
+      right: |
+        // the caller resolves the thread's absolute workspace path and passes it; `cwd` is never optional.
+
+    - id: bp-18
+      name: "A prompt instructing a tool the agent has not declared"
+      severity: high
+      mechanical: false
+      reason: "The tool is not in `--allowedTools`, so the model narrates a call it cannot make. The declaration and the instruction ship together or not at all."
+      wrong: |
+        system() { return 'Call codm__complete_issue when you finish.' }   // with tools = []
+      right: |
+        // add the tool to `tools` and the sentence to the prompt in the same change.

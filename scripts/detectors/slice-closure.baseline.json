@@ -1,0 +1,9 @@
+[
+	"SCW-01a::packages/api/typescript/src/auth/events/PasswordChangedEvent.ts",
+	"SCW-01a::packages/api/typescript/src/auth/events/PasswordResetEvent.ts",
+	"SCW-01a::packages/api/typescript/src/auth/events/PasswordResetRequestedEvent.ts",
+	"SCW-01a::packages/api/typescript/src/auth/events/ProfileUpdatedEvent.ts",
+	"SCW-01a::packages/api/typescript/src/auth/events/UserRegisteredEvent.ts",
+	"SCW-01a::packages/api/typescript/src/auth/events/UserSignedInEvent.ts",
+	"SCW-01a::packages/api/typescript/src/auth/events/UserSignedOutEvent.ts"
+]

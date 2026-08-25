@@ -1,0 +1,78 @@
+---
+// Inline-SVG icon primitive for the astro app. The design (design/codm.pen) specs its
+// glyphs against the `lucide` icon library; this workspace has no icon package installed
+// (@tabler/icons-react is the react-app's icon source and does not apply here — see
+// packages/app/astro/CLAUDE.md, "Icons — Inline <svg> or astro-icon"). Rather than add a
+// new dependency mid-adequação, each glyph the design actually uses is hand-authored as a
+// 24x24 stroke icon in lucide's own visual language (round caps/joins, 2px stroke) — same
+// vocabulary, zero new package. `apple`/`github` are brand marks (filled, not stroked).
+export type IconName =
+	'apple' | 'github' | 'sparkles' | 'ear' | 'shield-check' | 'hard-drive' | 'bot' | 'repeat' | 'check' | 'info' | 'arrow-right' | 'arrow-left' | 'terminal'
+
+interface Props {
+	name: IconName
+	class?: string
+	size?: number
+}
+
+const { name, class: className, size = 16 } = Astro.props
+
+const strokePaths: Partial<Record<IconName, string>> = {
+	sparkles:
+		'M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3zM5 15l.8 2.2L8 18l-2.2.8L5 21l-.8-2.2L2 18l2.2-.8L5 15zM19 13l.7 1.9L21.5 15.6l-1.8.7-.7 1.9-.7-1.9-1.8-.7 1.8-.7L19 13z',
+	ear: 'M8 3.5A5.5 5.5 0 0 1 13.5 9c0 2-1 3-2 4s-1.5 1.7-1.5 3a2.5 2.5 0 0 0 2.5 2.5M8 3.5A5.5 5.5 0 0 0 3.5 9c0 1.5.5 2.3 1.2 3.2M13.5 9a2 2 0 1 1 4 .3c0 1.4-1.5 1.9-1.5 3.7',
+	'shield-check': 'M12 3l7 3v5c0 4.5-3 7.7-7 9-4-1.3-7-4.5-7-9V6l7-3z M9 12l2 2 4-4',
+	'hard-drive':
+		'M3 12l2.5-6.5A2 2 0 0 1 7.35 4h9.3a2 2 0 0 1 1.85 1.5L21 12M3 12v5a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5M3 12h18M7.5 16.5h.01M11.5 16.5h3',
+	bot: 'M9 3v2M15 3v2M4 9h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9zM8.5 13.5v1M15.5 13.5v1M2 12h2M20 12h2',
+	repeat: 'M4 7h11a3 3 0 0 1 3 3v1M20 17H9a3 3 0 0 1-3-3v-1M7 4L4 7l3 3M17 20l3-3-3-3',
+	check: 'M20 6L9 17l-5-5',
+	info: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 11v6M12 7.5h.01',
+	'arrow-right': 'M5 12h14M13 6l6 6-6 6',
+	'arrow-left': 'M19 12H5M11 18l-6-6 6-6',
+	terminal: 'M4 5h16v14H4zM7 9l3 3-3 3M12 15h5',
+}
+
+const filledPaths: Partial<Record<IconName, string>> = {
+	// Simplified brand silhouettes (single fill path) — not a pixel copy of the trademarked
+	// glyphs, close enough to read at 12-18px alongside their labels.
+	apple:
+		'M16.365 1.43c0 1.14-.47 2.11-1.24 2.87-.83.83-2.03 1.42-3.08 1.34-.12-1.1.43-2.24 1.2-2.99.83-.83 2.24-1.32 3.12-1.22zM20.9 17.53c-.5 1.16-.74 1.68-1.38 2.7-.9 1.43-2.16 3.2-3.73 3.22-1.39.02-1.75-.91-3.63-.9-1.88.01-2.28.92-3.67.9-1.57-.02-2.76-1.62-3.66-3.05C2.5 17.05 2 12.6 3.72 10.02c1.06-1.6 2.77-2.6 4.4-2.6 1.68 0 2.74.94 4.13.94 1.35 0 2.17-.94 4.13-.94 1.45 0 2.98.79 4.07 2.16-3.58 1.96-3 7.03.55 7.95z',
+	github:
+		'M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.53 9.53 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .26.18.58.69.48A10 10 0 0 0 12 2z',
+}
+
+const isFilled = name in filledPaths
+---
+
+{
+	isFilled ? (
+		<svg
+			class={className}
+			width={size}
+			height={size}
+			viewBox="0 0 24 24"
+			fill="currentColor"
+			aria-hidden="true"
+			focusable="false"
+		>
+			<path d={filledPaths[name]} />
+		</svg>
+	) : (
+		<svg
+			class={className}
+			width={size}
+			height={size}
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+			aria-hidden="true"
+			focusable="false"
+		>
+			<path d={strokePaths[name]} />
+		</svg>
+	)
+}

@@ -1,0 +1,266 @@
+id: synthetic-l4-specification
+tier: holdout
+builder: opus
+title: Vague flash-sale ask → DDD design spec under .specs/ (synthetic — first L4
+  conceive-layer probe; question-every-aggregate, scope discipline, contract-lock-first,
+  ubiquitous-language naming; seeds RC-2 over-modeling + RC-12 naming traps)
+sourceSpec: PROBES-BACKLOG.md#L4
+goldRef: ""
+baseRef: ""
+prompt: >
+  We want to let merchants run "flash sales" on the e-commerce platform — time-boxed
+  promotions where a chosen set of catalog products is discounted for a short window,
+  the storefront shows a countdown, and the sale ends automatically when the window
+  closes (or, for some sales, when a capped quantity sells out). That is the whole brief
+  — the modeling is DELIBERATELY left to you.
+
+
+  Your job is to produce a Domain-Driven Design DESIGN SPEC for this feature — NOT code.
+  This is a conceive-layer task: read the conceive-layer skills FIRST and let them drive
+  the shape of the document. Read, in this order, before writing anything:
+  .claude/skills/ddd-spec/SKILL.md (the 7-section strategic-spec structure and the R1–R5
+  self-review), .claude/skills/ddd-modeling/SKILL.md (strategic + tactical decomposition,
+  the aggregate bad-practices), and — this is the part that decides the grade — the root
+  CLAUDE.md section titled "Modeling from another system" (the "Question Every Aggregate"
+  decision tree, the Scope Discipline rules, the Phase 0 Contract Lock rule, and the
+  naming-harmonization rule). The distilled failure corpus those rules came from lives at
+  .specs/2026-05-26-audit-distillation-what-we-got-wrong.md — skim Part I (RC-1, RC-2,
+  RC-3, RC-6, RC-12) so you do not re-commit the mistakes it catalogs.
+
+
+  Apply the decision tree to EVERY candidate concept the brief implies. The brief is
+  vague on purpose: it names some nouns and hints at others, and several of them LOOK
+  like aggregates but are not. For each candidate, decide — and write down the decision
+  with its justification — whether it is: an AGGREGATE (identity + lifecycle + invariants
+  + a confirmed need), a DOMAIN EVENT ("a thing that happened" — already persisted in the
+  outbox/domainEvent table, so no entity/repo/audit-table), a VALUE OBJECT (embedded data
+  with no identity, on a parent), a CODE ENUM + quotas (fixed tiers/config — not a
+  persisted row), better-auth-OWNED (sessions/tokens — not modeled), UI/BFF state (a query
+  param or a read concern — not a domain field), or a QueryService read (a shape that is
+  just a join — not a projection unless real denormalization/cross-context aggregation is
+  needed). There is no single correct decomposition — multiple context splits and names
+  can be right — but the DISCIPLINE is not optional: leaner-option-by-default, and every
+  rejected candidate is rejected explicitly with a reason, not silently dropped.
+
+
+  Hold the scope line. Do NOT speculatively introduce bounded contexts, commands, or
+  read-models the brief has not confirmed (no analytics/reporting context, no
+  loyalty/notifications context, no "audit log" table) — strip to the confirmed need and
+  list anything deferred under an explicit "Out of scope / deferred (not modeled)" heading
+  rather than building it. State the cross-boundary contract-lock intent up front: which
+  enums and integration events would be frozen in packages/contracts (Phase 0) BEFORE any
+  bounded context is implemented, so the contexts can be built in parallel. And do ONE
+  naming-harmonization pass to a single ubiquitous language — include a short glossary
+  (3–5 terms) pinning the canonical spellings (e.g. decide `discount` vs `markdown`,
+  `window` vs `period`, `status` not `externalStatus`) and use those terms consistently
+  everywhere in the document.
+
+
+  Deliverable: a single Markdown design spec at EXACTLY
+  .specs/2026-06-13-flash-sale-spec.md (do not create code under packages/, do not run
+  the scaffolder, do not regenerate the SDK — this is a spec-only task). The document must
+  contain, with these literal section headings so it is navigable:
+  "## 1. Requirements", "## 2. Candidate Concepts — Question Every Aggregate" (the
+  decision table — one row per candidate with its classification + justification),
+  "## 3. Bounded Contexts" (the context split, each with its aggregates and the nested
+  entities/VOs declared, references across aggregates by ID only),
+  "## 4. Aggregates & Invariants" (each aggregate's lifecycle + the invariants it guards +
+  the domain events it raises), "## 5. Domain & Integration Events",
+  "## 6. Contract Lock (Phase 0)" (the enums + integration events to freeze first),
+  "## 7. Ubiquitous Language Glossary", and
+  "## 8. Out of scope / deferred (not modeled)". Derive each aggregate's shape from the
+  domain (nested lines/windows as the spec needs them), never from a flattened wire-event
+  payload.
+axes:
+  - MODELING-DISCIPLINE
+  - AGGREGATE-SCOPE
+  - DECISION-TREE-APPLICATION
+  - SCOPE-DISCIPLINE
+  - CONTRACT-LOCK-FIRST
+  - UBIQUITOUS-LANGUAGE
+graders:
+  # ── the artifact exists at the pinned path ─────────────────────────
+  - kind: file-exists
+    spec: ".specs/2026-06-13-flash-sale-spec.md"
+  # ── mandatory section scaffolding (the spec is navigable + complete) ─
+  - kind: grep-must
+    spec: ".specs/2026-06-13-flash-sale-spec.md::## 2\\. Candidate Concepts"
+    id: ddd-spec#sec-decision-table
+  - kind: grep-must
+    spec: ".specs/2026-06-13-flash-sale-spec.md::## 3\\. Bounded Contexts"
+    id: ddd-modeling#sec-bc
+  - kind: grep-must
+    spec: ".specs/2026-06-13-flash-sale-spec.md::## 4\\. Aggregates"
+    id: ddd-modeling#sec-aggregates
+  - kind: grep-must
+    spec: ".specs/2026-06-13-flash-sale-spec.md::## 6\\. Contract Lock"
+    id: ddd-spec#sec-contract-lock
+  - kind: grep-must
+    spec: ".specs/2026-06-13-flash-sale-spec.md::## 7\\. Ubiquitous Language"
+    id: ddd-spec#sec-glossary
+  - kind: grep-must
+    spec: ".specs/2026-06-13-flash-sale-spec.md::## 8\\. Out of scope"
+    id: ddd-modeling#sec-deferred
+  # ── decision-tree discipline left a fingerprint: the rejected-candidate
+  #    vocabulary must appear (an agent that over-models never writes "event"
+  #    / "value object" / "deferred" next to a rejected concept) ─────────
+  - kind: grep-must
+    spec: ".specs/2026-06-13-flash-sale-spec.md::([Dd]omain [Ee]vent|[Vv]alue [Oo]bject)"
+    id: ddd-modeling#leaner-options-considered
+  - kind: grep-must
+    spec: ".specs/2026-06-13-flash-sale-spec.md::Phase 0|[Cc]ontract [Ll]ock"
+    id: ddd-spec#contract-lock-first
+  # ── over-modeling / scope-creep tokens MUST be absent (scoped to THIS
+  #    file only — repo-wide specs legitimately contain these words). A
+  #    candidate may be NAMED to reject it, but it must never be declared
+  #    AS an aggregate/entity, and speculative-future hedging is banned. ─
+  # The must-not fires ONLY on the AFFIRMATIVE over-modeling DECLARATION shape — a
+  # markdown heading ("### Customer aggregate"), an affirmative build verb
+  # ("introduce/add/create/model/define/stand-up/persist/build a <Name> aggregate|entity"),
+  # or a code sketch ("class/interface <Name>"). The disciplined REJECTION idiom places the
+  # same name adjacent to "entity"/"aggregate" inside a NEGATED sentence ("no Customer
+  # entity", "we reject the FlashSaleEvent entity", "Shopper aggregate is omitted",
+  # "FlashSaleEvent → no entity" — the canon's own "no entity, no repo" phrasing), which a
+  # bare "<Name>\s+(aggregate|entity)" regex CANNOT see the negation of and would wrongly
+  # fail. Both forms are unit-tested in this probe's design notes. The rich judge clause (b)
+  # is the real backstop; this grep cheaply catches the laziest affirmative over-model.
+  - kind: grep-must-not
+    spec: ".specs/2026-06-13-flash-sale-spec.md::(?:^#{2,4}\\s+(?:Customer|Shopper|Buyer|FlashSaleEvent|SaleEvent|PriceChangeLog|AuditLog|NotificationLog)\\s+(?:aggregate|[Ee]ntity)\\b|\\b(?:introduce|introduces|add|adds|create|creates|model|models|define|defines|stand up|stands up|persist|persists|build|builds)\\s+(?:a|an|the|our)\\s+(?:Customer|Shopper|Buyer|FlashSaleEvent|SaleEvent|PriceChangeLog|AuditLog|NotificationLog)\\s+(?:aggregate|[Ee]ntity)\\b|\\b(?:class|interface)\\s+(?:Customer|Shopper|Buyer|FlashSaleEvent|SaleEvent|PriceChangeLog|AuditLog|NotificationLog)\\b)"
+    id: ddd-modeling#rc-2-no-speculative-entity
+  - kind: grep-must-not
+    spec: ".specs/2026-06-13-flash-sale-spec.md::(might need|may need|in the future|future-proof|for now we will build|speculativel|just in case|TODO|TBD|FIXME)"
+    id: ddd-modeling#rc-2-no-speculative-hedging
+  # ── ONE rich judge: encodes the modeling heuristics; ends with the
+  #    legitimate-exception scope notes so the DISCIPLINE is graded, not a
+  #    specific decomposition. ──────────────────────────────────────────
+  - kind: judge
+    # sonnet, not haiku: judging "question every aggregate" modeling discipline over a produced
+    # spec is a heavy multi-criterion rubric; haiku under-grades (see L3 review-judgment).
+    model: sonnet
+    spec: >
+      A Domain-Driven Design DESIGN SPEC for a flash-sale feature was just authored at
+      .specs/2026-06-13-flash-sale-spec.md in response to a deliberately VAGUE product
+      ask. There is NO single correct decomposition — judge the MODELING DISCIPLINE, not
+      a particular answer. Read the spec in full, then verify ALL of:
+
+      (a) QUESTION-EVERY-AGGREGATE DISCIPLINE — Section 2 is a real decision table that
+      walks the candidate concepts the brief implies (the flash sale itself; the
+      discounted product set / sale lines; the time window; the optional quantity cap; the
+      countdown; the per-sale activation/expiry "events"; the shopper/customer; any
+      announcement/notification) and classifies EACH as exactly one of: aggregate / domain
+      event / value object / code-enum+quota / better-auth-owned / UI-BFF-or-query-param /
+      QueryService-read — WITH a one-line justification per row. The classifications are
+      sound by the decision tree: the flash sale plainly merits an aggregate (identity +
+      lifecycle: scheduled → active → ended, with invariants); the discounted line and the
+      time window are VALUE OBJECTS or child entities ON the sale, not standalone
+      aggregates; sale-activated / sale-ended are DOMAIN EVENTS (already persisted in the
+      outbox — NOT modeled as a "FlashSaleEvent" entity with its own repo/table); a
+      shopper/customer is NOT introduced as an aggregate (the brief never needs a Customer
+      write-model — at most an id reference); a status/state set is a code ENUM, not a
+      persisted row.
+
+      (b) THE SEEDED OVER-MODELING TRAP WAS NOT TAKEN (RC-2) — the spec does NOT stand up
+      any of: a Customer/Shopper/Buyer aggregate + repository; a FlashSaleEvent /
+      SaleEvent entity (an "event log" aggregate) when domain events already persist in the
+      outbox; a PriceChangeLog / AuditLog table for "what changed"; a Notification or
+      Announcement aggregate/context; a separate persisted Plan/Tier aggregate where a code
+      enum+quota suffices. Each of these, if mentioned at all, is mentioned to REJECT it
+      with the leaner option named — never built. Naming a concept in order to reject it is
+      CORRECT and shows decision-tree thinking; silently building it is the failure.
+
+      (c) SCOPE DISCIPLINE (no speculative contexts/read-models) — the spec strips to the
+      confirmed need. It does NOT introduce an analytics/reporting context, a
+      loyalty/marketing-notifications context, projections, or read-models that the brief
+      did not ask for; anything the agent judged out of scope is parked under Section 8
+      "Out of scope / deferred" with a reason, not modeled. A projection appears ONLY if
+      genuine cross-context denormalization is argued (a plain join is a QueryService, not
+      a projection).
+
+      (d) AGGREGATE SHAPE FROM THE DOMAIN, BY-ID REFERENCES (RC-6, ddd-modeling bp-01/02) —
+      the flash-sale aggregate's shape is derived from the domain (it composes its sale
+      lines and its time window as nested entities/VOs), NOT a flat wire-event payload; no
+      god aggregate manages everything; cross-aggregate references are by ID (string), never
+      embedded object references (a sale references catalog products by productId, it does
+      not embed a Product aggregate).
+
+      (e) CONTRACT-LOCK-FIRST + UBIQUITOUS LANGUAGE (RC-12) — Section 6 names the specific
+      enums and integration events that would be frozen in packages/contracts as Phase 0
+      BEFORE any context is implemented (so contexts build in parallel); Section 7 is a
+      glossary of 3–5 canonical terms and the document uses those terms consistently — it
+      does NOT carry two spellings for the same concept (e.g. discount vs markdown, window
+      vs period, status vs externalStatus drifting across sections), and status/state
+      values are spelled identically wherever they appear.
+
+      Scope notes — judge the DISCIPLINE, not a specific decomposition or naming:
+      • Multiple valid context splits exist (one "promotion"/"sales-promotion" context, or a
+        split into promotion + catalog-pricing, are BOTH acceptable) — do NOT fail a sound
+        split just because you would have drawn the boundary elsewhere.
+      • The agent's own names are fine: FlashSale vs SalePromotion vs Campaign, SaleLine vs
+        SaleItem vs DiscountedProduct, SaleWindow vs ActivePeriod — any internally-consistent
+        ubiquitous language passes (e); fail (e) only on DRIFT (two names for one concept) or
+        legacy-coupling leakage, not on which name was chosen.
+      • Classifying the quantity-cap as a VO field on the sale OR as an enum-gated mode are
+        both defensible — judge the justification, not the verdict.
+      • Choosing to model the countdown purely as UI/storefront state (no domain field) is
+        CORRECT, not a gap.
+      • This is a SPEC, not code: there will be no .ts files, no tsc, no tests — do not
+        penalize the absence of implementation; do not require Section-7-style full
+        Input/Output/Errors TypeScript for every command (this is a leaner design spec, not
+        the full ddd-spec 7-section deliverable). A short TypeScript-ish sketch of an
+        aggregate's fields is welcome but not required.
+      • Pre-existing repo specs under .specs/ are OUT of scope — judge ONLY
+        .specs/2026-06-13-flash-sale-spec.md.
+
+      If the spec stood up a Customer or FlashSaleEvent-style entity, added an unrequested
+      analytics/notifications context, drifted the ubiquitous language, or skipped the
+      candidate-classification table, FAIL with the specific concept named.
+notes: >-
+  First L4 (conceive-layer) probe — synthetic, agent-only, no gold tree, grades a SPEC +
+  the MODELING JUDGMENT behind it rather than code. There are no tsc/cmd gates (specs do
+  not compile); evaluation is the mechanical section/anti-pattern anchors plus ONE rich
+  judge whose rubric IS the "Question Every Aggregate" decision tree from CLAUDE.md
+  § "Modeling from another system" and the RC-2/RC-6/RC-12 traps from
+  .specs/2026-05-26-audit-distillation-what-we-got-wrong.md.
+
+  WHAT MAKES IT WINNABLE: the brief has a genuinely-confirmed lean core — exactly ONE
+  obvious aggregate (the flash sale, with a nested sale-line and a time-window VO) plus a
+  status enum, a couple of domain events, and an integration event. A disciplined agent
+  reads the decision tree, classifies each candidate, rejects the distractors explicitly,
+  and parks deferrals — every grader is reachable without inventing anything. The output
+  path is PINNED (.specs/2026-06-13-flash-sale-spec.md, today's date) so file-exists and
+  the section greps are deterministic while the modeling stays unpinned. The prompt names
+  the three canon carriers (ddd-spec/SKILL.md, ddd-modeling/SKILL.md, CLAUDE.md
+  § Modeling-from-another-system) and the failure corpus, in read order, as the proven
+  carriers for this judgment.
+
+  THE SEEDED TRAPS (the discriminators, straight from the retrospective): (1) RC-2
+  over-modeling — the vague ask dangles a Customer/Shopper aggregate (only a productId /
+  shopperId reference is ever needed), a "FlashSaleEvent" event-log entity (sale activation
+  / expiry are domain events already persisted in the outbox — no entity/repo/audit table),
+  a PriceChangeLog/AuditLog table (→ event), and a Notification/Announcement context
+  (speculative — the brief only says "the storefront shows a countdown"). (2) RC-12 naming
+  pollution — two spellings for the same concept (discount/markdown, window/period) or
+  legacy externalStatus drift; the probe demands a 3–5-term glossary and consistent use.
+  (3) RC-6 shape-from-events — flattening the sale to a wire-event payload instead of a
+  domain aggregate with nested lines + window. (4) scope creep — an analytics/reporting
+  context nobody asked for. A naive agent builds the Customer aggregate and the
+  FlashSaleEvent log and bolts on an analytics context; a disciplined agent rejects all
+  three on the record and ships the lean core.
+
+  GRADER MECHANICS / FREE REAL ESTATE (verified at HEAD 2026-06-13): no .specs/ file
+  matches *flash* and zero files under .specs/ contain "FlashSale", so file-exists +
+  every grep-must measures only new work. CRITICAL: the two grep-must-not graders are
+  SCOPED to the single new file (.specs/2026-06-13-flash-sale-spec.md::…), NOT a repo-wide
+  glob — pre-existing specs (the retrospective itself) legitimately contain words like
+  "speculative", "Customer aggregate", "future", "audit log", and a repo-wide must-not
+  would fail at HEAD and break validate-task's free-real-estate check. The must-not regexes
+  ban the over-modeling SHAPE (a concept declared "<Name> aggregate"/"<Name> entity") and
+  speculative-future hedging vocabulary, NOT the bare tokens — so the disciplined idiom of
+  NAMING a candidate to REJECT it still passes (the rejection reads "Customer → not an
+  aggregate; reference shopperId only", which does not match "Customer aggregate"). The
+  rich judge owns the real discrimination and ends with legitimate-exception scope notes
+  so a SOUND-BUT-DIFFERENT decomposition or naming is not failed. judge runs claude -p
+  (haiku) read-only inside the tree; validate-task skips judge graders, so run the probe
+  once to confirm the judge fires. Run `bun scripts/skill-evals/validate-task.ts
+  synthetic-l4-specification` before the first agent run — it must report free real estate
+  clean (judge skipped).

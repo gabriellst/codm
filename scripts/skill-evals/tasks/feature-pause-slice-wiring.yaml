@@ -1,0 +1,150 @@
+id: feature-pause-slice-wiring
+tier: holdout
+builder: opus
+title: Billing pause-slice wiring (feature-loop P1 — Kiwify pause webhook →
+  PAUSED transition → dispatcher-owned pause + paused event)
+sourceSpec: .specs/2026-06-10-billing-pause-slice-wiring.md
+goldRef: ""
+baseRef: ""
+prompt: |
+  Implement the billing pause-slice wiring spec
+  (.specs/2026-06-10-billing-pause-slice-wiring.md) in the template backend
+  (packages/api/typescript).
+
+  CONTEXT. Billing ingests provider webhooks through a fixed choreography:
+  HandleBillingWebhook (verify + snapshot + dedupe) → BillingWebhookReceivedEvent →
+  BillingWebhookReceivedHandler invokes the platform mapper → platform-neutral
+  ExternalSubscriptionUpdatedEvent { transition } → ExternalSubscriptionUpdatedHandler —
+  the single place a provider report becomes a real subscription state transition. For
+  each SubscriptionTransition it loads/creates the Subscription aggregate, calls the
+  imperative domain method, and persists the aggregate + the corresponding domain event
+  in ONE transaction. Downstream subscribers of those domain events do effects only,
+  never persistence. Today SubscriptionTransition has CREATED / PAID / RENEWED /
+  CANCELLED / OVERDUE — no PAUSED — yet SubscriptionPausedEvent exists,
+  Subscription.pause() exists, SubscriptionQuotaUpdatedPublisher subscribes to the
+  paused event, and a SubscriptionPausedHandler exists that pauses + saves the
+  aggregate. The pause path is dead end-to-end: a provider's "subscription paused"
+  webhook is dropped by the mapper, so quotas never tighten when a customer pauses.
+  And the existing SubscriptionPausedHandler performs persistence downstream of the
+  dispatcher, contradicting the effects-only canon — if the event ever fired, the
+  pause would be applied twice through two different code paths.
+
+  DECISIONS (binding):
+  1. PAUSED joins SubscriptionTransition (billing context enum) and the
+     ExternalSubscriptionUpdatedEvent payload's transition values.
+  2. The Kiwify mapper maps the provider's pause webhook (webhook_event_type:
+     'subscription_paused', alongside the existing canceled/late/renewed types) to
+     transition: PAUSED carrying { externalId, platform: KIWIFY, tier } — same shape
+     as CANCELLED/OVERDUE (no userId/period needed).
+  3. ExternalSubscriptionUpdatedHandler gains applyPaused, mirroring applyCancelled:
+     load by platform+externalId; missing row → no-op (out-of-order tolerance);
+     otherwise subscription.pause(), save, and persist SubscriptionPausedEvent via
+     domainEventRepository.save(event, tx) — same tx, event only when the transition
+     actually happened.
+  4. SubscriptionPausedHandler is DELETED (file + its test + barrel registration in
+     internal.ts). It is a persistence handler downstream of persistence — the
+     dispatcher owns the pause now. SubscriptionQuotaUpdatedPublisher's subscription
+     to the paused event is untouched (it is the effects-only consumer and, with the
+     multicast mediator, actually fires).
+  5. No wire/contract changes: SubscriptionPausedEvent already exists with the right
+     payload; the transition enum is context-local.
+
+  ACCEPTANCE CRITERIA:
+  - AC1: KiwifyWebhookMapper maps a subscription_paused webhook for a known
+    subscription to exactly one ExternalSubscriptionUpdatedEvent with transition:
+    PAUSED, platform: KIWIFY, the webhook's externalId and the mapped tier.
+  - AC2: ExternalSubscriptionUpdatedHandler on transition: PAUSED with an EXISTING
+    subscription: aggregate becomes inactive (isActive === false) AND exactly one
+    SubscriptionPausedEvent row is persisted (events table), both in the same
+    transaction.
+  - AC3: transition: PAUSED with NO matching subscription: no throw, no save, no event.
+  - AC4: SubscriptionPausedHandler no longer exists (not in handlers/, not exported
+    from internal.ts) and nothing else registers a persistence-performing subscriber
+    to billing.subscription.paused; SubscriptionQuotaUpdatedPublisher remains
+    subscribed.
+  - AC5: Backend type-check green; the transition switch stays exhaustive (never
+    default still compiles).
+  - AC6: No new detector findings (registry-scan, import-direction).
+
+  RED ACCEPTANCE TESTS. A verifier has placed failing acceptance tests at
+  packages/api/typescript/src/billing/handlers/ExternalSubscriptionUpdatedHandler.paused.test.ts
+  covering AC1/AC2/AC3. Per house TDD (red → green → refactor) your implementation
+  must make this file green WITHOUT modifying it. Read
+  .claude/skills/test/typescript/SKILL.md and the existing
+  ExternalSubscriptionUpdatedHandler.test.ts / KiwifyWebhookMapper.test.ts for the
+  harness conventions, and the relevant .claude/skills playbooks (handler, event,
+  enum) before writing code.
+
+  FINISHING GATES (both must pass before you are done):
+  - cd packages/api/typescript && bun x tsc -p tsconfig.build.json --noEmit
+  - cd packages/api/typescript && bun test src/billing/handlers/ExternalSubscriptionUpdatedHandler.paused.test.ts
+axes:
+  - EVENT-EMISSION
+  - TRANSACTION
+  - LAYOUT
+inject:
+  - from: scripts/skill-evals/features/pause-slice/ExternalSubscriptionUpdatedHandler.paused.red.ts
+    to: packages/api/typescript/src/billing/handlers/ExternalSubscriptionUpdatedHandler.paused.test.ts
+graders:
+  - kind: tsc
+    spec: backend
+    id: ac5#tsc-backend
+  - kind: test-green
+    spec: packages/api/typescript/src/billing/handlers/ExternalSubscriptionUpdatedHandler.paused.test.ts
+    id: ac2-ac3#paused-acceptance-tests
+  - kind: grep-must
+    spec: 'packages/api/typescript/src/billing/services/KiwifyWebhookMapper.ts::subscription_paused[\s\S]*SubscriptionTransition\.PAUSED'
+    id: ac1#kiwify-mapper-paused
+  - kind: grep-must
+    spec: 'packages/api/typescript/src/billing/handlers/ExternalSubscriptionUpdatedHandler.ts::^(?=[\s\S]*case\s+SubscriptionTransition\.PAUSED)(?=[\s\S]*new\s+SubscriptionPausedEvent)(?=[\s\S]*domainEventRepository\.save)'
+    id: ac2#dispatcher-paused-case-persists-event
+  - kind: grep-must-not
+    spec: 'packages/api/typescript/src/billing/handlers/**/*.ts::class\s+SubscriptionPausedHandler\b'
+    id: ac4#paused-persistence-handler-deleted
+  - kind: grep-must-not
+    spec: 'packages/api/typescript/src/billing/handlers/internal.ts::\bSubscriptionPausedHandler\b'
+    id: ac4#internal-barrel-cleaned
+  - kind: grep-must
+    spec: 'packages/api/typescript/src/billing/handlers/SubscriptionQuotaUpdatedPublisher.ts::class\s+SubscriptionPausedQuotaUpdatedHandler\s+extends\s+EventHandler<typeof\s+SubscriptionPausedEvent>[\s\S]*?readonly\s+event\s*=\s*SubscriptionPausedEvent'
+    id: ac4#quota-publisher-still-subscribed
+  - kind: detect
+    spec: registry-scan
+    id: ac6#registry-scan
+  - kind: detect
+    spec: import-direction
+    id: ac6#import-direction
+  - kind: judge
+    spec: >
+      The billing pause slice was just wired per
+      .specs/2026-06-10-billing-pause-slice-wiring.md (Decisions 3 + 4). Verify
+      ALL of: (a) ExternalSubscriptionUpdatedHandler
+      (packages/api/typescript/src/billing/handlers/ExternalSubscriptionUpdatedHandler.ts)
+      routes transition PAUSED to an applyPaused branch mirroring applyCancelled —
+      it loads the subscription by platform+externalId using the SAME transaction
+      handle as the rest of the handler (inside withTransaction), silently no-ops
+      (no throw, no save, no event) when the row is missing, and otherwise calls
+      subscription.pause(), saves the aggregate, AND persists
+      SubscriptionPausedEvent via this.domainEventRepository.save(event, tx) — the
+      aggregate save and the event persist share that one tx, and the event is
+      persisted ONLY when the transition actually happened; (b) the old
+      SubscriptionPausedHandler persistence handler is fully deleted: no
+      SubscriptionPausedHandler.ts or SubscriptionPausedHandler.test.ts under
+      billing/handlers/, no export from internal.ts, and no remaining subscriber
+      to the 'billing.subscription.paused' event performs persistence (repository
+      save / DB write) — subscribers may only do effects (publish, notify); (c)
+      SubscriptionPausedQuotaUpdatedHandler in SubscriptionQuotaUpdatedPublisher.ts
+      is functionally untouched: still declares event = SubscriptionPausedEvent and
+      only publishes the quota integration event; (d) the transition switch in
+      ExternalSubscriptionUpdatedHandler stays exhaustive with a never-typed
+      default branch.
+    id: judge#decisions-3-4
+notes: >-
+  Feature-loop P1 bundle (verifier-authored; see
+  scripts/skill-evals/features/pause-slice/README.md). The injected acceptance
+  test is red at base: 3 fail / 1 pass — the AC3 leg alone is trivially green at
+  base because an unknown transition falls into the handler's never-default
+  no-op; file-level red is carried by the Decision-1 enum guard + AC1 + AC2
+  tests, and post-implementation AC3 guards against a throwing applyPaused. The
+  ac4#quota-publisher-still-subscribed grep is a PRESERVATION grader — it
+  already matches at base and must keep matching. Both detect graders are clean
+  at base (verified 2026-06-10).

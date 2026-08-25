@@ -1,0 +1,23 @@
+import { injectable } from 'tsyringe-neo'
+
+// --- Abstract port -----------------------------------------------------------
+export abstract class Pricing {
+	// Define domain-specific method signatures
+	// abstract doSomething(input: SomeInput): Promise<SomeOutput>
+}
+
+// --- Concrete implementation -------------------------------------------------
+@injectable()
+export class DefaultPricing extends Pricing {
+	// async doSomething(input: SomeInput): Promise<SomeOutput> {
+	// 	// Implement here
+	// }
+}
+
+// --- Mock (for tests) --------------------------------------------------------
+@injectable()
+export class MockPricing extends Pricing {
+	// async doSomething(_input: SomeInput): Promise<SomeOutput> {
+	// 	return {} as SomeOutput
+	// }
+}

@@ -1,0 +1,97 @@
+id: replay-statcard-shared-component
+tier: train
+builder: sonnet
+title: Shared StatCard component + GradientIconBadge/MetricDelta/InfoHint primitives
+sourceSpec: .specs/2026-06-02-statcard-component-design.md
+goldRef: f3175d431
+baseRef: 92ad9fde36f5c6a6780bbd6de4ba74ad9d05314a
+prompt: >-
+  In packages/app/react, build a shared, composable StatCard for the template
+  dashboard. The dashboard renders a grid of ~13 stat cards (Lucro, Faturamento,
+  Custos Totais, Margem, ROI, Pedidos, Ticket Médio, ...) that share one shape;
+  only the highlighted card (Lucro) recolors its whole surface by metric sign.
+  StatCard will be reused outside the dashboard, so it is a shared component at
+  `@/components/StatCard` (not route-local).
+
+
+  Requirements:
+
+  - StatCard public API: `icon` (icon component), `label: string`, `value:
+  string` (PRE-formatted by the consumer — StatCard never formats money/percent
+  itself), `deltaPct?: number` (fraction: 0.52 → +52%; omit to hide), `tone?:
+  'default' | 'positive' | 'negative'` (CVA variant recoloring the surface;
+  sign-driven, applied by the consumer only on the highlighted card), plus two
+  ReactNode slots: `adornment` (label-side: info hint / platform badge / status
+  pill) and `actions` (top-right button group). No boolean soup — heterogeneous
+  bits are slots.
+
+  - Three NEW design-system primitives under `@/components/ui/`:
+  `gradient-icon-badge.tsx` (GradientIconBadge — halo + purple-gradient disc +
+  icon, with an `onColor` variant that adapts on a tinted surface via
+  currentColor), `metric-delta.tsx` (MetricDelta — trend arrow up/down + signed
+  integer percent; sign drives the arrow and the success/destructive token
+  color; `onColor` renders text-current), `info-hint.tsx` (InfoHint — (i) icon
+  wrapped in the existing Tooltip primitive, accessible aria-label, children =
+  translated tooltip text).
+
+  - StatCard is composed ONLY of primitives/atoms (Card, GradientIconBadge,
+  MetricDelta + slots) — no color literals anywhere, only design tokens (--card
+  / --success / --destructive families).
+
+  - Storybook stories: StatCard stories covering default, positive/negative
+  highlighted tones, negative delta, with info hint, with actions, a count
+  (non-currency) value, and a grid sample; plus one story for each new primitive
+  under `src/components/ui/stories/`.
+
+
+  Acceptance criteria: (1) StatCard composed only from primitives, tokens only,
+  no hex/color literals; (2) `tone` CVA recolors the surface and children adapt
+  via onColor/currentColor/foreground opacity; (3) deltaPct sign drives
+  MetricDelta arrow and token color; (4) adornment/actions are ReactNode slots;
+  (5) stories cover the listed cases; (6) each new primitive has its own story.
+  `bun tsc` must stay green.
+axes:
+  - LAYOUT
+  - NAMING
+graders:
+  - kind: tsc
+    spec: app-react
+  - kind: file-exists
+    spec: packages/app/react/src/components/StatCard/index.tsx
+  - kind: file-exists
+    spec: packages/app/react/src/components/StatCard/StatCard.stories.tsx
+    id: statcard#ac-5
+  - kind: file-exists
+    spec: packages/app/react/src/components/ui/gradient-icon-badge.tsx
+    id: statcard#ac-6
+  - kind: file-exists
+    spec: packages/app/react/src/components/ui/metric-delta.tsx
+    id: statcard#ac-3
+  - kind: file-exists
+    spec: packages/app/react/src/components/ui/info-hint.tsx
+    id: statcard#ac-6
+  - kind: grep-must
+    spec: packages/app/react/src/components/StatCard/index.tsx::cva\(
+    id: statcard#ac-2
+  - kind: grep-must-not
+    spec: packages/app/react/src/components/StatCard/index.tsx::#[0-9a-fA-F]{3,8}
+    id: statcard#ac-1
+notes: "Implementing commits: 6b7b30f5c (StatCard + 3 primitives + stories) ->
+  090011695 (visual refinements + success-bright token) = goldRef. baseRef
+  92ad9fde3 verified to already contain prerequisites (Card, Tooltip,
+  gradient-icon.tsx, @tabler/icons-react, cva). Gold verified: cva tone
+  variants, ReactNode slots, zero hex literals, all 5 files, 8 story exports
+  (gold has no WithPlatformBadge story, so no grader/prompt-AC for it). SKIPPED
+  SPECS (assigned but not replayed):
+  .specs/2026-06-03-additional-costs-card-design.md — implementation evolved
+  across an interleaved money/metric-vocabulary refactor (85df4f38e -> 9180dcd0e
+  -> 62786280a); no single gold tree satisfies the spec's ACs (first tree lacks
+  the warranty row and uses details.* instead of the spec's stat.costs.segments;
+  later trees code against an SDK reshape that does not exist at any buildable
+  baseRef). .specs/2026-06-02-template-frontend-app-migration.md — a porting
+  guide whose execution requires the external source repo template-frontend/app,
+  which is not in this tree; not self-contained for an eval agent (implementing
+  commit 788496b47 exists but cannot be reproduced without the source). goldRef
+  bumped from 090011695 → f3175d431: the original gold sha predated the
+  dashboard i18n keys (gold tree failed tsc:app-react — wip-commit style means
+  features complete across several shas)."

@@ -1,0 +1,205 @@
+id: synthetic-l3-review-judgment
+tier: holdout
+builder: opus
+title: Review-judgment — name the K real canon violations, clear the M legit exceptions
+  (synthetic L3; the agent as its own gatekeeper; precision + recall over a seeded diff)
+sourceSpec: PROBES-BACKLOG.md#L3
+goldRef: ""
+# HEAD: the seed diff is written into the tree by seedCommands BEFORE the builder runs;
+# nothing committed, so baseRef stays "" (run.ts falls back to HEAD).
+baseRef: ""
+seedCommands:
+  # Materialize the fake PR under review at REAL app paths, so the diff reads like a genuine
+  # /refunds listing screen a teammate opened. These files are NOT in the build graph and are
+  # NEVER tsc'd by a grader — they exist only to be reviewed.
+  - mkdir -p "packages/app/react/src/routes/(app)/refunds/-components/RefundTableSection"
+  - cp scripts/skill-evals/seeds/synthetic-l3-review-judgment/index.tsx "packages/app/react/src/routes/(app)/refunds/index.tsx"
+  - cp scripts/skill-evals/seeds/synthetic-l3-review-judgment/RefundTableSection.tsx "packages/app/react/src/routes/(app)/refunds/-components/RefundTableSection/index.tsx"
+  # Append the refunds i18n subtree as a SEPARATE catalog file alongside the real locale (the
+  # legit-exception trap L2: accented copy in a JSON catalog is sanctioned, not a violation).
+  - cp scripts/skill-evals/seeds/synthetic-l3-review-judgment/refunds.pt.json "packages/app/react/src/routes/(app)/refunds/refunds.pt.json"
+prompt: >
+  You are doing a CODE REVIEW, not a build. A teammate opened a PR adding a /refunds
+  listing screen to the React app. The diff is already in your working tree (the agent did
+  NOT write it — you are reviewing it blind):
+    - packages/app/react/src/routes/(app)/refunds/index.tsx
+    - packages/app/react/src/routes/(app)/refunds/-components/RefundTableSection/index.tsx
+    - packages/app/react/src/routes/(app)/refunds/refunds.pt.json
+  Review these three files against the house canons. Read FIRST, then judge:
+  (1) packages/app/react/CLAUDE.md (the proven canon carrier — state-placement five
+  questions, enum-label catalog vs. icon/color/variant maps, useMoney/useLocale, dialog
+  store); (2) the route/react registry at .claude/skills/route/react/registry.yaml and the
+  component/react registry at .claude/skills/component/registry.yaml — their bad_practices
+  (bp-xx) and patterns (when: always are mandatory) ARE the checklist; (3) the review skill
+  at .claude/skills/review/SKILL.md for the finding format. Ground every finding in a real
+  bp id or pattern id from those registries — never an invented rule.
+  This review is BOTH-SIDED. You are calibrated on precision AND recall:
+    - RECALL — name EVERY genuine canon violation in the diff (the route shell fetching and
+      prop-drilling list data, mixed icon libraries, literal status-string comparison instead
+      of the SDK enum constant, hardcoded color-scale classes, an icon-only button with no
+      aria-label, a search schema composed with .extend() instead of .and(), etc.). Miss one
+      and you fail recall.
+    - PRECISION — do NOT flag shapes that only LOOK like violations but are sanctioned by the
+      canons. A few deliberate traps are in the diff: a truly-local useState for a transient
+      UI disclosure (the ONE sanctioned useState); accented pt copy living in the JSON i18n
+      catalog (the sanctioned home for copy — only inline strings in code are violations); an
+      enum-keyed Record<…> COLOR/VARIANT map colocated with the component (canon — it resolves
+      to styles, its values are i18n keys, not labels); and a leaf component that receives its
+      single item via prop because it is rendered N times in a .map() (CMP-P05 requires this).
+      Flagging any of those is a false positive and you fail precision. (Naming one to
+      explicitly CLEAR it — "the useState here is fine, it's local disclosure" — is good.)
+  Do NOT edit, "fix", rewrite, or delete the seeded files — this is a review, not a refactor.
+  WRITE your review to a file named REVIEW.md at the repository root (your cwd). Use the
+  review skill's finding format: a Status line (APPROVED | CHANGES_REQUESTED), then a "Bad
+  Practices Found" list where each finding carries Severity (Blocker | Major | Minor),
+  Location (path:line), the violated practice id (bp-xx or Skill:<name>:<rule>), why, and the
+  required refactor; then a short "Cleared (looks-wrong-but-fine)" list naming each trap you
+  considered and why it is NOT a violation. Your FINAL MESSAGE must summarize the verdict and
+  list every bp id you flagged and every trap you cleared, so the result is legible without
+  opening the file.
+axes:
+  - REVIEW-JUDGMENT
+  - DATA-OWNERSHIP
+  - PRIMITIVES-A11Y
+  - LOCALE-MONEY
+graders:
+  # ── the review artifact exists ─────────────────────────────────────
+  - kind: file-exists
+    spec: "REVIEW.md"
+    id: review#artifact-written
+  # ── recall: the review names the K real violations (markers a correct review WILL contain;
+  #    each is a distinctive token tied to one seeded defect, scoped to REVIEW.md only) ──
+  - kind: grep-must
+    spec: "REVIEW.md::lucide-react"
+    id: review#V3-icon-library
+  - kind: grep-must
+    spec: "REVIEW.md::\\.extend\\(|\\.and\\("
+    id: review#V1-search-schema-and
+  - kind: grep-must
+    spec: "REVIEW.md::aria-label"
+    id: review#V6-icon-button-a11y
+  - kind: grep-must
+    spec: "REVIEW.md::onSearchParamsChange|prop-drill|thin shell|owns? its (own )?data|CMP-P01|data ownership"
+    id: review#V2-data-ownership
+  - kind: grep-must
+    spec: "REVIEW.md::bg-blue-500|hardcoded color|color.?scale|design token|token-mapped"
+    id: review#V5-hardcoded-color
+  - kind: grep-must
+    spec: "REVIEW.md::PaymentStatusEnum|enum constant|literal .?status|status ===|string compar"
+    id: review#V4-literal-status
+  # ── verdict shape: a diff with 6 real violations cannot be APPROVED ─
+  - kind: grep-must
+    spec: "REVIEW.md::CHANGES_REQUESTED"
+    id: review#verdict-changes-requested
+  # ── precision: the review must NOT condemn the legit traps. These must-nots fire ONLY on
+  #    ACCUSATORY phrasing adjacent to the trap token — a clearing/contrastive sentence
+  #    ("the useState here is fine, local disclosure"; "this Record is a variant map, NOT a
+  #    label map — fine") does NOT match, because a negative lookahead excludes the clearing
+  #    vocabulary (fine/sanctioned/variant/color/styles/canon) and the alternation lists only
+  #    accusatory directives/assertions ("is a violation", "is the banned … map", "remove this
+  #    map"), never the bare noun ("label map") that a contrastive clear necessarily contains.
+  #    Bare nouns were removed because "it's a variant map, not a label map" is the canonical
+  #    clear and would otherwise self-trip. The judge is the precision backstop (it counts
+  #    named-to-clear as correct); these are mechanical belt-and-suspenders on the two most
+  #    tempting traps. ──
+  - kind: grep-must-not
+    spec: "REVIEW.md::(useState)(?![^\\n]*\\b(fine|sanctioned|local disclosure|case 5|allowed)\\b)[^\\n]{0,60}\\b(must (be )?(remov|replac)|should (be )?(remov|replac|move)|move (it |this )?to (the )?(url|store)|is a (state.?placement )?violation|forbidden|anti.?pattern)"
+    id: review#L1-useState-not-flagged
+  - kind: grep-must-not
+    spec: "REVIEW.md::(REFUND_STATUS_BADGE|this Record)(?![^\\n]*\\b(variant|color|styles?|fine|canon|sanctioned|i18n key)\\b)[^\\n]{0,70}\\b(is (the|a) banned|banned Record|is the bp-23|violat|remove this map|move this map|flag (it |this )?as bp-23)"
+    id: review#L3-variant-map-not-flagged
+  # ── the rich judge: precision + recall + scope notes naming every legit trap ──
+  - kind: judge
+    # sonnet, not haiku: this 6-violations+4-traps precision/recall rubric is the heaviest in
+    # the suite; haiku mis-graded an exemplary review (named all 6 V's, cleared all 4 L-traps,
+    # CHANGES_REQUESTED) as FAIL — a weak-oracle instrument failure, not a tree signal.
+    model: sonnet
+    spec: >
+      A code REVIEW was just produced for a seeded /refunds PR in the React app. The diff
+      under review is three files: packages/app/react/src/routes/(app)/refunds/index.tsx,
+      packages/app/react/src/routes/(app)/refunds/-components/RefundTableSection/index.tsx,
+      and packages/app/react/src/routes/(app)/refunds/refunds.pt.json. The reviewer's output
+      is REVIEW.md at the repo root (read it AND the three seeded files AND, if helpful, the
+      builder's final message). Judge the review for BOTH precision and recall against the
+      route/react + component/react registries.
+      The diff contains EXACTLY SIX genuine canon violations. The review PASSES recall only if
+      it names ALL SIX (by the bp id OR by an unambiguous description of the same defect at the
+      right location):
+      (V1) the search schema in index.tsx composes the SDK params schema with .extend()
+      instead of .and() (route bp-04 — .extend overwrites SDK field constraints).
+      (V2) the route shell (RouteComponent) fetches the list via useListOrders and prop-drills
+      data + search + onSearchParamsChange into RefundTableSection, instead of the section
+      owning its own query and reading routeApi.useSearch()/navigate (route bp-02 /
+      component bp-01 / CMP-P01 data ownership — the route must be a thin shell).
+      (V3) RefundTableSection imports Trash from 'lucide-react' — mixed icon libraries; only
+      @tabler/icons-react is sanctioned (component bp-03).
+      (V4) StatusCell compares order.status === 'REFUNDED' with a literal string instead of
+      PaymentStatusEnum.REFUNDED (component bp-14 — literal vs enum constant).
+      (V5) StatusCell renders a hardcoded color-scale class (bg-blue-500 / text-white) instead
+      of a design token or Badge variant (component bp-06).
+      (V6) the first icon-only Button (the IconSend toggle) has no aria-label (component bp-17).
+      The review PASSES precision only if it does NOT assert that any of these FOUR sanctioned
+      shapes is a violation (each is a deliberate reverse-trap):
+      (L1) const [menuOpen, setMenuOpen] = useState(false) is the ONE sanctioned useState —
+      truly-local transient disclosure (state-placement case 5); it is NOT server data, NOT
+      bookmarkable, NOT cross-component. Flagging it (e.g. "move to URL/store") is a false
+      positive.
+      (L2) the accented Portuguese copy lives in refunds.pt.json, the typed i18n catalog — the
+      sanctioned home for copy. Only inline copy strings in .tsx code are violations. Flagging
+      the JSON's accents/copy as hardcoded-string debt is a false positive.
+      (L3) REFUND_STATUS_BADGE: Record<PaymentStatus, BadgeSpec> is an enum-keyed COLOR/VARIANT
+      map colocated with the component — explicitly canon (icon/color/variant maps resolve to
+      styles, not labels); its label values are i18n KEYS (enums.PaymentStatus.*), not inline
+      copy. Flagging it as the banned Record<Enum,string> LABEL map (bp-23) is a false positive.
+      (L4) StatusCell({ order }) receives its single item via prop because it is a leaf
+      rendered N times inside the columns .map() (CMP-P05 — leaves take the item by prop). This
+      is distinct from V2, which prop-drills the whole query response + search + callback into
+      a Section. Flagging this leaf prop as prop-drilling is a false positive.
+      VERDICT: PASS only if (recall) all six V1–V6 are named AND (precision) none of L1–L4 is
+      asserted to be a violation AND the review's status is CHANGES_REQUESTED (a diff with six
+      real defects cannot be APPROVED). Otherwise FAIL — name which Vs were missed and/or which
+      Ls were wrongly flagged.
+      Scope notes — judge the idiom, not the spelling: accept the violation named by bp id OR
+      by a clear description at the right location (the reviewer need not quote the exact code);
+      severity labels are the reviewer's call — do not fail on Major-vs-Blocker disagreement;
+      a reviewer who NAMES a trap explicitly to CLEAR it ("useState here is fine because it's
+      local disclosure", "this Record is a variant map, not a label map — fine") is doing the
+      RIGHT thing — that is not a false positive, it is the calibrated behaviour, count it as
+      correct precision; extra TRUE findings beyond the six (e.g. the section also lacks its
+      own loading/skeleton, the route lacks errorComponent, the leaf badge text isn't from
+      i18n) are NOT penalized as long as they are real and not one of the four traps; if the
+      reviewer flags a real-but-minor nit that is genuinely a deviation (missing errorComponent
+      is real route bp-05) that is fine; only the FOUR enumerated traps L1–L4 are false-positive
+      bait. Do not invent NEW violations the registries don't list and hold the review to them.
+notes: >-
+  L3 review-judgment probe — calibrates the agent as its OWN gatekeeper (precision + recall
+  over a seeded diff), the judge-scope-note traps run in REVERSE: instead of the judge
+  forgiving legit deviations, the BUILDER must forgive them and condemn only the real ones.
+  Seed lives at scripts/skill-evals/seeds/synthetic-l3-review-judgment/ (index.tsx,
+  RefundTableSection.tsx, refunds.pt.json, MANIFEST.md = authoring answer key, never seen by
+  the builder or judge — the ground truth is fully restated inside the judge spec). The fake
+  PR is materialized by seedCommands at the real app path packages/app/react/src/routes/
+  (app)/refunds/** BEFORE the builder runs; those files are deliberately OUT of the tsc build
+  expectation (no tsc grader here — this is a review, not a build) and use the real
+  useListOrders / PaymentStatusEnum / ListOrders200 identifiers so the diff reads idiomatic.
+  K=6 real violations (route bp-04 .extend, route bp-02/component bp-01 prop-drilled query,
+  component bp-03 lucide-react, component bp-14 literal 'REFUNDED', component bp-06 bg-blue-500,
+  component bp-17 unlabelled IconSend button); M=4 reverse traps (L1 sanctioned useState, L2
+  i18n-catalog copy, L3 enum color/variant map ≠ banned label map, L4 CMP-P05 leaf item prop).
+  The review is graded on the CAPTURED OUTPUT: file-exists REVIEW.md + grep-must markers a
+  correct review WILL contain (lucide-react, .and(), aria-label, prop-drill/CMP-P01,
+  bg-blue-500/token, PaymentStatusEnum/literal-status) + a CHANGES_REQUESTED verdict +
+  grep-must-not that the accusatory phrasing never lands on the two most-tempting traps
+  (useState, the variant map) + ONE rich judge restating the full V1–V6 / L1–L4 manifest with
+  scope notes that count "named-to-clear" as correct precision. VALIDATOR CAVEAT: this probe
+  has seedCommands (the diff is written into the tree at run time, not committed), so
+  validate-task.ts (the HEAD free-real-estate validator) does NOT exercise the seed — it runs
+  graders against bare HEAD where REVIEW.md and the refunds files are absent. Expected at HEAD:
+  file-exists REVIEW.md → FAIL (free real estate, the agent writes it); every grep-must on
+  REVIEW.md → FAIL (no file yet, validator expects grep-must to fail = correct); both
+  grep-must-not on REVIEW.md → PASS vacuously (no file); the judge is skipped. So validate-task
+  reports clean. The real signal comes from an agent run (seedCommands fire, builder reviews,
+  graders read the produced REVIEW.md + final message). baseRef stays "" so the validator does
+  NOT skip the task outright (it skips only when goldRef/baseRef is set) — the seedCommands are
+  what differentiate run-time from validate-time, and they are a no-op for the validator since
+  it never executes them.

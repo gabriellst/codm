@@ -1,0 +1,1 @@
+DROP TABLE `thread_thread_clarifications`;

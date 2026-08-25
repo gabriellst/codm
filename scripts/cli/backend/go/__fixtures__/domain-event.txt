@@ -1,0 +1,30 @@
+// Package events defines domain events for the sales bounded context.
+package events
+
+import (
+	"github.com/google/uuid"
+
+	"template/core-go/types"
+)
+
+// CouponAppliedEventName is the canonical event name.
+// Format: "<ctx>.<aggregate>.<past_tense_action>"
+const CouponAppliedEventName = "sales.coupon.applied"
+
+// CouponAppliedPayload carries immutable data at the moment the event occurred.
+// Use plain primitives only — no domain VOs, no pointers to mutable structs.
+type CouponAppliedPayload struct {
+	// TODO: add payload fields with json tags
+	// EntityID uuid.UUID `json:"entityId"`
+	// OwnerID  string    `json:"ownerId"`
+}
+
+// CouponAppliedEvent is a type alias (not a new type) so it satisfies types.DomainEventI automatically.
+type CouponAppliedEvent = types.DomainEvent[CouponAppliedPayload]
+
+// NewCouponAppliedEvent constructs a CouponAppliedEvent.
+// entityID: UUID of the affected aggregate.
+// ownerID:  tenant/owner identifier for multi-tenancy.
+func NewCouponAppliedEvent(entityID uuid.UUID, ownerID string, payload CouponAppliedPayload) CouponAppliedEvent {
+	return types.NewDomainEvent(CouponAppliedEventName, entityID, ownerID, payload)
+}

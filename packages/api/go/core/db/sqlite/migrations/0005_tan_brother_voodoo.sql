@@ -1,0 +1,1 @@
+CREATE INDEX `consumed_messages_entry_idx` ON `thread_consumed_messages` (`entry_id`);

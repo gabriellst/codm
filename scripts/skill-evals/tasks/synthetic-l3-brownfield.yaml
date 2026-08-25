@@ -1,0 +1,257 @@
+id: synthetic-l3-brownfield
+tier: holdout
+builder: sonnet
+title: L3 brownfield — extend the EXISTING finance OperationalCost aggregate with an
+  optional vendorName field + trim rule, propagated entity→usecase→controller→repo→DB→SDK,
+  non-breaking (regression suite stays green)
+sourceSpec: PROBES-BACKLOG.md#L3
+goldRef: ""
+# Empty baseRef ⇒ run.ts:547 falls back to HEAD — the agent edits the REAL current code.
+# Kept empty (not the literal 'HEAD') so the free-real-estate validator actually runs:
+# the vendorName idiom and the 0052+ migration are absent at HEAD (grep-must / file-exists
+# FAIL as expected), the EXISTING usecase suite is green at HEAD (regression test-green
+# PASSES), and both tsc gates + detectors are green at HEAD.
+baseRef: ""
+prompt: |
+  Extend the EXISTING finance OperationalCost aggregate
+  (packages/api/typescript/src/finance/) with an optional `vendorName` — the
+  supplier/payee a cost is paid to (e.g. "Adobe", "Imobiliária Central"). This is a
+  BROWNFIELD modification: you are changing real, already-shipped code in place, NOT
+  scaffolding a new aggregate. Do NOT create a parallel Vendor entity, a new bounded
+  context, or a second OperationalCost — every change lands in the files that already
+  exist for this aggregate.
+
+  CONTEXT (read these first — they are the files you will edit):
+  - Entity:      src/finance/entities/OperationalCost.ts (OperationalCostSchema +
+                 static create(...) + update(patch) — tell-don't-ask, schema-borne
+                 validation via .validate()).
+  - Use cases:   src/finance/usecases/CreateOperationalCost.ts (CreateOperationalCostInputSchema)
+                 and src/finance/usecases/UpdateOperationalCost.ts
+                 (UpdateOperationalCostInputSchema, partial patch).
+  - Controllers: src/finance/controllers/CreateOperationalCost.ts and UpdateOperationalCost.ts
+                 (body derived from the use-case input schema via .omit(...).extend(...)).
+  - Repository:  src/finance/repositories/OperationalCostRepository/DrizzleOperationalCostRepository.ts
+                 (toPersistence / toDomain round-trip).
+  - Table:       packages/contracts/src/db/sqlite/finance.ts → `operationalCosts`
+                 (text/uuid columns; house convention = no pgEnum, enums stored as text).
+  - Event:       src/finance/events/OperationalCostCreatedEvent.ts already carries the
+                 whole entity via OperationalCostSchema.input() — the new field flows into
+                 the event payload for free once the schema has it; do not hand-add it.
+  - Existing regression suite: src/finance/usecases/OperationalCost.test.ts (7 green tests).
+
+  THE CHANGE (binding decisions):
+  1. Entity schema — add `vendorName` to OperationalCostSchema as an OPTIONAL,
+     normalize-and-bounded string: `z.string().trim().max(120, { error:
+     'INVALID_VENDOR_NAME' as FinanceDomainErrors }).nullable()`. It must be NULLABLE
+     (default absent ⇒ null) so every existing row and every existing caller that omits
+     it still validates — this is what makes the change non-breaking. Place it next to
+     `description`. Do NOT make it `.min(1)` — an empty/whitespace vendor is "no vendor"
+     (normalizes to null in create, see D2), not a validation error.
+  2. create() — widen the `data` param with `vendorName?: string` and pass
+     `vendorName: data.vendorName?.trim() ? data.vendorName : null` into the constructor
+     (trim-empty ⇒ null). No `vendorName!` field, no hand-rolled constructor — props stay
+     interface-merged from the schema.
+  3. update(patch) — add `vendorName?: string | null` to the patch type and apply it with
+     the SAME `patch.vendorName !== undefined` guard style the other optional fields use
+     (so `null` explicitly clears it, `undefined` leaves it). End with the existing
+     `this.validate()` call — the trim+max rule rides the schema, do NOT duplicate it with
+     an if-check.
+  4. Use-case input schemas — add `vendorName: z.string().max(120).optional()` to BOTH
+     CreateOperationalCostInputSchema and UpdateOperationalCostInputSchema; thread
+     `vendorName: input.vendorName` into the `OperationalCost.create({...})` /
+     `entity.update({...})` calls. (The controllers derive their body from these via the
+     existing `.omit(...).extend(...)`, so they inherit the field — but confirm both
+     controllers actually pass `vendorName` through from `request.body` to the use case.)
+  5. Errors — add `'INVALID_VENDOR_NAME'` to FinanceDomainErrors in
+     src/finance/errors/index.ts and register it in registerErrorCodes as
+     `HttpStatusCode.UNPROCESSABLE_ENTITY` (422), beside the other domain codes.
+  6. Persistence — add `vendorName: text('vendor_name')` (NULLABLE — no .notNull()) to the
+     `operationalCosts` table in packages/contracts/src/db/sqlite/finance.ts, next to
+     `description`. Thread it through DrizzleOperationalCostRepository.toPersistence
+     (`vendorName: entity.vendorName`) and toDomain (`vendorName: row.vendorName`), and add
+     it to the `onConflictDoUpdate({ set: { … } })` set so an update persists it. Generate
+     the migration with `bun migrate:create` (drizzle diff → next 0052+ SQL adds the
+     `vendor_name` column; the PGlite TestBed applies the tree's migrations, so the
+     integration suite needs it).
+  7. SDK — run `bun sdk` after the controllers compile so
+     packages/client/dist/typescript/src/typescript/zod/createOperationalCostSchema.ts (and
+     the update schema) regenerate with the optional `vendorName`. The frontend stays
+     compiling because the field is optional (no consumer is forced to supply it).
+  8. NEW behavior test — add a colocated UNIT test at
+     src/finance/entities/OperationalCost.test.ts (sibling of the existing Fees.test.ts /
+     Taxes.test.ts) covering the NEW behavior ONLY: (a) create with `vendorName: '  Adobe  '`
+     ⇒ entity.vendorName === 'Adobe' (trimmed); (b) create omitting vendorName ⇒
+     vendorName === null; (c) create with a 121-char vendorName throws (named
+     'INVALID_VENDOR_NAME'); (d) update({ vendorName: null }) clears a previously-set vendor.
+     Direct entity instantiation per the test skill — no use case, no TestBed for the unit
+     test.
+
+  NON-NEGOTIABLES:
+  - The EXISTING suite src/finance/usecases/OperationalCost.test.ts must stay 100% green —
+    you may NOT edit it to accommodate the change (it must pass unmodified). If it goes red,
+    your change broke an invariant the field was supposed to leave untouched.
+  - No `as any` / `as never` / `@ts-expect-error` / widened `string` to dodge a tsc error —
+    fix the cause. The new field is typed end-to-end.
+  - No new aggregate, no new bounded context, no parallel schema.
+
+  FINISHING GATES (all must pass before you are done):
+  - cd packages/api/typescript && bun x tsc -p tsconfig.build.json --noEmit
+  - cd packages/api/typescript && bun test src/finance/usecases/OperationalCost.test.ts
+    src/finance/entities/OperationalCost.test.ts
+  - cd packages/app/react && bun x tsc --noEmit   (proves the SDK change didn't break the
+    frontend — no contract break)
+axes:
+  - BROWNFIELD-EDIT
+  - OPTIONALITY
+  - VALIDATION-PLACEMENT
+  - NON-BREAKING-CONTRACT
+  - SDK-PROPAGATION
+  - REGRESSION-GREEN
+graders:
+  # ── gates: both type-checks green (frontend gate proves the wire contract didn't break) ──
+  - kind: tsc
+    spec: backend
+    id: gate#tsc-backend
+  - kind: tsc
+    spec: app-react
+    id: gate#tsc-app-react-no-contract-break
+  # ── regression: the EXISTING suite stays green, UNMODIFIED ──
+  - kind: test-green
+    spec: packages/api/typescript/src/finance/usecases/OperationalCost.test.ts
+    id: regression#existing-operationalcost-suite-green
+  # ── new behavior: the agent's colocated entity unit test passes ──
+  - kind: test-green
+    spec: packages/api/typescript/src/finance/entities/OperationalCost.test.ts
+    id: behavior#new-vendorname-unit-test-green
+  # ── the field landed in the EXISTING entity schema (not a parallel file) ──
+  - kind: grep-must
+    spec: 'packages/api/typescript/src/finance/entities/OperationalCost.ts::vendorName:\s*z\.string\(\)'
+    id: entity#schema-carries-vendorname
+  - kind: grep-must
+    spec: 'packages/api/typescript/src/finance/entities/OperationalCost.ts::\.trim\(\)[\s\S]*\.nullable\(\)'
+    id: entity#vendorname-trim-and-nullable
+  # ── propagation: both use-case input schemas carry the optional field ──
+  - kind: grep-must
+    spec: 'packages/api/typescript/src/finance/usecases/CreateOperationalCost.ts::vendorName:\s*z\.string\(\)[\s\S]*\.optional\(\)'
+    id: usecase#create-input-vendorname-optional
+  - kind: grep-must
+    spec: 'packages/api/typescript/src/finance/usecases/UpdateOperationalCost.ts::vendorName:\s*z\.string\(\)[\s\S]*\.optional\(\)'
+    id: usecase#update-input-vendorname-optional
+  # ── propagation: repository round-trips the field both ways ──
+  - kind: grep-must
+    spec: 'packages/api/typescript/src/finance/repositories/OperationalCostRepository/DrizzleOperationalCostRepository.ts::^(?=[\s\S]*vendorName:\s*entity\.vendorName)(?=[\s\S]*vendorName:\s*row\.vendorName)'
+    id: repository#vendorname-persist-and-rehydrate
+  # ── persistence: the EXISTING table grew a nullable column + a migration carries it ──
+  - kind: grep-must
+    spec: "packages/contracts/src/db/sqlite/finance.ts::vendorName:\\s*text\\('vendor_name'\\)"
+    id: db#table-column-vendor-name
+  - kind: file-exists
+    spec: packages/contracts/db/migrations/005[2-9]_*.sql
+    id: db#migration-file-exists
+  - kind: grep-must
+    spec: 'packages/contracts/db/migrations/*.sql::vendor_name'
+    id: db#migration-carries-vendor-name
+  # ── error vocabulary: the named domain error is registered at 422 ──
+  - kind: grep-must
+    spec: 'packages/api/typescript/src/finance/errors/index.ts::INVALID_VENDOR_NAME:\s*HttpStatusCode\.UNPROCESSABLE_ENTITY'
+    id: errors#invalid-vendor-name-422
+  # ── SDK propagated: the regenerated client schema exposes the new optional field ──
+  - kind: grep-must
+    spec: 'packages/client/dist/typescript/src/typescript/zod/createOperationalCostSchema.ts::vendorName'
+    id: sdk#client-schema-regenerated-with-vendorname
+  # ── discipline: no suppression / widening to dodge the tsc errors the edit surfaces.
+  #    Scoped to the OperationalCost-named files the agent edits — NOT the whole finance
+  #    slice, which carries a pre-existing `[] as any[]` in FxRateRepository that is out of
+  #    scope for this change (don't blame pre-existing code). ──
+  - kind: grep-must-not
+    spec: 'packages/api/typescript/src/finance/**/*OperationalCost*.ts::\bas\s+any\b|@ts-(expect-error|ignore)'
+    id: quality#no-suppression-in-operationalcost-files
+  # ── the existing regression suite was NOT edited to absorb the change ──
+  - kind: grep-must-not
+    spec: 'packages/api/typescript/src/finance/usecases/OperationalCost.test.ts::vendorName'
+    id: regression#existing-suite-not-rewritten-for-vendorname
+  # ── architectural detectors stay clean over the modified slice ──
+  - kind: detect
+    spec: registry-scan
+    id: detect#registry-scan
+  - kind: detect
+    spec: import-direction
+    id: detect#import-direction
+  # ── ONE rich judge: brownfield discipline + non-breaking-ness, with scope-note traps ──
+  - kind: judge
+    spec: >
+      An engineer was asked to extend the EXISTING finance OperationalCost aggregate
+      (packages/api/typescript/src/finance/) with an OPTIONAL `vendorName` field, threaded
+      entity→usecase→controller→repository→DB→SDK, NON-BREAKINGLY. Verify ALL of:
+
+      (a) BROWNFIELD, NOT GREENFIELD — every change lands in files that already existed:
+      OperationalCost.ts, CreateOperationalCost.ts / UpdateOperationalCost.ts (usecases AND
+      controllers), DrizzleOperationalCostRepository.ts, errors/index.ts, and
+      packages/contracts/src/db/sqlite/finance.ts's `operationalCosts` table. FAIL if a NEW
+      aggregate, a NEW bounded context, a parallel `Vendor` entity, or a second
+      OperationalCost schema/table was created to hold the field instead of editing the
+      real ones.
+
+      (b) OPTIONALITY / NON-BREAKING — `vendorName` is nullable on the entity schema
+      (`.nullable()`, absent ⇒ null), `.optional()` on both use-case input schemas, and the
+      DB column is NULLABLE (no `.notNull()`). create() defaults a missing/blank vendor to
+      null (it does NOT throw when omitted). This is the whole point: an existing caller or
+      row that never mentions vendorName must keep validating. FAIL if the field is required
+      anywhere on the create path or the column is NOT NULL.
+
+      (c) VALIDATION PLACEMENT — the trim+max(120) rule lives ON the schema
+      (`z.string().trim().max(120, { error: 'INVALID_VENDOR_NAME' as FinanceDomainErrors })`)
+      and is enforced via the entity's existing `.validate()` — NOT duplicated as a
+      hand-rolled if/throw inside create()/update(). create() may normalize blank→null, but
+      the length/trim invariant rides the schema. INVALID_VENDOR_NAME is registered in
+      errors/index.ts at 422.
+
+      (d) REGRESSION GREEN, UNMODIFIED — the pre-existing suite
+      src/finance/usecases/OperationalCost.test.ts was NOT edited (no `vendorName` token in
+      it) and the NEW behavior has its OWN colocated test at
+      src/finance/entities/OperationalCost.test.ts asserting the trim, the null-default, the
+      over-120 rejection, and the null-clear-on-update.
+
+      (e) SDK DISCIPLINE — the client schema regenerated from the controllers
+      (createOperationalCostSchema.ts now mentions vendorName as optional); the change was
+      NOT hand-edited into the generated `dist/` file in a way that diverges from the
+      controller (the OpenAPI→Kubb pipeline is the source of truth).
+
+      LEGITIMATE-EXCEPTION TRAPS — do NOT fail the build for any of these (they are correct,
+      not violations): (i) create() normalizing a blank/whitespace vendorName to `null`
+      with a small `?? null` / `?.trim() ? … : null` expression is GOOD trim-empty handling,
+      not "logic that belongs in the schema" — only a DUPLICATED length/format check would
+      be the violation. (ii) The exact variable/column spelling and the precise max bound's
+      placement are the engineer's choice provided the mechanism exists and the column is
+      nullable. (iii) The OperationalCostCreatedEvent payload growing a vendorName because it
+      carries `OperationalCostSchema.input()` is automatic and CORRECT — it is NOT an
+      unrequested wire-surface expansion. (iv) update() using the same
+      `patch.x !== undefined` guard the sibling fields use (so explicit `null` clears and
+      `undefined` leaves) is the right partial-patch idiom, not a missing-guard bug.
+      (v) Touching only the Create/Update usecases+controllers (not Delete /
+      SetOperationalCostStatusOverride, which have nothing to do with vendor) is correct
+      scope, not an incomplete propagation.
+
+      Your FINAL line must be exactly 'VERDICT: PASS' or 'VERDICT: FAIL — <one-line reason>'.
+    id: judge#brownfield-nonbreaking-vendorname
+notes: >-
+  L3 brownfield-modification probe (PROBES-BACKLOG.md#L3): the agent EDITS the real,
+  already-shipped finance OperationalCost slice in place — ~80% edits, the opposite of a
+  free-real-estate greenfield build. baseRef is left EMPTY so run.ts:547 checks out HEAD
+  AND so the free-real-estate validator actually runs (a literal 'HEAD' would make the
+  validator skip it). Free-real-estate verified 2026-06-13 at HEAD: `vendorName` /
+  `vendor_name` / `INVALID_VENDOR_NAME` appear in ZERO files across
+  packages/api/typescript/src/finance, packages/contracts/db, and packages/client/dist (so
+  every grep-must matches 0 and FAILS as the validator expects); migrations end at 0051_* so
+  the 005[2-9]_*.sql file-exists glob is empty (FAIL); the existing regression suite
+  src/finance/usecases/OperationalCost.test.ts is GREEN at HEAD (7 pass — the test-green
+  regression grader PASSES); the new-behavior path src/finance/entities/OperationalCost.test.ts
+  does NOT exist (test-green expects FAIL → bun test exits 1 on a missing path); backend
+  `tsc -p tsconfig.build.json` and app-react `tsc` are both GREEN at HEAD; registry-scan and
+  import-direction detectors are GREEN at HEAD; both grep-must-not graders are clean at HEAD
+  (no `as any`/suppression in the finance slice; the existing suite has no vendorName token).
+  Behavior-change graders + the regression-stays-green oracle + the SDK-diff discipline are
+  exactly the L3 oracle the backlog prescribes. The single rich judge enforces the
+  brownfield-not-greenfield, non-breaking, validation-placement, regression-untouched, and
+  SDK-pipeline canons with five named legitimate-exception traps so a correct solution is
+  not punished for the automatic event-payload growth or for scoping to Create/Update only.

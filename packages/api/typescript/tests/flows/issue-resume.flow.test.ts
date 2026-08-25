@@ -1,0 +1,283 @@
+import { afterAll, beforeEach, describe, expect, it } from 'bun:test'
+import { container, type DependencyContainer } from 'tsyringe-neo'
+import { uuidv7 } from 'uuidv7'
+import type { ZodType } from 'zod'
+import { TestBed, givenIssue, givenThread, givenWorkspace } from '@test/support'
+import { HttpStatusCode, OutboxDispatcher } from '@codm/core-typescript'
+import { MailboxItemKind, MailboxTargetKind, ProviderKind, StopKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
+import { ThreadStopRaisedEvent } from '@codm/contracts-typescript/wire/events'
+import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
+import { SteerIssueTurnController } from '@agent/controllers/SteerIssueTurn'
+import { RecordStopFromExecution } from '@thread/handlers/RecordStopFromExecution'
+import { ResumeIssueOnStopResolved } from '@thread/handlers/ResumeIssueOnStopResolved'
+import { ThreadStopResolvedEvent } from '@thread/events/ThreadStopResolvedEvent'
+import { ResolveStop } from '@thread/usecases/ResolveStop'
+import { SteerThread } from '@thread/usecases/SteerThread'
+import { ThreadRepository } from '@thread/repositories/ThreadRepository'
+import { IssueRepository } from '@issue/repositories/IssueRepository'
+import { OpenIssuesReader } from '@thread/services/OpenIssuesReader'
+import { MailboxRepository } from '@agent/repositories/MailboxRepository'
+import { MailboxDispatcher } from '@agent/services/MailboxDispatcher'
+import { AgentRunner } from '@agent/services/AgentRunner'
+import { AgentRunnerFactory, FixedAgentRunnerFactory } from '@agent/services/AgentRunnerFactory'
+import { AgentName, AgentRunOutcome } from '@agent/enums'
+import type { AgentRunRequest } from '@agent/types/AgentRunRequest'
+import type { AgentRuntimeEvent } from '@agent/types/AgentRuntimeEvent'
+
+/**
+ * DIAGNOSTIC (spec 2026-07-31, Problem 3 / Decision 3) — what happens TODAY to an issue that stopped?
+ *
+ * The spec suspects the stop removes the issue from the thread's open-issue seam, which would make
+ * `SteerIssueTurnController` refuse (`AGENT_RUN_SCOPE_MISMATCH`) exactly the issue that most needs
+ * context. This suite pins the CURRENT behaviour before anything changes, so the answer is a test
+ * output rather than a reading of the code.
+ */
+describe('DIAGNOSTIC: a stopped issue and the steer seam, as of HEAD', () => {
+	let testBed: TestBed
+	let testContainer: DependencyContainer
+
+	beforeEach(async () => {
+		testContainer = container.createChildContainer()
+		testBed = await TestBed.create('integration', { testContainer, ownerId: MOCK_CLOUD_OWNER_ID })
+		await testBed.reset()
+	})
+	afterAll(async () => {
+		await testBed.destroy()
+	})
+
+	async function givenStoppedIssue() {
+		const workspace = await givenWorkspace(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const thread = await givenThread(testBed, {
+			ownerId: MOCK_CLOUD_OWNER_ID,
+			workspaceId: workspace.id.value,
+			providers: [ProviderKind.CLAUDE_CODE],
+		})
+		const issue = await givenIssue(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value, key: 'stopped-issue' })
+		const stopId = uuidv7()
+
+		// The REAL raise path — the terminal engine's fact, through the handler that materializes it.
+		await testBed.resolve(RecordStopFromExecution).handle(
+			new ThreadStopRaisedEvent({
+				ownerId: MOCK_CLOUD_OWNER_ID,
+				payload: {
+					stopId,
+					issueId: issue.id.value,
+					threadId: thread.id.value,
+					kind: StopKind.HUMAN_REQUESTED,
+					detail: 'Refund full or partial for orders older than 90 days?',
+				},
+			}) as never,
+		)
+
+		return { thread, issue, stopId }
+	}
+
+	it('(a) the stop does NOT move the issue out of its lifecycle state', async () => {
+		const { issue } = await givenStoppedIssue()
+
+		const reloaded = await testBed.resolve(IssueRepository).findById(issue.id.value)
+		console.log('[diagnostic] issue status after stop =', reloaded?.status, '| archived =', reloaded?.archived)
+		expect(reloaded?.status).toBe(issue.status)
+		expect(reloaded?.archived).toBe(false)
+	})
+
+	it('(b) the stopped issue is STILL inside the thread open-issue seam', async () => {
+		const { thread, issue, stopId } = await givenStoppedIssue()
+
+		const openStops = await testBed.resolve(ThreadRepository).openStopsByIssue(issue.id.value)
+		const open = await testBed.resolve(OpenIssuesReader).openIssues(thread.id.value)
+		console.log(
+			'[diagnostic] open stops =',
+			openStops.length,
+			'| openIssues =',
+			open.map(i => i.key),
+		)
+		expect(openStops.map(s => s.stopId)).toContain(stopId)
+		expect(open.map(i => i.issueId)).toContain(issue.id.value)
+	})
+
+	it('(c) a steer at the stopped issue is ACCEPTED today — not AGENT_RUN_SCOPE_MISMATCH', async () => {
+		const { thread, issue } = await givenStoppedIssue()
+
+		const response = await testBed.resolve(SteerIssueTurnController).handle({
+			ctx: { ownerId: MOCK_CLOUD_OWNER_ID, agentIdentity: { threadId: thread.id.value, entryId: uuidv7() } },
+			params: { threadId: thread.id.value, issueId: issue.id.value },
+			body: { text: 'full refund' },
+		} as Parameters<SteerIssueTurnController['handle']>[0])
+
+		console.log('[diagnostic] steer at a stopped issue →', JSON.stringify(response.data))
+		// `data` is optional on EVERY controller response (`HttpBaseResponse.data?`), because a bodiless
+		// answer is a legal one. So "a body came back at all" is part of what this diagnostic pins, and the
+		// whole payload is asserted rather than one flag read off an assumed-present object.
+		expect(response.status).toBe(HttpStatusCode.ACCEPTED)
+		expect(response.data).toEqual({ issueId: issue.id.value, queued: true })
+	})
+})
+
+/** Captures each request the use case built, and reports a stable CLI session id back. */
+class CapturingRunner extends AgentRunner {
+	static readonly CLI_SESSION_ID = 'cli-session-resume'
+	readonly requests: AgentRunRequest<ZodType | undefined>[] = []
+
+	async *run<OutputSchema extends ZodType | undefined = undefined>(
+		request: AgentRunRequest<OutputSchema>,
+	): AsyncIterable<AgentRuntimeEvent> {
+		this.requests.push(request)
+		yield {
+			type: 'finished',
+			result: { outcome: AgentRunOutcome.COMPLETED, replyText: 'ok', sessionId: CapturingRunner.CLI_SESSION_ID, failed: false },
+		}
+	}
+
+	async shutdown(): Promise<void> {}
+}
+
+/**
+ * THE FEATURE (spec 2026-07-31) — resolving a stop puts the issue back to work, on the SAME CLI
+ * session, carrying what the operator answered.
+ *
+ * The diagnostic above settled Decision 3: the issue never left the steer seam, so nothing had to be
+ * repaired there. What was actually missing is here — a subscriber on `thread.stop_resolved`, and a
+ * dispatcher that hands the resumed turn the cursor its own session was written under.
+ */
+describe('Flow (integration): a resolved stop puts the issue back to work', () => {
+	let testBed: TestBed
+	let testContainer: DependencyContainer
+
+	beforeEach(async () => {
+		testContainer = container.createChildContainer()
+		testBed = await TestBed.create('integration', { testContainer, ownerId: MOCK_CLOUD_OWNER_ID })
+		await testBed.reset()
+		// The internal handler under test is registered the way every flow spec registers one — TestBed
+		// wires DI, `BoundedContext.create` (the daemon's boot) wires the mediator, and a test is neither.
+		await testBed.spy.register(testBed.resolve(ResumeIssueOnStopResolved))
+	})
+	afterAll(async () => {
+		await testBed.destroy()
+	})
+
+	async function givenStoppedIssue(kind: StopKind = StopKind.HUMAN_REQUESTED, detail = 'Full or partial refund over 90 days?') {
+		const workspace = await givenWorkspace(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const thread = await givenThread(testBed, {
+			ownerId: MOCK_CLOUD_OWNER_ID,
+			workspaceId: workspace.id.value,
+			providers: [ProviderKind.CLAUDE_CODE],
+		})
+		const issue = await givenIssue(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value, key: 'refund-window' })
+		const stopId = uuidv7()
+		await testBed.resolve(RecordStopFromExecution).handle(
+			new ThreadStopRaisedEvent({
+				ownerId: MOCK_CLOUD_OWNER_ID,
+				payload: { stopId, issueId: issue.id.value, threadId: thread.id.value, kind, detail },
+			}) as never,
+		)
+		return { workspace, thread, issue, stopId }
+	}
+
+	/** Resolve through the real use case and let the real outbox carry the fact to the handler. */
+	async function resolveStop(stopId: string, resolution: StopResolution) {
+		await testBed.resolve(ResolveStop).execute({ ownerId: MOCK_CLOUD_OWNER_ID, stopId, resolution })
+		await testBed.resolve(OutboxDispatcher).flush()
+	}
+
+	const claimAll = async () => {
+		const mailbox = testBed.resolve(MailboxRepository)
+		const claimed = []
+		for (;;) {
+			const item = await mailbox.claimNext('resume-test', 60_000)
+			if (!item) return claimed
+			claimed.push(item)
+			await mailbox.complete(item.id)
+		}
+	}
+
+	it('AC-1 — a resolved stop queues a turn for the issue', async () => {
+		const { issue, stopId } = await givenStoppedIssue()
+
+		await resolveStop(stopId, StopResolution.REVIEW_AND_SEND)
+
+		const queued = (await claimAll()).filter(item => item.targetKind === MailboxTargetKind.ISSUE)
+		expect(queued).toHaveLength(1)
+		expect(queued[0]?.kind).toBe(MailboxItemKind.STEER)
+		expect(queued[0]?.targetId).toBe(issue.id.value)
+	})
+
+	it('AC-1 — TAKE_OVER queues NOTHING: the work is the human’s now', async () => {
+		const { stopId } = await givenStoppedIssue()
+
+		await resolveStop(stopId, StopResolution.TAKE_OVER)
+
+		expect((await claimAll()).filter(item => item.targetKind === MailboxTargetKind.ISSUE)).toHaveLength(0)
+	})
+
+	it('AC-5 — the resume prompt says what was asked and how it was answered', async () => {
+		const { stopId } = await givenStoppedIssue(StopKind.APPROVAL_NEEDED, 'May I delete the legacy coupons table?')
+
+		await resolveStop(stopId, StopResolution.APPROVE)
+
+		const queued = (await claimAll()).filter(item => item.targetKind === MailboxTargetKind.ISSUE)
+		expect(queued).toHaveLength(1)
+		const text = (queued[0] as { payload: { text: string } }).payload.text
+		expect(text).toContain('May I delete the legacy coupons table?')
+		expect(text).toContain(StopResolution.APPROVE)
+	})
+
+	it('AC-6 — the same resolution delivered twice produces ONE item', async () => {
+		const { thread, issue, stopId } = await givenStoppedIssue()
+
+		// The outbox is at-least-once, so the SAME fact reaches the handler again after a redelivery —
+		// which is what a second `handle()` of one event IS at this boundary.
+		const fact = new ThreadStopResolvedEvent({
+			entityId: thread.id.value,
+			ownerId: MOCK_CLOUD_OWNER_ID,
+			payload: { stopId, issueId: issue.id.value, threadId: thread.id.value, resolution: StopResolution.REVIEW_AND_SEND },
+		})
+		const handler = testBed.resolve(ResumeIssueOnStopResolved)
+		await handler.handle(fact as never)
+		await handler.handle(fact as never)
+
+		expect((await claimAll()).filter(item => item.targetKind === MailboxTargetKind.ISSUE)).toHaveLength(1)
+	})
+
+	it('AC-6 — console and orchestrator firing together produce ONE turn', async () => {
+		const { thread, issue, stopId } = await givenStoppedIssue()
+
+		// The orchestrator answers in the conversation and steers the stopped issue with the operator's
+		// words; the operator ALSO presses resolve in the console. Two paths, one issue, one turn.
+		await testBed.resolve(SteerIssueTurnController).handle({
+			ctx: { ownerId: MOCK_CLOUD_OWNER_ID, agentIdentity: { threadId: thread.id.value, entryId: uuidv7() } },
+			params: { threadId: thread.id.value, issueId: issue.id.value },
+			body: { text: 'refund total' },
+		} as Parameters<SteerIssueTurnController['handle']>[0])
+		await resolveStop(stopId, StopResolution.REVIEW_AND_SEND)
+
+		expect((await claimAll()).filter(item => item.targetKind === MailboxTargetKind.ISSUE)).toHaveLength(1)
+	})
+	/**
+	 * AC-2 — asserted on what reaches the RUNNER, per the spec: `session.resumeId` is the id the
+	 * previous turn persisted, not a fresh one.
+	 */
+	it('AC-2 — the resumed turn continues the session the previous turn persisted', async () => {
+		const runner = new CapturingRunner()
+		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(runner))
+		const { thread, issue, stopId } = await givenStoppedIssue()
+
+		// TURN 1 — driven by the mailbox exactly as production does, so the cursor it persists is the
+		// one a later turn has to match.
+		await testBed.resolve(SteerThread).execute({ ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value, text: 'começa pelo teste' })
+		await testBed.resolve(MailboxDispatcher).bind(testContainer).drain()
+
+		// TURN 2 — the resume, triggered by the operator resolving the stop.
+		await resolveStop(stopId, StopResolution.REVIEW_AND_SEND)
+		await testBed.resolve(MailboxDispatcher).bind(testContainer).drain()
+
+		const issueTurns = runner.requests.filter(request => request.agentName === AgentName.ISSUE_WORK)
+		expect(issueTurns).toHaveLength(2)
+		expect(issueTurns[0]?.session?.newId).toBeDefined()
+		expect(issueTurns[0]?.session?.resumeId).toBeUndefined()
+		// THE ASSERTION THE SPEC ASKED FOR: the second spawn resumes, and resumes THE id turn 1 stored.
+		expect(issueTurns[1]?.session?.resumeId).toBe(CapturingRunner.CLI_SESSION_ID)
+		expect(issueTurns[1]?.session?.newId).toBeUndefined()
+		expect(await testBed.resolve(MailboxRepository).hasPending(MailboxTargetKind.ISSUE, issue.id.value)).toBe(false)
+	})
+})
