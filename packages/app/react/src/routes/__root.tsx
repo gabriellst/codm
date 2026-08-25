@@ -54,25 +54,28 @@ function RootComponent() {
 	const { queryClient } = Route.useRouteContext()
 	return (
 		<QueryClientProvider client={queryClient}>
-			{/* THE WINDOW'S SHELL, and the reason it is here and not in a route layout.
-			    `titleBarStyle: 'Overlay'` + `hiddenTitle` (packages/app/tauri/config/window.ts) are
-			    properties of the WINDOW: there is no OS title bar over ANY route, and the macOS traffic
-			    lights are overlaid on whatever the webview paints top-left. So "this window has no
-			    native title bar" is true for every React route, not just the authenticated console —
-			    which is why AppChrome lived in `(app)/route.tsx` and `/attach`, `/onboarding` and
-			    `/styleguide` (all SIBLINGS of `(app)`, not children) came up with no drag surface at all
-			    and their own headers under the traffic lights.
-			    It sits OUTSIDE ServicesProvider on purpose: that provider swaps its children for a
-			    splash while the DI container loads, and the bar needs no container — `isTauri()` is a
-			    plain util — so nothing is gained by making the window undraggable during boot.
-			    The boot-error splash is NOT part of this: separate window, plain HTML, no React. */}
-			<div className="flex h-dvh flex-col overflow-hidden bg-route-background text-foreground">
-				<AppChrome />
-				{/* The routes' scroll container. Screens below are sized against THIS box (`h-full` /
-				    `min-h-full`), never the viewport — the bar has already taken its band out of it. */}
-				<div className="min-h-0 flex-1 overflow-auto">
-					{/* Client-side services — environment detected & bound ONCE here (see @/services). */}
-					<ServicesProvider>
+			{/* Client-side services — environment detected & bound ONCE here (see @/services). The
+			    provider sits ABOVE the window shell: AppChrome asks the WindowService port whether this
+			    host overlays its traffic lights (macOS) or draws a native title bar (Windows/Linux, a
+			    browser tab), so the bar needs the container like every other port consumer. While the
+			    bindings chunk loads the provider paints its splash instead of this tree — invisible in
+			    practice, because the main window is BORN HIDDEN (config/window.ts `visible: false`)
+			    until every sidecar has answered its health probe. */}
+			<ServicesProvider>
+				{/* THE WINDOW'S SHELL, and the reason it is here and not in a route layout.
+				    `titleBarStyle: 'Overlay'` + `hiddenTitle` (packages/app/tauri/config/window.ts) are
+				    properties of the WINDOW: there is no OS title bar over ANY route on macOS, and the
+				    traffic lights are overlaid on whatever the webview paints top-left. So "this window's
+				    chrome" is true for every React route, not just the authenticated console — which is
+				    why AppChrome lived in `(app)/route.tsx` and `/attach`, `/onboarding` and `/styleguide`
+				    (all SIBLINGS of `(app)`, not children) came up with no drag surface at all and their
+				    own headers under the traffic lights.
+				    The boot-error splash is NOT part of this: separate window, plain HTML, no React. */}
+				<div className="flex h-dvh flex-col overflow-hidden bg-route-background text-foreground">
+					<AppChrome />
+					{/* The routes' scroll container. Screens below are sized against THIS box (`h-full` /
+					    `min-h-full`), never the viewport — the bar has already taken its band out of it. */}
+					<div className="min-h-0 flex-1 overflow-auto">
 						{/* SP2 (spec Decisions 4/7): listens for the codm://auth deep link no matter which
 						    screen is showing — the OS can hand the callback back while the operator is on
 						    /login, i.e. exactly when CloudSessionGate (nested inside (app)) has redirected
@@ -99,9 +102,9 @@ function RootComponent() {
 							<Outlet />
 						</SupervisionGate>
 						<Toaster />
-					</ServicesProvider>
+					</div>
 				</div>
-			</div>
+			</ServicesProvider>
 			{/* Overlays de dev — apareciam no app EMPACOTADO por estarem montados sem condição
 			    (reportado em 2026-08-07, v0.1.3). Ver ./-devtools por que o import é dinâmico. */}
 			<Suspense fallback={null}>

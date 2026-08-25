@@ -31,6 +31,8 @@ export {
 	useService,
 	useSupervision,
 	useUpdate,
+	useWindow,
+	useWindowChrome,
 } from './hooks'
 export { ServicesProvider, useContainer } from './providers/ServicesProvider'
 export {
@@ -46,6 +48,7 @@ export {
 	SupervisionToken,
 	UpdateToken,
 	SystemPreconditionsToken,
+	WindowToken,
 } from './tokens'
 
 // Port types — for consumers that need to annotate against a capability contract.
@@ -68,3 +71,5 @@ export type {
 export type { SecretsService } from './SecretsService/SecretsService'
 export type { SupervisedSidecar, SupervisionService, SupervisionState } from './SupervisionService/SupervisionService'
 export type { UpdateService } from './UpdateService/UpdateService'
+export { TITLE_BARS } from './WindowService/WindowService'
+export type { TitleBar, WindowChrome, WindowService } from './WindowService/WindowService'

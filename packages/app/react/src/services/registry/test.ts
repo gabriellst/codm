@@ -12,6 +12,7 @@ import {
 	SupervisionToken,
 	UpdateToken,
 	SystemPreconditionsToken,
+	WindowToken,
 } from '../tokens'
 import type { AutostartService } from '../AutostartService/AutostartService'
 import type { BadgeService } from '../BadgeService/BadgeService'
@@ -29,6 +30,7 @@ import type {
 import type { SecretsService } from '../SecretsService/SecretsService'
 import type { SupervisionService, SupervisionState } from '../SupervisionService/SupervisionService'
 import type { UpdateService } from '../UpdateService/UpdateService'
+import type { WindowChrome, WindowService } from '../WindowService/WindowService'
 
 /**
  * Test composition root — in-memory fakes, no host present. The frontend analogue
@@ -255,6 +257,20 @@ export class FakeSystemPreconditionsService implements SystemPreconditionsServic
 	}
 }
 
+/**
+ * Semeado com o chrome que o host reportaria — `native` por default, a MESMA resposta que
+ * `BrowserWindowService` dá (uma aba não sobrepõe nada ao console). Um teste que precisa dos
+ * semáforos sobrepostos liga uma subclasse semeada com `{ titleBar: 'overlay' }`, como
+ * `SeededPicker` faz em ServicesProvider.test.tsx — `new` continua fora do teste.
+ */
+export class FakeWindowService implements WindowService {
+	constructor(private readonly value: WindowChrome = { titleBar: 'native' }) {}
+
+	async chrome(): Promise<WindowChrome> {
+		return this.value
+	}
+}
+
 export default [
 	[FilePickerToken, FakeFilePickerService],
 	[NotificationToken, FakeNotificationService],
@@ -268,4 +284,5 @@ export default [
 	[UpdateToken, FakeUpdateService],
 	[AnalyticsToken, FakeAnalyticsService],
 	[SystemPreconditionsToken, FakeSystemPreconditionsService],
+	[WindowToken, FakeWindowService],
 ] as const satisfies Bindings

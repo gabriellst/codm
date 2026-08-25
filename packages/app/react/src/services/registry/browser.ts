@@ -12,6 +12,7 @@ import {
 	SupervisionToken,
 	UpdateToken,
 	SystemPreconditionsToken,
+	WindowToken,
 } from '../tokens'
 import { BrowserAutostartService } from '../AutostartService/BrowserAutostartService'
 import { BrowserBadgeService } from '../BadgeService/BrowserBadgeService'
@@ -25,6 +26,7 @@ import { BrowserSystemPreconditionsService } from '../SystemPreconditionsService
 import { BrowserSecretsService } from '../SecretsService/BrowserSecretsService'
 import { BrowserSupervisionService } from '../SupervisionService/BrowserSupervisionService'
 import { BrowserUpdateService } from '../UpdateService/BrowserUpdateService'
+import { BrowserWindowService } from '../WindowService/BrowserWindowService'
 
 /**
  * Browser composition root — dev server / e2e / any plain tab. DECLARATIVE: a
@@ -47,4 +49,5 @@ export default [
 	[UpdateToken, BrowserUpdateService],
 	[SystemPreconditionsToken, BrowserSystemPreconditionsService],
 	[AnalyticsToken, AnalyticsServiceImpl],
+	[WindowToken, BrowserWindowService],
 ] as const satisfies Bindings
