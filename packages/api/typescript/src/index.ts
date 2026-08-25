@@ -15,6 +15,7 @@
 import './polyfill'
 
 import { Config, acquireDataDirLock, resolveDataDir, startParentWatchdog, startTelemetry } from '@codm/core-typescript'
+import { criteriaFromEnv } from '@shared/deployment'
 import { start } from '../composition/server'
 
 /**
@@ -37,7 +38,13 @@ import { start } from '../composition/server'
  * Skipped under EMIT_OPENAPI: codegen never boots the real daemon, and binds the in-memory driver.
  */
 async function main(): Promise<void> {
-	if (Config.env.EMIT_OPENAPI !== 'true') acquireDataDirLock(resolveDataDir(Config.env.CODM_DATA_DIR))
+	// The data dir is a DESKTOP fact: it is where the daemon and the gateway share the SQLite file.
+	// The cloud deployment (auth + owner on Postgres, ADR 0001/0005) has no SQLite and no sibling
+	// process to fence — resolving a dir there only ever produced an EACCES at boot on a read-only
+	// image home (Railway, 2026-08-25: `mkdir '/app/.codm/data'` under USER 1000). Same literal
+	// `CODM_PROFILE === 'cloud'` read the deployment table uses — no second parse of the flag.
+	const desktop = criteriaFromEnv().deployment === 'local'
+	if (Config.env.EMIT_OPENAPI !== 'true' && desktop) acquireDataDirLock(resolveDataDir(Config.env.CODM_DATA_DIR))
 
 	const server = await start({ env: Config.env.CODM_ENV, port: Config.env.API_PORT })
 	await startTelemetry()
