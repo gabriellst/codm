@@ -9,13 +9,7 @@ import { join } from 'node:path'
  * vivem no INVENTORY (shrink-only, motivo inline); a lista vazia é o estado final.
  */
 const SRC = join(import.meta.dir, '../../src')
-const INVENTORY: string[] = [
-	// `PATH` is the OS's own executable search list, not application config — there is no default to
-	// declare, no .env.example line a human would set, and RawEnvSchema exists to model THIS app's
-	// config surface, not to wrap every inherited OS env var. Genuinely pre-Config in spirit even
-	// though it runs after Config is parsed: the value has no product meaning outside `which`.
-	'ProviderDetector/SystemProviderDetector.ts',
-]
+const INVENTORY: string[] = []
 
 function walk(dir: string): string[] {
 	return readdirSync(dir).flatMap(name => {

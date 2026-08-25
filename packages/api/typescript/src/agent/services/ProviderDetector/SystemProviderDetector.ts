@@ -1,9 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { spawnSync } from 'node:child_process'
-import { accessSync, constants, existsSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { delimiter, join } from 'node:path'
-import { LoggingService } from '@codm/core-typescript'
+import { LoggingService, PROVIDER_SEARCH, resolveBinary, type ProviderSearchSpec } from '@codm/core-typescript'
 import { ProviderKind, ProviderStatus } from '@codm/contracts-typescript/wire/enums'
 import type { ProviderCapabilities } from '../../types/ProviderCapabilities'
 import { KNOWN_PROVIDERS, PROVIDER_BINARIES, ProviderDetector, type ProviderDetection } from './ProviderDetector'
@@ -22,9 +20,11 @@ const PROBE_TIMEOUT_MS = 3_000
  * reads its `--version`, caching the result in-memory. Registered in the `real` DI env only; tests
  * bind `MockProviderDetector` so detection never shells out.
  *
- * The two OS-touching operations (`probeWhich`, `probeVersion`) are `protected` so the caching +
- * status-mapping logic — the part with actual behavior — is unit-tested via a subclass that fakes
- * them, with no real binaries on the machine (`ProviderDetector.test.ts`).
+ * The OS-touching operations (`probeWhich`, `probeVersion`, `probeCapabilities`) are `protected` so
+ * the caching + status-mapping logic — the part with actual behavior — is unit-tested via a subclass
+ * that fakes them, with no real binaries on the machine (`ProviderDetector.test.ts`). The SEARCH
+ * itself (where a platform keeps CLIs, what an executable is called there) is a declared per-platform
+ * table in `ProviderSearch.ts`, tested against a temp-dir fixture from any host.
  */
 @injectable()
 export class SystemProviderDetector extends ProviderDetector {
@@ -32,14 +32,11 @@ export class SystemProviderDetector extends ProviderDetector {
 		super()
 	}
 
-	/** Install locations checked in addition to `PATH` — where the provider CLIs commonly land. */
-	protected readonly knownDirs: readonly string[] = [
-		join(homedir(), '.claude', 'local'),
-		join(homedir(), '.local', 'bin'),
-		join(homedir(), '.bun', 'bin'),
-		'/usr/local/bin',
-		'/opt/homebrew/bin',
-	]
+	/**
+	 * The host platform's row of `PROVIDER_SEARCH` — ONE lookup on `process.platform`, resolved once.
+	 * The table is exhaustive over `NodeJS.Platform`, so this can never be undefined.
+	 */
+	protected readonly search: ProviderSearchSpec = PROVIDER_SEARCH[process.platform]
 
 	private cache: ProviderDetection[] | undefined
 
@@ -122,15 +119,14 @@ export class SystemProviderDetector extends ProviderDetector {
 		}
 	}
 
-	/** Resolve a binary on `PATH`, then in the known install dirs. Returns the absolute path or null. */
+	/**
+	 * Resolve a binary name to its ABSOLUTE path on this machine — `PATH` first, then the platform's
+	 * known install dirs, each with the platform's executable suffixes (`ProviderSearch`). Null when
+	 * nothing executable answers to the name. The home and the environment are read HERE, at probe
+	 * time, so a `PATH` the shell injected after boot is honoured by `{ refresh: true }`.
+	 */
 	protected probeWhich(command: string): string | null {
-		const onPath = whichOnPath(command)
-		if (onPath) return onPath
-		for (const dir of this.knownDirs) {
-			const candidate = join(dir, command)
-			if (existsSync(candidate)) return candidate
-		}
-		return null
+		return resolveBinary(command, this.search, { home: homedir(), env: process.env })
 	}
 
 	/**
@@ -188,29 +184,4 @@ export class SystemProviderDetector extends ProviderDetector {
 			},
 		})
 	}
-}
-
-/**
- * Portable `which`: scan `$PATH` for an executable named `command`, returning the absolute path or
- * null. Runtime-agnostic on purpose, and it stays that way even though the ORIGINAL reason expired:
- * the old comment here claimed the daemon runs under Node "because node-pty is a native Node addon".
- * That has been false since the Fork-D2 spike removed node-pty, and it is corrected rather than
- * deleted because a stale WHY is worse than none. The real reason to avoid `Bun.which` is unchanged:
- * `node:child_process` + `node:fs` resolve identically under Bun and Node, so this file makes no
- * claim about which runtime is hosting it.
- */
-function whichOnPath(command: string): string | null {
-	const pathEnv = process.env.PATH
-	if (!pathEnv) return null
-	for (const dir of pathEnv.split(delimiter)) {
-		if (!dir) continue
-		const candidate = join(dir, command)
-		try {
-			accessSync(candidate, constants.X_OK)
-			return candidate
-		} catch {
-			// not present here or not executable — keep scanning PATH
-		}
-	}
-	return null
 }
