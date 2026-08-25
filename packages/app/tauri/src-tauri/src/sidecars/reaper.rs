@@ -69,7 +69,7 @@ impl Supervised for ForeignProcess {
     fn pid(&self) -> u32 {
         self.pid
     }
-    fn terminate(&self) {
+    fn terminate(&mut self) {
         send_sigterm(self.pid);
     }
     fn is_alive(&self) -> bool {

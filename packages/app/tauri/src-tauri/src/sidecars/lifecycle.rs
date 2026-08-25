@@ -13,9 +13,10 @@
 //! And the one the shell CANNOT do from here at all: `SIGKILL`, a panic in the event loop, or a
 //! power cut run no hook of ours, so (a) and (b) are both skipped. The only defense that survives
 //! the parent's sudden death is on the CHILD side — each sidecar watches the pid the shell handed
-//! it (`CODM_PARENT_PID`) and exits when it stops being its parent (TS: `src/watchdog.ts`, Go:
-//! `internal/shared/watchdog.go`). `sidecars::reap_previous_run` is the belt to that suspenders:
-//! whatever a crash still left behind is swept at the NEXT boot, before anything is spawned.
+//! it (`CODM_PARENT_PID`) and exits when it stops being its parent (TS: `core/src/utils/Watchdog.ts`,
+//! Go: `core/pkg/watchdog/watchdog.go`). `sidecars::reap_previous_run` is the belt to that
+//! suspenders: whatever a crash still left behind is swept at the NEXT boot, before anything is
+//! spawned.
 //!
 //! ## Why every kill here is SIGTERM first
 //!
@@ -26,7 +27,32 @@
 //! the daemon's own drain is the single path that can, and `SIGKILL` is exactly what denies it.
 //! So the escalation mirrors the one the daemon already uses on its agents — SIGTERM to everyone,
 //! ONE shared grace window, SIGKILL to whoever is left.
+//!
+//! ## The gap SIGTERM-first left open on Windows
+//!
+//! `send_sigterm` was ALREADY a documented no-op on Windows (see the `#[cfg(windows)]` block below)
+//! — but until now nothing connected that fact to its cost: on a NORMAL quit (window close, the
+//! tray's Quit, `RunEvent::Exit`) the SIGTERM half of this file's own graceful step never reaches
+//! the daemon there, so `TERM_GRACE` elapses doing nothing OBSERVABLE to the child and `force_kill`
+//! (`CommandChild::kill` = `TerminateProcess`) always fires — every bit as hard a kill as `SIGKILL`
+//! is on POSIX. `shutdown()` (outbox drain, mediator stop, and the part that actually LEAKS: every
+//! provider CLI process tree, `AgentProcess.ts`) never runs. This is NOT the sudden-death case the
+//! parent watchdog covers (`core/src/utils/Watchdog.ts`) — the shell is alive and quitting in
+//! order, it simply had no channel to ASK the daemon on that OS.
+//!
+//! The fix opens that channel without a platform-specific transport: `tauri_plugin_shell` keeps a
+//! spawned child's stdin PIPED (`process::Command::new`, `Stdio::piped()`) on every OS, so
+//! `CommandChild::write` can carry a line to the child regardless of platform. `Supervised::terminate`
+//! now writes `SHUTDOWN_SENTINEL` to stdin in the SAME step that sends SIGTERM — POSIX gets both (the
+//! sentinel is belt-and-suspenders there; SIGTERM still does the real work and nothing about it
+//! changes), Windows gets ONLY the sentinel, which is now the one thing that reaches it. The daemon
+//! arms a stdin listener (`core/src/utils/StdinShutdown.ts`) that runs the exact same `shutdown()`
+//! SIGTERM already triggers on POSIX — the drain is unified across OSes, not merely "less bad" on
+//! Windows. The gateway sidecar receives the same bytes on its own stdin and ignores them (it reads
+//! no stdin at all) — see `SHUTDOWN_SENTINEL`'s doc for why that is the intentionally simpler design.
 
+#[cfg(test)]
+use std::io::Write;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -45,14 +71,50 @@ pub const TERM_GRACE: Duration = Duration::from_secs(3);
 /// How often the grace window re-checks whether the fleet is already gone.
 const GRACE_POLL: Duration = Duration::from_millis(50);
 
+/// THE SHELL→DAEMON STDIN LINE — written to EVERY supervised child's stdin on the graceful step, on
+/// EVERY platform (POSIX included: belt-and-suspenders next to SIGTERM, never a replacement for it).
+/// It is the one thing Windows can observe at all, because no signal exists there for a
+/// console-less child (`send_sigterm` below is a no-op on `#[cfg(windows)]`).
+///
+/// Written to BOTH sidecars, not just the daemon: `ChildRegistry` is role-agnostic by design (a flat
+/// `Vec<Box<dyn Supervised>>`, see the `Supervised` trait) and giving `Supervised::terminate` a
+/// per-child role to consult would be new plumbing for zero behavioural gain — the Go gateway never
+/// reads `os.Stdin` (confirmed: no reference anywhere in `packages/api/go`), so the bytes sit unread
+/// in its stdin pipe until the process exits, exactly as harmless as the `SIGTERM` it already
+/// ignores having no handler for. Wiring a reader on the Go side, if ever wanted, is a SEPARATE
+/// task — it does not change what the shell writes here.
+///
+/// MIRROR of `core/src/utils/StdinShutdown.ts` `SHUTDOWN_SENTINEL_LINE` — Rust cannot import that
+/// file, so this names it as the other half of the pair, against drift. Same seam rule as
+/// `updater.rs` mirroring `config/updater.ts`. The TS constant holds the same text WITHOUT the
+/// trailing `\n` (it compares an already-line-split string); this one carries the `\n` because it is
+/// written straight into the raw byte stream and the newline is what makes it one complete line.
+pub(crate) const SHUTDOWN_SENTINEL: &str = "supervisor:shutdown\n";
+
+/// Write the sentinel to anything writable. Its own function — not inlined into
+/// `impl Supervised for CommandChild::terminate` — purely so the BYTES are unit-testable without a
+/// live `CommandChild`, which cannot be constructed outside a running tauri App (`Command::new` is
+/// `pub(crate)` in `tauri_plugin_shell`, reachable only through `ShellExt`). See the tests at the
+/// bottom of this file. `#[cfg(test)]`: production writes via `CommandChild::write` directly
+/// (`impl Supervised for CommandChild::terminate`, below) — this helper exists solely so the BYTES
+/// are testable against a plain `Vec<u8>`/pipe without a live `CommandChild`, so it is dead code
+/// outside the test build and stays gated to match.
+#[cfg(test)]
+pub(crate) fn write_shutdown_sentinel<W: Write>(mut writer: W) {
+    let _ = writer.write_all(SHUTDOWN_SENTINEL.as_bytes());
+}
+
 /// Everything the shutdown path needs from a process, so the ESCALATION POLICY can be tested
 /// without spawning anything and can serve two very different sources:
 /// a `CommandChild` we own, and a bare pid left behind by a PREVIOUS run (`reaper::ForeignProcess`).
 pub trait Supervised: Send {
     fn pid(&self) -> u32;
-    /// Ask politely — SIGTERM, so the process's own shutdown hooks run and it can take its
-    /// descendants with it. This is the ONLY step that can reach a grandchild.
-    fn terminate(&self);
+    /// Ask politely — SIGTERM (POSIX only) AND the shutdown sentinel written to stdin (every
+    /// platform — see `SHUTDOWN_SENTINEL`), so the process's own shutdown hooks run and it can take
+    /// its descendants with it. `&mut self` because writing to a piped stdin needs it
+    /// (`CommandChild::write` — tauri-plugin-shell 2.3.5, `src/process/mod.rs:72`). This is the ONLY
+    /// step that can reach a grandchild.
+    fn terminate(&mut self);
     /// Is it still there? Answered by `kill(pid, 0)`, so a process we are not allowed to signal
     /// (EPERM) still counts as alive.
     fn is_alive(&self) -> bool;
@@ -64,8 +126,12 @@ impl Supervised for CommandChild {
     fn pid(&self) -> u32 {
         CommandChild::pid(self)
     }
-    fn terminate(&self) {
+    fn terminate(&mut self) {
         send_sigterm(CommandChild::pid(self));
+        // Best-effort: a dead child's pipe write fails (`BrokenPipe`) exactly like a SIGTERM to an
+        // already-gone pid fails inside `send_sigterm` — both are the EXPECTED case for whichever
+        // sidecar finishes its own drain first, and neither failure blocks the other signal.
+        let _ = CommandChild::write(self, SHUTDOWN_SENTINEL.as_bytes());
     }
     fn is_alive(&self) -> bool {
         pid_alive(CommandChild::pid(self))
@@ -110,11 +176,13 @@ pub(crate) fn pid_alive(pid: u32) -> bool {
 }
 
 /// Windows has no SIGTERM for a console-less child: there is nothing between "ask" and
-/// `TerminateProcess`, so the graceful half stays a no-op and every process goes through
-/// `force_kill` after the grace window. The daemon's Windows drain path is its `CODM_PARENT_PID`
-/// watchdog, not a signal from here. Liveness and force are REAL, though — via `sysinfo`, the same
-/// crate the startup sweep's table uses: without them `terminate_then_force` could never see a
-/// Windows process die, and `reaper` could find an orphan without being able to remove it.
+/// `TerminateProcess`, so this half of the graceful step stays a no-op. `Supervised::terminate`'s
+/// OTHER half, the stdin sentinel (see `SHUTDOWN_SENTINEL`), is what reaches the child here now —
+/// before this task the daemon's ONLY Windows drain path was its `CODM_PARENT_PID` watchdog
+/// (sudden-death only); this closes the gap for the ORDINARY quit too. Liveness and force are REAL,
+/// though — via `sysinfo`, the same crate the startup sweep's table uses: without them
+/// `terminate_then_force` could never see a Windows process die, and `reaper` could find an orphan
+/// without being able to remove it.
 #[cfg(windows)]
 pub(crate) fn send_sigterm(_pid: u32) {}
 
@@ -171,8 +239,8 @@ pub(crate) fn pid_alive(_pid: u32) -> bool {
 /// grace windows — two sidecars would cost `2 × TERM_GRACE` in the worst case, and a Cmd+Q would sit
 /// there for six seconds. Signalling the fleet up front makes the drains overlap, so the wait is
 /// bounded by the SLOWEST child rather than by their sum.
-pub(crate) fn terminate_then_force(children: Vec<Box<dyn Supervised>>, grace: Duration) -> Vec<u32> {
-    for child in &children {
+pub(crate) fn terminate_then_force(mut children: Vec<Box<dyn Supervised>>, grace: Duration) -> Vec<u32> {
+    for child in &mut children {
         child.terminate();
     }
     let mut survivors = children;
@@ -377,7 +445,7 @@ mod tests {
         fn pid(&self) -> u32 {
             self.pid
         }
-        fn terminate(&self) {
+        fn terminate(&mut self) {
             self.log.lock().unwrap().push(format!("term {}", self.pid));
             if self.dies_on_term {
                 self.alive.store(false, Ordering::SeqCst);
@@ -471,7 +539,7 @@ mod tests {
             fn pid(&self) -> u32 {
                 self.0.id()
             }
-            fn terminate(&self) {
+            fn terminate(&mut self) {
                 send_sigterm(self.0.id());
             }
             fn is_alive(&self) -> bool {
@@ -517,6 +585,52 @@ mod tests {
             port_conflict(port),
             None,
             "liberada a porta, o boot segue normal — o guarda nao pode virar um bloqueio permanente"
+        );
+    }
+
+    /// The frozen wire value, byte for byte: ONE complete line. The TS side
+    /// (`core/src/utils/StdinShutdown.ts`) reads stdin as line-buffered text and compares against
+    /// the SAME text minus this trailing `\n` — see `SHUTDOWN_SENTINEL`'s doc for why the two
+    /// constants differ by exactly that character.
+    #[test]
+    fn the_shutdown_sentinel_is_one_terminated_line() {
+        let mut buf: Vec<u8> = Vec::new();
+        write_shutdown_sentinel(&mut buf);
+        assert_eq!(buf, SHUTDOWN_SENTINEL.as_bytes());
+        assert_eq!(
+            String::from_utf8(buf).unwrap(),
+            "supervisor:shutdown\n",
+            "o valor esta CONGELADO — mudar aqui sem mudar StdinShutdown.ts quebra o par"
+        );
+    }
+
+    /// The actual mechanism `impl Supervised for CommandChild::terminate` exercises: a piped stdin,
+    /// written to while the child is alive, delivers the bytes verbatim. Goes through a REAL child
+    /// and a REAL OS pipe rather than a fake, because `CommandChild` itself cannot be constructed in
+    /// a test — `tauri_plugin_shell::process::Command::new` is `pub(crate)` to that crate and needs
+    /// a live tauri App to reach through `ShellExt`. This is the same trade the `RealProcess` test
+    /// above already makes for SIGTERM.
+    #[cfg(unix)]
+    #[test]
+    fn writing_the_sentinel_to_a_piped_stdin_reaches_the_child_verbatim() {
+        let _no_listeners = fork_guard();
+        let out_path = std::env::temp_dir().join(format!("codm-sentinel-test-{}", std::process::id()));
+        let mut child = std::process::Command::new("/bin/sh")
+            .arg("-c")
+            .arg(format!("cat > {}", out_path.display()))
+            .stdin(std::process::Stdio::piped())
+            .spawn()
+            .expect("spawn a stdin sink");
+        let mut stdin = child.stdin.take().expect("piped stdin");
+        write_shutdown_sentinel(&mut stdin);
+        drop(stdin); // EOF — `cat` exits once its input closes
+        child.wait().expect("child exits");
+
+        let received = std::fs::read_to_string(&out_path).expect("read back what the child received");
+        let _ = std::fs::remove_file(&out_path);
+        assert_eq!(
+            received, SHUTDOWN_SENTINEL,
+            "o filho tem de receber a linha inteira, byte a byte, pelo MESMO tipo de pipe que CommandChild usa"
         );
     }
 }

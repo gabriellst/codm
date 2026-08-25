@@ -14,7 +14,7 @@
 // bundle would die at startup. See that file for the measurement.
 import './polyfill'
 
-import { Config, acquireDataDirLock, resolveDataDir, startParentWatchdog, startTelemetry } from '@codm/core-typescript'
+import { Config, acquireDataDirLock, armStdinShutdown, resolveDataDir, startParentWatchdog, startTelemetry } from '@codm/core-typescript'
 import { criteriaFromEnv } from '@shared/deployment'
 import { start } from '../composition/server'
 
@@ -78,6 +78,17 @@ async function main(): Promise<void> {
 	//
 	// No-op unless a desktop shell stamped CODM_PARENT_PID on this process. See core's Watchdog.
 	startParentWatchdog({ onOrphaned: () => shutdown('CODM_PARENT_PID') })
+
+	// SHELL→DAEMON STDIN CHANNEL — o shell escreve SHUTDOWN_SENTINEL_LINE no nosso stdin no passo
+	// GRACIOSO da propria escalacao de shutdown dele (`src-tauri/src/sidecars/lifecycle.rs`,
+	// `Supervised::terminate`), em TODA plataforma. O POSIX ainda recebe SIGTERM tambem — isto e
+	// cinto-e-suspensorio la. No Windows `send_sigterm` e um no-op (nao existe sinal para um processo
+	// sem console) e esta linha e o UNICO aviso antes do `force_kill` do shell (`CommandChild::kill` =
+	// TerminateProcess) — um kill duro que pularia este drain inteiro. Mesmo `shutdown` de todo
+	// outro gatilho, entao o comportamento e identico em qualquer SO; o guard `enabled` de
+	// `armStdinShutdown` (default `Boolean(CODM_PARENT_PID)`) evita que um terminal de `bun dev` seja
+	// confundido com um pedido de shutdown.
+	armStdinShutdown({ onShutdown: () => shutdown('stdin-sentinel') })
 }
 
 main().catch(error => {
