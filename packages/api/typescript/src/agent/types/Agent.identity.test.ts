@@ -91,7 +91,7 @@ function probeAgentFor(scope: McpScope, IdentitySchema: ZodType | undefined) {
 		override readonly tools = ['mcp__codm__Probe']
 
 		protected buildRequest(input: this['input']): Omit<AgentRunRequest, 'mcp' | 'agentName'> {
-			return { cwd: input.cwd, systemPrompt: 'probe', messages: [] }
+			return { cwd: input.cwd, binaryPath: '/usr/local/bin/claude', systemPrompt: 'probe', messages: [] }
 		}
 	}
 }

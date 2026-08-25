@@ -48,6 +48,7 @@ const input = (overrides: Partial<Parameters<IssueWorkAgent['run']>[1]> = {}): P
 	issueId: '00000000-0000-4000-8000-0000000000cc',
 	threadId: '00000000-0000-4000-8000-0000000000bb',
 	cwd: '/Users/dev/project',
+	binaryPath: '/usr/local/bin/claude',
 	prompt: 'fix the coupon focus bug',
 	// The DEFAULT is the brief that opened the issue — the case every test below that does not say
 	// otherwise is also asserting, silently.

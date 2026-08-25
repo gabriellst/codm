@@ -17,14 +17,32 @@ import { ClaudeAgentRunner } from '../AgentRunner/ClaudeAgentRunner'
  *
  * Empty (`{}`) on a `NOT_INSTALLED` provider, and empty is the SAFE default: every capability is
  * opt-in, so an unprobed binary is driven with the conservative argv rather than one it might reject.
+ *
+ * A UNION on `status`, not one interface with optionals: a `DETECTED` row without a `binaryPath` was
+ * representable before and the runner papered over it with a bare binary name. On Windows a bare
+ * name is whichever of `claude.exe` / `claude.cmd` the loader meets first on PATH — so the path the
+ * search resolved is REQUIRED where the status says it exists, and unrepresentable where it does not.
  */
-export interface ProviderDetection {
+export interface DetectedProvider {
 	name: ProviderKind
-	status: ProviderStatus
-	binaryPath?: string
+	status: ProviderStatus.DETECTED
+	/** ABSOLUTE path resolved by the detector's search (`ProviderSearch`; `SystemProviderDetector.probeWhich`) — exactly what the runner spawns. */
+	binaryPath: string
 	version?: string
 	caps?: ProviderCapabilities
 }
+
+export interface NotInstalledProvider {
+	name: ProviderKind
+	status: ProviderStatus.NOT_INSTALLED
+	// Declared as `undefined` rather than omitted so `d.binaryPath` stays a legal read on the union —
+	// `DetectProviders` maps the whole catalog with one expression, and the wire shape is unchanged.
+	binaryPath?: undefined
+	version?: undefined
+	caps?: undefined
+}
+
+export type ProviderDetection = DetectedProvider | NotInstalledProvider
 
 /**
  * Detection & resolution of agent provider CLIs (claude-code / codex / opencode). A SERVICE, not an

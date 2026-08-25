@@ -22,7 +22,10 @@ import type { ProviderCapabilities } from './ProviderCapabilities'
  * and we say so where its spec is declared.
  */
 export interface ProviderBinarySpec {
-	/** Primary binary name, used when the detector resolved no absolute path. */
+	/**
+	 * Primary binary name the DETECTOR searches for (`ProviderSearch`; `SystemProviderDetector.probeWhich`).
+	 * Never spawned bare: the runner only ever receives the resolved absolute path (`AgentRunRequest.binaryPath`).
+	 */
 	bin: string
 	/** Alternative binary names to try, in order, during detection. */
 	fallbackBins?: readonly string[]

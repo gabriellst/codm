@@ -39,6 +39,7 @@ const input = (): Parameters<OrchestratorAgent['run']>[1] => ({
 	// NO issueId — the orchestrator is thread-keyed and structurally has none (§6.1).
 	entryId: '00000000-0000-4000-8000-0000000000dd',
 	cwd: '/Users/dev/project',
+	binaryPath: '/usr/local/bin/claude',
 	contactKind: ContactKind.GROUP,
 	mentionTag: '@codm',
 	window: { seeded: true, entries: [] },

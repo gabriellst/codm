@@ -127,6 +127,7 @@ describe('cancellation — process-group kill (§4.11, AC-3.3)', () => {
 			for await (const event of runner.run({
 				agentName: AgentName.ISSUE_WORK,
 				cwd: process.cwd(),
+				binaryPath: '/opt/bin/claude',
 				messages: [{ role: AgentMessageRole.USER, content: 'noop' }],
 				signal: controller.signal,
 			})) {
@@ -156,6 +157,7 @@ describe('cancellation — process-group kill (§4.11, AC-3.3)', () => {
 			for await (const event of runner.run({
 				agentName: AgentName.ISSUE_WORK,
 				cwd: process.cwd(),
+				binaryPath: '/opt/bin/claude',
 				messages: [{ role: AgentMessageRole.USER, content: 'noop' }],
 			})) {
 				types.push(event.type)

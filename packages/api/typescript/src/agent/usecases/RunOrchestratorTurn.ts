@@ -22,7 +22,7 @@ import { AGENT_SPEAKER, INITIAL_CUT_STATE, advanceCutState, decideCut, type Repl
 import { OrchestratorAgent, OrchestratorInputSchema } from '../agents/OrchestratorAgent'
 import { parseReply } from '../agents/OrchestratorAgent/citation'
 import { AgentRunnerFactory } from '../services/AgentRunnerFactory'
-import { ProviderDetector, type ProviderDetection } from '../services/ProviderDetector'
+import { ProviderDetector, type DetectedProvider, type ProviderDetection } from '../services/ProviderDetector'
 import { TerminalOutputAccumulator } from '../services/TerminalOutputAccumulator'
 import { AgentSessionRepository } from '../repositories/AgentSessionRepository'
 import { MessageVia } from '../enums'
@@ -579,7 +579,7 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 		}
 	}
 
-	private async resolveProvider(provider: ProviderKind): Promise<ProviderDetection> {
+	private async resolveProvider(provider: ProviderKind): Promise<DetectedProvider> {
 		const detection = await this.providerDetector.resolve(provider)
 		if (!detection || detection.status !== ProviderStatus.DETECTED) {
 			throw new BaseError<AgentApplicationErrors>('PROVIDER_NOT_DETECTED', `provider ${provider} is not installed`)

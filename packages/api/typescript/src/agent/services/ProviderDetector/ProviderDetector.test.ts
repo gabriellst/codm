@@ -129,6 +129,15 @@ describe('SystemProviderDetector — detection logic (faked probes)', () => {
 		const codex = await detector.resolve(ProviderKind.CODEX)
 		expect(codex?.status).toBe(ProviderStatus.NOT_INSTALLED)
 	})
+
+	it('a DETECTED row ALWAYS carries the resolved binaryPath — the union makes a path-less DETECTED unrepresentable', async () => {
+		const detector = new FakeSystemProviderDetector({ claude: { path: '/opt/homebrew/bin/claude', version: '1.2.3' } })
+		const claude = await detector.resolve(ProviderKind.CLAUDE_CODE)
+		if (claude?.status !== ProviderStatus.DETECTED) throw new Error('expected DETECTED')
+		// After the narrowing this is `string`, not `string | undefined` — a compile-time fact the runtime assertion pins.
+		const path: string = claude.binaryPath
+		expect(path).toBe('/opt/homebrew/bin/claude')
+	})
 })
 
 describe('MockProviderDetector', () => {

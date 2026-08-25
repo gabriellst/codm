@@ -276,7 +276,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 			mcp: request.mcp,
 			caps: request.caps ?? {},
 		})
-		const cmd = [request.binaryPath ?? ClaudeAgentRunner.binary.bin, ...args]
+		const cmd = [request.binaryPath, ...args]
 
 		let proc: AgentProcess
 		try {

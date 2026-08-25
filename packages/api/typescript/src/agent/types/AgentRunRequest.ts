@@ -42,8 +42,14 @@ export interface AgentRunRequest<OutputSchema extends ZodType | undefined = unde
 	outputSchema?: OutputSchema
 	model?: AgentModelId
 	session?: { resumeId?: string; newId?: string }
-	/** Resolved by `ProviderDetector`; the runner falls back to the bare binary name of its own CLI. */
-	binaryPath?: string
+	/**
+	 * ABSOLUTE path resolved by `ProviderDetector` — the runner spawns exactly this and NEVER a bare
+	 * binary name. REQUIRED, not optional-with-fallback: on Windows a bare `claude` resolves through
+	 * PATHEXT to whichever of `claude.exe` / `claude.cmd` the loader meets first, and a `.cmd` cannot be
+	 * spawned without a shell. Both use cases already refuse to run a provider that is not DETECTED, so
+	 * the only thing a fallback could ever serve was a caller that forgot the field — now a `tsc` error.
+	 */
+	binaryPath: string
 	/**
 	 * What the probe found THIS binary can do, threaded from `ProviderDetector` beside `binaryPath`.
 	 *

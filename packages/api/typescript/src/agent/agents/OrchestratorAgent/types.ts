@@ -268,8 +268,8 @@ export const OrchestratorInputSchema = z.agentInput({
 	availableModels: z.array(z.enum(AgentModelId)),
 	/** EXACTLY ONE is set by `RunOrchestratorTurn` — continue the thread's session or open a new one. */
 	session: z.object({ resumeId: z.string().optional(), newId: z.string().optional() }).optional(),
-	/** Resolved by `ProviderDetector`; absent lets the runner fall back to the bare binary name. */
-	binaryPath: z.string().optional(),
+	/** ABSOLUTE path resolved by `ProviderDetector`. REQUIRED — the runner spawns exactly this, never a bare name (see `AgentRunRequest.binaryPath`). */
+	binaryPath: z.string(),
 	/** What the probe found THIS install supports. Absent = the conservative set. */
 	caps: ProviderCapabilitiesSchema.optional(),
 })

@@ -65,8 +65,8 @@ export const IssueWorkInputSchema = z.agentInput({
 	 * turn with no session identity is a turn whose successor cannot resume it.
 	 */
 	session: z.object({ resumeId: z.string().optional(), newId: z.string().optional() }).optional(),
-	/** Resolved by `ProviderDetector`; absent lets the runner fall back to its own CLI's bare binary name. */
-	binaryPath: z.string().optional(),
+	/** ABSOLUTE path resolved by `ProviderDetector`. REQUIRED — the runner spawns exactly this, never a bare name (see `AgentRunRequest.binaryPath`). */
+	binaryPath: z.string(),
 	/** What the probe found THIS install supports. Absent = the conservative set (no optional flag passed). */
 	caps: ProviderCapabilitiesSchema.optional(),
 	/**

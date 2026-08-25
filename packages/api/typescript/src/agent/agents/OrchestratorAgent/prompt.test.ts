@@ -57,6 +57,7 @@ const base = {
 	ownerId: '00000000-0000-4000-8000-0000000000aa',
 	threadId: '00000000-0000-4000-8000-0000000000bb',
 	cwd: '/Users/dev/project',
+	binaryPath: '/usr/local/bin/claude',
 	contactKind: ContactKind.GROUP,
 	mentionTag: '@codm',
 	window: { seeded: true, entries: [] },

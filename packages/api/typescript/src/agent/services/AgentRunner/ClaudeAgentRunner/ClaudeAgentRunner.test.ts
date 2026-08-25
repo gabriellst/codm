@@ -81,6 +81,7 @@ function makeRunner(spawner: ReturnType<typeof fakeSpawner>['spawner'], inactivi
 const request = (overrides: Partial<AgentRunRequest<z.ZodType | undefined>> = {}): AgentRunRequest<z.ZodType | undefined> => ({
 	agentName: AgentName.ISSUE_WORK,
 	cwd: '/tmp/workspace',
+	binaryPath: '/opt/bin/claude',
 	messages: [{ role: AgentMessageRole.USER, content: 'do the thing' }],
 	...overrides,
 })
@@ -206,19 +207,12 @@ describe('ClaudeAgentRunner — the happy turn', () => {
 		expect(cmd.slice(cmd.indexOf('--resume'))[1]).toBe('sess-prev')
 		// Capability-gated: `caps` was not threaded, so the optional flag must NOT be passed.
 		expect(cmd).not.toContain('--include-partial-messages')
+		// Never the bare name: on Windows a bare `claude` resolves through PATHEXT to whichever of
+		// `claude.exe` / `claude.cmd` the loader meets first — the runner spawns ONLY the resolved path.
+		expect(cmd).not.toContain(ClaudeAgentRunner.binary.bin)
 		// Bidirectional: stdin is OPEN at spawn, because the turn IS a stream and closing it is the act
 		// that ends the turn. This used to read `def.promptViaStdin`; it is now simply what this CLI is.
 		expect(fake.process().spec.stdin).toBe(true)
-	})
-
-	it('falls back to its OWN binary name when detection resolved no path', async () => {
-		const fake = fakeSpawner([INIT, TEXT, RESULT])
-
-		await drain(makeRunner(fake.spawner).run(request()))
-
-		// `ClaudeAgentRunner.binary.bin` — the same static `ProviderDetector` probes with, so the name
-		// this class spawns and the name the detector looks for cannot drift apart.
-		expect(fake.process().spec.cmd[0]).toBe(ClaudeAgentRunner.binary.bin)
 	})
 
 	it('passes a capability-gated flag only once the probe reported it', async () => {

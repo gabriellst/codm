@@ -7,7 +7,7 @@ import { OPERATOR_PARTICIPANT_ID } from '@thread/objects'
 import { IssueWorkAgent } from '../agents/IssueWorkAgent'
 import { AgentRunnerFactory } from '../services/AgentRunnerFactory'
 import type { AgentRunner } from '../services/AgentRunner'
-import { ProviderDetector, type ProviderDetection } from '../services/ProviderDetector'
+import { ProviderDetector, type DetectedProvider, type ProviderDetection } from '../services/ProviderDetector'
 import { AgentStreamRegistry } from '../services/AgentStreamRegistry'
 import { TerminalOutputAccumulator, type TerminalOutcome } from '../services/TerminalOutputAccumulator'
 import { AgentSessionRepository } from '../repositories/AgentSessionRepository'
@@ -244,7 +244,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 	 * operator missing the binary is told to install it rather than told the product does not support
 	 * their CLI.
 	 */
-	private async resolveProvider(provider: ProviderKind): Promise<{ detection: ProviderDetection; runner: AgentRunner }> {
+	private async resolveProvider(provider: ProviderKind): Promise<{ detection: DetectedProvider; runner: AgentRunner }> {
 		const detection = await this.providerDetector.resolve(provider)
 		if (!detection || detection.status !== ProviderStatus.DETECTED) {
 			throw new BaseError<AgentApplicationErrors>('PROVIDER_NOT_DETECTED', `provider ${provider} is not installed`)
@@ -255,7 +255,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 	private async drainRun(
 		input: this['input'],
 		runner: AgentRunner,
-		detection: ProviderDetection,
+		detection: DetectedProvider,
 		session: SessionPlan,
 	): Promise<RunObservations> {
 		const accumulator = new TerminalOutputAccumulator({ issueId: input.issueId })
