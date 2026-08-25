@@ -5,8 +5,9 @@ import { type ComponentProps, type ReactNode, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@codm/app-ui/button'
+import { tryCatchAsync } from '@/lib'
 import { cn } from '@/lib/utils'
-import { type RepairAvailability, useSystemPreconditions } from '@/services'
+import { SYSTEM_PRECONDITION_IDS, type RepairAvailability, useSystemPreconditions } from '@/services'
 import { useSystemPreconditionsStore } from '@/stores/useSystemPreconditionsStore'
 
 /**
@@ -39,17 +40,13 @@ export function FullDiskAccessCard({ className, ...props }: ComponentProps<'div'
 	const pending = useSystemPreconditionsStore(state => state.pending)
 	// Nada pendente ainda respondido (ou esta pré-condição não está entre as pendências) degrada
 	// para AVAILABLE — o comportamento de hoje — em vez de deixar o cartão em branco.
-	const repairAvailability: RepairAvailability = pending?.find(status => status.id === 'FULL_DISK_ACCESS')?.repair ?? 'AVAILABLE'
+	const repairAvailability: RepairAvailability = pending?.find(status => status.id === SYSTEM_PRECONDITION_IDS[0])?.repair ?? 'AVAILABLE'
 
 	const repair = async () => {
 		setRepairing(true)
-		try {
-			await systemPreconditions.repair('FULL_DISK_ACCESS')
-		} catch {
-			toast.error(t('systemPreconditions.repairFailed'))
-		} finally {
-			setRepairing(false)
-		}
+		const result = await tryCatchAsync(() => systemPreconditions.repair(SYSTEM_PRECONDITION_IDS[0]))
+		if (!result.success) toast.error(t('systemPreconditions.repairFailed'))
+		setRepairing(false)
 	}
 
 	// D3 (screen d4bKAl) — the button comes FIRST, `actionHint` (the two-step explanation) moves

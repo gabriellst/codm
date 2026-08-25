@@ -16,7 +16,7 @@ import { useSystemPreconditionsStore } from '@/stores/useSystemPreconditionsStor
 import { useOnboardingStore as useOnboardingRequiredStore } from '@/stores/useOnboardingStore'
 import { useOnboardingSetupStore } from '../../-stores/useOnboardingSetupStore'
 import { useOnboardingStore } from '../../-stores/useOnboardingStore'
-import { canComplete, firstUnvanquishedStep, onboardingSteps, type StepId, STEP_TAXONOMY } from '../steps'
+import { canComplete, firstUnvanquishedStep, INFORMATIVE_KIND, onboardingSteps, type StepId, STEP_TAXONOMY } from '../steps'
 import { STEP_COMPONENTS } from '../step-components'
 
 // D3 (screens NN8IL/FPKgO/tBcCA) — the three intro slides sit over a pair of soft blurred
@@ -256,7 +256,7 @@ export function OnboardingFlow({ className, ...props }: ComponentProps<'div'>) {
 	// first step that actually does something — never an exit from onboarding (that "Pular" died at
 	// spec Decision 13, before this front existed; see OnboardingFlow's test docblock). Presentation
 	// only: it calls the SAME `goTo` every other nav control uses.
-	const firstActionableIndex = steps.findIndex(id => STEP_TAXONOMY[id].kind !== 'INFORMATIVE')
+	const firstActionableIndex = steps.findIndex(id => STEP_TAXONOMY[id].kind !== INFORMATIVE_KIND)
 	const skipTarget = firstActionableIndex === -1 ? lastIndex : firstActionableIndex
 
 	// Nenhum StepId real é REQUIRED hoje (STEP_TAXONOMY), então isto avalia sempre `true` na prática —

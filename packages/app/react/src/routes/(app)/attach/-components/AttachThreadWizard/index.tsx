@@ -109,7 +109,7 @@ export function AttachThreadWizard({ className, ...props }: ComponentProps<'div'
 	}
 	const canContinue = CAN_CONTINUE[stepId]
 	const isFirstStep = currentStepIndex === 0
-	const isLastStep = stepId === 'REVIEW'
+	const isLastStep = currentStepIndex === STEPS.length - 1
 
 	// Step dispatch by map — never a switch chain (CMP-P18). Each step gets the FRM-P17 props
 	// contract; the review step additionally receives the accumulated selection + option lists.

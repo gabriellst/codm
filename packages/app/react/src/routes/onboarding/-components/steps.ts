@@ -74,6 +74,10 @@ export const STEP_TAXONOMY: Record<StepId, StepTaxonomy> = {
 // fonte única de verdade que tipa `StepKind`, só que endereçada por nome no ponto de uso.
 const REQUIRED_KIND: StepKind = STEP_KINDS[1]
 
+// Mesmo canon acima, para o outro extremo do union — `OnboardingFlow` usa este para achar o
+// primeiro passo ACIONÁVEL (o primeiro que não é só leitura) ao computar o alvo do "Pular".
+export const INFORMATIVE_KIND: StepKind = STEP_KINDS[0]
+
 /**
  * Concluir é bloqueado APENAS por um passo REQUIRED insatisfeito, e por nada mais (spec Decision
  * 13). Genérica sobre `Id` (mesmo padrão de `SystemPreconditionList<Id extends string>`) porque o

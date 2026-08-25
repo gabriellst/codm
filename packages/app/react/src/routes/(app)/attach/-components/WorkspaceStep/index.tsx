@@ -95,7 +95,26 @@ export function WorkspaceStep({ workspaces, defaultValues, onSubmit, className, 
 	}
 
 	// ─── "Adicionar uma pasta" — register a new workspace without leaving the wizard ──────────────
-	const addWorkspace = useAddWorkspace()
+	// `onSuccess` lives in the HOOK's mutation options (component bp-30), never `mutate()`'s second
+	// argument — those callbacks live on the React Query OBSERVER and are skipped if this component
+	// unmounts before the response lands, while the hook's own survive. `form` below is referenced
+	// through closure only — this callback never runs before `form` is assigned (mutation success is
+	// always later than the render that declares it).
+	const addWorkspace = useAddWorkspace({
+		mutation: {
+			onSuccess: res => {
+				queryClient.invalidateQueries({ queryKey: listWorkspacesQueryKey() })
+				// This list is fed by `getAttachThreadWizard`, not `listWorkspaces` — without this second
+				// invalidation the folder just created would not appear until an accidental refetch (same
+				// reason `AddWorkspaceForm` invalidates both).
+				queryClient.invalidateQueries({ queryKey: getAttachThreadWizardQueryKey() })
+				setShowManualInput(false)
+				form.reset()
+				// Same path a row click takes — the fresh folder is recorded as THE selection.
+				selectWorkspace(res.workspaceId)
+			},
+		},
+	})
 	const filePicker = useFilePicker()
 	const [canPickFolder, setCanPickFolder] = useState(false)
 	useEffect(() => {
@@ -116,22 +135,7 @@ export function WorkspaceStep({ workspaces, defaultValues, onSubmit, className, 
 		defaultValues: { path: '' },
 		validators: { onChange: addWorkspaceMutationRequestSchema },
 		onSubmit: async ({ value }) => {
-			addWorkspace.mutate(
-				{ data: value },
-				{
-					onSuccess: res => {
-						queryClient.invalidateQueries({ queryKey: listWorkspacesQueryKey() })
-						// This list is fed by `getAttachThreadWizard`, not `listWorkspaces` — without this
-						// second invalidation the folder just created would not appear until an accidental
-						// refetch (same reason `AddWorkspaceForm` invalidates both).
-						queryClient.invalidateQueries({ queryKey: getAttachThreadWizardQueryKey() })
-						setShowManualInput(false)
-						form.reset()
-						// Same path a row click takes — the fresh folder is recorded as THE selection.
-						selectWorkspace(res.workspaceId)
-					},
-				},
-			)
+			addWorkspace.mutate({ data: value })
 		},
 	})
 
