@@ -25,7 +25,7 @@ type Config struct {
 // gateway-IDENTITY concern the way Port/EventGroupID are.
 func LoadConfig() (*Config, error) {
 	cfg := &Config{
-		LogLevel: enums.LogLevel(getEnvOrDefault("WHATSMEOW_LOG_LEVEL", "WARN")),
+		LogLevel: enums.LogLevel(getEnvOrDefault("WHATSMEOW_LOG_LEVEL", string(enums.LogLevelWarn))),
 	}
 
 	if err := validator.New().Struct(cfg); err != nil {
