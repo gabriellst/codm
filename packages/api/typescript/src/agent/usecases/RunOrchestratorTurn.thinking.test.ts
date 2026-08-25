@@ -1,13 +1,8 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import type { ZodType } from 'zod'
-import {
-	CommandQueue,
-	LibSqlCommandQueue,
-	LibSqlDatabaseDriver,
-	MockLoggingService,
-	PHASE_EDIT_MIN_INTERVAL_MS,
-} from '@codm/core-typescript'
+import { CommandQueue, LibSqlCommandQueue, LibSqlDatabaseDriver, MockLoggingService } from '@codm/core-typescript'
+import { PHASE_EDIT_MIN_INTERVAL_MS } from '@codm/contracts/cues'
 import { ChannelKind, MailboxItemKind, MessageAuthor, MessageType, ProviderKind } from '@codm/contracts-typescript/wire/enums'
 import { ChannelMessageReceivedInProcessEvent, OrchestratorRepliedEvent } from '@codm/contracts-typescript/wire/events'
 import { TestBed, givenThread } from '@test/support'

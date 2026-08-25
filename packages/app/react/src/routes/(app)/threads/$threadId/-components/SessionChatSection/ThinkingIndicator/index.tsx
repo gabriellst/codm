@@ -1,6 +1,6 @@
 import * as React from 'react'
-import { easeSpinnerFrames, pickThinkingVerb } from '@codm/core-typescript/cues'
-import type { ThinkingVerb } from '@codm/core-typescript/cues'
+import { easeSpinnerFrames, pickThinkingVerb } from '@codm/contracts/cues'
+import type { ThinkingVerb } from '@codm/contracts/cues'
 import { cn } from '@/lib/utils'
 
 /**

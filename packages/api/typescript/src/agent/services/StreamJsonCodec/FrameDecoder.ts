@@ -1,5 +1,5 @@
 import { AgentStopReason } from '@codm/contracts-typescript/wire/enums'
-import { describeToolActivity } from '@codm/core-typescript'
+import { describeToolActivity } from '@codm/contracts/cues'
 import type { AgentFrame, AgentTurnUsage } from '../../types/AgentFrame'
 
 /**

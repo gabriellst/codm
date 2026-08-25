@@ -14,7 +14,8 @@
 		"./context-ids": "./src/contexts/context-ids.generated.ts",
 		"./namespaces": "./src/contexts/namespaces.ts",
 		"./placement": "./src/contexts/placement.ts",
-		"./context": "./src/contexts/context.ts"
+		"./context": "./src/contexts/context.ts",
+		"./cues": "./src/cues/thinking.ts"
 	},
 	"scripts": {
 		"tsp:compile": "tsp compile src/wire/",
@@ -32,7 +33,7 @@
 		"drizzle:generate:cloud": "bun --env-file=../../.env x drizzle-kit generate --config=src/db/pg/drizzle.config.ts",
 		"drizzle:migrate:cloud": "bun --env-file=../../.env src/db/pg/deploy.ts",
 		"all": "bun run tsp:compile && bun run codegen:wire && bun run codegen:fixtures && bun run drizzle:generate",
-		"test": "bun test codegen/ src/db/ && bun run test:rust && bun run test:go"
+		"test": "bun test codegen/ src/db/ src/cues/ && bun run test:rust && bun run test:go"
 	},
 	"dependencies": {
 		"drizzle-orm": "^0.45.2",

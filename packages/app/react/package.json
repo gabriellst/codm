@@ -19,6 +19,7 @@
 		"@codm/app-tauri": "workspace:*",
 		"@codm/app-ui": "workspace:*",
 		"@codm/client-typescript": "workspace:*",
+		"@codm/contracts": "workspace:*",
 		"@codm/core-typescript": "workspace:*",
 		"@maskito/core": "^5.0.1",
 		"@maskito/react": "^5.0.1",

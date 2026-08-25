@@ -9,8 +9,7 @@
 		"./db/lock": "./src/db/drivers/DataDirLock.ts",
 		"./schema": "./src/utils/schema/index.ts",
 		"./schemas": "./src/schemas/index.ts",
-		"./events": "./src/events.ts",
-		"./cues": "./src/utils/ThinkingCues.ts"
+		"./events": "./src/events.ts"
 	},
 	"scripts": {
 		"tsc": "bun x tsc --noEmit",

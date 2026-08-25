@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from 'bun:test'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { THINKING_GLYPHS, THINKING_VERBS } from '@codm/core-typescript/cues'
+import { THINKING_GLYPHS, THINKING_VERBS } from '@codm/contracts/cues'
 import { ThinkingIndicator } from './index'
 
 /**

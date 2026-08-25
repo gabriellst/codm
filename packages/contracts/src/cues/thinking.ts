@@ -1,7 +1,10 @@
 // ThinkingCues — MÓDULO FOLHA, zero imports.
-// Consumido pelo daemon (mensagem de fase no canal) E pelo console (spinner do chat) —
-// uma lista só (spec AC-5). A ausência de imports é CONTRATO: o bundle do console puxa
-// este arquivo sem arrastar o kernel Node do core (validado pelo build-spa em T3).
+// Consumido pelo daemon (mensagem de fase no canal) E pelo console (spinner do chat), ambos
+// importando `@codm/contracts/cues` DIRETO — uma lista só (spec AC-5). Vive em `@codm/contracts`
+// (não em `@codm/core-typescript`) porque é vocabulário COMPARTILHADO entre os dois lados do wire, e
+// `packages/app/react` nunca pode importar um pacote de backend (import-direction R5). A ausência de
+// imports aqui é CONTRATO: o bundle do console puxa este arquivo sem arrastar o kernel Node do core
+// (validado pelo build-spa em T3).
 
 /** Os 26 glifos da diretiva do founder, ROTACIONADOS para abrir em ✻, + o retorno a ✻. */
 export const THINKING_GLYPHS = [

@@ -48,7 +48,7 @@ export type AgentFrame =
 			input: unknown
 			/**
 			 * A SANITIZED, already-summarized preview of `input` — `describeToolActivity(tool, input).target`
-			 * from `@codm/core-typescript`, computed once here at decode time (never a path, never file
+			 * from `@codm/contracts/cues`, computed once here at decode time (never a path, never file
 			 * content, truncated to ~48 chars). This is what the rest of the system (the thinking-phase edit
 			 * in `RunOrchestratorTurn`, chiefly) is meant to read — `input` itself stays on the frame for the
 			 * consumers that already used it before this field existed (the terminal SSE panel's own

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { THINKING_GLYPHS, THINKING_VERBS, describeToolActivity, easeSpinnerFrames, pickThinkingVerb, thinkingLine } from './ThinkingCues'
+import { THINKING_GLYPHS, THINKING_VERBS, describeToolActivity, easeSpinnerFrames, pickThinkingVerb, thinkingLine } from './thinking'
 
 describe('THINKING_GLYPHS', () => {
 	it('é o ciclo rotacionado: começa e termina em ✻ (AC-4)', () => {
