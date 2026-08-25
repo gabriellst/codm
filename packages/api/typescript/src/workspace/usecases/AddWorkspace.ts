@@ -8,10 +8,25 @@ import { WorkspaceDetector } from '../services/WorkspaceDetector'
 import { WorkspaceAddedEvent } from '../events/WorkspaceAddedEvent'
 import type { ApplicationErrors } from '../errors'
 
+/**
+ * Caminho ABSOLUTO em qualquer SO em que o daemon roda — UMA regex, sem `node:path`, porque este
+ * schema atravessa o fio: o OpenAPI emite `pattern`, o Kubb re-emite `.regex(...)` em
+ * `addWorkspaceMutationRequestSchema` (os três forms do console validam com ele) e o progenitor
+ * cunha `AddWorkspaceBodyPath` (client rust) com o MESMO padrão. Uma alternativa por família:
+ *   `/…`              POSIX (macOS, Linux)
+ *   `C:\…` / `C:/…`   Windows com letra de unidade — o separador logo após `:` é obrigatório
+ *                     (`C:acme` é relativo à unidade corrente, não absoluto)
+ *   `\\servidor\…`    UNC (cobre também a forma estendida `\\?\C:\…`)
+ * Era `.startsWith('/')`, que rejeitava TODO caminho do Windows antes de o detector olhar o disco.
+ * O caminho NÃO é normalizado (separadores/case) — o dedupe por owner é textual, e o Windows FS
+ * ser case-insensitive é limitação aceita nesta fase.
+ */
+export const ABSOLUTE_PATH_PATTERN = /^(?:\/|[A-Za-z]:[\\/]|\\\\)/
+
 export const AddWorkspaceInputSchema = z.object({
 	ownerId: z.uuid(),
 	// Absolute path selected via the native folder picker — bounded and shape-checked at the edge.
-	path: z.string().trim().min(1).max(1024).startsWith('/'),
+	path: z.string().trim().min(1).max(1024).regex(ABSOLUTE_PATH_PATTERN),
 })
 
 export const AddWorkspaceOutputSchema = z.object({
