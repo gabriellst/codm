@@ -11,27 +11,100 @@
 | **stable** | tag `vX.Y.Z` (workflow `release-stable`) | `releases/latest/download/latest.json` (o `latest` do GitHub ignora prereleases) |
 
 O app checa o canal ~10s após o boot (release builds apenas — dev nunca se auto-atualiza), baixa o
-`.app.tar.gz`, **verifica a assinatura minisign** contra a pubkey embarcada, instala e relança.
-Falha de rede/endpoint é logada e engolida: update nunca custa o app.
+artefato de update da sua plataforma (tabela em "Plataformas", abaixo), **verifica a assinatura
+minisign** contra a pubkey embarcada, instala e relança. Falha de rede/endpoint é logada e engolida:
+update nunca custa o app.
 
 ### Trocar o canal de uma máquina
 
+O arquivo `update-channel` vive no data dir do app (`app_data_dir()/data`), que muda por SO:
+
 ```bash
+# macOS
+DATA="$HOME/Library/Application Support/app.codm.desktop/data"
+# Linux
+DATA="$HOME/.local/share/app.codm.desktop/data"
+# Windows (git-bash / PowerShell: $env:APPDATA\app.codm.desktop\data)
+DATA="$APPDATA/app.codm.desktop/data"
+
 # entrar no beta (máquinas do founder):
-echo beta > "$HOME/Library/Application Support/app.codm.desktop/data/update-channel"
+echo beta > "$DATA/update-channel"
 # voltar ao stable:
-rm "$HOME/Library/Application Support/app.codm.desktop/data/update-channel"
+rm "$DATA/update-channel"
 ```
 
 `CODM_UPDATE_CHANNEL=beta` (env) sobrepõe o arquivo — uso de CI/teste.
+
+## Plataformas (desde 2026-08-25)
+
+| Plataforma | Instalador (humano) | Artefato de update (o que o `latest.json` aponta) | Assinatura do app | Chave no manifest |
+|---|---|---|---|---|
+| macOS arm64 | `.dmg` | `.app.tar.gz` + `.sig` | Developer ID + notarização | `darwin-aarch64` |
+| Linux x64 | `.AppImage` **ou** `.deb` | `.AppImage` + `.sig` | nenhuma | `linux-x86_64` |
+| Windows x64 | `-setup.exe` (NSIS) | `-setup.exe` + `.sig` | nenhuma nesta fase (SmartScreen avisa) | `windows-x86_64` |
+
+A chave **minisign** é a mesma para os três: é a pubkey embarcada (`config/updater.ts`) que cada
+app verifica. Fora: Windows arm64 (o libsql não publica prebuild `win32-arm64`) e Linux arm64
+(depois; o prebuild existe, falta o runner).
+
+Nomes no R2 (`pub-….r2.dev`), por canal:
+
+| | beta (fixo, rolante) | stable (versionado, retenção total) | alias fixo (landing) |
+|---|---|---|---|
+| macOS | `beta/codm-aarch64.{dmg,app.tar.gz,app.tar.gz.sig}` | `stable/CODM_vX.Y.Z_aarch64.{dmg,app.tar.gz,app.tar.gz.sig}` | `stable/codm-aarch64.dmg` |
+| Linux | `beta/codm-linux-x86_64.{AppImage,AppImage.sig,deb}` | `stable/CODM_vX.Y.Z_linux-x86_64.{AppImage,AppImage.sig,deb}` | `stable/codm-linux-x86_64.{AppImage,deb}` |
+| Windows | `beta/codm-windows-x86_64-setup.exe{,.sig}` | `stable/CODM_vX.Y.Z_windows-x86_64-setup.exe{,.sig}` | `stable/codm-windows-x86_64-setup.exe` |
+
+Nomes exatos por trás da notação `{...}` acima (o que os `put` do R2 nos workflows escrevem em
+`beta/`; o `release-stable` versiona os mesmos nomes sob `stable/CODM_vX.Y.Z_...`):
+`codm-linux-x86_64.AppImage`, `codm-linux-x86_64.AppImage.sig`, `codm-linux-x86_64.deb`,
+`codm-windows-x86_64-setup.exe`, `codm-windows-x86_64-setup.exe.sig`.
+
+`latest.json` é **um por canal** com as três plataformas dentro. Se o build de um SO falha, nada é
+publicado — um manifest parcial deixaria uma plataforma presa numa versão enquanto as outras
+avançam, e o cliente daquela plataforma nunca saberia.
+
+### Linux
+
+- **AppImage é o formato do updater.** O `.deb` existe para quem prefere o gerenciador de pacotes,
+  mas **não se auto-atualiza** (o plugin só sabe substituir AppImage): quem instala pelo `.deb`
+  atualiza baixando o `.deb` novo. Diga isso na página de download.
+- AppImage precisa de FUSE 2 em algumas distros (`sudo apt install libfuse2` no Ubuntu 22.04+; ou
+  rode com `--appimage-extract-and-run`). Marque como executável (`chmod +x`) — o browser não faz.
+- **Keyring**: o shell guarda a sessão via `keyring` com `sync-secret-service`, que exige um
+  Secret Service D-Bus rodando (gnome-keyring, KWallet ≥ 5.97 com o portal, KeePassXC com o
+  Secret Service ligado). Sem ele o login não persiste entre aberturas. **Limitação conhecida
+  desta fase** — sem fallback em arquivo por enquanto.
+- Sem assinatura: não há Gatekeeper/SmartScreen no Linux; a integridade do update é a minisign.
+- Runner de build: `ubuntu-22.04` hospedado, chave da matriz e do manifest `linux-x86_64`.
+- Dados em `~/.local/share/app.codm.desktop/data` (o `app_data_dir` do Tauri + `data`).
+
+### Windows
+
+- Instalador **NSIS** (`-setup.exe`), por usuário, com o WebView2 via *download bootstrapper* —
+  a primeira instalação numa máquina sem WebView2 (raro: Win10/11 atualizados já têm) precisa de
+  internet. Sem MSI de propósito: o updater instala o NSIS em silêncio; dois formatos seriam dois
+  caminhos de update.
+- **Sem assinatura Authenticode nesta fase.** O SmartScreen mostra "O Windows protegeu o computador"
+  → *Mais informações* → *Executar assim mesmo*. O auto-update **não** passa pelo SmartScreen
+  (o updater verifica a minisign e roda o instalador em silêncio). Quando a assinatura entrar
+  (roadmap: Azure Trusted Signing, ~US$10/mês), o slot é `bundle.windows.signCommand` na conf
+  gerada — renderizado por `config/generate.ts` a partir de env, nunca cravado no JSON, pela mesma
+  razão que `signingIdentity` fica `'-'` (DSK-10): build local não pode exigir certificado.
+- Dados em `%APPDATA%\app.codm.desktop\data`.
+- O reaper de órfãos e o desligamento gracioso são diferentes no Windows (não há SIGTERM); o
+  daemon é derrubado pelo watchdog de `CODM_PARENT_PID` e pela terminação da árvore — ver o plano
+  `.plans/2026-08-25-windows-linux-build.md`.
 
 ## Cortar uma release estável
 
 1. Suba a versão em `packages/app/tauri/src-tauri/tauri.conf.json` **via config gerada** (o campo
    `version` da conf; regenere com `bun desktop:generate` se a fonte mudar de lugar) e commite.
 2. `git tag v<X.Y.Z> && git push origin v<X.Y.Z>`.
-3. O workflow valida **tag == versão da conf** (diverge ⇒ falha sem publicar), builda, assina os
-   artefatos de update e publica a release com DMG + `.app.tar.gz` + `.sig` + `latest.json`.
+3. O workflow valida **tag == versão da conf** (diverge ⇒ falha sem publicar, antes de qualquer
+   build), builda nos três SOs em paralelo (macOS self-hosted, Linux e Windows hospedados), assina
+   os artefatos de update e — só se os três passaram — publica a release com DMG + AppImage + deb +
+   NSIS + `.sig`s + um `latest.json` de três plataformas, e sobe tudo ao R2 (versionado + aliases).
 
 O beta não pede nada: mergear na main já publica `<versão-base>-beta.<run>` no canal.
 
@@ -162,6 +235,9 @@ Builds **anteriores** a essa data saíram ad-hoc e ainda exigem o contorno:
 3. Só na primeira vez: os auto-updates seguintes não passam pelo Gatekeeper (o updater baixa e
    aplica direto, verificando a assinatura minisign própria).
 
+Linux/Windows: formatos, avisos (SmartScreen, libfuse2, deb sem auto-update) e nomes de arquivo na
+seção "Plataformas" acima — a landing gera os CTAs por user-agent (task da lane landing).
+
 ## Crash logs
 
 Um panic do shell grava `…/app.codm.desktop/data/crashes/shell-<ts>.log` (payload + backtrace,
@@ -184,7 +260,46 @@ releases NELE mesmo ("somente fazer essa parte do publish depois no mesmo repo")
 
 ## O que este pipeline NÃO faz (ainda)
 
-Windows/Linux, rollout percentual, `minVersion` forçado, notarização Apple — ver roadmap (SP2/SP4).
+Assinatura Authenticode no Windows (SmartScreen avisa — ver "Windows" acima), Windows arm64 e
+Linux arm64, rollout percentual, `minVersion` forçado — ver roadmap (SP2/SP4).
+
+## A matriz de build (release-beta / release-stable)
+
+Os dois workflows têm a mesma forma, três jobs:
+
+1. **`prepare`** (ubuntu, segundos) — decide a versão (`<conf>-beta.<run>` ou a tag) e confere os
+   insumos que produzem um app quebrado em silêncio (`CODM_CLOUD_URL`, `VITE_POSTHOG_KEY`). No
+   stable é aqui que a tag é comparada com a conf — antes de gastar um minuto de build.
+2. **`build`** — uma matriz com **um runner por SO, sem cross-compile** (chaves `darwin-aarch64`,
+   `linux-x86_64`, `windows-x86_64` — as mesmas que o `make-manifest.ts` usa): o daemon é um `bun
+   build --compile` que só carrega o prebuild nativo do libsql do próprio host (`build-sidecars.ts`,
+   "CROSS-TRIPLE GAP"), então cada binário nasce no SO em que vai rodar. Cada entrada instala as
+   deps do SO, compila os sidecars, **sobe os dois e exige 200 no health** (`scripts/release/
+   smoke-sidecars.ts` — o gate que um build sozinho não dá), roda `tauri build --bundles <lista>`
+   (macOS `app,dmg`, Linux `appimage,deb`, Windows `nsis`; a conf gerada segue com `targets: all`),
+   renomeia os artefatos com o nome fixo da plataforma e os sobe como artifact do run.
+   Os passos macOS (keychain temporário + codesign dos Mach-O aninhados, `nice`, `target/` fora do
+   workspace, gate do Developer ID) ficam atrás de `if: runner.os == 'macOS'`.
+3. **`publish`** (ubuntu) — baixa os três artifacts, confere a lista completa, gera **um**
+   `latest.json` com as três plataformas (`make-manifest.ts --platform … --url … --sig-file …` ×3),
+   cria a release no GitHub, sobe ao R2 com o content-type certo (o `latest.json` por último) e
+   confere por `HEAD` que cada objeto tem o tamanho do arquivo local — o wrangler já saiu 0 sem
+   publicar.
+
+**Custo.** macOS é self-hosted (zero). Linux hospedado conta 1×, Windows 2×: um beta custa
+~40 min de cota (≈10 min Linux + ≈15 min Windows ×2). Com 2.000 min/mês isso dá ~50 betas — o
+filtro de caminhos do `release-beta` (só o que entra no app dispara) é o que mantém isso viável.
+O `correctness` tem um job `linux` (cargo check + sidecars + smoke, ~10 min ×1) filtrado do mesmo
+jeito por um `git diff` contra a base do PR; Windows **não** roda no gate de PR — quem pega quebra
+de Windows é o beta seguinte.
+
+**Cache.** `Swatinem/rust-cache` volta, mas **só nos runners hospedados** (`if: runner.os !=
+'macOS'`): eles são descartáveis, e a poda de `~/.cargo/bin` que apagou o `rustup` do founder
+(abaixo) não tem vítima lá.
+
+**Windows, três pegadinhas** já resolvidas nos workflows, para não redescobrir: o shell default é
+pwsh (`defaults.run.shell: bash` força git-bash em todo passo); os sidecars ganham `.exe`
+(build-sidecars.ts já faz); e não existe `nice` — é um campo da matriz, vazio fora do Mac.
 
 ## Runner self-hosted (macOS)
 
@@ -210,6 +325,11 @@ o custo em minutos.
 **Antes de tornar este repositório público**, remova o runner self-hosted: um PR de fork passaria a
 executar código arbitrário na máquina. As duas decisões são mutuamente exclusivas.
 
+Desde 2026-08-25 os builds de **Linux e Windows** rodam em runners hospedados (`ubuntu-22.04`,
+`windows-latest`) — não há Mac que os compile, e o daemon não cross-compila. Eles voltam a consumir
+cota (1× e 2×); o que os mantém baratos é o filtro de caminhos e o fato de o macOS, o único 10×,
+continuar aqui.
+
 ### O CI agora escreve na SUA máquina — actions de cache são o risco real
 
 Num runner descartável, uma action que "limpa" o ambiente não tem vítima. Aqui tem, e a primeira
@@ -222,10 +342,11 @@ O que torna isso traiçoeiro é a distância entre causa e sintoma: **o build qu
 passou**, verde. Quem falhou foi o workflow seguinte, com `Executable not found in $PATH: "cargo"`,
 e o desenvolvimento local teria falhado igual na próxima vez que alguém rodasse `bun contracts`.
 
-A action foi removida dos dois workflows de release e **não deve voltar**. Num runner persistente
-ela não tem função: o disco já persiste. O `target/` do Rust — a única coisa que o
-`git clean -ffdx` do checkout apagaria — vive fora do workspace via `CARGO_TARGET_DIR`, e sobrevive
-sem action nenhuma.
+A action foi removida dos passos do runner self-hosted e **não deve voltar a ele**. Nos jobs
+hospedados da matriz (Linux/Windows, `if: runner.os != 'macOS'`) ela roda — lá o runner é
+descartável e a poda de `~/.cargo/bin` não tem vítima. Num runner persistente ela não tem função: o
+disco já persiste. O `target/` do Rust — a única coisa que o `git clean -ffdx` do checkout apagaria
+— vive fora do workspace via `CARGO_TARGET_DIR`, e sobrevive sem action nenhuma.
 
 Para reparar, se acontecer de novo (as toolchains em `~/.rustup` sobrevivem; falta só o shim):
 

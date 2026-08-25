@@ -68,6 +68,8 @@ registrado em disco para diagnóstico.
    roadmap ("crash gera report visível ao founder") é satisfeito pelo arquivo local nesta fase.
 7. **macOS/arm64 apenas** nesta fase (runner `macos-14`). Windows/Linux seguem Open Question do
    roadmap.
+
+   > Superado em 2026-08-25 — ver .specs/2026-08-25-windows-linux-build-design.md (manifesto multi-plataforma, matrix de 3 SOs).
 8. **`createUpdaterArtifacts: true`** na bundle config gerada — o `tauri build` passa a emitir
    `.app.tar.gz` + `.sig` além do DMG.
 
@@ -97,6 +99,8 @@ registrado em disco para diagnóstico.
 - [ ] AC-4: `scripts/release/make-manifest.ts` produz um `latest.json` válido para o plugin
       (version, pub_date, platforms.darwin-aarch64.{url,signature}) a partir dos artefatos do
       build — coberto por teste unitário do script.
+
+      > Superado em 2026-08-25 — ver .specs/2026-08-25-windows-linux-build-design.md (manifesto multi-plataforma, matrix de 3 SOs).
 - [ ] AC-5: um panic do shell produz `crashes/shell-*.log` com o payload e mantém no máximo 20
       arquivos — coberto por teste da função de escrita/rotação.
 - [ ] AC-6: `cargo check` do shell limpo; `bun tsc` e `bun lint` limpos; `test:tooling` (rails
