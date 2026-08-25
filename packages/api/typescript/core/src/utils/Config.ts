@@ -1,4 +1,6 @@
 import { z } from 'zod'
+import os from 'node:os'
+import { defaultDataDir } from './UserConfigDir'
 
 /**
  * Raw field-level env schema — one entry per env var, each reproducing the exact default/coercion
@@ -28,16 +30,24 @@ const RawEnvSchema = z.object({
 	// opens too, plus its `-wal`/`-shm` companions and this daemon's `daemon.lock`; migrations apply
 	// on boot from either process, idempotently. A leading `~` expands to $HOME in the driver factory.
 	// Tests pass no dbPath (a process-scoped temp file) and never read this key.
-	// O NOME DA PASTA É DERIVADO de `PROJECT`, não escrito à mão — upstream-prep T8 (Decision 4),
-	// e o gêmeo Go faz o mesmo em `core/db/sqlite/store.go` (`projectName()`).
 	//
-	// Era um caminho com a marca escrita à mão: o nome do produto dentro do kernel que a W2 extrai,
-	// e o primeiro dos oito
-	// resíduos que a F3/T8 registrou como BLOQUEADOS numa decisão de desenho ("por onde a marca entra
-	// num kernel portável"). A resposta é esta: env, o único canal que já provou alcançar TS, Go e o
-	// core sem espelho nem import novo. `PROJECT` já existe e já é declarada no manifesto, então o
-	// caminho resolvido para ESTE fork não muda — muda de quem ele é.
-	CODM_DATA_DIR: z.string().default(`~/.${process.env.PROJECT ?? 'app'}/data`),
+	// O DEFAULT ESPELHA O GATEWAY GO, por SO (`core/db/sqlite/store.go` `resolveDataDir("")` →
+	// `os.UserConfigDir()` + nome do produto — ver `UserConfigDir.ts`): macOS
+	// `~/Library/Application Support/<produto>`, Windows `%AppData%\<produto>`, Linux
+	// `$XDG_CONFIG_HOME/<produto>` (ou `~/.config/<produto>`). Era `~/.<produto>/data` — um daemon
+	// standalone sem `.env` abria o mesmo arquivo de banco (`<produto>.db`) numa pasta diferente, que
+	// o gateway nunca veria. O shell desktop SEMPRE injeta CODM_DATA_DIR, então isto governa só o dev
+	// avulso. Lazy (`.default(fn)`): a resolução corre apenas quando a chave está ausente, e um
+	// `%AppData%` indefinido só é erro para quem precisa dele.
+	//
+	// O NOME DA PASTA É DERIVADO de `PROJECT` (fallback 'app'), não escrito à mão — upstream-prep T8
+	// (Decision 4): env é o único canal que alcança TS, Go e o core sem espelho nem import novo. (O
+	// gateway literaliza o nome do produto em store.go:344 — a follow-up 'go-datadir-project' (§Notes
+	// do plano) o alinha ao mesmo PROJECT-fallback-'app'; até lá, paridade exata do nome depende de
+	// `PROJECT` no ambiente.)
+	CODM_DATA_DIR: z
+		.string()
+		.default(() => defaultDataDir({ platform: process.platform, env: process.env, home: os.homedir() }, process.env.PROJECT ?? 'app')),
 	OTEL_COLLECTOR_TRACE_URL: z.string().default(''),
 	OTEL_SERVICE_NAME: z.string().default('service'),
 	OTEL_COLLECTOR_LOG_URL: z.string().default(''),

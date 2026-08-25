@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'bun:test'
+import os from 'node:os'
 import { EnvSchema } from './Config'
+import { defaultDataDir } from './UserConfigDir'
 
 /**
  * The boot-time secrets guard, and the incident that shaped it.
@@ -47,5 +49,32 @@ describe('production secrets guard', () => {
 		const result = parseUnderProfile('cloud', PROD_ENV)
 
 		expect(JSON.stringify(result.error?.issues)).not.toContain('JWT_SECRET')
+	})
+})
+
+/**
+ * O default de CODM_DATA_DIR é o diretório que o gateway Go abre quando ninguém lhe passa um
+ * (`store.go` `resolveDataDir("")`). Era `~/.<produto>/data` — um daemon avulso sem `.env` abria
+ * o mesmo arquivo de banco (`<produto>.db`) numa pasta diferente, que o gateway nunca veria. O
+ * shell desktop SEMPRE injeta a chave, então isto só governa o dev standalone; mas é exatamente aí
+ * que dois bancos silenciosos custam uma tarde.
+ *
+ * Paridade do NOME da pasta: aqui o produto deriva de PROJECT (fallback 'app'); o Go alinha na task
+ * irmã follow-up 'go-datadir-project' (o gateway ainda literaliza o nome do produto em store.go:344).
+ */
+describe('CODM_DATA_DIR default — o mesmo diretório que o gateway Go abre', () => {
+	it('sem a chave, resolve para <UserConfigDir>/<produto> desta plataforma (nunca mais ~/.<produto>/data)', () => {
+		const result = EnvSchema.safeParse({})
+
+		expect(result.success).toBe(true)
+		const expected = defaultDataDir({ platform: process.platform, env: process.env, home: os.homedir() }, process.env.PROJECT ?? 'app')
+		expect(result.data?.CODM_DATA_DIR).toBe(expected)
+		expect(result.data?.CODM_DATA_DIR.startsWith('~')).toBe(false)
+	})
+
+	it('com a chave, o valor passa intocado — o shell injeta o app_data_dir dele e o .env o seu', () => {
+		const result = EnvSchema.safeParse({ CODM_DATA_DIR: '~/.acme/data' })
+
+		expect(result.data?.CODM_DATA_DIR).toBe('~/.acme/data')
 	})
 })
