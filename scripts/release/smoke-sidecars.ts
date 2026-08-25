@@ -23,6 +23,17 @@ export const HEALTH_BUDGET_MS = 60_000
 export const HEALTH_CADENCE_MS = 500
 
 /**
+ * MIRROR of `core/src/utils/StdinShutdown.ts` `SHUTDOWN_SENTINEL_LINE` and
+ * `src-tauri/src/sidecars/lifecycle.rs` `SHUTDOWN_SENTINEL` — a three-way frozen wire constant.
+ * Pinned as a literal here, NOT imported from core: scripts under `scripts/` stay standalone (no
+ * dependency on the api-typescript workspace).
+ */
+const SHUTDOWN_SENTINEL_LINE = 'supervisor:shutdown'
+
+/** Quanto esperar o daemon drenar sozinho depois da sentinela, antes de escalar para kill(). */
+const SENTINEL_STOP_BUDGET_MS = 5_000
+
+/**
  * Portas do smoke — NUNCA as de produção (3030/3032). O runner macOS é a máquina de trabalho do
  * founder, e o daemon real dela escuta nas portas de produção; um smoke nelas falharia por
  * EADDRINUSE ou, pior, mediria o daemon errado.
@@ -168,8 +179,24 @@ const sleep = (ms: number): Promise<void> => new Promise(r => setTimeout(r, ms))
  * Spawn num helper próprio para o tsc INFERIR `stderr: 'pipe'` no tipo do Subprocess: `proc.stderr`
  * sai `ReadableStream<Uint8Array>` (async-iterável no bun) e o `for await` dispensa qualquer cast —
  * tipar por `ReturnType<typeof Bun.spawn>` (genérico nos defaults) mascararia isso com um `as`.
+ *
+ * Espelha o shell mais fielmente para o daemon: `stdin: 'pipe'`, mantido aberto pelo run inteiro,
+ * porque `armStdinShutdown` (core/src/utils/StdinShutdown.ts) só é armado quando `CODM_PARENT_PID`
+ * está setado — e este smoke seta (mirrora o env do shell). Sem um pipe vivo, o padrão do
+ * `Bun.spawn` é `stdin: 'ignore'`, que o filho lê como EOF imediato; era exatamente isso que
+ * derrubava o daemon antes dele responder health (ver `stop`/`stopGracefully` abaixo para o uso
+ * desse pipe). O gateway não lê stdin — fica no default.
  */
 function spawnSidecar(plan: SidecarPlan) {
+	if (plan.role === 'daemon') {
+		return Bun.spawn([plan.binary], {
+			cwd: plan.cwd,
+			env: { ...inheritedEnv(), ...plan.env },
+			stdin: 'pipe',
+			stdout: 'ignore',
+			stderr: 'pipe',
+		})
+	}
 	return Bun.spawn([plan.binary], {
 		cwd: plan.cwd,
 		env: { ...inheritedEnv(), ...plan.env },
@@ -220,7 +247,31 @@ async function waitHealthy(r: Running): Promise<string | null> {
 	return `${r.plan.name} não respondeu 200 em ${r.plan.healthUrl} dentro de ${HEALTH_BUDGET_MS / 1000}s (último: ${last})`
 }
 
+/**
+ * O PASSO GRACIOSO que o shell exercita no quit (`lifecycle.rs` `Supervised::terminate`, TODA
+ * plataforma) — mirrorado aqui de ponta a ponta para o smoke provar isso de verdade, em todo
+ * runner: escreve a linha-sentinela no stdin do daemon (o `armStdinShutdown` do lado de lá só
+ * reage a essa linha exata — EOF não dispara mais nada, ver `StdinShutdown.ts`), depois espera o
+ * drain. `false` sem lançar quando não há `stdin` piped (só o daemon tem, ver `spawnSidecar`) ou
+ * quando a escrita falha (pipe já fechado) — o chamador escala para `kill()` de todo modo.
+ */
+async function stopGracefully(proc: Spawned): Promise<boolean> {
+	if (!proc.stdin) return false
+	try {
+		proc.stdin.write(`${SHUTDOWN_SENTINEL_LINE}\n`)
+		await proc.stdin.flush()
+	} catch {
+		return false
+	}
+	return Promise.race([proc.exited.then(() => true), sleep(SENTINEL_STOP_BUDGET_MS).then(() => false)])
+}
+
 async function stop(r: Running): Promise<void> {
+	if (r.proc.exitCode !== null) return
+	if (r.plan.role === 'daemon') {
+		const graceful = await stopGracefully(r.proc)
+		console.log(`[smoke] ${r.plan.name}: ${graceful ? 'saiu pela linha-sentinela (graceful)' : 'nao respondeu a sentinela a tempo, kill'}`)
+	}
 	if (r.proc.exitCode !== null) return
 	// SIGTERM no unix (o daemon drena); no Windows o bun termina o processo — o que o shell também faz lá.
 	r.proc.kill()

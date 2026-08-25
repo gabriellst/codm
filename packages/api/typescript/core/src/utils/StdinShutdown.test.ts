@@ -95,7 +95,23 @@ describe('armStdinShutdown', () => {
 		expect(shutdowns).toBe(1)
 	})
 
-	test('EOF with no sentinel still fires — the pipe closing means the same thing', async () => {
+	test('EOF with no sentinel does NOT fire — redundant with the parent watchdog + SIGTERM, and a footgun for any supervisor without a live stdin pipe', async () => {
+		let shutdowns = 0
+		armStdinShutdown({
+			stdin,
+			enabled: true,
+			onShutdown: () => {
+				shutdowns += 1
+			},
+		})
+		stdin.write('some unrelated line\n')
+		await Bun.sleep(10)
+		stdin.end()
+		await Bun.sleep(10)
+		expect(shutdowns, 'EOF sozinho nunca e um pedido de shutdown — so a linha-sentinela e').toBe(0)
+	})
+
+	test('EOF immediately after arming does not fire — the exact smoke-sidecars scenario (no stdin pipe kept open)', async () => {
 		let shutdowns = 0
 		armStdinShutdown({
 			stdin,
@@ -106,10 +122,10 @@ describe('armStdinShutdown', () => {
 		})
 		stdin.end()
 		await Bun.sleep(10)
-		expect(shutdowns).toBe(1)
+		expect(shutdowns, 'um supervisor sem pipe de stdin vivo nao pode derrubar o daemon antes dele responder health').toBe(0)
 	})
 
-	test('a sentinel followed by EOF fires only once — the second trigger is a no-op', async () => {
+	test('sentinel then EOF fires exactly once — EOF after the drain already ran is a no-op', async () => {
 		let shutdowns = 0
 		armStdinShutdown({
 			stdin,
@@ -122,10 +138,7 @@ describe('armStdinShutdown', () => {
 		await Bun.sleep(10)
 		stdin.end()
 		await Bun.sleep(10)
-		expect(
-			shutdowns,
-			'dois triggers, um drain — o segundo tem de ser ignorado aqui MESMO antes do isShuttingDown de index.ts entrar em jogo',
-		).toBe(1)
+		expect(shutdowns, 'a linha-sentinela e o unico gatilho; o EOF que segue nao dispara um segundo drain').toBe(1)
 	})
 
 	test('an unrelated line changes nothing — only an exact match fires', async () => {

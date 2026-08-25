@@ -53,14 +53,18 @@ export interface StdinShutdownOptions {
  * what keeps `bun dev`, tests and the e2e harness untouched — none of them are supervised by a
  * desktop shell.
  *
- * Two triggers, because a pipe can end two ways: a matched LINE (the shell wrote the sentinel) or
- * EOF with no trailing line at all (the shell's end of the pipe closed — the `CommandChild` handle
- * dropped, or the pipe broke). Both mean the same thing here: nobody upstream can write to us any
- * more, so react exactly as if the shell had asked.
+ * ONE trigger: a matched sentinel LINE. EOF on stdin is deliberately NOT a shutdown order — it is
+ * redundant with two mechanisms that already cover "the supervisor is gone" without this one's
+ * footgun: `startParentWatchdog` (polls liveness) and SIGTERM on POSIX. The footgun: ANY supervisor
+ * that sets `CODM_PARENT_PID` (arming this listener) without keeping a live stdin pipe open to the
+ * child — CI, a service manager, a dev/smoke script that mirrors the shell's env but spawns without
+ * `stdin: 'pipe'` — hands the child a stdin that reads EOF immediately, so treating EOF as "stop"
+ * shut the daemon down before it ever answered health. On EOF this just releases the listeners
+ * (`release()`) and does nothing else; there is no path from EOF to `onShutdown`.
  *
- * Fires `onShutdown` AT MOST ONCE — a second sentinel, or EOF after a sentinel already fired, is
- * silently ignored here; `shutdown()` itself (`src/index.ts`) carries its own `isShuttingDown` guard,
- * so a sentinel racing a SIGTERM is safe at two independent layers, not just one.
+ * Fires `onShutdown` AT MOST ONCE — a second sentinel is silently ignored here; `shutdown()` itself
+ * (`src/index.ts`) carries its own `isShuttingDown` guard, so a sentinel racing a SIGTERM is safe at
+ * two independent layers, not just one.
  */
 export function armStdinShutdown(options: StdinShutdownOptions): void {
 	const enabled = options.enabled ?? Boolean(process.env[PARENT_PID_ENV])
@@ -69,6 +73,11 @@ export function armStdinShutdown(options: StdinShutdownOptions): void {
 	const stdin = options.stdin ?? process.stdin
 	let fired = false
 	let buffered = ''
+
+	const release = (): void => {
+		stdin.off('data', onData)
+		stdin.off('end', release)
+	}
 
 	const onData = (chunk: string | Buffer): void => {
 		buffered += chunk.toString()
@@ -85,12 +94,11 @@ export function armStdinShutdown(options: StdinShutdownOptions): void {
 	const fire = (): void => {
 		if (fired) return
 		fired = true
-		stdin.off('data', onData)
-		stdin.off('end', fire)
+		release()
 		options.onShutdown()
 	}
 
 	stdin.setEncoding('utf8')
 	stdin.on('data', onData)
-	stdin.on('end', fire)
+	stdin.on('end', release)
 }

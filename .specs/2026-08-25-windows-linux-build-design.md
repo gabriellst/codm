@@ -121,7 +121,10 @@ antes do `/build`. As que mudam a forma do trabalho estão marcadas **(virável 
     `lifecycle.rs` é no-op em `not(unix)` e o force é TerminateProcess): o shell passa a
     escrever uma linha-sentinela no stdin do sidecar no passo graceful (todas as plataformas;
     POSIX mantém SIGTERM também) e o daemon — só quando `CODM_PARENT_PID` está setado — trata
-    sentinela/EOF de stdin como "supervisor mandou parar", rodando o mesmo drain.
+    a LINHA-sentinela como "supervisor mandou parar", rodando o mesmo drain. EOF de stdin é
+    ignorado deliberadamente (não é mais um gatilho): é redundante com o watchdog do pai (10a) e
+    com SIGTERM em POSIX, e vira um footgun para qualquer supervisor que sete `CODM_PARENT_PID`
+    sem manter um pipe de stdin vivo (ex.: o smoke de T2 sem `stdin: 'pipe'`).
 11. **Reaper no Windows** ganha `process_table()` real (crate gated em
     `[target.'cfg(windows)'.dependencies]` ou parse de `tasklist`, a escolha justificada no
     plano) — sidecars órfãos de uma execução anterior passam a ser recolhidos.
@@ -227,9 +230,10 @@ antes do `/build`. As que mudam a forma do trabalho estão marcadas **(virável 
       testes table-driven em `core/pkg/watchdog`.
 - [ ] AC-17: no quit do shell, o daemon drena antes de morrer também no Windows — o passo
       graceful escreve a linha-sentinela no stdin do sidecar, o daemon (só com
-      `CODM_PARENT_PID` setado) trata sentinela/EOF como o mesmo shutdown dos sinais; dupla
-      entrega (SIGTERM + sentinela) é idempotente — coberto por teste do handler puro + teste
-      Rust da escalação.
+      `CODM_PARENT_PID` setado) trata a LINHA-sentinela como o mesmo shutdown dos sinais; EOF de
+      stdin é ignorado (redundante com o watchdog do pai + SIGTERM em POSIX — ver decisão 10c);
+      dupla entrega (SIGTERM + sentinela) é idempotente — coberto por teste do handler puro +
+      teste Rust da escalação.
 
 ## Fora de escopo (explícito)
 
