@@ -23,7 +23,7 @@ export type AddWorkspaceMutationRequest = {
     /**
      * @minLength 1
      * @maxLength 1024
-     * @pattern ^\/.*
+     * @pattern ^(?:\/|[A-Za-z]:[\\/]|\\\\)
      * @type string
     */
     path: string;
