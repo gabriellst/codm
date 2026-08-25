@@ -42,7 +42,7 @@ COPY ./packages/client/dist/typescript ./packages/client/dist/typescript
 COPY ./packages/client/package.json ./packages/client/package.json
 COPY ./packages/app/react/package.json ./packages/app/react/package.json
 COPY ./packages/app/astro/package.json ./packages/app/astro/package.json
-COPY ./packages/app/styles/package.json ./packages/app/styles/package.json
+COPY ./packages/app/ui/package.json ./packages/app/ui/package.json
 # app/tauri is a root package.json workspace member (desktop shell, unused by this image) — its
 # manifest must be staged too, or `bun install` fails resolving the workspace graph (found while
 # validating this Dockerfile — docker/Dockerfile.api predates this workspace and has the same gap).
