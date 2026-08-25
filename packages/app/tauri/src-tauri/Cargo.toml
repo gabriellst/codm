@@ -67,3 +67,14 @@ tokio = { version = "1", features = ["time", "signal"] }
 # shutdown path anyway. Also a pre-existing tauri transitive dep.
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
+
+# Windows counterpart of the three helpers above AND the startup sweep's process table
+# (src/sidecars/reaper.rs). Win32 has no `kill(2)`: liveness is `OpenProcess` + exit code, force is
+# `TerminateProcess`, and "which binary is this pid" is `QueryFullProcessImageNameW` — `sysinfo`
+# wraps all three behind safe calls. It is what makes the sweep POSSIBLE on Windows at all:
+# `tasklist` prints only the image NAME (the matching rule needs the absolute path), `wmic` is gone
+# on Windows 11, and PowerShell's `Get-Process | select Path` costs a ~1s interpreter start on every
+# boot. `default-features = false` + `system` keeps it to processes only (no disks, networks,
+# components, users, no rayon). Windows-gated so the macOS/Linux builds never compile it.
+[target.'cfg(windows)'.dependencies]
+sysinfo = { version = "0.39", default-features = false, features = ["system"] }

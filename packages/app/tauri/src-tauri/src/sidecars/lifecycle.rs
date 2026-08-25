@@ -109,14 +109,57 @@ pub(crate) fn pid_alive(pid: u32) -> bool {
     std::io::Error::last_os_error().raw_os_error() == Some(libc::EPERM)
 }
 
-/// Windows has no SIGTERM for a console-less child, and no cheap liveness probe. The graceful half
-/// degrades to a no-op and `pid_alive` stays pessimistic, so every child goes through `force_kill` —
-/// the exact behaviour that shipped before this escalation existed.
-#[cfg(not(unix))]
+/// Windows has no SIGTERM for a console-less child: there is nothing between "ask" and
+/// `TerminateProcess`, so the graceful half stays a no-op and every process goes through
+/// `force_kill` after the grace window. The daemon's Windows drain path is its `CODM_PARENT_PID`
+/// watchdog, not a signal from here. Liveness and force are REAL, though — via `sysinfo`, the same
+/// crate the startup sweep's table uses: without them `terminate_then_force` could never see a
+/// Windows process die, and `reaper` could find an orphan without being able to remove it.
+#[cfg(windows)]
 pub(crate) fn send_sigterm(_pid: u32) {}
-#[cfg(not(unix))]
+
+/// `TerminateProcess` on one pid — the Windows equivalent of SIGKILL, for a process we hold no
+/// handle to. Failures (already gone, or not ours) are ignored for the same reason as on unix:
+/// `terminate_then_force` will find it still alive and report it, which is the honest outcome.
+#[cfg(windows)]
+pub(crate) fn send_sigkill(pid: u32) {
+    let system = windows_system_for(pid);
+    if let Some(process) = system.process(sysinfo::Pid::from_u32(pid)) {
+        process.kill();
+    }
+}
+
+/// Is the pid still in the process table? `sysinfo` opens the process to ask; one this user cannot
+/// open (another session, elevated) is still LISTED — like `kill(pid, 0)`'s EPERM, that counts as
+/// alive. Only a pid that is gone comes back `None`.
+#[cfg(windows)]
+pub(crate) fn pid_alive(pid: u32) -> bool {
+    windows_system_for(pid)
+        .process(sysinfo::Pid::from_u32(pid))
+        .is_some()
+}
+
+/// One refresh, one pid, no fields — the cheapest view `sysinfo` offers (feature `system`).
+/// Built per call: `pid_alive` is polled every `GRACE_POLL` and a cached table would answer stale.
+#[cfg(windows)]
+fn windows_system_for(pid: u32) -> sysinfo::System {
+    use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, System};
+    let mut system = System::new();
+    system.refresh_processes_specifics(
+        ProcessesToUpdate::Some(&[sysinfo::Pid::from_u32(pid)]),
+        true,
+        ProcessRefreshKind::nothing(),
+    );
+    system
+}
+
+/// Neither unix nor Windows: nothing to signal with and nothing to probe with — the
+/// pre-escalation behaviour (straight to `force_kill` after the grace window) is all that is left.
+#[cfg(not(any(unix, windows)))]
+pub(crate) fn send_sigterm(_pid: u32) {}
+#[cfg(not(any(unix, windows)))]
 pub(crate) fn send_sigkill(_pid: u32) {}
-#[cfg(not(unix))]
+#[cfg(not(any(unix, windows)))]
 pub(crate) fn pid_alive(_pid: u32) -> bool {
     true
 }

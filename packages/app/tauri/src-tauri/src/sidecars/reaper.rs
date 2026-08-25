@@ -29,9 +29,15 @@
 //!
 //! ## Platforms
 //!
-//! Unix only. macOS reads `ps -Ao pid=,comm=` (BSD `comm` is the full executable path); Linux reads
-//! the `/proc/<pid>/exe` symlink. On Windows the table comes back empty and the sweep is a no-op —
-//! the shell is a macOS product today and a wrong `pid → path` mapping is worse than no sweep.
+//! macOS reads `ps -Ao pid=,comm=` (BSD `comm` is the full executable path); Linux reads the
+//! `/proc/<pid>/exe` symlink; Windows asks `sysinfo` for each process's image path
+//! (`QueryFullProcessImageNameW` — the kernel's own answer, like `/proc/<pid>/exe`). Anywhere else
+//! the table comes back empty and the sweep is a no-op: a wrong `pid → path` mapping is worse than
+//! no sweep.
+//!
+//! The path we compare against carries the host's executable suffix (`.exe` on Windows, nothing
+//! elsewhere) — the same `EXE_SUFFIX` tauri-plugin-shell's `relative_command_path` appends when it
+//! execs the sidecar, so "the path we are about to exec" stays one formula on every host.
 
 use std::path::PathBuf;
 use std::time::Duration;
@@ -45,7 +51,9 @@ pub struct Reaped {
     /// The executable path that matched — echoed so the report proves WHICH binary was matched,
     /// never "whatever was on the port".
     pub path: String,
-    /// `true` when SIGTERM was not enough and SIGKILL had to follow.
+    /// `true` when the process had to be force-killed after the grace window. On Windows there is
+    /// no graceful ask (`lifecycle::send_sigterm` is a no-op there), so `false` means the process
+    /// exited ON ITS OWN during the grace window — e.g. its own `CODM_PARENT_PID` watchdog fired.
     pub forced: bool,
 }
 
@@ -71,6 +79,15 @@ impl Supervised for ForeignProcess {
         send_sigkill(self.pid);
     }
 }
+
+/// What the report calls the two escalation steps — `[graceful, forced]`. Named per platform so
+/// `shell.log` never claims a SIGKILL on a host that has no signals — nor a "terminate" that was
+/// never sent: on Windows the graceful half is a no-op, so a non-forced reap there means the
+/// process exited on its own inside the grace window, and the log says exactly that.
+#[cfg(unix)]
+const HOW: [&str; 2] = ["SIGTERM", "SIGKILL"];
+#[cfg(not(unix))]
+const HOW: [&str; 2] = ["self-exit within the grace", "TerminateProcess"];
 
 /// PURE — the safety property, isolated so it can be falsified in `cargo test` instead of on a
 /// machine with the founder's other repos running.
@@ -100,13 +117,24 @@ pub fn parse_ps_table(output: &str) -> Vec<(u32, String)> {
         .collect()
 }
 
+/// PURE — the file name a sidecar is exec'd as on THIS host: the `externalBin` name plus the
+/// platform's executable suffix (`std::env::consts::EXE_SUFFIX`: `.exe` on Windows, empty
+/// elsewhere). The same suffix `tauri_plugin_shell::process::relative_command_path` appends, so a
+/// Windows leftover is matched as `codm-daemon.exe`, which is what actually ran.
+pub fn sidecar_file_name(name: &str) -> String {
+    format!("{name}{}", std::env::consts::EXE_SUFFIX)
+}
+
 /// The absolute paths this shell will spawn its sidecars from — the same computation
 /// `tauri_plugin_shell`'s `relative_command_path` does (`current_exe()`'s directory, stepping out
-/// of `deps/` under `cargo test`), because "the path we are about to exec" is the entire matching
-/// rule and a second, drifting derivation of it would quietly widen or narrow the sweep.
+/// of `deps/` under `cargo test`, plus the host's exe suffix), because "the path we are about to
+/// exec" is the entire matching rule and a second, drifting derivation of it would quietly widen
+/// or narrow the sweep.
 ///
 /// The canonicalized form is added ALONGSIDE the joined one (never instead of it): the two differ
-/// only when the target dir sits behind a symlink, and a previous run may have exec'd either.
+/// only when the target dir sits behind a symlink, and a previous run may have exec'd either. On
+/// Windows `canonicalize` yields the verbatim `\\?\C:\…` form, which no process table reports —
+/// the joined form is the one that matches there, and the extra entry is harmless.
 fn sidecar_binary_paths(names: &[&str]) -> Vec<String> {
     let Ok(exe) = tauri::utils::platform::current_exe() else {
         return Vec::new();
@@ -129,7 +157,7 @@ fn sidecar_binary_paths(names: &[&str]) -> Vec<String> {
         }
     };
     for name in names {
-        let path = base.join(name);
+        let path = base.join(sidecar_file_name(name));
         if let Ok(real) = std::fs::canonicalize(&path) {
             push(real);
         }
@@ -171,7 +199,7 @@ fn reap_within(names: &[&str], grace: Duration) -> Vec<Reaped> {
         .into_iter()
         .map(|(pid, path)| {
             let forced = forced.contains(&pid);
-            let how = if forced { "SIGKILL" } else { "SIGTERM" };
+            let how = HOW[usize::from(forced)];
             log::warn!("codm-shell: reaped pid {pid} via {how} — {path}");
             Reaped { pid, path, forced }
         })
@@ -210,7 +238,30 @@ fn process_table() -> Vec<(u32, String)> {
         .collect()
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "linux")))]
+#[cfg(windows)]
+fn process_table() -> Vec<(u32, String)> {
+    use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
+    // One snapshot, exe paths only — no CPU/memory/cmdline sampling; this runs on every boot.
+    let mut system = System::new();
+    system.refresh_processes_specifics(
+        ProcessesToUpdate::All,
+        true,
+        ProcessRefreshKind::nothing().with_exe(UpdateKind::Always),
+    );
+    system
+        .processes()
+        .iter()
+        .filter_map(|(pid, process)| {
+            // `exe()` is `QueryFullProcessImageNameW` — the kernel's absolute path for the image,
+            // the Windows answer to `/proc/<pid>/exe`. `None` for a process this user cannot open
+            // (another session, elevated): such a process cannot be ours, and no path never matches.
+            let exe = process.exe()?;
+            Some((pid.as_u32(), exe.to_string_lossy().into_owned()))
+        })
+        .collect()
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "linux", windows)))]
 fn process_table() -> Vec<(u32, String)> {
     Vec::new()
 }
@@ -290,6 +341,31 @@ mod tests {
     #[test]
     fn unparseable_lines_yield_no_pid() {
         assert_eq!(parse_ps_table("\n  PID COMM\nnotapid /bin/sh\n 123 \n"), vec![]);
+    }
+
+    /// The Windows exec path ends in `.exe` (tauri-plugin-shell's `relative_command_path` appends it);
+    /// unix paths do not. One formula, `std::env::consts::EXE_SUFFIX`, no cfg — the same suffix the
+    /// plugin uses, so the sweep matches what was actually exec'd on every host.
+    #[test]
+    fn the_sidecar_file_name_carries_the_host_exe_suffix() {
+        let expected = if cfg!(windows) { "codm-daemon.exe" } else { "codm-daemon" };
+        assert_eq!(sidecar_file_name("codm-daemon"), expected);
+    }
+
+    /// The Windows table answers the same question `/proc/<pid>/exe` does: the pid → ABSOLUTE
+    /// image path, as the kernel reports it. Proven on the one process this test is sure about —
+    /// itself — against `current_exe()`, the other Win32 source of the same path.
+    #[cfg(windows)]
+    #[test]
+    fn the_windows_table_lists_this_process_by_its_absolute_exe_path() {
+        let me = std::env::current_exe().expect("current exe");
+        let table = process_table();
+        let mine = table.iter().find(|(pid, _)| *pid == std::process::id());
+        assert_eq!(
+            mine.map(|(_, path)| path.as_str()),
+            Some(me.to_string_lossy().as_ref()),
+            "a tabela tem de reportar este processo pelo caminho absoluto do executavel"
+        );
     }
 
     /// End to end against REAL processes: a decoy at another path survives the sweep that removes
