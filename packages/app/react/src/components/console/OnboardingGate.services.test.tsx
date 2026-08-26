@@ -1,7 +1,8 @@
-// packages/app/react/src/components/console/OnboardingGate.test.tsx
+// packages/app/react/src/components/console/OnboardingGate.services.test.tsx
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { completeOnboarding } from '@codm/client-typescript/typescript'
+import { givenChannel } from '@codm/api-typescript/testing'
+import { completeOnboarding, ContactKindEnum, ProviderKindEnum, saveOnboardingStep } from '@codm/client-typescript/typescript'
 import { mountRouter, type MountedRouter } from '../../../tests/support/mountRouter'
 import { useIntegrationBackend, type IntegrationBackend } from '../../../tests/support/integration-harness'
 import { useSystemPreconditionsStore } from '@/stores/useSystemPreconditionsStore'
@@ -24,6 +25,13 @@ import { OnboardingGate, resetOnboardingGateForTests } from './OnboardingGate'
  * `backend.reset()` sozinho já produz o estado "onboarding nunca começou" (computado pelo
  * `GET /ui/onboarding` real), e `completeOnboarding({})` grava o `completedAt` pelo caminho de
  * produção — nada aqui é dublado.
+ *
+ * `.services.test.tsx` (`import-direction#R5`) — RENOMEADO de `OnboardingGate.test.tsx` em
+ * 2026-08-26 (draft/atomic-commit rewrite): `CompleteOnboarding` passou a exigir um rascunho
+ * completo para materializar, e produzir um de VERDADE (`givenOnboardingDraftComplete`, abaixo)
+ * precisa de `givenChannel` — um import de pacote de backend (`@codm/api-typescript/testing`) que o
+ * app nunca faz fora deste sufixo sancionado (mesma convenção de `AttachThreadWizard/
+ * index.services.test.tsx`). Roda via `bun run test:cross-service`, não no `bun test` default.
  */
 describe('OnboardingGate', () => {
 	let backend: IntegrationBackend
@@ -47,6 +55,29 @@ describe('OnboardingGate', () => {
 		mounted?.unmount()
 		mounted = null
 	})
+
+	/**
+	 * `CompleteOnboarding` now COMMITS a rascunho (2026-08-26, draft/atomic-commit) instead of just
+	 * flipping `completedAt` — `completeOnboarding({})` alone against a fresh backend 422s with
+	 * `ONBOARDING_DRAFT_INCOMPLETE` (nothing to materialize). This seeds a full draft — a REAL
+	 * connected channel (`givenChannel`, defaults `status: CONNECTED`) so `AttachThread`'s own
+	 * connectivity gate passes, `CLAUDE_CODE` because `MockProviderDetector` (the `integration` env's
+	 * binding) reports it `DETECTED` by default, and a fresh absolute path so `AddWorkspace` creates a
+	 * real workspace — via the SAME `PATCH /ui/onboarding/step` the wizard itself calls, direct through
+	 * the SDK (the `given*` canon applied to a wire-level fact instead of a repository, since there is
+	 * no `OnboardingRepository` reachable from this test — see `OnboardingFlow/index.test.tsx`'s own
+	 * `givenSetupFactsSatisfied` for the identical pattern).
+	 */
+	async function givenOnboardingDraftComplete(): Promise<void> {
+		const { channelId } = await givenChannel(backend.asTestBed())
+		await saveOnboardingStep({
+			state: {
+				contactRef: { channelId, externalId: 'onboarding-gate-test', displayName: 'Onboarding Gate Test', kind: ContactKindEnum.USER },
+				workspace: { path: '/tmp/onboarding-gate-test-workspace' },
+				providers: [ProviderKindEnum.CLAUDE_CODE],
+			},
+		})
+	}
 
 	/** `/dashboard` and `/onboarding` are `mountRouter`'s own defaults — exactly the two this gate chooses between. */
 	async function mount(pathname: string): Promise<MountedRouter> {
@@ -91,6 +122,7 @@ describe('OnboardingGate', () => {
 	})
 
 	it('com completedAt e nada pendente, não navega — console abre normalmente', async () => {
+		await givenOnboardingDraftComplete()
 		await completeOnboarding({})
 		const { router, host } = await mount('/dashboard')
 
@@ -99,6 +131,7 @@ describe('OnboardingGate', () => {
 	})
 
 	it('AC-11: com completedAt e algo pendente, leva ao /onboarding UMA VEZ por execução', async () => {
+		await givenOnboardingDraftComplete()
 		await completeOnboarding({})
 		useSystemPreconditionsStore.getState().apply([{ id: 'FULL_DISK_ACCESS', satisfied: false, repair: 'AVAILABLE' }])
 
