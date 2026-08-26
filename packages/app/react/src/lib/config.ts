@@ -1,5 +1,20 @@
 const baseUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3030'
 
+/**
+ * The per-service SDK base-url shape, derived from ONE daemon base url — used both for the
+ * browser/dev default below (`VITE_API_URL`) and, in a packaged desktop app, for the RUNTIME
+ * override `ServicesProvider` applies once the host reports which port it actually resolved
+ * (`HostInfoService.apiBaseUrl()` — spec 2026-08-25/26: a packaged app no longer bakes its daemon's
+ * port at build time, since there is no single port to bake any more, see
+ * `packages/app/tauri/config/ports.ts`). ONE formula, two call sites — never redigited.
+ */
+export function computeServiceBaseUrls(daemonBaseUrl: string) {
+	return {
+		typescript: daemonBaseUrl,
+		go: `${daemonBaseUrl}/external/channel`,
+	} as const
+}
+
 export const Config = {
 	baseUrl,
 	/**
@@ -33,9 +48,9 @@ export const Config = {
 /**
  * The CANONICAL per-service SDK base-url map — the one registry every `configureClient` call site
  * (router, storybook preview) spreads. Keys are the generated client subpaths; `go` rides the
- * ChannelProxy shape (see Config.gatewayBaseUrl), never :3032 directly.
+ * ChannelProxy shape (see Config.gatewayBaseUrl), never :3032 directly. This is the BROWSER/DEV
+ * default (`VITE_API_URL`, baked at build time); `ServicesProvider` re-calls `configureClient` with
+ * `computeServiceBaseUrls(hostApiBaseUrl)` in a packaged desktop app, once the host reports its
+ * resolved port — see that function's doc.
  */
-export const serviceBaseUrls = {
-	typescript: Config.baseUrl,
-	go: Config.gatewayBaseUrl,
-} as const
+export const serviceBaseUrls = computeServiceBaseUrls(Config.baseUrl)

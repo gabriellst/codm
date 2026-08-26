@@ -107,9 +107,15 @@ export class FakeAutostartService implements AutostartService {
 }
 
 export class FakeHostInfoService implements HostInfoService {
-	constructor(private readonly value: NativePlatform = 'browser') {}
+	constructor(
+		private readonly value: NativePlatform = 'browser',
+		private readonly baseUrl: string | null = null,
+	) {}
 	async platform(): Promise<NativePlatform> {
 		return this.value
+	}
+	async apiBaseUrl(): Promise<string | null> {
+		return this.baseUrl
 	}
 }
 
