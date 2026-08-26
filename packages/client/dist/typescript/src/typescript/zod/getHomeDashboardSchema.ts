@@ -85,6 +85,10 @@ get "status"(){
 get "status"(){
                 return channelStatusSchema
               }
+    })),
+"mentionCta": z.optional(z.object({
+    "threadId": z.uuid(),
+"tag": z.string()
     }))
     })
 

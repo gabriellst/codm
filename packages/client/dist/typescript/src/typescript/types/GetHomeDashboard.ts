@@ -203,6 +203,19 @@ export type GetHomeDashboard200 = {
         */
         status: ChannelStatus;
     }[];
+    /**
+     * @type object | undefined
+    */
+    mentionCta?: {
+        /**
+         * @type string, uuid
+        */
+        threadId: string;
+        /**
+         * @type string
+        */
+        tag: string;
+    };
 };
 
 export type GetHomeDashboardQueryResponse = GetHomeDashboard200;

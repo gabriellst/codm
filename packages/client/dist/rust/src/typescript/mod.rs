@@ -3123,6 +3123,24 @@ pub mod types {
     ///        "additionalProperties": false
     ///      }
     ///    },
+    ///    "mentionCta": {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "tag",
+    ///        "threadId"
+    ///      ],
+    ///      "properties": {
+    ///        "tag": {
+    ///          "type": "string"
+    ///        },
+    ///        "threadId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
     ///    "needsYou": {
     ///      "type": "object",
     ///      "required": [
@@ -3245,6 +3263,12 @@ pub mod types {
         pub channels: ::std::vec::Vec<GetHomeDashboardResponseChannelsItem>,
         #[serde(rename = "latestActivity")]
         pub latest_activity: ::std::vec::Vec<GetHomeDashboardResponseLatestActivityItem>,
+        #[serde(
+            rename = "mentionCta",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub mention_cta: ::std::option::Option<GetHomeDashboardResponseMentionCta>,
         #[serde(
             rename = "needsYou",
             default,
@@ -3510,6 +3534,44 @@ pub mod types {
     impl ::std::convert::From<&GetHomeDashboardResponseLatestActivityItemSender>
     for GetHomeDashboardResponseLatestActivityItemSender {
         fn from(value: &GetHomeDashboardResponseLatestActivityItemSender) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetHomeDashboardResponseMentionCta`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "tag",
+    ///    "threadId"
+    ///  ],
+    ///  "properties": {
+    ///    "tag": {
+    ///      "type": "string"
+    ///    },
+    ///    "threadId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetHomeDashboardResponseMentionCta {
+        pub tag: ::std::string::String,
+        #[serde(rename = "threadId")]
+        pub thread_id: ::uuid::Uuid,
+    }
+    impl ::std::convert::From<&GetHomeDashboardResponseMentionCta>
+    for GetHomeDashboardResponseMentionCta {
+        fn from(value: &GetHomeDashboardResponseMentionCta) -> Self {
             value.clone()
         }
     }

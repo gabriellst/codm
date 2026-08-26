@@ -8115,6 +8115,10 @@ type GetHomeDashboardResponse struct {
 			Subtitle string             `json:"subtitle"`
 			ThreadId openapi_types.UUID `json:"threadId"`
 		} `json:"latestActivity"`
+		MentionCta *struct {
+			Tag      string             `json:"tag"`
+			ThreadId openapi_types.UUID `json:"threadId"`
+		} `json:"mentionCta,omitempty"`
 		NeedsYou *struct {
 			StopKinds         []StopKind         `json:"stopKinds"`
 			ThreadDisplayName string             `json:"threadDisplayName"`
@@ -10909,6 +10913,10 @@ func ParseGetHomeDashboardResponse(rsp *http.Response) (*GetHomeDashboardRespons
 				Subtitle string             `json:"subtitle"`
 				ThreadId openapi_types.UUID `json:"threadId"`
 			} `json:"latestActivity"`
+			MentionCta *struct {
+				Tag      string             `json:"tag"`
+				ThreadId openapi_types.UUID `json:"threadId"`
+			} `json:"mentionCta,omitempty"`
 			NeedsYou *struct {
 				StopKinds         []StopKind         `json:"stopKinds"`
 				ThreadDisplayName string             `json:"threadDisplayName"`
