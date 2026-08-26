@@ -346,10 +346,10 @@ await page.getByRole('option', { name: category }).click()
 
 ### Type-Safe URL Resolution
 
-SDK query key functions contain `{ url: '/v1/...' }`. Pass them directly to `mockRoute`:
+SDK query key functions contain `{ url: '/...' }`. Pass them directly to `mockRoute`:
 
 ```ts
-// Static URL — query key resolves to '**​/v1/ui/notifications*'
+// Static URL — query key resolves to '**​/ui/notifications*'
 await mockRoute<ResponseType>(page, listNotificationsQueryKey, data)
 
 // Parameterized URL — query key would produce '/notifications/undefined', use glob
@@ -367,8 +367,8 @@ The SDK types `string` for fields like `lastMessageTimestamp`, but the component
 On failure, the `network` fixture attaches a `network-log` artifact:
 
 ```
-[OK] GET /v1/authentication/get-session → 200
-[FAIL] POST /v1/ui/onboarding/complete → 404
+[OK] GET /authentication/get-session → 200
+[FAIL] POST /ui/onboarding/complete → 404
   → {"code":"ONBOARDING_NOT_FOUND","message":"..."}
 ```
 

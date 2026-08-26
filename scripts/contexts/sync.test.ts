@@ -57,7 +57,7 @@ describe('contexts:sync — o gerador dos derivados', () => {
 		// O merge é por ordem de inserção, e o comentário que ele herda diz "shared (core) first so
 		// context bindings may override kernel defaults". O único token declarado em mais de um
 		// contexto é `HEALTH_CHECKS` (shared + agent), que é multi-inject: alfabético inverteria a
-		// ordem dos checks no /v1/health.
+		// ordem dos checks no /health.
 		const emitido = renderRegistries(contexts)
 		const posicoes = bootOrder(contexts).map(id => emitido.indexOf(`\t${id}: ${id}Registry,`))
 		expect(

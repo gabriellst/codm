@@ -55,7 +55,7 @@ only ever do three jobs:
    no nitro).
 2. **Supervise sidecars** — `bundle.externalBin` = `codm-daemon` (TS, `bun build
    --compile`) + `codm-gateway` (Go). `src-tauri/src/lib.rs` spawns both on boot and
-   health-checks: daemon `GET :3030/v1/session`, gateway `GET :3032/api/openapi.json`;
+   health-checks: daemon `GET :3030/session`, gateway `GET :3032/api/openapi.json`;
    emits `sidecar:ready` / `sidecar:error` to the webview. Binaries:
    `bun x nx run app-tauri:sidecars` (suffix = host target triple).
 3. **Back the tauri platform services** — keychain `secret_get/set/delete` commands and

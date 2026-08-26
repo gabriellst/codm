@@ -174,7 +174,7 @@ registry:
       name: "Hand-written http.get per state instead of typed helpers"
       severity: high
       wrong: |
-        export const handler = http.get('*/v1/ui/dashboard', () => HttpResponse.json(fixture))
+        export const handler = http.get('*/ui/dashboard', () => HttpResponse.json(fixture))
       right: |
         mockQuery(getDashboardQueryOptions(p), fixture)  // url + response type from the SDK
 

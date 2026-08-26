@@ -311,7 +311,7 @@ export function registerOpenApiVocabulary(): void {
  * Emitido em `BOOT_ORDER`, não alfabético. O merge abaixo depende da ordem de inserção — o
  * comentário que ele herda diz "shared (core) first so context bindings may override kernel
  * defaults" — e o único token declarado em mais de um contexto é `HEALTH_CHECKS` (`shared` +
- * `agent`), que é multi-inject. Alfabético inverteria a ordem dos checks no `/v1/health`.
+ * `agent`), que é multi-inject. Alfabético inverteria a ordem dos checks no `/health`.
  */
 export function renderRegistries(contexts: readonly LoadedContext[]): string {
 	const ordered = bootOrder(contexts)

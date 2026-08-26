@@ -64,7 +64,7 @@ registry:
       name: "Sidecar boot without readiness"
       rule: "Every sidecar bootstrap must poll its readiness URL and surface sidecar:ready/sidecar:error — never assume the daemon is up."
       wrong: "spawn() and immediately render the console against :3030"
-      right: "probe /v1/session until 200 (60s budget) → emit sidecar:ready"
+      right: "probe /session until 200 (60s budget) → emit sidecar:ready"
       mechanical: false
     - id: bp-05
       name: "Untestable native consumption"

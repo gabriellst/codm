@@ -100,7 +100,7 @@ packages/client/src/
 Open the docs UI to see all endpoints:
 
 ```
-http://localhost:{PORT}/v1/shared/internal/docs
+http://localhost:{PORT}/shared/internal/docs
 ```
 
 ## What Gets Generated

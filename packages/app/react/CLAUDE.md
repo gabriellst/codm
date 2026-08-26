@@ -190,7 +190,7 @@ above get missed.
 
 ## Real-time — useServerEvents, never polling, never cache surgery
 
-The backend streams owner-scoped integration events over SSE (`GET /v1/ui/events`,
+The backend streams owner-scoped integration events over SSE (`GET /ui/events`,
 `ListenEventsController`). The frontend consumes them through two hooks in `@/hooks`:
 
 - **`useServerEventSource()`** — establishes THE connection. Mounted exactly once, in the
@@ -233,9 +233,9 @@ useServerEvents('integration.billing.subscription_changed', event => {
   invented on the frontend's behalf. Subscribe to the raw name directly; there is nothing else to
   resolve to.
 - **Two SSE channels exist, and `browser.*` is only dead on one of them.** `useServerEvents`
-  (this section) is the owner-scoped stream at `GET /v1/ui/events`, names `integration.*`, no
+  (this section) is the owner-scoped stream at `GET /ui/events`, names `integration.*`, no
   enrichment. `useTerminalStream` (`@/hooks`) is a SEPARATE, issue-scoped stream
-  (`GET /v1/terminal/sessions/:issueId/stream`) for the live PTY tail — its frames are transport,
+  (`GET /terminal/sessions/:issueId/stream`) for the live PTY tail — its frames are transport,
   never touch the outbox, and `browser.terminal_action_detected` is very much alive there
   (`IssueDetailSection` consumes it). Do not read "browser.\* is dead" as "every `browser.*` name
   is dead" — it is dead specifically as an SSE-broadcaster enrichment mechanism.

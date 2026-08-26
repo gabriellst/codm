@@ -684,7 +684,7 @@ not a presentational refactor:
 
 - **MSW** (`msw-storybook-addon`): `initialize()` + `loaders:[mswLoader]` in `.storybook/preview.tsx`,
   `staticDirs:['../public']`, `bun x msw init public`; per-story
-  `parameters.msw.handlers = [http.get('*/v1/<path>', () => HttpResponse.json(mock))]`.
+  `parameters.msw.handlers = [http.get('*/<path>', () => HttpResponse.json(mock))]`.
 - **QueryClient**: wrap the story in `QueryClientProvider` with `queries:{ retry:false }`.
 - **Stub router**: reproduce the exact file-route id with a pathless `createRoute({ id:'(app)' })`
   parent + child `path:'x/'` (yields `/(app)/x/`), mounted via `RouterProvider` +
