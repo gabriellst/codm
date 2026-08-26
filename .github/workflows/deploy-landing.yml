@@ -10,10 +10,12 @@ on:
 
 jobs:
   deploy:
-    # Self-hosted pelo mesmo motivo do correctness.yml: a cota estourou em 2026-08-07 e derrubou
-    # todos os workflows, este incluso. Nada aqui é específico de Linux (bun + wrangler), então
-    # roda igual no Mac. Voltar à nuvem = trocar por `runs-on: ubuntu-latest`.
-    runs-on: [self-hosted, macOS, ARM64]
+    # Hospedado, como todo o resto desde 2026-08-26. Entre 07/08 e 26/08 este job rodou no Mac mini
+    # do founder junto com os demais — não por afinidade técnica (é só bun + wrangler, roda em
+    # qualquer lugar), mas porque a cota de Actions de repositório PRIVADO estourou em 2026-08-07 e
+    # levou todos os workflows junto. Com o repositório público a cota deixou de existir, e a landing
+    # deixou de depender de uma máquina estar ligada para ser publicada.
+    runs-on: ubuntu-latest
     # ATENCAO ao nome: ele NAO casa com o subdominio, e essa e a pegadinha.
     #
     # Ha dois projetos Pages nesta conta. O chamado `codm` e dono de `codm-landing.pages.dev` — a
