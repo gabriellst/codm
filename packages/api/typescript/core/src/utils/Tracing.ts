@@ -14,17 +14,41 @@ context.setGlobalContextManager(contextManager)
 const tracedClasses = new Set<string>()
 
 /**
- * Starts the OTEL SDK only when OTEL_COLLECTOR_TRACE_URL is explicitly set.
+ * IS THERE ANYWHERE FOR A SPAN TO GO — the single derivation every telemetry site reads
+ * (`startTelemetry`, `traceClass`, `autoTrace`). Telemetry is on when, and only when, a collector
+ * URL is configured; no site consults anything else, so none of them can drift into a second
+ * opinion about whether instrumentation is live.
  *
- * When the SDK is not started, the OpenTelemetry API returns noop tracers/spans
- * automatically — every startSpan, setAttribute, addEvent call becomes a zero-cost
- * noop. This means autoTrace can wrap every class unconditionally: in dev without
- * a collector there is zero memory overhead, and in production with a collector
- * all classes are traced with proper bounds.
+ * Read from `Config.env` (the typed env port) rather than `process.env`: same vocabulary as every
+ * other env consumer (rail `tests/architecture/process-env.test.ts`), and it is what lets a test
+ * override the field deterministically instead of shelling out a subprocess.
+ */
+export function isTelemetryEnabled(): boolean {
+	return Config.env.OTEL_COLLECTOR_TRACE_URL !== ''
+}
+
+/**
+ * Starts the OTEL SDK only when a collector URL is configured (`isTelemetryEnabled`).
+ *
+ * THE WRAPPERS BELOW ARE GATED BY THE SAME PREDICATE, and they have to be. Without the SDK the
+ * OTel API hands back non-recording spans, so no trace is ever created or exported — but the
+ * wrapper still pays, on EVERY call: `context.active()` plus an `ALS.run()` frame from
+ * `context.with`, a freshly allocated `ProxyTracer` (with no delegate `getTracer` caches nothing —
+ * `ProxyTracerProvider.getTracer`), a `NonRecordingSpan` allocation, two `Date.now()`s, and
+ * `describeValue()` over every argument AND the return value — that work runs eagerly, as the
+ * arguments to the `setAttribute` calls that are the no-ops. Measured 451 ns per instrumented call
+ * against 2 ns unwrapped (300k calls, trivial method, no collector) — on every method of every
+ * DI-resolved class. This file used to claim that path was "zero-cost ... zero memory overhead";
+ * it is not, and the desktop build is exactly where it landed: the shell injects no `OTEL_*` env
+ * into either sidecar (`src-tauri/src/sidecars/mod.rs`), so the packaged daemon paid the wrapper on
+ * every repository/service/mediator call with no collector to ship a span to.
+ *
+ * Gating on CONFIG rather than on "did the SDK start" is what keeps boot order irrelevant:
+ * `start()` wraps (`traceClass`, then `autoTrace` per context) BEFORE `main()` awaits this.
  */
 export async function startTelemetry() {
-	if (!process.env.OTEL_COLLECTOR_TRACE_URL) {
-		console.log('⏭️  OTEL_COLLECTOR_TRACE_URL not set — telemetry disabled (noop spans)')
+	if (!isTelemetryEnabled()) {
+		console.log('⏭️  OTEL_COLLECTOR_TRACE_URL not set — telemetry disabled (no spans, no wrappers)')
 		return
 	}
 
@@ -170,14 +194,29 @@ function traceClassMethods(prototype: any, className: string, module?: string) {
 	})
 }
 
+/**
+ * Wrap the given classes' methods — a NO-OP when telemetry is off, so the prototypes are left
+ * exactly as authored instead of paying `startTelemetry`'s measured 451 ns/call for spans that
+ * nothing records. The gate lives HERE, not at the call sites (`composition/server.ts`), so a
+ * future wrap site inherits it without remembering to ask.
+ */
 export function traceClass(classes: any[]) {
+	if (!isTelemetryEnabled()) return
+
 	classes.forEach(clazz => {
 		traceClassMethods(clazz.prototype, clazz.name)
 	})
 }
 
-// Intercept container.resolve to apply tracing to all resolved classes
+/**
+ * Intercept `container.resolve` to apply tracing to every resolved class — a NO-OP when telemetry
+ * is off: `resolve` is left un-patched, so nothing gets wrapped and DI resolution keeps its own
+ * cost. This is the site that made the overhead global (`BoundedContext.create` calls it for every
+ * context), which is why the gate is inside rather than at that call.
+ */
 export function autoTrace(container: DependencyContainer, context?: string) {
+	if (!isTelemetryEnabled()) return
+
 	const originalResolve = container.resolve
 
 	container.resolve = function <T>(this: typeof container, token: any): T {
