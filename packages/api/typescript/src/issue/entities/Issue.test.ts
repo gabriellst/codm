@@ -100,7 +100,55 @@ describe('Issue entity', () => {
 				provider: ProviderKind.CLAUDE_CODE,
 			})
 			expect(issue.status).toBe(IssueStatus.WORKING)
-			expect(() => issue.reopen()).toThrow(expect.objectContaining({ name: 'ISSUE_NOT_COMPLETED' }))
+			expect(() => issue.reopen()).toThrow(expect.objectContaining({ name: 'ISSUE_NOT_REOPENABLE' }))
 		})
+	})
+
+	it('needsInput() moves WORKING → NEEDS_INPUT and stores the reason in meta', () => {
+		const i = Issue.open(base)
+		i.needsInput('o turno encerrou sem conclusão')
+		expect(i.status).toBe(IssueStatus.NEEDS_INPUT)
+		expect(i.meta).toBe('o turno encerrou sem conclusão')
+	})
+
+	it('needsInput() without a reason leaves meta untouched', () => {
+		const i = Issue.open(base)
+		i.needsInput()
+		expect(i.status).toBe(IssueStatus.NEEDS_INPUT)
+		expect(i.meta).toBeUndefined()
+	})
+
+	it('needsInput() twice is a no-op, not a throw', () => {
+		const i = Issue.open(base)
+		i.needsInput('primeira')
+		expect(() => i.needsInput('segunda')).not.toThrow()
+		expect(i.status).toBe(IssueStatus.NEEDS_INPUT)
+	})
+
+	it('needsInput() does NOT regress a COMPLETED issue', () => {
+		const i = Issue.open(base)
+		i.complete('entregue')
+		i.needsInput('stop atrasado')
+		expect(i.status).toBe(IssueStatus.COMPLETED)
+		expect(i.meta).toBe('entregue')
+	})
+
+	it('needsInput() on an archived issue throws ISSUE_ARCHIVED', () => {
+		const i = Issue.open(base)
+		i.archive(IssueArchiveReason.MANUAL)
+		expect(() => i.needsInput('x')).toThrow(BaseError)
+	})
+
+	it('reopen() accepts NEEDS_INPUT as the origin state', () => {
+		const i = Issue.open(base)
+		i.needsInput('travou')
+		i.reopen()
+		expect(i.status).toBe(IssueStatus.WORKING)
+		expect(i.completedAt).toBeUndefined()
+	})
+
+	it('reopen() on a WORKING issue throws ISSUE_NOT_REOPENABLE', () => {
+		const i = Issue.open(base)
+		expect(() => i.reopen()).toThrow(BaseError)
 	})
 })

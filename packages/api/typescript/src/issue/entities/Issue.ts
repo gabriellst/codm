@@ -37,6 +37,9 @@ export const IssueSchema = z.object({
 
 export type IssueProps = Z.infer<typeof IssueSchema>
 
+/** De quais estados `reopen()` aceita voltar ao trabalho — ver o docblock do método. */
+const REOPENABLE_FROM: readonly IssueStatus[] = [IssueStatus.COMPLETED, IssueStatus.NEEDS_INPUT]
+
 /**
  * `Issue` (BC5 Issue Execution, Core) — a unit of concurrent work with its own terminal session.
  * Invariants: `key` unique within the thread (DB-enforced); lifecycle NEEDS_INPUT → WORKING →
@@ -82,12 +85,40 @@ export class Issue extends AggregateRoot<typeof IssueSchema> {
 	}
 
 	/**
-	 * COMPLETED → WORKING — o caminho de volta, e o ÚNICO.
+	 * WORKING → NEEDS_INPUT — a transição que faltava, e a razão de ela ter faltado importa.
+	 *
+	 * O enum declara `NEEDS_INPUT`, `GetIssuesOverview` e `GetSessionIssues` agrupam a UI por ele, e
+	 * `OpenIssuesReader` documenta que uma issue nesse estado pertence ao conjunto candidato do
+	 * classificador — mas nenhum método aqui produzia o valor, então nenhuma linha do banco jamais o
+	 * teve. Uma ferramenta MCP anunciava a transição e não a fazia; o operador lia "marquei como
+	 * NEEDS_INPUT" e a issue seguia `WORKING`.
+	 *
+	 * SILENCIOSA em dois casos, e nenhum dos dois é descuido:
+	 *  - já em `NEEDS_INPUT` ⇒ no-op. O fato que dispara isto é at-least-once (outbox + job repetível),
+	 *    então uma redelivery não pode virar erro — a mesma postura de `CompleteIssue`.
+	 *  - já `COMPLETED` ⇒ no-op, e o `meta` da conclusão é preservado. Um stop que chega depois da
+	 *    entrega é tardio, não uma correção: regredir o estado apagaria a entrega do operador.
+	 *
+	 * `reason` é opcional e só sobrescreve `meta` quando presente, pelo mesmo contrato de `complete()`.
+	 */
+	needsInput(reason?: string): void {
+		this.assertNotArchived()
+		if (this.status !== IssueStatus.WORKING) return
+		this.status = IssueStatus.NEEDS_INPUT
+		if (reason !== undefined) this.meta = reason
+	}
+
+	/**
+	 * DE VOLTA AO TRABALHO — e a origem é um CONJUNTO, não um estado.
 	 *
 	 * Não existe um "reabrir" que o operador aciona por si: receber trabalho é o que reabre uma issue
 	 * (spec Decisão 4). Reabrir sem instrução deixaria a issue em `WORKING` sem nada enfileirado, que é
 	 * um estado que ninguém consegue explicar depois. Por isso este método é chamado do caminho do
 	 * steer e de lugar nenhum além dele.
+	 *
+	 * `NEEDS_INPUT` entrou no conjunto junto com a transição que passou a produzi-lo: uma issue parada
+	 * esperando o operador é exatamente aquela que um steer existe para destravar, e deixá-la de fora
+	 * a prenderia lá pelo motivo simétrico ao que prendia em `WORKING`.
 	 *
 	 * `completedAt` é ZERADO, e isso não é arrumação: `AutoArchiveCompletedIssues` seleciona por essa
 	 * coluna. Uma issue reaberta que mantivesse o carimbo antigo seria arquivada por baixo de um agente
@@ -95,7 +126,7 @@ export class Issue extends AggregateRoot<typeof IssueSchema> {
 	 */
 	reopen(): void {
 		this.assertNotArchived()
-		if (this.status !== IssueStatus.COMPLETED) throw new BaseError<DomainErrors>('ISSUE_NOT_COMPLETED')
+		if (!REOPENABLE_FROM.includes(this.status)) throw new BaseError<DomainErrors>('ISSUE_NOT_REOPENABLE')
 		this.status = IssueStatus.WORKING
 		this.completedAt = undefined
 	}
