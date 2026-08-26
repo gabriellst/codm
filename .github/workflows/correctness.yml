@@ -69,10 +69,22 @@ jobs:
       # O //go:embed do gateway (public/embed.go) aponta docs/openapi.json — GERADO, presente em
       # todo checkout de dev e ausente num runner limpo. Sem isto o type-check (que compila o Go)
       # morre com "no matching files found" — mesmo fix do release-beta (2026-08-07).
-      - name: Generated embed inputs (openapi)
+      # Este passo regenera os `openapi.json` — e, desde 2026-08-26, TAMBÉM afirma que os commitados
+      # já estavam em dia. Os três arquivos são versionados (o `//go:embed` do gateway lê o do
+      # repositório), então um spec velho no repo é um artefato de release velho: o daemon anuncia
+      # rotas que o cliente gerado não conhece, e nada reclama até alguém chamar a rota faltante.
+      #
+      # A verificação mora AQUI, e não no release, por dois motivos: este job já tem as dependências
+      # instaladas (o `prepare` do release não tem — descobri fazendo `nx: command not found`), e um
+      # gate que roda em todo push e PR pega o desvio ANTES de virar release, não no meio dela.
+      - name: Generated embed inputs (openapi) + drift dos commitados
         run: |
           cp -n .env.example .env
           bun emit-openapi
+          git diff --exit-code -- '**/public/docs/openapi*.json' || {
+            echo "::error::os openapi.json commitados divergem do código — rode 'bun sdk' e commite o resultado"
+            exit 1
+          }
 
       # O `nice -n 10` que envolvia estes três passos saiu com o self-hosted: ele existia para o CI
       # ceder CPU ao daemon de produção do founder, que roda na mesma máquina. Num runner

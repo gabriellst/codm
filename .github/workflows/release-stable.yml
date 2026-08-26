@@ -49,20 +49,6 @@ jobs:
       - name: desktop config em dia
         run: bun desktop:generate --check
 
-      # OS `openapi.json` SÃO VERSIONADOS (api-typescript ×2, api-go ×1) — o `//go:embed` do gateway
-      # lê o do repositório, não um gerado na hora. Cada perna regerava os três antes de compilar, o
-      # que era trabalho triplicado e, no `windows-latest`, um defeito: resolver o workspace inteiro
-      # ali esbarra em `EPERM` lendo os symlinks que o `bun install` cria em `node_modules` (Windows
-      # não os lê sem privilégio). Então a pergunta muda de "gerar" para "estão em dia?", e ela é
-      # feita UMA vez, aqui, numa máquina onde a geração funciona.
-      - name: openapi commitado está em dia
-        run: |
-          cp -n .env.example .env
-          bun emit-openapi
-          git diff --exit-code -- '**/public/docs/openapi*.json' || {
-            echo "::error::os openapi.json commitados divergem do código — rode 'bun sdk' e commite o resultado"
-            exit 1
-          }
 
       # O GATE da decisão 4: tag == versão da conf, ou nada é publicado. Roda ANTES de qualquer
       # build — uma tag errada custaria três builds (um deles a 2×) para descobrir o mesmo erro.
