@@ -64,6 +64,63 @@ A versão do runner do GitHub Actions é resolvida em BUILD TIME contra a API de
 hardcoded no Dockerfile). Rebuilde a imagem de tempos em tempos (`docker build --no-cache`) para
 pegar patches do runner.
 
+## Bundling AppImage sob Rosetta
+
+O primeiro build Linux completo neste container (beta run 32929100958, 2026-08-26) morreu três
+vezes seguidas em pontos diferentes do bundler AppImage do Tauri — todos os três com a MESMA causa
+raiz: o container roda **amd64 sob tradução Rosetta** (ver "Nota de performance" abaixo), e as
+ferramentas do `linuxdeploy` não foram desenhadas para esse ambiente. As três correções, diagnosticadas
+por probes diferenciais no container ao vivo, viraram MECANISMOS PERMANENTES:
+
+**(A) Cache do `linuxdeploy` pré-baixado e pré-patchado.** O bundler AppImage do Tauri
+(`@tauri-apps/cli` ^2.9.6, `crates/tauri-bundler/.../appimage/linuxdeploy.rs`, função
+`prepare_tools`) baixa 5 arquivos para `~/.cache/tauri/` na primeira vez que precisa deles, e PULA o
+download se um arquivo daquele nome já existe ali — é esse early-return que faz a pré-carga desta
+imagem funcionar. O próprio Tauri já zera os bytes 8-10 de `linuxdeploy-x86_64.AppImage` (um `dd`
+incondicional no fim de `prepare_tools`, roda TODA vez) — por isso esse arquivo específico sempre
+funcionou. Ele NUNCA faz o mesmo para `linuxdeploy-plugin-appimage.AppImage` (baixado uma vez, nunca
+mais tocado), que por isso mantém o magic type-2 do formato AppImage (`41 49 02` no offset 8 do
+header ELF) — a heurística de binfmt do Rosetta do Docker Desktop não bate com esse magic, então o
+kernel executa o arquivo NATIVAMENTE em vez de rotear pelo Rosetta, e ele morre com
+`Exec format error`, engolido pelo linuxdeploy como `std::logic_error: subprocess failed (exit code 2)`.
+Fix: o Dockerfile baixa os mesmos 5 arquivos que o Tauri baixaria (`AppRun-x86_64`,
+`linuxdeploy-x86_64.AppImage`, `linuxdeploy-plugin-gtk.sh`, `linuxdeploy-plugin-gstreamer.sh`,
+`linuxdeploy-plugin-appimage.AppImage`) e zera os bytes 8-10 de TODO `*.AppImage` mais
+`AppRun-x86_64` de forma defensiva (inócuo onde já está zerado — o padding `e_ident` de um ELF comum
+já é zero nesse offset; só um header AppImage type-2 de verdade tem algo ali para apagar).
+- **Sintoma sem o fix:** `std::logic_error: subprocess failed (exit code 2)` no passo de bundle,
+  sem mais contexto (o linuxdeploy engole o `Exec format error` original).
+- **Drift caveat:** se um bump futuro do `@tauri-apps/cli` mudar esse conjunto de ferramentas
+  (arquivo novo, nome diferente, URL upstream diferente), esta pré-carga ainda semeia o conjunto
+  ANTIGO num cache que o Tauri trata como completo para todo arquivo cujo NOME não mudou — um
+  arquivo genuinamente NOVO que o Tauri passa a exigir é baixado fresco, SEM PATCH, e o mesmo
+  sintoma volta. Não há gate automatizado para esse drift; o reparo é rebuildar esta imagem
+  (`docker build --no-cache`) quando o Tauri CLI subir de versão, re-derivando a lista de
+  ferramentas de `linuxdeploy.rs` na versão nova se o sintoma reaparecer.
+
+**(B) Staging do daemon filtra o prebuild nativo pelo alvo declarado.** Em qualquer host
+`linux-x64-gnu` (este container incluso), `bun install`'s matching por `--os`/`--cpu` resolve TODOS
+os variantes de libc para aquele os+cpu — não existe eixo de libc no gate de optional-dep do bun —
+então `@libsql/linux-x64-gnu` E `@libsql/linux-x64-musl` resolvem os dois. O walk de staging de
+`packages/app/tauri/config/build-sidecars.ts` (`resolveStagedRoots`/`shouldStageOptionalDependency`)
+copiava os dois para dentro do bundle; o `ldd` glibc do linuxdeploy morria no `.node` musl. O fix
+filtra pelo `DAEMON_RUNTIME.nativePrebuild[target]` declarado — só o prebuild do alvo atual entra no
+bundle, uniformemente no path host E no path cross. Ver o comentário de `shouldStageOptionalDependency`
+no próprio arquivo para o mecanismo completo.
+- **Sintoma sem o fix:** o bundle falha (ou, pior, empacota um `.node` que não roda) ao processar
+  `daemon-runtime/node_modules/@libsql/linux-x64-musl` com uma libc estrangeira ao `ldd` glibc.
+
+**(C) Wrapper de `ldd`.** Sob Rosetta, `ldd` no binário single-file do Bun (`codm-daemon`) devolve
+SAÍDA VAZIA (o loader trace falha em silêncio) mesmo o binário rodando normalmente — o smoke test
+prova — e `ldd` no gateway Go estático (`codm-gateway`) sai com código != 0. O linuxdeploy roda `ldd`
+em TODO ELF do AppDir e trata QUALQUER falha (saída vazia ou exit != 0) como fatal. Fix: o Dockerfile
+renomeia o `ldd` real para `/usr/bin/ldd.real` e instala `ldd-wrapper.sh` como `/usr/bin/ldd` — o
+wrapper responde "sem dependências" (saída vazia, rc 0) sempre que o real falhar ou não imprimir
+nada. Ver o cabeçalho de `ldd-wrapper.sh` para a justificativa completa do risco aceito (nossos
+sidecars são autocontidos; as deps que têm — glibc base — já estão na blacklist do linuxdeploy).
+- **Sintoma sem o fix:** o bundle falha ao rodar `ldd` sobre `codm-daemon` ou `codm-gateway`, antes
+  de chegar perto do problema (A) acima.
+
 ## Gerar um token de registro
 
 Tokens de registro expiram em ~1h e exigem admin do repo:
@@ -133,6 +190,18 @@ ROOT-OWNED no host (não há conteúdo/ownership da imagem para semear); um `tau
 como `runner` então falha com "Permission denied" ao criar `release/` dentro dele. Medido: run
 32926405769 (2026-08-26). `.cargo`/`.rustup` nunca sofreram disso porque já existem na imagem,
 donos de `runner`, então o Docker semeia o volume novo com esse conteúdo E essa ownership.
+
+**Efeito colateral aceito de `.cargo`/`.rustup` serem volumes: eles MASCARAM a toolchain da imagem
+depois da primeira montagem.** Um named volume só é semeado a partir do conteúdo da imagem na
+PRIMEIRA vez que é criado — depois disso, o volume é a fonte de verdade em todo boot seguinte, e o
+que a imagem carrega para aquele caminho deixa de importar. Rebuildar a imagem para adicionar um
+rustup target novo (ou uma cargo subcommand nova, como `cargo-xwin` para o cross Windows) NÃO
+alcança um container cujos volumes `codm-runner-rustup`/`codm-runner-cargo` já existiam antes desse
+rebuild — medido no rerun da perna Windows: `Target x86_64-pc-windows-msvc is not installed
+(installed targets: x86_64-unknown-linux-gnu)`, com a imagem já reconstruída e o Dockerfile já
+correto. Fix: `entrypoint.sh` reconcilia o toolchain DECLARADO a cada boot, antes de `./run.sh`
+(`rustup target add x86_64-pc-windows-msvc` + instala `cargo-xwin` se ausente) — idempotente, então
+o custo real só existe na primeira vez que um volume desatualizado encontra o entrypoint novo.
 
 Sem esses volumes o runner ainda funciona — só recompila, rebaixa as dependências e rebaixa o SDK
 do Windows do zero a cada container novo, o que é o comportamento normal de um runner hospedado

@@ -171,6 +171,13 @@ async function run(label: string, cmd: string[], cwd: string, env?: Record<strin
  * makes a target added to TARGETS without a row here a tsc error — total by construction, same
  * discipline as TARGETS itself). Not derived from the triple string: Linux ships BOTH gnu/musl
  * prebuilds and this repo standardizes on gnu, matching TARGETS' own `...-unknown-linux-gnu` triple.
+ *
+ * This same table now ALSO drives the staging walk's filter (`shouldStageOptionalDependency`,
+ * below `resolveStagedRoots`): `bun install`'s os/cpu matching resolves every libc variant for a
+ * given os+cpu (no libc axis in its optional-dep gate), so a linux-x64-gnu HOST resolves
+ * `@libsql/linux-x64-musl` too — the walk used to stage it right alongside gnu, and `ldd` on the
+ * musl `.node` then killed linuxdeploy. The filter keys off THIS table so the fix stays declarative
+ * (add a target here, the filter covers it) instead of a platform `if` at the staging call site.
  */
 export const DAEMON_RUNTIME = {
 	role: 'daemon',
@@ -217,12 +224,54 @@ export function buildCmd(sidecar: SidecarManifestEntry, outfile: string, target:
 }
 
 /**
+ * Pure classifier for the (B) walk-filter below: given the FULL set of optional-dependency names
+ * declared by ONE package (e.g. `libsql`'s own `optionalDependencies`), decide whether that set IS
+ * the native-prebuild family — true when it contains at least one of `nativePrebuild`'s declared
+ * VALUES. Detecting the family this way (co-occurrence in the SAME `optionalDependencies` object as
+ * a package we already declared) is what lets an UNDECLARED sibling (`@libsql/linux-x64-musl` —
+ * musl is real but this repo only ever targets glibc, see `DAEMON_RUNTIME.nativePrebuild`'s own
+ * comment) still be recognized as part of the family it travels with, with zero platform `if`s and
+ * zero string-shape guessing on the package name itself.
+ */
+export function isNativePrebuildFamily(optionalDepNames: readonly string[], nativePrebuild: Record<TargetKey, string>): boolean {
+	const declared = new Set(Object.values(nativePrebuild))
+	return optionalDepNames.some(name => declared.has(name))
+}
+
+/**
+ * Pure walk-filter for defect (B): should `depName` — one member of `allOptionalDepNames`, the
+ * FULL optional-dependency set of its declaring package — be staged for `targetKey`?
+ *
+ * - Not a native-prebuild family member (`isNativePrebuildFamily` is false for its siblings) ⇒
+ *   today's behavior, unchanged: always a staging candidate (still gated on actually resolving).
+ * - A family member ⇒ staged ONLY when it's the ONE package `nativePrebuild[targetKey]` names.
+ *   This is the fix: measured on a linux-x64-gnu host, `bun install`'s os/cpu matching resolves
+ *   BOTH `@libsql/linux-x64-gnu` AND `@libsql/linux-x64-musl` (bun's optional-dep gate has no libc
+ *   axis), so the old walk staged the musl prebuild into a glibc bundle — `ldd` on the musl `.node`
+ *   then dies inside linuxdeploy. Applies uniformly to the host path AND the cross path
+ *   (`materializeCrossPlatformClosure`'s scratch install) because both funnel through this same
+ *   walk — no separate cross-only special case.
+ */
+export function shouldStageOptionalDependency(
+	depName: string,
+	allOptionalDepNames: readonly string[],
+	targetKey: TargetKey,
+	nativePrebuild: Record<TargetKey, string>,
+): boolean {
+	if (!isNativePrebuildFamily(allOptionalDepNames, nativePrebuild)) return true
+	return depName === nativePrebuild[targetKey]
+}
+
+/**
  * Runtime closure of a declared package, resolved FROM a given root (host workspace or the cross-
- * target scratch dir below — one staging function, two roots). Walking `optionalDependencies` is
- * the POINT, not a nicety: the native prebuild (`@libsql/darwin-arm64`, …) is an optional dep of
- * `libsql`, and walking it is what keeps this file from naming a triple at the call site. Absent
- * optionals are the OTHER platforms' prebuilds — skipped, not an error. `dependencies` are walked
- * too so a staged package is never half-copied. `@types/*` are type-only and skipped.
+ * target scratch dir below — one staging function, two roots, one filter). Walking
+ * `optionalDependencies` is the POINT, not a nicety: the native prebuild (`@libsql/darwin-arm64`, …)
+ * is an optional dep of `libsql`, and walking it is what keeps this file from naming a triple at the
+ * call site. Absent optionals are the OTHER platforms' prebuilds — skipped, not an error.
+ * `dependencies` are walked too so a staged package is never half-copied. `@types/*` are type-only
+ * and skipped. Every optional dep is additionally run through `shouldStageOptionalDependency`
+ * (defect B, see its own doc) BEFORE the resolve attempt — a family member that isn't this target's
+ * declared prebuild is skipped outright, never even probed.
  *
  * CROSS-TRIPLE GAP — CLOSED for declared targets. It used to be: `bun install`'s ambient
  * node_modules only ever holds the HOST's optional prebuild, so walking it from the workspace for a
@@ -236,7 +285,12 @@ export function buildCmd(sidecar: SidecarManifestEntry, outfile: string, target:
  * right prebuild actually landed, per target, so a silent miss fails the build loud instead of
  * shipping a binary that dies on first connect.
  */
-function resolveStagedRoots(packages: readonly string[], resolveFrom: string): Map<string, string> {
+function resolveStagedRoots(
+	packages: readonly string[],
+	resolveFrom: string,
+	targetKey: TargetKey,
+	nativePrebuild: Record<TargetKey, string> = DAEMON_RUNTIME.nativePrebuild,
+): Map<string, string> {
 	const roots = new Map<string, string>()
 
 	function walk(name: string, resolveFrom: string): void {
@@ -249,7 +303,9 @@ function resolveStagedRoots(packages: readonly string[], resolveFrom: string): M
 			optionalDependencies?: Record<string, string>
 		}
 		for (const dep of Object.keys(manifest.dependencies ?? {})) walk(dep, pkgDir)
-		for (const dep of Object.keys(manifest.optionalDependencies ?? {})) {
+		const optionalDepNames = Object.keys(manifest.optionalDependencies ?? {})
+		for (const dep of optionalDepNames) {
+			if (!shouldStageOptionalDependency(dep, optionalDepNames, targetKey, nativePrebuild)) continue
 			try {
 				Bun.resolveSync(`${dep}/package.json`, pkgDir)
 			} catch {
@@ -365,7 +421,7 @@ export async function buildSidecars(targetKey: TargetKey): Promise<void> {
 	rmSync(runtimeDest, { recursive: true, force: true })
 
 	const stagingRoot = isCrossTarget ? await materializeCrossPlatformClosure(target, DAEMON_RUNTIME.packages, coreDir) : coreDir
-	const roots = resolveStagedRoots(DAEMON_RUNTIME.packages, stagingRoot)
+	const roots = resolveStagedRoots(DAEMON_RUNTIME.packages, stagingRoot, targetKey)
 	try {
 		for (const [name, root] of roots) {
 			cpSync(root, join(runtimeDest, name), { recursive: true, dereference: true })

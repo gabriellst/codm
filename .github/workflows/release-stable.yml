@@ -103,7 +103,11 @@ jobs:
     env:
       MACMINI_KEYCHAIN_PASSWORD: ${{ secrets.MACMINI_KEYCHAIN_PASSWORD }}
     strategy:
-      fail-fast: true
+      # `fail-fast: false`, de propósito (uniformidade com release-beta.yml, pedida pela sessão
+      # coordenadora): `publish` já exige os três verdes via `needs`, e desde 2026-08-26 as três
+      # entradas são self-hosted NO MESMO runner Linux, rodando serializadas — cancelar uma no meio
+      # não libera capacidade para nenhuma outra, então fail-fast não economiza nada aqui.
+      fail-fast: false
       matrix:
         include:
           # Self-hosted no Mac mini do founder (custo zero de cota; ver release-beta.yml e

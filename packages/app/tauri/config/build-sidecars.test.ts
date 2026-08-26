@@ -10,11 +10,13 @@ import { REPO } from '../../../../template.config'
 import {
 	buildCmd,
 	DAEMON_RUNTIME,
+	isNativePrebuildFamily,
 	isTargetKey,
 	parseCliArgs,
 	pickDependencyVersions,
 	resolveHostKey,
 	resolveTargetKey,
+	shouldStageOptionalDependency,
 	TARGETS,
 } from './build-sidecars'
 import { SIDECARS } from './sidecars'
@@ -128,5 +130,65 @@ describe('build-sidecars (packages/app/tauri/config)', () => {
 
 	it('BSC-11: DAEMON_RUNTIME.role names a real sidecar in the manifest', () => {
 		expect(SIDECARS.some(s => s.role === DAEMON_RUNTIME.role)).toBe(true)
+	})
+
+	// Defect (B): a linux-x64-gnu HOST resolves BOTH `@libsql/linux-x64-gnu` and
+	// `@libsql/linux-x64-musl` (bun's optional-dep os/cpu gate has no libc axis) — the staging walk
+	// used to copy both into the bundle, and glibc `ldd` died on the musl `.node` inside linuxdeploy.
+	// These rails cover the pure classifier/filter the walk now runs every optional dep through
+	// (`resolveStagedRoots` itself needs a real node_modules tree, so it stays outside this pure
+	// lane — see the file banner).
+	describe('defect (B) — native-prebuild family walk-filter', () => {
+		// The real shape of `libsql`'s own optionalDependencies: every platform+libc variant,
+		// siblings in ONE object — exactly the co-occurrence the classifier keys off.
+		const libsqlOptionalDepNames = [
+			'@libsql/darwin-arm64',
+			'@libsql/darwin-x64',
+			'@libsql/linux-arm64-gnu',
+			'@libsql/linux-arm64-musl',
+			'@libsql/linux-x64-gnu',
+			'@libsql/linux-x64-musl',
+			'@libsql/win32-x64-msvc',
+		]
+
+		it('BSC-12: isNativePrebuildFamily is true for a set containing a declared nativePrebuild value', () => {
+			expect(isNativePrebuildFamily(libsqlOptionalDepNames, DAEMON_RUNTIME.nativePrebuild)).toBe(true)
+		})
+
+		it('BSC-13: isNativePrebuildFamily is false for a set with no declared nativePrebuild value', () => {
+			expect(isNativePrebuildFamily(['@neon-rs/load', 'some-other-optional'], DAEMON_RUNTIME.nativePrebuild)).toBe(false)
+			expect(isNativePrebuildFamily([], DAEMON_RUNTIME.nativePrebuild)).toBe(false)
+		})
+
+		it('BSC-14: shouldStageOptionalDependency excludes the undeclared musl sibling on a linux-x64 target', () => {
+			expect(
+				shouldStageOptionalDependency('@libsql/linux-x64-musl', libsqlOptionalDepNames, 'linux-x64', DAEMON_RUNTIME.nativePrebuild),
+			).toBe(false)
+		})
+
+		it('BSC-15: shouldStageOptionalDependency keeps the declared gnu prebuild on a linux-x64 target', () => {
+			expect(
+				shouldStageOptionalDependency('@libsql/linux-x64-gnu', libsqlOptionalDepNames, 'linux-x64', DAEMON_RUNTIME.nativePrebuild),
+			).toBe(true)
+		})
+
+		it('BSC-16: shouldStageOptionalDependency keeps @libsql/win32-x64-msvc ONLY for the win32-x64 target', () => {
+			expect(
+				shouldStageOptionalDependency('@libsql/win32-x64-msvc', libsqlOptionalDepNames, 'win32-x64', DAEMON_RUNTIME.nativePrebuild),
+			).toBe(true)
+			for (const other of ['darwin-arm64', 'darwin-x64', 'linux-arm64', 'linux-x64'] as const) {
+				expect(
+					shouldStageOptionalDependency('@libsql/win32-x64-msvc', libsqlOptionalDepNames, other, DAEMON_RUNTIME.nativePrebuild),
+					other,
+				).toBe(false)
+			}
+		})
+
+		it('BSC-17: a non-prebuild optional dependency always passes through, regardless of target', () => {
+			const nonFamily = ['@neon-rs/load']
+			for (const target of Object.keys(TARGETS) as (keyof typeof TARGETS)[]) {
+				expect(shouldStageOptionalDependency('@neon-rs/load', nonFamily, target, DAEMON_RUNTIME.nativePrebuild), target).toBe(true)
+			}
+		})
 	})
 })

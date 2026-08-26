@@ -33,4 +33,22 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+# Reconciliação de toolchain DECLARADO — mecanismo, não patch pontual (medido no rerun da perna
+# Windows: `Target x86_64-pc-windows-msvc is not installed (installed targets:
+# x86_64-unknown-linux-gnu)`). Os volumes nomeados `codm-runner-rustup`/`codm-runner-cargo`
+# (README.md, "Volumes persistentes") são semeados a partir do conteúdo da imagem SÓ na primeira
+# vez que cada volume é montado — depois disso eles MASCARAM `~/.rustup`/`~/.cargo` da imagem em
+# todo boot seguinte. Um rebuild de imagem que adiciona um rustup target novo (ou uma cargo
+# subcommand nova, como `cargo-xwin` para o cross Windows) nunca alcança um container cujo volume já
+# existia ANTES desse rebuild — o container continua rodando a toolchain velha para sempre, mesmo
+# com `docker run` apontando pra imagem nova. Fix: reconcilia o estado declarado AQUI, a cada boot,
+# em vez de confiar que a imagem sozinha basta — idempotente (custo real só na primeira vez que um
+# volume desatualizado encontra este entrypoint; toda vez depois disso é uma checagem barata que não
+# reinstala nada).
+REQUIRED_RUST_TARGETS=(x86_64-pc-windows-msvc)
+for target in "${REQUIRED_RUST_TARGETS[@]}"; do
+  rustup target add "$target"
+done
+command -v cargo-xwin >/dev/null 2>&1 || cargo install --locked cargo-xwin
+
 ./run.sh

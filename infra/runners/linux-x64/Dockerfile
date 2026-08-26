@@ -143,6 +143,68 @@ RUN GH_VERSION="$(curl -fsSL https://api.github.com/repos/cli/cli/releases/lates
     && rm -rf /tmp/gh.tar.gz "/tmp/gh_${GH_VERSION}_linux_amd64" \
     && gh --version
 
+# `ldd` wrapper — defect (C), measured 2026-08-26 (beta run 32929100958, differential probes in the
+# live container). Under Rosetta, `ldd` on the Bun single-file daemon (codm-daemon) returns EMPTY
+# output (the loader-trace mechanism fails silently) even though the binary runs fine — the smoke
+# test proves it — and `ldd` on the static Go gateway (codm-gateway) exits non-zero. linuxdeploy
+# runs `ldd` on EVERY ELF in the AppDir and treats ANY failure (empty output or non-zero exit) as
+# fatal, killing the whole bundle. Fix: rename the real `ldd` to `ldd.real` and install a wrapper at
+# `/usr/bin/ldd` (ldd-wrapper.sh, copied in below — content + rationale comment are verbatim from
+# the hot-verified fix) that answers "no dependencies" (empty output, rc 0) whenever the real one
+# fails or prints nothing. Design truth backing the wrapper's accepted risk: our sidecars are
+# self-contained, and the base-glibc deps they DO have are already on linuxdeploy's own blacklist —
+# see ldd-wrapper.sh's own header for the full rationale.
+COPY ldd-wrapper.sh /tmp/ldd-wrapper.sh
+RUN mv /usr/bin/ldd /usr/bin/ldd.real \
+    && install -m 755 /tmp/ldd-wrapper.sh /usr/bin/ldd \
+    && rm /tmp/ldd-wrapper.sh
+
+# linuxdeploy tool cache, pre-downloaded and pre-patched — defect (A), measured 2026-08-26 (same
+# beta run/probes as above). Tauri's AppImage bundler (`@tauri-apps/cli` ^2.9.6,
+# crates/tauri-bundler/src/bundle/linux/appimage/linuxdeploy.rs `prepare_tools`) downloads 5 tool
+# files into `dirs::cache_dir()/tauri` (`/home/runner/.cache/tauri` for the `runner` user) THE FIRST
+# TIME it needs them, and skips the download whenever a file of that name already exists there —
+# that early-return is what makes baking this cache into the image work at all. `prepare_tools`
+# ALSO zeroes bytes 8-10 of `linuxdeploy-x86_64.AppImage` itself on EVERY run (an unconditional `dd`
+# call at the end of the function) — that upstream `dd` is why the plain `linuxdeploy-x86_64.AppImage`
+# runs fine even outside this image. It does the SAME dd for NOTHING ELSE: `linuxdeploy-plugin-
+# appimage.AppImage` is downloaded once and never touched again, so it keeps the AppImage type-2
+# magic (`41 49 02` at ELF header offset 8) forever. Docker Desktop's Rosetta binfmt registration
+# does not match that magic, so the kernel native-execs the file instead of routing it through
+# Rosetta — it dies with "Exec format error", surfaced by linuxdeploy as `std::logic_error:
+# subprocess failed (exit code 2)`.
+#
+# Fix: pre-download the same 5 files Tauri would fetch on first build (URLs read straight out of
+# `linuxdeploy.rs` at the pinned CLI version), then zero bytes 8-10 of EVERY `*.AppImage` plus
+# `AppRun-x86_64` DEFENSIVELY — harmless where already zero (a normal ELF's `e_ident` padding at
+# that offset is zero already; only an actual AppImage type-2 header has non-zero bytes there to
+# blank).
+#
+# ⚠️ DRIFT CAVEAT: if a future `@tauri-apps/cli` bump changes this tool set (new tool, renamed file,
+# different upstream URL), this bake still seeds the OLD set into a cache Tauri treats as complete
+# for every file whose NAME didn't change (`!path.exists()` short-circuits the real download) — a
+# genuinely NEW file Tauri needs gets fetched fresh, UNPATCHED, and the exact "Exec format error" /
+# "subprocess failed (exit code 2)" symptom from beta run 32929100958 returns. There is no
+# automated gate for this drift; the fix is to re-bake this image (`docker build --no-cache`)
+# whenever the Tauri CLI version bumps, re-deriving the tool list from `linuxdeploy.rs` at the new
+# version if the symptom reappears.
+RUN mkdir -p /home/runner/.cache/tauri \
+    && curl -fsSL -o /home/runner/.cache/tauri/AppRun-x86_64 \
+         "https://github.com/tauri-apps/binary-releases/releases/download/apprun-old/AppRun-x86_64" \
+    && curl -fsSL -o /home/runner/.cache/tauri/linuxdeploy-x86_64.AppImage \
+         "https://github.com/tauri-apps/binary-releases/releases/download/linuxdeploy/linuxdeploy-x86_64.AppImage" \
+    && curl -fsSL -o /home/runner/.cache/tauri/linuxdeploy-plugin-gtk.sh \
+         "https://raw.githubusercontent.com/tauri-apps/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh" \
+    && curl -fsSL -o /home/runner/.cache/tauri/linuxdeploy-plugin-gstreamer.sh \
+         "https://raw.githubusercontent.com/tauri-apps/linuxdeploy-plugin-gstreamer/master/linuxdeploy-plugin-gstreamer.sh" \
+    && curl -fsSL -o /home/runner/.cache/tauri/linuxdeploy-plugin-appimage.AppImage \
+         "https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/download/continuous/linuxdeploy-plugin-appimage-x86_64.AppImage" \
+    && for f in /home/runner/.cache/tauri/*.AppImage /home/runner/.cache/tauri/AppRun-x86_64; do \
+         dd if=/dev/zero of="$f" bs=1 seek=8 count=3 conv=notrunc status=none; \
+       done \
+    && chmod +x /home/runner/.cache/tauri/*.AppImage /home/runner/.cache/tauri/AppRun-x86_64 /home/runner/.cache/tauri/*.sh \
+    && chown -R runner:runner /home/runner/.cache/tauri
+
 COPY --chown=runner:runner entrypoint.sh /home/runner/entrypoint.sh
 RUN chmod +x /home/runner/entrypoint.sh
 
