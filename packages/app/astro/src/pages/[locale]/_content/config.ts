@@ -56,6 +56,14 @@ export const landing = defineCollection({
 			// "Download para {platform}" — `{platform}` vira macOS / Windows / Linux (config/download.ts,
 			// detecção no cliente). Reusado pelo card de preço + CTA do footer. Nomes de SO só aqui.
 			ctaDownload: z.string().includes('{platform}'),
+			// O aviso do Windows (DownloadWindowsNote.astro): o instalador de lá não tem assinatura
+			// Authenticode, então o SmartScreen bloqueia o download. Quatro campos porque o aviso tem
+			// quatro trabalhos distintos — dizer O QUE é, POR QUE acontece, QUAIS cliques seguir, e
+			// oferecer a verificação a quem prefere conferir a confiar.
+			windowsNoteTitle: z.string(),
+			windowsNoteBody: z.string(),
+			windowsNoteSteps: z.string(),
+			windowsNoteChecksum: z.string(),
 			otherPlatforms: z.string(), // "Outras plataformas" — título da lista completa sob o CTA
 			ctaGithub: z.string(),
 			cards: z.object({

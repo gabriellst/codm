@@ -36,6 +36,18 @@ export interface DownloadEntry {
 
 const stable = (asset: string) => `${R2_PUBLIC_BASE}/stable/${asset}`
 
+/**
+ * A soma SHA-256 de cada instalador do canal estável, publicada pelo job de release a partir dos
+ * MESMOS arquivos que ele sobe (nunca recalculada depois).
+ *
+ * Existe por causa do Windows: aquele instalador não tem assinatura Authenticode, então o navegador
+ * o chama de suspeito e o sistema repete o aviso ao executar. Enquanto não houver certificado, o
+ * checksum é a única coisa que oferecemos a quem prefere conferir o arquivo a confiar na palavra de
+ * um site — e o alias tem nome fixo, como os instaladores, para que o link não envelheça a cada
+ * versão.
+ */
+export const CHECKSUMS_URL = stable('SHA256SUMS.txt')
+
 const MACOS: DownloadEntry = {
 	key: 'darwin-aarch64-dmg',
 	os: 'macos',

@@ -2,6 +2,7 @@
 import type { CollectionEntry } from 'astro:content'
 import DownloadIcon from '~/components/DownloadIcon.astro'
 import DownloadOthers from '~/components/DownloadOthers.astro'
+import DownloadWindowsNote from '~/components/DownloadWindowsNote.astro'
 import Icon from '~/components/Icon.astro'
 import { DEFAULT_DOWNLOAD, downloadLabel } from '~/config/download'
 
@@ -152,6 +153,13 @@ const floatCards = [
 		</div>
 		<div class="reveal reveal-stagger mt-4" style={{ '--i': 4 }}>
 			<DownloadOthers title={t.otherPlatforms} class="justify-center text-[var(--muted-foreground)]" />
+			{/* Revelado por DownloadDetect.astro só quando a detecção diz Windows — ver o docblock lá. */}
+			<DownloadWindowsNote
+				title={t.windowsNoteTitle}
+				body={t.windowsNoteBody}
+				steps={t.windowsNoteSteps}
+				checksumLabel={t.windowsNoteChecksum}
+			/>
 		</div>
 	</div>
 </header>

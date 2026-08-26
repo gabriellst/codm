@@ -1,0 +1,53 @@
+---
+/**
+ * O AVISO DO WINDOWS — o que dizer a quem vai levar um bloqueio do SmartScreen.
+ *
+ * O instalador do Windows não tem assinatura Authenticode (o do macOS tem Developer ID e é
+ * notarizado; os pacotes Linux e todo payload de update carregam assinatura minisign). Sem
+ * certificado, o navegador chama o download de "suspeito" e o Windows repete o aviso na execução —
+ * não porque encontrou algo, mas porque não sabe de quem é. Um certificado com reputação imediata
+ * custa centenas de dólares por ano; a candidatura ao programa gratuito para código aberto está em
+ * aberto, e enquanto ela não fecha o aviso existe.
+ *
+ * A escolha aqui é AVISAR ANTES em vez de deixar o susto acontecer sozinho: quem sabe o que vem
+ * decide se prossegue; quem é surpreendido por uma tela vermelha simplesmente desiste — e com razão,
+ * porque a única coisa que ele tinha para julgar era o alarme. O texto diz o que é, por que é, e o
+ * caminho exato dos cliques, com o link do SHA-256 para quem quiser conferir o arquivo em vez de
+ * confiar na nossa palavra.
+ *
+ * `hidden` por padrão e revelado por `DownloadDetect.astro` só quando a detecção diz Windows: o
+ * aviso não é para quem baixa no Mac. Sem JS ele fica escondido — e é o comportamento certo, porque
+ * sem JS o CTA também aponta para o macOS.
+ */
+import { CHECKSUMS_URL } from '~/config/download'
+
+interface Props {
+	/** Título curto do aviso. */
+	title: string
+	/** O corpo: o que vai acontecer e por quê. */
+	body: string
+	/** Os cliques, na ordem. */
+	steps: string
+	/** Rótulo do link para os checksums. */
+	checksumLabel: string
+	class?: string
+}
+
+const { title, body, steps, checksumLabel, class: className } = Astro.props
+---
+
+<aside
+	data-download-windows-note
+	hidden
+	class:list={[
+		'mx-auto mt-4 max-w-[560px] rounded-asymmetric-md border border-[var(--fg-20)] bg-[var(--muted)] px-4 py-3 text-left text-[12.5px] leading-relaxed text-[var(--muted-foreground)]',
+		className,
+	]}
+>
+	<p class="m-0 font-bold text-[var(--foreground)]">{title}</p>
+	<p class="m-0 mt-1">{body}</p>
+	<p class="m-0 mt-1">{steps}</p>
+	<p class="m-0 mt-1">
+		<a href={CHECKSUMS_URL} class="underline underline-offset-2">{checksumLabel}</a>
+	</p>
+</aside>

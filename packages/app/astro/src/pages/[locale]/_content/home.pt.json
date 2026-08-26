@@ -16,6 +16,10 @@
 		"titleLight": "sem sair do grupo.",
 		"subtitle": "Agentes na sua máquina executam projetos, clientes e processos\na partir de uma mensagem no WhatsApp. Você aprova antes.",
 		"ctaDownload": "Download para {platform}",
+		"windowsNoteTitle": "No Windows, o instalador ainda não é assinado",
+		"windowsNoteBody": "O navegador vai chamar o download de suspeito e o Windows vai repetir o aviso ao abrir — não porque encontrou algo, mas porque ainda não temos um certificado que diga de quem é o arquivo.",
+		"windowsNoteSteps": "Para prosseguir: no aviso do download, escolha Manter; ao executar, clique em Mais informações e depois em Executar assim mesmo.",
+		"windowsNoteChecksum": "Conferir a soma SHA-256 do arquivo",
 		"otherPlatforms": "Outras plataformas",
 		"ctaGithub": "GitHub",
 		"cards": {

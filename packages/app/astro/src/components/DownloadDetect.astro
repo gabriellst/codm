@@ -15,6 +15,16 @@
 	const os = detectDownloadOs(navigator.userAgent, uaData?.platform)
 	const entry = os ? PRIMARY_DOWNLOAD[os] : DEFAULT_DOWNLOAD
 
+	// O aviso do Windows sai do servidor ESCONDIDO e só aparece para quem está no Windows — ver o
+	// docblock de DownloadWindowsNote.astro. Fica fora do `if` abaixo de propósito: aquele bloco só
+	// roda quando a entrada difere do default (macOS), e a revelação depende do SISTEMA, não de o
+	// botão ter mudado.
+	if (os === 'windows') {
+		document.querySelectorAll<HTMLElement>('[data-download-windows-note]').forEach(note => {
+			note.hidden = false
+		})
+	}
+
 	if (entry.key !== DEFAULT_DOWNLOAD.key) {
 		document.querySelectorAll<HTMLAnchorElement>('a[data-download-cta]').forEach(a => {
 			a.href = entry.url

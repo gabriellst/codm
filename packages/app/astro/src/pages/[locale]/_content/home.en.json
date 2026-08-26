@@ -16,6 +16,10 @@
 		"titleLight": "no leaving the group chat.",
 		"subtitle": "Agents on your machine run projects, clients and processes\nfrom a single WhatsApp message. You approve first.",
 		"ctaDownload": "Download for {platform}",
+		"windowsNoteTitle": "On Windows, the installer isn't signed yet",
+		"windowsNoteBody": "Your browser will call the download suspicious and Windows will repeat the warning when you open it — not because it found anything, but because we don't yet have a certificate saying whose file this is.",
+		"windowsNoteSteps": "To continue: on the download warning choose Keep; when running it, click More info and then Run anyway.",
+		"windowsNoteChecksum": "Check the file's SHA-256 checksum",
 		"otherPlatforms": "Other platforms",
 		"ctaGithub": "GitHub",
 		"cards": {
