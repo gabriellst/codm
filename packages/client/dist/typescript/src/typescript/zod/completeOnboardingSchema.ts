@@ -8,6 +8,8 @@ import { z } from "zod/v4";
 /**
  * @description Conclui o onboarding do operador — commit atômico do rascunho (workspace/thread) seguido de completedAt
  */
-export const completeOnboarding200Schema = z.any()
+export const completeOnboarding200Schema = z.object({
+    "threadId": z.nullable(z.uuid())
+    })
 
 export const completeOnboardingMutationResponseSchema = z.lazy(() => completeOnboarding200Schema)

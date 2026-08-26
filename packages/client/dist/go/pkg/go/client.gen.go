@@ -630,6 +630,7 @@ const (
 	CodeBusinessRule             ErrorCode = "BUSINESS_RULE_VIOLATION"
 	CodeCannotEditOthers         ErrorCode = "CANNOT_EDIT_OTHERS_MESSAGE"
 	CodeChannelAlreadyConnected  ErrorCode = "INTEGRATION_ALREADY_CONNECTED"
+	CodeChannelDeviceInvalidated ErrorCode = "CHANNEL_DEVICE_INVALIDATED"
 	CodeChannelNameAlreadyExists ErrorCode = "INTEGRATION_NAME_ALREADY_EXISTS"
 	CodeChannelNotConnected      ErrorCode = "INTEGRATION_NOT_CONNECTED"
 	CodeChannelNotFound          ErrorCode = "INTEGRATION_NOT_FOUND"
@@ -693,6 +694,8 @@ func (e ErrorCode) Valid() bool {
 	case CodeCannotEditOthers:
 		return true
 	case CodeChannelAlreadyConnected:
+		return true
+	case CodeChannelDeviceInvalidated:
 		return true
 	case CodeChannelNameAlreadyExists:
 		return true

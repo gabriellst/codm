@@ -8216,7 +8216,9 @@ func (r GetOnboardingResponse) ContentType() string {
 type CompleteOnboardingResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *interface{}
+	JSON200      *struct {
+		ThreadId nullable.Nullable[openapi_types.UUID] `json:"threadId"`
+	}
 }
 
 // Status returns HTTPResponse.Status
@@ -11000,7 +11002,9 @@ func ParseCompleteOnboardingResponse(rsp *http.Response) (*CompleteOnboardingRes
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest interface{}
+		var dest struct {
+			ThreadId nullable.Nullable[openapi_types.UUID] `json:"threadId"`
+		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

@@ -12460,6 +12460,7 @@ pub mod types {
     ///    "PROXY_PORT_REQUIRED_WHEN_ENABLED",
     ///    "INVALID_OWNER_ID",
     ///    "INVALID_IMAGE",
+    ///    "CHANNEL_DEVICE_INVALIDATED",
     ///    "REMOTE_INVALID_PARAMS",
     ///    "REMOTE_DELETED",
     ///    "REMOTE_ALREADY_PINNED",
@@ -12516,6 +12517,7 @@ pub mod types {
     ///    "CodeProxyPortRequired",
     ///    "CodeInvalidOwnerId",
     ///    "CodeInvalidImage",
+    ///    "CodeChannelDeviceInvalidated",
     ///    "CodeRemoteInvalidParams",
     ///    "CodeRemoteDeleted",
     ///    "CodeRemoteAlreadyPinned",
@@ -12597,6 +12599,8 @@ pub mod types {
         InvalidOwnerId,
         #[serde(rename = "INVALID_IMAGE")]
         InvalidImage,
+        #[serde(rename = "CHANNEL_DEVICE_INVALIDATED")]
+        ChannelDeviceInvalidated,
         #[serde(rename = "REMOTE_INVALID_PARAMS")]
         RemoteInvalidParams,
         #[serde(rename = "REMOTE_DELETED")]
@@ -12712,6 +12716,9 @@ pub mod types {
                 }
                 Self::InvalidOwnerId => f.write_str("INVALID_OWNER_ID"),
                 Self::InvalidImage => f.write_str("INVALID_IMAGE"),
+                Self::ChannelDeviceInvalidated => {
+                    f.write_str("CHANNEL_DEVICE_INVALIDATED")
+                }
                 Self::RemoteInvalidParams => f.write_str("REMOTE_INVALID_PARAMS"),
                 Self::RemoteDeleted => f.write_str("REMOTE_DELETED"),
                 Self::RemoteAlreadyPinned => f.write_str("REMOTE_ALREADY_PINNED"),
@@ -12785,6 +12792,7 @@ pub mod types {
                 }
                 "INVALID_OWNER_ID" => Ok(Self::InvalidOwnerId),
                 "INVALID_IMAGE" => Ok(Self::InvalidImage),
+                "CHANNEL_DEVICE_INVALIDATED" => Ok(Self::ChannelDeviceInvalidated),
                 "REMOTE_INVALID_PARAMS" => Ok(Self::RemoteInvalidParams),
                 "REMOTE_DELETED" => Ok(Self::RemoteDeleted),
                 "REMOTE_ALREADY_PINNED" => Ok(Self::RemoteAlreadyPinned),

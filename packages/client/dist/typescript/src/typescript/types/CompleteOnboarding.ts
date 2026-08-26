@@ -7,7 +7,12 @@
 /**
  * @description Conclui o onboarding do operador — commit atômico do rascunho (workspace/thread) seguido de completedAt
 */
-export type CompleteOnboarding200 = any;
+export type CompleteOnboarding200 = {
+    /**
+     * @type string, uuid
+    */
+    threadId: string | null;
+};
 
 export type CompleteOnboardingMutationResponse = CompleteOnboarding200;
 

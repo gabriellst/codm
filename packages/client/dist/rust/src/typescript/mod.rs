@@ -1293,6 +1293,42 @@ pub mod types {
             value.clone()
         }
     }
+    ///`CompleteOnboardingResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "threadId"
+    ///  ],
+    ///  "properties": {
+    ///    "threadId": {
+    ///      "type": [
+    ///        "string",
+    ///        "null"
+    ///      ],
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct CompleteOnboardingResponse {
+        #[serde(rename = "threadId")]
+        pub thread_id: ::std::option::Option<::uuid::Uuid>,
+    }
+    impl ::std::convert::From<&CompleteOnboardingResponse>
+    for CompleteOnboardingResponse {
+        fn from(value: &CompleteOnboardingResponse) -> Self {
+            value.clone()
+        }
+    }
     ///`ConfigureContextBufferBody`
     ///
     /// <details><summary>JSON schema</summary>
@@ -13153,7 +13189,7 @@ Sends a `POST` request to `/ui/onboarding/complete`
 */
     pub async fn complete_onboarding<'a>(
         &'a self,
-    ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
+    ) -> Result<ResponseValue<types::CompleteOnboardingResponse>, Error<()>> {
         let url = format!("{}/ui/onboarding/complete", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
