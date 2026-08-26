@@ -1,99 +1,66 @@
 // packages/app/react/src/routes/onboarding/-components/OnboardingReviewStep/index.tsx — COMPLETE final file.
-import { type ComponentProps, useEffect, useMemo } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import type { ChannelKind } from '@codm/client-typescript/typescript'
-import {
-	attachThreadMutationRequestSchema,
-	getOnboardingQueryKey,
-	useAttachThread,
-	useGetAttachThreadWizard,
-} from '@codm/client-typescript/typescript'
-import { useErrorHandler } from '@/lib/errors'
+import { type ComponentProps, useMemo } from 'react'
+import type { ChannelKind, GetAttachThreadWizardQueryResponse } from '@codm/client-typescript/typescript'
+import { useGetAttachThreadWizard } from '@codm/client-typescript/typescript'
 import { ReviewStep } from '@/routes/(app)/attach/-components/ReviewStep'
 import { useOnboardingSetupStore } from '../../-stores/useOnboardingSetupStore'
+
+/** Sentinel key for a NEW workspace path the operator picked/typed but that is not yet a real
+ *  `Workspace` (only `CompleteOnboarding` materializes it). `ReviewStep` (shared, frozen — see its own
+ *  docblock) looks up the row's display path by matching `workspaceId` against the `workspaces` array
+ *  it's handed; this lets that unmodified lookup render a pending path correctly without either
+ *  fabricating a UUID or teaching the shared component about drafts. Never sent over the wire — it
+ *  only ever exists in this adapter's own props to `ReviewStep`. */
+const PENDING_WORKSPACE_ID = 'pending-workspace'
 
 /**
  * Adapter for the onboarding REVIEW step (spec Decision 11) — `ReviewStep` is `/attach`'s, reused
  * UNMODIFIED. D3 (founder review 12/08) changed `ReviewStep`'s contract from a `form: AttachForm`
- * instance to PLAIN props (`contactRef`/`workspaceId`/`providers`) — this adapter no longer builds a
- * local `useForm()` to satisfy it; it just hands the store's own fields straight through, the same way
- * `OnboardingContactStep`/`OnboardingAgentsStep` already read/write this store directly.
+ * instance to PLAIN props (`contactRef`/`workspaceId`/`providers`) — this adapter hands the store's
+ * own fields straight through, the same way `OnboardingContactStep`/`OnboardingAgentsStep` already
+ * read/write this store directly.
  *
- * `onFinish` deliberately does NOT navigate to `/threads/$threadId` the way `AttachThreadWizard`'s
- * does — AC-14 forbids the onboarding wizard from ever navigating out of `/onboarding`. It only fires
- * the mutation and invalidates the onboarding read, so `threadDone` flips once that read is consulted
- * again (`OnboardingFlow`'s "Concluir" gate, the dashboard panel, or a future visit to this step).
+ * `onFinish`/`isSubmitting` are NOT passed — same as before this rewrite: `OnboardingFlow`'s footer
+ * owns the wizard's only forward action, so this step is pure read + edit links. `onFinish` deliberately
+ * never navigates out of `/onboarding` either way (AC-14).
  *
- * REWRITTEN for the 2026-08-24 onboarding-attach-ux audit (item 2, "Próximo confirma e avança"). This
- * adapter no longer passes `onFinish`/`isSubmitting` to `ReviewStep` — per that component's own
- * docblock, omitting them makes it "pure read + edit links, nothing else", which is exactly what
- * removes the double-click ("Vincular conversa" inside the step, THEN "Próximo" in the footer). The
- * commit action moves to `confirmStep` on `useOnboardingSetupStore`, which `OnboardingFlow`'s footer
- * calls on "Próximo" and awaits before advancing. `confirmStep` is registered ONLY when the
- * accumulated selection is complete AND not already attached (`canFinish && !threadAttached`) — an
- * incomplete REVIEW (WORKSPACE/CONTACT/AGENTS never touched; all DEFERRABLE, not REQUIRED) leaves it
- * `undefined`, so "Próximo" is a synchronous no-op advance, same as before this audit.
- * `threadAttached` (same store) guards against re-firing `useAttachThread` if the operator goes
- * "Voltar" back into REVIEW after already attaching once.
+ * ### 2026-08-26 — draft/atomic-commit rewrite: REVIEW no longer attaches anything
+ * This step used to register its OWN `confirmStep` here, calling `useAttachThread` the instant
+ * "Próximo" confirmed a complete selection — REVIEW was the ONE step that materialized the thread,
+ * atomically-per-itself. That is gone: `CompleteOnboarding` is now the SOLE place that calls
+ * `AttachThread` (composed with `AddWorkspace`, one transaction), and it only runs at "Concluir".
+ * REVIEW's own "Próximo" is therefore a plain, synchronous advance — the exact same shape CONTACT/
+ * AGENTS already have (their row click already recorded+persisted everything there is to submit) —
+ * so this adapter registers no `confirmStep` at all; whatever the previous step's cleanup left behind
+ * (always `undefined` — `key={stepId}` fully unmounts on every navigation) is exactly what "nothing
+ * to confirm" needs. `OnboardingFlow`'s `CAN_CONTINUE.REVIEW` gate reads the SAME three store fields
+ * this component renders, so "Próximo" only unlocks once the summary below is actually complete.
+ *
+ * A pending (not-yet-materialized) new workspace path shows up here via `PENDING_WORKSPACE_ID` — see
+ * its own docblock above.
  */
 export function OnboardingReviewStep(props: ComponentProps<'div'>) {
-	const queryClient = useQueryClient()
 	const contactRef = useOnboardingSetupStore(state => state.contactRef)
 	const providers = useOnboardingSetupStore(state => state.providers)
 	const workspaceId = useOnboardingSetupStore(state => state.workspaceId)
-	const threadAttached = useOnboardingSetupStore(state => state.threadAttached)
-	const setThreadAttached = useOnboardingSetupStore(state => state.setThreadAttached)
-	const setAttachedThreadId = useOnboardingSetupStore(state => state.setAttachedThreadId)
-	const setConfirmStep = useOnboardingSetupStore(state => state.setConfirmStep)
-	const setStepError = useOnboardingSetupStore(state => state.setStepError)
-	const { extractErrorCode, getErrorTranslation } = useErrorHandler()
+	const workspacePath = useOnboardingSetupStore(state => state.workspacePath)
 
 	const { data } = useGetAttachThreadWizard()
-	// `meta: { suppressToast: true }` — 2026-08-24 audit item 6: no global toast for this mutation's
-	// failure; the effect below mirrors `attach.error` into `stepError` instead (no local `onError`/
-	// try-catch — component bp-22, same canon `isPending` already follows).
-	const attach = useAttachThread({
-		mutation: {
-			meta: { suppressToast: true },
-			onSuccess: () => queryClient.invalidateQueries({ queryKey: getOnboardingQueryKey() }),
-		},
-	})
 	const channelKindById = useMemo(() => new Map<string, ChannelKind>((data?.channels ?? []).map(c => [c.channelId, c.kind])), [data])
 
-	const canFinish = attachThreadMutationRequestSchema.safeParse({ contactRef, workspaceId, providers }).success
-
-	useEffect(() => {
-		if (!canFinish || threadAttached) {
-			setConfirmStep(undefined)
-			return
-		}
-		setConfirmStep(async () => {
-			const result = attachThreadMutationRequestSchema.safeParse({ contactRef, workspaceId, providers })
-			if (!result.success) return
-			const res = await attach.mutateAsync({ data: result.data })
-			setThreadAttached(true)
-			// Item 7 (same audit) — `OnboardingFinalStep` needs this thread's `threadId` to look up its
-			// mention tag; this response is the only place that id exists.
-			setAttachedThreadId(res.threadId)
-		})
-		return () => setConfirmStep(undefined)
-	}, [canFinish, threadAttached, contactRef, workspaceId, providers, attach, setThreadAttached, setAttachedThreadId, setConfirmStep])
-
-	// Mirrors the mutation's OWN error state into the shared `stepError` (item 6). Cleared on unmount
-	// (the step remounts fresh on every navigation) so a stale message never bleeds into a different
-	// step.
-	useEffect(() => {
-		setStepError(attach.error ? getErrorTranslation(extractErrorCode(attach.error)) : undefined)
-		return () => setStepError(undefined)
-	}, [attach.error, setStepError, extractErrorCode, getErrorTranslation])
+	const workspaces = useMemo<GetAttachThreadWizardQueryResponse['workspaces']>(() => {
+		const registered = data?.workspaces ?? []
+		if (workspaceId || !workspacePath) return registered
+		return [...registered, { workspaceId: PENDING_WORKSPACE_ID, path: workspacePath, badges: [] }]
+	}, [data, workspaceId, workspacePath])
 
 	return (
 		<ReviewStep
 			contactRef={contactRef}
-			workspaceId={workspaceId}
+			workspaceId={workspaceId ?? (workspacePath ? PENDING_WORKSPACE_ID : undefined)}
 			providers={providers}
 			channelKindById={channelKindById}
-			workspaces={data?.workspaces ?? []}
+			workspaces={workspaces}
 			{...props}
 		/>
 	)

@@ -3,12 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { IconArrowRight } from '@tabler/icons-react'
 import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import {
-	attachThreadMutationRequestSchema,
-	getOnboardingQueryKey,
-	useCompleteOnboarding,
-	useGetOnboarding,
-} from '@codm/client-typescript/typescript'
+import { getOnboardingQueryKey, useCompleteOnboarding, useGetOnboarding, useSaveOnboardingStep } from '@codm/client-typescript/typescript'
 import { Button } from '@codm/app-ui/button'
 import { Spinner } from '@codm/app-ui/spinner'
 import { cn } from '@/lib/utils'
@@ -21,7 +16,7 @@ import { useSystemPreconditionsStore } from '@/stores/useSystemPreconditionsStor
 import { useOnboardingStore as useOnboardingRequiredStore } from '@/stores/useOnboardingStore'
 import { useOnboardingSetupStore } from '../../-stores/useOnboardingSetupStore'
 import { useOnboardingStore } from '../../-stores/useOnboardingStore'
-import { canComplete, firstUnvanquishedStep, INFORMATIVE_KIND, onboardingSteps, type StepId, STEP_TAXONOMY } from '../steps'
+import { canComplete, firstUnvanquishedStep, INFORMATIVE_KIND, isContentStep, onboardingSteps, type StepId, STEP_TAXONOMY } from '../steps'
 import { STEP_COMPONENTS } from '../step-components'
 
 // D3 (screens NN8IL/FPKgO/tBcCA) — the three intro slides sit over a pair of soft blurred
@@ -205,9 +200,25 @@ export function OnboardingFlow({ className, ...props }: ComponentProps<'div'>) {
 	const pending = (pendingStatuses ?? []).map(status => status.id)
 	const steps = onboardingSteps(pending)
 
-	// Semeia o índice UMA VEZ por entrada, assim que a leitura de onboarding chega — nunca de novo
-	// depois (o `seededRef` é por instância de componente, então uma NOVA entrada em `/onboarding`
-	// sempre semeia de novo, mas navegar pelos passos dentro da mesma visita não é sobrescrito).
+	// PATCH `{ currentStep }` — best-effort, fire-and-forget bookkeeping (`goTo`, below): a failure
+	// here is inconsequential (worst case, a reboot resumes one step behind) and unrelated to whatever
+	// the operator is doing NOW, so it stays out of both the global toast and `stepError`.
+	const saveOnboardingStep = useSaveOnboardingStep({ mutation: { meta: { suppressToast: true } } })
+	const setContactRef = useOnboardingSetupStore(state => state.setContactRef)
+	const setProviders = useOnboardingSetupStore(state => state.setProviders)
+	const setWorkspaceId = useOnboardingSetupStore(state => state.setWorkspaceId)
+	const setWorkspacePath = useOnboardingSetupStore(state => state.setWorkspacePath)
+
+	// Semeia UMA VEZ por entrada, assim que a leitura de onboarding chega — nunca de novo depois (o
+	// `seededRef` é por instância de componente, então uma NOVA entrada em `/onboarding` sempre semeia
+	// de novo, mas navegar pelos passos dentro da mesma visita não é sobrescrito). Duas coisas são
+	// semeadas na MESMA passada:
+	//   1. o ÍNDICE do slide, via `firstUnvanquishedStep` (Decision 12/AC-10) — inalterado.
+	//   2. o RASCUNHO do servidor (`onboarding.state`) para dentro de `useOnboardingSetupStore` —
+	//      2026-08-26 fix (draft/atomic-commit): sem isto, um reboot no meio do wizard reabria
+	//      CONTACT/AGENTS/WORKSPACE em branco mesmo com o rascunho salvo no servidor, porque essas
+	//      seleções nunca tinham para onde voltar no cliente. Cada grupo hidrata SÓ se presente — um
+	//      rascunho parcial (ex.: só `providers`) não pisa em campos que o servidor não mandou.
 	// `pending`/`steps` são recalculados AQUI DENTRO a partir de `pendingStatuses` (a dependência
 	// reativa de verdade) — a versão de fora existe só para o render; usá-la faria o efeito depender
 	// de um array novo a cada render (o `.map()` do corpo do componente) e reexecutar sempre.
@@ -215,13 +226,19 @@ export function OnboardingFlow({ className, ...props }: ComponentProps<'div'>) {
 	useEffect(() => {
 		if (seededRef.current || !onboarding) return
 		seededRef.current = true
+
+		if (onboarding.state.contactRef) setContactRef(onboarding.state.contactRef)
+		if (onboarding.state.providers) setProviders(onboarding.state.providers)
+		if (onboarding.state.workspace?.existingWorkspaceId) setWorkspaceId(onboarding.state.workspace.existingWorkspaceId)
+		else if (onboarding.state.workspace?.path) setWorkspacePath(onboarding.state.workspace.path)
+
 		const seedPending = (pendingStatuses ?? []).map(status => status.id)
 		const seedSteps = onboardingSteps(seedPending)
 		const target = firstUnvanquishedStep(seedSteps, onboarding)
 		const index = seedSteps.indexOf(target)
 		setCurrentSlide(index === -1 ? 0 : index)
 		setDirection(1)
-	}, [onboarding, pendingStatuses, setCurrentSlide, setDirection])
+	}, [onboarding, pendingStatuses, setCurrentSlide, setDirection, setContactRef, setProviders, setWorkspaceId, setWorkspacePath])
 
 	const lastIndex = steps.length - 1
 	// Clamp, e não só fallback: quando a pendência é resolvida no meio do fluxo a lista ENCOLHE, e o
@@ -230,10 +247,20 @@ export function OnboardingFlow({ className, ...props }: ComponentProps<'div'>) {
 	const stepId = steps[index] ?? steps[0]
 
 	const goTo = (target: number) => {
+		const clamped = Math.min(lastIndex, Math.max(0, target))
 		setDirection(target < index ? -1 : 1)
-		setCurrentSlide(Math.min(lastIndex, Math.max(0, target)))
+		setCurrentSlide(clamped)
 		// A new step is about to mount — any error banner belongs to the step being LEFT.
 		setStepError(undefined)
+		// PERSISTE `currentStep` A CADA AVANÇO (2026-08-26 fix — the console never called
+		// `SaveOnboardingStep`, so `currentStep` stayed stuck at `VALUE` forever; a reboot mid-wizard
+		// always reopened at the very first slide). Only forward moves, and only into a `ContentStepId`
+		// the server enum actually models — a `SystemPrecondition` (`FULL_DISK_ACCESS`) isn't one
+		// (`isContentStep`), and going "Voltar" doesn't rewind the server's notion of progress.
+		if (clamped > index) {
+			const landedStepId = steps[clamped]
+			if (landedStepId && isContentStep(landedStepId)) saveOnboardingStep.mutate({ data: { currentStep: landedStepId } })
+		}
 	}
 
 	// 2026-08-24 onboarding-attach-ux audit (item 2) — "Próximo" CONFIRMS then advances, one click.
@@ -282,14 +309,19 @@ export function OnboardingFlow({ className, ...props }: ComponentProps<'div'>) {
 	const contactRef = useOnboardingSetupStore(state => state.contactRef)
 	const providers = useOnboardingSetupStore(state => state.providers)
 	const workspaceId = useOnboardingSetupStore(state => state.workspaceId)
+	const workspacePath = useOnboardingSetupStore(state => state.workspacePath)
 	const workspaceHasSelection = useOnboardingSetupStore(state => state.workspaceHasSelection)
 	const channelConnected = useOnboardingSetupStore(state => state.channelConnected)
 
-	// The SAME schema/fields `OnboardingReviewStep` parses to decide its OWN `confirmStep` (that
-	// component's docblock) — recomputed here, not threaded down, because `STEP_COMPONENTS` gives
-	// this component no prop channel into a mounted step (same constraint `confirmStep`/`stepError`
-	// already document), and REVIEW's three fields already live in this same store.
-	const canFinishReview = attachThreadMutationRequestSchema.safeParse({ contactRef, workspaceId, providers }).success
+	// The draft is complete enough to REVIEW/commit when all three groups are present — mirrors the
+	// backend's `OnboardingCompleteDraftSchema` refine (contactRef required, workspace `path` OR
+	// `existingWorkspaceId`, providers non-empty), which is never exposed on the wire (that schema is
+	// server-internal, `CompleteOnboarding`-only — see its own docblock) so this is a plain boolean
+	// rather than a `safeParse` against an SDK schema. `workspaceId`/`workspacePath` are mutually
+	// exclusive (`useOnboardingSetupStore`'s own docblock) — either satisfies "a workspace is chosen".
+	// Recomputed here, not threaded down, because `STEP_COMPONENTS` gives this component no prop
+	// channel into a mounted step, and REVIEW's fields already live in this same store.
+	const canFinishReview = Boolean(contactRef) && Boolean(providers?.length) && Boolean(workspaceId || workspacePath)
 
 	// 2026-08-26 fix — the footer's "Próximo" gate, PER STEP (same canon as `AttachThreadWizard`'s own
 	// `CAN_CONTINUE`, `/attach/-components/AttachThreadWizard/index.tsx`): dispatch by map, never a

@@ -3,14 +3,7 @@ import { type ComponentProps, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm, useStore } from '@tanstack/react-form'
 import { IconCheck, IconFolder, IconPlus } from '@tabler/icons-react'
-import { useQueryClient } from '@tanstack/react-query'
-import {
-	addWorkspaceMutationRequestSchema,
-	getAttachThreadWizardQueryKey,
-	listWorkspacesQueryKey,
-	useAddWorkspace,
-	useGetAttachThreadWizard,
-} from '@codm/client-typescript/typescript'
+import { addWorkspaceMutationRequestSchema, useGetAttachThreadWizard, useSaveOnboardingStep } from '@codm/client-typescript/typescript'
 import { Button } from '@codm/app-ui/button'
 import { Field, FieldError, FieldLabel } from '@codm/app-ui/field'
 import { Input } from '@codm/app-ui/input'
@@ -67,35 +60,56 @@ function folderName(path: string): string {
  * — so both entry points share one source of truth and one validation path.
  *
  * PICK ≠ ADD (2026-08-24 audit item 2, "Próximo confirma"). Picking a folder — native dialog OR the
- * fallback input — only records a LOCAL pending choice; nothing POSTs to `/workspaces` yet.
- * `confirmStep`, registered on `useOnboardingSetupStore` for `OnboardingFlow`'s footer to call on
- * "Próximo", is what actually calls `useAddWorkspace` — once, in the SAME chain that then advances
- * the step. `confirmStep` stays UNDEFINED whenever the field is empty, so a user who never picks
- * anything (WORKSPACE is DEFERRABLE/BLOCKING, not REQUIRED — `../steps.ts`) gets a plain synchronous
- * "Próximo" straight through, same as before this audit.
+ * fallback input — only records a LOCAL pending choice; nothing POSTs anywhere yet. `confirmStep`,
+ * registered on `useOnboardingSetupStore` for `OnboardingFlow`'s footer to call on "Próximo", is what
+ * actually PATCHes the pick into the server draft — once, in the SAME chain that then advances the
+ * step. `confirmStep` stays UNDEFINED whenever the field is empty, so a user who never picks anything
+ * (WORKSPACE is DEFERRABLE/BLOCKING, not REQUIRED — `../steps.ts`) gets a plain synchronous "Próximo"
+ * straight through, same as before this audit.
  *
- * A picked-but-not-yet-added path is intentionally NOT preserved if the operator goes "Voltar"
- * without confirming (the form instance itself is remounted, same as every other step's local state,
- * on the `key={stepId}` swap `OnboardingFlow` does on every navigation) — only a genuinely SELECTED
- * existing workspace (`workspaceId`, in the cross-mount store) survives back-and-forth. Nothing was
- * committed yet, so there is nothing to lose.
+ * ### 2026-08-26 — draft/atomic-commit rewrite: PATCH the rascunho, never `AddWorkspace` directly
+ * This step used to call `useAddWorkspace` the instant "Próximo" confirmed a typed/picked path — the
+ * new `Workspace` aggregate existed before the operator ever finished the wizard, and a reboot before
+ * REVIEW/AGENTS/CONTACT were filled lost THOSE selections anyway (they lived only in memory). Now
+ * EVERY selection here is a `PATCH /ui/onboarding/step` into `Onboarding.state.workspace` — a group
+ * the backend accepts as `{ path }` (a new folder, not yet a real `Workspace`) OR
+ * `{ existingWorkspaceId }` (a pick from the tile grid below) — and only `CompleteOnboarding`
+ * materializes whichever one won, atomically with contact/providers, at "Concluir" time:
+ *   - `selectExisting` (an existing tile clicked) PATCHes `{ existingWorkspaceId }` IMMEDIATELY, same
+ *     immediacy as `OnboardingContactStep`/`OnboardingAgentsStep`'s row clicks — nothing left to
+ *     "confirm" for an already-registered workspace.
+ *   - A typed/picked NEW path goes through `confirmStep` — PATCHed as `{ path }` only when "Próximo"
+ *     fires, mirroring the OLD `AddWorkspace` timing (the operator can still pick, cancel, re-pick
+ *     freely before advancing).
+ * `workspaceId`/`workspacePath` on the store are MUTUALLY EXCLUSIVE (mirrors the backend's `path` OR
+ * `existingWorkspaceId` refine) — every path that sets one explicitly clears the other, both locally
+ * and in the PATCH `workspace` group itself (the backend merges `state` RASO per group: sending
+ * `{ path }` replaces the whole group, dropping a previous `existingWorkspaceId` for free).
+ *
+ * A picked-but-not-yet-confirmed NEW path is intentionally NOT preserved if the operator goes
+ * "Voltar" without confirming (the form instance itself is remounted, same as every other step's
+ * local state, on the `key={stepId}` swap `OnboardingFlow` does on every navigation) — nothing was
+ * PATCHed yet, so there is nothing to lose. A genuinely CONFIRMED pick (`workspacePath`) or an
+ * existing SELECTION (`workspaceId`) survives back-and-forth via the cross-mount store, and survives
+ * a full reboot via `OnboardingFlow`'s resume-hydration effect (seeded from `GetOnboarding().state`).
  */
 export function OnboardingWorkspaceStep({ className, ...props }: ComponentProps<'div'>) {
 	const { t } = useTranslation()
-	const queryClient = useQueryClient()
 	const workspaceId = useOnboardingSetupStore(state => state.workspaceId)
+	const workspacePath = useOnboardingSetupStore(state => state.workspacePath)
 	const setWorkspaceId = useOnboardingSetupStore(state => state.setWorkspaceId)
+	const setWorkspacePath = useOnboardingSetupStore(state => state.setWorkspacePath)
 	const setWorkspaceHasSelection = useOnboardingSetupStore(state => state.setWorkspaceHasSelection)
 	const setConfirmStep = useOnboardingSetupStore(state => state.setConfirmStep)
 	const setStepError = useOnboardingSetupStore(state => state.setStepError)
 	const { extractErrorCode, getErrorTranslation } = useErrorHandler()
 	const { data } = useGetAttachThreadWizard()
-	// `meta: { suppressToast: true }` — item 6 of the same audit: `router.tsx`'s `MutationCache` skips
-	// the global toast for this mutation. No local `onError`/try-catch (component bp-22 — mutation
-	// error state comes from the hook's OWN `isError`/`error`, the same canon `isPending` already
-	// follows): the effect below just MIRRORS `addWorkspace.error` into `stepError`, which
-	// `OnboardingFlow`'s footer renders next to "Próximo" instead.
-	const addWorkspace = useAddWorkspace({ mutation: { meta: { suppressToast: true } } })
+	// `meta: { suppressToast: true }` — item 6 of the 2026-08-24 audit: `router.tsx`'s `MutationCache`
+	// skips the global toast for this mutation. No local `onError`/try-catch (component bp-22 —
+	// mutation error state comes from the hook's OWN `isError`/`error`, the same canon `isPending`
+	// already follows): the effect below just MIRRORS `saveOnboardingStep.error` into `stepError`,
+	// which `OnboardingFlow`'s footer renders next to "Próximo" instead.
+	const saveOnboardingStep = useSaveOnboardingStep({ mutation: { meta: { suppressToast: true } } })
 	const workspaces = data?.workspaces ?? []
 
 	const filePicker = useFilePicker()
@@ -111,9 +125,11 @@ export function OnboardingWorkspaceStep({ className, ...props }: ComponentProps<
 	}, [filePicker])
 
 	// The SAME schema the controller validates — `AddWorkspaceForm`'s exact pattern, so a native pick
-	// and a typed path share one source of truth and one validation path.
+	// and a typed path share one source of truth and one validation path. Resume: seeds from a
+	// CONFIRMED draft path (`workspacePath`) — never from `workspaceId` (an existing selection has no
+	// typed path to show here at all).
 	const form = useForm({
-		defaultValues: { path: '' },
+		defaultValues: { path: workspaceId ? '' : (workspacePath ?? '') },
 		validators: { onChange: addWorkspaceMutationRequestSchema },
 	})
 	const pendingPath = useStore(form.store, s => s.values.path)
@@ -135,10 +151,14 @@ export function OnboardingWorkspaceStep({ className, ...props }: ComponentProps<
 		form.setFieldValue('path', picked)
 	}
 
+	// An EXISTING workspace, PATCHed the instant it's clicked (same immediacy as CONTACT/AGENTS) —
+	// nothing left to "confirm" for a workspace that already exists.
 	const selectExisting = (id: string) => {
 		form.setFieldValue('path', '')
 		setShowManualInput(false)
 		setWorkspaceId(id)
+		setWorkspacePath(undefined)
+		saveOnboardingStep.mutate({ data: { state: { workspace: { existingWorkspaceId: id } } } })
 	}
 
 	// Registers/clears the footer's pending action — see the store's docblock for why `undefined`
@@ -157,26 +177,23 @@ export function OnboardingWorkspaceStep({ className, ...props }: ComponentProps<
 				throw new Error('INVALID_WORKSPACE_PATH')
 			}
 			// No try/catch (bp-22) — a rejection here propagates to `OnboardingFlow`'s `handleNext`,
-			// which is exactly what keeps "Próximo" from advancing; `addWorkspace.error` itself is what
-			// feeds `stepError` (below).
-			const res = await addWorkspace.mutateAsync({ data: result.data })
-			await queryClient.invalidateQueries({ queryKey: listWorkspacesQueryKey() })
-			// The onboarding WORKSPACE tile grid reads `getAttachThreadWizard`, not `listWorkspaces` —
-			// same second invalidation `AddWorkspaceForm` already does, for the same reason.
-			await queryClient.invalidateQueries({ queryKey: getAttachThreadWizardQueryKey() })
-			setWorkspaceId(res.workspaceId)
-			form.setFieldValue('path', '')
+			// which is exactly what keeps "Próximo" from advancing; `saveOnboardingStep.error` itself is
+			// what feeds `stepError` (below). Materialization happens later, atomically, in
+			// `CompleteOnboarding` — this call only persists the RASCUNHO.
+			await saveOnboardingStep.mutateAsync({ data: { state: { workspace: { path: result.data.path } } } })
+			setWorkspaceId(undefined)
+			setWorkspacePath(result.data.path)
 		})
 		return () => setConfirmStep(undefined)
-	}, [pendingPath, addWorkspace, queryClient, setConfirmStep, setWorkspaceId, form])
+	}, [pendingPath, saveOnboardingStep, setConfirmStep, setWorkspaceId, setWorkspacePath])
 
 	// Mirrors the mutation's OWN error state into the shared `stepError` (item 6) — the same canon
 	// `isPending` already follows for loading, applied to `isError`/`error`. Cleared on unmount (the
 	// step remounts fresh on every navigation) so a stale message never bleeds into a different step.
 	useEffect(() => {
-		setStepError(addWorkspace.error ? getErrorTranslation(extractErrorCode(addWorkspace.error)) : undefined)
+		setStepError(saveOnboardingStep.error ? getErrorTranslation(extractErrorCode(saveOnboardingStep.error)) : undefined)
 		return () => setStepError(undefined)
-	}, [addWorkspace.error, setStepError, extractErrorCode, getErrorTranslation])
+	}, [saveOnboardingStep.error, setStepError, extractErrorCode, getErrorTranslation])
 
 	const showPendingCard = pendingValid && !showManualInput
 	// Any folder chosen — pending (picked, not yet confirmed) OR already SELECTED (an existing
