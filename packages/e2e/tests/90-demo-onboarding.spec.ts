@@ -68,15 +68,19 @@ const ROTEIRO_PROVIDER_NAME = 'Claude Code'
  *                                     (roteiro `defaultE2eScenario`, Go `overlay.go`, AutoPairAfter
  *                                     2s) are watched, then "Próximo" is CLICKED to advance
  *   4. workspace (WORKSPACE)       → CLICKED (the "+ Adicionar uma pasta" ROW reveals the manual
- *                                     path input — real temp folder, filled — then "Próximo" both
- *                                     POSTs it and advances, one click; 2026-08-24 onboarding-
- *                                     attach-ux audit items 1+2, row refined the same day)
+ *                                     path input — real temp folder, filled — then "Próximo" PATCHes
+ *                                     it into the onboarding draft and advances, one click; 2026-08-24
+ *                                     onboarding-attach-ux audit items 1+2, row refined the same day;
+ *                                     2026-08-26 draft/atomic-commit rewrite swapped the POST for a
+ *                                     PATCH — the real `Workspace` only materializes at step 6)
  *   5. contact/agents/review       → CLICKED (Ada Lovelace from the roteiro's `ContactSeed`,
- *                                     "Claude Code" from the e2e column's `MockProviderDetector`,
- *                                     then "Próximo" both fires the attach mutation and advances, one
- *                                     click — no more inline "Vincular conversa" inside the step;
- *                                     same audit, item 2)
- *   6. final (FINAL)               → CLICKED ("Começar" fires the real completion mutation)
+ *                                     "Claude Code" from the e2e column's `MockProviderDetector` —
+ *                                     each row click both records AND PATCHes its own draft group —
+ *                                     then "Próximo" just advances, no mutation of its own since the
+ *                                     2026-08-26 rewrite)
+ *   6. final (FINAL)               → CLICKED ("Começar" fires `CompleteOnboarding` — the atomic
+ *                                     commit that FINALLY materializes the workspace + thread from
+ *                                     the draft, 2026-08-26 rewrite)
  * Nothing here uses a given/SDK seam to fast-forward wizard state — every step is driven through
  * the same browser surface a real operator would use, per the task's honesty-over-theater rule.
  *
@@ -91,15 +95,22 @@ const ROTEIRO_PROVIDER_NAME = 'Claude Code'
  * System Access API only ever yields a directory HANDLE, never an absolute path, so
  * `BrowserFilePickerService` staying incapable is correct, not a gap) — reveals the SAME manual
  * path input as before. Filling it no longer POSTs by itself; blurring it (once valid) collapses
- * it into a folder CARD, and "Próximo" is what actually POSTs the pending path AND advances (item
- * 2, "confirmar + avançar"), so step 6 below is one click shorter than it used to be. `ReviewStep`
- * similarly dropped its own inline "Vincular conversa" for the onboarding wizard (the adapter
- * stopped passing `onFinish` to it) — the SAME footer "Próximo" fires `useAttachThread` and
- * advances in the one chain, so step 9 lost its extra click too. `OnboardingFinalStep` also changed
- * (item 7): it now shows a 🎉 title and, having attached a real thread in this exact run, the
- * literal "Olá, @<mention>, está por aí?" message to send — asserted below via the fixed intro copy
- * only (the `@<mention>` tag itself is a server-minted slug of a randomly-suffixed temp dir, not
- * worth reproducing the mint rule in the test just to assert it).
+ * it into a folder CARD, and "Próximo" is what actually advances (item 2, "confirmar + avançar"), so
+ * step 6 below is one click shorter than it used to be. `ReviewStep` similarly dropped its own
+ * inline "Vincular conversa" for the onboarding wizard (the adapter stopped passing `onFinish` to
+ * it) — the footer "Próximo" just advances now, so step 9 lost its extra click too.
+ *
+ * ### 2026-08-26 update — draft/atomic-commit rewrite (reboot-loses-onboarding fix)
+ * WORKSPACE/CONTACT/AGENTS/REVIEW stopped materializing their own aggregate the instant a step
+ * confirmed (`AddWorkspace`/`AttachThread`) — every selection now PATCHes into a server-side draft
+ * (`Onboarding.state`, `PATCH /ui/onboarding/step`) that survives a reboot, and ONLY "Começar" (step
+ * 10, `CompleteOnboarding`) materializes the workspace + thread, atomically, from that draft. So
+ * step 6's network wait moved from `/workspaces` to `/ui/onboarding/step`, and step 9 (REVIEW) no
+ * longer waits for any response at all — its "Próximo" is a plain, synchronous advance.
+ * `OnboardingFinalStep`'s "mention the agent" copy (2026-08-24 audit item 7) is GONE for the same
+ * reason: `CompleteOnboarding` never returns the thread it just created to the client, so there is
+ * no `threadId` left to mint a mention tag from — the closing card always shows the generic body now
+ * (asserted below via `onboarding.finalBody`).
  *
  * ### FIXED (2026-08-25, founder live-test, item 3) — the SPA hop now lands, no hard reload needed
  * "Começar" fires `useCompleteOnboarding()`, whose `onSuccess` awaits an invalidate then calls the
@@ -180,24 +191,27 @@ test('demo: operador percorre o onboarding inteiro, do slide 1 ao dashboard', as
 	await page.waitForTimeout(500) // demo pacing — let the video breathe, not a wait-for-condition
 	await cursor.click(page.getByRole('button', { name: t('onboarding.next') }))
 
-	// 6. WORKSPACE — a real folder on disk (the mutation stat()s the path server-side). The add
-	// affordance is a ROW ("+ Adicionar uma pasta", founder refinement to item 1 — investigated
-	// whether the browser could open the File System Access API's `showDirectoryPicker()` instead
-	// of falling back to typing: that API only ever yields a `FileSystemDirectoryHandle`, never an
-	// absolute filesystem path — a browser security invariant, not a missed capability — so
-	// `BrowserFilePickerService` stays honestly incapable and `canPickFolder` gates to the manual
-	// input here, same as this Chromium-only harness always exercised). Filling it only records the
-	// pending path (item 1); blurring it (clicking "Próximo" next moves focus away) collapses it
-	// into the same folder CARD an already-registered workspace renders as. "Próximo" is what
-	// actually POSTs the pending path AND advances, one click (item 2) — no separate "Adicionar
-	// pasta" submit inside the step.
+	// 6. WORKSPACE — a real folder on disk. The add affordance is a ROW ("+ Adicionar uma pasta",
+	// founder refinement to item 1 — investigated whether the browser could open the File System
+	// Access API's `showDirectoryPicker()` instead of falling back to typing: that API only ever
+	// yields a `FileSystemDirectoryHandle`, never an absolute filesystem path — a browser security
+	// invariant, not a missed capability — so `BrowserFilePickerService` stays honestly incapable and
+	// `canPickFolder` gates to the manual input here, same as this Chromium-only harness always
+	// exercised). Filling it only records the pending path (item 1); blurring it (clicking "Próximo"
+	// next moves focus away) collapses it into the same folder CARD an already-registered workspace
+	// renders as. "Próximo" is what actually advances (item 2) — no separate "Adicionar pasta" submit
+	// inside the step.
+	//
+	// 2026-08-26 draft/atomic-commit rewrite: WORKSPACE no longer POSTs `/workspaces` on "Próximo" —
+	// the path only PATCHes into the onboarding RASCUNHO (`/ui/onboarding/step`); the real `Workspace`
+	// aggregate is materialized later, atomically with the thread, by "Começar" (step 10) alone.
 	const workspacePath = mkdtempSync(join(tmpdir(), 'codm-e2e-demo-ws-'))
 	await cursor.click(page.getByRole('button', { name: t('workspaces.addFolderRow') }))
 	await expect(page.getByLabel(t('workspaces.projectFolder'))).toBeVisible()
 	await cursor.fill(page.getByLabel(t('workspaces.projectFolder')), workspacePath)
 	await page.waitForTimeout(500) // demo pacing — let the video breathe, not a wait-for-condition
 	await Promise.all([
-		page.waitForResponse(res => res.url().includes('/workspaces') && res.request().method() === 'POST' && res.ok()),
+		page.waitForResponse(res => res.url().includes('/ui/onboarding/step') && res.request().method() === 'PATCH' && res.ok()),
 		cursor.click(page.getByRole('button', { name: t('onboarding.next') }), { circulate: true }),
 	])
 
@@ -223,28 +237,28 @@ test('demo: operador percorre o onboarding inteiro, do slide 1 ao dashboard', as
 	await page.waitForTimeout(400) // demo pacing — let the video breathe, not a wait-for-condition
 	await cursor.click(page.getByRole('button', { name: t('onboarding.next') }))
 
-	// 9. REVIEW — "Próximo" now commits the attach itself (item 2, 2026-08-24 onboarding-attach-ux
-	// audit): `ReviewStep` no longer renders its own "Vincular conversa" for this wizard (the adapter
-	// stopped passing `onFinish`), so ONE click both fires `useAttachThread` and advances. AC-14 still
+	// 9. REVIEW — plain read + edit links since the 2026-08-26 draft/atomic-commit rewrite: REVIEW no
+	// longer fires `useAttachThread` on "Próximo" (it used to, per the 2026-08-24 onboarding-attach-ux
+	// audit item 2) — the thread is materialized later, atomically with the workspace, only when
+	// "Começar" (step 10) commits the whole rascunho via `CompleteOnboarding`. "Próximo" here is
+	// therefore a plain, synchronous advance — nothing to wait a network response for. AC-14 still
 	// holds — the onboarding wizard never navigates away from /onboarding on its own; only the FINAL
 	// step's "Começar" does that.
 	await expect(page.getByRole('heading', { name: t('attach.stepReviewTitle') })).toBeVisible()
 	await page.waitForTimeout(500) // demo pacing — let the video breathe, not a wait-for-condition
-	await Promise.all([
-		page.waitForResponse(res => res.url().includes('/threads') && res.request().method() === 'POST' && res.ok()),
-		cursor.click(page.getByRole('button', { name: t('onboarding.next') }), { circulate: true }),
-	])
+	await cursor.click(page.getByRole('button', { name: t('onboarding.next') }), { circulate: true })
 
-	// 10. FINAL — "Começar" fires the real completion mutation (`useCompleteOnboarding`). Awaited via
-	// its own response rather than trusting timing alone — the SPA navigate below is now the REAL
-	// follow-up (item 3 fix), not a substitute.
+	// 10. FINAL — "Começar" fires the real completion mutation (`useCompleteOnboarding`), which is
+	// ALSO the moment the workspace + thread actually materialize (`CompleteOnboarding`'s atomic
+	// commit, 2026-08-26). Awaited via its own response rather than trusting timing alone — the SPA
+	// navigate below is now the REAL follow-up (item 3 fix), not a substitute.
 	//
-	// Item 7 (same audit) — this run DID attach a real thread (step 9), so the card shows the
-	// mention-the-agent copy instead of the generic body. Asserted via the fixed intro line only; the
-	// `@<mention>` tag itself is a server-minted slug of `workspacePath`'s random basename (item 7's
-	// own `mintMentionTag`), not worth re-deriving here just to match it exactly.
+	// The "mention the agent" closing copy (2026-08-24 audit item 7) is GONE as of the same
+	// draft/atomic-commit rewrite: `CompleteOnboarding` composes `AttachThread` server-side and never
+	// returns the minted `threadId` to the client, so there is nothing left client-side to look up a
+	// mention tag from — the card always shows the generic closing body now.
 	await expect(page.getByRole('heading', { name: t('onboarding.finalTitle') })).toBeVisible()
-	await expect(page.getByText(t('onboarding.finalMentionIntro'))).toBeVisible()
+	await expect(page.getByText(t('onboarding.finalBody'))).toBeVisible()
 	await page.waitForTimeout(600) // demo pacing — let the video breathe, not a wait-for-condition
 	await Promise.all([
 		page.waitForResponse(res => res.url().includes('/ui/onboarding/complete') && res.request().method() === 'POST' && res.ok()),
