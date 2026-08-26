@@ -19,10 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-Exception — the WhatsApp gateway (`packages/api/go`) is licensed under the
-GNU General Public License v3.0 or later, not MIT. See `packages/api/go/LICENSE`
-and `packages/api/go/NOTICE` for why, and `THIRD_PARTY_NOTICES.md` for the
-licenses of every third-party dependency.

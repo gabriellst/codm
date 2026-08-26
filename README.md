@@ -101,4 +101,4 @@ Everything else — your files, your repositories, your conversations — stays 
 
 ## License
 
-MIT (`LICENSE`), with one exception: the WhatsApp gateway in `packages/api/go` is **GPL-3.0-or-later** (`packages/api/go/LICENSE`), because it statically links `whatsmeow` → `libsignal` (GPL-3.0). The gateway is a separate program (own binary, HTTP + shared SQLite), so the daemon, shell, console and landing stay MIT. Third-party licenses: `THIRD_PARTY_NOTICES.md`.
+MIT (`LICENSE`), with one exception: the WhatsApp gateway in `packages/api/go` is **GPL-3.0-or-later**, because it links `whatsmeow` → `libsignal` (GPL-3.0). The gateway is a separate program (own binary, HTTP + shared SQLite), so the daemon, shell, console and landing stay MIT. The full reasoning is in [`LICENSING.md`](LICENSING.md); third-party licenses in `THIRD_PARTY_NOTICES.md`.
