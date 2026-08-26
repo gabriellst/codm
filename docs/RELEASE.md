@@ -444,19 +444,25 @@ janela crua mesmo assim. Os dois workflows ligam `TAURI_BUNDLER_DMG_IGNORE_CI=tr
 o que só funciona porque o runner é um LaunchAgent **na sessão gráfica** do mini (`launchctl print
 gui/$(id -u)` lista `actions.runner.gabriellst-codm.codm-macmini`).
 
-Controlar o Finder é Automação (TCC). Na primeira vez que o build chega ao DMG, o macOS mostra no
-mini o diálogo *"Runner.Listener" deseja controlar o "Finder"* e **segura o build até a resposta**:
+Controlar o Finder é Automação (TCC), e o cliente que o macOS enxerga **não é o `Runner.Listener`:
+é o `node` com que o runner executa os passos `run:`** — medido:
+`/Users/gabriel/actions-runner/externals/node20/bin/node → com.apple.finder`. Como é um binário
+solto e não um app, **o diálogo de permissão não aparece**: o Apple Event fica pendurado 2 min (o
+timeout padrão), o macOS grava a negação (`auth_value 0`) e o bundler sai com `exit 64` — no log só
+"failed to run bundle_dmg.sh", 2 min depois de "Running bundle_dmg.sh". Foi assim no primeiro run
+(beta 32940209483, 2026-08-26). Não há fallback: a release fica vermelha.
 
-1. Esteja com a sessão do mini desbloqueada quando o primeiro build com a env chegar ao passo do
-   DMG (~6 min após o início do job macOS) e clique **Permitir**. O grant é permanente.
-2. Negar (ou fechar) não cai num fallback: o bundler sai com `exit 64` e a release fica vermelha —
-   com o aviso "Failed running AppleScript" no log. Re-conceda em Ajustes do Sistema → Privacidade e
-   Segurança → Automação → Runner.Listener → Finder, e rode o job de novo.
+1. Deixe o primeiro build falhar (é ele que cria a entrada), depois em **Ajustes do Sistema →
+   Privacidade e Segurança → Automação → `node` → ligue "Finder"** e rode o job macOS de novo. O
+   grant é permanente para aquele caminho de `node`.
+2. **Trocar o `node` do runner recria o problema**: quando o runner migrar de `externals/node20`
+   para `node24` (o GitHub já avisa no log), o cliente muda de caminho, a permissão não vale mais e o
+   próximo DMG falha do mesmo jeito — repita o passo 1 para o `node` novo.
 3. Conferir o estado sem abrir Ajustes:
    `sqlite3 ~/Library/Application\ Support/com.apple.TCC/TCC.db "select client,indirect_object_identifier,auth_value from access where service='kTCCServiceAppleEvents'"`
-   — `auth_value` 2 = permitido, 0 = negado. Entrada de `sshd-keygen-wrapper` é o ssh, não o runner.
+   — `auth_value` 2 = permitido, 0 = negado. Entradas de `sshd-keygen-wrapper` são do ssh, não do runner.
 4. Prova de que funcionou: o DMG montado tem `.DS_Store` ao lado de `.background/` e a janela abre
-   com a seta entre os ícones.
+   com a seta entre os ícones (o `.background/` sozinho não prova nada — a v0.5.3 o tinha).
 
 ### O CI agora escreve na SUA máquina — actions de cache são o risco real
 

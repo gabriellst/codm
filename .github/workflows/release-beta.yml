@@ -497,8 +497,10 @@ jobs:
           # Janela de instalação do DMG: o bundler pula o AppleScript do Finder (fundo + posição
           # dos ícones) quando CI=true — `--skip-jenkins`, tauri#592. O runner macOS é um LaunchAgent
           # na sessão gráfica do mini, então TEM Finder; sem esta linha o DMG sai sem .DS_Store e a
-          # janela vem crua (medido na v0.5.3). Exige o grant único de Automação → Finder para o
-          # Runner.Listener no mini (docs/RELEASE.md). Só afeta o DMG — inócuo nas outras pernas.
+          # janela vem crua (medido na v0.5.3). Exige o grant de Automação → Finder para o `node`
+          # do runner (externals/nodeXX/bin/node, o cliente que o TCC enxerga nos passos `run:`):
+          # o diálogo NÃO aparece, o 1º run falha em 2 min e cria a entrada, que é ligada à mão nos
+          # Ajustes (docs/RELEASE.md). Só afeta o DMG — inócuo nas outras pernas.
           TAURI_BUNDLER_DMG_IGNORE_CI: ${{ runner.os == 'macOS' && 'true' || '' }}
 
         run: cd packages/app/tauri && ${{ matrix.nice }} bun x tauri build --bundles ${{ matrix.bundles }}${{ matrix.tauriRunner && format(' --runner {0}', matrix.tauriRunner) || '' }}${{ matrix.crossTarget && format(' --target {0}', matrix.crossTarget) || '' }} --config "{\"version\":\"${{ needs.prepare.outputs.version }}\"}"

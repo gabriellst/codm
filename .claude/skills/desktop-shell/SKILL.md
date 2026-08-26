@@ -71,9 +71,12 @@ icon = edit `config/dmg.ts` → `bun desktop:generate` + `bun desktop:dmg-backgr
 `CI=true` (`--skip-jenkins`, tauri#592)** — the DMG then ships `.background/background.png` but no
 `.DS_Store`, i.e. the bare window (that is what v0.5.3 shipped). Both release workflows set
 `TAURI_BUNDLER_DMG_IGNORE_CI=true` on the macOS leg; it works because the runner is a LaunchAgent in
-the mini's GUI session, and it needs a ONE-TIME Automation → Finder grant for `Runner.Listener`
-(procedure in `docs/RELEASE.md`). A denied grant is `exit 64` from the bundler = red release, not a
-silent fallback.
+the mini's GUI session, and it needs an Automation → Finder grant for the runner's **`node`**
+(`externals/nodeXX/bin/node` — the TCC client behind `run:` steps, NOT `Runner.Listener`). The
+prompt never shows for a bare binary: the first run hangs 2 min, macOS records a denial, and the
+entry is toggled on by hand in System Settings; a runner node upgrade changes the path and repeats
+the dance (procedure in `docs/RELEASE.md`). A denied grant is `exit 64` from the bundler = red
+release, not a silent fallback.
 
 **Adding a sidecar** = add an entry to `config/sidecars.ts` (`SIDECARS`) + `bun desktop:generate` —
 never edit tauri.conf.json/mod.rs literals. **Adding a native capability** = add the abstract key to
