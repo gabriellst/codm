@@ -4,44 +4,38 @@ name: correctness
 # PR. New violations gate; pre-existing debt is frozen in the per-detector *.baseline.json
 # files and ratcheted down over time. Companion to tsc + test, which run in the same job.
 #
-# Desde 2026-08-25 há um SEGUNDO job, `linux`: o shell desktop sai para Linux e Windows, e um PR
-# que só compila no Mac do founder passava verde até o beta quebrar 10 minutos depois do merge.
-# O job compila os sidecars, faz `cargo check` do shell e sobe os sidecars (smoke) no MESMO Mac
-# mini self-hosted do `detect` (Linux num container amd64 sob Rosetta — infra/runners/linux-x64/),
-# custo zero de cota — Windows fica de fora aqui (só o release-beta hospedado paga 2× por ele);
-# quem pega quebra de Windows é o release-beta.
+# Há um SEGUNDO job, `linux`: o shell desktop sai para Linux e Windows, e um PR que só compila no
+# Mac do founder passava verde até o beta quebrar 10 minutos depois do merge. O job compila os
+# sidecars, faz `cargo check` do shell e sobe os sidecars (smoke) num Linux de verdade. Windows fica
+# de fora daqui — quem pega quebra de Windows é a perna nativa do release-beta, que desde 2026-08-26
+# roda `cargo test --lib` (os testes `#[cfg(windows)]`) e o smoke num `windows-latest`.
+#
+# RUNNERS: hospedados. Entre 07/08 e 26/08/2026 estes jobs rodaram no Mac mini do founder — não por
+# preferência, mas porque a cota de Actions de repositório PRIVADO estourou em 2026-08-07 e levou o
+# gate de merge junto (a cota é uma só para a conta: quando os builds macOS a esgotaram, este
+# workflow barato parou também). Em 2026-08-26 o repositório ficou público, Actions passou a ser
+# gratuito e ilimitado, e o gate voltou a não depender de nenhuma máquina estar ligada.
+#
+# Com isso saiu também o guard `if:` que impedia PR de fork de executar nos jobs de entrada: ele
+# existia porque `pull_request` é o ÚNICO gatilho deste arquivo e um fork rodaria código arbitrário
+# na máquina do founder. Sem máquina do founder na jogada, não há o que proteger — o runner é
+# descartável e o GitHub já não entrega secrets a workflow de fork. A política do repositório
+# (Actions → Fork pull request workflows → "Require approval for all outside collaborators")
+# continua valendo por outros motivos e não é gerida por este arquivo.
 
 on:
   push:
     branches: [main]
   pull_request:
 
-# TODO CODE HERE RUNS ON THE FOUNDER'S OWN MAC MINI — e este arquivo é o ÚNICO que dispara em
-# `pull_request`. Enquanto o repositório era privado, isso era inócuo: só quem já tem acesso abre PR.
-# Com o repositório PÚBLICO (2026-08-26, para a candidatura ao SignPath Foundation) um PR de fork
-# passa a poder rodar código arbitrário nesta máquina — a mesma que guarda o Developer ID da Apple,
-# o container do runner Linux e os volumes de cache. Segredos o GitHub já não entrega a workflows de
-# fork; a EXECUÇÃO é que é o risco, e ela não tem defesa automática.
-#
-# A defesa é o `if` REPETIDO nos dois jobs de ENTRADA (`detect` e `changes`): um `pull_request` só
-# roda aqui se vier de um branch DESTE repositório — a condição é sempre verdadeira em `push`, que
-# não carrega `pull_request` no payload. PR de fork simplesmente não executa nos runners do founder.
-# (`linux` não precisa do guard: ele depende de `changes`, e um `needs` que não rodou já o pula. E o
-# `if` tem de ser a expressão literal, não uma env de workflow: o contexto `env` não existe em
-# `jobs.<id>.if`.)
-#
-# Defesa em profundidade, do lado da configuração: Actions → Fork pull request workflows → "Require
-# approval for ALL outside collaborators" — o default do GitHub só cobre a PRIMEIRA contribuição.
-# Ver docs/RELEASE.md.
 jobs:
   detect:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    # Mesmo runner self-hosted dos releases. Este job é BARATO no ubuntu (multiplicador 1x) e
-    # foi o macOS que estourou a cota em 2026-08-07 — mas a cota é uma só, então enquanto ela
-    # não reseta NADA roda na nuvem, gate de merge incluso. Aqui o custo é zero e o gate volta
-    # a existir. Trade-off consciente: o gate passa a depender do Mac estar ligado. Para voltar
-    # à nuvem quando a cota resetar, basta trocar esta linha por `runs-on: ubuntu-latest`.
-    runs-on: [self-hosted, macOS, ARM64]
+    # `bun run test` inclui `app-tauri:test` (cargo test do shell, com `dependsOn: sidecars`) e
+    # `client:test` (cargo test da SDK rust), então este job precisa de MAIS que bun: Go para o
+    # gateway, Rust para as duas crates e as libs de sistema do Tauri. Tudo isso vinha de graça
+    # quando o runner era o Mac do founder; num runner hospedado é provisionamento explícito, nos
+    # passos abaixo.
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -52,6 +46,22 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: packages/api/go/go.mod
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/app/tauri/src-tauri
+
+      # Mesma lista canônica dos workflows de release: webkit2gtk 4.1 + tray + rsvg (Tauri), mais
+      # libdbus-1-dev (keyring) e patchelf. O `cargo test` do shell linka contra ela.
+      - name: Tauri system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev \
+            libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev patchelf
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -64,37 +74,25 @@ jobs:
           cp -n .env.example .env
           bun emit-openapi
 
-      # `nice` porque o runner divide a máquina com o daemon de produção do founder: o CI cede
-      # CPU em vez de disputar. Sem isto um `bun run test` deixa o app perceptivelmente lento.
+      # O `nice -n 10` que envolvia estes três passos saiu com o self-hosted: ele existia para o CI
+      # ceder CPU ao daemon de produção do founder, que roda na mesma máquina. Num runner
+      # descartável não há com quem dividir.
       - name: Mechanical detectors (rung-2 gate)
-        run: nice -n 10 bun run detect
+        run: bun run detect
 
       - name: Type-check
-        run: nice -n 10 bun tsc
+        run: bun tsc
 
       - name: Tests
-        run: nice -n 10 bun run test
+        run: bun run test
 
-  # Desde 2026-08-25 o job `linux` roda self-hosted (custo zero de cota — ver o job abaixo), mas o
-  # filtro continua existindo: `on.paths` filtraria o workflow inteiro (e o `detect` tem de rodar
-  # sempre), então o filtro é este job: os caminhos do release-beta.yml MAIS `scripts/release/` (o
-  # smoke deste job mora lá) e este próprio arquivo. A redeclaração do path-set é presa por
+  # O filtro existe como JOB, não como `on.paths`: `on.paths` filtraria o workflow inteiro, e o
+  # `detect` tem de rodar sempre. O path-set é o do release-beta.yml MAIS `scripts/release/` (o
+  # smoke deste job mora lá) e este próprio arquivo. A redeclaração é presa por
   # scripts/release/workflow-paths.test.ts (test:tooling): se o filtro do beta mudar sem este mudar
   # junto, o tooling fica vermelho.
-  #
-  # Desde 2026-08-25 (auditoria coordenada com o founder) este job TAMBÉM vira self-hosted — só
-  # precisa de git/bash, já na imagem (infra/runners/linux-x64/). A razão de antes para mantê-lo
-  # hospedado era a decisão de SKIP não depender do Mac mini estar ligado; essa preocupação caía
-  # sozinha porque `linux` (abaixo) já DEPENDE do output deste job (`needs: changes`) — ou seja,
-  # mesmo hospedado, `changes` sempre corria ANTES de `linux` poder começar. Com os dois no MESMO
-  # runner, a fila vira `changes → linux`, que já era a ordem lógica — não um atraso novo (é serial,
-  # não paralelo, mas era serial de qualquer forma). O trade-off que resta é o mesmo do
-  # `detect`/`linux`: a decisão de skip passa a depender do Mac mini estar ligado; o ganho é custo
-  # (o ~1 min/push que este job faturava fica zero), não velocidade nem resiliência.
   changes:
-    # Mesmo guard de `detect` — ver o bloco no topo: nada de fork roda no mini.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-latest
     outputs:
       desktop: ${{ steps.filter.outputs.desktop }}
     steps:
@@ -127,14 +125,11 @@ jobs:
   linux:
     needs: changes
     if: needs.changes.outputs.desktop == 'true'
-    # Self-hosted desde 2026-08-25, no MESMO Mac mini do `detect` acima — container amd64 sob
-    # Rosetta (infra/runners/linux-x64/). NÃO é descartável: NÃO reintroduza apt/rustup/rust-cache
-    # aqui. O incidente de 2026-08-07 (Swatinem/rust-cache podando ~/.cargo/bin e apagando o
-    # `rustup` da máquina do founder — ver release-beta.yml) vale para qualquer runner persistente,
-    # não só macOS. Deps de sistema (libwebkit2gtk-4.1-dev, libdbus-1-dev, patchelf etc. — a mesma
-    # lista canônica que release-beta.yml/release-stable.yml documentam) e a toolchain Rust já vêm
-    # preinstaladas na imagem do container; nada a provisionar neste job.
-    runs-on: [self-hosted, Linux, X64]
+    # Linux de verdade, hospedado — até 2026-08-26 isto era um container amd64 sob Rosetta no Mac
+    # mini, com toda a pilha de contorno que o Rosetta exigia. Runner descartável: as deps de
+    # sistema, a toolchain Rust e o cache de cargo são provisionados aqui (o veto histórico a
+    # `Swatinem/rust-cache` era sobre runner PERSISTENTE — ver release-beta.yml).
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -142,12 +137,18 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: packages/api/go/go.mod
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/app/tauri/src-tauri
 
-      # Runner PERSISTENTE: o `target/` do Rust mora fora do workspace (mesma razão documentada em
-      # release-beta.yml/release-stable.yml) — sobrevive ao `git clean -ffdx` do checkout entre
-      # execuções, sem precisar de nenhuma action de cache.
-      - name: cargo target fora do workspace (runner persistente)
-        run: echo "CARGO_TARGET_DIR=$HOME/.cache/codm-cargo-target" >> "$GITHUB_ENV"
+      # A mesma lista canônica que release-beta.yml/release-stable.yml instalam na perna Linux.
+      - name: deps de sistema (Linux)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev \
+            libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev patchelf
 
       - name: deps
         run: bun install --frozen-lockfile
