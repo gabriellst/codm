@@ -13,7 +13,9 @@ export default {
 		owner: 'BFF read model: owner listing/active-owner via repositories.',
 		agent: 'BFF Settings/AttachWizard read provider availability via the ProviderDetector service (detection probe).',
 		thread:
-			'BFF Settings reads the per-owner stop-policy toggles via StopPolicyConfigRepository (repositories surface), which lives in thread/ since B4 — the policy follows the aggregate that raises stops.',
+			'BFF Settings reads the per-owner stop-policy toggles via StopPolicyConfigRepository (repositories surface), which lives in thread/ since B4 — the policy follows the aggregate that raises stops. Since the onboarding atomic-commit (spec 2026-08-26), CompleteOnboarding also composes AttachThread (usecases surface, named PolicyException) to materialize the wizard draft — see composition/policy.ts.',
+		workspace:
+			"CompleteOnboarding's atomic commit resolves/creates the wizard's workspace via WorkspaceRepository (repositories) and composes AddWorkspace (usecases surface, named PolicyException) — see composition/policy.ts.",
 	},
 	reads: {
 		thread: 'BFF read models (dashboard/wizard/checklist) — query-side by design.',

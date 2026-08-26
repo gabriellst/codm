@@ -66,7 +66,10 @@ export const CONTEXT_MAP: Partial<Record<ContextId, Partial<Record<ContextId, { 
 		owner: { note: 'BFF read model: owner listing/active-owner via repositories.' },
 		agent: { note: 'BFF Settings/AttachWizard read provider availability via the ProviderDetector service (detection probe).' },
 		thread: {
-			note: 'BFF Settings reads the per-owner stop-policy toggles via StopPolicyConfigRepository (repositories surface), which lives in thread/ since B4 — the policy follows the aggregate that raises stops.',
+			note: 'BFF Settings reads the per-owner stop-policy toggles via StopPolicyConfigRepository (repositories surface), which lives in thread/ since B4 — the policy follows the aggregate that raises stops. Since the onboarding atomic-commit (spec 2026-08-26), CompleteOnboarding also composes AttachThread (usecases surface, named PolicyException) to materialize the wizard draft — see composition/policy.ts.',
+		},
+		workspace: {
+			note: "CompleteOnboarding's atomic commit resolves/creates the wizard's workspace via WorkspaceRepository (repositories) and composes AddWorkspace (usecases surface, named PolicyException) — see composition/policy.ts.",
 		},
 	},
 }

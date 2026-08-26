@@ -35,6 +35,7 @@ export class LibSqlOnboardingRepository extends OnboardingRepository {
 					target: onboardings.id,
 					set: {
 						currentStep: data.currentStep,
+						state: data.state,
 						completedAt: data.completedAt,
 						updatedAt: new Date(),
 						version: data.version,
@@ -58,6 +59,7 @@ export class LibSqlOnboardingRepository extends OnboardingRepository {
 		const parsed = OnboardingSchema.parse({
 			ownerId: row.ownerId,
 			currentStep: row.currentStep as OnboardingStep,
+			state: row.state ?? {},
 			completedAt: row.completedAt ?? undefined,
 		})
 		return new Onboarding({
@@ -74,6 +76,7 @@ export class LibSqlOnboardingRepository extends OnboardingRepository {
 			id: entity.id.value,
 			ownerId: entity.ownerId,
 			currentStep: entity.currentStep,
+			state: entity.state,
 			completedAt: entity.completedAt ?? null,
 			createdAt: entity.createdAt,
 			updatedAt: entity.updatedAt,

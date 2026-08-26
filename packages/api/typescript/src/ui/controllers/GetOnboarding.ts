@@ -18,7 +18,7 @@ export class GetOnboardingController extends Controller<
 	static override readonly mcpScopes = [McpScope.system, McpScope.orchestration]
 	readonly path = '/ui/onboarding'
 	readonly method = 'get' as const
-	readonly description = 'Onboarding — jornada persistida (currentStep/completedAt) + satisfação derivada dos passos de setup'
+	readonly description = 'Onboarding — jornada persistida (currentStep/completedAt/state) + satisfação derivada dos passos de setup'
 	readonly inputSchema = GetOnboardingControllerInputSchema
 	readonly outputSchema = GetOnboardingControllerOutputSchema
 

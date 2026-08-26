@@ -4,11 +4,15 @@ import { LibSqlDatabaseDriver, Handler, z } from '@codm/core-typescript'
 import { channels, workspaces, threads } from '@codm/contracts/db'
 import { ChannelStatus, OnboardingStep } from '@codm/contracts-typescript/wire/enums'
 import { OnboardingRepository } from '../repositories/OnboardingRepository'
+import { OnboardingDraftStateSchema } from '../schemas/OnboardingDraftState'
 
 export const GetOnboardingInputSchema = z.object({ ownerId: z.uuid() })
 export const GetOnboardingOutputSchema = z.object({
 	currentStep: z.enum(OnboardingStep),
 	completedAt: z.iso.datetime().nullable(),
+	// O rascunho persistido — o console repopula os passos WORKSPACE/CONTACT/AGENTS com isto depois
+	// de um reboot, em vez de perder o que já tinha sido preenchido (spec 2026-08-26).
+	state: OnboardingDraftStateSchema,
 	channelDone: z.boolean(),
 	workspaceDone: z.boolean(),
 	threadDone: z.boolean(),
@@ -63,6 +67,7 @@ export class GetOnboarding extends Handler<typeof GetOnboardingInputSchema, type
 		return {
 			currentStep: onboarding?.currentStep ?? OnboardingStep.VALUE,
 			completedAt: onboarding?.completedAt?.toISOString() ?? null,
+			state: onboarding?.state ?? {},
 			channelDone: connectedChannels.length > 0,
 			workspaceDone: ownerWorkspaces.length > 0,
 			threadDone: ownerThreads.length > 0,

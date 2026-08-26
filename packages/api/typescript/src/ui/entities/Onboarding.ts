@@ -3,23 +3,27 @@
 import { AggregateRoot, z } from '@codm/core-typescript'
 import Z from 'zod'
 import { OnboardingStep } from '@codm/contracts-typescript/wire/enums'
+import { OnboardingDraftStateSchema, type OnboardingDraftState } from '../schemas/OnboardingDraftState'
 
 /**
- * A JORNADA do operador pelo wizard — e SÓ ela.
+ * A JORNADA do operador pelo wizard — e o RASCUNHO que ela carrega.
  *
- * Duas coisas moram aqui porque só o servidor pode respondê-las: onde a pessoa parou
- * (`currentStep`) e se ela terminou (`completedAt`). Tudo o mais que o wizard mostra é derivado a
- * cada leitura: a satisfação dos passos de setup sai de consultas de existência no banco (um canal
- * apagado desfaz o passo — spec AC-9), e as pré-condições do sistema saem do host e NUNCA chegam
- * até aqui, porque o servidor não enxerga o TCC da máquina e o mesmo `ownerId` em dois Macs daria
- * respostas diferentes (spec Decision 8).
+ * `currentStep` e `completedAt` só o servidor pode responder: onde a pessoa parou e se ela
+ * terminou. Tudo o mais que o wizard mostra é derivado a cada leitura: a satisfação dos passos de
+ * setup sai de consultas de existência no banco (um canal apagado desfaz o passo — spec AC-9), e as
+ * pré-condições do sistema saem do host e NUNCA chegam até aqui, porque o servidor não enxerga o
+ * TCC da máquina e o mesmo `ownerId` em dois Macs daria respostas diferentes (spec Decision 8).
  *
- * SEM campo `state`: nenhum passo coleta dado que não tenha tabela própria, e um saco genérico seria
- * convite a preenchê-lo com o que não devia (spec Decision 6).
+ * `state` (spec 2026-08-26) é o rascunho de `contactRef`/`workspace`/`providers` — o que os passos
+ * WORKSPACE/CONTACT/AGENTS coletam antes do commit atômico. Continua NÃO sendo "o mundo": nenhum
+ * passo de SETUP (canal conectado, workspace já registrado, thread já existente) é guardado aqui —
+ * esses seguem derivados por consulta em `GetOnboarding`. `state` é só o que ainda NÃO virou
+ * agregado de verdade, para sobreviver a um reboot no meio do wizard.
  */
 export const OnboardingSchema = z.object({
 	ownerId: z.uuid(),
 	currentStep: z.enum(OnboardingStep),
+	state: OnboardingDraftStateSchema,
 	completedAt: z.instanceof(Date).optional(),
 })
 
@@ -32,6 +36,7 @@ export class Onboarding extends AggregateRoot<typeof OnboardingSchema> {
 		return new Onboarding({
 			ownerId: data.ownerId,
 			currentStep: OnboardingStep.VALUE,
+			state: {},
 			completedAt: undefined,
 		})
 	}
@@ -48,6 +53,19 @@ export class Onboarding extends AggregateRoot<typeof OnboardingSchema> {
 	 */
 	advanceTo(step: OnboardingStep): void {
 		this.currentStep = step
+		this.validate()
+	}
+
+	/**
+	 * Mescla o rascunho — RASO, de propósito: `setState({ workspace: { path } })` SUBSTITUI o
+	 * `workspace` inteiro que já existia, não funde `path` dentro dele. Cada passo do wizard manda o
+	 * grupo COMPLETO que possui (`contactRef` inteiro, `workspace` inteiro, `providers` inteiro) —
+	 * nunca um campo solto dentro de um desses grupos — então um merge profundo nunca teria o que
+	 * resolver, e um raso é exatamente o que deixa um passo anterior (ex.: CONTACT) sobreviver
+	 * quando um passo posterior (ex.: AGENTS) grava só `providers`.
+	 */
+	setState(partial: OnboardingDraftState): void {
+		this.state = { ...this.state, ...partial }
 		this.validate()
 	}
 

@@ -74,7 +74,12 @@ export class AttachThread extends Handler<typeof AttachThreadInputSchema, typeof
 			throw new BaseError<ApplicationErrors>('CHANNEL_NOT_CONNECTED', 'the channel is not connected')
 		}
 
-		const workspace = await this.workspaces.findById(input.workspaceId)
+		// `tx` PASSED: a caller composing this into its own transaction (e.g. `CompleteOnboarding`,
+		// which creates the workspace via `AddWorkspace` and hands its id straight here) may reach
+		// this lookup before that workspace row is committed. Reading through the ambient connection
+		// (no `tx`) would miss it — a plain `SELECT` on another connection cannot see an in-flight
+		// transaction's writes.
+		const workspace = await this.workspaces.findById(input.workspaceId, tx)
 		if (!workspace || workspace.ownerId !== input.ownerId) {
 			throw new BaseError<ApplicationErrors>('WORKSPACE_NOT_FOUND', `no workspace ${input.workspaceId}`)
 		}

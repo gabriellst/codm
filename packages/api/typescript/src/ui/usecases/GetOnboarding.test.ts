@@ -40,11 +40,12 @@ describe('GetOnboarding', () => {
 		await testBed.destroy()
 	})
 
-	it('para um dono que nunca começou: nada concluído, primeiro passo, nada satisfeito', async () => {
+	it('para um dono que nunca começou: nada concluído, primeiro passo, nada satisfeito, rascunho vazio', async () => {
 		const result = await usecase.execute({ ownerId: OWNER })
 
 		expect(result.completedAt).toBeNull()
 		expect(result.currentStep).toBe(OnboardingStep.VALUE)
+		expect(result.state).toEqual({})
 		expect(result.channelDone).toBe(false)
 		expect(result.workspaceDone).toBe(false)
 		expect(result.threadDone).toBe(false)
@@ -59,6 +60,20 @@ describe('GetOnboarding', () => {
 
 		expect(result.currentStep).toBe(OnboardingStep.CHANNEL)
 		expect(result.completedAt).toBeNull()
+	})
+
+	/**
+	 * O RASCUNHO sobrevive a um reboot — o console repopula os passos WORKSPACE/CONTACT/AGENTS com
+	 * isto em vez de perder o que já foi preenchido (spec 2026-08-26).
+	 */
+	it('devolve o rascunho (state) que foi salvo', async () => {
+		const onboarding = Onboarding.create({ ownerId: OWNER })
+		onboarding.setState({ workspace: { path: '/Users/dev/acme-api' } })
+		await repo.save(onboarding)
+
+		const result = await usecase.execute({ ownerId: OWNER })
+
+		expect(result.state).toEqual({ workspace: { path: '/Users/dev/acme-api' } })
 	})
 
 	it('reporta os três derivados quando o setup está feito', async () => {

@@ -18,7 +18,7 @@ export class CompleteOnboardingController extends Controller<
 	static override readonly mcpScopes = [McpScope.system, McpScope.orchestration]
 	readonly path = '/ui/onboarding/complete'
 	readonly method = 'post' as const
-	readonly description = 'Conclui o onboarding do operador — grava completedAt'
+	readonly description = 'Conclui o onboarding do operador — commit atômico do rascunho (workspace/thread) seguido de completedAt'
 	readonly inputSchema = CompleteOnboardingControllerInputSchema
 	readonly outputSchema = CompleteOnboardingControllerOutputSchema
 

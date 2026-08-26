@@ -96,6 +96,37 @@ export const POLICY_EXCEPTIONS: readonly { file: string; imports: string; why: s
 			'and the card, on the exact path whose failure mode is already "nobody was told". Measured 2026-08-04: an ' +
 			'issue sat WORKING for two and a half hours with three dead items and no signal anywhere.',
 	},
+	...(
+		[
+			{ file: 'ui/usecases/CompleteOnboarding.ts', imports: 'workspace/usecases' },
+			{ file: 'ui/usecases/CompleteOnboarding.ts', imports: 'thread/usecases' },
+			{ file: 'ui/schemas/OnboardingDraftState.ts', imports: 'workspace/usecases' },
+			{ file: 'ui/schemas/OnboardingDraftState.ts', imports: 'thread/usecases' },
+		] as const
+	).map(({ file, imports }) => ({
+		file,
+		imports,
+		why:
+			"The onboarding atomic-commit ladder (spec 2026-08-26), descended in order and stopped at the first rung that passed:\n" +
+			'  degrau 1 (refactor to repositories/services) — NOT TAKEN. `CompleteOnboarding` must materialize the ' +
+			"wizard's draft into REAL aggregates — a new `Workspace` (or reuse of an existing one) and a `Thread` bound " +
+			'to it — inside ONE transaction with `onboarding.complete()`. `AddWorkspace`/`AttachThread` each own real ' +
+			"orchestration (path/git detection + dedupe, channel-connectivity + provider-detection + drivable-set " +
+			"guards, roster seeding, domain-event persistence) that `ui` has no business re-deriving via raw " +
+			"repository writes — that IS the write-model leak the `forbidden` list exists to catch, just reached from " +
+			"the entities/services surface instead of usecases.\n" +
+			"  degrau 2 (declared edge + NAMED per-file exception) — TAKEN. `ui → workspace` and `ui → thread` are " +
+			"declared CONTEXT_MAP edges (`ui/context.ts` `consumes`); this extends each to the usecases surface, " +
+			"per-file. Composing the destination context's OWN guarded entrypoint (`AddWorkspace`/`AttachThread`) is " +
+			"orchestration expressed directly — the same shape `SteerIssueTurn`'s `issue/usecases` exception already " +
+			"licenses for `agent`. `OnboardingDraftState` schemas are COMPOSED (`.shape.contactRef`, `.shape.path`) " +
+			"from these same use cases' Input schemas rather than redigitated, so the exception on the schema file is " +
+			"the wire-contract half of the same decision.\n" +
+			"  degrau 3 (integration event) — NOT NEEDED, and wrong here. The commit must be ATOMIC: if `AttachThread` " +
+			"fails after `AddWorkspace` succeeded, the whole transaction — including `onboarding.complete()` — must " +
+			"roll back together (spec AC: 'falha revalidação → nada persiste'). An event would make each step " +
+			"eventual and reintroduce exactly the partial-write-on-reboot bug this feature exists to close.",
+	})),
 ]
 
 /**
