@@ -4,6 +4,7 @@ import { act } from 'react'
 import { createRoot, type Root as ReactRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useRouterState } from '@tanstack/react-router'
+import { ContactKindEnum, ProviderKindEnum } from '@codm/client-typescript/typescript'
 import i18n from '@/lib/i18n'
 import { OnboardingGate, resetOnboardingGateForTests } from '@/components/console/OnboardingGate'
 import { type Bindings, Container, ServicesProvider } from '@/services'
@@ -14,7 +15,7 @@ import { mountRouter, type MountedRouter } from '../../../../../tests/support/mo
 import { useIntegrationBackend, type IntegrationBackend } from '../../../../../tests/support/integration-harness'
 import { useOnboardingSetupStore } from '../../-stores/useOnboardingSetupStore'
 import { useOnboardingStore } from '../../-stores/useOnboardingStore'
-import { onboardingSteps } from '../steps'
+import { onboardingSteps, type StepId } from '../steps'
 import { OnboardingFlow } from './index'
 import * as stories from './index.stories'
 
@@ -50,6 +51,35 @@ import * as stories from './index.stories'
  * `OnboardingFlow` (em `/onboarding`) seguido do MESMO `OnboardingGate` que decide `/dashboard`
  * (`(app)/route.tsx`), os dois no mesmo `QueryClient` — a única forma de flagrar o cache velho que
  * causava o bounce.
+ *
+ * 2026-08-26 — SEGUNDO bug do founder: "Próximo" avançava sem canal conectado, sem contato/provider
+ * escolhido, sem workspace escolhido e sem revisão completa. `OnboardingFlow` ganhou um gate real
+ * (`CAN_CONTINUE`, um `Record<StepId, boolean>` lido do estado AO VIVO — ver o docblock daquele
+ * arquivo), então a REGRESSÃO CORONA abaixo — que clicava "Próximo" por TODOS os passos sem nunca
+ * selecionar nada — pararia de chegar a "Concluir". A correção NÃO relaxa o gate para o teste passar:
+ * ela SATISFAZ cada passo antes de clicar, exatamente como o operador precisaria fazer.
+ *
+ * A satisfação é por SEED DIRETO no `useOnboardingSetupStore` (`useOnboardingSetupStore.getState().
+ * setX(...)`), não pela SDK mockada nem pela UI real de CHANNEL/CONTACT/AGENTS — por dois motivos
+ * medidos, não por atalho:
+ *   1. MSW é SÓ-VISUAL sob `bun test` (ruling do founder, `tests/support/storybook.ts`) — mockar a
+ *      SDK via `@/storybook` não intercepta NADA aqui, só no Storybook real. A única rede que
+ *      funciona neste arquivo é o backend de integração de verdade.
+ *   2. O FATO por trás de CHANNEL/CONTACT/AGENTS — um device WhatsApp pareado, contatos reais, um
+ *      provider CLI detectado — vem do gateway Go (`services: ['apiGo']`, opt-in, não usado aqui) e
+ *      de binários instalados no host de CI (não-determinístico) — o MESMO gap documentado acima
+ *      para `channelDone`/AC-10. `AttachThread` (a mutation real de REVIEW) valida os dois de verdade
+ *      (`ChannelConnectivity.isConnected`, `ProviderDetector.resolve`) e rejeitaria qualquer canal/
+ *      provider forjado — não é possível produzir esses fatos "de verdade" neste harness.
+ * Seed direto no store é o MESMO canon dos `given` helpers do backend (root `CLAUDE.md`: "criam
+ * estado direto via repositórios — nunca via use case") aplicado no cliente: não existe repositório
+ * para alcançar daqui, então o store (a fonte que `CAN_CONTINUE` lê) faz esse papel. `threadAttached`
+ * é semeado JUNTO para que `OnboardingReviewStep` NUNCA registre um `confirmStep` real (seu próprio
+ * efeito: `canFinish && !threadAttached`) — sem isso "Próximo" em REVIEW tentaria a mutation
+ * `AttachThread` de verdade contra canal/provider forjados e rejeitaria. `WORKSPACE` é a ÚNICA peça
+ * cuja seleção sobrevive intacta ao seed: `setWorkspaceId` sozinho já basta porque
+ * `OnboardingWorkspaceStep` deriva `hasSelection` (e o `workspaceHasSelection` que sobe ao store)
+ * do PRÓPRIO `workspaceId` ao montar — nenhum atalho adicional precisa existir para esse passo.
  *
  * `ServicesProvider`/`Container` (mesmo `testBindings` de `FullDiskAccessCard`) porque
  * `OnboardingWorkspaceStep` monta `AddWorkspaceForm`, que pede `useFilePicker()` do Container
@@ -158,6 +188,50 @@ describe('OnboardingFlow — contra o backend real', () => {
 		act(() => button.click())
 	}
 
+	function nextButton(): HTMLButtonElement {
+		const button = [...mounted!.host.querySelectorAll('button')].find(b => b.textContent?.includes(NEXT()))
+		if (!button) throw new Error(`button "${NEXT()}" not found`)
+		return button as HTMLButtonElement
+	}
+
+	/**
+	 * Semeia, DIRETO no store, o fato por trás de WORKSPACE/CONTACT/AGENTS/REVIEW — ver o docblock da
+	 * regressão CORONA abaixo para por que é seed e não SDK mockada/UI real. `threadAttached: true` é
+	 * o que impede `OnboardingReviewStep` de tentar a mutation `AttachThread` de verdade contra um
+	 * canal/provider forjados. SAFE de chamar ANTES de qualquer um desses passos montar: nenhum dos
+	 * quatro componentes reescreve estes campos ao montar, só DERIVA valores a partir deles.
+	 *
+	 * NÃO inclui `channelConnected` — CHANNEL é diferente (ver `clickThroughStep` abaixo): a MONTAGEM
+	 * de `ConnectChannelForm` dispara seu próprio efeito (`onConnectedChange(isConnected)`) com
+	 * `isConnected` começando `false`, o que sobrescreveria um seed feito ANTES dela montar.
+	 */
+	function givenSetupFactsSatisfied(): void {
+		act(() => {
+			useOnboardingSetupStore.getState().setWorkspaceId(crypto.randomUUID())
+			useOnboardingSetupStore.getState().setContactRef({
+				channelId: crypto.randomUUID(),
+				externalId: 'test-contact',
+				displayName: 'Test Contact',
+				kind: ContactKindEnum.USER,
+			})
+			useOnboardingSetupStore.getState().setProviders([ProviderKindEnum.CLAUDE_CODE])
+			useOnboardingSetupStore.getState().setThreadAttached(true)
+		})
+	}
+
+	/**
+	 * Clica "Próximo" a partir do passo `id` (que já deve estar montado/visível), semeando o fato de
+	 * CHANNEL bem ali — DEPOIS de `ConnectChannelForm` montar, nunca antes. Essa forma real conecta a
+	 * gateway Go (ausente por padrão neste harness — `useIntegrationBackend`'s próprio docblock), então
+	 * `isConnected` nunca resolve `true` sozinho: o próprio mount da forma dispara `onConnectedChange(false)`
+	 * (seu efeito, com o valor inicial), que sobrescreveria um `channelConnected` semeado ANTES dela
+	 * existir. Semear DEPOIS é o que sobrevive.
+	 */
+	function clickThroughStep(id: StepId): void {
+		if (id === 'CHANNEL') act(() => useOnboardingSetupStore.getState().setChannelConnected(true))
+		clickButton(NEXT())
+	}
+
 	/**
 	 * O índice do store começa pré-semeado num valor QUE NÃO é o que a leitura fresca produziria — se
 	 * a asserção fosse só "abre em 0", quebrar a guarda de semeadura (`if (seededRef.current ||
@@ -192,9 +266,10 @@ describe('OnboardingFlow — contra o backend real', () => {
 		it('REGRESSÃO 09/08: uma "Concluir" só, e a navegação para /dashboard FICA — o gate não devolve', async () => {
 			const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 			await mount(queryClient)
+			givenSetupFactsSatisfied()
 
 			const steps = onboardingSteps([])
-			for (let i = 0; i < steps.length - 1; i++) clickButton(NEXT())
+			for (let i = 0; i < steps.length - 1; i++) clickThroughStep(steps[i])
 
 			await mounted!.settled(() => {
 				const button = [...mounted!.host.querySelectorAll('button')].find(b => b.textContent?.includes(GET_STARTED()))
@@ -221,6 +296,91 @@ describe('OnboardingFlow — contra o backend real', () => {
 			// So the budget stayed at the default and the environment got pinned instead
 			// (`project.json` target env + the assertion in `tests/setup.ts`). Raising the timeout here
 			// would have hidden the cause and left the other two failures unexplained.
+		})
+	})
+
+	/**
+	 * O BUG relatado pelo founder em 2026-08-26, provado passo a passo: sem o fato de cada passo,
+	 * "Próximo" fica desabilitado; assim que o fato é semeado (a MESMA fonte que a UI real grava —
+	 * `useOnboardingSetupStore`), o botão libera. `CHANNEL`/`CONTACT`/`AGENTS`/`REVIEW` são REQUIRED
+	 * (bloqueiam "Concluir" também, ver `steps.test.ts`); `WORKSPACE` é DEFERRABLE mas ainda assim
+	 * gated aqui — o relato do founder incluía ele ("o mesmo vale para... workspace").
+	 */
+	describe('gate do "Próximo" — CAN_CONTINUE', () => {
+		it('CHANNEL/WORKSPACE/CONTACT/AGENTS/REVIEW bloqueiam "Próximo" sem seu fato, e liberam com ele', async () => {
+			const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+			await mount(queryClient)
+			await mounted!.settled(() => (mounted!.host.textContent ?? '').includes(i18n.t('onboarding.slide1Title')), 'o slide 1 aparecer')
+
+			// VALUE → HOW → CONTROL → CHANNEL — os três passos de intro são sempre INFORMATIVE, nunca
+			// bloqueiam "Próximo".
+			clickButton(NEXT())
+			clickButton(NEXT())
+			clickButton(NEXT())
+
+			// CHANNEL
+			expect(nextButton().disabled).toBe(true)
+			act(() => useOnboardingSetupStore.getState().setChannelConnected(true))
+			expect(nextButton().disabled).toBe(false)
+			clickButton(NEXT())
+
+			// WORKSPACE — `setWorkspaceId` sozinho basta: `OnboardingWorkspaceStep` deriva `hasSelection`
+			// (e o `workspaceHasSelection` que sobe ao store) do PRÓPRIO `workspaceId` ao (re)renderizar.
+			expect(nextButton().disabled).toBe(true)
+			act(() => useOnboardingSetupStore.getState().setWorkspaceId(crypto.randomUUID()))
+			expect(nextButton().disabled).toBe(false)
+			clickButton(NEXT())
+
+			// CONTACT
+			expect(nextButton().disabled).toBe(true)
+			act(() =>
+				useOnboardingSetupStore.getState().setContactRef({
+					channelId: crypto.randomUUID(),
+					externalId: 'test-contact',
+					displayName: 'Test Contact',
+					kind: ContactKindEnum.USER,
+				}),
+			)
+			expect(nextButton().disabled).toBe(false)
+			clickButton(NEXT())
+
+			// AGENTS
+			expect(nextButton().disabled).toBe(true)
+			act(() => useOnboardingSetupStore.getState().setProviders([ProviderKindEnum.CLAUDE_CODE]))
+			expect(nextButton().disabled).toBe(false)
+			clickButton(NEXT())
+
+			// REVIEW — chega JÁ satisfeito (contactRef/workspaceId/providers semeados acima, pelos
+			// próprios passos anteriores): prova o bloqueio esvaziando UM campo (`providers: []` — o
+			// setter é tipado sem `undefined`, um array vazio é o valor "nada escolhido" válido) e
+			// restaurando, em vez de reconstruir o fluxo do zero para um passo cujo gate é o MESMO
+			// schema em todos os campos.
+			expect(nextButton().disabled).toBe(false)
+			act(() => useOnboardingSetupStore.getState().setProviders([]))
+			expect(nextButton().disabled).toBe(true)
+			act(() => useOnboardingSetupStore.getState().setProviders([ProviderKindEnum.CLAUDE_CODE]))
+			expect(nextButton().disabled).toBe(false)
+		})
+
+		/**
+		 * FULL_DISK_ACCESS não tem gesto de "confirmar" — o passo só EXISTE em `steps` ENQUANTO a
+		 * pré-condição está pendente (`onboardingSteps` compõe a partir de `pending`, `../steps.ts`),
+		 * então estar nele JÁ é estar insatisfeito. `CAN_CONTINUE.FULL_DISK_ACCESS` é `false`
+		 * incondicional — só o host resolvendo a permissão (fora do escopo deste teste; reprovado no
+		 * foco da janela) tira o passo da lista e destrava o wizard sozinho.
+		 */
+		it('FULL_DISK_ACCESS bloqueia "Próximo" incondicionalmente enquanto pendente', async () => {
+			useSystemPreconditionsStore.getState().apply([{ id: 'FULL_DISK_ACCESS', satisfied: false, repair: 'AVAILABLE' }])
+			const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+			await mount(queryClient)
+			await mounted!.settled(() => (mounted!.host.textContent ?? '').includes(i18n.t('onboarding.slide1Title')), 'o slide 1 aparecer')
+			givenSetupFactsSatisfied()
+
+			const steps = onboardingSteps(['FULL_DISK_ACCESS'])
+			const fullDiskAccessIndex = steps.indexOf('FULL_DISK_ACCESS')
+			for (let i = 0; i < fullDiskAccessIndex; i++) clickThroughStep(steps[i])
+
+			expect(nextButton().disabled).toBe(true)
 		})
 	})
 })

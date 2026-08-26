@@ -3,7 +3,12 @@ import { useTranslation } from 'react-i18next'
 import { IconArrowRight } from '@tabler/icons-react'
 import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { getOnboardingQueryKey, useCompleteOnboarding, useGetOnboarding } from '@codm/client-typescript/typescript'
+import {
+	attachThreadMutationRequestSchema,
+	getOnboardingQueryKey,
+	useCompleteOnboarding,
+	useGetOnboarding,
+} from '@codm/client-typescript/typescript'
 import { Button } from '@codm/app-ui/button'
 import { Spinner } from '@codm/app-ui/spinner'
 import { cn } from '@/lib/utils'
@@ -126,10 +131,20 @@ function stepAlignment(stepId: StepId): string {
  * — e não um caso especial (spec Decisions 1/2).
  *
  * O `blocked`/"Pular" escondido de antes MORREU (spec Decision 13): a conclusão só é barrada por um
- * passo REQUIRED insatisfeito (`canComplete`), e nenhum `StepId` real carrega esse `kind` hoje — o
- * botão final fica sempre habilitado na prática, como CONSEQUÊNCIA da tabela `STEP_TAXONOMY`, não
- * como regra imposta aqui. Não existe mais link de saída nenhum: quem sai é o botão final, que
- * conclui o onboarding de verdade (`useCompleteOnboarding`) antes de navegar.
+ * passo REQUIRED insatisfeito (`canComplete`). Cinco `StepId` reais carregam esse `kind` desde
+ * 2026-08-26 (`CHANNEL`/`CONTACT`/`AGENTS`/`REVIEW`/`FULL_DISK_ACCESS` — founder override, ver
+ * `../steps.ts`), então "Concluir" agora fica desabilitado de verdade até os cinco estarem
+ * satisfeitos, como CONSEQUÊNCIA da tabela `STEP_TAXONOMY` — não uma regra nova imposta aqui. Não
+ * existe mais link de saída nenhum: quem sai é o botão final, que conclui o onboarding de verdade
+ * (`useCompleteOnboarding`) antes de navegar.
+ *
+ * `CAN_CONTINUE` (mesmo canon de `AttachThreadWizard`, `attach`'s `-components/AttachThreadWizard/
+ * index.tsx`) é a camada SEPARADA que gate "Próximo" passo a passo — um `Record<StepId, boolean>`
+ * derivado do estado AO VIVO (stores + a leitura de onboarding), nunca um booleano fixo. Existe
+ * porque o founder relatou o MESMO bug em dois lugares diferentes: "Próximo" avançava sem canal
+ * conectado, sem contato/provider escolhido, sem workspace escolhido e sem revisão completa —
+ * `WORKSPACE` continua DEFERRABLE (não bloqueia "Concluir"), mas ainda assim precisa de uma seleção
+ * para o PRÓPRIO "Próximo" avançar, daí o mapa cobrir os dez `StepId` e não só os cinco REQUIRED.
  *
  * A POSIÇÃO DE ABERTURA (spec Decision 12 / AC-10 — sempre no primeiro passo não vencido, nunca
  * "índice 0" depois de já ter concluído) é responsabilidade DESTE componente: ele lê `useGetOnboarding()`
@@ -259,11 +274,63 @@ export function OnboardingFlow({ className, ...props }: ComponentProps<'div'>) {
 	const firstActionableIndex = steps.findIndex(id => STEP_TAXONOMY[id].kind !== INFORMATIVE_KIND)
 	const skipTarget = firstActionableIndex === -1 ? lastIndex : firstActionableIndex
 
-	// Nenhum StepId real é REQUIRED hoje (STEP_TAXONOMY), então isto avalia sempre `true` na prática —
-	// ver o comentário de `canComplete` em `../steps`.
+	// Live per-step facts `CAN_CONTINUE` reads below. `contactRef`/`providers` ARE the fact already
+	// (set the instant a row is clicked, by `OnboardingContactStep`/`OnboardingAgentsStep`) — no extra
+	// plumbing needed. `channelConnected`/`workspaceHasSelection` exist ON `useOnboardingSetupStore`
+	// specifically because CHANNEL/WORKSPACE had no other live signal reaching this component (see
+	// that store's own docblock for why each is raised the way it is).
+	const contactRef = useOnboardingSetupStore(state => state.contactRef)
+	const providers = useOnboardingSetupStore(state => state.providers)
+	const workspaceId = useOnboardingSetupStore(state => state.workspaceId)
+	const workspaceHasSelection = useOnboardingSetupStore(state => state.workspaceHasSelection)
+	const channelConnected = useOnboardingSetupStore(state => state.channelConnected)
+
+	// The SAME schema/fields `OnboardingReviewStep` parses to decide its OWN `confirmStep` (that
+	// component's docblock) — recomputed here, not threaded down, because `STEP_COMPONENTS` gives
+	// this component no prop channel into a mounted step (same constraint `confirmStep`/`stepError`
+	// already document), and REVIEW's three fields already live in this same store.
+	const canFinishReview = attachThreadMutationRequestSchema.safeParse({ contactRef, workspaceId, providers }).success
+
+	// 2026-08-26 fix — the footer's "Próximo" gate, PER STEP (same canon as `AttachThreadWizard`'s own
+	// `CAN_CONTINUE`, `/attach/-components/AttachThreadWizard/index.tsx`): dispatch by map, never a
+	// switch/if chain (CMP-P18). Covers all ten `StepId`s, not just the five REQUIRED ones — `WORKSPACE`
+	// stays DEFERRABLE (it does not block "Concluir"), but the founder's bug report was specifically
+	// that "Próximo" advanced past it (and CHANNEL/CONTACT/AGENTS/FULL_DISK_ACCESS) with nothing chosen,
+	// so THIS gate applies uniformly regardless of `kind`.
+	//
+	// `FULL_DISK_ACCESS` is always `false` while shown: the step only EXISTS in `steps` while its
+	// precondition is pending (`onboardingSteps` composes from `pending`, `../steps.ts`) — being on it
+	// IS being unsatisfied. There is no "confirm" gesture for it; only the host resolving the
+	// permission (re-probed on window focus) removes it from `pending`, which reflows `steps` and
+	// moves the wizard past it on its own.
+	//
+	// `FINAL` is the wizard's LAST step by construction (`onboardingSteps` always appends it) — the
+	// footer swaps to "Concluir" once `index === lastIndex`, so `CAN_CONTINUE.FINAL` is never actually
+	// read for gating "Próximo". Kept `true` only so this stays a `Record`, not a `Partial` — a new
+	// `StepId` without an entry fails `tsc` here too, same canon as `STEP_TAXONOMY`.
+	const CAN_CONTINUE: Record<StepId, boolean> = {
+		VALUE: true,
+		HOW: true,
+		CONTROL: true,
+		CHANNEL: channelConnected || Boolean(onboarding?.channelDone),
+		WORKSPACE: workspaceHasSelection || Boolean(onboarding?.workspaceDone),
+		CONTACT: Boolean(contactRef),
+		AGENTS: Boolean(providers?.length),
+		REVIEW: canFinishReview,
+		FULL_DISK_ACCESS: false,
+		FINAL: true,
+	}
+	const canContinue = CAN_CONTINUE[stepId]
+
+	// `canComplete`'s `satisfied` list is THIS SAME map, filtered to the steps actually in play — one
+	// source for "is this step's fact true", read by both gates (per-step "Próximo" above, and
+	// "Concluir" here). A REQUIRED step (`STEP_TAXONOMY`) blocks completion exactly when its own
+	// "Próximo" would also stay closed; `FULL_DISK_ACCESS` never makes it into `satisfied` while
+	// present, which is what keeps "Concluir" honestly blocked until the host permission actually
+	// resolves (see `CAN_CONTINUE`'s own docblock above).
 	const completionAllowed = canComplete(
 		steps.map(id => ({ id, kind: STEP_TAXONOMY[id].kind })),
-		[],
+		steps.filter(id => CAN_CONTINUE[id]),
 	)
 
 	return (
@@ -355,7 +422,7 @@ export function OnboardingFlow({ className, ...props }: ComponentProps<'div'>) {
 						)}
 					</div>
 					{index < lastIndex ? (
-						<Button onClick={handleNext} disabled={isAdvancing}>
+						<Button onClick={handleNext} disabled={!canContinue || isAdvancing}>
 							{isAdvancing && <Spinner className="mr-2" />}
 							{t('onboarding.next')} <IconArrowRight data-icon="inline-end" />
 						</Button>

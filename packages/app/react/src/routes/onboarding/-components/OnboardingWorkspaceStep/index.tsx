@@ -85,6 +85,7 @@ export function OnboardingWorkspaceStep({ className, ...props }: ComponentProps<
 	const queryClient = useQueryClient()
 	const workspaceId = useOnboardingSetupStore(state => state.workspaceId)
 	const setWorkspaceId = useOnboardingSetupStore(state => state.setWorkspaceId)
+	const setWorkspaceHasSelection = useOnboardingSetupStore(state => state.setWorkspaceHasSelection)
 	const setConfirmStep = useOnboardingSetupStore(state => state.setConfirmStep)
 	const setStepError = useOnboardingSetupStore(state => state.setStepError)
 	const { extractErrorCode, getErrorTranslation } = useErrorHandler()
@@ -185,6 +186,16 @@ export function OnboardingWorkspaceStep({ className, ...props }: ComponentProps<
 	// stays set to the newly created workspace; `selectExisting` does the same. Founder live-test,
 	// 2026-08-25 follow-up to item 2 — the row kept reappearing right after a folder was added.
 	const hasSelection = showPendingCard || !!workspaceId
+
+	// Raises `hasSelection` to the cross-mount store (2026-08-26 fix) — `OnboardingFlow`'s footer
+	// gates "Próximo" on it (`CAN_CONTINUE.WORKSPACE`) and has no prop-based channel into this step
+	// (`STEP_COMPONENTS` dispatches by a static `Record<StepId, ReactNode>`), same shape as
+	// `confirmStep`/`stepError` just above. Cleared on unmount so a stale `true` never survives past
+	// a fresh remount that hasn't recomputed `hasSelection` yet.
+	useEffect(() => {
+		setWorkspaceHasSelection(hasSelection)
+		return () => setWorkspaceHasSelection(false)
+	}, [hasSelection, setWorkspaceHasSelection])
 
 	return (
 		<div className={cn('flex flex-col gap-4', className)} {...props}>

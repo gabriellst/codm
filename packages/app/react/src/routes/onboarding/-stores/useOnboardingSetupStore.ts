@@ -49,14 +49,30 @@ import type { ContactStepData } from '@/routes/(app)/attach/-components/ContactS
  * moment `confirmStep` succeeds, so `OnboardingFinalStep` (several steps later, no props threading
  * available to it either — same `STEP_COMPONENTS` constraint as `confirmStep`) can look up that
  * thread's `session.mentionGate.tag` (`useGetSessionChat`) for the real mention handle. Undefined
- * when REVIEW was skipped this visit (WORKSPACE/CONTACT/AGENTS/REVIEW are all DEFERRABLE, not
- * REQUIRED) — `OnboardingFinalStep` falls back to the generic closing copy in that case, never a
- * fabricated handle.
+ * when REVIEW was skipped this visit — `OnboardingFinalStep` falls back to the generic closing copy
+ * in that case, never a fabricated handle.
+ *
+ * `channelConnected`/`workspaceHasSelection` — added 2026-08-26 (founder bug report: "Próximo"
+ * advanced past CHANNEL/WORKSPACE/CONTACT/AGENTS/FULL_DISK_ACCESS with nothing chosen). `OnboardingFlow`'s
+ * footer needs, PER STEP, a live "has this step's fact actually happened" boolean to gate "Próximo"
+ * (`CAN_CONTINUE` in that file) — CONTACT/AGENTS already had one for free (`contactRef`/`providers`
+ * ARE the fact, set the instant a row is clicked), but CHANNEL and WORKSPACE didn't:
+ *   - CHANNEL's fact (a paired WhatsApp device) lives inside `ConnectChannelForm`'s own polling
+ *     state (`isConnected`) — its `onConnectedChange` prop is the live, poll-free channel to raise it
+ *     here (`step-components.tsx` wires it), instead of adding a second poll in `OnboardingFlow`.
+ *   - WORKSPACE's fact is `OnboardingWorkspaceStep`'s local `hasSelection` (a picked-but-unconfirmed
+ *     folder OR an already-selected one) — raised by that component's own effect.
+ * Both default `false` and are NOT reconstructed from `workspaceId`/`contactRef` alone in
+ * `OnboardingFlow` on purpose: a future hydration of this store FROM THE SERVER (e.g. seeding
+ * `workspaceId` from `workspaceDone`) flows through `OnboardingWorkspaceStep`'s existing
+ * `hasSelection` computation for free — the gate never needs touching when that lands.
  */
 interface OnboardingSetupState {
 	contactRef?: ContactStepData['contactRef']
 	providers?: AgentsStepData['providers']
 	workspaceId?: string
+	workspaceHasSelection: boolean
+	channelConnected: boolean
 	threadAttached: boolean
 	attachedThreadId?: string
 	confirmStep?: () => Promise<void>
@@ -67,6 +83,8 @@ interface OnboardingSetupActions {
 	setContactRef: (contactRef: ContactStepData['contactRef']) => void
 	setProviders: (providers: AgentsStepData['providers']) => void
 	setWorkspaceId: (workspaceId: string | undefined) => void
+	setWorkspaceHasSelection: (workspaceHasSelection: boolean) => void
+	setChannelConnected: (channelConnected: boolean) => void
 	setThreadAttached: (threadAttached: boolean) => void
 	setAttachedThreadId: (attachedThreadId: string | undefined) => void
 	setConfirmStep: (confirmStep: (() => Promise<void>) | undefined) => void
@@ -80,6 +98,8 @@ const initialState: OnboardingSetupState = {
 	contactRef: undefined,
 	providers: undefined,
 	workspaceId: undefined,
+	workspaceHasSelection: false,
+	channelConnected: false,
 	threadAttached: false,
 	attachedThreadId: undefined,
 	confirmStep: undefined,
@@ -91,6 +111,8 @@ export const useOnboardingSetupStore = create<OnboardingSetupStore>()(set => ({
 	setContactRef: contactRef => set({ contactRef }),
 	setProviders: providers => set({ providers }),
 	setWorkspaceId: workspaceId => set({ workspaceId }),
+	setWorkspaceHasSelection: workspaceHasSelection => set({ workspaceHasSelection }),
+	setChannelConnected: channelConnected => set({ channelConnected }),
 	setThreadAttached: threadAttached => set({ threadAttached }),
 	setAttachedThreadId: attachedThreadId => set({ attachedThreadId }),
 	setConfirmStep: confirmStep => set({ confirmStep }),

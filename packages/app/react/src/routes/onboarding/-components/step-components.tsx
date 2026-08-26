@@ -1,6 +1,7 @@
 // packages/app/react/src/routes/onboarding/-components/step-components.tsx — COMPLETE final file.
 import type { ReactNode } from 'react'
 import { ConnectChannelForm } from '@/routes/(app)/channels/-components/ConnectChannelForm'
+import { useOnboardingSetupStore } from '../-stores/useOnboardingSetupStore'
 import { ControlSlide } from './ControlSlide'
 import { FullDiskAccessCard } from './FullDiskAccessCard'
 import { HowItWorksSlide } from './HowItWorksSlide'
@@ -34,7 +35,18 @@ export const STEP_COMPONENTS: Record<StepId, ReactNode> = {
 	// "Fechar" (a dialog-context affordance — `onDone`/`hide()` on `/channels`) had nothing to close
 	// here and nothing wired to it (no `onDone` passed). The wizard's OWN footer ("Próximo") is what
 	// moves the operator forward.
-	CHANNEL: <ConnectChannelForm showCloseButton={false} />,
+	//
+	// `onConnectedChange` — 2026-08-26 fix: this used to be the one prop `ConnectChannelForm` exposes
+	// specifically for a host to learn its live paired state that NOBODY here read, which is how
+	// "Próximo" could advance past an unpaired channel. `useOnboardingSetupStore.getState()` (not the
+	// hook) because `STEP_COMPONENTS` is a module-level map, outside any component body — same vanilla
+	// zustand access `OnboardingFlow` already uses for `useOnboardingRequiredStore.getState().reset()`.
+	CHANNEL: (
+		<ConnectChannelForm
+			showCloseButton={false}
+			onConnectedChange={connected => useOnboardingSetupStore.getState().setChannelConnected(connected)}
+		/>
+	),
 	WORKSPACE: <OnboardingWorkspaceStep />,
 	CONTACT: <OnboardingContactStep />,
 	AGENTS: <OnboardingAgentsStep />,
