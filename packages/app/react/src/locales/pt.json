@@ -97,6 +97,7 @@
 		"stepThreadTitle": "Escolha uma conversa",
 		"stepWorkspaceSubtitle": "A pasta de projeto em que seus agentes vão trabalhar.",
 		"stepWorkspaceTitle": "Escolha um espaço de trabalho",
+		"retryContacts": "Procurar de novo",
 		"syncingContacts": "Sincronizando conversas…"
 	},
 	"auth": {

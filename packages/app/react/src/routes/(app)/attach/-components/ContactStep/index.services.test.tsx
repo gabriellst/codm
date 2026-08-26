@@ -3,7 +3,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { getAttachThreadWizard } from '@codm/client-typescript/typescript'
-import { givenConnectedGatewayChannel } from '@codm/api-typescript/testing'
+import { givenChannel, givenConnectedGatewayChannel } from '@codm/api-typescript/testing'
 import i18n from '@/lib/i18n'
 import { useIntegrationBackend, type IntegrationBackend } from '../../../../../../tests/support/integration-harness'
 import { ContactStep } from '.'
@@ -145,5 +145,54 @@ describe('ContactStep — services: apiGo (T9) — contra o gateway subprocess r
 		expect(host?.textContent).toContain('Ada Lovelace')
 		expect(host?.textContent).toContain('Alan Turing')
 		expect(host?.querySelectorAll('button[type="button"]')).toHaveLength(2)
+	}, 15_000)
+
+	/**
+	 * FOUNDER BUG (2026-08-26): "Nenhum contato encontrado neste canal." aparecia rápido demais logo
+	 * depois de parear — o orçamento de graça era de 4s, curto para a varredura de bootstrap do
+	 * gateway. Subiu para 60s, e o vazio DEFINITIVO passou a vir com uma saída: reconsultar.
+	 *
+	 * O tempo NÃO é esperado aqui, e não precisa ser: quem encerra a janela é `syncSettled`, e o
+	 * evento de sync a encerra na hora — o orçamento é só o teto de quem nunca recebe evento. Então o
+	 * teste dirige a MESMA transição pelo caminho de produção (o transporte SSE re-emite cada frame
+	 * em `document` sob o próprio nome, padrão de `useThreadRealtime.test.tsx`), com um canal
+	 * CONECTADO e zero contatos — o estado exato que o founder viu.
+	 *
+	 * `givenChannel` (lado TS, sem gateway) e não `givenConnectedGatewayChannel`: este caso precisa de
+	 * um canal conectado que NÃO recebe contatos, e o roteiro do mock sempre entrega Ada e Alan.
+	 */
+	it('vazio definitivo (canal conectado, zero contatos) oferece reconsultar — e o botão reabre a janela de sync', async () => {
+		await givenChannel(backend.asTestBed())
+
+		await mount()
+
+		// Antes de qualquer evento: a janela está aberta, então a copy é "sincronizando", sem saída —
+		// reconsultar aqui só releria o que o evento vai trazer sozinho.
+		expect(host?.textContent).toContain(i18n.t('attach.syncingContacts'))
+		expect(host?.textContent).not.toContain(i18n.t('attach.retryContacts'))
+
+		// O frame que encerra a janela. Com o canal ainda sem contatos, o vazio agora é honesto.
+		await act(async () => {
+			document.dispatchEvent(new CustomEvent('integration.channel.remotes_synced', { detail: { name: 'integration.channel.remotes_synced' } }))
+		})
+		await act(async () => {
+			await new Promise(resolve => setTimeout(resolve, 50))
+		})
+
+		expect(host?.textContent).toContain(i18n.t('attach.noContacts'))
+		expect(host?.textContent).toContain(i18n.t('attach.retryContacts'))
+
+		// Clicar reabre a janela: volta a "sincronizando" e a saída some até o próximo veredito.
+		const retry = [...(host?.querySelectorAll('button[type="button"]') ?? [])].find(button => button.textContent?.includes(i18n.t('attach.retryContacts')))
+		expect(retry).toBeDefined()
+		await act(async () => {
+			retry?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+		})
+		await act(async () => {
+			await new Promise(resolve => setTimeout(resolve, 50))
+		})
+
+		expect(host?.textContent).toContain(i18n.t('attach.syncingContacts'))
+		expect(host?.textContent).not.toContain(i18n.t('attach.retryContacts'))
 	}, 15_000)
 })

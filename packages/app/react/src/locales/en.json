@@ -97,6 +97,7 @@
 		"stepThreadTitle": "Pick a thread",
 		"stepWorkspaceSubtitle": "The project folder your agents will work in.",
 		"stepWorkspaceTitle": "Pick a workspace",
+		"retryContacts": "Search again",
 		"syncingContacts": "Syncing conversations…"
 	},
 	"auth": {

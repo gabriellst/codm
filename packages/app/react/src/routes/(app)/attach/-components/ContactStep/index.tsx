@@ -2,7 +2,7 @@ import { type ComponentProps, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm } from '@tanstack/react-form'
 import { keepPreviousData, useQueryClient } from '@tanstack/react-query'
-import { IconCheck, IconChevronRight } from '@tabler/icons-react'
+import { IconCheck, IconChevronRight, IconRefresh } from '@tabler/icons-react'
 import {
 	attachThreadMutationRequestSchema,
 	getAttachThreadWizardQueryKey,
@@ -44,8 +44,15 @@ type ContactStepProps = Omit<ComponentProps<'form'>, 'onSubmit'> & {
  * `SupervisionGate`'s `INITIAL_PULL_BUDGET_MS` — a budget can only ever bring the honest state
  * FORWARD, never withhold it: it always resolves to the real empty state, it just doesn't jump
  * there while a bootstrap sync is still plausibly writing.
+ *
+ * ERA 4s até 2026-08-26, e o founder mediu curto demais: logo depois de parear, o "Nenhum contato
+ * encontrado neste canal." aparecia antes de a varredura de bootstrap do gateway terminar de
+ * escrever — uma afirmação confiante e falsa, na primeira tela que o operador vê. Um minuto é o
+ * teto que ele pediu; passado ele, o vazio vem ACOMPANHADO do botão de reconsultar (abaixo), porque
+ * um minuto sem evento também pode significar que o evento se perdeu, e aí a saída é reler, não
+ * esperar mais.
  */
-const SYNC_GRACE_BUDGET_MS = 4_000
+const SYNC_GRACE_BUDGET_MS = 60_000
 
 export function ContactStep({ channelKindById, defaultValues, onSubmit, className, ...props }: ContactStepProps) {
 	const { t } = useTranslation()
@@ -123,6 +130,21 @@ export function ContactStep({ channelKindById, defaultValues, onSubmit, classNam
 	// zero matches (`noContactsFound`, which a still-syncing channel cannot explain away).
 	const stillSyncing = channelConnected && !trimmed && contacts.length === 0 && !syncSettled
 
+	/**
+	 * O vazio DEFINITIVO de um canal conectado — o único estado desta tela que merece uma saída, e o
+	 * que o founder pediu junto com o minuto de espera: gastar o orçamento inteiro sem uma linha
+	 * pode significar que o canal realmente não tem conversas, mas também que o evento de sync se
+	 * perdeu no caminho (SSE cai, o daemon reinicia). Reler é barato e é a única coisa que o console
+	 * controla — o gateway não expõe porta para forçar varredura (conferido: não há rota de sync no
+	 * openapi dele), então o botão INVALIDA a leitura e reabre a janela, em vez de prometer uma
+	 * re-sincronização que não temos como pedir.
+	 */
+	const exhaustedEmpty = channelConnected && !trimmed && contacts.length === 0 && syncSettled
+	const retrySync = () => {
+		setSyncSettled(false)
+		queryClient.invalidateQueries({ queryKey: getAttachThreadWizardQueryKey() })
+	}
+
 	const form = useForm({
 		defaultValues,
 		validators: { onChange: ContactStepSchema },
@@ -167,16 +189,27 @@ export function ContactStep({ channelKindById, defaultValues, onSubmit, classNam
 			<Input placeholder={t('attach.searchContacts')} value={inputValue} onChange={e => handleSearchChange(e.target.value)} />
 
 			{contacts.length === 0 && (
-				<p className="flex items-center gap-2 px-2 py-6 text-sm text-muted-foreground">
-					{(isFetching || stillSyncing) && <Spinner />}
-					{isFetching
-						? t('common.loading')
-						: stillSyncing
-							? t('attach.syncingContacts')
-							: trimmed
-								? t('attach.noContactsFound', { term: trimmed })
-								: t('attach.noContacts')}
-				</p>
+				<div className="flex flex-col items-start gap-2 px-2 py-6">
+					<p className="flex items-center gap-2 text-sm text-muted-foreground">
+						{(isFetching || stillSyncing) && <Spinner />}
+						{isFetching
+							? t('common.loading')
+							: stillSyncing
+								? t('attach.syncingContacts')
+								: trimmed
+									? t('attach.noContactsFound', { term: trimmed })
+									: t('attach.noContacts')}
+					</p>
+					{/* Só no vazio DEFINITIVO (ver `exhaustedEmpty`): durante a sincronização o botão
+					    convidaria a reler o que já vai chegar sozinho pelo evento, e numa busca sem
+					    resultado ele não muda nada — quem manda ali é o termo digitado. */}
+					{exhaustedEmpty && !isFetching && (
+						<Button type="button" variant={'outline'} size={'sm'} onClick={retrySync}>
+							<IconRefresh className="size-4 shrink-0" />
+							{t('attach.retryContacts')}
+						</Button>
+					)}
+				</div>
 			)}
 
 			<form.Subscribe selector={state => state.values.contactRef}>
