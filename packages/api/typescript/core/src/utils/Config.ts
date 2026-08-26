@@ -162,7 +162,11 @@ const PLACEHOLDER_SECRET = 'SECRET'
 export const EnvSchema = RawEnvSchema.transform(data => {
 	const API_URL = data.API_URL ?? `http://localhost:${data.API_PORT}`
 	const APP_URL = data.APP_URL ?? (data.NODE_ENV === 'development' ? 'http://localhost:5173' : API_URL)
-	const BETTER_AUTH_URL = data.BETTER_AUTH_URL ?? `http://localhost:${data.API_PORT}/v1/authentication`
+	// DERIVADO da base da API, e sem prefixo de versão — que saiu do roteador. Enquanto esta linha
+	// carregava `/v1` à mão, quem NÃO declarasse `BETTER_AUTH_URL` recebia o better-auth num caminho
+	// que o roteador não serve: 404 em todo cadastro, com a mensagem apontando para a autenticação e
+	// não para o prefixo.
+	const BETTER_AUTH_URL = data.BETTER_AUTH_URL ?? `http://localhost:${data.API_PORT}/authentication`
 	// Computed BEFORE the CODM_CLOUD_URL cross-field default below overwrites it — `Config.env.
 	// CODM_CLOUD_URL` cross-field-defaults to API_URL and is therefore ALWAYS a truthy string, so it
 	// cannot express "the operator never set this". CLOUD_CONFIGURED is the typed answer to that
@@ -202,7 +206,6 @@ export const EnvSchema = RawEnvSchema.transform(data => {
 
 export const Config = {
 	name: `${process.env.PROJECT ?? 'template'}-${process.env.SERVICE ?? 'backend'}`,
-	version: process.env.VERSION ?? 'v1',
 	project: process.env.PROJECT ?? 'project',
 	service: process.env.SERVICE ?? 'service',
 	env: EnvSchema.parse(process.env),

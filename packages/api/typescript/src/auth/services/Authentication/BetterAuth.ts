@@ -2,7 +2,7 @@
 // social-only (GitHub + Google), no email/password, no MailSender.
 //
 // Scope of this cut: T1 wires the better-auth INSTANCE and its social providers so
-// GET/POST /v1/auth/* answers with GitHub + Google configured. The lifecycle bridge the original
+// GET/POST /auth/* answers with GitHub + Google configured. The lifecycle bridge the original
 // file had (`IdentityAuthHooks` — domain events on user/session create, password-reset emails) was
 // removed with the operator collapse and is NOT recreated here: SP2 has no email/password screens
 // (spec decision — social-only v1) and no BC1 identity domain-event flow in scope. `databaseHooks`
@@ -24,7 +24,7 @@ import { IdentityAuthHooks } from '../IdentityAuthHooks'
  * `CORS_ALLOWED_ORIGINS` governa outra coisa (o allowlist de JSON da API em geral).
  *
  * Era exatamente esse bloqueio que obrigava o servidor a orquestrar o login por uma rota própria:
- * o docblock do `LoginSection` registra que apontar direto para `/v1/auth/sign-in/social` deu 404
+ * o docblock do `LoginSection` registra que apontar direto para `/auth/sign-in/social` deu 404
  * (aquele endpoint é POST; abrir o navegador do sistema é GET) e que fazer o POST do webview
  * esbarraria no CORS. Declarar a origem resolve a segunda metade — o POST passa a ser possível, e
  * o `disableRedirect` devolve a URL para o navegador do sistema abrir.
@@ -111,7 +111,7 @@ export class BetterAuth {
 function buildAuthInstance(driver: PgDatabaseDriver, socialProviders: BetterAuthSocialProviders, hooks: IdentityAuthHooks) {
 	const options = {
 		baseURL: Config.env.CODM_CLOUD_URL,
-		basePath: '/v1/auth',
+		basePath: '/auth',
 		secret: Config.env.BETTER_AUTH_SECRET,
 		// better-auth's OWN CSRF/cookie trust list — the cloud deployment's own origin. Distinct
 		// from CORS_ALLOWED_ORIGINS, which governs the general API's cross-origin JSON allowlist.
@@ -128,7 +128,7 @@ function buildAuthInstance(driver: PgDatabaseDriver, socialProviders: BetterAuth
 			// O ADR 0005 partiu o schema em dois troncos e o ADR 0002 aloca `auth` na NUVEM — que
 			// roda pg. Então este serviço estava cravado na família ERRADA para o único deployment em
 			// que ele monta: sob `CODM_PROFILE=cloud` o token `PgDatabaseDriver` nem está ligado.
-			// A nuvem subia porque `/v1/auth/ok` não toca o banco; o primeiro sign-in de verdade
+			// A nuvem subia porque `/auth/ok` não toca o banco; o primeiro sign-in de verdade
 			// explodiria.
 			provider: 'pg',
 			schema: {
@@ -208,7 +208,7 @@ function buildAuthInstance(driver: PgDatabaseDriver, socialProviders: BetterAuth
 		 * password resets → owned by better-auth, not modeled"*.
 		 *
 		 * `disableClientRequest: true` é uma trava que a versão anterior NÃO tinha e que passa a
-		 * existir de graça: a rota HTTP `/v1/auth/one-time-token/generate` fica fechada, e o código
+		 * existir de graça: a rota HTTP `/auth/one-time-token/generate` fica fechada, e o código
 		 * só pode ser cunhado por dentro (`auth.api.generateOneTimeToken`), pela ponte do desktop.
 		 * Sem ela, qualquer portador de um cookie de sessão poderia fabricar códigos de pareamento.
 		 *

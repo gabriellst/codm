@@ -18,7 +18,7 @@ class StubCheck extends HealthCheck {
 
 /** Um request CRU — sem cookie, sem header de auth, sem ctx. É a metade do AC-1 que importa. */
 function anonymousRequest(): HttpControllerRequest<unknown> {
-	const raw = new Request('http://localhost/v1/health')
+	const raw = new Request('http://localhost/health')
 	return { url: raw.url, ctx: {}, raw }
 }
 

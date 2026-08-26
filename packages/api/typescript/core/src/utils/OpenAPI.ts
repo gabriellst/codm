@@ -325,7 +325,10 @@ export class OpenAPI {
 	private readonly spec: OpenAPIV3.Document = {
 		openapi: '3.0.3',
 		info: {
-			version: Config.version,
+			// EXIGIDO pela OpenAPI 3.0, e descreve o DOCUMENTO — não a URL. Ele lia `Config.version`, o
+			// MESMO símbolo que prefixava as rotas, e foi essa coincidência que fez o prefixo parecer um
+			// esquema de versionamento quando era só uma constante. O prefixo saiu; este campo fica.
+			version: '1.0.0',
 			title: Config.name,
 		},
 		paths: {},
@@ -862,7 +865,13 @@ export class OpenAPI {
 	}
 
 	private buildPath(controller: Controller, router: Router): void {
-		const completePath = `/${this.spec.info.version}${router.path === '/' ? '' : router.path}${controller.path}`
+		// O MESMO caminho que o `MainRouter` monta — e a igualdade é OBRIGAÇÃO, não coincidência: o que
+		// a spec declara é o que a SDK chama, e o que a SDK chama tem de ser o que o servidor serve.
+		//
+		// Havia DUAS montagens independentes desta string, aqui e no `MainRouter`. Sem esta linha, a
+		// spec regenerada sairia com os paths sob `/1.0.0/...` — o `info.version` do documento, que
+		// nada tem a ver com roteamento.
+		const completePath = `${router.path === '/' ? '' : router.path}${controller.path}`
 		const parsedParamsPath = completePath.replace(/:(\w+)/g, '{$1}')
 		const methods = Array.isArray(controller.method) ? controller.method : [controller.method]
 

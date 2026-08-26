@@ -100,7 +100,7 @@ export class FileCloudSession extends CloudSession {
 		//
 		// `Config.env.CODM_CLOUD_URL` não sabe dizer "ausente": ela recebe o valor de `API_URL` por
 		// default cruzado. Sem esta guarda, um install sem a env manda o daemon perguntar A SI MESMO
-		// `GET /v1/session` — que não existe localmente, porque `auth` é cloud-only (PLACEMENT) — leva
+		// `GET /session` — que não existe localmente, porque `auth` é cloud-only (PLACEMENT) — leva
 		// 404, e 404 não é 401, então a falha propagava e virava 500 `INTERNAL_SERVER_ERROR`. Medido:
 		// era exatamente o "Erro desconhecido" que o console mostrava em toda tela.
 		if (!this.isCloudConfigured()) {
@@ -192,7 +192,7 @@ export class FileCloudSession extends CloudSession {
 	}
 
 	/**
-	 * `GET /v1/session` na NUVEM, com a credencial do dispositivo. A ÚNICA chamada de rede desta
+	 * `GET /session` na NUVEM, com a credencial do dispositivo. A ÚNICA chamada de rede desta
 	 * classe, `protected` para que um teste a falseie sem abrir socket.
 	 *
 	 * PARSEADO pelo `SessionSchema`, nunca convertido. A resposta traz `expiresAt` como string (é

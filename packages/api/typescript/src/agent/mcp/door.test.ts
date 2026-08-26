@@ -71,7 +71,7 @@ const toolCall = (name: string, args: unknown): string =>
 const post = (scope: string, body: string, headers: Record<string, string>) =>
 	({
 		params: { scope },
-		raw: new Request(`http://127.0.0.1:3030/v1/mcp/${scope}`, { method: 'POST', headers, body }),
+		raw: new Request(`http://127.0.0.1:3030/mcp/${scope}`, { method: 'POST', headers, body }),
 	}) as unknown as McpDoorController['input']
 
 describe('the door refuses BEFORE dispatching, and refuses an unusable credential at all', () => {

@@ -220,7 +220,7 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 		// never free. Checking here instead means an unauthenticated install simply never asks the
 		// queue for work — items sit PENDING, untouched, attempts unspent — and the very next drain
 		// (after `SetCloudToken` logs the daemon in) resumes exactly where it left off, no restart
-		// needed. O gate virou ASSÍNCRONO porque a resposta passou a vir da NUVEM (`GET /v1/session`
+		// needed. O gate virou ASSÍNCRONO porque a resposta passou a vir da NUVEM (`GET /session`
 		// com a credencial guardada) em vez de um cache em disco — memoizada por 60s dentro do
 		// `FileCloudSession`, porque este laço faz poll a cada 250ms–2s e a pergunta não pode sair da
 		// máquina nessa cadência. Dev-compat: with no CODM_CLOUD_URL configured, `CloudSession.isEntitled()` always

@@ -126,7 +126,6 @@ async function main(): Promise<Report> {
 	// biome-ignore lint/suspicious/noExplicitAny: tsyringe-neo can't type an abstract class as an injection token.
 	const mainRouter = new MainRouter({
 		httpRouter: container.resolve(HttpRouter as any) as HttpRouter,
-		version: Config.version,
 		routers: ALL_ROUTERS,
 	})
 	await mainRouter.start()
@@ -157,7 +156,7 @@ async function main(): Promise<Report> {
 		expiresAt: new Date(Date.now() + 60 * 60 * 1000),
 	})
 
-	const endpoint = `http://127.0.0.1:${Config.env.API_PORT}/${Config.version}${MCP_ROUTE_PREFIX}/issue-handling`
+	const endpoint = `http://127.0.0.1:${Config.env.API_PORT}${MCP_ROUTE_PREFIX}/issue-handling`
 	const mcpConfig = { mcpServers: { codm: { type: 'http', url: endpoint, headers: { Authorization: `Bearer ${token}` } } } }
 	const allowedTools = TOOL_WIRE
 

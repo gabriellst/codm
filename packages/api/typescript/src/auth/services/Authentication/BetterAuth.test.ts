@@ -35,7 +35,7 @@ describe('BetterAuth (integration)', () => {
 		// driver pg seria pedir a coisa errada. O `PGliteDriver` é Postgres em processo, com o TRONCO
 		// CLOUD migrado — as `authentication_*` que este serviço escreve nascem dele.
 		//
-		// Antes desta troca, `provider: 'sqlite'` apontava para o tronco do desktop: `/v1/auth/ok`
+		// Antes desta troca, `provider: 'sqlite'` apontava para o tronco do desktop: `/auth/ok`
 		// passava (não toca o banco) e os dois casos abaixo falhavam, que é exatamente como o defeito
 		// se apresentaria em produção — o boot sobe e o primeiro sign-in explode.
 		cloudDriver = new PGliteDriver()
@@ -51,8 +51,8 @@ describe('BetterAuth (integration)', () => {
 		await testBed.destroy()
 	})
 
-	it('mounts a working handler — GET /v1/auth/ok responds', async () => {
-		const request = new Request(`${Config.env.CODM_CLOUD_URL}/v1/auth/ok`)
+	it('mounts a working handler — GET /auth/ok responds', async () => {
+		const request = new Request(`${Config.env.CODM_CLOUD_URL}/auth/ok`)
 		const response = await betterAuth.auth.handler(request)
 
 		expect(response.status).toBe(200)
@@ -60,7 +60,7 @@ describe('BetterAuth (integration)', () => {
 
 	it('GitHub is configured — signInSocial returns an authorize URL carrying the injected client id', async () => {
 		const result = await betterAuth.auth.api.signInSocial({
-			body: { provider: 'github', callbackURL: `${Config.env.CODM_CLOUD_URL}/v1/desktop-callback` },
+			body: { provider: 'github', callbackURL: `${Config.env.CODM_CLOUD_URL}/desktop-callback` },
 		})
 
 		expect(result.url).toContain('github.com/login/oauth/authorize')
@@ -69,7 +69,7 @@ describe('BetterAuth (integration)', () => {
 
 	it('Google is configured — signInSocial returns an authorize URL carrying the injected client id', async () => {
 		const result = await betterAuth.auth.api.signInSocial({
-			body: { provider: 'google', callbackURL: `${Config.env.CODM_CLOUD_URL}/v1/desktop-callback` },
+			body: { provider: 'google', callbackURL: `${Config.env.CODM_CLOUD_URL}/desktop-callback` },
 		})
 
 		expect(result.url).toContain('accounts.google.com/o/oauth2/v2/auth')
@@ -94,7 +94,7 @@ describe('BetterAuth (integration)', () => {
 	 */
 	it('DIA-01: o `signInSocial` GRAVA no tronco CLOUD — a prova de que o substrato é o Postgres', async () => {
 		await betterAuth.auth.api.signInSocial({
-			body: { provider: 'github', callbackURL: `${Config.env.CODM_CLOUD_URL}/v1/desktop-callback` },
+			body: { provider: 'github', callbackURL: `${Config.env.CODM_CLOUD_URL}/desktop-callback` },
 		})
 
 		const rows = await cloudDriver.db.select().from(verificationTokens)
@@ -146,7 +146,7 @@ describe('BetterAuth (integration)', () => {
 	 * `getSession` só entende cookie — e cookie é o que um daemon não tem.
 	 *
 	 * FALSIFICADO: remover `bearer()` da lista de plugins deixa este caso vermelho (a sessão volta
-	 * `null`), e com ele caem `/v1/session` e o `entitlement` que o daemon revalida.
+	 * `null`), e com ele caem `/session` e o `entitlement` que o daemon revalida.
 	 */
 	it('BRR-01: uma sessão viva é resolvida por `Authorization: Bearer <token>`', async () => {
 		const { token, userId } = await seedSession('brr01')
@@ -187,7 +187,7 @@ describe('BetterAuth (integration)', () => {
 	/**
 	 * OTT-03 — A PORTA DE CUNHAGEM ESTÁ FECHADA PARA A REDE.
 	 *
-	 * `disableClientRequest: true` faz `/v1/auth/one-time-token/generate` recusar requisições HTTP,
+	 * `disableClientRequest: true` faz `/auth/one-time-token/generate` recusar requisições HTTP,
 	 * mesmo COM uma sessão válida — e é isso que o caso prova, apresentando um Bearer que o BRR-01
 	 * mostrou ser suficiente para o `getSession`. Só a nossa ponte (`DesktopCallbackController`,
 	 * chamando por dentro) cunha código.
@@ -203,7 +203,7 @@ describe('BetterAuth (integration)', () => {
 		const { token } = await seedSession('ott03')
 
 		const response = await betterAuth.auth.handler(
-			new Request(`${Config.env.CODM_CLOUD_URL}/v1/auth/one-time-token/generate`, {
+			new Request(`${Config.env.CODM_CLOUD_URL}/auth/one-time-token/generate`, {
 				headers: { authorization: `Bearer ${token}` },
 			}),
 		)

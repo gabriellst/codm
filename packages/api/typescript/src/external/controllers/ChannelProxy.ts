@@ -12,7 +12,7 @@ const ChannelProxyInputSchema = z.object({
 const ChannelProxyOutputSchema = z.any()
 
 /**
- * Catch-all reverse proxy — forwards every request under `/v1/external/channel/**` to the Go
+ * Catch-all reverse proxy — forwards every request under `/external/channel/**` to the Go
  * channel gateway (the origin fork's `external` ChannelProxy pattern, founder-ratified 22-jul). The
  * browser NEVER talks to the gateway directly: the gateway SDK (`@codm/client-typescript/go`)
  * is pointed at this route, so pairing (resolve → connect → QR), channel reads and the gateway

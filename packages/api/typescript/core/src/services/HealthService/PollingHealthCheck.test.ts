@@ -7,7 +7,7 @@ import { PollingHealthCheck } from './PollingHealthCheck'
  *
  * ── o incidente que estes casos existem para não deixar voltar ───────────────────────────────────
  * O desktop não abria. O daemon subia inteiro, as migrações aplicavam, os routers montavam, e o log
- * dizia `MailboxDispatcher started` — mas `/v1/health` respondia 503 para sempre, com
+ * dizia `MailboxDispatcher started` — mas `/health` respondia 503 para sempre, com
  * `mailboxDispatcher: down — poll timer not running`. O shell Tauri espera esse endpoint ficar
  * pronto antes de renderizar o console, então ele nunca inicializava.
  *

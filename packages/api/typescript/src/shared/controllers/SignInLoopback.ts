@@ -11,10 +11,10 @@ export const SignInLoopbackOutputSchema = z.string().example(['<html>…</html>'
 /**
  * ONDE O LOGIN ATERRISSA DE VOLTA NA MÁQUINA — o listener de loopback do RFC 8252.
  *
- * O navegador do sistema termina o OAuth na nuvem, o `/v1/desktop-callback` de lá cunha um código de
+ * O navegador do sistema termina o OAuth na nuvem, o `/desktop-callback` de lá cunha um código de
  * uso único e redireciona para cá, em `127.0.0.1`. Esta porta guarda o código e mostra ao operador
  * uma página dizendo que ele pode voltar ao app; o console o retira em seguida
- * (`/v1/sign-in/loopback/claim`) e o troca por sessão.
+ * (`/sign-in/loopback/claim`) e o troca por sessão.
  *
  * ── por que não é mais um deep link `codm://` ────────────────────────────────────────────────────
  * Porque o deep link não alcança um build de desenvolvimento no macOS, e isso é limitação de

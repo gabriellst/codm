@@ -14,8 +14,8 @@ export interface ForwardRequestOptions {
 	 * Leading pathname prefix to strip before forwarding. The stripped portion is the api-ts
 	 * routing prefix that the upstream service doesn't know about.
 	 *
-	 * Example: if the incoming path is `/v1/external/channel/channels/resolve` and `stripPrefix`
-	 * is `'/v1/external/channel'`, the upstream receives `/channels/resolve`.
+	 * Example: if the incoming path is `/external/channel/channels/resolve` and `stripPrefix`
+	 * is `'/external/channel'`, the upstream receives `/channels/resolve`.
 	 */
 	stripPrefix: string
 	/** Extra headers to inject on the forwarded request. */

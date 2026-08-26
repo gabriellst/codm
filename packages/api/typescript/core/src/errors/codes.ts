@@ -37,7 +37,7 @@ export type BaseInfrastructureErrors =
 	// Um erro sem nome vira uma stack trace que alguém interpreta às três da manhã.
 	| 'MIGRATIONS_PENDING'
 	// A NUVEM não respondeu — e isso NÃO é "você não está autenticado". A identidade do daemon local
-	// vem de `GET /v1/session` na nuvem (ADR 0001, Emenda 1); quando essa pergunta não chega ao
+	// vem de `GET /session` na nuvem (ADR 0001, Emenda 1); quando essa pergunta não chega ao
 	// destino, o operador não tem um problema de credencial, tem um problema de alcance. Sem este
 	// código a falha caía em `UNKNOWN_ERROR`/500 e a tela dizia "Erro desconhecido" — verdadeiro e
 	// inútil, porque as duas ações corretivas (refazer login × subir/apontar a nuvem) são opostas.

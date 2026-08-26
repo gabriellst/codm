@@ -30,7 +30,7 @@ describe('ChannelProxy — gateway unreachable', () => {
 	const proxyRequest = (init?: RequestInit) =>
 		({
 			ctx: { ownerId: OWNER_ID },
-			raw: new Request('http://localhost:3030/v1/external/channel/channel/channels/resolve', init),
+			raw: new Request('http://localhost:3030/external/channel/channel/channels/resolve', init),
 		}) as unknown as ChannelProxy['input']
 
 	it('a dead gateway (connection refused) surfaces as GATEWAY_UNAVAILABLE', async () => {

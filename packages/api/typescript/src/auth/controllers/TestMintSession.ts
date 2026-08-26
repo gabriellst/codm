@@ -26,7 +26,7 @@ export const TestMintSessionOutputSchema = z.object({
  *
  * ── POR QUE ELA EXISTE ───────────────────────────────────────────────────────────────────────────
  * O ADR 0001 pôs `auth` e `owner` na nuvem, e o daemon LOCAL passou a perguntar quem é o operador
- * (`FileCloudSession.fetchSession` → `GET /v1/session` com `Authorization: Bearer`). O e2e precisa,
+ * (`FileCloudSession.fetchSession` → `GET /session` com `Authorization: Bearer`). O e2e precisa,
  * portanto, de um device token que a nuvem aceite.
  *
  * O caminho de produção para obtê-lo é um handshake OAuth de device-code que entrega o callback ao

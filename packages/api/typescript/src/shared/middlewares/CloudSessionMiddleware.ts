@@ -38,7 +38,7 @@ import { CloudSession } from '@shared/services/CloudSession'
  * hora, no arquivo de quem tem a máquina. É a mesma classe de defeito que o ADR existe para apagar,
  * reintroduzida um nível abaixo.
  *
- * Agora `identity()` pergunta à nuvem (`GET /v1/session`, pela classe `Client` do SDK) usando a
+ * Agora `identity()` pergunta à nuvem (`GET /session`, pela classe `Client` do SDK) usando a
  * credencial que o console entregou. O daemon deixa de ter opinião sobre identidade: ele encaminha
  * a pergunta e injeta a resposta. Uma revogação passa a valer no instante seguinte, e não na
  * próxima hora.

@@ -78,7 +78,7 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// multi-inject `HEALTH_CHECKS` — todo registry de contexto é aplicado ao MESMO rootContainer
 	// (`BoundedContext.create`), então este check é agregado junto com os do shared por `resolveAll`.
 	// `e2e` declares the SAME check as `real` (hoisted to one value so the two columns cannot drift):
-	// the harness is a real boot with a real MailboxDispatcher polling, so `/v1/health` must report on
+	// the harness is a real boot with a real MailboxDispatcher polling, so `/health` must report on
 	// it there too. Inheriting `integration`'s declared absence would have silently dropped it.
 	{ token: HEALTH_CHECKS, mock: null, integration: null, real: mailboxDispatcherHealthCheck, e2e: mailboxDispatcherHealthCheck },
 	// ── The internal agents (§4.8) ────────────────────────────────────────────────────────────────

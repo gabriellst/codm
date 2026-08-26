@@ -12,7 +12,7 @@ export const SetCloudTokenControllerOutputSchema = z.void()
 
 /**
  * The console's half of the login handoff (T6 → T7, spec decisions 4-5): once the desktop trades its
- * one-time deep-link code for a device token (`POST /v1/cloud/devices/exchange`, T2), it PUSHES the
+ * one-time deep-link code for a device token (`POST /cloud/devices/exchange`, T2), it PUSHES the
  * plaintext HERE so the local daemon's `CloudSession` — the thing `LibSqlMailboxDispatcher` gates
  * every turn on — picks it up without a restart (AC-3). The exchange happens in the react console
  * process, not this daemon, so the token has to cross that process boundary somehow; this endpoint is

@@ -80,7 +80,7 @@ const healthServiceFactory = { useFactory: (c: DependencyContainer) => new Healt
 
 // The `real` health checks, hoisted so the `e2e` column can DECLARE the same value instead of
 // inheriting `integration`'s declared absence. e2e is a REAL boot — same driver, same outbox
-// dispatcher, same lane poller, same mailbox dispatcher — so `/v1/health` there must answer with the
+// dispatcher, same lane poller, same mailbox dispatcher — so `/health` there must answer with the
 // same five checks a production daemon answers with; the `null` in mock/integration is about TestBed
 // suites building HealthService by hand (Health.test.ts), which the harness does not do.
 const databaseHealthCheck = {

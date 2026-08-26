@@ -13,7 +13,7 @@ import type { Session } from '@shared/schemas'
  *   2. **o `ownerId` voltava a ser local.** O ADR 0001 existe para apagar identidade cunhada na
  *      máquina; o cache a recolocava num arquivo que quem tem o disco edita. Que a revalidação
  *      corrigisse depois não muda o que valia enquanto isso.
- *   3. **um deadlock de bootstrap.** O daemon só recebia token por `POST /v1/session/cloud-token`,
+ *   3. **um deadlock de bootstrap.** O daemon só recebia token por `POST /session/cloud-token`,
  *      e aquele controller era gateado por este `identity()` — que só existia depois do token. Numa
  *      instalação nova a porta que entrega a credencial exigia a credencial, respondia 401, e o
  *      console ENGOLIA o erro ("best-effort"). O daemon nunca era destravado.

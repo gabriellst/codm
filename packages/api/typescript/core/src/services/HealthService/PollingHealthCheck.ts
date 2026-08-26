@@ -19,7 +19,7 @@ import { HealthCheck, type HealthComponentReport, type PollingService } from './
  *      iniciava a de DEPOIS.
  *
  * Resultado: o dispatcher rodava — o log dizia "started" — e o check reportava `down` para sempre,
- * porque olhava um objeto que ninguém tinha iniciado. `/v1/health` devolvia 503, o shell de desktop
+ * porque olhava um objeto que ninguém tinha iniciado. `/health` devolvia 503, o shell de desktop
  * espera esse endpoint ficar pronto, e o console nunca inicializava.
  *
  * Resolver na hora do check não é generalidade: um health check descreve a fiação VIVA. Um retrato

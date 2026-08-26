@@ -31,7 +31,7 @@ beforeAll(() => {
  */
 function buildRequest(query?: Record<string, string>): HttpControllerRequest<unknown> {
 	const search = query ? `?${new URLSearchParams(query).toString()}` : ''
-	const raw = new Request(`http://localhost/v1/terminal/providers${search}`)
+	const raw = new Request(`http://localhost/terminal/providers${search}`)
 	return { url: raw.url, ctx: {}, query, raw }
 }
 

@@ -133,7 +133,7 @@ describe('the generated MCP server', () => {
 			expect(received).toHaveLength(1)
 			// The PATH the controller declares, rendered from the tool's own arguments — proof the
 			// generated handler is a client of the real endpoint and not of some parallel mechanism.
-			expect(received[0]?.pathname).toBe(`/v1/threads/${THREAD_ID}/issues`)
+			expect(received[0]?.pathname).toBe(`/threads/${THREAD_ID}/issues`)
 			// AC-6.19(a): the per-scope `_http` shim is the ONE auth seam, and it attached the credential
 			// the router established. No generated handler takes a config argument, so there is nowhere
 			// else this could have come from.

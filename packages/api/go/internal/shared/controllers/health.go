@@ -12,7 +12,7 @@ import (
 )
 
 // HealthComponent é o veredito de UM componente. Espelha, campo a campo, o shape que o daemon TS
-// publica em /v1/health — os dois backends respondem a mesma pergunta com a mesma forma, e um
+// publica em /health — os dois backends respondem a mesma pergunta com a mesma forma, e um
 // painel de diagnóstico futuro consome as duas sem tradutor.
 type HealthComponent struct {
 	Status string `json:"status"`
@@ -26,7 +26,7 @@ type HealthOutput struct {
 	Components map[string]HealthComponent `json:"components"`
 }
 
-// HealthController — o gêmeo Go do /v1/health do daemon.
+// HealthController — o gêmeo Go do /health do daemon.
 //
 // PÚBLICO por Metadata().Public: a cadeia global que internal/shared contribui (Session → APIKey)
 // barraria o supervisor da shell quando CHANNEL_GLOBAL_API_KEY estiver setado, e "o app nunca abre

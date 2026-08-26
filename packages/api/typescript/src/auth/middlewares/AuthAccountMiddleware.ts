@@ -11,16 +11,16 @@ import { OwnerDirectory } from '@shared/services/OwnerDirectory'
  *   ctx.session — { id, userId, expiresAt, ownerId }
  *
  * ── por que ele passou a existir aqui: o buraco que ele fecha ────────────────────────────────────
- * `/v1/session` monta SOMENTE na nuvem (`PLACEMENT`: `auth` é cloud-only desde o ADR 0001), mas
+ * `/session` monta SOMENTE na nuvem (`PLACEMENT`: `auth` é cloud-only desde o ADR 0001), mas
  * declarava o `CloudSessionMiddleware` — que lê `CloudSession.identity()`, um CACHE EM DISCO da
  * máquina do operador, e **não olha o header `Authorization`**. No processo de nuvem esse cache
  * nunca é populado: ninguém chama `setToken` lá. O resultado, medido: o `fetchIdentity()` do
  * daemon local — `getSession({ baseURL: CODM_CLOUD_URL, headers: { Bearer } })` — não podia dar
  * certo NUNCA, porque a porta que ele chama ignora a credencial que ele apresenta.
  *
- * O que mantinha a identidade de pé era o `GET /v1/entitlement`, o único que lia o Bearer — isto é,
+ * O que mantinha a identidade de pé era o `GET /entitlement`, o único que lia o Bearer — isto é,
  * o endpoint de entitlement estava fazendo o trabalho do de sessão. Com este middleware no lugar
- * certo, `/v1/session` volta a ser quem responde "quem é você", e o entitlement deixa de precisar
+ * certo, `/session` volta a ser quem responde "quem é você", e o entitlement deixa de precisar
  * existir para essa pergunta.
  *
  * Nada disso aparecia em teste porque a revalidação faz as duas chamadas por trás de um seam

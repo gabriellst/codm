@@ -7,11 +7,11 @@ import { RateLimitMiddleware } from './RateLimitMiddleware'
 // sign-in is configured at max 5 / window in the middleware's action table.
 function signInReq(ip: string, email?: string): HttpControllerRequest<unknown> {
 	return {
-		url: `http://localhost/v1/authentication/sign-in/email`,
+		url: `http://localhost/authentication/sign-in/email`,
 		headers: { 'x-forwarded-for': ip },
 		body: email ? { email } : {},
 		ctx: {},
-		raw: new Request('http://localhost/v1/authentication/sign-in/email'),
+		raw: new Request('http://localhost/authentication/sign-in/email'),
 	} as unknown as HttpControllerRequest<unknown>
 }
 
@@ -23,7 +23,7 @@ describe('RateLimitMiddleware', () => {
 	it('passes a request that does not match any configured action', async () => {
 		const mw = new RateLimitMiddleware(new InMemoryRateLimitStore())
 		const req = {
-			url: 'http://localhost/v1/authentication/get-session',
+			url: 'http://localhost/authentication/get-session',
 			headers: {},
 			body: {},
 			ctx: {},
@@ -58,7 +58,7 @@ describe('RateLimitMiddleware', () => {
 		const mw = new RateLimitMiddleware(new InMemoryRateLimitStore())
 		await hammer(mw, signInReq('3.3.3.3', 'x@example.com'), 5)
 		const signUp = {
-			url: 'http://localhost/v1/authentication/sign-up/email',
+			url: 'http://localhost/authentication/sign-up/email',
 			headers: { 'x-forwarded-for': '3.3.3.3' },
 			body: { email: 'x@example.com' },
 			ctx: {},

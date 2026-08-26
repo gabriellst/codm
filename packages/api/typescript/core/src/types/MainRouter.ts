@@ -6,7 +6,6 @@ import { Router } from './Router'
 
 interface MainRouterConfig {
 	httpRouter: HttpRouter
-	version: string
 	routers: Router[]
 	middlewares?: (Middleware | MiddlewareClass)[]
 }
@@ -69,7 +68,19 @@ export class MainRouter {
 			controller.middlewares = currentControllerMiddlewares
 			controller.skipMiddlewares = controllerSkip
 
-			const completePath = `/${this.config.version}${router.path === '/' ? '' : router.path}${controller.path}`
+			// O CAMINHO É O QUE O CONTROLLER DECLARA. Não há prefixo de versão.
+			//
+			// Havia: este trecho montava `/${Config.version}${router.path}${controller.path}`, e o `v1`
+			// resultante era redeclarado em outros lugares que tinham de concordar À MÃO — o
+			// `openapi.json` (e portanto a SDK) o assava em todos os paths, e quem montasse uma URL fora
+			// da SDK o acrescentava por fora. Duas dessas fontes juntas DOBRAM o segmento.
+			//
+			// E não era versionamento: nada ramificava no valor, não havia v2, nem negociação, nem
+			// depreciação — e o gateway Go tem o próprio mount (`/api/{version}`), independente deste.
+			//
+			// SE UM DIA PRECISAR VERSIONAR: é decisão POR ROTA, no `path` do controller. Versiona-se
+			// endpoint, não API inteira, e assim o caminho continua sendo o que está escrito.
+			const completePath = `${router.path === '/' ? '' : router.path}${controller.path}`
 			this.config.httpRouter.on(completePath, controller.method, controller)
 		})
 	}

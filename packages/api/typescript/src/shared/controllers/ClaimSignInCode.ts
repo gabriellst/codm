@@ -21,7 +21,7 @@ export const ClaimSignInCodeOutputSchema = z
  * O resgate (trocar o código por sessão contra a nuvem) já existe no console, com testes, usando o
  * client do better-auth — `auth.oneTimeToken.verify`. Movê-lo para cá exigiria um segundo client no
  * servidor para chamar uma rota que a SDK gerada não sabe expressar (o passthrough tem URL literal
- * `/v1/auth/*`). O daemon fica burro de propósito: ele é o socket de loopback, não o participante do
+ * `/auth/*`). O daemon fica burro de propósito: ele é o socket de loopback, não o participante do
  * fluxo.
  *
  * SEM MIDDLEWARE: é parte da porta de login, e exigir sessão aqui seria pedir de volta exatamente o

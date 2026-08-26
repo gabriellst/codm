@@ -92,4 +92,4 @@ export class DesktopCallbackController extends Controller<typeof DesktopCallback
  * essa igualdade, pela mesma razão que o DCB-01 guarda a outra ponta: um literal desalinhado entre
  * dois pacotes falha tarde, depois de o provedor já ter autenticado.
  */
-export const LOOPBACK_LANDING = '/v1/sign-in/loopback' as const
+export const LOOPBACK_LANDING = '/sign-in/loopback' as const

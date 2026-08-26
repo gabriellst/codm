@@ -148,8 +148,8 @@ function readFile(dbPath: string, statement: string): string[] {
 
 /** The daemon's own view of the channels — a different PROCESS answering about the same row. */
 async function daemonChannels(): Promise<{ kind: string; status: string }[]> {
-	const res = await fetch(`http://127.0.0.1:${API_PORT}/v1/ui/home`, { headers: { Origin: 'http://localhost:5173' } })
-	if (res.status !== 200) throw new Error(`daemon /v1/ui/home → ${res.status}`)
+	const res = await fetch(`http://127.0.0.1:${API_PORT}/ui/home`, { headers: { Origin: 'http://localhost:5173' } })
+	if (res.status !== 200) throw new Error(`daemon /ui/home → ${res.status}`)
 	const body = (await res.json()) as { channels?: { kind: string; status: string }[] }
 	return body.channels ?? []
 }
@@ -242,7 +242,7 @@ async function main(): Promise<number> {
 		daemon = spawn(nodeBin, ['--enable-source-maps', join(pkgRoot, 'dist/server.js')], { cwd: pkgRoot, env: daemonEnv, stdio: 'inherit' })
 
 		await waitFor('gateway', `http://127.0.0.1:${CHANNEL_PORT}/api/openapi.json`, 60, gateway)
-		await waitFor('daemon', `http://127.0.0.1:${API_PORT}/v1/session`, 60, daemon)
+		await waitFor('daemon', `http://127.0.0.1:${API_PORT}/session`, 60, daemon)
 
 		log('')
 		log('── crossing 1: the gateway INSERTS, the daemon reads ────────────────────')
@@ -333,7 +333,9 @@ async function main(): Promise<number> {
 		// COUNTED from the contracts source, not hard-coded: the literal that used to sit here went
 		// stale the first time a migration was added (the Fase-4 agent-session rename), and a smoke
 		// that has to be hand-bumped to stay true will eventually be bumped to whatever it printed.
-		const expectedLedgerRows = readdirSync(join(repoRoot, 'packages/contracts/src/db/sqlite/migrations')).filter(f => f.endsWith('.sql')).length
+		const expectedLedgerRows = readdirSync(join(repoRoot, 'packages/contracts/src/db/sqlite/migrations')).filter(f =>
+			f.endsWith('.sql'),
+		).length
 		const [ledger = '0'] = readFile(dbPath, 'SELECT count(*) FROM _sqlite_migrations;')
 		check(
 			ledger === String(expectedLedgerRows),

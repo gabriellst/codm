@@ -9,7 +9,7 @@ export const DeleteThreadControllerInputSchema = ThreadParam.example([
 ])
 export const DeleteThreadControllerOutputSchema = DeleteThreadOutputSchema
 
-// C-DEL — `DELETE /v1/threads/:threadId` (thread-deletion spec, decision 8). The bare thread path with
+// C-DEL — `DELETE /threads/:threadId` (thread-deletion spec, decision 8). The bare thread path with
 // the DELETE verb: the resource being removed IS the thread, so it needs no `/delete` suffix the way
 // `/pause` and `/resolve` (which are actions on a thread that stays) do.
 @injectable()

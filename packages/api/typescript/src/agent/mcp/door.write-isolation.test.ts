@@ -49,7 +49,7 @@ const COUNTED = ['artifacts', 'events', 'outbox'] as const
  * A door whose transport PERFORMS the write a dispatched tool call would have performed.
  *
  * This is the shortest path that is still real: the generated handler's whole job is to turn the tool
- * arguments into `POST /v1/threads/:threadId/artifacts`, which the controller turns into exactly this
+ * arguments into `POST /threads/:threadId/artifacts`, which the controller turns into exactly this
  * use-case call. Standing in for the HTTP hop keeps the test hermetic while leaving the thing being
  * measured — whether the door let anything through — completely untouched.
  */
@@ -119,7 +119,7 @@ describe('a refused tool call writes NOTHING, counted', () => {
 	const post = (scope: string, body: string, headers: Record<string, string>) =>
 		({
 			params: { scope },
-			raw: new Request(`http://127.0.0.1:3030/v1/mcp/${scope}`, { method: 'POST', headers, body }),
+			raw: new Request(`http://127.0.0.1:3030/mcp/${scope}`, { method: 'POST', headers, body }),
 		}) as unknown as McpDoorController['input']
 
 	const authorized = (token: string) => ({ authorization: `Bearer ${token}`, 'content-type': 'application/json' })

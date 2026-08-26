@@ -2,7 +2,7 @@
 /**
  * Node-boot smoke — the gate that actually exercises the RUN-UNDER-NODE path (the e2e suite boots
  * from Bun source, so it proves nothing here). Builds the node bundle, boots `node dist/server.js`
- * against a scratch data dir, asserts `/v1/session` answers 200 (only true once the shared SQLite
+ * against a scratch data dir, asserts `/session` answers 200 (only true once the shared SQLite
  * store migrated and the HTTP server is listening), then tears down. This is what would have caught
  * the two boot failures the grounded plan hit: the `import.meta.url` migrations path and the native
  * libsql addon left unresolvable outside `dist/node_modules`.
@@ -59,7 +59,7 @@ async function main(): Promise<void> {
 
 	let exitCode = 1
 	try {
-		const url = `http://127.0.0.1:${port}/v1/session`
+		const url = `http://127.0.0.1:${port}/session`
 		for (let i = 0; i < 40; i++) {
 			if (child.exitCode !== null) throw new Error(`daemon exited early with code ${child.exitCode}`)
 			try {

@@ -10,7 +10,7 @@ import { channels } from '@codm/contracts/db'
  * endpoint, ela só vira `detail`.
  *
  * Lê a tabela de read-model `gateway_channels` (escrita só pelos projetores do gateway Go) pela
- * conexão de leitura, como `LibSqlChannelConnectivity` já faz — sem ownerId, porque `/v1/health` é
+ * conexão de leitura, como `LibSqlChannelConnectivity` já faz — sem ownerId, porque `/health` é
  * público e o dado é status de processo, não conteúdo de tenant.
  */
 @injectable()

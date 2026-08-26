@@ -9,7 +9,7 @@ import { DESKTOP_CALLBACK } from '@auth/controllers/SignInSocial'
  * ── o defeito que este trilho existe para pegar, e que já aconteceu ──────────────────────────────
  * O `SignInSocialController` manda `callbackURL` ao better-auth, e o provedor devolve o browser para lá
  * DEPOIS de autenticar. Quando os controllers saíram da pasta `cloud/`, a ponte passou de
- * `/v1/cloud/desktop-callback` para `/v1/desktop-callback` e o literal do `callbackURL` ficou para
+ * `/cloud/desktop-callback` para `/desktop-callback` e o literal do `callbackURL` ficou para
  * trás. Nada ficou vermelho: a suíte só assegurava que a ORIGEM do `callbackURL` era confiável,
  * nunca que o CAMINHO existia.
  *
@@ -17,14 +17,15 @@ import { DESKTOP_CALLBACK } from '@auth/controllers/SignInSocial'
  * SUCESSO, e só então o navegador aterrissa num 404: o deep link `codm://` nunca dispara, o app fica
  * na tela de login, e nada diz o que houve. Quem depurasse procuraria no provedor, que é o único
  * lugar onde o problema não está. Medido ao vivo em 2026-08-15 contra a nuvem local:
- * `/v1/desktop-callback` → 401 (existe, faltou sessão); `/v1/cloud/desktop-callback` → 404.
+ * `/desktop-callback` → 401 (existe, faltou sessão); `/cloud/desktop-callback` → 404.
  *
  * ── por que a asserção é contra o OPENAPI, e não contra o `path` do controller ───────────────────
- * Metade do endereço já é impossível de errar: `DESKTOP_CALLBACK` deriva de `DESKTOP_CALLBACK_PATH`,
- * exportado pelo próprio `DesktopCallbackController`, então um rename move os dois juntos e o `tsc`
- * cobra. O que sobra redigitado é o prefixo de VERSÃO (`/v1`), que o `MainRouter` monta e nenhum dos
- * dois arquivos conhece. O openapi é o retrato do que foi realmente montado — é lá que os dois se
- * encontram. Um teste que comparasse a constante com o `path` do controller não veria o `/v1`.
+ * `DESKTOP_CALLBACK` deriva de `DESKTOP_CALLBACK_PATH`, exportado pelo próprio
+ * `DesktopCallbackController`, então um rename move os dois juntos e o `tsc` cobra. O que este
+ * trilho guarda é a outra metade — que o controller esteja MONTADO no deployment que o `callbackURL`
+ * aponta (o `auth` é cloud-only): o openapi é o retrato do que foi realmente montado, e é lá que a
+ * constante e o roteador se encontram. Quando o `MainRouter` ainda prefixava a versão (`/v1`), este
+ * mesmo teste era o único que via o prefixo, porque nenhum dos dois arquivos o conhecia.
  */
 describe('desktop-callback-parity — o callbackURL do login aponta para uma rota montada', () => {
 	const REPO_ROOT = path.resolve(import.meta.dirname, '..', '..', '..', '..', '..', '..')

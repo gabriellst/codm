@@ -207,7 +207,10 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 		// BUILD-LOG decision if a CLI turns out not to speak HTTP MCP — explicitly not a founder call.
 		return {
 			transport: 'http',
-			endpoint: `http://127.0.0.1:${Config.env.API_PORT}/${Config.version}${MCP_ROUTE_PREFIX}/${this.mcpScope}`,
+			// O caminho é o que o controller da porta MCP declara (`MCP_ROUTE_PREFIX/<scope>`) — sem
+			// prefixo de versão, que saiu do `MainRouter`. Esta era uma cópia da concatenação que o
+			// roteador fazia, e nada aqui é type-checked contra ele.
+			endpoint: `http://127.0.0.1:${Config.env.API_PORT}${MCP_ROUTE_PREFIX}/${this.mcpScope}`,
 			token,
 			allowedTools: this.tools,
 		}

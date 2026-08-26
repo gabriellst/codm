@@ -6,12 +6,12 @@ export const AuthPassthroughInputSchema = z.unknown().example([{}])
 export const AuthPassthroughOutputSchema = z.unknown().example([{}])
 
 /**
- * Todas as rotas do better-auth, servidas como um controller COMUM do contexto (`/v1/auth/*`).
+ * Todas as rotas do better-auth, servidas como um controller COMUM do contexto (`/auth/*`).
  *
  * O SP2 fixou o basePath em `/api/auth` só porque os apps OAuth de dev já apontavam para lá, e esse
  * caminho é inalcançável pelo `MainRouter` (que sempre prefixa a versão) — a consequência foi uma
  * classe declarada no `src/index.ts` e montada CRUA no HttpRouter, fora do sistema de contextos, com
- * um `if (isCloudProfile())` espalhando regra de rota pelo boot. Alinhado com o basePath `/v1/auth`,
+ * um `if (isCloudProfile())` espalhando regra de rota pelo boot. Alinhado com o basePath `/auth`,
  * a exceção inteira desaparece: o vocabulário de rota volta a viver só no `path` do controller, que
  * é a convenção declarada em `core/types/Router.ts`.
  *

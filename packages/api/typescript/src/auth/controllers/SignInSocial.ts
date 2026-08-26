@@ -42,14 +42,18 @@ const BetterAuthErrorSchema = z.object({ code: z.string().optional(), message: z
  *
  * DERIVADO do controller, não redigitado: o dia em que aquela rota mudar de endereço, esta constante
  * muda junto. Foi um literal desalinhado que quebrou este mesmo fluxo — a ponte virou
- * `/v1/desktop-callback` e o `callbackURL` ficou apontando para `/v1/cloud/desktop-callback`, de
+ * `/desktop-callback` e o `callbackURL` ficou apontando para `/cloud/desktop-callback`, de
  * modo que o login morria num 404 DEPOIS de o provedor já ter autenticado. O trilho DCB-01 guarda
  * esta igualdade.
+ *
+ * É o próprio `path` do controller, sem nada na frente: o prefixo de versão que o `MainRouter`
+ * acrescentava — e que esta constante redigitava — saiu do roteador. O que o controller declara é o
+ * que o servidor serve.
  */
-export const DESKTOP_CALLBACK = `/v1${DESKTOP_CALLBACK_PATH}` as const
+export const DESKTOP_CALLBACK = DESKTOP_CALLBACK_PATH
 
 /**
- * O GÊMEO GET do `POST /v1/auth/sign-in/social` do better-auth — daí o nome e o caminho.
+ * O GÊMEO GET do `POST /auth/sign-in/social` do better-auth — daí o nome e o caminho.
  *
  * Existe porque aquele endpoint é POST com corpo JSON, e um app desktop só sabe fazer uma coisa com
  * o browser: navegar (GET). A v0.1.4 abria o endpoint do better-auth direto e o usuário via 404.
@@ -101,7 +105,7 @@ export class SignInSocialController extends Controller<typeof SignInSocialInputS
 
 	async handle(request: this['input']): Promise<this['output']> {
 		const signIn = await this.betterAuth.auth.handler(
-			new Request(`${Config.env.CODM_CLOUD_URL}/v1/auth/sign-in/social`, {
+			new Request(`${Config.env.CODM_CLOUD_URL}/auth/sign-in/social`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({

@@ -51,7 +51,6 @@ export function assembleMainRouter(routers: Router[]): MainRouter {
 
 	return new MainRouter({
 		httpRouter,
-		version: Config.version,
 		routers,
 	})
 }
