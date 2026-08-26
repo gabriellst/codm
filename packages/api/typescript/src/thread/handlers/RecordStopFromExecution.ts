@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { BaseError, EventHandler } from '@codm/core-typescript'
+import { BaseError, EventHandler, LoggingService } from '@codm/core-typescript'
 import { ThreadStopRaisedEvent } from '@codm/contracts-typescript/wire/events'
 import { StopKind } from '@codm/contracts-typescript/wire/enums'
 import { Id } from '@codm/core-typescript'
@@ -20,7 +20,10 @@ import { RaiseStop } from '../usecases/RaiseStop'
 export class RecordStopFromExecution extends EventHandler<typeof ThreadStopRaisedEvent> {
 	readonly event = ThreadStopRaisedEvent
 
-	constructor(private readonly raiseStop: RaiseStop) {
+	constructor(
+		private readonly raiseStop: RaiseStop,
+		private readonly logging: LoggingService,
+	) {
 		super()
 	}
 
@@ -50,7 +53,23 @@ export class RecordStopFromExecution extends EventHandler<typeof ThreadStopRaise
 			// else — a DB outage included — must rethrow so the outbox retries instead of silently eating
 			// the needs-you signal.
 			const swallowed: readonly string[] = ['STOP_CRITERION_DISABLED', 'ISSUE_ARCHIVED', 'ISSUE_NOT_FOUND', 'THREAD_NOT_FOUND']
-			if (error instanceof BaseError && swallowed.includes(error.name)) return
+			if (error instanceof BaseError && swallowed.includes(error.name)) {
+				// ENGOLIR NÃO É SUMIR. Em 2026-08-26 dois `integration.thread.stop_raised` foram publicados e
+				// processados sem erro, e nenhuma linha apareceu em `stops` — e não havia como saber qual das
+				// quatro guardas recusou, porque nenhuma delas dizia nada. O `warn` custa uma linha e é a
+				// diferença entre um diagnóstico de segundos e uma reconstrução pelo banco.
+				this.logging.warn({
+					content: {
+						message: 'stop not recorded — a sanctioned guard refused it',
+						reason: error.name,
+						stopId: event.payload.stopId,
+						issueId: event.payload.issueId,
+						threadId: event.payload.threadId,
+						kind: event.payload.kind,
+					},
+				})
+				return
+			}
 			throw error
 		}
 	}
