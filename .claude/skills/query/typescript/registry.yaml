@@ -1,0 +1,324 @@
+registry:
+  type: backend
+  layer: interface
+  depends_on: [db-schema]
+  depended_by: [sdk]
+  context_reads: [db-schema, route]
+
+  bad_practices:
+    - id: bp-01
+      name: "Frontend orchestrating multiple API calls"
+      rule: "Create a single backend query use case that returns everything the UI needs — never require the frontend to stitch data from 3+ endpoints"
+      wrong: "Frontend calling /patients, /appointments, /stats separately and merging"
+      mechanical: false
+    - id: bp-02
+      name: "Missing dedicated dashboard endpoint"
+      rule: "Dashboard pages must have a single composite query endpoint returning all sections (calendar, charts, stats) in one response"
+      wrong: "Frontend making separate calls for each dashboard widget"
+      mechanical: false
+    - id: bp-03
+      name: "Command use cases for read operations"
+      rule: "Read queries belong in ui context with direct Drizzle access — never create domain-style use cases for reads"
+      wrong: "Creating CreatePatientQuery use case in the patient context for listing patients"
+      mechanical: false
+    - id: bp-04
+      name: "DrizzleDatabaseDriver injected in controller instead of use case"
+      rule: "Controllers delegate to use cases (Handlers). Only the use case has direct DrizzleDatabaseDriver access — controllers never hold DrizzleDatabaseDriver."
+      wrong: "UI controller with constructor(private driver: DrizzleDatabaseDriver) doing queries directly"
+      mechanical: true
+      detect:
+        - 'class\s+\w+Controller[\s\S]{0,800}DrizzleDatabaseDriver'
+    - id: bp-05
+      name: "Filtering data in memory after fetching from database"
+      rule: "All filtering must happen in SQL via Drizzle where/ilike/eq — never fetch all rows then .filter() in JS"
+      wrong: "const rows = await db.select()...; rows.filter(r => r.name.includes(search))"
+      mechanical: true
+      detect:
+        - '\.filter\(\s*\w+\s*=>[^)]*\.(includes|startsWith|endsWith|match|test)\('
+    - id: bp-06
+      name: "N+1 query pattern"
+      rule: "Use JOINs, subqueries, or batch queries — never query inside a .map() or loop"
+      wrong: "patients.map(async p => ({ ...p, lastConsultation: await db.select()... }))"
+      mechanical: true
+      detect:
+        - '\.map\(\s*async\b'
+        - '\.map\([^)]*await\b'
+    - id: bp-07
+      name: "Query use case in write/domain context"
+      rule: "Write contexts (clinic, patient, service, doctor, etc.) MUST NOT contain read-only query use cases. Only BFF contexts (ui, agent) can have queries. When a query is reusable across BFF layers (e.g. both ui and agent need GetUnitInfo), it lives in ui and agent imports from @ui/usecases/.... Error types in shared queries use BaseApplicationErrors from @codm/core-typescript, not context-specific ApplicationErrors."
+      wrong: "GetUnitInfo in packages/api/typescript/src/agent/usecases/ when ui also needed it — caused a 2-commit fix chain to move to ui context and fix error type imports"
+      mechanical: false
+    - id: bp-08
+      name: "Aggregating or counting data in frontend instead of SQL"
+      rule: "Status counts, sums, averages, and any aggregation MUST be computed via SQL GROUP BY in the backend query and returned as a field. Frontend should never iterate items to compute aggregates."
+      wrong: "const counts = items.filter(a => a.status === status).length — iterating all items client-side to compute per-status counts"
+      mechanical: false
+    - id: bp-09
+      name: "Single-entity query returning null instead of NOT_FOUND"
+      rule: "Query use cases that fetch a single entity by ID must throw BaseError<BaseApplicationErrors>('NOT_FOUND') when the entity doesn't exist. Never return null/undefined wrapper objects."
+      wrong: "if (!row) return { unit: null } — caller must null-check; error boundary won't catch it"
+      mechanical: true
+      detect:
+        - 'if\s*\(\s*!\w+\s*\)\s*return\s*\{'
+        - 'return\s*\{[^}]*:\s*null\b'
+
+    - id: bp-10
+      name: "Faker/stub data in a BFF query whose real read source already exists"
+      rule: "A query use case reads REAL tables via Drizzle (this.driver.db.select()...). faker/hardcoded fixtures are sanctioned ONLY while the underlying source genuinely does not exist yet — and then the file must carry a `// TODO(stub): unblocked by <controller/table>` marker so the stub is visibly temporary (and skipped by this detect). If the table/read model exists (orders, products, costs…), query it — a stub of an existing source also erases the NOT_FOUND path (bp-09 follows for free). Existing unmarked stubs are baselined debt, not precedent to imitate."
+      wrong: |
+        import { faker } from '../../shared/testing/mock'   // orders table EXISTS — read it
+        const order = { id: input.orderId, total: faker.number.int() }
+      right: |
+        const [row] = await this.driver.db.select({ ... }).from(orders).where(eq(orders.id, input.orderId))
+        if (!row) throw new BaseError<BaseApplicationErrors>('NOT_FOUND')
+      mechanical: true
+      detect:
+        - 'from\s+[''"][^''"]*shared/testing/mock[''"]'
+        - '@faker-js/faker'
+      detect_skip:
+        - 'TODO\(stub\)'
+
+  patterns:
+    - id: QRY-01
+      name: "Lives in ui context"
+      when: always
+      rule: "File in packages/api/typescript/src/ui/usecases/ or packages/api/typescript/src/ui/controllers/"
+      wrong: "Query logic in domain context"
+    - id: QRY-02
+      name: "Direct Drizzle access in use case"
+      when: always
+      rule: "Use case (Handler) has constructor(private driver: DrizzleDatabaseDriver) — no repository abstraction. Reads go through `this.driver.db`. Controller delegates to the use case, never holds DrizzleDatabaseDriver directly."
+      applies_to: "packages/api/typescript/src/ui/usecases/**/*.ts"
+      note: >
+        This pattern applies ONLY to use case files (packages/api/typescript/src/ui/usecases/).
+        Query controllers delegate to use cases and do NOT have DrizzleDatabaseDriver —
+        they follow the standard controller pattern (CTRL-03..CTRL-05).
+        When reviewing a controller file, mark this as N/A.
+    - id: QRY-03
+      name: "InputSchema with .example()"
+      when: "controller exposes this query"
+      rule: "const XInputSchema = z.object({...}).example([{...}])"
+    - id: QRY-04
+      name: "OutputSchema with .example()"
+      when: "controller exposes this query"
+      rule: "const XOutputSchema = z.object({...}).example([{...}])"
+    - id: QRY-C01
+      name: "Paginated query"
+      when: "listing endpoint"
+      rule: "z.paginatedQuery({...}) + z.paginatedResponse({...})"
+    - id: QRY-C02
+      name: "Join across tables"
+      when: "query needs data from multiple tables"
+      rule: "Drizzle .innerJoin() / .leftJoin()"
+
+    # Patterns extracted from codebase
+    - id: QRY-P01
+      name: "Handler class with DrizzleDatabaseDriver"
+      when: always
+      rule: "@injectable() class extends Handler<InputSchema, OutputSchema> with readonly name, inputSchema, outputSchema, constructor(private driver: DrizzleDatabaseDriver)"
+      wrong: "Using Controller base class for use cases or missing @injectable()"
+      note: "Reads extend Handler by DESIGN — read-vs-write is decided by path (ui/usecases), not base class. usecase bp-01 bans Get*/List* extends Handler only in WRITE contexts; here it is the canon, and direct DrizzleDatabaseDriver injection is the sanctioned BFF exemption (cc-bp-20)."
+      refs: ["packages/api/typescript/src/ui/usecases/appointments/ListAppointments.ts", "packages/api/typescript/src/ui/usecases/patients/ListPatients.ts"]
+    - id: QRY-P02
+      name: "Multi-table leftJoin chain"
+      when: "query needs data from 3+ tables"
+      rule: ".from(main).leftJoin(t2, eq(...)).leftJoin(t3, eq(...)).leftJoin(t4, eq(...))"
+      refs: ["packages/api/typescript/src/ui/usecases/appointments/ListAppointments.ts", "packages/api/typescript/src/ui/usecases/appointments/ListAppointments.ts"]
+    - id: QRY-P03
+      name: "Window function pagination (count OVER)"
+      when: "paginated listing"
+      rule: "Include total: sql<number>`count(*) OVER()`.mapWith(Number) in select — .mapWith(Number) is required because PostgreSQL returns count as a string at runtime despite the TypeScript type. Extract with rows[0]?.total ?? 0."
+      wrong: "sql<number>`count(*) OVER()` without .mapWith(Number) causes runtime Zod parse errors ('expected number, received string'). Running a separate COUNT(*) query for total."
+      refs: ["packages/api/typescript/src/ui/usecases/appointments/ListAppointments.ts", "packages/api/typescript/src/ui/usecases/patients/ListPatients.ts"]
+    - id: QRY-P04
+      name: "Dynamic WHERE conditions array"
+      when: "query has optional filters"
+      rule: "const conditions: SQL[] = [mandatory]; if (filter) conditions.push(eq/ilike(...)); where(and(...conditions)!)"
+      wrong: "Nested ternaries inside .where() or multiple query branches"
+      refs: ["packages/api/typescript/src/ui/usecases/appointments/ListAppointments.ts", "packages/api/typescript/src/ui/usecases/services/ListServices.ts"]
+    - id: QRY-P05
+      name: "ILIKE search with escaped special chars"
+      when: "query has text search"
+      rule: "const escaped = search.replace(/[%_\\\\]/g, '\\\\$&'); ilike(column, `%${escaped}%`)"
+      wrong: "Passing raw user input to ilike without escaping"
+      refs: ["packages/api/typescript/src/ui/usecases/collaborators/ListCollaborators.ts", "packages/api/typescript/src/ui/usecases/patients/ListPatients.ts"]
+    - id: QRY-P06
+      name: "Subquery with .as() for derived data"
+      when: "query needs aggregated data per row (e.g., last appointment date)"
+      rule: "const sub = this.driver.db.select({...}).from(...).groupBy(...).as('alias'); then .leftJoin(sub, eq(...))"
+      refs: ["packages/api/typescript/src/ui/usecases/patients/ListPatients.ts", "packages/api/typescript/src/ui/usecases/patients/ListPatients.ts"]
+    - id: QRY-P07
+      name: "SQL aggregations with FILTER"
+      when: "query needs conditional counts or stats"
+      rule: "sql<number>`count(*) FILTER (WHERE condition)` for inline stats alongside listing"
+      refs: ["packages/api/typescript/src/ui/usecases/patients/ListPatients.ts", "packages/api/typescript/src/ui/usecases/dashboard/GetDashboard.ts"]
+    - id: QRY-P08
+      name: "json_build_object for nested output"
+      when: "flat DB columns must become nested object (e.g., address)"
+      rule: "sql`json_build_object('street', col_street, 'number', col_number, ...)` in select"
+      wrong: "Selecting flat columns then manually mapping each — unless mapping is trivial"
+      refs: ["packages/api/typescript/src/ui/usecases/user/GetUserInfo.ts", "packages/api/typescript/src/ui/usecases/user/GetUserInfo.ts"]
+    - id: QRY-P09
+      name: "json_agg for grouped arrays"
+      when: "one-to-many needs to be a single query with nested arrays"
+      rule: "sql`json_agg(json_build_object(...))` with .groupBy() for parent-children in one query"
+      refs: ["packages/api/typescript/src/ui/usecases/units/ListUnits.ts"]
+    - id: QRY-P10
+      name: "outputSchema.parse() on return"
+      when: always
+      rule: "return this.outputSchema.parse({...}) — ensures type safety and strips extra fields"
+      wrong: "Returning raw row data without schema validation"
+      refs: ["packages/api/typescript/src/ui/usecases/appointments/ListAppointments.ts", "packages/api/typescript/src/ui/usecases/services/ListServices.ts"]
+    - id: QRY-P11
+      name: "Raw SQL with CTE for complex queries"
+      when: "query requires UNION, recursive CTE, or Drizzle builder is insufficient"
+      rule: "this.driver.db.execute<T>(sql`WITH cte AS (...) SELECT ...`) with explicit result type"
+      refs: ["packages/api/typescript/src/ui/usecases/collaborators/ListCollaborators.ts"]
+    - id: QRY-P12
+      name: "Dashboard composite endpoint"
+      when: "dashboard page"
+      rule: "Single use case returning multiple sections (calendar, charts, stats) via separate sequential queries"
+      refs: ["packages/api/typescript/src/ui/usecases/dashboard/GetDashboard.ts", "packages/api/typescript/src/ui/usecases/dashboard/GetDashboard.ts"]
+    - id: QRY-P13
+      name: "Parallel queries via Promise.all()"
+      when: "multiple independent queries in same handler"
+      rule: "const [result1, result2] = await Promise.all([query1, query2])"
+      wrong: "Running independent queries sequentially"
+      refs: ["packages/api/typescript/src/ui/usecases/schedule/GetAvailableTimeSlots.ts"]
+    - id: QRY-P14
+      name: "Inline phone formatting"
+      when: "output needs formatted phone from split columns"
+      rule: "phone: `${r.phoneCountryCode}${r.phoneAreaCode}${r.phoneNumber}`"
+      refs: ["packages/api/typescript/src/ui/usecases/patients/ListPatients.ts", "packages/api/typescript/src/ui/usecases/patients/GetPatientDetails.ts"]
+    - id: QRY-P15
+      name: "No `as` casts on JSONB columns — fix type at schema level"
+      when: "query reads a JSONB column"
+      reason: "JSONB columns typed with .$type<>() in the Drizzle schema already provide correct types via $inferSelect. If a cast is needed, it means the Drizzle schema's .$type<>() is wrong — fix it there using z.infer from the VO/entity schema (see DB-C06), don't patch with `as` in the query."
+      rule: "Use `r.specialties ?? []` without `as` cast. If $inferSelect doesn't give the right type, fix the Drizzle column's .$type<z.infer<typeof voSchema>>() to derive from the value object schema — never inline the shape."
+      wrong: "(r.specialties ?? []) as Array<{ specialty: string; rqe?: string }> — inline cast that duplicates the VO shape and hides schema mismatches"
+    - id: QRY-P16
+      name: "Paginated response extended with computed aggregations via .and()"
+      when: "listing endpoint needs extra computed fields (counts, stats) alongside items/total/totalPages"
+      reason: "z.paginatedResponse() returns a fixed shape. Use .and(z.object({...})) to add computed fields. Pre-aggregate counts in a separate SQL GROUP BY query without the status filter so counts always reflect all statuses."
+      rule: |
+        const _paginatedBase = z.paginatedResponse({ id: z.string(), ... })
+        export const OutputSchema = _paginatedBase.and(z.object({
+          statusCounts: z.object({
+            [Status.A]: z.number().default(0),
+            [Status.B]: z.number().default(0),
+          }),
+        }))
+      wrong: "Computing counts in frontend via items.filter().length — forces frontend to iterate all items and breaks when paginated"
+      refs: ["packages/api/typescript/src/ui/usecases/appointments/ListAppointments.ts"]
+    - id: QRY-P17
+      name: "Pre-aggregate counts without filter to show all statuses"
+      when: "query returns per-status counts alongside a filtered listing"
+      reason: "When the listing is filtered by status, the aggregation query must NOT include the status filter — otherwise counts only reflect the filtered subset. Use a separate base conditions array without the status filter."
+      rule: |
+        // Base conditions (no status filter) for aggregation
+        const baseConditions: SQL[] = [eq(t.unitId, unitId), gte(t.startDate, startDate), lte(t.startDate, endDate)]
+        const countRows = await this.driver.db
+          .select({ status: t.status, count: sql<number>`count(*)`.mapWith(Number) })
+          .from(t)
+          .where(and(...baseConditions)!)
+          .groupBy(t.status)
+      refs: ["packages/api/typescript/src/ui/usecases/appointments/ListAppointments.ts"]
+
+    - id: QRY-P18
+      name: "Composition-first discriminated BFF output (multi-axis reads)"
+      when: "BFF read output varies along 2+ axes (e.g. ViewScope SINGLE/MULTI × DashboardMode) or by a kind discriminator (dashboard, chart)"
+      reason: >
+        Composition-first beats nested unions and piles of .optional(): a future mode/axis-value
+        can return less / more / internally-changed sections by editing that cell's section
+        list — no nested-union rigidity, no optional-field rot, no hand-maintained cross-product
+        duplication. A single discriminator maps cleanly through kubb/OpenAPI and gives the
+        frontend exhaustive `never` narrowing. Section schemas are the lever for "change a
+        visualization"; the matrix is the lever for "add a mode".
+      rule: |
+        // 1. Each output region is a NAMED Zod shape fragment (raw shape, composed by spread)
+        const STAT = { revenue: MetricSchema, orders: TallySchema }
+        const ORDERS = { recentOrders: z.array(OrderRowSchema) }
+        const PAYMENT_METHODS = { paymentMethods: z.array(PaymentMethodSliceSchema) }
+
+        // 2. Generic atoms are extracted and reused
+        //    MetricSchema  = ONE quantity + deltaPct (count OR rate OR money — unit is contextual)
+        //    TallySchema   = { count: Metric, value: Metric } — ONLY when a count AND a monetary
+        //                    value genuinely coexist (orders: how many + how much). A funnel step
+        //                    (unique-session count) is a Metric, NOT a Tally.
+
+        // 3. A variant(kind, ...echoedEnums, ...shapes) composer builds each cross-product cell;
+        //    the real axis enums are ECHOED as literal fields so the frontend can narrow.
+        const variant = <K extends string>(kind: K, extra: object, ...shapes: object[]) =>
+          z.object({ kind: z.literal(kind), ...extra, ...Object.assign({}, ...shapes) })
+
+        // 4. Output = ONE discriminated union over the cells — never nested unions
+        export const GetDashboardOutputSchema = z.discriminatedUnion('kind', [
+          variant('SINGLE_GLOBAL',  { scope: z.literal(ViewScope.SINGLE) }, STAT, ORDERS, PAYMENT_METHODS),
+          variant('MULTI_GLOBAL',   { scope: z.literal(ViewScope.MULTI)  }, STAT, ORDERS),
+        ])
+      wrong: |
+        // Nested unions per axis (rigid), one all-optional shape (optional-field rot),
+        // or hand-duplicated near-identical cells instead of composed section fragments.
+        // ALSO: an axis that only selects the data set without changing the output shape
+        // (e.g. viewScope filtering stores) is an INPUT query param, NOT a discriminator.
+      refs: [".plans/2026-06-03-get-dashboard-and-ui-context.md", ".plans/2026-06-03-get-pixel-funnel.md", "examples/slices/dashboard-read-model/GetDashboard.ts"]
+
+  snippet:
+    skeleton: |
+      import { injectable } from 'tsyringe-neo'
+      import { Handler, DrizzleDatabaseDriver, z } from '@codm/core-typescript'
+
+      export const {{Name}}InputSchema = z.object({
+      	// Define input (e.g., userId, filters)
+      })
+
+      export const {{Name}}OutputSchema = z.object({
+      	// Define frontend-shaped output
+      })
+
+      @injectable()
+      export class {{Name}} extends Handler<typeof {{Name}}InputSchema, typeof {{Name}}OutputSchema> {
+      	readonly name = '{{verbEntity}}' as const
+      	readonly inputSchema = {{Name}}InputSchema
+      	readonly outputSchema = {{Name}}OutputSchema
+
+      	constructor(private driver: DrizzleDatabaseDriver) {
+      		super()
+      	}
+
+      	protected async handle(input: this['input']): Promise<this['output']> {
+      		// Direct Drizzle access — no repository abstraction
+      		// const rows = await this.driver.db.select().from(table).where(eq(table.id, input.id))
+      		return {} as this['output']
+      	}
+      }
+    exemplar: |
+      // --- Use case (packages/api/typescript/src/<ctx>/usecases/ListX.ts) ---
+      import { injectable } from 'tsyringe-neo'
+      import { Handler, z, DrizzleDatabaseDriver } from '@codm/core-typescript'
+      // import { xTable } from '@codm/contracts/db'  // real Drizzle table from contracts
+
+      const ListXInputSchema = z.object({
+        query: z.paginatedQuery({ status: z.string().optional() }),
+      }).example([{ query: { page: 1, limit: 10 } }])
+      const ListXOutputSchema = z.paginatedResponse({
+        id: z.uuid(), name: z.string(),
+      }).example([{ items: [{ id: '00000000-0000-0000-0000-000000000001', name: 'X' }], total: 1, totalPages: 1 }])
+
+      @injectable()
+      export class ListX extends Handler<typeof ListXInputSchema, typeof ListXOutputSchema> {
+        readonly name = 'list_x' as const
+        readonly inputSchema = ListXInputSchema
+        readonly outputSchema = ListXOutputSchema
+        constructor(private driver: DrizzleDatabaseDriver) { super() }
+        protected async handle(input: this['input']): Promise<this['output']> {
+          // Replace xTable with the imported Drizzle table from '@codm/contracts/db'
+          const rows = await this.driver.db.select().from(xTable).limit(input.query.limit)
+          return this.outputSchema.parse({ items: rows, total: rows.length, totalPages: 1 })
+        }
+      }
+
+      // --- Controller (packages/api/typescript/src/<ctx>/controllers/ListXController.ts) ---
+      // Controller delegates to the use case — no DrizzleDatabaseDriver here
+
+  scaffold: "bun cli query <name>"

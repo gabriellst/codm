@@ -1,0 +1,163 @@
+import { describe, expect, it } from 'bun:test'
+import type { ZodType } from 'zod'
+import { ContactKind, MailboxItemKind, AgentModelId } from '@codm/contracts-typescript/wire/enums'
+import { AgentRunner } from '../../services/AgentRunner'
+import { AgentName, AgentRunOutcome } from '../../enums'
+import type { AgentRunRequest } from '../../types/AgentRunRequest'
+import type { AgentRuntimeEvent } from '../../types/AgentRuntimeEvent'
+import { InMemoryAgentIdentityService } from '@codm/core-typescript'
+import { McpScope } from '@codm/contracts-typescript/wire/enums'
+import type { AgentRunIdentity } from '../../types/AgentRunIdentity'
+import { toolNameOf, toolsInScope, SteerIssueTurnController } from '../../mcp/exposure'
+import { OrchestratorPromptBuilder } from './prompt'
+import { OrchestratorAgent } from './OrchestratorAgent'
+
+class CapturingRunner extends AgentRunner {
+	readonly requests: AgentRunRequest<ZodType | undefined>[] = []
+
+	run<OutputSchema extends ZodType | undefined = undefined>(request: AgentRunRequest<OutputSchema>): AsyncIterable<AgentRuntimeEvent> {
+		this.requests.push(request)
+		return (async function* () {
+			yield {
+				type: 'finished',
+				result: { outcome: AgentRunOutcome.COMPLETED, replyText: 'sim, claro', sessionId: 'sess-1', failed: false },
+			} satisfies AgentRuntimeEvent
+		})()
+	}
+
+	async shutdown(): Promise<void> {}
+}
+
+/** A fixed instant, so nothing the prompt renders from the clock is raced. */
+const NOW = new Date('2026-08-06T06:09:00.000Z')
+
+// ANNOTATED, not asserted: the return type is checked against the agent's real input, so a field the
+// schema adds fails HERE instead of being swallowed by a cast.
+const input = (): Parameters<OrchestratorAgent['run']>[1] => ({
+	ownerId: '00000000-0000-4000-8000-0000000000aa',
+	threadId: '00000000-0000-4000-8000-0000000000bb',
+	// NO issueId — the orchestrator is thread-keyed and structurally has none (§6.1).
+	entryId: '00000000-0000-4000-8000-0000000000dd',
+	cwd: '/Users/dev/project',
+	binaryPath: '/usr/local/bin/claude',
+	contactKind: ContactKind.GROUP,
+	mentionTag: '@codm',
+	window: { seeded: true, entries: [] },
+	// REQUIRED even when empty (issue-resume spec, AC-4). "Nothing is pending" is a fact the turn
+	// always knows, so an absent field could only ever mean the seam was never wired — which is the
+	// exact failure that field exists to make unshippable, and the schema refuses the run without it.
+	openStops: [],
+	// Required for the same reason, and answering a different question: which zone a wall-clock loop
+	// is scheduled in. Absent, a model would guess one from the language of the conversation.
+	timezone: 'America/Sao_Paulo',
+	// Required for the same reason once more: which models the CLI of THIS turn offers. The turn
+	// always knows (its caller resolved the provider), and empty is a real value — a CLI nothing has
+	// ever driven — not a missing wire.
+	availableModels: [AgentModelId.DEFAULT, AgentModelId.OPUS, AgentModelId.SONNET, AgentModelId.HAIKU],
+	// Required for the same reason as `timezone`: every turn knows what time it started, and a
+	// renderer reading its own clock is a renderer no test can pin.
+	now: NOW,
+	item: {
+		kind: MailboxItemKind.OPERATOR_MESSAGE,
+		entryId: '00000000-0000-4000-8000-0000000000dd',
+		speaker: 'operator',
+		text: 'pode me tirar uma dúvida?',
+	},
+})
+
+const build = () => ({
+	runner: new CapturingRunner(),
+	tokens: new InMemoryAgentIdentityService<AgentRunIdentity>(),
+})
+
+describe('OrchestratorAgent', () => {
+	/**
+	 * AC-T3.2 — the blocker that gated the whole pivot, asserted as behaviour rather than as a comment.
+	 *
+	 * Before §7.2.1 the base refused to issue a credential for ANY scoped agent without an `issueId`. This agent
+	 * declares a scope and never has one, so that rule would have thrown on every single turn — the
+	 * product would have shipped conversing-never. A regression here is not subtle in production and is
+	 * completely silent in a unit test that only checks the happy path, which is why the assertion is
+	 * "the run completes at all".
+	 */
+	it('AC-T3.2 — a turn with NO issueId mints and runs, rather than throwing', async () => {
+		const { runner, tokens } = build()
+		const agent = new OrchestratorAgent(tokens, new OrchestratorPromptBuilder())
+
+		for await (const _ of agent.run(runner, input())) {
+			// drain
+		}
+
+		expect(runner.requests).toHaveLength(1)
+	})
+
+	it('AC-T3.1 — the request carries the orchestration scope, with tools DERIVED from the manifest', async () => {
+		const { runner, tokens } = build()
+		const agent = new OrchestratorAgent(tokens, new OrchestratorPromptBuilder())
+
+		for await (const _ of agent.run(runner, input())) {
+			// drain
+		}
+
+		const mcp = runner.requests[0]?.mcp
+		expect(mcp?.endpoint).toContain('/mcp/orchestration')
+		expect(mcp?.allowedTools).toEqual(toolsInScope(McpScope.orchestration))
+	})
+
+	/**
+	 * The claims are what the MCP router reads: `threadId` is the axis that still confines a
+	 * thread-scoped token, and `entryId` is what the fork tool uses as `originEntryId` — the reason
+	 * that value is not an argument the model supplies.
+	 */
+	it('the minted token carries threadId + entryId and NO issueId', async () => {
+		const { runner, tokens } = build()
+		const agent = new OrchestratorAgent(tokens, new OrchestratorPromptBuilder())
+
+		for await (const _ of agent.run(runner, input())) {
+			// drain
+		}
+
+		expect(tokens.resolve(runner.requests[0]?.mcp?.token ?? '')).toMatchObject({
+			threadId: '00000000-0000-4000-8000-0000000000bb',
+			entryId: '00000000-0000-4000-8000-0000000000dd',
+			agentName: AgentName.ORCHESTRATOR,
+			scope: McpScope.orchestration,
+		})
+		expect(tokens.resolve(runner.requests[0]?.mcp?.token ?? '')?.issueId).toBeUndefined()
+	})
+
+	/** The base stamps identity; `buildRequest` must never set it (§4.5). */
+	it('the prompt reaches the request as systemPrompt + ONE user message', async () => {
+		const { runner, tokens } = build()
+		const agent = new OrchestratorAgent(tokens, new OrchestratorPromptBuilder())
+
+		for await (const _ of agent.run(runner, input())) {
+			// drain
+		}
+
+		const request = runner.requests[0]
+		expect(request?.agentName).toBe(AgentName.ORCHESTRATOR)
+		expect(request?.systemPrompt).toContain('QUOTING')
+		expect(request?.messages).toHaveLength(1)
+		expect(request?.messages?.[0]?.content).toContain('pode me tirar uma dúvida?')
+	})
+})
+
+describe('redirecionar uma issue existente', () => {
+	it('ensina a situação e nomeia a ferramenta de steer pelo símbolo', () => {
+		const builder = new OrchestratorPromptBuilder()
+		const system = builder.system(input())
+
+		// O nome vem de `toolNameOf(SteerIssueTurnController)` — nunca digitado como literal, para
+		// que um rename siga o símbolo em vez de deixar a frase apontando para o vazio.
+		expect(system).toContain(toolNameOf(SteerIssueTurnController))
+		expect(system).toContain('REDIRECTING WORK THAT ALREADY EXISTS')
+	})
+
+	it('proíbe afirmar uma ação que não foi executada', () => {
+		const builder = new OrchestratorPromptBuilder()
+		const system = builder.system(input())
+
+		expect(system).toContain('never say you did something you did not do')
+	})
+})

@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+# Exit on any error
+set -e
+
+echo "Running commit message validation..."
+
+# Check if commit-msg-linter exists
+if [ -f "./node_modules/commit-msg-linter/commit-msg-linter.js" ]; then
+    cat "./node_modules/commit-msg-linter/commit-msg-linter.js" | node --input-type=commonjs
+    echo "Commit message validation completed successfully!"
+else
+    echo "Warning: commit-msg-linter not found, skipping validation"
+    exit 0
+fi

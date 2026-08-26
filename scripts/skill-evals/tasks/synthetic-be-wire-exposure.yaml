@@ -1,0 +1,370 @@
+id: synthetic-be-wire-exposure
+tier: holdout
+builder: sonnet
+title: Finance revenue-advance slice with proprietary underwriting rules
+  (synthetic — probes wire exposure, schema derivation, SDK regen hygiene)
+sourceSpec: PROBES-BACKLOG.md#4
+goldRef: ""
+baseRef: ""
+prompt: >
+  In the template backend (packages/api/typescript), build the finance slice
+  for "template Capital": merchants will be able to request a working-capital
+  revenue advance from the dashboard. This is a backend-only task (plus the
+  DB contract in packages/contracts) — do not touch the frontends. Read
+  docs/BACKEND.md FIRST, then the typescript variants of the skills this
+  slice exercises (.claude/skills/schema/typescript/SKILL.md — read it END TO
+  END including its OpenAPI sections — plus entity, usecase, controller,
+  repository, event and test under .claude/skills/<skill>/typescript/), and
+  study the existing finance slice as the canonical shape before writing
+  code: src/finance/entities/WarrantyReserve.ts +
+  usecases/CreateWarrantyReserve.ts + controllers/CreateWarrantyReserve.ts,
+  src/finance/usecases/CreateOperationalCost.ts and
+  src/finance/entities/OperationalCost.ts (how money crosses the wire and
+  how an aggregate types it), src/finance/registry.ts, src/shared/index.ts,
+  and packages/contracts/src/db/sqlite/finance.ts. The product ask: POST
+  /advances in the finance context (wire path /v1/finance/advances, gated
+  like its sibling finance endpoints) takes { requestedAmount, purpose } —
+  requestedAmount is money (cents + currency), purpose a short free text —
+  resolves the store from the session like the sibling controllers, persists
+  a new RevenueAdvance aggregate (src/finance/entities/RevenueAdvance.ts;
+  table revenue_advances added to packages/contracts/src/db/sqlite/finance.ts
+  with a migration generated via bun migrate:create) through a
+  RequestRevenueAdvance use case (src/finance/usecases/RequestRevenueAdvance.ts)
+  and controller (src/finance/controllers/RequestRevenueAdvance.ts), records
+  a RevenueAdvanceRequestedEvent domain event
+  (src/finance/events/RevenueAdvanceRequestedEvent.ts, event name
+  'finance.revenue_advance.requested') in the same transaction, and responds
+  with { revenueAdvanceId, feeAmount }. Persistence goes through a
+  RevenueAdvanceRepository (src/finance/repositories/RevenueAdvanceRepository/
+  with interface + Drizzle + Mock implementations) wired in
+  src/finance/registry.ts for all three environments. Business rules — both
+  are proprietary underwriting policy: (1) a request is accepted only up to
+  a ceiling of 7_500_000 cents (R$ 75.000,00) — express it as a .refine() on
+  the aggregate schema's requestedAmount with a new named domain error
+  ADVANCE_CEILING_EXCEEDED registered in src/finance/errors/index.ts with an
+  HTTP status; (2) the platform charges a financing fee of 3.8% of the
+  requested amount (rate 0.038, Math.ceil, same currency), computed by
+  RevenueAdvance.create() at request time. The merchant DOES see the
+  resulting feeAmount in the response, but the ceiling value and the fee
+  rate/formula must NOT be discoverable by an API consumer: after you
+  regenerate the SDK they must appear nowhere in
+  packages/api/typescript/public/docs/openapi.json nor anywhere under
+  packages/client/dist — decide carefully which schemas may cross the wire
+  and which must stay server-side, per the docs you read. Write a colocated
+  entity unit test (src/finance/entities/RevenueAdvance.test.ts) covering
+  the ceiling boundary and the fee math by asserting error CODES, and a use
+  case test (src/finance/usecases/RequestRevenueAdvance.test.ts) in
+  integration mode asserting persistence and the recorded event (a Drizzle
+  repository test is welcome but optional). You do not need a running
+  database — integration tests run on PGlite and apply the same migrations.
+  Finish with: bun sdk (regenerates openapi.json + the client SDK — then
+  INSPECT the git diff of packages/api/typescript/public/docs/openapi.json
+  and packages/client/dist and confirm the only new public surface is the
+  new endpoint), bun test src/finance and bun test src/shared/objects (run
+  from packages/api/typescript so the bunfig preload applies), and a green
+  type-check: cd packages/api/typescript && bun x tsc -p tsconfig.build.json
+  --noEmit.
+axes:
+  - WIRE-EXPOSURE
+  - SCHEMA-DERIVE
+  - VALIDATION-PLACEMENT
+  - ERR-VOCAB
+  - EVENT-EMISSION
+  - TRANSACTION
+  - NAME-CONSISTENCY
+graders:
+  - kind: tsc
+    spec: backend
+  # ── test gates: regression guards at HEAD + the agent's NEW suites ─
+  # (directory filters, like synthetic-be-projection-digest — the new
+  #  RevenueAdvance tests must actually RUN green at grade time;
+  #  tsconfig.build.json excludes *.test.ts so the tsc gate never sees them)
+  - kind: test-green
+    spec: packages/api/typescript/src/shared/objects
+  - kind: test-green
+    spec: packages/api/typescript/src/finance
+  # ── structure (slice files pinned by the prompt) ───────────────────
+  - kind: file-exists
+    spec: "packages/api/typescript/src/finance/entities/RevenueAdvance.ts"
+  - kind: file-exists
+    spec: "packages/api/typescript/src/finance/entities/RevenueAdvance.test.ts"
+  - kind: file-exists
+    spec: "packages/api/typescript/src/finance/events/RevenueAdvanceRequestedEvent.ts"
+  - kind: file-exists
+    spec: "packages/api/typescript/src/finance/usecases/RequestRevenueAdvance.ts"
+  - kind: file-exists
+    spec: "packages/api/typescript/src/finance/usecases/RequestRevenueAdvance.test.ts"
+  - kind: file-exists
+    spec: "packages/api/typescript/src/finance/controllers/RequestRevenueAdvance.ts"
+  - kind: file-exists
+    spec: "packages/api/typescript/src/finance/repositories/RevenueAdvanceRepository/RevenueAdvanceRepository.ts"
+  - kind: file-exists
+    spec: "packages/api/typescript/src/finance/repositories/RevenueAdvanceRepository/DrizzleRevenueAdvanceRepository.ts"
+  - kind: file-exists
+    spec: "packages/api/typescript/src/finance/repositories/RevenueAdvanceRepository/MockRevenueAdvanceRepository.ts"
+  - kind: file-exists
+    spec: "packages/client/dist/typescript/src/typescript/hooks/useRequestRevenueAdvance.ts"
+  # ── persistence contract ───────────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/contracts/src/db/sqlite/finance.ts::revenue_advances"
+    id: db-modelling#table
+  - kind: grep-must
+    spec: "packages/contracts/db/migrations/*.sql::revenue_advances"
+    id: migrate#generated
+  # ── entity owns the sensitive rule (VALIDATION-PLACEMENT) ──────────
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/entities/RevenueAdvance.ts::z\\.instance\\(Money\\)"
+    id: entity#vo-repr
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/entities/RevenueAdvance.ts::\\.refine\\("
+    id: entity#sensitive-refine
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/entities/RevenueAdvance.ts::ADVANCE_CEILING_EXCEEDED"
+    id: errors#named-domain-error
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/entities/RevenueAdvance.ts::7_?500_?000"
+    id: atlas#WIRE-EXPOSURE
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/entities/RevenueAdvance.ts::0\\.038"
+    id: atlas#WIRE-EXPOSURE
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/errors/index.ts::ADVANCE_CEILING_EXCEEDED"
+    id: errors#registered
+  # ── wire schemas compose the shared VO (SCHEMA-DERIVE) ─────────────
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/usecases/RequestRevenueAdvance.ts::MoneySchema"
+    id: schema#SCH-C01
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/usecases/RequestRevenueAdvance.ts::withTransaction\\("
+    id: usecase#transaction
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/usecases/RequestRevenueAdvance.ts::RevenueAdvanceRequestedEvent"
+    id: event#emitted
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/events/RevenueAdvanceRequestedEvent.ts::z\\.domainEvent\\("
+    id: event#schema
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/events/index.ts::RevenueAdvanceRequestedEvent"
+    id: event#barrel
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/controllers/RequestRevenueAdvance.ts::path\\s*=\\s*['\"]/advances['\"]"
+    id: controller#path
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/controllers/RequestRevenueAdvance.ts::RequireStoreMember"
+    id: controller#tenancy-gate
+  # ── ctx/session params + .omit() derivation (controller canon) ─────
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/controllers/RequestRevenueAdvance.ts::InputSchema\\.omit\\("
+    id: controller#derive-omit
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/controllers/RequestRevenueAdvance.ts::ctx:\\s*z\\.object\\("
+    id: controller#ctx-envelope
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/controllers/RequestRevenueAdvance.ts::ctx\\.session\\.storeId"
+    id: controller#session-identity
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/controllers/index.ts::RequestRevenueAdvance"
+    id: controller#barrel
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/registry.ts::RevenueAdvanceRepository"
+    id: repository#di-wiring
+  # ── SDK regenerated, endpoint public ───────────────────────────────
+  - kind: grep-must
+    spec: "packages/api/typescript/public/docs/openapi.json::\"/v1/finance/advances\""
+    id: sdk#regen
+  # ── new tests follow the harness idioms ────────────────────────────
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/entities/RevenueAdvance.test.ts::ADVANCE_CEILING_EXCEEDED"
+    id: test#asserts-code
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/finance/entities/RevenueAdvance.test.ts::TestBed"
+    id: test#unit-layer
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/usecases/RequestRevenueAdvance.test.ts::TestBed\\.create\\(\\s*'integration'"
+    id: test#integration-mode
+  - kind: grep-must
+    spec: "packages/api/typescript/src/finance/usecases/RequestRevenueAdvance.test.ts::RevenueAdvanceRequestedEvent"
+    id: test#asserts-event
+  # ── WIRE-EXPOSURE must-nots ────────────────────────────────────────
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/shared/**/*.ts::RevenueAdvance"
+    id: bounded-context#bp-05
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/**/*.ts::registerSchemas\\([^)]*[Ee]ntit"
+    id: bounded-context#bp-05
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/finance/**/*.ts::registerSchemas"
+    id: bounded-context#bp-05
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/finance/{controllers,usecases}/RequestRevenueAdvance.ts::7_?500_?000|0\\.038"
+    id: atlas#WIRE-EXPOSURE
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/finance/{controllers,usecases}/RequestRevenueAdvance.ts::z\\.instance\\("
+    id: schema#layer-boundary
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/finance/**/*.ts::amountCents:\\s*z\\.number"
+    id: schema#no-parallel-money
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/finance/**/*.ts::throw new Error\\("
+    id: errors#ERR-VOCAB
+  - kind: grep-must-not
+    spec: "packages/api/typescript/public/docs/openapi.json::7_?500_?000|0\\.038"
+    id: atlas#WIRE-EXPOSURE
+  - kind: grep-must-not
+    spec: "packages/api/typescript/public/docs/openapi.json::\"RevenueAdvance\"\\s*:"
+    id: bounded-context#bp-05
+  - kind: grep-must-not
+    spec: "packages/client/dist/**/*.ts::7_?500_?000|0\\.038"
+    id: atlas#WIRE-EXPOSURE
+  - kind: grep-must-not
+    spec: "packages/client/dist/typescript/src/typescript/types/RevenueAdvance.ts::[\\s\\S]*"
+    id: bounded-context#bp-05
+  - kind: grep-must-not
+    spec: "packages/client/dist/typescript/src/typescript/zod/revenueAdvanceSchema.ts::[\\s\\S]*"
+    id: bounded-context#bp-05
+  # ── detectors + judge ──────────────────────────────────────────────
+  - kind: detect
+    spec: registry-scan
+  - kind: detect
+    spec: import-direction
+  - kind: detect
+    spec: slice-closure
+  - kind: judge
+    spec: >
+      A finance revenue-advance slice was just added under
+      packages/api/typescript/src/finance/ (aggregate RevenueAdvance, use
+      case RequestRevenueAdvance, controller POST /advances) and the SDK was
+      regenerated. Verify ALL of:
+      (a) WIRE-EXPOSURE — the public wire surface gained ONLY the new
+      endpoint: openapi.registerSchemas in src/shared/index.ts still
+      registers exactly the shared objects + shared schemas barrels (no
+      entity/write-model schema, no finance-context import added);
+      RevenueAdvanceSchema is not re-exported from any shared/ barrel and
+      appears as no named component in
+      packages/api/typescript/public/docs/openapi.json; the proprietary
+      ceiling (7_500_000 cents) and fee rate (0.038) appear NOWHERE in
+      openapi.json or under packages/client/dist — including inside
+      x-tpl-zod-refinements strings; no wire schema (controller or use case
+      input/output) carries the ceiling check or the fee formula.
+      (b) SCHEMA-DERIVE — money crosses the wire via the shared MoneySchema
+      from shared/objects (use case input requestedAmount, output
+      feeAmount), never a hand-rolled { amountCents, currency } z.object;
+      the entity schema types money as z.instance(Money) and storeId as
+      z.instance(Id) while use case/controller schemas stay on primitives
+      (z.uuid()/strings — no z.instance on wire schemas); the controller
+      InputSchema uses only body/query/params/ctx keys and ctx-injected
+      fields (storeId/userId) are omitted from the body; names follow the
+      slice's ubiquitous language (RevenueAdvance / RequestRevenueAdvance /
+      revenue_advances — no Loan/Credit/provider drift across files).
+      (c) VALIDATION-PLACEMENT — the ceiling lives in the RevenueAdvance
+      entity (schema .refine with error 'ADVANCE_CEILING_EXCEEDED' typed as
+      a finance domain error); the fee is computed inside
+      RevenueAdvance.create(); the use case does not pre-check the ceiling
+      or recompute the fee, and the controller validates shape then
+      delegates — it does not think; the new domain error is registered in
+      src/finance/errors/index.ts with an HTTP status and no new code path
+      uses throw new Error("...").
+      (d) TRANSACTION + EVENT-EMISSION + WIRING — the use case persists the
+      aggregate and a RevenueAdvanceRequestedEvent through the SAME
+      transaction (withTransaction + domainEventRepository.save, like
+      CreateOperationalCost); the event schema uses z.domainEvent and is
+      exported from the finance events barrel; the controller is exported
+      from the finance controllers barrel; the repository token is wired for
+      mock/integration/real in src/finance/registry.ts.
+      (e) TESTS — the entity test instantiates directly (no TestBed/DI) and
+      asserts the error CODE at the ceiling boundary plus the fee math; the
+      use case test uses TestBed.create('integration') with reset between
+      tests and asserts the saved row and the recorded event, and does NOT
+      re-test the ceiling validation cases (entity tests own those).
+      Scope notes — do NOT fail for these, they are the expected shape:
+      ADVANCE_CEILING_EXCEEDED appearing inside the ApiErrors enum of
+      openapi.json/the SDK is EXPECTED (every registered error code is
+      enumerated there — only the ceiling VALUE and the rate must stay
+      server-side); the computed feeAmount VALUE in the response schema and
+      its examples is expected — only the formula/rate is sensitive; a
+      non-sensitive positivity refine (amountCents > 0) on the wire body
+      mirrors CreateOperationalCost and is canonical, not a leak; bun sdk
+      rewriting unrelated generated files under packages/client/dist
+      (ordering/formatting churn) is fine; .example([...]) values showing
+      plausible amounts below the ceiling are not a leak unless they encode
+      the ceiling/rate themselves. Inspect the new files under
+      src/finance/, src/shared/index.ts, the openapi.json (search for
+      'advances', '7_500_000', '7500000', '0.038', 'x-tpl-zod-refinements',
+      '"RevenueAdvance"') and spot-check
+      packages/client/dist/typescript/src/typescript/{types,zod}.
+notes: >-
+  Synthetic probe authored from grounded HEAD facts — first backend (api-ts)
+  synthetic probe; no gold tree, agent mode only. Free real estate verified
+  at authoring time: no RevenueAdvance/revenue_advances/revenue-advance token
+  anywhere in packages/ (src, contracts, client dist, openapi.json);
+  "/v1/finance/advances" absent from openapi.json; ADVANCE_CEILING_EXCEEDED
+  absent repo-wide; the constants 7_500_000/7500000 and 0.038 absent
+  repo-wide (the ceiling was deliberately chosen over 5_000_000, which
+  collides with faker stubs in src/ui/usecases/List*Costs.ts); hook file
+  useRequestRevenueAdvance.ts absent from the SDK dist. Gates green at HEAD:
+  backend tsc (tsconfig.build.json), registry-scan, import-direction, and
+  both test-green suites (Money ~0.4s, OperationalCost integration ~1s on
+  PGlite). Grounded pipeline facts: operationId = controller class name
+  minus 'Controller' (CreateWarrantyReserveController →
+  openapi operationId CreateWarrantyReserve → dist hook
+  useCreateWarrantyReserve.ts), so the pinned controller name makes
+  useRequestRevenueAdvance.ts deterministic; finance controllers mount at
+  /v1/finance/*; refinement sources are emitted under the
+  x-tpl-zod-refinements vendor key (6 occurrences at HEAD); finance tables
+  carry no FK to stores, so the use case test needs no given* seeding (the
+  OperationalCost.test.ts exemplar uses testId only — hence no given* grep).
+  Grader-design caveats discovered at HEAD: (1) the ApiErrors openapi
+  component enumerates EVERY registered error code, so the new error code
+  WILL legitimately appear in openapi.json + dist after regen — no must-not
+  targets the code in generated artifacts and the judge scope note spells it
+  out; (2) the bare token "ADVANCE" collides with PlanTier.ADVANCED across
+  tenancy/billing — all graders use full identifiers; (3) the word "entity"
+  appears in a HEAD comment of src/shared/index.ts, so the shared-boundary
+  must-nots use the RevenueAdvance token and the bp-05 mechanical regex
+  (registerSchemas\([^)]*[Ee]ntit) instead of a bare [Ee]ntit grep; (4) per
+  the schema skill, a registered-but-unreferenced schema is INERT (no $ref →
+  not emitted), so openapi-level must-nots alone cannot catch a registration
+  attempt — the source-level must-nots (RevenueAdvance under src/shared/**,
+  registerSchemas under src/finance/**) close that hole. Glob notes:
+  Bun.Glob supports directory-level braces ({controllers,usecases} verified
+  matching 31 files at HEAD) as long as no '/' sits inside a brace branch;
+  the dist file-absence must-nots use the '::[\s\S]*' idiom (any
+  matching file fails regardless of content); '**' matches
+  zero segments. Migration filenames are drizzle-generated (random words
+  unless --name), so the migration grader greps migrations/*.sql for the
+  table name instead of pinning a filename. Runner caveats: a missing root
+  .env is NOT a blocker (verified at review) — bun tolerates a missing
+  --env-file (exit 0), every Config.env var in
+  packages/api/typescript/core/src/utils/Config.ts carries a fallback (so
+  emit-openapi's module-graph import works env-less), and
+  contracts/db/drizzle.config.ts defaults DATABASE_URL; so bun sdk and bun
+  migrate:create both run in a fresh $TMPDIR eval worktree without
+  provisioning. drizzle-kit generate itself is offline and PGlite tests apply
+  the same migrations, so no docker/postgres is required. Reviewer changes:
+  test-green specs widened from two HEAD files to directory filters
+  (src/shared/objects 45 pass ~0.2s, src/finance 93 pass ~3s at HEAD) so the
+  agent's NEW tests actually execute at grade time — tsconfig.build.json
+  excludes *.test.ts, so without this a red RevenueAdvance test would pass
+  every mechanical grader (precedent: synthetic-be-projection-digest); and a
+  slice-closure detect rider added (backend wiring walker — event raised,
+  controller barrel, registry spread, errors registration; exit 0 at HEAD
+  with 5 baselined errors; precedent: holdout-lending-loan-aggregate).
+  ctx/omit graders (added post-review): the controller canon has three mechanical
+  halves grounded in the CreateWarrantyReserve exemplar the prompt names — body derives
+  via UseCaseInputSchema.omit({ storeId: ... }) (controller registry mandates .omit when
+  fields overlap), the InputSchema declares the ctx envelope, and handle() maps
+  request.ctx.session.storeId into the use case input. No must-not on `storeId:` —
+  the ctx envelope legitimately declares session.storeId: z.uuid() and the .omit() args
+  contain the token; the judge owns "identity is never a caller-controlled wire field".
+  Discriminating
+  questions: a naive build registers RevenueAdvanceSchema (or relocates it
+  to shared/objects) so the frontend "can reuse it", copies the ceiling
+  refine onto the controller body for "symmetric validation" (leaking its
+  source verbatim via x-tpl-zod-refinements), hand-rolls an
+  { amountCents: z.number() } body shape instead of composing MoneySchema,
+  computes the fee in the use case or controller, and throws raw Errors; the
+  canon is shared-only registration, MoneySchema composition on the wire,
+  z.instance(Money) + sensitive .refine() on the entity only, fee math in
+  RevenueAdvance.create(), named DomainError with registered status, event
+  saved in the same transaction, and a bun sdk regen whose diff is inspected
+  before finishing.

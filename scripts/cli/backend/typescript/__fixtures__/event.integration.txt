@@ -1,0 +1,10 @@
+import { BaseIntegrationEvent, z } from '@codm/core-typescript'
+
+const OrderCreatedEventSchema = z.integrationEvent('integration.orderCreated', {
+	id: z.string(),
+})
+
+export class OrderCreatedEvent extends BaseIntegrationEvent<typeof OrderCreatedEventSchema> {
+	static override readonly name = 'integration.orderCreated' as const
+	static readonly schema = OrderCreatedEventSchema
+}

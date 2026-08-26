@@ -1,0 +1,354 @@
+registry:
+  type: backend
+  layer: application
+  depends_on: [entity]
+  depended_by: [usecase, handler]
+  context_reads: [entity]
+
+  patterns:
+    - id: SVC-01
+      name: "Abstract class declaration"
+      when: always
+      rule: "export abstract class XService { abstract method(args): Promise<Result> }"
+    - id: SVC-02
+      name: "Barrel export"
+      when: always
+      rule: "export { XService } from './XService' in services/index.ts"
+    - id: SVCI-01
+      name: "@injectable() concrete class"
+      when: always
+      rule: "@injectable() class ConcreteXService extends XService"
+    - id: SVCI-02
+      name: "DI registration"
+      when: "service is NOT factory-managed (see SVC-P13)"
+      rule: "Bind services through `INSTANCE_REGISTRY` in `packages/api/typescript/src/<context>/registry.ts` or `packages/api/typescript/src/shared/registry.ts`, not inline container registration. Exception: factory-managed implementations only need @injectable() — no registry entry needed."
+    - id: SVC-C01
+      name: "External API integration"
+      when: "service wraps external API"
+      rule: "abstract service contract defines the API, implementation handles HTTP/SDK calls"
+    - id: SVC-C02
+      name: "Cross-entity logic"
+      when: "logic spans multiple entities"
+      rule: "service coordinates entities, entities own invariants"
+    - id: SVC-C03
+      name: "Mock implementation"
+      when: always
+      rule: "MockXService extends XService and is bound in the `mock` registry for tests"
+
+    # --- Patterns extracted from real codebase ---
+
+    - id: SVC-P01
+      name: "Abstract class over interface for DI"
+      when: always
+      reason: "tsyringe-neo resolves tokens by class reference; abstract classes work as DI tokens while interfaces are erased at runtime"
+      rule: "Define the service contract as `export abstract class XService` with abstract methods, not as a TypeScript `interface`"
+
+    - id: SVC-P02
+      name: "Service contract + implementation co-located in subfolder"
+      when: always
+      reason: "Each service lives in its own subfolder under services/; the abstract class is in the subfolder's index.ts and implementations are sibling files"
+      rule: "Place abstract class in `services/<ServiceName>/index.ts` (or a named file re-exported from index), place concrete implementation(s) as sibling file(s) like `services/<ServiceName>/ConcreteImpl.ts`"
+
+    - id: SVC-P03
+      name: "Registry entry for abstract-to-concrete binding"
+      when: "service is NOT factory-managed (see SVC-P13)"
+      reason: "The codebase now binds services through `INSTANCE_REGISTRY` entries per environment instead of inline registration in the context bootstrap."
+      rule: "Register service bindings in `packages/api/typescript/src/<context>/registry.ts` or `packages/api/typescript/src/shared/registry.ts` as `{ token: XService, instance: ConcreteXService }`. Exception: factory-managed implementations only need @injectable() — no registry entry needed."
+
+    - id: SVC-P04
+      name: "Constructor-based dependency injection"
+      when: "implementation depends on other services or repositories"
+      reason: "tsyringe-neo auto-resolves constructor parameters; no @inject() needed when the parameter type is itself a registered abstract class"
+      rule: "Declare dependencies as constructor parameters typed to their abstract class: `constructor(private mailSender: MailSender, private repo: SomeRepository) {}`"
+
+    - id: SVC-P05
+      name: "EmailTemplate protocol for MailSender"
+      when: "service sends emails"
+      reason: "The MailSender service uses an EmailTemplate interface with getSubject(), getBody(), and getAttachments() methods, decoupling content from transport"
+      rule: "Create template classes implementing `EmailTemplate { getSubject(): Promise<string>; getBody(): Promise<string>; getAttachments(): Promise<Attachment[]> }` and pass them to `MailSender.sendMail(email, template)`"
+
+    - id: SVC-P06
+      name: "Mock implementation with test helpers"
+      when: "service has external dependencies or side effects"
+      reason: "Mock implementations extend the abstract class and add helper methods (getLogs, clearLogs, getCurrentTransaction) for test assertions"
+      rule: "Create `MockXService extends XService` with in-memory state and expose helper methods like `clear()`, `getLogs()`, `getOperations()` for testing"
+
+    - id: SVC-P07
+      name: "Generic type parameter on abstract class"
+      when: "service wraps an infrastructure concept with varying internals"
+      reason: "UnitOfWork<T> and CommandQueue use a generic to allow different transaction/connection types per implementation"
+      rule: "Use `export abstract class XService<T = DefaultType>` when the service interface needs to be parametric over an infrastructure detail"
+
+    - id: SVC-P08
+      name: "Static factory/registration methods on abstract class"
+      when: "service requires batch registration of handlers or complex setup"
+      reason: "Mediator.register() and CommandQueue.registerCommandHandler() are static methods on the abstract class that accept a container and perform bulk resolution"
+      rule: "Add `static async register(container, instance, handlers): Promise<number>` on the abstract class for orchestrating bulk DI resolution and registration"
+
+    - id: SVC-P09
+      name: "Impl initializes external client in constructor"
+      when: "service wraps external API or infrastructure"
+      reason: "BetterAuth creates the auth instance in constructor, BullMQ parses Redis URL in constructor, OtlpLoggingService creates LoggerProvider in constructor"
+      rule: "Initialize external clients/connections in the constructor body using Config.env for credentials, not in method calls"
+
+    - id: SVC-P10
+      name: "Private mapping/helper methods in implementation"
+      when: "implementation needs to translate between domain and external formats"
+      reason: "Implementations use private methods to map external responses to domain types (e.g., mapStatus, getTemplateId, calculateDistance)"
+      rule: "Keep external-to-domain mapping logic in `private` methods of the concrete implementation, not in the abstract class or entity"
+    - id: SVC-P11
+      name: "Mock plus concrete service pair"
+      when: "service is NOT factory-managed (see SVC-P13)"
+      reason: "Every DI-managed service must be available in mock and concrete environments."
+      rule: "Create both `MockXService` and a true concrete implementation such as `DefaultXService`, `WebChatProvider`, or `ConsoleMailSender`, then bind `mock -> MockXService` and `integration`/`real` -> concrete implementation."
+    - id: SVC-P12
+      name: "Registry-based service binding"
+      when: "service is NOT factory-managed (see SVC-P13)"
+      reason: "Context services belong to the owning context registry, while shared services belong to `packages/api/typescript/src/shared/registry.ts`."
+      rule: "Register context services in `packages/api/typescript/src/<context>/registry.ts`. Register only shared services in `packages/api/typescript/src/shared/registry.ts`."
+    - id: SVC-P13
+      name: "Factory-managed implementations skip registry"
+      when: "service implementations are consumed exclusively through a factory class"
+      reason: "When concrete implementations are injected into a factory by their concrete type (not by an abstract token), tsyringe auto-resolves @injectable() classes without needing registry entries. Only the factory itself needs @injectable(). Example: ChatProviderFactory receives ConsoleChatProvider and WebChatProvider by concrete type — none of them need INSTANCE_REGISTRY entries."
+      rule: "Do NOT add registry entries for services that participate in a factory pattern. The factory class and its concrete implementations only need @injectable() — tsyringe resolves them automatically. Only register the abstract token → concrete binding in the registry when a service is injected by its abstract type (e.g., { token: XService, instance: ConcreteXService })."
+
+  snippet:
+    skeleton: |
+      import { injectable } from 'tsyringe-neo'
+
+      // --- Abstract port -----------------------------------------------------------
+      export abstract class {{Name}} {
+      	// Define domain-specific method signatures
+      	// abstract doSomething(input: SomeInput): Promise<SomeOutput>
+      }
+
+      // --- Concrete implementation -------------------------------------------------
+      @injectable()
+      export class Default{{Name}} extends {{Name}} {
+      	// async doSomething(input: SomeInput): Promise<SomeOutput> {
+      	// 	// Implement here
+      	// }
+      }
+
+      // --- Mock (for tests) --------------------------------------------------------
+      @injectable()
+      export class Mock{{Name}} extends {{Name}} {
+      	// async doSomething(_input: SomeInput): Promise<SomeOutput> {
+      	// 	return {} as SomeOutput
+      	// }
+      }
+    exemplar: |
+      // services/MailSender/MailSender.ts (abstract class)
+      export abstract class MailSender {
+        abstract sendMail(email: string, template: EmailTemplate): Promise<void>
+      }
+
+      // services/MailSender/ConsoleMailSender.ts (implementation)
+      import { injectable } from 'tsyringe-neo'
+      import { MailSender, type EmailTemplate } from './MailSender'
+
+      @injectable()
+      export class ConsoleMailSender extends MailSender {
+        async sendMail(email: string, template: EmailTemplate): Promise<void> {
+          const subject = await template.getSubject()
+          const body = await template.getBody()
+          console.log(`Sending ${subject} to ${email}.`)
+          console.log({ email: { body } })
+        }
+      }
+
+      // shared/registry.ts — one declaration inside the CORE_REGISTRY expandBindings([...])
+      // (`integration` omitted mirrors `real`; `null` = declared absence)
+      { token: MailSender, mock: ConsoleMailSender, real: ConsoleMailSender },
+
+  scaffold: "bun cli service <context> <name>"
+
+  bad_practices:
+    - id: bp-01
+      name: "Fat Service Anti-Pattern"
+      severity: critical
+      mechanical: false
+      wrong: |
+        @injectable()
+        export class OrderService implements OrderService {
+          async createOrder(...) { /* 100 lines */ }
+          async cancelOrder(...) { /* 80 lines */ }
+          async calculateShipping(...) { /* 60 lines */ }
+          async processPayment(...) { /* 90 lines */ }
+          async sendNotification(...) { /* 40 lines */ }
+          async generateInvoice(...) { /* 70 lines */ }
+          async updateInventory(...) { /* 50 lines */ }
+        }
+      right: |
+        // Focused services with single responsibility
+        @injectable()
+        export class DefaultPricingService extends PricingService {
+          async calculatePrice(...) { /* focused pricing logic */ }
+          async applyDiscount(...) { /* focused discount logic */ }
+        }
+
+        @injectable()
+        export class DefaultShippingService extends ShippingService {
+          async calculateShipping(...) { /* focused shipping logic */ }
+          async getDeliveryEstimate(...) { /* focused estimate logic */ }
+        }
+
+    - id: bp-02
+      name: "Service with State"
+      severity: critical
+      mechanical: false
+      wrong: |
+        @injectable()
+        export class PricingService {
+          private lastCalculatedPrice: Money  // State between calls!
+          private currentCustomer: Customer   // State between calls!
+
+          async calculatePrice(productId: string) {
+            this.currentCustomer = await this.customerRepo.findById(...)
+            this.lastCalculatedPrice = ...
+            return this.lastCalculatedPrice
+          }
+
+          async applyDiscount(discountCode: string) {
+            // Uses this.lastCalculatedPrice from previous call - dangerous!
+            return this.lastCalculatedPrice.multiply(...)
+          }
+        }
+      right: |
+        @injectable()
+        export class DefaultPricingService extends PricingService {
+          async calculatePrice(params: CalculatePriceParams): Promise<Money> {
+            const product = await this.productRepository.findById(new Id(params.productId))
+            return Money.create(product.price * params.quantity, 'BRL')
+          }
+
+          async applyDiscount(price: Money, discountCode: string): Promise<Money> {
+            const discount = await this.discountRepository.findByCode(discountCode)
+            return price.multiply(1 - discount.value / 100)
+          }
+        }
+
+    - id: bp-03
+      name: "Service Replacing Entity Logic"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'throw\s+new\s+BaseError<DomainErrors>'
+      wrong: |
+        @injectable()
+        export class OrderService {
+          async createOrder(data: CreateOrderInput) {
+            // This validation belongs in the Order entity!
+            if (data.items.length === 0) {
+              throw new BaseError<DomainErrors>('ORDER_MUST_HAVE_ITEMS')
+            }
+            if (data.totalPrice < 0) {
+              throw new BaseError<DomainErrors>('INVALID_ORDER_PRICE')
+            }
+            const order = new Order({ ...data })
+            await this.orderRepository.save(order)
+          }
+        }
+      right: |
+        // Entity validates its own invariants
+        export class Order extends AggregateRoot<typeof OrderSchema> {
+          static create(data: OrderCreateData): Order {
+            if (data.items.length === 0) {
+              throw new BaseError<DomainErrors>('ORDER_MUST_HAVE_ITEMS')
+            }
+            return new Order(data)
+          }
+        }
+
+        // Service orchestrates cross-entity operations
+        @injectable()
+        export class DefaultPricingService extends PricingService {
+          async calculateOrderTotal(items: OrderItem[]): Promise<Money> {
+            let total = Money.zero('BRL')
+            for (const item of items) {
+              const product = await this.productRepository.findById(item.productId)
+              total = total.add(product.price.multiply(item.quantity))
+            }
+            return total
+          }
+        }
+
+    - id: bp-04
+      name: "Service missing mock/concrete registry bindings"
+      severity: critical
+      note: "Does NOT apply to factory-managed implementations (SVC-P13). Services consumed via a factory by their concrete type only need @injectable() — no registry entry."
+      mechanical: true
+      detect:
+        - 'container\.registerSingleton\('
+        - 'as\s+any\b'
+      wrong: |
+        // Service exists but only one environment is wired (hand-written 3-env literal)
+        export const INSTANCE_REGISTRY = {
+          mock: [],
+          integration: [{ token: MailSender, instance: ConsoleMailSender }],
+          real: [{ token: MailSender, instance: ConsoleMailSender }],
+        }
+
+        // Or service is registered inline instead of in a registry file
+        container.registerSingleton(MailSender as any, ConsoleMailSender)
+      right: |
+        // Context service -> context registry, one expandBindings declaration per token
+        export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
+          { token: MailSender, mock: ConsoleMailSender, real: ConsoleMailSender },
+        ])
+
+        // Shared service -> CORE_REGISTRY declaration
+        // packages/api/typescript/src/shared/registry.ts
+        { token: MailSender, mock: ConsoleMailSender, real: ConsoleMailSender },
+
+        // Factory-managed services: NO registry entry needed (SVC-P13)
+        // ChatProviderFactory, ConsoleChatProvider, WebChatProvider
+        // all use @injectable() only — tsyringe resolves by concrete type
+
+    - id: bp-05
+      name: "Service touching the database directly or swallowing the transaction"
+      severity: critical
+      rule: "Services hold NO DrizzleDatabaseDriver and run NO queries — persistence belongs to repositories; a service composes repository ports + domain logic. When a service participates in a use case's transaction, it accepts tx?: Transaction (infra-agnostic, cc-bp-20) and threads it to every repository call — it never opens its own transaction (the use case's withTransaction owns the boundary) and never drops tx on the floor mid-chain."
+      wrong: |
+        export class PricingService {
+          constructor(private driver: DrizzleDatabaseDriver) {}  // infra leak — cc-bp-20
+          async reprice(id: string) { await this.driver.db.update(...) }
+        }
+      right: |
+        export class PricingService {
+          constructor(private productRepository: ProductRepository) {}
+          async reprice(id: string, tx?: Transaction) {
+            const product = await this.productRepository.findById(id, tx)
+            // ...domain logic...
+            await this.productRepository.save(product, tx)     // tx threaded, boundary owned by the use case
+          }
+        }
+      mechanical: false
+
+    - id: bp-06
+      name: "Service with a lifecycle (start/stop) bound in `real` without a matching HealthCheck"
+      severity: critical
+      rule: "A service with `start()`/`stop()` bound in the `real` environment (a poller, a dispatcher, anything with a background timer) must have a corresponding `HEALTH_CHECKS` declaration wrapping a `PollingHealthCheck` (or an equivalent `HealthCheck`) around it — otherwise `/health` can report `ok` while the background loop that does the actual work never started. The signal the check reads must be the SMALLEST existing TRUE-at-rest field already on the class — never a new `started`/`isRunning` field invented just to satisfy the check. Worked examples in `@codm/core-typescript`: `DrizzleOutboxDispatcher.running` reads `this.timer !== null` (the field `scheduleNext()` already sets and never nulls mid-poll); `SqlExternalMediator.running` reads `!this.stopped` (`stopped` already starts `true`); `DrizzleMailboxDispatcher.running` reads `this.timer !== null || this.draining !== null` (covers the window between `start()` and the first `drain()`). All three ship with zero new fields."
+      wrong: |
+        // A poller wired in `real`, no HEALTH_CHECKS entry anywhere — /health can say "ok"
+        // while this dispatcher's timer never got past construction.
+        export class ReconciliationDispatcher {
+          private timer: NodeJS.Timeout | null = null
+          start() { this.timer = setInterval(() => this.poll(), 5_000) }
+          stop() { if (this.timer) clearInterval(this.timer); this.timer = null }
+        }
+        // registry.ts — no HEALTH_CHECKS binding for ReconciliationDispatcher anywhere
+      right: |
+        // The getter reads the field that ALREADY proves "start ran and stop didn't" — no new
+        // state, just a name for what was already true. Implements the core's structural
+        // PollingService port (no abstract-class member — mocks/spies stay untouched).
+        export class ReconciliationDispatcher implements PollingService {
+          private timer: NodeJS.Timeout | null = null
+          get running(): boolean { return this.timer !== null }
+          start() { this.timer = setInterval(() => this.poll(), 5_000) }
+          stop() { if (this.timer) clearInterval(this.timer); this.timer = null }
+        }
+        // registry.ts — mock/integration declare ABSENCE, real binds the check
+        { token: HEALTH_CHECKS, mock: null, integration: null,
+          real: { useFactory: c => new PollingHealthCheck('reconciliationDispatcher', c.resolve(ReconciliationDispatcher as any)) } },
+      mechanical: false

@@ -1,0 +1,250 @@
+registry:
+  type: backend
+  layer: domain
+  depends_on: []
+  depended_by: [entity, usecase, controller]
+  context_reads: []
+
+  patterns:
+    - id: ERR-01
+      name: "DomainErrors union type"
+      when: always
+      rule: "export type DomainErrors = BaseDomainErrors | 'ERROR_CODE'"
+      wrong: "DomainErrors = never when domain validations exist"
+    - id: ERR-02
+      name: "ApplicationErrors union type"
+      when: always
+      rule: "export type ApplicationErrors = BaseApplicationErrors | 'ENTITY_NOT_FOUND'"
+    - id: ERR-03
+      name: "InterfaceErrors union type"
+      when: always
+      rule: "export type InterfaceErrors = BaseInterfaceErrors | ContextInterfaceErrors"
+    - id: ERR-04
+      name: "InfrastructureErrors union type"
+      when: always
+      rule: "export type InfrastructureErrors = BaseInfrastructureErrors | ContextInfrastructureErrors"
+    - id: ERR-05
+      name: "registerErrorCodes() side-effect in context errors/index.ts"
+      when: always
+      rule: "All error codes passed to registerErrorCodes({...}) at the bottom of <context>/errors/index.ts with the matching HttpStatusCode"
+      wrong: "error codes defined as types but never registered; editing core's GlobalErrorMapper.ts directly to add a context-specific code"
+    - id: ERR-06
+      name: "Extends Base*Errors"
+      when: always
+      rule: "type DomainErrors = BaseDomainErrors | 'CUSTOM_ERROR'"
+      wrong: "standalone type without extending base errors"
+    - id: ERR-C01
+      name: "Error per entity validation"
+      when: "entity has schema validation rules"
+      rule: "one DomainError per .min()/.max()/.refine() in entity schema"
+    - id: ERR-C02
+      name: "NOT_FOUND errors"
+      when: "use case fetches entity by ID"
+      rule: "'ENTITY_NOT_FOUND' in ApplicationErrors"
+    - id: ERR-P01
+      name: "Context-scoped type aliases"
+      when: always
+      rule: "export type ContextDomainErrors = 'CODE_A' | 'CODE_B'; export type DomainErrors = BaseDomainErrors | ContextDomainErrors"
+      wrong: "export type DomainErrors = BaseDomainErrors | 'CODE_A' — inline codes without intermediate context type"
+    - id: ERR-P02
+      name: "never for empty error categories"
+      when: "context has no errors in a category"
+      rule: "export type ContextInterfaceErrors = never; export type InterfaceErrors = BaseInterfaceErrors | ContextInterfaceErrors"
+      wrong: "omitting empty categories or using export type InterfaceErrors = never without the context-prefixed type"
+    - id: ERR-P03
+      name: "Four-section file structure with section comments"
+      when: always
+      rule: "File has 4 commented sections: '// Domain Errors', '// Application Errors', '// Interface Errors', '// Infrastructure Errors' — each with a context-prefixed type + a composed DomainErrors/ApplicationErrors/etc. type"
+      wrong: "flat file without section separators or missing one of the four layers; using verbose '// ===' separator blocks instead of simple '// Category Errors' comments"
+    - id: ERR-P04
+      name: "Base imports from @codm/core-typescript"
+      when: always
+      rule: "import { HttpStatusCode, registerErrorCodes } from '@codm/core-typescript'; import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codm/core-typescript'"
+      wrong: "importing base error types from relative paths, from '@shared/errors', or from individual files; runtime imports of HttpStatusCode/registerErrorCodes mixed with the type imports under one statement"
+    - id: ERR-P05
+      name: "Context errors/index.ts exports Errors union"
+      when: always
+      rule: "Context errors/index.ts exports: export type Errors = ApplicationErrors | DomainErrors | InfrastructureErrors | InterfaceErrors"
+      wrong: "exporting individual error types without the unified Errors union"
+    - id: ERR-P06
+      name: "Core never imports from contexts"
+      when: always
+      rule: "packages/api/typescript/core/src/utils/GlobalErrorMapper.ts only seeds framework codes; context codes are added via registerErrorCodes() at module load from the context's own errors/index.ts"
+      wrong: "editing GlobalErrorMapper.ts to add a context-specific code; importing context error types into core; building any aggregate AllErrors union that enumerates contexts"
+    - id: ERR-P07
+      name: "HTTP status code mapping conventions"
+      when: always
+      rule: "INVALID_* → BAD_REQUEST, *_NOT_FOUND → NOT_FOUND, *_ALREADY_* → CONFLICT, CANNOT_* → FORBIDDEN, *_PERMISSION → FORBIDDEN, *_EXPIRED → BAD_REQUEST, *_FAILED → INTERNAL_SERVER_ERROR"
+      wrong: "NOT_FOUND mapped to BAD_REQUEST, or ALREADY_EXISTS mapped to BAD_REQUEST"
+    - id: ERR-P08
+      name: "Domain-scoped error code naming"
+      when: always
+      rule: "Error codes include context prefix for application errors: PATIENT_NOT_FOUND, CLINIC_NOT_FOUND, SERVICE_NOT_FOUND"
+      wrong: "Generic codes like NOT_FOUND, INVALID_DATA, BAD_REQUEST as context error codes (those belong in Base*Errors only)"
+    - id: ERR-P09
+      name: "Frontend error translations"
+      when: always
+      rule: "Every error code added to packages/app/react/src/locales/pt.json and packages/app/react/src/locales/en.json under the 'errors' key"
+      wrong: "error codes exist in backend but have no frontend translation"
+    - id: ERR-P10
+      name: "registry.ts value-imports ./errors for the side-effect"
+      when: always
+      rule: "The context's registry.ts has a top-level `import './errors'` (NOT `import type`) so registerErrorCodes() actually runs when shared/registry.ts pulls the context"
+      wrong: "only type-importing from ./errors elsewhere in the context; relying on entities or use cases to trigger the side-effect (their imports are erased at runtime if type-only)"
+
+  snippet:
+    skeleton: |
+      import { HttpStatusCode, registerErrorCodes } from '@codm/core-typescript'
+      import type { BaseDomainErrors, BaseApplicationErrors, BaseInterfaceErrors, BaseInfrastructureErrors } from '@codm/core-typescript'
+
+      // Domain Errors
+      export type {{Name}}DomainErrors = never
+      export type DomainErrors = BaseDomainErrors | {{Name}}DomainErrors
+
+      // Application Errors
+      export type {{Name}}ApplicationErrors = never
+      export type ApplicationErrors = BaseApplicationErrors | {{Name}}ApplicationErrors
+
+      // Interface Errors
+      export type {{Name}}InterfaceErrors = never
+      export type InterfaceErrors = BaseInterfaceErrors | {{Name}}InterfaceErrors
+
+      // Infrastructure Errors
+      export type {{Name}}InfrastructureErrors = never
+      export type InfrastructureErrors = BaseInfrastructureErrors | {{Name}}InfrastructureErrors
+
+      export type Errors = ApplicationErrors | DomainErrors | InfrastructureErrors | InterfaceErrors
+
+      registerErrorCodes({
+      	// Add context-specific error codes here:
+      	// SOME_ERROR: HttpStatusCode.BAD_REQUEST,
+      })
+    exemplar: |
+      import { HttpStatusCode, registerErrorCodes } from '@codm/core-typescript'
+      import type {
+        BaseDomainErrors,
+        BaseApplicationErrors,
+        BaseInterfaceErrors,
+        BaseInfrastructureErrors,
+      } from '@codm/core-typescript'
+
+      // Domain Errors
+      export type BillingDomainErrors = 'INVALID_INVOICE_TOTAL' | 'INVOICE_ALREADY_PAID'
+      export type DomainErrors = BaseDomainErrors | BillingDomainErrors
+
+      // Application Errors
+      export type BillingApplicationErrors =
+        | 'INVOICE_NOT_FOUND'
+        | 'INVOICE_ALREADY_EXISTS'
+        | 'UNAUTHORIZED_INVOICE_ACCESS'
+      export type ApplicationErrors = BaseApplicationErrors | BillingApplicationErrors
+
+      // Interface Errors
+      export type BillingInterfaceErrors = never
+      export type InterfaceErrors = BaseInterfaceErrors | BillingInterfaceErrors
+
+      // Infrastructure Errors
+      export type BillingInfrastructureErrors = never
+      export type InfrastructureErrors = BaseInfrastructureErrors | BillingInfrastructureErrors
+
+      export type Errors = ApplicationErrors | DomainErrors | InfrastructureErrors | InterfaceErrors
+
+      // Side-effect: plug this context's codes into the framework registry.
+      // <context>/registry.ts must value-import this file so it actually runs.
+      registerErrorCodes({
+        INVALID_INVOICE_TOTAL: HttpStatusCode.BAD_REQUEST,
+        UNAUTHORIZED_INVOICE_ACCESS: HttpStatusCode.FORBIDDEN,
+        INVOICE_NOT_FOUND: HttpStatusCode.NOT_FOUND,
+        INVOICE_ALREADY_PAID: HttpStatusCode.CONFLICT,
+        INVOICE_ALREADY_EXISTS: HttpStatusCode.CONFLICT,
+      })
+
+  scaffold: "bun cli errors <context>"
+
+  bad_practices:
+    - id: bp-01
+      name: "Throwing BaseError without generic type"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'new\s+BaseError\s*\('
+      wrong: |
+        // No type safety — any string accepted, typos undetected
+        throw new BaseError('BOOK_NOT_FOUND')
+      right: |
+        // Type-safe — compiler enforces valid error codes
+        throw new BaseError<ApplicationErrors>('BOOK_NOT_FOUND')
+
+    - id: bp-02
+      name: "Using error without calling registerErrorCodes()"
+      severity: critical
+      mechanical: false
+      wrong: |
+        // Error code defined as a type but never registered with the framework runtime
+        export type OrderApplicationErrors = 'ORDER_NOT_FOUND'
+        export type ApplicationErrors = BaseApplicationErrors | OrderApplicationErrors
+        // ... and no registerErrorCodes({ ORDER_NOT_FOUND: ... }) anywhere.
+        // Result: any throw of ORDER_NOT_FOUND returns 500 because the registry
+        // falls through to INTERNAL_SERVER_ERROR for unknown codes.
+      right: |
+        // Type union + registry side-effect live together in errors/index.ts
+        export type OrderApplicationErrors = 'ORDER_NOT_FOUND'
+        export type ApplicationErrors = BaseApplicationErrors | OrderApplicationErrors
+
+        registerErrorCodes({
+          ORDER_NOT_FOUND: HttpStatusCode.NOT_FOUND,
+        })
+
+        // AND <context>/registry.ts has `import './errors'` to fire the side-effect.
+
+    - id: bp-05
+      name: "Editing core's GlobalErrorMapper.ts to add a context code"
+      severity: critical
+      mechanical: false
+      wrong: |
+        // packages/api/typescript/core/src/utils/GlobalErrorMapper.ts
+        const registry: Record<string, HttpStatusCode> = {
+          INVALID_ID: HttpStatusCode.BAD_REQUEST,
+          // ... framework codes ...
+          ORDER_NOT_FOUND: HttpStatusCode.NOT_FOUND,  // ← context-specific code in core
+        }
+        // Breaks "core never imports from contexts" — every new domain
+        // forces a core diff.
+      right: |
+        // Core stays untouched. Context registers from its own errors/index.ts:
+        // packages/api/typescript/src/order/errors/index.ts
+        registerErrorCodes({ ORDER_NOT_FOUND: HttpStatusCode.NOT_FOUND })
+
+    - id: bp-03
+      name: "Keeping dead error codes in GlobalErrorMapper"
+      severity: critical
+      mechanical: false
+      wrong: |
+        // Error code that no code throws anymore — creates confusion
+        export type UiApplicationErrors =
+          | 'ONBOARDING_NOT_FOUND'
+          | 'ONBOARDING_MISSING_DOCTOR_INFO'  // Dead code! No throw site exists
+      right: |
+        // Remove error codes that are no longer thrown
+        export type UiApplicationErrors =
+          | 'ONBOARDING_NOT_FOUND'
+          | 'ONBOARDING_ALREADY_COMPLETED'
+
+    - id: bp-04
+      name: "Generic error codes"
+      severity: critical
+      mechanical: true
+      detect:
+        - '''(INVALID_DATA|SERVER_ERROR|BAD_REQUEST)'''
+      wrong: |
+        // Vague, catch-all codes that convey no domain meaning
+        export type ProductDomainErrors =
+          | 'INVALID_DATA'
+          | 'SERVER_ERROR'
+          | 'BAD_REQUEST'
+      right: |
+        // Specific, domain-scoped error codes
+        export type ProductDomainErrors =
+          | 'INVALID_PRODUCT_PRICE'
+          | 'PRODUCT_OUT_OF_STOCK'
+          | 'PRODUCT_NAME_TOO_LONG'

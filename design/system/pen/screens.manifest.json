@@ -1,0 +1,356 @@
+{
+	"generatedFrom": "design/codm.pen",
+	"screens": [
+		{
+			"id": "uOamt",
+			"slug": "canais-group",
+			"area": "Mesclado / Projetos & Canais",
+			"name": "Canais — Group",
+			"width": 1440,
+			"height": 900,
+			"exportNodeId": "i0iogb"
+		},
+		{
+			"id": "TfUe4",
+			"slug": "canais-pareamento-aguardando-gateway-group",
+			"area": "Mesclado / Projetos & Canais",
+			"name": "Canais — pareamento — aguardando gateway — Group",
+			"width": 1440,
+			"height": 900,
+			"exportNodeId": "LPdas"
+		},
+		{
+			"id": "oilhX",
+			"slug": "canais-pareamento-codigo-expirado-group",
+			"area": "Mesclado / Projetos & Canais",
+			"name": "Canais — pareamento — código expirado — Group",
+			"width": 1440,
+			"height": 900,
+			"exportNodeId": "skxod"
+		},
+		{
+			"id": "e6hOKJ",
+			"slug": "canais-pareamento-conectado-group",
+			"area": "Mesclado / Projetos & Canais",
+			"name": "Canais — pareamento — conectado — Group",
+			"width": 1440,
+			"height": 900,
+			"exportNodeId": "v4P8mP"
+		},
+		{
+			"id": "msHbV",
+			"slug": "canais-pareamento-qr-ativo-group",
+			"area": "Mesclado / Projetos & Canais",
+			"name": "Canais — pareamento — QR ativo — Group",
+			"width": 1440,
+			"height": 900,
+			"exportNodeId": "vHXbQ"
+		},
+		{
+			"id": "H65VPv",
+			"slug": "configuracao-inicial-wrapper",
+			"area": "Mesclado / Onboarding, Login & Attach",
+			"name": "Configuração inicial — Wrapper",
+			"width": 1441,
+			"height": 901,
+			"exportNodeId": "JI1PL"
+		},
+		{
+			"id": "cixrK",
+			"slug": "configuracoes-wrapper",
+			"area": "Mesclado / Tarefas, Configurações & Conta",
+			"name": "Configurações — Wrapper",
+			"width": 1440,
+			"height": 900,
+			"exportNodeId": "StJKs"
+		},
+		{
+			"id": "egPQt",
+			"slug": "login-wrapper",
+			"area": "Mesclado / Onboarding, Login & Attach",
+			"name": "Login — Wrapper",
+			"width": 1441,
+			"height": 901,
+			"exportNodeId": "Y7b9M"
+		},
+		{
+			"id": "jxl4Y",
+			"slug": "minha-conta-wrapper",
+			"area": "Mesclado / Tarefas, Configurações & Conta",
+			"name": "Minha Conta — Wrapper",
+			"width": 1440,
+			"height": 900,
+			"exportNodeId": "A0vZXh"
+		},
+		{
+			"id": "NN8IL",
+			"slug": "onboarding-1-boas-vindas-wrapper",
+			"area": "Mesclado / Onboarding, Login & Attach",
+			"name": "Onboarding 1 — Boas-vindas — Wrapper",
+			"width": 1441,
+			"height": 901,
+			"exportNodeId": "m8uEmq"
+		},
+		{
+			"id": "FPKgO",
+			"slug": "onboarding-2-como-funciona-wrapper",
+			"area": "Mesclado / Onboarding, Login & Attach",
+			"name": "Onboarding 2 — Como funciona — Wrapper",
+			"width": 1441,
+			"height": 901,
+			"exportNodeId": "z7m4h"
+		},
+		{
+			"id": "tBcCA",
+			"slug": "onboarding-3-controle-wrapper",
+			"area": "Mesclado / Onboarding, Login & Attach",
+			"name": "Onboarding 3 — Controle — Wrapper",
+			"width": 1441,
+			"height": 901,
+			"exportNodeId": "L51Om"
+		},
+		{
+			"id": "d4bKAl",
+			"slug": "permissao-wrapper",
+			"area": "Mesclado / Onboarding, Login & Attach",
+			"name": "Permissão — Wrapper",
+			"width": 1441,
+			"height": 901,
+			"exportNodeId": "E87bs"
+		},
+		{
+			"id": "EeoDL",
+			"slug": "projetos-adicionar-group",
+			"area": "Mesclado / Projetos & Canais",
+			"name": "Projetos — adicionar — Group",
+			"width": 1440,
+			"height": 900,
+			"exportNodeId": "cxgvH"
+		},
+		{
+			"id": "bLARg",
+			"slug": "projetos-group",
+			"area": "Mesclado / Projetos & Canais",
+			"name": "Projetos — Group",
+			"width": 1440,
+			"height": 900,
+			"exportNodeId": "dtgs7"
+		},
+		{
+			"id": "fMBzX",
+			"slug": "projetos-vazio-e-remover-group",
+			"area": "Mesclado / Projetos & Canais",
+			"name": "Projetos — vazio e remover — Group",
+			"width": 1440,
+			"height": 900,
+			"exportNodeId": "kEpCL"
+		},
+		{
+			"id": "dbY54",
+			"slug": "screen-01-detalhe-da-tarefa",
+			"area": "Mesclado / Tarefa & Config da conversa",
+			"name": "Screen — 01 · Detalhe da tarefa",
+			"width": 1440,
+			"height": 900,
+			"exportNodeId": "N9dUcw"
+		},
+		{
+			"id": "z4NDCF",
+			"slug": "screen-02-configuracoes-da-conversa",
+			"area": "Mesclado / Tarefa & Config da conversa",
+			"name": "Screen — 02 · Configurações da conversa",
+			"width": 1440,
+			"height": 900,
+			"exportNodeId": "qZDge"
+		},
+		{
+			"id": "PMrmv",
+			"slug": "screen-03-loops",
+			"area": "Mesclado / Tarefa & Config da conversa",
+			"name": "Screen — 03 · Loops",
+			"width": 1440,
+			"height": 900,
+			"exportNodeId": "r61Tt"
+		},
+		{
+			"id": "W8mqWB",
+			"slug": "screen-04-apagar-conversa",
+			"area": "Mesclado / Tarefa & Config da conversa",
+			"name": "Screen — 04 · Apagar conversa",
+			"width": 1440,
+			"height": 900,
+			"exportNodeId": "FABM8"
+		},
+		{
+			"id": "LqqKM",
+			"slug": "screen-1-inicio-cheio",
+			"area": "Mesclado / Início",
+			"name": "Screen 1 — Início (cheio)",
+			"width": 1440,
+			"height": 900,
+			"exportNodeId": "qcD4n"
+		},
+		{
+			"id": "lktoE",
+			"slug": "screen-2-inicio-vazio",
+			"area": "Mesclado / Início",
+			"name": "Screen 2 — Início (vazio)",
+			"width": 1440,
+			"height": 900,
+			"exportNodeId": "tOKTk"
+		},
+		{
+			"id": "y8uXMi",
+			"slug": "screen-3-inicio-carregando",
+			"area": "Mesclado / Início",
+			"name": "Screen 3 — Início (carregando)",
+			"width": 1440,
+			"height": 900,
+			"exportNodeId": "vZsJU"
+		},
+		{
+			"id": "m4Q5K",
+			"slug": "screen-4-inicio-canal-offline",
+			"area": "Mesclado / Início",
+			"name": "Screen 4 — Início (canal offline)",
+			"width": 1440,
+			"height": 900,
+			"exportNodeId": "a3Axt"
+		},
+		{
+			"id": "Z17jOD",
+			"slug": "screen-artefatos",
+			"area": "Mesclado / Conversa",
+			"name": "Screen / Artefatos",
+			"width": 1440,
+			"height": 900,
+			"exportNodeId": "oAi4F"
+		},
+		{
+			"id": "VQNHl",
+			"slug": "screen-blog-indice",
+			"area": "Mesclado / Site público",
+			"name": "Screen — Blog (índice)",
+			"width": 1440,
+			"height": 1976,
+			"exportNodeId": "n5O4I"
+		},
+		{
+			"id": "oB3An",
+			"slug": "screen-blog-post",
+			"area": "Mesclado / Site público",
+			"name": "Screen — Blog (post)",
+			"width": 1440,
+			"height": 2927,
+			"exportNodeId": "n6AcF"
+		},
+		{
+			"id": "i1AQD2",
+			"slug": "screen-chat-pausada-sussurro",
+			"area": "Mesclado / Conversa",
+			"name": "Screen / Chat — pausada, sussurro",
+			"width": 1440,
+			"height": 900,
+			"exportNodeId": "sg0iK"
+		},
+		{
+			"id": "hLcjH",
+			"slug": "screen-chat-resposta-direta",
+			"area": "Mesclado / Conversa",
+			"name": "Screen / Chat — resposta direta",
+			"width": 1440,
+			"height": 900,
+			"exportNodeId": "hWPTw"
+		},
+		{
+			"id": "asqga",
+			"slug": "screen-landing",
+			"area": "Mesclado / Site público",
+			"name": "Screen — Landing",
+			"width": 1440,
+			"height": 4190,
+			"exportNodeId": "LpiKf"
+		},
+		{
+			"id": "G5MOV",
+			"slug": "screen-tarefas-da-conversa",
+			"area": "Mesclado / Conversa",
+			"name": "Screen / Tarefas da conversa",
+			"width": 1440,
+			"height": 900,
+			"exportNodeId": "g0oyA"
+		},
+		{
+			"id": "OJmwd",
+			"slug": "tarefas-arquivadas-wrapper",
+			"area": "Mesclado / Tarefas, Configurações & Conta",
+			"name": "Tarefas Arquivadas — Wrapper",
+			"width": 1440,
+			"height": 900,
+			"exportNodeId": "Q82ur8"
+		},
+		{
+			"id": "vwn9X",
+			"slug": "tarefas-vazio-wrapper",
+			"area": "Mesclado / Tarefas, Configurações & Conta",
+			"name": "Tarefas Vazio — Wrapper",
+			"width": 1440,
+			"height": 900,
+			"exportNodeId": "BtlNn"
+		},
+		{
+			"id": "OogKP",
+			"slug": "tarefas-wrapper",
+			"area": "Mesclado / Tarefas, Configurações & Conta",
+			"name": "Tarefas — Wrapper",
+			"width": 1440,
+			"height": 900,
+			"exportNodeId": "wqISp"
+		},
+		{
+			"id": "fa1hL",
+			"slug": "tudo-pronto-wrapper",
+			"area": "Mesclado / Onboarding, Login & Attach",
+			"name": "Tudo pronto — Wrapper",
+			"width": 1441,
+			"height": 901,
+			"exportNodeId": "FQkKw"
+		},
+		{
+			"id": "ZbVfW",
+			"slug": "vincular-agentes-wrapper",
+			"area": "Mesclado / Onboarding, Login & Attach",
+			"name": "Vincular — Agentes — Wrapper",
+			"width": 1441,
+			"height": 901,
+			"exportNodeId": "O1dFM"
+		},
+		{
+			"id": "PENI6",
+			"slug": "vincular-contato-wrapper",
+			"area": "Mesclado / Onboarding, Login & Attach",
+			"name": "Vincular — Contato — Wrapper",
+			"width": 1441,
+			"height": 901,
+			"exportNodeId": "VJXEt"
+		},
+		{
+			"id": "EWECP",
+			"slug": "vincular-projeto-wrapper",
+			"area": "Mesclado / Onboarding, Login & Attach",
+			"name": "Vincular — Projeto — Wrapper",
+			"width": 1441,
+			"height": 901,
+			"exportNodeId": "Ll0CW"
+		},
+		{
+			"id": "du3gx",
+			"slug": "vincular-revisao-wrapper",
+			"area": "Mesclado / Onboarding, Login & Attach",
+			"name": "Vincular — Revisão — Wrapper",
+			"width": 1441,
+			"height": 901,
+			"exportNodeId": "veUjJ"
+		}
+	]
+}

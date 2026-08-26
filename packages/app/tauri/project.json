@@ -1,0 +1,85 @@
+{
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"name": "app-tauri",
+	"projectType": "application",
+	"targets": {
+		"lint": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"//shape": "Matches the template's app-tauri:lint exactly \u2014 config/ only, not commands/ (that dir stays eslint-ignored, see eslint.config.ts). Needed packages/app/tauri/tsconfig.json (new \u2014 codm had none) so eslint's typed projectService can parse config/, and a matching entry in the root tsconfig.json references so the service discovers it \u2014 same prerequisite the template already had.",
+			"inputs": [
+				"{projectRoot}/config/**/*",
+				"{projectRoot}/tsconfig.json",
+				"{workspaceRoot}/eslint.config.ts",
+				"{workspaceRoot}/scripts/eslint-rules/**/*",
+				"^production"
+			],
+			"options": {
+				"command": "eslint config --ext ts --report-unused-disable-directives --max-warnings 0",
+				"cwd": "packages/app/tauri"
+			}
+		},
+		"test": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"dependsOn": ["sidecars"],
+			"//dependsOn": "WITHOUT THIS THE TARGET DIES BEFORE THE FIRST #[test]. `build.rs` calls `tauri_build::build()`, which resolves `bundle.externalBin` + `bundle.resources` from tauri.conf.json BEFORE any test compiles — the test profile exempts nothing. Since `binaries/` is gitignored (src-tauri/.gitignore:6) and only `release-*.yml` ever produced it, `cargo test` exited 101 in any clean tree: `resource path binaries/codm-daemon-<triple> doesn't exist`. The target was born RED-FROM-CLEAN in 192f8ce9 — it passed once only because that tree still held sidecars from an earlier `desktop:dev`. With `.githooks/pre-push` running `set -e`, this blocked EVERY push, and took down with it the `tests/no_raw_http.rs` rail (which forbids raw reqwest outside src/api/mod.rs) and tauri-specta's bindings.ts regeneration (desktop-shell/SKILL.md:73,:183). Mirrors `dev` and `bundle`, which already declared the same dependency. Measured 2026-08-18: sidecar build 2.09s, 64 tests green in 0.90s — so the dependency is cheap even though `sidecars` is uncached.",
+			"//shape": "The template splits this in two \u2014 `test` runs `bun test config/` and a SEPARATE `test:rust` runs cargo \u2014 because its hot path is bun-only ON PURPOSE (a contributor with neither Go nor Rust must keep `bun run test` green). The codm does NOT inherit that restriction, and it is measured, not assumed: `client:test` is already `cargo test --manifest-path dist/rust/Cargo.toml` and `@codm/contracts:test` already ends in `bun run test:rust && bun run test:go`, so `nx run-many -t test` here has been invoking cargo and go all along. Splitting would put this crate in a lane nothing runs \u2014 which is exactly the state this target exists to end. The bun side of the config/ tests is not duplicated here: it already belongs to `test:tooling` (./packages/app/tauri/config).",
+			"inputs": [
+				"{projectRoot}/src-tauri/src/**/*",
+				"{projectRoot}/src-tauri/tests/**/*",
+				"{projectRoot}/src-tauri/Cargo.toml",
+				"{projectRoot}/src-tauri/Cargo.lock",
+				"{projectRoot}/src-tauri/build.rs",
+				"{projectRoot}/src-tauri/tauri.conf.json",
+				"{projectRoot}/src-tauri/capabilities/**/*",
+				"^production"
+			],
+			"options": {
+				"command": "cargo test --quiet",
+				"cwd": "packages/app/tauri/src-tauri"
+			}
+		},
+		"generate": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"options": {
+				"command": "bun config/generate.ts",
+				"cwd": "packages/app/tauri"
+			}
+		},
+		"sidecars": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"options": {
+				"command": "bun config/build-sidecars.ts",
+				"cwd": "packages/app/tauri"
+			}
+		},
+		"dev": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"dependsOn": ["sidecars"],
+			"options": {
+				"commands": ["nx run api-typescript:dev:cloud", "bun x tauri dev"],
+				"cwd": "packages/app/tauri",
+				"parallel": true
+			}
+		},
+		"bundle": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"dependsOn": [
+				"sidecars",
+				{
+					"projects": "app-react",
+					"target": "build-spa"
+				}
+			],
+			"options": {
+				"command": "bun x tauri build",
+				"cwd": "packages/app/tauri"
+			}
+		}
+	}
+}

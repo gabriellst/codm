@@ -1,0 +1,19 @@
+import { BasePrimitiveValueObject, z } from '@codm/core-typescript'
+import { DomainErrors } from '../errors'
+
+export const SkuSchema = z
+	.string()
+	.min(1, { error: 'INVALID_SKU' as DomainErrors })
+	.transform(v => v.trim())
+
+export class Sku extends BasePrimitiveValueObject<typeof SkuSchema> {
+	static override schema = SkuSchema
+
+	equals(other: Sku): boolean {
+		return this.value === other.value
+	}
+
+	override toString(): string {
+		return this.value
+	}
+}

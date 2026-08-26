@@ -1,0 +1,60 @@
+// Package entities contains domain entities for the sales bounded context.
+package entities
+
+import (
+	ctxerrors "template/api-go/internal/sales/errors"
+	"template/core-go/entities"
+	"template/core-go/errors"
+	"template/core-go/objects"
+)
+
+// Coupon is an aggregate root for the sales bounded context.
+type Coupon struct {
+	entities.BaseEntity
+	// TODO: add domain fields, e.g.:
+	// OwnerID string
+	// Status  enums.CouponStatus
+}
+
+// NewCoupon creates a new Coupon, validates inputs, and raises the creation event.
+func NewCoupon(ownerID string) (*Coupon, error) {
+	if ownerID == "" {
+		return nil, errors.NewBaseError(ctxerrors.CodeCouponInvalid, "coupon: ownerID must not be empty")
+	}
+
+	base := entities.NewBaseEntity()
+	e := &Coupon{
+		BaseEntity: base,
+		// OwnerID: ownerID,
+	}
+
+	// e.AddDomainEvent(ctxevents.NewCouponCreatedEvent(base.ID.UUID(), ownerID, ...))
+
+	return e, nil
+}
+
+// SomeBehavior is an example behavior method.
+// Guard → mutate → IncrementVersion → optional event.
+func (e *Coupon) SomeBehavior() error {
+	// if e.Status != enums.CouponStatusPending {
+	// 	return errors.NewBaseError(ctxerrors.CodeCouponInvalid, "coupon is not in a valid state")
+	// }
+	_ = e.IncrementVersion()
+	return nil
+}
+
+// ReconstructCoupon rehydrates a Coupon from persistence without raising events.
+// Called only from repositories — never from business code.
+func ReconstructCoupon(
+	// id objects.ID,
+	// ownerID string,
+	base entities.BaseEntity,
+) *Coupon {
+	return &Coupon{
+		BaseEntity: base,
+		// OwnerID: ownerID,
+	}
+}
+
+// Ensure objects is used if referenced.
+var _ = objects.ID{}

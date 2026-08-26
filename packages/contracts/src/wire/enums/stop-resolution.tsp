@@ -1,0 +1,10 @@
+namespace TemplateContracts;
+
+@doc("How an operator resolves a stop. The resolution must match the stop kind (e.g. APPROVE/DENY only for APPROVAL_NEEDED); TAKE_OVER additionally pauses the thread for direct conversation.")
+enum StopResolution {
+  RETRY: "RETRY",
+  REVIEW_AND_SEND: "REVIEW_AND_SEND",
+  TAKE_OVER: "TAKE_OVER",
+  APPROVE: "APPROVE",
+  DENY: "DENY",
+}

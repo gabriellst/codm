@@ -1,0 +1,1065 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "version": "1.0.0",
+    "title": "codm-backend"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "shared"
+        ],
+        "description": "Readiness do daemon: banco, migrações e os timers de poll (canal WhatsApp entra só como diagnóstico)",
+        "operationId": "Health",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Readiness do daemon: banco, migrações e os timers de poll (canal WhatsApp entra só como diagnóstico)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/Status"
+                    },
+                    "components": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "status": {
+                            "$ref": "#/components/schemas/Status2"
+                          },
+                          "gate": {
+                            "type": "boolean"
+                          },
+                          "detail": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "status",
+                          "gate"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "components"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/cloud-token": {
+      "post": {
+        "tags": [
+          "shared"
+        ],
+        "description": "Push a freshly-exchanged session token into the local daemon",
+        "operationId": "SetCloudToken",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "token"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "token": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Push a freshly-exchanged session token into the local daemon",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sign-in/loopback": {
+      "get": {
+        "tags": [
+          "shared"
+        ],
+        "description": "Loopback landing (RFC 8252): receives the one-time sign-in code from the system browser",
+        "operationId": "SignInLoopback",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "code",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Loopback landing (RFC 8252): receives the one-time sign-in code from the system browser",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "examples": [
+                    "<html>…</html>"
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": "<html>…</html>",
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sign-in/loopback/claim": {
+      "get": {
+        "tags": [
+          "shared"
+        ],
+        "description": "Claims the one-time sign-in code delivered to the loopback landing (single use)",
+        "operationId": "ClaimSignInCode",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Claims the one-time sign-in code delivered to the loopback landing (single use)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "code": null
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "code": null
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/*": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "description": "better-auth passthrough",
+        "operationId": "AuthPassthroughGet",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "better-auth passthrough",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "examples": [
+                    {}
+                  ],
+                  "x-tpl-unknown": true
+                },
+                "examples": {
+                  "default": {
+                    "value": {},
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "description": "better-auth passthrough",
+        "operationId": "AuthPassthroughPost",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "better-auth passthrough",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "examples": [
+                    {}
+                  ],
+                  "x-tpl-unknown": true
+                },
+                "examples": {
+                  "default": {
+                    "value": {},
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "description": "Get the current authenticated session",
+        "operationId": "GetSession",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Get the current authenticated session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "emailVerified": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "email",
+                        "name",
+                        "emailVerified"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "session": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "userId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "ownerId": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "userId",
+                        "expiresAt",
+                        "ownerId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "user",
+                    "session"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "user": {
+                        "id": "019e4d24-6524-7041-9e1c-8108180cddae",
+                        "email": "user@example.com",
+                        "name": "Alice",
+                        "emailVerified": true
+                      },
+                      "session": {
+                        "id": "019e4d24-6524-7041-9e1c-8108180cddaf",
+                        "userId": "019e4d24-6524-7041-9e1c-8108180cddae",
+                        "expiresAt": "2030-01-01T00:00:00.000Z",
+                        "ownerId": null
+                      }
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "user": {
+                        "id": "019e4d24-6524-7041-9e1c-8108180cddae",
+                        "email": "user@example.com",
+                        "name": "Alice",
+                        "emailVerified": true
+                      },
+                      "session": {
+                        "id": "019e4d24-6524-7041-9e1c-8108180cddaf",
+                        "userId": "019e4d24-6524-7041-9e1c-8108180cddae",
+                        "expiresAt": "2030-01-01T00:00:00.000Z",
+                        "ownerId": null
+                      }
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/identity/account/avatar": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "description": "MOCK. Accept-and-echo multipart avatar upload — returns new pictureUrl",
+        "operationId": "UploadAvatar",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "MOCK. Accept-and-echo multipart avatar upload — returns new pictureUrl",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pictureUrl": {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  },
+                  "required": [
+                    "pictureUrl"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/desktop-callback": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "description": "Bridges a better-auth browser session into a one-time token, returned to the app over its loopback listener",
+        "operationId": "DesktopCallback",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "port",
+            "schema": {
+              "type": "integer",
+              "minimum": 1024,
+              "maximum": 65535
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bridges a better-auth browser session into a one-time token, returned to the app over its loopback listener",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "examples": [
+                    "<redirect>"
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": "<redirect>",
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sign-in/social": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "description": "Redireciona o browser do sistema para o provedor social escolhido, iniciando o login do desktop",
+        "operationId": "SignInSocial",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "provider",
+            "schema": {
+              "$ref": "#/components/schemas/SocialProvider"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "port",
+            "schema": {
+              "type": "integer",
+              "minimum": 1024,
+              "maximum": 65535
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Redireciona o browser do sistema para o provedor social escolhido, iniciando o login do desktop",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "examples": [
+                    "<redirect>"
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": "<redirect>",
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/owners": {
+      "post": {
+        "tags": [
+          "owner"
+        ],
+        "description": "Create a new owner (tenant); the creator becomes the responsible user",
+        "operationId": "CreateOwner",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "kind": {
+                    "$ref": "#/components/schemas/OwnerKind"
+                  },
+                  "timezone": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "pictureUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "name": "Acme Org",
+                    "kind": "ORGANIZATION",
+                    "timezone": "America/Sao_Paulo",
+                    "pictureUrl": "https://cdn.example.com/logo.png"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Create a new owner (tenant); the creator becomes the responsible user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ownerId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  },
+                  "required": [
+                    "ownerId"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "ownerId": "019e4d24-6524-7041-9e1c-8108180cddae"
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "ownerId": "019e4d24-6524-7041-9e1c-8108180cddae"
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/owners/settings": {
+      "patch": {
+        "tags": [
+          "owner"
+        ],
+        "description": "Update owner profile settings (name / picture / timezone)",
+        "operationId": "UpdateOwnerSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "pictureUrl": {
+                    "nullable": true,
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "timezone": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "name": "New Acme",
+                    "pictureUrl": "https://cdn.example.com/new-logo.png",
+                    "timezone": "America/Sao_Paulo"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Update owner profile settings (name / picture / timezone)",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/owners/disable": {
+      "post": {
+        "tags": [
+          "owner"
+        ],
+        "description": "Disable a owner (C19 DisableOwner; OWNER only)",
+        "operationId": "DisableOwner",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                }
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "reason": "closing for maintenance"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Disable a owner (C19 DisableOwner; OWNER only)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ownerId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "isDisabled": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ownerId",
+                    "isDisabled"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "ownerId": "019e4d24-6524-7041-9e1c-8108180cddae",
+                      "isDisabled": true
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "ownerId": "019e4d24-6524-7041-9e1c-8108180cddae",
+                      "isDisabled": true
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/owners/enable": {
+      "post": {
+        "tags": [
+          "owner"
+        ],
+        "description": "Re-enable a previously disabled owner (C20 EnableOwner; OWNER only)",
+        "operationId": "EnableOwner",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Re-enable a previously disabled owner (C20 EnableOwner; OWNER only)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ownerId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "isDisabled": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ownerId",
+                    "isDisabled"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "ownerId": "019e4d24-6524-7041-9e1c-8108180cddae",
+                      "isDisabled": false
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "ownerId": "019e4d24-6524-7041-9e1c-8108180cddae",
+                      "isDisabled": false
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/owners/{ownerId}/activate": {
+      "post": {
+        "tags": [
+          "owner"
+        ],
+        "description": "Switch the authenticated session to the given owner (SPEC-07 SetActiveOwner)",
+        "operationId": "SetActiveOwner",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ownerId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Switch the authenticated session to the given owner (SPEC-07 SetActiveOwner)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ownerId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "ownerId"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "ownerId": "019e4d24-6524-7041-9e1c-8108180cddae"
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "ownerId": "019e4d24-6524-7041-9e1c-8108180cddae"
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApiErrors": {
+        "type": "string",
+        "enum": [
+          "AGENT_ENTRY_FORBIDS_SENDER",
+          "AGENT_RUN_SCOPE_MISMATCH",
+          "AGENT_RUN_TOKEN_INVALID",
+          "AGENT_TOOLS_UNSUPPORTED",
+          "AGENT_TRANSPORT_STOP_NOT_DECLARABLE",
+          "ARTIFACT_FILE_MISSING",
+          "ARTIFACT_NOT_FOUND",
+          "ARTIFACT_NOT_PREVIEWABLE",
+          "ARTIFACT_TOO_LARGE",
+          "CANNOT_CONVERT_INPUT",
+          "CHANNEL_MEDIA_UNSUPPORTED",
+          "CHANNEL_NOT_CONNECTED",
+          "CLARIFICATION_ALREADY_PENDING",
+          "CLASSIFICATION_FAILED",
+          "CLOUD_UNREACHABLE",
+          "COMMAND_HANDLER_NOT_FOUND",
+          "COMMAND_QUEUE_NOT_FOUND",
+          "CONTACT_AVATAR_NOT_FOUND",
+          "CONTACT_ENTRY_REQUIRES_SENDER",
+          "CREDENTIAL_DECRYPT_FAILED",
+          "DATA_DIR_LOCKED",
+          "EMAIL_ALREADY_REGISTERED",
+          "ENTITY_NOT_FOUND_WHILE_SAVING",
+          "ENTRY_NOT_FOUND",
+          "ENTRY_NOT_INVOCABLE",
+          "FORBIDDEN",
+          "GATEWAY_UNAVAILABLE",
+          "HANDLER_NOT_BOUND",
+          "INVALIDATED_AUTH_TOKEN",
+          "INVALID_AUTH_TOKEN",
+          "INVALID_CONTROLLER_EXAMPLES",
+          "INVALID_EMAIL",
+          "INVALID_EMAIL_FORMAT",
+          "INVALID_ENTITY",
+          "INVALID_ID",
+          "INVALID_ID_VALUES_LENGTH",
+          "INVALID_LANGUAGE",
+          "INVALID_LOOP_INTERVAL",
+          "INVALID_LOOP_TIME",
+          "INVALID_OUTBOX_PAYLOAD",
+          "INVALID_PHONE",
+          "INVALID_PICTURE_URL",
+          "INVALID_RANGE",
+          "INVALID_REQUEST",
+          "INVALID_TIMEZONE",
+          "ISSUE_ALREADY_ARCHIVED",
+          "ISSUE_ALREADY_COMPLETED",
+          "ISSUE_ARCHIVED",
+          "ISSUE_NOT_ARCHIVED",
+          "ISSUE_NOT_COMPLETED",
+          "ISSUE_NOT_FOUND",
+          "LAST_INVOKER",
+          "LOOP_NOT_FOUND",
+          "LOOP_PROMPT_TOO_LONG",
+          "LOOP_WITHOUT_WEEKDAY",
+          "MIGRATIONS_PENDING",
+          "MISSING_ENVIRONMENT_VARIABLE",
+          "MISSING_LOG_CONTENT",
+          "MODEL_NOT_AVAILABLE",
+          "NOT_FOUND",
+          "NOT_IMPLEMENTED",
+          "NO_CHANNEL_CONNECTED",
+          "NO_PROVIDER_SELECTED",
+          "ONBOARDING_DRAFT_INCOMPLETE",
+          "ONBOARDING_NOT_COMPLETED",
+          "OPTIMISTIC_LOCK_CONFLICT",
+          "OWNER_ALREADY_DISABLED",
+          "OWNER_NOT_DISABLED",
+          "OWNER_NOT_FOUND",
+          "PARTICIPANT_NOT_FOUND",
+          "PASSWORDS_DONT_MATCH",
+          "PASSWORD_TOO_WEAK",
+          "PATH_NOT_A_DIRECTORY",
+          "PATH_NOT_FOUND",
+          "PROMPT_TOO_LONG",
+          "PROVIDER_COMING_SOON",
+          "PROVIDER_NOT_BOUND",
+          "PROVIDER_NOT_DETECTED",
+          "QUOTED_ENTRY_NOT_IN_THREAD",
+          "RATE_LIMITED",
+          "RESOLUTION_NOT_APPLICABLE",
+          "SESSION_ALREADY_STREAMING",
+          "SOCIAL_SIGN_IN_FAILED",
+          "STOP_ALREADY_RESOLVED",
+          "STOP_CRITERION_DISABLED",
+          "STOP_NOT_FOUND",
+          "STOP_NOT_IN_THREAD",
+          "TERMINAL_SPAWN_FAILED",
+          "THREAD_ALREADY_ATTACHED",
+          "THREAD_ALREADY_DELETED",
+          "THREAD_HAS_ACTIVE_WORK",
+          "THREAD_NOT_FOUND",
+          "THREAD_NOT_PAUSED",
+          "THREAD_PAUSED",
+          "TOO_MANY_TERMINAL_STREAMS",
+          "UNAUTHORIZED",
+          "USER_NOT_FOUND",
+          "VALIDATION_ERROR",
+          "WEAK_PASSWORD",
+          "WORKSPACE_ALREADY_REGISTERED",
+          "WORKSPACE_IN_USE",
+          "WORKSPACE_NOT_FOUND"
+        ],
+        "description": "All possible error codes"
+      },
+      "Status": {
+        "type": "string",
+        "enum": [
+          "ok",
+          "not_ready"
+        ]
+      },
+      "Status2": {
+        "type": "string",
+        "enum": [
+          "up",
+          "down"
+        ]
+      },
+      "SocialProvider": {
+        "type": "string",
+        "enum": [
+          "github",
+          "google"
+        ]
+      },
+      "OwnerKind": {
+        "default": "ORGANIZATION",
+        "type": "string",
+        "enum": [
+          "ORGANIZATION",
+          "INDIVIDUAL"
+        ]
+      }
+    }
+  },
+  "x-error-codes": [
+    "AGENT_ENTRY_FORBIDS_SENDER",
+    "AGENT_RUN_SCOPE_MISMATCH",
+    "AGENT_RUN_TOKEN_INVALID",
+    "AGENT_TOOLS_UNSUPPORTED",
+    "AGENT_TRANSPORT_STOP_NOT_DECLARABLE",
+    "ARTIFACT_FILE_MISSING",
+    "ARTIFACT_NOT_FOUND",
+    "ARTIFACT_NOT_PREVIEWABLE",
+    "ARTIFACT_TOO_LARGE",
+    "CANNOT_CONVERT_INPUT",
+    "CHANNEL_MEDIA_UNSUPPORTED",
+    "CHANNEL_NOT_CONNECTED",
+    "CLARIFICATION_ALREADY_PENDING",
+    "CLASSIFICATION_FAILED",
+    "CLOUD_UNREACHABLE",
+    "COMMAND_HANDLER_NOT_FOUND",
+    "COMMAND_QUEUE_NOT_FOUND",
+    "CONTACT_AVATAR_NOT_FOUND",
+    "CONTACT_ENTRY_REQUIRES_SENDER",
+    "CREDENTIAL_DECRYPT_FAILED",
+    "DATA_DIR_LOCKED",
+    "EMAIL_ALREADY_REGISTERED",
+    "ENTITY_NOT_FOUND_WHILE_SAVING",
+    "ENTRY_NOT_FOUND",
+    "ENTRY_NOT_INVOCABLE",
+    "FORBIDDEN",
+    "GATEWAY_UNAVAILABLE",
+    "HANDLER_NOT_BOUND",
+    "INVALIDATED_AUTH_TOKEN",
+    "INVALID_AUTH_TOKEN",
+    "INVALID_CONTROLLER_EXAMPLES",
+    "INVALID_EMAIL",
+    "INVALID_EMAIL_FORMAT",
+    "INVALID_ENTITY",
+    "INVALID_ID",
+    "INVALID_ID_VALUES_LENGTH",
+    "INVALID_LANGUAGE",
+    "INVALID_LOOP_INTERVAL",
+    "INVALID_LOOP_TIME",
+    "INVALID_OUTBOX_PAYLOAD",
+    "INVALID_PHONE",
+    "INVALID_PICTURE_URL",
+    "INVALID_RANGE",
+    "INVALID_REQUEST",
+    "INVALID_TIMEZONE",
+    "ISSUE_ALREADY_ARCHIVED",
+    "ISSUE_ALREADY_COMPLETED",
+    "ISSUE_ARCHIVED",
+    "ISSUE_NOT_ARCHIVED",
+    "ISSUE_NOT_COMPLETED",
+    "ISSUE_NOT_FOUND",
+    "LAST_INVOKER",
+    "LOOP_NOT_FOUND",
+    "LOOP_PROMPT_TOO_LONG",
+    "LOOP_WITHOUT_WEEKDAY",
+    "MIGRATIONS_PENDING",
+    "MISSING_ENVIRONMENT_VARIABLE",
+    "MISSING_LOG_CONTENT",
+    "MODEL_NOT_AVAILABLE",
+    "NOT_FOUND",
+    "NOT_IMPLEMENTED",
+    "NO_CHANNEL_CONNECTED",
+    "NO_PROVIDER_SELECTED",
+    "ONBOARDING_DRAFT_INCOMPLETE",
+    "ONBOARDING_NOT_COMPLETED",
+    "OPTIMISTIC_LOCK_CONFLICT",
+    "OWNER_ALREADY_DISABLED",
+    "OWNER_NOT_DISABLED",
+    "OWNER_NOT_FOUND",
+    "PARTICIPANT_NOT_FOUND",
+    "PASSWORDS_DONT_MATCH",
+    "PASSWORD_TOO_WEAK",
+    "PATH_NOT_A_DIRECTORY",
+    "PATH_NOT_FOUND",
+    "PROMPT_TOO_LONG",
+    "PROVIDER_COMING_SOON",
+    "PROVIDER_NOT_BOUND",
+    "PROVIDER_NOT_DETECTED",
+    "QUOTED_ENTRY_NOT_IN_THREAD",
+    "RATE_LIMITED",
+    "RESOLUTION_NOT_APPLICABLE",
+    "SESSION_ALREADY_STREAMING",
+    "SOCIAL_SIGN_IN_FAILED",
+    "STOP_ALREADY_RESOLVED",
+    "STOP_CRITERION_DISABLED",
+    "STOP_NOT_FOUND",
+    "STOP_NOT_IN_THREAD",
+    "TERMINAL_SPAWN_FAILED",
+    "THREAD_ALREADY_ATTACHED",
+    "THREAD_ALREADY_DELETED",
+    "THREAD_HAS_ACTIVE_WORK",
+    "THREAD_NOT_FOUND",
+    "THREAD_NOT_PAUSED",
+    "THREAD_PAUSED",
+    "TOO_MANY_TERMINAL_STREAMS",
+    "UNAUTHORIZED",
+    "USER_NOT_FOUND",
+    "VALIDATION_ERROR",
+    "WEAK_PASSWORD",
+    "WORKSPACE_ALREADY_REGISTERED",
+    "WORKSPACE_IN_USE",
+    "WORKSPACE_NOT_FOUND"
+  ]
+}

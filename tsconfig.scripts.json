@@ -1,0 +1,16 @@
+{
+	"extends": "./tsconfig.base.json",
+	"compilerOptions": {
+		"noEmit": true,
+		"declaration": false,
+		"declarationMap": false,
+		"sourceMap": false,
+		"exactOptionalPropertyTypes": false,
+		"noUnusedLocals": false,
+		"noUnusedParameters": false,
+		"skipLibCheck": true,
+		"paths": {}
+	},
+	"include": ["scripts/**/*.ts", "template.config.ts", "packages/app/tauri/config/**/*.ts"],
+	"exclude": ["scripts/**/__fixtures__/**", "scripts/skill-evals/seeds/**", "scripts/skill-evals/features/**"]
+}

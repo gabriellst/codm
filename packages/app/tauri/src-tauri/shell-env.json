@@ -1,0 +1,21 @@
+{
+	"daemon": {
+		"API_PORT": [
+			"47330",
+			"47340",
+			"47350",
+			"47360"
+		],
+		"CODM_CLOUD_URL": "https://codm.up.railway.app",
+		"PRODUCT_NAME": "CoDM"
+	},
+	"gateway": {
+		"CHANNEL_PORT": [
+			"47332",
+			"47342",
+			"47352",
+			"47362"
+		],
+		"PRODUCT_NAME": "CoDM"
+	}
+}

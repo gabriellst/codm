@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# Exit on any error
+set -e
+
+echo "Running post-merge setup..."
+
+# Configure git settings
+echo "Configuring git settings..."
+git config core.autocrlf false
+git config core.ignorecase false
+git config core.longpaths true
+git config push.autoSetupRemote true
+
+# Install dependencies
+echo "Installing dependencies..."
+bun i
+
+echo "Post-merge setup completed successfully!"

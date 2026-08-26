@@ -1,0 +1,13 @@
+import { z } from '@codm/core-typescript'
+
+/**
+ * What `ClassifyIssueAgent` is asked. `z.agentInput()` carries the run envelope
+ * (`ownerId` / `threadId` / `cwd` / optional `issueId`) — never restate those fields here.
+ */
+export const ClassifyIssueInputSchema = z.agentInput({
+	// TODO: this agent's own fields
+})
+
+// If this agent returns STRUCTURED output, declare the schema here and pass it as the second
+// generic of `Agent<...>`; the agent then exposes ONE public method delegating to `collect()`.
+// export const ClassifyIssueOutputSchema = z.object({})

@@ -1,0 +1,31 @@
+// Package objects contains value objects for the sales bounded context.
+package objects
+
+import (
+	"strings"
+
+	ctxerrors "template/api-go/internal/sales/errors"
+	"template/core-go/errors"
+)
+
+// CouponCode is an immutable value object for the sales bounded context.
+// Replace the single string field with whatever the concept requires.
+type CouponCode struct {
+	value string
+}
+
+// NewCouponCode constructs a CouponCode from a raw string.
+// Returns CodeCOUPON_CODE_INVALID when the value is empty or fails validation.
+func NewCouponCode(raw string) (CouponCode, error) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return CouponCode{}, errors.NewBaseError(ctxerrors.CodeCouponCodeInvalid, "coupon_code must not be empty")
+	}
+	// TODO: add format-specific validation
+	return CouponCode{value: trimmed}, nil
+}
+
+func (v CouponCode) Value() string               { return v.value }
+func (v CouponCode) String() string              { return v.value }
+func (v CouponCode) Equals(other CouponCode) bool { return v.value == other.value }
+func (v CouponCode) IsZero() bool                { return v.value == "" }

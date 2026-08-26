@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR">
+	<head>
+		<meta charset="utf-8" />
+		<title>CODM — boot failed</title>
+		<!--
+			BOOT-ERROR SPLASH. Plain HTML in public/ — copied verbatim into dist/client by vite (the
+			same path mockServiceWorker.js takes) and served at the root by the dev server, so one
+			file covers both dev and bundle. Deliberately OUTSIDE the React console: the console
+			fires SDK queries on boot, against exactly the backends that just failed to come up.
+			`withGlobalTauri: true` (tauri.conf.json) is what provides window.__TAURI__ with no bundler.
+		-->
+		<style>
+			body { margin: 0; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; background: #17171a; color: #e6e6e6; padding: 24px 28px; }
+			h1 { font: 600 15px/1.3 system-ui, sans-serif; margin: 0 0 4px; }
+			p.sub { color: #9a9aa2; margin: 0 0 20px; }
+			section { border: 1px solid #2b2b31; border-radius: 6px; margin-bottom: 14px; overflow: hidden; }
+			header { background: #1e1e23; padding: 8px 12px; display: flex; gap: 10px; align-items: baseline; }
+			header b { color: #ff7b72; }
+			header span { color: #9a9aa2; }
+			pre { margin: 0; padding: 10px 12px; white-space: pre-wrap; word-break: break-all; max-height: 260px; overflow: auto; color: #c9c9d1; }
+			button { font: inherit; background: #2f6feb; color: #fff; border: 0; border-radius: 5px; padding: 8px 16px; cursor: pointer; }
+		</style>
+	</head>
+	<body>
+		<h1>O CODM não conseguiu iniciar</h1>
+		<p class="sub">Um ou mais serviços não responderam dentro de 60 segundos. A janela principal foi mantida oculta de propósito.</p>
+		<div id="failures"></div>
+		<button id="retry" type="button">Tentar novamente</button>
+		<script>
+			const { invoke } = window.__TAURI__.core
+			const escape = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])
+			invoke('boot_failures').then(failures => {
+				document.getElementById('failures').innerHTML = failures
+					.map(
+						// O caminho do log é o que transforma esta tela em algo acionável: o ring buffer abaixo
+						// mostra as últimas linhas, o ARQUIVO tem a corrida inteira — e sobrevive ao fechar
+						// a janela. (Incidente de 2026-08-07: um daemon que morria no boot custou uma tarde
+						// de arqueologia porque o stderr só existia aqui, em memória.)
+						f => `<section><header><b>${escape(f.name)}</b><span>${escape(f.reason)}</span></header><pre>${
+							f.stderr.length ? escape(f.stderr.join('\n')) : 'sem stderr capturado'
+						}</pre>${f.logPath ? `<footer>log completo: <code>${escape(f.logPath)}</code></footer>` : ''}</section>`,
+					)
+					.join('')
+			})
+			document.getElementById('retry').addEventListener('click', () => invoke('retry_boot'))
+		</script>
+	</body>
+</html>

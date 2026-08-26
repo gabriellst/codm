@@ -1,0 +1,417 @@
+registry:
+  type: backend
+  layer: domain
+  depends_on: []
+  depended_by: [entity, controller, schema, component]
+  context_reads: []
+
+  patterns:
+    - id: ENUM-01
+      name: "TypeScript enum with SCREAMING_SNAKE_CASE"
+      when: always
+      rule: "export enum OrderStatus { PENDING = 'PENDING', CONFIRMED = 'CONFIRMED' }"
+      wrong: "as const arrays, z.enum(['literal']), z.nativeEnum(), camelCase or lowercase values"
+    - id: ENUM-02
+      name: "TypeScript enum keyword (not as const)"
+      when: always
+      rule: "export enum StatusName { VALUE_1 = 'VALUE_1', VALUE_2 = 'VALUE_2' }"
+      wrong: "export const StatusEnum = ['VALUE_1', 'VALUE_2'] as const — always use TypeScript enum keyword"
+    - id: ENUM-03
+      name: "Register in shared/index.ts via openapi.registerEnums()"
+      when: always
+      rule: "Add `import * as xEnums from '@x/enums'` to shared/index.ts and spread `...xEnums` into the `openapi.registerEnums({...})` call"
+      wrong: "registering in each context index.ts separately"
+    - id: ENUM-04
+      name: "Barrel export"
+      when: always
+      rule: "export { OrderStatus } from './OrderStatus' in enums/index.ts"
+    - id: ENUM-C01
+      name: "Label map"
+      when: "enum displayed in UI"
+      rule: "export const orderStatusLabels: Record<OrderStatus, string> = {...}"
+    - id: ENUM-C02
+      name: "z.enum() only (never z.nativeEnum)"
+      when: "enum used in Zod schema"
+      rule: "z.enum(OrderStatus) — always use z.enum() with TS enum"
+      wrong: "z.nativeEnum(OrderStatus) or z.enum(['PENDING', 'CONFIRMED'])"
+
+    # --- Extracted patterns from real implementations ---
+
+    - id: ENUM-P01
+      name: "TypeScript enum with mirrored key=value"
+      when: "defining any domain enum"
+      reason: "All project enums use native TS enum with KEY = 'KEY' pattern, ensuring the runtime value matches the key name for serialization and DB storage."
+      rule: |
+        export enum AppointmentStatus {
+          PENDING = 'PENDING',
+          CONFIRMED = 'CONFIRMED',
+          COMPLETED = 'COMPLETED',
+          CANCELLED = 'CANCELLED',
+          NO_SHOW = 'NO_SHOW',
+        }
+
+    - id: ENUM-P02
+      name: "Simple binary status enum"
+      when: "entity has only active/inactive states"
+      reason: "Many entities (Clinic, Unit, Service, DoctorAssignment) share the ACTIVE/INACTIVE pattern. Keep it as a separate enum per context to preserve domain semantics."
+      rule: |
+        export enum ServiceStatus {
+          ACTIVE = 'ACTIVE',
+          INACTIVE = 'INACTIVE',
+        }
+
+    - id: ENUM-P03
+      name: "ISO-code enum with inline comments"
+      when: "enum values follow an external standard (ISO, RFC)"
+      reason: "Country and BrazilianState enums use short ISO codes as values with inline comments for readability. Comments grouped by region help navigation in large enums."
+      severity_guidance: "low — ISO comments are a readability aid, not a correctness requirement"
+      rule: |
+        /**
+         * Country codes following ISO 3166-1 alpha-2 standard
+         * Enum values are the country codes themselves
+         */
+        export enum Country {
+          // Americas
+          BR = 'BR', // Brasil
+          AR = 'AR', // Argentina
+          US = 'US', // Estados Unidos
+
+          // Europe
+          PT = 'PT', // Portugal
+          ES = 'ES', // Espanha
+        }
+
+    - id: ENUM-P04
+      name: "Named export barrel with explicit re-exports"
+      when: "creating or updating enums/index.ts"
+      reason: "All enum index files use explicit named re-exports (not star exports) for tree-shaking and clarity. Only exception found is agent context using export *."
+      rule: |
+        export { ClinicStatus } from './ClinicStatus'
+        export { InviteStatus } from './InviteStatus'
+        export { MemberRoleType } from './MemberRoleType'
+        export { MembershipStatus } from './MembershipStatus'
+
+    - id: ENUM-P05
+      name: "Cross-context enum import from context barrel"
+      when: "a context needs an enum defined in another context"
+      reason: "Each context exports its enums from its own enums/index.ts barrel. Consumers import directly from the context barrel (e.g., @auth/enums) — no shared/enums folder exists."
+      rule: |
+        // In a use case that needs another context's enum
+        import { UserRole } from '@auth/enums'
+
+    - id: ENUM-P06
+      name: "Central enum registration in shared/index.ts"
+      when: "always — after creating any new enum"
+      reason: "All enums must be registered centrally via openapi.registerEnums() in shared/index.ts. This ensures OpenAPI schema uses the correct enum name. In this template, wire enums come from @codm/contracts-typescript/wire/enums."
+      rule: |
+        // packages/api/typescript/src/shared/index.ts
+        import * as wireEnums from '@codm/contracts-typescript/wire/enums'
+        // ...
+        openapi.registerEnums(wireEnums)
+
+    - id: ENUM-P07
+      name: "z.enum() usage with TS enum"
+      when: "enum used in Zod schema (entity, controller, event, use case)"
+      reason: "All Zod schemas reference the TS enum directly via z.enum(EnumName). This generates correct OpenAPI types and ensures the SDK exposes enum values."
+      rule: |
+        import { AppointmentStatus } from '../enums'
+
+        const schema = z.object({
+          status: z.enum(AppointmentStatus),
+        })
+
+    - id: ENUM-P08
+      name: "Frontend enum labels via i18n under enums.<EnumName>.<VALUE>"
+      when: "enum value displayed in UI"
+      reason: "Every enum value rendered in the UI resolves through i18n at the canonical key `enums.<EnumName>.<VALUE>`. The same namespace feeds zod-config's getEnumLabel for invalid-enum messages, so adding the keys gets you both render labels AND validation messages for free. There is NO lib/labels.ts in this project — that pattern is dead."
+      rule: |
+        // packages/app/react/src/locales/{pt,en}.json — keys mirror in both locales
+        {
+          "enums": {
+            "GameGenre": {
+              "ACTION": "Ação",
+              "ADVENTURE": "Aventura",
+              "RPG": "RPG"
+            }
+          }
+        }
+
+        // Read-only UI:
+        import { useTranslation } from 'react-i18next'
+        const { t } = useTranslation()
+        <TableCell>{t(`enums.GameGenre.${game.genre}`)}</TableCell>
+      wrong: |
+        // Centralized lib/labels.ts Record<EnumType, string> — outdated pattern
+        export const gameGenreLabels: Record<GameGenreEnum, string> = {
+          ACTION: 'Ação', ADVENTURE: 'Aventura',
+        }
+
+    - id: ENUM-P09
+      name: "One file per enum"
+      when: "always"
+      reason: "Every enum lives in its own file named after the enum (e.g., AppointmentStatus.ts). No file contains multiple enum declarations."
+      rule: |
+        // packages/api/typescript/src/appointment/enums/AppointmentStatus.ts
+        export enum AppointmentStatus {
+          PENDING = 'PENDING',
+          CONFIRMED = 'CONFIRMED',
+          ...
+        }
+
+    - id: ENUM-P10
+      name: "Multi-value lifecycle status enum"
+      when: "entity has more than two lifecycle states"
+      reason: "Enums like AppointmentStatus, InviteStatus, MembershipStatus model state machines with terminal states (CANCELLED, EXPIRED, COMPLETED). Keep all states in one enum — transition maps are defined separately."
+      rule: |
+        export enum InviteStatus {
+          PENDING = 'PENDING',
+          ACCEPTED = 'ACCEPTED',
+          EXPIRED = 'EXPIRED',
+          REVOKED = 'REVOKED',
+        }
+
+    - id: ENUM-P11
+      name: "Select trigger renders enum label via t()"
+      when: "form field uses <Select> with an enum value"
+      reason: "Base UI <Select.Value> does NOT auto-resolve the label from the matching <Select.Item> children. If you only pass `placeholder=`, the trigger renders the raw value (e.g. 'ACTION') after selection. You MUST pass children that compute the translated label."
+      rule: |
+        import type { GameGenreEnum } from '@codm/client-typescript/typescript'
+        const selectedGenre = field.state.value as GameGenreEnum | undefined
+        <Select value={selectedGenre} onValueChange={v => field.handleChange(v as GameGenreEnum)}>
+          <SelectTrigger>
+            <SelectValue>
+              {selectedGenre ? t(`enums.GameGenre.${selectedGenre}`) : t('games.form.genrePlaceholder')}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {ALL_GENRES.map(genre => (
+              <SelectItem key={genre} value={genre}>{t(`enums.GameGenre.${genre}`)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      wrong: |
+        // Falls back to raw enum value in trigger after selection
+        <SelectValue placeholder={t('games.form.genrePlaceholder')} />
+
+    - id: ENUM-P12
+      name: "Locale keys mirrored in pt and en"
+      when: "adding enums.<EnumName>.<VALUE> keys"
+      reason: "The locale type alias is generated from pt.json (the default). Keys missing from en.json are silently empty in English. Every value MUST appear in both locales."
+      rule: |
+        // pt.json
+        { "enums": { "GameGenre": { "ACTION": "Ação", "ADVENTURE": "Aventura" } } }
+        // en.json (must mirror)
+        { "enums": { "GameGenre": { "ACTION": "Action", "ADVENTURE": "Adventure" } } }
+
+  snippet:
+    skeleton: |
+      export enum {{Name}} {
+      	// SCREAMING_SNAKE_CASE for both keys and values
+      	// EXAMPLE = 'EXAMPLE',
+      }
+    exemplar: |
+      // Backend (packages/api/typescript/src/<context>/enums/OrderStatus.ts)
+      export enum OrderStatus {
+        PENDING = 'PENDING',
+        CONFIRMED = 'CONFIRMED',
+        CANCELLED = 'CANCELLED',
+      }
+
+      // Frontend labels in BOTH locales (packages/app/react/src/locales/{pt,en}.json)
+      {
+        "enums": {
+          "OrderStatus": {
+            "PENDING": "Pendente",
+            "CONFIRMED": "Confirmado",
+            "CANCELLED": "Cancelado"
+          }
+        }
+      }
+
+      // Render via t() — never via lib/labels.ts
+      <span>{t(`enums.OrderStatus.${order.status}`)}</span>
+
+  scaffold: "bun cli enum <context> <name>"
+
+  bad_practices:
+    - id: bp-01
+      name: "Duplicating enum mapping OR using a Record<Enum, string> labels map"
+      severity: critical
+      mechanical: false
+      wrong: |
+        // Same label mapping duplicated across components
+        const statusLabels = { PENDING: 'Pendente', SCHEDULED: 'Agendado' }
+
+        // OR — the now-deprecated lib/labels.ts approach
+        export const appointmentStatusLabels: Record<AppointmentStatus, string> = {
+          PENDING: 'Pendente', CONFIRMED: 'Confirmado',
+        }
+      right: |
+        // packages/app/react/src/locales/{pt,en}.json — single source of truth
+        {
+          "enums": {
+            "AppointmentStatus": { "PENDING": "Pendente", "CONFIRMED": "Confirmado" }
+          }
+        }
+        // In any consumer:
+        const { t } = useTranslation()
+        t(`enums.AppointmentStatus.${status}`)
+
+    - id: bp-02
+      name: "Inline enum values in z.enum()"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'z\.enum\(\s*\['
+      wrong: |
+        // Hardcoded string array instead of referencing the enum
+        status: z.enum(['PENDING', 'ACTIVE', 'CANCELLED'])
+      right: |
+        // Always reference the TypeScript enum
+        import { AppointmentStatus } from '../enums'
+        status: z.enum(AppointmentStatus)
+
+    - id: bp-03
+      name: "Magic strings as fallback instead of enum constant"
+      severity: critical
+      mechanical: true
+      detect:
+        - '[!=]==\s*''[A-Z][A-Z0-9_]*'''
+        - '\?\?\s*''[A-Z][A-Z0-9_]*'''
+      always_flag_when: >
+        Code compares a variable against a string literal that matches an enum value
+        (e.g. === 'PENDING', === 'ACTIVE', === 'CANCELLED'), or uses a string literal
+        as a default/fallback where an enum constant exists. Search for any === '...'
+        or !== '...' where the string matches a known enum value — if found, this is F.
+      wrong: |
+        // String literal used where enum constant should be
+        specialty: row.specialty ?? 'GENERAL_PRACTICE'
+        if (status === 'PENDING') { ... }
+      right: |
+        // Use the enum constant for type safety
+        import { Specialty } from '../enums'
+        specialty: row.specialty ?? Specialty.GENERAL_PRACTICE
+        if (status === AppointmentStatus.PENDING) { ... }
+
+    - id: bp-04
+      name: "Hardcoding STATUS_OPTIONS when SDK enum exists"
+      severity: moderate
+      mechanical: true
+      detect:
+        - '=\s*\[\s*''[A-Z][A-Z0-9_]*'''
+      wrong: |
+        // Manual array duplicating enum values
+        const STATUS_OPTIONS = ['PENDING', 'CONFIRMED', 'CANCELLED']
+      right: |
+        // Derive from SDK enum
+        import { AppointmentStatusEnum } from '@codm/client-typescript/typescript'
+        const STATUS_OPTIONS = Object.values(AppointmentStatusEnum)
+
+    - id: bp-05
+      name: "Record<string, string> instead of typed enum Record"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'Record<\s*string\s*,\s*string\s*>'
+        - '\{\s*\[\s*\w+\s*:\s*string\s*\]\s*:\s*string\s*\}'
+      always_flag_when: >
+        Code declares a Record, Map, or object literal typed with string keys (Record<string, string>,
+        { [key: string]: string }) where the keys are enum values. If the keys correspond to a known
+        enum type, the Record MUST be typed as Record<EnumType, string> for exhaustiveness checking.
+      wrong: |
+        // Untyped record loses compile-time exhaustiveness check
+        const labels: Record<string, string> = {
+          PENDING: 'Pendente',
+          CONFIRMED: 'Confirmado',
+        }
+      right: |
+        // Typed record ensures all enum values have a label
+        const labels: Record<AppointmentStatus, string> = {
+          PENDING: 'Pendente',
+          CONFIRMED: 'Confirmado',
+          COMPLETED: 'Concluido',
+          CANCELLED: 'Cancelado',
+          NO_SHOW: 'Nao Compareceu',
+        }
+
+    - id: bp-06
+      name: "Registering enums in context index.ts instead of shared/index.ts"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'openapi\.registerEnums\('
+      detect_skip: 'registerEnums\(\s*wireEnums'
+      wrong: |
+        // clinic/index.ts — WRONG: registering enums per-context
+        import * as clinicEnums from './enums'
+        openapi.registerEnums(clinicEnums)
+      right: |
+        // shared/index.ts — CORRECT: all enums registered centrally
+        import * as wireEnums from '@codm/contracts-typescript/wire/enums'
+        openapi.registerEnums(wireEnums)
+
+    - id: bp-07
+      name: "Using z.nativeEnum() instead of z.enum()"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'z\.nativeEnum\('
+      wrong: |
+        import { OrderStatus } from '../enums'
+        status: z.nativeEnum(OrderStatus)
+      right: |
+        import { OrderStatus } from '../enums'
+        status: z.enum(OrderStatus)
+
+    - id: bp-08
+      name: "Using as const arrays instead of TypeScript enum"
+      severity: critical
+      mechanical: true
+      detect:
+        # Only literal members. `[Enum.A, Enum.B] as const` is a typed SUBSET of an existing
+        # enum, not a redeclaration — see the exception below.
+        - '=\s*\[[^\].]*\]\s*as\s+const'
+        - '\(typeof\s+\w+\)\[number\]'
+      wrong: |
+        export const OrderStatus = ['PENDING', 'CONFIRMED', 'CANCELLED'] as const
+        export type OrderStatusType = (typeof OrderStatus)[number]
+      right: |
+        export enum OrderStatus {
+          PENDING = 'PENDING',
+          CONFIRMED = 'CONFIRMED',
+          CANCELLED = 'CANCELLED',
+        }
+      exception: |
+        A typed SUBSET of an enum that is already frozen elsewhere (typically a wire enum from
+        contracts) is NOT a violation — it declares no value-set of its own. Signal: every element
+        is a member reference, never a string literal.
+
+            export type TransportStopKind = typeof StopKind.AUTH_REQUIRED | typeof StopKind.SERVER_ERROR
+            export const TRANSPORT_STOP_KINDS = [StopKind.AUTH_REQUIRED, StopKind.SERVER_ERROR] as const
+
+        Turning that into `enum TransportStopKind` would RE-DECLARE half of StopKind's values, which
+        is the anti-mirror rule this registry enforces elsewhere — so obeying bp-08 literally would
+        violate a stronger rule. Surfaced by the agent contract lock (Fase 1), where the goal
+        mandated the subset form and this rail flagged it as critical.
+
+    - id: bp-09
+      name: "Rendering raw enum value in <SelectValue> instead of t()"
+      severity: critical
+      mechanical: true
+      detect:
+        - '<SelectValue\s[^>]*placeholder=[^>]*/>'
+      always_flag_when: >
+        Code uses <SelectValue placeholder="..." /> for a Select bound to an enum
+        value AND the matching <SelectItem> children render translated labels.
+        Without children on <SelectValue>, the trigger shows the raw enum value
+        once the user picks an option.
+      wrong: |
+        <SelectTrigger>
+          <SelectValue placeholder={t('games.form.genrePlaceholder')} />
+        </SelectTrigger>
+      right: |
+        <SelectTrigger>
+          <SelectValue>
+            {selectedGenre ? t(`enums.GameGenre.${selectedGenre}`) : t('games.form.genrePlaceholder')}
+          </SelectValue>
+        </SelectTrigger>

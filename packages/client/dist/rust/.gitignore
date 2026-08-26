@@ -1,0 +1,4 @@
+# Standalone-crate build output (consumers build this crate inside THEIR target dir).
+/target/
+# Library crate: the consumer's lockfile pins versions, not ours.
+Cargo.lock

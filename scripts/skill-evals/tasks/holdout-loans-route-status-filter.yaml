@@ -1,0 +1,131 @@
+id: holdout-loans-route-status-filter
+tier: holdout
+builder: opus
+title: H2 BFF + frontend — /app/loans list with URL status filter,
+  LoanStatusBadge, Money + i18n
+sourceSpec: hand-authored
+goldRef: ""
+baseRef: ""
+prompt: >-
+  # `/app/loans` — branch loans list with status filter, badge leaf, money +
+  i18n
+
+
+  ## Context
+
+  Library vertical. Library staff need a loans screen listing the branch's
+  loans. Each loan row carries: book title, member name, library card number,
+  checked-out date, due date, status (closed set `ACTIVE | RETURNED | OVERDUE` —
+  call it `LoanStatus`), and the accrued overdue fine (zero unless OVERDUE) as a
+  money value.
+
+
+  ## Backend (BFF read)
+
+  There is no read endpoint for this yet. Expose it through the BFF (`ui`
+  bounded context) per the house read pattern: a store-scoped, paginated
+  `ListLoans` query use case + GET controller, with an optional `status` filter
+  in the controller query schema validated against the closed status set (house
+  enum idiom — the enum must reach the SDK as a named type). The existing ui
+  list reads are deterministic faker stubs; a stub of the same style is
+  acceptable for this read — the contract (schemas, enum, Money shape) is what
+  matters. The fine uses the house Money shape (cents + currency) so the SDK
+  exposes it as `Money`. Regenerate the SDK (`bun sdk`) so the typed hook,
+  schemas, and the status enum exist for the app.
+
+
+  ## Frontend (`packages/app/react`)
+
+  1. **Route `/app/loans`** — new file route in the `(app)` group. The URL is
+  the state: `page`, `limit`, and the optional `status` filter live in the
+  validated search schema; `status` validates against the closed status set
+  (typed enum values), not a free string. The route shell stays thin — layout +
+  section composition only; no data fetching in the route.
+
+  2. **Table section** under the route's `-components/` that owns its own data:
+  reads the search params via the route API, calls the generated SDK list hook
+  with them, renders the table with an inline skeleton while loading, and a
+  status filter control that navigates back into the URL search. No
+  prop-drilling of data/search/callbacks; no raw fetch anywhere; no hand-rolled
+  parallel schema for wire data.
+
+  3. **`LoanStatusBadge` leaf**: receives its loan (or status) by prop from the
+  section's map and renders a colored badge per status. Labels are translated —
+  add a `LoanStatus` entry to the `enums` subtree of BOTH locale files (pt.json
+  and en.json) and resolve the label through i18n with a status→key Record (no
+  switch/if chains, no hand-rolled label module).
+
+  4. **Locale & money**: the fine renders through the house money hook (already
+  bound to the active locale); dates render with the active locale obtained from
+  the locale hook. Never pass a hardcoded `'pt-BR'` / `'en-US'` literal to any
+  formatter.
+
+  5. Run `bun tsr generate` after creating the route; `bun tsc` green for the
+  app.
+
+
+  ## Acceptance criteria
+
+  - Changing the filter updates the URL, and the table refetches through the SDK
+  hook (params flow URL → hook).
+
+  - Wire data is validated/typed exclusively by SDK schemas/types.
+
+  - pt and en both render correct labels for all three statuses.
+
+  - Overdue rows show the formatted money fine in the active locale; the screen
+  needs no modal/dialog — keep it a list + filter.
+axes:
+  - SDK-CONSUME
+  - LOCALE-MONEY
+  - ENUM-REPR
+  - DATA-OWNERSHIP
+  - CQRS-SIDE
+graders:
+  - kind: tsc
+    spec: app-react
+  - kind: grep-must
+    spec: packages/app/react/src/routes/(app)/loans/**/*.tsx::z\.enum\(
+    id: route#search-schema-enum
+  - kind: grep-must
+    spec: packages/app/react/src/routes/(app)/loans/**/*.tsx::routeApi\.useSearch\(
+    id: component#url-state-ownership
+  - kind: grep-must
+    spec: packages/app/react/src/routes/(app)/loans/**/*.tsx::useMoney\(
+    id: locale#use-money
+  - kind: grep-must
+    spec: packages/app/react/src/routes/(app)/loans/**/*.tsx::useLocale\(
+    id: locale#use-locale
+  - kind: grep-must
+    spec: packages/app/react/src/routes/(app)/loans/**/*.tsx::from
+      '@codm/client-typescript
+    id: sdk#consume-via-sdk
+  - kind: grep-must
+    spec: packages/app/react/src/locales/pt.json::LoanStatus
+    id: i18n#enums-subtree-pt
+  - kind: grep-must
+    spec: packages/app/react/src/locales/en.json::LoanStatus
+    id: i18n#enums-subtree-en
+  - kind: grep-must-not
+    spec: packages/app/react/src/routes/(app)/loans/**/*.tsx::fetch\(
+    id: sdk#no-raw-fetch
+  - kind: grep-must-not
+    spec: packages/app/react/src/routes/(app)/loans/**/*.tsx::(NumberFormat|DateTimeFormat|toLocaleDateString|toLocaleString)\(\s*'(pt-BR|en-US)'
+    id: locale#no-hardcoded-locale
+  - kind: grep-must-not
+    spec: packages/app/react/src/routes/(app)/loans/**/*.tsx::@/lib/labels
+    id: i18n#no-handrolled-label-module
+  - kind: grep-must-not
+    spec: packages/app/react/src/routes/(app)/loans/**/*.tsx::<(Dialog|AlertDialog|Sheet|Drawer)[^>]*onOpenChange
+    id: dialog#no-local-modal-state
+notes: "Hand-authored holdout; no gold tree. Calibration: ui BFF reads are
+  faker-stubbed in this repo (ListOrders/GetDashboard), so the prompt explicitly
+  permits a stub — the graders only enforce the contract + frontend idioms. The
+  onOpenChange must-not is scoped to modal primitives on one line because
+  Popover/Collapsible filters legitimately use onOpenChange in existing route
+  sections (orders OrderTableSection) — a blanket regex would false-fail a
+  correct filter UI. The hardcoded-locale must-not requires a quoted literal
+  inside a formatter call, so correct `toLocaleDateString(locale)` never
+  matches. URL `/app/loans` pins the `(app)/loans` folder via TanStack file
+  routing, making the path-anchored globs fair. Route file glob is `**/*.tsx`
+  (not just index.tsx) to tolerate route.tsx or schema co-location."

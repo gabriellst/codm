@@ -1,0 +1,43 @@
+// Package usecases contains application use cases for the sales bounded context.
+package usecases
+
+import (
+	"context"
+	"database/sql"
+)
+
+// GetCouponInput defines the query parameters.
+type GetCouponInput struct {
+	// TODO: add filter fields
+	// OwnerID string `validate:"required"`
+}
+
+// GetCouponOutput is the UI-shaped response for get_coupon.
+type GetCouponOutput struct {
+	// TODO: add output fields
+}
+
+// GetCouponHandler is a read-only query use case — direct SQL, no UnitOfWork.
+type GetCouponHandler struct {
+	db *sql.DB
+}
+
+// NewGetCouponHandler constructs the GetCouponHandler.
+func NewGetCouponHandler(db *sql.DB) *GetCouponHandler {
+	return &GetCouponHandler{db: db}
+}
+
+func (h *GetCouponHandler) Name() string { return "get_coupon" }
+
+// Execute runs the read query and returns the UI-shaped output.
+func (h *GetCouponHandler) Execute(ctx context.Context, input GetCouponInput) (GetCouponOutput, error) {
+	// Direct SQL — no repository abstraction for BFF queries.
+	// row := h.db.QueryRowContext(ctx, `SELECT ... FROM ...`, input.OwnerID)
+	// var result GetCouponOutput
+	// if err := row.Scan(...); err != nil {
+	// 	if err == sql.ErrNoRows { return GetCouponOutput{}, nil }
+	// 	return GetCouponOutput{}, err
+	// }
+	// return result, nil
+	return GetCouponOutput{}, nil
+}

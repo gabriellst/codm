@@ -1,0 +1,561 @@
+registry:
+  type: backend
+  layer: domain
+  depends_on: [errors]
+  depended_by: [entity, controller, schema]
+  context_reads: [schema]
+
+  patterns:
+    # === Always-on patterns ===
+    - id: VO-01
+      name: "Schema declaration"
+      when: always
+      rule: "export const XSchema = z.string().refine(...) or z.object({...})"
+    - id: VO-02
+      name: "Class extends BasePrimitiveValueObject or BaseValueObject"
+      when: always
+      rule: "class X extends BasePrimitiveValueObject<typeof XSchema> (primitive) or BaseValueObject<typeof XSchema> (composite)"
+    - id: VO-03
+      name: "Static schema override"
+      when: always
+      rule: "static override schema = XSchema"
+      wrong: "missing static schema — validation skipped"
+    - id: VO-04
+      name: "equals + toString"
+      when: always
+      rule: "equals(other: X): boolean; toString(): string"
+
+    # === Conditional patterns ===
+    - id: VO-C01
+      name: "Composite VO interface merging"
+      when: "composite (multi-field) VO"
+      rule: "export interface X extends Z.infer<typeof XSchema> {}"
+    - id: VO-C02
+      name: "Format method"
+      when: "VO has visual formatting (documents, phones, zip codes)"
+      rule: "format(): string { return formatted }"
+    - id: VO-C03
+      name: "Static isValid"
+      when: "validation without instantiation needed"
+      rule: "static isValid(v: string): boolean { return XSchema.safeParse(v).success }"
+    - id: VO-C04
+      name: "Input schema export"
+      when: "VO used in controller/entity schemas"
+      rule: "export const XSchema with .input() available for composition"
+    - id: VO-C05
+      name: "Composite VO Props type export"
+      when: "composite VO has transforms in schema"
+      rule: "export type XProps = Z.input<typeof XSchema>"
+    - id: VO-C06
+      name: "toJSON override"
+      when: "primitive VO needs serialization (base class returns .value by default)"
+      rule: "override toJSON(): string { return this.value }"
+    - id: VO-C07
+      name: "Constructor override for auto-generation"
+      when: "VO generates value if none provided (e.g. Id)"
+      rule: "constructor(value?: string) { super(value ?? Bun.randomUUIDv7()) }"
+    - id: VO-C08
+      name: "Constructor override for polymorphic input"
+      when: "VO accepts multiple input types (e.g. string or object)"
+      rule: "constructor(data: InputType | string) { const props = typeof data === 'string' ? X.parse(data) : data; super(props) }"
+    - id: VO-C09
+      name: "Static factory method (fromString/fromHash)"
+      when: "VO has alternative construction paths"
+      rule: "static fromString(raw: string): X { return new X(parsed) }"
+    - id: VO-C10
+      name: "Domain behavior methods"
+      when: "VO has domain-specific operations beyond get/format"
+      rule: "add(other: Money): Money, getAge(): number, contains(value): boolean, overlaps(other): boolean"
+    - id: VO-C11
+      name: "Nested VO transform in composite schema"
+      when: "composite VO contains another VO"
+      rule: "field: z.instance(VO) — uses static schema + constructor automatically"
+      wrong: "VOSchema.input().transform(v => new VO(v)) — manual wiring when z.instance() does it for you"
+    - id: VO-C12
+      name: "Builder pattern"
+      when: "VO has many optional construction parameters"
+      rule: "static builder(): XBuilder { return new XBuilder() }"
+    - id: VO-C13
+      name: "Computed value getter"
+      when: "composite VO has a derived single-string representation"
+      rule: "get value(): string { return computed_from_properties }"
+    - id: VO-C14
+      name: "Schema .refine() for cross-field invariants"
+      when: "composite VO has rules crossing 2+ fields"
+      rule: ".refine(data => data.from <= data.to, { error: 'INVALID_RANGE' as DomainErrors })"
+
+    # === Real-code pattern references (P## series) ===
+    - id: VO-P01
+      name: "Primitive VO with transform + refine"
+      source: "packages/api/typescript/src/shared/objects/CPF.ts"
+      snippet: |
+        export const CPFSchema = z
+            .string()
+            .transform(v => v.replace(/\D/g, ''))
+            .refine(cpf => { /* validation */ }, { error: 'INVALID_CPF' as BaseDomainErrors })
+        export class CPF extends BasePrimitiveValueObject<typeof CPFSchema> {
+            static override schema = CPFSchema
+            static isValid(cpf: string): boolean { return CPFSchema.safeParse(cpf).success }
+            format(): string { return this.value.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4') }
+            equals(other: CPF): boolean { return this.value === other.value }
+            override toString(): string { return this.value }
+        }
+    - id: VO-P02
+      name: "Primitive VO with transform (lowercase/trim)"
+      source: "packages/api/typescript/src/shared/objects/Email.ts"
+      snippet: |
+        export const EmailSchema = z
+            .string()
+            .transform(email => email.toLocaleLowerCase().trim())
+            .refine(email => emailRegex.test(email), { error: 'INVALID_EMAIL' as BaseDomainErrors })
+        export class Email extends BasePrimitiveValueObject<typeof EmailSchema> {
+            static override schema = EmailSchema
+            equals(other: Email): boolean { return this.value === other.value }
+            getDomain(): string { return this.value.split('@')[1] || '' }
+            override toString(): string { return this.value }
+            override toJSON(): string { return this.value }
+        }
+    - id: VO-P03
+      name: "Primitive VO wrapping Date type"
+      source: "packages/api/typescript/src/shared/objects/BirthDate.ts"
+      snippet: |
+        export const BirthDateSchema = z
+            .union([z.string(), z.instanceof(Date)])
+            .transform(d => { const date = typeof d === 'string' ? new Date(d) : d; date.setHours(0,0,0,0); return date })
+            .refine(date => !Number.isNaN(date.getTime()) && date <= new Date(), { error: 'INVALID_BIRTH_DATE' as BaseDomainErrors })
+        export class BirthDate extends BasePrimitiveValueObject<typeof BirthDateSchema> {
+            static override schema = BirthDateSchema
+            getAge(): number { /* age calculation */ }
+            equals(other: BirthDate): boolean { return this.value.getTime() === other.value.getTime() }
+        }
+    - id: VO-P04
+      name: "Primitive VO with auto-generated value (Id)"
+      source: "packages/api/typescript/src/shared/objects/Id.ts"
+      snippet: |
+        const IdSchema = z.string().refine(v => v.length > 0, { error: 'INVALID_ID' })
+        export class Id extends BasePrimitiveValueObject<typeof IdSchema> {
+            static override schema = IdSchema
+            constructor(value?: string) { super(value ?? Bun.randomUUIDv7()) }
+            static fromHash(value: string | string[]): Id { /* hash-based UUID */ }
+            equals(other: Id): boolean { return this.value === other.value }
+        }
+    - id: VO-P05
+      name: "Primitive VO with numeric transform"
+      source: "packages/api/typescript/src/doctor/objects/RQE.ts"
+      snippet: |
+        export const RQESchema = z
+            .string()
+            .regex(/^\d{4,6}$/, { error: 'INVALID_RQE' as DomainErrors })
+            .transform(v => Number.parseInt(v, 10))
+        export class RQE extends BasePrimitiveValueObject<typeof RQESchema> {
+            static override schema = RQESchema
+            static isValid(rqe: number | string): boolean { return RQESchema.safeParse(rqe).success }
+        }
+    - id: VO-P06
+      name: "Composite VO with full interface merging + Props export"
+      source: "packages/api/typescript/src/shared/objects/Address.ts"
+      snippet: |
+        export const AddressSchema = z.object({
+            street: z.string().transform(v => v.trim()).refine(v => v.length >= 3, { error: 'INVALID_ADDRESS' as BaseDomainErrors }),
+            zipCode: z.string().transform(value => new ZipCode(value)),
+            state: z.enum(BrazilianState, { error: 'INVALID_ADDRESS' as BaseDomainErrors }),
+            country: z.enum(Country).default(Country.BR),
+        })
+        export class Address extends BaseValueObject<typeof AddressSchema> {
+            static override schema = AddressSchema
+            equals(other: Address): boolean { return JSON.stringify(this.toJSON()) === JSON.stringify(other.toJSON()) }
+            override toString(): string { return `${this.street}, ${this.number} - ${this.city} - ${this.state}` }
+        }
+        export interface Address extends Z.infer<typeof AddressSchema> {}
+        export type AddressProps = Z.input<typeof AddressSchema>
+    - id: VO-P07
+      name: "Composite VO with polymorphic constructor (string | object)"
+      source: "packages/api/typescript/src/shared/objects/Phone.ts"
+      snippet: |
+        export class Phone extends BaseValueObject<typeof PhonePartsSchema> {
+            static override schema = PhonePartsSchema
+            constructor(data: Z.input<typeof PhonePartsSchema> | string) {
+                const props = typeof data === 'string' ? Phone.parsePhone(data) : data
+                super(props)
+            }
+            static parsePhone(phone: string): { countryCode: string; areaCode: string; number: string } { /* parsing */ }
+            format(format: 'international' | 'national' | 'e164' = 'international'): string { /* formatting */ }
+            static builder(): PhoneBuilder { return new PhoneBuilder() }
+        }
+        export interface Phone extends Z.infer<typeof PhonePartsSchema> {}
+    - id: VO-P08
+      name: "Composite VO with domain arithmetic (Money)"
+      source: "packages/api/typescript/src/shared/objects/Money.ts"
+      snippet: |
+        const MoneySchema = z.object({
+            value: z.number().refine(v => Number.isInteger(v) && v >= 0, { error: 'INVALID_MONEY' as BaseDomainErrors }),
+            currency: z.enum(Currency),
+        })
+        export class Money extends BaseValueObject<typeof MoneySchema> {
+            static override schema = MoneySchema
+            add(other: Money): Money { /* currency check + add */ return new Money({ value: this.value + other.value, currency: this.currency }) }
+            subtract(other: Money): Money { /* currency check + subtract */ }
+            equals(other: Money): boolean { return this.value === other.value && this.currency === other.currency }
+        }
+        export interface Money extends Z.infer<typeof MoneySchema> {}
+    - id: VO-P09
+      name: "Composite VO with nested VO transform"
+      when: "composite VO schema has a field that references another VO's schema. Check if any field in the z.object() imports or references another schema from objects/ — if so, this pattern applies."
+      source: "packages/api/typescript/src/doctor/objects/DoctorSpecialty.ts"
+      snippet: |
+        export const DoctorSpecialtySchema = z.object({
+            specialty: z.enum(Specialty),
+            rqe: z.instance(RQE).optional(),
+        })
+        export class DoctorSpecialty extends BaseValueObject<typeof DoctorSpecialtySchema> {
+            static override schema = DoctorSpecialtySchema
+            equals(other: DoctorSpecialty): boolean { return this.specialty === other.specialty && this.rqe?.value === other.rqe?.value }
+        }
+        export interface DoctorSpecialty extends Z.infer<typeof DoctorSpecialtySchema> {}
+    - id: VO-P10
+      name: "Composite VO with cross-field refine"
+      when: "composite VO (z.object with 2+ fields) has an invariant that depends on multiple fields together (e.g. startTime < endTime, min <= max). Check if the schema has a .refine() that accesses 2+ properties of the data object — if so, this pattern applies."
+      source: "packages/api/typescript/src/clinic/objects/TimeBlock.ts"
+      snippet: |
+        export const TimeBlockSchema = z
+            .object({
+                startTime: z.string().regex(TIME_REGEX, { error: 'INVALID_TIME_BLOCK' as DomainErrors }),
+                endTime: z.string().regex(TIME_REGEX, { error: 'INVALID_TIME_BLOCK' as DomainErrors }),
+            })
+            .refine(data => data.startTime < data.endTime, { error: 'INVALID_TIME_BLOCK' as DomainErrors })
+        export class TimeBlock extends BaseValueObject<typeof TimeBlockSchema> {
+            static override schema = TimeBlockSchema
+            overlaps(other: TimeBlock): boolean { return this.startTime < other.endTime && other.startTime < this.endTime }
+            durationMinutes(): number { /* calculation */ }
+        }
+        export interface TimeBlock extends Z.infer<typeof TimeBlockSchema> {}
+        export type TimeBlockProps = Z.input<typeof TimeBlockSchema>
+    - id: VO-P11
+      name: "Composite VO with nested VO array"
+      source: "packages/api/typescript/src/clinic/objects/WeeklySchedule.ts"
+      snippet: |
+        const TimeBlockArray = z.array(z.instance(TimeBlock))
+        export const WeeklyScheduleSchema = z
+            .object({ schedule: z.object({ [DayOfWeek.MONDAY]: TimeBlockArray, /* ... */ }).partial() })
+            .refine(data => { /* no overlaps check */ }, { error: 'OVERLAPPING_TIME_BLOCKS' as DomainErrors })
+        export class WeeklySchedule extends BaseValueObject<typeof WeeklyScheduleSchema> {
+            static override schema = WeeklyScheduleSchema
+            getBlocksForDay(day: DayOfWeek): TimeBlock[] { return this.schedule[day] ?? [] }
+        }
+        export interface WeeklySchedule extends Z.infer<typeof WeeklyScheduleSchema> {}
+        export type WeeklyScheduleProps = Z.input<typeof WeeklyScheduleSchema>
+    - id: VO-P12
+      name: "Composite VO with fromString factory"
+      source: "packages/api/typescript/src/doctor/objects/CRM.ts"
+      snippet: |
+        export const CRMNumberSchema = z.string().refine(value => /^\d{4,7}$/.test(value), {
+            error: 'INVALID_CRM' as DomainErrors,
+        })
+        export const CRMSchema = z.object({
+            number: CRMNumberSchema,
+            state: z.enum(BrazilianState),
+        })
+        export class CRM extends BaseValueObject<typeof CRMSchema> {
+            static override schema = CRMSchema
+            static fromString(crm: string): CRM { /* parse "SP123456" -> { number, state } */ }
+            static isValid(crm: string): boolean { /* full string validation */ }
+            get value(): string { return `${this.state}${this.number}` }
+            format(): string { return `CRM/${this.state} ${this.number}` }
+        }
+        export interface CRM extends Z.infer<typeof CRMSchema> {}
+    - id: VO-P13
+      name: "Primitive VO with derived properties in constructor"
+      source: "packages/api/typescript/src/shared/objects/PersonName.ts"
+      snippet: |
+        export const PersonNameSchema = z
+            .string()
+            .transform(v => v.trim().replace(/\s+/g, ' '))
+        export class PersonName extends BasePrimitiveValueObject<typeof PersonNameSchema> {
+            static override schema = PersonNameSchema
+            readonly firstName: string
+            readonly surName: string
+            readonly lastName: string
+            constructor(fullName: string) {
+                super(fullName)
+                const parts = this.value.split(' ')
+                this.firstName = parts[0]!
+                this.surName = parts.slice(1).join(' ')
+                this.lastName = parts[parts.length - 1]!
+            }
+            get fullName(): string { return this.value }
+        }
+    - id: VO-P14
+      name: "Composite VO with nested VO array + refine"
+      when: "composite VO schema has a z.array() field containing another VO schema transform AND a .refine() for cross-element validation (e.g. no overlaps, uniqueness). Check if the schema has both z.array(VOSchema.input().transform(...)) and a top-level .refine() — if so, this pattern applies."
+      source: "packages/api/typescript/src/clinic/objects/DateOverride.ts"
+      snippet: |
+        export const DateOverrideSchema = z
+            .object({
+                date: z.string().regex(DATE_REGEX, { error: 'INVALID_DATE_OVERRIDE' as DomainErrors }),
+                timeBlocks: z.array(z.instance(TimeBlock)),
+            })
+            .refine(data => !hasOverlaps(data.timeBlocks), { error: 'OVERLAPPING_TIME_BLOCKS' as DomainErrors })
+        export class DateOverride extends BaseValueObject<typeof DateOverrideSchema> {
+            static override schema = DateOverrideSchema
+            isUnavailable(): boolean { return this.timeBlocks.length === 0 }
+        }
+        export interface DateOverride extends Z.infer<typeof DateOverrideSchema> {}
+        export type DateOverrideProps = Z.input<typeof DateOverrideSchema>
+
+  bad_practices:
+    - id: bp-01
+      severity: moderate
+      name: "Assuming VO signature without validating real contract"
+      wrong: "new Id({ value: 'some-id' }) — guessing constructor shape"
+      right: "Read the VO source to verify constructor accepts string: new Id('some-id')"
+      mechanical: false
+
+    - id: bp-02
+      severity: moderate
+      name: "Using (typeof Schema)['_output'] instead of Z.infer"
+      wrong: "type XProps = (typeof XSchema)['_output']"
+      right: "type XProps = Z.infer<typeof XSchema> — with import Z from 'zod'"
+      mechanical: true
+      detect:
+        - '\[._output.\]'
+
+    - id: bp-03
+      severity: critical
+      name: "Manual constructor logic instead of base class"
+      wrong: |
+        constructor(email: string) {
+            super()
+            const normalized = email.toLowerCase().trim()
+            this.value = EmailSchema.parse(normalized)
+        }
+      right: |
+        // No constructor! Base class handles safeParse + BaseError + Object.assign
+        export class Email extends BasePrimitiveValueObject<typeof EmailSchema> {
+            static override schema = EmailSchema
+        }
+      mechanical: true
+      detect:
+        - 'this\.value\s*=\s*\w+Schema\.parse\('
+
+    - id: bp-04
+      severity: moderate
+      name: "Importing schema from @shared/schemas instead of VO"
+      wrong: "import { cpfSchema } from '@shared/schemas'"
+      right: "import { CPFSchema } from '@shared/objects'"
+      mechanical: true
+      detect:
+        - 'from\s+.@shared/schemas.'
+
+    - id: bp-05
+      severity: critical
+      name: "Extending old ValueObject/PrimitiveValueObject classes"
+      wrong: |
+        import { PrimitiveValueObject } from '@shared/objects/ValueObject'
+        export class Email extends PrimitiveValueObject<string> {
+            constructor(email: string) { super(); this.value = EmailSchema.parse(email) }
+        }
+      right: |
+        import { BasePrimitiveValueObject } from '@shared/objects'
+        export class Email extends BasePrimitiveValueObject<typeof EmailSchema> {
+            static override schema = EmailSchema
+        }
+      mechanical: true
+      detect:
+        - 'extends\s+PrimitiveValueObject\b'
+        - 'extends\s+ValueObject\b'
+        - 'from\s+.@shared/objects/ValueObject.'
+
+    - id: bp-06
+      severity: critical
+      name: "Constructor with manual parse/safeParse alongside static schema"
+      wrong: |
+        export class CPF extends BasePrimitiveValueObject<typeof CPFSchema> {
+            static override schema = CPFSchema
+            constructor(cpf: string) {
+                super(cpf)
+                this.value = CPFSchema.parse(cpf)  // DUPLICATE!
+            }
+        }
+      right: |
+        export class CPF extends BasePrimitiveValueObject<typeof CPFSchema> {
+            static override schema = CPFSchema
+            // No constructor! All logic in schema (.transform), base class handles the rest
+        }
+      mechanical: true
+      detect:
+        - 'this\.value\s*=\s*\w+Schema\.parse\('
+        - 'this\.value\s*=\s*\w+Schema\.safeParse\('
+
+    - id: bp-07
+      severity: critical
+      name: "Anemic Shape export alongside VO Schema"
+      always_flag_when: >
+        File exports a separate *Shape constant (e.g. MonetaryAmountShape, GraduatedTierShape)
+        that is a plain z.object() duplicating the VO schema's fields WITHOUT validation, transforms,
+        or DomainErrors casts. Search for any export containing "Shape" — if found, this is ALWAYS F.
+        The correct pattern is to export the VO Schema itself and have consumers use Schema.input()
+        for the pre-transform version. Shape exports create an anemic duplicate that strips validation
+        and prevents nested VO instantiation via transforms.
+      wrong: |
+        // ANEMIC: No VO class, just a plain z.object() Shape with no validation or behavior
+        export const MonetaryAmountShape = z.object({
+          amountCents: z.number().int().min(0),
+          currency: z.enum(CurrencyCode),
+        })
+        // Consumers use MonetaryAmountShape directly — no transforms, no DomainErrors, no VO instantiation
+      right: |
+        // PROPER: Export the schema, consumers use .input() for composition
+        export const MonetaryAmountSchema = z.object({
+          amountCents: z.number().int().min(0, { error: 'INVALID_MONETARY_AMOUNT' as DomainErrors }),
+          currency: z.enum(CurrencyCode),
+        })
+        export class MonetaryAmount extends BaseValueObject<typeof MonetaryAmountSchema> { ... }
+        // Consumers compose with:
+        //   MonetaryAmountSchema.input()           — pre-transform type for use case/controller schemas
+        //   MonetaryAmountSchema.input().transform(v => new MonetaryAmount(v))  — nested VO instantiation
+      mechanical: true
+      detect:
+        - 'export\s+const\s+\w*Shape\s*='
+
+    - id: bp-08
+      severity: critical
+      name: "Using z.nativeEnum() or inline literal arrays instead of z.enum(EnumType)"
+      wrong: |
+        // z.nativeEnum is not the project standard
+        state: z.nativeEnum(BrazilianState)
+        // Inline literals instead of TypeScript enum reference
+        state: z.enum(['SP', 'RJ', 'MG'])
+      right: |
+        // Always use z.enum() with TypeScript enum
+        import { BrazilianState } from '@<context>/enums'
+        state: z.enum(BrazilianState)
+      mechanical: true
+      detect:
+        - 'z\.nativeEnum\('
+        - 'z\.enum\(\['
+
+    - id: bp-10
+      severity: moderate
+      name: "Manual .input().transform() instead of z.instance()"
+      wrong: |
+        // Manual wiring when z.instance() exists
+        crm: CRMSchema.input().transform(v => new CRM(v)),
+        userId: z.string().transform(v => new Id(v)),
+        specialties: z.array(DoctorSpecialtySchema.input().transform(v => new DoctorSpecialty(v))),
+      right: |
+        // z.instance() reads static schema and constructor automatically
+        crm: z.instance(CRM),
+        userId: z.instance(Id),
+        specialties: z.array(z.instance(DoctorSpecialty)),
+      mechanical: true
+      detect:
+        - '\.input\(\)\.transform\('
+        - '\.transform\(\s*\w+\s*=>\s*new\s+(?!Date\b|RegExp\b|Error\b|Map\b|Set\b|Array\b|Object\b|Promise\b|Number\b|String\b|Boolean\b)[A-Z]\w*\('
+
+    - id: bp-09
+      severity: critical
+      name: "Schema error without DomainErrors cast"
+      always_flag_when: >
+        Any { error: 'ERROR_CODE' } in the schema (.refine(), .min(), .max(), .regex(), etc.)
+        is a plain string literal WITHOUT an `as DomainErrors` or `as BaseDomainErrors` cast.
+        Check every occurrence of `{ error: '...' }` in the file — if ANY lacks the cast, this is F.
+        For VOs in the shared context, the cast should be `as BaseDomainErrors`.
+        For VOs in a domain context (catalog, subscription, customer, etc.), the cast should be
+        `as DomainErrors` imported from the context's errors file, or `as BaseDomainErrors`
+        from @codm/core-typescript.
+      wrong: |
+        // Error code is an untyped string — not checked against DomainErrors union
+        export const AddressSchema = z.object({
+          street: z.string().min(1, { error: 'INVALID_ADDRESS' }),
+          city: z.string().min(1, { error: 'INVALID_ADDRESS' }),
+        })
+      right: |
+        // Cast to DomainErrors so the error code is validated against the context's error union
+        import { DomainErrors } from '@context/errors'
+        export const AddressSchema = z.object({
+          street: z.string().min(1, { error: 'INVALID_ADDRESS' as DomainErrors }),
+          city: z.string().min(1, { error: 'INVALID_ADDRESS' as DomainErrors }),
+        })
+        // For VOs in the shared context, use BaseDomainErrors instead:
+        import type { BaseDomainErrors } from '@codm/core-typescript'
+        export const PhoneSchema = z.string().refine(v => v.length >= 8, {
+          error: 'INVALID_PHONE' as BaseDomainErrors,
+        })
+      mechanical: true
+      detect:
+        - '\{\s*error:\s*''[^'']+''\s*\}'
+
+  snippet:
+    skeleton: |
+      import { BaseValueObject, z } from '@codm/core-typescript'
+      import Z from 'zod'
+      import { DomainErrors } from '../errors'
+
+      export const {{Name}}Schema = z.object({
+      	// Define value object properties
+      })
+
+      export class {{Name}} extends BaseValueObject<typeof {{Name}}Schema> {
+      	static override schema = {{Name}}Schema
+
+      	equals(other: {{Name}}): boolean {
+      		return JSON.stringify(this.toJSON()) === JSON.stringify(other.toJSON())
+      	}
+
+      	override toString(): string {
+      		return JSON.stringify(this.toJSON())
+      	}
+      }
+
+      export interface {{Name}} extends Z.infer<typeof {{Name}}Schema> {}
+      export type {{Name}}Props = Z.input<typeof {{Name}}Schema>
+    skeletons:
+      primitive: |
+        import { BasePrimitiveValueObject, z } from '@codm/core-typescript'
+        import { DomainErrors } from '../errors'
+
+        export const {{Name}}Schema = z
+        	.string()
+        	.min(1, { error: '{{NAME_ERR}}' as DomainErrors })
+        	.transform(v => v.trim())
+
+        export class {{Name}} extends BasePrimitiveValueObject<typeof {{Name}}Schema> {
+        	static override schema = {{Name}}Schema
+
+        	equals(other: {{Name}}): boolean {
+        		return this.value === other.value
+        	}
+
+        	override toString(): string {
+        		return this.value
+        	}
+        }
+    exemplar: |
+      import { BasePrimitiveValueObject, BaseValueObject, BaseDomainErrors, z } from '@codm/core-typescript'
+      import Z from 'zod'
+      // Primitive VO
+      export const EmailSchema = z
+        .string()
+        .transform(email => email.toLocaleLowerCase().trim())
+        .refine(email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email), { error: 'INVALID_EMAIL' as BaseDomainErrors })
+      export class Email extends BasePrimitiveValueObject<typeof EmailSchema> {
+        static override schema = EmailSchema
+        equals(other: Email): boolean { return this.value === other.value }
+        override toString(): string { return this.value }
+      }
+      // Composite VO
+      export const AddressSchema = z.object({
+        street: z.string().trim().min(3, { error: 'INVALID_ADDRESS' as BaseDomainErrors }),
+        city: z.string().min(2, { error: 'INVALID_ADDRESS' as BaseDomainErrors }),
+        state: z.enum(StateEnum, { error: 'INVALID_ADDRESS' as BaseDomainErrors }),
+      })
+      export class Address extends BaseValueObject<typeof AddressSchema> {
+        static override schema = AddressSchema
+        format(): string { return `${this.street}, ${this.city}` }
+        equals(other: Address): boolean { return JSON.stringify(this) === JSON.stringify(other) }
+        override toString(): string { return this.format() }
+      }
+      export interface Address extends Z.infer<typeof AddressSchema> {}
+      export type AddressProps = Z.input<typeof AddressSchema>
+
+  scaffold: "bun cli value-object <context> <name>"

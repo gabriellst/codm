@@ -1,0 +1,37 @@
+import { injectable } from 'tsyringe-neo'
+import { AgentMessageRole, AgentName } from '../../enums'
+import { AgentRunner } from '../../services/AgentRunner'
+import { Agent } from '../../types/Agent'
+import type { AgentRunRequest } from '../../types'
+import { ClassifyIssuePromptBuilder } from './prompt'
+import { ClassifyIssueInputSchema } from './types'
+
+/**
+ * TODO: one paragraph — what business intention this agent turns into ONE run, and what it is
+ * deliberately NOT allowed to decide (that belongs to a policy service next door).
+ */
+@injectable()
+export class ClassifyIssueAgent extends Agent<typeof ClassifyIssueInputSchema> {
+	static override readonly NAME = AgentName.CLASSIFY_ISSUE
+
+	override readonly inputSchema = ClassifyIssueInputSchema
+
+	// Declare the tool scope here when this agent is allowed to ACT:
+	// override readonly tools = [AgentToolName.COMPLETE_ISSUE] as const
+
+	constructor(
+		runner: AgentRunner,
+		private readonly prompt: ClassifyIssuePromptBuilder,
+	) {
+		super(runner)
+	}
+
+	/** The ONE point of variation. No `mcp`, no `agentName` — the base stamps both. */
+	protected buildRequest(input: this['input']): Omit<AgentRunRequest, 'mcp' | 'agentName'> {
+		return {
+			cwd: input.cwd,
+			systemPrompt: this.prompt.system(input),
+			messages: [{ role: AgentMessageRole.USER, content: this.prompt.user(input) }],
+		}
+	}
+}

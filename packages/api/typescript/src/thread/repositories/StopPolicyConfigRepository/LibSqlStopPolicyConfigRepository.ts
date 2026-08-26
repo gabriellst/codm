@@ -1,0 +1,34 @@
+import { injectable } from 'tsyringe-neo'
+import { eq } from 'drizzle-orm'
+import { LibSqlDatabaseDriver, LibSqlTransaction } from '@codm/core-typescript'
+import { stopPolicyConfig } from '@codm/contracts/db'
+import { StopPolicyConfigRepository, type StopPolicy, DEFAULT_STOP_POLICY } from './StopPolicyConfigRepository'
+
+@injectable()
+export class LibSqlStopPolicyConfigRepository extends StopPolicyConfigRepository {
+	constructor(private driver: LibSqlDatabaseDriver) {
+		super()
+	}
+
+	async get(ownerId: string, tx?: LibSqlTransaction): Promise<StopPolicy> {
+		const dbc = tx ?? this.driver.db
+		const rows = await dbc.select().from(stopPolicyConfig).where(eq(stopPolicyConfig.ownerId, ownerId)).limit(1)
+		const row = rows[0]
+		if (!row) return { ...DEFAULT_STOP_POLICY }
+		return {
+			serverErrors: row.serverErrors,
+			blockedByClassification: row.blockedByClassification,
+			humanRequested: row.humanRequested,
+			approvalNeeded: row.approvalNeeded,
+			authRequired: row.authRequired,
+		}
+	}
+
+	async upsert(ownerId: string, policy: StopPolicy, tx?: LibSqlTransaction): Promise<void> {
+		const dbc = tx ?? this.driver.db
+		await dbc
+			.insert(stopPolicyConfig)
+			.values({ ownerId, ...policy })
+			.onConflictDoUpdate({ target: stopPolicyConfig.ownerId, set: { ...policy, updatedAt: new Date() } })
+	}
+}

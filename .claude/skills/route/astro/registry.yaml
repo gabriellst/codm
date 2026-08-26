@@ -1,0 +1,140 @@
+name: route-astro
+description: Checklist for .astro page routes in packages/app/astro/src/pages/.
+depends_on:
+  - component-astro
+  - primitive-astro
+  - design-system
+
+context_reads:
+  - packages/app/astro/src/pages
+  - packages/app/astro/src/layouts
+  - packages/app/astro/src/content
+  - packages/app/astro/astro.config.mjs
+  - packages/app/astro/src/i18n
+
+bad_practices:
+  - id: BP-AR-001
+    severity: high
+    when: always
+    summary: Page without `<title>` / `<meta name="description">` / OG metadata.
+    why: SEO is the astro app's reason for existing; metadata gaps defeat the point.
+    fix: Render the page inside `<BaseLayout title=... description=... ogImage=...>`. Never bypass.
+    mechanical: false
+
+  - id: BP-AR-002
+    severity: high
+    when: dynamic route
+    summary: Missing `getStaticPaths()` returning the locale matrix.
+    why: Astro can't build static paths without it; the route fails at build time.
+    fix: Implement `export async function getStaticPaths()` returning every `(locale, slug)` combo.
+    mechanical: false
+
+  - id: BP-AR-003
+    severity: high
+    when: always
+    summary: Hardcoded route strings instead of `${locale}/...` interpolation.
+    why: Breaks i18n routing; users land on the wrong locale's deep link.
+    fix: Compose URLs as `/${locale}/<segment>`.
+    mechanical: true
+    detect:
+      - 'href=.[^>]*/(pt|en)/'
+
+  - id: BP-AR-004
+    severity: medium
+    when: always
+    summary: "`export const prerender = false` on a route that doesn't need request-time data."
+    why: SSR is opt-in and costs cold-start time; default static is faster.
+    fix: Remove the line unless the page genuinely needs SSR (e.g. geo-targeted content).
+    mechanical: true
+    detect:
+      - 'export\s+const\s+prerender\s*=\s*false'
+
+  - id: BP-AR-005
+    severity: medium
+    when: always
+    summary: Importing React component from `@codm/app-react`.
+    why: Each app workspace is independent. If you need a complex interactive piece, link to `/app/...` and let the react app handle it; for small interactivity inline the React island in `astro/src/components/`.
+    fix: Local React island in `packages/app/astro/src/components/` or external link to `/${locale}/app`.
+    mechanical: true
+    detect:
+      - '@codm/app-react'
+
+  - id: BP-AR-006
+    severity: medium
+    when: blog post route
+    summary: Missing JSON-LD `BlogPosting` structured data.
+    why: Loses rich-result eligibility in Google.
+    fix: "Pass `jsonLd={{ '@context': 'https://schema.org', '@type': 'BlogPosting', ... }}` to BaseLayout."
+    mechanical: false
+
+  - id: BP-AR-007
+    severity: low
+    when: always
+    summary: Sitemap excludes the route without a documented reason.
+    why: Public routes should be discoverable; private routes belong in the react app.
+    fix: Remove the filter, or add a comment explaining why this route shouldn't be indexed.
+    mechanical: false
+
+patterns:
+  - id: P-AR-001
+    when: always
+    description: Pages live under `src/pages/[locale]/...` for localized routes.
+    rationale: Astro's built-in i18n routing depends on the segment.
+
+  - id: P-AR-002
+    when: always
+    description: "`BaseLayout` is the only place that emits `<html>` / `<head>`."
+    rationale: One source of truth for metadata, fonts, analytics.
+
+  - id: P-AR-003
+    when: dynamic content
+    description: Use a content collection (Zod schema in `src/content/config.ts`) instead of inline frontmatter.
+    rationale: Type safety + listing/sorting/filtering for free.
+
+  - id: P-AR-004
+    when: linking to the react app
+    description: Link is a plain `<a href="/${locale}/app/...">` — no React imports.
+    rationale: Cross-workspace boundary; nginx + Start handle the handoff.
+
+scaffold:
+  - description: Astro page route
+    command: bun cli route <path> --platform=astro
+  - description: New content collection
+    command: bun cli astro:content-collection <Name>
+
+canonical_snippet: |
+  ---
+  // src/pages/[locale]/changelog.astro
+  import { getCollection } from 'astro:content';
+  import BaseLayout from '../../layouts/BaseLayout.astro';
+  import { t } from '../../i18n';
+
+  export async function getStaticPaths() {
+    return [{ params: { locale: 'pt' } }, { params: { locale: 'en' } }];
+  }
+
+  const { locale } = Astro.params;
+  const entries = await getCollection('changelog');
+  entries.sort((a, b) => +b.data.date - +a.data.date);
+  ---
+
+  <BaseLayout
+    locale={locale}
+    title={t(locale, 'changelog.title')}
+    description={t(locale, 'changelog.description')}
+  >
+    <main>
+      <h1>{t(locale, 'changelog.heading')}</h1>
+      <ul role="list">
+        {entries.map(e => (
+          <li role="listitem">
+            <article>
+              <time datetime={e.data.date.toISOString()}>{e.data.date.toLocaleDateString(locale)}</time>
+              <h2>{e.data.title}</h2>
+              <p>{e.data.summary}</p>
+            </article>
+          </li>
+        ))}
+      </ul>
+    </main>
+  </BaseLayout>

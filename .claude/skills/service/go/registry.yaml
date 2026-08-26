@@ -1,0 +1,213 @@
+registry:
+  type: backend
+  layer: application
+  depends_on: [entity]
+  depended_by: [usecase, handler]
+  context_reads: [entity]
+  lang: go
+
+  snippet:
+    skeleton: |
+      // Package services defines the {{Pascal}} interface and its stub implementation.
+      package services
+
+      import "context"
+
+      // {{Pascal}}Input describes the input for a {{snake}} operation.
+      type {{Pascal}}Input struct {
+      	// TODO: add fields
+      }
+
+      // {{Pascal}} defines the {{snake}} service interface.
+      // Use cases depend on this interface, not on the concrete implementation.
+      type {{Pascal}} interface {
+      	// Execute performs the {{snake}} operation.
+      	Execute(ctx context.Context, input {{Pascal}}Input) error
+      }
+
+      // Stub{{Pascal}} is a no-op implementation for local development and testing.
+      // Replace with a real implementation before going to production.
+      type Stub{{Pascal}} struct{}
+
+      // NewStub{{Pascal}} constructs the stub service.
+      func NewStub{{Pascal}}() *Stub{{Pascal}} {
+      	return &Stub{{Pascal}}{}
+      }
+
+      // Execute is a no-op stub that always succeeds.
+      func (s *Stub{{Pascal}}) Execute(_ context.Context, _ {{Pascal}}Input) error {
+      	// TODO: implement real service call
+      	return nil
+      }
+
+  patterns:
+    - id: SVC-GO-01
+      name: "Interface only when multiple implementations exist or are planned"
+      when: "service has stub + real impls, or provider-switched impls"
+      rule: |
+        // Interface justified: StubTranscoderService (dev/test) vs RealTranscoderService (prod)
+        type TranscoderService interface {
+            Start(ctx context.Context, input TranscoderInput) error
+        }
+
+    - id: SVC-GO-02
+      name: "Compile-time interface check on every concrete impl"
+      when: always
+      rule: |
+        var _ TranscoderService = (*StubTranscoderService)(nil)
+
+    - id: SVC-GO-03
+      name: "All dependencies injected via constructor, never global"
+      when: always
+      rule: |
+        type StubTranscoderService struct {
+            apirsURL string
+            client   *http.Client
+        }
+        func NewStubTranscoderService(apirsURL string, sleep time.Duration) *StubTranscoderService {
+            return &StubTranscoderService{apirsURL: apirsURL, client: &http.Client{...}}
+        }
+
+    - id: SVC-GO-04
+      name: "fx.As(new(FooService)) when consumers depend on the interface"
+      when: "service has an interface and is wired via fx"
+      rule: |
+        fx.Provide(fx.Annotate(
+            services.NewRealTranscoderService,
+            fx.As(new(services.TranscoderService)),
+        )),
+
+    - id: SVC-GO-05
+      name: "Context-local services registered in <ctx>/module.go"
+      when: always
+      rule: |
+        // transcoding/module.go
+        var Module = fx.Module("transcoding",
+            fx.Provide(func() services.TranscoderService {
+                return services.NewStubTranscoderService(os.Getenv("TRANSCODER_URL"), 10*time.Second)
+            }),
+            // ...
+        )
+
+    - id: SVC-GO-06
+      name: "Factory pattern when implementation selected at runtime"
+      when: "service implementation varies at runtime (e.g. based on platform enum)"
+      rule: |
+        // Factory receives concrete impls, not the interface
+        type GatewayFactory struct {
+            whatsapp *WhatsAppGateway
+            internal *InternalGateway
+        }
+        func NewGatewayFactory(wa *WhatsAppGateway, ig *InternalGateway) *GatewayFactory { ... }
+        func (f *GatewayFactory) Get(platform enums.Platform) Gateway { ... }
+
+        // In module.go — concrete structs need no fx.As
+        fx.Provide(services.NewWhatsAppGateway),
+        fx.Provide(services.NewInternalGateway),
+        fx.Provide(services.NewGatewayFactory),
+
+    - id: SVC-GO-07
+      name: "Cross-context infra services live in core/services/"
+      when: "service is shared across multiple bounded contexts"
+      rule: |
+        // core/services/{mediator,outbox,unitofwork,httprouter}
+        // Wired at application root (cmd/api/main.go), NOT in context module.go
+
+  bad_practices:
+    - id: bp-GO-SVC-01
+      name: "Interface defined for a single permanent implementation"
+      severity: low
+      mechanical: false
+      wrong: |
+        // Only one impl exists and no second impl is planned — interface is noise
+        type LoggerService interface {
+            Log(msg string)
+        }
+        type defaultLoggerService struct{}
+        // ... single impl forever
+      right: |
+        // Just provide the concrete struct directly; add interface later if needed
+        type LoggerService struct{}
+        func NewLoggerService() *LoggerService { return &LoggerService{} }
+
+    - id: bp-GO-SVC-02
+      name: "Global/package-level state in service"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'var\s+\w+\s*=\s*&http\.Client\{'
+      wrong: |
+        var globalClient = &http.Client{Timeout: 10 * time.Second} // package-level global
+        func (s *TranscoderService) Start(ctx context.Context, ...) error {
+            resp, err := globalClient.Do(req)
+        }
+      right: |
+        type StubTranscoderService struct { client *http.Client }
+        func NewStubTranscoderService(...) *StubTranscoderService {
+            return &StubTranscoderService{client: &http.Client{Timeout: 10 * time.Second}}
+        }
+
+    - id: bp-GO-SVC-03
+      name: "Context-local service registered in cmd/api/main.go instead of module.go"
+      severity: moderate
+      mechanical: false
+      wrong: |
+        // main.go — context-local service pollutes the root module
+        fx.Provide(services.NewStubTranscoderService),
+      right: |
+        // transcoding/module.go
+        var Module = fx.Module("transcoding",
+            fx.Provide(func() services.TranscoderService { ... }),
+        )
+
+    - id: bp-GO-SVC-04
+      name: "Cross-context infra service registered in context module.go"
+      severity: moderate
+      mechanical: false
+      wrong: |
+        // transcoding/module.go — mediator wiring should be at root
+        fx.Provide(fx.Annotate(mediator.NewChannelMediator, fx.As(new(mediator.InternalMediator)))),
+      right: |
+        // cmd/api/main.go
+        fx.Provide(fx.Annotate(mediator.NewChannelMediator, fx.As(new(mediator.InternalMediator)))),
+
+    - id: bp-GO-SVC-05
+      name: "Business logic inside a service that belongs on an entity"
+      severity: critical
+      mechanical: false
+      wrong: |
+        // Service decides status transition — entity invariant
+        func (s *VideoService) Publish(ctx context.Context, videoID string) error {
+            if video.Status != enums.VideoStatusReady {
+                return errors.New("video not ready")
+            }
+            video.Status = enums.VideoStatusPublished
+            return s.repo.Save(ctx, video)
+        }
+      right: |
+        // Entity encapsulates the invariant
+        func (v *Video) Publish() error {
+            if v.Status != enums.VideoStatusReady {
+                return errors.New("video not ready")
+            }
+            v.Status = enums.VideoStatusPublished
+            v.AppendDomainEvent(...)
+            return nil
+        }
+        // Use case: video.Publish(); repo.Save(ctx, video)
+
+    - id: bp-GO-SVC-06
+      name: "Factory pattern used where wire-up-time interface is sufficient"
+      severity: low
+      mechanical: false
+      wrong: |
+        // Two impls exist but are selected at wire-up time, not runtime
+        // A factory adds unnecessary indirection
+        type TranscoderFactory struct { stub *Stub; real *Real }
+        func (f *TranscoderFactory) Get(env string) TranscoderService { ... }
+      right: |
+        // Switch at wire-up via fx — choose once, no runtime factory needed
+        fx.Provide(fx.Annotate(
+            services.NewStubTranscoderService, // or NewRealTranscoderService
+            fx.As(new(services.TranscoderService)),
+        )),

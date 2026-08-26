@@ -1,0 +1,279 @@
+id: synthetic-react-dashboard-chart
+timeoutMs: 3600000
+tier: holdout
+builder: sonnet
+title: Sales reports page over the kind-discriminated GetChart BFF read
+  (synthetic — probes union consumption, dispatch-by-map, data ownership, locale/money)
+sourceSpec: PROBES-BACKLOG.md#6
+goldRef: ""
+baseRef: ""
+prompt: >
+  In the template web app (packages/app/react), build the missing Sales Reports
+  page. The dashboard's unified analytics chart (GetChart) deserves its own
+  explorable report screen: create the route directory src/routes/(app)/reports/
+  with an index.tsx, like every existing page (the directory exists empty today;
+  do not touch the sidebar nav — the page is reached by URL). The backend
+  surface already exists in the SDK: useGetChart, the ChartType discriminant
+  with its ChartTypeEnum const, chartTypeSchema and getChartQueryParamsSchema
+  from @codm/client-typescript/typescript — read the generated surface under
+  packages/client/dist/typescript/src/typescript/{types,zod,hooks} FIRST,
+  especially types/GetChart.ts: the endpoint returns ONE response per recorte,
+  a union discriminated by kind ('income' | 'weekday' | 'hour' | 'period' |
+  'region'), and each member has a genuinely different shape (income: dated
+  time buckets; weekday: seven fixed day segments; hour: per-hour segments;
+  period: four day-part segments; region: per-region totals). The query params
+  chartType, tenancyScope, frequency, startDate and endDate are required. This
+  is a frontend-only task: do not touch the backend and do not regenerate the
+  SDK. The page lets the user switch the recorte and renders that recorte's
+  breakdown — each of the five differently-shaped responses gets its own
+  variant visualization (no charting library; structured rows/segments with a
+  simple bar treatment is enough): segment labels appropriate to the recorte
+  (localized dates for income buckets, translated day/day-part names, hours,
+  region names), each segment's monetary values (at minimum revenue and
+  profit; region exposes a single total) rendered as finished locale-correct
+  money strings (SignedMoney is cents + currency), and order counts. The
+  chosen recorte and date range must survive a refresh and be shareable with a
+  teammate as-is; the date range defaults to the last 30 days; frequency is
+  fixed at DAILY for v1; tenancyScope is NOT a URL concern — it comes from the
+  app-global tenancy store (useTenancyStore from @/stores). While data loads,
+  the page header and recorte selector stay visible with a loading treatment
+  in the data-dependent area only; an empty result (income and region can come
+  back empty) renders a friendly empty state. All copy is localized in both
+  app languages (add the new keys to src/locales/pt.json and en.json), and the
+  recorte options show translated labels. Decide how the screen decomposes,
+  who owns the data fetching, where every piece of UI state lives, and how the
+  five union members map to the five variant visualizations — all per the
+  house frontend architecture: read packages/app/react/CLAUDE.md first, then
+  docs/FRONTEND.md and the react variants of the route and component skills
+  (.claude/skills/route/react/, .claude/skills/component/react/) before
+  writing code, and study one existing list route (e.g.
+  src/routes/(app)/orders/) for the established shape. Where an existing
+  screen and a skill registry disagree, the registry wins. Register the route
+  (cd packages/app/react && bun x tsr generate) and finish with a green
+  type-check: cd packages/app/react && bun x tsc --noEmit.
+axes:
+  - UI-COMPOSITION
+  - DATA-OWNERSHIP
+  - CENTRALIZE-MAPS
+  - LOCALE-MONEY
+  - DISC-UNION
+  - ENUM-REPR
+  - STATE-PLACEMENT
+  - SDK-CONSUME
+graders:
+  - kind: tsc
+    spec: app-react
+  # ── structure ──────────────────────────────────────────────────────
+  - kind: file-exists
+    spec: "packages/app/react/src/routes/(app)/reports/index.tsx"
+  - kind: file-exists
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.tsx"
+  # ── UI-COMPOSITION / route shell ───────────────────────────────────
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/index.tsx::validateSearch"
+    id: route#RTE-C01
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/index.tsx::chartTypeSchema|z\\.enum\\(\\s*ChartTypeEnum|getChartQueryParamsSchema"
+    id: enum#typescript
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/index.tsx::\\.default\\("
+    id: route#RTE-P12
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/reports/index.tsx::useGetChart|useTenancyStore"
+    id: route#bp-02
+  # ── DATA-OWNERSHIP ─────────────────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.tsx::useGetChart"
+    id: component#CMP-P01
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.{ts,tsx}::\\.useSearch\\("
+    id: component#CMP-P01
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.{ts,tsx}::useTenancyStore\\("
+    id: component#CMP-P11
+  # ── DISC-UNION + CENTRALIZE-MAPS ───────────────────────────────────
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.{ts,tsx}::Record<\\s*ChartType\\b|\\[\\s*\\w+\\s+in\\s+ChartType\\s*\\]"
+    id: component#CMP-P18
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::ChartTypeEnum\\b|chartTypeSchema\\.options"
+    id: enum#typescript
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::switch\\s*\\("
+    id: component#CMP-P18
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::Record<\\s*string"
+    id: atlas#CENTRALIZE-MAPS
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::\\btype\\s+ChartType\\s*="
+    id: atlas#DISC-UNION
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::\\[\\s*['\"](income|weekday|hour|period|region)['\"]\\s*,\\s*['\"](income|weekday|hour|period|region)['\"]"
+    id: enum#typescript
+  # ── ENUM-REPR / i18n catalog ───────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::enums\\.ChartType|enumLabel\\(\\s*['\"]ChartType['\"]"
+    id: component#CMP-P07
+  - kind: grep-must
+    spec: "packages/app/react/src/locales/en.json::\"ChartType\""
+    id: enum#i18n-catalog
+  - kind: grep-must
+    spec: "packages/app/react/src/locales/pt.json::\"ChartType\""
+    id: enum#i18n-catalog
+  # ── LOCALE-MONEY ───────────────────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::useMoney\\("
+    id: atlas#LOCALE-MONEY
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::useLocale\\("
+    id: component#bp-15
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::['\"]pt-BR['\"]|['\"]en-US['\"]|\\bptBR\\b|\\benUS\\b"
+    id: component#bp-15
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::amountCents\\s*/\\s*100|\\.toFixed\\("
+    id: atlas#LOCALE-MONEY
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::import\\s*\\{[^}]*\\bformatMoney\\b[^}]*\\}\\s*from\\s*['\"]@/lib/format['\"]"
+    id: atlas#LOCALE-MONEY
+  # ── skeleton ───────────────────────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::from\\s+['\"]@/components/ui/skeleton['\"]"
+    id: component#CMP-C01
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::export\\s+(function|const)\\s+\\w*Skeleton"
+    id: component#CMP-P02
+  # ── SDK-CONSUME + hygiene riders ───────────────────────────────────
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/reports/-components/**/*.tsx::from\\s+['\"]@codm/client-typescript/typescript['\"]"
+    id: atlas#SDK-CONSUME
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::(?<![\\w$.])fetch\\s*\\(|from\\s+['\"](axios|ky|got|redaxios|superagent)['\"]"
+    id: component#bp-21
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::\\buseState\\b"
+    id: store#STR-P10
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::from\\s+['\"]zustand['\"]"
+    id: store#STR-P10
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::\\bas\\s+any\\b|\\bas\\s+never\\b|\\bas\\s+unknown\\b|@ts-expect-error|@ts-ignore"
+    id: atlas#FIX-THE-CAUSE
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/reports/**/*.{ts,tsx}::throw\\s+new\\s+Error\\("
+    id: atlas#ERR-VOCAB
+  # ── detectors + judge ──────────────────────────────────────────────
+  - kind: detect
+    spec: registry-scan
+  - kind: detect
+    spec: import-direction
+  - kind: detect
+    spec: component-props
+  - kind: judge
+    spec: >
+      A Sales Reports page was just added under
+      packages/app/react/src/routes/(app)/reports/. Verify ALL of:
+      (a) UI-COMPOSITION — the route index.tsx is a thin shell: the URL
+      contract (validateSearch with the recorte field typed against the SDK
+      ChartType values and defaulted, dates defaulted to a last-30-days
+      window) plus layout composition only — no SDK hook calls, no business
+      JSX in the route; a Section component under -components/ owns the
+      single useGetChart query; static UI (page header, recorte selector)
+      stays visible while data loads, with an inline NON-exported skeleton in
+      the data-dependent area only, and the data area follows skeleton ->
+      empty -> content (an empty state where a member can be genuinely
+      empty, e.g. income buckets / region rows).
+      (b) DATA-OWNERSHIP — the section reads recorte/dates via the route's
+      search hook and tenancyScope via a useTenancyStore selector; exactly
+      ONE component calls useGetChart; the route never fetches and passes
+      data down; recorte changes write through router navigation (a search
+      updater or Link), never component state; variant components receive
+      the ALREADY-FETCHED response (or their member of it) by prop and never
+      re-fetch; no useState and no new Zustand store anywhere under the new
+      directory.
+      (c) DISC-UNION + CENTRALIZE-MAPS — each of the five kinds renders
+      through its own variant sub-component, selected via ONE module-level
+      dispatch map keyed by the SDK ChartType (exhaustive — a new kind must
+      break tsc), not via a switch or an if/else-if chain across kinds
+      inline in a single component; no all-optional flattened row type that
+      merges the five members; no hand-rolled parallel union re-declaring
+      the SDK kinds; no casts (as any / as never / as unknown) to force the
+      map-lookup correlation.
+      (d) LOCALE-MONEY + ENUM-REPR — every monetary value renders through
+      the useMoney() formatter (the SignedMoney object handed over as-is; no
+      amountCents/100 hand-math, no toFixed, no direct formatMoney import
+      from @/lib/format inside components); income bucket date labels format
+      with the active locale obtained from useLocale() — never a hardcoded
+      'pt-BR'/'en-US' or a date-fns locale object; the recorte option labels
+      come from the i18n enums.ChartType.* catalog with entries present in
+      BOTH src/locales/pt.json and en.json; weekday/day-part segment labels
+      are translated via i18n keys, not hardcoded strings.
+      Scope notes — judge the idiom, not the variable name: a variant
+      sub-component receiving the fetched response or its narrowed member as
+      a prop is the EXPECTED CMP-P18/CMP-P05 shape — do not fail it as
+      prop-drilling. Because TypeScript cannot correlate a map lookup with a
+      union-typed prop, BOTH cast-free typings pass: a map of
+      uniform-signature views that each take the full response and guard
+      their own kind with an early return (if (data.kind !== 'weekday')
+      return null), OR Extract-typed variant props with the correlation
+      resolved type-safely — do not fail the single-kind guard as an "if
+      chain"; what fails is one component branching across MULTIPLE kinds
+      inline, or flattening. tenancyScope living in the app-global Zustand
+      store (useTenancyStore) instead of the URL is the house canon — do not
+      fail it. A const-asserted ordering array for fixed segment keys
+      (MONDAY..SUNDAY, MORNING..NIGHT, hour sorting) resolves ORDER, not
+      labels — fine. Hardcoding frequency: 'DAILY' in the query params is
+      per the brief — fine. The dispatch map spelling may be
+      Record<ChartType, ...>, satisfies Record<...>, or a mapped type keyed
+      by ChartType — all fine. The pre-existing dashboard chart
+      (src/routes/(app)/dashboard/-components/RevenueChartSection/) carries
+      known deviations and is OUT of scope — judge only the new files under
+      src/routes/(app)/reports/ plus src/locales/pt.json and en.json.
+notes: >-
+  Synthetic probe authored from grounded HEAD facts — first BFF-read (chart)
+  family probe on react; backlog P2 row "synthetic-react-dashboard-chart"
+  (orchestrator item #6). No gold tree; agent mode only, built from HEAD. Free
+  real estate verified at authoring time: src/routes/(app)/reports/ exists but
+  is EMPTY (untracked leftover dir, zero files — every dir-scoped must-grep
+  has 0 candidate files and both file-exists globs are empty); routeTree.gen.ts
+  contains zero "reports" references; neither src/locales/pt.json nor en.json
+  contains a "ChartType" key; enums.ChartType / enumLabel('ChartType') appear
+  nowhere; useGetChart is consumed only under (app)/dashboard/ (excluded from
+  every glob). Grounded SDK reality: GetChart200 (types/GetChart.ts) is a
+  5-member union discriminated by kind (income/weekday/hour/period/region);
+  the SDK ZOD layer spells it z.union (kubb emission) while the TS type
+  narrows by kind — graders therefore target consumption idioms (enum-keyed
+  dispatch map, no flattening, no casts), never a literal z.discriminatedUnion
+  call in the app. Required query params chartType/tenancyScope/frequency/
+  startDate/endDate; ChartTypeEnum, chartTypeSchema, getChartQueryParamsSchema,
+  useGetChart all exported from @codm/client-typescript/typescript;
+  SignedMoney is structurally identical to Money, so useMoney's formatter
+  accepts it as-is (judge scope note covers it). Discriminating questions:
+  HEAD's own RevenueChartSection (dashboard) is the anti-exemplar — useState
+  fallbacks for URL state, `as` casts, a hand-rolled `type ChartType =
+  'income' | ...`, all five kinds flattened into one ChartBucket[] (zero-money
+  padding for region), and bespoke dashboard.revenueChart.type.* label keys
+  instead of the enums.* catalog. A naive agent copies it; the canon
+  (validateSearch typed by the SDK enum + .default()s, one section owning the
+  query, dispatch-by-map variant components, enums.ChartType i18n catalog,
+  useMoney/useLocale) is what the graders measure — hence the prompt's "the
+  registry wins" sentence. Correlated-union
+  note: TS cannot correlate VIEWS[kind] with a union-typed prop, so the judge
+  blesses both cast-free shapes (uniform-prop views guarding their own kind
+  with an early return, or Extract-typed props); switch is banned dir-wide and
+  as any/never/unknown banned — the reachable failure modes are flattening or
+  casting, which is the point. Deliberate bans: dir-wide useState (the brief
+  needs no transient UI and no stories are requested — a .stories.tsx with
+  useState in a decorator would trip store#STR-P10; relax if a variant adds
+  genuinely ephemeral hover/tooltip UI); .toFixed( (share/percent text goes
+  through formatPercent(ratio, locale)); ptBR/enUS bare identifiers also catch
+  date-fns locale objects; the adjacent-kind-literals must-not catches both
+  hand-typed option arrays and z.enum(['income',...]) re-declarations while
+  leaving dispatch-map object keys (unquoted, no array) and const ordering
+  arrays (MONDAY.., MORNING..) untouched. Glob notes: Bun.Glob treats the
+  literal "(app)" segment fine and supports filename braces (*.{ts,tsx}) but
+  NOT a "/" inside a brace branch — hence separate -components/** and dir-wide
+  ** globs; "**" matches zero segments so reports/**/*.{ts,tsx} includes
+  index.tsx. Verified at authoring time via validate-task.ts: tsc app-react
+  green at HEAD, registry-scan + import-direction + component-props exit 0 at
+  HEAD, all must-greps 0 at HEAD, all regexes compile through parseGrepSpec.

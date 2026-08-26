@@ -1,0 +1,242 @@
+registry:
+  type: backend
+  layer: interface
+  depends_on: [value-object, enum]
+  depended_by: [controller, usecase]
+  context_reads: [value-object, enum]
+
+  patterns:
+    - id: SCH-01
+      name: "Named export"
+      when: always
+      rule: "export const XSchema = z.object({...})"
+    - id: SCH-02
+      name: "Type inference"
+      when: always
+      rule: "export type XType = Z.infer<typeof XSchema>"
+      wrong: "(typeof XSchema)['_output'], OR no exported type alias at all — the type alias must be a standalone export at module level"
+    - id: SCH-C01
+      name: "VO schema reuse"
+      when: "field maps to a value object"
+      rule: "email: EmailSchema (primitive VO — reference directly); address: AddressSchema.input() (composite/object VO)"
+      wrong: "inline z.string() when VO schema exists"
+    - id: SCH-C02
+      name: "Enum schema"
+      when: "field is an enum"
+      rule: "z.enum(EnumType)"
+      wrong: "z.literal('A').or(z.literal('B'))"
+    - id: SCH-C03
+      name: "Composition with .pick/.omit/.and"
+      when: "schema derives from existing schema"
+      rule: "BaseSchema.pick({ field: true }).and(z.object({ extra: z.string() }))"
+    - id: SCH-C06
+      name: "VO schema usage by layer"
+      when: "schema field maps to a Value Object"
+      rule: |
+        // Entity schemas → z.instance(VO) — constructs VO instances
+        email: z.instance(Email),
+        address: z.instance(Address),
+
+        // Use case / controller schemas → accept raw input:
+        //   primitive VO schema (string-based) → reference directly
+        //   composite VO schema (z.object)     → VOSchema.input() strips transforms
+        email: EmailSchema,
+        address: AddressSchema.input(),
+
+        // VO schemas (nested VOs) → z.instance(VO) — constructs child VOs
+        rqe: z.instance(RQE).optional(),
+        timeBlocks: z.array(z.instance(TimeBlock)),
+      wrong: |
+        // Using z.instance() in use case/controller — they deal with raw input, not VOs
+        // Using VOSchema.input().transform(v => new VO(v)) in entities — z.instance() does this
+        // Using .input() on non-object schemas — compile error (only ZodObject has .input())
+    - id: SCH-C04
+      name: "Refinement with error code"
+      when: "schema has custom validation"
+      rule: ".refine(fn, { error: 'CODE' as ErrorType })"
+      wrong: ".refine(fn, { message: '...' })"
+    - id: SCH-C05
+      name: "Query param converters"
+      when: "schema used for query parameters"
+      rule: "z.stringToNumber(), z.stringToBoolean(), z.stringToDate()"
+
+    # Real-code patterns extracted from codebase
+    - id: SCH-P01
+      name: "Shared schema with inline refinement and typed error"
+      when: "schema has cross-field or complex validation shared across contexts"
+      rule: |
+        export const DocumentSchema = z.string().min(11).max(18)
+          .refine(value => { /* inline logic */ }, { error: 'INVALID_DOCUMENT' as BaseDomainErrors })
+      source: "packages/api/typescript/src/auth/schemas/document.ts"
+    - id: SCH-P02
+      name: "Controller composes use case schema with .omit for ctx fields"
+      when: "controller injects fields from ctx/cookie that use case expects"
+      rule: |
+        import { CreateClinicInputSchema } from '@clinic/usecases/clinic/CreateClinic'
+        const InputSchema = z.object({
+          body: CreateClinicInputSchema.omit({ userId: true }),
+          ctx: z.object({ user: z.object({ id: z.string() }) }),
+        }).example([...])
+      source: "packages/api/typescript/src/clinic/controllers/clinic/CreateClinic.ts"
+    - id: SCH-P03
+      name: "Paginated query with extra filters"
+      when: "list endpoint has domain-specific filters beyond search"
+      rule: |
+        query: z.paginatedQuery({
+          specialty: z.enum(Specialty).optional(),
+        })
+      source: "packages/api/typescript/src/ui/controllers/services/ListDoctorServices.ts"
+    - id: SCH-P04
+      name: "Output schema reuse with .example()"
+      when: "controller output reuses use case output schema"
+      rule: |
+        import { ListOutputSchema } from '@ui/usecases/ListItems'
+        export const ControllerOutputSchema = ListOutputSchema.example([{ ... }])
+      source: "packages/api/typescript/src/ui/controllers/patients/ListMemberPatients.ts"
+    - id: SCH-P05
+      name: "Context-specific reusable output schema"
+      when: "same output shape is used in 3+ controllers within a context"
+      rule: |
+        // [context]/schemas/AddressOutput.ts
+        export const AddressOutputSchema = z.object({
+          street: z.string(), number: z.string(),
+          complement: z.string().optional(),
+          neighborhood: z.string(), city: z.string(),
+          state: z.enum(BrazilianState), zipCode: z.string(),
+          country: z.enum(Country).optional(),
+        })
+      source: "packages/api/typescript/src/ui/schemas/AddressOutput.ts"
+    - id: SCH-P06
+      name: "z.record with enum key for status aggregations"
+      when: "schema models a map of enum values to counts or nested data"
+      rule: |
+        totalAppointmentsByStatus: z.record(z.enum(AppointmentStatus), z.number().optional())
+      source: "packages/api/typescript/src/ui/usecases/patients/ListMemberPatients.ts"
+    - id: SCH-P07
+      name: "Range schema with cross-field refinement"
+      when: "schema models a from/to range requiring from <= to"
+      rule: |
+        export const PriceRangeSchema = z.object({
+          from: z.number().int().min(0),
+          to: z.number().int().min(0),
+          currency: z.enum(Currency).default(Currency.BRL),
+        }).refine(data => data.from <= data.to, { error: 'INVALID_RANGE' as DomainErrors })
+      source: "packages/api/typescript/src/service/objects/PriceRange.ts"
+    - id: SCH-P08
+      name: "Use case input with VO .input() for domain fields"
+      when: "use case input has fields that map to existing value objects"
+      rule: |
+        export const CreatePatientInputSchema = z.object({
+          fullName: PersonNameSchema,            // primitive VO schema — reference directly
+          rg: RGSchema,
+          cpf: CPFSchema,
+          birthDate: z.stringToDate(),
+          email: EmailSchema,
+          phone: PhonePlainSchema.input(),       // composite (object) VO — .input() strips transforms
+          address: AddressSchema.input().optional(),
+          clinicId: z.string(),
+        })
+      source: "SKILL.md example (use case section)"
+
+  bad_practices:
+    - id: bp-07
+      name: ".input() on non-object schemas (primitive VOs)"
+      rule: ".input() exists only on z.object() schemas — on primitive VO schemas it is a compile error (TS2551) and a runtime throw for dynamic callers. Reference primitive VO schemas directly."
+      wrong: "CRMNumberSchema.input(), RQESchema.input() — TS2551 compile error since Phase 2 (was a silent type-erasing no-op before)"
+      right: "CRMNumberSchema, RQESchema — reference directly; AddressSchema.input() — object schema, correctly strips field transforms"
+      mechanical: false
+      # Enforced at type level since Phase 2 — .input() does not exist on non-object schemas (core InputSchema.ts)
+
+    - id: bp-08
+      name: "z.instance() in use case or controller schemas"
+      rule: "z.instance() constructs VO instances — only for entity/VO schemas. Use cases and controllers deal with raw input, so reference the VO schema directly (primitive) or VOSchema.input() (composite/object) instead."
+      wrong: "email: z.instance(Email) — in a use case or controller input schema"
+      right: "email: EmailSchema — in use case/controller (composite VOs use VOSchema.input()); email: z.instance(Email) — in entity schema"
+      mechanical: false
+
+    - id: bp-01
+      name: "Inline enum values in z.enum()"
+      rule: "Never hardcode enum values. Always reference the TypeScript enum constant."
+      wrong: "status: z.enum(['PENDING', 'SCHEDULED', 'COMPLETED', 'CANCELLED'])"
+      right: "status: z.enum(AppointmentStatus)"
+      mechanical: true
+      detect:
+        - 'z\.enum\(\['
+
+    - id: bp-02
+      name: "Query params without string conversion"
+      rule: "Query params arrive as strings. Use z.stringToNumber(), z.stringToBoolean(), z.stringToDate(). Body fields (JSON) use native Zod types."
+      wrong: "query: z.object({ page: z.number().optional() })"
+      right: "query: z.object({ page: z.stringToNumber().optional() })"
+      mechanical: false
+
+    - id: bp-03
+      name: "Using { message } in .refine() instead of { error }"
+      rule: "All .refine() errors must use { error: 'CODE' as ErrorType }. { message } bypasses GlobalErrorMapper and is not type-checked."
+      wrong: ".refine(fn, { message: 'FROM_MUST_BE_LESS' })"
+      right: ".refine(fn, { error: 'INVALID_RANGE' as DomainErrors })"
+      mechanical: true
+      detect:
+        - '\.refine\([^)]*\bmessage\s*:'
+
+    - id: bp-04
+      name: "Using (typeof Schema)['_output'] instead of Z.infer<>"
+      rule: "_output is internal and deprecated in Zod v4. Use Z.infer<typeof Schema> with import Z from 'zod'."
+      wrong: "type X = (typeof XSchema)['_output']"
+      right: "type X = Z.infer<typeof XSchema>"
+      mechanical: true
+      detect:
+        - '\[[''"]_output[''"]\]'
+
+    - id: bp-05
+      name: "Using z.instanceof() or manual .transform() instead of z.instance() in entity schemas"
+      rule: "Entity schemas must use z.instance(VO) — it reads the VO's static schema and constructor automatically. z.instanceof(Id) requires pre-constructed VOs. Manual .transform() is verbose and error-prone."
+      wrong: "createdBy: z.instanceof(Id), OR createdBy: z.string().transform(v => new Id(v))"
+      right: "createdBy: z.instance(Id)"
+      mechanical: true
+      detect:
+        - 'z\.instanceof\('
+        - '\.transform\(\s*\w+\s*=>\s*new\s'
+
+    - id: bp-06
+      name: "Inline schema when a value object schema exists"
+      rule: "When a field maps to an existing VO (email, phone, address, CRM), use the VO schema (primitive: direct reference; composite: VOSchema.input()) instead of inline z.string()/z.object()."
+      wrong: "email: z.string(), address: z.object({ street: z.string(), ... })"
+      right: "email: EmailSchema, address: AddressSchema.input().optional()"
+      mechanical: false
+
+    - id: bp-09
+      name: "Registering entity / sensitive schemas as OpenAPI components"
+      rule: "registerSchemas emits each schema's .refine() source (fn.toString()) + full field set into the public openapi.json + client SDK. Register only wire-safe VOs/DTOs (shared/objects, shared/schemas); never entities. The mechanical detector lives in bounded-context bp-05."
+      wrong: |
+        // entity write-model schema → its .refine() source + internal fields leak to the public SDK
+        openapi.registerSchemas({ ...patientEntities })
+      right: |
+        // only shared value objects + contract DTOs — shapes already on the wire
+        openapi.registerSchemas({ ...sharedObjects, ...sharedSchemas })
+      mechanical: false
+
+
+  snippet:
+    skeleton: |
+      import { z } from '@codm/core-typescript'
+      import Z from 'zod'
+
+      export const {{Name}}Schema = z.object({
+      	// Define reusable schema
+      })
+
+      export type {{Name}}Type = Z.infer<typeof {{Name}}Schema>
+    exemplar: |
+      import { z } from '@codm/core-typescript'
+      import Z from 'zod'
+      import { MonetaryAmountSchema } from '@shared/objects'
+      import { ProductStatus } from '@codm/contracts-typescript/wire/enums'
+      export const CreateProductSchema = z.object({
+        name: z.string().min(1).max(255),
+        price: MonetaryAmountSchema.input(),
+        status: z.enum(ProductStatus),
+      })
+      export type CreateProductInput = Z.infer<typeof CreateProductSchema>
+
+  scaffold: "bun cli schema <context> <name>"

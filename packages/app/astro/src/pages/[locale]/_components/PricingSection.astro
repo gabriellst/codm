@@ -1,0 +1,130 @@
+---
+import { getCollection } from 'astro:content'
+import type { CollectionEntry } from 'astro:content'
+import DownloadIcon from '~/components/DownloadIcon.astro'
+import Icon from '~/components/Icon.astro'
+import { DEFAULT_DOWNLOAD, downloadLabel } from '~/config/download'
+import type { Locale } from '~/i18n'
+
+interface Props {
+	locale: Locale
+	t: CollectionEntry<'landing'>['data']['pricing']
+	/** Template do rótulo (t.hero.ctaDownload, "Download para {platform}") — o mesmo do Hero; o
+	 * sistema é escolhido no cliente por DownloadDetect.astro (plano 2026-08-25, D15). */
+	downloadTemplate: string
+}
+
+// D3 (design/codm.pen `ji2y3` → `W8JSL`, "Seção — Preço"): rebrand of an existing section,
+// not a new one — two columns ("O que está incluído" checklist + the "Local" plan card),
+// two title stamps, a future-plans disclosure, and two floating chips. Single Community
+// plan → renamed "Local" (plans.json); price prints via Intl using a per-LOCALE currency
+// (R$ pt / $ en) since that's a presentation choice, not per-plan data (see plans/config.ts).
+const { locale, t, downloadTemplate } = Astro.props
+const plans = (await getCollection('plans')).sort((a, b) => a.data.order - b.data.order)
+const plan = plans[0]!
+const copy = plan.data.copy[locale]!
+
+const currency = locale === 'pt' ? 'BRL' : 'USD'
+const priceLabel = new Intl.NumberFormat(locale === 'pt' ? 'pt-BR' : 'en-US', {
+	style: 'currency',
+	currency,
+	maximumFractionDigits: 0,
+}).format(plan.data.price.monthly)
+const periodLabel = plan.data.price.monthly === 0 ? t.forever : t.perMonth
+---
+
+<section id="pricing" class="relative overflow-hidden px-6 py-24 md:px-16">
+	<div aria-hidden="true" class="pointer-events-none absolute -left-[180px] -top-[90px] h-[330px] w-[640px] rounded-full bg-[var(--secondary)] blur-[56px]"></div>
+	<div aria-hidden="true" class="pointer-events-none absolute bottom-0 right-0 h-[300px] w-[540px] rounded-full bg-[var(--accent)] blur-[48px]"></div>
+
+	<div class="relative mx-auto max-w-[1160px]">
+		<div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-10">
+			{/* D-motion (2026-08-25) Decision 7 — the two rotated title stamps are "badges"
+			    (`reveal-back`, Decision 1). Below the fold: no `is-inview` in the markup. */}
+			<div class="flex flex-col gap-3">
+				<div
+					class="reveal-back reveal-stagger inline-flex w-fit -rotate-1 items-center rounded-asymmetric-md border border-[var(--border)] bg-[var(--background)] px-[22px] py-[10px] shadow-[var(--shadow-float)]"
+					style={{ '--i': 0 }}
+				>
+					<span class="text-balance text-[length:clamp(22px,3.2vw,34px)] font-extrabold tracking-[-1px] text-[var(--foreground)]">
+						{t.badgeLine1}
+					</span>
+				</div>
+				<div
+					class="reveal-back reveal-stagger ml-8 inline-flex w-fit rotate-1 items-center rounded-asymmetric-md border border-[var(--border)] bg-[var(--background)] px-[22px] py-[10px] shadow-[var(--shadow-float)]"
+					style={{ '--i': 1 }}
+				>
+					<span class="text-balance text-[length:clamp(22px,3.2vw,34px)] font-extrabold tracking-[-1px] text-[var(--secondary-foreground)]">
+						{t.badgeLine2}
+					</span>
+				</div>
+			</div>
+			<p class="max-w-[360px] text-pretty text-[15.5px] leading-[1.55] text-[var(--muted-foreground)]">{t.explanation}</p>
+		</div>
+
+		{/* D-motion (2026-08-25) Decision 7 — the two "cards de preço" get `reveal-back` (back-eased,
+		    staggered entrance) + `card-hover-lift` (Decision 4), continuing the badges' stagger index. */}
+		<div class="relative mt-12 grid gap-7 md:grid-cols-2">
+			<div
+				class="reveal-back reveal-stagger card-hover-lift rotate-[-0.5deg] rounded-asymmetric-xl border border-[var(--border)] bg-[var(--background)] px-[34px] py-[30px]"
+				style={{ '--i': 2 }}
+			>
+				<h3 class="m-0 mb-[18px] text-[26px] font-extrabold tracking-[-0.6px] text-[var(--foreground)]">{t.includedTitle}</h3>
+				<ul class="m-0 flex list-none flex-col gap-[18px] p-0">
+					{
+						t.included.map(item => (
+							<li class="flex items-start gap-[11px]">
+								<Icon name="check" size={16} class="mt-[3px] shrink-0 text-[var(--primary)]" />
+								<span class="text-[14px] leading-[1.45] font-medium text-[var(--foreground)]">{item}</span>
+							</li>
+						))
+					}
+				</ul>
+			</div>
+
+			<div class="relative flex flex-col gap-5">
+				<div
+					class="reveal-back reveal-stagger card-hover-lift rotate-1 rounded-asymmetric-xl border-[1.5px] border-[var(--border)] bg-[var(--background)] px-8 py-7 shadow-[var(--shadow-float)]"
+					style={{ '--i': 3 }}
+				>
+					<div class="text-[26px] font-extrabold tracking-[-0.6px] text-[var(--foreground)]">{copy.name}</div>
+					<div class="mt-4 flex items-end gap-2">
+						<span class="text-[44px] font-extrabold leading-none tracking-[-1.5px] text-[var(--foreground)]">{priceLabel}</span>
+						<span class="text-[15px] text-[var(--caption-foreground)]">{periodLabel}</span>
+					</div>
+					<div class="my-4 h-px w-full bg-[var(--border)]"></div>
+					<p class="m-0 text-[14px] leading-[1.5] text-[var(--muted-foreground)]">{copy.blurb}</p>
+					<a
+						href={DEFAULT_DOWNLOAD.url}
+						data-download-cta
+						data-download-key={DEFAULT_DOWNLOAD.key}
+						class="mt-4 flex items-center justify-center gap-[9px] whitespace-nowrap rounded-asymmetric-md bg-[var(--primary)] py-[14px] text-[15px] font-bold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
+					>
+						<DownloadIcon size={17} />
+						<span data-download-label data-download-template={downloadTemplate}>{downloadLabel(downloadTemplate, DEFAULT_DOWNLOAD)}</span>
+					</a>
+				</div>
+
+				<div class="-rotate-[0.8deg] flex items-start gap-[11px] rounded-asymmetric-lg bg-[var(--secondary)] px-5 py-4">
+					<Icon name="info" size={15} class="mt-px shrink-0 text-[var(--secondary-foreground)]" />
+					<p class="m-0 text-pretty text-[12.5px] leading-[1.5] text-[var(--secondary-foreground)]">{t.futureNote}</p>
+				</div>
+			</div>
+
+			<div
+				class="reveal-back reveal-stagger absolute left-[34%] top-[6%] hidden -rotate-2 items-center gap-[7px] rounded-asymmetric-md border border-[var(--border)] bg-[var(--background)] px-[14px] py-[9px] shadow-[var(--shadow-float)] lg:flex"
+				style={{ '--i': 4 }}
+			>
+				<Icon name="github" size={13} class="text-[var(--fg-60)]" />
+				<span class="font-mono text-xs font-bold text-[var(--fg-60)]">{t.chipMit}</span>
+			</div>
+			<div
+				class="reveal-back reveal-stagger absolute bottom-[8%] left-[33%] hidden rotate-1 items-center gap-[7px] rounded-asymmetric-md border border-[var(--border)] bg-[var(--background)] px-[14px] py-[9px] shadow-[var(--shadow-float)] lg:flex"
+				style={{ '--i': 5 }}
+			>
+				<Icon name="shield-check" size={13} class="text-[var(--secondary-foreground)]" />
+				<span class="text-xs font-semibold text-[var(--secondary-foreground)]">{t.chipNoAccount}</span>
+			</div>
+		</div>
+	</div>
+</section>

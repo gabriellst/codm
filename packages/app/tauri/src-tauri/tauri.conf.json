@@ -1,0 +1,100 @@
+{
+	"$schema": "https://schema.tauri.app/config/2",
+	"productName": "CoDM",
+	"version": "0.5.4",
+	"identifier": "app.codm.desktop",
+	"build": {
+		"devUrl": "http://localhost:5173/",
+		"frontendDist": "../../react/dist/client",
+		"beforeDevCommand": "bun x nx run app-react:dev-spa",
+		"beforeBuildCommand": "bun x nx run app-react:build-spa"
+	},
+	"app": {
+		"withGlobalTauri": true,
+		"windows": [
+			{
+				"label": "main",
+				"title": "CoDM",
+				"width": 1280,
+				"height": 800,
+				"minWidth": 980,
+				"minHeight": 640,
+				"titleBarStyle": "Overlay",
+				"hiddenTitle": true,
+				"trafficLightPosition": {
+					"x": 19,
+					"y": 18
+				},
+				"visible": false
+			},
+			{
+				"label": "boot-error",
+				"width": 720,
+				"height": 520,
+				"url": "boot-error.html",
+				"visible": false,
+				"title": "CoDM — boot failed"
+			}
+		],
+		"security": {
+			"csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http://localhost:47330 http://127.0.0.1:47330 http://localhost:47340 http://127.0.0.1:47340 http://localhost:47350 http://127.0.0.1:47350 http://localhost:47360 http://127.0.0.1:47360; connect-src 'self' http://localhost:47330 http://127.0.0.1:47330 http://localhost:47340 http://127.0.0.1:47340 http://localhost:47350 http://127.0.0.1:47350 http://localhost:47360 http://127.0.0.1:47360 https://codm.up.railway.app https://us.i.posthog.com ipc: http://ipc.localhost"
+		}
+	},
+	"plugins": {
+		"updater": {
+			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQzMjEzMzQwOTY5MkUxMjcKUldRbjRaS1dRRE1oMDVKSTE2UFZiaVNZYjNTeU4wYnl3RUdXN1V4eG5zSjRiQ3V3QXVIamtxMkgK",
+			"endpoints": [
+				"https://pub-ae0c8cac60c94920b35464575c09e67d.r2.dev/stable/latest.json"
+			]
+		},
+		"deep-link": {
+			"desktop": {
+				"schemes": [
+					"codm"
+				]
+			}
+		}
+	},
+	"bundle": {
+		"active": true,
+		"createUpdaterArtifacts": true,
+		"targets": "all",
+		"externalBin": [
+			"binaries/codm-daemon",
+			"binaries/codm-gateway"
+		],
+		"icon": [
+			"icons/icon.icns",
+			"icons/icon.ico",
+			"icons/32x32.png",
+			"icons/128x128.png"
+		],
+		"resources": {
+			"binaries/migrations": "migrations",
+			"binaries/daemon-runtime": "daemon-runtime"
+		},
+		"macOS": {
+			"signingIdentity": "-",
+			"entitlements": "entitlements.plist",
+			"dmg": {
+				"background": "dmg/background.png",
+				"windowSize": {
+					"width": 660,
+					"height": 400
+				},
+				"windowPosition": {
+					"x": 200,
+					"y": 120
+				},
+				"appPosition": {
+					"x": 170,
+					"y": 190
+				},
+				"applicationFolderPosition": {
+					"x": 490,
+					"y": 190
+				}
+			}
+		}
+	}
+}

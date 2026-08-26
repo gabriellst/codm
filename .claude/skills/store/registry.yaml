@@ -1,0 +1,241 @@
+registry:
+  type: frontend
+  layer: presentation
+  depends_on: []
+  depended_by: [component]
+  context_reads: []
+
+  patterns:
+    - id: STR-01
+      name: "Zustand create"
+      when: always
+      rule: "export const useXStore = create<XStore>()(set => ({...}))"
+    - id: STR-02
+      name: "Interface definition"
+      when: always
+      rule: "interface XStore { state: Type; action: (args) => void }"
+    - id: STR-03
+      name: "Actions use set()"
+      when: always
+      rule: "action: (value) => set({ state: value })"
+      wrong: "mutating state directly"
+    - id: STR-C01
+      name: "Persist middleware"
+      when: "state persists across page refreshes"
+      rule: "create<XStore>()(persist(set => ({...}), { name: 'key-storage' }))"
+    - id: STR-C02
+      name: "Selector pattern"
+      when: "component only needs part of store"
+      rule: "const value = useXStore(s => s.value)"
+      wrong: "destructuring full store — re-renders on any change"
+    - id: STR-C03
+      name: "Reset action"
+      when: "store needs to be reset"
+      rule: "reset: () => set(initialState)"
+
+    # Extracted from codebase
+    - id: STR-P01
+      name: "Separate State and Actions interfaces"
+      when: "store has 3+ state fields"
+      rule: "interface XState { ... }; interface XActions { ... }; type XStore = XState & XActions"
+      source: "useAppointmentDialogStore.ts, useOnboardingStore.ts"
+    - id: STR-P02
+      name: "initialState constant for reset"
+      when: "store has a reset action"
+      rule: "const initialState: XState = { ... }; create(set => ({ ...initialState, reset: () => set(initialState) }))"
+      source: "useAppointmentDialogStore.ts"
+    - id: STR-P03
+      name: "Simple setter pattern"
+      when: always
+      rule: "setX: (x) => set({ x }) — one setter per state field, parameter name matches field"
+      source: "useAppointmentDialogStore.ts, useRightColumnStore.ts, useOnboardingStore.ts"
+    - id: STR-P04
+      name: "Double invocation for middleware"
+      when: "using persist or immer middleware"
+      rule: "create<XStore>()(persist(set => ({...}), { name: 'key' })) — note ()() double call"
+      source: "useSidebarStore.ts"
+    - id: STR-P05
+      name: "Route-scoped store location"
+      when: "store is route-specific"
+      rule: "Place in routes/[route]/-stores/useXStore.ts or nested -stores/ within -components/"
+      source: "useAppointmentDialogStore.ts, useRightColumnStore.ts, useOnboardingStore.ts"
+    - id: STR-P06
+      name: "SDK type imports"
+      when: "state uses domain types"
+      rule: "import type { XType } from '@codm/client-typescript/typescript' for typing state fields"
+      source: "useOnboardingStore.ts"
+    - id: STR-P07
+      name: "Boolean dialog state pattern (use sparingly)"
+      when: "store manages dialog visibility AND the dialog can't use the global dialog store"
+      rule: "isXOpen: boolean + setXOpen: (open: boolean) => void — prefer useDialogStore for simple dialogs"
+      source: "useRightColumnStore.ts"
+
+    - id: STR-P08
+      name: "Global dialog store"
+      when: "app needs dialogs openable from any component"
+      rule: |
+        import type { ReactNode } from 'react'
+        import { create } from 'zustand'
+
+        interface DialogState {
+          content: ReactNode | null
+          open: boolean
+        }
+
+        interface DialogActions {
+          show: (content: ReactNode) => void
+          hide: () => void
+          confirm: (options: ConfirmOptions) => Promise<boolean>
+        }
+
+        type DialogStore = DialogState & DialogActions
+
+        export const useDialogStore = create<DialogStore>(set => ({
+          content: null,
+          open: false,
+          show: content => set({ content, open: true }),
+          hide: () => {
+            set({ open: false })
+            setTimeout(() => { if (!useDialogStore.getState().open) set({ content: null }) }, 250)
+          },
+          confirm: (options) => new Promise<boolean>(resolve => {
+            const close = (result: boolean) => { resolve(result); /* hide logic */ }
+            set({ open: true, content: <ConfirmDialog {...options} onConfirm={() => close(true)} onCancel={() => close(false)} /> })
+          }),
+        }))
+
+        // App layout reads the store directly — no Provider component needed:
+        const { content, open, hide } = useDialogStore()
+        <Dialog open={open} onOpenChange={open => !open && hide()}>{content}</Dialog>
+
+        // Promise-based confirmation — no JSX rendering needed in caller:
+        const confirmed = await confirm({ title: 'Delete?', description: 'Cannot undo.', variant: 'destructive' })
+        if (!confirmed) return
+        await deleteMutation.mutateAsync(...)
+      source: "useDialogStore.tsx"
+
+    - id: STR-P09
+      name: "Route store for ephemeral pagination/filter state"
+      when: "route has pagination or filter state that shouldn't be in the URL"
+      rule: |
+        const CHAT_PAGE_SIZE = 50
+        chatLimit: CHAT_PAGE_SIZE,
+        chatFilter: {},
+        incrementChatLimit: () => set(s => ({ chatLimit: s.chatLimit + CHAT_PAGE_SIZE })),
+        resetChatLimit: () => set({ chatLimit: CHAT_PAGE_SIZE }),
+        setChatFilter: chatFilter => set({ chatFilter }),
+      source: "useChatStore.ts"
+
+    - id: STR-P10
+      name: "State placement decision tree (the OWNER rule for the STATE-PLACEMENT axis)"
+      when: always
+      rule: |
+        # Decide WHERE each piece of state lives BEFORE writing useState:
+        # 1. Server data                          → SDK React Query hooks ONLY.
+        #    Never mirror it into useState (component bp-05b) — the hook's data/isPending
+        #    /isError ARE the state.
+        # 2. Bookmarkable / shareable view state  → ROUTE SEARCH PARAMS.
+        #    Filters, tabs, pagination, search text, a selected detail that should deep-link
+        #    (routeApi.useSearch() + navigate({ search: prev => ... })).
+        #    The search SCHEMA composes from the wire contract when one exists: start from
+        #    the SDK query-params schema, .omit() fields owned elsewhere (app-global store
+        #    fields like tenancyScope), .and(z.object({...})) the route-local additions —
+        #    and EVERY field carries .default() so an empty/garbage deep link renders
+        #    defaults. Canonical exemplar: dashboardSearchSchema in
+        #    routes/(app)/dashboard/index.tsx.
+        # 3. Cross-component client state          → ZUSTAND STORE.
+        #    Runtime-resolved, non-shareable: selection shared between sibling components,
+        #    UI toggles read by 2+ components, dialog content (useDialogStore).
+        # 4. Form field state                      → TANSTACK FORM (useForm), never useState
+        #    per field. DERIVED state over form values (computed totals, previews, dirty
+        #    banners, conditional sections) reads via form.Subscribe with a narrow selector
+        #    (form FRM-P03) — never mirrored into useState or a store on onChange.
+        # 5. Truly local transient UI              → useState — the ONLY sanctioned case:
+        #    hover/focus flags, an uncontrolled draft before commit, a disclosure no other
+        #    component reads.
+      wrong: |
+        const [page, setPage] = useState(1)                 // bookmarkable → URL (case 2)
+        const [selectedId, setSelectedId] = useState<string>() // read by a sibling → store (case 3)
+        const [items, setItems] = useState(data?.items)     // server state mirror (case 1)
+        const [email, setEmail] = useState('')              // form field (case 4)
+
+  bad_practices:
+    - id: bp-01
+      name: "useState for cross-component interactive state"
+      rule: "Modal open/close, selected items, and other interactive state shared across components must use Zustand stores, not useState."
+      wrong: "const [createModalOpen, setCreateModalOpen] = useState(false)"
+      right: "export const useXStore = create<XStore>()(set => ({ createModalOpen: false, setCreateModalOpen: (open) => set({ createModalOpen: open }) }))"
+      mechanical: false
+    - id: bp-02
+      name: "Storing derived/computed state"
+      rule: "Never store values that can be computed from other state. Use selectors instead."
+      wrong: "fullName: '' stored in state and manually synced in setFirstName"
+      right: "const fullName = useUserStore(s => `${s.firstName} ${s.lastName}`)"
+      mechanical: false
+    - id: bp-03
+      name: "Storing server state or URL-worthy state in Zustand"
+      rule: "API/server data belongs in TanStack Query, not Zustand. Bookmarkable user selections (selectedChatId, selectedTab, filters) belong in URL search params, not Zustand. Stores are only for ephemeral client-side interactive state (typing indicators, presence, draft replies)."
+      wrong: |
+        fetchProducts: async () => { const data = await sdk.products.list(); set({ products: data }) }
+        selectedChatId: string | null  // lost on refresh, not shareable
+      right: |
+        const { data } = useListProducts({ params })
+        const { chatId } = Route.useSearch()
+        typingIndicators: Record<string, TypingIndicator>  // makes no sense in URL
+      mechanical: true
+      detect:
+        - 'await\s+sdk\.'
+        - 'fetch\w*:\s*async'
+    - id: bp-04
+      name: "Using getState() in render path"
+      rule: "Components must use the hook with a selector for reactive updates. getState() is only for event handlers outside React or initialization."
+      wrong: "const filter = useProductStore.getState().filter // in JSX — won't re-render"
+      right: "const filter = useProductStore(s => s.filter) // reactive"
+      mechanical: false
+
+    - id: bp-05
+      name: "Creating a Provider/Context when a store read in the layout suffices"
+      severity: moderate
+      wrong: |
+        function GlobalDialogProvider({ children }) {
+          const { content, hide } = useDialogStore()
+          return <Dialog open={!!content} onOpenChange={...}>{content}{children}</Dialog>
+        }
+        <GlobalDialogProvider><Outlet /></GlobalDialogProvider>
+      right: |
+        const { content, hide } = useDialogStore()
+        <Outlet />
+        <Dialog open={!!content} onOpenChange={open => !open && hide()}>{content}</Dialog>
+      mechanical: false
+
+  canonical_snippet: |
+    interface AppointmentDialogState {
+      selectedDoctorId: string | undefined
+      selectedUnitId: string | undefined
+      startDateForSlots: Date | undefined
+    }
+
+    interface AppointmentDialogActions {
+      setSelectedDoctorId: (id: string | undefined) => void
+      setSelectedUnitId: (id: string | undefined) => void
+      setStartDateForSlots: (date: Date | undefined) => void
+      reset: () => void
+    }
+
+    type AppointmentDialogStore = AppointmentDialogState & AppointmentDialogActions
+
+    const initialState: AppointmentDialogState = {
+      selectedDoctorId: undefined,
+      selectedUnitId: undefined,
+      startDateForSlots: undefined,
+    }
+
+    export const useAppointmentDialogStore = create<AppointmentDialogStore>()(set => ({
+      ...initialState,
+      setSelectedDoctorId: selectedDoctorId => set({ selectedDoctorId }),
+      setSelectedUnitId: selectedUnitId => set({ selectedUnitId }),
+      setStartDateForSlots: startDateForSlots => set({ startDateForSlots }),
+      reset: () => set(initialState),
+    }))
+
+  scaffold: "bun cli store <name>"

@@ -1,0 +1,177 @@
+registry:
+  type: backend
+  layer: application
+  depends_on: [entity, repository, errors]
+  depended_by: [controller]
+  context_reads: [schema, entity, repository]
+  lang: go
+
+  snippet:
+    skeleton: |
+      // Package usecases contains application use cases for the {{ctx}} bounded context.
+      package usecases
+
+      import (
+      	"context"
+      	"database/sql"
+      )
+
+      // {{Pascal}}Input defines the query parameters.
+      type {{Pascal}}Input struct {
+      	// TODO: add filter fields
+      	// OwnerID string `validate:"required"`
+      }
+
+      // {{Pascal}}Output is the UI-shaped response for {{snake}}.
+      type {{Pascal}}Output struct {
+      	// TODO: add output fields
+      }
+
+      // {{Pascal}}Handler is a read-only query use case — direct SQL, no UnitOfWork.
+      type {{Pascal}}Handler struct {
+      	db *sql.DB
+      }
+
+      // New{{Pascal}}Handler constructs the {{Pascal}}Handler.
+      func New{{Pascal}}Handler(db *sql.DB) *{{Pascal}}Handler {
+      	return &{{Pascal}}Handler{db: db}
+      }
+
+      func (h *{{Pascal}}Handler) Name() string { return "{{snake}}" }
+
+      // Execute runs the read query and returns the UI-shaped output.
+      func (h *{{Pascal}}Handler) Execute(ctx context.Context, input {{Pascal}}Input) ({{Pascal}}Output, error) {
+      	// Direct SQL — no repository abstraction for BFF queries.
+      	// row := h.db.QueryRowContext(ctx, `SELECT ... FROM ...`, input.OwnerID)
+      	// var result {{Pascal}}Output
+      	// if err := row.Scan(...); err != nil {
+      	// 	if err == sql.ErrNoRows { return {{Pascal}}Output{}, nil }
+      	// 	return {{Pascal}}Output{}, err
+      	// }
+      	// return result, nil
+      	return {{Pascal}}Output{}, nil
+      }
+
+  patterns:
+    - id: QRY-GO-01
+      when: always
+      title: Same Handler[I,O] primitive as write use cases — no UoW or domainEventRepo
+      description: >
+        Query handlers implement types.Handler[I,O] identically to write use
+        cases. The distinction is that query handlers do NOT call uow.Execute
+        and do NOT call domainEventRepo.Save — they only read from repositories.
+
+    - id: QRY-GO-02
+      when: always
+      title: Pass plain ctx (not txCtx) to repository reads
+      description: >
+        Query handlers receive ctx from Execute's parameter. Pass that ctx
+        directly to repository calls. There is no transaction to propagate
+        unless the handler is being composed inside a parent uow.Execute closure,
+        in which case the parent's txCtx IS the ctx received by Execute.
+
+    - id: QRY-GO-03
+      when: always
+      title: Output struct maps to primitives — never return domain entities
+      description: >
+        Map entity fields, UUIDs, and enum-typed strings to primitive types
+        in the output struct. Use instance.ID.String() for UUIDs,
+        time.RFC3339 for timestamps, and string(entity.Status) for enum strings.
+        Never assign a domain entity or repository type to the output struct.
+
+    - id: QRY-GO-04
+      when: list query
+      title: Apply a default page size when Limit is zero
+      description: >
+        List query inputs should set a sensible default (e.g., 20) when
+        Limit == 0 before calling the repository. Callers that don't supply a
+        limit still get bounded results.
+
+    - id: QRY-GO-05
+      when: always
+      title: BFF / UI-shaped queries belong to api-typescript, not api-go
+      description: >
+        Go query use cases are ctx-local reads only. Cross-context joins shaped
+        for a UI screen (GetVideoFeed, GetMyWatchHistory, SearchVideos) belong
+        to packages/api/typescript/src/ui/. If a query is intended to power a
+        frontend route, implement it in api-typescript.
+
+  bad_practices:
+    - id: BP-GO-QRY-01
+      severity: error
+      title: Query handler calls uow.Execute
+      wrong: |
+        func (h *GetChannelHandler) Execute(ctx context.Context, input GetChannelInput) (GetChannelOutput, error) {
+            err := h.uow.Execute(ctx, func(txCtx context.Context) error {
+                instance, _ := h.repo.Find(txCtx, input.ID) // unnecessary transaction
+                // ...
+            })
+        }
+      right: |
+        func (h *GetChannelHandler) Execute(ctx context.Context, input GetChannelInput) (GetChannelOutput, error) {
+            instance, err := h.repo.Find(ctx, input.ID) // plain ctx, no UoW
+            // ...
+        }
+      mechanical: true
+      detect:
+        - '\buow\.Execute\s*\('
+
+    - id: BP-GO-QRY-02
+      severity: error
+      title: Domain entity returned directly in output
+      wrong: |
+        type GetChannelOutput struct {
+            Channel *entities.Channel `json:"channel"` // exposes internal domain type
+        }
+      right: |
+        type GetChannelOutput struct {
+            ID        string `json:"id"`
+            Name      string `json:"name"`
+            Status    string `json:"status"`
+            CreatedAt string `json:"createdAt" format:"date-time"`
+        }
+      mechanical: true
+      detect:
+        - '\*?entities\.\w+\s+`json:'
+
+    - id: BP-GO-QRY-03
+      severity: error
+      title: UI-shaped cross-context query implemented in api-go
+      description: >
+        A query that joins tables from multiple bounded contexts to build a
+        frontend-optimized response (video feed, watch history) must live in
+        api-typescript/src/ui/, not in api-go. api-go owns search indexing
+        and analytics aggregation workers, not BFF read endpoints.
+      mechanical: false
+
+    - id: BP-GO-QRY-04
+      severity: warning
+      title: List query missing default page size
+      wrong: |
+        func (h *ListChannelsHandler) Execute(ctx context.Context, input ListChannelsInput) (ListChannelsOutput, error) {
+            results, total, err := h.repo.FindAll(ctx, input.OwnerID, input.Limit, input.Offset)
+            // if Limit == 0 the repo may return all rows unbounded
+        }
+      right: |
+        func (h *ListChannelsHandler) Execute(ctx context.Context, input ListChannelsInput) (ListChannelsOutput, error) {
+            if input.Limit == 0 {
+                input.Limit = 20
+            }
+            results, total, err := h.repo.FindAll(ctx, input.OwnerID, input.Limit, input.Offset)
+        }
+      mechanical: false
+
+    - id: BP-GO-QRY-05
+      severity: warning
+      title: Output fields missing json tags or example tags
+      wrong: |
+        type GetChannelOutput struct {
+            ID        string  // no json tag — serializes as "ID" not "id"
+            CreatedAt string  // no format tag — clients don't know it's a date
+        }
+      right: |
+        type GetChannelOutput struct {
+            ID        string `json:"id"        example:"7c9e6679-7425-40de-944b-e07fc1f90ae7"`
+            CreatedAt string `json:"createdAt" format:"date-time" example:"2026-02-19T10:30:00Z"`
+        }
+      mechanical: false

@@ -1,0 +1,19 @@
+telemetry = false
+
+[run]
+# * Disable if using NextJS
+bun = true
+
+[test]
+preload = ["./tests/setup.ts"]
+# THE CROSS-SERVICE SUITE RUNS IN ITS OWN PROCESS (T7). `bun test` shares ONE process across all
+# 187 files, and `startIntegrationBackend({ services })` performs a REAL `e2e` daemon boot —
+# `registerAll(container, ALL_REGISTRIES.e2e)` on the ROOT container, pollers and all. That is
+# correct for the mode and fatal for a shared process: MEASURED, the `e2e` column registers
+# HEALTH_CHECKS (five of them) where `integration` declares absence, so
+# core/src/services/HealthService/HealthService.test.ts — which asserts that a CHILD of the root
+# container has HEALTH_CHECKS *unregistered* — stops being true, resolves the real checks instead,
+# and the run hangs. Excluding the file by NAME (not by a `*.spike.*` convention) keeps the default
+# suite at its 1378/187 baseline and makes "this suite needs a process of its own" a decision
+# someone takes per file. Run it with `bun run test:cross-service`; the nx `test` target runs both.
+pathIgnorePatterns = ["**/tests/spikes/cross-service.spike.test.ts"]

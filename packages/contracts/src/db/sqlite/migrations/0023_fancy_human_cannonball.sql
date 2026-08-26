@@ -1,0 +1,1 @@
+ALTER TABLE `owner_onboardings` ADD `state` text;

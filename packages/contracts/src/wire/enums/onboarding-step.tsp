@@ -1,0 +1,14 @@
+namespace TemplateContracts;
+
+@doc("Onde o operador está no wizard de onboarding. SÓ os passos que o SERVIDOR conhece: os três informativos, os cinco de setup, e o final. Uma SystemPrecondition NUNCA entra aqui — o servidor não enxerga o TCC da máquina, e o mesmo ownerId em dois Macs teria respostas diferentes (spec Decision 8).")
+enum OnboardingStep {
+  VALUE: "VALUE",
+  HOW: "HOW",
+  CONTROL: "CONTROL",
+  CHANNEL: "CHANNEL",
+  WORKSPACE: "WORKSPACE",
+  CONTACT: "CONTACT",
+  AGENTS: "AGENTS",
+  REVIEW: "REVIEW",
+  FINAL: "FINAL",
+}

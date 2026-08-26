@@ -1,0 +1,107 @@
+---
+import { getCollection, getEntry } from 'astro:content'
+import type { Locale } from '~/i18n'
+import { BLOG_CATEGORIES, CATEGORY_LABELS } from '../_content/categories'
+import BlogCard from './BlogCard.astro'
+import BlogFeatured from './BlogFeatured.astro'
+
+interface Props {
+	locale: Locale
+}
+
+const { locale } = Astro.props
+const ui = (await getEntry('blogUi', `ui.${locale}`))!.data
+
+// Only posts authored in THIS locale (id is `<locale>/<slug>`). A pt-only post
+// therefore never appears on `/en/blog`, and vice-versa.
+const posts = (
+	await getCollection('blog', ({ id, data }) => id.startsWith(`${locale}/`) && (import.meta.env.DEV || !data.draft))
+).sort((a, b) => b.data.publishedAt.getTime() - a.data.publishedAt.getTime())
+
+const slugOf = (id: string) => id.replace(new RegExp(`^${locale}/`), '').replace(/\.mdx?$/, '')
+const [featured, ...rest] = posts
+---
+
+<!-- D3 (design/codm.pen `ji2y3` → `VQNHl`): Cabeçalho (title/subtitle/filters) → Post em
+     destaque → Grade de posts. Filtering is a tiny vanilla `<script>` (same pattern as
+     Nav's old hide-on-scroll / LocaleSwitcher's cookie write) — no React island for three
+     toggle buttons. -->
+<section class="relative overflow-hidden px-6 pb-20 pt-[86px] md:px-16">
+	<div aria-hidden="true" class="pointer-events-none absolute -left-[150px] -top-[120px] h-[320px] w-[620px] rounded-full bg-[var(--secondary)] blur-[56px]"></div>
+	<div aria-hidden="true" class="pointer-events-none absolute right-0 top-[-70px] h-[280px] w-[480px] rounded-full bg-[var(--accent)] blur-[48px]"></div>
+
+	<div class="relative mx-auto max-w-[1312px]">
+		<h1 class="m-0 text-[length:clamp(40px,7vw,64px)] font-extrabold tracking-[-2px] text-[var(--foreground)]">{ui.index.title}</h1>
+		<p class="mt-[14px] max-w-[620px] text-pretty text-[16.5px] leading-[1.55] text-[var(--muted-foreground)]">{ui.index.subtitle}</p>
+
+		{
+			posts.length > 0 && (
+				<div class="mt-[26px] flex flex-wrap items-center gap-[9px]" data-blog-filters>
+					<button
+						type="button"
+						data-filter="all"
+						aria-pressed="true"
+						class="rounded-asymmetric-md bg-[var(--secondary)] px-[15px] py-2 text-[13px] font-bold text-[var(--secondary-foreground)] aria-[pressed=false]:border aria-[pressed=false]:border-[var(--fg-20)] aria-[pressed=false]:bg-transparent aria-[pressed=false]:font-semibold aria-[pressed=false]:text-[var(--fg-60)]"
+					>
+						{ui.index.filterAll}
+					</button>
+					{BLOG_CATEGORIES.map(cat => (
+						<button
+							type="button"
+							data-filter={cat}
+							aria-pressed="false"
+							class="rounded-asymmetric-md border border-[var(--fg-20)] px-[15px] py-2 text-[13px] font-semibold text-[var(--fg-60)] aria-[pressed=true]:border-0 aria-[pressed=true]:bg-[var(--secondary)] aria-[pressed=true]:font-bold aria-[pressed=true]:text-[var(--secondary-foreground)]"
+						>
+							{CATEGORY_LABELS[locale][cat]}
+						</button>
+					))}
+				</div>
+			)
+		}
+	</div>
+
+	{
+		posts.length === 0 ? (
+			<p class="relative mx-auto mt-14 max-w-[1312px] text-[var(--muted-foreground)]">{ui.index.empty}</p>
+		) : (
+			<div class="relative mx-auto mt-14 flex max-w-[1312px] flex-col gap-6">
+				{featured && (
+					<div data-blog-item data-category={featured.data.category}>
+						<BlogFeatured
+							post={featured}
+							href={`/${locale}/blog/${slugOf(featured.id)}`}
+							locale={locale}
+							minReadSuffix={ui.post.minReadSuffix}
+							readPostLabel={ui.index.readPost}
+						/>
+					</div>
+				)}
+				<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+					{rest.map((post, i) => (
+						<div data-blog-item data-category={post.data.category}>
+							<BlogCard post={post} href={`/${locale}/blog/${slugOf(post.id)}`} locale={locale} minReadSuffix={ui.post.minReadSuffix} index={i} />
+						</div>
+					))}
+				</div>
+			</div>
+		)
+	}
+</section>
+
+<script>
+	const filterBar = document.querySelector<HTMLElement>('[data-blog-filters]')
+	if (filterBar) {
+		const items = document.querySelectorAll<HTMLElement>('[data-blog-item]')
+		filterBar.addEventListener('click', e => {
+			const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-filter]')
+			if (!btn) return
+			const category = btn.dataset.filter!
+			for (const b of filterBar.querySelectorAll<HTMLButtonElement>('button[data-filter]')) {
+				b.setAttribute('aria-pressed', String(b === btn))
+			}
+			for (const item of items) {
+				item.classList.toggle('hidden', category !== 'all' && item.dataset.category !== category)
+			}
+		})
+	}
+</script>

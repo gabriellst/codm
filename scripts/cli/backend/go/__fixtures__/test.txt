@@ -1,0 +1,43 @@
+package create_coupon_test
+
+import (
+	"testing"
+
+	// "template/api-go/internal/sales/entities"
+	// "template/api-go/internal/sales/usecases"
+	// "create_coupon" "template/api-go/internal/sales/repositories/create_coupon"
+)
+
+func TestCreateCoupon(t *testing.T) {
+	// Arrange
+	// mock := create_coupon.NewMockCreateCouponRepository()
+
+	// Act
+	// result, err := ...
+
+	// Assert
+	// if err != nil { t.Fatalf("unexpected error: %v", err) }
+	// if result == nil { t.Fatal("expected result, got nil") }
+	t.Skip("TODO: implement test")
+}
+
+// Table-driven test template:
+//
+// func TestCreateCouponBehavior(t *testing.T) {
+// 	tests := []struct {
+// 		name    string
+// 		input   string
+// 		wantErr bool
+// 	}{
+// 		{name: "valid input", input: "valid", wantErr: false},
+// 		{name: "empty input", input: "",      wantErr: true},
+// 	}
+// 	for _, tc := range tests {
+// 		t.Run(tc.name, func(t *testing.T) {
+// 			_, err := doSomething(tc.input)
+// 			if (err != nil) != tc.wantErr {
+// 				t.Errorf("wantErr=%v, got err=%v", tc.wantErr, err)
+// 			}
+// 		})
+// 	}
+// }

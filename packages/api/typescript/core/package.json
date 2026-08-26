@@ -1,0 +1,50 @@
+{
+	"name": "@codm/core-typescript",
+	"version": "0.0.1",
+	"license": "MIT",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./db/lock": "./src/db/drivers/DataDirLock.ts",
+		"./schema": "./src/utils/schema/index.ts",
+		"./schemas": "./src/schemas/index.ts",
+		"./events": "./src/events.ts"
+	},
+	"scripts": {
+		"tsc": "bun x tsc --noEmit",
+		"test": "bun test"
+	},
+	"peerDependencies": {
+		"zod": "^4.0.0"
+	},
+	"dependencies": {
+		"@codm/contracts": "workspace:*",
+		"@electric-sql/pglite": "^0.3.16",
+		"@libsql/client": "^0.17.4",
+		"@opentelemetry/api": "^1.9.0",
+		"@opentelemetry/api-logs": "^0.218.0",
+		"@opentelemetry/context-async-hooks": "^2.7.1",
+		"@opentelemetry/exporter-logs-otlp-grpc": "^0.218.0",
+		"@opentelemetry/exporter-trace-otlp-grpc": "^0.218.0",
+		"@opentelemetry/otlp-exporter-base": "^0.218.0",
+		"@opentelemetry/resources": "^2.7.1",
+		"@opentelemetry/sdk-logs": "^0.218.0",
+		"@opentelemetry/sdk-node": "^0.218.0",
+		"@opentelemetry/sdk-trace-node": "^2.7.1",
+		"bullmq": "^5.78.0",
+		"drizzle-orm": "^0.45.0",
+		"eventemitter2": "^6.4.9",
+		"fastify": "^5.8.5",
+		"ioredis": "^5.11.0",
+		"openapi-types": "^12.1.3",
+		"pg": "^8.20.0",
+		"tsyringe-neo": "^5.1.0",
+		"uuidv7": "^1.2.1"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.3.14",
+		"@types/pg": "^8.15.6",
+		"bun-types": "^1.3.14"
+	}
+}

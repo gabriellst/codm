@@ -1,0 +1,92 @@
+@import "tailwindcss";
+@import "@codm/app-ui/tokens.css";
+@import "@codm/app-ui/web-utilities.css";
+@import "@fontsource/inter/300.css";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/inter/800.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
+
+/*
+ * Landing typography (D3, founder 11/08): INTER carries the whole site — it is the face the
+ * design file itself declares ($font-sans: Inter); the Poppins pairing this block used to
+ * ship was overruled ("o design usa inter"). Weight does the voice work (w800 tight-tracked
+ * hero + w300 pairing), same as before, just on Inter. IBM Plex Mono stays as the
+ * product-vocabulary face (labels, terminal, chips) — note the design declares JetBrains
+ * Mono; flagged, not yet switched.
+ */
+@theme {
+	--font-sans: "Inter", system-ui, sans-serif;
+	--font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+	--font-display: "Inter", system-ui, sans-serif;
+
+	--animate-pulse-dot: pulse-dot 2s ease-in-out infinite;
+	--animate-pulse-dot-fast: pulse-dot 1.6s ease-in-out infinite;
+	--animate-rise-in: rise-in 0.5s ease both;
+}
+
+@keyframes pulse-dot {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.3;
+	}
+}
+@keyframes rise-in {
+	from {
+		opacity: 0;
+		transform: translateY(14px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+/* D6 — CSS-only cross-document view transitions; zero JS, inert where unsupported. */
+@view-transition {
+	navigation: auto;
+}
+
+html {
+	scroll-behavior: smooth;
+}
+
+/* Floating nav (~76px) — keep anchored sections clear of it when jumped to. */
+section[id] {
+	scroll-margin-top: 88px;
+}
+
+::selection {
+	background: var(--secondary);
+}
+
+body {
+	background-color: var(--background);
+	color: var(--foreground);
+	font-family: var(--font-sans);
+	-webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html {
+		scroll-behavior: auto;
+	}
+	.animate-rise-in {
+		animation: none;
+	}
+	/* D-motion (2026-08-25) Decision 5 — reduced-motion renders every reveal target already at
+	   rest, same as the noscript fallback in BaseLayout.astro (AC-3: nothing stays invisible). */
+	.reveal,
+	.reveal-back {
+		opacity: 1;
+		translate: none;
+		scale: none;
+		transition: none;
+	}
+}

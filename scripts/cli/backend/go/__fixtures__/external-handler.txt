@@ -1,0 +1,48 @@
+// Package handlers contains event handlers for the sales bounded context.
+package handlers
+
+import (
+	"context"
+	"log/slog"
+
+	// "template/contracts-go/wire"
+	fwtypes "template/core-go/types"
+)
+
+const CouponAppliedEventName = "integration.TODO.coupon.applied"
+
+// CouponAppliedIntegrationHandler subscribes to the coupon_applied integration event.
+type CouponAppliedIntegrationHandler struct {
+	// useCase *usecases.SomeHandler
+}
+
+// NewCouponAppliedIntegrationHandler constructs the handler.
+func NewCouponAppliedIntegrationHandler(
+// useCase *usecases.SomeHandler,
+) *CouponAppliedIntegrationHandler {
+	return &CouponAppliedIntegrationHandler{
+		// useCase: useCase,
+	}
+}
+
+func (h *CouponAppliedIntegrationHandler) EventName() string {
+	return CouponAppliedEventName
+}
+
+func (h *CouponAppliedIntegrationHandler) Handle(ctx context.Context, event fwtypes.IntegrationEventI) error {
+	// Replace wire.SomeEvent with the correct wire type from contracts-go/wire.
+	// typed, err := fwtypes.UnmarshalIntegrationEvent[wire.SomeEvent](event)
+	// if err != nil {
+	// 	return err
+	// }
+	// p := typed.Payload
+
+	slog.InfoContext(ctx, "sales: received coupon_applied integration event",
+		"eventName", event.GetName(),
+	)
+
+	// _, err = h.useCase.Execute(ctx, usecases.SomeInput{...})
+	// return err
+
+	return nil
+}

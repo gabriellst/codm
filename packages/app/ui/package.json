@@ -1,0 +1,45 @@
+{
+	"name": "@codm/app-ui",
+	"version": "1.0.0",
+	"license": "MIT",
+	"private": true,
+	"type": "module",
+	"//exports": "Subpath por primitivo (`@codm/app-ui/button`), espelhando o `@/components/ui/button` que os consumidores já escreviam — o porte foi mudança de ENDEREÇO, não de vocabulário. `./cn` é explícito porque é a única peça de `lib/` que atravessa a fronteira, junto de `enums`/`locale`/`useLocale`/`errorTranslator`. `./surfaces` também é explícito: é o único primitivo `.ts` e não `.tsx`, e um exports map não tenta duas extensões para a mesma chave. Os tokens entram por ESTE pacote (e não por um segundo) desde que o design system deixou de estar partido em dois lugares. Comentários ficam FORA do objeto `exports`: uma chave que não começa com `.` invalida o mapa inteiro, e o sintoma é TS2307 em arquivos que existem.",
+	"exports": {
+		"./cn": "./src/lib/cn.ts",
+		"./enums": "./src/lib/enums.ts",
+		"./locale": "./src/lib/locale.ts",
+		"./useLocale": "./src/lib/useLocale.ts",
+		"./errorTranslator": "./src/lib/errorTranslator.ts",
+		"./tokens.css": "./styles/tokens.css",
+		"./web-utilities.css": "./styles/web-utilities.css",
+		"./icons": "./src/components/icons/index.ts",
+		"./surfaces": "./src/components/surfaces.ts",
+		"./tests/support/virtualLayout": "./src/tests/support/virtualLayout.ts",
+		"./*": "./src/components/*.tsx"
+	},
+	"dependencies": {
+		"@base-ui/react": "^1.0.0",
+		"@codm/client-typescript": "workspace:*",
+		"@tabler/icons-react": "^3.36.0",
+		"@tanstack/react-virtual": "^3.14.9",
+		"class-variance-authority": "^0.7.1",
+		"clsx": "^2.1.1",
+		"date-fns": "^4.1.0",
+		"radix-ui": "^1.4.3",
+		"react-day-picker": "^9.13.0",
+		"react-i18next": "^16.5.3",
+		"sonner": "^2.0.7",
+		"tailwind-merge": "^3.4.0"
+	},
+	"peerDependencies": {
+		"react": "*"
+	},
+	"devDependencies": {
+		"@happy-dom/global-registrator": "^20.11.1",
+		"@storybook/react": "^10.4.2"
+	},
+	"scripts": {
+		"test": "bun test"
+	}
+}

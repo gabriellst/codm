@@ -1,0 +1,156 @@
+---
+import DownloadDetect from '~/components/DownloadDetect.astro'
+import Footer from '~/components/Footer.astro'
+import Nav from '~/components/Nav.astro'
+import { type Locale, localizedPath } from '~/i18n'
+import '~/styles/global.css'
+
+interface Props {
+	locale: Locale
+	title: string
+	description: string
+	ogImage?: string
+	canonical?: string
+	jsonLd?: Record<string, unknown>
+	/**
+	 * Per-page locale alternates as in-site paths, keyed by locale. Drives both
+	 * the `<link rel="alternate" hreflang>` tags AND the LocaleSwitcher. Defaults
+	 * to BOTH locales at the equivalent path (home, blog list, static pages).
+	 * Blog posts pass only the locales that actually have a translation — an
+	 * untranslated post therefore emits a single self hreflang and hides the
+	 * switcher (see rule 4).
+	 */
+	localeLinks?: Partial<Record<Locale, string>>
+}
+
+const { locale, title, description, ogImage, canonical, jsonLd, localeLinks } = Astro.props
+const canonicalUrl = canonical ?? Astro.url.href
+const site = Astro.site ?? new URL('http://localhost:4321')
+
+// SP4 — product analytics (PostHog). Read here via Node's `process.env` (frontmatter), NOT
+// `import.meta.env.VITE_POSTHOG_KEY` in client code: Astro's Vite integration defaults `envPrefix`
+// to `PUBLIC_` only, so a `VITE_*` var never reaches a browser bundle otherwise (see
+// src/scripts/posthogInit.ts for the full reasoning). `posthogKey` is PUBLIC by design (an ingest
+// key, rate-limited server-side by PostHog) — safe to hand to the browser this way. Empty key =
+// telemetry off: neither script below renders, so no analytics JS ships at all.
+const posthogKey = process.env.VITE_POSTHOG_KEY ?? ''
+const posthogHost = process.env.VITE_POSTHOG_HOST || 'https://us.i.posthog.com'
+
+const links: Partial<Record<Locale, string>> =
+	localeLinks ?? { pt: localizedPath(Astro.url, 'pt'), en: localizedPath(Astro.url, 'en') }
+const alternateEntries = (Object.entries(links) as [Locale, string][]).filter(([, href]) => Boolean(href))
+const hreflang = (loc: Locale) => (loc === 'pt' ? 'pt-BR' : 'en-US')
+// x-default points at the pt alternate when present, else the first available.
+const xDefault = links.pt ?? alternateEntries[0]?.[1]
+
+const ogLocale = locale === 'pt' ? 'pt_BR' : 'en_US'
+const ogLocaleAlternate = locale === 'pt' ? 'en_US' : 'pt_BR'
+const rssHref = `/${locale}/blog/rss.xml`
+---
+
+<!doctype html>
+<html lang={hreflang(locale)}>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="theme-color" content="#161616" />
+		<title>{title}</title>
+		<meta name="description" content={description} />
+		<link rel="canonical" href={canonicalUrl} />
+		{alternateEntries.map(([loc, href]) => <link rel="alternate" hreflang={hreflang(loc)} href={new URL(href, site).href} />)}
+		{xDefault && <link rel="alternate" hreflang="x-default" href={new URL(xDefault, site).href} />}
+		<link rel="alternate" type="application/rss+xml" title="CODM Blog" href={rssHref} />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content={canonicalUrl} />
+		<meta property="og:locale" content={ogLocale} />
+		<meta property="og:locale:alternate" content={ogLocaleAlternate} />
+		{ogImage && <meta property="og:image" content={ogImage} />}
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content={title} />
+		<meta name="twitter:description" content={description} />
+		{ogImage && <meta name="twitter:image" content={ogImage} />}
+		{jsonLd && <script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+		{
+			/* SP4 — product analytics bootstrap. The first (inline) script hands the server-read
+			config to the browser; the second (a real module, bundled by Vite) does the actual
+			`posthog.init` — see src/scripts/posthogInit.ts for why this is two tags. */
+		}
+		{posthogKey && (
+			<script is:inline define:vars={{ posthogKey, posthogHost }}>
+				window.__POSTHOG_CONFIG__ = { key: posthogKey, host: posthogHost }
+			</script>
+		)}
+		{posthogKey && <script src="../scripts/posthogInit.ts"></script>}
+		{
+			/* D-motion (2026-08-25) Decision 5 / AC-3 — with JS disabled, `.reveal`/`.reveal-back`
+			 * would stay at opacity:0 forever (nothing ever adds `.is-inview`). This is the
+			 * progressive-enhancement fallback: site-wide, mirrors the reduced-motion rule in
+			 * global.css. */
+		}
+		<noscript>
+			<style>
+				.reveal,
+				.reveal-back {
+					opacity: 1 !important;
+					translate: none !important;
+					scale: none !important;
+					transition: none !important;
+				}
+			</style>
+		</noscript>
+		<slot name="head" />
+	</head>
+	<body class="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+		<Nav locale={locale} localeLinks={links} />
+		<main>
+			<slot />
+		</main>
+		<Footer locale={locale} />
+		{/* Download por sistema (plano 2026-08-25, D15) — troca href/rótulo/ícone de todo
+		    `a[data-download-cta]` (Nav, Hero, preço, Footer) pelo sistema do visitante. Uma montagem por
+		    página; sem JS o HTML já sai com o macOS + a lista "outras plataformas". */}
+		<DownloadDetect />
+		{
+			/* D-motion (2026-08-25) Decision 5/8 — plain IntersectionObserver, no framework: marks
+			 * `.reveal`/`.reveal-back` elements `.is-inview` once (threshold 0.15) then unobserves.
+			 * `?fidelity=1` (Decision 8 — the deterministic hook a future Astro fidelity-capture
+			 * lane reaches for, see `docs/UI-FIDELITY.md`) and browsers without IntersectionObserver
+			 * both skip straight to marking everything in-view synchronously — see the
+			 * `html.is-capturing` rule in web-utilities.css that makes that snap instead of animate. */
+		}
+		<script is:inline>
+			;(function () {
+				var capturing = new URLSearchParams(location.search).has('fidelity')
+				if (capturing) document.documentElement.classList.add('is-capturing')
+
+				var targets = document.querySelectorAll('.reveal:not(.is-inview), .reveal-back:not(.is-inview)')
+
+				function reveal(el) {
+					el.classList.add('is-inview')
+				}
+
+				if (capturing || !('IntersectionObserver' in window)) {
+					targets.forEach(reveal)
+					return
+				}
+
+				var observer = new IntersectionObserver(
+					function (entries) {
+						entries.forEach(function (entry) {
+							if (!entry.isIntersecting) return
+							reveal(entry.target)
+							observer.unobserve(entry.target)
+						})
+					},
+					{ threshold: 0.15 },
+				)
+				targets.forEach(function (el) {
+					observer.observe(el)
+				})
+			})()
+		</script>
+	</body>
+</html>

@@ -1,0 +1,32 @@
+// Package middleware contains HTTP middlewares for the sales bounded context.
+package middleware
+
+import (
+	"net/http"
+
+	ctxerrors "template/api-go/internal/sales/errors"
+	"template/core-go/errors"
+	"template/core-go/pkg/httputil"
+)
+
+// ApiKey creates a middleware that enforces api_key before allowing the request through.
+//
+// Usage in ControllerMetadata:
+//
+//	Middlewares: []types.Middleware{middleware.ApiKey(secret)},
+func ApiKey(secret string) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// TODO: implement guard logic
+			val := r.Header.Get("X-ApiKey-Key")
+			if val == "" || val != secret {
+				httputil.RespondError(w, errors.NewBaseError(
+					ctxerrors.CodeApiKeyInvalid,
+					"invalid or missing X-ApiKey-Key header",
+				))
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}

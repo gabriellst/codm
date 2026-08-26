@@ -1,0 +1,421 @@
+import { injectable } from 'tsyringe-neo'
+import { and, asc, desc, eq, gte, inArray, isNull, sql } from 'drizzle-orm'
+import { LibSqlDatabaseDriver, Handler, z } from '@codm/core-typescript'
+import { threads, issues, stops, transcriptEntries, workspaces, channels, remotes } from '@codm/contracts/db'
+import {
+	ThreadStatus,
+	ChannelKind,
+	ChannelStatus,
+	IssueStatus,
+	ProviderKind,
+	StopKind,
+	TranscriptKind,
+} from '@codm/contracts-typescript/wire/enums'
+import { ThreadStatusDeriver } from '@thread/services/ThreadStatusDeriver'
+// The LEAF, not the barrel — the barrel re-exports the loop schedules and the cut policy, none of
+// which this read needs; see `GetSessionChat`'s own import of the same constant.
+import { OPERATOR_PARTICIPANT_ID } from '@thread/objects/TranscriptSpeaker'
+
+const ThreadSummarySchema = z.object({
+	threadId: z.uuid(),
+	displayName: z.string(),
+	/**
+	 * WHERE THE CONTACT'S FACE IS SERVED FROM — the two halves of the avatar endpoint's address
+	 * (`GET /ui/avatars/:channelId/:remoteId`) plus whether there is anything at it.
+	 *
+	 * The same four facts `GetSessionChat.sender` carries, spelled FLAT here because the fourth
+	 * (`displayName`) is already this row's own field: nesting a `contact` object would put the same
+	 * name on the payload twice and let the two disagree.
+	 *
+	 * `hasAvatar` rather than a url, for the reason documented at length on `GetSessionChat.sender`:
+	 * the platform's own url is signed, expiring and off-CSP, and the route belongs to the SDK's
+	 * generated query key — a url on the wire would be a second, hand-maintained copy of it.
+	 */
+	channelId: z.uuid(),
+	externalId: z.string(),
+	hasAvatar: z.boolean(),
+	channelKind: z.enum(ChannelKind),
+	workspacePath: z.string(),
+	providers: z.array(z.enum(ProviderKind)),
+	status: z.enum(ThreadStatus),
+	lastActivity: z.string(),
+})
+
+/**
+ * WHO SPOKE on one recent line — identical in shape and in meaning to `GetSessionChat.sender`, and
+ * absent for exactly the same lines: everything the product itself produced (`SYSTEM`, the operator's
+ * own `DIRECT`/`WHISPER`, the `ACTION` narration) has a caption the console composes from `kind`.
+ */
+const ActivitySenderSchema = z.object({
+	channelId: z.uuid(),
+	externalId: z.string(),
+	displayName: z.string(),
+	hasAvatar: z.boolean(),
+})
+
+export const GetHomeDashboardInputSchema = z.object({ ownerId: z.uuid() })
+export const GetHomeDashboardOutputSchema = z.object({
+	agentsRunningNow: z.number().int(),
+	needsYou: z.object({ threadId: z.uuid(), threadDisplayName: z.string(), stopKinds: z.array(z.enum(StopKind)) }).optional(),
+	/**
+	 * EVERY thread of the owner — the sidebar's conversation list (F1).
+	 *
+	 * Distinct from `activeSessions`, which answers a different question and filters to
+	 * `RUNNING | NEEDS_ATTENTION`. The sidebar read that filtered list, so a thread sitting `IDLE` —
+	 * the normal state of a conversation nobody is currently being answered in — showed as "Nenhuma
+	 * conversa ainda" while the row plainly existed. Two questions, two fields; the home page shows both.
+	 */
+	threads: z.array(ThreadSummarySchema),
+	activeSessions: z.array(ThreadSummarySchema),
+	/**
+	 * Recent transcript lines. `kind` is the ENUM, not a pre-rendered label — this used to ship as
+	 * `title: z.string()` carrying the raw `TranscriptKind`, which is how "CONTACT" and "SYSTEM" came
+	 * to be printed verbatim in a Portuguese list. Typed as the enum the browser runs it through
+	 * `enumLabel` and the i18n rail can see it; as a bare `string` it was invisible to both.
+	 */
+	latestActivity: z.array(
+		z.object({
+			kind: z.enum(TranscriptKind),
+			subtitle: z.string(),
+			threadId: z.uuid(),
+			at: z.string(),
+			sender: ActivitySenderSchema.optional(),
+		}),
+	),
+	/**
+	 * `medianResponseSeconds` is HOW LONG THE CONTACT WAITED, in seconds, for the median reply sent
+	 * today — measured on the transcript, from the first message of an unanswered inbound burst to the
+	 * line that answered it. It shipped as a literal `0`, so the card read "0s" forever: a number the
+	 * operator cannot distinguish from "we answer instantly", which is precisely the reading that makes
+	 * the stat worth nothing.
+	 */
+	today: z.object({ issuesOpened: z.number().int(), issuesClosed: z.number().int(), medianResponseSeconds: z.number() }),
+	channels: z.array(z.object({ kind: z.enum(ChannelKind), status: z.enum(ChannelStatus) })),
+	/**
+	 * THE "MENCIONE O AGENTE" CTA (dashboard follow-up to onboarding, 2026-08-26) — the one thread, if
+	 * any, the operator still hasn't actually talked to the agent in. Absent once satisfied (same
+	 * optional-field shape as `needsYou` above), never a boolean the frontend would have to pair with a
+	 * second lookup.
+	 *
+	 * A thread qualifies when THREE facts hold at once: it exists (not soft-deleted — same predicate as
+	 * every other read here), its mention gate is `enabled` (a thread born from `AttachThread` always
+	 * is — see `Thread.create`), and NOBODY carrying `OPERATOR_PARTICIPANT_ID` has ever written a line
+	 * in it. That sentinel is the one column that means "the operator, from any device" — the exact
+	 * fact this CTA exists to drive to `true` (the operator pastes `tag` into the channel to invoke the
+	 * agent for the first time). It is NOT "the transcript is empty": a thread attached to an
+	 * already-busy group can carry plenty of other people's lines and still owe this CTA.
+	 *
+	 * Was frontend-only state until this date (`OnboardingFinalStep` read a `threadId` stashed on a
+	 * Zustand store by `OnboardingFlow`'s `onSuccess`) — moved server-side because the dashboard route
+	 * mounts on a fresh page load with no such store entry to read, and the repo's own rule is that a
+	 * "has this operator done X yet" fact is server-authoritative, not something the frontend
+	 * synthesizes from a value that only existed for one React tick.
+	 *
+	 * Picks the MOST RECENTLY CREATED qualifying thread when more than one exists — mirrors
+	 * `allThreads`' own "most recently active first" ordering one field up: a fresh onboarding thread is
+	 * far more likely to be the one the operator is looking at than an old one that happens to still be
+	 * gated and untouched.
+	 */
+	mentionCta: z.object({ threadId: z.uuid(), tag: z.string() }).optional(),
+})
+
+/**
+ * Read — HomeDashboard (T03). The cross-context operating overview (BFF query in the ui context —
+ * spans BC1/BC2/BC4/BC5). Aggregates agents-running, the Needs-You callout, active sessions, latest
+ * activity, today's metrics, and channel health from the read tables directly.
+ */
+@injectable()
+export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema, typeof GetHomeDashboardOutputSchema> {
+	readonly name = 'get_home_dashboard' as const
+	readonly inputSchema = GetHomeDashboardInputSchema
+	readonly outputSchema = GetHomeDashboardOutputSchema
+
+	constructor(
+		private readonly driver: LibSqlDatabaseDriver,
+		private readonly statuses: ThreadStatusDeriver,
+	) {
+		super()
+	}
+
+	protected async handle(input: this['input']): Promise<this['output']> {
+		const allIssues = await this.driver.db.select().from(issues).where(eq(issues.ownerId, input.ownerId))
+		const agentsRunningNow = allIssues.filter(i => i.status === IssueStatus.WORKING && !i.archived).length
+
+		const threadRows = await this.driver.db
+			.select({
+				threadId: threads.id,
+				displayName: threads.contactDisplayName,
+				channelId: threads.channelId,
+				externalId: threads.contactExternalId,
+				avatarUrl: remotes.avatarUrl,
+				workspacePath: workspaces.path,
+				channelKind: channels.platform,
+				providers: threads.providers,
+				paused: threads.paused,
+				updatedAt: threads.updatedAt,
+				createdAt: threads.createdAt,
+				mentionGateEnabled: threads.mentionGateEnabled,
+				mentionGateTag: threads.mentionGateTag,
+			})
+			.from(threads)
+			.leftJoin(workspaces, eq(threads.workspaceId, workspaces.id))
+			.leftJoin(channels, eq(threads.channelId, channels.id))
+			// THE CONTACT BOOK, joined rather than queried — the face of every conversation on the sidebar
+			// and on the active-sessions list comes from the same `(channel_id, remote_id)` primary key the
+			// avatar endpoint walks, so one LEFT JOIN answers it for every row at once. LEFT because a
+			// thread attached to a contact the gateway sync has not written yet still has to render.
+			.leftJoin(remotes, and(eq(remotes.channelId, threads.channelId), eq(remotes.remoteId, threads.contactExternalId)))
+			// Apagadas are out (thread-deletion spec, decision 5). This one predicate covers BOTH `threads`
+			// and `activeSessions` below, because the second is derived from the first.
+			.where(and(eq(threads.ownerId, input.ownerId), isNull(threads.deletedAt)))
+
+		// PROJECTED, not `select()` — the join below would otherwise nest the row per table
+		// (`{ issue_stops: …, thread_threads: … }`) and silently change what `buildNeedsYou` reads. Only
+		// the two columns it uses travel.
+		const openStops = await this.driver.db
+			.select({ threadId: stops.threadId, kind: stops.kind })
+			.from(stops)
+			// Stops are read owner-wide here, so the join is how a deleted thread's stop is kept out of the
+			// Needs-you callout — the same reason `GetNeedsYouPanel` grew one.
+			.innerJoin(threads, and(eq(stops.threadId, threads.id), isNull(threads.deletedAt)))
+			.where(and(eq(stops.ownerId, input.ownerId), isNull(stops.resolvedAt)))
+
+		// Status is DERIVED, never read from `threads.status` — that column only ever holds IDLE or
+		// PAUSED (nothing stamps it when work starts), so filtering it for RUNNING/NEEDS_ATTENTION
+		// matched nothing and "active sessions" was permanently empty while the headline right above it
+		// counted a working agent. One batched call for the whole owner (B4, spec decision 7): the three
+		// reads behind the precedence live in `ThreadStatusDeriver`, not here.
+		const statuses = await this.statuses.forOwner(input.ownerId)
+
+		const toSummary = (t: (typeof threadRows)[number]) => ({
+			threadId: t.threadId,
+			displayName: t.displayName,
+			channelId: t.channelId,
+			externalId: t.externalId,
+			hasAvatar: Boolean(t.avatarUrl),
+			channelKind: (t.channelKind ?? ChannelKind.WHATSAPP) as ChannelKind,
+			workspacePath: t.workspacePath ?? '',
+			providers: t.providers as ProviderKind[],
+			status: statuses.get(t.threadId) ?? ThreadStatus.IDLE,
+			lastActivity: t.updatedAt.toISOString(),
+		})
+
+		// Most recently active first: the sidebar is a conversation list, and a conversation list that
+		// does not surface the one you were just in is a list you have to search.
+		const allThreads = [...threadRows].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()).map(toSummary)
+		const activeSessions = allThreads.filter(t => t.status === ThreadStatus.RUNNING || t.status === ThreadStatus.NEEDS_ATTENTION)
+
+		const needsYou = this.buildNeedsYou(openStops, threadRows)
+		const mentionCta = await this.buildMentionCta(input.ownerId, threadRows)
+
+		const recent = await this.driver.db
+			.select({
+				text: transcriptEntries.text,
+				threadId: transcriptEntries.threadId,
+				at: transcriptEntries.at,
+				kind: transcriptEntries.kind,
+				channelId: threads.channelId,
+				senderExternalId: transcriptEntries.senderExternalId,
+				// A CONTA CONECTADA do canal desta linha — é ela que dá rosto ao sentinela `operator`; ver
+				// `senderOf` e o `case` do join logo abaixo. Vem POR LINHA porque a lista é do owner inteiro:
+				// oito linhas recentes podem estar em oito canais diferentes, cada um com a sua conta.
+				ownerRemoteId: channels.ownerRemoteId,
+				senderName: remotes.name,
+				senderAvatarUrl: remotes.avatarUrl,
+			})
+			.from(transcriptEntries)
+			// THE READ THE SPEC NAMES BY HAND (thread-deletion spec, decision 5): this one reads the
+			// TRANSCRIPT, so a sweep that walks `from(threads)` never visits it — and without the join the
+			// home screen prints the words of a conversation the operator believes they deleted. Inner join
+			// because every entry has a NOT NULL `thread_id` whose row exists.
+			.innerJoin(threads, and(eq(transcriptEntries.threadId, threads.id), isNull(threads.deletedAt)))
+			// WHO SPOKE, on the same `(channel_id, remote_id)` key the avatar endpoint walks. The thread is
+			// already scoped to the owner by the predicate below, and `gateway_remotes` carries no owner of
+			// its own, so the channel equality IS the gate — the same path `GetContactAvatar` documents.
+			//
+			// LEFT também no canal: um canal ainda não projetado não pode sumir com a linha da lista — custa
+			// só o rosto do operador, e `ownerRemoteId` volta nulo.
+			.leftJoin(channels, eq(threads.channelId, channels.id))
+			// O SENTINELA DO OPERADOR TEM ROSTO, e é este `case` que o recupera — a MESMA troca que
+			// `GetSessionChat` faz no insumo da busca (lá em `lookupIds`; aqui na condição do join, porque
+			// esta leitura resolve o dono de cada linha numa consulta só). As linhas do operador são
+			// atribuídas a `OPERATOR_PARTICIPANT_ID`, que não é um JID e nunca terá linha na agenda; a conta
+			// por trás dele tem, e é o `owner_remote_id` do canal.
+			//
+			// `owner_remote_id` vazio (o default da coluna) ou canal ausente degradam para o comportamento
+			// antigo: a igualdade não casa com nada, a linha sai sem rosto, a home continua abrindo. Nunca
+			// um erro — é o mesmo par de casos que `GetSessionChat` cobre.
+			.leftJoin(
+				remotes,
+				and(
+					eq(remotes.channelId, threads.channelId),
+					eq(
+						remotes.remoteId,
+						sql`case when ${transcriptEntries.senderExternalId} = ${OPERATOR_PARTICIPANT_ID} then ${channels.ownerRemoteId} else ${transcriptEntries.senderExternalId} end`,
+					),
+				),
+			)
+			.where(eq(transcriptEntries.ownerId, input.ownerId))
+			.orderBy(desc(transcriptEntries.at))
+			.limit(8)
+		const latestActivity = recent.map(r => ({
+			kind: r.kind as TranscriptKind,
+			subtitle: r.text.slice(0, 120),
+			threadId: r.threadId,
+			at: r.at.toISOString(),
+			sender: this.senderOf(r),
+		}))
+
+		const dayStart = new Date(new Date().setHours(0, 0, 0, 0))
+		const issuesOpened = allIssues.filter(i => i.createdAt >= dayStart).length
+		const issuesClosed = allIssues.filter(i => i.completedAt !== null && i.completedAt !== undefined && i.completedAt >= dayStart).length
+
+		const medianResponseSeconds = await this.medianResponse(input.ownerId, dayStart)
+
+		const channelRows = await this.driver.db
+			.select({ kind: channels.platform, status: channels.status })
+			.from(channels)
+			.where(eq(channels.ownerId, input.ownerId))
+
+		return {
+			agentsRunningNow,
+			needsYou,
+			threads: allThreads,
+			activeSessions,
+			latestActivity,
+			today: { issuesOpened, issuesClosed, medianResponseSeconds },
+			channels: channelRows.map(c => ({ kind: c.kind as ChannelKind, status: c.status as ChannelStatus })),
+			mentionCta,
+		}
+	}
+
+	/** See `GetHomeDashboardOutputSchema.mentionCta`'s own docblock for the three-fact rule this picks. */
+	private async buildMentionCta(
+		ownerId: string,
+		threadRows: { threadId: string; createdAt: Date; mentionGateEnabled: boolean; mentionGateTag: string | null }[],
+	): Promise<{ threadId: string; tag: string } | undefined> {
+		const gated = threadRows.filter(t => t.mentionGateEnabled && t.mentionGateTag)
+		if (gated.length === 0) return undefined
+
+		// One query for every thread the operator has EVER written a line in — never per-thread, and
+		// never limited to `latestActivity`'s own 8-row window (an old thread's only operator line could
+		// easily have scrolled off it).
+		const spokenIn = await this.driver.db
+			.selectDistinct({ threadId: transcriptEntries.threadId })
+			.from(transcriptEntries)
+			.where(and(eq(transcriptEntries.ownerId, ownerId), eq(transcriptEntries.senderExternalId, OPERATOR_PARTICIPANT_ID)))
+		const spokenThreadIds = new Set(spokenIn.map(r => r.threadId))
+
+		const candidates = gated.filter(t => !spokenThreadIds.has(t.threadId))
+		if (candidates.length === 0) return undefined
+
+		const mostRecent = [...candidates].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]!
+		return { threadId: mostRecent.threadId, tag: mostRecent.mentionGateTag! }
+	}
+
+	/**
+	 * The identity to hang on one recent line, or nothing — the same rule (and the same fallback)
+	 * `GetSessionChat.senderOf` applies, so a line reads the same on the home screen and in the
+	 * conversation it came from.
+	 *
+	 * A contact the gateway sync has not written yet still gets a sender, with their JID standing in for
+	 * the name: the alternative is dropping the attribution entirely, which is the state this field
+	 * exists to end.
+	 *
+	 * O SENTINELA `operator` TAMBÉM TEM ROSTO. Ele descartava a linha inteira aqui (`=== OPERATOR_
+	 * PARTICIPANT_ID → undefined`), e sem `sender` o console caía no rótulo do `kind` e escrevia
+	 * "Você" onde devia estar o nome e a foto de quem respondeu. A conta por trás do sentinela é o
+	 * `owner_remote_id` do canal, que resolve na mesma agenda que todo o resto — a troca é a mesma que
+	 * o join acima faz no insumo. Sem `owner_remote_id` a linha volta a ser anônima: degradação.
+	 */
+	private senderOf(row: {
+		channelId: string
+		senderExternalId: string | null
+		ownerRemoteId: string | null
+		senderName: string | null
+		senderAvatarUrl: string | null
+	}): { channelId: string; externalId: string; displayName: string; hasAvatar: boolean } | undefined {
+		if (row.senderExternalId === null) return undefined
+		const resolvedId = row.senderExternalId === OPERATOR_PARTICIPANT_ID ? row.ownerRemoteId || null : row.senderExternalId
+		if (resolvedId === null) return undefined
+		return {
+			channelId: row.channelId,
+			externalId: resolvedId,
+			displayName: row.senderName || resolvedId,
+			hasAvatar: Boolean(row.senderAvatarUrl),
+		}
+	}
+
+	/**
+	 * TODAY'S MEDIAN RESPONSE, in seconds, off the transcript.
+	 *
+	 * A "response" is one inbound burst answered: the clock starts at the FIRST contact line nobody had
+	 * answered yet and stops at the next line this side put on the channel. Starting it at the first
+	 * message of the burst rather than the last is the whole point — a contact who writes four lines in
+	 * a row waited from the first one, and pairing each line with the same reply would report four
+	 * responses for one, three of them flatteringly short.
+	 *
+	 * OUTBOUND IS `SYSTEM | DIRECT` — the two kinds that reach the contact. `WHISPER` is an in-app steer
+	 * that never leaves the console and `ACTION` is an audit line; counting either would stop the clock
+	 * on a reply the contact never saw.
+	 *
+	 * The window is today, same `dayStart` as the two counters beside it, so the three numbers on the
+	 * card describe the same day. A burst that opened before midnight and was answered after it is
+	 * therefore not counted — the alternative is a stat whose window silently differs from its label.
+	 *
+	 * Median, not mean: one conversation left overnight would drag an average past every number the
+	 * operator recognises.
+	 */
+	private async medianResponse(ownerId: string, dayStart: Date): Promise<number> {
+		const OUTBOUND = [TranscriptKind.SYSTEM, TranscriptKind.DIRECT]
+
+		const entries = await this.driver.db
+			.select({ threadId: transcriptEntries.threadId, kind: transcriptEntries.kind, at: transcriptEntries.at })
+			.from(transcriptEntries)
+			// Same join as `latestActivity` above, for the same reason: a deleted thread's lines must not
+			// speak for the owner's numbers either.
+			.innerJoin(threads, and(eq(transcriptEntries.threadId, threads.id), isNull(threads.deletedAt)))
+			.where(
+				and(
+					eq(transcriptEntries.ownerId, ownerId),
+					gte(transcriptEntries.at, dayStart),
+					inArray(transcriptEntries.kind, [TranscriptKind.CONTACT, ...OUTBOUND]),
+				),
+			)
+			// Chronological, because the pairing below walks each thread forward in time.
+			.orderBy(asc(transcriptEntries.at))
+
+		const waitingSince = new Map<string, Date>()
+		const waits: number[] = []
+		for (const entry of entries) {
+			if (entry.kind === TranscriptKind.CONTACT) {
+				// First line of the burst wins — a later one in the same burst must not reset the clock.
+				if (!waitingSince.has(entry.threadId)) waitingSince.set(entry.threadId, entry.at)
+				continue
+			}
+			const since = waitingSince.get(entry.threadId)
+			// No pending inbound ⇒ this is us opening the conversation, not answering it.
+			if (!since) continue
+			waits.push((entry.at.getTime() - since.getTime()) / 1000)
+			waitingSince.delete(entry.threadId)
+		}
+
+		// Nothing was answered today: 0 is the honest reading of an empty set here, and it is what the
+		// card already renders for a quiet morning.
+		if (waits.length === 0) return 0
+		const sorted = [...waits].sort((a, b) => a - b)
+		const mid = Math.floor(sorted.length / 2)
+		return sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2
+	}
+
+	private buildNeedsYou(
+		openStops: { threadId: string; kind: string }[],
+		threadRows: { threadId: string; displayName: string }[],
+	): { threadId: string; threadDisplayName: string; stopKinds: StopKind[] } | undefined {
+		if (openStops.length === 0) return undefined
+		const threadId = openStops[0]!.threadId
+		const kinds = openStops.filter(s => s.threadId === threadId).map(s => s.kind as StopKind)
+		const display = threadRows.find(t => t.threadId === threadId)?.displayName ?? 'Thread'
+		return { threadId, threadDisplayName: display, stopKinds: kinds }
+	}
+}

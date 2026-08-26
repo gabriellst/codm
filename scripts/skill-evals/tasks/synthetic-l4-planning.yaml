@@ -1,0 +1,312 @@
+id: synthetic-l4-planning
+tier: holdout
+builder: opus
+title: Implementation PLAN from a frozen multi-context spec — probes contract-lock-FIRST
+  phase ordering, projection-ownership decisions (Go sync-worker vs TS BFF),
+  wave/parallelism classification, file-structure manifest, split-discipline
+  (conceive-layer / planning / unpinned judgment / RC-2 over-modeling / RC-12 naming)
+sourceSpec: PROBES-BACKLOG.md#L4
+goldRef: ""
+baseRef: ""
+prompt: >
+  You are turning an APPROVED business spec into an implementation PLAN for the
+  template monorepo — the `/plan` artifact, NOT code. Read the planning playbooks
+  FIRST: `.claude/commands/plan.md` and `.claude/skills/task-breakdown/SKILL.md`,
+  plus the "Modeling from another system" section of the root `CLAUDE.md` (Phase 0
+  Contract Lock, data-ownership-per-subsystem, question-every-aggregate, naming
+  harmonization, scope discipline). Then produce the plan.
+
+
+  Write the plan to EXACTLY this path (one file, this name — do not date-shift it):
+  `.plans/2026-06-13-procurement-sync-plan.md`. Do NOT write any code, schema,
+  migration, scaffold, or other `.plans/` / `.specs/` file — the deliverable is the
+  single plan document. (This is a planning exercise; there is no graph CLI to run
+  and no SDK to regen — produce the plan from the spec + playbooks you read.)
+
+
+  ── FROZEN SPEC (Status: Approved) ──────────────────────────────────────────
+
+  **Context.** template sellers buy inventory from external suppliers. Today none of
+  that is modeled. We are adding a **Procurement** capability so a seller can place a
+  purchase order with a supplier, and so the platform can track the inbound shipment
+  that fulfils it as the supplier's system pushes status webhooks (created → packed →
+  in_transit → delivered). The same webhook stream also drives a per-supplier
+  on-time-delivery scorecard the seller sees on a dashboard. A Go sync worker already
+  owns every other external-webhook ingestion pipeline in this repo (it runs the
+  normalizer/pipeline/channel layout); the TS backend owns BFF reads and seller-issued
+  commands. There is no reference supplier-system checkout on disk to mirror — derive
+  shapes from THIS spec.
+
+  **Problem.** Sellers reconcile supplier deliveries by hand across spreadsheets and
+  supplier emails; ~3 hrs/week per seller, and late suppliers are invisible until
+  stockouts.
+
+  **Goal.** A seller places a purchase order, watches its inbound shipment advance
+  live as supplier webhooks arrive, and sees a per-supplier on-time scorecard.
+
+  **Decisions (HOW — frozen).**
+  - D1. A **PurchaseOrder** is seller-issued (a command), has a lifecycle
+    (DRAFT → PLACED → RECEIVED → CLOSED / CANCELLED) and line items, each line a
+    quantity + a unit cost as money (cents + currency). It guards "cannot receive more
+    than ordered" and "cannot cancel after RECEIVED".
+  - D2. Supplier delivery **status webhooks** are ingested by the Go sync worker:
+    `Controller → Mapper(factory by supplier platform) → IntegrationEvent → outbox →
+    Handler`. The webhook delivery itself is a fact-that-happened, deduplicated by a
+    partial unique index — it is NOT a seller-issued command.
+  - D3. The seller's dashboard needs (a) a live inbound-shipment timeline per order and
+    (b) a per-supplier on-time-delivery scorecard (delivered-on-time / total, rolling).
+    Both are read shapes the seller polls a screen for; the scorecard aggregates across
+    many shipments per supplier.
+  - D4. Supplier platforms in scope: a fixed closed set the seller picks from when
+    registering a supplier connection. The connection mode is one of OAUTH /
+    CREDENTIALS / MANUAL.
+  - D5. The plan ships under a SINGLE PR; the seller-facing screens are a React route
+    with a live-updating timeline component and a scorecard component.
+
+  **User Stories.**
+  - US-1: As a seller I place a purchase order with line items so the supplier fulfils
+    it.
+  - US-2: As a seller I cancel a not-yet-received purchase order so I stop an order I no
+    longer need.
+  - US-3: As a seller I watch the inbound shipment advance live as the supplier reports
+    progress, so I know when stock arrives without emailing them.
+  - US-4: As a seller I see a per-supplier on-time-delivery scorecard so I can drop
+    chronically-late suppliers.
+
+  **Acceptance Criteria.**
+  - AC-1: Placing an order with valid lines persists it as PLACED and emits a
+    domain event.
+  - AC-2: Cancelling a RECEIVED order is rejected with a typed domain error.
+  - AC-3: A `delivered` supplier webhook advances the matching inbound-shipment read
+    model and the seller's timeline reflects it without a manual refresh.
+  - AC-4: The scorecard recomputes a supplier's on-time ratio when a new delivery
+    webhook lands.
+
+  ── END FROZEN SPEC ─────────────────────────────────────────────────────────
+
+
+  The spec is deliberately UNDER-SPECIFIED on the modeling-and-sequencing judgment
+  the plan must supply — that judgment is what you are being asked to produce. The
+  spec does NOT tell you the phase order, which writer owns each read model, which of
+  the four read/write shapes deserves a persisted aggregate vs an event vs a value
+  object vs a query service, or whether the scope fits one plan. Decide all of that
+  per the playbooks, and make the reasoning legible in the plan (a short rationale per
+  decision, not just a verdict). Multiple valid decompositions exist; what is graded
+  is the DISCIPLINE — contract-first sequencing, ownership stated and justified,
+  question-every-aggregate applied (and at least one candidate explicitly REJECTED as
+  an event / VO / enum / query-service with its reason), one harmonized naming
+  glossary, wave/parallelism classification on the manifest, and honest
+  split-discipline if you judge the scope too large for one plan.
+axes:
+  - PLAN-PHASE-ORDERING
+  - PROJECTION-OWNERSHIP
+  - WAVE-PARALLELISM
+  - FILE-MANIFEST
+  - MODELING-DISCIPLINE
+  - SCOPE-SPLIT
+graders:
+  # ── the plan document itself exists at the pinned path ─────────────────
+  - kind: file-exists
+    spec: ".plans/2026-06-13-procurement-sync-plan.md"
+    id: plan#doc-produced
+
+  # ── contract-lock-FIRST phase ordering is present and named ────────────
+  - kind: grep-must
+    spec: ".plans/2026-06-13-procurement-sync-plan.md::(Phase 0|Contract Lock)"
+    id: plan#phase0-named
+  - kind: grep-must
+    spec: ".plans/2026-06-13-procurement-sync-plan.md::## Task T1:"
+    id: plan#task-grammar
+  # Phase-0 freezes the cross-boundary enums/integration-events BEFORE any BC code:
+  # the contracts/enum freeze must read as the FIRST task, not a trailing sdk-regen.
+  # Order-independent, newline-tolerant ([\s\S]), and case-enumerated (JS RegExp has no
+  # inline (?i)) so a freeze/lock verb co-occurring with a contract/enum/integration-event
+  # noun in EITHER order — "freeze the enums" OR "the enums are frozen" — satisfies the
+  # cheap mechanical floor; judge axis (a) is the real gate on FIRST-ordering.
+  - kind: grep-must
+    spec: ".plans/2026-06-13-procurement-sync-plan.md::(freeze|Freeze|frozen|Frozen|lock|Lock|locked|Locked|first|Phase 0|Task T1)[\\s\\S]{0,80}(contract|Contract|enum|Enum|integration[ -]?event|Integration[ -]?[Ee]vent)|(contract|Contract|enum|Enum|integration[ -]?event|Integration[ -]?[Ee]vent)[\\s\\S]{0,80}(freeze|Freeze|frozen|Frozen|lock|Lock|locked|Locked|first|Phase 0|Task T1)"
+    id: plan#contract-first
+  # ── ownership of the canonical read models is explicitly decided ───────
+  - kind: grep-must
+    spec: ".plans/2026-06-13-procurement-sync-plan.md::(Go|sync worker|sync-worker|worker).{0,120}(owns|writes|ingests|projection|read model|read-model|scorecard|shipment)"
+    id: plan#ownership-go
+  - kind: grep-must
+    spec: ".plans/2026-06-13-procurement-sync-plan.md::(wave|Wave|parallel|critical path|critical-path)"
+    id: plan#wave-parallelism
+  # ── a harmonized naming glossary (RC-12) and a file-structure manifest ─
+  - kind: grep-must
+    spec: ".plans/2026-06-13-procurement-sync-plan.md::platform"
+    id: plan#naming-platform
+  - kind: grep-must
+    spec: ".plans/2026-06-13-procurement-sync-plan.md::(Create:|Modify:|File Structure|Files to write)"
+    id: plan#manifest
+
+  # ── over-modeling / scope-creep anti-tokens (RC-2) ─────────────────────
+  # The webhook delivery is a fact-that-happened (event + partial unique index),
+  # NOT a persisted aggregate/entity/repo (D2). Flag a WebhookDelivery entity/repo.
+  # Fires ONLY on the AFFIRMATIVE over-model DECLARATION shape — a markdown heading
+  # ("### WebhookDelivery entity"), an affirmative build verb ("create/model/introduce/
+  # build/persist a WebhookDelivery entity|aggregate|repository"), or a code sketch
+  # ("class/interface WebhookDelivery…"). The DISCIPLINED rejection idiom places the same
+  # name next to "entity"/"aggregate" inside a NEGATED sentence ("NOT a WebhookDelivery
+  # entity", "no WebhookDelivery aggregate", "WebhookDelivery → no entity, no repo") —
+  # which judge axis (c) REWARDS — so a bare "<Name>\s*(entity|aggregate)" regex would
+  # wrongly FAIL the canonical disciplined plan. The negative lookbehind guards the most
+  # natural rejection verbs; judge axis (c) is the real backstop. (Mirrors the spec
+  # probe's ddd-modeling#rc-2-no-speculative-entity construction.)
+  - kind: grep-must-not
+    spec: ".plans/2026-06-13-procurement-sync-plan.md::(?:^#{2,4}\\s+WebhookDelivery\\w*\\s+(?:entity|aggregate|repository|[Rr]epo)\\b|(?<!\\b(?:not|no|never|n't|reject|rejects|avoid|without|instead of)\\s{0,3})\\b(?:[Ii]ntroduce|[Ii]ntroduces|[Aa]dd|[Aa]dds|[Cc]reate|[Cc]reates|[Mm]odel|[Mm]odels|[Dd]efine|[Dd]efines|[Ss]tand up|[Ss]tands up|[Pp]ersist|[Pp]ersists|[Bb]uild|[Bb]uilds)\\s+(?:a|an|the|our)\\s+WebhookDelivery\\w*\\s+(?:entity|aggregate|repository|[Rr]epo)\\b|\\b(?:class|interface)\\s+WebhookDelivery\\w*\\b)"
+    id: plan#rc2-no-webhook-entity
+  # The scorecard is a derived cross-shipment aggregation → projection/query, never a
+  # seller-issued command/aggregate with its own lifecycle. Same affirmative-only shape
+  # so the disciplined "scorecard is a projection, NOT a Scorecard aggregate" rejection
+  # (which judge (c) rewards) stays clean while a real Scorecard aggregate/entity fires.
+  - kind: grep-must-not
+    spec: ".plans/2026-06-13-procurement-sync-plan.md::(?:^#{2,4}\\s+Scorecard\\w*\\s+(?:entity|aggregate)\\b|(?<!\\b(?:not|no|never|n't|reject|rejects|avoid|without|instead of)\\s{0,3})\\b(?:[Ii]ntroduce|[Ii]ntroduces|[Aa]dd|[Aa]dds|[Cc]reate|[Cc]reates|[Mm]odel|[Mm]odels|[Dd]efine|[Dd]efines|[Ss]tand up|[Ss]tands up|[Pp]ersist|[Pp]ersists|[Bb]uild|[Bb]uilds)\\s+(?:a|an|the|our)\\s+Scorecard\\w*\\s+(?:entity|aggregate)\\b|\\b(?:class|interface)\\s+Scorecard(?:Entity|Aggregate)\\w*\\b)"
+    id: plan#rc2-no-scorecard-entity
+  # Plan-failure placeholders the /plan self-review explicitly bans.
+  - kind: grep-must-not
+    spec: ".plans/2026-06-13-procurement-sync-plan.md::\\b(TBD|TODO|implement later|fill in details|might need|speculative)\\b"
+    id: plan#scope-discipline
+
+  # ── the rich judge — encodes the actual planning heuristics ────────────
+  - kind: judge
+    # sonnet, not haiku: judging contract-lock ordering + ownership + wave classification over a
+    # produced plan is a heavy multi-criterion rubric; haiku under-grades (see L3 review-judgment).
+    model: sonnet
+    spec: >
+      An implementation PLAN was produced at
+      .plans/2026-06-13-procurement-sync-plan.md from a frozen, approved spec for a
+      net-new **Procurement** capability (seller-issued purchase orders + Go-sync-worker
+      webhook ingestion of inbound-shipment status + a per-supplier on-time scorecard +
+      seller-facing React screens). Read that plan file (and only that file) and judge
+      ALL of the following. Each (a)-(f) must hold for PASS.
+
+      (a) CONTRACT-LOCK-FIRST PHASE ORDERING — the plan sequences Phase 0 (Contract
+      Lock) BEFORE any bounded-context behavior. Phase 0 authors and FREEZES the
+      cross-boundary enums (the closed supplier-platform set, the connection-mode
+      enum OAUTH/CREDENTIALS/MANUAL, the purchase-order status set) and the
+      cross-service integration event(s) the Go worker publishes — and treats those as
+      frozen so the contexts can be built in parallel. This freeze is the FIRST task /
+      first phase, NOT a trailing "regen the SDK at the end" step. Errors+enums living
+      in Phase 0 even though their consuming entity is implemented later is CORRECT, not
+      an ordering bug (closed-set definitions precede behavior). REJECT if the plan
+      builds entities/use-cases/leaf code before any contract is locked, or if the only
+      "contract" task is an SDK regen tacked on at the end.
+
+      (b) PROJECTION / DATA OWNERSHIP — for EACH canonical read model the spec needs
+      (the live inbound-shipment timeline AND the per-supplier on-time scorecard), the
+      plan states WHO WRITES IT and justifies it: webhook-ingest-driven read models are
+      written by the owner that runs the ingestion pipeline (the Go sync worker, since
+      it consumes the supplier webhooks), NOT by the TS BFF; the seller-facing READ of
+      those models is a TS BFF query. The ownership decision is explicit and reasoned,
+      not left implicit. REJECT if a webhook-fed projection is assigned to the BFF to
+      write, or if ownership is never stated.
+
+      (c) QUESTION-EVERY-AGGREGATE (modeling discipline / RC-2) — the plan applies the
+      decision tree and makes its verdicts legible. PurchaseOrder is correctly an
+      aggregate (identity + lifecycle DRAFT→…→CANCELLED + invariants "cannot receive
+      more than ordered" / "cannot cancel after RECEIVED" + confirmed need). The
+      supplier **webhook delivery** is correctly NOT an entity/repository — it is a
+      fact-that-happened modeled as an event deduplicated by a partial unique index
+      (per D2). At least ONE candidate is EXPLICITLY rejected as event / value-object /
+      enum+quotas / query-service WITH a one-line reason (e.g. the scorecard is a
+      derived cross-shipment aggregation → projection or QueryService, NOT an aggregate;
+      OR the supplier-platform set is a code enum, NOT a persisted aggregate; OR the
+      OrderLine is a value-object / child entity ON PurchaseOrder, not its own
+      aggregate). REJECT if a WebhookDelivery / Scorecard / SupplierPlatform is modeled
+      as a standalone persisted aggregate+repository+table, or if no rejection reasoning
+      is shown at all (a plan that builds an entity for everything fails this).
+
+      (d) WAVE / PARALLELISM CLASSIFICATION — because this crosses ≥3 contexts and/or
+      produces ≥10 artifacts, the plan carries the phase-lane overlay: a feature-type
+      calibration, wave labels, a parallelism statement (what can fan out after the
+      contract lock vs what is serial), and a critical path. It need not be a perfect
+      table, but the WHEN layer must be present and coherent — frontend screens and
+      independent contexts fan out after Phase 0; dependent contexts come in a later
+      wave. REJECT if the plan is a flat undifferentiated task list with no wave /
+      parallelism / critical-path reasoning at all.
+
+      (e) FILE-STRUCTURE MANIFEST + NAMING — the plan enumerates the files it
+      touches with exact paths and a one-line "owns" per file (Create:/Modify: or a File
+      Structure section), and uses ONE harmonized ubiquitous language: "platform" (not
+      "provider"), "status" (not "externalStatus"), a single consistent spelling of each
+      supplier-platform constant and the purchase-order status values across the whole
+      plan (no NUVEMSHOP-vs-NUVEM_SHOP-style split between sections). A short naming
+      glossary or a single typed enum definition that every later reference matches is
+      what to look for. REJECT if there is no file manifest, or if the same domain
+      concept is spelled differently in different parts of the plan (RC-12 pollution).
+
+      (f) SCOPE / SPLIT DISCIPLINE — the plan is honest about size. Either it stays
+      within scope and the manifest is coherent for a single PR, OR — if the agent
+      judges the four stories span too much for one plan (past ~7 deliverables) — it
+      explicitly PROPOSES A SPLIT (e.g. "PO command side" vs "webhook-ingest + read
+      models" as separate plans) rather than silently ballooning. Both are acceptable;
+      what fails is a sprawling plan that neither fits one PR coherently NOR flags the
+      split. There are NO "TBD"/"speculative"/"might need" placeholders and no invented
+      abstractions (a CSVSerializer-style helper, a speculative cache port, telemetry
+      entities) the spec never asked for.
+
+      Scope notes — judge the DISCIPLINE, not a specific answer. Multiple valid
+      decompositions exist: whether the inbound shipment is its own aggregate, a
+      projection driven by the worker, or a child of PurchaseOrder is a legitimate
+      design CHOICE — accept any of them AS LONG AS the ownership + question-every-
+      aggregate reasoning is shown. The agent's own naming for contexts, enums, files
+      and tasks is fine (Procurement / Supply / Inbound are all acceptable context
+      names) — do NOT fail on a name you'd have chosen differently. A plan that
+      explicitly PROPOSES A SPLIT and then writes a coherent first sub-plan is a PASS,
+      not a failure, even if it covers fewer than all four stories — split-discipline is
+      a virtue here. Do NOT require runnable code, real file contents, a graph-CLI run,
+      or an actual SDK regen — this is a plan document, evaluated for its modeling and
+      sequencing judgment only. Inspect ONLY
+      .plans/2026-06-13-procurement-sync-plan.md.
+notes: >-
+  First L4 conceive-layer PLANNING probe — synthetic, agent-only, no gold tree. The
+  graded artifact is a `/plan` document, not code: NO tsc/cmd/test/detect gates (a plan
+  doesn't compile). Mechanical anchors are limited to (1) file-exists on the pinned
+  plan path, (2) grep-must for the load-bearing planning sections — "Phase 0"/"Contract
+  Lock", a T-prefixed Task grammar (## Task T1:), a contract-FIRST freeze token, an
+  explicit Go-worker ownership sentence, a wave/parallel/critical-path token, the
+  harmonized "platform" term, and a file manifest token — and (3) grep-must-not for the
+  RC-2 over-modeling traps (a WebhookDelivery entity/repo, a Scorecard aggregate/entity)
+  and the /plan-banned placeholders (TBD/TODO/speculative/might-need). ONE rich judge
+  carries the real heuristics across six axes (a)-(f) and ENDS with scope notes that
+  name the legitimate-exception traps so the agent's own naming and any valid
+  decomposition — including a proposed split — pass.
+
+  WINNABLE because the spec is fully self-contained and frozen: every enum
+  (supplier-platform set, connection mode, PO status), every lifecycle, every read
+  model, and the exact ingestion pipeline shape (D2) are stated, so a disciplined plan
+  can satisfy all anchors + the judge without guessing. The plan path is PINNED to one
+  unique dated filename so every grader globs exactly that one new file — "Phase 0" and
+  "Contract Lock" appear in ~18/42 OTHER existing .plans/*.md at HEAD, which is WHY the
+  graders are scoped to the single pinned path and not a `.plans/**` glob. The
+  pinned-filename trick also makes file-exists + every grep HEAD-clean (the file does
+  not exist at HEAD). The probe does not run the graph CLI / SDK (the prompt says so) —
+  it is a pure conceive-layer judgment exercise.
+
+  SEEDED TRAPS (discriminators): (1) RC-2 over-modeling — the webhook delivery (D2) is
+  an intentional distractor that a naive agent turns into a WebhookDelivery
+  entity+repo+table instead of an event+partial-unique-index; the scorecard (D3) is an
+  intentional distractor that a naive agent turns into a Scorecard aggregate instead of
+  a projection/QueryService. (2) RC-1/ownership — the spec says a Go sync worker owns
+  webhook ingestion with no reference repo on disk; the trap is assigning the
+  webhook-fed projections to the TS BFF to write (the BFF only READS them). (3)
+  phase-ordering — the trap is sequencing entities/leaf code before the contract lock,
+  or making the only contract task a trailing SDK regen. (4) RC-12 naming — provider vs
+  platform, externalStatus vs status, split supplier-platform spellings. (5)
+  split-discipline — four stories spanning a command side + a Go ingest pipeline + two
+  read models + React screens is near/over the ~7-deliverable line; a disciplined agent
+  either keeps it coherent for one PR or proposes a split, and the judge passes both.
+
+  CLARIFICATION-PROBE SIBLING (inverted-success pattern, documented for a future
+  variant, NOT this probe): a companion L4 probe gives an UNDER-specified ask that is
+  genuinely un-plannable (e.g. ownership of a read model truly ambiguous, or a
+  conflicting decision) and INVERTS success — the winning move is minimal/no plan files
+  plus ONE sharp surfaced question; its graders would be file-exists-must-NOT on a plan
+  doc + a grep-must for a question token in the agent's reply, with the judge rewarding
+  a crisp clarifying question over a confidently-wrong plan. THIS probe is deliberately
+  the opposite: the spec is frozen and complete enough to plan, so producing the plan
+  (not asking) is the correct move; the split-discipline path in judge (f) is the only
+  sanctioned "surface a concern" escape and it must come WITH a coherent first sub-plan,
+  not instead of one.

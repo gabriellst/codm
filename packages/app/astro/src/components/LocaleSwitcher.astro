@@ -1,0 +1,41 @@
+---
+import { getLocale, type Locale } from '~/i18n'
+
+interface Props {
+	/** In-site paths per locale for THIS page. A locale absent from the map has no
+	 * translation, so it is not rendered; with fewer than two entries the switcher
+	 * disappears entirely (rule 4 — untranslated blog posts). */
+	localeLinks: Partial<Record<Locale, string>>
+}
+
+const { localeLinks } = Astro.props
+const current = getLocale(Astro.url)
+const entries = (Object.entries(localeLinks) as [Locale, string][]).filter(([, href]) => Boolean(href))
+---
+
+{
+	entries.length > 1 && (
+		<div class="flex items-center gap-1 text-xs">
+			{entries.map(([loc, href]) => (
+				<a
+					href={href}
+					class={`rounded px-2 py-1 transition-colors ${loc === current ? 'bg-[var(--muted)] font-semibold' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
+					aria-current={loc === current ? 'page' : undefined}
+					data-locale={loc}
+				>
+					{loc.toUpperCase()}
+				</a>
+			))}
+		</div>
+	)
+}
+
+<script>
+	// Persist the chosen locale so the `/` redirect shell honors it next visit.
+	import { LOCALE_COOKIE } from '~/i18n'
+	document.querySelectorAll<HTMLAnchorElement>('a[data-locale]').forEach(a => {
+		a.addEventListener('click', () => {
+			document.cookie = `${LOCALE_COOKIE}=${a.dataset.locale}; path=/; max-age=31536000; samesite=lax`
+		})
+	})
+</script>

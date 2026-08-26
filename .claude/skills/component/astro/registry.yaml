@@ -1,0 +1,144 @@
+name: component-astro
+description: Checklist for .astro components in packages/app/astro/.
+depends_on:
+  - primitive-astro
+  - design-system
+
+context_reads:
+  - packages/app/astro/src/components
+  - packages/app/astro/src/layouts
+  - packages/app/astro/src/i18n
+  - packages/app/ui/styles/tokens.css
+
+bad_practices:
+  - id: BP-AC-001
+    severity: high
+    when: always
+    summary: React hooks (useState, useEffect, useQuery) inside a `.astro` file's frontmatter or template.
+    why: Astro files run at build/SSR time. Hooks only run on a React island.
+    fix: Move the interactive piece into a `.tsx` file and mount it with `<Component client:visible />` from the `.astro`.
+    mechanical: true
+    detect:
+      - '\buse(State|Effect|Query)\s*\('
+
+  - id: BP-AC-002
+    severity: high
+    when: always
+    summary: Hardcoded user-facing string in a `.astro` template (instead of `t(locale, key)`).
+    why: Astro is multi-locale; literal strings break i18n and the test contract.
+    fix: Add the key to `src/i18n/<locale>.ts` and render via `t(locale, 'section.key')`.
+    mechanical: false
+
+  - id: BP-AC-003
+    severity: high
+    when: always
+    summary: Inline hex/rgb color values in styles or `<style>` blocks.
+    why: Tokens live in `@codm/app-ui/tokens.css`; inline colors break dark mode and theme overrides.
+    fix: Use `var(--primary)` / Tailwind utilities that map to tokens. If the token doesn't exist, add it.
+    mechanical: true
+    detect:
+      - '#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b'
+      - '\brgba?\s*\('
+
+  - id: BP-AC-004
+    severity: medium
+    when: always
+    summary: "`client:load` used when `client:visible` or `client:idle` would suffice."
+    why: "`client:load` ships JS during initial page load and blocks LCP unnecessarily."
+    fix: Default to `client:visible`. Use `client:load` only for above-the-fold interactivity.
+    mechanical: false
+
+  - id: BP-AC-005
+    severity: medium
+    when: always
+    summary: Importing from `@codm/app-react` inside the astro workspace.
+    why: Each app workspace is independent. The styles workspace is the only shared surface for design tokens.
+    fix: Recreate the component locally in `packages/app/astro/src/components/` or extract into `@codm/app-ui` if it's pure CSS.
+    mechanical: true
+    detect:
+      - '@codm/app-react'
+
+  - id: BP-AC-006
+    severity: medium
+    when: always
+    summary: Astro page without `<title>` / `<meta name="description">` / OG metadata.
+    why: SEO is the primary purpose of the astro workspace; missing metadata defeats the point.
+    fix: Inherit from `BaseLayout.astro` and pass `title`, `description`, optional `ogImage`.
+    mechanical: false
+
+  - id: BP-AC-007
+    severity: low
+    when: rendering a list
+    summary: List rendered as `<div>` / `<span>` instead of semantic `<ul role="list">`.
+    why: Screen readers / E2E selectors rely on list semantics.
+    fix: Use `<ul role="list" aria-label="...">` with `<li role="listitem">` children.
+    mechanical: false
+
+  - id: BP-AC-008
+    severity: low
+    when: rendering an icon-only link
+    summary: Icon-only `<a>` without `aria-label`.
+    why: Visually-impaired and AI-agent users can't tell what the link does.
+    fix: Add `aria-label="<action>"`.
+    mechanical: false
+
+  - id: BP-AC-009
+    severity: medium
+    when: always
+    summary: "`client:only=\"react\"` used for a component that could be SSRed."
+    why: "`client:only` skips server rendering — the page ships HTML-less shells, hurting LCP and crawlability."
+    fix: Only use `client:only` when the component genuinely depends on `window` / `document` at top level. Otherwise use `client:visible`.
+    mechanical: false
+
+patterns:
+  - id: P-AC-001
+    when: always
+    description: Astro frontmatter declares `Props` interface and destructures `Astro.props` once.
+    rationale: Makes the component's contract explicit and type-safe.
+
+  - id: P-AC-002
+    when: always
+    description: Tailwind classes use design-token variables (`bg-background`, `text-foreground`, `text-primary`, etc.).
+    rationale: Tokens drive theme; raw colors break it.
+
+  - id: P-AC-003
+    when: always
+    description: One React island per interactive concern; each is the smallest possible component.
+    rationale: Astro's value is shipping less JS — every island is a JS bundle.
+
+  - id: P-AC-004
+    when: rendering content collection items
+    description: Sort and filter inside the frontmatter, not inside `.map()` in the template.
+    rationale: Cleaner template; sort once.
+
+  - id: P-AC-005
+    when: a blog post or landing page
+    description: Emit JSON-LD via `<script type="application/ld+json" set:html={JSON.stringify(...)}>`.
+    rationale: Structured data drives rich results in search.
+
+scaffold:
+  - description: Static section component
+    command: bun cli component <Name> --platform=astro
+  - description: React island for use inside Astro pages
+    command: bun cli astro:island <Name>
+
+canonical_snippet: |
+  ---
+  // src/components/FeatureGrid.astro
+  import { t } from '../i18n';
+  export interface Props { features: Array<{ icon: string; key: string }> }
+  const { features } = Astro.props;
+  const locale = Astro.currentLocale ?? 'pt';
+  ---
+
+  <section aria-label={t(locale, 'features.aria')} class="py-24">
+    <ul role="list" class="grid grid-cols-1 gap-8 md:grid-cols-3">
+      {features.map(f => (
+        <li role="listitem" class="flex flex-col gap-2 rounded-lg bg-card p-6 text-card-foreground">
+          <span class="text-primary" set:html={f.icon} />
+          <h3 class="text-lg font-semibold">{t(locale, `features.${f.key}.title`)}</h3>
+          <p class="text-muted-foreground">{t(locale, `features.${f.key}.body`)}</p>
+        </li>
+      ))}
+    </ul>
+  </section>

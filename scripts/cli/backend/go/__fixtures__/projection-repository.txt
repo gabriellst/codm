@@ -1,0 +1,13 @@
+// Package projections — CouponProjectionRepository is the persistence interface
+// for CouponProjection.
+package projections
+
+import "context"
+
+// CouponProjectionRepository is the persistence interface for CouponProjection.
+type CouponProjectionRepository interface {
+	// Upsert inserts or updates the coupon projection row.
+	Upsert(ctx context.Context, p *CouponProjection) error
+	// Delete removes the row for the given key.
+	Delete(ctx context.Context, key string) error
+}

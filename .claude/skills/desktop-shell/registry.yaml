@@ -1,0 +1,89 @@
+registry:
+  type: frontend
+  layer: shell
+  depends_on: []
+  depended_by: [component, route, store]
+  context_reads: []
+
+  patterns:
+    - id: DSK-01
+      name: "Ports consumed via DI, bound once"
+      when: always
+      rule: "React code consumes OS capabilities via the service ports — useService(Token) / typed hooks (useFilePicker, useNotification, …) from '@/services', resolved from the DI Container. The environment is detected and bound ONCE by ServicesProvider at the composition root (routes/__root.tsx) via dynamic import of the declarative registry/<env> bindings record (container.load)."
+      wrong: "importing a registry env record (registry/tauri) or a Tauri*Service directly, calling window.__TAURI__ outside services/utils/tauri, or module-level platform selection in a component"
+    - id: DSK-02
+      name: "Capability = port + platform services + declared permissions"
+      when: "the console needs a new OS integration"
+      rule: "Declare the port in services/<Capability>Service/<Capability>Service.ts (pure types, promise-based), add a token in services/tokens.ts, implement Tauri<Cap>Service AND Browser<Cap>Service colocated, add the [Token, Class] pair to the declarative record in registry/{tauri,browser}.ts (+ a Fake pair in registry/test.ts), declare the capability in packages/app/tauri/config/capabilities.ts (CAPABILITIES + CAPABILITY_PERMISSIONS) (+ bun desktop:generate), expose a typed hook, consume via the hook."
+      wrong: "ad-hoc invoke() call sites sprinkled through components, a hand-written `new *Service()` anywhere (the Container is the only construction site), or hand-editing capabilities/default.json"
+    - id: DSK-03
+      name: "Honest browser degradation"
+      when: always
+      rule: "Browser services return honest values (supportsFolderPicker → false, pickFolder → null, autostart.isEnabled → false); they never fake a desktop capability."
+      wrong: "returning a fabricated path or pretending a secret store is secure"
+    - id: DSK-04
+      name: "Shell reaches the console via build config only"
+      when: always
+      rule: "tauri.conf.json devUrl/frontendDist + nx dependsOn app-react:build-spa are the only tauri→react links."
+      wrong: "src-tauri code importing/reading packages/app/react sources"
+    - id: DSK-05
+      name: "Sidecar = externalBin + health-check"
+      when: "adding or changing a sidecar"
+      rule: "Declare in packages/app/tauri/config/sidecars.ts (SIDECARS; bun desktop:generate renders externalBin), build via config/build-sidecars.ts (name-<target-triple>); every sidecar has a healthPath readiness URL."
+      wrong: "spawning raw processes without a readiness signal, or bundling unmanaged binaries"
+    - id: DSK-06
+      name: "Custom Rust command shape"
+      when: "a capability has no tauri plugin"
+      rule: "#[tauri::command] in src-tauri/src/lib.rs + invoke_handler registration + permission declared in packages/app/tauri/config/capabilities.ts (CAPABILITIES + CAPABILITY_PERMISSIONS; capabilities JSON is generated)"
+    - id: DSK-07
+      name: "Ports stay platform-pure (future expo home)"
+      when: always
+      rule: "Each services/<Cap>Service/<Cap>Service.ts port holds pure types only — no platform SDK, no react, no DOM globals. The ports are the future @codm/native-contract package: an expo host implements the same ports (colocated Expo<Cap>Service + a registry/expo.ts record) against identical types."
+      wrong: "importing @tauri-apps types (or react) inside a port file, or leaking a platform type through a port signature"
+
+  bad_practices:
+    - id: bp-01
+      name: "@tauri-apps/* outside the tauri touchpoints"
+      rule: "The shell API is quarantined to the tauri touchpoints — services/**/Tauri*Service.ts, services/registry/tauri.ts, services/utils/tauri/ — eslint no-restricted-imports enforces it repo-wide (ports and Browser*Service included)."
+      wrong: "import { open } from '@tauri-apps/plugin-dialog' inside a component"
+      right: "const filePicker = useFilePicker(); const path = await filePicker.pickFolder()"
+      mechanical: true
+    - id: bp-02
+      name: "UI branching on the host"
+      rule: "Components never test the platform name to change behavior — they branch on what a port REPORTS (capability), and a missing capability means extending the port with honest degradation. HostInfoService.platform() is diagnostics only."
+      wrong: "if (isTauri()) { showFolderPicker() } else { hideButton() }"
+      right: "const filePicker = useFilePicker(); const [can,setCan]=useState(false); useEffect(()=>{filePicker.supportsFolderPicker().then(setCan)},[filePicker]); {can && <Button onClick={pick}>Browse</Button>} — manual input stays either way"
+      mechanical: false
+    - id: bp-03
+      name: "Business logic in the shell"
+      rule: "src-tauri stays product-free: serve webview, supervise sidecars, expose OS commands. Domain behavior lives in the daemon/gateway/console."
+      wrong: "Rust command that classifies messages or touches domain tables"
+      right: "console → SDK → daemon use case; shell only relays OS capabilities"
+      mechanical: false
+    - id: bp-04
+      name: "Sidecar boot without readiness"
+      rule: "Every sidecar bootstrap must poll its readiness URL and surface sidecar:ready/sidecar:error — never assume the daemon is up."
+      wrong: "spawn() and immediately render the console against :3030"
+      right: "probe /session until 200 (60s budget) → emit sidecar:ready"
+      mechanical: false
+    - id: bp-05
+      name: "Untestable native consumption"
+      rule: "Flows that use a port must be provable with a fake bound via a test Container (c.load(testBindings) + a one-entry [Token, SeededFake] override) passed to ServicesProvider container={...} — no tauri required to test the DI (see ServicesProvider.test.tsx)."
+      wrong: "component reaching a registry env record/Tauri*Service directly, so the flow only runs inside the desktop shell"
+      right: "class SeededPicker extends FakeFilePickerService { constructor(){ super('/path') } } const c = new Container(); c.load(testBindings); c.load([[FilePickerToken, SeededPicker]]); renderToString(<ServicesProvider container={c}>…</ServicesProvider>) exercising the flow against the fake"
+      mechanical: false
+
+  canonical_snippet: |
+    // routes/__root.tsx — environment detected & bound ONCE at the composition root
+    <ServicesProvider>{children}</ServicesProvider>
+
+    // a component that needs a folder — capability-gated, never platform-gated
+    import { useFilePicker } from '@/services'
+    const filePicker = useFilePicker()
+    const [canPickFolder, setCanPickFolder] = useState(false)
+    useEffect(() => { filePicker.supportsFolderPicker().then(setCanPickFolder) }, [filePicker])
+    const pickFolder = async () => { const p = await filePicker.pickFolder({ title }); if (p) setPath(p) }
+    // {canPickFolder && <Button onClick={pickFolder}>{t('workspaces.browse')}</Button>}
+    // browser host reports no path-capable picker → manual input stays the only affordance
+
+  scaffold: null

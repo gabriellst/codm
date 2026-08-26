@@ -1,0 +1,28 @@
+---
+// Progressive enhancement do CTA de download (plano 2026-08-25, D15). O HTML sai do servidor com
+// DEFAULT_DOWNLOAD (macOS) — sem JS o botão continua funcionando e a lista "outras plataformas"
+// cobre o resto. Com JS, este módulo (bundlado pelo Vite — por isso pode importar `~/config/download`,
+// mesmo padrão do LocaleSwitcher) lê a plataforma e troca href/rótulo/ícone de TODO
+// `a[data-download-cta]` da página (Nav, Hero, card de preço, Footer). Montado UMA vez em BaseLayout;
+// o Astro dedupe o <script> do componente. Sem props, sem markup.
+---
+
+<script>
+	import { DEFAULT_DOWNLOAD, PRIMARY_DOWNLOAD, detectDownloadOs, downloadLabel } from '~/config/download'
+
+	// `userAgentData` ainda não está no lib.dom — leitura tipada estreita (interseção), sem `any`.
+	const uaData = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData
+	const os = detectDownloadOs(navigator.userAgent, uaData?.platform)
+	const entry = os ? PRIMARY_DOWNLOAD[os] : DEFAULT_DOWNLOAD
+
+	if (entry.key !== DEFAULT_DOWNLOAD.key) {
+		document.querySelectorAll<HTMLAnchorElement>('a[data-download-cta]').forEach(a => {
+			a.href = entry.url
+			const label = a.querySelector<HTMLElement>('[data-download-label]')
+			if (label?.dataset.downloadTemplate) label.textContent = downloadLabel(label.dataset.downloadTemplate, entry)
+			a.querySelectorAll<HTMLElement>('[data-download-icon]').forEach(icon => {
+				icon.hidden = icon.dataset.downloadIcon !== entry.icon
+			})
+		})
+	}
+</script>

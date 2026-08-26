@@ -1,0 +1,87 @@
+# ─── Dependências e caches de tooling ───────────────────────────────────────────────────────────
+node_modules/
+.bun
+.nx/cache
+.nx/workspace-data
+.cache/
+.vite/
+.eslintcache
+*.tsbuildinfo
+
+# ─── Ambiente ───────────────────────────────────────────────────────────────────────────────────
+# Um único .env na raiz (gerado de template.config.ts via `bun env:generate`); .env.example é versionado.
+.env
+.env*.local
+
+# ─── Saídas de build ────────────────────────────────────────────────────────────────────────────
+dist/
+# Os SDKs gerados são publicados COMMITADOS em packages/client/dist/ (.specs/2026-05-14-polyglot-client-sdk-design.md, Decision 13).
+!packages/client/dist/
+!packages/client/dist/**
+build/
+.output/
+target/
+# Contracts: emissão TypeSpec (OpenAPI) regenerada por `bun contracts`
+packages/contracts/generated/openapi/**
+# api-go: binário de verificação de build e docs geradas (openapi.json é o único artefato versionado)
+packages/api/go/api
+packages/api/go/public/docs/*
+!packages/api/go/public/docs/openapi.json
+# api-typescript: console empacotado no bundle do daemon (regenerado no build)
+packages/api/typescript/public/app/**
+# Storybook estático (entrada da régua de fidelity)
+packages/app/react/storybook-static/
+
+# ─── Artefatos regeneráveis ─────────────────────────────────────────────────────────────────────
+# Code-graph (`bun cli graph build`)
+.graph/
+# UI Fidelity (`bun fidelity`) — os targets/ são versionados
+design/fidelity/current/
+design/fidelity/deltas/
+design/fidelity/scoreboard.json
+design/fidelity/report.html
+# Gravações de demo do e2e
+packages/e2e/recordings/
+
+# ─── Estado local do sistema agêntico ───────────────────────────────────────────────────────────
+.claude/audit/
+.claude/feedback/
+.claude/judge-cache/
+.claude/metrics/
+# Worktrees de background — escondidos do git E da descoberta de projetos do Nx
+# (sem isto o Nx entra em cada worktree e acha nomes de projeto duplicados).
+.claude/worktrees/
+.worktrees/
+# Relatórios do `bun review` — saída de análise local, nunca artefato do repositório. Sem esta linha,
+# um `git add -A` os varre para dentro (e, com o repositório público, para dentro da vista de todos).
+review/
+
+# Binário do extractor Go do grafo — o adapter roda `go run .` (scripts/graph/adapters/go/facts.ts),
+# então o executável nunca é consumido: era 3,4 MB de peso morto carregando strings do ambiente de
+# quem o compilou (grep de texto não alcança binário — foi assim que ele passou pelas varreduras).
+scripts/graph/adapters/go/extractor/extractor
+
+# ─── Temporários, logs e IDE ────────────────────────────────────────────────────────────────────
+tmp/
+temp/
+logs/
+*.log
+pids
+*.pid
+*.seed
+*.pid.lock
+coverage/
+*.lcov
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── Lixo de sistema operacional ────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

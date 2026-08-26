@@ -1,0 +1,27 @@
+{
+	"name": "@codm/client",
+	"version": "0.0.0",
+	"license": "MIT",
+	"private": true,
+	"type": "module",
+	"main": "./lib/discover.ts",
+	"scripts": {
+		"generate": "bun generators/typescript.ts && bun generators/go.ts && bun generators/rust/index.ts && bun generators/error-codes.ts",
+		"generate:rust": "bun generators/rust/index.ts",
+		"test:rust": "cargo test --quiet --manifest-path dist/rust/Cargo.toml",
+		"check": "bun tsc --noEmit"
+	},
+	"peerDependencies": {
+		"zod": "^4.0.0",
+		"@tanstack/react-query": "^5.90.3"
+	},
+	"devDependencies": {
+		"@kubb/core": "^4.37.9",
+		"@kubb/plugin-client": "^4.37.9",
+		"@kubb/plugin-mcp": "4.39.2",
+		"@kubb/plugin-oas": "^4.37.9",
+		"@kubb/plugin-react-query": "^4.37.9",
+		"@kubb/plugin-ts": "^4.37.9",
+		"@kubb/plugin-zod": "^4.37.9"
+	}
+}

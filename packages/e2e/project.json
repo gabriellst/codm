@@ -1,0 +1,44 @@
+{
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"name": "e2e",
+	"sourceRoot": "packages/e2e",
+	"projectType": "application",
+	"targets": {
+		"tsc": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"dependsOn": [{ "projects": "client-typescript", "target": "build" }],
+			"inputs": [
+				"{projectRoot}/**/*",
+				"{workspaceRoot}/packages/app/react/src/routeTree.gen.ts",
+				"{workspaceRoot}/packages/app/react/src/locales/**"
+			],
+			"options": { "command": "tsc --noEmit", "cwd": "packages/e2e" }
+		},
+		"lint": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"//demo": "codm's e2e has no demo/ (the template's animate/record/render-* pipeline) — its recording surface is lib/ instead (inline-assets.ts, reconstruct.ts, cdp-snapshot.ts). Linted that in demo's place.",
+			"//scripts": "Dropped from the eslint invocation, same reason as api-typescript's lint target: eslint.config.ts carries a workspace-wide '**/scripts/**' ignore, so `eslint ... scripts` aborts with 'all matching files are ignored' (CHECK 3's failure mode, on a directory CHECK 3 itself doesn't check because the project root isn't named scripts).",
+			"inputs": [
+				"{projectRoot}/lib/**/*",
+				"{projectRoot}/tests/**/*",
+				"{projectRoot}/utils/**/*",
+				"{projectRoot}/tsconfig.json",
+				"{workspaceRoot}/eslint.config.ts",
+				"{workspaceRoot}/scripts/eslint-rules/**/*",
+				"^production"
+			],
+			"options": {
+				"command": "eslint lib tests utils --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+				"cwd": "packages/e2e"
+			}
+		},
+		"test": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"inputs": ["{projectRoot}/**/*", "{projectRoot}/playwright.config.ts"],
+			"options": { "command": "bun scripts/run-e2e.ts", "cwd": "packages/e2e" }
+		}
+	}
+}

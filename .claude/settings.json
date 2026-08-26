@@ -1,0 +1,64 @@
+{
+  "worktree": {
+    "baseRef": "head",
+    "bgIsolation": "none"
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          { "type": "command", "command": "sh -c 'h=\"$CLAUDE_PROJECT_DIR/.claude/hooks/audit-log.sh\"; [ -x \"$h\" ] || h=\"$(git rev-parse --show-toplevel 2>/dev/null)/.claude/hooks/audit-log.sh\"; [ -x \"$h\" ] && exec \"$h\"; exit 0'" }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          { "type": "command", "command": "sh -c 'h=\"$CLAUDE_PROJECT_DIR/.claude/hooks/audit-log.sh\"; [ -x \"$h\" ] || h=\"$(git rev-parse --show-toplevel 2>/dev/null)/.claude/hooks/audit-log.sh\"; [ -x \"$h\" ] && exec \"$h\"; exit 0'" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          { "type": "command", "command": "sh -c 'h=\"$CLAUDE_PROJECT_DIR/.claude/hooks/audit-log.sh\"; [ -x \"$h\" ] || h=\"$(git rev-parse --show-toplevel 2>/dev/null)/.claude/hooks/audit-log.sh\"; [ -x \"$h\" ] && exec \"$h\"; exit 0'" }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          { "type": "command", "command": "sh -c 'h=\"$CLAUDE_PROJECT_DIR/.claude/hooks/post-write-review.sh\"; [ -x \"$h\" ] || h=\"$(git rev-parse --show-toplevel 2>/dev/null)/.claude/hooks/post-write-review.sh\"; [ -x \"$h\" ] && exec \"$h\"; exit 0'" }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "sh -c 'h=\"$CLAUDE_PROJECT_DIR/.claude/hooks/classify-edit.ts\"; [ -f \"$h\" ] || h=\"$(git rev-parse --show-toplevel 2>/dev/null)/.claude/hooks/classify-edit.ts\"; [ -f \"$h\" ] || exit 0; exec bun \"$h\"'", "timeout": 30 }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "sh -c 'h=\"$CLAUDE_PROJECT_DIR/.claude/hooks/audit-log.sh\"; [ -x \"$h\" ] || h=\"$(git rev-parse --show-toplevel 2>/dev/null)/.claude/hooks/audit-log.sh\"; [ -x \"$h\" ] && exec \"$h\"; exit 0'" }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "sh -c 'h=\"$CLAUDE_PROJECT_DIR/.claude/hooks/audit-log.sh\"; [ -x \"$h\" ] || h=\"$(git rev-parse --show-toplevel 2>/dev/null)/.claude/hooks/audit-log.sh\"; [ -x \"$h\" ] && exec \"$h\"; exit 0'" }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "sh -c 'h=\"$CLAUDE_PROJECT_DIR/.claude/hooks/audit-log.sh\"; [ -x \"$h\" ] || h=\"$(git rev-parse --show-toplevel 2>/dev/null)/.claude/hooks/audit-log.sh\"; [ -x \"$h\" ] && exec \"$h\"; exit 0'" }
+        ]
+      }
+    ]
+  }
+}

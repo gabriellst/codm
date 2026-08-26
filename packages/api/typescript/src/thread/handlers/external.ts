@@ -1,0 +1,11 @@
+// External (integration-event) handlers for the thread (BC4 Thread & Routing) context.
+// The inbound ingestion consumer — the phase-6 hard gate: dedup FIRST (UNIQUE(channelId,
+// platformMessageId) INSERT ... ON CONFLICT DO NOTHING) so at-least-once delivery from the gateway
+// becomes exactly-once processing.
+export { ConsumeInboundMessage } from './ConsumeInboundMessage'
+// The agent context speaks in issues, the channel in conversations — only the thread knows which
+// contact an issue belongs to, so the reply→delivery translation lives here.
+export { DeliverOrchestratorReply } from './DeliverOrchestratorReply'
+// The terminal engine's stop fact lands on the thread that owns the Stop (B4, spec decision 4) — this
+// branch left `issue/handlers/MaterializeIssueFromExecution` with the aggregate.
+export { RecordStopFromExecution } from './RecordStopFromExecution'

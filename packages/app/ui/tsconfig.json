@@ -1,0 +1,22 @@
+{
+	"//": "O pacote precisa do PRÓPRIO tsconfig, e não é formalidade: o eslint tipado roda com `projectService: true` e recusa lintar arquivo que nenhum projeto reivindica ('was not found by the project service'). Sem este arquivo, os primitivos ficariam fora do lint — silenciosamente, porque o `tsc` do console os alcança pelo exports map e não reclama de nada.",
+	"compilerOptions": {
+		"target": "ES2020",
+		"useDefineForClassFields": true,
+		"lib": ["ES2020", "DOM", "DOM.Iterable"],
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"jsx": "react-jsx",
+		"skipLibCheck": true,
+		"allowImportingTsExtensions": true,
+		"verbatimModuleSyntax": true,
+		"noEmit": true,
+		"strict": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noFallthroughCasesInSwitch": true,
+		"noUncheckedIndexedAccess": true,
+		"types": []
+	},
+	"include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts"]
+}

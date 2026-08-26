@@ -1,0 +1,40 @@
+# sqlc config — SQLite substrate (go-domain port, Phase 0.2). PULL direction:
+# the Go structs + typed queries are GENERATED from the contract schema, never
+# hand-declared. core-go owns no schema of its own.
+#
+# Regenerate after any schema migration:
+#   1. (cd packages/contracts && bun x drizzle-kit generate --config=src/db/sqlite/drizzle.config.ts)
+#   2. bun run --cwd packages/contracts db:sync-go
+#      This copies the new migration into db/sqlite/migrations/. Do NOT `cp` by hand: that
+#      directory is a DERIVED copy, and a gate asserts it is byte-identical to
+#      packages/contracts/src/db/sqlite/migrations (scripts/db/sync-sqlite-migrations.ts,
+#      run by `bun test:tooling`; `db:check-go` is the read-only form). Byte equality is
+#      load-bearing — the shared _sqlite_migrations ledger is keyed by FILENAME, so a copy
+#      that drifted in CONTENT while keeping its name is silently SKIPPED by whichever
+#      process boots second, and the two backends then disagree about the schema with
+#      nothing in the logs. meta/ is deliberately not copied: both appliers derive the set
+#      to apply from readdir|filter|sort, never from meta/_journal.json.
+#   3. re-transcribe db/sqlite/schema.sql from that migration
+#      (backticks -> double quotes, drop `--> statement-breakpoint`):
+#        tr '\140' '"' < db/sqlite/migrations/<file>.sql | sed 's/--> statement-breakpoint//g' > db/sqlite/schema.sql
+#   4. (cd packages/api/go/core/db/sqlite && sqlc generate)
+#
+# WHY schema.sql is a normalized transcript, NOT migrations/*.sql: sqlc's sqlite
+# parser rejects drizzle-kit's raw output (backtick identifiers + the
+# `--> statement-breakpoint` separators). The Drizzle migration stays the source
+# of truth for the shape and is what the SqliteStore actually applies at boot via
+# //go:embed; schema.sql only feeds sqlc's typegen (proven equivalent — see the
+# round-trip test which applies the REAL migration, not this transcript).
+#
+# sqlc generates the MODELS for the whole schema (a compile-time drift guard) plus
+# typed queries for query/*.sql. The generated gen/ is committed so `go test`
+# runs without sqlc installed.
+version: "2"
+sql:
+  - engine: "sqlite"
+    schema: "schema.core.sql"
+    queries: "query"
+    gen:
+      go:
+        package: "sqlitedb"
+        out: "gen"

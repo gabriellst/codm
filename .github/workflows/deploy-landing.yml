@@ -1,0 +1,171 @@
+# Deploy da landing no Cloudflare Pages (spec SP2.5 decisão 7). Projeto criado idempotente no
+# primeiro run; a URL *.pages.dev serve até existir domínio próprio (open question do roadmap).
+name: deploy-landing
+
+on:
+  push:
+    branches: [main]
+    paths: ['packages/app/astro/**', '.github/workflows/deploy-landing.yml']
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    # Self-hosted pelo mesmo motivo do correctness.yml: a cota estourou em 2026-08-07 e derrubou
+    # todos os workflows, este incluso. Nada aqui é específico de Linux (bun + wrangler), então
+    # roda igual no Mac. Voltar à nuvem = trocar por `runs-on: ubuntu-latest`.
+    runs-on: [self-hosted, macOS, ARM64]
+    # ATENCAO ao nome: ele NAO casa com o subdominio, e essa e a pegadinha.
+    #
+    # Ha dois projetos Pages nesta conta. O chamado `codm` e dono de `codm-landing.pages.dev` — a
+    # URL sem sufixo, que e a que se divulga. O chamado `codm-landing` ficou com
+    # `codm-landing-6d5.pages.dev`, porque o subdominio e escolhido na CRIACAO e o nome bonito ja
+    # estava tomado pelo outro. O CI publicava no `codm-landing` e por isso a URL divulgada passou
+    # dois dias servindo um build velho, sem telemetria, enquanto todo workflow ficava verde.
+    #
+    # Entao o alvo e `codm`: publicar onde a URL vive, em vez de pedir que a URL mude. Renomear
+    # projeto no Pages NAO renomeia o subdominio, entao trocar o nome nao resolveria.
+    env:
+      PROJECT: codm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      # O wrangler roda sob NODE, não sob bun — ver o comentário no passo `deploy`. A máquina do
+      # runner não tem node instalado, então quem o traz é esta action.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: deps
+        run: bun install --frozen-lockfile
+
+      # UM guarda para tudo que o build assa, nao um passo por variavel. Todas falham do mesmo
+      # jeito — vazias, o build passa e produz um site errado em silencio:
+      #
+      #   VITE_POSTHOG_KEY  vazia → BaseLayout resolve '' e nao renderiza script nenhum: zero
+      #                             telemetria, e um painel vazio e indistinguivel de "ninguem
+      #                             acessou". Aconteceu.
+      #   SITE_URL          vazia → o astro.config cai no fallback http://localhost:4321, e a
+      #                             landing publica canonical, og:url e og:image apontando para
+      #                             localhost: previa de link quebrada no WhatsApp/Twitter e o
+      #                             Google informado de que a pagina canonica e a maquina de
+      #                             alguem. Ficou assim desde o primeiro deploy.
+      #
+      # As tres variaveis ja estavam declaradas no registro de env (template.config.ts) — o que
+      # falhou as tres vezes foi so a fiacao ate o passo de build. Por isso o teste e aqui.
+      - name: variaveis de build presentes
+        run: |
+          fail=0
+          for pair in "VITE_POSTHOG_KEY=${{ vars.VITE_POSTHOG_KEY }}" "SITE_URL=${{ vars.SITE_URL }}"; do
+            name=${pair%%=*}; value=${pair#*=}
+            if [ -z "$value" ]; then
+              echo "::error::repo variable $name vazia — o build sairia errado em silencio. Defina antes de publicar."
+              fail=1
+            else
+              echo "$name: ok"
+            fi
+          done
+          exit $fail
+
+      - name: build
+        # O Astro resolve estas no BUILD (o site e estatico): o que nao estiver aqui nasce com o
+        # fallback assado no HTML e so aparece depois, no ar.
+        env:
+          VITE_POSTHOG_KEY: ${{ vars.VITE_POSTHOG_KEY }}
+          VITE_POSTHOG_HOST: ${{ vars.VITE_POSTHOG_HOST }}
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: bun x nx run app-astro:build
+
+      # Criar o projeto e bootstrap de UMA vez, nao acao de cada deploy. Tambem tira uma chamada de
+      # wrangler do caminho quente de todo deploy, o que importa pelo motivo explicado abaixo.
+      - name: garante o projeto
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if curl -sf -o /dev/null -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT"; then
+            echo "projeto $PROJECT ja existe"
+          else
+            npx --yes wrangler@4.120.0 pages project create "$PROJECT" --production-branch=main
+          fi
+
+      # `npx`, NAO `bunx`. Sob bun este comando sai com codigo 0 sem publicar nada em cerca de
+      # metade das execucoes: imprime so o banner, abre o GET do projeto na API e o processo morre
+      # ali — sem upload, sem deployment, sem erro. Reproduzido em 2026-08-08 rodando o MESMO
+      # comando duas vezes seguidas na mesma maquina: a primeira nao fez nada, a segunda publicou.
+      # O wrangler e uma CLI escrita para Node e `bunx` a executa sob o runtime do bun; o trabalho
+      # assincrono e abandonado antes de terminar. Dois runs verdes ja deixaram no ar um build da
+      # vespera por causa disso.
+      #
+      # Vale para TODA invocacao de wrangler no repo, incluindo os `r2 object put` dos releases —
+      # la o mesmo no-op silencioso publicaria um latest.json apontando para um asset que nunca
+      # subiu, e o updater de todo mundo tomaria 404.
+      - name: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          # Marco do instante ANTES de publicar. A verificacao compara contra isto — uma janela
+          # fixa de minutos aceitaria um deployment feito pouco antes do run comecar, que foi
+          # exatamente como o passo de verificacao passou verde sem este run ter publicado.
+          echo "DEPLOY_STARTED_AT=$(date -u +%s)" >> "$GITHUB_ENV"
+          npx --yes wrangler@4.120.0 pages deploy packages/app/astro/dist --project-name="$PROJECT" --branch=main
+
+      # Duas perguntas distintas, porque uma so nao basta.
+      #
+      # (1) ESTE run publicou? Um `pages deploy` que sai com codigo 0 sem criar deployment ja
+      #     aconteceu duas vezes hoje, entao o codigo de saida nao e prova — a API e. Sem esta
+      #     checagem o passo (2) passaria de graca sempre que o conteudo correto ja estivesse no ar
+      #     por um deploy anterior, que foi exatamente o falso positivo observado em 08:52 UTC.
+      #
+      # (2) O que esta no ar tem a chave? Ao contrario do app desktop (assets comprimidos dentro do
+      #     binario, onde so da para validar o INSUMO), a landing e HTML publico: da para verificar
+      #     a SAIDA. O laco existe porque a propagacao do Pages leva alguns segundos.
+      - name: verifica a landing no ar
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          POSTHOG_KEY: ${{ vars.VITE_POSTHOG_KEY }}
+        run: |
+          # O subdominio NAO e derivavel do nome do projeto: quando o nome ja esta tomado o
+          # Cloudflare acrescenta um sufixo (aqui, codm-landing-6d5.pages.dev). Perguntamos a ele.
+          SUB=$(curl -sf -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT" \
+            | jq -r '.result.subdomain')
+          test -n "$SUB" && test "$SUB" != "null" || {
+            echo "::error::nao consegui descobrir o subdominio do projeto $PROJECT"; exit 1; }
+
+          # (1) o deployment mais novo tem que ser POSTERIOR ao inicio do nosso deploy
+          NEWEST=$(curl -sf -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT/deployments?per_page=1" \
+            | jq -r '.result[0].created_on')
+          NEWEST_TS=$(date -u -j -f "%Y-%m-%dT%H:%M:%S" "${NEWEST%.*}" +%s)
+          echo "deployment mais novo: $NEWEST | deploy comecou em $(date -u -r "$DEPLOY_STARTED_AT" +%Y-%m-%dT%H:%M:%S)"
+          test "$NEWEST_TS" -ge "$DEPLOY_STARTED_AT" || {
+            echo "::error::o deployment mais novo e ANTERIOR a este run — o 'pages deploy' saiu 0 sem publicar."
+            exit 1; }
+
+          # (2) e o que ele serve tem que carregar a chave — nos DOIS locales, porque cada um e uma
+          # pagina propria gerada pelo BaseLayout; verificar so um deixaria o outro sem cobertura.
+          # A raiz `/` fica de fora de proposito: e um stub de redirect que nunca teve script algum,
+          # e foi medindo ELA que eu conclui, errado, que a landing inteira estava sem telemetria.
+          for _ in $(seq 1 10); do
+            OK=1
+            for L in pt en; do
+              curl -sf "https://$SUB/$L/" | grep -q "$POSTHOG_KEY" || OK=0
+            done
+            if [ "$OK" = 1 ]; then
+              # E o que esta no ar nao pode se declarar hospedado na maquina de alguem. Esta linha
+              # existe porque a landing passou meses publicando canonical/og:url/og:image em
+              # http://localhost:4321 sem que nada reclamasse.
+              if curl -sf "https://$SUB/en/" | grep -q "localhost:4321"; then
+                echo "::error::a landing no ar contem localhost:4321 (canonical/og) — SITE_URL nao chegou ao build."
+                exit 1
+              fi
+              echo "landing no ar em https://$SUB/ — PostHog em /pt/ e /en/, sem localhost nos metadados"
+              exit 0
+            fi
+            sleep 6
+          done
+          echo "::error::https://$SUB/ nao serve a chave do PostHog nos dois locales."
+          exit 1

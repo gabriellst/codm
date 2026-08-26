@@ -1,0 +1,21 @@
+codm — WhatsApp gateway (`codm-gateway`, Go module `packages/api/go`)
+Copyright (c) 2026 Gabriel Araújo
+
+This module is licensed under the GNU General Public License v3.0 or later
+(see LICENSE in this directory), unlike the rest of the repository (MIT).
+
+Why: the gateway links `go.mau.fi/whatsmeow` (MPL-2.0), which depends on
+`go.mau.fi/libsignal` (GPL-3.0). Go links dependencies statically, so the
+`codm-gateway` binary is a derivative work of GPL-3.0 code and must be
+distributed under GPL-3.0-compatible terms.
+
+Scope: only this Go module. `packages/api/go/core` (the framework kernel),
+`packages/contracts/generated/go` and `packages/client/dist/go` do not import
+whatsmeow or libsignal and remain MIT. The TypeScript daemon, the Tauri shell,
+the console and the landing are separate programs that talk to the gateway over
+HTTP and a shared SQLite file; shipping them together with the gateway in one
+application bundle is mere aggregation under GPL-3.0 §5 and does not extend the
+GPL to them.
+
+Third-party licenses for this module's dependency tree are summarised in
+`THIRD_PARTY_NOTICES.md` at the repository root.

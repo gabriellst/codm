@@ -1,0 +1,9 @@
+namespace TemplateContracts;
+
+@doc("Why a turn is being scheduled. OPERATOR_MESSAGE = the operator addressed the orchestrator; ISSUE_RESULT = a subagent finished and its outcome must be composed into a reply; WORK = a newly created issue's first subagent turn; STEER = mid-flight guidance for a running issue. The first two target a THREAD, the last two an ISSUE — the pairing is not encoded here on purpose: a producer states what happened, the dispatcher decides what runs.")
+enum MailboxItemKind {
+  OPERATOR_MESSAGE: "OPERATOR_MESSAGE",
+  ISSUE_RESULT: "ISSUE_RESULT",
+  WORK: "WORK",
+  STEER: "STEER",
+}

@@ -1,0 +1,24 @@
+// Package events defines integration events for the sales bounded context.
+package events
+
+import "template/core-go/types"
+
+// CouponAppliedIntegrationEventName is the canonical integration event name.
+// Format: "integration.<ctx>.<past_verb>"
+const CouponAppliedIntegrationEventName = "integration.sales.coupon.applied"
+
+// CouponAppliedIntegrationPayload is the cross-service payload.
+// Use plain primitives only — no domain VOs.
+type CouponAppliedIntegrationPayload struct {
+	// TODO: add fields with json tags
+	// EntityID string `json:"entityId"`
+}
+
+// CouponAppliedIntegrationEvent is a type alias satisfying types.IntegrationEventI automatically.
+type CouponAppliedIntegrationEvent = types.IntegrationEvent[CouponAppliedIntegrationPayload]
+
+// NewCouponAppliedIntegrationEvent constructs a CouponAppliedIntegrationEvent.
+// ownerID: tenant/owner identifier for multi-tenancy.
+func NewCouponAppliedIntegrationEvent(ownerID string, payload CouponAppliedIntegrationPayload) CouponAppliedIntegrationEvent {
+	return types.NewIntegrationEvent(CouponAppliedIntegrationEventName, ownerID, payload)
+}

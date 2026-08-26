@@ -1,0 +1,6 @@
+[test]
+# Registers happy-dom globals BEFORE any module loads — react-dom/client's createRoot (used by
+# virtual-list.test.tsx) reads `document` at import time. Mirrors packages/app/react/bunfig.toml's
+# preload, scoped down to what this package's own colocated tests need (no reflect-metadata /
+# integration-harness port wiring — app-ui has no backend harness dependency).
+preload = ["./tests/setup.ts"]

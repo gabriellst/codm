@@ -1,0 +1,157 @@
+---
+import type { CollectionEntry } from 'astro:content'
+import DownloadIcon from '~/components/DownloadIcon.astro'
+import DownloadOthers from '~/components/DownloadOthers.astro'
+import Icon from '~/components/Icon.astro'
+import { DEFAULT_DOWNLOAD, downloadLabel } from '~/config/download'
+
+interface Props {
+	t: CollectionEntry<'landing'>['data']['hero']
+	githubHref: string
+}
+
+const { t, githubHref } = Astro.props
+
+// D3 (Hero — asqga/OnY7I): five floating mock-UI cards scattered around the H1, positions
+// measured off the design's 1440×780 canvas and converted to percentages so they scale
+// with the section instead of pinning literal desktop pixels. Only shown from `lg` up —
+// at narrower widths they'd overlap the copy the design keeps clear on a 1440 canvas.
+const floatCards = [
+	{ id: 'message', left: '3.5%', top: '42%', rotate: '2.5deg' },
+	{ id: 'task', left: '6.9%', top: '67%', rotate: '-2deg' },
+	{ id: 'skill', left: '3%', top: '33%', rotate: '1.5deg' },
+	{ id: 'reply', left: '75.9%', top: '39.5%', rotate: '-2.5deg' },
+	{ id: 'terminal', left: '71.3%', top: '66.5%', rotate: '2deg' },
+] as const
+---
+
+<header class="relative flex min-h-[88vh] flex-col items-center justify-center overflow-hidden px-6 pb-16 pt-[110px] text-center">
+	{/* D3 (founder, 11/08) — the hero backdrop is the design's two measured blur blobs
+	    (OnY7I/XAKBh: $secondary 760×380 blur 64 · OnY7I/w7tT1: $accent 420×260 blur 48),
+	    NOT the old three.js dot wave — the island and the `three` dependency were removed
+	    with it. Same treatment the pricing section already uses. */}
+	<div aria-hidden="true" class="pointer-events-none absolute inset-0 overflow-hidden">
+		<div class="absolute left-[25%] top-[-140px] h-[380px] w-[760px] rounded-full bg-[var(--secondary)] blur-[64px]"></div>
+		<div class="absolute left-[23%] top-[95px] h-[260px] w-[420px] rounded-full bg-[var(--accent)] blur-[48px]"></div>
+	</div>
+
+	<div aria-hidden="true" class="pointer-events-none absolute inset-0 hidden lg:block">
+		<div
+			class:list={['reveal-back reveal-stagger absolute w-[300px] rounded-asymmetric-lg border border-[var(--border)] bg-[var(--background)] p-[14px_16px] shadow-[var(--shadow-float)]']}
+			style={{ '--i': 5, left: floatCards[0].left, top: floatCards[0].top, transform: `rotate(${floatCards[0].rotate})` }}
+		>
+			<div class="mb-2 flex items-center gap-2">
+				<span class="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent)] text-[9px] font-bold text-[var(--muted-foreground)]">GA</span>
+				<span class="text-[11.5px] font-semibold text-[var(--caption-foreground)]">{t.cards.message.sender}</span>
+			</div>
+			<div class="rounded-[6px_14px_14px_14px] bg-[var(--secondary)] px-[13px] py-[9px] text-[13px] text-[var(--secondary-foreground)]">
+				{t.cards.message.text}
+			</div>
+		</div>
+
+		<div
+			class="reveal-back reveal-stagger absolute w-[270px] rounded-asymmetric-lg border border-[var(--border)] bg-[var(--background)] p-[13px_16px] shadow-[var(--shadow-float)]"
+			style={{ '--i': 7, left: floatCards[1].left, top: floatCards[1].top, transform: `rotate(${floatCards[1].rotate})` }}
+		>
+			<div class="mb-1.5 flex items-center gap-2">
+				<span class="h-[7px] w-[7px] shrink-0 rounded-full bg-[var(--primary)]"></span>
+				<span class="flex-1 font-mono text-[12.5px] font-bold text-[var(--foreground)]">{t.cards.task.key}</span>
+				<span class="whitespace-nowrap rounded-[9px_9px_9px_3px] bg-[var(--secondary)] px-[9px] py-[3px] text-[9.5px] font-bold text-[var(--secondary-foreground)]">
+					{t.cards.task.status}
+				</span>
+			</div>
+			<p class="m-0 font-mono text-[10.5px] text-[var(--caption-foreground)]">{t.cards.task.sub}</p>
+		</div>
+
+		<div
+			class="reveal-back reveal-stagger absolute flex items-center gap-2 rounded-asymmetric-md border border-[var(--border)] bg-[var(--background)] px-[14px] py-[10px] shadow-[var(--shadow-float)]"
+			style={{ '--i': 9, left: floatCards[2].left, top: floatCards[2].top, transform: `rotate(${floatCards[2].rotate})` }}
+		>
+			<Icon name="sparkles" size={14} class="text-[var(--secondary-foreground)]" />
+			<span class="font-mono text-xs font-bold text-[var(--foreground)]">{t.cards.skill.text}</span>
+		</div>
+
+		<div
+			class="reveal-back reveal-stagger absolute w-[290px] rounded-asymmetric-lg border border-[var(--border)] bg-[var(--background)] p-[13px_16px] shadow-[var(--shadow-float)]"
+			style={{ '--i': 11, left: floatCards[3].left, top: floatCards[3].top, transform: `rotate(${floatCards[3].rotate})` }}
+		>
+			<div class="mb-[7px] inline-flex items-center gap-1.5 rounded-[9px_9px_9px_3px] bg-[var(--muted)] px-[9px] py-[3px]">
+				<span class="h-[5px] w-[5px] rounded-full bg-[var(--primary)]"></span>
+				<span class="font-mono text-[10px] text-[var(--muted-foreground)]">{t.cards.reply.label}</span>
+			</div>
+			<div class="rounded-[14px_6px_14px_14px] bg-[var(--primary)] px-[13px] py-[9px] text-[13px] text-[var(--primary-foreground)]">
+				{t.cards.reply.text}
+			</div>
+		</div>
+
+		<div
+			class="reveal-back reveal-stagger absolute w-[330px] rounded-asymmetric-lg bg-[var(--illustration-terminal)] p-[13px_16px] shadow-[var(--shadow-float)]"
+			style={{ '--i': 13, left: floatCards[4].left, top: floatCards[4].top, transform: `rotate(${floatCards[4].rotate})` }}
+		>
+			<div class="mb-1.5 flex items-center gap-2 text-[var(--terminal-text-dim)]">
+				<Icon name="terminal" size={12} />
+				<span class="font-mono text-[10.5px]">{t.cards.terminal.path}</span>
+			</div>
+			<p class="m-0 font-mono text-[11px] leading-[1.5] text-[var(--success-bright)]">{t.cards.terminal.lines[0]}</p>
+			<p class="m-0 font-mono text-[11px] leading-[1.5] text-[var(--terminal-text-mid)]">{t.cards.terminal.lines[1]}</p>
+			<p class="m-0 font-mono text-[11px] leading-[1.5] text-[var(--terminal-text-dim)]">{t.cards.terminal.lines[2]}</p>
+		</div>
+	</div>
+
+	<div class="relative flex max-w-[980px] flex-col items-center">
+		{/* D-motion (2026-08-25) Decision 5 — the hero ANIMATES on load (founder): it ships hidden and the
+		    observer at the end of <body> marks it `.is-inview` on the first frame (already-intersecting
+		    targets fire immediately), so the entrance plays instead of being pre-resolved server-side.
+		    Badge/CTA are "cards/badges" (`reveal-back`, Decision 1); headline/subhead are text
+		    (`reveal`, Decision 2). Replaces the old block-level `animate-rise-in` with a
+		    per-element staggered entrance (Decision 7: "headline → subhead → CTA, stagger"). No-JS and
+		    reduced-motion still render at rest (BaseLayout <noscript> + global.css). */}
+		<div
+			class="reveal-back reveal-stagger mb-[26px] inline-flex items-center gap-[10px] rounded-asymmetric-md border border-[var(--border)] bg-[var(--background)] py-2 pl-4 pr-[7px] shadow-[var(--shadow-float)]"
+			style={{ '--i': 0 }}
+		>
+			<span class="animate-pulse-dot h-2 w-2 rounded-full bg-[var(--primary)]"></span>
+			<span class="text-[12.5px] font-semibold text-[var(--fg-60)]">{t.tagline}</span>
+			<span class="rounded-asymmetric-2xs bg-[var(--secondary)] px-[11px] py-1 text-[11.5px] font-bold text-[var(--secondary-foreground)]">
+				{t.freeChip}
+			</span>
+		</div>
+		<h1
+			class="reveal reveal-stagger m-0 text-balance text-[length:clamp(42px,7vw,76px)] font-extrabold leading-[1.02] tracking-[-2.5px]"
+			style={{ '--i': 1 }}
+		>
+			<span class="block">{t.titleBold}</span>
+			<span class="block font-light">{t.titleLight}</span>
+		</h1>
+		<p
+			class="reveal reveal-stagger mx-auto mt-7 max-w-[620px] whitespace-pre-line text-balance text-base leading-[1.55] text-[var(--muted-foreground)]"
+			style={{ '--i': 2 }}
+		>
+			{t.subtitle}
+		</p>
+		{/* Download por sistema (plano 2026-08-25, D15): o servidor renderiza DEFAULT_DOWNLOAD (macOS);
+		    DownloadDetect.astro (montado no BaseLayout) troca href/rótulo/ícone pelo sistema do visitante.
+		    Os `data-download-*` são o contrato com esse script. */}
+		<div class="reveal-back reveal-stagger mt-[34px] flex flex-wrap items-center justify-center gap-3" style={{ '--i': 3 }}>
+			<a
+				href={DEFAULT_DOWNLOAD.url}
+				data-download-cta
+				data-download-key={DEFAULT_DOWNLOAD.key}
+				class="inline-flex items-center gap-[9px] whitespace-nowrap rounded-asymmetric-md bg-[var(--primary)] px-[26px] py-[14px] text-[15px] font-bold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
+			>
+				<DownloadIcon size={18} />
+				<span data-download-label data-download-template={t.ctaDownload}>{downloadLabel(t.ctaDownload, DEFAULT_DOWNLOAD)}</span>
+			</a>
+			<a
+				href={githubHref}
+				class="inline-flex items-center gap-[9px] whitespace-nowrap rounded-asymmetric-md border border-[var(--fg-20)] px-6 py-[14px] text-[15px] font-bold text-[var(--fg-60)] transition-colors hover:bg-[var(--muted)]"
+			>
+				<Icon name="github" size={18} />
+				{t.ctaGithub}
+			</a>
+		</div>
+		<div class="reveal reveal-stagger mt-4" style={{ '--i': 4 }}>
+			<DownloadOthers title={t.otherPlatforms} class="justify-center text-[var(--muted-foreground)]" />
+		</div>
+	</div>
+</header>

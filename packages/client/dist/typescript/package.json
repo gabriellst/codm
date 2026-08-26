@@ -1,0 +1,28 @@
+{
+	"name": "@codm/client-typescript",
+	"description": "TypeScript SDK auto-generated from each discovered api service's OpenAPI spec. Subpath-per-service exports.",
+	"version": "0.0.1",
+	"license": "MIT",
+	"private": true,
+	"type": "module",
+	"main": "./src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./http": "./src/http/index.ts",
+		"./*/server": "./src/*/server.ts",
+		"./*/_http": "./src/*/_http.ts",
+		"./*/Client": "./src/*/Client.ts",
+		"./*": "./src/*/index.ts"
+	},
+	"scripts": {
+		"tsc": "bun x tsc --noEmit"
+	},
+	"dependencies": {
+		"@modelcontextprotocol/sdk": "^1.30.0",
+		"ky": "^1.14.0"
+	},
+	"peerDependencies": {
+		"zod": "^4.0.0",
+		"@tanstack/react-query": "^5.90.3"
+	}
+}

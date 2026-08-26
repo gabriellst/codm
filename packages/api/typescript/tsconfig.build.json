@@ -1,0 +1,16 @@
+{
+	"extends": "./tsconfig.json",
+	"//": "F1.1 — `scripts/**` entrou no include, e a razão é um defeito medido: o `emit-openapi.ts` importou por dias um `../src/manifest` que a DC2 tinha apagado, e o `tsc` ficou VERDE nos 7 projetos. Este diretório não estava em tsconfig nenhum que a bateria roda — o `tsconfig.json` ao lado já o incluía, mas o alvo `tsc` do `project.json` aponta para ESTE arquivo, então aquele include nunca era executado. Os dois `phase*-smoke` ficam de fora porque são REGISTRO pontual declarado pelo próprio autor (ver o cabeçalho de `phase6-mcp-smoke.ts`), não código vivo — mesma exclusão que o `tsconfig.json` já fazia.",
+	"include": [
+		"composition/**/*.ts",
+		"generated/**/*.ts",
+		"src/**/*.ts",
+		"src/**/*.tsx",
+		"tests/**/*.ts",
+		"tests/**/*.tsx",
+		"scripts/**/*.ts",
+		"../../../template.config.ts"
+	],
+	"//tests": "Os `*.test.ts` ENTRAM no typecheck — não são excluídos. A exclusão anterior era uma fresta medida: escondia 68 erros TS reais, entre eles uma função morta que referenciava símbolos inexistentes. Teste é código vivo (usa a mesma SDK, os mesmos schemas, as mesmas entidades); se ele não compila, o contrato que ele afirma não existe. `bun test` executa em runtime e não vê erro de tipo, então o `tsc` é o único rail que cobre isso. Só ficam de fora arquivos que NÃO são código vivo: o fake de PTY e os `phase*-smoke` (registro pontual declarado pelo autor).",
+	"exclude": ["src/**/testFakePty.ts", "scripts/phase3-smoke.ts", "scripts/phase6-mcp-smoke.ts"]
+}

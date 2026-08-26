@@ -1,0 +1,35 @@
+---
+import type { CollectionEntry } from 'astro:content'
+
+interface Props {
+	t: CollectionEntry<'landing'>['data']['useCases']
+}
+
+const { t } = Astro.props
+---
+
+<!--
+  D3 (design/codm.pen `ji2y3` → `ADhDZ`, "Seção — Casos de uso (numerada)"): the pre-D3
+  rounded dark card with the terminal mock is gone — the design puts this section back on
+  the plain page background, as four numbered columns with a top hairline each. TerminalMock
+  is no longer mounted anywhere on the landing (see the plan's handoff note on ChatMock/
+  TerminalMock disposition).
+-->
+<section id="use-cases" class="px-6 pb-24 pt-10 md:px-16">
+	<div class="mx-auto max-w-[1160px]">
+		<h2 class="m-0 text-balance text-[length:clamp(28px,4vw,40px)] font-extrabold leading-[1.12] tracking-[-1.2px] text-[var(--foreground)]">
+			{t.title}
+		</h2>
+		<div class="mt-9 grid gap-8 sm:grid-cols-2 md:grid-cols-4">
+			{
+				t.cases.map(useCase => (
+					<div class="flex flex-col gap-3 border-t border-[var(--border)] pt-[22px]">
+						<span class="font-mono text-sm font-bold text-[var(--secondary-foreground)]">{useCase.number}</span>
+						<h3 class="m-0 text-lg font-extrabold tracking-[-0.3px] text-[var(--foreground)]">{useCase.title}</h3>
+						<p class="m-0 text-pretty text-[13.5px] leading-[1.55] text-[var(--muted-foreground)]">{useCase.body}</p>
+					</div>
+				))
+			}
+		</div>
+	</div>
+</section>

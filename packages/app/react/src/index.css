@@ -1,0 +1,424 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@codm/app-ui/tokens.css";
+@import "@codm/app-ui/web-utilities.css";
+/* Os primitivos vivem em packages/app/ui, fora da raiz Vite deste pacote — o Tailwind v4 só
+   escaneia a raiz do projeto (e ignora node_modules/symlinks), então sem este @source as classes
+   usadas SÓ dentro dos primitivos (data-checked:*, z-50 do popup, slide-in-from-*) não são emitidas. */
+@source "../../ui/src";
+
+@custom-variant dark (&:is(.dark *));
+
+html,
+body,
+#root {
+	height: 100dvh;
+}
+
+body {
+	padding-top: env(safe-area-inset-top);
+	padding-bottom: env(safe-area-inset-bottom);
+	padding-left: env(safe-area-inset-left);
+	padding-right: env(safe-area-inset-right);
+}
+
+*:not(input):not(textarea):not(select) {
+	-webkit-touch-callout: none;
+}
+
+@theme inline {
+	/* CODM type — system/open stacks, no external fetch.
+	   Display renders heavy (sentence case, D3) via .heading-display; body is the same clean
+	   grotesque. Mono is load-bearing (paths, slugs, terminal, versions) — part of the identity. */
+	--font-sans:
+		ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	--font-display:
+		ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	--font-serif: var(--font-sans);
+	--font-mono:
+		ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, "Cascadia Code", "Roboto Mono", monospace;
+	--color-route-background: var(--route-background);
+	--color-chat-bg: var(--chat-bg);
+	--color-rail-bg: var(--rail-bg);
+	--color-rail-border: var(--rail-border);
+	--color-sidebar-bg: var(--sidebar-bg);
+	--color-header-bg: var(--header-bg);
+	--color-header-border: var(--header-border);
+	--color-composer-bg: var(--composer-bg);
+	--color-composer-border: var(--composer-border);
+	--color-bubble-out: var(--bubble-out);
+	--color-bubble-out-fg: var(--bubble-out-fg);
+	--color-bubble-in: var(--bubble-in);
+	--color-bubble-in-fg: var(--bubble-in-fg);
+	--color-success: var(--success);
+	--color-success-foreground: var(--success-foreground);
+	--color-success-bright: var(--success-bright);
+	--color-success-bright-foreground: var(--success-bright-foreground);
+	--color-info: var(--info);
+	--color-info-foreground: var(--info-foreground);
+	--color-hover: var(--hover);
+	--color-hover-accent: var(--hover-accent);
+	--color-hover-accent-border: var(--hover-accent-border);
+	--color-focus: var(--focus);
+	--color-brand-green: var(--brand-green);
+	--color-sidebar-ring: var(--sidebar-ring);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar: var(--sidebar);
+	--color-chart-5: var(--chart-5);
+	--color-chart-4: var(--chart-4);
+	--color-chart-3: var(--chart-3);
+	--color-chart-2: var(--chart-2);
+	--color-chart-1: var(--chart-1);
+	--color-ring: var(--ring);
+	--color-input: var(--input);
+	--color-border: var(--border);
+	--color-destructive: var(--destructive);
+	--color-destructive-foreground: var(--destructive-foreground);
+	--color-warning: var(--warning);
+	--color-warning-foreground: var(--warning-foreground);
+	/* Skeleton-loading greys + the attention family (D3, R1) — see tokens.css for the
+	   measurements (Início's offline banner + Tarefas' status rows were the first consumers).
+	   status-paused stays undeclared (no consumer yet). */
+	--color-skeleton: var(--skeleton);
+	--color-skeleton-strong: var(--skeleton-strong);
+	--color-attention-surface: var(--attention-surface);
+	--color-status-attention: var(--status-attention);
+	--color-attention-foreground: var(--attention-foreground);
+	--color-status-idle: var(--status-idle);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-accent: var(--accent);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-muted: var(--muted);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-secondary: var(--secondary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-primary: var(--primary);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-popover: var(--popover);
+	--color-card-foreground: var(--card-foreground);
+	--color-card: var(--card);
+	/* The design's quietest text tier (#8a8a8a): timestamps and metadata sit one step below
+	   `muted-foreground` (#6a6a6a), which is body-secondary. Use as `text-caption-foreground`. */
+	--color-caption-foreground: var(--caption-foreground);
+	--color-foreground: var(--foreground);
+	--color-background: var(--background);
+	/* Radius ladder: declared ONCE in @codm/app-ui/tokens.css (imported above), which also
+	   carries the smaller 3xs/2xs/xs steps this copy never had. The react-only duplicate that
+	   used to live here was deleted (D3 Fase 1) — identical calc() formulas, so nothing renders
+	   differently; it was pure shadowing. */
+}
+
+@layer base {
+	* {
+		@apply border-border outline-ring/30;
+	}
+	body {
+		@apply font-sans bg-background text-foreground antialiased;
+	}
+	html {
+		@apply font-sans;
+	}
+	/* Body spans breathe on a comfortable ramp — a blanket line-height:1 crushed every stacked
+	   title→description pair (the cramped ListRows). Layered in `base` so tight, single-line atoms
+	   (badges, pills, the display heading) keep their own leading: `.heading-display` lives in
+	   `@layer utilities` and Tailwind `leading-*` are utilities too — both outrank this base rule,
+	   so classed spans win while unclassed body spans get the comfortable 1.4. */
+	span {
+		line-height: 1.4;
+	}
+	@media (max-width: 1512px) {
+		html {
+			font-size: 14px;
+		}
+	}
+	/* Premium smooth transitions for interactive elements */
+	button,
+	a,
+	[role="button"],
+	input,
+	select,
+	textarea {
+		transition-property: color, background-color, border-color, opacity, transform, box-shadow;
+		transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+		transition-duration: 130ms;
+	}
+	.dark button {
+		color: var(--foreground);
+	}
+	.dark [role="button"] {
+		color: var(--foreground);
+	}
+	.dark .rdp-button {
+		color: var(--foreground);
+	}
+	.dark .rdp-caption_label {
+		color: var(--foreground);
+	}
+	.dark .rdp-dropdowns {
+		color: var(--foreground);
+	}
+	.dark .rdp-month_caption {
+		color: var(--foreground);
+	}
+	.rdp-day button,
+	.rdp-day button[data-selected-single="true"],
+	.rdp-day button[data-range-start="true"],
+	.rdp-day button[data-range-end="true"],
+	.rdp-day button[data-range-middle="true"],
+	.rdp-today,
+	.rdp-day .rdp-today,
+	[data-selected-single="true"],
+	[data-range-start="true"],
+	[data-range-end="true"],
+	[data-range-middle="true"],
+	.bg-accent,
+	.bg-primary {
+		box-shadow: none;
+		filter: none;
+	}
+	.group\/calendar button,
+	.group\/calendar .rdp-day button {
+		box-shadow: none;
+		filter: none;
+	}
+	.rdp-day button.bg-accent,
+	.rdp-day [class*="bg-accent"],
+	.group\/calendar .bg-accent {
+		background-color: transparent;
+	}
+	.rdp-day button[data-selected-single="true"],
+	.rdp-day button[data-range-start="true"],
+	.rdp-day button[data-range-end="true"] {
+		background-color: var(--color-primary);
+		color: var(--color-primary-foreground);
+	}
+	.dark .rdp-day button.bg-accent,
+	.dark .rdp-day [class*="bg-accent"],
+	.dark .group\/calendar .bg-accent,
+	.dark .rdp-day button[class*="accent"] {
+		background-color: transparent;
+	}
+	.dark .rdp-day button[data-selected-single="true"],
+	.dark .rdp-day button[data-range-start="true"],
+	.dark .rdp-day button[data-range-end="true"] {
+		background-color: var(--color-primary);
+		color: var(--color-primary-foreground);
+	}
+}
+
+@layer utilities {
+	/* CODM display type — heavy and tight, SENTENCE CASE. The uppercase "DM YOUR CODEBASE"
+	   voice died in D3 (founder, 11/08/2026 — R11): no display text anywhere in the design is
+	   capitalized, console mastheads and landing H1 alike. Weight carries the voice now. */
+	.heading-display {
+		font-family: var(--font-display);
+		font-weight: 800;
+		letter-spacing: -0.02em;
+		line-height: 0.95;
+	}
+
+	/* Eyebrow / section labels — small, uppercase, letter-spaced, muted. */
+	.label-eyebrow {
+		font-size: 0.6875rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		letter-spacing: 0.7px;
+		color: var(--muted-foreground);
+	}
+
+	/* Premium minimal shadows - very subtle */
+	.shadow-sm {
+		box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+	}
+	.dark .shadow-sm {
+		box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+	}
+	.shadow-md {
+		box-shadow: 0 2px 4px 0 rgb(0 0 0 / 0.04);
+	}
+	.dark .shadow-md {
+		box-shadow: 0 2px 4px 0 rgb(0 0 0 / 0.25);
+	}
+}
+
+@layer components {
+	/* Sonner Toast Styles */
+	[data-sonner-toaster] {
+		--width: 356px;
+		--border-radius: var(--radius);
+	}
+
+	[data-sonner-toast] {
+		background: var(--popover) !important;
+		color: var(--popover-foreground) !important;
+		border: 1px solid var(--border) !important;
+		border-radius: var(--radius) !important;
+		box-shadow: 0 2px 8px 0 rgb(0 0 0 / 0.06) !important;
+		line-height: 1 !important;
+		backdrop-filter: blur(8px);
+	}
+
+	[data-sonner-toast] [data-title] {
+		color: var(--popover-foreground) !important;
+		font-weight: 500 !important;
+		line-height: 1 !important;
+	}
+
+	[data-sonner-toast] [data-description] {
+		color: oklch(from var(--popover-foreground) l c h / 0.8) !important;
+		margin-top: 0.25rem !important;
+		line-height: 1 !important;
+	}
+
+	[data-sonner-toast] p {
+		line-height: 1 !important;
+	}
+
+	[data-sonner-toast][data-type="success"] {
+		background: var(--popover) !important;
+		color: var(--primary) !important;
+		border-color: var(--primary) !important;
+	}
+
+	[data-sonner-toast][data-type="success"] [data-title] {
+		color: var(--primary) !important;
+	}
+
+	[data-sonner-toast][data-type="success"] [data-description] {
+		color: oklch(from var(--primary) l c h / 0.9) !important;
+	}
+
+	[data-sonner-toast][data-type="error"] {
+		background: var(--popover) !important;
+		color: var(--destructive) !important;
+		border-color: var(--destructive) !important;
+	}
+
+	[data-sonner-toast][data-type="error"] [data-title] {
+		color: var(--destructive) !important;
+	}
+
+	[data-sonner-toast][data-type="error"] [data-description] {
+		color: oklch(from var(--destructive) l c h / 0.9) !important;
+	}
+
+	[data-sonner-toast][data-type="warning"] {
+		background: var(--popover) !important;
+		color: var(--popover-foreground) !important;
+		border-color: var(--border) !important;
+	}
+
+	[data-sonner-toast][data-type="info"] {
+		background: var(--popover) !important;
+		color: var(--popover-foreground) !important;
+		border-color: var(--border) !important;
+	}
+
+	[data-sonner-toast] [data-button] {
+		background: var(--primary) !important;
+		color: var(--primary-foreground) !important;
+		border-radius: calc(var(--radius) - 2px) !important;
+	}
+
+	[data-sonner-toast] [data-button]:hover {
+		background: oklch(from var(--primary) calc(l - 0.1) c h) !important;
+	}
+
+	[data-sonner-toast] [data-cancel] {
+		background: var(--muted) !important;
+		color: var(--muted-foreground) !important;
+	}
+
+	/* ────────────────────────────────────────
+	   SECTION PANELS
+	   ──────────────────────────────────────── */
+	.neo-panel {
+		border-radius: var(--radius-lg);
+		border: 1px solid var(--border);
+		background: var(--card);
+		padding: 1.5rem;
+		transition: border-color 200ms ease;
+	}
+	.dark .neo-panel:hover {
+		border-color: var(--primary);
+	}
+
+	/* Table container */
+	.neo-table-wrap {
+		border-radius: var(--radius-lg);
+		border: 1px solid var(--border);
+		overflow: hidden;
+	}
+	.neo-table-wrap thead tr {
+		background: var(--muted);
+	}
+	.neo-table-wrap tbody tr {
+		border-bottom: 1px solid var(--border);
+		transition: background-color 200ms ease;
+	}
+	.neo-table-wrap tbody tr:hover {
+		background: var(--muted);
+	}
+	.neo-table-wrap tbody tr:last-child {
+		border-bottom: none;
+	}
+
+	/* ────────────────────────────────────────
+	   CHAT UI
+	   ──────────────────────────────────────── */
+
+	/* Custom scrollbar for chat */
+	.chat-scroll::-webkit-scrollbar {
+		width: 6px;
+	}
+	.chat-scroll::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	.chat-scroll::-webkit-scrollbar-thumb {
+		background: oklch(from var(--foreground) l c h / 0.1);
+		border-radius: 3px;
+	}
+	.chat-scroll::-webkit-scrollbar-thumb:hover {
+		background: oklch(from var(--foreground) l c h / 0.2);
+	}
+
+	/* Thin scrollbar */
+	.scrollbar-thin::-webkit-scrollbar {
+		width: 4px;
+	}
+	.scrollbar-thin::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	.scrollbar-thin::-webkit-scrollbar-thumb {
+		background: oklch(from var(--foreground) l c h / 0.08);
+		border-radius: 2px;
+	}
+
+	/* Quoted message highlight flash */
+	@keyframes highlight-flash {
+		0% {
+			background-color: oklch(0.8 0.1 200 / 0.3);
+		}
+		100% {
+			background-color: transparent;
+		}
+	}
+	.animate-highlight > * {
+		animation: highlight-flash 1.5s ease-out;
+	}
+
+	/* Hide scrollbar */
+	.scrollbar-none::-webkit-scrollbar {
+		display: none;
+	}
+	.scrollbar-none {
+		-ms-overflow-style: none;
+		scrollbar-width: none;
+	}
+}

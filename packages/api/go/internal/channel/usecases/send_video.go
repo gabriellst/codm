@@ -1,0 +1,88 @@
+package usecases
+
+import (
+	"context"
+	errorsStd "errors"
+	msgenums "template/api-go/internal/channel/enums"
+	channelerrors "template/api-go/internal/channel/errors"
+	channelrepo "template/api-go/internal/channel/repositories/channel"
+	"template/api-go/internal/channel/services/gateway"
+	"template/api-go/internal/channel/services/gateway/whatsapp"
+	"template/api-go/internal/channel/services/pool"
+	"template/core-go/errors"
+	"time"
+)
+
+type SendVideoInput struct {
+	ChannelID string `validate:"required,uuid"`
+	RemoteID  string `validate:"required"`
+	MediaURL  string `validate:"required_without=MediaPath,excluded_with=MediaPath,omitempty,url"`
+	MediaPath string `validate:"required_without=MediaURL,excluded_with=MediaURL"`
+	Caption   string `validate:"omitempty,max=1024"`
+}
+
+type SendVideoOutput struct {
+	MessageID string `json:"messageId" example:"3EB0B430A6B7FBEC1200"`
+	Timestamp int64  `json:"timestamp" example:"1710000000"`
+}
+
+type SendVideoHandler struct {
+	integrationRepo channelrepo.ChannelRepository
+	pool            pool.ChannelPool
+}
+
+func NewSendVideoHandler(
+	integrationRepo channelrepo.ChannelRepository,
+	pool pool.ChannelPool,
+) *SendVideoHandler {
+	return &SendVideoHandler{
+		integrationRepo: integrationRepo,
+		pool:            pool,
+	}
+}
+
+func (h *SendVideoHandler) Name() string { return "send_video" }
+
+func (h *SendVideoHandler) Execute(ctx context.Context, input SendVideoInput) (SendVideoOutput, error) {
+	channel, err := h.integrationRepo.Find(ctx, input.ChannelID)
+	if err != nil {
+		return SendVideoOutput{}, err
+	}
+	if channel == nil {
+		return SendVideoOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotFound, "channel not found")
+	}
+	if channel.Status != msgenums.ChannelStatusConnected {
+		return SendVideoOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel is not connected")
+	}
+
+	ch, ok := h.pool.Get(channel.ID.UUID())
+	if !ok {
+		return SendVideoOutput{}, errors.NewBaseError(channelerrors.CodeChannelNotConnected, "channel not available")
+	}
+
+	sendContent := gateway.SendVideoContent{MediaURL: input.MediaURL, MediaPath: input.MediaPath, Caption: input.Caption}
+
+	result, err := ch.SendMessage(ctx, gateway.SendMessageParams{
+		To:          input.RemoteID,
+		MessageType: msgenums.MessageTypeVideo,
+		Content:     sendContent,
+	})
+	if err != nil {
+		if errorsStd.Is(err, whatsapp.ErrInvalidRemoteID) {
+			return SendVideoOutput{}, errors.NewBaseErrorWithCause(channelerrors.CodeInvalidRemoteID, "invalid remote identifier", err)
+		}
+		if errorsStd.Is(err, whatsapp.ErrMediaPathNotAllowed) {
+			return SendVideoOutput{}, errors.NewBaseErrorWithCause(channelerrors.CodeMediaPathNotAllowed, "media path not allowed", err)
+		}
+		return SendVideoOutput{}, errors.NewBaseErrorWithCause(channelerrors.CodeMessageSendFailed, "failed to send video message", err)
+	}
+
+	if result.Timestamp == 0 {
+		result.Timestamp = time.Now().Unix()
+	}
+
+	return SendVideoOutput{
+		MessageID: result.MessageID,
+		Timestamp: result.Timestamp,
+	}, nil
+}

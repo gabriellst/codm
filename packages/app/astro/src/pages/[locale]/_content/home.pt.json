@@ -1,0 +1,192 @@
+{
+	"nav": {
+		"links": {
+			"howItWorks": "Como funciona",
+			"useCases": "Casos de uso",
+			"pricing": "Preço",
+			"blog": "Blog",
+			"github": "GitHub ↗"
+		},
+		"download": "Baixar"
+	},
+	"hero": {
+		"tagline": "Código aberto · roda na sua máquina",
+		"freeChip": "grátis",
+		"titleBold": "Sem ticket, sem fila,",
+		"titleLight": "sem sair do grupo.",
+		"subtitle": "Agentes na sua máquina executam projetos, clientes e processos\na partir de uma mensagem no WhatsApp. Você aprova antes.",
+		"ctaDownload": "Download para {platform}",
+		"otherPlatforms": "Outras plataformas",
+		"ctaGithub": "GitHub",
+		"cards": {
+			"message": {
+				"sender": "Gabriel Araújo · WhatsApp",
+				"text": "o campo de cupom quebrou no mobile, dá uma olhada?"
+			},
+			"task": {
+				"key": "coupon-focus",
+				"status": "Em andamento",
+				"sub": "classificada → tarefa · terminal aberto"
+			},
+			"skill": {
+				"text": "/deploy-preview"
+			},
+			"reply": {
+				"label": "coupon-focus · Claude Code",
+				"text": "Pronto. Enviei fix/coupon-focus — o preview já está no ar."
+			},
+			"terminal": {
+				"path": "~/dev/acme-storefront",
+				"lines": ["$ pnpm test — 42 passed", "✓ pushed fix/coupon-focus", "→ reply sent · WhatsApp"]
+			}
+		}
+	},
+	"howItWorks": {
+		"title": "Como funciona",
+		"subtitle": "Envie instruções para os agentes que gerenciam seus projetos direto dos seus grupos e execute processos sem sair do grupo da empresa.",
+		"cards": [
+			{
+				"number": "01",
+				"title": "Mande no grupo",
+				"body": "Solicitações pontuais são delegadas a um agente e sinalizadas para resolução rápida — do WhatsApp.",
+				"bubble": "@codm o boleto do cliente Acme não gerou, resolve?",
+				"status": "delegada → invoice-500"
+			},
+			{
+				"number": "02",
+				"title": "O agente trabalha",
+				"body": "Uma sessão de terminal abre na sua pasta de projeto, com as skills que já existem na sua codebase.",
+				"terminalLabel": "$ claude — invoice-500",
+				"terminalLines": [
+					"→ investigando acme-storefront",
+					"→ 429 no provedor · retry",
+					"✓ fix aplicado · PR aberto"
+				]
+			},
+			{
+				"number": "03",
+				"title": "A resposta volta no grupo",
+				"body": "Com o label da tarefa — quem pediu acompanha tudo sem sair da conversa.",
+				"tag": "invoice-500 · Claude Code",
+				"bubble": "Fatura regenerada e enviada. O PR com o fix está em revisão."
+			}
+		],
+		"chips": [
+			{ "icon": "sparkles", "text": "/fix-invoice" },
+			{ "icon": "ear", "text": "sussurro — só o agente lê" },
+			{ "icon": "dot", "text": "3 sessões em paralelo" }
+		]
+	},
+	"capabilities": {
+		"titleBold": "Combine a ponte com",
+		"titleLight": "skills e scripts.",
+		"cards": [
+			{
+				"icon": "sparkles",
+				"tag": "Skills",
+				"title": "Skills que já existem",
+				"body": "Invoque /deploy, /triage, /report — qualquer skill da sua pasta de projeto ou codebase, sem reescrever nada."
+			},
+			{
+				"icon": "ear",
+				"tag": "Sussurros",
+				"title": "Orientações privadas",
+				"body": "Fale só com o agente no meio da conversa. O contato nunca vê — só o resultado."
+			},
+			{
+				"icon": "repeat",
+				"tag": "Loops",
+				"title": "Processos agendados",
+				"body": "Prompts que se repetem sozinhos: em horário fixo, nos dias que você escolher, ou de X em X minutos."
+			},
+			{
+				"icon": "shield-check",
+				"tag": "Controle",
+				"title": "Você aprova antes",
+				"body": "Agentes pausam em erros e decisões sensíveis. Nada é enviado sem a sua palavra."
+			},
+			{
+				"icon": "hard-drive",
+				"tag": "Local",
+				"title": "Roda 100% no seu computador",
+				"body": "Seu código, suas credenciais e suas conversas nunca saem da sua máquina."
+			},
+			{
+				"icon": "bot",
+				"tag": "Multi-agente",
+				"title": "Vários agentes por conversa",
+				"body": "Claude Code hoje, Codex e OpenCode em breve — cada tarefa com o agente certo."
+			}
+		]
+	},
+	"useCases": {
+		"title": "Você fala, o agente executa",
+		"cases": [
+			{
+				"number": "01",
+				"title": "Triagem de bugs",
+				"body": "O cliente reporta no grupo, a mensagem vira tarefa classificada e o agente já abre o terminal na pasta certa."
+			},
+			{
+				"number": "02",
+				"title": "Atendimento ao cliente",
+				"body": "Conversas automatizadas com aprovação humana: o agente redige, você revisa, o canal recebe."
+			},
+			{
+				"number": "03",
+				"title": "Processos internos",
+				"body": "Deploy, relatório, cobrança — qualquer script vira uma frase no grupo da empresa."
+			},
+			{
+				"number": "04",
+				"title": "Plantão sem fila",
+				"body": "Dez pedidos na mesma thread não entram em fila: cada um roda em paralelo na sua máquina."
+			}
+		]
+	},
+	"pricing": {
+		"badgeLine1": "Grátis. Open Source",
+		"badgeLine2": "Roda localmente na sua máquina",
+		"explanation": "Tudo que roda na sua máquina é grátis — os agentes são seus e o código é MIT. A conta é grátis e serve só para identificar você: sem cartão.",
+		"includedTitle": "O que está incluído",
+		"included": [
+			"Uso ilimitado — sem limite de tarefas ou mensagens",
+			"Claude Code hoje · Codex e OpenCode em breve",
+			"WhatsApp hoje · mais canais em breve",
+			"Skills e scripts da sua própria codebase",
+			"Sussurros, loops agendados e aprovação antes de enviar",
+			"Projetos e canais ilimitados",
+			"Roda 100% local — nada sai do seu computador",
+			"Código aberto sob licença MIT"
+		],
+		"perMonth": "/mês",
+		"forever": "/para sempre",
+		"futureNote": "No futuro, podemos introduzir recursos ou planos pagos. Se isso acontecer, os termos e o preço serão descritos com clareza antes de qualquer cobrança.",
+		"chipMit": "Licença MIT",
+		"chipNoAccount": "conta grátis · sem cartão"
+	},
+	"footer": {
+		"headline": "Seu time já está no grupo.\nAgora seu código também.",
+		"explore": {
+			"title": "Explorar",
+			"links": [
+				{ "label": "Início", "href": "/" },
+				{ "label": "Como funciona", "href": "#how-it-works" },
+				{ "label": "Casos de uso", "href": "#use-cases" },
+				{ "label": "Blog", "href": "/blog" }
+			]
+		},
+		"project": {
+			"title": "Projeto",
+			"links": [
+				{ "label": "GitHub", "href": "https://github.com/gabriellst/codm" },
+				{ "label": "Releases", "href": "https://github.com/gabriellst/codm/releases" },
+				{ "label": "Licença MIT", "href": "https://github.com/gabriellst/codm#readme" }
+			]
+		},
+		"copyright": "2026 CODM · Código aberto · roda localmente",
+		"privacy": "Privacidade",
+		"terms": "Termos",
+		"telemetryNotice": "Coletamos analytics de produto leve e anônimo — visitas de tela e cliques. Desligue quando quiser nas Configurações do console."
+	}
+}

@@ -1,0 +1,115 @@
+name: primitive-astro
+description: Checklist for reusable visual primitives in packages/app/astro/src/components/.
+depends_on:
+  - design-system
+
+context_reads:
+  - packages/app/astro/src/components
+  - packages/app/ui/styles/tokens.css
+
+bad_practices:
+  - id: BP-AP-001
+    severity: high
+    when: always
+    summary: Primitive declared as a `.tsx` React island without justification.
+    why: Astro's value proposition is shipping HTML; every island adds a JS bundle.
+    fix: If the primitive has no internal state and no event handlers that change state, author it as `.astro`.
+    mechanical: false
+
+  - id: BP-AP-002
+    severity: high
+    when: always
+    summary: Inline color values (`#abc123`, `rgb(...)`) instead of token-mapped Tailwind utilities.
+    why: Tokens drive theme and dark mode.
+    fix: Use `bg-primary`, `text-foreground`, etc. Add a token to `tokens.css` if missing.
+    mechanical: true
+    detect:
+      - '#[0-9a-fA-F]{3,8}\b'
+      - 'rgba?\('
+
+  - id: BP-AP-003
+    severity: high
+    when: always
+    summary: Hardcoded variant subcomponents (`PrimaryButton`, `GhostButton`) instead of one primitive with a `variant` prop.
+    why: Doubles maintenance and breaks the "one primitive per family" invariant.
+    fix: Author one `Button.astro` and declare variants via CVA.
+    mechanical: true
+    detect:
+      - '\b(Primary|Ghost)Button\b'
+
+  - id: BP-AP-004
+    severity: medium
+    when: always
+    summary: Primitive imports from `@codm/app-react`.
+    why: Each app workspace is independent; styles are the only shared surface.
+    fix: Recreate the primitive locally; share design tokens via `@codm/app-ui`.
+    mechanical: true
+    detect:
+      - '@codm/app-react'
+
+  - id: BP-AP-005
+    severity: medium
+    when: always
+    summary: "`client:load` on a primitive that could be `client:visible` or static."
+    why: Eager hydration delays LCP unnecessarily.
+    fix: Default to static; use `client:visible` if the primitive is interactive.
+    mechanical: true
+    detect:
+      - 'client:load'
+
+  - id: BP-AP-006
+    severity: low
+    when: rendering an icon-only primitive
+    summary: No `aria-label` prop / no required passthrough.
+    why: Icon-only controls are inaccessible without it.
+    fix: Make `ariaLabel` a required prop on icon-only primitives.
+    mechanical: false
+
+patterns:
+  - id: P-AP-001
+    when: always
+    description: CVA recipe authored in `.astro` frontmatter; `class={variants({...})}` emitted on the root element.
+    rationale: Single source of truth for variants — identical to react primitives.
+
+  - id: P-AP-002
+    when: always
+    description: "`<slot />` used to forward content."
+    rationale: Consumers compose freely; the primitive remains generic.
+
+  - id: P-AP-003
+    when: primitive renders a link
+    description: Renders `<a>` (not `<button>`) when `href` is provided.
+    rationale: Semantic HTML; right-click and middle-click work as expected.
+
+scaffold:
+  - description: Astro primitive (static)
+    command: bun cli primitive <Name> --platform=astro
+  - description: React-island primitive consumed from astro
+    command: bun cli astro:island <Name>
+
+canonical_snippet: |
+  ---
+  // src/components/Pill.astro
+  import { cva, type VariantProps } from 'class-variance-authority';
+
+  const pill = cva(
+    'inline-flex items-center rounded-full px-3 py-1 text-xs font-medium',
+    {
+      variants: {
+        tone: {
+          info: 'bg-secondary text-secondary-foreground',
+          success: 'bg-success/15 text-success',
+          warning: 'bg-warning/15 text-warning-foreground',
+        },
+      },
+      defaultVariants: { tone: 'info' },
+    },
+  );
+
+  type Props = VariantProps<typeof pill>;
+  const { tone } = Astro.props;
+  ---
+
+  <span class={pill({ tone })}>
+    <slot />
+  </span>

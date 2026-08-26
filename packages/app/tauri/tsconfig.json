@@ -1,0 +1,19 @@
+{
+	// The shell package's TypeScript half — `config/` (the generator + the manifest) and
+	// `commands/index.ts` (the barrel over the generated bindings).
+	//
+	// This file exists so that half is covered by the typed project service (eslint's `projectService`
+	// needs a tsconfig to type-check against — see `eslint.config.ts`). Previously the package had
+	// none, which is why `packages/app/tauri/config/**` sat in eslint's global ignore list.
+	//
+	// `commands/bindings.ts` is EXCLUDED: it is tauri-specta output carrying `// @ts-nocheck`. `cargo
+	// test` regenerates it — the right gate for a file whose author is a Rust macro.
+	"extends": "../../../tsconfig.base.json",
+	"compilerOptions": {
+		"lib": ["ES2022", "DOM"],
+		"types": ["bun-types"],
+		"skipLibCheck": true
+	},
+	"include": ["config/**/*.ts", "commands/index.ts"],
+	"exclude": ["commands/bindings.ts", "src-tauri"]
+}

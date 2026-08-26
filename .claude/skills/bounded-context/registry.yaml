@@ -1,0 +1,297 @@
+registry:
+  type: backend
+  layer: domain
+  depends_on: []
+  depended_by: []
+  context_reads: [ddd-modeling]
+
+  patterns:
+    - id: CTX-01
+      name: "Folder structure"
+      when: always
+      rule: "entities/, usecases/, controllers/, repositories/, registry.ts, errors/, enums/, events/, handlers/, services/ (middlewares/ is OPTIONAL — in the single-operator base most contexts import OperatorMiddleware from @auth/middlewares instead of owning a middlewares/ folder)"
+    - id: CTX-02
+      name: "Context bootstrap via BoundedContext.create()"
+      when: always
+      rule: "Context `index.ts` calls `BoundedContext.create()` with name, controllers, registry, and optionally middlewares/internalHandlers/externalHandlers. Exports `ctx.router` (default export). All boilerplate (child container, tracing, mediators, router) is handled by the abstraction."
+      wrong: "Manually creating child containers, resolving mediators, or instantiating Router in context index.ts"
+      snippet: |
+        import * as controllers from './controllers'
+        import * as internalHandlers from './handlers/internal'
+        import * as externalHandlers from './handlers/external'
+        import { INSTANCE_REGISTRY } from './registry'
+        import { BoundedContext } from '@codm/core-typescript'
+
+        const ctx = await BoundedContext.create({
+          name: 'product',
+          controllers,
+          internalHandlers,
+          externalHandlers,
+          registry: INSTANCE_REGISTRY,
+        })
+
+        export default ctx.router
+    - id: CTX-03
+      name: "Router registration in packages/api/typescript/src/routers.ts"
+      when: always
+      rule: "Add the context to `CONTEXTS` (`src/shared/contexts.ts`) and wire its router into the `ROUTERS` map in `src/routers.ts` (`satisfies Record<ContextModule, Router>`) — a declared context without a wired router is a compile error."
+      wrong: "creating context without declaring it in CONTEXTS or wiring its router into the ROUTERS map"
+    - id: CTX-04
+      name: "Middlewares default export"
+      when: "the context owns a middlewares/ folder (OPTIONAL in the single-operator base — most contexts use OperatorMiddleware from @auth/middlewares per-controller instead)"
+      rule: "export default [SomeMiddleware, ...] or export default [] in middlewares/index.ts"
+      wrong: "import * as middlewares — namespace import breaks Router"
+    - id: CTX-05
+      name: "Barrel only where the table says so"
+      when: always
+      rule: |
+        A layer folder has an `index.ts` barrel ONLY when `scripts/lib/context-layers.ts` marks it
+        `allowed`: `controllers`, `enums`, `objects`, `schemas`, `middlewares`. Every other layer —
+        `usecases`, `entities`, `repositories`, `services`, `events`, `types`, `agents`, `handlers`,
+        `projections`, `i18n`, `utils`, `config`, `mcp` — has NO barrel; consumers import the module
+        directly (`@ui/usecases/GetHomeDashboard`, `../entities/Thread`). `bun cli` reads the same
+        table and refuses to create a forbidden one; `scripts/context-barrels.test.ts` fails if one
+        appears; a NEW layer must be added to the table, with its why, in the change that creates it.
+      wrong: |
+        Adding `usecases/index.ts` (or entities/, repositories/, services/, events/) "for symmetry".
+        Measured on 2026-08-14, before the rule existed: 116 layer folders, 648 imports through a
+        barrel against 1319 straight to the module, and 17 barrels nobody imported at all — not 17
+        defects, one missing rule. The three `allowed` layers that are STRUCTURAL earn it: a
+        registrar namespace-imports the folder (`import * as controllers` → BoundedContext.create,
+        enums → registerEnums, objects → registerSchemas), so their index is the only possible door.
+      note: |
+        An `index.ts` that DECLARES something of its own is a module, not a barrel, and the rule does
+        not touch it — that is why all nine `errors/index.ts` stay: each declares the
+        DomainErrors/ApplicationErrors unions and calls registerErrorCodes.
+    - id: CTX-06
+      name: "Context registry as flat file"
+      when: always
+      rule: "`packages/api/typescript/src/<context>/registry.ts` (flat file, not folder) exports `INSTANCE_REGISTRY` built with `expandBindings([...])` — one declaration per token with `mock` / `real` (and optional `integration`) columns. Context-scoped repositories and services are bound there."
+      wrong: "Using a `registry/` folder instead of a flat `registry.ts` file. Hand-writing the raw 3-env `{ mock: [], integration: [], real: [] }` literal. Binding context repositories/services inline in `index.ts`."
+      snippet: |
+        // packages/api/typescript/src/<context>/registry.ts
+        import { type InstanceRegistry, expandBindings } from '@codm/core-typescript'
+        import { ProductRepository, MockProductRepository, DrizzleProductRepository } from './repositories'
+
+        // One declaration per token — `integration` omitted mirrors `real`; `null` = declared absence.
+        export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
+          { token: ProductRepository, mock: MockProductRepository, real: DrizzleProductRepository },
+        ])
+    - id: CTX-07
+      name: "Shared registry aggregation"
+      when: always
+      rule: "Import the context `INSTANCE_REGISTRY` into `packages/api/typescript/src/shared/registry.ts` and add it to `CONTEXT_REGISTRIES` (`satisfies Record<ContextModule, InstanceRegistry>` — forgetting a context is a tsc error). `ALL_REGISTRIES` is derived by the mechanical merge — never hand-spread env arrays."
+      wrong: "Creating a context registry without adding it to `CONTEXT_REGISTRIES` in `packages/api/typescript/src/shared/registry.ts`, or hand-spreading `...ctx.mock` / `...ctx.real` arrays into `ALL_REGISTRIES`"
+      snippet: |
+        // packages/api/typescript/src/shared/registry.ts
+        import { INSTANCE_REGISTRY as productRegistry } from '@product/registry'
+
+        const CONTEXT_REGISTRIES = {
+          shared: CORE_REGISTRY,
+          // ...existing contexts...
+          product: productRegistry,
+        } satisfies Record<ContextModule, InstanceRegistry>
+        // ALL_REGISTRIES is derived mechanically from CONTEXT_REGISTRIES — do not edit it.
+    - id: CTX-C01
+      name: "External event handlers"
+      when: "context reacts to events from other contexts"
+      rule: "handlers/external.ts exports cross-context handlers"
+    - id: CTX-C02
+      name: "Internal event handlers"
+      when: "context reacts to its own domain events"
+      rule: "handlers/internal.ts exports same-context handlers"
+
+    # BoundedContext.create() patterns
+    - id: BC-P01
+      name: "BoundedContext.create() is the only bootstrap mechanism"
+      when: always
+      rule: "All contexts (including shared with `root: true`) use `BoundedContext.create()`. Never manually create child containers, resolve mediators, or instantiate Router."
+      wrong: "Using `parentContainer.createChildContainer()`, `container.resolve(InternalMediator)`, or `new Router()` directly in context index.ts"
+    - id: BC-P03
+      name: "Registry-based context bindings"
+      when: "context has its own repositories or services"
+      rule: "Declare repository/service bindings in `packages/api/typescript/src/<context>/registry.ts` via `expandBindings([{ token, mock, real, integration? }])` — one declaration per token; `integration` omitted mirrors `real`, `null` = declared absence."
+      wrong: "Registering context repositories/services inline in the context `index.ts`"
+    - id: BC-P04
+      name: "Mediator registration via BoundedContext"
+      when: "context has event handlers (internal or external)"
+      rule: "Pass `internalHandlers` and/or `externalHandlers` to BoundedContext.create(). The abstraction resolves mediators and registers handlers automatically."
+      wrong: "Manually resolving InternalMediator/ExternalMediator and calling Mediator.register() in context index.ts"
+    - id: BC-P05
+      name: "Jobs via BoundedContext"
+      when: "context has recurring background work"
+      rule: "Pass `jobs: [{ handler: HandlerClass, repeat: { every: ms } }]` to BoundedContext.create(). Supports `every` (interval) and `pattern` (cron)."
+      wrong: "Manually resolving CommandQueue and calling registerCommandHandler/enqueueCommand in context index.ts"
+      snippet: |
+        jobs: [{ handler: ChatLoopHandler, repeat: { every: 30_000 } }]
+    - id: BC-P06
+      name: "Error type union in errors barrel"
+      when: always
+      rule: "The `Errors` type lives in `<context>/errors/index.ts`, not in context `index.ts`. GlobalErrorMapper imports from errors barrels."
+      snippet: |
+        // <context>/errors/index.ts
+        export type Errors = ApplicationErrors | DomainErrors | InfrastructureErrors | InterfaceErrors
+    - id: BC-P08
+      name: "Middlewares default import"
+      when: always
+      rule: "Import middlewares as a default import (`import middlewares from './middlewares'`), never as a namespace import."
+      wrong: "`import * as middlewares from './middlewares'` — namespace import breaks Router middleware resolution"
+    - id: BC-P09
+      name: "Controllers namespace import"
+      when: always
+      rule: "Import controllers as a namespace import (`import * as controllers from './controllers'`). Router iterates over the namespace to discover controller classes."
+      wrong: "`import controllers from './controllers'` — default import loses controller discovery"
+    - id: BC-P10
+      name: "Centralized enum registration in shared"
+      when: "context defines enums"
+      rule: "Import the context's enums in `packages/api/typescript/src/shared/index.ts` and spread into `openapi.registerEnums()`. Never call `openapi.registerEnums()` in the context's own index.ts."
+      wrong: "Calling `openapi.registerEnums()` in the context's own index.ts — enums won't be registered before `registerEvents()` and get wrong OpenAPI names"
+    - id: BC-P11
+      name: "Singleton auth services"
+      when: "context needs authenticated user (ctx.user) outside auth context"
+      rule: "BetterAuth is `@singleton()` — tsyringe resolves it automatically without explicit registration. AuthAccountMiddleware is resolved via the middlewares barrel export."
+      wrong: "Manually registering BetterAuth or AuthAccountMiddleware via `container.registerSingleton()` or a `services` array"
+    - id: BC-P12
+      name: "Shared context uses root: true"
+      when: "bootstrapping the shared context"
+      rule: "`packages/api/typescript/src/shared/index.ts` calls `BoundedContext.create({ root: true, registry: ALL_REGISTRIES })`. This registers on the root container instead of creating a child. All other contexts inherit from root."
+      snippet: |
+        import { ALL_REGISTRIES } from './registry'
+
+        const ctx = await BoundedContext.create({
+          name: '',
+          root: true,
+          controllers,
+          middlewares,
+          registry: ALL_REGISTRIES,
+          setup: async (container) => { ... },
+        })
+    - id: BC-P13
+      name: "Router map registration in the composition root"
+      when: always
+      rule: "In `packages/api/typescript/src/routers.ts`, import the context router and add it to the `ROUTERS` map (`satisfies Record<ContextModule, Router>`). Both `src/index.ts` (server boot) and `scripts/emit-openapi.ts` consume `ALL_ROUTERS` from there."
+      snippet: |
+        // packages/api/typescript/src/routers.ts
+        import MyContextRouter from '@mycontext/index'
+        const ROUTERS = {
+          // ...existing contexts...
+          mycontext: MyContextRouter,
+        } satisfies Record<ContextModule, Router>
+
+  bad_practices:
+    - id: bp-01
+      name: "Context without router registration"
+      severity: critical
+      wrong: |
+        // Context has controllers but is missing from the ROUTERS map in
+        // packages/api/typescript/src/routers.ts (or from CONTEXTS in src/shared/contexts.ts)
+        // Controllers exist but don't enter the main router — invisible in OpenAPI
+      right: |
+        // packages/api/typescript/src/routers.ts
+        import NewContextRouter from '@newcontext/index'
+        const ROUTERS = {
+          // ...existing contexts...
+          newcontext: NewContextRouter,
+        } satisfies Record<ContextModule, Router>
+      rationale: "Controllers exist but don't enter the main router and don't appear in OpenAPI. Every new HTTP context MUST be declared in `CONTEXTS` and wired into the `ROUTERS` map in `packages/api/typescript/src/routers.ts` before SDK generation — the `satisfies` check turns a missed wiring into a compile error."
+      mechanical: false
+
+    - id: bp-02
+      name: "Overly granular context"
+      severity: critical
+      wrong: |
+        // Separate bounded context for each entity
+        contexts/
+          doctor-availability/  # Just one entity
+          doctor-schedule/      # Just one entity
+          doctor-profile/       # Just one entity
+      right: |
+        // Group related entities that share invariants
+        contexts/
+          doctor/  # All doctor-related entities: availability, schedule, profile
+      rationale: "Related entities sharing the same invariants and ubiquitous language belong in the same context."
+      mechanical: false
+
+    - id: bp-03
+      name: "Manual bootstrap instead of BoundedContext.create()"
+      severity: critical
+      wrong: |
+        // Manually doing what BoundedContext.create() handles
+        export const container = parentContainer.createChildContainer()
+        autoTrace(container)
+        const internalMediator = container.resolve(InternalMediator)
+        Mediator.register(container, internalMediator, handlers)
+        const router = new Router(context, container, controllers, middlewares)
+        export default router
+      right: |
+        const ctx = await BoundedContext.create({
+          name: 'product',
+          controllers, middlewares,
+          internalHandlers, externalHandlers,
+        })
+        export const container = ctx.container
+        export default ctx.router
+      rationale: "BoundedContext.create() encapsulates all bootstrap boilerplate. Manual bootstrap duplicates logic and diverges from the standard pattern."
+      mechanical: true
+      detect:
+        - 'parentContainer\.createChildContainer\('
+        - '\.resolve\(\s*(Internal|External)Mediator\b'
+        - 'Mediator\.register\('
+        - 'new\s+Router\('
+
+    - id: bp-04
+      name: "Registry folder instead of flat file"
+      severity: warning
+      wrong: |
+        packages/api/typescript/src/<context>/registry/index.ts
+      right: |
+        packages/api/typescript/src/<context>/registry.ts
+      rationale: "Registry is a single file, not a module. Use a flat .ts file to reduce folder nesting."
+      mechanical: false
+
+    - id: bp-05
+      name: "Registering entity (write-model) schemas in OpenAPI via registerSchemas"
+      severity: critical
+      wrong: |
+        // leaks .refine() source + internal entity fields into the PUBLIC openapi.json + client SDK
+        import * as patientEntities from '@patient/entities'
+        openapi.registerSchemas({ ...patientEntities })
+      right: |
+        // only value objects (objects/) + contract DTO schemas — shapes already on the wire
+        import * as sharedObjects from '@shared/objects'
+        openapi.registerSchemas({ ...sharedObjects })
+      rationale: "registerSchemas emits each schema's .refine() source verbatim (fn.toString()) into the public openapi.json + the client SDK, and exposes its full field set. Entity schemas carry domain invariants + internal fields that must stay server-side. Register ONLY value objects + contract DTOs (already on the wire); keep sensitive invariants in the entity/use-case."
+      mechanical: true
+      detect:
+        - 'registerSchemas\([^)]*[Ee]ntit'
+
+  canonical_snippet: |
+    // product/index.ts
+    import * as controllers from './controllers'
+    import * as internalHandlers from './handlers/internal'
+    import * as externalHandlers from './handlers/external'
+    import middlewares from './middlewares'
+
+    import { BoundedContext } from '@codm/core-typescript'
+
+    const ctx = await BoundedContext.create({
+      name: 'product',
+      controllers,
+      middlewares,
+      internalHandlers,
+      externalHandlers,
+    })
+
+    export const container = ctx.container
+    export default ctx.router
+
+    // product/registry.ts
+    import { type InstanceRegistry, expandBindings } from '@codm/core-typescript'
+    import { ProductRepository, MockProductRepository, DrizzleProductRepository } from './repositories'
+
+    // One declaration per token — `integration` omitted mirrors `real`; `null` = declared absence.
+    export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
+      { token: ProductRepository, mock: MockProductRepository, real: DrizzleProductRepository },
+    ])
+
+  scaffold: "bun cli context <name>"

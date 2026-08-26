@@ -1,0 +1,255 @@
+registry:
+  type: frontend
+  layer: presentation
+  depends_on: [component, sdk]
+  depended_by: []
+  context_reads: [component, route, store, sdk]
+
+  patterns:
+    # --- Always ---
+
+    - id: SB-01
+      name: "Dumb component → args"
+      when: always
+      rule: "A component that takes all data via props is storied with StoryObj `args`; no providers, no MSW."
+      wrong: "Wrapping a pure presentational component in QueryClient/MSW/router it never uses."
+
+    - id: SB-02
+      name: "Connected component → real component + parameters.route"
+      when: always
+      rule: |
+        Story the data-owning component as-is. If it reads getRouteApi(id).useSearch(),
+        declare parameters.route = { id, search? | validateSearch? } (typed via connected()).
+      wrong: "Refactoring the component to accept mock data via props just to story it."
+
+    - id: SB-03
+      name: "Mock via typed SDK helpers"
+      when: always
+      rule: |
+        Build MSW handlers with @/storybook helpers keyed off the SDK options:
+        mockQuery(getXQueryOptions(p), resp) / loadingQuery / errorQuery /
+        mockMutation(method, getXMutationOptions(), resp) / mockMutationError / mockSession.
+      wrong: "Hand-writing http.get('*/...', () => HttpResponse.json(...)) per state in the story."
+
+    # --- Conditional ---
+
+    - id: SB-C01
+      name: "Seed stores via parameters.stores"
+      when: "component reads an app-global Zustand store (a StoresParam key — empty in the template; a product re-adds its typed keys, e.g. theme)"
+      rule: "parameters.stores = { theme: 'dark' } — the decorator (givenStores) seeds it before render."
+      wrong: "useThemeStore.setState(...) inside the story body / render."
+
+    - id: SB-C02
+      name: "Mock session"
+      when: "component calls useSession()"
+      rule: "parameters.msw.handlers includes mockSession(value)."
+
+    - id: SB-C03
+      name: "Loading + error states"
+      when: "component has skeleton / error UI"
+      rule: "A Loading story (loadingQuery) and an error story (errorQuery, 4xx)."
+
+    # --- Project conventions ---
+
+    - id: SB-P01
+      name: "Colocate mocks"
+      when: always
+      rule: |
+        Mocks live with their stories: inline fixtures for a single-consumer story; a feature-local
+        file (e.g. <feature>/-components/<x>.mocks.ts) when shared by sibling stories.
+      wrong: "A central src/mocks/ barrel."
+
+    - id: SB-P02
+      name: "DeepPartial + enum consts, no casts"
+      when: always
+      rule: |
+        Mock responses are DeepPartial of the SDK response (import DeepPartial from '@/lib'); enum
+        fields use the SDK PascalCase const (OperationalCostFlowEnum.DEBIT).
+      wrong: "as unknown as XResponse, or 'X' as XEnumKey casts."
+
+    - id: SB-P03
+      name: "Verify with tsc + storybook:build"
+      when: always
+      rule: "bun x tsc --noEmit + bun run storybook:build. No unit-test runner; no @ts-expect-error story tests."
+
+    # --- Frontend testing (stories + colocated + harness) ---
+
+    - id: SB-04
+      name: "Story-as-fixture — sibling test files prove a DIFFERENT boundary than play, never the same one twice"
+      when: always
+      rule: |
+        A component with a *.stories.tsx never gets a sibling .test.tsx that RE-PROVES a case the
+        story's `play` already covers — but two siblings are SANCTIONED because each proves a
+        boundary `play` structurally cannot reach: a `*.services.test.tsx` (cross-service, real
+        apiGo gateway subprocess — SB-05's boundary, its own file per bunfig's
+        `pathIgnorePatterns` + the one-process-per-file finding) and a harness-backed `.test.tsx`
+        asserting real backend behavior via `useIntegrationBackend()` that a browser-compatible
+        `play` cannot host. When an assertion DOES fit inside `play`, it still goes through
+        composeStories (from tests/support/storybook — the project's wrapper, never
+        @storybook/react directly) around the SAME composed story — never a fresh ad-hoc mount.
+        Full three-lane breakdown + canonical files in this entry's `exception`.
+      wrong: "Foo.test.tsx re-mounting <Foo/> with its own ad-hoc mocks to RE-ASSERT a case Foo.stories.tsx's play (or the file's own harness describe) already proves — that's a second proof of the same boundary, not a new one."
+      right: |
+        SessionChatSection/: index.stories.tsx (visual+play) + index.test.tsx (harness/reduced,
+        see exception) + index.services.test.tsx (apiGo) — three DIFFERENT boundaries, one file each.
+      exception: |
+        Three named lanes are sanctioned as a `.test.tsx`/`.services.test.tsx` sibling of a story —
+        none of them re-proves what `play` already covers, so none is the "parallel test" this rule
+        forbids:
+
+        1. **Cross-service lane (`*.services.test.tsx`)** — mounts the component against the REAL
+           `apiGo` gateway subprocess (`useIntegrationBackend({ services: ['apiGo'] })`). Signal: the
+           filename suffix itself. `bunfig.toml`'s `pathIgnorePatterns` excludes
+           `**/*.services.test.tsx` from the default suite for a STRUCTURAL reason, not convenience:
+           re-booting `services: ['apiGo']` in a process that already booted without it (or reusing
+           one after a prior file's `backend.stop()`) corrupts the DB handle (T9's one-process-per-file
+           finding — see bunfig.toml's docblock) — a story's `play` cannot spawn a subprocess and stay
+           Storybook-browser-compatible, so this behavior has nowhere else to live. It proves a fact
+           `play` never renders: a thread born from a REAL paired channel, a real
+           `CHANNEL_NOT_CONNECTED` — never a visual state the story already shows.
+
+        2. **Harness lane (plain `.test.tsx`, SB-05's boundary)** — mounts the component
+           independently (`mountRouter`/direct render, not through `composeStories`) against
+           `useIntegrationBackend()` (no `services`) to assert real backend behavior across a
+           bun:test-only async lifecycle (`beforeAll`/`beforeEach` boot+reset) that a `play` callback
+           — constrained to also run inside the Storybook browser — cannot invoke. `OnboardingFlow`'s
+           `index.test.tsx` composes BOTH lanes in one file: a `describe` that runs `composeStories`
+           against every story (the `play`-fits case), followed by a SEPARATE `describe` that mounts
+           the real `/onboarding` → `/dashboard` route pair against the harness to prove the
+           two-completions regression `play` cannot reach (no subprocess, no cross-route navigation
+           inside a story).
+
+        3. **Reduced lane, kept off `play` BY NAME, not by convenience** — when the behavior is
+           unreachable by BOTH lanes above: `play` can't reach it because MSW does not intercept
+           under bun (this SKILL.md's measured ruling — a story stays VISUAL-ONLY), AND the harness
+           can't produce it because no `given` helper exists yet to seed that shape/volume
+           server-side (a tooling gap, not a shortcut). The file must carry a docblock naming which
+           lane it tried and why each is closed, so the exception is legible at the call site, never
+           inferred. `SessionChatSection/index.test.tsx` (1000-row virtualization,
+           `spyOn(globalThis, 'fetch')` supplying DATA volume only — never the assertion target,
+           and never the bare `globalThis.fetch =` assignment bp-06 forbids) is the canonical case;
+           its own docblock names the closed lanes.
+
+        The trio is legal together on the SAME component — `index.stories.tsx` (visual + `play`),
+        `index.test.tsx` (lane 2 or 3), `index.services.test.tsx` (lane 1) — because each covers a
+        DIFFERENT boundary (mock/visual, real-backend-same-process, real-backend-cross-process). A
+        `.test.tsx` sibling stays a violation the moment it re-mounts the component with its OWN
+        ad-hoc mocks to re-assert a case `play` (or an already-passing lane in the same file)
+        already covers — the exception is for a genuinely different boundary, never a second proof
+        of the same one.
+
+    - id: SB-05
+      name: "Integration harness is the default network boundary"
+      when: always
+      rule: |
+        A play or colocated test asserting real behavior calls useIntegrationBackend()
+        (tests/support/integration-harness) and asserts on the COMPUTED response. MSW is reserved for
+        states the real backend cannot produce (a forced error, an eternal-loading skeleton) —
+        visual-only, in the Storybook browser (MSW does not intercept under bun — measured).
+      wrong: "Hand-mocking an SDK response, or stubbing globalThis.fetch, to assert behavior the real backend could compute via the harness."
+
+    - id: SB-06
+      name: "Mount routes via mountRouter, never RouterProvider by hand"
+      when: "the unit under test reads getRouteApi(id).useSearch() or otherwise needs a mounted route"
+      rule: |
+        Use mountRouter(ui, options) from tests/support/mountRouter — it calls router.load() before
+        the first render and exposes settled(predicate, label?) for condition-based waiting. Never
+        hand-assemble createRouter + RouterProvider + your own router.load() call.
+      wrong: "const router = createRouter(...); root.render(<RouterProvider router={router} />) with no router.load(), or a fixed setTimeout wait afterward instead of settled()."
+
+  bad_practices:
+    - id: bp-01
+      name: "Stripping the data layer to story a connected component"
+      severity: critical
+      wrong: |
+        // Refactor the real component into a presentational shell with mock props
+        export function RevenueSummaryView({ data }: { data: Dashboard }) { ... }
+        export const Default = { args: { data: mockDashboard } }
+      right: |
+        // Story the real component; mock the network it already calls
+        parameters: connected({ route: { id: '/(app)/dashboard/' } })
+        export const Default = { parameters: { msw: { handlers: [mockQuery(opts, mockDashboard)] } } }
+
+    - id: bp-02
+      name: "Hand-written http.get per state instead of typed helpers"
+      severity: high
+      wrong: |
+        export const handler = http.get('*/ui/dashboard', () => HttpResponse.json(fixture))
+      right: |
+        mockQuery(getDashboardQueryOptions(p), fixture)  // url + response type from the SDK
+
+    - id: bp-03
+      name: "Casts in mock data"
+      severity: high
+      wrong: "{ ... } as unknown as GetDashboardQueryResponse  /  flow: 'EXPENSE' as OperationalCostFlowEnumKey"
+      right: "DeepPartial<GetDashboardQueryResponse> + OperationalCostFlowEnum.DEBIT"
+
+    - id: bp-04
+      name: "Central src/mocks barrel"
+      severity: medium
+      wrong: "import { dashboardHandler } from '@/mocks/dashboard'"
+      right: "Colocated: inline, or '../../dashboard.mocks' next to the dashboard stories"
+
+    - id: bp-05
+      name: "Adding MSW/providers to a dumb story, or a test runner / @ts-expect-error story tests"
+      severity: medium
+      wrong: "QueryClientProvider around a props-only component; vitest/@storybook/test; @ts-expect-error type tests"
+      right: "args for dumb; tsc + storybook:build for verification"
+
+    - id: bp-06
+      name: "Manual globalThis.fetch stub"
+      severity: high
+      wrong: "globalThis.fetch = mock(() => Promise.resolve({ json: () => ({ ... }) }))"
+      right: "const backend = await useIntegrationBackend(); ... — the harness is the network boundary."
+      rationale: "Mechanically enforced by tests/architecture/fetch-stub.test.ts: any file outside its INVENTORY that matches globalThis.fetch = fails the rail, naming the file. The inventory only shrinks — it was seeded with the offenders that predate the harness; a NEW manual stub anywhere outside it is a fresh violation, not a grandfathered one."
+      mechanical: true
+      detect:
+        - 'globalThis\.fetch\s*='
+
+    - id: bp-07
+      name: "Fixed sleep instead of condition wait"
+      severity: medium
+      wrong: "await new Promise(resolve => setTimeout(resolve, 500))  // hope it settled by then"
+      right: "await settled(() => screen.queryByText('Ready') !== null, 'gate resolved')  // mountRouter's settled(), polls a predicate"
+
+    - id: bp-08
+      name: "TestBed.create inside a console test that already uses the integration harness"
+      severity: critical
+      wrong: "const testBed = await TestBed.create('integration', { ... })  // registers its OWN child container — a second, disconnected database"
+      right: "const { createGivenHelpers } = await loadBackendGivens(); createGivenHelpers(backend.asTestBed())  // seeds the SAME database the harness's server reads"
+
+  canonical_snippet: |
+    // The three-phase colocated test: given (seed via repository) → mount/act (real Container,
+    // mountRouter — never RouterProvider by hand) → assert behavior (the computed boundary, waited
+    // for by condition, never slept).
+    import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+    import { screen } from '@testing-library/react'
+    import { useIntegrationBackend, loadBackendGivens, type IntegrationBackend } from '../../tests/support/integration-harness'
+    import { mountRouter } from '../../tests/support/mountRouter'
+    import { OnboardingGate } from './OnboardingGate'
+
+    describe('OnboardingGate', () => {
+      let backend: IntegrationBackend
+
+      beforeAll(async () => {
+        backend = await useIntegrationBackend() // boots once per bun test process
+      })
+
+      beforeEach(async () => {
+        await backend.reset() // clean state per test — never shared across it()s
+      })
+
+      it('redirects to /onboarding while a required step is unsatisfied', async () => {
+        // 1. GIVEN — seed via repository, never via the use case under test
+        const { createGivenHelpers } = await loadBackendGivens()
+        await createGivenHelpers(backend.asTestBed()).userWithAccount({})
+
+        // 2. MOUNT — mountRouter includes router.load(); never assemble RouterProvider by hand
+        const { router, settled, unmount } = await mountRouter(<OnboardingGate />, { path: '/dashboard' })
+
+        // 3. ASSERT — the boundary that answers the question, waited for by CONDITION, never sleep
+        await settled(() => router.state.location.pathname === '/onboarding', 'redirected to onboarding')
+        expect(screen.queryByText('Complete your setup')).not.toBeNull()
+        unmount()
+      })
+    })

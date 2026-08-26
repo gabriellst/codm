@@ -1,0 +1,435 @@
+registry:
+  type: fullstack
+  layer: testing
+  depends_on: [sdk, component, route]
+  depended_by: []
+  context_reads: [component, route, controller]
+
+  patterns:
+    # --- Always patterns ---
+
+    - id: E2E-01
+      name: "Import test and expect from e2e/utils/test"
+      when: always
+      rule: |
+        import { test, expect } from '../utils/test'
+      wrong: |
+        import { test, expect } from '@playwright/test'
+
+    - id: E2E-02
+      name: "Use goto fixture for typed navigation"
+      when: always
+      rule: |
+        await goto('/patients')
+      wrong: |
+        await page.goto('/patients')
+
+    - id: E2E-03
+      name: "Inline label strings — no shared constants"
+      when: always
+      rule: |
+        await expect(page.getByLabel('Lista de pacientes')).toBeVisible()
+        await page.getByRole('button', { name: 'Nova Consulta' }).click()
+      wrong: |
+        import { PATIENTS } from '../../app/src/lib/aria-labels'
+        await expect(page.getByLabel(PATIENTS.patientList)).toBeVisible()
+
+    - id: E2E-04
+      name: "Use given helpers for test setup"
+      when: always
+      rule: |
+        await given.onboardedUser()
+        await goto('/dashboard')
+      wrong: |
+        // Manual sign-up + login in each test
+        const response = await request.post('/authentication/sign-up/email', ...)
+        await page.goto('/sign-in')
+        await page.fill(...)
+
+    - id: E2E-05
+      name: "Unique test data via generators"
+      when: always
+      reason: "Hardcoded emails/CPFs collide across parallel tests and persist between runs."
+      rule: |
+        await given.onboardedUser({ name: 'Test User' })
+        // email, CPF, phone auto-generated with unique values
+      wrong: |
+        await signUp({ email: 'test@test.com', document: '11144477735' })
+
+    - id: E2E-06
+      name: "Label-string source ladder (pt-BR pinned)"
+      when: always
+      rule: |
+        // 1. Enum-bound option? → the VALUE, never the label:
+        await pickOptionByValue(page, PlanNameEnum.PRO)
+        // 2. Copy the UI renders from i18n (incl. enums.* labels)? → the SAME source the UI reads:
+        await page.getByLabel(t('auth.signIn.email')).fill(email)
+        await page.getByRole('option', { name: t('enums.NotificationCategory.BILLING') }).click()
+        // 3. Static stable copy? → inline pt-BR literal (E2E-03):
+        await page.getByRole('button', { name: 'Nova Consulta' }).click()
+      wrong: |
+        // English literals — playwright.config pins locale: 'pt-BR'
+        await page.getByRole('button', { name: 'New appointment' }).click()
+        // A parallel constants file (bp-e2e-02), or importing app/src/lib/labels (dead — enum labels live in i18n enums.*)
+      reason: "utils/i18n.ts t() resolves packages/app/react/src/locales/pt.json — the exact strings the UI renders. Inline literals remain the contract for static copy (a failing test on a copy change is the test doing its job); t() is for strings that ship through i18n. Supersedes E2E-C08's lib/labels import."
+
+    # --- Conditional patterns ---
+
+    - id: E2E-C01
+      name: "Mock external dependencies with typed responses"
+      when: "test exercises UI that depends on external services (channel backend, WhatsApp)"
+      rule: |
+        import { mockRoute, mockSSE } from '../utils/mock'
+        import { listNotificationsQueryKey, type ListNotificationsQueryResponse } from '@codm/client-typescript/typescript'
+
+        const data: ListNotificationsQueryResponse = { items: [...] }
+        await mockRoute<ListNotificationsQueryResponse>(page, listNotificationsQueryKey, data)
+      wrong: |
+        await page.route('**/notifications*', route => route.fulfill({ body: '{"items":[]}' }))
+
+    - id: E2E-C02
+      name: "Mock SSE endpoints to prevent retry loops"
+      when: "page uses SSE/EventSource connections"
+      rule: |
+        import { mockSSE } from '../utils/mock'
+        import { listenEventsQueryKey } from '@codm/client-typescript/typescript'
+
+        await mockSSE(page, listenEventsQueryKey)
+      wrong: |
+        // Leaving SSE unmocked — causes infinite 500 retries that block rendering
+
+    - id: E2E-C03
+      name: "Use SDK query key for mock URL when available"
+      when: "mocking an endpoint that has an SDK query key function"
+      rule: |
+        await mockRoute<ResponseType>(page, listNotificationsQueryKey, data)
+      wrong: |
+        await mockRoute<ResponseType>(page, '**/ui/notifications*', data)
+
+    - id: E2E-C04
+      name: "Use glob string for parameterized URLs"
+      when: "mocking an endpoint with path params (query key would produce /path/undefined)"
+      rule: |
+        await mockRoute(page, '**/channel/channels/channel-id-here*', data)
+
+    - id: E2E-C05
+      name: "Use givenFreshUser for onboarding flow tests"
+      when: "testing the onboarding wizard itself"
+      rule: |
+        await given.freshUser({ name: 'Gerente Teste' })
+        await goto('/onboarding')
+      wrong: |
+        await given.onboardedUser()
+        await goto('/onboarding')
+        // User already completed onboarding — nothing to test
+
+    - id: E2E-C06
+      name: "Use network.waitForFailure in Promise.race"
+      when: "waiting for navigation after an action that triggers API calls"
+      reason: "Fail fast when the API returns an error instead of waiting for the full timeout."
+      rule: |
+        await Promise.race([
+          page.waitForURL(url => !url.pathname.includes('/sign-in'), { timeout: 15_000 }),
+          network.waitForFailure(),
+        ])
+      wrong: |
+        await page.waitForURL('**/dashboard**', { timeout: 30_000 })
+
+    - id: E2E-C07
+      name: "Register mocks before navigating"
+      when: "mocking API responses"
+      reason: "Route loaders fire on navigation — mocks must be in place before goto."
+      rule: |
+        await mockRoute(page, queryKey, data)  // mock first
+        await goto('/channel/chat')             // then navigate
+      wrong: |
+        await goto('/channel/chat')             // loader fires, real API called
+        await mockRoute(page, queryKey, data)   // too late
+
+    - id: E2E-C08
+      name: "Enum value dichotomy: raw enum vs label map"
+      when: "filling or selecting enum values in comboboxes/selects"
+      reason: "Some enums render as raw values (PRO, PENDING), others render through i18n labels (ORDER_RECEIVED → Pedido recebido). Using the wrong source causes the test to not find the option."
+      rule: |
+        import { PlanNameEnum, NotificationCategoryEnum } from '@codm/client-typescript/typescript'
+        import { t } from '../utils/i18n'
+
+        // Raw enum value — UI renders the value directly (plans, statuses)
+        await page.getByLabel('Plano').pressSequentially(PlanNameEnum.PRO)
+        await page.getByRole('option', { name: PlanNameEnum.PRO }).click()
+
+        // i18n label — UI renders a translated label from the enums.* subtree (E2E-06)
+        const label = t('enums.NotificationCategory.ORDER_RECEIVED')
+        await page.getByPlaceholder('Selecione a categoria').pressSequentially(label)
+        await page.getByRole('option', { name: label }).click()
+      wrong: |
+        // Hardcoded string for enum value
+        await page.getByLabel('Plano').pressSequentially('PRO')
+
+        // Using raw enum value when UI renders a label
+        await page.getByPlaceholder('Selecione').pressSequentially('ORDER_RECEIVED')
+
+        // Hardcoded label text that may drift from the label map
+        await page.getByRole('option', { name: 'Clínica Geral' }).click()
+
+    - id: E2E-C09
+      name: "Check Tempo traces for 4xx/5xx root cause"
+      when: "API call fails and the response body doesn't explain why"
+      rule: |
+        # 1. Get trace ID from Tempo
+        curl 'http://localhost:3000/api/datasources/proxy/uid/P214B5B846CF3925F/api/search?tags=http.status_code%3D500&limit=1'
+        # 2. Get trace detail — look for http.error.name
+        curl 'http://localhost:3000/api/datasources/proxy/uid/P214B5B846CF3925F/api/traces/TRACE_ID'
+        # 3. Read the use case/entity code to understand the business logic
+
+    - id: E2E-C10
+      name: "Pick options by enum value, not by translated label"
+      when: "selecting an option in a <Select> bound to an enum (any SDK *Enum value)"
+      reason: "Visible labels are translated and can substring-collide ('Ação' inside 'Simulação' → strict-mode failure). The underlying enum values are stable SCREAMING_SNAKE_CASE keys and never collide. Our SelectItem primitive forwards `value` as `data-value` via Base UI's render prop, so `pickOptionByValue` locates by `[role=option][data-value=KEY]`."
+      rule: |
+        import { PlanNameEnum } from '@codm/client-typescript/typescript'
+        import { pickOptionByValue } from '../utils/selectors'
+
+        await dialog.getByLabel(t('billing.form.planPlaceholder')).click()
+        await pickOptionByValue(page, PlanNameEnum.PRO)
+      wrong: |
+        // Label-based pick + strict mode → 'Ação' matches 'Simulação' too
+        await pickOption(page, 'Ação')
+        // Even with exact: true, the test re-breaks if the translation changes
+
+    - id: E2E-C11
+      name: "When the option doesn't carry a value, exact-match the label"
+      when: "the dropdown is NOT enum-bound (free-form items, derived strings, etc.)"
+      reason: "Without a stable value, label-based selection is the only option. Use `pickOption` (it passes { exact: true } internally) or pass exact: true yourself."
+      rule: |
+        // pickOption already uses exact: true
+        await pickOption(page, 'Centro de Saúde Vila Nova')
+        // Bespoke usage:
+        await page.getByRole('option', { name: 'Brasil', exact: true }).click()
+      wrong: |
+        await page.getByRole('option', { name: 'Brasil' }).click()
+        // strict mode violation if 'Brasileiro' or any superstring is also rendered
+
+    - id: E2E-C12
+      name: "Reuse already-running dev servers locally; spin up fresh in CI"
+      when: "always — playwright.config.ts webServer entries"
+      reason: "Local devs typically have api:dev + app:dev open in another terminal. With `reuseExistingServer: false` Playwright errors out with 'port already used'. Setting !process.env.CI keeps the local loop fast (no 30s server boot) while still guaranteeing a clean stack in CI."
+      rule: |
+        // packages/e2e/playwright.config.ts
+        webServer: [
+          { command: 'bun x nx run api:dev', port: 3030, reuseExistingServer: !process.env.CI, ... },
+          { command: 'bun x nx run app:dev', port: 5173, reuseExistingServer: !process.env.CI, ... },
+        ]
+      wrong: |
+        // Local runs collide with the dev server you're using to write the test
+        webServer: [{ command: 'bun x nx run api:dev', reuseExistingServer: false, ... }]
+
+  bad_practices:
+    - id: bp-e2e-00
+      name: "Asserting hardcoded UI copy instead of reading the i18n catalog"
+      severity: critical
+      why: |
+        A literal that is also a value in src/locales/pt.json couples the spec to COPY. A wording or
+        accent edit then breaks an unrelated spec, and it surfaces as
+        `Unable to find an element with the text: …` — which reads like a broken feature, not a stale
+        string. Reading through the typed `t()` turns a renamed key into a tsc error instead.
+        Measured 2026-08-18: the rule existed in one README line, `utils/i18n.ts` existed, and ZERO
+        test files imported it — 7 assertions across 2 specs hardcoded copy.
+      wrong: |
+        await page.getByRole('button', { name: 'Conectar canal' }).click()
+        await expect(modal.getByText('WhatsApp conectado')).toBeVisible()
+      right: |
+        import { t } from '../utils/i18n'   // key type derived from pt.json
+        await page.getByRole('button', { name: t('channels.connectChannel') }).click()
+        await expect(modal.getByText(t('channels.pairConnectedTitle'))).toBeVisible()
+      mechanical: true
+      rail: packages/app/react/tests/architecture/i18n-assertions.test.ts
+      detect:
+        - 'getByText\(\s*[''"][^''"]+[''"]'
+        - 'getByRole\([^)]*name:\s*[''"][^''"]+[''"]'
+
+    - id: bp-e2e-01
+      name: "Importing backend code (DI container, repositories) in e2e tests"
+      severity: critical
+      wrong: |
+        import { container } from 'tsyringe-neo'
+        import { ALL_REGISTRIES } from '../../api/src/shared/registry'
+      right: |
+        // Use SDK HTTP calls instead
+        import { createOwner } from '@codm/client-typescript/typescript'
+        await createOwner({ data }, { client: session.client })
+      mechanical: true
+      detect:
+        - 'from\s+[''"]tsyringe-neo[''"]'
+        - 'from\s+[''"][^''"]*api/src'
+
+    - id: bp-e2e-02
+      name: "Shared label constants file for test selectors"
+      severity: critical
+      wrong: |
+        // packages/app/react/src/lib/aria-labels.ts
+        export const PATIENTS = { patientList: 'Lista de pacientes' }
+        // test imports and uses PATIENTS.patientList
+      right: |
+        // Component: aria-label="Lista de pacientes" (inline)
+        // Test: page.getByLabel('Lista de pacientes') (inline)
+      mechanical: true
+      detect:
+        - 'from\s+[''"][^''"]*aria-labels'
+
+    - id: bp-e2e-03
+      name: "Using data-testid as primary selector"
+      severity: moderate
+      wrong: |
+        <Button data-testid="send-btn">Send</Button>
+        await page.locator('[data-testid="send-btn"]').click()
+      right: |
+        <Button aria-label="Enviar mensagem"><IconSend /></Button>
+        await page.getByRole('button', { name: 'Enviar mensagem' }).click()
+      mechanical: true
+      detect:
+        - 'data-testid'
+
+    - id: bp-e2e-04
+      name: "Untyped mock response"
+      severity: moderate
+      wrong: |
+        await page.route('**/notifications*', route =>
+          route.fulfill({ body: JSON.stringify({ items: [] }) }))
+      right: |
+        import type { ListNotificationsQueryResponse } from '@codm/client-typescript/typescript'
+        const data: ListNotificationsQueryResponse = { items: [] }
+        await mockRoute<ListNotificationsQueryResponse>(page, queryKey, data)
+      mechanical: true
+      detect:
+        - 'page\.route\('
+        - 'route\.fulfill\('
+
+    - id: bp-e2e-05
+      name: "Hardcoded test user credentials"
+      severity: moderate
+      wrong: |
+        const credentials = { email: 'test@test.com', password: 'Test@12345' }
+      right: |
+        await given.onboardedUser()
+        // or for login tests:
+        await given.freshUser({ name: 'Test User' })
+      mechanical: true
+      detect:
+        - 'password:\s*[''"]'
+        - 'email:\s*[''"][^''"]*@'
+
+    - id: bp-e2e-06
+      name: "Skipping onboarding steps in givenOnboardedUser"
+      severity: critical
+      wrong: |
+        await getOnboarding({ client: session.client })
+        await completeOnboarding({ data }, { client: session.client })
+        // → INVALID_STEP_TRANSITION
+      right: |
+        await getOnboarding({ client: session.client })
+        await saveOnboardingState({ data: { type: ..., currentStep: CLINIC_INFO } }, { client: session.client })
+        await saveOnboardingState({ data: { currentStep: UNIT_INFO } }, { client: session.client })
+        await completeOnboarding({ data }, { client: session.client })
+      mechanical: false
+
+    - id: bp-e2e-07
+      name: "Form compound input (Combobox, Select) missing id"
+      severity: critical
+      wrong: |
+        <FieldLabel htmlFor={field.name}>Estado</FieldLabel>
+        <ComboboxInput placeholder="UF" />
+        // getByLabel('Estado') can't find it
+      right: |
+        <FieldLabel htmlFor={field.name}>Estado</FieldLabel>
+        <ComboboxInput id={field.name} placeholder="UF" />
+      mechanical: false
+
+    - id: bp-e2e-08
+      name: "Using getByPlaceholder as primary selector"
+      severity: moderate
+      wrong: |
+        await page.getByPlaceholder('00.000.000-0').fill('12345678')
+        await page.getByPlaceholder('Selecione...').click()
+      right: |
+        // Prefer getByRole with name (label) or getByLabel
+        await page.getByRole('textbox', { name: 'RG' }).fill('12345678')
+        await page.getByLabel('Especialidade').click()
+      note: >
+        Placeholders are hints, not contracts. They can change without breaking functionality.
+        Use getByRole or getByLabel — they rely on the label-input association which IS the contract.
+        Only fall back to getByPlaceholder when the component has no label connection (missing id/htmlFor).
+      mechanical: true
+      detect:
+        - 'getByPlaceholder\([^)]*\)\.fill\('
+        - 'getByPlaceholder\([^)]*\)\.click\('
+
+    - id: bp-e2e-09
+      name: "Waiting for timeout instead of failing fast on API error"
+      severity: moderate
+      wrong: |
+        await page.getByRole('button', { name: 'Entrar' }).click()
+        await page.waitForURL('**/dashboard**', { timeout: 30_000 })
+      right: |
+        await page.getByRole('button', { name: 'Entrar' }).click()
+        await Promise.race([
+          page.waitForURL(url => !url.pathname.includes('/sign-in'), { timeout: 15_000 }),
+          network.waitForFailure(),
+        ])
+      mechanical: false
+
+    - id: bp-e2e-10
+      name: "Picking enum-bound options by translated label instead of by value"
+      severity: critical
+      always_flag_when: >
+        Code calls pickOption(page, t('enums.X.Y')) or
+        getByRole('option', { name }) targeting a Select that is bound to an
+        enum (the SelectItem `value` is an enum key). Use pickOptionByValue
+        with the SDK enum constant — it's collision-free and survives
+        translation tweaks. See E2E-C10.
+      wrong: |
+        // Label-based; substring-collides AND breaks if the translation drifts
+        await pickOption(page, t('enums.PlanName.PRO'))
+        await page.getByRole('option', { name: 'Pro' }).click()
+      right: |
+        import { PlanNameEnum } from '@codm/client-typescript/typescript'
+        import { pickOptionByValue } from '../utils/selectors'
+        await pickOptionByValue(page, PlanNameEnum.PRO)
+      mechanical: true
+      detect:
+        - 'pickOption\(\s*page\s*,\s*t\(\s*[''"]enums\.'
+
+    - id: bp-e2e-11
+      name: "Substring getByRole on a non-enum dropdown"
+      severity: moderate
+      always_flag_when: >
+        Code calls getByRole('option', { name }) (or any role-based picker)
+        without { exact: true } when the option is NOT enum-bound (no
+        SelectItem value forwarded as data-value). Use pickOption (which
+        passes exact: true) or add it yourself. See E2E-C11.
+      wrong: |
+        await page.getByRole('option', { name: 'Brasil' }).click()
+      right: |
+        await pickOption(page, 'Brasil') // exact: true under the hood
+        await page.getByRole('option', { name: 'Brasil', exact: true }).click()
+      mechanical: true
+      detect:
+        - 'getByRole\(\s*[''"]option[''"]\s*,\s*\{\s*name:'
+      detect_skip: 'exact:\s*true'
+
+    - id: bp-e2e-12
+      name: "reuseExistingServer: false for the local dev loop"
+      severity: moderate
+      wrong: |
+        // packages/e2e/playwright.config.ts
+        webServer: [{ command: 'bun x nx run api:dev', reuseExistingServer: false, ... }]
+        // Local runs error: 'http://localhost:3030 is already used' if you
+        // have api:dev open in another terminal.
+      right: |
+        webServer: [
+          { command: 'bun x nx run api:dev', port: 3030, reuseExistingServer: !process.env.CI, ... },
+          { command: 'bun x nx run app:dev', port: 5173, reuseExistingServer: !process.env.CI, ... },
+        ]
+      mechanical: true
+      detect:
+        - 'reuseExistingServer:\s*false'

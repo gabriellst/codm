@@ -1,0 +1,20 @@
+import { useTranslation } from 'react-i18next'
+import * as React from 'react'
+import { cn } from '@/lib/utils'
+import { type Status } from '@codm/client-typescript/typescript'
+
+interface ProductStatusProps extends React.ComponentProps<'div'> {}
+
+export function ProductStatus({ className, ...props }: ProductStatusProps) {
+	const { t } = useTranslation()
+	const statusLabel = (value: Status) => t(`enums.Status.${value}`)
+
+	return (
+		<div
+			className={cn('', className)}
+			{...props}
+		>
+			{/* Implement */}
+		</div>
+	)
+}

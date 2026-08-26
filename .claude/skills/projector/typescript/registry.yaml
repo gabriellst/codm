@@ -1,0 +1,420 @@
+registry:
+  type: backend
+  layer: application
+  depends_on: [projection, event, repository]
+  depended_by: []
+  context_reads: [event, handler, projection]
+
+  patterns:
+    - id: PRJTR-01
+      name: "Class extends Projector<E>"
+      when: always
+      rule: "@injectable() class <Name>Projector extends Projector<<Name>ProjectionEvent>"
+      wrong: "extends Handler / EventHandler — projectors are a sibling citizen, not a subtype"
+
+    - id: PRJTR-02
+      name: "Generic comes from the Projection's exported event union"
+      when: always
+      rule: "import { type <Name>ProjectionEvent } from '../<Name>' — use it as the generic parameter. No local union duplicated"
+      wrong: "type Handled = MessageReceivedEvent | … declared locally — duplicates the projection's source of truth"
+
+    - id: PRJTR-03
+      name: "Single ProjectionRepository dependency"
+      when: always
+      rule: "constructor(private repo: <Name>ProjectionRepository) { super() } — the only injected dependency"
+      wrong: "injecting ExternalMediator, use cases, other repositories — projectors only write to projections"
+
+    - id: PRJTR-04
+      name: "Plain switch (event.name) dispatch"
+      when: always
+      rule: |
+        async handle(event: <Name>ProjectionEvent, tx?: Transaction): Promise<void> {
+          switch (event.name) {
+            case '…': /* … */; return
+            default: { const _exhaustive: never = event; return _exhaustive }
+          }
+        }
+      wrong: |
+        // ProjectorHandlers mapped-type record:
+        protected readonly on: ProjectorHandlers<E> = { … }
+        // or a manually-keyed Record<string, …>:
+        protected readonly on: Record<string, (e, tx?) => Promise<void>> = { … }
+
+    - id: PRJTR-05
+      name: "Default: never for exhaustiveness"
+      when: always
+      rule: "default: { const _exhaustive: never = event; return _exhaustive } — fails compile when a new variant is added to the union without a case"
+      wrong: "no default clause — silent miss when union grows"
+
+    - id: PRJTR-06
+      name: "events array lists wire-string names"
+      when: always
+      rule: "readonly events = ['context.event_a', 'context.event_b', …] — matches the case labels in handle()"
+      wrong: "events derived from MessageReceivedEvent.name when the static name is the class name (TypeScript Function.name), not the wire string"
+
+    - id: PRJTR-07
+      name: "Canonical mutation: find → applyEvent → save"
+      when: "the event mutates an existing row"
+      rule: |
+        const row = await this.repo.findByKey(/* … */, tx)
+        if (!row) return  // replay-safe no-op
+        row.applyEvent(event)
+        await this.repo.save(row, tx)
+      wrong: |
+        // Reaching for an atomic op for a non-bulk, non-hot, non-monotonic mutation:
+        await this.repo.updateXyz(event.payload.x, tx)
+        // Should go through find/apply/save unless a trigger justifies the atomic op.
+
+    - id: PRJTR-08
+      name: "Atomic op requires a justification comment"
+      when: "the event is handled via repo.atomicOp(...) instead of find/apply/save"
+      rule: "A code comment above the case names the trigger: hot row, bulk over N rows, monotonic, conditional, or cache-mirror"
+      wrong: "atomic op with no justification — atomic ops are edge cases; future readers should see why this one bypasses the canonical flow"
+
+    - id: PRJTR-09
+      name: "Creation via Projection.create(event) overload"
+      when: "the handler creates a new projection row"
+      rule: "this.repo.insertIfNew(<Name>Projection.create(event), tx) — Projection.create is overloaded; the right shape is chosen by the event class"
+      wrong: |
+        // Building the row inline:
+        this.repo.insertIfNew({ id: event.payload.id, ... }, tx)
+        // Or per-event factory:
+        this.repo.insertIfNew(MessageProjection.fromMessageReceived(event), tx)
+
+    - id: PRJTR-10
+      name: "Path-A find-not-found is a no-op"
+      when: "the handler uses find → applyEvent → save and the row may not exist"
+      rule: "If find returns null, return silently. Out-of-order delivery shouldn't dead-letter the row"
+      wrong: "throw new BaseError('PROJECTION_NOT_FOUND') — projector failures put the row back in outbox; silent no-op is the replay-safe path"
+
+    - id: PRJTR-11
+      name: "One file per Projection"
+      when: always
+      rule: "Lives at `<ctx>/projections/projectors/<Name>Projector.ts` (or `ui/projections/projectors/` for cross-context). One Projector per Projection, not one per event"
+      wrong: |
+        MessageReceivedProjector.ts
+        MessageEditedProjector.ts
+        // Should collapse into MessageProjector.ts with one switch.
+
+    - id: PRJTR-12
+      name: "Cross-context projector lives in ui (BFF)"
+      when: "the projection's read shape spans multiple bounded contexts"
+      rule: "Projector lives in packages/api/typescript/src/ui/projections/projectors/, not in any domain context"
+      wrong: "domain context projector listening to events from another domain context — coupling belongs in the BFF"
+
+    - id: PRJTR-13
+      name: "Barrel export"
+      when: always
+      rule: "export * from './<Name>Projector' in projections/projectors/index.ts"
+      wrong: "not exported — BoundedContext.create has nothing to register"
+
+    - id: PRJTR-14
+      name: "Wired into BoundedContext.create"
+      when: always
+      rule: "<ctx>/index.ts passes `projectors` as a slot in BoundedContext.create({...})"
+      wrong: "projector defined but not wired — never registered on InternalMediator, never dispatched"
+
+    - id: PRJTR-15
+      name: "Async via outbox is the default; inline is opt-in"
+      when: always
+      rule: "By default, the projector is invoked only by OutboxDispatcher. Synchronous invocation is allowed when a use case takes the projector as a dependency and calls projector.handle(event, tx) for read-after-write — both async + inline runs are idempotent"
+      wrong: |
+        // Use case unconditionally bypassing the outbox by calling projector inline
+        // for every event, without a clear read-after-write justification.
+
+  bad_practices:
+    - id: bp-prjtr-01
+      name: "Per-event projector class"
+      severity: critical
+      wrong: |
+        class MessageReceivedProjector extends Projector<MessageReceivedEvent> { … }
+        class MessageEditedProjector   extends Projector<MessageEditedEvent>   { … }
+        // …N classes per projection.
+      right: |
+        class MessageProjector extends Projector<MessageProjectionEvent> {
+          async handle(event, tx?) {
+            switch (event.name) { /* one case per event */ }
+          }
+        }
+      reason: "One Projector per Projection. Per-event explosion is exactly the boilerplate this design eliminates."
+      mechanical: true
+      detect:
+        - 'extends\s+Projector<(?!\w*ProjectionEvent\b)\w+Event>'
+
+    - id: bp-prjtr-02
+      name: "ProjectorHandlers / mapped-type record dispatch"
+      severity: critical
+      wrong: |
+        protected readonly on: ProjectorHandlers<E> = {
+          'channel.message_received': (event, tx) => …,
+          'channel.message_edited':   (event, tx) => …,
+        }
+      right: |
+        async handle(event: E, tx?: Transaction): Promise<void> {
+          switch (event.name) {
+            case 'channel.message_received': /* … */; return
+            case 'channel.message_edited':   /* … */; return
+            default: { const _exhaustive: never = event; return _exhaustive }
+          }
+        }
+      reason: "Plain switch + never exhaustiveness is more legible, no type-system magic, idiomatic TS."
+      mechanical: true
+      detect:
+        - 'ProjectorHandlers<'
+        - 'readonly\s+on\s*:\s*Record<'
+
+    - id: bp-prjtr-03
+      name: "Find-mutate-save when an atomic op is the right tool"
+      severity: critical
+      wrong: |
+        case 'channel.message_delivered': {
+          for (const id of event.payload.messageIds) {
+            const msg = await this.repo.findById(id, tx)
+            if (!msg) continue
+            msg.props.deliveredAt = event.payload.at
+            await this.repo.save(msg, tx)
+          }
+        }
+      right: |
+        case 'channel.message_delivered':
+          // Bulk over N IDs — canonical would be N+1.
+          await this.repo.markDeliveredMany(event.payload.messageIds, event.payload.at, tx)
+          return
+      reason: "Bulk events justify an atomic op. N+1 round-trips + read-modify-write races defeat the projection."
+      mechanical: false
+
+    - id: bp-prjtr-04
+      name: "Atomic op for a single-row, non-hot, non-monotonic mutation"
+      severity: moderate
+      wrong: |
+        case 'channel.message_edited':
+          // Adding an atomic updateMessageContent op when find/apply/save would work fine
+          await this.repo.updateMessageContent(/* … */, tx)
+      right: |
+        case 'channel.message_edited': {
+          const msg = await this.repo.findByPlatformId(/* … */, tx)
+          if (!msg) return
+          msg.applyEvent(event)
+          await this.repo.save(msg, tx)
+          return
+        }
+      reason: "Canonical Path A is the default. Atomic ops fragment the API and require justification — each one carries the cost of an extra method on the repo forever."
+      mechanical: false
+
+    - id: bp-prjtr-05
+      name: "Projector calling a use case"
+      severity: critical
+      wrong: |
+        @injectable()
+        class RemoteProjector extends Projector<RemoteProjectionEvent> {
+          constructor(
+            private repo: RemoteProjectionRepository,
+            private notifyUser: NotifyUserUseCase,  // ← wrong dep
+          ) { super() }
+        }
+      right: |
+        // Two reactions to the same event:
+        //   - Internal handler in <ctx>/handlers/internal.ts → calls NotifyUserUseCase
+        //   - Projector in <ctx>/projections/projectors/ → writes the projection
+      reason: "Projectors only write to projections. Side effects on aggregates / external mediator belong to handlers."
+      mechanical: true
+      detect:
+        - ':\s*\w+UseCase\b'
+
+    - id: bp-prjtr-06
+      name: "Cross-context projector in a domain context"
+      severity: critical
+      wrong: |
+        // packages/api/typescript/src/channel/projections/projectors/ChannelSidebarProjector.ts
+        // subscribes to events from 'patient' and 'appointment'.
+      right: |
+        // packages/api/typescript/src/ui/projections/projectors/ChannelSidebarProjector.ts
+        // Cross-context projections live in the BFF (ui).
+      reason: "Domain contexts must not couple to other domain contexts' events. The ui context is the architectural place where cross-context composition is allowed."
+      mechanical: false
+
+    - id: bp-prjtr-07
+      name: "Throwing on not-found in Path A"
+      severity: moderate
+      wrong: |
+        case 'channel.message_edited': {
+          const msg = await this.repo.findByPlatformId(/* … */)
+          if (!msg) throw new BaseError('MESSAGE_NOT_PROJECTED')
+          msg.applyEvent(event)
+          await this.repo.save(msg, tx)
+        }
+      right: |
+        case 'channel.message_edited': {
+          const msg = await this.repo.findByPlatformId(/* … */)
+          if (!msg) return  // replay-safe no-op
+          msg.applyEvent(event)
+          await this.repo.save(msg, tx)
+        }
+      reason: "An out-of-order event (edit before create) shouldn't dead-letter the row. Return silently."
+      mechanical: true
+      detect:
+        - 'if\s*\(\s*!\w+\s*\)\s*throw\b'
+
+    - id: bp-prjtr-08
+      name: "Building the projection row inline"
+      severity: moderate
+      wrong: |
+        case 'channel.message_received':
+          await this.repo.insertIfNew({
+            channelId: event.payload.channelId,
+            // … inline construction
+          }, tx)
+      right: |
+        case 'channel.message_received':
+          await this.repo.insertIfNew(MessageProjection.create(event), tx)
+      reason: "Construction logic belongs on the Projection (overloaded create). Inline construction in the projector scatters the row shape across multiple files."
+      mechanical: true
+      detect:
+        - 'insertIfNew\(\s*\{'
+
+    - id: bp-prjtr-09
+      name: "Inline projector invocation without read-after-write justification"
+      severity: moderate
+      wrong: |
+        // Use case calling projector synchronously just because — no read-after-write need
+        await this.someProjector.handle(event, tx)
+      right: |
+        // Default: rely on the outbox path. Inline only when:
+        //   (a) the response payload depends on a projection-backed read, AND
+        //   (b) eventual consistency would surface a stale state to the user.
+      reason: "Inline couples the use case to the projector. Reach for it only when async + frontend refetch can't paper over the eventual consistency."
+      mechanical: false
+
+    - id: bp-prjtr-10
+      name: "Mixing projector logic with handler logic"
+      severity: moderate
+      wrong: |
+        @injectable()
+        class AppointmentConfirmedHandler extends EventHandler<typeof AppointmentConfirmedEvent> {
+          async handle(event) {
+            await this.externalMediator.publish(new SharedAppointmentConfirmed(...))
+            await this.patientProjectionRepo.upsert(...)  // ← projector work in handler
+          }
+        }
+      right: |
+        // Two reactions to the same event:
+        // - AppointmentConfirmedHandler (handlers/internal.ts) publishes integration event
+        // - PatientProjector (projections/projectors/) updates the projection
+      reason: "Handlers do write-side effects + integration publishing. Projectors update projections. Mixing the two muddles the failure semantics and the wiring."
+      mechanical: false
+
+  snippet:
+    skeleton: |
+      import { injectable } from 'tsyringe-neo'
+      import type { Transaction } from '@codm/core-typescript'
+      import { Projector } from '@codm/core-typescript'
+      import { {{Name}}Projection, type {{Name}}ProjectionEvent } from '../{{Name}}'
+      import { {{Name}}ProjectionRepository } from '../{{Name}}ProjectionRepository'
+
+      /**
+       * Read-side counterpart of EventHandler. One per Projection.
+       *
+       * Canonical mutation flow: find → projection.applyEvent(event) → save
+       * Creation: repo.insertIfNew({{Name}}Projection.create(event), tx)
+       * Atomic ops on the repo are edge cases — see {{Name}}ProjectionRepository.
+       *
+       * Async via outbox by default. A use case MAY invoke this synchronously
+       * inside its UnitOfWork (`projector.handle(event, tx)`) for read-after-write
+       * consistency — opt-in coupling.
+       */
+      @injectable()
+      export class {{Name}}Projector extends Projector<{{Name}}ProjectionEvent> {
+      	constructor(private repo: {{Name}}ProjectionRepository) {
+      		super()
+      	}
+
+      	readonly events = [
+      		// '<context>.<event_a>',
+      		// '<context>.<event_b>',
+      	]
+
+      	async handle(event: {{Name}}ProjectionEvent, tx?: Transaction): Promise<void> {
+      		switch (event.name) {
+      			// ── Creation: typed factory on the projection ─────────────
+      			// case '<context>.<creating_event>':
+      			//   await this.repo.insertIfNew({{Name}}Projection.create(event), tx)
+      			//   return
+
+      			// ── Canonical mutation: find → applyEvent → save ──────────
+      			// case '<context>.<mutating_event>': {
+      			//   const row = await this.repo.findByKey(/* key */, tx)
+      			//   if (!row) return  // replay-safe no-op
+      			//   row.applyEvent(event)
+      			//   await this.repo.save(row, tx)
+      			//   return
+      			// }
+
+      			// ── Atomic op (edge case — justify the trigger): ──────────
+      			// hot row / bulk / monotonic / conditional / cache-mirror
+      			// case '<context>.<atomic_event>':
+      			//   await this.repo.atomicOp(/* key */, /* value */, tx)
+      			//   return
+
+      			default: {
+      				const _exhaustive: never = event
+      				return _exhaustive
+      			}
+      		}
+      	}
+      }
+    exemplar: |
+      // packages/api/typescript/src/<ctx>/projections/projectors/<Name>Projector.ts
+      import { injectable } from 'tsyringe-neo'
+      import type { Transaction } from '@codm/core-typescript'
+      import { Projector } from '@codm/core-typescript'
+      import { <Name>Projection, type <Name>ProjectionEvent } from '../<Name>'
+      import { <Name>ProjectionRepository } from '../<Name>ProjectionRepository'
+
+      @injectable()
+      export class <Name>Projector extends Projector<<Name>ProjectionEvent> {
+        constructor(private repo: <Name>ProjectionRepository) { super() }
+        readonly events = ['<context>.<event_a>', '<context>.<event_b>']
+
+        async handle(event: <Name>ProjectionEvent, tx?: Transaction): Promise<void> {
+          switch (event.name) {
+            case '<context>.<creating_event>':
+              await this.repo.insertIfNew(<Name>Projection.create(event), tx)
+              return
+            case '<context>.<mutating_event>': {
+              const row = await this.repo.findByKey(/* key */, tx)
+              if (!row) return
+              row.applyEvent(event)
+              await this.repo.save(row, tx)
+              return
+            }
+            default: {
+              const _exhaustive: never = event
+              return _exhaustive
+            }
+          }
+        }
+      }
+
+  scaffold: |
+    # Scaffold the projector skeleton:
+    bun cli projector <context> <Name>
+
+    # Print to stdout for review without writing:
+    bun cli projector <context> <Name> --print
+
+    # The CLI emits:
+    #   packages/api/typescript/src/<context>/projections/projectors/<Name>Projector.ts
+    #
+    # Prereq: the Projection + ProjectionRepository must exist first
+    # (run `bun cli projection <context> <Name>` if not yet scaffolded).
+    #
+    # Then manually:
+    # 1. Replace the case-stubs in the switch with the events from <Name>ProjectionEvent
+    # 2. Populate readonly events = [...] with the same event names
+    # 3. Pick the path per event: creation (Projection.create + insertIfNew) / Path A (find → applyEvent → save) / Path B atomic (justify the trigger in a comment)
+    # 4. Export through projections/projectors/index.ts (the CLI suggests the line)
+    # 5. Add `projectors` slot to BoundedContext.create({...}) in <ctx>/index.ts (if not yet wired)
+    # 6. Add an integration test colocated alongside the projector (replay-safety required)
+    #
+    # For cross-context (BFF) projectors, scaffold in `ui` instead:
+    # bun cli projector ui <Name>

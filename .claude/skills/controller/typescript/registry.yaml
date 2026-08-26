@@ -1,0 +1,1013 @@
+registry:
+  type: backend
+  layer: interface
+  depends_on: [usecase, errors, schema]
+  depended_by: [sdk]
+  context_reads: [schema, usecase]
+
+  patterns:
+    # ── Structural patterns (always required) ──────────────────────────
+    - id: CTRL-01
+      name: "InputSchema with .example()"
+      when: always
+      rule: "const XInputSchema = z.object({...}).example([{...}])"
+      wrong: "schema without .example() or using .meta({ examples })"
+    - id: CTRL-02
+      name: "OutputSchema with .example()"
+      when: always
+      rule: "const XOutputSchema = z.object({...}).example([{...}])"
+    - id: CTRL-03
+      name: "@injectable() class extends Controller"
+      when: always
+      rule: "@injectable() class X extends Controller<typeof XInputSchema, typeof XOutputSchema>"
+    - id: CTRL-04
+      name: "path + method declaration"
+      when: always
+      rule: "readonly path = '/resources'; readonly method = 'get'|'post'|'put'|'delete'"
+    - id: CTRL-05
+      name: "handle() returns { status, data }"
+      when: always
+      rule: "return { status: HttpStatusCode.OK, data: result }"
+      wrong: "returning {} as Type or missing status code"
+    - id: CTRL-06
+      name: "Barrel export"
+      when: always
+      rule: "export { X } from './X' in controllers/index.ts"
+      wrong: "controller not exported — silently not registered"
+    - id: CTRL-07
+      name: "InputSchema envelope: only body/query/params/ctx at the root"
+      when: always
+      rule: "Every InputSchema top-level key is exactly one of `body`, `query`, `params`, `ctx`. Domain fields live nested under their HTTP source. The router assembles `{ body, params, query, ctx, raw }` — flat fields are NEVER populated and resolve to undefined at runtime. Compiler-enforced: the `ValidEnvelope` constraint on `Controller<InputSchema, …>` (core/src/types/Controller.ts) makes a flat root key a tsc error at the controller class declaration (negative proof: core/src/types/Controller.typecheck.test.ts)."
+      wrong: "const XInput = z.object({ ctx, storeId: z.uuid(), name: z.string() }) — storeId/name flat at root → request.storeId is undefined. Also: ctx nested inside z.paginatedQuery(...)."
+
+    # ── Conditional patterns (apply when condition matches) ────────────
+    - id: CTRL-C01
+      name: "paginatedQuery input"
+      when: "GET listing endpoint"
+      rule: "query: z.paginatedQuery({ filter: z.string().optional() }) — paginatedQuery nested UNDER query:, never as the root schema"
+      wrong: "z.paginatedQuery({...}) as the root InputSchema (flat-merges page/limit/filter), or manual z.object({ page: z.number(), limit: z.number() })"
+    - id: CTRL-C10
+      name: "Reads are GET, not POST"
+      when: "endpoint only fetches/lists/reports (no state change)"
+      rule: "readonly method = 'get'; filters in query: z.paginatedQuery({...})"
+      wrong: "POST for a list/report endpoint — breaks REST + SDK generation"
+    - id: CTRL-C12
+      name: "Array query param uses z.stringToArray"
+      when: "a GET query field accepts multiple values (ids, statuses)"
+      rule: "query: z.paginatedQuery({ storeIds: z.stringToArray(z.uuid(), { min: 1 }) })"
+      wrong: "z.array(z.uuid()) in a query schema — HTTP delivers CSV/repeated strings, router keeps only value[0]"
+    - id: CTRL-C13
+      name: "Boolean query param uses z.stringToBoolean"
+      when: "a GET query field is a boolean flag"
+      rule: "query: z.paginatedQuery({ active: z.stringToBoolean() })"
+      wrong: "z.boolean() in a query schema — query values arrive as strings"
+    - id: CTRL-C14
+      name: "Date field: stringToDate in query, coerce/iso in body"
+      when: "a date field is present"
+      rule: "query: z.stringToDate() (raw query string) ; body: z.coerce.date() or z.iso.datetime() (pre-parsed JSON)"
+      wrong: "z.stringToDate() inside a POST body schema, or z.coerce.date() inside a query schema"
+    - id: CTRL-C02
+      name: "Path params input"
+      when: "endpoint with :id (GET/:id, PUT/:id, DELETE/:id)"
+      rule: "params: z.object({ id: z.string() })"
+    - id: CTRL-C03
+      name: "Body input"
+      when: "POST or PUT with body"
+      rule: "body: z.object({...}) with format validation"
+    - id: CTRL-C04
+      name: "Schema reuse from usecase"
+      when: "controller has a use case dependency AND the controller's input schema (body, params, or query) defines fields inline with z.object({...}) instead of importing and using UseCaseInputSchema.omit(). Compare the controller's inline fields against the use case's InputSchema from the dependency — if they overlap, this applies."
+      rule: >
+        body: UseCaseInputSchema.omit({ injectedField: true }). Lifecycle: an inline
+        z.object body is the CORRECT shape while no use case exists (contract-first /
+        CTRL-C05 mock mode — the SDK ships before the use case); the moment the use case
+        lands with overlapping fields, the body REFACTORS to derive via .omit() in the
+        same change. The violation is coexistence (use case InputSchema + a parallel
+        inline body), not the inline body itself.
+      wrong: "duplicating use case fields inline WHILE the use case's InputSchema exists"
+    - id: CTRL-C05
+      name: "Mock controller (prototyping)"
+      when: "endpoint mocked before usecase exists"
+      rule: >
+        override mockController = true, handle() returns hardcoded data. In this mode the
+        body IS a hand-authored z.object (there is no InputSchema to derive from) — that is
+        canon, not a CTRL-C04 violation. Graduation: when the use case lands, switch the
+        body to UseCaseInputSchema.omit({...}) (CTRL-C04) in the same change.
+      wrong: "creating empty usecase just to satisfy DI"
+    - id: CTRL-C06
+      name: "Error mapping"
+      when: "usecase can throw ApplicationErrors"
+      rule: "errors registered in GlobalErrorMapper with HttpStatusCode"
+    - id: CTRL-C07
+      name: "Middleware declaration"
+      when: "endpoint needs auth beyond context defaults"
+      rule: "override middlewares = [ExtraMiddleware]"
+      wrong: "re-declaring middleware already in context default"
+    - id: CTRL-C09
+      name: "VO schema reuse"
+      when: "input field maps to a Value Object (except email — use z.email())"
+      rule: "address: AddressSchema.input(), phone: PhonePlainSchema.input()"
+      wrong: "inline z.string()/z.object() when VO schema exists"
+    - id: CTRL-C11
+      name: "Use z.email() for email fields"
+      when: "controller schema has an email field"
+      rule: "email: z.email()"
+      wrong: "email: EmailSchema.input() or email: z.string().email()"
+    - id: CTRL-C15
+      name: "Query param string converters"
+      when: "query params with non-string types"
+      rule: "z.stringToNumber(), z.stringToBoolean(), z.stringToDate(); arrays via z.stringToArray(element, { min?, max? }) — e.g. z.stringToArray(z.uuid(), { min: 1 }). The router preserves repeated params as arrays; the helper also accepts single + comma-separated values. Do NOT chain .min()/.max() on it (returns a ZodPipe) — use the options arg."
+      wrong: "z.number()/z.boolean() in query params; z.array(z.uuid()) in query (never populated as array); z.stringToArray(z.uuid()).min(1)"
+    - id: CTRL-C16
+      name: "Refinements after .omit() on use case schemas"
+      when: "controller needs cross-field validation (e.g., date range, password match) AND uses UseCaseInputSchema.omit()"
+      rule: "Apply .refine() on the controller InputSchema AFTER composing body with .omit(). Use case schemas must NOT have .refine() — Zod v4 throws on .omit() of refined schemas."
+      wrong: "Importing a use case schema that has .refine() and calling .omit() on it — Zod v4 throws '.omit() cannot be used on object schemas containing refinements'"
+      snippet: |
+        import { CreateXInputSchema } from '@context/usecases/CreateX'
+        import { InterfaceErrors } from '@context/errors'
+
+        export const ControllerInputSchema = z
+          .object({
+            body: CreateXInputSchema.omit({ actorId: true }),
+            ctx: z.object({
+              session: z.object({ actorId: z.string(), ownerId: z.string() }),
+            }),
+          })
+          .refine(data => data.body.startDate < data.body.endDate, {
+            error: 'INVALID_DATE_RANGE' as InterfaceErrors,
+          })
+          .example([...])
+
+    - id: CTRL-C17
+      name: "MCP exposure is a static on the controller, not a list elsewhere"
+      when: "the endpoint should be callable by a model as an MCP tool"
+      reason: "It used to live in a central manifest with seven parallel structures kept in sync by hand, so 'what exactly can a model call?' was un-answerable without leaving the file. `middlewares` already established the idiom: a cross-cutting property of an endpoint is declared ON the endpoint. The OpenAPI emitter reads the static during the same walk that builds the path — no registry, no side-effect module."
+      rule: "`static override readonly mcpScopes = [McpScope.X]`, right above `readonly path`, with `McpScope` from `@codm/contracts-typescript/wire/enums`. ABSENT is the default and absent means NOT EXPOSED — measured: with no filter, `@kubb/plugin-mcp` turns every operation in the spec into a tool, so the security property comes entirely from this being opt-in. A non-empty `mcpScopes` also makes `AgentIdentityMiddleware` mandatory (appended by `Controller.executeMiddlewares`, see `/middleware` MID-C06) — WITHOUT a line in `middlewares`."
+      wrong: "adding the controller class to a central `MCP_SCOPES` record, or declaring the scope as a bare string literal instead of the contracts enum."
+
+    - id: CTRL-C18
+      name: "Public controller — the empty middleware chain is a decision, documented on the class"
+      when: "the endpoint must answer a caller that cannot hold a session/identity yet (process readiness/health is the only case today)"
+      reason: "`HealthController` (shared/controllers/Health.ts) is asked by the shell supervisor BEFORE any session exists — requiring identity to answer 'did the process finish booting?' would make readiness undiscoverable. `Controller.effectiveMiddlewares` (core/src/types/Controller.ts) only auto-appends `AgentIdentityMiddleware` when `static mcpScopes` is non-empty, so a class declaring neither `override middlewares` nor `mcpScopes` genuinely ships with an empty chain — the same absence a controller could carry by oversight."
+      rule: "`middlewares` stays at the inherited `[]` default (never declared) AND the class declares NO `static mcpScopes`. Because the framework treats this absence as meaningful, the class MUST carry a docblock stating why no middleware applies — review rejects a public controller without one, since a bare class with no `override middlewares` line is otherwise indistinguishable from a context default nobody wired yet."
+      snippet: |
+        /**
+         * O PRIMEIRO CONTROLLER PUBLICO DO REPO, e a ausencia de `middlewares` e a decisao, nao um
+         * esquecimento. Quem pergunta se o daemon subiu e o supervisor da shell, ANTES de existir
+         * qualquer sessao — exigir identidade para responder "eu terminei de subir" e exigir que o
+         * app esteja pronto para descobrir se ele esta pronto.
+         */
+        @injectable()
+        export class HealthController extends Controller<typeof HealthInputSchema, typeof HealthOutputSchema> {
+          readonly path = '/health'
+          // no `override middlewares`, no `static mcpScopes`
+        }
+      wrong: "omitting `override middlewares`/leaving the class undocumented and hoping the empty default reads as intentional; or reaching for `static mcpScopes = []` / a dedicated `PublicMiddleware` marker to signal it — the framework already treats absence as public, a marker would be a second idiom for the same fact."
+
+    # ── Code patterns extracted from implementations ──────────────────
+    - id: CTRL-P01
+      name: "ctx.session for actor/owner injection"
+      when: "handle() needs actorId or ownerId for the current authenticated user/tenant"
+      reason: "Authenticated requests carry the actor (user performing the action) and the owner (tenant) on `ctx.session`, populated by the auth middleware. Controllers spread these into the use case input instead of accepting them from the body."
+      rule: |
+        export const ControllerInputSchema = z.object({
+          body: UseCaseInputSchema.omit({ actorId: true }),
+          ctx: z.object({
+            session: z.object({ actorId: z.string(), ownerId: z.string() }),
+          }),
+        })
+
+        async handle(request: this['input']): Promise<this['output']> {
+          const { body } = request
+          const result = await this.useCase.execute({
+            ...body,
+            actorId: request.ctx.session.actorId,
+          })
+          return { status: HttpStatusCode.OK, data: result }
+        }
+
+    - id: CTRL-P02
+      name: "Use case schema .omit() for body"
+      when: "controller input fields (body, params, query, or any schema param) overlap with the use case InputSchema. Compare the inlined use case dep — if any schema param duplicates fields from the use case schema instead of importing and reusing it, this applies."
+      reason: "Avoids duplicating field definitions. The use case schema is the single source of truth for field shapes and validation. Controller only composes it into HTTP input structure."
+      rule: |
+        import { CreateXInputSchema, CreateXOutputSchema } from '@context/usecases/CreateX'
+
+        export const ControllerInputSchema = z.object({
+          body: CreateXInputSchema.omit({ actorId: true }),
+          ctx: z.object({
+            session: z.object({ actorId: z.string(), ownerId: z.string() }),
+          }),
+        })
+
+        export const ControllerOutputSchema = CreateXOutputSchema
+
+    - id: CTRL-P03
+      name: "Use case output schema direct reuse"
+      when: "controller output schema has the same fields as the use case OutputSchema. Compare the inlined use case dep — if the controller re-declares output fields instead of importing OutputSchema, this applies."
+      wrong: "Controller declares its own output schema with z.object({...}) instead of importing from use case, OR output schema is completely absent when a use case dependency exists"
+      always_flag_when: >
+        Controller declares its own output schema with z.object({...}) or z.void() AND the use case
+        dependency (from the inlined dep) exports an OutputSchema with the same or overlapping fields.
+        If the controller's output is NOT imported from the use case (no import statement for
+        UseCaseOutputSchema), this is ALWAYS F — even if the fields look simple (e.g. { success: z.boolean() }
+        or { id: z.string() }). The use case OutputSchema is the single source of truth.
+      reason: "Prevents schema drift between controller and use case. The use case already defines the contract; the controller just wraps it with .example() for OpenAPI."
+      rule: |
+        import { CreateXOutputSchema } from '@context/usecases/CreateX'
+
+        // Direct reuse (output already has examples or doesn't need them)
+        export const ControllerOutputSchema = CreateXOutputSchema
+
+        // Or add examples for OpenAPI
+        export const ControllerOutputSchema = CreateXOutputSchema.example([
+          { id: '123e4567-e89b-12d3-a456-426614174000' },
+        ])
+
+    - id: CTRL-P04
+      name: "Void output for fire-and-forget"
+      when: "operation returns only a status code with no data"
+      reason: "Some operations (sign-up, password reset, delete with no body) return only HTTP status. z.void() signals this to the SDK generator."
+      rule: |
+        export const ControllerOutputSchema = z.void()
+
+        // In handle():
+        return { status: HttpStatusCode.OK }
+        // or for create:
+        return { status: HttpStatusCode.CREATED }
+        // or for update with no body:
+        return { status: HttpStatusCode.NO_CONTENT }
+
+    - id: CTRL-P05
+      name: "ID-only create output"
+      when: "POST endpoint returns only the created resource's ID"
+      reason: "Standard pattern for create operations — the frontend only needs the ID to navigate or refetch. Keeps the response minimal."
+      rule: |
+        export const ControllerOutputSchema = z
+          .object({ id: z.string() })
+          .example([{ id: '123e4567-e89b-12d3-a456-426614174000' }])
+
+        // In handle():
+        return {
+          status: HttpStatusCode.CREATED,
+          data: { id: result.resourceId },
+        }
+
+    - id: CTRL-P06
+      name: "Success boolean output for actions"
+      when: "PATCH/DELETE action endpoint that returns success confirmation"
+      reason: "Action endpoints (cancel, confirm, complete) need a simple success signal. The boolean tells the frontend the action succeeded without exposing internal state."
+      rule: |
+        export const ControllerOutputSchema = z
+          .object({ success: z.boolean() })
+          .example([{ success: true }])
+
+    - id: CTRL-P07
+      name: "Status action path pattern"
+      when: "endpoint changes resource status or triggers a named action. Check if the path ends with a verb segment like /:id/cancel, /publish, /rollback, /confirm, /complete, /approve, /reject, /archive, /activate, /deactivate, /link, /unlink. Any PATCH endpoint with an action verb in the path applies."
+      reason: "RESTful convention for sub-resource actions. Uses PATCH since it partially updates (status change), and the action name is the last path segment."
+      rule: |
+        readonly path = '/:id/cancel'   // or /confirm, /complete
+        readonly method = 'patch'
+
+        export const ControllerInputSchema = z.object({
+          params: z.object({ id: z.string() }),
+          ctx: z.object({
+            session: z.object({ actorId: z.string(), ownerId: z.string() }),
+          }),
+        })
+
+    - id: CTRL-P09
+      name: "Refine with InterfaceErrors"
+      when: "cross-field validation needed (e.g., password confirmation)"
+      reason: "The .refine() error must use InterfaceErrors typing so the SDK can expose the error code to the frontend for i18n and UX handling."
+      rule: |
+        import { InterfaceErrors } from '@context/errors'
+
+        export const ControllerInputSchema = z
+          .object({
+            body: z.object({
+              password: z.string().min(8).max(32),
+              confirmPassword: z.string().min(8).max(32),
+            }),
+          })
+          .refine(data => data.body.password === data.body.confirmPassword, {
+            error: 'PASSWORDS_DONT_MATCH' as InterfaceErrors,
+            path: ['confirmPassword'],
+          })
+          .example([...])
+
+    - id: CTRL-P10
+      name: "Middleware swap pattern"
+      when: "controller needs a different middleware than context default"
+      reason: "Some endpoints in a context need a different auth strategy (e.g., doctor endpoint in an appointment context that defaults to member auth). Swap by adding the new one and skipping the default."
+      rule: |
+        import { AuthActorMiddleware } from '@auth/middlewares/AuthActorMiddleware'
+
+        // Example: skip actor auth for pre-context operations
+        override skipMiddlewares: (Middleware | MiddlewareClass)[] = [AuthActorMiddleware]
+
+    - id: CTRL-P11
+      name: "skipMiddlewares for pre-context operations"
+      when: "controller operates before the actor has an established session (sign-up, accept invite, public endpoints)"
+      reason: "Operations like SignUp, AcceptInvite, ResetPassword happen before the actor has a session. Default auth middleware would reject them, so they are explicitly skipped."
+      rule: |
+        override skipMiddlewares: (Middleware | MiddlewareClass)[] = [AuthMiddleware]
+
+        export const ControllerInputSchema = z.object({
+          body: UseCaseInputSchema,
+        })
+
+    - id: CTRL-P12
+      name: "Local BodySchema extraction"
+      when: "body schema is complex with multiple VO schemas and would be hard to read inline"
+      reason: "Extracting body into a named const improves readability when using many VO schemas or adding JSDoc comments. The main InputSchema then references this local schema."
+      rule: |
+        const BodySchema = z.object({
+          fullName: PersonNameSchema,
+          cpf: CPFSchema,
+          email: z.email(),
+          phone: PhonePlainSchema.input(),
+          address: AddressSchema.input().optional(),
+        })
+
+        export const ControllerInputSchema = z
+          .object({
+            body: BodySchema,
+            ctx: z.object({
+              session: z.object({ actorId: z.string(), ownerId: z.string() }),
+            }),
+          })
+          .example([...])
+
+    - id: CTRL-P14
+      name: "Shared/context schema reuse in body"
+      when: "body fields map to shared schemas or context-specific schemas"
+      reason: "Shared schemas (PriceRangeSchema, DurationRangeSchema, DocumentSchema) and VO .input() schemas already carry validation rules. Reusing them avoids duplication and keeps validation consistent."
+      rule: |
+        import { PriceRangeSchema, DurationRangeSchema } from '@service/objects'
+        import { WeeklyScheduleSchema, DateOverrideSchema } from '@clinic/objects'
+
+        export const ControllerInputSchema = z.object({
+          body: z.object({
+            priceRange: PriceRangeSchema,
+            durationMinutesRange: DurationRangeSchema,
+            availability: WeeklyScheduleSchema.input().optional(),
+            dateOverrides: z.array(DateOverrideSchema.input()).optional(),
+          }),
+        })
+
+    - id: CTRL-P15
+      name: "Params + body + ctx.session triple destructure"
+      when: "update endpoint with path param ID, body fields, and session-injected actorId"
+      reason: "Most update controllers combine all three input sources. The handle() destructures once and spreads body into the use case input plus the path id and the session actorId."
+      rule: |
+        export const ControllerInputSchema = z.object({
+          params: z.object({ unitId: z.string() }),
+          body: UpdateXInputSchema.omit({ unitId: true, actorId: true }),
+          ctx: z.object({
+            session: z.object({ actorId: z.string(), ownerId: z.string() }),
+          }),
+        })
+
+        async handle(request: this['input']): Promise<this['output']> {
+          const { params, body } = request
+          const result = await this.updateX.execute({
+            ...body,
+            unitId: params.unitId,
+            actorId: request.ctx.session.actorId,
+          })
+          return { status: HttpStatusCode.OK, data: result }
+        }
+
+    - id: CTRL-P16
+      name: "Owner guard via RequireOwner middleware"
+      when: "controller mutates state (POST/PATCH/PUT/DELETE) and needs the request scoped to the authenticated owner (tenant)"
+      reason: "Authorization is enforced at the middleware layer. RequireOwner is declared in `override middlewares` — the controller itself just reads ctx.user.id and ctx.session.ownerId, injected by AuthAccountMiddleware + RequireOwner."
+      rule: |
+        import { injectable } from 'tsyringe-neo'
+        import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
+        import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
+        import { RequireOwner } from '@owner/middlewares'
+
+        @injectable()
+        export class UpdateXController extends Controller<...> {
+          override middlewares = [AuthAccountMiddleware, RequireOwner]
+          constructor(private readonly updateX: UpdateX) { super() }
+
+          async handle(request: this['input']): Promise<this['output']> {
+            const { params, body } = request
+            await this.updateX.execute({
+              ...body,
+              xId: params.xId,
+              userId: request.ctx.user.id,
+              ownerId: request.ctx.session.ownerId,
+            })
+            return { status: HttpStatusCode.NO_CONTENT }
+          }
+        }
+
+    - id: CTRL-P17
+      name: "SSE/streaming controller"
+      when: "endpoint streams events via Server-Sent Events"
+      reason: "SSE endpoints return a ReadableStream instead of JSON. They override contentType and return a raw Response. This is a special case handled by the framework."
+      rule: |
+        override contentType: MimeTypes = MimeTypes['.stream']
+
+        async handle(request: this['input']): Promise<any> {
+          const stream = new ReadableStream({
+            start: controller => {
+              controller.enqueue(encoder.encode(': connected\n\n'))
+              // subscribe to events...
+              request.raw.signal.addEventListener('abort', () => {
+                // cleanup...
+                controller.close()
+              })
+            },
+            cancel: () => { /* cleanup */ },
+          })
+          return new Response(stream, {
+            headers: {
+              'Content-Type': 'text/event-stream',
+              'Cache-Control': 'no-cache',
+              Connection: 'keep-alive',
+            },
+          })
+        }
+
+  bad_practices:
+    - id: bp-02
+      name: "Redundant manual validation in controller"
+      severity: moderate
+      mechanical: true
+      detect:
+        - '\.safeParse\(request\.(query|body|params)\b'
+      wrong: |
+        // Framework already validates via inputSchema — don't call safeParse manually
+        const queryResult = querySchema.safeParse(request.query)
+        if (!queryResult.success) {
+          throw new BaseError('VALIDATION_ERROR', message)
+        }
+      right: |
+        // Let the framework handle validation automatically
+        // Just define inputSchema — Controller base class validates before handle()
+        async handle(request: this['input']): Promise<this['output']> {
+          // request is already validated at this point
+          const result = await this.useCase.execute(request.body)
+          return { status: HttpStatusCode.OK, data: result }
+        }
+
+    - id: bp-03
+      name: "Returning empty object with type assertion"
+      severity: critical
+      mechanical: true
+      detect:
+        - '\{\}\s+as\b'
+      wrong: |
+        // Never return {} as Type — hides the real problem
+        return { status: HttpStatusCode.BAD_REQUEST, data: {} as this['output']['data'] }
+      right: |
+        // Throw an appropriate error instead
+        throw new BaseError<ApplicationErrors>('CLINIC_NOT_FOUND')
+
+    - id: bp-04
+      name: "Inline enum values or z.nativeEnum() instead of z.enum(EnumRef)"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'z\.nativeEnum\('
+        - 'z\.enum\(\s*\['
+      wrong: |
+        // Hardcoded strings — frontend doesn't know valid values
+        status: z.enum(['PENDING', 'ACTIVE', 'INACTIVE'])
+        // z.nativeEnum is NOT the project standard
+        status: z.nativeEnum(OrderStatus)
+      right: |
+        // Always use z.enum() with TypeScript enum reference — SDK generates type-safe enum
+        import { OrderStatus } from '@codm/contracts-typescript/wire/enums'
+        status: z.enum(OrderStatus)
+
+    - id: bp-05
+      name: "Query params without string conversion"
+      severity: critical
+      mechanical: false
+      wrong: |
+        // Query params arrive as strings — z.number() will fail
+        query: z.object({ page: z.number().optional() })
+      right: |
+        // Use z.stringTo*() converters for non-string query params
+        query: z.paginatedQuery({
+          active: z.stringToBoolean().optional(),
+          count: z.stringToInteger().optional(),
+        })
+
+    - id: bp-06
+      name: "Context without router registration"
+      severity: critical
+      mechanical: false
+      wrong: |
+        // Created context with controllers but forgot to register router
+        // Controllers exist but are unreachable
+      right: |
+        // Declare the context in CONTEXTS (src/shared/contexts.ts) and wire its router into the
+        // ROUTERS map in packages/api/typescript/src/routers.ts (satisfies Record<ContextModule, Router>)
+        // All new HTTP contexts must be registered before SDK generation
+
+    - id: bp-07
+      name: "Controller not exported in barrel"
+      severity: critical
+      mechanical: false
+      wrong: |
+        // Controller file exists but no export in controllers/index.ts
+        // Result: controller silently not registered, no error at startup
+      right: |
+        // controllers/index.ts
+        export { CreateProductController } from './CreateProduct'
+        export { UpdateProductController } from './UpdateProduct'
+
+    - id: bp-08
+      name: "Format validation in domain/use case"
+      severity: moderate
+      mechanical: false
+      wrong: |
+        // In entity or use case:
+        if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+          throw new Error('Invalid email format')
+        }
+      right: |
+        // Format validation belongs in controller InputSchema
+        body: z.object({
+          email: z.email(), // format checks here
+        })
+        // Use case trusts its input and only does business rules
+
+    - id: bp-09
+      name: "Reading auth identity from cookies or body instead of ctx.session"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'cookie:\s*z\.object\('
+      wrong: |
+        // Cookies are not the auth carrier in this project
+        cookie: z.object({ memberId: z.object({ value: z.string() }) })
+        // Or accepting actorId/ownerId from the client body
+        body: z.object({ actorId: z.string(), ownerId: z.string(), ... })
+      right: |
+        // ctx.session is populated by the auth middleware — trust it, never the body
+        ctx: z.object({
+          session: z.object({ actorId: z.string(), ownerId: z.string() }),
+        })
+        // Then spread into the use case input in handle()
+        await this.useCase.execute({ ...body, actorId: request.ctx.session.actorId })
+
+    - id: bp-10
+      name: "Redundant middleware override matching context default"
+      severity: moderate
+      mechanical: false
+      wrong: |
+        // AuthActorMiddleware is already in clinic context default
+        // This adds a SECOND instance of the middleware
+        override middlewares: (Middleware | MiddlewareClass)[] = [AuthActorMiddleware]
+      right: |
+        // No override needed — context default handles it
+        // Just remove the override entirely
+
+    - id: bp-11
+      name: "Using `as` cast for ctx in middlewares"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'request\.ctx\.\w+\s+as\b'
+      wrong: |
+        // Unsafe cast — no runtime validation
+        const user = request.ctx.user as { id: string } | undefined
+      right: |
+        // Zod parsing — safe runtime validation
+        const CtxSchema = z.object({ user: z.object({ id: z.string() }) })
+        const ctx = CtxSchema.safeParse(request.ctx)
+        if (!ctx.success) throw new BaseError('UNAUTHORIZED')
+        const userId = ctx.data.user.id
+
+    - id: bp-12
+      name: "Middleware default imported with namespace import"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'import\s+\*\s+as\s+middlewares\s+from'
+      wrong: |
+        // Namespace import breaks Router middleware registration
+        import * as middlewares from './middlewares'
+      right: |
+        // Default import
+        import middlewares from './middlewares'
+
+    - id: bp-13
+      name: "Inline, locally duplicated, or nested schema when a VO/shared schema exists"
+      severity: moderate
+      mechanical: false
+      wrong: |
+        // Using primitives when VO schema exists
+        body: z.object({
+          address: z.object({ street: z.string(), city: z.string() }),
+        })
+        // Redefining a VO schema locally instead of importing
+        const AddressSchema = z.object({ street: z.string(), city: z.string(), zipCode: z.string() })
+        body: z.object({ shippingAddress: AddressSchema })
+        // Inline nested structure that already exists as a shared/context schema
+        body: z.object({
+          dateRange: z.object({ startDate: z.string().datetime(), endDate: z.string().datetime() }),
+        })
+      right: |
+        // Always import and compose existing schemas
+        import { AddressSchema } from '@shared/objects'
+        import { DateRangeSchema } from '@shared/schemas'
+        body: z.object({
+          email: z.email(),                      // use z.email(), NOT EmailSchema.input()
+          address: AddressSchema.input().optional(), // VO with transform → .input()
+          dateRange: DateRangeSchema,             // shared schema → use directly
+        })
+
+    - id: bp-14
+      name: "Using (typeof Schema)['_output'] for type inference"
+      severity: low
+      mechanical: true
+      detect:
+        - '\[''_output''\]'
+      wrong: |
+        // _output is deprecated in Zod v4
+        type Input = (typeof InputSchema)['_output']
+      right: |
+        import Z from 'zod'
+        type Input = Z.infer<typeof InputSchema>
+
+    - id: bp-15
+      name: "Using { message } in .refine() or missing InterfaceErrors cast"
+      severity: moderate
+      mechanical: true
+      detect:
+        - '\.refine\([\s\S]*?\bmessage:'
+        - 'error:\s*''[A-Z_]+''\s*[,}]'
+      wrong: |
+        // { message } is not typed and won't appear in SDK errors
+        .refine(fn, { message: 'Passwords do not match' })
+        // Error code without InterfaceErrors cast — not checked against error union
+        .refine(fn, { error: 'PASSWORDS_DONT_MATCH' })
+      right: |
+        // Always use { error } with InterfaceErrors cast for SDK error codes
+        import { InterfaceErrors } from '@context/errors'
+        .refine(fn, { error: 'PASSWORDS_DONT_MATCH' as InterfaceErrors })
+
+    - id: bp-19
+      name: "Using EmailSchema VO for email in controllers"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'EmailSchema\.input\(\)'
+      wrong: |
+        // Don't use the Email value object schema in controllers
+        import { EmailSchema } from '@shared/objects'
+        email: EmailSchema.input()
+      right: |
+        // Use z.email() directly in controller schemas
+        email: z.email()
+
+    - id: bp-21
+      name: "Using `as any` in .example() to bypass type mismatch"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'as\s+any\b'
+      wrong: |
+        // Casting because example literals don't match schema types
+        .example([{
+          items: [{ id: '1', status: 'ACTIVE', createdAt: '2024-01-01T00:00:00.000Z' }],
+          total: 1, totalPages: 1,
+        }] as any)
+      right: |
+        // Use properly typed example values
+        .example([{
+          items: [{ id: '1', status: MyStatus.ACTIVE, createdAt: new Date('2024-01-01') }],
+          total: 1, totalPages: 1,
+        }])
+
+    - id: bp-22
+      name: "Domain fields flat at InputSchema root instead of under body/query/params"
+      severity: minor
+      mechanical: true
+      detect:
+        - 'InputSchema\s*=\s*z\.paginatedQuery\('
+      reason: |
+        DOWNGRADED (was critical): now compiler-enforced. The `ValidEnvelope` constraint on
+        `Controller<InputSchema, …>` (core/src/types/Controller.ts) rejects any InputSchema whose
+        root has a key outside body/query/params/ctx — a flat root key fails `bun tsc` at the
+        controller class declaration. This entry stays only for schemas authored before being
+        bound to a Controller generic.
+        Background: the router (FastifyHttpRouter) assembles every request as { body, params,
+        query, ctx, raw } and Handler.validatedRequest runs inputSchema.safeParse(thatObject).
+        A domain field placed flat at the schema root (a sibling of ctx) is NEVER populated → it
+        silently parses as undefined (or, worse, falls back to its .default(), masking the bug).
+        Top-level InputSchema keys must be a subset of { body, query, params, ctx }.
+      wrong: |
+        // Flat domain fields — never bound from the request
+        export const CreateGoalControllerInputSchema = z.object({
+          ctx: z.object({ user: z.object({ id: z.string() }) }),
+          type: z.enum(GoalType),          // ← undefined at runtime
+          targetAmount: MonetaryAmountSchema.input(),
+          from: z.stringToDate(),
+        })
+        // z.paginatedQuery(...) used as the ROOT schema (spreads page/limit/filters flat)
+        export const GetOrdersListControllerInputSchema = z.paginatedQuery({
+          ctx: z.object({...}),
+          storeIntegrationIds: z.array(z.uuid()).optional(),
+        })
+      right: |
+        // Mutations: domain fields under body (ctx/params stay at root)
+        export const CreateGoalControllerInputSchema = z.object({
+          ctx: z.object({ user: z.object({ id: z.string() }) }),
+          body: z.object({
+            type: z.enum(GoalType),
+            targetAmount: MonetaryAmountSchema.input(),
+            from: z.stringToDate(),
+          }),
+        })
+        // Reads (list/report) are GET with filters under query: z.paginatedQuery({...})
+        export const GetOrdersListControllerInputSchema = z.object({
+          ctx: z.object({ user: z.object({ id: z.string() }), membership: z.object({ storeId: z.uuid() }) }),
+          query: z.paginatedQuery({
+            storeIntegrationIds: z.stringToArray(z.uuid()).optional(),
+            paymentStatus: z.stringToArray(z.enum(PaymentStatus)).optional(),
+          }),
+        })
+        // handle() then reads request.body.* / request.query.* (never request.<field>)
+
+    - id: bp-23
+      name: "Declaring MCP exposure outside the controller"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'MCP_SCOPES|MCP_SCOPE_BY_OPERATION|registerMcpScopes|mcpScopesFor'
+      wrong: |
+        // A central list, far from the endpoint it exposes — and one of seven structures
+        // that had to agree with each other by hand.
+        export const MCP_SCOPES = {
+          'issue-handling': [CreateIssueController, RaiseStopController, /* … */],
+        }
+      right: |
+        // On the controller, in the idiom `middlewares` already uses.
+        @injectable()
+        export class RaiseStopController extends Controller</* … */> {
+          static override readonly mcpScopes = [McpScope.ISSUE_HANDLING, McpScope.ORCHESTRATION]
+          readonly path = '/threads/:threadId/issues/:issueId/stops'
+          // …
+        }
+
+    - id: bp-24
+      name: "Public controller (empty middlewares, no mcpScopes) without a docblock explaining why"
+      severity: critical
+      mechanical: false
+      wrong: |
+        // No `override middlewares`, no `static mcpScopes`, no docblock — a reviewer
+        // cannot tell "deliberately public" from "forgot the context default".
+        @injectable()
+        export class ListPlansController extends Controller<typeof ListPlansInputSchema, typeof ListPlansOutputSchema> {
+          readonly path = '/plans'
+          readonly method = 'get'
+          // ...
+        }
+      right: |
+        // shared/controllers/Health.ts — the one legitimate case today: the shell supervisor
+        // asks this BEFORE any session exists, so requiring identity to answer "did the process
+        // finish booting?" would make readiness undiscoverable.
+        /**
+         * O PRIMEIRO CONTROLLER PUBLICO DO REPO, e a ausencia de `middlewares` e a decisao, nao um
+         * esquecimento. Mecanicamente: `middlewares` fica no default `[]` herdado, e a classe NAO
+         * declara `static mcpScopes`.
+         */
+        @injectable()
+        export class HealthController extends Controller<typeof HealthInputSchema, typeof HealthOutputSchema> {
+          readonly path = '/health'
+          // ...
+        }
+
+  snippet:
+    skeleton: |
+      import { injectable } from 'tsyringe-neo'
+      import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
+
+      export const {{Name}}InputSchema = z.object({
+      	ctx: z.object({ user: z.object({ id: z.string() }) }),
+      }).example([{}])
+
+      export const {{Name}}OutputSchema = z.void()
+
+      @injectable()
+      export class {{Name}}Controller extends Controller<typeof {{Name}}InputSchema, typeof {{Name}}OutputSchema> {
+      	readonly path = '{{path}}'
+      	readonly method = '{{method}}'
+      	readonly description = '{{Name}} operation'
+      	readonly inputSchema = {{Name}}InputSchema
+      	readonly outputSchema = {{Name}}OutputSchema
+
+      {{classBody}}
+      }
+    skeletons:
+      list: |
+        import { injectable } from 'tsyringe-neo'
+        import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
+
+        export const {{Name}}InputSchema = z
+        	.object({
+        		ctx: z.object({ user: z.object({ id: z.string() }) }),
+        		query: z.paginatedQuery({}),
+        	})
+        	.example([{ query: { page: 1, limit: 10, search: '' } }])
+
+        export const {{Name}}OutputSchema = z
+        	.paginatedResponse({
+        		id: z.string(),
+        		name: z.string(),
+        		createdAt: z.stringToDate(),
+        		updatedAt: z.stringToDate(),
+        	})
+        	.example([{ items: [{ id: '1', name: 'Example', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' }], total: 1, totalPages: 1 }])
+
+        @injectable()
+        export class {{Name}}Controller extends Controller<typeof {{Name}}InputSchema, typeof {{Name}}OutputSchema> {
+        	readonly path = '{{path}}'
+        	readonly method = '{{method}}'
+        	readonly description = '{{Name}} operation'
+        	readonly inputSchema = {{Name}}InputSchema
+        	readonly outputSchema = {{Name}}OutputSchema
+
+        {{classBody}}
+        }
+      get: |
+        import { injectable } from 'tsyringe-neo'
+        import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
+
+        export const {{Name}}InputSchema = z
+        	.object({
+        		ctx: z.object({ user: z.object({ id: z.string() }) }),
+        		params: z.object({ id:z.string() }),
+        	})
+        	.example([{ params: { id: '123e4567-e89b-12d3-a456-426614174000' } }])
+
+        export const {{Name}}OutputSchema = z
+        	.object({
+        		id:z.string(),
+        		name: z.string(),
+        		createdAt: z.stringToDate(),
+        		updatedAt: z.stringToDate(),
+        	})
+        	.example([{ id: '123e4567-e89b-12d3-a456-426614174000', name: 'Example', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' }])
+
+        @injectable()
+        export class {{Name}}Controller extends Controller<typeof {{Name}}InputSchema, typeof {{Name}}OutputSchema> {
+        	readonly path = '{{path}}'
+        	readonly method = '{{method}}'
+        	readonly description = '{{Name}} operation'
+        	readonly inputSchema = {{Name}}InputSchema
+        	readonly outputSchema = {{Name}}OutputSchema
+
+        {{classBody}}
+        }
+      create: |
+        import { injectable } from 'tsyringe-neo'
+        import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
+
+        export const {{Name}}InputSchema = z
+        	.object({
+        		ctx: z.object({ user: z.object({ id: z.string() }) }),
+        		body: z.object({
+        			name: z.string().min(1).max(255),
+        		}),
+        	})
+        	.example([{ body: { name: 'Example' } }])
+
+        export const {{Name}}OutputSchema = z
+        	.object({
+        		id:z.string(),
+        		name: z.string(),
+        		createdAt: z.stringToDate(),
+        		updatedAt: z.stringToDate(),
+        	})
+        	.example([{ id: '123e4567-e89b-12d3-a456-426614174000', name: 'Example', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' }])
+
+        @injectable()
+        export class {{Name}}Controller extends Controller<typeof {{Name}}InputSchema, typeof {{Name}}OutputSchema> {
+        	readonly path = '{{path}}'
+        	readonly method = '{{method}}'
+        	readonly description = '{{Name}} operation'
+        	readonly inputSchema = {{Name}}InputSchema
+        	readonly outputSchema = {{Name}}OutputSchema
+
+        {{classBody}}
+        }
+      update: |
+        import { injectable } from 'tsyringe-neo'
+        import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
+
+        export const {{Name}}InputSchema = z
+        	.object({
+        		ctx: z.object({ user: z.object({ id: z.string() }) }),
+        		params: z.object({ id:z.string() }),
+        		body: z.object({
+        			name: z.string().min(1).max(255),
+        		}),
+        	})
+        	.example([{ params: { id: '123e4567-e89b-12d3-a456-426614174000' }, body: { name: 'Updated' } }])
+
+        export const {{Name}}OutputSchema = z.void()
+
+        @injectable()
+        export class {{Name}}Controller extends Controller<typeof {{Name}}InputSchema, typeof {{Name}}OutputSchema> {
+        	readonly path = '{{path}}'
+        	readonly method = '{{method}}'
+        	readonly description = '{{Name}} operation'
+        	readonly inputSchema = {{Name}}InputSchema
+        	readonly outputSchema = {{Name}}OutputSchema
+
+        {{classBody}}
+        }
+      delete: |
+        import { injectable } from 'tsyringe-neo'
+        import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
+
+        export const {{Name}}InputSchema = z
+        	.object({
+        		ctx: z.object({ user: z.object({ id: z.string() }) }),
+        		params: z.object({ id:z.string() }),
+        	})
+        	.example([{ params: { id: '123e4567-e89b-12d3-a456-426614174000' } }])
+
+        export const {{Name}}OutputSchema = z.void()
+
+        @injectable()
+        export class {{Name}}Controller extends Controller<typeof {{Name}}InputSchema, typeof {{Name}}OutputSchema> {
+        	readonly path = '{{path}}'
+        	readonly method = '{{method}}'
+        	readonly description = '{{Name}} operation'
+        	readonly inputSchema = {{Name}}InputSchema
+        	readonly outputSchema = {{Name}}OutputSchema
+
+        {{classBody}}
+        }
+    fragments:
+      handle: |-
+        	async handle(request: this['input']): Promise<this['output']> {
+        		{{destructuring}}
+
+        		// TODO: Delegate to use case
+        		return {
+        			status: HttpStatusCode.OK,
+        			data: {} as any,
+        		}
+        	}
+      mock: "	override mockController = true"
+    exemplar: |
+      import { injectable } from 'tsyringe-neo'
+      import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
+      import { AuthAccountMiddleware } from '@auth/middlewares/AuthAccountMiddleware'
+      import { RequireOwner } from '@owner/middlewares'
+      import { UpdateXInputSchema, UpdateXOutputSchema } from '@context/usecases/UpdateX'
+
+      export const UpdateXControllerInput = z
+        .object({
+          params: z.object({ xId: z.uuid() }),
+          body: UpdateXInputSchema.omit({ xId: true, userId: true }),
+          ctx: z.object({
+            user: z.object({ id: z.string() }),
+            session: z.object({ ownerId: z.string() }),
+          }),
+        })
+        .example([{
+          params: { xId: '123e4567-e89b-12d3-a456-426614174000' },
+          body: { name: 'Updated' },
+          ctx: { user: { id: 'user-uuid' }, session: { ownerId: 'owner-uuid' } },
+        }])
+
+      export const UpdateXControllerOutput = UpdateXOutputSchema
+
+      @injectable()
+      export class UpdateXController extends Controller<typeof UpdateXControllerInput, typeof UpdateXControllerOutput> {
+        readonly path = '/x/:xId'
+        readonly method = 'patch'
+        readonly description = 'Update an X'
+        readonly inputSchema = UpdateXControllerInput
+        readonly outputSchema = UpdateXControllerOutput
+        override middlewares = [AuthAccountMiddleware, RequireOwner]
+        constructor(private readonly updateX: UpdateX) { super() }
+
+        async handle(request: this['input']): Promise<this['output']> {
+          const { params, body } = request
+          await this.updateX.execute({
+            ...body,
+            xId: params.xId,
+            userId: request.ctx.user.id,
+          })
+          return { status: HttpStatusCode.NO_CONTENT }
+        }
+      }
+
+  scaffold: "bun cli controller <context> <name> [--method <method>]"

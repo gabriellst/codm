@@ -1,0 +1,80 @@
+# CODM desktop shell — Tauri v2 host. This crate's Cargo workspace is THE repo's only
+# one (rust-wire spec §F6): the generated contracts/client crates are standalone path
+# deps, compiled inside this workspace's target/lock — like Go's `replace` directives.
+[package]
+name = "codm-desktop"
+version = "0.1.0"
+license = "MIT"
+description = "CODM desktop shell (react console webview + TS daemon / Go gateway sidecars)"
+edition = "2021"
+
+[lib]
+name = "codm_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+# build.rs reads the generated `shell-env.json` (config/env.ts → generate.ts) and emits one
+# `cargo:rustc-env` per pair — the shell's env contract reaches Rust as `env!()` constants. Same
+# crate + version as the runtime dep: no new entry in Cargo.lock.
+serde_json = "1"
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-autostart = "2"
+tauri-plugin-deep-link = "2"
+# PERSISTED SHELL LOG (2026-08-07 incident, part 2) — see src/lib.rs. Backs the `log` facade with a
+# real target for the first time in this shell: every `log::*` call was previously a no-op in a
+# packaged build.
+tauri-plugin-log = "2"
+# Same crate + version tauri's own `PathResolver::app_data_dir` uses internally
+# (`dirs::data_dir().join(identifier)`, verified against tauri 2.11.5's vendored source) — the log
+# plugin needs that path BEFORE an App exists, so src/lib.rs computes it once, standalone, with the
+# same primitive rather than inventing a second one.
+dirs = "6"
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
+log = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri-specta = { version = "=2.0.0-rc.21", features = ["derive", "typescript"] }
+specta = { version = "=2.0.0-rc.22", features = ["derive"] }
+specta-typescript = "=0.0.9"
+
+# Typed backend access (rust-wire spec §F7): wire binding + SDK aggregate as standalone
+# path deps. reqwest appears ONLY for building the identity-carrying http client in
+# src/api/mod.rs — raw reqwest anywhere else is banned (tests/no_raw_http.rs).
+codm-contracts-rust = { path = "../../../contracts/generated/rust" }
+codm-client-rust = { path = "../../../client/dist/rust" }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+# The readiness loop is async (the typed probe awaits), and `tauri::async_runtime` re-exports
+# neither `sleep` nor a re-entrant `block_on` — so the supervisor sleeps on tokio directly. Already
+# in Cargo.lock as a tauri transitive dep: declaring it adds no crate.
+#
+# `signal` is what lets the shell take the fleet down on SIGTERM/SIGINT/SIGHUP and not only on
+# `RunEvent::Exit` (src/sidecars/lifecycle.rs). It is a self-pipe implementation: it neither blocks
+# signals for tauri's own threads nor runs any of our code inside a signal handler.
+tokio = { version = "1", features = ["time", "signal"] }
+
+# Raw process signals, for exactly three helpers in src/sidecars/lifecycle.rs: SIGTERM before
+# SIGKILL (so a daemon gets to run its own drain and take its provider CLI process groups with it),
+# SIGKILL for a leftover we hold no handle to, and `kill(pid, 0)` to tell a dead pid from a live
+# one. Unix-gated because none of the three exist on Windows, where `RunEvent::Exit` is the only
+# shutdown path anyway. Also a pre-existing tauri transitive dep.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+# Windows counterpart of the three helpers above AND the startup sweep's process table
+# (src/sidecars/reaper.rs). Win32 has no `kill(2)`: liveness is `OpenProcess` + exit code, force is
+# `TerminateProcess`, and "which binary is this pid" is `QueryFullProcessImageNameW` — `sysinfo`
+# wraps all three behind safe calls. It is what makes the sweep POSSIBLE on Windows at all:
+# `tasklist` prints only the image NAME (the matching rule needs the absolute path), `wmic` is gone
+# on Windows 11, and PowerShell's `Get-Process | select Path` costs a ~1s interpreter start on every
+# boot. `default-features = false` + `system` keeps it to processes only (no disks, networks,
+# components, users, no rayon). Windows-gated so the macOS/Linux builds never compile it.
+[target.'cfg(windows)'.dependencies]
+sysinfo = { version = "0.39", default-features = false, features = ["system"] }

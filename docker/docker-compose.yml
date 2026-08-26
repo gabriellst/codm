@@ -1,0 +1,45 @@
+services:
+  lgtm:
+    build:
+      context: .
+      dockerfile: Dockerfile.lgtm
+    container_name: ${PROJECT}-${SERVICE}-lgtm
+    ports:
+      - "3000:3000"   # Grafana
+      - "3100:3100"   # Loki
+      - "3200:3200"   # Tempo
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8126:8126"   # Datadog APM
+      - "9009:9009"   # Mimir
+    volumes:
+      - lgtm_tempo:/var/tempo
+      - lgtm_loki:/var/loki
+      - lgtm_mimir:/var/mimir
+      - lgtm_grafana:/var/lib/grafana
+    restart: unless-stopped
+    networks:
+      - default
+
+  redis:
+    image: redis:alpine
+    container_name: ${PROJECT}-${SERVICE}-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - default
+
+volumes:
+  redis_data:
+  lgtm_tempo:
+  lgtm_loki:
+  lgtm_mimir:
+  lgtm_grafana:

@@ -1,0 +1,784 @@
+registry:
+  type: backend
+  layer: testing
+  depends_on: [entity, value-object, usecase, handler, repository]
+  depended_by: []
+  context_reads: [entity, usecase, handler, repository, event]
+
+  patterns:
+    - id: TST-01
+      name: "Use bun:test and colocated specs"
+      when: always
+      rule: "Write backend tests with bun:test. Keep unit/use case/handler specs as *.test.ts next to the artifact. Keep process-level flow tests under packages/api/tests/flows."
+
+    - id: TST-02
+      name: "Pure unit tests avoid TestBed"
+      when: "testing only in-memory domain logic"
+      reason: "Entities, value objects, enum helpers, and pure functions do not need DI, command queue, mediator, or outbox wiring."
+      rule: "Instantiate the artifact directly, use explicit test doubles, and assert domain state/errors without booting TestBed."
+
+    - id: TST-03
+      name: "Integration TestBed for use case, handler, and repository tests"
+      when: "testing a use case, handler, or repository that extends Handler or depends on container-bound infrastructure"
+      reason: "Integration mode uses LibsqlDriver's temp-file SQLite database with real Drizzle repositories, enforcing FK constraints and real persistence. Given helpers set up prerequisite data via repos directly."
+      rule: |
+        const testContainer = container.createChildContainer()
+        const testBed = await TestBed.create('integration', {
+          testContainer,
+          ownerId: 'integration-tenant',
+        })
+
+    - id: TST-04
+      name: "Resolve through TestBed — never register"
+      when: "test uses TestBed"
+      reason: >
+        TestBed.create(mode) already calls registerAll(ALL_REGISTRIES[mode]) — so EVERY infra
+        binding (DomainEventRepository, DrizzleDatabaseDriver, InternalMediator, ExternalMediator,
+        OutboxDispatcher, LoggingService, the SDK Client, all repos/services) is already
+        registered. It then OVERRIDES the mediators with a SpyMediator (both modes) and, in
+        mock mode, DomainEventRepository with the outbox-aware mock. So tests only ever RESOLVE;
+        they never register. testBed.resolve(...) also binds Handler subclasses to the test
+        container, which manual `new X(...)` / raw container resolution skips.
+      rule: "Resolve repos/use-cases/handlers via testBed.resolve(Token). Never registerInstance — the registry already provides everything; assert events via testBed.spy (TST-16)."
+      wrong: "const useCase = new UpdatePatient(repo)  // or testContainer.registerInstance(DomainEventRepository as any, ...)"
+
+    - id: TST-16
+      name: "Assert events via testBed.spy or DomainEventRepository.findByType — never DrizzleDatabaseDriver"
+      when: "a test asserts that domain or integration events were emitted/persisted"
+      reason: >
+        Two channels, both Drizzle-free: (1) testBed.spy/externalSpy capture events PUBLISHED via
+        the mediator (TestBed wraps the mediators in a SpyMediator over the registry's plain
+        EventEmitter2Mediator — re-registering a mediator silently removes the spy). (2) Domain
+        events PERSISTED to the events table (saved via the outbox) are read back, typed, with
+        DomainEventRepository.findByType(EventClass). NEVER resolve DrizzleDatabaseDriver to hand-query
+        the events table — if a repo lacks a needed read, add the method to the repo (see bp-15).
+      rule: |
+        // published (mediator) — internal/domain + integration:
+        expect(testBed.spy.getPublishedOfType('sales.order.created')).toHaveLength(1)
+        expect(testBed.externalSpy.getPublishedOfType('integration.subscription.cancelled')).not.toHaveLength(0)
+        // persisted (events table) — typed payload, no Drizzle, no cast:
+        const events = testBed.resolve(DomainEventRepository)
+        const evs = await events.findByType(StoreMemberRoleChangedEvent)
+        expect(evs[0]!.payload.newRole).toBe(Role.ADMIN)
+        // per-actor history by name prefix: events.findByOwnerIdAndNameLike(userId, 'billing.%', { limit, offset })
+      wrong: |
+        const mediator = new EventEmitter2Mediator()
+        testContainer.registerInstance(InternalMediator as any, mediator)  // kills the spy
+
+    - id: TST-05
+      name: "Flow tests use PipeBuilder"
+      when: "test spans multiple commands or a business process"
+      reason: "PipeBuilder executes real use cases in sequence and flushes the outbox after each step, which is the intended process-testing harness."
+      rule: |
+        const result = await testBed
+          .pipe('create_clinic', input)
+          .pipe('create_unit', prev => ({ clinicId: prev[0].clinicId, ... }))
+          .run()
+
+    - id: TST-06
+      name: "Guard PipeBuilder result union"
+      when: "using testBed.pipe(...).run()"
+      reason: "run() returns a success/failure union. Tests must guard before reading outputs."
+      rule: |
+        expect(result.success).toBe(true)
+        if (!result.success) return
+        const [firstOutput] = result.outputs
+
+    - id: TST-07
+      name: "Assert internal event handling"
+      when: "test needs to verify domain dispatch or internal handler execution"
+      reason: "testBed.spy wraps the internal mediator and records dispatched events plus handler executions."
+      rule: "Use testBed.spy.getEventsOfType(...), getDispatched(), getHandlerExecutions(), and wasHandlerActivated(...)."
+
+    - id: TST-08
+      name: "Assert external publication and handling"
+      when: "test needs to verify integration publication or external handler execution"
+      reason: "testBed.externalSpy wraps the external mediator and records published events plus external handler executions."
+      rule: "Use testBed.externalSpy.getPublishedOfType(...), getPublished(), getHandlerExecutions(), and wasHandlerActivated(...)."
+
+    - id: TST-09
+      name: "Repository integration tests cover save/findById/delete + queries"
+      when: "creating or modifying a Drizzle repository"
+      reason: "Every DrizzleXRepository must have a colocated integration test that validates persistence, retrieval, deletion, and all query methods against a real LibsqlDriver-backed SQLite database."
+      rule: |
+        // DrizzleXRepository.test.ts — colocated next to the repository
+        import { TestBed, givenUser } from '@test/support'
+        import { container, DependencyContainer } from 'tsyringe-neo'
+
+        describe('DrizzleXRepository', () => {
+          let testBed: TestBed
+          let testContainer: DependencyContainer
+          let xRepository: XRepository
+
+          beforeAll(async () => {
+            testContainer = container.createChildContainer()
+            testBed = await TestBed.create('integration', { testContainer, ownerId: 'integration-tenant' })
+            xRepository = testBed.resolve(XRepository)
+          })
+          beforeEach(async () => { await testBed.reset() })
+          afterAll(async () => { await testBed.destroy() })
+
+          it('should save and retrieve by id', ...)
+          it('should delete', ...)
+          // + all query methods with positive and negative cases
+        })
+
+    - id: TST-10
+      name: "LibsqlDriver integration fidelity caveat"
+      when: "writing integration tests against LibsqlDriver"
+      reason: "The write seam drives BEGIN IMMEDIATE manually on a dedicated write connection (see DrizzleUnitOfWork.ts docstring — measured connection-leak/pragma-reset bugs in @libsql/client's native transaction() ruled it out), which is not identical to production's transaction nesting/locking semantics."
+      rule: "Use integration mode to validate repository mappings, migrations, and outbox persistence. Do not present it as full production transaction parity."
+
+    - id: TST-11
+      name: "Lifecycle: beforeAll/beforeEach(reset)/afterAll(destroy)"
+      when: always
+      reason: "Booting the integration-mode driver (migrations included) is expensive. Create TestBed once per suite, reset DB between tests, close on teardown."
+      rule: |
+        // Standard lifecycle for ALL TestBed-backed tests (repos, use cases, handlers, flows)
+        beforeAll(async () => {
+          testContainer = container.createChildContainer()
+          testBed = await TestBed.create('integration', { testContainer, ownerId: 'integration-tenant' })
+          // resolve repos and use cases here
+        })
+        beforeEach(async () => {
+          await testBed.reset()
+        })
+        afterAll(async () => {
+          await testBed.destroy()
+        })
+
+    - id: TST-12
+      name: "Import from @codm/core-typescript, no dead @shared paths"
+      when: always
+      reason: "The @shared barrels and direct module paths were removed; all framework primitives now live in the @codm/core-typescript barrel."
+      rule: "Import framework primitives (BaseError, Handler, tryCatchAsync, z, Transaction) from @codm/core-typescript."
+
+    - id: TST-13
+      name: "Given helpers for test data setup"
+      when: "test needs prerequisite entities (users, clinics, patients, etc.)"
+      reason: "Given helpers create entities via repos directly (never use cases), enforcing FK constraints in the LibsqlDriver-backed test database. They compose into higher-level builders (e.g., givenClinicWithOwner)."
+      rule: |
+        // Import from @test/support
+        import { TestBed, givenClinicWithOwner, givenPatient } from '@test/support'
+
+        // Use in tests — helpers accept testBed + optional overrides
+        const { user, clinic, unit } = await givenClinicWithOwner(testBed)
+        const patient = await givenPatient(testBed, { ownerId: unit.ownerId.value, fullName: 'Custom Name' })
+
+        // Override pattern: Partial<Parameters<typeof Entity.create>[0]> with Omit for positional args
+        // Given helpers ALWAYS use repositories directly, NEVER use cases
+
+    - id: TST-14
+      name: "Use case tests use given helpers + integration mode"
+      when: "writing a use case test"
+      reason: "Integration mode enforces FK constraints via the LibsqlDriver-backed test database. Given helpers set up prerequisite entities that satisfy those constraints without calling use cases."
+      rule: |
+        // Given helpers replace inline entity creation and mock seeding
+        const { unit } = await givenClinicWithOwner(testBed)
+        const patient = await givenPatient(testBed, { ownerId: unit.ownerId.value })
+
+        // Then test the use case
+        const result = await updatePatient.execute({
+          patientId: patient.id.value,
+          unitId: unit.id.value,
+          fullName: 'Maria Souza',
+        })
+
+    - id: TST-15
+      name: "Use case tests must NOT test entity-level validation"
+      when: "writing a use case test"
+      reason: "Entity-level input validation (VALIDATION_ERROR) is already covered by entity/value-object unit tests. Duplicating it in use case tests is redundant and adds maintenance burden."
+      rule: "Only test orchestration-level errors in use case tests: permissions (INVALID_PERMISSION), not-found (PATIENT_NOT_FOUND), state guards (INVITATION_EXPIRED), and cross-entity coordination. Never test VALIDATION_ERROR scenarios like invalid email, empty name, or inverted ranges."
+      wrong: |
+        // Bad — entity validation already tested in Entity.test.ts
+        it('should throw VALIDATION_ERROR when email is invalid', ...)
+        it('should throw VALIDATION_ERROR when phone is invalid', ...)
+        it('should throw VALIDATION_ERROR when priceRange.from > priceRange.to', ...)
+
+    - id: TST-17
+      name: "Canonical error assertion — expect().toThrow / rejects.toMatchObject"
+      when: "a test asserts a thrown domain/application error"
+      reason: >
+        bun:test already gives a typed, cast-free error API. Hand-rolling try/catch and
+        casting the caught value (`(caught as BaseError).name`) is 5 lines of boilerplate
+        that silently passes if the thrown value is not a BaseError. tryCatchAsync is a
+        PRODUCTION convention — in tests use expect().rejects.
+      rule: |
+        // sync (entity / value object):
+        expect(() => Store.create({ name: '' })).toThrow(BaseError)
+        // async + assert the error CODE (not the message):
+        await expect(useCase.execute({ ... })).rejects.toMatchObject({ name: 'STORE_NOT_FOUND' })
+      wrong: |
+        let caught: unknown = null
+        try { await useCase.execute({ ... }) } catch (e) { caught = e }
+        expect((caught as Error & { name: string }).name).toBe('STORE_NOT_FOUND')
+
+    - id: TST-18
+      name: "One given-API — bare givenX(testBed, …)"
+      when: "a test sets up prerequisite state via given helpers"
+      reason: >
+        Two competing given-APIs (bare givenX vs the createGivenHelpers facade) means no
+        canonical reference. The bare functions are the documented path.
+      rule: "Call bare `givenX(testBed, overrides?)` imported from '@test/support'. The createGivenHelpers facade is deprecated."
+
+  canonical_snippet: |
+    import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+    import { container, type DependencyContainer } from 'tsyringe-neo'
+    import { TestBed, testId, givenStoreWithOwner } from '@test/support'
+    import { UpdateStore } from './UpdateStore'
+    import { StoreRepository } from '@tenancy/repositories'
+
+    describe('UpdateStore', () => {
+      let testBed: TestBed
+      let testContainer: DependencyContainer
+      let storeRepository: StoreRepository
+      let updateStore: UpdateStore
+
+      beforeAll(async () => {
+        testContainer = container.createChildContainer()
+        testBed = await TestBed.create('integration', {
+          testContainer,
+          ownerId: 'integration-tenant',
+        })
+        storeRepository = testBed.resolve(StoreRepository)
+        updateStore = testBed.resolve(UpdateStore)
+      })
+
+      beforeEach(async () => {
+        await testBed.reset()
+      })
+
+      afterAll(async () => {
+        await testBed.destroy()
+      })
+
+      it('should update store name', async () => {
+        const { store } = await givenStoreWithOwner(testBed)
+
+        const result = await updateStore.execute({
+          storeId: store.id.value,
+          name: 'New Name',
+        })
+
+        expect(result.name).toBe('New Name')
+      })
+
+      it('throws STORE_NOT_FOUND when store does not exist', async () => {
+        await expect(
+          updateStore.execute({ storeId: testId(), name: 'x' }),
+        ).rejects.toMatchObject({ name: 'STORE_NOT_FOUND' })
+      })
+    })
+
+  bad_practices:
+    - id: bp-01
+      name: "Treating TestBed tests as pure unit tests"
+      severity: high
+      mechanical: false
+      wrong: "Calling a use case or handler test 'unit' while booting TestBed, command queue, mediators, and outbox."
+      right: "Describe TestBed-backed specs as integration tests. Use TestBed.create('integration', ...) with given helpers."
+
+    - id: bp-08
+      name: "Using mock mode for use case or repository tests"
+      severity: high
+      mechanical: true
+      detect:
+        - 'TestBed\.create\(\s*[''"]mock[''"]'
+      detect_skip: '\.pipe\('
+      wrong: "TestBed.create('mock', ...) for use case or repository tests — avoids FK enforcement and masks persistence bugs."
+      right: "TestBed.create('integration', ...) for all tests except flow tests. Mock mode is reserved for packages/api/tests/flows only."
+
+    - id: bp-09
+      name: "Setting up test data via use cases instead of given helpers"
+      severity: high
+      mechanical: false
+      wrong: "Using testBed.pipe('connect_integration', ...) or useCase.execute() to set up prerequisite data in use case/repo tests."
+      right: "Use given helpers (givenStoreWithOwner, givenStore, givenStoreIntegration, etc.) which call repos directly. This isolates the test from unrelated use case logic. Missing a helper? Add a givenX (repo-direct) shipped with its first consumer — never hand-cast a stub."
+
+    - id: bp-02
+      name: "Bypassing TestBed resolution"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'new\s+Mock\w+\s*\('
+      wrong: |
+        const repo = new MockPatientRepository()
+        const useCase = new UpdatePatient(repo)
+      right: |
+        const patientRepository = testBed.resolve(PatientRepository)
+        const updatePatient = testBed.resolve(UpdatePatient)
+
+    - id: bp-03
+      name: "Using the root container"
+      severity: critical
+      mechanical: true
+      detect:
+        - '\bcontainer\.resolve\('
+      wrong: "Resolving handlers or use cases from the global tsyringe container inside tests."
+      right: "Always create a child container and pass it to TestBed.create(...)."
+
+    - id: bp-04
+      name: "Flow test that only checks outputs"
+      severity: high
+      mechanical: false
+      wrong: "Asserting only result.outputs and ignoring repository state, dispatched events, and published events."
+      right: "After a successful flow, assert persisted state and the relevant internal/external event activity."
+
+    - id: bp-05
+      name: "Overclaiming LibsqlDriver integration fidelity"
+      severity: high
+      mechanical: false
+      wrong: "Using integration-mode tests as proof of exact production transaction or locking semantics."
+      right: "Use them as embedded SQLite/Drizzle repository tests and call out the LibsqlDriver write-seam transaction limitations (TST-10)."
+
+    - id: bp-06
+      name: "Assuming integration reset truncates the database"
+      severity: high
+      mechanical: false
+      wrong: "Reusing one integration TestBed across DB-sensitive tests and assuming testBed.reset() clears all persisted rows."
+      right: "If the suite needs strong database isolation, recreate the integration TestBed or add explicit cleanup/truncation."
+
+    - id: bp-07
+      name: "Dead @shared import paths"
+      severity: medium
+      mechanical: true
+      detect:
+        - 'from\s+[''"]@shared/'
+      wrong: |
+        import { BaseError } from '@shared/types/BaseError'
+        import { tryCatchAsync } from '@shared/utils/TryCatch'
+      right: |
+        import { BaseError, tryCatchAsync } from '@codm/core-typescript'
+
+    - id: bp-10
+      name: "Testing entity-level validation in use case tests"
+      severity: high
+      mechanical: false
+      wrong: |
+        // In a use case test file — these are redundant, entity tests already cover them
+        it('should throw VALIDATION_ERROR when email is invalid', ...)
+        it('should throw VALIDATION_ERROR when phone is invalid', ...)
+        it('should throw VALIDATION_ERROR when fullName is empty', ...)
+        it('should throw VALIDATION_ERROR when priceRange.from > priceRange.to', ...)
+      right: "Use case tests only cover orchestration-level errors: PATIENT_NOT_FOUND, INVALID_PERMISSION, INVITATION_EXPIRED, USER_ALREADY_MEMBER, etc. Entity/schema validation is tested in Entity.test.ts and ValueObject.test.ts."
+
+    - id: bp-11
+      name: "Stub schema-existence tests instead of real integration tests"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'expect\(\s*\w*Schema\s*\)\.toBeDefined\(\)'
+      wrong: |
+        // Useless — only proves the import works, not the behavior
+        it('should have valid input schema', () => { expect(InputSchema).toBeDefined() })
+        it('should have valid output schema', () => { expect(OutputSchema).toBeDefined() })
+      right: |
+        // Real integration test with TestBed, given helpers, success + error cases
+        it('returns the store with its reporting currency', async () => {
+          const { store } = await givenStoreWithOwner(testBed)
+          const result = await getStore.execute({ storeId: store.id.value })
+          expect(result.store.reportingCurrency).toBe(store.reportingCurrency)
+        })
+        it('throws STORE_NOT_FOUND when the store does not exist', async () => {
+          const result = await tryCatchAsync(() => getStore.execute({ storeId: 'non-existent' }))
+          expect(result.success).toBe(false)
+        })
+
+    - id: bp-12
+      name: "Hand-registering infrastructure the registry/TestBed already provides"
+      severity: critical
+      mechanical: true
+      detect:
+        - '\.registerInstance\('
+      reason: >
+        TestBed.create(mode) registers every infra binding via registerAll(ALL_REGISTRIES[mode])
+        and then overrides the mediators (→ SpyMediator) and, in mock mode, DomainEventRepository
+        (→ outbox-aware mock). Re-registering these in a test is redundant AND breaks the harness:
+        replacing InternalMediator kills testBed.spy; replacing DomainEventRepository kills outbox
+        → handler delivery. It also forces `as any` casts on the tokens.
+      wrong: |
+        testContainer.registerInstance(DomainEventRepository as any, new MockDomainEventRepository())
+        testContainer.registerInstance(DrizzleDatabaseDriver as any, someFakeDriver)
+        testContainer.registerInstance(InternalMediator as any, new EventEmitter2Mediator())
+      right: |
+        // create once; everything is already registered
+        const testBed = await TestBed.create('mock', { testContainer })
+        const repo = testBed.resolve(DomainEventRepository)   // the outbox-aware mock
+        // assert events via the spy (TST-16), not a hand-wired mediator
+        expect(testBed.spy.getPublished()).toContainEqual(expect.objectContaining({ name: 'billing.subscription.created' }))
+
+    - id: bp-13
+      name: "Importing Mock*/mediator primitives from core into a test"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'import\s*\{[^}]*\b(Mock\w+|EventEmitter2Mediator|OutboxDispatcher)\b[^}]*\}\s*from\s*[''"]@codm/core-typescript[''"]'
+      reason: >
+        The Mock* repositories, EventEmitter2Mediator, and OutboxDispatcher in @codm/core-typescript
+        exist for the REGISTRIES (or TestBed itself, e.g. MockOutboxDispatcher) to wire per mode —
+        never for tests to import and instantiate. A test importing them is about to bypass TestBed.
+      wrong: |
+        import { MockOutboxDispatcher, EventEmitter2Mediator, MockDomainEventRepository } from '@codm/core-typescript'
+      right: |
+        import { TestBed } from '@test/support'   // TestBed owns infra wiring; tests resolve, never construct it
+
+    - id: bp-14
+      name: "Casts in tests (as any on resolve, stub cast on a dependency)"
+      severity: high
+      mechanical: true
+      detect:
+        - 'as\s+any\b'
+        - 'as\s+unknown\s+as\b'
+      reason: >
+        testBed.resolve takes a class token directly — no cast. A `{} as unknown as XRepo` stub
+        means a given/mock helper is missing; build the helper instead of casting a partial object.
+      wrong: |
+        const driver = testBed.resolve(DrizzleDatabaseDriver as any) as DrizzleDatabaseDriver
+        const handshaker = {} as unknown as ShopifyHandshaker   // fake stub
+      right: |
+        const driver = testBed.resolve(DrizzleDatabaseDriver)   // no cast
+        const { store } = await givenStoreWithOwner(testBed)    // real state via a given helper
+        // For an error-path stub, spyOn the resolved instance — don't cast a fake:
+        // spyOn(testBed.resolve(StoreRepository), 'findById').mockResolvedValue(null)
+        // To swap a collaborator the registry can't feed (e.g. a Mock query service fed test
+        // data), use the sanctioned escape hatch — typed, no cast, after create():
+        // testBed.override(ProductCostQueryService, costQuery)
+        // NEVER override infra TestBed owns (DomainEventRepository / DrizzleDatabaseDriver / mediators / OutboxDispatcher).
+
+    - id: bp-15
+      name: "Resolving DrizzleDatabaseDriver to hand-query a table in a test"
+      severity: critical
+      mechanical: true
+      detect:
+        - 'testBed\.resolve\(\s*DrizzleDatabaseDriver'
+        - '\.select\(\)\.from\('
+      detect_skip: 'describe\(\s*[''"]Drizzle\w+(Repository|QueryService)'
+      reason: >
+        A test resolving DrizzleDatabaseDriver and doing `driver.db.select().from(<table>)` is a
+        symptom that the repository it should use lacks a read method. Hand-querying also forces
+        `as any` / JSONB-`unknown` casts at every assertion. EXCEPTION: the Drizzle<X>Repository.test.ts /
+        Drizzle<X>QueryService.test.ts files legitimately resolve DrizzleDatabaseDriver — they ARE the
+        infra-layer tests of that Drizzle impl.
+      wrong: |
+        const driver = testBed.resolve(DrizzleDatabaseDriver)
+        const rows = await driver.db.select().from(events).where(eq(events.name, StoreMemberRoleChangedEvent.name))
+        expect((rows[0] as any).payload.newRole).toBe(Role.ADMIN)
+      right: |
+        // read domain events via the repository — typed, no Drizzle, no cast
+        const events = testBed.resolve(DomainEventRepository)
+        const evs = await events.findByType(StoreMemberRoleChangedEvent)
+        expect(evs[0]!.payload.newRole).toBe(Role.ADMIN)
+        // missing a read your test needs? ADD it to the repo port + Drizzle + Mock impls,
+        // then call it — never reach past the repo into DrizzleDatabaseDriver.
+
+    - id: bp-16
+      name: "Using givenEvent / seeding shared.events to test in-process handlers"
+      severity: high
+      mechanical: false
+      reason: >
+        `givenEvent` seeds a row into the `shared.events` outbox table — it exists ONLY for
+        cross-process boundary tests (e.g. replaying an event that arrived from another service).
+        Using it to test an in-process handler bypasses the real event class and its type system,
+        requires casting, and exercises the outbox delivery plumbing rather than the handler logic
+        under test. Instantiate the event class directly and call handler.handle(event) instead.
+      wrong: |
+        // Seeding the events table to trigger an in-process handler — wrong scope
+        await givenEvent(testBed, { name: 'sales.order.created', payload: { orderId: '...' } })
+        await testBed.flushOutbox()
+        expect(testBed.spy.wasHandlerActivated(OrderCreatedHandler)).toBe(true)
+      right: |
+        // Instantiate the event class and call the handler directly — no outbox, no seeding
+        import { OrderCreatedEvent } from '@sales/events'
+        const event = new OrderCreatedEvent({ orderId: '...', /* full payload */ })
+        const handler = testBed.resolve(OrderCreatedHandler)
+        await handler.handle(event)
+        // assert side-effects on the resolved repositories or testBed.spy
+
+    - id: bp-17
+      name: "Inline seed/build/make helpers instead of given/"
+      severity: high
+      mechanical: true
+      detect:
+        - '(?:async\s+)?function\s+(seed|build|make)[A-Z]\w*'
+      detect_skip: 'describe\(\s*[''"]Drizzle\w+Repository'
+      reason: >
+        A local `async function seedX/buildX/makeX` that creates or persists a domain
+        entity duplicates per-file (seedAuthUser was copy-pasted across 8 identity files)
+        and drifts when the entity schema changes.
+      wrong: |
+        async function seedAuthUser(email: string) { /* repo.save(User.create(...)) */ }
+      right: |
+        import { givenUser, givenUserProfile } from '@test/support'   // shared, repo-direct
+        // A local fixture is allowed ONLY inside a single Drizzle*Repository.test.ts with
+        // no cross-file reuse. Reused in 2+ files → promote to tests/support/given/.
+
+    - id: bp-18
+      name: "Hardcoded UUID literals as test ids"
+      severity: medium
+      mechanical: true
+      detect:
+        - '[''"][0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}[''"]'
+      reason: "Opaque hex literals bypass the Id factory, may not match UUIDv7 format, and collide when copy-pasted."
+      wrong: "const USER_ID = '019e4d24-6524-7041-9e1c-8108180cddae'"
+      right: |
+        import { testId } from '@test/support'
+        const userId = testId('user', '1')   // deterministic; testId() for random/not-found
+
+    - id: bp-19
+      name: "Hand-rolled try/catch + cast for error assertions"
+      severity: medium
+      mechanical: true
+      detect:
+        - '\(\s*caught\s+as\s+\w+\s*\)'
+        - 'catch\s*\(\s*\w+\s*\)\s*\{\s*caught\s*='
+      reason: "See TST-17. The cast silently passes for non-BaseError throwables and spreads 5-line boilerplate."
+      wrong: |
+        let caught; try { await uc.execute(...) } catch (e) { caught = e }
+        expect((caught as BaseError).name).toBe('CODE')
+      right: |
+        await expect(uc.execute(...)).rejects.toMatchObject({ name: 'CODE' })
+
+    - id: bp-20
+      name: "`as unknown as typeof fetch` stub cast"
+      severity: high
+      mechanical: true
+      detect:
+        - 'as\s+unknown\s+as\s+typeof\s+fetch'
+      reason: "The double cast suppresses signature checks on the HTTP stub; all occurrences cluster in integration/services from copy-paste."
+      wrong: "const fetchStub = (async () => jsonResponse({})) as unknown as typeof fetch"
+      right: |
+        import { createFakeFetch, jsonResponse } from '@test/support'
+        const { fetch, calls } = createFakeFetch({ routes: { '/shop.json': () => jsonResponse({ shop: {} }) } })
+        new ShopifyHandshaker(fetch)   // typed; the single cast is centralized in the fake
+
+    - id: bp-21
+      name: "TestBed.create('integration') without ownerId"
+      severity: low
+      mechanical: true
+      detect:
+        - 'TestBed\.create\(\s*[''"]integration[''"]\s*,\s*\{(?:(?!ownerId)[^}])*\}'
+      reason: >
+        The ownerId getter defaults to 'integration-tenant', so this is a CONSISTENCY rule,
+        not a correctness bug — but every integration test should pass it explicitly to match
+        the canonical snippet and make tenant scoping legible.
+      wrong: "await TestBed.create('integration', { testContainer })"
+      right: "await TestBed.create('integration', { testContainer, ownerId: 'integration-tenant' })"
+
+    - id: bp-22
+      name: "setTimeout timing hacks for ordering"
+      severity: medium
+      mechanical: true
+      detect:
+        - 'setTimeout\('
+      reason: "Sleeping to force createdAt gaps is flaky and slow. Events carry no createdAt; the table assigns it at insert."
+      wrong: "await givenDomainEvent(testBed, a); await new Promise(r => setTimeout(r, 5)); await givenDomainEvent(testBed, b)"
+      right: |
+        // assert set membership / count, not array order:
+        const types = out.items.map(i => i.type)
+        expect(types).toContain('billing.subscription.created')
+        // if strict order is genuinely required, that is a read-side ordering concern — fix the query, not the test.
+
+    - id: bp-23
+      name: "Raw event-name string literals in assertions"
+      severity: low
+      mechanical: true
+      detect:
+        - '[''"][a-z][a-z0-9]*\.[a-z][a-z0-9]*\.[a-z0-9.]+[''"]'
+      reason: "Magic strings like 'billing.subscription.created' drift from the event class; the class carries the canonical name."
+      wrong: "expect(countSaved('billing.subscription.created')).toBe(1)"
+      right: "expect(countSaved(SubscriptionCreatedEvent.name)).toBe(1)"
+
+    - id: bp-24
+      name: "Weak/dead assertions on known-present values"
+      severity: low
+      mechanical: true
+      detect:
+        - 'expect\([^)]*\)\.toBeDefined\(\)'
+        - 'expect\([^)]*\)\.toBeTruthy\(\)'
+      reason: "toBeDefined/toBeTruthy/length>0 on a value the test just created proves nothing about behavior."
+      wrong: "expect(result).toBeDefined()"
+      right: "expect(result.reportingCurrency).toBe(CurrencyCode.BRL)"
+
+    - id: bp-25
+      name: "Resolving collaborators inside each test body"
+      severity: low
+      mechanical: false
+      reason: "Resolving repos/use-cases in every it() repeats wiring and diverges; resolve once in beforeAll."
+      wrong: "it('…', async () => { const repo = testBed.resolve(StoreRepository); /* … */ })"
+      right: "// resolve in beforeAll into a suite-scoped let; test bodies use it"
+
+    - id: bp-26
+      name: "Private-field probing via `as any`"
+      severity: medium
+      mechanical: true
+      detect:
+        - '\[\s*[''"][^''"]+[''"]\s+as\s+never\s*\]'
+      reason: "Reaching into a private field (`uc['inputSchema' as never] as any`) tests implementation, not behavior."
+      wrong: "const schema = uc['inputSchema' as never] as any"
+      right: "// assert observable behavior; if a value must be inspected, expose a typed accessor"
+
+  snippet:
+    skeleton: |
+      import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+      import { container, type DependencyContainer } from 'tsyringe-neo'
+      import { TestBed } from '@test/support'
+      import { testId } from '@test/support'
+      import { {{Name}} } from './{{Name}}'
+
+      describe('{{Name}}', () => {
+      	let testBed: TestBed
+      	let testContainer: DependencyContainer
+      	let useCase: {{Name}}
+
+      	beforeAll(async () => {
+      		testContainer = container.createChildContainer()
+      		testBed = await TestBed.create('integration', { testContainer, ownerId: 'integration-tenant' })
+      		useCase = testBed.resolve({{Name}})
+      	})
+      	beforeEach(async () => { await testBed.reset() })
+      	afterAll(async () => { await testBed.destroy() })
+
+      	it('TODO: orchestration behavior', async () => {
+      		// const { store } = await givenStoreWithOwner(testBed)
+      		// const result = await useCase.execute({ ... })
+      		// expect(result.x).toBe(y)
+      	})
+
+      	it('throws when the resource is missing', async () => {
+      		await expect(useCase.execute({ id: testId() })).rejects.toMatchObject({ name: 'NOT_FOUND' })
+      	})
+      })
+    skeletons:
+      usecase: |
+        import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+        import { container, type DependencyContainer } from 'tsyringe-neo'
+        import { TestBed } from '@test/support'
+        import { testId } from '@test/support'
+        import { {{Name}} } from './{{Name}}'
+
+        describe('{{Name}}', () => {
+        	let testBed: TestBed
+        	let testContainer: DependencyContainer
+        	let useCase: {{Name}}
+
+        	beforeAll(async () => {
+        		testContainer = container.createChildContainer()
+        		testBed = await TestBed.create('integration', { testContainer, ownerId: 'integration-tenant' })
+        		useCase = testBed.resolve({{Name}})
+        	})
+        	beforeEach(async () => { await testBed.reset() })
+        	afterAll(async () => { await testBed.destroy() })
+
+        	it('TODO: orchestration behavior', async () => {
+        		// const { store } = await givenStoreWithOwner(testBed)
+        		// const result = await useCase.execute({ ... })
+        		// expect(result.x).toBe(y)
+        	})
+
+        	it('throws when the resource is missing', async () => {
+        		await expect(useCase.execute({ id: testId() })).rejects.toMatchObject({ name: 'NOT_FOUND' })
+        	})
+        })
+      repository: |
+        import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+        import { container, type DependencyContainer } from 'tsyringe-neo'
+        import { TestBed } from '@test/support'
+        import { testId } from '@test/support'
+        import { {{Name}}Repository } from './{{Name}}Repository'
+
+        describe('Drizzle{{Name}}Repository', () => {
+        	let testBed: TestBed
+        	let testContainer: DependencyContainer
+        	let repository: {{Name}}Repository
+
+        	beforeAll(async () => {
+        		testContainer = container.createChildContainer()
+        		testBed = await TestBed.create('integration', { testContainer, ownerId: 'integration-tenant' })
+        		repository = testBed.resolve({{Name}}Repository)
+        	})
+        	beforeEach(async () => { await testBed.reset() })
+        	afterAll(async () => { await testBed.destroy() })
+
+        	it('saves and retrieves by id', async () => {
+        		// const entity = {{Name}}.create({ ... })
+        		// await repository.save(entity)
+        		// const found = await repository.findById(entity.id.value)
+        		// expect(found?.id.value).toBe(entity.id.value)
+        	})
+
+        	it('returns null for unknown id', async () => {
+        		const found = await repository.findById(testId())
+        		expect(found).toBeNull()
+        	})
+        })
+      handler: |
+        import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+        import { container, type DependencyContainer } from 'tsyringe-neo'
+        import { TestBed } from '@test/support'
+        import { testId } from '@test/support'
+        import { {{Name}}Handler } from './{{Name}}Handler'
+        import { {{Name}}Event } from '@{{contextName}}/events'
+
+        describe('{{Name}}Handler', () => {
+        	let testBed: TestBed
+        	let testContainer: DependencyContainer
+        	let handler: {{Name}}Handler
+
+        	beforeAll(async () => {
+        		testContainer = container.createChildContainer()
+        		testBed = await TestBed.create('integration', { testContainer, ownerId: 'integration-tenant' })
+        		handler = testBed.resolve({{Name}}Handler)
+        	})
+        	beforeEach(async () => { await testBed.reset() })
+        	afterAll(async () => { await testBed.destroy() })
+
+        	it('handles {{camelName}} event', async () => {
+        		const event = new {{Name}}Event({
+        			entityId: testId('{{camelName}}', '1'),
+        			ownerId: 'integration-tenant',
+        			payload: { /* TODO: required fields */ },
+        		})
+        		await handler.handle(event)
+        		// assert side-effects via testBed.spy or repo
+        	})
+        })
+      query: |
+        import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+        import { container, type DependencyContainer } from 'tsyringe-neo'
+        import { TestBed } from '@test/support'
+        import { testId } from '@test/support'
+        import { {{Name}} } from './{{Name}}'
+
+        describe('{{Name}}', () => {
+        	let testBed: TestBed
+        	let testContainer: DependencyContainer
+        	let query: {{Name}}
+
+        	beforeAll(async () => {
+        		testContainer = container.createChildContainer()
+        		testBed = await TestBed.create('integration', { testContainer, ownerId: 'integration-tenant' })
+        		query = testBed.resolve({{Name}})
+        	})
+        	beforeEach(async () => { await testBed.reset() })
+        	afterAll(async () => { await testBed.destroy() })
+
+        	it('returns expected data', async () => {
+        		// const { store } = await givenStoreWithOwner(testBed)
+        		// const result = await query.execute({ ownerId: testBed.ownerId })
+        		// expect(result.items).toHaveLength(1)
+        	})
+
+        	it('returns empty results when no data exists', async () => {
+        		const result = await query.execute({ ownerId: testId() })
+        		expect(result).toBeDefined()
+        	})
+        })
+      given: |
+        import type { TestBed } from '../TestBed'
+        import { {{Name}} } from '@{{contextName}}/entities/{{Name}}'
+        import { {{Name}}Repository } from '@{{contextName}}/repositories/{{Name}}Repository'
+
+        export async function given{{Name}}(testBed: TestBed, overrides: Partial<{}> = {}): Promise<{{Name}}> {
+        	const entity = {{Name}}.create({ /* TODO: required fields, use testId(...) for ids */ })
+        	return testBed.resolve({{Name}}Repository).save(entity)
+        }

@@ -1,0 +1,61 @@
+{
+	"name": "@codm/contracts",
+	"version": "0.0.1",
+	"license": "MIT",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/db/sqlite/index.ts",
+		"./db": "./src/db/sqlite/index.ts",
+		"./db/pg": "./src/db/pg/schema/index.ts",
+		"./db/pg/migrations": "./src/db/pg/migrations.ts",
+		"./db/migrations": "./src/db/migrations.ts",
+		"./db/dialect": "./src/db/dialect.ts",
+		"./context-ids": "./src/contexts/context-ids.generated.ts",
+		"./namespaces": "./src/contexts/namespaces.ts",
+		"./placement": "./src/contexts/placement.ts",
+		"./context": "./src/contexts/context.ts",
+		"./cues": "./src/cues/thinking.ts"
+	},
+	"scripts": {
+		"tsp:compile": "tsp compile src/wire/",
+		"tsp:watch": "tsp compile src/wire/ --watch",
+		"codegen:wire:typescript": "bun codegen/emit-wire-ts.ts",
+		"codegen:wire:go": "bun codegen/emit-wire-go.ts",
+		"codegen:wire:rust": "bun codegen/emit-wire-rs.ts && cargo check --quiet --manifest-path generated/rust/Cargo.toml",
+		"codegen:wire": "bun run codegen:wire:typescript && bun run codegen:wire:go && bun run codegen:wire:rust",
+		"codegen:fixtures": "bun codegen/emit-fixtures.ts",
+		"test:rust": "cargo test --quiet --manifest-path generated/rust/Cargo.toml",
+		"test:go": "cd generated/go && go test ./...",
+		"db:sync-go": "bun ../../scripts/db/sync-sqlite-migrations.ts",
+		"db:check-go": "bun ../../scripts/db/sync-sqlite-migrations.ts --check",
+		"drizzle:generate": "drizzle-kit generate --config=src/db/sqlite/drizzle.config.ts",
+		"drizzle:generate:cloud": "bun --env-file=../../.env x drizzle-kit generate --config=src/db/pg/drizzle.config.ts",
+		"drizzle:migrate:cloud": "bun --env-file=../../.env src/db/pg/deploy.ts",
+		"all": "bun run tsp:compile && bun run codegen:wire && bun run codegen:fixtures && bun run drizzle:generate",
+		"test": "bun test codegen/ src/db/ src/cues/ && bun run test:rust && bun run test:go"
+	},
+	"dependencies": {
+		"drizzle-orm": "^0.45.2",
+		"pg": "^8.20.0",
+		"yaml": "^2.6.0"
+	},
+	"devDependencies": {
+		"@typespec/compiler": "^1.5.0",
+		"@typespec/openapi": "^1.5.0",
+		"@typespec/openapi3": "^1.5.0",
+		"drizzle-kit": "^0.31.0",
+		"@codm/contracts-typescript": "workspace:*",
+		"@codm/core-typescript": "workspace:*"
+	},
+	"nx": {
+		"//targets": "`test` reads packages/contracts/generated/openapi/contracts.openapi.yaml, which `tsp:compile` emits into the gitignored generated/openapi/ (the ephemeral intermediate of the pipeline; the language dirs beside it are committed). Without this dependsOn the suite dies with ENOENT in every tree where nobody has run `bun contracts` yet (fresh clone, fresh worktree, freshly stamped product).",
+		"targets": {
+			"test": {
+				"dependsOn": [
+					"tsp:compile"
+				]
+			}
+		}
+	}
+}

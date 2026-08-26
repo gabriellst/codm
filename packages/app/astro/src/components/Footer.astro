@@ -1,0 +1,103 @@
+---
+import { getEntry } from 'astro:content'
+import DownloadIcon from '~/components/DownloadIcon.astro'
+import DownloadOthers from '~/components/DownloadOthers.astro'
+import Icon from '~/components/Icon.astro'
+import { DEFAULT_DOWNLOAD, downloadLabel } from '~/config/download'
+import { type Locale, routeFor } from '~/i18n'
+
+interface Props {
+	locale: Locale
+}
+
+const { locale } = Astro.props
+const entry = await getEntry('landing', `home.${locale}`)
+const t = entry!.data
+
+// A link's kind decides its href source: `/…` is an in-site route (needs the locale
+// prefix), `#…` is a same-page anchor, anything else is external — never a per-label
+// special case.
+const hrefFor = (href: string) => (href.startsWith('/') ? routeFor(locale, href) : href)
+
+// Privacy/Terms have no dedicated route yet (same "not out of scope, just not shipped"
+// situation as /docs — see Home.astro's docsHref). Anchored to the GitHub README until
+// those pages exist, rather than a dead `#` or a misleading link to the homepage.
+const githubHref = t.footer.project.links.find(l => l.label.includes('GitHub'))?.href ?? 'https://github.com/gabriellst/codm'
+const legalFallbackHref = `${githubHref}#readme`
+---
+
+<!--
+  R22 — ClosingCta.astro no longer exists as a standalone section. The design's dark
+  footer (JLnsz) bakes the final call-to-action (headline + CTAs) directly into its top,
+  above the Explorar/Projeto columns — so the closing pitch now lives here, once, instead
+  of as a separate section Home.astro mounted right before the footer.
+
+  Download por sistema (plano 2026-08-25, D15): o CTA sai do servidor com DEFAULT_DOWNLOAD (macOS)
+  e DownloadDetect.astro (BaseLayout) troca href/rótulo/ícone pelo sistema do visitante; a lista
+  DownloadOthers logo abaixo cobre quem não foi reconhecido ou quer outro formato.
+
+  Colors here are literal `white/NN` alpha utilities, not `--fg-60`/`--fg-20` — this
+  surface is unconditionally dark (it never runs against the light `:root` palette), so
+  it doesn't need the theme-auto-inverting token (which composes `oklch(from var(--foreground)…)`
+  and is meant for elements that toggle between a `.dark`-scoped wrapper and plain
+  `:root`, like the Hero/Pricing outline buttons). Same literal-alpha pattern the legal
+  row below already used before this rewrite.
+-->
+<footer class="overflow-hidden bg-[var(--site-dark)] px-6 pt-20 text-white md:px-16">
+	<div class="mx-auto flex max-w-[1312px] flex-col gap-10 md:flex-row">
+		<div class="flex flex-1 flex-col gap-[22px]">
+			<h2 class="m-0 whitespace-pre-line text-balance text-[length:clamp(28px,4vw,40px)] font-extrabold leading-[1.12] tracking-[-1.2px] text-white">
+				{t.footer.headline}
+			</h2>
+			<div class="flex flex-wrap items-center gap-3">
+				<a
+					href={DEFAULT_DOWNLOAD.url}
+					data-download-cta
+					data-download-key={DEFAULT_DOWNLOAD.key}
+					class="inline-flex items-center gap-[9px] whitespace-nowrap rounded-asymmetric-md bg-[var(--primary)] px-6 py-[13px] text-[14.5px] font-bold text-[var(--primary-foreground)] transition-opacity hover:opacity-90"
+				>
+					<DownloadIcon size={17} />
+					<span data-download-label data-download-template={t.hero.ctaDownload}>{downloadLabel(t.hero.ctaDownload, DEFAULT_DOWNLOAD)}</span>
+				</a>
+				<a
+					href={githubHref}
+					class="inline-flex items-center gap-[9px] whitespace-nowrap rounded-asymmetric-md border border-white/20 px-[22px] py-[13px] text-[14.5px] font-bold text-white/60 transition-colors hover:bg-white/5"
+				>
+					<Icon name="github" size={17} />
+					{t.hero.ctaGithub}
+				</a>
+			</div>
+			<DownloadOthers title={t.hero.otherPlatforms} class="text-white/60 [&_a:hover]:text-white" />
+		</div>
+		<div class="flex w-[170px] flex-col gap-3">
+			<span class="text-[13px] font-bold text-white">{t.footer.explore.title}</span>
+			{
+				t.footer.explore.links.map(l => (
+					<a href={hrefFor(l.href)} class="text-[13px] text-white/60 transition-colors hover:text-white">
+						{l.label}
+					</a>
+				))
+			}
+		</div>
+		<div class="flex w-[170px] flex-col gap-3">
+			<span class="text-[13px] font-bold text-white">{t.footer.project.title}</span>
+			{
+				t.footer.project.links.map(l => (
+					<a href={hrefFor(l.href)} class="text-[13px] text-white/60 transition-colors hover:text-white">
+						{l.label}
+					</a>
+				))
+			}
+		</div>
+	</div>
+	<div class="mx-auto mt-12 flex max-w-[1312px] flex-col gap-2 border-t border-white/[0.12] py-[18px]">
+		<div class="flex flex-wrap items-center gap-5">
+			<span class="flex-1 text-[12.5px] text-white/40">{t.footer.copyright}</span>
+			<a href={legalFallbackHref} class="text-[12.5px] text-white/60 transition-colors hover:text-white">{t.footer.privacy}</a>
+			<a href={legalFallbackHref} class="text-[12.5px] text-white/60 transition-colors hover:text-white">{t.footer.terms}</a>
+		</div>
+		{/* SP4 — transparency disclosure: not a node in the design's footer, but a compliance
+		    line the design doesn't contradict — kept as a quiet caption beneath the legal row. */}
+		<p class="text-[11.5px] text-white/30">{t.footer.telemetryNotice}</p>
+	</div>
+</footer>

@@ -1,0 +1,13 @@
+{
+	"refunds": {
+		"title": "Reembolsos",
+		"deleteSelected": "Excluir selecionados",
+		"menuHint": "Ações em lote disponíveis aqui",
+		"empty": "Nenhum reembolso encontrado",
+		"loading": "Carregando reembolsos…",
+		"table": {
+			"code": "Código",
+			"status": "Situação"
+		}
+	}
+}

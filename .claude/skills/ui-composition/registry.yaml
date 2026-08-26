@@ -1,0 +1,251 @@
+registry:
+  type: meta
+  layer: analysis
+  depends_on: []
+  depended_by: [route, component, form, store, primitive]
+  context_reads: [brainstorm]
+
+  patterns:
+    # --- Always patterns ---
+
+    - id: UIC-01
+      name: "Seven sub-sections in fixed order"
+      when: always
+      rule: |
+        Emitted block contains, in this order:
+        1. ### URL Contract
+        2. ### ASCII Layout Map
+        3. ### Component Tree
+        4. ### Component Anatomy
+        5. ### Data Cards
+        6. ### Reuse Summary
+        7. ### Hand-off
+      wrong: "Missing a sub-section or reordering them"
+
+    - id: UIC-02
+      name: "Three-way name parity"
+      when: always
+      rule: "Every citizen name appears in ASCII Layout Map, Component Tree, AND Component Anatomy (1:1 mapping across all three; RouteShell is exempt from anatomy)"
+      wrong: "ASCII shows 'PatientGrid', tree shows 'PatientListSection', anatomy missing — names diverge or coverage gaps"
+
+    - id: UIC-03
+      name: "Exactly one citizen per boundary"
+      when: always
+      rule: "Each node in the tree has exactly one Role from {RouteShell, Section, Component, Leaf, Dialog, Form}"
+      wrong: "Node labeled 'Section/Component' (ambiguous) or missing Role"
+
+    - id: UIC-04
+      name: "Section guard"
+      when: always
+      rule: "A Section orchestrates ≥3 distinct sub-components OR is the sole data-fetching root of a region"
+      wrong: "Labeling a standalone search input or pagination control as a Section"
+
+    - id: UIC-05
+      name: "Leaf receives props only"
+      when: always
+      rule: "Leaf node Data field is 'props from <Parent>' — never an SDK hook"
+      wrong: "Leaf with `useGetX({ id: props.id })` (re-fetches what parent already passed)"
+
+    - id: UIC-06
+      name: "Reuse decision present"
+      when: always
+      rule: "Every node has Reuse.decision ∈ {reuse, promote-to-shared, create-new-shared, create-route-local} with rationale"
+      wrong: "Missing decision or rationale; just `— TBD`"
+
+    - id: UIC-07
+      name: "Existing path cited on reuse/promote"
+      when: always
+      rule: "Nodes with decision = reuse or promote-to-shared cite the existing file path"
+      wrong: "decision = reuse but no path; reader can't verify"
+
+    - id: UIC-08
+      name: "Hand-off ordering"
+      when: always
+      rule: "Hand-off order is Route → Store → New shared/primitive → Sections (top-down) → Leaves → Dialogs → Forms"
+      wrong: "Dialogs before Sections, Forms before their parent Dialog"
+
+    - id: UIC-09
+      name: "Component Anatomy completeness"
+      when: always
+      rule: |
+        Every citizen except RouteShell has an anatomy block containing:
+        (1) root container with layout shorthand, (2) every visible slot/sub-element as one line,
+        (3) primitive references inline as [primitive: <Name>] wherever an element wraps a primitive,
+        (4) variants list when the citizen has visually distinct prop/URL/store-driven states.
+        Forms list every field as a slot with the SDK schema field name and the primitive used.
+        Dialogs show DialogHeader / DialogBody / DialogFooter structure.
+      wrong: "Anatomy missing for a Leaf; or anatomy only says 'a card with stuff' without naming slots; or Form lists 'inputs' instead of named fields"
+
+    - id: UIC-10
+      name: "Anatomy is shape, not behavior"
+      when: always
+      rule: "Anatomy blocks describe layout, slots, sub-elements, primitives, and visual variants. They do NOT mention hooks, queries, store calls, or mutations — that lives in the Data Card."
+      wrong: "Anatomy says 'IconButton calls useUpdateTax mutation' — behavior belongs in Data Card"
+
+    - id: UIC-11
+      name: "ASCII mockup required for Leaf / Component / Dialog"
+      when: always
+      rule: |
+        Every Leaf, Component, and Dialog anatomy block contains a fenced ASCII mockup BEFORE the
+        slot tree. The mockup uses Unicode box-drawing characters, ≤80 cols, with representative
+        copy pulled from the source artifact (not lorem ipsum). Sections and Forms MAY omit the
+        mockup (Section layout is covered by the page-level ASCII Layout Map; Forms live inside
+        their Dialog's body and are shown via the parent Dialog's mockup).
+      wrong: "Leaf with only a slot tree and no ASCII mockup; mockup with placeholder text like 'XXXX'"
+
+    # --- Conditional patterns ---
+
+    - id: UIC-C01
+      name: "Dialog placement by consumer count"
+      when: "the boundary is a Dialog"
+      rule: "1 route consumer → routes/.../-components/<Name>Dialog/; ≥2 consumers → @/components/Dialogs/<Name>/ + barrel export added"
+      wrong: "Dialog used in 1 route placed in @/components/Dialogs/ (premature shared); or used in 3 routes placed locally (duplicated)"
+
+    - id: UIC-C02
+      name: "URL state for bookmarkable selection"
+      when: "boundary represents a user selection that should survive refresh (selectedId, active tab, filters, page)"
+      rule: "URL r/w lists the search param; never use Zustand or useState"
+      wrong: "selectedAppointmentId stored in useChatStore instead of URL search param"
+
+    - id: UIC-C03
+      name: "Zustand for shared ephemeral state"
+      when: "interactive state shared between ≥2 components AND should NOT be in URL (typing, presence, draft, runtime IDs)"
+      rule: "Introduce a store (route-scoped or global per location) and list it in the relevant data cards"
+      wrong: "Prop-drilling typing/presence state through 3 levels; recreating local state in each consumer"
+
+    - id: UIC-C04
+      name: "useState only for ephemeral local state"
+      when: "state is local to ONE component and has no sharing"
+      rule: "List under Local state field of that one component's data card"
+      wrong: "Filter state in useState that should be URL"
+
+    - id: UIC-C05
+      name: "ARIA on icon-only / list / dialog"
+      when: "boundary is an icon-only button, a list container, or a dialog"
+      rule: "ARIA field of data card lists the label (aria-label='Excluir paciente' or role='list' aria-label='Lista de pacientes')"
+      wrong: "Icon-only button with no aria; list container without role + label"
+
+    - id: UIC-C06
+      name: "Promote rationale when shape repeats"
+      when: "a similar shape exists in ≥2 routes' -components/"
+      rule: "decision MUST be promote-to-shared, citing both routes; do not duplicate route-local"
+      wrong: "PatientCard recreated in two routes when both could consume a shared PersonCard"
+
+    - id: UIC-C07
+      name: "Open Questions for unclear boundaries"
+      when: "a boundary doesn't fit any citizen cleanly"
+      rule: "List it under ### Open Questions with proposed classification and what info would resolve it"
+      wrong: "Force-fitting an unclear boundary into Section by default"
+
+    - id: UIC-C08
+      name: "Missing primitive flagged in Hand-off"
+      when: "an anatomy block references a primitive that does NOT exist in @codm/app-ui/"
+      rule: "Hand-off MUST include a /primitive step for that primitive, ordered BEFORE the first consuming component"
+      wrong: "Anatomy says [primitive: Carousel] but @codm/app-ui/carousel does not exist and Hand-off does not create it"
+
+    - id: UIC-C09
+      name: "Anatomy overlap triggers promote-to-shared"
+      when: "two citizens have anatomies overlapping ≥70% (same root, same slot names, same primitives)"
+      rule: "Reuse Summary MUST classify them as a single shared component with promote-to-shared (or create-new-shared) decision — even when only one consumer exists today"
+      wrong: "Two route-local cards with identical anatomy kept separate"
+
+  bad_practices:
+    - id: bp-01
+      severity: high
+      name: "Section overuse"
+      description: "Labeling every container as Section dilutes the orchestration signal. Section is for ≥3 distinct sub-components OR data root."
+      example_wrong: "SearchInput labeled as SearchInputSection"
+      example_right: "SearchInput labeled as Component (it owns URL r/w but doesn't orchestrate sub-components)"
+      mechanical: false
+
+    - id: bp-02
+      severity: high
+      name: "Data prop drilling"
+      description: "Passing fetched data through props instead of letting each consumer fetch via React Query (which deduplicates)."
+      example_wrong: "Route fetches list, passes to PatientListSection via props"
+      example_right: "PatientListSection owns useListPatients; Route is a thin shell"
+      mechanical: false
+
+    - id: bp-03
+      severity: high
+      name: "Filter in useState"
+      description: "Filters and pagination must live in URL search params so they are bookmarkable and survive refresh."
+      example_wrong: "const [search, setSearch] = useState('') in a list section"
+      example_right: "const { search } = routeApi.useSearch(); navigate to update"
+      mechanical: true
+      detect:
+        - 'const\s*\[\s*(search|filter|page|sort|tab|query|status)\w*\s*,\s*set\w+\s*\]\s*=\s*useState'
+
+    - id: bp-04
+      severity: high
+      name: "Dialog without useDialogStore"
+      description: "All dialogs are opened via useDialogStore.show(<DialogComponent />). Never receive open/onOpenChange props."
+      example_wrong: "<CreatePatientDialog open={isOpen} onOpenChange={setOpen} />"
+      example_right: "show(<CreatePatientDialog />)"
+      mechanical: true
+      detect:
+        - 'onOpenChange='
+        - '<\w+Dialog\b[^>]*\bopen='
+
+    - id: bp-05
+      severity: medium
+      name: "Primitive duplication"
+      description: "Re-implementing a primitive that already exists in @codm/app-ui/."
+      example_wrong: "Hand-rolled <select> styled element"
+      example_right: "Import Select from @codm/app-ui/select"
+      mechanical: true
+      detect:
+        - '<select\b'
+        - '<input\s+type=["'']date'
+
+    - id: bp-06
+      severity: medium
+      name: "Premature shared promotion"
+      description: "Moving a route-local component to @/components/<Name>/ before ≥2 consumers exist."
+      example_wrong: "Creating @/components/PatientCard/ used in only one route"
+      example_right: "Keep PatientCard route-local until a second route needs the same shape"
+      mechanical: false
+
+    - id: bp-07
+      severity: medium
+      name: "ARIA omission"
+      description: "Missing aria-label on icon-only buttons, list containers, dialogs, or section landmarks."
+      example_wrong: "<Button><IconTrash /></Button>"
+      example_right: "<Button aria-label='Excluir paciente'><IconTrash /></Button>"
+      mechanical: false
+
+    - id: bp-08
+      severity: low
+      name: "ASCII map drift"
+      description: "Names in ASCII map don't match Component Tree names exactly."
+      example_wrong: "ASCII shows 'PatientsGrid', tree shows 'PatientListSection'"
+      example_right: "Both use 'PatientListSection'"
+      mechanical: false
+
+    - id: bp-09
+      severity: low
+      name: "Missing Open Questions section"
+      description: "Unclear boundaries silently coerced into a citizen instead of flagged for human review."
+      example_wrong: "Boundary that doesn't fit cleanly labeled Section without note"
+      example_right: "List under ### Open Questions with proposed classification"
+      mechanical: false
+
+  checklist:
+    - "UIC-01 — seven sub-sections present in order"
+    - "UIC-02 — ASCII/Tree/Anatomy name parity"
+    - "UIC-03 — single citizen per boundary"
+    - "UIC-04 — Section guard satisfied"
+    - "UIC-05 — Leaves use props only"
+    - "UIC-06 — every node has reuse decision + rationale"
+    - "UIC-07 — reuse/promote nodes cite existing paths"
+    - "UIC-08 — hand-off in correct order"
+    - "UIC-09 — anatomy block for every citizen except RouteShell"
+    - "UIC-10 — anatomy is shape only, no behavior"
+    - "UIC-11 — ASCII mockup present for every Leaf / Component / Dialog"
+    - "UIC-C01 — dialog placement matches consumer count"
+    - "UIC-C02 — bookmarkable selection in URL"
+    - "UIC-C05 — ARIA on icon-only / list / dialog"
+    - "UIC-C06 — shape repeated in ≥2 routes → promote"
+    - "UIC-C08 — missing primitives flagged in Hand-off"
+    - "UIC-C09 — overlapping anatomies trigger promote-to-shared"
+    - "bp-01..09 — no bad practice violations"

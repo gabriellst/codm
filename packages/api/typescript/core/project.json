@@ -1,0 +1,48 @@
+{
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"name": "core-typescript",
+	"sourceRoot": "packages/api/typescript/core/src",
+	"projectType": "library",
+	"targets": {
+		"tsc": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"options": {
+				"command": "bun x tsc --noEmit",
+				"cwd": "packages/api/typescript/core"
+			}
+		},
+		"lint": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"inputs": [
+				"{projectRoot}/src/**/*",
+				"{projectRoot}/tsconfig.json",
+				"{workspaceRoot}/eslint.config.ts",
+				"{workspaceRoot}/scripts/eslint-rules/**/*",
+				"^production"
+			],
+			"options": {
+				"command": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+				"cwd": "packages/api/typescript/core"
+			}
+		},
+		"test": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"options": {
+				"command": "bun test",
+				"cwd": "packages/api/typescript/core",
+				"env": {
+					"NODE_ENV": "test"
+				}
+			},
+			"inputs": [
+				"{projectRoot}/src/**/*",
+				"{projectRoot}/tests/**/*",
+				"{projectRoot}/bunfig.toml",
+				"sharedGlobals"
+			]
+		}
+	}
+}

@@ -1,0 +1,18 @@
+import { Route } from '../../route'
+import * as React from 'react'
+import { cn } from '@/lib/utils'
+
+interface ProductFilterProps extends React.ComponentProps<'div'> {}
+
+export function ProductFilter({ className, ...props }: ProductFilterProps) {
+	const search = Route.useSearch()
+
+	return (
+		<div
+			className={cn('', className)}
+			{...props}
+		>
+			{/* Implement */}
+		</div>
+	)
+}

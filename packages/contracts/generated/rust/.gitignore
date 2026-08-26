@@ -1,0 +1,5 @@
+# Standalone-crate build output (consumers build this crate inside THEIR target dir;
+# this one only exists for `cargo test` runs with cwd here).
+/target/
+# Library crate: the consumer's lockfile pins versions, not ours.
+Cargo.lock

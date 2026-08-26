@@ -1,0 +1,365 @@
+id: synthetic-fullstack-crud-realtime
+tier: holdout
+builder: opus
+title: Supplier purchase orders — full vertical slice with real-time list
+  (P0 COMPOSITION PROBE — contracts → api-ts → api-go → app-react → e2e)
+sourceSpec: PROBES-BACKLOG.md#P0
+goldRef: ""
+baseRef: ""
+prompt: >
+  Build the supplier purchase-orders slice end to end across the template monorepo. This is
+  a COMPOSITION task: contracts, both backends, the react app and an e2e spec, in one
+  coherent build. Work phase by phase and run each phase's finishing gate before moving on.
+  READ FIRST, per layer, before touching that layer: docs/BACKEND.md +
+  .claude/skills/{bounded-context,entity,usecase,controller,repository,event,handler,projection,projector,query,errors,test}/typescript/SKILL.md
+  for the TS backend; packages/app/react/CLAUDE.md (END TO END — especially the Real-time
+  section) + .claude/skills/{route,component,form}/react/SKILL.md for the frontend;
+  .claude/skills/repository/go/SKILL.md + the existing Go handlers under
+  packages/api/go/internal/sync/handlers/ as the Go exemplars; .claude/skills/e2e/SKILL.md
+  + the existing packages/e2e/tests/*.spec.ts as the e2e exemplars.
+  PHASE 1 — CONTRACT LOCK: author the integration event in TypeSpec at
+  packages/contracts/src/wire/events/purchase-order-recorded.tsp (model
+  PurchaseOrderRecordedEvent extends IntegrationEvent, name
+  'integration.shared.purchase_order.recorded', payload: purchaseOrderId (uuid string),
+  storeId (uuid string — REQUIRED, the SSE tenancy filter depends on it), supplierName
+  (string), status (a new PurchaseOrderStatus enum: DRAFT | PLACED | CANCELLED — defined in
+  TypeSpec next to the other wire enums and used by both languages), totalAmount (the wire
+  money shape used by sibling events/schemas); register it in wire/events/index.tsp and run
+  `bun contracts` to regenerate both language bindings. Add the purchase_orders table to
+  packages/contracts/src/db/sqlite (a new procurement.ts file, following finance.ts): id,
+  store_id, supplier_name, status (pgEnum from PurchaseOrderStatus), total_amount cents +
+  currency, timestamps; generate the migration with bun migrate:create. Freeze the
+  contract: later phases consume the generated bindings, never redefine shapes.
+  PHASE 2 — TS BACKEND (new bounded context `procurement` under
+  packages/api/typescript/src/procurement/, wired like its siblings via registry.ts +
+  BoundedContext.create with mock/integration/real): PurchaseOrder aggregate
+  (entities/PurchaseOrder.ts — schema with z.instance(Id)/z.instance(Money) where the
+  entity owns rich types, status as z.enum over the contracts enum, invariant: a CANCELLED
+  order cannot be placed/cancelled again — named domain errors in errors/index.ts with
+  HTTP statuses, e.g. PURCHASE_ORDER_ALREADY_CANCELLED); CreatePurchaseOrder and
+  CancelPurchaseOrder use cases (withTransaction; domain events PurchaseOrderCreatedEvent /
+  PurchaseOrderCancelledEvent saved in the SAME transaction via domainEventRepository);
+  an internal handler (handlers/internal.ts) that reacts to both domain events and
+  publishes the integration event built from the contracts binding (PurchaseOrderRecordedEvent
+  from @codm/contracts-typescript/wire/events) via the external mediator;
+  PurchaseOrderRepository (interface + Drizzle + Mock) wired for all three environments;
+  controllers POST /purchase-orders and POST /purchase-orders/:id/cancel (wire path
+  /v1/procurement/..., AuthAccountMiddleware + RequireStoreMember, ctx envelope, body
+  derived from the use case InputSchema via .omit({ storeId: true, ... }), storeId mapped
+  from request.ctx.session.storeId); a ui BFF list read: src/ui/usecases/ListPurchaseOrders.ts
+  (direct Drizzle, storeId-scoped, newest first) + controller GET /purchase-orders in
+  src/ui/controllers/ + barrel registrations. Colocated tests: entity unit test (direct
+  instantiation, asserts error CODES for the cancelled-twice invariant) and a
+  CreatePurchaseOrder integration test (TestBed.create('integration'), asserts the saved
+  row AND the recorded domain event). Gates: cd packages/api/typescript && bun x tsc -p
+  tsconfig.build.json --noEmit && bun test src/procurement.
+  PHASE 3 — REAL-TIME WIRE: add PurchaseOrderRecordedEvent to BROWSER_EVENTS and the
+  output union in src/ui/controllers/ListenEvents.ts (it carries storeId — read the
+  curation note there), then bun sdk. The SDK now exports usePurchaseOrder hooks, the
+  ListenEvents union member, and purchaseOrderStatus enum/schema.
+  PHASE 4 — REACT: route /app/procurement/purchase-orders
+  (src/routes/(app)/procurement/purchase-orders/): thin index.tsx (URL contract via
+  validateSearch — status filter typed by the SDK enum schema with .default()s —
+  breadcrumb, composition only); -components/PurchaseOrderListSection (owns its data via
+  the SDK list hook + routeApi.useSearch, skeleton inline, status badges via an enum-keyed
+  dispatch map, labels via the typed enums.PurchaseOrderStatus.* catalog added to BOTH
+  src/locales/pt.json and en.json); a create dialog through useDialogStore + TanStack Form
+  validating against the SDK mutation schema (no parallel z.object); cancel action through
+  the SDK mutation hook (mutation object kept whole, no try/catch around mutate); and the
+  REAL-TIME requirement: the list live-updates via
+  useServerEvents('integration.shared.purchase_order.recorded', then invalidateQueries with
+  the SDK list query key per the package CLAUDE.md Real-time section. The purchase-orders
+  list is STORE-WIDE, and the stream is already store-scoped server-side, so a payload.storeId
+  guard is NOT required here (it is only for SUB-store scoping) — subscribe and invalidate directly). Run cd packages/app/react && bun tsr generate after
+  creating the route. Gates: bun x tsc --noEmit in packages/app/react + bun run detect at
+  the repo root.
+  PHASE 5 — GO CONSUMER: packages/api/go/internal/sync/handlers/purchase_order_recorded_handler.go
+  consuming the integration event through the generated Go bindings
+  (UnmarshalIntegrationEvent / the IntegrationEventI registry pattern used by the sibling
+  handlers — NEVER a hand-rolled payload struct), persisting an audit row into a new
+  purchase_order_audit table (migration via bun migrate:channel:create, hand-written SQL
+  constants over database/sql like the sibling repositories — no ORM), registered in the
+  module's fx wiring next to its siblings, with a colocated _test.go exercising the
+  handler against the test harness the siblings use. Gates: cd packages/api/go && go build
+  ./... && go test ./...
+  PHASE 6 — E2E: packages/e2e/tests/08-purchase-orders.spec.ts per the e2e skill: data
+  setup through the API/fixtures (never the UI), role/label selectors, zero
+  waitForTimeout; cover create → appears in list, cancel → status flips, and the
+  REAL-TIME assertion: with the list open, create a second purchase order through the API
+  request context and expect the row to appear WITHOUT a reload (the SSE invalidation).
+  Gate: cd packages/e2e && bun x tsc --noEmit.
+  FINISH with the full sweep from the repo root: bun run detect && bun tsc, and your final
+  message must list per phase what you built and which gates you ran.
+axes:
+  - DISC-UNION
+  - EVENT-EMISSION
+  - TRANSACTION
+  - PROJECTION-MUTATION
+  - WIRE-EXPOSURE
+  - SCHEMA-DERIVE
+  - DATA-OWNERSHIP
+  - STATE-PLACEMENT
+  - SDK-CONSUME
+  - LOCALE-MONEY
+  - ENUM-REPR
+  - NAME-CONSISTENCY
+  - E2E-DISCIPLINE
+graders:
+  # ── layer: contracts ────────────────────────────────────────────────
+  - kind: file-exists
+    spec: "packages/contracts/src/wire/events/purchase-order-recorded.tsp"
+    id: contracts#event-tsp
+  - kind: grep-must
+    spec: "packages/contracts/src/wire/events/purchase-order-recorded.tsp::integration\\.shared\\.purchase_order\\.recorded"
+    id: contracts#event-name
+  - kind: grep-must
+    spec: "packages/contracts/src/wire/events/purchase-order-recorded.tsp::storeId"
+    id: contracts#tenancy-field
+  - kind: grep-must
+    spec: "packages/contracts/generated/typescript/src/wire/events/purchase-order-recorded.ts::PurchaseOrderRecordedEvent"
+    id: contracts#ts-binding-regen
+  - kind: grep-must
+    spec: "packages/contracts/src/db/sqlite/procurement.ts::purchase_orders"
+    id: db-modelling#table
+  - kind: grep-must
+    spec: "packages/contracts/db/migrations/*.sql::purchase_orders"
+    id: migrate#generated
+  # ── layer: api-ts ───────────────────────────────────────────────────
+  - kind: tsc
+    spec: backend
+    id: ts#tsc
+  - kind: test-green
+    spec: packages/api/typescript/src/procurement
+    id: ts#new-suite-green
+  - kind: file-exists
+    spec: "packages/api/typescript/src/procurement/entities/PurchaseOrder.ts"
+    id: ts#aggregate
+  - kind: file-exists
+    spec: "packages/api/typescript/src/procurement/entities/PurchaseOrder.test.ts"
+    id: ts#entity-test
+  - kind: grep-must
+    spec: "packages/api/typescript/src/procurement/entities/PurchaseOrder.ts::z\\.instance\\("
+    id: entity#vo-repr
+  - kind: grep-must
+    spec: "packages/api/typescript/src/procurement/errors/index.ts::PURCHASE_ORDER"
+    id: errors#named-registered
+  - kind: grep-must
+    spec: "packages/api/typescript/src/procurement/usecases/CreatePurchaseOrder.ts::withTransaction\\("
+    id: usecase#transaction
+  - kind: grep-must
+    spec: "packages/api/typescript/src/procurement/handlers/internal.ts::PurchaseOrderRecordedEvent"
+    id: handler#publishes-integration
+  - kind: grep-must
+    spec: "packages/api/typescript/src/procurement/handlers/internal.ts::@codm/contracts-typescript"
+    id: handler#contracts-binding
+  - kind: grep-must
+    spec: "packages/api/typescript/src/procurement/registry.ts::PurchaseOrderRepository"
+    id: repository#di-wiring
+  - kind: grep-must
+    spec: "packages/api/typescript/src/procurement/controllers/CreatePurchaseOrder.ts::InputSchema\\.omit\\("
+    id: controller#derive-omit
+  - kind: grep-must
+    spec: "packages/api/typescript/src/procurement/controllers/CreatePurchaseOrder.ts::ctx\\.session\\.storeId"
+    id: controller#session-identity
+  - kind: grep-must
+    spec: "packages/api/typescript/src/ui/usecases/ListPurchaseOrders.ts::storeId"
+    id: query#tenancy-scoped
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/ui/usecases/ListPurchaseOrders.ts::faker"
+    id: query#real-read
+  - kind: grep-must
+    spec: "packages/api/typescript/src/procurement/usecases/CreatePurchaseOrder.test.ts::TestBed\\.create\\(\\s*'integration'"
+    id: test#integration-mode
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/procurement/**/*.ts::throw new Error\\("
+    id: errors#vocab
+  - kind: grep-must-not
+    spec: "packages/api/typescript/src/procurement/{controllers,usecases}/**/*.ts::z\\.instance\\("
+    id: schema#layer-boundary
+  # ── layer: realtime wire ────────────────────────────────────────────
+  - kind: grep-must
+    spec: "packages/api/typescript/src/ui/controllers/ListenEvents.ts::PurchaseOrderRecordedEvent"
+    id: realtime#browser-union
+  - kind: grep-must
+    spec: "packages/client/dist/typescript/src/typescript/zod/listenEventsSchema.ts::purchase_order"
+    id: realtime#sdk-regen
+  # ── layer: react ────────────────────────────────────────────────────
+  - kind: tsc
+    spec: app-react
+    id: react#tsc
+  - kind: file-exists
+    spec: "packages/app/react/src/routes/(app)/procurement/purchase-orders/index.tsx"
+    id: react#route
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/procurement/purchase-orders/**/*.{ts,tsx}::useServerEvents\\("
+    id: realtime#subscribe
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/procurement/purchase-orders/**/*.{ts,tsx}::invalidateQueries"
+    id: realtime#invalidate-not-surgery
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/procurement/purchase-orders/**/*.{ts,tsx}::setQueryData|refetchInterval"
+    id: realtime#no-surgery-no-poll
+  - kind: grep-must
+    spec: "packages/app/react/src/routes/(app)/procurement/purchase-orders/**/*.{ts,tsx}::useDialogStore"
+    id: component#dialog-store
+  - kind: grep-must
+    spec: "packages/app/react/src/locales/pt.json::PurchaseOrderStatus"
+    id: enum#catalog-pt
+  - kind: grep-must
+    spec: "packages/app/react/src/locales/en.json::PurchaseOrderStatus"
+    id: enum#catalog-en
+  - kind: grep-must-not
+    spec: "packages/app/react/src/routes/(app)/procurement/**/*.{ts,tsx}::fetch\\("
+    id: sdk#no-raw-fetch
+  # ── layer: go ───────────────────────────────────────────────────────
+  - kind: cmd
+    spec: "packages/api/go::go build ./..."
+    id: go#build
+  - kind: cmd
+    spec: "packages/api/go::go test ./..."
+    id: go#test
+  - kind: file-exists
+    spec: "packages/api/go/internal/sync/handlers/purchase_order_recorded_handler.go"
+    id: go#handler
+  - kind: file-exists
+    spec: "packages/api/go/internal/sync/handlers/purchase_order_recorded_handler_test.go"
+    id: go#handler-test
+  - kind: grep-must
+    spec: "packages/api/go/internal/sync/handlers/purchase_order_recorded_handler.go::UnmarshalIntegrationEvent"
+    id: go#contracts-binding
+  - kind: grep-must-not
+    spec: "packages/api/go/internal/sync/handlers/purchase_order_recorded_handler.go::json\\.Unmarshal\\(.*map\\[string\\]"
+    id: go#no-handrolled-payload
+  # ── layer: e2e ──────────────────────────────────────────────────────
+  - kind: tsc
+    spec: e2e
+    id: e2e#tsc
+  - kind: file-exists
+    spec: "packages/e2e/tests/08-purchase-orders.spec.ts"
+    id: e2e#spec
+  - kind: grep-must-not
+    spec: "packages/e2e/tests/08-purchase-orders.spec.ts::waitForTimeout"
+    id: e2e#no-sleep
+  - kind: grep-must
+    spec: "packages/e2e/tests/08-purchase-orders.spec.ts::request\\.|APIRequestContext|api\\."
+    id: e2e#api-setup
+  - kind: grep-must-not
+    spec: "packages/e2e/tests/08-purchase-orders.spec.ts::expect\\(\\s*true\\s*\\)\\.toBe\\(\\s*true|expect\\(\\s*1\\s*\\)\\.toBe\\(\\s*1|TODO|placeholder|\\.skip\\("
+    id: e2e#not-stubbed
+  - kind: grep-must
+    spec: "packages/e2e/tests/08-purchase-orders.spec.ts::expect\\([\\s\\S]{0,400}(toContainText|toBeVisible|toHaveText|toHaveURL|getByRole|getByText)"
+    id: e2e#real-assertions
+  # ── cross-layer ─────────────────────────────────────────────────────
+  - kind: detect
+    spec: registry-scan
+  - kind: detect
+    spec: import-direction
+  - kind: detect
+    spec: slice-closure
+  - kind: detect
+    spec: component-props
+  - kind: judge
+    spec: >
+      A supplier purchase-orders vertical slice was added: contracts (TypeSpec event
+      integration.shared.purchase_order.recorded + purchase_orders table), a new
+      procurement bounded context in packages/api/typescript (PurchaseOrder aggregate,
+      create/cancel use cases, internal handler publishing the contracts-bound integration
+      event, repository, controllers, ui BFF list), the event added to the curated SSE
+      union in src/ui/controllers/ListenEvents.ts, a react route with a live-updating
+      list, a Go consumer handler persisting an audit row, and an e2e spec. Judge the
+      BACKEND + CROSS-LAYER composition: (a) NAME-CONSISTENCY — ONE ubiquitous term end to
+      end: PurchaseOrder / purchase_orders / purchase_order.recorded / PurchaseOrderStatus
+      across tsp, drizzle schema, TS context, Go handler, react route and e2e spec — no
+      Order/PO/Procurement drift between layers; the event name string is IDENTICAL in
+      tsp, the TS handler, ListenEvents, the react subscription and the Go handler. (b)
+      CONTRACT FLOW — the TS internal handler builds the integration event from the
+      generated contracts binding (never a locally-declared shape); the Go handler decodes
+      through the generated bindings; neither language redefines the payload. (c)
+      TRANSACTION + EVENTS — domain events are saved in the same transaction as the
+      aggregate; the integration event is published by the HANDLER (never the use case);
+      the SSE union member carries storeId. (d) TENANCY — every read/write is
+      storeId-scoped from the session ctx (never wire-supplied identity); the BFF list
+      filters by storeId. (e) The entity owns the cancelled-twice invariant with a named
+      domain error; the use case test does not re-test entity validation. Scope notes: the
+      agent's own names for files/components/steps are fine as long as the UBIQUITOUS
+      terms above are consistent; the audit table being Go-owned (channel migrations) while
+      purchase_orders is TS-owned (drizzle) is the EXPECTED split, not drift; minor
+      generated-file churn from bun contracts / bun sdk is fine.
+    id: judge#backend-composition
+  # ── FRONTEND + E2E split into FOUR per-layer judges (was one bundled judge#frontend-e2e) ──
+  # P0 measures the COMPOUND canon rate (p^N) across independent layers; bundling 4 dimensions
+  # into one judge defeated the probe's own "attribute by layer via grader-id prefixes" intent
+  # and manufactured a false "repeating family" signal (the grader failed every roll, but on a
+  # DIFFERENT layer each time — iter7 the filter, iter8 the dialog). Each layer's canon is
+  # individually railed by a dedicated PERFECT probe (react-state-placement, the realtime panels,
+  # the dialog/form probes, the e2e-notifications flow); split so the board shows WHICH layer a
+  # sub-100% roll dropped, and each dimension is its own non-repeating single.
+  - kind: judge
+    model: sonnet
+    spec: >
+      P0 slice, judge ONLY the REACT SHELL + LIST layer: the route index.tsx is a thin shell (URL
+      contract with the status filter typed by the SDK enum schema and .default()ed, NO data
+      fetching in the route); the list section owns its data (SDK hook + routeApi.useSearch with
+      the status filter ACTUALLY threaded into the hook call — a filter that is defined in the
+      search schema but never read/applied is a FAIL), renders inline skeletons, dispatches status
+      badge styles via an enum-keyed map (no switch on the status), labels ONLY via the typed
+      enums.PurchaseOrderStatus.* catalog present in BOTH locale files. Scope: a small -hooks/
+      wrapper around the route's typed search params consumed by components is canon, not a
+      violation; realtime/dialog/e2e concerns are judged by OTHER graders — out of scope here;
+      pre-existing code outside the new route is out of scope.
+    id: judge#react-shell
+  - kind: judge
+    model: sonnet
+    spec: >
+      P0 slice, judge ONLY the REAL-TIME layer per packages/app/react/CLAUDE.md: exactly one
+      useServerEvents subscription for the recorded event whose callback invalidates the SDK list
+      query key on the recorded event — no setQueryData, no refetchInterval, no new
+      EventSource/fetchEventSource outside the shared hooks, no second useServerEventSource mount.
+      Scope: the route/list shape, the dialog, and the e2e spec are judged by OTHER graders — out
+      of scope here; pre-existing code outside the new route/spec is out of scope.
+    id: judge#realtime
+  - kind: judge
+    model: sonnet
+    spec: >
+      P0 slice, judge ONLY the CREATE/CANCEL MUTATION layer: the create dialog goes through
+      useDialogStore and validates against the SDK mutation schema (no parallel z.object of the
+      body); the cancel mutation keeps the mutation object whole, no try/catch around mutate, no
+      onError. A create dialog that is ABSENT entirely is a FAIL. Scope: the route/list shape,
+      realtime wiring, and the e2e spec are judged by OTHER graders — out of scope here;
+      pre-existing code outside the new route is out of scope.
+    id: judge#dialog-mutation
+  - kind: judge
+    model: sonnet
+    spec: >
+      P0 slice, judge ONLY E2E-DISCIPLINE: a new Playwright spec exists for the slice (not absent,
+      not all-fixme/skip), setup goes through the API request context (not UI click-paths),
+      role/label selectors, no waitForTimeout, and the realtime assertion creates data via the API
+      while the list is open and asserts the new row appears without reload/navigation. Scope: the
+      realtime assertion may allow a generous expect timeout (SSE latency) — that is NOT a banned
+      sleep; the route/dialog/realtime-hook implementations are judged by OTHER graders — out of
+      scope here; pre-existing specs outside the new slice are out of scope.
+    id: judge#e2e-discipline
+notes: >-
+  P0 COMPOSITION PROBE — measures the COMPOUND canon rate across five layers in one build
+  (the p^N question); expect sub-100% first runs and attribute by layer via the grader id
+  prefixes (contracts#/ts#/realtime#/react#/go#/e2e#). RUNNER REQUIREMENTS: a DEDICATED
+  session/window — AGENT_TIMEOUT_MS=10800000 (3h), AGENT_RESUMES=4, run alone in a fresh
+  usage window. Free real estate verified 2026-06-11 ~00:45Z: zero purchase-order tokens
+  (purchaseorder/purchase_order/purchase-order, case-insensitive) anywhere under packages/,
+  .claude/skills/, docs/; procurement context absent from packages/api/typescript/src; no
+  08-*.spec.ts in packages/e2e/tests; go handler file absent; ListenEvents union has 19
+  members (none purchase-order); locales lack PurchaseOrderStatus. Grounded facts: contracts
+  events are TypeSpec models extending IntegrationEvent in packages/contracts/src/wire/events/
+  (see product-updated.tsp), regenerated via `bun contracts` (package script: cd
+  packages/contracts && bun run all) → bindings at packages/contracts/generated/{typescript,go};
+  the realtime infra (ListenEventsController BROWSER_EVENTS curation + useServerEvents +
+  the react CLAUDE.md Real-time section) landed 2026-06-10 (commit 'feat(realtime)');
+  Go consumer idioms (UnmarshalIntegrationEvent, IntegrationEventI, internal/sync/handlers
+  path, golang-migrate via bun migrate:channel:create) mirror
+  synthetic-go-consumer-slice.yaml's grounding; e2e idioms mirror
+  synthetic-e2e-notifications-flow.yaml (no playwright-RUN cmd grader — CI=1 hazard; the
+  realtime e2e assertion is graded by tsc + greps + judge, not by executing playwright).
+  Validator expectation notes: both cmd graders (go build/test) green at HEAD; tsc targets
+  backend/app-react/e2e green at HEAD; test-green src/procurement does not exist at HEAD —
+  expected FAIL (validator treats test-green as pass-at-HEAD; this one is the agent's NEW
+  suite — accepted validator exception, see expectation table caveat in validate-task.ts).

@@ -1,0 +1,240 @@
+registry:
+  type: backend
+  layer: domain
+  depends_on: [errors]
+  depended_by: [entity, controller, repository]
+  context_reads: []
+  lang: go
+
+  snippet:
+    skeleton: |
+      // Package objects contains value objects for the {{ctx}} bounded context.
+      package objects
+
+      import (
+      	"strings"
+
+      	ctxerrors "template/api-go/internal/{{ctx}}/errors"
+      	"template/core-go/errors"
+      )
+
+      // {{Pascal}} is an immutable value object for the {{ctx}} bounded context.
+      // Replace the single string field with whatever the concept requires.
+      type {{Pascal}} struct {
+      	value string
+      }
+
+      // New{{Pascal}} constructs a {{Pascal}} from a raw string.
+      // Returns Code{{scream}}_INVALID when the value is empty or fails validation.
+      func New{{Pascal}}(raw string) ({{Pascal}}, error) {
+      	trimmed := strings.TrimSpace(raw)
+      	if trimmed == "" {
+      		return {{Pascal}}{}, errors.NewBaseError(ctxerrors.Code{{Pascal}}Invalid, "{{snake}} must not be empty")
+      	}
+      	// TODO: add format-specific validation
+      	return {{Pascal}}{value: trimmed}, nil
+      }
+
+      func (v {{Pascal}}) Value() string               { return v.value }
+      func (v {{Pascal}}) String() string              { return v.value }
+      func (v {{Pascal}}) Equals(other {{Pascal}}) bool { return v.value == other.value }
+      func (v {{Pascal}}) IsZero() bool                { return v.value == "" }
+
+  patterns:
+    - id: VO-GO-01
+      when: always
+      title: All struct fields are private (lowercase)
+      rule: >
+        Value object struct fields must be private (lowercase). Public exported fields
+        can be mutated by any caller, breaking immutability. All read access goes through
+        exported accessor methods.
+      wrong: |
+        type Email struct {
+            Value string // exported — mutable
+        }
+      right: |
+        type Email struct {
+            value string // private — immutable
+        }
+        func (e Email) Value() string { return e.value }
+
+    - id: VO-GO-02
+      when: always
+      title: Constructor returns (T, error) — never panics
+      rule: >
+        The `New<Name>` constructor always returns `(T, error)`. It must never panic,
+        call `log.Fatal`, or silently swallow invalid input. The caller decides how to
+        handle construction failure.
+      wrong: |
+        func NewEmail(raw string) Email {
+            if !isValid(raw) { panic("invalid email") }
+            return Email{value: raw}
+        }
+      right: |
+        func NewEmail(raw string) (Email, error) {
+            normalized := strings.TrimSpace(strings.ToLower(raw))
+            if _, err := mail.ParseAddress(normalized); err != nil {
+                return Email{}, errors.NewBaseError(errors.CodeInvalidEmail, "invalid email: "+raw)
+            }
+            return Email{value: normalized}, nil
+        }
+
+    - id: VO-GO-03
+      when: always
+      title: Mandatory accessor quartet — Value, String, Equals, IsZero
+      rule: >
+        Every value object must expose: `Value() T` (the underlying value), `String() string`
+        (human-readable form), `Equals(other T) bool` (value equality), and `IsZero() bool`
+        (true when the VO is the zero/unset state).
+      wrong: |
+        // Missing Equals and IsZero
+        func (e Email) Value() string  { return e.value }
+        func (e Email) String() string { return e.value }
+      right: |
+        func (e Email) Value() string        { return e.value }
+        func (e Email) String() string       { return e.value }
+        func (e Email) Equals(other Email) bool { return e.value == other.value }
+        func (e Email) IsZero() bool         { return e.value == "" }
+
+    - id: VO-GO-04
+      when: always
+      title: Construction error uses errors.NewBaseError with a typed code
+      rule: >
+        Validation failures in constructors must be returned as `*errors.AppError` via
+        `errors.NewBaseError(code, message)`. This ensures the HTTP mapper can translate
+        the error to the correct status code.
+      wrong: |
+        return Email{}, fmt.Errorf("invalid email: %s", raw)
+      right: |
+        return Email{}, errors.NewBaseError(errors.CodeInvalidEmail, "invalid email: "+raw)
+
+    - id: VO-GO-C01
+      when: composite VO with multiple required fields
+      title: Use struct tags + validation.ValidateWithCode for composite VOs
+      rule: >
+        For VOs with multiple fields, declare constraints with `validate:"..."` struct tags
+        and call `validation.ValidateWithCode(&v, code)` in the constructor. This keeps
+        constraints co-located with field declarations and avoids verbose manual if-chains.
+      wrong: |
+        func NewAddress(data NewAddressParams) (Address, error) {
+            if data.Street == "" {
+                return Address{}, errors.NewBaseError(errors.CodeInvalidAddress, "street required")
+            }
+            if data.City == "" {
+                return Address{}, errors.NewBaseError(errors.CodeInvalidAddress, "city required")
+            }
+            return Address{street: data.Street, city: data.City}, nil
+        }
+      right: |
+        type Address struct {
+            street string `validate:"required"`
+            city   string `validate:"required"`
+        }
+        func NewAddress(data NewAddressParams) (Address, error) {
+            a := Address{street: data.Street, city: data.City}
+            if err := validation.ValidateWithCode(&a, errors.CodeInvalidAddress); err != nil {
+                return Address{}, err
+            }
+            return a, nil
+        }
+
+    - id: VO-GO-C02
+      when: VO needs an optional static validity check (no allocation)
+      title: IsValid<Name> package-level function for boolean validity check
+      rule: >
+        When callers need a boolean check without constructing the VO (e.g., validating
+        a CPF without raising an error), expose a package-level `IsValid<Name>(raw string) bool`
+        function that runs the same algorithm but returns bool instead of (T, error).
+      right: |
+        func IsValidCPF(raw string) bool {
+            clean := cpfCleanRegex.ReplaceAllString(raw, "")
+            if len(clean) != 11 { return false }
+            // ... check-digit algorithm ...
+            return true
+        }
+
+  bad_practices:
+    - id: bp-01
+      title: Public struct fields (breaks immutability)
+      description: >
+        Exporting struct fields destroys immutability — any caller can write to them.
+        All VO fields must be private with exported accessor methods.
+      wrong: |
+        type Email struct {
+            Value string
+        }
+      right: |
+        type Email struct {
+            value string
+        }
+        func (e Email) Value() string { return e.value }
+      mechanical: false
+
+    - id: bp-02
+      title: Constructor panics on invalid input
+      description: >
+        A panicking constructor crashes the whole request. Domain constructors must
+        return `(T, error)` and let the caller decide what to do with the failure.
+      wrong: |
+        func NewEmail(raw string) Email {
+            if !isValid(raw) { panic("invalid email") }
+            return Email{value: raw}
+        }
+      right: |
+        func NewEmail(raw string) (Email, error) {
+            // validate and return error if invalid
+        }
+      mechanical: true
+      detect:
+        - 'panic\('
+        - 'log\.Fatal'
+
+    - id: bp-03
+      title: Missing IsZero implementation
+      description: >
+        `IsZero` is required by repositories and use cases to distinguish "field was
+        never set" from "field was set to empty". Omitting it causes nil-check bugs
+        when VOs are optional fields on entities.
+      wrong: |
+        // No IsZero method
+        func (e Email) Value() string { return e.value }
+      right: |
+        func (e Email) IsZero() bool { return e.value == "" }
+      mechanical: false
+
+    - id: bp-04
+      title: Returning nil instead of zero value on construction error
+      description: >
+        Since VOs are value types (not pointers), the zero value is returned on error,
+        never nil. Returning `nil` is only valid for pointer types.
+      wrong: |
+        func NewEmail(raw string) (*Email, error) {
+            // ...
+            return nil, errors.NewBaseError(...)
+        }
+      right: |
+        func NewEmail(raw string) (Email, error) {
+            // ...
+            return Email{}, errors.NewBaseError(...)
+        }
+      mechanical: true
+      detect:
+        - 'func\s+New\w+\([^)]*\)\s*\(\s*\*\w+,\s*error\s*\)'
+        - 'return\s+nil,\s*errors\.NewBaseError'
+
+    - id: bp-05
+      title: Setter methods on value objects
+      description: >
+        VOs must not have setter methods. If an entity field needs to change, the
+        entity behavior method creates a new VO and assigns it to the field.
+      wrong: |
+        func (e *Email) SetValue(raw string) { e.value = raw }
+      right: |
+        // In the entity behavior method:
+        email, err := objects.NewEmail(newRaw)
+        if err != nil { return err }
+        c.Email = email
+        _ = c.IncrementVersion()
+      mechanical: true
+      detect:
+        - 'func\s*\([^)]*\)\s*Set\w+\('

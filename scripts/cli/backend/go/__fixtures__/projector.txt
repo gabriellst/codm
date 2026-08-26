@@ -1,0 +1,46 @@
+// Package projectors provides CouponProjector.
+// Canonical flow: repo.Upsert / repo.Delete (or find→applyEvent→save when read-before-write needed).
+package projectors
+
+import (
+	"context"
+	"log/slog"
+
+	"template/api-go/internal/sales/projections"
+	// ctxevents "template/api-go/internal/sales/events"
+	fwtypes "template/core-go/types"
+)
+
+const CouponEventName = "integration.TODO.coupon"
+
+// CouponProjector handles events that affect CouponProjection.
+type CouponProjector struct {
+	repo projections.CouponProjectionRepository
+}
+
+// NewCouponProjector constructs the projector.
+func NewCouponProjector(repo projections.CouponProjectionRepository) *CouponProjector {
+	return &CouponProjector{repo: repo}
+}
+
+func (p *CouponProjector) EventName() string { return CouponEventName }
+
+// Handle processes an event and updates the CouponProjection.
+func (p *CouponProjector) Handle(ctx context.Context, event fwtypes.IntegrationEventI) error {
+	// typed, err := fwtypes.UnmarshalIntegrationEvent[wire.SomeEvent](event)
+	// if err != nil {
+	// 	return err
+	// }
+
+	proj := &projections.CouponProjection{
+		// TODO: populate from event payload
+	}
+
+	if err := p.repo.Upsert(ctx, proj); err != nil {
+		slog.Error("sales: failed to upsert coupon projection", "error", err)
+		return err
+	}
+
+	slog.Info("sales: upserted coupon projection")
+	return nil
+}

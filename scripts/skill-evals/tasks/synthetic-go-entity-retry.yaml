@@ -1,0 +1,106 @@
+id: synthetic-go-entity-retry
+tier: holdout
+builder: sonnet
+title: RetrySyncJob — Go aggregate invariant + use case + named errors
+  (synthetic — Go write-side canon — entity owns the rule, use case orchestrates)
+sourceSpec: PROBES-BACKLOG.md#P-Go
+goldRef: ""
+baseRef: ""
+prompt: >
+  In the template Go worker (packages/api/go), implement sync-job retry: a FAILED sync job
+  can be retried (back to PENDING, attempts incremented), at most 3 retries. Go-only task;
+  do not touch other packages. READ FIRST: .claude/skills/entity/go/SKILL.md +
+  .claude/skills/usecase/go/SKILL.md + .claude/skills/errors/go/SKILL.md (the rubric),
+  then the live exemplars: internal/sync/entities/sync_job.go (+ its test — the aggregate
+  you are EXTENDING), the existing use cases under internal/sync/usecases/ (mirror their
+  shape), core/errors (how named errors carry codes), and the syncjob repository folder.
+  DECISIONS (binding):
+  (1) The INVARIANT lives on the aggregate: a Retry() method on SyncJob in
+  internal/sync/entities/sync_job.go — only a FAILED job may retry (named error
+  SYNC_JOB_NOT_RETRYABLE), and a job that has already been retried 3 times refuses
+  (named error SYNC_JOB_RETRY_LIMIT_REACHED). Both errors follow the repo's named-error
+  convention with codes (mirror how existing sync errors are declared and where). Track
+  attempts with whatever field the aggregate already has, or add retryCount + the
+  matching column via a migration in packages/api/go/core/db/sql/migrations/ if none
+  exists — inspect the entity and table first and say which you found.
+  (2) Use case RetrySyncJob at internal/sync/usecases/retry_sync_job.go (constructor
+  shape mirroring the sibling use cases): load via the syncjob repository, call
+  job.Retry(), save. The use case does NOT re-check the status/limit itself — the entity
+  decides; the use case orchestrates and maps not-found.
+  (3) Wire it like its siblings expose mutations (module wiring; if sibling use cases are
+  invoked by controllers or handlers, expose RetrySyncJob the same way the closest
+  sibling mutation is exposed — mirror, do not invent a new transport).
+  (4) Tests: entity test cases in internal/sync/entities/sync_job_test.go for the three
+  paths (FAILED retries to PENDING with incremented count; non-FAILED refuses with
+  SYNC_JOB_NOT_RETRYABLE; 3-times-retried refuses with SYNC_JOB_RETRY_LIMIT_REACHED) —
+  asserting error CODES, never message strings; a use case test mirroring the sibling
+  use case tests asserting orchestration (load→retry→save) and not re-testing the
+  invariant matrix. Finish with: cd packages/api/go && go build ./... && go test ./...
+axes:
+  - VALIDATION-PLACEMENT
+  - ERR-VOCAB
+  - TEST-MODE
+  - NAME-CONSISTENCY
+graders:
+  - kind: cmd
+    spec: "packages/api/go::go build ./..."
+    id: go#build
+  - kind: cmd
+    spec: "packages/api/go::go test ./..."
+    id: go#test
+  - kind: grep-must
+    spec: "packages/api/go/internal/sync/entities/sync_job.go::func \\(.*SyncJob\\) Retry\\("
+    id: entity#owns-invariant
+  - kind: grep-must
+    spec: "packages/api/go/internal/sync/entities/sync_job.go::SYNC_JOB_NOT_RETRYABLE"
+    id: errors#not-retryable
+  - kind: grep-must
+    spec: "packages/api/go/internal/sync/entities/sync_job.go::SYNC_JOB_RETRY_LIMIT_REACHED"
+    id: errors#retry-limit
+  - kind: file-exists
+    spec: "packages/api/go/internal/sync/usecases/retry_sync_job.go"
+    id: usecase#file
+  - kind: file-exists
+    spec: "packages/api/go/internal/sync/usecases/retry_sync_job_test.go"
+    id: usecase#test
+  - kind: grep-must
+    spec: "packages/api/go/internal/sync/usecases/retry_sync_job.go::\\.Retry\\("
+    id: usecase#delegates-to-entity
+  - kind: grep-must-not
+    spec: "packages/api/go/internal/sync/usecases/retry_sync_job.go::SyncStatusFailed|\"FAILED\""
+    id: usecase#no-invariant-recheck
+  - kind: grep-must
+    spec: "packages/api/go/internal/sync/entities/sync_job_test.go::SYNC_JOB_RETRY_LIMIT_REACHED"
+    id: test#asserts-codes
+  - kind: judge
+    spec: >
+      Sync-job retry was added to the Go worker (SyncJob.Retry() + RetrySyncJob use case +
+      named errors). Verify: (a) VALIDATION-PLACEMENT — the FAILED-only and max-3 rules
+      live in SyncJob.Retry() raising the two named errors; the use case loads, calls
+      Retry(), saves, maps not-found — it does NOT re-check status or count (a status
+      check in the use case FAILS this); no transport layer (controller/handler) contains
+      the invariant either. (b) ERR-VOCAB — both errors follow the repo's existing named
+      sync-error convention (declared where the siblings are, carrying codes); no bare
+      errors.New("...") business rules; tests assert CODES not messages. (c) the retry
+      count persists: either an existing attempts field was reused (acceptable and
+      preferable if semantically right — the agent must have said which) or a column +
+      embedded migration was added; the pg repository round-trips it. (d) exposure mirrors
+      how the closest sibling mutation is exposed — no invented transport. (e) the entity
+      test covers the three paths; the use case test does not duplicate the invariant
+      matrix. Scope notes: reusing the existing attempts/runCount field instead of adding
+      retryCount is GOOD if argued; Go errors wrapped per the repo's convention
+      (errors.Is-compatible) are the expected mechanics — judge the convention used by
+      siblings, not a TS-shaped BaseError; the agent's receiver names and test helper
+      shapes are fine.
+    id: judge#go-write-side
+notes: >-
+  Go write-side probe — deliberately BROWNFIELD-LITE (extends the existing SyncJob
+  aggregate rather than greenfield): the first probe measuring modification of existing Go
+  domain code, a small step toward the L3 brownfield class. Grounded: SyncJob entity +
+  test exist at internal/sync/entities/sync_job.go; SyncStatus has FAILED member; use case
+  siblings under internal/sync/usecases/ (23 usecase-referencing files); named-error
+  conventions in core/errors. Free real estate: RetrySyncJob 0 matches, retry_sync 0,
+  SYNC_JOB_NOT_RETRYABLE/SYNC_JOB_RETRY_LIMIT_REACHED absent. The
+  usecase#no-invariant-recheck must-not bans the status re-check in the use case (the
+  classic violation); 'FAILED' may legitimately appear in the entity and enum files —
+  the must-not is scoped to the use case file only. cmd graders green at HEAD.
