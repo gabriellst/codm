@@ -73,6 +73,68 @@ impl Sidecar {
     }
 }
 
+/// A sidecar whose every candidate port (`config/ports.ts`) was already taken when the shell tried
+/// to bind one — no process spawned, nothing to supervise. Reported straight to the readiness gate
+/// (`report_failure`, called from `lib.rs`'s `setup`) in the same vocabulary a spawn failure uses,
+/// naming every port that was tried — never the generic "did not open" (spec 2026-08-25/26).
+pub struct PortsExhausted {
+    pub name: &'static str,
+    pub candidates: Vec<u16>,
+}
+
+/// Resolve the daemon's and the gateway's listening ports ONCE, before either the typed SDK client
+/// (`api::Api`) or the spawned processes' own boot env reads them — two independent resolutions
+/// could each pick a different free candidate and put the client and the sidecar it calls on
+/// different addresses. `process.env` (`API_PORT`/`CHANNEL_PORT`) pins a fixed value exactly as
+/// before (dev/e2e); otherwise the first free candidate from `config/ports.ts` wins
+/// (`lifecycle::resolve_port`).
+///
+/// A port that could not be resolved (every candidate occupied) still needs A number so the OTHER
+/// sidecar's env can be built (`API_GO_URL` below) even though nothing will ever answer there — the
+/// first candidate is used as that inert placeholder, and the failure is recorded in the returned
+/// `Vec<PortsExhausted>` so the caller never spawns that sidecar and reports the failure instead.
+pub fn resolve_ports() -> (u16, u16, Vec<PortsExhausted>) {
+    // Named through a binding rather than an inline `name:` + string-literal struct field (as the
+    // TWO `Sidecar` values below use): `scripts/release/smoke-sidecars.test.ts`'s cross-lang gate
+    // extracts each Sidecar's boot env by finding that exact "field colon, quoted role" text in
+    // THIS file and reading until the next `Sidecar {` — an extra occurrence of it ahead of the
+    // real struct literals in `sidecars()` below would shift what the extractor reads.
+    let daemon_name = "codm-daemon";
+    let gateway_name = "codm-gateway";
+    let api_candidates = shell_env::port_candidates(shell_env::DAEMON_API_PORT_CANDIDATES);
+    let channel_candidates = shell_env::port_candidates(shell_env::GATEWAY_CHANNEL_PORT_CANDIDATES);
+    let mut exhausted = Vec::new();
+
+    let api_port = match resolve_port("API_PORT", &api_candidates) {
+        Ok(port) => port,
+        Err(candidates) => {
+            let placeholder = candidates[0];
+            exhausted.push(PortsExhausted { name: daemon_name, candidates });
+            placeholder
+        }
+    };
+    let channel_port = match resolve_port("CHANNEL_PORT", &channel_candidates) {
+        Ok(port) => port,
+        Err(candidates) => {
+            let placeholder = candidates[0];
+            exhausted.push(PortsExhausted { name: gateway_name, candidates });
+            placeholder
+        }
+    };
+    (api_port, channel_port, exhausted)
+}
+
+/// Report a failure straight to the readiness gate and reveal whichever window the gate decides —
+/// the same path `boot_sidecar`'s own pre-spawn checks use, exposed here for a failure discovered
+/// EARLIER than that (port resolution, in `lib.rs`'s `setup`, before any process is spawned at all).
+pub fn report_failure(app: &tauri::AppHandle, gate: &ReadinessGate, name: &str, reason: &str) {
+    log::error!("[{name}] {reason}");
+    let _ = app.emit("sidecar:error", format!("{name}: {reason}"));
+    if let Some(reveal) = gate.note_failed(name, reason, None) {
+        apply(app, reveal);
+    }
+}
+
 /// The two supervised sidecars + the exact env each boots with. The descriptors mirror
 /// `config/sidecars.ts`; the boot env is assembled here from two sources — the
 /// manifest-derived constants (`crate::shell_env`, the contract half) and the runtime
@@ -93,13 +155,15 @@ impl Sidecar {
 /// `api/typescript/src/watchdog.ts` and `api/go/internal/shared/watchdog.go`. Unset (a sidecar
 /// started by hand, or by `bun dev`) DISABLES the watchdog, which is why it is passed here, at the
 /// one place that actually knows a supervising shell exists.
+///
 /// `app_version` vem do `package_info()` do Tauri (que lê `tauri.conf.json`) — NÃO de
 /// `CARGO_PKG_VERSION`, que é a versão da crate e não acompanha a do bundle (0.1.0 contra 0.1.10 em
 /// 2026-08-07). A linha "Sobre" das configurações lia o package.json do workspace do daemon e
 /// mostrava 0.0.1; a versão é fato do BUNDLE, e o shell é quem o conhece.
-pub fn sidecars(data_dir: &str, resource_dir: &std::path::Path, app_version: &str) -> Vec<Sidecar> {
-    let api_port = shell_env::port_from_env("API_PORT", shell_env::DAEMON_API_PORT);
-    let channel_port = shell_env::port_from_env("CHANNEL_PORT", shell_env::GATEWAY_CHANNEL_PORT);
+///
+/// `api_port`/`channel_port` chegam JÁ RESOLVIDOS (`resolve_ports`, chamado uma vez em `setup`) —
+/// esta função não escolhe porta nenhuma, só monta os dois descritores com os valores que venceram.
+pub fn sidecars(data_dir: &str, resource_dir: &std::path::Path, app_version: &str, api_port: u16, channel_port: u16) -> Vec<Sidecar> {
     // A origem da nuvem, do manifesto (`config/cloud.ts` → shell-env.json). Sem esta linha o daemon
     // empacotado nascia sem `CODM_CLOUD_URL` e respondia `503 CLOUD_UNREACHABLE` a toda tela
     // (medido no 0.5.1 instalado): `auth` é cloud-only, então ele não tem a quem perguntar quem é

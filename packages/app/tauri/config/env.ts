@@ -11,7 +11,7 @@
  * proíbe: a informação existia no contrato e o consumidor a inferia — ou não.
  *
  * Aqui a relação vira TIPO: `ShellEnvKey` são exatamente as chaves do `REPO.env` cujos `consumers`
- * incluem `appTauri`. `SHELL_ENV` é `Record<ShellEnvKey, string>` — então:
+ * incluem `appTauri`. `SHELL_ENV` é `Record<ShellEnvKey, ShellEnvEntry>` — então:
  *   - acrescentar `appTauri` a uma chave no manifesto sem dar valor aqui = erro de `tsc`;
  *   - dar valor a uma chave que o manifesto NÃO entrega ao shell = excess property, erro de `tsc`.
  * O gate é por construção, não por rail.
@@ -31,9 +31,19 @@
  * `CODM_SHELL_ENV_<SIDECAR>_<KEY>`, e `src/shell_env.rs` os expõe como `env!()` — constantes de
  * compilação, zero leitura de arquivo em runtime, zero literal em `.rs`. Em dev, `process.env`
  * continua sobrepondo (o `.env` da raiz), exatamente como antes.
+ *
+ * ── portas: CANDIDATAS, não um valor único (incidente 2026-08-25) ───────────────────────────────
+ * `API_PORT`/`CHANNEL_PORT` continuam sendo as chaves que os dois sidecars leem — o que mudou é QUEM
+ * decide o valor: não mais `REPO.env.<KEY>.example` (a família de portas do `bun dev`, 3030/3032 —
+ * um app empacotado não tem por que disputar essa faixa com qualquer outro `bun dev`/Node/Go do
+ * mesmo founder), e sim `./ports.ts` `PORT_CANDIDATES` — uma lista de portas incomuns, na mesma
+ * ordem em que o supervisor Rust tenta cada uma (`sidecars::lifecycle::choose_free_port`: primeira
+ * livre vence). Um `ShellEnvEntry` é ou uma LISTA de candidatas (portas) ou um valor FIXO (URL/nome
+ * de marca) — a distinção é DECLARADA por chave abaixo, nunca inferida de `key.endsWith('_PORT')`.
  */
 import { REPO, type WorkspaceId } from '../../../../template.config'
 import { CLOUD } from './cloud'
+import { PORT_CANDIDATES } from './ports'
 
 type EnvDecls = typeof REPO.env
 
@@ -43,18 +53,49 @@ export type ShellEnvKey = {
 }[keyof EnvDecls]
 
 /**
- * Os valores que o shell fornece. Portas vêm do `example` do manifesto (a mesma fonte que o
- * `.env.example` e o `bun dev` usam — uma só família de portas); a origem da nuvem é a decisão de
- * shell em `./cloud.ts`, que também autoriza a origem na CSP.
+ * Um valor de `SHELL_ENV`: ou uma lista ORDENADA de portas candidatas (o supervisor tenta cada uma,
+ * na ordem, e usa a primeira livre — `sidecars::lifecycle::choose_free_port`), ou um valor fixo
+ * único (URL, nome de marca). `renderShellEnv`/`build.rs` tratam as duas formas explicitamente —
+ * nunca por convenção de sufixo no NOME da chave.
  */
-export const SHELL_ENV: Record<ShellEnvKey, string> = {
-	API_PORT: REPO.env.API_PORT.example,
-	CHANNEL_PORT: REPO.env.CHANNEL_PORT.example,
-	CODM_CLOUD_URL: CLOUD.origin,
+export type ShellEnvEntry =
+	| { readonly kind: 'candidates'; readonly candidates: readonly string[] }
+	| { readonly kind: 'fixed'; readonly value: string }
+
+function candidates(ports: readonly number[]): ShellEnvEntry {
+	return { kind: 'candidates', candidates: ports.map(String) }
+}
+
+function fixed(value: string): ShellEnvEntry {
+	return { kind: 'fixed', value }
+}
+
+/** Lê um `ShellEnvEntry` fixo, ou falha alto — usado por quem só sabe lidar com um valor único (a
+ *  origem da cloud, o nome de marca). Um `'candidates'` ali é bug de contrato, nunca um caso a tratar. */
+export function fixedValue(entry: ShellEnvEntry): string {
+	if (entry.kind !== 'fixed') throw new Error(`expected a fixed ShellEnvEntry, got '${entry.kind}'`)
+	return entry.value
+}
+
+/** Lê um `ShellEnvEntry` de candidatas, ou falha alto — o inverso de `fixedValue`. */
+export function candidateValues(entry: ShellEnvEntry): readonly string[] {
+	if (entry.kind !== 'candidates') throw new Error(`expected a candidates ShellEnvEntry, got '${entry.kind}'`)
+	return entry.candidates
+}
+
+/**
+ * Os valores que o shell fornece. `API_PORT`/`CHANNEL_PORT` vêm de `./ports.ts` (candidatas — a
+ * PACKAGED app tem sua própria faixa incomum, nunca a família de dev); a origem da nuvem é a decisão
+ * de shell em `./cloud.ts`, que também autoriza a origem na CSP.
+ */
+export const SHELL_ENV: Record<ShellEnvKey, ShellEnvEntry> = {
+	API_PORT: candidates(PORT_CANDIDATES.API_PORT),
+	CHANNEL_PORT: candidates(PORT_CANDIDATES.CHANNEL_PORT),
+	CODM_CLOUD_URL: fixed(CLOUD.origin),
 	// O nome que o CLIENTE vê: dispositivo vinculado no WhatsApp (gateway) e chrome do e-mail
 	// (daemon). É a marca de exibição, não o token minúsculo (`REPO.brand` = identificador de
 	// bundle/pastas). Medido no 0.5.3: sem esta entrada os dois sidecars caíam em 'Your Product'.
-	PRODUCT_NAME: REPO.brandDisplay,
+	PRODUCT_NAME: fixed(REPO.brandDisplay),
 }
 
 const SHELL_ENV_KEYS = Object.keys(SHELL_ENV) as ShellEnvKey[]
@@ -63,7 +104,7 @@ const SHELL_ENV_KEYS = Object.keys(SHELL_ENV) as ShellEnvKey[]
  * O subconjunto de `SHELL_ENV` que um sidecar recebe no boot: as chaves que o shell fornece E que o
  * workspace daquele sidecar declara ler. Puro lookup sobre a relação do manifesto.
  */
-export function forwardedEnv(workspace: WorkspaceId): Readonly<Partial<Record<ShellEnvKey, string>>> {
+export function forwardedEnv(workspace: WorkspaceId): Readonly<Partial<Record<ShellEnvKey, ShellEnvEntry>>> {
 	const entries = SHELL_ENV_KEYS.filter(key => {
 		const consumers: readonly string[] = REPO.env[key].consumers
 		return consumers.includes(workspace)

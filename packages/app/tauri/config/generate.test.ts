@@ -14,8 +14,9 @@ import { DMG } from './dmg'
 import { ANALYTICS } from './analytics'
 import { CLOUD } from './cloud'
 import { UPDATER } from './updater'
-import { forwardedEnv, SHELL_ENV, type ShellEnvKey } from './env'
+import { candidateValues, fixedValue, SHELL_ENV, type ShellEnvKey } from './env'
 import { cargoNameDrift, OUTPUTS, renderCapabilities, renderShellEnv, renderTauriConf } from './generate'
+import { PORT_CANDIDATES } from './ports'
 import { SIDECARS } from './sidecars'
 import { BOOT_ERROR_FRAME, WINDOW_FRAME } from './window'
 
@@ -165,12 +166,16 @@ describe('desktop config (packages/app/tauri/config)', () => {
 		const conf = JSON.parse(renderTauriConf()) as { app: { security: { csp: string } } }
 		const imgSrc = conf.app.security.csp.split(';').find(directive => directive.trim().startsWith('img-src'))
 		expect(imgSrc).toBeDefined()
-		// As MESMAS origens que o connect-src deriva de console.connectsTo — nunca uma porta literal.
+		// As MESMAS origens que o connect-src deriva de console.connectsTo — TODAS as candidatas
+		// (spec 2026-08-25/26): a porta é escolhida em RUNTIME pelo supervisor, então a CSP não pode
+		// saber qual delas vai vencer e tem de liberar a lista inteira, nunca uma porta literal.
 		for (const role of CONSOLE.connectsTo) {
 			const sidecar = SIDECARS.find(s => s.role === role)
-			const port = (REPO.env as Record<string, { example: string }>)[sidecar?.portEnvKey ?? ''].example
-			expect(imgSrc).toContain(`http://localhost:${port}`)
-			expect(imgSrc).toContain(`http://127.0.0.1:${port}`)
+			const ports = candidateValues(SHELL_ENV[sidecar?.portEnvKey ?? 'API_PORT'])
+			for (const port of ports) {
+				expect(imgSrc).toContain(`http://localhost:${port}`)
+				expect(imgSrc).toContain(`http://127.0.0.1:${port}`)
+			}
 		}
 		// data:/blob: continuam (ícones inline, previews de upload); a CDN não entra.
 		expect(imgSrc).toContain("'self'")
@@ -192,7 +197,7 @@ describe('desktop config (packages/app/tauri/config)', () => {
 		expect(conf.plugins['deep-link'].desktop.schemes).toEqual([DEEPLINK.scheme])
 	})
 
-	it('DSK-13: SHELL_ENV is exactly the manifest keys the shell consumes (appTauri ∈ consumers) — no more, no less', () => {
+	it('DSK-16: SHELL_ENV is exactly the manifest keys the shell consumes (appTauri ∈ consumers) — no more, no less', () => {
 		// The relation is declared ONCE, in template.config.ts `consumers`. The shell's table is typed
 		// against it (a missing/extra key is a tsc error); this rail states the same fact at runtime
 		// so a reader sees the set, and so a consumer edit in the manifest shows up here by name.
@@ -201,27 +206,43 @@ describe('desktop config (packages/app/tauri/config)', () => {
 			.map(([key]) => key)
 			.sort()
 		expect(Object.keys(SHELL_ENV).sort()).toEqual(declared)
-		// Ports come from the manifest's own example (one port family for .env.example, bun dev and
-		// the bundle); the cloud origin is the shell decision in ./cloud.ts.
-		expect(SHELL_ENV.API_PORT).toBe(REPO.env.API_PORT.example)
-		expect(SHELL_ENV.CHANNEL_PORT).toBe(REPO.env.CHANNEL_PORT.example)
-		expect(SHELL_ENV.CODM_CLOUD_URL).toBe(CLOUD.origin)
+		// Ports are the PACKAGED app's own candidate list (./ports.ts) — never the manifest's `.env`
+		// example (that family is dev/e2e/bun-dev only, see ./ports.ts docblock for the incident);
+		// the cloud origin is the shell decision in ./cloud.ts.
+		expect(candidateValues(SHELL_ENV.API_PORT)).toEqual(PORT_CANDIDATES.API_PORT.map(String))
+		expect(candidateValues(SHELL_ENV.CHANNEL_PORT)).toEqual(PORT_CANDIDATES.CHANNEL_PORT.map(String))
+		expect(fixedValue(SHELL_ENV.CODM_CLOUD_URL)).toBe(CLOUD.origin)
+	})
+
+	it('DSK-17: every declared port candidate is authorized in the CSP — none silently left out', () => {
+		// Tooling rail the task calls for explicitly: a candidate added to ./ports.ts without
+		// regenerating reproduces the exact `Load failed` symptom `./cloud.ts` documents for a
+		// missing origin — this fails LOUD instead.
+		const conf = JSON.parse(renderTauriConf()) as { app: { security: { csp: string } } }
+		for (const role of CONSOLE.connectsTo) {
+			const sidecar = SIDECARS.find(s => s.role === role)
+			if (!sidecar) continue
+			for (const port of candidateValues(SHELL_ENV[sidecar.portEnvKey])) {
+				expect(conf.app.security.csp).toContain(`http://localhost:${port}`)
+				expect(conf.app.security.csp).toContain(`http://127.0.0.1:${port}`)
+			}
+		}
 	})
 
 	it('DSK-14: shell-env.json hands each sidecar exactly the shell keys its workspace reads (set algebra, per role)', () => {
 		// 0.5.1 shipped a daemon with NO CODM_CLOUD_URL in its boot env — every screen answered
 		// 503 CLOUD_UNREACHABLE. The manifest had declared apiTs + appTauri as its readers all
 		// along; the supervisor just re-typed the env by hand. Now the forwarded set is derived.
-		const rendered = JSON.parse(renderShellEnv()) as Record<string, Record<string, string>>
+		const rendered = JSON.parse(renderShellEnv()) as Record<string, Record<string, string | string[]>>
 		expect(Object.keys(rendered).sort()).toEqual(SIDECARS.map(s => s.role).sort())
 		for (const sidecar of SIDECARS) {
 			const expected = (Object.keys(SHELL_ENV) as ShellEnvKey[]).filter(key =>
 				(REPO.env[key].consumers as readonly string[]).includes(sidecar.build.workspace),
 			)
 			expect(Object.keys(rendered[sidecar.role] ?? {}).sort()).toEqual(expected.sort())
-			expect(rendered[sidecar.role]).toEqual(forwardedEnv(sidecar.build.workspace))
-			// A sidecar's own port is always among what it receives — the CSP and the process agree.
-			expect(rendered[sidecar.role]?.[sidecar.portEnvKey]).toBe(SHELL_ENV[sidecar.portEnvKey])
+			// A porta candidata da chave é sempre um ARRAY no JSON renderizado — a CSP e o processo
+			// leem a MESMA lista, e é por isso que a CSP autoriza todas, não só a que vence em runtime.
+			expect(rendered[sidecar.role]?.[sidecar.portEnvKey]).toEqual([...candidateValues(SHELL_ENV[sidecar.portEnvKey])])
 		}
 		// The daemon is the one that asks the cloud who the operator is — it MUST get the origin.
 		expect(rendered.daemon?.CODM_CLOUD_URL).toBe(CLOUD.origin)

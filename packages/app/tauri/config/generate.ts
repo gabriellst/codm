@@ -34,7 +34,7 @@ import { CAPABILITIES, CAPABILITY_PERMISSIONS } from './capabilities'
 import { ANALYTICS } from './analytics'
 import { DEEPLINK } from './deeplink'
 import { DMG } from './dmg'
-import { forwardedEnv, SHELL_ENV } from './env'
+import { candidateValues, fixedValue, forwardedEnv, SHELL_ENV } from './env'
 import { SIDECARS, type SidecarManifestEntry } from './sidecars'
 import { UPDATER } from './updater'
 import { BOOT_ERROR_FRAME, WINDOW, WINDOW_FRAME } from './window'
@@ -68,14 +68,21 @@ function envExample(key: string): string {
 	return decl.example
 }
 
-// A porta de um sidecar vem do MESMO valor que o shell entrega a ele no boot (./env SHELL_ENV) —
-// a CSP e o supervisor Rust leem uma fonte só, então não há como a CSP liberar uma porta e o
-// processo subir em outra.
-function sidecarPort(sidecar: SidecarManifestEntry): number {
-	const raw = SHELL_ENV[sidecar.portEnvKey]
-	const port = Number(raw)
-	if (!Number.isInteger(port) || port <= 0) throw new Error(`env key '${sidecar.portEnvKey}' value is not a port: '${raw}'`)
-	return port
+// As portas CANDIDATAS de um sidecar vêm da MESMA lista que o shell entrega a ele no boot
+// (./env SHELL_ENV) — a CSP e o supervisor Rust leem uma fonte só. O supervisor escolhe UMA delas em
+// runtime (a primeira livre — `sidecars::lifecycle::choose_free_port`), o que a CSP não pode saber
+// em tempo de GERAÇÃO — então ela autoriza TODAS as candidatas. O preço de uma porta dinâmica é uma
+// CSP um pouco mais larga; o alternativo (autorizar só uma) é reintroduzir o mesmo sintoma do
+// `CODM_CLOUD_URL` ausente (`./cloud.ts`): um `TypeError: Load failed` sem status, porque o webview
+// bloqueia a origem ANTES de o pedido sair — indistinguível de "servidor fora do ar" para quem lê o
+// erro. Esquecer de regenerar depois de mudar `./ports.ts` reproduz exatamente esse sintoma.
+function sidecarPortCandidates(sidecar: SidecarManifestEntry): number[] {
+	const raw = candidateValues(SHELL_ENV[sidecar.portEnvKey])
+	return raw.map(value => {
+		const port = Number(value)
+		if (!Number.isInteger(port) || port <= 0) throw new Error(`env key '${sidecar.portEnvKey}' candidate is not a port: '${value}'`)
+		return port
+	})
 }
 
 const binName = (sidecar: SidecarManifestEntry): string => `${REPO.brand}-${sidecar.role}`
@@ -91,16 +98,18 @@ export function renderTauriConf(): string {
 	// Config paths resolve relative to src-tauri/ (where tauri.conf.json lives).
 	const frontendDist = posix.relative(srcTauriDir, posix.join(consoleWs.pkgRoot, console_.distSubpath))
 	// The sidecar origins the console addresses DIRECTLY, derived from the DECLARED console→sidecar
-	// relation (console.connectsTo) and resolved against the package manifest for each port. Both CSP
-	// fetch directives below are built from this ONE list — a literal port in either would be a second
-	// copy of the manifest, and the one nobody remembers to update.
+	// relation (console.connectsTo) and resolved against the package manifest for EVERY candidate
+	// port (see `sidecarPortCandidates` — the supervisor picks one at runtime, so generation time
+	// cannot narrow this to a single origin). Both CSP fetch directives below are built from this ONE
+	// list — a literal port in either would be a second copy of the manifest, and the one nobody
+	// remembers to update.
 	const sidecarOrigins = console_.connectsTo
 		.map(role => {
 			const sidecar = SIDECARS.find(s => s.role === role)
 			if (sidecar === undefined) throw new Error(`console.connectsTo names unknown sidecar role '${role}'`)
 			return sidecar
 		})
-		.flatMap(s => [`http://localhost:${sidecarPort(s)}`, `http://127.0.0.1:${sidecarPort(s)}`])
+		.flatMap(s => sidecarPortCandidates(s).flatMap(port => [`http://localhost:${port}`, `http://127.0.0.1:${port}`]))
 	// `connect-src` alcança os sidecars MAIS os dois destinos remotos que o console chama por XHR.
 	// A cloud: o console fala com ela para trocar o código do deep link e revogar no logout — sem
 	// esta origem o webview bloqueia a requisição antes de sair (ver ./cloud.ts, foi o que quebrou o
@@ -108,7 +117,7 @@ export function renderTauriConf(): string {
 	// (./env) — uma fonte, então a CSP não pode autorizar uma nuvem e o daemon perguntar a outra. O
 	// PostHog, pela MESMA razão (ver ./analytics.ts): telemetria bloqueada pela CSP falha em
 	// silêncio — pior que o login, porque ninguém percebe, os números só ficam vazios.
-	const connectSrc = [...sidecarOrigins, SHELL_ENV.CODM_CLOUD_URL, ANALYTICS.origin].join(' ')
+	const connectSrc = [...sidecarOrigins, fixedValue(SHELL_ENV.CODM_CLOUD_URL), ANALYTICS.origin].join(' ')
 	// `img-src` alcança os MESMOS sidecars — e SÓ eles, porque nem a cloud nem o PostHog servem
 	// imagem alguma.
 	//
@@ -285,10 +294,21 @@ export function renderCapabilities(): string {
  * (`src/api/mod.rs`) — nunca uma porta literal em `.rs`.
  *
  * A forma é deliberadamente plana e nomeada pelo role: quem lê o JSON (build.rs, um humano no
- * diff) vê "o daemon recebe X, o gateway recebe Y", sem precisar do manifesto ao lado.
+ * diff) vê "o daemon recebe X, o gateway recebe Y", sem precisar do manifesto ao lado. Uma entrada
+ * `{ kind: 'candidates' }` (portas) renderiza como ARRAY de strings; uma `{ kind: 'fixed' }` (URL,
+ * nome de marca) renderiza como string única — `build.rs` distingue pelo TIPO do valor JSON
+ * (`serde_json::Value::Array` vs `::String`), nunca pelo sufixo do nome da chave.
  */
 export function renderShellEnv(): string {
-	const byRole = Object.fromEntries(SIDECARS.map(s => [s.role, forwardedEnv(s.build.workspace)]))
+	const byRole = Object.fromEntries(
+		SIDECARS.map(s => {
+			const env = forwardedEnv(s.build.workspace)
+			const rendered = Object.fromEntries(
+				Object.entries(env).map(([key, entry]) => [key, entry?.kind === 'candidates' ? [...entry.candidates] : entry ? entry.value : undefined]),
+			)
+			return [s.role, rendered]
+		}),
+	)
 	return `${JSON.stringify(byRole, null, '\t')}\n`
 }
 
