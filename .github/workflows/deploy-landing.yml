@@ -141,8 +141,13 @@ jobs:
           NEWEST=$(curl -sf -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT/deployments?per_page=1" \
             | jq -r '.result[0].created_on')
-          NEWEST_TS=$(date -u -j -f "%Y-%m-%dT%H:%M:%S" "${NEWEST%.*}" +%s)
-          echo "deployment mais novo: $NEWEST | deploy comecou em $(date -u -r "$DEPLOY_STARTED_AT" +%Y-%m-%dT%H:%M:%S)"
+          # `date -d` (GNU), nao `date -j -f` (BSD): este job rodou no Mac mini ate 26/08/2026 e a
+          # sintaxe BSD passou despercebida ate o primeiro run em `ubuntu-latest`, onde virou
+          # `date: invalid option -- 'j'` e reprovou um deploy que tinha publicado corretamente.
+          # `${NEWEST%.*}` corta os milissegundos do ISO-8601 da Cloudflare; o `Z` explicito mantem a
+          # leitura em UTC, como o `-u` fazia.
+          NEWEST_TS=$(date -u -d "${NEWEST%.*}Z" +%s)
+          echo "deployment mais novo: $NEWEST | deploy comecou em $(date -u -d "@$DEPLOY_STARTED_AT" +%Y-%m-%dT%H:%M:%S)"
           test "$NEWEST_TS" -ge "$DEPLOY_STARTED_AT" || {
             echo "::error::o deployment mais novo e ANTERIOR a este run — o 'pages deploy' saiu 0 sem publicar."
             exit 1; }
