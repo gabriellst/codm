@@ -6,20 +6,15 @@
 # silêncio.
 #
 # Três SOs desde 2026-08-25, na MESMA forma do release-beta.yml (prepare → build por SO → publish
-# agregado) — leia os dois juntos. macOS e Linux rodam self-hosted no Mac mini do founder (Linux
-# num container amd64 sob Rosetta — infra/runners/linux-x64/). Desde 2026-08-26 (diretriz do
-# founder, verbatim: "não podemos contar com o billing do GitHub, temos que usar o mac mini" —
-# addendum 2026-08-26 em .specs/2026-08-25-windows-linux-build-design.md) o Windows TAMBÉM saiu do
-# runner hospedado: passou a ser CROSS-COMPILADO no MESMO runner self-hosted Linux, via a rota que
-# o próprio Tauri v2 documenta (`cargo-xwin`, EXPERIMENTAL por documentação do Tauri — aceita pelo
-# founder nesta fase). `windows-latest` virou `windows-native-tests.yml` (workflow_dispatch-only,
-# não-bloqueante — valida nativamente o que o cross-build não pode provar sozinho). Desde
-# 2026-08-25 (auditoria coordenada com o founder) `prepare` e `publish` — as jobs UTILITY, que não
-# fazem parte da matriz por SO — TAMBÉM rodam no mesmo runner self-hosted Linux: com o Windows
-# cross desde 2026-08-26, esta release inteira não consome mais NENHUM minuto hospedado do GitHub
-# (a única exposição que resta é o dispatch manual de `windows-native-tests.yml`). `publish` ainda
-# exige os três builds via `needs`, então uma falha em qualquer um segue derrubando a release
-# inteira (D4: sem manifest parcial) — o que mudou foi a exposição a billing, não essa garantia.
+# agregado) — leia os dois juntos, inclusive o parágrafo de história dos runners que abre o beta.
+# Resumo dele: entre 07/08 e 26/08/2026 esta release rodou inteira no Mac mini do founder por causa
+# de cota (repo privado, macOS 10×, Windows 2×), com o Windows cross-compilado por `cargo-xwin` e o
+# Linux num container amd64 sob Rosetta; em 2026-08-26 o repositório ficou PÚBLICO, Actions passou a
+# ser gratuito e ilimitado nos runners hospedados dos três SOs, e o Mac mini saiu da reta de release.
+# Hoje: `macos-latest` (arm64, nativo), `ubuntu-latest` (x86_64, nativo), `windows-latest` (nativo —
+# sem cross, com os testes `#[cfg(windows)]` do shell rodando no fluxo normal), as três EM PARALELO.
+# `publish` exige os três builds via `needs`, então uma falha em qualquer um derruba a release
+# inteira (D4: sem manifest parcial).
 # O que muda no stable: retenção TOTAL no R2 (nome versionado por artefato) + um alias fixo por
 # instalador para o botão da landing.
 name: release-stable
@@ -37,10 +32,9 @@ env:
 
 jobs:
   prepare:
-    # Job UTILITY — self-hosted desde 2026-08-25, mesmo runner Linux (self-hosted, Mac mini) que a
-    # entrada linux-x86_64 do `build` já usa. Custo zero de cota; ver o comentário no topo do
-    # arquivo e o gêmeo em release-beta.yml. Só usa git/bash/jq (na imagem) + bun (via `uses:`).
-    runs-on: [self-hosted, Linux, X64]
+    # Job UTILITY: só git/bash/jq (na imagem) + bun (via `uses:`) — nada a provisionar. Ver o
+    # comentário gêmeo em release-beta.yml.
+    runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.v.outputs.version }}
     steps:
@@ -84,85 +78,31 @@ jobs:
 
   build:
     needs: prepare
-    # Serializa SÓ o entry darwin-aarch64 do matrix ENTRE OS DOIS workflows (beta e stable) — o
-    # mesmo Mac mini roda os dois, e dois `codesign`/`security` concorrentes disputam a MESMA lista
-    # de busca do keychain de login (corrida medida). O group é a MESMA string fixa
-    # ('release-signing-macos') nos dois arquivos só para esse entry, então um build beta e um
-    # stable que colidam fazem fila (`cancel-in-progress: false` — nenhum é descartado) em vez de
-    # correr. Linux e Windows (cross, desde 2026-08-26 — ambos no MESMO runner self-hosted Linux,
-    # mas SEM keychain nenhum envolvido) não têm esse risco — cada run recebe um group ÚNICO
-    # (workflow+run_id+key), que nunca colide com outro run e por isso nunca espera.
-    concurrency:
-      group: ${{ matrix.key == 'darwin-aarch64' && 'release-signing-macos' || format('nosig-{0}-{1}-{2}', github.workflow, github.run_id, matrix.key) }}
-      cancel-in-progress: false
-    # MACMINI_KEYCHAIN_PASSWORD ainda NÃO existe como secret (checado 2026-08-25) — o campo fica
-    # vazio em toda run, e é por isso que o passo de destravar abaixo é `if`-guardado pela
-    # EXISTÊNCIA dele, não pelo SO sozinho: sem o secret, o comportamento de hoje continua idêntico.
-    # Precisa estar no nível do JOB (não do step) porque um step não enxerga o próprio `env:` no seu
-    # próprio `if:` — o `if` decide se o step roda ANTES do `env:` daquele step existir.
-    env:
-      MACMINI_KEYCHAIN_PASSWORD: ${{ secrets.MACMINI_KEYCHAIN_PASSWORD }}
     strategy:
-      # `fail-fast: false`, de propósito (uniformidade com release-beta.yml, pedida pela sessão
-      # coordenadora): `publish` já exige os três verdes via `needs`, e desde 2026-08-26 as três
-      # entradas são self-hosted NO MESMO runner Linux, rodando serializadas — cancelar uma no meio
-      # não libera capacidade para nenhuma outra, então fail-fast não economiza nada aqui.
+      # `fail-fast: false`, de propósito (uniformidade com release-beta.yml): `publish` já exige os
+      # três verdes via `needs`, então cancelar um irmão no meio não muda a garantia — só joga fora
+      # o paralelismo dos três runners.
       fail-fast: false
       matrix:
         include:
-          # Self-hosted no Mac mini do founder (custo zero de cota; ver release-beta.yml e
-          # docs/RELEASE.md). CUIDADO ao tornar o repo público: runner self-hosted + repo público
-          # deixa qualquer PR de fork executar código nesta máquina.
-          #
-          # `hosted` é o campo DECLARADO que os passos de provisionamento abaixo leem (non-negotiable
-          # 5 do CLAUDE.md) — desde 2026-08-26 as TRÊS entradas são self-hosted (`hosted: false`).
-          # `sidecarTarget`/`tauriRunner`/`crossTarget`/`smoke` são os OUTROS campos DECLARADOS que
-          # os passos `sidecars`/`tauri build`/`smoke dos sidecars` consomem — vazios/`true` nas
-          # entradas nativas, preenchidos só na entrada cross. Ver o comentário gêmeo, mais
-          # detalhado, em release-beta.yml.
+          # Runners HOSPEDADOS, um por SO, nativos — ver o comentário detalhado de cada entrada em
+          # release-beta.yml (por que `macos-latest` é conferido com `uname -m`, por que
+          # `ubuntu-latest` fixa o piso de glibc do AppImage, e o que a volta do Windows nativo
+          # trouxe de volta junto).
           - key: darwin-aarch64
-            runner: '["self-hosted", "macOS", "ARM64"]'
+            runner: macos-latest
             bundles: app,dmg
-            hosted: false
-            sidecarTarget: ''
-            tauriRunner: ''
-            crossTarget: ''
-            smoke: true
-            nice: nice -n 10
-          # Linux x64 — self-hosted no MESMO Mac mini desde 2026-08-25 (container amd64 sob Rosetta,
-          # infra/runners/linux-x64/); deps de sistema + Rust já vêm na imagem.
           - key: linux-x86_64
-            runner: '["self-hosted", "Linux", "X64"]'
+            runner: ubuntu-latest
             bundles: appimage,deb
-            hosted: false
-            sidecarTarget: ''
-            tauriRunner: ''
-            crossTarget: ''
-            smoke: true
-            nice: ''
-          # Windows x64 — desde 2026-08-26 CROSS-COMPILADO no MESMO runner self-hosted Linux que a
-          # entrada `linux-x86_64` acima usa (diretriz do founder — addendum 2026-08-26 em
-          # .specs/2026-08-25-windows-linux-build-design.md), via a rota `cargo-xwin` documentada
-          # pelo Tauri v2 (EXPERIMENTAL por documentação própria dele; aceita pelo founder). Ver o
-          # comentário detalhado desta mesma entrada em release-beta.yml — mesma razão, mesmos
-          # campos, mesmo `smoke: false` (o runner Linux não executa um PE Windows para provar o
-          # health; só `windows-native-tests.yml` + a validação manual da AC-15 fazem isso).
           - key: windows-x86_64
-            runner: '["self-hosted", "Linux", "X64"]'
+            runner: windows-latest
             bundles: nsis
-            hosted: false
-            sidecarTarget: win32-x64
-            tauriRunner: cargo-xwin
-            crossTarget: x86_64-pc-windows-msvc
-            smoke: false
-            nice: ''
-    runs-on: ${{ fromJSON(matrix.runner) }}
+    runs-on: ${{ matrix.runner }}
     defaults:
       run:
-        # macOS e Linux (self-hosted) já são bash por padrão — redundante para os dois, explícito
-        # por segurança. Desde 2026-08-26 nenhuma entrada roda num Windows de verdade (a
-        # `windows-x86_64` cross-compila num runner Linux); a pegadinha do shell default do Windows
-        # ser pwsh não se aplica mais aqui — segue valendo só para `windows-native-tests.yml`.
+        # NÃO é redundante: o shell default do Windows é pwsh e todo passo abaixo é bash (git-bash
+        # no Windows) — `||`, `test` e heredoc falham em pwsh, às vezes em silêncio.
         shell: bash
     steps:
       - uses: actions/checkout@v4
@@ -172,46 +112,39 @@ jobs:
         with:
           go-version-file: packages/api/go/go.mod
 
-      # Gate pelo campo DECLARADO `matrix.hosted`, não por `runner.os`: o Linux self-hosted
-      # (infra/runners/linux-x64/Dockerfile) já nasce com esta lista instalada na imagem. Este
-      # passo só dispararia se um futuro entry Linux voltasse a ser hospedado.
+      # A chave `darwin-aarch64` é também a chave do manifest: um runner macOS x86_64 publicaria um
+      # bundle Intel sob ela, sem erro em lugar nenhum. Ver o gêmeo em release-beta.yml.
+      - name: runner macOS é arm64
+        if: runner.os == 'macOS'
+        run: |
+          test "$(uname -m)" = "arm64" || {
+            echo "::error::runner macOS é $(uname -m), não arm64 — a chave darwin-aarch64 publicaria um bundle da arquitetura errada. Fixe o runner numa imagem ARM (ex.: macos-15)."
+            exit 1
+          }
+
+      # Toolchain de sistema do Tauri no Ubuntu + o que este shell puxa por cima (libdbus-1-dev para
+      # o keyring, patchelf para o AppImage) — o runner hospedado não traz nada disso. `runner.os` é
+      # identidade de SO, não inferência sobre o runner.
       - name: deps de sistema (Linux)
-        if: runner.os == 'Linux' && matrix.hosted
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev \
             libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev patchelf
 
-      - name: toolchain Rust (runners hospedados)
-        if: matrix.hosted
-        uses: dtolnay/rust-toolchain@stable
-      - name: cache do cargo (runners hospedados)
-        if: matrix.hosted
-        uses: Swatinem/rust-cache@v2
+      # Runner descartável: Rust pela action, cache de cargo em toda perna. O veto histórico à
+      # `Swatinem/rust-cache` era sobre runner PERSISTENTE (a poda de `~/.cargo/bin` apagou o
+      # `rustup` da máquina do founder em 2026-08-07) — ver o comentário longo em release-beta.yml.
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
         with:
           workspaces: packages/app/tauri/src-tauri
 
-      # NÃO reintroduza Swatinem/rust-cache em runner self-hosted — ver o comentário longo em
-      # release-beta.yml: o passo de save dela poda `~/.cargo/bin` e apagou o `rustup` da máquina do
-      # founder em 2026-08-07. Runners persistentes não precisam dela; o `target/` mora fora do
-      # workspace (passo abaixo) — vale para os dois self-hosted (macOS e Linux).
-      - name: cargo target fora do workspace (runners persistentes)
-        if: '!matrix.hosted'
-        run: echo "CARGO_TARGET_DIR=$HOME/.cache/codm-cargo-target" >> "$GITHUB_ENV"
-
-      # `BUNDLE_DIR` deriva do MESMO literal que o `stage` computava inline antes — declarado UMA
-      # VEZ aqui, consumido por lookup em `stage` e em qualquer outro passo que precise do bundle,
-      # em vez de cada um recalcular a expressão por conta própria (rail non-negotiable #5:
-      # contrato declarado, sem desvio por convenção). Passo INCONDICIONAL (ao contrário do passo
-      # acima): `$CARGO_TARGET_DIR` só existe em `$GITHUB_ENV` nos runners self-hosted, então o
-      # fallback `${CARGO_TARGET_DIR:-...}` precisa rodar sempre — numa leg `matrix.hosted` (campo
-      # já declarado na matriz, mesmo que nenhuma entrada atual o use) ele resolve para o target
-      # padrão do crate; se este passo também fosse gated por `!matrix.hosted`, `stage` morreria
-      # com variável não-declarada sob `set -u` nessa leg — exatamente o desvio de edge-case que a
-      # regra 5 do CLAUDE.md proíbe.
+      # `BUNDLE_DIR` declarado UMA VEZ, consumido por lookup nos passos que precisam do bundle
+      # (rail non-negotiable #5) — ver release-beta.yml.
       - name: bundle dir (declarado uma vez)
-        run: echo "BUNDLE_DIR=${CARGO_TARGET_DIR:-packages/app/tauri/src-tauri/target}${{ matrix.crossTarget && format('/{0}', matrix.crossTarget) || '' }}/release/bundle" >> "$GITHUB_ENV"
+        run: echo "BUNDLE_DIR=packages/app/tauri/src-tauri/target/release/bundle" >> "$GITHUB_ENV"
 
       - name: deps
         run: bun install --frozen-lockfile
@@ -225,23 +158,28 @@ jobs:
           cp -n .env.example .env
           bun emit-openapi
 
-      # `matrix.sidecarTarget` é o contrato CONGELADO com `build-sidecars.ts` (ver release-beta.yml):
-      # vazio nas entradas nativas, `--target win32-x64` só na `windows-x86_64` (cross).
+      # Sem `--target`: cada perna builda para o próprio host (ver release-beta.yml — o modo cross do
+      # script saiu junto com a fase do `cargo-xwin`).
       - name: sidecars
-        run: cd packages/app/tauri && bun config/build-sidecars.ts${{ matrix.sidecarTarget && format(' --target {0}', matrix.sidecarTarget) || '' }}
+        run: cd packages/app/tauri && bun config/build-sidecars.ts
+
+      # Único job do repo que roda cargo num Windows nativo — os testes `#[cfg(windows)]` do shell
+      # (reaper/lifecycle/watchdog) gateiam a release aqui, em vez de num workflow manual à parte
+      # (ver release-beta.yml).
+      - name: cargo test do shell (testes cfg(windows))
+        if: runner.os == 'Windows'
+        run: cargo test --manifest-path packages/app/tauri/src-tauri/Cargo.toml --lib
 
       # Ver release-beta.yml: sobe os binários recém-compilados como o shell sobe (mesmo env de
       # src-tauri/src/sidecars/mod.rs) e exige 200. CONTRATO do script (congelado com a task que o
       # cria): portas EFÊMERAS, nunca as default 3030/3032 — o Mac mini self-hosted roda o daemon de
       # PRODUÇÃO nelas, e um smoke na porta default daria 200 contra o binário errado (falso-verde)
-      # — e verificação de que quem respondeu foi o PID que o próprio script lançou.
+      # — e verificação de que quem respondeu foi o PID que o próprio script lançou. (O runner
+      # hospedado não tem esse daemon, mas o contrato de portas efêmeras fica: ele é do script.)
       #
-      # Pulado quando `matrix.smoke` é `false` — só a `windows-x86_64` cross: o binário é um PE
-      # Windows, e este runner Linux não consegue executá-lo. `windows-native-tests.yml` faz esse
-      # smoke nativamente; AC-15 exige validação manual do NSIS cross-compilado numa máquina
-      # Windows real antes do primeiro stable multi-SO.
+      # Roda nas TRÊS pernas desde 2026-08-26 — com o Windows nativo de volta, cada binário é
+      # exercitado no SO em que vai rodar antes de virar release.
       - name: smoke dos sidecars
-        if: matrix.smoke != false
         env:
           CODM_APP_VERSION: ${{ needs.prepare.outputs.version }}
         run: bun scripts/release/smoke-sidecars.ts
@@ -255,19 +193,11 @@ jobs:
       # Assina por BUSCA, não por caminho fixo: o dia em que outro prebuild nativo entrar no closure
       # ele já sai assinado, em vez de reprovar numa notarização 12 minutos build adentro. `file`
       # decide o que é Mach-O — extensão não decide (`.node` é Mach-O, `.js` ao lado não é).
-      # O keychain de login do mini fica TRAVADO quando a sessão não está desbloqueada ("User
-      # interaction is not allowed") e o codesign morre mesmo com o p12 correto. Guardado pela
-      # EXISTÊNCIA do secret (job env acima): sem MACMINI_KEYCHAIN_PASSWORD o passo é pulado e o
-      # comportamento atual permanece — degrada limpo, o secret ainda não existe hoje.
-      - name: destrava o keychain de login (mini)
-        if: runner.os == 'macOS' && env.MACMINI_KEYCHAIN_PASSWORD != ''
-        run: security unlock-keychain -p "$MACMINI_KEYCHAIN_PASSWORD" ~/Library/Keychains/login.keychain-db
-
-      # O CERTIFICADO NÃO ESTÁ NO KEYCHAIN DESTE PROCESSO, e é por isso que o passo monta um. O
-      # runner é self-hosted, então a máquina TEM o certificado — no keychain de login do founder.
-      # Mas o Actions roda como serviço, com sessão e keychain próprios, e um `codesign` daqui
-      # responde `no identity found` (medido). O Tauri não sofre disso porque importa o `.p12` dos
-      # secrets num keychain temporário dentro do próprio passo dele; aqui fazemos o mesmo, antes.
+      #
+      # O CERTIFICADO NÃO EXISTE NESTA MÁQUINA — runner hospedado é descartável e nasce sem
+      # keychain nenhum do projeto. Por isso o passo monta um keychain temporário a partir do
+      # `.p12` dos secrets, exatamente como o bundler do Tauri faz mais adiante para assinar o
+      # `.app`; a diferença é que estes Mach-O aninhados precisam estar assinados ANTES dele rodar.
       - name: assina os Mach-O aninhados nos resources
         if: runner.os == 'macOS'
         env:
@@ -296,7 +226,8 @@ jobs:
           KEYCHAIN_PW="$(openssl rand -base64 24)"
           CERT="$RUNNER_TEMP/codm-nested-cert.p12"
           # O keychain e o .p12 saem do disco aconteça o que acontecer, e a lista de busca volta ao
-          # que era: este runner é a máquina de trabalho do founder, não um descartável.
+          # que era. O runner morre com o job, mas o `.p12` DECODIFICADO ficaria legível pelos
+          # passos seguintes do mesmo job — o trap fecha essa janela.
           PREV_KEYCHAINS="$(security list-keychains -d user | sed 's/[",]//g' | xargs)"
           cleanup() {
             security list-keychains -d user -s $PREV_KEYCHAINS >/dev/null 2>&1 || true
@@ -350,21 +281,10 @@ jobs:
           echo "VITE_CODM_CLOUD_URL=$CLOUD_URL" >> "$GITHUB_ENV"
           echo "cloud: $CLOUD_URL"
 
-      # O CARGO_TARGET_DIR vive num volume persistente do runner; os artefatos de bundle têm a
-      # versão no nome (`CoDM_<versão>_<arch>.<ext>`) e ACUMULAM entre runs — os globs do `stage`
-      # (`*.deb`, `*-setup.exe`, `*.dmg`) exigem exatamente um build por pasta. Medido no run
-      # 32934975156 (release-beta): `cp: target 'dist-release/codm-linux-x86_64.deb' is not a
-      # directory`, com duas versões presentes em `deb/`. Uniforme para todas as entradas da
-      # matriz (macOS incluído — o `.dmg` também carrega a versão no nome) e para os dois tipos de
-      # runner: `rm -rf` de um bundle dir num runner hospedado/efêmero é inofensivo (o disco morre
-      # com o job de qualquer forma) — condicionar a limpeza a `matrix.hosted` seria o mesmo desvio
-      # de edge-case do passo `bundle dir` acima.
-      - name: limpa bundle de runs anteriores
-        run: rm -rf "$BUNDLE_DIR"
-
-      # Sem `--config version`: no stable a versão É a da conf (gate acima). Desde 2026-08-26 a
-      # entrada `windows-x86_64` também injeta `--runner cargo-xwin --target
-      # x86_64-pc-windows-msvc` (via `matrix.tauriRunner`/`matrix.crossTarget` — ver release-beta.yml).
+      # Sem `--config version`: no stable a versão É a da conf (gate acima). Cada perna builda para
+      # o próprio host — sem `--runner`/`--target`. (A limpeza de `$BUNDLE_DIR` que existia aqui saiu
+      # com o self-hosted: ela só fazia sentido com um `CARGO_TARGET_DIR` persistente, onde os
+      # bundles acumulavam entre runs e quebravam os globs do `stage`.)
       - name: tauri build
         env:
           # VITE_CODM_CLOUD_URL chega pelo GITHUB_ENV do passo "cloud url do manifesto" acima —
@@ -392,15 +312,16 @@ jobs:
           APPLE_TEAM_ID: ${{ runner.os == 'macOS' && 'V4F6T68S5B' || '' }}
           # A janela de instalação do DMG (fundo + posição dos ícones, config/dmg.ts) é aplicada por
           # um AppleScript no Finder dentro do bundler — e o bundler PULA esse passo quando vê
-          # CI=true (`--skip-jenkins`, tauri#592), porque runner hospedado não tem Finder. O nosso
-          # tem: é um LaunchAgent na sessão gráfica do mini. Sem esta linha o DMG sai com o
-          # background.png copiado mas sem .DS_Store — janela crua (medido na v0.5.3). Exige o
-          # grant de Automação → Finder para o `node` do runner (externals/nodeXX/bin/node — o
-          # cliente que o TCC enxerga nos passos `run:`); o diálogo NÃO aparece, o 1º run falha em
-          # 2 min e cria a entrada, e ela é ligada à mão nos Ajustes (docs/RELEASE.md).
+          # CI=true (`--skip-jenkins`, tauri#592). Sem esta linha o DMG sai com o background.png
+          # copiado mas sem `.DS_Store`: janela crua (medido na v0.5.3). ESTE É O PONTO DE RISCO da
+          # migração para runner hospedado — no Mac mini o runner era um LaunchAgent na sessão
+          # gráfica e tinha um grant manual de Automação → Finder; um runner hospedado não tem esse
+          # grant. Se o primeiro DMG hospedado sair cru (ou o bundler morrer com `exit 64`), a
+          # decisão já tomada é voltar SÓ esta perna para o mini, não desfazer a migração inteira.
+          # Ver docs/RELEASE.md, "A janela do DMG precisa do Finder".
           TAURI_BUNDLER_DMG_IGNORE_CI: ${{ runner.os == 'macOS' && 'true' || '' }}
 
-        run: cd packages/app/tauri && ${{ matrix.nice }} bun x tauri build --bundles ${{ matrix.bundles }}${{ matrix.tauriRunner && format(' --runner {0}', matrix.tauriRunner) || '' }}${{ matrix.crossTarget && format(' --target {0}', matrix.crossTarget) || '' }}
+        run: cd packages/app/tauri && bun x tauri build --bundles ${{ matrix.bundles }}
 
       # A conf fica com signingIdentity '-' de propósito (rail DSK-10: build local não deve exigir
       # certificado); a identidade real vem do APPLE_SIGNING_IDENTITY acima, que a sobrepõe. Se essa
@@ -419,9 +340,8 @@ jobs:
           codesign -dv --verbose=2 "$APP" 2>&1 | grep -E "^Authority=|^TeamIdentifier="
 
       # Nomes FIXOS no stage (os mesmos do beta) — o `publish` é quem versiona ao subir ao R2.
-      # $BUNDLE_DIR vem do `$GITHUB_ENV` escrito no passo "cargo target fora do workspace" — mesmo
-      # mecanismo do release-beta.yml. O `stage` só faz lookup da env var, nunca recomputa a
-      # expressão.
+      # $BUNDLE_DIR vem do `$GITHUB_ENV` escrito no passo "bundle dir" — mesmo mecanismo do
+      # release-beta.yml. O `stage` só faz lookup da env var, nunca recomputa a expressão.
       #
       # O nome que o Tauri estampou em cada instalador (`CoDM_<versão>_<arch>.<ext>`, de
       # productName + version da conf) é o nome que o browser deve SALVAR — vai no
@@ -430,8 +350,8 @@ jobs:
       # entrada escreve o SEU PRÓPRIO `NAMES-<matrix.key>.env` — nunca um nome compartilhado: os
       # três artifacts se fundem num único `dist-release/` no `publish` (`merge-multiple: true`), e
       # um nome de arquivo repetido entre eles perderia dois dos três na sobrescrita silenciosa. O
-      # `case` chaveia por `matrix.key`, NÃO por `$RUNNER_OS` — desde 2026-08-26 `linux-x86_64` e
-      # `windows-x86_64` (cross) rodam as duas no MESMO runner Linux.
+      # `case` chaveia por `matrix.key` — a chave da matriz É a chave do manifest, então o
+      # mapeamento fica preso ao contrato que o `publish` consome, não a um `$RUNNER_OS`.
       - name: stage
         run: |
           set -euo pipefail
@@ -467,9 +387,9 @@ jobs:
 
   publish:
     needs: [prepare, build]
-    # Job UTILITY — self-hosted desde 2026-08-25, mesmo runner Linux do `prepare` acima e mesma
-    # razão. GITHUB_TOKEN continua funcionando igual (injetado pelo Actions, não pelo runner).
-    runs-on: [self-hosted, Linux, X64]
+    # Job UTILITY: junta os artefatos das três máquinas, fala com GitHub e R2. `ubuntu-latest` já
+    # traz `gh`, `jq` e o `stat` do GNU (`-c %s`, usado na verificação do R2).
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -542,6 +462,19 @@ jobs:
           }
           echo "manifest ok: $KEYS"
 
+      # SHA-256 de tudo que vai ao ar — ver o comentário longo em release-beta.yml (mesmo passo,
+      # mesma razão: o NSIS não tem Authenticode nesta fase, o SmartScreen barra, e o checksum é o
+      # único meio de conferir o download). Gerado dos MESMOS bytes que sobem, antes de qualquer
+      # upload. Os nomes nas linhas são os dos assets do GitHub release e dos ALIASES fixos do R2
+      # (`stable/codm-aarch64.dmg`, …) — os objetos versionados são os mesmos bytes sob outro nome.
+      - name: sha256 dos artefatos
+        run: |
+          set -euo pipefail
+          cd dist-release
+          sha256sum -- * > "$RUNNER_TEMP/SHA256SUMS.txt"
+          mv "$RUNNER_TEMP/SHA256SUMS.txt" SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
       - name: publish
         env:
           GH_TOKEN: ${{ github.token }}
@@ -583,11 +516,17 @@ jobs:
           put "CODM_${T}_linux-x86_64.deb"               codm-linux-x86_64.deb              application/vnd.debian.binary-package
           put "CODM_${T}_windows-x86_64-setup.exe"       codm-windows-x86_64-setup.exe      application/vnd.microsoft.portable-executable
           put "CODM_${T}_windows-x86_64-setup.exe.sig"   codm-windows-x86_64-setup.exe.sig  text/plain
+          # A lista de checksums segue a MESMA regra dos artefatos: uma cópia versionada (retenção
+          # total — o checksum de uma versão antiga continua consultável) e o alias fixo que a
+          # landing linka ao lado do download. `text/plain` sem Content-Disposition, para abrir no
+          # navegador em vez de baixar.
+          put "CODM_${T}_SHA256SUMS.txt"                 SHA256SUMS.txt                     "text/plain; charset=utf-8"
           # aliases fixos — os instaladores humanos que a landing linka
           put codm-aarch64.dmg                codm-aarch64.dmg               application/x-apple-diskimage                    "$DMG_NAME"
           put codm-linux-x86_64.AppImage      codm-linux-x86_64.AppImage     application/vnd.appimage                          "$APPIMAGE_NAME"
           put codm-linux-x86_64.deb           codm-linux-x86_64.deb          application/vnd.debian.binary-package             "$DEB_NAME"
           put codm-windows-x86_64-setup.exe   codm-windows-x86_64-setup.exe  application/vnd.microsoft.portable-executable      "$SETUP_EXE_NAME"
+          put SHA256SUMS.txt                  SHA256SUMS.txt                 "text/plain; charset=utf-8"
           put latest.json                     latest.json                    application/json
 
       # Código de saída do wrangler não é prova (deploy-landing, 2026-08-08); o objeto no ar é.
@@ -608,4 +547,6 @@ jobs:
           check codm-linux-x86_64.AppImage codm-linux-x86_64.AppImage
           check codm-linux-x86_64.deb codm-linux-x86_64.deb
           check codm-windows-x86_64-setup.exe codm-windows-x86_64-setup.exe
+          check "CODM_${T}_SHA256SUMS.txt" SHA256SUMS.txt
+          check SHA256SUMS.txt SHA256SUMS.txt
           check latest.json latest.json
