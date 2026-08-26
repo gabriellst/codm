@@ -390,6 +390,13 @@ jobs:
           APPLE_ID: ${{ runner.os == 'macOS' && secrets.APPLE_ID || '' }}
           APPLE_PASSWORD: ${{ runner.os == 'macOS' && secrets.APPLE_PASSWORD || '' }}
           APPLE_TEAM_ID: ${{ runner.os == 'macOS' && 'V4F6T68S5B' || '' }}
+          # A janela de instalação do DMG (fundo + posição dos ícones, config/dmg.ts) é aplicada por
+          # um AppleScript no Finder dentro do bundler — e o bundler PULA esse passo quando vê
+          # CI=true (`--skip-jenkins`, tauri#592), porque runner hospedado não tem Finder. O nosso
+          # tem: é um LaunchAgent na sessão gráfica do mini. Sem esta linha o DMG sai com o
+          # background.png copiado mas sem .DS_Store — janela crua (medido na v0.5.3). Exige o
+          # grant único de Automação → Finder para o Runner.Listener no mini (docs/RELEASE.md).
+          TAURI_BUNDLER_DMG_IGNORE_CI: ${{ runner.os == 'macOS' && 'true' || '' }}
 
         run: cd packages/app/tauri && ${{ matrix.nice }} bun x tauri build --bundles ${{ matrix.bundles }}${{ matrix.tauriRunner && format(' --runner {0}', matrix.tauriRunner) || '' }}${{ matrix.crossTarget && format(' --target {0}', matrix.crossTarget) || '' }}
 

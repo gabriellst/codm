@@ -434,6 +434,30 @@ tempo de reinstalação a cada run.
 **Antes de tornar este repositório público**, remova os DOIS runners self-hosted: um PR de fork
 passaria a executar código arbitrário na máquina. As duas decisões são mutuamente exclusivas.
 
+### A janela do DMG precisa do Finder — e o Finder pede permissão uma vez
+
+O fundo e a posição dos ícones do DMG ("arraste para instalar", `packages/app/tauri/config/dmg.ts`)
+não são metadados do arquivo: o bundler do Tauri os aplica **abrindo o volume no Finder por
+AppleScript** e deixando o Finder gravar o `.DS_Store`. Em `CI=true` o bundler pula esse passo
+(`--skip-jenkins`, tauri#592) — foi assim que a v0.5.3 saiu com o `background.png` dentro do DMG e a
+janela crua mesmo assim. Os dois workflows ligam `TAURI_BUNDLER_DMG_IGNORE_CI=true` na perna macOS,
+o que só funciona porque o runner é um LaunchAgent **na sessão gráfica** do mini (`launchctl print
+gui/$(id -u)` lista `actions.runner.gabriellst-codm.codm-macmini`).
+
+Controlar o Finder é Automação (TCC). Na primeira vez que o build chega ao DMG, o macOS mostra no
+mini o diálogo *"Runner.Listener" deseja controlar o "Finder"* e **segura o build até a resposta**:
+
+1. Esteja com a sessão do mini desbloqueada quando o primeiro build com a env chegar ao passo do
+   DMG (~6 min após o início do job macOS) e clique **Permitir**. O grant é permanente.
+2. Negar (ou fechar) não cai num fallback: o bundler sai com `exit 64` e a release fica vermelha —
+   com o aviso "Failed running AppleScript" no log. Re-conceda em Ajustes do Sistema → Privacidade e
+   Segurança → Automação → Runner.Listener → Finder, e rode o job de novo.
+3. Conferir o estado sem abrir Ajustes:
+   `sqlite3 ~/Library/Application\ Support/com.apple.TCC/TCC.db "select client,indirect_object_identifier,auth_value from access where service='kTCCServiceAppleEvents'"`
+   — `auth_value` 2 = permitido, 0 = negado. Entrada de `sshd-keygen-wrapper` é o ssh, não o runner.
+4. Prova de que funcionou: o DMG montado tem `.DS_Store` ao lado de `.background/` e a janela abre
+   com a seta entre os ícones.
+
 ### O CI agora escreve na SUA máquina — actions de cache são o risco real
 
 Num runner descartável, uma action que "limpa" o ambiente não tem vítima. Aqui tem, e a primeira

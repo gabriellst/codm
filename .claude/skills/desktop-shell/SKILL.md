@@ -67,6 +67,13 @@ icons). Facts measured on a real volume (2026-08-25): the bundler fixes icon siz
 bottom are hidden — keep nothing important there; and Finder draws icon labels in DARK text over a
 light background picture even in dark mode, so one light picture serves both appearances. Moving an
 icon = edit `config/dmg.ts` → `bun desktop:generate` + `bun desktop:dmg-background`.
+**On CI the layout is applied by an AppleScript driving Finder, and the bundler SKIPS it when
+`CI=true` (`--skip-jenkins`, tauri#592)** — the DMG then ships `.background/background.png` but no
+`.DS_Store`, i.e. the bare window (that is what v0.5.3 shipped). Both release workflows set
+`TAURI_BUNDLER_DMG_IGNORE_CI=true` on the macOS leg; it works because the runner is a LaunchAgent in
+the mini's GUI session, and it needs a ONE-TIME Automation → Finder grant for `Runner.Listener`
+(procedure in `docs/RELEASE.md`). A denied grant is `exit 64` from the bundler = red release, not a
+silent fallback.
 
 **Adding a sidecar** = add an entry to `config/sidecars.ts` (`SIDECARS`) + `bun desktop:generate` —
 never edit tauri.conf.json/mod.rs literals. **Adding a native capability** = add the abstract key to
