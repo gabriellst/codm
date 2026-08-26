@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { configureModel } from "../client/configureModel.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const configureModelMutationKey = () => [{ url: '/v1/threads/:threadId/model' }] as const
+export const configureModelMutationKey = () => [{ url: '/threads/:threadId/model' }] as const
 
 export type ConfigureModelMutationKey = ReturnType<typeof configureModelMutationKey>
 
@@ -27,7 +27,7 @@ export function configureModelMutationOptions<TContext = unknown>(config: Partia
 
 /**
  * @description Choose which model this conversation asks one of its agent CLIs for. DEFAULT means let the CLI pick (C16)
- * {@link /v1/threads/:threadId/model}
+ * {@link /threads/:threadId/model}
  */
 export function useConfigureModel<TContext>(options: 
 {

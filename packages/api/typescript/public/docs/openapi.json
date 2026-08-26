@@ -1,11 +1,11 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "version": "v1",
+    "version": "1.0.0",
     "title": "codm-backend"
   },
   "paths": {
-    "/v1/health": {
+    "/health": {
       "get": {
         "tags": [
           "shared"
@@ -59,7 +59,7 @@
         }
       }
     },
-    "/v1/session/cloud-token": {
+    "/session/cloud-token": {
       "post": {
         "tags": [
           "shared"
@@ -105,7 +105,7 @@
         }
       }
     },
-    "/v1/sign-in/loopback": {
+    "/sign-in/loopback": {
       "get": {
         "tags": [
           "shared"
@@ -146,7 +146,7 @@
         }
       }
     },
-    "/v1/sign-in/loopback/claim": {
+    "/sign-in/loopback/claim": {
       "get": {
         "tags": [
           "shared"
@@ -191,7 +191,7 @@
         }
       }
     },
-    "/v1/terminal/providers": {
+    "/terminal/providers": {
       "get": {
         "tags": [
           "agent"
@@ -306,7 +306,7 @@
         }
       }
     },
-    "/v1/terminal/sessions/{issueId}/stream": {
+    "/terminal/sessions/{issueId}/stream": {
       "get": {
         "tags": [
           "agent"
@@ -405,7 +405,7 @@
         }
       }
     },
-    "/v1/threads/{threadId}/issues": {
+    "/threads/{threadId}/issues": {
       "post": {
         "tags": [
           "agent",
@@ -663,7 +663,7 @@
         ]
       }
     },
-    "/v1/threads/{threadId}/issues/{issueId}/status": {
+    "/threads/{threadId}/issues/{issueId}/status": {
       "post": {
         "tags": [
           "agent",
@@ -867,7 +867,7 @@
         ]
       }
     },
-    "/v1/threads/{threadId}/issues/{issueId}/stops": {
+    "/threads/{threadId}/issues/{issueId}/stops": {
       "post": {
         "tags": [
           "agent",
@@ -970,7 +970,7 @@
         ]
       }
     },
-    "/v1/threads/{threadId}/issues/{issueId}/operator-questions": {
+    "/threads/{threadId}/issues/{issueId}/operator-questions": {
       "post": {
         "tags": [
           "agent",
@@ -1075,7 +1075,7 @@
         ]
       }
     },
-    "/v1/threads/{threadId}/issues/fork": {
+    "/threads/{threadId}/issues/fork": {
       "post": {
         "tags": [
           "agent",
@@ -1168,7 +1168,7 @@
         ]
       }
     },
-    "/v1/threads/{threadId}/issues/{issueId}/steer": {
+    "/threads/{threadId}/issues/{issueId}/steer": {
       "post": {
         "tags": [
           "agent",
@@ -1270,7 +1270,7 @@
         ]
       }
     },
-    "/v1/threads/{threadId}/artifacts/{artifactId}/content": {
+    "/threads/{threadId}/artifacts/{artifactId}/content": {
       "get": {
         "tags": [
           "artifact"
@@ -1320,7 +1320,7 @@
         }
       }
     },
-    "/v1/threads/{threadId}/artifacts": {
+    "/threads/{threadId}/artifacts": {
       "get": {
         "tags": [
           "artifact",
@@ -1515,7 +1515,7 @@
         ]
       }
     },
-    "/v1/threads/{threadId}/artifacts/{artifactId}/send": {
+    "/threads/{threadId}/artifacts/{artifactId}/send": {
       "post": {
         "tags": [
           "artifact",
@@ -1582,7 +1582,7 @@
         ]
       }
     },
-    "/v1/issues/{issueId}/archive": {
+    "/issues/{issueId}/archive": {
       "post": {
         "tags": [
           "issue"
@@ -1612,7 +1612,7 @@
         }
       }
     },
-    "/v1/issues/{issueId}": {
+    "/issues/{issueId}": {
       "get": {
         "tags": [
           "issue",
@@ -1780,7 +1780,7 @@
         ]
       }
     },
-    "/v1/issues": {
+    "/issues": {
       "get": {
         "tags": [
           "issue",
@@ -1965,7 +1965,7 @@
         ]
       }
     },
-    "/v1/issues/{issueId}/restore": {
+    "/issues/{issueId}/restore": {
       "post": {
         "tags": [
           "issue"
@@ -1995,7 +1995,7 @@
         }
       }
     },
-    "/v1/issues/{issueId}/steer": {
+    "/issues/{issueId}/steer": {
       "post": {
         "tags": [
           "issue"
@@ -2077,7 +2077,7 @@
         }
       }
     },
-    "/v1/threads": {
+    "/threads": {
       "post": {
         "tags": [
           "thread"
@@ -2195,7 +2195,7 @@
         }
       }
     },
-    "/v1/threads/{threadId}": {
+    "/threads/{threadId}": {
       "delete": {
         "tags": [
           "thread"
@@ -2225,7 +2225,7 @@
         }
       }
     },
-    "/v1/threads/{threadId}/buffer": {
+    "/threads/{threadId}/buffer": {
       "put": {
         "tags": [
           "thread",
@@ -2286,7 +2286,7 @@
         ]
       }
     },
-    "/v1/threads/{threadId}/mention-gate": {
+    "/threads/{threadId}/mention-gate": {
       "put": {
         "tags": [
           "thread",
@@ -2380,7 +2380,7 @@
         ]
       }
     },
-    "/v1/threads/{threadId}/model": {
+    "/threads/{threadId}/model": {
       "put": {
         "tags": [
           "thread",
@@ -2446,7 +2446,7 @@
         ]
       }
     },
-    "/v1/threads/{threadId}/prompt": {
+    "/threads/{threadId}/prompt": {
       "put": {
         "tags": [
           "thread",
@@ -2505,7 +2505,7 @@
         ]
       }
     },
-    "/v1/threads/{threadId}/thinking-indicator": {
+    "/threads/{threadId}/thinking-indicator": {
       "put": {
         "tags": [
           "thread",
@@ -2566,7 +2566,7 @@
         ]
       }
     },
-    "/v1/threads/{threadId}/reactions": {
+    "/threads/{threadId}/reactions": {
       "put": {
         "tags": [
           "thread",
@@ -2627,7 +2627,7 @@
         ]
       }
     },
-    "/v1/threads/{threadId}/streaming": {
+    "/threads/{threadId}/streaming": {
       "put": {
         "tags": [
           "thread",
@@ -2688,7 +2688,7 @@
         ]
       }
     },
-    "/v1/threads/{threadId}/chat": {
+    "/threads/{threadId}/chat": {
       "get": {
         "tags": [
           "thread",
@@ -2968,7 +2968,7 @@
         ]
       }
     },
-    "/v1/threads/{threadId}/settings": {
+    "/threads/{threadId}/settings": {
       "get": {
         "tags": [
           "thread",
@@ -3175,7 +3175,7 @@
         ]
       }
     },
-    "/v1/threads/{threadId}/pause": {
+    "/threads/{threadId}/pause": {
       "post": {
         "tags": [
           "thread"
@@ -3205,7 +3205,7 @@
         }
       }
     },
-    "/v1/threads/{threadId}/resume": {
+    "/threads/{threadId}/resume": {
       "post": {
         "tags": [
           "thread"
@@ -3235,7 +3235,7 @@
         }
       }
     },
-    "/v1/threads/{threadId}/direct": {
+    "/threads/{threadId}/direct": {
       "post": {
         "tags": [
           "thread",
@@ -3323,7 +3323,7 @@
         ]
       }
     },
-    "/v1/threads/{threadId}/participants/{participantId}": {
+    "/threads/{threadId}/participants/{participantId}": {
       "put": {
         "tags": [
           "thread"
@@ -3387,7 +3387,7 @@
         }
       }
     },
-    "/v1/threads/{threadId}/steer": {
+    "/threads/{threadId}/steer": {
       "post": {
         "tags": [
           "thread"
@@ -3469,7 +3469,7 @@
         }
       }
     },
-    "/v1/threads/{threadId}/needs-you": {
+    "/threads/{threadId}/needs-you": {
       "get": {
         "tags": [
           "thread",
@@ -3561,7 +3561,7 @@
         ]
       }
     },
-    "/v1/stops/{stopId}/resolve": {
+    "/stops/{stopId}/resolve": {
       "post": {
         "tags": [
           "thread",
@@ -3620,7 +3620,7 @@
         ]
       }
     },
-    "/v1/settings/stop-criteria": {
+    "/settings/stop-criteria": {
       "put": {
         "tags": [
           "thread"
@@ -3695,7 +3695,7 @@
         }
       }
     },
-    "/v1/threads/{threadId}/loops": {
+    "/threads/{threadId}/loops": {
       "get": {
         "tags": [
           "thread",
@@ -3998,7 +3998,7 @@
         ]
       }
     },
-    "/v1/threads/{threadId}/loops/{loopId}": {
+    "/threads/{threadId}/loops/{loopId}": {
       "put": {
         "tags": [
           "thread",
@@ -4186,7 +4186,7 @@
         ]
       }
     },
-    "/v1/threads/{threadId}/loops/{loopId}/enabled": {
+    "/threads/{threadId}/loops/{loopId}/enabled": {
       "put": {
         "tags": [
           "thread",
@@ -4271,7 +4271,7 @@
         ]
       }
     },
-    "/v1/workspaces": {
+    "/workspaces": {
       "post": {
         "tags": [
           "workspace",
@@ -4437,7 +4437,7 @@
         ]
       }
     },
-    "/v1/workspaces/{workspaceId}": {
+    "/workspaces/{workspaceId}": {
       "delete": {
         "tags": [
           "workspace",
@@ -4473,7 +4473,7 @@
         ]
       }
     },
-    "/v1/ui/events": {
+    "/ui/events": {
       "get": {
         "tags": [
           "ui"
@@ -7739,7 +7739,7 @@
         }
       }
     },
-    "/v1/ui/user-info": {
+    "/ui/user-info": {
       "get": {
         "tags": [
           "ui",
@@ -7845,7 +7845,7 @@
         ]
       }
     },
-    "/v1/ui/account": {
+    "/ui/account": {
       "get": {
         "tags": [
           "ui",
@@ -7955,7 +7955,7 @@
         ]
       }
     },
-    "/v1/ui/home": {
+    "/ui/home": {
       "get": {
         "tags": [
           "ui",
@@ -8238,7 +8238,7 @@
         ]
       }
     },
-    "/v1/ui/attach-thread-wizard": {
+    "/ui/attach-thread-wizard": {
       "get": {
         "tags": [
           "ui",
@@ -8430,7 +8430,7 @@
         ]
       }
     },
-    "/v1/ui/settings": {
+    "/ui/settings": {
       "get": {
         "tags": [
           "ui",
@@ -8548,7 +8548,7 @@
         ]
       }
     },
-    "/v1/ui/onboarding": {
+    "/ui/onboarding": {
       "get": {
         "tags": [
           "ui",
@@ -8604,7 +8604,7 @@
         ]
       }
     },
-    "/v1/ui/avatars/{channelId}/{remoteId}": {
+    "/ui/avatars/{channelId}/{remoteId}": {
       "get": {
         "tags": [
           "ui"
@@ -8654,7 +8654,7 @@
         }
       }
     },
-    "/v1/ui/operator": {
+    "/ui/operator": {
       "get": {
         "tags": [
           "ui"
@@ -8705,7 +8705,7 @@
         }
       }
     },
-    "/v1/ui/onboarding/complete": {
+    "/ui/onboarding/complete": {
       "post": {
         "tags": [
           "ui",
@@ -8731,7 +8731,7 @@
         ]
       }
     },
-    "/v1/ui/onboarding/step": {
+    "/ui/onboarding/step": {
       "patch": {
         "tags": [
           "ui",

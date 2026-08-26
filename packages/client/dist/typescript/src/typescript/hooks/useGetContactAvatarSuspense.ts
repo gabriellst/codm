@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { getContactAvatar } from "../client/getContactAvatar.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const getContactAvatarSuspenseQueryKey = (channelId: GetContactAvatarPathParams["channelId"] | undefined, remoteId: GetContactAvatarPathParams["remoteId"] | undefined) => [{ url: '/v1/ui/avatars/:channelId/:remoteId', params: {channelId:channelId,remoteId:remoteId} }] as const
+export const getContactAvatarSuspenseQueryKey = (channelId: GetContactAvatarPathParams["channelId"] | undefined, remoteId: GetContactAvatarPathParams["remoteId"] | undefined) => [{ url: '/ui/avatars/:channelId/:remoteId', params: {channelId:channelId,remoteId:remoteId} }] as const
 
 export type GetContactAvatarSuspenseQueryKey = ReturnType<typeof getContactAvatarSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function getContactAvatarSuspenseQueryOptions(channelId: GetContactAvatar
 
 /**
  * @description The photo of one channel contact, cached daemon-side (the console renders it in chat bubbles and rosters)
- * {@link /v1/ui/avatars/:channelId/:remoteId}
+ * {@link /ui/avatars/:channelId/:remoteId}
  */
 export function useGetContactAvatarSuspense<TData = GetContactAvatarQueryResponse, TQueryKey extends QueryKey = GetContactAvatarSuspenseQueryKey>(channelId: GetContactAvatarPathParams["channelId"], remoteId: GetContactAvatarPathParams["remoteId"], options: 
 {

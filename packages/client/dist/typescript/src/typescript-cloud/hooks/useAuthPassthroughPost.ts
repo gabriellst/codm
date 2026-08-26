@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { authPassthroughPost } from "../client/authPassthroughPost.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const authPassthroughPostMutationKey = () => [{ url: '/v1/auth/*' }] as const
+export const authPassthroughPostMutationKey = () => [{ url: '/auth/*' }] as const
 
 export type AuthPassthroughPostMutationKey = ReturnType<typeof authPassthroughPostMutationKey>
 
@@ -27,7 +27,7 @@ export function authPassthroughPostMutationOptions<TContext = unknown>(config: P
 
 /**
  * @description better-auth passthrough
- * {@link /v1/auth/*}
+ * {@link /auth/*}
  */
 export function useAuthPassthroughPost<TContext>(options: 
 {

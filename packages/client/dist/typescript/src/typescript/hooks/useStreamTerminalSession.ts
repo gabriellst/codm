@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { streamTerminalSession } from "../client/streamTerminalSession.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const streamTerminalSessionQueryKey = (issueId: StreamTerminalSessionPathParams["issueId"] | undefined) => [{ url: '/v1/terminal/sessions/:issueId/stream', params: {issueId:issueId} }] as const
+export const streamTerminalSessionQueryKey = (issueId: StreamTerminalSessionPathParams["issueId"] | undefined) => [{ url: '/terminal/sessions/:issueId/stream', params: {issueId:issueId} }] as const
 
 export type StreamTerminalSessionQueryKey = ReturnType<typeof streamTerminalSessionQueryKey>
 
@@ -28,7 +28,7 @@ export function streamTerminalSessionQueryOptions(issueId: StreamTerminalSession
 
 /**
  * @description Live terminal output for an issue session via Server-Sent Events (browser.terminal_output_appended)
- * {@link /v1/terminal/sessions/:issueId/stream}
+ * {@link /terminal/sessions/:issueId/stream}
  */
 export function useStreamTerminalSession<TData = StreamTerminalSessionQueryResponse, TQueryData = StreamTerminalSessionQueryResponse, TQueryKey extends QueryKey = StreamTerminalSessionQueryKey>(issueId: StreamTerminalSessionPathParams["issueId"] | undefined, options: 
 {

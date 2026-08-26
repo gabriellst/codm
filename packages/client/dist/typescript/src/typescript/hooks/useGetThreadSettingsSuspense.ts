@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { getThreadSettings } from "../client/getThreadSettings.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const getThreadSettingsSuspenseQueryKey = (threadId: GetThreadSettingsPathParams["threadId"] | undefined) => [{ url: '/v1/threads/:threadId/settings', params: {threadId:threadId} }] as const
+export const getThreadSettingsSuspenseQueryKey = (threadId: GetThreadSettingsPathParams["threadId"] | undefined) => [{ url: '/threads/:threadId/settings', params: {threadId:threadId} }] as const
 
 export type GetThreadSettingsSuspenseQueryKey = ReturnType<typeof getThreadSettingsSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function getThreadSettingsSuspenseQueryOptions(threadId: GetThreadSetting
 
 /**
  * @description Per-thread behavior: mention gate, participants + invocation, buffer size (T10)
- * {@link /v1/threads/:threadId/settings}
+ * {@link /threads/:threadId/settings}
  */
 export function useGetThreadSettingsSuspense<TData = GetThreadSettingsQueryResponse, TQueryKey extends QueryKey = GetThreadSettingsSuspenseQueryKey>(threadId: GetThreadSettingsPathParams["threadId"], options: 
 {

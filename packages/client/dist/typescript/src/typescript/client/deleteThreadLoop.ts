@@ -8,13 +8,13 @@ import type { DeleteThreadLoopMutationResponse, DeleteThreadLoopPathParams } fro
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getDeleteThreadLoopUrl(threadId: DeleteThreadLoopPathParams["threadId"], loopId: DeleteThreadLoopPathParams["loopId"]) {
-  const res = { method: 'DELETE', url: `/v1/threads/${threadId}/loops/${loopId}` as const }
+  const res = { method: 'DELETE', url: `/threads/${threadId}/loops/${loopId}` as const }
   return res
 }
 
 /**
  * @description Remove a loop (C24)
- * {@link /v1/threads/:threadId/loops/:loopId}
+ * {@link /threads/:threadId/loops/:loopId}
  */
 export async function deleteThreadLoop(threadId: DeleteThreadLoopPathParams["threadId"], loopId: DeleteThreadLoopPathParams["loopId"], config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

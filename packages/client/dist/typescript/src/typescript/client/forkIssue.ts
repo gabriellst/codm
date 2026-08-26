@@ -8,13 +8,13 @@ import type { ForkIssueMutationRequest, ForkIssueMutationResponse, ForkIssuePath
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getForkIssueUrl(threadId: ForkIssuePathParams["threadId"]) {
-  const res = { method: 'POST', url: `/v1/threads/${threadId}/issues/fork` as const }
+  const res = { method: 'POST', url: `/threads/${threadId}/issues/fork` as const }
   return res
 }
 
 /**
  * @description Fork a new issue out of the conversation, from the operator's own words
- * {@link /v1/threads/:threadId/issues/fork}
+ * {@link /threads/:threadId/issues/fork}
  */
 export async function forkIssue(threadId: ForkIssuePathParams["threadId"], data: ForkIssueMutationRequest, config: Partial<RequestConfig<ForkIssueMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { enableOwner } from "../client/enableOwner.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const enableOwnerMutationKey = () => [{ url: '/v1/owners/enable' }] as const
+export const enableOwnerMutationKey = () => [{ url: '/owners/enable' }] as const
 
 export type EnableOwnerMutationKey = ReturnType<typeof enableOwnerMutationKey>
 
@@ -27,7 +27,7 @@ export function enableOwnerMutationOptions<TContext = unknown>(config: Partial<R
 
 /**
  * @description Re-enable a previously disabled owner (C20 EnableOwner; OWNER only)
- * {@link /v1/owners/enable}
+ * {@link /owners/enable}
  */
 export function useEnableOwner<TContext>(options: 
 {

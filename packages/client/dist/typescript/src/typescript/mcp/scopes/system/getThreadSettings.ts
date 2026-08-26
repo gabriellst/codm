@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description Per-thread behavior: mention gate, participants + invocation, buffer size (T10)
- * {@link /v1/threads/:threadId/settings}
+ * {@link /threads/:threadId/settings}
  */
 export async function getThreadSettingsHandler({ threadId }: { threadId: GetThreadSettingsPathParams["threadId"] }): Promise<Promise<CallToolResult>> {
 
 
 
 
-  const res = await fetch<GetThreadSettingsQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/v1/threads/${threadId}/settings` })
+  const res = await fetch<GetThreadSettingsQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/threads/${threadId}/settings` })
   return {
               content: [
                 {

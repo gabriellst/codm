@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description Open a new issue on a thread
- * {@link /v1/threads/:threadId/issues}
+ * {@link /threads/:threadId/issues}
  */
 export async function createIssueHandler({ threadId, data }: { threadId: CreateIssuePathParams["threadId"]; data: CreateIssueMutationRequest }): Promise<Promise<CallToolResult>> {
 
 
   const requestData = data
 
-  const res = await fetch<CreateIssueMutationResponse, ResponseErrorConfig<Error>, CreateIssueMutationRequest>({ method : "POST", url : `/v1/threads/${threadId}/issues`, data : requestData })
+  const res = await fetch<CreateIssueMutationResponse, ResponseErrorConfig<Error>, CreateIssueMutationRequest>({ method : "POST", url : `/threads/${threadId}/issues`, data : requestData })
   return {
               content: [
                 {

@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { completeOnboarding } from "../client/completeOnboarding.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const completeOnboardingMutationKey = () => [{ url: '/v1/ui/onboarding/complete' }] as const
+export const completeOnboardingMutationKey = () => [{ url: '/ui/onboarding/complete' }] as const
 
 export type CompleteOnboardingMutationKey = ReturnType<typeof completeOnboardingMutationKey>
 
@@ -27,7 +27,7 @@ export function completeOnboardingMutationOptions<TContext = unknown>(config: Pa
 
 /**
  * @description Conclui o onboarding do operador — grava completedAt
- * {@link /v1/ui/onboarding/complete}
+ * {@link /ui/onboarding/complete}
  */
 export function useCompleteOnboarding<TContext>(options: 
 {

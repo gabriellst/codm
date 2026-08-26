@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { resumeThread } from "../client/resumeThread.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const resumeThreadMutationKey = () => [{ url: '/v1/threads/:threadId/resume' }] as const
+export const resumeThreadMutationKey = () => [{ url: '/threads/:threadId/resume' }] as const
 
 export type ResumeThreadMutationKey = ReturnType<typeof resumeThreadMutationKey>
 
@@ -27,7 +27,7 @@ export function resumeThreadMutationOptions<TContext = unknown>(config: Partial<
 
 /**
  * @description Resume agent activity on a thread (C11)
- * {@link /v1/threads/:threadId/resume}
+ * {@link /threads/:threadId/resume}
  */
 export function useResumeThread<TContext>(options: 
 {

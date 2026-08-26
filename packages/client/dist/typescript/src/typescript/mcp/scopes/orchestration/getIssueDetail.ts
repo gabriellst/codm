@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description One issue drill-down: terminal log, routed messages, stops (T12)
- * {@link /v1/issues/:issueId}
+ * {@link /issues/:issueId}
  */
 export async function getIssueDetailHandler({ issueId }: { issueId: GetIssueDetailPathParams["issueId"] }): Promise<Promise<CallToolResult>> {
 
 
 
 
-  const res = await fetch<GetIssueDetailQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/v1/issues/${issueId}` })
+  const res = await fetch<GetIssueDetailQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/issues/${issueId}` })
   return {
               content: [
                 {

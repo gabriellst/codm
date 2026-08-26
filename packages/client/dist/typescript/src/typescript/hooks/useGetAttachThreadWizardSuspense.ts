@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { getAttachThreadWizard } from "../client/getAttachThreadWizard.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const getAttachThreadWizardSuspenseQueryKey = (params?: GetAttachThreadWizardQueryParams) => [{ url: '/v1/ui/attach-thread-wizard' }, ...(params ? [params] : [])] as const
+export const getAttachThreadWizardSuspenseQueryKey = (params?: GetAttachThreadWizardQueryParams) => [{ url: '/ui/attach-thread-wizard' }, ...(params ? [params] : [])] as const
 
 export type GetAttachThreadWizardSuspenseQueryKey = ReturnType<typeof getAttachThreadWizardSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function getAttachThreadWizardSuspenseQueryOptions(params?: GetAttachThre
 
 /**
  * @description Attach-thread wizard — contacts, workspaces, providers + attached/no-channel flags (T15)
- * {@link /v1/ui/attach-thread-wizard}
+ * {@link /ui/attach-thread-wizard}
  */
 export function useGetAttachThreadWizardSuspense<TData = GetAttachThreadWizardQueryResponse, TQueryKey extends QueryKey = GetAttachThreadWizardSuspenseQueryKey>(params?: GetAttachThreadWizardQueryParams, options: 
 {

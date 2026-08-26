@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { sendArtifact } from "../client/sendArtifact.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const sendArtifactMutationKey = () => [{ url: '/v1/threads/:threadId/artifacts/:artifactId/send' }] as const
+export const sendArtifactMutationKey = () => [{ url: '/threads/:threadId/artifacts/:artifactId/send' }] as const
 
 export type SendArtifactMutationKey = ReturnType<typeof sendArtifactMutationKey>
 
@@ -27,7 +27,7 @@ export function sendArtifactMutationOptions<TContext = unknown>(config: Partial<
 
 /**
  * @description Deliver an already-recorded artifact to the contact on the channel
- * {@link /v1/threads/:threadId/artifacts/:artifactId/send}
+ * {@link /threads/:threadId/artifacts/:artifactId/send}
  */
 export function useSendArtifact<TContext>(options: 
 {

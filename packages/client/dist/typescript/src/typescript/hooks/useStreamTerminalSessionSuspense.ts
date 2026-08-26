@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { streamTerminalSession } from "../client/streamTerminalSession.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const streamTerminalSessionSuspenseQueryKey = (issueId: StreamTerminalSessionPathParams["issueId"] | undefined) => [{ url: '/v1/terminal/sessions/:issueId/stream', params: {issueId:issueId} }] as const
+export const streamTerminalSessionSuspenseQueryKey = (issueId: StreamTerminalSessionPathParams["issueId"] | undefined) => [{ url: '/terminal/sessions/:issueId/stream', params: {issueId:issueId} }] as const
 
 export type StreamTerminalSessionSuspenseQueryKey = ReturnType<typeof streamTerminalSessionSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function streamTerminalSessionSuspenseQueryOptions(issueId: StreamTermina
 
 /**
  * @description Live terminal output for an issue session via Server-Sent Events (browser.terminal_output_appended)
- * {@link /v1/terminal/sessions/:issueId/stream}
+ * {@link /terminal/sessions/:issueId/stream}
  */
 export function useStreamTerminalSessionSuspense<TData = StreamTerminalSessionQueryResponse, TQueryKey extends QueryKey = StreamTerminalSessionSuspenseQueryKey>(issueId: StreamTerminalSessionPathParams["issueId"], options: 
 {

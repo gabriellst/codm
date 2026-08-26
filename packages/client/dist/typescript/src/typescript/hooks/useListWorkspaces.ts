@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { listWorkspaces } from "../client/listWorkspaces.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const listWorkspacesQueryKey = () => [{ url: '/v1/workspaces' }] as const
+export const listWorkspacesQueryKey = () => [{ url: '/workspaces' }] as const
 
 export type ListWorkspacesQueryKey = ReturnType<typeof listWorkspacesQueryKey>
 
@@ -28,7 +28,7 @@ export function listWorkspacesQueryOptions(config: Partial<RequestConfig> & { cl
 
 /**
  * @description List registered workspaces with badges and thread counts (T07)
- * {@link /v1/workspaces}
+ * {@link /workspaces}
  */
 export function useListWorkspaces<TData = ListWorkspacesQueryResponse, TQueryData = ListWorkspacesQueryResponse, TQueryKey extends QueryKey = ListWorkspacesQueryKey>(options: 
 {

@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { getContactAvatar } from "../client/getContactAvatar.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const getContactAvatarQueryKey = (channelId: GetContactAvatarPathParams["channelId"] | undefined, remoteId: GetContactAvatarPathParams["remoteId"] | undefined) => [{ url: '/v1/ui/avatars/:channelId/:remoteId', params: {channelId:channelId,remoteId:remoteId} }] as const
+export const getContactAvatarQueryKey = (channelId: GetContactAvatarPathParams["channelId"] | undefined, remoteId: GetContactAvatarPathParams["remoteId"] | undefined) => [{ url: '/ui/avatars/:channelId/:remoteId', params: {channelId:channelId,remoteId:remoteId} }] as const
 
 export type GetContactAvatarQueryKey = ReturnType<typeof getContactAvatarQueryKey>
 
@@ -28,7 +28,7 @@ export function getContactAvatarQueryOptions(channelId: GetContactAvatarPathPara
 
 /**
  * @description The photo of one channel contact, cached daemon-side (the console renders it in chat bubbles and rosters)
- * {@link /v1/ui/avatars/:channelId/:remoteId}
+ * {@link /ui/avatars/:channelId/:remoteId}
  */
 export function useGetContactAvatar<TData = GetContactAvatarQueryResponse, TQueryData = GetContactAvatarQueryResponse, TQueryKey extends QueryKey = GetContactAvatarQueryKey>(channelId: GetContactAvatarPathParams["channelId"] | undefined, remoteId: GetContactAvatarPathParams["remoteId"] | undefined, options: 
 {

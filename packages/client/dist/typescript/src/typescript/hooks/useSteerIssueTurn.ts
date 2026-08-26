@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { steerIssueTurn } from "../client/steerIssueTurn.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const steerIssueTurnMutationKey = () => [{ url: '/v1/threads/:threadId/issues/:issueId/steer' }] as const
+export const steerIssueTurnMutationKey = () => [{ url: '/threads/:threadId/issues/:issueId/steer' }] as const
 
 export type SteerIssueTurnMutationKey = ReturnType<typeof steerIssueTurnMutationKey>
 
@@ -27,7 +27,7 @@ export function steerIssueTurnMutationOptions<TContext = unknown>(config: Partia
 
 /**
  * @description Redirect an issue of this thread — including one that already finished
- * {@link /v1/threads/:threadId/issues/:issueId/steer}
+ * {@link /threads/:threadId/issues/:issueId/steer}
  */
 export function useSteerIssueTurn<TContext>(options: 
 {

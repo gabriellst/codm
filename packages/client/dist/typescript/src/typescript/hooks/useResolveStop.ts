@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { resolveStop } from "../client/resolveStop.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const resolveStopMutationKey = () => [{ url: '/v1/stops/:stopId/resolve' }] as const
+export const resolveStopMutationKey = () => [{ url: '/stops/:stopId/resolve' }] as const
 
 export type ResolveStopMutationKey = ReturnType<typeof resolveStopMutationKey>
 
@@ -27,7 +27,7 @@ export function resolveStopMutationOptions<TContext = unknown>(config: Partial<R
 
 /**
  * @description Resolve a stop — retry / review&send / take over / approve / deny (C25)
- * {@link /v1/stops/:stopId/resolve}
+ * {@link /stops/:stopId/resolve}
  */
 export function useResolveStop<TContext>(options: 
 {

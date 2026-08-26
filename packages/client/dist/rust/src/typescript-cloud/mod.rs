@@ -2084,7 +2084,7 @@ pub mod types {
 #[derive(Clone, Debug)]
 /**Client for codm-backend
 
-Version: v1*/
+Version: 1.0.0*/
 pub struct Client {
     pub(crate) baseurl: String,
     pub(crate) client: reqwest::Client,
@@ -2130,17 +2130,17 @@ impl Client {
     /// This string is pulled directly from the source OpenAPI
     /// document and may be in any format the API selects.
     pub fn api_version(&self) -> &'static str {
-        "v1"
+        "1.0.0"
     }
 }
 #[allow(clippy::all)]
 #[allow(elided_named_lifetimes)]
 impl Client {
-    #[doc = "better-auth passthrough\n\nSends a `GET` request to `/v1/auth/*`\n\n"]
+    #[doc = "better-auth passthrough\n\nSends a `GET` request to `/auth/*`\n\n"]
     pub async fn auth_passthrough_get<'a>(
         &'a self,
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
-        let url = format!("{}/v1/auth/*", self.baseurl,);
+        let url = format!("{}/auth/*", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -2164,11 +2164,11 @@ impl Client {
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
-    #[doc = "better-auth passthrough\n\nSends a `POST` request to `/v1/auth/*`\n\n"]
+    #[doc = "better-auth passthrough\n\nSends a `POST` request to `/auth/*`\n\n"]
     pub async fn auth_passthrough_post<'a>(
         &'a self,
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
-        let url = format!("{}/v1/auth/*", self.baseurl,);
+        let url = format!("{}/auth/*", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -2194,14 +2194,14 @@ impl Client {
     }
     /**Bridges a better-auth browser session into a one-time token, returned to the app over its loopback listener
 
-Sends a `GET` request to `/v1/desktop-callback`
+Sends a `GET` request to `/desktop-callback`
 
 */
     pub async fn desktop_callback<'a>(
         &'a self,
         port: i64,
     ) -> Result<ResponseValue<::std::string::String>, Error<()>> {
-        let url = format!("{}/v1/desktop-callback", self.baseurl,);
+        let url = format!("{}/desktop-callback", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -2228,13 +2228,13 @@ Sends a `GET` request to `/v1/desktop-callback`
     }
     /**Readiness do daemon: banco, migrações e os timers de poll (canal WhatsApp entra só como diagnóstico)
 
-Sends a `GET` request to `/v1/health`
+Sends a `GET` request to `/health`
 
 */
     pub async fn health<'a>(
         &'a self,
     ) -> Result<ResponseValue<types::HealthResponse>, Error<()>> {
-        let url = format!("{}/v1/health", self.baseurl,);
+        let url = format!("{}/health", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -2260,13 +2260,13 @@ Sends a `GET` request to `/v1/health`
     }
     /**MOCK. Accept-and-echo multipart avatar upload — returns new pictureUrl
 
-Sends a `POST` request to `/v1/identity/account/avatar`
+Sends a `POST` request to `/identity/account/avatar`
 
 */
     pub async fn upload_avatar<'a>(
         &'a self,
     ) -> Result<ResponseValue<types::UploadAvatarResponse>, Error<()>> {
-        let url = format!("{}/v1/identity/account/avatar", self.baseurl,);
+        let url = format!("{}/identity/account/avatar", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -2292,14 +2292,14 @@ Sends a `POST` request to `/v1/identity/account/avatar`
     }
     /**Create a new owner (tenant); the creator becomes the responsible user
 
-Sends a `POST` request to `/v1/owners`
+Sends a `POST` request to `/owners`
 
 */
     pub async fn create_owner<'a>(
         &'a self,
         body: &'a types::CreateOwnerBody,
     ) -> Result<ResponseValue<types::CreateOwnerResponse>, Error<()>> {
-        let url = format!("{}/v1/owners", self.baseurl,);
+        let url = format!("{}/owners", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -2326,14 +2326,14 @@ Sends a `POST` request to `/v1/owners`
     }
     /**Disable a owner (C19 DisableOwner; OWNER only)
 
-Sends a `POST` request to `/v1/owners/disable`
+Sends a `POST` request to `/owners/disable`
 
 */
     pub async fn disable_owner<'a>(
         &'a self,
         body: &'a types::DisableOwnerBody,
     ) -> Result<ResponseValue<types::DisableOwnerResponse>, Error<()>> {
-        let url = format!("{}/v1/owners/disable", self.baseurl,);
+        let url = format!("{}/owners/disable", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -2360,13 +2360,13 @@ Sends a `POST` request to `/v1/owners/disable`
     }
     /**Re-enable a previously disabled owner (C20 EnableOwner; OWNER only)
 
-Sends a `POST` request to `/v1/owners/enable`
+Sends a `POST` request to `/owners/enable`
 
 */
     pub async fn enable_owner<'a>(
         &'a self,
     ) -> Result<ResponseValue<types::EnableOwnerResponse>, Error<()>> {
-        let url = format!("{}/v1/owners/enable", self.baseurl,);
+        let url = format!("{}/owners/enable", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -2392,14 +2392,14 @@ Sends a `POST` request to `/v1/owners/enable`
     }
     /**Update owner profile settings (name / picture / timezone)
 
-Sends a `PATCH` request to `/v1/owners/settings`
+Sends a `PATCH` request to `/owners/settings`
 
 */
     pub async fn update_owner_settings<'a>(
         &'a self,
         body: &'a types::UpdateOwnerSettingsBody,
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
-        let url = format!("{}/v1/owners/settings", self.baseurl,);
+        let url = format!("{}/owners/settings", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -2426,7 +2426,7 @@ Sends a `PATCH` request to `/v1/owners/settings`
     }
     /**Switch the authenticated session to the given owner (SPEC-07 SetActiveOwner)
 
-Sends a `POST` request to `/v1/owners/{ownerId}/activate`
+Sends a `POST` request to `/owners/{ownerId}/activate`
 
 */
     pub async fn set_active_owner<'a>(
@@ -2434,8 +2434,7 @@ Sends a `POST` request to `/v1/owners/{ownerId}/activate`
         owner_id: &'a str,
     ) -> Result<ResponseValue<types::SetActiveOwnerResponse>, Error<()>> {
         let url = format!(
-            "{}/v1/owners/{}/activate", self.baseurl, encode_path(& owner_id
-            .to_string()),
+            "{}/owners/{}/activate", self.baseurl, encode_path(& owner_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -2462,13 +2461,13 @@ Sends a `POST` request to `/v1/owners/{ownerId}/activate`
     }
     /**Get the current authenticated session
 
-Sends a `GET` request to `/v1/session`
+Sends a `GET` request to `/session`
 
 */
     pub async fn get_session<'a>(
         &'a self,
     ) -> Result<ResponseValue<types::GetSessionResponse>, Error<()>> {
-        let url = format!("{}/v1/session", self.baseurl,);
+        let url = format!("{}/session", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -2494,14 +2493,14 @@ Sends a `GET` request to `/v1/session`
     }
     /**Push a freshly-exchanged session token into the local daemon
 
-Sends a `POST` request to `/v1/session/cloud-token`
+Sends a `POST` request to `/session/cloud-token`
 
 */
     pub async fn set_cloud_token<'a>(
         &'a self,
         body: &'a types::SetCloudTokenBody,
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
-        let url = format!("{}/v1/session/cloud-token", self.baseurl,);
+        let url = format!("{}/session/cloud-token", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -2528,14 +2527,14 @@ Sends a `POST` request to `/v1/session/cloud-token`
     }
     /**Loopback landing (RFC 8252): receives the one-time sign-in code from the system browser
 
-Sends a `GET` request to `/v1/sign-in/loopback`
+Sends a `GET` request to `/sign-in/loopback`
 
 */
     pub async fn sign_in_loopback<'a>(
         &'a self,
         code: &'a types::SignInLoopbackCode,
     ) -> Result<ResponseValue<::std::string::String>, Error<()>> {
-        let url = format!("{}/v1/sign-in/loopback", self.baseurl,);
+        let url = format!("{}/sign-in/loopback", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -2562,13 +2561,13 @@ Sends a `GET` request to `/v1/sign-in/loopback`
     }
     /**Claims the one-time sign-in code delivered to the loopback landing (single use)
 
-Sends a `GET` request to `/v1/sign-in/loopback/claim`
+Sends a `GET` request to `/sign-in/loopback/claim`
 
 */
     pub async fn claim_sign_in_code<'a>(
         &'a self,
     ) -> Result<ResponseValue<types::ClaimSignInCodeResponse>, Error<()>> {
-        let url = format!("{}/v1/sign-in/loopback/claim", self.baseurl,);
+        let url = format!("{}/sign-in/loopback/claim", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -2594,7 +2593,7 @@ Sends a `GET` request to `/v1/sign-in/loopback/claim`
     }
     /**Redireciona o browser do sistema para o provedor social escolhido, iniciando o login do desktop
 
-Sends a `GET` request to `/v1/sign-in/social`
+Sends a `GET` request to `/sign-in/social`
 
 */
     pub async fn sign_in_social<'a>(
@@ -2602,7 +2601,7 @@ Sends a `GET` request to `/v1/sign-in/social`
         port: i64,
         provider: types::SocialProvider,
     ) -> Result<ResponseValue<::std::string::String>, Error<()>> {
-        let url = format!("{}/v1/sign-in/social", self.baseurl,);
+        let url = format!("{}/sign-in/social", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(

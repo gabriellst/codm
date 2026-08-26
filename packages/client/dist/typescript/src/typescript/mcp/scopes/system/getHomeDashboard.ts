@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description Home dashboard — agents running, needs-you, active sessions, today metrics, channels (T03)
- * {@link /v1/ui/home}
+ * {@link /ui/home}
  */
 export async function getHomeDashboardHandler(): Promise<Promise<CallToolResult>> {
 
 
 
 
-  const res = await fetch<GetHomeDashboardQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/v1/ui/home` })
+  const res = await fetch<GetHomeDashboardQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/ui/home` })
   return {
               content: [
                 {

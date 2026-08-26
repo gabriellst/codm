@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description Settings — providers, stop criteria, general, app version (T08)
- * {@link /v1/ui/settings}
+ * {@link /ui/settings}
  */
 export async function getSettingsHandler(): Promise<Promise<CallToolResult>> {
 
 
 
 
-  const res = await fetch<GetSettingsQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/v1/ui/settings` })
+  const res = await fetch<GetSettingsQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/ui/settings` })
   return {
               content: [
                 {

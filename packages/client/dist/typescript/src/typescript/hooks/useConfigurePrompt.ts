@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { configurePrompt } from "../client/configurePrompt.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const configurePromptMutationKey = () => [{ url: '/v1/threads/:threadId/prompt' }] as const
+export const configurePromptMutationKey = () => [{ url: '/threads/:threadId/prompt' }] as const
 
 export type ConfigurePromptMutationKey = ReturnType<typeof configurePromptMutationKey>
 
@@ -27,7 +27,7 @@ export function configurePromptMutationOptions<TContext = unknown>(config: Parti
 
 /**
  * @description Set (or clear, with an empty body value) the operator's custom prompt for this conversation (C15)
- * {@link /v1/threads/:threadId/prompt}
+ * {@link /threads/:threadId/prompt}
  */
 export function useConfigurePrompt<TContext>(options: 
 {

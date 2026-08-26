@@ -1,11 +1,11 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "version": "v1",
+    "version": "1.0.0",
     "title": "codm-backend"
   },
   "paths": {
-    "/v1/health": {
+    "/health": {
       "get": {
         "tags": [
           "shared"
@@ -59,7 +59,7 @@
         }
       }
     },
-    "/v1/session/cloud-token": {
+    "/session/cloud-token": {
       "post": {
         "tags": [
           "shared"
@@ -105,7 +105,7 @@
         }
       }
     },
-    "/v1/sign-in/loopback": {
+    "/sign-in/loopback": {
       "get": {
         "tags": [
           "shared"
@@ -146,7 +146,7 @@
         }
       }
     },
-    "/v1/sign-in/loopback/claim": {
+    "/sign-in/loopback/claim": {
       "get": {
         "tags": [
           "shared"
@@ -191,7 +191,7 @@
         }
       }
     },
-    "/v1/auth/*": {
+    "/auth/*": {
       "get": {
         "tags": [
           "auth"
@@ -251,7 +251,7 @@
         }
       }
     },
-    "/v1/session": {
+    "/session": {
       "get": {
         "tags": [
           "auth"
@@ -368,7 +368,7 @@
         }
       }
     },
-    "/v1/identity/account/avatar": {
+    "/identity/account/avatar": {
       "post": {
         "tags": [
           "auth"
@@ -400,7 +400,7 @@
         }
       }
     },
-    "/v1/desktop-callback": {
+    "/desktop-callback": {
       "get": {
         "tags": [
           "auth"
@@ -442,7 +442,7 @@
         }
       }
     },
-    "/v1/sign-in/social": {
+    "/sign-in/social": {
       "get": {
         "tags": [
           "auth"
@@ -492,7 +492,7 @@
         }
       }
     },
-    "/v1/owners": {
+    "/owners": {
       "post": {
         "tags": [
           "owner"
@@ -579,7 +579,7 @@
         }
       }
     },
-    "/v1/owners/settings": {
+    "/owners/settings": {
       "patch": {
         "tags": [
           "owner"
@@ -634,7 +634,7 @@
         }
       }
     },
-    "/v1/owners/disable": {
+    "/owners/disable": {
       "post": {
         "tags": [
           "owner"
@@ -710,7 +710,7 @@
         }
       }
     },
-    "/v1/owners/enable": {
+    "/owners/enable": {
       "post": {
         "tags": [
           "owner"
@@ -762,7 +762,7 @@
         }
       }
     },
-    "/v1/owners/{ownerId}/activate": {
+    "/owners/{ownerId}/activate": {
       "post": {
         "tags": [
           "owner"

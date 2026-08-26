@@ -838,7 +838,7 @@ func NewAuthPassthroughGetRequest(server string) (*http.Request, error) {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/auth/*")
+	operationPath := fmt.Sprintf("/auth/*")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -865,7 +865,7 @@ func NewAuthPassthroughPostRequest(server string) (*http.Request, error) {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/auth/*")
+	operationPath := fmt.Sprintf("/auth/*")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -892,7 +892,7 @@ func NewDesktopCallbackRequest(server string, params *DesktopCallbackParams) (*h
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/desktop-callback")
+	operationPath := fmt.Sprintf("/desktop-callback")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -942,7 +942,7 @@ func NewHealthRequest(server string) (*http.Request, error) {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/health")
+	operationPath := fmt.Sprintf("/health")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -969,7 +969,7 @@ func NewUploadAvatarRequest(server string) (*http.Request, error) {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/identity/account/avatar")
+	operationPath := fmt.Sprintf("/identity/account/avatar")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1007,7 +1007,7 @@ func NewCreateOwnerRequestWithBody(server string, contentType string, body io.Re
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/owners")
+	operationPath := fmt.Sprintf("/owners")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1047,7 +1047,7 @@ func NewDisableOwnerRequestWithBody(server string, contentType string, body io.R
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/owners/disable")
+	operationPath := fmt.Sprintf("/owners/disable")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1076,7 +1076,7 @@ func NewEnableOwnerRequest(server string) (*http.Request, error) {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/owners/enable")
+	operationPath := fmt.Sprintf("/owners/enable")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1114,7 +1114,7 @@ func NewUpdateOwnerSettingsRequestWithBody(server string, contentType string, bo
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/owners/settings")
+	operationPath := fmt.Sprintf("/owners/settings")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1150,7 +1150,7 @@ func NewSetActiveOwnerRequest(server string, ownerId string) (*http.Request, err
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/owners/%s/activate", pathParam0)
+	operationPath := fmt.Sprintf("/owners/%s/activate", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1177,7 +1177,7 @@ func NewGetSessionRequest(server string) (*http.Request, error) {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/session")
+	operationPath := fmt.Sprintf("/session")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1215,7 +1215,7 @@ func NewSetCloudTokenRequestWithBody(server string, contentType string, body io.
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/session/cloud-token")
+	operationPath := fmt.Sprintf("/session/cloud-token")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1244,7 +1244,7 @@ func NewSignInLoopbackRequest(server string, params *SignInLoopbackParams) (*htt
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/sign-in/loopback")
+	operationPath := fmt.Sprintf("/sign-in/loopback")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1294,7 +1294,7 @@ func NewClaimSignInCodeRequest(server string) (*http.Request, error) {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/sign-in/loopback/claim")
+	operationPath := fmt.Sprintf("/sign-in/loopback/claim")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1321,7 +1321,7 @@ func NewSignInSocialRequest(server string, params *SignInSocialParams) (*http.Re
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/sign-in/social")
+	operationPath := fmt.Sprintf("/sign-in/social")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}

@@ -8,13 +8,13 @@ import type { TransitionIssueStatusMutationRequest, TransitionIssueStatusMutatio
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getTransitionIssueStatusUrl(threadId: TransitionIssueStatusPathParams["threadId"], issueId: TransitionIssueStatusPathParams["issueId"]) {
-  const res = { method: 'POST', url: `/v1/threads/${threadId}/issues/${issueId}/status` as const }
+  const res = { method: 'POST', url: `/threads/${threadId}/issues/${issueId}/status` as const }
   return res
 }
 
 /**
  * @description Declare the lifecycle status of an issue (done / needs input)
- * {@link /v1/threads/:threadId/issues/:issueId/status}
+ * {@link /threads/:threadId/issues/:issueId/status}
  */
 export async function transitionIssueStatus(threadId: TransitionIssueStatusPathParams["threadId"], issueId: TransitionIssueStatusPathParams["issueId"], data: TransitionIssueStatusMutationRequest, config: Partial<RequestConfig<TransitionIssueStatusMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

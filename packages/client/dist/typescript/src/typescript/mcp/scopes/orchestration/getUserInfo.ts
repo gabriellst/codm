@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description Header context — user identity, all member owners (role), active owner, and profile alerts
- * {@link /v1/ui/user-info}
+ * {@link /ui/user-info}
  */
 export async function getUserInfoHandler(): Promise<Promise<CallToolResult>> {
 
 
 
 
-  const res = await fetch<GetUserInfoQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/v1/ui/user-info` })
+  const res = await fetch<GetUserInfoQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/ui/user-info` })
   return {
               content: [
                 {

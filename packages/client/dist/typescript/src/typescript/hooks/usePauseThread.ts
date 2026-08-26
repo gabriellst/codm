@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { pauseThread } from "../client/pauseThread.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const pauseThreadMutationKey = () => [{ url: '/v1/threads/:threadId/pause' }] as const
+export const pauseThreadMutationKey = () => [{ url: '/threads/:threadId/pause' }] as const
 
 export type PauseThreadMutationKey = ReturnType<typeof pauseThreadMutationKey>
 
@@ -27,7 +27,7 @@ export function pauseThreadMutationOptions<TContext = unknown>(config: Partial<R
 
 /**
  * @description Pause all agent activity on a thread (C10)
- * {@link /v1/threads/:threadId/pause}
+ * {@link /threads/:threadId/pause}
  */
 export function usePauseThread<TContext>(options: 
 {

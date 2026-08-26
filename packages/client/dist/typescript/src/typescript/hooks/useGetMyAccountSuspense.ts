@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { getMyAccount } from "../client/getMyAccount.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const getMyAccountSuspenseQueryKey = () => [{ url: '/v1/ui/account' }] as const
+export const getMyAccountSuspenseQueryKey = () => [{ url: '/ui/account' }] as const
 
 export type GetMyAccountSuspenseQueryKey = ReturnType<typeof getMyAccountSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function getMyAccountSuspenseQueryOptions(config: Partial<RequestConfig> 
 
 /**
  * @description Account settings read
- * {@link /v1/ui/account}
+ * {@link /ui/account}
  */
 export function useGetMyAccountSuspense<TData = GetMyAccountQueryResponse, TQueryKey extends QueryKey = GetMyAccountSuspenseQueryKey>(options: 
 {

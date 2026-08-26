@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description Resolve a stop — retry / review&send / take over / approve / deny (C25)
- * {@link /v1/stops/:stopId/resolve}
+ * {@link /stops/:stopId/resolve}
  */
 export async function resolveStopHandler({ stopId, data }: { stopId: ResolveStopPathParams["stopId"]; data: ResolveStopMutationRequest }): Promise<Promise<CallToolResult>> {
 
 
   const requestData = data
 
-  const res = await fetch<ResolveStopMutationResponse, ResponseErrorConfig<Error>, ResolveStopMutationRequest>({ method : "POST", url : `/v1/stops/${stopId}/resolve`, data : requestData })
+  const res = await fetch<ResolveStopMutationResponse, ResponseErrorConfig<Error>, ResolveStopMutationRequest>({ method : "POST", url : `/stops/${stopId}/resolve`, data : requestData })
   return {
               content: [
                 {

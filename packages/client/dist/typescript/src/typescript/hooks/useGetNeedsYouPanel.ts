@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { getNeedsYouPanel } from "../client/getNeedsYouPanel.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const getNeedsYouPanelQueryKey = (threadId: GetNeedsYouPanelPathParams["threadId"] | undefined) => [{ url: '/v1/threads/:threadId/needs-you', params: {threadId:threadId} }] as const
+export const getNeedsYouPanelQueryKey = (threadId: GetNeedsYouPanelPathParams["threadId"] | undefined) => [{ url: '/threads/:threadId/needs-you', params: {threadId:threadId} }] as const
 
 export type GetNeedsYouPanelQueryKey = ReturnType<typeof getNeedsYouPanelQueryKey>
 
@@ -28,7 +28,7 @@ export function getNeedsYouPanelQueryOptions(threadId: GetNeedsYouPanelPathParam
 
 /**
  * @description Active stops on a thread with per-kind resolution actions (T14)
- * {@link /v1/threads/:threadId/needs-you}
+ * {@link /threads/:threadId/needs-you}
  */
 export function useGetNeedsYouPanel<TData = GetNeedsYouPanelQueryResponse, TQueryData = GetNeedsYouPanelQueryResponse, TQueryKey extends QueryKey = GetNeedsYouPanelQueryKey>(threadId: GetNeedsYouPanelPathParams["threadId"] | undefined, options: 
 {

@@ -8,13 +8,13 @@ import type { DeleteThreadMutationResponse, DeleteThreadPathParams } from "../ty
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getDeleteThreadUrl(threadId: DeleteThreadPathParams["threadId"]) {
-  const res = { method: 'DELETE', url: `/v1/threads/${threadId}` as const }
+  const res = { method: 'DELETE', url: `/threads/${threadId}` as const }
   return res
 }
 
 /**
  * @description Apagar uma conversa configurada — soft delete, bloqueado por trabalho vivo (C-DEL)
- * {@link /v1/threads/:threadId}
+ * {@link /threads/:threadId}
  */
 export async function deleteThread(threadId: DeleteThreadPathParams["threadId"], config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

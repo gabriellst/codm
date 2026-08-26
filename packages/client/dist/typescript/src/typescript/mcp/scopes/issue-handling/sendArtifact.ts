@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description Deliver an already-recorded artifact to the contact on the channel
- * {@link /v1/threads/:threadId/artifacts/:artifactId/send}
+ * {@link /threads/:threadId/artifacts/:artifactId/send}
  */
 export async function sendArtifactHandler({ threadId, artifactId, data }: { threadId: SendArtifactPathParams["threadId"]; artifactId: SendArtifactPathParams["artifactId"]; data?: SendArtifactMutationRequest }): Promise<Promise<CallToolResult>> {
 
 
   const requestData = data
 
-  const res = await fetch<SendArtifactMutationResponse, ResponseErrorConfig<Error>, SendArtifactMutationRequest>({ method : "POST", url : `/v1/threads/${threadId}/artifacts/${artifactId}/send`, data : requestData })
+  const res = await fetch<SendArtifactMutationResponse, ResponseErrorConfig<Error>, SendArtifactMutationRequest>({ method : "POST", url : `/threads/${threadId}/artifacts/${artifactId}/send`, data : requestData })
   return {
               content: [
                 {

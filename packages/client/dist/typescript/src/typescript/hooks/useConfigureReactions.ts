@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { configureReactions } from "../client/configureReactions.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const configureReactionsMutationKey = () => [{ url: '/v1/threads/:threadId/reactions' }] as const
+export const configureReactionsMutationKey = () => [{ url: '/threads/:threadId/reactions' }] as const
 
 export type ConfigureReactionsMutationKey = ReturnType<typeof configureReactionsMutationKey>
 
@@ -27,7 +27,7 @@ export function configureReactionsMutationOptions<TContext = unknown>(config: Pa
 
 /**
  * @description Turn the 👀/🤖 channel reaction cues on or off for this conversation
- * {@link /v1/threads/:threadId/reactions}
+ * {@link /threads/:threadId/reactions}
  */
 export function useConfigureReactions<TContext>(options: 
 {

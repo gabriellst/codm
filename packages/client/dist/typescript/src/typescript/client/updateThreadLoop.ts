@@ -8,13 +8,13 @@ import type { UpdateThreadLoopMutationRequest, UpdateThreadLoopMutationResponse,
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getUpdateThreadLoopUrl(threadId: UpdateThreadLoopPathParams["threadId"], loopId: UpdateThreadLoopPathParams["loopId"]) {
-  const res = { method: 'PUT', url: `/v1/threads/${threadId}/loops/${loopId}` as const }
+  const res = { method: 'PUT', url: `/threads/${threadId}/loops/${loopId}` as const }
   return res
 }
 
 /**
  * @description Edit a loop — its prompt and its schedule (C22)
- * {@link /v1/threads/:threadId/loops/:loopId}
+ * {@link /threads/:threadId/loops/:loopId}
  */
 export async function updateThreadLoop(threadId: UpdateThreadLoopPathParams["threadId"], loopId: UpdateThreadLoopPathParams["loopId"], data: UpdateThreadLoopMutationRequest, config: Partial<RequestConfig<UpdateThreadLoopMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { getSession } from "../client/getSession.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const getSessionSuspenseQueryKey = () => [{ url: '/v1/session' }] as const
+export const getSessionSuspenseQueryKey = () => [{ url: '/session' }] as const
 
 export type GetSessionSuspenseQueryKey = ReturnType<typeof getSessionSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function getSessionSuspenseQueryOptions(config: Partial<RequestConfig> & 
 
 /**
  * @description Get the current authenticated session
- * {@link /v1/session}
+ * {@link /session}
  */
 export function useGetSessionSuspense<TData = GetSessionQueryResponse, TQueryKey extends QueryKey = GetSessionSuspenseQueryKey>(options: 
 {

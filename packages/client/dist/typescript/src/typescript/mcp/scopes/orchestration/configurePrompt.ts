@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description Set (or clear, with an empty body value) the operator's custom prompt for this conversation (C15)
- * {@link /v1/threads/:threadId/prompt}
+ * {@link /threads/:threadId/prompt}
  */
 export async function configurePromptHandler({ threadId, data }: { threadId: ConfigurePromptPathParams["threadId"]; data?: ConfigurePromptMutationRequest }): Promise<Promise<CallToolResult>> {
 
 
   const requestData = data
 
-  const res = await fetch<ConfigurePromptMutationResponse, ResponseErrorConfig<Error>, ConfigurePromptMutationRequest>({ method : "PUT", url : `/v1/threads/${threadId}/prompt`, data : requestData })
+  const res = await fetch<ConfigurePromptMutationResponse, ResponseErrorConfig<Error>, ConfigurePromptMutationRequest>({ method : "PUT", url : `/threads/${threadId}/prompt`, data : requestData })
   return {
               content: [
                 {

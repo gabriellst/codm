@@ -8,13 +8,13 @@ import type { GetSessionIssuesQueryResponse, GetSessionIssuesPathParams } from "
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getGetSessionIssuesUrl(threadId: GetSessionIssuesPathParams["threadId"]) {
-  const res = { method: 'GET', url: `/v1/threads/${threadId}/issues` as const }
+  const res = { method: 'GET', url: `/threads/${threadId}/issues` as const }
   return res
 }
 
 /**
  * @description Issues of one thread grouped by status + auto-archive note (T11)
- * {@link /v1/threads/:threadId/issues}
+ * {@link /threads/:threadId/issues}
  */
 export async function getSessionIssues(threadId: GetSessionIssuesPathParams["threadId"], config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

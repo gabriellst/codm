@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { listArtifacts } from "../client/listArtifacts.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const listArtifactsQueryKey = (threadId: ListArtifactsPathParams["threadId"] | undefined) => [{ url: '/v1/threads/:threadId/artifacts', params: {threadId:threadId} }] as const
+export const listArtifactsQueryKey = (threadId: ListArtifactsPathParams["threadId"] | undefined) => [{ url: '/threads/:threadId/artifacts', params: {threadId:threadId} }] as const
 
 export type ListArtifactsQueryKey = ReturnType<typeof listArtifactsQueryKey>
 
@@ -28,7 +28,7 @@ export function listArtifactsQueryOptions(threadId: ListArtifactsPathParams["thr
 
 /**
  * @description The non-code outputs of a thread (T13)
- * {@link /v1/threads/:threadId/artifacts}
+ * {@link /threads/:threadId/artifacts}
  */
 export function useListArtifacts<TData = ListArtifactsQueryResponse, TQueryData = ListArtifactsQueryResponse, TQueryKey extends QueryKey = ListArtifactsQueryKey>(threadId: ListArtifactsPathParams["threadId"] | undefined, options: 
 {

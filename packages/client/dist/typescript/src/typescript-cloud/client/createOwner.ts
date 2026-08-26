@@ -8,13 +8,13 @@ import type { CreateOwnerMutationRequest, CreateOwnerMutationResponse } from "..
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
 
 function getCreateOwnerUrl() {
-  const res = { method: 'POST', url: `/v1/owners` as const }
+  const res = { method: 'POST', url: `/owners` as const }
   return res
 }
 
 /**
  * @description Create a new owner (tenant); the creator becomes the responsible user
- * {@link /v1/owners}
+ * {@link /owners}
  */
 export async function createOwner(data: CreateOwnerMutationRequest, config: Partial<RequestConfig<CreateOwnerMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

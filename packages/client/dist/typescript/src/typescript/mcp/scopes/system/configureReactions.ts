@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description Turn the 👀/🤖 channel reaction cues on or off for this conversation
- * {@link /v1/threads/:threadId/reactions}
+ * {@link /threads/:threadId/reactions}
  */
 export async function configureReactionsHandler({ threadId, data }: { threadId: ConfigureReactionsPathParams["threadId"]; data: ConfigureReactionsMutationRequest }): Promise<Promise<CallToolResult>> {
 
 
   const requestData = data
 
-  const res = await fetch<ConfigureReactionsMutationResponse, ResponseErrorConfig<Error>, ConfigureReactionsMutationRequest>({ method : "PUT", url : `/v1/threads/${threadId}/reactions`, data : requestData })
+  const res = await fetch<ConfigureReactionsMutationResponse, ResponseErrorConfig<Error>, ConfigureReactionsMutationRequest>({ method : "PUT", url : `/threads/${threadId}/reactions`, data : requestData })
   return {
               content: [
                 {

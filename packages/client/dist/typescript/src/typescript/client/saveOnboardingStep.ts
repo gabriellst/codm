@@ -8,13 +8,13 @@ import type { SaveOnboardingStepMutationRequest, SaveOnboardingStepMutationRespo
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getSaveOnboardingStepUrl() {
-  const res = { method: 'PATCH', url: `/v1/ui/onboarding/step` as const }
+  const res = { method: 'PATCH', url: `/ui/onboarding/step` as const }
   return res
 }
 
 /**
  * @description Salva onde o operador parou no wizard
- * {@link /v1/ui/onboarding/step}
+ * {@link /ui/onboarding/step}
  */
 export async function saveOnboardingStep(data: SaveOnboardingStepMutationRequest, config: Partial<RequestConfig<SaveOnboardingStepMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

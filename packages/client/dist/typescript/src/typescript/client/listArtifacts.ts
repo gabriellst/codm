@@ -8,13 +8,13 @@ import type { ListArtifactsQueryResponse, ListArtifactsPathParams } from "../typ
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getListArtifactsUrl(threadId: ListArtifactsPathParams["threadId"]) {
-  const res = { method: 'GET', url: `/v1/threads/${threadId}/artifacts` as const }
+  const res = { method: 'GET', url: `/threads/${threadId}/artifacts` as const }
   return res
 }
 
 /**
  * @description The non-code outputs of a thread (T13)
- * {@link /v1/threads/:threadId/artifacts}
+ * {@link /threads/:threadId/artifacts}
  */
 export async function listArtifacts(threadId: ListArtifactsPathParams["threadId"], config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

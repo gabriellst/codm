@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { signInSocial } from "../client/signInSocial.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const signInSocialSuspenseQueryKey = (params: SignInSocialQueryParams) => [{ url: '/v1/sign-in/social' }, ...(params ? [params] : [])] as const
+export const signInSocialSuspenseQueryKey = (params: SignInSocialQueryParams) => [{ url: '/sign-in/social' }, ...(params ? [params] : [])] as const
 
 export type SignInSocialSuspenseQueryKey = ReturnType<typeof signInSocialSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function signInSocialSuspenseQueryOptions(params: SignInSocialQueryParams
 
 /**
  * @description Redireciona o browser do sistema para o provedor social escolhido, iniciando o login do desktop
- * {@link /v1/sign-in/social}
+ * {@link /sign-in/social}
  */
 export function useSignInSocialSuspense<TData = SignInSocialQueryResponse, TQueryKey extends QueryKey = SignInSocialSuspenseQueryKey>(params: SignInSocialQueryParams, options: 
 {

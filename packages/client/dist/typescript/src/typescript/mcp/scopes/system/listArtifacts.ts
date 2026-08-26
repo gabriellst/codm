@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description The non-code outputs of a thread (T13)
- * {@link /v1/threads/:threadId/artifacts}
+ * {@link /threads/:threadId/artifacts}
  */
 export async function listArtifactsHandler({ threadId }: { threadId: ListArtifactsPathParams["threadId"] }): Promise<Promise<CallToolResult>> {
 
 
 
 
-  const res = await fetch<ListArtifactsQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/v1/threads/${threadId}/artifacts` })
+  const res = await fetch<ListArtifactsQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/threads/${threadId}/artifacts` })
   return {
               content: [
                 {

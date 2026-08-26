@@ -8,13 +8,13 @@ import type { ConfigureModelMutationRequest, ConfigureModelMutationResponse, Con
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getConfigureModelUrl(threadId: ConfigureModelPathParams["threadId"]) {
-  const res = { method: 'PUT', url: `/v1/threads/${threadId}/model` as const }
+  const res = { method: 'PUT', url: `/threads/${threadId}/model` as const }
   return res
 }
 
 /**
  * @description Choose which model this conversation asks one of its agent CLIs for. DEFAULT means let the CLI pick (C16)
- * {@link /v1/threads/:threadId/model}
+ * {@link /threads/:threadId/model}
  */
 export async function configureModel(threadId: ConfigureModelPathParams["threadId"], data: ConfigureModelMutationRequest, config: Partial<RequestConfig<ConfigureModelMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

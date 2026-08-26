@@ -8,13 +8,13 @@ import type { ResumeThreadMutationResponse, ResumeThreadPathParams } from "../ty
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getResumeThreadUrl(threadId: ResumeThreadPathParams["threadId"]) {
-  const res = { method: 'POST', url: `/v1/threads/${threadId}/resume` as const }
+  const res = { method: 'POST', url: `/threads/${threadId}/resume` as const }
   return res
 }
 
 /**
  * @description Resume agent activity on a thread (C11)
- * {@link /v1/threads/:threadId/resume}
+ * {@link /threads/:threadId/resume}
  */
 export async function resumeThread(threadId: ResumeThreadPathParams["threadId"], config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { getThreadSettings } from "../client/getThreadSettings.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const getThreadSettingsQueryKey = (threadId: GetThreadSettingsPathParams["threadId"] | undefined) => [{ url: '/v1/threads/:threadId/settings', params: {threadId:threadId} }] as const
+export const getThreadSettingsQueryKey = (threadId: GetThreadSettingsPathParams["threadId"] | undefined) => [{ url: '/threads/:threadId/settings', params: {threadId:threadId} }] as const
 
 export type GetThreadSettingsQueryKey = ReturnType<typeof getThreadSettingsQueryKey>
 
@@ -28,7 +28,7 @@ export function getThreadSettingsQueryOptions(threadId: GetThreadSettingsPathPar
 
 /**
  * @description Per-thread behavior: mention gate, participants + invocation, buffer size (T10)
- * {@link /v1/threads/:threadId/settings}
+ * {@link /threads/:threadId/settings}
  */
 export function useGetThreadSettings<TData = GetThreadSettingsQueryResponse, TQueryData = GetThreadSettingsQueryResponse, TQueryKey extends QueryKey = GetThreadSettingsQueryKey>(threadId: GetThreadSettingsPathParams["threadId"] | undefined, options: 
 {

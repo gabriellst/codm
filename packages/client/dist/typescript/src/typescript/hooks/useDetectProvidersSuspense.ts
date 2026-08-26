@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { detectProviders } from "../client/detectProviders.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const detectProvidersSuspenseQueryKey = (params?: DetectProvidersQueryParams) => [{ url: '/v1/terminal/providers' }, ...(params ? [params] : [])] as const
+export const detectProvidersSuspenseQueryKey = (params?: DetectProvidersQueryParams) => [{ url: '/terminal/providers' }, ...(params ? [params] : [])] as const
 
 export type DetectProvidersSuspenseQueryKey = ReturnType<typeof detectProvidersSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function detectProvidersSuspenseQueryOptions(params?: DetectProvidersQuer
 
 /**
  * @description Detected agent provider CLIs (claude-code / codex / opencode) with binary path, version, install status and whether a runner exists for them yet (comingSoon)
- * {@link /v1/terminal/providers}
+ * {@link /terminal/providers}
  */
 export function useDetectProvidersSuspense<TData = DetectProvidersQueryResponse, TQueryKey extends QueryKey = DetectProvidersSuspenseQueryKey>(params?: DetectProvidersQueryParams, options: 
 {

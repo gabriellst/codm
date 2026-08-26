@@ -8,13 +8,13 @@ import type { PauseThreadMutationResponse, PauseThreadPathParams } from "../type
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getPauseThreadUrl(threadId: PauseThreadPathParams["threadId"]) {
-  const res = { method: 'POST', url: `/v1/threads/${threadId}/pause` as const }
+  const res = { method: 'POST', url: `/threads/${threadId}/pause` as const }
   return res
 }
 
 /**
  * @description Pause all agent activity on a thread (C10)
- * {@link /v1/threads/:threadId/pause}
+ * {@link /threads/:threadId/pause}
  */
 export async function pauseThread(threadId: PauseThreadPathParams["threadId"], config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

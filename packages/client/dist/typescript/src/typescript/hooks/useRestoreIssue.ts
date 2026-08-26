@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { restoreIssue } from "../client/restoreIssue.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const restoreIssueMutationKey = () => [{ url: '/v1/issues/:issueId/restore' }] as const
+export const restoreIssueMutationKey = () => [{ url: '/issues/:issueId/restore' }] as const
 
 export type RestoreIssueMutationKey = ReturnType<typeof restoreIssueMutationKey>
 
@@ -27,7 +27,7 @@ export function restoreIssueMutationOptions<TContext = unknown>(config: Partial<
 
 /**
  * @description Restore an archived issue (C27)
- * {@link /v1/issues/:issueId/restore}
+ * {@link /issues/:issueId/restore}
  */
 export function useRestoreIssue<TContext>(options: 
 {

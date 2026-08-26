@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { saveOnboardingStep } from "../client/saveOnboardingStep.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const saveOnboardingStepMutationKey = () => [{ url: '/v1/ui/onboarding/step' }] as const
+export const saveOnboardingStepMutationKey = () => [{ url: '/ui/onboarding/step' }] as const
 
 export type SaveOnboardingStepMutationKey = ReturnType<typeof saveOnboardingStepMutationKey>
 
@@ -27,7 +27,7 @@ export function saveOnboardingStepMutationOptions<TContext = unknown>(config: Pa
 
 /**
  * @description Salva onde o operador parou no wizard
- * {@link /v1/ui/onboarding/step}
+ * {@link /ui/onboarding/step}
  */
 export function useSaveOnboardingStep<TContext>(options: 
 {

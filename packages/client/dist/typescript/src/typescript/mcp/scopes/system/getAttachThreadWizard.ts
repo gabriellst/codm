@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description Attach-thread wizard — contacts, workspaces, providers + attached/no-channel flags (T15)
- * {@link /v1/ui/attach-thread-wizard}
+ * {@link /ui/attach-thread-wizard}
  */
 export async function getAttachThreadWizardHandler({ params }: { params?: GetAttachThreadWizardQueryParams } = {}): Promise<Promise<CallToolResult>> {
 
 
 
 
-  const res = await fetch<GetAttachThreadWizardQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/v1/ui/attach-thread-wizard`, params })
+  const res = await fetch<GetAttachThreadWizardQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/ui/attach-thread-wizard`, params })
   return {
               content: [
                 {

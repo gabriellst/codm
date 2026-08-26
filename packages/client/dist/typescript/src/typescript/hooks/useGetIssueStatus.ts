@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { getIssueStatus } from "../client/getIssueStatus.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const getIssueStatusQueryKey = (threadId: GetIssueStatusPathParams["threadId"] | undefined, issueId: GetIssueStatusPathParams["issueId"] | undefined) => [{ url: '/v1/threads/:threadId/issues/:issueId/status', params: {threadId:threadId,issueId:issueId} }] as const
+export const getIssueStatusQueryKey = (threadId: GetIssueStatusPathParams["threadId"] | undefined, issueId: GetIssueStatusPathParams["issueId"] | undefined) => [{ url: '/threads/:threadId/issues/:issueId/status', params: {threadId:threadId,issueId:issueId} }] as const
 
 export type GetIssueStatusQueryKey = ReturnType<typeof getIssueStatusQueryKey>
 
@@ -28,7 +28,7 @@ export function getIssueStatusQueryOptions(threadId: GetIssueStatusPathParams["t
 
 /**
  * @description Status of one issue of this thread
- * {@link /v1/threads/:threadId/issues/:issueId/status}
+ * {@link /threads/:threadId/issues/:issueId/status}
  */
 export function useGetIssueStatus<TData = GetIssueStatusQueryResponse, TQueryData = GetIssueStatusQueryResponse, TQueryKey extends QueryKey = GetIssueStatusQueryKey>(threadId: GetIssueStatusPathParams["threadId"] | undefined, issueId: GetIssueStatusPathParams["issueId"] | undefined, options: 
 {

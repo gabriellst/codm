@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { getIssuesOverview } from "../client/getIssuesOverview.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const getIssuesOverviewSuspenseQueryKey = (params?: GetIssuesOverviewQueryParams) => [{ url: '/v1/issues' }, ...(params ? [params] : [])] as const
+export const getIssuesOverviewSuspenseQueryKey = (params?: GetIssuesOverviewQueryParams) => [{ url: '/issues' }, ...(params ? [params] : [])] as const
 
 export type GetIssuesOverviewSuspenseQueryKey = ReturnType<typeof getIssuesOverviewSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function getIssuesOverviewSuspenseQueryOptions(params?: GetIssuesOverview
 
 /**
  * @description All issues across every thread, grouped by status (T04)
- * {@link /v1/issues}
+ * {@link /issues}
  */
 export function useGetIssuesOverviewSuspense<TData = GetIssuesOverviewQueryResponse, TQueryKey extends QueryKey = GetIssuesOverviewSuspenseQueryKey>(params?: GetIssuesOverviewQueryParams, options: 
 {

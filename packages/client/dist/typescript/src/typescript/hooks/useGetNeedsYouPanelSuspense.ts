@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { getNeedsYouPanel } from "../client/getNeedsYouPanel.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const getNeedsYouPanelSuspenseQueryKey = (threadId: GetNeedsYouPanelPathParams["threadId"] | undefined) => [{ url: '/v1/threads/:threadId/needs-you', params: {threadId:threadId} }] as const
+export const getNeedsYouPanelSuspenseQueryKey = (threadId: GetNeedsYouPanelPathParams["threadId"] | undefined) => [{ url: '/threads/:threadId/needs-you', params: {threadId:threadId} }] as const
 
 export type GetNeedsYouPanelSuspenseQueryKey = ReturnType<typeof getNeedsYouPanelSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function getNeedsYouPanelSuspenseQueryOptions(threadId: GetNeedsYouPanelP
 
 /**
  * @description Active stops on a thread with per-kind resolution actions (T14)
- * {@link /v1/threads/:threadId/needs-you}
+ * {@link /threads/:threadId/needs-you}
  */
 export function useGetNeedsYouPanelSuspense<TData = GetNeedsYouPanelQueryResponse, TQueryKey extends QueryKey = GetNeedsYouPanelSuspenseQueryKey>(threadId: GetNeedsYouPanelPathParams["threadId"], options: 
 {

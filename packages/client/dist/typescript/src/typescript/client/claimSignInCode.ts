@@ -8,13 +8,13 @@ import type { ClaimSignInCodeQueryResponse } from "../types/ClaimSignInCode.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getClaimSignInCodeUrl() {
-  const res = { method: 'GET', url: `/v1/sign-in/loopback/claim` as const }
+  const res = { method: 'GET', url: `/sign-in/loopback/claim` as const }
   return res
 }
 
 /**
  * @description Claims the one-time sign-in code delivered to the loopback landing (single use)
- * {@link /v1/sign-in/loopback/claim}
+ * {@link /sign-in/loopback/claim}
  */
 export async function claimSignInCode(config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

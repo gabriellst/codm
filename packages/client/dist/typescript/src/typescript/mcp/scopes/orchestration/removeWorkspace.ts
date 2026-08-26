@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description Remove a registered workspace (refused while an issue is WORKING on it)
- * {@link /v1/workspaces/:workspaceId}
+ * {@link /workspaces/:workspaceId}
  */
 export async function removeWorkspaceHandler({ workspaceId }: { workspaceId: RemoveWorkspacePathParams["workspaceId"] }): Promise<Promise<CallToolResult>> {
 
 
 
 
-  const res = await fetch<RemoveWorkspaceMutationResponse, ResponseErrorConfig<Error>, unknown>({ method : "DELETE", url : `/v1/workspaces/${workspaceId}` })
+  const res = await fetch<RemoveWorkspaceMutationResponse, ResponseErrorConfig<Error>, unknown>({ method : "DELETE", url : `/workspaces/${workspaceId}` })
   return {
               content: [
                 {

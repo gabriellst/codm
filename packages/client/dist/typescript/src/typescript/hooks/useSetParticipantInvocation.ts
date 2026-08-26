@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { setParticipantInvocation } from "../client/setParticipantInvocation.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const setParticipantInvocationMutationKey = () => [{ url: '/v1/threads/:threadId/participants/:participantId' }] as const
+export const setParticipantInvocationMutationKey = () => [{ url: '/threads/:threadId/participants/:participantId' }] as const
 
 export type SetParticipantInvocationMutationKey = ReturnType<typeof setParticipantInvocationMutationKey>
 
@@ -27,7 +27,7 @@ export function setParticipantInvocationMutationOptions<TContext = unknown>(conf
 
 /**
  * @description Toggle whether a participant may invoke agents (C13)
- * {@link /v1/threads/:threadId/participants/:participantId}
+ * {@link /threads/:threadId/participants/:participantId}
  */
 export function useSetParticipantInvocation<TContext>(options: 
 {

@@ -8,13 +8,13 @@ import type { RecordArtifactMutationRequest, RecordArtifactMutationResponse, Rec
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getRecordArtifactUrl(threadId: RecordArtifactPathParams["threadId"]) {
-  const res = { method: 'POST', url: `/v1/threads/${threadId}/artifacts` as const }
+  const res = { method: 'POST', url: `/threads/${threadId}/artifacts` as const }
   return res
 }
 
 /**
  * @description Record a non-code agent output (image / file / link) (C30)
- * {@link /v1/threads/:threadId/artifacts}
+ * {@link /threads/:threadId/artifacts}
  */
 export async function recordArtifact(threadId: RecordArtifactPathParams["threadId"], data: RecordArtifactMutationRequest, config: Partial<RequestConfig<RecordArtifactMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

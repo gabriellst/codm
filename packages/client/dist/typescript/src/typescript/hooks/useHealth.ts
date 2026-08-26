@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { health } from "../client/health.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const healthQueryKey = () => [{ url: '/v1/health' }] as const
+export const healthQueryKey = () => [{ url: '/health' }] as const
 
 export type HealthQueryKey = ReturnType<typeof healthQueryKey>
 
@@ -28,7 +28,7 @@ export function healthQueryOptions(config: Partial<RequestConfig> & { client?: C
 
 /**
  * @description Readiness do daemon: banco, migrações e os timers de poll (canal WhatsApp entra só como diagnóstico)
- * {@link /v1/health}
+ * {@link /health}
  */
 export function useHealth<TData = HealthQueryResponse, TQueryData = HealthQueryResponse, TQueryKey extends QueryKey = HealthQueryKey>(options: 
 {

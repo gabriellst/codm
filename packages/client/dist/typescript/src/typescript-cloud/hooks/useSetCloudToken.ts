@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { setCloudToken } from "../client/setCloudToken.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const setCloudTokenMutationKey = () => [{ url: '/v1/session/cloud-token' }] as const
+export const setCloudTokenMutationKey = () => [{ url: '/session/cloud-token' }] as const
 
 export type SetCloudTokenMutationKey = ReturnType<typeof setCloudTokenMutationKey>
 
@@ -27,7 +27,7 @@ export function setCloudTokenMutationOptions<TContext = unknown>(config: Partial
 
 /**
  * @description Push a freshly-exchanged session token into the local daemon
- * {@link /v1/session/cloud-token}
+ * {@link /session/cloud-token}
  */
 export function useSetCloudToken<TContext>(options: 
 {

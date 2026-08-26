@@ -8,13 +8,13 @@ import type { ConfigureMentionGateMutationRequest, ConfigureMentionGateMutationR
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getConfigureMentionGateUrl(threadId: ConfigureMentionGatePathParams["threadId"]) {
-  const res = { method: 'PUT', url: `/v1/threads/${threadId}/mention-gate` as const }
+  const res = { method: 'PUT', url: `/threads/${threadId}/mention-gate` as const }
   return res
 }
 
 /**
  * @description Configure the mention gate (respond only when a @tag is written) (C12)
- * {@link /v1/threads/:threadId/mention-gate}
+ * {@link /threads/:threadId/mention-gate}
  */
 export async function configureMentionGate(threadId: ConfigureMentionGatePathParams["threadId"], data: ConfigureMentionGateMutationRequest, config: Partial<RequestConfig<ConfigureMentionGateMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

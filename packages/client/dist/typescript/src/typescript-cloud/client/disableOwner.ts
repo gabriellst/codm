@@ -8,13 +8,13 @@ import type { DisableOwnerMutationRequest, DisableOwnerMutationResponse } from "
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
 
 function getDisableOwnerUrl() {
-  const res = { method: 'POST', url: `/v1/owners/disable` as const }
+  const res = { method: 'POST', url: `/owners/disable` as const }
   return res
 }
 
 /**
  * @description Disable a owner (C19 DisableOwner; OWNER only)
- * {@link /v1/owners/disable}
+ * {@link /owners/disable}
  */
 export async function disableOwner(data?: DisableOwnerMutationRequest, config: Partial<RequestConfig<DisableOwnerMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

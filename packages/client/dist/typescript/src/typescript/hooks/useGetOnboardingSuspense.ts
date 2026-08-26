@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { getOnboarding } from "../client/getOnboarding.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const getOnboardingSuspenseQueryKey = () => [{ url: '/v1/ui/onboarding' }] as const
+export const getOnboardingSuspenseQueryKey = () => [{ url: '/ui/onboarding' }] as const
 
 export type GetOnboardingSuspenseQueryKey = ReturnType<typeof getOnboardingSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function getOnboardingSuspenseQueryOptions(config: Partial<RequestConfig>
 
 /**
  * @description Onboarding — jornada persistida (currentStep/completedAt) + satisfação derivada dos passos de setup
- * {@link /v1/ui/onboarding}
+ * {@link /ui/onboarding}
  */
 export function useGetOnboardingSuspense<TData = GetOnboardingQueryResponse, TQueryKey extends QueryKey = GetOnboardingSuspenseQueryKey>(options: 
 {

@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { sendDirectMessage } from "../client/sendDirectMessage.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const sendDirectMessageMutationKey = () => [{ url: '/v1/threads/:threadId/direct' }] as const
+export const sendDirectMessageMutationKey = () => [{ url: '/threads/:threadId/direct' }] as const
 
 export type SendDirectMessageMutationKey = ReturnType<typeof sendDirectMessageMutationKey>
 
@@ -27,7 +27,7 @@ export function sendDirectMessageMutationOptions<TContext = unknown>(config: Par
 
 /**
  * @description Send a direct message as the operator (only while paused) (C20)
- * {@link /v1/threads/:threadId/direct}
+ * {@link /threads/:threadId/direct}
  */
 export function useSendDirectMessage<TContext>(options: 
 {

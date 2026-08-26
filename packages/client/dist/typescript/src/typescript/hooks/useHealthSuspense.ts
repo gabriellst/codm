@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { health } from "../client/health.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const healthSuspenseQueryKey = () => [{ url: '/v1/health' }] as const
+export const healthSuspenseQueryKey = () => [{ url: '/health' }] as const
 
 export type HealthSuspenseQueryKey = ReturnType<typeof healthSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function healthSuspenseQueryOptions(config: Partial<RequestConfig> & { cl
 
 /**
  * @description Readiness do daemon: banco, migrações e os timers de poll (canal WhatsApp entra só como diagnóstico)
- * {@link /v1/health}
+ * {@link /health}
  */
 export function useHealthSuspense<TData = HealthQueryResponse, TQueryKey extends QueryKey = HealthSuspenseQueryKey>(options: 
 {

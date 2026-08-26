@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { getUserInfo } from "../client/getUserInfo.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const getUserInfoQueryKey = () => [{ url: '/v1/ui/user-info' }] as const
+export const getUserInfoQueryKey = () => [{ url: '/ui/user-info' }] as const
 
 export type GetUserInfoQueryKey = ReturnType<typeof getUserInfoQueryKey>
 
@@ -28,7 +28,7 @@ export function getUserInfoQueryOptions(config: Partial<RequestConfig> & { clien
 
 /**
  * @description Header context — user identity, all member owners (role), active owner, and profile alerts
- * {@link /v1/ui/user-info}
+ * {@link /ui/user-info}
  */
 export function useGetUserInfo<TData = GetUserInfoQueryResponse, TQueryData = GetUserInfoQueryResponse, TQueryKey extends QueryKey = GetUserInfoQueryKey>(options: 
 {

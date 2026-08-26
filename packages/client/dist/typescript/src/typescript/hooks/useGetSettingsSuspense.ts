@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { getSettings } from "../client/getSettings.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const getSettingsSuspenseQueryKey = () => [{ url: '/v1/ui/settings' }] as const
+export const getSettingsSuspenseQueryKey = () => [{ url: '/ui/settings' }] as const
 
 export type GetSettingsSuspenseQueryKey = ReturnType<typeof getSettingsSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function getSettingsSuspenseQueryOptions(config: Partial<RequestConfig> &
 
 /**
  * @description Settings — providers, stop criteria, general, app version (T08)
- * {@link /v1/ui/settings}
+ * {@link /ui/settings}
  */
 export function useGetSettingsSuspense<TData = GetSettingsQueryResponse, TQueryKey extends QueryKey = GetSettingsSuspenseQueryKey>(options: 
 {

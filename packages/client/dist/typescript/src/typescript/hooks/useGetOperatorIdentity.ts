@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { getOperatorIdentity } from "../client/getOperatorIdentity.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const getOperatorIdentityQueryKey = () => [{ url: '/v1/ui/operator' }] as const
+export const getOperatorIdentityQueryKey = () => [{ url: '/ui/operator' }] as const
 
 export type GetOperatorIdentityQueryKey = ReturnType<typeof getOperatorIdentityQueryKey>
 
@@ -28,7 +28,7 @@ export function getOperatorIdentityQueryOptions(config: Partial<RequestConfig> &
 
 /**
  * @description The operator's displayed identity — name and photo borrowed from the connected channel's own account
- * {@link /v1/ui/operator}
+ * {@link /ui/operator}
  */
 export function useGetOperatorIdentity<TData = GetOperatorIdentityQueryResponse, TQueryData = GetOperatorIdentityQueryResponse, TQueryKey extends QueryKey = GetOperatorIdentityQueryKey>(options: 
 {

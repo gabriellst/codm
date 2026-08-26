@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { askOperator } from "../client/askOperator.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const askOperatorMutationKey = () => [{ url: '/v1/threads/:threadId/issues/:issueId/operator-questions' }] as const
+export const askOperatorMutationKey = () => [{ url: '/threads/:threadId/issues/:issueId/operator-questions' }] as const
 
 export type AskOperatorMutationKey = ReturnType<typeof askOperatorMutationKey>
 
@@ -27,7 +27,7 @@ export function askOperatorMutationOptions<TContext = unknown>(config: Partial<R
 
 /**
  * @description Ask the operator a question (fire-and-forget; surfaces as a Needs-you stop)
- * {@link /v1/threads/:threadId/issues/:issueId/operator-questions}
+ * {@link /threads/:threadId/issues/:issueId/operator-questions}
  */
 export function useAskOperator<TContext>(options: 
 {

@@ -8,13 +8,13 @@ import type { AskOperatorMutationRequest, AskOperatorMutationResponse, AskOperat
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getAskOperatorUrl(threadId: AskOperatorPathParams["threadId"], issueId: AskOperatorPathParams["issueId"]) {
-  const res = { method: 'POST', url: `/v1/threads/${threadId}/issues/${issueId}/operator-questions` as const }
+  const res = { method: 'POST', url: `/threads/${threadId}/issues/${issueId}/operator-questions` as const }
   return res
 }
 
 /**
  * @description Ask the operator a question (fire-and-forget; surfaces as a Needs-you stop)
- * {@link /v1/threads/:threadId/issues/:issueId/operator-questions}
+ * {@link /threads/:threadId/issues/:issueId/operator-questions}
  */
 export async function askOperator(threadId: AskOperatorPathParams["threadId"], issueId: AskOperatorPathParams["issueId"], data: AskOperatorMutationRequest, config: Partial<RequestConfig<AskOperatorMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

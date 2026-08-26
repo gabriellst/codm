@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { listWorkspaces } from "../client/listWorkspaces.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const listWorkspacesSuspenseQueryKey = () => [{ url: '/v1/workspaces' }] as const
+export const listWorkspacesSuspenseQueryKey = () => [{ url: '/workspaces' }] as const
 
 export type ListWorkspacesSuspenseQueryKey = ReturnType<typeof listWorkspacesSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function listWorkspacesSuspenseQueryOptions(config: Partial<RequestConfig
 
 /**
  * @description List registered workspaces with badges and thread counts (T07)
- * {@link /v1/workspaces}
+ * {@link /workspaces}
  */
 export function useListWorkspacesSuspense<TData = ListWorkspacesQueryResponse, TQueryKey extends QueryKey = ListWorkspacesSuspenseQueryKey>(options: 
 {

@@ -3472,7 +3472,7 @@ func NewHealthRequest(server string) (*http.Request, error) {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/health")
+	operationPath := fmt.Sprintf("/health")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -3499,7 +3499,7 @@ func NewGetIssuesOverviewRequest(server string, params *GetIssuesOverviewParams)
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/issues")
+	operationPath := fmt.Sprintf("/issues")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -3560,7 +3560,7 @@ func NewGetIssueDetailRequest(server string, issueId string) (*http.Request, err
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/issues/%s", pathParam0)
+	operationPath := fmt.Sprintf("/issues/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -3594,7 +3594,7 @@ func NewArchiveIssueRequest(server string, issueId string) (*http.Request, error
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/issues/%s/archive", pathParam0)
+	operationPath := fmt.Sprintf("/issues/%s/archive", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -3628,7 +3628,7 @@ func NewRestoreIssueRequest(server string, issueId string) (*http.Request, error
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/issues/%s/restore", pathParam0)
+	operationPath := fmt.Sprintf("/issues/%s/restore", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -3673,7 +3673,7 @@ func NewSteerIssueRequestWithBody(server string, issueId string, contentType str
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/issues/%s/steer", pathParam0)
+	operationPath := fmt.Sprintf("/issues/%s/steer", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -3713,7 +3713,7 @@ func NewSetCloudTokenRequestWithBody(server string, contentType string, body io.
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/session/cloud-token")
+	operationPath := fmt.Sprintf("/session/cloud-token")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -3753,7 +3753,7 @@ func NewUpdateStopCriteriaRequestWithBody(server string, contentType string, bod
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/settings/stop-criteria")
+	operationPath := fmt.Sprintf("/settings/stop-criteria")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -3782,7 +3782,7 @@ func NewSignInLoopbackRequest(server string, params *SignInLoopbackParams) (*htt
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/sign-in/loopback")
+	operationPath := fmt.Sprintf("/sign-in/loopback")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -3832,7 +3832,7 @@ func NewClaimSignInCodeRequest(server string) (*http.Request, error) {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/sign-in/loopback/claim")
+	operationPath := fmt.Sprintf("/sign-in/loopback/claim")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -3877,7 +3877,7 @@ func NewResolveStopRequestWithBody(server string, stopId string, contentType str
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/stops/%s/resolve", pathParam0)
+	operationPath := fmt.Sprintf("/stops/%s/resolve", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -3906,7 +3906,7 @@ func NewDetectProvidersRequest(server string, params *DetectProvidersParams) (*h
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/terminal/providers")
+	operationPath := fmt.Sprintf("/terminal/providers")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -3967,7 +3967,7 @@ func NewStreamTerminalSessionRequest(server string, issueId string) (*http.Reque
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/terminal/sessions/%s/stream", pathParam0)
+	operationPath := fmt.Sprintf("/terminal/sessions/%s/stream", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -4005,7 +4005,7 @@ func NewAttachThreadRequestWithBody(server string, contentType string, body io.R
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads")
+	operationPath := fmt.Sprintf("/threads")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -4041,7 +4041,7 @@ func NewDeleteThreadRequest(server string, threadId string) (*http.Request, erro
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s", pathParam0)
+	operationPath := fmt.Sprintf("/threads/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -4075,7 +4075,7 @@ func NewListArtifactsRequest(server string, threadId string) (*http.Request, err
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/artifacts", pathParam0)
+	operationPath := fmt.Sprintf("/threads/%s/artifacts", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -4120,7 +4120,7 @@ func NewRecordArtifactRequestWithBody(server string, threadId string, contentTyp
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/artifacts", pathParam0)
+	operationPath := fmt.Sprintf("/threads/%s/artifacts", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -4163,7 +4163,7 @@ func NewGetArtifactContentRequest(server string, threadId string, artifactId str
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/artifacts/%s/content", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/threads/%s/artifacts/%s/content", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -4215,7 +4215,7 @@ func NewSendArtifactRequestWithBody(server string, threadId string, artifactId s
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/artifacts/%s/send", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/threads/%s/artifacts/%s/send", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -4262,7 +4262,7 @@ func NewConfigureContextBufferRequestWithBody(server string, threadId string, co
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/buffer", pathParam0)
+	operationPath := fmt.Sprintf("/threads/%s/buffer", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -4298,7 +4298,7 @@ func NewGetSessionChatRequest(server string, threadId string) (*http.Request, er
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/chat", pathParam0)
+	operationPath := fmt.Sprintf("/threads/%s/chat", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -4343,7 +4343,7 @@ func NewSendDirectMessageRequestWithBody(server string, threadId string, content
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/direct", pathParam0)
+	operationPath := fmt.Sprintf("/threads/%s/direct", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -4379,7 +4379,7 @@ func NewGetSessionIssuesRequest(server string, threadId string) (*http.Request, 
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/issues", pathParam0)
+	operationPath := fmt.Sprintf("/threads/%s/issues", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -4424,7 +4424,7 @@ func NewCreateIssueRequestWithBody(server string, threadId string, contentType s
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/issues", pathParam0)
+	operationPath := fmt.Sprintf("/threads/%s/issues", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -4471,7 +4471,7 @@ func NewForkIssueRequestWithBody(server string, threadId string, contentType str
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/issues/fork", pathParam0)
+	operationPath := fmt.Sprintf("/threads/%s/issues/fork", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -4525,7 +4525,7 @@ func NewAskOperatorRequestWithBody(server string, threadId string, issueId strin
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/issues/%s/operator-questions", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/threads/%s/issues/%s/operator-questions", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -4568,7 +4568,7 @@ func NewGetIssueStatusRequest(server string, threadId string, issueId string) (*
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/issues/%s/status", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/threads/%s/issues/%s/status", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -4620,7 +4620,7 @@ func NewTransitionIssueStatusRequestWithBody(server string, threadId string, iss
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/issues/%s/status", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/threads/%s/issues/%s/status", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -4674,7 +4674,7 @@ func NewSteerIssueTurnRequestWithBody(server string, threadId string, issueId st
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/issues/%s/steer", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/threads/%s/issues/%s/steer", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -4728,7 +4728,7 @@ func NewRaiseStopRequestWithBody(server string, threadId string, issueId string,
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/issues/%s/stops", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/threads/%s/issues/%s/stops", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -4764,7 +4764,7 @@ func NewListThreadLoopsRequest(server string, threadId string) (*http.Request, e
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/loops", pathParam0)
+	operationPath := fmt.Sprintf("/threads/%s/loops", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -4809,7 +4809,7 @@ func NewCreateThreadLoopRequestWithBody(server string, threadId string, contentT
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/loops", pathParam0)
+	operationPath := fmt.Sprintf("/threads/%s/loops", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -4852,7 +4852,7 @@ func NewDeleteThreadLoopRequest(server string, threadId string, loopId string) (
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/loops/%s", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/threads/%s/loops/%s", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -4904,7 +4904,7 @@ func NewUpdateThreadLoopRequestWithBody(server string, threadId string, loopId s
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/loops/%s", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/threads/%s/loops/%s", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -4958,7 +4958,7 @@ func NewSetThreadLoopEnabledRequestWithBody(server string, threadId string, loop
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/loops/%s/enabled", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/threads/%s/loops/%s/enabled", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5005,7 +5005,7 @@ func NewConfigureMentionGateRequestWithBody(server string, threadId string, cont
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/mention-gate", pathParam0)
+	operationPath := fmt.Sprintf("/threads/%s/mention-gate", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5052,7 +5052,7 @@ func NewConfigureModelRequestWithBody(server string, threadId string, contentTyp
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/model", pathParam0)
+	operationPath := fmt.Sprintf("/threads/%s/model", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5088,7 +5088,7 @@ func NewGetNeedsYouPanelRequest(server string, threadId string) (*http.Request, 
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/needs-you", pathParam0)
+	operationPath := fmt.Sprintf("/threads/%s/needs-you", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5140,7 +5140,7 @@ func NewSetParticipantInvocationRequestWithBody(server string, threadId string, 
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/participants/%s", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/threads/%s/participants/%s", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5176,7 +5176,7 @@ func NewPauseThreadRequest(server string, threadId string) (*http.Request, error
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/pause", pathParam0)
+	operationPath := fmt.Sprintf("/threads/%s/pause", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5221,7 +5221,7 @@ func NewConfigurePromptRequestWithBody(server string, threadId string, contentTy
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/prompt", pathParam0)
+	operationPath := fmt.Sprintf("/threads/%s/prompt", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5268,7 +5268,7 @@ func NewConfigureReactionsRequestWithBody(server string, threadId string, conten
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/reactions", pathParam0)
+	operationPath := fmt.Sprintf("/threads/%s/reactions", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5304,7 +5304,7 @@ func NewResumeThreadRequest(server string, threadId string) (*http.Request, erro
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/resume", pathParam0)
+	operationPath := fmt.Sprintf("/threads/%s/resume", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5338,7 +5338,7 @@ func NewGetThreadSettingsRequest(server string, threadId string) (*http.Request,
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/settings", pathParam0)
+	operationPath := fmt.Sprintf("/threads/%s/settings", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5383,7 +5383,7 @@ func NewSteerThreadRequestWithBody(server string, threadId string, contentType s
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/steer", pathParam0)
+	operationPath := fmt.Sprintf("/threads/%s/steer", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5430,7 +5430,7 @@ func NewConfigureStreamingRequestWithBody(server string, threadId string, conten
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/streaming", pathParam0)
+	operationPath := fmt.Sprintf("/threads/%s/streaming", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5477,7 +5477,7 @@ func NewConfigureThinkingIndicatorRequestWithBody(server string, threadId string
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/threads/%s/thinking-indicator", pathParam0)
+	operationPath := fmt.Sprintf("/threads/%s/thinking-indicator", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5506,7 +5506,7 @@ func NewGetMyAccountRequest(server string) (*http.Request, error) {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/ui/account")
+	operationPath := fmt.Sprintf("/ui/account")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5533,7 +5533,7 @@ func NewGetAttachThreadWizardRequest(server string, params *GetAttachThreadWizar
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/ui/attach-thread-wizard")
+	operationPath := fmt.Sprintf("/ui/attach-thread-wizard")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5613,7 +5613,7 @@ func NewGetContactAvatarRequest(server string, channelId string, remoteId string
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/ui/avatars/%s/%s", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/ui/avatars/%s/%s", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5640,7 +5640,7 @@ func NewListenEventsRequest(server string) (*http.Request, error) {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/ui/events")
+	operationPath := fmt.Sprintf("/ui/events")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5667,7 +5667,7 @@ func NewGetHomeDashboardRequest(server string) (*http.Request, error) {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/ui/home")
+	operationPath := fmt.Sprintf("/ui/home")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5694,7 +5694,7 @@ func NewGetOnboardingRequest(server string) (*http.Request, error) {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/ui/onboarding")
+	operationPath := fmt.Sprintf("/ui/onboarding")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5721,7 +5721,7 @@ func NewCompleteOnboardingRequest(server string) (*http.Request, error) {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/ui/onboarding/complete")
+	operationPath := fmt.Sprintf("/ui/onboarding/complete")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5759,7 +5759,7 @@ func NewSaveOnboardingStepRequestWithBody(server string, contentType string, bod
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/ui/onboarding/step")
+	operationPath := fmt.Sprintf("/ui/onboarding/step")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5788,7 +5788,7 @@ func NewGetOperatorIdentityRequest(server string) (*http.Request, error) {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/ui/operator")
+	operationPath := fmt.Sprintf("/ui/operator")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5815,7 +5815,7 @@ func NewGetSettingsRequest(server string) (*http.Request, error) {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/ui/settings")
+	operationPath := fmt.Sprintf("/ui/settings")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5842,7 +5842,7 @@ func NewGetUserInfoRequest(server string) (*http.Request, error) {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/ui/user-info")
+	operationPath := fmt.Sprintf("/ui/user-info")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5869,7 +5869,7 @@ func NewListWorkspacesRequest(server string) (*http.Request, error) {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/workspaces")
+	operationPath := fmt.Sprintf("/workspaces")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5907,7 +5907,7 @@ func NewAddWorkspaceRequestWithBody(server string, contentType string, body io.R
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/workspaces")
+	operationPath := fmt.Sprintf("/workspaces")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5943,7 +5943,7 @@ func NewRemoveWorkspaceRequest(server string, workspaceId string) (*http.Request
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/v1/workspaces/%s", pathParam0)
+	operationPath := fmt.Sprintf("/workspaces/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}

@@ -8,13 +8,13 @@ import type { GetThreadSettingsQueryResponse, GetThreadSettingsPathParams } from
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getGetThreadSettingsUrl(threadId: GetThreadSettingsPathParams["threadId"]) {
-  const res = { method: 'GET', url: `/v1/threads/${threadId}/settings` as const }
+  const res = { method: 'GET', url: `/threads/${threadId}/settings` as const }
   return res
 }
 
 /**
  * @description Per-thread behavior: mention gate, participants + invocation, buffer size (T10)
- * {@link /v1/threads/:threadId/settings}
+ * {@link /threads/:threadId/settings}
  */
 export async function getThreadSettings(threadId: GetThreadSettingsPathParams["threadId"], config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

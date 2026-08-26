@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { recordArtifact } from "../client/recordArtifact.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const recordArtifactMutationKey = () => [{ url: '/v1/threads/:threadId/artifacts' }] as const
+export const recordArtifactMutationKey = () => [{ url: '/threads/:threadId/artifacts' }] as const
 
 export type RecordArtifactMutationKey = ReturnType<typeof recordArtifactMutationKey>
 
@@ -27,7 +27,7 @@ export function recordArtifactMutationOptions<TContext = unknown>(config: Partia
 
 /**
  * @description Record a non-code agent output (image / file / link) (C30)
- * {@link /v1/threads/:threadId/artifacts}
+ * {@link /threads/:threadId/artifacts}
  */
 export function useRecordArtifact<TContext>(options: 
 {

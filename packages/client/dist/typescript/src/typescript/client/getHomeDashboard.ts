@@ -8,13 +8,13 @@ import type { GetHomeDashboardQueryResponse } from "../types/GetHomeDashboard.ts
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getGetHomeDashboardUrl() {
-  const res = { method: 'GET', url: `/v1/ui/home` as const }
+  const res = { method: 'GET', url: `/ui/home` as const }
   return res
 }
 
 /**
  * @description Home dashboard — agents running, needs-you, active sessions, today metrics, channels (T03)
- * {@link /v1/ui/home}
+ * {@link /ui/home}
  */
 export async function getHomeDashboard(config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

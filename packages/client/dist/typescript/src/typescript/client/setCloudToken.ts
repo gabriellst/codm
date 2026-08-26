@@ -8,13 +8,13 @@ import type { SetCloudTokenMutationRequest, SetCloudTokenMutationResponse } from
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getSetCloudTokenUrl() {
-  const res = { method: 'POST', url: `/v1/session/cloud-token` as const }
+  const res = { method: 'POST', url: `/session/cloud-token` as const }
   return res
 }
 
 /**
  * @description Push a freshly-exchanged session token into the local daemon
- * {@link /v1/session/cloud-token}
+ * {@link /session/cloud-token}
  */
 export async function setCloudToken(data: SetCloudTokenMutationRequest, config: Partial<RequestConfig<SetCloudTokenMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

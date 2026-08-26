@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { getUserInfo } from "../client/getUserInfo.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const getUserInfoSuspenseQueryKey = () => [{ url: '/v1/ui/user-info' }] as const
+export const getUserInfoSuspenseQueryKey = () => [{ url: '/ui/user-info' }] as const
 
 export type GetUserInfoSuspenseQueryKey = ReturnType<typeof getUserInfoSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function getUserInfoSuspenseQueryOptions(config: Partial<RequestConfig> &
 
 /**
  * @description Header context — user identity, all member owners (role), active owner, and profile alerts
- * {@link /v1/ui/user-info}
+ * {@link /ui/user-info}
  */
 export function useGetUserInfoSuspense<TData = GetUserInfoQueryResponse, TQueryKey extends QueryKey = GetUserInfoSuspenseQueryKey>(options: 
 {

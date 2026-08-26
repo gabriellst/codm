@@ -8,13 +8,13 @@ import type { ConfigureReactionsMutationRequest, ConfigureReactionsMutationRespo
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getConfigureReactionsUrl(threadId: ConfigureReactionsPathParams["threadId"]) {
-  const res = { method: 'PUT', url: `/v1/threads/${threadId}/reactions` as const }
+  const res = { method: 'PUT', url: `/threads/${threadId}/reactions` as const }
   return res
 }
 
 /**
  * @description Turn the 👀/🤖 channel reaction cues on or off for this conversation
- * {@link /v1/threads/:threadId/reactions}
+ * {@link /threads/:threadId/reactions}
  */
 export async function configureReactions(threadId: ConfigureReactionsPathParams["threadId"], data: ConfigureReactionsMutationRequest, config: Partial<RequestConfig<ConfigureReactionsMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

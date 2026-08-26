@@ -10173,7 +10173,7 @@ pub mod types {
 #[derive(Clone, Debug)]
 /**Client for codm-backend
 
-Version: v1*/
+Version: 1.0.0*/
 pub struct Client {
     pub(crate) baseurl: String,
     pub(crate) client: reqwest::Client,
@@ -10219,7 +10219,7 @@ impl Client {
     /// This string is pulled directly from the source OpenAPI
     /// document and may be in any format the API selects.
     pub fn api_version(&self) -> &'static str {
-        "v1"
+        "1.0.0"
     }
 }
 #[allow(clippy::all)]
@@ -10227,13 +10227,13 @@ impl Client {
 impl Client {
     /**Readiness do daemon: banco, migrações e os timers de poll (canal WhatsApp entra só como diagnóstico)
 
-Sends a `GET` request to `/v1/health`
+Sends a `GET` request to `/health`
 
 */
     pub async fn health<'a>(
         &'a self,
     ) -> Result<ResponseValue<types::HealthResponse>, Error<()>> {
-        let url = format!("{}/v1/health", self.baseurl,);
+        let url = format!("{}/health", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -10259,14 +10259,14 @@ Sends a `GET` request to `/v1/health`
     }
     /**All issues across every thread, grouped by status (T04)
 
-Sends a `GET` request to `/v1/issues`
+Sends a `GET` request to `/issues`
 
 */
     pub async fn get_issues_overview<'a>(
         &'a self,
         include_archived: Option<bool>,
     ) -> Result<ResponseValue<types::GetIssuesOverviewResponse>, Error<()>> {
-        let url = format!("{}/v1/issues", self.baseurl,);
+        let url = format!("{}/issues", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -10295,7 +10295,7 @@ Sends a `GET` request to `/v1/issues`
     }
     /**One issue drill-down: terminal log, routed messages, stops (T12)
 
-Sends a `GET` request to `/v1/issues/{issueId}`
+Sends a `GET` request to `/issues/{issueId}`
 
 */
     pub async fn get_issue_detail<'a>(
@@ -10303,7 +10303,7 @@ Sends a `GET` request to `/v1/issues/{issueId}`
         issue_id: &'a str,
     ) -> Result<ResponseValue<types::GetIssueDetailResponse>, Error<()>> {
         let url = format!(
-            "{}/v1/issues/{}", self.baseurl, encode_path(& issue_id.to_string()),
+            "{}/issues/{}", self.baseurl, encode_path(& issue_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -10330,7 +10330,7 @@ Sends a `GET` request to `/v1/issues/{issueId}`
     }
     /**Archive an issue (C26)
 
-Sends a `POST` request to `/v1/issues/{issueId}/archive`
+Sends a `POST` request to `/issues/{issueId}/archive`
 
 */
     pub async fn archive_issue<'a>(
@@ -10338,7 +10338,7 @@ Sends a `POST` request to `/v1/issues/{issueId}/archive`
         issue_id: &'a str,
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
         let url = format!(
-            "{}/v1/issues/{}/archive", self.baseurl, encode_path(& issue_id.to_string()),
+            "{}/issues/{}/archive", self.baseurl, encode_path(& issue_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -10365,7 +10365,7 @@ Sends a `POST` request to `/v1/issues/{issueId}/archive`
     }
     /**Restore an archived issue (C27)
 
-Sends a `POST` request to `/v1/issues/{issueId}/restore`
+Sends a `POST` request to `/issues/{issueId}/restore`
 
 */
     pub async fn restore_issue<'a>(
@@ -10373,7 +10373,7 @@ Sends a `POST` request to `/v1/issues/{issueId}/restore`
         issue_id: &'a str,
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
         let url = format!(
-            "{}/v1/issues/{}/restore", self.baseurl, encode_path(& issue_id.to_string()),
+            "{}/issues/{}/restore", self.baseurl, encode_path(& issue_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -10400,7 +10400,7 @@ Sends a `POST` request to `/v1/issues/{issueId}/restore`
     }
     /**Whisper a steer scoped to one issue (C22)
 
-Sends a `POST` request to `/v1/issues/{issueId}/steer`
+Sends a `POST` request to `/issues/{issueId}/steer`
 
 */
     pub async fn steer_issue<'a>(
@@ -10409,7 +10409,7 @@ Sends a `POST` request to `/v1/issues/{issueId}/steer`
         body: &'a types::SteerIssueBody,
     ) -> Result<ResponseValue<types::SteerIssueResponse>, Error<()>> {
         let url = format!(
-            "{}/v1/issues/{}/steer", self.baseurl, encode_path(& issue_id.to_string()),
+            "{}/issues/{}/steer", self.baseurl, encode_path(& issue_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -10437,14 +10437,14 @@ Sends a `POST` request to `/v1/issues/{issueId}/steer`
     }
     /**Push a freshly-exchanged session token into the local daemon
 
-Sends a `POST` request to `/v1/session/cloud-token`
+Sends a `POST` request to `/session/cloud-token`
 
 */
     pub async fn set_cloud_token<'a>(
         &'a self,
         body: &'a types::SetCloudTokenBody,
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
-        let url = format!("{}/v1/session/cloud-token", self.baseurl,);
+        let url = format!("{}/session/cloud-token", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -10471,14 +10471,14 @@ Sends a `POST` request to `/v1/session/cloud-token`
     }
     /**Update the global stop-criteria toggles (C29)
 
-Sends a `PUT` request to `/v1/settings/stop-criteria`
+Sends a `PUT` request to `/settings/stop-criteria`
 
 */
     pub async fn update_stop_criteria<'a>(
         &'a self,
         body: &'a types::UpdateStopCriteriaBody,
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
-        let url = format!("{}/v1/settings/stop-criteria", self.baseurl,);
+        let url = format!("{}/settings/stop-criteria", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -10505,14 +10505,14 @@ Sends a `PUT` request to `/v1/settings/stop-criteria`
     }
     /**Loopback landing (RFC 8252): receives the one-time sign-in code from the system browser
 
-Sends a `GET` request to `/v1/sign-in/loopback`
+Sends a `GET` request to `/sign-in/loopback`
 
 */
     pub async fn sign_in_loopback<'a>(
         &'a self,
         code: &'a types::SignInLoopbackCode,
     ) -> Result<ResponseValue<::std::string::String>, Error<()>> {
-        let url = format!("{}/v1/sign-in/loopback", self.baseurl,);
+        let url = format!("{}/sign-in/loopback", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -10539,13 +10539,13 @@ Sends a `GET` request to `/v1/sign-in/loopback`
     }
     /**Claims the one-time sign-in code delivered to the loopback landing (single use)
 
-Sends a `GET` request to `/v1/sign-in/loopback/claim`
+Sends a `GET` request to `/sign-in/loopback/claim`
 
 */
     pub async fn claim_sign_in_code<'a>(
         &'a self,
     ) -> Result<ResponseValue<types::ClaimSignInCodeResponse>, Error<()>> {
-        let url = format!("{}/v1/sign-in/loopback/claim", self.baseurl,);
+        let url = format!("{}/sign-in/loopback/claim", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -10571,7 +10571,7 @@ Sends a `GET` request to `/v1/sign-in/loopback/claim`
     }
     /**Resolve a stop — retry / review&send / take over / approve / deny (C25)
 
-Sends a `POST` request to `/v1/stops/{stopId}/resolve`
+Sends a `POST` request to `/stops/{stopId}/resolve`
 
 */
     pub async fn resolve_stop<'a>(
@@ -10580,7 +10580,7 @@ Sends a `POST` request to `/v1/stops/{stopId}/resolve`
         body: &'a types::ResolveStopBody,
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
         let url = format!(
-            "{}/v1/stops/{}/resolve", self.baseurl, encode_path(& stop_id.to_string()),
+            "{}/stops/{}/resolve", self.baseurl, encode_path(& stop_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -10608,14 +10608,14 @@ Sends a `POST` request to `/v1/stops/{stopId}/resolve`
     }
     /**Detected agent provider CLIs (claude-code / codex / opencode) with binary path, version, install status and whether a runner exists for them yet (comingSoon)
 
-Sends a `GET` request to `/v1/terminal/providers`
+Sends a `GET` request to `/terminal/providers`
 
 */
     pub async fn detect_providers<'a>(
         &'a self,
         refresh: Option<bool>,
     ) -> Result<ResponseValue<types::DetectProvidersResponse>, Error<()>> {
-        let url = format!("{}/v1/terminal/providers", self.baseurl,);
+        let url = format!("{}/terminal/providers", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -10642,7 +10642,7 @@ Sends a `GET` request to `/v1/terminal/providers`
     }
     /**Live terminal output for an issue session via Server-Sent Events (browser.terminal_output_appended)
 
-Sends a `GET` request to `/v1/terminal/sessions/{issueId}/stream`
+Sends a `GET` request to `/terminal/sessions/{issueId}/stream`
 
 */
     pub async fn stream_terminal_session<'a>(
@@ -10650,7 +10650,7 @@ Sends a `GET` request to `/v1/terminal/sessions/{issueId}/stream`
         issue_id: &'a str,
     ) -> Result<ResponseValue<ByteStream>, Error<()>> {
         let url = format!(
-            "{}/v1/terminal/sessions/{}/stream", self.baseurl, encode_path(& issue_id
+            "{}/terminal/sessions/{}/stream", self.baseurl, encode_path(& issue_id
             .to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
@@ -10670,14 +10670,14 @@ Sends a `GET` request to `/v1/terminal/sessions/{issueId}/stream`
     }
     /**Attach a contact/group to a workspace + providers (C09)
 
-Sends a `POST` request to `/v1/threads`
+Sends a `POST` request to `/threads`
 
 */
     pub async fn attach_thread<'a>(
         &'a self,
         body: &'a types::AttachThreadBody,
     ) -> Result<ResponseValue<types::AttachThreadResponse>, Error<()>> {
-        let url = format!("{}/v1/threads", self.baseurl,);
+        let url = format!("{}/threads", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -10704,7 +10704,7 @@ Sends a `POST` request to `/v1/threads`
     }
     /**Apagar uma conversa configurada — soft delete, bloqueado por trabalho vivo (C-DEL)
 
-Sends a `DELETE` request to `/v1/threads/{threadId}`
+Sends a `DELETE` request to `/threads/{threadId}`
 
 */
     pub async fn delete_thread<'a>(
@@ -10712,7 +10712,7 @@ Sends a `DELETE` request to `/v1/threads/{threadId}`
         thread_id: &'a str,
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}", self.baseurl, encode_path(& thread_id.to_string()),
+            "{}/threads/{}", self.baseurl, encode_path(& thread_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -10739,7 +10739,7 @@ Sends a `DELETE` request to `/v1/threads/{threadId}`
     }
     /**The non-code outputs of a thread (T13)
 
-Sends a `GET` request to `/v1/threads/{threadId}/artifacts`
+Sends a `GET` request to `/threads/{threadId}/artifacts`
 
 */
     pub async fn list_artifacts<'a>(
@@ -10747,7 +10747,7 @@ Sends a `GET` request to `/v1/threads/{threadId}/artifacts`
         thread_id: &'a str,
     ) -> Result<ResponseValue<types::ListArtifactsResponse>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/artifacts", self.baseurl, encode_path(& thread_id
+            "{}/threads/{}/artifacts", self.baseurl, encode_path(& thread_id
             .to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
@@ -10775,7 +10775,7 @@ Sends a `GET` request to `/v1/threads/{threadId}/artifacts`
     }
     /**Record a non-code agent output (image / file / link) (C30)
 
-Sends a `POST` request to `/v1/threads/{threadId}/artifacts`
+Sends a `POST` request to `/threads/{threadId}/artifacts`
 
 */
     pub async fn record_artifact<'a>(
@@ -10784,7 +10784,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/artifacts`
         body: &'a types::RecordArtifactBody,
     ) -> Result<ResponseValue<types::RecordArtifactResponse>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/artifacts", self.baseurl, encode_path(& thread_id
+            "{}/threads/{}/artifacts", self.baseurl, encode_path(& thread_id
             .to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
@@ -10813,7 +10813,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/artifacts`
     }
     /**The bytes of one recorded artifact, for the console preview
 
-Sends a `GET` request to `/v1/threads/{threadId}/artifacts/{artifactId}/content`
+Sends a `GET` request to `/threads/{threadId}/artifacts/{artifactId}/content`
 
 */
     pub async fn get_artifact_content<'a>(
@@ -10822,8 +10822,8 @@ Sends a `GET` request to `/v1/threads/{threadId}/artifacts/{artifactId}/content`
         artifact_id: &'a str,
     ) -> Result<ResponseValue<ByteStream>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/artifacts/{}/content", self.baseurl, encode_path(&
-            thread_id.to_string()), encode_path(& artifact_id.to_string()),
+            "{}/threads/{}/artifacts/{}/content", self.baseurl, encode_path(& thread_id
+            .to_string()), encode_path(& artifact_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -10842,7 +10842,7 @@ Sends a `GET` request to `/v1/threads/{threadId}/artifacts/{artifactId}/content`
     }
     /**Deliver an already-recorded artifact to the contact on the channel
 
-Sends a `POST` request to `/v1/threads/{threadId}/artifacts/{artifactId}/send`
+Sends a `POST` request to `/threads/{threadId}/artifacts/{artifactId}/send`
 
 */
     pub async fn send_artifact<'a>(
@@ -10852,7 +10852,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/artifacts/{artifactId}/send`
         body: &'a types::SendArtifactBody,
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/artifacts/{}/send", self.baseurl, encode_path(& thread_id
+            "{}/threads/{}/artifacts/{}/send", self.baseurl, encode_path(& thread_id
             .to_string()), encode_path(& artifact_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
@@ -10881,7 +10881,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/artifacts/{artifactId}/send`
     }
     /**Set the rolling context-buffer size {25,50,100,200} (C14)
 
-Sends a `PUT` request to `/v1/threads/{threadId}/buffer`
+Sends a `PUT` request to `/threads/{threadId}/buffer`
 
 */
     pub async fn configure_context_buffer<'a>(
@@ -10890,8 +10890,7 @@ Sends a `PUT` request to `/v1/threads/{threadId}/buffer`
         body: &'a types::ConfigureContextBufferBody,
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/buffer", self.baseurl, encode_path(& thread_id
-            .to_string()),
+            "{}/threads/{}/buffer", self.baseurl, encode_path(& thread_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -10919,7 +10918,7 @@ Sends a `PUT` request to `/v1/threads/{threadId}/buffer`
     }
     /**Full thread conversation + control-plane state + active stops (T09)
 
-Sends a `GET` request to `/v1/threads/{threadId}/chat`
+Sends a `GET` request to `/threads/{threadId}/chat`
 
 */
     pub async fn get_session_chat<'a>(
@@ -10927,7 +10926,7 @@ Sends a `GET` request to `/v1/threads/{threadId}/chat`
         thread_id: &'a str,
     ) -> Result<ResponseValue<types::GetSessionChatResponse>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/chat", self.baseurl, encode_path(& thread_id.to_string()),
+            "{}/threads/{}/chat", self.baseurl, encode_path(& thread_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -10954,7 +10953,7 @@ Sends a `GET` request to `/v1/threads/{threadId}/chat`
     }
     /**Send a direct message as the operator (only while paused) (C20)
 
-Sends a `POST` request to `/v1/threads/{threadId}/direct`
+Sends a `POST` request to `/threads/{threadId}/direct`
 
 */
     pub async fn send_direct_message<'a>(
@@ -10963,8 +10962,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/direct`
         body: &'a types::SendDirectMessageBody,
     ) -> Result<ResponseValue<types::SendDirectMessageResponse>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/direct", self.baseurl, encode_path(& thread_id
-            .to_string()),
+            "{}/threads/{}/direct", self.baseurl, encode_path(& thread_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -10992,7 +10990,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/direct`
     }
     /**Issues of one thread grouped by status + auto-archive note (T11)
 
-Sends a `GET` request to `/v1/threads/{threadId}/issues`
+Sends a `GET` request to `/threads/{threadId}/issues`
 
 */
     pub async fn get_session_issues<'a>(
@@ -11000,8 +10998,7 @@ Sends a `GET` request to `/v1/threads/{threadId}/issues`
         thread_id: &'a str,
     ) -> Result<ResponseValue<types::GetSessionIssuesResponse>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/issues", self.baseurl, encode_path(& thread_id
-            .to_string()),
+            "{}/threads/{}/issues", self.baseurl, encode_path(& thread_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -11028,7 +11025,7 @@ Sends a `GET` request to `/v1/threads/{threadId}/issues`
     }
     /**Open a new issue on a thread
 
-Sends a `POST` request to `/v1/threads/{threadId}/issues`
+Sends a `POST` request to `/threads/{threadId}/issues`
 
 */
     pub async fn create_issue<'a>(
@@ -11037,8 +11034,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/issues`
         body: &'a types::CreateIssueBody,
     ) -> Result<ResponseValue<types::CreateIssueResponse>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/issues", self.baseurl, encode_path(& thread_id
-            .to_string()),
+            "{}/threads/{}/issues", self.baseurl, encode_path(& thread_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -11066,7 +11062,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/issues`
     }
     /**Fork a new issue out of the conversation, from the operator's own words
 
-Sends a `POST` request to `/v1/threads/{threadId}/issues/fork`
+Sends a `POST` request to `/threads/{threadId}/issues/fork`
 
 */
     pub async fn fork_issue<'a>(
@@ -11075,7 +11071,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/issues/fork`
         body: &'a types::ForkIssueBody,
     ) -> Result<ResponseValue<types::ForkIssueResponse>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/issues/fork", self.baseurl, encode_path(& thread_id
+            "{}/threads/{}/issues/fork", self.baseurl, encode_path(& thread_id
             .to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
@@ -11104,7 +11100,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/issues/fork`
     }
     /**Ask the operator a question (fire-and-forget; surfaces as a Needs-you stop)
 
-Sends a `POST` request to `/v1/threads/{threadId}/issues/{issueId}/operator-questions`
+Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/operator-questions`
 
 */
     pub async fn ask_operator<'a>(
@@ -11114,7 +11110,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/issues/{issueId}/operator-ques
         body: &'a types::AskOperatorBody,
     ) -> Result<ResponseValue<types::AskOperatorResponse>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/issues/{}/operator-questions", self.baseurl, encode_path(&
+            "{}/threads/{}/issues/{}/operator-questions", self.baseurl, encode_path(&
             thread_id.to_string()), encode_path(& issue_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
@@ -11143,7 +11139,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/issues/{issueId}/operator-ques
     }
     /**Status of one issue of this thread
 
-Sends a `GET` request to `/v1/threads/{threadId}/issues/{issueId}/status`
+Sends a `GET` request to `/threads/{threadId}/issues/{issueId}/status`
 
 */
     pub async fn get_issue_status<'a>(
@@ -11152,7 +11148,7 @@ Sends a `GET` request to `/v1/threads/{threadId}/issues/{issueId}/status`
         issue_id: &'a str,
     ) -> Result<ResponseValue<types::GetIssueStatusResponse>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/issues/{}/status", self.baseurl, encode_path(& thread_id
+            "{}/threads/{}/issues/{}/status", self.baseurl, encode_path(& thread_id
             .to_string()), encode_path(& issue_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
@@ -11180,7 +11176,7 @@ Sends a `GET` request to `/v1/threads/{threadId}/issues/{issueId}/status`
     }
     /**Declare the lifecycle status of an issue (done / needs input)
 
-Sends a `POST` request to `/v1/threads/{threadId}/issues/{issueId}/status`
+Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/status`
 
 */
     pub async fn transition_issue_status<'a>(
@@ -11190,7 +11186,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/issues/{issueId}/status`
         body: &'a types::TransitionIssueStatusBody,
     ) -> Result<ResponseValue<types::TransitionIssueStatusResponse>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/issues/{}/status", self.baseurl, encode_path(& thread_id
+            "{}/threads/{}/issues/{}/status", self.baseurl, encode_path(& thread_id
             .to_string()), encode_path(& issue_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
@@ -11219,7 +11215,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/issues/{issueId}/status`
     }
     /**Redirect an issue of this thread — including one that already finished
 
-Sends a `POST` request to `/v1/threads/{threadId}/issues/{issueId}/steer`
+Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/steer`
 
 */
     pub async fn steer_issue_turn<'a>(
@@ -11229,7 +11225,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/issues/{issueId}/steer`
         body: &'a types::SteerIssueTurnBody,
     ) -> Result<ResponseValue<types::SteerIssueTurnResponse>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/issues/{}/steer", self.baseurl, encode_path(& thread_id
+            "{}/threads/{}/issues/{}/steer", self.baseurl, encode_path(& thread_id
             .to_string()), encode_path(& issue_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
@@ -11258,7 +11254,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/issues/{issueId}/steer`
     }
     /**Declare that the agent is blocked and needs the human (approval, classification, …)
 
-Sends a `POST` request to `/v1/threads/{threadId}/issues/{issueId}/stops`
+Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/stops`
 
 */
     pub async fn raise_stop<'a>(
@@ -11268,7 +11264,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/issues/{issueId}/stops`
         body: &'a types::RaiseStopBody,
     ) -> Result<ResponseValue<types::RaiseStopResponse>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/issues/{}/stops", self.baseurl, encode_path(& thread_id
+            "{}/threads/{}/issues/{}/stops", self.baseurl, encode_path(& thread_id
             .to_string()), encode_path(& issue_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
@@ -11297,7 +11293,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/issues/{issueId}/stops`
     }
     /**This conversation's scheduled prompts (loops) (T11)
 
-Sends a `GET` request to `/v1/threads/{threadId}/loops`
+Sends a `GET` request to `/threads/{threadId}/loops`
 
 */
     pub async fn list_thread_loops<'a>(
@@ -11305,7 +11301,7 @@ Sends a `GET` request to `/v1/threads/{threadId}/loops`
         thread_id: &'a str,
     ) -> Result<ResponseValue<types::ListThreadLoopsResponse>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/loops", self.baseurl, encode_path(& thread_id.to_string()),
+            "{}/threads/{}/loops", self.baseurl, encode_path(& thread_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -11332,7 +11328,7 @@ Sends a `GET` request to `/v1/threads/{threadId}/loops`
     }
     /**Schedule a recurring whisper into this conversation (C21)
 
-Sends a `POST` request to `/v1/threads/{threadId}/loops`
+Sends a `POST` request to `/threads/{threadId}/loops`
 
 */
     pub async fn create_thread_loop<'a>(
@@ -11341,7 +11337,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/loops`
         body: &'a types::CreateThreadLoopBody,
     ) -> Result<ResponseValue<types::CreateThreadLoopResponse>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/loops", self.baseurl, encode_path(& thread_id.to_string()),
+            "{}/threads/{}/loops", self.baseurl, encode_path(& thread_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -11369,7 +11365,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/loops`
     }
     /**Edit a loop — its prompt and its schedule (C22)
 
-Sends a `PUT` request to `/v1/threads/{threadId}/loops/{loopId}`
+Sends a `PUT` request to `/threads/{threadId}/loops/{loopId}`
 
 */
     pub async fn update_thread_loop<'a>(
@@ -11379,8 +11375,8 @@ Sends a `PUT` request to `/v1/threads/{threadId}/loops/{loopId}`
         body: &'a types::UpdateThreadLoopBody,
     ) -> Result<ResponseValue<types::UpdateThreadLoopResponse>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/loops/{}", self.baseurl, encode_path(& thread_id
-            .to_string()), encode_path(& loop_id.to_string()),
+            "{}/threads/{}/loops/{}", self.baseurl, encode_path(& thread_id.to_string()),
+            encode_path(& loop_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -11408,7 +11404,7 @@ Sends a `PUT` request to `/v1/threads/{threadId}/loops/{loopId}`
     }
     /**Remove a loop (C24)
 
-Sends a `DELETE` request to `/v1/threads/{threadId}/loops/{loopId}`
+Sends a `DELETE` request to `/threads/{threadId}/loops/{loopId}`
 
 */
     pub async fn delete_thread_loop<'a>(
@@ -11417,8 +11413,8 @@ Sends a `DELETE` request to `/v1/threads/{threadId}/loops/{loopId}`
         loop_id: &'a str,
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/loops/{}", self.baseurl, encode_path(& thread_id
-            .to_string()), encode_path(& loop_id.to_string()),
+            "{}/threads/{}/loops/{}", self.baseurl, encode_path(& thread_id.to_string()),
+            encode_path(& loop_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -11445,7 +11441,7 @@ Sends a `DELETE` request to `/v1/threads/{threadId}/loops/{loopId}`
     }
     /**Pause or resume a loop (C23)
 
-Sends a `PUT` request to `/v1/threads/{threadId}/loops/{loopId}/enabled`
+Sends a `PUT` request to `/threads/{threadId}/loops/{loopId}/enabled`
 
 */
     pub async fn set_thread_loop_enabled<'a>(
@@ -11455,7 +11451,7 @@ Sends a `PUT` request to `/v1/threads/{threadId}/loops/{loopId}/enabled`
         body: &'a types::SetThreadLoopEnabledBody,
     ) -> Result<ResponseValue<types::SetThreadLoopEnabledResponse>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/loops/{}/enabled", self.baseurl, encode_path(& thread_id
+            "{}/threads/{}/loops/{}/enabled", self.baseurl, encode_path(& thread_id
             .to_string()), encode_path(& loop_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
@@ -11484,7 +11480,7 @@ Sends a `PUT` request to `/v1/threads/{threadId}/loops/{loopId}/enabled`
     }
     /**Configure the mention gate (respond only when a @tag is written) (C12)
 
-Sends a `PUT` request to `/v1/threads/{threadId}/mention-gate`
+Sends a `PUT` request to `/threads/{threadId}/mention-gate`
 
 */
     pub async fn configure_mention_gate<'a>(
@@ -11493,7 +11489,7 @@ Sends a `PUT` request to `/v1/threads/{threadId}/mention-gate`
         body: &'a types::ConfigureMentionGateBody,
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/mention-gate", self.baseurl, encode_path(& thread_id
+            "{}/threads/{}/mention-gate", self.baseurl, encode_path(& thread_id
             .to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
@@ -11522,7 +11518,7 @@ Sends a `PUT` request to `/v1/threads/{threadId}/mention-gate`
     }
     /**Choose which model this conversation asks one of its agent CLIs for. DEFAULT means let the CLI pick (C16)
 
-Sends a `PUT` request to `/v1/threads/{threadId}/model`
+Sends a `PUT` request to `/threads/{threadId}/model`
 
 */
     pub async fn configure_model<'a>(
@@ -11531,7 +11527,7 @@ Sends a `PUT` request to `/v1/threads/{threadId}/model`
         body: &'a types::ConfigureModelBody,
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/model", self.baseurl, encode_path(& thread_id.to_string()),
+            "{}/threads/{}/model", self.baseurl, encode_path(& thread_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -11559,7 +11555,7 @@ Sends a `PUT` request to `/v1/threads/{threadId}/model`
     }
     /**Active stops on a thread with per-kind resolution actions (T14)
 
-Sends a `GET` request to `/v1/threads/{threadId}/needs-you`
+Sends a `GET` request to `/threads/{threadId}/needs-you`
 
 */
     pub async fn get_needs_you_panel<'a>(
@@ -11567,7 +11563,7 @@ Sends a `GET` request to `/v1/threads/{threadId}/needs-you`
         thread_id: &'a str,
     ) -> Result<ResponseValue<types::GetNeedsYouPanelResponse>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/needs-you", self.baseurl, encode_path(& thread_id
+            "{}/threads/{}/needs-you", self.baseurl, encode_path(& thread_id
             .to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
@@ -11595,7 +11591,7 @@ Sends a `GET` request to `/v1/threads/{threadId}/needs-you`
     }
     /**Toggle whether a participant may invoke agents (C13)
 
-Sends a `PUT` request to `/v1/threads/{threadId}/participants/{participantId}`
+Sends a `PUT` request to `/threads/{threadId}/participants/{participantId}`
 
 */
     pub async fn set_participant_invocation<'a>(
@@ -11605,7 +11601,7 @@ Sends a `PUT` request to `/v1/threads/{threadId}/participants/{participantId}`
         body: &'a types::SetParticipantInvocationBody,
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/participants/{}", self.baseurl, encode_path(& thread_id
+            "{}/threads/{}/participants/{}", self.baseurl, encode_path(& thread_id
             .to_string()), encode_path(& participant_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
@@ -11634,7 +11630,7 @@ Sends a `PUT` request to `/v1/threads/{threadId}/participants/{participantId}`
     }
     /**Pause all agent activity on a thread (C10)
 
-Sends a `POST` request to `/v1/threads/{threadId}/pause`
+Sends a `POST` request to `/threads/{threadId}/pause`
 
 */
     pub async fn pause_thread<'a>(
@@ -11642,7 +11638,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/pause`
         thread_id: &'a str,
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/pause", self.baseurl, encode_path(& thread_id.to_string()),
+            "{}/threads/{}/pause", self.baseurl, encode_path(& thread_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -11669,7 +11665,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/pause`
     }
     /**Set (or clear, with an empty body value) the operator's custom prompt for this conversation (C15)
 
-Sends a `PUT` request to `/v1/threads/{threadId}/prompt`
+Sends a `PUT` request to `/threads/{threadId}/prompt`
 
 */
     pub async fn configure_prompt<'a>(
@@ -11678,8 +11674,7 @@ Sends a `PUT` request to `/v1/threads/{threadId}/prompt`
         body: &'a types::ConfigurePromptBody,
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/prompt", self.baseurl, encode_path(& thread_id
-            .to_string()),
+            "{}/threads/{}/prompt", self.baseurl, encode_path(& thread_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -11707,7 +11702,7 @@ Sends a `PUT` request to `/v1/threads/{threadId}/prompt`
     }
     /**Turn the 👀/🤖 channel reaction cues on or off for this conversation
 
-Sends a `PUT` request to `/v1/threads/{threadId}/reactions`
+Sends a `PUT` request to `/threads/{threadId}/reactions`
 
 */
     pub async fn configure_reactions<'a>(
@@ -11716,7 +11711,7 @@ Sends a `PUT` request to `/v1/threads/{threadId}/reactions`
         body: &'a types::ConfigureReactionsBody,
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/reactions", self.baseurl, encode_path(& thread_id
+            "{}/threads/{}/reactions", self.baseurl, encode_path(& thread_id
             .to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
@@ -11745,7 +11740,7 @@ Sends a `PUT` request to `/v1/threads/{threadId}/reactions`
     }
     /**Resume agent activity on a thread (C11)
 
-Sends a `POST` request to `/v1/threads/{threadId}/resume`
+Sends a `POST` request to `/threads/{threadId}/resume`
 
 */
     pub async fn resume_thread<'a>(
@@ -11753,8 +11748,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/resume`
         thread_id: &'a str,
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/resume", self.baseurl, encode_path(& thread_id
-            .to_string()),
+            "{}/threads/{}/resume", self.baseurl, encode_path(& thread_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -11781,7 +11775,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/resume`
     }
     /**Per-thread behavior: mention gate, participants + invocation, buffer size (T10)
 
-Sends a `GET` request to `/v1/threads/{threadId}/settings`
+Sends a `GET` request to `/threads/{threadId}/settings`
 
 */
     pub async fn get_thread_settings<'a>(
@@ -11789,8 +11783,7 @@ Sends a `GET` request to `/v1/threads/{threadId}/settings`
         thread_id: &'a str,
     ) -> Result<ResponseValue<types::GetThreadSettingsResponse>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/settings", self.baseurl, encode_path(& thread_id
-            .to_string()),
+            "{}/threads/{}/settings", self.baseurl, encode_path(& thread_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -11817,7 +11810,7 @@ Sends a `GET` request to `/v1/threads/{threadId}/settings`
     }
     /**Whisper a steer into the thread (agents-only; never sent to the channel) (C19)
 
-Sends a `POST` request to `/v1/threads/{threadId}/steer`
+Sends a `POST` request to `/threads/{threadId}/steer`
 
 */
     pub async fn steer_thread<'a>(
@@ -11826,7 +11819,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/steer`
         body: &'a types::SteerThreadBody,
     ) -> Result<ResponseValue<types::SteerThreadResponse>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/steer", self.baseurl, encode_path(& thread_id.to_string()),
+            "{}/threads/{}/steer", self.baseurl, encode_path(& thread_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -11854,7 +11847,7 @@ Sends a `POST` request to `/v1/threads/{threadId}/steer`
     }
     /**Turn intermediate content cuts on or off for this conversation
 
-Sends a `PUT` request to `/v1/threads/{threadId}/streaming`
+Sends a `PUT` request to `/threads/{threadId}/streaming`
 
 */
     pub async fn configure_streaming<'a>(
@@ -11863,7 +11856,7 @@ Sends a `PUT` request to `/v1/threads/{threadId}/streaming`
         body: &'a types::ConfigureStreamingBody,
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/streaming", self.baseurl, encode_path(& thread_id
+            "{}/threads/{}/streaming", self.baseurl, encode_path(& thread_id
             .to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
@@ -11892,7 +11885,7 @@ Sends a `PUT` request to `/v1/threads/{threadId}/streaming`
     }
     /**Turn the "Pensando" channel placeholder on or off for this conversation
 
-Sends a `PUT` request to `/v1/threads/{threadId}/thinking-indicator`
+Sends a `PUT` request to `/threads/{threadId}/thinking-indicator`
 
 */
     pub async fn configure_thinking_indicator<'a>(
@@ -11901,7 +11894,7 @@ Sends a `PUT` request to `/v1/threads/{threadId}/thinking-indicator`
         body: &'a types::ConfigureThinkingIndicatorBody,
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
         let url = format!(
-            "{}/v1/threads/{}/thinking-indicator", self.baseurl, encode_path(& thread_id
+            "{}/threads/{}/thinking-indicator", self.baseurl, encode_path(& thread_id
             .to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
@@ -11930,13 +11923,13 @@ Sends a `PUT` request to `/v1/threads/{threadId}/thinking-indicator`
     }
     /**Account settings read
 
-Sends a `GET` request to `/v1/ui/account`
+Sends a `GET` request to `/ui/account`
 
 */
     pub async fn get_my_account<'a>(
         &'a self,
     ) -> Result<ResponseValue<types::GetMyAccountResponse>, Error<()>> {
-        let url = format!("{}/v1/ui/account", self.baseurl,);
+        let url = format!("{}/ui/account", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -11962,7 +11955,7 @@ Sends a `GET` request to `/v1/ui/account`
     }
     /**Attach-thread wizard — contacts, workspaces, providers + attached/no-channel flags (T15)
 
-Sends a `GET` request to `/v1/ui/attach-thread-wizard`
+Sends a `GET` request to `/ui/attach-thread-wizard`
 
 */
     pub async fn get_attach_thread_wizard<'a>(
@@ -11970,7 +11963,7 @@ Sends a `GET` request to `/v1/ui/attach-thread-wizard`
         cursor: Option<&'a str>,
         search: Option<&'a str>,
     ) -> Result<ResponseValue<types::GetAttachThreadWizardResponse>, Error<()>> {
-        let url = format!("{}/v1/ui/attach-thread-wizard", self.baseurl,);
+        let url = format!("{}/ui/attach-thread-wizard", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -11998,7 +11991,7 @@ Sends a `GET` request to `/v1/ui/attach-thread-wizard`
     }
     /**The photo of one channel contact, cached daemon-side (the console renders it in chat bubbles and rosters)
 
-Sends a `GET` request to `/v1/ui/avatars/{channelId}/{remoteId}`
+Sends a `GET` request to `/ui/avatars/{channelId}/{remoteId}`
 
 */
     pub async fn get_contact_avatar<'a>(
@@ -12007,8 +12000,8 @@ Sends a `GET` request to `/v1/ui/avatars/{channelId}/{remoteId}`
         remote_id: &'a str,
     ) -> Result<ResponseValue<ByteStream>, Error<()>> {
         let url = format!(
-            "{}/v1/ui/avatars/{}/{}", self.baseurl, encode_path(& channel_id
-            .to_string()), encode_path(& remote_id.to_string()),
+            "{}/ui/avatars/{}/{}", self.baseurl, encode_path(& channel_id.to_string()),
+            encode_path(& remote_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -12027,13 +12020,13 @@ Sends a `GET` request to `/v1/ui/avatars/{channelId}/{remoteId}`
     }
     /**Owner-scoped real-time integration events via SSE
 
-Sends a `GET` request to `/v1/ui/events`
+Sends a `GET` request to `/ui/events`
 
 */
     pub async fn listen_events<'a>(
         &'a self,
     ) -> Result<ResponseValue<ByteStream>, Error<()>> {
-        let url = format!("{}/v1/ui/events", self.baseurl,);
+        let url = format!("{}/ui/events", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -12051,13 +12044,13 @@ Sends a `GET` request to `/v1/ui/events`
     }
     /**Home dashboard — agents running, needs-you, active sessions, today metrics, channels (T03)
 
-Sends a `GET` request to `/v1/ui/home`
+Sends a `GET` request to `/ui/home`
 
 */
     pub async fn get_home_dashboard<'a>(
         &'a self,
     ) -> Result<ResponseValue<types::GetHomeDashboardResponse>, Error<()>> {
-        let url = format!("{}/v1/ui/home", self.baseurl,);
+        let url = format!("{}/ui/home", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -12083,13 +12076,13 @@ Sends a `GET` request to `/v1/ui/home`
     }
     /**Onboarding — jornada persistida (currentStep/completedAt) + satisfação derivada dos passos de setup
 
-Sends a `GET` request to `/v1/ui/onboarding`
+Sends a `GET` request to `/ui/onboarding`
 
 */
     pub async fn get_onboarding<'a>(
         &'a self,
     ) -> Result<ResponseValue<types::GetOnboardingResponse>, Error<()>> {
-        let url = format!("{}/v1/ui/onboarding", self.baseurl,);
+        let url = format!("{}/ui/onboarding", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -12115,13 +12108,13 @@ Sends a `GET` request to `/v1/ui/onboarding`
     }
     /**Conclui o onboarding do operador — grava completedAt
 
-Sends a `POST` request to `/v1/ui/onboarding/complete`
+Sends a `POST` request to `/ui/onboarding/complete`
 
 */
     pub async fn complete_onboarding<'a>(
         &'a self,
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
-        let url = format!("{}/v1/ui/onboarding/complete", self.baseurl,);
+        let url = format!("{}/ui/onboarding/complete", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -12147,14 +12140,14 @@ Sends a `POST` request to `/v1/ui/onboarding/complete`
     }
     /**Salva onde o operador parou no wizard
 
-Sends a `PATCH` request to `/v1/ui/onboarding/step`
+Sends a `PATCH` request to `/ui/onboarding/step`
 
 */
     pub async fn save_onboarding_step<'a>(
         &'a self,
         body: &'a types::SaveOnboardingStepBody,
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
-        let url = format!("{}/v1/ui/onboarding/step", self.baseurl,);
+        let url = format!("{}/ui/onboarding/step", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -12181,13 +12174,13 @@ Sends a `PATCH` request to `/v1/ui/onboarding/step`
     }
     /**The operator's displayed identity — name and photo borrowed from the connected channel's own account
 
-Sends a `GET` request to `/v1/ui/operator`
+Sends a `GET` request to `/ui/operator`
 
 */
     pub async fn get_operator_identity<'a>(
         &'a self,
     ) -> Result<ResponseValue<types::GetOperatorIdentityResponse>, Error<()>> {
-        let url = format!("{}/v1/ui/operator", self.baseurl,);
+        let url = format!("{}/ui/operator", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -12213,13 +12206,13 @@ Sends a `GET` request to `/v1/ui/operator`
     }
     /**Settings — providers, stop criteria, general, app version (T08)
 
-Sends a `GET` request to `/v1/ui/settings`
+Sends a `GET` request to `/ui/settings`
 
 */
     pub async fn get_settings<'a>(
         &'a self,
     ) -> Result<ResponseValue<types::GetSettingsResponse>, Error<()>> {
-        let url = format!("{}/v1/ui/settings", self.baseurl,);
+        let url = format!("{}/ui/settings", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -12245,13 +12238,13 @@ Sends a `GET` request to `/v1/ui/settings`
     }
     /**Header context — user identity, all member owners (role), active owner, and profile alerts
 
-Sends a `GET` request to `/v1/ui/user-info`
+Sends a `GET` request to `/ui/user-info`
 
 */
     pub async fn get_user_info<'a>(
         &'a self,
     ) -> Result<ResponseValue<types::GetUserInfoResponse>, Error<()>> {
-        let url = format!("{}/v1/ui/user-info", self.baseurl,);
+        let url = format!("{}/ui/user-info", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -12277,13 +12270,13 @@ Sends a `GET` request to `/v1/ui/user-info`
     }
     /**List registered workspaces with badges and thread counts (T07)
 
-Sends a `GET` request to `/v1/workspaces`
+Sends a `GET` request to `/workspaces`
 
 */
     pub async fn list_workspaces<'a>(
         &'a self,
     ) -> Result<ResponseValue<types::ListWorkspacesResponse>, Error<()>> {
-        let url = format!("{}/v1/workspaces", self.baseurl,);
+        let url = format!("{}/workspaces", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -12309,14 +12302,14 @@ Sends a `GET` request to `/v1/workspaces`
     }
     /**Register a local project folder; auto-detects git / Claude-project badges
 
-Sends a `POST` request to `/v1/workspaces`
+Sends a `POST` request to `/workspaces`
 
 */
     pub async fn add_workspace<'a>(
         &'a self,
         body: &'a types::AddWorkspaceBody,
     ) -> Result<ResponseValue<types::AddWorkspaceResponse>, Error<()>> {
-        let url = format!("{}/v1/workspaces", self.baseurl,);
+        let url = format!("{}/workspaces", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(
@@ -12343,7 +12336,7 @@ Sends a `POST` request to `/v1/workspaces`
     }
     /**Remove a registered workspace (refused while an issue is WORKING on it)
 
-Sends a `DELETE` request to `/v1/workspaces/{workspaceId}`
+Sends a `DELETE` request to `/workspaces/{workspaceId}`
 
 */
     pub async fn remove_workspace<'a>(
@@ -12351,7 +12344,7 @@ Sends a `DELETE` request to `/v1/workspaces/{workspaceId}`
         workspace_id: &'a str,
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
         let url = format!(
-            "{}/v1/workspaces/{}", self.baseurl, encode_path(& workspace_id.to_string()),
+            "{}/workspaces/{}", self.baseurl, encode_path(& workspace_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map

@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description Register a local project folder; auto-detects git / Claude-project badges
- * {@link /v1/workspaces}
+ * {@link /workspaces}
  */
 export async function addWorkspaceHandler({ data }: { data: AddWorkspaceMutationRequest }): Promise<Promise<CallToolResult>> {
 
 
   const requestData = data
 
-  const res = await fetch<AddWorkspaceMutationResponse, ResponseErrorConfig<Error>, AddWorkspaceMutationRequest>({ method : "POST", url : `/v1/workspaces`, data : requestData })
+  const res = await fetch<AddWorkspaceMutationResponse, ResponseErrorConfig<Error>, AddWorkspaceMutationRequest>({ method : "POST", url : `/workspaces`, data : requestData })
   return {
               content: [
                 {

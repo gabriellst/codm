@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { forkIssue } from "../client/forkIssue.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const forkIssueMutationKey = () => [{ url: '/v1/threads/:threadId/issues/fork' }] as const
+export const forkIssueMutationKey = () => [{ url: '/threads/:threadId/issues/fork' }] as const
 
 export type ForkIssueMutationKey = ReturnType<typeof forkIssueMutationKey>
 
@@ -27,7 +27,7 @@ export function forkIssueMutationOptions<TContext = unknown>(config: Partial<Req
 
 /**
  * @description Fork a new issue out of the conversation, from the operator's own words
- * {@link /v1/threads/:threadId/issues/fork}
+ * {@link /threads/:threadId/issues/fork}
  */
 export function useForkIssue<TContext>(options: 
 {

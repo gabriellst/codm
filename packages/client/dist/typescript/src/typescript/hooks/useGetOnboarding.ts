@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { getOnboarding } from "../client/getOnboarding.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const getOnboardingQueryKey = () => [{ url: '/v1/ui/onboarding' }] as const
+export const getOnboardingQueryKey = () => [{ url: '/ui/onboarding' }] as const
 
 export type GetOnboardingQueryKey = ReturnType<typeof getOnboardingQueryKey>
 
@@ -28,7 +28,7 @@ export function getOnboardingQueryOptions(config: Partial<RequestConfig> & { cli
 
 /**
  * @description Onboarding — jornada persistida (currentStep/completedAt) + satisfação derivada dos passos de setup
- * {@link /v1/ui/onboarding}
+ * {@link /ui/onboarding}
  */
 export function useGetOnboarding<TData = GetOnboardingQueryResponse, TQueryData = GetOnboardingQueryResponse, TQueryKey extends QueryKey = GetOnboardingQueryKey>(options: 
 {

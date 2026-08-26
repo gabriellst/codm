@@ -8,13 +8,13 @@ import type { GetAttachThreadWizardQueryResponse, GetAttachThreadWizardQueryPara
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getGetAttachThreadWizardUrl() {
-  const res = { method: 'GET', url: `/v1/ui/attach-thread-wizard` as const }
+  const res = { method: 'GET', url: `/ui/attach-thread-wizard` as const }
   return res
 }
 
 /**
  * @description Attach-thread wizard — contacts, workspaces, providers + attached/no-channel flags (T15)
- * {@link /v1/ui/attach-thread-wizard}
+ * {@link /ui/attach-thread-wizard}
  */
 export async function getAttachThreadWizard(params?: GetAttachThreadWizardQueryParams, config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

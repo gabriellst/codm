@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { configureContextBuffer } from "../client/configureContextBuffer.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const configureContextBufferMutationKey = () => [{ url: '/v1/threads/:threadId/buffer' }] as const
+export const configureContextBufferMutationKey = () => [{ url: '/threads/:threadId/buffer' }] as const
 
 export type ConfigureContextBufferMutationKey = ReturnType<typeof configureContextBufferMutationKey>
 
@@ -27,7 +27,7 @@ export function configureContextBufferMutationOptions<TContext = unknown>(config
 
 /**
  * @description Set the rolling context-buffer size {25,50,100,200} (C14)
- * {@link /v1/threads/:threadId/buffer}
+ * {@link /threads/:threadId/buffer}
  */
 export function useConfigureContextBuffer<TContext>(options: 
 {

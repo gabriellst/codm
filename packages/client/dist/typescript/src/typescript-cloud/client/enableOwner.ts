@@ -8,13 +8,13 @@ import type { EnableOwnerMutationResponse } from "../types/EnableOwner.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
 
 function getEnableOwnerUrl() {
-  const res = { method: 'POST', url: `/v1/owners/enable` as const }
+  const res = { method: 'POST', url: `/owners/enable` as const }
   return res
 }
 
 /**
  * @description Re-enable a previously disabled owner (C20 EnableOwner; OWNER only)
- * {@link /v1/owners/enable}
+ * {@link /owners/enable}
  */
 export async function enableOwner(config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

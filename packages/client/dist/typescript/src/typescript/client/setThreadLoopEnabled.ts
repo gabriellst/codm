@@ -8,13 +8,13 @@ import type { SetThreadLoopEnabledMutationRequest, SetThreadLoopEnabledMutationR
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getSetThreadLoopEnabledUrl(threadId: SetThreadLoopEnabledPathParams["threadId"], loopId: SetThreadLoopEnabledPathParams["loopId"]) {
-  const res = { method: 'PUT', url: `/v1/threads/${threadId}/loops/${loopId}/enabled` as const }
+  const res = { method: 'PUT', url: `/threads/${threadId}/loops/${loopId}/enabled` as const }
   return res
 }
 
 /**
  * @description Pause or resume a loop (C23)
- * {@link /v1/threads/:threadId/loops/:loopId/enabled}
+ * {@link /threads/:threadId/loops/:loopId/enabled}
  */
 export async function setThreadLoopEnabled(threadId: SetThreadLoopEnabledPathParams["threadId"], loopId: SetThreadLoopEnabledPathParams["loopId"], data: SetThreadLoopEnabledMutationRequest, config: Partial<RequestConfig<SetThreadLoopEnabledMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

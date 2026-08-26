@@ -8,13 +8,13 @@ import type { ConfigurePromptMutationRequest, ConfigurePromptMutationResponse, C
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getConfigurePromptUrl(threadId: ConfigurePromptPathParams["threadId"]) {
-  const res = { method: 'PUT', url: `/v1/threads/${threadId}/prompt` as const }
+  const res = { method: 'PUT', url: `/threads/${threadId}/prompt` as const }
   return res
 }
 
 /**
  * @description Set (or clear, with an empty body value) the operator's custom prompt for this conversation (C15)
- * {@link /v1/threads/:threadId/prompt}
+ * {@link /threads/:threadId/prompt}
  */
 export async function configurePrompt(threadId: ConfigurePromptPathParams["threadId"], data?: ConfigurePromptMutationRequest, config: Partial<RequestConfig<ConfigurePromptMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { createThreadLoop } from "../client/createThreadLoop.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const createThreadLoopMutationKey = () => [{ url: '/v1/threads/:threadId/loops' }] as const
+export const createThreadLoopMutationKey = () => [{ url: '/threads/:threadId/loops' }] as const
 
 export type CreateThreadLoopMutationKey = ReturnType<typeof createThreadLoopMutationKey>
 
@@ -27,7 +27,7 @@ export function createThreadLoopMutationOptions<TContext = unknown>(config: Part
 
 /**
  * @description Schedule a recurring whisper into this conversation (C21)
- * {@link /v1/threads/:threadId/loops}
+ * {@link /threads/:threadId/loops}
  */
 export function useCreateThreadLoop<TContext>(options: 
 {

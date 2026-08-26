@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { claimSignInCode } from "../client/claimSignInCode.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const claimSignInCodeSuspenseQueryKey = () => [{ url: '/v1/sign-in/loopback/claim' }] as const
+export const claimSignInCodeSuspenseQueryKey = () => [{ url: '/sign-in/loopback/claim' }] as const
 
 export type ClaimSignInCodeSuspenseQueryKey = ReturnType<typeof claimSignInCodeSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function claimSignInCodeSuspenseQueryOptions(config: Partial<RequestConfi
 
 /**
  * @description Claims the one-time sign-in code delivered to the loopback landing (single use)
- * {@link /v1/sign-in/loopback/claim}
+ * {@link /sign-in/loopback/claim}
  */
 export function useClaimSignInCodeSuspense<TData = ClaimSignInCodeQueryResponse, TQueryKey extends QueryKey = ClaimSignInCodeSuspenseQueryKey>(options: 
 {

@@ -8,13 +8,13 @@ import type { GetSettingsQueryResponse } from "../types/GetSettings.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getGetSettingsUrl() {
-  const res = { method: 'GET', url: `/v1/ui/settings` as const }
+  const res = { method: 'GET', url: `/ui/settings` as const }
   return res
 }
 
 /**
  * @description Settings — providers, stop criteria, general, app version (T08)
- * {@link /v1/ui/settings}
+ * {@link /ui/settings}
  */
 export async function getSettings(config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

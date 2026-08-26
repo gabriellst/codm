@@ -8,13 +8,13 @@ import type { GetMyAccountQueryResponse } from "../types/GetMyAccount.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getGetMyAccountUrl() {
-  const res = { method: 'GET', url: `/v1/ui/account` as const }
+  const res = { method: 'GET', url: `/ui/account` as const }
   return res
 }
 
 /**
  * @description Account settings read
- * {@link /v1/ui/account}
+ * {@link /ui/account}
  */
 export async function getMyAccount(config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

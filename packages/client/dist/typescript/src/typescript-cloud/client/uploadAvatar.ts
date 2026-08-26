@@ -8,13 +8,13 @@ import type { UploadAvatarMutationResponse } from "../types/UploadAvatar.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
 
 function getUploadAvatarUrl() {
-  const res = { method: 'POST', url: `/v1/identity/account/avatar` as const }
+  const res = { method: 'POST', url: `/identity/account/avatar` as const }
   return res
 }
 
 /**
  * @description MOCK. Accept-and-echo multipart avatar upload — returns new pictureUrl
- * {@link /v1/identity/account/avatar}
+ * {@link /identity/account/avatar}
  */
 export async function uploadAvatar(config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

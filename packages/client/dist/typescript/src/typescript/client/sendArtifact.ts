@@ -8,13 +8,13 @@ import type { SendArtifactMutationRequest, SendArtifactMutationResponse, SendArt
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getSendArtifactUrl(threadId: SendArtifactPathParams["threadId"], artifactId: SendArtifactPathParams["artifactId"]) {
-  const res = { method: 'POST', url: `/v1/threads/${threadId}/artifacts/${artifactId}/send` as const }
+  const res = { method: 'POST', url: `/threads/${threadId}/artifacts/${artifactId}/send` as const }
   return res
 }
 
 /**
  * @description Deliver an already-recorded artifact to the contact on the channel
- * {@link /v1/threads/:threadId/artifacts/:artifactId/send}
+ * {@link /threads/:threadId/artifacts/:artifactId/send}
  */
 export async function sendArtifact(threadId: SendArtifactPathParams["threadId"], artifactId: SendArtifactPathParams["artifactId"], data?: SendArtifactMutationRequest, config: Partial<RequestConfig<SendArtifactMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

@@ -8,13 +8,13 @@ import type { ConfigureContextBufferMutationRequest, ConfigureContextBufferMutat
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getConfigureContextBufferUrl(threadId: ConfigureContextBufferPathParams["threadId"]) {
-  const res = { method: 'PUT', url: `/v1/threads/${threadId}/buffer` as const }
+  const res = { method: 'PUT', url: `/threads/${threadId}/buffer` as const }
   return res
 }
 
 /**
  * @description Set the rolling context-buffer size {25,50,100,200} (C14)
- * {@link /v1/threads/:threadId/buffer}
+ * {@link /threads/:threadId/buffer}
  */
 export async function configureContextBuffer(threadId: ConfigureContextBufferPathParams["threadId"], data: ConfigureContextBufferMutationRequest, config: Partial<RequestConfig<ConfigureContextBufferMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

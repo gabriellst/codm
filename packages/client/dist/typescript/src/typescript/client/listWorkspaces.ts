@@ -8,13 +8,13 @@ import type { ListWorkspacesQueryResponse } from "../types/ListWorkspaces.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getListWorkspacesUrl() {
-  const res = { method: 'GET', url: `/v1/workspaces` as const }
+  const res = { method: 'GET', url: `/workspaces` as const }
   return res
 }
 
 /**
  * @description List registered workspaces with badges and thread counts (T07)
- * {@link /v1/workspaces}
+ * {@link /workspaces}
  */
 export async function listWorkspaces(config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

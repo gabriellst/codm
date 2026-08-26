@@ -8,13 +8,13 @@ import type { GetOnboardingQueryResponse } from "../types/GetOnboarding.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getGetOnboardingUrl() {
-  const res = { method: 'GET', url: `/v1/ui/onboarding` as const }
+  const res = { method: 'GET', url: `/ui/onboarding` as const }
   return res
 }
 
 /**
  * @description Onboarding — jornada persistida (currentStep/completedAt) + satisfação derivada dos passos de setup
- * {@link /v1/ui/onboarding}
+ * {@link /ui/onboarding}
  */
 export async function getOnboarding(config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

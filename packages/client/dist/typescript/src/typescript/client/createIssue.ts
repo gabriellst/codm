@@ -8,13 +8,13 @@ import type { CreateIssueMutationRequest, CreateIssueMutationResponse, CreateIss
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getCreateIssueUrl(threadId: CreateIssuePathParams["threadId"]) {
-  const res = { method: 'POST', url: `/v1/threads/${threadId}/issues` as const }
+  const res = { method: 'POST', url: `/threads/${threadId}/issues` as const }
   return res
 }
 
 /**
  * @description Open a new issue on a thread
- * {@link /v1/threads/:threadId/issues}
+ * {@link /threads/:threadId/issues}
  */
 export async function createIssue(threadId: CreateIssuePathParams["threadId"], data: CreateIssueMutationRequest, config: Partial<RequestConfig<CreateIssueMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

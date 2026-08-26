@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { getAttachThreadWizard } from "../client/getAttachThreadWizard.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const getAttachThreadWizardQueryKey = (params?: GetAttachThreadWizardQueryParams) => [{ url: '/v1/ui/attach-thread-wizard' }, ...(params ? [params] : [])] as const
+export const getAttachThreadWizardQueryKey = (params?: GetAttachThreadWizardQueryParams) => [{ url: '/ui/attach-thread-wizard' }, ...(params ? [params] : [])] as const
 
 export type GetAttachThreadWizardQueryKey = ReturnType<typeof getAttachThreadWizardQueryKey>
 
@@ -28,7 +28,7 @@ export function getAttachThreadWizardQueryOptions(params?: GetAttachThreadWizard
 
 /**
  * @description Attach-thread wizard — contacts, workspaces, providers + attached/no-channel flags (T15)
- * {@link /v1/ui/attach-thread-wizard}
+ * {@link /ui/attach-thread-wizard}
  */
 export function useGetAttachThreadWizard<TData = GetAttachThreadWizardQueryResponse, TQueryData = GetAttachThreadWizardQueryResponse, TQueryKey extends QueryKey = GetAttachThreadWizardQueryKey>(params?: GetAttachThreadWizardQueryParams, options: 
 {

@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { configureThinkingIndicator } from "../client/configureThinkingIndicator.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const configureThinkingIndicatorMutationKey = () => [{ url: '/v1/threads/:threadId/thinking-indicator' }] as const
+export const configureThinkingIndicatorMutationKey = () => [{ url: '/threads/:threadId/thinking-indicator' }] as const
 
 export type ConfigureThinkingIndicatorMutationKey = ReturnType<typeof configureThinkingIndicatorMutationKey>
 
@@ -27,7 +27,7 @@ export function configureThinkingIndicatorMutationOptions<TContext = unknown>(co
 
 /**
  * @description Turn the "Pensando" channel placeholder on or off for this conversation
- * {@link /v1/threads/:threadId/thinking-indicator}
+ * {@link /threads/:threadId/thinking-indicator}
  */
 export function useConfigureThinkingIndicator<TContext>(options: 
 {

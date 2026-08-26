@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { deleteThreadLoop } from "../client/deleteThreadLoop.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const deleteThreadLoopMutationKey = () => [{ url: '/v1/threads/:threadId/loops/:loopId' }] as const
+export const deleteThreadLoopMutationKey = () => [{ url: '/threads/:threadId/loops/:loopId' }] as const
 
 export type DeleteThreadLoopMutationKey = ReturnType<typeof deleteThreadLoopMutationKey>
 
@@ -27,7 +27,7 @@ export function deleteThreadLoopMutationOptions<TContext = unknown>(config: Part
 
 /**
  * @description Remove a loop (C24)
- * {@link /v1/threads/:threadId/loops/:loopId}
+ * {@link /threads/:threadId/loops/:loopId}
  */
 export function useDeleteThreadLoop<TContext>(options: 
 {

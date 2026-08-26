@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { raiseStop } from "../client/raiseStop.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const raiseStopMutationKey = () => [{ url: '/v1/threads/:threadId/issues/:issueId/stops' }] as const
+export const raiseStopMutationKey = () => [{ url: '/threads/:threadId/issues/:issueId/stops' }] as const
 
 export type RaiseStopMutationKey = ReturnType<typeof raiseStopMutationKey>
 
@@ -27,7 +27,7 @@ export function raiseStopMutationOptions<TContext = unknown>(config: Partial<Req
 
 /**
  * @description Declare that the agent is blocked and needs the human (approval, classification, …)
- * {@link /v1/threads/:threadId/issues/:issueId/stops}
+ * {@link /threads/:threadId/issues/:issueId/stops}
  */
 export function useRaiseStop<TContext>(options: 
 {

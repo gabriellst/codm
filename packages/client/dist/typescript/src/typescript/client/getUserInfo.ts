@@ -8,13 +8,13 @@ import type { GetUserInfoQueryResponse } from "../types/GetUserInfo.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getGetUserInfoUrl() {
-  const res = { method: 'GET', url: `/v1/ui/user-info` as const }
+  const res = { method: 'GET', url: `/ui/user-info` as const }
   return res
 }
 
 /**
  * @description Header context — user identity, all member owners (role), active owner, and profile alerts
- * {@link /v1/ui/user-info}
+ * {@link /ui/user-info}
  */
 export async function getUserInfo(config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

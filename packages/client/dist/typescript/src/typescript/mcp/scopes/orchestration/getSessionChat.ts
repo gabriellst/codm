@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description Full thread conversation + control-plane state + active stops (T09)
- * {@link /v1/threads/:threadId/chat}
+ * {@link /threads/:threadId/chat}
  */
 export async function getSessionChatHandler({ threadId }: { threadId: GetSessionChatPathParams["threadId"] }): Promise<Promise<CallToolResult>> {
 
 
 
 
-  const res = await fetch<GetSessionChatQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/v1/threads/${threadId}/chat` })
+  const res = await fetch<GetSessionChatQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/threads/${threadId}/chat` })
   return {
               content: [
                 {

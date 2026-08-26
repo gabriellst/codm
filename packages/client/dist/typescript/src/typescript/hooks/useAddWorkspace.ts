@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { addWorkspace } from "../client/addWorkspace.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const addWorkspaceMutationKey = () => [{ url: '/v1/workspaces' }] as const
+export const addWorkspaceMutationKey = () => [{ url: '/workspaces' }] as const
 
 export type AddWorkspaceMutationKey = ReturnType<typeof addWorkspaceMutationKey>
 
@@ -27,7 +27,7 @@ export function addWorkspaceMutationOptions<TContext = unknown>(config: Partial<
 
 /**
  * @description Register a local project folder; auto-detects git / Claude-project badges
- * {@link /v1/workspaces}
+ * {@link /workspaces}
  */
 export function useAddWorkspace<TContext>(options: 
 {

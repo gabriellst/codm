@@ -8,13 +8,13 @@ import type { GetNeedsYouPanelQueryResponse, GetNeedsYouPanelPathParams } from "
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getGetNeedsYouPanelUrl(threadId: GetNeedsYouPanelPathParams["threadId"]) {
-  const res = { method: 'GET', url: `/v1/threads/${threadId}/needs-you` as const }
+  const res = { method: 'GET', url: `/threads/${threadId}/needs-you` as const }
   return res
 }
 
 /**
  * @description Active stops on a thread with per-kind resolution actions (T14)
- * {@link /v1/threads/:threadId/needs-you}
+ * {@link /threads/:threadId/needs-you}
  */
 export async function getNeedsYouPanel(threadId: GetNeedsYouPanelPathParams["threadId"], config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

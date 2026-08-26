@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description Turn the "Pensando" channel placeholder on or off for this conversation
- * {@link /v1/threads/:threadId/thinking-indicator}
+ * {@link /threads/:threadId/thinking-indicator}
  */
 export async function configureThinkingIndicatorHandler({ threadId, data }: { threadId: ConfigureThinkingIndicatorPathParams["threadId"]; data: ConfigureThinkingIndicatorMutationRequest }): Promise<Promise<CallToolResult>> {
 
 
   const requestData = data
 
-  const res = await fetch<ConfigureThinkingIndicatorMutationResponse, ResponseErrorConfig<Error>, ConfigureThinkingIndicatorMutationRequest>({ method : "PUT", url : `/v1/threads/${threadId}/thinking-indicator`, data : requestData })
+  const res = await fetch<ConfigureThinkingIndicatorMutationResponse, ResponseErrorConfig<Error>, ConfigureThinkingIndicatorMutationRequest>({ method : "PUT", url : `/threads/${threadId}/thinking-indicator`, data : requestData })
   return {
               content: [
                 {

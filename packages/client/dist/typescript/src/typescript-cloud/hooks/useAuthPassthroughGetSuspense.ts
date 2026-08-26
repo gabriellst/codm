@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { authPassthroughGet } from "../client/authPassthroughGet.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const authPassthroughGetSuspenseQueryKey = () => [{ url: '/v1/auth/*' }] as const
+export const authPassthroughGetSuspenseQueryKey = () => [{ url: '/auth/*' }] as const
 
 export type AuthPassthroughGetSuspenseQueryKey = ReturnType<typeof authPassthroughGetSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function authPassthroughGetSuspenseQueryOptions(config: Partial<RequestCo
 
 /**
  * @description better-auth passthrough
- * {@link /v1/auth/*}
+ * {@link /auth/*}
  */
 export function useAuthPassthroughGetSuspense<TData = AuthPassthroughGetQueryResponse, TQueryKey extends QueryKey = AuthPassthroughGetSuspenseQueryKey>(options: 
 {

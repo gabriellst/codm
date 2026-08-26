@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { getIssuesOverview } from "../client/getIssuesOverview.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const getIssuesOverviewQueryKey = (params?: GetIssuesOverviewQueryParams) => [{ url: '/v1/issues' }, ...(params ? [params] : [])] as const
+export const getIssuesOverviewQueryKey = (params?: GetIssuesOverviewQueryParams) => [{ url: '/issues' }, ...(params ? [params] : [])] as const
 
 export type GetIssuesOverviewQueryKey = ReturnType<typeof getIssuesOverviewQueryKey>
 
@@ -28,7 +28,7 @@ export function getIssuesOverviewQueryOptions(params?: GetIssuesOverviewQueryPar
 
 /**
  * @description All issues across every thread, grouped by status (T04)
- * {@link /v1/issues}
+ * {@link /issues}
  */
 export function useGetIssuesOverview<TData = GetIssuesOverviewQueryResponse, TQueryData = GetIssuesOverviewQueryResponse, TQueryKey extends QueryKey = GetIssuesOverviewQueryKey>(params?: GetIssuesOverviewQueryParams, options: 
 {

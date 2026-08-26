@@ -8,13 +8,13 @@ import type { UpdateOwnerSettingsMutationRequest, UpdateOwnerSettingsMutationRes
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
 
 function getUpdateOwnerSettingsUrl() {
-  const res = { method: 'PATCH', url: `/v1/owners/settings` as const }
+  const res = { method: 'PATCH', url: `/owners/settings` as const }
   return res
 }
 
 /**
  * @description Update owner profile settings (name / picture / timezone)
- * {@link /v1/owners/settings}
+ * {@link /owners/settings}
  */
 export async function updateOwnerSettings(data?: UpdateOwnerSettingsMutationRequest, config: Partial<RequestConfig<UpdateOwnerSettingsMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

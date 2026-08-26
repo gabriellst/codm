@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description All issues across every thread, grouped by status (T04)
- * {@link /v1/issues}
+ * {@link /issues}
  */
 export async function getIssuesOverviewHandler({ params }: { params?: GetIssuesOverviewQueryParams } = {}): Promise<Promise<CallToolResult>> {
 
 
 
 
-  const res = await fetch<GetIssuesOverviewQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/v1/issues`, params })
+  const res = await fetch<GetIssuesOverviewQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/issues`, params })
   return {
               content: [
                 {

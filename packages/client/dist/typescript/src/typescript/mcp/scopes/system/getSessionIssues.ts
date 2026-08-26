@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description Issues of one thread grouped by status + auto-archive note (T11)
- * {@link /v1/threads/:threadId/issues}
+ * {@link /threads/:threadId/issues}
  */
 export async function getSessionIssuesHandler({ threadId }: { threadId: GetSessionIssuesPathParams["threadId"] }): Promise<Promise<CallToolResult>> {
 
 
 
 
-  const res = await fetch<GetSessionIssuesQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/v1/threads/${threadId}/issues` })
+  const res = await fetch<GetSessionIssuesQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/threads/${threadId}/issues` })
   return {
               content: [
                 {

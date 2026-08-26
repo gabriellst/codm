@@ -8,13 +8,13 @@ import type { GetIssueStatusQueryResponse, GetIssueStatusPathParams } from "../t
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getGetIssueStatusUrl(threadId: GetIssueStatusPathParams["threadId"], issueId: GetIssueStatusPathParams["issueId"]) {
-  const res = { method: 'GET', url: `/v1/threads/${threadId}/issues/${issueId}/status` as const }
+  const res = { method: 'GET', url: `/threads/${threadId}/issues/${issueId}/status` as const }
   return res
 }
 
 /**
  * @description Status of one issue of this thread
- * {@link /v1/threads/:threadId/issues/:issueId/status}
+ * {@link /threads/:threadId/issues/:issueId/status}
  */
 export async function getIssueStatus(threadId: GetIssueStatusPathParams["threadId"], issueId: GetIssueStatusPathParams["issueId"], config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

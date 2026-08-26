@@ -8,13 +8,13 @@ import type { ResolveStopMutationRequest, ResolveStopMutationResponse, ResolveSt
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getResolveStopUrl(stopId: ResolveStopPathParams["stopId"]) {
-  const res = { method: 'POST', url: `/v1/stops/${stopId}/resolve` as const }
+  const res = { method: 'POST', url: `/stops/${stopId}/resolve` as const }
   return res
 }
 
 /**
  * @description Resolve a stop — retry / review&send / take over / approve / deny (C25)
- * {@link /v1/stops/:stopId/resolve}
+ * {@link /stops/:stopId/resolve}
  */
 export async function resolveStop(stopId: ResolveStopPathParams["stopId"], data: ResolveStopMutationRequest, config: Partial<RequestConfig<ResolveStopMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

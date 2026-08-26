@@ -8,13 +8,13 @@ import type { SteerThreadMutationRequest, SteerThreadMutationResponse, SteerThre
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getSteerThreadUrl(threadId: SteerThreadPathParams["threadId"]) {
-  const res = { method: 'POST', url: `/v1/threads/${threadId}/steer` as const }
+  const res = { method: 'POST', url: `/threads/${threadId}/steer` as const }
   return res
 }
 
 /**
  * @description Whisper a steer into the thread (agents-only; never sent to the channel) (C19)
- * {@link /v1/threads/:threadId/steer}
+ * {@link /threads/:threadId/steer}
  */
 export async function steerThread(threadId: SteerThreadPathParams["threadId"], data: SteerThreadMutationRequest, config: Partial<RequestConfig<SteerThreadMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

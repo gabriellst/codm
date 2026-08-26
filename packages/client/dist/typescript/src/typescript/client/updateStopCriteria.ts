@@ -8,13 +8,13 @@ import type { UpdateStopCriteriaMutationRequest, UpdateStopCriteriaMutationRespo
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getUpdateStopCriteriaUrl() {
-  const res = { method: 'PUT', url: `/v1/settings/stop-criteria` as const }
+  const res = { method: 'PUT', url: `/settings/stop-criteria` as const }
   return res
 }
 
 /**
  * @description Update the global stop-criteria toggles (C29)
- * {@link /v1/settings/stop-criteria}
+ * {@link /settings/stop-criteria}
  */
 export async function updateStopCriteria(data: UpdateStopCriteriaMutationRequest, config: Partial<RequestConfig<UpdateStopCriteriaMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

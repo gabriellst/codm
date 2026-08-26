@@ -8,13 +8,13 @@ import type { SteerIssueTurnMutationRequest, SteerIssueTurnMutationResponse, Ste
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getSteerIssueTurnUrl(threadId: SteerIssueTurnPathParams["threadId"], issueId: SteerIssueTurnPathParams["issueId"]) {
-  const res = { method: 'POST', url: `/v1/threads/${threadId}/issues/${issueId}/steer` as const }
+  const res = { method: 'POST', url: `/threads/${threadId}/issues/${issueId}/steer` as const }
   return res
 }
 
 /**
  * @description Redirect an issue of this thread — including one that already finished
- * {@link /v1/threads/:threadId/issues/:issueId/steer}
+ * {@link /threads/:threadId/issues/:issueId/steer}
  */
 export async function steerIssueTurn(threadId: SteerIssueTurnPathParams["threadId"], issueId: SteerIssueTurnPathParams["issueId"], data: SteerIssueTurnMutationRequest, config: Partial<RequestConfig<SteerIssueTurnMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

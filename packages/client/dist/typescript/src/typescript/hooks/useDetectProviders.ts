@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { detectProviders } from "../client/detectProviders.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const detectProvidersQueryKey = (params?: DetectProvidersQueryParams) => [{ url: '/v1/terminal/providers' }, ...(params ? [params] : [])] as const
+export const detectProvidersQueryKey = (params?: DetectProvidersQueryParams) => [{ url: '/terminal/providers' }, ...(params ? [params] : [])] as const
 
 export type DetectProvidersQueryKey = ReturnType<typeof detectProvidersQueryKey>
 
@@ -28,7 +28,7 @@ export function detectProvidersQueryOptions(params?: DetectProvidersQueryParams,
 
 /**
  * @description Detected agent provider CLIs (claude-code / codex / opencode) with binary path, version, install status and whether a runner exists for them yet (comingSoon)
- * {@link /v1/terminal/providers}
+ * {@link /terminal/providers}
  */
 export function useDetectProviders<TData = DetectProvidersQueryResponse, TQueryData = DetectProvidersQueryResponse, TQueryKey extends QueryKey = DetectProvidersQueryKey>(params?: DetectProvidersQueryParams, options: 
 {

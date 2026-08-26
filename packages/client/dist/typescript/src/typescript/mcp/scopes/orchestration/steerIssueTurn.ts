@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description Redirect an issue of this thread — including one that already finished
- * {@link /v1/threads/:threadId/issues/:issueId/steer}
+ * {@link /threads/:threadId/issues/:issueId/steer}
  */
 export async function steerIssueTurnHandler({ threadId, issueId, data }: { threadId: SteerIssueTurnPathParams["threadId"]; issueId: SteerIssueTurnPathParams["issueId"]; data: SteerIssueTurnMutationRequest }): Promise<Promise<CallToolResult>> {
 
 
   const requestData = data
 
-  const res = await fetch<SteerIssueTurnMutationResponse, ResponseErrorConfig<Error>, SteerIssueTurnMutationRequest>({ method : "POST", url : `/v1/threads/${threadId}/issues/${issueId}/steer`, data : requestData })
+  const res = await fetch<SteerIssueTurnMutationResponse, ResponseErrorConfig<Error>, SteerIssueTurnMutationRequest>({ method : "POST", url : `/threads/${threadId}/issues/${issueId}/steer`, data : requestData })
   return {
               content: [
                 {

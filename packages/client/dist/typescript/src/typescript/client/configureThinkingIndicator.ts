@@ -8,13 +8,13 @@ import type { ConfigureThinkingIndicatorMutationRequest, ConfigureThinkingIndica
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getConfigureThinkingIndicatorUrl(threadId: ConfigureThinkingIndicatorPathParams["threadId"]) {
-  const res = { method: 'PUT', url: `/v1/threads/${threadId}/thinking-indicator` as const }
+  const res = { method: 'PUT', url: `/threads/${threadId}/thinking-indicator` as const }
   return res
 }
 
 /**
  * @description Turn the "Pensando" channel placeholder on or off for this conversation
- * {@link /v1/threads/:threadId/thinking-indicator}
+ * {@link /threads/:threadId/thinking-indicator}
  */
 export async function configureThinkingIndicator(threadId: ConfigureThinkingIndicatorPathParams["threadId"], data: ConfigureThinkingIndicatorMutationRequest, config: Partial<RequestConfig<ConfigureThinkingIndicatorMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

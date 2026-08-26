@@ -8,13 +8,13 @@ import type { CreateThreadLoopMutationRequest, CreateThreadLoopMutationResponse,
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getCreateThreadLoopUrl(threadId: CreateThreadLoopPathParams["threadId"]) {
-  const res = { method: 'POST', url: `/v1/threads/${threadId}/loops` as const }
+  const res = { method: 'POST', url: `/threads/${threadId}/loops` as const }
   return res
 }
 
 /**
  * @description Schedule a recurring whisper into this conversation (C21)
- * {@link /v1/threads/:threadId/loops}
+ * {@link /threads/:threadId/loops}
  */
 export async function createThreadLoop(threadId: CreateThreadLoopPathParams["threadId"], data: CreateThreadLoopMutationRequest, config: Partial<RequestConfig<CreateThreadLoopMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

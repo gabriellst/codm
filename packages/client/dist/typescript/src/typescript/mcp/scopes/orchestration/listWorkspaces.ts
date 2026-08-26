@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description List registered workspaces with badges and thread counts (T07)
- * {@link /v1/workspaces}
+ * {@link /workspaces}
  */
 export async function listWorkspacesHandler(): Promise<Promise<CallToolResult>> {
 
 
 
 
-  const res = await fetch<ListWorkspacesQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/v1/workspaces` })
+  const res = await fetch<ListWorkspacesQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/workspaces` })
   return {
               content: [
                 {

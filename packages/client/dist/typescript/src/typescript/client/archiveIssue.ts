@@ -8,13 +8,13 @@ import type { ArchiveIssueMutationResponse, ArchiveIssuePathParams } from "../ty
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getArchiveIssueUrl(issueId: ArchiveIssuePathParams["issueId"]) {
-  const res = { method: 'POST', url: `/v1/issues/${issueId}/archive` as const }
+  const res = { method: 'POST', url: `/issues/${issueId}/archive` as const }
   return res
 }
 
 /**
  * @description Archive an issue (C26)
- * {@link /v1/issues/:issueId/archive}
+ * {@link /issues/:issueId/archive}
  */
 export async function archiveIssue(issueId: ArchiveIssuePathParams["issueId"], config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

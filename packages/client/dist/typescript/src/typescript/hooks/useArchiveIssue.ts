@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { archiveIssue } from "../client/archiveIssue.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const archiveIssueMutationKey = () => [{ url: '/v1/issues/:issueId/archive' }] as const
+export const archiveIssueMutationKey = () => [{ url: '/issues/:issueId/archive' }] as const
 
 export type ArchiveIssueMutationKey = ReturnType<typeof archiveIssueMutationKey>
 
@@ -27,7 +27,7 @@ export function archiveIssueMutationOptions<TContext = unknown>(config: Partial<
 
 /**
  * @description Archive an issue (C26)
- * {@link /v1/issues/:issueId/archive}
+ * {@link /issues/:issueId/archive}
  */
 export function useArchiveIssue<TContext>(options: 
 {

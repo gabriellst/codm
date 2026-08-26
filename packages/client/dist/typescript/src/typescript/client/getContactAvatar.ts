@@ -8,13 +8,13 @@ import type { GetContactAvatarQueryResponse, GetContactAvatarPathParams } from "
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getGetContactAvatarUrl(channelId: GetContactAvatarPathParams["channelId"], remoteId: GetContactAvatarPathParams["remoteId"]) {
-  const res = { method: 'GET', url: `/v1/ui/avatars/${channelId}/${remoteId}` as const }
+  const res = { method: 'GET', url: `/ui/avatars/${channelId}/${remoteId}` as const }
   return res
 }
 
 /**
  * @description The photo of one channel contact, cached daemon-side (the console renders it in chat bubbles and rosters)
- * {@link /v1/ui/avatars/:channelId/:remoteId}
+ * {@link /ui/avatars/:channelId/:remoteId}
  */
 export async function getContactAvatar(channelId: GetContactAvatarPathParams["channelId"], remoteId: GetContactAvatarPathParams["remoteId"], config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

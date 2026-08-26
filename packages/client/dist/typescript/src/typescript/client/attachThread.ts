@@ -8,13 +8,13 @@ import type { AttachThreadMutationRequest, AttachThreadMutationResponse } from "
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getAttachThreadUrl() {
-  const res = { method: 'POST', url: `/v1/threads` as const }
+  const res = { method: 'POST', url: `/threads` as const }
   return res
 }
 
 /**
  * @description Attach a contact/group to a workspace + providers (C09)
- * {@link /v1/threads}
+ * {@link /threads}
  */
 export async function attachThread(data: AttachThreadMutationRequest, config: Partial<RequestConfig<AttachThreadMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

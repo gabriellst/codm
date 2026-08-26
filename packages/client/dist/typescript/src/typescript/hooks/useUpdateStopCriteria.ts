@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { updateStopCriteria } from "../client/updateStopCriteria.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const updateStopCriteriaMutationKey = () => [{ url: '/v1/settings/stop-criteria' }] as const
+export const updateStopCriteriaMutationKey = () => [{ url: '/settings/stop-criteria' }] as const
 
 export type UpdateStopCriteriaMutationKey = ReturnType<typeof updateStopCriteriaMutationKey>
 
@@ -27,7 +27,7 @@ export function updateStopCriteriaMutationOptions<TContext = unknown>(config: Pa
 
 /**
  * @description Update the global stop-criteria toggles (C29)
- * {@link /v1/settings/stop-criteria}
+ * {@link /settings/stop-criteria}
  */
 export function useUpdateStopCriteria<TContext>(options: 
 {

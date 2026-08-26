@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { listenEvents } from "../client/listenEvents.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const listenEventsSuspenseQueryKey = () => [{ url: '/v1/ui/events' }] as const
+export const listenEventsSuspenseQueryKey = () => [{ url: '/ui/events' }] as const
 
 export type ListenEventsSuspenseQueryKey = ReturnType<typeof listenEventsSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function listenEventsSuspenseQueryOptions(config: Partial<RequestConfig> 
 
 /**
  * @description Owner-scoped real-time integration events via SSE
- * {@link /v1/ui/events}
+ * {@link /ui/events}
  */
 export function useListenEventsSuspense<TData = ListenEventsQueryResponse, TQueryKey extends QueryKey = ListenEventsSuspenseQueryKey>(options: 
 {

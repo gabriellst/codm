@@ -8,13 +8,13 @@ import type { AddWorkspaceMutationRequest, AddWorkspaceMutationResponse } from "
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getAddWorkspaceUrl() {
-  const res = { method: 'POST', url: `/v1/workspaces` as const }
+  const res = { method: 'POST', url: `/workspaces` as const }
   return res
 }
 
 /**
  * @description Register a local project folder; auto-detects git / Claude-project badges
- * {@link /v1/workspaces}
+ * {@link /workspaces}
  */
 export async function addWorkspace(data: AddWorkspaceMutationRequest, config: Partial<RequestConfig<AddWorkspaceMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

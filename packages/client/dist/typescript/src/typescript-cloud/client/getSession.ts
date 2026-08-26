@@ -8,13 +8,13 @@ import type { GetSessionQueryResponse } from "../types/GetSession.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
 
 function getGetSessionUrl() {
-  const res = { method: 'GET', url: `/v1/session` as const }
+  const res = { method: 'GET', url: `/session` as const }
   return res
 }
 
 /**
  * @description Get the current authenticated session
- * {@link /v1/session}
+ * {@link /session}
  */
 export async function getSession(config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

@@ -8,13 +8,13 @@ import type { GetArtifactContentQueryResponse, GetArtifactContentPathParams } fr
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getGetArtifactContentUrl(threadId: GetArtifactContentPathParams["threadId"], artifactId: GetArtifactContentPathParams["artifactId"]) {
-  const res = { method: 'GET', url: `/v1/threads/${threadId}/artifacts/${artifactId}/content` as const }
+  const res = { method: 'GET', url: `/threads/${threadId}/artifacts/${artifactId}/content` as const }
   return res
 }
 
 /**
  * @description The bytes of one recorded artifact, for the console preview
- * {@link /v1/threads/:threadId/artifacts/:artifactId/content}
+ * {@link /threads/:threadId/artifacts/:artifactId/content}
  */
 export async function getArtifactContent(threadId: GetArtifactContentPathParams["threadId"], artifactId: GetArtifactContentPathParams["artifactId"], config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

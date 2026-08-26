@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description Declare the lifecycle status of an issue (done / needs input)
- * {@link /v1/threads/:threadId/issues/:issueId/status}
+ * {@link /threads/:threadId/issues/:issueId/status}
  */
 export async function transitionIssueStatusHandler({ threadId, issueId, data }: { threadId: TransitionIssueStatusPathParams["threadId"]; issueId: TransitionIssueStatusPathParams["issueId"]; data: TransitionIssueStatusMutationRequest }): Promise<Promise<CallToolResult>> {
 
 
   const requestData = data
 
-  const res = await fetch<TransitionIssueStatusMutationResponse, ResponseErrorConfig<Error>, TransitionIssueStatusMutationRequest>({ method : "POST", url : `/v1/threads/${threadId}/issues/${issueId}/status`, data : requestData })
+  const res = await fetch<TransitionIssueStatusMutationResponse, ResponseErrorConfig<Error>, TransitionIssueStatusMutationRequest>({ method : "POST", url : `/threads/${threadId}/issues/${issueId}/status`, data : requestData })
   return {
               content: [
                 {

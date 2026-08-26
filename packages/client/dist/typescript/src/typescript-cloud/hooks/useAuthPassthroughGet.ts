@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { authPassthroughGet } from "../client/authPassthroughGet.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const authPassthroughGetQueryKey = () => [{ url: '/v1/auth/*' }] as const
+export const authPassthroughGetQueryKey = () => [{ url: '/auth/*' }] as const
 
 export type AuthPassthroughGetQueryKey = ReturnType<typeof authPassthroughGetQueryKey>
 
@@ -28,7 +28,7 @@ export function authPassthroughGetQueryOptions(config: Partial<RequestConfig> & 
 
 /**
  * @description better-auth passthrough
- * {@link /v1/auth/*}
+ * {@link /auth/*}
  */
 export function useAuthPassthroughGet<TData = AuthPassthroughGetQueryResponse, TQueryData = AuthPassthroughGetQueryResponse, TQueryKey extends QueryKey = AuthPassthroughGetQueryKey>(options: 
 {

@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description Remove a loop (C24)
- * {@link /v1/threads/:threadId/loops/:loopId}
+ * {@link /threads/:threadId/loops/:loopId}
  */
 export async function deleteThreadLoopHandler({ threadId, loopId }: { threadId: DeleteThreadLoopPathParams["threadId"]; loopId: DeleteThreadLoopPathParams["loopId"] }): Promise<Promise<CallToolResult>> {
 
 
 
 
-  const res = await fetch<DeleteThreadLoopMutationResponse, ResponseErrorConfig<Error>, unknown>({ method : "DELETE", url : `/v1/threads/${threadId}/loops/${loopId}` })
+  const res = await fetch<DeleteThreadLoopMutationResponse, ResponseErrorConfig<Error>, unknown>({ method : "DELETE", url : `/threads/${threadId}/loops/${loopId}` })
   return {
               content: [
                 {

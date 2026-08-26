@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { updateThreadLoop } from "../client/updateThreadLoop.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const updateThreadLoopMutationKey = () => [{ url: '/v1/threads/:threadId/loops/:loopId' }] as const
+export const updateThreadLoopMutationKey = () => [{ url: '/threads/:threadId/loops/:loopId' }] as const
 
 export type UpdateThreadLoopMutationKey = ReturnType<typeof updateThreadLoopMutationKey>
 
@@ -27,7 +27,7 @@ export function updateThreadLoopMutationOptions<TContext = unknown>(config: Part
 
 /**
  * @description Edit a loop — its prompt and its schedule (C22)
- * {@link /v1/threads/:threadId/loops/:loopId}
+ * {@link /threads/:threadId/loops/:loopId}
  */
 export function useUpdateThreadLoop<TContext>(options: 
 {

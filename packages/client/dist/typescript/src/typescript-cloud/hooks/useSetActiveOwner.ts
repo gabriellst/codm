@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { setActiveOwner } from "../client/setActiveOwner.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const setActiveOwnerMutationKey = () => [{ url: '/v1/owners/:ownerId/activate' }] as const
+export const setActiveOwnerMutationKey = () => [{ url: '/owners/:ownerId/activate' }] as const
 
 export type SetActiveOwnerMutationKey = ReturnType<typeof setActiveOwnerMutationKey>
 
@@ -27,7 +27,7 @@ export function setActiveOwnerMutationOptions<TContext = unknown>(config: Partia
 
 /**
  * @description Switch the authenticated session to the given owner (SPEC-07 SetActiveOwner)
- * {@link /v1/owners/:ownerId/activate}
+ * {@link /owners/:ownerId/activate}
  */
 export function useSetActiveOwner<TContext>(options: 
 {

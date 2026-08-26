@@ -8,13 +8,13 @@ import type { SetActiveOwnerMutationResponse, SetActiveOwnerPathParams } from ".
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
 
 function getSetActiveOwnerUrl(ownerId: SetActiveOwnerPathParams["ownerId"]) {
-  const res = { method: 'POST', url: `/v1/owners/${ownerId}/activate` as const }
+  const res = { method: 'POST', url: `/owners/${ownerId}/activate` as const }
   return res
 }
 
 /**
  * @description Switch the authenticated session to the given owner (SPEC-07 SetActiveOwner)
- * {@link /v1/owners/:ownerId/activate}
+ * {@link /owners/:ownerId/activate}
  */
 export async function setActiveOwner(ownerId: SetActiveOwnerPathParams["ownerId"], config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { createOwner } from "../client/createOwner.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const createOwnerMutationKey = () => [{ url: '/v1/owners' }] as const
+export const createOwnerMutationKey = () => [{ url: '/owners' }] as const
 
 export type CreateOwnerMutationKey = ReturnType<typeof createOwnerMutationKey>
 
@@ -27,7 +27,7 @@ export function createOwnerMutationOptions<TContext = unknown>(config: Partial<R
 
 /**
  * @description Create a new owner (tenant); the creator becomes the responsible user
- * {@link /v1/owners}
+ * {@link /owners}
  */
 export function useCreateOwner<TContext>(options: 
 {

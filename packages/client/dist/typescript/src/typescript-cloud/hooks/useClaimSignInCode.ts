@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { claimSignInCode } from "../client/claimSignInCode.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const claimSignInCodeQueryKey = () => [{ url: '/v1/sign-in/loopback/claim' }] as const
+export const claimSignInCodeQueryKey = () => [{ url: '/sign-in/loopback/claim' }] as const
 
 export type ClaimSignInCodeQueryKey = ReturnType<typeof claimSignInCodeQueryKey>
 
@@ -28,7 +28,7 @@ export function claimSignInCodeQueryOptions(config: Partial<RequestConfig> & { c
 
 /**
  * @description Claims the one-time sign-in code delivered to the loopback landing (single use)
- * {@link /v1/sign-in/loopback/claim}
+ * {@link /sign-in/loopback/claim}
  */
 export function useClaimSignInCode<TData = ClaimSignInCodeQueryResponse, TQueryData = ClaimSignInCodeQueryResponse, TQueryKey extends QueryKey = ClaimSignInCodeQueryKey>(options: 
 {

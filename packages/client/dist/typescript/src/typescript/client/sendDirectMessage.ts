@@ -8,13 +8,13 @@ import type { SendDirectMessageMutationRequest, SendDirectMessageMutationRespons
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getSendDirectMessageUrl(threadId: SendDirectMessagePathParams["threadId"]) {
-  const res = { method: 'POST', url: `/v1/threads/${threadId}/direct` as const }
+  const res = { method: 'POST', url: `/threads/${threadId}/direct` as const }
   return res
 }
 
 /**
  * @description Send a direct message as the operator (only while paused) (C20)
- * {@link /v1/threads/:threadId/direct}
+ * {@link /threads/:threadId/direct}
  */
 export async function sendDirectMessage(threadId: SendDirectMessagePathParams["threadId"], data: SendDirectMessageMutationRequest, config: Partial<RequestConfig<SendDirectMessageMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

@@ -8,13 +8,13 @@ import type { GetIssuesOverviewQueryResponse, GetIssuesOverviewQueryParams } fro
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getGetIssuesOverviewUrl() {
-  const res = { method: 'GET', url: `/v1/issues` as const }
+  const res = { method: 'GET', url: `/issues` as const }
   return res
 }
 
 /**
  * @description All issues across every thread, grouped by status (T04)
- * {@link /v1/issues}
+ * {@link /issues}
  */
 export async function getIssuesOverview(params?: GetIssuesOverviewQueryParams, config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

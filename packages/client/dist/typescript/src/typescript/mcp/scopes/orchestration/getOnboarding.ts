@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description Onboarding — jornada persistida (currentStep/completedAt) + satisfação derivada dos passos de setup
- * {@link /v1/ui/onboarding}
+ * {@link /ui/onboarding}
  */
 export async function getOnboardingHandler(): Promise<Promise<CallToolResult>> {
 
 
 
 
-  const res = await fetch<GetOnboardingQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/v1/ui/onboarding` })
+  const res = await fetch<GetOnboardingQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/ui/onboarding` })
   return {
               content: [
                 {

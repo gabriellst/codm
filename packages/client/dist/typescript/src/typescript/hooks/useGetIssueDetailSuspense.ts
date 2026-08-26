@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { getIssueDetail } from "../client/getIssueDetail.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const getIssueDetailSuspenseQueryKey = (issueId: GetIssueDetailPathParams["issueId"] | undefined) => [{ url: '/v1/issues/:issueId', params: {issueId:issueId} }] as const
+export const getIssueDetailSuspenseQueryKey = (issueId: GetIssueDetailPathParams["issueId"] | undefined) => [{ url: '/issues/:issueId', params: {issueId:issueId} }] as const
 
 export type GetIssueDetailSuspenseQueryKey = ReturnType<typeof getIssueDetailSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function getIssueDetailSuspenseQueryOptions(issueId: GetIssueDetailPathPa
 
 /**
  * @description One issue drill-down: terminal log, routed messages, stops (T12)
- * {@link /v1/issues/:issueId}
+ * {@link /issues/:issueId}
  */
 export function useGetIssueDetailSuspense<TData = GetIssueDetailQueryResponse, TQueryKey extends QueryKey = GetIssueDetailSuspenseQueryKey>(issueId: GetIssueDetailPathParams["issueId"], options: 
 {

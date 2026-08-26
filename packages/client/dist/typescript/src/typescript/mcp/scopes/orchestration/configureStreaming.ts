@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description Turn intermediate content cuts on or off for this conversation
- * {@link /v1/threads/:threadId/streaming}
+ * {@link /threads/:threadId/streaming}
  */
 export async function configureStreamingHandler({ threadId, data }: { threadId: ConfigureStreamingPathParams["threadId"]; data: ConfigureStreamingMutationRequest }): Promise<Promise<CallToolResult>> {
 
 
   const requestData = data
 
-  const res = await fetch<ConfigureStreamingMutationResponse, ResponseErrorConfig<Error>, ConfigureStreamingMutationRequest>({ method : "PUT", url : `/v1/threads/${threadId}/streaming`, data : requestData })
+  const res = await fetch<ConfigureStreamingMutationResponse, ResponseErrorConfig<Error>, ConfigureStreamingMutationRequest>({ method : "PUT", url : `/threads/${threadId}/streaming`, data : requestData })
   return {
               content: [
                 {

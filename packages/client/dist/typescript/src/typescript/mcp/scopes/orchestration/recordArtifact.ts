@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description Record a non-code agent output (image / file / link) (C30)
- * {@link /v1/threads/:threadId/artifacts}
+ * {@link /threads/:threadId/artifacts}
  */
 export async function recordArtifactHandler({ threadId, data }: { threadId: RecordArtifactPathParams["threadId"]; data: RecordArtifactMutationRequest }): Promise<Promise<CallToolResult>> {
 
 
   const requestData = data
 
-  const res = await fetch<RecordArtifactMutationResponse, ResponseErrorConfig<Error>, RecordArtifactMutationRequest>({ method : "POST", url : `/v1/threads/${threadId}/artifacts`, data : requestData })
+  const res = await fetch<RecordArtifactMutationResponse, ResponseErrorConfig<Error>, RecordArtifactMutationRequest>({ method : "POST", url : `/threads/${threadId}/artifacts`, data : requestData })
   return {
               content: [
                 {

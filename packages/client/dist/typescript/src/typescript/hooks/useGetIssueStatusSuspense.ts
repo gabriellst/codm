@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { getIssueStatus } from "../client/getIssueStatus.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const getIssueStatusSuspenseQueryKey = (threadId: GetIssueStatusPathParams["threadId"] | undefined, issueId: GetIssueStatusPathParams["issueId"] | undefined) => [{ url: '/v1/threads/:threadId/issues/:issueId/status', params: {threadId:threadId,issueId:issueId} }] as const
+export const getIssueStatusSuspenseQueryKey = (threadId: GetIssueStatusPathParams["threadId"] | undefined, issueId: GetIssueStatusPathParams["issueId"] | undefined) => [{ url: '/threads/:threadId/issues/:issueId/status', params: {threadId:threadId,issueId:issueId} }] as const
 
 export type GetIssueStatusSuspenseQueryKey = ReturnType<typeof getIssueStatusSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function getIssueStatusSuspenseQueryOptions(threadId: GetIssueStatusPathP
 
 /**
  * @description Status of one issue of this thread
- * {@link /v1/threads/:threadId/issues/:issueId/status}
+ * {@link /threads/:threadId/issues/:issueId/status}
  */
 export function useGetIssueStatusSuspense<TData = GetIssueStatusQueryResponse, TQueryKey extends QueryKey = GetIssueStatusSuspenseQueryKey>(threadId: GetIssueStatusPathParams["threadId"], issueId: GetIssueStatusPathParams["issueId"], options: 
 {

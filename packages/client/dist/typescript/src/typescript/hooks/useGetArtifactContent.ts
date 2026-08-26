@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { getArtifactContent } from "../client/getArtifactContent.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const getArtifactContentQueryKey = (threadId: GetArtifactContentPathParams["threadId"] | undefined, artifactId: GetArtifactContentPathParams["artifactId"] | undefined) => [{ url: '/v1/threads/:threadId/artifacts/:artifactId/content', params: {threadId:threadId,artifactId:artifactId} }] as const
+export const getArtifactContentQueryKey = (threadId: GetArtifactContentPathParams["threadId"] | undefined, artifactId: GetArtifactContentPathParams["artifactId"] | undefined) => [{ url: '/threads/:threadId/artifacts/:artifactId/content', params: {threadId:threadId,artifactId:artifactId} }] as const
 
 export type GetArtifactContentQueryKey = ReturnType<typeof getArtifactContentQueryKey>
 
@@ -28,7 +28,7 @@ export function getArtifactContentQueryOptions(threadId: GetArtifactContentPathP
 
 /**
  * @description The bytes of one recorded artifact, for the console preview
- * {@link /v1/threads/:threadId/artifacts/:artifactId/content}
+ * {@link /threads/:threadId/artifacts/:artifactId/content}
  */
 export function useGetArtifactContent<TData = GetArtifactContentQueryResponse, TQueryData = GetArtifactContentQueryResponse, TQueryKey extends QueryKey = GetArtifactContentQueryKey>(threadId: GetArtifactContentPathParams["threadId"] | undefined, artifactId: GetArtifactContentPathParams["artifactId"] | undefined, options: 
 {

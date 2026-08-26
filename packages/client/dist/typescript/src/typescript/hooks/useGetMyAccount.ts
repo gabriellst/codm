@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { getMyAccount } from "../client/getMyAccount.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const getMyAccountQueryKey = () => [{ url: '/v1/ui/account' }] as const
+export const getMyAccountQueryKey = () => [{ url: '/ui/account' }] as const
 
 export type GetMyAccountQueryKey = ReturnType<typeof getMyAccountQueryKey>
 
@@ -28,7 +28,7 @@ export function getMyAccountQueryOptions(config: Partial<RequestConfig> & { clie
 
 /**
  * @description Account settings read
- * {@link /v1/ui/account}
+ * {@link /ui/account}
  */
 export function useGetMyAccount<TData = GetMyAccountQueryResponse, TQueryData = GetMyAccountQueryResponse, TQueryKey extends QueryKey = GetMyAccountQueryKey>(options: 
 {

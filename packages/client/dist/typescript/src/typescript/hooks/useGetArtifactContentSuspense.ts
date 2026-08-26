@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { getArtifactContent } from "../client/getArtifactContent.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const getArtifactContentSuspenseQueryKey = (threadId: GetArtifactContentPathParams["threadId"] | undefined, artifactId: GetArtifactContentPathParams["artifactId"] | undefined) => [{ url: '/v1/threads/:threadId/artifacts/:artifactId/content', params: {threadId:threadId,artifactId:artifactId} }] as const
+export const getArtifactContentSuspenseQueryKey = (threadId: GetArtifactContentPathParams["threadId"] | undefined, artifactId: GetArtifactContentPathParams["artifactId"] | undefined) => [{ url: '/threads/:threadId/artifacts/:artifactId/content', params: {threadId:threadId,artifactId:artifactId} }] as const
 
 export type GetArtifactContentSuspenseQueryKey = ReturnType<typeof getArtifactContentSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function getArtifactContentSuspenseQueryOptions(threadId: GetArtifactCont
 
 /**
  * @description The bytes of one recorded artifact, for the console preview
- * {@link /v1/threads/:threadId/artifacts/:artifactId/content}
+ * {@link /threads/:threadId/artifacts/:artifactId/content}
  */
 export function useGetArtifactContentSuspense<TData = GetArtifactContentQueryResponse, TQueryKey extends QueryKey = GetArtifactContentSuspenseQueryKey>(threadId: GetArtifactContentPathParams["threadId"], artifactId: GetArtifactContentPathParams["artifactId"], options: 
 {

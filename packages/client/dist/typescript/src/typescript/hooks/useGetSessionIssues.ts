@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { getSessionIssues } from "../client/getSessionIssues.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const getSessionIssuesQueryKey = (threadId: GetSessionIssuesPathParams["threadId"] | undefined) => [{ url: '/v1/threads/:threadId/issues', params: {threadId:threadId} }] as const
+export const getSessionIssuesQueryKey = (threadId: GetSessionIssuesPathParams["threadId"] | undefined) => [{ url: '/threads/:threadId/issues', params: {threadId:threadId} }] as const
 
 export type GetSessionIssuesQueryKey = ReturnType<typeof getSessionIssuesQueryKey>
 
@@ -28,7 +28,7 @@ export function getSessionIssuesQueryOptions(threadId: GetSessionIssuesPathParam
 
 /**
  * @description Issues of one thread grouped by status + auto-archive note (T11)
- * {@link /v1/threads/:threadId/issues}
+ * {@link /threads/:threadId/issues}
  */
 export function useGetSessionIssues<TData = GetSessionIssuesQueryResponse, TQueryData = GetSessionIssuesQueryResponse, TQueryKey extends QueryKey = GetSessionIssuesQueryKey>(threadId: GetSessionIssuesPathParams["threadId"] | undefined, options: 
 {

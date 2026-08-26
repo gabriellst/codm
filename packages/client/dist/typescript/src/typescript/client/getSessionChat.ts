@@ -8,13 +8,13 @@ import type { GetSessionChatQueryResponse, GetSessionChatPathParams } from "../t
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getGetSessionChatUrl(threadId: GetSessionChatPathParams["threadId"]) {
-  const res = { method: 'GET', url: `/v1/threads/${threadId}/chat` as const }
+  const res = { method: 'GET', url: `/threads/${threadId}/chat` as const }
   return res
 }
 
 /**
  * @description Full thread conversation + control-plane state + active stops (T09)
- * {@link /v1/threads/:threadId/chat}
+ * {@link /threads/:threadId/chat}
  */
 export async function getSessionChat(threadId: GetSessionChatPathParams["threadId"], config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

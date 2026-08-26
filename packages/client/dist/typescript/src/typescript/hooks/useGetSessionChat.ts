@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { getSessionChat } from "../client/getSessionChat.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const getSessionChatQueryKey = (threadId: GetSessionChatPathParams["threadId"] | undefined) => [{ url: '/v1/threads/:threadId/chat', params: {threadId:threadId} }] as const
+export const getSessionChatQueryKey = (threadId: GetSessionChatPathParams["threadId"] | undefined) => [{ url: '/threads/:threadId/chat', params: {threadId:threadId} }] as const
 
 export type GetSessionChatQueryKey = ReturnType<typeof getSessionChatQueryKey>
 
@@ -28,7 +28,7 @@ export function getSessionChatQueryOptions(threadId: GetSessionChatPathParams["t
 
 /**
  * @description Full thread conversation + control-plane state + active stops (T09)
- * {@link /v1/threads/:threadId/chat}
+ * {@link /threads/:threadId/chat}
  */
 export function useGetSessionChat<TData = GetSessionChatQueryResponse, TQueryData = GetSessionChatQueryResponse, TQueryKey extends QueryKey = GetSessionChatQueryKey>(threadId: GetSessionChatPathParams["threadId"] | undefined, options: 
 {

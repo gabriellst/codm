@@ -8,13 +8,13 @@ import type { AuthPassthroughPostMutationResponse } from "../types/AuthPassthrou
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
 
 function getAuthPassthroughPostUrl() {
-  const res = { method: 'POST', url: `/v1/auth/*` as const }
+  const res = { method: 'POST', url: `/auth/*` as const }
   return res
 }
 
 /**
  * @description better-auth passthrough
- * {@link /v1/auth/*}
+ * {@link /auth/*}
  */
 export async function authPassthroughPost(config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

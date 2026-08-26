@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { getSession } from "../client/getSession.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const getSessionQueryKey = () => [{ url: '/v1/session' }] as const
+export const getSessionQueryKey = () => [{ url: '/session' }] as const
 
 export type GetSessionQueryKey = ReturnType<typeof getSessionQueryKey>
 
@@ -28,7 +28,7 @@ export function getSessionQueryOptions(config: Partial<RequestConfig> & { client
 
 /**
  * @description Get the current authenticated session
- * {@link /v1/session}
+ * {@link /session}
  */
 export function useGetSession<TData = GetSessionQueryResponse, TQueryData = GetSessionQueryResponse, TQueryKey extends QueryKey = GetSessionQueryKey>(options: 
 {

@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { getSettings } from "../client/getSettings.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const getSettingsQueryKey = () => [{ url: '/v1/ui/settings' }] as const
+export const getSettingsQueryKey = () => [{ url: '/ui/settings' }] as const
 
 export type GetSettingsQueryKey = ReturnType<typeof getSettingsQueryKey>
 
@@ -28,7 +28,7 @@ export function getSettingsQueryOptions(config: Partial<RequestConfig> & { clien
 
 /**
  * @description Settings — providers, stop criteria, general, app version (T08)
- * {@link /v1/ui/settings}
+ * {@link /ui/settings}
  */
 export function useGetSettings<TData = GetSettingsQueryResponse, TQueryData = GetSettingsQueryResponse, TQueryKey extends QueryKey = GetSettingsQueryKey>(options: 
 {

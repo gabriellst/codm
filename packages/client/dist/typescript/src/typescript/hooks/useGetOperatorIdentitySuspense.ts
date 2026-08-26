@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { getOperatorIdentity } from "../client/getOperatorIdentity.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const getOperatorIdentitySuspenseQueryKey = () => [{ url: '/v1/ui/operator' }] as const
+export const getOperatorIdentitySuspenseQueryKey = () => [{ url: '/ui/operator' }] as const
 
 export type GetOperatorIdentitySuspenseQueryKey = ReturnType<typeof getOperatorIdentitySuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function getOperatorIdentitySuspenseQueryOptions(config: Partial<RequestC
 
 /**
  * @description The operator's displayed identity — name and photo borrowed from the connected channel's own account
- * {@link /v1/ui/operator}
+ * {@link /ui/operator}
  */
 export function useGetOperatorIdentitySuspense<TData = GetOperatorIdentityQueryResponse, TQueryKey extends QueryKey = GetOperatorIdentitySuspenseQueryKey>(options: 
 {

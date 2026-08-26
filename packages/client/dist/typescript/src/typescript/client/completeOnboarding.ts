@@ -8,13 +8,13 @@ import type { CompleteOnboardingMutationResponse } from "../types/CompleteOnboar
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getCompleteOnboardingUrl() {
-  const res = { method: 'POST', url: `/v1/ui/onboarding/complete` as const }
+  const res = { method: 'POST', url: `/ui/onboarding/complete` as const }
   return res
 }
 
 /**
  * @description Conclui o onboarding do operador — grava completedAt
- * {@link /v1/ui/onboarding/complete}
+ * {@link /ui/onboarding/complete}
  */
 export async function completeOnboarding(config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { removeWorkspace } from "../client/removeWorkspace.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const removeWorkspaceMutationKey = () => [{ url: '/v1/workspaces/:workspaceId' }] as const
+export const removeWorkspaceMutationKey = () => [{ url: '/workspaces/:workspaceId' }] as const
 
 export type RemoveWorkspaceMutationKey = ReturnType<typeof removeWorkspaceMutationKey>
 
@@ -27,7 +27,7 @@ export function removeWorkspaceMutationOptions<TContext = unknown>(config: Parti
 
 /**
  * @description Remove a registered workspace (refused while an issue is WORKING on it)
- * {@link /v1/workspaces/:workspaceId}
+ * {@link /workspaces/:workspaceId}
  */
 export function useRemoveWorkspace<TContext>(options: 
 {

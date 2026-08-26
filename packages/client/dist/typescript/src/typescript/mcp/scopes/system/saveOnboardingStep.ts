@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description Salva onde o operador parou no wizard
- * {@link /v1/ui/onboarding/step}
+ * {@link /ui/onboarding/step}
  */
 export async function saveOnboardingStepHandler({ data }: { data: SaveOnboardingStepMutationRequest }): Promise<Promise<CallToolResult>> {
 
 
   const requestData = data
 
-  const res = await fetch<SaveOnboardingStepMutationResponse, ResponseErrorConfig<Error>, SaveOnboardingStepMutationRequest>({ method : "PATCH", url : `/v1/ui/onboarding/step`, data : requestData })
+  const res = await fetch<SaveOnboardingStepMutationResponse, ResponseErrorConfig<Error>, SaveOnboardingStepMutationRequest>({ method : "PATCH", url : `/ui/onboarding/step`, data : requestData })
   return {
               content: [
                 {

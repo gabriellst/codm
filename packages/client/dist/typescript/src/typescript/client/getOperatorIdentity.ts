@@ -8,13 +8,13 @@ import type { GetOperatorIdentityQueryResponse } from "../types/GetOperatorIdent
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getGetOperatorIdentityUrl() {
-  const res = { method: 'GET', url: `/v1/ui/operator` as const }
+  const res = { method: 'GET', url: `/ui/operator` as const }
   return res
 }
 
 /**
  * @description The operator's displayed identity — name and photo borrowed from the connected channel's own account
- * {@link /v1/ui/operator}
+ * {@link /ui/operator}
  */
 export async function getOperatorIdentity(config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

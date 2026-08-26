@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description Account settings read
- * {@link /v1/ui/account}
+ * {@link /ui/account}
  */
 export async function getMyAccountHandler(): Promise<Promise<CallToolResult>> {
 
 
 
 
-  const res = await fetch<GetMyAccountQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/v1/ui/account` })
+  const res = await fetch<GetMyAccountQueryResponse, ResponseErrorConfig<Error>, unknown>({ method : "GET", url : `/ui/account` })
   return {
               content: [
                 {

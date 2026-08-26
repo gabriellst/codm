@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { getHomeDashboard } from "../client/getHomeDashboard.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const getHomeDashboardSuspenseQueryKey = () => [{ url: '/v1/ui/home' }] as const
+export const getHomeDashboardSuspenseQueryKey = () => [{ url: '/ui/home' }] as const
 
 export type GetHomeDashboardSuspenseQueryKey = ReturnType<typeof getHomeDashboardSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function getHomeDashboardSuspenseQueryOptions(config: Partial<RequestConf
 
 /**
  * @description Home dashboard — agents running, needs-you, active sessions, today metrics, channels (T03)
- * {@link /v1/ui/home}
+ * {@link /ui/home}
  */
 export function useGetHomeDashboardSuspense<TData = GetHomeDashboardQueryResponse, TQueryKey extends QueryKey = GetHomeDashboardSuspenseQueryKey>(options: 
 {

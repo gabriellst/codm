@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { listThreadLoops } from "../client/listThreadLoops.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const listThreadLoopsQueryKey = (threadId: ListThreadLoopsPathParams["threadId"] | undefined) => [{ url: '/v1/threads/:threadId/loops', params: {threadId:threadId} }] as const
+export const listThreadLoopsQueryKey = (threadId: ListThreadLoopsPathParams["threadId"] | undefined) => [{ url: '/threads/:threadId/loops', params: {threadId:threadId} }] as const
 
 export type ListThreadLoopsQueryKey = ReturnType<typeof listThreadLoopsQueryKey>
 
@@ -28,7 +28,7 @@ export function listThreadLoopsQueryOptions(threadId: ListThreadLoopsPathParams[
 
 /**
  * @description This conversation's scheduled prompts (loops) (T11)
- * {@link /v1/threads/:threadId/loops}
+ * {@link /threads/:threadId/loops}
  */
 export function useListThreadLoops<TData = ListThreadLoopsQueryResponse, TQueryData = ListThreadLoopsQueryResponse, TQueryKey extends QueryKey = ListThreadLoopsQueryKey>(threadId: ListThreadLoopsPathParams["threadId"] | undefined, options: 
 {

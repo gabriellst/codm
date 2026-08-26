@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { deleteThread } from "../client/deleteThread.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const deleteThreadMutationKey = () => [{ url: '/v1/threads/:threadId' }] as const
+export const deleteThreadMutationKey = () => [{ url: '/threads/:threadId' }] as const
 
 export type DeleteThreadMutationKey = ReturnType<typeof deleteThreadMutationKey>
 
@@ -27,7 +27,7 @@ export function deleteThreadMutationOptions<TContext = unknown>(config: Partial<
 
 /**
  * @description Apagar uma conversa configurada — soft delete, bloqueado por trabalho vivo (C-DEL)
- * {@link /v1/threads/:threadId}
+ * {@link /threads/:threadId}
  */
 export function useDeleteThread<TContext>(options: 
 {

@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { getSessionIssues } from "../client/getSessionIssues.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const getSessionIssuesSuspenseQueryKey = (threadId: GetSessionIssuesPathParams["threadId"] | undefined) => [{ url: '/v1/threads/:threadId/issues', params: {threadId:threadId} }] as const
+export const getSessionIssuesSuspenseQueryKey = (threadId: GetSessionIssuesPathParams["threadId"] | undefined) => [{ url: '/threads/:threadId/issues', params: {threadId:threadId} }] as const
 
 export type GetSessionIssuesSuspenseQueryKey = ReturnType<typeof getSessionIssuesSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function getSessionIssuesSuspenseQueryOptions(threadId: GetSessionIssuesP
 
 /**
  * @description Issues of one thread grouped by status + auto-archive note (T11)
- * {@link /v1/threads/:threadId/issues}
+ * {@link /threads/:threadId/issues}
  */
 export function useGetSessionIssuesSuspense<TData = GetSessionIssuesQueryResponse, TQueryKey extends QueryKey = GetSessionIssuesSuspenseQueryKey>(threadId: GetSessionIssuesPathParams["threadId"], options: 
 {

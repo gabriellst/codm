@@ -8,13 +8,13 @@ import type { RemoveWorkspaceMutationResponse, RemoveWorkspacePathParams } from 
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getRemoveWorkspaceUrl(workspaceId: RemoveWorkspacePathParams["workspaceId"]) {
-  const res = { method: 'DELETE', url: `/v1/workspaces/${workspaceId}` as const }
+  const res = { method: 'DELETE', url: `/workspaces/${workspaceId}` as const }
   return res
 }
 
 /**
  * @description Remove a registered workspace (refused while an issue is WORKING on it)
- * {@link /v1/workspaces/:workspaceId}
+ * {@link /workspaces/:workspaceId}
  */
 export async function removeWorkspace(workspaceId: RemoveWorkspacePathParams["workspaceId"], config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

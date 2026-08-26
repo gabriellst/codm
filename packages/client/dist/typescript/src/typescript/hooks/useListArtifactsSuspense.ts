@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { listArtifacts } from "../client/listArtifacts.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const listArtifactsSuspenseQueryKey = (threadId: ListArtifactsPathParams["threadId"] | undefined) => [{ url: '/v1/threads/:threadId/artifacts', params: {threadId:threadId} }] as const
+export const listArtifactsSuspenseQueryKey = (threadId: ListArtifactsPathParams["threadId"] | undefined) => [{ url: '/threads/:threadId/artifacts', params: {threadId:threadId} }] as const
 
 export type ListArtifactsSuspenseQueryKey = ReturnType<typeof listArtifactsSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function listArtifactsSuspenseQueryOptions(threadId: ListArtifactsPathPar
 
 /**
  * @description The non-code outputs of a thread (T13)
- * {@link /v1/threads/:threadId/artifacts}
+ * {@link /threads/:threadId/artifacts}
  */
 export function useListArtifactsSuspense<TData = ListArtifactsQueryResponse, TQueryKey extends QueryKey = ListArtifactsSuspenseQueryKey>(threadId: ListArtifactsPathParams["threadId"], options: 
 {

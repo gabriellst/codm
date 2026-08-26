@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { desktopCallback } from "../client/desktopCallback.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const desktopCallbackSuspenseQueryKey = (params: DesktopCallbackQueryParams) => [{ url: '/v1/desktop-callback' }, ...(params ? [params] : [])] as const
+export const desktopCallbackSuspenseQueryKey = (params: DesktopCallbackQueryParams) => [{ url: '/desktop-callback' }, ...(params ? [params] : [])] as const
 
 export type DesktopCallbackSuspenseQueryKey = ReturnType<typeof desktopCallbackSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function desktopCallbackSuspenseQueryOptions(params: DesktopCallbackQuery
 
 /**
  * @description Bridges a better-auth browser session into a one-time token, returned to the app over its loopback listener
- * {@link /v1/desktop-callback}
+ * {@link /desktop-callback}
  */
 export function useDesktopCallbackSuspense<TData = DesktopCallbackQueryResponse, TQueryKey extends QueryKey = DesktopCallbackSuspenseQueryKey>(params: DesktopCallbackQueryParams, options: 
 {

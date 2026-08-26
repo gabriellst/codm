@@ -8,13 +8,13 @@ import type { ConfigureStreamingMutationRequest, ConfigureStreamingMutationRespo
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getConfigureStreamingUrl(threadId: ConfigureStreamingPathParams["threadId"]) {
-  const res = { method: 'PUT', url: `/v1/threads/${threadId}/streaming` as const }
+  const res = { method: 'PUT', url: `/threads/${threadId}/streaming` as const }
   return res
 }
 
 /**
  * @description Turn intermediate content cuts on or off for this conversation
- * {@link /v1/threads/:threadId/streaming}
+ * {@link /threads/:threadId/streaming}
  */
 export async function configureStreaming(threadId: ConfigureStreamingPathParams["threadId"], data: ConfigureStreamingMutationRequest, config: Partial<RequestConfig<ConfigureStreamingMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

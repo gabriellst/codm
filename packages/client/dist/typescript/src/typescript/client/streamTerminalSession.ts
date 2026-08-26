@@ -8,13 +8,13 @@ import type { StreamTerminalSessionQueryResponse, StreamTerminalSessionPathParam
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getStreamTerminalSessionUrl(issueId: StreamTerminalSessionPathParams["issueId"]) {
-  const res = { method: 'GET', url: `/v1/terminal/sessions/${issueId}/stream` as const }
+  const res = { method: 'GET', url: `/terminal/sessions/${issueId}/stream` as const }
   return res
 }
 
 /**
  * @description Live terminal output for an issue session via Server-Sent Events (browser.terminal_output_appended)
- * {@link /v1/terminal/sessions/:issueId/stream}
+ * {@link /terminal/sessions/:issueId/stream}
  */
 export async function streamTerminalSession(issueId: StreamTerminalSessionPathParams["issueId"], config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

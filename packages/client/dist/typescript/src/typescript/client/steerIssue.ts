@@ -8,13 +8,13 @@ import type { SteerIssueMutationRequest, SteerIssueMutationResponse, SteerIssueP
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getSteerIssueUrl(issueId: SteerIssuePathParams["issueId"]) {
-  const res = { method: 'POST', url: `/v1/issues/${issueId}/steer` as const }
+  const res = { method: 'POST', url: `/issues/${issueId}/steer` as const }
   return res
 }
 
 /**
  * @description Whisper a steer scoped to one issue (C22)
- * {@link /v1/issues/:issueId/steer}
+ * {@link /issues/:issueId/steer}
  */
 export async function steerIssue(issueId: SteerIssuePathParams["issueId"], data: SteerIssueMutationRequest, config: Partial<RequestConfig<SteerIssueMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

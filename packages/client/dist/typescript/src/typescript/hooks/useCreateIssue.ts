@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { createIssue } from "../client/createIssue.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const createIssueMutationKey = () => [{ url: '/v1/threads/:threadId/issues' }] as const
+export const createIssueMutationKey = () => [{ url: '/threads/:threadId/issues' }] as const
 
 export type CreateIssueMutationKey = ReturnType<typeof createIssueMutationKey>
 
@@ -27,7 +27,7 @@ export function createIssueMutationOptions<TContext = unknown>(config: Partial<R
 
 /**
  * @description Open a new issue on a thread
- * {@link /v1/threads/:threadId/issues}
+ * {@link /threads/:threadId/issues}
  */
 export function useCreateIssue<TContext>(options: 
 {

@@ -8,13 +8,13 @@ import type { SignInLoopbackQueryResponse, SignInLoopbackQueryParams } from "../
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getSignInLoopbackUrl() {
-  const res = { method: 'GET', url: `/v1/sign-in/loopback` as const }
+  const res = { method: 'GET', url: `/sign-in/loopback` as const }
   return res
 }
 
 /**
  * @description Loopback landing (RFC 8252): receives the one-time sign-in code from the system browser
- * {@link /v1/sign-in/loopback}
+ * {@link /sign-in/loopback}
  */
 export async function signInLoopback(params: SignInLoopbackQueryParams, config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

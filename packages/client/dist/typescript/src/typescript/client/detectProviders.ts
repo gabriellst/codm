@@ -8,13 +8,13 @@ import type { DetectProvidersQueryResponse, DetectProvidersQueryParams } from ".
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getDetectProvidersUrl() {
-  const res = { method: 'GET', url: `/v1/terminal/providers` as const }
+  const res = { method: 'GET', url: `/terminal/providers` as const }
   return res
 }
 
 /**
  * @description Detected agent provider CLIs (claude-code / codex / opencode) with binary path, version, install status and whether a runner exists for them yet (comingSoon)
- * {@link /v1/terminal/providers}
+ * {@link /terminal/providers}
  */
 export async function detectProviders(params?: DetectProvidersQueryParams, config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

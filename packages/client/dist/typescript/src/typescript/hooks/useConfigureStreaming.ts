@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { configureStreaming } from "../client/configureStreaming.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const configureStreamingMutationKey = () => [{ url: '/v1/threads/:threadId/streaming' }] as const
+export const configureStreamingMutationKey = () => [{ url: '/threads/:threadId/streaming' }] as const
 
 export type ConfigureStreamingMutationKey = ReturnType<typeof configureStreamingMutationKey>
 
@@ -27,7 +27,7 @@ export function configureStreamingMutationOptions<TContext = unknown>(config: Pa
 
 /**
  * @description Turn intermediate content cuts on or off for this conversation
- * {@link /v1/threads/:threadId/streaming}
+ * {@link /threads/:threadId/streaming}
  */
 export function useConfigureStreaming<TContext>(options: 
 {

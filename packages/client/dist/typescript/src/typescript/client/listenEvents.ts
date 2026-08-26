@@ -8,13 +8,13 @@ import type { ListenEventsQueryResponse } from "../types/ListenEvents.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getListenEventsUrl() {
-  const res = { method: 'GET', url: `/v1/ui/events` as const }
+  const res = { method: 'GET', url: `/ui/events` as const }
   return res
 }
 
 /**
  * @description Owner-scoped real-time integration events via SSE
- * {@link /v1/ui/events}
+ * {@link /ui/events}
  */
 export async function listenEvents(config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

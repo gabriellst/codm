@@ -8,13 +8,13 @@ import type { RaiseStopMutationRequest, RaiseStopMutationResponse, RaiseStopPath
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getRaiseStopUrl(threadId: RaiseStopPathParams["threadId"], issueId: RaiseStopPathParams["issueId"]) {
-  const res = { method: 'POST', url: `/v1/threads/${threadId}/issues/${issueId}/stops` as const }
+  const res = { method: 'POST', url: `/threads/${threadId}/issues/${issueId}/stops` as const }
   return res
 }
 
 /**
  * @description Declare that the agent is blocked and needs the human (approval, classification, …)
- * {@link /v1/threads/:threadId/issues/:issueId/stops}
+ * {@link /threads/:threadId/issues/:issueId/stops}
  */
 export async function raiseStop(threadId: RaiseStopPathParams["threadId"], issueId: RaiseStopPathParams["issueId"], data: RaiseStopMutationRequest, config: Partial<RequestConfig<RaiseStopMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

@@ -8,13 +8,13 @@ import type { ListThreadLoopsQueryResponse, ListThreadLoopsPathParams } from "..
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getListThreadLoopsUrl(threadId: ListThreadLoopsPathParams["threadId"]) {
-  const res = { method: 'GET', url: `/v1/threads/${threadId}/loops` as const }
+  const res = { method: 'GET', url: `/threads/${threadId}/loops` as const }
   return res
 }
 
 /**
  * @description This conversation's scheduled prompts (loops) (T11)
- * {@link /v1/threads/:threadId/loops}
+ * {@link /threads/:threadId/loops}
  */
 export async function listThreadLoops(threadId: ListThreadLoopsPathParams["threadId"], config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

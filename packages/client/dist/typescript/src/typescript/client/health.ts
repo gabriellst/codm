@@ -8,13 +8,13 @@ import type { HealthQueryResponse } from "../types/Health.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getHealthUrl() {
-  const res = { method: 'GET', url: `/v1/health` as const }
+  const res = { method: 'GET', url: `/health` as const }
   return res
 }
 
 /**
  * @description Readiness do daemon: banco, migrações e os timers de poll (canal WhatsApp entra só como diagnóstico)
- * {@link /v1/health}
+ * {@link /health}
  */
 export async function health(config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { getIssueDetail } from "../client/getIssueDetail.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const getIssueDetailQueryKey = (issueId: GetIssueDetailPathParams["issueId"] | undefined) => [{ url: '/v1/issues/:issueId', params: {issueId:issueId} }] as const
+export const getIssueDetailQueryKey = (issueId: GetIssueDetailPathParams["issueId"] | undefined) => [{ url: '/issues/:issueId', params: {issueId:issueId} }] as const
 
 export type GetIssueDetailQueryKey = ReturnType<typeof getIssueDetailQueryKey>
 
@@ -28,7 +28,7 @@ export function getIssueDetailQueryOptions(issueId: GetIssueDetailPathParams["is
 
 /**
  * @description One issue drill-down: terminal log, routed messages, stops (T12)
- * {@link /v1/issues/:issueId}
+ * {@link /issues/:issueId}
  */
 export function useGetIssueDetail<TData = GetIssueDetailQueryResponse, TQueryData = GetIssueDetailQueryResponse, TQueryKey extends QueryKey = GetIssueDetailQueryKey>(issueId: GetIssueDetailPathParams["issueId"] | undefined, options: 
 {

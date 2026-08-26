@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { listThreadLoops } from "../client/listThreadLoops.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const listThreadLoopsSuspenseQueryKey = (threadId: ListThreadLoopsPathParams["threadId"] | undefined) => [{ url: '/v1/threads/:threadId/loops', params: {threadId:threadId} }] as const
+export const listThreadLoopsSuspenseQueryKey = (threadId: ListThreadLoopsPathParams["threadId"] | undefined) => [{ url: '/threads/:threadId/loops', params: {threadId:threadId} }] as const
 
 export type ListThreadLoopsSuspenseQueryKey = ReturnType<typeof listThreadLoopsSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function listThreadLoopsSuspenseQueryOptions(threadId: ListThreadLoopsPat
 
 /**
  * @description This conversation's scheduled prompts (loops) (T11)
- * {@link /v1/threads/:threadId/loops}
+ * {@link /threads/:threadId/loops}
  */
 export function useListThreadLoopsSuspense<TData = ListThreadLoopsQueryResponse, TQueryKey extends QueryKey = ListThreadLoopsSuspenseQueryKey>(threadId: ListThreadLoopsPathParams["threadId"], options: 
 {

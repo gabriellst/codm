@@ -8,13 +8,13 @@ import type { RestoreIssueMutationResponse, RestoreIssuePathParams } from "../ty
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getRestoreIssueUrl(issueId: RestoreIssuePathParams["issueId"]) {
-  const res = { method: 'POST', url: `/v1/issues/${issueId}/restore` as const }
+  const res = { method: 'POST', url: `/issues/${issueId}/restore` as const }
   return res
 }
 
 /**
  * @description Restore an archived issue (C27)
- * {@link /v1/issues/:issueId/restore}
+ * {@link /issues/:issueId/restore}
  */
 export async function restoreIssue(issueId: RestoreIssuePathParams["issueId"], config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

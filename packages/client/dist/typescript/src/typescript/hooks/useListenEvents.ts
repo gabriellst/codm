@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { listenEvents } from "../client/listenEvents.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const listenEventsQueryKey = () => [{ url: '/v1/ui/events' }] as const
+export const listenEventsQueryKey = () => [{ url: '/ui/events' }] as const
 
 export type ListenEventsQueryKey = ReturnType<typeof listenEventsQueryKey>
 
@@ -28,7 +28,7 @@ export function listenEventsQueryOptions(config: Partial<RequestConfig> & { clie
 
 /**
  * @description Owner-scoped real-time integration events via SSE
- * {@link /v1/ui/events}
+ * {@link /ui/events}
  */
 export function useListenEvents<TData = ListenEventsQueryResponse, TQueryData = ListenEventsQueryResponse, TQueryKey extends QueryKey = ListenEventsQueryKey>(options: 
 {

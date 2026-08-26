@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { signInSocial } from "../client/signInSocial.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const signInSocialQueryKey = (params: SignInSocialQueryParams) => [{ url: '/v1/sign-in/social' }, ...(params ? [params] : [])] as const
+export const signInSocialQueryKey = (params: SignInSocialQueryParams) => [{ url: '/sign-in/social' }, ...(params ? [params] : [])] as const
 
 export type SignInSocialQueryKey = ReturnType<typeof signInSocialQueryKey>
 
@@ -28,7 +28,7 @@ export function signInSocialQueryOptions(params: SignInSocialQueryParams, config
 
 /**
  * @description Redireciona o browser do sistema para o provedor social escolhido, iniciando o login do desktop
- * {@link /v1/sign-in/social}
+ * {@link /sign-in/social}
  */
 export function useSignInSocial<TData = SignInSocialQueryResponse, TQueryData = SignInSocialQueryResponse, TQueryKey extends QueryKey = SignInSocialQueryKey>(params: SignInSocialQueryParams, options: 
 {

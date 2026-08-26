@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { setThreadLoopEnabled } from "../client/setThreadLoopEnabled.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const setThreadLoopEnabledMutationKey = () => [{ url: '/v1/threads/:threadId/loops/:loopId/enabled' }] as const
+export const setThreadLoopEnabledMutationKey = () => [{ url: '/threads/:threadId/loops/:loopId/enabled' }] as const
 
 export type SetThreadLoopEnabledMutationKey = ReturnType<typeof setThreadLoopEnabledMutationKey>
 
@@ -27,7 +27,7 @@ export function setThreadLoopEnabledMutationOptions<TContext = unknown>(config: 
 
 /**
  * @description Pause or resume a loop (C23)
- * {@link /v1/threads/:threadId/loops/:loopId/enabled}
+ * {@link /threads/:threadId/loops/:loopId/enabled}
  */
 export function useSetThreadLoopEnabled<TContext>(options: 
 {

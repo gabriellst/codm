@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { updateOwnerSettings } from "../client/updateOwnerSettings.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const updateOwnerSettingsMutationKey = () => [{ url: '/v1/owners/settings' }] as const
+export const updateOwnerSettingsMutationKey = () => [{ url: '/owners/settings' }] as const
 
 export type UpdateOwnerSettingsMutationKey = ReturnType<typeof updateOwnerSettingsMutationKey>
 
@@ -27,7 +27,7 @@ export function updateOwnerSettingsMutationOptions<TContext = unknown>(config: P
 
 /**
  * @description Update owner profile settings (name / picture / timezone)
- * {@link /v1/owners/settings}
+ * {@link /owners/settings}
  */
 export function useUpdateOwnerSettings<TContext>(options: 
 {

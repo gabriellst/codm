@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { getSessionChat } from "../client/getSessionChat.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const getSessionChatSuspenseQueryKey = (threadId: GetSessionChatPathParams["threadId"] | undefined) => [{ url: '/v1/threads/:threadId/chat', params: {threadId:threadId} }] as const
+export const getSessionChatSuspenseQueryKey = (threadId: GetSessionChatPathParams["threadId"] | undefined) => [{ url: '/threads/:threadId/chat', params: {threadId:threadId} }] as const
 
 export type GetSessionChatSuspenseQueryKey = ReturnType<typeof getSessionChatSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function getSessionChatSuspenseQueryOptions(threadId: GetSessionChatPathP
 
 /**
  * @description Full thread conversation + control-plane state + active stops (T09)
- * {@link /v1/threads/:threadId/chat}
+ * {@link /threads/:threadId/chat}
  */
 export function useGetSessionChatSuspense<TData = GetSessionChatQueryResponse, TQueryKey extends QueryKey = GetSessionChatSuspenseQueryKey>(threadId: GetSessionChatPathParams["threadId"], options: 
 {

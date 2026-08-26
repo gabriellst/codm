@@ -8,13 +8,13 @@ import type { DesktopCallbackQueryResponse, DesktopCallbackQueryParams } from ".
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
 
 function getDesktopCallbackUrl() {
-  const res = { method: 'GET', url: `/v1/desktop-callback` as const }
+  const res = { method: 'GET', url: `/desktop-callback` as const }
   return res
 }
 
 /**
  * @description Bridges a better-auth browser session into a one-time token, returned to the app over its loopback listener
- * {@link /v1/desktop-callback}
+ * {@link /desktop-callback}
  */
 export async function desktopCallback(params: DesktopCallbackQueryParams, config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

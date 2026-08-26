@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { steerIssue } from "../client/steerIssue.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const steerIssueMutationKey = () => [{ url: '/v1/issues/:issueId/steer' }] as const
+export const steerIssueMutationKey = () => [{ url: '/issues/:issueId/steer' }] as const
 
 export type SteerIssueMutationKey = ReturnType<typeof steerIssueMutationKey>
 
@@ -27,7 +27,7 @@ export function steerIssueMutationOptions<TContext = unknown>(config: Partial<Re
 
 /**
  * @description Whisper a steer scoped to one issue (C22)
- * {@link /v1/issues/:issueId/steer}
+ * {@link /issues/:issueId/steer}
  */
 export function useSteerIssue<TContext>(options: 
 {

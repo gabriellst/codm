@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description Pause or resume a loop (C23)
- * {@link /v1/threads/:threadId/loops/:loopId/enabled}
+ * {@link /threads/:threadId/loops/:loopId/enabled}
  */
 export async function setThreadLoopEnabledHandler({ threadId, loopId, data }: { threadId: SetThreadLoopEnabledPathParams["threadId"]; loopId: SetThreadLoopEnabledPathParams["loopId"]; data: SetThreadLoopEnabledMutationRequest }): Promise<Promise<CallToolResult>> {
 
 
   const requestData = data
 
-  const res = await fetch<SetThreadLoopEnabledMutationResponse, ResponseErrorConfig<Error>, SetThreadLoopEnabledMutationRequest>({ method : "PUT", url : `/v1/threads/${threadId}/loops/${loopId}/enabled`, data : requestData })
+  const res = await fetch<SetThreadLoopEnabledMutationResponse, ResponseErrorConfig<Error>, SetThreadLoopEnabledMutationRequest>({ method : "PUT", url : `/threads/${threadId}/loops/${loopId}/enabled`, data : requestData })
   return {
               content: [
                 {

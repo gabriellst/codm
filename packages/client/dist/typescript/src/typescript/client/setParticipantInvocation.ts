@@ -8,13 +8,13 @@ import type { SetParticipantInvocationMutationRequest, SetParticipantInvocationM
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 
 function getSetParticipantInvocationUrl(threadId: SetParticipantInvocationPathParams["threadId"], participantId: SetParticipantInvocationPathParams["participantId"]) {
-  const res = { method: 'PUT', url: `/v1/threads/${threadId}/participants/${participantId}` as const }
+  const res = { method: 'PUT', url: `/threads/${threadId}/participants/${participantId}` as const }
   return res
 }
 
 /**
  * @description Toggle whether a participant may invoke agents (C13)
- * {@link /v1/threads/:threadId/participants/:participantId}
+ * {@link /threads/:threadId/participants/:participantId}
  */
 export async function setParticipantInvocation(threadId: SetParticipantInvocationPathParams["threadId"], participantId: SetParticipantInvocationPathParams["participantId"], data: SetParticipantInvocationMutationRequest, config: Partial<RequestConfig<SetParticipantInvocationMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

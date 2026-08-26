@@ -5,14 +5,14 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
  * @description Conclui o onboarding do operador — grava completedAt
- * {@link /v1/ui/onboarding/complete}
+ * {@link /ui/onboarding/complete}
  */
 export async function completeOnboardingHandler(): Promise<Promise<CallToolResult>> {
 
 
 
 
-  const res = await fetch<CompleteOnboardingMutationResponse, ResponseErrorConfig<Error>, unknown>({ method : "POST", url : `/v1/ui/onboarding/complete` })
+  const res = await fetch<CompleteOnboardingMutationResponse, ResponseErrorConfig<Error>, unknown>({ method : "POST", url : `/ui/onboarding/complete` })
   return {
               content: [
                 {

@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryRe
 import { signInLoopback } from "../client/signInLoopback.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-export const signInLoopbackSuspenseQueryKey = (params: SignInLoopbackQueryParams) => [{ url: '/v1/sign-in/loopback' }, ...(params ? [params] : [])] as const
+export const signInLoopbackSuspenseQueryKey = (params: SignInLoopbackQueryParams) => [{ url: '/sign-in/loopback' }, ...(params ? [params] : [])] as const
 
 export type SignInLoopbackSuspenseQueryKey = ReturnType<typeof signInLoopbackSuspenseQueryKey>
 
@@ -28,7 +28,7 @@ export function signInLoopbackSuspenseQueryOptions(params: SignInLoopbackQueryPa
 
 /**
  * @description Loopback landing (RFC 8252): receives the one-time sign-in code from the system browser
- * {@link /v1/sign-in/loopback}
+ * {@link /sign-in/loopback}
  */
 export function useSignInLoopbackSuspense<TData = SignInLoopbackQueryResponse, TQueryKey extends QueryKey = SignInLoopbackSuspenseQueryKey>(params: SignInLoopbackQueryParams, options: 
 {

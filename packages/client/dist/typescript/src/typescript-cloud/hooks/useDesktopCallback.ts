@@ -9,7 +9,7 @@ import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from
 import { desktopCallback } from "../client/desktopCallback.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-export const desktopCallbackQueryKey = (params: DesktopCallbackQueryParams) => [{ url: '/v1/desktop-callback' }, ...(params ? [params] : [])] as const
+export const desktopCallbackQueryKey = (params: DesktopCallbackQueryParams) => [{ url: '/desktop-callback' }, ...(params ? [params] : [])] as const
 
 export type DesktopCallbackQueryKey = ReturnType<typeof desktopCallbackQueryKey>
 
@@ -28,7 +28,7 @@ export function desktopCallbackQueryOptions(params: DesktopCallbackQueryParams, 
 
 /**
  * @description Bridges a better-auth browser session into a one-time token, returned to the app over its loopback listener
- * {@link /v1/desktop-callback}
+ * {@link /desktop-callback}
  */
 export function useDesktopCallback<TData = DesktopCallbackQueryResponse, TQueryData = DesktopCallbackQueryResponse, TQueryKey extends QueryKey = DesktopCallbackQueryKey>(params: DesktopCallbackQueryParams, options: 
 {

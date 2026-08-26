@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { uploadAvatar } from "../client/uploadAvatar.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const uploadAvatarMutationKey = () => [{ url: '/v1/identity/account/avatar' }] as const
+export const uploadAvatarMutationKey = () => [{ url: '/identity/account/avatar' }] as const
 
 export type UploadAvatarMutationKey = ReturnType<typeof uploadAvatarMutationKey>
 
@@ -27,7 +27,7 @@ export function uploadAvatarMutationOptions<TContext = unknown>(config: Partial<
 
 /**
  * @description MOCK. Accept-and-echo multipart avatar upload — returns new pictureUrl
- * {@link /v1/identity/account/avatar}
+ * {@link /identity/account/avatar}
  */
 export function useUploadAvatar<TContext>(options: 
 {

@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { configureMentionGate } from "../client/configureMentionGate.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const configureMentionGateMutationKey = () => [{ url: '/v1/threads/:threadId/mention-gate' }] as const
+export const configureMentionGateMutationKey = () => [{ url: '/threads/:threadId/mention-gate' }] as const
 
 export type ConfigureMentionGateMutationKey = ReturnType<typeof configureMentionGateMutationKey>
 
@@ -27,7 +27,7 @@ export function configureMentionGateMutationOptions<TContext = unknown>(config: 
 
 /**
  * @description Configure the mention gate (respond only when a @tag is written) (C12)
- * {@link /v1/threads/:threadId/mention-gate}
+ * {@link /threads/:threadId/mention-gate}
  */
 export function useConfigureMentionGate<TContext>(options: 
 {

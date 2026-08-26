@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { transitionIssueStatus } from "../client/transitionIssueStatus.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const transitionIssueStatusMutationKey = () => [{ url: '/v1/threads/:threadId/issues/:issueId/status' }] as const
+export const transitionIssueStatusMutationKey = () => [{ url: '/threads/:threadId/issues/:issueId/status' }] as const
 
 export type TransitionIssueStatusMutationKey = ReturnType<typeof transitionIssueStatusMutationKey>
 
@@ -27,7 +27,7 @@ export function transitionIssueStatusMutationOptions<TContext = unknown>(config:
 
 /**
  * @description Declare the lifecycle status of an issue (done / needs input)
- * {@link /v1/threads/:threadId/issues/:issueId/status}
+ * {@link /threads/:threadId/issues/:issueId/status}
  */
 export function useTransitionIssueStatus<TContext>(options: 
 {

@@ -8,13 +8,13 @@ import type { SignInSocialQueryResponse, SignInSocialQueryParams } from "../type
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
 
 function getSignInSocialUrl() {
-  const res = { method: 'GET', url: `/v1/sign-in/social` as const }
+  const res = { method: 'GET', url: `/sign-in/social` as const }
   return res
 }
 
 /**
  * @description Redireciona o browser do sistema para o provedor social escolhido, iniciando o login do desktop
- * {@link /v1/sign-in/social}
+ * {@link /sign-in/social}
  */
 export async function signInSocial(params: SignInSocialQueryParams, config: Partial<RequestConfig> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config

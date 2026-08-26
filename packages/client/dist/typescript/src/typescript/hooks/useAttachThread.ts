@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { attachThread } from "../client/attachThread.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const attachThreadMutationKey = () => [{ url: '/v1/threads' }] as const
+export const attachThreadMutationKey = () => [{ url: '/threads' }] as const
 
 export type AttachThreadMutationKey = ReturnType<typeof attachThreadMutationKey>
 
@@ -27,7 +27,7 @@ export function attachThreadMutationOptions<TContext = unknown>(config: Partial<
 
 /**
  * @description Attach a contact/group to a workspace + providers (C09)
- * {@link /v1/threads}
+ * {@link /threads}
  */
 export function useAttachThread<TContext>(options: 
 {

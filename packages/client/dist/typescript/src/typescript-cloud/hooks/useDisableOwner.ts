@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { disableOwner } from "../client/disableOwner.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const disableOwnerMutationKey = () => [{ url: '/v1/owners/disable' }] as const
+export const disableOwnerMutationKey = () => [{ url: '/owners/disable' }] as const
 
 export type DisableOwnerMutationKey = ReturnType<typeof disableOwnerMutationKey>
 
@@ -27,7 +27,7 @@ export function disableOwnerMutationOptions<TContext = unknown>(config: Partial<
 
 /**
  * @description Disable a owner (C19 DisableOwner; OWNER only)
- * {@link /v1/owners/disable}
+ * {@link /owners/disable}
  */
 export function useDisableOwner<TContext>(options: 
 {

@@ -9,7 +9,7 @@ import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tansta
 import { steerThread } from "../client/steerThread.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
 
-export const steerThreadMutationKey = () => [{ url: '/v1/threads/:threadId/steer' }] as const
+export const steerThreadMutationKey = () => [{ url: '/threads/:threadId/steer' }] as const
 
 export type SteerThreadMutationKey = ReturnType<typeof steerThreadMutationKey>
 
@@ -27,7 +27,7 @@ export function steerThreadMutationOptions<TContext = unknown>(config: Partial<R
 
 /**
  * @description Whisper a steer into the thread (agents-only; never sent to the channel) (C19)
- * {@link /v1/threads/:threadId/steer}
+ * {@link /threads/:threadId/steer}
  */
 export function useSteerThread<TContext>(options: 
 {
