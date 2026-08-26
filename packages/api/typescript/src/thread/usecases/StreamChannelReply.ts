@@ -1,11 +1,10 @@
 import { injectable } from 'tsyringe-neo'
-import { CommandQueue, Handler, LoggingService, tryCatchAsync, z } from '@codm/core-typescript'
+import { CommandQueue, Handler, LoggingService, z } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
 import { ChannelSender } from '../services/ChannelSender'
 import { ReplyStreamer, streamKey } from '../services/ReplyStreamer'
 import { ConsumedMessageRepository } from '../repositories/ConsumedMessageRepository'
-import { typingBeatJobIds } from '../utils/ChannelCues'
-import type { SustainTypingPresence } from './SustainTypingPresence'
+import { endTypingPresence } from '../services/TypingPresence'
 
 export const StreamChannelReplyInputSchema = z.object({
 	ownerId: z.uuid(),
@@ -114,7 +113,7 @@ export class StreamChannelReply extends Handler<typeof StreamChannelReplyInputSc
 					quotedMessageId: await this.resolveQuote(replyToEntryId),
 				})
 				// The first words are on the wire — the indicator has done its job (AC-10).
-				await this.stopTypingPresence(channelId, remoteId)
+				await this.stopTypingPresence(ownerId, channelId, remoteId)
 				return
 
 			case 'CONTINUE':
@@ -198,15 +197,17 @@ export class StreamChannelReply extends Handler<typeof StreamChannelReplyInputSc
 		return this.consumed.findPlatformId(replyToEntryId)
 	}
 
-	/** Same derived handles `DeliverChannelMessage` cancels, and swallowed for the same reason (decision 12). */
-	private async stopTypingPresence(channelId: string, remoteId: string): Promise<void> {
-		for (const jobId of typingBeatJobIds(channelId, remoteId)) {
-			const outcome = await tryCatchAsync(() =>
-				this.commands.cancelCommand('sustain_typing_presence' satisfies SustainTypingPresence['name'], jobId),
-			)
-			if (!outcome.success) {
-				this.logging.info({ content: { message: 'typing presence not cancelled (best-effort)', channelId, reason: outcome.error.message } })
-			}
-		}
+	/**
+	 * THE SAME SEAM every other caller uses (`thread/services/TypingPresence`), and no longer a second
+	 * hand-rolled copy of it: this method used to inline the cancel loop, which is how it kept the
+	 * `paused` publish — added to the seam — from ever reaching the one branch that opens a reply.
+	 *
+	 * Reached only on `SEND`, which is the cut that puts the FIRST words on the screen. Note that when
+	 * the turn opened a "Pensando" placeholder there is no `SEND` at all (the stream is already open,
+	 * so every cut edits) — that path is closed by `DeliverChannelMessage` and by the turn's `finally`,
+	 * not here. Swallowed throughout, like every cue (decision 12).
+	 */
+	private async stopTypingPresence(ownerId: string, channelId: string, remoteId: string): Promise<void> {
+		await endTypingPresence({ commands: this.commands, sender: this.sender, logging: this.logging, ownerId, channelId, remoteId })
 	}
 }

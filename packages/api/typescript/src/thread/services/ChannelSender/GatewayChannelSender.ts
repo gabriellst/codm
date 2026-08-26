@@ -1,7 +1,18 @@
 import { injectable } from 'tsyringe-neo'
 import { Config, BaseError } from '@codm/core-typescript'
 import { ArtifactKind } from '@codm/contracts-typescript/wire/enums'
-import { sendText, sendImage, sendVideo, sendAudio, sendFile, sendReaction, sendChatPresence, editMessage, ChatPresenceTypeEnum } from '@codm/client-typescript/go'
+import {
+	sendText,
+	sendImage,
+	sendVideo,
+	sendAudio,
+	sendFile,
+	sendReaction,
+	sendChatPresence,
+	editMessage,
+	ChatPresenceTypeEnum,
+} from '@codm/client-typescript/go'
+import type { ChatPresenceType } from '@codm/client-typescript/go'
 import {
 	ChannelSender,
 	type ChannelCapabilities,
@@ -69,14 +80,24 @@ export class GatewayChannelSender extends ChannelSender {
 			switch (input.kind) {
 				case ArtifactKind.IMAGE: {
 					const out = await sendImage(
-						{ channelId: input.channelId, remoteId: input.remoteId, mediaPath: input.mediaPath, ...(input.caption ? { caption: input.caption } : {}) },
+						{
+							channelId: input.channelId,
+							remoteId: input.remoteId,
+							mediaPath: input.mediaPath,
+							...(input.caption ? { caption: input.caption } : {}),
+						},
 						auth,
 					)
 					return { messageId: out.messageId }
 				}
 				case ArtifactKind.VIDEO: {
 					const out = await sendVideo(
-						{ channelId: input.channelId, remoteId: input.remoteId, mediaPath: input.mediaPath, ...(input.caption ? { caption: input.caption } : {}) },
+						{
+							channelId: input.channelId,
+							remoteId: input.remoteId,
+							mediaPath: input.mediaPath,
+							...(input.caption ? { caption: input.caption } : {}),
+						},
 						auth,
 					)
 					return { messageId: out.messageId }
@@ -149,12 +170,26 @@ export class GatewayChannelSender extends ChannelSender {
 	}
 
 	async signalTyping(input: ChannelConversation, ownerId: string): Promise<void> {
+		// `composing` is the gateway's own vocabulary (`ChatPresenceType`), read from the generated
+		// binding rather than retyped — the wire value never gets to drift from the Go enum, and the
+		// port above stays free of it.
+		await this.publishPresence(input, ownerId, ChatPresenceTypeEnum.composing)
+	}
+
+	/**
+	 * The SAME endpoint, the other value: `paused` is what actually takes the indicator off the
+	 * contact's screen instead of waiting for a decay this side cannot observe. It has been in
+	 * `ChatPresenceType` (and in `WhatsmeowChannel.SendChatPresence`) all along — see the port.
+	 */
+	async stopTyping(input: ChannelConversation, ownerId: string): Promise<void> {
+		await this.publishPresence(input, ownerId, ChatPresenceTypeEnum.paused)
+	}
+
+	/** One call, one presence — the two cue verbs above differ by exactly this argument. */
+	private async publishPresence(input: ChannelConversation, ownerId: string, presence: ChatPresenceType): Promise<void> {
 		try {
-			// `composing` is the gateway's own vocabulary (`ChatPresenceType`), read from the generated
-			// binding rather than retyped — the wire value never gets to drift from the Go enum, and the
-			// port above stays free of it.
 			await sendChatPresence(
-				{ channelId: input.channelId, remoteId: input.remoteId, presence: ChatPresenceTypeEnum.composing },
+				{ channelId: input.channelId, remoteId: input.remoteId, presence },
 				{ baseURL: `${Config.env.API_GO_URL}/api`, headers: { 'X-Owner-Id': ownerId } },
 			)
 		} catch (error) {

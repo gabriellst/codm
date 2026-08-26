@@ -18,6 +18,11 @@ export class MockChannelSender extends ChannelSender {
 	/** Every cue, in order — the two arrays a cue test asserts on. */
 	readonly reactions: Array<ReactToChannelMessageInput & { ownerId: string }> = []
 	readonly typingBeats: Array<ChannelConversation & { ownerId: string }> = []
+	/**
+	 * Every EXPLICIT extinction of the indicator, in order — the assertion surface for "the loop ends
+	 * by saying so on the wire", as opposed to merely falling silent and hoping the platform decays.
+	 */
+	readonly typingStops: Array<ChannelConversation & { ownerId: string }> = []
 	/** Every edit, in the order the gateway would have applied them. */
 	readonly edits: Array<EditChannelMessageInput & { ownerId: string }> = []
 	/**
@@ -62,6 +67,10 @@ export class MockChannelSender extends ChannelSender {
 
 	async signalTyping(input: ChannelConversation, ownerId: string): Promise<void> {
 		this.typingBeats.push({ ...input, ownerId })
+	}
+
+	async stopTyping(input: ChannelConversation, ownerId: string): Promise<void> {
+		this.typingStops.push({ ...input, ownerId })
 	}
 
 	/**

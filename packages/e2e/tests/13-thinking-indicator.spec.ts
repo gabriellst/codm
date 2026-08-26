@@ -148,11 +148,14 @@ test('inbound message opens a "Pensando" placeholder that phases and settles int
 		)
 		.toBe(true)
 
-	// AC-1 (cessation) — once turn 1's own answer is visible, its composing loop has already been cut
-	// (`DeliverChannelMessage.stopTypingPresence`, called right after ITS OWN send/edit lands): no new
-	// beat shows up across a window wider than one heartbeat (`TYPING_BEAT_INTERVAL_MS` = 6s,
-	// thread/utils/ChannelCues.ts). Read once more, right after the reply-text poll above resolved, so
-	// this measures the SAME settled point the previous assertion just observed.
+	// AC-1 (cessation) — once turn 1's own answer is visible, its composing loop has already been cut:
+	// `DeliverChannelMessage` cancels on BOTH of its exits (the streamed final edit as well as the plain
+	// send — the streamed one used to return early, above the cancel, which is how a real conversation
+	// ended up beating for the full five-minute ceiling), and the turn itself ends the presence in a
+	// `finally` regardless. So no new beat shows up across a window wider than one heartbeat
+	// (`TYPING_BEAT_INTERVAL_MS` = 6s, thread/utils/ChannelCues.ts). Read once more, right after the
+	// reply-text poll above resolved, so this measures the SAME settled point the previous assertion
+	// just observed.
 	const settled = await readChannelSender(user.session, conversation)
 	const beatCountAtSettle = settled.typingBeatCount
 	await new Promise(resolve => setTimeout(resolve, 8_000))

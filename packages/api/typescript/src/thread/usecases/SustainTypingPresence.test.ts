@@ -112,23 +112,32 @@ describe("SustainTypingPresence — the lease against the founder's dangling rep
 			{ jobId: typingBeatJobId(channelId, remoteId, TYPING_FIRST_BEAT_SLOT) },
 		)
 
-	describe('the near-deadline case — a beat that ran, but whose successor would only wake up past the ceiling', () => {
-		it('still publishes THIS beat, but arms no successor (distinct from the past-ceiling case, which arms nothing at all)', async () => {
+	describe('the near-deadline case — a beat that ran, and whose successor will only wake up past the ceiling', () => {
+		/**
+		 * THE SUCCESSOR IS ARMED ANYWAY, and the change of mind is the fix.
+		 *
+		 * This used to arm nothing here, reasoning that a beat waking past its own deadline is dead
+		 * weight. It is not: past the deadline, a beat is the only thing left that can PUBLISH THE STOP.
+		 * Skipping it left the last `composing` of a hung turn standing with nothing scheduled to
+		 * retract it — the indicator outliving not just the turn but the loop that fed it.
+		 */
+		it('publishes THIS beat and arms the successor that will put the indicator out', async () => {
 			const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
 			const { channelId, contactRef } = thread
 			const remoteId = contactRef.externalId
 
-			// Less than one full interval away: `Date.now() + TYPING_BEAT_INTERVAL_MS >= untilEpochMs` is
-			// true for the successor this beat WOULD arm, even though the ceiling has not passed YET.
+			// Less than one full interval away: the successor this beat arms will wake up PAST the ceiling.
 			await startLoop(channelId, remoteId, Date.now() + TYPING_BEAT_INTERVAL_MS / 2)
 
 			await queue.tick()
 
 			// The indicator for THIS instant is still real — the contact is not lied to early.
 			expect(sender.typingBeats).toHaveLength(1)
-			// But nothing was scheduled to keep it lit past the ceiling — a successor here would just be a
-			// row the queue claims, runs and finds already past its own deadline: dead weight, not a beat.
-			expect(await pendingBeats()).toBe(0)
+			expect(sender.typingStops).toHaveLength(0)
+			// The successor exists, and it is the one that will publish the stop when it wakes up past the
+			// ceiling — that half is pinned by `ChannelCues.test.ts`'s past-ceiling case, which can force
+			// the deadline into the past without this suite having to wait out a real interval.
+			expect(await pendingBeats()).toBe(1)
 		})
 	})
 
@@ -146,11 +155,22 @@ describe("SustainTypingPresence — the lease against the founder's dangling rep
 			// Before this audit, the only code that could do this was `DeliverChannelMessage`'s private
 			// `stopTypingPresence` — unreachable from a caller in a different bounded context. This proves
 			// the extracted primitive does the same job, from a caller that is not `DeliverChannelMessage`.
-			await endTypingPresence({ commands: queue, logging: new MockLoggingService(), channelId, remoteId })
+			await endTypingPresence({
+				commands: queue,
+				sender,
+				logging: new MockLoggingService(),
+				ownerId: MOCK_CLOUD_OWNER_ID,
+				channelId,
+				remoteId,
+			})
 
 			expect(await pendingBeats()).toBe(0)
 			await queue.tick()
 			expect(sender.typingBeats).toHaveLength(1) // no further beat — the loop is over
+			// AND THE CONTACT'S SCREEN IS TOLD. Cancelling the rows only stops us from beating; the last
+			// `composing` we published stays up until something retracts it.
+			expect(sender.typingStops).toHaveLength(1)
+			expect(sender.typingStops[0]).toMatchObject({ channelId, remoteId, ownerId: MOCK_CLOUD_OWNER_ID })
 		})
 
 		it('is best-effort per handle — a queue that refuses to cancel does not throw', async () => {
@@ -165,7 +185,31 @@ describe("SustainTypingPresence — the lease against the founder's dangling rep
 			} as unknown as CommandQueue
 
 			await expect(
-				endTypingPresence({ commands: refusingQueue, logging: new MockLoggingService(), channelId, remoteId }),
+				endTypingPresence({
+					commands: refusingQueue,
+					sender,
+					logging: new MockLoggingService(),
+					ownerId: MOCK_CLOUD_OWNER_ID,
+					channelId,
+					remoteId,
+				}),
+			).resolves.toBeUndefined()
+
+			// A CHANNEL THAT REFUSES THE STOP MAY NOT THROW EITHER — same policy, the other half of the seam.
+			const refusingSender = {
+				async stopTyping() {
+					throw new Error('gateway down')
+				},
+			} as unknown as MockChannelSender
+			await expect(
+				endTypingPresence({
+					commands: queue,
+					sender: refusingSender,
+					logging: new MockLoggingService(),
+					ownerId: MOCK_CLOUD_OWNER_ID,
+					channelId,
+					remoteId,
+				}),
 			).resolves.toBeUndefined()
 		})
 	})

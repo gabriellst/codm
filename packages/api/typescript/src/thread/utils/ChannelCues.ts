@@ -35,8 +35,11 @@ export const CUE_REPLIED = '🤖'
 /**
  * How often the typing indicator must be re-published to stay lit.
  *
- * The platform expires it on its own in the order of ten seconds. Beating faster than the expiry is
- * the whole mechanism — beat at the expiry and the indicator strobes.
+ * Beating faster than the platform's own expiry is the whole mechanism — beat AT the expiry and the
+ * indicator strobes. How long that expiry actually is, is not something this side gets to assume: the
+ * "order of ten seconds" this constant was chosen against turned out to be wrong in the direction that
+ * hurts (a contact kept reading "digitando…" well past the last beat), which is why extinction is now
+ * an explicit `paused` (`ChannelSender.stopTyping`) instead of a wait.
  */
 export const TYPING_BEAT_INTERVAL_MS = 6_000
 
@@ -46,6 +49,11 @@ export const TYPING_BEAT_INTERVAL_MS = 6_000
  * This is the number that makes "digitando…" impossible to get PERMANENTLY stuck, and it is load
  * bearing rather than a tidy-up: see `SustainTypingPresence` for why no off-switch can carry that
  * guarantee by itself.
+ *
+ * IT IS THE LAST LINE, NOT THE FIRST, and the difference is worth stating because it was measured the
+ * hard way: while nothing else cancelled, this ceiling WAS the off-switch, and a contact sat through
+ * the whole five minutes after every answer. A ceiling bounds the damage of a missing cancel; it is
+ * not a substitute for one.
  */
 export const TYPING_MAX_DURATION_MS = 5 * 60 * 1000
 

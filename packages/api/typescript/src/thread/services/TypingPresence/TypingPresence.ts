@@ -1,6 +1,7 @@
 import { CommandQueue, LoggingService, tryCatchAsync } from '@codm/core-typescript'
 import { TYPING_FIRST_BEAT_SLOT, TYPING_MAX_DURATION_MS, typingBeatJobId, typingBeatJobIds } from '../../utils/ChannelCues'
 import type { SustainTypingPresence } from '../../usecases/SustainTypingPresence'
+import type { ChannelSender } from '../ChannelSender'
 
 /** Everything the loop needs to beat, plus the two kernel collaborators the enqueue rides on. */
 interface BeginTypingPresence {
@@ -71,10 +72,16 @@ export async function beginTypingPresence({ commands, logging, ownerId, channelI
 	}
 }
 
-/** What cancelling a loop needs — no `ownerId`, because `CommandQueue.cancelCommand` deletes by job id alone. */
+/**
+ * What ending a loop needs. `ownerId` is back — not for the cancel (`CommandQueue.cancelCommand`
+ * deletes by job id alone) but for the `paused` that follows it, which is a gateway write and is
+ * scoped by owner like every other one.
+ */
 interface EndTypingPresence {
 	commands: CommandQueue
+	sender: ChannelSender
 	logging: LoggingService
+	ownerId: string
 	channelId: string
 	remoteId: string
 }
@@ -86,19 +93,22 @@ interface EndTypingPresence {
  * `beginTypingPresence` above, for the same reason: `services` is the permitted surface, and the
  * loop's vocabulary — the command's name, its two derivable handles — stays owned by this context.
  *
+ * TWO HALVES, and both are load bearing: CANCEL the pending beats (so nothing re-lights the signal)
+ * and PUBLISH the stop (so what is already on the contact's screen comes down). Either one alone
+ * leaves the bug that motivated this: cancelling without stopping left a `composing` standing that
+ * nothing would ever retract; stopping without cancelling would have the next beat undo it.
+ *
  * `DeliverChannelMessage` already relied on exactly this property (a canceller derives both handles
  * from `channelId`/`remoteId` alone and can stop a loop it never started) — it just held the only
- * copy, as a private method nothing outside `thread/usecases` could reach. Extracted here so a
- * TERMINAL path with no delivery (a turn that errors, or ends without a reply) has a seam of its own
- * to call — today nothing does, which is the loop's own ceiling (`TYPING_MAX_DURATION_MS`, currently
- * five minutes) standing in for cancellation on that path. See `SustainTypingPresence.test.ts` for
- * the falseador that measures the gap this closes only half of: the primitive now exists, but wiring
- * it into the turn's non-completion return is agent-context work, out of this seam's reach.
+ * copy, as a private method nothing outside `thread/usecases` could reach. Extracted here so every
+ * terminal can reach it, and now they all do: both of the delivery's exits, `StreamChannelReply`'s
+ * opening cut, and — the guarantee — `RunOrchestratorTurn`'s `finally`, which covers the paths with
+ * no delivery at all (an error, a run that produced no reply).
  *
  * BEST-EFFORT PER HANDLE, like every other cue (decision 12): one handle failing to cancel must not
  * skip the other, and neither failure may throw — the reply (or the error path) already did its job.
  */
-export async function endTypingPresence({ commands, logging, channelId, remoteId }: EndTypingPresence): Promise<void> {
+export async function endTypingPresence({ commands, sender, logging, ownerId, channelId, remoteId }: EndTypingPresence): Promise<void> {
 	for (const jobId of typingBeatJobIds(channelId, remoteId)) {
 		const outcome = await tryCatchAsync(() =>
 			commands.cancelCommand('sustain_typing_presence' satisfies SustainTypingPresence['name'], jobId),
@@ -106,5 +116,17 @@ export async function endTypingPresence({ commands, logging, channelId, remoteId
 		if (!outcome.success) {
 			logging.info({ content: { message: 'typing presence not cancelled (best-effort)', channelId, reason: outcome.error.message } })
 		}
+	}
+
+	// AND THEN SAY SO ON THE WIRE. Deleting the rows only stops US from beating; the contact's screen is
+	// still holding the last `composing` we published, and how long it holds it is not ours to assume —
+	// the old design rated the decay at "~10s" and a real conversation showed the indicator outliving
+	// the answer regardless. `paused` is what actually takes it down (`ChannelSender.stopTyping`).
+	//
+	// AFTER the cancel, never before: a stop published while a beat is still armed would be overwritten
+	// by that beat within six seconds, which is worse than not stopping at all — it looks intermittent.
+	const stopped = await tryCatchAsync(() => sender.stopTyping({ channelId, remoteId }, ownerId))
+	if (!stopped.success) {
+		logging.info({ content: { message: 'typing presence not stopped (best-effort)', channelId, reason: stopped.error.message } })
 	}
 }

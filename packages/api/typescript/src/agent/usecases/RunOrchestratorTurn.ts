@@ -90,6 +90,17 @@ export const RunOrchestratorTurnOutputSchema = z.object({
  */
 type LoadedThread = NonNullable<Awaited<ReturnType<ThreadRepository['findById']>>>
 
+/**
+ * THE DEBT A TURN TAKES ON WHEN IT LIGHTS "digitando…".
+ *
+ * Empty until the loop is actually ignited, and then carrying the conversation it was ignited for —
+ * which is exactly the pair the extinction needs. One field rather than a boolean plus two strings,
+ * because "was it lit" and "where" are the same fact and can never be allowed to disagree.
+ */
+interface LitPresence {
+	conversation?: { channelId: string; remoteId: string }
+}
+
 /** How this turn addresses the CLI session: continue the thread's, or open one under an id we mint. */
 interface SessionPlan {
 	resumed: boolean
@@ -191,7 +202,44 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 		super()
 	}
 
+	/**
+	 * THE GUARANTEE THAT "digitando…" NEVER OUTLIVES THE TURN.
+	 *
+	 * The turn is the one thing that knows it is generating, so it is the one thing that can promise the
+	 * indicator goes out when it stops — on EVERY terminal, including the ones nobody has written yet.
+	 * That promise used to be spread across the delivery legs instead, and the sum of them had a hole:
+	 * a streamed reply (which the "Pensando" placeholder makes every reply) reached none of the cancels,
+	 * and the loop beat on to its five-minute ceiling after the answer was already on the screen —
+	 * measured on a real conversation, not inferred.
+	 *
+	 * A `finally` is the shape for it, because the alternative is remembering to close a cue on each of
+	 * four returns and every future fifth. The delivery legs keep their own cancels: those are the
+	 * OPTIMISATION (they fire the moment the words land, this one when the turn ends), and cancelling
+	 * twice is free — `endTypingPresence` deletes rows that may already be gone and publishes a stop
+	 * that is idempotent by nature.
+	 *
+	 * ONLY IF IT WAS LIT: `runTurn` records the conversation the moment it ignites the loop and not
+	 * before, so a turn refused by `resolveProvider` (which throws BEFORE the ignition, deliberately —
+	 * see the note there) pays no gateway call on the way out.
+	 */
 	protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
+		const presence: LitPresence = {}
+		try {
+			return await this.runTurn(input, presence, tx)
+		} finally {
+			if (presence.conversation) {
+				await endTypingPresence({
+					commands: this.commands,
+					sender: this.sender,
+					logging: this.logging,
+					ownerId: input.ownerId,
+					...presence.conversation,
+				})
+			}
+		}
+	}
+
+	private async runTurn(input: this['input'], presence: LitPresence, tx?: Transaction): Promise<this['output']> {
 		const thread = await this.threads.findById(input.threadId)
 		if (!thread) throw new BaseError<AgentApplicationErrors>('PROVIDER_NOT_DETECTED', `thread ${input.threadId} not found`)
 
@@ -220,10 +268,14 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 		// indicator for an answer that is never coming. "I saw it" is already covered, at ingest, by the
 		// 👀 (AC-9), which is why nothing is lost by waiting for the run to actually be about to start.
 		//
-		// Nobody turns it OFF from here, and that is the design: the platform expires the signal in ~10s
-		// if a beat is missed, the ceiling in the payload ends the loop even on a healthy process, and
-		// `DeliverChannelMessage` cancels it as an optimisation once the words are on the wire.
+		// AND THE TURN TURNS IT OFF, in `handle`'s `finally` — the guarantee. `DeliverChannelMessage` and
+		// `StreamChannelReply` still cancel as an optimisation the moment the words are on the wire, and
+		// the ceiling in the payload still bounds a process that dies between the two.
 		await beginTypingPresence({ commands: this.commands, logging: this.logging, ownerId: input.ownerId, channelId, remoteId })
+		// FROM HERE ON THE TURN OWES AN EXTINCTION — recorded for the `finally` in `handle` above, which
+		// is what makes "the indicator never outlives the turn" true of every exit rather than of the
+		// ones somebody remembered.
+		presence.conversation = { channelId, remoteId }
 
 		// THE STREAMED REPLY (streaming spec). The turn is the only place that holds the answer while it
 		// is still growing, so it is the only place the cadence can be fed from — but it stays ignorant of
@@ -540,26 +592,19 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 	 * as the only off-switch: a non-COMPLETED outcome, a COMPLETED one with an empty reply, and an
 	 * unhandled throw around `agent.run()`. All three call this.
 	 *
-	 * Two best-effort cues (streaming spec decision 12), never a hard failure stacked on whatever
-	 * already went wrong:
-	 *   1. `endTypingPresence` — stop paying for "digitando…" beats nobody has an answer for, rather
-	 *      than leaving the loop to find its own ceiling five minutes later.
-	 *   2. IF the "Pensando" placeholder was opened AND no real cut ever grew it: edit it to the
-	 *      friendly error copy instead of leaving "✻ {verbo}…" standing. A placeholder that already
-	 *      carries a real cut is left untouched — the contact is reading an actual, if incomplete,
-	 *      answer, and overwriting it with an error would be worse than leaving it as it stands.
+	 * ONE best-effort cue now (streaming spec decision 12), never a hard failure stacked on whatever
+	 * already went wrong: IF the "Pensando" placeholder was opened AND no real cut ever grew it, edit it
+	 * to the friendly error copy instead of leaving "✻ {verbo}…" standing. A placeholder that already
+	 * carries a real cut is left untouched — the contact is reading an actual, if incomplete, answer,
+	 * and overwriting it with an error would be worse than leaving it as it stands.
+	 *
+	 * The typing presence used to be closed HERE too, and no longer is: `handle`'s `finally` ends it on
+	 * every terminal, so doing it again on this one would only publish a second identical stop.
 	 */
 	private async closeCuesOnNoDelivery(
 		conversation: { channelId: string; remoteId: string; ownerId: string },
 		placeholder: { messageId: string | undefined; landed: boolean },
 	): Promise<void> {
-		await endTypingPresence({
-			commands: this.commands,
-			logging: this.logging,
-			channelId: conversation.channelId,
-			remoteId: conversation.remoteId,
-		})
-
 		if (!placeholder.messageId || placeholder.landed) return
 		const messageId = placeholder.messageId
 		const edited = await tryCatchAsync(() =>

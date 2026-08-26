@@ -16,6 +16,7 @@ import { ConfigureReactions } from './ConfigureThreadSettings'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { ConsumedMessageRepository } from '../repositories/ConsumedMessageRepository'
 import { ChannelSender, MockChannelSender } from '../services/ChannelSender'
+import { ReplyStreamer, streamKey } from '../services/ReplyStreamer'
 import { CUE_ACKNOWLEDGED, CUE_REPLIED, TYPING_FIRST_BEAT_SLOT, typingBeatJobId } from '../utils/ChannelCues'
 
 /**
@@ -388,8 +389,12 @@ describe('the instant cues — 👀 on the trigger, "digitando…" while it thin
 		 * THE PROPERTY THAT MAKES A CRASH SURVIVABLE. Nobody cancels anything here — the ceiling in the
 		 * beat's own payload is what ends the loop, so a turn that hangs forever cannot leave a contact
 		 * staring at a permanent "digitando…".
+		 *
+		 * And it ends it OUT LOUD: the past-ceiling beat publishes the stop. Ending in silence was the
+		 * original design and it is what left the last `composing` standing on the contact's screen with
+		 * nothing to retract it.
 		 */
-		it('a beat past its ceiling publishes NOTHING and arms NOTHING — the loop ends itself', async () => {
+		it('a beat past its ceiling arms NOTHING and publishes the STOP — the loop ends itself, visibly', async () => {
 			const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
 			const { channelId, contactRef } = thread
 			const remoteId = contactRef.externalId
@@ -399,7 +404,91 @@ describe('the instant cues — 👀 on the trigger, "digitando…" while it thin
 			await queue.tick()
 
 			expect(sender.typingBeats).toHaveLength(0)
+			expect(sender.typingStops).toHaveLength(1)
 			expect(await typingRows()).toHaveLength(0)
+		})
+
+		/**
+		 * THE PATH THE OFF-SWITCH ACTUALLY TAKES IN PRODUCTION, and the one that had no test.
+		 *
+		 * Measured on a real conversation (gateway log, 26-ago): the reply landed at 4:19PM and the beats
+		 * carried on — 10 a minute — until 4:24PM, when `TYPING_MAX_DURATION_MS` finally ended the loop.
+		 * Five minutes of "digitando…" after the answer was already on the contact's screen, every turn.
+		 *
+		 * The reason is a hole between two half-cancels, and each half is individually defensible:
+		 *   - `StreamChannelReply` cancels only on its `SEND` branch, because that is "the first text is
+		 *     on the wire". But `RunOrchestratorTurn` opens the "Pensando" placeholder and calls
+		 *     `streams.opened()` itself, so by the time a real cut arrives the stream is ALREADY open and
+		 *     every cut is an `EDIT`. That branch never runs.
+		 *   - `DeliverChannelMessage` cancels after `sender.send(...)` — but `handle()` returns early on
+		 *     `finishStreamedReply(...)`, several lines above it. A streamed reply never reaches it.
+		 *
+		 * So the sum of two correct-looking guards was zero. This test pins the PROPERTY instead of
+		 * either branch: whatever shape the delivery takes, the loop is out when the answer is out.
+		 */
+		it('a STREAMED reply cancels the loop too — the "Pensando" placeholder may not shield the exit', async () => {
+			const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+			const { channelId, contactRef } = thread
+			const remoteId = contactRef.externalId
+
+			await startLoop(channelId, remoteId, Date.now() + 60_000)
+			await queue.tick()
+			expect(await typingRows()).toHaveLength(1) // the successor is armed
+
+			// EXACTLY what the turn does: send the placeholder, then hand the message to the streamer so
+			// the reply GROWS in it instead of opening a second balloon.
+			const streamer = testBed.resolve(ReplyStreamer)
+			streamer.begin({ ownerId: MOCK_CLOUD_OWNER_ID, channelId, remoteId })
+			const { messageId } = await sender.send({ channelId, remoteId, text: '✻ Pensando…' }, MOCK_CLOUD_OWNER_ID)
+			streamer.opened(streamKey(channelId, remoteId), {
+				ownerId: MOCK_CLOUD_OWNER_ID,
+				messageId,
+				sentAtEpochMs: Date.now(),
+				sequence: 0,
+				baseOffset: 0,
+				deliveredLength: 0,
+			})
+
+			await testBed.resolve(DeliverChannelMessage).execute({
+				ownerId: MOCK_CLOUD_OWNER_ID,
+				channelId,
+				contactExternalId: remoteId,
+				text: 'here you go',
+				author: MessageAuthor.SYSTEM,
+			})
+
+			// The delivery went out as the FINAL EDIT of the placeholder — the streamed path, not the send.
+			expect(sender.screen()).toEqual(['here you go'])
+			expect(await typingRows()).toHaveLength(0)
+			await queue.tick()
+			expect(sender.typingBeats).toHaveLength(1)
+		})
+
+		/**
+		 * EXTINCTION IS AN ACT, not an absence (the second half of the same report).
+		 *
+		 * Cancelling the queue rows only stops US from talking; it says nothing to WhatsApp, which is
+		 * still holding the last `composing` we published. The port's old docblock claimed the wire had
+		 * no off-switch — it does, and the gateway has always mapped it (`ChatPresenceTypePaused`).
+		 */
+		it('ending the loop PUBLISHES a stop — the contact does not wait for a decay we cannot observe', async () => {
+			const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+			const { channelId, contactRef } = thread
+			const remoteId = contactRef.externalId
+
+			await startLoop(channelId, remoteId, Date.now() + 60_000)
+			await queue.tick()
+
+			await testBed.resolve(DeliverChannelMessage).execute({
+				ownerId: MOCK_CLOUD_OWNER_ID,
+				channelId,
+				contactExternalId: remoteId,
+				text: 'here you go',
+				author: MessageAuthor.SYSTEM,
+			})
+
+			expect(sender.typingStops).toHaveLength(1)
+			expect(sender.typingStops[0]).toMatchObject({ channelId, remoteId, ownerId: MOCK_CLOUD_OWNER_ID })
 		})
 
 		it('the reply going out CANCELS the loop — no beat survives the first text', async () => {

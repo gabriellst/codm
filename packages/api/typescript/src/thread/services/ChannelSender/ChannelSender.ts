@@ -177,11 +177,31 @@ export abstract class ChannelSender {
 	/**
 	 * Publish ONE beat of the platform's native "typing…" indicator.
 	 *
-	 * Deliberately not `startTyping`/`stopTyping`: the platform indicator is a DECAYING signal, not a
-	 * latch. It expires on its own in the order of ten seconds, so "keep typing" means calling this
-	 * again, and "stop typing" means *not* calling it again. Modelling it as a latch would invent an
-	 * off-switch the wire does not have — and an off-switch that a crash can skip is exactly how a
-	 * contact ends up staring at a permanent "digitando…". `SustainTypingPresence` owns the cadence.
+	 * A beat, not a latch: the signal decays on its own, so "keep typing" means calling this again.
+	 * `SustainTypingPresence` owns the cadence.
 	 */
 	abstract signalTyping(input: ChannelConversation, ownerId: string): Promise<void>
+
+	/**
+	 * Put the indicator OUT, explicitly.
+	 *
+	 * ### Why this verb exists now, when the port deliberately refused it before
+	 * It used to say, in as many words, that an off-switch would be "an off-switch the wire does not
+	 * have" — so silence was the whole design and the platform's own decay the only extinction. That
+	 * premise was simply WRONG about the wire: `ChatPresenceType` has carried `paused` since the
+	 * gateway's first version, and `WhatsmeowChannel.SendChatPresence` maps it onto
+	 * `types.ChatPresencePaused`. The endpoint was there the whole time; only this port refused to
+	 * name it.
+	 *
+	 * The measurement that settled it: with nothing ever publishing `paused`, a contact kept reading
+	 * "digitando…" long past the last beat — the decay the old docblock rated at "the order of ten
+	 * seconds" is not something this side gets to assume. So extinction becomes an ACT: whoever ends
+	 * the loop says so on the wire.
+	 *
+	 * BEST-EFFORT, exactly like `signalTyping` and every other cue (streaming spec, decision 12) — a
+	 * refused stop may never fail the reply that just landed. It stays SEPARATE from `signalTyping`
+	 * rather than becoming a parameter on it for the reason the class doc gives for the other verbs:
+	 * one call site means one presence, and the vocabulary of the gateway's enum stays out of the port.
+	 */
+	abstract stopTyping(input: ChannelConversation, ownerId: string): Promise<void>
 }

@@ -114,7 +114,14 @@ export class DeliverChannelMessage extends Handler<typeof DeliverChannelMessageI
 		// grow must be COMPLETED, not repeated: sending here would put the answer in the conversation
 		// twice. The stream is found by the conversation alone, so nothing had to be threaded through the
 		// event, the handler or this command's schema.
-		if (await this.finishStreamedReply(input, tx)) return
+		if (await this.finishStreamedReply(input, tx)) {
+			// THE SAME CLOSING MOVE THE PLAIN PATH MAKES, and the line whose absence was the bug: this
+			// early return used to jump straight past `stopTypingPresence` below, so every reply that
+			// STREAMED — which, once the "Pensando" placeholder existed, is every reply — left the loop
+			// running to its five-minute ceiling. Measured on a real conversation before it was fixed.
+			await this.stopTypingPresence(ownerId, channelId, contactExternalId)
+			return
+		}
 
 		// EXTERNAL I/O OUTSIDE ANY TRANSACTION — the sanctioned shape (cc-bp-24's named exception):
 		// holding the single SQLite write lock across an HTTP round-trip would block every other writer,
@@ -134,7 +141,7 @@ export class DeliverChannelMessage extends Handler<typeof DeliverChannelMessageI
 
 		await this.recordOutbound(messageId, input, tx)
 
-		await this.stopTypingPresence(channelId, contactExternalId)
+		await this.stopTypingPresence(ownerId, channelId, contactExternalId)
 
 		this.logging.info({ content: { message: 'channel message delivered', channelId, messageId, author } })
 	}
@@ -316,20 +323,20 @@ export class DeliverChannelMessage extends Handler<typeof DeliverChannelMessageI
 	 * After, because until the send returns we are still generating as far as the contact is concerned,
 	 * and a send that throws is retried — the indicator should stay lit across that retry. Swallowed,
 	 * because a cue may never fail a delivery (decision 12): the reply is already on the channel by
-	 * this line, and `SustainTypingPresence` is built so that failing to cancel costs at most one beat
-	 * interval, with the platform's own ~10s expiry and the loop's ceiling behind it.
+	 * this line, and there are two more extinctions behind this one: the turn's `finally` and, failing
+	 * even that, the ceiling beat — which publishes the stop itself rather than merely falling silent.
 	 *
-	 * ### This is an OPTIMISATION on the DELIVERY path only — audited, not yet closed on the ERROR path
-	 * A turn that ends WITHOUT delivering (throws, or completes with no reply) never calls this, and
-	 * nothing else does either — the loop then runs to its own ceiling (`TYPING_MAX_DURATION_MS`,
-	 * currently five minutes) before self-terminating, which is a real, measured "digitando…" that
-	 * outlives the turn by minutes rather than seconds. `endTypingPresence` was extracted to
-	 * `thread/services/TypingPresence` (this method used to hold the only copy, private, unreachable
-	 * from outside `thread/usecases`) precisely so a non-delivering terminal path can call it too — see
-	 * `SustainTypingPresence.test.ts` for the falseador. Wiring that call is agent-context work
-	 * (`RunOrchestratorTurn`'s non-completion return), out of this audit's scope.
+	 * ### CALLED FROM BOTH BRANCHES, and that is the correction this line carries
+	 * `handle()` has two exits — the final edit of a streamed reply and the plain send — and for a long
+	 * while only the second one closed the cue. Every streamed reply therefore left the loop beating to
+	 * its ceiling. Whichever way the words got out, they are out: both exits stop the indicator.
+	 *
+	 * ### STILL AN OPTIMISATION, not the guarantee
+	 * The guarantee is the turn's own `finally` (`RunOrchestratorTurn`), which ends the presence on
+	 * EVERY terminal — delivery, empty reply, error, or a shape nobody has written yet. This call just
+	 * gets there sooner, on the hot path, where the contact is actually looking.
 	 */
-	private async stopTypingPresence(channelId: string, remoteId: string): Promise<void> {
-		await endTypingPresence({ commands: this.commands, logging: this.logging, channelId, remoteId })
+	private async stopTypingPresence(ownerId: string, channelId: string, remoteId: string): Promise<void> {
+		await endTypingPresence({ commands: this.commands, sender: this.sender, logging: this.logging, ownerId, channelId, remoteId })
 	}
 }

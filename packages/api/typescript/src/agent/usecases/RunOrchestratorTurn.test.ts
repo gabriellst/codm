@@ -7,6 +7,7 @@ import { MailboxItemKind, ProviderKind, StopKind, StopResolution } from '@codm/c
 import { TestBed, givenIssue, givenStop, givenThread } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
+import { ChannelSender, MockChannelSender } from '@thread/services/ChannelSender'
 import { TYPING_FIRST_BEAT_SLOT, typingBeatJobId } from '@thread/utils/ChannelCues'
 import type { Thread } from '@thread/entities/Thread'
 import { AgentRunner } from '../services/AgentRunner'
@@ -41,10 +42,18 @@ import { RunOrchestratorTurn } from './RunOrchestratorTurn'
  */
 class CapturingRunner extends AgentRunner {
 	requests: AgentRunRequest<ZodType | undefined>[] = []
+	/**
+	 * Run WHILE THE TURN IS GENERATING — the only window in which "the indicator is lit" is a true
+	 * statement about the world, now that the turn puts it out on its way past every terminal. A test
+	 * that reads the queue after `execute()` returns is reading the state AFTER the extinction, which is
+	 * how the activation assertions below used to pass for the wrong reason.
+	 */
+	whileRunning?: () => Promise<void>
 	async *run<OutputSchema extends ZodType | undefined = undefined>(
 		request: AgentRunRequest<OutputSchema>,
 	): AsyncIterable<AgentRuntimeEvent> {
 		this.requests.push(request)
+		await this.whileRunning?.()
 		yield { type: 'finished', result: { outcome: AgentRunOutcome.COMPLETED, replyText: 'ok', sessionId: 'sess-orch', failed: false } }
 	}
 	async shutdown(): Promise<void> {}
@@ -81,13 +90,23 @@ describe('RunOrchestratorTurn — the cues the turn is responsible for lighting'
 
 	const typingBeats = async () => (await db.select().from(scheduledCommands)).filter(row => row.name === 'sustain_typing_presence')
 
-	describe('AC-10 (activation): a running turn arms the typing loop', () => {
+	/** Drive one turn with a probe running INSIDE the generation, where the indicator is supposed to be lit. */
+	const runTurnObserving = async (thread: Thread, whileRunning: () => Promise<void>) => {
+		const runner = new CapturingRunner()
+		runner.whileRunning = whileRunning
+		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(runner))
+		await runTurn(thread)
+	}
+
+	describe('AC-10 (activation): a running turn arms the typing loop — and puts it out on the way out', () => {
 		it('enqueues the FIRST beat, on the handle a canceller can derive, with a ceiling in the future', async () => {
 			const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
 
-			await runTurn(thread)
+			let beats: Awaited<ReturnType<typeof typingBeats>> = []
+			await runTurnObserving(thread, async () => {
+				beats = await typingBeats()
+			})
 
-			const beats = await typingBeats()
 			expect(beats).toHaveLength(1)
 			// The id is DERIVED from the conversation — the property that lets `DeliverChannelMessage` stop a
 			// loop it never started. A random one would beat correctly and be uncancellable.
@@ -106,6 +125,29 @@ describe('RunOrchestratorTurn — the cues the turn is responsible for lighting'
 		})
 
 		/**
+		 * THE OTHER HALF OF THE SAME PROMISE, and the one a real conversation caught missing: the turn
+		 * that lit the indicator is the turn that puts it out. Before, nothing in this file did — the
+		 * loop was left to the delivery legs (which a streamed reply walks past) and, failing those, to
+		 * a five-minute ceiling the contact sat through.
+		 *
+		 * Asserted on BOTH facts, because either alone can be true while the bug is present: no rows
+		 * left (nothing will re-light it) AND a stop on the wire (what is already on the screen comes
+		 * down). The stop also proves the ignition happened — the `finally` only publishes for a turn
+		 * that actually lit the loop.
+		 */
+		it('leaves no beat behind and publishes the stop — the indicator never outlives the turn', async () => {
+			const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+			const sender = testBed.resolve(ChannelSender) as MockChannelSender
+
+			await runTurn(thread)
+
+			expect(await typingBeats()).toHaveLength(0)
+			expect(sender.typingStops).toMatchObject([
+				{ channelId: thread.channelId, remoteId: thread.contactRef.externalId, ownerId: MOCK_CLOUD_OWNER_ID },
+			])
+		})
+
+		/**
 		 * The loop belongs to ONE conversation. Asserted against a second thread because the handle is
 		 * derived from `channelId` + `remoteId`: a seam that armed the loop on the wrong pair would light
 		 * a stranger's chat and leave the one actually waiting silent, and a single-thread fixture cannot
@@ -115,9 +157,11 @@ describe('RunOrchestratorTurn — the cues the turn is responsible for lighting'
 			const answered = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
 			const quiet = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
 
-			await runTurn(answered)
+			let ids: string[] = []
+			await runTurnObserving(answered, async () => {
+				ids = (await typingBeats()).map(row => row.id)
+			})
 
-			const ids = (await typingBeats()).map(row => row.id)
 			expect(ids).toEqual([typingBeatJobId(answered.channelId, answered.contactRef.externalId, TYPING_FIRST_BEAT_SLOT)])
 			expect(ids).not.toContain(typingBeatJobId(quiet.channelId, quiet.contactRef.externalId, TYPING_FIRST_BEAT_SLOT))
 		})
