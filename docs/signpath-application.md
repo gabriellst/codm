@@ -37,9 +37,12 @@ verifies on update.
 GitHub Actions, workflow `.github/workflows/release-stable.yml`, triggered only by pushing a
 `vX.Y.Z` tag. The job refuses to publish unless the tag matches the version in the committed
 desktop config, so an artifact can never claim a version its source does not declare. The Windows
-installer is cross-compiled from the Linux job via `cargo-xwin`. Nothing is signed by a workflow a
-pull request can trigger, and pull requests from forks require maintainer approval before any
-workflow runs (`all_external_contributors`).
+installer is built natively on a GitHub-hosted `windows-latest` runner — the same job runs the
+shell's `#[cfg(windows)]` tests and a smoke test that boots both sidecars and requires a healthy
+response before the release proceeds. Nothing is signed by a workflow a pull request can trigger,
+and pull requests from forks require maintainer approval before any workflow runs
+(`all_external_contributors`). Every release also publishes a `SHA256SUMS.txt` covering all
+installers, generated in the publishing job from the same bytes it uploads.
 
 **Code signing policy page:**
 https://github.com/gabriellst/codm#code-signing-policy — lists committers, reviewers and approvers,

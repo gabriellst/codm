@@ -1,6 +1,7 @@
 # Canal STABLE = tags vX.Y.Z (roadmap decisão 3). O cliente lê $R2/stable/latest.json
-# (config/updater.ts — desde SP2.5 o updater aponta ao R2, não ao GitHub: repo privado 404a GET
-# anônimo em release asset). O beta escreve em beta/, então o canal rolante nunca alcança quem
+# (config/updater.ts — desde SP2.5 o updater aponta ao R2, não ao GitHub: nasceu porque asset de
+# repo privado 404a para GET anônimo, e continua assim porque essa base está embarcada em todo app
+# já instalado). O beta escreve em beta/, então o canal rolante nunca alcança quem
 # está no stable — o isolamento vem dos prefixos R2 distintos. A tag só vira release se casar com
 # a versão da conf: um manifest cuja versão diverge do bundle instalado é um updater quebrado em
 # silêncio.

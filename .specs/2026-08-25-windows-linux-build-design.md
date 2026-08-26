@@ -192,6 +192,34 @@ acima: `windows-latest` deixa de ser o runner que produz o instalador Windows of
   metade que dá pra automatizar (shell + sidecars num Windows hospedado de verdade), a instalação
   manual do `-setup.exe` fecha o resto.
 
+## Addendum 2 (2026-08-26, mesma data) — o repositório ficou público e o addendum acima foi revertido
+
+O addendum anterior durou horas. **O repositório ficou PÚBLICO em 2026-08-26** (candidatura ao
+SignPath Foundation), e Actions em repositório público é **gratuito e ilimitado** nos runners
+hospedados do GitHub — Linux, Windows e macOS. A premissa inteira do addendum 1 ("não podemos contar
+com o billing do GitHub") deixou de valer, e o founder decidiu **tirar o Mac mini da reta de
+release**. As Decisões 1 e 2 voltam à forma ORIGINAL desta spec, com juros:
+
+- **Decisão 1, restaurada.** `windows-x86_64` volta a `windows-latest`, NATIVO: sem `cargo-xwin`,
+  sem `--runner`, sem `--target`. `linux-x86_64` volta a `ubuntu-latest` (x86_64 real — some o
+  container amd64 sob Rosetta e toda a pilha que ele exigia). `darwin-aarch64` vai para
+  `macos-latest`. `prepare`/`publish` em `ubuntu-latest`. As três pernas rodam **em paralelo**, em
+  máquinas distintas — a serialização num runner só (v0.5.4: ~35 min de wall-clock para ~10 de
+  compute) acabou.
+- **Decisão 14 / `correctness.yml`, restaurada.** O `cargo test --lib` dos testes `#[cfg(windows)]`
+  volta para dentro da perna Windows do beta/stable, GATEANDO a release; `windows-native-tests.yml`
+  foi APAGADO, junto com `infra/runners/linux-x64/` e o modo `--target` de `build-sidecars.ts` (sem
+  consumidor depois da volta ao build nativo).
+- **AC-15, na forma original.** O `-setup.exe` deixa de ser cross-compilado, então cai a parte da
+  extensão que falava de "NSIS cross-compilado". O que fica é o que a spec já pedia: o loop de
+  auto-update por SO, e a instalação manual do `-setup.exe` numa máquina Windows real antes do
+  primeiro stable multi-SO — agora com o smoke nativo e os testes `cfg(windows)` cobrindo, no
+  próprio fluxo de release, a metade automatizável.
+- **Risco novo, nomeado.** `TAURI_BUNDLER_DMG_IGNORE_CI=true` continua necessário na perna macOS, e
+  a janela do DMG (o `.DS_Store` do layout) depende de um grant de Automação → Finder que o mini
+  tinha e um runner hospedado não tem. Se o primeiro DMG hospedado sair cru, a decisão é voltar SÓ a
+  perna macOS para o self-hosted — não desfazer a migração. Ver `docs/RELEASE.md`.
+
 ## User Stories
 
 - **Story 1:** Como usuário Linux ou Windows, quero baixar um instalador do meu sistema na

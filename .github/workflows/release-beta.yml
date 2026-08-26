@@ -57,8 +57,10 @@ permissions:
   contents: write
 
 env:
-  # A ORIGEM PÚBLICA (spec SP2.5) — repo privado ⇒ assets do GitHub 404am anônimos. Mesma base que
-  # config/updater.ts embarca no app; mudar aqui sem mudar lá deixa todo app instalado sem update.
+  # A ORIGEM PÚBLICA (spec SP2.5). Nasceu porque o repo era privado e asset de release privado 404a
+  # para GET anônimo; o repo ficou público em 2026-08-26, mas a origem NÃO muda: esta base está
+  # embarcada em todo app já instalado (config/updater.ts é compilado dentro do binário). Mudar aqui
+  # sem mudar lá — ou mudar nos dois — deixa para trás exatamente quem já usa o produto.
   R2_PUBLIC: https://pub-ae0c8cac60c94920b35464575c09e67d.r2.dev
   R2_BUCKET: codm-releases
 
