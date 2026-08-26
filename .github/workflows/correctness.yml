@@ -64,13 +64,17 @@ jobs:
   # scripts/release/workflow-paths.test.ts (test:tooling): se o filtro do beta mudar sem este mudar
   # junto, o tooling fica vermelho.
   #
-  # Trade-off consciente: este job roda HOSPEDADO (ubuntu-22.04) em todo push/PR, mesmo os só-docs
-  # que ele existe para poupar — o GitHub fatura por job arredondando para 1 min. A alternativa
-  # (self-hosted, igual ao `linux`) custaria zero, mas enfileiraria atrás do `detect` (e agora do
-  # `linux`) no único runner do Mac e faria até a decisão de SKIP depender do Mac estar ligado —
-  # ~1 min de cota por push de docs compra a resposta rápida sem essa dependência.
+  # Desde 2026-08-25 (auditoria coordenada com o founder) este job TAMBÉM vira self-hosted — só
+  # precisa de git/bash, já na imagem (infra/runners/linux-x64/). A razão de antes para mantê-lo
+  # hospedado era a decisão de SKIP não depender do Mac mini estar ligado; essa preocupação caía
+  # sozinha porque `linux` (abaixo) já DEPENDE do output deste job (`needs: changes`) — ou seja,
+  # mesmo hospedado, `changes` sempre corria ANTES de `linux` poder começar. Com os dois no MESMO
+  # runner, a fila vira `changes → linux`, que já era a ordem lógica — não um atraso novo (é serial,
+  # não paralelo, mas era serial de qualquer forma). O trade-off que resta é o mesmo do
+  # `detect`/`linux`: a decisão de skip passa a depender do Mac mini estar ligado; o ganho é custo
+  # (o ~1 min/push que este job faturava fica zero), não velocidade nem resiliência.
   changes:
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux, X64]
     outputs:
       desktop: ${{ steps.filter.outputs.desktop }}
     steps:

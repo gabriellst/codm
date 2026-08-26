@@ -8,6 +8,11 @@
 # Três SOs desde 2026-08-25, na MESMA forma do release-beta.yml (prepare → build por SO → publish
 # agregado) — leia os dois juntos. macOS e Linux rodam self-hosted no Mac mini do founder (Linux
 # num container amd64 sob Rosetta — infra/runners/linux-x64/); só Windows é hospedado pelo GitHub.
+# Desde 2026-08-25 (auditoria coordenada com o founder) `prepare` e `publish` — as jobs UTILITY,
+# que não fazem parte da matriz por SO — TAMBÉM migraram para o mesmo runner self-hosted Linux:
+# Windows fica como a ÚNICA exposição a minutos hospedados na release inteira (2×). É corte de
+# custo, não de resiliência — `publish` ainda exige os três builds via `needs`, então uma falha de
+# cobrança na entrada Windows segue derrubando a release inteira (D4: sem manifest parcial).
 # O que muda no stable: retenção TOTAL no R2 (nome versionado por artefato) + um alias fixo por
 # instalador para o botão da landing.
 name: release-stable
@@ -25,7 +30,10 @@ env:
 
 jobs:
   prepare:
-    runs-on: ubuntu-22.04
+    # Job UTILITY — self-hosted desde 2026-08-25, mesmo runner Linux (self-hosted, Mac mini) que a
+    # entrada linux-x86_64 do `build` já usa. Custo zero de cota; ver o comentário no topo do
+    # arquivo e o gêmeo em release-beta.yml. Só usa git/bash/jq (na imagem) + bun (via `uses:`).
+    runs-on: [self-hosted, Linux, X64]
     outputs:
       version: ${{ steps.v.outputs.version }}
     steps:
@@ -374,7 +382,9 @@ jobs:
 
   publish:
     needs: [prepare, build]
-    runs-on: ubuntu-22.04
+    # Job UTILITY — self-hosted desde 2026-08-25, mesmo runner Linux do `prepare` acima e mesma
+    # razão. GITHUB_TOKEN continua funcionando igual (injetado pelo Actions, não pelo runner).
+    runs-on: [self-hosted, Linux, X64]
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -382,6 +392,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      # A imagem self-hosted (infra/runners/linux-x64/Dockerfile) NÃO vem com `gh` — só esta job o
+      # usa (`gh release create`, no passo `publish` abaixo). Baixa o tarball oficial linux_amd64
+      # pro $RUNNER_TEMP (limpo pelo Actions a cada job) e entra no PATH via GITHUB_PATH. Ver o
+      # comentário gêmeo, mais detalhado, em release-beta.yml.
+      - name: gh cli (self-hosted não vem com gh — baixa tarball para $RUNNER_TEMP)
+        run: |
+          set -euo pipefail
+          GH_VERSION="$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest | jq -r '.tag_name' | sed 's/^v//')"
+          curl -fsSL -o "$RUNNER_TEMP/gh.tar.gz" \
+            "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz"
+          tar -xzf "$RUNNER_TEMP/gh.tar.gz" -C "$RUNNER_TEMP"
+          "$RUNNER_TEMP/gh_${GH_VERSION}_linux_amd64/bin/gh" --version
+          echo "$RUNNER_TEMP/gh_${GH_VERSION}_linux_amd64/bin" >> "$GITHUB_PATH"
 
       - uses: actions/download-artifact@v4
         with:

@@ -21,7 +21,10 @@ on:
     # Só o que ENTRA no app dispara um beta. Antes era todo push na main, e num único dia isso
     # gerou 36 builds — a maioria por mudança em docs, spec ou backend que o bundle nem carrega.
     # Mesmo filtro de caminho que o deploy-landing já usa (e por isso rodou 5 vezes no mesmo dia).
-    # Desde 2026-08-25 só Windows consome minutos hospedados (2×) — Linux virou self-hosted.
+    # Desde 2026-08-25 só a entrada Windows do `build` consome minutos hospedados (2×) — Linux
+    # virou self-hosted, e as jobs UTILITY (`prepare`/`publish`) migraram para o MESMO runner
+    # self-hosted do Mac mini (auditoria coordenada com o founder, ver comentário em `prepare`
+    # abaixo). Windows fica sozinho como a única exposição a falha de cobrança hospedada.
     paths:
       - 'packages/app/**'
       - 'packages/api/**'
@@ -49,7 +52,14 @@ env:
 jobs:
   # ── 1. insumos, UMA vez ───────────────────────────────────────────────────────────────────────
   prepare:
-    runs-on: ubuntu-22.04
+    # Desde 2026-08-25 (auditoria coordenada com o founder) esta job UTILITY sai do runner
+    # hospedado do GitHub para o self-hosted do Mac mini — o MESMO runner Linux que a entrada
+    # linux-x86_64 do `build` já usa (infra/runners/linux-x64/). Custo zero de cota; NÃO é
+    # resiliência — se faltar cota, o beta continua morrendo na entrada Windows do `build` (2×,
+    # ver comentário no `on.push.paths` acima), e como `publish` exige os três builds via `needs`,
+    # uma falha ali ainda derruba a release inteira (D4: sem manifest parcial). Esta job só usa
+    # git/bash/jq (já na imagem) + `bun` (trazido pela `uses:` abaixo) — nada a provisionar.
+    runs-on: [self-hosted, Linux, X64]
     outputs:
       version: ${{ steps.v.outputs.version }}
     steps:
@@ -467,7 +477,10 @@ jobs:
   # ── 3. um manifest, uma release, um upload ────────────────────────────────────────────────────
   publish:
     needs: [prepare, build]
-    runs-on: ubuntu-22.04
+    # Desde 2026-08-25 (auditoria coordenada com o founder) esta job UTILITY também sai do runner
+    # hospedado para o self-hosted do Mac mini — mesma razão e mesmo runner Linux do `prepare`
+    # acima. GITHUB_TOKEN continua funcionando igual (é injetado pelo Actions, não pelo runner).
+    runs-on: [self-hosted, Linux, X64]
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -477,6 +490,21 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      # A imagem self-hosted (infra/runners/linux-x64/Dockerfile) NÃO vem com `gh` — só esta job o
+      # usa (`gh release delete`/`create`, no passo `publish` abaixo). Baixa o tarball oficial
+      # linux_amd64 pro $RUNNER_TEMP (limpo pelo Actions a cada job, mesmo em runner persistente) e
+      # entra no PATH via GITHUB_PATH. Instalar de verdade (assar na imagem) exigiria rebuild —
+      # fora do escopo desta mudança, que é sobre custo de runner, não sobre a imagem.
+      - name: gh cli (self-hosted não vem com gh — baixa tarball para $RUNNER_TEMP)
+        run: |
+          set -euo pipefail
+          GH_VERSION="$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest | jq -r '.tag_name' | sed 's/^v//')"
+          curl -fsSL -o "$RUNNER_TEMP/gh.tar.gz" \
+            "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz"
+          tar -xzf "$RUNNER_TEMP/gh.tar.gz" -C "$RUNNER_TEMP"
+          "$RUNNER_TEMP/gh_${GH_VERSION}_linux_amd64/bin/gh" --version
+          echo "$RUNNER_TEMP/gh_${GH_VERSION}_linux_amd64/bin" >> "$GITHUB_PATH"
 
       - uses: actions/download-artifact@v4
         with:

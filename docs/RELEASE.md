@@ -269,7 +269,7 @@ Linux arm64, rollout percentual, `minVersion` forçado — ver roadmap (SP2/SP4)
 
 Os dois workflows têm a mesma forma, três jobs:
 
-1. **`prepare`** (ubuntu, segundos) — decide a versão (`<conf>-beta.<run>` ou a tag), confere que
+1. **`prepare`** (self-hosted desde 2026-08-25, segundos) — decide a versão (`<conf>-beta.<run>` ou a tag), confere que
    `packages/app/tauri/src-tauri/shell-env.json` e os demais artefatos gerados do shell estão em
    dia (`bun desktop:generate --check`) e que `VITE_POSTHOG_KEY` está presente. No stable é aqui
    que a tag é comparada com a conf — antes de gastar um minuto de build.
@@ -292,19 +292,28 @@ Os dois workflows têm a mesma forma, três jobs:
    temporário + codesign dos Mach-O aninhados, `nice`, gate do Developer ID) continuam atrás de
    `if: runner.os == 'macOS'` — essa condição é sobre IDENTIDADE do SO (só o macOS assina Apple),
    não sobre ser ou não hospedado.
-3. **`publish`** (ubuntu) — baixa os três artifacts, confere a lista completa, gera **um**
+3. **`publish`** (self-hosted desde 2026-08-25) — baixa os três artifacts, confere a lista completa, gera **um**
    `latest.json` com as três plataformas (`make-manifest.ts --platform … --url … --sig-file …` ×3),
    cria a release no GitHub, sobe ao R2 com o content-type certo (o `latest.json` por último) e
    confere por `HEAD` que cada objeto tem o tamanho do arquivo local — o wrangler já saiu 0 sem
-   publicar.
+   publicar. A imagem self-hosted não vem com `gh` (só esta job usa; ver
+   `infra/runners/linux-x64/Dockerfile`) — um passo baixa o tarball oficial `linux_amd64` para
+   `$RUNNER_TEMP` e o entra no `PATH` via `GITHUB_PATH`; instalar de verdade na imagem exigiria
+   rebuild, fora do escopo desta migração (custo de runner, não a imagem).
 
 **Custo.** macOS e Linux são self-hosted (zero — Linux desde 2026-08-25, `infra/runners/
-linux-x64/`, ver "Runner self-hosted" abaixo). Windows hospedado conta 2×: um beta custa ~30 min
-de cota (≈15 min Windows ×2). Com 2.000 min/mês isso dá ~65 betas — o filtro de caminhos do
-`release-beta` (só o que entra no app dispara) é o que mantém isso viável mesmo sem o Linux
-contando mais. O `correctness` tem um job `linux` (cargo check + sidecars + smoke) que também
-passou a rodar no Mac mini self-hosted e não consome cota; Windows **não** roda no gate de PR —
-quem pega quebra de Windows é o beta seguinte.
+linux-x64/`, ver "Runner self-hosted" abaixo), e desde a mesma data as jobs UTILITY `prepare` e
+`publish` de `release-beta`/`release-stable` (que não fazem parte da matriz por SO) também
+migraram para o mesmo runner Linux self-hosted. Windows hospedado conta 2×: um beta custa ~30 min
+de cota (≈15 min Windows ×2) — e agora é a ÚNICA linha que ainda fatura minutos hospedados na
+release inteira. Com 2.000 min/mês isso dá ~65 betas — o filtro de caminhos do `release-beta` (só
+o que entra no app dispara) é o que mantém isso viável mesmo sem Linux/UTILITY contando mais. O
+`correctness` tem um job `linux` (cargo check + sidecars + smoke) e um job `changes` (o filtro que
+decide se `linux` roda) que também passaram a rodar no Mac mini self-hosted e não consomem cota;
+Windows **não** roda no gate de PR — quem pega quebra de Windows é o beta seguinte. Mover essas
+jobs é corte de custo, não de resiliência: `publish` ainda exige os três builds via `needs`, então
+uma falha de cobrança na entrada Windows do `build` segue derrubando a release inteira (D4: sem
+manifest parcial) — só o alvo do gasto mudou.
 
 **Cache.** `Swatinem/rust-cache` volta, mas **só quando `matrix.hosted`** (o campo DECLARADO, não
 `runner.os != 'macOS'`): runners hospedados são descartáveis, e a poda de `~/.cargo/bin` que
@@ -329,9 +338,18 @@ hospedado. A razão é a mesma: o job Linux custava ~10 min de cota hospedada po
 virou zero. Como o daemon não cross-compila (o mesmo "CROSS-TRIPLE GAP" do libsql), o Linux x64
 roda dentro de um **container amd64 sob Rosetta** — `infra/runners/linux-x64/` tem o Dockerfile e
 o runbook completo de como subir a imagem no mini, incluindo os volumes que mantêm o cache do
-cargo quente entre execuções. Só o **Windows** segue hospedado (`windows-latest`): não há como
-rodar um runner Windows no Mac mini, e o multiplicador 2× dele é o único gasto de cota que resta
-na matriz.
+cargo quente entre execuções.
+
+Na mesma data, a auditoria coordenada com o founder estendeu a migração às jobs **UTILITY** — as
+que não fazem parte da matriz por SO, mas custavam minutos hospedados mesmo assim: `prepare` e
+`publish` em `release-beta.yml`/`release-stable.yml`, e `changes` em `correctness.yml`. Nenhuma
+delas builda nada — só git/bash/jq (`changes`, `prepare`) ou baixa artifacts e fala com GitHub/R2
+(`publish`) — então rodam no MESMO runner `[self-hosted, Linux, X64]` do job `linux`/da entrada
+`linux-x86_64`, sem provisionamento extra, exceto por uma exceção pontual: a imagem self-hosted
+não vem com `gh` (só `publish` usa), e o job baixa o tarball oficial para `$RUNNER_TEMP` em vez de
+reconstruir a imagem — ver o comentário no próprio workflow. Só o **Windows** segue hospedado
+(`windows-latest`): não há como rodar um runner Windows no Mac mini, e o multiplicador 2× dele é o
+único gasto de cota que resta em toda a release.
 
 A máquina já era o ambiente de build do macOS: mesmo toolchain, a chave de assinatura mora nela, e
 os caches de cargo/bun ficam quentes entre execuções. O runner Linux é um processo separado —
