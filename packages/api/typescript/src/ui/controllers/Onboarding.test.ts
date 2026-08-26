@@ -53,7 +53,7 @@ describe('Onboarding controllers — PATCH incremental + commit atômico', () =>
 		expect(getResponse.data?.state).toEqual({ contactRef })
 	})
 
-	it('POST complete materializa o rascunho salvo via PATCH e carimba completedAt', async () => {
+	it('POST complete materializa o rascunho salvo via PATCH, carimba completedAt e devolve o threadId', async () => {
 		const contactRef = { channelId: uuidv7(), externalId: `contact-${uuidv7()}`, displayName: 'Ada', kind: ContactKind.USER }
 		await testBed.resolve(SaveOnboardingStepController).execute({
 			ctx: { ownerId: OWNER },
@@ -64,11 +64,29 @@ describe('Onboarding controllers — PATCH incremental + commit atômico', () =>
 		})
 
 		const completeResponse = await testBed.resolve(CompleteOnboardingController).execute({ ctx: { ownerId: OWNER } })
-		expect(completeResponse.status).toBe(204)
+		expect(completeResponse.status).toBe(200)
+		expect(completeResponse.data?.threadId).toEqual(expect.any(String))
 
 		const getResponse = await testBed.resolve(GetOnboardingController).execute({ ctx: { ownerId: OWNER } })
 		expect(getResponse.data?.completedAt).not.toBeNull()
 		expect(getResponse.data?.currentStep).toBe(OnboardingStep.FINAL)
+	})
+
+	it('POST complete chamado de novo (idempotente) devolve o MESMO threadId da primeira conclusão', async () => {
+		const contactRef = { channelId: uuidv7(), externalId: `contact-${uuidv7()}`, displayName: 'Ada', kind: ContactKind.USER }
+		await testBed.resolve(SaveOnboardingStepController).execute({
+			ctx: { ownerId: OWNER },
+			body: {
+				currentStep: OnboardingStep.REVIEW,
+				state: { contactRef, workspace: { path: '/Users/dev/acme-api' }, providers: [ProviderKind.CLAUDE_CODE] },
+			},
+		})
+
+		const first = await testBed.resolve(CompleteOnboardingController).execute({ ctx: { ownerId: OWNER } })
+		const second = await testBed.resolve(CompleteOnboardingController).execute({ ctx: { ownerId: OWNER } })
+
+		expect(second.status).toBe(200)
+		expect(second.data?.threadId).toBe(first.data?.threadId)
 	})
 
 	it('POST complete com rascunho incompleto responde ONBOARDING_DRAFT_INCOMPLETE', async () => {

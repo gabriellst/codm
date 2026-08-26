@@ -7,11 +7,21 @@ import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { AttachThread } from '@thread/usecases/AttachThread'
 import { Onboarding } from '../entities/Onboarding'
 import { OnboardingRepository } from '../repositories/OnboardingRepository'
-import { OnboardingCompleteDraftSchema, type OnboardingCompleteDraft } from '../schemas/OnboardingDraftState'
+import { OnboardingCompleteDraftSchema, OnboardingDraftStateSchema, type OnboardingCompleteDraft } from '../schemas/OnboardingDraftState'
 import type { ApplicationErrors } from '../errors'
 
 export const CompleteOnboardingInputSchema = z.object({ ownerId: z.uuid() })
-export const CompleteOnboardingOutputSchema = z.void()
+export const CompleteOnboardingOutputSchema = z.object({
+	/**
+	 * A thread materializada por ESTE commit — ou já materializada por um commit ANTERIOR
+	 * (idempotência). `null` só no caminho "onboarding já concluído" (`Onboarding.isCompleted()`
+	 * abaixo) quando o rascunho atual não carrega mais um `contactRef` resolvível: `state` pode ter
+	 * sido sobrescrito/esvaziado por outra sessão depois da primeira conclusão, e não há mais como
+	 * apontar para a thread original sem arriscar resolver a ERRADA — nesse caso o contrato modela a
+	 * incerteza explicitamente (nunca inventa um id, nunca falha a chamada).
+	 */
+	threadId: z.uuid().nullable(),
+})
 
 /**
  * O COMMIT ATÔMICO do wizard (spec 2026-08-26) — o fim de "cada passo escreve na hora, e um reboot
@@ -62,16 +72,22 @@ export class CompleteOnboarding extends Handler<typeof CompleteOnboardingInputSc
 
 			// Idempotente: concluir de novo não repete o commit nem remarca a data (mesma regra de
 			// `Onboarding.complete`), e sobretudo não revalida um rascunho que pode já ter sido
-			// esvaziado/alterado depois da primeira conclusão.
-			if (onboarding.isCompleted()) return
+			// esvaziado/alterado depois da primeira conclusão. O que ESTE caminho ainda pode fazer,
+			// sem revalidar nada, é tentar devolver o id da thread original — best-effort, ver
+			// `resolveCompletedThreadId`.
+			if (onboarding.isCompleted()) {
+				return { threadId: await this.resolveCompletedThreadId(onboarding.state, tx) }
+			}
 
 			const draft = this.parseDraft(onboarding.state)
 
 			const workspaceId = await this.resolveWorkspaceId(input.ownerId, draft.workspace, tx)
-			await this.ensureThreadAttached(input.ownerId, draft, workspaceId, tx)
+			const threadId = await this.ensureThreadAttached(input.ownerId, draft, workspaceId, tx)
 
 			onboarding.complete()
 			await this.onboardingRepo.save(onboarding, tx)
+
+			return { threadId }
 		})
 	}
 
@@ -108,10 +124,31 @@ export class CompleteOnboarding extends Handler<typeof CompleteOnboardingInputSc
 	}
 
 	/** Reaproveita uma thread LIVE já anexada a este contato (idempotência) antes de pedir a `AttachThread`. */
-	private async ensureThreadAttached(ownerId: string, draft: OnboardingCompleteDraft, workspaceId: string, tx: Transaction): Promise<void> {
+	private async ensureThreadAttached(
+		ownerId: string,
+		draft: OnboardingCompleteDraft,
+		workspaceId: string,
+		tx: Transaction,
+	): Promise<string> {
 		const existing = await this.threads.findByChannelContact(draft.contactRef.channelId, draft.contactRef.externalId, tx)
-		if (existing && !existing.deletedAt) return
+		if (existing && !existing.deletedAt) return existing.id.value
 
-		await this.attachThread.execute({ ownerId, contactRef: draft.contactRef, workspaceId, providers: draft.providers }, tx)
+		const attached = await this.attachThread.execute({ ownerId, contactRef: draft.contactRef, workspaceId, providers: draft.providers }, tx)
+		return attached.threadId
+	}
+
+	/**
+	 * Caminho "onboarding já concluído" — `state` não é revalidado contra `OnboardingCompleteDraftSchema`
+	 * (a regra de ouro deste método, ver o comentário no `handle`), então o parse aqui é o mais FROUXO
+	 * possível (`OnboardingDraftStateSchema`, tudo opcional) só para extrair um `contactRef`, se ainda
+	 * houver um. Sem `contactRef` resolvível, ou sem thread LIVE encontrada para ele, devolve `null` —
+	 * nunca inventa um id, nunca lança.
+	 */
+	private async resolveCompletedThreadId(state: unknown, tx: Transaction): Promise<string | null> {
+		const parsed = OnboardingDraftStateSchema.safeParse(state)
+		if (!parsed.success || !parsed.data.contactRef) return null
+
+		const thread = await this.threads.findByChannelContact(parsed.data.contactRef.channelId, parsed.data.contactRef.externalId, tx)
+		return thread && !thread.deletedAt ? thread.id.value : null
 	}
 }

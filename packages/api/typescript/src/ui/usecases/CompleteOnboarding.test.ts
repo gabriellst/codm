@@ -105,7 +105,7 @@ describe('CompleteOnboarding / SaveOnboardingStep', () => {
 				state: { contactRef, workspace: { path: '/Users/dev/acme-api' }, providers: [ProviderKind.CLAUDE_CODE] },
 			})
 
-			await complete.execute({ ownerId: OWNER })
+			const result = await complete.execute({ ownerId: OWNER })
 
 			const onboarding = await repo.findByOwnerId(OWNER)
 			expect(onboarding?.isCompleted()).toBe(true)
@@ -119,6 +119,9 @@ describe('CompleteOnboarding / SaveOnboardingStep', () => {
 			expect(thread).toBeDefined()
 			expect(thread?.workspaceId).toBe(workspaces[0]?.id.value)
 			expect(thread?.providers).toEqual([ProviderKind.CLAUDE_CODE])
+			// A thread recém-materializada é devolvida ao chamador (spec 2026-08-26 follow-up) — o
+			// console usa isto para o CTA "mencione o agente" da tela FINAL.
+			expect(result.threadId).toBe(thread?.id.value ?? null)
 		})
 
 		it('usa existingWorkspaceId em vez de criar um novo workspace', async () => {
@@ -129,12 +132,13 @@ describe('CompleteOnboarding / SaveOnboardingStep', () => {
 				state: { contactRef, workspace: { existingWorkspaceId: workspace.id.value }, providers: [ProviderKind.CLAUDE_CODE] },
 			})
 
-			await complete.execute({ ownerId: OWNER })
+			const result = await complete.execute({ ownerId: OWNER })
 
 			const workspaces = await testBed.resolve(WorkspaceRepository).listByOwner(OWNER)
 			expect(workspaces).toHaveLength(1)
 			const thread = await testBed.resolve(ThreadRepository).findByChannelContact(contactRef.channelId, contactRef.externalId)
 			expect(thread?.workspaceId).toBe(workspace.id.value)
+			expect(result.threadId).toBe(thread?.id.value ?? null)
 		})
 
 		/**
@@ -192,26 +196,73 @@ describe('CompleteOnboarding / SaveOnboardingStep', () => {
 				state: { contactRef, workspace: { path: '/Users/dev/acme-api' }, providers: [ProviderKind.CLAUDE_CODE] },
 			})
 
-			await complete.execute({ ownerId: OWNER })
+			const result = await complete.execute({ ownerId: OWNER })
 
 			expect((await repo.findByOwnerId(OWNER))?.isCompleted()).toBe(true)
 			expect(await testBed.resolve(WorkspaceRepository).listByOwner(OWNER)).toHaveLength(1)
 			const threads = await testBed.resolve(ThreadRepository).findByChannelContact(contactRef.channelId, contactRef.externalId)
 			expect(threads?.id.value).toBeDefined()
+			// Idempotência do LADO da thread: a linha pré-existente é REAPROVEITADA, nunca recriada, e
+			// o id devolvido é o dela, não um novo.
+			expect(result.threadId).toBe(threads?.id.value ?? null)
 		})
 
 		/** AC-2/AC-8 (legado) sobrevivem como "concluir duas vezes não repete o commit nem remarca a data". */
-		it('concluir duas vezes não remarca a data nem revalida um rascunho já esvaziado', async () => {
+		it('concluir duas vezes não remarca a data nem revalida um rascunho já esvaziado — e devolve o MESMO threadId', async () => {
+			const contactRef = fullDraftContactRef()
+			await saveStep.execute({
+				ownerId: OWNER,
+				state: { contactRef, workspace: { path: '/Users/dev/acme-api' }, providers: [ProviderKind.CLAUDE_CODE] },
+			})
+			const first = await complete.execute({ ownerId: OWNER })
+			const firstCompletedAt = (await repo.findByOwnerId(OWNER))?.completedAt
+
+			const second = await complete.execute({ ownerId: OWNER })
+
+			expect((await repo.findByOwnerId(OWNER))?.completedAt).toEqual(firstCompletedAt)
+			expect(second.threadId).toBe(first.threadId)
+		})
+
+		/**
+		 * O CAMINHO "já concluído" NÃO revalida o rascunho (regra de ouro do método) — mas ainda tenta
+		 * resolver o `threadId` original a partir do que sobrar de `contactRef` em `state`, sem exigir
+		 * `workspace`/`providers` completos. Simula outra sessão tendo reescrito o rascunho DEPOIS da
+		 * conclusão via um PATCH normal (`SaveOnboardingStep`) que explicita `workspace`/`providers`
+		 * como `undefined` — `setState` faz merge RASO (`Onboarding.setState`'s own docblock), então um
+		 * valor explicitamente `undefined` no PATCH realmente sobrescreve o grupo anterior.
+		 */
+		it('concluir de novo depois do state ter sido reduzido a só contactRef ainda resolve o threadId', async () => {
+			const contactRef = fullDraftContactRef()
+			await saveStep.execute({
+				ownerId: OWNER,
+				state: { contactRef, workspace: { path: '/Users/dev/acme-api' }, providers: [ProviderKind.CLAUDE_CODE] },
+			})
+			const first = await complete.execute({ ownerId: OWNER })
+
+			await saveStep.execute({ ownerId: OWNER, state: { contactRef, workspace: undefined, providers: undefined } })
+
+			const second = await complete.execute({ ownerId: OWNER })
+
+			expect(second.threadId).toBe(first.threadId)
+		})
+
+		/**
+		 * Sem `contactRef` nenhum sobrevivendo no rascunho pós-conclusão, não há como resolver a thread
+		 * original de forma determinística — o contrato modela isso como `null`, nunca uma falha nem um
+		 * id inventado.
+		 */
+		it('concluir de novo com o rascunho totalmente esvaziado (sem contactRef) devolve threadId null', async () => {
 			await saveStep.execute({
 				ownerId: OWNER,
 				state: { contactRef: fullDraftContactRef(), workspace: { path: '/Users/dev/acme-api' }, providers: [ProviderKind.CLAUDE_CODE] },
 			})
 			await complete.execute({ ownerId: OWNER })
-			const first = (await repo.findByOwnerId(OWNER))?.completedAt
 
-			await complete.execute({ ownerId: OWNER })
+			await saveStep.execute({ ownerId: OWNER, state: { contactRef: undefined, workspace: undefined, providers: undefined } })
 
-			expect((await repo.findByOwnerId(OWNER))?.completedAt).toEqual(first)
+			const second = await complete.execute({ ownerId: OWNER })
+
+			expect(second.threadId).toBeNull()
 		})
 	})
 })

@@ -2,12 +2,12 @@ import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 import { McpScope } from '@codm/contracts-typescript/wire/enums'
 import { CloudSessionMiddleware } from '@shared/middlewares'
-import { CompleteOnboarding } from '../usecases/CompleteOnboarding'
+import { CompleteOnboarding, CompleteOnboardingOutputSchema } from '../usecases/CompleteOnboarding'
 
 export const CompleteOnboardingControllerInputSchema = z
 	.object({ ctx: z.object({ ownerId: z.uuid() }) })
 	.example([{ ctx: { ownerId: '00000000-0000-4000-8000-000000000001' } }])
-export const CompleteOnboardingControllerOutputSchema = z.void()
+export const CompleteOnboardingControllerOutputSchema = CompleteOnboardingOutputSchema
 
 @injectable()
 export class CompleteOnboardingController extends Controller<
@@ -30,7 +30,7 @@ export class CompleteOnboardingController extends Controller<
 	}
 
 	async handle(request: this['input']): Promise<this['output']> {
-		await this.completeOnboarding.execute({ ownerId: request.ctx.ownerId })
-		return { status: HttpStatusCode.NO_CONTENT }
+		const data = await this.completeOnboarding.execute({ ownerId: request.ctx.ownerId })
+		return { status: HttpStatusCode.OK, data }
 	}
 }
