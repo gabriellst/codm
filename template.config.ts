@@ -499,7 +499,7 @@ export const REPO = {
 		},
 		// ── auth / secrets ──
 		BETTER_AUTH_SECRET: { consumers: ['apiTs'], schema: 'kernel', example: 'CHANGE_ME', secret: true },
-		BETTER_AUTH_URL: { consumers: ['apiTs'], schema: 'kernel', example: 'http://localhost:3030/v1/authentication' },
+		BETTER_AUTH_URL: { consumers: ['apiTs'], schema: 'kernel', example: 'http://localhost:3030/authentication' },
 		// Cloud profile only (SP2 Task T1/T4): social-provider credentials for the resurrected
 		// better-auth instance (auth/services/Authentication/BetterAuth.ts), kernel-scoped like
 		// BETTER_AUTH_SECRET/URL above — the auth bounded context ships in the base template, not a
@@ -591,7 +591,8 @@ export const REPO = {
 		// database to point at. CHANNEL_SERVICE_NAME/SERVICE_NAME went with it: they
 		// only ever drove the Postgres search_path.)
 		// ── misc ──
-		API_VERSION: { consumers: ['apiGo'], example: 'v1', doc: 'read by api-go; api-typescript reads VERSION (defaults ok in dev)' },
+		// (API_VERSION/VERSION saíram com o prefixo de versão do roteador: nada no gateway Go lia a
+		// primeira, e a segunda só alimentava o `Config.version` que o MainRouter prefixava às rotas.)
 		// No frame for this long ⇒ ClaudeAgentRunner treats the run as wedged and kills it (§4.3 rule
 		// 5 backstop). T5: previously read raw (`process.env.CODM_AGENT_INACTIVITY_MS ?? 180_000`).
 		CODM_AGENT_INACTIVITY_MS: {
