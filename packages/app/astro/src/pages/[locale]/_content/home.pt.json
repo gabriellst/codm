@@ -191,6 +191,10 @@
 		"copyright": "2026 CODM · Código aberto · roda localmente",
 		"privacy": "Privacidade",
 		"terms": "Termos",
-		"telemetryNotice": "Coletamos analytics de produto leve e anônimo — visitas de tela e cliques. Desligue quando quiser nas Configurações do console."
+		"telemetryNotice": "Coletamos analytics de produto leve e anônimo — visitas de tela e cliques. Desligue aqui no site ou nas Configurações do console.",
+		"telemetryOptOut": {
+			"decline": "Não rastrear",
+			"declined": "Rastreamento desligado — reativar"
+		}
 	}
 }

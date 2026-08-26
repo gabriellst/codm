@@ -1,0 +1,239 @@
+---
+title: 'Política de Privacidade'
+description: 'O que o codm guarda no seu computador, o pouco que sai dele, e como desligar o que sai.'
+updatedAt: 2026-08-26
+---
+
+# Política de Privacidade do codm
+
+**Última atualização:** 26 de agosto de 2026
+
+O codm é um aplicativo de computador que roda agentes de código na **sua** máquina, operados
+pelos seus canais de mensagem. Por causa disso, esta política é curta na parte que costuma ser
+longa: quase tudo que o codm processa nunca chega até nós.
+
+## Resumo em uma tela
+
+| O que | Onde vive | Sai da sua máquina? |
+|---|---|---|
+| Mensagens, conversas, contatos e nomes do canal | arquivo SQLite em `~/.codm/data` | **Não** — para nós, não |
+| Issues, workspaces, artefatos, caminhos de pasta | mesmo arquivo SQLite | **Não** |
+| Credenciais de pareamento do canal | mesmo arquivo SQLite | **Não** |
+| Conteúdo que você manda para o agente (prompts, código) | sua máquina → CLI do provider | **Sim, para o provider que você escolheu**, com a sua conta |
+| Sua identidade (e-mail, nome, foto do login) | perfil na nuvem do codm | **Sim** |
+| Cliques e telas visitadas no site e no console | PostHog | **Sim, e você pode desligar** |
+
+Não vendemos dados, não exibimos anúncios, não fazemos gravação de sessão e não lemos o
+conteúdo das suas conversas.
+
+## 1. Quem responde por esta política
+
+O codm é mantido por **Gabriel Araújo** ([@gabriellst](https://github.com/gabriellst)), que é o
+controlador dos dados descritos na seção 4.
+
+**Contato para qualquer assunto de privacidade — inclusive para exercer os direitos da seção 11:**
+abra uma issue em [github.com/gabriellst/codm/issues](https://github.com/gabriellst/codm/issues).
+Issues são **públicas**: descreva o pedido sem colar dados pessoais além do estritamente
+necessário para identificar a solicitação.
+
+## 2. O codm tem duas naturezas
+
+Separar as duas é o que torna o resto desta política compreensível.
+
+1. **O aplicativo que roda no seu computador.** O shell de desktop hospeda o console e supervisiona
+   dois processos locais — o daemon (TypeScript) e o gateway do canal (Go) — que compartilham um
+   único arquivo SQLite no seu disco. Todo o produto — conversas, issues, agentes, artefatos —
+   acontece aí. **Nós não temos acesso a esse arquivo.**
+2. **Os serviços online que o projeto opera.** São dois, e só dois: o **perfil na nuvem**, que
+   guarda quem você é, e a **análise de produto**, que conta telas e cliques. É sobre eles que a
+   seção 4 fala.
+
+O código-fonte de tudo isso é aberto ([MIT](https://github.com/gabriellst/codm/blob/main/LICENSE)):
+qualquer afirmação desta política pode ser conferida no repositório.
+
+## 3. Dados que ficam só no seu computador
+
+Guardados no arquivo SQLite sob `$CODM_DATA_DIR` (por padrão `~/.codm/data`), lido e escrito
+apenas pelos processos locais do codm:
+
+- **Mensagens do canal** — texto, tipo, direção, horários, recibos de entrega e leitura.
+- **Contatos e grupos** — identificador no canal, nome exibido, foto de perfil, participantes.
+- **Conversas (threads)** — a qual workspace estão atreladas, provider e modelo escolhidos,
+  configurações de menção e pausa, transcrição dos turnos do agente.
+- **Trabalho** — issues, execuções de agente, artefatos gerados, caminhos das pastas de projeto.
+- **Credenciais de pareamento do canal** — a sessão que mantém o gateway conectado.
+- **Logs locais**, inclusive registros de falha do shell.
+
+Nada disso é transmitido para nós, em nenhuma circunstância. Não existe hoje qualquer envio de
+telemetria dos processos locais para fora da sua máquina: a instrumentação técnica do daemon e do
+gateway só tem destino configurado em ambiente de desenvolvimento, apontando para a própria
+máquina.
+
+**Para apagar tudo isso:** desinstale o aplicativo e remova a pasta `~/.codm/data`. A exclusão é
+imediata e não depende de nós.
+
+## 4. Dados que tratamos
+
+### 4.1 Conta — o perfil na nuvem
+
+A identidade é a única coisa que o codm não resolve localmente. Ao entrar na sua conta, o perfil
+na nuvem guarda:
+
+- **e-mail, nome e foto** vindos do provedor de login que você usou;
+- **os tokens** que autorizam esse login (acesso e renovação) e o escopo concedido;
+- **a sessão** — data de expiração, **endereço IP** e **user agent** do dispositivo que entrou;
+- **a organização/titularidade** à qual sua conta pertence (nome, tipo, fuso horário).
+
+Para que serve: autenticar você, manter você conectado e definir a qual titularidade os dados
+locais pertencem. **Finalidade única** — esses dados não alimentam marketing nem perfilamento.
+
+### 4.2 Análise de produto (PostHog)
+
+O site e o console enviam eventos de uso para o [PostHog](https://posthog.com), hospedado nos
+Estados Unidos:
+
+- **telas visitadas** e **cliques em elementos da interface** (captura automática);
+- **contexto técnico** — navegador, sistema, idioma, referenciador, resolução;
+- **endereço IP**, usado pelo PostHog para localização aproximada (país/região);
+- **um identificador anônimo por dispositivo**; no console, depois do login, esse identificador
+  é associado ao seu ID de usuário para que o funil do site até o app se conecte.
+
+O que **não** fazemos aqui: **gravação de sessão está desligada** nas duas superfícies, por
+decisão explícita — as telas do console mostram nomes de projetos e trechos de conversa, e
+gravá-las exigiria uma revisão de mascaramento que ainda não foi feita.
+
+Essa coleta vem **ligada por padrão** e você pode desligá-la — veja a seção 12.
+
+### 4.3 Site, download e atualização
+
+O site e os arquivos de instalação são servidos pela infraestrutura da
+[Cloudflare](https://www.cloudflare.com); o aplicativo consulta periodicamente se há uma versão
+nova. Como em qualquer requisição na internet, essas consultas deixam **registros de servidor**
+(IP, user agent, horário, arquivo pedido) sob controle do provedor de hospedagem. Não montamos
+perfis a partir desses registros.
+
+### 4.4 Suporte pelo GitHub
+
+Se você abrir uma issue, o conteúdo dela e sua conta do GitHub ficam **públicos**, sob a
+[privacidade do GitHub](https://docs.github.com/site-policy/privacy-policies/github-privacy-statement).
+
+## 5. O que não coletamos
+
+Para não deixar dúvida — nenhum destes chega até nós:
+
+- o **conteúdo das suas mensagens** e conversas;
+- o **seu código**, arquivos, nomes de pasta ou caminhos de projeto;
+- os **prompts** que você manda ao agente ou as respostas que ele devolve;
+- suas **chaves de API** e credenciais de canal;
+- **gravações de tela ou de sessão**.
+
+## 6. Serviços de terceiros que você aciona ao usar o codm
+
+Estes não são "nossos" tratamentos — são serviços que **você** contrata e o codm apenas conecta.
+Vale conhecê-los, porque é neles que o conteúdo do seu trabalho realmente circula.
+
+### 6.1 O canal de mensagens (WhatsApp)
+
+Ao parear um canal, suas mensagens trafegam pela infraestrutura do WhatsApp/Meta, sob os termos e
+a política de privacidade **deles**. O codm se conecta como um dispositivo vinculado à sua conta:
+nós não intermediamos, não copiamos e não temos acesso a esse tráfego.
+
+### 6.2 O provider do agente
+
+O agente roda na sua máquina através da CLI do provider que você escolher — **Claude Code**
+(Anthropic), **Codex** (OpenAI) ou **OpenCode**. Isso significa que **o conteúdo que o agente lê e
+escreve — trechos de conversa, código, arquivos do projeto — é enviado a esse provider**, com a
+**sua** conta ou chave de API e sob o contrato que **você** tem com ele. O codm não é intermediário
+dessa comunicação, não recebe cópia e não guarda cópia. Antes de apontar um agente para um projeto
+sensível, leia a política do provider escolhido.
+
+## 7. Com quem compartilhamos
+
+Só com os prestadores necessários para os serviços da seção 4, cada um limitado à sua função:
+
+| Prestador | Para quê | Onde |
+|---|---|---|
+| PostHog | análise de produto (4.2) | Estados Unidos |
+| Cloudflare | hospedagem do site, downloads e atualizações (4.3) | rede global |
+| Provedor de hospedagem do perfil na nuvem | conta e autenticação (4.1) | Estados Unidos |
+| Provedor de login (ex.: Google) | autenticar você, se escolher esse método | conforme o provedor |
+| GitHub | código, releases e suporte (4.4) | Estados Unidos |
+
+Fora isso, só compartilhamos dados se a lei ou uma ordem judicial obrigar. Não vendemos, alugamos
+nem cedemos dados pessoais a ninguém.
+
+## 8. Transferência internacional
+
+Os prestadores acima ficam majoritariamente nos Estados Unidos, então os dados da seção 4 são
+transferidos para fora do Brasil e do Espaço Econômico Europeu. As transferências se apoiam nas
+salvaguardas contratuais oferecidas por esses prestadores (cláusulas contratuais padrão) e na
+necessidade de executar o serviço que você pediu.
+
+## 9. Por quanto tempo guardamos
+
+- **Conta e perfil (4.1):** enquanto sua conta existir. Pedida a exclusão, apagamos o registro e
+  suas sessões.
+- **Sessões de login:** até expirarem ou até você sair.
+- **Análise de produto (4.2):** pelo período de retenção do plano contratado no PostHog. Ao
+  desligar a telemetria, a coleta cessa imediatamente; o histórico já enviado pode ser apagado a
+  pedido.
+- **Registros de servidor (4.3):** pelo prazo curto de retenção do provedor de hospedagem.
+- **Dados locais (seção 3):** para sempre, ou até você apagar — a decisão é só sua.
+
+## 10. Bases legais
+
+| Tratamento | LGPD (Lei 13.709/2018) | GDPR |
+|---|---|---|
+| Conta e autenticação (4.1) | execução de contrato — art. 7º, V | art. 6(1)(b) |
+| Análise de produto (4.2) | legítimo interesse — art. 7º, IX, com opt-out simples | art. 6(1)(f) |
+| Registros de servidor e segurança (4.3) | legítimo interesse e obrigação legal — art. 7º, II e IX | art. 6(1)(c) e (f) |
+
+## 11. Seus direitos
+
+Pela LGPD (art. 18) e pelo GDPR (arts. 15 a 22), você pode pedir: **confirmação** de que tratamos
+seus dados, **acesso**, **correção**, **anonimização ou exclusão**, **portabilidade**,
+**informação sobre compartilhamento**, **oposição** a um tratamento e **revogação** de
+consentimento.
+
+Como exercer: abra uma issue em
+[github.com/gabriellst/codm/issues](https://github.com/gabriellst/codm/issues) descrevendo o
+pedido. Sua conta é identificada pelo login usado no aplicativo — **não cole dados pessoais na
+issue**. Respondemos em até 15 dias.
+
+Lembre que os dados da seção 3 estão sob seu controle direto: para excluí-los você não precisa
+pedir nada a ninguém, basta apagar a pasta de dados.
+
+Se você acreditar que seus direitos não foram atendidos, pode reclamar à
+[ANPD](https://www.gov.br/anpd) (Brasil) ou à autoridade de proteção de dados do seu país.
+
+## 12. Como desligar a telemetria
+
+- **No aplicativo:** abra **Configurações → Telemetria** e desligue o compartilhamento. A partir
+  daí, o console para de capturar qualquer evento — telas, cliques e identificação. A escolha fica
+  guardada e vale para as próximas sessões.
+- **No site:** clique em **"Não rastrear"** no rodapé de qualquer página. A escolha fica guardada
+  no seu navegador e vale para as próximas visitas; o mesmo botão a desfaz. Enquanto ela estiver
+  ativa, o script de análise **nem chega a ser inicializado** — nenhuma requisição é enviada e
+  nenhum cookie de análise é criado. Bloqueadores de rastreamento continuam funcionando também, e a
+  coleta do site nunca inclui conteúdo digitado.
+
+## 13. Segurança
+
+Os dados da seção 3 são protegidos pelas permissões do seu sistema operacional: quem tem acesso à
+sua conta de usuário tem acesso a eles. Se o computador for compartilhado ou puder ser perdido,
+use criptografia de disco — é a proteção que realmente vale para dados locais.
+
+Os serviços da seção 4 usam conexões cifradas (TLS) e a autenticação é delegada a provedores de
+login estabelecidos. Nenhum sistema é imune a incidentes; se ocorrer uma violação relevante,
+notificaremos os titulares afetados e a autoridade competente nos prazos legais.
+
+## 14. Crianças e adolescentes
+
+O codm é uma ferramenta de trabalho, não direcionada a menores de 16 anos, e não coletamos
+conscientemente dados dessa faixa etária. Se isso ocorrer, abra uma issue e apagaremos o registro.
+
+## 15. Mudanças nesta política
+
+Esta política vive no repositório público do projeto: **todas as alterações ficam registradas no
+histórico do Git**, com data e conteúdo do que mudou. Mudanças relevantes serão anunciadas nas
+notas de versão. A data no topo indica a versão vigente.

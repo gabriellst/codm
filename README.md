@@ -65,6 +65,7 @@ Prereqs: `bun >= 1.0`, `docker`, `go`, `cargo` (the contracts codegen builds a R
 - **`docs/RELEASE.md`** — stable/beta tracks, auto-update, desktop signing.
 - **`docs/ECOSYSTEM.md`** — the template family this repo descends from and syncs with.
 - **`.claude/skills/`** — per-artifact playbooks used by the agentic workflow.
+- **Privacy Policy** — [English](packages/app/astro/src/pages/%5Blocale%5D/legal/_content/privacy.en.mdx) · [Português](packages/app/astro/src/pages/%5Blocale%5D/legal/_content/privacy.pt.mdx). The same MDX files the landing renders at `/en/legal/privacy` and `/pt/legal/privacy` — what stays on your machine, what leaves it, and how to turn that off.
 
 ## Code signing policy
 

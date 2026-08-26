@@ -108,7 +108,7 @@ const rssHref = `/${locale}/blog/rss.xml`
 		<main>
 			<slot />
 		</main>
-		<Footer locale={locale} />
+		<Footer locale={locale} analytics={Boolean(posthogKey)} />
 		{/* Download por sistema (plano 2026-08-25, D15) — troca href/rótulo/ícone de todo
 		    `a[data-download-cta]` (Nav, Hero, preço, Footer) pelo sistema do visitante. Uma montagem por
 		    página; sem JS o HTML já sai com o macOS + a lista "outras plataformas". */}

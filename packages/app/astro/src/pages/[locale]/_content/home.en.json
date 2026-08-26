@@ -191,6 +191,10 @@
 		"copyright": "2026 CODM · Open source · runs locally",
 		"privacy": "Privacy",
 		"terms": "Terms",
-		"telemetryNotice": "We collect lightweight, anonymous product analytics — page views and clicks. Turn it off anytime in the console's Settings."
+		"telemetryNotice": "We collect lightweight, anonymous product analytics — page views and clicks. Turn it off here on the site or in the console's Settings.",
+		"telemetryOptOut": {
+			"decline": "Don't track me",
+			"declined": "Tracking off — turn it back on"
+		}
 	}
 }

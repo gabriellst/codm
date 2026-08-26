@@ -1,0 +1,112 @@
+---
+import { type CollectionEntry, render } from 'astro:content'
+
+interface Props {
+	doc: CollectionEntry<'legal'>
+}
+
+const { doc } = Astro.props
+const { Content } = await render(doc)
+---
+
+<!--
+  Reading column for a legal document. Narrower than the blog's 720px and left-aligned
+  from the first line: this page is scanned and cited (section numbers, tables), never
+  read as an article, so it gets no centered hero, no cover art and no author chip.
+
+  The prose rules below mirror `blog/_components/BlogPost.astro`'s `.post-body` for the
+  elements both share (headings, lists, links, code) and add what only a legal document
+  needs — `h1`, `table`, `hr`. They are NOT extracted into a shared stylesheet on purpose:
+  the two bodies want different scales (26px vs 22px h2), and the blog's rules are scoped
+  to its own component the same way. When a third long-form body appears, extract then.
+-->
+<article class="px-6 pb-24 pt-[72px] md:px-16">
+	<div class="legal-body mx-auto flex max-w-[760px] flex-col gap-[20px] text-[16px] leading-[1.7] text-[var(--foreground)]">
+		<Content />
+	</div>
+</article>
+
+<style>
+	.legal-body :global(h1) {
+		margin: 0;
+		text-wrap: balance;
+		font-size: clamp(32px, 5vw, 46px);
+		font-weight: 800;
+		line-height: 1.1;
+		letter-spacing: -1.6px;
+	}
+	.legal-body :global(h2) {
+		margin: 0.9em 0 0;
+		font-size: 22px;
+		font-weight: 800;
+		line-height: 1.3;
+		letter-spacing: -0.5px;
+	}
+	.legal-body :global(h3) {
+		margin: 0.5em 0 0;
+		font-size: 17.5px;
+		font-weight: 700;
+		line-height: 1.35;
+	}
+	.legal-body :global(p) {
+		margin: 0;
+	}
+	.legal-body :global(ul),
+	.legal-body :global(ol) {
+		margin: 0;
+		padding-left: 1.3em;
+		display: flex;
+		flex-direction: column;
+		gap: 0.4em;
+	}
+	.legal-body :global(a) {
+		color: var(--secondary-foreground);
+		text-decoration: underline;
+		text-underline-offset: 2px;
+	}
+	.legal-body :global(hr) {
+		margin: 0.6em 0;
+		border: 0;
+		border-top: 1px solid var(--border);
+	}
+	.legal-body :global(blockquote) {
+		margin: 0;
+		border-left: 3px solid var(--primary);
+		padding: 0.2em 0 0.2em 20px;
+		color: var(--muted-foreground);
+	}
+	/* `display: block` + `overflow-x` on the table itself (rather than a wrapper) because
+	   markdown gives us no element to wrap it in — the tables here carry three columns of
+	   prose and must scroll inside the column instead of widening the page on a phone. */
+	.legal-body :global(table) {
+		display: block;
+		width: 100%;
+		overflow-x: auto;
+		border-collapse: collapse;
+		font-size: 14.5px;
+		line-height: 1.5;
+	}
+	.legal-body :global(th),
+	.legal-body :global(td) {
+		border-bottom: 1px solid var(--border);
+		padding: 10px 14px 10px 0;
+		text-align: left;
+		vertical-align: top;
+	}
+	.legal-body :global(th) {
+		font-weight: 700;
+		white-space: nowrap;
+		color: var(--muted-foreground);
+	}
+	.legal-body :global(code) {
+		font-family: var(--font-mono);
+	}
+	.legal-body :global(p code),
+	.legal-body :global(li code),
+	.legal-body :global(td code) {
+		border-radius: 5px;
+		background: var(--muted);
+		padding: 0.1em 0.4em;
+		font-size: 0.9em;
+	}
+</style>
