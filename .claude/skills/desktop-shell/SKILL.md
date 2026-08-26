@@ -83,6 +83,69 @@ never edit tauri.conf.json/mod.rs literals. **Adding a native capability** = add
 `CAPABILITIES` AND its permission list to `CAPABILITY_PERMISSIONS` — both in `config/capabilities.ts`
 — then regenerate. The two must agree — a key with no entry in the map fails the render loudly.
 
+## Packaged-app ports — a CANDIDATE list, never a fixed value (2026-08-25/26)
+
+**Incident.** The 0.5.4 installed build's daemon (`API_PORT=3030`, `SHELL_ENV.API_PORT` copied
+verbatim from `REPO.env.API_PORT.example` — the SAME family `bun dev` uses) died on boot with
+`EADDRINUSE: Failed to start server. Is port 3030 in use?`: port 3030 had been held for 15h by an
+unrelated `bun run --watch ./src` dev server from a sibling project on the same machine. Cascading
+symptoms: `boot failed for 1 sidecar(s): codm-daemon`, the login loopback answered `NETWORK_ERROR`,
+the SSE stream answered `Load failed`, and the operator saw an icon that produced no usable window.
+**Decision:** the packaged app gets its OWN port family, far from every dev/service port this
+repo's stack (or a founder's other projects) is likely to bind, tries several candidates at boot,
+and fails LOUD (never silently rebinds to a wrong address) when every one of them is taken.
+
+**The contract.** `config/ports.ts` declares `PORT_CANDIDATES` — an ORDERED list per sidecar
+(`API_PORT`/`CHANNEL_PORT`), in an unusual range, below the OS ephemeral band (see that file's
+docblock for the exact numbers and the reasoning behind each constraint). `config/env.ts`'s
+`SHELL_ENV` carries a `ShellEnvEntry` per key — `{ kind: 'candidates', candidates: [...] }` for a
+port, `{ kind: 'fixed', value }` for a URL/brand name — DECLARED per key, never inferred from
+`key.endsWith('_PORT')`. `generate.ts` renders `shell-env.json` with the candidate list as a JSON
+ARRAY (not a single string); `build.rs` reads the JSON's own type (`Value::Array` vs `::String`) to
+decide whether to join the elements with `,` before emitting one `cargo:rustc-env`, and validates
+every element; `shell_env.rs::port_candidates` splits the CSV back into `Vec<u16>` at compile-time
+constant read.
+
+**The CSP authorizes EVERY candidate.** Generation time cannot know which one will win at boot, so
+`connect-src`/`img-src` list all of them — documented in `generate.ts` next to `sidecarPortCandidates`,
+with the `Load failed` symptom named explicitly (same failure mode `./cloud.ts` documents for a
+missing cloud origin: the webview blocks the request before it leaves, with no HTTP status to
+distinguish it from a genuinely dead server). Forgetting to regenerate after editing
+`config/ports.ts` reproduces that exact symptom. `generate.test.ts` DSK-17 gates that every declared
+candidate is actually present in the CSP.
+
+**The boot-time choice.** `sidecars::resolve_ports()` (`src-tauri/src/sidecars/mod.rs`), called
+ONCE in `lib.rs`'s `setup` before `api::Api` is built or any sidecar env is assembled, resolves
+BOTH ports up front: `process.env` (`API_PORT`/`CHANNEL_PORT`) still pins one fixed port outright —
+how dev/e2e work — otherwise `sidecars::lifecycle::resolve_port` tries each candidate, in order, via
+a real `TcpListener::bind`-then-release (`port_conflict`'s technique) and keeps the first free one.
+Resolving in exactly one place, threaded through to both `api::Api::new(api_port, channel_port)`
+and `sidecars::sidecars(..., api_port, channel_port)`, is load-bearing: two independent candidate
+scans could each land on a DIFFERENT free port and put the typed SDK client and the spawned process
+on different addresses. A sidecar whose every candidate is occupied comes back as a
+`PortsExhausted { name, candidates }` instead of a port; `lib.rs` pre-counts it into the
+`ReadinessGate`'s `total` (it will never call `boot_sidecar`, so it must never make the gate wait
+for an arrival that isn't coming) and reports it via `sidecars::report_failure` with a reason naming
+every port that was tried — the same boot-error splash a spawn failure routes to, never the generic
+"did not open".
+
+**The daemon's own race.** The shell's bind-then-release has an inherent gap before the daemon's
+own `listen()` — something else can grab the port in between. `packages/api/typescript/src/bootError.ts`
+(`formatBootError`) collapses that race, when it happens, into the SAME one-line, port-naming reason
+the shell's own `port_conflict` uses — never Bun's raw multi-frame stack trace, which the persisted
+stderr would otherwise hand the boot-error splash verbatim.
+
+**The console asks, never assumes.** A packaged app can no longer bake `VITE_API_URL` at build time
+— there is no single port to bake. `HostInfoService.apiBaseUrl()` (`packages/app/react/src/services/HostInfoService`)
+is the ONE new non-diagnostic method on that port (`platform()` stays diagnostics-only): the Tauri
+impl asks the typed `host_ports` command (`src-tauri/src/commands/host_info.rs`, `tauri::State<ResolvedPorts>`
+set once alongside `resolve_ports()`); the browser impl answers `null` (that host never decides —
+`router.tsx`'s module-load `configureClient(serviceBaseUrls)`, the `VITE_API_URL` default, stands).
+`ServicesProvider` calls it once, BEFORE `setContainer` reveals the app tree (`Outlet` lives inside
+the provider, so no route loader can fire before this resolves), and re-`configureClient`s with
+`computeServiceBaseUrls(hostApiBaseUrl)` (`packages/app/react/src/lib/config.ts` — the ONE formula
+both the default and the runtime override use) when the host supplies one.
+
 ## Mental model
 
 The **product is the react console**; the shell is plumbing. `packages/app/tauri` may

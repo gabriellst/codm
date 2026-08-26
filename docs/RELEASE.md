@@ -35,6 +35,21 @@ rm "$DATA/update-channel"
 
 `CODM_UPDATE_CHANNEL=beta` (env) sobrepõe o arquivo — uso de CI/teste.
 
+## Portas do app empacotado (desde 2026-08-25/26)
+
+O app instalado **não** usa mais as portas de dev (3030/3032) — essas continuam existindo só para
+`bun dev`/`.env.example`. O empacotado tenta uma pequena lista de portas incomuns declaradas em
+`packages/app/tauri/config/ports.ts` (`PORT_CANDIDATES`) e fica com a primeira livre; se TODAS
+estiverem ocupadas, o boot falha alto e a splash de erro nomeia as portas que foram tentadas — nunca
+um "não abriu" genérico. Detalhe completo (contrato, CSP, resolução no boot, como o console
+descobre a porta escolhida): seção *"Packaged-app ports — a CANDIDATE list, never a fixed value"*
+em `.claude/skills/desktop-shell/SKILL.md`.
+
+Se o app não abrir e a splash de erro citar "every candidate port is already taken": outro processo
+neste computador está usando toda a faixa (raro — quatro portas incomuns por sidecar). Feche o
+processo concorrente (ou aguarde) e clique "Tentar novamente"; se persistir, é sinal de que a faixa
+em `config/ports.ts` colidiu com algo novo no ambiente e merece revisão.
+
 ## Plataformas (desde 2026-08-25)
 
 | Plataforma | Instalador (humano) | Artefato de update (o que o `latest.json` aponta) | Assinatura do app | Chave no manifest |
