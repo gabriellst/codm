@@ -80,6 +80,7 @@ export const OnboardingBoasVindas: Story = {
 					mockQuery(opts, {
 						currentStep: 'VALUE',
 						completedAt: null,
+						state: {},
 						channelDone: false,
 						workspaceDone: false,
 						threadDone: false,
@@ -111,6 +112,7 @@ export const OnboardingComoFunciona: Story = {
 					mockQuery(opts, {
 						currentStep: 'HOW',
 						completedAt: null,
+						state: {},
 						channelDone: false,
 						workspaceDone: false,
 						threadDone: false,
@@ -147,6 +149,7 @@ export const OnboardingControle: Story = {
 					mockQuery(opts, {
 						currentStep: 'CONTROL',
 						completedAt: null,
+						state: {},
 						channelDone: false,
 						workspaceDone: false,
 						threadDone: false,
@@ -183,6 +186,7 @@ export const Permissao: Story = {
 					mockQuery(opts, {
 						currentStep: 'FINAL',
 						completedAt: null,
+						state: {},
 						channelDone: true,
 						workspaceDone: true,
 						threadDone: true,
@@ -218,6 +222,7 @@ export const TudoPronto: Story = {
 					mockQuery(opts, {
 						currentStep: 'FINAL',
 						completedAt: null,
+						state: {},
 						channelDone: true,
 						workspaceDone: true,
 						threadDone: true,

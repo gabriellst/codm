@@ -38,6 +38,7 @@ const opts = getOnboardingQueryOptions()
 const FRESH: GetOnboardingQueryResponse = {
 	currentStep: 'VALUE',
 	completedAt: null,
+	state: {},
 	channelDone: false,
 	workspaceDone: false,
 	threadDone: false,
@@ -53,6 +54,7 @@ const FRESH: GetOnboardingQueryResponse = {
 const READY_WITH_PENDING_PRECONDITION: GetOnboardingQueryResponse = {
 	currentStep: 'FINAL',
 	completedAt: '2026-08-09T00:00:00.000Z',
+	state: {},
 	channelDone: true,
 	workspaceDone: true,
 	threadDone: true,

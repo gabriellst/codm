@@ -144,6 +144,7 @@ const DASHBOARD_FULL: DeepPartial<GetHomeDashboardQueryResponse> = {
 const ONBOARDING_THREAD_DONE: GetOnboardingQueryResponse = {
 	currentStep: 'FINAL',
 	completedAt: hoursAgo(10),
+	state: {},
 	channelDone: true,
 	workspaceDone: true,
 	threadDone: true,
