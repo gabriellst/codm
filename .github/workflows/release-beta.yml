@@ -158,17 +158,32 @@ jobs:
           done < "$LIST"
           echo "Mach-O aninhados assinados: $found"
 
-      # Um release sem esta variável produz um app cujo login abre localhost:3030 — defeito
-      # INVISÍVEL no artefato (os assets do frontend vão comprimidos dentro do binário, então
-      # nenhum grep no .app prova que a URL foi assada). Medido na v0.1.3; a única defesa é
-      # falhar aqui, no insumo, em vez de tentar verificar na saída.
-      - name: cloud url presente
+      # A config do shell é GERADA (config/*.ts → tauri.conf.json, capabilities, shell-env.json) e
+      # comitada; um build sobre um JSON desregenerado assaria uma CSP/env de ontem com a config de
+      # hoje. Drift = build vermelho, aqui, antes de gastar 20 minutos de cargo.
+      - name: desktop config em dia
+        run: bun desktop:generate --check
+
+      # A origem da nuvem NÃO é mais uma repo variable: ela é a decisão declarada em
+      # config/cloud.ts, derivada por config/env.ts e renderizada em shell-env.json — o MESMO valor
+      # que o build.rs entrega ao supervisor Rust e este passa ao daemon em CODM_CLOUD_URL. O
+      # console a recebe pelo VITE_CODM_CLOUD_URL exportado daqui (o Vite resolve VITE_* no BUILD).
+      # Um release sem ela produz um app cujo login abre localhost:3030 e um daemon que responde
+      # 503 CLOUD_UNREACHABLE a toda tela — defeito INVISÍVEL no artefato (os assets vão
+      # comprimidos dentro do binário; nenhum grep no .app prova que a URL foi assada). Medido na
+      # v0.1.3 (console) e na v0.5.1 (daemon); a defesa é falhar aqui, no insumo.
+      - name: cloud url do manifesto
         run: |
-          test -n "${{ vars.CODM_CLOUD_URL }}" || {
-            echo "::error::vars.CODM_CLOUD_URL vazia — o app sairia apontando o daemon local. Defina a repo variable antes de publicar."
-            exit 1
-          }
-          echo "cloud: ${{ vars.CODM_CLOUD_URL }}"
+          CLOUD_URL="$(jq -r .daemon.CODM_CLOUD_URL packages/app/tauri/src-tauri/shell-env.json)"
+          case "$CLOUD_URL" in
+            https://*) ;;
+            *)
+              echo "::error::shell-env.json daemon.CODM_CLOUD_URL='$CLOUD_URL' não é uma origem https — corrija config/cloud.ts e rode bun desktop:generate"
+              exit 1
+              ;;
+          esac
+          echo "VITE_CODM_CLOUD_URL=$CLOUD_URL" >> "$GITHUB_ENV"
+          echo "cloud: $CLOUD_URL"
 
       # MESMO defeito invisível, uma camada mais fundo — ver o comentário gêmeo em
       # release-stable.yml. Com a chave vazia o console resolve para o NoopAnalyticsService e a
@@ -189,10 +204,9 @@ jobs:
       # baixa faz o build ceder ao trabalho real em vez do contrário.
       - name: tauri build
         env:
-          # O console é compilado DENTRO do tauri build (beforeBuildCommand) e o Vite resolve
-          # VITE_* no BUILD: sem isto o app empacotado nasce apontando o daemon local e o login
-          # abre localhost:3030 (medido na v0.1.3). Repo variable, não secret — é URL pública.
-          VITE_CODM_CLOUD_URL: ${{ vars.CODM_CLOUD_URL }}
+          # VITE_CODM_CLOUD_URL chega pelo GITHUB_ENV do passo "cloud url do manifesto" acima —
+          # lida do shell-env.json comitado, não de uma repo variable. O console é compilado
+          # DENTRO do tauri build (beforeBuildCommand) e o Vite resolve VITE_* no BUILD.
           # Telemetria de produto (SP4). O Vite resolve VITE_* no BUILD: sem estas linhas o app sai
           # com a chave vazia e a telemetria fica desligada EM SILÊNCIO — sem erro, só um dashboard
           # que nunca enche. Repo variables, não secrets: a chave de ingest do PostHog é pública.

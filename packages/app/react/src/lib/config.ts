@@ -22,8 +22,10 @@ export const Config = {
 	 * montado APENAS sob `CODM_PROFILE=cloud` (src/index.ts), então o daemon local devolve 404 ali.
 	 * (O comentário anterior afirmava o contrário e estava errado — medido em 2026-08-07, quando o
 	 * app empacotado, sem `VITE_CODM_CLOUD_URL` assado no build, abriu o login em localhost:3030.)
-	 * Os releases assam a URL real via `vars.CODM_CLOUD_URL` nos workflows; em dev, aponte a
-	 * variável para a cloud de verdade se quiser exercitar login.
+	 * Os releases assam a URL real a partir de `packages/app/tauri/src-tauri/shell-env.json` (gerado
+	 * de `tauri/config/cloud.ts` — a MESMA origem que o shell entrega ao daemon em `CODM_CLOUD_URL`
+	 * e autoriza na CSP); em dev, aponte a variável para a cloud de verdade se quiser exercitar
+	 * login.
 	 */
 	cloudUrl: import.meta.env.VITE_CODM_CLOUD_URL ?? baseUrl,
 } as const
