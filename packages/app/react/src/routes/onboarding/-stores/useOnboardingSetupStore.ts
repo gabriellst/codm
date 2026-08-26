@@ -18,63 +18,73 @@ import type { ContactStepData } from '@/routes/(app)/attach/-components/ContactS
  * lifecycles — but the same shape, on purpose: `ReviewStep` (shared by both) reads plain
  * `contactRef`/`workspaceId`/`providers` props either way, never a `form` instance.
  *
- * `confirmStep`/`threadAttached` — added for the 2026-08-24 onboarding-attach-ux audit (item 2,
- * "Próximo confirma e avança"). `OnboardingFlow`'s footer dispatches EVERY step's `STEP_COMPONENTS`
- * entry from a static `Record<StepId, ReactNode>` with no props threading (see that map's own
- * docblock) — so a mounted step has no prop-based channel to hand its "Próximo" action up to the
- * footer that actually owns the button. `confirmStep` is that channel: the step registers an async
- * closure here in a `useEffect` (cleared on unmount, via `key={stepId}` full remounts — every
- * navigation clears it for free) ONLY WHEN it has a real pending action (an unadded folder pick, a
- * complete-and-unattached review); the footer calls it and awaits it before advancing. UNDEFINED is
+ * ### 2026-08-26 — draft/atomic-commit rewrite (the reboot-loses-onboarding fix)
+ * Before this date, WORKSPACE/CONTACT/AGENTS wrote straight to their own aggregate the INSTANT the
+ * operator confirmed a step (`AddWorkspace`/`AttachThread`, called from this store's `confirmStep`) —
+ * and `contactRef`/`providers` themselves lived ONLY here, in memory, never reaching the server at
+ * all. A reboot mid-wizard lost the in-memory selections and left `currentStep` stuck at `VALUE`
+ * (nothing ever called `SaveOnboardingStep`), so the operator had to reattach the thread and re-pick
+ * the workspace from scratch. The backend now models a RASCUNHO (`Onboarding.state`, `PATCH
+ * /ui/onboarding/step`) that survives a reboot, materialized atomically by `CompleteOnboarding` only
+ * when the operator hits "Concluir" — this store's fields below are what the wizard mirrors that
+ * draft into (and back out of, on resume — `OnboardingFlow`'s hydration effect).
+ *
+ * `confirmStep`/`stepError` — added for the 2026-08-24 onboarding-attach-ux audit (item 2, "Próximo
+ * confirma e avança"). `OnboardingFlow`'s footer dispatches EVERY step's `STEP_COMPONENTS` entry from
+ * a static `Record<StepId, ReactNode>` with no props threading (see that map's own docblock) — so a
+ * mounted step has no prop-based channel to hand its "Próximo" action up to the footer that actually
+ * owns the button. `confirmStep` is that channel: the step registers an async closure here in a
+ * `useEffect` (cleared on unmount, via `key={stepId}` full remounts — every navigation clears it for
+ * free) ONLY WHEN it has a real pending action to submit (today: only `OnboardingWorkspaceStep`, for a
+ * picked-but-not-yet-PATCHed path); the footer calls it and awaits it before advancing. UNDEFINED is
  * load-bearing, not just "no-op": `OnboardingFlow`'s Next handler branches on it — undefined stays a
  * fully SYNCHRONOUS `goTo()`, which is what keeps `OnboardingFlow/index.test.tsx`'s
- * click-Próximo-through-every-step regression working without an `await` between clicks. Only
- * `OnboardingWorkspaceStep` and `OnboardingReviewStep` register anything; CONTACT/AGENTS never do —
- * their row click already fully records the selection into this same store, so Próximo has nothing
- * left to submit for them. `threadAttached` guards `OnboardingReviewStep` against re-firing
- * `useAttachThread` if the operator goes Voltar back into REVIEW after already attaching once.
+ * click-Próximo-through-every-step regression working without an `await` between clicks.
+ * `stepError` mirrors a mutation's OWN error state (never a local try/catch — component bp-22) for
+ * `OnboardingFlow`'s footer to render next to "Próximo"/"Concluir" instead of the global toast that
+ * `MutationCache.onError` (`router.tsx`) would otherwise fire — the three onboarding write mutations
+ * (`SaveOnboardingStep`'s workspace-path confirm, and `CompleteOnboarding`) opt out via `meta: {
+ * suppressToast: true }` at their call sites.
  *
- * `stepError` — added for the 2026-08-24 onboarding-attach-ux audit (item 6, "erro do onboarding não
- * ativa toast"). The `MutationCache.onError` in `router.tsx` toasts EVERY mutation failure globally by
- * default; `useAddWorkspace`/`useAttachThread`/`useCompleteOnboarding` opt out of that (per-mutation
- * `meta: { suppressToast: true }`, scoped to their onboarding call sites only — the SAME hooks used
- * outside onboarding keep the toast) and set THIS instead, a translated message `OnboardingFlow`'s
- * footer renders next to the "Próximo"/"Concluir" button. A local validation failure (e.g. an invalid
- * manually-typed workspace path) does NOT go through here — that already has its own on-the-spot
- * `FieldError`; `stepError` is specifically for a mutation that reached the network and failed.
+ * `contactRef`/`providers` — the CONTACT/AGENTS selections, PATCHed to the server draft the instant a
+ * row is clicked (`OnboardingContactStep`/`OnboardingAgentsStep`'s `handleSubmit`, mirroring the same
+ * `state` group the backend's `OnboardingDraftStateSchema` declares) — no `confirmStep` needed for
+ * either, since a row click already both records AND persists in one gesture.
  *
- * `attachedThreadId` — added for the 2026-08-24 onboarding-attach-ux audit (item 7, the FINAL step's
- * "@-mention the agent" CTA). `useAttachThread`'s response is the ONLY place a `threadId` exists for
- * the thread this onboarding session just created — `OnboardingReviewStep` captures it here the
- * moment `confirmStep` succeeds, so `OnboardingFinalStep` (several steps later, no props threading
- * available to it either — same `STEP_COMPONENTS` constraint as `confirmStep`) can look up that
- * thread's `session.mentionGate.tag` (`useGetSessionChat`) for the real mention handle. Undefined
- * when REVIEW was skipped this visit — `OnboardingFinalStep` falls back to the generic closing copy
- * in that case, never a fabricated handle.
+ * `workspaceId` — an EXISTING already-registered workspace the operator picked from the tile grid
+ * (`OnboardingWorkspaceStep.selectExisting`) — PATCHed as `state.workspace.existingWorkspaceId` the
+ * instant it's clicked, same immediacy as CONTACT/AGENTS above.
  *
- * `channelConnected`/`workspaceHasSelection` — added 2026-08-26 (founder bug report: "Próximo"
- * advanced past CHANNEL/WORKSPACE/CONTACT/AGENTS/FULL_DISK_ACCESS with nothing chosen). `OnboardingFlow`'s
- * footer needs, PER STEP, a live "has this step's fact actually happened" boolean to gate "Próximo"
- * (`CAN_CONTINUE` in that file) — CONTACT/AGENTS already had one for free (`contactRef`/`providers`
- * ARE the fact, set the instant a row is clicked), but CHANNEL and WORKSPACE didn't:
+ * `workspacePath` — a NEW folder typed or picked (native dialog or the manual-path fallback) that is
+ * NOT YET a real `Workspace` — only `CompleteOnboarding` materializes it, at "Concluir" time. This is
+ * the one field that DOES go through `confirmStep`: the operator can keep retyping/replacing the pick
+ * before advancing, so there is a genuine "confirm this value" moment (mirroring the OLD
+ * `AddWorkspace` timing, now a `PATCH { state: { workspace: { path } } }` instead). `workspaceId` and
+ * `workspacePath` are MUTUALLY EXCLUSIVE (same OR the backend's `OnboardingDraftWorkspaceSchema`
+ * models) — picking one clears the other, both locally and in the next PATCH's `workspace` group
+ * (the backend merges `state` RASO per group: a `workspace` PATCH replaces the whole group).
+ *
+ * `workspaceHasSelection`/`channelConnected` — added 2026-08-26 (founder bug report: "Próximo"
+ * advanced past CHANNEL/WORKSPACE/CONTACT/AGENTS/FULL_DISK_ACCESS with nothing chosen).
+ * `OnboardingFlow`'s footer needs, PER STEP, a live "has this step's fact actually happened" boolean
+ * to gate "Próximo" (`CAN_CONTINUE` in that file) — CONTACT/AGENTS already had one for free
+ * (`contactRef`/`providers` ARE the fact), but CHANNEL and WORKSPACE didn't:
  *   - CHANNEL's fact (a paired WhatsApp device) lives inside `ConnectChannelForm`'s own polling
  *     state (`isConnected`) — its `onConnectedChange` prop is the live, poll-free channel to raise it
  *     here (`step-components.tsx` wires it), instead of adding a second poll in `OnboardingFlow`.
  *   - WORKSPACE's fact is `OnboardingWorkspaceStep`'s local `hasSelection` (a picked-but-unconfirmed
- *     folder OR an already-selected one) — raised by that component's own effect.
- * Both default `false` and are NOT reconstructed from `workspaceId`/`contactRef` alone in
- * `OnboardingFlow` on purpose: a future hydration of this store FROM THE SERVER (e.g. seeding
- * `workspaceId` from `workspaceDone`) flows through `OnboardingWorkspaceStep`'s existing
- * `hasSelection` computation for free — the gate never needs touching when that lands.
+ *     folder, an already-confirmed `workspacePath`, OR a selected `workspaceId`) — raised by that
+ *     component's own effect, and — since `workspaceId`/`workspacePath` are now hydrated straight
+ *     from the server draft on resume (`OnboardingFlow`'s hydration effect) — that effect derives the
+ *     right answer for free the moment the step (re)mounts, no extra plumbing needed here.
  */
 interface OnboardingSetupState {
 	contactRef?: ContactStepData['contactRef']
 	providers?: AgentsStepData['providers']
 	workspaceId?: string
+	workspacePath?: string
 	workspaceHasSelection: boolean
 	channelConnected: boolean
-	threadAttached: boolean
-	attachedThreadId?: string
 	confirmStep?: () => Promise<void>
 	stepError?: string
 }
@@ -83,10 +93,9 @@ interface OnboardingSetupActions {
 	setContactRef: (contactRef: ContactStepData['contactRef']) => void
 	setProviders: (providers: AgentsStepData['providers']) => void
 	setWorkspaceId: (workspaceId: string | undefined) => void
+	setWorkspacePath: (workspacePath: string | undefined) => void
 	setWorkspaceHasSelection: (workspaceHasSelection: boolean) => void
 	setChannelConnected: (channelConnected: boolean) => void
-	setThreadAttached: (threadAttached: boolean) => void
-	setAttachedThreadId: (attachedThreadId: string | undefined) => void
 	setConfirmStep: (confirmStep: (() => Promise<void>) | undefined) => void
 	setStepError: (stepError: string | undefined) => void
 	reset: () => void
@@ -98,10 +107,9 @@ const initialState: OnboardingSetupState = {
 	contactRef: undefined,
 	providers: undefined,
 	workspaceId: undefined,
+	workspacePath: undefined,
 	workspaceHasSelection: false,
 	channelConnected: false,
-	threadAttached: false,
-	attachedThreadId: undefined,
 	confirmStep: undefined,
 	stepError: undefined,
 }
@@ -110,11 +118,13 @@ export const useOnboardingSetupStore = create<OnboardingSetupStore>()(set => ({
 	...initialState,
 	setContactRef: contactRef => set({ contactRef }),
 	setProviders: providers => set({ providers }),
+	// Mutual exclusion with `workspacePath` is the CALLER'S job (`OnboardingWorkspaceStep` clears the
+	// other field explicitly when the operator switches selection mode) — a setter that guessed at
+	// intent from truthiness would silently drop a legitimate `setWorkspaceId(undefined)` cleanup call.
 	setWorkspaceId: workspaceId => set({ workspaceId }),
+	setWorkspacePath: workspacePath => set({ workspacePath }),
 	setWorkspaceHasSelection: workspaceHasSelection => set({ workspaceHasSelection }),
 	setChannelConnected: channelConnected => set({ channelConnected }),
-	setThreadAttached: threadAttached => set({ threadAttached }),
-	setAttachedThreadId: attachedThreadId => set({ attachedThreadId }),
 	setConfirmStep: confirmStep => set({ confirmStep }),
 	setStepError: stepError => set({ stepError }),
 	reset: () => set(initialState),
