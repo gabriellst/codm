@@ -1,22 +1,30 @@
 // packages/app/tauri/config/generate.ts — renders the desktop shell's config surfaces FROM the
-// LOCAL config in this folder (./app, ./window, ./capabilities, ./sidecars) plus the abstract
-// contract (template.config.ts — only REPO.brand / REPO.workspaces / REPO.env). The sidecar SET +
-// boot ENV are code (the manifest + the Rust supervisor), NOT config — this file only compiles the
-// two committed JSON surfaces.
+// LOCAL config in this folder (./app, ./window, ./capabilities, ./sidecars, ./env) plus the
+// abstract contract (template.config.ts — only REPO.brand / REPO.workspaces / REPO.env). The
+// sidecar SET is code (the manifest + the Rust supervisor), NOT config — this file only compiles
+// the three committed surfaces.
 //
 // Outputs (committed generated files, like .env.example):
 //   ../src-tauri/tauri.conf.json          — identity, window, devUrl, frontendDist,
 //                                            externalBin, CSP, bundle.resources
 //   ../src-tauri/capabilities/default.json — permissions DERIVED from ./capabilities CAPABILITIES
 //                                            mapped through CAPABILITY_PERMISSIONS
+//   ../src-tauri/shell-env.json            — the env the shell SUPPLIES each sidecar, DERIVED from
+//                                            REPO.env's `consumers` relation (./env) — read by
+//                                            build.rs into `cargo:rustc-env`, so the Rust side
+//                                            carries no port/URL literal
 //
-// The sidecar boot env + the `IDENTIFIER` are NO LONGER generated as a .rs: env is inline in the
-// Rust supervisor (src/sidecars/mod.rs), and the keychain service name is read at runtime from
-// `app.config().identifier`. `externalBin` / the CSP port / `bundle.resources` derive from the
-// package sidecar manifest, not a generated .rs.
+// What is (still) NOT generated: the RUNTIME half of the sidecar boot env — `CODM_DATA_DIR`,
+// `CODM_MIGRATIONS_DIR`, `CODM_PARENT_PID`, `CODM_APP_VERSION`, `NODE_ENV` — stays inline in the
+// Rust supervisor (src/sidecars/mod.rs), because only the running process knows its data dir,
+// resource dir and pid. The line is: a constant the manifest declares the shell reads → generated
+// (shell-env.json); a fact of the process → Rust. The keychain service name is read at runtime
+// from `app.config().identifier`; `externalBin` / the CSP ports / `bundle.resources` derive from the
+// package sidecar manifest.
 //
 // Usage: `bun desktop:generate` (writes) · `bun desktop:generate --check` (exit 1 on drift —
-// wired into test:tooling via ./generate.test.ts).
+// wired into test:tooling via ./generate.test.ts, and run by both release workflows before
+// `tauri build`).
 import { readFileSync, writeFileSync } from 'node:fs'
 import { posix } from 'node:path'
 import { resolve } from 'node:path'
@@ -24,9 +32,9 @@ import { REPO } from '../../../../template.config'
 import { CONSOLE, DISPLAY_NAME, IDENTIFIER } from './app'
 import { CAPABILITIES, CAPABILITY_PERMISSIONS } from './capabilities'
 import { ANALYTICS } from './analytics'
-import { CLOUD } from './cloud'
 import { DEEPLINK } from './deeplink'
 import { DMG } from './dmg'
+import { forwardedEnv, SHELL_ENV } from './env'
 import { SIDECARS, type SidecarManifestEntry } from './sidecars'
 import { UPDATER } from './updater'
 import { BOOT_ERROR_FRAME, WINDOW, WINDOW_FRAME } from './window'
@@ -60,10 +68,13 @@ function envExample(key: string): string {
 	return decl.example
 }
 
+// A porta de um sidecar vem do MESMO valor que o shell entrega a ele no boot (./env SHELL_ENV) —
+// a CSP e o supervisor Rust leem uma fonte só, então não há como a CSP liberar uma porta e o
+// processo subir em outra.
 function sidecarPort(sidecar: SidecarManifestEntry): number {
-	const port = Number(envExample(sidecar.portEnvKey))
-	if (!Number.isInteger(port) || port <= 0)
-		throw new Error(`env key '${sidecar.portEnvKey}' example is not a port: '${envExample(sidecar.portEnvKey)}'`)
+	const raw = SHELL_ENV[sidecar.portEnvKey]
+	const port = Number(raw)
+	if (!Number.isInteger(port) || port <= 0) throw new Error(`env key '${sidecar.portEnvKey}' value is not a port: '${raw}'`)
 	return port
 }
 
@@ -93,10 +104,11 @@ export function renderTauriConf(): string {
 	// `connect-src` alcança os sidecars MAIS os dois destinos remotos que o console chama por XHR.
 	// A cloud: o console fala com ela para trocar o código do deep link e revogar no logout — sem
 	// esta origem o webview bloqueia a requisição antes de sair (ver ./cloud.ts, foi o que quebrou o
-	// login até a v0.1.8). O PostHog, pela MESMA razão (ver ./analytics.ts): telemetria bloqueada
-	// pela CSP falha em silêncio — pior que o login, porque ninguém percebe, os números só ficam
-	// vazios.
-	const connectSrc = [...sidecarOrigins, CLOUD.origin, ANALYTICS.origin].join(' ')
+	// login até a v0.1.8). A origem é a MESMA que o shell entrega ao daemon em `CODM_CLOUD_URL`
+	// (./env) — uma fonte, então a CSP não pode autorizar uma nuvem e o daemon perguntar a outra. O
+	// PostHog, pela MESMA razão (ver ./analytics.ts): telemetria bloqueada pela CSP falha em
+	// silêncio — pior que o login, porque ninguém percebe, os números só ficam vazios.
+	const connectSrc = [...sidecarOrigins, SHELL_ENV.CODM_CLOUD_URL, ANALYTICS.origin].join(' ')
 	// `img-src` alcança os MESMOS sidecars — e SÓ eles, porque nem a cloud nem o PostHog servem
 	// imagem alguma.
 	//
@@ -265,6 +277,21 @@ export function renderCapabilities(): string {
 	return `${JSON.stringify(capability, null, '\t')}\n`
 }
 
+/**
+ * `shell-env.json` — por sidecar (chave = `role` do manifesto), o env que o shell FORNECE no boot,
+ * derivado de `REPO.env`'s `consumers` (./env `forwardedEnv`). `build.rs` lê este arquivo e emite
+ * `cargo:rustc-env=CODM_SHELL_ENV_<ROLE>_<KEY>=<valor>` para cada par; `src/shell_env.rs` os expõe
+ * como `env!()`. O shell também lê daqui as portas e a origem da nuvem para o próprio cliente SDK
+ * (`src/api/mod.rs`) — nunca uma porta literal em `.rs`.
+ *
+ * A forma é deliberadamente plana e nomeada pelo role: quem lê o JSON (build.rs, um humano no
+ * diff) vê "o daemon recebe X, o gateway recebe Y", sem precisar do manifesto ao lado.
+ */
+export function renderShellEnv(): string {
+	const byRole = Object.fromEntries(SIDECARS.map(s => [s.role, forwardedEnv(s.build.workspace)]))
+	return `${JSON.stringify(byRole, null, '\t')}\n`
+}
+
 // ── Cargo.toml identity check (name is stamped once, not generated — but drift is a bug) ──
 
 export function cargoNameDrift(): string[] {
@@ -284,6 +311,7 @@ export function cargoNameDrift(): string[] {
 export const OUTPUTS: readonly { path: string; render: () => string }[] = [
 	{ path: posix.join(srcTauriDir, 'tauri.conf.json'), render: renderTauriConf },
 	{ path: posix.join(srcTauriDir, 'capabilities/default.json'), render: renderCapabilities },
+	{ path: posix.join(srcTauriDir, 'shell-env.json'), render: renderShellEnv },
 ]
 
 if (import.meta.main) {

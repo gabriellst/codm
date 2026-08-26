@@ -14,7 +14,8 @@ import { DMG } from './dmg'
 import { ANALYTICS } from './analytics'
 import { CLOUD } from './cloud'
 import { UPDATER } from './updater'
-import { cargoNameDrift, OUTPUTS, renderCapabilities, renderTauriConf } from './generate'
+import { forwardedEnv, SHELL_ENV, type ShellEnvKey } from './env'
+import { cargoNameDrift, OUTPUTS, renderCapabilities, renderShellEnv, renderTauriConf } from './generate'
 import { SIDECARS } from './sidecars'
 import { BOOT_ERROR_FRAME, WINDOW_FRAME } from './window'
 
@@ -189,6 +190,48 @@ describe('desktop config (packages/app/tauri/config)', () => {
 		}
 		expect(DEEPLINK.scheme).toBe('codm')
 		expect(conf.plugins['deep-link'].desktop.schemes).toEqual([DEEPLINK.scheme])
+	})
+
+	it('DSK-13: SHELL_ENV is exactly the manifest keys the shell consumes (appTauri ∈ consumers) — no more, no less', () => {
+		// The relation is declared ONCE, in template.config.ts `consumers`. The shell's table is typed
+		// against it (a missing/extra key is a tsc error); this rail states the same fact at runtime
+		// so a reader sees the set, and so a consumer edit in the manifest shows up here by name.
+		const declared = Object.entries(REPO.env)
+			.filter(([, decl]) => (decl.consumers as readonly string[]).includes('appTauri'))
+			.map(([key]) => key)
+			.sort()
+		expect(Object.keys(SHELL_ENV).sort()).toEqual(declared)
+		// Ports come from the manifest's own example (one port family for .env.example, bun dev and
+		// the bundle); the cloud origin is the shell decision in ./cloud.ts.
+		expect(SHELL_ENV.API_PORT).toBe(REPO.env.API_PORT.example)
+		expect(SHELL_ENV.CHANNEL_PORT).toBe(REPO.env.CHANNEL_PORT.example)
+		expect(SHELL_ENV.CODM_CLOUD_URL).toBe(CLOUD.origin)
+	})
+
+	it('DSK-14: shell-env.json hands each sidecar exactly the shell keys its workspace reads (set algebra, per role)', () => {
+		// 0.5.1 shipped a daemon with NO CODM_CLOUD_URL in its boot env — every screen answered
+		// 503 CLOUD_UNREACHABLE. The manifest had declared apiTs + appTauri as its readers all
+		// along; the supervisor just re-typed the env by hand. Now the forwarded set is derived.
+		const rendered = JSON.parse(renderShellEnv()) as Record<string, Record<string, string>>
+		expect(Object.keys(rendered).sort()).toEqual(SIDECARS.map(s => s.role).sort())
+		for (const sidecar of SIDECARS) {
+			const expected = (Object.keys(SHELL_ENV) as ShellEnvKey[]).filter(key =>
+				(REPO.env[key].consumers as readonly string[]).includes(sidecar.build.workspace),
+			)
+			expect(Object.keys(rendered[sidecar.role] ?? {}).sort()).toEqual(expected.sort())
+			expect(rendered[sidecar.role]).toEqual(forwardedEnv(sidecar.build.workspace))
+			// A sidecar's own port is always among what it receives — the CSP and the process agree.
+			expect(rendered[sidecar.role]?.[sidecar.portEnvKey]).toBe(SHELL_ENV[sidecar.portEnvKey])
+		}
+		// The daemon is the one that asks the cloud who the operator is — it MUST get the origin.
+		expect(rendered.daemon?.CODM_CLOUD_URL).toBe(CLOUD.origin)
+		expect(rendered.gateway?.CODM_CLOUD_URL).toBeUndefined()
+	})
+
+	it('DSK-15: the CSP authorizes the SAME cloud origin the daemon is booted with (one source, two readers)', () => {
+		const conf = JSON.parse(renderTauriConf()) as { app: { security: { csp: string } } }
+		const rendered = JSON.parse(renderShellEnv()) as { daemon: { CODM_CLOUD_URL: string } }
+		expect(conf.app.security.csp).toContain(rendered.daemon.CODM_CLOUD_URL)
 	})
 
 	it('DSK-07: the Rust updater mirrors config/updater.ts betaEndpoint verbatim (cross-lang seam gate)', () => {

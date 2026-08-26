@@ -13,9 +13,13 @@
 //! (`API_PORT` / `CHANNEL_PORT` — see `sidecars::sidecars`); no second source of truth.
 //! A superfície de NUVEM vem de `CODM_CLOUD_URL`, a mesma chave que o daemon TS usa — nunca
 //! uma URL cravada aqui. Todas as três estão declaradas em `template.config.ts` com `appTauri`
-//! entre os consumidores; consumo de env é relação declarada, não hábito.
+//! entre os consumidores; consumo de env é relação declarada, não hábito — e os DEFAULTS vêm
+//! do mesmo manifesto, via `crate::shell_env` (shell-env.json → build.rs → `env!()`), então um
+//! app empacotado sem `process.env` continua sabendo as portas e a origem da nuvem.
 
 use tauri::Manager;
+
+use crate::shell_env;
 
 /// Typed SDK aggregate + the identity it calls with. Constructed ONCE in `setup` and
 /// managed as `tauri::State<Api>`.
@@ -31,41 +35,18 @@ pub struct Api {
 /// tenant under this id; the shell's S2S calls carry it explicitly.
 const LOCAL_OWNER_ID: &str = "local";
 
-fn port_from_env(key: &str, default: u16) -> u16 {
-    std::env::var(key)
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(default)
-}
-
-/// A DECISÃO, separada da leitura: dado o valor cru (ou a ausência dele) e um default, qual URL
-/// vale. Pura de propósito — é o que permite testá-la sem mutar env, que em Rust é global ao
-/// processo e corre contra os testes em paralelo.
-///
-/// Vazio conta como AUSENTE: um `CODM_CLOUD_URL=` no `.env` daria uma base vazia, e todo request
-/// cairia num path relativo — o modo mais silencioso de errar o destino.
-fn resolve_url(raw: Option<String>, default: &str) -> String {
-    match raw {
-        Some(v) if !v.trim().is_empty() => v,
-        _ => default.to_string(),
-    }
-}
-
-fn url_from_env(key: &str, default: &str) -> String {
-    resolve_url(std::env::var(key).ok(), default)
-}
-
 impl Api {
     /// Build the aggregate client against the supervised sidecars. `owner_id` rides as
     /// a default header on every request — commands never touch identity.
     pub fn from_env() -> Self {
-        let api_port = port_from_env("API_PORT", 3030);
-        let channel_port = port_from_env("CHANNEL_PORT", 3032);
+        let api_port = shell_env::port_from_env("API_PORT", shell_env::DAEMON_API_PORT);
+        let channel_port = shell_env::port_from_env("CHANNEL_PORT", shell_env::GATEWAY_CHANNEL_PORT);
         let local_api = format!("http://127.0.0.1:{api_port}");
-        // Default = a api local, exatamente a regra que o lado TS já declara para esta chave
-        // ("defaults to API_URL", template.config.ts). Não é conveniência: é não inventar uma
-        // segunda semântica para a mesma variável. Em produção o instalador aponta para a nuvem.
-        let cloud_url = url_from_env("CODM_CLOUD_URL", &local_api);
+        // O default era `local_api` — "defaults to API_URL", a regra do lado TS. Num app empacotado
+        // não há `process.env`, então o sub-cliente de nuvem do shell apontava o daemon local, que
+        // não monta `auth` (cloud-only) e devolve 404. O default agora é o MESMO valor que o
+        // supervisor entrega ao daemon em `CODM_CLOUD_URL`: uma origem, dois leitores.
+        let cloud_url = shell_env::value_from_env("CODM_CLOUD_URL", shell_env::DAEMON_CODM_CLOUD_URL);
 
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert(
@@ -117,25 +98,6 @@ mod tests {
     fn from_env_builds_every_surface_without_panicking() {
         let _api = Api::from_env();
     }
-
-    #[test]
-    fn resolve_url_prefers_the_env_value() {
-        assert_eq!(
-            resolve_url(Some("https://cloud.example".into()), "http://127.0.0.1:3030"),
-            "https://cloud.example"
-        );
-    }
-
-    #[test]
-    fn resolve_url_falls_back_when_absent() {
-        assert_eq!(resolve_url(None, "http://127.0.0.1:3030"), "http://127.0.0.1:3030");
-    }
-
-    /// Vazio é AUSENTE, não "use string vazia". Sem isto, um `CODM_CLOUD_URL=` no `.env` daria uma
-    /// base vazia e todo request iria para um path relativo, sem erro nenhum.
-    #[test]
-    fn resolve_url_treats_blank_as_absent() {
-        assert_eq!(resolve_url(Some("".into()), "http://fallback"), "http://fallback");
-        assert_eq!(resolve_url(Some("   ".into()), "http://fallback"), "http://fallback");
-    }
+    // The env-resolution unit tests (prefer env / fall back / blank is absent) moved with the
+    // helpers to `crate::shell_env`.
 }

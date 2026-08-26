@@ -19,6 +19,23 @@ things read from the abstract contract (`template.config.ts`) are `REPO.brand` (
 `REPO.workspaces` (roots), and `REPO.env` (ports/paths) — a literal port/name/path in a config file
 that exists in `REPO.env` is a bug, same rule as the env registry.
 
+**Shell-supplied env is DERIVED from the manifest, never hand-listed.** `config/env.ts` types
+`ShellEnvKey` as the `REPO.env` keys whose `consumers` include `appTauri` and maps each to its value
+(`SHELL_ENV`: port examples from the manifest, cloud origin from `cloud.ts`); `forwardedEnv(workspace)`
+is set algebra over the same relation (daemon gets `API_PORT` + `CODM_CLOUD_URL`, gateway gets
+`CHANNEL_PORT`). `generate.ts` renders it into **`src-tauri/shell-env.json`** (committed, drift-gated
+by `bun desktop:generate --check`); `build.rs` re-emits each pair as
+`cargo:rustc-env=CODM_SHELL_ENV_<ROLE>_<KEY>`; **`src/shell_env.rs` is the only Rust module that reads
+them back** (`env!()` compile-time constants; `process.env` still overrides at runtime — dev keeps the
+root `.env`). Adding `appTauri` to a key's `consumers` without a value in `SHELL_ENV` is a `tsc` error
+by construction. RUNTIME facts (`CODM_DATA_DIR`, `CODM_MIGRATIONS_DIR`, `CODM_PARENT_PID`,
+`CODM_APP_VERSION`, `NODE_ENV`) stay computed in `sidecars/mod.rs` — only the running process knows
+them. Never edit `shell-env.json` by hand; never reintroduce a port/URL literal in `.rs` (the 0.5.1
+daemon shipped without `CODM_CLOUD_URL` and answered `503 CLOUD_UNREACHABLE` to every screen because
+the supervisor's hand-written env list drifted from the manifest). The release workflows read
+`VITE_CODM_CLOUD_URL` from the committed `shell-env.json` — there is no `CODM_CLOUD_URL` repo
+variable any more.
+
 Both the abstract keys AND the `capability → Tauri permissions[]` map live together in
 **`config/capabilities.ts`** (`CAPABILITIES` + `CAPABILITY_PERMISSIONS`) — the config knows *what*
 capabilities exist and *how* each maps to Tauri's permission grammar. `config/generate.ts` renders

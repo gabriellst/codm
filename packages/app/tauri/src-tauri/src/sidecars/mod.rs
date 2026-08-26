@@ -2,14 +2,18 @@
 //! `bundle.externalBin`) and polls each service's readiness through the TYPED SDK
 //! (`api::Api` → the generated `health()` operation), never a hand-assembled request.
 //!
-//! The sidecar SET and each process's boot ENV are hand-written in `sidecars()`
-//! below — env values are runtime paths (`data_dir`, `resource_dir/migrations`) and
-//! shell-decision literals the supervisor owns, not a cross-boundary contract. The
-//! LEAN cross-boundary list the JS side needs (binary role → port env key → build
-//! recipe) lives in `packages/app/tauri/config/sidecars.ts`, which
-//! `config/build-sidecars.ts` and `config/generate.ts` read; keep the two in step
-//! (same two roles, same ports). The readiness PATH is in NEITHER list any more: it
-//! lives in the OpenAPI contract and arrives through the generated method (spec E2).
+//! The sidecar SET is hand-written in `sidecars()` below, mirroring the LEAN
+//! cross-boundary list the JS side needs (binary role → port env key → build recipe)
+//! in `packages/app/tauri/config/sidecars.ts`, which `config/build-sidecars.ts` and
+//! `config/generate.ts` read; keep the two in step (same two roles). Each process's
+//! boot ENV has two halves: the CONTRACT half — the keys `template.config.ts` declares
+//! the shell reads (`API_PORT`, `CHANNEL_PORT`, `CODM_CLOUD_URL`) — arrives as
+//! compile-time constants through `crate::shell_env` (generated `shell-env.json` →
+//! `build.rs` → `env!()`), never as a literal here; the RUNTIME half (`data_dir`,
+//! `resource_dir/migrations`, the parent pid, the bundle version) is computed in
+//! `sidecars()`, because only the running process knows it. The readiness PATH is in
+//! NEITHER list any more: it lives in the OpenAPI contract and arrives through the
+//! generated method (spec E2).
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -21,6 +25,7 @@ use tauri_plugin_shell::ShellExt;
 use tauri_specta::Event as _;
 
 use crate::api::Api;
+use crate::shell_env;
 
 mod gate;
 pub use gate::*;
@@ -68,18 +73,10 @@ impl Sidecar {
     }
 }
 
-/// The port a sidecar listens on: read from its env var (matching `config/sidecars.ts`'s
-/// `portEnvKey`), falling back to the dev/bundle default when unset.
-fn port_from_env(key: &str, default: u16) -> u16 {
-    std::env::var(key)
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(default)
-}
-
-/// The two supervised sidecars + the exact env each boots with. Hand-written, on
-/// purpose: the descriptors mirror `config/sidecars.ts` and the boot env is inlined
-/// here because it is a runtime concern, not a cross-boundary contract.
+/// The two supervised sidecars + the exact env each boots with. The descriptors mirror
+/// `config/sidecars.ts`; the boot env is assembled here from two sources — the
+/// manifest-derived constants (`crate::shell_env`, the contract half) and the runtime
+/// facts below (the half only this process knows).
 ///
 /// `data_dir`     — app-data subdir (`app_data_dir()/data`), the sidecars' data root.
 /// `resource_dir` — bundle resource dir, holding the two dirs a compiled sidecar reads
@@ -101,8 +98,13 @@ fn port_from_env(key: &str, default: u16) -> u16 {
 /// 2026-08-07). A linha "Sobre" das configurações lia o package.json do workspace do daemon e
 /// mostrava 0.0.1; a versão é fato do BUNDLE, e o shell é quem o conhece.
 pub fn sidecars(data_dir: &str, resource_dir: &std::path::Path, app_version: &str) -> Vec<Sidecar> {
-    let api_port = port_from_env("API_PORT", 3030);
-    let channel_port = port_from_env("CHANNEL_PORT", 3032);
+    let api_port = shell_env::port_from_env("API_PORT", shell_env::DAEMON_API_PORT);
+    let channel_port = shell_env::port_from_env("CHANNEL_PORT", shell_env::GATEWAY_CHANNEL_PORT);
+    // A origem da nuvem, do manifesto (`config/cloud.ts` → shell-env.json). Sem esta linha o daemon
+    // empacotado nascia sem `CODM_CLOUD_URL` e respondia `503 CLOUD_UNREACHABLE` a toda tela
+    // (medido no 0.5.1 instalado): `auth` é cloud-only, então ele não tem a quem perguntar quem é
+    // o operador a não ser que o shell diga onde a nuvem mora.
+    let cloud_url = shell_env::value_from_env("CODM_CLOUD_URL", shell_env::DAEMON_CODM_CLOUD_URL);
     let migrations_dir = resource_dir
         .join("migrations")
         .to_string_lossy()
@@ -120,7 +122,9 @@ pub fn sidecars(data_dir: &str, resource_dir: &std::path::Path, app_version: &st
                 ("API_PORT".into(), api_port.to_string()),
                 ("CODM_DATA_DIR".into(), data_dir.into()),
                 ("CODM_MIGRATIONS_DIR".into(), migrations_dir),
-                ("API_GO_URL".into(), "http://localhost:3032".into()),
+                ("CODM_CLOUD_URL".into(), cloud_url),
+                // Derived from the gateway's port, never a second literal for `:3032`.
+                ("API_GO_URL".into(), format!("http://localhost:{channel_port}")),
                 ("NODE_ENV".into(), "production".into()),
                 ("CODM_PARENT_PID".into(), parent_pid.clone()),
                 ("CODM_APP_VERSION".into(), app_version.to_string()),

@@ -12,10 +12,13 @@
  * `curl` do terminal enquanto o app apanhava `NETWORK_ERROR`, porque a CSP só liberava
  * `localhost:3030`.
  *
- * DEVE bater com a repo variable `CODM_CLOUD_URL` que os workflows de release assam em
- * `VITE_CODM_CLOUD_URL` (o console usa aquela para montar as URLs; esta autoriza o tráfego). Mudar
- * uma sem a outra volta a bloquear o login — por isso o rail DSK-11 exige a origem na CSP, e este
- * comentário é o lembrete de que são dois lugares para o mesmo fato.
+ * É A FONTE, não uma cópia. Até 2026-08-26 este valor "devia bater" com uma repo variable
+ * `CODM_CLOUD_URL` que os workflows assavam em `VITE_CODM_CLOUD_URL` — dois lugares para o mesmo
+ * fato, e um terceiro (o env do daemon empacotado) que ninguém preenchia, daí o 0.5.1 nascer sem
+ * saber onde a nuvem mora. Hoje `./env` (SHELL_ENV.CODM_CLOUD_URL) lê daqui; `./generate.ts`
+ * renderiza o mesmo valor na CSP e em `src-tauri/shell-env.json`; `build.rs` o entrega ao
+ * supervisor Rust, que o passa ao daemon; e os workflows de release exportam `VITE_CODM_CLOUD_URL`
+ * a partir do JSON comitado. Mudar a nuvem de endereço = mudar esta linha e regenerar.
  *
  * É uma decisão de shell no mesmo sentido de `UPDATER.repo`: nomeia ONDE o produto vive, não um
  * fato do workspace, então é constante aqui e não leitura de `REPO`.
