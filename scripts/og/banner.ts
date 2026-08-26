@@ -36,7 +36,7 @@ const COLORS = {
  * Inter + IBM Plex Mono — as fontes REAIS da landing (global.css importa `@fontsource/inter` e
  * `@fontsource/ibm-plex-mono`), não o Poppins do OG antigo (que nem está instalado).
  */
-function bundledFontDataUri(pkg: '@fontsource/inter' | '@fontsource/ibm-plex-mono', file: string): string {
+export function bundledFontDataUri(pkg: '@fontsource/inter' | '@fontsource/ibm-plex-mono', file: string): string {
 	const pkgJsonPath = Bun.resolveSync(`${pkg}/package.json`, ASTRO_DIR)
 	const buf = readFileSync(join(dirname(pkgJsonPath), 'files', file))
 	return `data:font/woff2;base64,${buf.toString('base64')}`

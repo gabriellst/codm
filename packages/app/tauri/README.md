@@ -46,5 +46,10 @@ machines without a Rust toolchain — the shell build is opt-in.
 - **Rust** (`cargo`, via rustup) — required for `dev`/`bundle`. Not present on the
   authoring machine: the Rust sources are marked UNVERIFIED-COMPILE and the
   `tauri dev` acceptance is parked in `.specs/codedm/OVERNIGHT-BLOCKED.md`.
-- **Icons** — `src-tauri/icons/` is not committed yet; run
-  `bun x tauri icon <path-to-1024.png>` once before the first `bundle`.
+- **Icons** — `src-tauri/icons/` is committed; regenerate with
+  `bun x tauri icon <path-to-1024.png>` when the mark changes.
+- **DMG install window** — `src-tauri/dmg/background.png` (the "drag to Applications"
+  picture) is committed too. Layout lives in `config/dmg.ts` (window size + icon positions,
+  rendered into `bundle.macOS.dmg`); the picture is drawn from the SAME coordinates by
+  `bun desktop:dmg-background` (`scripts/og/dmg-background.ts`, Playwright, 2× @ 144 DPI).
+  Move an icon in `config/dmg.ts` → `bun desktop:generate` + `bun desktop:dmg-background`.

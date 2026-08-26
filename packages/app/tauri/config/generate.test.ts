@@ -4,12 +4,13 @@
 // (template.config.ts REPO.brand/workspaces/env). Any hand-edit of a generated file, or a config
 // change without regeneration, is a red build.
 import { describe, expect, it } from 'bun:test'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { REPO } from '../../../../template.config'
 import { CONSOLE, IDENTIFIER } from './app'
 import { CAPABILITIES, CAPABILITY_PERMISSIONS } from './capabilities'
 import { DEEPLINK } from './deeplink'
+import { DMG } from './dmg'
 import { ANALYTICS } from './analytics'
 import { CLOUD } from './cloud'
 import { UPDATER } from './updater'
@@ -105,6 +106,28 @@ describe('desktop config (packages/app/tauri/config)', () => {
 		// document server — stripped only for build-spa), never the web `dev`.
 		expect(console_.devTarget).toBe('dev-spa')
 		expect(conf.build.beforeDevCommand).toBe(`bun x nx run ${consoleWs.nxProject}:${console_.devTarget}`)
+	})
+
+	it('DSK-13: the install window (bundle.macOS.dmg) is config/dmg.ts verbatim and its background is committed', () => {
+		const conf = JSON.parse(renderTauriConf()) as {
+			bundle: { macOS: { dmg: Record<string, unknown> } }
+		}
+		expect(conf.bundle.macOS.dmg).toEqual({
+			background: DMG.background,
+			windowSize: DMG.windowSize,
+			windowPosition: DMG.windowPosition,
+			appPosition: DMG.appPosition,
+			applicationFolderPosition: DMG.applicationFolderPosition,
+		})
+		// Both icons sit inside the window, on the same baseline, app on the left — the arrow drawn
+		// between them (scripts/og/dmg-background.ts) assumes exactly this.
+		expect(DMG.appPosition.y).toBe(DMG.applicationFolderPosition.y)
+		expect(DMG.appPosition.x).toBeLessThan(DMG.applicationFolderPosition.x)
+		expect(DMG.applicationFolderPosition.x).toBeLessThan(DMG.windowSize.width)
+		expect(DMG.appPosition.y).toBeLessThan(DMG.windowSize.height)
+		// The bundler copies the picture from src-tauri/<background>; a missing file is a silent
+		// fallback to the bare Finder window (the tauri CLI only warns).
+		expect(existsSync(resolve(ROOT, REPO.workspaces.appTauri.pkgRoot, 'src-tauri', DMG.background))).toBe(true)
 	})
 
 	it('DSK-10: the bundle is ad-hoc signed, so macOS says "unidentified developer" and not "damaged"', () => {

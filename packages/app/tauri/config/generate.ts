@@ -26,6 +26,7 @@ import { CAPABILITIES, CAPABILITY_PERMISSIONS } from './capabilities'
 import { ANALYTICS } from './analytics'
 import { CLOUD } from './cloud'
 import { DEEPLINK } from './deeplink'
+import { DMG } from './dmg'
 import { SIDECARS, type SidecarManifestEntry } from './sidecars'
 import { UPDATER } from './updater'
 import { BOOT_ERROR_FRAME, WINDOW, WINDOW_FRAME } from './window'
@@ -217,6 +218,17 @@ export function renderTauriConf(): string {
 				// Continua necessário DEPOIS do Developer ID: app notarizado roda hardened runtime, e
 				// o prebuild nativo segue não sendo nosso para assinar.
 				entitlements: 'entitlements.plist',
+				// The install window ("drag to Applications"). Every field comes from ./dmg — the SAME
+				// object scripts/og/dmg-background.ts draws the background from, so the arrow in the
+				// picture and the icons Finder places never disagree. The picture is committed
+				// (`bun desktop:dmg-background`); the bundler only copies it into the volume.
+				dmg: {
+					background: DMG.background,
+					windowSize: DMG.windowSize,
+					windowPosition: DMG.windowPosition,
+					appPosition: DMG.appPosition,
+					applicationFolderPosition: DMG.applicationFolderPosition,
+				},
 			},
 		},
 	}

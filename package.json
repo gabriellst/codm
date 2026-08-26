@@ -37,6 +37,7 @@
 		"desktop:sidecars": "nx run app-tauri:sidecars",
 		"desktop:bundle": "nx run app-tauri:bundle",
 		"desktop:generate": "bun packages/app/tauri/config/generate.ts",
+		"desktop:dmg-background": "bun scripts/og/dmg-background.ts",
 		"tsc": "nx run-many -t tsc",
 		"test": "nx run-many -t test --exclude=e2e",
 		"lint": "nx run-many -t lint",

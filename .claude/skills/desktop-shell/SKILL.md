@@ -39,6 +39,18 @@ entries, build kinds); only host-triple knowledge stays local. Genuine shell dec
 defaults, health-check timing, `sidecar:ready/error` vocabulary, icons, the `data` subdir under
 `app_data_dir()`) stay as parameters in the shell — they have no repo-fact source.
 
+**DMG install window** (`config/dmg.ts`, rendered into `bundle.macOS.dmg`): window size, screen
+position and the CENTER of each icon (app + Applications alias), in Finder content points. The
+background picture `src-tauri/dmg/background.png` is committed and drawn from the SAME object by
+`bun desktop:dmg-background` (`scripts/og/dmg-background.ts` — Playwright at 2×, then a `pHYs`
+chunk declaring 144 DPI, or Finder paints it at double size). Rails: DSK-13 (conf ↔ config, file
+exists) + `scripts/og/dmg-background.test.ts` (PNG = 2× `windowSize` @ 144 DPI, arrow between the
+icons). Facts measured on a real volume (2026-08-25): the bundler fixes icon size 128 / label 16
+(`DMG_FINDER`, not configurable); `windowSize` INCLUDES the title bar, so ~28 pt of the picture's
+bottom are hidden — keep nothing important there; and Finder draws icon labels in DARK text over a
+light background picture even in dark mode, so one light picture serves both appearances. Moving an
+icon = edit `config/dmg.ts` → `bun desktop:generate` + `bun desktop:dmg-background`.
+
 **Adding a sidecar** = add an entry to `config/sidecars.ts` (`SIDECARS`) + `bun desktop:generate` —
 never edit tauri.conf.json/mod.rs literals. **Adding a native capability** = add the abstract key to
 `CAPABILITIES` AND its permission list to `CAPABILITY_PERMISSIONS` — both in `config/capabilities.ts`
