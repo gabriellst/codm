@@ -54,6 +54,9 @@ export interface SmokeInputs {
 	ports: { daemon: number; gateway: number }
 	/** Path de health por papel, lido do openapi.json de cada backend (ver `healthPathOf`). */
 	healthPaths: Record<Role, string>
+	/** A origem da nuvem que o shell injeta no daemon (mod.rs: `shell_env::value_from_env`),
+	 *  lida do MESMO `shell-env.json` comitado que o build.rs consome — nunca um literal aqui. */
+	cloudUrl: string
 }
 
 export interface SidecarPlan {
@@ -91,6 +94,7 @@ const BOOT: Record<Role, (i: SmokeInputs) => { cwd: string; env: Record<string, 
 			API_PORT: String(i.ports.daemon),
 			CODM_DATA_DIR: i.dataDir,
 			CODM_MIGRATIONS_DIR: join(i.binariesDir, 'migrations'),
+			CODM_CLOUD_URL: i.cloudUrl,
 			// O rail espelha CHAVES, não valores: o shell hardcoda http://localhost:3032 (mod.rs:123);
 			// aqui a URL aponta o gateway DO SMOKE (3132) — senão o daemon mediria o gateway errado.
 			API_GO_URL: `http://localhost:${i.ports.gateway}`,
@@ -288,6 +292,14 @@ function openapiPath(workspace: keyof typeof REPO.workspaces): string {
 	return resolve(import.meta.dirname, '..', '..', REPO.workspaces[workspace].pkgRoot, 'public', 'docs', 'openapi.json')
 }
 
+/** ÚNICA fonte da origem da nuvem: o `shell-env.json` COMITADO que `config/generate.ts` renderiza
+ *  e `build.rs` lê para o supervisor Rust — nunca um literal aqui (mesmo insumo, dois runtimes). */
+function cloudUrlFromShellEnv(): string {
+	const path = resolve(import.meta.dirname, '..', '..', REPO.workspaces.appTauri.pkgRoot, 'src-tauri', 'shell-env.json')
+	const shellEnv = JSON.parse(readFileSync(path, 'utf8')) as { daemon: { CODM_CLOUD_URL: string } }
+	return shellEnv.daemon.CODM_CLOUD_URL
+}
+
 async function main(): Promise<number> {
 	const binariesDir = resolve(import.meta.dirname, '..', '..', REPO.workspaces.appTauri.pkgRoot, 'src-tauri', 'binaries')
 	const dataDir = mkdtempSync(join(tmpdir(), `${REPO.brand}-smoke-`))
@@ -304,6 +316,7 @@ async function main(): Promise<number> {
 		appVersion: process.env.CODM_APP_VERSION ?? '0.0.0-smoke',
 		ports: SMOKE_PORTS,
 		healthPaths,
+		cloudUrl: cloudUrlFromShellEnv(),
 	})
 
 	// Os dois de uma vez, como o shell — eles abrem o MESMO SQLite e migram de forma idempotente em

@@ -14,7 +14,8 @@ const base: SmokeInputs = {
 	parentPid: 4242,
 	appVersion: '0.5.0-beta.7',
 	ports: SMOKE_PORTS,
-	healthPaths: { daemon: '/v1/health', gateway: '/health' },
+	healthPaths: { daemon: '/health', gateway: '/health' },
+	cloudUrl: 'https://codm.up.railway.app',
 }
 
 /**
@@ -102,7 +103,7 @@ describe('smoke-sidecars (planSmoke — o espelho do supervisor)', () => {
 
 	it('URLs de health: daemon direto na porta, gateway sob a fronteira /api (api/mod.rs)', () => {
 		const [daemon, gateway] = planSmoke(base)
-		expect(daemon?.healthUrl).toBe('http://127.0.0.1:3130/v1/health')
+		expect(daemon?.healthUrl).toBe('http://127.0.0.1:3130/health')
 		expect(gateway?.healthUrl).toBe('http://127.0.0.1:3132/api/health')
 	})
 })

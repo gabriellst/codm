@@ -54,6 +54,14 @@ jobs:
       version: ${{ steps.v.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+
+      # A config do shell é GERADA (config/*.ts → tauri.conf.json, capabilities, shell-env.json) e
+      # comitada; um build sobre um JSON desregenerado assaria uma CSP/env de ontem com a config de
+      # hoje. Drift = build vermelho, AQUI — antes de qualquer um dos três builds gastar minutos de
+      # cargo. Roda uma vez em `prepare` (é um check de repo, não depende do runner do build).
+      - name: desktop config em dia
+        run: bun desktop:generate --check
 
       # Versão do beta: base da conf + `-beta.<run>` — semver crescente por merge, sem commit de
       # bump (spec decisão 4). Injetada via --config em cada build, nunca escrita no repo. Calculada
@@ -62,18 +70,6 @@ jobs:
       - name: version
         id: v
         run: echo "version=$(jq -r .version packages/app/tauri/src-tauri/tauri.conf.json)-beta.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
-
-      # Um release sem esta variável produz um app cujo login abre localhost:3030 — defeito
-      # INVISÍVEL no artefato (os assets do frontend vão comprimidos dentro do binário, então
-      # nenhum grep no .app prova que a URL foi assada). Medido na v0.1.3; a única defesa é
-      # falhar aqui, no insumo, em vez de tentar verificar na saída.
-      - name: cloud url presente
-        run: |
-          test -n "${{ vars.CODM_CLOUD_URL }}" || {
-            echo "::error::vars.CODM_CLOUD_URL vazia — o app sairia apontando o daemon local. Defina a repo variable antes de publicar."
-            exit 1
-          }
-          echo "cloud: ${{ vars.CODM_CLOUD_URL }}"
 
       # MESMO defeito invisível, uma camada mais fundo — ver o comentário gêmeo em
       # release-stable.yml. Com a chave vazia o console resolve para o NoopAnalyticsService e a
@@ -92,6 +88,23 @@ jobs:
   # ── 2. um build por SO ────────────────────────────────────────────────────────────────────────
   build:
     needs: prepare
+    # Serializa SÓ o entry darwin-aarch64 do matrix ENTRE OS DOIS workflows (beta e stable) — o
+    # mesmo Mac mini roda os dois, e dois `codesign`/`security` concorrentes disputam a MESMA lista
+    # de busca do keychain de login (corrida medida). O group é a MESMA string fixa
+    # ('release-signing-macos') nos dois arquivos só para esse entry, então um build beta e um
+    # stable que colidam fazem fila (`cancel-in-progress: false` — nenhum é descartado) em vez de
+    # correr. Linux (self-hosted) e Windows (hospedado) não têm esse risco — cada run recebe um
+    # group ÚNICO (workflow+run_id+key), que nunca colide com outro run e por isso nunca espera.
+    concurrency:
+      group: ${{ matrix.key == 'darwin-aarch64' && 'release-signing-macos' || format('nosig-{0}-{1}-{2}', github.workflow, github.run_id, matrix.key) }}
+      cancel-in-progress: false
+    # MACMINI_KEYCHAIN_PASSWORD ainda NÃO existe como secret (checado 2026-08-25) — o campo fica
+    # vazio em toda run, e é por isso que o passo de destravar abaixo é `if`-guardado pela
+    # EXISTÊNCIA dele, não pelo SO sozinho: sem o secret, o comportamento de hoje continua idêntico.
+    # Precisa estar no nível do JOB (não do step) porque um step não enxerga o próprio `env:` no seu
+    # próprio `if:` — o `if` decide se o step roda ANTES do `env:` daquele step existir.
+    env:
+      MACMINI_KEYCHAIN_PASSWORD: ${{ secrets.MACMINI_KEYCHAIN_PASSWORD }}
     strategy:
       # `fail-fast: false`, de propósito: o `publish` já exige os três verdes via `needs`, então a
       # garantia "um SO falhou ⇒ nada é publicado" não depende de cancelar os irmãos. E cancelar o
@@ -244,6 +257,14 @@ jobs:
         if: runner.os == 'Windows'
         run: cargo test --manifest-path packages/app/tauri/src-tauri/Cargo.toml --lib
 
+      # O keychain de login do mini fica TRAVADO quando a sessão não está desbloqueada ("User
+      # interaction is not allowed") e o codesign morre mesmo com o p12 correto. Guardado pela
+      # EXISTÊNCIA do secret (job env acima): sem MACMINI_KEYCHAIN_PASSWORD o passo é pulado e o
+      # comportamento atual permanece — degrada limpo, o secret ainda não existe hoje.
+      - name: destrava o keychain de login (mini)
+        if: runner.os == 'macOS' && env.MACMINI_KEYCHAIN_PASSWORD != ''
+        run: security unlock-keychain -p "$MACMINI_KEYCHAIN_PASSWORD" ~/Library/Keychains/login.keychain-db
+
       # O CERTIFICADO NÃO ESTÁ NO KEYCHAIN DESTE PROCESSO, e é por isso que o passo monta um. O
       # runner é self-hosted, então a máquina TEM o certificado — no keychain de login do founder.
       # Mas o Actions roda como serviço, com sessão e keychain próprios, e um `codesign` daqui
@@ -314,15 +335,36 @@ jobs:
           done < "$LIST"
           echo "Mach-O aninhados assinados: $found"
 
+      # A origem da nuvem NÃO é uma repo variable: é a decisão declarada em config/cloud.ts,
+      # derivada por config/env.ts e renderizada em shell-env.json — o MESMO valor que o build.rs
+      # entrega ao supervisor Rust e este passa ao daemon em CODM_CLOUD_URL. O console recebe pelo
+      # VITE_CODM_CLOUD_URL exportado aqui (o Vite resolve VITE_* no BUILD). Um release sem ela
+      # produz um app cujo login abre localhost:3030 e um daemon que responde 503 CLOUD_UNREACHABLE
+      # a toda tela — defeito INVISÍVEL no artefato (os assets vão comprimidos dentro do binário;
+      # nenhum grep no .app prova que a URL foi assada). Medido na v0.1.3 (console) e na v0.5.1
+      # (daemon). Um passo POR SO (não em `prepare`): GITHUB_ENV não atravessa jobs, e cada entrada
+      # da matriz roda no seu próprio job.
+      - name: cloud url do manifesto
+        run: |
+          CLOUD_URL="$(jq -r .daemon.CODM_CLOUD_URL packages/app/tauri/src-tauri/shell-env.json)"
+          case "$CLOUD_URL" in
+            https://*) ;;
+            *)
+              echo "::error::shell-env.json daemon.CODM_CLOUD_URL='$CLOUD_URL' não é uma origem https — corrija config/cloud.ts e rode bun desktop:generate"
+              exit 1
+              ;;
+          esac
+          echo "VITE_CODM_CLOUD_URL=$CLOUD_URL" >> "$GITHUB_ENV"
+          echo "cloud: $CLOUD_URL"
+
       # `--bundles` restringe o que este SO empacota (a conf gerada segue com `targets: 'all'`):
       # macOS app+dmg, Linux appimage+deb, Windows só nsis. Os artefatos de update (.sig) saem
       # junto do bundle que o updater consome em cada SO (app.tar.gz / AppImage / -setup.exe).
       - name: tauri build
         env:
-          # O console é compilado DENTRO do tauri build (beforeBuildCommand) e o Vite resolve
-          # VITE_* no BUILD: sem isto o app empacotado nasce apontando o daemon local e o login
-          # abre localhost:3030 (medido na v0.1.3). Repo variable, não secret — é URL pública.
-          VITE_CODM_CLOUD_URL: ${{ vars.CODM_CLOUD_URL }}
+          # VITE_CODM_CLOUD_URL chega pelo GITHUB_ENV do passo "cloud url do manifesto" acima —
+          # lida do shell-env.json comitado, não de uma repo variable. O console é compilado DENTRO
+          # do tauri build (beforeBuildCommand) e o Vite resolve VITE_* no BUILD.
           # Telemetria de produto (SP4). O Vite resolve VITE_* no BUILD: sem estas linhas o app sai
           # com a chave vazia e a telemetria fica desligada EM SILÊNCIO — sem erro, só um dashboard
           # que nunca enche. Repo variables, não secrets: a chave de ingest do PostHog é pública.
@@ -379,23 +421,36 @@ jobs:
       # quem decide onde o cargo escreve é aquela variável, e um caminho repetido aqui volta a
       # divergir dela no dia em que ela mudar (foi exatamente o que aconteceu ao movê-la, com o
       # `tauri build` verde e o `stage` falhando logo depois).
+      # O nome que o Tauri estampou em cada instalador (`CoDM_<versão>..._<arch>.<ext>`, de
+      # productName + version da conf) é o nome que o browser deve SALVAR — vai no
+      # Content-Disposition do alias, lá no `publish`. Lido do artefato, NUNCA remontado por uma
+      # segunda fórmula (uma fórmula paralela diverge na primeira mudança de nome do bundler).
+      #
+      # Cada OS escreve o SEU PRÓPRIO `NAMES-<matrix.key>.env` — nunca um nome compartilhado: os
+      # três artifacts se fundem num único `dist-release/` no `publish` (`merge-multiple: true`),
+      # e um nome de arquivo repetido entre eles perderia dois dos três na sobrescrita silenciosa.
       - name: stage
         run: |
           set -euo pipefail
           BUNDLE="${CARGO_TARGET_DIR:-packages/app/tauri/src-tauri/target}/release/bundle"
           mkdir -p dist-release
+          NAMES="dist-release/NAMES-${{ matrix.key }}.env"
           case "$RUNNER_OS" in
             macOS)
               cp "$BUNDLE"/macos/*.app.tar.gz     dist-release/codm-aarch64.app.tar.gz
               cp "$BUNDLE"/macos/*.app.tar.gz.sig dist-release/codm-aarch64.app.tar.gz.sig
-              cp "$BUNDLE"/dmg/*.dmg              dist-release/codm-aarch64.dmg ;;
+              cp "$BUNDLE"/dmg/*.dmg              dist-release/codm-aarch64.dmg
+              echo "DMG_NAME=$(basename "$(ls "$BUNDLE"/dmg/*.dmg | head -1)")" >> "$NAMES" ;;
             Linux)
               cp "$BUNDLE"/appimage/*.AppImage     dist-release/codm-linux-x86_64.AppImage
               cp "$BUNDLE"/appimage/*.AppImage.sig dist-release/codm-linux-x86_64.AppImage.sig
-              cp "$BUNDLE"/deb/*.deb               dist-release/codm-linux-x86_64.deb ;;
+              cp "$BUNDLE"/deb/*.deb               dist-release/codm-linux-x86_64.deb
+              echo "APPIMAGE_NAME=$(basename "$(ls "$BUNDLE"/appimage/*.AppImage | head -1)")" >> "$NAMES"
+              echo "DEB_NAME=$(basename "$(ls "$BUNDLE"/deb/*.deb | head -1)")" >> "$NAMES" ;;
             Windows)
               cp "$BUNDLE"/nsis/*-setup.exe     dist-release/codm-windows-x86_64-setup.exe
-              cp "$BUNDLE"/nsis/*-setup.exe.sig dist-release/codm-windows-x86_64-setup.exe.sig ;;
+              cp "$BUNDLE"/nsis/*-setup.exe.sig dist-release/codm-windows-x86_64-setup.exe.sig
+              echo "SETUP_EXE_NAME=$(basename "$(ls "$BUNDLE"/nsis/*-setup.exe | head -1)")" >> "$NAMES" ;;
             *) echo "::error::SO desconhecido: $RUNNER_OS"; exit 1 ;;
           esac
           ls -la dist-release
@@ -441,6 +496,30 @@ jobs:
           done
           ls -la dist-release
 
+      # Um `NAMES-<key>.env` por SO (do `stage`, no `build`) — cada um com o nome que o Tauri
+      # estampou naquele instalador. `source`ados aqui, viram env do JOB inteiro (`$GITHUB_ENV`) e
+      # alimentam o `--content-disposition` do upload abaixo. As QUATRO variáveis são exigidas: um
+      # `stage` que não escreveu a sua quebraria o alias correspondente em silêncio.
+      - name: nomes dos artefatos (Content-Disposition)
+        run: |
+          set -euo pipefail
+          for f in dist-release/NAMES-*.env; do
+            test -s "$f" || { echo "::error::$f ausente ou vazio — o stage daquele SO não gravou o nome"; exit 1; }
+            cat "$f" >> "$GITHUB_ENV"
+          done
+          # Sinalização ENTRE JOBS, não artefato de release: some daqui para não virar asset do GH
+          # release (`dist-release/*` no passo `publish` abaixo) nem quebrar o `verifica no r2`
+          # (que assume que TUDO que sobrou em dist-release/ subiu ao bucket).
+          rm -f dist-release/NAMES-*.env
+
+      - name: nomes cobrem os 4 instaladores
+        run: |
+          set -euo pipefail
+          for v in DMG_NAME APPIMAGE_NAME DEB_NAME SETUP_EXE_NAME; do
+            test -n "${!v:-}" || { echo "::error::$v vazio — algum NAMES-<key>.env não gravou a variável esperada"; exit 1; }
+          done
+          echo "DMG_NAME=$DMG_NAME APPIMAGE_NAME=$APPIMAGE_NAME DEB_NAME=$DEB_NAME SETUP_EXE_NAME=$SETUP_EXE_NAME"
+
       # Um latest.json, três plataformas — as chaves são as que o tauri-plugin-updater consulta
       # (`<os>-<arch>` do alvo Rust). Cada URL é o artefato de UPDATE daquele SO, não o instalador
       # humano (dmg/deb ficam fora do manifest). Este passo consome o CLI multi-`--platform` do
@@ -481,7 +560,10 @@ jobs:
 
       # A ORIGEM PÚBLICA é o R2 (spec SP2.5): repo privado ⇒ assets do GitHub 404am anônimos —
       # tanto para o download da landing quanto para o auto-updater. O canal beta é ROLANTE:
-      # sobrescreve os mesmos objetos a cada merge; a versão vive no latest.json.
+      # sobrescreve os mesmos objetos a cada merge; a versão vive no latest.json — e no NOME que o
+      # browser salva: os quatro instaladores de nome fixo sobem com `Content-Disposition:
+      # attachment; filename=$X_NAME` ($DMG_NAME/$APPIMAGE_NAME/$DEB_NAME/$SETUP_EXE_NAME, do
+      # `stage`), porque `<a download>` é ignorado em origem cruzada (r2.dev).
       #
       # `npx`, nunca `bunx` — ver deploy-landing.yml. E o latest.json sobe POR ÚLTIMO: um manifest
       # que aponta para um binário que ainda não subiu é um updater baixando 404.
@@ -491,14 +573,22 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          put() { npx --yes wrangler@4.120.0 r2 object put "$R2_BUCKET/beta/$1" --file "dist-release/$1" --content-type "$2" --remote; }
+          # put <nome=arquivo em dist-release> <content-type> [nome salvo pelo browser]
+          put() {
+            local name="$1" ctype="$2" cd="${3:-}"
+            if [ -n "$cd" ]; then
+              npx --yes wrangler@4.120.0 r2 object put "$R2_BUCKET/beta/$name" --file "dist-release/$name" --content-type "$ctype" --content-disposition "attachment; filename=\"$cd\"" --remote
+            else
+              npx --yes wrangler@4.120.0 r2 object put "$R2_BUCKET/beta/$name" --file "dist-release/$name" --content-type "$ctype" --remote
+            fi
+          }
           put codm-aarch64.app.tar.gz            application/gzip
           put codm-aarch64.app.tar.gz.sig        text/plain
-          put codm-aarch64.dmg                   application/x-apple-diskimage
-          put codm-linux-x86_64.AppImage         application/vnd.appimage
+          put codm-aarch64.dmg                   application/x-apple-diskimage                    "$DMG_NAME"
+          put codm-linux-x86_64.AppImage         application/vnd.appimage                          "$APPIMAGE_NAME"
           put codm-linux-x86_64.AppImage.sig     text/plain
-          put codm-linux-x86_64.deb              application/vnd.debian.binary-package
-          put codm-windows-x86_64-setup.exe      application/vnd.microsoft.portable-executable
+          put codm-linux-x86_64.deb              application/vnd.debian.binary-package             "$DEB_NAME"
+          put codm-windows-x86_64-setup.exe      application/vnd.microsoft.portable-executable      "$SETUP_EXE_NAME"
           put codm-windows-x86_64-setup.exe.sig  text/plain
           put latest.json                        application/json
 

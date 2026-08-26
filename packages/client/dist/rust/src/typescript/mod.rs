@@ -52,7 +52,7 @@ pub mod types {
     ///      "type": "string",
     ///      "maxLength": 1024,
     ///      "minLength": 1,
-    ///      "pattern": "^\\/.*"
+    ///      "pattern": "^(?:\\/|[A-Za-z]:[\\\\/]|\\\\\\\\)"
     ///    }
     ///  }
     ///}
@@ -76,7 +76,7 @@ pub mod types {
     ///  "type": "string",
     ///  "maxLength": 1024,
     ///  "minLength": 1,
-    ///  "pattern": "^\\/.*"
+    ///  "pattern": "^(?:\\/|[A-Za-z]:[\\\\/]|\\\\\\\\)"
     ///}
     /// ```
     /// </details>
@@ -111,9 +111,11 @@ pub mod types {
                 return Err("shorter than 1 characters".into());
             }
             static PATTERN: ::std::sync::LazyLock<::regress::Regex> = ::std::sync::LazyLock::new(||
-            { ::regress::Regex::new("^\\/.*").unwrap() });
+            { ::regress::Regex::new("^(?:\\/|[A-Za-z]:[\\\\/]|\\\\\\\\)").unwrap() });
             if PATTERN.find(value).is_none() {
-                return Err("doesn't match pattern \"^\\/.*\"".into());
+                return Err(
+                    "doesn't match pattern \"^(?:\\/|[A-Za-z]:[\\\\/]|\\\\\\\\)\"".into(),
+                );
             }
             Ok(Self(value.to_string()))
         }

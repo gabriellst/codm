@@ -269,17 +269,21 @@ Linux arm64, rollout percentual, `minVersion` forçado — ver roadmap (SP2/SP4)
 
 Os dois workflows têm a mesma forma, três jobs:
 
-1. **`prepare`** (ubuntu, segundos) — decide a versão (`<conf>-beta.<run>` ou a tag) e confere os
-   insumos que produzem um app quebrado em silêncio (`CODM_CLOUD_URL`, `VITE_POSTHOG_KEY`). No
-   stable é aqui que a tag é comparada com a conf — antes de gastar um minuto de build.
+1. **`prepare`** (ubuntu, segundos) — decide a versão (`<conf>-beta.<run>` ou a tag), confere que
+   `packages/app/tauri/src-tauri/shell-env.json` e os demais artefatos gerados do shell estão em
+   dia (`bun desktop:generate --check`) e que `VITE_POSTHOG_KEY` está presente. No stable é aqui
+   que a tag é comparada com a conf — antes de gastar um minuto de build.
 2. **`build`** — uma matriz com **um runner por SO, sem cross-compile** (chaves `darwin-aarch64`,
    `linux-x86_64`, `windows-x86_64` — as mesmas que o `make-manifest.ts` usa): o daemon é um `bun
    build --compile` que só carrega o prebuild nativo do libsql do próprio host (`build-sidecars.ts`,
    "CROSS-TRIPLE GAP"), então cada binário nasce no SO em que vai rodar. Cada entrada compila os
    sidecars, **sobe os dois e exige 200 no health** (`scripts/release/smoke-sidecars.ts` — o gate
-   que um build sozinho não dá), roda `tauri build --bundles <lista>` (macOS `app,dmg`, Linux
-   `appimage,deb`, Windows `nsis`; a conf gerada segue com `targets: all`), renomeia os artefatos
-   com o nome fixo da plataforma e os sobe como artifact do run.
+   que um build sozinho não dá), confere e exporta a origem da nuvem lida do `shell-env.json`
+   comitado (`CODM_CLOUD_URL` NÃO é mais uma repo variable — é a decisão declarada em
+   `config/cloud.ts`, a mesma que `build.rs` entrega ao supervisor Rust), roda `tauri build
+   --bundles <lista>` (macOS `app,dmg`, Linux `appimage,deb`, Windows `nsis`; a conf gerada segue
+   com `targets: all`), renomeia os artefatos com o nome fixo da plataforma e os sobe como artifact
+   do run.
    Cada entrada da matriz DECLARA um campo booleano `hosted` (`false` para macOS/Linux
    self-hosted, `true` para Windows) — é ele, não `runner.os`, que gate-ia os passos de
    provisionamento (instalar deps de sistema/Rust, cache do cargo, `CARGO_TARGET_DIR` fora do
