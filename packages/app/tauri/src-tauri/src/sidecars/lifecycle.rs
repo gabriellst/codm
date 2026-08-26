@@ -415,6 +415,25 @@ pub fn port_conflict(port: u16) -> Option<String> {
     }
 }
 
+/// THE DECISION, pure: given an optional fixed override and the candidate list (tried through
+/// `try_bind`, injected so this is provable without a real socket), which port wins. `Err` names
+/// EVERY candidate that was tried, in order, so the caller can build a boot-error reason that lists
+/// them (spec 2026-08-25/26, AC: "falhe com erro legível que nomeie as portas tentadas").
+pub(crate) fn decide_port(fixed: Option<u16>, candidates: &[u16], try_bind: impl Fn(u16) -> bool) -> Result<u16, Vec<u16>> {
+    if let Some(port) = fixed {
+        return Ok(port);
+    }
+    candidates.iter().copied().find(|&port| try_bind(port)).ok_or_else(|| candidates.to_vec())
+}
+
+/// Resolve ONE sidecar's listening port against the REAL network: an explicit `process.env` value
+/// wins outright — how dev/e2e pin a single fixed port — else the first free candidate
+/// (`port_conflict`'s real bind-and-release).
+pub fn resolve_port(env_key: &str, candidates: &[u16]) -> Result<u16, Vec<u16>> {
+    let fixed = std::env::var(env_key).ok().and_then(|v| v.parse::<u16>().ok());
+    decide_port(fixed, candidates, |port| port_conflict(port).is_none())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -586,6 +605,53 @@ mod tests {
             None,
             "liberada a porta, o boot segue normal — o guarda nao pode virar um bloqueio permanente"
         );
+    }
+
+    /// `decide_port` honra um valor fixo por cima de qualquer candidata — o jeito de dev/e2e
+    /// cravarem uma porta única (`process.env`, via `resolve_port`), sem tocar `config/ports.ts`.
+    /// `try_bind` nunca é chamado neste caso — provado pelo `panic!` dentro dele.
+    #[test]
+    fn decide_port_prefers_a_fixed_override_and_never_probes() {
+        assert_eq!(decide_port(Some(9999), &[1, 2, 3], |_| panic!("nao deveria sondar nenhuma candidata")), Ok(9999));
+    }
+
+    /// Sem override: a primeira candidata que `try_bind` aceita vence, mesmo que uma anterior tenha
+    /// sido recusada.
+    #[test]
+    fn decide_port_falls_back_to_the_first_candidate_try_bind_accepts() {
+        assert_eq!(decide_port(None, &[10, 20, 30], |p| p == 20), Ok(20));
+    }
+
+    /// Toda candidata recusada, sem override: `Err` nomeia exatamente as portas tentadas, na mesma
+    /// ordem — o que o boot-error precisa para uma mensagem acionável (spec 2026-08-25/26).
+    #[test]
+    fn decide_port_names_every_candidate_when_none_is_accepted() {
+        assert_eq!(decide_port(None, &[10, 20, 30], |_| false), Err(vec![10, 20, 30]));
+    }
+
+    /// `resolve_port` contra a rede DE VERDADE: sem override no ambiente, a primeira candidata
+    /// livre vence.
+    #[test]
+    fn resolve_port_falls_back_to_the_first_free_candidate() {
+        let _no_forks = fork_guard();
+        let free = std::net::TcpListener::bind(("127.0.0.1", 0))
+            .expect("bind an ephemeral port")
+            .local_addr()
+            .expect("local addr")
+            .port();
+
+        assert_eq!(resolve_port("CODM_TEST_RESOLVE_PORT_UNSET_KEY", &[free]), Ok(free));
+    }
+
+    /// Toda candidata ocupada de verdade, sem override: `Err` nomeia as portas tentadas.
+    #[test]
+    fn resolve_port_names_every_candidate_when_all_are_taken() {
+        let _no_forks = fork_guard();
+        let a = std::net::TcpListener::bind(("127.0.0.1", 0)).expect("bind a");
+        let b = std::net::TcpListener::bind(("127.0.0.1", 0)).expect("bind b");
+        let ports = vec![a.local_addr().unwrap().port(), b.local_addr().unwrap().port()];
+
+        assert_eq!(resolve_port("CODM_TEST_RESOLVE_PORT_UNSET_KEY", &ports), Err(ports));
     }
 
     /// The frozen wire value, byte for byte: ONE complete line. The TS side

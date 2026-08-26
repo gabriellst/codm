@@ -158,12 +158,31 @@ pub fn run() {
             // build-sidecars) live here; sidecars() resolves resource_dir/<subpath> for their boot env.
             let resource_dir = app.path().resource_dir().expect("resource dir resolvable");
 
+            // PORT RESOLUTION — ONCE, before anything that needs a port exists (spec 2026-08-25/26).
+            // `config/ports.ts` declares a small CANDIDATE list per sidecar (the packaged app's own
+            // unusual range, never the dev family) precisely because a single hardcoded port
+            // collided with an unrelated `bun dev` on the same machine (0.5.4, measured): the daemon
+            // died on `EADDRINUSE` before ever emitting a usable window. `resolve_ports` tries each
+            // candidate in order and keeps the first free one; a sidecar whose EVERY candidate is
+            // taken comes back in `port_failures` instead of a port, named with every port that was
+            // tried. Resolving here — once — is what lets `api::Api` (below) and the spawned
+            // process's own boot env (`sidecars::sidecars`) agree on the same address; two
+            // independent resolutions could each land on a different free port.
+            let (api_port, channel_port, port_failures) = sidecars::resolve_ports();
+
             // Typed SDK aggregate (api::Api) — the shell's only door to the backends, and now the
             // readiness probe's door too, so it MUST be managed before the fleet spawns: each
             // supervisor task resolves `State<Api>` and would race an unmanaged state otherwise.
-            // Building it early is free — `Api::from_env` only reads env and assembles a lazy HTTP
-            // client, opening no connection; requests simply fail until the sidecars answer.
-            api::manage(app.handle());
+            // Building it early is free — `Api::new` only assembles a lazy HTTP client on the ALREADY
+            // resolved ports, opening no connection; requests simply fail until the sidecars answer.
+            api::manage(app.handle(), api_port, channel_port);
+
+            // The SAME resolved ports, for the console to ask about (`HostInfoService` →
+            // `commands::host_ports`, spec 2026-08-25/26): a packaged app no longer bakes its
+            // daemon's port at BUILD time (`VITE_API_URL`), because there is no single port to bake
+            // any more — the console's SDK client is configured at RUNTIME against whichever
+            // candidate actually won here.
+            app.manage(commands::ResolvedPorts { api: api_port, channel: channel_port });
 
             // READINESS GATE — both windows are `"visible": false` in tauri.conf.json, and whichever
             // sidecar finishes LAST decides which one opens (`sidecars::ReadinessGate`). Painting the
@@ -171,8 +190,14 @@ pub fn run() {
             // querying a port still applying migrations. Every exit path in `boot_sidecar` reports to
             // the gate, and a single failure routes the boot to the error splash instead of the
             // console — the `boot_failures` command reads the failures back out of this same gate.
-            let fleet = sidecars::sidecars(&data_dir.to_string_lossy(), &resource_dir, &app.package_info().version.to_string());
-            let gate = Arc::new(sidecars::ReadinessGate::new(fleet.len()));
+            //
+            // `total` counts every sidecar this boot ATTEMPTED, spawned or not: a `port_failures`
+            // entry never reaches `boot_sidecar`, so it must be pre-counted here or the gate would
+            // wait forever for an arrival that is never coming.
+            let fleet = sidecars::sidecars(&data_dir.to_string_lossy(), &resource_dir, &app.package_info().version.to_string(), api_port, channel_port);
+            let exhausted_names: std::collections::HashSet<&str> = port_failures.iter().map(|f| f.name).collect();
+            let fleet: Vec<sidecars::Sidecar> = fleet.into_iter().filter(|s| !exhausted_names.contains(s.name())).collect();
+            let gate = Arc::new(sidecars::ReadinessGate::new(fleet.len() + port_failures.len()));
             app.manage(gate.clone());
 
             // SUPERVISION picks up where the gate stops (`Reveal::Main` arms it — see
@@ -180,6 +205,8 @@ pub fn run() {
             // the child's exit signal plus a typed health probe every 5s, with the reaction
             // decided by the pure `SupervisionMonitor`. Managed here because BOTH the boot tasks
             // (which own each child's event stream) and the `supervision_state` command read it.
+            // Only the SPAWNED sidecars are watched — a `port_failures` entry never started a
+            // process, so there is nothing here for supervision to poll.
             let monitor = Arc::new(sidecars::SupervisionMonitor::new(
                 fleet
                     .iter()
@@ -204,9 +231,23 @@ pub fn run() {
             // STARTUP SWEEP, before the first spawn and therefore before `port_conflict` runs.
             // What no exit hook could clean (the shell was SIGKILLed, or crashed) is cleaned one
             // boot late, matched by the BINARY PATH we are about to exec — never by port, so a
-            // sibling repo's process on :3030 is refused, not killed. See `sidecars::reaper`.
-            let names: Vec<&str> = fleet.iter().map(|s| s.name()).collect();
+            // sibling repo's process on :3030 is refused, not killed. See `sidecars::reaper`. Swept
+            // by declared binary name, not by `fleet` alone: a sidecar this boot could not get a port
+            // for is exactly the one most likely to have a LEFTOVER previous-run process still
+            // holding it, and that is precisely what this sweep exists to clear.
+            let mut names: Vec<&str> = fleet.iter().map(|s| s.name()).collect();
+            names.extend(port_failures.iter().map(|f| f.name));
             sidecars::reap_previous_run(&names);
+
+            // PORTS EXHAUSTED FOR A SIDECAR — reported to the gate BEFORE any spawn attempt, in the
+            // same vocabulary a spawn failure uses (never the generic "did not open"): the reason
+            // names every candidate that was tried, which is exactly what the operator needs to go
+            // free one of them (or wait out whatever else is using it) and hit "Tentar novamente".
+            for failure in &port_failures {
+                let ports = failure.candidates.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(", ");
+                let reason = format!("every candidate port is already taken by another process: {ports} — refusing to boot onto a port this shell does not own");
+                sidecars::report_failure(app.handle(), &gate, failure.name, &reason);
+            }
 
             // PERSISTED STDERR (2026-08-07 incident) — same root as `crash::install_panic_hook`
             // above, so a diagnosis never has to hunt across two different data trees for "what

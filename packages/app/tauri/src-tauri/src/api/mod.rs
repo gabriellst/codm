@@ -9,13 +9,15 @@
 //! injected once here) — the called service never infers the owner (CLAUDE.md, SDK
 //! rules). Commands never assemble identity headers by hand.
 //!
-//! URLs come from the SAME env keys the sidecar supervisor boots the services with
-//! (`API_PORT` / `CHANNEL_PORT` — see `sidecars::sidecars`); no second source of truth.
-//! A superfície de NUVEM vem de `CODM_CLOUD_URL`, a mesma chave que o daemon TS usa — nunca
-//! uma URL cravada aqui. Todas as três estão declaradas em `template.config.ts` com `appTauri`
-//! entre os consumidores; consumo de env é relação declarada, não hábito — e os DEFAULTS vêm
-//! do mesmo manifesto, via `crate::shell_env` (shell-env.json → build.rs → `env!()`), então um
-//! app empacotado sem `process.env` continua sabendo as portas e a origem da nuvem.
+//! URLs come from the SAME resolved ports the sidecar supervisor boots the services with
+//! (`api_port` / `channel_port` — see `sidecars::resolve_ports`, called ONCE in `lib.rs`'s `setup`
+//! and passed in here); no second source of truth. Building this client from its OWN independent
+//! call to `shell_env::port_candidates` + a second bind-and-release scan would risk picking a
+//! DIFFERENT free port than the one the spawned sidecar actually got — the client would then be
+//! calling an address nothing is listening on. A superfície de NUVEM vem de `CODM_CLOUD_URL`, a
+//! mesma chave que o daemon TS usa — nunca uma URL cravada aqui, e ela AINDA lê o manifesto
+//! diretamente (`crate::shell_env`): a cloud não é candidata a porta, não tem corrida nenhuma a
+//! resolver antes.
 
 use tauri::Manager;
 
@@ -36,11 +38,10 @@ pub struct Api {
 const LOCAL_OWNER_ID: &str = "local";
 
 impl Api {
-    /// Build the aggregate client against the supervised sidecars. `owner_id` rides as
-    /// a default header on every request — commands never touch identity.
-    pub fn from_env() -> Self {
-        let api_port = shell_env::port_from_env("API_PORT", shell_env::DAEMON_API_PORT);
-        let channel_port = shell_env::port_from_env("CHANNEL_PORT", shell_env::GATEWAY_CHANNEL_PORT);
+    /// Build the aggregate client against the supervised sidecars, on the ports the caller already
+    /// resolved (`sidecars::resolve_ports`) — this constructor makes NO port decision of its own.
+    /// `owner_id` rides as a default header on every request — commands never touch identity.
+    pub fn new(api_port: u16, channel_port: u16) -> Self {
         let local_api = format!("http://127.0.0.1:{api_port}");
         // O default era `local_api` — "defaults to API_URL", a regra do lado TS. Num app empacotado
         // não há `process.env`, então o sub-cliente de nuvem do shell apontava o daemon local, que
@@ -74,15 +75,17 @@ impl Api {
             .go(format!("http://127.0.0.1:{channel_port}/api"))
             .http(http)
             .build()
-            .expect("every surface url is set above — build cannot fail; api::tests::from_env_builds_every_surface_without_panicking is the witness");
+            .expect("every surface url is set above — build cannot fail; api::tests::new_builds_every_surface_without_panicking is the witness");
 
         Api { client }
     }
 }
 
-/// Register the aggregate in managed state. Called once from `run()`'s setup.
-pub fn manage(app: &tauri::AppHandle) {
-    app.manage(Api::from_env());
+/// Register the aggregate in managed state, on the ports the caller already resolved. Called once
+/// from `run()`'s setup, AFTER `sidecars::resolve_ports` — see that function's doc for why the
+/// resolution happens exactly once and is threaded through rather than re-derived here.
+pub fn manage(app: &tauri::AppHandle, api_port: u16, channel_port: u16) {
+    app.manage(Api::new(api_port, channel_port));
 }
 
 #[cfg(test)]
@@ -95,8 +98,8 @@ mod tests {
     ///
     /// `cargo check` não pega isso. Só chamar pega.
     #[test]
-    fn from_env_builds_every_surface_without_panicking() {
-        let _api = Api::from_env();
+    fn new_builds_every_surface_without_panicking() {
+        let _api = Api::new(47330, 47332);
     }
     // The env-resolution unit tests (prefer env / fall back / blank is absent) moved with the
     // helpers to `crate::shell_env`.

@@ -9,6 +9,9 @@
 mod boot;
 pub use boot::*;
 
+mod host_info;
+pub use host_info::*;
+
 mod system_preconditions;
 pub use system_preconditions::*;
 
@@ -39,6 +42,7 @@ pub fn specta_builder() -> tauri_specta::Builder {
             secret_delete,
             boot_failures,
             retry_boot,
+            host_ports,
             supervision_state,
             pending_update,
             restart_for_update,

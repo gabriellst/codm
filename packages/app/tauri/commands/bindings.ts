@@ -40,6 +40,9 @@ async bootFailures() : Promise<SidecarFailure[]> {
 async retryBoot() : Promise<void> {
     await TAURI_INVOKE("retry_boot");
 },
+async hostPorts() : Promise<HostPorts> {
+    return await TAURI_INVOKE("host_ports");
+},
 async supervisionState() : Promise<SupervisionState> {
     return await TAURI_INVOKE("supervision_state");
 },
@@ -92,6 +95,13 @@ updateReady: "update-ready"
 
 /** user-defined types **/
 
+/**
+ * What crosses to the console. `api_port` is the one the react `Config` actually needs
+ * (`serviceBaseUrls.typescript` / `.go` both resolve through the daemon — the browser never talks
+ * to the gateway directly, see `packages/app/react/src/lib/config.ts`); `channel_port` rides along
+ * for diagnostics/symmetry with what the shell resolved.
+ */
+export type HostPorts = { apiPort: number; channelPort: number }
 /**
  * Se o reparo de uma pré-condição TEM efeito neste host — cruza `repair_scope` (declarado) com
  * `has_attributable_identity()` (derivado do processo). Um `AppGrant` sem identidade atribuível

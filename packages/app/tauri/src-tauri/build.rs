@@ -6,6 +6,13 @@
 //! and `src/shell_env.rs` reads them back with `env!()` — compile-time constants, so a missing key
 //! is a COMPILE error, never a daemon that boots without knowing where the cloud lives (0.5.1).
 //!
+//! A value is either a single string (a URL, a brand name) or a JSON ARRAY of strings — the
+//! PACKAGED app's candidate ports (spec 2026-08-25/26: a single hardcoded port collided with an
+//! unrelated dev server on the same machine). An array is joined with `,` into ONE emitted env var
+//! (`env!()` only ever reads a string); `src/shell_env.rs::port_candidates` splits it back. Which
+//! shape a key carries is read off the JSON VALUE itself (`serde_json::Value::Array` vs `::String`),
+//! never off a naming convention on the key.
+//!
 //! Validation happens here, once, at the edge: a port must parse as `u16`, a URL must be absolute.
 //! The runtime readers trust that and only parse.
 
@@ -30,19 +37,45 @@ fn emit_shell_env() {
         )
     });
     // BTreeMap: deterministic emission order, so two builds of the same JSON print the same lines.
-    let by_role: BTreeMap<String, BTreeMap<String, String>> = serde_json::from_str(&raw).unwrap_or_else(|err| {
-        panic!("{SHELL_ENV_FILE} is not `{{ role: {{ KEY: value }} }}` ({err}) — regenerate with `bun desktop:generate`")
+    // `serde_json::Value` for the leaf because a leaf is EITHER a string OR an array of strings —
+    // see the module doc.
+    let by_role: BTreeMap<String, BTreeMap<String, serde_json::Value>> = serde_json::from_str(&raw).unwrap_or_else(|err| {
+        panic!("{SHELL_ENV_FILE} is not `{{ role: {{ KEY: value | value[] }} }}` ({err}) — regenerate with `bun desktop:generate`")
     });
 
     let mut emitted = 0usize;
     for (role, env) in &by_role {
         for (key, value) in env {
-            validate(role, key, value);
+            let joined = match value {
+                serde_json::Value::String(s) => {
+                    validate(role, key, s);
+                    s.clone()
+                }
+                serde_json::Value::Array(items) => {
+                    let strs: Vec<String> = items
+                        .iter()
+                        .map(|item| {
+                            item.as_str().unwrap_or_else(|| {
+                                panic!("{SHELL_ENV_FILE}: {role}.{key} candidate {item:?} is not a string")
+                            })
+                        })
+                        .map(|s| {
+                            validate(role, key, s);
+                            s.to_owned()
+                        })
+                        .collect();
+                    assert!(!strs.is_empty(), "{SHELL_ENV_FILE}: {role}.{key} is an empty candidate list");
+                    // `,` is safe as a joiner: `validate` below already refuses any value containing
+                    // one (ports and URLs never legitimately do).
+                    strs.join(",")
+                }
+                other => panic!("{SHELL_ENV_FILE}: {role}.{key} = {other:?} is neither a string nor an array of strings"),
+            };
             println!(
                 "cargo:rustc-env=CODM_SHELL_ENV_{}_{}={}",
                 role.to_ascii_uppercase(),
                 key.to_ascii_uppercase(),
-                value
+                joined
             );
             emitted += 1;
         }
@@ -51,7 +84,8 @@ fn emit_shell_env() {
 }
 
 /// The value class is named by the KEY, the same convention the manifest's examples follow:
-/// `*_PORT` is a port, `*_URL` is an absolute http(s) origin. Anything else passes through.
+/// `*_PORT` is a port, `*_URL` is an absolute http(s) origin. Anything else passes through. Runs on
+/// every element of a candidate list too (called once per string either way).
 fn validate(role: &str, key: &str, value: &str) {
     if key.ends_with("_PORT") {
         assert!(
@@ -65,4 +99,5 @@ fn validate(role: &str, key: &str, value: &str) {
         );
     }
     assert!(!value.contains('\n'), "{SHELL_ENV_FILE}: {role}.{key} contains a newline");
+    assert!(!value.contains(','), "{SHELL_ENV_FILE}: {role}.{key} = {value:?} contains a comma — it is the candidate-list joiner");
 }

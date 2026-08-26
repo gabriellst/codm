@@ -10,18 +10,39 @@
 //! `process.env` still wins at runtime (the root `.env` in dev, a hand-launched shell): the
 //! constants are DEFAULTS, and the readers below keep the same shape they always had — only the
 //! default stopped being typed by hand.
+//!
+//! `API_PORT`/`CHANNEL_PORT` carry a CANDIDATE LIST now (`config/ports.ts`), not a single value —
+//! the packaged app's own port family, chosen at boot by trying each in order and taking the first
+//! nothing else is bound to (`sidecars::lifecycle::resolve_port`). `build.rs` joins the list with
+//! `,` into one env var; `port_candidates` below splits it back.
 
-/// The daemon's listening port (`API_PORT`), as the manifest declares it.
-pub const DAEMON_API_PORT: &str = env!("CODM_SHELL_ENV_DAEMON_API_PORT");
+/// The daemon's candidate listening ports (`API_PORT`), comma-joined by `build.rs` from
+/// `config/ports.ts` — split back with `port_candidates`.
+pub const DAEMON_API_PORT_CANDIDATES: &str = env!("CODM_SHELL_ENV_DAEMON_API_PORT");
 /// The cloud origin the daemon asks for identity (`CODM_CLOUD_URL`) — `config/cloud.ts`.
 pub const DAEMON_CODM_CLOUD_URL: &str = env!("CODM_SHELL_ENV_DAEMON_CODM_CLOUD_URL");
-/// The gateway's listening port (`CHANNEL_PORT`), as the manifest declares it.
-pub const GATEWAY_CHANNEL_PORT: &str = env!("CODM_SHELL_ENV_GATEWAY_CHANNEL_PORT");
+/// The gateway's candidate listening ports (`CHANNEL_PORT`), same shape as
+/// `DAEMON_API_PORT_CANDIDATES`.
+pub const GATEWAY_CHANNEL_PORT_CANDIDATES: &str = env!("CODM_SHELL_ENV_GATEWAY_CHANNEL_PORT");
 /// The brand the customer sees (`PRODUCT_NAME`): e-mail chrome on the daemon side — `config/env.ts`.
 pub const DAEMON_PRODUCT_NAME: &str = env!("CODM_SHELL_ENV_DAEMON_PRODUCT_NAME");
 /// The brand the customer sees (`PRODUCT_NAME`): the WhatsApp linked-device name on the gateway
 /// side. Same manifest key, same value; each sidecar reads its own role's constant.
 pub const GATEWAY_PRODUCT_NAME: &str = env!("CODM_SHELL_ENV_GATEWAY_PRODUCT_NAME");
+
+/// Split a comma-joined candidate-port default back into the list `build.rs` validated element by
+/// element while emitting it — a failure here can only mean the two disagree (a build bug), not a
+/// runtime condition, same posture as `port_from_env`'s default parse.
+pub fn port_candidates(default_csv: &str) -> Vec<u16> {
+    default_csv
+        .split(',')
+        .map(|s| {
+            s.trim()
+                .parse()
+                .unwrap_or_else(|_| panic!("shell-env candidate default is not a port: {s:?} in {default_csv:?} — build.rs validates this"))
+        })
+        .collect()
+}
 
 /// A DECISÃO, separada da leitura: dado o valor cru (ou a ausência dele) e um default, qual valor
 /// vale. Pura de propósito — é o que permite testá-la sem mutar env, que em Rust é global ao
@@ -41,19 +62,6 @@ pub fn value_from_env(key: &str, default: &str) -> String {
     resolve_value(std::env::var(key).ok(), default)
 }
 
-/// A port env value, `process.env` first, the generated default second. The default is parsed
-/// here, not validated: `build.rs` already refused any non-port value while emitting it, so a
-/// failure at this line can only mean the two disagree — a build bug, not a runtime condition.
-pub fn port_from_env(key: &str, default: &str) -> u16 {
-    let fallback: u16 = default
-        .parse()
-        .unwrap_or_else(|_| panic!("shell-env default for {key} is not a port: {default:?} — build.rs validates this"));
-    std::env::var(key)
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(fallback)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -63,8 +71,12 @@ mod tests {
     /// teste cobre o valor.
     #[test]
     fn generated_defaults_are_present_and_well_formed() {
-        assert!(DAEMON_API_PORT.parse::<u16>().is_ok(), "API_PORT: {DAEMON_API_PORT:?}");
-        assert!(GATEWAY_CHANNEL_PORT.parse::<u16>().is_ok(), "CHANNEL_PORT: {GATEWAY_CHANNEL_PORT:?}");
+        assert_eq!(port_candidates(DAEMON_API_PORT_CANDIDATES).len(), 4, "API_PORT candidates: {DAEMON_API_PORT_CANDIDATES:?}");
+        assert_eq!(
+            port_candidates(GATEWAY_CHANNEL_PORT_CANDIDATES).len(),
+            4,
+            "CHANNEL_PORT candidates: {GATEWAY_CHANNEL_PORT_CANDIDATES:?}"
+        );
         assert!(
             DAEMON_CODM_CLOUD_URL.starts_with("https://"),
             "CODM_CLOUD_URL must be the public cloud origin, got {DAEMON_CODM_CLOUD_URL:?}"
@@ -92,12 +104,17 @@ mod tests {
         assert_eq!(resolve_value(Some("   ".into()), "http://fallback"), "http://fallback");
     }
 
+    /// `build.rs` joins the candidates with `,`; this is the inverse, and it has to survive a
+    /// generated default it never saw at the call site (only the two constants above ever do).
     #[test]
-    fn port_from_env_parses_the_generated_default() {
-        // A key no environment will ever carry — so the generated default is what comes back.
-        assert_eq!(
-            port_from_env("CODM_SHELL_ENV_TEST_UNSET_PORT_KEY", DAEMON_API_PORT),
-            DAEMON_API_PORT.parse::<u16>().unwrap()
-        );
+    fn port_candidates_splits_the_joined_default() {
+        assert_eq!(port_candidates("47330,47340,47350"), vec![47330, 47340, 47350]);
+        assert_eq!(port_candidates("3030"), vec![3030]);
+    }
+
+    #[test]
+    #[should_panic(expected = "is not a port")]
+    fn port_candidates_panics_on_a_malformed_default() {
+        port_candidates("not-a-port");
     }
 }
