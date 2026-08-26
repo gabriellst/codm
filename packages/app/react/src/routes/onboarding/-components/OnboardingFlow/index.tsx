@@ -180,10 +180,18 @@ export function OnboardingFlow({ className, ...props }: ComponentProps<'div'>) {
 	// exact mutation whose whole job is completing onboarding. `OnboardingGate` itself ALSO now
 	// prioritizes a fresh `completedAt` over a stale `required` (belt-and-suspenders — see its own
 	// docblock) so a `required` latched from a DIFFERENT stray 403 cannot reintroduce the same bounce.
+	//
+	// `setCompletedThreadId(data.threadId)` — regression follow-up (2026-08-26): `CompleteOnboarding`
+	// went from `void` back to `{ threadId: string | null }`, and this is the ONLY place that response
+	// ever reaches the client. Stashed on `useOnboardingSetupStore` BEFORE the invalidate/navigate so
+	// `OnboardingFinalStep` (mounted for the rest of this tick, until the SPA hop below lands) can read
+	// it for the "mention the agent" CTA — see that store field's own docblock for why `null` and
+	// `undefined` both mean "no CTA" there.
 	const completeOnboarding = useCompleteOnboarding({
 		mutation: {
 			meta: { suppressToast: true },
-			onSuccess: async () => {
+			onSuccess: async data => {
+				useOnboardingSetupStore.getState().setCompletedThreadId(data.threadId)
 				await queryClient.invalidateQueries({ queryKey: getOnboardingQueryKey() })
 				useOnboardingRequiredStore.getState().reset()
 				await navigate({ to: '/dashboard' })
