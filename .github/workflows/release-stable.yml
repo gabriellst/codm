@@ -7,12 +7,19 @@
 #
 # Três SOs desde 2026-08-25, na MESMA forma do release-beta.yml (prepare → build por SO → publish
 # agregado) — leia os dois juntos. macOS e Linux rodam self-hosted no Mac mini do founder (Linux
-# num container amd64 sob Rosetta — infra/runners/linux-x64/); só Windows é hospedado pelo GitHub.
-# Desde 2026-08-25 (auditoria coordenada com o founder) `prepare` e `publish` — as jobs UTILITY,
-# que não fazem parte da matriz por SO — TAMBÉM migraram para o mesmo runner self-hosted Linux:
-# Windows fica como a ÚNICA exposição a minutos hospedados na release inteira (2×). É corte de
-# custo, não de resiliência — `publish` ainda exige os três builds via `needs`, então uma falha de
-# cobrança na entrada Windows segue derrubando a release inteira (D4: sem manifest parcial).
+# num container amd64 sob Rosetta — infra/runners/linux-x64/). Desde 2026-08-26 (diretriz do
+# founder, verbatim: "não podemos contar com o billing do GitHub, temos que usar o mac mini" —
+# addendum 2026-08-26 em .specs/2026-08-25-windows-linux-build-design.md) o Windows TAMBÉM saiu do
+# runner hospedado: passou a ser CROSS-COMPILADO no MESMO runner self-hosted Linux, via a rota que
+# o próprio Tauri v2 documenta (`cargo-xwin`, EXPERIMENTAL por documentação do Tauri — aceita pelo
+# founder nesta fase). `windows-latest` virou `windows-native-tests.yml` (workflow_dispatch-only,
+# não-bloqueante — valida nativamente o que o cross-build não pode provar sozinho). Desde
+# 2026-08-25 (auditoria coordenada com o founder) `prepare` e `publish` — as jobs UTILITY, que não
+# fazem parte da matriz por SO — TAMBÉM rodam no mesmo runner self-hosted Linux: com o Windows
+# cross desde 2026-08-26, esta release inteira não consome mais NENHUM minuto hospedado do GitHub
+# (a única exposição que resta é o dispatch manual de `windows-native-tests.yml`). `publish` ainda
+# exige os três builds via `needs`, então uma falha em qualquer um segue derrubando a release
+# inteira (D4: sem manifest parcial) — o que mudou foi a exposição a billing, não essa garantia.
 # O que muda no stable: retenção TOTAL no R2 (nome versionado por artefato) + um alias fixo por
 # instalador para o botão da landing.
 name: release-stable
@@ -82,8 +89,9 @@ jobs:
     # de busca do keychain de login (corrida medida). O group é a MESMA string fixa
     # ('release-signing-macos') nos dois arquivos só para esse entry, então um build beta e um
     # stable que colidam fazem fila (`cancel-in-progress: false` — nenhum é descartado) em vez de
-    # correr. Linux (self-hosted) e Windows (hospedado) não têm esse risco — cada run recebe um
-    # group ÚNICO (workflow+run_id+key), que nunca colide com outro run e por isso nunca espera.
+    # correr. Linux e Windows (cross, desde 2026-08-26 — ambos no MESMO runner self-hosted Linux,
+    # mas SEM keychain nenhum envolvido) não têm esse risco — cada run recebe um group ÚNICO
+    # (workflow+run_id+key), que nunca colide com outro run e por isso nunca espera.
     concurrency:
       group: ${{ matrix.key == 'darwin-aarch64' && 'release-signing-macos' || format('nosig-{0}-{1}-{2}', github.workflow, github.run_id, matrix.key) }}
       cancel-in-progress: false
@@ -103,13 +111,19 @@ jobs:
           # deixa qualquer PR de fork executar código nesta máquina.
           #
           # `hosted` é o campo DECLARADO que os passos de provisionamento abaixo leem (non-negotiable
-          # 5 do CLAUDE.md) — macOS e Linux self-hosted (persistentes, `hosted: false`), Windows
-          # hospedado pelo GitHub (descartável, `hosted: true`). Ver o comentário gêmeo, mais
+          # 5 do CLAUDE.md) — desde 2026-08-26 as TRÊS entradas são self-hosted (`hosted: false`).
+          # `sidecarTarget`/`tauriRunner`/`crossTarget`/`smoke` são os OUTROS campos DECLARADOS que
+          # os passos `sidecars`/`tauri build`/`smoke dos sidecars` consomem — vazios/`true` nas
+          # entradas nativas, preenchidos só na entrada cross. Ver o comentário gêmeo, mais
           # detalhado, em release-beta.yml.
           - key: darwin-aarch64
             runner: '["self-hosted", "macOS", "ARM64"]'
             bundles: app,dmg
             hosted: false
+            sidecarTarget: ''
+            tauriRunner: ''
+            crossTarget: ''
+            smoke: true
             nice: nice -n 10
           # Linux x64 — self-hosted no MESMO Mac mini desde 2026-08-25 (container amd64 sob Rosetta,
           # infra/runners/linux-x64/); deps de sistema + Rust já vêm na imagem.
@@ -117,15 +131,34 @@ jobs:
             runner: '["self-hosted", "Linux", "X64"]'
             bundles: appimage,deb
             hosted: false
+            sidecarTarget: ''
+            tauriRunner: ''
+            crossTarget: ''
+            smoke: true
             nice: ''
+          # Windows x64 — desde 2026-08-26 CROSS-COMPILADO no MESMO runner self-hosted Linux que a
+          # entrada `linux-x86_64` acima usa (diretriz do founder — addendum 2026-08-26 em
+          # .specs/2026-08-25-windows-linux-build-design.md), via a rota `cargo-xwin` documentada
+          # pelo Tauri v2 (EXPERIMENTAL por documentação própria dele; aceita pelo founder). Ver o
+          # comentário detalhado desta mesma entrada em release-beta.yml — mesma razão, mesmos
+          # campos, mesmo `smoke: false` (o runner Linux não executa um PE Windows para provar o
+          # health; só `windows-native-tests.yml` + a validação manual da AC-15 fazem isso).
           - key: windows-x86_64
-            runner: '"windows-latest"'
+            runner: '["self-hosted", "Linux", "X64"]'
             bundles: nsis
-            hosted: true
+            hosted: false
+            sidecarTarget: win32-x64
+            tauriRunner: cargo-xwin
+            crossTarget: x86_64-pc-windows-msvc
+            smoke: false
             nice: ''
     runs-on: ${{ fromJSON(matrix.runner) }}
     defaults:
       run:
+        # macOS e Linux (self-hosted) já são bash por padrão — redundante para os dois, explícito
+        # por segurança. Desde 2026-08-26 nenhuma entrada roda num Windows de verdade (a
+        # `windows-x86_64` cross-compila num runner Linux); a pegadinha do shell default do Windows
+        # ser pwsh não se aplica mais aqui — segue valendo só para `windows-native-tests.yml`.
         shell: bash
     steps:
       - uses: actions/checkout@v4
@@ -175,15 +208,23 @@ jobs:
           cp -n .env.example .env
           bun emit-openapi
 
+      # `matrix.sidecarTarget` é o contrato CONGELADO com `build-sidecars.ts` (ver release-beta.yml):
+      # vazio nas entradas nativas, `--target win32-x64` só na `windows-x86_64` (cross).
       - name: sidecars
-        run: cd packages/app/tauri && bun config/build-sidecars.ts
+        run: cd packages/app/tauri && bun config/build-sidecars.ts${{ matrix.sidecarTarget && format(' --target {0}', matrix.sidecarTarget) || '' }}
 
       # Ver release-beta.yml: sobe os binários recém-compilados como o shell sobe (mesmo env de
       # src-tauri/src/sidecars/mod.rs) e exige 200. CONTRATO do script (congelado com a task que o
       # cria): portas EFÊMERAS, nunca as default 3030/3032 — o Mac mini self-hosted roda o daemon de
       # PRODUÇÃO nelas, e um smoke na porta default daria 200 contra o binário errado (falso-verde)
       # — e verificação de que quem respondeu foi o PID que o próprio script lançou.
+      #
+      # Pulado quando `matrix.smoke` é `false` — só a `windows-x86_64` cross: o binário é um PE
+      # Windows, e este runner Linux não consegue executá-lo. `windows-native-tests.yml` faz esse
+      # smoke nativamente; AC-15 exige validação manual do NSIS cross-compilado numa máquina
+      # Windows real antes do primeiro stable multi-SO.
       - name: smoke dos sidecars
+        if: matrix.smoke != false
         env:
           CODM_APP_VERSION: ${{ needs.prepare.outputs.version }}
         run: bun scripts/release/smoke-sidecars.ts
@@ -292,7 +333,9 @@ jobs:
           echo "VITE_CODM_CLOUD_URL=$CLOUD_URL" >> "$GITHUB_ENV"
           echo "cloud: $CLOUD_URL"
 
-      # Sem `--config version`: no stable a versão É a da conf (gate acima).
+      # Sem `--config version`: no stable a versão É a da conf (gate acima). Desde 2026-08-26 a
+      # entrada `windows-x86_64` também injeta `--runner cargo-xwin --target
+      # x86_64-pc-windows-msvc` (via `matrix.tauriRunner`/`matrix.crossTarget` — ver release-beta.yml).
       - name: tauri build
         env:
           # VITE_CODM_CLOUD_URL chega pelo GITHUB_ENV do passo "cloud url do manifesto" acima —
@@ -319,7 +362,7 @@ jobs:
           APPLE_PASSWORD: ${{ runner.os == 'macOS' && secrets.APPLE_PASSWORD || '' }}
           APPLE_TEAM_ID: ${{ runner.os == 'macOS' && 'V4F6T68S5B' || '' }}
 
-        run: cd packages/app/tauri && ${{ matrix.nice }} bun x tauri build --bundles ${{ matrix.bundles }}
+        run: cd packages/app/tauri && ${{ matrix.nice }} bun x tauri build --bundles ${{ matrix.bundles }}${{ matrix.tauriRunner && format(' --runner {0}', matrix.tauriRunner) || '' }}${{ matrix.crossTarget && format(' --target {0}', matrix.crossTarget) || '' }}
 
       # A conf fica com signingIdentity '-' de propósito (rail DSK-10: build local não deve exigir
       # certificado); a identidade real vem do APPLE_SIGNING_IDENTITY acima, que a sobrepõe. Se essa
@@ -338,38 +381,42 @@ jobs:
           codesign -dv --verbose=2 "$APP" 2>&1 | grep -E "^Authority=|^TeamIdentifier="
 
       # Nomes FIXOS no stage (os mesmos do beta) — o `publish` é quem versiona ao subir ao R2.
-      # Caminhos derivados de $CARGO_TARGET_DIR — ver o comentário em release-beta.yml.
+      # Caminhos derivados de $CARGO_TARGET_DIR — ver o comentário em release-beta.yml. A entrada
+      # `windows-x86_64` (cross) soma o triple subdir de `matrix.crossTarget` por cima do
+      # `$CARGO_TARGET_DIR` — mesmo mecanismo do release-beta.yml.
       #
       # O nome que o Tauri estampou em cada instalador (`CoDM_<versão>_<arch>.<ext>`, de
       # productName + version da conf) é o nome que o browser deve SALVAR — vai no
       # Content-Disposition do alias, lá no `publish`. Lido do artefato, NUNCA remontado por uma
       # segunda fórmula (uma fórmula paralela diverge na primeira mudança de nome do bundler). Cada
-      # OS escreve o SEU PRÓPRIO `NAMES-<matrix.key>.env` — nunca um nome compartilhado: os três
-      # artifacts se fundem num único `dist-release/` no `publish` (`merge-multiple: true`), e um
-      # nome de arquivo repetido entre eles perderia dois dos três na sobrescrita silenciosa.
+      # entrada escreve o SEU PRÓPRIO `NAMES-<matrix.key>.env` — nunca um nome compartilhado: os
+      # três artifacts se fundem num único `dist-release/` no `publish` (`merge-multiple: true`), e
+      # um nome de arquivo repetido entre eles perderia dois dos três na sobrescrita silenciosa. O
+      # `case` chaveia por `matrix.key`, NÃO por `$RUNNER_OS` — desde 2026-08-26 `linux-x86_64` e
+      # `windows-x86_64` (cross) rodam as duas no MESMO runner Linux.
       - name: stage
         run: |
           set -euo pipefail
-          BUNDLE="${CARGO_TARGET_DIR:-packages/app/tauri/src-tauri/target}/release/bundle"
+          BUNDLE="${CARGO_TARGET_DIR:-packages/app/tauri/src-tauri/target}${{ matrix.crossTarget && format('/{0}', matrix.crossTarget) || '' }}/release/bundle"
           mkdir -p dist-release
           NAMES="dist-release/NAMES-${{ matrix.key }}.env"
-          case "$RUNNER_OS" in
-            macOS)
+          case "${{ matrix.key }}" in
+            darwin-aarch64)
               cp "$BUNDLE"/macos/*.app.tar.gz     dist-release/codm-aarch64.app.tar.gz
               cp "$BUNDLE"/macos/*.app.tar.gz.sig dist-release/codm-aarch64.app.tar.gz.sig
               cp "$BUNDLE"/dmg/*.dmg              dist-release/codm-aarch64.dmg
               echo "DMG_NAME=$(basename "$(ls "$BUNDLE"/dmg/*.dmg | head -1)")" >> "$NAMES" ;;
-            Linux)
+            linux-x86_64)
               cp "$BUNDLE"/appimage/*.AppImage     dist-release/codm-linux-x86_64.AppImage
               cp "$BUNDLE"/appimage/*.AppImage.sig dist-release/codm-linux-x86_64.AppImage.sig
               cp "$BUNDLE"/deb/*.deb               dist-release/codm-linux-x86_64.deb
               echo "APPIMAGE_NAME=$(basename "$(ls "$BUNDLE"/appimage/*.AppImage | head -1)")" >> "$NAMES"
               echo "DEB_NAME=$(basename "$(ls "$BUNDLE"/deb/*.deb | head -1)")" >> "$NAMES" ;;
-            Windows)
+            windows-x86_64)
               cp "$BUNDLE"/nsis/*-setup.exe     dist-release/codm-windows-x86_64-setup.exe
               cp "$BUNDLE"/nsis/*-setup.exe.sig dist-release/codm-windows-x86_64-setup.exe.sig
               echo "SETUP_EXE_NAME=$(basename "$(ls "$BUNDLE"/nsis/*-setup.exe | head -1)")" >> "$NAMES" ;;
-            *) echo "::error::SO desconhecido: $RUNNER_OS"; exit 1 ;;
+            *) echo "::error::matrix.key desconhecido: ${{ matrix.key }}"; exit 1 ;;
           esac
           ls -la dist-release
 

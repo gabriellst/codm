@@ -85,7 +85,8 @@ avançam, e o cliente daquela plataforma nunca saberia.
 - Instalador **NSIS** (`-setup.exe`), por usuário, com o WebView2 via *download bootstrapper* —
   a primeira instalação numa máquina sem WebView2 (raro: Win10/11 atualizados já têm) precisa de
   internet. Sem MSI de propósito: o updater instala o NSIS em silêncio; dois formatos seriam dois
-  caminhos de update.
+  caminhos de update — e, desde 2026-08-26, também é o único formato que a rota de cross-compile
+  sabe produzir (abaixo): MSI/WiX não cross-compila.
 - **Sem assinatura Authenticode nesta fase.** O SmartScreen mostra "O Windows protegeu o computador"
   → *Mais informações* → *Executar assim mesmo*. O auto-update **não** passa pelo SmartScreen
   (o updater verifica a minisign e roda o instalador em silêncio). Quando a assinatura entrar
@@ -96,6 +97,19 @@ avançam, e o cliente daquela plataforma nunca saberia.
 - O reaper de órfãos e o desligamento gracioso são diferentes no Windows (não há SIGTERM); o
   daemon é derrubado pelo watchdog de `CODM_PARENT_PID` e pela terminação da árvore — ver o plano
   `.plans/2026-08-25-windows-linux-build.md`.
+- **Runner de build: desde 2026-08-26, CROSS-COMPILADO** no MESMO runner self-hosted Linux que
+  builda `linux-x86_64` (`infra/runners/linux-x64/`), via `cargo-xwin` — a rota que o próprio
+  Tauri v2 documenta para builds Windows-a-partir-de-Linux (`tauri build --runner cargo-xwin
+  --target x86_64-pc-windows-msvc`). Diretriz do founder, verbatim: "não podemos contar com o
+  billing do GitHub, temos que usar o mac mini" (addendum 2026-08-26 em
+  `.specs/2026-08-25-windows-linux-build-design.md`). A rota é **EXPERIMENTAL** por documentação
+  do próprio Tauri — aceita pelo founder nesta fase. `windows-latest` não desapareceu: virou
+  `.github/workflows/windows-native-tests.yml` (`workflow_dispatch`-only, não-bloqueante), o único
+  lugar que ainda executa um Windows nativo — roda os testes `#[cfg(windows)]` do shell e o smoke
+  dos sidecars de verdade, coisas que um runner Linux não consegue provar sobre um `.exe` PE que
+  acabou de linkar. **A validação manual do NSIS cross-compilado numa máquina Windows real é
+  precondição explícita do primeiro stable multi-SO** (AC-15) — nenhum gate automatizado substitui
+  essa instalação de verdade. Chave da matriz e do manifest `windows-x86_64`.
 
 ## Cortar uma release estável
 
@@ -103,10 +117,11 @@ avançam, e o cliente daquela plataforma nunca saberia.
    `version` da conf; regenere com `bun desktop:generate` se a fonte mudar de lugar) e commite.
 2. `git tag v<X.Y.Z> && git push origin v<X.Y.Z>`.
 3. O workflow valida **tag == versão da conf** (diverge ⇒ falha sem publicar, antes de qualquer
-   build), builda nos três SOs em paralelo (macOS e Linux self-hosted no Mac mini, Windows
-   hospedado), assina os artefatos de update e — só se os três passaram — publica a release com
-   DMG + AppImage + deb + NSIS + `.sig`s + um `latest.json` de três plataformas, e sobe tudo ao R2
-   (versionado + aliases).
+   build), builda os três SOs (macOS self-hosted no Mac mini, em paralelo com Linux + Windows
+   cross-compilado — os dois últimos no MESMO runner self-hosted Linux, portanto em SÉRIE entre si
+   desde 2026-08-26; ver "A matriz de build" abaixo), assina os artefatos de update e — só se os
+   três passaram — publica a release com DMG + AppImage + deb + NSIS + `.sig`s + um `latest.json`
+   de três plataformas, e sobe tudo ao R2 (versionado + aliases).
 
 O beta não pede nada: mergear na main já publica `<versão-base>-beta.<run>` no canal.
 
@@ -263,7 +278,11 @@ releases NELE mesmo ("somente fazer essa parte do publish depois no mesmo repo")
 ## O que este pipeline NÃO faz (ainda)
 
 Assinatura Authenticode no Windows (SmartScreen avisa — ver "Windows" acima), Windows arm64 e
-Linux arm64, rollout percentual, `minVersion` forçado — ver roadmap (SP2/SP4).
+Linux arm64, rollout percentual, `minVersion` forçado — ver roadmap (SP2/SP4). Desde 2026-08-26,
+billing hospedado do GitHub também NÃO faz parte do caminho de release — os três SOs (incluindo o
+Windows cross-compilado) rodam inteiramente no Mac mini self-hosted do founder; a única linha que
+ainda consome minutos hospedados é `windows-native-tests.yml`, dispatch-only e fora do caminho
+crítico de publicar.
 
 ## A matriz de build (release-beta / release-stable)
 
@@ -273,25 +292,39 @@ Os dois workflows têm a mesma forma, três jobs:
    `packages/app/tauri/src-tauri/shell-env.json` e os demais artefatos gerados do shell estão em
    dia (`bun desktop:generate --check`) e que `VITE_POSTHOG_KEY` está presente. No stable é aqui
    que a tag é comparada com a conf — antes de gastar um minuto de build.
-2. **`build`** — uma matriz com **um runner por SO, sem cross-compile** (chaves `darwin-aarch64`,
-   `linux-x86_64`, `windows-x86_64` — as mesmas que o `make-manifest.ts` usa): o daemon é um `bun
-   build --compile` que só carrega o prebuild nativo do libsql do próprio host (`build-sidecars.ts`,
-   "CROSS-TRIPLE GAP"), então cada binário nasce no SO em que vai rodar. Cada entrada compila os
-   sidecars, **sobe os dois e exige 200 no health** (`scripts/release/smoke-sidecars.ts` — o gate
-   que um build sozinho não dá), confere e exporta a origem da nuvem lida do `shell-env.json`
-   comitado (`CODM_CLOUD_URL` NÃO é mais uma repo variable — é a decisão declarada em
-   `config/cloud.ts`, a mesma que `build.rs` entrega ao supervisor Rust), roda `tauri build
-   --bundles <lista>` (macOS `app,dmg`, Linux `appimage,deb`, Windows `nsis`; a conf gerada segue
-   com `targets: all`), renomeia os artefatos com o nome fixo da plataforma e os sobe como artifact
-   do run.
-   Cada entrada da matriz DECLARA um campo booleano `hosted` (`false` para macOS/Linux
-   self-hosted, `true` para Windows) — é ele, não `runner.os`, que gate-ia os passos de
-   provisionamento (instalar deps de sistema/Rust, cache do cargo, `CARGO_TARGET_DIR` fora do
-   workspace): um runner self-hosted já chega com tudo isso pronto (imagem do container, no caso
-   do Linux — `infra/runners/linux-x64/`), um runner hospedado não. Os passos macOS (keychain
-   temporário + codesign dos Mach-O aninhados, `nice`, gate do Developer ID) continuam atrás de
-   `if: runner.os == 'macOS'` — essa condição é sobre IDENTIDADE do SO (só o macOS assina Apple),
-   não sobre ser ou não hospedado.
+2. **`build`** — uma matriz com **um entry por SO** (chaves `darwin-aarch64`, `linux-x86_64`,
+   `windows-x86_64` — as mesmas que o `make-manifest.ts` usa): macOS e Linux compilam NATIVAMENTE
+   (o daemon é um `bun build --compile` que só carrega o prebuild nativo do libsql do próprio host
+   — `build-sidecars.ts`, "CROSS-TRIPLE GAP" — então o binário nasce no SO em que vai rodar).
+   **Desde 2026-08-26, `windows-x86_64` é a exceção: CROSS-COMPILA** no MESMO runner self-hosted
+   Linux que builda `linux-x86_64`, via `cargo-xwin` (addendum 2026-08-26 em
+   `.specs/2026-08-25-windows-linux-build-design.md` — a rota documentada pelo Tauri v2,
+   EXPERIMENTAL, aceita pelo founder para eliminar a exposição a billing hospedado). Os campos
+   DECLARADOS `matrix.sidecarTarget`/`matrix.tauriRunner`/`matrix.crossTarget` alimentam
+   `build-sidecars.ts --target win32-x64` e `tauri build --runner cargo-xwin --target
+   x86_64-pc-windows-msvc` só nessa entrada — vazios nas outras duas, que buildam pro host.
+   Cada entrada compila os sidecars e, quando `matrix.smoke` não é `false` (as duas nativas — a
+   cross pula: um runner Linux não executa um PE Windows), **sobe os dois e exige 200 no health**
+   (`scripts/release/smoke-sidecars.ts` — o gate que um build sozinho não dá). Confere e exporta a
+   origem da nuvem lida do `shell-env.json` comitado (`CODM_CLOUD_URL` NÃO é mais uma repo variable
+   — é a decisão declarada em `config/cloud.ts`, a mesma que `build.rs` entrega ao supervisor
+   Rust), roda `tauri build --bundles <lista>` (macOS `app,dmg`, Linux `appimage,deb`, Windows
+   `nsis`; a conf gerada segue com `targets: all`), renomeia os artefatos com o nome fixo da
+   plataforma e os sobe como artifact do run.
+   Cada entrada da matriz DECLARA um campo booleano `hosted` — desde 2026-08-26 é `false` nas
+   TRÊS (nenhuma entrada deste `build` roda mais num runner hospedado do GitHub) — é ele, não
+   `runner.os`, que gate-ia os passos de provisionamento (instalar deps de sistema/Rust, cache do
+   cargo, `CARGO_TARGET_DIR` fora do workspace): um runner self-hosted já chega com tudo isso
+   pronto (imagem do container, no caso do Linux — `infra/runners/linux-x64/`, que desde
+   2026-08-26 também carrega `nsis`/`lld`/`llvm`/`clang`, o target `x86_64-pc-windows-msvc` e
+   `cargo-xwin`), um runner hospedado não. O campo `hosted` continua existindo para o dia em que
+   uma entrada voltar a ser hospedada — não foi removido, só nunca fica `true` hoje. Os passos
+   macOS (keychain temporário + codesign dos Mach-O aninhados, `nice`, gate do Developer ID)
+   continuam atrás de `if: runner.os == 'macOS'` — essa condição é sobre IDENTIDADE do SO (só o
+   macOS assina Apple), não sobre ser ou não hospedado. Nos passos que ainda distinguem por SO
+   (`stage`, que copia o bundle certo para cada nome de artefato fixo), o `case` chaveia por
+   `matrix.key` — desde que `linux-x86_64` e `windows-x86_64` (cross) rodam as duas num runner
+   `runner.os == 'Linux'`, `$RUNNER_OS` sozinho não distingue mais uma da outra.
 3. **`publish`** (self-hosted desde 2026-08-25) — baixa os três artifacts, confere a lista completa, gera **um**
    `latest.json` com as três plataformas (`make-manifest.ts --platform … --url … --sig-file …` ×3),
    cria a release no GitHub, sobe ao R2 com o content-type certo (o `latest.json` por último) e
@@ -301,28 +334,37 @@ Os dois workflows têm a mesma forma, três jobs:
    `$RUNNER_TEMP` e o entra no `PATH` via `GITHUB_PATH`; instalar de verdade na imagem exigiria
    rebuild, fora do escopo desta migração (custo de runner, não a imagem).
 
-**Custo.** macOS e Linux são self-hosted (zero — Linux desde 2026-08-25, `infra/runners/
-linux-x64/`, ver "Runner self-hosted" abaixo), e desde a mesma data as jobs UTILITY `prepare` e
-`publish` de `release-beta`/`release-stable` (que não fazem parte da matriz por SO) também
-migraram para o mesmo runner Linux self-hosted. Windows hospedado conta 2×: um beta custa ~30 min
-de cota (≈15 min Windows ×2) — e agora é a ÚNICA linha que ainda fatura minutos hospedados na
-release inteira. Com 2.000 min/mês isso dá ~65 betas — o filtro de caminhos do `release-beta` (só
-o que entra no app dispara) é o que mantém isso viável mesmo sem Linux/UTILITY contando mais. O
-`correctness` tem um job `linux` (cargo check + sidecars + smoke) e um job `changes` (o filtro que
-decide se `linux` roda) que também passaram a rodar no Mac mini self-hosted e não consomem cota;
-Windows **não** roda no gate de PR — quem pega quebra de Windows é o beta seguinte. Mover essas
-jobs é corte de custo, não de resiliência: `publish` ainda exige os três builds via `needs`, então
-uma falha de cobrança na entrada Windows do `build` segue derrubando a release inteira (D4: sem
-manifest parcial) — só o alvo do gasto mudou.
+**Custo.** Desde 2026-08-26, **as TRÊS entradas do `build` são self-hosted — zero cota.** macOS e
+Linux nativamente desde sempre/2026-08-25; Windows CROSS-COMPILA no mesmo runner Linux desde
+2026-08-26 (diretriz do founder: "não podemos contar com o billing do GitHub, temos que usar o mac
+mini" — addendum 2026-08-25-windows-linux-build-design.md). As jobs UTILITY `prepare` e `publish`
+de `release-beta`/`release-stable` também rodam no mesmo runner Linux self-hosted desde
+2026-08-25. **Resultado: a release inteira (beta e stable) não consome mais NENHUM minuto
+hospedado do GitHub para publicar.** A única linha que ainda fatura cota é
+`windows-native-tests.yml` (`windows-latest`, 2×) — mas é `workflow_dispatch`-only,
+não-bloqueante, fora do caminho crítico de release: só roda quando alguém o dispara manualmente.
+O `correctness` tem um job `linux` (cargo check + sidecars + smoke) e um job `changes` (o filtro
+que decide se `linux` roda) que também rodam no Mac mini self-hosted e não consomem cota; nenhum
+job de `correctness` roda num Windows nativo — quem valida isso é `windows-native-tests.yml`, sob
+demanda. **O trade-off de custo virou trade-off de wall-clock**: `prepare`, `linux-x86_64`,
+`windows-x86_64` (cross) e `publish` disputam o MESMO runner `[self-hosted, Linux, X64]`, então
+rodam em SÉRIE entre si (só o build macOS corre em paralelo, noutro runner) — o tunable é um
+SEGUNDO container/runner Linux, não implementado nesta fase (ver o comentário na entrada
+`windows-x86_64` de release-beta.yml). `publish` ainda exige os três builds via `needs`, então uma
+falha em qualquer um segue derrubando a release inteira (D4: sem manifest parcial).
 
-**Cache.** `Swatinem/rust-cache` volta, mas **só quando `matrix.hosted`** (o campo DECLARADO, não
+**Cache.** `Swatinem/rust-cache` só roda **quando `matrix.hosted`** (o campo DECLARADO, não
 `runner.os != 'macOS'`): runners hospedados são descartáveis, e a poda de `~/.cargo/bin` que
-apagou o `rustup` do founder (abaixo) não tem vítima lá. Com Linux virando self-hosted, hoje só o
-Windows entra nessa condição.
+apagou o `rustup` do founder (abaixo) não tem vítima lá. Desde 2026-08-26 nenhuma entrada do
+`build` é hospedada, então esta condição nunca é `true` hoje neste workflow — o campo continua
+declarado para o dia em que uma entrada voltar a ser hospedada (ex.: um runner offline — ver
+"Runner self-hosted" abaixo).
 
-**Windows, três pegadinhas** já resolvidas nos workflows, para não redescobrir: o shell default é
-pwsh (`defaults.run.shell: bash` força git-bash em todo passo); os sidecars ganham `.exe`
-(build-sidecars.ts já faz); e não existe `nice` — é um campo da matriz, vazio fora do Mac.
+**Windows, três pegadinhas** históricas de quando `windows-latest` era o runner do `build` (hoje
+só relevantes para `windows-native-tests.yml`, que ainda roda num Windows nativo): o shell default
+é pwsh (`defaults.run.shell: bash` força git-bash em todo passo); os sidecars ganham `.exe`
+(build-sidecars.ts já faz); e não existe `nice` — é um campo da matriz, vazio fora do Mac. A
+entrada `windows-x86_64` do `build` não sofre mais nenhuma delas — ela é um runner Linux.
 
 ## Runner self-hosted (macOS + Linux)
 
@@ -347,9 +389,22 @@ delas builda nada — só git/bash/jq (`changes`, `prepare`) ou baixa artifacts 
 (`publish`) — então rodam no MESMO runner `[self-hosted, Linux, X64]` do job `linux`/da entrada
 `linux-x86_64`, sem provisionamento extra, exceto por uma exceção pontual: a imagem self-hosted
 não vem com `gh` (só `publish` usa), e o job baixa o tarball oficial para `$RUNNER_TEMP` em vez de
-reconstruir a imagem — ver o comentário no próprio workflow. Só o **Windows** segue hospedado
-(`windows-latest`): não há como rodar um runner Windows no Mac mini, e o multiplicador 2× dele é o
-único gasto de cota que resta em toda a release.
+reconstruir a imagem — ver o comentário no próprio workflow.
+
+**Desde 2026-08-26 o Windows TAMBÉM saiu do runner hospedado.** Não há como rodar um runner
+Windows nativo no Mac mini — mas não precisa mais: a entrada `windows-x86_64` CROSS-COMPILA no
+MESMO runner `[self-hosted, Linux, X64]` via `cargo-xwin` (rota documentada pelo Tauri v2,
+EXPERIMENTAL, aceita pelo founder — addendum 2026-08-26 em
+`.specs/2026-08-25-windows-linux-build-design.md`; diretriz verbatim: "não podemos contar com o
+billing do GitHub, temos que usar o mac mini"). A imagem `infra/runners/linux-x64/` carrega
+`nsis`/`lld`/`llvm`/`clang`, o target `x86_64-pc-windows-msvc` e `cargo-xwin` pré-instalados — ver
+"Papel de cross-compile Windows" em `infra/runners/linux-x64/README.md`. Isso remove o ÚLTIMO
+gasto de cota hospedada da release: as três entradas do `build`, mais `prepare`/`publish`, rodam
+inteiramente self-hosted. O custo que sobra virou wall-clock, não dinheiro — `linux-x86_64` e
+`windows-x86_64` disputam o MESMO runner Linux físico e rodam em série entre si (ver "Custo" em "A
+matriz de build" acima). `windows-latest` não desapareceu do repo: sobrevive como
+`.github/workflows/windows-native-tests.yml`, `workflow_dispatch`-only e fora do caminho de
+release — o único lugar que ainda paga o multiplicador 2×, e só quando alguém o dispara.
 
 A máquina já era o ambiente de build do macOS: mesmo toolchain, a chave de assinatura mora nela, e
 os caches de cargo/bun ficam quentes entre execuções. O runner Linux é um processo separado —
@@ -368,7 +423,13 @@ Linux não usa `nice` (o campo da matriz fica vazio nessa entrada; ver "A matriz
 **Se um runner estiver offline**, os jobs daquele SO ficam na fila em vez de falhar. Para publicar
 mesmo assim, troque `runs-on: [self-hosted, macOS, ARM64]` por `macos-14`, ou `runs-on:
 [self-hosted, Linux, X64]` por `ubuntu-22.04`, no workflow — e conte com o custo em minutos (10×
-macOS, 1× Linux).
+macOS, 1× Linux). Como `linux-x86_64` e `windows-x86_64` (cross) compartilham o MESMO runner Linux,
+o container offline enfileira as DUAS entradas juntas; o `ubuntu-22.04` hospedado como fallback
+também serve para a `windows-x86_64` — o runner hospedado do GitHub tem `cargo`/`rustup` via
+`dtolnay/rust-toolchain@stable` (gate `matrix.hosted`), mas NÃO vem com `nsis`/`cargo-xwin`
+pré-instalados como a imagem self-hosted: um fallback hospedado da entrada Windows precisaria
+reinstalar essas duas peças manualmente antes do `tauri build --runner cargo-xwin`, ou aceitar o
+tempo de reinstalação a cada run.
 
 **Antes de tornar este repositório público**, remova os DOIS runners self-hosted: um PR de fork
 passaria a executar código arbitrário na máquina. As duas decisões são mutuamente exclusivas.

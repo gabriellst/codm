@@ -6,6 +6,12 @@ macOS (docs/RELEASE.md, "Runner self-hosted") — não num runner hospedado do G
 mesma do macOS: custo. Minutos self-hosted não contam na cota (repo privado), e o job Linux que
 antes custava ~10 min de cota hospedada por execução passa a custar zero.
 
+Desde 2026-08-26 este MESMO runner também produz o instalador Windows — a entrada `windows-x86_64`
+de `release-beta`/`release-stable` CROSS-COMPILA aqui via `cargo-xwin`, em vez de rodar num
+`windows-latest` hospedado (diretriz do founder, verbatim: "não podemos contar com o billing do
+GitHub, temos que usar o mac mini" — addendum 2026-08-26 em
+`.specs/2026-08-25-windows-linux-build-design.md`). Ver "Papel de cross-compile Windows" abaixo.
+
 O Mac mini é Apple Silicon (arm64); Linux x64 roda dentro de um **container amd64 sob Rosetta**
 (`--platform linux/amd64`) — porque o daemon TS (`bun build --compile`) só carrega o prebuild
 nativo do libsql do próprio host (o mesmo "CROSS-TRIPLE GAP" de
@@ -47,6 +53,13 @@ duplicaria a fonte de verdade da versão instalada. `unzip` e o `gh` CLI também
 jobs `publish` de release-beta/release-stable rodam `gh release create`/`delete` — rebuilde a
 imagem de tempos em tempos para pegar patches do `gh`.
 
+Desde 2026-08-26 a imagem também carrega o necessário para CROSS-COMPILAR o instalador Windows
+aqui dentro (ver "Papel de cross-compile Windows" abaixo): `nsis` (o `makensis` que empacota o
+`-setup.exe`), `lld`/`llvm`/`clang` (o linker que `cargo-xwin` usa no lugar do MSVC de verdade), o
+target `x86_64-pc-windows-msvc` (`rustup target add`) e o próprio `cargo-xwin` (`cargo install
+--locked`) — tudo preinstalado pelo MESMO motivo que o resto desta lista: para a entrada
+`windows-x86_64` de release-beta/release-stable não reinstalar nada a cada execução.
+
 A versão do runner do GitHub Actions é resolvida em BUILD TIME contra a API de releases (não fica
 hardcoded no Dockerfile). Rebuilde a imagem de tempos em tempos (`docker build --no-cache`) para
 pegar patches do runner.
@@ -71,6 +84,7 @@ docker run -d \
   -v codm-runner-cargo-target:/home/runner/.cache/codm-cargo-target \
   -v codm-runner-cargo:/home/runner/.cargo \
   -v codm-runner-rustup:/home/runner/.rustup \
+  -v codm-runner-xwin:/home/runner/.cache/cargo-xwin \
   codm-runner-linux-x64
 ```
 
@@ -100,14 +114,57 @@ exige um token fresco.
 
 - `/home/runner/.cache/codm-cargo-target` — `$CARGO_TARGET_DIR` (o mesmo mecanismo do runner
   self-hosted macOS: o `target/` do Rust mora FORA do workspace do checkout, então sobrevive ao
-  `git clean -ffdx` que o `actions/checkout` roda a cada execução).
+  `git clean -ffdx` que o `actions/checkout` roda a cada execução). Cross ou nativo — a entrada
+  `windows-x86_64` (cross, desde 2026-08-26) escreve dentro do MESMO diretório, no subdiretório
+  `x86_64-pc-windows-msvc/` que o Cargo cria sozinho para um `--target` explícito.
 - `/home/runner/.cargo` e `/home/runner/.rustup` — o registry de crates baixadas e a toolchain.
   Já vêm preinstalados NA IMAGEM (`CARGO_HOME`/`RUSTUP_HOME` do Dockerfile), mas montar como
   volume evita perder o cache de download de dependências toda vez que o container é recriado
   (rebuild de imagem, `docker rm`).
+- `/home/runner/.cache/cargo-xwin` (`$XWIN_CACHE_DIR`) — desde 2026-08-26, o SDK do Windows/MSVC
+  que `cargo-xwin` baixa (headers + libs da Microsoft, via `xwin`) na PRIMEIRA vez que a entrada
+  `windows-x86_64` cross-compila. Sem este volume, todo container recriado rebaixaria o SDK inteiro
+  no primeiro build cross depois de subir — o volume é o que faz isso acontecer só uma vez.
 
-Sem esses volumes o runner ainda funciona — só recompila e rebaixa tudo do zero a cada container
-novo, o que é o comportamento normal de um runner hospedado descartável.
+**Os mountpoints `codm-cargo-target` e `cargo-xwin` são pré-criados NA IMAGEM, donos de
+`runner`** (Dockerfile, `RUN mkdir -p ... && chown -R runner:runner`) — de propósito. Um named
+volume Docker montado pela primeira vez num caminho que NÃO existe ainda na imagem nasce
+ROOT-OWNED no host (não há conteúdo/ownership da imagem para semear); um `tauri build` rodando
+como `runner` então falha com "Permission denied" ao criar `release/` dentro dele. Medido: run
+32926405769 (2026-08-26). `.cargo`/`.rustup` nunca sofreram disso porque já existem na imagem,
+donos de `runner`, então o Docker semeia o volume novo com esse conteúdo E essa ownership.
+
+Sem esses volumes o runner ainda funciona — só recompila, rebaixa as dependências e rebaixa o SDK
+do Windows do zero a cada container novo, o que é o comportamento normal de um runner hospedado
+descartável (custa só tempo, nunca corretude).
+
+## Papel de cross-compile Windows (desde 2026-08-26)
+
+Este mesmo container que builda `linux-x86_64` também CROSS-COMPILA o instalador `windows-x86_64`
+— a entrada `windows-x86_64` de `release-beta.yml`/`release-stable.yml` roda `tauri build --runner
+cargo-xwin --target x86_64-pc-windows-msvc --bundles nsis` NELE, em vez de num `windows-latest`
+hospedado. Diretriz do founder, verbatim: "não podemos contar com o billing do GitHub, temos que
+usar o mac mini" (addendum 2026-08-26 em `.specs/2026-08-25-windows-linux-build-design.md`).
+
+A rota é a que o **próprio Tauri v2 documenta** para builds Windows-a-partir-de-Linux: `nsis` (o
+`makensis` que empacota o `-setup.exe`) + `x86_64-pc-windows-msvc` (`rustup target add`) +
+`cargo-xwin` (que orquestra `lld`/`clang` contra o SDK do Windows/MSVC baixado por ele) — as três
+peças já vêm preinstaladas na imagem (Dockerfile). NSIS cross-compila por essa rota; **MSI/WiX
+não** — é por isso que o Windows desta release só empacota NSIS, sem alternativa.
+
+**Caveat honesto: a rota é EXPERIMENTAL por documentação do próprio Tauri**, aceita pelo founder
+nesta fase justamente para eliminar a dependência de billing hospedado. Um runner Linux não
+consegue EXECUTAR o `.exe` PE que acabou de linkar — não há como provar aqui que o instalador
+realmente abre, instala e roda num Windows de verdade. Por isso:
+
+- O passo `smoke dos sidecars` desta entrada é PULADO (`matrix.smoke: false`) nos dois workflows de
+  release — não há host Windows neste container para subir os binários e checar o health.
+- `.github/workflows/windows-native-tests.yml` (`workflow_dispatch`-only, `windows-latest`,
+  não-bloqueante) é o validador nativo: roda os testes `#[cfg(windows)]` do shell e o smoke de
+  verdade, num Windows hospedado de verdade — mas não instala o `-setup.exe` cross-compilado.
+- A validação manual do NSIS cross-compilado, instalando numa máquina Windows REAL, é uma
+  **precondição explícita do primeiro stable multi-SO** (AC-15, mesmo spec) — nenhum gate
+  automatizado prova que o binário cross roda de verdade; só essa instalação manual prova.
 
 ## Nota de performance — x64 sob Rosetta
 

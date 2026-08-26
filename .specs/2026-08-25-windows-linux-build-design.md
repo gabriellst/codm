@@ -155,6 +155,43 @@ antes do `/build`. As que mudam a forma do trabalho estão marcadas **(virável 
     ACL por usuário); `MacosLauncher::LaunchAgent` do autostart (o plugin ignora fora do macOS);
     `keyring` sem Secret Service no Linux (limitação documentada nesta fase).
 
+## Addendum (2026-08-26) — Windows deixa de depender de billing hospedado
+
+**Diretriz do founder** (relayed pela sessão coordenadora, verbatim quanto à intenção): *"não
+podemos contar com o billing do GitHub, temos que usar o mac mini."* Isso amenda as Decisões 1 e 2
+acima: `windows-latest` deixa de ser o runner que produz o instalador Windows oficial.
+
+- **Decisão 1, amendada.** A perna `windows-x86_64` do `build` deixa de rodar num runner hospedado
+  e passa a **CROSS-COMPILAR** no MESMO runner `[self-hosted, Linux, X64]` que já builda
+  `linux-x86_64` (o Mac mini do founder), via a rota **documentada pelo próprio Tauri v2** para
+  builds Windows-a-partir-de-Linux: apt `nsis lld llvm clang`, `rustup target add
+  x86_64-pc-windows-msvc`, `cargo install --locked cargo-xwin` (todos baked na imagem
+  `infra/runners/linux-x64/`, para nenhum job reinstalar nada a cada execução), e `tauri build
+  --runner cargo-xwin --target x86_64-pc-windows-msvc --bundles nsis`. NSIS cross-compila por essa
+  rota; **MSI/WiX não** — o que já era uma escolha desta fase (Decisão 2, "sem MSI") passa também a
+  ser a razão pela qual a rota funciona, não só uma preferência de formato de instalador. A rota é
+  classificada como **EXPERIMENTAL** pela própria documentação do Tauri — aceita pelo founder nesta
+  fase por eliminar de vez a exposição a billing hospedado do GitHub. `windows-latest` NÃO
+  desaparece: vira `windows-native-tests.yml`, um workflow `workflow_dispatch`-only e
+  NÃO-BLOQUEANTE, cujo único papel é validar nativamente o que o cross-build não pode provar
+  sozinho (um runner Linux não executa o PE Windows que acabou de linkar).
+- **Decisão 2, amendada.** Os alvos desta fase continuam os mesmos (`linux-x86_64`,
+  `windows-x86_64`, NSIS sem MSI) — o que muda é ONDE o `windows-x86_64` é produzido, não O QUÊ.
+- **Nota sobre a Decisão 14 / `correctness.yml`.** O texto original dizia que o job Windows do
+  beta era "o único executor dos testes `#[cfg(windows)]` do shell (`cargo test --lib` no job
+  Windows)" — isso ficou desatualizado. O `cargo test --lib` Windows-only foi REMOVIDO de
+  `release-beta.yml`/`release-stable.yml` (a entrada cross-compilada não executa o binário que
+  produz — não há como rodar `cargo test` de um alvo cross ali) e migrou inteiro para
+  `windows-native-tests.yml` (`workflow_dispatch`, `windows-latest`), que passa a ser o ÚNICO
+  executor desses testes.
+- **AC-15, estendida.** Além do loop de auto-update por SO, a validação manual do **NSIS
+  cross-compilado** (produzido no runner Linux, nunca executado ali) numa máquina Windows REAL —
+  instala limpo, o app abre, o daemon/gateway sobem — é uma **precondição explícita do primeiro
+  stable multi-SO**. Nenhum runner Linux prova que um `.exe` PE cross-linkado roda de verdade num
+  Windows de carne e osso; só a execução nativa prova isso — `windows-native-tests.yml` fecha a
+  metade que dá pra automatizar (shell + sidecars num Windows hospedado de verdade), a instalação
+  manual do `-setup.exe` fecha o resto.
+
 ## User Stories
 
 - **Story 1:** Como usuário Linux ou Windows, quero baixar um instalador do meu sistema na
@@ -221,9 +258,14 @@ antes do `/build`. As que mudam a forma do trabalho estão marcadas **(virável 
       "Windows/Linux" sai de "O que este pipeline NÃO faz".
 - [ ] AC-14: `bun tsc`, `bun lint`, `bun run test` e `test:tooling` (rails DSK) verdes; o
       `desktop:generate --check` sem drift (a conf gerada não muda).
-- [ ] AC-15 (manual, primeiro par de betas multi-SO): o LOOP de auto-update é verificado em
-      cada SO novo — instalar o beta N, publicar N+1, o app baixa, verifica minisign e aplica
-      (AppImage substituído no Linux; NSIS silencioso no Windows). Nenhum gate automatizado
+- [ ] AC-15 (manual, primeiro par de betas multi-SO; ESTENDIDA pelo addendum 2026-08-26): o LOOP
+      de auto-update é verificado em cada SO novo — instalar o beta N, publicar N+1, o app baixa,
+      verifica minisign e aplica (AppImage substituído no Linux; NSIS silencioso no Windows). Desde
+      2026-08-26 o NSIS do Windows é CROSS-COMPILADO no runner Linux (nunca executado ali) — a
+      validação manual do instalador cross-compilado numa máquina Windows REAL (instala, abre, o
+      daemon/gateway sobem) é **precondição explícita do primeiro stable multi-SO**, além do loop
+      de auto-update: nenhum runner Linux prova que o `.exe` PE cross-linkado roda de verdade num
+      Windows de carne e osso. Nenhum gate automatizado
       cobre isso; é AC de aceite explícito.
 - [ ] AC-16: o watchdog do gateway Go detecta supervisor morto no Windows (sonda de vida com
       probe injetável; `ppid` congelado deixa de cegar) e drena via shutdowner — coberto por

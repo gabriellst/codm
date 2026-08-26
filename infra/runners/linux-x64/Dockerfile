@@ -35,27 +35,84 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # imagem. Fix na causa (non-negotiable 1): a imagem base é diferente do runner de referência, então
 # a dependência que ficava implícita lá precisa ficar explícita aqui.
 # `unzip` — setup-bun extrai um .zip; medido 2026-08-25.
+#
+# `nsis lld llvm clang` — desde 2026-08-26, o que a rota de CROSS-COMPILE Windows do Tauri v2 exige
+# além do Rust (addendum 2026-08-26 em .specs/2026-08-25-windows-linux-build-design.md): `nsis`
+# fornece `makensis`, o empacotador que gera o `-setup.exe` (o Tauri invoca o binário do sistema,
+# não baixa um); `lld`/`llvm`/`clang` são o linker e o toolchain que `cargo-xwin` usa para linkar
+# contra o SDK do Windows/MSVC baixado por ele (ver `XWIN_CACHE_DIR` abaixo) — MSVC de verdade não
+# roda em Linux, `cargo-xwin` cross-linka com `lld-link`/`clang-cl` no lugar dele.
+#
+# `xdg-utils desktop-file-utils squashfs-tools` — pré-requisitos do BUNDLER Linux do Tauri v2
+# (empacota AppImage/.deb; não têm relação com o cross Windows acima). Adicionados como CONJUNTO,
+# não um por vez: o rebuild de 2026-08-26 (rerun do run 32926405769) morreu em
+# `failed to bundle project: xdg-mime binary not found /usr/bin/xdg-mime` — a lista canônica dos
+# workflows nunca precisou deles porque o bundler Linux só rodava self-hosted a partir desta
+# mesma imagem, e essa lacuna nunca tinha sido exercida antes do primeiro build cross completo.
+# `xdg-utils` dá `xdg-mime` (registra o MIME type do AppImage); `desktop-file-utils` dá
+# `desktop-file-validate` (o `.desktop` embutido no AppImage); `squashfs-tools` dá `mksquashfs`
+# (o filesystem que vira o AppImage). `file` já está na lista acima (linuxdeploy o usa para
+# identificar ELF/Mach-O) — conferido, não duplicado aqui.
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates \
       build-essential curl wget file git jq python3 unzip \
       libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf \
       libxdo-dev libssl-dev libdbus-1-dev \
+      nsis lld llvm clang \
+      xdg-utils desktop-file-utils squashfs-tools \
     && rm -rf /var/lib/apt/lists/*
 
 # Usuário não-root — o runner do GitHub Actions recusa rodar como root sem
 # RUNNER_ALLOW_RUNASROOT=1, e não há motivo para forçar isso aqui.
 RUN useradd --create-home --shell /bin/bash runner
 
+# Pré-cria os DOIS mountpoints de cache que `docker run -v` vai montar como named volumes NOVOS
+# (README.md, "Volumes persistentes"), donos de `runner`, ANTES de qualquer volume ser montado.
+# Mecanismo medido (run 32926405769, 2026-08-26): quando um named volume novo é montado num
+# caminho que NÃO existe ainda na imagem, o Docker cria o diretório no host ROOT-OWNED (não há
+# conteúdo de imagem para semear, então também não há ownership para copiar). `tauri build`
+# rodando como `runner` então falha com "Permission denied" ao tentar criar `release/` dentro dele.
+# `~/.cargo`/`~/.rustup` (montados como volume também, mais abaixo) escapam desse problema SEM
+# precisar deste passo — eles JÁ existem na imagem, donos de `runner` (criados pelo `rustup`
+# install, que roda como `USER runner`), e o Docker semeia o volume novo com esse conteúdo E essa
+# ownership. `codm-cargo-target` (CARGO_TARGET_DIR) e `cargo-xwin` (XWIN_CACHE_DIR, abaixo) são
+# caminhos NOVOS que nada mais cria — por isso precisam do tratamento explícito aqui.
+RUN mkdir -p /home/runner/.cache/codm-cargo-target /home/runner/.cache/cargo-xwin \
+    && chown -R runner:runner /home/runner/.cache
+
 # Toolchain Rust (stable) — o que dtolnay/rust-toolchain@stable instalaria num runner hospedado.
 # Fica pronta na imagem porque este runner é PERSISTENTE (docs/RELEASE.md): nenhum workflow
-# reinstala Rust aqui (o `matrix.hosted`/gate correspondente em correctness.yml pula esse passo).
+# reinstala Rust aqui (o `matrix.hosted`/gate correspondente em release-beta.yml/release-stable.yml
+# pula esse passo). Desde 2026-08-26 a imagem TAMBÉM carrega o necessário para CROSS-COMPILAR
+# Windows a partir daqui — a rota que o próprio Tauri v2 documenta para builds
+# Windows-a-partir-de-Linux (addendum 2026-08-26 em .specs/2026-08-25-windows-linux-build-design.md;
+# diretriz do founder: "não podemos contar com o billing do GitHub, temos que usar o mac mini").
+# Baked na imagem para que a entrada `windows-x86_64` de release-beta.yml/release-stable.yml não
+# reinstale nada a cada execução — `rustup target add`/`cargo install` custam minutos que um job
+# não precisa pagar de novo toda vez.
 USER runner
 ENV RUSTUP_HOME=/home/runner/.rustup \
     CARGO_HOME=/home/runner/.cargo \
-    PATH=/home/runner/.cargo/bin:$PATH
+    PATH=/home/runner/.cargo/bin:$PATH \
+    # `cargo-xwin` baixa o SDK do Windows/MSVC (headers + libs da Microsoft, via `xwin`) na
+    # PRIMEIRA vez que compila para `x86_64-pc-windows-msvc` — não na instalação do `cargo-xwin`
+    # em si (abaixo). Declarado explícito (em vez de deixar cair no default, que já cairia dentro
+    # de `$HOME` e persistiria pelo mesmo mecanismo) para o volume dedicado em
+    # infra/runners/linux-x64/README.md apontar exatamente para este caminho.
+    XWIN_CACHE_DIR=/home/runner/.cache/cargo-xwin
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
       | sh -s -- -y --default-toolchain stable --profile minimal \
+    && rustup target add x86_64-pc-windows-msvc \
     && rustup --version && cargo --version
+
+# `cargo-xwin` é o `--runner` que `tauri build --runner cargo-xwin --target
+# x86_64-pc-windows-msvc` (release-beta.yml/release-stable.yml, entrada `windows-x86_64`) invoca —
+# ele orquestra `lld`/`clang` (apt deps acima) contra o SDK baixado em `$XWIN_CACHE_DIR`. EXPERIMENTAL
+# por documentação do próprio Tauri v2; aceito pelo founder nesta fase. `--locked` pela mesma razão
+# de sempre: reprodutibilidade contra o Cargo.lock publicado do crate, não um resolve solto no
+# momento do build da imagem.
+RUN cargo install --locked cargo-xwin \
+    && cargo xwin --version
 
 # Runner do GitHub Actions (tarball x64). A versão é resolvida em BUILD TIME contra a API de
 # releases — não fica hardcoded no Dockerfile, então rebuildar a imagem periodicamente é o que

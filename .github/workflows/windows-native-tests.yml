@@ -1,0 +1,75 @@
+# Validador NATIVO do Windows — desde 2026-08-26 o instalador oficial (`release-beta.yml`/
+# `release-stable.yml`) não roda mais em `windows-latest`: a entrada `windows-x86_64` da matrix
+# CROSS-COMPILA no runner self-hosted Linux via `cargo-xwin` (diretriz do founder, verbatim: "não
+# podemos contar com o billing do GitHub, temos que usar o mac mini" — addendum 2026-08-26 em
+# .specs/2026-08-25-windows-linux-build-design.md). Um runner Linux não EXECUTA o PE Windows que
+# ele acabou de linkar, então duas coisas ficaram sem executor depois da migração:
+#
+#   1. Os testes `#[cfg(windows)]` do shell (reaper/lifecycle/watchdog — plano 2026-08-25): só
+#      rodam num host Windows de verdade. Este workflow é agora o ÚNICO lugar que os executa —
+#      nenhum outro workflow roda `cargo test` num Windows nativo.
+#   2. A prova de que os sidecars SOBEM de verdade (health 200) no host onde vão rodar: o smoke do
+#      release cross (`matrix.smoke: false`) fica pulado de propósito nessa entrada.
+#
+# Por isso este workflow é BILLING-DEPENDENTE (windows-latest é runner HOSPEDADO, cota 2×) e
+# `workflow_dispatch`-only, NÃO-BLOQUEANTE: não roda em push nem em PR, nunca gateia merge nem
+# release — é disparado manualmente quando alguém quer a prova nativa (antes de um stable
+# multi-SO, por exemplo). AC-15 (.specs/2026-08-25-windows-linux-build-design.md) exige, além
+# disso, a validação manual do NSIS cross-compilado numa máquina Windows REAL (instalar, abrir,
+# checar que o daemon/gateway sobem) como precondição do primeiro stable multi-SO — este workflow
+# prova o shell e os sidecars num Windows hospedado, mas não instala o `-setup.exe` produzido pelo
+# cross-build; as duas verificações são complementares, não substitutas uma da outra.
+name: windows-native-tests
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  native:
+    runs-on: windows-latest
+    defaults:
+      run:
+        # O shell default do Windows é pwsh; todo passo abaixo é bash (git-bash no Windows) — a
+        # mesma pegadinha que release-beta.yml/release-stable.yml documentavam antes da migração
+        # para cross-compile (ver o comentário em `defaults.run` dos dois).
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: packages/api/go/go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: deps
+        run: bun install --frozen-lockfile
+
+      # O gateway Go embute public/docs/openapi.json (//go:embed) e o arquivo é GERADO — mesma
+      # razão documentada em release-beta.yml/release-stable.yml/correctness.yml.
+      - name: openapi (insumo gerado do embed)
+        run: |
+          cp -n .env.example .env
+          bun emit-openapi
+
+      # SEM `--target`: builda para o próprio host Windows — é o que este workflow existe para
+      # provar (o prebuild nativo do libsql do host, não o cross via cargo-xwin).
+      - name: sidecars
+        run: cd packages/app/tauri && bun config/build-sidecars.ts
+
+      # O ÚNICO executor dos testes #[cfg(windows)] do shell desde a migração para cross-compile
+      # (reaper/lifecycle/watchdog — plano 2026-08-25): nenhum outro workflow roda cargo num
+      # Windows nativo. `--lib` compila só a crate, sem bundle; os binários dos sidecars já existem
+      # (passo acima), então o build.rs resolve externalBin/resources sem erro.
+      - name: cargo test do shell (executor dos testes cfg(windows))
+        run: cargo test --manifest-path packages/app/tauri/src-tauri/Cargo.toml --lib
+
+      # Prova que os sidecars SOBEM de verdade (health 200) no host Windows onde vão rodar — o
+      # gate que a entrada cross do release pula (`matrix.smoke: false`, sem executor no runner
+      # Linux). Mesmo script e contrato que release-beta.yml/release-stable.yml/correctness.yml
+      # usam (scripts/release/smoke-sidecars.ts).
+      - name: smoke dos sidecars
+        run: bun scripts/release/smoke-sidecars.ts

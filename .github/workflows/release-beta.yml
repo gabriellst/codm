@@ -8,11 +8,18 @@
 #
 # Desde 2026-08-25 o beta sai para TRÊS sistemas (docs/RELEASE.md, "Plataformas"): macOS arm64 e
 # Linux x64 no runner self-hosted do Mac mini do founder (Linux roda num container amd64 sob
-# Rosetta — infra/runners/linux-x64/), Windows x64 num runner hospedado do GitHub — um runner por
-# SO, sem cross-compile, porque o daemon compilado só carrega o prebuild nativo do libsql do
-# próprio host (build-sidecars.ts, "CROSS-TRIPLE GAP"). Um build por SO alimenta UM latest.json com
-# as três plataformas; se um SO falhar, NADA é publicado — um manifest parcial deixaria uma
-# plataforma presa numa versão enquanto o release avança.
+# Rosetta — infra/runners/linux-x64/). Desde 2026-08-26 (diretriz do founder, verbatim: "não
+# podemos contar com o billing do GitHub, temos que usar o mac mini" — addendum 2026-08-26 em
+# .specs/2026-08-25-windows-linux-build-design.md) o Windows x64 TAMBÉM saiu do runner hospedado:
+# passou a ser CROSS-COMPILADO no MESMO runner self-hosted Linux que já builda `linux-x86_64`, via
+# a rota que o próprio Tauri v2 documenta para builds Windows-a-partir-de-Linux (`cargo-xwin`,
+# EXPERIMENTAL por documentação do Tauri — aceita pelo founder nesta fase). `windows-latest` não
+# desapareceu: virou `windows-native-tests.yml` (workflow_dispatch-only, não-bloqueante — valida
+# nativamente o que o cross-build não pode provar sozinho: o instalador executando de verdade, os
+# testes `#[cfg(windows)]` do shell). Um build por SO alimenta UM latest.json com as três
+# plataformas; se um SO falhar, NADA é publicado — um manifest parcial deixaria uma plataforma
+# presa numa versão enquanto o release avança. Ver o comentário na entrada `windows-x86_64` da
+# matrix, abaixo, para o custo de wall-clock de pôr três jobs no mesmo runner Linux.
 name: release-beta
 
 on:
@@ -21,10 +28,13 @@ on:
     # Só o que ENTRA no app dispara um beta. Antes era todo push na main, e num único dia isso
     # gerou 36 builds — a maioria por mudança em docs, spec ou backend que o bundle nem carrega.
     # Mesmo filtro de caminho que o deploy-landing já usa (e por isso rodou 5 vezes no mesmo dia).
-    # Desde 2026-08-25 só a entrada Windows do `build` consome minutos hospedados (2×) — Linux
-    # virou self-hosted, e as jobs UTILITY (`prepare`/`publish`) migraram para o MESMO runner
-    # self-hosted do Mac mini (auditoria coordenada com o founder, ver comentário em `prepare`
-    # abaixo). Windows fica sozinho como a única exposição a falha de cobrança hospedada.
+    # Desde 2026-08-25 Linux virou self-hosted, e as jobs UTILITY (`prepare`/`publish`) migraram
+    # para o MESMO runner self-hosted do Mac mini (auditoria coordenada com o founder, ver
+    # comentário em `prepare` abaixo). Desde 2026-08-26 o Windows TAMBÉM saiu do runner hospedado
+    # (cross-compilado no mesmo runner Linux self-hosted — ver o topo do arquivo e a entrada
+    # `windows-x86_64` da matrix) — este workflow não consome mais NENHUM minuto hospedado do
+    # GitHub. A única exposição a billing hospedado que resta é `windows-native-tests.yml`
+    # (workflow_dispatch-only, não-bloqueante, sem `paths` — só roda quando alguém o dispara).
     paths:
       - 'packages/app/**'
       - 'packages/api/**'
@@ -54,11 +64,14 @@ jobs:
   prepare:
     # Desde 2026-08-25 (auditoria coordenada com o founder) esta job UTILITY sai do runner
     # hospedado do GitHub para o self-hosted do Mac mini — o MESMO runner Linux que a entrada
-    # linux-x86_64 do `build` já usa (infra/runners/linux-x64/). Custo zero de cota; NÃO é
-    # resiliência — se faltar cota, o beta continua morrendo na entrada Windows do `build` (2×,
-    # ver comentário no `on.push.paths` acima), e como `publish` exige os três builds via `needs`,
-    # uma falha ali ainda derruba a release inteira (D4: sem manifest parcial). Esta job só usa
-    # git/bash/jq (já na imagem) + `bun` (trazido pela `uses:` abaixo) — nada a provisionar.
+    # linux-x86_64 do `build` já usa (infra/runners/linux-x64/). Desde 2026-08-26 o Windows
+    # também deixou de ser hospedado (cross-compilado no mesmo runner Linux — ver o topo do
+    # arquivo), então este beta inteiro não depende mais de cota hospedada do GitHub: só
+    # `windows-native-tests.yml` (dispatch-only, não-bloqueante) ainda a consome, e só quando
+    # alguém o dispara manualmente. `publish` continua exigindo os três builds via `needs`, então
+    # uma falha em qualquer um ainda derruba a release inteira (D4: sem manifest parcial) — o que
+    # mudou foi a exposição a billing, não essa garantia. Esta job só usa git/bash/jq (já na
+    # imagem) + `bun` (trazido pela `uses:` abaixo) — nada a provisionar.
     runs-on: [self-hosted, Linux, X64]
     outputs:
       version: ${{ steps.v.outputs.version }}
@@ -103,8 +116,9 @@ jobs:
     # de busca do keychain de login (corrida medida). O group é a MESMA string fixa
     # ('release-signing-macos') nos dois arquivos só para esse entry, então um build beta e um
     # stable que colidam fazem fila (`cancel-in-progress: false` — nenhum é descartado) em vez de
-    # correr. Linux (self-hosted) e Windows (hospedado) não têm esse risco — cada run recebe um
-    # group ÚNICO (workflow+run_id+key), que nunca colide com outro run e por isso nunca espera.
+    # correr. Linux e Windows (cross, desde 2026-08-26 — ambos no MESMO runner self-hosted Linux,
+    # mas SEM keychain nenhum envolvido) não têm esse risco — cada run recebe um group ÚNICO
+    # (workflow+run_id+key), que nunca colide com outro run e por isso nunca espera.
     concurrency:
       group: ${{ matrix.key == 'darwin-aarch64' && 'release-signing-macos' || format('nosig-{0}-{1}-{2}', github.workflow, github.run_id, matrix.key) }}
       cancel-in-progress: false
@@ -142,12 +156,22 @@ jobs:
           #
           # `hosted` é o campo DECLARADO que os passos de provisionamento abaixo leem (non-negotiable
           # 5 do CLAUDE.md: nunca inferir de `runner.os`/label se um runner é descartável ou
-          # persistente). macOS e Linux são self-hosted no Mac mini do founder (persistentes,
-          # `hosted: false`); Windows é hospedado pelo GitHub (descartável, `hosted: true`).
+          # persistente). Desde 2026-08-26 as TRÊS entradas são self-hosted (`hosted: false`) — ver
+          # a entrada `windows-x86_64` abaixo para a mudança.
+          #
+          # `sidecarTarget`/`tauriRunner`/`crossTarget`/`smoke` são os OUTROS campos DECLARADOS que
+          # os passos `sidecars`/`tauri build`/`smoke dos sidecars` abaixo consomem — vazios/`true`
+          # nas duas entradas nativas (`build-sidecars.ts` resolve o triple do próprio host,
+          # `tauri build` sem `--runner`/`--target` builda pro host, o smoke sobe os binários e
+          # testa o health de verdade), preenchidos só na entrada cross (ver `windows-x86_64`).
           - key: darwin-aarch64
             runner: '["self-hosted", "macOS", "ARM64"]'
             bundles: app,dmg
             hosted: false
+            sidecarTarget: ''
+            tauriRunner: ''
+            crossTarget: ''
+            smoke: true
             # `nice`: esta máquina também roda o daemon de produção do founder (agentes atendendo
             # WhatsApp). Um build de release competindo por CPU já causou contenção aqui; a
             # prioridade baixa faz o build ceder ao trabalho real em vez do contrário.
@@ -161,20 +185,57 @@ jobs:
             runner: '["self-hosted", "Linux", "X64"]'
             bundles: appimage,deb
             hosted: false
+            sidecarTarget: ''
+            tauriRunner: ''
+            crossTarget: ''
+            smoke: true
             nice: ''
-          # Windows x64 — hospedado, multiplicador 2×. Só NSIS (sem MSI): é o que o updater instala
-          # em silêncio. Sem assinatura Authenticode nesta fase (SmartScreen avisa — docs/RELEASE.md).
+          # Windows x64 — desde 2026-08-26 CROSS-COMPILADO no MESMO runner self-hosted Linux que a
+          # entrada `linux-x86_64` acima usa (diretriz do founder, verbatim: "não podemos contar
+          # com o billing do GitHub, temos que usar o mac mini" — addendum 2026-08-26 em
+          # .specs/2026-08-25-windows-linux-build-design.md). A rota é a que o próprio Tauri v2
+          # documenta para builds Windows-a-partir-de-Linux — `cargo-xwin` (a imagem já traz o
+          # target `x86_64-pc-windows-msvc` e o `cargo-xwin` instalados, ver
+          # infra/runners/linux-x64/Dockerfile) — e é EXPERIMENTAL por documentação própria do
+          # Tauri; aceita pelo founder nesta fase. NSIS cross-compila por essa rota, MSI/WiX não —
+          # por isso o Windows já só empacotava NSIS (sem mudança aqui).
+          #
+          # `sidecarTarget: win32-x64` é o contrato CONGELADO com `build-sidecars.ts` (lane irmã):
+          # o passo `sidecars` abaixo invoca `bun config/build-sidecars.ts --target win32-x64`, que
+          # produz os binários `-x86_64-pc-windows-msvc.exe` + `daemon-runtime/` com o prebuild
+          # WINDOWS do libsql — cross, nunca o do host Linux. `tauriRunner: cargo-xwin` +
+          # `crossTarget: x86_64-pc-windows-msvc` alimentam `--runner`/`--target` no passo `tauri
+          # build`. `smoke: false` porque o binário resultante é um PE Windows: o runner Linux não
+          # consegue EXECUTAR nem o daemon nem o gateway para provar o health — só o
+          # `windows-native-tests.yml` (workflow_dispatch, windows-latest) prova isso de verdade, e
+          # a AC-15 exige validação manual do NSIS numa máquina Windows real como precondição do
+          # primeiro stable multi-SO.
+          #
+          # Custo de wall-clock, com honestidade: `prepare`, a entrada `linux-x86_64`, esta entrada
+          # `windows-x86_64` e `publish` disputam o MESMO runner `[self-hosted, Linux, X64]` (um
+          # único runner registrado com essas labels) — por isso rodam em SÉRIE entre si, mesmo com
+          # `fail-fast: false` (só o build macOS corre em paralelo, noutro runner). O tunable é um
+          # SEGUNDO container/runner Linux registrado com uma label distinta, para tirar esta
+          # entrada da fila da `linux-x86_64` — não implementado nesta fase.
           - key: windows-x86_64
-            runner: '"windows-latest"'
+            runner: '["self-hosted", "Linux", "X64"]'
             bundles: nsis
-            hosted: true
+            hosted: false
+            sidecarTarget: win32-x64
+            tauriRunner: cargo-xwin
+            crossTarget: x86_64-pc-windows-msvc
+            smoke: false
             nice: ''
     runs-on: ${{ fromJSON(matrix.runner) }}
     defaults:
       run:
-        # O shell default do Windows é pwsh; TODO passo abaixo é bash (git-bash no Windows). Um
-        # passo escrito em bash e executado em pwsh falha em `||`/`test`/heredoc — em silêncio às
-        # vezes, que é o pior jeito.
+        # macOS e Linux (self-hosted) já são bash por padrão — este `defaults` é redundante para os
+        # dois, mas explícito por segurança. Desde 2026-08-26 nenhuma entrada deste workflow roda
+        # num Windows de verdade (a `windows-x86_64` cross-compila num runner Linux), então a
+        # pegadinha histórica do shell default do Windows ser pwsh não se aplica mais AQUI — ela
+        # segue valendo para `windows-native-tests.yml` (windows-latest), que declara o mesmo
+        # `shell: bash` pela mesma razão original: um passo escrito em bash e executado em pwsh
+        # falha em `||`/`test`/heredoc, às vezes em silêncio.
         shell: bash
     steps:
       - uses: actions/checkout@v4
@@ -244,8 +305,12 @@ jobs:
           cp -n .env.example .env
           bun emit-openapi
 
+      # `matrix.sidecarTarget` é o contrato CONGELADO com `build-sidecars.ts` (lane irmã): vazio
+      # nas entradas nativas (o script resolve o triple do próprio host, como sempre fez), `--target
+      # win32-x64` só na entrada `windows-x86_64` — cross para o triple `x86_64-pc-windows-msvc`,
+      # com o prebuild WINDOWS do libsql, nunca o do host Linux que está compilando.
       - name: sidecars
-        run: cd packages/app/tauri && bun config/build-sidecars.ts
+        run: cd packages/app/tauri && bun config/build-sidecars.ts${{ matrix.sidecarTarget && format(' --target {0}', matrix.sidecarTarget) || '' }}
 
       # O gate que o build sozinho nunca dá (build-sidecars.ts: "compila limpo e morre no primeiro
       # connect"). Sobe os dois binários recém-compilados como o shell sobe — cwd daemon-runtime,
@@ -254,18 +319,18 @@ jobs:
       # não na máquina do usuário. Contrato do script (A-smoke-sidecars): invocado da raiz, sem
       # args; resolve sozinho data dir temporário, CODM_MIGRATIONS_DIR e portas; CODM_APP_VERSION
       # é env opcional.
+      #
+      # Pulado quando `matrix.smoke` é `false` — só a entrada `windows-x86_64` cross-compilada: o
+      # binário resultante é um PE Windows, e este runner é Linux — não há como EXECUTAR o daemon
+      # nem o gateway aqui para provar o health. `windows-native-tests.yml` (workflow_dispatch,
+      # windows-latest) faz esse smoke de verdade, nativamente; AC-15 (.specs/2026-08-25-
+      # windows-linux-build-design.md) exige validação manual do NSIS cross-compilado numa máquina
+      # Windows real antes do primeiro stable multi-SO.
       - name: smoke dos sidecars
+        if: matrix.smoke != false
         env:
           CODM_APP_VERSION: ${{ needs.prepare.outputs.version }}
         run: bun scripts/release/smoke-sidecars.ts
-
-      # O ÚNICO executor dos testes #[cfg(windows)] do shell (reaper/lifecycle — tasks do plano
-      # 2026-08-25): nenhum outro workflow roda cargo em Windows. `--lib` compila só a crate, sem
-      # bundle; os binários dos sidecars já existem (passo acima), então o build.rs resolve
-      # externalBin/resources sem erro. No macOS os mesmos testes já rodam via app-tauri:test.
-      - name: cargo test do shell (Windows — executor dos testes cfg(windows))
-        if: runner.os == 'Windows'
-        run: cargo test --manifest-path packages/app/tauri/src-tauri/Cargo.toml --lib
 
       # O keychain de login do mini fica TRAVADO quando a sessão não está desbloqueada ("User
       # interaction is not allowed") e o codesign morre mesmo com o p12 correto. Guardado pela
@@ -370,6 +435,12 @@ jobs:
       # `--bundles` restringe o que este SO empacota (a conf gerada segue com `targets: 'all'`):
       # macOS app+dmg, Linux appimage+deb, Windows só nsis. Os artefatos de update (.sig) saem
       # junto do bundle que o updater consome em cada SO (app.tar.gz / AppImage / -setup.exe).
+      # Desde 2026-08-26 a entrada `windows-x86_64` também injeta `--runner cargo-xwin --target
+      # x86_64-pc-windows-msvc` (via os campos DECLARADOS `matrix.tauriRunner`/`matrix.crossTarget`
+      # — vazios nas outras duas, que buildam pro host normalmente): é a rota de cross-compile que
+      # o Tauri v2 documenta, e é o motivo de o bundle desta entrada nascer sob
+      # `target/x86_64-pc-windows-msvc/release/bundle/` em vez de `target/release/bundle/` — o
+      # `stage` abaixo já lê o caminho certo pelo mesmo campo declarado.
       - name: tauri build
         env:
           # VITE_CODM_CLOUD_URL chega pelo GITHUB_ENV do passo "cloud url do manifesto" acima —
@@ -399,7 +470,7 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: V4F6T68S5B
 
-        run: cd packages/app/tauri && ${{ matrix.nice }} bun x tauri build --bundles ${{ matrix.bundles }} --config "{\"version\":\"${{ needs.prepare.outputs.version }}\"}"
+        run: cd packages/app/tauri && ${{ matrix.nice }} bun x tauri build --bundles ${{ matrix.bundles }}${{ matrix.tauriRunner && format(' --runner {0}', matrix.tauriRunner) || '' }}${{ matrix.crossTarget && format(' --target {0}', matrix.crossTarget) || '' }} --config "{\"version\":\"${{ needs.prepare.outputs.version }}\"}"
 
       # A conf fica com signingIdentity '-' de propósito (rail DSK-10: build local não deve exigir
       # certificado); a identidade real vem do APPLE_SIGNING_IDENTITY acima, que a sobrepõe. Se essa
@@ -430,38 +501,44 @@ jobs:
       # cima) e do target padrão do crate nos runners hospedados — nunca de um caminho repetido:
       # quem decide onde o cargo escreve é aquela variável, e um caminho repetido aqui volta a
       # divergir dela no dia em que ela mudar (foi exatamente o que aconteceu ao movê-la, com o
-      # `tauri build` verde e o `stage` falhando logo depois).
+      # `tauri build` verde e o `stage` falhando logo depois). A entrada `windows-x86_64` (cross)
+      # soma o triple subdir de `matrix.crossTarget` por cima do `$CARGO_TARGET_DIR` — é dali que
+      # vem `target/x86_64-pc-windows-msvc/release/bundle/`, e é por isso que o `BUNDLE` abaixo
+      # monta esse pedaço a partir do MESMO campo declarado, nunca de um `if runner.os` separado.
       # O nome que o Tauri estampou em cada instalador (`CoDM_<versão>..._<arch>.<ext>`, de
       # productName + version da conf) é o nome que o browser deve SALVAR — vai no
       # Content-Disposition do alias, lá no `publish`. Lido do artefato, NUNCA remontado por uma
       # segunda fórmula (uma fórmula paralela diverge na primeira mudança de nome do bundler).
       #
-      # Cada OS escreve o SEU PRÓPRIO `NAMES-<matrix.key>.env` — nunca um nome compartilhado: os
-      # três artifacts se fundem num único `dist-release/` no `publish` (`merge-multiple: true`),
-      # e um nome de arquivo repetido entre eles perderia dois dos três na sobrescrita silenciosa.
+      # Cada entrada escreve o SEU PRÓPRIO `NAMES-<matrix.key>.env` — nunca um nome compartilhado:
+      # os três artifacts se fundem num único `dist-release/` no `publish` (`merge-multiple:
+      # true`), e um nome de arquivo repetido entre eles perderia dois dos três na sobrescrita
+      # silenciosa. O `case` abaixo chaveia por `matrix.key`, NÃO por `$RUNNER_OS` — desde
+      # 2026-08-26 as entradas `linux-x86_64` e `windows-x86_64` (cross) rodam as duas no MESMO
+      # runner Linux, então `$RUNNER_OS` sozinho não distingue mais uma da outra.
       - name: stage
         run: |
           set -euo pipefail
-          BUNDLE="${CARGO_TARGET_DIR:-packages/app/tauri/src-tauri/target}/release/bundle"
+          BUNDLE="${CARGO_TARGET_DIR:-packages/app/tauri/src-tauri/target}${{ matrix.crossTarget && format('/{0}', matrix.crossTarget) || '' }}/release/bundle"
           mkdir -p dist-release
           NAMES="dist-release/NAMES-${{ matrix.key }}.env"
-          case "$RUNNER_OS" in
-            macOS)
+          case "${{ matrix.key }}" in
+            darwin-aarch64)
               cp "$BUNDLE"/macos/*.app.tar.gz     dist-release/codm-aarch64.app.tar.gz
               cp "$BUNDLE"/macos/*.app.tar.gz.sig dist-release/codm-aarch64.app.tar.gz.sig
               cp "$BUNDLE"/dmg/*.dmg              dist-release/codm-aarch64.dmg
               echo "DMG_NAME=$(basename "$(ls "$BUNDLE"/dmg/*.dmg | head -1)")" >> "$NAMES" ;;
-            Linux)
+            linux-x86_64)
               cp "$BUNDLE"/appimage/*.AppImage     dist-release/codm-linux-x86_64.AppImage
               cp "$BUNDLE"/appimage/*.AppImage.sig dist-release/codm-linux-x86_64.AppImage.sig
               cp "$BUNDLE"/deb/*.deb               dist-release/codm-linux-x86_64.deb
               echo "APPIMAGE_NAME=$(basename "$(ls "$BUNDLE"/appimage/*.AppImage | head -1)")" >> "$NAMES"
               echo "DEB_NAME=$(basename "$(ls "$BUNDLE"/deb/*.deb | head -1)")" >> "$NAMES" ;;
-            Windows)
+            windows-x86_64)
               cp "$BUNDLE"/nsis/*-setup.exe     dist-release/codm-windows-x86_64-setup.exe
               cp "$BUNDLE"/nsis/*-setup.exe.sig dist-release/codm-windows-x86_64-setup.exe.sig
               echo "SETUP_EXE_NAME=$(basename "$(ls "$BUNDLE"/nsis/*-setup.exe | head -1)")" >> "$NAMES" ;;
-            *) echo "::error::SO desconhecido: $RUNNER_OS"; exit 1 ;;
+            *) echo "::error::matrix.key desconhecido: ${{ matrix.key }}"; exit 1 ;;
           esac
           ls -la dist-release
 
