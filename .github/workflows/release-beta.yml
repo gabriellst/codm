@@ -293,6 +293,19 @@ jobs:
         if: '!matrix.hosted'
         run: echo "CARGO_TARGET_DIR=$HOME/.cache/codm-cargo-target" >> "$GITHUB_ENV"
 
+      # `BUNDLE_DIR` deriva do MESMO literal que o `stage` computava inline antes — declarado UMA
+      # VEZ aqui, consumido por lookup em `stage` e em qualquer outro passo que precise do bundle,
+      # em vez de cada um recalcular a expressão por conta própria (rail non-negotiable #5:
+      # contrato declarado, sem desvio por convenção). Passo INCONDICIONAL (ao contrário do passo
+      # acima): `$CARGO_TARGET_DIR` só existe em `$GITHUB_ENV` nos runners self-hosted, então o
+      # fallback `${CARGO_TARGET_DIR:-...}` precisa rodar sempre — numa leg `matrix.hosted` (campo
+      # já declarado na matriz, mesmo que nenhuma entrada atual o use) ele resolve para o target
+      # padrão do crate; se este passo também fosse gated por `!matrix.hosted`, `stage` morreria
+      # com variável não-declarada sob `set -u` nessa leg — exatamente o desvio de edge-case que a
+      # regra 5 do CLAUDE.md proíbe.
+      - name: bundle dir (declarado uma vez)
+        run: echo "BUNDLE_DIR=${CARGO_TARGET_DIR:-packages/app/tauri/src-tauri/target}${{ matrix.crossTarget && format('/{0}', matrix.crossTarget) || '' }}/release/bundle" >> "$GITHUB_ENV"
+
       - name: deps
         run: bun install --frozen-lockfile
 
@@ -432,6 +445,18 @@ jobs:
           echo "VITE_CODM_CLOUD_URL=$CLOUD_URL" >> "$GITHUB_ENV"
           echo "cloud: $CLOUD_URL"
 
+      # O CARGO_TARGET_DIR vive num volume persistente do runner; os artefatos de bundle têm a
+      # versão no nome (`CoDM_<versão>..._<arch>.<ext>`) e ACUMULAM entre runs — os globs do
+      # `stage` (`*.deb`, `*-setup.exe`, `*.dmg`) exigem exatamente um build por pasta. Medido no
+      # run 32934975156: `cp: target 'dist-release/codm-linux-x86_64.deb' is not a directory`, com
+      # `CoDM_0.5.2-beta.64_amd64.deb` e `..._beta.65_...` ambos presentes em `deb/`. Uniforme para
+      # todas as entradas da matriz (macOS incluído — o `.dmg` também carrega a versão no nome) e
+      # para os dois tipos de runner: `rm -rf` de um bundle dir num runner hospedado/efêmero é
+      # inofensivo (o disco morre com o job de qualquer forma) — condicionar a limpeza a
+      # `matrix.hosted` seria o mesmo desvio de edge-case do passo `bundle dir` acima.
+      - name: limpa bundle de runs anteriores
+        run: rm -rf "$BUNDLE_DIR"
+
       # `--bundles` restringe o que este SO empacota (a conf gerada segue com `targets: 'all'`):
       # macOS app+dmg, Linux appimage+deb, Windows só nsis. Os artefatos de update (.sig) saem
       # junto do bundle que o updater consome em cada SO (app.tar.gz / AppImage / -setup.exe).
@@ -478,13 +503,15 @@ jobs:
       # máquina do usuário, quando o TCC prende a permissão de disco ao cdhash e os agentes perdem o
       # workspace no update seguinte (v0.2.0, 07/08/2026). Verificar na saída é a única defesa.
       #
-      # O caminho sai de $CARGO_TARGET_DIR como o `stage` abaixo: o target mora FORA do workspace
-      # desde que o CI virou self-hosted, e um gate apontando para o caminho antigo não acharia o
-      # bundle — falharia por motivo errado, ou pior, passaria por não encontrar nada para reprovar.
+      # O caminho sai de $BUNDLE_DIR, o MESMO declarado no passo "cargo target fora do workspace"
+      # acima e consumido pelo `stage` logo abaixo — nunca recomputado aqui: o target mora FORA do
+      # workspace desde que o CI virou self-hosted, e um gate apontando para o caminho antigo não
+      # acharia o bundle — falharia por motivo errado, ou pior, passaria por não encontrar nada para
+      # reprovar.
       - name: assinatura Apple presente no bundle
         if: runner.os == 'macOS'
         run: |
-          APP=$(ls -d "$CARGO_TARGET_DIR"/release/bundle/macos/*.app | head -1)
+          APP=$(ls -d "$BUNDLE_DIR"/macos/*.app | head -1)
           if ! codesign -dv --verbose=2 "$APP" 2>&1 | grep -q "^Authority=Developer ID Application"; then
             echo "::error::$APP saiu SEM Developer ID (provavelmente ad-hoc). Confira os secrets APPLE_*."
             codesign -dv --verbose=2 "$APP" 2>&1 | head -20
@@ -497,14 +524,12 @@ jobs:
       # porque `x86_64` sozinho não diz qual; o macOS mantém `codm-aarch64.*` — URL que a landing e
       # todo app instalado já conhecem.
       #
-      # Os caminhos derivam de $CARGO_TARGET_DIR quando ele existe (self-hosted, definido lá em
-      # cima) e do target padrão do crate nos runners hospedados — nunca de um caminho repetido:
-      # quem decide onde o cargo escreve é aquela variável, e um caminho repetido aqui volta a
-      # divergir dela no dia em que ela mudar (foi exatamente o que aconteceu ao movê-la, com o
-      # `tauri build` verde e o `stage` falhando logo depois). A entrada `windows-x86_64` (cross)
-      # soma o triple subdir de `matrix.crossTarget` por cima do `$CARGO_TARGET_DIR` — é dali que
-      # vem `target/x86_64-pc-windows-msvc/release/bundle/`, e é por isso que o `BUNDLE` abaixo
-      # monta esse pedaço a partir do MESMO campo declarado, nunca de um `if runner.os` separado.
+      # $BUNDLE_DIR vem do `$GITHUB_ENV` escrito lá em cima ("cargo target fora do workspace") —
+      # declarado UMA VEZ com o mesmo campo `matrix.crossTarget` que `tauri build` usa para decidir
+      # `target/x86_64-pc-windows-msvc/release/bundle/` (windows-x86_64, cross) vs
+      # `target/release/bundle/` (as outras duas). O `stage` só faz lookup da env var — nunca
+      # recomputa a expressão (foi exatamente essa duplicação que divergiu ao mover o target para
+      # fora do workspace, com o `tauri build` verde e o `stage` falhando logo depois).
       # O nome que o Tauri estampou em cada instalador (`CoDM_<versão>..._<arch>.<ext>`, de
       # productName + version da conf) é o nome que o browser deve SALVAR — vai no
       # Content-Disposition do alias, lá no `publish`. Lido do artefato, NUNCA remontado por uma
@@ -519,7 +544,7 @@ jobs:
       - name: stage
         run: |
           set -euo pipefail
-          BUNDLE="${CARGO_TARGET_DIR:-packages/app/tauri/src-tauri/target}${{ matrix.crossTarget && format('/{0}', matrix.crossTarget) || '' }}/release/bundle"
+          BUNDLE="$BUNDLE_DIR"
           mkdir -p dist-release
           NAMES="dist-release/NAMES-${{ matrix.key }}.env"
           case "${{ matrix.key }}" in

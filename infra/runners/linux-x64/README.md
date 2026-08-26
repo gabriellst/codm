@@ -121,6 +121,13 @@ sidecars são autocontidos; as deps que têm — glibc base — já estão na bl
 - **Sintoma sem o fix:** o bundle falha ao rodar `ldd` sobre `codm-daemon` ou `codm-gateway`, antes
   de chegar perto do problema (A) acima.
 
+**Nota relacionada — cache do plugin NSIS.** Desde 2026-08-26 o Dockerfile também pré-baixa
+`nsis_tauri_utils.dll` para `~/.cache/tauri/NSIS/Plugins/x86-unicode/additional/`, pela MESMA razão
+do cache do `linuxdeploy` em (A): é o único download que o bundler correspondente (agora o NSIS, não
+o AppImage) faz em tempo de build, e um cache frio nesse único arquivo já derrubou uma execução (run
+32934975156) por um flake de DNS do Docker Desktop. Ver "Papel de cross-compile Windows" abaixo para
+o contexto completo do cross Windows.
+
 ## Gerar um token de registro
 
 Tokens de registro expiram em ~1h e exigem admin do repo:

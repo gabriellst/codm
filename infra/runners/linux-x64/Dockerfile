@@ -205,6 +205,32 @@ RUN mkdir -p /home/runner/.cache/tauri \
     && chmod +x /home/runner/.cache/tauri/*.AppImage /home/runner/.cache/tauri/AppRun-x86_64 /home/runner/.cache/tauri/*.sh \
     && chown -R runner:runner /home/runner/.cache/tauri
 
+# Plugin `nsis_tauri_utils.dll`, pré-baixado — medido no run 32934975156 (2026-08-26, beta): a
+# perna `windows-x86_64` morreu em `tauri build` com `failed to bundle project: io: failed to
+# lookup address information: Name or service not known`. É o ÚNICO download que o bundler NSIS
+# faz em TEMPO DE BUILD quando o cache está frio — o `makensis` em si vem do apt (deps de sistema
+# acima), sem baixar nsis-3.zip nenhum. Um warm-run manual neste container comprovou o conjunto
+# completo: o bundler baixa
+# `https://github.com/tauri-apps/nsis-tauri-utils/releases/download/nsis_tauri_utils-v0.5.3/nsis_tauri_utils.dll`
+# para `/home/runner/.cache/tauri/NSIS/Plugins/x86-unicode/additional/nsis_tauri_utils.dll`, valida
+# o hash e empacota com sucesso. O DNS deste container é normalmente saudável — a falha do run
+# 32934975156 foi um flake transitório de DNS do Docker Desktop, não um problema estrutural — mas
+# uma dependência de rede em tempo de build é a mesma nondeterminism que já eliminamos para o
+# linuxdeploy logo acima; este bake fecha a última pendência. SEM byte-patching aqui, diferente do
+# bloco linuxdeploy: este `.dll` é um PE do Windows que o `makensis` carrega como DADO, nunca
+# executado dentro do container — não há magic de AppImage/Rosetta para corrigir.
+#
+# ⚠️ DRIFT CAVEAT no mesmo espírito do bloco linuxdeploy: a versão `v0.5.3` é a que o
+# `@tauri-apps/cli` atual do repo pede. Se o CLI subir de versão e o plugin NSIS bumpar junto, o
+# bundler simplesmente baixa a versão nova em tempo de build (cache quente não é lock — só pula o
+# download quando o NOME do arquivo já existe ali) — não quebra, só volta a depender de rede uma
+# vez. Atualizar a URL/versão aqui quando o Tauri do repo subir de versão, para manter o bake
+# completo.
+RUN mkdir -p /home/runner/.cache/tauri/NSIS/Plugins/x86-unicode/additional \
+    && curl -fsSL -o /home/runner/.cache/tauri/NSIS/Plugins/x86-unicode/additional/nsis_tauri_utils.dll \
+         "https://github.com/tauri-apps/nsis-tauri-utils/releases/download/nsis_tauri_utils-v0.5.3/nsis_tauri_utils.dll" \
+    && chown -R runner:runner /home/runner/.cache/tauri/NSIS
+
 COPY --chown=runner:runner entrypoint.sh /home/runner/entrypoint.sh
 RUN chmod +x /home/runner/entrypoint.sh
 
