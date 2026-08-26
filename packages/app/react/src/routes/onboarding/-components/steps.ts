@@ -110,7 +110,16 @@ export function canComplete<Id extends string>(steps: readonly { id: Id; kind: S
 /** A ordem "de conteúdo" que o `OnboardingStep` do servidor enxerga — sem as `SystemPrecondition`s,
  *  que o servidor nunca vê (spec Decision 8). É contra ESTA ordem que `currentStep` é posicionado. */
 const CONTENT_STEPS = [...INTRO_STEPS, ...SETUP_STEPS, 'FINAL'] as const
-type ContentStepId = (typeof CONTENT_STEPS)[number]
+export type ContentStepId = (typeof CONTENT_STEPS)[number]
+
+/** Um `StepId` é persistível como `currentStep` do servidor sse for um `ContentStepId` — uma
+ *  `SystemPrecondition` (ex.: `FULL_DISK_ACCESS`) nunca é, porque o servidor não a enxerga (spec
+ *  Decision 8, mesma razão de `CONTENT_STEPS` acima). `OnboardingFlow` usa isto para decidir, a cada
+ *  avanço de passo, se vale a pena mandar `PATCH { currentStep }` (2026-08-26 fix — o console nunca
+ *  chamava `SaveOnboardingStep`, então um reboot sempre reabria em `VALUE`). */
+export function isContentStep(id: StepId): id is ContentStepId {
+	return (CONTENT_STEPS as readonly string[]).includes(id)
+}
 
 /** O que o wizard precisa saber do servidor + do banco para decidir onde reabrir (spec Decision 12). */
 export interface OnboardingProgress {
@@ -133,16 +142,26 @@ export interface OnboardingProgress {
  *     concluir, é o currentStep" (Decision 12): antes de concluir `currentStep` ainda não é `FINAL`,
  *     então os passos de intro vencidos são exatamente os que o operador já passou.
  *   · setup (`CHANNEL`/`WORKSPACE`/`CONTACT`/`AGENTS`/`REVIEW`) — pela satisfação DERIVADA do banco
- *     (Decision 8/9), nunca pela posição: `channelDone`/`workspaceDone` mapeiam 1:1; `CONTACT`,
- *     `AGENTS` e `REVIEW` são os três passos do `/attach` que produzem uma thread (Decision 11), e
- *     por isso compartilham `threadDone` — nenhum dos três tem satisfação própria hoje.
+ *     (Decision 8/9) OU pela POSIÇÃO de `currentStep`, o que vier primeiro (2026-08-26 fix, rascunho/
+ *     commit atômico): `channelDone`/`workspaceDone` mapeiam 1:1 ao fato real; `CONTACT`, `AGENTS` e
+ *     `REVIEW` compartilham `threadDone` (Decision 11, os três produzem a MESMA thread). Mas desde o
+ *     commit atômico, WORKSPACE/CONTACT/AGENTS/REVIEW podem estar bem à frente do fato real —
+ *     `workspace.path`/`contactRef`/`providers` vivem só no RASCUNHO (`Onboarding.state`) até
+ *     `CompleteOnboarding`, então `workspaceDone`/`threadDone` ficam `false` o wizard INTEIRO até o
+ *     "Concluir" final, mesmo depois de o operador já ter passado esses passos. Sem o fallback de
+ *     posição, um reboot no meio (ex.: `currentStep=AGENTS`) reabriria sempre em `WORKSPACE` (o
+ *     primeiro cujo flag de banco é `false`) — exatamente o "reabre do zero" que este fix elimina.
+ *     O flag de banco continua tendo precedência semântica (um passo cujo fato JÁ é real nunca
+ *     precisa da posição para se provar vencido), a posição é só o COMPLEMENTO para o que ainda é
+ *     rascunho.
  *   · `FINAL` e `SystemPrecondition` — nunca "vencem" por aqui de propósito: `FINAL` é o destino de
  *     fallback quando tudo o mais já venceu, e uma `SystemPrecondition` só existe dentro de `steps`
  *     ENQUANTO pendente (Decision 4 — a composição já filtra por `pending`), então "vencer" para ela
  *     é sair da lista, não um estado que se observa de dentro dela. É o que faz "depois de concluir,
  *     os passos de conteúdo já estão vencidos, e o primeiro não vencido é a pendência" (Decision 12)
  *     cair para fora deste `switch` sem um branch dedicado: com `currentStep === 'FINAL'` todo passo
- *     de intro vence pela posição, cada setup vence pelo seu flag, e o que sobra é a precondição.
+ *     de intro vence pela posição, cada setup vence pelo seu flag (ou pela posição, ambos `true`
+ *     quando `currentStep` é o último), e o que sobra é a precondição.
  */
 // Referências nomeadas em vez de literais soltos na comparação (bp-14) — `SETUP_STEPS` é a mesma
 // fonte única de verdade que compõe o wizard, só que endereçada por nome no ponto de uso.
@@ -151,11 +170,14 @@ const [CHANNEL_STEP, WORKSPACE_STEP, CONTACT_STEP, AGENTS_STEP, REVIEW_STEP] = S
 export function firstUnvanquishedStep(steps: readonly StepId[], progress: OnboardingProgress): StepId {
 	const currentIndex = CONTENT_STEPS.indexOf(progress.currentStep)
 
+	// O fato de banco OU a posição já ter passado este passo — o que vier primeiro (ver docblock).
+	const setupVanquished = (id: ContentStepId, done: boolean): boolean => done || CONTENT_STEPS.indexOf(id) < currentIndex
+
 	const vanquished = (id: StepId): boolean => {
 		if ((INTRO_STEPS as readonly string[]).includes(id)) return CONTENT_STEPS.indexOf(id as ContentStepId) < currentIndex
-		if (id === CHANNEL_STEP) return progress.channelDone
-		if (id === WORKSPACE_STEP) return progress.workspaceDone
-		if (id === CONTACT_STEP || id === AGENTS_STEP || id === REVIEW_STEP) return progress.threadDone
+		if (id === CHANNEL_STEP) return setupVanquished(id, progress.channelDone)
+		if (id === WORKSPACE_STEP) return setupVanquished(id, progress.workspaceDone)
+		if (id === CONTACT_STEP || id === AGENTS_STEP || id === REVIEW_STEP) return setupVanquished(id, progress.threadDone)
 		return false
 	}
 

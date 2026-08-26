@@ -147,6 +147,19 @@ describe('firstUnvanquishedStep — AC-10 / Decision 12', () => {
 		expect(steps.indexOf(firstUnvanquishedStep(steps, progress))).not.toBe(0)
 	})
 
+	/**
+	 * 2026-08-26 fix (rascunho/commit atômico) — `WORKSPACE`/`CONTACT`/`AGENTS` podem estar bem à
+	 * frente do fato de banco: `workspace.path`/`contactRef`/`providers` vivem só no rascunho até
+	 * `CompleteOnboarding`, então `workspaceDone`/`threadDone` continuam `false` o wizard INTEIRO.
+	 * Sem o fallback de posição, um reboot com `currentStep=AGENTS` reabriria em `WORKSPACE` (o
+	 * primeiro cujo flag é `false`) — perdendo dois passos que o operador já tinha passado.
+	 */
+	it('com o rascunho à frente do fato de banco (currentStep=AGENTS, nada materializado ainda), reabre em AGENTS — nunca WORKSPACE/CONTACT', () => {
+		const steps = onboardingSteps([])
+		const progress = { currentStep: 'AGENTS' as const, completedAt: null, channelDone: true, workspaceDone: false, threadDone: false }
+		expect(firstUnvanquishedStep(steps, progress)).toBe('AGENTS')
+	})
+
 	it('com tudo vencido e nada pendente, cai no FINAL — o fallback quando não há mais o que reabrir', () => {
 		const steps = onboardingSteps([])
 		const progress = {
