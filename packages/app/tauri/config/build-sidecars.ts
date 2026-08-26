@@ -8,12 +8,14 @@
  * Tauri resolves external binaries by `<name>-<target-triple>`, so outputs land in
  * `src-tauri/binaries/` with the TARGET triple suffix.
  *
- * `bun config/build-sidecars.ts [--target <key>]` — `<key>` is a declared key of TARGETS (closed
- * set, rejected otherwise). No flag = build for the host, exactly as before this file learned to
- * cross-compile. A `--target` naming a DIFFERENT platform than the host cross-compiles: the bun
- * sidecar via `bun build --compile --target=<bunTarget>`, the Go sidecar via `GOOS`/`GOARCH`, and
- * the daemon's native-prebuild closure (below) via a throwaway `bun install --os --cpu` root — see
- * `materializeCrossPlatformClosure`.
+ * `bun config/build-sidecars.ts` — NO ARGUMENTS: every build targets the HOST, and the host's own
+ * row in TARGETS supplies the triple, the bun `--compile --target=`, and the Go `GOOS`/`GOARCH`.
+ * The script had a `--target <key>` cross mode between 2026-08-25 and 2026-08-26, when the Windows
+ * release leg was cross-compiled from a Linux runner (`cargo-xwin`) because hosted-runner billing
+ * was unavailable. The repo went public, hosted runners became free on all three OSes, every leg
+ * builds natively again, and the cross mode lost its only consumer — so it is gone rather than
+ * rotting unexercised. Unknown arguments are REJECTED (`main` below) instead of silently ignored:
+ * a stale `--target win32-x64` from an old doc or script must fail, not quietly build for the host.
  *
  * Shipping a SQLite engine inside a bun single-binary uses the same walk-up mechanism the D2 spike
  * proved (.specs/codedm/2026-07-23-fork-d2-spike.md), with a different package: `@libsql/client`
@@ -24,19 +26,18 @@
  * the shell spawns the sidecar inside that dir (`Sidecar.cwd` in src/sidecars/mod.rs). A build alone
  * never surfaces this: the binary compiles clean and dies on first connect.
  */
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { REPO } from '../../../../template.config'
 import { SIDECARS, type SidecarManifestEntry } from './sidecars'
 
 /**
  * Toolchain knowledge per declared target — platform data, not repo identity (correctly local).
- * ONE table for everything a target changes: the Tauri/Rust triple suffix, the TARGET's own
- * platform/arch (never read `process.platform`/`process.arch` for these once cross-compiling
- * exists — those two only ever name the HOST), the bun `--compile --target=` value, and the Go
- * `GOOS`/`GOARCH` pair. Total by construction (every declared key has every field) — adding a
- * target means adding one row here, never an `if` at a call site.
+ * ONE table for everything a target changes: the Tauri/Rust triple suffix, the target's own
+ * platform/arch, the bun `--compile --target=` value, and the Go `GOOS`/`GOARCH` pair. Every build
+ * targets the host, but the call sites still read the ROW rather than `process.platform`/
+ * `process.arch` directly: one lookup decides the triple, the `.exe` suffix and both toolchains, so
+ * a new host (linux-arm64, say) is one row here and never an `if` at a call site.
  */
 export interface TargetSpec {
 	/** Rust-style target triple — the `<name>-<triple>` suffix Tauri's `externalBin` expects. */
@@ -101,38 +102,20 @@ export function resolveHostKey(platform: string, arch: string): string {
 	return `${platform}-${arch}`
 }
 
-export interface CliArgs {
-	target?: TargetKey
-}
-
-/** Pure argv parser — closed-set validation happens HERE (not deferred to a later branch), so an
- *  unknown `--target` value fails with the same message whether it came from a human or CI. */
-export function parseCliArgs(argv: readonly string[]): CliArgs {
-	let target: TargetKey | undefined
-	for (let i = 0; i < argv.length; i += 2) {
-		const flag = argv[i]
-		const value = argv[i + 1]
-		if (flag === undefined) break
-		if (value === undefined || value.startsWith('--')) throw new Error(`flag with no value: ${flag}`)
-		switch (flag) {
-			case '--target':
-				if (!isTargetKey(value)) {
-					throw new Error(`unknown --target '${value}' — expected one of: ${Object.keys(TARGETS).join(', ')}`)
-				}
-				target = value
-				break
-			default:
-				throw new Error(`unknown flag: ${flag}`)
-		}
-	}
-	return { target }
-}
-
-/** No `--target` ⇒ the host, exactly like before this file learned to cross-compile — but the host
- *  itself must be a declared TARGETS row, or there is nothing to fall back to. */
+/**
+ * The build target IS the host — but the host must be a declared TARGETS row, or there is no
+ * triple, no bun target and no `GOOS` to build with. Fails loud naming the host instead of
+ * half-building with defaults.
+ *
+ * Also the argv guard: this script takes NO arguments. Anything passed is a caller still speaking
+ * the retired `--target` protocol (the cross mode that existed only while the Windows release leg
+ * was cross-compiled from Linux), and silently building for the host would hand it a binary for the
+ * wrong platform under the right name.
+ */
 export function resolveTargetKey(argv: readonly string[], hostKey: string): TargetKey {
-	const { target } = parseCliArgs(argv)
-	if (target) return target
+	if (argv.length > 0) {
+		throw new Error(`this script takes no arguments (got: ${argv.join(' ')}) — every build targets the host`)
+	}
 	if (!isTargetKey(hostKey)) {
 		throw new Error(`unsupported host ${hostKey} — add it to TARGETS`)
 	}
@@ -166,15 +149,17 @@ async function run(label: string, cmd: string[], cwd: string, env?: Record<strin
  * resolve from here (measured). `resolveFrom` (host path) is load-bearing too: the dep is declared
  * by the nested `core` package, so it resolves from `<workspace>/core` and NOWHERE above.
  *
- * `nativePrebuild` is the OTHER declared table this file's cross-target support needs: libsql's
- * native-prebuild optional-dep name per target, keyed the SAME as TARGETS (the `satisfies` below
- * makes a target added to TARGETS without a row here a tsc error — total by construction, same
- * discipline as TARGETS itself). Not derived from the triple string: Linux ships BOTH gnu/musl
- * prebuilds and this repo standardizes on gnu, matching TARGETS' own `...-unknown-linux-gnu` triple.
+ * `nativePrebuild` is the OTHER declared table: libsql's native-prebuild optional-dep name per
+ * target, keyed the SAME as TARGETS (the `satisfies` below makes a target added to TARGETS without
+ * a row here a tsc error — total by construction, same discipline as TARGETS itself). Not derived
+ * from the triple string: Linux ships BOTH gnu/musl prebuilds and this repo standardizes on gnu,
+ * matching TARGETS' own `...-unknown-linux-gnu` triple. It is read twice — by the staging walk's
+ * filter (below) and by the post-staging assertion in `buildSidecars`, which fails loud when the
+ * host's prebuild did not land (a daemon missing it compiles clean and dies on first connect).
  *
- * This same table now ALSO drives the staging walk's filter (`shouldStageOptionalDependency`,
- * below `resolveStagedRoots`): `bun install`'s os/cpu matching resolves every libc variant for a
- * given os+cpu (no libc axis in its optional-dep gate), so a linux-x64-gnu HOST resolves
+ * That same table drives the staging walk's filter (`shouldStageOptionalDependency`, below
+ * `resolveStagedRoots`): `bun install`'s os/cpu matching resolves every libc variant for a given
+ * os+cpu (no libc axis in its optional-dep gate), so a linux-x64-gnu HOST resolves
  * `@libsql/linux-x64-musl` too — the walk used to stage it right alongside gnu, and `ldd` on the
  * musl `.node` then killed linuxdeploy. The filter keys off THIS table so the fix stays declarative
  * (add a target here, the filter covers it) instead of a platform `if` at the staging call site.
@@ -201,7 +186,7 @@ export const DAEMON_RUNTIME = {
 
 /**
  * Build command per declared kind — the manifest names the kind, this maps it to a toolchain, for
- * the given TARGET (host or cross, uniformly — never an `if (target === 'win32-x64')` here).
+ * the given target row (uniformly — never an `if (target === 'win32-x64')` here).
  *
  * ⚠️ `bun-compile` takes NO `--external`, and that is a measured decision, not an omission. Marking
  * the libsql packages external makes bun leave their JS on disk; the compiled binary then resolves
@@ -248,9 +233,8 @@ export function isNativePrebuildFamily(optionalDepNames: readonly string[], nati
  *   This is the fix: measured on a linux-x64-gnu host, `bun install`'s os/cpu matching resolves
  *   BOTH `@libsql/linux-x64-gnu` AND `@libsql/linux-x64-musl` (bun's optional-dep gate has no libc
  *   axis), so the old walk staged the musl prebuild into a glibc bundle — `ldd` on the musl `.node`
- *   then dies inside linuxdeploy. Applies uniformly to the host path AND the cross path
- *   (`materializeCrossPlatformClosure`'s scratch install) because both funnel through this same
- *   walk — no separate cross-only special case.
+ *   then dies inside linuxdeploy. A HOST-path defect, and it stays fixed here regardless of which
+ *   platform the build is running on.
  */
 export function shouldStageOptionalDependency(
 	depName: string,
@@ -263,8 +247,7 @@ export function shouldStageOptionalDependency(
 }
 
 /**
- * Runtime closure of a declared package, resolved FROM a given root (host workspace or the cross-
- * target scratch dir below — one staging function, two roots, one filter). Walking
+ * Runtime closure of a declared package, resolved FROM the host workspace. Walking
  * `optionalDependencies` is the POINT, not a nicety: the native prebuild (`@libsql/darwin-arm64`, …)
  * is an optional dep of `libsql`, and walking it is what keeps this file from naming a triple at the
  * call site. Absent optionals are the OTHER platforms' prebuilds — skipped, not an error.
@@ -273,17 +256,15 @@ export function shouldStageOptionalDependency(
  * (defect B, see its own doc) BEFORE the resolve attempt — a family member that isn't this target's
  * declared prebuild is skipped outright, never even probed.
  *
- * CROSS-TRIPLE GAP — CLOSED for declared targets. It used to be: `bun install`'s ambient
- * node_modules only ever holds the HOST's optional prebuild, so walking it from the workspace for a
- * cross-target build would stage a binary that COMPILES and then dies at runtime with a missing
- * `@libsql/<target-triple>`. The fix (`materializeCrossPlatformClosure`, below `buildSidecars`):
- * for any target that ISN'T the host, seed a throwaway package.json — `DAEMON_RUNTIME.packages` at
- * the version `core/package.json` pins them to, never a re-typed literal — into a scratch dir, then
- * run `bun install --os=<platform> --cpu=<arch>` there (bun ≥1.3). Those two flags make bun fetch
- * the TARGET's optional prebuild instead of the host's; THIS function then walks the scratch dir
- * exactly like it walks the workspace for a host build. `DAEMON_RUNTIME.nativePrebuild` asserts the
- * right prebuild actually landed, per target, so a silent miss fails the build loud instead of
- * shipping a binary that dies on first connect.
+ * CROSS-TRIPLE GAP — why every release leg builds on its own OS. `bun install`'s ambient
+ * node_modules only ever holds the HOST's optional prebuild, so a closure walked here for a
+ * DIFFERENT platform would stage a daemon that compiles clean and then dies at runtime with a
+ * missing `@libsql/<target-triple>`. There was a cross path around this (a throwaway
+ * `bun install --os --cpu` scratch root) while the Windows release leg was cross-compiled from
+ * Linux; with hosted runners free on all three OSes, every leg builds natively and the workspace
+ * closure is the right one by construction. `DAEMON_RUNTIME.nativePrebuild` is still asserted after
+ * staging, so a silent miss fails the build loud instead of shipping a binary that dies on first
+ * connect.
  */
 function resolveStagedRoots(
 	packages: readonly string[],
@@ -319,53 +300,14 @@ function resolveStagedRoots(
 	return roots
 }
 
-/** Pure lookup + fail-loud: pulls the pinned version string for each `packages` entry out of an
- *  already-parsed package.json. Never a re-typed literal — `@libsql/client`'s range lives in
- *  exactly one place, `core/package.json`, and this is the only reader for cross-target staging. */
-export function pickDependencyVersions(
-	manifest: { dependencies?: Record<string, string> },
-	packages: readonly string[],
-	sourceLabel: string,
-): Record<string, string> {
-	const versions: Record<string, string> = {}
-	for (const pkg of packages) {
-		const version = manifest.dependencies?.[pkg]
-		if (version === undefined) {
-			throw new Error(`'${pkg}' is not a declared dependency in ${sourceLabel} — cannot pin a cross-target version`)
-		}
-		versions[pkg] = version
-	}
-	return versions
-}
-
-/**
- * Materializes, for a target that is NOT the host, a node_modules closure resolvable the same way
- * the host path resolves one — see the CROSS-TRIPLE GAP note on `resolveStagedRoots` above. Network
- * + minutes (bun fetches the target's prebuild from the registry), so this is exercised by the real
- * cross build (CI / the local proof), never by the unit-test lane.
- */
-async function materializeCrossPlatformClosure(target: TargetSpec, packages: readonly string[], coreDir: string): Promise<string> {
-	const corePkgJsonPath = join(coreDir, 'package.json')
-	const coreManifest = JSON.parse(readFileSync(corePkgJsonPath, 'utf-8')) as { dependencies?: Record<string, string> }
-	const versions = pickDependencyVersions(coreManifest, packages, corePkgJsonPath)
-
-	const scratchDir = mkdtempSync(join(tmpdir(), 'codm-sidecar-cross-'))
-	const manifest = { name: 'codm-sidecar-cross-scratch', private: true, dependencies: versions }
-	writeFileSync(join(scratchDir, 'package.json'), JSON.stringify(manifest, null, 2))
-	await run(`cross-install(${target.platform}-${target.arch})`, ['bun', 'install', `--os=${target.platform}`, `--cpu=${target.arch}`], scratchDir)
-	return scratchDir
-}
-
 export async function buildSidecars(targetKey: TargetKey): Promise<void> {
 	const target = TARGETS[targetKey]
-	const hostKey = resolveHostKey(process.platform, process.arch)
-	const isCrossTarget = targetKey !== hostKey
 
 	const pkgRoot = join(import.meta.dir, '..')
 	const repoRoot = join(pkgRoot, '..', '..', '..')
 	const outDir = join(pkgRoot, 'src-tauri', 'binaries')
 	mkdirSync(outDir, { recursive: true })
-	// The TARGET's own extension — never `process.platform`, which only ever names the HOST.
+	// The target ROW's own extension — one lookup decides it, like every other toolchain fact here.
 	const exe = target.platform === 'win32' ? '.exe' : ''
 
 	const outputs: string[] = []
@@ -405,11 +347,12 @@ export async function buildSidecars(targetKey: TargetKey): Promise<void> {
 	console.log('[sidecars] staged migrations → src-tauri/binaries/migrations/')
 
 	// SECOND: the daemon's native-prebuild closure (see DAEMON_RUNTIME). Resolved from the daemon
-	// sidecar's own workspace for a HOST build, or from a throwaway `bun install --os --cpu` root for
-	// a cross-target one (materializeCrossPlatformClosure — see the CROSS-TRIPLE GAP note above).
-	// Copied FLAT into `binaries/daemon-runtime/node_modules/<pkg>` so the binary's CWD walk-up finds
-	// the entry point AND every sibling it requires. `dereference` turns the .bun-store symlinks (or,
-	// for a scratch root, the bun install symlinks) into real files that survive bundling.
+	// sidecar's own workspace — the host's own node_modules, which is exactly the closure this host's
+	// binary needs (see the CROSS-TRIPLE GAP note above for why that sentence is the whole reason
+	// each release leg builds on its own OS). Copied FLAT into
+	// `binaries/daemon-runtime/node_modules/<pkg>` so the binary's CWD walk-up finds the entry point
+	// AND every sibling it requires. `dereference` turns the .bun-store symlinks into real files that
+	// survive bundling.
 	const daemon = SIDECARS.find(s => s.role === DAEMON_RUNTIME.role)
 	if (daemon === undefined) {
 		console.error(`[sidecars] DAEMON_RUNTIME names unknown sidecar role '${DAEMON_RUNTIME.role}'`)
@@ -420,29 +363,24 @@ export async function buildSidecars(targetKey: TargetKey): Promise<void> {
 	const runtimeDest = join(outDir, DAEMON_RUNTIME.subpath, 'node_modules')
 	rmSync(runtimeDest, { recursive: true, force: true })
 
-	const stagingRoot = isCrossTarget ? await materializeCrossPlatformClosure(target, DAEMON_RUNTIME.packages, coreDir) : coreDir
-	const roots = resolveStagedRoots(DAEMON_RUNTIME.packages, stagingRoot, targetKey)
-	try {
-		for (const [name, root] of roots) {
-			cpSync(root, join(runtimeDest, name), { recursive: true, dereference: true })
-			if (!existsSync(join(runtimeDest, name))) {
-				console.error(`[sidecars] failed to stage node module '${name}' into ${DAEMON_RUNTIME.subpath}`)
-				process.exit(1)
-			}
+	const roots = resolveStagedRoots(DAEMON_RUNTIME.packages, coreDir, targetKey)
+	for (const [name, root] of roots) {
+		cpSync(root, join(runtimeDest, name), { recursive: true, dereference: true })
+		if (!existsSync(join(runtimeDest, name))) {
+			console.error(`[sidecars] failed to stage node module '${name}' into ${DAEMON_RUNTIME.subpath}`)
+			process.exit(1)
 		}
-	} finally {
-		if (isCrossTarget) rmSync(stagingRoot, { recursive: true, force: true })
 	}
 	console.log(`[sidecars] staged ${roots.size} node modules → src-tauri/binaries/${DAEMON_RUNTIME.subpath}/node_modules/`)
 
-	// Windows (or any declared target's) staged prebuild sanity: a closure that copied fine can still
-	// be missing the ONE package that actually opens the database, if the target's optional-dep
-	// filter silently matched nothing (wrong --os/--cpu spelling, a libsql release that drops a
-	// platform). Fail loud, naming the gap, instead of shipping a sidecar that dies on first connect.
+	// Staged-prebuild sanity: a closure that copied fine can still be missing the ONE package that
+	// actually opens the database, if the optional-dep filter silently matched nothing (a libsql
+	// release that drops a platform, an install that never fetched it). Fail loud, naming the gap,
+	// instead of shipping a sidecar that dies on first connect.
 	const expectedNativePkg = DAEMON_RUNTIME.nativePrebuild[targetKey]
 	if (!existsSync(join(runtimeDest, expectedNativePkg))) {
 		console.error(
-			`[sidecars] cross-target staging gap: '${expectedNativePkg}' missing from ${DAEMON_RUNTIME.subpath}/node_modules — the ${targetKey} daemon would compile clean and die on first connect`,
+			`[sidecars] staging gap: '${expectedNativePkg}' missing from ${DAEMON_RUNTIME.subpath}/node_modules — the ${targetKey} daemon would compile clean and die on first connect`,
 		)
 		process.exit(1)
 	}
@@ -463,8 +401,7 @@ export async function buildSidecars(targetKey: TargetKey): Promise<void> {
 	// came up with no daemon and no message.
 	//
 	// Deleting a derived copy is safe: the next `tauri dev`/`tauri build` re-copies from `binaries/`,
-	// which is authoritative and was just rebuilt. Target-independent: this purges a LOCAL cargo
-	// cache dir, unrelated to which triple was just built.
+	// which is authoritative and was just rebuilt.
 	for (const profile of ['debug', 'release']) {
 		for (const subpath of ['migrations', DAEMON_RUNTIME.subpath]) {
 			const derived = join(pkgRoot, 'src-tauri', 'target', profile, subpath)
@@ -478,10 +415,10 @@ export async function buildSidecars(targetKey: TargetKey): Promise<void> {
 	console.log(`[sidecars] done → src-tauri/binaries/ (${target.triple})`)
 }
 
-// Run as a standalone script (`bun config/build-sidecars.ts [--target <key>]`) — the package
-// "sidecars" script and the nx `sidecars` target both invoke it this way (no flag, host behavior
-// unchanged). Importing the module (e.g. for SIDECARS/TARGETS types, or the pure parsers under
-// test) does NOT trigger a build.
+// Run as a standalone script (`bun config/build-sidecars.ts`, no arguments) — the package
+// "sidecars" script, the nx `sidecars` target and the release workflows all invoke it this way.
+// Importing the module (e.g. for SIDECARS/TARGETS types, or the pure helpers under test) does NOT
+// trigger a build.
 if (import.meta.main) {
 	try {
 		const hostKey = resolveHostKey(process.platform, process.arch)

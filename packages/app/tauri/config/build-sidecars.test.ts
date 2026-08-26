@@ -1,27 +1,19 @@
-// Pure-function rail for the sidecar cross-build support (CROSS-TRIPLE GAP, closed in
-// ./build-sidecars.ts). Covers ONLY the declared tables + argv/env assembly — never a full build
-// (network + minutes; the real proof runs in CI on the runner, and locally via
-// `bun config/build-sidecars.ts --target win32-x64`). Runs in the same lane as ./generate.test.ts
+// Pure-function rail for ./build-sidecars.ts. Covers ONLY the declared tables + command assembly —
+// never a full build (network + minutes; the real proof is the `sidecars` step of every release leg,
+// followed by the smoke). Runs in the same lane as ./generate.test.ts
 // (`bun test ./packages/app/tauri/config`).
 import { describe, expect, it } from 'bun:test'
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
-import { REPO } from '../../../../template.config'
 import {
 	buildCmd,
 	DAEMON_RUNTIME,
 	isNativePrebuildFamily,
 	isTargetKey,
-	parseCliArgs,
-	pickDependencyVersions,
 	resolveHostKey,
 	resolveTargetKey,
 	shouldStageOptionalDependency,
 	TARGETS,
 } from './build-sidecars'
 import { SIDECARS } from './sidecars'
-
-const ROOT = resolve(import.meta.dirname, '..', '..', '..', '..')
 
 describe('build-sidecars (packages/app/tauri/config)', () => {
 	it('BSC-01: TARGETS is total — every declared key carries every field, no empty toolchain values', () => {
@@ -45,7 +37,8 @@ describe('build-sidecars (packages/app/tauri/config)', () => {
 		for (const [key, pkg] of Object.entries(DAEMON_RUNTIME.nativePrebuild)) {
 			expect(pkg.startsWith('@libsql/'), key).toBe(true)
 		}
-		// The specific gap this whole file exists to close.
+		// `win32-x64` is a HOST row: the Windows release leg builds natively on windows-latest, and
+		// this is the prebuild its daemon has to stage or it dies on first connect.
 		expect(DAEMON_RUNTIME.nativePrebuild['win32-x64']).toBe('@libsql/win32-x64-msvc')
 	})
 
@@ -62,27 +55,19 @@ describe('build-sidecars (packages/app/tauri/config)', () => {
 		expect(resolveHostKey('freebsd', 'x64')).toBe('freebsd-x64')
 	})
 
-	it('BSC-05: parseCliArgs — no args, valid --target, and closed-set rejection', () => {
-		expect(parseCliArgs([])).toEqual({ target: undefined })
-		expect(parseCliArgs(['--target', 'win32-x64'])).toEqual({ target: 'win32-x64' })
-		expect(() => parseCliArgs(['--target', 'win32-arm64'])).toThrow(/unknown --target 'win32-arm64'/)
-		expect(() => parseCliArgs(['--target', 'win32-arm64'])).toThrow(/win32-x64/) // lists the valid keys
-		expect(() => parseCliArgs(['--target'])).toThrow(/flag with no value/)
-		expect(() => parseCliArgs(['--bogus', 'x'])).toThrow(/unknown flag: --bogus/)
-	})
-
-	it('BSC-06: resolveTargetKey — default is host, explicit --target wins, unsupported host fails loud', () => {
+	it('BSC-05: resolveTargetKey — the target IS the host, and an unsupported host fails loud', () => {
 		expect(resolveTargetKey([], 'darwin-arm64')).toBe('darwin-arm64')
-		expect(resolveTargetKey(['--target', 'win32-x64'], 'darwin-arm64')).toBe('win32-x64')
+		expect(resolveTargetKey([], 'win32-x64')).toBe('win32-x64')
 		expect(() => resolveTargetKey([], 'freebsd-x64')).toThrow(/unsupported host freebsd-x64/)
 	})
 
-	it('BSC-07: pickDependencyVersions pins from an already-parsed manifest, fails loud on a missing dep', () => {
-		const manifest = { dependencies: { '@libsql/client': '^0.17.4', other: '1.0.0' } }
-		expect(pickDependencyVersions(manifest, ['@libsql/client'], 'fixture')).toEqual({ '@libsql/client': '^0.17.4' })
-		expect(() => pickDependencyVersions(manifest, ['@libsql/missing'], 'fixture')).toThrow(
-			/'@libsql\/missing' is not a declared dependency in fixture/,
-		)
+	// The retired `--target` protocol (the cross mode that existed only while the Windows release leg
+	// was cross-compiled from Linux) must FAIL, not be ignored: a caller still passing it expects a
+	// binary for another platform, and silently handing it the host's would be the worst outcome —
+	// right filename, wrong machine code.
+	it('BSC-06: any argument is rejected — a stale --target never degrades into a host build', () => {
+		expect(() => resolveTargetKey(['--target', 'win32-x64'], 'darwin-arm64')).toThrow(/takes no arguments/)
+		expect(() => resolveTargetKey(['--bogus'], 'darwin-arm64')).toThrow(/takes no arguments/)
 	})
 
 	it('BSC-08: buildCmd assembles the right toolchain per sidecar kind + target — bun --target, go GOOS/GOARCH', () => {
@@ -101,8 +86,8 @@ describe('build-sidecars (packages/app/tauri/config)', () => {
 		expect(goCmd).toEqual(['go', 'build', '-o', '/out/gateway.exe', goSidecar.build.entry])
 		expect(goEnv).toEqual({ GOOS: 'windows', GOARCH: 'amd64' })
 
-		// Host-shaped target produces a command with NO surprises — same toolchain, just its own
-		// bunTarget/GOOS/GOARCH instead of windows'. No flag = host behavior, byte-identical shape.
+		// Another host row produces a command with NO surprises — same toolchain, just its own
+		// bunTarget/GOOS/GOARCH instead of windows'.
 		const mac = TARGETS['darwin-arm64']
 		const { cmd: hostBunCmd } = buildCmd(bunSidecar, '/out/daemon', mac)
 		expect(hostBunCmd).toEqual(['bun', 'build', '--compile', '--target=bun-darwin-arm64', bunSidecar.build.entry, '--outfile', '/out/daemon'])
@@ -113,18 +98,6 @@ describe('build-sidecars (packages/app/tauri/config)', () => {
 		for (const sidecar of SIDECARS) {
 			const { cmd } = buildCmd(sidecar, '/out/bin', win)
 			expect(cmd.length, sidecar.role).toBeGreaterThan(0)
-		}
-	})
-
-	it('BSC-10: core/package.json still declares every DAEMON_RUNTIME.packages entry — the cross-target pin source is live', () => {
-		// This is what materializeCrossPlatformClosure reads at runtime (via pickDependencyVersions)
-		// to seed the scratch install; a drift here would fail the REAL cross build, not this rail —
-		// so this rail exists to catch it earlier, without touching the network.
-		const coreDir = resolve(ROOT, REPO.workspaces.apiTs.pkgRoot, DAEMON_RUNTIME.resolveFrom)
-		const manifest = JSON.parse(readFileSync(resolve(coreDir, 'package.json'), 'utf8')) as { dependencies?: Record<string, string> }
-		const versions = pickDependencyVersions(manifest, DAEMON_RUNTIME.packages, 'core/package.json')
-		for (const pkg of DAEMON_RUNTIME.packages) {
-			expect(versions[pkg]?.length, pkg).toBeGreaterThan(0)
 		}
 	})
 
