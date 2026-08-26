@@ -17,6 +17,7 @@ import './polyfill'
 import { Config, acquireDataDirLock, armStdinShutdown, resolveDataDir, startParentWatchdog, startTelemetry } from '@codm/core-typescript'
 import { criteriaFromEnv } from '@shared/deployment'
 import { start } from '../composition/server'
+import { formatBootError } from './bootError'
 
 /**
  * THE SINGLE-INSTANCE LOCK — an explicit step, not an import side-effect.
@@ -92,6 +93,10 @@ async function main(): Promise<void> {
 }
 
 main().catch(error => {
-	console.error('❌ Failed to start api-ts:', error)
+	// See ./bootError — an EADDRINUSE (the shell's own pre-spawn port check lost a race, or the
+	// daemon was launched by hand onto a busy port) collapses to ONE actionable line instead of the
+	// raw Bun/Node stack trace, so the persisted stderr the boot-error splash renders reads as "a
+	// port is taken" and not "something is badly broken".
+	console.error(`❌ Failed to start api-ts: ${formatBootError(error, Config.env.API_PORT)}`)
 	process.exit(1)
 })
