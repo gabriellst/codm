@@ -330,7 +330,7 @@ jobs:
           # Ver docs/RELEASE.md, "A janela do DMG precisa do Finder".
           TAURI_BUNDLER_DMG_IGNORE_CI: ${{ runner.os == 'macOS' && 'true' || '' }}
 
-        run: cd packages/app/tauri && bun x tauri build --bundles ${{ matrix.bundles }}
+        run: cd packages/app/tauri && bun x tauri build --verbose --bundles ${{ matrix.bundles }}
 
       # A conf fica com signingIdentity '-' de propósito (rail DSK-10: build local não deve exigir
       # certificado); a identidade real vem do APPLE_SIGNING_IDENTITY acima, que a sobrepõe. Se essa
