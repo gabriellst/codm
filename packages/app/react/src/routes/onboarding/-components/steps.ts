@@ -14,9 +14,14 @@ export type StepKind = (typeof STEP_KINDS)[number]
 export const STEP_IMPACTS = ['BLOCKING', 'ADVISORY'] as const
 export type StepImpact = (typeof STEP_IMPACTS)[number]
 
-// `REQUIRED` e `ADVISORY` não têm NENHUM passo usando-os hoje — deliberado e a pedido do founder
+// `ADVISORY`-sem-`BLOCKING` não tem NENHUM passo usando-o hoje — deliberado e a pedido do founder
 // (spec Decision 3): o vocabulário é para ser documentado e usado, e um membro de union sem uso em
 // TypeScript não dispara lint. NÃO "limpe" isso.
+//
+// `REQUIRED` TINHA zero passos usando-o (a nota original desta seção) até 2026-08-26: o founder
+// reportou que "Próximo" avançava sem canal conectado, sem contato/provider escolhido e sem revisão
+// completa — a spec Decision 13 original ("nenhum passo bloqueia Concluir") foi REVOGADA para esses
+// cinco passos por decisão do founder nessa data. Ver `STEP_TAXONOMY` abaixo.
 
 const INTRO_STEPS = ['VALUE', 'HOW', 'CONTROL'] as const
 const SETUP_STEPS = ['CHANNEL', 'WORKSPACE', 'CONTACT', 'AGENTS', 'REVIEW'] as const
@@ -53,20 +58,29 @@ interface StepTaxonomy {
  * Cada passo declara `kind` e `impact` (spec AC-6). `Record<StepId, …>` — não `Partial` — para que
  * um `StepId` novo sem entrada pare de compilar, não vire um cartão em branco em runtime.
  *
- * Hoje: os três passos de intro são INFORMATIVE/ADVISORY (ver é cumprir; nada quebra por não ver).
- * Os cinco passos de setup e `FULL_DISK_ACCESS` são DEFERRABLE/BLOCKING (conclui sem, mas alguma
- * capacidade real não funciona enquanto isso). `FINAL` é INFORMATIVE/ADVISORY.
+ * Os três passos de intro e `FINAL` são INFORMATIVE/ADVISORY (ver é cumprir; nada quebra por não
+ * ver). `WORKSPACE` é DEFERRABLE/BLOCKING (o operador pode concluir sem workspace e adicionar um
+ * depois pelo dashboard — a única peça de setup que continua adiável).
+ *
+ * `CHANNEL`/`CONTACT`/`AGENTS`/`REVIEW`/`FULL_DISK_ACCESS` são REQUIRED/BLOCKING desde 2026-08-26
+ * (decisão do founder, REVOGANDO a Decision 13 original da spec só para estes cinco): sem canal
+ * pareado, sem contato, sem provider e sem a thread revisada+anexada, o produto não tem nada pra
+ * fazer — e sem Full Disk Access o host não lê os arquivos que o agente precisa. `canComplete`
+ * (abaixo) agora bloqueia "Concluir" de verdade nestes cinco; `WORKSPACE` continua fora dessa lista
+ * de propósito. O gate de "Próximo" (`CAN_CONTINUE` em `OnboardingFlow`) é uma camada SEPARADA que
+ * já cobria `WORKSPACE` mesmo DEFERRABLE — dentro do passo, avançar sem selecionar nada continua
+ * bloqueado; só "Concluir" sem workspace nenhum é permitido.
  */
 export const STEP_TAXONOMY: Record<StepId, StepTaxonomy> = {
 	VALUE: { kind: 'INFORMATIVE', impact: 'ADVISORY' },
 	HOW: { kind: 'INFORMATIVE', impact: 'ADVISORY' },
 	CONTROL: { kind: 'INFORMATIVE', impact: 'ADVISORY' },
-	CHANNEL: { kind: 'DEFERRABLE', impact: 'BLOCKING' },
+	CHANNEL: { kind: 'REQUIRED', impact: 'BLOCKING' },
 	WORKSPACE: { kind: 'DEFERRABLE', impact: 'BLOCKING' },
-	CONTACT: { kind: 'DEFERRABLE', impact: 'BLOCKING' },
-	AGENTS: { kind: 'DEFERRABLE', impact: 'BLOCKING' },
-	REVIEW: { kind: 'DEFERRABLE', impact: 'BLOCKING' },
-	FULL_DISK_ACCESS: { kind: 'DEFERRABLE', impact: 'BLOCKING' },
+	CONTACT: { kind: 'REQUIRED', impact: 'BLOCKING' },
+	AGENTS: { kind: 'REQUIRED', impact: 'BLOCKING' },
+	REVIEW: { kind: 'REQUIRED', impact: 'BLOCKING' },
+	FULL_DISK_ACCESS: { kind: 'REQUIRED', impact: 'BLOCKING' },
 	FINAL: { kind: 'INFORMATIVE', impact: 'ADVISORY' },
 }
 
@@ -80,12 +94,14 @@ export const INFORMATIVE_KIND: StepKind = STEP_KINDS[0]
 
 /**
  * Concluir é bloqueado APENAS por um passo REQUIRED insatisfeito, e por nada mais (spec Decision
- * 13). Genérica sobre `Id` (mesmo padrão de `SystemPreconditionList<Id extends string>`) porque o
- * ÚNICO jeito de provar o branch bloqueante hoje é injetar um passo REQUIRED que não existe em
- * produção — nenhum `StepId` real carrega `kind: 'REQUIRED'` ainda.
+ * 13 — parcialmente revogada 2026-08-26, ver `STEP_TAXONOMY` acima). Genérica sobre `Id` (mesmo
+ * padrão de `SystemPreconditionList<Id extends string>`) porque o chamador (`OnboardingFlow`) monta
+ * a lista `satisfied` a partir do MESMO mapa que gate o "Próximo" de cada passo — `canComplete` em si
+ * não sabe nada sobre canal/contato/provider, só compara `kind` contra a lista que recebe.
  *
- * Como nenhum passo é REQUIRED hoje, esta função sempre devolve `true` na prática — não porque a
- * regra foi relaxada aqui, mas como CONSEQUÊNCIA da tabela `STEP_TAXONOMY` acima.
+ * Cinco `StepId` reais carregam `kind: 'REQUIRED'` hoje (`CHANNEL`/`CONTACT`/`AGENTS`/`REVIEW`/
+ * `FULL_DISK_ACCESS`) — esta função agora bloqueia de verdade em produção quando um deles está
+ * insatisfeito, não só no teste com o `FAKE_REQUIRED` de mentira.
  */
 export function canComplete<Id extends string>(steps: readonly { id: Id; kind: StepKind }[], satisfied: readonly Id[]): boolean {
 	return steps.every(step => step.kind !== REQUIRED_KIND || satisfied.includes(step.id))

@@ -485,12 +485,24 @@ else afterward. `BLOCKING` means some real capability doesn't work while the ste
 `ADVISORY` means only the step itself is missing — nothing else breaks.
 
 A step's `kind` never determines its `impact`, and the wizard component never reads `impact` (nor
-does the dashboard panel read `kind`). Today every setup step and the `FULL_DISK_ACCESS`
-`SystemPrecondition` are `DEFERRABLE` + `BLOCKING`, and the three intro slides plus the final step
-are `INFORMATIVE` + `ADVISORY` — but `REQUIRED` and `ADVISORY`-without-`BLOCKING` combinations are
-first-class, deliberately unused-but-declared members of each union. `STEP_TAXONOMY` is a
-`Record<StepId, …>`, not a `Partial` — a new `StepId` without an entry fails `tsc`, not silently
-renders a blank card.
+does the dashboard panel read `kind`). The three intro slides and the final step are `INFORMATIVE` +
+`ADVISORY`. `WORKSPACE` is `DEFERRABLE` + `BLOCKING` (the operator can finish onboarding without a
+workspace and add one later from the dashboard). `CHANNEL`/`CONTACT`/`AGENTS`/`REVIEW`/
+`FULL_DISK_ACCESS` are `REQUIRED` + `BLOCKING` since 2026-08-26 (founder override, revoking the
+original decision that had all five as `DEFERRABLE`: the wizard let "Próximo"/"Concluir" advance with
+no channel paired, no contact/provider picked, and no reviewed+attached thread — a real defect, not a
+deliberately deferred step). `ADVISORY`-without-`BLOCKING` combinations remain first-class,
+deliberately unused-but-declared members of the union (the vocabulary exists to be documented even
+before every combination has a member). `STEP_TAXONOMY` is a `Record<StepId, …>`, not a `Partial` —
+a new `StepId` without an entry fails `tsc`, not silently renders a blank card.
+
+The wizard's own "Próximo" gate (`CAN_CONTINUE` in `OnboardingFlow`, one `Record<StepId, boolean>`
+per render derived from live store/query state — same dispatch-by-map canon as `AttachThreadWizard`'s
+own `CAN_CONTINUE`) is a **separate, finer-grained** mechanism from `kind`: it blocks advancing past
+**any** step with nothing chosen yet, `WORKSPACE` included, even though `WORKSPACE`'s `kind` doesn't
+block "Concluir". `kind: REQUIRED` only governs whether **finishing the wizard** is possible
+(`canComplete`); `CAN_CONTINUE` governs whether **leaving the current step** is possible. A step can
+be gated by one, the other, or both.
 
 ### Four sources of satisfaction — and the one that can never be persisted
 

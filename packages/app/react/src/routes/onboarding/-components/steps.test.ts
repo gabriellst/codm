@@ -46,13 +46,40 @@ describe('taxonomia — AC-6', () => {
 			expect(STEP_TAXONOMY[id]).toBeDefined()
 		}
 	})
+
+	/**
+	 * 2026-08-26 founder override — REVOGA a Decision 13 original só para estes cinco: "Próximo"
+	 * avançava sem canal conectado, sem contato/provider escolhido e sem revisão completa. `WORKSPACE`
+	 * fica de fora de propósito (continua DEFERRABLE — o operador pode concluir sem workspace e
+	 * adicionar um depois pelo dashboard).
+	 */
+	it('CHANNEL/CONTACT/AGENTS/REVIEW/FULL_DISK_ACCESS são REQUIRED desde 2026-08-26', () => {
+		expect(STEP_TAXONOMY.CHANNEL.kind).toBe('REQUIRED')
+		expect(STEP_TAXONOMY.CONTACT.kind).toBe('REQUIRED')
+		expect(STEP_TAXONOMY.AGENTS.kind).toBe('REQUIRED')
+		expect(STEP_TAXONOMY.REVIEW.kind).toBe('REQUIRED')
+		expect(STEP_TAXONOMY.FULL_DISK_ACCESS.kind).toBe('REQUIRED')
+	})
+
+	it('WORKSPACE continua DEFERRABLE — a única peça de setup que não bloqueia Concluir', () => {
+		expect(STEP_TAXONOMY.WORKSPACE.kind).toBe('DEFERRABLE')
+	})
+
+	it('os três slides de intro e FINAL continuam INFORMATIVE', () => {
+		expect(STEP_TAXONOMY.VALUE.kind).toBe('INFORMATIVE')
+		expect(STEP_TAXONOMY.HOW.kind).toBe('INFORMATIVE')
+		expect(STEP_TAXONOMY.CONTROL.kind).toBe('INFORMATIVE')
+		expect(STEP_TAXONOMY.FINAL.kind).toBe('INFORMATIVE')
+	})
 })
 
 /**
  * AC-7/AC-8 — `canComplete` só é bloqueada por um passo REQUIRED insatisfeito, e por nada mais
- * (spec Decision 13). Como nenhum StepId real é REQUIRED hoje, a única forma de exercitar o branch
- * bloqueante é um passo REQUIRED DE MENTIRA — daí a genericidade sobre `Id` (mesmo padrão de
- * `SystemPreconditionList<Id extends string>`).
+ * (spec Decision 13 — parcialmente revogada 2026-08-26). O primeiro par de casos usa um passo
+ * REQUIRED DE MENTIRA (a genericidade sobre `Id`, mesmo padrão de `SystemPreconditionList<Id extends
+ * string>`, existe por causa deles) para isolar a regra pura de qualquer `StepId` real; o describe
+ * "taxonomia — AC-6" acima já cobre QUAIS `StepId`s reais carregam `kind: 'REQUIRED'` hoje, e os
+ * casos logo abaixo ("AC-8 invertido" em diante) provam o comportamento com o `STEP_TAXONOMY` real.
  */
 describe('canComplete — AC-7/AC-8', () => {
 	it('AC-7: um passo REQUIRED de mentira, insatisfeito, bloqueia', () => {
@@ -65,9 +92,27 @@ describe('canComplete — AC-7/AC-8', () => {
 		expect(canComplete(steps, ['FAKE_REQUIRED'])).toBe(true)
 	})
 
-	it('AC-8: com todos os passos reais (todos DEFERRABLE/INFORMATIVE hoje) insatisfeitos, conclui', () => {
+	/**
+	 * AC-8 INVERTIDO em 2026-08-26 (founder override — ver o describe "taxonomia" acima): cinco passos
+	 * reais agora são REQUIRED, então "com todos os passos insatisfeitos, conclui" deixou de ser
+	 * verdade — é exatamente o comportamento anterior que permitia "Próximo"/"Concluir" avançarem sem
+	 * canal/contato/provider/revisão/FDA, o bug que esta mudança fecha.
+	 */
+	it('AC-8 invertido: com todos os passos reais insatisfeitos, NÃO conclui (os REQUIRED bloqueiam)', () => {
 		const steps = onboardingSteps(SYSTEM_PRECONDITION_IDS).map(id => ({ id, kind: STEP_TAXONOMY[id].kind }))
-		expect(canComplete(steps, [])).toBe(true)
+		expect(canComplete(steps, [])).toBe(false)
+	})
+
+	it('com só WORKSPACE insatisfeito (o único DEFERRABLE) e os cinco REQUIRED satisfeitos, conclui', () => {
+		const steps = onboardingSteps(SYSTEM_PRECONDITION_IDS).map(id => ({ id, kind: STEP_TAXONOMY[id].kind }))
+		const satisfied = ['CHANNEL', 'CONTACT', 'AGENTS', 'REVIEW', 'FULL_DISK_ACCESS'] as const
+		expect(canComplete(steps, satisfied)).toBe(true)
+	})
+
+	it('faltando UM REQUIRED (CONTACT) entre os outros quatro satisfeitos, ainda bloqueia', () => {
+		const steps = onboardingSteps(SYSTEM_PRECONDITION_IDS).map(id => ({ id, kind: STEP_TAXONOMY[id].kind }))
+		const satisfied = ['CHANNEL', 'AGENTS', 'REVIEW', 'FULL_DISK_ACCESS'] as const
+		expect(canComplete(steps, satisfied)).toBe(false)
 	})
 })
 
