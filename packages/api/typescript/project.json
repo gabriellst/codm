@@ -17,8 +17,8 @@
 			"options": {
 				"cwd": "packages/api/typescript",
 				"commands": [
-					"EMIT_OPENAPI=true START_SERVER=false bun run scripts/emit-openapi.ts",
-					"EMIT_OPENAPI=true START_SERVER=false CODM_PROFILE=cloud bun run scripts/emit-openapi.ts"
+					"bun run scripts/emit-openapi-run.ts",
+					"bun run scripts/emit-openapi-run.ts --cloud"
 				],
 				"parallel": false
 			}

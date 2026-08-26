@@ -288,6 +288,13 @@ jobs:
       # bundles acumulavam entre runs e quebravam os globs do `stage`.)
       - name: tauri build
         env:
+          # O linuxdeploy que o bundler do AppImage baixa é ELE MESMO um AppImage, e montar um
+          # AppImage exige FUSE — que a imagem do `ubuntu-latest` não traz. Sem esta linha ele morre
+          # sem stderr algum (o Tauri engole a saída do bundler) e o único sinal é
+          # `failed to bundle project: failed to run linuxdeploy` — medido no primeiro build
+          # hospedado, 2026-08-26. `EXTRACT_AND_RUN` manda extrair em vez de montar: nada de FUSE,
+          # nada de sudo. Inócua nas outras pernas — só o bundler do AppImage lê esta variável.
+          APPIMAGE_EXTRACT_AND_RUN: 1
           # VITE_CODM_CLOUD_URL chega pelo GITHUB_ENV do passo "cloud url do manifesto" acima —
           # lida do shell-env.json comitado, não de uma repo variable.
           VITE_POSTHOG_KEY: ${{ vars.VITE_POSTHOG_KEY }}
