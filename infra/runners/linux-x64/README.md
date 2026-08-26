@@ -66,12 +66,21 @@ docker run -d \
   --name codm-runner-linux-x64 \
   --platform linux/amd64 \
   --restart unless-stopped \
+  --sysctl net.ipv6.conf.lo.disable_ipv6=1 \
   -e RUNNER_TOKEN="$(gh api -X POST repos/gabriellst/codm/actions/runners/registration-token --jq .token)" \
   -v codm-runner-cargo-target:/home/runner/.cache/codm-cargo-target \
   -v codm-runner-cargo:/home/runner/.cargo \
   -v codm-runner-rustup:/home/runner/.rustup \
   codm-runner-linux-x64
 ```
+
+`--sysctl net.ipv6.conf.lo.disable_ipv6=1` é OBRIGATÓRIO e nasceu de um vermelho medido
+(beta 32924933642, 2026-08-26): dentro do netns default o glibc resolve `localhost` para `::1`
+primeiro, então um servidor que binda `"localhost"` escuta SÓ em `::1` — e o cliente do Bun disca
+`127.0.0.1` → `ConnectionRefused`. Foi exatamente assim que o prerender do TanStack Start morreu no
+`build-spa` (o servidor interno dele sobe em `localhost`). Sem `::1` no loopback, servidor e
+cliente caem ambos em `127.0.0.1` (probe: `bind localhost` + `fetch http://localhost` → 200,
+medido na imagem). Efeito colateral aceito: nenhum job neste runner pode depender de `::1`.
 
 `--restart unless-stopped` é o que mantém o runner no ar entre reboots da máquina, igual ao runner
 macOS. As labels registradas são `self-hosted,Linux,X64` (mesmas que
