@@ -1,0 +1,33 @@
+---
+import { getEntry } from 'astro:content'
+import BaseLayout from '~/layouts/BaseLayout.astro'
+import { LOCALES, type Locale } from '~/i18n'
+import LegalDoc from './_components/LegalDoc.astro'
+
+// Both locales always exist for a legal document — unlike a blog post, a privacy policy
+// that is missing in one language is a defect, not a normal "untranslated" state. So the
+// path list is the locale list, and `getEntry` below is asserted non-null on purpose:
+// a missing file must fail the build, not emit a page with an empty body.
+export function getStaticPaths() {
+	return LOCALES.map(locale => ({ params: { locale } }))
+}
+
+const locale = Astro.params.locale as Locale
+const doc = (await getEntry('legal', `privacy.${locale}`))!
+const { title, description, updatedAt } = doc.data
+
+const jsonLd = {
+	'@context': 'https://schema.org',
+	'@type': 'WebPage',
+	name: title,
+	description,
+	dateModified: updatedAt.toISOString(),
+	inLanguage: locale === 'pt' ? 'pt-BR' : 'en-US',
+	url: Astro.url.href,
+	isPartOf: { '@type': 'WebSite', name: 'codm' },
+}
+---
+
+<BaseLayout locale={locale} title={title} description={description} jsonLd={jsonLd}>
+	<LegalDoc doc={doc} />
+</BaseLayout>
