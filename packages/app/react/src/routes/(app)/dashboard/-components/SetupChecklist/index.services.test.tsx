@@ -31,6 +31,14 @@ import { SetupChecklist } from '.'
  * FALSEADO (T9): comentando a chamada a `givenConnectedGatewayChannel` — sem canal, a linha
  * (`home.setupChannelTitle`) permanece presente em vez de sumir → RED. Restaurado → GREEN. Números no
  * relato da Task T9.
+ *
+ * 2026-08-26 — REESCRITO: `CHANNEL` virou `REQUIRED` no `STEP_TAXONOMY` do wizard (founder override
+ * do bug "Próximo avança sem conectar canal") — `DEFERRABLE_SETUP_IDS` (`index.tsx`) deriva dessa
+ * mesma tabela, e `CHANNEL` saiu da lista. A linha do canal agora NUNCA aparece neste painel,
+ * conectado ou não — o teste original ("a linha do canal fica marcada concluída") não tem mais como
+ * ser verdade porque a linha deixou de existir. O caso abaixo prova exatamente isso: um canal
+ * conectado DE VERDADE contra o gateway subprocess real não faz a linha aparecer nem some nada —
+ * ela já não estava lá.
  */
 
 describe('SetupChecklist — services: apiGo (T9) — channelDone contra o gateway subprocess real', () => {
@@ -70,19 +78,16 @@ describe('SetupChecklist — services: apiGo (T9) — channelDone contra o gatew
 	// Timeout explícito: um seed via givenConnectedGatewayChannel (AutoPairAfter 2s do cenário e2e) —
 	// T10 deixou o default de 5000ms do bun:test com margem apertada (observado ~4.3-4.5s). 15s dá
 	// folga real sem mascarar uma regressão de verdade.
-	it('canal pareado de verdade (mock do gateway): a linha do canal fica marcada concluída, workspace/thread seguem pendentes', async () => {
+	it('canal pareado de verdade (mock do gateway): CHANNEL não é mais candidato deste painel — nenhuma linha de canal aparece', async () => {
 		await givenConnectedGatewayChannel(backend, { name: 'setup-checklist-services-test-channel' })
 
 		await mount()
 
-		// Founder, 2026-08-25: o passo satisfeito FICA, marcado concluído (check, sem CTA) — não some mais.
+		// `CHANNEL` saiu de `DEFERRABLE_SETUP_IDS` (2026-08-26, docblock acima) — a linha não existe
+		// mais, conectado ou não. `WORKSPACE` (o único candidato que sobrou) segue pendente.
+		expect(mounted?.host.textContent).not.toContain(i18n.t('home.setupChannelTitle'))
 		const rows = [...(mounted?.host.querySelectorAll('[data-slot="setup-step"]') ?? [])] as HTMLElement[]
 		const rowFor = (key: string) => rows.find(r => r.textContent?.includes(i18n.t(key)))
-		const channelRow = rowFor('home.setupChannelTitle')
-		expect(channelRow).toBeDefined()
-		expect(channelRow?.dataset.done).toBe('true')
-		expect(channelRow?.querySelector('a')).toBeNull()
 		expect(rowFor('home.setupWorkspaceTitle')?.dataset.done).toBe('false')
-		expect(rowFor('home.setupThreadTitle')?.dataset.done).toBe('false')
 	}, 15_000)
 })

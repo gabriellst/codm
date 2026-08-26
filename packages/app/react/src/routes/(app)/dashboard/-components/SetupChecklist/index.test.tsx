@@ -16,12 +16,14 @@ import { SetupChecklist } from '.'
  * `{ exists: true, isDirectory: true }`), o mesmo tipo de determinismo que `ProvidersSection` (T9)
  * já provou para `MockProviderDetector`. `threadDone` vem de `givenThread` (tooling congelado).
  *
- * `channelDone` NÃO é produzível AQUI (harness sem `services`): `channels`/`remotes` são tabelas do
- * gateway Go, e este arquivo sobe o backend TS sozinho, sem o gateway subprocess. ATUALIZADO (T9/T12):
- * `channelDone` isolado TEM cobertura real — `index.services.test.tsx` (`services: ['apiGo']`) semeia
- * um canal de verdade via `givenConnectedGatewayChannel` e prova a linha do canal sumindo. O que
- * continua SÓ-VISUAL em `index.stories.tsx` é só o caso "tudo feito" (os três ao mesmo tempo) — nenhum
- * arquivo hoje combina canal conectado + workspace + thread na mesma seed.
+ * 2026-08-26 — REESCRITO: `CHANNEL`/`CONTACT`/`AGENTS`/`REVIEW` viraram `REQUIRED` no
+ * `STEP_TAXONOMY` do wizard (`/onboarding/-components/steps.ts`, founder override do bug "Próximo
+ * avança sem conectar/escolher nada") — `DEFERRABLE_SETUP_IDS` (`index.tsx`) deriva DESSA MESMA
+ * tabela, então `WORKSPACE` é o ÚNICO `StepId` que ainda sobra como candidato deste painel. Um
+ * passo `REQUIRED` bloqueia "Concluir" no wizard — não existe mais um operador no `/dashboard` com
+ * canal/contato/provider/revisão pendentes para "adiar" aqui (a exceção — quem já tinha
+ * `completedAt` gravado ANTES desta mudança — é uma migração de dado fora do escopo deste front).
+ * Os três casos abaixo passam a testar exatamente UM candidato (`WORKSPACE`) em vez de três.
  */
 describe('SetupChecklist — contra o backend real', () => {
 	let backend: IntegrationBackend
@@ -65,39 +67,39 @@ describe('SetupChecklist — contra o backend real', () => {
 		return { done: row.dataset.done === 'true', hasCta: !!row.querySelector('a') }
 	}
 
-	it('nada feito: os três passos aparecem, todos pendentes e com CTA', async () => {
+	it('nada feito: só a linha de WORKSPACE aparece, pendente e com CTA — CHANNEL/THREAD não são mais candidatos', async () => {
 		await mount()
 
-		expect(stepRow('home.setupChannelTitle')).toEqual({ done: false, hasCta: true })
 		expect(stepRow('home.setupWorkspaceTitle')).toEqual({ done: false, hasCta: true })
-		expect(stepRow('home.setupThreadTitle')).toEqual({ done: false, hasCta: true })
+		const rows = [...(mounted?.host.querySelectorAll('[data-slot="setup-step"]') ?? [])]
+		expect(rows).toHaveLength(1)
+		expect(mounted?.host.textContent).not.toContain(i18n.t('home.setupChannelTitle'))
+		expect(mounted?.host.textContent).not.toContain(i18n.t('home.setupThreadTitle'))
 	})
 
-	// Founder, 2026-08-25: um passo satisfeito NÃO some mais — fica na lista marcado como concluído
-	// (check no lugar do CTA), senão "2 · 3" sem o "1" lê como buraco, não como progresso.
-	it('workspace feito de verdade (addWorkspace real): a linha fica, marcada concluída e sem CTA; os outros dois seguem pendentes', async () => {
+	// Founder, 2026-08-25: um passo DEFERRABLE satisfeito não some mais — fica marcado concluído. Mas
+	// `WORKSPACE` é o ÚNICO candidato deste painel desde 2026-08-26 (docblock acima), então satisfazê-lo
+	// esvazia `steps` por completo (`steps.every(done)` com um array de um item) — o painel INTEIRO
+	// some, não sobra uma linha "concluída" para mostrar.
+	it('workspace feito de verdade (addWorkspace real): era o único candidato — o painel inteiro some', async () => {
 		await addWorkspace({ path: '/tmp/setup-checklist-fixture' })
 		await mount()
 
-		expect(stepRow('home.setupWorkspaceTitle')).toEqual({ done: true, hasCta: false })
-		expect(mounted?.host.querySelector(`[aria-label="${i18n.t('home.setupDone')}"]`)).not.toBeNull()
-		expect(stepRow('home.setupChannelTitle')).toEqual({ done: false, hasCta: true })
-		expect(stepRow('home.setupThreadTitle')).toEqual({ done: false, hasCta: true })
+		expect(mounted?.host.querySelector('[data-slot="setup-step"]')).toBeNull()
 	})
 
 	/**
 	 * `givenThread` ANINHA `givenWorkspace` (uma thread não pode existir sem workspace — ver
-	 * `tests/support/given/threads.ts`), então este caso derruba as DUAS linhas de uma vez —
-	 * medido, não assumido: a primeira versão deste teste esperava só a linha de thread sumir e
-	 * quebrou porque `workspaceDone` também virava `true`. Só o canal (improduzível) sobra.
+	 * `tests/support/given/threads.ts`), então `workspaceDone` também vira `true` aqui — MESMO
+	 * resultado do caso acima por um caminho diferente: `WORKSPACE` (o único candidato) fica
+	 * satisfeito, o painel some. `REVIEW`/`threadDone` não têm mais linha própria para checar (não é
+	 * mais candidato deste painel).
 	 */
-	it('thread feita de verdade (givenThread, que também cria o workspace que ela referencia): duas linhas concluídas, só o canal pendente', async () => {
+	it('thread feita de verdade (givenThread, que também cria o workspace que ela referencia): mesmo resultado — o painel some', async () => {
 		const { givenThread } = await loadBackendGivens()
 		await givenThread(backend.asTestBed(), {})
 		await mount()
 
-		expect(stepRow('home.setupThreadTitle')).toEqual({ done: true, hasCta: false })
-		expect(stepRow('home.setupWorkspaceTitle')).toEqual({ done: true, hasCta: false })
-		expect(stepRow('home.setupChannelTitle')).toEqual({ done: false, hasCta: true })
+		expect(mounted?.host.querySelector('[data-slot="setup-step"]')).toBeNull()
 	})
 })

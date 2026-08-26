@@ -9,14 +9,13 @@ import { SetupChecklist } from '.'
  * interno) — MSW não intercepta sob bun (medido, `tests/support/storybook.ts`), então esta story é
  * SÓ-VISUAL (sem `play`).
  *
- * O comportamento real (um passo satisfeito fica na lista, marcado concluído — founder 2026-08-25) mora no `index.test.tsx` reduzido, via
- * `useIntegrationBackend()` — `workspaceDone`/`threadDone` são PRODUZÍVEIS pelo harness real
- * (`addWorkspace` real sob `MockWorkspaceDetector` determinístico; `givenThread`). `channelDone`
- * ISOLADO também é, desde a frente eixo-ambiente-go (T9/T12): `index.services.test.tsx`
- * (`services: ['apiGo']`) semeia um canal REAL via `givenConnectedGatewayChannel` e prova a linha do
- * canal sumindo. O que continua IMPRODUZÍVEL pelo harness — e fica só aqui, visual — é o caso "tudo
- * feito" (os TRÊS ao mesmo tempo): nenhum arquivo hoje combina canal conectado + workspace + thread na
- * mesma seed.
+ * 2026-08-26 — `CHANNEL`/`CONTACT`/`AGENTS`/`REVIEW` viraram `REQUIRED` no `STEP_TAXONOMY` do wizard
+ * (founder override) — `DEFERRABLE_SETUP_IDS` (`index.tsx`) deriva dessa mesma tabela, então
+ * `WORKSPACE` é o ÚNICO `StepId` que ainda aparece como linha neste painel. `channelDone`/
+ * `threadDone` nos fixtures abaixo não mudam mais o que renderiza (não há linha de canal/thread para
+ * reagir a eles) — mantidos só porque `GetOnboardingQueryResponse` exige os três campos; o
+ * comportamento REAL que importa (workspace satisfeito → painel inteiro some) mora no
+ * `index.test.tsx` reduzido, via `useIntegrationBackend()`.
  */
 const opts = getOnboardingQueryOptions()
 
