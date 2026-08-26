@@ -150,7 +150,9 @@ parece que não há nada):
 ## Instalação do beta (texto para a página de download)
 
 A partir dos builds de 07/08/2026 os dois canais são assinados com Developer ID e notarizados:
-baixe o `codm-aarch64.dmg`, arraste para **Aplicativos** e abra normalmente — sem aviso do
+baixe o DMG (a URL é o alias fixo `codm-aarch64.dmg`, mas o arquivo salva como
+`CoDM_<versão>_aarch64.dmg` — o alias sobe com `Content-Disposition` apontando o nome versionado
+que o Tauri estampou), arraste para **Aplicativos** e abra normalmente — sem aviso do
 Gatekeeper, sem "Abrir Mesmo Assim".
 
 Builds **anteriores** a essa data saíram ad-hoc e ainda exigem o contorno:

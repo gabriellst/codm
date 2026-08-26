@@ -246,6 +246,10 @@ jobs:
           cp "$CARGO_TARGET_DIR"/release/bundle/macos/*.app.tar.gz dist-release/codm-aarch64.app.tar.gz
           cp "$CARGO_TARGET_DIR"/release/bundle/macos/*.app.tar.gz.sig dist-release/codm-aarch64.app.tar.gz.sig
           cp "$CARGO_TARGET_DIR"/release/bundle/dmg/*.dmg dist-release/codm-aarch64.dmg
+          # O nome que o Tauri estampou (`CoDM_<versão>-beta.N_aarch64.dmg`, do --config version
+          # acima) é o nome que o browser deve SALVAR — vai no Content-Disposition do alias abaixo.
+          # Lido do artefato, não remontado aqui: uma segunda fórmula divergiria na primeira mudança.
+          echo "DMG_NAME=$(basename "$(ls "$CARGO_TARGET_DIR"/release/bundle/dmg/*.dmg | head -1)")" >> "$GITHUB_ENV"
 
       - name: manifest
         run: >
@@ -273,7 +277,9 @@ jobs:
 
       # A ORIGEM PÚBLICA é o R2 (spec SP2.5): repo privado ⇒ assets do GitHub 404am anônimos —
       # tanto para o download da landing quanto para o auto-updater. O canal beta é ROLANTE:
-      # sobrescreve os mesmos objetos a cada merge; a versão vive no latest.json.
+      # sobrescreve os mesmos objetos a cada merge; a versão vive no latest.json — e no NOME que o
+      # browser salva: o alias do DMG sobe com `Content-Disposition: attachment; filename=$DMG_NAME`
+      # (do stage), porque `<a download>` é ignorado em origem cruzada (r2.dev).
       - name: upload r2
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -281,5 +287,5 @@ jobs:
         run: |
           npx --yes wrangler@4.120.0 r2 object put codm-releases/beta/codm-aarch64.app.tar.gz --file dist-release/codm-aarch64.app.tar.gz --content-type application/gzip --remote
           npx --yes wrangler@4.120.0 r2 object put codm-releases/beta/codm-aarch64.app.tar.gz.sig --file dist-release/codm-aarch64.app.tar.gz.sig --content-type text/plain --remote
-          npx --yes wrangler@4.120.0 r2 object put codm-releases/beta/codm-aarch64.dmg --file dist-release/codm-aarch64.dmg --content-type application/x-apple-diskimage --remote
+          npx --yes wrangler@4.120.0 r2 object put codm-releases/beta/codm-aarch64.dmg --file dist-release/codm-aarch64.dmg --content-type application/x-apple-diskimage --content-disposition "attachment; filename=\"$DMG_NAME\"" --remote
           npx --yes wrangler@4.120.0 r2 object put codm-releases/beta/latest.json --file dist-release/latest.json --content-type application/json --remote
