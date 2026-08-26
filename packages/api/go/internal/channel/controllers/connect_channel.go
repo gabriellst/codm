@@ -36,7 +36,7 @@ func (c *ConnectChannelController) Metadata() types.ControllerMetadata {
 		Request:  ConnectChannelRequest{},
 		Response: usecases.ConnectChannelOutput{},
 		Status:   http.StatusOK,
-		Errors:   []errors.ErrorCode{ctxerrors.CodeChannelNotFound, errors.CodeValidationFailed},
+		Errors:   []errors.ErrorCode{ctxerrors.CodeChannelNotFound, errors.CodeValidationFailed, ctxerrors.CodeChannelDeviceInvalidated},
 	}
 }
 

@@ -181,3 +181,21 @@ type Channel interface {
 type ChannelFactory interface {
 	Create(integrationID uuid.UUID, config ChannelConfig) (Channel, error)
 }
+
+// PoolEvictor is the subset of pool.ChannelPool a Channel needs to evict its
+// own cache entry when the underlying session becomes permanently invalid —
+// e.g. WhatsApp force-logs the device out server-side (events.LoggedOut),
+// which whatsmeow answers by deleting the device store (store.Device.Delete,
+// see store.ErrDeviceDeleted). A pool-cached Channel that keeps that dead
+// client/device around answers every future Connect()/GetQRChannel() with
+// "invalid use of deleted device" forever, since neither call constructs a
+// new device — see whatsmeow_channel.go's handleEvent LoggedOut case.
+//
+// Declared here (not in package pool) so gateway/whatsapp can depend on it
+// without an import cycle: pool already imports gateway for
+// ChannelFactory/Channel, so gateway importing pool back would cycle.
+// pool.ChannelPool satisfies this interface structurally — no change needed
+// on that side; see module.go's registerLifecycleHooks wiring.
+type PoolEvictor interface {
+	Remove(channelID uuid.UUID)
+}

@@ -36,7 +36,7 @@ func (c *RestartChannelController) Metadata() types.ControllerMetadata {
 		Request:  RestartChannelRequest{},
 		Response: usecases.RestartChannelOutput{},
 		Status:   http.StatusOK,
-		Errors:   []errors.ErrorCode{ctxerrors.CodeChannelNotFound, errors.CodeValidationFailed},
+		Errors:   []errors.ErrorCode{ctxerrors.CodeChannelNotFound, errors.CodeValidationFailed, ctxerrors.CodeChannelDeviceInvalidated},
 	}
 }
 

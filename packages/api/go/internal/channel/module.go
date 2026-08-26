@@ -285,6 +285,24 @@ var Module = fx.Module("channel",
 	// A ordem que o fx garante é o que torna isto correto — roda depois da config e antes de
 	// qualquer canal conectar.
 	fx.Invoke(func(cfg *config.Config) { whatsapp.SetDeviceProps(cfg.ProductName) }),
+	// Wires the pool back into the channel factory so every WhatsmeowChannel it
+	// builds can evict its own pool entry on events.LoggedOut (see
+	// whatsapp.WhatsmeowChannel.handleEvent + gateway.PoolEvictor's docblock). A
+	// separate fx.Invoke, not a constructor param on either side, because
+	// pool.NewChannelPool(factory) already depends on the factory — the factory
+	// also taking the pool as a constructor param would be a DI cycle.
+	//
+	// factory is requested as gateway.ChannelFactory (the only type fx has a
+	// provider for — fx.Annotate/fx.As above replaces the concrete type in the
+	// container) and downcast, mirroring registerLifecycleHooks' OnStop Close()
+	// assertion below.
+	fx.Invoke(func(factory gateway.ChannelFactory, p pool.ChannelPool) {
+		if wired, ok := factory.(interface {
+			SetEvictor(gateway.PoolEvictor)
+		}); ok {
+			wired.SetEvictor(p)
+		}
+	}),
 	fx.Invoke(registerLifecycleHooks),
 	fx.Invoke(registerDomainEventHandlers),
 )

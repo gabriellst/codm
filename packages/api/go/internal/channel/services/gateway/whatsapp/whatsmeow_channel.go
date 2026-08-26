@@ -4,12 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	stderrors "errors"
 	"fmt"
 	"log/slog"
 	"strings"
 	"sync"
 	channelenums "template/api-go/internal/channel/enums"
 	msgenums "template/api-go/internal/channel/enums"
+	ctxerrors "template/api-go/internal/channel/errors"
 	ctxevents "template/api-go/internal/channel/events"
 	messagerepo "template/api-go/internal/channel/repositories/message"
 	remoterepo "template/api-go/internal/channel/repositories/remote"
@@ -17,6 +19,7 @@ import (
 	waevents "template/api-go/internal/channel/services/gateway/whatsapp/events"
 	mapperpkg "template/api-go/internal/channel/services/gateway/whatsapp/mapper"
 	coreenums "template/core-go/enums"
+	coreerrors "template/core-go/errors"
 	repositories "template/core-go/repositories"
 	"time"
 
@@ -60,6 +63,12 @@ type WhatsmeowChannel struct {
 	stopCtx       context.Context
 	stopCancel    context.CancelFunc
 	avatarLimiter *rate.Limiter
+	// evictor requests this channel's own removal from the pool when whatsmeow
+	// tells us (events.LoggedOut) that the session was permanently invalidated —
+	// see handleEvent below and gateway.PoolEvictor's docblock. nil in contexts
+	// that never wire one (unit tests constructing WhatsmeowChannel{} directly);
+	// handleEvent guards for that.
+	evictor gateway.PoolEvictor
 }
 
 func init() {
@@ -103,6 +112,7 @@ func NewWhatsmeowChannel(
 	remoteRepo remoterepo.RemoteProjectionRepository,
 	messageRepo messagerepo.MessageProjectionRepository,
 	mediaStore *MediaStore,
+	evictor gateway.PoolEvictor,
 ) *WhatsmeowChannel {
 	client := whatsmeow.NewClient(device, waLog.Stdout("whatsmeow", string(coreenums.LogLevelInfo), true))
 	client.EnableAutoReconnect = true
@@ -125,6 +135,7 @@ func NewWhatsmeowChannel(
 		status:          gateway.ConnectionStatusDisconnected,
 		stopCtx:         stopCtx,
 		stopCancel:      stopCancel,
+		evictor:         evictor,
 	}
 
 	// Rate-limit avatar fetches to 1 request per 25 ms (40 req/s) with no burst
@@ -175,7 +186,22 @@ func (c *WhatsmeowChannel) Connect(ctx context.Context) error {
 
 	if c.client.Store.ID == nil {
 		c.purgeStaleDevices(ctx)
-		return c.client.Connect()
+		if err := c.client.Connect(); err != nil {
+			// A device already marked Deleted (whatsmeow set both ID=nil and
+			// Deleted=true together — see store.Device.Delete) never recovers by
+			// retrying the SAME client: unlockedConnect short-circuits to
+			// ErrDeviceDeleted before touching the network every time. This is
+			// exactly the raw error the production incident surfaced as a 500 —
+			// see deviceInvalidatedError's docblock for the full story.
+			c.mu.Lock()
+			c.status = gateway.ConnectionStatusDisconnected
+			c.mu.Unlock()
+			if stderrors.Is(err, store.ErrDeviceDeleted) {
+				return deviceInvalidatedError()
+			}
+			return err
+		}
+		return nil
 	}
 
 	err := c.client.Connect()
@@ -186,10 +212,29 @@ func (c *WhatsmeowChannel) Connect(ctx context.Context) error {
 		c.mu.Lock()
 		c.status = gateway.ConnectionStatusDisconnected
 		c.mu.Unlock()
+		if stderrors.Is(err, store.ErrDeviceDeleted) {
+			return deviceInvalidatedError()
+		}
 		return fmt.Errorf("failed to connect: %w", err)
 	}
 
 	return nil
+}
+
+// deviceInvalidatedError is the safety net for store.ErrDeviceDeleted
+// ("invalid use of deleted device") escaping to a caller. The primary fix is
+// evicting the channel from the pool as soon as events.LoggedOut fires (see
+// handleEvent) so the NEXT Connect()/GetQRChannel() call never touches the
+// dead client at all — this only fires in the narrow race where a call is
+// already in flight against the old client the instant whatsmeow marks the
+// store deleted, before eviction runs. Named + registered (410 Gone,
+// internal/channel/errors) so it maps to a real HTTP status + i18n key
+// instead of the generic 500 "unhandled error in HTTP mapper".
+func deviceInvalidatedError() error {
+	return coreerrors.NewBaseError(
+		ctxerrors.CodeChannelDeviceInvalidated,
+		"channel session was invalidated by the platform; reconnect via QR pairing",
+	)
 }
 
 func (c *WhatsmeowChannel) Disconnect() error {
@@ -230,6 +275,9 @@ func (c *WhatsmeowChannel) GetQRChannel(ctx context.Context) (<-chan gateway.QRC
 	err = c.client.Connect()
 	if err != nil {
 		qrCancel()
+		if stderrors.Is(err, store.ErrDeviceDeleted) {
+			return nil, deviceInvalidatedError()
+		}
 		return nil, fmt.Errorf("failed to connect for QR: %w", err)
 	}
 
@@ -852,6 +900,22 @@ func (c *WhatsmeowChannel) handleEvent(evt any) {
 		c.status = gateway.ConnectionStatusDisconnected
 		c.mu.Unlock()
 		slog.Info("whatsmeow logged out", "instanceId", c.instanceID)
+		// WhatsApp force-logged this device out server-side. whatsmeow answers by
+		// permanently deleting the local device store (store.Device.Delete —
+		// Store.Deleted=true, Store.ID=nil) on THIS *whatsmeow.Client, which never
+		// gets a new device on its own. If this channel stays cached in the pool,
+		// every future Connect()/GetQRChannel() call reuses the same dead client and
+		// fails with store.ErrDeviceDeleted ("invalid use of deleted device") — a 500
+		// even though the gateway process is healthy. Evicting here means the NEXT
+		// pool.Register for this channelId calls the factory again, which builds a
+		// fresh WhatsmeowChannel from a clean (or the next-best legacy-matched, see
+		// whatsmeow_factory.go findDeviceByUserJID) device — i.e. the normal
+		// needs-pairing/QR flow, not a crash.
+		if c.evictor != nil {
+			slog.Info("evicting channel from pool after logout — next connect starts a fresh session",
+				"instanceId", c.instanceID)
+			c.evictor.Remove(c.instanceID)
+		}
 	case *events.PairSuccess:
 		slog.Info("whatsmeow pair success", "instanceId", c.instanceID, "jid", v.ID.String())
 	}
