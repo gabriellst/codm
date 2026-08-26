@@ -57,7 +57,7 @@ import * as stories from './index.stories'
  * lançaria "useService usado fora do ServicesProvider" no mount, não um erro de rede.
  *
  * `/go` (canal) não tem gateway real por trás do harness — `useIntegrationBackend()` aponta `go`
- * para a MESMA origem `typescript` (sem o prefixo `/v1/external/channel` da produção), então o passo
+ * para a MESMA origem `typescript` (sem o prefixo `/external/channel` da produção), então o passo
  * CHANNEL bate em rotas que não existem e erra RÁPIDO (404, sem timeout) — seguro para atravessar
  * sem esperar assentar.
  */

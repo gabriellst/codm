@@ -207,7 +207,7 @@ export function renderTauriConf(): string {
 				//   different Team IDs
 				// Medido na v0.1.2 instalada: daemon morto no boot, portão de 60s disparado, usuário
 				// vendo só "um ou mais serviços não responderam". Verificado: com o entitlement, o
-				// daemon do bundle sobe e GET /v1/health responde 200.
+				// daemon do bundle sobe e GET /health responde 200.
 				//
 				// O plist fica SEM COMENTÁRIOS de propósito: o parser do AMFI (dentro do codesign)
 				// rejeita XML com hífen duplo em comentário, e a primeira versão deste arquivo

@@ -92,10 +92,10 @@ describe('useAnalyticsIdentity', () => {
 		fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(
 			fetchStub(async input => {
 				const url = requestUrl(input)
-				// `/v1/session`, e não mais `/v1/cloud/entitlement`: a rota de entitlement foi removida
+				// `/session`, e não mais `/cloud/entitlement`: a rota de entitlement foi removida
 				// porque respondia `{ active: true, plan: 'free', userId }` — uma constante mais o
 				// `userId` que a própria sessão já traz. Uma pergunta, uma porta.
-				if (url.includes('/v1/session'))
+				if (url.includes('/session'))
 					return jsonResponse({
 						user: { id: USER_ID, email: 'operator@example.test', name: 'Operator', emailVerified: true },
 						session: { id: 'session-1', userId: USER_ID, expiresAt: '2999-12-31T00:00:00.000Z', ownerId: null },
@@ -112,7 +112,7 @@ describe('useAnalyticsIdentity', () => {
 
 		// The session lookup carried the STORED session token as a Bearer header, not a hardcoded
 		// or missing one — proves the hook reads the SAME keychain key `useLoopbackAuth` writes.
-		const call = fetchSpy.mock.calls.find(([input]) => requestUrl(input).includes('/v1/session'))
+		const call = fetchSpy.mock.calls.find(([input]) => requestUrl(input).includes('/session'))
 		expect(call).toBeDefined()
 		const request = call![0] as Request
 		expect(request.headers.get('authorization')).toBe(`Bearer ${TOKEN}`)

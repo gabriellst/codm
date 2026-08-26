@@ -11,7 +11,7 @@ export type ServerEventName = ListenEventsQueryResponse['name']
 type ServerEventByName<K extends ServerEventName> = Extract<ListenEventsQueryResponse, { name: K }>
 
 /**
- * Establishes the owner-scoped SSE connection to `GET /v1/ui/events`.
+ * Establishes the owner-scoped SSE connection to `GET /ui/events`.
  * Mount ONCE at the layout that owns the scope (the `(app)` route layout) — every child
  * component then subscribes via `useServerEvents`. Frames are data-only JSON envelopes
  * ({ name, ownerId, payload }) re-dispatched as `document` CustomEvents keyed by `name`.

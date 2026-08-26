@@ -15,7 +15,7 @@ import { useCloudSessionStore } from '@/stores'
  * `unauthenticated` (logout, or no token found at boot) resets PostHog back to anonymous.
  *
  * `userId` is not part of the exchange response (`ExchangeDeviceCode200` is `{ token }` only) — the
- * endpoint that resolves the stored session token into an account identity is `GET /v1/session`
+ * endpoint that resolves the stored session token into an account identity is `GET /session`
  * (SP2's entitlement: "does this install get to run"), so this hook reads the stored token and
  * calls it exactly the way `CloudAccountSection`'s logout calls `revokeDevice`: a PLAIN SDK
  * function against `Config.cloudUrl` with a Bearer header built at call time — not the generated

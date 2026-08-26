@@ -16,8 +16,8 @@ interface LoginSectionProps extends React.ComponentProps<'section'> {}
 type OAuthProvider = 'github' | 'google'
 
 /**
- * `${cloudUrl}/v1/sign-in/social?provider=<p>` — NOSSA porta, o GÊMEO GET do `POST
- * /v1/auth/sign-in/social` do better-auth, na origem da NUVEM (`Config.cloudUrl`, nunca
+ * `${cloudUrl}/sign-in/social?provider=<p>` — NOSSA porta, o GÊMEO GET do `POST
+ * /auth/sign-in/social` do better-auth, na origem da NUVEM (`Config.cloudUrl`, nunca
  * o daemon local), que responde 302 para o provedor.
  *
  * ── por que não `auth.signIn.social` daqui, que seria mais direto ────────────────────────────────
@@ -31,7 +31,7 @@ type OAuthProvider = 'github' | 'google'
  * **quem inicia o fluxo tem de ser quem o conclui**. Esta URL coloca o navegador do sistema na
  * primeira ponta. Ver o docblock de `auth/controllers/SignIn.ts` para a medição A/B.
  *
- * Concluído o provedor, o better-auth manda o browser para `/v1/desktop-callback` na MESMA origem,
+ * Concluído o provedor, o better-auth manda o browser para `/desktop-callback` na MESMA origem,
  * que cunha o código de uso único e o devolve ao LISTENER DE LOOPBACK do daemon local
  * (`127.0.0.1:<porta>`), de onde o `useLoopbackAuth` o retira.
  */
@@ -40,7 +40,7 @@ function buildSignInUrl(provider: OAuthProvider): string {
 	// `Config.baseUrl` em vez de ser um literal — o daemon é quem decide onde escuta, e um número
 	// redigitado aqui apontaria o navegador para o vazio no dia em que a porta mudasse.
 	const port = new URL(Config.baseUrl).port
-	return `${Config.cloudUrl}/v1/sign-in/social?${new URLSearchParams({ provider, port }).toString()}`
+	return `${Config.cloudUrl}/sign-in/social?${new URLSearchParams({ provider, port }).toString()}`
 }
 
 /**

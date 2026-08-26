@@ -53,7 +53,7 @@ describe('contactAvatarUrl — the daemon serves the photo, never the platform C
 		const url = contactAvatarUrl(CHANNEL, ADA_JID)
 
 		expect(url.startsWith(Config.baseUrl)).toBe(true)
-		expect(url).toContain(`/v1/ui/avatars/${CHANNEL}/`)
+		expect(url).toContain(`/ui/avatars/${CHANNEL}/`)
 		// `pps.whatsapp.net` appears nowhere: the CSP does not allow it and the signed url expires.
 		expect(url).not.toContain('whatsapp.net/')
 	})

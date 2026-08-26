@@ -15,7 +15,7 @@ import { useCloudSessionStore } from '@/stores'
  * pending affordance without fighting over one shared boolean.
  *
  * ── quem revoga mudou; a forma da chamada, não ───────────────────────────────────────────────────
- * Isto chamava `revokeDevice`, uma rota nossa (`POST /v1/cloud/devices/revoke`) que lia o header
+ * Isto chamava `revokeDevice`, uma rota nossa (`POST /cloud/devices/revoke`) que lia o header
  * `Bearer` à mão e marcava uma linha como revogada numa tabela nossa. A rota, a tabela e o use case
  * foram removidos: a credencial passou a ser a sessão do better-auth, e encerrar sessão é
  * `signOut` — dele. O que NÃO mudou é a razão de o token ser lido dentro da mutation em vez de no

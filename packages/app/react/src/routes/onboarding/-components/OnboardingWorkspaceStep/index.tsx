@@ -67,7 +67,7 @@ function folderName(path: string): string {
  * — so both entry points share one source of truth and one validation path.
  *
  * PICK ≠ ADD (2026-08-24 audit item 2, "Próximo confirma"). Picking a folder — native dialog OR the
- * fallback input — only records a LOCAL pending choice; nothing POSTs to `/v1/workspaces` yet.
+ * fallback input — only records a LOCAL pending choice; nothing POSTs to `/workspaces` yet.
  * `confirmStep`, registered on `useOnboardingSetupStore` for `OnboardingFlow`'s footer to call on
  * "Próximo", is what actually calls `useAddWorkspace` — once, in the SAME chain that then advances
  * the step. `confirmStep` stays UNDEFINED whenever the field is empty, so a user who never picks

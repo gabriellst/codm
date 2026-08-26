@@ -53,7 +53,7 @@ const RAFAEL = {
  * photo for a story fixture (`ThreadAvatar` falls back to initials when `hasAvatar` is false, which
  * is what this row rendered before — a defensible default, but it left the row's worst region-lane
  * tile at 0.71, F3 batch B3), so this fixture exists to feed the mocked
- * `GET /v1/ui/avatars/:channelId/:remoteId` with SOME image bytes without reproducing anyone's real
+ * `GET /ui/avatars/:channelId/:remoteId` with SOME image bytes without reproducing anyone's real
  * photo. Regeneration recipe: generate any solid-color 44×44 PNG (e.g. via a small `zlib.deflateSync`
  * script) and replace the constant below.
  */

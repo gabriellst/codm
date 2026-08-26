@@ -22,9 +22,9 @@ import { Config } from './config'
  * daemon local não monta nenhuma dessas rotas — apontar para `baseUrl` daria 404 em tudo, que é o
  * beco sem saída que `config.ts` documenta ter custado um login quebrado em 2026-08-07.
  *
- * O caminho é `/v1/auth` porque é o `basePath` que o `BetterAuth` do backend declara, e o
+ * O caminho é `/auth` porque é o `basePath` que o `BetterAuth` do backend declara, e o
  * `AuthPassthroughController` (`/auth/*`) é quem o entrega — o `MainRouter` prefixa a versão.
- * Medido contra o processo de nuvem: `/v1/auth/get-session` e `/v1/auth/ok` respondem 200.
+ * Medido contra o processo de nuvem: `/auth/get-session` e `/auth/ok` respondem 200.
  *
  * ── e o desktop não navega o webview ─────────────────────────────────────────────────────────────
  * Provedores OAuth recusam webview embutido, então o login abre o NAVEGADOR DO SISTEMA. Quem faz
@@ -34,11 +34,11 @@ import { Config } from './config'
  *
  * ── e o resgate do código volta por aqui também ──────────────────────────────────────────────────
  * O deep link `codm://auth?code=…` traz um token de uso único, e quem o troca por sessão é
- * `auth.oneTimeToken.verify` — o plugin, não uma rota nossa. As rotas `/v1/cloud/devices/exchange` e
- * `/v1/cloud/devices/revoke` que faziam isso à mão foram removidas; `signOut()` cobre a segunda.
+ * `auth.oneTimeToken.verify` — o plugin, não uma rota nossa. As rotas `/cloud/devices/exchange` e
+ * `/cloud/devices/revoke` que faziam isso à mão foram removidas; `signOut()` cobre a segunda.
  */
 export const auth = createAuthClient({
-	baseURL: `${Config.cloudUrl}/v1/auth`,
+	baseURL: `${Config.cloudUrl}/auth`,
 	/**
 	 * O par-cliente do plugin `one-time-token` do servidor. Ele não carrega implementação — só o
 	 * `$InferServerPlugin`, que é o que faz `auth.oneTimeToken.verify({ token })` existir COM TIPO
@@ -46,7 +46,7 @@ export const auth = createAuthClient({
 	 * chamada não some silenciosamente: o tipo deixa de existir e o `tsc` aponta a linha.
 	 *
 	 * É por ele que passa o resgate do deep link `codm://auth?code=…` (`useLoopbackAuth`), no lugar
-	 * do antigo `POST /v1/cloud/devices/exchange`.
+	 * do antigo `POST /cloud/devices/exchange`.
 	 */
 	plugins: [oneTimeTokenClient()],
 	/**

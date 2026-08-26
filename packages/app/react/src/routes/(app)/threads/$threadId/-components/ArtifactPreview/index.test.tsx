@@ -48,7 +48,7 @@ describe('artifactContentUrl', () => {
 
 	/** O path vem da query key da SDK; o que o cliente acrescenta é só a origem, que é dele. */
 	it('substitui os dois params na rota gerada', () => {
-		expect(artifactContentUrl(THREAD, ARTIFACT)).toEndWith(`/v1/threads/${THREAD}/artifacts/${ARTIFACT}/content`)
+		expect(artifactContentUrl(THREAD, ARTIFACT)).toEndWith(`/threads/${THREAD}/artifacts/${ARTIFACT}/content`)
 	})
 })
 

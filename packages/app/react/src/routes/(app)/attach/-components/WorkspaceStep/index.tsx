@@ -47,7 +47,7 @@ type WorkspaceStepProps = Omit<ComponentProps<'form'>, 'onSubmit'> & {
  * owned by `AttachThreadWizard` and gated on `workspaceId` alone; a pending-not-yet-added path would
  * need a second confirm hook the wizard has no seam for, and the `/workspaces` screen's own
  * `AddWorkspaceForm` already registers on submit. So: pick (or type + Enter/"Adicionar pasta") →
- * `POST /v1/workspaces` → invalidate BOTH `listWorkspaces` and `getAttachThreadWizard` (this list is
+ * `POST /workspaces` → invalidate BOTH `listWorkspaces` and `getAttachThreadWizard` (this list is
  * fed by the latter — the same double invalidation `AddWorkspaceForm` documents) → the fresh
  * `workspaceId` is recorded through `selectWorkspace`, the exact path a row click takes, so the new
  * folder shows up already selected and the footer's Continuar lights up without a second click.

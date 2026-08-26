@@ -38,7 +38,7 @@ function requestUrl(input: RequestInfo | URL): string {
 	return input.toString()
 }
 
-/** A sessão que `POST /v1/auth/one-time-token/verify` devolve — o token guardado é `session.token`. */
+/** A sessão que `POST /auth/one-time-token/verify` devolve — o token guardado é `session.token`. */
 function verifiedSession() {
 	return {
 		user: { id: '019e4d24-6524-7041-9e1c-8108180cddae', email: 'operator@example.test', name: 'Operator', emailVerified: true },
@@ -58,9 +58,9 @@ const preconnect: typeof fetch.preconnect = () => undefined
 function mockFetch(claim: () => Response, verify: () => Response): typeof fetch {
 	const route = async (input: RequestInfo | URL): Promise<Response> => {
 		const url = requestUrl(input)
-		if (url.includes('/v1/sign-in/loopback/claim')) return claim()
+		if (url.includes('/sign-in/loopback/claim')) return claim()
 		if (url.includes('/one-time-token/verify')) return verify()
-		if (url.includes('/v1/session/cloud-token')) return jsonResponse({})
+		if (url.includes('/session/cloud-token')) return jsonResponse({})
 		throw new Error(`fetch inesperado: ${url}`)
 	}
 	return Object.assign(route, { preconnect })
@@ -127,7 +127,7 @@ describe('useLoopbackAuth', () => {
 
 		// O `setCloudToken` gerado chegou ao fio COM o token — prova que o empurrão ao daemon usa a
 		// função real com a forma real, não só que algum POST aterrissou no caminho certo.
-		const push = fetchSpy.mock.calls.find(([input]) => requestUrl(input).includes('/v1/session/cloud-token'))
+		const push = fetchSpy.mock.calls.find(([input]) => requestUrl(input).includes('/session/cloud-token'))
 		expect(push).toBeDefined()
 		expect(await (push![0] as Request).clone().json()).toEqual({ token: TOKEN })
 	})

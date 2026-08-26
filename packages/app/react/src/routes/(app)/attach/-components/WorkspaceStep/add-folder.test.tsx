@@ -16,7 +16,7 @@ import { WorkspaceStep, type WorkspaceStepData } from '.'
  * como diretório). As stories provam o que é puro (a linha existe, cancelar o picker não grava
  * nada); este arquivo prova o EFEITO da adição, que só existe com rede:
  *
- *   1. picker nativo capaz (fake SEMEADO, `SeededPicker`) → clique na linha → `POST /v1/workspaces`
+ *   1. picker nativo capaz (fake SEMEADO, `SeededPicker`) → clique na linha → `POST /workspaces`
  *      de verdade → o workspace novo existe em `listWorkspaces`;
  *   2. o `workspaceId` criado é ENTREGUE por `onSubmit` — o mesmo caminho do clique numa linha —
  *      então o footer do wizard habilita Continuar sem um segundo clique;

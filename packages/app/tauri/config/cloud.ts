@@ -1,6 +1,6 @@
 /**
  * A origem pública da fatia cloud — onde o console troca o código do deep link por device token e
- * revoga a sessão no logout (`/v1/cloud/devices/{exchange,revoke}`).
+ * revoga a sessão no logout (`/cloud/devices/{exchange,revoke}`).
  *
  * Por que vive AQUI e não só na env: o webview roda sob uma CSP, e `connect-src` é uma lista
  * fechada renderizada no `tauri.conf.json` em tempo de GERAÇÃO — não há como derivá-la de uma env

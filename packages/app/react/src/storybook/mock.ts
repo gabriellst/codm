@@ -62,9 +62,9 @@ export function mockMutationError(method: MutationMethod, options: MutationOptio
 /** Mock the better-auth session endpoint so components calling useSession() get a fixed value.
  *  Typed off the app's own useSession so it stays in sync with the session shape. */
 export function mockSession(session: ReturnType<typeof useSession>): RequestHandler {
-	// `/v1/auth`, e não `/v1/authentication`: é o `basePath` que o `BetterAuth` do backend declara e
+	// `/auth`, e não `/authentication`: é o `basePath` que o `BetterAuth` do backend declara e
 	// que o `AuthPassthroughController` entrega. O caminho antigo era herança do repo de referência
 	// (o fork de origem monta em `/authentication`) e não casava com rota nenhuma daqui — o mock nunca
 	// interceptou nada, e ninguém percebeu porque o client era um stub que não fazia request.
-	return http.get('*/v1/auth/get-session', () => HttpResponse.json(session as never))
+	return http.get('*/auth/get-session', () => HttpResponse.json(session as never))
 }

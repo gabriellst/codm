@@ -24,7 +24,7 @@ const MAX_FRAMES = 500
 const RETRY_MS = 500
 
 /**
- * Subscribe to ONE issue's live terminal session (`GET /v1/terminal/sessions/:issueId/stream`).
+ * Subscribe to ONE issue's live terminal session (`GET /terminal/sessions/:issueId/stream`).
  *
  * This is a SECOND, issue-scoped SSE connection, deliberately separate from the owner-scoped
  * `useServerEventSource`: the frames here are TRANSPORT (what the CLI is doing, right now) and never

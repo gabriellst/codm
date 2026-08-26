@@ -10,12 +10,12 @@ export const Config = {
 	 * `X-Owner-Id` and forwards to `${API_GO_URL}/api` server-side (origin-fork pattern — their
 	 * `channelBaseUrl = ${VITE_API_URL}/external/channel`). No VITE_GATEWAY_URL exists on purpose.
 	 */
-	gatewayBaseUrl: `${baseUrl}/v1/external/channel`,
+	gatewayBaseUrl: `${baseUrl}/external/channel`,
 	/**
 	 * The CLOUD deployment's own origin (SP2 Task T6) — where the desktop console opens the system
-	 * browser for OAuth sign-in and where the `/v1/cloud/devices/{exchange,revoke}` calls land.
+	 * browser for OAuth sign-in and where the `/cloud/devices/{exchange,revoke}` calls land.
 	 * DELIBERATELY separate from `baseUrl`: `baseUrl` is THIS machine's local daemon, `cloudUrl` is
-	 * the shared identity service (Railway). O device code cunhado por `/v1/cloud/desktop-callback`
+	 * the shared identity service (Railway). O device code cunhado por `/cloud/desktop-callback`
 	 * só existe no banco do processo que o emitiu — exchange/revoke têm que bater NAQUELA origem.
 	 *
 	 * O fallback para `baseUrl` é um beco sem saída, não uma coincidência de dev: `/api/auth/*` é

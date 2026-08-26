@@ -20,7 +20,7 @@ type LoginStep = 'claim' | 'exchange' | 'keychain' | 'daemon'
 
 /**
  * Best-effort push of the freshly-exchanged token to the LOCAL daemon (`POST
- * /v1/session/cloud-token`, Task T7's `SetCloudToken` controller — the dispatcher gate reads its
+ * /session/cloud-token`, Task T7's `SetCloudToken` controller — the dispatcher gate reads its
  * own on-disk cache, populated by this call, never the cloud directly). `baseURL` is explicit and
  * points at `Config.baseUrl` (the LOCAL daemon) — the opposite of the exchange call above, which
  * explicitly targets `Config.cloudUrl`; this endpoint only ever exists on the machine's own daemon.

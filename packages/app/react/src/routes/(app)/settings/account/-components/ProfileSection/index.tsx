@@ -22,7 +22,7 @@ import { AvatarUploader } from '../AvatarUploader'
 // `useUploadAvatar` ERA chamado aqui e deixou de ser, na integração de 2026-08-15. Duas razões, e a
 // segunda sozinha já bastaria:
 //
-//   1. A rota mudou de lado. `/v1/identity/account/avatar` é do contexto `auth`, que o ADR 0001
+//   1. A rota mudou de lado. `/identity/account/avatar` é do contexto `auth`, que o ADR 0001
 //      tornou CLOUD-ONLY — ela saiu da SDK local, e o import daqui deixou de compilar.
 //   2. Ela nunca fez nada. O próprio servidor a documenta como "MOCK. Accept-and-echo", e a
 //      assinatura gerada não carrega corpo de request (o kubb nunca recebeu schema multipart), então
