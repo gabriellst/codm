@@ -107,10 +107,17 @@ const ROTEIRO_PROVIDER_NAME = 'Claude Code'
  * 10, `CompleteOnboarding`) materializes the workspace + thread, atomically, from that draft. So
  * step 6's network wait moved from `/workspaces` to `/ui/onboarding/step`, and step 9 (REVIEW) no
  * longer waits for any response at all — its "Próximo" is a plain, synchronous advance.
- * `OnboardingFinalStep`'s "mention the agent" copy (2026-08-24 audit item 7) is GONE for the same
- * reason: `CompleteOnboarding` never returns the thread it just created to the client, so there is
- * no `threadId` left to mint a mention tag from — the closing card always shows the generic body now
- * (asserted below via `onboarding.finalBody`).
+ * `OnboardingFinalStep`'s "mention the agent" copy (2026-08-24 audit item 7) was GONE for the same
+ * reason for one regression window: `CompleteOnboarding` returned `void`, so there was no `threadId`
+ * left to mint a mention tag from. RESTORED (2026-08-26 follow-up): `CompleteOnboarding` now answers
+ * `{ threadId: string | null }`, and `OnboardingFlow`'s `onSuccess` stashes it on
+ * `useOnboardingSetupStore` for `OnboardingFinalStep` to look up via `useGetSessionChat`. This spec
+ * still asserts the GENERIC body (`onboarding.finalBody`), not the mention copy — not because the
+ * capability is gone again, but because "Começar"'s `onSuccess` navigates to `/dashboard` right after
+ * stashing the id, in the SAME handler as the `useGetSessionChat` round-trip the mention copy needs;
+ * which one wins is a genuine race this demo does not control, so asserting the mention text here
+ * would be flaky by construction. The branch itself is covered deterministically in
+ * `OnboardingFinalStep/index.test.tsx` (react harness lane, real backend, no navigate racing it).
  *
  * ### FIXED (2026-08-25, founder live-test, item 3) — the SPA hop now lands, no hard reload needed
  * "Começar" fires `useCompleteOnboarding()`, whose `onSuccess` awaits an invalidate then calls the
@@ -253,10 +260,10 @@ test('demo: operador percorre o onboarding inteiro, do slide 1 ao dashboard', as
 	// commit, 2026-08-26). Awaited via its own response rather than trusting timing alone — the SPA
 	// navigate below is now the REAL follow-up (item 3 fix), not a substitute.
 	//
-	// The "mention the agent" closing copy (2026-08-24 audit item 7) is GONE as of the same
-	// draft/atomic-commit rewrite: `CompleteOnboarding` composes `AttachThread` server-side and never
-	// returns the minted `threadId` to the client, so there is nothing left client-side to look up a
-	// mention tag from — the card always shows the generic closing body now.
+	// The "mention the agent" closing copy (2026-08-24 audit item 7) is RESTORED server-side
+	// (`CompleteOnboarding` answers `{ threadId }` again, 2026-08-26 follow-up) but not asserted here —
+	// see this file's own docblock ("2026-08-26 update") for why: it races the SPA navigate this same
+	// click triggers, so which body renders first is not something this demo controls deterministically.
 	await expect(page.getByRole('heading', { name: t('onboarding.finalTitle') })).toBeVisible()
 	await expect(page.getByText(t('onboarding.finalBody'))).toBeVisible()
 	await page.waitForTimeout(600) // demo pacing — let the video breathe, not a wait-for-condition
