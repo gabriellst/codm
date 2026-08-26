@@ -12,7 +12,7 @@ import { test } from '../utils/test'
  * reach, this flow is skipped with cause.
  *
  * To un-skip: extend E2eStubAgentRunner to emit a stop runtime-event on a sentinel prompt token (and
- * add a `/v1/_test/gateway` action to trigger it), then assert NEEDS_INPUT → getNeedsYouPanel →
+ * add a `/_test/gateway` action to trigger it), then assert NEEDS_INPUT → getNeedsYouPanel →
  * resolveStop → back to WORKING. Deferred — it changes the ingress seam's contract, out of scope for
  * the harness rewire.
  */

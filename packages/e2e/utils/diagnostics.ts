@@ -1,5 +1,19 @@
 import type { Page } from 'playwright'
 
+/**
+ * As origens que SÃO nossas — derivadas das portas que o runner fixa (`scripts/run-e2e.ts`
+ * `pinnedAddresses`), nunca transcritas. Inclui as duas grafias de host porque o browser e as sondas
+ * de servidor legitimamente usam grafias diferentes (ver o docblock de `baseURL` no
+ * `playwright.config.ts`). O gateway entra pela porta que o runner exporta como `CHANNEL_PORT`; a
+ * nuvem, por `E2E_CLOUD_PORT`.
+ */
+const OUR_ORIGINS = ['localhost', '127.0.0.1'].flatMap(host => [
+	`http://${host}:${Number(process.env.API_PORT ?? 3130)}`,
+	`http://${host}:${Number(process.env.CHANNEL_PORT ?? 3132)}`,
+	`http://${host}:${Number(process.env.E2E_CLOUD_PORT ?? 3134)}`,
+	`http://${host}:${Number(process.env.VITE_PORT ?? 5273)}`,
+])
+
 export interface ApiCall {
 	method: string
 	url: string
@@ -19,7 +33,15 @@ export function createNetworkLogger() {
 	function attach(page: Page) {
 		page.on('response', async response => {
 			const url = response.url()
-			if (!url.includes('/v1/') && !url.includes('/api/')) return
+			// ANCORADO NA ORIGEM, não num prefixo de caminho.
+			//
+			// Este filtro casava `/v1/` e `/api/`. Um filtro assim é frágil por construção: ele pressupõe
+			// que toda chamada da nossa API carrega um segmento fixo, e o dia em que o prefixo sai — foi o
+			// que aconteceu — ele para de gravar QUALQUER coisa, em silêncio. O diagnóstico some exatamente
+			// quando a mudança que o quebrou precisa ser diagnosticada.
+			//
+			// A pergunta real é "esta resposta veio de um servidor NOSSO?", e isso é a ORIGEM.
+			if (!OUR_ORIGINS.some(origin => url.startsWith(origin))) return
 
 			let responseBody = ''
 			try {

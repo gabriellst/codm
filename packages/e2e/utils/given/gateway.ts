@@ -1,7 +1,7 @@
 import type { ApiSession } from './api'
 
 /**
- * Test-only gateway ingress helpers — the spec-side counterpart of the daemon's `/v1/_test/gateway`
+ * Test-only gateway ingress helpers — the spec-side counterpart of the daemon's `/_test/gateway`
  * controller (mounted only under CODM_ENV=e2e). The harness boots ONLY the TS daemon; the Go Channel
  * Gateway is simulated at the integration-event seam by these two calls. Not part of the generated
  * SDK, so they go through the operator client's raw request (it adds the Origin header + base URL).
@@ -11,7 +11,7 @@ import type { ApiSession } from './api'
 export async function seedConnectedChannel(session: ApiSession, opts: { platform?: string; accountDetail?: string } = {}): Promise<string> {
 	const res = await session.client<{ ok: boolean; channelId: string }>({
 		method: 'POST',
-		url: '/v1/_test/gateway',
+		url: '/_test/gateway',
 		data: { kind: 'channel-connected', ...opts },
 	})
 	return res.data.channelId
@@ -33,7 +33,7 @@ export async function injectInboundMessage(
 ): Promise<string> {
 	const res = await session.client<{ ok: boolean; messageId: string }>({
 		method: 'POST',
-		url: '/v1/_test/gateway',
+		url: '/_test/gateway',
 		data: { kind: 'inbound-message', ...input },
 	})
 	return res.data.messageId
@@ -85,7 +85,7 @@ export async function readChannelSender(
 ): Promise<ChannelSenderSnapshot> {
 	const res = await session.client<ChannelSenderSnapshot>({
 		method: 'GET',
-		url: '/v1/_test/channel-sender',
+		url: '/_test/channel-sender',
 		params: { channelId: opts.channelId, remoteId: opts.remoteId },
 	})
 	return res.data

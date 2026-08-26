@@ -48,7 +48,7 @@ function resolveNodeBin(): string {
  * boots CODM_ENV=e2e over the SAME scratch CODM_DATA_DIR the TS daemon writes to, with
  * `channel.Overlays[EnvE2e]` swapping in the scripted `MockChannelFactory` (defaultE2eScenario,
  * internal/channel/overlay.go) — QR frames, auto-pairing, and contacts flow through the REAL
- * mapper/outbox/handler/projector pipeline, no phone involved. The TEST-ONLY `/v1/_test/gateway`
+ * mapper/outbox/handler/projector pipeline, no phone involved. The TEST-ONLY `/_test/gateway`
  * endpoint (TS-side, mounted only under CODM_ENV=e2e) still exists and is still used by specs that
  * only need a CONNECTED channel row as background state (givenAttachedThread) — the two seams are
  * complementary, not a replacement of one by the other: this runner needs no Postgres, no Redis, no

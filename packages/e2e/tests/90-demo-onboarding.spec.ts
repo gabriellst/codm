@@ -197,7 +197,7 @@ test('demo: operador percorre o onboarding inteiro, do slide 1 ao dashboard', as
 	await cursor.fill(page.getByLabel(t('workspaces.projectFolder')), workspacePath)
 	await page.waitForTimeout(500) // demo pacing — let the video breathe, not a wait-for-condition
 	await Promise.all([
-		page.waitForResponse(res => res.url().includes('/v1/workspaces') && res.request().method() === 'POST' && res.ok()),
+		page.waitForResponse(res => res.url().includes('/workspaces') && res.request().method() === 'POST' && res.ok()),
 		cursor.click(page.getByRole('button', { name: t('onboarding.next') }), { circulate: true }),
 	])
 
@@ -231,7 +231,7 @@ test('demo: operador percorre o onboarding inteiro, do slide 1 ao dashboard', as
 	await expect(page.getByRole('heading', { name: t('attach.stepReviewTitle') })).toBeVisible()
 	await page.waitForTimeout(500) // demo pacing — let the video breathe, not a wait-for-condition
 	await Promise.all([
-		page.waitForResponse(res => res.url().includes('/v1/threads') && res.request().method() === 'POST' && res.ok()),
+		page.waitForResponse(res => res.url().includes('/threads') && res.request().method() === 'POST' && res.ok()),
 		cursor.click(page.getByRole('button', { name: t('onboarding.next') }), { circulate: true }),
 	])
 
@@ -247,7 +247,7 @@ test('demo: operador percorre o onboarding inteiro, do slide 1 ao dashboard', as
 	await expect(page.getByText(t('onboarding.finalMentionIntro'))).toBeVisible()
 	await page.waitForTimeout(600) // demo pacing — let the video breathe, not a wait-for-condition
 	await Promise.all([
-		page.waitForResponse(res => res.url().includes('/v1/ui/onboarding/complete') && res.request().method() === 'POST' && res.ok()),
+		page.waitForResponse(res => res.url().includes('/ui/onboarding/complete') && res.request().method() === 'POST' && res.ok()),
 		cursor.click(page.getByRole('button', { name: t('onboarding.getStarted') }), { circulate: true }),
 	])
 

@@ -13,7 +13,7 @@ import { cloudClient } from '../utils/given'
  *     daemon de NUVEM (`PLACEMENT`: `owner` e `auth` montam sob `{ deployment: 'cloud' }`);
  *   - a leitura de volta é `getSession`, também da nuvem — é lá que a sessão vive.
  *
- * Até a F7 esta spec mandava as três contra o local e recebia `Route POST:/v1/owners not found` —
+ * Até a F7 esta spec mandava as três contra o local e recebia `Route POST:/owners not found` —
  * que era a PLACEMENT funcionando, não um defeito. A sonda de prontidão quebrada escondeu isso por
  * meses: a suíte nunca chegava a rodar para dizer.
  *

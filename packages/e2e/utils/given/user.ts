@@ -4,7 +4,7 @@ import { apiOperatorSession, type ApiSession } from './api'
 
 const API_BASE_URL = process.env.API_URL ?? 'http://localhost:3130'
 // `go` rides the api-ts ChannelProxy shape (the canonical map in app lib/config.ts) — never :3032.
-configureClient({ typescript: API_BASE_URL, go: `${API_BASE_URL}/v1/external/channel` })
+configureClient({ typescript: API_BASE_URL, go: `${API_BASE_URL}/external/channel` })
 
 export interface FreshUser {
 	email: string

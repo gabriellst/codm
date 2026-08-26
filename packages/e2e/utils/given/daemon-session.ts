@@ -8,10 +8,10 @@
  * rota local devolve 401. Eram 10 das 11 specs reprovando por isso.
  *
  * ── OS DOIS HOPS ─────────────────────────────────────────────────────────────────────────────────
- * 1. A NUVEM cunha a sessão e devolve o token (`POST /v1/_test/session`, costura montada só sob a
+ * 1. A NUVEM cunha a sessão e devolve o token (`POST /_test/session`, costura montada só sob a
  *    coluna `e2e` — ver o docblock dela para por que o caminho de produção, OAuth device-code pelo
  *    navegador do sistema, é indirigível numa suíte).
- * 2. O DAEMON LOCAL recebe o token por `POST /v1/session/cloud-token` — que é a MESMA porta que o
+ * 2. O DAEMON LOCAL recebe o token por `POST /session/cloud-token` — que é a MESMA porta que o
  *    console de verdade usa depois de trocar o deep-link code, e que é deliberadamente sem
  *    middleware (a porta de login não pode exigir login).
  *
@@ -45,7 +45,7 @@ export interface DaemonSession {
  * segundo tenant por acidente.
  */
 export async function authenticateDaemon(ownerId: string = E2E_OWNER_ID): Promise<DaemonSession> {
-	const minted = await fetch(`${cloudUrl()}/v1/_test/session`, {
+	const minted = await fetch(`${cloudUrl()}/_test/session`, {
 		method: 'POST',
 		headers: { 'content-type': 'application/json', Origin: cloudUrl() },
 		body: JSON.stringify({ ownerId }),
@@ -55,7 +55,7 @@ export async function authenticateDaemon(ownerId: string = E2E_OWNER_ID): Promis
 	}
 	const { token, userId } = (await minted.json()) as { token: string; userId: string }
 
-	const pushed = await fetch(`${daemonUrl()}/v1/session/cloud-token`, {
+	const pushed = await fetch(`${daemonUrl()}/session/cloud-token`, {
 		method: 'POST',
 		headers: { 'content-type': 'application/json', Origin: daemonUrl() },
 		body: JSON.stringify({ token }),

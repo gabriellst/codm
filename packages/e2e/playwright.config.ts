@@ -36,8 +36,8 @@ export default defineConfig({
 			// 127.0.0.1 accepts any response, but 404 does NOT prove the daemon is up (a stale listener
 			// 404s too), so probe a route that returns 200 only once the daemon is serving.
 			//
-			// ── F1.3: a rota era `/v1/session`, e a premissa dela CADUCOU ───────────────────────────
-			// `/v1/session` monta SOMENTE na nuvem — `auth` é cloud-only desde o ADR 0001, e a
+			// ── F1.3: a rota era `/session`, e a premissa dela CADUCOU ───────────────────────────
+			// `/session` monta SOMENTE na nuvem — `auth` é cloud-only desde o ADR 0001, e a
 			// `PLACEMENT` o diz. No daemon local ela dá 404 PERMANENTE. E o Playwright considera pronto
 			// só `200 <= status < 404` (playwright-core, `isURLAvailable`), com um fallback para 404
 			// que só vale quando o pathname é `/`. Logo o poll NUNCA convergia: os 120s estouravam com
@@ -47,11 +47,11 @@ export default defineConfig({
 			// em `/api/health`, e o api-ts loga `listening` — os três estavam saudáveis. O defeito era
 			// a sonda, e ele é do MAINLINE, não desta worktree.
 			//
-			// `/v1/health` serve melhor à intenção original: é do contexto `shared` (monta sempre), é
+			// `/health` serve melhor à intenção original: é do contexto `shared` (monta sempre), é
 			// público (sem middleware), devolve 200 apenas quando db, migrações e dispatchers estão up,
 			// e 503 caso contrário — que também está fora da faixa de prontidão. Ou seja, preserva a
 			// propriedade anti-listener-stale que este comentário buscava, e a reforça.
-			url: `http://127.0.0.1:${Number(process.env.API_PORT ?? 3130)}/v1/health`,
+			url: `http://127.0.0.1:${Number(process.env.API_PORT ?? 3130)}/health`,
 			reuseExistingServer: false,
 			timeout: 120_000,
 			cwd: '../api/typescript',
@@ -68,7 +68,7 @@ export default defineConfig({
 				RATE_LIMIT_DISABLED: 'true',
 				// SERVER-SIDE only — the browser never learns this (app-react lib/config.ts: "No
 				// VITE_GATEWAY_URL exists on purpose"). external/utils/forwardToChannel.ts reads this to
-				// proxy `/v1/external/channel/*` to the gateway webServer below. scripts/run-e2e.ts exports
+				// proxy `/external/channel/*` to the gateway webServer below. scripts/run-e2e.ts exports
 				// the real value (derived from its own gatewayPort); this fallback keeps a bare
 				// `bunx playwright` invocation (no runner) pointed at the SAME default port the gateway
 				// webServer entry falls back to.
@@ -89,7 +89,7 @@ export default defineConfig({
 			//
 			// SEM POSTGRES: sob `CODM_ENV=e2e` a família `pg` resolve para o `PGliteDriver`
 			// (`shared/registry.ts`, decisão da F7) — Postgres em-processo que aplica a própria
-			// migração. Medido: este boot responde 200 em `/v1/health` com `auth` e `owner` montados,
+			// migração. Medido: este boot responde 200 em `/health` com `auth` e `owner` montados,
 			// sem container e sem passo de deploy.
 			//
 			// DA FONTE, e não do bundle — a assimetria com o daemon local acima é DELIBERADA e medida.
@@ -105,7 +105,7 @@ export default defineConfig({
 			// estático sobre a saída do build (`tests/architecture/build-output.test.ts`), que nasceu
 			// justamente do defeito que este caminho revelou.
 			command: 'bun run ./src',
-			url: `http://127.0.0.1:${Number(process.env.E2E_CLOUD_PORT ?? 3134)}/v1/health`,
+			url: `http://127.0.0.1:${Number(process.env.E2E_CLOUD_PORT ?? 3134)}/health`,
 			reuseExistingServer: false,
 			timeout: 120_000,
 			cwd: '../api/typescript',
