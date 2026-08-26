@@ -4,10 +4,10 @@ import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
- * @description Salva onde o operador parou no wizard
+ * @description Salva onde o operador parou no wizard e/ou o rascunho (contactRef/workspace/providers) acumulado até aqui
  * {@link /ui/onboarding/step}
  */
-export async function saveOnboardingStepHandler({ data }: { data: SaveOnboardingStepMutationRequest }): Promise<Promise<CallToolResult>> {
+export async function saveOnboardingStepHandler({ data }: { data?: SaveOnboardingStepMutationRequest } = {}): Promise<Promise<CallToolResult>> {
 
 
   const requestData = data

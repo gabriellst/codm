@@ -4,7 +4,7 @@ import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
 
 /**
- * @description Onboarding — jornada persistida (currentStep/completedAt) + satisfação derivada dos passos de setup
+ * @description Onboarding — jornada persistida (currentStep/completedAt/state) + satisfação derivada dos passos de setup
  * {@link /ui/onboarding}
  */
 export async function getOnboardingHandler(): Promise<Promise<CallToolResult>> {

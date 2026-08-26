@@ -26,7 +26,7 @@ export function completeOnboardingMutationOptions<TContext = unknown>(config: Pa
 }
 
 /**
- * @description Conclui o onboarding do operador — grava completedAt
+ * @description Conclui o onboarding do operador — commit atômico do rascunho (workspace/thread) seguido de completedAt
  * {@link /ui/onboarding/complete}
  */
 export function useCompleteOnboarding<TContext>(options: 

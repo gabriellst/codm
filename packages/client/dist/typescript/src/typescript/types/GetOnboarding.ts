@@ -3,10 +3,12 @@
 * Do not edit manually.
 */
 
+import type { ContactKind } from "./ContactKind.ts";
 import type { OnboardingStep } from "./OnboardingStep.ts";
+import type { ProviderKind } from "./ProviderKind.ts";
 
 /**
- * @description Onboarding — jornada persistida (currentStep/completedAt) + satisfação derivada dos passos de setup
+ * @description Onboarding — jornada persistida (currentStep/completedAt/state) + satisfação derivada dos passos de setup
 */
 export type GetOnboarding200 = {
     /**
@@ -17,6 +19,54 @@ export type GetOnboarding200 = {
      * @type string, date-time
     */
     completedAt: string | null;
+    /**
+     * @type object
+    */
+    state: {
+        /**
+         * @type object | undefined
+        */
+        contactRef?: {
+            /**
+             * @type string, uuid
+            */
+            channelId: string;
+            /**
+             * @minLength 1
+             * @type string
+            */
+            externalId: string;
+            /**
+             * @minLength 1
+             * @type string
+            */
+            displayName: string;
+            /**
+             * @type string
+            */
+            kind: ContactKind;
+        };
+        /**
+         * @type object | undefined
+        */
+        workspace?: {
+            /**
+             * @minLength 1
+             * @maxLength 1024
+             * @pattern ^(?:\/|[A-Za-z]:[\\/]|\\\\)
+             * @type string | undefined
+            */
+            path?: string;
+            /**
+             * @type string | undefined, uuid
+            */
+            existingWorkspaceId?: string;
+        };
+        /**
+         * @type array | undefined
+        */
+        providers?: ProviderKind[];
+    };
     /**
      * @type boolean
     */

@@ -16,7 +16,7 @@ export type SaveOnboardingStepMutationKey = ReturnType<typeof saveOnboardingStep
 export function saveOnboardingStepMutationOptions<TContext = unknown>(config: Partial<RequestConfig<SaveOnboardingStepMutationRequest>> & { client?: Client } = {}) {
 
         const mutationKey = saveOnboardingStepMutationKey()
-        return mutationOptions<SaveOnboardingStepMutationResponse, ResponseErrorConfig<Error>, {data: SaveOnboardingStepMutationRequest}, TContext>({
+        return mutationOptions<SaveOnboardingStepMutationResponse, ResponseErrorConfig<Error>, {data?: SaveOnboardingStepMutationRequest}, TContext>({
           mutationKey,
           mutationFn: async({ data }) => {
             return saveOnboardingStep(data, config)
@@ -26,12 +26,12 @@ export function saveOnboardingStepMutationOptions<TContext = unknown>(config: Pa
 }
 
 /**
- * @description Salva onde o operador parou no wizard
+ * @description Salva onde o operador parou no wizard e/ou o rascunho (contactRef/workspace/providers) acumulado até aqui
  * {@link /ui/onboarding/step}
  */
 export function useSaveOnboardingStep<TContext>(options: 
 {
-  mutation?: UseMutationOptions<SaveOnboardingStepMutationResponse, ResponseErrorConfig<Error>, {data: SaveOnboardingStepMutationRequest}, TContext> & { client?: QueryClient },
+  mutation?: UseMutationOptions<SaveOnboardingStepMutationResponse, ResponseErrorConfig<Error>, {data?: SaveOnboardingStepMutationRequest}, TContext> & { client?: QueryClient },
   client?: Partial<RequestConfig<SaveOnboardingStepMutationRequest>> & { client?: Client },
 }
  = {}) {
@@ -40,13 +40,13 @@ export function useSaveOnboardingStep<TContext>(options:
           const { client: queryClient, ...mutationOptions } = mutation;
           const mutationKey = mutationOptions.mutationKey ?? saveOnboardingStepMutationKey()
 
-          const baseOptions = saveOnboardingStepMutationOptions(config) as UseMutationOptions<SaveOnboardingStepMutationResponse, ResponseErrorConfig<Error>, {data: SaveOnboardingStepMutationRequest}, TContext>
+          const baseOptions = saveOnboardingStepMutationOptions(config) as UseMutationOptions<SaveOnboardingStepMutationResponse, ResponseErrorConfig<Error>, {data?: SaveOnboardingStepMutationRequest}, TContext>
           
 
-          return useMutation<SaveOnboardingStepMutationResponse, ResponseErrorConfig<Error>, {data: SaveOnboardingStepMutationRequest}, TContext>({
+          return useMutation<SaveOnboardingStepMutationResponse, ResponseErrorConfig<Error>, {data?: SaveOnboardingStepMutationRequest}, TContext>({
             ...baseOptions,
             mutationKey,
             ...mutationOptions,
-          }, queryClient) as UseMutationResult<SaveOnboardingStepMutationResponse, ResponseErrorConfig<Error>, {data: SaveOnboardingStepMutationRequest}, TContext>
+          }, queryClient) as UseMutationResult<SaveOnboardingStepMutationResponse, ResponseErrorConfig<Error>, {data?: SaveOnboardingStepMutationRequest}, TContext>
       
 }

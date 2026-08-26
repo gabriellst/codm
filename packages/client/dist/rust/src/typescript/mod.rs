@@ -268,6 +268,7 @@ pub mod types {
     ///    "NOT_IMPLEMENTED",
     ///    "NO_CHANNEL_CONNECTED",
     ///    "NO_PROVIDER_SELECTED",
+    ///    "ONBOARDING_DRAFT_INCOMPLETE",
     ///    "ONBOARDING_NOT_COMPLETED",
     ///    "OPTIMISTIC_LOCK_CONFLICT",
     ///    "OWNER_ALREADY_DISABLED",
@@ -449,6 +450,8 @@ pub mod types {
         NoChannelConnected,
         #[serde(rename = "NO_PROVIDER_SELECTED")]
         NoProviderSelected,
+        #[serde(rename = "ONBOARDING_DRAFT_INCOMPLETE")]
+        OnboardingDraftIncomplete,
         #[serde(rename = "ONBOARDING_NOT_COMPLETED")]
         OnboardingNotCompleted,
         #[serde(rename = "OPTIMISTIC_LOCK_CONFLICT")]
@@ -611,6 +614,9 @@ pub mod types {
                 Self::NotImplemented => f.write_str("NOT_IMPLEMENTED"),
                 Self::NoChannelConnected => f.write_str("NO_CHANNEL_CONNECTED"),
                 Self::NoProviderSelected => f.write_str("NO_PROVIDER_SELECTED"),
+                Self::OnboardingDraftIncomplete => {
+                    f.write_str("ONBOARDING_DRAFT_INCOMPLETE")
+                }
                 Self::OnboardingNotCompleted => f.write_str("ONBOARDING_NOT_COMPLETED"),
                 Self::OptimisticLockConflict => f.write_str("OPTIMISTIC_LOCK_CONFLICT"),
                 Self::OwnerAlreadyDisabled => f.write_str("OWNER_ALREADY_DISABLED"),
@@ -725,6 +731,7 @@ pub mod types {
                 "NOT_IMPLEMENTED" => Ok(Self::NotImplemented),
                 "NO_CHANNEL_CONNECTED" => Ok(Self::NoChannelConnected),
                 "NO_PROVIDER_SELECTED" => Ok(Self::NoProviderSelected),
+                "ONBOARDING_DRAFT_INCOMPLETE" => Ok(Self::OnboardingDraftIncomplete),
                 "ONBOARDING_NOT_COMPLETED" => Ok(Self::OnboardingNotCompleted),
                 "OPTIMISTIC_LOCK_CONFLICT" => Ok(Self::OptimisticLockConflict),
                 "OWNER_ALREADY_DISABLED" => Ok(Self::OwnerAlreadyDisabled),
@@ -4941,6 +4948,7 @@ pub mod types {
     ///    "channelDone",
     ///    "completedAt",
     ///    "currentStep",
+    ///    "state",
     ///    "threadDone",
     ///    "workspaceDone"
     ///  ],
@@ -4958,6 +4966,64 @@ pub mod types {
     ///    },
     ///    "currentStep": {
     ///      "$ref": "#/components/schemas/OnboardingStep"
+    ///    },
+    ///    "state": {
+    ///      "type": "object",
+    ///      "properties": {
+    ///        "contactRef": {
+    ///          "type": "object",
+    ///          "required": [
+    ///            "channelId",
+    ///            "displayName",
+    ///            "externalId",
+    ///            "kind"
+    ///          ],
+    ///          "properties": {
+    ///            "channelId": {
+    ///              "type": "string",
+    ///              "format": "uuid",
+    ///              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///            },
+    ///            "displayName": {
+    ///              "type": "string",
+    ///              "minLength": 1
+    ///            },
+    ///            "externalId": {
+    ///              "type": "string",
+    ///              "minLength": 1
+    ///            },
+    ///            "kind": {
+    ///              "$ref": "#/components/schemas/ContactKind"
+    ///            }
+    ///          },
+    ///          "additionalProperties": false
+    ///        },
+    ///        "providers": {
+    ///          "type": "array",
+    ///          "items": {
+    ///            "$ref": "#/components/schemas/ProviderKind"
+    ///          },
+    ///          "minItems": 1
+    ///        },
+    ///        "workspace": {
+    ///          "type": "object",
+    ///          "properties": {
+    ///            "existingWorkspaceId": {
+    ///              "type": "string",
+    ///              "format": "uuid",
+    ///              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///            },
+    ///            "path": {
+    ///              "type": "string",
+    ///              "maxLength": 1024,
+    ///              "minLength": 1,
+    ///              "pattern": "^(?:\\/|[A-Za-z]:[\\\\/]|\\\\\\\\)"
+    ///            }
+    ///          },
+    ///          "additionalProperties": false
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
     ///    },
     ///    "threadDone": {
     ///      "type": "boolean"
@@ -4981,6 +5047,7 @@ pub mod types {
         >,
         #[serde(rename = "currentStep")]
         pub current_step: ::codm_contracts_rust::wire::enums::OnboardingStep,
+        pub state: GetOnboardingResponseState,
         #[serde(rename = "threadDone")]
         pub thread_done: bool,
         #[serde(rename = "workspaceDone")]
@@ -4989,6 +5056,461 @@ pub mod types {
     impl ::std::convert::From<&GetOnboardingResponse> for GetOnboardingResponse {
         fn from(value: &GetOnboardingResponse) -> Self {
             value.clone()
+        }
+    }
+    ///`GetOnboardingResponseState`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "properties": {
+    ///    "contactRef": {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "channelId",
+    ///        "displayName",
+    ///        "externalId",
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "channelId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "displayName": {
+    ///          "type": "string",
+    ///          "minLength": 1
+    ///        },
+    ///        "externalId": {
+    ///          "type": "string",
+    ///          "minLength": 1
+    ///        },
+    ///        "kind": {
+    ///          "$ref": "#/components/schemas/ContactKind"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    "providers": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "$ref": "#/components/schemas/ProviderKind"
+    ///      },
+    ///      "minItems": 1
+    ///    },
+    ///    "workspace": {
+    ///      "type": "object",
+    ///      "properties": {
+    ///        "existingWorkspaceId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "path": {
+    ///          "type": "string",
+    ///          "maxLength": 1024,
+    ///          "minLength": 1,
+    ///          "pattern": "^(?:\\/|[A-Za-z]:[\\\\/]|\\\\\\\\)"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetOnboardingResponseState {
+        #[serde(
+            rename = "contactRef",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub contact_ref: ::std::option::Option<GetOnboardingResponseStateContactRef>,
+        #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+        pub providers: ::std::vec::Vec<::codm_contracts_rust::wire::enums::ProviderKind>,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub workspace: ::std::option::Option<GetOnboardingResponseStateWorkspace>,
+    }
+    impl ::std::convert::From<&GetOnboardingResponseState>
+    for GetOnboardingResponseState {
+        fn from(value: &GetOnboardingResponseState) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::default::Default for GetOnboardingResponseState {
+        fn default() -> Self {
+            Self {
+                contact_ref: Default::default(),
+                providers: Default::default(),
+                workspace: Default::default(),
+            }
+        }
+    }
+    ///`GetOnboardingResponseStateContactRef`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "channelId",
+    ///    "displayName",
+    ///    "externalId",
+    ///    "kind"
+    ///  ],
+    ///  "properties": {
+    ///    "channelId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
+    ///    "displayName": {
+    ///      "type": "string",
+    ///      "minLength": 1
+    ///    },
+    ///    "externalId": {
+    ///      "type": "string",
+    ///      "minLength": 1
+    ///    },
+    ///    "kind": {
+    ///      "$ref": "#/components/schemas/ContactKind"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetOnboardingResponseStateContactRef {
+        #[serde(rename = "channelId")]
+        pub channel_id: ::uuid::Uuid,
+        #[serde(rename = "displayName")]
+        pub display_name: GetOnboardingResponseStateContactRefDisplayName,
+        #[serde(rename = "externalId")]
+        pub external_id: GetOnboardingResponseStateContactRefExternalId,
+        pub kind: ::codm_contracts_rust::wire::enums::ContactKind,
+    }
+    impl ::std::convert::From<&GetOnboardingResponseStateContactRef>
+    for GetOnboardingResponseStateContactRef {
+        fn from(value: &GetOnboardingResponseStateContactRef) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetOnboardingResponseStateContactRefDisplayName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct GetOnboardingResponseStateContactRefDisplayName(::std::string::String);
+    impl ::std::ops::Deref for GetOnboardingResponseStateContactRefDisplayName {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<GetOnboardingResponseStateContactRefDisplayName>
+    for ::std::string::String {
+        fn from(value: GetOnboardingResponseStateContactRefDisplayName) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&GetOnboardingResponseStateContactRefDisplayName>
+    for GetOnboardingResponseStateContactRefDisplayName {
+        fn from(value: &GetOnboardingResponseStateContactRefDisplayName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for GetOnboardingResponseStateContactRefDisplayName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for GetOnboardingResponseStateContactRefDisplayName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for GetOnboardingResponseStateContactRefDisplayName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for GetOnboardingResponseStateContactRefDisplayName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de>
+    for GetOnboardingResponseStateContactRefDisplayName {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`GetOnboardingResponseStateContactRefExternalId`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct GetOnboardingResponseStateContactRefExternalId(::std::string::String);
+    impl ::std::ops::Deref for GetOnboardingResponseStateContactRefExternalId {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<GetOnboardingResponseStateContactRefExternalId>
+    for ::std::string::String {
+        fn from(value: GetOnboardingResponseStateContactRefExternalId) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&GetOnboardingResponseStateContactRefExternalId>
+    for GetOnboardingResponseStateContactRefExternalId {
+        fn from(value: &GetOnboardingResponseStateContactRefExternalId) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for GetOnboardingResponseStateContactRefExternalId {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for GetOnboardingResponseStateContactRefExternalId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for GetOnboardingResponseStateContactRefExternalId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for GetOnboardingResponseStateContactRefExternalId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de>
+    for GetOnboardingResponseStateContactRefExternalId {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`GetOnboardingResponseStateWorkspace`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "properties": {
+    ///    "existingWorkspaceId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
+    ///    "path": {
+    ///      "type": "string",
+    ///      "maxLength": 1024,
+    ///      "minLength": 1,
+    ///      "pattern": "^(?:\\/|[A-Za-z]:[\\\\/]|\\\\\\\\)"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetOnboardingResponseStateWorkspace {
+        #[serde(
+            rename = "existingWorkspaceId",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub existing_workspace_id: ::std::option::Option<::uuid::Uuid>,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub path: ::std::option::Option<GetOnboardingResponseStateWorkspacePath>,
+    }
+    impl ::std::convert::From<&GetOnboardingResponseStateWorkspace>
+    for GetOnboardingResponseStateWorkspace {
+        fn from(value: &GetOnboardingResponseStateWorkspace) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::default::Default for GetOnboardingResponseStateWorkspace {
+        fn default() -> Self {
+            Self {
+                existing_workspace_id: Default::default(),
+                path: Default::default(),
+            }
+        }
+    }
+    ///`GetOnboardingResponseStateWorkspacePath`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 1024,
+    ///  "minLength": 1,
+    ///  "pattern": "^(?:\\/|[A-Za-z]:[\\\\/]|\\\\\\\\)"
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct GetOnboardingResponseStateWorkspacePath(::std::string::String);
+    impl ::std::ops::Deref for GetOnboardingResponseStateWorkspacePath {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<GetOnboardingResponseStateWorkspacePath>
+    for ::std::string::String {
+        fn from(value: GetOnboardingResponseStateWorkspacePath) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&GetOnboardingResponseStateWorkspacePath>
+    for GetOnboardingResponseStateWorkspacePath {
+        fn from(value: &GetOnboardingResponseStateWorkspacePath) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for GetOnboardingResponseStateWorkspacePath {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 1024usize {
+                return Err("longer than 1024 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            static PATTERN: ::std::sync::LazyLock<::regress::Regex> = ::std::sync::LazyLock::new(||
+            { ::regress::Regex::new("^(?:\\/|[A-Za-z]:[\\\\/]|\\\\\\\\)").unwrap() });
+            if PATTERN.find(value).is_none() {
+                return Err(
+                    "doesn't match pattern \"^(?:\\/|[A-Za-z]:[\\\\/]|\\\\\\\\)\"".into(),
+                );
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for GetOnboardingResponseStateWorkspacePath {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for GetOnboardingResponseStateWorkspacePath {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for GetOnboardingResponseStateWorkspacePath {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for GetOnboardingResponseStateWorkspacePath {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
         }
     }
     ///`GetOperatorIdentityResponse`
@@ -8391,12 +8913,64 @@ pub mod types {
     /// ```json
     ///{
     ///  "type": "object",
-    ///  "required": [
-    ///    "step"
-    ///  ],
     ///  "properties": {
-    ///    "step": {
+    ///    "currentStep": {
     ///      "$ref": "#/components/schemas/OnboardingStep"
+    ///    },
+    ///    "state": {
+    ///      "type": "object",
+    ///      "properties": {
+    ///        "contactRef": {
+    ///          "type": "object",
+    ///          "required": [
+    ///            "channelId",
+    ///            "displayName",
+    ///            "externalId",
+    ///            "kind"
+    ///          ],
+    ///          "properties": {
+    ///            "channelId": {
+    ///              "type": "string",
+    ///              "format": "uuid",
+    ///              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///            },
+    ///            "displayName": {
+    ///              "type": "string",
+    ///              "minLength": 1
+    ///            },
+    ///            "externalId": {
+    ///              "type": "string",
+    ///              "minLength": 1
+    ///            },
+    ///            "kind": {
+    ///              "$ref": "#/components/schemas/ContactKind"
+    ///            }
+    ///          }
+    ///        },
+    ///        "providers": {
+    ///          "type": "array",
+    ///          "items": {
+    ///            "$ref": "#/components/schemas/ProviderKind"
+    ///          },
+    ///          "minItems": 1
+    ///        },
+    ///        "workspace": {
+    ///          "type": "object",
+    ///          "properties": {
+    ///            "existingWorkspaceId": {
+    ///              "type": "string",
+    ///              "format": "uuid",
+    ///              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///            },
+    ///            "path": {
+    ///              "type": "string",
+    ///              "maxLength": 1024,
+    ///              "minLength": 1,
+    ///              "pattern": "^(?:\\/|[A-Za-z]:[\\\\/]|\\\\\\\\)"
+    ///            }
+    ///          }
+    ///        }
+    ///      }
     ///    }
     ///  }
     ///}
@@ -8404,11 +8978,475 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct SaveOnboardingStepBody {
-        pub step: ::codm_contracts_rust::wire::enums::OnboardingStep,
+        #[serde(
+            rename = "currentStep",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub current_step: ::std::option::Option<
+            ::codm_contracts_rust::wire::enums::OnboardingStep,
+        >,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub state: ::std::option::Option<SaveOnboardingStepBodyState>,
     }
     impl ::std::convert::From<&SaveOnboardingStepBody> for SaveOnboardingStepBody {
         fn from(value: &SaveOnboardingStepBody) -> Self {
             value.clone()
+        }
+    }
+    impl ::std::default::Default for SaveOnboardingStepBody {
+        fn default() -> Self {
+            Self {
+                current_step: Default::default(),
+                state: Default::default(),
+            }
+        }
+    }
+    ///`SaveOnboardingStepBodyState`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "properties": {
+    ///    "contactRef": {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "channelId",
+    ///        "displayName",
+    ///        "externalId",
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "channelId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "displayName": {
+    ///          "type": "string",
+    ///          "minLength": 1
+    ///        },
+    ///        "externalId": {
+    ///          "type": "string",
+    ///          "minLength": 1
+    ///        },
+    ///        "kind": {
+    ///          "$ref": "#/components/schemas/ContactKind"
+    ///        }
+    ///      }
+    ///    },
+    ///    "providers": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "$ref": "#/components/schemas/ProviderKind"
+    ///      },
+    ///      "minItems": 1
+    ///    },
+    ///    "workspace": {
+    ///      "type": "object",
+    ///      "properties": {
+    ///        "existingWorkspaceId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "path": {
+    ///          "type": "string",
+    ///          "maxLength": 1024,
+    ///          "minLength": 1,
+    ///          "pattern": "^(?:\\/|[A-Za-z]:[\\\\/]|\\\\\\\\)"
+    ///        }
+    ///      }
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct SaveOnboardingStepBodyState {
+        #[serde(
+            rename = "contactRef",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub contact_ref: ::std::option::Option<SaveOnboardingStepBodyStateContactRef>,
+        #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+        pub providers: ::std::vec::Vec<::codm_contracts_rust::wire::enums::ProviderKind>,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub workspace: ::std::option::Option<SaveOnboardingStepBodyStateWorkspace>,
+    }
+    impl ::std::convert::From<&SaveOnboardingStepBodyState>
+    for SaveOnboardingStepBodyState {
+        fn from(value: &SaveOnboardingStepBodyState) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::default::Default for SaveOnboardingStepBodyState {
+        fn default() -> Self {
+            Self {
+                contact_ref: Default::default(),
+                providers: Default::default(),
+                workspace: Default::default(),
+            }
+        }
+    }
+    ///`SaveOnboardingStepBodyStateContactRef`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "channelId",
+    ///    "displayName",
+    ///    "externalId",
+    ///    "kind"
+    ///  ],
+    ///  "properties": {
+    ///    "channelId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
+    ///    "displayName": {
+    ///      "type": "string",
+    ///      "minLength": 1
+    ///    },
+    ///    "externalId": {
+    ///      "type": "string",
+    ///      "minLength": 1
+    ///    },
+    ///    "kind": {
+    ///      "$ref": "#/components/schemas/ContactKind"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct SaveOnboardingStepBodyStateContactRef {
+        #[serde(rename = "channelId")]
+        pub channel_id: ::uuid::Uuid,
+        #[serde(rename = "displayName")]
+        pub display_name: SaveOnboardingStepBodyStateContactRefDisplayName,
+        #[serde(rename = "externalId")]
+        pub external_id: SaveOnboardingStepBodyStateContactRefExternalId,
+        pub kind: ::codm_contracts_rust::wire::enums::ContactKind,
+    }
+    impl ::std::convert::From<&SaveOnboardingStepBodyStateContactRef>
+    for SaveOnboardingStepBodyStateContactRef {
+        fn from(value: &SaveOnboardingStepBodyStateContactRef) -> Self {
+            value.clone()
+        }
+    }
+    ///`SaveOnboardingStepBodyStateContactRefDisplayName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct SaveOnboardingStepBodyStateContactRefDisplayName(::std::string::String);
+    impl ::std::ops::Deref for SaveOnboardingStepBodyStateContactRefDisplayName {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<SaveOnboardingStepBodyStateContactRefDisplayName>
+    for ::std::string::String {
+        fn from(value: SaveOnboardingStepBodyStateContactRefDisplayName) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&SaveOnboardingStepBodyStateContactRefDisplayName>
+    for SaveOnboardingStepBodyStateContactRefDisplayName {
+        fn from(value: &SaveOnboardingStepBodyStateContactRefDisplayName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for SaveOnboardingStepBodyStateContactRefDisplayName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for SaveOnboardingStepBodyStateContactRefDisplayName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for SaveOnboardingStepBodyStateContactRefDisplayName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for SaveOnboardingStepBodyStateContactRefDisplayName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de>
+    for SaveOnboardingStepBodyStateContactRefDisplayName {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`SaveOnboardingStepBodyStateContactRefExternalId`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct SaveOnboardingStepBodyStateContactRefExternalId(::std::string::String);
+    impl ::std::ops::Deref for SaveOnboardingStepBodyStateContactRefExternalId {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<SaveOnboardingStepBodyStateContactRefExternalId>
+    for ::std::string::String {
+        fn from(value: SaveOnboardingStepBodyStateContactRefExternalId) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&SaveOnboardingStepBodyStateContactRefExternalId>
+    for SaveOnboardingStepBodyStateContactRefExternalId {
+        fn from(value: &SaveOnboardingStepBodyStateContactRefExternalId) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for SaveOnboardingStepBodyStateContactRefExternalId {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for SaveOnboardingStepBodyStateContactRefExternalId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for SaveOnboardingStepBodyStateContactRefExternalId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for SaveOnboardingStepBodyStateContactRefExternalId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de>
+    for SaveOnboardingStepBodyStateContactRefExternalId {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`SaveOnboardingStepBodyStateWorkspace`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "properties": {
+    ///    "existingWorkspaceId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
+    ///    "path": {
+    ///      "type": "string",
+    ///      "maxLength": 1024,
+    ///      "minLength": 1,
+    ///      "pattern": "^(?:\\/|[A-Za-z]:[\\\\/]|\\\\\\\\)"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct SaveOnboardingStepBodyStateWorkspace {
+        #[serde(
+            rename = "existingWorkspaceId",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub existing_workspace_id: ::std::option::Option<::uuid::Uuid>,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub path: ::std::option::Option<SaveOnboardingStepBodyStateWorkspacePath>,
+    }
+    impl ::std::convert::From<&SaveOnboardingStepBodyStateWorkspace>
+    for SaveOnboardingStepBodyStateWorkspace {
+        fn from(value: &SaveOnboardingStepBodyStateWorkspace) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::default::Default for SaveOnboardingStepBodyStateWorkspace {
+        fn default() -> Self {
+            Self {
+                existing_workspace_id: Default::default(),
+                path: Default::default(),
+            }
+        }
+    }
+    ///`SaveOnboardingStepBodyStateWorkspacePath`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 1024,
+    ///  "minLength": 1,
+    ///  "pattern": "^(?:\\/|[A-Za-z]:[\\\\/]|\\\\\\\\)"
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct SaveOnboardingStepBodyStateWorkspacePath(::std::string::String);
+    impl ::std::ops::Deref for SaveOnboardingStepBodyStateWorkspacePath {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<SaveOnboardingStepBodyStateWorkspacePath>
+    for ::std::string::String {
+        fn from(value: SaveOnboardingStepBodyStateWorkspacePath) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&SaveOnboardingStepBodyStateWorkspacePath>
+    for SaveOnboardingStepBodyStateWorkspacePath {
+        fn from(value: &SaveOnboardingStepBodyStateWorkspacePath) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for SaveOnboardingStepBodyStateWorkspacePath {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 1024usize {
+                return Err("longer than 1024 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            static PATTERN: ::std::sync::LazyLock<::regress::Regex> = ::std::sync::LazyLock::new(||
+            { ::regress::Regex::new("^(?:\\/|[A-Za-z]:[\\\\/]|\\\\\\\\)").unwrap() });
+            if PATTERN.find(value).is_none() {
+                return Err(
+                    "doesn't match pattern \"^(?:\\/|[A-Za-z]:[\\\\/]|\\\\\\\\)\"".into(),
+                );
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for SaveOnboardingStepBodyStateWorkspacePath {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for SaveOnboardingStepBodyStateWorkspacePath {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for SaveOnboardingStepBodyStateWorkspacePath {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for SaveOnboardingStepBodyStateWorkspacePath {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
         }
     }
     ///`SendArtifactBody`
@@ -12076,7 +13114,7 @@ Sends a `GET` request to `/ui/home`
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
-    /**Onboarding — jornada persistida (currentStep/completedAt) + satisfação derivada dos passos de setup
+    /**Onboarding — jornada persistida (currentStep/completedAt/state) + satisfação derivada dos passos de setup
 
 Sends a `GET` request to `/ui/onboarding`
 
@@ -12108,7 +13146,7 @@ Sends a `GET` request to `/ui/onboarding`
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
-    /**Conclui o onboarding do operador — grava completedAt
+    /**Conclui o onboarding do operador — commit atômico do rascunho (workspace/thread) seguido de completedAt
 
 Sends a `POST` request to `/ui/onboarding/complete`
 
@@ -12140,7 +13178,7 @@ Sends a `POST` request to `/ui/onboarding/complete`
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
-    /**Salva onde o operador parou no wizard
+    /**Salva onde o operador parou no wizard e/ou o rascunho (contactRef/workspace/providers) acumulado até aqui
 
 Sends a `PATCH` request to `/ui/onboarding/step`
 

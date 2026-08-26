@@ -268,7 +268,7 @@ server.registerTool("GetSettings", {
           
 
 server.registerTool("GetOnboarding", {
-  description: "Onboarding — jornada persistida (currentStep/completedAt) + satisfação derivada dos passos de setup",
+  description: "Onboarding — jornada persistida (currentStep/completedAt/state) + satisfação derivada dos passos de setup",
   outputSchema: { data: getOnboardingQueryResponseSchema },
 }, async () => {
   return getOnboardingHandler()
@@ -276,7 +276,7 @@ server.registerTool("GetOnboarding", {
           
 
 server.registerTool("CompleteOnboarding", {
-  description: "Conclui o onboarding do operador — grava completedAt",
+  description: "Conclui o onboarding do operador — commit atômico do rascunho (workspace/thread) seguido de completedAt",
   outputSchema: { data: completeOnboardingMutationResponseSchema },
 }, async () => {
   return completeOnboardingHandler()
@@ -284,7 +284,7 @@ server.registerTool("CompleteOnboarding", {
           
 
 server.registerTool("SaveOnboardingStep", {
-  description: "Salva onde o operador parou no wizard",
+  description: "Salva onde o operador parou no wizard e/ou o rascunho (contactRef/workspace/providers) acumulado até aqui",
   outputSchema: { data: saveOnboardingStepMutationResponseSchema },
   inputSchema: { data: saveOnboardingStepMutationRequestSchema },
 }, async ({ data }) => {

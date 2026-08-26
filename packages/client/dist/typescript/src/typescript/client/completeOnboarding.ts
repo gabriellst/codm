@@ -13,7 +13,7 @@ function getCompleteOnboardingUrl() {
 }
 
 /**
- * @description Conclui o onboarding do operador — grava completedAt
+ * @description Conclui o onboarding do operador — commit atômico do rascunho (workspace/thread) seguido de completedAt
  * {@link /ui/onboarding/complete}
  */
 export async function completeOnboarding(config: Partial<RequestConfig> & { client?: Client } = {}) {

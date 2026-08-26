@@ -13,10 +13,10 @@ function getSaveOnboardingStepUrl() {
 }
 
 /**
- * @description Salva onde o operador parou no wizard
+ * @description Salva onde o operador parou no wizard e/ou o rascunho (contactRef/workspace/providers) acumulado até aqui
  * {@link /ui/onboarding/step}
  */
-export async function saveOnboardingStep(data: SaveOnboardingStepMutationRequest, config: Partial<RequestConfig<SaveOnboardingStepMutationRequest>> & { client?: Client } = {}) {
+export async function saveOnboardingStep(data?: SaveOnboardingStepMutationRequest, config: Partial<RequestConfig<SaveOnboardingStepMutationRequest>> & { client?: Client } = {}) {
   const { client: request = fetch, ...requestConfig } = config
 
   const requestData = data

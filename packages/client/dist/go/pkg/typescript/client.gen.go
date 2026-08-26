@@ -108,6 +108,7 @@ const (
 	NOPROVIDERSELECTED              ApiErrors = "NO_PROVIDER_SELECTED"
 	NOTFOUND                        ApiErrors = "NOT_FOUND"
 	NOTIMPLEMENTED                  ApiErrors = "NOT_IMPLEMENTED"
+	ONBOARDINGDRAFTINCOMPLETE       ApiErrors = "ONBOARDING_DRAFT_INCOMPLETE"
 	ONBOARDINGNOTCOMPLETED          ApiErrors = "ONBOARDING_NOT_COMPLETED"
 	OPTIMISTICLOCKCONFLICT          ApiErrors = "OPTIMISTIC_LOCK_CONFLICT"
 	OWNERALREADYDISABLED            ApiErrors = "OWNER_ALREADY_DISABLED"
@@ -276,6 +277,8 @@ func (e ApiErrors) Valid() bool {
 	case NOTFOUND:
 		return true
 	case NOTIMPLEMENTED:
+		return true
+	case ONBOARDINGDRAFTINCOMPLETE:
 		return true
 	case ONBOARDINGNOTCOMPLETED:
 		return true
@@ -1618,7 +1621,20 @@ type GetAttachThreadWizardParams struct {
 
 // SaveOnboardingStepJSONBody defines parameters for SaveOnboardingStep.
 type SaveOnboardingStepJSONBody struct {
-	Step OnboardingStep `json:"step"`
+	CurrentStep *OnboardingStep `json:"currentStep,omitempty"`
+	State       *struct {
+		ContactRef *struct {
+			ChannelId   openapi_types.UUID `json:"channelId"`
+			DisplayName string             `json:"displayName"`
+			ExternalId  string             `json:"externalId"`
+			Kind        ContactKind        `json:"kind"`
+		} `json:"contactRef,omitempty"`
+		Providers *[]ProviderKind `json:"providers,omitempty"`
+		Workspace *struct {
+			ExistingWorkspaceId *openapi_types.UUID `json:"existingWorkspaceId,omitempty"`
+			Path                *string             `json:"path,omitempty"`
+		} `json:"workspace,omitempty"`
+	} `json:"state,omitempty"`
 }
 
 // AddWorkspaceJSONBody defines parameters for AddWorkspace.
@@ -8152,11 +8168,24 @@ type GetOnboardingResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *struct {
-		ChannelDone   bool                         `json:"channelDone"`
-		CompletedAt   nullable.Nullable[time.Time] `json:"completedAt"`
-		CurrentStep   OnboardingStep               `json:"currentStep"`
-		ThreadDone    bool                         `json:"threadDone"`
-		WorkspaceDone bool                         `json:"workspaceDone"`
+		ChannelDone bool                         `json:"channelDone"`
+		CompletedAt nullable.Nullable[time.Time] `json:"completedAt"`
+		CurrentStep OnboardingStep               `json:"currentStep"`
+		State       struct {
+			ContactRef *struct {
+				ChannelId   openapi_types.UUID `json:"channelId"`
+				DisplayName string             `json:"displayName"`
+				ExternalId  string             `json:"externalId"`
+				Kind        ContactKind        `json:"kind"`
+			} `json:"contactRef,omitempty"`
+			Providers *[]ProviderKind `json:"providers,omitempty"`
+			Workspace *struct {
+				ExistingWorkspaceId *openapi_types.UUID `json:"existingWorkspaceId,omitempty"`
+				Path                *string             `json:"path,omitempty"`
+			} `json:"workspace,omitempty"`
+		} `json:"state"`
+		ThreadDone    bool `json:"threadDone"`
+		WorkspaceDone bool `json:"workspaceDone"`
 	}
 }
 
@@ -10927,11 +10956,24 @@ func ParseGetOnboardingResponse(rsp *http.Response) (*GetOnboardingResponse, err
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
-			ChannelDone   bool                         `json:"channelDone"`
-			CompletedAt   nullable.Nullable[time.Time] `json:"completedAt"`
-			CurrentStep   OnboardingStep               `json:"currentStep"`
-			ThreadDone    bool                         `json:"threadDone"`
-			WorkspaceDone bool                         `json:"workspaceDone"`
+			ChannelDone bool                         `json:"channelDone"`
+			CompletedAt nullable.Nullable[time.Time] `json:"completedAt"`
+			CurrentStep OnboardingStep               `json:"currentStep"`
+			State       struct {
+				ContactRef *struct {
+					ChannelId   openapi_types.UUID `json:"channelId"`
+					DisplayName string             `json:"displayName"`
+					ExternalId  string             `json:"externalId"`
+					Kind        ContactKind        `json:"kind"`
+				} `json:"contactRef,omitempty"`
+				Providers *[]ProviderKind `json:"providers,omitempty"`
+				Workspace *struct {
+					ExistingWorkspaceId *openapi_types.UUID `json:"existingWorkspaceId,omitempty"`
+					Path                *string             `json:"path,omitempty"`
+				} `json:"workspace,omitempty"`
+			} `json:"state"`
+			ThreadDone    bool `json:"threadDone"`
+			WorkspaceDone bool `json:"workspaceDone"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err

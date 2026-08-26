@@ -27,7 +27,7 @@ export function getOnboardingSuspenseQueryOptions(config: Partial<RequestConfig>
 }
 
 /**
- * @description Onboarding — jornada persistida (currentStep/completedAt) + satisfação derivada dos passos de setup
+ * @description Onboarding — jornada persistida (currentStep/completedAt/state) + satisfação derivada dos passos de setup
  * {@link /ui/onboarding}
  */
 export function useGetOnboardingSuspense<TData = GetOnboardingQueryResponse, TQueryKey extends QueryKey = GetOnboardingSuspenseQueryKey>(options: 

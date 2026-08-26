@@ -3,17 +3,36 @@
 * Do not edit manually.
 */
 
+import { contactKindSchema } from "./contactKindSchema.ts";
 import { onboardingStepSchema } from "./onboardingStepSchema.ts";
+import { providerKindSchema } from "./providerKindSchema.ts";
 import { z } from "zod/v4";
 
 /**
- * @description Onboarding — jornada persistida (currentStep/completedAt) + satisfação derivada dos passos de setup
+ * @description Onboarding — jornada persistida (currentStep/completedAt/state) + satisfação derivada dos passos de setup
  */
 export const getOnboarding200Schema = z.object({
     get "currentStep"(){
                 return onboardingStepSchema
               },
 "completedAt": z.nullable(z.iso.datetime()),
+"state": z.object({
+    "contactRef": z.optional(z.object({
+    "channelId": z.uuid(),
+"externalId": z.string().min(1),
+"displayName": z.string().min(1),
+get "kind"(){
+                return contactKindSchema
+              }
+    })),
+"workspace": z.optional(z.object({
+    "path": z.optional(z.string().min(1).max(1024).regex(/^(?:\/|[A-Za-z]:[\\/]|\\\\)/)),
+"existingWorkspaceId": z.optional(z.uuid())
+    })),
+get "providers"(){
+                return z.array(providerKindSchema).min(1).optional()
+              }
+    }),
 "channelDone": z.boolean(),
 "workspaceDone": z.boolean(),
 "threadDone": z.boolean()

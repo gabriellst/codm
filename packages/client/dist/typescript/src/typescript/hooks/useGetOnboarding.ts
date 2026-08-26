@@ -27,7 +27,7 @@ export function getOnboardingQueryOptions(config: Partial<RequestConfig> & { cli
 }
 
 /**
- * @description Onboarding — jornada persistida (currentStep/completedAt) + satisfação derivada dos passos de setup
+ * @description Onboarding — jornada persistida (currentStep/completedAt/state) + satisfação derivada dos passos de setup
  * {@link /ui/onboarding}
  */
 export function useGetOnboarding<TData = GetOnboardingQueryResponse, TQueryData = GetOnboardingQueryResponse, TQueryKey extends QueryKey = GetOnboardingQueryKey>(options: 

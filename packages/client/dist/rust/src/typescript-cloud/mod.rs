@@ -109,6 +109,7 @@ pub mod types {
     ///    "NOT_IMPLEMENTED",
     ///    "NO_CHANNEL_CONNECTED",
     ///    "NO_PROVIDER_SELECTED",
+    ///    "ONBOARDING_DRAFT_INCOMPLETE",
     ///    "ONBOARDING_NOT_COMPLETED",
     ///    "OPTIMISTIC_LOCK_CONFLICT",
     ///    "OWNER_ALREADY_DISABLED",
@@ -290,6 +291,8 @@ pub mod types {
         NoChannelConnected,
         #[serde(rename = "NO_PROVIDER_SELECTED")]
         NoProviderSelected,
+        #[serde(rename = "ONBOARDING_DRAFT_INCOMPLETE")]
+        OnboardingDraftIncomplete,
         #[serde(rename = "ONBOARDING_NOT_COMPLETED")]
         OnboardingNotCompleted,
         #[serde(rename = "OPTIMISTIC_LOCK_CONFLICT")]
@@ -452,6 +455,9 @@ pub mod types {
                 Self::NotImplemented => f.write_str("NOT_IMPLEMENTED"),
                 Self::NoChannelConnected => f.write_str("NO_CHANNEL_CONNECTED"),
                 Self::NoProviderSelected => f.write_str("NO_PROVIDER_SELECTED"),
+                Self::OnboardingDraftIncomplete => {
+                    f.write_str("ONBOARDING_DRAFT_INCOMPLETE")
+                }
                 Self::OnboardingNotCompleted => f.write_str("ONBOARDING_NOT_COMPLETED"),
                 Self::OptimisticLockConflict => f.write_str("OPTIMISTIC_LOCK_CONFLICT"),
                 Self::OwnerAlreadyDisabled => f.write_str("OWNER_ALREADY_DISABLED"),
@@ -566,6 +572,7 @@ pub mod types {
                 "NOT_IMPLEMENTED" => Ok(Self::NotImplemented),
                 "NO_CHANNEL_CONNECTED" => Ok(Self::NoChannelConnected),
                 "NO_PROVIDER_SELECTED" => Ok(Self::NoProviderSelected),
+                "ONBOARDING_DRAFT_INCOMPLETE" => Ok(Self::OnboardingDraftIncomplete),
                 "ONBOARDING_NOT_COMPLETED" => Ok(Self::OnboardingNotCompleted),
                 "OPTIMISTIC_LOCK_CONFLICT" => Ok(Self::OptimisticLockConflict),
                 "OWNER_ALREADY_DISABLED" => Ok(Self::OwnerAlreadyDisabled),

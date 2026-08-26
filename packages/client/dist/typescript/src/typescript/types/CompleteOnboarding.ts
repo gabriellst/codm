@@ -5,7 +5,7 @@
 
 
 /**
- * @description Conclui o onboarding do operador — grava completedAt
+ * @description Conclui o onboarding do operador — commit atômico do rascunho (workspace/thread) seguido de completedAt
 */
 export type CompleteOnboarding200 = any;
 

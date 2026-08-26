@@ -84,6 +84,7 @@ const (
 	NOPROVIDERSELECTED              ApiErrors = "NO_PROVIDER_SELECTED"
 	NOTFOUND                        ApiErrors = "NOT_FOUND"
 	NOTIMPLEMENTED                  ApiErrors = "NOT_IMPLEMENTED"
+	ONBOARDINGDRAFTINCOMPLETE       ApiErrors = "ONBOARDING_DRAFT_INCOMPLETE"
 	ONBOARDINGNOTCOMPLETED          ApiErrors = "ONBOARDING_NOT_COMPLETED"
 	OPTIMISTICLOCKCONFLICT          ApiErrors = "OPTIMISTIC_LOCK_CONFLICT"
 	OWNERALREADYDISABLED            ApiErrors = "OWNER_ALREADY_DISABLED"
@@ -252,6 +253,8 @@ func (e ApiErrors) Valid() bool {
 	case NOTFOUND:
 		return true
 	case NOTIMPLEMENTED:
+		return true
+	case ONBOARDINGDRAFTINCOMPLETE:
 		return true
 	case ONBOARDINGNOTCOMPLETED:
 		return true

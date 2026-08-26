@@ -8555,12 +8555,12 @@
           "mcp:system",
           "mcp:orchestration"
         ],
-        "description": "Onboarding — jornada persistida (currentStep/completedAt) + satisfação derivada dos passos de setup",
+        "description": "Onboarding — jornada persistida (currentStep/completedAt/state) + satisfação derivada dos passos de setup",
         "operationId": "GetOnboarding",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Onboarding — jornada persistida (currentStep/completedAt) + satisfação derivada dos passos de setup",
+            "description": "Onboarding — jornada persistida (currentStep/completedAt/state) + satisfação derivada dos passos de setup",
             "content": {
               "application/json": {
                 "schema": {
@@ -8575,6 +8575,64 @@
                       "format": "date-time",
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
                     },
+                    "state": {
+                      "type": "object",
+                      "properties": {
+                        "contactRef": {
+                          "type": "object",
+                          "properties": {
+                            "channelId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "externalId": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "displayName": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "kind": {
+                              "$ref": "#/components/schemas/ContactKind"
+                            }
+                          },
+                          "required": [
+                            "channelId",
+                            "externalId",
+                            "displayName",
+                            "kind"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "workspace": {
+                          "type": "object",
+                          "properties": {
+                            "path": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 1024,
+                              "pattern": "^(?:\\/|[A-Za-z]:[\\\\/]|\\\\\\\\)"
+                            },
+                            "existingWorkspaceId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "providers": {
+                          "minItems": 1,
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ProviderKind"
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    },
                     "channelDone": {
                       "type": "boolean"
                     },
@@ -8588,6 +8646,7 @@
                   "required": [
                     "currentStep",
                     "completedAt",
+                    "state",
                     "channelDone",
                     "workspaceDone",
                     "threadDone"
@@ -8712,12 +8771,12 @@
           "mcp:system",
           "mcp:orchestration"
         ],
-        "description": "Conclui o onboarding do operador — grava completedAt",
+        "description": "Conclui o onboarding do operador — commit atômico do rascunho (workspace/thread) seguido de completedAt",
         "operationId": "CompleteOnboarding",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Conclui o onboarding do operador — grava completedAt",
+            "description": "Conclui o onboarding do operador — commit atômico do rascunho (workspace/thread) seguido de completedAt",
             "content": {
               "application/json": {
                 "schema": {}
@@ -8738,7 +8797,7 @@
           "mcp:system",
           "mcp:orchestration"
         ],
-        "description": "Salva onde o operador parou no wizard",
+        "description": "Salva onde o operador parou no wizard e/ou o rascunho (contactRef/workspace/providers) acumulado até aqui",
         "operationId": "SaveOnboardingStep",
         "requestBody": {
           "content": {
@@ -8746,20 +8805,92 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "step": {
+                  "currentStep": {
                     "$ref": "#/components/schemas/OnboardingStep"
+                  },
+                  "state": {
+                    "type": "object",
+                    "properties": {
+                      "contactRef": {
+                        "type": "object",
+                        "properties": {
+                          "channelId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "externalId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "displayName": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "kind": {
+                            "$ref": "#/components/schemas/ContactKind"
+                          }
+                        },
+                        "required": [
+                          "channelId",
+                          "externalId",
+                          "displayName",
+                          "kind"
+                        ]
+                      },
+                      "workspace": {
+                        "type": "object",
+                        "properties": {
+                          "path": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1024,
+                            "pattern": "^(?:\\/|[A-Za-z]:[\\\\/]|\\\\\\\\)"
+                          },
+                          "existingWorkspaceId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          }
+                        }
+                      },
+                      "providers": {
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/ProviderKind"
+                        }
+                      }
+                    }
                   }
-                },
-                "required": [
-                  "step"
-                ]
+                }
               },
               "examples": {
-                "default": {
+                "example1": {
                   "value": {
-                    "step": "CHANNEL"
+                    "currentStep": "CHANNEL"
                   },
-                  "summary": "Example"
+                  "summary": "Example 1"
+                },
+                "example2": {
+                  "value": {
+                    "currentStep": "REVIEW",
+                    "state": {
+                      "contactRef": {
+                        "channelId": "019e4d24-6524-7041-9e1c-8108180cddae",
+                        "externalId": "5511999999999@s.whatsapp.net",
+                        "displayName": "Ada",
+                        "kind": "USER"
+                      },
+                      "workspace": {
+                        "path": "/Users/dev/acme-api"
+                      },
+                      "providers": [
+                        "CLAUDE_CODE"
+                      ]
+                    }
+                  },
+                  "summary": "Example 2"
                 }
               }
             }
@@ -8768,7 +8899,7 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Salva onde o operador parou no wizard",
+            "description": "Salva onde o operador parou no wizard e/ou o rascunho (contactRef/workspace/providers) acumulado até aqui",
             "content": {
               "application/json": {
                 "schema": {}
@@ -8851,6 +8982,7 @@
           "NOT_IMPLEMENTED",
           "NO_CHANNEL_CONNECTED",
           "NO_PROVIDER_SELECTED",
+          "ONBOARDING_DRAFT_INCOMPLETE",
           "ONBOARDING_NOT_COMPLETED",
           "OPTIMISTIC_LOCK_CONFLICT",
           "OWNER_ALREADY_DISABLED",
@@ -9299,6 +9431,7 @@
     "NOT_IMPLEMENTED",
     "NO_CHANNEL_CONNECTED",
     "NO_PROVIDER_SELECTED",
+    "ONBOARDING_DRAFT_INCOMPLETE",
     "ONBOARDING_NOT_COMPLETED",
     "OPTIMISTIC_LOCK_CONFLICT",
     "OWNER_ALREADY_DISABLED",

@@ -13,7 +13,7 @@ function getGetOnboardingUrl() {
 }
 
 /**
- * @description Onboarding — jornada persistida (currentStep/completedAt) + satisfação derivada dos passos de setup
+ * @description Onboarding — jornada persistida (currentStep/completedAt/state) + satisfação derivada dos passos de setup
  * {@link /ui/onboarding}
  */
 export async function getOnboarding(config: Partial<RequestConfig> & { client?: Client } = {}) {
