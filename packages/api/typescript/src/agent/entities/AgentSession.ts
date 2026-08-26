@@ -134,7 +134,19 @@ export class AgentSession extends AggregateRoot<typeof AgentSessionSchema> {
 	resumeDecision(ctx: ResumeContext): ResumeDecision {
 		if (ctx.model !== this.model) return { resume: false, reason: ResumeInvalidationReason.MODEL_CHANGED }
 		if (ctx.cwd !== this.cwd) return { resume: false, reason: ResumeInvalidationReason.CWD_CHANGED }
-		if (!this.lastMessageId) return { resume: false, reason: ResumeInvalidationReason.MISSING_CURSOR }
+		// O CURSOR SÓ EXISTE PARA UMA SESSÃO DE ISSUE — e a ausência de `issueId` é o que identifica a
+		// linha do orquestrador, então isto é lookup sobre o modelo, não um caso especial.
+		//
+		// As duas metades foram escritas sob premissas opostas e nunca se encontraram:
+		// `RunOrchestratorTurn.resolveSession` decidiu, com razão declarada, NÃO passar cursor ("a
+		// conversation has no equivalent notion of 'the turn before this one'"), enquanto esta linha
+		// reprovava toda linha sem `lastMessageId` antes de chegar na comparação — e `upsertSession` do
+		// orquestrador nunca grava um. O resultado era um orquestrador ESTRUTURALMENTE incapaz de retomar:
+		// 28 avisos de `MISSING_CURSOR` num único boot, cada mensagem da thread abrindo uma sessão nova.
+		//
+		// Consertar do outro lado (gravar um cursor para a conversa) contradiria a decisão de 594 e daria
+		// à thread um conceito que ela não tem. `model` e `cwd` seguem sendo checados para os dois tipos.
+		if (this.issueId && !this.lastMessageId) return { resume: false, reason: ResumeInvalidationReason.MISSING_CURSOR }
 		if (ctx.cursor !== this.lastMessageId) return { resume: false, reason: ResumeInvalidationReason.CONVERSATION_ADVANCED }
 		return { resume: true, id: this.agentSessionId }
 	}

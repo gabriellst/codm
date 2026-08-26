@@ -94,5 +94,50 @@ describe('AgentSession entity', () => {
 			const decision = AgentSession.create(base).resumeDecision({ model: AgentModelId.HAIKU, cwd: '/tmp/elsewhere', cursor: 'nope' })
 			expect(decision).toEqual({ resume: false, reason: ResumeInvalidationReason.MODEL_CHANGED })
 		})
+
+		it('an ORCHESTRATOR session (no issueId) resumes without a cursor', () => {
+			const session = AgentSession.create({
+				ownerId: '00000000-0000-4000-8000-000000000001',
+				threadId: '00000000-0000-4000-8000-0000000000aa',
+				provider: ProviderKind.CLAUDE_CODE,
+				cwd: '/tmp/ws',
+				agentSessionId: 'cli-session-1',
+				model: AgentModelId.DEFAULT,
+			})
+
+			const decision = session.resumeDecision({ model: AgentModelId.DEFAULT, cwd: '/tmp/ws' })
+			expect(decision.resume).toBe(true)
+		})
+
+		it('an ISSUE session with no cursor is still invalidated with MISSING_CURSOR', () => {
+			const session = AgentSession.create({
+				ownerId: '00000000-0000-4000-8000-000000000001',
+				issueId: '00000000-0000-4000-8000-0000000000bb',
+				threadId: '00000000-0000-4000-8000-0000000000aa',
+				provider: ProviderKind.CLAUDE_CODE,
+				cwd: '/tmp/ws',
+				agentSessionId: 'cli-session-2',
+				model: AgentModelId.DEFAULT,
+			})
+
+			const decision = session.resumeDecision({ model: AgentModelId.DEFAULT, cwd: '/tmp/ws' })
+			expect(decision.resume).toBe(false)
+			expect(decision.resume === false && decision.reason).toBe(ResumeInvalidationReason.MISSING_CURSOR)
+		})
+
+		it('an ORCHESTRATOR session still checks model and cwd', () => {
+			const session = AgentSession.create({
+				ownerId: '00000000-0000-4000-8000-000000000001',
+				threadId: '00000000-0000-4000-8000-0000000000aa',
+				provider: ProviderKind.CLAUDE_CODE,
+				cwd: '/tmp/ws',
+				agentSessionId: 'cli-session-3',
+				model: AgentModelId.DEFAULT,
+			})
+
+			const decision = session.resumeDecision({ model: AgentModelId.DEFAULT, cwd: '/tmp/OTHER' })
+			expect(decision.resume).toBe(false)
+			expect(decision.resume === false && decision.reason).toBe(ResumeInvalidationReason.CWD_CHANGED)
+		})
 	})
 })
