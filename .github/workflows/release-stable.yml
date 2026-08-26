@@ -49,6 +49,21 @@ jobs:
       - name: desktop config em dia
         run: bun desktop:generate --check
 
+      # OS `openapi.json` SÃO VERSIONADOS (api-typescript ×2, api-go ×1) — o `//go:embed` do gateway
+      # lê o do repositório, não um gerado na hora. Cada perna regerava os três antes de compilar, o
+      # que era trabalho triplicado e, no `windows-latest`, um defeito: resolver o workspace inteiro
+      # ali esbarra em `EPERM` lendo os symlinks que o `bun install` cria em `node_modules` (Windows
+      # não os lê sem privilégio). Então a pergunta muda de "gerar" para "estão em dia?", e ela é
+      # feita UMA vez, aqui, numa máquina onde a geração funciona.
+      - name: openapi commitado está em dia
+        run: |
+          cp -n .env.example .env
+          bun emit-openapi
+          git diff --exit-code -- '**/public/docs/openapi*.json' || {
+            echo "::error::os openapi.json commitados divergem do código — rode 'bun sdk' e commite o resultado"
+            exit 1
+          }
+
       # O GATE da decisão 4: tag == versão da conf, ou nada é publicado. Roda ANTES de qualquer
       # build — uma tag errada custaria três builds (um deles a 2×) para descobrir o mesmo erro.
       - name: verify tag matches conf version
@@ -93,8 +108,16 @@ jobs:
           - key: darwin-aarch64
             runner: macos-latest
             bundles: app,dmg
+          # `ubuntu-22.04`, não `ubuntu-latest` (24.04), por DOIS motivos que apontam para o mesmo
+          # lado. (1) O bundler do AppImage baixa o linuxdeploy — que é ele mesmo um AppImage — e na
+          # 24.04 ele morre sem stderr algum mesmo com `APPIMAGE_EXTRACT_AND_RUN=1` (medido nos dois
+          # primeiros builds hospedados, 2026-08-26: só sobra `failed to run linuxdeploy`, porque o
+          # Tauri engole a saída do bundler). (2) O glibc da imagem é o PISO do AppImage publicado:
+          # linkado na 24.04 ele recusa rodar numa 22.04, e quem paga essa conta é o usuário, não o
+          # CI. Quando a 22.04 sair do GitHub, o substituto é a imagem mais VELHA ainda suportada —
+          # não a mais nova.
           - key: linux-x86_64
-            runner: ubuntu-latest
+            runner: ubuntu-22.04
             bundles: appimage,deb
           - key: windows-x86_64
             runner: windows-latest
@@ -150,14 +173,6 @@ jobs:
       - name: deps
         run: bun install --frozen-lockfile
 
-      # O gateway Go embute public/docs/openapi.json (//go:embed) e o arquivo é GERADO —
-      # existe em qualquer checkout de dev, mas nunca num runner limpo. Sem este step o build
-      # do sidecar morre com "pattern docs/openapi.json: no matching files found" (1º run real,
-      # 2026-08-07). O .env de exemplo basta: o emit curto-circuita o boot após gerar o spec.
-      - name: openapi (insumo gerado do embed)
-        run: |
-          cp -n .env.example .env
-          bun emit-openapi
 
       # Sem `--target`: cada perna builda para o próprio host (ver release-beta.yml — o modo cross do
       # script saiu junto com a fase do `cargo-xwin`).
