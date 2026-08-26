@@ -336,7 +336,10 @@ export const REPO = {
 		SERVICE: { consumers: ['compose'], example: 'backend', doc: 'docker-compose container prefix (${PROJECT}-${SERVICE})' },
 		NODE_ENV: { consumers: ['apiTs'], schema: 'kernel', example: 'development' },
 		PRODUCT_NAME: {
-			consumers: ['apiTs', 'apiGo'],
+			// `appTauri` porque o shell FORNECE o valor aos dois sidecars empacotados (config/env.ts →
+			// shell-env.json). Sem ele, o app 0.5.3 saiu com o default `'Your Product'` como nome do
+			// dispositivo vinculado no WhatsApp do cliente — o shell não encaminhava a chave.
+			consumers: ['apiTs', 'apiGo', 'appTauri'],
 			schema: 'product',
 			example: 'codm',
 			doc: 'brand: transactional-email chrome (MailSender Layout) AND the WhatsApp linked-device name the customer sees on their phone (core-go Config.ProductName)',

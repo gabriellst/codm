@@ -17,6 +17,11 @@ pub const DAEMON_API_PORT: &str = env!("CODM_SHELL_ENV_DAEMON_API_PORT");
 pub const DAEMON_CODM_CLOUD_URL: &str = env!("CODM_SHELL_ENV_DAEMON_CODM_CLOUD_URL");
 /// The gateway's listening port (`CHANNEL_PORT`), as the manifest declares it.
 pub const GATEWAY_CHANNEL_PORT: &str = env!("CODM_SHELL_ENV_GATEWAY_CHANNEL_PORT");
+/// The brand the customer sees (`PRODUCT_NAME`): e-mail chrome on the daemon side — `config/env.ts`.
+pub const DAEMON_PRODUCT_NAME: &str = env!("CODM_SHELL_ENV_DAEMON_PRODUCT_NAME");
+/// The brand the customer sees (`PRODUCT_NAME`): the WhatsApp linked-device name on the gateway
+/// side. Same manifest key, same value; each sidecar reads its own role's constant.
+pub const GATEWAY_PRODUCT_NAME: &str = env!("CODM_SHELL_ENV_GATEWAY_PRODUCT_NAME");
 
 /// A DECISÃO, separada da leitura: dado o valor cru (ou a ausência dele) e um default, qual valor
 /// vale. Pura de propósito — é o que permite testá-la sem mutar env, que em Rust é global ao

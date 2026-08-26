@@ -1,9 +1,11 @@
 {
 	"daemon": {
 		"API_PORT": "3030",
-		"CODM_CLOUD_URL": "https://codm.up.railway.app"
+		"CODM_CLOUD_URL": "https://codm.up.railway.app",
+		"PRODUCT_NAME": "CoDM"
 	},
 	"gateway": {
-		"CHANNEL_PORT": "3032"
+		"CHANNEL_PORT": "3032",
+		"PRODUCT_NAME": "CoDM"
 	}
 }

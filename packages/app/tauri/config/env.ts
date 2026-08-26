@@ -51,6 +51,10 @@ export const SHELL_ENV: Record<ShellEnvKey, string> = {
 	API_PORT: REPO.env.API_PORT.example,
 	CHANNEL_PORT: REPO.env.CHANNEL_PORT.example,
 	CODM_CLOUD_URL: CLOUD.origin,
+	// O nome que o CLIENTE vê: dispositivo vinculado no WhatsApp (gateway) e chrome do e-mail
+	// (daemon). É a marca de exibição, não o token minúsculo (`REPO.brand` = identificador de
+	// bundle/pastas). Medido no 0.5.3: sem esta entrada os dois sidecars caíam em 'Your Product'.
+	PRODUCT_NAME: REPO.brandDisplay,
 }
 
 const SHELL_ENV_KEYS = Object.keys(SHELL_ENV) as ShellEnvKey[]

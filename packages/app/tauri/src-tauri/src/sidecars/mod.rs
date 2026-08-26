@@ -123,6 +123,9 @@ pub fn sidecars(data_dir: &str, resource_dir: &std::path::Path, app_version: &st
                 ("CODM_DATA_DIR".into(), data_dir.into()),
                 ("CODM_MIGRATIONS_DIR".into(), migrations_dir),
                 ("CODM_CLOUD_URL".into(), cloud_url),
+                // A marca de exibição, do manifesto. Sem esta linha o daemon caía no default
+                // 'Your Product' do ProductConfig (medido no 0.5.3).
+                ("PRODUCT_NAME".into(), shell_env::value_from_env("PRODUCT_NAME", shell_env::DAEMON_PRODUCT_NAME)),
                 // Derived from the gateway's port, never a second literal for `:3032`.
                 ("API_GO_URL".into(), format!("http://localhost:{channel_port}")),
                 ("NODE_ENV".into(), "production".into()),
@@ -138,6 +141,9 @@ pub fn sidecars(data_dir: &str, resource_dir: &std::path::Path, app_version: &st
             cwd: None,
             env: vec![
                 ("CHANNEL_PORT".into(), channel_port.to_string()),
+                // O nome do dispositivo vinculado que o cliente vê no WhatsApp — sem isto o
+                // gateway mostrava 'Your Product' (medido no 0.5.3).
+                ("PRODUCT_NAME".into(), shell_env::value_from_env("PRODUCT_NAME", shell_env::GATEWAY_PRODUCT_NAME)),
                 ("CODM_DATA_DIR".into(), data_dir.into()),
                 (
                     "CHANNEL_ALLOWED_ORIGINS".into(),

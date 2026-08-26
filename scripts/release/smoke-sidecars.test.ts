@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { healthPathOf, planSmoke, SMOKE_PORTS, type SmokeInputs } from './smoke-sidecars'
+import { healthPathOf, planSmoke, shellEnvByRole, SMOKE_PORTS, type SmokeInputs } from './smoke-sidecars'
 
 const ROOT = resolve(import.meta.dirname, '..', '..')
 
@@ -15,7 +15,9 @@ const base: SmokeInputs = {
 	appVersion: '0.5.0-beta.7',
 	ports: SMOKE_PORTS,
 	healthPaths: { daemon: '/health', gateway: '/health' },
-	cloudUrl: 'https://codm.up.railway.app',
+	// O arquivo REAL comitado, não uma cópia à mão: o gate cross-lang abaixo compara o plano com o
+	// Rust, e os dois têm de nascer do mesmo `shell-env.json`.
+	shellEnv: shellEnvByRole(),
 }
 
 /**
