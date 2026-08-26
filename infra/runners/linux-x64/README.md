@@ -42,7 +42,10 @@ toolchain Rust `stable` e o tarball do runner do GitHub Actions — tudo preinst
 workflows não precisem provisionar nada em cada execução (ver o Dockerfile para o porquê de cada
 passo). `bun`/`go`/`node` **não** entram na imagem: quem os instala é a `uses:` do próprio
 workflow (`oven-sh/setup-bun`, `actions/setup-go`), a cada run — baking essas ferramentas aqui
-duplicaria a fonte de verdade da versão instalada.
+duplicaria a fonte de verdade da versão instalada. `unzip` e o `gh` CLI também estão assados:
+`unzip` porque `oven-sh/setup-bun@v2` extrai um `.zip` e a imagem base não o traz; `gh` porque os
+jobs `publish` de release-beta/release-stable rodam `gh release create`/`delete` — rebuilde a
+imagem de tempos em tempos para pegar patches do `gh`.
 
 A versão do runner do GitHub Actions é resolvida em BUILD TIME contra a API de releases (não fica
 hardcoded no Dockerfile). Rebuilde a imagem de tempos em tempos (`docker build --no-cache`) para

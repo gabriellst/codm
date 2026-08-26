@@ -393,20 +393,6 @@ jobs:
         with:
           node-version: '22'
 
-      # A imagem self-hosted (infra/runners/linux-x64/Dockerfile) NÃO vem com `gh` — só esta job o
-      # usa (`gh release create`, no passo `publish` abaixo). Baixa o tarball oficial linux_amd64
-      # pro $RUNNER_TEMP (limpo pelo Actions a cada job) e entra no PATH via GITHUB_PATH. Ver o
-      # comentário gêmeo, mais detalhado, em release-beta.yml.
-      - name: gh cli (self-hosted não vem com gh — baixa tarball para $RUNNER_TEMP)
-        run: |
-          set -euo pipefail
-          GH_VERSION="$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest | jq -r '.tag_name' | sed 's/^v//')"
-          curl -fsSL -o "$RUNNER_TEMP/gh.tar.gz" \
-            "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz"
-          tar -xzf "$RUNNER_TEMP/gh.tar.gz" -C "$RUNNER_TEMP"
-          "$RUNNER_TEMP/gh_${GH_VERSION}_linux_amd64/bin/gh" --version
-          echo "$RUNNER_TEMP/gh_${GH_VERSION}_linux_amd64/bin" >> "$GITHUB_PATH"
-
       - uses: actions/download-artifact@v4
         with:
           pattern: release-*

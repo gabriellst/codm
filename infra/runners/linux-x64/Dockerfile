@@ -34,9 +34,10 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # "error setting certificate file: /etc/ssl/certs/ca-certificates.crt". Medido no build local desta
 # imagem. Fix na causa (non-negotiable 1): a imagem base é diferente do runner de referência, então
 # a dependência que ficava implícita lá precisa ficar explícita aqui.
+# `unzip` — setup-bun extrai um .zip; medido 2026-08-25.
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates \
-      build-essential curl wget file git jq python3 \
+      build-essential curl wget file git jq python3 unzip \
       libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf \
       libxdo-dev libssl-dev libdbus-1-dev \
     && rm -rf /var/lib/apt/lists/*
@@ -70,6 +71,20 @@ RUN RUNNER_VERSION="$(curl -fsSL https://api.github.com/repos/actions/runner/rel
     && rm actions-runner.tar.gz \
     && ./bin/installdependencies.sh \
     && chown -R runner:runner /home/runner/actions-runner
+
+# gh CLI — mesmo padrão de resolução via API que o tarball do runner logo acima: a versão é
+# resolvida em BUILD TIME contra a API de releases, não hardcoded (rebuildar a imagem é o que pega
+# patches do gh). Só os jobs `publish` de release-beta.yml/release-stable.yml usam (`gh release
+# create`/`delete`); antes disso eles baixavam esse mesmo tarball para $RUNNER_TEMP a cada
+# execução — assar aqui remove aquele passo dos dois workflows. Extrai para /usr/local/bin (já no
+# PATH de qualquer shell) porque, diferente do workflow, a imagem é permanente.
+RUN GH_VERSION="$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest | jq -r '.tag_name' | sed 's/^v//')" \
+    && curl -fsSL -o /tmp/gh.tar.gz \
+         "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" \
+    && tar -xzf /tmp/gh.tar.gz -C /tmp \
+    && install -m 0755 "/tmp/gh_${GH_VERSION}_linux_amd64/bin/gh" /usr/local/bin/gh \
+    && rm -rf /tmp/gh.tar.gz "/tmp/gh_${GH_VERSION}_linux_amd64" \
+    && gh --version
 
 COPY --chown=runner:runner entrypoint.sh /home/runner/entrypoint.sh
 RUN chmod +x /home/runner/entrypoint.sh
