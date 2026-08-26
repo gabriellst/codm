@@ -91,6 +91,32 @@ export const GetHomeDashboardOutputSchema = z.object({
 	 */
 	today: z.object({ issuesOpened: z.number().int(), issuesClosed: z.number().int(), medianResponseSeconds: z.number() }),
 	channels: z.array(z.object({ kind: z.enum(ChannelKind), status: z.enum(ChannelStatus) })),
+	/**
+	 * THE "MENCIONE O AGENTE" CTA (dashboard follow-up to onboarding, 2026-08-26) — the one thread, if
+	 * any, the operator still hasn't actually talked to the agent in. Absent once satisfied (same
+	 * optional-field shape as `needsYou` above), never a boolean the frontend would have to pair with a
+	 * second lookup.
+	 *
+	 * A thread qualifies when THREE facts hold at once: it exists (not soft-deleted — same predicate as
+	 * every other read here), its mention gate is `enabled` (a thread born from `AttachThread` always
+	 * is — see `Thread.create`), and NOBODY carrying `OPERATOR_PARTICIPANT_ID` has ever written a line
+	 * in it. That sentinel is the one column that means "the operator, from any device" — the exact
+	 * fact this CTA exists to drive to `true` (the operator pastes `tag` into the channel to invoke the
+	 * agent for the first time). It is NOT "the transcript is empty": a thread attached to an
+	 * already-busy group can carry plenty of other people's lines and still owe this CTA.
+	 *
+	 * Was frontend-only state until this date (`OnboardingFinalStep` read a `threadId` stashed on a
+	 * Zustand store by `OnboardingFlow`'s `onSuccess`) — moved server-side because the dashboard route
+	 * mounts on a fresh page load with no such store entry to read, and the repo's own rule is that a
+	 * "has this operator done X yet" fact is server-authoritative, not something the frontend
+	 * synthesizes from a value that only existed for one React tick.
+	 *
+	 * Picks the MOST RECENTLY CREATED qualifying thread when more than one exists — mirrors
+	 * `allThreads`' own "most recently active first" ordering one field up: a fresh onboarding thread is
+	 * far more likely to be the one the operator is looking at than an old one that happens to still be
+	 * gated and untouched.
+	 */
+	mentionCta: z.object({ threadId: z.uuid(), tag: z.string() }).optional(),
 })
 
 /**
@@ -127,6 +153,9 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 				providers: threads.providers,
 				paused: threads.paused,
 				updatedAt: threads.updatedAt,
+				createdAt: threads.createdAt,
+				mentionGateEnabled: threads.mentionGateEnabled,
+				mentionGateTag: threads.mentionGateTag,
 			})
 			.from(threads)
 			.leftJoin(workspaces, eq(threads.workspaceId, workspaces.id))
@@ -177,6 +206,7 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 		const activeSessions = allThreads.filter(t => t.status === ThreadStatus.RUNNING || t.status === ThreadStatus.NEEDS_ATTENTION)
 
 		const needsYou = this.buildNeedsYou(openStops, threadRows)
+		const mentionCta = await this.buildMentionCta(input.ownerId, threadRows)
 
 		const recent = await this.driver.db
 			.select({
@@ -255,7 +285,32 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 			latestActivity,
 			today: { issuesOpened, issuesClosed, medianResponseSeconds },
 			channels: channelRows.map(c => ({ kind: c.kind as ChannelKind, status: c.status as ChannelStatus })),
+			mentionCta,
 		}
+	}
+
+	/** See `GetHomeDashboardOutputSchema.mentionCta`'s own docblock for the three-fact rule this picks. */
+	private async buildMentionCta(
+		ownerId: string,
+		threadRows: { threadId: string; createdAt: Date; mentionGateEnabled: boolean; mentionGateTag: string | null }[],
+	): Promise<{ threadId: string; tag: string } | undefined> {
+		const gated = threadRows.filter(t => t.mentionGateEnabled && t.mentionGateTag)
+		if (gated.length === 0) return undefined
+
+		// One query for every thread the operator has EVER written a line in — never per-thread, and
+		// never limited to `latestActivity`'s own 8-row window (an old thread's only operator line could
+		// easily have scrolled off it).
+		const spokenIn = await this.driver.db
+			.selectDistinct({ threadId: transcriptEntries.threadId })
+			.from(transcriptEntries)
+			.where(and(eq(transcriptEntries.ownerId, ownerId), eq(transcriptEntries.senderExternalId, OPERATOR_PARTICIPANT_ID)))
+		const spokenThreadIds = new Set(spokenIn.map(r => r.threadId))
+
+		const candidates = gated.filter(t => !spokenThreadIds.has(t.threadId))
+		if (candidates.length === 0) return undefined
+
+		const mostRecent = [...candidates].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]!
+		return { threadId: mostRecent.threadId, tag: mostRecent.mentionGateTag! }
 	}
 
 	/**

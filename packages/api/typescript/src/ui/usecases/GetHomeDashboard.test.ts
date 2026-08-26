@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
-import { TestBed, givenChannel, givenIssue, givenRemote, givenThread, givenWorkspace } from '@test/support'
+import { TestBed, givenChannel, givenIssue, givenRemote, givenThread, givenWorkspace, GIVEN_MENTION_TAG } from '@test/support'
 import { IssueStatus, ThreadStatus, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import type { Thread } from '@thread/entities/Thread'
@@ -447,5 +447,94 @@ describe('GetHomeDashboard — a linha do operador tem o rosto da conta conectad
 			displayName: 'Ada Lovelace',
 			hasAvatar: false,
 		})
+	})
+})
+
+/**
+ * `mentionCta` — the dashboard's own "mencione o agente" follow-up (moved here 2026-08-26 from a
+ * frontend-only Zustand field that only ever survived one React tick post-onboarding). Three facts
+ * gate it: the thread exists, its mention gate is enabled, and nobody carrying `OPERATOR_PARTICIPANT_ID`
+ * has ever written a line in it.
+ */
+describe('GetHomeDashboard — mentionCta', () => {
+	let testBed: TestBed
+	let testContainer: DependencyContainer
+
+	beforeAll(async () => {
+		testContainer = container.createChildContainer()
+		testBed = await TestBed.create('integration', { testContainer, ownerId: MOCK_CLOUD_OWNER_ID })
+	})
+	beforeEach(async () => {
+		await testBed.reset()
+	})
+	afterAll(async () => {
+		await testBed.destroy()
+	})
+
+	const dashboard = () => testBed.resolve(GetHomeDashboard).execute({ ownerId: MOCK_CLOUD_OWNER_ID })
+
+	it('surfaces a freshly attached thread — gated, untouched by the operator', async () => {
+		const workspace = await givenWorkspace(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, workspaceId: workspace.id.value })
+
+		const result = await dashboard()
+
+		expect(result.mentionCta).toEqual({ threadId: thread.id.value, tag: GIVEN_MENTION_TAG })
+	})
+
+	/** The operator pasting the mention into the channel is exactly what satisfies this CTA. */
+	it('disappears once the operator has written a line in the thread — any kind, any device', async () => {
+		const workspace = await givenWorkspace(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, workspaceId: workspace.id.value })
+		thread.recordEntry({
+			kind: TranscriptKind.CONTACT,
+			text: '@test-workspace oi',
+			senderExternalId: OPERATOR_PARTICIPANT_ID,
+			at: new Date(),
+		})
+		await testBed.resolve(ThreadRepository).save(thread)
+
+		expect((await dashboard()).mentionCta).toBeUndefined()
+	})
+
+	/**
+	 * A real contact's own lines must NOT satisfy this CTA — an already-busy group thread stays flagged
+	 * until the OPERATOR specifically has said something, not merely until the thread has any traffic.
+	 */
+	it('stays present while only a real contact has spoken, not the operator', async () => {
+		const workspace = await givenWorkspace(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, workspaceId: workspace.id.value })
+		thread.recordEntry({ kind: TranscriptKind.CONTACT, text: 'oi', senderExternalId: 'someone-else', at: new Date() })
+		await testBed.resolve(ThreadRepository).save(thread)
+
+		expect((await dashboard()).mentionCta).toEqual({ threadId: thread.id.value, tag: GIVEN_MENTION_TAG })
+	})
+
+	it('is absent when the operator has turned the mention gate off', async () => {
+		const workspace = await givenWorkspace(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, workspaceId: workspace.id.value })
+		thread.configureMentionGate({ enabled: false })
+		await testBed.resolve(ThreadRepository).save(thread)
+
+		expect((await dashboard()).mentionCta).toBeUndefined()
+	})
+
+	it('is absent when there is no thread at all', async () => {
+		expect((await dashboard()).mentionCta).toBeUndefined()
+	})
+
+	/**
+	 * Two qualifying threads: the most recently CREATED one wins, not an arbitrary row order. The
+	 * `createdAt` column is millisecond-resolution `$defaultFn(() => new Date())` — a real gap between
+	 * the two writes (not just two ticks of the same microtask queue) is what makes the tie-break
+	 * observable at all.
+	 */
+	it('picks the most recently created qualifying thread when more than one is untouched', async () => {
+		const workspace = await givenWorkspace(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, workspaceId: workspace.id.value, contactExternalId: 'older' })
+		await new Promise(resolve => setTimeout(resolve, 5))
+		const newer = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, workspaceId: workspace.id.value, contactExternalId: 'newer' })
+
+		expect((await dashboard()).mentionCta?.threadId).toBe(newer.id.value)
 	})
 })
