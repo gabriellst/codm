@@ -18,6 +18,12 @@ dist/
 # Os SDKs gerados são publicados COMMITADOS em packages/client/dist/ (.specs/2026-05-14-polyglot-client-sdk-design.md, Decision 13).
 !packages/client/dist/
 !packages/client/dist/**
+# ...mas NÃO o node_modules que o bun cria lá dentro. A negação acima desfazia o `node_modules/` do
+# topo do arquivo, e 10 symlinks para dependências hasteadas entraram no repositório. Em macOS e
+# Linux ninguém percebe; no Windows o checkout não os materializa e o `bun build --compile` do daemon
+# morre com `EPERM reading file: ...node_modules/@tanstack/react-query` — foi o que reprovou a
+# primeira perna Windows nativa (2026-08-26). Quem os recria é o `bun install`, em toda máquina.
+packages/client/dist/**/node_modules/
 build/
 .output/
 target/
