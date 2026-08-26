@@ -70,9 +70,14 @@ pub fn satisfied_from(result: io::Result<()>) -> bool {
 /// A ORDEM é o que ninguém adivinha (spec Decision 8): conceder sem limpar não funciona quando a
 /// negação já foi gravada, então o `tccutil reset` vem ANTES de os Ajustes abrirem. Ela fica
 /// embutida na ação em vez de virar instrução para o operador seguir.
+///
+/// E há um TERCEIRO passo entre os dois, que o 0.5.3 não tinha: o reset apaga a entrada do app no
+/// TCC — a mesma entrada que o faz aparecer na lista de Acesso Total ao Disco —, então os Ajustes
+/// abriam numa lista onde o CODM não estava, e o operador tinha de arrastar o app à mão. A sonda
+/// (`open(TCC.db)` negado) re-registra o app ANTES de o pane abrir; aí é só ligar o switch.
 fn repair(bundle_id: &str) -> Vec<RepairStep> {
     vec![
-        RepairStep {
+        RepairStep::Command {
             program: "tccutil",
             args: vec![
                 "reset".into(),
@@ -80,7 +85,8 @@ fn repair(bundle_id: &str) -> Vec<RepairStep> {
                 bundle_id.into(),
             ],
         },
-        RepairStep {
+        RepairStep::Probe,
+        RepairStep::Command {
             program: "open",
             args: vec![SETTINGS_URL.into()],
         },
@@ -140,17 +146,27 @@ mod tests {
     /// negação já foi gravada, então o `tccutil reset` tem que vir primeiro; declarar os passos como
     /// dado é o que permite provar isso sem tocar no TCC da máquina que roda o teste.
     #[test]
-    fn repair_resets_tcc_before_opening_settings() {
+    fn repair_resets_tcc_then_reregisters_then_opens_settings() {
         let steps = repair("app.codm.desktop");
 
-        assert_eq!(steps.len(), 2, "o reparo é exatamente dois passos");
-        assert_eq!(steps[0].program, "tccutil");
+        assert_eq!(steps.len(), 3, "o reparo é exatamente três passos: reset, sonda, open");
         assert_eq!(
-            steps[0].args,
-            vec!["reset", "SystemPolicyAllFiles", "app.codm.desktop"]
+            steps[0],
+            RepairStep::Command {
+                program: "tccutil",
+                args: vec!["reset".into(), "SystemPolicyAllFiles".into(), "app.codm.desktop".into()],
+            }
         );
-        assert_eq!(steps[1].program, "open");
-        assert_eq!(steps[1].args, vec![SETTINGS_URL]);
+        // A sonda ENTRE o reset e o open: é o acesso negado dela que faz o app voltar à lista dos
+        // Ajustes. Antes dela (0.5.3), o pane abria sem o CODM listado.
+        assert_eq!(steps[1], RepairStep::Probe);
+        assert_eq!(
+            steps[2],
+            RepairStep::Command {
+                program: "open",
+                args: vec![SETTINGS_URL.into()],
+            }
+        );
     }
 
     /// O bundle id ENTRA — não é literal. `tccutil` apagando a entrada de outro app seria uma
@@ -158,6 +174,9 @@ mod tests {
     #[test]
     fn repair_targets_the_bundle_id_it_was_given() {
         let steps = repair("com.example.other");
-        assert_eq!(steps[0].args[2], "com.example.other");
+        let RepairStep::Command { args, .. } = &steps[0] else {
+            panic!("o primeiro passo é o tccutil reset")
+        };
+        assert_eq!(args[2], "com.example.other");
     }
 }

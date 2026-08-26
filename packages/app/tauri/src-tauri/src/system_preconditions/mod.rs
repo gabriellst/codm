@@ -52,9 +52,18 @@ pub const fn current_platform() -> Platform {
 /// o `tccutil reset` aconteça ANTES de os Ajustes abrirem; um teste lê a lista e prova a ordem sem
 /// executar nada nem tocar no TCC da máquina.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RepairStep {
-    pub program: &'static str,
-    pub args: Vec<String>,
+pub enum RepairStep {
+    /// Um processo externo (`tccutil`, `open`).
+    Command { program: &'static str, args: Vec<String> },
+    /// A PRÓPRIA sonda da pré-condição, executada por ESTE processo, no meio da sequência.
+    ///
+    /// Existe por causa do TCC: um `tccutil reset` apaga a entrada do app — e é a entrada que faz o
+    /// app aparecer na lista dos Ajustes. Abrir o pane logo depois do reset mostrava uma lista onde o
+    /// CODM não estava (medido pelo founder no 0.5.3: "não adicionou o app automaticamente, só pra
+    /// eu ligar o switch"). O que re-registra o app é um acesso NEGADO feito pelo próprio processo
+    /// — exatamente o que a sonda faz (`open(TCC.db)`) —, então ela entra como passo declarado
+    /// entre o reset e o `open`. O veredito dela aqui não importa; o efeito colateral no `tccd` sim.
+    Probe,
 }
 
 /// Sobre o que o reparo de uma pré-condição age — DECLARADO pelo módulo, como `platforms`
@@ -171,24 +180,30 @@ pub fn repair_steps(id: SystemPreconditionId, bundle_id: &str) -> Vec<RepairStep
 /// primeira viagem. Falha de SPAWN (binário ausente) é outra coisa: essa sobe, porque significa
 /// que o reparo não aconteceu de forma alguma.
 pub fn run_repair(id: SystemPreconditionId, bundle_id: &str) -> Result<(), String> {
-    if let Some(system_precondition) = applicable().find(|p| p.id == id) {
-        if repair_availability(system_precondition.repair_scope) == RepairAvailability::NoAppIdentity {
-            return Err(format!(
-                "system_precondition repair: {id:?} exige identidade de app atribuível (este processo roda fora de um bundle `.app`) — recusado antes de tentar qualquer coisa"
-            ));
-        }
+    let Some(system_precondition) = applicable().find(|p| p.id == id) else {
+        return Ok(());
+    };
+    if repair_availability(system_precondition.repair_scope) == RepairAvailability::NoAppIdentity {
+        return Err(format!(
+            "system_precondition repair: {id:?} exige identidade de app atribuível (este processo roda fora de um bundle `.app`) — recusado antes de tentar qualquer coisa"
+        ));
     }
 
-    for step in repair_steps(id, bundle_id) {
-        let status = std::process::Command::new(step.program)
-            .args(&step.args)
-            .status()
-            .map_err(|e| format!("system_precondition repair: `{}` não iniciou: {e}", step.program))?;
-        log::info!(
-            "[system_preconditions] {} {:?} -> {status}",
-            step.program,
-            step.args
-        );
+    for step in (system_precondition.repair)(bundle_id) {
+        match step {
+            RepairStep::Command { program, args } => {
+                let status = std::process::Command::new(program)
+                    .args(&args)
+                    .status()
+                    .map_err(|e| format!("system_precondition repair: `{program}` não iniciou: {e}"))?;
+                log::info!("[system_preconditions] {program} {args:?} -> {status}");
+            }
+            RepairStep::Probe => {
+                // O valor é só registro: o que este passo produz é o acesso negado que o tccd anota.
+                let satisfied = (system_precondition.probe)();
+                log::info!("[system_preconditions] probe {id:?} (re-registro no TCC) -> satisfied={satisfied}");
+            }
+        }
     }
     Ok(())
 }
