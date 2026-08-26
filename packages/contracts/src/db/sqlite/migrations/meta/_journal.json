@@ -162,6 +162,13 @@
       "when": 1787689498385,
       "tag": "0022_luxuriant_iron_lad",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1787728722362,
+      "tag": "0023_fancy_human_cannonball",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,18 @@
 import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
-import { OwnerKind, OnboardingStep } from '../../../generated/typescript/src/wire/enums'
+import { OwnerKind, OnboardingStep, ContactKind, ProviderKind } from '../../../generated/typescript/src/wire/enums'
 import { enumCheck } from './_enum'
+
+/**
+ * Forma do rascunho persistido em `onboardings.state` — espelha `OnboardingDraftStateSchema`
+ * (packages/api/typescript/src/ui/schemas/OnboardingDraftState.ts), a fonte de verdade em runtime.
+ * Declarado estruturalmente aqui (não importado) porque `contracts` não pode depender de tipos da
+ * camada api — mesmo raciocínio de `ThreadParticipant` em `thread.ts`.
+ */
+type OnboardingDraftState = {
+	contactRef?: { channelId: string; externalId: string; displayName: string; kind: ContactKind }
+	workspace?: { path?: string; existingWorkspaceId?: string }
+	providers?: ProviderKind[]
+}
 
 /**
  * `owner` (pgSchema namespace) → `owner_*` table prefix. The generic tenancy axis:
@@ -55,6 +67,12 @@ export const onboardings = sqliteTable(
 
 		// OnboardingStep wire enum. text + CHECK, mesma forma de `owner_owners.kind`.
 		currentStep: text('current_step').$type<OnboardingStep>().notNull(),
+
+		// O RASCUNHO — contactRef/workspace/providers coletados pelos passos WORKSPACE/CONTACT/AGENTS,
+		// só materializados nos agregados de verdade (Workspace, Thread) no commit atômico de
+		// `CompleteOnboarding` (spec 2026-08-26). NULL até o primeiro PATCH que carregue `state`; nunca
+		// lido fora dessa transação de conclusão.
+		state: text('state', { mode: 'json' }).$type<OnboardingDraftState>(),
 
 		// NULL = não concluído. É o único fato que barra a API (spec Decision 10).
 		completedAt: integer('completed_at', { mode: 'timestamp_ms' }),
