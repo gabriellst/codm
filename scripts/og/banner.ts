@@ -101,7 +101,7 @@ export function buildBannerHtml(input: { logoMarkSvg: string; fonts: Record<300 
         <div class="who"><span class="dot">RM</span><span class="n">Rafael Moreira</span></div>
         <div class="in">@aurora did yesterday's deploy ship the new rate limit?</div>
       </div>
-      <div class="think rot2"><span class="g">✻</span> Executando… · bun test src/thread</div>
+      <div class="think rot2"><span class="g">✻</span> Executing… · bun test src/thread</div>
       <div class="out rot2">Shipped and verified — 42 tests green, limit is live. 🤖</div>
     </div>
   </div>
