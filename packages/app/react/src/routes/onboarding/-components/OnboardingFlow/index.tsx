@@ -181,17 +181,17 @@ export function OnboardingFlow({ className, ...props }: ComponentProps<'div'>) {
 	// prioritizes a fresh `completedAt` over a stale `required` (belt-and-suspenders — see its own
 	// docblock) so a `required` latched from a DIFFERENT stray 403 cannot reintroduce the same bounce.
 	//
-	// `setCompletedThreadId(data.threadId)` — regression follow-up (2026-08-26): `CompleteOnboarding`
-	// went from `void` back to `{ threadId: string | null }`, and this is the ONLY place that response
-	// ever reaches the client. Stashed on `useOnboardingSetupStore` BEFORE the invalidate/navigate so
-	// `OnboardingFinalStep` (mounted for the rest of this tick, until the SPA hop below lands) can read
-	// it for the "mention the agent" CTA — see that store field's own docblock for why `null` and
-	// `undefined` both mean "no CTA" there.
+	// `data.threadId` (from `CompleteOnboarding`'s `{ threadId: string | null }` response) is not read
+	// here anymore (2026-08-26): it used to be stashed on `useOnboardingSetupStore` for
+	// `OnboardingFinalStep`'s "mention the agent" CTA, which never actually painted — this handler
+	// invalidates and navigates away in the SAME tick, before that step's own round-trip could land.
+	// The CTA now lives on the dashboard, driven server-side by `GetHomeDashboard.mentionCta` (see that
+	// field's own docblock). `CompleteOnboarding` still returns the id — a legitimate fact about the
+	// operation, already tested — nothing on the frontend consumes it anymore.
 	const completeOnboarding = useCompleteOnboarding({
 		mutation: {
 			meta: { suppressToast: true },
-			onSuccess: async data => {
-				useOnboardingSetupStore.getState().setCompletedThreadId(data.threadId)
+			onSuccess: async () => {
 				await queryClient.invalidateQueries({ queryKey: getOnboardingQueryKey() })
 				useOnboardingRequiredStore.getState().reset()
 				await navigate({ to: '/dashboard' })

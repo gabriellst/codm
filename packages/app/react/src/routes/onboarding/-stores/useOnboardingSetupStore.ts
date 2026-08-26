@@ -78,15 +78,17 @@ import type { ContactStepData } from '@/routes/(app)/attach/-components/ContactS
  *     from the server draft on resume (`OnboardingFlow`'s hydration effect) — that effect derives the
  *     right answer for free the moment the step (re)mounts, no extra plumbing needed here.
  *
- * `completedThreadId` — restored 2026-08-26 (regression follow-up: the draft/atomic-commit rewrite
- * moved thread creation OUT of REVIEW and into `CompleteOnboarding` (`useCompleteOnboarding`), which
- * dropped the FINAL step's "mention the agent" CTA along with it — `CompleteOnboarding` used to
- * return `void`. Now that it returns `{ threadId: string | null }`, `OnboardingFlow`'s
- * `completeOnboarding.onSuccess` stashes that id here — the ONLY place a materialized `threadId`
- * exists for `OnboardingFinalStep` (no props channel reaches it either, same `STEP_COMPONENTS`
- * constraint as `confirmStep` above) to look up via `useGetSessionChat`. `null`/`undefined` both mean
- * "no CTA" to that step — `null` is the backend's explicit "could not resolve" (see
- * `CompleteOnboarding`'s own docblock), `undefined` is simply "not completed yet in this visit".
+ * ### 2026-08-26 — `completedThreadId` REMOVED (moved server-side)
+ * This store briefly carried a `completedThreadId` field, stashed by `OnboardingFlow`'s
+ * `completeOnboarding.onSuccess` from `CompleteOnboarding`'s `{ threadId: string | null }` response,
+ * so `OnboardingFinalStep` could look up the thread's mention tag for a "mention the agent" CTA. It
+ * never actually painted: `onSuccess` invalidates the onboarding query and navigates to `/dashboard`
+ * in the SAME tick it stashes the id, so the `useGetSessionChat` round-trip that CTA needed was still
+ * in flight when the route unmounted the step reading this field. The CTA now lives on the dashboard
+ * (`dashboard/-components/MentionCta`), driven by a server-computed field
+ * (`GetHomeDashboard.mentionCta`) that survives a fresh page load — no client-only value with a
+ * one-tick lifetime needed. `CompleteOnboarding` still returns `{ threadId }` (a legitimate fact about
+ * the operation, and already tested) even though nothing on the frontend reads it anymore.
  */
 interface OnboardingSetupState {
 	contactRef?: ContactStepData['contactRef']
@@ -97,7 +99,6 @@ interface OnboardingSetupState {
 	channelConnected: boolean
 	confirmStep?: () => Promise<void>
 	stepError?: string
-	completedThreadId?: string | null
 }
 
 interface OnboardingSetupActions {
@@ -109,7 +110,6 @@ interface OnboardingSetupActions {
 	setChannelConnected: (channelConnected: boolean) => void
 	setConfirmStep: (confirmStep: (() => Promise<void>) | undefined) => void
 	setStepError: (stepError: string | undefined) => void
-	setCompletedThreadId: (completedThreadId: string | null | undefined) => void
 	reset: () => void
 }
 
@@ -124,7 +124,6 @@ const initialState: OnboardingSetupState = {
 	channelConnected: false,
 	confirmStep: undefined,
 	stepError: undefined,
-	completedThreadId: undefined,
 }
 
 export const useOnboardingSetupStore = create<OnboardingSetupStore>()(set => ({
@@ -140,6 +139,5 @@ export const useOnboardingSetupStore = create<OnboardingSetupStore>()(set => ({
 	setChannelConnected: channelConnected => set({ channelConnected }),
 	setConfirmStep: confirmStep => set({ confirmStep }),
 	setStepError: stepError => set({ stepError }),
-	setCompletedThreadId: completedThreadId => set({ completedThreadId }),
 	reset: () => set(initialState),
 }))
