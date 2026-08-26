@@ -16,6 +16,7 @@ import { PageHeader } from '@/components/console/PageHeader'
 import { relativeTime } from '@/components/console/time'
 import { Dot } from '@/components/console/StatusDot'
 import { ThreadAvatar, contactAvatarUrl } from '@/components/console/ThreadAvatar'
+import { MentionCta } from '../MentionCta'
 
 type Dashboard = GetHomeDashboardQueryResponse
 
@@ -71,6 +72,8 @@ export function HomeDashboard({ className, ...props }: ComponentProps<'div'>) {
 			</div>
 
 			{data.needsYou && <NeedsYouCallout needsYou={data.needsYou} />}
+
+			<MentionCta />
 
 			<TodayStats today={data.today} />
 
