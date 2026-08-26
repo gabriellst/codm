@@ -428,6 +428,7 @@
 		"ARTIFACT_NOT_PREVIEWABLE": "Este artefato é um link — abra a URL em vez de pedir o conteúdo.",
 		"ARTIFACT_TOO_LARGE": "Este artefato é grande demais para ser enviado pelo canal.",
 		"CANNOT_CONVERT_INPUT": "Não foi possível processar a requisição. Revise os dados enviados.",
+		"CHANNEL_DEVICE_INVALIDATED": "A conexão deste canal foi invalidada pela plataforma de mensagens. Reconecte para gerar um novo código de pareamento.",
 		"CHANNEL_MEDIA_UNSUPPORTED": "Este canal não pode entregar mensagens de mídia.",
 		"CHANNEL_NOT_CONNECTED": "O canal não está conectado.",
 		"CLARIFICATION_ALREADY_PENDING": "Já há uma clarificação pendente para este remetente.",

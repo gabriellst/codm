@@ -428,6 +428,7 @@
 		"ARTIFACT_NOT_PREVIEWABLE": "This artifact is a link — open the URL instead of requesting its content.",
 		"ARTIFACT_TOO_LARGE": "This artifact is too large to send over the channel.",
 		"CANNOT_CONVERT_INPUT": "The request could not be processed. Review the submitted data.",
+		"CHANNEL_DEVICE_INVALIDATED": "This channel's connection was invalidated by the messaging platform. Reconnect it to generate a new pairing code.",
 		"CHANNEL_MEDIA_UNSUPPORTED": "This channel cannot deliver media messages.",
 		"CHANNEL_NOT_CONNECTED": "The channel is not connected.",
 		"CLARIFICATION_ALREADY_PENDING": "A clarification is already pending for this sender.",
