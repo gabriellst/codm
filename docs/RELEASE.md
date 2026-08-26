@@ -76,7 +76,8 @@ avançam, e o cliente daquela plataforma nunca saberia.
   Secret Service ligado). Sem ele o login não persiste entre aberturas. **Limitação conhecida
   desta fase** — sem fallback em arquivo por enquanto.
 - Sem assinatura: não há Gatekeeper/SmartScreen no Linux; a integridade do update é a minisign.
-- Runner de build: `ubuntu-22.04` hospedado, chave da matriz e do manifest `linux-x86_64`.
+- Runner de build: **self-hosted**, no Mac mini do founder — um container amd64 sob Rosetta
+  (`infra/runners/linux-x64/`), desde 2026-08-25. Chave da matriz e do manifest `linux-x86_64`.
 - Dados em `~/.local/share/app.codm.desktop/data` (o `app_data_dir` do Tauri + `data`).
 
 ### Windows
@@ -102,9 +103,10 @@ avançam, e o cliente daquela plataforma nunca saberia.
    `version` da conf; regenere com `bun desktop:generate` se a fonte mudar de lugar) e commite.
 2. `git tag v<X.Y.Z> && git push origin v<X.Y.Z>`.
 3. O workflow valida **tag == versão da conf** (diverge ⇒ falha sem publicar, antes de qualquer
-   build), builda nos três SOs em paralelo (macOS self-hosted, Linux e Windows hospedados), assina
-   os artefatos de update e — só se os três passaram — publica a release com DMG + AppImage + deb +
-   NSIS + `.sig`s + um `latest.json` de três plataformas, e sobe tudo ao R2 (versionado + aliases).
+   build), builda nos três SOs em paralelo (macOS e Linux self-hosted no Mac mini, Windows
+   hospedado), assina os artefatos de update e — só se os três passaram — publica a release com
+   DMG + AppImage + deb + NSIS + `.sig`s + um `latest.json` de três plataformas, e sobe tudo ao R2
+   (versionado + aliases).
 
 O beta não pede nada: mergear na main já publica `<versão-base>-beta.<run>` no canal.
 
@@ -273,62 +275,81 @@ Os dois workflows têm a mesma forma, três jobs:
 2. **`build`** — uma matriz com **um runner por SO, sem cross-compile** (chaves `darwin-aarch64`,
    `linux-x86_64`, `windows-x86_64` — as mesmas que o `make-manifest.ts` usa): o daemon é um `bun
    build --compile` que só carrega o prebuild nativo do libsql do próprio host (`build-sidecars.ts`,
-   "CROSS-TRIPLE GAP"), então cada binário nasce no SO em que vai rodar. Cada entrada instala as
-   deps do SO, compila os sidecars, **sobe os dois e exige 200 no health** (`scripts/release/
-   smoke-sidecars.ts` — o gate que um build sozinho não dá), roda `tauri build --bundles <lista>`
-   (macOS `app,dmg`, Linux `appimage,deb`, Windows `nsis`; a conf gerada segue com `targets: all`),
-   renomeia os artefatos com o nome fixo da plataforma e os sobe como artifact do run.
-   Os passos macOS (keychain temporário + codesign dos Mach-O aninhados, `nice`, `target/` fora do
-   workspace, gate do Developer ID) ficam atrás de `if: runner.os == 'macOS'`.
+   "CROSS-TRIPLE GAP"), então cada binário nasce no SO em que vai rodar. Cada entrada compila os
+   sidecars, **sobe os dois e exige 200 no health** (`scripts/release/smoke-sidecars.ts` — o gate
+   que um build sozinho não dá), roda `tauri build --bundles <lista>` (macOS `app,dmg`, Linux
+   `appimage,deb`, Windows `nsis`; a conf gerada segue com `targets: all`), renomeia os artefatos
+   com o nome fixo da plataforma e os sobe como artifact do run.
+   Cada entrada da matriz DECLARA um campo booleano `hosted` (`false` para macOS/Linux
+   self-hosted, `true` para Windows) — é ele, não `runner.os`, que gate-ia os passos de
+   provisionamento (instalar deps de sistema/Rust, cache do cargo, `CARGO_TARGET_DIR` fora do
+   workspace): um runner self-hosted já chega com tudo isso pronto (imagem do container, no caso
+   do Linux — `infra/runners/linux-x64/`), um runner hospedado não. Os passos macOS (keychain
+   temporário + codesign dos Mach-O aninhados, `nice`, gate do Developer ID) continuam atrás de
+   `if: runner.os == 'macOS'` — essa condição é sobre IDENTIDADE do SO (só o macOS assina Apple),
+   não sobre ser ou não hospedado.
 3. **`publish`** (ubuntu) — baixa os três artifacts, confere a lista completa, gera **um**
    `latest.json` com as três plataformas (`make-manifest.ts --platform … --url … --sig-file …` ×3),
    cria a release no GitHub, sobe ao R2 com o content-type certo (o `latest.json` por último) e
    confere por `HEAD` que cada objeto tem o tamanho do arquivo local — o wrangler já saiu 0 sem
    publicar.
 
-**Custo.** macOS é self-hosted (zero). Linux hospedado conta 1×, Windows 2×: um beta custa
-~40 min de cota (≈10 min Linux + ≈15 min Windows ×2). Com 2.000 min/mês isso dá ~50 betas — o
-filtro de caminhos do `release-beta` (só o que entra no app dispara) é o que mantém isso viável.
-O `correctness` tem um job `linux` (cargo check + sidecars + smoke, ~10 min ×1) filtrado do mesmo
-jeito por um `git diff` contra a base do PR; Windows **não** roda no gate de PR — quem pega quebra
-de Windows é o beta seguinte.
+**Custo.** macOS e Linux são self-hosted (zero — Linux desde 2026-08-25, `infra/runners/
+linux-x64/`, ver "Runner self-hosted" abaixo). Windows hospedado conta 2×: um beta custa ~30 min
+de cota (≈15 min Windows ×2). Com 2.000 min/mês isso dá ~65 betas — o filtro de caminhos do
+`release-beta` (só o que entra no app dispara) é o que mantém isso viável mesmo sem o Linux
+contando mais. O `correctness` tem um job `linux` (cargo check + sidecars + smoke) que também
+passou a rodar no Mac mini self-hosted e não consome cota; Windows **não** roda no gate de PR —
+quem pega quebra de Windows é o beta seguinte.
 
-**Cache.** `Swatinem/rust-cache` volta, mas **só nos runners hospedados** (`if: runner.os !=
-'macOS'`): eles são descartáveis, e a poda de `~/.cargo/bin` que apagou o `rustup` do founder
-(abaixo) não tem vítima lá.
+**Cache.** `Swatinem/rust-cache` volta, mas **só quando `matrix.hosted`** (o campo DECLARADO, não
+`runner.os != 'macOS'`): runners hospedados são descartáveis, e a poda de `~/.cargo/bin` que
+apagou o `rustup` do founder (abaixo) não tem vítima lá. Com Linux virando self-hosted, hoje só o
+Windows entra nessa condição.
 
 **Windows, três pegadinhas** já resolvidas nos workflows, para não redescobrir: o shell default é
 pwsh (`defaults.run.shell: bash` força git-bash em todo passo); os sidecars ganham `.exe`
 (build-sidecars.ts já faz); e não existe `nice` — é um campo da matriz, vazio fora do Mac.
 
-## Runner self-hosted (macOS)
+## Runner self-hosted (macOS + Linux)
 
 Os builds macOS (`release-beta`, `release-stable`) rodam num **runner self-hosted** no Mac mini do
-founder, não nos runners do GitHub. A razão é custo: repo privado consome cota, macOS conta **10×**,
-e em 2026-08-07 isso estourou o teto (57 builds macOS num dia ≈ 3.250 minutos faturados contra 2.000
-disponíveis), derrubando TODOS os workflows — inclusive os de Linux, que eram baratos. Minutos de
-runner self-hosted não contam na cota.
+founder desde o início, não nos runners do GitHub. A razão é custo: repo privado consome cota,
+macOS conta **10×**, e em 2026-08-07 isso estourou o teto (57 builds macOS num dia ≈ 3.250 minutos
+faturados contra 2.000 disponíveis), derrubando TODOS os workflows — inclusive os de Linux, que
+eram baratos. Minutos de runner self-hosted não contam na cota.
 
-A máquina já era o ambiente de build: mesmo toolchain, a chave de assinatura mora nela, e os caches
-de cargo/bun ficam quentes entre execuções.
+Desde 2026-08-25 os builds **Linux** (`release-beta`, `release-stable`, e o job `linux` de
+`correctness`) também rodam self-hosted, no MESMO Mac mini — não mais num `ubuntu-22.04`
+hospedado. A razão é a mesma: o job Linux custava ~10 min de cota hospedada por execução (1×), e
+virou zero. Como o daemon não cross-compila (o mesmo "CROSS-TRIPLE GAP" do libsql), o Linux x64
+roda dentro de um **container amd64 sob Rosetta** — `infra/runners/linux-x64/` tem o Dockerfile e
+o runbook completo de como subir a imagem no mini, incluindo os volumes que mantêm o cache do
+cargo quente entre execuções. Só o **Windows** segue hospedado (`windows-latest`): não há como
+rodar um runner Windows no Mac mini, e o multiplicador 2× dele é o único gasto de cota que resta
+na matriz.
 
-**Não espere que fique mais rápido de imediato.** O primeiro build self-hosted levou 11,9 min contra
-~5,7 no runner do GitHub — `actions/checkout` roda `git clean -ffdx`, então cada execução começa sem
-`node_modules` e recompila o Rust do zero. O ganho vem das execuções seguintes, quando o
-`Swatinem/rust-cache` e o cache do bun estão quentes; e o `nice -n 10` em todos os passos pesados faz
-o CI ceder CPU ao daemon de produção, o que troca alguns minutos de build por uma máquina usável.
+A máquina já era o ambiente de build do macOS: mesmo toolchain, a chave de assinatura mora nela, e
+os caches de cargo/bun ficam quentes entre execuções. O runner Linux é um processo separado —
+outro container, outro registro no GitHub com labels `self-hosted,Linux,X64` — na MESMA máquina
+física; os dois dividem CPU/memória entre si e com o daemon de produção do founder.
 
-**Se o runner estiver offline**, os jobs de macOS ficam na fila em vez de falhar. Para publicar
-mesmo assim, troque `runs-on: [self-hosted, macOS, ARM64]` por `macos-14` no workflow — e conte com
-o custo em minutos.
+**Não espere que fique mais rápido de imediato — em nenhum dos dois.** O primeiro build macOS
+self-hosted levou 11,9 min contra ~5,7 no runner do GitHub — `actions/checkout` roda `git clean
+-ffdx`, então cada execução começa sem `node_modules` e recompila o Rust do zero. O Linux tem o
+mesmo efeito, mais a tradução Rosetta por cima (x64 sob Rosetta: o `cargo build` é a parte
+CPU-bound, e é onde o overhead aparece — ver `infra/runners/linux-x64/README.md`, "Nota de
+performance"). O ganho vem das execuções seguintes, quando os caches de cargo/bun estão quentes; e
+o `nice -n 10` nos passos pesados do macOS faz o CI ceder CPU ao daemon de produção — o container
+Linux não usa `nice` (o campo da matriz fica vazio nessa entrada; ver "A matriz de build" acima).
 
-**Antes de tornar este repositório público**, remova o runner self-hosted: um PR de fork passaria a
-executar código arbitrário na máquina. As duas decisões são mutuamente exclusivas.
+**Se um runner estiver offline**, os jobs daquele SO ficam na fila em vez de falhar. Para publicar
+mesmo assim, troque `runs-on: [self-hosted, macOS, ARM64]` por `macos-14`, ou `runs-on:
+[self-hosted, Linux, X64]` por `ubuntu-22.04`, no workflow — e conte com o custo em minutos (10×
+macOS, 1× Linux).
 
-Desde 2026-08-25 os builds de **Linux e Windows** rodam em runners hospedados (`ubuntu-22.04`,
-`windows-latest`) — não há Mac que os compile, e o daemon não cross-compila. Eles voltam a consumir
-cota (1× e 2×); o que os mantém baratos é o filtro de caminhos e o fato de o macOS, o único 10×,
-continuar aqui.
+**Antes de tornar este repositório público**, remova os DOIS runners self-hosted: um PR de fork
+passaria a executar código arbitrário na máquina. As duas decisões são mutuamente exclusivas.
 
 ### O CI agora escreve na SUA máquina — actions de cache são o risco real
 
@@ -342,11 +363,12 @@ O que torna isso traiçoeiro é a distância entre causa e sintoma: **o build qu
 passou**, verde. Quem falhou foi o workflow seguinte, com `Executable not found in $PATH: "cargo"`,
 e o desenvolvimento local teria falhado igual na próxima vez que alguém rodasse `bun contracts`.
 
-A action foi removida dos passos do runner self-hosted e **não deve voltar a ele**. Nos jobs
-hospedados da matriz (Linux/Windows, `if: runner.os != 'macOS'`) ela roda — lá o runner é
-descartável e a poda de `~/.cargo/bin` não tem vítima. Num runner persistente ela não tem função: o
-disco já persiste. O `target/` do Rust — a única coisa que o `git clean -ffdx` do checkout apagaria
-— vive fora do workspace via `CARGO_TARGET_DIR`, e sobrevive sem action nenhuma.
+A action foi removida dos passos dos runners self-hosted e **não deve voltar a eles** (nem ao
+macOS, nem ao Linux — o mesmo incidente vale para qualquer runner persistente). Ela só roda quando
+o campo DECLARADO `matrix.hosted` é `true` — hoje só a entrada Windows: lá o runner é descartável e
+a poda de `~/.cargo/bin` não tem vítima. Num runner persistente ela não tem função: o disco já
+persiste. O `target/` do Rust — a única coisa que o `git clean -ffdx` do checkout apagaria — vive
+fora do workspace via `CARGO_TARGET_DIR`, e sobrevive sem action nenhuma, nos dois self-hosted.
 
 Para reparar, se acontecer de novo (as toolchains em `~/.rustup` sobrevivem; falta só o shim):
 

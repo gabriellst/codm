@@ -6,12 +6,13 @@
 # UPDATE seguem assinados com a chave minisign (TAURI_SIGNING_PRIVATE_KEY), que é outra coisa e é
 # o que o cliente verifica.
 #
-# Desde 2026-08-25 o beta sai para TRÊS sistemas (docs/RELEASE.md, "Plataformas"): macOS arm64 no
-# runner self-hosted, Linux x64 e Windows x64 em runners hospedados do GitHub — um runner por SO,
-# sem cross-compile, porque o daemon compilado só carrega o prebuild nativo do libsql do próprio
-# host (build-sidecars.ts, "CROSS-TRIPLE GAP"). Um build por SO alimenta UM latest.json com as três
-# plataformas; se um SO falhar, NADA é publicado — um manifest parcial deixaria uma plataforma
-# presa numa versão enquanto o release avança.
+# Desde 2026-08-25 o beta sai para TRÊS sistemas (docs/RELEASE.md, "Plataformas"): macOS arm64 e
+# Linux x64 no runner self-hosted do Mac mini do founder (Linux roda num container amd64 sob
+# Rosetta — infra/runners/linux-x64/), Windows x64 num runner hospedado do GitHub — um runner por
+# SO, sem cross-compile, porque o daemon compilado só carrega o prebuild nativo do libsql do
+# próprio host (build-sidecars.ts, "CROSS-TRIPLE GAP"). Um build por SO alimenta UM latest.json com
+# as três plataformas; se um SO falhar, NADA é publicado — um manifest parcial deixaria uma
+# plataforma presa numa versão enquanto o release avança.
 name: release-beta
 
 on:
@@ -20,7 +21,7 @@ on:
     # Só o que ENTRA no app dispara um beta. Antes era todo push na main, e num único dia isso
     # gerou 36 builds — a maioria por mudança em docs, spec ou backend que o bundle nem carrega.
     # Mesmo filtro de caminho que o deploy-landing já usa (e por isso rodou 5 vezes no mesmo dia).
-    # Importa DOBRADO agora: Linux e Windows consomem minutos hospedados (1× e 2×).
+    # Desde 2026-08-25 só Windows consome minutos hospedados (2×) — Linux virou self-hosted.
     paths:
       - 'packages/app/**'
       - 'packages/api/**'
@@ -115,24 +116,35 @@ jobs:
           #
           # `runner` é JSON (fromJSON abaixo) porque um label composto é uma LISTA, e o matrix não
           # aceita lista literal em `runs-on` sem essa volta.
+          #
+          # `hosted` é o campo DECLARADO que os passos de provisionamento abaixo leem (non-negotiable
+          # 5 do CLAUDE.md: nunca inferir de `runner.os`/label se um runner é descartável ou
+          # persistente). macOS e Linux são self-hosted no Mac mini do founder (persistentes,
+          # `hosted: false`); Windows é hospedado pelo GitHub (descartável, `hosted: true`).
           - key: darwin-aarch64
             runner: '["self-hosted", "macOS", "ARM64"]'
             bundles: app,dmg
+            hosted: false
             # `nice`: esta máquina também roda o daemon de produção do founder (agentes atendendo
             # WhatsApp). Um build de release competindo por CPU já causou contenção aqui; a
             # prioridade baixa faz o build ceder ao trabalho real em vez do contrário.
             nice: nice -n 10
-          # Linux x64 — hospedado, multiplicador 1×. AppImage é o formato do updater (o .deb não se
-          # auto-atualiza; existe para quem prefere o gerenciador de pacotes).
+          # Linux x64 — self-hosted no MESMO Mac mini, desde 2026-08-25 (custo zero de cota; ver
+          # docs/RELEASE.md "Runner self-hosted"). Roda num container amd64 sob Rosetta
+          # (infra/runners/linux-x64/) com deps de sistema + Rust já preinstalados pela imagem —
+          # nada a provisionar aqui. AppImage é o formato do updater (o .deb não se auto-atualiza;
+          # existe para quem prefere o gerenciador de pacotes).
           - key: linux-x86_64
-            runner: '"ubuntu-22.04"'
+            runner: '["self-hosted", "Linux", "X64"]'
             bundles: appimage,deb
+            hosted: false
             nice: ''
           # Windows x64 — hospedado, multiplicador 2×. Só NSIS (sem MSI): é o que o updater instala
           # em silêncio. Sem assinatura Authenticode nesta fase (SmartScreen avisa — docs/RELEASE.md).
           - key: windows-x86_64
             runner: '"windows-latest"'
             bundles: nsis
+            hosted: true
             nice: ''
     runs-on: ${{ fromJSON(matrix.runner) }}
     defaults:
@@ -151,8 +163,12 @@ jobs:
 
       # Toolchain de sistema do Tauri no Ubuntu 22.04 (webkit2gtk 4.1 + tray + rsvg) e o que este
       # shell puxa por cima: libdbus-1-dev (keyring `sync-secret-service`), patchelf (AppImage).
+      # Gate pelo campo DECLARADO `matrix.hosted`, não por `runner.os`: o Linux self-hosted
+      # (infra/runners/linux-x64/Dockerfile) já nasce com esta lista instalada na imagem — rodar
+      # `apt-get` de novo aqui seria trabalho sem efeito (e sem `sudo` dentro do container). Este
+      # passo só dispararia se um futuro entry Linux voltasse a ser hospedado.
       - name: deps de sistema (Linux)
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.hosted
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -160,35 +176,37 @@ jobs:
             libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev patchelf
 
       # Runners HOSPEDADOS são descartáveis: o Rust vem da action e o cache de cargo é bem-vindo.
-      # O `if` é a fronteira — nada disto encosta no self-hosted (ver o bloco logo abaixo).
+      # O `if` é a fronteira — nada disto encosta nos self-hosted (ver o bloco logo abaixo).
       - name: toolchain Rust (runners hospedados)
-        if: runner.os != 'macOS'
+        if: matrix.hosted
         uses: dtolnay/rust-toolchain@stable
       - name: cache do cargo (runners hospedados)
-        if: runner.os != 'macOS'
+        if: matrix.hosted
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: packages/app/tauri/src-tauri
 
-      # NÃO reintroduza Swatinem/rust-cache no runner self-hosted. Ela existe para dar cache de Rust
+      # NÃO reintroduza Swatinem/rust-cache em runner self-hosted. Ela existe para dar cache de Rust
       # a runners DESCARTÁVEIS, e para isso o passo de save PODA `~/.cargo/bin` — em 2026-08-07, 4
       # segundos depois de entrar no `Post Run`, apagou o binário `rustup` da máquina do founder e
       # deixou todos os symlinks (cargo, rustc, rustfmt) pendurados. O build passou; o que quebrou
       # foi o ambiente de desenvolvimento DEPOIS, e o sintoma apareceu longe da causa: o
       # correctness seguinte falhou com `Executable not found in $PATH: "cargo"`. Nos runners
-      # hospedados acima ela é inofensiva — o `if: runner.os != 'macOS'` é o que separa os dois.
+      # hospedados acima ela é inofensiva — o `if: matrix.hosted` é o que separa os dois.
       #
-      # Num runner PERSISTENTE o cache de disco é o próprio disco — não há nada para restaurar.
+      # Em runners PERSISTENTES o cache de disco é o próprio disco — não há nada para restaurar.
       # O que `git clean -ffdx` do checkout apagaria é o `target/`, e por isso ele mora FORA do
-      # workspace (passo abaixo): sobrevive entre execuções sem nenhuma action.
+      # workspace (passo abaixo): sobrevive entre execuções sem nenhuma action. Vale para os dois
+      # self-hosted (macOS e Linux) — o Linux roda num container cujo volume persistente
+      # (infra/runners/linux-x64/README.md) é o disco equivalente.
       #
       # Só o `target/` sai do workspace, de propósito. Ele é cache de compilador puro — o cargo
       # revalida por fingerprint, então um target quente não consegue mascarar bug de fonte. O
       # resto do checkout continua limpo a cada execução, que é o que impede um ARTEFATO GERADO
       # sobrevivente (o openapi.json do //go:embed já foi essa pegadinha) de fingir que o build
       # funciona num clone frio.
-      - name: cargo target fora do workspace (self-hosted)
-        if: runner.os == 'macOS'
+      - name: cargo target fora do workspace (runners persistentes)
+        if: '!matrix.hosted'
         run: echo "CARGO_TARGET_DIR=$HOME/.cache/codm-cargo-target" >> "$GITHUB_ENV"
 
       - name: deps

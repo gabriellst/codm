@@ -6,8 +6,10 @@
 # silêncio.
 #
 # Três SOs desde 2026-08-25, na MESMA forma do release-beta.yml (prepare → build por SO → publish
-# agregado) — leia os dois juntos. O que muda no stable: retenção TOTAL no R2 (nome versionado por
-# artefato) + um alias fixo por instalador para o botão da landing.
+# agregado) — leia os dois juntos. macOS e Linux rodam self-hosted no Mac mini do founder (Linux
+# num container amd64 sob Rosetta — infra/runners/linux-x64/); só Windows é hospedado pelo GitHub.
+# O que muda no stable: retenção TOTAL no R2 (nome versionado por artefato) + um alias fixo por
+# instalador para o botão da landing.
 name: release-stable
 
 on:
@@ -78,17 +80,27 @@ jobs:
           # Self-hosted no Mac mini do founder (custo zero de cota; ver release-beta.yml e
           # docs/RELEASE.md). CUIDADO ao tornar o repo público: runner self-hosted + repo público
           # deixa qualquer PR de fork executar código nesta máquina.
+          #
+          # `hosted` é o campo DECLARADO que os passos de provisionamento abaixo leem (non-negotiable
+          # 5 do CLAUDE.md) — macOS e Linux self-hosted (persistentes, `hosted: false`), Windows
+          # hospedado pelo GitHub (descartável, `hosted: true`). Ver o comentário gêmeo, mais
+          # detalhado, em release-beta.yml.
           - key: darwin-aarch64
             runner: '["self-hosted", "macOS", "ARM64"]'
             bundles: app,dmg
+            hosted: false
             nice: nice -n 10
+          # Linux x64 — self-hosted no MESMO Mac mini desde 2026-08-25 (container amd64 sob Rosetta,
+          # infra/runners/linux-x64/); deps de sistema + Rust já vêm na imagem.
           - key: linux-x86_64
-            runner: '"ubuntu-22.04"'
+            runner: '["self-hosted", "Linux", "X64"]'
             bundles: appimage,deb
+            hosted: false
             nice: ''
           - key: windows-x86_64
             runner: '"windows-latest"'
             bundles: nsis
+            hosted: true
             nice: ''
     runs-on: ${{ fromJSON(matrix.runner) }}
     defaults:
@@ -102,8 +114,11 @@ jobs:
         with:
           go-version-file: packages/api/go/go.mod
 
+      # Gate pelo campo DECLARADO `matrix.hosted`, não por `runner.os`: o Linux self-hosted
+      # (infra/runners/linux-x64/Dockerfile) já nasce com esta lista instalada na imagem. Este
+      # passo só dispararia se um futuro entry Linux voltasse a ser hospedado.
       - name: deps de sistema (Linux)
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.hosted
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -111,20 +126,20 @@ jobs:
             libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev patchelf
 
       - name: toolchain Rust (runners hospedados)
-        if: runner.os != 'macOS'
+        if: matrix.hosted
         uses: dtolnay/rust-toolchain@stable
       - name: cache do cargo (runners hospedados)
-        if: runner.os != 'macOS'
+        if: matrix.hosted
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: packages/app/tauri/src-tauri
 
-      # NÃO reintroduza Swatinem/rust-cache no self-hosted — ver o comentário longo em
+      # NÃO reintroduza Swatinem/rust-cache em runner self-hosted — ver o comentário longo em
       # release-beta.yml: o passo de save dela poda `~/.cargo/bin` e apagou o `rustup` da máquina do
-      # founder em 2026-08-07. Runner persistente não precisa dela; o `target/` mora fora do
-      # workspace (passo abaixo).
-      - name: cargo target fora do workspace (self-hosted)
-        if: runner.os == 'macOS'
+      # founder em 2026-08-07. Runners persistentes não precisam dela; o `target/` mora fora do
+      # workspace (passo abaixo) — vale para os dois self-hosted (macOS e Linux).
+      - name: cargo target fora do workspace (runners persistentes)
+        if: '!matrix.hosted'
         run: echo "CARGO_TARGET_DIR=$HOME/.cache/codm-cargo-target" >> "$GITHUB_ENV"
 
       - name: deps

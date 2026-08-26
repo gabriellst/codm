@@ -6,8 +6,10 @@ name: correctness
 #
 # Desde 2026-08-25 há um SEGUNDO job, `linux`: o shell desktop sai para Linux e Windows, e um PR
 # que só compila no Mac do founder passava verde até o beta quebrar 10 minutos depois do merge.
-# O job compila os sidecars, faz `cargo check` do shell e sobe os sidecars (smoke) num ubuntu
-# hospedado — Windows fica de fora aqui (2× de cota); quem pega quebra de Windows é o release-beta.
+# O job compila os sidecars, faz `cargo check` do shell e sobe os sidecars (smoke) no MESMO Mac
+# mini self-hosted do `detect` (Linux num container amd64 sob Rosetta — infra/runners/linux-x64/),
+# custo zero de cota — Windows fica de fora aqui (só o release-beta hospedado paga 2× por ele);
+# quem pega quebra de Windows é o release-beta.
 
 on:
   push:
@@ -55,17 +57,18 @@ jobs:
       - name: Tests
         run: nice -n 10 bun run test
 
-  # O job `linux` custa ~10 min de cota HOSPEDADA por execução. `on.paths` filtraria o workflow
-  # inteiro (e o `detect` tem de rodar sempre), então o filtro é este job: os caminhos do
-  # release-beta.yml MAIS `scripts/release/` (o smoke deste job mora lá) e este próprio arquivo.
-  # A redeclaração do path-set é presa por scripts/release/workflow-paths.test.ts (test:tooling):
-  # se o filtro do beta mudar sem este mudar junto, o tooling fica vermelho. Sem action externa:
-  # numa cota que já estourou uma vez, cada minuto poupado conta, e o `git diff` é grátis.
+  # Desde 2026-08-25 o job `linux` roda self-hosted (custo zero de cota — ver o job abaixo), mas o
+  # filtro continua existindo: `on.paths` filtraria o workflow inteiro (e o `detect` tem de rodar
+  # sempre), então o filtro é este job: os caminhos do release-beta.yml MAIS `scripts/release/` (o
+  # smoke deste job mora lá) e este próprio arquivo. A redeclaração do path-set é presa por
+  # scripts/release/workflow-paths.test.ts (test:tooling): se o filtro do beta mudar sem este mudar
+  # junto, o tooling fica vermelho.
   #
-  # Trade-off consciente: este job roda HOSPEDADO em todo push/PR (inclusive os só-docs que ele
-  # existe para poupar) e o GitHub fatura por job arredondando para 1 min — ~1 min de cota por
-  # push de docs. A alternativa (self-hosted) custaria zero mas enfileiraria atrás do `detect`
-  # no único runner do Mac e faria até o SKIP depender do Mac estar ligado. 1 min < 10 min.
+  # Trade-off consciente: este job roda HOSPEDADO (ubuntu-22.04) em todo push/PR, mesmo os só-docs
+  # que ele existe para poupar — o GitHub fatura por job arredondando para 1 min. A alternativa
+  # (self-hosted, igual ao `linux`) custaria zero, mas enfileiraria atrás do `detect` (e agora do
+  # `linux`) no único runner do Mac e faria até a decisão de SKIP depender do Mac estar ligado —
+  # ~1 min de cota por push de docs compra a resposta rápida sem essa dependência.
   changes:
     runs-on: ubuntu-22.04
     outputs:
@@ -100,31 +103,27 @@ jobs:
   linux:
     needs: changes
     if: needs.changes.outputs.desktop == 'true'
-    # Hospedado e descartável: aqui rust-cache é bem-vinda (o incidente de 2026-08-07 foi no
-    # self-hosted, onde ela poda ~/.cargo/bin da máquina do founder — ver release-beta.yml).
-    runs-on: ubuntu-22.04
+    # Self-hosted desde 2026-08-25, no MESMO Mac mini do `detect` acima — container amd64 sob
+    # Rosetta (infra/runners/linux-x64/). NÃO é descartável: NÃO reintroduza apt/rustup/rust-cache
+    # aqui. O incidente de 2026-08-07 (Swatinem/rust-cache podando ~/.cargo/bin e apagando o
+    # `rustup` da máquina do founder — ver release-beta.yml) vale para qualquer runner persistente,
+    # não só macOS. Deps de sistema (libwebkit2gtk-4.1-dev, libdbus-1-dev, patchelf etc. — a mesma
+    # lista canônica que release-beta.yml/release-stable.yml documentam) e a toolchain Rust já vêm
+    # preinstaladas na imagem do container; nada a provisionar neste job.
+    runs-on: [self-hosted, Linux, X64]
     steps:
       - uses: actions/checkout@v4
-
-      # Toolchain de sistema do Tauri v2 no Ubuntu 22.04 (libwebkit2gtk-4.1-dev etc.) +
-      # libdbus-1-dev (keyring/secret-service) + patchelf (AppImage). Esta é a lista canônica
-      # de deps Linux do repo — a leg Linux do release-beta usa a MESMA; quem mudar uma muda a
-      # outra, senão o PR passa aqui e o beta quebra lá (ou vice-versa).
-      - name: deps de sistema
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev \
-            libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev patchelf
 
       - uses: oven-sh/setup-bun@v2
       - uses: actions/setup-go@v5
         with:
           go-version-file: packages/api/go/go.mod
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: packages/app/tauri/src-tauri
+
+      # Runner PERSISTENTE: o `target/` do Rust mora fora do workspace (mesma razão documentada em
+      # release-beta.yml/release-stable.yml) — sobrevive ao `git clean -ffdx` do checkout entre
+      # execuções, sem precisar de nenhuma action de cache.
+      - name: cargo target fora do workspace (runner persistente)
+        run: echo "CARGO_TARGET_DIR=$HOME/.cache/codm-cargo-target" >> "$GITHUB_ENV"
 
       - name: deps
         run: bun install --frozen-lockfile
