@@ -3,6 +3,33 @@
 # Exit on any error
 set -e
 
+# O QUE ESTÁ SENDO EMPURRADO — o git entrega no stdin uma linha por ref:
+#
+#     <ref local> <sha local> <ref remota> <sha remoto>
+#
+# e numa DELEÇÃO (`git push origin --delete <ref>`) o sha local vem zerado, porque não há commit
+# algum viajando. Sem ler isso, o hook rodava a suíte inteira para cada referência apagada: em
+# 2026-08-26, limpando o histórico antes de abrir o repositório, foram 26 branches + 26 tags = 52
+# execuções completas de `bun run test` para não enviar uma única linha de código. A suíte existe
+# para proteger o que CHEGA no remoto; deleção não traz nada para proteger.
+#
+# `git push --delete` também é como se apaga uma tag por engano — e é justamente o caso em que
+# esperar dez minutos de teste convida a usar `--no-verify`, que aí desliga a verificação inclusive
+# nos pushes que importam. Pular aqui é o que mantém o hook confiável nos outros.
+deletion_only=1
+while read -r _local_ref local_sha _remote_ref _remote_sha; do
+	# `read` sem linha nenhuma (push sem refs) sai do laço sem entrar aqui — `deletion_only` segue 1
+	# e o efeito é o mesmo de uma deleção: não há commit a testar.
+	case "$local_sha" in
+		*[!0]*) deletion_only=0 ;;
+	esac
+done
+
+if [ "$deletion_only" -eq 1 ]; then
+	echo "Pre-push: nada a testar (remoção de referência) — pulando a suíte."
+	exit 0
+fi
+
 echo "Running pre-push checks..."
 
 # Run build to ensure everything compiles
