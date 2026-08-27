@@ -26,20 +26,22 @@ type AgentAgentSession struct {
 }
 
 type AgentMailbox struct {
-	ID         string
-	OwnerID    string
-	TargetKind string
-	TargetID   string
-	Kind       string
-	Payload    string
-	DedupKey   string
-	ClaimedBy  sql.NullString
-	LeaseUntil sql.NullInt64
-	Attempts   int64
-	LastError  sql.NullString
-	DeadAt     sql.NullInt64
-	ConsumedAt sql.NullInt64
-	CreatedAt  int64
+	ID          string
+	OwnerID     string
+	TargetKind  string
+	TargetID    string
+	Kind        string
+	Payload     string
+	DedupKey    string
+	ClaimedBy   sql.NullString
+	LeaseUntil  sql.NullInt64
+	Attempts    int64
+	LastError   sql.NullString
+	DeadAt      sql.NullInt64
+	ConsumedAt  sql.NullInt64
+	CreatedAt   int64
+	ClaimedBoot sql.NullString
+	ClaimedPid  sql.NullInt64
 }
 
 type ArtifactArtifact struct {
@@ -251,6 +253,7 @@ type OwnerOnboarding struct {
 	CreatedAt   int64
 	UpdatedAt   int64
 	Version     int64
+	State       sql.NullString
 }
 
 type OwnerOwner struct {
@@ -330,13 +333,14 @@ type ThreadTranscriptEntry struct {
 	IssueID          sql.NullString
 	QuotedEntryID    sql.NullString
 	SenderExternalID sql.NullString
+	FiredByLoop      sql.NullString
 	Provider         sql.NullString
 	Classification   sql.NullString
-	At               int64
-	CreatedAt        int64
-	FiredByLoop      sql.NullString
 	MessageType      sql.NullString
 	MediaPath        sql.NullString
+	At               int64
+	CreatedAt        int64
+	ArtifactID       sql.NullString
 }
 
 type WorkspaceWorkspace struct {

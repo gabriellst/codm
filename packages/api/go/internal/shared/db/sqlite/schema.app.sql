@@ -33,7 +33,7 @@ CREATE TABLE "agent_mailbox" (
 	"last_error" text,
 	"dead_at" integer,
 	"consumed_at" integer,
-	"created_at" integer NOT NULL,
+	"created_at" integer NOT NULL, "claimed_boot" text, "claimed_pid" integer,
 	CONSTRAINT "agent_mailbox_target_kind_check" CHECK("agent_mailbox"."target_kind" IN ('THREAD', 'ISSUE')),
 	CONSTRAINT "agent_mailbox_kind_check" CHECK("agent_mailbox"."kind" IN ('OPERATOR_MESSAGE', 'ISSUE_RESULT', 'WORK', 'STEER'))
 );
@@ -247,7 +247,7 @@ CREATE TABLE "owner_onboardings" (
 	"completed_at" integer,
 	"created_at" integer NOT NULL,
 	"updated_at" integer NOT NULL,
-	"version" integer DEFAULT 1 NOT NULL,
+	"version" integer DEFAULT 1 NOT NULL, "state" text,
 	CONSTRAINT "owner_onboardings_current_step_check" CHECK("owner_onboardings"."current_step" IN ('VALUE', 'HOW', 'CONTROL', 'CHANNEL', 'WORKSPACE', 'CONTACT', 'AGENTS', 'REVIEW', 'FINAL'))
 );
 CREATE TABLE "owner_owners" (
@@ -322,10 +322,13 @@ CREATE TABLE "thread_transcript_entries" (
 	"issue_id" text,
 	"quoted_entry_id" text,
 	"sender_external_id" text,
+	"fired_by_loop" text,
 	"provider" text,
 	"classification" text,
+	"message_type" text,
+	"media_path" text,
 	"at" integer NOT NULL,
-	"created_at" integer NOT NULL, "fired_by_loop" text, "message_type" text, "media_path" text,
+	"created_at" integer NOT NULL, "artifact_id" text,
 	CONSTRAINT "thread_transcript_entries_kind_check" CHECK("thread_transcript_entries"."kind" IN ('CONTACT', 'SYSTEM', 'DIRECT', 'WHISPER', 'ACTION')),
 	CONSTRAINT "thread_transcript_entries_provider_check" CHECK("thread_transcript_entries"."provider" IN ('CLAUDE_CODE', 'CODEX', 'OPENCODE')),
 	CONSTRAINT "thread_transcript_entries_classification_check" CHECK("thread_transcript_entries"."classification" IN ('REPLY_QUOTE', 'CONTEXT_MATCH', 'NEW_ISSUE', 'CLARIFIED')),

@@ -22,18 +22,19 @@
  * verbatim, que é o que `windowsVerbatimArguments` significa.
  */
 
+// A leitura de `ComSpec` mora no kernel, junto do resto do que "processo neste SO" significa — ver o
+// docblock de `comspecPath`. Em `src/` o Config tipado é a única porta de ambiente (rail em
+// `tests/architecture/process-env.test.ts`), e uma variável que o SO define sobre si mesmo não é
+// configuração do produto: declará-la lá a colocaria no `.env.example`, para um valor que ninguém
+// escolhe. Mesmo argumento que `Watchdog.ts` faz sobre o pid do supervisor.
+import { comspecPath } from '@codm/core-typescript'
+
 /** O que o chamador entrega ao `spawn`: arquivo, argumentos e as opções que a plataforma exige. */
 export interface Invocation {
 	file: string
 	args: string[]
 	/** Só definido no caminho do Windows — no POSIX o objeto sai vazio, sem chave alguma. */
 	options: { windowsVerbatimArguments?: true }
-}
-
-/** O interpretador de lote do Windows, pelo caminho que o próprio sistema anuncia (`ComSpec`), com
- *  fallback para o nome — uma instalação sem `ComSpec` é anômala, mas não é motivo para falhar aqui. */
-function comspec(): string {
-	return process.env.ComSpec ?? process.env.COMSPEC ?? 'cmd.exe'
 }
 
 /**
@@ -74,5 +75,5 @@ export function resolveInvocation(binary: string, args: readonly string[], platf
 	// `/d` ignora AutoRun do registro (um `cmd.exe` de máquina alheia não decide o que roda antes do
 	// nosso comando); `/s` fixa a regra de citação do resto da linha; `/c` executa e sai.
 	const line = [binary, ...args].map(quoteForCmd).join(' ')
-	return { file: comspec(), args: ['/d', '/s', '/c', line], options: { windowsVerbatimArguments: true } }
+	return { file: comspecPath(), args: ['/d', '/s', '/c', line], options: { windowsVerbatimArguments: true } }
 }

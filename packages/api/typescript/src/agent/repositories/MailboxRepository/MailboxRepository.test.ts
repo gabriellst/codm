@@ -1,9 +1,22 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
+import { eq } from 'drizzle-orm'
 import { TestBed } from '@test/support'
+import { agentMailbox } from '@codm/contracts/db'
+import { LibSqlDatabaseDriver } from '@codm/core-typescript'
 import { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { MailboxRepository } from './MailboxRepository'
+
+/**
+ * Above every platform's pid ceiling, so `kill(pid, 0)` answers ESRCH rather than naming a process
+ * that happens to exist. Measured on this host: `ESRCH`, same as pid 99999.
+ *
+ * Deliberately NOT "spawn something and reuse its pid after it dies" — that is a test whose
+ * correctness depends on the OS not recycling a number, which is exactly the ambiguity `claimed_boot`
+ * exists to remove.
+ */
+const PID_NOBODY_HOLDS = 2_147_483_632
 
 /**
  * The scheduler's semantics, which are the whole reason this table exists rather than "just trigger
@@ -112,6 +125,77 @@ describe('MailboxRepository — one turn per target, durable', () => {
 		const retry = await r.claimNext('w1', 60_000)
 		expect(retry?.id).toBe(first!.id)
 		expect(retry?.attempts).toBe(2)
+	})
+
+	/**
+	 * O LEASE DE UM BOOT ANTERIOR NASCE RECLAMÁVEL — não imortal, e não "reclamável em dez minutos".
+	 *
+	 * O crash budget sempre esteve certo no papel: o lease expira e o item volta. O que ele custava era
+	 * a espera INTEIRA, toda vez, porque `claimed_by` é um uuid criado na memória do processo morto e o
+	 * processo novo não tem como distingui-lo de um segundo daemon que ainda está trabalhando. Com o
+	 * boot gravado na linha a pergunta tem dono: o SO responde por `kill(pid, 0)`.
+	 *
+	 * O falsificador é exato: apague o `isClaimOrphaned` de `releaseOrphanedClaims` (ou pare de gravar
+	 * `claimed_boot`/`claimed_pid` no claim) e este teste fica vermelho — o item continua leased até o
+	 * relógio do lease virar, que é o comportamento que ele existe para substituir.
+	 */
+	it('libera o lease de um boot que não existe mais — e só dele', async () => {
+		const r = repo()
+		const db = testBed.resolve(LibSqlDatabaseDriver).db
+		await r.enqueue(item(THREAD_A, 'do-boot-morto'))
+		await r.enqueue(item(THREAD_B, 'do-boot-vivo'))
+
+		// Os dois estão leased por dez minutos: nenhum expira sozinho dentro deste teste.
+		const dead = await r.claimNext('worker-do-boot-anterior', 600_000)
+		const alive = await r.claimNext('worker-deste-boot', 600_000)
+		expect(dead).toBeDefined()
+		expect(alive).toBeDefined()
+
+		// AS DUAS linhas passam a ser de OUTRO boot. A única diferença é que um dos pids ainda existe —
+		// que é precisamente a pergunta que só o SO responde, e a razão de a varredura não poder ser um
+		// `WHERE claimed_boot <> ?` e nada mais.
+		await db
+			.update(agentMailbox)
+			.set({ claimedBoot: 'boot-de-ontem', claimedPid: PID_NOBODY_HOLDS })
+			.where(eq(agentMailbox.id, dead?.id ?? ''))
+		await db
+			.update(agentMailbox)
+			.set({ claimedBoot: 'boot-do-outro-daemon', claimedPid: process.pid })
+			.where(eq(agentMailbox.id, alive?.id ?? ''))
+
+		expect(await r.releaseOrphanedClaims()).toBe(1)
+
+		// O órfão está de volta na fila AGORA, sem esperar os dez minutos…
+		const recovered = await r.claimNext('worker-depois-do-boot', 60_000)
+		expect(recovered?.id).toBe(dead?.id)
+		// …e conta como tentativa, senão um item que mata o worker teria retries infinitos de graça.
+		expect(recovered?.attempts).toBe(2)
+
+		// …enquanto o lease do boot cujo processo AINDA EXISTE segue intocado. É o que impede a varredura
+		// de roubar o turno de um segundo daemon rodando contra o mesmo arquivo.
+		const row = await db
+			.select()
+			.from(agentMailbox)
+			.where(eq(agentMailbox.id, alive?.id ?? ''))
+		expect(row[0]?.claimedBoot).toBe('boot-do-outro-daemon')
+		expect(row[0]?.leaseUntil).not.toBeNull()
+	})
+
+	it('uma linha sem boot gravado (anterior à migração) NÃO é reclamada — só o provável, nunca o suposto', async () => {
+		const r = repo()
+		const db = testBed.resolve(LibSqlDatabaseDriver).db
+		await r.enqueue(item(THREAD_A, 'linha-antiga'))
+		const claimed = await r.claimNext('worker-de-uma-versao-antiga', 600_000)
+
+		// Como as linhas escritas antes das colunas existirem: leased, sem boot nenhum.
+		await db
+			.update(agentMailbox)
+			.set({ claimedBoot: null, claimedPid: null })
+			.where(eq(agentMailbox.id, claimed?.id ?? ''))
+
+		expect(await r.releaseOrphanedClaims()).toBe(0)
+		// Segue leased — cai no comportamento antigo (esperar o lease), que é o pior caso aceitável.
+		expect(await r.claimNext('worker-outro', 60_000)).toBeUndefined()
 	})
 
 	it('hasPending sees runnable work and stops seeing it once consumed', async () => {

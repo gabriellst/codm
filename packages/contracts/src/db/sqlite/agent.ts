@@ -122,6 +122,25 @@ export const agentMailbox = sqliteTable(
 		// Lease + failure vocabulary, mirroring SqliteCommandQueue: a turn that dies mid-flight has
 		// its lease expire and is retried; one that keeps dying is poisoned rather than looping.
 		claimedBy: text('claimed_by'),
+		/**
+		 * WHICH RUN OF THE DAEMON holds the lease — the two columns that make a stranded claim
+		 * PROVABLY dead instead of merely old.
+		 *
+		 * `claimed_by` alone answers "which worker", and a worker id is a uuid minted in memory: after
+		 * a crash nothing in the new process can tell whether the id on the row belongs to a run that
+		 * is still going (a second daemon, legitimately) or to one that no longer exists. The only
+		 * available answer to that is the OS's — `kill(pid, 0)` — and it needs a pid to ask about,
+		 * plus a boot id so a RECYCLED pid (the new daemon inheriting the dead one's number) is not
+		 * mistaken for the original holder.
+		 *
+		 * Declared as two typed columns rather than packed into `claimed_by`: WHO claimed is three
+		 * facts (worker, boot, process), and a parser over a delimited string would be exactly the
+		 * "convention instead of contract" the repo forbids. NULLable because rows written before this
+		 * migration have no boot recorded — and a claim we cannot prove dead is never reclaimed early,
+		 * it simply waits out its lease, which is the pre-existing behaviour.
+		 */
+		claimedBoot: text('claimed_boot'),
+		claimedPid: integer('claimed_pid'),
 		leaseUntil: integer('lease_until', { mode: 'timestamp_ms' }),
 		attempts: integer('attempts').notNull().default(0),
 		lastError: text('last_error'),
