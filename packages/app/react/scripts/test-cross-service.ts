@@ -38,9 +38,26 @@ interface FileResult {
 	ms: number
 }
 
+/**
+ * O PRAZO DOS HOOKS DESTA LANE — 5s (o default do `bun test`) é menor que o trabalho que eles fazem.
+ *
+ * Cada arquivo daqui boota o backend de integração num `beforeAll`, e com `services: ['apiGo']` isso
+ * inclui `go build` + spawn + poll de prontidão do subprocesso. O `bootService` tem prazo interno de
+ * 30s justamente por isso; o hook do bun estourava antes, aos 5s, e a suíte morria com
+ * `a beforeEach/afterEach hook timed out for this test` — uma mensagem que não diz nada sobre boot e
+ * mandou mais de um investigador procurar defeito onde não havia.
+ *
+ * Na máquina do founder passava quase sempre; nos runners hospedados (2 vCPU, cache frio, desde a
+ * migração de 2026-08-26) virou vermelho intermitente em metade dos pushes. Não é flakiness a
+ * tolerar com retry: é um prazo menor que a tarefa, e o conserto é declarar o prazo certo — 60s, o
+ * dobro do que o `bootService` se dá, para o timeout de fora nunca disparar antes do de dentro (que
+ * sabe dizer o que falhou).
+ */
+const HOOK_TIMEOUT = '--timeout=60000'
+
 function runOne(file: string): FileResult {
 	const started = performance.now()
-	const result = Bun.spawnSync(['bun', 'test', PATH_IGNORE_OVERRIDE, file], {
+	const result = Bun.spawnSync(['bun', 'test', PATH_IGNORE_OVERRIDE, HOOK_TIMEOUT, file], {
 		cwd: REACT_ROOT,
 		stdout: 'inherit',
 		stderr: 'inherit',

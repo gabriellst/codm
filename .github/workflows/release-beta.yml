@@ -236,9 +236,20 @@ jobs:
       # GATEANDO a release — que é o lugar deles. `--lib` compila só a crate, sem bundle; os
       # binários dos sidecars já existem (passo acima), então o `build.rs` resolve
       # `externalBin`/`resources` sem erro.
+      # `PATH` com `target/debug`: o binário de teste nasce em `target/debug/deps/` e o
+      # `WebView2Loader.dll` que o webview2-com entrega fica um nível acima, em `target/debug/`. Sem
+      # isso o Windows carrega OUTRO WebView2Loader do sistema e o processo morre antes do primeiro
+      # teste com `0xc0000139 STATUS_ENTRYPOINT_NOT_FOUND` — que não é falha de teste nenhum, é a DLL
+      # errada (medido no primeiro run da perna nativa, 2026-08-26).
       - name: cargo test do shell (testes cfg(windows))
         if: runner.os == 'Windows'
-        run: cargo test --manifest-path packages/app/tauri/src-tauri/Cargo.toml --lib
+        run: |
+          # `export` no PRÓPRIO passo: `$GITHUB_PATH` só vale para os passos seguintes, e quem
+          # precisa da DLL é o comando abaixo.
+          export PATH="$PWD/packages/app/tauri/src-tauri/target/debug:$PATH"
+          # Diagnóstico barato: se o erro voltar, a lista diz se a DLL sequer existe e onde.
+          find packages/app/tauri/src-tauri/target -name 'WebView2Loader.dll' -maxdepth 3 || true
+          cargo test --manifest-path packages/app/tauri/src-tauri/Cargo.toml --lib
 
       # O gate que o build sozinho nunca dá (build-sidecars.ts: "compila limpo e morre no primeiro
       # connect"). Sobe os dois binários recém-compilados como o shell sobe — cwd daemon-runtime,
