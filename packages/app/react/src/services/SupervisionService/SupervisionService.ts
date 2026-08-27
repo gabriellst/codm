@@ -2,11 +2,11 @@
  * Supervision PORT — is the backend the console talks to still alive?
  *
  * The console CANNOT answer this itself, and that is the whole reason this is a port instead of a
- * poll in a hook. Every gateway operation travels through the daemon's ChannelProxy (`Config
- * .gatewayBaseUrl` — "never :3032 directly"), so a browser has no route to observe the gateway; and
- * when the thing that died IS the daemon, a poll living in the console dies with it. The host
- * supervises (it owns the child processes and already holds a typed client for both), and the
- * console consumes the verdict.
+ * poll in a hook. Every gateway operation travels through the daemon's ChannelProxy
+ * (`computeServiceBaseUrls` — "never :3032 directly"), so a browser has no route to observe the
+ * gateway; and when the thing that died IS the daemon, a poll living in the console dies with it.
+ * The host supervises (it owns the child processes and already holds a typed client for both), and
+ * the console consumes the verdict.
  *
  * PULL + PUSH, both, on purpose: `subscribe` is the live channel, but a push only reaches whoever
  * was already mounted — a console that opens with the gateway ALREADY down would never hear one.

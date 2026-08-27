@@ -5,7 +5,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { IconBrandGithub, IconBrandGoogle } from '@tabler/icons-react'
 
 import { cn } from '@/lib/utils'
-import { Config } from '@/lib/config'
+import { Config, daemonBaseUrl } from '@/lib/config'
 import { Button } from '@codm/app-ui/button'
 import { CodmLogoIcon } from '@codm/app-ui/icons'
 import { useCloudSession } from '@/services'
@@ -36,10 +36,13 @@ type OAuthProvider = 'github' | 'google'
  * (`127.0.0.1:<porta>`), de onde o `useLoopbackAuth` o retira.
  */
 function buildSignInUrl(provider: OAuthProvider): string {
-	// A PORTA do daemon local vai junto: é para lá que o código volta (RFC 8252), e ela sai do
-	// `Config.baseUrl` em vez de ser um literal — o daemon é quem decide onde escuta, e um número
-	// redigitado aqui apontaria o navegador para o vazio no dia em que a porta mudasse.
-	const port = new URL(Config.baseUrl).port
+	// A PORTA do daemon local vai junto: é para lá que o código volta (RFC 8252). Ela sai de
+	// `daemonBaseUrl()` — a origem que o host RESOLVEU no boot —, nunca de `Config.baseUrl`, que é o
+	// valor assado no bundle. Num app empacotado o daemon não escuta mais em 3030: o shell fica com a
+	// primeira candidata livre de `tauri/config/ports.ts`. Lendo o valor assado, o `/desktop-callback`
+	// redirecionava o navegador para `http://127.0.0.1:3030/sign-in/loopback?code=…` — porta sem
+	// ninguém do outro lado, e o login não fechava (medido em 26/08/2026).
+	const port = new URL(daemonBaseUrl()).port
 	return `${Config.cloudUrl}/sign-in/social?${new URLSearchParams({ provider, port }).toString()}`
 }
 

@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next'
 // import, o que fazia a fronteira ser invisível na linha que a atravessa.
 import { claimSignInCode, setCloudToken } from '@codm/client-typescript/typescript'
 import { auth } from '@/lib/auth'
-import { Config } from '@/lib/config'
+import { daemonBaseUrl } from '@/lib/config'
 import { extractErrorCode } from '@/lib/errors'
 import { CLOUD_DEVICE_TOKEN_SECRET_KEY, useSecrets } from '@/services'
 import { useCloudSessionStore } from '@/stores'
@@ -22,8 +22,9 @@ type LoginStep = 'claim' | 'exchange' | 'keychain' | 'daemon'
  * Best-effort push of the freshly-exchanged token to the LOCAL daemon (`POST
  * /session/cloud-token`, Task T7's `SetCloudToken` controller — the dispatcher gate reads its
  * own on-disk cache, populated by this call, never the cloud directly). `baseURL` is explicit and
- * points at `Config.baseUrl` (the LOCAL daemon) — the opposite of the exchange call above, which
- * explicitly targets `Config.cloudUrl`; this endpoint only ever exists on the machine's own daemon.
+ * points at `daemonBaseUrl()` (the LOCAL daemon, na porta que o host RESOLVEU no boot — nunca o
+ * `Config.baseUrl` assado no bundle) — o oposto da troca acima, que mira explicitamente
+ * `Config.cloudUrl`; este endpoint só existe no daemon da própria máquina.
  * Tolerant on purpose — by the time this call is attempted the token is already safely in the
  * keychain, the actual source of truth (spec Decision 4); an offline daemon must never turn a
  * successful login into a visible error — hence no toast here, only a diagnostic trace (now that
@@ -32,7 +33,7 @@ type LoginStep = 'claim' | 'exchange' | 'keychain' | 'daemon'
  */
 async function pushToDaemon(token: string): Promise<void> {
 	try {
-		await setCloudToken({ token }, { baseURL: Config.baseUrl })
+		await setCloudToken({ token }, { baseURL: daemonBaseUrl() })
 	} catch (error) {
 		const step: LoginStep = 'daemon'
 		console.warn('[useLoopbackAuth] daemon push failed (best-effort, tolerated — keychain already has the token)', {
@@ -148,7 +149,7 @@ export function useLoopbackAuth(): void {
 				// `baseURL` EXPLÍCITO no daemon local: o código foi entregue ao loopback DESTA máquina,
 				// nunca à nuvem. É a mesma disciplina do `pushToDaemon` logo abaixo, e o oposto do
 				// `auth.oneTimeToken.verify` acima, que fala com a nuvem.
-				const { code } = await claimSignInCode({ baseURL: Config.baseUrl })
+				const { code } = await claimSignInCode({ baseURL: daemonBaseUrl() })
 				if (cancelled || code === null) return
 				await redeem(code)
 			} catch (error) {

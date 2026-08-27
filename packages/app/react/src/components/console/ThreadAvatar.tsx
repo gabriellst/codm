@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react'
 import { getContactAvatarQueryKey } from '@codm/client-typescript/typescript'
 import { Avatar, AvatarFallback, AvatarImage } from '@codm/app-ui/avatar'
-import { Config } from '@/lib/config'
+import { daemonBaseUrl } from '@/lib/config'
 import { cn } from '@/lib/utils'
 import { channelGlyph } from './glyphs'
 import type { ChannelKind } from '@codm/client-typescript/typescript'
@@ -29,7 +29,7 @@ export function contactAvatarUrl(channelId: string, remoteId: string): string {
 	const path = getContactAvatarQueryKey(channelId, remoteId)[0]
 		.url.replace(':channelId', encodeURIComponent(channelId))
 		.replace(':remoteId', encodeURIComponent(remoteId))
-	return `${Config.baseUrl}${path}`
+	return `${daemonBaseUrl()}${path}`
 }
 
 type Size = 'sm' | 'default' | 'lg'
