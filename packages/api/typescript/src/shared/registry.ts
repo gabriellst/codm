@@ -49,6 +49,7 @@ import {
 } from '@codm/core-typescript'
 import { CloudSession, FileCloudSession, MockCloudSession } from './services/CloudSession'
 import { ChannelStatusHealthCheck } from './services/ChannelStatusHealthCheck'
+import { OutboxDeadLetterHealthCheck } from './services/OutboxDeadLetterHealthCheck'
 import { FileLibsqlDriver } from './db/FileLibsqlDriver'
 import * as schema from '@codm/contracts/db'
 import { migrationsDir } from '@codm/contracts/db/migrations'
@@ -81,7 +82,7 @@ const healthServiceFactory = { useFactory: (c: DependencyContainer) => new Healt
 // The `real` health checks, hoisted so the `e2e` column can DECLARE the same value instead of
 // inheriting `integration`'s declared absence. e2e is a REAL boot — same driver, same outbox
 // dispatcher, same lane poller, same mailbox dispatcher — so `/health` there must answer with the
-// same five checks a production daemon answers with; the `null` in mock/integration is about TestBed
+// same six checks a production daemon answers with; the `null` in mock/integration is about TestBed
 // suites building HealthService by hand (Health.test.ts), which the harness does not do.
 const databaseHealthCheck = {
 	useFactory: (c: DependencyContainer) => new DatabaseHealthCheck(resolve(c, LibSqlDatabaseDriver)),
@@ -102,6 +103,9 @@ const externalMediatorHealthCheck = {
 }
 const channelStatusHealthCheck = {
 	useFactory: (c: DependencyContainer) => new ChannelStatusHealthCheck(resolve(c, LibSqlDatabaseDriver).db),
+}
+const outboxDeadLettersHealthCheck = {
+	useFactory: (c: DependencyContainer) => new OutboxDeadLetterHealthCheck(resolve(c, LibSqlDatabaseDriver).db),
 }
 
 // ── HELPERS DAS FAMÍLIAS ─────────────────────────────────────────────────────────────────────────
@@ -182,6 +186,7 @@ const LIBSQL_DB_BINDINGS = [
 	{ token: CommandQueue, mock: MockCommandQueue, real: LibSqlCommandQueue },
 	{ token: HEALTH_CHECKS, mock: null, integration: null, real: databaseHealthCheck, e2e: databaseHealthCheck },
 	{ token: HEALTH_CHECKS, mock: null, integration: null, real: channelStatusHealthCheck, e2e: channelStatusHealthCheck },
+	{ token: HEALTH_CHECKS, mock: null, integration: null, real: outboxDeadLettersHealthCheck, e2e: outboxDeadLettersHealthCheck },
 	// A projeção do TOPO sobre a MESMA instância (ver docblock acima).
 	{
 		token: DatabaseDriver,
