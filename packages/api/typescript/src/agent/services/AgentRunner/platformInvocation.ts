@@ -21,13 +21,7 @@
  * (`--add-dir C:\Users\Fulano\Meus Projetos`). Aqui os argumentos são citados um a um e entregues
  * verbatim, que é o que `windowsVerbatimArguments` significa.
  */
-
-// A leitura de `ComSpec` mora no kernel, junto do resto do que "processo neste SO" significa — ver o
-// docblock de `comspecPath`. Em `src/` o Config tipado é a única porta de ambiente (rail em
-// `tests/architecture/process-env.test.ts`), e uma variável que o SO define sobre si mesmo não é
-// configuração do produto: declará-la lá a colocaria no `.env.example`, para um valor que ninguém
-// escolhe. Mesmo argumento que `Watchdog.ts` faz sobre o pid do supervisor.
-import { comspecPath } from '@codm/core-typescript'
+import { Config } from '@codm/core-typescript'
 
 /** O que o chamador entrega ao `spawn`: arquivo, argumentos e as opções que a plataforma exige. */
 export interface Invocation {
@@ -74,6 +68,11 @@ export function resolveInvocation(binary: string, args: readonly string[], platf
 
 	// `/d` ignora AutoRun do registro (um `cmd.exe` de máquina alheia não decide o que roda antes do
 	// nosso comando); `/s` fixa a regra de citação do resto da linha; `/c` executa e sai.
+	//
+	// O INTERPRETADOR VEM DA PORTA TIPADA (`Config.env.COMSPEC`), não de `process.env` cru — a mesma
+	// variável que o Windows anuncia como `ComSpec`, agora declarada no `RawEnvSchema` com o fallback
+	// `'cmd.exe'` embutido. Ler ambiente aqui direto era o último site cru do `src/` e derrubava o
+	// rail D14/AC-4; o valor não mudou, só a porta por onde entra.
 	const line = [binary, ...args].map(quoteForCmd).join(' ')
-	return { file: comspecPath(), args: ['/d', '/s', '/c', line], options: { windowsVerbatimArguments: true } }
+	return { file: Config.env.COMSPEC, args: ['/d', '/s', '/c', line], options: { windowsVerbatimArguments: true } }
 }

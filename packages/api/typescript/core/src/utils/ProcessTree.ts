@@ -19,26 +19,6 @@ import { spawn as spawnChild, type ChildProcess, type SpawnOptions } from 'node:
  *    be terminated forcefully" and stays — a graceful pass would buy 2s of dead latency per
  *    cancel, never a teardown. No timer to arm, nothing to escalate to.
  */
-/**
- * O INTERPRETADOR DE LOTE DO WINDOWS, pelo caminho que o próprio sistema anuncia (`ComSpec`), com
- * fallback para o nome — uma instalação sem `ComSpec` é anômala, mas não é motivo para falhar.
- *
- * ### Por que a leitura mora no KERNEL e não ao lado de quem a usa
- * O consumidor é `agent/services/AgentRunner/platformInvocation.ts`, que precisa dela para invocar um
- * `.cmd` do npm no Windows. Mas `src/` tem um rail (`tests/architecture/process-env.test.ts`): a
- * ÚNICA porta de ambiente ali é o Config tipado, e o inventário de exceções é shrink-only. E `ComSpec`
- * não é config do produto — é uma variável que o SO define sobre si mesmo. Declará-la em `REPO.env`
- * (que é o que `PRODUCT_ENV_KEYS` exige de qualquer chave do `ProductConfig`) a colocaria no
- * `.env.example`, num arquivo que humanos editam, para um valor que ninguém deve escolher.
- *
- * É exatamente o argumento que `Watchdog.ts` já faz sobre `CODM_PARENT_PID`, duas portas ao lado:
- * variável de spawn/SO não é configuração. E é exatamente a família deste arquivo — "o que
- * significa um processo neste SO" já é declarado aqui, por OS, uma vez.
- */
-export function comspecPath(): string {
-	return process.env.ComSpec ?? process.env.COMSPEC ?? 'cmd.exe'
-}
-
 export interface ProcessTree {
 	/** Spawn options that make the tree terminable later. Spread into every provider spawn. */
 	readonly spawnOptions: Readonly<Pick<SpawnOptions, 'detached' | 'windowsHide'>>
