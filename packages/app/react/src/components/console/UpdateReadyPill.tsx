@@ -12,7 +12,7 @@ import { useUpdate } from '@/services'
  * is the ONE surface that tells them a version is ready and lets THEM pick the moment; clicking it
  * is the only thing that restarts the app.
  *
- * PULL then PUSH, same shape as `SupervisionBanner`/`AgentsRunningPill`: `pending()` covers a
+ * PULL then PUSH, same shape as `SupervisionBanner`: `pending()` covers a
  * console that mounts AFTER the background check already finished installing (the ask+listen
  * pattern `commands/boot.rs` documents — an event fired before the page mounted is simply lost, so
  * the page also ASKS), `subscribe` covers an install completing while the console is already open.
