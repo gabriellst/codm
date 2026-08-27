@@ -97,6 +97,11 @@ fn repair(bundle_id: &str) -> Vec<RepairStep> {
 mod tests {
     use super::*;
     use std::io::{Error, ErrorKind, Write};
+    // Só-Unix, e por isso atrás de `cfg`: o teste que a usa também é — ver o docblock dele. Sem esta
+    // guarda o `cargo test` do shell nem COMPILA no Windows (`from_mode` não existe lá), e a perna
+    // Windows nativa, que passou a rodar os testes de verdade em 2026-08-26, encontrou isso no
+    // primeiro run — o arquivo inteiro é macOS-only em produção, mas os testes compilam em todo lugar.
+    #[cfg(unix)]
     use std::os::unix::fs::PermissionsExt;
 
     /// O VEREDITO, isolado do disco. `PermissionDenied` é a única evidência de negação que o macOS
@@ -112,6 +117,12 @@ mod tests {
     /// AC-1, contra o disco de verdade: um arquivo sem bit de leitura devolve EPERM ao abrir, que é
     /// exatamente a forma que o TCC dá à negação. Não roda como root (que ignora os bits) — e os
     /// runners deste repo não são root.
+    ///
+    /// `cfg(unix)`: o mecanismo asseverado aqui são os bits de permissão POSIX, que no Windows não
+    /// existem — lá o controle é por ACL e `from_mode` sequer compila. Pular no Windows é honesto
+    /// (a pré-condição inteira é macOS-only, `platforms: &[Platform::Macos]`); o que não podia
+    /// continuar é o arquivo não compilar.
+    #[cfg(unix)]
     #[test]
     fn an_unreadable_file_reports_unsatisfied() {
         let path = std::env::temp_dir().join("codm-system_precondition-probe-unreadable");
