@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import type { ZodType } from 'zod'
 import { InMemoryAgentIdentityService } from '@codm/core-typescript'
 import { E2eMcpDriver } from '../../mcp/E2eMcpDriver'
+import { AgentScenarioSelection } from '../AgentScenario'
 import type { AgentRunIdentity } from '../../types/AgentRunIdentity'
 import { AgentRunner } from './AgentRunner'
 import { StubAgentRunner } from './StubAgentRunner'
@@ -62,9 +63,12 @@ describe('AgentRunner — the ONE-METHOD seam (§4.1)', () => {
 
 	it('is an abstract class — subclassing works and instances are AgentRunner', () => {
 		expect(new StubAgentRunner()).toBeInstanceOf(AgentRunner)
-		// The e2e stub DECLARES over the real MCP door, so it takes the driver that makes those calls —
-		// constructed here only to satisfy the constructor: this case asserts the subclassing relation and
-		// touches neither the driver nor the identity map it reads.
-		expect(new E2eStubAgentRunner(new E2eMcpDriver(new InMemoryAgentIdentityService<AgentRunIdentity>()))).toBeInstanceOf(AgentRunner)
+		// The e2e stub DECLARES over the real MCP door, so it takes the driver that makes those calls, and
+		// it INTERPRETS a roteiro, so it takes the holder that says which one — both constructed here only
+		// to satisfy the constructor: this case asserts the subclassing relation and touches neither the
+		// driver, the identity map it reads, nor the scenario.
+		expect(
+			new E2eStubAgentRunner(new E2eMcpDriver(new InMemoryAgentIdentityService<AgentRunIdentity>()), new AgentScenarioSelection()),
+		).toBeInstanceOf(AgentRunner)
 	})
 })

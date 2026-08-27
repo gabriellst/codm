@@ -48,6 +48,9 @@ design/fidelity/scoreboard.json
 design/fidelity/report.html
 # Gravações de demo do e2e
 packages/e2e/recordings/
+# Demo takes. Kept OUT of `recordings/` on purpose: that is Playwright's `outputDir`, which it
+# wipes at the start of every run — a later spec would silently destroy the film.
+packages/e2e/films/
 
 # ─── Estado local do sistema agêntico ───────────────────────────────────────────────────────────
 .claude/audit/

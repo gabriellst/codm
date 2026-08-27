@@ -1,9 +1,11 @@
+import { join } from 'node:path'
 import { injectable } from 'tsyringe-neo'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
-import { ArtifactKind, IssueStatus } from '@codm/contracts-typescript/wire/enums'
+import { IssueStatus } from '@codm/contracts-typescript/wire/enums'
 import { BaseError } from '@codm/core-typescript'
 import { AgentIdentityService } from '@codm/core-typescript'
+import type { AgentScenarioArtifactRef, AgentScenarioDeclaration } from '../services/AgentScenario'
 import type { AgentRunIdentity } from '../types/AgentRunIdentity'
 import type { AgentMcpInvocation } from '../types/AgentMcpInvocation'
 import type { AgentApplicationErrors } from '../errors'
@@ -15,6 +17,18 @@ export interface DeclaredToolCall {
 	tool: string
 	input: Record<string, unknown>
 	summary: string
+}
+
+/**
+ * What the RUN knows that its roteiro cannot.
+ *
+ * One field today, and it is deliberately not the run's identity: `cwd` is invocation data of the
+ * same nature as `binaryPath` (see `AgentRunRequest`), which is why the stand-in is allowed to hand
+ * it over while the three envelope keys stay inside the opaque token.
+ */
+export interface DeclarationContext {
+	/** The run's absolute workspace — resolves a WORKSPACE-relative artifact reference. */
+	readonly cwd: string
 }
 
 /**
@@ -51,88 +65,50 @@ export interface DeclaredToolCall {
  */
 @injectable()
 export class E2eMcpDriver {
-	/** Stable artifact the e2e asserts on, through the same `ListArtifacts` query the console uses. */
-	static readonly ARTIFACT_NAME = 'e2e-agent: run notes'
-	static readonly ARTIFACT_REF = 'https://codm.local/e2e/run-notes'
-	/** Stable completion note — carried on the declaration, not inferred from any text. */
-	static readonly COMPLETION_SUMMARY = 'e2e-agent: declared complete over MCP'
-	static readonly FORK_GOAL = 'e2e-agent: fix the login bug'
-
 	constructor(private readonly identities: AgentIdentityService<AgentRunIdentity>) {}
 
 	/**
-	 * Record an artifact, then declare the issue COMPLETED — the exact chain AC-6.2 names.
+	 * Make every declaration of one scripted act, in order, over ONE connection — and fail loudly.
 	 *
-	 * Both calls are asserted to come back `isError: false`, and that assertion is not zeal. Measured
-	 * on the generated server: the MCP SDK validates a tool's `outputSchema` AFTER the handler has
-	 * already issued its HTTP write, so a drift between the emitted response schema and what the
+	 * ### Why one entry point instead of the two it replaced
+	 * There used to be `forkIssue()` and `declareIssueWorkComplete()`, each with the calls it makes
+	 * written into its body. That is two hard-coded performances, and it is why the runner could only
+	 * ever tell one story. What a run declares is now DECLARED — `AgentScenarioDeclaration`, chosen by
+	 * the roteiro (`services/AgentScenario`) — and this method is the interpreter that turns each
+	 * member into a real tool call on the real door. Adding a fact a scripted run can declare is a
+	 * member on that union plus a `case` below, and the switch stops compiling until both exist.
+	 *
+	 * ### Why isError is asserted on every call, which is not zeal
+	 * Measured on the generated server: the MCP SDK validates a tool's `outputSchema` AFTER the handler
+	 * has already issued its HTTP write, so a drift between the emitted response schema and what the
 	 * endpoint returns turns a COMPLETED write into a tool error — and a real model retries, which is a
 	 * silent double write wearing a failure's clothes. Failing loudly here is what makes that visible.
 	 */
-	/**
-	 * The ORCHESTRATOR's half (T8): fork an issue through the REAL `orchestration` surface.
-	 *
-	 * The stub used to fake this by returning a structured classification verdict — which only worked
-	 * because `ClassifyIssueAgent` had an `outputSchema` to discriminate on. That agent is gone, so the
-	 * deterministic driver now does what the real orchestrator does: it calls the tool. Strictly better
-	 * coverage, too — the old shape never exercised the MCP router, the run identity or the
-	 * thread-ownership check, and every e2e run does now.
-	 *
-	 * `originEntryId` is NOT passed and could not be: the router injects it from the identity (§7.2). If
-	 * this driver could supply it, so could a model.
-	 */
-	async forkIssue(mcp: AgentMcpInvocation): Promise<DeclaredToolCall[]> {
+	async declare(
+		mcp: AgentMcpInvocation,
+		declarations: readonly AgentScenarioDeclaration[],
+		ctx: DeclarationContext,
+	): Promise<DeclaredToolCall[]> {
 		// A run with no triggering transcript entry CANNOT fork: the router injects `originEntryId`
 		// from this very field, and `ForkIssue` rejects the attribution gap by design (§7.2). Such
 		// turns exist — a whisper queues an orchestrator turn with no origin — and the real
-		// orchestrator answers them by replying, not by forking. Declaring nothing is that behavior
-		// (AC-5: return [] WITHOUT entering `call`); forcing the call would turn a designed rejection
-		// into 3 mailbox retries per whisper. An INVALID token still falls through to `call`, whose
-		// fail-loudly path reports it — that guard is for drift on turns that CAN fork and stays.
+		// orchestrator answers them by replying, not by forking. Dropping the declaration is that
+		// behavior (AC-5: nothing is declared and NO connection is opened); forcing the call would turn
+		// a designed rejection into 3 mailbox retries per whisper. An INVALID token still falls through
+		// below, where the fail-loudly path reports it — that guard is for runs that CAN declare.
 		const identity = this.identities.resolve(mcp.token)
-		if (identity && !identity.entryId) return []
-		return this.call(mcp, verified => [
-			{
-				tool: operationIdOf(ForkIssueController),
-				input: { threadId: verified.threadId, data: { goal: E2eMcpDriver.FORK_GOAL } },
-				summary: 'issue forked from the conversation',
-			},
-		])
-	}
+		const eligible =
+			identity && !identity.entryId ? declarations.filter(declaration => !REQUIRES_ORIGIN_ENTRY[declaration.kind]) : declarations
+		if (eligible.length === 0) return []
 
-	async declareIssueWorkComplete(mcp: AgentMcpInvocation): Promise<DeclaredToolCall[]> {
-		return this.call(mcp, identity => [
-			{
-				tool: operationIdOf(RecordArtifactController),
-				// NO `issueId`: the use case validates the issue EXISTS when one is supplied, and the issue
-				// is materialized asynchronously. Naming the thread only is sufficient and race-free.
-				input: {
-					threadId: identity.threadId,
-					data: { kind: ArtifactKind.LINK, name: E2eMcpDriver.ARTIFACT_NAME, ref: E2eMcpDriver.ARTIFACT_REF, meta: '{}' },
-				},
-				summary: 'artifact recorded',
-			},
-			{
-				tool: operationIdOf(TransitionIssueStatusController),
-				input: {
-					threadId: identity.threadId,
-					issueId: identity.issueId,
-					data: { status: IssueStatus.COMPLETED, summary: E2eMcpDriver.COMPLETION_SUMMARY },
-				},
-				summary: 'issue declared complete',
-			},
-		])
-	}
-
-	/** Connect over the real MCP door, make the calls, fail loudly on `isError`. */
-	private async call(mcp: AgentMcpInvocation, build: (identity: AgentRunIdentity) => DeclaredToolCall[]): Promise<DeclaredToolCall[]> {
-		const identity = this.identities.resolve(mcp.token)
 		if (!identity) {
 			throw new BaseError<AgentApplicationErrors>('AGENT_TOOLS_UNSUPPORTED', 'run token is not valid — nothing can be declared with it')
 		}
 		if (!mcp.endpoint) {
 			throw new BaseError<AgentApplicationErrors>('AGENT_TOOLS_UNSUPPORTED', 'the deterministic driver only speaks the http transport')
 		}
+
+		const calls = eligible.map(declaration => this.toolCall(declaration, identity, ctx))
 
 		const client = new Client({ name: 'codm-e2e-driver', version: '0.0.0' })
 		const transport = new StreamableHTTPClientTransport(new URL(mcp.endpoint), {
@@ -142,7 +118,6 @@ export class E2eMcpDriver {
 
 		try {
 			await client.connect(transport)
-			const calls = build(identity)
 
 			for (const call of calls) {
 				const result = await client.callTool({ name: call.tool, arguments: call.input })
@@ -157,5 +132,83 @@ export class E2eMcpDriver {
 		} finally {
 			await client.close().catch(() => undefined)
 		}
+	}
+
+	/**
+	 * ONE declaration → the tool call that carries it, with the ids filled in from the credential.
+	 *
+	 * A plain exhaustive `switch`, which is this repo's canonical shape for a discriminated union (see
+	 * the Projector contract in CLAUDE.md: narrowing per `case`, `never` at the default, no mapped
+	 * types). It is also the ONE place the run's identity meets the scenario's intent — the roteiro
+	 * says WHAT to declare and cannot say on whose behalf, which is the whole reason it lives in a
+	 * subtree that AC-6.12 keeps free of these three keys.
+	 */
+	private toolCall(declaration: AgentScenarioDeclaration, identity: AgentRunIdentity, ctx: DeclarationContext): DeclaredToolCall {
+		switch (declaration.kind) {
+			case 'FORK_ISSUE':
+				return {
+					tool: operationIdOf(ForkIssueController),
+					// `originEntryId` is NOT passed and could not be: the router injects it from the identity
+					// (§7.2). If this driver could supply it, so could a model.
+					input: { threadId: identity.threadId, data: { goal: declaration.goal } },
+					summary: 'issue forked from the conversation',
+				}
+
+			case 'RECORD_ARTIFACT':
+				return {
+					tool: operationIdOf(RecordArtifactController),
+					// NO `issueId`: the use case validates the issue EXISTS when one is supplied, and the issue
+					// is materialized asynchronously. Naming the thread only is sufficient and race-free.
+					input: {
+						threadId: identity.threadId,
+						data: {
+							kind: declaration.artifact.kind,
+							name: declaration.artifact.name,
+							ref: resolveArtifactRef(declaration.artifact.ref, ctx.cwd),
+							meta: declaration.artifact.meta,
+						},
+					},
+					summary: 'artifact recorded',
+				}
+
+			case 'COMPLETE_ISSUE':
+				return {
+					tool: operationIdOf(TransitionIssueStatusController),
+					input: {
+						threadId: identity.threadId,
+						issueId: identity.issueId,
+						data: { status: IssueStatus.COMPLETED, summary: declaration.summary },
+					},
+					summary: 'issue declared complete',
+				}
+		}
+	}
+}
+
+/**
+ * Which declarations the router will refuse without an origin transcript entry (§7.2).
+ *
+ * A total record rather than a predicate with an `if`: a member added to the union leaves this map
+ * incomplete, which is a `tsc` error, whereas a predicate would quietly answer `false` for it.
+ */
+const REQUIRES_ORIGIN_ENTRY: Readonly<Record<AgentScenarioDeclaration['kind'], boolean>> = {
+	FORK_ISSUE: true,
+	RECORD_ARTIFACT: false,
+	COMPLETE_ISSUE: false,
+}
+
+/**
+ * Where an artifact's bytes actually are, once the run that owns them exists.
+ *
+ * A scenario cannot write down a scratch workspace's path — it is a `mkdtemp` minted per run — so it
+ * declares the location RELATIVE to the run and the absolute form is composed here, the first place
+ * that knows both halves.
+ */
+function resolveArtifactRef(ref: AgentScenarioArtifactRef, cwd: string): string {
+	switch (ref.at) {
+		case 'WORKSPACE':
+			return join(cwd, ref.relativePath)
+		case 'URL':
+			return ref.url
 	}
 }

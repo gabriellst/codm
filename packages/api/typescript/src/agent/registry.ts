@@ -6,6 +6,7 @@ import { type InstanceRegistry, expandBindings, HEALTH_CHECKS, PollingHealthChec
 import { AgentRunnerFactory, DefaultAgentRunnerFactory, StubAgentRunnerFactory, E2eAgentRunnerFactory } from './services/AgentRunnerFactory'
 import { ProviderDetector, MockProviderDetector, SystemProviderDetector } from './services/ProviderDetector'
 import { AgentStreamRegistry } from './services/AgentStreamRegistry'
+import { AgentScenarioSelection } from './services/AgentScenario'
 import { MailboxDispatcher, LibSqlMailboxDispatcher } from './services/MailboxDispatcher'
 import { IssueWorkAgent, IssueWorkPromptBuilder } from './agents/IssueWorkAgent'
 import { OrchestratorAgent, OrchestratorPromptBuilder } from './agents/OrchestratorAgent'
@@ -61,6 +62,16 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// The adopted whatscode AgentStreamRegistry (Fork C): SSE observer channel + the absorbed
 	// single-active-run guard — one shared in-memory instance per process.
 	{ token: AgentStreamRegistry, mock: AgentStreamRegistry, integration: AgentStreamRegistry, real: AgentStreamRegistry },
+	// WHICH roteiro the deterministic stand-in performs. Bound in EVERY column, not only `e2e`: the
+	// door that writes it is `e2e`-only, so everywhere else this resolves to a constant reporting the
+	// default. A token bound in one column and absent from the others is how a resolve throws in
+	// production for a reason invisible at the call site.
+	{
+		token: AgentScenarioSelection,
+		mock: AgentScenarioSelection,
+		integration: AgentScenarioSelection,
+		real: AgentScenarioSelection,
+	},
 	// Durable per-issue session record (Fork B): resume identity + last-turn recency.
 	{
 		token: AgentSessionRepository,
