@@ -35,7 +35,7 @@ import type { SupervisionState } from '@/services'
  * interchangeable.
  *
  * `down` + `daemon` → PAUSE. The daemon is the origin of EVERY request the console makes, its own
- * and the gateway's alike: `Config.gatewayBaseUrl` routes every gateway operation through the
+ * and the gateway's alike: `computeServiceBaseUrls` routes every gateway operation through the
  * daemon's ChannelProxy ("never :3032 directly"), so a dead daemon means there is no reachable
  * backend at all. Nothing that leaves can arrive. Note this still matters even though a dead daemon
  * also hides the window (spec Decision 6): hidden is not unmounted — the webview keeps running,

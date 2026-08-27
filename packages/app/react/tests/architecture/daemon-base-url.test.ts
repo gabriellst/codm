@@ -22,14 +22,20 @@ import { join, resolve } from 'node:path'
  * boot (`configureClient`) com a porta que o host informou. `daemonBaseUrl()` é esse mesmo registro,
  * exposto para quem precisa de uma string — logo, uma fonte, não duas.
  *
- * O predicado é `Config.baseUrl` FORA de `lib/config.ts`. É a leitura que reintroduz o bug, e é
- * mecânica: um `daemonBaseUrl()` trocado de volta por `Config.baseUrl` num refactor futuro fica
- * vermelho aqui em vez de sair pela porta de novo. `lib/config.ts` é o dono (é lá que
- * `serviceBaseUrls` semeia o registro e que o fallback vive), e comentários/docblocks continuam
- * livres para CITAR o nome — a rail lê código, não prosa.
+ * O predicado é QUALQUER `Config.<algo>BaseUrl` FORA de `lib/config.ts` — não só `Config.baseUrl`.
+ * A diferença não é zelo: `Config` também expunha um `gatewayBaseUrl` (`${baseUrl}/external/channel`),
+ * a MESMA fórmula sobre o MESMO valor assado. Ninguém o consumia, então ele saiu junto com este
+ * conserto — mas um predicado preso ao nome `baseUrl` teria ficado VERDE no dia em que alguém
+ * montasse uma URL do gateway à mão a partir dele: o mesmo bug, com outro nome. `Config.cloudUrl`
+ * não casa, e é certo que não case — a nuvem é outra origem, decidida em build por
+ * `VITE_CODM_CLOUD_URL`, e ler dela é legítimo.
  *
- * FALSEADO: trocar `daemonBaseUrl()` por `Config.baseUrl` em qualquer um dos seis call sites deixa
- * esta rail vermelha; revertido, verde.
+ * `lib/config.ts` é o dono isento (é lá que `serviceBaseUrls` semeia o registro e que o fallback
+ * vive), e comentários/docblocks continuam livres para CITAR os nomes — a rail lê código, não prosa.
+ *
+ * FALSEADO nas duas metades: trocar `daemonBaseUrl()` por `Config.baseUrl` em qualquer um dos seis
+ * call sites deixa esta rail vermelha, e a fixture negativa abaixo prova que um `Config.gatewayBaseUrl`
+ * reintroduzido fora do dono também cai — que é exatamente a folga que o predicado antigo tinha.
  */
 
 const REACT_SRC = resolve(import.meta.dirname, '../../src')
@@ -38,11 +44,14 @@ const REACT_SRC = resolve(import.meta.dirname, '../../src')
 const OWNER = 'lib/config.ts'
 
 /**
- * A leitura proibida — em CÓDIGO. Comentários de linha (`//`) e de bloco (` * `) são removidos antes
- * do teste: os docblocks que EXPLICAM esta regra precisam nomear `Config.baseUrl` para serem úteis, e
- * um predicado cego à diferença transformaria a própria documentação da rail em violação.
+ * A leitura proibida — em CÓDIGO. `Config.baseUrl`, `Config.gatewayBaseUrl` e qualquer irmão futuro
+ * com a mesma terminação: todos são o valor ASSADO no build, e todos reintroduzem o mesmo defeito.
+ *
+ * Comentários de linha (`//`) e de bloco (` * `) são removidos antes do teste: os docblocks que
+ * EXPLICAM esta regra precisam nomear `Config.baseUrl` para serem úteis, e um predicado cego à
+ * diferença transformaria a própria documentação da rail em violação.
  */
-const FORBIDDEN = /\bConfig\.baseUrl\b/
+const FORBIDDEN = /\bConfig\.[A-Za-z]*[Bb]aseUrl\b/
 
 function stripComments(source: string): string {
 	return source
@@ -86,5 +95,18 @@ describe('rail — a origem do daemon é a que o host resolveu, não a assada no
 		const missing = CALL_SITES.filter(f => !readFileSync(join(REACT_SRC, f), 'utf8').includes('daemonBaseUrl()'))
 
 		expect(missing).toEqual([])
+	})
+
+	it('o predicado pega um irmão de Config, não só o nome que causou o incidente', () => {
+		// FIXTURE NEGATIVA — a folga que o predicado antigo (`\bConfig\.baseUrl\b`) tinha. Sem esta
+		// asserção, alargá-lo seria uma afirmação sobre o regex que ninguém verificou, e encolhê-lo de
+		// volta num refactor não faria barulho nenhum.
+		expect(FORBIDDEN.test('const url = `${Config.gatewayBaseUrl}/pair`')).toBe(true)
+		expect(FORBIDDEN.test('const url = `${Config.baseUrl}/ui/home`')).toBe(true)
+
+		// E a fronteira do outro lado: a NUVEM é outra origem, decidida em build de propósito
+		// (`VITE_CODM_CLOUD_URL`), e `LoginSection` a lê legitimamente ao montar a URL do OAuth. Um
+		// predicado que a pegasse tornaria a rail impossível de satisfazer sem quebrar o login.
+		expect(FORBIDDEN.test('const url = `${Config.cloudUrl}/sign-in/social`')).toBe(false)
 	})
 })
