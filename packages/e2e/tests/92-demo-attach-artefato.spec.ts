@@ -12,9 +12,9 @@ import {
 import { test, expect } from '../utils/test'
 import { givenFreshUser, injectInboundMessage, selectAgentScenario, type AgentScenarioId } from '../utils/given'
 import { authenticateCloudSession } from '../utils/given/cloud'
-import { createDemoCursor } from '../utils/cursor'
-import { createDemoRecorder } from '../utils/recorder'
-import { writeBuiltScreen } from '../utils/demo-screen'
+import { createDemoCursor } from '../demo/cursor'
+import { createDemoRecorder } from '../demo/recorder'
+import { writeBuiltScreen } from '../demo/demo-screen'
 import { t, type Locale } from '../utils/i18n'
 
 /**
@@ -41,9 +41,9 @@ import { t, type Locale } from '../utils/i18n'
  * ONE FILM PER INVOCATION — see the `test.skip` below for why the harness cannot record both in one
  * daemon. Then turn each take into something watchable:
  *
- *   bun scripts/render-mp4.ts films/demo-attach-artefato-pt         # the MP4
- *   bun scripts/generate-html.ts films/demo-attach-artefato-pt      # inspect frames in a browser
- *   bun scripts/generate-svg.ts  films/demo-attach-artefato-pt      # vector frames for the edit
+ *   bun demo/render-mp4.ts demo-out/demo-attach-artefato-pt         # the MP4
+ *   bun demo/generate-html.ts demo-out/demo-attach-artefato-pt      # inspect frames in a browser
+ *   bun demo/generate-svg.ts  demo-out/demo-attach-artefato-pt      # vector frames for the edit
  *
  * ### What is ON camera and what is not
  * The film starts at `/attach`. Everything before it is state a real operator would already have:
@@ -70,15 +70,17 @@ import { t, type Locale } from '../utils/i18n'
  */
 
 /**
- * Where takes land — `packages/e2e/films/`, and NOT the recorder's own default.
+ * Where takes land — `packages/e2e/demo-out/`, and NOT the recorder's own default.
  *
  * `createDemoRecorder.save(name)` defaults to `e2e/recordings/<name>`, which is Playwright's
  * `outputDir` (playwright.config.ts) — a directory Playwright OWNS and WIPES at the start of every
  * run. Measured the hard way: this film recorded cleanly, then a later `run-e2e.ts` on an unrelated
  * spec deleted all 679 frames of it. A take costs minutes and cannot be reproduced byte-for-byte
  * (jitter, timing), so it does not live anywhere a test runner is entitled to clear.
+ *
+ * `demo-out/` is the name the rest of the family already uses for this — see `demo/README.md`.
  */
-const filmDir = (name: string) => resolve(import.meta.dirname, '..', 'films', name)
+const filmDir = (name: string) => resolve(import.meta.dirname, '..', 'demo-out', name)
 
 /** What the workspace path reads as on screen. */
 const FILM_WORKSPACE_PATH = '~/acme/web'
@@ -488,7 +490,7 @@ for (const film of FILMS) {
 
 			// THE THIRD CAPTURE-LAYER TWEAK, and the only one that touches an attribute rather than text.
 			//
-			// A DOMSnapshot keeps an `<img>`'s URL as it found it — `lib/inline-assets.ts` says so out loud and
+			// A DOMSnapshot keeps an `<img>`'s URL as it found it — `demo/inline-assets.ts` says so out loud and
 			// explains the trade: resolving images at GENERATION time keeps the capture phase fast. That works
 			// while whatever served them is still up, and the console's artifact bytes come off the DAEMON
 			// (`/artifacts/:id/content`), which the harness tears down the moment the spec ends. So the film's
@@ -496,7 +498,7 @@ for (const film of FILMS) {
 			//
 			// Re-fetching each image and swapping in its data URI moves the resolution INTO the take, where the
 			// server still exists. The pixels are the ones the browser already painted; only the address
-			// changes. Done here rather than in `utils/recorder.ts` because the general fix (inline on every
+			// changes. Done here rather than in `demo/recorder.ts` because the general fix (inline on every
 			// snapshot) would pay that cost on every frame of every recording to serve a case that only arises
 			// when the film outlives its server.
 			await page.evaluate(async () => {
@@ -549,7 +551,7 @@ for (const film of FILMS) {
 			// Printed, not attached: the reconstruction scripts take a DIRECTORY, and the next thing whoever
 			// ran this does is feed them one.
 			console.log(`[demo] ${saved.snapshotCount} snapshots · ${saved.cursorCount} cursor frames → ${saved.baseDir}`)
-			console.log(`[demo] next: bun scripts/render-mp4.ts ${saved.baseDir}`)
+			console.log(`[demo] next: bun demo/render-mp4.ts ${saved.baseDir}`)
 			expect(saved.snapshotCount).toBeGreaterThan(0)
 		})
 	})

@@ -6,15 +6,15 @@
  *   - Send SIGTERM/SIGINT to the process
  *
  * Usage:
- *   bun e2e/scripts/record-free.ts [url]
- *   bun e2e/scripts/record-free.ts http://localhost:5173
+ *   bun demo/record-free.ts [url]
+ *   bun demo/record-free.ts http://localhost:5173
  *
- * Output: e2e/recordings/free-session-<timestamp>/
- * Then:   bun e2e/scripts/generate-html.ts e2e/recordings/free-session-<timestamp>
+ * Output: demo-out/free-session-<timestamp>/
+ * Then:   bun demo/generate-html.ts demo-out/free-session-<timestamp>
  */
 
 import { chromium } from 'playwright'
-import { createDemoRecorder } from '../utils/recorder'
+import { createDemoRecorder } from './recorder'
 import { existsSync, unlinkSync } from 'node:fs'
 
 const STOP_FILE = '/tmp/recorder-stop'
@@ -61,7 +61,7 @@ async function saveAndExit() {
 	console.log(`Output: ${result.baseDir}`)
 	console.log('')
 	console.log('Generate HTML with:')
-	console.log(`  bun e2e/scripts/generate-html.ts ${result.baseDir}`)
+	console.log(`  bun demo/generate-html.ts ${result.baseDir}`)
 	await browser.close()
 	if (existsSync(STOP_FILE)) unlinkSync(STOP_FILE)
 	process.exit(0)

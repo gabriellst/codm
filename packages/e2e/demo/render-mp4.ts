@@ -2,15 +2,15 @@
 /**
  * A recorded take → a watchable MP4.
  *
- * The DOM recorder (`utils/recorder.ts`) captures STRUCTURE, not pixels: a CDP `DOMSnapshot` per
+ * The DOM recorder (`demo/recorder.ts`) captures STRUCTURE, not pixels: a CDP `DOMSnapshot` per
  * frame plus the page's CSS. That is what makes a take resolution-free and diffable — and it is also
  * why it is not a video yet. This script closes that gap: reconstruct each frame's HTML (the same
- * `lib/reconstruct.ts` the extension and `generate-html.ts` use), rasterise it in a real Chromium at
+ * `demo/reconstruct.ts` the extension and `generate-html.ts` use), rasterise it in a real Chromium at
  * the size the film was shot, and hand the sequence to ffmpeg.
  *
  * Usage:
- *   bun scripts/render-mp4.ts films/demo-attach-artefato
- *   bun scripts/render-mp4.ts films/demo-attach-artefato --scale 2 --out /tmp/demo-4k.mp4
+ *   bun demo/render-mp4.ts films/demo-attach-artefato
+ *   bun demo/render-mp4.ts films/demo-attach-artefato --scale 2 --out /tmp/demo-4k.mp4
  *
  * Flags:
  *   --out <path>      where the MP4 lands (default: `<film-dir>/<dir name>.mp4`)
@@ -37,7 +37,7 @@ import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
 import { basename, join, resolve } from 'node:path'
 import { chromium } from 'playwright'
-import { collectImageUrls, reconstructHtml, type FrameEntry, type ImageMap } from '../lib/reconstruct'
+import { collectImageUrls, reconstructHtml, type FrameEntry, type ImageMap } from './reconstruct'
 
 /**
  * Run a child to completion, streaming its output rather than buffering it.
@@ -90,7 +90,7 @@ const flag = (name: string): string | undefined => flags.get(name)
 const filmDir = positionals[0]
 
 if (!filmDir || !existsSync(join(filmDir, 'snapshots', 'meta.json'))) {
-	console.error('Usage: bun scripts/render-mp4.ts <film-dir> [--out file.mp4] [--fps n] [--scale n] [--keep-frames]')
+	console.error('Usage: bun demo/render-mp4.ts <film-dir> [--out file.mp4] [--fps n] [--scale n] [--keep-frames]')
 	console.error('  <film-dir> must contain snapshots/meta.json — a directory written by `recorder.save()`.')
 	process.exit(1)
 }

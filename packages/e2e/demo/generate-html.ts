@@ -1,26 +1,26 @@
 /**
  * CLI wrapper for DOMSnapshot → HTML reconstruction.
  *
- * Core logic lives in e2e/lib/reconstruct.ts (shared with the Chrome extension).
+ * Core logic lives in demo/reconstruct.ts (shared with the Chrome extension).
  *
  * Resolves external image URLs → data URIs at generation time (not during snapshot capture)
  * using a shared image cache across all frames.
  *
  * Usage:
- *   bun e2e/scripts/generate-html.ts <recording-dir>              # all frames → html/
- *   bun e2e/scripts/generate-html.ts <recording-dir> --frame 30   # single frame
+ *   bun demo/generate-html.ts <recording-dir>              # all frames → html/
+ *   bun demo/generate-html.ts <recording-dir> --frame 30   # single frame
  */
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { reconstructHtml, collectImageUrls, type FrameEntry, type ImageMap } from '../lib/reconstruct'
+import { reconstructHtml, collectImageUrls, type FrameEntry, type ImageMap } from './reconstruct'
 
 const args = process.argv.slice(2)
 const recordingDir = args.find(a => !a.startsWith('--'))
 const frameArg = args.includes('--frame') ? Number(args[args.indexOf('--frame') + 1]) : null
 
 if (!recordingDir || !existsSync(join(recordingDir, 'snapshots', 'meta.json'))) {
-	console.error('Usage: bun e2e/scripts/generate-html.ts <recording-dir> [--frame N]')
+	console.error('Usage: bun demo/generate-html.ts <recording-dir> [--frame N]')
 	process.exit(1)
 }
 

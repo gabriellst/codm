@@ -1,13 +1,13 @@
 import type { Page, CDPSession } from 'playwright'
 import { mkdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
-import { getValidComputedStyles, type CDPTransport } from '../lib/cdp-snapshot'
-import { CAPTURE_CANVAS_SCRIPT } from '../lib/inline-assets'
+import { getValidComputedStyles, type CDPTransport } from './cdp-snapshot'
+import { CAPTURE_CANVAS_SCRIPT } from './inline-assets'
 
 /**
  * Wrap a Playwright CDPSession as a CDPTransport.
  *
- * The cast is at a REAL widening boundary, and stays narrow on purpose. `CDPTransport` (lib/cdp-snapshot)
+ * The cast is at a REAL widening boundary, and stays narrow on purpose. `CDPTransport` (demo/cdp-snapshot)
  * is deliberately Playwright-free so the same snapshot code runs under `chrome.debugger` in the
  * extension — and the two clients type the method differently: Playwright narrows to the literal union
  * `keyof CommandParameters`, `chrome.debugger` takes a plain `string`. An adapter between a wider and a
@@ -43,8 +43,8 @@ async function getValidComputedStyleNames(page: Page): Promise<string[]> {
  *   cursor/     — framemap.json + cursor.json (cursor positions)
  *
  * On-demand generation (via scripts):
- *   html/       — bun e2e/scripts/generate-html.ts <recording-dir>
- *   svg/        — bun e2e/scripts/generate-svg.ts <recording-dir>
+ *   html/       — bun demo/generate-html.ts <recording-dir>
+ *   svg/        — bun demo/generate-svg.ts <recording-dir>
  */
 export async function createDemoRecorder(page: Page, options: { fps?: number; domFps?: number } = {}) {
 	const fps = options.fps ?? 60

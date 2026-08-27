@@ -18,10 +18,10 @@
 		"lint": {
 			"executor": "nx:run-commands",
 			"cache": true,
-			"//demo": "codm's e2e has no demo/ (the template's animate/record/render-* pipeline) — its recording surface is lib/ instead (inline-assets.ts, reconstruct.ts, cdp-snapshot.ts). Linted that in demo's place.",
+			"//demo": "The whole recording pipeline lives in demo/ (cursor, recorder, reconstruct, the render CLIs) — same layout as template-fullstack. It used to be scattered across lib/ + utils/ + scripts/, which is why this target once linted lib/ in demo/'s place.",
 			"//scripts": "Dropped from the eslint invocation, same reason as api-typescript's lint target: eslint.config.ts carries a workspace-wide '**/scripts/**' ignore, so `eslint ... scripts` aborts with 'all matching files are ignored' (CHECK 3's failure mode, on a directory CHECK 3 itself doesn't check because the project root isn't named scripts).",
 			"inputs": [
-				"{projectRoot}/lib/**/*",
+				"{projectRoot}/demo/**/*",
 				"{projectRoot}/tests/**/*",
 				"{projectRoot}/utils/**/*",
 				"{projectRoot}/tsconfig.json",
@@ -30,7 +30,7 @@
 				"^production"
 			],
 			"options": {
-				"command": "eslint lib tests utils --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+				"command": "eslint demo tests utils --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
 				"cwd": "packages/e2e"
 			}
 		},

@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import type { Browser } from '@playwright/test'
-import type { Locale } from './i18n'
+import type { Locale } from '../utils/i18n'
 
 /**
  * THE SCREEN THE SCRIPTED AGENT "BUILT" — rendered here, by Playwright, into the run's workspace.
