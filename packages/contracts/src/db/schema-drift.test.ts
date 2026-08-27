@@ -29,14 +29,33 @@ import { fileURLToPath } from 'node:url'
  *     snapshot reader mis-resolves an absolute `out`, so every scratch run below sets
  *     `out: './migrations'` and spawns with `cwd` pointed at the scratch dir.
  *   - A schema file drizzle-kit reads is `require()`d as CJS, so it must resolve
- *     `drizzle-orm/{pg,sqlite}-core` — which only works from an ancestor with `node_modules`. The
- *     falsifier below therefore writes its nudged copy INSIDE this package (a dot-prefixed probe
- *     dir, removed in `finally`), never to `/tmp`.
+ *     `drizzle-orm/{pg,sqlite}-core` — which only works from an ancestor with `node_modules`, so
+ *     the falsifier's nudged copy cannot live in `/tmp`. It lives under `node_modules/.cache`
+ *     (`PROBE_ROOT` below) — an ancestor that resolves, and the one directory OUTSIDE the scanned
+ *     source tree. See `PROBE_ROOT` for why that distinction is load-bearing.
  */
 
 // Package root. This file lives at `src/db/schema-drift.test.ts` — TWO levels up from
 // `import.meta.dir` (`src/db`) reaches `packages/contracts`, not one.
 const CONTRACTS_DIR = resolve(import.meta.dir, '..', '..')
+
+/**
+ * Where the falsifier's nudged schema copy lives.
+ *
+ * Two constraints pull in opposite directions: drizzle-kit `require()`s the schema as CJS, so the
+ * file needs an ancestor carrying `node_modules` (rules out `/tmp`) — but ANY path inside the
+ * source tree is walked by the repo's tree-scanning rails, and this file appears and vanishes
+ * mid-run. That is not hypothetical: with the probe under `src/db/<dialect>/`, `product-residue`
+ * died with `ENOENT ... .schema-drift-falsifier-probe-sqlite/infrastructure.nudged.ts` (CI,
+ * 2026-08-27) — it had listed the file and read it after this test's `finally` removed it. The two
+ * suites run as separate nx processes, so the race is real and lands on whichever PR draws it.
+ *
+ * `node_modules/.cache` satisfies both: resolution reaches `drizzle-orm` through the ancestor
+ * `node_modules`, and `node_modules` is the ONE directory every walker in this repo already
+ * excludes — so the fix holds for rails that do not exist yet. Same place, same reason, as
+ * `core/src/types/Controller.typecheck.test.ts`; the pid keeps two concurrent runs apart.
+ */
+const PROBE_ROOT = resolve(CONTRACTS_DIR, '..', '..', 'node_modules', '.cache')
 
 type Trunk = {
 	readonly name: string
@@ -132,9 +151,8 @@ describe.each(TRUNKS)('drizzle schema diff-zero — $name', trunk => {
 
 	test('FALSEADOR — a synthetic column nudge on the schema produces a NEW migration (RED), proving the check above can fail', () => {
 		const scratch = mkdtempSync(join(tmpdir(), 'drizzle-diff-zero-falsifier-'))
-		// Must live INSIDE this package (not /tmp) — drizzle-kit require()s the schema file as CJS
-		// and `drizzle-orm/{pg,sqlite}-core` only resolves from an ancestor with node_modules.
-		const probeDir = join(dirname(trunk.nudgeFile), `.schema-drift-falsifier-probe-${trunk.dialect}`)
+		// Outside the source tree, inside an ancestor with node_modules — see PROBE_ROOT.
+		const probeDir = join(PROBE_ROOT, `schema-drift-falsifier-probe-${trunk.dialect}-${process.pid}`)
 		try {
 			cpSync(trunk.migrationsDir, join(scratch, 'migrations'), { recursive: true })
 			const before = readdirSync(join(scratch, 'migrations')).filter(f => f.endsWith('.sql'))
