@@ -259,16 +259,23 @@ describe('shared_outbox lanes (api / gateway / integration) over one file', () =
 		}).toEqual({ attempts: 1, hasError: true, leaseInFuture: true, processedAt: null })
 	})
 
-	it('7 — DEAD-LETTER: the 5th failure terminates the row', async () => {
+	it('7 — DEAD-LETTER: the 5th failure terminates the row via dead_at, NOT processed_at', async () => {
 		const id = await seed({ attempts: 4 }) // the claim charges the 5th
 		internal.failNames.add(id)
 
 		await dispatcher.flush()
 
 		const after = await row(id)
-		expect({ attempts: after?.attempts, processed: after?.processedAt instanceof Date, claimedBy: after?.claimedBy ?? null }).toEqual({
+		// dead_at is its own tombstone — processed_at means "delivered", and this row never was.
+		expect({
+			attempts: after?.attempts,
+			dead: after?.deadAt instanceof Date,
+			processedAt: after?.processedAt ?? null,
+			claimedBy: after?.claimedBy ?? null,
+		}).toEqual({
 			attempts: 5,
-			processed: true,
+			dead: true,
+			processedAt: null,
 			claimedBy: null,
 		})
 	})
@@ -336,14 +343,16 @@ describe('shared_outbox lanes (api / gateway / integration) over one file', () =
 		expect(await claim()).toHaveLength(0)
 
 		// …and it does not sit there invisible: neither claimable (ceiling) nor terminal (never
-		// finalized). The poison sweep at the head of the claim is what collects it.
+		// finalized). The poison sweep at the head of the claim is what collects it — via dead_at,
+		// NOT processed_at, so it never gets mistaken for a delivered event.
 		const swept = await row(id)
 		expect({
 			attempts: swept?.attempts,
-			processed: swept?.processedAt instanceof Date,
+			dead: swept?.deadAt instanceof Date,
+			processedAt: swept?.processedAt ?? null,
 			claimedBy: swept?.claimedBy ?? null,
 			poisoned: (swept?.lastError ?? '').includes('poison'),
-		}).toEqual({ attempts: 5, processed: true, claimedBy: null, poisoned: true })
+		}).toEqual({ attempts: 5, dead: true, processedAt: null, claimedBy: null, poisoned: true })
 	})
 
 	it('9b — CONTRAST: a handler that THROWS charges attempts once per cycle, never twice', async () => {
