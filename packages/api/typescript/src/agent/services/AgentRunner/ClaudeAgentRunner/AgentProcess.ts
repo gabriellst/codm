@@ -1,4 +1,5 @@
 import { spawn as spawnChild } from 'node:child_process'
+import { resolveInvocation } from '../platformInvocation'
 import { BaseError, PROCESS_TREES, type ProcessTree } from '@codm/core-typescript'
 import type { AgentApplicationErrors } from '../../../errors'
 
@@ -50,11 +51,16 @@ const KILL_GRACE_MS = 2_000
 export function createNodeAgentProcessSpawner(tree: ProcessTree): AgentProcessSpawner {
 	return spec => {
 		const [bin, ...args] = spec.cmd
+		// COMO invocar é decisão da plataforma, não deste arquivo — ver `resolveInvocation`. No Windows
+		// o binário do provedor costuma ser um `.cmd` do npm, que `spawn` recusa executar direto
+		// (EINVAL); fora dali isto é a identidade.
+		const invocation = resolveInvocation(bin as string, args)
 		let child: ReturnType<typeof spawnChild>
 		try {
-			child = spawnChild(bin as string, args, {
+			child = spawnChild(invocation.file, invocation.args, {
 				cwd: spec.cwd,
 				stdio: [spec.stdin ? 'pipe' : 'ignore', 'pipe', 'pipe'],
+				...invocation.options,
 				...tree.spawnOptions,
 			})
 		} catch (cause) {
