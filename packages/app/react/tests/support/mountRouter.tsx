@@ -20,6 +20,85 @@ import type { ReactNode } from 'react'
  * testes passavam por acidente. O rail irmão (`tests/architecture/router-load.test.ts`) pega quem
  * montar na mão.
  */
+/**
+ * GRAVADOR DE REDE — existe para que um estouro de espera diga POR QUE, não só QUE.
+ *
+ * Medido em 2026-08-27: um teste morreu com `a tile aparecer nunca aconteceu` depois de 30s, e essa
+ * frase é IDÊNTICA nos dois casos que pedem correções OPOSTAS — "está lento" e "nunca vai
+ * acontecer". Descobrir de qual se tratava custou uma investigação inteira, e o sinal que faltava
+ * estava a um passo: o cliente da SDK é ky, cujo timeout PADRÃO é 30s — o MESMO número do deadline
+ * daqui. Uma requisição pendurada e uma espera vazia terminam no mesmo instante e, sem este log,
+ * com a mesma mensagem.
+ *
+ * Instrumenta `globalThis.fetch` UMA vez por processo e nunca desinstala: o wrapper é passthrough
+ * puro (só anota), então deixá-lo instalado sai mais barato e menos frágil que contar montagens
+ * para restaurar — um contador desbalanceado por um teste que estoura ANTES do `unmount` seria
+ * exatamente o tipo de bug que este arquivo existe para não ter. O ky resolve `fetch` na hora da
+ * chamada, então o wrapper o alcança sem o cliente precisar saber de nada.
+ */
+interface RequestRecord {
+	method: string
+	url: string
+	startedAt: number
+	endedAt?: number
+	status?: number
+	error?: string
+}
+
+let netLog: RequestRecord[] = []
+let fetchInstrumented = false
+
+function instrumentFetchOnce(): void {
+	if (fetchInstrumented) return
+	fetchInstrumented = true
+	const base = globalThis.fetch.bind(globalThis)
+	globalThis.fetch = (async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+		const url = typeof input === 'string' ? input : input instanceof URL ? input.href : (input as Request).url
+		const method = (init?.method ?? (input as Request)?.method ?? 'GET').toUpperCase()
+		const record: RequestRecord = { method, url, startedAt: Date.now() }
+		netLog.push(record)
+		if (netLog.length > 60) netLog.shift()
+		try {
+			const response = await base(input, init)
+			record.endedAt = Date.now()
+			record.status = response.status
+			return response
+		} catch (error) {
+			record.endedAt = Date.now()
+			record.error = error instanceof Error ? error.message : String(error)
+			throw error
+		}
+	}) as typeof globalThis.fetch
+}
+
+/** O relatório que substitui "nunca aconteceu" por uma leitura. */
+function diagnose(host: HTMLDivElement, label: string, elapsedMs: number): string {
+	const now = Date.now()
+	const inFlight = netLog.filter(r => r.endedAt === undefined)
+	const failed = netLog.filter(r => r.endedAt !== undefined && (r.error !== undefined || (r.status ?? 0) >= 400))
+	const completed = netLog.filter(r => r.endedAt !== undefined)
+	const lines = [`mountRouter.settled: ${label} nunca aconteceu (${elapsedMs}ms)`]
+
+	// A PRIMEIRA pergunta: alguém ainda espera a rede? Se sim, o problema não é a asserção.
+	lines.push(
+		inFlight.length === 0
+			? 'rede: nada em voo — a espera estava VAZIA, então a condição depende de algo que já deveria ter chegado'
+			: `rede: ${inFlight.length} requisição(ões) EM VOO — pendura, não lentidão:`,
+	)
+	for (const r of inFlight) lines.push(`  [em voo] ${r.method} ${r.url} — ${now - r.startedAt}ms sem resposta`)
+
+	// Falhas que a sondagem do DOM engole: ninguém aguarda essas promessas, então elas somem.
+	if (failed.length > 0) {
+		lines.push(`falhas: ${failed.length} requisição(ões) terminaram mal e ninguém as observou:`)
+		for (const r of failed.slice(-8)) lines.push(`  [falhou] ${r.method} ${r.url} -> ${r.error ?? `HTTP ${r.status}`}`)
+	}
+
+	lines.push(`total: ${netLog.length} requisição(ões) observadas, ${completed.length} concluida(s)`)
+	const text = (host.textContent ?? '').replace(/\s+/g, ' ').trim()
+	lines.push(`DOM (${text.length} chars): ${text.slice(0, 300)}${text.length > 300 ? '...' : ''}`)
+	return lines.join('\n')
+}
+
 export interface MountedRouter {
 	router: AnyRouter
 	host: HTMLDivElement
@@ -32,6 +111,9 @@ export async function mountRouter(
 	ui: ReactNode,
 	options?: { path?: string; extraPaths?: string[] },
 ): Promise<MountedRouter> {
+	instrumentFetchOnce()
+	netLog = []
+
 	const host = document.createElement('div')
 	document.body.appendChild(host)
 
@@ -75,14 +157,15 @@ export async function mountRouter(
 			// propósito: um teste que trava de verdade continua falhando com a MESMA mensagem nomeando
 			// o que ficou pendurado — só demora mais para desistir, e vermelho falso custa mais caro
 			// que essa espera.
-			const deadline = Date.now() + 30_000
+			const startedAt = Date.now()
+			const deadline = startedAt + 30_000
 			while (Date.now() < deadline) {
 				if (predicate()) return
 				await act(async () => {
 					await new Promise(resolve => setTimeout(resolve, 10))
 				})
 			}
-			throw new Error(`mountRouter.settled: ${label} nunca aconteceu`)
+			throw new Error(diagnose(host, label, Date.now() - startedAt))
 		},
 		unmount() {
 			act(() => root?.unmount())
