@@ -1,13 +1,13 @@
 import type { Page, CDPSession } from 'playwright'
-import { mkdirSync } from 'node:fs'
+import { mkdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
-import { getValidComputedStyles, type CDPTransport } from '../lib/cdp-snapshot'
-import { CAPTURE_CANVAS_SCRIPT } from '../lib/inline-assets'
+import { getValidComputedStyles, type CDPTransport } from './cdp-snapshot'
+import { CAPTURE_CANVAS_SCRIPT } from './inline-assets'
 
 /**
  * Wrap a Playwright CDPSession as a CDPTransport.
  *
- * The cast is at a REAL widening boundary, and stays narrow on purpose. `CDPTransport` (lib/cdp-snapshot)
+ * The cast is at a REAL widening boundary, and stays narrow on purpose. `CDPTransport` (demo/cdp-snapshot)
  * is deliberately Playwright-free so the same snapshot code runs under `chrome.debugger` in the
  * extension — and the two clients type the method differently: Playwright narrows to the literal union
  * `keyof CommandParameters`, `chrome.debugger` takes a plain `string`. An adapter between a wider and a
@@ -43,8 +43,8 @@ async function getValidComputedStyleNames(page: Page): Promise<string[]> {
  *   cursor/     — framemap.json + cursor.json (cursor positions)
  *
  * On-demand generation (via scripts):
- *   html/       — bun e2e/scripts/generate-html.ts <recording-dir>
- *   svg/        — bun e2e/scripts/generate-svg.ts <recording-dir>
+ *   html/       — bun demo/generate-html.ts <recording-dir>
+ *   svg/        — bun demo/generate-svg.ts <recording-dir>
  */
 export async function createDemoRecorder(page: Page, options: { fps?: number; domFps?: number } = {}) {
 	const fps = options.fps ?? 60
@@ -163,6 +163,13 @@ export async function createDemoRecorder(page: Page, options: { fps?: number; do
 			const baseDir = outputDir ?? join(import.meta.dirname, '..', 'recordings', nameOrDir)
 			const snapshotsDir = join(baseDir, 'snapshots')
 			const cursorDir = join(baseDir, 'cursor')
+			// CLEARED, not merged. Frames are written as `snapshot-<index>` and a re-take that runs one
+			// second shorter leaves the PREVIOUS take's trailing frames behind — indistinguishable from
+			// its own, and silently appended to the end of whatever gets rendered from this directory.
+			// Measured: a 722-frame take saved over a 731-frame one, and the last nine frames of the
+			// resulting film came from a recording nobody had made that day.
+			rmSync(snapshotsDir, { recursive: true, force: true })
+			rmSync(cursorDir, { recursive: true, force: true })
 			mkdirSync(snapshotsDir, { recursive: true })
 			mkdirSync(cursorDir, { recursive: true })
 

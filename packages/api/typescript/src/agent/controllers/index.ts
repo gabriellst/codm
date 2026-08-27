@@ -12,6 +12,7 @@ export { AskOperatorController } from './AskOperator'
 // `agent/index.ts` decides whether it is actually MOUNTED. Same shape as `shared`'s gateway
 // simulator: the barrel says the class exists, the composition root says when it serves.
 export { TestRunIssueTurnController } from './TestRunIssueTurn'
+export { TestSelectAgentScenarioController } from './TestSelectAgentScenario'
 export { ForkIssueController } from './ForkIssue'
 export { SteerIssueTurnController } from './SteerIssueTurn'
 
@@ -24,6 +25,7 @@ import { TransitionIssueStatusController } from './TransitionIssueStatus'
 import { RaiseStopController } from './RaiseStop'
 import { AskOperatorController } from './AskOperator'
 import { TestRunIssueTurnController } from './TestRunIssueTurn'
+import { TestSelectAgentScenarioController } from './TestSelectAgentScenario'
 import { ForkIssueController } from './ForkIssue'
 import { SteerIssueTurnController } from './SteerIssueTurn'
 
@@ -40,9 +42,11 @@ import { SteerIssueTurnController } from './SteerIssueTurn'
  *    disciplina do `ChannelProxy` e do `TestIngressController`. A AC-6.8(d) cobra as DUAS metades —
  *    zero ocorrências no `openapi.json` E um `initialize` de ida e volta de verdade — porque "não
  *    emitido" não é a mesma afirmação que "não implementado".
- * 3. GATILHO DE TESTE — o mesmo carve-out, um ambiente mais apertado: a emissão nunca seleciona
- *    `e2e`, então ele é duplamente ausente da spec, e um boot de produção recusa qualquer ambiente
- *    não-`real`. Existe para uma spec anexar o observador SSE do console ANTES do run que quer ver.
+ * 3. PORTAS DE TESTE — o mesmo carve-out, um ambiente mais apertado: a emissão nunca seleciona
+ *    `e2e`, então elas são duplamente ausentes da spec, e um boot de produção recusa qualquer
+ *    ambiente não-`real`. São duas, e são complementares: uma DISPARA um turno (para uma spec
+ *    anexar o observador SSE do console ANTES do run que quer ver) e a outra ESCOLHE o roteiro que
+ *    esse run vai performar (`services/AgentScenario`).
  *
  * O argumento de tipo EXPLÍCITO no `byEnvironment` não é cerimônia: sem ele o TS infere a coluna de
  * `default` e a de `e2e` de forma independente e produz uma união não-sobreposta que falha a
@@ -61,9 +65,12 @@ const productionControllers = {
 
 const runtimeControllers = Config.env.EMIT_OPENAPI === 'true' ? productionControllers : { ...productionControllers, McpDoorController }
 
-export default byEnvironment<
-	typeof runtimeControllers | (typeof runtimeControllers & { TestRunIssueTurnController: typeof TestRunIssueTurnController })
->({
+const testDoors = {
+	TestRunIssueTurnController,
+	TestSelectAgentScenarioController,
+}
+
+export default byEnvironment<typeof runtimeControllers | (typeof runtimeControllers & typeof testDoors)>({
 	default: runtimeControllers,
-	e2e: { ...runtimeControllers, TestRunIssueTurnController },
+	e2e: { ...runtimeControllers, ...testDoors },
 })

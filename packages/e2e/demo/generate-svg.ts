@@ -223,7 +223,7 @@ async function resolveWithBrowser(
 							const buf = await fontResp.arrayBuffer()
 							const bytes = new Uint8Array(buf)
 							let binary = ''
-							for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+							for (const byte of bytes) binary += String.fromCharCode(byte)
 							results[weight] = btoa(binary)
 						} catch {}
 					}

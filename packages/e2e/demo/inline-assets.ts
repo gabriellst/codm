@@ -10,7 +10,7 @@
  *
  * Used by:
  *   - e2e/extension/content.js (Chrome extension)
- *   - e2e/utils/recorder.ts (Playwright recorder)
+ *   - e2e/demo/recorder.ts (Playwright recorder)
  *   - e2e/tests/demo/*.spec.ts (demo capture tests)
  */
 

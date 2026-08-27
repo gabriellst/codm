@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { test, expect } from '../utils/test'
 import { givenFreshUser } from '../utils/given'
 import { authenticateCloudSession } from '../utils/given/cloud'
-import { createDemoCursor } from '../utils/cursor'
+import { createDemoCursor } from '../demo/cursor'
 import { t } from '../utils/i18n'
 
 // The roteiro's DATA, not app copy — `t()` doesn't apply (these never appear in `pt.json`). Named
@@ -17,7 +17,7 @@ const ROTEIRO_PROVIDER_NAME = 'Claude Code'
 
 /**
  * DEMO — the full onboarding wizard, clicked start to finish, recorded to video
- * (`PW_VIDEO=on`) with the animated cursor (`utils/cursor.ts`). This is a PROMOTIONAL artifact,
+ * (`PW_VIDEO=on`) with the animated cursor (`demo/cursor.ts`). This is a PROMOTIONAL artifact,
  * not a correctness gate: assertions below are LEVE (a heading/label visible per step) — just
  * enough that the recording only "passes" if the whole journey actually rendered.
  *
