@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { fetchEventSource } from '@microsoft/fetch-event-source'
 import { streamTerminalSessionQueryKey, type StreamTerminalSessionQueryResponse } from '@codm/client-typescript/typescript'
-import { Config } from '@/lib/config'
+import { daemonBaseUrl } from '@/lib/config'
 import { tryCatch } from '@/lib/utils'
 
 /** One SSE frame of an issue's live terminal session — the SDK's own materialized union. */
@@ -55,7 +55,7 @@ export function useTerminalStream(issueId: string): TerminalStream {
 		setConnected(false)
 		setFrames([])
 
-		const url = `${Config.baseUrl}${streamTerminalSessionQueryKey(issueId)[0].url.replace(':issueId', issueId)}`
+		const url = `${daemonBaseUrl()}${streamTerminalSessionQueryKey(issueId)[0].url.replace(':issueId', issueId)}`
 
 		fetchEventSource(url, {
 			credentials: 'include',

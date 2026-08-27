@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from 'bun:test'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { Config } from '@/lib/config'
+import { Config, daemonBaseUrl } from '@/lib/config'
 import { Container, ServicesProvider } from '@/services'
 import { SecretsToken } from '@/services/tokens'
 import testBindings, { type FakeSecretsService } from '@/services/registry/test'
@@ -136,11 +136,13 @@ describe('useLoopbackAuth', () => {
 		// A asserção que um stub por função não conseguiria fazer. Trocar as duas origens é um erro
 		// que compila, passa em todo teste de unidade, e só aparece quando alguém tenta logar.
 		//
-		// O CONTRATO, não o literal: `claim` bate em `Config.baseUrl` (o daemon LOCAL) e o resgate
-		// (`/one-time-token/verify`) bate em `Config.cloudUrl` (a NUVEM) — nunca num host hard-coded,
-		// que é exatamente o que o default do repo (`localhost:3030`) é. Sob nx o `.env` da raiz
-		// sobrescreve `VITE_API_URL` (ex.: `3045`), e uma asserção presa ao default falha por
-		// divergência de ambiente, não por regressão real.
+		// O CONTRATO, não o literal: `claim` bate em `daemonBaseUrl()` (o daemon LOCAL, na porta que o
+		// host RESOLVEU no boot) e o resgate (`/one-time-token/verify`) bate em `Config.cloudUrl` (a
+		// NUVEM) — nunca num host hard-coded, que é exatamente o que o default do repo
+		// (`localhost:3030`) é. Sob nx o `.env` da raiz sobrescreve `VITE_API_URL` (ex.: `3045`), e uma
+		// asserção presa ao default falha por divergência de ambiente, não por regressão real. E num
+		// app EMPACOTADO nem o default vale: `Config.baseUrl` seria a porta errada (o incidente de
+		// 26/08/2026 — o login aterrissava em `127.0.0.1:3030`, onde ninguém escuta).
 		fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(
 			mockFetch(
 				() => jsonResponse({ code: CODE }),
@@ -156,14 +158,14 @@ describe('useLoopbackAuth', () => {
 		expect(claim).toBeDefined()
 		expect(verify).toBeDefined()
 
-		expect(new URL(claim!).origin).toBe(new URL(Config.baseUrl).origin)
+		expect(new URL(claim!).origin).toBe(new URL(daemonBaseUrl()).origin)
 		expect(new URL(verify!).origin).toBe(new URL(Config.cloudUrl).origin)
 
-		// `Config.cloudUrl` cai de volta a `Config.baseUrl` quando `VITE_CODM_CLOUD_URL` não está
+		// `Config.cloudUrl` cai de volta ao mesmo default do daemon quando `VITE_CODM_CLOUD_URL` não está
 		// configurada (dev/test) — nesse caso as duas origens são a MESMA de propósito, e forçar
 		// desigualdade aqui reproduziria o mesmo erro sensível a ambiente que este teste existe para
 		// eliminar. A distinção de origem só é exigível quando as duas fontes de config divergem.
-		if (Config.cloudUrl !== Config.baseUrl) {
+		if (new URL(Config.cloudUrl).origin !== new URL(daemonBaseUrl()).origin) {
 			expect(new URL(claim!).origin).not.toBe(new URL(verify!).origin)
 		}
 	})

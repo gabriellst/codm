@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import '@/lib/i18n'
-import { Config } from '@/lib/config'
+import { daemonBaseUrl } from '@/lib/config'
 import { contactAvatarUrl } from '@/components/console/ThreadAvatar'
 import { composeStories } from '../../../../../../../tests/support/storybook'
 import * as stories from './index.stories'
@@ -52,7 +52,7 @@ describe('contactAvatarUrl — the daemon serves the photo, never the platform C
 	it('addresses the daemon origin on the SDK’s own path', () => {
 		const url = contactAvatarUrl(CHANNEL, ADA_JID)
 
-		expect(url.startsWith(Config.baseUrl)).toBe(true)
+		expect(url.startsWith(daemonBaseUrl())).toBe(true)
 		expect(url).toContain(`/ui/avatars/${CHANNEL}/`)
 		// `pps.whatsapp.net` appears nowhere: the CSP does not allow it and the signed url expires.
 		expect(url).not.toContain('whatsapp.net/')

@@ -1,3 +1,5 @@
+import { getBaseUrl } from '@codm/client-typescript/http'
+
 const baseUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3030'
 
 /**
@@ -16,6 +18,12 @@ export function computeServiceBaseUrls(daemonBaseUrl: string) {
 }
 
 export const Config = {
+	/**
+	 * O default ASSADO NO BUILD (`VITE_API_URL`). Serve para semear o registro da SDK em
+	 * `router.tsx` e como fallback — NÃO para montar uma URL do daemon à mão: num app empacotado a
+	 * porta é escolhida em runtime. Quem monta URL usa `daemonBaseUrl()` (abaixo), e a rail
+	 * `tests/architecture/daemon-base-url.test.ts` guarda essa fronteira.
+	 */
 	baseUrl,
 	/**
 	 * Base URL for the GATEWAY SDK (`@codm/client-typescript/go`) — the api-ts
@@ -54,3 +62,31 @@ export const Config = {
  * resolved port — see that function's doc.
  */
 export const serviceBaseUrls = computeServiceBaseUrls(Config.baseUrl)
+
+/**
+ * A ORIGEM DO DAEMON **EM RUNTIME** — a única leitura válida para quem monta uma URL do daemon à
+ * mão. `Config.baseUrl` NÃO serve para isso: ele é o valor ASSADO no bundle (`VITE_API_URL`, ou
+ * `localhost:3030`), e num app empacotado o daemon não escuta mais nessa porta — o shell escolhe
+ * a primeira candidata livre de `packages/app/tauri/config/ports.ts` (47330/47340/…) e o
+ * `ServicesProvider` empurra o resultado para o registro da SDK com `configureClient`.
+ *
+ * ── o que quebrou por ler o valor assado (medido em 26/08/2026, build 0.5.4+) ────────────────────
+ * O login com GitHub/Google mandava a porta do daemon à nuvem como query param (RFC 8252) lendo
+ * `new URL(Config.baseUrl).port` → `3030`. O provedor autenticava, o `/desktop-callback` cunhava o
+ * código de uso único e redirecionava o navegador para `http://127.0.0.1:3030/sign-in/loopback?code=…`
+ * — uma porta onde NINGUÉM escuta. O código nunca chegava ao daemon, o laço do `useLoopbackAuth`
+ * consultava a gaveta errada, e da cadeira do operador o login simplesmente não fechava. A mesma
+ * causa alcançava o stream SSE, o terminal, os avatares e a pré-visualização de artefato: toda URL
+ * montada à mão apontava para a porta de dev.
+ *
+ * O registro da SDK (`getBaseUrl('typescript')`) já é a resposta certa porque é o MESMO valor que
+ * toda chamada gerada usa — não há um segundo lugar a sincronizar. O fallback para `Config.baseUrl`
+ * cobre quem nunca chamou `configureClient` (storybook, testes isolados), e é exatamente o default
+ * que `router.tsx` registra no carregamento do módulo.
+ *
+ * É uma FUNÇÃO, e não uma constante, de propósito: o valor só existe depois do boot assíncrono do
+ * `ServicesProvider`, então uma constante de módulo congelaria o default antes da resposta do host.
+ */
+export function daemonBaseUrl(): string {
+	return getBaseUrl('typescript') ?? Config.baseUrl
+}
