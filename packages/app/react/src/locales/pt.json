@@ -192,8 +192,6 @@
 		"terms": "Termos"
 	},
 	"console": {
-		"agentsRunning_one": "{{count}} agente em execução",
-		"agentsRunning_other": "{{count}} agentes em execução",
 		"attachThread": "Vincular uma conversa",
 		"back": "Voltar",
 		"footerLocal": "Código aberto · roda localmente",

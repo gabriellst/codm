@@ -71,11 +71,9 @@ const STATUS_BADGE: Record<ThreadStatus, { chip: string; dot: string }> = {
  *
  * ### Sticky — the founder's call, and a deliberate departure
  * The design's own header sits in normal flow and scrolls away. The founder asked for it to stay, so
- * it does. That costs a fixed band at the top of the scroll container, and the band has to clear
- * `AgentsRunningPill` — which the `(app)` layout pins at `top-5 right-6`, i.e. floating over exactly
- * this space. So the page's top padding moves OFF the route wrapper and INTO this header: the header
- * owns the clearance, the geometry never changes between scrolled and unscrolled, and the pill cannot
- * collide with the icon buttons on the right of row one.
+ * it does. That costs a fixed band at the top of the scroll container, so the page's top padding moves
+ * OFF the route wrapper and INTO this header: the header owns the clearance and the geometry never
+ * changes between scrolled and unscrolled.
  */
 export function SessionHeader({ threadId, className, ...props }: ComponentProps<'div'> & { threadId: string }) {
 	const { t } = useTranslation()

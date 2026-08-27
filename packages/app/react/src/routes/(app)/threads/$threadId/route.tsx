@@ -13,7 +13,7 @@ function SessionLayout() {
 	useThreadRealtime(threadId)
 	return (
 		// No `pt-*` here: the sticky SessionHeader owns the top clearance, so the band it reserves is
-		// the same scrolled or not, and `AgentsRunningPill` keeps floating in it rather than over it.
+		// the same scrolled or not.
 		<div className="mx-auto flex w-full flex-col px-6 gap-2 h-full">
 			<SessionHeader threadId={threadId} />
 			<Outlet />

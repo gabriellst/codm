@@ -1,6 +1,5 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { Sidebar } from '@/components/Navbar'
-import { AgentsRunningPill } from '@/components/console/AgentsRunningPill'
 import { CloudSessionGate } from '@/components/console/CloudSessionGate'
 import { OnboardingGate } from '@/components/console/OnboardingGate'
 import { SupervisionBanner } from '@/components/console/SupervisionBanner'
@@ -33,12 +32,6 @@ function AuthLayout() {
 			<div className="relative flex min-h-0 flex-1">
 				<Sidebar />
 				<main className="relative flex flex-1 flex-col overflow-hidden">
-					{/* Persistent operating pulse, pinned above the scrolling content. */}
-					<div className="pointer-events-none absolute right-10 top-4 z-20">
-						<div className="pointer-events-auto">
-							<AgentsRunningPill />
-						</div>
-					</div>
 					{/* `min-h-0` é load-bearing, não cosmético: sem ele o flex item herda `min-height: auto`
 					    e não encolhe abaixo do conteúdo. O `h-full` das telas passa a resolver contra uma
 					    altura indefinida, a cadeia de altura quebra, e o scroller interno do `VirtualList`
