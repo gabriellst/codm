@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -282,7 +283,13 @@ func (s *SqliteStore) migrationApplied(ctx context.Context, db *sql.DB, name str
 // the loser dies — migration 0000 is 25 CREATE TABLE with no IF NOT EXISTS and 0001
 // is ALTER TABLE ... ADD, so re-execution is a fatal error, not a no-op.
 func (s *SqliteStore) applyOne(ctx context.Context, db *sql.DB, name string) error {
-	raw, err := migrationsFS.ReadFile(filepath.Join("migrations", name))
+	// `path.Join`, NUNCA `filepath.Join`: o alvo é um `embed.FS`, cujos caminhos são SEMPRE separados
+	// por barra, em qualquer sistema — enquanto `filepath.Join` usa o separador do SO e produz
+	// `migrations\\0000_....sql` no Windows. O resultado é um gateway que não sobe:
+	// `read migration "0000_flaky_carmella_unuscione.sql": file does not exist`, com as migrações
+	// embarcadas ali o tempo todo. Nunca apareceu porque nada rodava em Windows; o smoke dos sidecars
+	// da perna nativa (2026-08-26) o pegou no primeiro boot de verdade.
+	raw, err := migrationsFS.ReadFile(path.Join("migrations", name))
 	if err != nil {
 		return fmt.Errorf("sqlite store: read migration %q: %w", name, err)
 	}

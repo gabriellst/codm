@@ -39,26 +39,25 @@ interface FileResult {
 }
 
 /**
- * O TETO BRUTO POR TESTE DESTA SUÍTE — e ele é maior que o default de 5s do `bun test` por uma
- * razão de categoria, não por um teste específico.
+ * O PRAZO DOS HOOKS DESTA LANE — 5s (o default do `bun test`) é menor que o trabalho que eles fazem.
  *
- * Todo arquivo daqui sobe um BACKEND REAL (`useIntegrationBackend`) antes de asserir qualquer coisa,
- * e alguns ainda esperam um PATCH em background chegar ao servidor. Localmente isso custa ~1s; num
- * runner hospedado, sem cache quente, o mesmo teste passou de 5s e o CI o cortou — não por travar,
- * mas por o teto default não ter folga para máquina lenta. Um flake assim é pior que uma falha: ele
- * some no rerun e volta depois, e desde que a `main` exige o job `detect` ele bloqueia merge.
+ * Cada arquivo daqui boota o backend de integração num `beforeAll`, e com `services: ['apiGo']` isso
+ * inclui `go build` + spawn + poll de prontidão do subprocesso. O `bootService` tem prazo interno de
+ * 30s justamente por isso; o hook do bun estourava antes, aos 5s, e a suíte morria com
+ * `a beforeEach/afterEach hook timed out for this test` — uma mensagem que não diz nada sobre boot e
+ * mandou mais de um investigador procurar defeito onde não havia.
  *
- * Isto NÃO afrouxa nenhuma asserção. Cada espera destes testes tem o seu PRÓPRIO limite semântico e
- * nomeado (`waitForDraft` desiste em 200 tentativas dizendo qual condição nunca aconteceu, e
- * `MountedRouter.settled` faz o mesmo pelo DOM) — um travamento de verdade continua falhando rápido
- * e com a causa escrita. O que este valor faz é só impedir que o teto bruto corte a espera ANTES do
- * limite que sabe explicar o que deu errado.
+ * Na máquina do founder passava quase sempre; nos runners hospedados (2 vCPU, cache frio, desde a
+ * migração de 2026-08-26) virou vermelho intermitente em metade dos pushes. Não é flakiness a
+ * tolerar com retry: é um prazo menor que a tarefa, e o conserto é declarar o prazo certo — 60s, o
+ * dobro do que o `bootService` se dá, para o timeout de fora nunca disparar antes do de dentro (que
+ * sabe dizer o que falhou).
  */
-const PER_FILE_TIMEOUT_MS = 30_000
+const HOOK_TIMEOUT = '--timeout=60000'
 
 function runOne(file: string): FileResult {
 	const started = performance.now()
-	const result = Bun.spawnSync(['bun', 'test', '--timeout', String(PER_FILE_TIMEOUT_MS), PATH_IGNORE_OVERRIDE, file], {
+	const result = Bun.spawnSync(['bun', 'test', PATH_IGNORE_OVERRIDE, HOOK_TIMEOUT, file], {
 		cwd: REACT_ROOT,
 		stdout: 'inherit',
 		stderr: 'inherit',

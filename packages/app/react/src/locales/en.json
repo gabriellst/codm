@@ -192,8 +192,6 @@
 		"terms": "Terms"
 	},
 	"console": {
-		"agentsRunning_one": "{{count}} agent running",
-		"agentsRunning_other": "{{count}} agents running",
 		"attachThread": "Attach a thread",
 		"back": "Back",
 		"footerLocal": "Open source · runs locally",

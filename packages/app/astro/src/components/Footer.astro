@@ -8,9 +8,17 @@ import { type Locale, routeFor } from '~/i18n'
 
 interface Props {
 	locale: Locale
+	/**
+	 * Whether product analytics is actually configured for this build (BaseLayout resolves it from
+	 * `VITE_POSTHOG_KEY`, the same read that decides whether the PostHog scripts render at all).
+	 * Gates the opt-out control below: with no ingest key nothing is ever captured, and offering
+	 * to turn off something that isn't running is noise, not transparency. Passed down rather than
+	 * re-read from `process.env` here so ONE read decides both halves and they can't disagree.
+	 */
+	analytics?: boolean
 }
 
-const { locale } = Astro.props
+const { locale, analytics = false } = Astro.props
 const entry = await getEntry('landing', `home.${locale}`)
 const t = entry!.data
 
@@ -19,11 +27,13 @@ const t = entry!.data
 // special case.
 const hrefFor = (href: string) => (href.startsWith('/') ? routeFor(locale, href) : href)
 
-// Privacy/Terms have no dedicated route yet (same "not out of scope, just not shipped"
-// situation as /docs — see Home.astro's docsHref). Anchored to the GitHub README until
-// those pages exist, rather than a dead `#` or a misleading link to the homepage.
+// Privacy now HAS a dedicated route (`/[locale]/legal/privacy`, sourced from the same MDX
+// the README links to on GitHub). Terms still doesn't — it keeps the README anchor, which is
+// what this fallback was always for: a real destination instead of a dead `#`, until the page
+// exists. Drop `legalFallbackHref` entirely once /legal/terms ships.
 const githubHref = t.footer.project.links.find(l => l.label.includes('GitHub'))?.href ?? 'https://github.com/gabriellst/codm'
 const legalFallbackHref = `${githubHref}#readme`
+const privacyHref = routeFor(locale, '/legal/privacy')
 ---
 
 <!--
@@ -93,11 +103,58 @@ const legalFallbackHref = `${githubHref}#readme`
 	<div class="mx-auto mt-12 flex max-w-[1312px] flex-col gap-2 border-t border-white/[0.12] py-[18px]">
 		<div class="flex flex-wrap items-center gap-5">
 			<span class="flex-1 text-[12.5px] text-white/40">{t.footer.copyright}</span>
-			<a href={legalFallbackHref} class="text-[12.5px] text-white/60 transition-colors hover:text-white">{t.footer.privacy}</a>
+			<a href={privacyHref} class="text-[12.5px] text-white/60 transition-colors hover:text-white">{t.footer.privacy}</a>
 			<a href={legalFallbackHref} class="text-[12.5px] text-white/60 transition-colors hover:text-white">{t.footer.terms}</a>
 		</div>
 		{/* SP4 — transparency disclosure: not a node in the design's footer, but a compliance
-		    line the design doesn't contradict — kept as a quiet caption beneath the legal row. */}
-		<p class="text-[11.5px] text-white/30">{t.footer.telemetryNotice}</p>
+		    line the design doesn't contradict — kept as a quiet caption beneath the legal row.
+		    The button next to it is the ACTION for that disclosure (privacy policy §12): until it
+		    existed, the landing's only way to refuse analytics was a browser-level tracking blocker,
+		    while the console had had a real toggle since SP4. Rendered with the "decline" label and
+		    corrected by the script below from the stored choice — the same server-default-then-fix
+		    shape DownloadDetect uses for the platform CTA. */}
+		<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+			<p class="text-[11.5px] text-white/30">{t.footer.telemetryNotice}</p>
+			{
+				analytics && (
+					<button
+						type="button"
+						data-telemetry-toggle
+						data-label-decline={t.footer.telemetryOptOut.decline}
+						data-label-declined={t.footer.telemetryOptOut.declined}
+						aria-pressed="false"
+						class="cursor-pointer border-0 bg-transparent p-0 text-[11.5px] text-white/50 underline underline-offset-2 transition-colors hover:text-white"
+					>
+						{t.footer.telemetryOptOut.decline}
+					</button>
+				)
+			}
+		</div>
 	</div>
 </footer>
+
+<script>
+	// The landing's telemetry opt-out (privacy policy §12). Writes the choice and announces it;
+	// `~/scripts/posthogInit.ts` is what acts on it — declining before the SDK has initialized
+	// means it never initializes at all, so nothing is sent for that page view.
+	import { TELEMETRY_CONSENT_EVENT, readSiteTelemetryConsent, writeSiteTelemetryConsent } from '~/config/telemetry'
+
+	const toggle = document.querySelector<HTMLButtonElement>('[data-telemetry-toggle]')
+
+	if (toggle) {
+		const paint = (enabled: boolean) => {
+			// `aria-pressed` tracks "tracking is declined", matching what the pressed label says.
+			toggle.setAttribute('aria-pressed', String(!enabled))
+			toggle.textContent = enabled ? toggle.dataset.labelDecline! : toggle.dataset.labelDeclined!
+		}
+
+		paint(readSiteTelemetryConsent())
+
+		toggle.addEventListener('click', () => {
+			const enabled = !readSiteTelemetryConsent()
+			writeSiteTelemetryConsent(enabled)
+			paint(enabled)
+			window.dispatchEvent(new CustomEvent(TELEMETRY_CONSENT_EVENT, { detail: { enabled } }))
+		})
+	}
+</script>

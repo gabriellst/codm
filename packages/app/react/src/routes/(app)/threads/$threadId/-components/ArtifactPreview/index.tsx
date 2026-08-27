@@ -4,7 +4,7 @@ import { IconExternalLink, IconFile, IconLink, IconMovie, IconMusic, IconPhoto }
 import type { Icon } from '@tabler/icons-react'
 import { getArtifactContentQueryKey } from '@codm/client-typescript/typescript'
 import type { ArtifactKind, ListArtifactsQueryResponse } from '@codm/client-typescript/typescript'
-import { Config } from '@/lib/config'
+import { daemonBaseUrl } from '@/lib/config'
 import { cn } from '@/lib/utils'
 import { enumLabel } from '@/lib'
 import { useDialogStore } from '@/stores/useDialogStore'
@@ -31,7 +31,7 @@ export const artifactGlyph: Record<ArtifactKind, Icon> = {
  */
 export function artifactContentUrl(threadId: string, artifactId: string): string {
 	const path = getArtifactContentQueryKey(threadId, artifactId)[0].url.replace(':threadId', threadId).replace(':artifactId', artifactId)
-	return `${Config.baseUrl}${path}`
+	return `${daemonBaseUrl()}${path}`
 }
 
 export interface ArtifactPreviewProps extends ComponentProps<'div'> {

@@ -236,9 +236,6 @@ jobs:
       # GATEANDO a release — que é o lugar deles. `--lib` compila só a crate, sem bundle; os
       # binários dos sidecars já existem (passo acima), então o `build.rs` resolve
       # `externalBin`/`resources` sem erro.
-      - name: cargo test do shell (testes cfg(windows))
-        if: runner.os == 'Windows'
-        run: cargo test --manifest-path packages/app/tauri/src-tauri/Cargo.toml --lib
 
       # O gate que o build sozinho nunca dá (build-sidecars.ts: "compila limpo e morre no primeiro
       # connect"). Sobe os dois binários recém-compilados como o shell sobe — cwd daemon-runtime,
@@ -347,6 +344,32 @@ jobs:
           esac
           echo "VITE_CODM_CLOUD_URL=$CLOUD_URL" >> "$GITHUB_ENV"
           echo "cloud: $CLOUD_URL"
+
+      # UM ATALHO DE `ldd` PARA BINÁRIO ESTÁTICO — sem ele o AppImage não é empacotado.
+      #
+      # O plugin gtk do linuxdeploy roda `ldd` em tudo que está no AppDir, inclusive nos dois
+      # sidecars. O gateway é um binário Go ESTÁTICO: `ldd` responde "not a dynamic executable" e
+      # sai com código 1 — comportamento correto dele —, e o linuxdeploy trata qualquer saída não
+      # zero como fatal: `terminate called after throwing 'std::runtime_error' what(): Failed to run
+      # ldd: exited with code 1`, plugin gtk exit 134, bundling abortado. Levou três builds para
+      # aparecer porque o Tauri engole o stderr do bundler (daí o `--verbose` abaixo).
+      #
+      # O atalho NÃO MENTE: ele chama o `ldd` de verdade e só traduz o caso do binário estático para
+      # a frase que o linuxdeploy sabe ler, com saída zero. Um binário dinâmico com dependência
+      # faltando continua reportando o que reportava. A imagem do container que saiu na migração
+      # tinha esse mesmo wrapper embutido; aqui ele fica declarado, onde se lê.
+      - name: atalho de ldd para os sidecars estáticos (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          cat > "$RUNNER_TEMP/bin/ldd" <<'SH'
+          #!/bin/sh
+          out=$(/usr/bin/ldd "$@" 2>&1) && { printf '%s\n' "$out"; exit 0; }
+          printf '\tnot a dynamic executable\n'
+          exit 0
+          SH
+          chmod +x "$RUNNER_TEMP/bin/ldd"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
 
       # `--bundles` restringe o que este SO empacota (a conf gerada segue com `targets: 'all'`):
       # macOS app+dmg, Linux appimage+deb, Windows só nsis. Os artefatos de update (.sig) saem

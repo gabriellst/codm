@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { fetchEventSource } from '@microsoft/fetch-event-source'
 import { listenEventsQueryKey, type ListenEventsQueryResponse } from '@codm/client-typescript/typescript'
-import { Config } from '@/lib/config'
+import { daemonBaseUrl } from '@/lib/config'
 import { tryCatch } from '@/lib/utils'
 
 /** String literal union of all SSE event names, derived from the SDK response type. */
@@ -20,7 +20,7 @@ export function useServerEventSource() {
 	useEffect(() => {
 		const controller = new AbortController()
 
-		fetchEventSource(`${Config.baseUrl}${listenEventsQueryKey()[0].url}`, {
+		fetchEventSource(`${daemonBaseUrl()}${listenEventsQueryKey()[0].url}`, {
 			credentials: 'include',
 			signal: controller.signal,
 			onmessage(msg) {

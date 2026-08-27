@@ -116,6 +116,14 @@ export const landing = defineCollection({
 			// gone; this is its honest replacement). Not in the design's footer node, but a
 			// compliance requirement the design doesn't reject — kept as a quiet caption line.
 			telemetryNotice: z.string(),
+			// The action half of that disclosure (privacy policy §12). Two labels, not one with a
+			// state suffix appended in code: each state is a full phrase and the two read differently
+			// per language — composing them would be a translation bug waiting to happen.
+			// `~/config/telemetry.ts` owns the persistence; this owns the words.
+			telemetryOptOut: z.object({
+				decline: z.string(),
+				declined: z.string(),
+			}),
 		}),
 	}),
 })

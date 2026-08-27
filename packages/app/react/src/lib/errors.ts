@@ -115,7 +115,7 @@ const infrastructureErrorHandler: ErrorHandler = ctx => {
  *
  * ── a corrida, declarada em vez de escondida ─────────────────────────────────────────────────────
  * O efeito do gate lê o keychain no mount e pode chamar `setAuthenticated()` DEPOIS de um 401 vindo
- * de um componente que vive fora do gate (a chrome — `AgentsRunningPill` é um). Nesse caso o
+ * de um componente que vive fora do gate (a chrome — `SupervisionBanner` é um). Nesse caso o
  * operador volta para dentro por um instante. Converge sozinho: toda query em voo devolve 401 e
  * cada uma re-executa este handler, então o estado estável é `unauthenticated`. Um token que o
  * keychain tem e o daemon recusa é uma sessão morta — a evidência do 401 é mais forte que a da

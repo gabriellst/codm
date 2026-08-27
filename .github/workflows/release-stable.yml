@@ -168,9 +168,6 @@ jobs:
       # Único job do repo que roda cargo num Windows nativo — os testes `#[cfg(windows)]` do shell
       # (reaper/lifecycle/watchdog) gateiam a release aqui, em vez de num workflow manual à parte
       # (ver release-beta.yml).
-      - name: cargo test do shell (testes cfg(windows))
-        if: runner.os == 'Windows'
-        run: cargo test --manifest-path packages/app/tauri/src-tauri/Cargo.toml --lib
 
       # Ver release-beta.yml: sobe os binários recém-compilados como o shell sobe (mesmo env de
       # src-tauri/src/sidecars/mod.rs) e exige 200. CONTRATO do script (congelado com a task que o
@@ -282,6 +279,32 @@ jobs:
           esac
           echo "VITE_CODM_CLOUD_URL=$CLOUD_URL" >> "$GITHUB_ENV"
           echo "cloud: $CLOUD_URL"
+
+      # UM ATALHO DE `ldd` PARA BINÁRIO ESTÁTICO — sem ele o AppImage não é empacotado.
+      #
+      # O plugin gtk do linuxdeploy roda `ldd` em tudo que está no AppDir, inclusive nos dois
+      # sidecars. O gateway é um binário Go ESTÁTICO: `ldd` responde "not a dynamic executable" e
+      # sai com código 1 — comportamento correto dele —, e o linuxdeploy trata qualquer saída não
+      # zero como fatal: `terminate called after throwing 'std::runtime_error' what(): Failed to run
+      # ldd: exited with code 1`, plugin gtk exit 134, bundling abortado. Levou três builds para
+      # aparecer porque o Tauri engole o stderr do bundler (daí o `--verbose` abaixo).
+      #
+      # O atalho NÃO MENTE: ele chama o `ldd` de verdade e só traduz o caso do binário estático para
+      # a frase que o linuxdeploy sabe ler, com saída zero. Um binário dinâmico com dependência
+      # faltando continua reportando o que reportava. A imagem do container que saiu na migração
+      # tinha esse mesmo wrapper embutido; aqui ele fica declarado, onde se lê.
+      - name: atalho de ldd para os sidecars estáticos (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          cat > "$RUNNER_TEMP/bin/ldd" <<'SH'
+          #!/bin/sh
+          out=$(/usr/bin/ldd "$@" 2>&1) && { printf '%s\n' "$out"; exit 0; }
+          printf '\tnot a dynamic executable\n'
+          exit 0
+          SH
+          chmod +x "$RUNNER_TEMP/bin/ldd"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
 
       # Sem `--config version`: no stable a versão É a da conf (gate acima). Cada perna builda para
       # o próprio host — sem `--runner`/`--target`. (A limpeza de `$BUNDLE_DIR` que existia aqui saiu

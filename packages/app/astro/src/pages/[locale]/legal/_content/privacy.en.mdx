@@ -1,0 +1,235 @@
+---
+title: 'Privacy Policy'
+description: 'What codm keeps on your computer, the little that leaves it, and how to turn that off.'
+updatedAt: 2026-08-26
+---
+
+# codm Privacy Policy
+
+**Last updated:** August 26, 2026
+
+codm is a desktop application that runs coding agents on **your** machine, operated through your
+messaging channels. That is why this policy is short exactly where privacy policies are usually
+long: almost everything codm processes never reaches us.
+
+## The whole thing in one screen
+
+| What | Where it lives | Does it leave your machine? |
+|---|---|---|
+| Channel messages, conversations, contacts and names | SQLite file in `~/.codm/data` | **No** — not to us |
+| Issues, workspaces, artifacts, folder paths | same SQLite file | **No** |
+| Channel pairing credentials | same SQLite file | **No** |
+| What you send to the agent (prompts, code) | your machine → the provider CLI | **Yes, to the provider you chose**, under your account |
+| Your identity (email, name, picture from sign-in) | codm cloud profile | **Yes** |
+| Screens visited and clicks on the site and console | PostHog | **Yes, and you can turn it off** |
+
+We do not sell data, do not serve ads, do not record sessions, and do not read the content of
+your conversations.
+
+## 1. Who is responsible for this policy
+
+codm is maintained by **Gabriel Araújo** ([@gabriellst](https://github.com/gabriellst)), who is
+the controller of the data described in section 4.
+
+**Contact for anything privacy-related — including exercising the rights in section 11:** open an
+issue at [github.com/gabriellst/codm/issues](https://github.com/gabriellst/codm/issues). Issues
+are **public**: describe your request without pasting personal data beyond what is strictly
+needed to identify it.
+
+## 2. codm has two natures
+
+Telling them apart is what makes the rest of this policy readable.
+
+1. **The application running on your computer.** The desktop shell hosts the console and
+   supervises two local processes — a TypeScript daemon and a Go channel gateway — that share a
+   single SQLite file on your disk. The entire product — conversations, issues, agents, artifacts
+   — happens there. **We have no access to that file.**
+2. **The online services the project operates.** There are two, and only two: the **cloud
+   profile**, which stores who you are, and **product analytics**, which counts screens and
+   clicks. Section 4 is about those.
+
+All of it is open source
+([MIT](https://github.com/gabriellst/codm/blob/main/LICENSE)): every claim in this policy can be
+checked against the repository.
+
+## 3. Data that stays only on your computer
+
+Stored in the SQLite file under `$CODM_DATA_DIR` (`~/.codm/data` by default), read and written
+only by codm's local processes:
+
+- **Channel messages** — text, type, direction, timestamps, delivery and read receipts.
+- **Contacts and groups** — channel identifier, display name, profile picture, participants.
+- **Threads** — which workspace they are attached to, chosen provider and model, mention and
+  pause settings, the transcript of agent turns.
+- **Work** — issues, agent runs, generated artifacts, project folder paths.
+- **Channel pairing credentials** — the session that keeps the gateway connected.
+- **Local logs**, including shell crash records.
+
+None of this is transmitted to us, under any circumstances. There is currently no telemetry of
+any kind leaving your machine from the local processes: the daemon's and the gateway's technical
+instrumentation only has a destination configured in a development environment, pointing at the
+machine itself.
+
+**To erase all of it:** uninstall the application and delete the `~/.codm/data` folder. Deletion
+is immediate and does not depend on us.
+
+## 4. Data we do process
+
+### 4.1 Account — the cloud profile
+
+Identity is the one thing codm does not resolve locally. When you sign in, the cloud profile
+stores:
+
+- **email, name and picture** from the sign-in provider you used;
+- **the tokens** authorizing that sign-in (access and refresh) and the granted scope;
+- **the session** — expiry, **IP address** and **user agent** of the device that signed in;
+- **the organization/ownership** your account belongs to (name, kind, time zone).
+
+What it is for: authenticating you, keeping you signed in, and defining which ownership the local
+data belongs to. **Single purpose** — this data feeds no marketing and no profiling.
+
+### 4.2 Product analytics (PostHog)
+
+The site and the console send usage events to [PostHog](https://posthog.com), hosted in the
+United States:
+
+- **screens visited** and **clicks on interface elements** (autocapture);
+- **technical context** — browser, system, language, referrer, resolution;
+- **IP address**, used by PostHog for approximate location (country/region);
+- **an anonymous per-device identifier**; in the console, after sign-in, that identifier is
+  associated with your user ID so the funnel from site to app connects.
+
+What we do **not** do here: **session recording is disabled** on both surfaces, deliberately —
+the console's screens show project names and conversation excerpts, and recording them would
+require a masking review that has not been done.
+
+This collection is **on by default** and you can turn it off — see section 12.
+
+### 4.3 Site, downloads and updates
+
+The site and the installers are served by [Cloudflare](https://www.cloudflare.com)
+infrastructure; the application periodically checks whether a newer version exists. As with any
+request on the internet, those checks leave **server logs** (IP, user agent, time, requested
+file) under the hosting provider's control. We do not build profiles from those logs.
+
+### 4.4 Support through GitHub
+
+If you open an issue, its content and your GitHub account are **public**, under
+[GitHub's privacy statement](https://docs.github.com/site-policy/privacy-policies/github-privacy-statement).
+
+## 5. What we do not collect
+
+So there is no doubt — none of these ever reach us:
+
+- the **content of your messages** and conversations;
+- your **code**, files, folder names or project paths;
+- the **prompts** you send the agent or the answers it returns;
+- your **API keys** and channel credentials;
+- **screen or session recordings**.
+
+## 6. Third-party services you engage by using codm
+
+These are not "our" processing — they are services **you** engage and codm merely connects to.
+They are worth knowing about, because that is where the content of your work actually travels.
+
+### 6.1 The messaging channel (WhatsApp)
+
+When you pair a channel, your messages travel through WhatsApp/Meta infrastructure, under
+**their** terms and privacy policy. codm connects as a device linked to your account: we do not
+intermediate, copy, or have access to that traffic.
+
+### 6.2 The agent provider
+
+The agent runs on your machine through the CLI of the provider you choose — **Claude Code**
+(Anthropic), **Codex** (OpenAI) or **OpenCode**. That means **the content the agent reads and
+writes — conversation excerpts, code, project files — is sent to that provider**, under **your**
+account or API key and under the contract **you** have with them. codm does not intermediate that
+communication, receives no copy, and stores no copy. Before pointing an agent at a sensitive
+project, read the chosen provider's policy.
+
+## 7. Who we share with
+
+Only the providers required for the services in section 4, each limited to its function:
+
+| Provider | For what | Where |
+|---|---|---|
+| PostHog | product analytics (4.2) | United States |
+| Cloudflare | site hosting, downloads and updates (4.3) | global network |
+| Cloud profile hosting provider | account and authentication (4.1) | United States |
+| Sign-in provider (e.g. Google) | authenticating you, if you choose that method | per the provider |
+| GitHub | code, releases and support (4.4) | United States |
+
+Beyond that, we share data only when required by law or a court order. We do not sell, rent or
+trade personal data with anyone.
+
+## 8. International transfers
+
+The providers above are mostly in the United States, so the data in section 4 is transferred
+outside Brazil and the European Economic Area. Those transfers rely on the contractual safeguards
+those providers offer (standard contractual clauses) and on the necessity of performing the
+service you asked for.
+
+## 9. How long we keep it
+
+- **Account and profile (4.1):** as long as your account exists. Once you request deletion, we
+  erase the record and your sessions.
+- **Sign-in sessions:** until they expire or you sign out.
+- **Product analytics (4.2):** for the retention period of the PostHog plan in use. Turning
+  telemetry off stops collection immediately; history already sent can be deleted on request.
+- **Server logs (4.3):** for the hosting provider's short retention window.
+- **Local data (section 3):** forever, or until you delete it — that call is yours alone.
+
+## 10. Legal bases
+
+| Processing | GDPR | LGPD (Brazilian Law 13.709/2018) |
+|---|---|---|
+| Account and authentication (4.1) | art. 6(1)(b) — performance of a contract | art. 7, V |
+| Product analytics (4.2) | art. 6(1)(f) — legitimate interests, with a simple opt-out | art. 7, IX |
+| Server logs and security (4.3) | art. 6(1)(c) and (f) | art. 7, II and IX |
+
+## 11. Your rights
+
+Under the GDPR (arts. 15–22) and the LGPD (art. 18) you may request: **confirmation** that we
+process your data, **access**, **rectification**, **anonymization or erasure**, **portability**,
+**information about sharing**, **objection** to a processing activity, and **withdrawal** of
+consent.
+
+How to exercise them: open an issue at
+[github.com/gabriellst/codm/issues](https://github.com/gabriellst/codm/issues) describing your
+request. Your account is identified by the sign-in you use in the application — **do not paste
+personal data into the issue**. We respond within 15 days.
+
+Remember that the data in section 3 is under your direct control: to delete it you need to ask no
+one — just remove the data folder.
+
+## 12. How to turn telemetry off
+
+- **In the application:** open **Settings → Telemetry** and turn sharing off. From then on the
+  console stops capturing any event — screens, clicks and identification. The choice is remembered
+  across sessions.
+- **On the site:** click **"Don't track me"** in the footer of any page. The choice is stored in
+  your browser and applies to later visits; the same button undoes it. While it is set, the
+  analytics script is **never even initialized** — no request is sent and no analytics cookie is
+  created. Tracking blockers keep working too, and the site's collection never includes anything
+  you type.
+
+## 13. Security
+
+The data in section 3 is protected by your operating system's permissions: whoever has access to
+your user account has access to it. If the computer is shared or could be lost, use disk
+encryption — that is the protection that actually matters for local data.
+
+The services in section 4 use encrypted connections (TLS), and authentication is delegated to
+established sign-in providers. No system is immune to incidents; should a material breach occur,
+we will notify affected individuals and the competent authority within the legal deadlines.
+
+## 14. Children
+
+codm is a work tool, not directed at anyone under 16, and we do not knowingly collect data from
+that age group. If it happens, open an issue and we will erase the record.
+
+## 15. Changes to this policy
+
+This policy lives in the project's public repository: **every change is recorded in the Git
+history**, with its date and exact content. Material changes will be announced in the release
+notes. The date at the top marks the version in force.

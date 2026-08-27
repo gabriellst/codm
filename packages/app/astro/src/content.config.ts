@@ -5,6 +5,7 @@ import { defineCollection, z } from 'astro:content'
 // `base` below is a filesystem path — the brackets are literal, never globbed.
 // The `_content` prefix keeps these files out of the file router.
 import { landing, plans } from './pages/[locale]/_content/config'
+import { legal } from './pages/[locale]/legal/_content/config'
 
 const blog = defineCollection({
 	loader: glob({ pattern: '**/*.{md,mdx}', base: './src/pages/[locale]/blog/_content' }),
@@ -52,4 +53,4 @@ const blogUi = defineCollection({
 	}),
 })
 
-export const collections = { blog, landing, plans, blogUi }
+export const collections = { blog, landing, plans, blogUi, legal }

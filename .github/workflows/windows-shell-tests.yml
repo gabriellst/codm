@@ -1,0 +1,61 @@
+# Testes Rust do shell no Windows — FORA do caminho de release, e este arquivo existe para dizer
+# por quê.
+#
+# Os testes `#[cfg(windows)]` do shell nunca rodaram em lugar nenhum: até 26/08/2026 a perna Windows
+# era cross-compilada num runner Linux, que compila para Windows mas não EXECUTA nada. Quando a perna
+# virou nativa e eles entraram no release, encontraram valor de imediato — um teste do Acesso Total ao
+# Disco usava bits de permissão POSIX (`Permissions::from_mode`) e sequer compilava fora do Unix
+# (corrigido com `cfg(unix)`).
+#
+# E aí travaram num muro de AMBIENTE, não de código: o binário de teste morre ANTES do primeiro teste
+# com `0xc0000139 STATUS_ENTRYPOINT_NOT_FOUND` — uma DLL carregada com exports diferentes dos que o
+# executável espera. Investigado até aqui: não existe `WebView2Loader.dll` em `target/` (o `find` do
+# passo não achou nenhuma), então não é a DLL local do webview2-com sendo ignorada; é a do sistema, e
+# descobrir qual e por quê exige uma máquina Windows onde dê para depurar — não ciclos de 5 minutos
+# num runner efêmero.
+#
+# POR QUE FORA DO RELEASE: um gate que não se sabe consertar bloqueia entrega sem proteger nada. O
+# build e o smoke da perna Windows CONTINUAM gateando o release (é o que prova que o instalador sai e
+# que os sidecars sobem). Estes testes ficam aqui, executáveis à mão, até alguém resolver o
+# carregamento da DLL — e é assim que fica visível que estão parados, em vez de virarem um
+# `continue-on-error` que ninguém lê.
+#
+# Quando voltar a passar, o lugar deles é de novo na perna Windows do release-beta/stable.
+name: windows-shell-tests
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  cargo-test:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: packages/api/go/go.mod
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/app/tauri/src-tauri
+
+      - name: deps
+        run: bun install --frozen-lockfile
+
+      # `build.rs` (tauri_build) resolve `bundle.externalBin` e `resources` da conf ANTES de compilar
+      # a crate: sem os binários dos sidecars staged, a compilação falha no build script, muito antes
+      # de qualquer teste.
+      - name: sidecars
+        run: cd packages/app/tauri && bun config/build-sidecars.ts
+
+      # Diagnóstico junto do comando: quando o STATUS_ENTRYPOINT_NOT_FOUND voltar, a saída já diz
+      # quais WebView2Loader.dll existem na máquina e qual o binário de teste enxerga primeiro.
+      - name: cargo test do shell (testes cfg(windows))
+        run: |
+          find packages/app/tauri/src-tauri/target -name 'WebView2Loader.dll' || echo 'nenhuma WebView2Loader.dll em target/'
+          ls -la "/c/Program Files (x86)/Microsoft/EdgeWebView/Application" 2>/dev/null | head -5 || true
+          cargo test --manifest-path packages/app/tauri/src-tauri/Cargo.toml --lib
