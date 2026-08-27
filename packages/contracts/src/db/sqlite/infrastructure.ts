@@ -41,6 +41,22 @@ export const outbox = sqliteTable(
 		processedAt: integer('processed_at', { mode: 'timestamp_ms' }),
 		attempts: integer('attempts').notNull().default(0),
 		lastError: text('last_error'),
+		/**
+		 * QUANDO o evento MORREU — esgotou as tentativas e ninguém mais vai entregá-lo.
+		 *
+		 * Existe porque `processed_at` carregava dois significados incompatíveis: "entregue" e
+		 * "desisti". Os dois caminhos escreviam no mesmo campo, então uma linha morta ficava
+		 * indistinguível de uma bem-sucedida e a única evidência sobrava em `last_error` — um campo
+		 * que ninguém consulta sem já suspeitar de algo. Medido em 2026-08-27: 55.082 linhas, 55.082
+		 * "processadas", duas delas mortas havia duas semanas.
+		 *
+		 * Mesmo nome, mesmo tipo e mesma semântica que `agent_mailbox.dead_at`, que já distinguia os
+		 * dois estados — esta coluna não inventa vocabulário, aplica o que a tabela irmã tem.
+		 *
+		 * `last_error` continua sendo o PORQUÊ; esta coluna é o QUE ACONTECEU. A pergunta "há falhas
+		 * silenciosas?" passa a ser `WHERE dead_at IS NOT NULL`.
+		 */
+		deadAt: integer('dead_at', { mode: 'timestamp_ms' }),
 		// Lease-based claim (go-domain-design.md §3(c), NO consumer-groups): a
 		// consumer claims a batch by stamping claimedBy (an opaque per-claim token)
 		// and leaseUntil (now + lease). A row is (re)claimable while processedAt IS

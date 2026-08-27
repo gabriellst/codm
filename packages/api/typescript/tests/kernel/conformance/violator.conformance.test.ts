@@ -174,6 +174,7 @@ describe('violator — a suíte de OUTBOX também morde', () => {
 				attempts: row.attempts ?? 0,
 				leaseUntil: row.leaseUntil ?? null,
 				processedAt: row.processedAt ?? null,
+				deadAt: row.deadAt ?? null,
 			})
 		},
 		readOutboxRow: async (d, id) => {
@@ -185,6 +186,7 @@ describe('violator — a suíte de OUTBOX também morde', () => {
 						source: found.source,
 						attempts: found.attempts,
 						processedAt: found.processedAt,
+						deadAt: found.deadAt,
 						lastError: found.lastError,
 						claimedBy: found.claimedBy,
 					}

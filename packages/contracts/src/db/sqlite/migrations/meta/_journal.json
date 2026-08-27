@@ -169,6 +169,13 @@
       "when": 1787728722362,
       "tag": "0023_fancy_human_cannonball",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1787813298561,
+      "tag": "0024_naive_blue_marvel",
+      "breakpoints": true
     }
   ]
 }

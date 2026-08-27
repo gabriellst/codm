@@ -1,0 +1,1 @@
+ALTER TABLE "shared"."outbox" ADD COLUMN "dead_at" timestamp with time zone;

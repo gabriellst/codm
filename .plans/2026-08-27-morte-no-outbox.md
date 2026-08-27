@@ -306,7 +306,7 @@ git commit -m "feat(core): a lane TypeScript marca morte com dead_at, não com p
 **Depends on:** T1
 **Consumes (frozen):** a coluna `dead_at` de `shared_outbox`, congelada por T1 e já espelhada no `//go:embed` do gateway; `sqliteMaxAttempts` (`sqlite_outbox_dispatcher.go:24`).
 **Scope fence:** DONE — a coluna e o espelho da migração são de T1. OUT — a lane TypeScript (Task T2) e o health check (T4). NÃO altere `markProcessed`: o caminho de sucesso continua carimbando apenas `processed_at`.
-**Gate:** `cd packages/api/go && go test ./core/services/outbox/... -count=1 -race`
+**Gate:** `cd packages/api/go/core && go test ./services/outbox/... -count=1 -race`
 
 ### Step T3.1 — Reescrever a asserção do teste que codifica o contrato antigo
 
@@ -320,7 +320,7 @@ Leia o `select` do helper de leitura no topo do arquivo (`SELECT attempts, last_
 
 ### Step T3.2 — Rodar e ver falhar
 
-Run: `cd packages/api/go && go test ./core/services/outbox/... -count=1`
+Run: `cd packages/api/go/core && go test ./services/outbox/... -count=1`
 Expected: FAIL — `dead_at` vem nulo e `processed_at` preenchido, porque o `fail()` ainda carimba o campo antigo.
 
 ### Step T3.3 — O dead-letter do Go carimba dead_at
@@ -337,12 +337,12 @@ Sem isto, o passo anterior faria uma linha morta voltar a ser reivindicada para 
 
 ### Step T3.5 — Rodar e ver passar
 
-Run: `cd packages/api/go && go test ./core/services/outbox/... -count=1 -race`
+Run: `cd packages/api/go/core && go test ./services/outbox/... -count=1 -race`
 Expected: PASS. Rode com `-count=1` para não pegar cache e com `-race` porque o despachante tem concorrência.
 
 ### Step T3.6 — Suíte Go completa
 
-Run: `cd packages/api/go && go build ./... && bun x nx run api-go:test`
+Run: `cd packages/api/go/core && go build ./... && cd .. && bun x nx run api-go:test`
 Expected: build limpo e suíte verde.
 
 ### Step T3.7 — Commit
@@ -414,7 +414,7 @@ git commit -m "feat(shared): health check publica a contagem de eventos mortos n
 - [ ] `bun lint` — lint clean
 - [ ] `bun run test` — todos os testes passam
 - [ ] `bun run --cwd packages/contracts db:check-go` — as duas cópias da migração byte-a-byte iguais
-- [ ] `cd packages/api/go && go test ./core/services/outbox/... -count=1 -race` — a lane Go verde sob detector de race
+- [ ] `cd packages/api/go/core && go test ./services/outbox/... -count=1 -race` — a lane Go verde sob detector de race
 - [ ] `bun run detect` — os sete detectores mecânicos limpos
 - [ ] AC mapping (cada AC da spec → ≥1 verificação):
   - AC-1 → `bun run --cwd packages/contracts db:check-go` (Step T1.3) + a coluna confirmada no Step T1.5

@@ -27,6 +27,7 @@ export interface SeedOutboxRow {
 	attempts?: number
 	leaseUntil?: Date | null
 	processedAt?: Date | null
+	deadAt?: Date | null
 }
 
 /** O que o teste precisa ler de volta. Deliberadamente pobre: só o que as propriedades exigem. */
@@ -35,6 +36,7 @@ export interface OutboxRowSnapshot {
 	source: string
 	attempts: number
 	processedAt: Date | null
+	deadAt: Date | null
 	lastError: string | null
 	claimedBy: string | null
 }
