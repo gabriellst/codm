@@ -1,3 +1,10 @@
+# `name` PINA o project namespace do compose. Sem ele o compose deriva o nome do DIRETÓRIO deste
+# arquivo — `docker` — e QUALQUER outro repo cujo compose também more em `docker/` cai no MESMO
+# namespace: o `stack:up` daqui ADOTA os containers do outro (renomeia para `${PROJECT}-${SERVICE}-*`
+# e recria), e o outro repo perde a stack sem nada reportar o porquê. Já aconteceu com um monorepo
+# vizinho. O nome é o único ponto onde isso se corta.
+name: codm
+
 services:
   lgtm:
     build:
