@@ -67,6 +67,6 @@ export class LibSqlOpenIssuesReader extends OpenIssuesReader {
 			.limit(1)
 		const row = rows[0]
 		if (!row) return undefined
-		return { issueId: row.issueId, key: row.key, title: row.title, completed: row.status === IssueStatus.COMPLETED }
+		return { issueId: row.issueId, key: row.key, title: row.title, needsReopen: row.status !== IssueStatus.WORKING }
 	}
 }

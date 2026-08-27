@@ -53,10 +53,11 @@ export class SteerIssueTurn extends Handler<typeof SteerIssueTurnInputSchema, ty
 		}
 
 		return this.withTransaction(tx, async tx => {
-			// Só reabre o que está concluído: chamar `reopen()` numa issue em `WORKING` levantaria
-			// `ISSUE_NOT_COMPLETED` e derrubaria um steer perfeitamente válido de trabalho em andamento,
-			// que é o caso mais comum deste endpoint.
-			if (target.completed) {
+			// Só reabre o que NÃO está trabalhando: chamar `reopen()` numa issue em `WORKING` levantaria
+			// `ISSUE_NOT_REOPENABLE` e derrubaria um steer perfeitamente válido de trabalho em andamento,
+			// que é o caso mais comum deste endpoint. A pergunta vem pronta do reader — este contexto não
+			// olha o ciclo de vida da issue, só o que fazer antes de enfileirar.
+			if (target.needsReopen) {
 				await this.reopenIssue.execute({ ownerId: input.ownerId, issueId: input.issueId }, tx)
 			}
 
