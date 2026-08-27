@@ -27,6 +27,7 @@ export interface SeedOutboxRow {
 	attempts?: number
 	leaseUntil?: Date | null
 	processedAt?: Date | null
+	deadAt?: Date | null
 }
 
 /** O que o teste precisa ler de volta. Deliberadamente pobre: só o que as propriedades exigem. */
@@ -35,6 +36,7 @@ export interface OutboxRowSnapshot {
 	source: string
 	attempts: number
 	processedAt: Date | null
+	deadAt: Date | null
 	lastError: string | null
 	claimedBy: string | null
 }
@@ -139,8 +141,18 @@ export const OUTBOX_CHECKS: Readonly<Record<string, OutboxCheck>> = {
 			problems.push('a linha envenenada foi DELETADA — o incidente ficou sem evidência, e ninguém consegue auditar o que morreu')
 			return problems
 		}
-		if (after.processedAt === null)
-			problems.push('a linha envenenada não foi finalizada — fica invisível para sempre, nem reivindicável nem terminal')
+		// `processed_at` e `dead_at` são dois predicados terminais DISTINTOS, não um só com dois
+		// nomes: `processed_at` significa "entreguei", `dead_at` significa "desisti". Uma linha
+		// envenenada nunca foi entregue — TODA família precisa terminalizá-la via `dead_at`, com
+		// `processed_at` permanecendo NULO. Foi carimbar `processed_at` numa morte que tornou uma
+		// morte indistinguível de uma entrega: 55.082 linhas "processadas" em produção, duas das
+		// quais mortas de verdade e invisíveis por duas semanas. Ver TASK T1/T3b.
+		if (after.deadAt === null)
+			problems.push('a linha envenenada não foi finalizada via `dead_at` — fica invisível para sempre, nem reivindicável nem terminal')
+		if (after.processedAt !== null)
+			problems.push(
+				'a linha envenenada carimbou `processed_at` — morte indistinguível de entrega, exatamente o defeito que dead_at existe para eliminar',
+			)
 		if (after.lastError === null || !after.lastError.includes('poison')) {
 			problems.push(`a linha envenenada não registrou POR QUE morreu (last_error=${String(after.lastError)})`)
 		}

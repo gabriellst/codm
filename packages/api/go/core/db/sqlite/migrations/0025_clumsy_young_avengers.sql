@@ -1,0 +1,1 @@
+ALTER TABLE `shared_outbox` ADD `dead_at` integer;

@@ -60,6 +60,9 @@ export const outbox = sharedSchema.table(
 		processedAt: timestamp('processed_at', { withTimezone: true, mode: 'date' }),
 		attempts: integer('attempts').notNull().default(0),
 		lastError: text('last_error'),
+		// QUANDO o evento MORREU — ver o docblock gêmeo em `db/schema/infrastructure.ts` (sqlite) para
+		// o porquê. Mesmo nome, mesmo papel, mesma semântica que `scheduled_commands.dead_at` acima.
+		deadAt: timestamp('dead_at', { withTimezone: true, mode: 'date' }),
 		// Lease-based claim (NO consumer-groups): a consumer claims a batch by stamping claimedBy (an
 		// opaque per-claim token) and leaseUntil (now + lease). A row is (re)claimable while
 		// processedAt IS NULL AND (leaseUntil IS NULL OR leaseUntil < now) — so a crashed consumer's

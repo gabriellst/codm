@@ -6,7 +6,9 @@ import { join } from 'node:path'
  * RAIL (spec D14/AC-4): `process.env.` fora do módulo Config é proibido em src/. O Config tipado
  * (`RawEnvSchema`) é a única porta de entrada de ambiente — um site cru é um eixo paralelo em
  * gestação (foi assim que nasceram mais de um flag de teste solto por aí, extintos desde). Exceções
- * vivem no INVENTORY (shrink-only, motivo inline); a lista vazia é o estado final.
+ * vivem no INVENTORY (shrink-only, motivo inline) e o estado final é a lista VAZIA — que é onde
+ * ela está. Até `ComSpec`, que o próprio Windows define, entrou pela porta tipada em vez de virar
+ * exceção aqui (ver `Config.ts`): se o valor tem dono declarado, ele passa pelo Config.
  */
 const SRC = join(import.meta.dir, '../../src')
 const INVENTORY: string[] = []

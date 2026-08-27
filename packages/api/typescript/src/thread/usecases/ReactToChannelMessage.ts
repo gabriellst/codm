@@ -10,6 +10,16 @@ export const ReactToChannelMessageInputSchema = z.object({
 	messageId: z.string(),
 	fromMe: z.boolean(),
 	/**
+	 * WHO wrote the target message — the part of the WhatsApp message key that decides whether a
+	 * reaction lands in a GROUP (see `ReactToChannelMessageInput`).
+	 *
+	 * OPTIONAL, and the two reasons it may be absent are both legitimate rather than defensive: a
+	 * `fromMe` target is resolved from the device's own JID by the gateway, and a command row enqueued
+	 * before this field existed simply does not carry one — it must keep working, which is what an
+	 * optional field (rather than a required one with a placeholder) buys.
+	 */
+	senderExternalId: z.string().optional(),
+	/**
 	 * The emoji, carried rather than hardcoded. Decision 11 wants a SECOND cue on the way out (the
 	 * "needs you" signal when a turn ends in a stop) and the platform replaces a sender's reaction on
 	 * resend — so the same command serves both, and the swap costs an argument.
@@ -54,11 +64,13 @@ export class ReactToChannelMessage extends Handler<typeof ReactToChannelMessageI
 	}
 
 	protected async handle(input: this['input']): Promise<void> {
-		const { ownerId, channelId, remoteId, messageId, fromMe, reaction } = input
+		const { ownerId, channelId, remoteId, messageId, fromMe, senderExternalId, reaction } = input
 
 		// EXTERNAL I/O, NO TRANSACTION AT ALL — this command touches no table. Nothing to commit,
 		// nothing to roll back, and nothing that a failure here could leave half-written.
-		const outcome = await tryCatchAsync(() => this.sender.react({ channelId, remoteId, messageId, fromMe, reaction }, ownerId))
+		const outcome = await tryCatchAsync(() =>
+			this.sender.react({ channelId, remoteId, messageId, fromMe, senderExternalId, reaction }, ownerId),
+		)
 
 		if (!outcome.success) {
 			// INFO, not error: the operator has nothing to do about a missing emoji, and an ERROR line

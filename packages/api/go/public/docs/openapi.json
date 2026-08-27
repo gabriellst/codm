@@ -1903,6 +1903,10 @@
                   "remoteId": {
                     "example": "5511999999999@s.whatsapp.net",
                     "type": "string"
+                  },
+                  "senderId": {
+                    "example": "5511999999999@s.whatsapp.net",
+                    "type": "string"
                   }
                 },
                 "required": [

@@ -290,7 +290,7 @@ CREATE TABLE "shared_outbox" (
 	"attempts" integer DEFAULT 0 NOT NULL,
 	"last_error" text,
 	"created_at" integer NOT NULL
-, "claimed_by" text, "lease_until" integer);
+, "claimed_by" text, "lease_until" integer, "dead_at" integer);
 CREATE TABLE "shared_scheduled_commands" (
 	"id" text PRIMARY KEY NOT NULL,
 	"name" text NOT NULL,

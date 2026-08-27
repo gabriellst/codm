@@ -40,9 +40,24 @@ export interface ReactToChannelMessageInput extends ChannelConversation {
 	messageId: string
 	/**
 	 * Whether the target message is one THIS account sent. WhatsApp addresses a reaction by the full
-	 * message KEY (remote + fromMe + id), not by the id alone, so a wrong `fromMe` targets nothing.
+	 * message KEY (remote + fromMe + id + participant), not by the id alone, so a wrong `fromMe`
+	 * targets nothing.
 	 */
 	fromMe: boolean
+	/**
+	 * WHO wrote the message being reacted to — the fourth part of that key, and the reason a `👀` used
+	 * to vanish in every GROUP.
+	 *
+	 * In a group `remoteId` is the GROUP jid, not the author's, so the gateway had nothing but the chat
+	 * to fill the key's `participant` slot with — and a key whose participant is the group addresses no
+	 * message at all. In a DM the two coincide, which is exactly why only groups broke.
+	 *
+	 * OPTIONAL because it is only ever needed for someone ELSE's message: a `fromMe: true` target is
+	 * resolved from the device's own JID by the gateway (that is how `CUE_REPLIED` has always worked),
+	 * and an absent author keeps the historical chat-JID fallback — so a cue command enqueued before
+	 * this field existed still behaves exactly as it did.
+	 */
+	senderExternalId?: string
 	/**
 	 * The emoji. One reaction per sender per message, REPLACED on resend — which is what makes the
 	 * cue's lifecycle free (spec decision 11): swapping `👀` for a later signal costs one more call,

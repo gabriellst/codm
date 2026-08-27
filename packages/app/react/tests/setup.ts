@@ -35,6 +35,35 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 /**
+ * A COBERTURA DESTA INVOCAÇÃO, DITA EM VOZ ALTA — porque "verde" aqui não quer dizer "tudo passou".
+ *
+ * `bunfig.toml` exclui `**\/*.services.test.tsx` da suíte PADRÃO (cada um desses arquivos boota o
+ * gateway Go de verdade e precisa de um processo só seu — ver o docblock de `scripts/test-cross-service.ts`).
+ * Quem roda `bun test` vê um verde que NÃO executou nenhum deles.
+ *
+ * Isso não é hipotético: em 27/08 um teste `.services.test.tsx` ficou vermelho na CI e a
+ * investigação local rodou `bun test`, viu "302 pass, 0 fail" e concluiu que não reproduzia — o
+ * arquivo vermelho nunca tinha rodado. Foram vários passos gastos contra a suíte errada.
+ *
+ * Uma linha no começo da execução custa nada e fecha esse buraco no ponto de uso. O runner
+ * cross-service DECLARA `CODM_CROSS_SERVICE=1` ao invocar cada arquivo — ali não há nada a avisar,
+ * porque aquela invocação é justamente a que roda essas suítes. A declaração é explícita de
+ * propósito: a primeira versão tentou farejar a flag `--path-ignore-patterns` em `process.argv` e
+ * não funcionou, porque o bun não a expõe lá — inferir de convenção falhou, declarar não falha.
+ */
+const runningExcludedSuites = process.env.CODM_CROSS_SERVICE === '1'
+if (!runningExcludedSuites) {
+	const excluded = [...new Bun.Glob('src/**/*.services.test.tsx').scanSync(new URL('..', import.meta.url).pathname)]
+	if (excluded.length > 0) {
+		console.warn(
+			`[tests/setup] ${excluded.length} suíte(s) .services.test.tsx NÃO rodam nesta invocação ` +
+				`(bunfig.toml as exclui — cada uma boota o gateway Go num processo próprio).\n` +
+				`[tests/setup] Verde aqui NÃO cobre essas. Para rodá-las: bun run test:cross-service`,
+		)
+	}
+}
+
+/**
  * A DOM for the console's tests, registered as a bun PRELOAD (see `bunfig.toml`) so it exists before
  * any module — React's included — is evaluated.
  *

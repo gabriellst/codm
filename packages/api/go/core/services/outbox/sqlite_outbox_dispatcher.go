@@ -178,6 +178,7 @@ func (d *SqliteOutboxDispatcher) claim(ctx context.Context) ([]outboxRow, error)
 		     SELECT id FROM shared_outbox
 		     WHERE source = ?
 		       AND processed_at IS NULL
+		       AND dead_at IS NULL
 		       AND (lease_until IS NULL OR lease_until < ?)
 		     ORDER BY created_at
 		     LIMIT ?
@@ -252,9 +253,12 @@ func (d *SqliteOutboxDispatcher) fail(ctx context.Context, r outboxRow, cause er
 	if attempts >= sqliteMaxAttempts {
 		slog.Warn("sqlite outbox dispatcher: dead-lettering event",
 			"id", r.id, "event", r.name, "attempts", attempts, "error", cause)
-		// processed_at set → stops being claimed; last_error kept for audit.
+		// dead_at set → the claim query excludes it, so it stops being claimed;
+		// processed_at stays reserved for successful delivery and last_error is kept
+		// for audit. Same processed/dead split as the sibling agent_mailbox table
+		// (consumed_at/dead_at).
 		if _, err := d.db.ExecContext(ctx,
-			`UPDATE shared_outbox SET attempts = ?, last_error = ?, processed_at = ?, claimed_by = NULL WHERE id = ?`,
+			`UPDATE shared_outbox SET attempts = ?, last_error = ?, dead_at = ?, claimed_by = NULL WHERE id = ?`,
 			attempts, cause.Error(), d.now().UnixMilli(), r.id); err != nil {
 			slog.Error("sqlite outbox dispatcher: dead-letter update failed", "id", r.id, "error", err)
 		}

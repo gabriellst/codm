@@ -369,6 +369,24 @@ func (c *WhatsmeowChannel) buildButtonMessage(content gateway.SendButtonContent)
 
 // --- Reaction ---
 
+// buildReactionMessage turns a reaction request into the waE2E message whose KEY
+// points at the message being reacted to.
+//
+// The key is the whole job: `BuildReaction` delegates to `BuildMessageKey`, which
+// reads the `sender` JID to decide both `fromMe` AND — when the chat is not a user
+// server, i.e. a GROUP — the `participant` slot. So the sender we hand it is not a
+// detail, it is the address.
+//
+//	fromMe        → the device's own JID. `participant` is left unset (correct in a
+//	                DM and in a group alike) and `fromMe` comes out true.
+//	someone else  → THE AUTHOR's JID (`Key.SenderID`), so a group reaction lands on
+//	                that participant's message. This is the fix: passing the chat
+//	                JID here put the GROUP in the participant slot and the emoji
+//	                never rendered for anyone.
+//	no author     → the chat JID, the historical fallback. Right in a DM (chat JID
+//	                == the contact) and no worse than before in a group, which is
+//	                what keeps a command row enqueued before `SenderID` existed
+//	                behaving exactly as it did.
 func (c *WhatsmeowChannel) buildReactionMessage(content gateway.SendReactionContent) (*waE2E.Message, error) {
 	chatJID, err := parseOrBuildJID(content.Key.RemoteID)
 	if err != nil {
@@ -376,9 +394,15 @@ func (c *WhatsmeowChannel) buildReactionMessage(content gateway.SendReactionCont
 	}
 
 	var senderJID types.JID
-	if content.Key.FromMe && c.client.Store.ID != nil {
+	switch {
+	case content.Key.FromMe && c.client.Store.ID != nil:
 		senderJID = *c.client.Store.ID
-	} else {
+	case content.Key.SenderID != "":
+		senderJID, err = parseOrBuildJID(content.Key.SenderID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid sender JID for reaction: %w", err)
+		}
+	default:
 		senderJID = chatJID
 	}
 
