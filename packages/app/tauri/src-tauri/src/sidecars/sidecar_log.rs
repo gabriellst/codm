@@ -1,4 +1,4 @@
-//! Sidecar stderr → disk. The persisted twin of `gate.rs`'s in-memory ring buffer.
+//! Sidecar output (stdout + stderr) → disk. The persisted twin of `gate.rs`'s in-memory ring buffer.
 //!
 //! Incident (2026-08-07): an installed app showed the generic boot-error splash ("um ou mais
 //! serviços não responderam em 60s"). The actual cause — the daemon sidecar dying instantly on a
@@ -13,8 +13,8 @@
 //! crash-looping sidecar cannot grow the data dir without limit.
 //!
 //! One divergence from `crash.rs`, on purpose: a panic is a single self-contained payload written
-//! once, but a sidecar's failure is a BUILD-UP of lines across its run (every stderr line, then the
-//! exit line) — so this opens ONE file per sidecar per app boot and appends to it for as long as
+//! once, but a sidecar's failure is a BUILD-UP of lines across its run (every line it printed, then
+//! the exit line) — so this opens ONE file per sidecar per app boot and appends to it for as long as
 //! that process lives, rather than writing once. Rotation is scoped to that sidecar's OWN filename
 //! prefix — a crash-looping daemon must not evict the gateway's only surviving log, or vice versa.
 

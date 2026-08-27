@@ -42,6 +42,7 @@ pub fn specta_builder() -> tauri_specta::Builder {
             secret_delete,
             boot_failures,
             retry_boot,
+            release_data_dir_lock,
             host_ports,
             supervision_state,
             pending_update,
@@ -51,6 +52,7 @@ pub fn specta_builder() -> tauri_specta::Builder {
             window_chrome
         ])
         .events(tauri_specta::collect_events![
+            crate::sidecars::BootFailed,
             crate::sidecars::SupervisionChanged,
             crate::updater::UpdateReady
         ])

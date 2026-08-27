@@ -1,3 +1,5 @@
+import { BaseError } from '@codm/core-typescript'
+
 /**
  * A single, actionable line for the daemon's own boot failure — never the raw Bun/Node stack trace.
  *
@@ -22,6 +24,20 @@ export function formatBootError(error: unknown, port: number): string {
 	if (isAddressInUse(error)) {
 		return `port :${port} is already taken by another process — refusing to boot onto a port this shell does not own`
 	}
+	// A NAMED failure prints as `<CODE>: <message>` — one line, code FIRST, never a stack.
+	//
+	// `BaseError`'s `name` IS the error code (`new BaseError('DATA_DIR_LOCKED', …)`), so this is the
+	// machine-readable half of the boot failure, and the shell reads it back: the boot-error splash
+	// scans this line for a token that parses as a contract error code and, for the ones it knows how
+	// to undo, offers a BUTTON instead of prose (`src-tauri/src/sidecars/remedy.rs` — keep the two in
+	// step, they are a pair).
+	//
+	// Measured on Windows, 2026-08-27: a hung daemon kept the data dir's lockfile, so every later
+	// opening died with `DATA_DIR_LOCKED` naming the offending pid — the whole fix, printed, and
+	// unreachable. `error.stack` would put the code on the first line and a multi-frame trace on the
+	// ones after it, which the splash then renders as "something is badly broken"; the code alone is
+	// what an operator (and this shell) can act on.
+	if (error instanceof BaseError) return `${error.name}: ${error.message}`
 	return error instanceof Error ? (error.stack ?? error.message) : String(error)
 }
 

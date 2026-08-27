@@ -221,16 +221,30 @@ export function OnboardingFlow({ className, ...props }: ComponentProps<'div'>) {
 	// `seededRef` é por instância de componente, então uma NOVA entrada em `/onboarding` sempre semeia
 	// de novo, mas navegar pelos passos dentro da mesma visita não é sobrescrito). Duas coisas são
 	// semeadas na MESMA passada:
-	//   1. o ÍNDICE do slide, via `firstUnvanquishedStep` (Decision 12/AC-10) — inalterado.
+	//   1. o ÍNDICE do slide, via `firstUnvanquishedStep` (Decision 12/AC-10) — só quando o operador
+	//      AINDA não navegou manualmente (ver `manualNavRef` abaixo).
 	//   2. o RASCUNHO do servidor (`onboarding.state`) para dentro de `useOnboardingSetupStore` —
 	//      2026-08-26 fix (draft/atomic-commit): sem isto, um reboot no meio do wizard reabria
 	//      CONTACT/AGENTS/WORKSPACE em branco mesmo com o rascunho salvo no servidor, porque essas
 	//      seleções nunca tinham para onde voltar no cliente. Cada grupo hidrata SÓ se presente — um
 	//      rascunho parcial (ex.: só `providers`) não pisa em campos que o servidor não mandou.
+	//      SEMPRE roda, mesmo com navegação manual — o rascunho é independente de ONDE o operador
+	//      está no wizard.
 	// `pending`/`steps` são recalculados AQUI DENTRO a partir de `pendingStatuses` (a dependência
 	// reativa de verdade) — a versão de fora existe só para o render; usá-la faria o efeito depender
 	// de um array novo a cada render (o `.map()` do corpo do componente) e reexecutar sempre.
+	//
+	// 2026-08-27 fix — `manualNavRef` (setado por `goTo`, abaixo): a leitura de `onboarding` chega
+	// ASSINCRONAMENTE, e nada garante que ela resolva ANTES do primeiro clique do operador. Quando ela
+	// chegava DEPOIS (medido: `index.services.test.tsx`'s "chegam ao rascunho do servidor..." caso,
+	// ~30% em CI/local rodando sozinho), este efeito reexecutava por causa de `onboarding` mudar de
+	// `undefined` para o valor real e chamava `setCurrentSlide(seedIndex)` incondicionalmente — jogando
+	// o wizard DE VOLTA ao passo semeado e perdendo o clique que o operador já tinha dado (o PATCH
+	// duplicado de `currentStep` no teste é o sintoma: o wizard reenviou o mesmo passo porque voltou a
+	// ele). O reposicionamento só faz sentido ANTES de qualquer navegação manual — depois dela, é o
+	// operador quem decide onde está, não a leitura que acabou de chegar.
 	const seededRef = useRef(false)
+	const manualNavRef = useRef(false)
 	useEffect(() => {
 		if (seededRef.current || !onboarding) return
 		seededRef.current = true
@@ -239,6 +253,8 @@ export function OnboardingFlow({ className, ...props }: ComponentProps<'div'>) {
 		if (onboarding.state.providers) setProviders(onboarding.state.providers)
 		if (onboarding.state.workspace?.existingWorkspaceId) setWorkspaceId(onboarding.state.workspace.existingWorkspaceId)
 		else if (onboarding.state.workspace?.path) setWorkspacePath(onboarding.state.workspace.path)
+
+		if (manualNavRef.current) return
 
 		const seedPending = (pendingStatuses ?? []).map(status => status.id)
 		const seedSteps = onboardingSteps(seedPending)
@@ -255,6 +271,10 @@ export function OnboardingFlow({ className, ...props }: ComponentProps<'div'>) {
 	const stepId = steps[index] ?? steps[0]
 
 	const goTo = (target: number) => {
+		// Marca a navegação como MANUAL antes de tudo — vale tanto para "Próximo" quanto para "Voltar"
+		// (ambos chamam `goTo`). É esta marca que o efeito de semeadura acima checa para não pisar de
+		// volta no passo assim que a leitura de onboarding chegar depois deste clique.
+		manualNavRef.current = true
 		const clamped = Math.min(lastIndex, Math.max(0, target))
 		setDirection(target < index ? -1 : 1)
 		setCurrentSlide(clamped)

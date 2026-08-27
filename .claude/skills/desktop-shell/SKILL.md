@@ -146,6 +146,42 @@ the provider, so no route loader can fire before this resolves), and re-`configu
 `computeServiceBaseUrls(hostApiBaseUrl)` (`packages/app/react/src/lib/config.ts` — the ONE formula
 both the default and the runtime override use) when the host supplies one.
 
+## A splash de boot mostra a CAUSA, e oferece a AÇÃO (2026-08-27)
+
+**Incidente.** Um testador em Windows viu `boot-error` dizendo apenas "um ou mais serviços não
+responderam em 60 segundos". Nos logs: o daemon travou num primeiro boot e o processo travado ficou
+VIVO segurando `<dataDir>/daemon.lock`, então TODA abertura seguinte morreu na hora com
+`DATA_DIR_LOCKED: Another daemon is already running on this data dir "…" (pid 16580). Stop the other
+daemon…` — a solução inteira, impressa, e invisível. O operador esperou horas.
+
+**Três regras, cada uma o falseador da anterior.**
+
+1. **PULL sozinho não serve para esta janela.** `boot-error` é DECLARADA em `tauri.conf.json`, então
+   seu webview existe — e o script roda — desde o primeiro instante do processo, enquanto a primeira
+   falha só chega até 60s depois. O `invoke('boot_failures')` de carregamento respondia lista vazia e
+   a página nunca perguntava de novo: título, subtítulo e nada. `sidecars::apply` agora TAMBÉM emite
+   `gate::BootFailed` (evento tipado, `boot-failed`), e a página faz as duas coisas — o `listen`
+   cobre a página que já estava de pé, o `invoke` cobre a que carregou depois do veredito.
+2. **Os DOIS streams do sidecar são capturados** (`CommandEvent::Stdout` deixou de cair no `_ => {}`).
+   Um processo que MORRE grita no stderr; um que TRAVA — o primeiro dominó do incidente — não escreve
+   nada lá, e o que ele imprimiu normalmente é a única prova de até onde chegou. `SidecarFailure` traz
+   os últimos `SPLASH_TAIL_LINES` (30) desse fluxo unificado; o arquivo em `logPath` tem a corrida
+   inteira.
+3. **Uma causa acionável vira BOTÃO, e a detecção é sobre o erro NOMEADO.** `sidecars::remedy` varre
+   a razão + a cauda procurando um token que faça `ApiErrors::from_str` (o enum GERADO do contrato,
+   `codm-client-rust`) — nunca `contains("DATA_DIR_LOCKED")`. Do outro lado da costura,
+   `packages/api/typescript/src/bootError.ts` imprime um `BaseError` como `<CODE>: <message>`, uma
+   linha, código primeiro, sem stack. Um `Remedy` cruza para o webview como enum fechado (specta) e a
+   página só despacha por variante. O que o botão executa REUSA o sweep (`sidecars::reaper`,
+   `commands::release_data_dir_lock`): morre quem tem o caminho de executável exatamente igual ao que
+   este shell spawna, nunca "quem está na porta" nem o pid que a mensagem cita. Sweep vazio é resposta
+   legítima — a tela diz que o dono do lock não é nosso, em vez de reiniciar na mesma tela.
+
+A página é HTML puro em `packages/app/react/public/` (sem bundler, sem i18n do console — pt-BR
+inteiro, e é assim que ela se mantém consistente). Como ela não importa `commands/bindings.ts`, o
+nome do evento e o valor do `Remedy` são literais lá: o teste `the_splash_page_speaks_the_same_names_this_module_emits`
+(`gate.rs`) é o trilho que impede um dos lados de mudar sozinho.
+
 ## Mental model
 
 The **product is the react console**; the shell is plumbing. `packages/app/tauri` may
