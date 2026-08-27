@@ -452,9 +452,16 @@ describe('GetHomeDashboard — a linha do operador tem o rosto da conta conectad
 
 /**
  * `mentionCta` — the dashboard's own "mencione o agente" follow-up (moved here 2026-08-26 from a
- * frontend-only Zustand field that only ever survived one React tick post-onboarding). Three facts
- * gate it: the thread exists, its mention gate is enabled, and nobody carrying `OPERATOR_PARTICIPANT_ID`
- * has ever written a line in it.
+ * frontend-only Zustand field that only ever survived one React tick post-onboarding).
+ *
+ * WHETHER it is owed is ONE owner-wide, one-way fact: nobody carrying `OPERATOR_PARTICIPANT_ID` has
+ * ever written a line in ANY thread of the owner. WHICH thread it names is the mention gate — an
+ * eligibility filter over the owner's live threads, not a second condition on the CTA coming back.
+ *
+ * The two questions are asserted apart on purpose. While the read was per-thread (until 2026-08-27)
+ * every test below still passed, because each one owned a single thread — the shape that cannot tell
+ * "the operator has never spoken" from "the operator has never spoken HERE". It took a second thread
+ * to see it, which is why that case now leads the suite.
  */
 describe('GetHomeDashboard — mentionCta', () => {
 	let testBed: TestBed
@@ -473,6 +480,63 @@ describe('GetHomeDashboard — mentionCta', () => {
 
 	const dashboard = () => testBed.resolve(GetHomeDashboard).execute({ ownerId: MOCK_CLOUD_OWNER_ID })
 
+	/**
+	 * THE REGRESSION THAT MADE THIS FIRST-RUN-GLOBAL. The operator talks to the agent in one thread —
+	 * first run over, for good — and then attaches a second conversation, which is necessarily empty.
+	 * Under the per-thread rule that empty thread qualified (gated, no operator line of its OWN), so
+	 * the dashboard told a long-time user to "fale com o agente pela primeira vez" every time they
+	 * added a contact. Two threads is the minimum shape that can catch it.
+	 */
+	it('never returns once the operator has spoken anywhere — not even for a brand-new empty thread', async () => {
+		const workspace = await givenWorkspace(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const spokenIn = await givenThread(testBed, {
+			ownerId: MOCK_CLOUD_OWNER_ID,
+			workspaceId: workspace.id.value,
+			contactExternalId: 'old-friend',
+		})
+		spokenIn.recordEntry({
+			kind: TranscriptKind.CONTACT,
+			text: '@test-workspace oi',
+			senderExternalId: OPERATOR_PARTICIPANT_ID,
+			at: new Date(),
+		})
+		await testBed.resolve(ThreadRepository).save(spokenIn)
+
+		// Attached afterwards, so it also wins the most-recently-created tie-break the CTA used to pick by.
+		await new Promise(resolve => setTimeout(resolve, 5))
+		await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, workspaceId: workspace.id.value, contactExternalId: 'brand-new' })
+
+		expect((await dashboard()).mentionCta).toBeUndefined()
+	})
+
+	/**
+	 * The fact is "has this operator ever spoken", not "is there a live thread they spoke in" — so the
+	 * owner-wide read is deliberately NOT joined onto `threads`. Deleting the conversation does not
+	 * unspeak the line, and a rule that let it would hand the per-thread bug back in a smaller form:
+	 * delete the thread you talked in, and the first-run banner returns.
+	 */
+	it('stays retired when the only thread the operator spoke in was since deleted', async () => {
+		const workspace = await givenWorkspace(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const repo = testBed.resolve(ThreadRepository)
+		const spokenIn = await givenThread(testBed, {
+			ownerId: MOCK_CLOUD_OWNER_ID,
+			workspaceId: workspace.id.value,
+			contactExternalId: 'gone',
+		})
+		spokenIn.recordEntry({
+			kind: TranscriptKind.CONTACT,
+			text: '@test-workspace oi',
+			senderExternalId: OPERATOR_PARTICIPANT_ID,
+			at: new Date(),
+		})
+		spokenIn.delete()
+		await repo.save(spokenIn)
+
+		await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, workspaceId: workspace.id.value, contactExternalId: 'still-here' })
+
+		expect((await dashboard()).mentionCta).toBeUndefined()
+	})
+
 	it('surfaces a freshly attached thread — gated, untouched by the operator', async () => {
 		const workspace = await givenWorkspace(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
 		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, workspaceId: workspace.id.value })
@@ -483,7 +547,7 @@ describe('GetHomeDashboard — mentionCta', () => {
 	})
 
 	/** The operator pasting the mention into the channel is exactly what satisfies this CTA. */
-	it('disappears once the operator has written a line in the thread — any kind, any device', async () => {
+	it('disappears once the operator has written a line — any kind, any device', async () => {
 		const workspace = await givenWorkspace(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
 		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, workspaceId: workspace.id.value })
 		thread.recordEntry({
@@ -510,6 +574,7 @@ describe('GetHomeDashboard — mentionCta', () => {
 		expect((await dashboard()).mentionCta).toEqual({ threadId: thread.id.value, tag: GIVEN_MENTION_TAG })
 	})
 
+	/** The gate decides WHICH thread has something to paste — a thread without one is not eligible. */
 	it('is absent when the operator has turned the mention gate off', async () => {
 		const workspace = await givenWorkspace(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
 		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, workspaceId: workspace.id.value })
@@ -524,12 +589,12 @@ describe('GetHomeDashboard — mentionCta', () => {
 	})
 
 	/**
-	 * Two qualifying threads: the most recently CREATED one wins, not an arbitrary row order. The
+	 * Two eligible threads: the most recently CREATED one wins, not an arbitrary row order. The
 	 * `createdAt` column is millisecond-resolution `$defaultFn(() => new Date())` — a real gap between
 	 * the two writes (not just two ticks of the same microtask queue) is what makes the tie-break
 	 * observable at all.
 	 */
-	it('picks the most recently created qualifying thread when more than one is untouched', async () => {
+	it('names the most recently created eligible thread when more than one is on offer', async () => {
 		const workspace = await givenWorkspace(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
 		await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, workspaceId: workspace.id.value, contactExternalId: 'older' })
 		await new Promise(resolve => setTimeout(resolve, 5))

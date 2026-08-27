@@ -92,29 +92,38 @@ export const GetHomeDashboardOutputSchema = z.object({
 	today: z.object({ issuesOpened: z.number().int(), issuesClosed: z.number().int(), medianResponseSeconds: z.number() }),
 	channels: z.array(z.object({ kind: z.enum(ChannelKind), status: z.enum(ChannelStatus) })),
 	/**
-	 * THE "MENCIONE O AGENTE" CTA (dashboard follow-up to onboarding, 2026-08-26) — the one thread, if
-	 * any, the operator still hasn't actually talked to the agent in. Absent once satisfied (same
-	 * optional-field shape as `needsYou` above), never a boolean the frontend would have to pair with a
-	 * second lookup.
+	 * THE "MENCIONE O AGENTE" CTA (dashboard follow-up to onboarding, 2026-08-26) — the FIRST-RUN
+	 * prompt, and only that: it ends the moment the operator first speaks to the agent, anywhere.
+	 * Absent once satisfied (same optional-field shape as `needsYou` above), never a boolean the
+	 * frontend would have to pair with a second lookup.
 	 *
-	 * A thread qualifies when THREE facts hold at once: it exists (not soft-deleted — same predicate as
-	 * every other read here), its mention gate is `enabled` (a thread born from `AttachThread` always
-	 * is — see `Thread.create`), and NOBODY carrying `OPERATOR_PARTICIPANT_ID` has ever written a line
-	 * in it. That sentinel is the one column that means "the operator, from any device" — the exact
-	 * fact this CTA exists to drive to `true` (the operator pastes `tag` into the channel to invoke the
-	 * agent for the first time). It is NOT "the transcript is empty": a thread attached to an
-	 * already-busy group can carry plenty of other people's lines and still owe this CTA.
+	 * WHETHER IT APPEARS IS ONE OWNER-WIDE, ONE-WAY FACT: it is owed only while NOBODY carrying
+	 * `OPERATOR_PARTICIPANT_ID` has ever written a line in ANY thread of this owner. That sentinel is
+	 * the one column that means "the operator, from any device" — the exact fact this CTA exists to
+	 * drive to `true` (the operator pastes `tag` into the channel to invoke the agent for the first
+	 * time). Once true it stays true; the phrase never comes back.
 	 *
-	 * Was frontend-only state until this date (`OnboardingFinalStep` read a `threadId` stashed on a
+	 * It was PER-THREAD until 2026-08-27, and per-thread is what made it lie: the read returned the
+	 * most recent gated thread the operator had not spoken in, so attaching any new — therefore empty
+	 * — conversation resurrected "fale com o agente pela primeira vez" for someone who had been
+	 * talking to the agent for weeks. A first run happens once per OPERATOR, not once per thread.
+	 *
+	 * The mention gate is therefore an ELIGIBILITY filter over WHICH thread to name, never a condition
+	 * on the CTA returning: among the owner's live threads (not soft-deleted — same predicate as every
+	 * other read here) it keeps those whose gate is `enabled` and that carry a `tag` to paste — a
+	 * thread born from `AttachThread` always does (see `Thread.create`). "Has any traffic" is still NOT
+	 * the test either: a thread attached to an already-busy group carries plenty of other people's
+	 * lines and, until the operator themselves speaks, still owes this CTA.
+	 *
+	 * Was frontend-only state until 2026-08-26 (`OnboardingFinalStep` read a `threadId` stashed on a
 	 * Zustand store by `OnboardingFlow`'s `onSuccess`) — moved server-side because the dashboard route
 	 * mounts on a fresh page load with no such store entry to read, and the repo's own rule is that a
 	 * "has this operator done X yet" fact is server-authoritative, not something the frontend
 	 * synthesizes from a value that only existed for one React tick.
 	 *
-	 * Picks the MOST RECENTLY CREATED qualifying thread when more than one exists — mirrors
-	 * `allThreads`' own "most recently active first" ordering one field up: a fresh onboarding thread is
-	 * far more likely to be the one the operator is looking at than an old one that happens to still be
-	 * gated and untouched.
+	 * Names the MOST RECENTLY CREATED eligible thread when more than one exists — mirrors `allThreads`'
+	 * own "most recently active first" ordering one field up: a fresh onboarding thread is far more
+	 * likely to be the one the operator is looking at than an old one that happens to still be gated.
 	 */
 	mentionCta: z.object({ threadId: z.uuid(), tag: z.string() }).optional(),
 })
@@ -289,27 +298,35 @@ export class GetHomeDashboard extends Handler<typeof GetHomeDashboardInputSchema
 		}
 	}
 
-	/** See `GetHomeDashboardOutputSchema.mentionCta`'s own docblock for the three-fact rule this picks. */
+	/** See `GetHomeDashboardOutputSchema.mentionCta`'s own docblock for the first-run rule this reads. */
 	private async buildMentionCta(
 		ownerId: string,
 		threadRows: { threadId: string; createdAt: Date; mentionGateEnabled: boolean; mentionGateTag: string | null }[],
 	): Promise<{ threadId: string; tag: string } | undefined> {
-		const gated = threadRows.filter(t => t.mentionGateEnabled && t.mentionGateTag)
-		if (gated.length === 0) return undefined
-
-		// One query for every thread the operator has EVER written a line in — never per-thread, and
-		// never limited to `latestActivity`'s own 8-row window (an old thread's only operator line could
-		// easily have scrolled off it).
-		const spokenIn = await this.driver.db
-			.selectDistinct({ threadId: transcriptEntries.threadId })
+		// THE FIRST-RUN QUESTION, asked OWNER-WIDE and answered before any thread is looked at: has this
+		// operator ever spoken to the agent at all? One line anywhere retires the CTA for good.
+		//
+		// Deliberately NOT scoped to a thread and NOT joined onto `threads`. Both narrowings bring the
+		// per-thread bug back in a smaller form — the line the operator wrote in a conversation they
+		// later attached over, or deleted, still happened, and this field asks what the operator has
+		// done, not what their live thread list looks like. Nor is it limited to `latestActivity`'s
+		// 8-row window: an old first line has long scrolled off it.
+		//
+		// `limit(1)` because existence is the entire answer.
+		const [spoken] = await this.driver.db
+			.select({ id: transcriptEntries.id })
 			.from(transcriptEntries)
 			.where(and(eq(transcriptEntries.ownerId, ownerId), eq(transcriptEntries.senderExternalId, OPERATOR_PARTICIPANT_ID)))
-		const spokenThreadIds = new Set(spokenIn.map(r => r.threadId))
+			.limit(1)
+		if (spoken) return undefined
 
-		const candidates = gated.filter(t => !spokenThreadIds.has(t.threadId))
-		if (candidates.length === 0) return undefined
+		// Only now does the mention gate speak, and only to pick WHICH thread the CTA names: the `tag` is
+		// what the operator has to paste, so a thread without an enabled gate carrying one has nothing to
+		// show — an eligibility filter, never a reason for the CTA to return later.
+		const eligible = threadRows.filter(t => t.mentionGateEnabled && t.mentionGateTag)
+		if (eligible.length === 0) return undefined
 
-		const mostRecent = [...candidates].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]!
+		const mostRecent = [...eligible].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]!
 		return { threadId: mostRecent.threadId, tag: mostRecent.mentionGateTag! }
 	}
 
