@@ -37,6 +37,10 @@ export type SendReactionMutationRequest = {
      * @type string
     */
     remoteId: string;
+    /**
+     * @type string | undefined
+    */
+    senderId?: string;
 };
 
 export type SendReactionMutationResponse = SendReaction200;

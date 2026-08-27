@@ -4333,11 +4333,12 @@ type SendChatPresenceJSONBody struct {
 
 // SendReactionJSONBody defines parameters for SendReaction.
 type SendReactionJSONBody struct {
-	ChannelId string `json:"channelId"`
-	FromMe    *bool  `json:"fromMe,omitempty"`
-	MessageId string `json:"messageId"`
-	Reaction  string `json:"reaction"`
-	RemoteId  string `json:"remoteId"`
+	ChannelId string  `json:"channelId"`
+	FromMe    *bool   `json:"fromMe,omitempty"`
+	MessageId string  `json:"messageId"`
+	Reaction  string  `json:"reaction"`
+	RemoteId  string  `json:"remoteId"`
+	SenderId  *string `json:"senderId,omitempty"`
 }
 
 // SendStatusJSONBody defines parameters for SendStatus.

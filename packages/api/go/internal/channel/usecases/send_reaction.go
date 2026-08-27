@@ -17,7 +17,12 @@ type SendReactionInput struct {
 	RemoteID  string `validate:"required"`
 	MessageID string `validate:"required"`
 	FromMe    bool
-	Reaction  string `validate:"required"`
+	// SenderID is the JID of whoever AUTHORED the target message — the fourth
+	// part of the WhatsApp message key (see gateway.SendReactionKey). Optional:
+	// a `FromMe` target resolves its author from the device, and a caller that
+	// omits it keeps the historical chat-JID fallback.
+	SenderID string
+	Reaction string `validate:"required"`
 }
 
 type SendReactionOutput struct {
@@ -59,7 +64,7 @@ func (h *SendReactionHandler) Execute(ctx context.Context, input SendReactionInp
 	}
 
 	content := gateway.SendReactionContent{
-		Key:      gateway.SendReactionKey{RemoteID: input.RemoteID, FromMe: input.FromMe, ID: input.MessageID},
+		Key:      gateway.SendReactionKey{RemoteID: input.RemoteID, FromMe: input.FromMe, ID: input.MessageID, SenderID: input.SenderID},
 		Reaction: input.Reaction,
 	}
 

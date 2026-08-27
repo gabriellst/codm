@@ -15,7 +15,12 @@ type SendReactionRequest struct {
 	RemoteID  string `from:"body" json:"remoteId"    validate:"required" example:"5511999999999@s.whatsapp.net"`
 	MessageID string `from:"body" json:"messageId"    validate:"required" example:"3EB0B430A6B7FBEC1200"`
 	FromMe    bool   `from:"body" json:"fromMe"       example:"true"`
-	Reaction  string `from:"body" json:"reaction"     validate:"required" example:"👍"`
+	// SenderID is the JID of whoever AUTHORED the target message — the part of the
+	// WhatsApp message key that makes a reaction stick on someone else's message in
+	// a GROUP, where the chat JID is the group and not the author. Optional: a
+	// `fromMe` target needs no author, and a DM's chat JID already is one.
+	SenderID string `from:"body" json:"senderId"     example:"5511999999999@s.whatsapp.net"`
+	Reaction string `from:"body" json:"reaction"     validate:"required" example:"👍"`
 }
 
 type SendReactionController struct {
@@ -56,6 +61,7 @@ func (c *SendReactionController) Handle(w http.ResponseWriter, r *http.Request) 
 		RemoteID:  req.RemoteID,
 		MessageID: req.MessageID,
 		FromMe:    req.FromMe,
+		SenderID:  req.SenderID,
 		Reaction:  req.Reaction,
 	})
 	if err != nil {
