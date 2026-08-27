@@ -182,8 +182,10 @@ export class PgOutboxDispatcher extends OutboxDispatcher implements PollingServi
 	 * would re-claim at attempts=0 after every lease expiry — an unbreakable crash loop with no
 	 * dead-letter. `attempts` therefore means "executions STARTED", exactly as documented on the
 	 * LibSqlCommandQueue claim, which is where this repo first paid for the lesson. The predicate
-	 * `attempts < MAX_ATTEMPTS` is therefore a CRASH-LOOP CEILING, not a terminal state: the only
-	 * terminal predicate is `processed_at IS NOT NULL`.
+	 * `attempts < MAX_ATTEMPTS` is therefore a CRASH-LOOP CEILING, not a terminal state: there are
+	 * two terminal predicates now, `processed_at IS NOT NULL` (delivered) and `dead_at IS NOT NULL`
+	 * (gave up) — collapsing them back into one column is exactly what made a dead-lettered row
+	 * indistinguishable from a delivered one.
 	 *
 	 * KNOWN DIVERGENCE FROM THE GO DISPATCHER, deliberate: `sqlite_outbox_dispatcher.go` still
 	 * increments in its failure path only, so the gateway lane keeps the unbounded crash loop. That
@@ -197,11 +199,18 @@ export class PgOutboxDispatcher extends OutboxDispatcher implements PollingServi
 			// POISON SWEEP, before the claim. A row that burned its budget by crashing the process is
 			// neither claimable (ceiling reached) nor terminal (never finalized) — it would sit there
 			// invisible forever. Mirror of the dead-letter sweep the command queue already runs.
+			// Dies as `dead_at`, not `processed_at` — same reasoning as finalize's dead-letter branch
+			// below: a poisoned row is neither delivered nor claimable, and `processed_at` must stay
+			// the single "delivered successfully" predicate. The extra `AND deadAt IS NULL` on the
+			// WHERE is what stops this sweep from re-selecting (and re-stamping) the rows it just
+			// killed on every subsequent poll — `attempts >= MAX_ATTEMPTS` alone would match them
+			// forever.
 			await tx.execute(sql`
 				UPDATE ${outbox}
-				SET processed_at = ${now}, claimed_by = NULL, last_error = 'poison: exceeded attempts without finalize'
+				SET dead_at = ${now}, claimed_by = NULL, last_error = 'poison: exceeded attempts without finalize'
 				WHERE ${outbox.source} = ${LANE}
 					AND ${outbox.processedAt} IS NULL
+					AND ${outbox.deadAt} IS NULL
 					AND ${outbox.attempts} >= ${MAX_ATTEMPTS}
 					AND ${outbox.leaseUntil} IS NOT NULL
 					AND ${outbox.leaseUntil} < ${now}
@@ -225,6 +234,7 @@ export class PgOutboxDispatcher extends OutboxDispatcher implements PollingServi
 				FROM ${outbox}
 				WHERE ${outbox.source} = ${LANE}
 					AND ${outbox.processedAt} IS NULL
+					AND ${outbox.deadAt} IS NULL
 					AND ${outbox.attempts} < ${MAX_ATTEMPTS}
 					AND (${outbox.leaseUntil} IS NULL OR ${outbox.leaseUntil} < ${now})
 				ORDER BY ${outbox.createdAt}
@@ -339,6 +349,12 @@ export class PgOutboxDispatcher extends OutboxDispatcher implements PollingServi
 	 * re-persist is `INSERT … ON CONFLICT(id) DO NOTHING`, so a deleted id is a re-insertable id,
 	 * and delete + at-least-once delivery is re-dispatch.
 	 *
+	 * Death (attempts ceiling reached) → a DIFFERENT tombstone, `dead_at` (+ release the token).
+	 * `processed_at` means exactly one thing — delivered — and `dead_at` means exactly the other —
+	 * gave up. The two are distinct states on purpose: collapsing them back into one column is what
+	 * made a dead-lettered row indistinguishable from a delivered one, invisible to anyone who
+	 * investigates by filtering `processed_at IS NULL`.
+	 *
 	 * Failure below the ceiling → record `last_error` and NOTHING else. `attempts` was already
 	 * charged at claim time (charging twice would halve the budget), and the lease is DELIBERATELY
 	 * retained: holding it is the 30s backoff.
@@ -363,7 +379,11 @@ export class PgOutboxDispatcher extends OutboxDispatcher implements PollingServi
 					.update(outbox)
 					.set(
 						deadLettered
-							? { lastError: fail.error, processedAt: now, claimedBy: null }
+							? // Death stamps `dead_at`, NOT `processed_at` — the two are distinct terminal states
+								// on purpose (see the docblock above). Releasing `claimedBy` is what actually takes
+								// the row out of rotation; the claim predicate above excludes `dead_at IS NOT NULL`,
+								// so it never comes back.
+								{ lastError: fail.error, deadAt: now, claimedBy: null }
 							: // Lease deliberately retained → natural 30s backoff. Attempts already charged.
 								{ lastError: fail.error },
 					)
