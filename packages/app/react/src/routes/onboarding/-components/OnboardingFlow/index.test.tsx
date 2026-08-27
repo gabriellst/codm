@@ -1,10 +1,11 @@
 // packages/app/react/src/routes/onboarding/-components/OnboardingFlow/index.test.tsx
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, spyOn } from 'bun:test'
 import { act } from 'react'
 import { createRoot, type Root as ReactRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useRouterState } from '@tanstack/react-router'
-import { ContactKindEnum, ProviderKindEnum } from '@codm/client-typescript/typescript'
+import { configureClient } from '@codm/client-typescript/http'
+import { ContactKindEnum, type GetOnboardingQueryResponse, ProviderKindEnum } from '@codm/client-typescript/typescript'
 import i18n from '@/lib/i18n'
 import { OnboardingGate, resetOnboardingGateForTests } from '@/components/console/OnboardingGate'
 import { type Bindings, Container, ServicesProvider } from '@/services'
@@ -13,6 +14,7 @@ import { useSystemPreconditionsStore } from '@/stores/useSystemPreconditionsStor
 import { composeStories } from '../../../../../tests/support/storybook'
 import { mountRouter, type MountedRouter } from '../../../../../tests/support/mountRouter'
 import { useIntegrationBackend, type IntegrationBackend } from '../../../../../tests/support/integration-harness'
+import { fetchStub } from '../../../../../tests/support/fetchStub'
 import { useOnboardingSetupStore } from '../../-stores/useOnboardingSetupStore'
 import { useOnboardingStore } from '../../-stores/useOnboardingStore'
 import { OnboardingFlow } from './index'
@@ -266,5 +268,101 @@ describe('OnboardingFlow — contra o backend real', () => {
 			act(() => useOnboardingSetupStore.getState().setProviders([ProviderKindEnum.CLAUDE_CODE]))
 			expect(nextButton().disabled).toBe(false)
 		})
+	})
+})
+
+/**
+ * 2026-08-27 fix — `manualNavRef` em `OnboardingFlow` (ver o docblock do efeito de semeadura). O bug:
+ * a leitura de `useGetOnboarding()` chega ASSINCRONAMENTE, e nada garantia que ela resolvesse ANTES
+ * do primeiro clique do operador — quando chegava DEPOIS, o efeito de semeadura reexecutava e chamava
+ * `setCurrentSlide` de volta ao passo semeado, perdendo o clique. Medido em
+ * `index.services.test.tsx` ("chegam ao rascunho do servidor…"): ~30% das vezes, rodando sozinho, o
+ * PATCH de `currentStep` saía DUPLICADO porque o wizard voltou ao índice 0 entre o 1º e o 2º avanço.
+ *
+ * Este caso PROVA a ordem em vez de esperar por ela: `fetchStub` segura a resposta de `/ui/onboarding`
+ * atrás de uma promise controlada à mão (`held`), o teste clica "Próximo" ENQUANTO ela ainda está
+ * pendurada, e só DEPOIS a libera — reproduzindo deterministicamente o "clique antes da leitura
+ * chegar" sem depender de uma corrida real contra um backend de verdade (por isso este describe NÃO
+ * usa `useIntegrationBackend()` — o resto do arquivo usa o backend real justamente porque MSW não
+ * intercepta sob `bun test`, mas aqui o que importa é a ORDEM dos dois eventos, não o conteúdo da
+ * resposta, e `spyOn(globalThis, 'fetch')` dá controle total sobre ela; mesmo seam de
+ * `SessionChatSection/index.test.tsx`).
+ */
+describe('OnboardingFlow — a leitura de onboarding não pisa em navegação manual', () => {
+	let fetchSpy: ReturnType<typeof spyOn<typeof globalThis, 'fetch'>>
+	let mounted: MountedRouter | null = null
+
+	beforeAll(() => {
+		// URL absoluta qualquer — nunca alcançada de verdade, `fetchSpy` abaixo intercepta tudo antes
+		// que qualquer coisa saia para a rede.
+		configureClient({ typescript: 'http://127.0.0.1:65535' })
+	})
+
+	beforeEach(async () => {
+		await i18n.changeLanguage('pt')
+		useOnboardingStore.getState().reset()
+		useOnboardingSetupStore.getState().reset()
+		useSystemPreconditionsStore.getState().reset()
+	})
+
+	afterEach(() => {
+		mounted?.unmount()
+		mounted = null
+		fetchSpy?.mockRestore()
+	})
+
+	function json(body: unknown): Response {
+		return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } })
+	}
+
+	it('operador avança para HOW antes da leitura de onboarding chegar — o wizard CONTINUA em HOW quando ela chega', async () => {
+		let releaseOnboarding: (() => void) | undefined
+		const held = new Promise<void>(resolve => {
+			releaseOnboarding = resolve
+		})
+
+		fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(
+			fetchStub(async input => {
+				const url = String(input instanceof Request ? input.url : input)
+				if (url.includes('/ui/onboarding')) {
+					// Segura a resposta até o teste liberar explicitamente — é o que garante que o clique
+					// abaixo aconteça ENQUANTO a leitura ainda está em voo.
+					await held
+					const fresh: GetOnboardingQueryResponse = {
+						currentStep: 'VALUE',
+						completedAt: null,
+						state: {},
+						channelDone: false,
+						workspaceDone: false,
+						threadDone: false,
+					}
+					return json(fresh)
+				}
+				throw new Error(`unexpected request: ${url}`)
+			}),
+		)
+
+		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+		mounted = await mountRouter(
+			<QueryClientProvider client={queryClient}>
+				<OnboardingFlow />
+			</QueryClientProvider>,
+			{ path: '/onboarding' },
+		)
+
+		expect(mounted.host.textContent ?? '').toContain(i18n.t('onboarding.slide1Title'))
+
+		// Navegação MANUAL — a leitura de onboarding acima ainda está pendurada em `held`.
+		const nextButton = [...mounted.host.querySelectorAll('button')].find(b => b.textContent?.includes(NEXT()))
+		if (!nextButton) throw new Error(`button "${NEXT()}" not found`)
+		act(() => nextButton.click())
+		expect(mounted.host.textContent ?? '').toContain(i18n.t('onboarding.slide2Title'))
+
+		// SÓ AGORA a leitura resolve — é exatamente o instante que costumava repor o índice em 0.
+		releaseOnboarding?.()
+		await mounted.settled(() => queryClient.isFetching() === 0, 'a leitura de onboarding resolver')
+
+		expect(useOnboardingStore.getState().currentSlide).toBe(1)
+		expect(mounted.host.textContent ?? '').toContain(i18n.t('onboarding.slide2Title'))
 	})
 })
