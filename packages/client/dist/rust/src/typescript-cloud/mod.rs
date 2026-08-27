@@ -97,6 +97,7 @@ pub mod types {
     ///    "ISSUE_NOT_ARCHIVED",
     ///    "ISSUE_NOT_COMPLETED",
     ///    "ISSUE_NOT_FOUND",
+    ///    "ISSUE_NOT_REOPENABLE",
     ///    "LAST_INVOKER",
     ///    "LOOP_NOT_FOUND",
     ///    "LOOP_PROMPT_TOO_LONG",
@@ -267,6 +268,8 @@ pub mod types {
         IssueNotCompleted,
         #[serde(rename = "ISSUE_NOT_FOUND")]
         IssueNotFound,
+        #[serde(rename = "ISSUE_NOT_REOPENABLE")]
+        IssueNotReopenable,
         #[serde(rename = "LAST_INVOKER")]
         LastInvoker,
         #[serde(rename = "LOOP_NOT_FOUND")]
@@ -441,6 +444,7 @@ pub mod types {
                 Self::IssueNotArchived => f.write_str("ISSUE_NOT_ARCHIVED"),
                 Self::IssueNotCompleted => f.write_str("ISSUE_NOT_COMPLETED"),
                 Self::IssueNotFound => f.write_str("ISSUE_NOT_FOUND"),
+                Self::IssueNotReopenable => f.write_str("ISSUE_NOT_REOPENABLE"),
                 Self::LastInvoker => f.write_str("LAST_INVOKER"),
                 Self::LoopNotFound => f.write_str("LOOP_NOT_FOUND"),
                 Self::LoopPromptTooLong => f.write_str("LOOP_PROMPT_TOO_LONG"),
@@ -560,6 +564,7 @@ pub mod types {
                 "ISSUE_NOT_ARCHIVED" => Ok(Self::IssueNotArchived),
                 "ISSUE_NOT_COMPLETED" => Ok(Self::IssueNotCompleted),
                 "ISSUE_NOT_FOUND" => Ok(Self::IssueNotFound),
+                "ISSUE_NOT_REOPENABLE" => Ok(Self::IssueNotReopenable),
                 "LAST_INVOKER" => Ok(Self::LastInvoker),
                 "LOOP_NOT_FOUND" => Ok(Self::LoopNotFound),
                 "LOOP_PROMPT_TOO_LONG" => Ok(Self::LoopPromptTooLong),
@@ -1160,6 +1165,9 @@ pub mod types {
     ///        "id": {
     ///          "type": "string"
     ///        },
+    ///        "language": {
+    ///          "$ref": "#/components/schemas/Language"
+    ///        },
     ///        "name": {
     ///          "type": [
     ///            "string",
@@ -1261,6 +1269,9 @@ pub mod types {
     ///    "id": {
     ///      "type": "string"
     ///    },
+    ///    "language": {
+    ///      "$ref": "#/components/schemas/Language"
+    ///    },
     ///    "name": {
     ///      "type": [
     ///        "string",
@@ -1279,6 +1290,10 @@ pub mod types {
         #[serde(rename = "emailVerified")]
         pub email_verified: bool,
         pub id: ::std::string::String,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub language: ::std::option::Option<
+            ::codm_contracts_rust::wire::enums::Language,
+        >,
         pub name: ::std::option::Option<::std::string::String>,
     }
     impl ::std::convert::From<&GetSessionResponseUser> for GetSessionResponseUser {

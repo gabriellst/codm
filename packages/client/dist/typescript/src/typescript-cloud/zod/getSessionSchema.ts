@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import { languageSchema } from "./languageSchema.ts";
 import { z } from "zod/v4";
 
 /**
@@ -13,7 +14,10 @@ export const getSession200Schema = z.object({
     "id": z.string(),
 "email": z.string(),
 "name": z.nullable(z.string()),
-"emailVerified": z.boolean()
+"emailVerified": z.boolean(),
+get "language"(){
+                return languageSchema.optional()
+              }
     }),
 "session": z.object({
     "id": z.string(),

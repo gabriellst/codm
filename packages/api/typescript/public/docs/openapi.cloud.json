@@ -282,6 +282,9 @@
                         },
                         "emailVerified": {
                           "type": "boolean"
+                        },
+                        "language": {
+                          "$ref": "#/components/schemas/Language"
                         }
                       },
                       "required": [
@@ -873,6 +876,7 @@
           "ISSUE_NOT_ARCHIVED",
           "ISSUE_NOT_COMPLETED",
           "ISSUE_NOT_FOUND",
+          "ISSUE_NOT_REOPENABLE",
           "LAST_INVOKER",
           "LOOP_NOT_FOUND",
           "LOOP_PROMPT_TOO_LONG",
@@ -939,6 +943,13 @@
         "enum": [
           "up",
           "down"
+        ]
+      },
+      "Language": {
+        "type": "string",
+        "enum": [
+          "pt-BR",
+          "en-US"
         ]
       },
       "SocialProvider": {
@@ -1010,6 +1021,7 @@
     "ISSUE_NOT_ARCHIVED",
     "ISSUE_NOT_COMPLETED",
     "ISSUE_NOT_FOUND",
+    "ISSUE_NOT_REOPENABLE",
     "LAST_INVOKER",
     "LOOP_NOT_FOUND",
     "LOOP_PROMPT_TOO_LONG",

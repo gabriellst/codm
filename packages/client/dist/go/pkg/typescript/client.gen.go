@@ -96,6 +96,7 @@ const (
 	ISSUENOTARCHIVED                ApiErrors = "ISSUE_NOT_ARCHIVED"
 	ISSUENOTCOMPLETED               ApiErrors = "ISSUE_NOT_COMPLETED"
 	ISSUENOTFOUND                   ApiErrors = "ISSUE_NOT_FOUND"
+	ISSUENOTREOPENABLE              ApiErrors = "ISSUE_NOT_REOPENABLE"
 	LASTINVOKER                     ApiErrors = "LAST_INVOKER"
 	LOOPNOTFOUND                    ApiErrors = "LOOP_NOT_FOUND"
 	LOOPPROMPTTOOLONG               ApiErrors = "LOOP_PROMPT_TOO_LONG"
@@ -253,6 +254,8 @@ func (e ApiErrors) Valid() bool {
 	case ISSUENOTCOMPLETED:
 		return true
 	case ISSUENOTFOUND:
+		return true
+	case ISSUENOTREOPENABLE:
 		return true
 	case LASTINVOKER:
 		return true
