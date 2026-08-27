@@ -9,40 +9,117 @@
 			file covers both dev and bundle. Deliberately OUTSIDE the React console: the console
 			fires SDK queries on boot, against exactly the backends that just failed to come up.
 			`withGlobalTauri: true` (tauri.conf.json) is what provides window.__TAURI__ with no bundler.
+
+			SEM i18n, e de propósito: esta página não passa pelo i18n do console (não tem bundler, não
+			tem provider, não pode importar nada dele) — o arquivo é pt-BR inteiro, como já era, e essa
+			consistência é o contrato dele. Traduzir isto significa dar um catálogo próprio à splash,
+			e isso é outra tarefa.
 		-->
 		<style>
 			body { margin: 0; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; background: #17171a; color: #e6e6e6; padding: 24px 28px; }
 			h1 { font: 600 15px/1.3 system-ui, sans-serif; margin: 0 0 4px; }
 			p.sub { color: #9a9aa2; margin: 0 0 20px; }
 			section { border: 1px solid #2b2b31; border-radius: 6px; margin-bottom: 14px; overflow: hidden; }
-			header { background: #1e1e23; padding: 8px 12px; display: flex; gap: 10px; align-items: baseline; }
+			header { background: #1e1e23; padding: 8px 12px; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
 			header b { color: #ff7b72; }
 			header span { color: #9a9aa2; }
 			pre { margin: 0; padding: 10px 12px; white-space: pre-wrap; word-break: break-all; max-height: 260px; overflow: auto; color: #c9c9d1; }
+			footer { border-top: 1px solid #2b2b31; padding: 8px 12px; color: #9a9aa2; }
+			.remedy { border-top: 1px solid #2b2b31; padding: 10px 12px; background: #1a1a1f; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+			.remedy p { margin: 0; color: #9a9aa2; flex: 1 1 260px; }
+			.outcome { margin: 8px 12px 12px; color: #e3b341; }
 			button { font: inherit; background: #2f6feb; color: #fff; border: 0; border-radius: 5px; padding: 8px 16px; cursor: pointer; }
+			button[disabled] { opacity: 0.5; cursor: default; }
 		</style>
 	</head>
 	<body>
 		<h1>O CODM não conseguiu iniciar</h1>
-		<p class="sub">Um ou mais serviços não responderam dentro de 60 segundos. A janela principal foi mantida oculta de propósito.</p>
+		<p class="sub" id="sub">Verificando o que aconteceu…</p>
 		<div id="failures"></div>
 		<button id="retry" type="button">Tentar novamente</button>
 		<script>
 			const { invoke } = window.__TAURI__.core
-			const escape = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])
+			const { listen } = window.__TAURI__.event
+			const escape = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])
+
+			// O QUE CADA REMÉDIO OFERECE. A chave é o valor do enum `Remedy` do shell
+			// (src-tauri/src/sidecars/remedy.rs, atravessa via specta) — a página NÃO lê texto de erro
+			// nem procura substring: quem decide o que é acionável é o shell, aqui só se desenha.
+			const REMEDIES = {
+				releaseDataDirLock: {
+					command: 'release_data_dir_lock',
+					label: 'Encerrar o processo antigo e tentar de novo',
+					hint: 'Outro processo do CoDM ficou vivo segurando a pasta de dados. Isto encerra o que sobrou da execução anterior e reinicia o app.',
+					// Só chega aqui quando NADA nosso foi encontrado para encerrar: o dono do lock é um
+					// processo que este shell não pode matar (a regra de propriedade vive em
+					// src-tauri/src/sidecars/reaper.rs). O PID está na mensagem logo acima.
+					nothingToDo:
+						'Nenhum processo do CoDM foi encontrado para encerrar. Quem está segurando a pasta de dados não é um processo nosso — encerre-o pelo gerenciador de tarefas do seu computador (o PID aparece na mensagem acima) e clique em "Tentar novamente".',
+				},
+			}
+
+			const renderRemedy = (failure, index) => {
+				const remedy = REMEDIES[failure.remedy]
+				if (!remedy) return ''
+				return `<div class="remedy"><p>${escape(remedy.hint)}</p><button type="button" data-remedy="${index}">${escape(remedy.label)}</button></div><p class="outcome" id="outcome-${index}" hidden></p>`
+			}
+
+			const renderFailure = (failure, index) =>
+				`<section><header><b>${escape(failure.name)}</b><span>${escape(failure.reason)}</span></header><pre>${
+					failure.output.length ? escape(failure.output.join('\n')) : 'o processo não imprimiu nada'
+				}</pre>${
+					// O caminho do log é o que transforma esta tela em algo acionável: as linhas acima são
+					// a cauda, o ARQUIVO tem a corrida inteira — e sobrevive ao fechar a janela.
+					// (Incidente de 2026-08-07: um daemon que morria no boot custou uma tarde de
+					// arqueologia porque o stderr só existia em memória.)
+					failure.logPath ? `<footer>log completo: <code>${escape(failure.logPath)}</code></footer>` : ''
+				}${renderRemedy(failure, index)}</section>`
+
+			const render = failures => {
+				document.getElementById('sub').textContent = failures.length
+					? 'A janela principal foi mantida oculta de propósito. Abaixo, o que cada serviço deixou no log antes de o app desistir.'
+					: 'Verificando o que aconteceu…'
+				document.getElementById('failures').innerHTML = failures.map(renderFailure).join('')
+				for (const button of document.querySelectorAll('[data-remedy]')) {
+					button.addEventListener('click', () => runRemedy(button, failures[Number(button.dataset.remedy)]))
+				}
+			}
+
+			const runRemedy = async (button, failure) => {
+				const remedy = REMEDIES[failure.remedy]
+				const outcome = document.getElementById(`outcome-${button.dataset.remedy}`)
+				button.disabled = true
+				button.textContent = 'Encerrando…'
+				try {
+					// Quando ALGO é encerrado o shell reinicia o app e esta promise nunca resolve — o
+					// processo morre antes. Resolver com lista vazia é a outra resposta possível, e ela
+					// precisa ser dita: reiniciar cairia exatamente nesta mesma tela.
+					const reaped = await invoke(remedy.command)
+					outcome.hidden = false
+					outcome.textContent = reaped.length ? `Encerrado(s): ${reaped.join(', ')}. Reiniciando…` : remedy.nothingToDo
+				} catch (error) {
+					outcome.hidden = false
+					outcome.textContent = `Não foi possível executar a ação: ${error}`
+				}
+				button.disabled = false
+				button.textContent = remedy.label
+			}
+
+			// PUXA E ESCUTA, e as duas metades são necessárias.
+			//
+			// Esta janela é DECLARADA no tauri.conf.json, então o webview existe — e este script roda —
+			// desde o primeiro instante do processo, enquanto a primeira falha só aparece até 60s
+			// depois. O `boot_failures` de carregamento respondia lista vazia, a página nunca
+			// perguntava de novo, e o operador ficava com um título e mais nada: foi exatamente isso que
+			// aconteceu no incidente do Windows em 27/08/2026, com a causa (DATA_DIR_LOCKED, com o PID
+			// do processo travado) registrada no shell.log e invisível na tela. O `listen` cobre a
+			// página que já estava de pé; o `invoke` cobre a que carregou DEPOIS do veredito (um reload,
+			// ou uma janela revelada mais tarde).
+			listen('boot-failed', event => render(event.payload.failures))
 			invoke('boot_failures').then(failures => {
-				document.getElementById('failures').innerHTML = failures
-					.map(
-						// O caminho do log é o que transforma esta tela em algo acionável: o ring buffer abaixo
-						// mostra as últimas linhas, o ARQUIVO tem a corrida inteira — e sobrevive ao fechar
-						// a janela. (Incidente de 2026-08-07: um daemon que morria no boot custou uma tarde
-						// de arqueologia porque o stderr só existia aqui, em memória.)
-						f => `<section><header><b>${escape(f.name)}</b><span>${escape(f.reason)}</span></header><pre>${
-							f.stderr.length ? escape(f.stderr.join('\n')) : 'sem stderr capturado'
-						}</pre>${f.logPath ? `<footer>log completo: <code>${escape(f.logPath)}</code></footer>` : ''}</section>`,
-					)
-					.join('')
+				if (failures.length) render(failures)
 			})
+
 			document.getElementById('retry').addEventListener('click', () => invoke('retry_boot'))
 		</script>
 	</body>

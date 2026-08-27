@@ -9,23 +9,50 @@
 use std::collections::VecDeque;
 use std::sync::Mutex;
 
-/// How many stderr lines per sidecar the splash shows. The TAIL, not the head: the panic is at the end.
-pub const STDERR_TAIL_LINES: usize = 50;
+use super::remedy::{remedy_for, Remedy};
+
+/// How many output lines per sidecar are RETAINED in memory, per process. The TAIL, not the head:
+/// the panic is at the end.
+pub const OUTPUT_TAIL_LINES: usize = 50;
+
+/// How many of those the splash actually RENDERS. Smaller than what we retain on purpose: the point
+/// is that the operator READS the cause, and the failing line is always among the last few, while
+/// the full run is on disk one line below it (`SidecarFailure::log_path`). Dumping the whole buffer
+/// buries the one sentence that matters.
+pub const SPLASH_TAIL_LINES: usize = 30;
 
 /// What a sidecar that never came up leaves for the operator to read.
-#[derive(Debug, Clone, serde::Serialize, specta::Type)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct SidecarFailure {
     pub name: String,
     /// Why we gave up: the spawn failed, or no healthy answer within the budget.
     pub reason: String,
-    /// The retained tail of captured stderr, in chronological order.
-    pub stderr: Vec<String>,
-    /// Where the FULL stderr for this run was persisted (`sidecar_log::SidecarLog`), so the splash
-    /// can tell the operator where to look instead of only showing the 50-line tail above. `None`
+    /// The retained tail of the process's captured output — stdout AND stderr, in the order they
+    /// arrived. Both, since 2026-08-27: a sidecar that HANGS (the incident's first domino) never
+    /// writes to stderr at all, so the only trace of how far it got is what it printed normally.
+    pub output: Vec<String>,
+    /// Where the FULL run was persisted (`sidecar_log::SidecarLog`), so the splash can tell the
+    /// operator where to look instead of only showing the [`SPLASH_TAIL_LINES`] tail above. `None`
     /// when no process ever ran (port conflict, spawn setup failure) — there is nothing on disk to
     /// point to — or when the write itself was best-effort-skipped.
     pub log_path: Option<String>,
+    /// The action the splash can OFFER for this failure, when the output names an error this shell
+    /// knows how to undo (`super::remedy`). `None` = the operator gets the cause and the log path,
+    /// and no button — which is the honest answer for a cause we cannot act on.
+    pub remedy: Option<Remedy>,
+}
+
+/// PUSH half of the boot verdict, for the splash. The PULL half (`commands::boot_failures`) is NOT
+/// enough on its own, and that is the whole 2026-08-27 blank-screen bug: the `boot-error` window is
+/// DECLARED in tauri.conf.json, so its webview exists — and its page runs — from the very first
+/// instant of the process, while the first failure only lands up to 60 seconds later. The page
+/// asked once, got an empty list, and never asked again; the operator read a heading and nothing
+/// else. So: the page still pulls on load (covers a reload, and a window revealed after the fact)
+/// AND listens for this, which is what carries the verdict to a page that was already up.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type, tauri_specta::Event)]
+pub struct BootFailed {
+    pub failures: Vec<SidecarFailure>,
 }
 
 /// Which window to reveal. Returned ONLY to whoever arrives last — everyone before gets `None`.
@@ -58,10 +85,10 @@ impl ReadinessGate {
         }
     }
 
-    /// Retain the tail of one sidecar's stderr. Called from the stderr reader ALWAYS — including for
+    /// Retain the tail of one sidecar's output. Called from the output reader ALWAYS — including for
     /// processes that end up healthy (the cost is 50 lines, and the alternative is having nothing to
     /// show at the moment it matters).
-    pub fn record_stderr(&self, name: &str, line: &str) {
+    pub fn record_output(&self, name: &str, line: &str) {
         let mut state = self.state.lock().expect("gate mutex");
         let entry = match state.stderr.iter().position(|(n, _)| n == name) {
             Some(index) => &mut state.stderr[index],
@@ -70,7 +97,7 @@ impl ReadinessGate {
                 state.stderr.last_mut().expect("just pushed")
             }
         };
-        if entry.1.len() == STDERR_TAIL_LINES {
+        if entry.1.len() == OUTPUT_TAIL_LINES {
             entry.1.pop_front();
         }
         entry.1.push_back(line.to_owned());
@@ -106,23 +133,28 @@ impl ReadinessGate {
         self.state.lock().expect("gate mutex").failures.clone()
     }
 
-    /// A failure record with that sidecar's retained stderr tail (and persisted log path) attached.
+    /// A failure record with that sidecar's retained output tail (and persisted log path) attached.
     /// Locks and releases before the caller takes the lock again — the two paths differ only in what
     /// they do with the record.
+    ///
+    /// The remedy is read from the SAME lines the splash will render, never from the wider retained
+    /// buffer: a button whose justification scrolled off the screen is a button the operator cannot
+    /// judge.
     fn build_failure(&self, name: &str, reason: &str, log_path: Option<&str>) -> SidecarFailure {
-        let stderr = {
+        let output = {
             let state = self.state.lock().expect("gate mutex");
             state
                 .stderr
                 .iter()
                 .find(|(n, _)| n == name)
-                .map(|(_, lines)| lines.iter().cloned().collect())
+                .map(|(_, lines)| splash_tail(lines))
                 .unwrap_or_default()
         };
         SidecarFailure {
             name: name.to_owned(),
             reason: reason.to_owned(),
-            stderr,
+            remedy: remedy_for(reason, &output),
+            output,
             log_path: log_path.map(|p| p.to_owned()),
         }
     }
@@ -147,6 +179,16 @@ impl ReadinessGate {
     }
 }
 
+/// PURE — the last [`SPLASH_TAIL_LINES`] lines of a retained buffer, in chronological order.
+/// Isolated from the gate's locking so the cut itself is falsifiable in `cargo test`.
+fn splash_tail(lines: &VecDeque<String>) -> Vec<String> {
+    lines
+        .iter()
+        .skip(lines.len().saturating_sub(SPLASH_TAIL_LINES))
+        .cloned()
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -168,7 +210,7 @@ mod tests {
     #[test]
     fn a_single_failure_reveals_the_error_splash_and_never_main() {
         let gate = ReadinessGate::new(2);
-        gate.record_stderr(
+        gate.record_output(
             "codm-gateway",
             "panic: dial tcp 127.0.0.1:3032: connection refused",
         );
@@ -189,7 +231,7 @@ mod tests {
         assert_eq!(failures[0].name, "codm-gateway");
         assert_eq!(failures[0].reason, "no 200 within 60s");
         assert_eq!(
-            failures[0].stderr,
+            failures[0].output,
             vec!["panic: dial tcp 127.0.0.1:3032: connection refused"]
         );
         assert_eq!(
@@ -234,7 +276,7 @@ mod tests {
     #[test]
     fn a_runtime_death_reuses_the_boot_error_splash() {
         let gate = ReadinessGate::new(2);
-        gate.record_stderr("codm-daemon", "FATAL: database is locked");
+        gate.record_output("codm-daemon", "FATAL: database is locked");
         assert!(gate.note_ready("codm-daemon").is_none());
         assert!(
             matches!(gate.note_ready("codm-gateway"), Some(Reveal::Main)),
@@ -253,9 +295,9 @@ mod tests {
         assert_eq!(failures[0].name, "codm-daemon");
         assert_eq!(failures[0].reason, "process exited (code Some(1))");
         assert_eq!(
-            failures[0].stderr,
+            failures[0].output,
             vec!["FATAL: database is locked"],
-            "a cauda de stderr capturada durante a vida do processo e o que o operador le"
+            "a cauda capturada durante a vida do processo e o que o operador le"
         );
         assert_eq!(
             failures[0].log_path.as_deref(),
@@ -269,19 +311,102 @@ mod tests {
         );
     }
 
+    /// A cauda entregue à splash é BOUNDED e são as ÚLTIMAS linhas — a mensagem de erro está no fim
+    /// de uma corrida, nunca no começo.
     #[test]
-    fn stderr_is_retained_bounded_and_tail_first() {
+    fn the_splash_tail_is_bounded_and_holds_the_last_lines() {
         let gate = ReadinessGate::new(1);
-        for i in 0..(STDERR_TAIL_LINES + 10) {
-            gate.record_stderr("x", &format!("line {i}"));
+        let printed = OUTPUT_TAIL_LINES + 10;
+        for i in 0..printed {
+            gate.record_output("x", &format!("line {i}"));
         }
         let Some(Reveal::BootError(failures)) = gate.note_failed("x", "spawn failed", None) else {
             panic!("esperava a splash");
         };
-        assert_eq!(failures[0].stderr.len(), STDERR_TAIL_LINES);
+        assert_eq!(failures[0].output.len(), SPLASH_TAIL_LINES);
         assert_eq!(
-            failures[0].stderr.last().unwrap(),
-            &format!("line {}", STDERR_TAIL_LINES + 9)
+            failures[0].output.first().unwrap(),
+            &format!("line {}", printed - SPLASH_TAIL_LINES),
+            "o corte tem de comecar SPLASH_TAIL_LINES antes do fim"
+        );
+        assert_eq!(
+            failures[0].output.last().unwrap(),
+            &format!("line {}", printed - 1),
+            "a ultima linha impressa e a que explica"
+        );
+    }
+
+    /// Menos linhas do que o corte: entrega todas, sem inventar buraco.
+    #[test]
+    fn a_short_run_is_delivered_whole() {
+        let gate = ReadinessGate::new(1);
+        gate.record_output("x", "só uma linha");
+        let Some(Reveal::BootError(failures)) = gate.note_failed("x", "spawn failed", None) else {
+            panic!("esperava a splash");
+        };
+        assert_eq!(failures[0].output, vec!["só uma linha"]);
+    }
+
+    /// INCIDENTE 2026-08-27 — o daemon que morre na hora imprime a causa E o que fazer. A falha que
+    /// chega à splash tem de carregar a AÇÃO, não só o texto (o botão nasce daqui).
+    #[test]
+    fn a_locked_data_dir_reaches_the_splash_with_its_remedy() {
+        let gate = ReadinessGate::new(1);
+        gate.record_output("codm-daemon", "codm-daemon starting");
+        gate.record_output(
+            "codm-daemon",
+            r#"❌ Failed to start api-ts: DATA_DIR_LOCKED: Another daemon is already running on this data dir "C:\Users\t\data" (pid 16580). Stop the other daemon or point this one at a different CODM_DATA_DIR."#,
+        );
+        let Some(Reveal::BootError(failures)) =
+            gate.note_failed("codm-daemon", "no healthy response from :47330 within 60s", None)
+        else {
+            panic!("esperava a splash");
+        };
+        assert_eq!(failures[0].remedy, Some(Remedy::ReleaseDataDirLock));
+    }
+
+    /// DRIFT RAIL entre o shell e a splash. A tela é HTML puro, sem bundler: ela não importa
+    /// `commands/bindings.ts`, então escuta o evento pelo NOME e despacha o remédio pelo VALOR
+    /// serializado do enum. As duas strings vivem, do lado dela, como literais — este teste é o
+    /// único lugar que impede uma delas de mudar de um lado só e a tela voltar a ficar em branco.
+    #[test]
+    fn the_splash_page_speaks_the_same_names_this_module_emits() {
+        use tauri_specta::Event as _;
+        let page = std::fs::read_to_string(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../react/public/boot-error.html"),
+        )
+        .expect("boot-error.html — a splash vive no public/ do console");
+
+        assert!(
+            page.contains(&format!("listen('{}'", BootFailed::NAME)),
+            "a splash precisa escutar '{}' — sem isso ela so tem a lista vazia do carregamento",
+            BootFailed::NAME
+        );
+        let remedy = serde_json::to_string(&Remedy::ReleaseDataDirLock).expect("remedy serializa");
+        assert!(
+            page.contains(&remedy.replace('"', "")),
+            "a splash despacha pelo valor serializado do Remedy ({remedy})"
+        );
+        for command in ["boot_failures", "retry_boot", "release_data_dir_lock"] {
+            assert!(page.contains(command), "a splash precisa chamar '{command}'");
+        }
+    }
+
+    /// E o contra-exemplo: um estouro de espera sem causa nomeada não ganha botão nenhum.
+    #[test]
+    fn a_timeout_without_a_named_cause_offers_no_remedy() {
+        let gate = ReadinessGate::new(1);
+        gate.record_output("codm-daemon", "applying migrations…");
+        let Some(Reveal::BootError(failures)) =
+            gate.note_failed("codm-daemon", "no healthy response from :47330 within 60s", None)
+        else {
+            panic!("esperava a splash");
+        };
+        assert_eq!(failures[0].remedy, None);
+        assert_eq!(
+            failures[0].output,
+            vec!["applying migrations…"],
+            "um sidecar que travou tambem tem saida — e e ela que explica ate onde ele foi"
         );
     }
 }

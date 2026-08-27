@@ -40,6 +40,30 @@ async bootFailures() : Promise<SidecarFailure[]> {
 async retryBoot() : Promise<void> {
     await TAURI_INVOKE("retry_boot");
 },
+/**
+ * THE ACTIONABLE HALF of a `Remedy::ReleaseDataDirLock` failure: take down the leftover process
+ * that is still holding the data dir, then boot again.
+ * 
+ * Incident (Windows, 2026-08-27): the daemon hung on one boot and stayed ALIVE holding
+ * `<dataDir>/daemon.lock`, so every later opening of the app died instantly with `DATA_DIR_LOCKED`
+ * naming the offending pid. Everything needed to fix it was on the machine; nothing on screen let
+ * the operator do it, and they waited hours.
+ * 
+ * WHAT IT KILLS, and why not the pid the message names. The pid in that message is whatever holds
+ * the lockfile — it could be a daemon somebody started by hand from a checkout, and killing a
+ * process because it inconveniences us is not ours to do (`sidecars::reaper`'s matching rule, at
+ * length). So this reuses the startup sweep unchanged: a process dies iff its executable path is
+ * byte-for-byte one this shell spawns, and the names come from the boot's own `FleetNames`. In the
+ * incident the holder WAS our binary at our path, which is the case this button exists for.
+ * 
+ * Returns the pids it removed. EMPTY is a real answer, not a failure: nothing of ours was left
+ * over, so the lock belongs to a process the shell must not touch — the splash says so instead of
+ * restarting into the identical screen. A non-empty sweep restarts (this call never returns), and
+ * the fresh boot finds the data dir free.
+ */
+async releaseDataDirLock() : Promise<number[]> {
+    return await TAURI_INVOKE("release_data_dir_lock");
+},
 async hostPorts() : Promise<HostPorts> {
     return await TAURI_INVOKE("host_ports");
 },
@@ -82,9 +106,11 @@ async windowChrome() : Promise<WindowChrome> {
 
 
 export const events = __makeEvents__<{
+bootFailed: BootFailed,
 supervisionChanged: SupervisionChanged,
 updateReady: UpdateReady
 }>({
+bootFailed: "boot-failed",
 supervisionChanged: "supervision-changed",
 updateReady: "update-ready"
 })
@@ -96,12 +122,36 @@ updateReady: "update-ready"
 /** user-defined types **/
 
 /**
+ * PUSH half of the boot verdict, for the splash. The PULL half (`commands::boot_failures`) is NOT
+ * enough on its own, and that is the whole 2026-08-27 blank-screen bug: the `boot-error` window is
+ * DECLARED in tauri.conf.json, so its webview exists — and its page runs — from the very first
+ * instant of the process, while the first failure only lands up to 60 seconds later. The page
+ * asked once, got an empty list, and never asked again; the operator read a heading and nothing
+ * else. So: the page still pulls on load (covers a reload, and a window revealed after the fact)
+ * AND listens for this, which is what carries the verdict to a page that was already up.
+ */
+export type BootFailed = { failures: SidecarFailure[] }
+/**
  * What crosses to the console. `api_port` is the one the react `Config` actually needs
  * (`serviceBaseUrls.typescript` / `.go` both resolve through the daemon — the browser never talks
  * to the gateway directly, see `packages/app/react/src/lib/config.ts`); `channel_port` rides along
  * for diagnostics/symmetry with what the shell resolved.
  */
 export type HostPorts = { apiPort: number; channelPort: number }
+/**
+ * An action the boot-error splash can offer for a failure it understands.
+ * 
+ * Deliberately a CLOSED enum crossing to the webview (specta), not a free-form string: the page
+ * dispatches on the variant and does no parsing of its own — the shell decides what is actionable,
+ * the splash only renders it. Adding a remedy = a variant here, an arm in [`remedy_of`], a command
+ * that performs it, and a branch in `boot-error.html`.
+ */
+export type Remedy = 
+/**
+ * Another process of ours is still holding the data dir's lockfile. Undone by sweeping the
+ * leftover sidecar processes of a previous run and booting again.
+ */
+"releaseDataDirLock"
 /**
  * Se o reparo de uma pré-condição TEM efeito neste host — cruza `repair_scope` (declarado) com
  * `has_attributable_identity()` (derivado do processo). Um `AppGrant` sem identidade atribuível
@@ -122,16 +172,24 @@ export type SidecarFailure = { name: string;
  */
 reason: string; 
 /**
- * The retained tail of captured stderr, in chronological order.
+ * The retained tail of the process's captured output — stdout AND stderr, in the order they
+ * arrived. Both, since 2026-08-27: a sidecar that HANGS (the incident's first domino) never
+ * writes to stderr at all, so the only trace of how far it got is what it printed normally.
  */
-stderr: string[]; 
+output: string[]; 
 /**
- * Where the FULL stderr for this run was persisted (`sidecar_log::SidecarLog`), so the splash
- * can tell the operator where to look instead of only showing the 50-line tail above. `None`
+ * Where the FULL run was persisted (`sidecar_log::SidecarLog`), so the splash can tell the
+ * operator where to look instead of only showing the [`SPLASH_TAIL_LINES`] tail above. `None`
  * when no process ever ran (port conflict, spawn setup failure) — there is nothing on disk to
  * point to — or when the write itself was best-effort-skipped.
  */
-logPath: string | null }
+logPath: string | null; 
+/**
+ * The action the splash can OFFER for this failure, when the output names an error this shell
+ * knows how to undo (`super::remedy`). `None` = the operator gets the cause and the log path,
+ * and no button — which is the honest answer for a cause we cannot act on.
+ */
+remedy: Remedy | null }
 /**
  * Which SDK sub-client answers for a sidecar — and, since supervision, which one the console is
  * being told about. A fact of the SHELL (which binary is which service), never a contract enum:

@@ -235,9 +235,15 @@ pub fn run() {
             // by declared binary name, not by `fleet` alone: a sidecar this boot could not get a port
             // for is exactly the one most likely to have a LEFTOVER previous-run process still
             // holding it, and that is precisely what this sweep exists to clear.
-            let mut names: Vec<&str> = fleet.iter().map(|s| s.name()).collect();
+            let mut names: Vec<&'static str> = fleet.iter().map(|s| s.name()).collect();
             names.extend(port_failures.iter().map(|f| f.name));
             sidecars::reap_previous_run(&names);
+
+            // The SAME list, kept for the ONE thing that needs to sweep again later: the splash's
+            // "encerrar o processo antigo e tentar de novo" button
+            // (`commands::release_data_dir_lock`). It must be able to touch only what this boot
+            // claimed as its own — see `sidecars::FleetNames`.
+            app.manage(sidecars::FleetNames::new(names));
 
             // PORTS EXHAUSTED FOR A SIDECAR — reported to the gate BEFORE any spawn attempt, in the
             // same vocabulary a spawn failure uses (never the generic "did not open"): the reason

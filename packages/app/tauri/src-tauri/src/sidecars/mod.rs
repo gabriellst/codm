@@ -39,6 +39,10 @@ pub use lifecycle::*;
 mod reaper;
 pub use reaper::*;
 
+/// Not `pub use`d flat like its siblings: `Remedy` is reachable as `sidecars::remedy::Remedy` and
+/// is only ever named through `SidecarFailure`, so a flat re-export would be an unused one.
+pub mod remedy;
+
 // Not `pub use`d — only `boot_sidecar` below constructs one; nothing outside this module needs to
 // name the type.
 mod sidecar_log;
@@ -80,6 +84,25 @@ impl Sidecar {
 pub struct PortsExhausted {
     pub name: &'static str,
     pub candidates: Vec<u16>,
+}
+
+/// The sidecar binary names THIS boot is responsible for — every one it attempted, spawned or not.
+///
+/// Managed state (`lib.rs`'s `setup`) for one reason: `commands::release_data_dir_lock` runs the
+/// startup sweep AGAIN, on demand, long after `setup` returned, and the sweep's whole safety
+/// property is that it matches the binaries this shell itself spawns (`reaper`). Handing the
+/// command a list it derives on its own would be a second source of that truth; handing it THIS one
+/// means the button can only ever touch what the boot already claimed.
+pub struct FleetNames(Vec<&'static str>);
+
+impl FleetNames {
+    pub fn new(names: Vec<&'static str>) -> Self {
+        Self(names)
+    }
+
+    pub fn names(&self) -> &[&'static str] {
+        &self.0
+    }
 }
 
 /// Resolve the daemon's and the gateway's listening ports ONCE, before either the typed SDK client
@@ -268,15 +291,23 @@ fn apply(app: &tauri::AppHandle, reveal: Reveal) {
     let (show, hide) = match &reveal {
         Reveal::Main => ("main", "boot-error"),
         Reveal::BootError(failures) => {
-            // The splash reads the failures back through `boot_failures` (PULL — an emit fired
-            // before that page loads would be lost); this line is the same fact in the shell log,
-            // for whoever is tailing a terminal instead of looking at the window.
             let names: Vec<&str> = failures.iter().map(|f| f.name.as_str()).collect();
             log::error!(
                 "boot failed for {} sidecar(s): {}",
                 failures.len(),
                 names.join(", ")
             );
+            // PUSH the verdict at the splash. It ALSO pulls (`commands::boot_failures`) — but only
+            // once, when its page loads, and that page loads with the process, i.e. up to 60 seconds
+            // BEFORE the first failure exists. That gap is the 2026-08-27 blank screen: a heading,
+            // a subtitle, and an empty failure list that never refilled. See `gate::BootFailed`.
+            if let Err(e) = (BootFailed {
+                failures: failures.clone(),
+            })
+            .emit(app)
+            {
+                log::error!("failed to push the boot failures to the splash: {e}");
+            }
             ("boot-error", "main")
         }
     };
@@ -463,7 +494,7 @@ pub fn boot_sidecar(
     // that is exactly how a shell's children outlive it and start holding ports for nobody.
     children.adopt(child);
 
-    // PERSISTED STDERR (2026-08-07 incident) — best-effort disk mirror of the ring buffer the gate
+    // PERSISTED OUTPUT (2026-08-07 incident) — best-effort disk mirror of the ring buffer the gate
     // already keeps in memory. `None` here just means the splash's reason has no file to point the
     // operator to; boot proceeds exactly as it did before this existed. Recorded on the monitor
     // (not just held locally) so a RUNTIME death — reported from the probe loop in `supervise()`,
@@ -473,13 +504,19 @@ pub fn boot_sidecar(
         monitor.set_log_path(sidecar.service, log.path().to_string_lossy().into_owned());
     }
 
-    // ONE reader, THREE jobs. Stderr goes to the shell log, the gate's ring buffer, AND — the
-    // point of this whole module — the persisted file (the log is for the developer tailing a
-    // terminal, the ring is what the boot-error splash shows live, the file is what survives after
-    // both are gone). `Terminated` is the death signal itself — the child is gone the instant this
-    // arrives, so supervision hears it without waiting a single probe cycle; its exit code/signal is
-    // exactly the line that used to only reach `log::error!` (a no-op in a packaged build) and now
-    // also lands in the file.
+    // ONE reader, THREE jobs. The child's output goes to the shell log, the gate's ring buffer,
+    // AND — the point of this whole module — the persisted file (the log is for the developer
+    // tailing a terminal, the ring is what the boot-error splash shows live, the file is what
+    // survives after both are gone). `Terminated` is the death signal itself — the child is gone the
+    // instant this arrives, so supervision hears it without waiting a single probe cycle; its exit
+    // code/signal is exactly the line that used to only reach `log::error!` (a no-op in a packaged
+    // build) and now also lands in the file.
+    //
+    // BOTH STREAMS, since 2026-08-27. Stdout used to be dropped on the floor (`_ => {}`), which is
+    // fine for a process that dies loudly and useless for one that HANGS: the incident's first
+    // domino was a daemon that never reached "ready" and never wrote to stderr either, so its log
+    // was 84 bytes and the splash had nothing to show for the timeout. What a hung process printed
+    // NORMALLY is exactly the evidence of how far it got, so it is captured the same way.
     let log_handle = app.clone();
     let log_name = sidecar.name;
     let log_service = sidecar.service;
@@ -487,17 +524,21 @@ pub fn boot_sidecar(
     let log_monitor = monitor.clone();
     let reader_log = sidecar_log.clone();
     tauri::async_runtime::spawn(async move {
+        // One line, three destinations — the only thing the two streams disagree on is the level
+        // this shell's OWN log records them at.
+        let record = |line: &[u8], level: log::Level| {
+            let line = String::from_utf8_lossy(line);
+            let trimmed = line.trim_end();
+            log::log!(level, "[{log_name}] {trimmed}");
+            log_gate.record_output(log_name, trimmed);
+            if let Some(log) = &reader_log {
+                log.append(trimmed);
+            }
+        };
         while let Some(event) = rx.recv().await {
             match event {
-                CommandEvent::Stderr(line) => {
-                    let line = String::from_utf8_lossy(&line);
-                    log::warn!("[{}] {}", log_name, line);
-                    let trimmed = line.trim_end();
-                    log_gate.record_stderr(log_name, trimmed);
-                    if let Some(log) = &reader_log {
-                        log.append(trimmed);
-                    }
-                }
+                CommandEvent::Stderr(line) => record(&line, log::Level::Warn),
+                CommandEvent::Stdout(line) => record(&line, log::Level::Info),
                 CommandEvent::Terminated(payload) => {
                     log::error!(
                         "[{}] process exited (code {:?}, signal {:?})",
