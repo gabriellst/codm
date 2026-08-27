@@ -8,6 +8,7 @@ export type IssueDomainErrors =
 	| 'ISSUE_ALREADY_ARCHIVED'
 	| 'ISSUE_ALREADY_COMPLETED'
 	| 'ISSUE_NOT_COMPLETED'
+	| 'ISSUE_NOT_REOPENABLE'
 export type DomainErrors = BaseDomainErrors | IssueDomainErrors
 
 // Application errors — orchestration in the issue use cases. The stop control plane left in B4 (spec
@@ -30,5 +31,6 @@ registerErrorCodes({
 	ISSUE_ALREADY_ARCHIVED: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	ISSUE_ALREADY_COMPLETED: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	ISSUE_NOT_COMPLETED: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	ISSUE_NOT_REOPENABLE: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	ISSUE_NOT_FOUND: HttpStatusCode.NOT_FOUND,
 })

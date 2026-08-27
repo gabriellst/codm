@@ -18,12 +18,16 @@ export interface OpenIssueRef {
  * Uma issue que o orquestrador PODE steerar — o mesmo shape, mais o estado que decide se o steer
  * precisa reabri-la antes de enfileirar.
  *
- * `completed` é um boolean e não o `IssueStatus` inteiro de propósito: o chamador só tem uma decisão a
- * tomar ("preciso reabrir?"), e devolver o enum convidaria o contexto `agent` a ramificar sobre o
- * ciclo de vida da issue, que não é dele.
+ * BOOLEANO, e não o `IssueStatus` inteiro: o chamador só tem uma decisão a tomar, e devolver o enum
+ * convidaria o contexto `agent` a ramificar sobre o ciclo de vida da issue, que não é dele.
+ *
+ * O nome diz a PERGUNTA, não um estado. Ele era `completed`, o que funcionava enquanto `COMPLETED` era
+ * a única origem de `reopen()`; quando `NEEDS_INPUT` passou a ser produzível, um chamador olhando
+ * `completed` teria deixado exatamente as issues paradas presas — o motivo simétrico ao bug que a spec
+ * de reabertura já tinha corrigido do outro lado.
  */
 export interface SteerableIssueRef extends OpenIssueRef {
-	completed: boolean
+	needsReopen: boolean
 }
 
 /**

@@ -13,6 +13,7 @@ import * as wireEnums from '@codm/contracts-typescript/wire/enums'
 import agentControllers from '@agent/controllers'
 import * as agentInternalHandlers from '@agent/handlers/internal'
 import * as agentExternalHandlers from '@agent/handlers/external'
+import { ReconcileStalledIssues } from '@agent/jobs'
 import { INSTANCE_REGISTRY as agentRegistry } from '@agent/registry'
 import { start as agentStart } from '@agent/lifecycle'
 import { shutdown as agentShutdown } from '@agent/lifecycle'
@@ -66,6 +67,7 @@ export const MANIFEST = {
 		controllers: agentControllers,
 		internalHandlers: agentInternalHandlers,
 		externalHandlers: agentExternalHandlers,
+		jobs: [{ handler: ReconcileStalledIssues }],
 		registry: agentRegistry,
 		start: agentStart,
 		shutdown: agentShutdown,

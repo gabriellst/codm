@@ -350,7 +350,27 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		await this.enqueueResult(input, outcome, tx)
 
 		if (outcome.kind === 'COMPLETED') {
-			if (this.agent.tools.length > 0) return
+			if (this.agent.tools.length > 0) {
+				// O turno acabou e o agente NÃO declarou nada — nem `TransitionIssueStatus`, nem `RaiseStop`,
+				// nem `AskOperator`. Continua sendo um `return`: inferir a conclusão aqui publicaria
+				// `integration.issue.completed` uma segunda vez (o fato declarado já a publicou), e inferir um
+				// stop aqui é impossível de fazer certo — a declaração chega por uma ferramenta MCP que commita
+				// fora deste fluxo, então ler o estado daqui responde a pergunta errada. Quem fecha a issue
+				// travada é `ReconcileStalledIssues`, pela ausência de trabalho em voo.
+				//
+				// O que muda é o SILÊNCIO. Até 2026-08-26 este caminho não deixava rastro em lugar nenhum, e um
+				// turno que encerrou prometendo "volto com o veredito" custou 1h22 de issue marcada como viva
+				// sem nada rodando. Esta linha é o que aponta a causa em segundos.
+				this.logging.warn({
+					content: {
+						message: 'turn ended without a declared outcome — the reconcile sweep will close the issue',
+						issueId: input.issueId,
+						threadId: input.threadId,
+						turnKind: input.turnKind,
+					},
+				})
+				return
+			}
 			await this.domainEventRepository.save(
 				new AgentRunCompletedEvent({
 					entityId: input.issueId,
