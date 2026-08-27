@@ -21,6 +21,28 @@ const LEASE_MS = 10 * 60 * 1000
  * the point is to survive a hiccup, not to be exact.
  */
 const HEARTBEAT_MS = LEASE_MS / 3
+/**
+ * THE CEILING ON RENEWAL — how long one turn may hold its lease before the queue stops believing it.
+ *
+ * ### The failure this closes
+ * The heartbeat below turns `leaseMs` from a crash budget into a turn-duration budget, which is what
+ * a coding agent needs. What it also did, unbounded, was turn a WEDGED turn into an immortal one:
+ * measured 2026-08-27, two issues sat `WORKING` for over half an hour with `lease_until` pushed
+ * forward every three minutes and NO provider process alive on the machine. The turn's promise had
+ * never settled, so `clearInterval` was never reached, so the timer renewed forever — and every
+ * rescue downstream is keyed on the lease, so both of them cancelled out: `claimNext` refuses a
+ * target with a live lease, and `ReconcileStalledIssues` refuses an issue with an item in flight.
+ * Two independent safety nets, and one stuck timer beat both.
+ *
+ * ### Why an hour, and what it costs when it is wrong
+ * It is a BACKSTOP, deliberately far above any turn we have measured — the runner already ends a run
+ * that goes 180s without a frame (`CODM_AGENT_INACTIVITY_MS`) and now ends one whose child died, so
+ * anything still alive at this point is producing output and doing nothing with it. Firing on a
+ * healthy turn is the expensive direction: the item returns to the queue while the original work is
+ * still running, which is the double-turn this whole lease exists to prevent. An hour buys enough
+ * room that the ceiling is reached by wedged turns and not by slow ones.
+ */
+const MAX_TURN_MS = 60 * 60 * 1000
 /** Past this many failed turns an item is POISONED rather than retried — it is blocking its target. */
 const MAX_ATTEMPTS = 3
 const POLL_MIN_MS = 250
@@ -86,7 +108,15 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	 */
 	protected leaseMs = LEASE_MS
 	protected heartbeatMs = HEARTBEAT_MS
+	/** How long one turn may keep renewing before the queue stops believing it. See `MAX_TURN_MS`. */
+	protected maxTurnMs = MAX_TURN_MS
 	private draining: Promise<number> | null = null
+	/**
+	 * Whether the leases of dead boots have been released THIS run. The sweep is a boot-time repair,
+	 * not a poll: after the first pass every foreign live lease belongs to a daemon that is running,
+	 * and asking again every 250ms would be a select nobody reads.
+	 */
+	private orphansReleased = false
 	private pollIntervalMs = POLL_MIN_MS
 	private readonly workerId = `mailbox-${crypto.randomUUID()}`
 
@@ -227,6 +257,26 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 		// answers true (spec T7.1 rollout note), so this is a no-op for every install that predates SP2.
 		if (!(await this.cloudSession.isEntitled())) return 0
 
+		// THE BOOT SWEEP, and it is no longer just "the ordinary drain picks up expired leases".
+		//
+		// That story was true and slow: a crash left the row claimed by a worker id minted in the dead
+		// process's memory, indistinguishable from a second daemon still working, so the only safe
+		// recovery was to wait out the ten-minute lease — ten minutes of a conversation that answers
+		// nothing, on every restart. With the boot stamped on the row the holder's death is PROVABLE
+		// (`kill(pid, 0)`), so a lease from a boot that is gone is released here and claimable on this
+		// same pass. A live pid, or a row that predates the columns, is left alone and still falls back
+		// to expiry.
+		//
+		// The flag is set only on SUCCESS: a transient read failure should retry on the next tick, not
+		// silently spend the one chance this run had to recover its own crashed predecessor.
+		if (!this.orphansReleased) {
+			const released = await this.mailbox.releaseOrphanedClaims()
+			this.orphansReleased = true
+			if (released > 0) {
+				this.logging.info({ content: { message: 'released mailbox leases held by a daemon boot that is gone', released } })
+			}
+		}
+
 		let handled = 0
 		const inflight = new Set<Promise<void>>()
 
@@ -299,9 +349,41 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	 * re-polled mid-turn, so nobody was around to reclaim the lapsed lease. Fixing that park (so new work
 	 * is not stranded behind a long turn) removed the accident that was protecting long turns — which is
 	 * why the two land together.
+	 *
+	 * ### …and why the heartbeat is not unconditional either
+	 * "For as long as the turn actually takes" is only safe while somebody can still say when that is.
+	 * A turn whose promise never settles never clears the interval, and the renewal then outlives the
+	 * work by hours — the 27/08 incident, where two issues held live leases with no provider process on
+	 * the machine and both rescue mechanisms (reclaim by expiry, reconcile by nothing-in-flight) were
+	 * keyed on the very lease the dead timer kept alive. `MAX_TURN_MS` is the bound; reaching it ends
+	 * the turn for the QUEUE, whatever the work is doing.
 	 */
 	private async runTurn(item: ClaimedMailboxItem): Promise<void> {
+		const startedAt = Date.now()
+		/** Why the turn was given up on, or `null` while it is still believed. Read after the race. */
+		let abandoned: string | null = null
+		let giveUp: () => void = () => {
+			// replaced synchronously by the executor below — see `abandonedAt`
+		}
+		/**
+		 * Resolves ONLY when the ceiling is reached. Racing it against the turn is what frees the
+		 * concurrency slot: a wedged turn holds one of `MAX_CONCURRENT_TURNS` forever otherwise, and
+		 * four of them wedge the dispatcher for every conversation on the machine, not just their own.
+		 */
+		const abandonedAt = new Promise<undefined>(resolve => {
+			giveUp = () => resolve(undefined)
+		})
+
 		const heartbeat = setInterval(() => {
+			// THE CEILING, checked before the renewal and never after: past it the lease must be allowed
+			// to lapse, and a renewal that lands first would keep the item invisible for another
+			// `leaseMs`. See `MAX_TURN_MS` for the incident.
+			if (Date.now() - startedAt >= this.maxTurnMs) {
+				clearInterval(heartbeat)
+				abandoned = `o turno passou de ${Math.round(this.maxTurnMs / 60_000)}min sem terminar — o lease deixou de ser renovado`
+				giveUp()
+				return
+			}
 			// Fire-and-forget by design: a missed renewal is survivable (the lease still has two beats of
 			// slack), and awaiting here would make the turn's progress depend on the queue's write path.
 			void this.mailbox.renewLease(item.id, this.workerId, this.leaseMs).catch(error => {
@@ -316,7 +398,43 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 		}, this.heartbeatMs)
 
 		try {
-			const report = item.targetKind === MailboxTargetKind.THREAD ? await this.runThreadTurn(item) : await this.runIssueWork(item)
+			const work = item.targetKind === MailboxTargetKind.THREAD ? this.runThreadTurn(item) : this.runIssueWork(item)
+			const report = await Promise.race([work, abandonedAt])
+
+			// NO REPORT ⇒ THE CEILING WON. A `TurnReport` is always an object, so this is unambiguous.
+			//
+			// The work is NOT cancelled — this layer holds no handle on the provider process, and the one
+			// that does (`ClaudeAgentRunner`) now ends its own run when the child dies. What is bounded
+			// here is the QUEUE's belief: the item goes back with its attempt spent, and the slot is
+			// freed. That admits a second turn for the same target while the abandoned one may still be
+			// alive, which is the cost of the ceiling and the reason it sits an hour out.
+			if (!report) {
+				this.logging.error({
+					content: {
+						message: 'mailbox turn abandoned at the renewal ceiling',
+						itemId: item.id,
+						targetKind: item.targetKind,
+						targetId: item.targetId,
+						attempts: item.attempts,
+						maxTurnMs: this.maxTurnMs,
+					},
+				})
+				// The only trace an abandoned turn will ever leave when it finally settles — nothing else
+				// is awaiting it by then.
+				void work.then(
+					() => this.logging.warn({ content: { message: 'abandoned mailbox turn settled late', itemId: item.id } }),
+					error =>
+						this.logging.warn({
+							content: {
+								message: 'abandoned mailbox turn failed late',
+								itemId: item.id,
+								error: error instanceof Error ? error.message : String(error),
+							},
+						}),
+				)
+				await this.recordFailure(item, abandoned ?? 'o turno foi abandonado')
+				return
+			}
 
 			// TRANSPORT + MUTE RETURNS TO THE QUEUE. `fail` bumps `attempts`, records the cause in
 			// `last_error` and releases the lease NOW — the item is claimable on the next poll (250ms)
@@ -327,8 +445,7 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			// streamed a cut has already spoken in the operator's real chat, and retrying it would
 			// reproduce the duplicate-message bug `RunOrchestratorTurn` documents at its own stop branch.
 			if (report.transportStop && !report.spoke) {
-				await this.mailbox.fail(item.id, report.transportStop.detail, MAX_ATTEMPTS)
-				if (item.attempts >= MAX_ATTEMPTS) await this.raiseStopForPoisoned(item, report.transportStop.detail)
+				await this.recordFailure(item, report.transportStop.detail)
 				return
 			}
 
@@ -346,21 +463,30 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 					error: message,
 				},
 			})
-			// attempts++ and the lease released. Past MAX_ATTEMPTS the row is poisoned — it is ordered
-			// AHEAD of everything else for its target, so retrying forever would silence that thread.
-			await this.mailbox.fail(item.id, message, MAX_ATTEMPTS)
-
-			// A POISONED ITEM IS A NEEDS-YOU, and until now it was a silent one.
-			//
-			// `attempts` was already incremented at claim, so reaching MAX here means this failure was the
-			// last one and the row is now dead. Before this line the only trace was a log nobody reads:
-			// the item stopped existing for the queue, the issue stayed `WORKING` forever, and the
-			// operator found out by asking. Raising a stop puts it on the Needs-you panel — and since
-			// stops of this kind now reach the channel, on the operator's phone.
-			if (item.attempts >= MAX_ATTEMPTS) await this.raiseStopForPoisoned(item, message)
+			await this.recordFailure(item, message)
 		} finally {
 			clearInterval(heartbeat)
 		}
+	}
+
+	/**
+	 * attempts++ and the lease released. Past MAX_ATTEMPTS the row is poisoned — it is ordered AHEAD
+	 * of everything else for its target, so retrying forever would silence that thread.
+	 *
+	 * ### A POISONED ITEM IS A NEEDS-YOU, and it used to be a silent one
+	 * `attempts` was already incremented at claim, so reaching MAX here means this failure was the
+	 * last one and the row is now dead. Before the stop existed the only trace was a log nobody reads:
+	 * the item stopped existing for the queue, the issue stayed `WORKING` forever, and the operator
+	 * found out by asking. Raising a stop puts it on the Needs-you panel — and since stops of this kind
+	 * now reach the channel, on the operator's phone.
+	 *
+	 * One method for all three ways a turn can end badly (threw, reported a transport stop, ran past
+	 * the ceiling) because they differ only in the sentence written to `last_error` — and the third one
+	 * arrived by copying the other two, which is how the poison counter drifts.
+	 */
+	private async recordFailure(item: ClaimedMailboxItem, cause: string): Promise<void> {
+		await this.mailbox.fail(item.id, cause, MAX_ATTEMPTS)
+		if (item.attempts >= MAX_ATTEMPTS) await this.raiseStopForPoisoned(item, cause)
 	}
 
 	/**

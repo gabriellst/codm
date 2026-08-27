@@ -3,7 +3,7 @@ import { container, type DependencyContainer } from 'tsyringe-neo'
 import { eq, like } from 'drizzle-orm'
 import { scheduledCommands } from '@codm/contracts/db'
 import { CommandQueue, LibSqlDatabaseDriver, MockLoggingService, LibSqlCommandQueue, LibSqlTransaction } from '@codm/core-typescript'
-import { MessageAuthor, MailboxTargetKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
+import { ContactKind, MessageAuthor, MailboxTargetKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { TestBed, givenThread, GIVEN_MENTION_TAG } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
@@ -13,6 +13,7 @@ import { ReactToChannelMessage } from './ReactToChannelMessage'
 import { SustainTypingPresence } from './SustainTypingPresence'
 import { RecordOrchestratorReply } from './RecordOrchestratorReply'
 import { ConfigureReactions } from './ConfigureThreadSettings'
+import { OPERATOR_PARTICIPANT_ID } from '../objects'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { ConsumedMessageRepository } from '../repositories/ConsumedMessageRepository'
 import { ChannelSender, MockChannelSender } from '../services/ChannelSender'
@@ -84,10 +85,14 @@ describe('the instant cues — 👀 on the trigger, "digitando…" while it thin
 	const TRIGGER_WAMID = 'wamid-that-woke-it'
 
 	/** Ingest one inbound, aged by `minutesAgo` — `receivedAt` is when the PLATFORM says it was sent. */
-	const ingest = (threadId: string, text: string, opts: { minutesAgo?: number; platformMessageId?: string | undefined } = {}) =>
+	const ingest = (
+		threadId: string,
+		text: string,
+		opts: { minutesAgo?: number; platformMessageId?: string | undefined; senderExternalId?: string } = {},
+	) =>
 		testBed.resolve(IngestChannelMessage).execute({
 			threadId,
-			senderExternalId: 'stranger-42',
+			senderExternalId: opts.senderExternalId ?? 'stranger-42',
 			text,
 			receivedAt: new Date(Date.now() - (opts.minutesAgo ?? 0) * 60 * 1000),
 			platformMessageId: 'platformMessageId' in opts ? opts.platformMessageId : TRIGGER_WAMID,
@@ -196,6 +201,97 @@ describe('the instant cues — 👀 on the trigger, "digitando…" while it thin
 			expect(await commandRows('react_to_channel_message')).toHaveLength(0)
 			await queue.tick()
 			expect(sender.reactions).toHaveLength(0)
+		})
+
+		/**
+		 * THE GROUP CASE — WHO wrote it travels, or the 👀 lands on nobody.
+		 *
+		 * WhatsApp addresses a reaction by the WHOLE message key: remote + fromMe + id + PARTICIPANT.
+		 * In a group `remoteId` is the group jid, so without the author the gateway has only the chat to
+		 * fill the participant slot with — a key that points at the group itself, matches no message, and
+		 * renders for nobody in the room. In a DM the two coincide, which is the only reason this went
+		 * unnoticed: the bug was invisible in exactly the conversation shape that was tested.
+		 *
+		 * Asserted on the SENDER's input rather than on the command row, because the port is the last
+		 * place the value can still be lost before it becomes a wire field.
+		 */
+		it('in a GROUP, the 👀 carries the PARTICIPANT who wrote the message — not the group', async () => {
+			const GROUP_JID = '120363000000000000@g.us'
+			const MEMBER_JID = '5511777777777@s.whatsapp.net'
+			const thread = await givenThread(testBed, {
+				ownerId: MOCK_CLOUD_OWNER_ID,
+				contactExternalId: GROUP_JID,
+				contactKind: ContactKind.GROUP,
+				participants: [
+					{ participantId: 'operator', name: 'Operator', source: 'Operator on this machine', canInvoke: true },
+					{ participantId: MEMBER_JID, name: 'Ana', source: 'Group member', canInvoke: true },
+				],
+			})
+
+			const out = await ingest(thread.id.value, `${GIVEN_MENTION_TAG} ship the coupon fix`, { senderExternalId: MEMBER_JID })
+			expect(out.invocable).toBe(true)
+
+			await queue.tick()
+
+			expect(sender.reactions).toHaveLength(1)
+			expect(sender.reactions[0]).toMatchObject({
+				remoteId: GROUP_JID,
+				messageId: TRIGGER_WAMID,
+				fromMe: false,
+				// THE FIX. Drop this from the chain anywhere between the ingest and the port and the gateway
+				// falls back to the chat jid — i.e. reacts to the group, which is no reaction at all.
+				senderExternalId: MEMBER_JID,
+				reaction: CUE_ACKNOWLEDGED,
+			})
+		})
+
+		/**
+		 * THE OTHER HALF OF THE SAME RULE — the operator's own line sends NO author.
+		 *
+		 * `ConsumeInboundMessage` rewrites the sender to `OPERATOR_PARTICIPANT_ID` when the gateway
+		 * reports `fromMe`, and that is a SENTINEL, not a jid. Forwarding it would have the gateway parse
+		 * `operator` into a nonsense JID and break the one case that already worked — the device's own id
+		 * is what answers a `fromMe` key. So the sentinel stops here, on purpose.
+		 */
+		it("the operator's OWN message reacts with fromMe and never leaks the operator sentinel as a jid", async () => {
+			const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+
+			const out = await ingest(thread.id.value, `${GIVEN_MENTION_TAG} ship the coupon fix`, {
+				senderExternalId: OPERATOR_PARTICIPANT_ID,
+			})
+			expect(out.invocable).toBe(true)
+
+			await queue.tick()
+
+			expect(sender.reactions).toHaveLength(1)
+			expect(sender.reactions[0]).toMatchObject({ messageId: TRIGGER_WAMID, fromMe: true, reaction: CUE_ACKNOWLEDGED })
+			expect(sender.reactions[0]?.senderExternalId).toBeUndefined()
+		})
+
+		/**
+		 * A DM is unchanged: the contact IS the conversation, so the author that travels is the remote
+		 * itself and the key comes out exactly as it did before this field existed (WhatsApp sets no
+		 * participant for a user-server chat — proven on the gateway side in `message_builder_test.go`).
+		 */
+		it('in a DM the author travels too, and it is simply the contact — no behaviour change', async () => {
+			const CONTACT_JID = '5511888888888@s.whatsapp.net'
+			const thread = await givenThread(testBed, {
+				ownerId: MOCK_CLOUD_OWNER_ID,
+				contactExternalId: CONTACT_JID,
+				participants: [
+					{ participantId: 'operator', name: 'Operator', source: 'Operator on this machine', canInvoke: true },
+					{ participantId: CONTACT_JID, name: 'Test Contact', source: 'Channel contact', canInvoke: true },
+				],
+			})
+
+			await ingest(thread.id.value, `${GIVEN_MENTION_TAG} ship it`, { senderExternalId: thread.contactRef.externalId })
+			await queue.tick()
+
+			expect(sender.reactions[0]).toMatchObject({
+				remoteId: thread.contactRef.externalId,
+				fromMe: false,
+				senderExternalId: thread.contactRef.externalId,
+			})
 		})
 	})
 

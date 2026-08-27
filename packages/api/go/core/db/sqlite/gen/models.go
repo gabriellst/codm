@@ -40,6 +40,7 @@ type SharedOutbox struct {
 	CreatedAt   int64
 	ClaimedBy   sql.NullString
 	LeaseUntil  sql.NullInt64
+	DeadAt      sql.NullInt64
 }
 
 type SharedScheduledCommand struct {

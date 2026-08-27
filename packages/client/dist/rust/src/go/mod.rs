@@ -19288,6 +19288,12 @@ pub mod types {
     ///        "5511999999999@s.whatsapp.net"
     ///      ],
     ///      "type": "string"
+    ///    },
+    ///    "senderId": {
+    ///      "examples": [
+    ///        "5511999999999@s.whatsapp.net"
+    ///      ],
+    ///      "type": "string"
     ///    }
     ///  }
     ///}
@@ -19308,6 +19314,12 @@ pub mod types {
         pub reaction: ::std::string::String,
         #[serde(rename = "remoteId")]
         pub remote_id: ::std::string::String,
+        #[serde(
+            rename = "senderId",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub sender_id: ::std::option::Option<::std::string::String>,
     }
     impl ::std::convert::From<&SendReactionBody> for SendReactionBody {
         fn from(value: &SendReactionBody) -> Self {

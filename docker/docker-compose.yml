@@ -1,3 +1,10 @@
+# `name` PINA o project namespace do compose. Sem ele o compose deriva o nome do DIRETÓRIO deste
+# arquivo — `docker` — e QUALQUER outro repo cujo compose também more em `docker/` cai no MESMO
+# namespace: o `stack:up` daqui ADOTA os containers do outro (renomeia para `${PROJECT}-${SERVICE}-*`
+# e recria), e o outro repo perde a stack sem nada reportar o porquê. Já aconteceu com um monorepo
+# vizinho. O nome é o único ponto onde isso se corta.
+name: codm
+
 services:
   lgtm:
     build:
@@ -37,8 +44,104 @@ services:
     networks:
       - default
 
+  # O Postgres do PERFIL CLOUD (`CODM_PROFILE=cloud`), e só dele — o daemon desktop não tem banco
+  # externo, é o arquivo SQLite único sob `$CODM_DATA_DIR`. Sobe aqui porque `bun desktop:dev`
+  # depende de `api-typescript:dev:cloud`, e o `PgDriver` CONFERE E RECUSA migração (ver o registry):
+  # sem este banco de pé E migrado, o boot morre no `SELECT ... __drizzle_migrations` antes de
+  # qualquer rota subir, e o shell Tauri cai junto.
+  #
+  # `POSTGRES_DB` casa com o path do `CLOUD_DATABASE_URL` — o entrypoint da imagem cria o banco no
+  # PRIMEIRO boot do volume, e só nele. Trocar o nome depois exige `stack:reset` (ou um CREATE
+  # DATABASE na mão): num volume já inicializado o entrypoint não roda de novo e o banco novo
+  # simplesmente não nasce.
+  postgres:
+    image: postgres:17-alpine
+    container_name: ${PROJECT}-${SERVICE}-postgres
+    # SEM `POSTGRES_DB` de propósito. Ele só cria o banco quando o PGDATA está VAZIO, então serviria
+    # apenas ao primeiro boot do volume e deixaria todo o resto para o `postgres-init` abaixo — dois
+    # mecanismos para o mesmo fato, e o mais frágil deles sendo o único exercitado no caminho feliz.
+    # Com um mecanismo só, o que roda em máquina nova é o mesmo que roda em máquina velha.
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # Sonda o `postgres` (banco que o entrypoint sempre cria), NUNCA o banco da aplicação: este
+    # healthcheck é a pré-condição do `postgres-init`, e apontá-lo para o banco que o init ainda vai
+    # criar fecharia um ciclo — init espera saúde, saúde espera o banco, banco espera o init.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - default
+
+  # CRIA o banco do perfil cloud, em toda `stack:up` e não só na primeira.
+  #
+  # Este é o ÚNICO criador do banco (ver o comentário do `POSTGRES_DB` ausente acima). A janela que
+  # ele fecha: o entrypoint da imagem só inicializa com PGDATA VAZIO, então um volume que já existe
+  # — nascido antes da variável, ou com outro nome — nunca ganha o banco. `/docker-entrypoint-initdb.d/`
+  # tem exatamente a mesma janela. Verificado na marra: subir um volume com `POSTGRES_DB=a` e recriar
+  # o container com `POSTGRES_DB=b` deixa só `a` no cluster.
+  #
+  # O que se paga por não ter isto é um erro que não diz o próprio nome: o daemon cloud morre no
+  # ledger de migração (`SELECT ... __drizzle_migrations`), porque o `PgDriver` CONFERE E RECUSA
+  # migração — a mensagem fala de TABELA, e o que faltava era o BANCO.
+  #
+  # ── DE ONDE SAI O NOME ───────────────────────────────────────────────────────────────────────────
+  # Do `CLOUD_DATABASE_URL`, a MESMA string que o `PgDriver` abre e que o `migrate:deploy:cloud` mira
+  # — e não de uma variável só desta stack. Um segundo lugar guardando o nome do banco é um lugar a
+  # mais para divergir, e a divergência aqui não falha alto: cria-se um banco, conecta-se noutro, e o
+  # sintoma volta a ser o ledger de migração acusando tabela ausente.
+  #
+  # Só o NOME vem da URL. Host e credenciais não podem vir: a URL é a visão de quem está no HOST
+  # (`localhost:5432`), e aqui dentro o servidor atende por `postgres`, no nome do serviço.
+  #
+  # `$$` e não `$` porque o Compose interpola `${...}` no YAML antes de o shell ver: `$$` é como se
+  # entrega um cifrão literal ao `sh`.
+  #
+  # O teste-e-cria em dois passos existe porque o Postgres não tem `CREATE DATABASE IF NOT EXISTS`.
+  # O idiomático seria `\gexec`, mas ele é meta-comando do psql: não existe dentro de `-c` e depende
+  # de uma barra invertida sobreviver ao `echo` do sh, que varia por shell. Este par não tem escape
+  # nenhum para dar errado, e é no-op silencioso quando o banco já existe.
+  postgres-init:
+    image: postgres:17-alpine
+    container_name: ${PROJECT}-${SERVICE}-postgres-init
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: postgres
+      CLOUD_DATABASE_URL: ${CLOUD_DATABASE_URL:?defina CLOUD_DATABASE_URL no .env}
+    entrypoint:
+      - sh
+      - -c
+      - |
+        db="$${CLOUD_DATABASE_URL##*/}"
+        db="$${db%%\?*}"
+        # Recusa alto em vez de criar um banco com nome absurdo. Sem isto, uma URL sem banco no fim
+        # (`postgres://user:pass@host:5432`) faria o `##*/` devolver `host:5432` — e o `CREATE
+        # DATABASE "host:5432"` PASSA, porque aspas duplas aceitam qualquer coisa como identificador.
+        # O erro só reapareceria depois, longe daqui, como banco ausente.
+        case "$$db" in
+          '' | *[:@]* )
+            echo "CLOUD_DATABASE_URL não termina em nome de banco: $$CLOUD_DATABASE_URL" >&2
+            exit 1
+            ;;
+        esac
+        psql -h postgres -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$$db'" | grep -q 1 \
+          || psql -h postgres -U postgres -c "CREATE DATABASE \"$$db\""
+    restart: "no"
+    networks:
+      - default
+
 volumes:
   redis_data:
+  postgres_data:
   lgtm_tempo:
   lgtm_loki:
   lgtm_mimir:

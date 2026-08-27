@@ -173,8 +173,15 @@
     {
       "idx": 24,
       "version": "6",
-      "when": 1787813298561,
-      "tag": "0024_naive_blue_marvel",
+      "when": 1787815237986,
+      "tag": "0024_large_rafael_vega",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1787818433223,
+      "tag": "0025_clumsy_young_avengers",
       "breakpoints": true
     }
   ]

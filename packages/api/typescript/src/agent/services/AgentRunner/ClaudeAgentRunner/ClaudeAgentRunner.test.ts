@@ -34,11 +34,26 @@ interface FakeProcess extends AgentProcess {
  * counter is what makes "the turn ended at the terminal frame" an assertion rather than a claim.
  *
  * `hold` keeps stdout open forever after the lines run out — the shape that provokes the watchdog.
+ *
+ * ### `exited` IS PENDING WHILE THE FAKE IS "RUNNING", and that is not cosmetic
+ * It used to be `Promise.resolve(0)` — a process that had already died while its stdout was still
+ * yielding, which no real process does. It went unnoticed because nothing read `exited` until the
+ * loop was over. Now the run RACES it (a child that dies mid-stream ends the turn), so the old fake
+ * would report every single test as a run whose process died, and the watchdog cases would never be
+ * reached. A fake that lies about liveness cannot be used to test liveness.
+ *
+ * `dieDuringStream` is the opposite lie, told on purpose: the child is reaped while its stdout stays
+ * open forever — the leaked-grandchild shape of the 27/08 incident.
  */
-function fakeSpawner(lines: string[], options: { hold?: boolean; exitCode?: number; stderr?: string } = {}) {
+function fakeSpawner(lines: string[], options: { hold?: boolean; exitCode?: number; stderr?: string; dieDuringStream?: boolean } = {}) {
 	let created: FakeProcess | undefined
 	const spawner = (spec: AgentProcessSpec): AgentProcess => {
 		let emitted = 0
+		let reap: (code: number) => void = () => {}
+		const exited = new Promise<number>(resolve => {
+			reap = resolve
+		})
+		if (options.dieDuringStream) reap(options.exitCode ?? 0)
 		const proc: FakeProcess = {
 			spec,
 			writes: [],
@@ -52,10 +67,15 @@ function fakeSpawner(lines: string[], options: { hold?: boolean; exitCode?: numb
 					emitted++
 					yield line
 				}
-				if (options.hold) await new Promise<void>(() => {}) // never resolves; the watchdog must fire
+				if (options.hold || options.dieDuringStream) await new Promise<void>(() => {}) // never resolves
+				// Stdout ran dry, so the process is done — this is the reap a real child gets here.
+				reap(options.exitCode ?? 0)
 			})(),
 			stderr: (async function* () {
 				if (options.stderr) yield options.stderr
+				// O NETO VAZADO segura os DOIS canos, não só o stdout — é o `await stderrPump` que também
+				// pendurava o turno depois do laço de leitura.
+				if (options.dieDuringStream) await new Promise<void>(() => {})
 			})(),
 			write(chunk) {
 				proc.writes.push(chunk)
@@ -65,8 +85,10 @@ function fakeSpawner(lines: string[], options: { hold?: boolean; exitCode?: numb
 			},
 			kill() {
 				proc.killed = true
+				// Killing IS what reaps a child that would otherwise never end — the watchdog's whole point.
+				reap(options.exitCode ?? 0)
 			},
-			exited: Promise.resolve(options.exitCode ?? 0),
+			exited,
 		}
 		created = proc
 		return proc
@@ -443,6 +465,11 @@ describe('ClaudeAgentRunner — transport stops and the watchdog backstop', () =
 	it('mata um run que emite bytes sem nunca completar um frame', async () => {
 		const spawner = (): AgentProcess => {
 			let stop = false
+			// Alive until killed — see `fakeSpawner`'s docblock on why a fake must not pre-reap itself.
+			let reap: (code: number) => void = () => {}
+			const exited = new Promise<number>(resolve => {
+				reap = resolve
+			})
 			return {
 				stdout: (async function* () {
 					while (!stop) {
@@ -456,8 +483,9 @@ describe('ClaudeAgentRunner — transport stops and the watchdog backstop', () =
 				endStdin: () => {},
 				kill: () => {
 					stop = true
+					reap(0)
 				},
-				exited: Promise.resolve(0),
+				exited,
 			}
 		}
 
@@ -468,6 +496,45 @@ describe('ClaudeAgentRunner — transport stops and the watchdog backstop', () =
 
 		expect(finished.type).toBe('finished')
 		expect(finished.result.stop?.detail).toContain('inactivity watchdog')
+	}, 5_000)
+
+	/**
+	 * A MORTE DO FILHO ENCERRA O TURNO — o watchdog cobre SILÊNCIO, e silêncio não é morte.
+	 *
+	 * MEDIDO em 27/08: duas issues presas por mais de meia hora com o item do mailbox leased, o
+	 * `lease_until` empurrado a cada três minutos e NENHUM processo `claude -p` vivo na máquina. O
+	 * heartbeat estava correto; o turno é que nunca assentava, porque este laço esperava um stdout que
+	 * um neto vazado do CLI mantinha aberto depois de o pai morrer — e depois dele, um `proc.exited`
+	 * que resolvia em `'close'` (que espera os mesmos canos) e um `stderrPump` que iterava um deles.
+	 * Três esperas, nenhuma com relógio, todas sobre um processo que já não existia.
+	 *
+	 * A jusante isso não é um turno lento, é um turno eterno: `claimNext` recusa alvo com lease vivo e
+	 * `ReconcileStalledIssues` recusa issue com item em voo, então os dois salvamentos se anulavam.
+	 *
+	 * O falsificador é exato: tire `proc.exited` da corrida do laço e este teste PENDURA até o timeout
+	 * do bun — o orçamento de inatividade aqui é de um minuto, muito além dele, exatamente como em
+	 * produção era de três.
+	 */
+	it('encerra o turno quando o FILHO MORRE, mesmo com stdout e stderr presos para sempre', async () => {
+		const fake = fakeSpawner([INIT], { dieDuringStream: true })
+		const runner = ClaudeAgentRunner.withOptions(new MockLoggingService(), new InMemoryAgentIdentityService(), {
+			spawner: fake.spawner,
+			// Um minuto: se o watchdog fosse o que resolve isto, o teste estouraria antes.
+			inactivityMs: 60_000,
+			postMortemMs: 20,
+		})
+
+		const finished = (await drain(runner.run(request()))).at(-1) as {
+			type: string
+			result: { outcome: string; stop?: { detail: string } }
+		}
+
+		expect(finished.type).toBe('finished')
+		// STOPPED, não COMPLETED com resposta vazia: um run que perdeu o processo é retentável e
+		// visível. Reportado como concluído, o chamador não tem como distinguir de "o agente não tinha
+		// nada a dizer", e a issue fica WORKING esperando uma resposta que não vem.
+		expect(finished.result.outcome).toBe(AgentRunOutcome.STOPPED)
+		expect(finished.result.stop?.detail).toContain('morreu antes de fechar o turno')
 	}, 5_000)
 
 	it('surfaces a spawn failure as the terminal event instead of throwing out of run()', async () => {

@@ -60,6 +60,50 @@ describe('ReconcileStalledIssues', () => {
 		expect(stalledIssueIds).toEqual([])
 	})
 
+	/**
+	 * A ISSUE PRESA VOLTA A SER VISÍVEL — o buraco que fazia esta varredura rodar sessenta vezes por
+	 * hora sem nunca enxergar uma issue morta.
+	 *
+	 * `consumed_at` e `dead_at` de um item reclamado por um worker que morreu ficam NULL PARA SEMPRE:
+	 * ninguém as escreve a não ser o próprio worker. O predicado parava aí, então "não consumido e não
+	 * envenenado" era lido como "em voo" e a issue sumia desta varredura permanentemente. Medido em
+	 * 27/08: duas issues nesse estado por mais de meia hora, com o lease sendo renovado por um
+	 * `setInterval` cujo turno nunca assentou e sem nenhum processo de provedor vivo.
+	 *
+	 * O falsificador é exato: tire a cláusula do lease do `inFlightMailbox` e este teste fica vermelho —
+	 * a issue volta a ser invisível, que é o defeito.
+	 */
+	it('vê uma issue cujo item ficou com o lease EXPIRADO — o worker morreu e ninguém mais o segura', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const issue = await givenIssue(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value })
+		await enqueueSteer(issue.ownerId, issue.id.value, thread.id.value)
+
+		// Lease NEGATIVO: já nasce expirado há dois minutos, além da graça de uma cadência. Sem isto o
+		// teste teria de dormir, e um teste que dorme mede o relógio, não o predicado.
+		const claimed = await testBed.resolve(MailboxRepository).claimNext('worker-que-morreu', -120_000)
+		expect(claimed).toBeDefined()
+
+		const { stalledIssueIds } = await usecase.execute({})
+
+		expect(stalledIssueIds).toEqual([issue.id.value])
+	})
+
+	/**
+	 * O outro lado da mesma linha, e o que impede o conserto de virar falso positivo: um lease VIVO é
+	 * um turno rodando, e um turno rodando pode durar vinte minutos legítimos.
+	 */
+	it('não toca numa issue cujo item está com lease VIVO — isso é um turno em andamento', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const issue = await givenIssue(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value })
+		await enqueueSteer(issue.ownerId, issue.id.value, thread.id.value)
+
+		await testBed.resolve(MailboxRepository).claimNext('worker-trabalhando', 600_000)
+
+		const { stalledIssueIds } = await usecase.execute({})
+
+		expect(stalledIssueIds).toEqual([])
+	})
+
 	it('does NOT touch an issue whose outbox event is not processed yet', async () => {
 		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
 		const issue = await givenIssue(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value })
