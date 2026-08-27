@@ -21,7 +21,22 @@ import { AgentIdentityService } from '@codm/core-typescript'
 export interface ClaudeAgentRunnerOptions {
 	spawner?: AgentProcessSpawner
 	inactivityMs?: number
+	postMortemMs?: number
 }
+
+/**
+ * How long the run keeps reading AFTER the child is already dead — and how long a teardown may take.
+ *
+ * A dead child produces no new output, so this is not an activity budget: it bounds the wait for
+ * bytes ALREADY in the pipe (the terminal `result` frame is routinely among them) and for the pipes
+ * themselves to shut. Both are seconds-scale by nature, and both are unbounded in the failure this
+ * closes — a grandchild the CLI leaked inherits the pipe and holds it open forever, which is how a
+ * run whose process had been gone half an hour still had nothing to report (27/08).
+ *
+ * Comfortably past `KILL_GRACE_MS` (2s, `AgentProcess.ts`), so a child that only dies at the SIGKILL
+ * escalation is still reaped inside the window rather than reported as a run that never exited.
+ */
+const POST_MORTEM_DRAIN_MS = 5_000
 
 /** A CLI that says any of these is asking for a human to log in — not a run that failed on its merits. */
 const AUTH_HINT = /\/login\b|not logged in|please log ?in|authentication (?:required|failed)|unauthorized/i
@@ -148,6 +163,8 @@ export class ClaudeAgentRunner extends AgentRunner {
 	private spawner: AgentProcessSpawner = nodeAgentProcessSpawner
 	/** No frame for this long ⇒ the run is wedged. The BACKSTOP of §4.3 rule 5, never the primary signal. */
 	private inactivityMs = ProductConfig.env.CODM_AGENT_INACTIVITY_MS
+	/** How long a run keeps draining after the child is already dead. See `POST_MORTEM_DRAIN_MS`. */
+	private postMortemMs = POST_MORTEM_DRAIN_MS
 	private readonly live = new Set<AgentProcess>()
 
 	/**
@@ -188,6 +205,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 		const runner = new ClaudeAgentRunner(logging, identities)
 		if (options.spawner !== undefined) runner.spawner = options.spawner
 		if (options.inactivityMs !== undefined) runner.inactivityMs = options.inactivityMs
+		if (options.postMortemMs !== undefined) runner.postMortemMs = options.postMortemMs
 		return runner
 	}
 
@@ -301,6 +319,12 @@ export class ClaudeAgentRunner extends AgentRunner {
 		let sessionId: string | null = null
 		let stdinClosed = false
 		let watchdogFired = false
+		/**
+		 * The child's pid was reaped while we were still reading its stdout — i.e. the process is gone
+		 * and whatever is still holding the pipe open is not it. Distinct from the ordinary ending,
+		 * where stdout closes first and the exit is merely the formality that follows.
+		 */
+		let diedMidStream = false
 
 		const closeStdin = (): void => {
 			if (stdinClosed) return
@@ -319,18 +343,62 @@ export class ClaudeAgentRunner extends AgentRunner {
 			const iterator = proc.stdout[Symbol.asyncIterator]()
 			let pending: Promise<IteratorResult<Uint8Array | string>> | null = null
 			let deadlineAt = Date.now() + this.inactivityMs
+			/**
+			 * DEATH OF THE CHILD, raced against its own output — the signal §4.3 rule 5 never had.
+			 *
+			 * The watchdog covers SILENCE. It does not cover DEATH, and the two are not the same
+			 * ending: a child that dies leaving a grandchild on the inherited pipe produces a stdout
+			 * iterator that never yields and never completes, so the loop below sat on `iterator.next()`
+			 * with nothing coming. Downstream that is not a slow turn, it is an eternal one — the mailbox
+			 * heartbeat renews the lease of a turn whose process is gone, and every recovery mechanism is
+			 * keyed on that lease (measured 27/08: two issues stuck over half an hour, no `claude`
+			 * process alive).
+			 *
+			 * Rejection is folded into the same value on purpose: a spawn error arriving here means the
+			 * child will never speak either, and the two need identical handling.
+			 */
+			const death = proc.exited.then(
+				() => 'exited' as const,
+				() => 'exited' as const,
+			)
 
 			for (;;) {
 				let timer: ReturnType<typeof setTimeout> | undefined
-				const step = pending ?? iterator.next()
+				// ANNOTATED, and it has to be: `pending` is assigned from `step` on the line below, so the
+				// racers array a few lines down (which mentions `step`) is enough of a loop for inference
+				// to give up and infer `any` — silently, since `noImplicitAny` only reports the cycle.
+				const step: Promise<IteratorResult<Uint8Array | string>> = pending ?? iterator.next()
 				pending = step
 				const timeout = new Promise<'timeout'>(resolve => {
 					timer = setTimeout(() => resolve('timeout'), Math.max(deadlineAt - Date.now(), 0))
 				})
-				const settled = await Promise.race([step, timeout])
+				// Once death has been observed it is permanently resolved and would win every subsequent
+				// race, so it leaves the field — what bounds the loop from then on is the short drain
+				// deadline set below.
+				const racers: Promise<IteratorResult<Uint8Array | string> | 'timeout' | 'exited'>[] = [step, timeout]
+				if (!diedMidStream) racers.push(death)
+				const settled = await Promise.race(racers)
 				clearTimeout(timer)
 
+				if (settled === 'exited') {
+					// NOT an ending yet: bytes already written by the dead child can still be buffered, and
+					// the terminal `result` frame is frequently among them. Keep draining, but on a budget
+					// measured in seconds rather than the three-minute silence budget — nothing is going to
+					// produce NEW output, so the only thing left to wait for is what is already in the pipe.
+					diedMidStream = true
+					deadlineAt = Date.now() + this.postMortemMs
+					continue
+				}
+
 				if (settled === 'timeout') {
+					// The child is already dead and its pipe is being held open by something that is not it.
+					// There is nothing left to drain and nothing to kill; end the run on what was seen.
+					if (diedMidStream) {
+						step.catch(() => {
+							// no-op — the raced promise outlives this loop, see the watchdog branch below
+						})
+						break
+					}
 					watchdogFired = true
 					warn(`no output for ${this.inactivityMs}ms — killing the run (watchdog backstop)`)
 					// The raced promise outlives this loop; without a catch its later rejection is unhandled.
@@ -359,7 +427,9 @@ export class ClaudeAgentRunner extends AgentRunner {
 						if (decoded.terminal.stopReason !== AgentStopReason.TOOL_USE) closeStdin()
 					}
 				}
-				if (sawFrame) deadlineAt = Date.now() + this.inactivityMs
+				// A frame is a sign of life — of the STREAM. Past the child's death it means the pipe still
+				// had buffered bytes, which earns the short drain budget again and never the long one.
+				if (sawFrame) deadlineAt = Date.now() + (diedMidStream ? this.postMortemMs : this.inactivityMs)
 			}
 
 			for (const decoded of codec.flush()) {
@@ -372,8 +442,18 @@ export class ClaudeAgentRunner extends AgentRunner {
 			}
 
 			closeStdin()
-			const exitCode = await proc.exited.catch(() => -1)
-			await stderrPump
+			// BOUNDED, both of them — this is where the 27/08 hang actually lived. The read loop had
+			// ended (or been killed) and the turn then parked here forever: `exited` used to resolve on
+			// `'close'`, which additionally waits for every inherited pipe to shut, and `stderrPump` is a
+			// `for await` over one of those very pipes. A leaked grandchild holding either one is enough,
+			// and neither await had a clock. Nothing downstream could tell that apart from a long turn:
+			// no frame, no result, no failure — just a lease renewed every three minutes forever.
+			//
+			// A timeout here is not a guess at the child's runtime: by this line the child has been asked
+			// to end (stdin closed, or killed outright), so what is being waited on is a teardown, and a
+			// teardown that misses a seconds-wide window is not going to arrive.
+			const exitCode = await settleWithin(proc.exited, this.postMortemMs, -1)
+			await settleWithin(stderrPump, this.postMortemMs, undefined)
 
 			// Orphan tool calls become FAILED here — the turn is over and they never reported a result.
 			for (const fact of accumulator.flush()) yield { type: 'fact', fact }
@@ -385,6 +465,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 					sessionId,
 					exitCode,
 					watchdogFired,
+					diedMidStream,
 					stderr: stderrChunks.join(''),
 				}),
 			}
@@ -417,6 +498,8 @@ export class ClaudeAgentRunner extends AgentRunner {
 			sessionId: string | null
 			exitCode: number
 			watchdogFired: boolean
+			/** The child was reaped while its stdout was still open — see the field in `run`. */
+			diedMidStream: boolean
 			stderr: string
 		},
 	): AgentRunResult {
@@ -457,6 +540,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 		terminal?: TerminalResultRecord
 		exitCode: number
 		watchdogFired: boolean
+		diedMidStream: boolean
 		stderr: string
 	}): AgentRunResult['stop'] {
 		// TRANSPORT evidence ONLY: process stderr and the CLI's own API-layer diagnosis
@@ -489,6 +573,18 @@ export class ClaudeAgentRunner extends AgentRunner {
 			return {
 				kind: StopKind.SERVER_ERROR as TransportStopKind,
 				detail: `provider exited with code ${observed.exitCode}${observed.stderr ? `: ${observed.stderr.trim()}` : ''}`,
+			}
+		}
+		// DIED WITHOUT CLOSING THE TURN. Reached only when there is no terminal frame (the branch above
+		// returns first) and the exit was clean — the child went away mid-stream and said nothing final.
+		// Reporting COMPLETED here is what the run used to do, and it is a lie the caller cannot detect:
+		// an empty reply with no stop reads as "the agent had nothing to say", so the issue stays WORKING
+		// and the operator waits on an answer that will never come. A transport stop is retriable and
+		// visible, which is what a run that lost its process actually is.
+		if (observed.diedMidStream) {
+			return {
+				kind: StopKind.SERVER_ERROR as TransportStopKind,
+				detail: `o processo do provedor morreu antes de fechar o turno${observed.stderr ? `: ${observed.stderr.trim()}` : ''}`,
 			}
 		}
 		return undefined
@@ -578,5 +674,28 @@ async function drainToStrings(stream: AsyncIterable<Uint8Array | string>, sink: 
 		for await (const chunk of stream) sink.push(typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk))
 	} catch {
 		// A broken stderr pipe must never be the reason a run fails — stdout is the signal.
+	}
+}
+
+/**
+ * Await `promise`, but never past `ms` — a rejection and an overrun both collapse to `fallback`.
+ *
+ * Exists because two awaits in `run()` sit AFTER the turn is structurally over and neither had a
+ * clock: the process's exit and the stderr drain. Both hang on the same thing — a pipe inherited by a
+ * grandchild the CLI leaked — and hanging there is worse than being wrong there, because the caller
+ * upstream (a mailbox turn holding a lease it renews every three minutes) has no way to tell an
+ * unfinished teardown from an unfinished turn.
+ */
+async function settleWithin<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+	let timer: ReturnType<typeof setTimeout> | undefined
+	try {
+		return await Promise.race([
+			promise.catch(() => fallback),
+			new Promise<T>(resolve => {
+				timer = setTimeout(() => resolve(fallback), ms)
+			}),
+		])
+	} finally {
+		clearTimeout(timer)
 	}
 }

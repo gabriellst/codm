@@ -28,6 +28,18 @@ export interface AgentProcess {
 	endStdin(): void
 	/** Terminate the process TREE, so a CLI's own children die with it. */
 	kill(): void
+	/**
+	 * Resolves when THE PROCESS dies — not when its pipes close, and the distinction is a measured bug
+	 * rather than a nicety.
+	 *
+	 * Node's `'close'` fires only once the child has exited AND every stdio stream it was given is
+	 * closed. A CLI that leaves a grandchild holding the inherited stdout/stderr pipe therefore keeps
+	 * `'close'` pending FOREVER after its own death — and the runner awaits this promise (and the
+	 * stderr drain) after the read loop, so the turn's promise never settled, so the mailbox heartbeat
+	 * next door kept renewing the lease of a turn whose process had been gone for half an hour
+	 * (27/08). `'exit'` is the honest signal: it fires when the pid is gone, which is exactly the
+	 * question every caller here is asking.
+	 */
 	exited: Promise<number>
 }
 
@@ -79,7 +91,10 @@ export function createNodeAgentProcessSpawner(tree: ProcessTree): AgentProcessSp
 			child.once('error', cause =>
 				reject(new BaseError<AgentApplicationErrors>('TERMINAL_SPAWN_FAILED', `failed to spawn ${bin}: ${String(cause)}`)),
 			)
-			child.once('close', code => resolve(code ?? 0))
+			// `'exit'`, NOT `'close'` — the pid is what we are waiting on. See the interface docblock:
+			// `'close'` additionally waits for every inherited pipe to shut, which a leaked grandchild
+			// can hold open past our own death.
+			child.once('exit', code => resolve(code ?? 0))
 		})
 
 		// Fallback for stdout/stderr when the child was spawned without a pipe — yields nothing.

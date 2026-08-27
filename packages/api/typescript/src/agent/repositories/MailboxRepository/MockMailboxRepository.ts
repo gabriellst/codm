@@ -1,4 +1,5 @@
 import { injectable } from 'tsyringe-neo'
+import { DAEMON_BOOT, isClaimOrphaned } from '@codm/core-typescript'
 import type { MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
 import { MailboxRepository, type ClaimedMailboxItem, type EnqueueMailboxItem } from './MailboxRepository'
 
@@ -6,6 +7,9 @@ interface Row extends EnqueueMailboxItem {
 	id: string
 	attempts: number
 	leaseUntil?: number
+	/** WHICH RUN of the daemon holds the lease — the twin of `claimed_boot` / `claimed_pid`. */
+	claimedBoot: string | null
+	claimedPid: number | null
 	consumed: boolean
 	dead: boolean
 	seq: number
@@ -20,7 +24,16 @@ export class MockMailboxRepository extends MailboxRepository {
 	async enqueue(item: EnqueueMailboxItem): Promise<boolean> {
 		if (this.rows.some(r => r.dedupKey === item.dedupKey)) return false
 		this.seq += 1
-		this.rows.push({ ...item, id: crypto.randomUUID(), attempts: 0, consumed: false, dead: false, seq: this.seq })
+		this.rows.push({
+			...item,
+			id: crypto.randomUUID(),
+			attempts: 0,
+			claimedBoot: null,
+			claimedPid: null,
+			consumed: false,
+			dead: false,
+			seq: this.seq,
+		})
 		return true
 	}
 
@@ -35,6 +48,8 @@ export class MockMailboxRepository extends MailboxRepository {
 		if (!row) return undefined
 		row.attempts += 1
 		row.leaseUntil = now + leaseMs
+		row.claimedBoot = DAEMON_BOOT.id
+		row.claimedPid = DAEMON_BOOT.pid
 		void claimedBy
 		return {
 			id: row.id,
@@ -53,11 +68,25 @@ export class MockMailboxRepository extends MailboxRepository {
 		row.leaseUntil = Date.now() + leaseMs
 	}
 
+	async releaseOrphanedClaims(): Promise<number> {
+		const orphaned = this.rows.filter(
+			r => !r.consumed && !r.dead && r.leaseUntil !== undefined && isClaimOrphaned({ bootId: r.claimedBoot, pid: r.claimedPid }),
+		)
+		for (const row of orphaned) {
+			row.leaseUntil = undefined
+			row.claimedBoot = null
+			row.claimedPid = null
+		}
+		return orphaned.length
+	}
+
 	async complete(id: string): Promise<void> {
 		const row = this.rows.find(r => r.id === id)
 		if (row) {
 			row.consumed = true
 			row.leaseUntil = undefined
+			row.claimedBoot = null
+			row.claimedPid = null
 		}
 	}
 
@@ -65,6 +94,8 @@ export class MockMailboxRepository extends MailboxRepository {
 		const row = this.rows.find(r => r.id === id)
 		if (!row) return
 		row.leaseUntil = undefined
+		row.claimedBoot = null
+		row.claimedPid = null
 		if (row.attempts >= maxAttempts) row.dead = true
 	}
 

@@ -444,6 +444,83 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 	})
 
 	/**
+	 * …E O OUTRO LADO DA MESMA MOEDA: renovar não pode ser para sempre.
+	 *
+	 * O teste acima prova que um turno saudável e longo mantém o próprio item. Ele não diz nada sobre um
+	 * turno que NUNCA assenta — e essa foi a falha de 27/08: duas issues em `WORKING` por mais de meia
+	 * hora, `lease_until` empurrado a cada três minutos, `consumed_at`/`dead_at` nulos, e NENHUM
+	 * processo `claude -p` vivo na máquina. O heartbeat fazia exatamente o que lhe mandaram; quem nunca
+	 * chegou foi o `clearInterval`, porque a promise do turno jamais assentou.
+	 *
+	 * O estrago é que os dois salvamentos são chaveados no mesmo lease e por isso se anulam:
+	 * `claimNext` recusa um alvo com lease vivo, e `ReconcileStalledIssues` recusa uma issue com item em
+	 * voo. Um timer preso vence os dois ao mesmo tempo.
+	 *
+	 * O falsificador é exato: tire a checagem do teto do heartbeat e este teste estoura no timeout do
+	 * bun — o item nunca volta para a fila, que é literalmente o defeito. Note o `leaseMs` LONGO: quem
+	 * tem de soltar o item aqui é o teto, não a expiração natural do lease.
+	 */
+	it('para de renovar no TETO — um turno que nunca assenta não segura o item para sempre', async () => {
+		const mailbox = testBed.resolve(MailboxRepository)
+		const threads = testBed.resolve(ThreadRepository)
+		const workspaces = testBed.resolve(WorkspaceRepository)
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+
+		// O turno trava no lookup do WORKSPACE, e não no da thread, pela mesma razão do teste de veneno
+		// acima: `RaiseStop` também lê a thread, e travá-la impediria o próprio Stop de nascer.
+		let started = 0
+		const turnStarted = Promise.withResolvers<void>()
+		const realWorkspaceFindById = workspaces.findById.bind(workspaces)
+		workspaces.findById = async () => {
+			started += 1
+			turnStarted.resolve()
+			// Nunca resolve. É a forma exata do incidente: o filho morreu, e nada deste lado soube.
+			await new Promise<void>(() => {})
+			return undefined
+		}
+
+		class CeilingDispatcher extends LibSqlMailboxDispatcher {
+			// Dez vezes o teto: se este teste passar, não foi a expiração do lease que soltou o item.
+			protected override leaseMs = 1_200
+			protected override heartbeatMs = 20
+			protected override maxTurnMs = 120
+		}
+		const dispatcher = new CeilingDispatcher(
+			mailbox,
+			threads,
+			workspaces,
+			testBed.resolve(AgentSessionRepository),
+			testBed.resolve(LoggingService),
+			testBed.resolve(CloudSession),
+		).bind(testContainer)
+
+		try {
+			await mailbox.enqueue({
+				ownerId: MOCK_CLOUD_OWNER_ID,
+				targetKind: MailboxTargetKind.ISSUE,
+				targetId: uuidv7(),
+				kind: MailboxItemKind.WORK,
+				payload: { threadId: thread.id.value, key: 'ISS-9', title: 'travada', goal: 'x', provider: 'CLAUDE' },
+				dedupKey: 'wedged-1',
+			})
+
+			// O drain só retorna quando não há mais nada reivindicável NEM em voo — o que, com o turno
+			// preso, só acontece porque o teto devolve o item e as tentativas acabam por envenená-lo.
+			const draining = dispatcher.drain()
+			await turnStarted.promise
+			await draining
+
+			// Três turnos começaram: o teto devolveu o item à fila duas vezes antes de a terceira falha
+			// envenená-lo. Sem o teto, `started` fica em 1 para sempre.
+			expect(started).toBe(3)
+			// E o item não está mais em voo — que é a condição de o reconciliador voltar a enxergar a issue.
+			expect(await mailbox.claimNext('worker-depois', 60_000)).toBeUndefined()
+		} finally {
+			workspaces.findById = realWorkspaceFindById
+		}
+	})
+
+	/**
 	 * A long issue turn must not silence the orchestrator.
 	 *
 	 * Reproduces the production trace verbatim: a WORK item claimed first and still running, then an

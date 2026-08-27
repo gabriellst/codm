@@ -26,6 +26,10 @@ const API_ROOT = join(import.meta.dir, '..', '..')
 /** Files legitimately allowed to resolve LibSqlDatabaseDriver — each needs a `why`. */
 const EXEMPTIONS: { path: string; why: string }[] = [
 	{
+		path: 'src/agent/repositories/MailboxRepository/MailboxRepository.test.ts',
+		why: 'the LEASE COLUMNS are the subject: the boot-sweep cases stamp `claimed_boot`/`claimed_pid` on a claimed row (standing in for a daemon that crashed) and then read them back — a write AND a read of columns the probe deliberately does not expose (it counts rows, it does not read them). Same exception class as tests/kernel/LibSqlCommandQueue.test.ts, whose lease/claim behaviour this table mirrors',
+	},
+	{
 		path: 'tests/kernel/LibSqlCommandQueue.test.ts',
 		why: "tests LibSqlCommandQueue's own DB-backed scheduling behavior directly (row-by-id, repeat scheduling, lease/claim) — the DB is the subject, same exception class as Drizzle*Repository.test.ts",
 	},

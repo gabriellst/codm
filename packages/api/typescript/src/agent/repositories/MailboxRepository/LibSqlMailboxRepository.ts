@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
-import { and, asc, eq, isNull, lt, notExists, or, sql } from 'drizzle-orm'
-import { LibSqlDatabaseDriver, LibSqlTransaction } from '@codm/core-typescript'
+import { and, asc, eq, inArray, isNotNull, isNull, lt, ne, notExists, or, sql } from 'drizzle-orm'
+import { DAEMON_BOOT, isClaimOrphaned, LibSqlDatabaseDriver, LibSqlTransaction } from '@codm/core-typescript'
 import { agentMailbox } from '@codm/contracts/db'
 import type { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
 import { MailboxRepository, type ClaimedMailboxItem, type EnqueueMailboxItem } from './MailboxRepository'
@@ -67,7 +67,16 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 
 		const claimed = await dbc
 			.update(agentMailbox)
-			.set({ claimedBy, leaseUntil: new Date(now.getTime() + leaseMs), attempts: sql`${agentMailbox.attempts} + 1` })
+			.set({
+				claimedBy,
+				// WHICH RUN of the daemon is holding it — what makes a stranded claim provably dead
+				// instead of merely old. Written here and nowhere else: a claim is the only moment a
+				// row acquires a holder, so it is the only moment the holder's identity is a fact.
+				claimedBoot: DAEMON_BOOT.id,
+				claimedPid: DAEMON_BOOT.pid,
+				leaseUntil: new Date(now.getTime() + leaseMs),
+				attempts: sql`${agentMailbox.attempts} + 1`,
+			})
 			.where(and(eq(agentMailbox.id, candidate.id), runnable(), unleased(now)))
 			.returning({
 				id: agentMailbox.id,
@@ -96,9 +105,52 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 			)
 	}
 
+	/**
+	 * Two statements, and the SPLIT is the point: SQL decides which claims are CANDIDATES (leased,
+	 * runnable, stamped by a boot that is not this one) and the OS decides which of those are dead.
+	 * `kill(pid, 0)` has no SQL spelling, so a single-statement version could only guess — and the
+	 * guess it would have to make ("a different boot means a dead boot") robs a second daemon running
+	 * against the same file of the work it is doing right now.
+	 *
+	 * Candidates are typically zero or one, and only at boot, so the round-trip per candidate that a
+	 * `WHERE id IN (...)` avoids is not a cost anybody pays twice.
+	 */
+	async releaseOrphanedClaims(tx?: LibSqlTransaction): Promise<number> {
+		const dbc = tx ?? this.driver.db
+
+		const candidates = await dbc
+			.select({ id: agentMailbox.id, bootId: agentMailbox.claimedBoot, pid: agentMailbox.claimedPid })
+			.from(agentMailbox)
+			.where(
+				and(
+					runnable(),
+					isNotNull(agentMailbox.leaseUntil),
+					isNotNull(agentMailbox.claimedBoot),
+					ne(agentMailbox.claimedBoot, DAEMON_BOOT.id),
+				),
+			)
+
+		const orphaned = candidates.filter(isClaimOrphaned).map(row => row.id)
+		if (orphaned.length === 0) return 0
+
+		// The predicate is RE-ASSERTED, not just the ids: between the select and here, a poll could have
+		// claimed one of these rows for THIS boot (its lease had expired, which is the other way an
+		// orphan becomes claimable). Releasing it then would strip a live turn of the lease it is
+		// running under — the exact double-turn the queue exists to prevent, produced by the code meant
+		// to protect it.
+		await dbc
+			.update(agentMailbox)
+			.set({ claimedBy: null, claimedBoot: null, claimedPid: null, leaseUntil: null })
+			.where(and(inArray(agentMailbox.id, orphaned), runnable(), ne(agentMailbox.claimedBoot, DAEMON_BOOT.id)))
+		return orphaned.length
+	}
+
 	async complete(id: string, tx?: LibSqlTransaction): Promise<void> {
 		const dbc = tx ?? this.driver.db
-		await dbc.update(agentMailbox).set({ consumedAt: new Date(), claimedBy: null, leaseUntil: null }).where(eq(agentMailbox.id, id))
+		await dbc
+			.update(agentMailbox)
+			.set({ consumedAt: new Date(), claimedBy: null, claimedBoot: null, claimedPid: null, leaseUntil: null })
+			.where(eq(agentMailbox.id, id))
 	}
 
 	async fail(id: string, error: string, maxAttempts: number, tx?: LibSqlTransaction): Promise<void> {
@@ -110,6 +162,8 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 			.set({
 				lastError: error,
 				claimedBy: null,
+				claimedBoot: null,
+				claimedPid: null,
 				leaseUntil: null,
 				deadAt: sql`CASE WHEN ${agentMailbox.attempts} >= ${maxAttempts} THEN ${Date.now()} ELSE NULL END`,
 			})
