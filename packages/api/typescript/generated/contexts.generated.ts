@@ -78,6 +78,16 @@ export const CONTEXT_MAP: Partial<Record<ContextId, Partial<Record<ContextId, { 
  *  Canal DIFERENTE do de cima, e de propósito: o `CONTEXT_MAP` é estruturalmente cego a ele. */
 export const TABLE_READ_EDGES: readonly { consumer: ContextId; schema: string; note: string }[] = [
 	{
+		consumer: 'agent',
+		schema: 'issue',
+		note: 'LibSqlStalledIssueReader (BFF-style read service, the same pattern as thread/services/OpenIssuesReader) reads the issue table directly to find WORKING issues with no work in flight — ReconcileStalledIssues needs to tell "still being worked" from "marked WORKING but abandoned," and that answer lives in the issues row this agent context does not own.',
+	},
+	{
+		consumer: 'agent',
+		schema: 'shared',
+		note: 'The same reader NOT EXISTS-correlates each candidate issue against the outbox table to rule out a pending-but-not-yet-dispatched turn: an issue can be WORKING with its mailbox already drained while its outbox entry (the fact that re-enqueues the next turn) is still unprocessed, and reading only the mailbox would misclassify that issue as stalled.',
+	},
+	{
 		consumer: 'issue',
 		schema: 'thread',
 		note: 'T04/T12 read models join threads + transcript entries for display fields (read-services cross-tabela, BUILD-LOG:64).',

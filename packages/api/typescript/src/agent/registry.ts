@@ -11,6 +11,7 @@ import { IssueWorkAgent, IssueWorkPromptBuilder } from './agents/IssueWorkAgent'
 import { OrchestratorAgent, OrchestratorPromptBuilder } from './agents/OrchestratorAgent'
 import { AgentSessionRepository, LibSqlAgentSessionRepository, MockAgentSessionRepository } from './repositories/AgentSessionRepository'
 import { LibSqlMailboxRepository, MailboxRepository, MockMailboxRepository } from './repositories/MailboxRepository'
+import { StalledIssueReader, LibSqlStalledIssueReader, MockStalledIssueReader } from './services/StalledIssueReader'
 
 // E2E HERMETIC SEAM (see shared/registry.ts + src/boot.ts). The Playwright harness boots the REAL
 // daemon but must never spawn a provider CLI or probe host PATH: under the `e2e` boot environment
@@ -70,6 +71,15 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// The durable per-target turn queue. Producers enqueue inside their own transaction; the
 	// dispatcher is the single consumer and holds one lease per target.
 	{ token: MailboxRepository, mock: MockMailboxRepository, integration: LibSqlMailboxRepository, real: LibSqlMailboxRepository },
+	// A varredura de issues órfãs lê a tabela `issues` a partir daqui — mesmo padrão de
+	// `thread/services/OpenIssuesReader`. `integration` usa a implementação REAL de propósito: o teste do
+	// job existe para exercitar o predicado das duas filas contra o banco, e um mock o tornaria vazio.
+	{
+		token: StalledIssueReader,
+		mock: MockStalledIssueReader,
+		integration: LibSqlStalledIssueReader,
+		real: LibSqlStalledIssueReader,
+	},
 	// The SINGLE consumer of the mailbox (§7.4). Bound in all three envs so a test can `drain()` on
 	// demand; only `real` ever has `start()` called on it, from the boot sequence — a poller running
 	// under a test suite would race every assertion in it.

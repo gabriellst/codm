@@ -18,4 +18,10 @@ export default {
 			"The MailboxDispatcher resolves each turn run context — thread providers/workspaceId, and the conversation window — via BC4 read seams (ThreadRepository/OpenIssuesReader; the transcript window is the thread aggregate's own persistence surface since B4). ForkIssue slugs an issue key against the same reader (an open issue of a thread is a THREAD concept and lives there).",
 		workspace: 'The saga-closer reads the bound workspace path (the run cwd) via WorkspaceRepository (repositories surface).',
 	},
+	reads: {
+		issue:
+			'LibSqlStalledIssueReader (BFF-style read service, the same pattern as thread/services/OpenIssuesReader) reads the issue table directly to find WORKING issues with no work in flight — ReconcileStalledIssues needs to tell "still being worked" from "marked WORKING but abandoned," and that answer lives in the issues row this agent context does not own.',
+		shared:
+			'The same reader NOT EXISTS-correlates each candidate issue against the outbox table to rule out a pending-but-not-yet-dispatched turn: an issue can be WORKING with its mailbox already drained while its outbox entry (the fact that re-enqueues the next turn) is still unprocessed, and reading only the mailbox would misclassify that issue as stalled.',
+	},
 } satisfies ContextDecl
