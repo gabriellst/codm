@@ -49,7 +49,7 @@ const showNext = nextPost && nextPost.id !== post.id && siblingPosts.length > 0
      field), styled with the design's radius/shadow chrome instead of reproducing fake
      per-post decoration. -->
 <article class="px-6 pb-24 pt-[80px] md:px-16">
-	<div class="relative mx-auto flex max-w-[900px] flex-col items-center overflow-hidden pb-11 text-center">
+	<div class="relative mx-auto flex max-w-[900px] flex-col items-center overflow-hidden p-12 text-center">
 		<div aria-hidden="true" class="pointer-events-none absolute -top-[130px] left-1/2 h-[340px] w-[760px] -translate-x-1/4 rounded-full bg-[var(--secondary)] blur-[60px]"></div>
 		<a
 			href={routeFor(locale, '/blog')}
