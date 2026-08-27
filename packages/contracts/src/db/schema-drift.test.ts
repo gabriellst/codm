@@ -30,13 +30,35 @@ import { fileURLToPath } from 'node:url'
  *     `out: './migrations'` and spawns with `cwd` pointed at the scratch dir.
  *   - A schema file drizzle-kit reads is `require()`d as CJS, so it must resolve
  *     `drizzle-orm/{pg,sqlite}-core` — which only works from an ancestor with `node_modules`. The
- *     falsifier below therefore writes its nudged copy INSIDE this package (a dot-prefixed probe
- *     dir, removed in `finally`), never to `/tmp`.
+ *     falsifier below therefore writes its nudged copy INSIDE this package (`PROBE_ROOT`), never
+ *     to the OS temp dir.
  */
 
 // Package root. This file lives at `src/db/schema-drift.test.ts` — TWO levels up from
 // `import.meta.dir` (`src/db`) reaches `packages/contracts`, not one.
 const CONTRACTS_DIR = resolve(import.meta.dir, '..', '..')
+
+/**
+ * Where the falsifier's nudged schema copy lives: `packages/contracts/tmp/`.
+ *
+ * Three constraints, and only this directory satisfies all three.
+ *   1. drizzle-kit `require()`s the schema as CJS, so the file needs an ancestor carrying
+ *      `node_modules` — which rules out the OS temp dir.
+ *   2. It must NOT sit in a directory the repo's tree-walking rails read. With the probe under
+ *      `src/db/<dialect>/`, `product-residue` died with `ENOENT ... infrastructure.nudged.ts`
+ *      (CI, 2026-08-27): it had listed the file and read it after this test's `finally` removed
+ *      it. The suites run as separate nx processes, so that race lands on whichever PR draws it.
+ *   3. drizzle-kit must be able to READ it — which `node_modules/.cache` (tried first, and the home
+ *      of `Controller.typecheck.test.ts`'s fixtures) is not. MEASURED, not theorized: with the
+ *      probe there, CI's falsifier produced no migration at all for either trunk, so it silently
+ *      stopped falsifying. It does NOT reproduce locally — a worktree's symlinked node_modules
+ *      masks the difference — which is why the `status` assertion below exists: whatever the
+ *      mechanism, a generate that never ran must never again read as "no drift".
+ *
+ * `tmp/` is gitignored and already excluded by `barrel-liveness` and `test-liveness`;
+ * `product-residue` exempts it alongside `target`.
+ */
+const PROBE_ROOT = join(CONTRACTS_DIR, 'tmp')
 
 type Trunk = {
 	readonly name: string
@@ -132,9 +154,8 @@ describe.each(TRUNKS)('drizzle schema diff-zero — $name', trunk => {
 
 	test('FALSEADOR — a synthetic column nudge on the schema produces a NEW migration (RED), proving the check above can fail', () => {
 		const scratch = mkdtempSync(join(tmpdir(), 'drizzle-diff-zero-falsifier-'))
-		// Must live INSIDE this package (not /tmp) — drizzle-kit require()s the schema file as CJS
-		// and `drizzle-orm/{pg,sqlite}-core` only resolves from an ancestor with node_modules.
-		const probeDir = join(dirname(trunk.nudgeFile), `.schema-drift-falsifier-probe-${trunk.dialect}`)
+		// Inside this package so drizzle-kit resolves AND reads it, outside every scanned dir — see PROBE_ROOT.
+		const probeDir = join(PROBE_ROOT, `schema-drift-falsifier-probe-${trunk.dialect}-${process.pid}`)
 		try {
 			cpSync(trunk.migrationsDir, join(scratch, 'migrations'), { recursive: true })
 			const before = readdirSync(join(scratch, 'migrations')).filter(f => f.endsWith('.sql'))
@@ -156,7 +177,15 @@ describe.each(TRUNKS)('drizzle schema diff-zero — $name', trunk => {
 			// drizzle-kit only follows the schema entry it's told, so we point it straight at the nudge.
 			const configPath = join(scratch, 'drizzle.config.mjs')
 			writeScratchConfig(configPath, nudgedSchemaPath, trunk.dialect)
-			runGenerate(scratch, configPath)
+			const { output, status } = runGenerate(scratch, configPath)
+
+			// A generate that never LOADED the nudged schema produces no migration — the same
+			// observable as a schema with no drift. Without this line the falsifier reports
+			// "the nudge did not produce a new migration" and points at drift detection, while
+			// the real cause is that drizzle-kit could not read the probe file at all (measured:
+			// moving the probe under node_modules/.cache, 2026-08-27 — resolvable, but drizzle-kit
+			// treats node_modules as external). Assert the RUN before reading its effect.
+			expect(status, `drizzle-kit generate exited non-zero on the nudged schema:\n${output}`).toBe(0)
 
 			const after = readdirSync(join(scratch, 'migrations')).filter(f => f.endsWith('.sql'))
 			expect(
