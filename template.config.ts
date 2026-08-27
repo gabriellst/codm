@@ -393,6 +393,21 @@ export const REPO = {
 			doc: 'nome do arquivo SQLite dentro do CODM_DATA_DIR, lido por AMBOS os sidecars; um rebrand troca isto e os dois seguem juntos',
 			advanced: true,
 		},
+		// O INTERPRETADOR DE LOTE DO WINDOWS — o único executável capaz de rodar o `claude.cmd` que o
+		// npm instala (`agent/services/AgentRunner/platformInvocation.ts`).
+		//
+		// `advanced` porque NINGUÉM preenche esta linha: o Windows já exporta a variável em toda
+		// sessão, e fora do Windows ela não existe. Está declarada porque o rail process-env exige que
+		// toda leitura de ambiente do `src/` entre pela porta tipada — inclusive a de um valor que o
+		// próprio SO anuncia. Maiúscula, e não o `ComSpec` que o Windows escreve: lá `process.env` é
+		// insensível a caixa, então uma chave só alcança o valor.
+		COMSPEC: {
+			consumers: ['apiTs'],
+			schema: 'kernel',
+			example: 'C:\\Windows\\System32\\cmd.exe',
+			doc: 'interpretador de lote do Windows; o SO já o exporta — declarado para o platformInvocation ler pela porta tipada',
+			advanced: true,
+		},
 		REDIS_URL: { consumers: ['apiTs'], schema: 'kernel', example: 'redis://localhost:6379' },
 		// ── Config verbatim do serviço de canal de origem — CHANNEL_* primary keys with
 		// generic fallbacks read by internal/shared/config/config.go. Retarget/rename happens in the

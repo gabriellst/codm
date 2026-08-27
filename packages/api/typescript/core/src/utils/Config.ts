@@ -48,6 +48,26 @@ const RawEnvSchema = z.object({
 	CODM_DATA_DIR: z
 		.string()
 		.default(() => defaultDataDir({ platform: process.platform, env: process.env, home: os.homedir() }, process.env.PROJECT ?? 'app')),
+	/**
+	 * O INTERPRETADOR DE LOTE DO WINDOWS, pelo caminho que o próprio sistema anuncia — o único
+	 * executável capaz de rodar o `claude.cmd` que o npm instala (ver
+	 * `agent/services/AgentRunner/platformInvocation.ts`, que é seu único consumidor).
+	 *
+	 * NÃO é config que alguém preencha: o Windows já exporta esta variável em toda sessão, e fora do
+	 * Windows ela simplesmente não existe. Está declarada aqui porque a porta tipada é a ÚNICA
+	 * entrada de ambiente do `src/` (rail D14/AC-4) — um `process.env` cru lá seria um eixo paralelo,
+	 * mesmo lendo algo que o SO anuncia.
+	 *
+	 * MAIÚSCULA de propósito, e não o `ComSpec` que o Windows escreve: no Windows `process.env` é
+	 * insensível a caixa (o objeto é um proxy que resolve a chave real), então UMA chave alcança o
+	 * valor — verificado contra o parse do Zod, que lê `input[key]` e portanto atravessa o proxy. O
+	 * registro inteiro fala UPPER_SNAKE; duas chaves só para cobrir caixa seriam duas entradas de
+	 * registro descrevendo a mesma variável.
+	 *
+	 * O default `'cmd.exe'` é o fallback pelo NOME (resolvido via PATH): uma instalação sem `ComSpec`
+	 * é anômala, mas não é motivo para falhar aqui.
+	 */
+	COMSPEC: z.string().default('cmd.exe'),
 	OTEL_COLLECTOR_TRACE_URL: z.string().default(''),
 	OTEL_SERVICE_NAME: z.string().default('service'),
 	OTEL_COLLECTOR_LOG_URL: z.string().default(''),
