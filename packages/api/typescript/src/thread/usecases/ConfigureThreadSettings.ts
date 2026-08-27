@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { Handler, z, BaseError } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { BufferSize, ProviderKind, AgentModelId, ContactKind } from '@codm/contracts-typescript/wire/enums'
+import { BufferSize, ProviderKind, AgentModelId, ContactKind, Language } from '@codm/contracts-typescript/wire/enums'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { GroupMemberReader } from '../services/GroupMemberReader'
 import { CUSTOM_PROMPT_MAX_LENGTH, MentionGateSchema } from '../schemas'
@@ -179,6 +179,49 @@ export class ConfigureStreaming extends Handler<typeof ConfigureStreamingInputSc
 		if (!thread || thread.ownerId !== input.ownerId)
 			throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
 		thread.configureStreaming(input.enabled)
+		await this.withTransaction(tx, async tx => this.threads.save(thread, tx))
+	}
+}
+
+/**
+ * ConfigureLanguage (i18n-das-pistas spec) — WHICH LANGUAGE this conversation speaks.
+ *
+ * One field, two surfaces: the "thinking" cues everyone in the room sees (`@codm/contracts/cues`) and
+ * the language the agent answers in. They used to be decided independently — the cues by a hardcoded
+ * Portuguese deck, the reply by a prompt heuristic re-read every turn — which is how a room got an
+ * English cue line over a Portuguese answer.
+ *
+ * ### Why the field is OPTIONAL, unlike `ConfigureModel`'s required model
+ * `AgentModelId.DEFAULT` is a real catalog member, so "let the CLI decide" has a value to send.
+ * `Language` has no such member and must not grow one: it is the app's shipped-locale enum, read by
+ * the user profile too, and a `DEFAULT` member there would be a locale the console would have to
+ * filter out of every language picker. So "follow the account default" is spelled the way
+ * `ConfigurePrompt` already spells its erase — by ABSENCE — and `Thread.configureLanguage(undefined)`
+ * is the way back.
+ *
+ * No `LANGUAGE_NOT_AVAILABLE` sibling to `ConfigureModel`'s guards: every member of the enum is legal
+ * for every conversation, and `z.enum(Language)` at this door already refuses everything else.
+ */
+export const ConfigureLanguageInputSchema = z.object({
+	ownerId: z.uuid(),
+	threadId: z.uuid(),
+	language: z.enum(Language).optional(),
+})
+export const ConfigureLanguageOutputSchema = z.void()
+
+@injectable()
+export class ConfigureLanguage extends Handler<typeof ConfigureLanguageInputSchema, typeof ConfigureLanguageOutputSchema> {
+	readonly name = 'configure_language' as const
+	readonly inputSchema = ConfigureLanguageInputSchema
+	readonly outputSchema = ConfigureLanguageOutputSchema
+	constructor(private readonly threads: ThreadRepository) {
+		super()
+	}
+	protected async handle(input: this['input'], tx?: Transaction): Promise<void> {
+		const thread = await this.threads.findById(input.threadId)
+		if (!thread || thread.ownerId !== input.ownerId)
+			throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
+		thread.configureLanguage(input.language)
 		await this.withTransaction(tx, async tx => this.threads.save(thread, tx))
 	}
 }

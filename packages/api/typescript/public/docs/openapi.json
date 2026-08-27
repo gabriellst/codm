@@ -2688,6 +2688,64 @@
         ]
       }
     },
+    "/threads/{threadId}/language": {
+      "put": {
+        "tags": [
+          "thread",
+          "mcp:system",
+          "mcp:orchestration"
+        ],
+        "description": "Set the language this conversation speaks, or clear it to follow the account default",
+        "operationId": "ConfigureLanguage",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "language": {
+                    "$ref": "#/components/schemas/Language"
+                  }
+                }
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "language": "en-US"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Set the language this conversation speaks, or clear it to follow the account default",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "x-mcp-scope": [
+          "system",
+          "orchestration"
+        ]
+      }
+    },
     "/threads/{threadId}/chat": {
       "get": {
         "tags": [
@@ -2755,6 +2813,9 @@
                         },
                         "lastActivity": {
                           "type": "string"
+                        },
+                        "language": {
+                          "$ref": "#/components/schemas/Language"
                         }
                       },
                       "required": [
@@ -2767,7 +2828,8 @@
                         "workspacePath",
                         "providers",
                         "status",
-                        "lastActivity"
+                        "lastActivity",
+                        "language"
                       ],
                       "additionalProperties": false
                     },
@@ -3066,6 +3128,21 @@
                       ],
                       "additionalProperties": false
                     },
+                    "language": {
+                      "type": "object",
+                      "properties": {
+                        "declared": {
+                          "$ref": "#/components/schemas/Language"
+                        },
+                        "effective": {
+                          "$ref": "#/components/schemas/Language"
+                        }
+                      },
+                      "required": [
+                        "effective"
+                      ],
+                      "additionalProperties": false
+                    },
                     "participants": {
                       "type": "array",
                       "items": {
@@ -3156,6 +3233,7 @@
                     "thinkingIndicator",
                     "reactions",
                     "streaming",
+                    "language",
                     "participants",
                     "invokerCount",
                     "bufferSize",
@@ -9166,6 +9244,13 @@
           "HAIKU"
         ]
       },
+      "Language": {
+        "type": "string",
+        "enum": [
+          "pt-BR",
+          "en-US"
+        ]
+      },
       "ChannelKind": {
         "type": "string",
         "enum": [
@@ -9280,13 +9365,6 @@
           "MANUAL",
           "AUTO_24H",
           "THREAD_DETACHED"
-        ]
-      },
-      "Language": {
-        "type": "string",
-        "enum": [
-          "pt-BR",
-          "en-US"
         ]
       },
       "CurrencyCode": {
@@ -9520,6 +9598,7 @@
       "AskOperator",
       "CompleteOnboarding",
       "ConfigureContextBuffer",
+      "ConfigureLanguage",
       "ConfigureMentionGate",
       "ConfigureModel",
       "ConfigurePrompt",
@@ -9562,6 +9641,7 @@
       "AddWorkspace",
       "CompleteOnboarding",
       "ConfigureContextBuffer",
+      "ConfigureLanguage",
       "ConfigureMentionGate",
       "ConfigureModel",
       "ConfigurePrompt",

@@ -2,8 +2,8 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import type { ZodType } from 'zod'
 import { CommandQueue, LibSqlCommandQueue, LibSqlDatabaseDriver, MockLoggingService } from '@codm/core-typescript'
-import { PHASE_EDIT_MIN_INTERVAL_MS } from '@codm/contracts/cues'
-import { ChannelKind, MailboxItemKind, MessageAuthor, MessageType, ProviderKind } from '@codm/contracts-typescript/wire/enums'
+import { PHASE_EDIT_MIN_INTERVAL_MS, THINKING_VERBS_EN, THINKING_VERBS_PT, thinkingErrorCopy } from '@codm/contracts/cues'
+import { ChannelKind, Language, MailboxItemKind, MessageAuthor, MessageType, ProviderKind } from '@codm/contracts-typescript/wire/enums'
 import { ChannelMessageReceivedInProcessEvent, OrchestratorRepliedEvent } from '@codm/contracts-typescript/wire/events'
 import { TestBed, givenThread } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
@@ -15,13 +15,13 @@ import { DeliverChannelMessage } from '@thread/usecases/DeliverChannelMessage'
 import { StreamChannelReply } from '@thread/usecases/StreamChannelReply'
 import { DeliverOrchestratorReply } from '@thread/handlers/DeliverOrchestratorReply'
 import { ConsumeInboundMessage } from '@thread/handlers/ConsumeInboundMessage'
-import { ConfigureThinkingIndicator, ConfigureStreaming } from '@thread/usecases/ConfigureThreadSettings'
+import { ConfigureLanguage, ConfigureThinkingIndicator, ConfigureStreaming } from '@thread/usecases/ConfigureThreadSettings'
 import { AgentRunner } from '../services/AgentRunner'
 import { AgentRunnerFactory, FixedAgentRunnerFactory } from '../services/AgentRunnerFactory'
 import { AgentRunOutcome } from '../enums'
 import type { AgentRunRequest } from '../types/AgentRunRequest'
 import type { AgentRuntimeEvent } from '../types/AgentRuntimeEvent'
-import { RunOrchestratorTurn, THINKING_ERROR_COPY } from './RunOrchestratorTurn'
+import { RunOrchestratorTurn } from './RunOrchestratorTurn'
 
 /**
  * THE "PENSANDO" PLACEHOLDER — it opens the stream, evolves by phase, and either becomes the answer or
@@ -532,7 +532,7 @@ describe('RunOrchestratorTurn — the "Pensando" placeholder', () => {
 			// The placeholder opened, and NOTHING else was ever sent.
 			expect(sender.sent).toHaveLength(1)
 			expect(sender.edits).toHaveLength(1)
-			expect(sender.edits[0]).toMatchObject({ messageId: 'mock-wamid-1', text: THINKING_ERROR_COPY })
+			expect(sender.edits[0]).toMatchObject({ messageId: 'mock-wamid-1', text: thinkingErrorCopy(Language.PT_BR) })
 			// The typing loop was cancelled explicitly — not left for the 5-minute ceiling.
 			expect(await typingBeatCount()).toBe(0)
 		})
@@ -547,7 +547,7 @@ describe('RunOrchestratorTurn — the "Pensando" placeholder', () => {
 
 			expect(result.text).toBe('')
 			expect(sender.edits).toHaveLength(1)
-			expect(sender.edits[0]).toMatchObject({ messageId: 'mock-wamid-1', text: THINKING_ERROR_COPY })
+			expect(sender.edits[0]).toMatchObject({ messageId: 'mock-wamid-1', text: thinkingErrorCopy(Language.PT_BR) })
 			expect(await typingBeatCount()).toBe(0)
 		})
 
@@ -557,7 +557,7 @@ describe('RunOrchestratorTurn — the "Pensando" placeholder', () => {
 			await expect(runTurn(thread, new ThrowingRunner())).rejects.toThrow('boom mid-run')
 
 			expect(sender.edits).toHaveLength(1)
-			expect(sender.edits[0]).toMatchObject({ messageId: 'mock-wamid-1', text: THINKING_ERROR_COPY })
+			expect(sender.edits[0]).toMatchObject({ messageId: 'mock-wamid-1', text: thinkingErrorCopy(Language.PT_BR) })
 			expect(await typingBeatCount()).toBe(0)
 		})
 
@@ -571,8 +571,119 @@ describe('RunOrchestratorTurn — the "Pensando" placeholder', () => {
 			await queue.tick()
 			expect(sender.screen()).toEqual(['Já comecei.'])
 			// The placeholder already grew into a real, if incomplete, answer — never clobbered with the error.
-			expect(sender.edits.map(e => e.text)).not.toContain(THINKING_ERROR_COPY)
+			expect(sender.edits.map(e => e.text)).not.toContain(thinkingErrorCopy(Language.PT_BR))
 			expect(await typingBeatCount()).toBe(0)
+		})
+	})
+
+	// ─────────────────────────────────────────────────────────────────────────────
+	// The cues speak the CONVERSATION's language (i18n-das-pistas spec)
+	// ─────────────────────────────────────────────────────────────────────────────
+
+	/**
+	 * Every string this suite asserts above was Portuguese because the deck only HAD Portuguese. These
+	 * cases are the same turn, on a conversation that declared English, and they pin the three places the
+	 * old code hardcoded it: the opening verb (the random pool), the phase line (the tool verb AND the
+	 * family's own target word), and the friendly error (a literal in `RunOrchestratorTurn`).
+	 */
+	describe('the placeholder speaks the language the conversation declared', () => {
+		const englishThread = async () => {
+			const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+			await testBed
+				.resolve(ConfigureLanguage)
+				.execute({ ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value, language: Language.EN_US })
+			// Re-read: the turn loads the aggregate itself, but the fixture instance in hand is stale.
+			const reloaded = await testBed.resolve(ThreadRepository).findById(thread.id.value)
+			if (!reloaded) throw new Error('thread vanished')
+			return reloaded
+		}
+
+		it('opens with a verb from the ENGLISH pool — never the Portuguese one', async () => {
+			const thread = await englishThread()
+
+			await runTurn(
+				thread,
+				new ScriptedRunner([
+					{ type: 'finished', result: { outcome: AgentRunOutcome.COMPLETED, replyText: 'on it', sessionId: 'sess-en', failed: false } },
+				]),
+			)
+
+			const opening = sender.sent[0]?.text ?? ''
+			const verb = opening.replace(/^✻ /, '').replace(/…$/, '')
+			expect(THINKING_VERBS_EN as readonly string[]).toContain(verb)
+			expect(THINKING_VERBS_PT as readonly string[]).not.toContain(verb)
+		})
+
+		it('phases in English — the tool verb AND the word a family supplies when it has no data to show', async () => {
+			const thread = await englishThread()
+
+			const events: Array<{ event: AgentRuntimeEvent; delayMs?: number }> = [
+				{
+					event: {
+						type: 'frame',
+						frame: {
+							kind: 'tool_use',
+							toolUseId: 't1',
+							tool: 'Read',
+							input: { file_path: '/tmp/x/Thread.ts' },
+							target: 'Thread.ts',
+							parentToolUseId: null,
+						},
+					},
+				},
+				// DELEGATE carries no data target on purpose (the delegated prompt must never leak), so the
+				// detail on this line is COPY from the deck — which is exactly what used to be the hardcoded
+				// 'subagente'.
+				{
+					event: {
+						type: 'frame',
+						frame: { kind: 'tool_use', toolUseId: 't2', tool: 'Agent', input: { prompt: 'sweep the repo' }, parentToolUseId: null },
+					},
+					delayMs: PHASE_EDIT_MIN_INTERVAL_MS + 100,
+				},
+				{
+					event: {
+						type: 'finished',
+						result: { outcome: AgentRunOutcome.COMPLETED, replyText: 'done', sessionId: 'sess-en2', failed: false },
+					},
+				},
+			]
+
+			await runTurn(thread, new TimedScriptedRunner(events))
+
+			expect(sender.edits[0]?.text).toBe('✼ Reading… · Thread.ts')
+			expect(sender.edits[1]?.text).toBe('✽ Delegating… · a subagent')
+		})
+
+		it('the SAME delegate phase reads "subagente" on a Portuguese conversation', async () => {
+			const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+
+			await runTurn(
+				thread,
+				new ScriptedRunner([
+					{
+						type: 'frame',
+						frame: { kind: 'tool_use', toolUseId: 't1', tool: 'Agent', input: { prompt: 'varre o repo' }, parentToolUseId: null },
+					},
+					{ type: 'finished', result: { outcome: AgentRunOutcome.COMPLETED, replyText: 'pronto', sessionId: 'sess-pt', failed: false } },
+				]),
+			)
+
+			expect(sender.edits[0]?.text).toBe('✼ Delegando… · subagente')
+		})
+
+		it('closes a non-delivery with the ENGLISH error copy — the straggler that used to be a literal', async () => {
+			const thread = await englishThread()
+
+			await runTurn(
+				thread,
+				new ScriptedRunner([
+					{ type: 'finished', result: { outcome: AgentRunOutcome.STOPPED, replyText: '', sessionId: null, failed: false } },
+				]),
+			)
+
+			expect(sender.edits[0]).toMatchObject({ messageId: 'mock-wamid-1', text: thinkingErrorCopy(Language.EN_US) })
+			expect(sender.edits[0]?.text).not.toBe(thinkingErrorCopy(Language.PT_BR))
 		})
 	})
 })

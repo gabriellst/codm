@@ -7,6 +7,7 @@ import {
 	claimSignInCode,
 	completeOnboarding,
 	configureContextBuffer,
+	configureLanguage,
 	configureMentionGate,
 	configureModel,
 	configurePrompt,
@@ -101,6 +102,10 @@ export class TypescriptClient {
 
 	configureContextBuffer(...args: Parameters<typeof configureContextBuffer>): ReturnType<typeof configureContextBuffer> {
 		return (configureContextBuffer as (...a: any[]) => ReturnType<typeof configureContextBuffer>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	configureLanguage(...args: Parameters<typeof configureLanguage>): ReturnType<typeof configureLanguage> {
+		return (configureLanguage as (...a: any[]) => ReturnType<typeof configureLanguage>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	configureMentionGate(...args: Parameters<typeof configureMentionGate>): ReturnType<typeof configureMentionGate> {

@@ -2,9 +2,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenRemote, givenRemoteMembership, givenThread, givenWorkspace } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
-import { ContactKind } from '@codm/contracts-typescript/wire/enums'
+import { ContactKind, Language } from '@codm/contracts-typescript/wire/enums'
 import { ThreadRepository } from '../repositories/ThreadRepository'
-import { ConfigureThinkingIndicator, SetParticipantInvocation } from './ConfigureThreadSettings'
+import { ConfigureLanguage, ConfigureThinkingIndicator, SetParticipantInvocation } from './ConfigureThreadSettings'
 
 const GROUP_CHANNEL = '019e4d24-0000-7041-9e1c-0000000000e1'
 const GROUP_ID = '120363111111111111@g.us'
@@ -110,9 +110,7 @@ describe('ConfigureThinkingIndicator — per-thread on/off for the "Pensando" ch
 		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
 		expect(thread.thinkingIndicatorEnabled).toBe(true)
 
-		await testBed
-			.resolve(ConfigureThinkingIndicator)
-			.execute({ ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value, enabled: false })
+		await testBed.resolve(ConfigureThinkingIndicator).execute({ ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value, enabled: false })
 
 		const persisted = await testBed.resolve(ThreadRepository).findById(thread.id.value)
 		expect(persisted?.thinkingIndicatorEnabled).toBe(false)
@@ -136,6 +134,75 @@ describe('ConfigureThinkingIndicator — per-thread on/off for the "Pensando" ch
 			testBed
 				.resolve(ConfigureThinkingIndicator)
 				.execute({ ownerId: '00000000-0000-4000-8000-000000000099', threadId: thread.id.value, enabled: false }),
+		).rejects.toThrow(expect.objectContaining({ name: 'THREAD_NOT_FOUND' }))
+	})
+})
+
+/**
+ * The per-thread language (i18n-das-pistas spec). Its shape is `ConfigureThinkingIndicator`'s above
+ * with one difference that carries the whole design: the field is OPTIONAL, and sending it ABSENT is
+ * not a no-op — it is the ERASE, the way back to the account default.
+ */
+describe('ConfigureLanguage — WHICH language this conversation speaks', () => {
+	let testBed: TestBed
+	let testContainer: DependencyContainer
+
+	beforeAll(async () => {
+		testContainer = container.createChildContainer()
+		testBed = await TestBed.create('integration', { testContainer, ownerId: MOCK_CLOUD_OWNER_ID })
+	})
+	beforeEach(async () => {
+		await testBed.reset()
+	})
+	afterAll(async () => {
+		await testBed.destroy()
+	})
+
+	it('a fresh thread has declared nothing — it follows the account', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		expect(thread.language).toBeUndefined()
+	})
+
+	it('declares a language and persists it', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+
+		await testBed.resolve(ConfigureLanguage).execute({ ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value, language: Language.EN_US })
+
+		const persisted = await testBed.resolve(ThreadRepository).findById(thread.id.value)
+		expect(persisted?.language).toBe(Language.EN_US)
+	})
+
+	it('an ABSENT field is the erase — it reaches the row, it is not swallowed as "nothing to change"', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const useCase = testBed.resolve(ConfigureLanguage)
+		await useCase.execute({ ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value, language: Language.EN_US })
+
+		await useCase.execute({ ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value })
+
+		// Back to ABSENT, not to a stored pt-BR: the difference is what makes changing the ACCOUNT
+		// language reach this conversation again.
+		const persisted = await testBed.resolve(ThreadRepository).findById(thread.id.value)
+		expect(persisted?.language).toBeUndefined()
+	})
+
+	it('switches from one declared language to another', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const useCase = testBed.resolve(ConfigureLanguage)
+		await useCase.execute({ ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value, language: Language.EN_US })
+
+		await useCase.execute({ ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value, language: Language.PT_BR })
+
+		const persisted = await testBed.resolve(ThreadRepository).findById(thread.id.value)
+		expect(persisted?.language).toBe(Language.PT_BR)
+	})
+
+	it('refuses a thread that does not belong to the caller (THREAD_NOT_FOUND)', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+
+		await expect(
+			testBed
+				.resolve(ConfigureLanguage)
+				.execute({ ownerId: '00000000-0000-4000-8000-000000000099', threadId: thread.id.value, language: Language.EN_US }),
 		).rejects.toThrow(expect.objectContaining({ name: 'THREAD_NOT_FOUND' }))
 	})
 })

@@ -7,6 +7,7 @@ export { ConfigurePromptController } from './ConfigurePrompt'
 export { ConfigureThinkingIndicatorController } from './ConfigureThinkingIndicator'
 export { ConfigureReactionsController } from './ConfigureReactions'
 export { ConfigureStreamingController } from './ConfigureStreaming'
+export { ConfigureLanguageController } from './ConfigureLanguage'
 export { GetSessionChatController } from './GetSessionChat'
 export { GetThreadSettingsController } from './GetThreadSettings'
 export { PauseThreadController } from './PauseThread'
@@ -40,6 +41,7 @@ import { ConfigurePromptController } from './ConfigurePrompt'
 import { ConfigureThinkingIndicatorController } from './ConfigureThinkingIndicator'
 import { ConfigureReactionsController } from './ConfigureReactions'
 import { ConfigureStreamingController } from './ConfigureStreaming'
+import { ConfigureLanguageController } from './ConfigureLanguage'
 import { GetSessionChatController } from './GetSessionChat'
 import { GetThreadSettingsController } from './GetThreadSettings'
 import { PauseThreadController } from './PauseThread'
@@ -79,6 +81,7 @@ const productionControllers = {
 	ConfigureThinkingIndicatorController,
 	ConfigureReactionsController,
 	ConfigureStreamingController,
+	ConfigureLanguageController,
 	GetSessionChatController,
 	GetThreadSettingsController,
 	PauseThreadController,

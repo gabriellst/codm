@@ -1363,6 +1363,40 @@ pub mod types {
             value.clone()
         }
     }
+    ///`ConfigureLanguageBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "properties": {
+    ///    "language": {
+    ///      "$ref": "#/components/schemas/Language"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct ConfigureLanguageBody {
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub language: ::std::option::Option<
+            ::codm_contracts_rust::wire::enums::Language,
+        >,
+    }
+    impl ::std::convert::From<&ConfigureLanguageBody> for ConfigureLanguageBody {
+        fn from(value: &ConfigureLanguageBody) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::default::Default for ConfigureLanguageBody {
+        fn default() -> Self {
+            Self {
+                language: Default::default(),
+            }
+        }
+    }
     ///`ConfigureMentionGateBody`
     ///
     /// <details><summary>JSON schema</summary>
@@ -5826,6 +5860,7 @@ pub mod types {
     ///        "displayName",
     ///        "externalId",
     ///        "hasAvatar",
+    ///        "language",
     ///        "lastActivity",
     ///        "providers",
     ///        "status",
@@ -5849,6 +5884,9 @@ pub mod types {
     ///        },
     ///        "hasAvatar": {
     ///          "type": "boolean"
+    ///        },
+    ///        "language": {
+    ///          "$ref": "#/components/schemas/Language"
     ///        },
     ///        "lastActivity": {
     ///          "type": "string"
@@ -6122,6 +6160,7 @@ pub mod types {
     ///    "displayName",
     ///    "externalId",
     ///    "hasAvatar",
+    ///    "language",
     ///    "lastActivity",
     ///    "providers",
     ///    "status",
@@ -6145,6 +6184,9 @@ pub mod types {
     ///    },
     ///    "hasAvatar": {
     ///      "type": "boolean"
+    ///    },
+    ///    "language": {
+    ///      "$ref": "#/components/schemas/Language"
     ///    },
     ///    "lastActivity": {
     ///      "type": "string"
@@ -6184,6 +6226,7 @@ pub mod types {
         pub external_id: ::std::string::String,
         #[serde(rename = "hasAvatar")]
         pub has_avatar: bool,
+        pub language: ::codm_contracts_rust::wire::enums::Language,
         #[serde(rename = "lastActivity")]
         pub last_activity: ::std::string::String,
         pub providers: ::std::vec::Vec<::codm_contracts_rust::wire::enums::ProviderKind>,
@@ -7109,6 +7152,7 @@ pub mod types {
     ///    "customPrompt",
     ///    "customPromptMaxLength",
     ///    "invokerCount",
+    ///    "language",
     ///    "mentionGate",
     ///    "participants",
     ///    "providers",
@@ -7132,6 +7176,21 @@ pub mod types {
     ///      "type": "integer",
     ///      "maximum": 9007199254740991.0,
     ///      "minimum": -9007199254740991.0
+    ///    },
+    ///    "language": {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "effective"
+    ///      ],
+    ///      "properties": {
+    ///        "declared": {
+    ///          "$ref": "#/components/schemas/Language"
+    ///        },
+    ///        "effective": {
+    ///          "$ref": "#/components/schemas/Language"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
     ///    },
     ///    "mentionGate": {
     ///      "oneOf": [
@@ -7290,6 +7349,7 @@ pub mod types {
         pub custom_prompt_max_length: ::std::num::NonZeroU64,
         #[serde(rename = "invokerCount")]
         pub invoker_count: i64,
+        pub language: GetThreadSettingsResponseLanguage,
         #[serde(rename = "mentionGate")]
         pub mention_gate: GetThreadSettingsResponseMentionGate,
         pub participants: ::std::vec::Vec<GetThreadSettingsResponseParticipantsItem>,
@@ -7301,6 +7361,43 @@ pub mod types {
     }
     impl ::std::convert::From<&GetThreadSettingsResponse> for GetThreadSettingsResponse {
         fn from(value: &GetThreadSettingsResponse) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetThreadSettingsResponseLanguage`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "effective"
+    ///  ],
+    ///  "properties": {
+    ///    "declared": {
+    ///      "$ref": "#/components/schemas/Language"
+    ///    },
+    ///    "effective": {
+    ///      "$ref": "#/components/schemas/Language"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetThreadSettingsResponseLanguage {
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub declared: ::std::option::Option<
+            ::codm_contracts_rust::wire::enums::Language,
+        >,
+        pub effective: ::codm_contracts_rust::wire::enums::Language,
+    }
+    impl ::std::convert::From<&GetThreadSettingsResponseLanguage>
+    for GetThreadSettingsResponseLanguage {
+        fn from(value: &GetThreadSettingsResponseLanguage) -> Self {
             value.clone()
         }
     }
@@ -12420,6 +12517,43 @@ Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/stops`
         let mut request = self
             .client
             .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Set the language this conversation speaks, or clear it to follow the account default
+
+Sends a `PUT` request to `/threads/{threadId}/language`
+
+*/
+    pub async fn configure_language<'a>(
+        &'a self,
+        thread_id: &'a str,
+        body: &'a types::ConfigureLanguageBody,
+    ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
+        let url = format!(
+            "{}/threads/{}/language", self.baseurl, encode_path(& thread_id.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .put(url)
             .header(
                 ::reqwest::header::ACCEPT,
                 ::reqwest::header::HeaderValue::from_static("application/json"),

@@ -275,6 +275,67 @@ describe('ThreadSettingsDialog — contra o backend real', () => {
 		expect(persisted.providers.find(p => p.provider === 'CLAUDE_CODE')?.model).toBe('OPUS')
 		expect(persisted.providers.find(p => p.provider === 'CLAUDE_CODE')?.models).toEqual(DEFAULT_MODELS)
 	})
+
+	/**
+	 * O IDIOMA DA CONVERSA — as pistas de "pensando" que a sala vê e o idioma em que o agente responde,
+	 * um campo só. Mesmo molde do modelo acima (escolher salva sozinho, a prova é a releitura real), com
+	 * o eixo extra que só este campo tem: a AUSÊNCIA é um estado, e voltar a ela é uma ação própria.
+	 */
+	it('a conversa nasce SEM idioma declarado — nada a desfazer, então o botão de voltar não existe', async () => {
+		const threadId = await seedThread()
+		await mount(threadId)
+
+		const trigger = document.querySelector<HTMLElement>(`[aria-label="${i18n.t('session.language')}"]`)
+		expect(trigger?.textContent).toContain(i18n.t('session.languageAccountDefault'))
+		expect(document.body.textContent).not.toContain(i18n.t('session.languageUseAccountDefault'))
+
+		const persisted = await getThreadSettings(threadId)
+		expect(persisted.language.declared).toBeUndefined()
+		// Sem escolha na conversa E sem escolha na conta: o padrão do produto é o que está em vigor.
+		expect(persisted.language.effective).toBe('pt-BR')
+	})
+
+	it('escolher um idioma dispara a mutação, e voltar ao padrão da conta APAGA a escolha no backend real', async () => {
+		const threadId = await seedThread()
+		await mount(threadId)
+
+		const trigger = document.querySelector<HTMLElement>(`[aria-label="${i18n.t('session.language')}"]`)
+		await act(async () => {
+			trigger?.click()
+		})
+		const option = [...document.querySelectorAll<HTMLElement>('[role="option"]')].find(
+			el => el.textContent === i18n.t('enums.Language.en-US'),
+		)
+		await act(async () => {
+			option?.click()
+		})
+
+		await mounted!.settled(() => {
+			const el = document.querySelector<HTMLElement>(`[aria-label="${i18n.t('session.language')}"]`)
+			return (el?.textContent ?? '').includes(i18n.t('enums.Language.en-US'))
+		}, 'o seletor refletir en-US')
+
+		expect(await getThreadSettings(threadId)).toMatchObject({ language: { declared: 'en-US', effective: 'en-US' } })
+
+		// A VOLTA. O botão só existe agora — porque agora há escolha a desfazer.
+		const reset = [...document.querySelectorAll<HTMLElement>('button')].find(
+			el => el.textContent === i18n.t('session.languageUseAccountDefault'),
+		)
+		expect(reset).toBeDefined()
+		await act(async () => {
+			reset?.click()
+		})
+
+		await mounted!.settled(() => {
+			const el = document.querySelector<HTMLElement>(`[aria-label="${i18n.t('session.language')}"]`)
+			return (el?.textContent ?? '').includes(i18n.t('session.languageAccountDefault'))
+		}, 'o seletor voltar ao padrão da conta')
+
+		// ABSENT, não 'pt-BR': o campo apagado é o que faz esta conversa voltar a seguir a conta.
+		const cleared = await getThreadSettings(threadId)
+		expect(cleared.language.declared).toBeUndefined()
+		expect(cleared.language.effective).toBe('pt-BR')
+	})
 })
 
 /**

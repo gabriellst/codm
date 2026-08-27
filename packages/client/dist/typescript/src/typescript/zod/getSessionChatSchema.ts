@@ -6,6 +6,7 @@
 import { artifactKindSchema } from "./artifactKindSchema.ts";
 import { channelKindSchema } from "./channelKindSchema.ts";
 import { classificationMethodSchema } from "./classificationMethodSchema.ts";
+import { languageSchema } from "./languageSchema.ts";
 import { providerKindSchema } from "./providerKindSchema.ts";
 import { stopKindSchema } from "./stopKindSchema.ts";
 import { threadModeSchema } from "./threadModeSchema.ts";
@@ -37,7 +38,10 @@ get "providers"(){
 get "status"(){
                 return threadStatusSchema
               },
-"lastActivity": z.string()
+"lastActivity": z.string(),
+get "language"(){
+                return languageSchema
+              }
     }),
 "paused": z.boolean(),
 "mentionGate": z.union([z.object({

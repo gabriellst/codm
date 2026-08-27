@@ -1469,6 +1469,11 @@ type RaiseStopJSONBody struct {
 	Kind   StopKind `json:"kind"`
 }
 
+// ConfigureLanguageJSONBody defines parameters for ConfigureLanguage.
+type ConfigureLanguageJSONBody struct {
+	Language *Language `json:"language,omitempty"`
+}
+
 // ListThreadLoops200JSONResponseBodyLoopsSchedule0 defines parameters for ListThreadLoops.
 type ListThreadLoops200JSONResponseBodyLoopsSchedule0 struct {
 	Kind      string      `json:"kind"`
@@ -1689,6 +1694,9 @@ type SteerIssueTurnJSONRequestBody SteerIssueTurnJSONBody
 
 // RaiseStopJSONRequestBody defines body for RaiseStop for application/json ContentType.
 type RaiseStopJSONRequestBody RaiseStopJSONBody
+
+// ConfigureLanguageJSONRequestBody defines body for ConfigureLanguage for application/json ContentType.
+type ConfigureLanguageJSONRequestBody ConfigureLanguageJSONBody
 
 // CreateThreadLoopJSONRequestBody defines body for CreateThreadLoop for application/json ContentType.
 type CreateThreadLoopJSONRequestBody CreateThreadLoopJSONBody
@@ -2293,6 +2301,11 @@ type ClientInterface interface {
 	RaiseStopWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	RaiseStop(ctx context.Context, threadId string, issueId string, body RaiseStopJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ConfigureLanguageWithBody request with any body
+	ConfigureLanguageWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ConfigureLanguage(ctx context.Context, threadId string, body ConfigureLanguageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListThreadLoops request
 	ListThreadLoops(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2944,6 +2957,30 @@ func (c *Client) RaiseStopWithBody(ctx context.Context, threadId string, issueId
 
 func (c *Client) RaiseStop(ctx context.Context, threadId string, issueId string, body RaiseStopJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRaiseStopRequest(c.Server, threadId, issueId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ConfigureLanguageWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConfigureLanguageRequestWithBody(c.Server, threadId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ConfigureLanguage(ctx context.Context, threadId string, body ConfigureLanguageJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConfigureLanguageRequest(c.Server, threadId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -4767,6 +4804,53 @@ func NewRaiseStopRequestWithBody(server string, threadId string, issueId string,
 	return req, nil
 }
 
+// NewConfigureLanguageRequest calls the generic ConfigureLanguage builder with application/json body
+func NewConfigureLanguageRequest(server string, threadId string, body ConfigureLanguageJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewConfigureLanguageRequestWithBody(server, threadId, "application/json", bodyReader)
+}
+
+// NewConfigureLanguageRequestWithBody generates requests for ConfigureLanguage with any type of body
+func NewConfigureLanguageRequestWithBody(server string, threadId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/threads/%s/language", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewListThreadLoopsRequest generates requests for ListThreadLoops
 func NewListThreadLoopsRequest(server string, threadId string) (*http.Request, error) {
 	var err error
@@ -6143,6 +6227,11 @@ type ClientWithResponsesInterface interface {
 
 	RaiseStopWithResponse(ctx context.Context, threadId string, issueId string, body RaiseStopJSONRequestBody, reqEditors ...RequestEditorFn) (*RaiseStopResponse, error)
 
+	// ConfigureLanguageWithBodyWithResponse request with any body
+	ConfigureLanguageWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfigureLanguageResponse, error)
+
+	ConfigureLanguageWithResponse(ctx context.Context, threadId string, body ConfigureLanguageJSONRequestBody, reqEditors ...RequestEditorFn) (*ConfigureLanguageResponse, error)
+
 	// ListThreadLoopsWithResponse request
 	ListThreadLoopsWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*ListThreadLoopsResponse, error)
 
@@ -6972,6 +7061,7 @@ type GetSessionChatResponse struct {
 			DisplayName   string             `json:"displayName"`
 			ExternalId    string             `json:"externalId"`
 			HasAvatar     bool               `json:"hasAvatar"`
+			Language      Language           `json:"language"`
 			LastActivity  string             `json:"lastActivity"`
 			Providers     []ProviderKind     `json:"providers"`
 			Status        ThreadStatus       `json:"status"`
@@ -7343,6 +7433,36 @@ func (r RaiseStopResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r RaiseStopResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ConfigureLanguageResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r ConfigureLanguageResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ConfigureLanguageResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ConfigureLanguageResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -7773,12 +7893,16 @@ type GetThreadSettingsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *struct {
-		BufferSize            BufferSize                                       `json:"bufferSize"`
-		CustomPrompt          string                                           `json:"customPrompt"`
-		CustomPromptMaxLength int                                              `json:"customPromptMaxLength"`
-		InvokerCount          int                                              `json:"invokerCount"`
-		MentionGate           GetThreadSettings200JSONResponseBody_MentionGate `json:"mentionGate"`
-		Participants          []struct {
+		BufferSize            BufferSize `json:"bufferSize"`
+		CustomPrompt          string     `json:"customPrompt"`
+		CustomPromptMaxLength int        `json:"customPromptMaxLength"`
+		InvokerCount          int        `json:"invokerCount"`
+		Language              struct {
+			Declared  *Language `json:"declared,omitempty"`
+			Effective Language  `json:"effective"`
+		} `json:"language"`
+		MentionGate  GetThreadSettings200JSONResponseBody_MentionGate `json:"mentionGate"`
+		Participants []struct {
 			CanInvoke     bool               `json:"canInvoke"`
 			ChannelId     openapi_types.UUID `json:"channelId"`
 			HasAvatar     bool               `json:"hasAvatar"`
@@ -8906,6 +9030,23 @@ func (c *ClientWithResponses) RaiseStopWithResponse(ctx context.Context, threadI
 	return ParseRaiseStopResponse(rsp)
 }
 
+// ConfigureLanguageWithBodyWithResponse request with arbitrary body returning *ConfigureLanguageResponse
+func (c *ClientWithResponses) ConfigureLanguageWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfigureLanguageResponse, error) {
+	rsp, err := c.ConfigureLanguageWithBody(ctx, threadId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConfigureLanguageResponse(rsp)
+}
+
+func (c *ClientWithResponses) ConfigureLanguageWithResponse(ctx context.Context, threadId string, body ConfigureLanguageJSONRequestBody, reqEditors ...RequestEditorFn) (*ConfigureLanguageResponse, error) {
+	rsp, err := c.ConfigureLanguage(ctx, threadId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConfigureLanguageResponse(rsp)
+}
+
 // ListThreadLoopsWithResponse request returning *ListThreadLoopsResponse
 func (c *ClientWithResponses) ListThreadLoopsWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*ListThreadLoopsResponse, error) {
 	rsp, err := c.ListThreadLoops(ctx, threadId, reqEditors...)
@@ -9912,6 +10053,7 @@ func ParseGetSessionChatResponse(rsp *http.Response) (*GetSessionChatResponse, e
 				DisplayName   string             `json:"displayName"`
 				ExternalId    string             `json:"externalId"`
 				HasAvatar     bool               `json:"hasAvatar"`
+				Language      Language           `json:"language"`
 				LastActivity  string             `json:"lastActivity"`
 				Providers     []ProviderKind     `json:"providers"`
 				Status        ThreadStatus       `json:"status"`
@@ -10227,6 +10369,32 @@ func ParseRaiseStopResponse(rsp *http.Response) (*RaiseStopResponse, error) {
 		var dest struct {
 			StopId openapi_types.UUID `json:"stopId"`
 		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseConfigureLanguageResponse parses an HTTP response from a ConfigureLanguageWithResponse call
+func ParseConfigureLanguageResponse(rsp *http.Response) (*ConfigureLanguageResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ConfigureLanguageResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -10621,12 +10789,16 @@ func ParseGetThreadSettingsResponse(rsp *http.Response) (*GetThreadSettingsRespo
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
-			BufferSize            BufferSize                                       `json:"bufferSize"`
-			CustomPrompt          string                                           `json:"customPrompt"`
-			CustomPromptMaxLength int                                              `json:"customPromptMaxLength"`
-			InvokerCount          int                                              `json:"invokerCount"`
-			MentionGate           GetThreadSettings200JSONResponseBody_MentionGate `json:"mentionGate"`
-			Participants          []struct {
+			BufferSize            BufferSize `json:"bufferSize"`
+			CustomPrompt          string     `json:"customPrompt"`
+			CustomPromptMaxLength int        `json:"customPromptMaxLength"`
+			InvokerCount          int        `json:"invokerCount"`
+			Language              struct {
+				Declared  *Language `json:"declared,omitempty"`
+				Effective Language  `json:"effective"`
+			} `json:"language"`
+			MentionGate  GetThreadSettings200JSONResponseBody_MentionGate `json:"mentionGate"`
+			Participants []struct {
 				CanInvoke     bool               `json:"canInvoke"`
 				ChannelId     openapi_types.UUID `json:"channelId"`
 				HasAvatar     bool               `json:"hasAvatar"`

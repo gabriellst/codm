@@ -132,7 +132,9 @@ export function SessionChatSection({ threadId, className, ...props }: ComponentP
 				/>
 			)}
 
-			{showThinkingIndicator && <ThinkingIndicator className="shrink-0 px-1" />}
+			{/* The ROOM's language, resolved by the daemon — not the console's UI locale. The operator watching
+			    a Portuguese group from an English console sees the same verb the group sees. */}
+			{showThinkingIndicator && <ThinkingIndicator className="shrink-0 px-1" language={data.thread.language} />}
 
 			<Composer threadId={threadId} composerMode={data.composerMode} />
 		</div>

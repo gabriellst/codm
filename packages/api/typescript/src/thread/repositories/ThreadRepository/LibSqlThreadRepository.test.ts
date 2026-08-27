@@ -3,7 +3,7 @@ import { container, type DependencyContainer } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
 import { threads, transcriptEntries, stops } from '@codm/contracts/db'
 import { LibSqlDatabaseDriver, LibSqlTransaction } from '@codm/core-typescript'
-import { TranscriptKind, StopKind, StopResolution, ProviderKind, AgentModelId } from '@codm/contracts-typescript/wire/enums'
+import { TranscriptKind, StopKind, StopResolution, ProviderKind, AgentModelId, Language } from '@codm/contracts-typescript/wire/enums'
 import { TestBed, givenThread } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { ThreadRepository } from './ThreadRepository'
@@ -222,5 +222,33 @@ describe('LibSqlThreadRepository — the thread row and its transcript entries c
 		const reenabled = (await repo.findById(thread.id.value))!
 		expect(reenabled.reactionsEnabled).toBe(true)
 		expect(reenabled.streamingEnabled).toBe(true)
+	})
+
+	/**
+	 * `language` (i18n-das-pistas spec) — same both-directions rule as the toggles above, with a sharper
+	 * failure mode: the ERASE is the direction that matters. A `configureLanguage(undefined)` missing
+	 * from the `onConflictDoUpdate` SET clause would leave the console reporting "follows the account"
+	 * while every turn kept speaking the language nobody can see chosen any more.
+	 */
+	it('language round-trips, and clearing it writes NULL rather than being silently skipped', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		// Born declaring nothing — the column is NULL, which is what "follow the account" IS.
+		expect(thread.language).toBeUndefined()
+
+		thread.configureLanguage(Language.EN_US)
+		await repo.save(thread)
+
+		const declared = (await repo.findById(thread.id.value))!
+		expect(declared.language).toBe(Language.EN_US)
+		const [row] = await db.select().from(threads).where(eq(threads.id, thread.id.value))
+		expect(row?.language).toBe(Language.EN_US)
+
+		declared.configureLanguage(undefined)
+		await repo.save(declared)
+
+		const cleared = (await repo.findById(thread.id.value))!
+		expect(cleared.language).toBeUndefined()
+		const [clearedRow] = await db.select().from(threads).where(eq(threads.id, thread.id.value))
+		expect(clearedRow?.language).toBeNull()
 	})
 })

@@ -58,3 +58,21 @@ export function defineMessages(
 	}
 	return messages
 }
+
+/**
+ * THE LANGUAGE OF ONE CONVERSATION — declared, else the owner's, else the product default.
+ *
+ * The collapse lives here, in one named function, because it has THREE readers that must never
+ * disagree: the channel (`RunOrchestratorTurn`, which opens the "thinking" cues and hands the agent
+ * the language it must answer in), the settings dialog (`GetThreadSettings`, which renders what is in
+ * force), and the console chat (`GetSessionChat`, whose spinner has to show the room's words, not the
+ * browser's). Three `??` chains written three times is exactly how a room ends up with English cues
+ * over a Portuguese answer — the defect this whole field exists to close.
+ *
+ * `declared` absent ⟺ the thread never chose (`Thread.language`); `ownerDefault` absent ⟺ the account
+ * never chose, or the session could not be resolved at all. `resolveLanguage` decides the last step,
+ * so an unknown locale has ONE landing place for the whole daemon.
+ */
+export function resolveThreadLanguage(declared: Language | null | undefined, ownerDefault: Language | null | undefined): CatalogLanguage {
+	return resolveLanguage(declared ?? ownerDefault)
+}

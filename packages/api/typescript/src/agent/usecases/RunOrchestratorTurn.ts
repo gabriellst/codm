@@ -2,7 +2,15 @@ import { injectable } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { BaseError, CommandQueue, Handler, LoggingService, tryCatchAsync, z } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { PHASE_EDIT_MIN_INTERVAL_MS, THINKING_GLYPHS, describeToolActivity, pickThinkingVerb, thinkingLine } from '@codm/contracts/cues'
+import {
+	PHASE_EDIT_MIN_INTERVAL_MS,
+	THINKING_GLYPHS,
+	describeToolActivity,
+	localizeToolActivity,
+	pickThinkingVerb,
+	thinkingErrorCopy,
+	thinkingLine,
+} from '@codm/contracts/cues'
 import type { ToolVerb } from '@codm/contracts/cues'
 import {
 	AgentModelId,
@@ -11,8 +19,11 @@ import {
 	ProviderKind,
 	ProviderStatus,
 	TranscriptKind,
+	type Language,
 } from '@codm/contracts-typescript/wire/enums'
 import { modelsFor } from '@catalog'
+import { CloudSession } from '@shared/services/CloudSession'
+import { resolveThreadLanguage } from '@shared/i18n/messages'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { ConsumedMessageRepository } from '@thread/repositories/ConsumedMessageRepository'
 import { ChannelSender } from '@thread/services/ChannelSender'
@@ -110,9 +121,13 @@ interface SessionPlan {
 /**
  * The friendly copy a "Pensando" placeholder is edited to when a turn ends WITHOUT delivering an
  * answer (thinking-indicator spec, AC-6) — never left standing as if the agent were still working.
- * Local to this turn: the placeholder is opened and closed here, and nowhere else composes this text.
+ *
+ * It USED to be a Portuguese literal right here, which made it the one string of this surface outside
+ * the cue deck — and therefore the one that could not follow the conversation's language. It now comes
+ * from `@codm/contracts/cues` like the verb the placeholder opened with, because it is the LAST FRAME
+ * of that same message: same `messageId`, same line, same locale decision.
  */
-export const THINKING_ERROR_COPY = 'Tive um problema para terminar essa tarefa. Pode tentar de novo?'
+// (no constant here any more — `thinkingErrorCopy(language)` IS the declaration.)
 
 /**
  * Runs ONE conversational turn for a thread (orchestrator pivot §7.3) — the write-side entry point
@@ -197,6 +212,16 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 		 * transcript as if the channel OWNER had typed it, not the agent.
 		 */
 		private readonly consumed: ConsumedMessageRepository,
+		/**
+		 * The OWNER's default language, for a conversation that declared none.
+		 *
+		 * `CloudSession` and not `OwnerDirectory` for the reason `RaiseStop` writes out at its own call
+		 * site: the owner registry is CLOUD-ONLY, so on the desktop that token has no binding and tsyringe
+		 * hands back the abstract class — every read through it threw. This port lives in `shared` and IS
+		 * bound in the local profile. ADR 0001 is untouched: the cloud stays the only authority on
+		 * identity; the daemon asks.
+		 */
+		private readonly session: CloudSession,
 		private readonly logging: LoggingService,
 	) {
 		super()
@@ -242,6 +267,26 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 	private async runTurn(input: this['input'], presence: LitPresence, tx?: Transaction): Promise<this['output']> {
 		const thread = await this.threads.findById(input.threadId)
 		if (!thread) throw new BaseError<AgentApplicationErrors>('PROVIDER_NOT_DETECTED', `thread ${input.threadId} not found`)
+
+		/**
+		 * THE LANGUAGE OF THIS TURN — read ONCE, here, and handed to everything the room will hear.
+		 *
+		 * Three surfaces used to decide it independently and could disagree: the placeholder's opening
+		 * verb and phase line (a hardcoded Portuguese deck), the friendly error copy (a Portuguese literal
+		 * in this file), and the agent's own reply (a prompt heuristic — "reply in the language the
+		 * operator wrote in" — re-evaluated by the model every turn). That is exactly how an English cue
+		 * line ended up over a Portuguese answer. One read, one value, three consumers.
+		 *
+		 * ONCE and not per line, for the reason `now` above states for the clock: a value the renderer
+		 * re-reads is a value no test can pin, and a turn whose language could move halfway through is the
+		 * mid-turn flip decision 2 forbids.
+		 *
+		 * The owner default is only asked for when the thread declared nothing — `??` short-circuits — so
+		 * a conversation with its own language never pays the round-trip, and `identity()` memoizes the
+		 * answer for the ones that do.
+		 */
+		const ownerLanguage = thread.language ? undefined : (await this.session.identity())?.user.language
+		const language = resolveThreadLanguage(thread.language, ownerLanguage)
 
 		const detection = await this.resolveProvider(input.provider)
 		const runner = this.runners.for(input.provider)
@@ -321,7 +366,7 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 			// the random pool (`pickThinkingVerb`) — every PHASE edit below is tool-driven instead
 			// (`describeToolActivity`), which is total over every tool name and therefore never falls back
 			// to the pool (thinking-indicator spec, decision 4).
-			const openingVerb = pickThinkingVerb()
+			const openingVerb = pickThinkingVerb(language)
 			const opened = await tryCatchAsync(() => this.sender.send({ channelId, remoteId, text: thinkingLine(openingVerb) }, input.ownerId))
 			if (opened.success) {
 				const messageId = opened.data.messageId
@@ -423,6 +468,11 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 				// fills the loop form. Read per turn, like `customPrompt` above — a daemon that outlives a
 				// timezone change should not keep scheduling in the old one.
 				timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+				// WHICH LANGUAGE TO ANSWER IN — the SAME value the cues above were drawn from, which is the
+				// whole point of the field. Before it, the prompt asked the model to "reply in the language the
+				// operator wrote in": a heuristic re-decided every turn, off the last thing anyone happened to
+				// type, with nothing tying it to the words the placeholder had already put on screen.
+				language,
 				now,
 				model: input.model ?? AgentModelId.DEFAULT,
 				// WHAT THE CLI DRIVING THIS TURN OFFERS — a lookup in the declared relation, resolved here
@@ -458,14 +508,19 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 					// a change to the PAIR (tool, target), not just the tool name, so re-reading a DIFFERENT file
 					// with the SAME tool still moves the line (e.g. two `Read` calls on different paths).
 					if (event.frame.kind === 'tool_use' && thinkingMessageId && !firstCutLanded) {
-						const { tool, target } = event.frame
+						const tool = event.frame.tool
+						// TOOL-DRIVEN verb (decision 4) — `describeToolActivity` is total over every tool name (an
+						// unmapped one still resolves to the WORK family), so the random pool never enters here; it
+						// stays reserved for the opening line, which has no tool to key off yet.
+						//
+						// The classification is language-free and the WORDS come from the deck, in this
+						// conversation's language. The DATA target rides the frame (sanitized once, at decode time);
+						// a family with no data to show — today only DELEGATE, whose delegated prompt must never
+						// leak — borrows the deck's own word for it ("subagente" / "a subagent").
+						const { verb, target } = localizeToolActivity({ kind: describeToolActivity(tool).kind, target: event.frame.target }, language)
 						const changedFromApplied = tool !== lastPhaseTool || target !== lastPhaseTarget
 						const changedFromPending = !pendingPhase || pendingPhase.tool !== tool || pendingPhase.target !== target
 						if (changedFromApplied && changedFromPending) {
-							// TOOL-DRIVEN verb (decision 4) — `describeToolActivity` is total over every tool name
-							// (an unmapped one still resolves to "Trabalhando"), so the random pool never enters here;
-							// it stays reserved for the opening line, which has no tool to key off yet.
-							const { verb } = describeToolActivity(tool)
 							if (lastPhaseEditAtMs === undefined || phaseNowMs - lastPhaseEditAtMs >= PHASE_EDIT_MIN_INTERVAL_MS) {
 								await applyPhaseEdit({ tool, target, verb }, phaseNowMs)
 							} else {
@@ -516,7 +571,7 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 			// placeholder must not be left for the 5-minute ceiling to close. Never swallowed: the dispatcher
 			// still decides retry vs. poison off the rethrown error (`LibSqlMailboxDispatcher.runTurn`).
 			await this.closeCuesOnNoDelivery(
-				{ channelId, remoteId, ownerId: input.ownerId },
+				{ channelId, remoteId, ownerId: input.ownerId, language },
 				{ messageId: thinkingMessageId, landed: firstCutLanded },
 			)
 			throw error
@@ -541,7 +596,7 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 			// CASE 1 OF THE CATCH TERMINAL (T4's audit finding). A stopped turn is a non-delivery exactly
 			// like the throw case above — nothing reaches `deliver_channel_message` on this path either.
 			await this.closeCuesOnNoDelivery(
-				{ channelId, remoteId, ownerId: input.ownerId },
+				{ channelId, remoteId, ownerId: input.ownerId, language },
 				{ messageId: thinkingMessageId, landed: firstCutLanded },
 			)
 			return {
@@ -578,7 +633,7 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 		// advanced regardless of whether the model said anything worth sending.
 		if (reply.text.length === 0) {
 			await this.closeCuesOnNoDelivery(
-				{ channelId, remoteId, ownerId: input.ownerId },
+				{ channelId, remoteId, ownerId: input.ownerId, language },
 				{ messageId: thinkingMessageId, landed: firstCutLanded },
 			)
 		}
@@ -602,14 +657,19 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 	 * every terminal, so doing it again on this one would only publish a second identical stop.
 	 */
 	private async closeCuesOnNoDelivery(
-		conversation: { channelId: string; remoteId: string; ownerId: string },
+		conversation: { channelId: string; remoteId: string; ownerId: string; language: Language },
 		placeholder: { messageId: string | undefined; landed: boolean },
 	): Promise<void> {
 		if (!placeholder.messageId || placeholder.landed) return
 		const messageId = placeholder.messageId
 		const edited = await tryCatchAsync(() =>
 			this.sender.edit(
-				{ channelId: conversation.channelId, remoteId: conversation.remoteId, messageId, text: THINKING_ERROR_COPY },
+				{
+					channelId: conversation.channelId,
+					remoteId: conversation.remoteId,
+					messageId,
+					text: thinkingErrorCopy(conversation.language),
+				},
 				conversation.ownerId,
 			),
 		)

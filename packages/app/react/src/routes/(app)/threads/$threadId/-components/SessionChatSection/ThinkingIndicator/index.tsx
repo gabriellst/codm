@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { easeSpinnerFrames, pickThinkingVerb } from '@codm/contracts/cues'
-import type { ThinkingVerb } from '@codm/contracts/cues'
+import type { LanguageInput, ThinkingVerb } from '@codm/contracts/cues'
 import { cn } from '@/lib/utils'
 
 /**
@@ -19,7 +19,24 @@ if (!FIRST_FRAME) throw new Error('easeSpinnerFrames(2000) returned no frames')
  *  because the verb only swaps on the cycle boundary where the eased frames are slowest. */
 const CYCLES_PER_VERB = 1
 
-interface ThinkingIndicatorProps extends React.ComponentProps<'div'> {}
+interface ThinkingIndicatorProps extends React.ComponentProps<'div'> {
+	/**
+	 * WHICH LANGUAGE the verb is drawn in — the conversation's, ALREADY RESOLVED by the daemon
+	 * (`GetSessionChat.thread.language`), never the console's own UI locale.
+	 *
+	 * The distinction is the whole point of the field: this spinner shows the operator what the ROOM is
+	 * seeing, and a Portuguese group watched from an English console must still read "✻ Destilando…".
+	 * A prop and not a query of its own, because the parent already holds the read that answers it.
+	 *
+	 * Optional so a story or a mount that has not loaded the thread yet still renders — the deck's own
+	 * fallback (pt-BR) applies, which is the same collapse the daemon uses.
+	 *
+	 * `LanguageInput` and not the contracts `enum`: what arrives here is the SDK's value, and a contract
+	 * enum crosses the wire as its bare tag. The deck declares that both spellings are the same locale
+	 * (its type is DERIVED from the enum), so this stays as closed as the enum without an `as` on the way in.
+	 */
+	language?: LanguageInput
+}
 
 /**
  * The console's "✻ {verbo}" spinner (spec Decision 3, AC-4): a purely presentational
@@ -32,9 +49,9 @@ interface ThinkingIndicatorProps extends React.ComponentProps<'div'> {}
  * `delayMs`, so the effect re-runs once per frame and cleans up its own pending timeout on unmount or
  * before scheduling the next one.
  */
-export function ThinkingIndicator({ className, ...props }: ThinkingIndicatorProps) {
+export function ThinkingIndicator({ className, language, ...props }: ThinkingIndicatorProps) {
 	const [frameIndex, setFrameIndex] = React.useState(0)
-	const [verb, setVerb] = React.useState<ThinkingVerb>(() => pickThinkingVerb())
+	const [verb, setVerb] = React.useState<ThinkingVerb>(() => pickThinkingVerb(language))
 	const cyclesCompleted = React.useRef(0)
 
 	React.useEffect(() => {
@@ -45,13 +62,15 @@ export function ThinkingIndicator({ className, ...props }: ThinkingIndicatorProp
 			const nextIndex = (frameIndex + 1) % FRAMES.length
 			if (nextIndex === 0) {
 				cyclesCompleted.current += 1
-				if (cyclesCompleted.current % CYCLES_PER_VERB === 0) setVerb(previous => pickThinkingVerb(previous))
+				if (cyclesCompleted.current % CYCLES_PER_VERB === 0) setVerb(previous => pickThinkingVerb(language, previous))
 			}
 			setFrameIndex(nextIndex)
 		}, currentFrame.delayMs)
 
 		return () => clearTimeout(id)
-	}, [frameIndex])
+		// `language` is read inside the timeout, so the effect declares it — a conversation whose language
+		// changes while the spinner is up picks the new pool on the very next cycle boundary.
+	}, [frameIndex, language])
 
 	// noUncheckedIndexedAccess: frameIndex está sempre em [0, FRAMES.length) por construção (o efeito
 	// acima só avança via `% FRAMES.length`) — `?? FIRST_FRAME` só satisfaz o compilador.

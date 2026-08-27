@@ -10,6 +10,7 @@ import {
 	StopKind,
 	StopResolution,
 	DayOfWeek,
+	Language,
 	LoopScheduleKind,
 	MessageType,
 } from '../../../generated/typescript/src/wire/enums'
@@ -86,6 +87,26 @@ export const threads = sqliteTable(
 		 * the full interaction with the thinking-indicator gate.
 		 */
 		streamingEnabled: integer('streaming_enabled', { mode: 'boolean' }).notNull().default(true),
+		/**
+		 * O IDIOMA DESTA CONVERSA — declarado, nunca detectado (i18n-das-pistas spec, decisão 2).
+		 *
+		 * NULL ⟺ "o operador não escolheu para esta conversa", e nesse caso vale o padrão do dono (o
+		 * idioma da conta, `Session.user.language`). Nulável em vez de `NOT NULL DEFAULT 'pt-BR'` porque
+		 * "nunca escolhi" e "escolhi português" NÃO são o mesmo fato: com o default gravado, trocar o
+		 * idioma da conta deixaria de alcançar as conversas que só herdavam — cada linha antiga teria
+		 * congelado uma escolha que ninguém fez. Mesma regra que `custom_prompt` ao lado declara: uma
+		 * ausência tem UMA grafia.
+		 *
+		 * DECLARADO é o ponto: nada aqui é inferido do transcript. Uma linha em inglês num grupo
+		 * português não vira uma coluna diferente no meio do turno — as pistas de fase são vistas por
+		 * todos na sala, e trocar de idioma a cada mensagem seria pior que estar no idioma errado.
+		 *
+		 * Sem CHECK, ao contrário dos enums vizinhos: SQLite não sabe ADICIONAR uma constraint de tabela
+		 * a uma tabela existente, então declarar um `enumCheck` aqui faria o drizzle-kit emitir um
+		 * recreate destrutivo de `thread_threads` no lugar de um `ALTER TABLE ADD COLUMN` aditivo. Quem
+		 * fecha o conjunto é o `z.enum(Language)` do agregado, na hidratação (`LibSqlThreadRepository`).
+		 */
+		language: text('language').$type<Language>(),
 		participants: text('participants', { mode: 'json' }).$type<ThreadParticipant[]>().notNull(),
 		// BufferSize string tiers (25 | 50 | 100 | 200).
 		bufferSize: text('buffer_size').$type<BufferSize>().notNull(),

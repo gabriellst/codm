@@ -1,10 +1,16 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenRemote, givenRemoteMembership, givenThread, givenWorkspace } from '@test/support'
-import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
-import { ContactKind } from '@codm/contracts-typescript/wire/enums'
+import { CloudSession } from '@shared/services/CloudSession'
+import {
+	MOCK_CLOUD_OWNER_ID,
+	MOCK_CLOUD_SESSION_ID,
+	MOCK_CLOUD_USER_ID,
+	MockCloudSession,
+} from '@shared/services/CloudSession/MockCloudSession'
+import { ContactKind, Language } from '@codm/contracts-typescript/wire/enums'
 import { CUSTOM_PROMPT_MAX_LENGTH } from '../schemas'
-import { ConfigurePrompt, ConfigureThinkingIndicator } from './ConfigureThreadSettings'
+import { ConfigureLanguage, ConfigurePrompt, ConfigureThinkingIndicator } from './ConfigureThreadSettings'
 import { GetThreadSettings } from './GetThreadSettings'
 
 const CHANNEL = '019e4d24-0000-7041-9e1c-0000000000c1'
@@ -137,9 +143,7 @@ describe('GetThreadSettings — participant names come from the contact book', (
 		const thread = await threadWithContact(JID)
 		expect((await settingsFor(thread.id.value)).thinkingIndicator).toEqual({ enabled: true })
 
-		await testBed
-			.resolve(ConfigureThinkingIndicator)
-			.execute({ ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value, enabled: false })
+		await testBed.resolve(ConfigureThinkingIndicator).execute({ ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value, enabled: false })
 
 		expect((await settingsFor(thread.id.value)).thinkingIndicator).toEqual({ enabled: false })
 	})
@@ -303,5 +307,97 @@ describe('GetThreadSettings — group roster reflects LIVE membership, not the f
 		const { participants } = await settingsFor(thread.id.value)
 
 		expect(participants.map(p => p.participantId).sort()).toEqual(['operator', JID].sort())
+	})
+})
+
+/**
+ * The two halves of the language field, and why the read ships BOTH.
+ *
+ * `declared` is what the operator chose for THIS conversation — absent when they never did, which is
+ * what the dialog's "account default" option is bound to. `effective` is what is actually in force,
+ * which is the only thing that answers "so what will it speak?". Collapsing them into one value would
+ * make the dialog unable to tell "chose Portuguese" from "inherits Portuguese" — and those two diverge
+ * the moment the account language changes.
+ */
+describe("GetThreadSettings — the conversation's language, declared and effective", () => {
+	let testBed: TestBed
+	let testContainer: DependencyContainer
+
+	beforeAll(async () => {
+		testContainer = container.createChildContainer()
+		testBed = await TestBed.create('integration', { testContainer, ownerId: MOCK_CLOUD_OWNER_ID })
+	})
+	beforeEach(async () => {
+		await testBed.reset()
+		// The mock identity carries no language by default — restored per test so a case that sets one
+		// cannot leak into the next.
+		withAccountLanguage(undefined)
+	})
+	afterAll(async () => {
+		await testBed.destroy()
+	})
+
+	/** Points the mock cloud session at an account that HAS (or has not) chosen a language. */
+	const withAccountLanguage = (language: Language | undefined) =>
+		(testBed.resolve(CloudSession) as MockCloudSession).setIdentity({
+			user: { id: MOCK_CLOUD_USER_ID, email: 'operator@example.test', name: 'Test Operator', emailVerified: true, language },
+			session: {
+				id: MOCK_CLOUD_SESSION_ID,
+				userId: MOCK_CLOUD_USER_ID,
+				expiresAt: new Date('2999-12-31T00:00:00.000Z'),
+				ownerId: MOCK_CLOUD_OWNER_ID,
+			},
+		})
+
+	const languageOf = async (threadId: string) =>
+		(await testBed.resolve(GetThreadSettings).execute({ ownerId: MOCK_CLOUD_OWNER_ID, threadId })).language
+
+	it('nothing declared and no account choice → declared absent, effective is the product default', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+
+		expect(await languageOf(thread.id.value)).toEqual({ declared: undefined, effective: Language.PT_BR })
+	})
+
+	it('nothing declared, account in English → the conversation INHERITS it, and declared stays absent', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		withAccountLanguage(Language.EN_US)
+
+		expect(await languageOf(thread.id.value)).toEqual({ declared: undefined, effective: Language.EN_US })
+	})
+
+	it('declared English over a Portuguese account → the conversation wins', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		withAccountLanguage(Language.PT_BR)
+		await testBed.resolve(ConfigureLanguage).execute({ ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value, language: Language.EN_US })
+
+		expect(await languageOf(thread.id.value)).toEqual({ declared: Language.EN_US, effective: Language.EN_US })
+	})
+
+	/**
+	 * THE CASE THE TWO FIELDS EXIST FOR. Declaring pt-BR and merely inheriting it report the same
+	 * `effective` and a DIFFERENT `declared` — and only the declared one survives the account changing.
+	 */
+	it('declaring pt-BR is not the same state as inheriting it', async () => {
+		const declaredThread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const inheritingThread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, contactExternalId: '5511900000099@s.whatsapp.net' })
+		await testBed
+			.resolve(ConfigureLanguage)
+			.execute({ ownerId: MOCK_CLOUD_OWNER_ID, threadId: declaredThread.id.value, language: Language.PT_BR })
+
+		withAccountLanguage(Language.PT_BR)
+		expect((await languageOf(declaredThread.id.value)).effective).toBe(Language.PT_BR)
+		expect((await languageOf(inheritingThread.id.value)).effective).toBe(Language.PT_BR)
+
+		// The account moves. Only the thread that never chose follows it.
+		withAccountLanguage(Language.EN_US)
+		expect(await languageOf(declaredThread.id.value)).toEqual({ declared: Language.PT_BR, effective: Language.PT_BR })
+		expect(await languageOf(inheritingThread.id.value)).toEqual({ declared: undefined, effective: Language.EN_US })
+	})
+
+	it('an account language the product does not ship collapses to the default, and does not fail the dialog', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		withAccountLanguage('fr-CH' as Language)
+
+		expect(await languageOf(thread.id.value)).toEqual({ declared: undefined, effective: Language.PT_BR })
 	})
 })
