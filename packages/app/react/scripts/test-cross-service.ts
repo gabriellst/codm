@@ -38,9 +38,27 @@ interface FileResult {
 	ms: number
 }
 
+/**
+ * O TETO BRUTO POR TESTE DESTA SUÍTE — e ele é maior que o default de 5s do `bun test` por uma
+ * razão de categoria, não por um teste específico.
+ *
+ * Todo arquivo daqui sobe um BACKEND REAL (`useIntegrationBackend`) antes de asserir qualquer coisa,
+ * e alguns ainda esperam um PATCH em background chegar ao servidor. Localmente isso custa ~1s; num
+ * runner hospedado, sem cache quente, o mesmo teste passou de 5s e o CI o cortou — não por travar,
+ * mas por o teto default não ter folga para máquina lenta. Um flake assim é pior que uma falha: ele
+ * some no rerun e volta depois, e desde que a `main` exige o job `detect` ele bloqueia merge.
+ *
+ * Isto NÃO afrouxa nenhuma asserção. Cada espera destes testes tem o seu PRÓPRIO limite semântico e
+ * nomeado (`waitForDraft` desiste em 200 tentativas dizendo qual condição nunca aconteceu, e
+ * `MountedRouter.settled` faz o mesmo pelo DOM) — um travamento de verdade continua falhando rápido
+ * e com a causa escrita. O que este valor faz é só impedir que o teto bruto corte a espera ANTES do
+ * limite que sabe explicar o que deu errado.
+ */
+const PER_FILE_TIMEOUT_MS = 30_000
+
 function runOne(file: string): FileResult {
 	const started = performance.now()
-	const result = Bun.spawnSync(['bun', 'test', PATH_IGNORE_OVERRIDE, file], {
+	const result = Bun.spawnSync(['bun', 'test', '--timeout', String(PER_FILE_TIMEOUT_MS), PATH_IGNORE_OVERRIDE, file], {
 		cwd: REACT_ROOT,
 		stdout: 'inherit',
 		stderr: 'inherit',
