@@ -127,10 +127,28 @@ type SendButtonContent struct {
 }
 
 // SendReactionKey identifies the message being reacted to.
+//
+// WhatsApp addresses a reaction by the WHOLE message key — remote + fromMe + id
+// + participant — and whatsmeow derives the last two from the `sender` JID it is
+// handed (BuildMessageKey). So the key is only complete when it also says WHO
+// authored the target message, which is what SenderID carries.
 type SendReactionKey struct {
 	RemoteID string
 	FromMe   bool
 	ID       string
+	// SenderID is the JID of whoever AUTHORED the message being reacted to, and
+	// it is what makes a reaction stick in a GROUP.
+	//
+	// In a group the chat JID is the group (@g.us) and the author is a
+	// participant, so a key built from the chat alone points its `participant`
+	// slot at the group itself — the reaction addresses no message and no client
+	// ever renders it. In a DM the two coincide (chat JID == the contact), which
+	// is exactly why the bug only ever showed up in groups.
+	//
+	// OPTIONAL, and deliberately so: `FromMe` messages need no participant (the
+	// device's own JID answers it), and a caller that has no author still gets
+	// the pre-existing chat-JID fallback rather than a validation error.
+	SenderID string
 }
 
 // SendReactionContent is the send payload for reaction messages.

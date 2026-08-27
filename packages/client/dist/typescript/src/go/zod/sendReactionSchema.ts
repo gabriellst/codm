@@ -22,7 +22,8 @@ export const sendReactionMutationRequestSchema = z.object({
 "fromMe": z.optional(z.boolean()),
 "messageId": z.string(),
 "reaction": z.string(),
-"remoteId": z.string()
+"remoteId": z.string(),
+"senderId": z.optional(z.string())
     })
 
 export const sendReactionMutationResponseSchema = z.lazy(() => sendReaction200Schema)

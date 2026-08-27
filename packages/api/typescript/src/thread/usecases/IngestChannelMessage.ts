@@ -238,6 +238,13 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 		entryId: string,
 		tx: Transaction,
 	): Promise<void> {
+		// The owner's own words arrive under the OPERATOR roster id (`ConsumeInboundMessage` rewrites the
+		// sender when the gateway reports `fromMe`), and WhatsApp addresses a reaction by the whole
+		// message key — so the sentinel that already encodes "this account said it" is precisely the fact
+		// the gateway needs, read where it is unambiguous. Read ONCE, because the same comparison also
+		// decides whether there is an author to send (below).
+		const fromMe = input.senderExternalId === OPERATOR_PARTICIPANT_ID
+
 		const outcome = await tryCatchAsync(() =>
 			this.commands.enqueueCommand<ReactToChannelMessage>(
 				'react_to_channel_message',
@@ -246,11 +253,16 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 					channelId,
 					remoteId,
 					messageId: input.platformMessageId ?? '',
-					// The owner's own words arrive under the OPERATOR roster id (`ConsumeInboundMessage` rewrites
-					// the sender when the gateway reports `fromMe`), and WhatsApp addresses a reaction by the whole
-					// message key — so the sentinel that already encodes "this account said it" is precisely the
-					// fact the gateway needs, read where it is unambiguous.
-					fromMe: input.senderExternalId === OPERATOR_PARTICIPANT_ID,
+					fromMe,
+					// THE AUTHOR, and the whole reason a `👀` used to vanish in a group. `remoteId` is the GROUP
+					// jid there, never the person's, so without this the gateway could only fill the message
+					// key's `participant` slot with the chat — a key that addresses no message, and an emoji
+					// nobody in the room ever sees. In a DM the two coincide, which is why it looked fine.
+					//
+					// Withheld when `fromMe`, because there the id is `OPERATOR_PARTICIPANT_ID` — a SENTINEL,
+					// not a JID. Sending it would have the gateway parse `operator` into a nonsense JID and
+					// break the one case that already works; the device's own id is what answers that case.
+					senderExternalId: fromMe ? undefined : input.senderExternalId,
 					reaction: CUE_ACKNOWLEDGED,
 				},
 				// Derived from the ENTRY, like the mailbox item's own dedup key: a redelivered gateway event

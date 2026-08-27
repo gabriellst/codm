@@ -140,6 +140,11 @@ export class GatewayChannelSender extends ChannelSender {
 					remoteId: input.remoteId,
 					messageId: input.messageId,
 					fromMe: input.fromMe,
+					// THE AUTHOR, renamed at the boundary and nowhere else. `senderExternalId` is the thread's
+					// word for it; `senderId` is the channel context's own (it is the very field the inbound
+					// `channel.message_received` carried it out on), so the value makes a round trip under the
+					// name each side already uses instead of a third one invented here.
+					senderId: input.senderExternalId,
 					reaction: input.reaction,
 				},
 				{ baseURL: `${Config.env.API_GO_URL}/api`, headers: { 'X-Owner-Id': ownerId } },
