@@ -61,6 +61,11 @@ function runOne(file: string): FileResult {
 		cwd: REACT_ROOT,
 		stdout: 'inherit',
 		stderr: 'inherit',
+		// DECLARADO, não inferido: `tests/setup.ts` avisa que as suítes `.services.test.tsx` ficam de
+		// fora da invocação padrão, e esse aviso não faz sentido AQUI — esta invocação é justamente a
+		// que as roda. A primeira tentativa farejava `--path-ignore-patterns` em `process.argv` e não
+		// funcionou (o bun não expõe a flag lá), então quem sabe a resposta a diz em voz alta.
+		env: { ...process.env, CODM_CROSS_SERVICE: '1' },
 	})
 	const ms = performance.now() - started
 	return { file, ok: result.exitCode === 0, ms }
