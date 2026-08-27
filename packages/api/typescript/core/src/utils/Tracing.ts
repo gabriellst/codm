@@ -14,6 +14,37 @@ context.setGlobalContextManager(contextManager)
 const tracedClasses = new Set<string>()
 
 /**
+ * OS PROTÓTIPOS QUE `autoTrace` NÃO PODE TOCAR, e a razão de este arquivo ter uma denylist.
+ *
+ * `autoTrace` deduz a classe de um serviço resolvido por `service.constructor`. Quando o token
+ * resolve para um OBJETO LITERAL (um bag de config, o retorno de um `useFactory` que devolve `{...}`),
+ * esse constructor é o `Object` — e a linha seguinte então instrumentava `Object.prototype`. A partir
+ * daí TODO `hasOwnProperty` do processo — zod, drizzle, ky, react-jsx-runtime, bullmq, os internos do
+ * node — passava por `startSpan` + `context.with` + seis `setAttribute`. Medido no perfil cloud:
+ * 2957 de 3000 chamadas embrulhadas eram `Object.hasOwnProperty`, o daemon prendia um core em 100%,
+ * não respondia a `/health` e ignorava SIGTERM (só `kill -9`).
+ *
+ * O sintoma era MUDO em dois níveis: nada no log, e só com o SDK GRAVANDO — com spans noop o mesmo
+ * wrapper é barato o bastante para passar despercebido, que é como isto sobreviveu ao dev local.
+ *
+ * A denylist é por PROTÓTIPO e não por nome: `className === 'Object'` cairia junto com qualquer
+ * classe de aplicação que por acaso se chamasse `Object`, e não pegaria `Array`/`Map`/`Promise`.
+ */
+const INTRINSIC_PROTOTYPES: ReadonlySet<unknown> = new Set<unknown>([
+	Object.prototype,
+	Array.prototype,
+	Function.prototype,
+	Promise.prototype,
+	Map.prototype,
+	Set.prototype,
+	WeakMap.prototype,
+	WeakSet.prototype,
+	Date.prototype,
+	RegExp.prototype,
+	Error.prototype,
+])
+
+/**
  * IS THERE ANYWHERE FOR A SPAN TO GO — the single derivation every telemetry site reads
  * (`startTelemetry`, `traceClass`, `autoTrace`). Telemetry is on when, and only when, a collector
  * URL is configured; no site consults anything else, so none of them can drift into a second
@@ -224,11 +255,15 @@ export function autoTrace(container: DependencyContainer, context?: string) {
 
 		if (service && typeof service === 'object') {
 			const classConstructor = service.constructor
-			const className = classConstructor.name
+			const prototype = classConstructor?.prototype
 
-			if (!tracedClasses.has(className)) {
-				traceClassMethods(classConstructor.prototype, className, context)
-				tracedClasses.add(className)
+			if (prototype && !INTRINSIC_PROTOTYPES.has(prototype)) {
+				const className = classConstructor.name
+
+				if (!tracedClasses.has(className)) {
+					traceClassMethods(prototype, className, context)
+					tracedClasses.add(className)
+				}
 			}
 		}
 
