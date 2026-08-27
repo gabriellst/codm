@@ -43,19 +43,60 @@ Polyglot fullstack descending from the `template-fullstack` architecture: **DDD 
 | `packages/client` | Kubb / oapi-codegen / progenitor | Generated SDKs (TS committed at `packages/client/dist/typescript`) |
 | `packages/e2e` | Playwright | Cross-stack flows |
 
-Both sidecars open the **same SQLite file** under `$CODM_DATA_DIR` and apply the same Drizzle-authored migrations idempotently at boot — there is no external database and no manual migrate step. Cross-context and cross-service facts travel through a **transactional outbox**; Redis streams back the external mediator in dev.
+Both sidecars open the **same SQLite file** under `$CODM_DATA_DIR` and apply the same Drizzle-authored migrations idempotently at boot — on the user's machine there is no external database and no manual migrate step. The **cloud profile is the exception, and the only one**: it speaks Postgres, and its driver *verifies* migrations rather than applying them, so that database is created and migrated explicitly (`bun stack:up`, `bun migrate:deploy:cloud`). Cross-context and cross-service facts travel through a **transactional outbox**; Redis streams back the external mediator in dev.
 
 ## Quick start
 
 ```bash
-cp .env.example .env             # fill JWT_SECRET, BETTER_AUTH_SECRET, INTERNAL_SERVICE_KEY
+cp .env.example .env          # see "Before you start" — one of these is not optional
 bun install
-bun docker:compose               # redis + LGTM observability (no Postgres — one SQLite file)
-bun sdk                          # generate the typed client from OpenAPI
-bun dev                          # api-ts:3030 + api-go:3032 + app-react:5173 + app-astro:4321
+bun stack:up                  # redis + LGTM + postgres (the cloud profile's database)
+bun migrate:deploy:cloud      # required: the cloud driver verifies migrations, it never applies them
+bun desktop:dev               # the app itself
 ```
 
-Prereqs: `bun >= 1.0`, `docker`, `go`, `cargo` (the contracts codegen builds a Rust crate). Full setup notes live in `CLAUDE.md` ("Environment Setup"); desktop packaging and the two release signatures are in `docs/RELEASE.md`.
+`bun desktop:dev` is the product: it compiles both sidecars, starts the cloud profile on `:3033`, and
+opens the Tauri shell hosting the console — the shell supervises the sidecars, so there is nothing
+else to keep running. Expect the first launch to be slow; it builds a Rust binary.
+
+### Before you start
+
+**Sign-in needs an OAuth app.** There is no email/password path — the console offers GitHub and
+Google and nothing else. Fill `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` **or** the `GOOGLE_*` pair in
+`.env`, or you will reach the login screen and stop there. The three secrets the file ships as
+`CHANGE_ME` (`JWT_SECRET`, `BETTER_AUTH_SECRET`, `INTERNAL_SERVICE_KEY`) still need real values.
+
+**Prereqs**: `bun >= 1.0`, `docker`, `go`, `cargo`. The Rust toolchain is what makes `desktop:dev`
+the heaviest of the four — it builds the shell — and `go` compiles the gateway sidecar. If you only
+want the services (next section), `cargo` is not needed: the generated Rust, Go and TypeScript all
+ship committed, so nothing on that path compiles a crate.
+
+**One data dir, one daemon.** `bun desktop:dev` opens the same SQLite store an installed CoDM.app
+uses (`~/Library/Application Support/app.codm.desktop/data` on macOS), and the daemon holds an
+exclusive lock on it. Start the dev build while the installed app is running and you get the error
+splash, with `DATA_DIR_LOCKED` and the offending pid in the log — the guard working, not a bug. Quit
+the installed app, or give the dev build its own store with `CODM_DATA_DIR`.
+
+**`bun sdk` is not a setup step.** The TypeScript client is committed under
+`packages/client/dist/typescript`, and nx builds it as a dependency of the console's dev target. Run
+it after you change a contract or a controller, not to boot the stack.
+
+### Running the pieces separately
+
+The desktop shell is the product, not the only way in. To work on a service — or on the landing,
+which the shell does not host — run them as plain dev servers instead:
+
+```bash
+bun dev                       # api-ts:3030 · api-go:3032 · console:5173/app · landing:4321
+bun dev:cloud                 # :3033 — identity (auth + owner); the console's sign-in points here
+curl localhost:3030/health    # every component "up" = the stack is sound
+```
+
+Those are two long-running commands, so use two terminals. The console at `:5173/app` is the same
+React app the shell hosts, minus the desktop capabilities the shell provides.
+
+Full setup notes live in `CLAUDE.md` ("Environment Setup"); desktop packaging and the two release
+signatures are in `docs/RELEASE.md`.
 
 ## Documentation
 
