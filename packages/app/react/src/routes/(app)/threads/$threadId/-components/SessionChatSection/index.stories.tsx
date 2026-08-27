@@ -76,11 +76,41 @@ export const Pensando: Story = {
 				mockQuery(getNeedsYouPanelQueryOptions(THREAD), { stops: [] }),
 				mockQuery(listArtifactsQueryOptions(THREAD), { artifacts: [] }),
 				mockQuery(getSessionChatQueryOptions(THREAD), {
-					thread: { status: 'RUNNING' },
+					thread: { status: 'RUNNING', language: 'pt-BR' },
 					composerMode: 'DIRECT',
 					activeStops: [],
 					transcript: [
 						{ entryId: '019e4d24-6524-7041-9e1c-8108180cdd03', kind: 'CONTACT', text: 'sobe o deploy?', at: '2026-08-06T10:00:00.000Z' },
+					],
+				}),
+			],
+		},
+	},
+}
+
+/**
+ * O MESMO estado, numa conversa que fala inglês — o verbo do spinner sai do pool inglês do deck
+ * (`@codm/contracts/cues`), não de uma tradução do português. A distinção que esta story existe para
+ * mostrar é que o idioma é o da SALA, resolvido pelo daemon, e não o locale do console: as duas
+ * stories rodam sob o mesmo i18n e mostram palavras de línguas diferentes.
+ */
+export const PensandoEmIngles: Story = {
+	parameters: {
+		msw: {
+			handlers: [
+				mockQuery(getNeedsYouPanelQueryOptions(THREAD), { stops: [] }),
+				mockQuery(listArtifactsQueryOptions(THREAD), { artifacts: [] }),
+				mockQuery(getSessionChatQueryOptions(THREAD), {
+					thread: { status: 'RUNNING', language: 'en-US' },
+					composerMode: 'DIRECT',
+					activeStops: [],
+					transcript: [
+						{
+							entryId: '019e4d24-6524-7041-9e1c-8108180cdd03',
+							kind: 'CONTACT',
+							text: 'can you ship the deploy?',
+							at: '2026-08-06T10:00:00.000Z',
+						},
 					],
 				}),
 			],

@@ -2,10 +2,12 @@ import { injectable } from 'tsyringe-neo'
 import { and, eq, inArray, isNull } from 'drizzle-orm'
 import { LibSqlDatabaseDriver, Handler, z, BaseError } from '@codm/core-typescript'
 import { threads, remotes } from '@codm/contracts/db'
-import { BufferSize, ProviderKind, AgentModelId, ContactKind } from '@codm/contracts-typescript/wire/enums'
+import { BufferSize, ProviderKind, AgentModelId, ContactKind, Language } from '@codm/contracts-typescript/wire/enums'
 import { effectiveModel, modelsFor } from '@catalog'
 // The LEAF, not the barrel — see `AttachThread` and that barrel's header.
 import { AgentRunnerFactory } from '@agent/services/AgentRunnerFactory/AgentRunnerFactory'
+import { CloudSession } from '@shared/services/CloudSession'
+import { resolveThreadLanguage } from '@shared/i18n/messages'
 import { OPERATOR_PARTICIPANT_ID, type Participant } from '../entities/Thread'
 import { GroupMemberReader } from '../services/GroupMemberReader'
 import { CUSTOM_PROMPT_MAX_LENGTH } from '../schemas'
@@ -24,6 +26,19 @@ export const GetThreadSettingsOutputSchema = z.object({
 	reactions: z.object({ enabled: z.boolean() }),
 	/** Per-thread on/off for intermediate content cuts (reactions/streaming spec). Default ON. */
 	streaming: z.object({ enabled: z.boolean() }),
+	/**
+	 * WHICH LANGUAGE this conversation speaks (i18n-das-pistas spec) — the cues the room sees and the
+	 * language the agent answers in.
+	 *
+	 * TWO fields, because the dialog has two things to say and they are genuinely different facts.
+	 * `declared` is the operator's choice for THIS conversation and is ABSENT when they never made one —
+	 * that is what the picker's "follow my account" option is bound to, and collapsing it into the
+	 * effective value would make the dialog unable to render the difference between "chose Portuguese"
+	 * and "inherits Portuguese". `effective` is what is actually in force right now, so the inherit
+	 * option can name the language it inherits instead of saying "default" and leaving the operator to
+	 * guess. `Thread.modelFor`'s collapse ships the same way, for the same reason.
+	 */
+	language: z.object({ declared: z.enum(Language).optional(), effective: z.enum(Language) }),
 	/**
 	 * The roster, each member carrying the address of their FACE alongside their name.
 	 *
@@ -113,6 +128,11 @@ export class GetThreadSettings extends Handler<typeof GetThreadSettingsInputSche
 		private readonly driver: LibSqlDatabaseDriver,
 		private readonly runners: AgentRunnerFactory,
 		private readonly groupMembers: GroupMemberReader,
+		// The OWNER's default language, for the thread that declared none. Same source `RaiseStop` reads
+		// for channel copy — `CloudSession`, which is bound in the local profile, and not `OwnerDirectory`,
+		// whose binding is cloud-only. It costs no round-trip here: `CloudSessionMiddleware` already asked
+		// this exact question at the top of the request, and `identity()` memoizes the answer per token.
+		private readonly session: CloudSession,
 	) {
 		super()
 	}
@@ -210,11 +230,21 @@ export class GetThreadSettings extends Handler<typeof GetThreadSettingsInputSche
 			}
 		})
 
+		// The owner's default, read ONLY to answer "what is in force" — `declared` below never passes
+		// through it. A session the daemon cannot resolve is not an error here: it means the same thing an
+		// account with no chosen language means, and `resolveThreadLanguage` collapses both into the
+		// product default rather than making this dialog fail to open.
+		const ownerLanguage = (await this.session.identity())?.user.language
+
 		return {
 			mentionGate: thread.mentionGateEnabled ? { enabled: true, tag: thread.mentionGateTag ?? '' } : { enabled: false },
 			thinkingIndicator: { enabled: thread.thinkingIndicatorEnabled },
 			reactions: { enabled: thread.reactionsEnabled },
 			streaming: { enabled: thread.streamingEnabled },
+			language: {
+				declared: (thread.language ?? undefined) as Language | undefined,
+				effective: resolveThreadLanguage(thread.language, ownerLanguage),
+			},
 			participants,
 			invokerCount: participants.filter(p => p.canInvoke).length,
 			bufferSize: thread.bufferSize as BufferSize,

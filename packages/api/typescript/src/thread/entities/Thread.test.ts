@@ -8,6 +8,7 @@ import {
 	StopKind,
 	StopResolution,
 	ThreadStatus,
+	Language,
 } from '@codm/contracts-typescript/wire/enums'
 import { ThreadStopResolvedEvent } from '../events/ThreadStopResolvedEvent'
 import { CUSTOM_PROMPT_MAX_LENGTH } from '../schemas'
@@ -47,6 +48,28 @@ describe('Thread entity', () => {
 
 		t.configureThinkingIndicator(true)
 		expect(t.thinkingIndicatorEnabled).toBe(true)
+	})
+
+	it('is born with NO language of its own — absence is what "follow the account default" means', () => {
+		const t = Thread.create(base)
+		// NOT `Language.PT_BR`. A stored default and an inherited one behave identically today and diverge
+		// the moment the operator changes their account language, so only one of them may be representable
+		// for "nobody chose" — and absence is it.
+		expect(t.language).toBeUndefined()
+	})
+
+	it("configureLanguage declares the conversation's language, and undefined hands it back to the account", () => {
+		const t = Thread.create(base)
+
+		t.configureLanguage(Language.EN_US)
+		expect(t.language).toBe(Language.EN_US)
+
+		t.configureLanguage(Language.PT_BR)
+		expect(t.language).toBe(Language.PT_BR)
+
+		// The ERASE — and it is a distinct state from having chosen pt-BR right above.
+		t.configureLanguage(undefined)
+		expect(t.language).toBeUndefined()
 	})
 
 	it('rejects an empty provider set', () => {
@@ -654,6 +677,22 @@ describe('Thread.raiseStop / resolveStop — a stop belongs to the thread, with 
 		})
 
 		expect(t.thinkingIndicatorEnabled).toBe(false)
+	})
+
+	it('revive() keeps the declared language — re-deriving it is the detection the spec forbids', () => {
+		const t = Thread.create(base)
+		t.configureLanguage(Language.EN_US)
+		t.delete()
+
+		t.revive({
+			contactRef: base.contactRef,
+			workspaceId: base.workspaceId,
+			providers: base.providers,
+			mentionTag: '@base',
+			participants: base.participants,
+		})
+
+		expect(t.language).toBe(Language.EN_US)
 	})
 
 	it('AC-5 — revive() clears deletedAt and re-applies the new attach settings', () => {

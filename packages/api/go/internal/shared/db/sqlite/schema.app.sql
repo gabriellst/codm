@@ -308,7 +308,7 @@ CREATE TABLE "thread_threads" (
 	"status" text NOT NULL,
 	"created_at" integer NOT NULL,
 	"updated_at" integer NOT NULL,
-	"version" integer DEFAULT 1 NOT NULL, "deleted_at" integer, "custom_prompt" text, "model_by_provider" text DEFAULT '{}' NOT NULL, "thinking_indicator_enabled" integer DEFAULT true NOT NULL, "reactions_enabled" integer DEFAULT true NOT NULL, "streaming_enabled" integer DEFAULT true NOT NULL,
+	"version" integer DEFAULT 1 NOT NULL, "deleted_at" integer, "custom_prompt" text, "model_by_provider" text DEFAULT '{}' NOT NULL, "thinking_indicator_enabled" integer DEFAULT true NOT NULL, "reactions_enabled" integer DEFAULT true NOT NULL, "streaming_enabled" integer DEFAULT true NOT NULL, "language" text,
 	CONSTRAINT "thread_threads_contact_kind_check" CHECK("thread_threads"."contact_kind" IN ('USER', 'GROUP', 'BROADCAST')),
 	CONSTRAINT "thread_threads_buffer_size_check" CHECK("thread_threads"."buffer_size" IN ('25', '50', '100', '200')),
 	CONSTRAINT "thread_threads_status_check" CHECK("thread_threads"."status" IN ('RUNNING', 'IDLE', 'NEEDS_ATTENTION', 'PAUSED'))

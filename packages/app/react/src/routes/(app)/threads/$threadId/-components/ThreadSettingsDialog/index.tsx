@@ -9,6 +9,7 @@ import {
 	getSessionChatQueryKey,
 	getThreadSettingsQueryKey,
 	useConfigureContextBuffer,
+	useConfigureLanguage,
 	useConfigureMentionGate,
 	useConfigureModel,
 	useConfigurePrompt,
@@ -20,6 +21,7 @@ import {
 	useGetThreadSettings,
 	useSetParticipantInvocation,
 	AgentModelIdEnum,
+	LanguageEnum,
 } from '@codm/client-typescript/typescript'
 import type { BufferSize, ProviderKind } from '@codm/client-typescript/typescript'
 import { Button } from '@codm/app-ui/button'
@@ -110,6 +112,7 @@ export function ThreadSettingsDialog({
 				<ThinkingIndicatorSection threadId={threadId} />
 				<ReactionsSection threadId={threadId} />
 				<StreamingSection threadId={threadId} />
+				<LanguageSection threadId={threadId} />
 				<AgentsSection threadId={threadId} />
 				<BufferSection threadId={threadId} />
 				<CustomPromptSection threadId={threadId} />
@@ -310,9 +313,7 @@ function ThinkingIndicatorSection({ threadId, className, ...props }: { threadId:
 					checked={data.thinkingIndicator.enabled}
 					disabled={configureThinkingIndicator.isPending}
 					aria-label={t('session.thinkingIndicator')}
-					onCheckedChange={value =>
-						configureThinkingIndicator.mutate({ threadId, data: { enabled: value } }, { onSuccess: invalidate })
-					}
+					onCheckedChange={value => configureThinkingIndicator.mutate({ threadId, data: { enabled: value } }, { onSuccess: invalidate })}
 				/>
 			</div>
 		</section>
@@ -393,6 +394,81 @@ function StreamingSection({ threadId, className, ...props }: { threadId: string 
 					onCheckedChange={value => configureStreaming.mutate({ threadId, data: { enabled: value } }, { onSuccess: invalidate })}
 				/>
 			</div>
+		</section>
+	)
+}
+
+/**
+ * Idioma — WHICH LANGUAGE this conversation speaks (i18n-das-pistas spec).
+ *
+ * One control, two surfaces downstream: the "thinking" cues everyone in the room sees and the language
+ * the agent answers in. It sits with the other three cue settings because it governs the same run of
+ * the dialog — what the room hears while and after the agent works.
+ *
+ * ### The picker is bound to `declared`, and the hint names `effective`
+ * They are different facts and the wire ships both. `declared` is what the operator chose HERE and is
+ * absent when they never did — bound to the select, so the placeholder ("account default") is a real,
+ * reachable state rather than a rendering of Portuguese-that-happens-to-be-inherited. `effective` is
+ * what is in force right now, which is the only thing that answers "so what will it actually speak?" —
+ * so it is written into the hint instead of leaving the operator to work it out from their account.
+ *
+ * ### Why "back to the account default" is a BUTTON and not an option in the select
+ * The enum select is generated from `LanguageEnum` and narrows `onValueChange` to real members — which
+ * is the property that keeps a locale the product does not ship from reaching the wire. Adding an
+ * "inherit" row would mean smuggling a sentinel string through that narrowing, and `Language` must not
+ * grow a `DEFAULT` member for it (the profile picker would then have to filter it back out). The erase
+ * is spelled the way the wire spells it: a request with the field ABSENT.
+ */
+function LanguageSection({ threadId, className, ...props }: { threadId: string } & ComponentProps<'section'>) {
+	const { t } = useTranslation()
+	const queryClient = useQueryClient()
+	const { data, isLoading } = useGetThreadSettings(threadId)
+	const configureLanguage = useConfigureLanguage()
+
+	const invalidate = () => queryClient.invalidateQueries({ queryKey: getThreadSettingsQueryKey(threadId) })
+
+	if (isLoading || !data) {
+		return (
+			<div className="flex flex-col gap-3">
+				<Skeleton className="h-7 rounded-lg" />
+				<Skeleton className="h-8 rounded-lg" />
+			</div>
+		)
+	}
+
+	return (
+		<section className={cn('flex flex-col gap-3', className)} {...props}>
+			<h3 className={sectionLabel}>{t('session.language')}</h3>
+			<div className="flex items-center gap-4">
+				<p className="flex-1 text-sm text-muted-foreground">
+					{t('session.languageHint', { language: t(`enums.Language.${data.language.effective}`) })}
+				</p>
+				<Select
+					enum={LanguageEnum}
+					i18nPrefix="enums.Language"
+					value={data.language.declared}
+					placeholder="session.languageAccountDefault"
+					onValueChange={value => configureLanguage.mutate({ threadId, data: { language: value } }, { onSuccess: invalidate })}
+					aria-label={t('session.language')}
+					className="w-44 shrink-0 bg-background"
+				/>
+			</div>
+			{/* Only reachable once there IS a choice to undo — a "clear" for an empty field is a control
+			    that cannot do anything, the same reason the model-change warning above only renders when a
+			    model select exists. Sends the mutation with the field ABSENT, which is how the contract
+			    spells "follow the account default". */}
+			{data.language.declared ? (
+				<Button
+					type="button"
+					variant="ghost"
+					size="sm"
+					className="self-start"
+					disabled={configureLanguage.isPending}
+					onClick={() => configureLanguage.mutate({ threadId, data: {} }, { onSuccess: invalidate })}
+				>
+					{t('session.languageUseAccountDefault')}
+				</Button>
+			) : null}
 		</section>
 	)
 }

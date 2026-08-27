@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from 'bun:test'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { THINKING_GLYPHS, THINKING_VERBS } from '@codm/contracts/cues'
+import { THINKING_GLYPHS, THINKING_VERBS_EN, THINKING_VERBS_PT } from '@codm/contracts/cues'
+import type { LanguageInput } from '@codm/contracts/cues'
 import { ThinkingIndicator } from './index'
 
 /**
@@ -83,12 +84,12 @@ describe('ThinkingIndicator', () => {
 		timeoutSpy.mockRestore()
 	})
 
-	function mount(): HTMLElement {
+	function mount(language?: LanguageInput): HTMLElement {
 		host = document.createElement('div')
 		document.body.appendChild(host)
 		root = createRoot(host)
 		act(() => {
-			root!.render(<ThinkingIndicator />)
+			root!.render(<ThinkingIndicator language={language} />)
 		})
 		return host
 	}
@@ -113,7 +114,8 @@ describe('ThinkingIndicator', () => {
 		const el = mount()
 
 		expect(glyphOf(el)).toBe(THINKING_GLYPHS[0])
-		expect(THINKING_VERBS).toContain(verbOf(el) as (typeof THINKING_VERBS)[number])
+		// Sem `language`, o deck cai no padrão (pt-BR) — o mesmo colapso que o daemon usa.
+		expect(THINKING_VERBS_PT).toContain(verbOf(el) as (typeof THINKING_VERBS_PT)[number])
 	})
 
 	it('agenda exatamente UM timeout encadeado por frame — nunca setInterval', () => {
@@ -143,5 +145,28 @@ describe('ThinkingIndicator', () => {
 		flushNext() // fecha o primeiro ciclo completo e reabre em frame 0
 
 		expect(glyphOf(el)).toBe(THINKING_GLYPHS[0])
+	})
+
+	/**
+	 * O IDIOMA DA SALA, não o do console. `GetSessionChat.thread.language` já vem RESOLVIDO pelo daemon
+	 * (declarado na conversa → padrão do dono → padrão do produto), e é ele que o spinner desenha: o
+	 * operador que acompanha um grupo em inglês a partir de um console em português vê o verbo em inglês,
+	 * porque é o que o grupo está vendo.
+	 */
+	it('desenha do pool do idioma que a conversa fala, e nunca do outro', () => {
+		const el = mount('en-US')
+
+		const verb = verbOf(el) as (typeof THINKING_VERBS_EN)[number]
+		expect(THINKING_VERBS_EN).toContain(verb)
+		expect(THINKING_VERBS_PT as readonly string[]).not.toContain(verb)
+	})
+
+	it('troca de verbo DENTRO do mesmo idioma a cada ciclo — nunca escorrega para o pool vizinho', () => {
+		const el = mount('en-US')
+
+		// Um ciclo completo é o que faz o verbo trocar (CYCLES_PER_VERB = 1).
+		for (let i = 0; i < THINKING_GLYPHS.length; i++) flushNext()
+
+		expect(THINKING_VERBS_EN).toContain(verbOf(el) as (typeof THINKING_VERBS_EN)[number])
 	})
 })

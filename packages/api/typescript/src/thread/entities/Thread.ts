@@ -11,6 +11,7 @@ import {
 	StopKind,
 	StopResolution,
 	MessageType,
+	Language,
 } from '@codm/contracts-typescript/wire/enums'
 // The DECLARED provider → models relation. A constant, no I/O — unlike the wire enums above (a
 // generated cross-language contract, `@codm/contracts-typescript`), `@catalog` is a single-reader
@@ -185,6 +186,27 @@ export const ThreadSchema = z.object({
 	 * plain send (if it is also OFF) — see `RunOrchestratorTurn`'s streaming-off gate.
 	 */
 	streamingEnabled: z.boolean(),
+	/**
+	 * WHICH LANGUAGE this conversation speaks — ABSENT until the operator picks one for it.
+	 *
+	 * It drives BOTH halves of what the room hears: the "thinking" cues (`@codm/contracts/cues` — the
+	 * phase line on the channel and the console spinner) and the agent's own reply language, which the
+	 * prompt used to re-decide every turn from a heuristic ("reply in the language the operator wrote
+	 * in"). One field, so English cues can never sit on top of a Portuguese answer again.
+	 *
+	 * DECLARED, never detected (i18n-das-pistas spec, decision 2). One English line in a Portuguese
+	 * group must not flip the copy mid-turn — the cues are seen by everyone in the room, and a room
+	 * whose vocabulary changes per message is worse than a room in the wrong language. There is
+	 * deliberately no AUTO member: nothing in the system ever writes this field except the operator.
+	 *
+	 * Optional, and the absence is load-bearing: it means "follow the owner's default" (the account
+	 * language, `Session.user.language`), so changing the account language still reaches every
+	 * conversation that never made a choice of its own. `configureLanguage(undefined)` is the way back —
+	 * the same shape `configurePrompt(undefined)` already uses for the other field whose absence means
+	 * something. The COLLAPSE (declared → owner's → product default) is `resolveThreadLanguage`
+	 * (`@shared/i18n`), decided in one place so the channel and the console cannot disagree.
+	 */
+	language: z.enum(Language).optional(),
 	participants: z.array(ParticipantSchema),
 	bufferSize: z.enum(BufferSize),
 	/**
@@ -420,10 +442,12 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 * exists to make unrepresentable. Filtering here keeps that invariant true of every reachable state,
 	 * not merely of the write path.
 	 *
-	 * `thinkingIndicatorEnabled`, `reactionsEnabled` and `streamingEnabled` SURVIVE too, for the same
-	 * reason as `customPrompt`: the attach wizard never asks about any of them, so none is reset or
-	 * re-derived here — whatever the operator last chose for this conversation stays chosen across a
-	 * delete/re-attach cycle.
+	 * `thinkingIndicatorEnabled`, `reactionsEnabled`, `streamingEnabled` and `language` SURVIVE too, for
+	 * the same reason as `customPrompt`: the attach wizard never asks about any of them, so none is reset
+	 * or re-derived here — whatever the operator last chose for this conversation stays chosen across a
+	 * delete/re-attach cycle. `language` in particular must NOT be re-derived: it is declared, and the
+	 * only thing a reset could derive it from is the transcript, which is exactly the detection decision 2
+	 * forbids.
 	 *
 	 * There is deliberately no "this thread is not deleted" guard. `AttachThread` is the only caller and
 	 * it reaches this method only on the deleted branch — the live branch raises THREAD_ALREADY_ATTACHED
@@ -506,6 +530,24 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 */
 	configureStreaming(enabled: boolean): void {
 		this.streamingEnabled = enabled
+	}
+
+	/**
+	 * Declare which language this conversation speaks — or hand it back to the owner's default.
+	 *
+	 * ### `undefined` is the ERASE, and it is not the same as choosing pt-BR
+	 * Same shape as `configurePrompt(undefined)`, for a reason that is sharper here: a stored `pt-BR`
+	 * and an absent value behave identically TODAY and diverge the moment the operator changes their
+	 * account language — the stored one keeps answering in Portuguese, the absent one follows. So
+	 * "inherit" needs its own spelling, and absence is it.
+	 *
+	 * No invariant either state can violate (every `Language` member is legal for every thread), so
+	 * this is a plain flip like its three siblings above — the closed set is `z.enum(Language)`, checked
+	 * by `validate()`, not by a hand-rolled guard.
+	 */
+	configureLanguage(language: Language | undefined): void {
+		this.language = language
+		this.validate()
 	}
 
 	/**

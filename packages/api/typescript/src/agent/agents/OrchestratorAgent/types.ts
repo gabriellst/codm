@@ -1,5 +1,5 @@
 import { z } from '@codm/core-typescript'
-import { AgentModelId, ContactKind, MailboxItemKind, MessageType, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { AgentModelId, ContactKind, Language, MailboxItemKind, MessageType, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { AgentRunOutcome, MessageVia } from '../../enums'
 import { ProviderCapabilitiesSchema } from '../../types/ProviderCapabilities'
 import { OpenStopSchema } from '../../usecases/GetOpenStops'
@@ -231,6 +231,24 @@ export const OrchestratorInputSchema = z.agentInput({
 	 * DEFAULTED zone is precisely the failure this field exists to prevent, not a fallback for it.
 	 */
 	timezone: z.string().min(1),
+	/**
+	 * WHICH LANGUAGE TO ANSWER IN — the conversation's own, already resolved.
+	 *
+	 * It REPLACES a heuristic: the voice section used to say "reply in the language the operator wrote
+	 * in", which made the model re-decide, every turn, off whatever the last person happened to type. A
+	 * single English line in a Portuguese group flipped it, and nothing tied that decision to the
+	 * "thinking" cues the same turn had already put on screen from a different (hardcoded) source. One
+	 * declared field now drives both.
+	 *
+	 * REQUIRED, not optional-with-a-default — the same rule `timezone` above states. `RunOrchestratorTurn`
+	 * resolves it once per turn (`Thread.language` → the owner's → the product default), so "absent" would
+	 * mean nothing except that somebody forgot to wire it, which is exactly the silent regression this
+	 * field exists to prevent.
+	 *
+	 * The ENUM and not a free BCP-47 string: the prompt renders a NAMED instruction per member, and a tag
+	 * the deck has never heard of would render as a locale code the model has to interpret.
+	 */
+	language: z.enum(Language),
 	/**
 	 * WHAT TIME IT IS — the turn's own instant, rendered at the top of the prompt as `agora: …`.
 	 *

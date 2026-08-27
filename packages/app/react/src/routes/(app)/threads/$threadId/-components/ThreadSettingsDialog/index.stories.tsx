@@ -18,6 +18,10 @@ const meta: Meta<typeof ThreadSettingsDialog> = {
 					thinkingIndicator: { enabled: true },
 					reactions: { enabled: true },
 					streaming: { enabled: true },
+					// DECLARADO diferente do efetivo de propósito: é o único estado em que a seção mostra as
+					// duas coisas que ela tem para dizer — o valor escolhido no seletor E o botão de voltar
+					// ao padrão da conta, que só existe quando há escolha a desfazer.
+					language: { declared: 'en-US', effective: 'en-US' },
 					participants: [
 						{ participantId: 'operator', name: 'Operator', source: 'Operator nesta máquina', canInvoke: true },
 						{ participantId: 'ada', name: 'Ada Lovelace', source: 'WhatsApp · +55 11 90000-0000', canInvoke: false },

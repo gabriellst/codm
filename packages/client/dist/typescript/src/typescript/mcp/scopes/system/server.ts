@@ -6,6 +6,7 @@
 import { addWorkspaceHandler } from "./addWorkspace.ts";
 import { completeOnboardingHandler } from "./completeOnboarding.ts";
 import { configureContextBufferHandler } from "./configureContextBuffer.ts";
+import { configureLanguageHandler } from "./configureLanguage.ts";
 import { configureMentionGateHandler } from "./configureMentionGate.ts";
 import { configureModelHandler } from "./configureModel.ts";
 import { configurePromptHandler } from "./configurePrompt.ts";
@@ -32,6 +33,7 @@ import { saveOnboardingStepHandler } from "./saveOnboardingStep.ts";
 import { addWorkspaceMutationRequestSchema, addWorkspaceMutationResponseSchema } from "../../../zod/addWorkspaceSchema.ts";
 import { completeOnboardingMutationResponseSchema } from "../../../zod/completeOnboardingSchema.ts";
 import { configureContextBufferMutationRequestSchema, configureContextBufferMutationResponseSchema } from "../../../zod/configureContextBufferSchema.ts";
+import { configureLanguageMutationRequestSchema, configureLanguageMutationResponseSchema } from "../../../zod/configureLanguageSchema.ts";
 import { configureMentionGateMutationRequestSchema, configureMentionGateMutationResponseSchema } from "../../../zod/configureMentionGateSchema.ts";
 import { configureModelMutationRequestSchema, configureModelMutationResponseSchema } from "../../../zod/configureModelSchema.ts";
 import { configurePromptMutationRequestSchema, configurePromptMutationResponseSchema } from "../../../zod/configurePromptSchema.ts";
@@ -161,6 +163,15 @@ server.registerTool("ConfigureStreaming", {
   inputSchema: { threadId: z.string(), data: configureStreamingMutationRequestSchema },
 }, async ({ threadId, data }) => {
   return configureStreamingHandler({ threadId, data })
+})
+          
+
+server.registerTool("ConfigureLanguage", {
+  description: "Set the language this conversation speaks, or clear it to follow the account default",
+  outputSchema: { data: configureLanguageMutationResponseSchema },
+  inputSchema: { threadId: z.string(), data: configureLanguageMutationRequestSchema },
+}, async ({ threadId, data }) => {
+  return configureLanguageHandler({ threadId, data })
 })
           
 

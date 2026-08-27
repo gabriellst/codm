@@ -5,6 +5,7 @@
 
 import type { AgentModelId } from "./AgentModelId.ts";
 import type { BufferSize } from "./BufferSize.ts";
+import type { Language } from "./Language.ts";
 import type { ProviderKind } from "./ProviderKind.ts";
 
 export type GetThreadSettingsPathParams = {
@@ -71,6 +72,19 @@ export type GetThreadSettings200 = {
          * @type boolean
         */
         enabled: boolean;
+    };
+    /**
+     * @type object
+    */
+    language: {
+        /**
+         * @type string | undefined
+        */
+        declared?: Language;
+        /**
+         * @type string
+        */
+        effective: Language;
     };
     /**
      * @type array

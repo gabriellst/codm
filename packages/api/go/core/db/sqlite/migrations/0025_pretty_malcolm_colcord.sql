@@ -1,0 +1,1 @@
+ALTER TABLE `thread_threads` ADD `language` text;

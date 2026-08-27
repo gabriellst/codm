@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import type { ZodType } from 'zod'
-import { ContactKind, MailboxItemKind, AgentModelId } from '@codm/contracts-typescript/wire/enums'
+import { ContactKind, MailboxItemKind, AgentModelId, Language } from '@codm/contracts-typescript/wire/enums'
 import { AgentRunner } from '../../services/AgentRunner'
 import { AgentName, AgentRunOutcome } from '../../enums'
 import type { AgentRunRequest } from '../../types/AgentRunRequest'
@@ -47,6 +47,10 @@ const input = (): Parameters<OrchestratorAgent['run']>[1] => ({
 	// always knows, so an absent field could only ever mean the seam was never wired — which is the
 	// exact failure that field exists to make unshippable, and the schema refuses the run without it.
 	openStops: [],
+	// REQUIRED for the same reason again (i18n-das-pistas spec): the conversation's declared language,
+	// resolved by the use case before the run. Absent could only mean the seam was never wired, and a
+	// turn that answers in the wrong language is exactly what the field exists to prevent.
+	language: Language.PT_BR,
 	// Required for the same reason, and answering a different question: which zone a wall-clock loop
 	// is scheduled in. Absent, a model would guess one from the language of the conversation.
 	timezone: 'America/Sao_Paulo',

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { ContactKind, MailboxItemKind, StopKind, AgentModelId } from '@codm/contracts-typescript/wire/enums'
+import { ContactKind, MailboxItemKind, StopKind, AgentModelId, Language } from '@codm/contracts-typescript/wire/enums'
 import { AgentRunOutcome, MessageVia } from '../../enums'
 import {
 	toolNameOf,
@@ -72,6 +72,10 @@ const base = {
 	// silently also asserting that the model section behaves for a normal conversation. The case that
 	// cares about the empty catalog overrides with `[]`.
 	availableModels: [AgentModelId.DEFAULT, AgentModelId.OPUS, AgentModelId.SONNET, AgentModelId.HAIKU],
+	// The conversation's declared language. REQUIRED, same "the turn always knows" reason — the default
+	// here is pt-BR, so every case that does not say otherwise is silently also asserting the Portuguese
+	// instruction renders; the case that cares about the other locale overrides it.
+	language: Language.PT_BR,
 	now: NOW,
 }
 
@@ -109,6 +113,39 @@ const issueResultTurn = () =>
 
 describe('OrchestratorPromptBuilder', () => {
 	const builder = new OrchestratorPromptBuilder()
+
+	/**
+	 * THE REPLY LANGUAGE IS DECLARED, not inferred.
+	 *
+	 * The voice section used to say "Reply in the language the operator wrote in" — a heuristic the model
+	 * re-decided every turn from whatever was last typed. That is how a Portuguese group got an English
+	 * answer under Portuguese cues (and vice versa). It now renders the conversation's declared language
+	 * as an instruction, from the SAME field the "thinking" cues are drawn from.
+	 */
+	it('(a0) renders the declared language as an instruction, and never the old "language the operator wrote in" heuristic', () => {
+		const portuguese = builder.system(operatorTurn())
+
+		expect(portuguese).toContain('Reply in Brazilian Portuguese')
+		expect(portuguese).not.toContain('the language the operator wrote in')
+	})
+
+	it('(a1) the SAME turn on an English conversation asks for English — one field, both surfaces', () => {
+		const english = builder.system(operatorTurn({ language: Language.EN_US }))
+
+		expect(english).toContain('Reply in English')
+		expect(english).not.toContain('Reply in Brazilian Portuguese')
+	})
+
+	it('(a2) the instruction survives a message written in another language — that is the whole point', () => {
+		// The heuristic would have flipped on this message alone. The declared field does not.
+		const system = builder.system(
+			operatorTurn({
+				item: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: LIVE_REF, speaker: 'operator', text: 'hey, can you check the build?' },
+			}),
+		)
+
+		expect(system).toContain('Reply in Brazilian Portuguese')
+	})
 
 	it('(a) an OPERATOR_MESSAGE turn in a GROUP renders QUOTING, carrying the consumed item id', () => {
 		const system = builder.system(operatorTurn())

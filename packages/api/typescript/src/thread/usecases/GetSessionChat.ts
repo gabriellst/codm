@@ -12,7 +12,10 @@ import {
 	ClassificationMethod,
 	StopKind,
 	ArtifactKind,
+	Language,
 } from '@codm/contracts-typescript/wire/enums'
+import { CloudSession } from '@shared/services/CloudSession'
+import { resolveThreadLanguage } from '@shared/i18n/messages'
 import type { ApplicationErrors } from '../errors'
 
 export const GetSessionChatInputSchema = z.object({ ownerId: z.uuid(), threadId: z.uuid() })
@@ -36,6 +39,20 @@ export const GetSessionChatOutputSchema = z.object({
 		providers: z.array(z.enum(ProviderKind)),
 		status: z.enum(ThreadStatus),
 		lastActivity: z.string(),
+		/**
+		 * WHICH LANGUAGE this conversation speaks, ALREADY RESOLVED (i18n-das-pistas spec) — what the
+		 * console's "thinking" spinner draws its verb pool from (`@codm/contracts/cues`).
+		 *
+		 * The EFFECTIVE value, never the declared one: the console has no business re-running the
+		 * declared → owner → default collapse, and a browser that re-derives it is a browser that can
+		 * disagree with the channel about what the same conversation speaks. `Thread.modelFor`'s
+		 * effective-only field states the same rule; the settings dialog is the ONE read that needs both
+		 * halves, because it is the one that has to render the choice.
+		 *
+		 * It is STATE, not prose, so D5's rule about `autonomyCaption` below does not apply — this ships
+		 * a locale code the view turns into words, not a finished sentence.
+		 */
+		language: z.enum(Language),
 	}),
 	paused: z.boolean(),
 	mentionGate: z.discriminatedUnion('enabled', [
@@ -141,6 +158,9 @@ export class GetSessionChat extends Handler<typeof GetSessionChatInputSchema, ty
 	constructor(
 		private readonly driver: LibSqlDatabaseDriver,
 		private readonly statuses: ThreadStatusDeriver,
+		// The OWNER's default language, for the thread that declared none — same source and same
+		// no-round-trip argument as `GetThreadSettings`' own injection of it.
+		private readonly session: CloudSession,
 	) {
 		super()
 	}
@@ -257,6 +277,7 @@ export class GetSessionChat extends Handler<typeof GetSessionChatInputSchema, ty
 				providers: thread.providers as ProviderKind[],
 				status,
 				lastActivity: lastActivity.toISOString(),
+				language: resolveThreadLanguage(thread.language, (await this.session.identity())?.user.language),
 			},
 			paused: thread.paused,
 			mentionGate,

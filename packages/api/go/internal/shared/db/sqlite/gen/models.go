@@ -322,6 +322,7 @@ type ThreadThread struct {
 	ThinkingIndicatorEnabled int64
 	ReactionsEnabled         int64
 	StreamingEnabled         int64
+	Language                 sql.NullString
 }
 
 type ThreadTranscriptEntry struct {

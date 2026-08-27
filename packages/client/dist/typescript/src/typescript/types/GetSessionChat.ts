@@ -6,6 +6,7 @@
 import type { ArtifactKind } from "./ArtifactKind.ts";
 import type { ChannelKind } from "./ChannelKind.ts";
 import type { ClassificationMethod } from "./ClassificationMethod.ts";
+import type { Language } from "./Language.ts";
 import type { ProviderKind } from "./ProviderKind.ts";
 import type { StopKind } from "./StopKind.ts";
 import type { ThreadMode } from "./ThreadMode.ts";
@@ -79,6 +80,10 @@ export type GetSessionChat200 = {
          * @type string
         */
         lastActivity: string;
+        /**
+         * @type string
+        */
+        language: Language;
     };
     /**
      * @type boolean

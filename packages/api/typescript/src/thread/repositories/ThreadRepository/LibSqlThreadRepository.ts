@@ -77,6 +77,11 @@ export class LibSqlThreadRepository extends ThreadRepository {
 						// reports as saved and the next turn/delivery never sees.
 						reactionsEnabled: data.reactionsEnabled,
 						streamingEnabled: data.streamingEnabled,
+						// Both directions, like `customPrompt` below: `configureLanguage` declares a language AND
+						// hands it back to the owner's default (`undefined` → NULL). An erase missing from the update
+						// set is the worse half — the console would show "follow the account" while every turn kept
+						// speaking the language nobody can see chosen any more.
+						language: data.language,
 						participants: data.participants,
 						bufferSize: data.bufferSize,
 						// Both directions too, and for the same reason the custom prompt is: `configureModel`
@@ -202,6 +207,9 @@ export class LibSqlThreadRepository extends ThreadRepository {
 			thinkingIndicatorEnabled: row.thinkingIndicatorEnabled,
 			reactionsEnabled: row.reactionsEnabled,
 			streamingEnabled: row.streamingEnabled,
+			// The column is nullable and the field is optional — one spelling of "never chosen" on each
+			// side, collapsed here, exactly as `customPrompt` below does.
+			language: row.language ?? undefined,
 			participants: row.participants as Participant[],
 			bufferSize: row.bufferSize as BufferSize,
 			modelByProvider: row.modelByProvider,
@@ -228,6 +236,7 @@ export class LibSqlThreadRepository extends ThreadRepository {
 			thinkingIndicatorEnabled: entity.thinkingIndicatorEnabled,
 			reactionsEnabled: entity.reactionsEnabled,
 			streamingEnabled: entity.streamingEnabled,
+			language: entity.language ?? null,
 			participants: entity.participants,
 			bufferSize: entity.bufferSize,
 			modelByProvider: entity.modelByProvider,

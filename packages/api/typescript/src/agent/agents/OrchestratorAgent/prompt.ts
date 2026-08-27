@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { ContactKind, MailboxItemKind, MessageType } from '@codm/contracts-typescript/wire/enums'
+import { ContactKind, Language, MailboxItemKind, MessageType } from '@codm/contracts-typescript/wire/enums'
 import type Z from 'zod'
 import {
 	toolNameOf,
@@ -36,6 +36,33 @@ type OpenStop = OrchestratorInput['openStops'][number]
 
 /** The `para` of a line written TO the agent. Absent on everything else — see `transcript()`. */
 const ADDRESSED_TO_AGENT = 'you'
+
+/**
+ * THE ONE SENTENCE THAT SETTLES WHAT LANGUAGE THE AGENT ANSWERS IN — one per shipped locale.
+ *
+ * It replaces "Reply in the language the operator wrote in", which was a HEURISTIC and therefore a
+ * decision the model re-made on every turn from the last thing anyone typed. Two consequences, both
+ * observed: a single English line in a Portuguese group flipped the whole reply, and nothing connected
+ * that decision to the "thinking" cues the same turn had already put on the screen from a hardcoded
+ * Portuguese deck — so the room got English cues over a Portuguese answer. The language is now DECLARED
+ * on the thread (`Thread.language`), resolved once per turn, and rendered here.
+ *
+ * A closed `Record` keyed by the enum, not a template over the tag: "answer in pt-BR" is a locale code
+ * the model has to interpret, while "answer in Brazilian Portuguese" is an instruction. Adding a member
+ * to `Language` is a compile error here until somebody writes the sentence — which is the point.
+ *
+ * The sentences are in ENGLISH even for the Portuguese entry, because the whole system prompt is: a
+ * prompt that switched language mid-document would be describing the register it is asking for instead
+ * of stating it.
+ */
+const LANGUAGE_INSTRUCTION: Record<Language, string> = {
+	[Language.PT_BR]:
+		'Reply in Brazilian Portuguese, always — even when a message you are answering is written in another ' +
+		'language. This conversation is configured for it and everyone in the room reads it.',
+	[Language.EN_US]:
+		'Reply in English, always — even when a message you are answering is written in another language. ' +
+		'This conversation is configured for it and everyone in the room reads it.',
+}
 
 /**
  * The prompt half of `OrchestratorAgent` (§7.1) — and, per the handoff, THE VOICE OF THE PRODUCT.
@@ -79,7 +106,7 @@ export class OrchestratorPromptBuilder {
 		return [
 			...this.identity(input),
 			'',
-			...this.voice(),
+			...this.voice(input),
 			'',
 			...this.grammar(input),
 			'',
@@ -220,10 +247,11 @@ export class OrchestratorPromptBuilder {
 	 * standard that cuts the actual failure — preamble and politeness padding — without cutting
 	 * substance.
 	 */
-	private voice(): string[] {
+	private voice(input: OrchestratorInput): string[] {
 		return [
 			'HOW YOU TALK',
-			'Reply in the language the operator wrote in. Match their register, not a house style.',
+			LANGUAGE_INSTRUCTION[input.language],
+			"Match the room's register, not a house style.",
 			'Short. A question worth two words gets two words. Length is earned by content, never by manners.',
 			'No preamble, no restating the question, no "claro!" before the answer, no sign-off, no offer of further help. ' +
 				'Answer the message and stop.',
