@@ -22,7 +22,8 @@ import {
 	resolve,
 } from '@codm/core-typescript'
 import { container } from 'tsyringe-neo'
-import { criteriaFromEnv } from '@shared/deployment'
+import { criteriaFromEnv, mountedContexts } from '@shared/deployment'
+import { phase } from './bootPhase'
 // T1.5 APAGOU CINCO IMPORTS DAQUI: `OutboxDispatcher`, `InternalMediator`, `ExternalMediator`,
 // `AgentRunnerFactory` e `MailboxDispatcher`. A raiz de composição os importava para PARAR recursos
 // que ela não tinha adquirido — e dois deles vinham de dentro de `@agent/`, o que fazia este arquivo
@@ -92,10 +93,14 @@ export async function start(options: { env: BoundedContextEnvironment; port?: nu
 	const { MANIFEST } = await import('@generated/composition.generated')
 	const { bindContexts, composeContexts } = await import('./compose')
 	const criteria = criteriaFromEnv()
+	// Cheap and pure (derived from the static `PLACEMENT` table) — read once, reused as the phase-log
+	// detail below AND for the compose-contexts phase further down, so the same number is never
+	// computed (or drifts) twice.
+	const mountedCount = mountedContexts(criteria).length
 
 	// FASE A — TODOS os bindings, de todo contexto montado, numa passada só. Cobre o registry do
 	// kernel (o `shared` monta sempre) e os módulos da família escolhida pela tabela de alocação.
-	bindContexts(MANIFEST, criteria, options.env)
+	await phase(`bind-contexts (env=${options.env}, contexts=${mountedCount})`, () => bindContexts(MANIFEST, criteria, options.env))
 
 	// MIGRAÇÃO — pelo TOPO NEUTRO, e DEPOIS de a família estar ligada.
 	//
@@ -113,15 +118,34 @@ export async function start(options: { env: BoundedContextEnvironment; port?: nu
 	// O guarda de emissão de spec continua: `bun sdk` importa a raiz de composição só para colher
 	// routers, e abrir infra ali abriria o data dir real.
 	if (Config.env.EMIT_OPENAPI !== 'true') {
-		await resolve(container, DatabaseDriver).runMigrations()
+		// Both the ledger read AND the migration run live INSIDE the phase — resolving the driver and
+		// reading the ledger are themselves I/O (a DB read, on the libsql family the SAME file the Go
+		// gateway may be writing) and must not happen before the "starting" line prints, or a hang
+		// there would look identical to silence between "bind-contexts" and nothing. `readMigrations()`
+		// is read-only on both drivers (libsql/pg), so running it before `runMigrations()` doesn't
+		// change what gets applied — it only tells the "done" line how many migrations this boot ran.
+		await phase(
+			'migrate',
+			async () => {
+				const driver = resolve(container, DatabaseDriver)
+				const { pending } = await driver.readMigrations()
+				await driver.runMigrations()
+				return pending.length
+			},
+			pendingCount => `${pendingCount} pending migration(s) applied`,
+		)
 	}
 
-	const { routers, contexts } = await composeContexts(MANIFEST, criteria)
+	const { routers, contexts } = await phase(
+		`compose-contexts (${mountedCount} contexts)`,
+		() => composeContexts(MANIFEST, criteria),
+		result => `${result.contexts.length} context(s) composed, ${result.routers.length} router(s)`,
+	)
 
 	// Build OpenAPI spec (used by scripts/emit-openapi.ts when EMIT_OPENAPI=true). Reusa os MESMOS
 	// `routers` que a composição produziu — uma emissão sob o deployment de nuvem documenta
 	// exatamente o que ela serve, sem passo de filtro no meio.
-	await openapi.generateSpecification(routers)
+	await phase(`openapi-spec (${routers.length} routers)`, () => openapi.generateSpecification(routers))
 
 	// If we only need the spec (emit-openapi mode), exit after writing. Boot behavior, not
 	// process-shell behavior — stays inside `start()` (spec scope fence).
@@ -133,8 +157,18 @@ export async function start(options: { env: BoundedContextEnvironment; port?: nu
 	// HTTP router — resolved by the abstract `HttpRouter` DI token, not the Fastify concrete class.
 	// `options.port` overrides `Config.env.API_PORT` when given (the harness/e2e ask for `0`); the
 	// EFFECTIVE bound port comes back from `MainRouter.start` (relevant when the OS assigns one).
-	const mainRouter = assembleMainRouter(routers)
-	const effectivePort = await mainRouter.start(options.port)
+	// `assembleMainRouter` (a DI resolve + route wiring) is INSIDE the phase for the same reason the
+	// migrate phase pulled its driver resolve in: a resolve is still a step that can be slow, and it
+	// must not run before "starting" is printed.
+	const { mainRouter, effectivePort } = await phase(
+		`http-listen (port=${options.port ?? Config.env.API_PORT})`,
+		async () => {
+			const router = assembleMainRouter(routers)
+			const port = await router.start(options.port)
+			return { mainRouter: router, effectivePort: port }
+		},
+		result => `effective port ${result.effectivePort}`,
+	)
 
 	// A FASE DE START (T1.5) — cada contexto liga o que é dele, na ordem em que foi composto.
 	//
@@ -146,7 +180,7 @@ export async function start(options: { env: BoundedContextEnvironment; port?: nu
 	// Agora não há o que pular: `startAll` percorre os contextos que EXISTEM, e existir já é a
 	// resposta que o `if` procurava. Um contexto novo que precise ligar algo declara `start` no seu
 	// descritor e este arquivo não fica sabendo.
-	await BoundedContext.startAll(contexts)
+	await phase(`context-start (${contexts.length} contexts)`, () => BoundedContext.startAll(contexts))
 
 	let stopped = false
 

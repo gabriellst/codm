@@ -17,6 +17,7 @@ import './polyfill'
 import { Config, acquireDataDirLock, armStdinShutdown, resolveDataDir, startParentWatchdog, startTelemetry } from '@codm/core-typescript'
 import { criteriaFromEnv } from '@shared/deployment'
 import { start } from '../composition/server'
+import { phase } from '../composition/bootPhase'
 import { formatBootError } from './bootError'
 
 /**
@@ -45,10 +46,12 @@ async function main(): Promise<void> {
 	// image home (Railway, 2026-08-25: `mkdir '/app/.codm/data'` under USER 1000). Same literal
 	// `CODM_PROFILE === 'cloud'` read the deployment table uses — no second parse of the flag.
 	const desktop = criteriaFromEnv().deployment === 'local'
-	if (Config.env.EMIT_OPENAPI !== 'true' && desktop) acquireDataDirLock(resolveDataDir(Config.env.CODM_DATA_DIR))
+	if (Config.env.EMIT_OPENAPI !== 'true' && desktop) {
+		await phase(`data-dir-lock (dir=${Config.env.CODM_DATA_DIR})`, () => acquireDataDirLock(resolveDataDir(Config.env.CODM_DATA_DIR)))
+	}
 
 	const server = await start({ env: Config.env.CODM_ENV, port: Config.env.API_PORT })
-	await startTelemetry()
+	await phase('telemetry', () => startTelemetry())
 	console.log(`✅ api-ts listening on ${server.url}`)
 
 	let isShuttingDown = false

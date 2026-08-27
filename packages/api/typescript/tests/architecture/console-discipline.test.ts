@@ -39,6 +39,13 @@ import { join, relative } from 'node:path'
  *   - watchdog.ts — the desktop shell's dead-man's switch, started BY index.ts and in the same
  *     bootstrap class: it speaks once, on the way out, when the supervising shell has died. Same
  *     sanctioned bottom as index.ts, not a temporary one.
+ *   - bootPhase.ts — the boot-phase crumb trail `index.ts`/`server.ts` wrap every boot step in
+ *     (`phase(name, fn)`). Same sanctioned bottom as those two, for the same reason: the earliest
+ *     phases (the data-dir lock, `bindContexts` itself) run BEFORE the injected `LoggingService` is
+ *     even resolvable (it is a token in the `shared` registry, bound only once `bindContexts` has
+ *     run), and once it IS resolvable its `real` binding can route to OTLP-only (no stdout) —
+ *     exactly the boot that needs a crumb trail most (an unreachable/misconfigured collector) is
+ *     the boot where a LoggingService-routed crumb would print nothing to `shell.log`.
  *
  * False positives go in EXEMPTIONS below with a `why`, never by weakening the regex.
  *
@@ -65,6 +72,10 @@ const EXEMPTIONS: { file: string; why: string }[] = [
 	{
 		file: 'index.ts',
 		why: 'composition root / bootstrap + graceful-shutdown + start-failure handlers — must survive even a broken LoggingService binding, and run both before and after the DI-driven request-handling window, so it cannot resolve the injected LoggingService for its startup/shutdown console output.',
+	},
+	{
+		file: 'bootPhase.ts',
+		why: 'the phase(name, fn) crumb-trail helper `index.ts`/`server.ts` wrap every boot step in — the earliest phases run before LoggingService is resolvable, and its `real` binding can route to OTLP-only (no stdout), which is exactly the failure mode a boot-hang crumb trail needs to survive.',
 	},
 ]
 
