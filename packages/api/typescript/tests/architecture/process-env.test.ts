@@ -6,10 +6,21 @@ import { join } from 'node:path'
  * RAIL (spec D14/AC-4): `process.env.` fora do módulo Config é proibido em src/. O Config tipado
  * (`RawEnvSchema`) é a única porta de entrada de ambiente — um site cru é um eixo paralelo em
  * gestação (foi assim que nasceram mais de um flag de teste solto por aí, extintos desde). Exceções
- * vivem no INVENTORY (shrink-only, motivo inline); a lista vazia é o estado final.
+ * vivem no INVENTORY (shrink-only, motivo inline); o estado final não é a lista vazia, e sim a
+ * lista conter só leituras de ambiente do SISTEMA OPERACIONAL — env de configuração do produto
+ * continua proibido fora do Config e deve ser adicionado ao `RawEnvSchema`/registry, nunca aqui.
  */
 const SRC = join(import.meta.dir, '../../src')
-const INVENTORY: string[] = []
+const INVENTORY: string[] = [
+	// `ComSpec` é variável de AMBIENTE DE EXECUÇÃO que o próprio Windows define (aponta o
+	// interpretador de lote, ex.: cmd.exe) — não é config do produto, então não pertence ao
+	// RawEnvSchema/template.config.ts (de onde o .env.example é GERADO): declará-la ali pediria
+	// ao usuário para configurar algo que o SO já fornece sozinho. Não é o eixo paralelo que o
+	// rail existe para impedir — é leitura de onde o interpretador mora, não uma config redigitada
+	// por fora do Config. O fallback `?? 'cmd.exe'` também torna a leitura não-essencial: uma
+	// instalação sem `ComSpec` é anômala e ainda assim funciona.
+	'agent/services/AgentRunner/platformInvocation.ts',
+]
 
 function walk(dir: string): string[] {
 	return readdirSync(dir).flatMap(name => {
