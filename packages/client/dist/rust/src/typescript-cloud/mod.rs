@@ -1165,6 +1165,9 @@ pub mod types {
     ///        "id": {
     ///          "type": "string"
     ///        },
+    ///        "language": {
+    ///          "$ref": "#/components/schemas/Language"
+    ///        },
     ///        "name": {
     ///          "type": [
     ///            "string",
@@ -1266,6 +1269,9 @@ pub mod types {
     ///    "id": {
     ///      "type": "string"
     ///    },
+    ///    "language": {
+    ///      "$ref": "#/components/schemas/Language"
+    ///    },
     ///    "name": {
     ///      "type": [
     ///        "string",
@@ -1284,6 +1290,10 @@ pub mod types {
         #[serde(rename = "emailVerified")]
         pub email_verified: bool,
         pub id: ::std::string::String,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub language: ::std::option::Option<
+            ::codm_contracts_rust::wire::enums::Language,
+        >,
         pub name: ::std::option::Option<::std::string::String>,
     }
     impl ::std::convert::From<&GetSessionResponseUser> for GetSessionResponseUser {

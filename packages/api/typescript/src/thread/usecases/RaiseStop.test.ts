@@ -1,10 +1,20 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
+import { uuidv7 } from 'uuidv7'
 import { Id } from '@codm/core-typescript'
 import { TestBed, givenThread } from '@test/support'
-import { Language, OwnerKind, StopKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
-import { MockOwnerDirectory, OwnerDirectory } from '@shared/services/OwnerDirectory'
+import { Language, StopKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
+import {
+	CloudSession,
+	MockCloudSession,
+	MOCK_CLOUD_OWNER_ID,
+	MOCK_CLOUD_USER_ID,
+	MOCK_CLOUD_SESSION_ID,
+} from '@shared/services/CloudSession'
+import { SessionSchema } from '@shared/schemas'
+import { DEFAULT_LANGUAGE } from '@shared/i18n/messages'
 import { ThreadRepository } from '../repositories/ThreadRepository'
+import { THREAD_MESSAGES } from '../i18n/messages'
 import { RaiseStop } from './RaiseStop'
 
 /**
@@ -92,24 +102,144 @@ describe('RaiseStop — o aviso no canal', () => {
 
 		expect(await enqueuedDeliveries(testBed)).toBe(kinds.length)
 	})
+
+	it('AC-1/AC-3: grava um stop HUMAN_REQUESTED sem o contexto `owner` montado', async () => {
+		// A condição EXATA do desktop: `owner` é cloud-only, então `OwnerDirectory` não tem binding.
+		// Antes desta mudança o tsyringe construía a classe abstrata e `RaiseStop` estourava
+		// `TypeError: this.owners.getOwner is not a function` — silenciosamente, porque o handler
+		// relança e o outbox dead-letta depois de cinco tentativas.
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const stopId = uuidv7()
+
+		await testBed.resolve(RaiseStop).execute({
+			stopId,
+			threadId: thread.id.value,
+			kind: StopKind.HUMAN_REQUESTED,
+			title: 'o agente pediu ajuda',
+			detail: 'o agente pediu ajuda',
+		})
+
+		const stop = await testBed.resolve(ThreadRepository).findStop(stopId)
+		expect(stop?.stopId).toBe(stopId)
+		expect(stop?.title).toBe('o agente pediu ajuda')
+	})
+
+	it('AC-2: um stop HUMAN_REQUESTED não resolve idioma nenhum', async () => {
+		// O dublê FALHA se chamado. `NOTIFIES_ON_CHANNEL[HUMAN_REQUESTED]` é false e o título já vem
+		// pronto, então nem `stopChannelNotice` nem `stopTitle` rodam — e o idioma que alimentaria os
+		// dois não tem por que ser buscado.
+		const cloud = testBed.resolve(CloudSession) as MockCloudSession
+		cloud.setFailure(new Error('identity() não deveria ser chamado para HUMAN_REQUESTED'))
+
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const stopId = uuidv7()
+
+		await testBed.resolve(RaiseStop).execute({
+			stopId,
+			threadId: thread.id.value,
+			kind: StopKind.HUMAN_REQUESTED,
+			title: 'pergunta do agente',
+			detail: 'pergunta do agente',
+		})
+
+		expect((await testBed.resolve(ThreadRepository).findStop(stopId))?.stopId).toBe(stopId)
+		cloud.setFailure(undefined)
+	})
+
+	it('AC-4: um kind que notifica o canal usa o idioma da sessão', async () => {
+		const cloud = testBed.resolve(CloudSession) as MockCloudSession
+		cloud.setIdentity({
+			user: {
+				id: MOCK_CLOUD_USER_ID,
+				email: 'operator@example.test',
+				name: 'Test Operator',
+				emailVerified: true,
+				language: Language.EN_US,
+			},
+			session: {
+				id: MOCK_CLOUD_SESSION_ID,
+				userId: MOCK_CLOUD_USER_ID,
+				expiresAt: new Date('2999-12-31T00:00:00.000Z'),
+				ownerId: MOCK_CLOUD_OWNER_ID,
+			},
+		})
+
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const stopId = uuidv7()
+
+		await testBed.resolve(RaiseStop).execute({
+			stopId,
+			threadId: thread.id.value,
+			kind: StopKind.SERVER_ERROR,
+			detail: 'upstream 503',
+		})
+
+		const stop = await testBed.resolve(ThreadRepository).findStop(stopId)
+		expect(stop?.title).toBe(THREAD_MESSAGES.stopTitle(Language.EN_US, { kind: StopKind.SERVER_ERROR }))
+	})
+
+	it('AC-5: sem identidade, o stop é gravado e o texto cai em DEFAULT_LANGUAGE', async () => {
+		const cloud = testBed.resolve(CloudSession) as MockCloudSession
+		cloud.setIdentity(null)
+
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const stopId = uuidv7()
+
+		await testBed.resolve(RaiseStop).execute({
+			stopId,
+			threadId: thread.id.value,
+			kind: StopKind.SERVER_ERROR,
+			detail: 'upstream 503',
+		})
+
+		const stop = await testBed.resolve(ThreadRepository).findStop(stopId)
+		expect(stop?.stopId).toBe(stopId)
+		expect(stop?.title).toBe(THREAD_MESSAGES.stopTitle(DEFAULT_LANGUAGE, { kind: StopKind.SERVER_ERROR }))
+	})
+
+	it('AC-6: uma sessão sem `language` faz parse e o campo fica ausente', () => {
+		const parsed = SessionSchema.parse({
+			user: { id: MOCK_CLOUD_USER_ID, email: 'operator@example.test', name: null, emailVerified: true },
+			session: {
+				id: MOCK_CLOUD_SESSION_ID,
+				userId: MOCK_CLOUD_USER_ID,
+				expiresAt: new Date('2999-12-31T00:00:00.000Z'),
+				ownerId: MOCK_CLOUD_OWNER_ID,
+			},
+		})
+		expect(parsed.user.language).toBeUndefined()
+
+		const withLanguage = SessionSchema.parse({
+			user: { id: MOCK_CLOUD_USER_ID, email: 'operator@example.test', name: null, emailVerified: true, language: Language.EN_US },
+			session: {
+				id: MOCK_CLOUD_SESSION_ID,
+				userId: MOCK_CLOUD_USER_ID,
+				expiresAt: new Date('2999-12-31T00:00:00.000Z'),
+				ownerId: MOCK_CLOUD_OWNER_ID,
+			},
+		})
+		expect(withLanguage.user.language).toBe(Language.EN_US)
+	})
 })
 
 /**
- * Cria owner (só a tenancy — via `MockOwnerDirectory`, `override`d na porta do kernel), thread e
- * devolve `{ thread }`. A `StopPolicyConfigRepository` não precisa de seed: sem linha para o owner ela
- * devolve `DEFAULT_STOP_POLICY`, que já habilita todos os critérios.
+ * Cria thread e devolve `{ thread }`, com a IDENTIDADE da sessão (`CloudSession`) configurada no
+ * idioma pedido — a fonte que `RaiseStop` agora consulta para o título genérico e para o aviso no
+ * canal (Decisão 2 da spec: a fonte deixou de ser `OwnerDirectory`).
  *
- * O idioma é seedado num `MockOwnerDirectory` FRESH por chamada e trocado via `testBed.override` — o
- * único seam sancionado para substituir um binding em teste (`TestBed.override`). Em modo `integration`
- * o token `OwnerDirectory` resolve para `LibSqlOwnerDirectory` (que lê Owner + UserProfile reais); essa
- * leitura já está coberta por `LibSqlOwnerDirectory.test.ts` (T1). Aqui o que se testa é `RaiseStop`
- * reagindo ao idioma que a porta devolve — então o double é o ponto certo, não um Owner real.
+ * Um `MockCloudSession` FRESH por chamada, trocado via `testBed.override` — o único seam sancionado
+ * para substituir um binding em teste (`TestBed.override`). A `StopPolicyConfigRepository` não
+ * precisa de seed: sem linha para o owner ela devolve `DEFAULT_STOP_POLICY`, que já habilita todos os
+ * critérios.
  */
 async function givenThreadReadyForStops(testBed: TestBed, language: Language) {
 	const ownerId = Id.value()
-	const owners = new MockOwnerDirectory()
-	owners.seed(ownerId, { kind: OwnerKind.ORGANIZATION, responsibleUserId: Id.value(), language })
-	testBed.override(OwnerDirectory, owners)
+	const cloud = new MockCloudSession()
+	cloud.setIdentity({
+		user: { id: MOCK_CLOUD_USER_ID, email: 'operator@example.test', name: 'Test Operator', emailVerified: true, language },
+		session: { id: MOCK_CLOUD_SESSION_ID, userId: MOCK_CLOUD_USER_ID, expiresAt: new Date('2999-12-31T00:00:00.000Z'), ownerId },
+	})
+	testBed.override(CloudSession, cloud)
 
 	const thread = await givenThread(testBed, { ownerId })
 	return { thread }

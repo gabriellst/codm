@@ -282,6 +282,9 @@
                         },
                         "emailVerified": {
                           "type": "boolean"
+                        },
+                        "language": {
+                          "$ref": "#/components/schemas/Language"
                         }
                       },
                       "required": [
@@ -940,6 +943,13 @@
         "enum": [
           "up",
           "down"
+        ]
+      },
+      "Language": {
+        "type": "string",
+        "enum": [
+          "pt-BR",
+          "en-US"
         ]
       },
       "SocialProvider": {

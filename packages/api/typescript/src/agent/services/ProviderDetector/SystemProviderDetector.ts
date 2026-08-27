@@ -1,5 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { spawnSync } from 'node:child_process'
+import { resolveInvocation } from '../AgentRunner/platformInvocation'
 import { homedir } from 'node:os'
 import { LoggingService, PROVIDER_SEARCH, resolveBinary, type ProviderSearchSpec } from '@codm/core-typescript'
 import { ProviderKind, ProviderStatus } from '@codm/contracts-typescript/wire/enums'
@@ -93,10 +94,16 @@ export class SystemProviderDetector extends ProviderDetector {
 		const spec = PROVIDER_BINARIES[provider]
 		if (!spec.helpArgs || !spec.capabilityFlags) return {}
 		try {
-			const res = spawnSync(binaryPath, [...spec.helpArgs], {
+			// MESMA decisão de plataforma do spawner do runner (`resolveInvocation`): no Windows o binário
+			// do provedor é um `.cmd` do npm, e `spawnSync` direto devolve EINVAL. Aqui a falha era MUDA —
+			// virava "sem capacidades" via `logProbeFailure`, e o operador via um provedor detectado que
+			// não sabe fazer nada, em vez de um erro.
+			const probe = resolveInvocation(binaryPath, [...spec.helpArgs])
+			const res = spawnSync(probe.file, probe.args, {
 				stdio: ['ignore', 'pipe', 'pipe'],
 				encoding: 'utf8',
 				timeout: PROBE_TIMEOUT_MS,
+				...probe.options,
 			})
 			// `spawnSync` does not throw on timeout — it kills the child and sets `res.error`
 			// (`ETIMEDOUT`) instead. Catching only the `throw` path (ENOENT-before-spawn, etc.) would
@@ -139,10 +146,12 @@ export class SystemProviderDetector extends ProviderDetector {
 	 */
 	protected async probeVersion(binaryPath: string, versionArgs: readonly string[]): Promise<string | undefined> {
 		try {
-			const res = spawnSync(binaryPath, [...versionArgs], {
+			const probe = resolveInvocation(binaryPath, [...versionArgs])
+			const res = spawnSync(probe.file, probe.args, {
 				stdio: ['ignore', 'pipe', 'ignore'],
 				encoding: 'utf8',
 				timeout: PROBE_TIMEOUT_MS,
+				...probe.options,
 			})
 			if (res.error) {
 				this.logProbeFailure('version', binaryPath, res.error)

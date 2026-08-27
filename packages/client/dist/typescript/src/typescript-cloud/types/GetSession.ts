@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import type { Language } from "./Language.ts";
 
 /**
  * @description Get the current authenticated session
@@ -28,6 +29,10 @@ export type GetSession200 = {
          * @type boolean
         */
         emailVerified: boolean;
+        /**
+         * @type string | undefined
+        */
+        language?: Language;
     };
     /**
      * @type object

@@ -107,8 +107,19 @@ func TestConnect_AutoPairsAfterDelay_ReachesRealConnectedMapper(t *testing.T) {
 		t.Fatalf("status right after Connect = %s, want CONNECTING", got)
 	}
 
+	// ESPERA PELO EVENTO, NÃO PELO STATUS — e a diferença não é estilo, é uma race garantida.
+	//
+	// `autoPair` (channel.go) marca `ConnectionStatusConnected` sob o mutex e SÓ DEPOIS chama
+	// `emitViaMapper`, que mapeia e persiste o `Connected`. São duas escritas em sequência, então
+	// existe uma janela em que o status já mudou e o repositório ainda está vazio. Esperar pelo
+	// status e assertar o evento no instante seguinte fecha os olhos para essa janela: passa na
+	// máquina do dev, e num runner hospedado de 2 vCPU falha com `got []` — foi o que deixou a
+	// `main` vermelha em 2026-08-27.
+	//
+	// A regra que isto aplica: espere pela condição que você vai assertar. O status continua sendo
+	// verificado abaixo, e de graça — quando o evento chega, ele já mudou (a ordem acima garante).
 	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) && ch.Status() != gateway.ConnectionStatusConnected {
+	for time.Now().Before(deadline) && !containsName(repo.names(), ctxevents.GatewayConnectedEventName) {
 		time.Sleep(5 * time.Millisecond)
 	}
 

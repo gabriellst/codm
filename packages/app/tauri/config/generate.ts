@@ -130,7 +130,7 @@ export function renderTauriConf(): string {
 	const conf = {
 		$schema: 'https://schema.tauri.app/config/2',
 		productName: DISPLAY_NAME,
-		version: '0.5.5',
+		version: '0.6.0',
 		identifier: IDENTIFIER,
 		build: {
 			// Desktop dev serves the root-based SPA (dev-spa → base '/'), so the webview loads the

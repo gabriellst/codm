@@ -70,6 +70,23 @@ export class RecordStopFromExecution extends EventHandler<typeof ThreadStopRaise
 				})
 				return
 			}
+			// O CAMINHO NÃO SANCIONADO TAMBÉM PRECISA DE RASTRO, e ele é o mais caro de investigar.
+			//
+			// Um erro fora da lista é relançado para o outbox retentar — e depois de esgotar as tentativas
+			// a linha é dead-lettered com `processed_at` CARIMBADO. Quem procura problemas filtrando por
+			// `processed_at IS NULL` não encontra nada, e a única evidência fica em `last_error`, onde
+			// ninguém olha sem já suspeitar. Foi assim que um `TypeError` no `RaiseStop` manteve todos os
+			// stops do desktop invisíveis por duas semanas.
+			this.logging.warn({
+				content: {
+					message: 'stop not recorded — unsanctioned error, rethrowing for outbox retry',
+					error: error instanceof Error ? error.message : String(error),
+					stopId: event.payload.stopId,
+					issueId: event.payload.issueId,
+					threadId: event.payload.threadId,
+					kind: event.payload.kind,
+				},
+			})
 			throw error
 		}
 	}

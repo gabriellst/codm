@@ -2,7 +2,7 @@ import { injectable } from 'tsyringe-neo'
 import { Handler, z, BaseError, CommandQueue } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
 import { MessageAuthor, StopKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
-import { OwnerDirectory } from '@shared/services/OwnerDirectory'
+import { CloudSession } from '@shared/services/CloudSession'
 import { IssueRepository } from '@issue/repositories/IssueRepository'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { StopPolicyConfigRepository, type StopPolicy } from '../repositories/StopPolicyConfigRepository'
@@ -76,7 +76,7 @@ export class RaiseStop extends Handler<typeof RaiseStopInputSchema, typeof Raise
 		private readonly threads: ThreadRepository,
 		private readonly issues: IssueRepository,
 		private readonly policy: StopPolicyConfigRepository,
-		private readonly owners: OwnerDirectory,
+		private readonly session: CloudSession,
 		private readonly commands: CommandQueue,
 	) {
 		super()
@@ -109,10 +109,23 @@ export class RaiseStop extends Handler<typeof RaiseStopInputSchema, typeof Raise
 			throw new BaseError<ApplicationErrors>('STOP_CRITERION_DISABLED', `the ${input.kind} criterion is disabled`)
 		}
 
-		// O idioma como transporte: quem resolve o owner já traz. `language` ausente cai em
-		// `DEFAULT_LANGUAGE` dentro do catálogo, então não há ramificação sobre idioma aqui.
-		const tenancy = await this.owners.getOwner(thread.ownerId, tx)
-		const language = tenancy?.language
+		// O IDIOMA SÓ É BUSCADO QUANDO ALGUÉM VAI USÁ-LO — e essa é a correção, não uma otimização.
+		//
+		// Ele alimenta exatamente dois textos: o título genérico (só quando o chamador não trouxe um) e o
+		// aviso que vai ao canal (só para os kinds que notificam). Para `HUMAN_REQUESTED` nenhum dos dois
+		// acontece: `NOTIFIES_ON_CHANNEL` é false e `RecordStopFromExecution` já preenche o título com o
+		// `detail` do agente. A resolução eager que existia aqui era, nesse caminho, trabalho jogado fora.
+		//
+		// E jogado fora de um jeito caro: ela vinha do `OwnerDirectory`, bindado pelo registry do contexto
+		// `owner`, que é CLOUD-ONLY. No desktop o token não tem binding, o tsyringe construía a classe
+		// ABSTRATA — um objeto sem métodos — e este método estourava `TypeError` antes de gravar coisa
+		// alguma. Nenhum Stop foi gravado no desktop desde 2026-08-10 por causa disso.
+		//
+		// A fonte agora é `CloudSession`, que mora em `shared` e É bindada no perfil local. A direção do
+		// ADR 0001 fica intacta: a nuvem continua sendo a única autoridade sobre identidade — o desktop
+		// pergunta, não decide.
+		const needsLanguage = input.title === undefined || NOTIFIES_ON_CHANNEL[input.kind]
+		const language = needsLanguage ? (await this.session.identity())?.user.language : undefined
 
 		return this.withTransaction(tx, async tx => {
 			const stop = thread.raiseStop({

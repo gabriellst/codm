@@ -340,6 +340,24 @@ func (e ApiErrors) Valid() bool {
 	}
 }
 
+// Defines values for Language.
+const (
+	EnUS Language = "en-US"
+	PtBR Language = "pt-BR"
+)
+
+// Valid indicates whether the value is a known member of the Language enum.
+func (e Language) Valid() bool {
+	switch e {
+	case EnUS:
+		return true
+	case PtBR:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OwnerKind.
 const (
 	INDIVIDUAL   OwnerKind = "INDIVIDUAL"
@@ -414,6 +432,9 @@ func (e Status2) Valid() bool {
 
 // ApiErrors All possible error codes
 type ApiErrors string
+
+// Language defines model for Language.
+type Language string
 
 // OwnerKind defines model for OwnerKind.
 type OwnerKind string
@@ -1806,6 +1827,7 @@ type GetSessionResponse struct {
 			Email         string                    `json:"email"`
 			EmailVerified bool                      `json:"emailVerified"`
 			Id            string                    `json:"id"`
+			Language      *Language                 `json:"language,omitempty"`
 			Name          nullable.Nullable[string] `json:"name"`
 		} `json:"user"`
 	}
@@ -2429,6 +2451,7 @@ func ParseGetSessionResponse(rsp *http.Response) (*GetSessionResponse, error) {
 				Email         string                    `json:"email"`
 				EmailVerified bool                      `json:"emailVerified"`
 				Id            string                    `json:"id"`
+				Language      *Language                 `json:"language,omitempty"`
 				Name          nullable.Nullable[string] `json:"name"`
 			} `json:"user"`
 		}

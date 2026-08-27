@@ -473,7 +473,7 @@
 		"ISSUE_NOT_ARCHIVED": "Esta issue não está arquivada.",
 		"ISSUE_NOT_COMPLETED": "Esta issue não está concluída.",
 		"ISSUE_NOT_FOUND": "Issue não encontrada.",
-		"ISSUE_NOT_REOPENABLE": "Esta issue não pode ser reaberta.",
+		"ISSUE_NOT_REOPENABLE": "Esta issue já está em andamento e não pode ser reaberta.",
 		"LAST_INVOKER": "Ao menos um participante deve manter permissão de invocação.",
 		"LOOP_NOT_FOUND": "Esse loop não existe mais nesta conversa.",
 		"LOOP_PROMPT_TOO_LONG": "O prompt do loop passou do limite de caracteres.",
