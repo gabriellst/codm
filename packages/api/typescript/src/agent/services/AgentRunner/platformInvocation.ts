@@ -73,6 +73,14 @@ export function resolveInvocation(binary: string, args: readonly string[], platf
 	// variável que o Windows anuncia como `ComSpec`, agora declarada no `RawEnvSchema` com o fallback
 	// `'cmd.exe'` embutido. Ler ambiente aqui direto era o último site cru do `src/` e derrubava o
 	// rail D14/AC-4; o valor não mudou, só a porta por onde entra.
+	//
+	// O PAR DE ASPAS DE FORA É O QUE O `/s` COME. A regra do cmd: com `/s`, ele remove a primeira e a
+	// última aspas do que vem depois do `/c` e trata o resto literalmente. Sem o par externo, a linha
+	// `"C:\...\claude.cmd" "--print"` chega ao interpretador como `C:\...\claude.cmd" "--print` — e
+	// num caminho com espaço o cmd lê só até ele: `'C:\Program' não é reconhecido como um comando`,
+	// que foi o que o founder viu em 27/08/2026, na segunda máquina Windows. Na primeira o caminho não
+	// tinha espaço (`AppData\Roaming\npm`) e o defeito passou despercebido — o teste do dia cobria a
+	// citação de cada argumento, não a linha inteira.
 	const line = [binary, ...args].map(quoteForCmd).join(' ')
-	return { file: Config.env.COMSPEC, args: ['/d', '/s', '/c', line], options: { windowsVerbatimArguments: true } }
+	return { file: Config.env.COMSPEC, args: ['/d', '/s', '/c', `"${line}"`], options: { windowsVerbatimArguments: true } }
 }

@@ -31,8 +31,26 @@ describe('resolveInvocation', () => {
 
 		expect(invocation.file.toLowerCase()).toContain('cmd')
 		expect(invocation.args.slice(0, 3)).toEqual(['/d', '/s', '/c'])
-		expect(invocation.args[3]).toBe('"C:\\Users\\Yayhe\\AppData\\Roaming\\npm\\claude.cmd" "--print"')
+		// O par de aspas de FORA é o que o `/s` remove; sem ele o cmd lê a linha partida.
+		expect(invocation.args[3]).toBe('""C:\\Users\\Yayhe\\AppData\\Roaming\\npm\\claude.cmd" "--print""')
 		expect(invocation.options.windowsVerbatimArguments).toBe(true)
+	})
+
+	/**
+	 * O DEFEITO DE 27/08/2026, na segunda máquina Windows do founder: caminho do provedor com espaço
+	 * (`C:\\Program Files\\…`), e o provedor saiu com
+	 * `'C:\\Program' não é reconhecido como um comando interno ou externo`. A correção anterior citava
+	 * cada argumento mas não a LINHA — e o `/s` come a primeira e a última aspas, partindo o caminho
+	 * exatamente no espaço. Este caso é o que faltava.
+	 */
+	it('caminho do PROVEDOR com espaço sobrevive ao /s — o par externo é o que ele consome', () => {
+		const invocation = resolveInvocation('C:\\Program Files\\nodejs\\claude.cmd', ['--print'], 'win32')
+
+		const line = invocation.args[3] ?? ''
+		expect(line.startsWith('""')).toBe(true)
+		expect(line.endsWith('""')).toBe(true)
+		// O que o cmd enxerga DEPOIS de comer a primeira e a última aspas.
+		expect(line.slice(1, -1)).toBe('"C:\\Program Files\\nodejs\\claude.cmd" "--print"')
 	})
 
 	it('.bat conta como script de lote, e a extensão não é sensível a caixa', () => {
@@ -44,7 +62,7 @@ describe('resolveInvocation', () => {
 	it('caminho com espaço chega inteiro, não como dois argumentos', () => {
 		const invocation = resolveInvocation('C:\\npm\\claude.cmd', ['--add-dir', 'C:\\Users\\Fulano\\Meus Projetos'], 'win32')
 
-		expect(invocation.args[3]).toBe('"C:\\npm\\claude.cmd" "--add-dir" "C:\\Users\\Fulano\\Meus Projetos"')
+		expect(invocation.args[3]).toBe('""C:\\npm\\claude.cmd" "--add-dir" "C:\\Users\\Fulano\\Meus Projetos""')
 	})
 })
 
