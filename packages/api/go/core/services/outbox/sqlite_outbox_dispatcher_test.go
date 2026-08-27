@@ -74,6 +74,7 @@ type outboxRowState struct {
 	attempts    int
 	lastError   sql.NullString
 	processedAt sql.NullInt64
+	deadAt      sql.NullInt64
 	leaseUntil  sql.NullInt64
 	claimedBy   sql.NullString
 }
@@ -82,8 +83,8 @@ func readOutboxRow(t *testing.T, db *sql.DB, id string) outboxRowState {
 	t.Helper()
 	var s outboxRowState
 	if err := db.QueryRowContext(context.Background(),
-		`SELECT attempts, last_error, processed_at, lease_until, claimed_by FROM shared_outbox WHERE id = ?`, id,
-	).Scan(&s.attempts, &s.lastError, &s.processedAt, &s.leaseUntil, &s.claimedBy); err != nil {
+		`SELECT attempts, last_error, processed_at, dead_at, lease_until, claimed_by FROM shared_outbox WHERE id = ?`, id,
+	).Scan(&s.attempts, &s.lastError, &s.processedAt, &s.deadAt, &s.leaseUntil, &s.claimedBy); err != nil {
 		t.Fatalf("read outbox row: %v", err)
 	}
 	return s
@@ -158,8 +159,13 @@ func TestSqliteOutboxDispatcher_RedeliversAfterLeaseExpiry(t *testing.T) {
 }
 
 // TestSqliteOutboxDispatcher_DeadLettersAtCap proves the dead-letter path: after the
-// attempt cap the row is marked processed (stops being claimed) with last_error kept
-// for audit, and no further redelivery happens.
+// attempt cap the row is marked DEAD — dead_at set, processed_at left NULL — with
+// last_error kept for audit, and no further redelivery happens.
+//
+// The two fields are distinct on purpose. processed_at means "delivered"; dead_at means
+// "gave up". They were the same column until 2026-08-27, which made a dead event
+// indistinguishable from a delivered one and hid a real failure for two weeks. What takes
+// the row out of flight is dead_at, because the claim query excludes it.
 func TestSqliteOutboxDispatcher_DeadLettersAtCap(t *testing.T) {
 	ctx := context.Background()
 	store := newOutboxStore(t)
@@ -189,8 +195,11 @@ func TestSqliteOutboxDispatcher_DeadLettersAtCap(t *testing.T) {
 	if got.attempts != sqliteMaxAttempts {
 		t.Fatalf("attempts at dead-letter: got %d want %d", got.attempts, sqliteMaxAttempts)
 	}
-	if !got.processedAt.Valid {
-		t.Fatalf("dead-lettered row must have processed_at set to stop being claimed")
+	if !got.deadAt.Valid {
+		t.Fatalf("dead-lettered row must have dead_at set to stop being claimed")
+	}
+	if got.processedAt.Valid {
+		t.Fatalf("dead-lettered row must NOT have processed_at set — that field is reserved for successful delivery, got processed_at=%d", got.processedAt.Int64)
 	}
 	if !got.lastError.Valid || got.lastError.String == "" {
 		t.Fatalf("dead-lettered row must keep last_error for audit, got %+v", got.lastError)
