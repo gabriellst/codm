@@ -1636,6 +1636,18 @@ git commit -m "test(flows): ciclo completo de issue travada → NEEDS_INPUT → 
 
 **AC-11 e AC-12 não têm teste automatizado, e isso é uma escolha.** Os dois pedem uma linha de log. O repo não tem infraestrutura de asserção sobre `LoggingService`, e montar um espião só para isto significaria ou um backdoor no código de produção ou um teste que afirma o formato de uma string em vez de um comportamento. A verificação é a leitura do diff no review de T3.
 
-**Gap do CLI a reportar (house rule do CLAUDE.md).** `bun cli service <ctx> <Name>` gera **um arquivo plano** com abstract + `Default*` + `Mock*` juntos, mas todo service do contexto `agent` (`AgentRunnerFactory/`, `ProviderDetector/`, `MailboxDispatcher/`, `AgentStreamRegistry/`) e do `thread` (`OpenIssuesReader/`) usa **pasta com barril e um arquivo por implementação**, com o prefixo da infra no nome concreto (`LibSql*`) em vez de `Default*`. T5 escreve à mão o que o CLI deveria escrever. Abrir issue para dar ao verbo `service` uma flag de layout em pasta (ou torná-lo o default), resolvendo dentro de uma semana conforme a house rule, e linkar da PR.
+**Gaps do CLI a reportar (house rule do CLAUDE.md).** Três, todos medidos durante o build:
+
+1. `bun cli service <ctx> <Name>` gera **um arquivo plano** com abstract + `Default*` + `Mock*` juntos, mas todo service dos contextos `agent` e `thread` usa **pasta com barril**, um arquivo por implementação, e prefixo de infra no concreto (`LibSql*`, não `Default*`).
+2. `bun cli usecase <ctx> <Name> --internal` gera em `usecases/internal/`, mas os siblings do contexto (`CompleteIssue.ts`, `OpenIssue.ts`) ficam planos em `usecases/`.
+3. `bun cli handler <ctx> <Name> --external` gera o arquivo com sufixo `Handler` **e auto-wira esse nome errado no barril `external.ts`** — o pior dos três, porque deixa o barril apontando para um símbolo que o autor vai renomear.
+
+Nos três casos o worker teve de apagar o artefato escafoldado e escrever à mão o que o CLI deveria ter escrito. Abrir issue e resolver dentro de uma semana conforme a house rule; linkar da PR.
+
+**Defeitos deste plano, corrigidos pelos workers (para a próxima vez).** `ownerId: 'integration-tenant'` não é UUID e as entidades validam com `z.uuid()` — o literal veio do exemplo do CLAUDE.md em "Sandbox: banco em-processo", que merece correção; o certo é `MOCK_CLOUD_OWNER_ID`. `issue.archive('MANUAL')` não type-checa: é `IssueArchiveReason.MANUAL`. E o Step T6.1 era autocontraditório, dizendo `Test:` (arquivo novo) e "Adicione ao describe de" (arquivo existente) — `SteerIssueTurn.test.ts` não existia.
+
+**O rail que o plano não previu.** `tests/architecture/context-map.test.ts` exige que toda leitura de tabela cross-schema seja declarada no campo `reads` do `<ctx>/context.ts` ANTES do código que a consome. O `LibSqlStalledIssueReader` lê `issues` e `outbox` a partir do `agent`, e as duas travessias precisaram ser declaradas. A leitura é legítima — é o padrão do `OpenIssuesReader` — mas a declaração é metade do trabalho, e nem a spec nem o plano a previram.
+
+**Gap do CLI original (mantido para referência).** `bun cli service <ctx> <Name>` gera **um arquivo plano** com abstract + `Default*` + `Mock*` juntos, mas todo service do contexto `agent` (`AgentRunnerFactory/`, `ProviderDetector/`, `MailboxDispatcher/`, `AgentStreamRegistry/`) e do `thread` (`OpenIssuesReader/`) usa **pasta com barril e um arquivo por implementação**, com o prefixo da infra no nome concreto (`LibSql*`) em vez de `Default*`. T5 escreve à mão o que o CLI deveria escrever. Abrir issue para dar ao verbo `service` uma flag de layout em pasta (ou torná-lo o default), resolvendo dentro de uma semana conforme a house rule, e linkar da PR.
 
 **Ordem de execução sugerida por onda:** W1 = T1 ∥ T3 ∥ T4 · W2 = T2 ∥ T6 · W3 = T5 · Phase 2 = T7.
