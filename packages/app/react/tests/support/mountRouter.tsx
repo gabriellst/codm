@@ -60,9 +60,23 @@ export async function mountRouter(
 		router,
 		host,
 		async settled(predicate, label = 'condição') {
-			// 5s de margem (500×10ms): sob o PTY do Nx/pre-push o flush de log é mais lento e o
-			// orçamento de 1s estourava em falso (medido: StepWalking a 1005ms, REGRESSÃO a 1155ms).
-			for (let attempt = 0; attempt < 500; attempt++) {
+			// O LIMITE É TEMPO REAL, NÃO CONTAGEM DE TENTATIVAS — e a distinção é o que faz este
+			// número parar de precisar de recalibração.
+			//
+			// Era `500 tentativas × sleep(10ms)`, descrito como "5s de margem". Isso só é verdade
+			// quando cada iteração custa os 10ms do sleep e mais nada: o `act()` e o render do React
+			// entram na conta, então o orçamento REAL variava com a máquina — exatamente a grandeza
+			// que o limite deveria ser imune. Foi recalibrado de 1s para 5s quando o PTY do Nx tornou
+			// o flush mais lento (medido: StepWalking a 1005ms, REGRESSÃO a 1155ms), e estourou de
+			// novo em 2026-08-27 num runner hospedado de 2 vCPU, onde uma tile que depende de um PATCH
+			// ao backend real não apareceu dentro da janela.
+			//
+			// Com deadline de relógio, "30s" quer dizer 30s em qualquer máquina. A folga é generosa de
+			// propósito: um teste que trava de verdade continua falhando com a MESMA mensagem nomeando
+			// o que ficou pendurado — só demora mais para desistir, e vermelho falso custa mais caro
+			// que essa espera.
+			const deadline = Date.now() + 30_000
+			while (Date.now() < deadline) {
 				if (predicate()) return
 				await act(async () => {
 					await new Promise(resolve => setTimeout(resolve, 10))
