@@ -10,7 +10,7 @@ dez arquivos eram uma coisa só. O layout segue o do `template-fullstack`, que j
 ```
 cursor.ts          dirige a jornada: move/clica/digita como gente — o RITMO é parâmetro (CursorPace)
 recorder.ts        grava DOMSnapshots + trilha de cursor durante uma spec Playwright
-   ↓ demo-out/<slug>/{snapshots,cursor}/
+   ↓ out/<slug>/{snapshots,cursor}/
 reconstruct.ts     um snapshot → HTML ou SVG (o mesmo módulo que a extensão Chrome usa)
 render-mp4.ts      rasteriza os frames num Chromium real e encoda com ffmpeg → MP4
 generate-html.ts   os frames como HTML, para inspecionar um quadro no browser
@@ -26,7 +26,7 @@ agente roteirizado "constrói" — é um adereço, não produto (ver o docblock 
 | pasta | papel | versionada |
 |---|---|---|
 | `demo/` | o código acima | sim |
-| `demo-out/<slug>/` | os takes crus — ~1,1 GB por filme de 45 s a 60 fps | **não** |
+| `demo/out/<slug>/` | os takes crus — ~1,1 GB por filme de 45 s a 60 fps | **não** |
 | `recordings/` | `outputDir` do Playwright | **não** |
 | `assets/cursors/` | os SVGs do ponteiro que `cursor.ts` embute | sim |
 
@@ -37,7 +37,7 @@ custa ~1,3 MB por idioma. Quem precisa deles roda os dois comandos do docblock d
 
 **1. O `outputDir` do Playwright destrói gravação.** `playwright.config.ts` aponta
 `outputDir: './recordings'` — o mesmo default de `recorder.save()` — e o Playwright **limpa esse
-diretório no começo de cada run**. Por isso a spec 92 passa um destino explícito (`demo-out/<slug>`).
+diretório no começo de cada run**. Por isso a spec 92 passa um destino explícito (`demo/out/<slug>`).
 Uma gravação que "some sozinha" é isto: aconteceu aqui, um take de 679 frames apagado por uma run de
 uma spec sem relação.
 

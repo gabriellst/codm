@@ -22,6 +22,7 @@
 			"//scripts": "Dropped from the eslint invocation, same reason as api-typescript's lint target: eslint.config.ts carries a workspace-wide '**/scripts/**' ignore, so `eslint ... scripts` aborts with 'all matching files are ignored' (CHECK 3's failure mode, on a directory CHECK 3 itself doesn't check because the project root isn't named scripts).",
 			"inputs": [
 				"{projectRoot}/demo/**/*",
+				"!{projectRoot}/demo/out/**/*",
 				"{projectRoot}/tests/**/*",
 				"{projectRoot}/utils/**/*",
 				"{projectRoot}/tsconfig.json",

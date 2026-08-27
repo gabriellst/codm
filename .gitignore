@@ -47,9 +47,9 @@ design/fidelity/deltas/
 design/fidelity/scoreboard.json
 design/fidelity/report.html
 # Saída de gravação de demo. `recordings/` é o `outputDir` do próprio Playwright (limpo no começo de
-# cada run); `demo-out/` é onde o recorder salva, para uma gravação sobreviver ao próximo `bun e2e`.
+# cada run); `demo/out/` é onde o recorder salva, para uma gravação sobreviver ao próximo `bun e2e`.
 packages/e2e/recordings/
-packages/e2e/demo-out/
+packages/e2e/demo/out/
 
 # ─── Estado local do sistema agêntico ───────────────────────────────────────────────────────────
 .claude/audit/

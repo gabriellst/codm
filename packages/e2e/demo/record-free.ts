@@ -9,8 +9,8 @@
  *   bun demo/record-free.ts [url]
  *   bun demo/record-free.ts http://localhost:5173
  *
- * Output: demo-out/free-session-<timestamp>/
- * Then:   bun demo/generate-html.ts demo-out/free-session-<timestamp>
+ * Output: demo/out/free-session-<timestamp>/
+ * Then:   bun demo/generate-html.ts demo/out/free-session-<timestamp>
  */
 
 import { chromium } from 'playwright'

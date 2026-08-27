@@ -41,9 +41,9 @@ import { t, type Locale } from '../utils/i18n'
  * ONE FILM PER INVOCATION — see the `test.skip` below for why the harness cannot record both in one
  * daemon. Then turn each take into something watchable:
  *
- *   bun demo/render-mp4.ts demo-out/demo-attach-artefato-pt         # the MP4
- *   bun demo/generate-html.ts demo-out/demo-attach-artefato-pt      # inspect frames in a browser
- *   bun demo/generate-svg.ts  demo-out/demo-attach-artefato-pt      # vector frames for the edit
+ *   bun demo/render-mp4.ts demo/out/demo-attach-artefato-pt         # the MP4
+ *   bun demo/generate-html.ts demo/out/demo-attach-artefato-pt      # inspect frames in a browser
+ *   bun demo/generate-svg.ts  demo/out/demo-attach-artefato-pt      # vector frames for the edit
  *
  * ### What is ON camera and what is not
  * The film starts at `/attach`. Everything before it is state a real operator would already have:
@@ -70,7 +70,7 @@ import { t, type Locale } from '../utils/i18n'
  */
 
 /**
- * Where takes land — `packages/e2e/demo-out/`, and NOT the recorder's own default.
+ * Where takes land — `packages/e2e/demo/out/`, and NOT the recorder's own default.
  *
  * `createDemoRecorder.save(name)` defaults to `e2e/recordings/<name>`, which is Playwright's
  * `outputDir` (playwright.config.ts) — a directory Playwright OWNS and WIPES at the start of every
@@ -78,9 +78,12 @@ import { t, type Locale } from '../utils/i18n'
  * spec deleted all 679 frames of it. A take costs minutes and cannot be reproduced byte-for-byte
  * (jitter, timing), so it does not live anywhere a test runner is entitled to clear.
  *
- * `demo-out/` is the name the rest of the family already uses for this — see `demo/README.md`.
+ * NESTED under `demo/` rather than beside it: the whole demo concern — the machine and what it
+ * produces — is one subtree, and `out` needs no prefix when its parent already says of what. Every
+ * glob over `demo/**` therefore has to exclude it (`tsconfig` and `project.json` both do), which is
+ * the price of the nesting and is written down in both places.
  */
-const filmDir = (name: string) => resolve(import.meta.dirname, '..', 'demo-out', name)
+const filmDir = (name: string) => resolve(import.meta.dirname, '..', 'demo', 'out', name)
 
 /** What the workspace path reads as on screen. */
 const FILM_WORKSPACE_PATH = '~/acme/web'
