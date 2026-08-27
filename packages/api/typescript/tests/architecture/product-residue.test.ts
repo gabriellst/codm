@@ -65,14 +65,7 @@ const EXTENSIONS = ['.ts', '.tsx', '.go', '.json', '.yaml', '.yml', '.css', '.md
 // `packages/client/dist` + `packages/contracts/generated` are COMMITTED generated output — scanned.
 // `.claude` as a NESTED segment exempts harness/runner config under packages (see doc comment);
 // the `.claude/skills` scan root starts inside it, so skills themselves stay fully scanned.
-// `target` is cargo's build directory (gitignored, like `.output`/`.astro`). Two reasons, and the
-// second is the load-bearing one: its contents are machine-written artifacts nobody authors, AND
-// `emit-wire-rs.compile.test.ts` runs a `cargo test` that rewrites that tree — fingerprint JSON
-// appearing and vanishing — WHILE this scan may be walking it from another nx process. A file that
-// disappears between `readdirSync` and `readFileSync` makes this rail die with ENOENT instead of
-// reporting anything, which is how it took down an unrelated PR (CI, 2026-08-27; the other half of
-// that incident was a probe dir under packages/contracts/src, moved to node_modules/.cache).
-const EXEMPT_DIR_SEGMENTS = new Set(['node_modules', 'skill-evals', 'recordings', 'target', '.git', '.output', '.astro', '.claude'])
+const EXEMPT_DIR_SEGMENTS = new Set(['node_modules', 'skill-evals', 'recordings', '.git', '.output', '.astro', '.claude'])
 // The candidate queue lives with the eval machinery (scripts/skill-evals/candidates — already
 // exempt as machinery); examples/ holds ONLY approved teaching content and is scanned whole.
 const EXEMPT_PATH_RES = [/packages\/app\/[^/]+\/dist\//]
@@ -144,7 +137,7 @@ describe('product-residue (base template stays generic — purged product vocabu
 
 	// Negative fixture — proves the scan catches an offender in every root and honors the line-scoped
 	// provenance exemption (temp dir, not the real tree).
-	test('fixture: offenders in packages/, .claude/skills/ and examples/ bodies are flagged; provenance lines in examples/, nested .claude config and build output are not', () => {
+	test('fixture: offenders in packages/, .claude/skills/ and examples/ bodies are flagged; provenance lines in examples/ and nested .claude config are not', () => {
 		const tmpRoot = mkdtempSync(join(tmpdir(), 'product-residue-fixture-'))
 		const write = (p: string, c: string) => {
 			mkdirSync(p.slice(0, p.lastIndexOf('/')), { recursive: true })
@@ -176,9 +169,6 @@ describe('product-residue (base template stays generic — purged product vocabu
 			// que o detector não via. Esta linha é a fixture negativa da F3/T7: reverta o `[-_]?` do
 			// padrão `legacy-brand` e SÓ este arquivo sai da lista — o alargamento é o que a segura.
 			write(join(tmpRoot, 'packages', 'x', 'f.ts'), `export const ${LEGACY_SNAKE}_NAMESPACE = 'x'\n`)
-			// Build output is not authored text: cargo's `target/` is exempt as a dir segment. It is also
-			// the tree a concurrent `cargo test` rewrites under this scan's feet — see EXEMPT_DIR_SEGMENTS.
-			write(join(tmpRoot, 'packages', 'contracts', 'generated', 'rust', 'target', 'debug', 'x.json'), `{"crate":"kiwify"}\n`)
 
 			const hits = scan(tmpRoot)
 
