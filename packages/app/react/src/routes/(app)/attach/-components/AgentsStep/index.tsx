@@ -45,7 +45,11 @@ export function AgentsStep({ providers, defaultValues, onSubmit, className, ...p
 	 * `onSubmit`): fidelidade visual ao desenho sem inventar campo de contrato. Ajustar o modelo de
 	 * verdade continua sendo o trabalho do `ThreadSettingsDialog`, depois que a conversa existe.
 	 */
-	const [model, setModel] = useState<AgentModelId>(AgentModelIdEnum.DEFAULT)
+	const [models, setModels] = useState<Record<ProviderKind, AgentModelId>>({
+		CLAUDE_CODE: AgentModelIdEnum.DEFAULT,
+		CODEX: AgentModelIdEnum.DEFAULT,
+		OPENCODE: AgentModelIdEnum.DEFAULT,
+	})
 
 	const form = useForm({
 		defaultValues,
@@ -177,8 +181,8 @@ export function AgentsStep({ providers, defaultValues, onSubmit, className, ...p
 											enum={AgentModelIdEnum}
 											i18nPrefix="enums.AgentModelId"
 										values={MODEL_VALUES_BY_PROVIDER[entry.provider]}
-										value={model}
-											onValueChange={setModel}
+										value={models[entry.provider]}
+										onValueChange={value => setModels(current => ({ ...current, [entry.provider]: value }))}
 											aria-label={t('session.agentModel')}
 											className="w-[125px] shrink-0"
 											onClick={e => e.stopPropagation()}
