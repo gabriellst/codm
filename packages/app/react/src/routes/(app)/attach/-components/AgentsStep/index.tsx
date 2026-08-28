@@ -14,6 +14,15 @@ import { StepHeading } from '../StepHeading'
 export const AgentsStepSchema = attachThreadMutationRequestSchema.pick({ providers: true })
 export type AgentsStepData = (typeof AgentsStepSchema)['_zod']['output']
 
+// The attach contract intentionally carries providers only, so this pre-thread selector keeps the
+// small provider catalog local. Codex delegates model selection to its CLI and therefore exposes only
+// DEFAULT; Claude's aliases remain available only on the Claude row.
+const MODEL_VALUES_BY_PROVIDER: Record<ProviderKind, AgentModelId[]> = {
+	CLAUDE_CODE: [AgentModelIdEnum.DEFAULT, AgentModelIdEnum.OPUS, AgentModelIdEnum.SONNET, AgentModelIdEnum.HAIKU],
+	CODEX: [AgentModelIdEnum.DEFAULT],
+	OPENCODE: [],
+}
+
 // No `onBack` — the wizard's persistent footer (`AttachThreadWizard`) owns Voltar for every step now
 // (D3, founder review 12/08); `StepHeading` no longer renders a back button for any step to opt into.
 type AgentsStepProps = Omit<ComponentProps<'form'>, 'onSubmit'> & {
@@ -168,7 +177,8 @@ export function AgentsStep({ providers, defaultValues, onSubmit, className, ...p
 										<Select
 											enum={AgentModelIdEnum}
 											i18nPrefix="enums.AgentModelId"
-											value={model}
+										values={MODEL_VALUES_BY_PROVIDER[entry.provider]}
+										value={model}
 											onValueChange={setModel}
 											aria-label={t('session.agentModel')}
 											className="w-[125px] shrink-0"
