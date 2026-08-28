@@ -75,7 +75,7 @@ export class SystemProviderDetector extends ProviderDetector {
 
 	/**
 	 * Discover what THIS binary can do, by running the spec's `helpArgs` and grepping the output for
-	 * each key of its `capabilityFlags` map (GOAL-agent-abstraction §4.7, Fase 1).
+	 * each key of its `capabilityTokens` map (GOAL-agent-abstraction §4.7, Fase 1).
 	 *
 	 * Grep-the-help rather than parse-the-version, deliberately: a version string tells you what the
 	 * CLI calls itself, not what flags it accepts, and a wrong guess makes the CLI abort on an unknown
@@ -92,7 +92,7 @@ export class SystemProviderDetector extends ProviderDetector {
 	 */
 	protected async probeCapabilities(provider: ProviderKind, binaryPath: string): Promise<ProviderCapabilities> {
 		const spec = PROVIDER_BINARIES[provider]
-		if (!spec.helpArgs || !spec.capabilityFlags) return {}
+		if (!spec.helpArgs || !spec.capabilityTokens) return {}
 		try {
 			// MESMA decisão de plataforma do spawner do runner (`resolveInvocation`): no Windows o binário
 			// do provedor é um `.cmd` do npm, e `spawnSync` direto devolve EINVAL. Aqui a falha era MUDA —
@@ -116,7 +116,7 @@ export class SystemProviderDetector extends ProviderDetector {
 			const help = `${res.stdout ?? ''}\n${res.stderr ?? ''}`
 			if (!help.trim()) return {}
 			const caps: ProviderCapabilities = {}
-			for (const [flag, capability] of Object.entries(spec.capabilityFlags)) {
+			for (const [flag, capability] of Object.entries(spec.capabilityTokens)) {
 				if (help.includes(flag)) caps[capability] = true
 			}
 			return caps

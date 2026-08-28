@@ -144,7 +144,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 	 *
 	 * It lives on the runner rather than in a registry of literals because "how to find claude" and
 	 * "how to drive claude" are the same knowledge: the day the binary is renamed or grows a flag, one
-	 * file changes. `capabilityFlags` is greped against `--help` output, so a capability is DISCOVERED
+	 * file changes. `capabilityTokens` is greped against `--help` output, so a capability is DISCOVERED
 	 * rather than assumed from a version string — an older build that lacks `--include-partial-messages`
 	 * would abort on the unknown argument, so guessing is not a safe default.
 	 */
@@ -152,7 +152,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 		bin: 'claude',
 		versionArgs: ['--version'],
 		helpArgs: ['--help'],
-		capabilityFlags: {
+		capabilityTokens: {
 			'--include-partial-messages': 'partialMessages',
 			'--mcp-config': 'mcpConfig',
 			'--resume': 'sessionResume',

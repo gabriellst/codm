@@ -14,7 +14,12 @@ let cached: Awaited<ReturnType<typeof build>> | null = null
 
 beforeAll(async () => {
 	cached = await build()
-}, 120_000)
+	// 120_000 was NOT margin, it was the measurement: a cold full-polyglot build of this repo takes
+	// ~119s on its own (it spawns the Go extractor and walks every workspace), so the budget was one
+	// second wider than the thing it bounded and any load at all pushed it over — an intermittent red
+	// reading `(unnamed) [120016.00ms]`, which names neither the build nor the clock. Widened to a
+	// budget that is a bound rather than a coincidence.
+}, 600_000)
 
 function buildOnce() {
 	return cached!

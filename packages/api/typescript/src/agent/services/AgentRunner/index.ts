@@ -10,11 +10,16 @@
 // The process lives in `ClaudeAgentRunner/`, not in `StreamJsonCodec/` — that separation is what AC-2.5
 // checks, and it is what lets every fold rule of §4.3 be tested over canned frames instead of a live CLI.
 //
-// `ClaudeAgentRunner` is the ONLY implementation that can start a child process, and it is bound in
+// `CodexAgentRunner` is that second class, and it is what the paragraph above was written in
+// anticipation of: it shares `AgentProcess`, `LineBuffer` and the never-throw codec as COLLABORATORS,
+// and shares no branch with claude at all. Its wire grammar is `StreamJsonCodec/CodexFrameDecoder`.
+//
+// Both real runners are the ONLY implementations that can start a child process, and they are bound in
 // `real` only — which is how §8 rule 8 ("no test spawns a provider CLI") stays a property of the DI env
 // rather than of test discipline.
 export { AgentRunner } from './AgentRunner'
 export { ClaudeAgentRunner, type ClaudeAgentRunnerOptions, type ClaudeBuildArgsOptions } from './ClaudeAgentRunner/ClaudeAgentRunner'
+export { CodexAgentRunner, type CodexAgentRunnerOptions, type CodexBuildArgsOptions } from './CodexAgentRunner/CodexAgentRunner'
 export {
 	nodeAgentProcessSpawner,
 	type AgentProcess,
