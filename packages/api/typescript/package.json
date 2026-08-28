@@ -17,7 +17,7 @@
 		"dev": "bun run --watch ./src",
 		"tsc": "bun x tsc --noEmit",
 		"test": "bun test",
-		"test:cross-service": "bun test --path-ignore-patterns='**/__run_everything__/**' --timeout=60000 tests/spikes/cross-service.spike.test.ts"
+		"test:cross-service": "CODM_CROSS_SERVICE=1 bun test --timeout=60000 tests/spikes/cross-service.spike.test.ts"
 	},
 	"dependencies": {
 		"@codm/client-typescript": "workspace:*",

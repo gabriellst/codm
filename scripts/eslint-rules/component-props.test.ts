@@ -2,6 +2,7 @@ import { afterAll, describe, expect, it } from 'bun:test'
 import { RuleTester } from 'eslint'
 import tseslint from 'typescript-eslint'
 import { componentProps, isRouteModule } from './component-props'
+import { fileURLToPath } from 'node:url'
 
 /**
  * Self-test for `local/component-props` — the className doctrine (component bp-20 / bp-29).
@@ -17,7 +18,7 @@ import { componentProps, isRouteModule } from './component-props'
  * to see them at all is the reason the migration happened.
  */
 
-const FIXTURE = new URL('./__fixtures__/', import.meta.url).pathname
+const FIXTURE = fileURLToPath(new URL('./__fixtures__/', import.meta.url))
 const APP = `${FIXTURE}src/components/file.tsx`
 const ROUTE = `${FIXTURE}src/routes/index.tsx`
 const ROUTE_COMPONENT = `${FIXTURE}src/routes/-components/file.tsx`

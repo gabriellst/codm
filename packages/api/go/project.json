@@ -33,8 +33,7 @@
 			"cache": true,
 			"inputs": ["{projectRoot}/**/*.go", "^production"],
 			"options": {
-				"command": "out=$(gofmt -l .); [ -z \"$out\" ] || { echo 'gofmt drift — run `gofmt -w .` in packages/api/go:'; echo \"$out\"; exit 1; }",
-				"cwd": "packages/api/go"
+				"command": "bun scripts/gofmt-check.ts"
 			}
 		},
 		"test": {

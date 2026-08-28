@@ -16,4 +16,9 @@ preload = ["./tests/setup.ts"]
 # and the run hangs. Excluding the file by NAME (not by a `*.spike.*` convention) keeps the default
 # suite at its 1378/187 baseline and makes "this suite needs a process of its own" a decision
 # someone takes per file. Run it with `bun run test:cross-service`; the nx `test` target runs both.
-pathIgnorePatterns = ["**/tests/spikes/cross-service.spike.test.ts"]
+# THE EXCLUSION MOVED INTO THE FILE (`CODM_CROSS_SERVICE`, see its guard). `pathIgnorePatterns`
+# lived here and did not hold on Windows: measured on bun 1.3.4, the file was still discovered
+# and run with the `/` spelling, a backslash spelling, a separator-free glob, and the equivalent
+# `--path-ignore-patterns` CLI flag. It failed SILENTLY, which is the worst way for an exclusion
+# to fail — everything above is the description of what then happens, and it happened.
+# An env var the run script sets cannot be spelled wrong by a platform.

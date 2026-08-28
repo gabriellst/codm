@@ -81,7 +81,11 @@ export function findTokenCasts(root: string, scanned: readonly string[] = SCANNE
 	const sites: CastSite[] = []
 	for (const tree of scanned) {
 		for (const file of walk(join(root, tree))) {
-			const rel = relative(root, file)
+			// `/`-separated, because that is how `OWNER` and `SCANNED` are spelled — they are built by
+			// string interpolation off the workspace manifest, not by `join`. On Windows `relative`
+			// hands back `pkg\src\…`, `startsWith(owner)` then matched nothing, and the ONE directory
+			// this rail is supposed to exempt (the conversion's owner) was reported as a violation.
+			const rel = relative(root, file).split('\\').join('/')
 			if (rel.startsWith(owner)) continue
 			const source = readFileSync(file, 'utf-8')
 			const originalLines = source.split('\n')

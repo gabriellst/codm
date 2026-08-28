@@ -11,9 +11,16 @@ unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_OBJECT_DIRECTORY GIT_A
 
 echo "Running pre-commit checks..."
 
-# Run linting and formatting on staged files
+# Run linting and formatting on staged files.
+#
+# SERIALIZED. lint-staged runs its glob groups in parallel by default, so a commit that touches
+# enough source files has two typed-eslint programs and the detector suite building at once — and
+# the eslint spawns get SIGKILLed, which lint-staged reports as a failed task with no diagnostic.
+# It is the same OOM lever lint-staged.config.mjs already filters generated files to avoid, reached
+# through concurrency instead of list length: the same 55-file list passes in one sequential run.
+# Costs a few seconds on a large commit; the alternative is a hook that fails by memory pressure.
 echo "Running lint-staged..."
-bunx lint-staged
+bunx lint-staged --concurrent 1
 
 # Run tests for workspaces with hermetic test suites
 # (e2e:test needs the full stack — run separately, not in pre-commit.)

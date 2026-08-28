@@ -16,6 +16,17 @@ import { PROVIDER_SEARCH, resolveBinary, type ProviderSearchEnv } from './Provid
  * - The one assertion that needs `accessSync X_OK` to REJECT a file (no exec bit) is guarded with
  *   `describe.skipIf(process.platform === 'win32')` — on Windows X_OK degrades to F_OK, which is
  *   exactly why the win32 row never offers the bare name.
+ *
+ * THE HERMETICITY IS NOT SYMMETRIC, and the asymmetry is a property of the platforms, not a gap
+ * here. The win32 row is fully testable from a POSIX host because nothing about a POSIX absolute
+ * path collides with `;`. The reverse does not hold: a Windows absolute path is `C:\...`, and `:`
+ * IS the POSIX rows' declared `pathDelimiter`. Feeding one to a POSIX row splits `C:\Users\x\bin`
+ * into `C` and `\Users\x\bin`; the second half still resolves (Windows reads a leading `\` against
+ * the current drive) so the file is FOUND, just under a drive-less path — the assertion fails on a
+ * value that is right about everything except the drive letter. No fixture can dodge that while
+ * still living on a real Windows filesystem, so the cases that put a host-absolute path on `PATH`
+ * are grouped into their own `describe.skipIf` below. The POSIX rows are covered on the POSIX
+ * runners, where they are the rows that actually ship.
  */
 
 const CLI = 'fixture-provider-cli'
@@ -48,18 +59,32 @@ afterEach(() => {
 })
 
 describe('resolveBinary — darwin/linux rows (POSIX)', () => {
-	it('finds an executable on PATH and returns its absolute path', () => {
-		const bin = dir('bin')
-		const found = executable(bin, CLI)
-		expect(resolveBinary(CLI, PROVIDER_SEARCH.darwin, env({ PATH: bin }))).toBe(found)
-	})
+	// A host-absolute path ON `PATH`, read by a POSIX row — see the asymmetry note at the top of the
+	// file. Every case in here builds a fixture dir and puts it on `PATH`; on Windows that string is
+	// `C:\…`, and `:` is precisely this row's declared delimiter, so the row splits the drive letter
+	// off and matches a path that is right except for the drive. Not constructible on a Windows
+	// filesystem; covered on the POSIX runners, where these rows are the ones that ship.
+	describe.skipIf(process.platform === 'win32')('a fixture dir on PATH (host-absolute)', () => {
+		it('finds an executable on PATH and returns its absolute path', () => {
+			const bin = dir('bin')
+			const found = executable(bin, CLI)
+			expect(resolveBinary(CLI, PROVIDER_SEARCH.darwin, env({ PATH: bin }))).toBe(found)
+		})
 
-	it('splits PATH on the DECLARED delimiter and honours entry order', () => {
-		const first = dir('first')
-		const second = dir('second')
-		const winner = executable(first, CLI)
-		executable(second, CLI)
-		expect(resolveBinary(CLI, PROVIDER_SEARCH.linux, env({ PATH: `${first}:${second}` }))).toBe(winner)
+		it('splits PATH on the DECLARED delimiter and honours entry order', () => {
+			const first = dir('first')
+			const second = dir('second')
+			const winner = executable(first, CLI)
+			executable(second, CLI)
+			expect(resolveBinary(CLI, PROVIDER_SEARCH.linux, env({ PATH: `${first}:${second}` }))).toBe(winner)
+		})
+
+		it('PATH wins over the known dirs', () => {
+			const bin = dir('bin')
+			const onPath = executable(bin, CLI)
+			executable(dir('.local', 'bin'), CLI)
+			expect(resolveBinary(CLI, PROVIDER_SEARCH.linux, env({ PATH: bin }))).toBe(onPath)
+		})
 	})
 
 	describe.skipIf(process.platform === 'win32')('exec bit / directory rejection (POSIX X_OK semantics)', () => {
@@ -82,13 +107,6 @@ describe('resolveBinary — darwin/linux rows (POSIX)', () => {
 		const found = executable(npmGlobal, CLI)
 		expect(resolveBinary(CLI, PROVIDER_SEARCH.linux, env({ PATH: '' }))).toBe(found)
 		expect(resolveBinary(CLI, PROVIDER_SEARCH.darwin, env({ PATH: '' }))).toBeNull()
-	})
-
-	it('PATH wins over the known dirs', () => {
-		const bin = dir('bin')
-		const onPath = executable(bin, CLI)
-		executable(dir('.local', 'bin'), CLI)
-		expect(resolveBinary(CLI, PROVIDER_SEARCH.linux, env({ PATH: bin }))).toBe(onPath)
 	})
 
 	it('returns null when PATH is unset and nothing is installed', () => {

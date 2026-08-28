@@ -6,7 +6,7 @@
 // era falso para essa direção. Aqui o caminho inteiro é exercitado como em produção: um
 // `Publish*IntegrationEvents` de verdade publica, a linha aparece na lane `integration` (a mesma que o
 // gateway Go escreve), e SÓ o poller entrega.
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
@@ -14,7 +14,7 @@ import * as schema from '@codm/contracts/db'
 import { outbox } from '@codm/contracts/db'
 import { migrationsDir } from '@codm/contracts/db/migrations'
 import { ContactKind, ProviderKind } from '@codm/contracts-typescript/wire/enums'
-import { LibSqlDomainEventRepository, LibSqlDriver, SqlExternalMediator, type Handler } from '@codm/core-typescript'
+import { LibSqlDomainEventRepository, LibSqlDriver, SqlExternalMediator, type Handler, removeTempDirWhenFree } from '@codm/core-typescript'
 import { PublishThreadIntegrationEvents } from '@thread/handlers/PublishThreadIntegrationEvents'
 import { ThreadAttachedEvent } from '@thread/events/ThreadAttachedEvent'
 import { ProductConfig } from '@shared/config/ProductConfig'
@@ -64,7 +64,7 @@ describe('a TS publisher rides the SAME lane as the Go gateway, and only the pol
 	})
 
 	afterAll(() => {
-		rmSync(dir, { recursive: true, force: true })
+		removeTempDirWhenFree(dir)
 	})
 
 	beforeEach(async () => {

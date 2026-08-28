@@ -17,8 +17,19 @@ export interface ApplyTarget {
 	destDir: string
 }
 
-/** First matching rule wins; no match = copy. The single evaluator of CopyRule data. */
-export function evalCopyRules(rules: readonly CopyRule[], path: string): boolean {
+/**
+ * First matching rule wins; no match = copy. The single evaluator of CopyRule data.
+ *
+ * Being the single evaluator is also why the separator is settled here. A `CopyRule` is CONTRACT
+ * data — `{ action: 'skip', endsWith: '/.env' }` in plan.ts — and its fragments are written with
+ * `/` because that is how the repo spells paths. The `path` argument arrives from a filesystem
+ * walk, so on Windows it is `\`-separated and no rule fragment beginning with `/` can ever match.
+ * Silently: `evalCopyRules` then returns its "no match = copy" default, and a stamp made on Windows
+ * ships the maintainer's live `.env` along with the caches and worktrees the rules exist to hold
+ * back. The rules are the contract; the path is normalized to meet them.
+ */
+export function evalCopyRules(rules: readonly CopyRule[], rawPath: string): boolean {
+	const path = rawPath.split('\\').join('/')
 	for (const rule of rules) {
 		const containsOk = rule.contains === undefined || path.includes(rule.contains)
 		const endsWithOk = rule.endsWith === undefined || path.endsWith(rule.endsWith)

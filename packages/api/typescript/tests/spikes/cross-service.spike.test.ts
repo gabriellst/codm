@@ -65,7 +65,25 @@ async function awaitChannelStatusFromTs(channelId: string): Promise<{ status: st
 	}
 }
 
+/**
+ * THE GUARD THAT KEEPS THIS FILE OUT OF THE SHARED RUN — read `bunfig.toml` for what it costs when
+ * it leaks in, and why the exclusion cannot be a path pattern.
+ *
+ * `bun test` shares ONE process across every file, and the `beforeAll` below performs a REAL `e2e`
+ * daemon boot that registers on the ROOT container. The exclusion used to be
+ * `pathIgnorePatterns`, which bun does not honour for this file on Windows — measured on 1.3.4,
+ * with the `/` spelling, a `\` spelling, a separator-free glob, and the `--path-ignore-patterns`
+ * CLI flag: the file was discovered and run by all four. What that produced is exactly what the
+ * bunfig comment predicted — `HealthService.test.ts` stopped being true and the run HUNG — plus a
+ * spray of intermittent reds in the whole-tree scanners from the extra load.
+ *
+ * An env var is not a pattern, so no platform can spell it wrong. `bun run test:cross-service` sets
+ * it; nothing else does.
+ */
+const IN_OWN_PROCESS = process.env.CODM_CROSS_SERVICE === '1'
+
 beforeAll(async () => {
+	if (!IN_OWN_PROCESS) return
 	const started = performance.now()
 	// `ownerId` DECLARADO, não herdado: até a F3/T3 o harness defaultava para a mesma constante
 	// que a linha 30 usa, e o acordo entre semente e asserção valia por coincidência de default.
@@ -74,13 +92,18 @@ beforeAll(async () => {
 	const url = backend.services.apiGo
 	if (!url) throw new Error('spike: harness reported no apiGo service url')
 	gatewayUrl = url
-})
+	// The boot BUILDS the Go gateway and waits for it to answer health, so it is measured in tens of
+	// seconds, not in the 5s bun allows a hook by default — the same reason the `it` below declares
+	// 20_000 and concurrent-boot declares 180_000. It fit under the default on the machine this was
+	// written on and did not on Windows, where the failure reads as `a beforeEach/afterEach hook
+	// timed out` with no mention of the build: an infrastructure budget, stated rather than assumed.
+}, 180_000)
 
 afterAll(async () => {
 	await backend?.stop()
 })
 
-describe('AC-6 — o gateway declarado no manifesto sobe no MESMO arquivo SQLite do backend TS', () => {
+describe.skipIf(!IN_OWN_PROCESS)('AC-6 — o gateway declarado no manifesto sobe no MESMO arquivo SQLite do backend TS', () => {
 	it('uma linha ESCRITA pelo gateway é visível pela query do lado TS na mesma run', async () => {
 		const channelId = await createChannel('spike-ac6')
 
@@ -110,7 +133,7 @@ describe('AC-6 — o gateway declarado no manifesto sobe no MESMO arquivo SQLite
 	})
 })
 
-describe('THE RESET SPIKE — reset() cross-processo (o veredito vira contrato para T8/T9)', () => {
+describe.skipIf(!IN_OWN_PROCESS)('THE RESET SPIKE — reset() cross-processo (o veredito vira contrato para T8/T9)', () => {
 	// Timeout explícito: dois seeds pareados × AutoPairAfter 2s do cenário e2e — T10 (default de
 	// 5000ms do bun:test não sobra margem para dois ciclos create→connect→CONNECTED sequenciais).
 	it('truncate do lado TS limpa as tabelas do gateway E o gateway continua funcional depois', async () => {

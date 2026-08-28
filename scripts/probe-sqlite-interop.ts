@@ -53,7 +53,8 @@ import { spawnSync } from 'node:child_process'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
-const SCRIPT_DIR = dirname(new URL(import.meta.url).pathname)
+import { fileURLToPath } from 'node:url'
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = resolve(SCRIPT_DIR, '..')
 const GO_DIR = join(REPO_ROOT, 'packages/api/go')
 const GO_PROBE = 'scripts/probe_sqlite_interop.go'

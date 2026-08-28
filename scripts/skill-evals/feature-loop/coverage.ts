@@ -15,8 +15,9 @@ import { dirname, join, resolve } from 'node:path'
 import { parse as parseYaml } from 'yaml'
 import { loadTasks } from '../run'
 import type { ScoreRow } from '../types'
+import { fileURLToPath } from 'node:url'
 
-const EV = resolve(dirname(new URL(import.meta.url).pathname), '..')
+const EV = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const MAIN_REPO = resolve(EV, '../..')
 
 interface AxisRow {
