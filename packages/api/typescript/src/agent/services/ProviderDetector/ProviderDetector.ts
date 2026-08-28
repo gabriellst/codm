@@ -2,6 +2,7 @@ import { ProviderKind, ProviderStatus } from '@codm/contracts-typescript/wire/en
 import type { ProviderBinarySpec } from '../../types/ProviderBinarySpec'
 import type { ProviderCapabilities } from '../../types/ProviderCapabilities'
 import { ClaudeAgentRunner } from '../AgentRunner/ClaudeAgentRunner'
+import { CodexAgentRunner } from '../AgentRunner/CodexAgentRunner'
 
 /**
  * The detection record for one provider CLI — the shape T08 (Settings) and T15 (Attach wizard) read
@@ -9,7 +10,7 @@ import { ClaudeAgentRunner } from '../AgentRunner/ClaudeAgentRunner'
  * `NOT_INSTALLED` carries neither.
  *
  * `caps` (GOAL-agent-abstraction §4.7, Fase 1) is the probe result: `helpArgs` output grepped for
- * each key of the spec's `capabilityFlags`. It is RETURNED, never stashed in a module-level map, and
+ * each key of the spec's `capabilityTokens`. It is RETURNED, never stashed in a module-level map, and
  * the caller threads it into `ClaudeAgentRunner.buildArgs({ …, caps })`. That is the whole difference
  * from the open-design implementation this pattern is adapted from — there argv construction reads an
  * ambient map that detection mutates, so its output silently depends on whether detection has run.
@@ -71,28 +72,30 @@ export const KNOWN_PROVIDERS: readonly ProviderKind[] = [ProviderKind.CLAUDE_COD
  * `Record<ProviderKind, …>` and not an array: adding a member to `provider-kind.tsp` and regenerating
  * turns this into a `tsc` error at author time rather than a boot-time surprise.
  *
- * **claude-code is the only kind with a runner**, and it therefore does not repeat itself here — its
- * spec IS the static on `ClaudeAgentRunner`, so "how to find it" and "how to drive it" cannot drift.
- * The other two are DETECT-ONLY: we can report them in the provider catalog (which is all
- * `DetectProviders` ever did with them), and the day one is genuinely driven it arrives as its own
- * runner class with a MEASURED spec, which then replaces the literal below. Declaring their driving
- * shape ahead of that measurement is exactly the fiction Fase 4.5 removed — `streamFormat: 'plain'`
- * was never verified for either binary (the risk AC-1.8 registered), and a guess that costs a branch
- * in a shared runner is worse than an honest gap.
+ * **Two kinds now have a runner**, and neither repeats itself here — each spec IS the static on its
+ * own runner class, so "how to find it" and "how to drive it" cannot drift for either.
+ *
+ * codex arrived exactly the way the previous version of this paragraph said it would: "the day one is
+ * genuinely driven it arrives as its own runner class with a MEASURED spec, which then replaces the
+ * literal below". The literal it replaced was wrong in a way worth remembering, because it is the
+ * failure mode this design exists to prevent. It declared `capabilityTokens: { '--mcp-config': …,
+ * '--resume': … }` — plausible flags, guessed from claude's spelling, and codex publishes NEITHER.
+ * The probe greps help text, so it reported both capabilities ABSENT on a binary that has both, and
+ * a runner trusting that answer would have shipped with no tools and a transcript re-rendered into
+ * every prompt. The guess cost nothing while the CLI was undriven and would have cost two features
+ * the moment it was driven; `CodexAgentRunner.binary` now declares the tokens the CLI actually prints.
+ *
+ * opencode stays DETECT-ONLY under the original terms: we report it in the provider catalog (which is
+ * all `DetectProviders` ever did with it), and its literal below is a plausible-looking guess of the
+ * same species as codex's was. Read it as a placeholder awaiting measurement, not as a fact.
  */
 export const PROVIDER_BINARIES: Record<ProviderKind, ProviderBinarySpec> = {
 	[ProviderKind.CLAUDE_CODE]: ClaudeAgentRunner.binary,
-	[ProviderKind.CODEX]: {
-		bin: 'codex',
-		versionArgs: ['--version'],
-		helpArgs: ['--help'],
-		// Probed anyway: if a future build grows the flags, the capability lights up with no code change.
-		capabilityFlags: { '--mcp-config': 'mcpConfig', '--resume': 'sessionResume' },
-	},
+	[ProviderKind.CODEX]: CodexAgentRunner.binary,
 	[ProviderKind.OPENCODE]: {
 		bin: 'opencode',
 		versionArgs: ['--version'],
 		helpArgs: ['--help'],
-		capabilityFlags: { '--mcp-config': 'mcpConfig', '--resume': 'sessionResume' },
+		capabilityTokens: { '--mcp-config': 'mcpConfig', '--resume': 'sessionResume' },
 	},
 }

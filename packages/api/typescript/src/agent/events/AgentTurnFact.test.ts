@@ -117,7 +117,10 @@ describe('the usage fact is token counts, not money', () => {
 
 	it('has no cost/currency field — pricing is policy applied by the reader, not a fact of the run', () => {
 		const keys = Object.keys(AgentUsageEvent.schema.shape.payload.shape)
-		expect(keys).toEqual(['inputTokens', 'outputTokens', 'cacheCreationInputTokens', 'cacheReadInputTokens'])
+		// `reasoningOutputTokens` is the fifth and OPTIONAL bucket, added when codex landed: it reports
+		// reasoning separately and claude has no counterpart, so absence means "not reported" rather
+		// than zero. Still a token count, which is why it belongs here and not in the guard below.
+		expect(keys).toEqual(['inputTokens', 'outputTokens', 'cacheCreationInputTokens', 'cacheReadInputTokens', 'reasoningOutputTokens'])
 		// Stated as intent as well as as a key list, so a future additive field cannot smuggle money in
 		// by merely updating the list above.
 		expect(keys.some(k => /cost|price|usd|currency|money/i.test(k))).toBe(false)

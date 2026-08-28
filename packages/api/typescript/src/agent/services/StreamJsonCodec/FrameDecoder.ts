@@ -1,6 +1,7 @@
 import { AgentStopReason } from '@codm/contracts-typescript/wire/enums'
 import { describeToolActivity } from '@codm/contracts/cues'
 import type { AgentFrame, AgentTurnUsage } from '../../types/AgentFrame'
+import { count, isRecord, str } from './wireValues'
 
 /**
  * The terminal `result` record, kept OUT of the `AgentFrame` union on purpose.
@@ -43,22 +44,9 @@ const STOP_REASONS: Readonly<Record<string, AgentStopReason>> = {
 	refusal: AgentStopReason.REFUSAL,
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function str(value: unknown): string | undefined {
-	return typeof value === 'string' ? value : undefined
-}
-
 /** `api_error_status` is either a code (string/number) or absent/`null` — never coerced from other shapes. */
 function apiErrorStatus(value: unknown): string | number | null {
 	return typeof value === 'string' || typeof value === 'number' ? value : null
-}
-
-/** Non-negative integer or 0 — a missing bucket is arithmetically zero, never "unknown" (§4.3 rule 8). */
-function count(value: unknown): number {
-	return typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.trunc(value) : 0
 }
 
 function readUsage(raw: unknown): AgentTurnUsage {

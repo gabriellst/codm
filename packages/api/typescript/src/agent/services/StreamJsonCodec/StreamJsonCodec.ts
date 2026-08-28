@@ -2,9 +2,30 @@ import type { AgentFrame } from '../../types/AgentFrame'
 import { FrameDecoder, type DecodedLine, type TerminalResultRecord } from './FrameDecoder'
 import { LineBuffer } from './LineBuffer'
 
+/**
+ * The wire-grammar half, as a PORT.
+ *
+ * One method, because that is the whole seam: a line's already-parsed value in, frames out. Both
+ * decoders in this folder satisfy it structurally without declaring that they do — the interface
+ * describes them, it does not constrain them into a hierarchy.
+ */
+export interface WireFrameDecoder {
+	decode(raw: unknown): DecodedLine
+}
+
 export interface StreamJsonCodecOptions {
 	/** Diagnostics sink. Injected, never `console` — `tests/architecture/console-discipline.test.ts` is the rail. */
 	onWarn?: (message: string) => void
+	/**
+	 * The grammar this stream speaks. Defaults to claude's, which is what every existing caller means.
+	 *
+	 * A PARAMETER, and this is the line that keeps a second CLI from becoming a branch. The three
+	 * responsibilities this class composes — chunk boundaries, `JSON.parse`, never-throw — are
+	 * identical for codex; only the grammar differs, and a grammar is a collaborator. Reaching for
+	 * `if (provider === …)` inside `decodeLine` instead would put provider identity in the one place
+	 * §4.3 keeps free of it, and would grow a branch per CLI forever.
+	 */
+	decoder?: WireFrameDecoder
 }
 
 /**
@@ -38,10 +59,10 @@ export interface StreamJsonCodecOptions {
  */
 export class StreamJsonCodec {
 	private readonly lines = new LineBuffer()
-	private readonly decoder: FrameDecoder
+	private readonly decoder: WireFrameDecoder
 
 	constructor(private readonly options: StreamJsonCodecOptions = {}) {
-		this.decoder = new FrameDecoder(options.onWarn)
+		this.decoder = options.decoder ?? new FrameDecoder(options.onWarn)
 	}
 
 	/** Feed one chunk. Returns everything the COMPLETE lines in it decoded to. */

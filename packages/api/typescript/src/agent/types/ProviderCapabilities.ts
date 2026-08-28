@@ -27,9 +27,23 @@ import { z } from '@codm/core-typescript'
 export const ProviderCapabilitiesSchema = z.object({
 	/** `--include-partial-messages` is supported → token-level deltas instead of whole-message chunks. */
 	partialMessages: z.boolean().optional(),
-	/** The CLI accepts an MCP server config → our tools can be declared at all. */
+	/**
+	 * The CLI accepts an MCP server config → our tools can be declared at all.
+	 *
+	 * The capability, never a spelling: claude takes `--mcp-config`, codex takes an inline TOML
+	 * override (`-c mcp_servers.<key>.command=…`, measured to spawn the server with both args and env
+	 * in `.specs/codedm/codex-smoke/raw/mcp-proof.json`). Which argv expresses it belongs to that
+	 * CLI's runner; this flag only answers whether it can be expressed at all.
+	 */
 	mcpConfig: z.boolean().optional(),
-	/** Native session resume (`--resume` / `--session-id`) → no rendered transcript in the prompt. */
+	/**
+	 * Native session resume → no rendered transcript in the prompt.
+	 *
+	 * Also a capability rather than a spelling, and codex is why the parenthetical that used to read
+	 * "(`--resume` / `--session-id`)" is gone: there resume is a SUBCOMMAND with a strictly narrower
+	 * flag set than the plain run (`codex exec resume`, measured — no `-s`, no `-C`, no `--add-dir`),
+	 * so it is a different argv SHAPE, not one more flag on the same one.
+	 */
 	sessionResume: z.boolean().optional(),
 })
 

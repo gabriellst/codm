@@ -52,13 +52,23 @@ One JSON object per line. Measured sequence of a successful turn (`raw/s1-text.j
    TOP-LEVEL `{"type":"error"}` + `turn.failed` ends a turn. Treating both alike would mark every
    run on a machine with a stale model cache as failed. MEASURED in all six captures.
 3. **A failed turn duplicates its message**: top-level `{"type":"error","message":M}` is immediately
-   followed by `{"type":"turn.failed","error":{"message":M}}` with the SAME M.
+   followed by `{"type":"turn.failed","error":{"message":M}}` with the SAME M. **NOT MEASURED — no
+   capture contains it.** This was observed live while measuring (the 400 from a model the account
+   could not use) and the run was never saved as a `.jsonl`; `grep turn.failed raw/*.jsonl` finds
+   nothing, and the only `"type":"error"` matches in the corpus are the NESTED item of point 2. The
+   field names above are transcribed from that session, so they are a weaker claim than everything
+   else on this page — which is why this line says so rather than letting the numbering imply
+   otherwise. `CodexFrameDecoder` handles the shape and repeats the caveat at the two methods that
+   do.
 4. **`error.message` is sometimes double-encoded JSON.** The 400 from an unsupported model arrived
    as a JSON *string* containing a JSON object:
    `"message":"{\"type\":\"error\",\"status\":400,\"error\":{...}}"`. A consumer that renders it raw
    shows the operator a wall of escapes. UNFALSIFIED whether this holds for every API error.
 5. **There is NO `stop_reason` anywhere.** claude's `AgentStopReason` has no counterpart: success is
    the ARRIVAL of `turn.completed`, failure the arrival of `turn.failed`.
+6. **The final answer is not on the terminal event.** `turn.completed` carries `usage` and nothing
+   else; the answer is the last `agent_message` item. A decoder therefore has to REMEMBER it, which
+   is the one piece of state `CodexFrameDecoder` keeps beyond the thread id.
 
 ### 2.1 `usage` — the vendor docs are INCOMPLETE
 

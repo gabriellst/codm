@@ -5,7 +5,7 @@ import { ProviderKind } from '@codm/contracts-typescript/wire/enums'
 import { LIBSQL_DB_REGISTRY } from '@shared/registry'
 import { ALL_REGISTRIES } from '@generated/registries.generated'
 import { AgentRunnerFactory } from '@agent/services/AgentRunnerFactory'
-import { ClaudeAgentRunner } from '@agent/services/AgentRunner'
+import { ClaudeAgentRunner, CodexAgentRunner } from '@agent/services/AgentRunner'
 import { IssueWorkAgent } from '@agent/agents/IssueWorkAgent'
 import { OrchestratorAgent } from '@agent/agents/OrchestratorAgent'
 import { MailboxDispatcher } from '@agent/services/MailboxDispatcher'
@@ -84,10 +84,15 @@ describe('real-env DI resolution — the bindings no other test ever constructs'
 		// `e2e` DI column (agent/registry.ts), so `ALL_REGISTRIES.real` always yields the production
 		// runner here.
 		expect(factory.for(ProviderKind.CLAUDE_CODE)).toBeInstanceOf(ClaudeAgentRunner)
-		expect(factory.supported).toEqual([ProviderKind.CLAUDE_CODE])
-		// The misrouting guard, at the layer that owns it: codex is DETECT-ONLY, so a thread declaring it
-		// must be refused by the WIRING rather than silently driven by claude's argv and stream parser.
-		expect(() => factory.for(ProviderKind.CODEX)).toThrow(/no AgentRunner implementation exists/)
+		// Two CLIs have a runner now, and each must resolve to ITS OWN class — the failure this pins is
+		// not "nothing resolves", it is a second entry that quietly hands back the first one's runner.
+		expect(factory.for(ProviderKind.CODEX)).toBeInstanceOf(CodexAgentRunner)
+		expect(factory.supported).toEqual([ProviderKind.CLAUDE_CODE, ProviderKind.CODEX])
+		// The misrouting guard, at the layer that owns it, now aimed at the kind that still has no runner:
+		// opencode is DETECT-ONLY, so a thread declaring it must be refused by the WIRING rather than
+		// silently driven by another CLI's argv and stream parser. It moved here from codex when codex
+		// got a class — leaving it on codex would have kept the assertion green while testing nothing.
+		expect(() => factory.for(ProviderKind.OPENCODE)).toThrow(/no AgentRunner implementation exists/)
 	})
 
 	/**

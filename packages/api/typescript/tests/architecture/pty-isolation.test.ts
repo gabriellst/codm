@@ -19,7 +19,7 @@
  * in one sentence: **a provider CLI is spawned only by the module that DETECTS the binary and the
  * module that EXECUTES the turn.** Any third file importing `node:child_process` is a violation.
  * `ProviderDetector` is in the allowed set rather than exempted by filename because §5.3 keeps it and
- * Fase 1 EXTENDS it to probe `helpArgs` × `capabilityFlags` — it must spawn, and it spawns BEFORE any
+ * Fase 1 EXTENDS it to probe `helpArgs` × `capabilityTokens` — it must spawn, and it spawns BEFORE any
  * run exists. Moving it under `services/AgentRunner/` would invert the dependency (the runner would
  * contain the detection that precedes it); a per-file exception would fossilize at the first rename.
  *

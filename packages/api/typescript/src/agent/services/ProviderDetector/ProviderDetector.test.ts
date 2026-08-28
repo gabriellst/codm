@@ -42,7 +42,7 @@ class FakeSystemProviderDetector extends SystemProviderDetector {
 		const help = this.helpText[binaryPath]
 		if (help === undefined) return {}
 		const caps: ProviderCapabilities = {}
-		for (const [flag, capability] of Object.entries(PROVIDER_BINARIES[provider].capabilityFlags ?? {})) {
+		for (const [flag, capability] of Object.entries(PROVIDER_BINARIES[provider].capabilityTokens ?? {})) {
 			if (help.includes(flag)) caps[capability] = true
 		}
 		return caps
@@ -69,7 +69,7 @@ describe('SystemProviderDetector — detection logic (faked probes)', () => {
 		expect(codex).toEqual({ name: ProviderKind.CODEX, status: ProviderStatus.NOT_INSTALLED })
 	})
 
-	it('probes CAPABILITIES from help text via the def’s capabilityFlags map, per binary', async () => {
+	it('probes CAPABILITIES from help text via the def’s capabilityTokens map, per binary', async () => {
 		const detector = new FakeSystemProviderDetector(
 			{ claude: { path: '/opt/homebrew/bin/claude', version: '2.0.0' } },
 			{ '/opt/homebrew/bin/claude': '--include-partial-messages  stream token deltas\n--mcp-config <json>\n' },

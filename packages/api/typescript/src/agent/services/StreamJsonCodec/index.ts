@@ -6,5 +6,6 @@
 // `AgentRunner/StreamJsonAgentRunner/`.
 export { LineBuffer } from './LineBuffer'
 export { FrameDecoder, type DecodedLine, type TerminalResultRecord } from './FrameDecoder'
-export { StreamJsonCodec, type StreamJsonCodecOptions } from './StreamJsonCodec'
+export { CodexFrameDecoder } from './CodexFrameDecoder'
+export { StreamJsonCodec, type StreamJsonCodecOptions, type WireFrameDecoder } from './StreamJsonCodec'
 export { StreamJsonToTurnFactAccumulator, type TurnFactAccumulatorOptions } from './StreamJsonToTurnFactAccumulator'

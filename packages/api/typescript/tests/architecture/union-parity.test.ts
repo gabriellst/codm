@@ -318,6 +318,10 @@ describe('union-parity check 3 — no redeclaration outside the owner; consumpti
 	for (const m of MANIFESTS) {
 		for (const slot of Object.values(m.slots)) {
 			for (const v of slot.variants) {
+				// One WALK of every backend workspace's source tree per variant, so the cost scales with the
+				// repo rather than with the assertion. It passes in ~5s alone and crosses bun's 5s per-test
+				// default under full tooling load — an intermittent red that says nothing about time. The
+				// budget is declared for the same reason `concurrent-boot` declares its own.
 				test(`${v.typeName} is declared ONLY in ${v.owner}`, () => {
 					for (const [id, ws] of backendWorkspaces) {
 						if (id === v.owner) continue
@@ -335,7 +339,7 @@ describe('union-parity check 3 — no redeclaration outside the owner; consumpti
 							`variant "${v.typeName}" (owner ${v.owner}) must not be redeclared in workspace ${id}`,
 						).toEqual([])
 					}
-				})
+				}, 60_000)
 			}
 		}
 	}
