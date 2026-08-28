@@ -1,0 +1,5 @@
+Reading additional input from stdin...
+2026-08-27T22:11:32.736606Z ERROR codex_models_manager::manager: failed to refresh available models: stream disconnected before completion: failed to decode models response: missing field `models` at line 1 column 103; body: {"object":"list","data":[{"id":"qwen3:4b","object":"model","created":1787868256,"owned_by":"library"}]}
+
+2026-08-27T22:11:32.739604Z ERROR codex_models_manager::manager: failed to refresh available models: stream disconnected before completion: failed to decode models response: missing field `models` at line 1 column 103; body: {"object":"list","data":[{"id":"qwen3:4b","object":"model","created":1787868256,"owned_by":"library"}]}
+

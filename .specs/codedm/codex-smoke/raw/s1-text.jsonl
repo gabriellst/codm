@@ -1,0 +1,6 @@
+{"type":"thread.started","thread_id":"01a04541-3924-75f1-9f7e-221f3f57cee8"}
+{"type":"item.completed","item":{"id":"item_0","type":"error","message":"Model metadata for `qwen3:4b` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."}}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_1","type":"reasoning","text":"Okay, the user asked to reply with exactly the word PONG and nothing else. Let me check the tools provided to see if any are needed here.\n\nLooking at the functions: get_goal, create_goal, update_goal, web_search, and some safety settings functions. The user's request is straightforward—just a PONG response. There's no need to call any of the functions because the instruction is to output PONG without anything else. The tools are for specific tasks like managing goals or web searches, which aren't relevant here. So I should just respond with PONG.\n"}}
+{"type":"item.completed","item":{"id":"item_2","type":"agent_message","text":"PONG"}}
+{"type":"turn.completed","usage":{"input_tokens":2050,"cached_input_tokens":0,"cache_write_input_tokens":0,"output_tokens":122,"reasoning_output_tokens":0}}
