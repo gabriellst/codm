@@ -1,0 +1,3 @@
+{"type":"thread.started","thread_id":"01a04547-ad8b-7bc0-9433-9b9d761ef22f"}
+{"type":"item.completed","item":{"id":"item_0","type":"error","message":"Model metadata for `qwen3:4b` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."}}
+{"type":"turn.started"}

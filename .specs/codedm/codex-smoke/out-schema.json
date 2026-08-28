@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["decision", "title"],
+  "properties": {
+    "decision": { "type": "string", "enum": ["NEW_ISSUE", "APPEND", "IGNORE"] },
+    "title": { "type": "string" }
+  }
+}
