@@ -6,6 +6,7 @@ import { PROVIDER_BINARIES } from './ProviderDetector'
 import { SystemProviderDetector } from './SystemProviderDetector'
 import { MockProviderDetector } from './MockProviderDetector'
 import { ClaudeAgentRunner } from '../AgentRunner/ClaudeAgentRunner'
+import { CodexAgentRunner } from '../AgentRunner/CodexAgentRunner'
 
 /**
  * Faked `SystemProviderDetector` — overrides the OS-touching probes so the caching + status mapping
@@ -100,6 +101,7 @@ describe('SystemProviderDetector — detection logic (faked probes)', () => {
 		// claude's spec is not a copy: it IS the static the runner spawns with, so "how to find it" and
 		// "how to drive it" cannot drift.
 		expect(PROVIDER_BINARIES[ProviderKind.CLAUDE_CODE]).toBe(ClaudeAgentRunner.binary)
+		expect(PROVIDER_BINARIES[ProviderKind.CODEX]).toBe(CodexAgentRunner.binary)
 	})
 
 	it('returns a row for every known provider', async () => {

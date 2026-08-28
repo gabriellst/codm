@@ -5,7 +5,7 @@ import { ProviderKind } from '@codm/contracts-typescript/wire/enums'
 import { LIBSQL_DB_REGISTRY } from '@shared/registry'
 import { ALL_REGISTRIES } from '@generated/registries.generated'
 import { AgentRunnerFactory } from '@agent/services/AgentRunnerFactory'
-import { ClaudeAgentRunner } from '@agent/services/AgentRunner'
+import { ClaudeAgentRunner, CodexAgentRunner } from '@agent/services/AgentRunner'
 import { IssueWorkAgent } from '@agent/agents/IssueWorkAgent'
 import { OrchestratorAgent } from '@agent/agents/OrchestratorAgent'
 import { MailboxDispatcher } from '@agent/services/MailboxDispatcher'
@@ -75,7 +75,7 @@ describe('real-env DI resolution — the bindings no other test ever constructs'
 		expect(instance.identities).toBeDefined()
 	})
 
-	it('the resolved factory yields the runner its env promises, and refuses a CLI with no runner class', () => {
+	it('the resolved factory yields both implemented runners and refuses a CLI with no runner class', () => {
 		const factory = realContainer().resolve(AgentRunnerFactory as never) as AgentRunnerFactory
 
 		// The POINT of resolving: the concrete runner is reachable only through this factory now, so this
@@ -84,10 +84,9 @@ describe('real-env DI resolution — the bindings no other test ever constructs'
 		// `e2e` DI column (agent/registry.ts), so `ALL_REGISTRIES.real` always yields the production
 		// runner here.
 		expect(factory.for(ProviderKind.CLAUDE_CODE)).toBeInstanceOf(ClaudeAgentRunner)
-		expect(factory.supported).toEqual([ProviderKind.CLAUDE_CODE])
-		// The misrouting guard, at the layer that owns it: codex is DETECT-ONLY, so a thread declaring it
-		// must be refused by the WIRING rather than silently driven by claude's argv and stream parser.
-		expect(() => factory.for(ProviderKind.CODEX)).toThrow(/no AgentRunner implementation exists/)
+		expect(factory.for(ProviderKind.CODEX)).toBeInstanceOf(CodexAgentRunner)
+		expect(factory.supported).toEqual([ProviderKind.CLAUDE_CODE, ProviderKind.CODEX])
+		expect(() => factory.for(ProviderKind.OPENCODE)).toThrow(/no AgentRunner implementation exists/)
 	})
 
 	/**

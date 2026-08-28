@@ -2,6 +2,7 @@ import { ProviderKind, ProviderStatus } from '@codm/contracts-typescript/wire/en
 import type { ProviderBinarySpec } from '../../types/ProviderBinarySpec'
 import type { ProviderCapabilities } from '../../types/ProviderCapabilities'
 import { ClaudeAgentRunner } from '../AgentRunner/ClaudeAgentRunner'
+import { CodexAgentRunner } from '../AgentRunner/CodexAgentRunner'
 
 /**
  * The detection record for one provider CLI — the shape T08 (Settings) and T15 (Attach wizard) read
@@ -71,24 +72,13 @@ export const KNOWN_PROVIDERS: readonly ProviderKind[] = [ProviderKind.CLAUDE_COD
  * `Record<ProviderKind, …>` and not an array: adding a member to `provider-kind.tsp` and regenerating
  * turns this into a `tsc` error at author time rather than a boot-time surprise.
  *
- * **claude-code is the only kind with a runner**, and it therefore does not repeat itself here — its
- * spec IS the static on `ClaudeAgentRunner`, so "how to find it" and "how to drive it" cannot drift.
- * The other two are DETECT-ONLY: we can report them in the provider catalog (which is all
- * `DetectProviders` ever did with them), and the day one is genuinely driven it arrives as its own
- * runner class with a MEASURED spec, which then replaces the literal below. Declaring their driving
- * shape ahead of that measurement is exactly the fiction Fase 4.5 removed — `streamFormat: 'plain'`
- * was never verified for either binary (the risk AC-1.8 registered), and a guess that costs a branch
- * in a shared runner is worse than an honest gap.
+ * Driven providers do not repeat themselves here: their spec IS the static on their runner, so "how
+ * to find it" and "how to drive it" cannot drift. OPENCODE remains detect-only until its own measured
+ * runner replaces the literal below.
  */
 export const PROVIDER_BINARIES: Record<ProviderKind, ProviderBinarySpec> = {
 	[ProviderKind.CLAUDE_CODE]: ClaudeAgentRunner.binary,
-	[ProviderKind.CODEX]: {
-		bin: 'codex',
-		versionArgs: ['--version'],
-		helpArgs: ['--help'],
-		// Probed anyway: if a future build grows the flags, the capability lights up with no code change.
-		capabilityFlags: { '--mcp-config': 'mcpConfig', '--resume': 'sessionResume' },
-	},
+	[ProviderKind.CODEX]: CodexAgentRunner.binary,
 	[ProviderKind.OPENCODE]: {
 		bin: 'opencode',
 		versionArgs: ['--version'],

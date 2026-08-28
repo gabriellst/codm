@@ -6,6 +6,8 @@ import type { AgentApplicationErrors } from '../../../errors'
 export interface AgentProcessSpec {
 	cmd: readonly string[]
 	cwd: string
+	/** Per-run environment additions. Callers pass a complete merged environment. */
+	env?: NodeJS.ProcessEnv
 	/** Whether stdin stays open for writes. `false` when the prompt rode in on argv. */
 	stdin: boolean
 }
@@ -71,6 +73,7 @@ export function createNodeAgentProcessSpawner(tree: ProcessTree): AgentProcessSp
 		try {
 			child = spawnChild(invocation.file, invocation.args, {
 				cwd: spec.cwd,
+				env: spec.env,
 				stdio: [spec.stdin ? 'pipe' : 'ignore', 'pipe', 'pipe'],
 				...invocation.options,
 				...tree.spawnOptions,
