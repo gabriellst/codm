@@ -47,7 +47,9 @@ import { ProviderKind, AgentModelId } from '@codm/contracts-typescript/wire/enum
  */
 export const PROVIDER_MODELS: Readonly<Record<ProviderKind, readonly AgentModelId[]>> = {
 	[ProviderKind.CLAUDE_CODE]: [AgentModelId.DEFAULT, AgentModelId.OPUS, AgentModelId.SONNET, AgentModelId.HAIKU],
-	[ProviderKind.CODEX]: [],
+	// Codex currently delegates model choice to the CLI; DEFAULT is the explicit "let Codex choose"
+	// option and keeps the provider selector isolated from Claude's aliases.
+	[ProviderKind.CODEX]: [AgentModelId.DEFAULT],
 	[ProviderKind.OPENCODE]: [],
 }
 

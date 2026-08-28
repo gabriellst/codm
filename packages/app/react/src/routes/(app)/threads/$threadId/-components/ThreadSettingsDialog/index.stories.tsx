@@ -39,7 +39,7 @@ const meta: Meta<typeof ThreadSettingsDialog> = {
 							model: 'OPUS',
 							models: ['DEFAULT', 'OPUS', 'SONNET', 'HAIKU'],
 						},
-						{ provider: 'CODEX', comingSoon: false, model: 'DEFAULT', models: [] },
+						{ provider: 'CODEX', comingSoon: false, model: 'DEFAULT', models: ['DEFAULT'] },
 					],
 				}),
 				mockQuery(getSessionChatQueryOptions(THREAD_ID), { thread: { displayName: 'Ada Lovelace' } }),

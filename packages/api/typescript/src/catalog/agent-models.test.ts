@@ -37,7 +37,7 @@ describe('PROVIDER_MODELS — the declared provider → models relation', () => 
 	it('offers a real catalog for the one CLI this engine drives, and nothing for the others', () => {
 		expect(modelsFor(ProviderKind.CLAUDE_CODE)).toContain(AgentModelId.OPUS)
 		// Empty ⇒ nothing to choose. Deliberately NOT `[DEFAULT]`: a select with one option is noise.
-		expect(modelsFor(ProviderKind.CODEX)).toEqual([])
+		expect(modelsFor(ProviderKind.CODEX)).toEqual([AgentModelId.DEFAULT])
 		expect(modelsFor(ProviderKind.OPENCODE)).toEqual([])
 	})
 
