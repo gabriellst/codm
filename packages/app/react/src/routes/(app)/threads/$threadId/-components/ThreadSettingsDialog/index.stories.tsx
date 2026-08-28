@@ -39,7 +39,7 @@ const meta: Meta<typeof ThreadSettingsDialog> = {
 							model: 'OPUS',
 							models: ['DEFAULT', 'OPUS', 'SONNET', 'HAIKU'],
 						},
-						{ provider: 'CODEX', comingSoon: false, model: 'DEFAULT', models: ['DEFAULT'] },
+						{ provider: 'CODEX', comingSoon: false, model: 'DEFAULT', models: ['DEFAULT', 'GPT_5_3_CODEX', 'GPT_5_2_CODEX', 'GPT_5_1_CODEX'] },
 					],
 				}),
 				mockQuery(getSessionChatQueryOptions(THREAD_ID), { thread: { displayName: 'Ada Lovelace' } }),

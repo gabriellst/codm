@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { z, type ZodType } from 'zod'
 import { LoggingService, AgentIdentityService } from '@codm/core-typescript'
 import { ProductConfig } from '@shared/config/ProductConfig'
-import { StopKind } from '@codm/contracts-typescript/wire/enums'
+import { AgentModelId, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { AgentRunOutcome, type TransportStopKind } from '../../../enums'
 import type { AgentRunRequest } from '../../../types/AgentRunRequest'
 import type { AgentMcpInvocation } from '../../../types/AgentMcpInvocation'
@@ -18,6 +18,12 @@ import { nodeAgentProcessSpawner, type AgentProcess, type AgentProcessSpawner } 
 const AUTH_HINT = /\/login\b|not logged in|please log ?in|authentication (?:required|failed)|unauthorized/i
 const POST_MORTEM_MS = 5_000
 
+const CODEX_MODEL_ALIASES: Partial<Record<AgentModelId, string>> = {
+	[AgentModelId.GPT_5_3_CODEX]: 'gpt-5.3-codex',
+	[AgentModelId.GPT_5_2_CODEX]: 'gpt-5.2-codex',
+	[AgentModelId.GPT_5_1_CODEX]: 'gpt-5.1-codex',
+}
+
 export interface CodexBuildArgsOptions {
 	cwd: string
 	extraDirs?: readonly string[]
@@ -25,6 +31,7 @@ export interface CodexBuildArgsOptions {
 	prompt: string
 	mcp?: AgentMcpInvocation
 	outputSchemaPath?: string
+	model?: AgentModelId
 }
 
 export interface CodexAgentRunnerOptions {
@@ -59,9 +66,11 @@ export class CodexAgentRunner extends AgentRunner {
 		return runner
 	}
 
-	static buildArgs({ cwd, extraDirs, resumeSessionId, prompt, mcp, outputSchemaPath }: CodexBuildArgsOptions): string[] {
+	static buildArgs({ cwd, extraDirs, resumeSessionId, prompt, mcp, outputSchemaPath, model }: CodexBuildArgsOptions): string[] {
 		const args = resumeSessionId ? ['exec', '--approve-for-me', 'resume', resumeSessionId] : ['exec', '-C', cwd, '--approve-for-me']
 		args.push('--json')
+		const modelAlias = model && model !== AgentModelId.DEFAULT ? CODEX_MODEL_ALIASES[model] : undefined
+		if (modelAlias) args.push('--model', modelAlias)
 		if (!resumeSessionId) for (const dir of extraDirs ?? []) args.push('--add-dir', dir)
 		if (mcp?.transport === 'http' && mcp.endpoint) {
 			args.push('-c', `mcp_servers.codm.url=${JSON.stringify(mcp.endpoint)}`)
@@ -85,6 +94,7 @@ export class CodexAgentRunner extends AgentRunner {
 			prompt,
 			mcp: request.mcp,
 			outputSchemaPath: schema?.path,
+			model: request.model,
 		})]
 		let proc: AgentProcess
 		try {

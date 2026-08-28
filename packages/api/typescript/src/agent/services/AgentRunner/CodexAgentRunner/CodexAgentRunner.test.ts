@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { MockLoggingService, InMemoryAgentIdentityService } from '@codm/core-typescript'
+import { AgentModelId } from '@codm/contracts-typescript/wire/enums'
 import { AgentMessageRole, AgentName, AgentRunOutcome } from '../../../enums'
 import type { AgentRunRequest } from '../../../types/AgentRunRequest'
 import type { AgentRuntimeEvent } from '../../../types/AgentRuntimeEvent'
@@ -60,6 +61,11 @@ describe('CodexAgentRunner.buildArgs', () => {
 	it('passes a materialized native output schema path', () => {
 		const args = CodexAgentRunner.buildArgs({ cwd: '/repo', prompt: 'classify', outputSchemaPath: '/tmp/schema.json' })
 		expect(args.slice(args.indexOf('--output-schema'), args.indexOf('--output-schema') + 2)).toEqual(['--output-schema', '/tmp/schema.json'])
+	})
+
+	it('maps Codex model ids to the CLI --model slugs', () => {
+		expect(CodexAgentRunner.buildArgs({ cwd: '/repo', prompt: 'pong', model: AgentModelId.GPT_5_3_CODEX })).toContain('--model')
+		expect(CodexAgentRunner.buildArgs({ cwd: '/repo', prompt: 'pong', model: AgentModelId.GPT_5_3_CODEX })).toContain('gpt-5.3-codex')
 	})
 })
 

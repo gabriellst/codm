@@ -15,11 +15,10 @@ export const AgentsStepSchema = attachThreadMutationRequestSchema.pick({ provide
 export type AgentsStepData = (typeof AgentsStepSchema)['_zod']['output']
 
 // The attach contract intentionally carries providers only, so this pre-thread selector keeps the
-// small provider catalog local. Codex delegates model selection to its CLI and therefore exposes only
-// DEFAULT; Claude's aliases remain available only on the Claude row.
+// small provider catalog local. Each provider's aliases remain available only on its own row.
 const MODEL_VALUES_BY_PROVIDER: Record<ProviderKind, AgentModelId[]> = {
 	CLAUDE_CODE: [AgentModelIdEnum.DEFAULT, AgentModelIdEnum.OPUS, AgentModelIdEnum.SONNET, AgentModelIdEnum.HAIKU],
-	CODEX: [AgentModelIdEnum.DEFAULT],
+	CODEX: [AgentModelIdEnum.DEFAULT, AgentModelIdEnum.GPT_5_3_CODEX, AgentModelIdEnum.GPT_5_2_CODEX, AgentModelIdEnum.GPT_5_1_CODEX],
 	OPENCODE: [],
 }
 
