@@ -15,8 +15,7 @@ import { AgentsStep } from '.'
 
 const THREE_PROVIDERS: GetAttachThreadWizardQueryResponse['providers'] = [
 	{ provider: 'CLAUDE_CODE', status: 'DETECTED', available: true, comingSoon: false, version: '1.0.0' },
-	// Instalado E sem runner — a máquina exata em que o rótulo antigo mentia ("Detectado" e clicável).
-	{ provider: 'CODEX', status: 'DETECTED', available: false, comingSoon: true, version: '3.1.0' },
+	{ provider: 'CODEX', status: 'DETECTED', available: true, comingSoon: false, version: '3.1.0' },
 	{ provider: 'OPENCODE', status: 'NOT_INSTALLED', available: false, comingSoon: true },
 ]
 
@@ -51,11 +50,11 @@ export const Default: Story = {
 		await i18n.changeLanguage('pt')
 		const canvas = within(canvasElement)
 
-		// "EM BREVE" É UM RÓTULO DE OUTRO EIXO, NÃO UM STATUS — os dois eixos são independentes.
+		// Codex now has its own runner; only OpenCode remains on the coming-soon axis.
 		const codex = rowFor(canvasElement, 'Codex')
-		await expect(codex.textContent).toContain(i18n.t('common.comingSoon'))
-		await expect(codex.textContent).not.toContain(enumLabel('ProviderStatus', 'DETECTED'))
-		await expect(codex).toHaveAttribute('aria-disabled', 'true')
+		await expect(codex.textContent).toContain(enumLabel('ProviderStatus', 'DETECTED'))
+		await expect(codex.textContent).not.toContain(i18n.t('common.comingSoon'))
+		await expect(codex).toHaveAttribute('aria-disabled', 'false')
 
 		const opencode = rowFor(canvasElement, 'OpenCode')
 		await expect(opencode.textContent).toContain(i18n.t('common.comingSoon'))
@@ -68,16 +67,16 @@ export const Default: Story = {
 
 		// D3 — o select de modelo só existe na linha DISPONÍVEL.
 		await expect(claude.querySelector(`[aria-label="${i18n.t('session.agentModel')}"]`)).not.toBeNull()
-		await expect(codex.querySelector(`[aria-label="${i18n.t('session.agentModel')}"]`)).toBeNull()
+		await expect(codex.querySelector(`[aria-label="${i18n.t('session.agentModel')}"]`)).not.toBeNull()
 
 		// FALSEADOR — o clique na linha GRAVA a escolha via `onSubmit`, sem passar por botão nenhum.
 		await userEvent.click(claude)
 		await expect(args.onSubmit).toHaveBeenCalledTimes(1)
 		await expect(args.onSubmit).toHaveBeenCalledWith({ providers: ['CLAUDE_CODE'] })
 
-		// Um provedor sem runner não grava nada — a linha continua desabilitada e o clique é inerte.
-		await userEvent.click(codex, { pointerEventsCheck: 0 })
-		await expect(args.onSubmit).toHaveBeenCalledTimes(1)
+		await userEvent.click(codex)
+		await expect(args.onSubmit).toHaveBeenCalledTimes(2)
+		await expect(args.onSubmit).toHaveBeenLastCalledWith({ providers: ['CODEX'] })
 
 		// Nem Continuar, nem Voltar — nenhum controle de navegação nasce deste componente.
 		await expect(canvas.queryByRole('button', { name: i18n.t('attach.continue') })).toBeNull()

@@ -70,11 +70,10 @@ export function AgentsStep({ providers, defaultValues, onSubmit, className, ...p
 	 * o clique na linha ainda DEFINE, nunca acumula (ver abaixo).
 	 *
 	 * QUANDO REVISITAR: `comingSoon` deriva de `!drivable.includes(...)` sobre os AgentRunners
-	 * REGISTRADOS (`GetAttachThreadWizard.ts`), de propósito, e não de uma lista literal. Hoje só
-	 * CLAUDE_CODE é dirigível, então a tela PARECE de escolha única e a dívida não aparece. No dia em que
-	 * um SEGUNDO runner registrar, dois provedores ficam disponíveis sozinhos e esta restrição vira uma
-	 * trave visível — é esse o momento de trazer de volta uma forma de escolher mais de um (um botão
-	 * explícito, um long-press, uma tela própria). Não espere um relatório de bug: procure aqui.
+	 * REGISTRADOS (`GetAttachThreadWizard.ts`), de propósito, e não de uma lista literal. Com Claude e
+	 * Codex dirigíveis, a restrição de escolha única já é visível: selecionar um substitui o outro. Ao
+	 * implementar seleção simultânea, este é o ponto para trazer de volta uma forma explícita de escolher
+	 * mais de um (um botão, um long-press ou uma tela própria).
 	 *
 	 * ─── POR QUE DEFINIR, E NÃO ALTERNAR ─────────────────────────────────────────────────────────────
 	 *
