@@ -79,7 +79,12 @@ function withoutComments(content: string): string {
 }
 
 export function scanContent(file: string, content: string): Finding[] {
-	const rel = isAbsolute(file) ? relative(SCAN_ROOT, file) : file
+	// Repo-relative AND `/`-separated: this string is the KEY the whole classification hangs off —
+	// `matchSkill` matches it against the registry's globs and `detectLang` against the declared
+	// workspace roots, and both of those are `/` literals. `relative` yields `\` on Windows, so an
+	// absolute path classified as NOTHING there: no skill matched, every file silently fell back to
+	// the universal rules, and `bun review` reported a thin green over a repo it had not really read.
+	const rel = (isAbsolute(file) ? relative(SCAN_ROOT, file) : file).split('\\').join('/')
 	const match = matchSkill(rel, loadComponentsIndex())
 	const rules = match ? loadMechanicalRules(match.skill, detectLang(rel)) : loadUniversalRules()
 

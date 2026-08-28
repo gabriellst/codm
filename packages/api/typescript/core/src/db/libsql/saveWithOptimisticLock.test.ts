@@ -5,10 +5,11 @@
 // OPTIMISTIC_LOCK_CONFLICT rather than a silent lost update; `onConflictDoUpdate` + `setWhere` +
 // `.returning()` all exist in sqlite-core with the same shape, so what these cases really pin is
 // that the guard still MATCHES ZERO ROWS on a stale version instead of overwriting.
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { removeTempDirWhenFree } from '../../utils/removeTempDirWhenFree'
 import { eq } from 'drizzle-orm'
 import * as schema from '@codm/contracts/db'
 import { owners } from '@codm/contracts/db'
@@ -54,7 +55,7 @@ describe('libSqlSaveWithOptimisticLock', () => {
 	})
 
 	afterAll(() => {
-		rmSync(dir, { recursive: true, force: true })
+		removeTempDirWhenFree(dir)
 	})
 
 	beforeEach(async () => {

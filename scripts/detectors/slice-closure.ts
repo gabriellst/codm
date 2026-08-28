@@ -33,6 +33,7 @@
  */
 
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { dirname, join, relative, resolve } from 'node:path'
 import { parse as parseYaml } from 'yaml'
 import { REPO } from '../../template.config'
@@ -1074,7 +1075,7 @@ export function walk(files: Map<string, string>, options: WalkOptions = {}): Fin
 
 // ─── CLI ────────────────────────────────────────────────────────────
 
-const SCRIPT_DIR = dirname(new URL(import.meta.url).pathname)
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 // ROOT_OVERRIDE (env) retargets the walked tree (eval worktrees — scripts/skill-evals/); unset → identical behavior.
 // The allowlist stays next to THIS script (main repo) — suppression policy is not ref-pinned.
 const PROJECT_ROOT = process.env.ROOT_OVERRIDE ? resolve(process.env.ROOT_OVERRIDE) : resolve(SCRIPT_DIR, '../..')

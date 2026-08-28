@@ -179,13 +179,30 @@ const UNWALKABLE = new Set([
 ])
 const UNWALKABLE_PATHS = new Set(['.claude/worktrees'])
 
-const norm = (p: string): string => p.replace(/^\.\//, '').replace(/\/+$/, '')
+/**
+ * The one place a path becomes a KEY here — so it is also the one place the separator is decided.
+ *
+ * Both sides of every comparison in this file have to spell the same path the same way, and they
+ * do not arrive that way: the `exports` subpaths and `paths` aliases are `/`-separated literals
+ * read out of package.json / tsconfig.json, while everything walked off disk comes through `join`
+ * and `relative`, which are `\`-separated on Windows. Without the `\`→`/` pass no barrel ever
+ * matched its own subpath there and all 91 of them reported dead at once.
+ */
+const norm = (p: string): string => p.split('\\').join('/').replace(/^\.\//, '').replace(/\/+$/, '')
 
-/** Every file under `dir` matching `keep`, repo-relative. `dist` is walked: this repo commits SDK dists. */
+/**
+ * Every file under `dir` matching `keep`, repo-relative and `/`-separated — this is where a path
+ * enters the file, so it leaves here already in the one spelling everything downstream compares
+ * against. `UNWALKABLE_PATHS` is a `/` literal too, and `ownerPackage` decides ownership with
+ * `startsWith(`${pkg.dir}/`)`: handing it a `\`-separated path made it find no owner at all, which
+ * silently switched off the tsconfig-alias channel and reported every alias-only barrel dead.
+ *
+ * `dist` is walked: this repo commits SDK dists.
+ */
 function walkFiles(root: string, keep: (name: string) => boolean, dir = root, acc: string[] = []): string[] {
 	for (const entry of readdirSync(dir, { withFileTypes: true })) {
 		const full = join(dir, entry.name)
-		const rel = relative(root, full)
+		const rel = norm(relative(root, full))
 		if (entry.isDirectory()) {
 			if (UNWALKABLE.has(entry.name) || UNWALKABLE_PATHS.has(rel)) continue
 			walkFiles(root, keep, full, acc)

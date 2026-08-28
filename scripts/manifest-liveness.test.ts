@@ -127,7 +127,15 @@ const COVERAGE_MANIFESTS: CoverageManifest[] = [
  */
 const UNEXECUTED_MANIFESTS: { symbol: string; why: string }[] = []
 
-const norm = (p: string): string => p.replace(/^\.\//, '').replace(/\/+$/, '')
+/**
+ * Repo-relative path → the ONE spelling every comparison in this file uses.
+ *
+ * The backslash→slash pass is what makes it correct off a Windows host: the globs, the manifest's
+ * `module` fields and the relative specifiers read out of source are all `/` literals, while
+ * `Bun.Glob.scanSync`, `join` and `relative` hand back backslash-separated paths there. Without it
+ * the two sides never met and the rail reported orphans it had simply failed to match.
+ */
+const norm = (p: string): string => p.split('\\').join('/').replace(/^\.\//, '').replace(/\/+$/, '')
 
 /** Files a glob names, repo-relative and sorted. */
 export function globFiles(root: string, pattern: string): string[] {

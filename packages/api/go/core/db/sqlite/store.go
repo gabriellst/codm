@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -282,7 +283,13 @@ func (s *SqliteStore) migrationApplied(ctx context.Context, db *sql.DB, name str
 // the loser dies — migration 0000 is 25 CREATE TABLE with no IF NOT EXISTS and 0001
 // is ALTER TABLE ... ADD, so re-execution is a fatal error, not a no-op.
 func (s *SqliteStore) applyOne(ctx context.Context, db *sql.DB, name string) error {
-	raw, err := migrationsFS.ReadFile(filepath.Join("migrations", name))
+	// `path.Join`, not `filepath.Join`: this names an entry inside an embed.FS, and io/fs paths are
+	// slash-separated on every OS by definition — never the host's separator. `filepath.Join` builds
+	// `migrations\0000_….sql` on Windows, which no embedded entry is called, and the boot dies with
+	// `file does not exist` about a file that is compiled into the binary. It survived because the
+	// TS daemon usually reaches the shared ledger first and the gateway skips the read entirely; the
+	// gateway only fails when it is the one to migrate a cold data dir.
+	raw, err := migrationsFS.ReadFile(path.Join("migrations", name))
 	if err != nil {
 		return fmt.Errorf("sqlite store: read migration %q: %w", name, err)
 	}

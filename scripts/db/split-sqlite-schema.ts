@@ -25,9 +25,10 @@
  *   bun scripts/db/split-sqlite-schema.ts --check    # exit 1 se o commitado divergir do derivado
  */
 import { readFileSync, writeFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { dirname, join, relative, resolve } from 'node:path'
 
-const SCRIPT_DIR = dirname(new URL(import.meta.url).pathname)
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 const ROOT = process.env.ROOT_OVERRIDE ? resolve(process.env.ROOT_OVERRIDE) : resolve(SCRIPT_DIR, '../..')
 
 const SOURCE = join(ROOT, 'packages/api/go/core/db/sqlite/schema.sql')

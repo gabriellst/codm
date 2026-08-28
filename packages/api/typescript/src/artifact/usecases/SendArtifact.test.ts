@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { mkdtempSync, rmSync, truncateSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { scheduledCommands } from '@codm/contracts/db'
 import { TestBed, givenThread, givenArtifact } from '@test/support'
 import { BaseError, LibSqlDatabaseDriver } from '@codm/core-typescript'
@@ -94,7 +94,7 @@ describe('SendArtifact', () => {
 		await testBed.resolve(SendArtifact).execute({ ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value, artifactId: artifact.id.value })
 
 		const rows = await enqueuedCommands()
-		expect(rows[0]?.input).toMatchObject({ kind: ArtifactKind.FILE, fileName: path.split('/').at(-1), mimeType: 'application/pdf' })
+		expect(rows[0]?.input).toMatchObject({ kind: ArtifactKind.FILE, fileName: basename(path), mimeType: 'application/pdf' })
 	})
 
 	it('LINK — enqueues deliver_channel_message with caption + url, never touching MediaStore/sendMedia', async () => {
@@ -151,7 +151,7 @@ describe('SendArtifact', () => {
 		).rejects.toThrow(BaseError)
 	})
 
-	it("ARTIFACT_NOT_FOUND — an artifact that belongs to another thread than the one named", async () => {
+	it('ARTIFACT_NOT_FOUND — an artifact that belongs to another thread than the one named', async () => {
 		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
 		const otherThread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
 		const artifact = await givenArtifact(testBed, otherThread.id.value, { ref: writeFile('x.png', 'x') })
@@ -196,7 +196,7 @@ describe('SendArtifact', () => {
 		expect(await enqueuedCommands()).toHaveLength(0)
 	})
 
-	it('a FILE artifact gets the larger 64 MiB ceiling — one byte over IMAGE\'s 16 MiB still sends fine', async () => {
+	it("a FILE artifact gets the larger 64 MiB ceiling — one byte over IMAGE's 16 MiB still sends fine", async () => {
 		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
 		const path = writeOversizedFile('big.pdf', 16 * 1024 * 1024 + 1)
 		const artifact = await givenArtifact(testBed, thread.id.value, { kind: ArtifactKind.FILE, ref: path })

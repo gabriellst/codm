@@ -1,6 +1,7 @@
 import type { Page, Locator, CDPSession } from 'playwright'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 // ── Cursor assets ──────────────────────────────────────────
 
@@ -29,7 +30,7 @@ const CURSOR_SELECTORS: Record<CursorType, string> = {
 }
 
 function loadSvg(name: string): string {
-	const dir = new URL('.', import.meta.url).pathname
+	const dir = fileURLToPath(new URL('.', import.meta.url))
 	return `data:image/svg+xml,${encodeURIComponent(readFileSync(join(dir, '..', 'assets', 'cursors', `${name}.svg`), 'utf-8'))}`
 }
 

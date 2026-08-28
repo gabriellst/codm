@@ -29,8 +29,9 @@ import { dirname, join, resolve } from 'node:path'
 import { parse as parseYaml } from 'yaml'
 import { graderLabel } from './graders'
 import type { Task } from './types'
+import { fileURLToPath } from 'node:url'
 
-const SCRIPT_DIR = dirname(new URL(import.meta.url).pathname)
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 const REPO = resolve(SCRIPT_DIR, '../..')
 const TASKS_DIR = join(SCRIPT_DIR, 'tasks')
 const SKILLS_DIR = join(REPO, '.claude', 'skills')

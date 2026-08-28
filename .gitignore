@@ -18,13 +18,22 @@ dist/
 # Os SDKs gerados são publicados COMMITADOS em packages/client/dist/ (.specs/2026-05-14-polyglot-client-sdk-design.md, Decision 13).
 !packages/client/dist/
 !packages/client/dist/**
+# ...mas a Decision 13 commita o SDK GERADO, não as dependências instaladas dele. A negação acima é
+# recursiva e sobrepõe o `node_modules/` da linha 2 dentro desse subdiretório, então o `node_modules`
+# que o `bun install` materializa lá dentro entrava no índice junto. O que entrava eram os SYMLINKS
+# do bun (`../../../../../node_modules/.bun/zod@4.4.3/node_modules/zod`) — e symlink versionado é
+# exatamente o que um clone Windows não sabe restaurar: sem Developer Mode o git tem
+# `core.symlinks=false` e escreve um ARQUIVO DE TEXTO com o caminho de destino. O bun então tenta
+# ler esse texto como JavaScript e o processo morre em `error: Unexpected .` antes do primeiro
+# teste. Reexcluir aqui é o que torna o clone Windows utilizável; `bun install` recria os links.
+packages/client/dist/**/node_modules/
 build/
 .output/
 target/
 # Contracts: emissão TypeSpec (OpenAPI) regenerada por `bun contracts`
 packages/contracts/generated/openapi/**
 # api-go: binário de verificação de build e docs geradas (openapi.json é o único artefato versionado)
-packages/api/go/api
+packages/api/go/api.exe
 packages/api/go/public/docs/*
 !packages/api/go/public/docs/openapi.json
 # api-typescript: console empacotado no bundle do daemon (regenerado no build)

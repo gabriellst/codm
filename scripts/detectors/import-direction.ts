@@ -15,6 +15,7 @@
 
 import { execSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { dirname, isAbsolute, relative, resolve } from 'node:path'
 import { REPO } from '../../template.config'
 import { CONTEXTS } from '../../packages/api/typescript/generated/contexts.generated'
@@ -22,7 +23,7 @@ import { CONTEXTS } from '../../packages/api/typescript/generated/contexts.gener
 // Derived once from the spine; interpolated into rule patterns below.
 const CTX_ALT = Object.keys(CONTEXTS).join('|')
 
-const SCRIPT_DIR = dirname(new URL(import.meta.url).pathname)
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 // ROOT_OVERRIDE (env) retargets the scanned tree (eval worktrees — scripts/skill-evals/); unset → identical behavior.
 const PROJECT_ROOT = process.env.ROOT_OVERRIDE ? resolve(process.env.ROOT_OVERRIDE) : resolve(SCRIPT_DIR, '../..')
 

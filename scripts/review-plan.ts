@@ -37,8 +37,9 @@ import { readFileSync, mkdirSync, writeFileSync, rmSync, existsSync } from 'node
 import { resolve, dirname } from 'node:path'
 import { parseArgs } from 'node:util'
 import { getGenerators, resolvePlatform } from './cli/resolve'
+import { fileURLToPath } from 'node:url'
 
-const SCRIPT_DIR = dirname(new URL(import.meta.url).pathname)
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 const PROJECT_ROOT = resolve(SCRIPT_DIR, '..')
 const TMP_PREFIX = '.review-plan-tmp'
 

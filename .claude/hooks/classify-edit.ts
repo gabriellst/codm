@@ -46,7 +46,11 @@ function run(core: Core): string | null {
 	// make every file in that worktree match `\.claude\` and get silently skipped.
 	if (!/\.(?:tsx?|astro)$/.test(file)) return null
 	if (/\.(?:gen|test|spec|stories|d)\.(?:tsx?|astro)$/.test(file)) return null
-	const relPath = relative(ROOT, file)
+	// `/`-separated: the pattern below is anchored on `/`, and `relative` answers with `\` on Windows,
+	// where the whole exclusion then matched nothing. It fails OPEN — the file is treated as in
+	// scope — so the hook reviewed exactly the directories this line exists to leave alone, and
+	// warned about `.claude/**` and generated code as if they were product source.
+	const relPath = relative(ROOT, file).split('\\').join('/')
 	if (/(?:^|\/)(?:node_modules|dist|sdk|generated|locales|\.claude)\//.test(relPath)) return null
 
 	// The NEW text this edit introduces.

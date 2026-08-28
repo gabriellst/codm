@@ -23,6 +23,7 @@
  */
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { dirname, join, relative, resolve } from 'node:path'
 
 export interface Finding {
@@ -35,7 +36,7 @@ export interface Finding {
 	message: string
 }
 
-const SCRIPT_DIR = dirname(new URL(import.meta.url).pathname)
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 const PROJECT_ROOT = process.env.ROOT_OVERRIDE ? resolve(process.env.ROOT_OVERRIDE) : resolve(SCRIPT_DIR, '../..')
 const GO_ROOT = join(PROJECT_ROOT, 'packages/api/go')
 

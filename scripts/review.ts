@@ -73,8 +73,9 @@ import { build as buildGraph, writeOutputs as writeGraphOutputs } from './graph/
 import { GRAPH_JSON } from './graph/core/paths'
 import type { FastQueryContext } from './graph/core/index-cache'
 import { loadQueryContext, reviewBatch as graphReviewBatch, formatReviewBatch, type ReviewBatchResult } from './graph/core/review-query'
+import { fileURLToPath } from 'node:url'
 
-const SCRIPT_DIR = dirname(new URL(import.meta.url).pathname)
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 const PROJECT_ROOT = process.env.REVIEW_PROJECT_ROOT || resolve(SCRIPT_DIR, '..')
 
 // ─── Polyglot layout roots ──────────────────────────────────────────

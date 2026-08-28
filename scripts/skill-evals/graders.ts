@@ -11,8 +11,9 @@
 
 import { dirname, join, resolve } from 'node:path'
 import type { GradeResult, GraderSpec, Task } from './types'
+import { fileURLToPath } from 'node:url'
 
-const SCRIPT_DIR = dirname(new URL(import.meta.url).pathname)
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 export const MAIN_REPO = resolve(SCRIPT_DIR, '../..')
 
 // ─── Process execution ──────────────────────────────────────────────
@@ -58,8 +59,15 @@ export async function globFiles(treeRoot: string, glob: string): Promise<string[
 	// graders FAIL on correct output and grep-must-not graders VACUOUSLY PASS (zero files seen)
 	// for any artifact under a dot-dir. node_modules/.git are still pruned explicitly below.
 	for await (const entry of new Bun.Glob(glob).scan({ cwd: treeRoot, onlyFiles: true, dot: true })) {
-		if (entry.includes('node_modules/') || entry.startsWith('.git/')) continue
-		files.push(entry)
+		// `/`-separated before anything looks at it. Bun.Glob yields `\`-separated paths on Windows,
+		// and both things that read this string are `/` contracts: the two prunes on the next line,
+		// and the grader specs these paths are reported to. It is the same vacuity the `dot: true`
+		// comment above describes, arriving through a second door — an unpruned `node_modules/` hit
+		// makes a grep-must-not grader fail on correct output, and a path that matches no spec makes
+		// a file-exists grader pass over a tree it never really inspected.
+		const rel = entry.split('\\').join('/')
+		if (rel.includes('node_modules/') || rel.startsWith('.git/')) continue
+		files.push(rel)
 	}
 	return files.sort()
 }

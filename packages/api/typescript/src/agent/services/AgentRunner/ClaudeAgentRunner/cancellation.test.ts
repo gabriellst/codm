@@ -96,22 +96,34 @@ function fakeBlockingProcess() {
 }
 
 describe('cancellation — process-group kill (§4.11, AC-3.3)', () => {
-	it('kills the child AND the grandchild it spawned', async () => {
-		// `$$` is sh's own pid; the backgrounded `sleep` is the grandchild, whose pid is `$!`.
-		const proc = nodeAgentProcessSpawner({
-			cmd: ['/bin/sh', '-c', 'echo $$; sleep 300 & echo $!; wait'],
-			cwd: process.cwd(),
-			stdin: false,
+	/**
+	 * POSIX-ONLY FIXTURE, same guard and same reason as the two in `AgentProcess.test.ts`.
+	 *
+	 * Everything this case is made of is POSIX: `/bin/sh` (absent on Windows — `uv_spawn` answers
+	 * ENOENT), `$$`/`$!`/`&`/`wait`, and the negative-pid group signal it asserts about. The PROPERTY
+	 * still holds there and is not going untested by accident: killing the tree on Windows is a
+	 * different mechanism entirely — one forced `taskkill /T /F` — declared as its own strategy in
+	 * `AgentProcess`, which is where the win32 row is exercised. Rewriting this fixture in cmd.exe
+	 * would not test the same thing; it would test a second fixture.
+	 */
+	describe.skipIf(process.platform === 'win32')('a real child that backgrounds a real grandchild', () => {
+		it('kills the child AND the grandchild it spawned', async () => {
+			// `$$` is sh's own pid; the backgrounded `sleep` is the grandchild, whose pid is `$!`.
+			const proc = nodeAgentProcessSpawner({
+				cmd: ['/bin/sh', '-c', 'echo $$; sleep 300 & echo $!; wait'],
+				cwd: process.cwd(),
+				stdin: false,
+			})
+
+			const pids = await readPids(proc)
+			expect(alive(pids.child)).toBe(true)
+			expect(alive(pids.grandchild)).toBe(true)
+
+			proc.kill()
+
+			expect(await waitUntilDead(pids.child)).toBe(true)
+			expect(await waitUntilDead(pids.grandchild)).toBe(true)
 		})
-
-		const pids = await readPids(proc)
-		expect(alive(pids.child)).toBe(true)
-		expect(alive(pids.grandchild)).toBe(true)
-
-		proc.kill()
-
-		expect(await waitUntilDead(pids.child)).toBe(true)
-		expect(await waitUntilDead(pids.grandchild)).toBe(true)
 	})
 
 	it('an aborted run kills the process, and the drain still ends on ONE terminal event', async () => {

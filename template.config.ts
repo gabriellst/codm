@@ -90,8 +90,16 @@ const WORKSPACES = {
 		// and both resolve against `pkgRoot` — which is also what puts config.Load's
 		// `godotenv.Load("../../../.env")` on the repo root, exactly like `bun dev:api:go`.
 		testBoot: {
-			build: ['go', 'build', '-o', 'api', './cmd/api'],
-			run: ['./api'],
+			// `api.exe`, on every OS, and that is the declaration rather than an oversight. Go honours
+			// `-o` literally, so on Windows `-o api` really does write an extensionless file — which
+			// Windows then refuses to EXECUTE, because there the extension is the exec bit (the same
+			// fact the win32 row of core's ProviderSearch is built around). The harness spawn failed
+			// with `ENOENT: uv_spawn './api'` while the file sat right there on disk. The alternative
+			// to one name is a platform→suffix branch on both lines; an `.exe` suffix is inert on
+			// macOS and Linux, where the exec bit decides, so a single name is valid everywhere and
+			// the recipe stays a flat declaration.
+			build: ['go', 'build', '-o', 'api.exe', './cmd/api'],
+			run: ['./api.exe'],
 			// CODM_ENV picks the axis column (scripted mock ChannelFactory, no phone). The two apikey
 			// keys are DECLARED EMPTY because a harness talks to the gateway DIRECTLY — there is no
 			// api-ts proxy hop to stamp the key (`external/utils/forwardToChannel` does that in

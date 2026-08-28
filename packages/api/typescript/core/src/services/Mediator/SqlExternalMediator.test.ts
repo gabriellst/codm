@@ -1,7 +1,7 @@
 // SqlExternalMediator — the shared-outbox INGRESS, i.e. the Go gateway's egress lane consumed by
 // this daemon. The transport is the database file, so everything here is exercised against a real
 // one: lane partitioning, the handler-name filter, the date reviver, and the full outcome table.
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
@@ -14,6 +14,7 @@ import { LibSqlDriver } from '../../db/libsql/drivers/LibSqlDriver'
 import { LibSqlDomainEventRepository } from '../../repositories/LibSqlDomainEventRepository'
 import type { Handler } from '../../types/Handler'
 import { SqlExternalMediator } from './SqlExternalMediator'
+import { removeTempDirWhenFree } from '../../utils/removeTempDirWhenFree'
 
 const EVENT = 'integration.channel_message.received'
 const OTHER_EVENT = 'integration.channel.connected'
@@ -63,7 +64,7 @@ describe('SqlExternalMediator (shared-outbox ingress)', () => {
 	})
 
 	afterAll(() => {
-		rmSync(dir, { recursive: true, force: true })
+		removeTempDirWhenFree(dir)
 	})
 
 	beforeEach(async () => {

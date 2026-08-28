@@ -73,14 +73,24 @@ const PER_LANG_API_ROOT: Partial<Record<BackendLang, string>> = Object.fromEntri
 		.map(w => [w.lang, join(ROOT, w.srcRoot)]),
 )
 
-/** File-system root for a given language's bounded contexts. */
+/**
+ * File-system root for a given language's bounded contexts, `/`-separated.
+ *
+ * Every call site extends it by template literal — `` `${GO_ROOT}/${ctx}/entities/${snake}.go` `` —
+ * so the separator has to be decided HERE or the emitted path is half one and half the other. On
+ * Windows `join` above yields `…\packages\api\go`, which those literals turn into
+ * `…\packages\api\go/internal/sales/entities/coupon.go`. node:fs accepts that, so files still land
+ * in the right place and nothing looks broken; what breaks is everything that treats the emitted
+ * `filePath` as a VALUE — the review pipeline matching a task's files, and any `endsWith` on a
+ * repo-relative fragment. A `/` path is valid on Windows too, so this costs nothing there.
+ */
 export function apiRoot(lang: BackendLang): string {
 	const root = PER_LANG_API_ROOT[lang]
 	if (root === undefined) {
 		console.error(`No ${lang} backend workspace declared in template.config.ts (REPO.workspaces).`)
 		process.exit(1)
 	}
-	return root
+	return root.split('\\').join('/')
 }
 
 /**

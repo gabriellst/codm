@@ -53,6 +53,7 @@ export * from './db'
 // Utils
 export * from './types/Placement'
 export * from './utils/Concurrency'
+export * from './utils/removeTempDirWhenFree'
 export * from './utils/Watchdog'
 export * from './utils/StdinShutdown'
 export * from './utils/Config'

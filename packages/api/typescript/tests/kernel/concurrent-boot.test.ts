@@ -30,6 +30,7 @@
 // The cross-LANGUAGE shape (this applier racing the Go applier) lives in the Go twin,
 // `core/db/sqlite/store_test.go` TestConcurrentBoot, which spawns the same helper script.
 import { afterAll, describe, expect, it } from 'bun:test'
+import { Database } from 'bun:sqlite'
 import { mkdtempSync, readdirSync, rmSync, existsSync, writeFileSync } from 'node:fs'
 import { is } from 'drizzle-orm'
 import { SQLiteTable } from 'drizzle-orm/sqlite-core'
@@ -55,9 +56,7 @@ const DRIZZLE_TABLE_COUNT = Object.values(schema).filter(v => is(v, SQLiteTable)
  */
 const MIGRATION_FILE_COUNT = readdirSync(
 	join(import.meta.dir, '..', '..', '..', '..', 'contracts', 'src', 'db', 'sqlite', 'migrations'),
-).filter(
-	f => f.endsWith('.sql'),
-).length
+).filter(f => f.endsWith('.sql')).length
 /** Racers per round. Three, so a bug that needs more than a pair to surface still has room. */
 const RACERS = 3
 /** Cold data dirs. The race is probabilistic, so it is repeated — the plan's T28 asks for 20. */
@@ -77,17 +76,32 @@ afterAll(() => {
 })
 
 /**
- * Read the file with the `sqlite3` CLI — a THIRD implementation, owned by neither applier.
+ * Read the file with `bun:sqlite` — a THIRD implementation, owned by neither applier.
  *
  * Deliberate: asking one of the racing drivers what happened lets the thing under test answer for
- * itself. (It is also the only reader available here: `@libsql/client` is a dependency of the
- * nested `core` package and does not resolve from this directory — measured; T25 hit the same shape
- * when staging the sidecar.)
+ * itself. Bun's bundled SQLite is neither the TS side's `@libsql/client` nor the gateway's Go
+ * driver, so the independence this assertion rests on is intact.
+ *
+ * It also has to RESOLVE, which is the reason this was a `sqlite3` subprocess before:
+ * `@libsql/client` is a dependency of the nested `core` package and is not reachable from this
+ * directory (measured; T25 hit the same shape when staging the sidecar). `bun:sqlite` is a runtime
+ * builtin — no resolution, no install. That is what makes the round runnable on Windows, where
+ * `sqlite3` is not a command the OS ships and the whole file died at `Executable not found in
+ * $PATH: "sqlite3"` before asserting anything.
+ *
+ * Opened READ-ONLY, and closed in the same call: the point is to observe the racers' file without
+ * becoming a writer to it, and on Windows an open handle would also block the `rmSync` teardown.
  */
 function query(dataDir: string, sql: string): string[] {
-	const result = Bun.spawnSync({ cmd: ['sqlite3', join(dataDir, ProductConfig.env.CODM_DB_FILE_NAME), sql] })
-	if (result.exitCode !== 0) throw new Error(`sqlite3 failed: ${result.stderr.toString()}`)
-	return result.stdout.toString().trim().split('\n').filter(Boolean)
+	const db = new Database(join(dataDir, ProductConfig.env.CODM_DB_FILE_NAME), { readonly: true })
+	try {
+		return db
+			.query(sql)
+			.values()
+			.map(row => String(row[0]))
+	} finally {
+		db.close()
+	}
 }
 
 /**

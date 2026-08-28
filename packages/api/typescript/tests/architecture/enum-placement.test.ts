@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, relative } from 'node:path'
+import { dirname, join, relative, sep } from 'node:path'
 
 /**
  * Enum-placement guard (CMPL-01 + CMPL-02) — the mechanical rail behind the enum→contracts canon.
@@ -72,7 +72,11 @@ function listEnumDirFiles(dir: string): string[] {
 		if (entry.isDirectory()) {
 			if (entry.name === 'node_modules') continue
 			out.push(...listEnumDirFiles(full))
-		} else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts') && full.split('/').includes('enums')) {
+			// `full` is a filesystem path, so it is `\`-separated on Windows. Splitting it on `/` there
+			// yields ONE element, `includes('enums')` is never true, and this returns []. That does not
+			// fail loudly: it makes CMPL-02 below scan zero files and pass — the rail silently switches
+			// itself off on the platform. Splitting on the host separator is what keeps it load-bearing.
+		} else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts') && full.split(sep).includes('enums')) {
 			out.push(full)
 		}
 	}
@@ -131,6 +135,12 @@ describe('enum-placement (cross-boundary enums live only in contracts, never mir
 	})
 
 	test('CMPL-02: no cross-boundary enum is defined (export enum) under src/**/enums', () => {
+		// Non-vacuity first, exactly as CMPL-01 does above — and here it is not hypothetical: this rail
+		// DID pass over zero files on Windows, because the walker split an absolute path on '/'. A rail
+		// that reports green by scanning nothing is worse than no rail, so assert it saw the tree.
+		const scanned = listEnumDirFiles(API_SRC)
+		expect(scanned.length, 'CMPL-02 scanned no src enums/ file — the walker went blind, the rail is vacuous.').toBeGreaterThan(0)
+
 		const violations = scanSrcEnumDefs(API_SRC)
 		const report = violations.map(v => `  ${v.file}:${v.line}  →  ${v.text}`).join('\n')
 		expect(
@@ -146,7 +156,7 @@ describe('enum-placement (cross-boundary enums live only in contracts, never mir
 	test('fixture: a mirror union alias and a src enum def are flagged; a branded alias is not', () => {
 		const tmpRoot = mkdtempSync(join(tmpdir(), 'enum-placement-fixture-'))
 		const write = (p: string, c: string) => {
-			mkdirSync(p.slice(0, p.lastIndexOf('/')), { recursive: true })
+			mkdirSync(dirname(p), { recursive: true })
 			writeFileSync(p, c)
 		}
 		try {

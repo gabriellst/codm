@@ -372,7 +372,13 @@ export function runRules(rules: Rule[], text: string): { id: string; rule: strin
  * files (`agent-input.type-test.ts` and `union-narrowing.typecheck.ts`, which produce zero findings
  * either way, plus `transport-stop-kind.typecheck.ts`) and nothing else.
  */
-export function isInScope(file: string): boolean {
+export function isInScope(rawFile: string): boolean {
+	// Every exclusion below is written against `/`, and the argument arrives from `relative(ROOT, …)`
+	// — `\`-separated on Windows, where none of the three path-shaped patterns can fire. The failure
+	// is one-directional and it is the dangerous direction: the file is judged IN scope, so the hook
+	// reviews `.claude/**`, `dist/**` and the typecheck fixtures it exists to leave alone, and warns
+	// the author about code that was never meant to answer to these rules.
+	const file = rawFile.split('\\').join('/')
 	if (!/\.(?:tsx?|astro)$/.test(file)) return false
 	if (/\.(?:gen|test|spec|stories|d)\.(?:tsx?|astro)$/.test(file)) return false
 	if (/(?:^|\/)tests?\/(?:.*\/)?[^/]*[.-](?:typecheck|type-test)\.tsx?$/.test(file)) return false

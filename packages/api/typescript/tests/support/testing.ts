@@ -6,7 +6,15 @@ import { HARNESS_DATA_DIR } from './harnessDataDir'
 import 'reflect-metadata'
 import { rmSync } from 'node:fs'
 import { container } from 'tsyringe-neo'
-import { Config, LibSqlDatabaseDriver, resolve, type Token } from '@codm/core-typescript'
+import {
+	Config,
+	getBoundedContextEnvironment,
+	LibSqlDatabaseDriver,
+	resolve,
+	setBoundedContextEnvironment,
+	type Token,
+	removeTempDirWhenFree,
+} from '@codm/core-typescript'
 import { CloudSession, MockCloudSession } from '@shared/services/CloudSession'
 import { start, type RunningServer } from '../../composition/server'
 import type { TestingSurface } from '../../testing'
@@ -196,7 +204,22 @@ async function boot(options?: IntegrationBackendOptions): Promise<IntegrationBac
 
 	// Column: `integration` on the default path (unchanged), `e2e` with services — see
 	// IntegrationBackendOptions.services for why the topology decides the column.
+	//
+	// RESTORED AFTERWARDS, because the column is PROCESS-GLOBAL and this harness shares a process
+	// with every other suite. `start()` calls `setBoundedContextEnvironment`, and nothing used to
+	// put it back: the first suite here to boot left `integration` (or `e2e`) selected for the rest
+	// of the run, and `BoundedContext.environment.test.ts`'s "o default é real" then read whatever
+	// that suite had left. It only ever passed by luck of file order — the order that happens to
+	// hold on macOS and not on Windows, which is how this surfaced.
+	//
+	// Restoring is unobservable, and that is checkable rather than hopeful: the only reader of the
+	// selection is `byEnvironment`, every one of its call sites is a module-top-level `const` /
+	// `export default` in a `*/controllers/index.ts`, and ES modules evaluate once. The columns are
+	// therefore already frozen by the time `start()` returns — putting the variable back cannot
+	// reach them.
+	const environmentBeforeBoot = getBoundedContextEnvironment()
 	const server = await start({ env: withServices ? 'e2e' : 'integration', port: 0 })
+	setBoundedContextEnvironment(environmentBeforeBoot)
 
 	// A IDENTIDADE, se o chamador a declarou — ver `IntegrationBackendOptions.identity`.
 	//
@@ -276,7 +299,12 @@ async function boot(options?: IntegrationBackendOptions): Promise<IntegrationBac
 			for (const service of running) await service.stop()
 			await server.stop()
 			// Only what services mode created — the default path never touched this dir.
-			if (withServices) rmSync(HARNESS_DATA_DIR, { recursive: true, force: true })
+			//
+			// Deferred when the OS still holds the file: the store this dir contains is opened by the
+			// TS driver too, and `@libsql/client` does not hand a SQLite file back on close under
+			// Windows (measured — see `removeTempDirWhenFree`). A plain `rmSync` threw EBUSY there and
+			// took the whole suite down at teardown, after its assertions had passed.
+			if (withServices) removeTempDirWhenFree(HARNESS_DATA_DIR)
 			booted = null
 		},
 	}

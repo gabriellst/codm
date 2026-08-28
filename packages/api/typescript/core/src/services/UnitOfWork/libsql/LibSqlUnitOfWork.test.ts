@@ -4,7 +4,7 @@
 // work called the callback with the plain client and emitted no BEGIN, no COMMIT and no rollback.
 // These three cases are what make the transaction real, and case 2 in particular is the one an
 // adapter with a SYNCHRONOUS session would fail — it would COMMIT before the async body ran.
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
@@ -15,6 +15,7 @@ import { migrationsDir } from '@codm/contracts/db/migrations'
 import { LibSqlDriver } from '../../../db/libsql/drivers/LibSqlDriver'
 import type { UnitOfWork } from '../UnitOfWork'
 import type { LibSqlTransaction } from '../../../db/libsql/LibSqlDatabaseDriver'
+import { removeTempDirWhenFree } from '../../../utils/removeTempDirWhenFree'
 
 describe('LibSqlUnitOfWork', () => {
 	let dir: string
@@ -36,7 +37,7 @@ describe('LibSqlUnitOfWork', () => {
 	})
 
 	afterAll(() => {
-		rmSync(dir, { recursive: true, force: true })
+		removeTempDirWhenFree(dir)
 	})
 
 	beforeEach(async () => {

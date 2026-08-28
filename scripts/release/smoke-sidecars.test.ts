@@ -1,14 +1,25 @@
 import { describe, expect, it } from 'bun:test'
 import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { join, resolve } from 'node:path'
 import { healthPathOf, planSmoke, shellEnvByRole, SMOKE_PORTS, type SmokeInputs } from './smoke-sidecars'
 
 const ROOT = resolve(import.meta.dirname, '..', '..')
 
+/**
+ * O diretório de binários da fixture, e o `join` que reproduz o que `planSmoke` faz com ele.
+ *
+ * `planSmoke` monta caminhos com `join`, que é o certo — o resultado vira um spawn de verdade, no
+ * separador do host. Escrever o esperado como literal `'/repo/…/codm-daemon-…'` afirmava a grafia
+ * POSIX de um caminho que a função nunca prometeu produzir, então essas asserções só podiam valer
+ * num host POSIX. Derivar o esperado com o mesmo `join` pergunta a mesma coisa em qualquer host.
+ */
+const BINARIES = join('/repo', 'packages', 'app', 'tauri', 'src-tauri', 'binaries')
+const inBinaries = (...segments: string[]): string => join(BINARIES, ...segments)
+
 const base: SmokeInputs = {
 	brand: 'codm',
 	platform: 'darwin',
-	binariesDir: '/repo/packages/app/tauri/src-tauri/binaries',
+	binariesDir: BINARIES,
 	entries: ['codm-daemon-aarch64-apple-darwin', 'codm-gateway-aarch64-apple-darwin', 'daemon-runtime', 'migrations'],
 	dataDir: '/tmp/codm-smoke-abc',
 	parentPid: 4242,
@@ -38,8 +49,8 @@ describe('smoke-sidecars (planSmoke — o espelho do supervisor)', () => {
 	it('escolhe o binário pelo prefixo <brand>-<role>- e ignora as pastas staged', () => {
 		const plans = planSmoke(base)
 		expect(plans.map(p => p.role)).toEqual(['daemon', 'gateway'])
-		expect(plans[0]?.binary).toBe('/repo/packages/app/tauri/src-tauri/binaries/codm-daemon-aarch64-apple-darwin')
-		expect(plans[1]?.binary).toBe('/repo/packages/app/tauri/src-tauri/binaries/codm-gateway-aarch64-apple-darwin')
+		expect(plans[0]?.binary).toBe(inBinaries('codm-daemon-aarch64-apple-darwin'))
+		expect(plans[1]?.binary).toBe(inBinaries('codm-gateway-aarch64-apple-darwin'))
 	})
 
 	it('no Windows exige o sufixo .exe (é o nome que o Tauri resolve como externalBin)', () => {
@@ -68,7 +79,7 @@ describe('smoke-sidecars (planSmoke — o espelho do supervisor)', () => {
 
 	it('o daemon nasce DENTRO de daemon-runtime e o gateway num cwd sem .env', () => {
 		const [daemon, gateway] = planSmoke(base)
-		expect(daemon?.cwd).toBe('/repo/packages/app/tauri/src-tauri/binaries/daemon-runtime')
+		expect(daemon?.cwd).toBe(inBinaries('daemon-runtime'))
 		// Desvio DELIBERADO do shell (que spawna o gateway com cwd herdado — mod.rs cwd: None):
 		// godotenv.Overload(".env") no config.go do gateway lê o .env do CWD por cima do env recebido —
 		// rodando na raiz do repo ele trocaria CODM_DATA_DIR/CHANNEL_PORT pelos de produção do founder.
@@ -89,7 +100,7 @@ describe('smoke-sidecars (planSmoke — o espelho do supervisor)', () => {
 		expect(daemon?.env).toMatchObject({
 			API_PORT: '3130',
 			CODM_DATA_DIR: '/tmp/codm-smoke-abc',
-			CODM_MIGRATIONS_DIR: '/repo/packages/app/tauri/src-tauri/binaries/migrations',
+			CODM_MIGRATIONS_DIR: inBinaries('migrations'),
 			API_GO_URL: 'http://localhost:3132',
 			NODE_ENV: 'production',
 			CODM_PARENT_PID: '4242',

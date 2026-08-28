@@ -196,7 +196,15 @@ const BUN_SCRIPT = /^bun\s+(?:run\s+)?([\w:.-]+)\s*$/
 const CD_SEGMENT = /^cd\s+(\S+)$/
 const MANIFEST_PATH = /--manifest-path[=\s]+(\S+)/
 
-const norm = (p: string): string => p.replace(/^\.\//, '').replace(/\/+$/, '')
+/**
+ * Repo-relative path → the ONE spelling every comparison in this file uses.
+ *
+ * The backslash→slash pass is what makes it correct off a Windows host: the globs and the relative
+ * specifiers read out of source are all `/` literals, while `Bun.Glob.scanSync`, `join` and
+ * `relative` hand back backslash-separated paths there. Without it the two sides never met and the
+ * rail reported as unexecuted what it had simply failed to match.
+ */
+const norm = (p: string): string => p.split('\\').join('/').replace(/^\.\//, '').replace(/\/+$/, '')
 
 /** Positional path args of a `bun test` segment — flags (and their values) are not paths. */
 function positionalArgs(rest: string): string[] {
@@ -279,12 +287,12 @@ function projectDirs(): string[] {
 	for (const pattern of (rootPkg.workspaces as string[] | undefined) ?? []) {
 		if (/[*?[\]{}]/.test(pattern)) {
 			for (const hit of new Bun.Glob(`${pattern}/package.json`).scanSync({ cwd: ROOT, onlyFiles: true })) {
-				dirs.add(norm(hit.replace(/\/package\.json$/, '')))
+				dirs.add(norm(hit).replace(/\/package\.json$/, ''))
 			}
 		} else if (existsSync(join(ROOT, pattern, 'package.json'))) dirs.add(norm(pattern))
 	}
 	for (const hit of new Bun.Glob('packages/**/project.json').scanSync({ cwd: ROOT, onlyFiles: true })) {
-		dirs.add(norm(hit.replace(/\/project\.json$/, '')))
+		dirs.add(norm(hit).replace(/\/project\.json$/, ''))
 	}
 	return [...dirs].sort()
 }
@@ -369,11 +377,16 @@ export function declaredTargets(): DeclaredTarget[] {
 export function nativeRoots(root: string, marker: 'go.mod' | 'Cargo.toml', dir = root, acc: string[] = []): string[] {
 	for (const entry of readdirSync(dir, { withFileTypes: true })) {
 		const full = join(dir, entry.name)
-		const rel = relative(root, full)
+		// Normed on the way out of `relative`, because both things it is compared against are `/`
+		// literals: the UNWALKABLE_PATHS / WALKABLE_PATHS sets here, and the anchors in `Reach`. On
+		// Windows the un-normed form matched neither, and the miss on WALKABLE_PATHS was the loud
+		// one — it is what re-opens `packages/client/dist/rust` after `dist` is skipped wholesale, so
+		// the crate was never entered and the Rust half of the rail counted zero test files.
+		const rel = norm(relative(root, full))
 		if (entry.isDirectory()) {
 			if ((UNWALKABLE.has(entry.name) || UNWALKABLE_PATHS.has(rel)) && !WALKABLE_PATHS.has(rel)) continue
 			nativeRoots(root, marker, full, acc)
-		} else if (entry.name === marker) acc.push(relative(root, dir) || '.')
+		} else if (entry.name === marker) acc.push(norm(relative(root, dir)) || '.')
 	}
 	return acc.sort()
 }
@@ -409,7 +422,10 @@ export const isUnder = (file: string, root: string): boolean => root === '' || f
 export function walkTests(root: string, dir = root, acc: { path: string; lang: TestLang }[] = []): { path: string; lang: TestLang }[] {
 	for (const entry of readdirSync(dir, { withFileTypes: true })) {
 		const full = join(dir, entry.name)
-		const rel = relative(root, full)
+		// Normed here for the same three reasons as in `nativeRoots`: the UNWALKABLE_PATHS /
+		// WALKABLE_PATHS sets are `/` literals, `testLangOf` recognises a cargo integration test by
+		// the `tests/` segment in its path, and `isUnder` below matches anchors with `${root}/`.
+		const rel = norm(relative(root, full))
 		if (entry.isDirectory()) {
 			if ((UNWALKABLE.has(entry.name) || UNWALKABLE_PATHS.has(rel)) && !WALKABLE_PATHS.has(rel)) continue
 			walkTests(root, full, acc)
