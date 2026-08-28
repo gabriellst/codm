@@ -105,10 +105,8 @@ describe('a thread bound to an undrivable provider still LOADS everywhere', () =
 				provider: ProviderKind.CODEX,
 				comingSoon: true,
 				model: AgentModelId.DEFAULT,
-				// EMPTY, and that is a SEPARATE declared fact from `comingSoon`: this build has never driven
-				// the codex binary, so it does not know what to offer. The console reads the empty list as
-				// "there is nothing to choose here" and renders no selector on this row.
-				models: [],
+				// The provider can have a catalog even when this test's factory intentionally cannot drive it.
+				models: [AgentModelId.DEFAULT, AgentModelId.GPT_5_3_CODEX, AgentModelId.GPT_5_2_CODEX, AgentModelId.GPT_5_1_CODEX],
 			},
 		])
 	})
