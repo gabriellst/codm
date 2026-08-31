@@ -11,11 +11,14 @@ const (
 	AgentModelIdSONNET AgentModelId = "SONNET"
 	AgentModelIdOPUS AgentModelId = "OPUS"
 	AgentModelIdHAIKU AgentModelId = "HAIKU"
+	AgentModelIdGPT_5_3_CODEX AgentModelId = "GPT_5_3_CODEX"
+	AgentModelIdGPT_5_2_CODEX AgentModelId = "GPT_5_2_CODEX"
+	AgentModelIdGPT_5_1_CODEX AgentModelId = "GPT_5_1_CODEX"
 )
 
 func ParseAgentModelId(s string) (AgentModelId, error) {
 	switch AgentModelId(s) {
-	case AgentModelIdDEFAULT, AgentModelIdSONNET, AgentModelIdOPUS, AgentModelIdHAIKU:
+	case AgentModelIdDEFAULT, AgentModelIdSONNET, AgentModelIdOPUS, AgentModelIdHAIKU, AgentModelIdGPT_5_3_CODEX, AgentModelIdGPT_5_2_CODEX, AgentModelIdGPT_5_1_CODEX:
 		return AgentModelId(s), nil
 	default:
 		return "", fmt.Errorf("invalid AgentModelId: %q", s)

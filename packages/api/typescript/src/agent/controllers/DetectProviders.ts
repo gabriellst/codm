@@ -28,7 +28,8 @@ export const DetectProvidersOutputSchema = z
 				 * `status` answers "is the BINARY on this machine?" (DETECTED / NOT_INSTALLED). `comingSoon`
 				 * answers a question detection cannot: "does this engine have a class that knows how to DRIVE
 				 * that binary?". They are independent — `PROVIDER_BINARIES` declares real `bin` names for
-				 * codex and opencode so the catalog reports them honestly, while exactly one CLI has a runner.
+					 * codex and opencode so the catalog reports them honestly, while only the CLIs with runners
+					 * are exposed as available.
 				 *
 				 * They are NOT collapsed into a third `ProviderStatus` member, deliberately: a machine with
 				 * the codex CLI installed is genuinely DETECTED, and re-labelling it would tell the operator
@@ -56,7 +57,7 @@ export const DetectProvidersOutputSchema = z
 					version: '1.0.0',
 					comingSoon: false,
 				},
-				{ name: ProviderKind.CODEX, status: ProviderStatus.NOT_INSTALLED, comingSoon: true },
+				{ name: ProviderKind.CODEX, status: ProviderStatus.NOT_INSTALLED, comingSoon: false },
 				{ name: ProviderKind.OPENCODE, status: ProviderStatus.NOT_INSTALLED, comingSoon: true },
 			],
 		},

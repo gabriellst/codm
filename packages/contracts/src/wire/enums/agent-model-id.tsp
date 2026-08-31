@@ -6,4 +6,7 @@ enum AgentModelId {
   SONNET: "SONNET",
   OPUS: "OPUS",
   HAIKU: "HAIKU",
+  GPT_5_3_CODEX: "GPT_5_3_CODEX",
+  GPT_5_2_CODEX: "GPT_5_2_CODEX",
+  GPT_5_1_CODEX: "GPT_5_1_CODEX",
 }

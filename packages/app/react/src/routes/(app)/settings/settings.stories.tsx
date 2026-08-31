@@ -94,7 +94,7 @@ const PROVIDERS: DeepPartial<DetectProvidersQueryResponse> = {
 			version: '2.1.227 (Claude Code)',
 			comingSoon: false,
 		},
-		{ name: 'CODEX', status: 'DETECTED', binaryPath: '/Users/work/.local/bin/codex', version: 'codex-cli 0.140.0', comingSoon: true },
+		{ name: 'CODEX', status: 'DETECTED', binaryPath: '/Users/work/.local/bin/codex', version: 'codex-cli 0.149.1', comingSoon: false },
 		{ name: 'OPENCODE', status: 'DETECTED', binaryPath: '/opt/homebrew/bin/opencode', version: '1.18.5', comingSoon: true },
 	],
 }

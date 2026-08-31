@@ -243,9 +243,12 @@
 		"itemsPerPage": "items per page"
 	},
 	"enums": {
-		"AgentModelId": {
-			"DEFAULT": "Automatic",
-			"HAIKU": "Haiku",
+			"AgentModelId": {
+				"DEFAULT": "Automatic",
+				"GPT_5_1_CODEX": "GPT-5.1 Codex",
+				"GPT_5_2_CODEX": "GPT-5.2 Codex",
+				"GPT_5_3_CODEX": "GPT-5.3 Codex",
+				"HAIKU": "Haiku",
 			"OPUS": "Opus",
 			"SONNET": "Sonnet"
 		},

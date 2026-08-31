@@ -17,7 +17,7 @@ import { ProvidersSection } from '.'
 const CATALOG: DeepPartial<DetectProvidersQueryResponse> = {
 	providers: [
 		{ name: 'CLAUDE_CODE', status: 'DETECTED', binaryPath: '/usr/local/bin/claude', version: '1.0.0', comingSoon: false },
-		{ name: 'CODEX', status: 'NOT_INSTALLED', comingSoon: true },
+		{ name: 'CODEX', status: 'NOT_INSTALLED', comingSoon: false },
 		{ name: 'OPENCODE', status: 'NOT_INSTALLED', comingSoon: true },
 	],
 }

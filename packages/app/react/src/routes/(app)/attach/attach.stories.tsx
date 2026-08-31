@@ -102,12 +102,10 @@ const WORKSPACES: GetAttachThreadWizardQueryResponse['workspaces'] = [
 	{ workspaceId: WS_CODEDM, path: '/Users/work/Desktop/Projetos/pessoal/codedm', badges: ['GIT', 'CLAUDE_PROJECT'] },
 ]
 
-// Same fixture shape as `AgentsStep/index.stories.tsx`'s `THREE_PROVIDERS` — Claude Code is the only
-// DRIVABLE runner today, Codex/OpenCode are both `comingSoon` regardless of `status` (see that
-// component's docblock on why `comingSoon` always wins the row's label over `status`).
+// Same fixture shape as `AgentsStep/index.stories.tsx`: Claude and Codex are drivable; OpenCode is not.
 const PROVIDERS: GetAttachThreadWizardQueryResponse['providers'] = [
 	{ provider: 'CLAUDE_CODE', status: 'DETECTED', available: true, comingSoon: false, version: '1.0.0' },
-	{ provider: 'CODEX', status: 'DETECTED', available: false, comingSoon: true, version: '3.1.0' },
+	{ provider: 'CODEX', status: 'DETECTED', available: true, comingSoon: false, version: '3.1.0' },
 	{ provider: 'OPENCODE', status: 'NOT_INSTALLED', available: false, comingSoon: true },
 ]
 

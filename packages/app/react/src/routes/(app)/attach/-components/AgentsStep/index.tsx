@@ -14,6 +14,14 @@ import { StepHeading } from '../StepHeading'
 export const AgentsStepSchema = attachThreadMutationRequestSchema.pick({ providers: true })
 export type AgentsStepData = (typeof AgentsStepSchema)['_zod']['output']
 
+// The attach contract intentionally carries providers only, so this pre-thread selector keeps the
+// small provider catalog local. Each provider's aliases remain available only on its own row.
+const MODEL_VALUES_BY_PROVIDER: Record<ProviderKind, AgentModelId[]> = {
+	CLAUDE_CODE: [AgentModelIdEnum.DEFAULT, AgentModelIdEnum.OPUS, AgentModelIdEnum.SONNET, AgentModelIdEnum.HAIKU],
+	CODEX: [AgentModelIdEnum.DEFAULT, AgentModelIdEnum.GPT_5_3_CODEX, AgentModelIdEnum.GPT_5_2_CODEX, AgentModelIdEnum.GPT_5_1_CODEX],
+	OPENCODE: [],
+}
+
 // No `onBack` — the wizard's persistent footer (`AttachThreadWizard`) owns Voltar for every step now
 // (D3, founder review 12/08); `StepHeading` no longer renders a back button for any step to opt into.
 type AgentsStepProps = Omit<ComponentProps<'form'>, 'onSubmit'> & {
@@ -37,7 +45,11 @@ export function AgentsStep({ providers, defaultValues, onSubmit, className, ...p
 	 * `onSubmit`): fidelidade visual ao desenho sem inventar campo de contrato. Ajustar o modelo de
 	 * verdade continua sendo o trabalho do `ThreadSettingsDialog`, depois que a conversa existe.
 	 */
-	const [model, setModel] = useState<AgentModelId>(AgentModelIdEnum.DEFAULT)
+	const [models, setModels] = useState<Record<ProviderKind, AgentModelId>>({
+		CLAUDE_CODE: AgentModelIdEnum.DEFAULT,
+		CODEX: AgentModelIdEnum.DEFAULT,
+		OPENCODE: AgentModelIdEnum.DEFAULT,
+	})
 
 	const form = useForm({
 		defaultValues,
@@ -70,11 +82,10 @@ export function AgentsStep({ providers, defaultValues, onSubmit, className, ...p
 	 * o clique na linha ainda DEFINE, nunca acumula (ver abaixo).
 	 *
 	 * QUANDO REVISITAR: `comingSoon` deriva de `!drivable.includes(...)` sobre os AgentRunners
-	 * REGISTRADOS (`GetAttachThreadWizard.ts`), de propósito, e não de uma lista literal. Hoje só
-	 * CLAUDE_CODE é dirigível, então a tela PARECE de escolha única e a dívida não aparece. No dia em que
-	 * um SEGUNDO runner registrar, dois provedores ficam disponíveis sozinhos e esta restrição vira uma
-	 * trave visível — é esse o momento de trazer de volta uma forma de escolher mais de um (um botão
-	 * explícito, um long-press, uma tela própria). Não espere um relatório de bug: procure aqui.
+	 * REGISTRADOS (`GetAttachThreadWizard.ts`), de propósito, e não de uma lista literal. Com Claude e
+	 * Codex dirigíveis, a restrição de escolha única já é visível: selecionar um substitui o outro. Ao
+	 * implementar seleção simultânea, este é o ponto para trazer de volta uma forma explícita de escolher
+	 * mais de um (um botão, um long-press ou uma tela própria).
 	 *
 	 * ─── POR QUE DEFINIR, E NÃO ALTERNAR ─────────────────────────────────────────────────────────────
 	 *
@@ -169,8 +180,9 @@ export function AgentsStep({ providers, defaultValues, onSubmit, className, ...p
 										<Select
 											enum={AgentModelIdEnum}
 											i18nPrefix="enums.AgentModelId"
-											value={model}
-											onValueChange={setModel}
+										values={MODEL_VALUES_BY_PROVIDER[entry.provider]}
+										value={models[entry.provider]}
+										onValueChange={value => setModels(current => ({ ...current, [entry.provider]: value }))}
 											aria-label={t('session.agentModel')}
 											className="w-[125px] shrink-0"
 											onClick={e => e.stopPropagation()}

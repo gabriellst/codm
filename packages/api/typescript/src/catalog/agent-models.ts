@@ -47,7 +47,7 @@ import { ProviderKind, AgentModelId } from '@codm/contracts-typescript/wire/enum
  */
 export const PROVIDER_MODELS: Readonly<Record<ProviderKind, readonly AgentModelId[]>> = {
 	[ProviderKind.CLAUDE_CODE]: [AgentModelId.DEFAULT, AgentModelId.OPUS, AgentModelId.SONNET, AgentModelId.HAIKU],
-	[ProviderKind.CODEX]: [],
+	[ProviderKind.CODEX]: [AgentModelId.DEFAULT, AgentModelId.GPT_5_3_CODEX, AgentModelId.GPT_5_2_CODEX, AgentModelId.GPT_5_1_CODEX],
 	[ProviderKind.OPENCODE]: [],
 }
 

@@ -1,18 +1,17 @@
 import { injectable } from 'tsyringe-neo'
 import { ProviderKind } from '@codm/contracts-typescript/wire/enums'
 import type { AgentRunner } from '../AgentRunner'
-import { ClaudeAgentRunner } from '../AgentRunner'
+import { ClaudeAgentRunner, CodexAgentRunner } from '../AgentRunner'
 import { AgentRunnerFactory } from './AgentRunnerFactory'
 
 /**
- * The `real` factory. ONE entry today, because exactly one CLI has a runner class.
+ * The `real` factory. One entry per CLI runner class; provider selection lives only in this map.
  *
  * `ClaudeAgentRunner` is injected by CONCRETE type (SVC-P13): it is no longer bound to any token, so
  * this factory is the only thing in the process that can produce one — which is what makes "the `real`
  * env is the only env that can spawn a CLI" true by construction rather than by a comment.
  *
- * A second CLI landing (Fase 6+) adds a constructor parameter and a map entry HERE, and still not a
- * branch inside a runner.
+ * A CLI landing adds a constructor parameter and a map entry HERE, never a branch inside a runner.
  *
  * ### Why this lives beside the abstract token rather than inside its file
  * It is the same split `ProviderDetector/` already uses (abstract seam in `ProviderDetector.ts`, each
@@ -27,12 +26,12 @@ import { AgentRunnerFactory } from './AgentRunnerFactory'
 export class DefaultAgentRunnerFactory extends AgentRunnerFactory {
 	private readonly runners: ReadonlyMap<ProviderKind, AgentRunner>
 
-	constructor(claude: ClaudeAgentRunner) {
+	constructor(claude: ClaudeAgentRunner, codex: CodexAgentRunner) {
 		super()
-		this.runners = new Map<ProviderKind, AgentRunner>([[ProviderKind.CLAUDE_CODE, claude]])
+		this.runners = new Map<ProviderKind, AgentRunner>([[ProviderKind.CLAUDE_CODE, claude], [ProviderKind.CODEX, codex]])
 	}
 
-	override readonly supported: readonly ProviderKind[] = [ProviderKind.CLAUDE_CODE]
+	override readonly supported: readonly ProviderKind[] = [ProviderKind.CLAUDE_CODE, ProviderKind.CODEX]
 
 	protected runnerFor(provider: ProviderKind): AgentRunner | undefined {
 		return this.runners.get(provider)

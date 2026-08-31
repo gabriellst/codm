@@ -263,7 +263,7 @@
                         {
                           "name": "CODEX",
                           "status": "NOT_INSTALLED",
-                          "comingSoon": true
+                          "comingSoon": false
                         },
                         {
                           "name": "OPENCODE",
@@ -288,7 +288,7 @@
                         {
                           "name": "CODEX",
                           "status": "NOT_INSTALLED",
-                          "comingSoon": true
+                          "comingSoon": false
                         },
                         {
                           "name": "OPENCODE",
@@ -9241,7 +9241,10 @@
           "DEFAULT",
           "SONNET",
           "OPUS",
-          "HAIKU"
+          "HAIKU",
+          "GPT_5_3_CODEX",
+          "GPT_5_2_CODEX",
+          "GPT_5_1_CODEX"
         ]
       },
       "Language": {
