@@ -68,6 +68,19 @@ const RawEnvSchema = z.object({
 	 * é anômala, mas não é motivo para falhar aqui.
 	 */
 	COMSPEC: z.string().default('cmd.exe'),
+	/**
+	 * O PATH que ESTE daemon herdou — declarado pela porta tipada pelo mesmo motivo do COMSPEC
+	 * acima: é o SO quem o define, mas toda leitura de ambiente do `src/` entra por aqui (rail
+	 * D14/AC-4). Consumido por `resolveProviderEnv` (agent/services/AgentRunner/platformInvocation)
+	 * como a BASE do PATH dos processos-filho: num .app lançado pelo Finder/launchd ele é
+	 * praticamente só `/usr/bin:/bin:/usr/sbin:/sbin`, e o shebang `#!/usr/bin/env node` do CLI do
+	 * provedor morre com 127 se o filho herdar isso cru.
+	 *
+	 * MAIÚSCULA alcança também o `Path` do Windows — `process.env` lá é um proxy insensível a caixa
+	 * (ver COMSPEC). Default `''`: um ambiente sem PATH nenhum ainda compõe um PATH válido só dos
+	 * diretórios declarados/atestados.
+	 */
+	PATH: z.string().default(''),
 	OTEL_COLLECTOR_TRACE_URL: z.string().default(''),
 	OTEL_SERVICE_NAME: z.string().default('service'),
 	OTEL_COLLECTOR_LOG_URL: z.string().default(''),

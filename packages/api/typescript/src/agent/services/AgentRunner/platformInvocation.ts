@@ -21,7 +21,9 @@
  * (`--add-dir C:\Users\Fulano\Meus Projetos`). Aqui os argumentos são citados um a um e entregues
  * verbatim, que é o que `windowsVerbatimArguments` significa.
  */
-import { Config } from '@codm/core-typescript'
+import { homedir } from 'node:os'
+import { posix, win32 } from 'node:path'
+import { composeChildPath, Config, PROVIDER_SEARCH } from '@codm/core-typescript'
 
 /** O que o chamador entrega ao `spawn`: arquivo, argumentos e as opções que a plataforma exige. */
 export interface Invocation {
@@ -83,4 +85,73 @@ export function resolveInvocation(binary: string, args: readonly string[], platf
 	// citação de cada argumento, não a linha inteira.
 	const line = [binary, ...args].map(quoteForCmd).join(' ')
 	return { file: Config.env.COMSPEC, args: ['/d', '/s', '/c', `"${line}"`], options: { windowsVerbatimArguments: true } }
+}
+
+/**
+ * A álgebra de caminhos de CADA plataforma — o Node já a declara em exatamente dois módulos
+ * (`path.posix` / `path.win32`); a relação plataforma → módulo segue a mesma disciplina de
+ * `PROVIDER_SEARCH`: row exaustiva consumida por UM lookup, testável de qualquer host.
+ */
+const PATH_ALGEBRA: Record<NodeJS.Platform, Pick<typeof posix, 'dirname' | 'isAbsolute'>> = {
+	aix: posix,
+	android: posix,
+	darwin: posix,
+	freebsd: posix,
+	haiku: posix,
+	linux: posix,
+	openbsd: posix,
+	sunos: posix,
+	win32,
+	cygwin: posix,
+	netbsd: posix,
+}
+
+/** Fatos do host que `resolveProviderEnv` usa — parâmetros com o default certo, pelo mesmo motivo
+ * do `platform` em `resolveInvocation`: é o que permite testar a composição sem depender do host. */
+export interface ProviderEnvHost {
+	readonly platform?: NodeJS.Platform
+	/** O interpretador que RODA este daemon (`process.execPath`) — o diretório dele entra no PATH. */
+	readonly execPath?: string
+	readonly home?: string
+	/** O ambiente que o filho herda além do PATH — `process.env` em produção. */
+	readonly env?: NodeJS.ProcessEnv
+	/** A BASE do PATH composto — em produção vem da porta tipada (`Config.env.PATH`). */
+	readonly basePath?: string
+}
+
+/**
+ * O AMBIENTE DO FILHO, MONTADO EM VEZ DE HERDADO — a outra metade da invocação.
+ *
+ * Herdar o env cru era a causa do `provider exited with code 127: env: node: No such file or
+ * directory`: o binário do provedor é achado (a busca de `resolveBinary` vai além do PATH) e
+ * executado por caminho absoluto, mas o shebang `#!/usr/bin/env node` dele resolve o `node` no PATH
+ * DO FILHO — e um daemon lançado pelo Finder/launchd herda pouco mais que `/usr/bin:/bin`. Quem tem
+ * node por Homebrew/nvm quebrava; quem tem em `/usr/local/bin` não — "só para alguns usuários".
+ *
+ * A composição é declarada, sem `if` de plataforma nem string espalhada: a base vem da porta tipada
+ * (`Config.env.PATH`), os diretórios ATESTADOS vêm do processo vivo (o do interpretador do daemon e
+ * o do próprio binário invocado — sob nvm/fnm/volta/asdf e npm-global o shim do provedor e o `node`
+ * moram lado a lado), e os CONHECIDOS vêm da mesma relação `PROVIDER_SEARCH` que já decide onde uma
+ * plataforma guarda CLIs. `composeChildPath` junta tudo na ordem base → atestados → conhecidos.
+ *
+ * UMA chave só no resultado: variantes de caixa da base (o `Path` que o Windows escreve) saem antes
+ * da nossa `PATH` entrar — duas chaves diferindo em caixa no bloco de ambiente é comportamento
+ * indefinido do CreateProcess, e no POSIX a regra uniforme não muda nada que exista de verdade.
+ */
+export function resolveProviderEnv(binary: string, host: ProviderEnvHost = {}): NodeJS.ProcessEnv {
+	const platform = host.platform ?? process.platform
+	const base = host.env ?? process.env
+	const paths = PATH_ALGEBRA[platform]
+	const path = composeChildPath(
+		PROVIDER_SEARCH[platform],
+		{ home: host.home ?? homedir(), env: base },
+		{
+			basePath: host.basePath ?? Config.env.PATH,
+			// `filter(isAbsolute)`: um binário relativo (nome nu) tem `dirname` `'.'`, e o cwd do filho não
+			// é um diretório que este processo possa atestar.
+			runtimeDirs: [host.execPath ?? process.execPath, binary].map(paths.dirname).filter(paths.isAbsolute),
+		},
+	)
+	const inherited = Object.fromEntries(Object.entries(base).filter(([key]) => key.toUpperCase() !== 'PATH'))
+	return { ...inherited, PATH: path }
 }

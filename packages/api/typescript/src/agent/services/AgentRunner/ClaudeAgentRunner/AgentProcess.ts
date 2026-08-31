@@ -1,5 +1,5 @@
 import { spawn as spawnChild } from 'node:child_process'
-import { resolveInvocation } from '../platformInvocation'
+import { resolveInvocation, resolveProviderEnv } from '../platformInvocation'
 import { BaseError, PROCESS_TREES, type ProcessTree } from '@codm/core-typescript'
 import type { AgentApplicationErrors } from '../../../errors'
 
@@ -45,6 +45,10 @@ export interface AgentProcess {
 
 export type AgentProcessSpawner = (spec: AgentProcessSpec) => AgentProcess
 
+/** O ambiente que UM spawn entrega ao filho, em função do binário invocado — seam para os testes
+ * fixarem uma base mínima sem depender do env do host (produção usa `resolveProviderEnv`). */
+export type ChildEnvResolver = (binary: string) => NodeJS.ProcessEnv
+
 /** POSIX only: how long the terminated group gets on SIGTERM before SIGKILL follows (§4.11). The
  * Windows strategy ignores it — its single pass is already forced (D6). */
 const KILL_GRACE_MS = 2_000
@@ -58,9 +62,10 @@ const KILL_GRACE_MS = 2_000
  * is idempotent HERE, so a strategy never has to be.
  *
  * Exported as a FACTORY so the strategy is a parameter (tests pair a real `/bin/sh` with a fake
- * tree); production binds it once, below, by ONE lookup on `process.platform`.
+ * tree) — and so is the child-env resolver (tests fix a minimal base PATH; production binds
+ * `resolveProviderEnv`). Production binds it once, below, by ONE lookup on `process.platform`.
  */
-export function createNodeAgentProcessSpawner(tree: ProcessTree): AgentProcessSpawner {
+export function createNodeAgentProcessSpawner(tree: ProcessTree, resolveEnv: ChildEnvResolver = resolveProviderEnv): AgentProcessSpawner {
 	return spec => {
 		const [bin, ...args] = spec.cmd
 		// COMO invocar é decisão da plataforma, não deste arquivo — ver `resolveInvocation`. No Windows
@@ -72,6 +77,9 @@ export function createNodeAgentProcessSpawner(tree: ProcessTree): AgentProcessSp
 			child = spawnChild(invocation.file, invocation.args, {
 				cwd: spec.cwd,
 				stdio: [spec.stdin ? 'pipe' : 'ignore', 'pipe', 'pipe'],
+				// MONTADO, não herdado — o PATH herdado de um .app lançado pelo Finder/launchd não resolve o
+				// `node` do shebang do CLI (exit 127). Ver `resolveProviderEnv`.
+				env: resolveEnv(bin as string),
 				...invocation.options,
 				...tree.spawnOptions,
 			})
