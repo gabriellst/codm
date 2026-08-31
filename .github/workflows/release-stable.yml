@@ -507,14 +507,23 @@ jobs:
           mv "$RUNNER_TEMP/SHA256SUMS.txt" SHA256SUMS.txt
           cat SHA256SUMS.txt
 
+      # IDEMPOTENTE por construção: criar só se falta, assets sempre por `upload --clobber`.
+      # O R2 devolveu 500 no meio do `upload r2` (v0.7.0, 2026-08-31) e a re-execução do job morreu
+      # AQUI — 'a release with the same tag name already exists' — antes de chegar nos uploads que
+      # faltavam; a recuperação exigiu deletar a release no GitHub à mão só para o rerun passar
+      # deste passo. Re-executar o publish precisa ser recuperação real: a release existente é o
+      # estado esperado de um rerun, não um erro.
       - name: publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" \
-            --title "codm ${GITHUB_REF_NAME}" \
-            --notes "Release estável — macOS arm64, Linux x64 (AppImage/deb) e Windows x64 (NSIS). Instalação e canais: docs/RELEASE.md." \
-            dist-release/*
+          set -euo pipefail
+          if ! gh release view "${GITHUB_REF_NAME}" > /dev/null 2>&1; then
+            gh release create "${GITHUB_REF_NAME}" \
+              --title "codm ${GITHUB_REF_NAME}" \
+              --notes "Release estável — macOS arm64, Linux x64 (AppImage/deb) e Windows x64 (NSIS). Instalação e canais: docs/RELEASE.md."
+          fi
+          gh release upload "${GITHUB_REF_NAME}" --clobber dist-release/*
 
       # stable = retenção TOTAL (decisão do founder): cada versão fica no R2 sob nome versionado;
       # latest.json e os aliases dos instaladores apontam sempre para a mais nova (o botão da
