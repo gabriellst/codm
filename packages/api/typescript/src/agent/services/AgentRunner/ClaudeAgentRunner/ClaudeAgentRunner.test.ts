@@ -451,6 +451,24 @@ describe('ClaudeAgentRunner — transport stops and the watchdog backstop', () =
 	})
 
 	/**
+	 * O 127 DO SHEBANG TEM NOME. "provider exited with code 127" não aponta para nada; o operador
+	 * via o item envenenar depois de 3 tentativas sem saber que o `node` do CLI não estava no PATH
+	 * do app. A forma do stderr é a real (o que `env` imprime num .app lançado pelo Finder); zero
+	 * frames no stdout também — com o interpretador ausente o CLI nunca chega a falar.
+	 */
+	it('traduz o exit 127 de "env: node: No such file or directory" num stop que nomeia a causa', async () => {
+		const { spawner } = fakeSpawner([], { exitCode: 127, stderr: 'env: node: No such file or directory' })
+
+		const finished = (await drain(makeRunner(spawner).run(request()))).at(-1)
+
+		expect(finished).toMatchObject({ type: 'finished', result: { outcome: AgentRunOutcome.STOPPED, stop: { kind: 'SERVER_ERROR' } } })
+		const stop = (finished as { result: { stop: { detail: string } } }).result.stop
+		expect(stop.detail).toContain('não encontrou o `node` no PATH do app')
+		// O sinal cru continua no detail — é o que se grepa num log de máquina alheia.
+		expect(stop.detail).toContain('env: node: No such file or directory')
+	})
+
+	/**
 	 * O WATCHDOG MEDE AVANÇO, NÃO TAGARELICE.
 	 *
 	 * Medido em 2026-08-05: um turno ficou 8m12s parado esperando o classificador de permissão do

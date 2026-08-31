@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { quoteForCmd, resolveInvocation } from './platformInvocation'
+import { join } from 'node:path'
+import { quoteForCmd, resolveInvocation, resolveProviderEnv } from './platformInvocation'
 
 /**
  * A DECISÃO É TESTADA NUMA MÁQUINA QUE NÃO É WINDOWS — é isso que `resolveInvocation`'s terceiro
@@ -45,6 +46,59 @@ describe('resolveInvocation', () => {
 		const invocation = resolveInvocation('C:\\npm\\claude.cmd', ['--add-dir', 'C:\\Users\\Fulano\\Meus Projetos'], 'win32')
 
 		expect(invocation.args[3]).toBe('"C:\\npm\\claude.cmd" "--add-dir" "C:\\Users\\Fulano\\Meus Projetos"')
+	})
+})
+
+/**
+ * Como em `resolveInvocation`: todo fato do host é parâmetro, então a composição inteira — inclusive
+ * a do Windows — se prova de qualquer máquina. O que produção deixa nos defaults (`process.execPath`,
+ * `process.env`, `Config.env.PATH`) os testes fixam via `host`.
+ */
+describe('resolveProviderEnv', () => {
+	const host = {
+		platform: 'darwin' as const,
+		execPath: '/daemon/runtime/bun',
+		home: '/Users/x',
+		env: { PATH: '/usr/bin:/bin', HOME: '/Users/x', LANG: 'pt_BR.UTF-8' },
+		basePath: '/usr/bin:/bin',
+	}
+
+	it('o PATH do filho é a base + o dir do interpretador do daemon + o dir do binário + os conhecidos', () => {
+		const env = resolveProviderEnv('/Users/x/.nvm/versions/node/v22.0.0/bin/claude', host)
+
+		const entries = (env.PATH ?? '').split(':')
+		expect(entries.slice(0, 4)).toEqual(['/usr/bin', '/bin', '/daemon/runtime', '/Users/x/.nvm/versions/node/v22.0.0/bin'])
+		// Os conhecidos da row darwin fecham a lista — declarados, nunca hardcoded aqui.
+		expect(entries).toContain('/opt/homebrew/bin')
+		expect(entries).toContain(join('/Users/x', '.bun', 'bin'))
+	})
+
+	it('preserva o resto do ambiente herdado — o CLI ainda precisa de HOME para achar as credenciais', () => {
+		const env = resolveProviderEnv('/opt/bin/claude', host)
+
+		expect(env.HOME).toBe('/Users/x')
+		expect(env.LANG).toBe('pt_BR.UTF-8')
+	})
+
+	it('UMA chave de PATH só: a variante de caixa do Windows (`Path`) sai antes da nossa entrar', () => {
+		const env = resolveProviderEnv('C:\\npm\\claude.cmd', {
+			platform: 'win32',
+			execPath: 'C:\\daemon\\runtime.exe',
+			home: 'C:\\Users\\x',
+			env: { Path: 'C:\\Windows\\system32', APPDATA: 'C:\\Users\\x\\AppData\\Roaming' },
+			basePath: 'C:\\Windows\\system32',
+		})
+
+		expect(Object.keys(env).filter(key => key.toUpperCase() === 'PATH')).toEqual(['PATH'])
+		const entries = (env.PATH ?? '').split(';')
+		expect(entries.slice(0, 3)).toEqual(['C:\\Windows\\system32', 'C:\\daemon', 'C:\\npm'])
+		expect(entries).toContain(join('C:\\Users\\x\\AppData\\Roaming', 'npm'))
+	})
+
+	it('binário relativo (nome nu) não contribui dir nenhum — cwd não é diretório atestável', () => {
+		const env = resolveProviderEnv('claude', host)
+
+		expect((env.PATH ?? '').split(':')).not.toContain('.')
 	})
 })
 

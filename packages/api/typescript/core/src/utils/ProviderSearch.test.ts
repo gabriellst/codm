@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { PROVIDER_SEARCH, resolveBinary, type ProviderSearchEnv } from './ProviderSearch'
+import { composeChildPath, PROVIDER_SEARCH, resolveBinary, type ProviderSearchEnv } from './ProviderSearch'
 
 /**
  * The per-platform search table against a temp-dir fixture: the table is a function of (platform,
@@ -166,5 +166,49 @@ describe('PROVIDER_SEARCH — the declared platform → search relation', () => 
 
 	it('covers the platform this test is running on — the lookup in SystemProviderDetector can never be undefined', () => {
 		expect(PROVIDER_SEARCH[process.platform]).toBeDefined()
+	})
+})
+
+describe('composeChildPath — o PATH que um filho recebe, composto da relação declarada', () => {
+	it('ordem: base herdada primeiro, depois os dirs atestados, depois os conhecidos da row', () => {
+		const composed = composeChildPath(PROVIDER_SEARCH.darwin, env({}, '/Users/x'), {
+			basePath: '/usr/bin:/bin',
+			runtimeDirs: ['/runtime/interpreter', '/runtime/provider'],
+		})
+		expect(composed).toBe(
+			[
+				'/usr/bin',
+				'/bin',
+				'/runtime/interpreter',
+				'/runtime/provider',
+				join('/Users/x', '.claude', 'local'),
+				join('/Users/x', '.local', 'bin'),
+				join('/Users/x', '.bun', 'bin'),
+				'/usr/local/bin',
+				'/opt/homebrew/bin',
+			].join(':'),
+		)
+	})
+
+	it('deduplica sem reordenar e ignora entradas vazias da base (um PATH ausente vira base vazia)', () => {
+		const composed = composeChildPath(PROVIDER_SEARCH.darwin, env({}, '/Users/x'), {
+			basePath: '/usr/local/bin::',
+			runtimeDirs: ['/usr/local/bin'],
+		})
+		const entries = composed.split(':')
+		expect(entries.filter(e => e === '/usr/local/bin')).toHaveLength(1)
+		expect(entries).not.toContain('')
+		// A primeira ocorrência vence — a base continua na frente dos conhecidos.
+		expect(entries[0]).toBe('/usr/local/bin')
+	})
+
+	it('a row win32 compõe com o delimitador dela e os dirs %VAR%-rooted declarados', () => {
+		const composed = composeChildPath(PROVIDER_SEARCH.win32, env({ APPDATA: 'C:\\Users\\x\\AppData\\Roaming' }, 'C:\\Users\\x'), {
+			basePath: 'C:\\Windows\\system32;C:\\Windows',
+			runtimeDirs: ['C:\\runtime'],
+		})
+		const entries = composed.split(';')
+		expect(entries.slice(0, 3)).toEqual(['C:\\Windows\\system32', 'C:\\Windows', 'C:\\runtime'])
+		expect(entries).toContain(join('C:\\Users\\x\\AppData\\Roaming', 'npm'))
 	})
 })

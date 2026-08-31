@@ -42,6 +42,14 @@ const POST_MORTEM_DRAIN_MS = 5_000
 const AUTH_HINT = /\/login\b|not logged in|please log ?in|authentication (?:required|failed)|unauthorized/i
 
 /**
+ * O shebang do próprio CLI (`#!/usr/bin/env node`) falhando: exit 127 é command-not-found, e esta
+ * mensagem no stderr diz QUAL comando — o binário do provedor foi achado e executado, mas o `node`
+ * que ele precisa não está no PATH do filho. Sem esta tradução o operador recebia só "provider
+ * exited with code 127", que não aponta para nada (medido: 3 tentativas e o item envenenava).
+ */
+const MISSING_NODE_HINT = /env: '?node'?: No such file or directory/i
+
+/**
  * `AgentModelId` → the CLI's own model alias. A MAP, not a `switch`, and it lives HERE because "what
  * this binary calls its models" is a fact about claude and about nothing else. `DEFAULT` is absent on
  * purpose: it is the instruction to omit `--model` altogether, which is why it is a member of the enum
@@ -567,6 +575,14 @@ export class ClaudeAgentRunner extends AgentRunner {
 			return {
 				kind: StopKind.SERVER_ERROR as TransportStopKind,
 				detail: `no output for ${this.inactivityMs}ms — killed by the inactivity watchdog`,
+			}
+		}
+		// ANTES do genérico "exited with code N": o 127 do shebang tem causa conhecida e ação clara, e
+		// um stop que a nomeia é a diferença entre o operador consertar o PATH e três retries poisoning.
+		if (observed.exitCode === 127 && MISSING_NODE_HINT.test(observed.stderr)) {
+			return {
+				kind: StopKind.SERVER_ERROR as TransportStopKind,
+				detail: `o CLI do provedor não encontrou o \`node\` no PATH do app (exit 127: ${observed.stderr.trim()})`,
 			}
 		}
 		if (observed.exitCode !== 0) {
