@@ -21,6 +21,57 @@ const API_GO_ROOT = resolve(REPO_ROOT, REPO.workspaces.apiGo.pkgRoot)
 const apiGoRecipe = REPO.workspaces.apiGo.testBoot
 
 /**
+ * "Who is listening on this port, and how do I kill them" — a DECLARED row per platform, the same
+ * shape `PROVIDER_SEARCH` uses for binary lookup, and for the same reason: the platforms differ in
+ * their TOOLING, not in this runner's logic, so the difference belongs in a table rather than in an
+ * `if` inside the sweep loop.
+ *
+ * The sweep used to be `lsof -ti :PORT` + `kill -9`, unconditionally. Neither command exists on
+ * Windows, so the run died there at the port sweep — after building the node bundle AND the Go
+ * binary, which both succeed — with `Executable not found in $PATH: "lsof"`.
+ */
+interface PortReaper {
+	/** argv of a command whose stdout names the pids holding `port`. */
+	list: (port: string | number) => string[]
+	/** The pids in that stdout. */
+	pids: (stdout: string, port: string | number) => string[]
+	/** argv that force-kills one pid. */
+	kill: (pid: string) => string[]
+}
+
+const PORT_REAPERS: Record<'posix' | 'win32', PortReaper> = {
+	posix: {
+		list: port => ['lsof', '-ti', `:${port}`],
+		pids: stdout => stdout.trim().split('\n').filter(Boolean),
+		kill: pid => ['kill', '-9', pid],
+	},
+	win32: {
+		// netstat has no per-port filter, so it lists every connection and the parsing below selects.
+		list: () => ['netstat', '-ano', '-p', 'tcp'],
+		/**
+		 * Selected BY COLUMN POSITION, deliberately, because the state word is the one part of this
+		 * output that could be localized. Measured on a pt-BR Windows: the HEADERS are translated
+		 * ("Endereço local", "Estado") while `TCP` and the numbers are not — so a filter reading
+		 * `LISTENING` would be betting on the machine's locale. Column 1 is the LOCAL address: a
+		 * listener on the port has it there, while an outbound connection TO that port carries it in
+		 * the foreign column instead, so position alone excludes what the state word was excluding.
+		 */
+		pids: (stdout, port) => {
+			const found = new Set<string>()
+			for (const line of stdout.split('\n')) {
+				const cols = line.trim().split(/\s+/)
+				if (cols[0] !== 'TCP' || !cols[1]?.endsWith(`:${port}`)) continue
+				// `cols[cols.length - 1]`, not `.at(-1)`: this workspace's tsconfig lib predates ES2022.
+				const pid = cols[cols.length - 1]
+				if (pid && /^\d+$/.test(pid) && pid !== '0') found.add(pid)
+			}
+			return [...found]
+		},
+		kill: pid => ['taskkill', '/F', '/PID', pid],
+	},
+}
+
+/**
  * Resolve a Node binary to boot the daemon the RUN-UNDER-NODE way (the daemon is built with Bun but
  * runs under Node). Node is nvm-only on the build host (absent from the bare non-interactive PATH),
  * so resolve explicitly: honor `CODM_NODE_BIN`, else the newest `~/.nvm/versions/node/<v>/bin/node`,
@@ -192,13 +243,12 @@ async function main() {
 	// This runner OWNS the three dev ports for the duration of the run: its servers must be wired to
 	// THIS run's scratch data dir, so a leftover listener from a previous run (watch-mode orphan
 	// pointing at a dropped dir) is always wrong — kill it, never reuse it.
+	const reaper = PORT_REAPERS[process.platform === 'win32' ? 'win32' : 'posix']
 	for (const port of [apiPort, vitePort, gatewayPort, cloudPort]) {
-		const found = Bun.spawnSync(['lsof', '-ti', `:${port}`])
-			.stdout.toString()
-			.trim()
-		if (found) {
-			console.log(`[e2e] killing stale listener(s) on :${port} (${found.split('\n').join(', ')})`)
-			for (const pid of found.split('\n')) Bun.spawnSync(['kill', '-9', pid])
+		const pids = reaper.pids(Bun.spawnSync(reaper.list(port)).stdout.toString(), port)
+		if (pids.length > 0) {
+			console.log(`[e2e] killing stale listener(s) on :${port} (${pids.join(', ')})`)
+			for (const pid of pids) Bun.spawnSync(reaper.kill(pid))
 		}
 	}
 
