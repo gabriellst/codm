@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
+
+	"template/core-go/pkg/proclive"
 )
 
 // DataDirLockedError is returned when a second process tries to open a SQLite
@@ -33,72 +35,82 @@ func (e *DataDirLockedError) Error() string {
 	)
 }
 
-// isProcessAlive reports whether pid names a currently-running process. Signal 0
-// probes existence without delivering anything: nil ⇒ alive; EPERM ⇒ exists but
-// unsignalable (still alive); ESRCH ⇒ no such process. On platforms where signal
-// 0 is unsupported (Windows) this conservatively returns false, so a stale lock
-// is always reclaimable there.
-func isProcessAlive(pid int) bool {
-	if pid <= 0 {
-		return false
-	}
-	proc, err := os.FindProcess(pid)
-	if err != nil {
-		return false
-	}
-	err = proc.Signal(syscall.Signal(0))
-	if err == nil {
-		return true
-	}
-	return errors.Is(err, syscall.EPERM)
-}
-
 // acquireDataDirLock takes an exclusive PID lockfile at lockPath, mirroring the
-// TS acquireDataDirLock. It writes the current pid with O_EXCL so the acquire is
-// atomic against a racing process. If the lockfile already holds a DIFFERENT live
-// pid it returns *DataDirLockedError; a stale lock (dead pid) is reclaimed. The
-// returned release func removes the lockfile iff this process still owns it — the
-// store calls it on Close.
+// TS acquireDataDirLock. If the lockfile already holds a DIFFERENT live pid it
+// returns *DataDirLockedError; a stale lock (dead pid) is reclaimed. The returned
+// release func removes the lockfile iff this process still owns it — the store
+// calls it on Close.
 func acquireDataDirLock(lockPath string) (func(), error) {
 	self := os.Getpid()
 
-	write := func() error {
-		f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		_, err = f.WriteString(strconv.Itoa(self))
-		return err
+	err := publishLock(lockPath, self)
+	if err == nil {
+		return releaseFunc(lockPath, self), nil
+	}
+	if !errors.Is(err, os.ErrExist) {
+		return nil, fmt.Errorf("acquire sqlite lock: %w", err)
 	}
 
-	err := write()
-	if err != nil {
-		if !errors.Is(err, os.ErrExist) {
-			return nil, fmt.Errorf("acquire sqlite lock: %w", err)
-		}
+	holder := readLockPID(lockPath)
+	// Idempotent for THIS process: same pid means we already own it.
+	if holder == self {
+		return releaseFunc(lockPath, self), nil
+	}
+	if proclive.IsAlive(holder) {
+		return nil, &DataDirLockedError{LockPath: lockPath, HeldByPID: holder}
+	}
 
-		holder := readLockPID(lockPath)
-		// Idempotent for THIS process: same pid means we already own it.
-		if holder == self {
-			return releaseFunc(lockPath, self), nil
+	// Stale lock (previous owner crashed) — reclaim. The retry still publishes
+	// atomically, so a live process that acquired in the gap wins and we surface
+	// its lock instead of stomping it.
+	_ = os.Remove(lockPath)
+	if err := publishLock(lockPath, self); err != nil {
+		if errors.Is(err, os.ErrExist) {
+			return nil, &DataDirLockedError{LockPath: lockPath, HeldByPID: readLockPID(lockPath)}
 		}
-		if isProcessAlive(holder) {
-			return nil, &DataDirLockedError{LockPath: lockPath, HeldByPID: holder}
-		}
-
-		// Stale lock (previous owner crashed) — reclaim. The retry is still O_EXCL,
-		// so a live process that acquired in the gap wins and we surface its lock.
-		_ = os.Remove(lockPath)
-		if err := write(); err != nil {
-			if errors.Is(err, os.ErrExist) {
-				return nil, &DataDirLockedError{LockPath: lockPath, HeldByPID: readLockPID(lockPath)}
-			}
-			return nil, fmt.Errorf("acquire sqlite lock (reclaim): %w", err)
-		}
+		return nil, fmt.Errorf("acquire sqlite lock (reclaim): %w", err)
 	}
 
 	return releaseFunc(lockPath, self), nil
+}
+
+// publishLock makes lockPath appear, ALREADY CONTAINING pid, in one atomic step:
+// the pid is written to a private temp file next to it and the finished file is
+// hard-linked into place. os.Link fails with os.ErrExist when the name is taken,
+// which is the same exclusivity O_EXCL gave — minus the window that O_EXCL left
+// open.
+//
+// THAT WINDOW WAS A REAL BUG, not a theoretical one. Creating with O_EXCL and
+// THEN writing the pid means a racing acquirer can stat the file between the two
+// syscalls and read it EMPTY. readLockPID answers 0, nobody is pid 0, so the
+// racer concludes "stale" and DELETES a live owner's lock — and whoever then
+// loses the re-create reports "already held by a running process (pid 0)". That
+// is how TestConcurrentBoot's three racers failed on the Linux CI runner; the
+// Windows host hid it because the liveness probe there answered false for every
+// pid, so the reclaim branch was the normal path instead of the error one.
+//
+// A filesystem without hard links fails loudly here rather than falling back to
+// the racy path. That is not a real narrowing: SQLite's WAL mode already needs
+// the shared-memory support such filesystems lack, so a data dir that cannot
+// link could not host this store anyway.
+func publishLock(lockPath string, pid int) error {
+	tmp, err := os.CreateTemp(filepath.Dir(lockPath), filepath.Base(lockPath)+".*.tmp")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+	// Removes the temp NAME, never the published lock: after a successful link the
+	// content has two names and only this one goes away.
+	defer func() { _ = os.Remove(tmpPath) }()
+
+	if _, err := tmp.WriteString(strconv.Itoa(pid)); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Link(tmpPath, lockPath)
 }
 
 // readLockPID reads the pid recorded in the lockfile, or 0 if it is
