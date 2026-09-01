@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { posixProcessTree, type ProcessTree, type TreeRoot } from '@codm/core-typescript'
+import { PROCESS_TREES, posixProcessTree, type ProcessTree, type TreeRoot } from '@codm/core-typescript'
 import { resolveProviderEnv } from '../platformInvocation'
 import { createNodeAgentProcessSpawner, type AgentProcess } from './AgentProcess'
 
@@ -156,5 +156,64 @@ describe.skipIf(process.platform === 'win32')('createNodeAgentProcessSpawner —
 
 		expect(await readFirstLine(proc)).toBe('fake-node-ok')
 		expect(await proc.exited).toBe(0)
+	})
+})
+
+/**
+ * The COMPOSITION of the two env layers, on every host — deliberately not `skipIf`ed.
+ *
+ * The two PATH cases above are the sharp proof, but they are POSIX-only (a `#!` shebang is not a
+ * thing on Windows), which left the composition unguarded on exactly the platform where the merge
+ * that broke it was being worked on. `resolveEnv` had lost its call site: the spread was written
+ * `spec.env ? {...process.env, ...spec.env} : {}`, so the resolver was never consulted, and the one
+ * path that does pass `spec.env` got the raw daemon environment. Both halves are asserted here —
+ * that the resolver IS called, and that the run's own keys win over it — with no shebang involved.
+ */
+describe('createNodeAgentProcessSpawner — spec.env layers OVER the resolved base', () => {
+	it('consults the resolver for the invoked binary, and lets spec.env win the overlap', async () => {
+		const asked: string[] = []
+		const resolveEnv = (binary: string): NodeJS.ProcessEnv => {
+			asked.push(binary)
+			return { ...process.env, CODM_FROM_RESOLVER: 'base', CODM_OVERLAP: 'base' }
+		}
+
+		const proc = createNodeAgentProcessSpawner(
+			PROCESS_TREES[process.platform],
+			resolveEnv,
+		)({
+			cmd: [
+				process.execPath,
+				'-e',
+				'console.log([process.env.CODM_FROM_RESOLVER, process.env.CODM_OVERLAP, process.env.CODM_FROM_SPEC].join("|"))',
+			],
+			cwd: process.cwd(),
+			stdin: false,
+			env: { CODM_OVERLAP: 'spec', CODM_FROM_SPEC: 'spec' },
+		})
+
+		// base survives | spec wins the collision | spec-only key arrives
+		expect(await readFirstLine(proc)).toBe('base|spec|spec')
+		// The resolver is asked about the BINARY being invoked, not about the daemon.
+		expect(asked).toEqual([process.execPath])
+	})
+
+	it('still consults the resolver when the spec carries NO env — the base is never conditional', async () => {
+		const asked: string[] = []
+		const resolveEnv = (binary: string): NodeJS.ProcessEnv => {
+			asked.push(binary)
+			return { ...process.env, CODM_FROM_RESOLVER: 'base' }
+		}
+
+		const proc = createNodeAgentProcessSpawner(
+			PROCESS_TREES[process.platform],
+			resolveEnv,
+		)({
+			cmd: [process.execPath, '-e', 'console.log(process.env.CODM_FROM_RESOLVER)'],
+			cwd: process.cwd(),
+			stdin: false,
+		})
+
+		expect(await readFirstLine(proc)).toBe('base')
+		expect(asked).toEqual([process.execPath])
 	})
 })

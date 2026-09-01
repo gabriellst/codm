@@ -18,8 +18,9 @@ export interface AgentProcessSpec {
 	 * which is strictly better than the argv carriers next to it and is why the seam grew a field
 	 * rather than the runner growing a `process.env` mutation (global, racy across concurrent runs).
 	 *
-	 * MERGED, never replacing: a provider CLI needs PATH, HOME and its own auth from the ambient
-	 * environment, so handing it only these keys would break login rather than scope it.
+	 * LAYERED OVER `ChildEnvResolver`, never replacing it: these keys are added on top of the env the
+	 * resolver builds, so a run's own variables cannot cost the child the PATH that lets its shebang
+	 * find node. Absent is the normal case — most spawns need nothing beyond the resolved base.
 	 */
 	env?: Readonly<Record<string, string>>
 }
@@ -91,10 +92,20 @@ export function createNodeAgentProcessSpawner(tree: ProcessTree, resolveEnv: Chi
 			child = spawnChild(invocation.file, invocation.args, {
 				cwd: spec.cwd,
 				stdio: [spec.stdin ? 'pipe' : 'ignore', 'pipe', 'pipe'],
-				// Omitted entirely when the spec asks for nothing, so the child keeps inheriting rather
-				// than receiving a copy — `undefined` and `{...process.env}` are not the same thing to
-				// `spawn`, and only the former survives a variable the daemon gains after boot.
-				...(spec.env ? { env: { ...process.env, ...spec.env } } : {}),
+				// TWO LAYERS, and the order is the contract. The base is ALWAYS built by `resolveEnv` —
+				// never inherited, never conditional on the spec — because that is the whole point of the
+				// resolver: a daemon launched from a `.app` bundle has a PATH with no node in it, and the
+				// CLI's `#!/usr/bin/env node` shebang then dies with 127. `spec.env` layers the run's own
+				// variables (today: the MCP run token for codex's http transport) OVER that base, so it
+				// adds identity without discarding the PATH that makes the binary runnable at all.
+				//
+				// This spread used to be `spec.env ? {...process.env, ...spec.env} : {}`, which dropped
+				// `resolveEnv` on the floor: it left the resolver with no call site at all, silently
+				// reverting the `.app` fix on every spawn, and handed the raw daemon environment to the
+				// one path that does set `spec.env`. `AgentProcess.test.ts`'s two PATH cases are the
+				// regression guard — they pass NO `spec.env`, so they fail outright if the base is
+				// conditional.
+				env: { ...resolveEnv(bin as string), ...spec.env },
 				...invocation.options,
 				...tree.spawnOptions,
 			})
