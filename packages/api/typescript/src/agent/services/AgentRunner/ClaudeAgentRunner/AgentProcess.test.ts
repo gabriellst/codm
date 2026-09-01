@@ -1,5 +1,9 @@
-import { describe, expect, it } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { posixProcessTree, type ProcessTree, type TreeRoot } from '@codm/core-typescript'
+import { resolveProviderEnv } from '../platformInvocation'
 import { createNodeAgentProcessSpawner, type AgentProcess } from './AgentProcess'
 
 /**
@@ -97,4 +101,60 @@ describe('createNodeAgentProcessSpawner — consumes the ProcessTree strategy', 
 			})
 		},
 	)
+})
+
+/**
+ * O BUG DO PATH MÍNIMO, reproduzido de verdade — o `provider exited with code 127: env: node: No
+ * such file or directory` que envenenava issues em máquinas com node por Homebrew/nvm.
+ *
+ * A fixture é o formato exato da falha: um "CLI" cujo shebang é `#!/usr/bin/env node` (o do próprio
+ * `claude`), e um daemon cujo PATH herdado é o de um .app lançado pelo Finder/launchd — sem node.
+ * O `node` de mentira mora AO LADO do CLI (o layout real de nvm/npm-global/Homebrew), que é
+ * exatamente o diretório que `resolveProviderEnv` atesta via `dirname(binary)`.
+ *
+ * Hermético nos dois sentidos: o controle usa um dir de fixture VAZIO como PATH (nenhum host tem
+ * node nele), e o caso verde assertiva o stdout do NOSSO node — o node real do host executaria o
+ * conteúdo do CLI e imprimiria outra coisa, então um vazamento de host não passa por verde.
+ * POSIX-only: shebang é mecanismo POSIX (no Windows o caminho é o `cmd.exe` de `resolveInvocation`).
+ */
+describe.skipIf(process.platform === 'win32')('createNodeAgentProcessSpawner — monta o env do filho (PATH resolvido)', () => {
+	let root: string
+	let cli: string
+	let emptyDir: string
+
+	beforeEach(() => {
+		root = mkdtempSync(join(tmpdir(), 'agent-process-path-'))
+		// Não existe de propósito: uma entrada de PATH inexistente é o "sem node" mais hermético possível.
+		emptyDir = join(root, 'empty')
+		writeFileSync(join(root, 'node'), '#!/bin/sh\necho fake-node-ok\n', { mode: 0o755 })
+		cli = join(root, 'fake-cli')
+		writeFileSync(cli, '#!/usr/bin/env node\nconsole.log("real-node-ran")\n', { mode: 0o755 })
+	})
+	afterEach(() => {
+		rmSync(root, { recursive: true, force: true })
+	})
+
+	it('CONTROLE — com o env herdado cru de um .app (PATH sem node), o shebang morre com 127', async () => {
+		// O resolver identidade é o comportamento antigo: o filho recebe o PATH do pai como está.
+		const inherited = () => ({ PATH: emptyDir })
+		const proc = createNodeAgentProcessSpawner(posixProcessTree, inherited)({ cmd: [cli], cwd: root, stdin: false })
+
+		expect(await proc.exited).toBe(127)
+	})
+
+	it('com o env MONTADO, o mesmo PATH mínimo resolve o node mesmo assim — pelo dir do próprio binário', async () => {
+		const resolveEnv = (binary: string) =>
+			resolveProviderEnv(binary, {
+				// A base é o PATH de um .app lançado pelo Finder: nada utilizável. `home` aponta para a
+				// fixture para os knownDirs da row não vazarem o host para dentro do verde.
+				basePath: emptyDir,
+				env: { PATH: emptyDir },
+				home: join(root, 'home'),
+				execPath: join(root, 'home', 'daemon'),
+			})
+		const proc = createNodeAgentProcessSpawner(posixProcessTree, resolveEnv)({ cmd: [cli], cwd: root, stdin: false })
+
+		expect(await readFirstLine(proc)).toBe('fake-node-ok')
+		expect(await proc.exited).toBe(0)
+	})
 })

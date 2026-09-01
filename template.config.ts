@@ -416,6 +416,17 @@ export const REPO = {
 			doc: 'interpretador de lote do Windows; o SO já o exporta — declarado para o platformInvocation ler pela porta tipada',
 			advanced: true,
 		},
+		// O PATH HERDADO PELO DAEMON — mesmo racional do COMSPEC: o SO define, ninguém preenche, mas a
+		// leitura entra pela porta tipada. É a BASE do PATH que `resolveProviderEnv` monta para os
+		// processos-filho (CLI do provedor): um .app lançado pelo Finder/launchd herda quase nada, e o
+		// shebang `#!/usr/bin/env node` do CLI morre com 127 se o filho receber esse PATH cru.
+		PATH: {
+			consumers: ['apiTs'],
+			schema: 'kernel',
+			example: '/usr/local/bin:/usr/bin:/bin',
+			doc: 'PATH herdado pelo daemon; o SO define — declarado como base do PATH dos processos-filho (resolveProviderEnv)',
+			advanced: true,
+		},
 		REDIS_URL: { consumers: ['apiTs'], schema: 'kernel', example: 'redis://localhost:6379' },
 		// ── Config verbatim do serviço de canal de origem — CHANNEL_* primary keys with
 		// generic fallbacks read by internal/shared/config/config.go. Retarget/rename happens in the

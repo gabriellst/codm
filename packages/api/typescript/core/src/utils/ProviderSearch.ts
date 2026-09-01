@@ -133,6 +133,42 @@ export function resolveBinary(command: string, spec: ProviderSearchSpec, env: Pr
 }
 
 /**
+ * WHAT a spawned provider CLI's PATH is made of — the same declared relation, consumed for the
+ * child's environment instead of for a search.
+ *
+ * The bug this closes: the CLI binary is FOUND (resolveBinary searches beyond PATH) and executed by
+ * absolute path, but its `#!/usr/bin/env node` shebang then searches the CHILD's PATH — and a
+ * daemon launched by Finder/launchd inherits little more than `/usr/bin:/bin:/usr/sbin:/sbin`, so
+ * `env` answers `node: No such file or directory` and the exec dies with 127.
+ */
+export interface ChildPathSources {
+	/** The PATH the parent itself inherited — under a Finder/launchd launch, nearly empty. */
+	readonly basePath: string
+	/**
+	 * Directories the running process can VOUCH for: the one holding its own interpreter
+	 * (`process.execPath`) and the one holding the binary being invoked — under nvm/fnm/volta/asdf
+	 * and npm-global installs the provider shim and `node` live side by side, which is what makes
+	 * this the entry that rescues those hosts.
+	 */
+	readonly runtimeDirs: readonly string[]
+}
+
+/**
+ * Compose the PATH a child process should see: the inherited entries first (never shadow the
+ * user's own resolution order), then the runtime dirs, then the row's declared known dirs.
+ * Deduplicated, joined on the row's own delimiter. No existence probing — a dir that isn't there
+ * is skipped by the OS lookup itself, and staying pure is what keeps this testable from any host.
+ */
+export function composeChildPath(spec: ProviderSearchSpec, env: ProviderSearchEnv, sources: ChildPathSources): string {
+	const entries = [
+		...sources.basePath.split(spec.pathDelimiter),
+		...sources.runtimeDirs,
+		...spec.knownDirs(env),
+	].filter(Boolean)
+	return [...new Set(entries)].join(spec.pathDelimiter)
+}
+
+/**
  * Exec bit AND a regular file. `access(X_OK)` alone accepts a DIRECTORY named like the binary
  * (search permission is `x`), and on Windows it degrades to `F_OK` — there the extension is the
  * exec bit, which is why the win32 row never offers the bare name.

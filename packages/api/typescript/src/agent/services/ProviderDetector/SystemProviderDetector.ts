@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { spawnSync } from 'node:child_process'
-import { resolveInvocation } from '../AgentRunner/platformInvocation'
+import { resolveInvocation, resolveProviderEnv } from '../AgentRunner/platformInvocation'
 import { homedir } from 'node:os'
 import { LoggingService, PROVIDER_SEARCH, resolveBinary, type ProviderSearchSpec } from '@codm/core-typescript'
 import { ProviderKind, ProviderStatus } from '@codm/contracts-typescript/wire/enums'
@@ -103,6 +103,9 @@ export class SystemProviderDetector extends ProviderDetector {
 				stdio: ['ignore', 'pipe', 'pipe'],
 				encoding: 'utf8',
 				timeout: PROBE_TIMEOUT_MS,
+				// MESMO ambiente montado do spawner do runner: um CLI de shebang `#!/usr/bin/env node` sob o
+				// PATH mínimo de um .app morre com 127 — aqui isso virava "sem capacidades", silenciosamente.
+				env: resolveProviderEnv(binaryPath),
 				...probe.options,
 			})
 			// `spawnSync` does not throw on timeout — it kills the child and sets `res.error`
@@ -151,6 +154,8 @@ export class SystemProviderDetector extends ProviderDetector {
 				stdio: ['ignore', 'pipe', 'ignore'],
 				encoding: 'utf8',
 				timeout: PROBE_TIMEOUT_MS,
+				// Ver `probeCapabilities` — a sonda de versão sofre do mesmo 127 sob PATH mínimo.
+				env: resolveProviderEnv(binaryPath),
 				...probe.options,
 			})
 			if (res.error) {
