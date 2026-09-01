@@ -8,6 +8,20 @@ export interface AgentProcessSpec {
 	cwd: string
 	/** Whether stdin stays open for writes. `false` when the prompt rode in on argv. */
 	stdin: boolean
+	/**
+	 * Extra variables for the CHILD's environment, MERGED over the daemon's own.
+	 *
+	 * It exists because one carrier of the run token cannot be argv: codex's http MCP transport takes
+	 * `bearer_token_env_var`, the NAME of a variable it reads the token from, so the value has to be
+	 * in the environment of the CLI process itself — measured, `bearer_token` (a value) is rejected
+	 * outright. That makes this the one path where the token never appears in `ps` output at all,
+	 * which is strictly better than the argv carriers next to it and is why the seam grew a field
+	 * rather than the runner growing a `process.env` mutation (global, racy across concurrent runs).
+	 *
+	 * MERGED, never replacing: a provider CLI needs PATH, HOME and its own auth from the ambient
+	 * environment, so handing it only these keys would break login rather than scope it.
+	 */
+	env?: Readonly<Record<string, string>>
 }
 
 /**
@@ -72,6 +86,10 @@ export function createNodeAgentProcessSpawner(tree: ProcessTree): AgentProcessSp
 			child = spawnChild(invocation.file, invocation.args, {
 				cwd: spec.cwd,
 				stdio: [spec.stdin ? 'pipe' : 'ignore', 'pipe', 'pipe'],
+				// Omitted entirely when the spec asks for nothing, so the child keeps inheriting rather
+				// than receiving a copy — `undefined` and `{...process.env}` are not the same thing to
+				// `spawn`, and only the former survives a variable the daemon gains after boot.
+				...(spec.env ? { env: { ...process.env, ...spec.env } } : {}),
 				...invocation.options,
 				...tree.spawnOptions,
 			})

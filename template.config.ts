@@ -85,8 +85,8 @@ const WORKSPACES = {
 		nxProject: 'api-go',
 		devServer: 'aggregate',
 		// The DECLARED recipe for booting this workspace as a co-tenant of a test harness
-		// (see TestBoot below). `-o api` is the path .gitignore already reserves for this
-		// workspace's compiled binary ("Compiled Go binaries"); `run` names the same artifact,
+		// (see TestBoot below). `-o api.exe` is the path .gitignore already reserves for this
+		// workspace's compiled binary; `run` names the same artifact,
 		// and both resolve against `pkgRoot` — which is also what puts config.Load's
 		// `godotenv.Load("../../../.env")` on the repo root, exactly like `bun dev:api:go`.
 		testBoot: {

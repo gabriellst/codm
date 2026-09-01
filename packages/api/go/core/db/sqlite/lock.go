@@ -61,8 +61,20 @@ func acquireDataDirLock(lockPath string) (func(), error) {
 	}
 
 	// Stale lock (previous owner crashed) — reclaim. The retry still publishes
-	// atomically, so a live process that acquired in the gap wins and we surface
-	// its lock instead of stomping it.
+	// atomically, so a live process that acquired in the gap AFTER our Remove wins
+	// and we surface its lock instead of stomping it.
+	//
+	// KNOWN RACE, PRE-EXISTING AND NARROWER THAN IT WAS. Two processes that read the
+	// SAME dead holder can both reach this line: A removes and publishes, then B's
+	// Remove deletes A's freshly published lock and B publishes its own — two owners,
+	// no error on either side. The atomic publish above closed the window that
+	// mattered in practice (the O_EXCL gap, where a lock existed with no pid in it and
+	// the reclaim branch became the NORMAL path); this one needs two daemons to boot
+	// against one data dir within microseconds of each other, after a crash. Closing it
+	// properly means making remove-and-republish a single atomic step — a rename over
+	// the holder we verified dead, conditional on it still being that holder — which is
+	// a different design than a lockfile and is not worth it at one desktop daemon per
+	// data dir. Recorded rather than fixed, so it is not rediscovered as new.
 	_ = os.Remove(lockPath)
 	if err := publishLock(lockPath, self); err != nil {
 		if errors.Is(err, os.ErrExist) {

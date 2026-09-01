@@ -3,7 +3,10 @@
 # CLI's event grammar is measured without consuming ChatGPT quota. The grammar is
 # emitted by the CLI, not the model.
 WS="$(cd "$(dirname "$0")" && pwd)"
-OUT="C:/Users/detup/Desktop/CoDM/.specs/codedm/codex-smoke/raw"
+# Relative to this script, never to the machine it was first run on: a measurement script that only
+# works from one absolute path is not reproducible, which is the entire point of committing it.
+OUT="$WS/raw"
+mkdir -p "$OUT"
 M="${CODEX_SMOKE_MODEL:-qwen3:4b}"
 BASE=(codex exec --json --oss --local-provider ollama -m "$M" --skip-git-repo-check -C "$WS")
 
@@ -41,6 +44,11 @@ run s5-mcp 300 "${BASE[@]}" -s read-only \
   -c "mcp_servers.codmsmoke.args=[\"$WS/fake-mcp.js\",\"--probe\"]" \
   -c "mcp_servers.codmsmoke.env={CODM_RUN_TOKEN=\"tok-abc123\"}" \
   "Say OK."
+
+# s6 — cancel: NOT scripted. `raw/s6-cancel.jsonl` was captured by hand, interrupting a running turn,
+# because the signal under measurement is what the CLI emits when a human kills it — which a
+# `timeout` wrapper does not reproduce faithfully. Stated here so the absence reads as a decision
+# rather than as a smoke someone forgot to write.
 
 echo "=== DONE ==="
 ls -la "$OUT"

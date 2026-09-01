@@ -6,7 +6,7 @@ import { z, type ZodType } from 'zod'
 import { StopKind } from '@codm/contracts-typescript/wire/enums'
 import { AgentIdentityService, LoggingService } from '@codm/core-typescript'
 import { ProductConfig } from '@shared/config/ProductConfig'
-import { MCP_SERVER_KEY } from '../../../mcp/wire'
+import { MCP_RUN_TOKEN_ENV, MCP_SERVER_KEY } from '../../../mcp/wire'
 import { AgentRunOutcome, type TransportStopKind } from '../../../enums'
 import type { AgentMcpInvocation } from '../../../types/AgentMcpInvocation'
 import type { AgentRunRequest } from '../../../types/AgentRunRequest'
@@ -176,6 +176,20 @@ export class CodexAgentRunner extends AgentRunner {
 		return args
 	}
 
+	/**
+	 * The child environment this invocation needs, or nothing.
+	 *
+	 * ONLY the http branch needs one, and only because its config carries a variable NAME (see
+	 * `renderMcpOverrides`). The stdio branch declares the child's env inside the config instead, so
+	 * putting the token in codex's own environment there would widen its exposure for no gain.
+	 *
+	 * STATIC and PURE for the same reason `buildArgs` is: it is a rendering decision about an
+	 * invocation, testable without a process anywhere near it.
+	 */
+	static mcpEnv(mcp: AgentMcpInvocation | undefined): Record<string, string> | undefined {
+		return mcp?.transport === 'http' ? { [MCP_RUN_TOKEN_ENV]: mcp.token } : undefined
+	}
+
 	async *run<OutputSchema extends ZodType | undefined = undefined>(
 		request: AgentRunRequest<OutputSchema>,
 	): AsyncIterable<AgentRuntimeEvent> {
@@ -199,7 +213,12 @@ export class CodexAgentRunner extends AgentRunner {
 				outputSchemaPath: schema?.path,
 			})
 			// The prompt LAST, as the trailing positional both shapes end with.
-			proc = this.spawner({ cmd: [request.binaryPath, ...args, renderPrompt(request)], cwd: request.cwd, stdin: false })
+			proc = this.spawner({
+				cmd: [request.binaryPath, ...args, renderPrompt(request)],
+				cwd: request.cwd,
+				stdin: false,
+				env: CodexAgentRunner.mcpEnv(request.mcp),
+			})
 		} catch (cause) {
 			schema?.cleanup()
 			if (request.mcp) this.identities.revoke(request.mcp.token)
@@ -401,19 +420,41 @@ function failure(detail: string): AgentRunResult {
  * `AgentMcpInvocation` → the inline `-c` overrides codex takes instead of a config flag.
  *
  * One `-c` per LEAF, because that is the shape the CLI accepts: `-c mcp_servers.<key>.command=…`,
- * `.args=[…]`, `.env={…}`. Values are JSON-encoded, which is also TOML-compatible for the scalar and
- * array cases and is what the measured invocation used.
+ * `.args=[…]`, `.env={…}`.
  *
- * The HTTP transport has a counterpart (`codex mcp add --url --bearer-token-env-var`), but expressing
- * it through inline `-c` is UNFALSIFIED — only the stdio shape was measured to spawn. It is rendered
- * on the same pattern rather than omitted, because omitting it would silently drop tools for an
- * invocation the seam says is legal; the caveat lives here so the next person measures rather than
- * assumes.
+ * THE VALUE GRAMMAR IS TOML, NOT JSON. `-c` overrides the same `~/.codex/config.toml` the CLI reads,
+ * and its own help says so outright (`raw/help-root.txt:46-52`): *"The `value` portion is parsed as
+ * TOML. If it fails to parse as TOML, the raw string is used as a literal."* The two grammars coincide
+ * on the leaves rendered as scalars and arrays (`"node"`, `["/srv.js"]` are valid in both) — which is
+ * the trap, because they DIVERGE on the inline table, and the table is the one leaf carrying the run
+ * token. TOML writes it `{KEY="value"}`: `=`, not `:`.
+ *
+ * Both branches below were MEASURED against codex-cli 0.150.0 with `codex mcp list -c …`, which
+ * resolves the config and prints the server without spawning a model — a falsifier that costs nothing
+ * and is why neither shape is guessed any more (`raw/config-parse-probe.txt`):
+ *
+ *   env={CODM_RUN_TOKEN="tok"}       →  Env  CODM_RUN_TOKEN=*****
+ *   env={"CODM_RUN_TOKEN":"tok"}     →  Error: failed to load bootstrap configuration
+ *                                       invalid type: string "{\"CODM_RUN_TOKEN\":\"tok\"}",
+ *                                       expected a map in `mcp_servers.codm.env`
+ *   bearer_token_env_var="CODM_…"    →  Bearer Token Env Var  CODM_RUN_TOKEN   Auth: Bearer token
+ *   bearer_token="tok"               →  Error: bearer_token is not supported for streamable_http
+ *
+ * So a JSON rendering does not degrade — the fallback turns it into a STRING, the deserializer wants a
+ * map, and the whole config load aborts. The run dies at startup rather than losing its tools quietly.
+ *
+ * THE HTTP BRANCH TAKES A VARIABLE NAME, NOT A TOKEN, and that is a real difference in kind rather
+ * than a spelling: `bearer_token_env_var` names an env var codex reads at request time, so the value
+ * has to reach the CLI's OWN environment (`run()` puts it there via `AgentProcessSpec.env`). The
+ * pleasant consequence is that on this path the token never enters argv, so it is not in `ps` — unlike
+ * the stdio branch here and both branches of the claude runner, where argv is the only carrier the CLI
+ * offers. It authenticates against the same door: `bearer_token_env_var` sends
+ * `Authorization: Bearer <value>`, which is exactly what `mcp/door.ts` resolves per call.
  */
 function renderMcpOverrides(mcp: AgentMcpInvocation): string[] {
 	const key = `mcp_servers.${MCP_SERVER_KEY}`
 	if (mcp.transport === 'http') {
-		return ['-c', `${key}.url=${JSON.stringify(mcp.endpoint)}`, '-c', `${key}.bearer_token=${JSON.stringify(mcp.token)}`]
+		return ['-c', `${key}.url=${JSON.stringify(mcp.endpoint)}`, '-c', `${key}.bearer_token_env_var=${JSON.stringify(MCP_RUN_TOKEN_ENV)}`]
 	}
 	return [
 		'-c',
@@ -421,7 +462,7 @@ function renderMcpOverrides(mcp: AgentMcpInvocation): string[] {
 		'-c',
 		`${key}.args=${JSON.stringify(mcp.command?.args ?? [])}`,
 		'-c',
-		`${key}.env=${JSON.stringify({ CODM_RUN_TOKEN: mcp.token })}`,
+		`${key}.env={${MCP_RUN_TOKEN_ENV}=${JSON.stringify(mcp.token)}}`,
 	]
 }
 
@@ -436,6 +477,13 @@ function renderMcpOverrides(mcp: AgentMcpInvocation): string[] {
  * NO structured-output directive, and that absence is the point of point 3: `--output-schema` hands
  * the CLI the contract, so describing the schema in prose as well would be a second, drifting copy of
  * it — the exact duplication the claude runner has to accept only because its CLI offers no such flag.
+ *
+ * KNOWN GAP — JOINING DROPS THE ROLES. `user` and `assistant` messages are concatenated with nothing
+ * marking which was which, so a multi-message turn reads to the model as one undifferentiated block.
+ * It is nearly unreachable in practice and that is the only reason it stands: `sessionResume` probes
+ * TRUE on this binary, so after the first turn the transcript lives in the recorded session and
+ * `messages` carries just the new one. The exposure is a FIRST turn built from several messages. If
+ * that shape ever becomes real, the fix is role markers here — not a second prompt renderer.
  */
 function renderPrompt(request: AgentRunRequest<ZodType | undefined>): string {
 	const parts = request.systemPrompt ? [request.systemPrompt] : []

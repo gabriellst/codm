@@ -15,7 +15,7 @@ import { nodeAgentProcessSpawner, type AgentProcess, type AgentProcessSpawner } 
 // The server key is single-sourced in `mcp/wire.ts` — a LEAF module — because the runner, the MCP
 // manifest and the turn-fact accumulator all need the same spelling and routing them through one
 // another would drag a subprocess-spawning module into a pure state machine.
-import { MCP_SERVER_KEY } from '../../../mcp/wire'
+import { MCP_RUN_TOKEN_ENV, MCP_SERVER_KEY } from '../../../mcp/wire'
 import { AgentIdentityService } from '@codm/core-typescript'
 
 export interface ClaudeAgentRunnerOptions {
@@ -609,7 +609,7 @@ function renderMcpConfig(mcp: AgentMcpInvocation): string {
 	const server =
 		mcp.transport === 'http'
 			? { type: 'http', url: mcp.endpoint, headers: { Authorization: `Bearer ${mcp.token}` } }
-			: { type: 'stdio', command: mcp.command?.command, args: mcp.command?.args ?? [], env: { CODM_RUN_TOKEN: mcp.token } }
+			: { type: 'stdio', command: mcp.command?.command, args: mcp.command?.args ?? [], env: { [MCP_RUN_TOKEN_ENV]: mcp.token } }
 	return JSON.stringify({ mcpServers: { [MCP_SERVER_KEY]: server } })
 }
 

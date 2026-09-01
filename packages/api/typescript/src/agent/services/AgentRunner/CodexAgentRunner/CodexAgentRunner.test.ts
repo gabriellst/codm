@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'bun:test'
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { MCP_RUN_TOKEN_ENV, MCP_SERVER_KEY, wireToolName } from '../../../mcp/wire'
+import type { AgentToolName } from '../../../enums'
+import type { AgentMcpInvocation } from '../../../types/AgentMcpInvocation'
 import { CodexAgentRunner } from './CodexAgentRunner'
 
 /**
@@ -45,6 +48,20 @@ function flagsIn(args: readonly string[]): string[] {
 	return args.filter(a => a.startsWith('-'))
 }
 
+/**
+ * A stdio `AgentMcpInvocation`, TYPED — the same helper shape `ClaudeAgentRunner/buildArgs.test.ts`
+ * uses, for the same reason: a cast here would switch off the type-check on the very object whose
+ * serialization is under test, and the day the seam grows or renames a field these cases would keep
+ * compiling against a dead shape while asserting an argv nothing produces.
+ */
+const mcp = (overrides: Partial<AgentMcpInvocation> = {}): AgentMcpInvocation => ({
+	transport: 'stdio',
+	token: 't',
+	allowedTools: [] as readonly AgentToolName[],
+	command: { command: 'node', args: [] },
+	...overrides,
+})
+
 describe('CodexAgentRunner.buildArgs — the plain `exec` shape', () => {
 	const base = { cwd: '/work/thread-1' }
 
@@ -86,7 +103,11 @@ describe('CodexAgentRunner.buildArgs — the plain `exec` shape', () => {
 	it('declares an MCP server through inline -c overrides, with the run token in env — never a tool argument', () => {
 		const args = CodexAgentRunner.buildArgs({
 			...base,
-			mcp: { transport: 'stdio', token: 'tok-abc123', allowedTools: ['a'], command: { command: 'node', args: ['/srv.js'] } } as never,
+			mcp: mcp({
+				token: 'tok-abc123',
+				allowedTools: [wireToolName('TransitionIssueStatus')],
+				command: { command: 'node', args: ['/srv.js'] },
+			}),
 		})
 
 		// One `-c` per leaf, which is the shape measured to actually spawn a server (`raw/mcp-proof.json`).
@@ -95,6 +116,35 @@ describe('CodexAgentRunner.buildArgs — the plain `exec` shape', () => {
 		expect(args.some(a => a.includes('CODM_RUN_TOKEN') && a.includes('tok-abc123'))).toBe(true)
 		// The token must reach the child ONLY through env — not as an argument the model could read back.
 		expect(args.some(a => a.includes('tok-abc123') && !a.includes('env='))).toBe(false)
+		// …and it must reach it PARSEABLY. `-c` values are TOML, so env is an inline TABLE (`KEY="v"`),
+		// not a JSON object (`"KEY":"v"`). Asserting only that the token appears somewhere in the string
+		// passes on BOTH, which is how a `JSON.stringify` here read as correct — while the measured
+		// behaviour is a hard config abort ("invalid type: string …, expected a map", case 2 of
+		// `raw/config-parse-probe.txt`). Byte-for-byte the shape case 1 resolves.
+		expect(args).toContain(`mcp_servers.${MCP_SERVER_KEY}.env={${MCP_RUN_TOKEN_ENV}="tok-abc123"}`)
+	})
+
+	it('the http transport names an ENV VAR, and so keeps the token out of argv entirely', () => {
+		const invocation = mcp({ transport: 'http', endpoint: 'http://127.0.0.1:3030/mcp', token: 'tok-abc123', command: undefined })
+		const args = CodexAgentRunner.buildArgs({ ...base, mcp: invocation })
+
+		// `bearer_token=<value>` is REJECTED by the CLI — "bearer_token is not supported for
+		// streamable_http" (case 4 of `raw/config-parse-probe.txt`). What it accepts is the NAME of a
+		// variable it reads at request time (case 3), which is a difference in kind, not in spelling.
+		expect(args).toContain(`mcp_servers.${MCP_SERVER_KEY}.bearer_token_env_var="${MCP_RUN_TOKEN_ENV}"`)
+		expect(args.some(a => a.includes('bearer_token='))).toBe(false)
+
+		// The property that difference buys: on this path the token is in NO argument, so it is not in
+		// `ps` output. It reaches the CLI through its own environment instead.
+		expect(args.some(a => a.includes('tok-abc123'))).toBe(false)
+		expect(CodexAgentRunner.mcpEnv(invocation)).toEqual({ [MCP_RUN_TOKEN_ENV]: 'tok-abc123' })
+	})
+
+	it('the stdio transport asks for NO process env — its child env is declared in the config instead', () => {
+		// Widening the CLI's own environment there would expose the token to every process codex
+		// spawns, for nothing: `-c …env={…}` already hands it to the one server that needs it.
+		expect(CodexAgentRunner.mcpEnv(mcp())).toBeUndefined()
+		expect(CodexAgentRunner.mcpEnv(undefined)).toBeUndefined()
 	})
 
 	it('every flag it emits is one `codex exec` actually publishes', () => {
@@ -103,7 +153,7 @@ describe('CodexAgentRunner.buildArgs — the plain `exec` shape', () => {
 			...base,
 			extraDirs: ['/a'],
 			outputSchemaPath: '/tmp/schema.json',
-			mcp: { transport: 'stdio', token: 't', allowedTools: [], command: { command: 'node', args: [] } } as never,
+			mcp: mcp(),
 		})
 
 		expect(published.size, 'the help capture parsed no flags — the assertion below would be vacuous').toBeGreaterThan(10)
@@ -136,7 +186,7 @@ describe('CodexAgentRunner.buildArgs — the `exec resume` shape is NARROWER, no
 		const args = CodexAgentRunner.buildArgs({
 			...base,
 			outputSchemaPath: '/tmp/schema.json',
-			mcp: { transport: 'stdio', token: 't', allowedTools: [], command: { command: 'node', args: [] } } as never,
+			mcp: mcp(),
 		})
 
 		expect(args).toContain('--json')
@@ -150,7 +200,7 @@ describe('CodexAgentRunner.buildArgs — the `exec resume` shape is NARROWER, no
 			...base,
 			extraDirs: ['/a'],
 			outputSchemaPath: '/tmp/schema.json',
-			mcp: { transport: 'stdio', token: 't', allowedTools: [], command: { command: 'node', args: [] } } as never,
+			mcp: mcp(),
 		})
 
 		expect(published.size, 'the help capture parsed no flags — the assertion below would be vacuous').toBeGreaterThan(10)

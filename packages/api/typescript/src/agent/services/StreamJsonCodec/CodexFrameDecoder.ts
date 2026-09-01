@@ -179,6 +179,15 @@ export class CodexFrameDecoder {
  *
  * `reasoning_output_tokens` is the fifth, and the one `AgentTurnUsage` grew an optional bucket for:
  * on a reasoning model it can dominate the turn's cost, and dropping it under-bills systematically.
+ *
+ * KNOWN GAP, harmless against 0.150.0 and recorded so it is not rediscovered. `AgentUsageEvent`
+ * declares `reasoningOutputTokens` OPTIONAL, whose meaning is "the transport did not report this" —
+ * but `count()` maps a missing field to `0`, which asserts the opposite: "the transport reported
+ * none". Every `turn.completed` in the corpus carries the field, so today the two readings coincide
+ * and nothing downstream can tell them apart. They stop coinciding the day a build drops it, and the
+ * failure is silent under-billing that looks like measurement. The fix is to let this one bucket stay
+ * `undefined` when the key is absent — deliberately NOT taken here, because it changes the payload of
+ * an event already in flight and belongs with the consumer audit, not with a decoder correction.
  */
 function readUsage(raw: unknown): AgentTurnUsage {
 	const usage = isRecord(raw) ? raw : {}

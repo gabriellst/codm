@@ -46,3 +46,11 @@ packages/contracts/generated/**    merge=regenerate
 *.bat  text eol=crlf
 *.cmd  text eol=crlf
 *.ps1  text eol=crlf
+
+# Encrypted design blob. It is NOT text, but its bytes today happen to carry no NUL, so git's
+# heuristic classifies it as text (`git ls-files --eol` reports `i/lf attr/text=auto`) and the rule
+# above would renormalize it. Nothing changes today — there is no CRLF in it — but the day a
+# re-encryption produces a `\r\n` pair anywhere in the ciphertext, `git add` would rewrite that byte
+# and the file would no longer decrypt. `binary` is the declaration that its bytes are content, not
+# a line-ending preference, and it also stops diff/merge from ever touching them.
+*.pen  binary

@@ -174,3 +174,52 @@ account or a stronger local model.
    `gpt-5.1-codex`, … → `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`, `gpt-5.4-mini`). Pinning a slug
    into a cross-language enum would ship stale. `PROVIDER_MODELS[CODEX] = [DEFAULT]` is the honest
    catalog entry and passes all three `auditProviderModels` gates.
+
+## 7. Config-parse measurement (2026-08-31, Windows host, codex-cli 0.150.0)
+
+The smokes above drive a MODEL to measure the event grammar. The MCP declaration needs no model:
+`codex mcp list -c …` resolves the config and prints the server, so each shape costs nothing and is
+settled by measurement rather than by analogy with claude. Full capture: `raw/config-parse-probe.txt`.
+
+This closed §4's `UNFALSIFIED` note on the http transport — and found that BOTH branches of
+`renderMcpOverrides` as first written were rejected outright:
+
+| rendered | result |
+|---|---|
+| `env={CODM_RUN_TOKEN="tok"}` | resolves — `Env  CODM_RUN_TOKEN=*****` |
+| `env={"CODM_RUN_TOKEN":"tok"}` | `Error: failed to load bootstrap configuration` — `invalid type: string …, expected a map` |
+| `bearer_token_env_var="CODM_RUN_TOKEN"` | resolves — `Auth: Bearer token` |
+| `bearer_token="tok"` | `Error: bearer_token is not supported for streamable_http` |
+
+Two things follow that the spec previously got wrong:
+
+1. **A JSON value does not degrade, it aborts.** `help-root.txt:46-52` — *"The `value` portion is
+   parsed as TOML. If it fails to parse as TOML, the raw string is used as a literal."* The literal is
+   then a string where the deserializer wants a map, so the whole config load fails and the run dies
+   at startup. Not a tool-less run, not a 401.
+2. **`bearer_token_env_var` takes a variable NAME.** So the token has to be in the environment of the
+   codex process itself, which is what `AgentProcessSpec.env` exists for. Consequence worth naming:
+   on the http path the run token is in NO argv, so it is not visible in `ps`.
+
+## 8. Known issues, recorded rather than fixed
+
+Stated here so they are found as known rather than rediscovered as new. Each is also noted at its
+own site in the code.
+
+1. **The run token is in argv on three of the four paths.** codex/stdio (`-c …env={…}`) and both
+   claude paths (`--mcp-config <json>`) put an opaque, short-lived, `finally`-revoked token into a
+   process argument, readable by any local process. This is a property of what the CLIs accept, not a
+   defect introduced by either runner; codex/http is the one path that escapes it, and only because
+   its config takes a variable name. If it ever needs closing, the fix is per-runner (a temp file, or
+   a real env var) and belongs with a threat model, not with a rendering change.
+2. **`renderPrompt` joins messages without role markers** (`CodexAgentRunner.ts`). Nearly unreachable
+   while `sessionResume` probes true — after the first turn the transcript lives in the recorded
+   session. Exposure is a first turn built from several messages.
+3. **The stale-lock reclaim can produce two owners** (`core/db/sqlite/lock.go` and
+   `core/src/db/drivers/DataDirLock.ts`, same shape on both sides). Two daemons that read the same
+   dead holder can both remove-and-republish; the second stomps the first. Pre-existing, and narrower
+   since the atomic publish landed — that fix closed the window that actually fired. Closing this one
+   means a conditional rename, i.e. a different design than a lockfile.
+4. **`reasoningOutputTokens` reports `0` for a field that is absent** (`CodexFrameDecoder.ts`), while
+   the event declares it optional with the meaning "not reported". Harmless against 0.150.0, which
+   always sends it; it would become silent under-billing on a build that stops.
