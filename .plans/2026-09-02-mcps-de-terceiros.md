@@ -105,8 +105,8 @@ graph TD
 - Create: `packages/contracts/src/wire/enums/mcp-transport.tsp`
 - Create: `packages/contracts/src/wire/enums/mcp-approval-policy.tsp`
 - Create: `packages/contracts/src/wire/enums/mcp-approval-decision.tsp`
-- Modify: `packages/api/typescript/src/agent/errors/index.ts` — adiciona 3 códigos às uniões
-- Modify: `packages/api/typescript/src/shared/utils/GlobalErrorMapper.ts` — mapeia os 3 códigos
+- Modify: `packages/contracts/src/wire/main.tsp` — importa os três `.tsp` (enum não é auto-descoberto)
+- Modify: `packages/api/typescript/src/agent/errors/index.ts` — adiciona os códigos às uniões E registra os status no `registerErrorCodes` que já existe no pé do arquivo
 - Modify: `packages/app/react/src/locales/en.json` — chaves de erro
 - Modify: `packages/app/react/src/locales/pt.json` — chaves de erro
 
@@ -182,17 +182,30 @@ Modify `packages/api/typescript/src/agent/errors/index.ts`:
 
 ### Step T1.5 — Status HTTP
 
-Modify `packages/api/typescript/src/shared/utils/GlobalErrorMapper.ts`: adicionar as entradas
-`MCP_SERVER_KEY_CONFLICT: HttpStatusCode.CONFLICT`,
+**NÃO toque no `GlobalErrorMapper`.** Ele vive em `packages/api/typescript/core/src/utils/`, e o
+próprio docblock manda o contrário: *"Adding a new context-specific code = touch the context's
+`errors/index.ts`, NOT this file. Core stays untouched."* O mecanismo real é a chamada
+`registerErrorCodes({...})` que já existe no pé de `agent/errors/index.ts` — a mesma por onde
+`AGENT_RUN_TOKEN_INVALID` e `AGENT_RUN_SCOPE_MISMATCH` já passam.
+
+Modify `packages/api/typescript/src/agent/errors/index.ts`: acrescentar ao `registerErrorCodes`
+existente `MCP_SERVER_KEY_CONFLICT: HttpStatusCode.CONFLICT`,
 `MCP_SERVER_NOT_FOUND: HttpStatusCode.NOT_FOUND`,
 `MCP_SERVER_TRANSPORT_INCOMPLETE: HttpStatusCode.UNPROCESSABLE_ENTITY`,
 `MCP_APPROVAL_ALREADY_SETTLED: HttpStatusCode.CONFLICT` e
 `MCP_TOOL_APPROVAL_REQUIRED: HttpStatusCode.FORBIDDEN`.
 
+### Step T1.5b — Registrar os `.tsp` no `main.tsp`
+
+Modify `packages/contracts/src/wire/main.tsp`: adicionar `import "./enums/mcp-transport.tsp";`,
+`import "./enums/mcp-approval-policy.tsp";` e `import "./enums/mcp-approval-decision.tsp";` junto dos
+demais. Nenhum enum deste pacote é auto-descoberto — `stop-kind.tsp` está lá pela mesma razão, e sem
+esses imports o `bun contracts` não emite binding nenhum.
+
 ### Step T1.6 — Traduções
 
 Modify `packages/app/react/src/locales/en.json` e `pt.json`: sob a chave de erros já existente,
-adicionar os 4 códigos. EN: `"MCP_SERVER_KEY_CONFLICT": "An MCP server with this key already exists."`,
+adicionar os 5 códigos — todo erro carrega código + status + chave i18n, sem exceção. EN: `"MCP_SERVER_KEY_CONFLICT": "An MCP server with this key already exists."`,
 `"MCP_SERVER_NOT_FOUND": "MCP server not found."`,
 `"MCP_APPROVAL_ALREADY_SETTLED": "This approval was already answered."`,
 `"MCP_TOOL_APPROVAL_REQUIRED": "This tool needs your approval before it can run."`. PT: as

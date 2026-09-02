@@ -450,6 +450,38 @@ func ParseMailboxTargetKind(s string) (MailboxTargetKind, error) {
 	}
 }
 
+type McpApprovalDecision string
+
+const (
+	McpApprovalDecisionAPPROVED McpApprovalDecision = "APPROVED"
+	McpApprovalDecisionDENIED McpApprovalDecision = "DENIED"
+)
+
+func ParseMcpApprovalDecision(s string) (McpApprovalDecision, error) {
+	switch McpApprovalDecision(s) {
+	case McpApprovalDecisionAPPROVED, McpApprovalDecisionDENIED:
+		return McpApprovalDecision(s), nil
+	default:
+		return "", fmt.Errorf("invalid McpApprovalDecision: %q", s)
+	}
+}
+
+type McpApprovalPolicy string
+
+const (
+	McpApprovalPolicyAUTO McpApprovalPolicy = "AUTO"
+	McpApprovalPolicyASK McpApprovalPolicy = "ASK"
+)
+
+func ParseMcpApprovalPolicy(s string) (McpApprovalPolicy, error) {
+	switch McpApprovalPolicy(s) {
+	case McpApprovalPolicyAUTO, McpApprovalPolicyASK:
+		return McpApprovalPolicy(s), nil
+	default:
+		return "", fmt.Errorf("invalid McpApprovalPolicy: %q", s)
+	}
+}
+
 type McpScope string
 
 const (
@@ -464,6 +496,22 @@ func ParseMcpScope(s string) (McpScope, error) {
 		return McpScope(s), nil
 	default:
 		return "", fmt.Errorf("invalid McpScope: %q", s)
+	}
+}
+
+type McpTransport string
+
+const (
+	McpTransportSTDIO McpTransport = "STDIO"
+	McpTransportHTTP McpTransport = "HTTP"
+)
+
+func ParseMcpTransport(s string) (McpTransport, error) {
+	switch McpTransport(s) {
+	case McpTransportSTDIO, McpTransportHTTP:
+		return McpTransport(s), nil
+	default:
+		return "", fmt.Errorf("invalid McpTransport: %q", s)
 	}
 }
 
