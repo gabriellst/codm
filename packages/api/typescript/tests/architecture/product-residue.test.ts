@@ -130,6 +130,12 @@ function scan(root: string): Violation[] {
 }
 
 describe('product-residue (base template stays generic — purged product vocabulary never returns)', () => {
+	// A WHOLE-TREE WALK, and 5s is bun's default for a UNIT test rather than a budget anyone chose
+	// for one. This reads every source file under the scan roots (~4.7k tracked files), which costs
+	// 3-6s on its own and crosses the default under full-suite load — measured on Windows, where
+	// filesystem walks are slowest, and reported as an ordinary red with no mention of time. Same
+	// shape as `concurrent-boot`'s 180_000 and the cross-service spike's boot hook: the cost is a
+	// property of the repo's size, so the budget is declared instead of inherited.
 	test('no purged platform / Store-tenancy / legacy-brand token in live packages+scripts+skills+examples', () => {
 		const violations = scan(REPO_ROOT)
 		const report = violations.map(v => `  ${v.file}:${v.line}  [${v.pattern}]  →  ${v.text}`).join('\n')
@@ -139,7 +145,7 @@ describe('product-residue (base template stays generic — purged product vocabu
 				`generic. Rename to a live or neutral identifier (see the sanitized exemplars in examples/), ` +
 				`move it to scripts/skill-evals/ (fixture), or take it to a product fork:\n${report}`,
 		).toBe(0)
-	})
+	}, 120_000)
 
 	// Negative fixture — proves the scan catches an offender in every root and honors the line-scoped
 	// provenance exemption (temp dir, not the real tree).

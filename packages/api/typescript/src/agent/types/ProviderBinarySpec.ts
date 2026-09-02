@@ -34,9 +34,20 @@ export interface ProviderBinarySpec {
 	/** Argv that prints help — the capability probe's input. */
 	helpArgs?: readonly string[]
 	/**
-	 * Flag-in-help → capability-key map. The probe greps `helpArgs` output for each key and sets the
+	 * Help-text TOKEN → capability-key map. The probe greps `helpArgs` output for each key and sets the
 	 * mapped `ProviderCapabilities` field. A capability is therefore DISCOVERED, never assumed from a
 	 * version string, which is what keeps a CLI upgrade from silently changing behaviour.
+	 *
+	 * A TOKEN, NOT A FLAG — and the difference is not pedantry, it is the bug this field was renamed
+	 * out of. The probe has always been `help.includes(key)`, but the field was called
+	 * `capabilityFlags`, and a name that says "flag" invites the next spec to declare `--x` for a CLI
+	 * that spells the same capability another way. codex is exactly that CLI: measured against its own
+	 * committed `--help` (`.specs/codedm/codex-smoke/raw/help-root.txt`) it publishes NEITHER
+	 * `--mcp-config` NOR `--resume` — its MCP is a config key (`-c mcp_servers.*`, measured to spawn a
+	 * server) and its resume is a SUBCOMMAND (`codex exec resume`). The spec declared both flags
+	 * anyway, so the probe reported both capabilities ABSENT on a binary that has both, and the runner
+	 * would have been driven with the conservative argv: no tools, and a transcript re-rendered into
+	 * every prompt. Whatever string the CLI's own help uses is the right key.
 	 */
-	capabilityFlags?: Readonly<Record<string, keyof ProviderCapabilities>>
+	capabilityTokens?: Readonly<Record<string, keyof ProviderCapabilities>>
 }

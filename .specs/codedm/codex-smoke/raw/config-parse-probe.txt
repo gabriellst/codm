@@ -1,0 +1,42 @@
+# `codex mcp list -c …` — the config-parse falsifier.
+#
+# Captured on a Windows 10 host against the binary named in version.txt, resolving the SAME
+# inline overrides CodexAgentRunner.renderMcpOverrides emits. `codex mcp list` loads the config
+# and prints the resolved server WITHOUT spawning a model, so each shape below costs nothing
+# and settles by measurement what the runner previously rendered by analogy with claude.
+#
+# help-root.txt:46-52 is the rule these four cases exercise: "The `value` portion is parsed as
+# TOML. If it fails to parse as TOML, the raw string is used as a literal." A JSON object does
+# not parse as TOML, becomes a string, and the deserializer then rejects a string where it wants
+# a map — so the failure is a HARD config abort, not a silently tool-less run.
+
+$ codex --version
+codex-cli 0.150.0
+
+=== 1. stdio env — TOML inline table — SHIPPED ===
+$ codex mcp list -c 'mcp_servers.probe.command="node"' -c 'mcp_servers.probe.env={CODM_RUN_TOKEN="tok-abc123"}'
+Name   Command  Args  Env                   Cwd  Status   Auth       
+probe  node     -     CODM_RUN_TOKEN=*****  -    enabled  Unsupported
+
+=== 2. stdio env — JSON object — THE DEFECT ===
+$ codex mcp list -c 'mcp_servers.probe.command="node"' -c 'mcp_servers.probe.env={"CODM_RUN_TOKEN":"tok-abc123"}'
+Error: failed to load bootstrap configuration
+
+Caused by:
+    invalid type: string "{\"CODM_RUN_TOKEN\":\"tok-abc123\"}", expected a map
+    in `mcp_servers.probe.env`
+    
+
+=== 3. http — bearer_token_env_var — SHIPPED ===
+$ codex mcp list -c 'mcp_servers.probe.url="http://127.0.0.1:3030/mcp"' -c 'mcp_servers.probe.bearer_token_env_var="CODM_RUN_TOKEN"'
+Name   Url                        Bearer Token Env Var  Status   Auth        
+probe  http://127.0.0.1:3030/mcp  CODM_RUN_TOKEN        enabled  Bearer token
+
+=== 4. http — bearer_token — THE DEFECT ===
+$ codex mcp list -c 'mcp_servers.probe.url="http://127.0.0.1:3030/mcp"' -c 'mcp_servers.probe.bearer_token="tok-abc123"'
+Error: failed to load bootstrap configuration
+
+Caused by:
+    bearer_token is not supported for streamable_http
+    in `mcp_servers.probe`
+    

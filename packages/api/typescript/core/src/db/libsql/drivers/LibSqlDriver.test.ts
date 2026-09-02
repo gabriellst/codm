@@ -7,7 +7,7 @@
 // per call and silently reverts the per-connection pragmas. So the tests below assert descriptor
 // COUNT and pragma VALUES after N transactions, plus the read/write split in both directions.
 import { execSync } from 'node:child_process'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
@@ -17,6 +17,7 @@ import * as schema from '@codm/contracts/db'
 import { migrationsDir } from '@codm/contracts/db/migrations'
 import { events } from '@codm/contracts/db'
 import { LibSqlDriver } from './LibSqlDriver'
+import { removeTempDirWhenFree } from '../../../utils/removeTempDirWhenFree'
 
 /**
  * DERIVED from the schema module, not hardcoded — the assertion is that the applied MIGRATIONS and
@@ -55,7 +56,7 @@ describe('LibSqlDriver', () => {
 	})
 
 	afterAll(() => {
-		rmSync(dir, { recursive: true, force: true })
+		removeTempDirWhenFree(dir)
 	})
 
 	beforeEach(async () => {

@@ -38,6 +38,18 @@ export const MCP_SERVER_KEY = 'codm'
  */
 export const MCP_TOOL_WIRE_PREFIX = `mcp__${MCP_SERVER_KEY}__` as const
 
+/**
+ * The env var the run token rides in, whenever a CLI's config takes a variable NAME rather than a value.
+ *
+ * A THIRD carrier of the same opaque token, alongside the `Authorization: Bearer` header the door
+ * reads and the child `env` a stdio server is spawned with — and it is here, in the wire vocabulary,
+ * for the reason this module exists: it was a bare literal repeated in the two runners, and the
+ * codex http branch was about to make it a fourth. The name is a CONTRACT between whoever spawns the
+ * CLI and whoever reads the variable; a contract spelled by copy-paste drifts on the first rename,
+ * silently, into a 401.
+ */
+export const MCP_RUN_TOKEN_ENV = 'CODM_RUN_TOKEN'
+
 /** `WIRE(C)` — the spelling an MCP client uses, and the string that goes into `--allowedTools`. */
 export function wireToolName(operationId: string): string {
 	return `${MCP_TOOL_WIRE_PREFIX}${operationId}`

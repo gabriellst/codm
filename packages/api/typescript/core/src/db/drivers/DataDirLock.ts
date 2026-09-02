@@ -89,7 +89,17 @@ export function acquireDataDirLock(dataDir: string): void {
 		if (isProcessAlive(holder)) throw dataDirLockedError(dataDir, holder)
 
 		// Stale lock (previous daemon crashed without cleanup) — reclaim it. The retry is still O_EXCL,
-		// so a live daemon that acquired in the gap wins and we surface its lock instead of stomping it.
+		// so a live daemon that acquired in the gap AFTER this rm wins and we surface its lock instead
+		// of stomping it.
+		//
+		// KNOWN RACE, PRE-EXISTING, and the SAME one the Go store carries (see the matching note in
+		// `core/db/sqlite/lock.go`): two daemons that read the same dead holder can both reach this
+		// line, and the second one's `rmSync` deletes the lock the first just published, leaving two
+		// owners with no error on either side. It takes two daemons booting against one data dir within
+		// microseconds of each other, after a crash. Closing it means making remove-and-rewrite a single
+		// atomic step conditional on the holder still being the dead pid we verified — a different
+		// design than a lockfile, and not worth it at one desktop daemon per data dir. Recorded on both
+		// sides so the next reader finds it stated rather than rediscovers it.
 		fs.rmSync(lockPath, { force: true })
 		try {
 			writeLock()

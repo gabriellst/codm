@@ -203,6 +203,12 @@ describe('i18n-coherence (pt/en parity, literal references resolve, unused keys 
 		).toBe(0)
 	})
 
+	// A WHOLE-TREE WALK, and 5s is bun's default for a UNIT test rather than a budget anyone chose
+	// for one. This reads every source file under the scan roots (~4.7k tracked files), which costs
+	// 3-6s on its own and crosses the default under full-suite load — measured on Windows, where
+	// filesystem walks are slowest, and reported as an ordinary red with no mention of time. Same
+	// shape as `concurrent-boot`'s 180_000 and the cross-service spike's boot hook: the cost is a
+	// property of the repo's size, so the budget is declared instead of inherited.
 	test('(b) every literal t()/i18nPrefix key referenced in src resolves in pt.json', () => {
 		const catalogue = readLocale(join(LOCALES_DIR, 'pt.json'))
 		const dangling = findDanglingReferences(catalogue, scanReferences(APP_REACT_SRC))
@@ -218,7 +224,7 @@ describe('i18n-coherence (pt/en parity, literal references resolve, unused keys 
 				`i18nPrefix must name an OBJECT node whose children are the enum values. Never silence by weakening ` +
 				`the scan — model the missed i18next semantics or add a named EXEMPTIONS entry with a why:\n${report}`,
 		).toBe(0)
-	})
+	}, 60_000)
 
 	test('(c) pt.json leaves referenced nowhere in src are listed as a warning, never a failure', () => {
 		const catalogue = readLocale(join(LOCALES_DIR, 'pt.json'))

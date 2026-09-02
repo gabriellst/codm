@@ -9,7 +9,7 @@
 // Real file-backed LibSqlDriver, not `mock` DI — the poison sweep, the dead-letter branch and the
 // claim predicate are all SQL. A mocked outbox would assert the shape of the test, not the
 // dispatcher's behaviour. Same reasoning `tests/flows/shared-outbox-lanes.test.ts` documents.
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
@@ -22,6 +22,7 @@ import { LibSqlOutboxDispatcher, MAX_ATTEMPTS } from './LibSqlOutboxDispatcher'
 import { EventEmitter2Mediator, MockExternalMediator } from '../Mediator'
 import { MockLoggingService } from '../Logging/MockLoggingService'
 import type { Handler } from '../../types/Handler'
+import { removeTempDirWhenFree } from '../../utils/removeTempDirWhenFree'
 
 const OWNER = 'owner-deadat'
 const EVENT_NAME = 'thread.message.appended'
@@ -66,7 +67,7 @@ describe('LibSqlOutboxDispatcher — dead_at', () => {
 	})
 
 	afterAll(() => {
-		rmSync(dir, { recursive: true, force: true })
+		removeTempDirWhenFree(dir)
 	})
 
 	beforeEach(async () => {

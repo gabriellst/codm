@@ -24,6 +24,15 @@ import { BaseDomainEvent, z } from '@codm/core-typescript'
  * A provider that does not cache contributes 0 to both cache buckets — that is arithmetically
  * CORRECT, not "unknown": with no cache, all input lands in `inputTokens` and the sum still holds.
  *
+ * `reasoningOutputTokens` IS OPTIONAL, and it is here rather than only on the frame because this is
+ * the durable record. codex reports it (measured, `.specs/codedm/codex-smoke/raw/s1-text.jsonl`);
+ * claude's transport has no such field. Measuring a bucket and then dropping it at the persistence
+ * boundary would leave exactly the systematic under-count the four required buckets exist to prevent
+ * — on a reasoning model this one can dominate the turn. Optional rather than defaulted to 0 for the
+ * same reason the cache buckets are NOT optional: there, 0 is arithmetically true; here, absence
+ * means the provider never said, and a rate card applied to an invented 0 would under-price silently.
+ * Old rows simply lack the key, which is what makes adding it safe to read back.
+ *
  * Still no `costUsd` and no currency, on purpose — and note D4 REINFORCES that choice rather than
  * contradicting it. Pricing is a policy that changes without the run changing, and the four buckets
  * price differently (a cache read is an order of magnitude cheaper than a fresh input token).
@@ -36,6 +45,7 @@ export const AgentUsageEventSchema = z.domainEvent({
 	outputTokens: z.number().int().nonnegative(),
 	cacheCreationInputTokens: z.number().int().nonnegative(),
 	cacheReadInputTokens: z.number().int().nonnegative(),
+	reasoningOutputTokens: z.number().int().nonnegative().optional(),
 })
 
 export class AgentUsageEvent extends BaseDomainEvent<typeof AgentUsageEventSchema> {

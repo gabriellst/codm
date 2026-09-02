@@ -14,7 +14,15 @@ import { dirname, join, resolve } from 'node:path'
 import { DRIVER_CONFIG_COMMAND, GENERATED_ROOTS, resolveGenerated } from './merge-regenerate'
 
 const REPO_ROOT = resolve(import.meta.dir, '..', '..')
-const DRIVER = join(REPO_ROOT, 'scripts/sync/merge-regenerate.ts')
+/**
+ * `/`-separated, because this path is interpolated into a SHELL COMMAND, not passed as an argv
+ * entry: `git config merge.regenerate.driver "bun <DRIVER> %O %A %B %P"`, which git later runs
+ * through `sh -c`. In `sh` a backslash is an escape character, so the Windows spelling of this path
+ * is eaten one character at a time before `bun` ever sees it — the driver never runs, git falls
+ * back to a plain conflict, and the merge exits non-zero. A `/` path is what `sh` and `bun` both
+ * accept on Windows.
+ */
+const DRIVER = join(REPO_ROOT, 'scripts/sync/merge-regenerate.ts').split('\\').join('/')
 const GENERATED_FILE = 'packages/client/dist/typescript/src/generated.ts'
 
 let root: string

@@ -6,10 +6,11 @@
 //      way to see that is to RUN the count.
 //   2. Every row carries `source`, and the value must be the FROZEN wire enum, because the Go side
 //      discriminates its lane on that exact string. A retyped literal drifts silently.
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { removeTempDirWhenFree } from '../utils/removeTempDirWhenFree'
 import * as schema from '@codm/contracts/db'
 import { events, outbox } from '@codm/contracts/db'
 import { migrationsDir } from '@codm/contracts/db/migrations'
@@ -47,7 +48,7 @@ describe('LibSqlDomainEventRepository', () => {
 	})
 
 	afterAll(() => {
-		rmSync(dir, { recursive: true, force: true })
+		removeTempDirWhenFree(dir)
 	})
 
 	beforeEach(async () => {

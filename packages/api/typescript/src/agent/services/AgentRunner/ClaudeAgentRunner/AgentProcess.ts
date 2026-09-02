@@ -8,6 +8,21 @@ export interface AgentProcessSpec {
 	cwd: string
 	/** Whether stdin stays open for writes. `false` when the prompt rode in on argv. */
 	stdin: boolean
+	/**
+	 * Extra variables for the CHILD's environment, MERGED over the daemon's own.
+	 *
+	 * It exists because one carrier of the run token cannot be argv: codex's http MCP transport takes
+	 * `bearer_token_env_var`, the NAME of a variable it reads the token from, so the value has to be
+	 * in the environment of the CLI process itself — measured, `bearer_token` (a value) is rejected
+	 * outright. That makes this the one path where the token never appears in `ps` output at all,
+	 * which is strictly better than the argv carriers next to it and is why the seam grew a field
+	 * rather than the runner growing a `process.env` mutation (global, racy across concurrent runs).
+	 *
+	 * LAYERED OVER `ChildEnvResolver`, never replacing it: these keys are added on top of the env the
+	 * resolver builds, so a run's own variables cannot cost the child the PATH that lets its shebang
+	 * find node. Absent is the normal case — most spawns need nothing beyond the resolved base.
+	 */
+	env?: Readonly<Record<string, string>>
 }
 
 /**
@@ -77,9 +92,20 @@ export function createNodeAgentProcessSpawner(tree: ProcessTree, resolveEnv: Chi
 			child = spawnChild(invocation.file, invocation.args, {
 				cwd: spec.cwd,
 				stdio: [spec.stdin ? 'pipe' : 'ignore', 'pipe', 'pipe'],
-				// MONTADO, não herdado — o PATH herdado de um .app lançado pelo Finder/launchd não resolve o
-				// `node` do shebang do CLI (exit 127). Ver `resolveProviderEnv`.
-				env: resolveEnv(bin as string),
+				// TWO LAYERS, and the order is the contract. The base is ALWAYS built by `resolveEnv` —
+				// never inherited, never conditional on the spec — because that is the whole point of the
+				// resolver: a daemon launched from a `.app` bundle has a PATH with no node in it, and the
+				// CLI's `#!/usr/bin/env node` shebang then dies with 127. `spec.env` layers the run's own
+				// variables (today: the MCP run token for codex's http transport) OVER that base, so it
+				// adds identity without discarding the PATH that makes the binary runnable at all.
+				//
+				// This spread used to be `spec.env ? {...process.env, ...spec.env} : {}`, which dropped
+				// `resolveEnv` on the floor: it left the resolver with no call site at all, silently
+				// reverting the `.app` fix on every spawn, and handed the raw daemon environment to the
+				// one path that does set `spec.env`. `AgentProcess.test.ts`'s two PATH cases are the
+				// regression guard — they pass NO `spec.env`, so they fail outright if the base is
+				// conditional.
+				env: { ...resolveEnv(bin as string), ...spec.env },
 				...invocation.options,
 				...tree.spawnOptions,
 			})

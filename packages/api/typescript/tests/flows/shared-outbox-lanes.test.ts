@@ -15,7 +15,7 @@
 // TIME IS MOVED BY REWINDING ROWS, NOT BY SLEEPING. "Advance the clock 31s" is expressed as
 // `lease_until -= 31s`, which is exactly the state the clock would produce and is instant and
 // deterministic. Same trick LibSqlCommandQueue.test.ts uses for `run_at`.
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
@@ -35,6 +35,7 @@ import {
 	type EventCallback,
 	type Handler,
 	type Unsubscribe,
+	removeTempDirWhenFree,
 } from '@codm/core-typescript'
 
 const API_EVENT = 'thread.message.appended'
@@ -129,7 +130,7 @@ describe('shared_outbox lanes (api / gateway / integration) over one file', () =
 	})
 
 	afterAll(() => {
-		rmSync(dir, { recursive: true, force: true })
+		removeTempDirWhenFree(dir)
 	})
 
 	beforeEach(async () => {

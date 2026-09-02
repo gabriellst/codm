@@ -141,8 +141,11 @@ describe('patchPath', () => {
 		// 1:1 — distinct tasks and distinct stamps never collide.
 		expect(patchPath('agent-abc123', 'task-x')).not.toBe(patchPath('agent-abc123', 'task-y'))
 		expect(patchPath('agent-abc123', 'task-x')).not.toBe(patchPath('agent-def456', 'task-x'))
-		// Injectable dir (tests / consumers with fixture scoreboards).
-		expect(patchPath('s', 't', '/tmp/board')).toBe('/tmp/board/s--t.patch')
+		// Injectable dir (tests / consumers with fixture scoreboards). Spelled with `join`, like the
+		// assertion above and like `patchPath` itself: a hardcoded `/tmp/board/s--t.patch` asserted
+		// the POSIX spelling of a filesystem path the function builds with the HOST's separator, so
+		// it could only ever hold on a POSIX host.
+		expect(patchPath('s', 't', join('tmp', 'board'))).toBe(join('tmp', 'board', 's--t.patch'))
 	})
 })
 
@@ -156,6 +159,16 @@ describe('archivePatch', () => {
 			const git = (...args: string[]) =>
 				execFileSync('git', ['-c', 'user.name=fixture', '-c', 'user.email=fixture@test', ...args], { cwd: repo })
 			git('init', '-q')
+			// Written into the fixture repo's OWN config rather than passed per-invocation, so it also
+			// covers the git calls that do not go through this helper — `archivePatch`'s internal spawn,
+			// and the raw `worktree add` / `apply` below (a linked worktree shares this config).
+			//
+			// The fixture writes LF, diffs LF and asserts LF, but a scratch repo under tmpdir answers to
+			// the CONTRIBUTOR'S GLOBAL git config, where `autocrlf=true` is the Windows default. With it
+			// on, git rewrites the working copy to CRLF, `git apply` restores CRLF, and the round-trip
+			// assertion fails on bytes this test never chose. The repo's own `.gitattributes` cannot
+			// reach here — this scratch repo is not that repo.
+			git('config', 'core.autocrlf', 'false')
 			writeFileSync(join(repo, 'base.txt'), 'base\n')
 			git('add', '-A')
 			git('commit', '-qm', 'base')
@@ -202,6 +215,16 @@ describe('archivePatch', () => {
 			const git = (...args: string[]) =>
 				execFileSync('git', ['-c', 'user.name=fixture', '-c', 'user.email=fixture@test', ...args], { cwd: repo })
 			git('init', '-q')
+			// Written into the fixture repo's OWN config rather than passed per-invocation, so it also
+			// covers the git calls that do not go through this helper — `archivePatch`'s internal spawn,
+			// and the raw `worktree add` / `apply` below (a linked worktree shares this config).
+			//
+			// The fixture writes LF, diffs LF and asserts LF, but a scratch repo under tmpdir answers to
+			// the CONTRIBUTOR'S GLOBAL git config, where `autocrlf=true` is the Windows default. With it
+			// on, git rewrites the working copy to CRLF, `git apply` restores CRLF, and the round-trip
+			// assertion fails on bytes this test never chose. The repo's own `.gitattributes` cannot
+			// reach here — this scratch repo is not that repo.
+			git('config', 'core.autocrlf', 'false')
 			writeFileSync(join(repo, 'base.txt'), 'base\n')
 			git('add', '-A')
 			git('commit', '-qm', 'base')

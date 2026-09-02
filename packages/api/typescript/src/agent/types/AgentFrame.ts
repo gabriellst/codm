@@ -9,12 +9,23 @@ import type { AgentStopReason } from '@codm/contracts-typescript/wire/enums'
  * `.specs/codedm/phase2-smoke/raw/s1-text.jsonl`: `input_tokens: 2` next to
  * `cache_creation_input_tokens: 9188` and `cache_read_input_tokens: 15273`. Total input for a turn
  * is `inputTokens + cacheCreationInputTokens + cacheReadInputTokens`.
+ *
+ * A FIFTH BUCKET, AND IT IS OPTIONAL RATHER THAN A ZERO. codex reports `reasoning_output_tokens`
+ * alongside the other four (measured, `.specs/codedm/codex-smoke/raw/s1-text.jsonl`); claude's
+ * transport has no counterpart field. Optional is the honest spelling of that difference: a required
+ * bucket would make every claude turn assert `0`, which reads as "measured none" when the truth is
+ * "this transport does not report it" — and on a reasoning model the number can dominate the turn's
+ * cost, so the two are not interchangeable. Whether claude's `output_tokens` already includes
+ * reasoning is UNFALSIFIED, which is the second reason not to fold this into `outputTokens`: the
+ * fold would only be correct if that question had an answer.
  */
 export interface AgentTurnUsage {
 	inputTokens: number
 	outputTokens: number
 	cacheCreationInputTokens: number
 	cacheReadInputTokens: number
+	/** Reasoning tokens billed as output, when the provider reports them separately. Absent ⇒ not reported. */
+	reasoningOutputTokens?: number
 }
 
 /**

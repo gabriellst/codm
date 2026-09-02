@@ -132,10 +132,11 @@ export default defineConfig({
 			env: { PORT: String(process.env.VITE_PORT ?? 5273) },
 		},
 		{
-			// Prebuilt Go binary — scripts/run-e2e.ts runs `go build -o api ./cmd/api` ONCE before
+			// Prebuilt Go binary — packages/e2e/scripts/run-e2e.ts runs `go build -o api.exe ./cmd/api` ONCE before
 			// Playwright boots anything (mirrors the TS daemon above: build once, run the artifact,
-			// never `go run` under a webServer restart cycle). `./api` is the SAME argv
-			// template.config.ts's `WORKSPACES.apiGo.testBoot.run` declares.
+			// never `go run` under a webServer restart cycle). `./api.exe` is the SAME argv
+			// template.config.ts's `WORKSPACES.apiGo.testBoot.run` declares — one name on every OS,
+			// which is that declaration's point, not a Windows special case.
 			//
 			// CODM_ENV=e2e selects `channel.Overlays[EnvE2e]` (internal/channel/overlay.go) — the
 			// scripted MockChannelFactory playing `defaultE2eScenario()` (QR frames, auto-pairing,

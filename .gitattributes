@@ -27,3 +27,30 @@
 
 packages/client/dist/**            merge=regenerate
 packages/contracts/generated/**    merge=regenerate
+
+# ── EOL ──────────────────────────────────────────────────────────────────────────────────────────
+# Line endings are part of the CONTENT here, not a display preference. Several gates in this repo
+# compare bytes: ENV-04 asserts `.env.example` is byte-identical to the registry rendering, and
+# `db:check-go` asserts the two copies of the migration SQL are byte-for-byte equal. Both generators
+# emit "\n". A Windows clone with git's default `core.autocrlf=true` checks the same bytes out as
+# CRLF, so the working tree stops matching what the generator produces and the gate fails on a file
+# nobody edited — a false red that no amount of regenerating fixes.
+#
+# Declaring the policy here takes it out of each contributor's global git config. The repository
+# bytes are already LF, so this changes no committed content: it only stops the checkout from
+# rewriting them on the way to disk.
+* text=auto eol=lf
+
+# The exceptions are the scripts Windows itself parses. cmd.exe is line-ending sensitive in ways
+# `sh` is not, so these keep CRLF on disk.
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.ps1  text eol=crlf
+
+# Encrypted design blob. It is NOT text, but its bytes today happen to carry no NUL, so git's
+# heuristic classifies it as text (`git ls-files --eol` reports `i/lf attr/text=auto`) and the rule
+# above would renormalize it. Nothing changes today — there is no CRLF in it — but the day a
+# re-encryption produces a `\r\n` pair anywhere in the ciphertext, `git add` would rewrite that byte
+# and the file would no longer decrypt. `binary` is the declaration that its bytes are content, not
+# a line-ending preference, and it also stops diff/merge from ever touching them.
+*.pen  binary

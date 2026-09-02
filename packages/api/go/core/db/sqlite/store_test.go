@@ -108,12 +108,25 @@ func TestNewSqliteStore_SameProcessReopenIsIdempotent(t *testing.T) {
 	t.Cleanup(func() { _ = second.Close() })
 }
 
-func TestAcquireDataDirLock_ForeignLiveOwnerFailsLoud(t *testing.T) {
-	lockPath := filepath.Join(t.TempDir(), "codm.db.lock")
+// sleepHelperEnv marks the re-exec of THIS test binary as the disposable "foreign live process".
+// It replaced `exec.Command("sleep", "30")`, which does not exist on Windows — the OS where this
+// case only started meaning anything once the liveness probe learned to answer there (before that,
+// lock.go read every pid as dead and the guard below could never fire).
+const sleepHelperEnv = "CODM_SQLITE_LOCK_SLEEP_HELPER"
 
-	// Spawn a real, live process and plant ITS pid in the lockfile — a foreign
-	// owner the guard must refuse (the same-pid idempotency branch cannot fire).
-	cmd := exec.Command("sleep", "30")
+// TestSleepHelperProcess is not a test: it is the body of the child process spawned below. Without
+// the env var it skips instantly, so a normal `go test ./...` costs nothing.
+func TestSleepHelperProcess(t *testing.T) {
+	if os.Getenv(sleepHelperEnv) == "" {
+		t.Skip("helper process body — only runs when re-exec'd by this package's tests")
+	}
+	time.Sleep(30 * time.Second)
+}
+
+func startForeignProcess(t *testing.T) int {
+	t.Helper()
+	cmd := exec.Command(os.Args[0], "-test.run=^TestSleepHelperProcess$")
+	cmd.Env = append(os.Environ(), sleepHelperEnv+"=1")
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("spawn foreign process: %v", err)
 	}
@@ -121,7 +134,16 @@ func TestAcquireDataDirLock_ForeignLiveOwnerFailsLoud(t *testing.T) {
 		_ = cmd.Process.Kill()
 		_, _ = cmd.Process.Wait()
 	})
-	if err := os.WriteFile(lockPath, []byte(strconv.Itoa(cmd.Process.Pid)), 0o644); err != nil {
+	return cmd.Process.Pid
+}
+
+func TestAcquireDataDirLock_ForeignLiveOwnerFailsLoud(t *testing.T) {
+	lockPath := filepath.Join(t.TempDir(), "codm.db.lock")
+
+	// A real, live process whose pid is planted in the lockfile — a foreign owner the guard must
+	// refuse (the same-pid idempotency branch cannot fire).
+	foreignPID := startForeignProcess(t)
+	if err := os.WriteFile(lockPath, []byte(strconv.Itoa(foreignPID)), 0o644); err != nil {
 		t.Fatalf("plant foreign lock: %v", err)
 	}
 
@@ -134,16 +156,17 @@ func TestAcquireDataDirLock_ForeignLiveOwnerFailsLoud(t *testing.T) {
 	if !errors.As(err, &lockErr) {
 		t.Fatalf("expected *DataDirLockedError, got %T: %v", err, err)
 	}
-	if lockErr.HeldByPID != cmd.Process.Pid {
-		t.Fatalf("lock error names pid %d, want %d", lockErr.HeldByPID, cmd.Process.Pid)
+	if lockErr.HeldByPID != foreignPID {
+		t.Fatalf("lock error names pid %d, want %d", lockErr.HeldByPID, foreignPID)
 	}
 }
 
 func TestAcquireDataDirLock_StaleLockIsReclaimed(t *testing.T) {
 	lockPath := filepath.Join(t.TempDir(), "codm.db.lock")
 
-	// A pid from a process that has exited — its lock is stale and reclaimable.
-	cmd := exec.Command("true")
+	// A pid from a process that has exited — its lock is stale and reclaimable. Re-exec of this
+	// binary with a filter that matches nothing: it starts, runs no test, exits 0.
+	cmd := exec.Command(os.Args[0], "-test.run=^$")
 	if err := cmd.Run(); err != nil {
 		t.Fatalf("run throwaway process: %v", err)
 	}
@@ -481,5 +504,46 @@ func TestConcurrentBoot(t *testing.T) {
 	}
 	if foreign != 0 {
 		t.Fatal("__drizzle_migrations exists — the drizzle migrator is forbidden on the shared file (it is a second ledger the Go side cannot see)")
+	}
+}
+
+// TOCTOU REGRESSION. acquireDataDirLock publishes the lockfile in two steps — create with O_EXCL,
+// then write the pid. A racer that reads it BETWEEN them sees an EMPTY file, reads pid 0, judges a
+// LIVE owner stale, and deletes its lock; the next racer to lose the re-create reports
+// "already held by a running process (pid 0)". That is exactly how TestConcurrentBoot went red on
+// the Linux runner. Same process on purpose: every acquire here must take the same-pid idempotent
+// branch, so ANY error is the window and nothing else.
+func TestAcquireDataDirLock_ConcurrentAcquiresInOneProcess(t *testing.T) {
+	lockPath := filepath.Join(t.TempDir(), "codm.db.lock")
+
+	const racers = 8
+	start := make(chan struct{})
+	results := make(chan error, racers)
+	releases := make(chan func(), racers)
+
+	for i := 0; i < racers; i++ {
+		go func() {
+			<-start
+			release, err := acquireDataDirLock(lockPath)
+			if err == nil {
+				releases <- release
+			}
+			results <- err
+		}()
+	}
+	close(start)
+
+	var failures []error
+	for i := 0; i < racers; i++ {
+		if err := <-results; err != nil {
+			failures = append(failures, err)
+		}
+	}
+	close(releases)
+	for release := range releases {
+		release()
+	}
+	if len(failures) > 0 {
+		t.Fatalf("%d/%d concurrent acquires from THIS process were refused; first: %v", len(failures), racers, failures[0])
 	}
 }

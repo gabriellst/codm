@@ -26,9 +26,18 @@ const repoRoot = (() => {
 })()
 
 const tempDir = path.join(repoRoot, 'node_modules', '.cache', `controller-envelope-typecheck-${process.pid}`)
-// Extension-less relative specifier to this folder's Controller.ts, from the fixture dir.
-const controllerImport = path.relative(tempDir, path.join(import.meta.dir, 'Controller'))
-const httpImport = path.relative(tempDir, path.join(import.meta.dir, 'Http'))
+/**
+ * Extension-less relative specifier to this folder's Controller.ts, from the fixture dir.
+ *
+ * A module specifier is `/`-separated on EVERY platform — it is not a filesystem path, and the one
+ * place that distinction bites is here, where the result is interpolated into generated TypeScript
+ * source. On Windows `path.relative` yields `..\..\types\Controller`, and inside a string literal
+ * `\t` is a TAB: tsc then reported `Cannot find module '......src<TAB>ypesController'`, and the
+ * fixture failed for a reason that had nothing to do with the rule under test.
+ */
+const specifier = (from: string, to: string): string => path.relative(from, to).split(path.sep).join('/')
+const controllerImport = specifier(tempDir, path.join(import.meta.dir, 'Controller'))
+const httpImport = specifier(tempDir, path.join(import.meta.dir, 'Http'))
 
 const fixtureHeader = `
 import { z } from 'zod'

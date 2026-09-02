@@ -29,8 +29,12 @@ build/
 target/
 # Contracts: emissão TypeSpec (OpenAPI) regenerada por `bun contracts`
 packages/contracts/generated/openapi/**
-# api-go: binário de verificação de build e docs geradas (openapi.json é o único artefato versionado)
+# api-go: binário de verificação de build e docs geradas (openapi.json é o único artefato versionado).
+# Os DOIS nomes: o build declarado em template.config.ts emite `api.exe` em todo OS, mas um checkout
+# anterior a essa decisão tem um `api` sem extensão no disco — que passaria a aparecer como untracked
+# e a entrar num commit por descuido. Ignorar o nome antigo custa uma linha e fecha isso.
 packages/api/go/api
+packages/api/go/api.exe
 packages/api/go/public/docs/*
 !packages/api/go/public/docs/openapi.json
 # api-typescript: console empacotado no bundle do daemon (regenerado no build)

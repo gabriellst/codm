@@ -597,7 +597,13 @@ describe('GetHomeDashboard — mentionCta', () => {
 	it('names the most recently created eligible thread when more than one is on offer', async () => {
 		const workspace = await givenWorkspace(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
 		await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, workspaceId: workspace.id.value, contactExternalId: 'older' })
-		await new Promise(resolve => setTimeout(resolve, 5))
+		// Long enough to cross a clock TICK, not just to "wait a bit". The assertion below is about
+		// which thread is newer, so the two `createdAt` values have to actually differ — and the
+		// Windows system clock advances in ~15.6ms steps by default, so a 5ms sleep routinely leaves
+		// both rows stamped with the SAME millisecond and the tie-break picks arbitrarily. It failed
+		// intermittently, and only under load, which reads like an unrelated race until you notice
+		// the sleep is shorter than the tick. Any interval longer than the tick must contain one.
+		await new Promise(resolve => setTimeout(resolve, 25))
 		const newer = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, workspaceId: workspace.id.value, contactExternalId: 'newer' })
 
 		expect((await dashboard()).mentionCta?.threadId).toBe(newer.id.value)

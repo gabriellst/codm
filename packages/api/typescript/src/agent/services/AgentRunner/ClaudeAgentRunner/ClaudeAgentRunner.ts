@@ -15,7 +15,7 @@ import { nodeAgentProcessSpawner, type AgentProcess, type AgentProcessSpawner } 
 // The server key is single-sourced in `mcp/wire.ts` — a LEAF module — because the runner, the MCP
 // manifest and the turn-fact accumulator all need the same spelling and routing them through one
 // another would drag a subprocess-spawning module into a pure state machine.
-import { MCP_SERVER_KEY } from '../../../mcp/wire'
+import { MCP_RUN_TOKEN_ENV, MCP_SERVER_KEY } from '../../../mcp/wire'
 import { AgentIdentityService } from '@codm/core-typescript'
 
 export interface ClaudeAgentRunnerOptions {
@@ -152,7 +152,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 	 *
 	 * It lives on the runner rather than in a registry of literals because "how to find claude" and
 	 * "how to drive claude" are the same knowledge: the day the binary is renamed or grows a flag, one
-	 * file changes. `capabilityFlags` is greped against `--help` output, so a capability is DISCOVERED
+	 * file changes. `capabilityTokens` is greped against `--help` output, so a capability is DISCOVERED
 	 * rather than assumed from a version string — an older build that lacks `--include-partial-messages`
 	 * would abort on the unknown argument, so guessing is not a safe default.
 	 */
@@ -160,7 +160,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 		bin: 'claude',
 		versionArgs: ['--version'],
 		helpArgs: ['--help'],
-		capabilityFlags: {
+		capabilityTokens: {
 			'--include-partial-messages': 'partialMessages',
 			'--mcp-config': 'mcpConfig',
 			'--resume': 'sessionResume',
@@ -625,7 +625,7 @@ function renderMcpConfig(mcp: AgentMcpInvocation): string {
 	const server =
 		mcp.transport === 'http'
 			? { type: 'http', url: mcp.endpoint, headers: { Authorization: `Bearer ${mcp.token}` } }
-			: { type: 'stdio', command: mcp.command?.command, args: mcp.command?.args ?? [], env: { CODM_RUN_TOKEN: mcp.token } }
+			: { type: 'stdio', command: mcp.command?.command, args: mcp.command?.args ?? [], env: { [MCP_RUN_TOKEN_ENV]: mcp.token } }
 	return JSON.stringify({ mcpServers: { [MCP_SERVER_KEY]: server } })
 }
 

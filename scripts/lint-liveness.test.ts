@@ -67,7 +67,13 @@ export interface Project {
 export function nxProjects(root: string): Project[] {
 	const out = new Map<string, Project>()
 
-	for (const rel of new Bun.Glob('packages/**/project.json').scanSync({ cwd: root })) {
+	// `/`-separated from here on: `Bun.Glob` hands back `\`-separated paths on Windows, and every
+	// consumer downstream reads this as a `/` path — the `node_modules/` guard right below, and
+	// `swallowedProjects`, which decides whether an ignore pattern swallows a project by testing
+	// `root.endsWith('/' + segment)`. With `\` neither fired: the guard let node_modules projects in
+	// and the swallow check reported none, which is the answer that looks like success.
+	for (const raw of new Bun.Glob('packages/**/project.json').scanSync({ cwd: root })) {
+		const rel = raw.split('\\').join('/')
 		if (rel.includes('node_modules/')) continue
 		const doc = JSON.parse(readFileSync(join(root, rel), 'utf-8')) as { name?: string; targets?: Record<string, unknown> }
 		// Some tools emit their own `project.json` telemetry/manifest (Storybook's static build writes

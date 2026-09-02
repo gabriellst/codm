@@ -49,8 +49,9 @@ import { parseArgs } from 'node:util'
 import { parse as parseYaml } from 'yaml'
 import { MAIN_REPO, graderLabel, runGrader } from './graders'
 import type { GradeResult, RunMode, ScoreRow, Task } from './types'
+import { fileURLToPath } from 'node:url'
 
-const SCRIPT_DIR = dirname(new URL(import.meta.url).pathname)
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 const TASKS_DIR = join(SCRIPT_DIR, 'tasks')
 export const SCOREBOARD_DIR = join(SCRIPT_DIR, 'scoreboard')
 
