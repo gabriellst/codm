@@ -1265,9 +1265,27 @@ const LEAN_FLAGS = ['--no-session-persistence', '--disallowedTools', '*', '--set
  */
 const JSON_FLAGS = ['--no-session-persistence', '--allowedTools', 'StructuredOutput', '--setting-sources', '']
 
+/**
+ * O prompt vai por STDIN, nunca em argv.
+ *
+ * MEDIDO (2026-09-02, Windows 10): com o prompt em `argv` TODO lote morre antes de o `claude` subir,
+ * com `Linha de comando muito longa.` / `ENAMETOOLONG: uv_spawn` — o `CreateProcess` do Windows corta
+ * a linha de comando em ~32k caracteres, e um prompt de review tem 7k–20k TOKENS. Não dependia do
+ * tamanho do arquivo: falhava até num único arquivo pequeno e intocado do repo, o que significa que
+ * `bun review`, `bun review:all` e a Fase 7 do `/plan` (`review-plan.ts`) NUNCA rodaram num host
+ * Windows. Em POSIX o limite é bem maior (`ARG_MAX`), o que explica o bug ter sobrevivido.
+ *
+ * `claude -p` sem prompt posicional lê a entrada padrão, então a correção é só mover o texto — nenhum
+ * flag muda, e o comportamento em POSIX é idêntico ao anterior.
+ */
+function promptStdin(prompt: string): Uint8Array {
+	return new TextEncoder().encode(prompt)
+}
+
 async function runClaudeText(prompt: string, model: string): Promise<string> {
-	const proc = Bun.spawn(['claude', '-p', prompt, '--model', model, ...LEAN_FLAGS], {
+	const proc = Bun.spawn(['claude', '-p', '--model', model, ...LEAN_FLAGS], {
 		cwd: PROJECT_ROOT,
+		stdin: promptStdin(prompt),
 		stdout: 'pipe',
 		stderr: 'pipe',
 		env: DETACHED_ENV,
@@ -1296,10 +1314,13 @@ function extractJsonText(raw: string): string {
 }
 
 async function runClaudeJson<T>(prompt: string, model: string, schema: Record<string, unknown>): Promise<T> {
+	// Prompt por stdin — mesma razão de `runClaudeText`. O `--json-schema` continua em argv porque é
+	// pequeno e limitado pela forma do schema, não pelo tamanho do código revisado.
 	const proc = Bun.spawn(
-		['claude', '-p', prompt, '--model', model, '--output-format', 'json', '--json-schema', JSON.stringify(schema), ...JSON_FLAGS],
+		['claude', '-p', '--model', model, '--output-format', 'json', '--json-schema', JSON.stringify(schema), ...JSON_FLAGS],
 		{
 			cwd: PROJECT_ROOT,
+			stdin: promptStdin(prompt),
 			stdout: 'pipe',
 			stderr: 'pipe',
 			env: DETACHED_ENV,
