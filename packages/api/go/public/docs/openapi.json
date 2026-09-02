@@ -2220,14 +2220,20 @@
           "DEFAULT",
           "SONNET",
           "OPUS",
-          "HAIKU"
+          "HAIKU",
+          "GPT_5_3_CODEX",
+          "GPT_5_2_CODEX",
+          "GPT_5_1_CODEX"
         ],
         "type": "string",
         "x-enum-varnames": [
           "AgentModelIdDEFAULT",
           "AgentModelIdSONNET",
           "AgentModelIdOPUS",
-          "AgentModelIdHAIKU"
+          "AgentModelIdHAIKU",
+          "AgentModelIdGPT_5_3_CODEX",
+          "AgentModelIdGPT_5_2_CODEX",
+          "AgentModelIdGPT_5_1_CODEX"
         ]
       },
       "AgentStopReason": {

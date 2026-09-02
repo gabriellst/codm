@@ -119,10 +119,15 @@ describe('ThreadSettingsDialog — contra o backend real', () => {
 
 	/**
 	 * O SELETOR DE MODELO — presente onde há o que escolher, ausente onde não há. As duas metades
-	 * importam: um seletor na linha do CODEX ofereceria uma escolha que o backend recusa.
+	 * importam: um seletor numa linha sem catálogo ofereceria uma escolha que o backend recusa.
+	 *
+	 * O agente SEM catálogo é o OPENCODE, e não mais o CODEX: catálogo e `comingSoon` são dois eixos
+	 * (`PROVIDER_MODELS` declara o primeiro, `AgentRunnerFactory.supported` o segundo), e desde que o
+	 * CODEX ganhou os slugs `gpt-5.x-codex` ele é justamente o caso em que os dois discordam — ver o
+	 * teste seguinte.
 	 */
 	it('renderiza um seletor de modelo por agente com catálogo, e nenhum para o agente sem catálogo', async () => {
-		const threadId = await seedThread([ProviderKind.CLAUDE_CODE, ProviderKind.CODEX])
+		const threadId = await seedThread([ProviderKind.CLAUDE_CODE, ProviderKind.OPENCODE])
 		await mount(threadId)
 
 		const selectors = document.querySelectorAll(`[aria-label="${i18n.t('session.agentModel')}"]`)
@@ -131,8 +136,51 @@ describe('ThreadSettingsDialog — contra o backend real', () => {
 		expect(document.body.textContent ?? '').toContain(i18n.t('session.agentModelRestartHint'))
 	})
 
-	it('não avisa nada sobre modelo quando nenhum agente tem o que escolher', async () => {
+	/**
+	 * O CASO EM QUE OS DOIS EIXOS DISCORDAM, que é o único que prova que são dois: o CODEX chega
+	 * `comingSoon` (o `StubAgentRunnerFactory` de `integration` só declara CLAUDE_CODE) E com catálogo.
+	 * A linha mostra o selo E o seletor — se um eixo fosse derivado do outro, um dos dois sumiria.
+	 *
+	 * E o seletor do binding morto vem DESABILITADO: existir prova que o catálogo é conhecido, estar
+	 * desabilitado prova que ninguém dirige a CLI. Os dois estados na mesma linha são a razão de o
+	 * componente não poder decidir isso com um booleano só.
+	 */
+	it('oferece o catálogo de um agente que esta versão ainda não dirige, mas com o seletor desabilitado', async () => {
+		const threadId = await seedThread([ProviderKind.CLAUDE_CODE, ProviderKind.CODEX])
+		await mount(threadId)
+
+		const selectors = [...document.querySelectorAll(`[aria-label="${i18n.t('session.agentModel')}"]`)]
+		expect(selectors).toHaveLength(2)
+		// A linha é o ancestral imediato do gatilho, e é o texto dela que diz de quem é o seletor —
+		// a ordem do array vem da ordem dos providers na thread, que não é o que este teste afirma.
+		// De quem é cada gatilho sai SUBINDO até o primeiro ancestral que nomeia um agente — a linha.
+		// A ordem do array vem da ordem dos providers na thread, que não é o que este teste afirma, e o
+		// pai imediato do gatilho é só o wrapper do próprio Select ("Automático▼").
+		const providerOf = (el: Element): string => {
+			for (let node = el.parentElement; node; node = node.parentElement) {
+				const text = node.textContent ?? ''
+				if (text.includes('Codex')) return 'Codex'
+				if (text.includes('Claude Code')) return 'Claude Code'
+			}
+			return ''
+		}
+		const triggerOf = (label: string) => selectors.find(el => providerOf(el) === label)
+		expect(triggerOf('Codex')?.hasAttribute('disabled')).toBe(true)
+		expect(triggerOf('Claude Code')?.hasAttribute('disabled')).toBe(false)
+		expect(document.body.textContent ?? '').toContain(i18n.t('common.comingSoon'))
+	})
+
+	/** Um seletor que ninguém pode mexer não ganha aviso sobre a consequência de mexer nele. */
+	it('não avisa sobre reinício quando o único agente com catálogo não é dirigível', async () => {
 		const threadId = await seedThread([ProviderKind.CODEX])
+		await mount(threadId)
+
+		expect(document.querySelectorAll(`[aria-label="${i18n.t('session.agentModel')}"]`)).toHaveLength(1)
+		expect(document.body.textContent ?? '').not.toContain(i18n.t('session.agentModelRestartHint'))
+	})
+
+	it('não avisa nada sobre modelo quando nenhum agente tem o que escolher', async () => {
+		const threadId = await seedThread([ProviderKind.OPENCODE])
 		await mount(threadId)
 
 		expect(document.body.textContent ?? '').not.toContain(i18n.t('session.agentModelRestartHint'))

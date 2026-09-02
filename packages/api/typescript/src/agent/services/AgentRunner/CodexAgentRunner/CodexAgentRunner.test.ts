@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { AgentModelId } from '@codm/contracts-typescript/wire/enums'
 import { MCP_RUN_TOKEN_ENV, MCP_SERVER_KEY, wireToolName } from '../../../mcp/wire'
 import type { AgentToolName } from '../../../enums'
 import type { AgentMcpInvocation } from '../../../types/AgentMcpInvocation'
@@ -83,12 +84,38 @@ describe('CodexAgentRunner.buildArgs — the plain `exec` shape', () => {
 		expect(args).toContain('/b')
 	})
 
-	it('NEVER passes --model — the account decides, and the account list churns', () => {
-		// Measured: the model list changed wholesale between two logins on one machine within an hour.
-		// A slug we cannot verify aborts the run with "not supported for your account", so the flag is
-		// deliberately absent rather than defaulted. `PROVIDER_MODELS[CODEX]` is empty for the same reason.
-		expect(CodexAgentRunner.buildArgs(base)).not.toContain('--model')
-		expect(CodexAgentRunner.buildArgs(base)).not.toContain('-m')
+	it('omits the model flag when nothing was chosen, and when the choice is DEFAULT', () => {
+		// DEFAULT is the instruction to let the CLI pick — the reason it is an enum member rather than
+		// `undefined`. Both spellings of "no choice" must render the same argv.
+		for (const args of [CodexAgentRunner.buildArgs(base), CodexAgentRunner.buildArgs({ ...base, model: AgentModelId.DEFAULT })]) {
+			expect(args).not.toContain('-m')
+			expect(args).not.toContain('--model')
+		}
+	})
+
+	it('passes -m with the CLI slug the wire member stands for — never the member name', () => {
+		const args = CodexAgentRunner.buildArgs({ ...base, model: AgentModelId.GPT_5_3_CODEX })
+
+		expect(args.slice(args.indexOf('-m'), args.indexOf('-m') + 2)).toEqual(['-m', 'gpt-5.3-codex'])
+		expect(args).not.toContain('GPT_5_3_CODEX')
+	})
+
+	it('re-states the model on RESUME, unlike -C/--add-dir', () => {
+		// Both help captures list `-m` (`help-exec.txt:40`, `help-exec-resume.txt:41`), so the flag is
+		// not part of the shape narrowing that resume forces — a resumed turn is steerable.
+		const args = CodexAgentRunner.buildArgs({ ...base, resumeSessionId: 'sess-1', model: AgentModelId.GPT_5_1_CODEX })
+
+		expect(args.slice(args.indexOf('-m'), args.indexOf('-m') + 2)).toEqual(['-m', 'gpt-5.1-codex'])
+		expect(args).not.toContain('-C')
+	})
+
+	it('omits the flag for a member codex has no slug for, rather than passing a bogus string', () => {
+		// Unreachable through the catalog (`PROVIDER_MODELS[CODEX]` never offers a claude model); this
+		// is what makes it harmless if some other path ever hands one over.
+		const args = CodexAgentRunner.buildArgs({ ...base, model: AgentModelId.OPUS })
+
+		expect(args).not.toContain('-m')
+		expect(args).not.toContain('opus')
 	})
 
 	it('passes --output-schema as a FILE path when the run is structured', () => {

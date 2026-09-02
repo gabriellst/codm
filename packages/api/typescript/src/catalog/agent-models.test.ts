@@ -34,10 +34,13 @@ describe('PROVIDER_MODELS — the declared provider → models relation', () => 
 		}
 	})
 
-	it('offers a real catalog for the one CLI this engine drives, and nothing for the others', () => {
+	it('offers a real catalog per CLI, and nothing for the one whose list nobody has measured', () => {
 		expect(modelsFor(ProviderKind.CLAUDE_CODE)).toContain(AgentModelId.OPUS)
+		// CODEX carries a catalog while `AgentRunnerFactory.supported` may still call it `comingSoon` —
+		// that pair is the whole point of keeping the two axes apart (see the catalog's header).
+		expect(modelsFor(ProviderKind.CODEX)).toContain(AgentModelId.GPT_5_3_CODEX)
+		expect(modelsFor(ProviderKind.CODEX)).toContain(AgentModelId.DEFAULT)
 		// Empty ⇒ nothing to choose. Deliberately NOT `[DEFAULT]`: a select with one option is noise.
-		expect(modelsFor(ProviderKind.CODEX)).toEqual([])
 		expect(modelsFor(ProviderKind.OPENCODE)).toEqual([])
 	})
 

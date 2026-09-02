@@ -169,11 +169,23 @@ account or a stronger local model.
    whose MCP is a config key and whose resume is a subcommand. Probing `--help` for `--mcp-config` /
    `--resume` (what `PROVIDER_BINARIES[CODEX]` does today) reports both capabilities as ABSENT on a
    CLI that has both.
-3. **`AgentModelId` is a closed enum; codex's model list is served per-account and churns.**
-   Measured: the list changed wholesale between two logins on this machine (`gpt-5.3-codex`,
-   `gpt-5.1-codex`, … → `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`, `gpt-5.4-mini`). Pinning a slug
-   into a cross-language enum would ship stale. `PROVIDER_MODELS[CODEX] = [DEFAULT]` is the honest
-   catalog entry and passes all three `auditProviderModels` gates.
+3. ~~**`AgentModelId` is a closed enum; codex's model list is served per-account and churns.**~~
+   **CLOSED 2026-09-02 (founder): pin the slugs.** The measurement stands — the list changed wholesale
+   between two logins on this machine (`gpt-5.3-codex`, `gpt-5.1-codex`, … → `gpt-5.6-terra`,
+   `gpt-5.6-luna`, `gpt-5.5`, `gpt-5.4-mini`) — but the conclusion drawn from it was the wrong trade:
+   an empty catalog leaves the operator with NO choice on a CLI that has several, in order to avoid a
+   failure the transport already reports loudly (a slug the account does not serve comes back as
+   `not supported for your account`, a 400 on that turn — §5 point 3 — never a silent substitution).
+   So `AgentModelId` gained `GPT_5_3_CODEX` / `GPT_5_2_CODEX` / `GPT_5_1_CODEX`,
+   `PROVIDER_MODELS[CODEX]` lists them plus `DEFAULT` (the way back for whoever picked a slug the
+   account stopped serving), and `CodexAgentRunner` renders `-m <slug>` through `CODEX_MODEL_ALIASES` —
+   the ONE place a slug is spelled, so a churn is a one-map edit plus a contract bump. `-m` sits
+   outside the resume shape-narrowing because both help captures list it (`help-exec.txt:40`,
+   `help-exec-resume.txt:41`).
+
+   What this does NOT change: `comingSoon` and the catalog stay two axes. A build that cannot drive
+   the codex binary still reports it `comingSoon` while serving the same catalog — the CLI's models are
+   a fact about the CLI, not about this deployment's wiring.
 
 ## 7. Config-parse measurement (2026-08-31, Windows host, codex-cli 0.150.0)
 
