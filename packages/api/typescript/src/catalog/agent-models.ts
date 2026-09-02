@@ -36,18 +36,28 @@ import { ProviderKind, AgentModelId } from '@codm/contracts-typescript/wire/enum
  * `customPrompt` column documents at length — so it appears in every non-empty list instead.
  *
  * ### An EMPTY list means "there is nothing to choose", and it is a SEPARATE axis from `comingSoon`
- * Nobody has ever driven the codex or opencode binary from here, so this build does not know which
- * aliases they accept, and inventing a list would offer the operator a choice we cannot honour. The
- * console renders the selector iff the list is non-empty.
+ * `OPENCODE` is empty because nobody has ever driven that binary from here, so this build does not
+ * know which aliases it accepts, and inventing a list would offer the operator a choice we cannot
+ * honour. The console renders the selector iff the list is non-empty.
  *
- * That happens to coincide today with `comingSoon` (`AgentRunnerFactory.supported`), and the two are
- * kept apart on purpose: "can this engine drive the CLI?" is a fact about THIS deployment's wiring,
- * "what can be asked of it?" is a fact about the CLI. Collapsing them would make binding a runner
- * silently invent a model list.
+ * The two axes are kept apart on purpose, and `CODEX` is now what proves they are two: it carries a
+ * catalog while `AgentRunnerFactory.supported` may still report it as `comingSoon` in a given build.
+ * "Can this engine drive the CLI?" is a fact about THIS deployment's wiring; "what can be asked of
+ * it?" is a fact about the CLI. Collapsing them would make binding a runner silently invent a model
+ * list — and would make an unbound runner silently erase one that is known.
+ *
+ * ### The codex slugs are PINNED, and that is a decision taken against a measurement
+ * `.specs/codedm/2026-08-27-codex-driving-measured.md` §6 Q3 measured codex's per-account list
+ * churning wholesale between two logins on one machine, and asked whether pinning slugs into a
+ * cross-language enum would ship stale. Answer (founder, 2026-09-02): pin the three the account
+ * actually serves and let a rejected slug be a LOUD failed turn — the CLI answers `not supported for
+ * your account` — rather than keep the operator with no choice at all. The failure mode is a visible
+ * refusal on one turn, not silent wrong-model routing, because `CODEX_MODEL_ALIASES` in the runner is
+ * the only place a slug is spelled and `DEFAULT` is always in the list as the way back.
  */
 export const PROVIDER_MODELS: Readonly<Record<ProviderKind, readonly AgentModelId[]>> = {
 	[ProviderKind.CLAUDE_CODE]: [AgentModelId.DEFAULT, AgentModelId.OPUS, AgentModelId.SONNET, AgentModelId.HAIKU],
-	[ProviderKind.CODEX]: [],
+	[ProviderKind.CODEX]: [AgentModelId.DEFAULT, AgentModelId.GPT_5_3_CODEX, AgentModelId.GPT_5_2_CODEX, AgentModelId.GPT_5_1_CODEX],
 	[ProviderKind.OPENCODE]: [],
 }
 

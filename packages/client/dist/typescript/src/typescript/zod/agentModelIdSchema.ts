@@ -5,4 +5,4 @@
 
 import { z } from "zod/v4";
 
-export const agentModelIdSchema = z.enum(["DEFAULT", "SONNET", "OPUS", "HAIKU"])
+export const agentModelIdSchema = z.enum(["DEFAULT", "SONNET", "OPUS", "HAIKU", "GPT_5_3_CODEX", "GPT_5_2_CODEX", "GPT_5_1_CODEX"])

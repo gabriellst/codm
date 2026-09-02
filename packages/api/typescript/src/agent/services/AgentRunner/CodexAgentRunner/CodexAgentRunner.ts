@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { injectable } from 'tsyringe-neo'
 import { z, type ZodType } from 'zod'
-import { StopKind } from '@codm/contracts-typescript/wire/enums'
+import { AgentModelId, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { AgentIdentityService, LoggingService } from '@codm/core-typescript'
 import { ProductConfig } from '@shared/config/ProductConfig'
 import { MCP_RUN_TOKEN_ENV, MCP_SERVER_KEY } from '../../../mcp/wire'
@@ -23,12 +23,33 @@ export interface CodexAgentRunnerOptions {
 
 /** The inputs `buildArgs` needs, and nothing else — see the method's docblock on why this is a parameter bag. */
 export interface CodexBuildArgsOptions {
+	/** `AgentModelId.DEFAULT` means OMIT the model flag entirely — not "pass the string DEFAULT". */
+	model?: AgentModelId
 	cwd: string
 	extraDirs?: readonly string[]
 	resumeSessionId?: string
 	mcp?: AgentMcpInvocation
 	/** Absolute path of the JSON Schema file, when the run is structured. Written by `run()`, never here. */
 	outputSchemaPath?: string
+}
+
+/**
+ * `AgentModelId` → the slug `-m` takes. A MAP, not a `switch`, and per-runner for the same reason
+ * `CLAUDE_MODEL_ALIASES` is: what a binary calls its models is a fact about that binary alone. This is
+ * also the ONLY place a codex slug is spelled — the wire enum carries a member name, never the slug.
+ *
+ * MEASURED, and the measurement is why this map is small and why `DEFAULT` stays absent from it:
+ * `.specs/codedm/2026-08-27-codex-driving-measured.md` §6 Q3 caught the per-account list changing
+ * wholesale between two logins on one machine. So a slug here is a CLAIM about the account this build
+ * talks to, and the failure mode when the claim is wrong is a loud one the transport already reports —
+ * codex answers `not supported for your account`, which arrives as a 400 on the turn (§5 point 3),
+ * never as a silent substitution. `DEFAULT` is the way back for whoever picked a slug the account
+ * stopped serving, which is why the catalog always offers it.
+ */
+const CODEX_MODEL_ALIASES: Partial<Record<AgentModelId, string>> = {
+	[AgentModelId.GPT_5_3_CODEX]: 'gpt-5.3-codex',
+	[AgentModelId.GPT_5_2_CODEX]: 'gpt-5.2-codex',
+	[AgentModelId.GPT_5_1_CODEX]: 'gpt-5.1-codex',
 }
 
 /**
@@ -144,7 +165,7 @@ export class CodexAgentRunner extends AgentRunner {
 	 * operator chose and codex otherwise refuses to run outside a git repo — a refusal that would
 	 * surface as a failed turn for a reason that has nothing to do with the turn.
 	 */
-	static buildArgs({ cwd, extraDirs, resumeSessionId, mcp, outputSchemaPath }: CodexBuildArgsOptions): string[] {
+	static buildArgs({ model, cwd, extraDirs, resumeSessionId, mcp, outputSchemaPath }: CodexBuildArgsOptions): string[] {
 		// SHAPE FIRST — see point 2 of the class docblock. The narrower set is not a subset chosen for
 		// tidiness; `-C` and `--add-dir` do not EXIST on resume, and passing one aborts the run.
 		const args = resumeSessionId ? ['exec', 'resume'] : ['exec']
@@ -158,12 +179,18 @@ export class CodexAgentRunner extends AgentRunner {
 			for (const dir of extraDirs ?? []) args.push('--add-dir', dir)
 		}
 
-		// NO `--model`, EVER, and this is a decision rather than an omission. codex's model list is
-		// served per ACCOUNT and churns: measured, it changed wholesale between two logins on one
-		// machine within an hour (`gpt-5.3-codex`, `gpt-5.1-codex` … → `gpt-5.6-terra`, `gpt-5.6-luna`,
-		// `gpt-5.5`, `gpt-5.4-mini`). `PROVIDER_MODELS[CODEX]` is empty for the same reason, so the
-		// console never offers a choice, and passing a slug we cannot verify would abort the run with
-		// `not supported for your account` — which is exactly how the measurement session lost an hour.
+		// `-m` lives OUTSIDE the resume guard because both help captures list it (`help-exec.txt:40`,
+		// `help-exec-resume.txt:41`) — unlike `-C`/`--add-dir`, which exist on one shape only. A resumed
+		// turn therefore re-states the model rather than inheriting whatever the session was opened with.
+		//
+		// DEFAULT ⇒ omit the flag entirely so the CLI chooses. An unmapped member (a value added to the
+		// wire enum without a codex slug, e.g. a claude model reaching here) also omits rather than
+		// passing a bogus string — the catalog is what makes that unreachable, this is what makes it
+		// harmless. See `CODEX_MODEL_ALIASES` for why pinning slugs at all is a decision under a
+		// measurement that says the account's list churns.
+		const modelAlias = model && model !== AgentModelId.DEFAULT ? CODEX_MODEL_ALIASES[model] : undefined
+		if (modelAlias) args.push('-m', modelAlias)
+
 		if (outputSchemaPath) args.push('--output-schema', outputSchemaPath)
 
 		// Point 4: inline TOML overrides, one `-c` per leaf. The run token rides in `env` for the stdio
@@ -206,6 +233,7 @@ export class CodexAgentRunner extends AgentRunner {
 		let proc: AgentProcess
 		try {
 			const args = CodexAgentRunner.buildArgs({
+				model: request.model,
 				cwd: request.cwd,
 				extraDirs: request.extraDirs,
 				resumeSessionId: request.session?.resumeId,

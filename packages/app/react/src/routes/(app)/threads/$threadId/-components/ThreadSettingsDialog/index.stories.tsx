@@ -31,15 +31,24 @@ const meta: Meta<typeof ThreadSettingsDialog> = {
 					customPrompt: 'Fale sempre em inglês com este cliente. Nunca prometa prazo.',
 					customPromptMaxLength: 8000,
 					providers: [
-						// Um agente com catálogo (seletor de modelo, já numa escolha explícita para a escolha
-						// aparecer selecionada) e um sem (só o selo "Em breve") — as duas metades da linha.
+						// AS TRÊS LINHAS POSSÍVEIS, porque catálogo e `comingSoon` são dois eixos e não um: um
+						// agente dirigível com catálogo (seletor ativo, já numa escolha explícita para ela
+						// aparecer selecionada), um NÃO dirigível que ainda assim tem catálogo (selo "Em breve"
+						// E seletor DESABILITADO — a combinação que não existia enquanto os dois eixos eram
+						// tratados como um) e um sem catálogo nenhum (só o selo e o switch read-only).
 						{
 							provider: 'CLAUDE_CODE',
 							comingSoon: false,
 							model: 'OPUS',
 							models: ['DEFAULT', 'OPUS', 'SONNET', 'HAIKU'],
 						},
-						{ provider: 'CODEX', comingSoon: true, model: 'DEFAULT', models: [] },
+						{
+							provider: 'CODEX',
+							comingSoon: true,
+							model: 'GPT_5_3_CODEX',
+							models: ['DEFAULT', 'GPT_5_3_CODEX', 'GPT_5_2_CODEX', 'GPT_5_1_CODEX'],
+						},
+						{ provider: 'OPENCODE', comingSoon: true, model: 'DEFAULT', models: [] },
 					],
 				}),
 				mockQuery(getSessionChatQueryOptions(THREAD_ID), { thread: { displayName: 'Ada Lovelace' } }),

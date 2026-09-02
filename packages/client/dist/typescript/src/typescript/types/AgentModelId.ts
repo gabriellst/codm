@@ -8,7 +8,10 @@ export const AgentModelIdEnum = {
     DEFAULT: "DEFAULT",
     SONNET: "SONNET",
     OPUS: "OPUS",
-    HAIKU: "HAIKU"
+    HAIKU: "HAIKU",
+    GPT_5_3_CODEX: "GPT_5_3_CODEX",
+    GPT_5_2_CODEX: "GPT_5_2_CODEX",
+    GPT_5_1_CODEX: "GPT_5_1_CODEX"
 } as const;
 
 export type AgentModelIdEnumKey = (typeof AgentModelIdEnum)[keyof typeof AgentModelIdEnum];

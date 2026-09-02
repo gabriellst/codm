@@ -143,7 +143,12 @@ const THREAD_SETTINGS: DeepPartial<GetThreadSettingsQueryResponse> = {
 	customPromptMaxLength: 8000,
 	providers: [
 		{ provider: 'CLAUDE_CODE', comingSoon: false, model: 'DEFAULT', models: ['DEFAULT', 'OPUS', 'SONNET', 'HAIKU'] },
-		{ provider: 'CODEX', comingSoon: false, model: 'DEFAULT', models: ['DEFAULT'] },
+		{
+			provider: 'CODEX',
+			comingSoon: false,
+			model: 'GPT_5_3_CODEX',
+			models: ['DEFAULT', 'GPT_5_3_CODEX', 'GPT_5_2_CODEX', 'GPT_5_1_CODEX'],
+		},
 		{ provider: 'OPENCODE', comingSoon: true, model: 'DEFAULT', models: [] },
 	],
 }

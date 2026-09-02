@@ -540,10 +540,17 @@ function AgentsSection({ threadId, className, ...props }: { threadId: string } &
 							) : null}
 							{/*
 							 * O MODELO, na linha do agente a que ele pertence — não numa seção própria (ver o
-							 * comentário do componente). Só aparece quando há o que escolher: um provider que
-							 * esta versão nunca dirigiu tem catálogo vazio, e um select de uma opção só é ruído.
+							 * comentário do componente). Só aparece quando há o que escolher: um provider cujo
+							 * catálogo ninguém mediu vem vazio, e um select de uma opção só é ruído.
 							 * Salva no `onValueChange`, como as pilhas de buffer e ao contrário do prompt: é uma
 							 * escolha de um clique, não um texto escrito aos poucos.
+							 *
+							 * PRESENTE MAS DESABILITADO quando o binding está morto (`comingSoon`), e os dois
+							 * estados dizem coisas diferentes: a AUSÊNCIA do seletor diz "esta CLI não tem o que
+							 * escolher", o seletor DESABILITADO diz "ela tem, e esta versão ainda não a dirige".
+							 * Um provider `comingSoon` COM catálogo (o codex, hoje) é exatamente onde os dois
+							 * eixos discordam — esconder o seletor ali apagaria o catálogo, e deixá-lo ativo
+							 * ofereceria uma escolha que não muda nenhuma turn enquanto ninguém dirige a CLI.
 							 */}
 							{models.length > 0 ? (
 								<Select
@@ -552,6 +559,7 @@ function AgentsSection({ threadId, className, ...props }: { threadId: string } &
 									values={models}
 									value={model}
 									onValueChange={value => configureModel.mutate({ threadId, data: { provider, model: value } }, { onSuccess: invalidate })}
+									disabled={comingSoon}
 									aria-label={t('session.agentModel')}
 									className="w-36 shrink-0 bg-background"
 								/>
@@ -572,10 +580,13 @@ function AgentsSection({ threadId, className, ...props }: { threadId: string } &
 			 * retomar ignoraria o pedido em silêncio). É o comportamento certo — e, sem estar escrito, o
 			 * operador vê o agente "esquecer" a conversa e conclui que quebrou.
 			 *
-			 * Só quando há pelo menos um seletor: um aviso sobre uma ação indisponível é decoração, pela
-			 * mesma razão que o aviso de `comingSoon` logo abaixo só aparece quando há um provider morto.
+			 * Só quando há pelo menos um seletor USÁVEL: um aviso sobre uma ação indisponível é decoração,
+			 * pela mesma razão que o aviso de `comingSoon` logo abaixo só aparece quando há um provider
+			 * morto. `models.length > 0` sozinho deixou de bastar quando o seletor de um binding morto
+			 * passou a existir desabilitado — a linha do codex mostra o catálogo, mas ninguém troca nada
+			 * ali, então explicar a consequência da troca seria explicar uma ação que não acontece.
 			 */}
-			{data.providers.some(p => p.models.length > 0) ? (
+			{data.providers.some(p => p.models.length > 0 && !p.comingSoon) ? (
 				<p className="text-sm text-muted-foreground">{t('session.agentModelRestartHint')}</p>
 			) : null}
 			{/* A explicação só aparece quando há algo a explicar — um aviso permanente vira decoração. */}
