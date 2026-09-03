@@ -14,6 +14,7 @@ import { AgentSessionRepository, LibSqlAgentSessionRepository, MockAgentSessionR
 import { LibSqlMailboxRepository, MailboxRepository, MockMailboxRepository } from './repositories/MailboxRepository'
 import { McpServerRepository, LibSqlMcpServerRepository, MockMcpServerRepository } from './repositories/McpServerRepository'
 import { StalledIssueReader, LibSqlStalledIssueReader, MockStalledIssueReader } from './services/StalledIssueReader'
+import { McpUpstreamRegistry, DefaultMcpUpstreamRegistry, MockMcpUpstreamRegistry } from './services/McpUpstreamRegistry'
 
 // E2E HERMETIC SEAM (see shared/registry.ts + src/boot.ts). The Playwright harness boots the REAL
 // daemon but must never spawn a provider CLI or probe host PATH: under the `e2e` boot environment
@@ -85,6 +86,9 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	{ token: MailboxRepository, mock: MockMailboxRepository, integration: LibSqlMailboxRepository, real: LibSqlMailboxRepository },
 	// Third-party MCP servers the owner registered on this machine (Task T3).
 	{ token: McpServerRepository, mock: MockMcpServerRepository, integration: LibSqlMcpServerRepository, real: LibSqlMcpServerRepository },
+	// The daemon as an MCP CLIENT (Task T5). `integration` binds the MOCK on purpose — a test cannot
+	// depend on a third-party MCP server being installed on the CI machine.
+	{ token: McpUpstreamRegistry, mock: MockMcpUpstreamRegistry, integration: MockMcpUpstreamRegistry, real: DefaultMcpUpstreamRegistry },
 	// A varredura de issues órfãs lê a tabela `issues` a partir daqui — mesmo padrão de
 	// `thread/services/OpenIssuesReader`. `integration` usa a implementação REAL de propósito: o teste do
 	// job existe para exercitar o predicado das duas filas contra o banco, e um mock o tornaria vazio.

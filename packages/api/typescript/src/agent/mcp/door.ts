@@ -6,6 +6,8 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { McpScope } from '@codm/contracts-typescript/wire/enums'
 import type { AgentRunIdentity } from '../types/AgentRunIdentity'
 import type { AgentInterfaceErrors } from '../errors'
+import { McpUpstreamRegistry } from '../services/McpUpstreamRegistry'
+import { withUpstream, type RequestHandling } from './upstream'
 
 import { MCP_ROUTE_PREFIX } from './route'
 
@@ -40,6 +42,14 @@ export { MCP_ROUTE_PREFIX }
  * `resolve` is a map lookup that fails closed on unknown, expired and revoked, so a late tool call
  * from a run that already died gets 401 and writes nothing — the property §4.11 promises when a run is
  * cancelled.
+ *
+ * THIRD-PARTY TOOLS ARE MERGED IN ONLY FOR `issue-handling` (Task T5)
+ * `buildTransport` wraps the generated transport with `withUpstream` when, and only when, the scope
+ * being served is `issue-handling`. `orchestration` is the surface that reads text a third party
+ * wrote (WhatsApp threads, group chats), so handing it a live upstream tool a human registered — shell,
+ * filesystem, a browser — would put that tool one prompt injection away from a stranger. The fence is
+ * the REGISTER-BY-SCOPE happening here, not the `--allowedTools` list handed to the client: that list is
+ * client-side and the client is the attacker's, same rule as the scope match above.
  * ───────────────────────────────────────────────────────────────────────────────────────────────
  */
 @injectable()
@@ -65,10 +75,32 @@ export class McpDoorController extends McpAdapter {
 	 *
 	 * It also narrows the service's generic to this product's identity, which is what makes `resolve()`
 	 * hand back an `AgentRunIdentity` rather than the bare core format.
+	 *
+	 * `mcpUpstream` is OPTIONAL — not because production may run without one (Task T5.9 binds
+	 * `DefaultMcpUpstreamRegistry` in every DI env), but because every existing test in this file's
+	 * suite builds this door with `new McpDoorController(identities)`, one argument, and overrides
+	 * `buildTransport` outright — so the real one, which is the only method that reads this field,
+	 * never runs against an instance built that way. A required second parameter would fail those call
+	 * sites to COMPILE for a field they never touch at runtime. The `!this.mcpUpstream` guard inside
+	 * `buildTransport` is what makes the optionality sound rather than a landmine.
 	 */
+	/**
+	 * A SECOND, correctly-typed reference to the same object `super()` already stored. `McpAdapter`'s
+	 * own field is declared `protected readonly identities: AgentIdentityService` — unparameterized,
+	 * on purpose, because core has no vocabulary for this product's identity shape. That means
+	 * `this.identities.resolve(...)` anywhere in this class returns the bare core `AgentIdentity`, not
+	 * `AgentRunIdentity`, no matter what was actually passed at construction. `E2eMcpDriver` carries the
+	 * same duplication for the same reason.
+	 */
+	private readonly runIdentities: AgentIdentityService<AgentRunIdentity>
+
 	// biome-ignore lint/complexity/noUselessConstructor: carries design:paramtypes for tsyringe — see above
-	constructor(identities: AgentIdentityService<AgentRunIdentity>) {
+	constructor(
+		identities: AgentIdentityService<AgentRunIdentity>,
+		private readonly mcpUpstream?: McpUpstreamRegistry,
+	) {
 		super(identities)
+		this.runIdentities = identities
 	}
 
 	/** 401 for a credential that is absent or dead, 403 for one aimed at the wrong surface. */
@@ -78,7 +110,14 @@ export class McpDoorController extends McpAdapter {
 	}
 
 	protected async serve(scope: string, token: string, request: Request): Promise<Response> {
-		const transport = await this.buildTransport(scope)
+		// Resolved a SECOND time, deliberately (Task T5). `McpAdapter.handle` already proved this token
+		// maps to a live identity before calling `serve`, but the identity object itself never crossed
+		// that boundary — only the opaque `token` did. `ownerId` scopes the upstream lookup below, and
+		// it comes from HERE, never from an argument the model supplies.
+		const identity = this.runIdentities.resolve(token)
+		if (!identity) this.refuse('invalid-token', 'missing, unknown, expired or revoked run token')
+
+		const transport = await this.buildTransport(scope, identity)
 		// The context the generated `_http.ts` shims read to address AND authenticate their outbound
 		// call. Established AROUND the whole dispatch, so it covers every async continuation the
 		// transport spawns — a per-tool wrapper would miss the ones the SDK schedules itself.
@@ -117,11 +156,20 @@ export class McpDoorController extends McpAdapter {
 	 * call moves every counter, the rejected one moves none, and the asymmetry is the measurement.
 	 * A `private` method would leave that claim argued in a comment, which is what this AC forbids.
 	 */
-	protected async buildTransport(scope: string): Promise<WebStandardStreamableHTTPServerTransport> {
+	protected async buildTransport(scope: string, identity: AgentRunIdentity): Promise<RequestHandling> {
 		const server = await loadGeneratedServer(scope as McpScope)
 		const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true })
 		await server.connect(transport)
-		return transport
+
+		// See the class docblock: upstream tools exist ONLY in `issue-handling`.
+		if (scope !== McpScope.ISSUE_HANDLING || !this.mcpUpstream) return transport
+
+		const registry = this.mcpUpstream
+		return withUpstream(transport, {
+			scope: McpScope.ISSUE_HANDLING,
+			tools: await registry.listTools(identity.ownerId),
+			call: input => registry.call({ ownerId: identity.ownerId, ...input }),
+		})
 	}
 }
 

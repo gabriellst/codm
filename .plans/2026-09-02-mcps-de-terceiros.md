@@ -1591,6 +1591,8 @@ git commit -m "feat(ui): settings reads the registered MCP servers, and the SDK 
 - Create: `packages/api/typescript/src/agent/mcp/upstream.test.ts`
 - Modify: `packages/api/typescript/src/agent/mcp/door.ts` — `buildTransport` embrulha o transporte com o upstream
 - Modify: `packages/api/typescript/src/agent/agents/IssueWorkAgent/IssueWorkAgent.ts` — `tools` inclui as upstream
+- Modify: `packages/api/typescript/src/agent/types/Agent.ts` — `buildMcpInvocation` vira async e é awaited em `run()`
+- Modify: `packages/api/typescript/src/agent/agents/IssueWorkAgent/IssueWorkAgent.test.ts` — a asserção passa a admitir as upstream
 - Modify: `packages/api/typescript/src/agent/registry.ts` — binda `McpUpstreamRegistry`
 
 **Files to read:**
