@@ -81,6 +81,20 @@ export type GetSettings200 = {
          * @type string
         */
         approvalPolicy: McpApprovalPolicy;
+        /**
+         * @type array
+        */
+        tools: {
+            /**
+             * @type string
+            */
+            name: string;
+            policy: McpApprovalPolicy | null;
+        }[];
+        /**
+         * @type boolean
+        */
+        reachable: boolean;
     }[];
     /**
      * @type object

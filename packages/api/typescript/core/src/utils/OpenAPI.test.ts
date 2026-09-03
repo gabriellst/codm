@@ -633,6 +633,51 @@ describe('z.discriminatedUnion emission', () => {
 	})
 })
 
+describe('nullable enum occurrences must not mutate the shared component', () => {
+	it('keeps the named enum component non-nullable while each call site carries its own nullability', () => {
+		const openapi = new OpenAPI()
+		openapi.registerEnums({ TestEnum: { A: 'A', B: 'B' } })
+
+		const internals = openapi as unknown as {
+			processSchemaForEnums: (s: unknown, path?: string) => unknown
+			reusableSchemas: Map<string, Record<string, unknown>>
+		}
+
+		// Two occurrences of the SAME enum values in one document walk — e.g. one controller's
+		// field is `.optional()` only (RegisterMcpServer.approvalPolicy), another's is genuinely
+		// `.nullable()` (UpdateMcpServer.toolPolicy.policy). Order matters for the regression:
+		// the non-nullable occurrence is resolved first, the nullable one second — reproducing
+		// "whichever occurrence is processed LAST decides nullability for every consumer".
+		const nonNullableResult = internals.processSchemaForEnums({ type: 'string', enum: ['A', 'B'] }, 'first') as {
+			$ref?: string
+			nullable?: boolean
+		}
+		const nullableResult = internals.processSchemaForEnums({ type: 'string', enum: ['A', 'B'], nullable: true }, 'second') as {
+			$ref?: string
+			nullable?: boolean
+			allOf?: { $ref?: string }[]
+		}
+
+		const component = internals.reusableSchemas.get('TestEnum')
+
+		// The shared component identity must stay non-nullable — nullability is a call-site trait,
+		// not a property of the enum itself.
+		expect(component?.nullable).toBeUndefined()
+
+		// The non-nullable occurrence must not carry nullable, and stays a bare $ref.
+		expect(nonNullableResult.$ref).toBe('#/components/schemas/TestEnum')
+		expect(nonNullableResult.nullable).toBeUndefined()
+
+		// The nullable occurrence must carry its OWN nullable marker, without touching the shared
+		// component. It is wrapped in `allOf` (not a bare `{ $ref, nullable: true }` sibling) so the
+		// `$ref` node itself stays sibling-free — a bare sibling gets merged into the SDK generator's
+		// shared dereferenced object for that ref, leaking nullability onto every other consumer.
+		expect(nullableResult.nullable).toBe(true)
+		expect(nullableResult.$ref).toBeUndefined()
+		expect(nullableResult.allOf).toEqual([{ $ref: '#/components/schemas/TestEnum' }])
+	})
+})
+
 describe('refinement placement', () => {
 	it('extracts inline refined subschemas into named components', async () => {
 		const openapi = new OpenAPI()

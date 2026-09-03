@@ -6959,6 +6959,8 @@ pub mod types {
     ///          "headerKeys",
     ///          "id",
     ///          "key",
+    ///          "reachable",
+    ///          "tools",
     ///          "transport"
     ///        ],
     ///        "properties": {
@@ -6994,6 +6996,39 @@ pub mod types {
     ///          },
     ///          "key": {
     ///            "type": "string"
+    ///          },
+    ///          "reachable": {
+    ///            "type": "boolean"
+    ///          },
+    ///          "tools": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "type": "object",
+    ///              "required": [
+    ///                "name",
+    ///                "policy"
+    ///              ],
+    ///              "properties": {
+    ///                "name": {
+    ///                  "type": "string"
+    ///                },
+    ///                "policy": {
+    ///                  "oneOf": [
+    ///                    {
+    ///                      "type": "null"
+    ///                    },
+    ///                    {
+    ///                      "allOf": [
+    ///                        {
+    ///                          "$ref": "#/components/schemas/McpApprovalPolicy"
+    ///                        }
+    ///                      ]
+    ///                    }
+    ///                  ]
+    ///                }
+    ///              },
+    ///              "additionalProperties": false
+    ///            }
     ///          },
     ///          "transport": {
     ///            "$ref": "#/components/schemas/McpTransport"
@@ -7141,6 +7176,8 @@ pub mod types {
     ///    "headerKeys",
     ///    "id",
     ///    "key",
+    ///    "reachable",
+    ///    "tools",
     ///    "transport"
     ///  ],
     ///  "properties": {
@@ -7177,6 +7214,39 @@ pub mod types {
     ///    "key": {
     ///      "type": "string"
     ///    },
+    ///    "reachable": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "tools": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "name",
+    ///          "policy"
+    ///        ],
+    ///        "properties": {
+    ///          "name": {
+    ///            "type": "string"
+    ///          },
+    ///          "policy": {
+    ///            "oneOf": [
+    ///              {
+    ///                "type": "null"
+    ///              },
+    ///              {
+    ///                "allOf": [
+    ///                  {
+    ///                    "$ref": "#/components/schemas/McpApprovalPolicy"
+    ///                  }
+    ///                ]
+    ///              }
+    ///            ]
+    ///          }
+    ///        },
+    ///        "additionalProperties": false
+    ///      }
+    ///    },
     ///    "transport": {
     ///      "$ref": "#/components/schemas/McpTransport"
     ///    },
@@ -7204,6 +7274,8 @@ pub mod types {
         pub header_keys: ::std::vec::Vec<::std::string::String>,
         pub id: ::std::string::String,
         pub key: ::std::string::String,
+        pub reachable: bool,
+        pub tools: ::std::vec::Vec<GetSettingsResponseMcpServersItemToolsItem>,
         pub transport: ::codm_contracts_rust::wire::enums::McpTransport,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub url: ::std::option::Option<::std::string::String>,
@@ -7211,6 +7283,54 @@ pub mod types {
     impl ::std::convert::From<&GetSettingsResponseMcpServersItem>
     for GetSettingsResponseMcpServersItem {
         fn from(value: &GetSettingsResponseMcpServersItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetSettingsResponseMcpServersItemToolsItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "name",
+    ///    "policy"
+    ///  ],
+    ///  "properties": {
+    ///    "name": {
+    ///      "type": "string"
+    ///    },
+    ///    "policy": {
+    ///      "oneOf": [
+    ///        {
+    ///          "type": "null"
+    ///        },
+    ///        {
+    ///          "allOf": [
+    ///            {
+    ///              "$ref": "#/components/schemas/McpApprovalPolicy"
+    ///            }
+    ///          ]
+    ///        }
+    ///      ]
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetSettingsResponseMcpServersItemToolsItem {
+        pub name: ::std::string::String,
+        pub policy: ::std::option::Option<
+            ::codm_contracts_rust::wire::enums::McpApprovalPolicy,
+        >,
+    }
+    impl ::std::convert::From<&GetSettingsResponseMcpServersItemToolsItem>
+    for GetSettingsResponseMcpServersItemToolsItem {
+        fn from(value: &GetSettingsResponseMcpServersItemToolsItem) -> Self {
             value.clone()
         }
     }
@@ -11760,7 +11880,18 @@ pub mod types {
     ///      ],
     ///      "properties": {
     ///        "policy": {
-    ///          "$ref": "#/components/schemas/McpApprovalPolicy"
+    ///          "oneOf": [
+    ///            {
+    ///              "type": "null"
+    ///            },
+    ///            {
+    ///              "allOf": [
+    ///                {
+    ///                  "$ref": "#/components/schemas/McpApprovalPolicy"
+    ///                }
+    ///              ]
+    ///            }
+    ///          ]
     ///        },
     ///        "toolName": {
     ///          "type": "string",
@@ -12005,7 +12136,18 @@ pub mod types {
     ///  ],
     ///  "properties": {
     ///    "policy": {
-    ///      "$ref": "#/components/schemas/McpApprovalPolicy"
+    ///      "oneOf": [
+    ///        {
+    ///          "type": "null"
+    ///        },
+    ///        {
+    ///          "allOf": [
+    ///            {
+    ///              "$ref": "#/components/schemas/McpApprovalPolicy"
+    ///            }
+    ///          ]
+    ///        }
+    ///      ]
     ///    },
     ///    "toolName": {
     ///      "type": "string",
@@ -12017,7 +12159,9 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct UpdateMcpServerBodyToolPolicy {
-        pub policy: ::codm_contracts_rust::wire::enums::McpApprovalPolicy,
+        pub policy: ::std::option::Option<
+            ::codm_contracts_rust::wire::enums::McpApprovalPolicy,
+        >,
         #[serde(rename = "toolName")]
         pub tool_name: UpdateMcpServerBodyToolPolicyToolName,
     }

@@ -23,6 +23,11 @@ export const GetSettingsControllerOutputSchema = GetSettingsOutputSchema.example
 				headerKeys: [],
 				enabled: true,
 				approvalPolicy: McpApprovalPolicy.ASK,
+				tools: [
+					{ name: 'click', policy: McpApprovalPolicy.AUTO },
+					{ name: 'navigate', policy: null },
+				],
+				reachable: true,
 			},
 		],
 		stopCriteria: {

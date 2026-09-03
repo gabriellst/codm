@@ -3219,6 +3219,7 @@ git commit -m "feat(app): the owner manages MCP servers from settings (Task T12)
 
 **Files to write:**
 - Modify: `packages/api/typescript/src/ui/usecases/GetSettings.ts` — cada servidor leva suas ferramentas, o override de cada uma e o status da conexão
+- Modify: `packages/api/typescript/core/src/utils/OpenAPI.ts` — um enum anulável deixa de sobrescrever o componente compartilhado (ver abaixo)
 - Regen: `packages/api/typescript/public/docs/openapi.json`
 - Regen: `packages/client/dist/**`
 

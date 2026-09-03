@@ -511,7 +511,10 @@ export type ListenEvents200 = ({
                  * @type string | undefined
                 */
                 participant?: string;
-                quotedMessageContent?: any;
+                /**
+                 * @type array | undefined
+                */
+                quotedMessageContent?: number[];
                 /**
                  * @type string | undefined
                 */

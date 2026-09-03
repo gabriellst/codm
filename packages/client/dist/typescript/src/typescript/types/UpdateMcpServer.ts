@@ -47,10 +47,7 @@ export type UpdateMcpServerMutationRequest = {
          * @type string
         */
         toolName: string;
-        /**
-         * @type string
-        */
-        policy: McpApprovalPolicy;
+        policy: McpApprovalPolicy | null;
     };
     config?: ({
         /**

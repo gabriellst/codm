@@ -1437,7 +1437,12 @@
                         "minLength": 1
                       },
                       "policy": {
-                        "$ref": "#/components/schemas/McpApprovalPolicy"
+                        "allOf": [
+                          {
+                            "$ref": "#/components/schemas/McpApprovalPolicy"
+                          }
+                        ],
+                        "nullable": true
                       }
                     },
                     "required": [
@@ -5131,7 +5136,14 @@
                                         "participant": {
                                           "type": "string"
                                         },
-                                        "quotedMessageContent": {},
+                                        "quotedMessageContent": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          }
+                                        },
                                         "quotedMessageType": {
                                           "type": "string"
                                         },
@@ -8913,6 +8925,33 @@
                           },
                           "approvalPolicy": {
                             "$ref": "#/components/schemas/McpApprovalPolicy"
+                          },
+                          "tools": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "name": {
+                                  "type": "string"
+                                },
+                                "policy": {
+                                  "allOf": [
+                                    {
+                                      "$ref": "#/components/schemas/McpApprovalPolicy"
+                                    }
+                                  ],
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "name",
+                                "policy"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "reachable": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
@@ -8922,7 +8961,9 @@
                           "envKeys",
                           "headerKeys",
                           "enabled",
-                          "approvalPolicy"
+                          "approvalPolicy",
+                          "tools",
+                          "reachable"
                         ],
                         "additionalProperties": false
                       }
@@ -9011,7 +9052,18 @@
                           "envKeys": [],
                           "headerKeys": [],
                           "enabled": true,
-                          "approvalPolicy": "ASK"
+                          "approvalPolicy": "ASK",
+                          "tools": [
+                            {
+                              "name": "click",
+                              "policy": "AUTO"
+                            },
+                            {
+                              "name": "navigate",
+                              "policy": null
+                            }
+                          ],
+                          "reachable": true
                         }
                       ],
                       "stopCriteria": {
@@ -9055,7 +9107,18 @@
                           "envKeys": [],
                           "headerKeys": [],
                           "enabled": true,
-                          "approvalPolicy": "ASK"
+                          "approvalPolicy": "ASK",
+                          "tools": [
+                            {
+                              "name": "click",
+                              "policy": "AUTO"
+                            },
+                            {
+                              "name": "navigate",
+                              "policy": null
+                            }
+                          ],
+                          "reachable": true
                         }
                       ],
                       "stopCriteria": {

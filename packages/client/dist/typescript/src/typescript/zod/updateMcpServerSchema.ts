@@ -23,7 +23,7 @@ get "approvalPolicy"(){
 "toolPolicy": z.optional(z.object({
     "toolName": z.string().min(1),
 get "policy"(){
-                return mcpApprovalPolicySchema
+               return mcpApprovalPolicySchema.nullable()
               }
     })),
 "config": z.optional(z.union([z.object({

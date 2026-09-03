@@ -88,7 +88,7 @@ get "platform"(){
 "content": z.optional(z.object({
     "contextInfo": z.object({
     "participant": z.optional(z.string()),
-"quotedMessageContent": z.optional(z.any()),
+"quotedMessageContent": z.optional(z.array(z.int().min(-9007199254740991).max(9007199254740991))),
 "quotedMessageType": z.optional(z.string()),
 "quotedSenderName": z.optional(z.string()),
 "stanzaId": z.optional(z.string())

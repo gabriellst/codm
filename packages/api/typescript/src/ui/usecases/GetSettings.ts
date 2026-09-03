@@ -8,6 +8,7 @@ import { ProviderDetector } from '@agent/services/ProviderDetector'
 // `agent/mcp/exposure.ts` → `@ui/controllers` → back here. See that barrel's header.
 import { AgentRunnerFactory } from '@agent/services/AgentRunnerFactory/AgentRunnerFactory'
 import { McpServerRepository } from '@agent/repositories/McpServerRepository'
+import { McpUpstreamRegistry, type UpstreamTool } from '@agent/services/McpUpstreamRegistry'
 import { StopPolicyConfigRepository } from '@thread/repositories/StopPolicyConfigRepository'
 
 import pkg from '../../../package.json' with { type: 'json' }
@@ -60,6 +61,20 @@ const McpServerSummarySchema = z.object({
 	headerKeys: z.array(z.string()),
 	enabled: z.boolean(),
 	approvalPolicy: z.enum(McpApprovalPolicy),
+	/**
+	 * As ferramentas que ESTE upstream publicou, na última vez que conseguimos falar com ele.
+	 * `policy: null` significa "sem override — herda a `approvalPolicy` do servidor" (ver
+	 * `McpServer.toolPolicies`). O console precisa do override de volta na LEITURA — não só na
+	 * escrita — para o seletor por ferramenta renderizar o próprio estado.
+	 */
+	tools: z.array(z.object({ name: z.string(), policy: z.enum(McpApprovalPolicy).nullable() })),
+	/**
+	 * `false` quando o servidor está desabilitado OU quando estava habilitado mas o upstream não
+	 * respondeu (`McpUpstreamRegistry.listTools` engole a exceção e devolve lista vazia — ver
+	 * `DefaultMcpUpstreamRegistry.safeListTools`). Um upstream quebrado nunca pode derrubar a tela
+	 * inteira: os outros servidores continuam presentes com suas próprias `tools`.
+	 */
+	reachable: z.boolean(),
 })
 
 export const GetSettingsInputSchema = z.object({ ownerId: z.uuid() })
@@ -86,8 +101,9 @@ export const GetSettingsOutputSchema = z.object({
  *   - providers    — per-CLI availability (the detection Service probe: DETECTED + version, or
  *                    NOT_INSTALLED), the same shape the attach wizard renders.
  *   - mcpServers   — the registered third-party MCP servers, secrets stripped to key names only
- *                    (see `McpServerSummarySchema`). The discovered-tools list and `reachable` flag
- *                    are OUT of scope here — they need `McpUpstreamRegistry` (Task T13).
+ *                    (see `McpServerSummarySchema`), each carrying the tools its upstream published
+ *                    (with the per-tool policy override, read back so the console's selector knows
+ *                    its own state) and whether that upstream was reachable this call (Task T13).
  *   - stopCriteria — the per-owner stop-policy toggles (BC5 settings row, defaulted when unset).
  *   - general      — operator identity + the embedded data directory (local-daemon config).
  *   - appVersion   — the About row.
@@ -104,6 +120,7 @@ export class GetSettings extends Handler<typeof GetSettingsInputSchema, typeof G
 		private readonly stopPolicy: StopPolicyConfigRepository,
 		private readonly agentRunnerFactory: AgentRunnerFactory,
 		private readonly mcpServers: McpServerRepository,
+		private readonly mcpUpstreamRegistry: McpUpstreamRegistry,
 	) {
 		super()
 	}
@@ -123,18 +140,40 @@ export class GetSettings extends Handler<typeof GetSettingsInputSchema, typeof G
 			}
 		})
 
-		const mcpServers = (await this.mcpServers.listByOwner(input.ownerId)).map(server => ({
-			id: server.id.value,
-			key: server.key,
-			transport: server.transport,
-			command: server.command,
-			args: server.args,
-			url: server.url,
-			envKeys: Object.keys(server.env ?? {}),
-			headerKeys: Object.keys(server.headers ?? {}),
-			enabled: server.enabled,
-			approvalPolicy: server.approvalPolicy,
-		}))
+		const registeredServers = await this.mcpServers.listByOwner(input.ownerId)
+		// UMA chamada, não uma por servidor — o registry já devolve o achatado de todos os habilitados,
+		// namespeado por `serverKey`; agrupar aqui é local, sem round-trip extra por servidor.
+		const upstreamTools = await this.mcpUpstreamRegistry.listTools(input.ownerId)
+		const toolsByServerKey = new Map<string, UpstreamTool[]>()
+		for (const tool of upstreamTools) {
+			const bucket = toolsByServerKey.get(tool.serverKey)
+			if (bucket) bucket.push(tool)
+			else toolsByServerKey.set(tool.serverKey, [tool])
+		}
+
+		const mcpServers = registeredServers.map(server => {
+			// Desabilitado nunca é conectado — `DefaultMcpUpstreamRegistry.listTools` já filtra por
+			// `listEnabledByOwner`, mas o gate fica explícito aqui também: um servidor desligado nunca
+			// mostra ferramentas que porventura sobraram no mapa.
+			const tools = server.enabled ? (toolsByServerKey.get(server.key) ?? []) : []
+			return {
+				id: server.id.value,
+				key: server.key,
+				transport: server.transport,
+				command: server.command,
+				args: server.args,
+				url: server.url,
+				envKeys: Object.keys(server.env ?? {}),
+				headerKeys: Object.keys(server.headers ?? {}),
+				enabled: server.enabled,
+				approvalPolicy: server.approvalPolicy,
+				tools: tools.map(tool => ({ name: tool.name, policy: server.toolPolicies?.[tool.name] ?? null })),
+				// Ausente do resultado do upstream (habilitado mas sem NENHUMA ferramenta de volta) é
+				// `reachable: false` — o mesmo sinal cobre "upstream quebrado" e "upstream vazio", e é a
+				// mesma ambiguidade que `safeListTools` já aceita ao engolir a exceção como lista vazia.
+				reachable: server.enabled && tools.length > 0,
+			}
+		})
 
 		const stopCriteria = await this.stopPolicy.get(input.ownerId)
 

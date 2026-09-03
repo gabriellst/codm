@@ -1446,8 +1446,8 @@ type UpdateMcpServerJSONBody struct {
 	Config         *UpdateMcpServerJSONBody_Config `json:"config,omitempty"`
 	Enabled        *bool                           `json:"enabled,omitempty"`
 	ToolPolicy     *struct {
-		Policy   McpApprovalPolicy `json:"policy"`
-		ToolName string            `json:"toolName"`
+		Policy   nullable.Nullable[McpApprovalPolicy] `json:"policy"`
+		ToolName string                               `json:"toolName"`
 	} `json:"toolPolicy,omitempty"`
 }
 
@@ -9057,8 +9057,13 @@ type GetSettingsResponse struct {
 			HeaderKeys     []string          `json:"headerKeys"`
 			Id             string            `json:"id"`
 			Key            string            `json:"key"`
-			Transport      McpTransport      `json:"transport"`
-			Url            *string           `json:"url,omitempty"`
+			Reachable      bool              `json:"reachable"`
+			Tools          []struct {
+				Name   string                               `json:"name"`
+				Policy nullable.Nullable[McpApprovalPolicy] `json:"policy"`
+			} `json:"tools"`
+			Transport McpTransport `json:"transport"`
+			Url       *string      `json:"url,omitempty"`
 		} `json:"mcpServers"`
 		Providers []struct {
 			Available  bool           `json:"available"`
@@ -12018,8 +12023,13 @@ func ParseGetSettingsResponse(rsp *http.Response) (*GetSettingsResponse, error) 
 				HeaderKeys     []string          `json:"headerKeys"`
 				Id             string            `json:"id"`
 				Key            string            `json:"key"`
-				Transport      McpTransport      `json:"transport"`
-				Url            *string           `json:"url,omitempty"`
+				Reachable      bool              `json:"reachable"`
+				Tools          []struct {
+					Name   string                               `json:"name"`
+					Policy nullable.Nullable[McpApprovalPolicy] `json:"policy"`
+				} `json:"tools"`
+				Transport McpTransport `json:"transport"`
+				Url       *string      `json:"url,omitempty"`
 			} `json:"mcpServers"`
 			Providers []struct {
 				Available  bool           `json:"available"`

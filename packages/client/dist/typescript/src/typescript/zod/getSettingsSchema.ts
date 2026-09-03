@@ -38,7 +38,14 @@ get "transport"(){
 "enabled": z.boolean(),
 get "approvalPolicy"(){
                 return mcpApprovalPolicySchema
+              },
+"tools": z.array(z.object({
+    "name": z.string(),
+get "policy"(){
+               return mcpApprovalPolicySchema.nullable()
               }
+    })),
+"reachable": z.boolean()
     })),
 "stopCriteria": z.object({
     "serverErrors": z.boolean(),
