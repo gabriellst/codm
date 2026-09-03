@@ -647,7 +647,9 @@ export class McpServer extends AggregateRoot<typeof McpServerSchema> {
 	setToolPolicy(toolName: string, policy: McpApprovalPolicy | undefined): void {
 		const next = { ...(this.toolPolicies ?? {}) }
 		if (policy) next[toolName] = policy
-		else delete next[toolName]
+		// `Reflect.deleteProperty` e não `delete next[x]`: o lint roda com --max-warnings 0 e
+		// `no-dynamic-delete` reprova a segunda forma. Comportamento idêntico.
+		else Reflect.deleteProperty(next, toolName)
 		this.toolPolicies = Object.keys(next).length > 0 ? next : undefined
 		this.validate()
 	}
@@ -1166,7 +1168,7 @@ describe('ciclo de vida de um servidor MCP', () => {
 		const before = (await repo.listByOwner(ownerId)).length
 
 		await expect(testBed.resolve(RegisterMcpServer).execute({ ownerId, key: 'dup', ...stdio })).rejects.toMatchObject({
-			code: 'MCP_SERVER_KEY_CONFLICT',
+			name: 'MCP_SERVER_KEY_CONFLICT',
 		})
 
 		// A prova é a CONTAGEM de linhas, não a ausência de exceção.
@@ -1194,7 +1196,7 @@ describe('ciclo de vida de um servidor MCP', () => {
 		const { mcpServerId } = await testBed.resolve(RegisterMcpServer).execute({ ownerId, key: 'mine', ...stdio })
 		const intruder = '019e4d24-6524-7041-9e1c-8108180cdd99'
 		await expect(testBed.resolve(RemoveMcpServer).execute({ ownerId: intruder, mcpServerId })).rejects.toMatchObject({
-			code: 'MCP_SERVER_NOT_FOUND',
+			name: 'MCP_SERVER_NOT_FOUND',
 		})
 	})
 })
@@ -1273,15 +1275,17 @@ export class RegisterMcpServerController extends Controller<
 	readonly description = 'Register a third-party MCP server for this owner'
 	readonly inputSchema = RegisterMcpServerControllerInputSchema
 	readonly outputSchema = RegisterMcpServerControllerOutputSchema
-	readonly successStatusCode = HttpStatusCode.CREATED
 	override readonly middlewares = [CloudSessionMiddleware]
 
 	constructor(private usecase: RegisterMcpServer) {
 		super()
 	}
 
-	protected async handle(request: this['request']): Promise<this['response']> {
-		return this.usecase.execute({ ownerId: request.ctx.session.ownerId, ...request.body })
+	// `this['input']`/`this['output']`, e o status vem no RETORNO — não existe campo
+	// `successStatusCode` nesta base. Mesma forma de `AskOperator` e `CreateIssue`.
+	async handle(request: this['input']): Promise<this['output']> {
+		const data = await this.usecase.execute({ ownerId: request.ctx.session.ownerId, ...request.body })
+		return { status: HttpStatusCode.CREATED, data }
 	}
 }
 ```
@@ -1291,7 +1295,7 @@ Create: `packages/api/typescript/src/agent/controllers/UpdateMcpServer.ts`
 ```typescript
 // packages/api/typescript/src/agent/controllers/UpdateMcpServer.ts — arquivo final COMPLETO
 import { injectable } from 'tsyringe-neo'
-import { Controller, z } from '@codm/core-typescript'
+import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 import { McpApprovalPolicy } from '@codm/contracts-typescript/wire/enums'
 import { CloudSessionMiddleware } from '@shared/middlewares'
 import { UpdateMcpServer } from '../usecases/UpdateMcpServer'
@@ -1339,9 +1343,9 @@ export class UpdateMcpServerController extends Controller<
 		super()
 	}
 
-	protected async handle(request: this['request']): Promise<this['response']> {
+	async handle(request: this['input']): Promise<this['output']> {
 		const { enabled, approvalPolicy, toolPolicy, config } = request.body
-		return this.usecase.execute({
+		await this.usecase.execute({
 			ownerId: request.ctx.session.ownerId,
 			mcpServerId: request.params.mcpServerId,
 			enabled,
@@ -1349,6 +1353,7 @@ export class UpdateMcpServerController extends Controller<
 			toolPolicy,
 			...(config ?? {}),
 		})
+		return { status: HttpStatusCode.NO_CONTENT, data: undefined }
 	}
 }
 ```
@@ -1358,7 +1363,7 @@ Create: `packages/api/typescript/src/agent/controllers/RemoveMcpServer.ts`
 ```typescript
 // packages/api/typescript/src/agent/controllers/RemoveMcpServer.ts — arquivo final COMPLETO
 import { injectable } from 'tsyringe-neo'
-import { Controller, z } from '@codm/core-typescript'
+import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 import { CloudSessionMiddleware } from '@shared/middlewares'
 import { RemoveMcpServer } from '../usecases/RemoveMcpServer'
 
@@ -1391,8 +1396,9 @@ export class RemoveMcpServerController extends Controller<
 		super()
 	}
 
-	protected async handle(request: this['request']): Promise<this['response']> {
-		return this.usecase.execute({ ownerId: request.ctx.session.ownerId, mcpServerId: request.params.mcpServerId })
+	async handle(request: this['input']): Promise<this['output']> {
+		await this.usecase.execute({ ownerId: request.ctx.session.ownerId, mcpServerId: request.params.mcpServerId })
+		return { status: HttpStatusCode.NO_CONTENT, data: undefined }
 	}
 }
 ```
@@ -1407,7 +1413,10 @@ Modify `packages/api/typescript/src/agent/controllers/index.ts`: adicionar
 `export { RegisterMcpServerController } from './RegisterMcpServer'`,
 `export { UpdateMcpServerController } from './UpdateMcpServer'` e
 `export { RemoveMcpServerController } from './RemoveMcpServer'` — o rail WIRE-03 exige todo controller
-no barrel do contexto.
+no barrel do contexto. **E acrescentar os três ao `productionControllers` do mesmo arquivo**: é esse
+mapa que `composition/compose.ts` consome para MONTAR a rota e para emitir a OpenAPI. Só o export
+nomeado satisfaz o rail e deixa o endpoint morto — o gate do T4 (`bun sdk` produzindo as três
+operações) falharia.
 
 Modify `packages/api/typescript/src/agent/registry.ts`: importar
 `{ McpServerRepository, LibSqlMcpServerRepository, MockMcpServerRepository }` de
