@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { GetOperatorIdentityQueryResponse } from "../types/GetOperatorIdentity.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
-import { getOperatorIdentity } from "../client/getOperatorIdentity.ts";
+import type { GetOperatorIdentityQueryResponse } from "../types/GetOperatorIdentity.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
+import { getOperatorIdentity } from "../client/getOperatorIdentity.ts";
 
 export const getOperatorIdentityQueryKey = () => [{ url: '/ui/operator' }] as const
 

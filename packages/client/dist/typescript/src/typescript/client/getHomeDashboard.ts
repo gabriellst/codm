@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { GetHomeDashboardQueryResponse } from "../types/GetHomeDashboard.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { GetHomeDashboardQueryResponse } from "../types/GetHomeDashboard.ts";
 
 function getGetHomeDashboardUrl() {
   const res = { method: 'GET', url: `/ui/home` as const }

@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { CreateThreadLoopMutationRequest, CreateThreadLoopMutationResponse, CreateThreadLoopPathParams } from "../types/CreateThreadLoop.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { createThreadLoop } from "../client/createThreadLoop.ts";
+import type { CreateThreadLoopMutationRequest, CreateThreadLoopMutationResponse, CreateThreadLoopPathParams } from "../types/CreateThreadLoop.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { createThreadLoop } from "../client/createThreadLoop.ts";
 
 export const createThreadLoopMutationKey = () => [{ url: '/threads/:threadId/loops' }] as const
 

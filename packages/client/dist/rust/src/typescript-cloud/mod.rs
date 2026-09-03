@@ -102,6 +102,11 @@ pub mod types {
     ///    "LOOP_NOT_FOUND",
     ///    "LOOP_PROMPT_TOO_LONG",
     ///    "LOOP_WITHOUT_WEEKDAY",
+    ///    "MCP_APPROVAL_ALREADY_SETTLED",
+    ///    "MCP_SERVER_KEY_CONFLICT",
+    ///    "MCP_SERVER_NOT_FOUND",
+    ///    "MCP_SERVER_TRANSPORT_INCOMPLETE",
+    ///    "MCP_TOOL_APPROVAL_REQUIRED",
     ///    "MIGRATIONS_PENDING",
     ///    "MISSING_ENVIRONMENT_VARIABLE",
     ///    "MISSING_LOG_CONTENT",
@@ -278,6 +283,16 @@ pub mod types {
         LoopPromptTooLong,
         #[serde(rename = "LOOP_WITHOUT_WEEKDAY")]
         LoopWithoutWeekday,
+        #[serde(rename = "MCP_APPROVAL_ALREADY_SETTLED")]
+        McpApprovalAlreadySettled,
+        #[serde(rename = "MCP_SERVER_KEY_CONFLICT")]
+        McpServerKeyConflict,
+        #[serde(rename = "MCP_SERVER_NOT_FOUND")]
+        McpServerNotFound,
+        #[serde(rename = "MCP_SERVER_TRANSPORT_INCOMPLETE")]
+        McpServerTransportIncomplete,
+        #[serde(rename = "MCP_TOOL_APPROVAL_REQUIRED")]
+        McpToolApprovalRequired,
         #[serde(rename = "MIGRATIONS_PENDING")]
         MigrationsPending,
         #[serde(rename = "MISSING_ENVIRONMENT_VARIABLE")]
@@ -449,6 +464,17 @@ pub mod types {
                 Self::LoopNotFound => f.write_str("LOOP_NOT_FOUND"),
                 Self::LoopPromptTooLong => f.write_str("LOOP_PROMPT_TOO_LONG"),
                 Self::LoopWithoutWeekday => f.write_str("LOOP_WITHOUT_WEEKDAY"),
+                Self::McpApprovalAlreadySettled => {
+                    f.write_str("MCP_APPROVAL_ALREADY_SETTLED")
+                }
+                Self::McpServerKeyConflict => f.write_str("MCP_SERVER_KEY_CONFLICT"),
+                Self::McpServerNotFound => f.write_str("MCP_SERVER_NOT_FOUND"),
+                Self::McpServerTransportIncomplete => {
+                    f.write_str("MCP_SERVER_TRANSPORT_INCOMPLETE")
+                }
+                Self::McpToolApprovalRequired => {
+                    f.write_str("MCP_TOOL_APPROVAL_REQUIRED")
+                }
                 Self::MigrationsPending => f.write_str("MIGRATIONS_PENDING"),
                 Self::MissingEnvironmentVariable => {
                     f.write_str("MISSING_ENVIRONMENT_VARIABLE")
@@ -569,6 +595,13 @@ pub mod types {
                 "LOOP_NOT_FOUND" => Ok(Self::LoopNotFound),
                 "LOOP_PROMPT_TOO_LONG" => Ok(Self::LoopPromptTooLong),
                 "LOOP_WITHOUT_WEEKDAY" => Ok(Self::LoopWithoutWeekday),
+                "MCP_APPROVAL_ALREADY_SETTLED" => Ok(Self::McpApprovalAlreadySettled),
+                "MCP_SERVER_KEY_CONFLICT" => Ok(Self::McpServerKeyConflict),
+                "MCP_SERVER_NOT_FOUND" => Ok(Self::McpServerNotFound),
+                "MCP_SERVER_TRANSPORT_INCOMPLETE" => {
+                    Ok(Self::McpServerTransportIncomplete)
+                }
+                "MCP_TOOL_APPROVAL_REQUIRED" => Ok(Self::McpToolApprovalRequired),
                 "MIGRATIONS_PENDING" => Ok(Self::MigrationsPending),
                 "MISSING_ENVIRONMENT_VARIABLE" => Ok(Self::MissingEnvironmentVariable),
                 "MISSING_LOG_CONTENT" => Ok(Self::MissingLogContent),

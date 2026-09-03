@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { GetMyAccountQueryResponse } from "../types/GetMyAccount.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
-import { getMyAccount } from "../client/getMyAccount.ts";
+import type { GetMyAccountQueryResponse } from "../types/GetMyAccount.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
+import { getMyAccount } from "../client/getMyAccount.ts";
 
 export const getMyAccountQueryKey = () => [{ url: '/ui/account' }] as const
 

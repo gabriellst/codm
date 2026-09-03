@@ -9,7 +9,7 @@ import { z } from "zod/v4";
 
 export const getChannelOutputSchema = z.object({
     "createdAt": z.iso.datetime(),
-"credentials": z.any(),
+"credentials": z.array(z.int()),
 "id": z.string(),
 "name": z.string(),
 "ownerRemoteId": z.string(),

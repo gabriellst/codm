@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { DetectProvidersQueryResponse, DetectProvidersQueryParams } from "../types/DetectProviders.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
-import { detectProviders } from "../client/detectProviders.ts";
+import type { DetectProvidersQueryResponse, DetectProvidersQueryParams } from "../types/DetectProviders.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
+import { detectProviders } from "../client/detectProviders.ts";
 
 export const detectProvidersQueryKey = (params?: DetectProvidersQueryParams) => [{ url: '/terminal/providers' }, ...(params ? [params] : [])] as const
 

@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { SendReactionMutationRequest, SendReactionMutationResponse } from "../types/SendReaction.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { sendReaction } from "../client/sendReaction.ts";
+import type { SendReactionMutationRequest, SendReactionMutationResponse } from "../types/SendReaction.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { sendReaction } from "../client/sendReaction.ts";
 
 export const sendReactionMutationKey = () => [{ url: '/messaging/messages/reaction' }] as const
 

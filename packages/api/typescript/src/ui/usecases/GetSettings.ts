@@ -2,11 +2,12 @@ import { injectable } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
 import { LibSqlDatabaseDriver, Handler, z, Config } from '@codm/core-typescript'
 import { owners } from '@codm/contracts/db'
-import { ProviderKind, ProviderStatus } from '@codm/contracts-typescript/wire/enums'
+import { McpApprovalPolicy, McpTransport, ProviderKind, ProviderStatus } from '@codm/contracts-typescript/wire/enums'
 import { ProviderDetector } from '@agent/services/ProviderDetector'
 // The LEAF, not the barrel: the barrel re-exports the runner implementations, whose graph reaches
 // `agent/mcp/exposure.ts` → `@ui/controllers` → back here. See that barrel's header.
 import { AgentRunnerFactory } from '@agent/services/AgentRunnerFactory/AgentRunnerFactory'
+import { McpServerRepository } from '@agent/repositories/McpServerRepository'
 import { StopPolicyConfigRepository } from '@thread/repositories/StopPolicyConfigRepository'
 
 import pkg from '../../../package.json' with { type: 'json' }
@@ -39,9 +40,32 @@ const ProviderAvailabilitySchema = z.object({
 	version: z.string().optional(),
 })
 
+/**
+ * O que a tela de settings mostra de um servidor MCP — e, tão importante quanto, o que ela NÃO mostra.
+ *
+ * `env` e `headers` ficam de fora POR CONTRATO, não por esquecimento: são os campos que carregam
+ * token de API dos servidores de terceiros, e este DTO vira `openapi.json` público mais SDK do
+ * cliente. Um segredo que nunca entra no schema não vaza por um `console.log` de resposta nem por um
+ * devtools aberto. O console mostra QUE existem variáveis configuradas (`envKeys`), nunca os valores.
+ */
+const McpServerSummarySchema = z.object({
+	id: z.string(),
+	key: z.string(),
+	transport: z.enum(McpTransport),
+	command: z.string().optional(),
+	args: z.array(z.string()).optional(),
+	url: z.string().optional(),
+	/** Só os NOMES das variáveis/headers configurados. Nunca os valores. */
+	envKeys: z.array(z.string()),
+	headerKeys: z.array(z.string()),
+	enabled: z.boolean(),
+	approvalPolicy: z.enum(McpApprovalPolicy),
+})
+
 export const GetSettingsInputSchema = z.object({ ownerId: z.uuid() })
 export const GetSettingsOutputSchema = z.object({
 	providers: z.array(ProviderAvailabilitySchema),
+	mcpServers: z.array(McpServerSummarySchema),
 	stopCriteria: z.object({
 		serverErrors: z.boolean(),
 		blockedByClassification: z.boolean(),
@@ -58,9 +82,12 @@ export const GetSettingsOutputSchema = z.object({
 })
 
 /**
- * Read — Settings (T08). The settings screen's four panels, composed in the ui BFF context:
+ * Read — Settings (T08). The settings screen's panels, composed in the ui BFF context:
  *   - providers    — per-CLI availability (the detection Service probe: DETECTED + version, or
  *                    NOT_INSTALLED), the same shape the attach wizard renders.
+ *   - mcpServers   — the registered third-party MCP servers, secrets stripped to key names only
+ *                    (see `McpServerSummarySchema`). The discovered-tools list and `reachable` flag
+ *                    are OUT of scope here — they need `McpUpstreamRegistry` (Task T13).
  *   - stopCriteria — the per-owner stop-policy toggles (BC5 settings row, defaulted when unset).
  *   - general      — operator identity + the embedded data directory (local-daemon config).
  *   - appVersion   — the About row.
@@ -76,6 +103,7 @@ export class GetSettings extends Handler<typeof GetSettingsInputSchema, typeof G
 		private readonly providerDetector: ProviderDetector,
 		private readonly stopPolicy: StopPolicyConfigRepository,
 		private readonly agentRunnerFactory: AgentRunnerFactory,
+		private readonly mcpServers: McpServerRepository,
 	) {
 		super()
 	}
@@ -95,6 +123,19 @@ export class GetSettings extends Handler<typeof GetSettingsInputSchema, typeof G
 			}
 		})
 
+		const mcpServers = (await this.mcpServers.listByOwner(input.ownerId)).map(server => ({
+			id: server.id.value,
+			key: server.key,
+			transport: server.transport,
+			command: server.command,
+			args: server.args,
+			url: server.url,
+			envKeys: Object.keys(server.env ?? {}),
+			headerKeys: Object.keys(server.headers ?? {}),
+			enabled: server.enabled,
+			approvalPolicy: server.approvalPolicy,
+		}))
+
 		const stopCriteria = await this.stopPolicy.get(input.ownerId)
 
 		const ownerRow = await this.driver.db
@@ -105,6 +146,7 @@ export class GetSettings extends Handler<typeof GetSettingsInputSchema, typeof G
 
 		return {
 			providers,
+			mcpServers,
 			stopCriteria,
 			general: {
 				// Empty when unnamed — the frontend renders its own i18n placeholder; never an EN literal from the API.

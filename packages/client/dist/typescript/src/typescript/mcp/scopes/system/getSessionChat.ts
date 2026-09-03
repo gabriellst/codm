@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/system/_http";
-import type { GetSessionChatQueryResponse, GetSessionChatPathParams } from "../../../types/GetSessionChat.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/system/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { GetSessionChatQueryResponse, GetSessionChatPathParams } from "../../../types/GetSessionChat.ts";
 
 /**
  * @description Full thread conversation + control-plane state + active stops (T09)

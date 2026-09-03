@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { ResumeThreadMutationResponse, ResumeThreadPathParams } from "../types/ResumeThread.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { resumeThread } from "../client/resumeThread.ts";
+import type { ResumeThreadMutationResponse, ResumeThreadPathParams } from "../types/ResumeThread.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { resumeThread } from "../client/resumeThread.ts";
 
 export const resumeThreadMutationKey = () => [{ url: '/threads/:threadId/resume' }] as const
 

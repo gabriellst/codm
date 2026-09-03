@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { GetOrCreateChannelQueryResponse, GetOrCreateChannelQueryParams } from "../types/GetOrCreateChannel.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { GetOrCreateChannelQueryResponse, GetOrCreateChannelQueryParams } from "../types/GetOrCreateChannel.ts";
 
 function getGetOrCreateChannelUrl() {
   const res = { method: 'GET', url: `/channel/channels/resolve` as const }

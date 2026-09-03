@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { ConnectChannelMutationResponse, ConnectChannelPathParams } from "../types/ConnectChannel.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { connectChannel } from "../client/connectChannel.ts";
+import type { ConnectChannelMutationResponse, ConnectChannelPathParams } from "../types/ConnectChannel.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { connectChannel } from "../client/connectChannel.ts";
 
 export const connectChannelMutationKey = () => [{ url: '/channel/channels/:id/connect' }] as const
 

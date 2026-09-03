@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { ConfigureThinkingIndicatorMutationRequest, ConfigureThinkingIndicatorMutationResponse, ConfigureThinkingIndicatorPathParams } from "../types/ConfigureThinkingIndicator.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { configureThinkingIndicator } from "../client/configureThinkingIndicator.ts";
+import type { ConfigureThinkingIndicatorMutationRequest, ConfigureThinkingIndicatorMutationResponse, ConfigureThinkingIndicatorPathParams } from "../types/ConfigureThinkingIndicator.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { configureThinkingIndicator } from "../client/configureThinkingIndicator.ts";
 
 export const configureThinkingIndicatorMutationKey = () => [{ url: '/threads/:threadId/thinking-indicator' }] as const
 

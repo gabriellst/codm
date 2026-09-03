@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
-import type { UpdateThreadLoopMutationRequest, UpdateThreadLoopMutationResponse, UpdateThreadLoopPathParams } from "../../../types/UpdateThreadLoop.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { UpdateThreadLoopMutationRequest, UpdateThreadLoopMutationResponse, UpdateThreadLoopPathParams } from "../../../types/UpdateThreadLoop.ts";
 
 /**
  * @description Edit a loop — its prompt and its schedule (C22)

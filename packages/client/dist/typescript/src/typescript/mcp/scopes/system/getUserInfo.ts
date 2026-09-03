@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/system/_http";
-import type { GetUserInfoQueryResponse } from "../../../types/GetUserInfo.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/system/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { GetUserInfoQueryResponse } from "../../../types/GetUserInfo.ts";
 
 /**
  * @description Header context — user identity, all member owners (role), active owner, and profile alerts

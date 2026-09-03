@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { GetMyAccountQueryResponse } from "../types/GetMyAccount.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { GetMyAccountQueryResponse } from "../types/GetMyAccount.ts";
 
 function getGetMyAccountUrl() {
   const res = { method: 'GET', url: `/ui/account` as const }

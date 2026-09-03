@@ -17,7 +17,10 @@ export type ChannelLoggedOutPayload = {
      * @type string
     */
     platform: string;
-    platformData?: any;
+    /**
+     * @type array | undefined
+    */
+    platformData?: number[];
     /**
      * @type string
     */

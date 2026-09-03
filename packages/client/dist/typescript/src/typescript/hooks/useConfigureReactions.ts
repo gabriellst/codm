@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { ConfigureReactionsMutationRequest, ConfigureReactionsMutationResponse, ConfigureReactionsPathParams } from "../types/ConfigureReactions.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { configureReactions } from "../client/configureReactions.ts";
+import type { ConfigureReactionsMutationRequest, ConfigureReactionsMutationResponse, ConfigureReactionsPathParams } from "../types/ConfigureReactions.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { configureReactions } from "../client/configureReactions.ts";
 
 export const configureReactionsMutationKey = () => [{ url: '/threads/:threadId/reactions' }] as const
 

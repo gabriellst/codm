@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { DisableOwnerMutationRequest, DisableOwnerMutationResponse } from "../types/DisableOwner.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { disableOwner } from "../client/disableOwner.ts";
+import type { DisableOwnerMutationRequest, DisableOwnerMutationResponse } from "../types/DisableOwner.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { disableOwner } from "../client/disableOwner.ts";
 
 export const disableOwnerMutationKey = () => [{ url: '/owners/disable' }] as const
 

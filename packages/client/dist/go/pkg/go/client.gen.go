@@ -992,6 +992,42 @@ func (e MailboxTargetKind) Valid() bool {
 	}
 }
 
+// Defines values for McpApprovalDecision.
+const (
+	McpApprovalDecisionAPPROVED McpApprovalDecision = "APPROVED"
+	McpApprovalDecisionDENIED   McpApprovalDecision = "DENIED"
+)
+
+// Valid indicates whether the value is a known member of the McpApprovalDecision enum.
+func (e McpApprovalDecision) Valid() bool {
+	switch e {
+	case McpApprovalDecisionAPPROVED:
+		return true
+	case McpApprovalDecisionDENIED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for McpApprovalPolicy.
+const (
+	McpApprovalPolicyASK  McpApprovalPolicy = "ASK"
+	McpApprovalPolicyAUTO McpApprovalPolicy = "AUTO"
+)
+
+// Valid indicates whether the value is a known member of the McpApprovalPolicy enum.
+func (e McpApprovalPolicy) Valid() bool {
+	switch e {
+	case McpApprovalPolicyASK:
+		return true
+	case McpApprovalPolicyAUTO:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for McpScope.
 const (
 	McpScopeISSUEHANDLING McpScope = "issue-handling"
@@ -1007,6 +1043,24 @@ func (e McpScope) Valid() bool {
 	case McpScopeorchestration:
 		return true
 	case McpScopesystem:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for McpTransport.
+const (
+	McpTransportHTTP  McpTransport = "HTTP"
+	McpTransportSTDIO McpTransport = "STDIO"
+)
+
+// Valid indicates whether the value is a known member of the McpTransport enum.
+func (e McpTransport) Valid() bool {
+	switch e {
+	case McpTransportHTTP:
+		return true
+	case McpTransportSTDIO:
 		return true
 	default:
 		return false
@@ -2520,7 +2574,7 @@ type ChannelConnectedPayload struct {
 	ChannelId    openapi_types.UUID `json:"channelId"`
 	OwnerId      string             `json:"ownerId"`
 	Platform     string             `json:"platform"`
-	PlatformData interface{}        `json:"platformData,omitempty"`
+	PlatformData *[]int             `json:"platformData,omitempty"`
 }
 
 // ChannelCreatedPayload defines model for ChannelCreatedPayload.
@@ -2536,7 +2590,7 @@ type ChannelDisconnectedPayload struct {
 	ChannelId    openapi_types.UUID `json:"channelId"`
 	OwnerId      string             `json:"ownerId"`
 	Platform     string             `json:"platform"`
-	PlatformData interface{}        `json:"platformData,omitempty"`
+	PlatformData *[]int             `json:"platformData,omitempty"`
 }
 
 // ChannelEvent defines model for ChannelEvent.
@@ -2696,7 +2750,7 @@ type ChannelLoggedOutPayload struct {
 	ChannelId    openapi_types.UUID `json:"channelId"`
 	OwnerId      string             `json:"ownerId"`
 	Platform     string             `json:"platform"`
-	PlatformData interface{}        `json:"platformData,omitempty"`
+	PlatformData *[]int             `json:"platformData,omitempty"`
 	Reason       string             `json:"reason"`
 }
 
@@ -2742,7 +2796,7 @@ type ChannelMessageDeliveredPayload struct {
 // ChannelMessageEditedPayload defines model for ChannelMessageEditedPayload.
 type ChannelMessageEditedPayload struct {
 	ChannelId   openapi_types.UUID `json:"channelId"`
-	Content     interface{}        `json:"content,omitempty"`
+	Content     *[]int             `json:"content,omitempty"`
 	MessageId   string             `json:"messageId"`
 	MessageType MessageType        `json:"messageType"`
 	OwnerId     string             `json:"ownerId"`
@@ -3533,7 +3587,7 @@ type ForwardMessageOutput struct {
 // GetChannelOutput defines model for GetChannelOutput.
 type GetChannelOutput struct {
 	CreatedAt     time.Time     `json:"createdAt"`
-	Credentials   interface{}   `json:"credentials"`
+	Credentials   []int         `json:"credentials"`
 	Id            string        `json:"id"`
 	Name          string        `json:"name"`
 	OwnerRemoteId string        `json:"ownerRemoteId"`
@@ -3781,7 +3835,7 @@ type Language string
 // ListChannelsItem defines model for ListChannelsItem.
 type ListChannelsItem struct {
 	CreatedAt   time.Time     `json:"createdAt"`
-	Credentials interface{}   `json:"credentials"`
+	Credentials []int         `json:"credentials"`
 	Id          string        `json:"id"`
 	Name        string        `json:"name"`
 	Platform    ChannelKind   `json:"platform"`
@@ -3834,8 +3888,17 @@ type MailboxItemKind string
 // MailboxTargetKind defines model for MailboxTargetKind.
 type MailboxTargetKind string
 
+// McpApprovalDecision defines model for McpApprovalDecision.
+type McpApprovalDecision string
+
+// McpApprovalPolicy defines model for McpApprovalPolicy.
+type McpApprovalPolicy string
+
 // McpScope defines model for McpScope.
 type McpScope string
+
+// McpTransport defines model for McpTransport.
+type McpTransport string
 
 // MembershipAction defines model for MembershipAction.
 type MembershipAction string
@@ -4070,11 +4133,11 @@ type WhatsAppContactContent struct {
 
 // WhatsAppContextInfo defines model for WhatsAppContextInfo.
 type WhatsAppContextInfo struct {
-	Participant          *string     `json:"participant,omitempty"`
-	QuotedMessageContent interface{} `json:"quotedMessageContent,omitempty"`
-	QuotedMessageType    *string     `json:"quotedMessageType,omitempty"`
-	QuotedSenderName     *string     `json:"quotedSenderName,omitempty"`
-	StanzaId             *string     `json:"stanzaId,omitempty"`
+	Participant          *string `json:"participant,omitempty"`
+	QuotedMessageContent *[]int  `json:"quotedMessageContent,omitempty"`
+	QuotedMessageType    *string `json:"quotedMessageType,omitempty"`
+	QuotedSenderName     *string `json:"quotedSenderName,omitempty"`
+	StanzaId             *string `json:"stanzaId,omitempty"`
 }
 
 // WhatsAppCredentials defines model for WhatsAppCredentials.

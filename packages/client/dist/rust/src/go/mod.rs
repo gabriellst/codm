@@ -271,7 +271,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "platformData": {
-    ///      "x-unknown": true
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "integer"
+    ///      }
     ///    }
     ///  }
     ///}
@@ -287,9 +290,9 @@ pub mod types {
         #[serde(
             rename = "platformData",
             default,
-            skip_serializing_if = "::std::option::Option::is_none"
+            skip_serializing_if = "::std::vec::Vec::is_empty"
         )]
-        pub platform_data: ::std::option::Option<::serde_json::Value>,
+        pub platform_data: ::std::vec::Vec<i64>,
     }
     impl ::std::convert::From<&ChannelConnectedPayload> for ChannelConnectedPayload {
         fn from(value: &ChannelConnectedPayload) -> Self {
@@ -365,7 +368,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "platformData": {
-    ///      "x-unknown": true
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "integer"
+    ///      }
     ///    }
     ///  }
     ///}
@@ -381,9 +387,9 @@ pub mod types {
         #[serde(
             rename = "platformData",
             default,
-            skip_serializing_if = "::std::option::Option::is_none"
+            skip_serializing_if = "::std::vec::Vec::is_empty"
         )]
-        pub platform_data: ::std::option::Option<::serde_json::Value>,
+        pub platform_data: ::std::vec::Vec<i64>,
     }
     impl ::std::convert::From<&ChannelDisconnectedPayload>
     for ChannelDisconnectedPayload {
@@ -3399,7 +3405,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "platformData": {
-    ///      "x-unknown": true
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "integer"
+    ///      }
     ///    },
     ///    "reason": {
     ///      "type": "string"
@@ -3418,9 +3427,9 @@ pub mod types {
         #[serde(
             rename = "platformData",
             default,
-            skip_serializing_if = "::std::option::Option::is_none"
+            skip_serializing_if = "::std::vec::Vec::is_empty"
         )]
-        pub platform_data: ::std::option::Option<::serde_json::Value>,
+        pub platform_data: ::std::vec::Vec<i64>,
         pub reason: ::std::string::String,
     }
     impl ::std::convert::From<&ChannelLoggedOutPayload> for ChannelLoggedOutPayload {
@@ -3687,7 +3696,10 @@ pub mod types {
     ///      "format": "uuid"
     ///    },
     ///    "content": {
-    ///      "x-unknown": true
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "integer"
+    ///      }
     ///    },
     ///    "messageId": {
     ///      "type": "string"
@@ -3718,8 +3730,8 @@ pub mod types {
     pub struct ChannelMessageEditedPayload {
         #[serde(rename = "channelId")]
         pub channel_id: ::uuid::Uuid,
-        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
-        pub content: ::std::option::Option<::serde_json::Value>,
+        #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+        pub content: ::std::vec::Vec<i64>,
         #[serde(rename = "messageId")]
         pub message_id: ::std::string::String,
         #[serde(rename = "messageType")]
@@ -14120,7 +14132,10 @@ pub mod types {
     ///      "format": "date-time"
     ///    },
     ///    "credentials": {
-    ///      "x-unknown": true
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "integer"
+    ///      }
     ///    },
     ///    "id": {
     ///      "examples": [
@@ -14151,7 +14166,7 @@ pub mod types {
     pub struct GetChannelOutput {
         #[serde(rename = "createdAt")]
         pub created_at: ::chrono::DateTime<::chrono::offset::Utc>,
-        pub credentials: ::serde_json::Value,
+        pub credentials: ::std::vec::Vec<i64>,
         pub id: ::std::string::String,
         pub name: ::std::string::String,
         #[serde(rename = "ownerRemoteId")]
@@ -17100,7 +17115,10 @@ pub mod types {
     ///      "format": "date-time"
     ///    },
     ///    "credentials": {
-    ///      "x-unknown": true
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "integer"
+    ///      }
     ///    },
     ///    "id": {
     ///      "examples": [
@@ -17128,7 +17146,7 @@ pub mod types {
     pub struct ListChannelsItem {
         #[serde(rename = "createdAt")]
         pub created_at: ::chrono::DateTime<::chrono::offset::Utc>,
-        pub credentials: ::serde_json::Value,
+        pub credentials: ::std::vec::Vec<i64>,
         pub id: ::std::string::String,
         pub name: ::std::string::String,
         pub platform: ::codm_contracts_rust::wire::enums::ChannelKind,
@@ -20706,7 +20724,10 @@ pub mod types {
     ///      "type": "string"
     ///    },
     ///    "quotedMessageContent": {
-    ///      "x-unknown": true
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "integer"
+    ///      }
     ///    },
     ///    "quotedMessageType": {
     ///      "type": "string"
@@ -20728,9 +20749,9 @@ pub mod types {
         #[serde(
             rename = "quotedMessageContent",
             default,
-            skip_serializing_if = "::std::option::Option::is_none"
+            skip_serializing_if = "::std::vec::Vec::is_empty"
         )]
-        pub quoted_message_content: ::std::option::Option<::serde_json::Value>,
+        pub quoted_message_content: ::std::vec::Vec<i64>,
         #[serde(
             rename = "quotedMessageType",
             default,

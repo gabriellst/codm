@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { CreateWhatsAppChannelMutationRequest, CreateWhatsAppChannelMutationResponse } from "../types/CreateWhatsAppChannel.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { CreateWhatsAppChannelMutationRequest, CreateWhatsAppChannelMutationResponse } from "../types/CreateWhatsAppChannel.ts";
 
 function getCreateWhatsAppChannelUrl() {
   const res = { method: 'POST', url: `/channel/channels/whatsapp` as const }

@@ -2386,7 +2386,10 @@
             "type": "string"
           },
           "platformData": {
-            "x-unknown": true
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
           }
         },
         "required": [
@@ -2433,7 +2436,10 @@
             "type": "string"
           },
           "platformData": {
-            "x-unknown": true
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
           }
         },
         "required": [
@@ -2959,7 +2965,10 @@
             "type": "string"
           },
           "platformData": {
-            "x-unknown": true
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
           },
           "reason": {
             "type": "string"
@@ -3109,7 +3118,10 @@
             "type": "string"
           },
           "content": {
-            "x-unknown": true
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
           },
           "messageId": {
             "type": "string"
@@ -6394,7 +6406,10 @@
             "type": "string"
           },
           "credentials": {
-            "x-unknown": true
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
           },
           "id": {
             "example": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
@@ -7215,7 +7230,10 @@
             "type": "string"
           },
           "credentials": {
-            "x-unknown": true
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
           },
           "id": {
             "example": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
@@ -7395,6 +7413,28 @@
           "MailboxTargetKindISSUE"
         ]
       },
+      "McpApprovalDecision": {
+        "enum": [
+          "APPROVED",
+          "DENIED"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "McpApprovalDecisionAPPROVED",
+          "McpApprovalDecisionDENIED"
+        ]
+      },
+      "McpApprovalPolicy": {
+        "enum": [
+          "AUTO",
+          "ASK"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "McpApprovalPolicyAUTO",
+          "McpApprovalPolicyASK"
+        ]
+      },
       "McpScope": {
         "enum": [
           "issue-handling",
@@ -7406,6 +7446,17 @@
           "McpScopeISSUE_HANDLING",
           "McpScopeorchestration",
           "McpScopesystem"
+        ]
+      },
+      "McpTransport": {
+        "enum": [
+          "STDIO",
+          "HTTP"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "McpTransportSTDIO",
+          "McpTransportHTTP"
         ]
       },
       "MembershipAction": {
@@ -8906,7 +8957,10 @@
             "type": "string"
           },
           "quotedMessageContent": {
-            "x-unknown": true
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
           },
           "quotedMessageType": {
             "type": "string"

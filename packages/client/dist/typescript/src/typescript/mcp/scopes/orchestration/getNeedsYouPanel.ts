@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
-import type { GetNeedsYouPanelQueryResponse, GetNeedsYouPanelPathParams } from "../../../types/GetNeedsYouPanel.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { GetNeedsYouPanelQueryResponse, GetNeedsYouPanelPathParams } from "../../../types/GetNeedsYouPanel.ts";
 
 /**
  * @description Active stops on a thread with per-kind resolution actions (T14)

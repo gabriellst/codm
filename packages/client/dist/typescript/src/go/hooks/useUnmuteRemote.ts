@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { UnmuteRemoteMutationRequest, UnmuteRemoteMutationResponse } from "../types/UnmuteRemote.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { unmuteRemote } from "../client/unmuteRemote.ts";
+import type { UnmuteRemoteMutationRequest, UnmuteRemoteMutationResponse } from "../types/UnmuteRemote.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { unmuteRemote } from "../client/unmuteRemote.ts";
 
 export const unmuteRemoteMutationKey = () => [{ url: '/channel/remotes/unmute' }] as const
 

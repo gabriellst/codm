@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { SendImageMutationRequest, SendImageMutationResponse } from "../types/SendImage.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { SendImageMutationRequest, SendImageMutationResponse } from "../types/SendImage.ts";
 
 function getSendImageUrl() {
   const res = { method: 'POST', url: `/messaging/messages/image` as const }

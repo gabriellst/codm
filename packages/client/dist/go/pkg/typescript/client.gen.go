@@ -110,6 +110,11 @@ const (
 	LOOPNOTFOUND                    ApiErrors = "LOOP_NOT_FOUND"
 	LOOPPROMPTTOOLONG               ApiErrors = "LOOP_PROMPT_TOO_LONG"
 	LOOPWITHOUTWEEKDAY              ApiErrors = "LOOP_WITHOUT_WEEKDAY"
+	MCPAPPROVALALREADYSETTLED       ApiErrors = "MCP_APPROVAL_ALREADY_SETTLED"
+	MCPSERVERKEYCONFLICT            ApiErrors = "MCP_SERVER_KEY_CONFLICT"
+	MCPSERVERNOTFOUND               ApiErrors = "MCP_SERVER_NOT_FOUND"
+	MCPSERVERTRANSPORTINCOMPLETE    ApiErrors = "MCP_SERVER_TRANSPORT_INCOMPLETE"
+	MCPTOOLAPPROVALREQUIRED         ApiErrors = "MCP_TOOL_APPROVAL_REQUIRED"
 	MIGRATIONSPENDING               ApiErrors = "MIGRATIONS_PENDING"
 	MISSINGENVIRONMENTVARIABLE      ApiErrors = "MISSING_ENVIRONMENT_VARIABLE"
 	MISSINGLOGCONTENT               ApiErrors = "MISSING_LOG_CONTENT"
@@ -273,6 +278,16 @@ func (e ApiErrors) Valid() bool {
 	case LOOPPROMPTTOOLONG:
 		return true
 	case LOOPWITHOUTWEEKDAY:
+		return true
+	case MCPAPPROVALALREADYSETTLED:
+		return true
+	case MCPSERVERKEYCONFLICT:
+		return true
+	case MCPSERVERNOTFOUND:
+		return true
+	case MCPSERVERTRANSPORTINCOMPLETE:
+		return true
+	case MCPTOOLAPPROVALREQUIRED:
 		return true
 	case MIGRATIONSPENDING:
 		return true
@@ -916,6 +931,42 @@ func (e LoopScheduleKind) Valid() bool {
 	}
 }
 
+// Defines values for McpApprovalPolicy.
+const (
+	ASK  McpApprovalPolicy = "ASK"
+	AUTO McpApprovalPolicy = "AUTO"
+)
+
+// Valid indicates whether the value is a known member of the McpApprovalPolicy enum.
+func (e McpApprovalPolicy) Valid() bool {
+	switch e {
+	case ASK:
+		return true
+	case AUTO:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for McpTransport.
+const (
+	HTTP  McpTransport = "HTTP"
+	STDIO McpTransport = "STDIO"
+)
+
+// Valid indicates whether the value is a known member of the McpTransport enum.
+func (e McpTransport) Valid() bool {
+	switch e {
+	case HTTP:
+		return true
+	case STDIO:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MessageAuthor.
 const (
 	MessageAuthorHUMAN  MessageAuthor = "HUMAN"
@@ -1306,6 +1357,12 @@ type Language string
 // LoopScheduleKind defines model for LoopScheduleKind.
 type LoopScheduleKind string
 
+// McpApprovalPolicy defines model for McpApprovalPolicy.
+type McpApprovalPolicy string
+
+// McpTransport defines model for McpTransport.
+type McpTransport string
+
 // MessageAuthor defines model for MessageAuthor.
 type MessageAuthor string
 
@@ -1359,6 +1416,59 @@ type GetIssuesOverviewParams struct {
 // SteerIssueJSONBody defines parameters for SteerIssue.
 type SteerIssueJSONBody struct {
 	Text string `json:"text"`
+}
+
+// RegisterMcpServerJSONBody defines parameters for RegisterMcpServer.
+type RegisterMcpServerJSONBody struct {
+	ApprovalPolicy *McpApprovalPolicy `json:"approvalPolicy,omitempty"`
+	Key            string             `json:"key"`
+	union          json.RawMessage
+}
+
+// RegisterMcpServerJSONBody0 defines parameters for RegisterMcpServer.
+type RegisterMcpServerJSONBody0 struct {
+	Args      *[]string          `json:"args,omitempty"`
+	Command   string             `json:"command"`
+	Env       *map[string]string `json:"env,omitempty"`
+	Transport string             `json:"transport"`
+}
+
+// RegisterMcpServerJSONBody1 defines parameters for RegisterMcpServer.
+type RegisterMcpServerJSONBody1 struct {
+	Headers   *map[string]string `json:"headers,omitempty"`
+	Transport string             `json:"transport"`
+	Url       string             `json:"url"`
+}
+
+// UpdateMcpServerJSONBody defines parameters for UpdateMcpServer.
+type UpdateMcpServerJSONBody struct {
+	ApprovalPolicy *McpApprovalPolicy              `json:"approvalPolicy,omitempty"`
+	Config         *UpdateMcpServerJSONBody_Config `json:"config,omitempty"`
+	Enabled        *bool                           `json:"enabled,omitempty"`
+	ToolPolicy     *struct {
+		Policy   McpApprovalPolicy `json:"policy"`
+		ToolName string            `json:"toolName"`
+	} `json:"toolPolicy,omitempty"`
+}
+
+// UpdateMcpServerJSONBodyConfig0 defines parameters for UpdateMcpServer.
+type UpdateMcpServerJSONBodyConfig0 struct {
+	Args      *[]string          `json:"args,omitempty"`
+	Command   string             `json:"command"`
+	Env       *map[string]string `json:"env,omitempty"`
+	Transport string             `json:"transport"`
+}
+
+// UpdateMcpServerJSONBodyConfig1 defines parameters for UpdateMcpServer.
+type UpdateMcpServerJSONBodyConfig1 struct {
+	Headers   *map[string]string `json:"headers,omitempty"`
+	Transport string             `json:"transport"`
+	Url       string             `json:"url"`
+}
+
+// UpdateMcpServerJSONBody_Config defines parameters for UpdateMcpServer.
+type UpdateMcpServerJSONBody_Config struct {
+	union json.RawMessage
 }
 
 // SetCloudTokenJSONBody defines parameters for SetCloudToken.
@@ -1662,6 +1772,12 @@ type AddWorkspaceJSONBody struct {
 // SteerIssueJSONRequestBody defines body for SteerIssue for application/json ContentType.
 type SteerIssueJSONRequestBody SteerIssueJSONBody
 
+// RegisterMcpServerJSONRequestBody defines body for RegisterMcpServer for application/json ContentType.
+type RegisterMcpServerJSONRequestBody RegisterMcpServerJSONBody
+
+// UpdateMcpServerJSONRequestBody defines body for UpdateMcpServer for application/json ContentType.
+type UpdateMcpServerJSONRequestBody UpdateMcpServerJSONBody
+
 // SetCloudTokenJSONRequestBody defines body for SetCloudToken for application/json ContentType.
 type SetCloudTokenJSONRequestBody SetCloudTokenJSONBody
 
@@ -1745,6 +1861,177 @@ type SaveOnboardingStepJSONRequestBody SaveOnboardingStepJSONBody
 
 // AddWorkspaceJSONRequestBody defines body for AddWorkspace for application/json ContentType.
 type AddWorkspaceJSONRequestBody AddWorkspaceJSONBody
+
+// AsRegisterMcpServerJSONBody0 returns the union data inside the RegisterMcpServerJSONBody as a RegisterMcpServerJSONBody0
+func (t RegisterMcpServerJSONBody) AsRegisterMcpServerJSONBody0() (RegisterMcpServerJSONBody0, error) {
+	var body RegisterMcpServerJSONBody0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRegisterMcpServerJSONBody0 overwrites any union data inside the RegisterMcpServerJSONBody as the provided RegisterMcpServerJSONBody0
+func (t *RegisterMcpServerJSONBody) FromRegisterMcpServerJSONBody0(v RegisterMcpServerJSONBody0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeRegisterMcpServerJSONBody0 performs a merge with any union data inside the RegisterMcpServerJSONBody, using the provided RegisterMcpServerJSONBody0
+func (t *RegisterMcpServerJSONBody) MergeRegisterMcpServerJSONBody0(v RegisterMcpServerJSONBody0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRegisterMcpServerJSONBody1 returns the union data inside the RegisterMcpServerJSONBody as a RegisterMcpServerJSONBody1
+func (t RegisterMcpServerJSONBody) AsRegisterMcpServerJSONBody1() (RegisterMcpServerJSONBody1, error) {
+	var body RegisterMcpServerJSONBody1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRegisterMcpServerJSONBody1 overwrites any union data inside the RegisterMcpServerJSONBody as the provided RegisterMcpServerJSONBody1
+func (t *RegisterMcpServerJSONBody) FromRegisterMcpServerJSONBody1(v RegisterMcpServerJSONBody1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeRegisterMcpServerJSONBody1 performs a merge with any union data inside the RegisterMcpServerJSONBody, using the provided RegisterMcpServerJSONBody1
+func (t *RegisterMcpServerJSONBody) MergeRegisterMcpServerJSONBody1(v RegisterMcpServerJSONBody1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t RegisterMcpServerJSONBody) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	object := make(map[string]json.RawMessage)
+	if t.union != nil {
+		err = json.Unmarshal(b, &object)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if t.ApprovalPolicy != nil {
+		object["approvalPolicy"], err = json.Marshal(t.ApprovalPolicy)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'approvalPolicy': %w", err)
+		}
+	}
+
+	object["key"], err = json.Marshal(t.Key)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'key': %w", err)
+	}
+
+	b, err = json.Marshal(object)
+	return b, err
+}
+
+func (t *RegisterMcpServerJSONBody) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	if err != nil {
+		return err
+	}
+	object := make(map[string]json.RawMessage)
+	err = json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["approvalPolicy"]; found {
+		err = json.Unmarshal(raw, &t.ApprovalPolicy)
+		if err != nil {
+			return fmt.Errorf("error reading 'approvalPolicy': %w", err)
+		}
+	}
+
+	if raw, found := object["key"]; found {
+		err = json.Unmarshal(raw, &t.Key)
+		if err != nil {
+			return fmt.Errorf("error reading 'key': %w", err)
+		}
+	}
+
+	return err
+}
+
+// AsUpdateMcpServerJSONBodyConfig0 returns the union data inside the UpdateMcpServerJSONBody_Config as a UpdateMcpServerJSONBodyConfig0
+func (t UpdateMcpServerJSONBody_Config) AsUpdateMcpServerJSONBodyConfig0() (UpdateMcpServerJSONBodyConfig0, error) {
+	var body UpdateMcpServerJSONBodyConfig0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromUpdateMcpServerJSONBodyConfig0 overwrites any union data inside the UpdateMcpServerJSONBody_Config as the provided UpdateMcpServerJSONBodyConfig0
+func (t *UpdateMcpServerJSONBody_Config) FromUpdateMcpServerJSONBodyConfig0(v UpdateMcpServerJSONBodyConfig0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeUpdateMcpServerJSONBodyConfig0 performs a merge with any union data inside the UpdateMcpServerJSONBody_Config, using the provided UpdateMcpServerJSONBodyConfig0
+func (t *UpdateMcpServerJSONBody_Config) MergeUpdateMcpServerJSONBodyConfig0(v UpdateMcpServerJSONBodyConfig0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsUpdateMcpServerJSONBodyConfig1 returns the union data inside the UpdateMcpServerJSONBody_Config as a UpdateMcpServerJSONBodyConfig1
+func (t UpdateMcpServerJSONBody_Config) AsUpdateMcpServerJSONBodyConfig1() (UpdateMcpServerJSONBodyConfig1, error) {
+	var body UpdateMcpServerJSONBodyConfig1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromUpdateMcpServerJSONBodyConfig1 overwrites any union data inside the UpdateMcpServerJSONBody_Config as the provided UpdateMcpServerJSONBodyConfig1
+func (t *UpdateMcpServerJSONBody_Config) FromUpdateMcpServerJSONBodyConfig1(v UpdateMcpServerJSONBodyConfig1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeUpdateMcpServerJSONBodyConfig1 performs a merge with any union data inside the UpdateMcpServerJSONBody_Config, using the provided UpdateMcpServerJSONBodyConfig1
+func (t *UpdateMcpServerJSONBody_Config) MergeUpdateMcpServerJSONBodyConfig1(v UpdateMcpServerJSONBodyConfig1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t UpdateMcpServerJSONBody_Config) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *UpdateMcpServerJSONBody_Config) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
 
 // AsGetSessionChat200JSONResponseBodyMentionGate0 returns the union data inside the GetSessionChat200JSONResponseBody_MentionGate as a GetSessionChat200JSONResponseBodyMentionGate0
 func (t GetSessionChat200JSONResponseBody_MentionGate) AsGetSessionChat200JSONResponseBodyMentionGate0() (GetSessionChat200JSONResponseBodyMentionGate0, error) {
@@ -2211,6 +2498,19 @@ type ClientInterface interface {
 
 	SteerIssue(ctx context.Context, issueId string, body SteerIssueJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// RegisterMcpServerWithBody request with any body
+	RegisterMcpServerWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	RegisterMcpServer(ctx context.Context, body RegisterMcpServerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RemoveMcpServer request
+	RemoveMcpServer(ctx context.Context, mcpServerId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateMcpServerWithBody request with any body
+	UpdateMcpServerWithBody(ctx context.Context, mcpServerId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	UpdateMcpServer(ctx context.Context, mcpServerId string, body UpdateMcpServerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// SetCloudTokenWithBody request with any body
 	SetCloudTokenWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -2510,6 +2810,66 @@ func (c *Client) SteerIssueWithBody(ctx context.Context, issueId string, content
 
 func (c *Client) SteerIssue(ctx context.Context, issueId string, body SteerIssueJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewSteerIssueRequest(c.Server, issueId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RegisterMcpServerWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRegisterMcpServerRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RegisterMcpServer(ctx context.Context, body RegisterMcpServerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRegisterMcpServerRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RemoveMcpServer(ctx context.Context, mcpServerId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRemoveMcpServerRequest(c.Server, mcpServerId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateMcpServerWithBody(ctx context.Context, mcpServerId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateMcpServerRequestWithBody(c.Server, mcpServerId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UpdateMcpServer(ctx context.Context, mcpServerId string, body UpdateMcpServerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateMcpServerRequest(c.Server, mcpServerId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -3749,6 +4109,127 @@ func NewSteerIssueRequestWithBody(server string, issueId string, contentType str
 	}
 
 	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewRegisterMcpServerRequest calls the generic RegisterMcpServer builder with application/json body
+func NewRegisterMcpServerRequest(server string, body RegisterMcpServerJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewRegisterMcpServerRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewRegisterMcpServerRequestWithBody generates requests for RegisterMcpServer with any type of body
+func NewRegisterMcpServerRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/mcp-servers")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewRemoveMcpServerRequest generates requests for RemoveMcpServer
+func NewRemoveMcpServerRequest(server string, mcpServerId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "mcpServerId", mcpServerId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/mcp-servers/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateMcpServerRequest calls the generic UpdateMcpServer builder with application/json body
+func NewUpdateMcpServerRequest(server string, mcpServerId string, body UpdateMcpServerJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateMcpServerRequestWithBody(server, mcpServerId, "application/json", bodyReader)
+}
+
+// NewUpdateMcpServerRequestWithBody generates requests for UpdateMcpServer with any type of body
+func NewUpdateMcpServerRequestWithBody(server string, mcpServerId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "mcpServerId", mcpServerId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/mcp-servers/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPatch, queryURL.String(), body)
 	if err != nil {
 		return nil, err
 	}
@@ -6136,6 +6617,19 @@ type ClientWithResponsesInterface interface {
 
 	SteerIssueWithResponse(ctx context.Context, issueId string, body SteerIssueJSONRequestBody, reqEditors ...RequestEditorFn) (*SteerIssueResponse, error)
 
+	// RegisterMcpServerWithBodyWithResponse request with any body
+	RegisterMcpServerWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RegisterMcpServerResponse, error)
+
+	RegisterMcpServerWithResponse(ctx context.Context, body RegisterMcpServerJSONRequestBody, reqEditors ...RequestEditorFn) (*RegisterMcpServerResponse, error)
+
+	// RemoveMcpServerWithResponse request
+	RemoveMcpServerWithResponse(ctx context.Context, mcpServerId string, reqEditors ...RequestEditorFn) (*RemoveMcpServerResponse, error)
+
+	// UpdateMcpServerWithBodyWithResponse request with any body
+	UpdateMcpServerWithBodyWithResponse(ctx context.Context, mcpServerId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateMcpServerResponse, error)
+
+	UpdateMcpServerWithResponse(ctx context.Context, mcpServerId string, body UpdateMcpServerJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateMcpServerResponse, error)
+
 	// SetCloudTokenWithBodyWithResponse request with any body
 	SetCloudTokenWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetCloudTokenResponse, error)
 
@@ -6602,6 +7096,98 @@ func (r SteerIssueResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r SteerIssueResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RegisterMcpServerResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		McpServerId string `json:"mcpServerId"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r RegisterMcpServerResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RegisterMcpServerResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RegisterMcpServerResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RemoveMcpServerResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r RemoveMcpServerResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RemoveMcpServerResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RemoveMcpServerResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type UpdateMcpServerResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateMcpServerResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateMcpServerResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UpdateMcpServerResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -8462,6 +9048,18 @@ type GetSettingsResponse struct {
 			OperatorName string `json:"operatorName"`
 			Timezone     string `json:"timezone"`
 		} `json:"general"`
+		McpServers []struct {
+			ApprovalPolicy McpApprovalPolicy `json:"approvalPolicy"`
+			Args           *[]string         `json:"args,omitempty"`
+			Command        *string           `json:"command,omitempty"`
+			Enabled        bool              `json:"enabled"`
+			EnvKeys        []string          `json:"envKeys"`
+			HeaderKeys     []string          `json:"headerKeys"`
+			Id             string            `json:"id"`
+			Key            string            `json:"key"`
+			Transport      McpTransport      `json:"transport"`
+			Url            *string           `json:"url,omitempty"`
+		} `json:"mcpServers"`
 		Providers []struct {
 			Available  bool           `json:"available"`
 			ComingSoon bool           `json:"comingSoon"`
@@ -8709,6 +9307,49 @@ func (c *ClientWithResponses) SteerIssueWithResponse(ctx context.Context, issueI
 		return nil, err
 	}
 	return ParseSteerIssueResponse(rsp)
+}
+
+// RegisterMcpServerWithBodyWithResponse request with arbitrary body returning *RegisterMcpServerResponse
+func (c *ClientWithResponses) RegisterMcpServerWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RegisterMcpServerResponse, error) {
+	rsp, err := c.RegisterMcpServerWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRegisterMcpServerResponse(rsp)
+}
+
+func (c *ClientWithResponses) RegisterMcpServerWithResponse(ctx context.Context, body RegisterMcpServerJSONRequestBody, reqEditors ...RequestEditorFn) (*RegisterMcpServerResponse, error) {
+	rsp, err := c.RegisterMcpServer(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRegisterMcpServerResponse(rsp)
+}
+
+// RemoveMcpServerWithResponse request returning *RemoveMcpServerResponse
+func (c *ClientWithResponses) RemoveMcpServerWithResponse(ctx context.Context, mcpServerId string, reqEditors ...RequestEditorFn) (*RemoveMcpServerResponse, error) {
+	rsp, err := c.RemoveMcpServer(ctx, mcpServerId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRemoveMcpServerResponse(rsp)
+}
+
+// UpdateMcpServerWithBodyWithResponse request with arbitrary body returning *UpdateMcpServerResponse
+func (c *ClientWithResponses) UpdateMcpServerWithBodyWithResponse(ctx context.Context, mcpServerId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateMcpServerResponse, error) {
+	rsp, err := c.UpdateMcpServerWithBody(ctx, mcpServerId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateMcpServerResponse(rsp)
+}
+
+func (c *ClientWithResponses) UpdateMcpServerWithResponse(ctx context.Context, mcpServerId string, body UpdateMcpServerJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateMcpServerResponse, error) {
+	rsp, err := c.UpdateMcpServer(ctx, mcpServerId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateMcpServerResponse(rsp)
 }
 
 // SetCloudTokenWithBodyWithResponse request with arbitrary body returning *SetCloudTokenResponse
@@ -9652,6 +10293,86 @@ func ParseSteerIssueResponse(rsp *http.Response) (*SteerIssueResponse, error) {
 		var dest struct {
 			EntryId openapi_types.UUID `json:"entryId"`
 		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRegisterMcpServerResponse parses an HTTP response from a RegisterMcpServerWithResponse call
+func ParseRegisterMcpServerResponse(rsp *http.Response) (*RegisterMcpServerResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RegisterMcpServerResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			McpServerId string `json:"mcpServerId"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRemoveMcpServerResponse parses an HTTP response from a RemoveMcpServerWithResponse call
+func ParseRemoveMcpServerResponse(rsp *http.Response) (*RemoveMcpServerResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RemoveMcpServerResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateMcpServerResponse parses an HTTP response from a UpdateMcpServerWithResponse call
+func ParseUpdateMcpServerResponse(rsp *http.Response) (*UpdateMcpServerResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateMcpServerResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -11288,6 +12009,18 @@ func ParseGetSettingsResponse(rsp *http.Response) (*GetSettingsResponse, error) 
 				OperatorName string `json:"operatorName"`
 				Timezone     string `json:"timezone"`
 			} `json:"general"`
+			McpServers []struct {
+				ApprovalPolicy McpApprovalPolicy `json:"approvalPolicy"`
+				Args           *[]string         `json:"args,omitempty"`
+				Command        *string           `json:"command,omitempty"`
+				Enabled        bool              `json:"enabled"`
+				EnvKeys        []string          `json:"envKeys"`
+				HeaderKeys     []string          `json:"headerKeys"`
+				Id             string            `json:"id"`
+				Key            string            `json:"key"`
+				Transport      McpTransport      `json:"transport"`
+				Url            *string           `json:"url,omitempty"`
+			} `json:"mcpServers"`
 			Providers []struct {
 				Available  bool           `json:"available"`
 				ComingSoon bool           `json:"comingSoon"`

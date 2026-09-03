@@ -9,6 +9,6 @@ export const channelLoggedOutPayloadSchema = z.object({
     "channelId": z.uuid(),
 "ownerId": z.string(),
 "platform": z.string(),
-"platformData": z.optional(z.any()),
+"platformData": z.optional(z.array(z.int())),
 "reason": z.string()
     })

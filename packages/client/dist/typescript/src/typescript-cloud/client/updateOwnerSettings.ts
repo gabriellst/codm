@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript-cloud/_http";
-import type { UpdateOwnerSettingsMutationRequest, UpdateOwnerSettingsMutationResponse } from "../types/UpdateOwnerSettings.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
+import type { UpdateOwnerSettingsMutationRequest, UpdateOwnerSettingsMutationResponse } from "../types/UpdateOwnerSettings.ts";
 
 function getUpdateOwnerSettingsUrl() {
   const res = { method: 'PATCH', url: `/owners/settings` as const }

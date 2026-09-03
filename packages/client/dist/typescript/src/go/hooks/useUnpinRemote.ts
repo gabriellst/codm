@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { UnpinRemoteMutationRequest, UnpinRemoteMutationResponse } from "../types/UnpinRemote.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { unpinRemote } from "../client/unpinRemote.ts";
+import type { UnpinRemoteMutationRequest, UnpinRemoteMutationResponse } from "../types/UnpinRemote.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { unpinRemote } from "../client/unpinRemote.ts";
 
 export const unpinRemoteMutationKey = () => [{ url: '/channel/remotes/unpin' }] as const
 

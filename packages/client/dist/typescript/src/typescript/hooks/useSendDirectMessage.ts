@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { SendDirectMessageMutationRequest, SendDirectMessageMutationResponse, SendDirectMessagePathParams } from "../types/SendDirectMessage.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { sendDirectMessage } from "../client/sendDirectMessage.ts";
+import type { SendDirectMessageMutationRequest, SendDirectMessageMutationResponse, SendDirectMessagePathParams } from "../types/SendDirectMessage.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { sendDirectMessage } from "../client/sendDirectMessage.ts";
 
 export const sendDirectMessageMutationKey = () => [{ url: '/threads/:threadId/direct' }] as const
 

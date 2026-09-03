@@ -17,5 +17,8 @@ export type ChannelDisconnectedPayload = {
      * @type string
     */
     platform: string;
-    platformData?: any;
+    /**
+     * @type array | undefined
+    */
+    platformData?: number[];
 };

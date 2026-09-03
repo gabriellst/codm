@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { SendFileMutationRequest, SendFileMutationResponse } from "../types/SendFile.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { sendFile } from "../client/sendFile.ts";
+import type { SendFileMutationRequest, SendFileMutationResponse } from "../types/SendFile.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { sendFile } from "../client/sendFile.ts";
 
 export const sendFileMutationKey = () => [{ url: '/messaging/messages/file' }] as const
 

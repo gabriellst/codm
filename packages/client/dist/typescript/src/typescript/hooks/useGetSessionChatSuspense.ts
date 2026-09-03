@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { GetSessionChatQueryResponse, GetSessionChatPathParams } from "../types/GetSessionChat.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
-import { getSessionChat } from "../client/getSessionChat.ts";
+import type { GetSessionChatQueryResponse, GetSessionChatPathParams } from "../types/GetSessionChat.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { getSessionChat } from "../client/getSessionChat.ts";
 
 export const getSessionChatSuspenseQueryKey = (threadId: GetSessionChatPathParams["threadId"] | undefined) => [{ url: '/threads/:threadId/chat', params: {threadId:threadId} }] as const
 

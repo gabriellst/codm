@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { ResolveStopMutationRequest, ResolveStopMutationResponse, ResolveStopPathParams } from "../types/ResolveStop.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { ResolveStopMutationRequest, ResolveStopMutationResponse, ResolveStopPathParams } from "../types/ResolveStop.ts";
 
 function getResolveStopUrl(stopId: ResolveStopPathParams["stopId"]) {
   const res = { method: 'POST', url: `/stops/${stopId}/resolve` as const }

@@ -3,6 +3,8 @@
 * Do not edit manually.
 */
 
+import type { McpApprovalPolicy } from "./McpApprovalPolicy.ts";
+import type { McpTransport } from "./McpTransport.ts";
 import type { ProviderKind } from "./ProviderKind.ts";
 import type { ProviderStatus } from "./ProviderStatus.ts";
 
@@ -34,6 +36,51 @@ export type GetSettings200 = {
          * @type string | undefined
         */
         version?: string;
+    }[];
+    /**
+     * @type array
+    */
+    mcpServers: {
+        /**
+         * @type string
+        */
+        id: string;
+        /**
+         * @type string
+        */
+        key: string;
+        /**
+         * @type string
+        */
+        transport: McpTransport;
+        /**
+         * @type string | undefined
+        */
+        command?: string;
+        /**
+         * @type array | undefined
+        */
+        args?: string[];
+        /**
+         * @type string | undefined
+        */
+        url?: string;
+        /**
+         * @type array
+        */
+        envKeys: string[];
+        /**
+         * @type array
+        */
+        headerKeys: string[];
+        /**
+         * @type boolean
+        */
+        enabled: boolean;
+        /**
+         * @type string
+        */
+        approvalPolicy: McpApprovalPolicy;
     }[];
     /**
      * @type object

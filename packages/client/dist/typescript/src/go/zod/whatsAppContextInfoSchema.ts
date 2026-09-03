@@ -7,7 +7,7 @@ import { z } from "zod/v4";
 
 export const whatsAppContextInfoSchema = z.object({
     "participant": z.optional(z.string()),
-"quotedMessageContent": z.optional(z.any()),
+"quotedMessageContent": z.optional(z.array(z.int())),
 "quotedMessageType": z.optional(z.string()),
 "quotedSenderName": z.optional(z.string()),
 "stanzaId": z.optional(z.string())

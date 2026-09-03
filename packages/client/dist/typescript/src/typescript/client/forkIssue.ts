@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { ForkIssueMutationRequest, ForkIssueMutationResponse, ForkIssuePathParams } from "../types/ForkIssue.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { ForkIssueMutationRequest, ForkIssueMutationResponse, ForkIssuePathParams } from "../types/ForkIssue.ts";
 
 function getForkIssueUrl(threadId: ForkIssuePathParams["threadId"]) {
   const res = { method: 'POST', url: `/threads/${threadId}/issues/fork` as const }

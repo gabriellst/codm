@@ -11,7 +11,10 @@ export type ListChannelsItem = {
      * @type string, date-time
     */
     createdAt: string;
-    credentials: any;
+    /**
+     * @type array
+    */
+    credentials: number[];
     /**
      * @type string
     */

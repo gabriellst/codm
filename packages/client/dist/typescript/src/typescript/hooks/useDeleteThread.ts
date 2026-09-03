@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { DeleteThreadMutationResponse, DeleteThreadPathParams } from "../types/DeleteThread.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { deleteThread } from "../client/deleteThread.ts";
+import type { DeleteThreadMutationResponse, DeleteThreadPathParams } from "../types/DeleteThread.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { deleteThread } from "../client/deleteThread.ts";
 
 export const deleteThreadMutationKey = () => [{ url: '/threads/:threadId' }] as const
 

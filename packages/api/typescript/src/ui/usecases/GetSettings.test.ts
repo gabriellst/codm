@@ -1,6 +1,12 @@
-import { describe, expect, it } from 'bun:test'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { container, type DependencyContainer } from 'tsyringe-neo'
+import { TestBed } from '@test/support'
+import { McpTransport } from '@codm/contracts-typescript/wire/enums'
+import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
+import { McpServer } from '@agent/entities/McpServer'
+import { McpServerRepository } from '@agent/repositories/McpServerRepository'
 import pkg from '../../../package.json' with { type: 'json' }
-import { resolveAppVersion } from './GetSettings'
+import { GetSettings, resolveAppVersion } from './GetSettings'
 
 /**
  * De onde vem o número que a linha "Sobre" mostra.
@@ -25,5 +31,44 @@ describe('resolveAppVersion', () => {
 
 	it('trata vazio como ausente — o .env gerado define a chave em branco', () => {
 		expect(resolveAppVersion({ CODM_APP_VERSION: '' })).toBe(pkg.version)
+	})
+})
+
+/**
+ * A tela de settings enxerga os servidores MCP cadastrados — e, tão importante quanto, NUNCA vê
+ * `env`/`headers` (as variáveis e headers carregam token de API de terceiros; este DTO vira
+ * `openapi.json` público mais SDK do cliente).
+ */
+describe('GetSettings — mcpServers', () => {
+	let testBed: TestBed
+	let testContainer: DependencyContainer
+	const ownerId = MOCK_CLOUD_OWNER_ID
+
+	beforeAll(async () => {
+		testContainer = container.createChildContainer()
+		testBed = await TestBed.create('integration', { testContainer, ownerId })
+	})
+	beforeEach(async () => {
+		await testBed.reset()
+	})
+	afterAll(async () => {
+		await testBed.destroy()
+	})
+
+	it('devolve os servidores MCP cadastrados, habilitados e desabilitados', async () => {
+		const repo = testBed.resolve(McpServerRepository)
+		const on = McpServer.create({ ownerId, key: 'playwright', transport: McpTransport.STDIO, command: 'npx' })
+		const off = McpServer.create({ ownerId, key: 'shell', transport: McpTransport.STDIO, command: 'bash' })
+		off.disable()
+		await repo.save(on)
+		await repo.save(off)
+
+		const settings = await testBed.resolve(GetSettings).execute({ ownerId })
+
+		expect(settings.mcpServers.map(s => s.key).sort()).toEqual(['playwright', 'shell'])
+		expect(settings.mcpServers.find(s => s.key === 'shell')?.enabled).toBe(false)
+		// O segredo NUNCA atravessa: env e headers não estão no DTO.
+		expect(settings.mcpServers[0]).not.toHaveProperty('env')
+		expect(settings.mcpServers[0]).not.toHaveProperty('headers')
 	})
 })

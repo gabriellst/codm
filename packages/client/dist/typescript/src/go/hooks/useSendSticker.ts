@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { SendStickerMutationRequest, SendStickerMutationResponse } from "../types/SendSticker.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { sendSticker } from "../client/sendSticker.ts";
+import type { SendStickerMutationRequest, SendStickerMutationResponse } from "../types/SendSticker.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { sendSticker } from "../client/sendSticker.ts";
 
 export const sendStickerMutationKey = () => [{ url: '/messaging/messages/sticker' }] as const
 

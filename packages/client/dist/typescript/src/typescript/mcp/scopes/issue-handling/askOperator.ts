@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/issue-handling/_http";
-import type { AskOperatorMutationRequest, AskOperatorMutationResponse, AskOperatorPathParams } from "../../../types/AskOperator.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/issue-handling/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { AskOperatorMutationRequest, AskOperatorMutationResponse, AskOperatorPathParams } from "../../../types/AskOperator.ts";
 
 /**
  * @description Ask the operator a question (fire-and-forget; surfaces as a Needs-you stop)

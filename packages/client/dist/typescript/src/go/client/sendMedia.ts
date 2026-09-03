@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { SendMediaMutationRequest, SendMediaMutationResponse } from "../types/SendMedia.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { SendMediaMutationRequest, SendMediaMutationResponse } from "../types/SendMedia.ts";
 
 function getSendMediaUrl() {
   const res = { method: 'POST', url: `/messaging/messages/media` as const }

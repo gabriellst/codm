@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
-import type { ResolveStopMutationRequest, ResolveStopMutationResponse, ResolveStopPathParams } from "../../../types/ResolveStop.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { ResolveStopMutationRequest, ResolveStopMutationResponse, ResolveStopPathParams } from "../../../types/ResolveStop.ts";
 
 /**
  * @description Resolve a stop — retry / review&send / take over / approve / deny (C25)

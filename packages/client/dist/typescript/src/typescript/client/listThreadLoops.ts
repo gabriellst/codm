@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { ListThreadLoopsQueryResponse, ListThreadLoopsPathParams } from "../types/ListThreadLoops.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { ListThreadLoopsQueryResponse, ListThreadLoopsPathParams } from "../types/ListThreadLoops.ts";
 
 function getListThreadLoopsUrl(threadId: ListThreadLoopsPathParams["threadId"]) {
   const res = { method: 'GET', url: `/threads/${threadId}/loops` as const }

@@ -1270,6 +1270,302 @@
         ]
       }
     },
+    "/mcp-servers": {
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "description": "Register a third-party MCP server for this owner",
+        "operationId": "RegisterMcpServer",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "key": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9-]{0,31}$"
+                      },
+                      "approvalPolicy": {
+                        "$ref": "#/components/schemas/McpApprovalPolicy"
+                      }
+                    },
+                    "required": [
+                      "key"
+                    ]
+                  },
+                  {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "transport": {
+                            "type": "string",
+                            "const": "STDIO"
+                          },
+                          "command": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "args": {
+                            "default": [],
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "env": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "transport",
+                          "command"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "transport": {
+                            "type": "string",
+                            "const": "HTTP"
+                          },
+                          "url": {
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          "headers": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "transport",
+                          "url"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "key": "playwright",
+                    "transport": "STDIO",
+                    "command": "npx",
+                    "args": [
+                      "-y",
+                      "@playwright/mcp"
+                    ]
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Register a third-party MCP server for this owner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "mcpServerId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "mcpServerId"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "mcpServerId": "019e4d24-6524-7041-9e1c-8108180cdd0a"
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "mcpServerId": "019e4d24-6524-7041-9e1c-8108180cdd0a"
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mcp-servers/{mcpServerId}": {
+      "patch": {
+        "tags": [
+          "agent"
+        ],
+        "description": "Enable, disable, repolicy or reconfigure a registered MCP server",
+        "operationId": "UpdateMcpServer",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "approvalPolicy": {
+                    "$ref": "#/components/schemas/McpApprovalPolicy"
+                  },
+                  "toolPolicy": {
+                    "type": "object",
+                    "properties": {
+                      "toolName": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "policy": {
+                        "$ref": "#/components/schemas/McpApprovalPolicy"
+                      }
+                    },
+                    "required": [
+                      "toolName",
+                      "policy"
+                    ]
+                  },
+                  "config": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "transport": {
+                            "type": "string",
+                            "const": "STDIO"
+                          },
+                          "command": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "args": {
+                            "default": [],
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "env": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "transport",
+                          "command"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "transport": {
+                            "type": "string",
+                            "const": "HTTP"
+                          },
+                          "url": {
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          "headers": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "transport",
+                          "url"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "approvalPolicy": "AUTO"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mcpServerId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cdd0a"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Enable, disable, repolicy or reconfigure a registered MCP server",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "agent"
+        ],
+        "description": "Remove a registered MCP server",
+        "operationId": "RemoveMcpServer",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mcpServerId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cdd0a"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Remove a registered MCP server",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/threads/{threadId}/artifacts/{artifactId}/content": {
       "get": {
         "tags": [
@@ -8574,6 +8870,63 @@
                         "additionalProperties": false
                       }
                     },
+                    "mcpServers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "key": {
+                            "type": "string"
+                          },
+                          "transport": {
+                            "$ref": "#/components/schemas/McpTransport"
+                          },
+                          "command": {
+                            "type": "string"
+                          },
+                          "args": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "url": {
+                            "type": "string"
+                          },
+                          "envKeys": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "headerKeys": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "enabled": {
+                            "type": "boolean"
+                          },
+                          "approvalPolicy": {
+                            "$ref": "#/components/schemas/McpApprovalPolicy"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "key",
+                          "transport",
+                          "envKeys",
+                          "headerKeys",
+                          "enabled",
+                          "approvalPolicy"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
                     "stopCriteria": {
                       "type": "object",
                       "properties": {
@@ -8628,11 +8981,99 @@
                   },
                   "required": [
                     "providers",
+                    "mcpServers",
                     "stopCriteria",
                     "general",
                     "appVersion"
                   ],
-                  "additionalProperties": false
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "providers": [
+                        {
+                          "provider": "CLAUDE_CODE",
+                          "status": "DETECTED",
+                          "available": true,
+                          "comingSoon": false,
+                          "version": "1.2.3"
+                        }
+                      ],
+                      "mcpServers": [
+                        {
+                          "id": "019e4d24-6524-7041-9e1c-8108180cdd02",
+                          "key": "playwright",
+                          "transport": "STDIO",
+                          "command": "npx",
+                          "args": [
+                            "-y",
+                            "@playwright/mcp"
+                          ],
+                          "envKeys": [],
+                          "headerKeys": [],
+                          "enabled": true,
+                          "approvalPolicy": "ASK"
+                        }
+                      ],
+                      "stopCriteria": {
+                        "serverErrors": true,
+                        "blockedByClassification": true,
+                        "humanRequested": true,
+                        "approvalNeeded": true,
+                        "authRequired": true
+                      },
+                      "general": {
+                        "operatorName": "Ada Lovelace",
+                        "timezone": "America/Sao_Paulo",
+                        "dataDir": "/home/ada/.codm"
+                      },
+                      "appVersion": "0.1.10"
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "providers": [
+                        {
+                          "provider": "CLAUDE_CODE",
+                          "status": "DETECTED",
+                          "available": true,
+                          "comingSoon": false,
+                          "version": "1.2.3"
+                        }
+                      ],
+                      "mcpServers": [
+                        {
+                          "id": "019e4d24-6524-7041-9e1c-8108180cdd02",
+                          "key": "playwright",
+                          "transport": "STDIO",
+                          "command": "npx",
+                          "args": [
+                            "-y",
+                            "@playwright/mcp"
+                          ],
+                          "envKeys": [],
+                          "headerKeys": [],
+                          "enabled": true,
+                          "approvalPolicy": "ASK"
+                        }
+                      ],
+                      "stopCriteria": {
+                        "serverErrors": true,
+                        "blockedByClassification": true,
+                        "humanRequested": true,
+                        "approvalNeeded": true,
+                        "authRequired": true
+                      },
+                      "general": {
+                        "operatorName": "Ada Lovelace",
+                        "timezone": "America/Sao_Paulo",
+                        "dataDir": "/home/ada/.codm"
+                      },
+                      "appVersion": "0.1.10"
+                    },
+                    "summary": "Example"
+                  }
                 }
               }
             }
@@ -9085,6 +9526,11 @@
           "LOOP_NOT_FOUND",
           "LOOP_PROMPT_TOO_LONG",
           "LOOP_WITHOUT_WEEKDAY",
+          "MCP_APPROVAL_ALREADY_SETTLED",
+          "MCP_SERVER_KEY_CONFLICT",
+          "MCP_SERVER_NOT_FOUND",
+          "MCP_SERVER_TRANSPORT_INCOMPLETE",
+          "MCP_TOOL_APPROVAL_REQUIRED",
           "MIGRATIONS_PENDING",
           "MISSING_ENVIRONMENT_VARIABLE",
           "MISSING_LOG_CONTENT",
@@ -9187,6 +9633,20 @@
           "HUMAN_REQUESTED",
           "APPROVAL_NEEDED",
           "AUTH_REQUIRED"
+        ]
+      },
+      "McpApprovalPolicy": {
+        "type": "string",
+        "enum": [
+          "AUTO",
+          "ASK"
+        ]
+      },
+      "McpTransport": {
+        "type": "string",
+        "enum": [
+          "HTTP",
+          "STDIO"
         ]
       },
       "ArtifactKind": {
@@ -9538,6 +9998,11 @@
     "LOOP_NOT_FOUND",
     "LOOP_PROMPT_TOO_LONG",
     "LOOP_WITHOUT_WEEKDAY",
+    "MCP_APPROVAL_ALREADY_SETTLED",
+    "MCP_SERVER_KEY_CONFLICT",
+    "MCP_SERVER_NOT_FOUND",
+    "MCP_SERVER_TRANSPORT_INCOMPLETE",
+    "MCP_TOOL_APPROVAL_REQUIRED",
     "MIGRATIONS_PENDING",
     "MISSING_ENVIRONMENT_VARIABLE",
     "MISSING_LOG_CONTENT",

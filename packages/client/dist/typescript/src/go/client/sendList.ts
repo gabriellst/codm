@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { SendListMutationRequest, SendListMutationResponse } from "../types/SendList.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { SendListMutationRequest, SendListMutationResponse } from "../types/SendList.ts";
 
 function getSendListUrl() {
   const res = { method: 'POST', url: `/messaging/messages/list` as const }

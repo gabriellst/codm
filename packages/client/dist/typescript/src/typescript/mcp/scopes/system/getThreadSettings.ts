@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/system/_http";
-import type { GetThreadSettingsQueryResponse, GetThreadSettingsPathParams } from "../../../types/GetThreadSettings.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/system/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { GetThreadSettingsQueryResponse, GetThreadSettingsPathParams } from "../../../types/GetThreadSettings.ts";
 
 /**
  * @description Per-thread behavior: mention gate, participants + invocation, buffer size (T10)

@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { SendTextMutationRequest, SendTextMutationResponse } from "../types/SendText.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { sendText } from "../client/sendText.ts";
+import type { SendTextMutationRequest, SendTextMutationResponse } from "../types/SendText.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { sendText } from "../client/sendText.ts";
 
 export const sendTextMutationKey = () => [{ url: '/messaging/messages/text' }] as const
 

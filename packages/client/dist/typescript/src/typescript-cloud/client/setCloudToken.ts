@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript-cloud/_http";
-import type { SetCloudTokenMutationRequest, SetCloudTokenMutationResponse } from "../types/SetCloudToken.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
+import type { SetCloudTokenMutationRequest, SetCloudTokenMutationResponse } from "../types/SetCloudToken.ts";
 
 function getSetCloudTokenUrl() {
   const res = { method: 'POST', url: `/session/cloud-token` as const }

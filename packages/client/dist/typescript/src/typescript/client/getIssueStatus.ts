@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { GetIssueStatusQueryResponse, GetIssueStatusPathParams } from "../types/GetIssueStatus.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { GetIssueStatusQueryResponse, GetIssueStatusPathParams } from "../types/GetIssueStatus.ts";
 
 function getGetIssueStatusUrl(threadId: GetIssueStatusPathParams["threadId"], issueId: GetIssueStatusPathParams["issueId"]) {
   const res = { method: 'GET', url: `/threads/${threadId}/issues/${issueId}/status` as const }
