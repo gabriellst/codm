@@ -19,10 +19,11 @@ import {
 } from '@codm/client-typescript/typescript'
 import { Button } from '@codm/app-ui/button'
 import { DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@codm/app-ui/dialog'
-import { Field, FieldLabel } from '@codm/app-ui/field'
+import { Field, FieldError, FieldLabel } from '@codm/app-ui/field'
 import { Input } from '@codm/app-ui/input'
 import { Select } from '@codm/app-ui/select'
 import { Spinner } from '@codm/app-ui/spinner'
+import { pickUnionVariantField, sharedOf, unionOf } from '@/lib/union'
 import { cn } from '@/lib/utils'
 
 /** The row this form edits when it is REGISTERING, not RECONFIGURING — the SDK's own element type. */
@@ -44,6 +45,32 @@ interface KeyValueEntry {
 	id: string
 	key: string
 	value: string
+}
+
+/**
+ * As sub-schemas POR CAMPO, tiradas do schema da SDK — a razao pela qual este formulario valida ao
+ * vivo sem re-declarar regra nenhuma.
+ *
+ * O `validators.onChange` da casa (ver `AddWorkspaceForm`) recebe a schema da REQUISICAO inteira,
+ * porque la a forma do formulario E a forma do fio. Aqui nao e: `args` e uma string separada por
+ * espaco que virara `string[]`, e `env` sai de uma lista de linhas que virara `Record`. Passar a
+ * schema inteira reprovaria todo digito.
+ *
+ * O que casa campo a campo casa EXATAMENTE — `key`, `command` e `url` sao strings no formulario e no
+ * fio — e e por campo que a validacao entra, com a regex da `key` e a `url()` vindas do controller
+ * via `@/lib/union`, nunca redigitadas aqui. Era o furo que a revisao agregada apontou (FRM-02): sem
+ * `validators`, a unica validacao era o `safeParse` no submit, e o operador descobria uma `key`
+ * invalida clicando em salvar em vez de enquanto digitava.
+ */
+const KEY_SCHEMA = sharedOf(registerMcpServerMutationRequestSchema).shape.key
+const COMMAND_SCHEMA = pickUnionVariantField(unionOf(registerMcpServerMutationRequestSchema), { transport: 'STDIO' }, 'command')
+const URL_SCHEMA = pickUnionVariantField(unionOf(registerMcpServerMutationRequestSchema), { transport: 'HTTP' }, 'url')
+
+/** A primeira mensagem de erro do campo, ou `undefined` — mesma leitura de `AddWorkspaceForm`. */
+const firstError = (errors: readonly unknown[]): string | undefined => {
+	const head = errors[0]
+	if (head == null) return undefined
+	return typeof head === 'string' ? head : String((head as { message?: unknown }).message ?? '')
 }
 
 const newKeyValueEntry = (): KeyValueEntry => ({ id: crypto.randomUUID(), key: '', value: '' })
@@ -240,35 +267,43 @@ function StdioServerForm({ server, onDone, className, ...props }: VariantFormPro
 			}}
 		>
 			{!isReconfigure && (
-				<form.Field name="key">
+				<form.Field name="key" validators={{ onChange: KEY_SCHEMA }}>
 					{field => (
 						<Field>
 							<FieldLabel htmlFor={field.name}>{t('settings.mcpServers.form.keyLabel')}</FieldLabel>
 							<Input
 								id={field.name}
 								className="font-mono"
+								aria-invalid={field.state.meta.isTouched && !field.state.meta.isValid}
 								placeholder={t('settings.mcpServers.form.keyPlaceholder')}
 								value={field.state.value}
 								onBlur={field.handleBlur}
 								onChange={e => field.handleChange(e.target.value)}
 							/>
+							{field.state.meta.isTouched && firstError(field.state.meta.errors) && (
+								<FieldError>{firstError(field.state.meta.errors)}</FieldError>
+							)}
 						</Field>
 					)}
 				</form.Field>
 			)}
 
-			<form.Field name="command">
+			<form.Field name="command" validators={{ onChange: COMMAND_SCHEMA }}>
 				{field => (
 					<Field>
 						<FieldLabel htmlFor={field.name}>{t('settings.mcpServers.form.commandLabel')}</FieldLabel>
 						<Input
 							id={field.name}
 							className="font-mono"
+							aria-invalid={field.state.meta.isTouched && !field.state.meta.isValid}
 							placeholder={t('settings.mcpServers.form.commandPlaceholder')}
 							value={field.state.value}
 							onBlur={field.handleBlur}
 							onChange={e => field.handleChange(e.target.value)}
 						/>
+						{field.state.meta.isTouched && firstError(field.state.meta.errors) && (
+							<FieldError>{firstError(field.state.meta.errors)}</FieldError>
+						)}
 					</Field>
 				)}
 			</form.Field>
@@ -399,24 +434,28 @@ function HttpServerForm({ server, onDone, className, ...props }: VariantFormProp
 			}}
 		>
 			{!isReconfigure && (
-				<form.Field name="key">
+				<form.Field name="key" validators={{ onChange: KEY_SCHEMA }}>
 					{field => (
 						<Field>
 							<FieldLabel htmlFor={field.name}>{t('settings.mcpServers.form.keyLabel')}</FieldLabel>
 							<Input
 								id={field.name}
 								className="font-mono"
+								aria-invalid={field.state.meta.isTouched && !field.state.meta.isValid}
 								placeholder={t('settings.mcpServers.form.keyPlaceholder')}
 								value={field.state.value}
 								onBlur={field.handleBlur}
 								onChange={e => field.handleChange(e.target.value)}
 							/>
+							{field.state.meta.isTouched && firstError(field.state.meta.errors) && (
+								<FieldError>{firstError(field.state.meta.errors)}</FieldError>
+							)}
 						</Field>
 					)}
 				</form.Field>
 			)}
 
-			<form.Field name="url">
+			<form.Field name="url" validators={{ onChange: URL_SCHEMA }}>
 				{field => (
 					<Field>
 						<FieldLabel htmlFor={field.name}>{t('settings.mcpServers.form.urlLabel')}</FieldLabel>
@@ -424,11 +463,15 @@ function HttpServerForm({ server, onDone, className, ...props }: VariantFormProp
 							id={field.name}
 							type="url"
 							className="font-mono"
+							aria-invalid={field.state.meta.isTouched && !field.state.meta.isValid}
 							placeholder={t('settings.mcpServers.form.urlPlaceholder')}
 							value={field.state.value}
 							onBlur={field.handleBlur}
 							onChange={e => field.handleChange(e.target.value)}
 						/>
+						{field.state.meta.isTouched && firstError(field.state.meta.errors) && (
+							<FieldError>{firstError(field.state.meta.errors)}</FieldError>
+						)}
 					</Field>
 				)}
 			</form.Field>
