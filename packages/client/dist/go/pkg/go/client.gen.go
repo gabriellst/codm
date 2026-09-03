@@ -22,13 +22,12 @@ import (
 
 // Defines values for AgentModelId.
 const (
-	AgentModelIdDEFAULT    AgentModelId = "DEFAULT"
-	AgentModelIdGPT51CODEX AgentModelId = "GPT_5_1_CODEX"
-	AgentModelIdGPT52CODEX AgentModelId = "GPT_5_2_CODEX"
-	AgentModelIdGPT53CODEX AgentModelId = "GPT_5_3_CODEX"
-	AgentModelIdHAIKU      AgentModelId = "HAIKU"
-	AgentModelIdOPUS       AgentModelId = "OPUS"
-	AgentModelIdSONNET     AgentModelId = "SONNET"
+	AgentModelIdDEFAULT AgentModelId = "DEFAULT"
+	AgentModelIdHAIKU   AgentModelId = "HAIKU"
+	AgentModelIdLUNA    AgentModelId = "LUNA"
+	AgentModelIdOPUS    AgentModelId = "OPUS"
+	AgentModelIdSONNET  AgentModelId = "SONNET"
+	AgentModelIdTERRA   AgentModelId = "TERRA"
 )
 
 // Valid indicates whether the value is a known member of the AgentModelId enum.
@@ -36,17 +35,15 @@ func (e AgentModelId) Valid() bool {
 	switch e {
 	case AgentModelIdDEFAULT:
 		return true
-	case AgentModelIdGPT51CODEX:
-		return true
-	case AgentModelIdGPT52CODEX:
-		return true
-	case AgentModelIdGPT53CODEX:
-		return true
 	case AgentModelIdHAIKU:
+		return true
+	case AgentModelIdLUNA:
 		return true
 	case AgentModelIdOPUS:
 		return true
 	case AgentModelIdSONNET:
+		return true
+	case AgentModelIdTERRA:
 		return true
 	default:
 		return false

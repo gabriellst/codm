@@ -94,18 +94,20 @@ describe('CodexAgentRunner.buildArgs — the plain `exec` shape', () => {
 	})
 
 	it('passes -m with the CLI slug the wire member stands for — never the member name', () => {
-		const args = CodexAgentRunner.buildArgs({ ...base, model: AgentModelId.GPT_5_3_CODEX })
+		// The member is a CODENAME and the slug carries the version; this is the seam that lets the
+		// vendor bump `gpt-5.6-terra` without a contract edit (see `CODEX_MODEL_ALIASES`).
+		const args = CodexAgentRunner.buildArgs({ ...base, model: AgentModelId.TERRA })
 
-		expect(args.slice(args.indexOf('-m'), args.indexOf('-m') + 2)).toEqual(['-m', 'gpt-5.3-codex'])
-		expect(args).not.toContain('GPT_5_3_CODEX')
+		expect(args.slice(args.indexOf('-m'), args.indexOf('-m') + 2)).toEqual(['-m', 'gpt-5.6-terra'])
+		expect(args).not.toContain('TERRA')
 	})
 
 	it('re-states the model on RESUME, unlike -C/--add-dir', () => {
 		// Both help captures list `-m` (`help-exec.txt:40`, `help-exec-resume.txt:41`), so the flag is
 		// not part of the shape narrowing that resume forces — a resumed turn is steerable.
-		const args = CodexAgentRunner.buildArgs({ ...base, resumeSessionId: 'sess-1', model: AgentModelId.GPT_5_1_CODEX })
+		const args = CodexAgentRunner.buildArgs({ ...base, resumeSessionId: 'sess-1', model: AgentModelId.LUNA })
 
-		expect(args.slice(args.indexOf('-m'), args.indexOf('-m') + 2)).toEqual(['-m', 'gpt-5.1-codex'])
+		expect(args.slice(args.indexOf('-m'), args.indexOf('-m') + 2)).toEqual(['-m', 'gpt-5.6-luna'])
 		expect(args).not.toContain('-C')
 	})
 

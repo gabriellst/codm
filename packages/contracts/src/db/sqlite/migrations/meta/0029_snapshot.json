@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "91351fec-bf84-4349-9f8c-e231860aaf8d",
-  "prevId": "f63e5bda-99db-4b0b-ad74-c644c5dea4de",
+  "id": "173f990e-ff3e-4719-a0e4-c0f5c9b5ca80",
+  "prevId": "91351fec-bf84-4349-9f8c-e231860aaf8d",
   "tables": {
     "owner_onboardings": {
       "name": "owner_onboardings",
@@ -2485,6 +2485,293 @@
         "agent_agent_sessions_model_check": {
           "name": "agent_agent_sessions_model_check",
           "value": "\"agent_agent_sessions\".\"model\" IN ('DEFAULT', 'SONNET', 'OPUS', 'HAIKU', 'TERRA', 'LUNA')"
+        }
+      }
+    },
+    "agent_mcp_servers": {
+      "name": "agent_mcp_servers",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "transport": {
+          "name": "transport",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "command": {
+          "name": "command",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "args": {
+          "name": "args",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "env": {
+          "name": "env",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "url": {
+          "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "headers": {
+          "name": "headers",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "enabled": {
+          "name": "enabled",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "approval_policy": {
+          "name": "approval_policy",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'ASK'"
+        },
+        "tool_policies": {
+          "name": "tool_policies",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "added_at": {
+          "name": "added_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        }
+      },
+      "indexes": {
+        "agent_mcp_servers_owner_key_unq": {
+          "name": "agent_mcp_servers_owner_key_unq",
+          "columns": [
+            "owner_id",
+            "key"
+          ],
+          "isUnique": true
+        },
+        "agent_mcp_servers_owner_idx": {
+          "name": "agent_mcp_servers_owner_idx",
+          "columns": [
+            "owner_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "agent_mcp_servers_transport_check": {
+          "name": "agent_mcp_servers_transport_check",
+          "value": "\"agent_mcp_servers\".\"transport\" IN ('STDIO', 'HTTP')"
+        },
+        "agent_mcp_servers_policy_check": {
+          "name": "agent_mcp_servers_policy_check",
+          "value": "\"agent_mcp_servers\".\"approval_policy\" IN ('AUTO', 'ASK')"
+        }
+      }
+    },
+    "agent_mcp_tool_approvals": {
+      "name": "agent_mcp_tool_approvals",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "issue_id": {
+          "name": "issue_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "thread_id": {
+          "name": "thread_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "server_key": {
+          "name": "server_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "tool_name": {
+          "name": "tool_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "call_hash": {
+          "name": "call_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "call_arguments": {
+          "name": "call_arguments",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "decision": {
+          "name": "decision",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "stop_id": {
+          "name": "stop_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "requested_at": {
+          "name": "requested_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "settled_at": {
+          "name": "settled_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        }
+      },
+      "indexes": {
+        "agent_mcp_tool_approvals_lookup_idx": {
+          "name": "agent_mcp_tool_approvals_lookup_idx",
+          "columns": [
+            "issue_id",
+            "call_hash"
+          ],
+          "isUnique": false
+        },
+        "agent_mcp_tool_approvals_stop_unq": {
+          "name": "agent_mcp_tool_approvals_stop_unq",
+          "columns": [
+            "stop_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "agent_mcp_tool_approvals_decision_check": {
+          "name": "agent_mcp_tool_approvals_decision_check",
+          "value": "\"agent_mcp_tool_approvals\".\"decision\" IN ('APPROVED', 'DENIED')"
         }
       }
     },

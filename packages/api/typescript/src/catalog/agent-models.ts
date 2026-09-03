@@ -46,18 +46,31 @@ import { ProviderKind, AgentModelId } from '@codm/contracts-typescript/wire/enum
  * it?" is a fact about the CLI. Collapsing them would make binding a runner silently invent a model
  * list — and would make an unbound runner silently erase one that is known.
  *
- * ### The codex slugs are PINNED, and that is a decision taken against a measurement
+ * ### A ROW LISTS CODENAMES, NEVER VERSIONS — the correction this file was rewritten for
  * `.specs/codedm/2026-08-27-codex-driving-measured.md` §6 Q3 measured codex's per-account list
- * churning wholesale between two logins on one machine, and asked whether pinning slugs into a
- * cross-language enum would ship stale. Answer (founder, 2026-09-02): pin the three the account
- * actually serves and let a rejected slug be a LOUD failed turn — the CLI answers `not supported for
- * your account` — rather than keep the operator with no choice at all. The failure mode is a visible
- * refusal on one turn, not silent wrong-model routing, because `CODEX_MODEL_ALIASES` in the runner is
- * the only place a slug is spelled and `DEFAULT` is always in the list as the way back.
+ * churning wholesale between two logins on one machine, and the first answer to it was to pin the
+ * three slugs the account served that day (`GPT_5_3_CODEX` / `GPT_5_2_CODEX` / `GPT_5_1_CODEX`).
+ * That answer was falsified within the week, on the machine that produced the measurement: the same
+ * account now serves `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`, `gpt-5.4-mini` and NOT ONE of the
+ * three pinned members — so the whole codex row had become three guaranteed 400s, plus a migration
+ * and an SDK regen spent to get there.
+ *
+ * So a member is a TIER, spelled as the vendor's own codename, and the version floats: `TERRA` is
+ * "the balanced codex model", whichever build that is this month, exactly as `SONNET` has always been
+ * "the balanced claude model". The version prefix lives ONLY in the runner's alias map, which is why
+ * a vendor bumping `gpt-5.6-terra` to `gpt-5.7-terra` is a one-line edit there and touches neither
+ * this catalog, nor the wire enum, nor the database CHECK. What still forces a contract edit is a
+ * vendor RETIRING a codename — which is the edit that genuinely changes what the operator may choose.
+ *
+ * `gpt-5.5` (frontier) and `gpt-5.4-mini` are deliberately absent: they carry no codename, so listing
+ * them would put a version back into the enum and re-open the churn this row was rewritten to close.
+ * `DEFAULT` remains the way back for whoever picked a tier the account stopped serving — and it is a
+ * LOUD way back, because a slug the account does not serve returns `not supported for your account`,
+ * a 400 on that turn (§5 point 3), never a silent substitution.
  */
 export const PROVIDER_MODELS: Readonly<Record<ProviderKind, readonly AgentModelId[]>> = {
 	[ProviderKind.CLAUDE_CODE]: [AgentModelId.DEFAULT, AgentModelId.OPUS, AgentModelId.SONNET, AgentModelId.HAIKU],
-	[ProviderKind.CODEX]: [AgentModelId.DEFAULT, AgentModelId.GPT_5_3_CODEX, AgentModelId.GPT_5_2_CODEX, AgentModelId.GPT_5_1_CODEX],
+	[ProviderKind.CODEX]: [AgentModelId.DEFAULT, AgentModelId.TERRA, AgentModelId.LUNA],
 	[ProviderKind.OPENCODE]: [],
 }
 
@@ -91,7 +104,7 @@ export function effectiveModel(chosen: Readonly<Partial<Record<ProviderKind, Age
  * fall out of step:
  *
  *  - `unowned` — a model member no provider claims. The one that actually happens: somebody adds
- *    `GPT_5` to the enum and forgets that the enum does not say whose it is.
+ *    `SOL` to the enum and forgets that the enum does not say whose it is.
  *  - `shared` — a model claimed by two providers. `DEFAULT` is the deliberate exception; anything else
  *    means the flat set is being used as if it were namespaced.
  *  - `missingDefault` — a non-empty list without `DEFAULT`. A provider that can be chosen but offers

@@ -128,7 +128,7 @@ describe('ThreadSettingsDialog — contra o backend real', () => {
 	 *
 	 * O agente SEM catálogo é o OPENCODE, e não mais o CODEX: catálogo e `comingSoon` são dois eixos
 	 * (`PROVIDER_MODELS` declara o primeiro, `AgentRunnerFactory.supported` o segundo), e desde que o
-	 * CODEX ganhou os slugs `gpt-5.x-codex` ele é justamente o caso em que os dois discordam — ver o
+	 * CODEX ganhou os codinomes TERRA/LUNA ele é justamente o caso em que os dois discordam — ver o
 	 * teste seguinte.
 	 */
 	it('renderiza um seletor de modelo por agente com catálogo, e nenhum para o agente sem catálogo', async () => {

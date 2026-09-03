@@ -245,12 +245,11 @@
 	"enums": {
 		"AgentModelId": {
 			"DEFAULT": "Automatic",
-			"GPT_5_1_CODEX": "GPT-5.1 Codex",
-			"GPT_5_2_CODEX": "GPT-5.2 Codex",
-			"GPT_5_3_CODEX": "GPT-5.3 Codex",
 			"HAIKU": "Haiku",
+			"LUNA": "Luna",
 			"OPUS": "Opus",
-			"SONNET": "Sonnet"
+			"SONNET": "Sonnet",
+			"TERRA": "Terra"
 		},
 		"ArtifactKind": {
 			"AUDIO": "Audio",
