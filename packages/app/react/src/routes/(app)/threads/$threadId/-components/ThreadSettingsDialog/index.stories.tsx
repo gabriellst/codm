@@ -45,8 +45,8 @@ const meta: Meta<typeof ThreadSettingsDialog> = {
 						{
 							provider: 'CODEX',
 							comingSoon: true,
-							model: 'GPT_5_3_CODEX',
-							models: ['DEFAULT', 'GPT_5_3_CODEX', 'GPT_5_2_CODEX', 'GPT_5_1_CODEX'],
+							model: 'TERRA',
+							models: ['DEFAULT', 'TERRA', 'LUNA'],
 						},
 						{ provider: 'OPENCODE', comingSoon: true, model: 'DEFAULT', models: [] },
 					],

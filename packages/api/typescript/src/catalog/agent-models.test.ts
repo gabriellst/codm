@@ -24,6 +24,19 @@ describe('PROVIDER_MODELS — the declared provider → models relation', () => 
 		expect(auditProviderModels(PROVIDER_MODELS).missingDefault).toEqual([])
 	})
 
+	it('names every member by CODENAME ONLY — a member carrying a version is the churn this enum banned', () => {
+		// The rail behind the enum's own docblock, and it exists because the rule was broken once:
+		// `GPT_5_3_CODEX` / `GPT_5_2_CODEX` / `GPT_5_1_CODEX` shipped as members and the account they
+		// were measured against had stopped serving all three within the week — three guaranteed 400s
+		// bought with a contract edit, a migration and an SDK regen. A version belongs in the runner's
+		// alias map (`CODEX_MODEL_ALIASES`, `CLAUDE_MODEL_ALIASES`), which no contract consumer reads.
+		//
+		// Letters only: a digit or an underscore is how a version reaches a member name in practice
+		// (`GPT_5_3_CODEX`, `CLAUDE_4_5_SONNET`). `SONNET`, `TERRA`, `LUNA`, `DEFAULT` all pass.
+		const versioned = Object.values(AgentModelId).filter(member => !/^[A-Z]+$/.test(member))
+		expect(versioned).toEqual([])
+	})
+
 	it('lists no model twice', () => {
 		expect(auditProviderModels(PROVIDER_MODELS).duplicated).toEqual([])
 	})
@@ -38,7 +51,8 @@ describe('PROVIDER_MODELS — the declared provider → models relation', () => 
 		expect(modelsFor(ProviderKind.CLAUDE_CODE)).toContain(AgentModelId.OPUS)
 		// CODEX carries a catalog while `AgentRunnerFactory.supported` may still call it `comingSoon` —
 		// that pair is the whole point of keeping the two axes apart (see the catalog's header).
-		expect(modelsFor(ProviderKind.CODEX)).toContain(AgentModelId.GPT_5_3_CODEX)
+		expect(modelsFor(ProviderKind.CODEX)).toContain(AgentModelId.TERRA)
+		expect(modelsFor(ProviderKind.CODEX)).toContain(AgentModelId.LUNA)
 		expect(modelsFor(ProviderKind.CODEX)).toContain(AgentModelId.DEFAULT)
 		// Empty ⇒ nothing to choose. Deliberately NOT `[DEFAULT]`: a select with one option is noise.
 		expect(modelsFor(ProviderKind.OPENCODE)).toEqual([])

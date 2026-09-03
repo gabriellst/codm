@@ -106,7 +106,7 @@ describe('a thread bound to an undrivable provider still LOADS everywhere', () =
 				comingSoon: true,
 				model: AgentModelId.DEFAULT,
 				// The provider can have a catalog even when this test's factory intentionally cannot drive it.
-				models: [AgentModelId.DEFAULT, AgentModelId.GPT_5_3_CODEX, AgentModelId.GPT_5_2_CODEX, AgentModelId.GPT_5_1_CODEX],
+				models: [AgentModelId.DEFAULT, AgentModelId.TERRA, AgentModelId.LUNA],
 			},
 		])
 	})

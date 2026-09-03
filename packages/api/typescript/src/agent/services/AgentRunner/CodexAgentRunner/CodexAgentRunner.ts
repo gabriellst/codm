@@ -36,20 +36,26 @@ export interface CodexBuildArgsOptions {
 /**
  * `AgentModelId` → the slug `-m` takes. A MAP, not a `switch`, and per-runner for the same reason
  * `CLAUDE_MODEL_ALIASES` is: what a binary calls its models is a fact about that binary alone. This is
- * also the ONLY place a codex slug is spelled — the wire enum carries a member name, never the slug.
+ * also the ONLY place a codex slug is spelled — the wire enum carries a CODENAME, never a version.
  *
- * MEASURED, and the measurement is why this map is small and why `DEFAULT` stays absent from it:
- * `.specs/codedm/2026-08-27-codex-driving-measured.md` §6 Q3 caught the per-account list changing
- * wholesale between two logins on one machine. So a slug here is a CLAIM about the account this build
- * talks to, and the failure mode when the claim is wrong is a loud one the transport already reports —
+ * THE VERSION PREFIX LIVES HERE AND NOWHERE ELSE, and that split is the whole point of this map.
+ * `.specs/codedm/2026-08-27-codex-driving-measured.md` §6 Q3 measured the per-account list changing
+ * wholesale between two logins on one machine; the first answer to it put `gpt-5.3-codex` &co. into
+ * the wire enum as members, and the same account had stopped serving all three within the week
+ * (`gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`, `gpt-5.4-mini` today). So the enum member names the
+ * TIER — `TERRA` is the balanced model, `LUNA` the fast one, whichever build carries the name this
+ * month — and the churn lands on the two string literals below: a one-line edit, no contract bump, no
+ * migration, no SDK regen. A tier the vendor RETIRES is a different event and correctly costs a
+ * contract edit, because it changes what the operator may choose.
+ *
+ * `DEFAULT` stays absent on purpose — it is the instruction to omit `-m` altogether — and it is the
+ * way back for whoever picked a tier this account no longer serves. That failure is loud, not silent:
  * codex answers `not supported for your account`, which arrives as a 400 on the turn (§5 point 3),
- * never as a silent substitution. `DEFAULT` is the way back for whoever picked a slug the account
- * stopped serving, which is why the catalog always offers it.
+ * never as a substitution.
  */
 const CODEX_MODEL_ALIASES: Partial<Record<AgentModelId, string>> = {
-	[AgentModelId.GPT_5_3_CODEX]: 'gpt-5.3-codex',
-	[AgentModelId.GPT_5_2_CODEX]: 'gpt-5.2-codex',
-	[AgentModelId.GPT_5_1_CODEX]: 'gpt-5.1-codex',
+	[AgentModelId.TERRA]: 'gpt-5.6-terra',
+	[AgentModelId.LUNA]: 'gpt-5.6-luna',
 }
 
 /**
@@ -186,8 +192,7 @@ export class CodexAgentRunner extends AgentRunner {
 		// DEFAULT ⇒ omit the flag entirely so the CLI chooses. An unmapped member (a value added to the
 		// wire enum without a codex slug, e.g. a claude model reaching here) also omits rather than
 		// passing a bogus string — the catalog is what makes that unreachable, this is what makes it
-		// harmless. See `CODEX_MODEL_ALIASES` for why pinning slugs at all is a decision under a
-		// measurement that says the account's list churns.
+		// harmless. See `CODEX_MODEL_ALIASES` for why the member is a codename and the version is not.
 		const modelAlias = model && model !== AgentModelId.DEFAULT ? CODEX_MODEL_ALIASES[model] : undefined
 		if (modelAlias) args.push('-m', modelAlias)
 
