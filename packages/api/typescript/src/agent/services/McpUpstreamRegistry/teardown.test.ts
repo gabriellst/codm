@@ -1,7 +1,7 @@
 // packages/api/typescript/src/agent/services/McpUpstreamRegistry/teardown.test.ts — arquivo final COMPLETO
 import 'reflect-metadata'
 import { afterEach, beforeEach, describe, expect, it, spyOn } from 'bun:test'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createRequire } from 'node:module'
@@ -32,24 +32,37 @@ const serverIndexUrl = pathToFileURL(require.resolve('@modelcontextprotocol/sdk/
 const serverStdioUrl = pathToFileURL(require.resolve('@modelcontextprotocol/sdk/server/stdio.js')).href
 
 /**
- * A REAL, minimal MCP stdio server, written to the OS temp dir (never the repo) fresh per test and
- * removed in `afterEach` — nothing survives the run. It only needs to complete the MCP handshake
- * (`Server` does that automatically) and then idle on stdin, exactly like a real third-party upstream
- * sitting there waiting for the next call.
+ * Um servidor MCP stdio real que SPAWNA UM NETO e IGNORA o fechamento do stdin.
+ *
+ * As duas coisas são o teste. O fixture anterior morria sozinho quando o `client.close()` fechava o
+ * stdin dele — então a suíte via o processo sumir e concluía que o teardown funcionava, quando o que
+ * funcionava era o `close`. Um MCP de navegador (o caso que o docblock do `shutdown` nomeia) faz
+ * exatamente o contrário: abre um browser que não é filho do nosso stdin e não morre com ele.
+ *
+ * `process.on('SIGTERM', () => {})` não é decoração: sem ignorar o sinal, o filho morreria no
+ * primeiro passe gracioso e o teste voltaria a passar sem tocar na escalada.
  */
-function writeFixtureServer(dir: string, name: string): string {
+function writeFixtureServer(dir: string, name: string): { path: string; grandchildPidFile: string } {
+	const grandchildPidFile = join(dir, `${name}.grandchild.pid`)
 	const path = join(dir, `${name}.mjs`)
 	writeFileSync(
 		path,
 		[
 			`import { Server } from ${JSON.stringify(serverIndexUrl)}`,
 			`import { StdioServerTransport } from ${JSON.stringify(serverStdioUrl)}`,
+			`import { spawn } from 'node:child_process'`,
+			`import { writeFileSync } from 'node:fs'`,
+			// O NETO: um processo que não conhece o nosso stdin e só morre por sinal.
+			`const grandchild = spawn(process.execPath, ['-e', 'process.stdin.resume(); setInterval(() => {}, 1000)'], { stdio: 'ignore' })`,
+			`writeFileSync(${JSON.stringify(grandchildPidFile)}, String(grandchild.pid))`,
+			`process.on('SIGTERM', () => {})`,
+			`process.stdin.on('close', () => {})`,
 			`const server = new Server({ name: ${JSON.stringify(name)}, version: '0.0.0' }, { capabilities: {} })`,
 			`await server.connect(new StdioServerTransport())`,
 		].join('\n'),
 		'utf8',
 	)
-	return path
+	return { path, grandchildPidFile }
 }
 
 /** `process.kill(pid, 0)` sends no signal — it only probes whether the pid still resolves to a process. */
@@ -88,7 +101,7 @@ describe('DefaultMcpUpstreamRegistry.shutdown — teardown of REAL STDIO upstrea
 	let repo: MockMcpServerRepository
 	let registry: DefaultMcpUpstreamRegistry
 	let closeSpy: ReturnType<typeof spyOn>
-	let originalTerminate: ProcessTree['terminate']
+	let originalTerminateByPid: ProcessTree['terminateByPid']
 	let terminateCalls: { pid: number | undefined }[]
 
 	beforeEach(() => {
@@ -103,26 +116,28 @@ describe('DefaultMcpUpstreamRegistry.shutdown — teardown of REAL STDIO upstrea
 		closeSpy = spyOn(Protocol.prototype, 'close')
 
 		// The registry looks up `PROCESS_TREES[process.platform]` DIRECTLY — there is no injection seam
-		// — so the only way to observe what it passes to `terminate` is to wrap the real strategy in
-		// place and restore it afterwards. The wrapper still forwards to the original implementation,
-		// so the OS-level kill this suite verifies is the production one, not a stub.
+		// — so the only way to observe what it passes to `terminateByPid` is to wrap the real strategy
+		// in place and restore it afterwards. The wrapper still forwards to the original
+		// implementation, so the OS-level kill this suite verifies is the production one, not a stub.
+		// `terminateByPid`, not `terminate`: the registry spawns the child through the MCP SDK, which
+		// never becomes a `TreeRoot` we adopted — see `DefaultMcpUpstreamRegistry.shutdown`.
 		const tree = PROCESS_TREES[process.platform]
-		originalTerminate = tree.terminate.bind(tree)
+		originalTerminateByPid = tree.terminateByPid.bind(tree)
 		terminateCalls = []
-		tree.terminate = (child, exited, graceMs) => {
-			terminateCalls.push({ pid: child.pid })
-			return originalTerminate(child, exited, graceMs)
+		tree.terminateByPid = (pid, graceMs) => {
+			terminateCalls.push({ pid })
+			return originalTerminateByPid(pid, graceMs)
 		}
 	})
 
 	afterEach(() => {
 		closeSpy.mockRestore()
-		PROCESS_TREES[process.platform].terminate = originalTerminate
+		PROCESS_TREES[process.platform].terminateByPid = originalTerminateByPid
 		rmSync(dir, { recursive: true, force: true })
 	})
 
-	async function registerStdioServer(key: string): Promise<McpServer> {
-		const scriptPath = writeFixtureServer(dir, key)
+	async function registerStdioServer(key: string): Promise<{ grandchildPidFile: string }> {
+		const { path: scriptPath, grandchildPidFile } = writeFixtureServer(dir, key)
 		const server = McpServer.create({
 			ownerId: OWNER_ID,
 			key,
@@ -133,7 +148,7 @@ describe('DefaultMcpUpstreamRegistry.shutdown — teardown of REAL STDIO upstrea
 			args: [scriptPath],
 		})
 		await repo.save(server)
-		return server
+		return { grandchildPidFile }
 	}
 
 	it('(a) closes every connected client', async () => {
@@ -213,4 +228,18 @@ describe('DefaultMcpUpstreamRegistry.shutdown — teardown of REAL STDIO upstrea
 			killSpy.mockRestore()
 		}
 	}, 20_000)
+
+	it('(e) o NETO morre junto — é o caso que o docblock do shutdown nomeia, e o único que o mecanismo precisa entregar', async () => {
+		const { grandchildPidFile } = await registerStdioServer('com-neto')
+		await registry.listTools(OWNER_ID)
+
+		// O neto só existe depois que o servidor subiu; ler o pid do arquivo é como o teste o alcança
+		// sem conhecer a árvore por dentro.
+		const grandchildPid = Number(readFileSync(grandchildPidFile, 'utf8').trim())
+		expect(isAlive(grandchildPid)).toBe(true)
+
+		await registry.shutdown()
+
+		expect(await waitUntilDead(grandchildPid)).toBe(true)
+	}, 30_000)
 })

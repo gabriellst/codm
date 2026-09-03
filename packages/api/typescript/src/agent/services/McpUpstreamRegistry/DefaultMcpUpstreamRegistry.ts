@@ -99,14 +99,18 @@ export class DefaultMcpUpstreamRegistry extends McpUpstreamRegistry {
 		for (const [key, client] of this.clients) {
 			// O pid é lido ANTES do close, nunca depois: `StdioClientTransport.close()` zera
 			// `this._process` de forma SÍNCRONA antes de esperar qualquer coisa (medido no SDK,
-			// `dist/esm/client/stdio.js:146`), e `get pid()` é `this._process?.pid ?? null` — ler
-			// depois do await sempre devolve `null`, o `if (pid)` nunca entra, e `tree.terminate`
-			// nunca roda. É a causa raiz do vazamento que o T11 reportou.
+			// `dist/esm/client/stdio.js:146`).
+			//
+			// `terminateByPid`, e não `terminate`: o `terminate` espera um `TreeRoot` — um filho que
+			// NÓS adotamos, com `kill` de verdade e `spawnOptions` aplicadas. Nenhuma das duas coisas
+			// existe aqui, porque quem spawna é o SDK, com opções fixas. A versão anterior contornava
+			// isso passando um `TreeRoot` FABRICADO (`kill: () => true`) — e o `kill` de fallback do
+			// POSIX, que é justamente o que roda quando o sinal de grupo falha, caía num no-op. Nenhum
+			// sinal era entregue nunca; o único teardown real era o `close` fechar o stdin, que não
+			// alcança neto nenhum.
 			const pid = this.transports.get(key)?.pid
 			await client.close().catch(() => undefined)
-			// `client.close()` fecha o stdio; o TREE é o que alcança os netos que o servidor spawnou
-			// (um MCP de navegador abre o próprio browser). Matar só o filho direto vaza o browser.
-			if (pid) tree.terminate({ pid, kill: () => true, exitCode: null, signalCode: null }, Promise.resolve(), 2000)
+			if (pid) tree.terminateByPid(pid, 2000)
 		}
 		this.clients.clear()
 		this.transports.clear()

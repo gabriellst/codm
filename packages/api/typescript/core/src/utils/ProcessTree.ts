@@ -1,4 +1,4 @@
-import { spawn as spawnChild, type ChildProcess, type SpawnOptions } from 'node:child_process'
+import { spawn as spawnChild, spawnSync, type ChildProcess, type SpawnOptions } from 'node:child_process'
 
 /**
  * HOW A PROVIDER CLI'S PROCESS TREE IS OWNED AND TORN DOWN — one strategy per OS family, chosen by
@@ -33,6 +33,21 @@ export interface ProcessTree {
 	 * ignores both. Idempotence is the caller's job (`AgentProcess.kill`).
 	 */
 	terminate(child: TreeRoot, exited: Promise<unknown>, graceMs: number): void
+	/**
+	 * Matar a árvore enraizada num PID que NÃO é líder de grupo — o caso em que `spawnOptions` não
+	 * chegou ao `spawn`.
+	 *
+	 * `terminate` acima pressupõe que QUEM SPAWNOU aplicou `spawnOptions`; no POSIX isso significa
+	 * `detached: true`, que é o que cria o grupo. Nem todo consumidor pode: o
+	 * `StdioClientTransport` do SDK do MCP spawna com um objeto de opções FIXO (medido no fonte,
+	 * `dist/esm/client/stdio.js:65-75`) e descarta silenciosamente qualquer opção que a gente passe.
+	 * Um `process.kill(-pid)` ali lança ESRCH, e o filho — mais os netos dele — sobrevive.
+	 *
+	 * Então esta é uma capacidade DECLARADA e não um detalhe de implementação: quem spawna sem poder
+	 * adotar o filho chama isto, e cada plataforma resolve com a ferramenta que tem — o Windows já
+	 * anda a árvore por pid (`taskkill /T`), o POSIX desce pelos filhos diretos.
+	 */
+	terminateByPid(pid: number, graceMs: number): void
 }
 
 /** What a strategy needs from the child: its pid, its liveness (`exitCode`/`signalCode` are set the
@@ -76,6 +91,32 @@ export const posixProcessTree: ProcessTree = {
 			() => clearTimeout(escalation),
 		)
 	},
+	terminateByPid(pid, graceMs) {
+		// Sem grupo para sinalizar, a árvore é descoberta pelo pai de cada processo. `pgrep -P` lista
+		// os filhos diretos; a recursão faz o resto. Os FILHOS primeiro, o pai por último: matar o pai
+		// antes reparenta os netos ao init e some com o caminho até eles.
+		const descendants = (root: number): number[] => {
+			const found = spawnSync('pgrep', ['-P', String(root)], { encoding: 'utf8' })
+			if (found.status !== 0 || !found.stdout) return []
+			const children = found.stdout.split('\n').map(Number).filter(Number.isInteger)
+			return children.flatMap(child => [...descendants(child), child])
+		}
+
+		const tree = [...descendants(pid), pid]
+		const signal = (sig: 'SIGTERM' | 'SIGKILL') => {
+			for (const target of tree) {
+				try {
+					process.kill(target, sig)
+				} catch {
+					// já reaped — o alvo seguinte ainda pode existir
+				}
+			}
+		}
+
+		signal('SIGTERM')
+		const escalation = setTimeout(() => signal('SIGKILL'), graceMs)
+		escalation.unref?.()
+	},
 }
 
 /** Production shell-out: `taskkill` with no console window and no handle kept on our side. */
@@ -110,6 +151,12 @@ export function windowsProcessTree(run: TreeCommand = spawnTreeCommand): Process
 			// Tree root already reaped — there is no tree left that this pid safely names.
 			if (child.exitCode !== null || child.signalCode !== null) return
 			run('taskkill', ['/T', '/F', '/PID', String(child.pid)])
+		},
+		terminateByPid(pid, _graceMs) {
+			// `taskkill /T /F` já anda a árvore por pid — é indiferente a grupo e a `detached`, então
+			// esta capacidade e a `terminate` coincidem aqui. Estão separadas porque no POSIX não
+			// coincidem, e o contrato existe para o consumidor não precisar saber em qual está.
+			run('taskkill', ['/T', '/F', '/PID', String(pid)])
 		},
 	}
 }
