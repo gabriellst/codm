@@ -94,9 +94,24 @@ export class RequestMcpToolApproval extends Handler<typeof RequestMcpToolApprova
 }
 
 /**
+ * O limite de pré-visualização dos argumentos no card.
+ *
+ * Este texto vai para a tela em que o dono decide sob pressão, no meio de um turno do agente. Um
+ * `JSON.stringify` cru de um argumento grande (o conteúdo de um arquivo, um payload) vira uma
+ * parede que empurra a PERGUNTA para fora da vista — e a pergunta é a única coisa que o card
+ * precisa entregar. O hash canônico, que é o que de fato identifica a chamada, não depende disto.
+ */
+const ARGS_PREVIEW_LIMIT = 300
+
+/**
  * O texto que o dono lê no card. Carrega servidor, ferramenta e ARGUMENTOS — sem os argumentos a
  * pergunta é "posso rodar um comando?", que não é uma pergunta que alguém consiga responder.
  */
 function describeCall(input: { serverKey: string; toolName: string; args: Record<string, unknown> }): string {
-	return `O agente quer executar "${input.toolName}" do servidor MCP "${input.serverKey}" com: ${JSON.stringify(input.args)}`
+	const serialized = JSON.stringify(input.args)
+	const preview =
+		serialized.length > ARGS_PREVIEW_LIMIT
+			? `${serialized.slice(0, ARGS_PREVIEW_LIMIT)}… (${serialized.length} caracteres no total)`
+			: serialized
+	return `O agente quer executar "${input.toolName}" do servidor MCP "${input.serverKey}" com: ${preview}`
 }

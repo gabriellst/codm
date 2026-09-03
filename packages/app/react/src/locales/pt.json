@@ -484,7 +484,6 @@
 		"MCP_SERVER_KEY_CONFLICT": "Já existe um servidor MCP com esta chave.",
 		"MCP_SERVER_NOT_FOUND": "Servidor MCP não encontrado.",
 		"MCP_SERVER_TRANSPORT_INCOMPLETE": "O transporte deste servidor MCP está sem um campo obrigatório.",
-		"MCP_TOOL_APPROVAL_REQUIRED": "Esta ferramenta precisa da sua aprovação antes de poder rodar.",
 		"MISSING_ENVIRONMENT_VARIABLE": "Erro de configuração do servidor. Contate o suporte.",
 		"MISSING_LOG_CONTENT": "Erro interno de logging.",
 		"MODEL_NOT_AVAILABLE": "Este agente não oferece esse modelo.",

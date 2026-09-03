@@ -33,7 +33,11 @@ import type { AttachedThread } from './thread'
  * O rascunho é montado a partir do `AttachedThread` que a spec já criou, e não inventado: o mesmo
  * canal, o mesmo contato e o MESMO workspace por `existingWorkspaceId` (nunca um `path` novo, que
  * faria `CompleteOnboarding` registrar um segundo workspace para o mesmo diretório). `providers`
- * espelha o default de `givenAttachedThread`, que é o que o detector canônico do e2e reporta.
+ * é o que a THREAD foi de fato anexada com — lido de volta de `attached.providers`, nunca um
+ * literal `['CLAUDE_CODE']` redigitado aqui. Um literal envelheceria em silêncio no dia em que
+ * alguma spec chamar `givenAttachedThread({ providers: ['CODEX'] })`: o rascunho do onboarding
+ * diria uma coisa e a thread outra, e `CompleteOnboarding` validaria contra um provider que a
+ * thread nunca teve.
  */
 export async function givenCompletedOnboarding(session: ApiSession, attached: AttachedThread): Promise<void> {
 	await saveOnboardingStep(
@@ -46,7 +50,7 @@ export async function givenCompletedOnboarding(session: ApiSession, attached: At
 					kind: 'USER',
 				},
 				workspace: { existingWorkspaceId: attached.workspaceId },
-				providers: ['CLAUDE_CODE'],
+				providers: [...attached.providers],
 			},
 		},
 		{ client: session.client },

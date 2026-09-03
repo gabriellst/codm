@@ -80,7 +80,51 @@ const nonEmptyEntries = (entries: KeyValueEntry[]): Record<string, string> | und
 	return filtered.length > 0 ? Object.fromEntries(filtered.map(e => [e.key.trim(), e.value])) : undefined
 }
 
-const splitArgs = (raw: string): string[] | undefined => (raw.trim().length > 0 ? raw.trim().split(/\s+/) : undefined)
+/**
+ * A linha de argumentos como o dono a escreveu — respeitando aspas, e só isso.
+ *
+ * NÃO é um shell e não deve virar um: sem expansão de variável, sem glob, sem pipe. A única regra
+ * que a caixa precisa é a de aspas, porque sem ela `--profile "My Profile"` vira três argumentos —
+ * medido, e é o caso motivador do próprio recurso.
+ *
+ * Aspas abertas e não fechadas devolvem `undefined` em vez de adivinhar onde o dono queria fechar:
+ * o campo reprova na validação e ele vê o que faltou, que é melhor do que um servidor subindo com
+ * dois argumentos colados num só.
+ */
+export const splitArgs = (raw: string): string[] | undefined => {
+	const trimmed = raw.trim()
+	if (trimmed.length === 0) return undefined
+
+	const args: string[] = []
+	let current = ''
+	let quote: '"' | "'" | undefined
+	let started = false
+
+	for (const char of trimmed) {
+		if (quote !== undefined) {
+			if (char === quote) quote = undefined
+			else current += char
+			continue
+		}
+		if (char === '"' || char === "'") {
+			quote = char
+			started = true
+			continue
+		}
+		if (char === ' ' || char === '\t') {
+			if (started) args.push(current)
+			current = ''
+			started = false
+			continue
+		}
+		current += char
+		started = true
+	}
+
+	if (quote !== undefined) return undefined
+	if (started) args.push(current)
+	return args.length > 0 ? args : undefined
+}
 
 /**
  * Register or reconfigure a third-party MCP server (T12).

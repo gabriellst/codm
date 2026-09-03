@@ -41,9 +41,23 @@ export class RegisterMcpServer extends Handler<typeof RegisterMcpServerInputSche
 			throw new BaseError<AgentApplicationErrors>('MCP_SERVER_KEY_CONFLICT', `an MCP server with key "${input.key}" is already registered`)
 
 		const server = McpServer.create(input)
-		await this.withTransaction(tx, async tx => {
-			await this.servers.save(server, tx)
-		})
+		try {
+			await this.withTransaction(tx, async tx => {
+				await this.servers.save(server, tx)
+			})
+		} catch (error) {
+			// A checagem acima é o caminho NORMAL e continua sendo — ela devolve o erro nomeado sem
+			// gastar uma escrita. Este catch é a rede para a CORRIDA: dois cadastros simultâneos da mesma
+			// key passam os dois pela leitura e só o índice único os separa, e aí o que chega ao dono
+			// seria um erro cru do driver (500) no lugar do 409 que o contrato promete. Janela minúscula,
+			// resposta consistente.
+			if (error instanceof Error && error.message.includes('agent_mcp_servers.owner_id') && error.message.includes('agent_mcp_servers.key'))
+				throw new BaseError<AgentApplicationErrors>(
+					'MCP_SERVER_KEY_CONFLICT',
+					`an MCP server with key "${input.key}" is already registered`,
+				)
+			throw error
+		}
 		return { mcpServerId: server.id.value }
 	}
 }

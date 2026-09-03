@@ -49,11 +49,7 @@ export type ApplicationErrors = BaseApplicationErrors | AgentApplicationErrors
  *    the log unable to tell an expired run apart from an attempted cross-issue write — which is
  *    exactly the prompt-injection path the mitigation exists to catch.
  */
-export type AgentInterfaceErrors =
-	| 'AGENT_RUN_TOKEN_INVALID'
-	| 'AGENT_RUN_SCOPE_MISMATCH'
-	// The external tool requires the owner's approval; the call did not execute and a stop was raised.
-	| 'MCP_TOOL_APPROVAL_REQUIRED'
+export type AgentInterfaceErrors = 'AGENT_RUN_TOKEN_INVALID' | 'AGENT_RUN_SCOPE_MISMATCH'
 export type InterfaceErrors = BaseInterfaceErrors | AgentInterfaceErrors
 
 export type AgentInfrastructureErrors = never
@@ -84,5 +80,4 @@ registerErrorCodes({
 	MCP_SERVER_NOT_FOUND: HttpStatusCode.NOT_FOUND,
 	MCP_SERVER_TRANSPORT_INCOMPLETE: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	MCP_APPROVAL_ALREADY_SETTLED: HttpStatusCode.CONFLICT,
-	MCP_TOOL_APPROVAL_REQUIRED: HttpStatusCode.FORBIDDEN,
 })

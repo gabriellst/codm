@@ -265,7 +265,6 @@ pub mod types {
     ///    "MCP_SERVER_KEY_CONFLICT",
     ///    "MCP_SERVER_NOT_FOUND",
     ///    "MCP_SERVER_TRANSPORT_INCOMPLETE",
-    ///    "MCP_TOOL_APPROVAL_REQUIRED",
     ///    "MIGRATIONS_PENDING",
     ///    "MISSING_ENVIRONMENT_VARIABLE",
     ///    "MISSING_LOG_CONTENT",
@@ -450,8 +449,6 @@ pub mod types {
         McpServerNotFound,
         #[serde(rename = "MCP_SERVER_TRANSPORT_INCOMPLETE")]
         McpServerTransportIncomplete,
-        #[serde(rename = "MCP_TOOL_APPROVAL_REQUIRED")]
-        McpToolApprovalRequired,
         #[serde(rename = "MIGRATIONS_PENDING")]
         MigrationsPending,
         #[serde(rename = "MISSING_ENVIRONMENT_VARIABLE")]
@@ -631,9 +628,6 @@ pub mod types {
                 Self::McpServerTransportIncomplete => {
                     f.write_str("MCP_SERVER_TRANSPORT_INCOMPLETE")
                 }
-                Self::McpToolApprovalRequired => {
-                    f.write_str("MCP_TOOL_APPROVAL_REQUIRED")
-                }
                 Self::MigrationsPending => f.write_str("MIGRATIONS_PENDING"),
                 Self::MissingEnvironmentVariable => {
                     f.write_str("MISSING_ENVIRONMENT_VARIABLE")
@@ -760,7 +754,6 @@ pub mod types {
                 "MCP_SERVER_TRANSPORT_INCOMPLETE" => {
                     Ok(Self::McpServerTransportIncomplete)
                 }
-                "MCP_TOOL_APPROVAL_REQUIRED" => Ok(Self::McpToolApprovalRequired),
                 "MIGRATIONS_PENDING" => Ok(Self::MigrationsPending),
                 "MISSING_ENVIRONMENT_VARIABLE" => Ok(Self::MissingEnvironmentVariable),
                 "MISSING_LOG_CONTENT" => Ok(Self::MissingLogContent),

@@ -5136,14 +5136,7 @@
                                         "participant": {
                                           "type": "string"
                                         },
-                                        "quotedMessageContent": {
-                                          "type": "array",
-                                          "items": {
-                                            "type": "integer",
-                                            "minimum": -9007199254740991,
-                                            "maximum": 9007199254740991
-                                          }
-                                        },
+                                        "quotedMessageContent": {},
                                         "quotedMessageType": {
                                           "type": "string"
                                         },
@@ -9593,7 +9586,6 @@
           "MCP_SERVER_KEY_CONFLICT",
           "MCP_SERVER_NOT_FOUND",
           "MCP_SERVER_TRANSPORT_INCOMPLETE",
-          "MCP_TOOL_APPROVAL_REQUIRED",
           "MIGRATIONS_PENDING",
           "MISSING_ENVIRONMENT_VARIABLE",
           "MISSING_LOG_CONTENT",
@@ -10064,7 +10056,6 @@
     "MCP_SERVER_KEY_CONFLICT",
     "MCP_SERVER_NOT_FOUND",
     "MCP_SERVER_TRANSPORT_INCOMPLETE",
-    "MCP_TOOL_APPROVAL_REQUIRED",
     "MIGRATIONS_PENDING",
     "MISSING_ENVIRONMENT_VARIABLE",
     "MISSING_LOG_CONTENT",
