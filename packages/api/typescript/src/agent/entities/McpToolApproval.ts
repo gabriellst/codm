@@ -94,6 +94,26 @@ export class McpToolApproval extends AggregateRoot<typeof McpToolApprovalSchema>
 		this.settledAt = new Date()
 		this.validate()
 	}
+
+	/**
+	 * PERGUNTAR DE NOVO a mesma chamada — o caminho do dono que mudou de ideia.
+	 *
+	 * NÃO é o inverso de `settle`, e a diferença é o ponto: `settle` recusa reabrir porque um
+	 * veredito não pode virar outro EM SILÊNCIO, pelas costas de quem respondeu. Aqui o dono está
+	 * sendo perguntado OUTRA VEZ, explicitamente, e o novo stop é a nova pergunta — a antiga
+	 * continua registrada em `issue_stops` com a resposta que recebeu.
+	 *
+	 * Por que reabrir a linha em vez de inserir outra: o par `(issueId, callHash)` é ÚNICO, porque a
+	 * tabela responde "esta chamada pode rodar AGORA?" e essa pergunta tem uma resposta só. Duas
+	 * linhas foi exatamente o defeito — a leitura virava loteria e o card do dono multiplicava.
+	 */
+	reask(stopId: string): void {
+		this.decision = undefined
+		this.settledAt = undefined
+		this.stopId = stopId
+		this.requestedAt = new Date()
+		this.validate()
+	}
 }
 
 export interface McpToolApproval extends McpToolApprovalProps {}

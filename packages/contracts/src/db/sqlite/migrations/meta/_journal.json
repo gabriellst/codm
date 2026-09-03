@@ -211,6 +211,13 @@
       "when": 1788470348699,
       "tag": "0029_colorful_spiral",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1788470876183,
+      "tag": "0030_giant_cloak",
+      "breakpoints": true
     }
   ]
 }

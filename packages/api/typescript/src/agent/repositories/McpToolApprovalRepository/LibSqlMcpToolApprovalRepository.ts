@@ -1,6 +1,6 @@
 // packages/api/typescript/src/agent/repositories/McpToolApprovalRepository/LibSqlMcpToolApprovalRepository.ts — arquivo final COMPLETO
 import { injectable } from 'tsyringe-neo'
-import { and, eq, type SQL } from 'drizzle-orm'
+import { and, eq, isNull, type SQL } from 'drizzle-orm'
 import { LibSqlDatabaseDriver, LibSqlTransaction, tryCatchAsync } from '@codm/core-typescript'
 import { mcpToolApprovals } from '@codm/contracts/db'
 import { McpToolApproval } from '../../entities/McpToolApproval'
@@ -26,6 +26,13 @@ export class LibSqlMcpToolApprovalRepository extends McpToolApprovalRepository {
 		return this.findOne(and(eq(mcpToolApprovals.issueId, issueId), eq(mcpToolApprovals.callHash, callHash)), tx)
 	}
 
+	async findPendingByCall(issueId: string, callHash: string, tx?: LibSqlTransaction): Promise<McpToolApproval | undefined> {
+		return this.findOne(
+			and(eq(mcpToolApprovals.issueId, issueId), eq(mcpToolApprovals.callHash, callHash), isNull(mcpToolApprovals.decision)),
+			tx,
+		)
+	}
+
 	async save(entity: McpToolApproval, tx?: LibSqlTransaction): Promise<McpToolApproval> {
 		const dbc = tx ?? this.driver.db
 		entity.incrementVersion()
@@ -34,13 +41,15 @@ export class LibSqlMcpToolApprovalRepository extends McpToolApprovalRepository {
 			.insert(mcpToolApprovals)
 			.values(data)
 			// O `set` é CURADO, e não o objeto inteiro: `id`, `ownerId`, `issueId`, `threadId`,
-			// `serverKey`, `toolName`, `callHash`, `callArguments`, `stopId` e `requestedAt` são o que a
-			// linha É, não o que ela vira. Só `decision`/`settledAt` (o flip) e as colunas de auditoria
-			// mudam num update legítimo.
+			// `serverKey`, `toolName`, `callHash` e `callArguments` são o que a linha É, não o que ela
+			// vira. `decision`/`settledAt` (o flip) e `stopId`/`requestedAt` (o `reask` — a linha
+			// REABERTA pela pergunta nova) mudam num update legítimo, mais as colunas de auditoria.
 			.onConflictDoUpdate({
 				target: mcpToolApprovals.id,
 				set: {
 					decision: data.decision,
+					stopId: data.stopId,
+					requestedAt: data.requestedAt,
 					settledAt: data.settledAt,
 					updatedAt: data.updatedAt,
 					version: data.version,

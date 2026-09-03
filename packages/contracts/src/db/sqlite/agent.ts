@@ -295,7 +295,13 @@ export const mcpToolApprovals = sqliteTable(
 		// array literal, porque é isso que `enumCheck` promete no próprio docblock.
 		enumCheck('agent_mcp_tool_approvals_decision_check', t.decision, Object.values(McpApprovalDecision)),
 		// O lookup do replay: "esta chamada, nesta issue, já foi aprovada?"
-		index('agent_mcp_tool_approvals_lookup_idx').on(t.issueId, t.callHash),
+		//
+		// `uniqueIndex`, e não `index`: a tabela é ESTADO CORRENTE ("esta chamada pode rodar nesta
+		// issue?"), não histórico. Com duas linhas para o mesmo par, a leitura do door vira loteria
+		// (`LIMIT 1` sem `ORDER BY` devolve a mais antiga) e o dono passa a ver uma pergunta nova a cada
+		// retry. O histórico de quantas vezes foi perguntado e o que se respondeu vive em `issue_stops`,
+		// uma linha por stop com `resolution` e `resolvedAt` — que é onde ele pertence.
+		uniqueIndex('agent_mcp_tool_approvals_call_unq').on(t.issueId, t.callHash),
 		// O lookup do handler quando o stop é resolvido.
 		uniqueIndex('agent_mcp_tool_approvals_stop_unq').on(t.stopId),
 	],

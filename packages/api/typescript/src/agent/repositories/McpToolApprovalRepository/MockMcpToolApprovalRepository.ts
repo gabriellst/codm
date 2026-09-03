@@ -20,6 +20,10 @@ export class MockMcpToolApprovalRepository extends McpToolApprovalRepository {
 		return [...this.rows.values()].find(a => a.issueId === issueId && a.callHash === callHash)
 	}
 
+	async findPendingByCall(issueId: string, callHash: string, _tx?: Transaction): Promise<McpToolApproval | undefined> {
+		return [...this.rows.values()].find(a => a.issueId === issueId && a.callHash === callHash && a.decision === undefined)
+	}
+
 	async save(entity: McpToolApproval, _tx?: Transaction): Promise<McpToolApproval> {
 		entity.incrementVersion()
 		this.rows.set(entity.id.value, entity)

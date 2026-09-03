@@ -44,8 +44,12 @@ export class RequestMcpToolApproval extends Handler<typeof RequestMcpToolApprova
 
 	protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
 		const callHash = canonicalCallHash({ serverKey: input.serverKey, toolName: input.toolName, args: input.args })
-		const existing = await this.approvals.findByCall(input.issueId, callHash, tx)
-		if (existing?.isPending) return { stopId: existing.stopId }
+
+		// PENDENTE, e não "qualquer uma": reaproveitar um card que o dono JÁ respondeu seria devolver
+		// um stop resolvido, que ele nunca mais vai ver. Esta é a metade do dedup que faz o Needs-you
+		// não multiplicar dentro de um mesmo turno.
+		const pending = await this.approvals.findPendingByCall(input.issueId, callHash, tx)
+		if (pending) return { stopId: pending.stopId }
 
 		// UMA transação para os dois. O stop é a PERGUNTA e a linha é o que a resposta vai encontrar:
 		// gravar o stop e falhar ao gravar a linha deixaria um card no Needs-you cuja aprovação não
@@ -61,7 +65,29 @@ export class RequestMcpToolApproval extends Handler<typeof RequestMcpToolApprova
 				},
 				tx,
 			)
-			await this.approvals.save(McpToolApproval.request({ ...input, stopId }), tx)
+
+			// A linha JÁ DECIDIDA do mesmo par é REABERTA, nunca duplicada: `(issueId, callHash)` é
+			// único, e a tabela responde "pode rodar agora?" — uma pergunta com uma resposta só. O
+			// histórico de que houve um DENY antes fica em `issue_stops`, com a sua resolução.
+			const settled = await this.approvals.findByCall(input.issueId, callHash, tx)
+			if (settled) {
+				settled.reask(stopId)
+				await this.approvals.save(settled, tx)
+				return { stopId }
+			}
+
+			await this.approvals.save(
+				McpToolApproval.request({
+					ownerId: input.ownerId,
+					issueId: input.issueId,
+					threadId: input.threadId,
+					serverKey: input.serverKey,
+					toolName: input.toolName,
+					args: input.args,
+					stopId,
+				}),
+				tx,
+			)
 			return { stopId }
 		})
 	}
