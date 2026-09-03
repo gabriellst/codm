@@ -13,6 +13,11 @@ import { OrchestratorAgent, OrchestratorPromptBuilder } from './agents/Orchestra
 import { AgentSessionRepository, LibSqlAgentSessionRepository, MockAgentSessionRepository } from './repositories/AgentSessionRepository'
 import { LibSqlMailboxRepository, MailboxRepository, MockMailboxRepository } from './repositories/MailboxRepository'
 import { McpServerRepository, LibSqlMcpServerRepository, MockMcpServerRepository } from './repositories/McpServerRepository'
+import {
+	McpToolApprovalRepository,
+	LibSqlMcpToolApprovalRepository,
+	MockMcpToolApprovalRepository,
+} from './repositories/McpToolApprovalRepository'
 import { StalledIssueReader, LibSqlStalledIssueReader, MockStalledIssueReader } from './services/StalledIssueReader'
 import { McpUpstreamRegistry, DefaultMcpUpstreamRegistry, MockMcpUpstreamRegistry } from './services/McpUpstreamRegistry'
 
@@ -86,6 +91,13 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	{ token: MailboxRepository, mock: MockMailboxRepository, integration: LibSqlMailboxRepository, real: LibSqlMailboxRepository },
 	// Third-party MCP servers the owner registered on this machine (Task T3).
 	{ token: McpServerRepository, mock: MockMcpServerRepository, integration: LibSqlMcpServerRepository, real: LibSqlMcpServerRepository },
+	// The owner's decision on ONE external tool call — PENDING/APPROVED/DENIED (Task T7).
+	{
+		token: McpToolApprovalRepository,
+		mock: MockMcpToolApprovalRepository,
+		integration: LibSqlMcpToolApprovalRepository,
+		real: LibSqlMcpToolApprovalRepository,
+	},
 	// The daemon as an MCP CLIENT (Task T5). `integration` binds the MOCK on purpose — a test cannot
 	// depend on a third-party MCP server being installed on the CI machine.
 	{ token: McpUpstreamRegistry, mock: MockMcpUpstreamRegistry, integration: MockMcpUpstreamRegistry, real: DefaultMcpUpstreamRegistry },

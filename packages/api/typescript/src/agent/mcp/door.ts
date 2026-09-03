@@ -4,9 +4,15 @@ import { withMcpRunContext } from '@codm/client-typescript/typescript/mcp/contex
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { McpScope } from '@codm/contracts-typescript/wire/enums'
+import { StopPolicyConfigRepository } from '@thread/repositories/StopPolicyConfigRepository'
 import type { AgentRunIdentity } from '../types/AgentRunIdentity'
 import type { AgentInterfaceErrors } from '../errors'
-import { McpUpstreamRegistry } from '../services/McpUpstreamRegistry'
+import { McpUpstreamRegistry, type UpstreamCallResult } from '../services/McpUpstreamRegistry'
+import { McpServerRepository } from '../repositories/McpServerRepository'
+import { McpToolApprovalRepository } from '../repositories/McpToolApprovalRepository'
+import { RequestMcpToolApproval } from '../usecases/RequestMcpToolApproval'
+import { canonicalCallHash } from '../entities/McpToolApproval'
+import { resolveMcpCallDisposition } from './approvalPolicy'
 import { withUpstream, type RequestHandling } from './upstream'
 
 import { MCP_ROUTE_PREFIX } from './route'
@@ -83,6 +89,14 @@ export class McpDoorController extends McpAdapter {
 	 * never runs against an instance built that way. A required second parameter would fail those call
 	 * sites to COMPILE for a field they never touch at runtime. The `!this.mcpUpstream` guard inside
 	 * `buildTransport` is what makes the optionality sound rather than a landmine.
+	 *
+	 * The FOUR params after it (`mcpServers`, `stopPolicies`, `mcpApprovals`, `requestApproval`) carry
+	 * the SAME optionality for the SAME reason (Task T7): they exist only to let `callUpstream` decide
+	 * between executing and gating, and `door.test.ts`'s `T6` suite already builds this door with
+	 * `new McpDoorController(tokens, upstream)` — two arguments — to exercise `tools/list` merging
+	 * without ever driving a `tools/call` against an upstream tool. Each is bound in every DI env
+	 * alongside `DefaultMcpUpstreamRegistry` (Task T7.8), so production never resolves this door with
+	 * one present and the others missing.
 	 */
 	/**
 	 * A SECOND, correctly-typed reference to the same object `super()` already stored. `McpAdapter`'s
@@ -98,6 +112,10 @@ export class McpDoorController extends McpAdapter {
 	constructor(
 		identities: AgentIdentityService<AgentRunIdentity>,
 		private readonly mcpUpstream?: McpUpstreamRegistry,
+		private readonly mcpServers?: McpServerRepository,
+		private readonly stopPolicies?: StopPolicyConfigRepository,
+		private readonly mcpApprovals?: McpToolApprovalRepository,
+		private readonly requestApproval?: RequestMcpToolApproval,
 	) {
 		super(identities)
 		this.runIdentities = identities
@@ -168,8 +186,71 @@ export class McpDoorController extends McpAdapter {
 		return withUpstream(transport, {
 			scope: McpScope.ISSUE_HANDLING,
 			tools: await registry.listTools(identity.ownerId),
-			call: input => registry.call({ ownerId: identity.ownerId, ...input }),
+			call: input => this.callUpstream(registry, identity, input),
 		})
+	}
+
+	/**
+	 * THE GATE (Task T7). Runs BEFORE the upstream is ever touched — `approvalPolicy.ts` is the ONLY
+	 * place that decides between the two outcomes, this method only gathers what it needs to ask.
+	 *
+	 * `identity.issueId` is read here, never from `input`: upstream tools exist only under
+	 * `issue-handling` (see the class docblock), whose identity schema REQUIRES the field, so its
+	 * absence here is a broken invariant rather than a legitimate optional — same shape as
+	 * `ForkIssue`'s `entryId` guard.
+	 */
+	private async callUpstream(
+		registry: McpUpstreamRegistry,
+		identity: AgentRunIdentity,
+		input: { serverKey: string; toolName: string; args: Record<string, unknown> },
+	): Promise<UpstreamCallResult> {
+		if (!this.mcpServers || !this.stopPolicies || !this.mcpApprovals || !this.requestApproval) {
+			// See the constructor docblock: the four gate dependencies are bound together in every DI
+			// env alongside `mcpUpstream` (Task T7.8) — this is a wiring defect, never a runtime case a
+			// caller can hit.
+			throw new Error(
+				'McpDoorController: mcpUpstream is wired but the approval gate (mcpServers/stopPolicies/mcpApprovals/requestApproval) is not',
+			)
+		}
+		if (!identity.issueId) this.refuse('scope-mismatch', 'this run carries no issue to confine an external tool call to')
+
+		const mcpServer = await this.mcpServers.findByKey(identity.ownerId, input.serverKey)
+		// An unregistered/disabled server is not this gate's call to make — `registry.call` already
+		// answers it with a graceful `isError` text instead of throwing (see `DefaultMcpUpstreamRegistry`).
+		if (!mcpServer) return registry.call({ ownerId: identity.ownerId, ...input })
+
+		const stopPolicy = await this.stopPolicies.get(identity.ownerId)
+		const disposition = resolveMcpCallDisposition({
+			serverPolicy: mcpServer.approvalPolicy,
+			toolPolicy: mcpServer.toolPolicies?.[input.toolName],
+			ownerWantsToBeAsked: stopPolicy.approvalNeeded,
+		})
+		if (disposition === 'execute') return registry.call({ ownerId: identity.ownerId, ...input })
+
+		const callHash = canonicalCallHash(input)
+		const existing = await this.mcpApprovals.findByCall(identity.issueId, callHash)
+		if (existing?.grantsExecution) return registry.call({ ownerId: identity.ownerId, ...input })
+
+		// NEITHER approved nor executed — the call NEVER reaches `registry.call` on this branch. A
+		// pending/denied/absent approval all resolve here; `RequestMcpToolApproval` itself decides
+		// whether to reuse a pending request or raise a fresh one.
+		const { stopId } = await this.requestApproval.execute({
+			ownerId: identity.ownerId,
+			issueId: identity.issueId,
+			threadId: identity.threadId,
+			serverKey: input.serverKey,
+			toolName: input.toolName,
+			args: input.args,
+		})
+		return {
+			content: [
+				{
+					type: 'text',
+					text: `"${input.toolName}" on MCP server "${input.serverKey}" needs your approval before it can run (stop ${stopId}).`,
+				},
+			],
+			isError: true,
+		}
 	}
 }
 
