@@ -170,18 +170,40 @@ account or a stronger local model.
    `--resume` (what `PROVIDER_BINARIES[CODEX]` does today) reports both capabilities as ABSENT on a
    CLI that has both.
 3. ~~**`AgentModelId` is a closed enum; codex's model list is served per-account and churns.**~~
-   **CLOSED 2026-09-02 (founder): pin the slugs.** The measurement stands — the list changed wholesale
+   **CLOSED 2026-09-02 (founder): the member is a CODENAME, the version is not in the contract.**
+
+   The measurement stands, and it is the whole argument: the account-served list changed wholesale
    between two logins on this machine (`gpt-5.3-codex`, `gpt-5.1-codex`, … → `gpt-5.6-terra`,
-   `gpt-5.6-luna`, `gpt-5.5`, `gpt-5.4-mini`) — but the conclusion drawn from it was the wrong trade:
-   an empty catalog leaves the operator with NO choice on a CLI that has several, in order to avoid a
-   failure the transport already reports loudly (a slug the account does not serve comes back as
-   `not supported for your account`, a 400 on that turn — §5 point 3 — never a silent substitution).
-   So `AgentModelId` gained `GPT_5_3_CODEX` / `GPT_5_2_CODEX` / `GPT_5_1_CODEX`,
-   `PROVIDER_MODELS[CODEX]` lists them plus `DEFAULT` (the way back for whoever picked a slug the
-   account stopped serving), and `CodexAgentRunner` renders `-m <slug>` through `CODEX_MODEL_ALIASES` —
-   the ONE place a slug is spelled, so a churn is a one-map edit plus a contract bump. `-m` sits
-   outside the resume shape-narrowing because both help captures list it (`help-exec.txt:40`,
-   `help-exec-resume.txt:41`).
+   `gpt-5.6-luna`, `gpt-5.5`, `gpt-5.4-mini`). Two conclusions were drawn from it in turn, and the
+   first two were both wrong:
+
+   - **Empty catalog** (the original): leaves the operator with NO choice on a CLI that has several,
+     to avoid a failure the transport already reports loudly — a slug the account does not serve comes
+     back as `not supported for your account`, a 400 on that turn (§5 point 3), never a silent
+     substitution.
+   - **Pin the three slugs as members** (`GPT_5_3_CODEX` / `GPT_5_2_CODEX` / `GPT_5_1_CODEX`):
+     falsified within the week, on this same machine. `~/.codex/models_cache.json` (fetched
+     2026-08-27) lists `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`, `gpt-5.4-mini` and NOT ONE of the
+     three — so the entire codex row had become three guaranteed 400s, bought with a contract edit, a
+     migration (0027) and an SDK regen. The stale pin outlived even the operator's own
+     `~/.codex/config.toml`, which still said `model = "gpt-5.3-codex"`.
+   - **A member is a TIER CODENAME and the version floats** (the standing answer): `TERRA` is "the
+     balanced codex model", `LUNA` "the fast one" — exactly what `SONNET`/`OPUS`/`HAIKU` have always
+     been for claude, where nobody ever considered spelling `CLAUDE_4_5_SONNET` into the wire enum.
+     `PROVIDER_MODELS[CODEX]` lists the two plus `DEFAULT` (the way back for whoever picked a tier the
+     account stopped serving), and `CodexAgentRunner` renders `-m <slug>` through
+     `CODEX_MODEL_ALIASES` — the ONE place a version is spelled anywhere in the repo. A vendor bumping
+     `gpt-5.6-terra` to `gpt-5.7-terra` is now a one-line edit with no contract bump, no migration and
+     no SDK regen; a vendor RETIRING a codename still costs a contract edit, which is correct, because
+     that is the event that changes what the operator may choose. Migration 0028 carries the CHECK and
+     normalizes any row left holding a retired member. `-m` sits outside the resume shape-narrowing
+     because both help captures list it (`help-exec.txt:40`, `help-exec-resume.txt:41`).
+
+   `gpt-5.5` (frontier) and `gpt-5.4-mini` are deliberately NOT offered: they carry no codename, so a
+   member for either would put a version straight back into the contract.
+
+   A rail replaced the prose: `agent-models.test.ts` fails on any `AgentModelId` member that is not
+   letters-only, so the next versioned member is red before it reaches a migration.
 
    What this does NOT change: `comingSoon` and the catalog stay two axes. A build that cannot drive
    the codex binary still reports it `comingSoon` while serving the same catalog — the CLI's models are
