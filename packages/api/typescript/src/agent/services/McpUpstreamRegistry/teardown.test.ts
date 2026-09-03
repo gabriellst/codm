@@ -8,7 +8,7 @@ import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
 import { Protocol } from '@modelcontextprotocol/sdk/shared/protocol.js'
 import { McpTransport } from '@codm/contracts-typescript/wire/enums'
-import { PROCESS_TREES, type ProcessTree } from '@codm/core-typescript'
+import { MockLoggingService, PROCESS_TREES, type ProcessTree } from '@codm/core-typescript'
 import { McpServer } from '../../entities/McpServer'
 import { MockMcpServerRepository } from '../../repositories/McpServerRepository'
 import { DefaultMcpUpstreamRegistry } from './DefaultMcpUpstreamRegistry'
@@ -94,7 +94,7 @@ describe('DefaultMcpUpstreamRegistry.shutdown — teardown of REAL STDIO upstrea
 	beforeEach(() => {
 		dir = mkdtempSync(join(tmpdir(), 'mcp-teardown-'))
 		repo = new MockMcpServerRepository()
-		registry = new DefaultMcpUpstreamRegistry(repo)
+		registry = new DefaultMcpUpstreamRegistry(repo, new MockLoggingService())
 
 		// Spies through the REAL SDK classes — `close()` is defined on `Protocol.prototype`, which
 		// `Client.prototype` inherits, so this observes every `client.close()` call the registry makes
@@ -144,9 +144,7 @@ describe('DefaultMcpUpstreamRegistry.shutdown — teardown of REAL STDIO upstrea
 		await registry.shutdown()
 
 		expect(closeSpy).toHaveBeenCalledTimes(2)
-	}, // Real spawn + MCP handshake for 2 processes, then real teardown — see the module docblock atop
-	// `waitUntilDead` for why this needs headroom above bun's 5000ms default under load.
-	20_000)
+	}, 20_000) // `waitUntilDead` for why this needs headroom above bun's 5000ms default under load. // Real spawn + MCP handshake for 2 processes, then real teardown — see the module docblock atop
 
 	it('(b) terminate is called once per STDIO server, with that REAL pid — red before the fix, green after', async () => {
 		await registerStdioServer('alpha')
@@ -178,10 +176,7 @@ describe('DefaultMcpUpstreamRegistry.shutdown — teardown of REAL STDIO upstrea
 		for (const dead of deaths) {
 			expect(dead).toBe(true)
 		}
-	}, // Real spawn + handshake for 2 processes, real teardown, then up to `waitUntilDead`'s own 10s
-	// deadline (run concurrently for both pids, so worst case is ~10s, not ~20s) — comfortably below
-	// this cap even under load. See the module docblock atop `waitUntilDead`.
-	25_000)
+	}, 25_000) // this cap even under load. See the module docblock atop `waitUntilDead`. // deadline (run concurrently for both pids, so worst case is ~10s, not ~20s) — comfortably below // Real spawn + handshake for 2 processes, real teardown, then up to `waitUntilDead`'s own 10s
 
 	it('(c) shutdown is idempotent — a second call terminates nothing again', async () => {
 		await registerStdioServer('alpha')

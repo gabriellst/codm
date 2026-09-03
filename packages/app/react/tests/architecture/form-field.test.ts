@@ -7,8 +7,8 @@ import { join, resolve } from 'node:path'
  *
  * O que a rail protege não é estilo: um `<Input>` fora do form é um campo sem validação, sem
  * `handleBlur`, sem erro renderizado e sem o schema da SDK por trás — a sincronização manual que o
- * TanStack Form existe para matar. Quatro sítios NÃO são campos de dado e estão na whitelist com o
- * porquê; qualquer quinto é defeito até prova em contrário.
+ * TanStack Form existe para matar. Cinco sítios NÃO são campos de dado e estão na whitelist com o
+ * porquê; qualquer sexto é defeito até prova em contrário.
  *
  * O predicado de "dentro de form.Field" é contagem de aberturas menos fechamentos antes do índice do
  * match — o mesmo raciocínio de um parser, sem parser. É suficiente porque `form.Field` no repo é
@@ -33,6 +33,14 @@ const WHITELIST: Record<string, string> = {
 		'recipe `live-settings` — o input da tag salva no onBlur; não existe submit para um form.Field pendurar.',
 	'routes/(app)/attach/-components/ContactStep/index.tsx':
 		'busca: filtra uma lista já carregada dentro de um passo de wizard (STATE-LOCAL-FILTER). Busca nunca é form — form react.',
+	// A MESMA receita `live-settings` do ThreadSettingsDialog, dois blocos acima: a linha do servidor
+	// e a linha da ferramenta nao tem submit nenhum — trocar a politica JA E a escrita
+	// (`updateServer.mutate` no `onValueChange`). Nao ha valor pendente para um form guardar, nem
+	// botao para um `canSubmit` habilitar; pendurar um `form.Field` aqui seria um formulario de um
+	// campo que se submete sozinho. O cadastro, esse SIM e formulario, e vive em
+	// `-forms/McpServerForm` com `validators` por campo vindos do schema da SDK.
+	'routes/(app)/settings/-components/McpServersSection/index.tsx':
+		'receita `live-settings` — a politica do servidor e a da ferramenta salvam no proprio onValueChange; nao existe submit para um form.Field pendurar.',
 	'routes/(app)/attach/-components/AgentsStep/index.tsx':
 		'select de modelo (D3, ZbVfW) é estado LOCAL ao passo, nunca submetido: `attachThreadMutationRequestSchema` (o que este passo grava) não carrega modelo nenhum, e o único lugar da SDK que modela "modelo por provider" (`session.models`) só existe DEPOIS que a thread é criada. Sem campo de contrato para pousar, não há form.Field para pendurar.',
 }
@@ -40,9 +48,16 @@ const WHITELIST: Record<string, string> = {
 async function componentFiles(): Promise<string[]> {
 	const out: string[] = []
 	for await (const entry of new Bun.Glob('routes/**/-components/**/*.tsx').scan({ cwd: REACT_SRC, onlyFiles: true })) {
-		if (entry.startsWith('routes/styleguide/')) continue
-		if (/\.(test|stories)\.tsx$/.test(entry)) continue
-		out.push(entry)
+		// SEPARADOR NORMALIZADO, e nao por gosto: no Windows o `scan` devolve caminhos com barra
+		// enquanto o padrao do glob, os prefixos testados aqui e as CHAVES DA WHITELIST usam `/`.
+		// Sem esta linha a rail nao apenas falha — ela falha ao contrario: nenhuma isencao casa, todo
+		// arquivo isento vira infrator, e o terceiro caso reporta as cinco isencoes como orfas. Uma
+		// rail que so e verdadeira num SO nao e uma rail; e por isso que a normalizacao mora no
+		// PRODUTOR da lista, e nao espalhada por cada comparacao.
+		const normalized = entry.replace(/\\/g, '/')
+		if (normalized.startsWith('routes/styleguide/')) continue
+		if (/\.(test|stories)\.tsx$/.test(normalized)) continue
+		out.push(normalized)
 	}
 	return out.sort()
 }
