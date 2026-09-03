@@ -228,7 +228,27 @@ function StdioServerForm({ server, onDone, className, ...props }: VariantFormPro
 	const { t } = useTranslation()
 	const isReconfigure = server != null
 	const { isPending, submitCreate, submitReconfigure } = useMcpServerSubmit(server, onDone)
-	const [envEntries, setEnvEntries] = useState<KeyValueEntry[]>([])
+	/**
+	 * SEMEADO com as chaves que o servidor JÁ TEM — e a lista nascer vazia era perda silenciosa de
+	 * segredo.
+	 *
+	 * `McpServer.reconfigure` substitui o transporte INTEIRO, o que é a decisão certa da entidade: um
+	 * servidor STDIO que vira HTTP não pode carregar um `command` órfão. Mas o form submetia
+	 * `env: undefined` sempre que o dono abrisse "Reconfigurar" só para trocar um argumento — e a
+	 * `OPENAI_API_KEY` que ele cadastrou uma vez evaporava sem aviso, com o upstream passando a
+	 * falhar auth e a tela mostrando "0 variáveis" depois do fato.
+	 *
+	 * O VALOR não vem semeado, e não pode vir: `envKeys` é só nomes, porque o DTO de leitura nunca
+	 * carrega segredo (non-negotiable #4). Então a linha nasce com a chave preenchida e o valor
+	 * vazio, e o submit fica bloqueado enquanto houver valor faltando — o dono re-informa o que quer
+	 * manter e apaga o que não quer, explicitamente.
+	 */
+	const [envEntries, setEnvEntries] = useState<KeyValueEntry[]>(() =>
+		(server?.envKeys ?? []).map(key => ({ id: crypto.randomUUID(), key, value: '' })),
+	)
+	// Uma linha com chave e sem valor é uma chave que o dono ainda não re-informou. Submeter assim
+	// apagaria o segredo — que é exatamente o defeito. O botão espera.
+	const hasBlankSecret = envEntries.some(entry => entry.key.trim().length > 0 && entry.value.length === 0)
 
 	const form = useForm({
 		defaultValues: {
@@ -334,6 +354,7 @@ function StdioServerForm({ server, onDone, className, ...props }: VariantFormPro
 					addLabel={t('settings.mcpServers.form.addVariable')}
 					removeLabel={t('settings.mcpServers.form.removeVariable')}
 				/>
+				{hasBlankSecret && <FieldError>{t('settings.mcpServers.form.secretsMustBeReentered')}</FieldError>}
 			</Field>
 
 			{!isReconfigure && (
@@ -381,7 +402,7 @@ function StdioServerForm({ server, onDone, className, ...props }: VariantFormPro
 							? updateMcpServerMutationRequestSchema.safeParse(payload).success
 							: registerMcpServerMutationRequestSchema.safeParse(payload).success
 						return (
-							<Button type="submit" disabled={!valid || isPending}>
+							<Button type="submit" disabled={!valid || isPending || hasBlankSecret}>
 								{isPending && <Spinner className="mr-2" />}
 								{isReconfigure ? t('settings.mcpServers.form.save') : t('settings.mcpServers.form.register')}
 							</Button>
@@ -398,7 +419,18 @@ function HttpServerForm({ server, onDone, className, ...props }: VariantFormProp
 	const { t } = useTranslation()
 	const isReconfigure = server != null
 	const { isPending, submitCreate, submitReconfigure } = useMcpServerSubmit(server, onDone)
-	const [headerEntries, setHeaderEntries] = useState<KeyValueEntry[]>([])
+	/**
+	 * SEMEADO com as chaves que o servidor JÁ TEM — mesmo raciocínio de `StdioServerForm.envEntries`:
+	 * `headerKeys` é só nomes (o DTO de leitura nunca carrega segredo, non-negotiable #4), então a
+	 * linha nasce com a chave preenchida e o valor vazio, e o submit fica bloqueado enquanto houver
+	 * valor faltando — o dono re-informa o que quer manter e apaga o que não quer, explicitamente.
+	 */
+	const [headerEntries, setHeaderEntries] = useState<KeyValueEntry[]>(() =>
+		(server?.headerKeys ?? []).map(key => ({ id: crypto.randomUUID(), key, value: '' })),
+	)
+	// Uma linha com chave e sem valor é uma chave que o dono ainda não re-informou. Submeter assim
+	// apagaria o segredo — que é exatamente o defeito. O botão espera.
+	const hasBlankSecret = headerEntries.some(entry => entry.key.trim().length > 0 && entry.value.length === 0)
 
 	const form = useForm({
 		defaultValues: {
@@ -486,6 +518,7 @@ function HttpServerForm({ server, onDone, className, ...props }: VariantFormProp
 					addLabel={t('settings.mcpServers.form.addVariable')}
 					removeLabel={t('settings.mcpServers.form.removeVariable')}
 				/>
+				{hasBlankSecret && <FieldError>{t('settings.mcpServers.form.secretsMustBeReentered')}</FieldError>}
 			</Field>
 
 			{!isReconfigure && (
@@ -525,7 +558,7 @@ function HttpServerForm({ server, onDone, className, ...props }: VariantFormProp
 							? updateMcpServerMutationRequestSchema.safeParse(payload).success
 							: registerMcpServerMutationRequestSchema.safeParse(payload).success
 						return (
-							<Button type="submit" disabled={!valid || isPending}>
+							<Button type="submit" disabled={!valid || isPending || hasBlankSecret}>
 								{isPending && <Spinner className="mr-2" />}
 								{isReconfigure ? t('settings.mcpServers.form.save') : t('settings.mcpServers.form.register')}
 							</Button>

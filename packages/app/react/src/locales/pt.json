@@ -754,6 +754,7 @@
 				"reconfigureTitle": "Reconfigurar {{key}}",
 				"removeVariable": "Remover variável",
 				"save": "Salvar",
+				"secretsMustBeReentered": "Reconfigurar substitui as variáveis: re-informe o valor de cada chave que quiser manter.",
 				"transportLabel": "Transporte",
 				"urlLabel": "URL do servidor",
 				"urlPlaceholder": "https://mcp.example.com",

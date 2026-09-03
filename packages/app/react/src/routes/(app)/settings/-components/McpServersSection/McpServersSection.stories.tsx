@@ -1,8 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react'
+import { expect, screen, userEvent } from 'storybook/test'
 import { getSettingsQueryOptions } from '@codm/client-typescript/typescript'
 import type { GetSettingsQueryResponse } from '@codm/client-typescript/typescript'
 import type { DeepPartial } from '@/lib'
+import { Dialog } from '@codm/app-ui/dialog'
+import i18n from '@/lib/i18n'
 import { connected, errorQuery, loadingQuery, mockQuery } from '@/storybook'
+import { McpServerForm } from '../../-forms/McpServerForm'
 import { McpServersSection } from '.'
 
 /**
@@ -184,4 +188,56 @@ export const Loading: Story = {
 
 export const ErrorState: Story = {
 	parameters: { msw: { handlers: [errorQuery(opts)] } },
+}
+
+/** The server this story reconfigures — one env var already on file (`OPENAI_API_KEY`), name only. */
+const SERVER_WITH_SECRET: GetSettingsQueryResponse['mcpServers'][number] = {
+	id: 'mcp-browser-use',
+	key: 'browser-use',
+	transport: 'STDIO',
+	command: 'npx',
+	args: ['-y', '@agent/browser-use-mcp'],
+	envKeys: ['OPENAI_API_KEY'],
+	headerKeys: [],
+	enabled: true,
+	approvalPolicy: 'AUTO',
+	reachable: true,
+	tools: [],
+}
+
+/**
+ * RECONFIGURE com um segredo já cadastrado (T5) — abrir "Reconfigurar" NÃO PODE apagar a
+ * `OPENAI_API_KEY` que o dono já tem. A linha nasce com a CHAVE preenchida (`envKeys` é só nome —
+ * o DTO de leitura nunca carrega segredo) e o VALOR vazio, e o botão de salvar fica bloqueado até
+ * o dono re-informar o valor.
+ *
+ * Renderiza o `McpServerForm` real dentro de um `Dialog open` — mesma técnica de
+ * `thread-config.stories.tsx` (`<Dialog open><ThreadSettingsDialog .../></Dialog>`) — em vez de
+ * clicar o botão "Reconfigurar" da `McpServersSection`: aquele botão só chama
+ * `useDialogStore().show(...)`, e o `<Dialog>` que de fato lê `content`/`open` do store mora em
+ * `(app)/route.tsx` (`AuthLayout`), que o harness de story isolado (`withConnected`) não monta —
+ * clicar não renderizaria nada para o `play` inspecionar.
+ */
+export const ReconfigureWithSecrets: Story = {
+	render: () => (
+		<Dialog open>
+			<McpServerForm server={SERVER_WITH_SECRET} onDone={() => {}} />
+		</Dialog>
+	),
+	play: async () => {
+		await i18n.changeLanguage('pt')
+
+		// A CHAVE vem semeada — `envKeys` é só nome, o DTO de leitura nunca carrega segredo.
+		const keyInput = await screen.findByDisplayValue('OPENAI_API_KEY')
+		await expect(keyInput).toBeInTheDocument()
+
+		// O VALOR nasce vazio, e o submit fica bloqueado enquanto ele estiver assim.
+		const saveButton = screen.getByRole('button', { name: i18n.t('settings.mcpServers.form.save') })
+		await expect(saveButton).toBeDisabled()
+
+		const valueInput = screen.getByPlaceholderText(i18n.t('settings.mcpServers.form.valueColumnLabel'))
+		await userEvent.type(valueInput, 'sk-test-123')
+
+		await expect(saveButton).toBeEnabled()
+	},
 }
