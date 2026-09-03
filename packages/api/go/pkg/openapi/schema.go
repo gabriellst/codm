@@ -370,10 +370,15 @@ func (c *schemaCtx) namedSchema(t *types.Named) map[string]any {
 		return map[string]any{"type": "string", "format": "date-time"}
 	case pkgPath == "github.com/google/uuid" && name == "UUID":
 		return map[string]any{"type": "string", "format": "uuid"}
-	case pkgPath == "encoding/json" && name == "RawMessage":
-		// When a parent struct has a @union annotation, the containing struct's
-		// union field is already replaced in unionSchema. Remaining RawMessages
-		// are truly unknown.
+	case pkgPath == "encoding/json" && name == "RawMessage",
+		pkgPath == "encoding/json/jsontext" && name == "Value":
+		// DOIS caminhos para o MESMO tipo, e ambos são `encoding/json` do ponto de vista do contrato.
+		// No Go ≥1.27 `json.RawMessage` é alias de `jsontext.Value`; `types.Unalias` em `typeSchema`
+		// resolve o alias e é o NOME DE DESTINO que chega aqui. Listar os dois mantém o walker correto
+		// nas duas versões, em vez de amarrá-lo à do dia.
+		//
+		// Quando a struct pai tem anotação @union, o campo já foi substituído em unionSchema; os
+		// RawMessage que sobram são genuinamente desconhecidos.
 		return map[string]any{"x-unknown": true}
 	}
 

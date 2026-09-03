@@ -11,10 +11,7 @@ export type GetChannelOutput = {
      * @type string, date-time
     */
     createdAt: string;
-    /**
-     * @type array
-    */
-    credentials: number[];
+    credentials: any;
     /**
      * @type string
     */

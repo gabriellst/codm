@@ -9,10 +9,7 @@ export type WhatsAppContextInfo = {
      * @type string | undefined
     */
     participant?: string;
-    /**
-     * @type array | undefined
-    */
-    quotedMessageContent?: number[];
+    quotedMessageContent?: any;
     /**
      * @type string | undefined
     */

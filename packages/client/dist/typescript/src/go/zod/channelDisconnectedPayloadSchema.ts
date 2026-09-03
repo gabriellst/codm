@@ -9,5 +9,5 @@ export const channelDisconnectedPayloadSchema = z.object({
     "channelId": z.uuid(),
 "ownerId": z.string(),
 "platform": z.string(),
-"platformData": z.optional(z.array(z.int()))
+"platformData": z.optional(z.any())
     })

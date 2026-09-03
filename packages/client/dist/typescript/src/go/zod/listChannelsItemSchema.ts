@@ -9,7 +9,7 @@ import { z } from "zod/v4";
 
 export const listChannelsItemSchema = z.object({
     "createdAt": z.iso.datetime(),
-"credentials": z.array(z.int()),
+"credentials": z.any(),
 "id": z.string(),
 "name": z.string(),
 get "platform"(){

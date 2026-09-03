@@ -2571,7 +2571,7 @@ type ChannelConnectedPayload struct {
 	ChannelId    openapi_types.UUID `json:"channelId"`
 	OwnerId      string             `json:"ownerId"`
 	Platform     string             `json:"platform"`
-	PlatformData *[]int             `json:"platformData,omitempty"`
+	PlatformData interface{}        `json:"platformData,omitempty"`
 }
 
 // ChannelCreatedPayload defines model for ChannelCreatedPayload.
@@ -2587,7 +2587,7 @@ type ChannelDisconnectedPayload struct {
 	ChannelId    openapi_types.UUID `json:"channelId"`
 	OwnerId      string             `json:"ownerId"`
 	Platform     string             `json:"platform"`
-	PlatformData *[]int             `json:"platformData,omitempty"`
+	PlatformData interface{}        `json:"platformData,omitempty"`
 }
 
 // ChannelEvent defines model for ChannelEvent.
@@ -2747,7 +2747,7 @@ type ChannelLoggedOutPayload struct {
 	ChannelId    openapi_types.UUID `json:"channelId"`
 	OwnerId      string             `json:"ownerId"`
 	Platform     string             `json:"platform"`
-	PlatformData *[]int             `json:"platformData,omitempty"`
+	PlatformData interface{}        `json:"platformData,omitempty"`
 	Reason       string             `json:"reason"`
 }
 
@@ -2793,7 +2793,7 @@ type ChannelMessageDeliveredPayload struct {
 // ChannelMessageEditedPayload defines model for ChannelMessageEditedPayload.
 type ChannelMessageEditedPayload struct {
 	ChannelId   openapi_types.UUID `json:"channelId"`
-	Content     *[]int             `json:"content,omitempty"`
+	Content     interface{}        `json:"content,omitempty"`
 	MessageId   string             `json:"messageId"`
 	MessageType MessageType        `json:"messageType"`
 	OwnerId     string             `json:"ownerId"`
@@ -3584,7 +3584,7 @@ type ForwardMessageOutput struct {
 // GetChannelOutput defines model for GetChannelOutput.
 type GetChannelOutput struct {
 	CreatedAt     time.Time     `json:"createdAt"`
-	Credentials   []int         `json:"credentials"`
+	Credentials   interface{}   `json:"credentials"`
 	Id            string        `json:"id"`
 	Name          string        `json:"name"`
 	OwnerRemoteId string        `json:"ownerRemoteId"`
@@ -3832,7 +3832,7 @@ type Language string
 // ListChannelsItem defines model for ListChannelsItem.
 type ListChannelsItem struct {
 	CreatedAt   time.Time     `json:"createdAt"`
-	Credentials []int         `json:"credentials"`
+	Credentials interface{}   `json:"credentials"`
 	Id          string        `json:"id"`
 	Name        string        `json:"name"`
 	Platform    ChannelKind   `json:"platform"`
@@ -4130,11 +4130,11 @@ type WhatsAppContactContent struct {
 
 // WhatsAppContextInfo defines model for WhatsAppContextInfo.
 type WhatsAppContextInfo struct {
-	Participant          *string `json:"participant,omitempty"`
-	QuotedMessageContent *[]int  `json:"quotedMessageContent,omitempty"`
-	QuotedMessageType    *string `json:"quotedMessageType,omitempty"`
-	QuotedSenderName     *string `json:"quotedSenderName,omitempty"`
-	StanzaId             *string `json:"stanzaId,omitempty"`
+	Participant          *string     `json:"participant,omitempty"`
+	QuotedMessageContent interface{} `json:"quotedMessageContent,omitempty"`
+	QuotedMessageType    *string     `json:"quotedMessageType,omitempty"`
+	QuotedSenderName     *string     `json:"quotedSenderName,omitempty"`
+	StanzaId             *string     `json:"stanzaId,omitempty"`
 }
 
 // WhatsAppCredentials defines model for WhatsAppCredentials.

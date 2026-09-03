@@ -17,8 +17,5 @@ export type ChannelConnectedPayload = {
      * @type string
     */
     platform: string;
-    /**
-     * @type array | undefined
-    */
-    platformData?: number[];
+    platformData?: any;
 };

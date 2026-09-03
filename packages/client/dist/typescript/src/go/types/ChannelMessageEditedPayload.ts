@@ -11,10 +11,7 @@ export type ChannelMessageEditedPayload = {
      * @type string, uuid
     */
     channelId: string;
-    /**
-     * @type array | undefined
-    */
-    content?: number[];
+    content?: any;
     /**
      * @type string
     */

@@ -9,7 +9,7 @@ import { z } from "zod/v4";
 
 export const channelMessageEditedPayloadSchema = z.object({
     "channelId": z.uuid(),
-"content": z.optional(z.array(z.int())),
+"content": z.optional(z.any()),
 "messageId": z.string(),
 get "messageType"(){
                 return messageTypeSchema
