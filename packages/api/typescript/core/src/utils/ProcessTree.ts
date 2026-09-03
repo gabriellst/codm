@@ -8,6 +8,11 @@ import { spawn as spawnChild, type ChildProcess, type SpawnOptions } from 'node:
  * after the MCP inversion), and killing only the direct child leaks them (§4.11, AC-3.3). What "the
  * whole tree" means is an OS fact, so it is declared per OS:
  *
+ * Since the MCP inversion, this same contract also governs a SECOND tree: third-party MCP servers are
+ * no longer children of the provider CLI — the daemon itself spawns and owns them as direct STDIO
+ * children (`DefaultMcpUpstreamRegistry`), so tearing down a run now means walking two trees rooted in
+ * this process, not one.
+ *
  *  - POSIX: `detached: true` makes the child a process-GROUP leader, so a negative pid names the
  *    group. Graceful `SIGTERM` to the group first, `SIGKILL` to the group after the grace window,
  *    on an `unref`'d timer (a pending kill must never keep a process — or a test runner — alive),

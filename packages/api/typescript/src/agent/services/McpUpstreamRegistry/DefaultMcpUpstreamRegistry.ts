@@ -72,9 +72,13 @@ export class DefaultMcpUpstreamRegistry extends McpUpstreamRegistry {
 	async shutdown(): Promise<void> {
 		const tree = PROCESS_TREES[process.platform]
 		for (const [key, client] of this.clients) {
+			// O pid é lido ANTES do close, nunca depois: `StdioClientTransport.close()` zera
+			// `this._process` de forma SÍNCRONA antes de esperar qualquer coisa (medido no SDK,
+			// `dist/esm/client/stdio.js:146`), e `get pid()` é `this._process?.pid ?? null` — ler
+			// depois do await sempre devolve `null`, o `if (pid)` nunca entra, e `tree.terminate`
+			// nunca roda. É a causa raiz do vazamento que o T11 reportou.
+			const pid = this.transports.get(key)?.pid
 			await client.close().catch(() => undefined)
-			const transport = this.transports.get(key)
-			const pid = transport?.pid
 			// `client.close()` fecha o stdio; o TREE é o que alcança os netos que o servidor spawnou
 			// (um MCP de navegador abre o próprio browser). Matar só o filho direto vaza o browser.
 			if (pid) tree.terminate({ pid, kill: () => true, exitCode: null, signalCode: null }, Promise.resolve(), 2000)

@@ -1959,9 +1959,12 @@ export class DefaultMcpUpstreamRegistry extends McpUpstreamRegistry {
 	async shutdown(): Promise<void> {
 		const tree = PROCESS_TREES[process.platform]
 		for (const [key, client] of this.clients) {
+			// O pid é lido ANTES do close, e a ordem é a correção de um defeito medido: o
+			// `StdioClientTransport.close()` do SDK faz `this._process = undefined` de forma SÍNCRONA na
+			// primeira linha, e `get pid()` é `this._process?.pid ?? null`. Lendo depois, o pid é sempre
+			// null, o `if (pid)` nunca entra e o TREE — a única coisa que alcança os netos — nunca roda.
+			const pid = this.transports.get(key)?.pid
 			await client.close().catch(() => undefined)
-			const transport = this.transports.get(key)
-			const pid = transport?.pid
 			// `client.close()` fecha o stdio; o TREE é o que alcança os netos que o servidor spawnou
 			// (um MCP de navegador abre o próprio browser). Matar só o filho direto vaza o browser.
 			if (pid) tree.terminate({ pid, kill: () => undefined, exitCode: null, signalCode: null }, Promise.resolve(), 2000)
@@ -3051,6 +3054,7 @@ git commit -m "test(agent): the owner can pre-approve everything, and no combina
 
 **Files to write:**
 - Create: `packages/api/typescript/src/agent/services/McpUpstreamRegistry/teardown.test.ts`
+- Modify: `packages/api/typescript/src/agent/services/McpUpstreamRegistry/DefaultMcpUpstreamRegistry.ts` — lê o pid ANTES do close (ver T11.1)
 - Modify: `packages/api/typescript/src/agent/lifecycle.ts` — o shutdown do contexto derruba o registry
 - Modify: `packages/api/typescript/core/src/utils/ProcessTree.ts` — atualiza o docblock
 
