@@ -2,7 +2,7 @@ import type { Page } from 'playwright'
 import { test, expect } from '../utils/test'
 import { dialog, field, pickOptionByValue } from '../utils/selectors'
 import { t } from '../utils/i18n'
-import { givenFreshUser, givenCompletedOnboarding, authenticateCloudSession } from '../utils/given'
+import { givenFreshUser, givenAttachedThread, givenCompletedOnboarding, authenticateCloudSession } from '../utils/given'
 import { getSettings, McpTransportEnum, McpApprovalPolicyEnum } from '@codm/client-typescript/typescript'
 
 /**
@@ -70,7 +70,13 @@ function serverRow(page: Page, key: string) {
  */
 test('mcp servers — owner registers a STDIO server through settings and it lands on ASK', async ({ page, goto }) => {
 	const user = await givenFreshUser({})
-	await givenCompletedOnboarding(user.session)
+	// `givenAttachedThread` ANTES do complete, e nao por gosto: desde a reescrita de draft/commit
+	// atomico, `CompleteOnboarding` REVALIDA um rascunho do servidor, e um `completeOnboarding` nu
+	// apresenta um rascunho vazio (`ONBOARDING_DRAFT_INCOMPLETE`). Nao existe endpoint de skip —
+	// concluir EXIGE um rascunho, e um rascunho sempre materializa canal + workspace + thread. E o
+	// que `11-artifact-preview.spec.ts` faz, e a ordem e o pre-requisito, nao uma preferencia.
+	const attached = await givenAttachedThread(user.session, { displayName: 'Ada' })
+	await givenCompletedOnboarding(user.session, attached)
 	// CloudSessionGate wraps every (app) route, checked before OnboardingGate — seed it first.
 	await authenticateCloudSession(page)
 

@@ -10,6 +10,9 @@ export interface AttachedThread {
 	workspaceId: string
 	threadId: string
 	contactExternalId: string
+	/** O nome com que o contato foi anexado — devolvido, e nao redigitado por quem precisa dele
+	 *  depois (`givenCompletedOnboarding` monta o rascunho do onboarding com o MESMO contato). */
+	contactDisplayName: string
 	workspacePath: string
 	/**
 	 * The citation the thread was gated on, minted server-side by `AttachThread` from the workspace
@@ -36,12 +39,13 @@ export async function givenAttachedThread(
 	const workspace = await addWorkspace({ path: workspacePath }, { client: session.client })
 
 	const contactExternalId = overrides.contactExternalId ?? `55119${Math.floor(Math.random() * 1e8)}`
+	const displayName = overrides.displayName ?? 'Ada'
 	const thread = await attachThread(
 		{
 			contactRef: {
 				channelId,
 				externalId: contactExternalId,
-				displayName: overrides.displayName ?? 'Ada',
+				displayName,
 				kind: 'USER',
 			},
 			workspaceId: workspace.workspaceId,
@@ -59,6 +63,7 @@ export async function givenAttachedThread(
 		workspaceId: workspace.workspaceId,
 		threadId: thread.threadId,
 		contactExternalId,
+		contactDisplayName: displayName,
 		workspacePath,
 		mentionTag: settings.mentionGate.tag,
 	}

@@ -71,7 +71,7 @@ test('preview de artefatos — imagem, áudio, vídeo, link e arquivo na convers
 	// A tela que esta spec exercita é GATEADA: sem `completedAt` o OnboardingGate manda para
 	// /onboarding e o backend recusa as leituras da thread. Antes da F7 isto passava por causa de um
 	// fail-open no gate, não por direito — ver o docblock de `givenCompletedOnboarding`.
-	await givenCompletedOnboarding(user.session)
+	await givenCompletedOnboarding(user.session, thread)
 	const client = user.session.client
 	const scratch = mkdtempSync(join(tmpdir(), 'codm-e2e-artifacts-'))
 	mkdirSync(SHOTS_DIR, { recursive: true })

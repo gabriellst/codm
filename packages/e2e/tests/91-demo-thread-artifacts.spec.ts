@@ -165,7 +165,7 @@ test('demo: film assets — Ada thread through (a)→(d), catalog, dashboard, si
 	const user = await givenFreshUser({})
 	const client = user.session.client
 	const thread = await givenAttachedThread(user.session, { displayName: 'Ada' })
-	await givenCompletedOnboarding(user.session)
+	await givenCompletedOnboarding(user.session, thread)
 	const scratch = mkdtempSync(join(tmpdir(), 'codm-film-'))
 
 	const inbound = (text: string) =>
