@@ -62,7 +62,17 @@ function isAlive(pid: number): boolean {
 	}
 }
 
-async function waitUntilDead(pid: number, timeoutMs = 5000): Promise<boolean> {
+/**
+ * Polls for the pid's death against a GENEROUS deadline instead of a single fixed sleep — the
+ * assertion this backs is "gone by the deadline", never "gone within exactly N ms". The deadline is
+ * intentionally decoupled from any `it()` timeout: this suite spawns real OS processes and tears them
+ * down through a real grace-period kill (`tree.terminate(..., 2000)`), and under CI/pre-commit load
+ * (many suites' processes competing for scheduler time) the OS can take meaningfully longer than the
+ * unloaded case to actually reap a child and report it gone via `process.kill(pid, 0)`. 10s here is
+ * comfortably above the 2s grace period `shutdown()` requests, and every call site pairs this with an
+ * `it()` timeout set well above 10s so the two deadlines never race each other.
+ */
+async function waitUntilDead(pid: number, timeoutMs = 10_000): Promise<boolean> {
 	const deadline = Date.now() + timeoutMs
 	while (Date.now() < deadline) {
 		if (!isAlive(pid)) return true
@@ -134,7 +144,9 @@ describe('DefaultMcpUpstreamRegistry.shutdown — teardown of REAL STDIO upstrea
 		await registry.shutdown()
 
 		expect(closeSpy).toHaveBeenCalledTimes(2)
-	})
+	}, // Real spawn + MCP handshake for 2 processes, then real teardown — see the module docblock atop
+	// `waitUntilDead` for why this needs headroom above bun's 5000ms default under load.
+	20_000)
 
 	it('(b) terminate is called once per STDIO server, with that REAL pid — red before the fix, green after', async () => {
 		await registerStdioServer('alpha')
@@ -158,12 +170,18 @@ describe('DefaultMcpUpstreamRegistry.shutdown — teardown of REAL STDIO upstrea
 		expect(new Set(pids).size).toBe(2)
 
 		// The strongest proof a recorded pid was the SERVER's real pid, not a stale/undefined one: the
-		// OS actually reports that process gone once shutdown has run its course.
-		for (const pid of pids) {
-			const dead = await waitUntilDead(pid as number)
+		// OS actually reports that process gone once shutdown has run its course. Waited CONCURRENTLY,
+		// not sequentially — sequential waits would let two independent 10s polling deadlines stack
+		// into a worst case double the `it()` timeout below for no reason; both pids die from the same
+		// `shutdown()` call, so there is nothing sequential about waiting for them.
+		const deaths = await Promise.all(pids.map(pid => waitUntilDead(pid as number)))
+		for (const dead of deaths) {
 			expect(dead).toBe(true)
 		}
-	})
+	}, // Real spawn + handshake for 2 processes, real teardown, then up to `waitUntilDead`'s own 10s
+	// deadline (run concurrently for both pids, so worst case is ~10s, not ~20s) — comfortably below
+	// this cap even under load. See the module docblock atop `waitUntilDead`.
+	25_000)
 
 	it('(c) shutdown is idempotent — a second call terminates nothing again', async () => {
 		await registerStdioServer('alpha')
@@ -176,7 +194,7 @@ describe('DefaultMcpUpstreamRegistry.shutdown — teardown of REAL STDIO upstrea
 		await registry.shutdown()
 		expect(terminateCalls).toHaveLength(1)
 		expect(closeSpy).toHaveBeenCalledTimes(1)
-	})
+	}, 20_000)
 
 	it('(d) the Windows strategy is never asked for a process-group signal', async () => {
 		await registerStdioServer('alpha')
@@ -199,5 +217,5 @@ describe('DefaultMcpUpstreamRegistry.shutdown — teardown of REAL STDIO upstrea
 		} finally {
 			killSpy.mockRestore()
 		}
-	})
+	}, 20_000)
 })
