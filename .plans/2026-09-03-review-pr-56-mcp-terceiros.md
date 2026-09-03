@@ -469,8 +469,21 @@ git commit -m "fix(agent): o veredito mais recente vence, e o re-pedido reaprove
 **Reviewer:** spec-compliance-reviewer → code-reviewer
 **Model:** sonnet
 **Skills:** /service, /test
-**Depends on:** (none)
+**Depends on:** T1
+**Consumes (frozen):** `getDefaultEnvironment` de `@modelcontextprotocol/sdk/client/stdio.js`,
+`StdioClientTransport`, e o campo `env` de `McpServer` (o que o dono declarou no cadastro).
+**Scope fence:** DONE — o `shutdown`/teardown é do T4 e NÃO se mexe nele aqui. OUT — cache de
+conexão, dedupe de connect e cache de `tools/list`, que são do T8.
+
+> **Depende do T1 porque o T1 é um REBASE.** A dependência não é de arquivo nem de lógica: um
+> rebase reescreve a árvore inteira, e um worker escrevendo em paralelo com ele perde o próprio
+> trabalho ou reescreve sobre um estado que deixou de existir. Nenhuma Task roda ao lado do T1.
+
 **Gate:** `cd packages/api/typescript && bun test src/agent/services/McpUpstreamRegistry/`
+
+> **Depende do T1 porque o T1 é um REBASE.** A dependência não é de arquivo nem de lógica: um
+> rebase reescreve a árvore inteira, e um worker escrevendo em paralelo com ele perde o próprio
+> trabalho ou reescreve sobre um estado que deixou de existir. Nenhuma Task roda ao lado do T1.
 
 ### Step T3.1 — Escrever o teste que falha
 
@@ -604,8 +617,17 @@ git commit -m "fix(agent): um servidor MCP de terceiro deixa de receber os segre
 **Reviewer:** spec-compliance-reviewer → code-reviewer
 **Model:** sonnet
 **Skills:** /service, /test
-**Depends on:** (none)
+**Depends on:** T3
+**Consumes (frozen):** `childEnv` na forma que o T3 deixou (allowlist do SDK + `server.env`),
+`PROCESS_TREES`, `TreeRoot`, `StdioClientTransport`.
+**Scope fence:** DONE — a allowlist de env é do T3 e NÃO se mexe nela aqui. OUT — cache de
+conexão e dedupe de connect, que são do T8.
 **Gate:** `cd packages/api/typescript && bun test src/agent/services/McpUpstreamRegistry/teardown.test.ts core/src/utils/ProcessTree.test.ts`
+
+> **Por que depende do T3 e não roda em paralelo com ele:** os dois reescrevem
+> `DefaultMcpUpstreamRegistry.ts`. A dependência aqui é de ARQUIVO, não de lógica — o `childEnv` e o
+> `terminateByPid` não se conhecem. Declarada porque dois workers paralelos no mesmo arquivo se
+> sobrescrevem, que é o que o pré-flight do `/build` recusa antes de despachar.
 
 ### Step T4.1 — Registrar a medição no topo do teste, e torná-lo capaz de morder
 
@@ -802,7 +824,11 @@ git commit -m "fix(agent): o teardown do upstream mata a árvore, não só o fil
 **Reviewer:** spec-compliance-reviewer → code-reviewer
 **Model:** sonnet
 **Skills:** /form, /component, /storybook
-**Depends on:** (none)
+**Depends on:** T1
+
+> **Depende do T1 porque o T1 é um REBASE.** A dependência não é de arquivo nem de lógica: um
+> rebase reescreve a árvore inteira, e um worker escrevendo em paralelo com ele perde o próprio
+> trabalho ou reescreve sobre um estado que deixou de existir. Nenhuma Task roda ao lado do T1.
 **Consumes (frozen):** `GetSettingsQueryResponse['mcpServers'][number]` (com `envKeys` e
 `headerKeys`, que o T13 do PR já congelou), `updateMcpServerMutationRequestSchema`,
 `useUpdateMcpServer`, `McpTransportEnum`.
@@ -890,7 +916,12 @@ git commit -m "fix(app): reconfigurar um servidor MCP deixa de apagar os segredo
 **Reviewer:** spec-compliance-reviewer → code-reviewer
 **Model:** sonnet
 **Skills:** /sdk
-**Depends on:** (none)
+**Depends on:** T1
+**Consumes (frozen):** o walker `packages/api/go/pkg/openapi/schema.go` e os eventos de wire em `packages/contracts/generated/go/wire/events.go` (campos `json.RawMessage`).
+
+> **Depende do T1 porque o T1 é um REBASE.** A dependência não é de arquivo nem de lógica: um
+> rebase reescreve a árvore inteira, e um worker escrevendo em paralelo com ele perde o próprio
+> trabalho ou reescreve sobre um estado que deixou de existir. Nenhuma Task roda ao lado do T1.
 **Gate:** `bun emit-openapi && bun sdk && bun tsc`, e
 `git diff --stat packages/client/dist | tail -1` mostrando uma redução de ~370 arquivos em
 relação ao estado atual do branch.
@@ -1225,8 +1256,15 @@ git commit -m "test(e2e): o console dirige toggle, política e remoção de um s
 **Reviewer:** spec-compliance-reviewer → code-reviewer
 **Model:** sonnet
 **Skills:** /component
-**Depends on:** (none)
+**Depends on:** T5
+**Consumes (frozen):** as chaves i18n que o T5 acrescentou sob `settings.mcpServers.form`, e
+`useUpdateStopCriteria` da SDK (se existir — ver o Step T10.2).
+**Scope fence:** DONE — o form de cadastro/reconfigure é do T5. OUT — a seção de servidores MCP
+em si (T9).
 **Gate:** `cd packages/app/react && bun x tsc --noEmit && bun run storybook:build`
+
+> **Por que depende do T5:** os dois escrevem `locales/pt.json` e `en.json`. Dependência de
+> ARQUIVO, não de lógica — declarada porque dois workers paralelos no mesmo JSON se sobrescrevem.
 
 ### Step T10.1 — Medir o que existe
 
