@@ -1,3 +1,6 @@
+import { mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import http from 'node:http'
 import { act } from 'react'
@@ -7,7 +10,12 @@ import { addWorkspace, attachThread, ContactKindEnum, ProviderKindEnum } from '@
 import type { Client, RequestConfig, ResponseConfig } from '@codm/client-typescript/typescript/_http'
 import { givenConnectedGatewayChannel } from '@codm/api-typescript/testing'
 import i18n from '@/lib/i18n'
-import { useIntegrationBackend, type IntegrationBackend } from '../../../../../../../tests/support/integration-harness'
+import {
+	useIntegrationBackend,
+	type IntegrationBackend,
+	INTEGRATION_BOOT_TIMEOUT_MS,
+	RUNNING_CROSS_SERVICE_LANE,
+} from '../../../../../../../tests/support/integration-harness'
 import { SessionChatSection } from '.'
 
 /**
@@ -106,82 +114,102 @@ const rawNodeClient: Client = <TData, _TError = unknown, TVariables = unknown>(
 	})
 }
 
-describe('SessionChatSection — services: apiGo (T9) — contra um thread real, nascido de um canal real', () => {
-	let backend: IntegrationBackend
-	let root: Root | null = null
-	let host: HTMLDivElement | null = null
+/**
+ * SO NA LANE CROSS-SERVICE. Esta suite faz `go build` + spawn de subprocesso e boota o backend COM
+ * `services`, e a lei de um-backend-por-processo a torna incompativel com a suite padrao. O
+ * `pathIgnorePatterns` do `bunfig.toml` existia para isso e e INERTE (medido: bun 1.3.4 no Windows,
+ * nenhum padrao exclui nada) — ver o docblock de `RUNNING_CROSS_SERVICE_LANE`. A guarda declarada
+ * vale igual nos dois SOs; `scripts/test-cross-service.ts` e quem liga a flag, um processo por arquivo.
+ */
+describe.skipIf(!RUNNING_CROSS_SERVICE_LANE)(
+	'SessionChatSection — services: apiGo (T9) — contra um thread real, nascido de um canal real',
+	() => {
+		let backend: IntegrationBackend
+		let root: Root | null = null
+		let host: HTMLDivElement | null = null
 
-	beforeAll(async () => {
-		backend = await useIntegrationBackend({ services: ['apiGo'], identity: 'double' })
-	})
+		beforeAll(async () => {
+			backend = await useIntegrationBackend({ services: ['apiGo'], identity: 'double' })
+		}, INTEGRATION_BOOT_TIMEOUT_MS)
 
-	afterAll(async () => {
-		await backend.stop()
-	})
+		afterAll(async () => {
+			await backend.stop()
+		}, INTEGRATION_BOOT_TIMEOUT_MS)
 
-	beforeEach(async () => {
-		await i18n.changeLanguage('pt')
-		await backend.reset()
-	})
-
-	afterEach(() => {
-		act(() => root?.unmount())
-		root = null
-		host?.remove()
-		host = null
-	})
-
-	async function mount(threadId: string): Promise<HTMLDivElement> {
-		host = document.createElement('div')
-		document.body.appendChild(host)
-		const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-		const element = host
-		await act(async () => {
-			root = createRoot(element)
-			root.render(
-				<QueryClientProvider client={queryClient}>
-					<SessionChatSection threadId={threadId} />
-				</QueryClientProvider>,
-			)
+		beforeEach(async () => {
+			await i18n.changeLanguage('pt')
+			await backend.reset()
 		})
-		for (let attempt = 0; attempt < 200; attempt++) {
-			if (host.querySelector('[data-slot="skeleton"]') === null) return host
+
+		afterEach(() => {
+			act(() => root?.unmount())
+			root = null
+			host?.remove()
+			host = null
+		})
+
+		async function mount(threadId: string): Promise<HTMLDivElement> {
+			host = document.createElement('div')
+			document.body.appendChild(host)
+			const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+			const element = host
 			await act(async () => {
-				await new Promise(resolve => setTimeout(resolve, 10))
+				root = createRoot(element)
+				root.render(
+					<QueryClientProvider client={queryClient}>
+						<SessionChatSection threadId={threadId} />
+					</QueryClientProvider>,
+				)
 			})
+			// PRAZO DE PARADE DE RELOGIO, e nao contagem de tentativas. A versao anterior girava 200 vezes
+			// com um `setTimeout(10)` dentro — o que NAO da 2 segundos: cada volta paga tambem o custo do
+			// `act`, do render e da consulta, entao o "limite" valia uma duracao diferente em cada maquina.
+			// E o mesmo defeito que este repo ja nomeou uma vez ("o limite do settled era contagem de
+			// tentativas fingindo ser tempo"): num host mais lento a consulta contra o gateway real ainda
+			// estava em voo quando as tentativas acabaram, e a falha dizia "nunca saiu do skeleton" — uma
+			// frase que acusa o componente de estar quebrado quando quem acabou foi o orcamento.
+			const deadline = Date.now() + 30_000
+			while (Date.now() < deadline) {
+				if (host.querySelector('[data-slot="skeleton"]') === null) return host
+				await act(async () => {
+					await new Promise(resolve => setTimeout(resolve, 10))
+				})
+			}
+			throw new Error('SessionChatSection nunca saiu do skeleton em 30s')
 		}
-		throw new Error('SessionChatSection nunca saiu do skeleton')
-	}
 
-	// Timeout explícito: um seed via givenConnectedGatewayChannel (AutoPairAfter 2s do cenário e2e) —
-	// T10 deixou o default de 5000ms do bun:test com margem apertada (observado até ~4.93s, quase no
-	// limite). 15s dá folga real sem mascarar uma regressão de verdade.
-	it('monta contra um threadId real — anexado só porque um canal do gateway pareou de verdade — e lê o transcript vazio real', async () => {
-		const { channelId } = await givenConnectedGatewayChannel(backend, { name: 'session-chat-services-test-channel' })
+		// Timeout explícito: um seed via givenConnectedGatewayChannel (AutoPairAfter 2s do cenário e2e) —
+		// T10 deixou o default de 5000ms do bun:test com margem apertada (observado até ~4.93s, quase no
+		// limite). 15s dá folga real sem mascarar uma regressão de verdade.
+		it('monta contra um threadId real — anexado só porque um canal do gateway pareou de verdade — e lê o transcript vazio real', async () => {
+			const { channelId } = await givenConnectedGatewayChannel(backend, { name: 'session-chat-services-test-channel' })
 
-		const workspace = await addWorkspace(
-			{ path: '/tmp/session-chat-services-test-workspace' },
-			{ client: rawNodeClient, baseURL: backend.url },
-		)
+			// UM DIRETORIO REAL, criado agora — nunca o literal `/tmp/...`. `AddWorkspace` faz stat do
+			// caminho e recusa um inexistente, e `/tmp` so existe no mac e no Linux: no Windows o Node
+			// resolve isso para `C:	mp\...`, que nao esta la. E o mesmo motivo pelo qual
+			// `packages/e2e/utils/given/thread.ts` ja usa `mkdtempSync` em vez de um caminho fixo.
+			const workspacePath = mkdtempSync(join(tmpdir(), 'session-chat-services-'))
+			const workspace = await addWorkspace({ path: workspacePath }, { client: rawNodeClient, baseURL: backend.url })
 
-		const attached = await attachThread(
-			{
-				contactRef: {
-					channelId,
-					externalId: 'session-chat-services-test-contact',
-					displayName: 'Session Chat Services Test',
-					kind: ContactKindEnum.USER,
+			const attached = await attachThread(
+				{
+					contactRef: {
+						channelId,
+						externalId: 'session-chat-services-test-contact',
+						displayName: 'Session Chat Services Test',
+						kind: ContactKindEnum.USER,
+					},
+					workspaceId: workspace.workspaceId,
+					providers: [ProviderKindEnum.CLAUDE_CODE],
 				},
-				workspaceId: workspace.workspaceId,
-				providers: [ProviderKindEnum.CLAUDE_CODE],
-			},
-			{ client: rawNodeClient, baseURL: backend.url },
-		)
+				{ client: rawNodeClient, baseURL: backend.url },
+			)
 
-		const el = await mount(attached.threadId)
+			const el = await mount(attached.threadId)
 
-		expect(el.querySelector('[data-slot="virtual-list"]')).toBeNull()
-		expect(el.querySelector('[data-slot="empty"]')).not.toBeNull()
-		expect(el.textContent).toContain(i18n.t('session.chatEmptyTitle'))
-	}, 15_000)
-})
+			expect(el.querySelector('[data-slot="virtual-list"]')).toBeNull()
+			expect(el.querySelector('[data-slot="empty"]')).not.toBeNull()
+			expect(el.textContent).toContain(i18n.t('session.chatEmptyTitle'))
+		}, 15_000)
+	},
+)

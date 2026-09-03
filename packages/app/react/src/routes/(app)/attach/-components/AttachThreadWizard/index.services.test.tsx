@@ -5,7 +5,12 @@ import { givenChannel, givenRemote } from '@codm/api-typescript/testing'
 import i18n from '@/lib/i18n'
 import { type Bindings, Container, ServicesProvider } from '@/services'
 import testBindings from '@/services/registry/test'
-import { useIntegrationBackend, type IntegrationBackend } from '../../../../../../tests/support/integration-harness'
+import {
+	useIntegrationBackend,
+	type IntegrationBackend,
+	INTEGRATION_BOOT_TIMEOUT_MS,
+	RUNNING_CROSS_SERVICE_LANE,
+} from '../../../../../../tests/support/integration-harness'
 import { mountRouter, type MountedRouter } from '../../../../../../tests/support/mountRouter'
 import { useAttachWizardStore } from '../../-stores/useAttachWizardStore'
 import { AttachThreadWizard } from '.'
@@ -31,17 +36,24 @@ import { AttachThreadWizard } from '.'
  * (`IncompleteSelectionCannotFinish`) and `AgentsStep`/`WorkspaceStep`'s stories prove each step's own
  * click-records-selection contract in isolation.
  */
-describe('AttachThreadWizard — o rodapé contra o backend real', () => {
+/**
+ * SO NA LANE CROSS-SERVICE. Esta suite faz `go build` + spawn de subprocesso e boota o backend COM
+ * `services`, e a lei de um-backend-por-processo a torna incompativel com a suite padrao. O
+ * `pathIgnorePatterns` do `bunfig.toml` existia para isso e e INERTE (medido: bun 1.3.4 no Windows,
+ * nenhum padrao exclui nada) — ver o docblock de `RUNNING_CROSS_SERVICE_LANE`. A guarda declarada
+ * vale igual nos dois SOs; `scripts/test-cross-service.ts` e quem liga a flag, um processo por arquivo.
+ */
+describe.skipIf(!RUNNING_CROSS_SERVICE_LANE)('AttachThreadWizard — o rodapé contra o backend real', () => {
 	let backend: IntegrationBackend
 	let mounted: MountedRouter | null = null
 
 	beforeAll(async () => {
 		backend = await useIntegrationBackend()
-	})
+	}, INTEGRATION_BOOT_TIMEOUT_MS)
 
 	afterAll(async () => {
 		await backend.stop()
-	})
+	}, INTEGRATION_BOOT_TIMEOUT_MS)
 
 	beforeEach(async () => {
 		await i18n.changeLanguage('pt')

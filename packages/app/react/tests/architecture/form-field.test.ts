@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { scanPosix } from './support/scan'
 
 /**
  * RAIL B — um campo de dado sob `-components/` vive dentro de um `form.Field`.
@@ -46,20 +47,10 @@ const WHITELIST: Record<string, string> = {
 }
 
 async function componentFiles(): Promise<string[]> {
-	const out: string[] = []
-	for await (const entry of new Bun.Glob('routes/**/-components/**/*.tsx').scan({ cwd: REACT_SRC, onlyFiles: true })) {
-		// SEPARADOR NORMALIZADO, e nao por gosto: no Windows o `scan` devolve caminhos com barra
-		// enquanto o padrao do glob, os prefixos testados aqui e as CHAVES DA WHITELIST usam `/`.
-		// Sem esta linha a rail nao apenas falha — ela falha ao contrario: nenhuma isencao casa, todo
-		// arquivo isento vira infrator, e o terceiro caso reporta as cinco isencoes como orfas. Uma
-		// rail que so e verdadeira num SO nao e uma rail; e por isso que a normalizacao mora no
-		// PRODUTOR da lista, e nao espalhada por cada comparacao.
-		const normalized = entry.replace(/\\/g, '/')
-		if (normalized.startsWith('routes/styleguide/')) continue
-		if (/\.(test|stories)\.tsx$/.test(normalized)) continue
-		out.push(normalized)
-	}
-	return out.sort()
+	const entries = await scanPosix('routes/**/-components/**/*.tsx', REACT_SRC)
+	return entries
+		.filter(entry => !entry.startsWith('routes/styleguide/') && !/[.](test|stories)[.]tsx$/.test(entry))
+		.sort()
 }
 
 /** Aberturas de `<form.Field` menos `</form.Field>` antes de `index` — >0 significa "dentro". */

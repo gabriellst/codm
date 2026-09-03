@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
 import { getOnboarding } from '@codm/client-typescript/typescript'
-import { loadBackendGivens, useIntegrationBackend, type IntegrationBackend } from '../support/integration-harness'
+import { loadBackendGivens, useIntegrationBackend, INTEGRATION_BOOT_TIMEOUT_MS, type IntegrationBackend } from '../support/integration-harness'
 
 /**
  * O SPIKE DA SPEC (Risks: "duas apostas a validar ANTES da massa") — e ao mesmo tempo a prova
@@ -23,10 +23,10 @@ describe('harness de integração — spike', () => {
 		const t0 = performance.now()
 		backend = await useIntegrationBackend()
 		console.log(`[spike] boot do backend integration: ${Math.round(performance.now() - t0)}ms`)
-	})
+	}, INTEGRATION_BOOT_TIMEOUT_MS)
 	afterAll(async () => {
 		await backend.stop()
-	})
+	}, INTEGRATION_BOOT_TIMEOUT_MS)
 
 	it('a SDK atravessa o servidor real e volta com o computado', async () => {
 		await backend.reset()

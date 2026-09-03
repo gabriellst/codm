@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test'
+import { scanPosix } from './support/scan'
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
@@ -62,14 +63,8 @@ function stripComments(source: string): string {
 
 async function sourceFiles(): Promise<string[]> {
 	const out: string[] = []
-	for (const pattern of ['**/*.ts', '**/*.tsx']) {
-		for await (const entry of new Bun.Glob(pattern).scan({ cwd: REACT_SRC, onlyFiles: true })) {
-			if (/\.(test|stories)\.tsx?$/.test(entry)) continue
-			if (entry === OWNER) continue
-			out.push(entry)
-		}
-	}
-	return out.sort()
+	for (const pattern of ['**/*.ts', '**/*.tsx']) out.push(...(await scanPosix(pattern, REACT_SRC)))
+	return out.filter(entry => !/\.(test|stories)\.tsx?$/.test(entry) && entry !== OWNER).sort()
 }
 
 describe('rail — a origem do daemon é a que o host resolveu, não a assada no build', () => {
