@@ -1,7 +1,7 @@
 // packages/api/typescript/src/agent/services/McpUpstreamRegistry/DefaultMcpUpstreamRegistry.ts — arquivo final COMPLETO
 import { injectable } from 'tsyringe-neo'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
+import { getDefaultEnvironment, StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import { CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js'
 import { McpTransport } from '@codm/contracts-typescript/wire/enums'
@@ -12,18 +12,25 @@ import { McpServerRepository } from '../../repositories/McpServerRepository'
 import { McpUpstreamRegistry, type UpstreamCallResult, type UpstreamTool } from './McpUpstreamRegistry'
 
 /**
- * O env do processo filho, montado sem `as`.
+ * O env do processo filho — a allowlist do SDK, mais o que o DONO declarou. Nada além disso.
  *
- * `process.env` é `Record<string, string | undefined>` e o transporte stdio pede
- * `Record<string, string>`. Um cast faria a diferença sumir do TIPO em vez de tratá-la, e uma variável
- * ausente chegaria ao servidor MCP como a string literal `"undefined"` — o tipo de defeito que só
- * aparece quando alguém depura por que o token não autenticou. A narrowing depois do filtro é
- * verdadeira, e é a única no arquivo.
+ * A versão anterior copiava `process.env` INTEIRO e justificava outra coisa (evitar que uma
+ * variável ausente virasse a string `"undefined"`). Isso resolvia um problema de tipo e criava um
+ * de segurança: `StdioClientTransport` já monta o env do filho a partir de `getDefaultEnvironment()`
+ * — uma allowlist deliberada, com o comentário *"inspired by the default env inheritance of sudo"* —
+ * e passar um env explícito SOBRESCREVE essa proteção.
+ *
+ * O que ia junto: `JWT_SECRET`, `BETTER_AUTH_SECRET`, `INTERNAL_SERVICE_KEY`, a URL do Postgres da
+ * nuvem com senha e os segredos de OAuth. Para um processo de TERCEIRO, spawnado a partir de um
+ * `npx <pacote>` que o dono digitou num formulário. O spec gasta a decisão 14 inteira cercando o
+ * raio de ação de prompt-injection→shell; entregar os segredos por env ao mesmo raio contradiz o
+ * próprio modelo de ameaça.
+ *
+ * Se um servidor precisar de mais que a allowlist, isso é campo DECLARADO no cadastro (`server.env`,
+ * que continua passando por cima), nunca herança silenciosa.
  */
-function childEnv(extra?: Record<string, string>): Record<string, string> {
-	const base: Record<string, string> = {}
-	for (const [key, value] of Object.entries(process.env)) if (value !== undefined) base[key] = value
-	return { ...base, ...(extra ?? {}) }
+export function childEnv(extra?: Record<string, string>): Record<string, string> {
+	return { ...getDefaultEnvironment(), ...(extra ?? {}) }
 }
 
 /**
