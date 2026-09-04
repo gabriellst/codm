@@ -84,7 +84,7 @@ export function McpServersSection({ className, ...props }: ComponentProps<'secti
 					<EmptyDescription>{t('settings.mcpServers.emptyDescription')}</EmptyDescription>
 				</Empty>
 			) : (
-				<div className="flex flex-col gap-2.5">
+				<ul className="flex flex-col gap-2.5">
 					{servers.map(server => (
 						<McpServerRow
 							key={server.id}
@@ -93,7 +93,7 @@ export function McpServersSection({ className, ...props }: ComponentProps<'secti
 							onReconfigure={() => show(<McpServerForm server={server} onDone={hide} />)}
 						/>
 					))}
-				</div>
+				</ul>
 			)}
 		</section>
 	)
@@ -104,6 +104,11 @@ export function McpServersSection({ className, ...props }: ComponentProps<'secti
  * count, and — reachable ones only — the tool list. A LEAF (receives its item by prop; the section
  * above owns the list query), but it owns its OWN mutations, same as `LoopRow`: the toggle and the
  * policy selector both write through `useUpdateMcpServer` right where the operator clicks them.
+ *
+ * Root is a native `<li>` (parent `<ul>` in `McpServersSection`) rather than a `div` carrying a
+ * declared `role` — T9 found `aria-label` silently unsupported on a bare `div` (implicit role
+ * `generic` prohibits it, so `getByLabel` in the e2e passed while no screen reader ever heard the
+ * name). `listitem` is real list semantics AND one of the roles that supports an accessible name.
  */
 function McpServerRow({
 	server,
@@ -111,7 +116,7 @@ function McpServerRow({
 	onReconfigure,
 	className,
 	...props
-}: ComponentProps<'div'> & { server: McpServer; approvalNeeded: boolean; onReconfigure: () => void }) {
+}: ComponentProps<'li'> & { server: McpServer; approvalNeeded: boolean; onReconfigure: () => void }) {
 	const { t } = useTranslation()
 	const queryClient = useQueryClient()
 	const { confirm } = useDialogStore()
@@ -141,7 +146,12 @@ function McpServerRow({
 	const unreachable = server.enabled && !server.reachable
 
 	return (
-		<div className={cn('flex flex-col gap-3 rounded-asymmetric-sm px-4 py-3.5', surface, className)} {...props}>
+		<li
+			className={cn('flex flex-col gap-3 rounded-asymmetric-sm px-4 py-3.5', surface, className)}
+			data-testid={`mcp-server-${server.key}`}
+			aria-label={server.key}
+			{...props}
+		>
 			<div className="flex items-center gap-3.5">
 				<div className="flex min-w-0 flex-1 flex-col gap-1">
 					<span className="font-bold text-foreground">{server.key}</span>
@@ -196,7 +206,7 @@ function McpServerRow({
 					))}
 				</div>
 			)}
-		</div>
+		</li>
 	)
 }
 

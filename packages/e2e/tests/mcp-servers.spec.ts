@@ -41,19 +41,15 @@ function generateMcpKey(prefix: string): string {
 /**
  * Scope to ONE registered server's row by its (unique, generated) key.
  *
- * `McpServerRow` (settings/-components/McpServersSection/index.tsx) gives the row itself no role or
- * aria-label of its own — only its individual controls (the enable `Switch`, the policy `Select`) are
- * labelled, and both labels repeat verbatim across every row. The innermost `div` that contains BOTH
- * the key text and an enable switch is exactly that one row's header strip (key, transport caption,
- * switch, policy select, reconfigure/remove buttons) — `.last()` picks it because Playwright's DOM
- * order lists an ancestor before its descendants, so the deepest (innermost) match sorts last.
+ * `McpServerRow` (settings/-components/McpServersSection/index.tsx) carries `aria-label={server.key}`
+ * on the row itself (Task T9) — the key is the server's own unique identifier, not catalog copy, so
+ * it needs no i18n entry to serve as an accessible name. This is immune to DOM nesting: unlike the
+ * previous `.filter().last()` chase (which depended on the row being the innermost `div` containing
+ * both the key text and a switch — broken by the first layout change that added a nested wrapper),
+ * `getByLabel` finds the element by its accessible name regardless of how deep it sits.
  */
 function serverRow(page: Page, key: string) {
-	return page
-		.locator('div')
-		.filter({ hasText: key })
-		.filter({ has: page.getByRole('switch') })
-		.last()
+	return page.getByLabel(key, { exact: true })
 }
 
 /**
@@ -130,6 +126,39 @@ test('mcp servers — owner registers a STDIO server through settings and it lan
 	const persisted = settings.mcpServers.find(server => server.key === key)
 	expect(persisted?.transport).toBe(McpTransportEnum.STDIO)
 	expect(persisted?.approvalPolicy).toBe(McpApprovalPolicyEnum.ASK)
+
+	// AC-16 — the console drives the FULL lifecycle of a server, not only its registration: toggle,
+	// policy swap, and removal, all against the row created above (no reason to pay for a second boot).
+
+	// 1. Toggle the server off — the switch itself is the reflection; there is no separate
+	//    "disabled" copy anywhere in the row (T12's read model has no such field), so the toggle's
+	//    own checked state IS what "the row reflects disabled" means here.
+	const toggle = row.getByRole('switch', { name: t('settings.mcpServers.enabledToggle') })
+	await expect(toggle).toBeChecked()
+	await toggle.click()
+	await expect(toggle).not.toBeChecked()
+
+	const afterToggle = await getSettings({ client: user.session.client })
+	expect(afterToggle.mcpServers.find(server => server.key === key)?.enabled).toBe(false)
+
+	// 2. Swap the server's approval policy from ASK to AUTO.
+	await expect(row.getByText(t('settings.mcpServers.policy.ASK'), { exact: true })).toBeVisible()
+	await row.getByRole('combobox', { name: t('settings.mcpServers.policyLabel') }).click()
+	await pickOptionByValue(page, McpApprovalPolicyEnum.AUTO)
+	await expect(row.getByText(t('settings.mcpServers.policy.AUTO'), { exact: true })).toBeVisible()
+
+	const afterPolicySwap = await getSettings({ client: user.session.client })
+	expect(afterPolicySwap.mcpServers.find(server => server.key === key)?.approvalPolicy).toBe(McpApprovalPolicyEnum.AUTO)
+
+	// 3. Remove the server — behind the same destructive confirm dialog `useDialogStore.confirm` opens.
+	await row.getByRole('button', { name: t('settings.mcpServers.remove') }).click()
+	const confirmDialog = dialog(page)
+	await expect(confirmDialog.getByText(t('settings.mcpServers.removeConfirmTitle'))).toBeVisible()
+	await confirmDialog.getByRole('button', { name: t('settings.mcpServers.removeConfirmAction') }).click()
+	await expect(row).toHaveCount(0)
+
+	const afterRemove = await getSettings({ client: user.session.client })
+	expect(afterRemove.mcpServers.find(server => server.key === key)).toBeUndefined()
 })
 
 /**
