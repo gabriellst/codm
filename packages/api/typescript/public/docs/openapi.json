@@ -8795,13 +8795,20 @@
                           },
                           "version": {
                             "type": "string"
+                          },
+                          "models": {
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/components/schemas/AgentModelId"
+                            }
                           }
                         },
                         "required": [
                           "provider",
                           "status",
                           "available",
-                          "comingSoon"
+                          "comingSoon",
+                          "models"
                         ],
                         "additionalProperties": false
                       }

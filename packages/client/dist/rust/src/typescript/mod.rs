@@ -2744,6 +2744,7 @@ pub mod types {
     ///        "required": [
     ///          "available",
     ///          "comingSoon",
+    ///          "models",
     ///          "provider",
     ///          "status"
     ///        ],
@@ -2753,6 +2754,12 @@ pub mod types {
     ///          },
     ///          "comingSoon": {
     ///            "type": "boolean"
+    ///          },
+    ///          "models": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "$ref": "#/components/schemas/AgentModelId"
+    ///            }
     ///          },
     ///          "provider": {
     ///            "$ref": "#/components/schemas/ProviderKind"
@@ -2948,6 +2955,7 @@ pub mod types {
     ///  "required": [
     ///    "available",
     ///    "comingSoon",
+    ///    "models",
     ///    "provider",
     ///    "status"
     ///  ],
@@ -2957,6 +2965,12 @@ pub mod types {
     ///    },
     ///    "comingSoon": {
     ///      "type": "boolean"
+    ///    },
+    ///    "models": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "$ref": "#/components/schemas/AgentModelId"
+    ///      }
     ///    },
     ///    "provider": {
     ///      "$ref": "#/components/schemas/ProviderKind"
@@ -2978,6 +2992,7 @@ pub mod types {
         pub available: bool,
         #[serde(rename = "comingSoon")]
         pub coming_soon: bool,
+        pub models: ::std::vec::Vec<::codm_contracts_rust::wire::enums::AgentModelId>,
         pub provider: ::codm_contracts_rust::wire::enums::ProviderKind,
         pub status: ::codm_contracts_rust::wire::enums::ProviderStatus,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]

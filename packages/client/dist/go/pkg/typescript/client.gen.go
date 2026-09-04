@@ -8704,6 +8704,7 @@ type GetAttachThreadWizardResponse struct {
 		Providers          []struct {
 			Available  bool           `json:"available"`
 			ComingSoon bool           `json:"comingSoon"`
+			Models     []AgentModelId `json:"models"`
 			Provider   ProviderKind   `json:"provider"`
 			Status     ProviderStatus `json:"status"`
 			Version    *string        `json:"version,omitempty"`
@@ -11720,6 +11721,7 @@ func ParseGetAttachThreadWizardResponse(rsp *http.Response) (*GetAttachThreadWiz
 			Providers          []struct {
 				Available  bool           `json:"available"`
 				ComingSoon bool           `json:"comingSoon"`
+				Models     []AgentModelId `json:"models"`
 				Provider   ProviderKind   `json:"provider"`
 				Status     ProviderStatus `json:"status"`
 				Version    *string        `json:"version,omitempty"`
