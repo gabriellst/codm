@@ -61,6 +61,59 @@ export type TreeRoot = Pick<ChildProcess, 'pid' | 'kill' | 'exitCode' | 'signalC
  */
 export type TreeCommand = (file: string, args: readonly string[]) => void
 
+/**
+ * A tabela de processos inteira, em UMA chamada: `pid ppid`, uma linha por processo.
+ *
+ * POR QUE UM SNAPSHOT, E NÃO `pgrep -P` RECURSIVO — o CI no Ubuntu reprovou o caso do neto
+ * (`teardown.test.ts` (e)) enquanto ele passava no Windows, onde `taskkill /T` anda a árvore sozinho.
+ * A descida recursiva tinha dois modos de falha que um snapshot único elimina de vez:
+ *
+ *  1. CORRIDA DE REPARENTAMENTO. Entre o `pgrep` do pai e o `pgrep` do filho, o intermediário pode
+ *     sair; o neto é reparentado ao init e o caminho até ele desaparece no meio da própria descida.
+ *  2. DEPENDÊNCIA DE `pgrep`. Ele pode não existir na imagem, e o código tratava isso como "sem
+ *     filhos" (`status !== 0`) — indistinguível do caso legítimo. O teardown virava um no-op silencioso.
+ *
+ * `ps -A -o pid=,ppid=` é POSIX e existe em Linux e macOS. Uma foto consistente, zero recursão.
+ */
+function psSnapshot(): string {
+	const found = spawnSync('ps', ['-A', '-o', 'pid=,ppid='], { encoding: 'utf8' })
+	return found.status === 0 && found.stdout ? found.stdout : ''
+}
+
+/**
+ * Os descendentes de `root`, MAIS FUNDOS PRIMEIRO, a partir de um snapshot `pid ppid`.
+ *
+ * Pura e exportada de propósito: é a metade da lógica de teardown que dá para MEDIR em qualquer
+ * plataforma. O bug que a motivou não precisava de POSIX para ser visto — `'1234\n5678\n'.split('\n')`
+ * termina em `''`, e `Number('')` é `0`, que passa por `Number.isInteger`. O `0` entrava na lista de
+ * alvos e `process.kill(0, sig)` no POSIX sinaliza O PRÓPRIO GRUPO DO CHAMADOR — o daemon mandaria
+ * SIGTERM para si mesmo (e, sob `bun test`, para o runner). Daí o filtro por `pid > 0`, com teste.
+ */
+export function posixDescendants(root: number, snapshot: string): number[] {
+	const childrenOf = new Map<number, number[]>()
+	for (const line of snapshot.split('\n')) {
+		const parts = line.trim().split(/\s+/)
+		// Duas colunas ou nada: uma linha truncada com só o pid daria `ppid = Number('') = 0`, que é
+		// um valor VÁLIDO (o pai do init) e penduraria o processo numa raiz que não é a dele.
+		if (parts.length < 2) continue
+		const pid = Number(parts[0] ?? '')
+		const ppid = Number(parts[1] ?? '')
+		// `pid > 0` é a guarda que importa: 0 é "o meu grupo" e valores não numéricos viram NaN.
+		if (!Number.isInteger(pid) || !Number.isInteger(ppid) || pid <= 0 || ppid < 0) continue
+		childrenOf.set(ppid, [...(childrenOf.get(ppid) ?? []), pid])
+	}
+
+	// `seen` fecha o ciclo que uma tabela inconsistente poderia descrever — um snapshot é uma foto de
+	// algo que se move, e uma recursão sem guarda ali não termina.
+	const seen = new Set<number>([root])
+	const walk = (parent: number): number[] =>
+		(childrenOf.get(parent) ?? [])
+			.filter(child => !seen.has(child) && seen.add(child) !== undefined)
+			.flatMap(child => [...walk(child), child])
+
+	return walk(root)
+}
+
 /** POSIX — the process GROUP is the tree. */
 export const posixProcessTree: ProcessTree = {
 	spawnOptions: { detached: true },
@@ -92,17 +145,10 @@ export const posixProcessTree: ProcessTree = {
 		)
 	},
 	terminateByPid(pid, graceMs) {
-		// Sem grupo para sinalizar, a árvore é descoberta pelo pai de cada processo. `pgrep -P` lista
-		// os filhos diretos; a recursão faz o resto. Os FILHOS primeiro, o pai por último: matar o pai
-		// antes reparenta os netos ao init e some com o caminho até eles.
-		const descendants = (root: number): number[] => {
-			const found = spawnSync('pgrep', ['-P', String(root)], { encoding: 'utf8' })
-			if (found.status !== 0 || !found.stdout) return []
-			const children = found.stdout.split('\n').map(Number).filter(Number.isInteger)
-			return children.flatMap(child => [...descendants(child), child])
-		}
-
-		const tree = [...descendants(pid), pid]
+		// Sem grupo para sinalizar (ver `posixDescendants`), a árvore vem de UM snapshot da tabela de
+		// processos. Os FILHOS primeiro, o pai por último: matar o pai antes reparenta os netos ao init
+		// e some com o caminho até eles.
+		const tree = [...posixDescendants(pid, psSnapshot()), pid]
 		const signal = (sig: 'SIGTERM' | 'SIGKILL') => {
 			for (const target of tree) {
 				try {

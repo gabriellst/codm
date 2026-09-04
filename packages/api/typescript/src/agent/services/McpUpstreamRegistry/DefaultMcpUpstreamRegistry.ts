@@ -241,7 +241,17 @@ export class DefaultMcpUpstreamRegistry extends McpUpstreamRegistry {
 				command: server.command,
 				args: [...(server.args ?? [])],
 				env: childEnv(server.env),
-				...PROCESS_TREES[process.platform].spawnOptions,
+				// SEM `spawnOptions` AQUI, e a ausência é o fato — não um esquecimento.
+				//
+				// MEDIDO no SDK (`dist/cjs/client/stdio.js:72`): `StdioClientTransport` monta um objeto
+				// FECHADO para o `cross-spawn` — `{ env, stdio, shell: false, windowsHide, cwd }` — lendo
+				// dos parâmetros apenas `command`, `args`, `env`, `stderr` e `cwd`. `detached` NUNCA é
+				// repassado. Espalhar `spawnOptions` aqui era inerte E enganoso: sugeria que o upstream
+				// virava líder de grupo, quando ele nasce no grupo do PRÓPRIO daemon.
+				//
+				// É por isso que o teardown deste registry usa `terminateByPid` (árvore por snapshot do
+				// `ps`) em vez do sinal de grupo do `terminate`: não existe grupo para sinalizar, e
+				// `process.kill(-pid)` aqui alcançaria o grupo do daemon.
 			})
 			await client.connect(transport)
 			this.transports.set(key, transport)
