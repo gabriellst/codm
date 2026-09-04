@@ -8,6 +8,7 @@ import {
 	useRemoveMcpServer,
 	useUpdateMcpServer,
 	McpApprovalPolicyEnum,
+	McpTransportEnum,
 	type GetSettingsQueryResponse,
 } from '@codm/client-typescript/typescript'
 import { sectionLabelBare, surface } from '@codm/app-ui/surfaces'
@@ -16,6 +17,7 @@ import { Empty, EmptyDescription, EmptyMedia, EmptyTitle } from '@codm/app-ui/em
 import { Select } from '@codm/app-ui/select'
 import { Skeleton } from '@codm/app-ui/skeleton'
 import { Switch } from '@codm/app-ui/switch'
+import { enumLabel } from '@/lib'
 import { cn } from '@/lib/utils'
 import { useDialogStore } from '@/stores/useDialogStore'
 import { McpServerForm } from '../../-forms/McpServerForm'
@@ -141,7 +143,7 @@ function McpServerRow({
 	// Secret COUNT only — the read never carries a value, only `envKeys`/`headerKeys` (T12 wire
 	// contract). Which key list applies is the transport's own discriminant, read here rather than
 	// invented as a third field.
-	const secretCount = server.transport === 'STDIO' ? server.envKeys.length : server.headerKeys.length
+	const secretCount = server.transport === McpTransportEnum.STDIO ? server.envKeys.length : server.headerKeys.length
 	// An enabled-but-unreachable server shows a connection notice INSTEAD of its tool list (T12 AC):
 	// a tool selector for a server the daemon cannot currently talk to has nothing real to say.
 	const unreachable = server.enabled && !server.reachable
@@ -156,7 +158,7 @@ function McpServerRow({
 			<div className="flex items-center gap-3.5">
 				<div className="flex min-w-0 flex-1 flex-col gap-1">
 					<span className="font-bold text-foreground">{server.key}</span>
-					<span className="text-xs text-muted-foreground">{t(`settings.mcpServers.transport.${server.transport}`)}</span>
+					<span className="text-xs text-muted-foreground">{enumLabel('McpTransport', server.transport)}</span>
 				</div>
 				<Switch
 					aria-label={t('settings.mcpServers.enabledToggle')}

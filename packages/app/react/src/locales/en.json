@@ -378,6 +378,10 @@
 			"DAILY": "Fixed time",
 			"INTERVAL": "Every so often"
 		},
+		"McpTransport": {
+			"HTTP": "HTTP",
+			"STDIO": "Local command"
+		},
 		"NotificationCategory": {
 			"DAILY_DIGEST": "Daily digest",
 			"FEATURE_ANNOUNCEMENT": "Feature announcement",
@@ -778,10 +782,6 @@
 				"INHERIT": "Inherits from server"
 			},
 			"toolPolicyLabel": "Approval policy for {{tool}}",
-			"transport": {
-				"HTTP": "HTTP",
-				"STDIO": "Local command"
-			},
 			"unreachable": "Can't reach this server — check the command or URL and reconnect.",
 			"variablesConfigured_one": "{{count}} variable configured",
 			"variablesConfigured_other": "{{count}} variables configured"

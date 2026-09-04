@@ -378,6 +378,10 @@
 			"DAILY": "Horário fixo",
 			"INTERVAL": "De tempos em tempos"
 		},
+		"McpTransport": {
+			"HTTP": "HTTP",
+			"STDIO": "Comando local"
+		},
 		"NotificationCategory": {
 			"DAILY_DIGEST": "Resumo diário",
 			"FEATURE_ANNOUNCEMENT": "Anúncio de novidade",
@@ -778,10 +782,6 @@
 				"INHERIT": "Herda do servidor"
 			},
 			"toolPolicyLabel": "Política de aprovação de {{tool}}",
-			"transport": {
-				"HTTP": "HTTP",
-				"STDIO": "Comando local"
-			},
 			"unreachable": "Não foi possível conectar a este servidor — confira o comando ou a URL e reconecte.",
 			"variablesConfigured_one": "{{count}} variável configurada",
 			"variablesConfigured_other": "{{count}} variáveis configuradas"

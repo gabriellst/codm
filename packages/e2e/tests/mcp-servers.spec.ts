@@ -118,7 +118,9 @@ test('mcp servers — owner registers a STDIO server through settings and it lan
 
 	const row = serverRow(page, key)
 	await expect(row).toBeVisible()
-	await expect(row.getByText(t('settings.mcpServers.transport.STDIO'), { exact: true })).toBeVisible()
+	// `enums.McpTransport.*`, não `settings.mcpServers.transport.*`: rótulo de enum de contrato vive no
+	// catálogo de enums (component#bp-25) — feature namespace fragmenta o mesmo rótulo por tela.
+	await expect(row.getByText(t('enums.McpTransport.STDIO'), { exact: true })).toBeVisible()
 	await expect(row.getByText(t('settings.mcpServers.policy.ASK'), { exact: true })).toBeVisible()
 
 	// Cross-checked against the same read model the row is rendered from, not only the DOM.

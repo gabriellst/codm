@@ -169,7 +169,7 @@ export function McpServerForm({
 				<FieldLabel>{t('settings.mcpServers.form.transportLabel')}</FieldLabel>
 				<Select
 					enum={McpTransportEnum}
-					i18nPrefix="settings.mcpServers.transport"
+					i18nPrefix="enums.McpTransport"
 					value={transport}
 					onValueChange={setTransport}
 					aria-label={t('settings.mcpServers.form.transportLabel')}
