@@ -5,6 +5,7 @@ import type { DependencyContainer } from 'tsyringe-neo'
 import { type InstanceRegistry, expandBindings, HEALTH_CHECKS, PollingHealthCheck, resolve, asPollingService } from '@codm/core-typescript'
 import { AgentRunnerFactory, DefaultAgentRunnerFactory, StubAgentRunnerFactory, E2eAgentRunnerFactory } from './services/AgentRunnerFactory'
 import { ProviderDetector, MockProviderDetector, SystemProviderDetector } from './services/ProviderDetector'
+import { McpConfigDiscovery, MockMcpConfigDiscovery, SystemMcpConfigDiscovery } from './services/McpConfigDiscovery'
 import { AgentStreamRegistry } from './services/AgentStreamRegistry'
 import { AgentScenarioSelection } from './services/AgentScenario'
 import { MailboxDispatcher, LibSqlMailboxDispatcher } from './services/MailboxDispatcher'
@@ -65,6 +66,17 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 		integration: MockProviderDetector,
 		real: SystemProviderDetector,
 		e2e: MockProviderDetector,
+	},
+	// Descoberta de configuração MCP existente: o `real` lê os arquivos declarados em `fileSources`;
+	// todo o resto NUNCA toca disco. Sem essa coluna, um teste de import passaria a depender de quais
+	// arquivos existem na máquina que o roda — e medido em 04/09/2026, três das quatro fontes estavam
+	// ausentes aqui, então o verde viria da ausência e esconderia um parser quebrado.
+	{
+		token: McpConfigDiscovery,
+		mock: MockMcpConfigDiscovery,
+		integration: MockMcpConfigDiscovery,
+		real: SystemMcpConfigDiscovery,
+		e2e: MockMcpConfigDiscovery,
 	},
 	// The adopted whatscode AgentStreamRegistry (Fork C): SSE observer channel + the absorbed
 	// single-active-run guard — one shared in-memory instance per process.
