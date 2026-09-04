@@ -102,7 +102,7 @@ describe('DefaultMcpUpstreamRegistry.shutdown — teardown of REAL STDIO upstrea
 	let registry: DefaultMcpUpstreamRegistry
 	let closeSpy: ReturnType<typeof spyOn>
 	let originalTerminateByPid: ProcessTree['terminateByPid']
-	let terminateCalls: { pid: number | undefined }[]
+	let terminateCalls: { pid: number | undefined; closesAntes: number }[]
 
 	beforeEach(() => {
 		dir = mkdtempSync(join(tmpdir(), 'mcp-teardown-'))
@@ -125,7 +125,9 @@ describe('DefaultMcpUpstreamRegistry.shutdown — teardown of REAL STDIO upstrea
 		originalTerminateByPid = tree.terminateByPid.bind(tree)
 		terminateCalls = []
 		tree.terminateByPid = (pid, graceMs) => {
-			terminateCalls.push({ pid })
+			// `closesAntes` grava a ORDEM sem inventar seam: quantos `client.close()` já tinham acontecido
+			// quando a árvore foi derrubada. Zero é o contrato — ver o caso (f).
+			terminateCalls.push({ pid, closesAntes: closeSpy.mock.calls.length })
 			return originalTerminateByPid(pid, graceMs)
 		}
 	})
@@ -244,5 +246,33 @@ describe('DefaultMcpUpstreamRegistry.shutdown — teardown of REAL STDIO upstrea
 		await registry.shutdown()
 
 		expect(await waitUntilDead(grandchildPid)).toBe(true)
+	}, 30_000)
+
+	/**
+	 * (f) A ORDEM É O MECANISMO — e é a única metade do caso (e) que dá para MEDIR em qualquer host.
+	 *
+	 * O caso (e) reprovou no CI do Ubuntu e passava no Windows, então a plataforma onde o mecanismo
+	 * importa era a única onde ele nunca era exercitado. A causa, medida no SDK
+	 * (`dist/cjs/client/stdio.js:150`): `close()` roda a escada `stdin.end()` → 2000ms → `SIGTERM` →
+	 * 2000ms → `SIGKILL`. Contra um servidor que ignora stdin e SIGTERM — a fixture desta suíte, que é
+	 * o MCP de navegador do docblock — ela vai até o fim e VOLTA COM O PAI MORTO.
+	 *
+	 * Derrubar a árvore depois disso é tarde: o pai saiu da tabela de processos e os netos já foram
+	 * reparentados ao init. A varredura devolve vazio e o único alvo é um pid morto.
+	 *
+	 * Este caso não afirma que o neto morre no POSIX — o (e) faz isso, e só roda lá. Ele afirma a
+	 * PRECONDIÇÃO sem a qual o (e) não tem como passar, e afirma num host qualquer.
+	 */
+	it('(f) a árvore é derrubada ANTES do close — depois dele o pai já morreu e levou o caminho até os netos', async () => {
+		await registerStdioServer('ordem-do-teardown')
+		await registry.listTools(OWNER_ID)
+
+		await registry.shutdown()
+
+		expect(terminateCalls).toHaveLength(1)
+		expect(terminateCalls[0]?.closesAntes).toBe(0)
+		// E o close REALMENTE aconteceu — sem isto a asserção acima passaria por um teardown que nunca
+		// fechou coisa nenhuma, que é o verde-por-vacuidade que esta suíte existe para não repetir.
+		expect(closeSpy.mock.calls.length).toBeGreaterThan(0)
 	}, 30_000)
 })

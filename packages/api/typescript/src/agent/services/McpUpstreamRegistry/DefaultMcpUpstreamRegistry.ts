@@ -102,12 +102,11 @@ export class DefaultMcpUpstreamRegistry extends McpUpstreamRegistry {
 		const key = cacheKey(ownerId, serverKey)
 		const client = this.clients.get(key)
 		if (client) {
-			// Mesma ordem de `shutdown()`, e pelo mesmo motivo: o pid tem de ser lido ANTES do close,
-			// nunca depois — `StdioClientTransport.close()` zera `this._process` de forma SÍNCRONA antes
-			// de esperar qualquer coisa.
+			// Mesma ordem de `shutdown()`, e pelo mesmo motivo — ver o docblock lá: a árvore é derrubada
+			// ANTES do close, porque o close MATA o pai e leva a árvore embora junto.
 			const pid = this.transports.get(key)?.pid
-			await client.close().catch(() => undefined)
 			if (pid) PROCESS_TREES[process.platform].terminateByPid(pid, 2000)
+			await client.close().catch(() => undefined)
 		}
 		this.clients.delete(key)
 		this.transports.delete(key)
@@ -152,9 +151,23 @@ export class DefaultMcpUpstreamRegistry extends McpUpstreamRegistry {
 			// POSIX, que é justamente o que roda quando o sinal de grupo falha, caía num no-op. Nenhum
 			// sinal era entregue nunca; o único teardown real era o `close` fechar o stdin, que não
 			// alcança neto nenhum.
+			//
+			// A ORDEM É O CONSERTO, e ela é contraintuitiva: DERRUBAR A ÁRVORE ANTES DO `close()`.
+			//
+			// MEDIDO no SDK (`dist/cjs/client/stdio.js:150`), `close()` roda uma escada PRÓPRIA:
+			// `stdin.end()` → espera até 2000ms → `SIGTERM` → espera até 2000ms → `SIGKILL`. Contra um
+			// servidor que ignora o stdin e o SIGTERM — que é exatamente o MCP de navegador que o
+			// docblock acima nomeia — a escada vai até o fim: `close()` volta ~4s depois com o PAI JÁ
+			// MORTO E REAPEADO.
+			//
+			// Derrubar a árvore depois disso é tarde. O pai não está mais na tabela de processos, os
+			// netos já foram reparentados ao init, e o caminho até eles não existe mais: a varredura
+			// devolve lista vazia e o único alvo é um pid morto. Era ESTE o defeito que o CI do Ubuntu
+			// reprovava, e a plataforma escondia — no Windows o `close()` não tem SIGTERM de verdade
+			// para ser ignorado, então a árvore some por outro caminho e o caso passava.
 			const pid = this.transports.get(key)?.pid
-			await client.close().catch(() => undefined)
 			if (pid) tree.terminateByPid(pid, 2000)
+			await client.close().catch(() => undefined)
 		}
 		this.clients.clear()
 		this.transports.clear()
