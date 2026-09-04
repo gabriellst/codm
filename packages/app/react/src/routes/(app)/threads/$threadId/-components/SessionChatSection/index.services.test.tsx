@@ -186,7 +186,7 @@ describe.skipIf(!RUNNING_CROSS_SERVICE_LANE)(
 
 			// UM DIRETORIO REAL, criado agora — nunca o literal `/tmp/...`. `AddWorkspace` faz stat do
 			// caminho e recusa um inexistente, e `/tmp` so existe no mac e no Linux: no Windows o Node
-			// resolve isso para `C:	mp\...`, que nao esta la. E o mesmo motivo pelo qual
+			// resolve isso para `C:\tmp\...`, que nao esta la. E o mesmo motivo pelo qual
 			// `packages/e2e/utils/given/thread.ts` ja usa `mkdtempSync` em vez de um caminho fixo.
 			const workspacePath = mkdtempSync(join(tmpdir(), 'session-chat-services-'))
 			const workspace = await addWorkspace({ path: workspacePath }, { client: rawNodeClient, baseURL: backend.url })

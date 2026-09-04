@@ -25,11 +25,12 @@ type McpTool = McpServer['tools'][number]
 
 /**
  * WHICH of the three tool-policy states a tool sits in — `INHERIT` is a UI-only sentinel for
- * `tool.policy === null` (the wire never sends the string "INHERIT"). A local `as const` object
- * rather than the SDK's `McpApprovalPolicyEnum` because the third state has no wire member to
- * borrow: it is the ABSENCE of a per-tool override, not a policy value.
+ * `tool.policy === null` (the wire never sends the string "INHERIT"); it has no wire member to
+ * borrow because it is the ABSENCE of a per-tool override, not a policy value. The other two
+ * members SPREAD from the SDK's `McpApprovalPolicyEnum` instead of being redeclared — a new wire
+ * member then shows up here for free, instead of silently missing from this map.
  */
-const TOOL_POLICY_OPTIONS = { INHERIT: 'INHERIT', AUTO: 'AUTO', ASK: 'ASK' } as const
+const TOOL_POLICY_OPTIONS = { INHERIT: 'INHERIT', ...McpApprovalPolicyEnum } as const
 
 /**
  * MCP servers the owner has registered, and the policy that governs every tool each one

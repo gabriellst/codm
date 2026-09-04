@@ -26,12 +26,6 @@ const SHELL: UpstreamTool = {
 }
 
 describe('a fronteira é o escopo, não a lista no cliente', () => {
-	it.each([McpScope.orchestration, McpScope.system])('%s não recebe binding de upstream', scope => {
-		// O door só embrulha o transporte em issue-handling. A prova aqui é a REGRA que o door aplica:
-		// nos outros escopos o transporte devolvido é o cru, sem ferramenta upstream para listar.
-		expect(scope).not.toBe(McpScope.ISSUE_HANDLING)
-	})
-
 	it('mesmo se um binding vazasse para outro escopo, uma chamada a ferramenta desconhecida não é interceptada', async () => {
 		let innerCalls = 0
 		const inner = {

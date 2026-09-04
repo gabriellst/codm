@@ -3,6 +3,7 @@ import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 import { McpApprovalPolicy, McpTransport } from '@codm/contracts-typescript/wire/enums'
 import { CloudSessionMiddleware } from '@shared/middlewares'
+import { MCP_SERVER_KEY_PATTERN } from '../entities/McpServer'
 import { RegisterMcpServer, RegisterMcpServerOutputSchema } from '../usecases/RegisterMcpServer'
 
 /**
@@ -32,9 +33,10 @@ export const RegisterMcpServerControllerInputSchema = z
 		ctx: z.object({ session: z.object({ ownerId: z.string() }) }),
 		body: z.intersection(
 			z.object({
-				// O formato é o mesmo do domínio, declarado aqui porque o controller é quem produz a
-				// mensagem que o dono lê enquanto digita.
-				key: z.string().regex(/^[a-z][a-z0-9-]{0,31}$/),
+				// O padrão vem da entidade (`MCP_SERVER_KEY_PATTERN`), nunca redigitado aqui: duas cópias
+				// do mesmo regex divergem no primeiro que alguém mudar, e esta seria a pior divergência
+				// possível — entre o que o controller ACEITA e o que a entidade VALIDA.
+				key: z.string().regex(MCP_SERVER_KEY_PATTERN),
 				approvalPolicy: z.enum(McpApprovalPolicy).optional(),
 			}),
 			McpServerConfigSchema,

@@ -217,7 +217,11 @@ export class McpDoorController extends McpAdapter {
 		const mcpServer = await this.mcpServers.findByKey(identity.ownerId, input.serverKey)
 		// An unregistered/disabled server is not this gate's call to make — `registry.call` already
 		// answers it with a graceful `isError` text instead of throwing (see `DefaultMcpUpstreamRegistry`).
-		if (!mcpServer) return registry.call({ ownerId: identity.ownerId, ...input })
+		// `enabled` is checked HERE too, not just inside `registry.call`: without it, a disabled
+		// server would still fall through to the ASK gate below, raise a stop, and an owner who
+		// approves it would land on `registry.call`'s "unknown MCP server" text anyway — a question
+		// asked that no answer can satisfy.
+		if (!mcpServer?.enabled) return registry.call({ ownerId: identity.ownerId, ...input })
 
 		const stopPolicy = await this.stopPolicies.get(identity.ownerId)
 		const disposition = resolveMcpCallDisposition({

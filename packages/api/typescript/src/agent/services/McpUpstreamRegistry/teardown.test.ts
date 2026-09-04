@@ -159,7 +159,8 @@ describe('DefaultMcpUpstreamRegistry.shutdown — teardown of REAL STDIO upstrea
 		await registry.shutdown()
 
 		expect(closeSpy).toHaveBeenCalledTimes(2)
-	}, 20_000) // `waitUntilDead` for why this needs headroom above bun's 5000ms default under load. // Real spawn + MCP handshake for 2 processes, then real teardown — see the module docblock atop
+	}, 20_000) // Real spawn + MCP handshake for 2 processes, then real teardown — see the module docblock atop
+	// `waitUntilDead` for why this needs headroom above bun's 5000ms default under load.
 
 	it('(b) terminate is called once per STDIO server, with that REAL pid — red before the fix, green after', async () => {
 		await registerStdioServer('alpha')
@@ -191,7 +192,9 @@ describe('DefaultMcpUpstreamRegistry.shutdown — teardown of REAL STDIO upstrea
 		for (const dead of deaths) {
 			expect(dead).toBe(true)
 		}
-	}, 25_000) // this cap even under load. See the module docblock atop `waitUntilDead`. // deadline (run concurrently for both pids, so worst case is ~10s, not ~20s) — comfortably below // Real spawn + handshake for 2 processes, real teardown, then up to `waitUntilDead`'s own 10s
+	}, 25_000) // Real spawn + handshake for 2 processes, real teardown, then up to `waitUntilDead`'s own 10s
+	// deadline (run concurrently for both pids, so worst case is ~10s, not ~20s) — comfortably below
+	// this cap even under load. See the module docblock atop `waitUntilDead`.
 
 	it('(c) shutdown is idempotent — a second call terminates nothing again', async () => {
 		await registerStdioServer('alpha')

@@ -22,8 +22,12 @@ function sortDeep(value: unknown): unknown {
 	if (Array.isArray(value)) return value.map(sortDeep)
 	if (value && typeof value === 'object')
 		return Object.fromEntries(
+			// Plain `sort()` — codepoint order, not `localeCompare`. This form is PERSISTED
+			// (`callHash` is a DB column compared across processes/runs), and `localeCompare` collates
+			// through ICU: the same key pair can order differently across runtimes/OS locale tables,
+			// which would make the same call hash to different bytes depending on where it ran.
 			Object.entries(value as Record<string, unknown>)
-				.sort(([a], [b]) => a.localeCompare(b))
+				.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
 				.map(([k, v]) => [k, sortDeep(v)]),
 		)
 	return value
