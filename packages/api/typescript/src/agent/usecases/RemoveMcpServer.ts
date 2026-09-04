@@ -3,6 +3,7 @@ import { injectable } from 'tsyringe-neo'
 import { BaseError, Handler, z } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
 import { McpServerRepository } from '../repositories/McpServerRepository'
+import { McpUpstreamRegistry } from '../services/McpUpstreamRegistry'
 import type { AgentApplicationErrors } from '../errors'
 
 export const RemoveMcpServerInputSchema = z.object({ ownerId: z.uuid(), mcpServerId: z.string() })
@@ -14,7 +15,10 @@ export class RemoveMcpServer extends Handler<typeof RemoveMcpServerInputSchema, 
 	readonly inputSchema = RemoveMcpServerInputSchema
 	readonly outputSchema = RemoveMcpServerOutputSchema
 
-	constructor(private servers: McpServerRepository) {
+	constructor(
+		private servers: McpServerRepository,
+		private readonly registry: McpUpstreamRegistry,
+	) {
 		super()
 	}
 
@@ -22,8 +26,13 @@ export class RemoveMcpServer extends Handler<typeof RemoveMcpServerInputSchema, 
 		const server = await this.servers.findById(input.mcpServerId, tx)
 		if (!server || server.ownerId !== input.ownerId) throw new BaseError<AgentApplicationErrors>('MCP_SERVER_NOT_FOUND')
 
-		return this.withTransaction(tx, async tx => {
+		await this.withTransaction(tx, async tx => {
 			await this.servers.delete(server.id.value, tx)
 		})
+
+		// DEPOIS do delete, nunca antes — mesma ordem e mesmo motivo de `UpdateMcpServer`. Sem isto, um
+		// servidor "removido" seguia rodando: as chamadas passavam a ser recusadas (o `call` re-checa
+		// `enabled`/existência), mas o PROCESSO continuava vivo até o daemon reiniciar.
+		return this.registry.evict(input.ownerId, server.key)
 	}
 }

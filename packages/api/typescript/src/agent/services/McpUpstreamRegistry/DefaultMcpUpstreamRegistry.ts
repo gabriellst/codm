@@ -45,17 +45,45 @@ export function childEnv(extra?: Record<string, string>): Record<string, string>
 const UPSTREAM_CALL_RESULT_SCHEMA = z.looseObject({ content: z.array(z.unknown()), isError: z.boolean().optional() })
 
 /**
+ * A chave de cache de um servidor — SEMPRE o par (dono, key), nunca a key sozinha.
+ *
+ * A versão anterior cacheava só por `server.key`, e `key` é único POR DONO
+ * (`MCP_SERVER_KEY_CONFLICT` checa `(ownerId, key)`, não `key` global) — então dois donos com a mesma
+ * key ("playwright", o exemplo óbvio) compartilhariam cliente, transporte e cache de ferramentas.
+ * Um cruzamento entre donos esperando para acontecer, não um bug hipotético.
+ */
+function cacheKey(ownerId: string, serverKey: string): string {
+	return `${ownerId}::${serverKey}`
+}
+
+/**
  * Uma conexão viva por servidor habilitado, criada sob demanda e reaproveitada entre requisições.
  *
  * DIFERENTE do servidor gerado, que o door constrói FRESCO a cada request porque o transporte
  * stateless do lado servidor proíbe reúso. Aqui é o oposto: cada conexão é um PROCESSO (ou um socket),
  * e recriá-la por chamada pagaria um spawn de Node por `tools/call` — em Playwright, dezenas por
  * tarefa. O que o reúso obriga em troca é `shutdown`, e é por isso que ele está no contrato.
+ *
+ * DOIS CACHES A MAIS além do cliente, e o porquê de cada um (Task T8, §2 da revisão do PR-56):
+ *
+ * - `connecting` — um `Map<string, Promise<Client>>` de conexões EM VOO, consultado ANTES de
+ *   spawnar. Duas chamadas paralelas de ferramenta contra o mesmo servidor ainda-não-conectado — o
+ *   caso COMUM de uso paralelo, não o exótico — entravam as duas em `connect()` antes de qualquer
+ *   `await` resolver: a segunda sobrescrevia `clients`/`transports` e a primeira ficava órfã,
+ *   invisível a `shutdown()`. Como `Map.get`/`.set` são síncronos, registrar a promessa em voo antes
+ *   do primeiro `await` fecha a janela — a segunda chamada encontra e aguarda a MESMA promessa.
+ * - `toolsCache` — as ferramentas do último `tools/list` bem-sucedido, por chave. Sem isso, toda
+ *   montagem de transporte (inclusive para chamar as NOSSAS ferramentas) reconsultava TODO upstream
+ *   habilitado — um upstream HTTP inalcançável podia segurar `GetSettings` e o door até o timeout do
+ *   SDK. `evict()` é a única porta de invalidação: uma falha (`catch` em `safeListTools`) nunca
+ *   escreve no cache, para que o próximo `listTools` tente de novo em vez de fixar um erro transitório.
  */
 @injectable()
 export class DefaultMcpUpstreamRegistry extends McpUpstreamRegistry {
 	private readonly clients = new Map<string, Client>()
 	private readonly transports = new Map<string, StdioClientTransport>()
+	private readonly connecting = new Map<string, Promise<Client>>()
+	private readonly toolsCache = new Map<string, UpstreamTool[]>()
 
 	constructor(
 		private servers: McpServerRepository,
@@ -68,6 +96,22 @@ export class DefaultMcpUpstreamRegistry extends McpUpstreamRegistry {
 		const enabled = await this.servers.listEnabledByOwner(ownerId)
 		const lists = await Promise.all(enabled.map(server => this.safeListTools(server)))
 		return lists.flat()
+	}
+
+	async evict(ownerId: string, serverKey: string): Promise<void> {
+		const key = cacheKey(ownerId, serverKey)
+		const client = this.clients.get(key)
+		if (client) {
+			// Mesma ordem de `shutdown()`, e pelo mesmo motivo: o pid tem de ser lido ANTES do close,
+			// nunca depois — `StdioClientTransport.close()` zera `this._process` de forma SÍNCRONA antes
+			// de esperar qualquer coisa.
+			const pid = this.transports.get(key)?.pid
+			await client.close().catch(() => undefined)
+			if (pid) PROCESS_TREES[process.platform].terminateByPid(pid, 2000)
+		}
+		this.clients.delete(key)
+		this.transports.delete(key)
+		this.toolsCache.delete(key)
 	}
 
 	async call(input: { ownerId: string; serverKey: string; toolName: string; args: Record<string, unknown> }): Promise<UpstreamCallResult> {
@@ -130,16 +174,25 @@ export class DefaultMcpUpstreamRegistry extends McpUpstreamRegistry {
 	 * trace — que é onde um servidor MCP quebrado numa máquina sem ninguém olhando é diagnosticado.
 	 */
 	private async safeListTools(server: McpServer): Promise<UpstreamTool[]> {
+		const key = cacheKey(server.ownerId, server.key)
+		const cached = this.toolsCache.get(key)
+		if (cached) return cached
+
 		try {
 			const client = await this.connect(server)
 			const { tools } = await client.listTools()
-			return tools.map(tool => ({
+			const mapped = tools.map(tool => ({
 				serverKey: server.key,
 				name: tool.name,
 				description: tool.description,
 				inputSchema: tool.inputSchema,
 				approvalPolicy: server.approvalPolicy,
 			}))
+			// SÓ o sucesso entra no cache. Uma falha transitória (upstream ainda subindo, rede
+			// momentaneamente fora) não pode virar um erro FIXO até o próximo `evict` — o próximo
+			// `listTools` tenta de novo, exatamente como se não houvesse cache nenhum.
+			this.toolsCache.set(key, mapped)
+			return mapped
 		} catch (error) {
 			this.logging.warn({
 				content: {
@@ -154,9 +207,30 @@ export class DefaultMcpUpstreamRegistry extends McpUpstreamRegistry {
 	}
 
 	private async connect(server: McpServer): Promise<Client> {
-		const cached = this.clients.get(server.key)
+		const key = cacheKey(server.ownerId, server.key)
+		const cached = this.clients.get(key)
 		if (cached) return cached
 
+		// Uma conexão já EM VOO para esta chave é devolvida como está — sem isso, duas chamadas
+		// paralelas contra o mesmo servidor ainda-não-conectado entrariam as duas no `connect()` de
+		// baixo, e a segunda sobrescreveria `clients`/`transports` da primeira antes dela terminar,
+		// deixando o processo da primeira órfão (invisível a `shutdown()`). `Map.get`/`.set` são
+		// síncronos, então registrar a promessa ANTES do primeiro `await` fecha essa janela.
+		const inFlight = this.connecting.get(key)
+		if (inFlight) return inFlight
+
+		const promise = this.doConnect(server, key)
+		this.connecting.set(key, promise)
+		try {
+			return await promise
+		} finally {
+			// Falha ou sucesso, a corrida acabou: uma falha não pode deixar uma promessa REJEITADA presa
+			// no cache para sempre — a próxima tentativa tem de poder spawnar de novo.
+			this.connecting.delete(key)
+		}
+	}
+
+	private async doConnect(server: McpServer, key: string): Promise<Client> {
 		const client = new Client({ name: 'codm', version: '1.0.0' }, { capabilities: {} })
 		// Sem `!`: a entidade garante o campo por transporte via `.refine()`, mas o TIPO não carrega
 		// essa garantia, e uma asserção esconderia exatamente o caso que a garantia protege. Um
@@ -170,13 +244,13 @@ export class DefaultMcpUpstreamRegistry extends McpUpstreamRegistry {
 				...PROCESS_TREES[process.platform].spawnOptions,
 			})
 			await client.connect(transport)
-			this.transports.set(server.key, transport)
+			this.transports.set(key, transport)
 		} else {
 			if (!server.url) throw new BaseError<AgentDomainErrors>('MCP_SERVER_TRANSPORT_INCOMPLETE', server.key)
 			await client.connect(new StreamableHTTPClientTransport(new URL(server.url), { requestInit: { headers: server.headers ?? {} } }))
 		}
 
-		this.clients.set(server.key, client)
+		this.clients.set(key, client)
 		return client
 	}
 }

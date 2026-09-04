@@ -4,6 +4,7 @@ import { BaseError, Handler, z } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
 import { McpApprovalPolicy, McpTransport } from '@codm/contracts-typescript/wire/enums'
 import { McpServerRepository } from '../repositories/McpServerRepository'
+import { McpUpstreamRegistry } from '../services/McpUpstreamRegistry'
 import type { AgentApplicationErrors } from '../errors'
 
 export const UpdateMcpServerInputSchema = z.object({
@@ -28,7 +29,10 @@ export class UpdateMcpServer extends Handler<typeof UpdateMcpServerInputSchema, 
 	readonly inputSchema = UpdateMcpServerInputSchema
 	readonly outputSchema = UpdateMcpServerOutputSchema
 
-	constructor(private servers: McpServerRepository) {
+	constructor(
+		private servers: McpServerRepository,
+		private readonly registry: McpUpstreamRegistry,
+	) {
 		super()
 	}
 
@@ -52,8 +56,14 @@ export class UpdateMcpServer extends Handler<typeof UpdateMcpServerInputSchema, 
 				headers: input.headers,
 			})
 
-		return this.withTransaction(tx, async tx => {
+		await this.withTransaction(tx, async tx => {
 			await this.servers.save(server, tx)
 		})
+
+		// DEPOIS do save, nunca antes: uma falha de escrita não pode derrubar uma conexão que continua
+		// válida. O registry cacheia por chave, e a chave não muda quando `command`/`env` mudam — sem
+		// este `evict`, editar um servidor continuava servindo o processo VELHO até o daemon reiniciar,
+		// sem erro em lugar nenhum (Task T8, §2 da revisão do PR-56).
+		return this.registry.evict(input.ownerId, server.key)
 	}
 }

@@ -25,4 +25,8 @@ export class MockMcpUpstreamRegistry extends McpUpstreamRegistry {
 	async shutdown(): Promise<void> {
 		// Nothing to release — this registry never owns a process or a connection.
 	}
+
+	async evict(): Promise<void> {
+		// Nothing to release — this registry never owns a process or a connection to evict.
+	}
 }

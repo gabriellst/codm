@@ -34,4 +34,14 @@ export abstract class McpUpstreamRegistry {
 	abstract call(input: { ownerId: string; serverKey: string; toolName: string; args: Record<string, unknown> }): Promise<UpstreamCallResult>
 	/** Derruba todo processo/conexão que este registry ainda detém. Idempotente. */
 	abstract shutdown(): Promise<void>
+	/**
+	 * Esquecer o que sabemos de um servidor — a conexão viva e as ferramentas cacheadas.
+	 *
+	 * Existe porque o cache aqui é por CHAVE, e a chave não muda quando a configuração muda. Sem uma
+	 * porta de invalidação, editar `command`/`env` continuava servindo o processo velho até o daemon
+	 * reiniciar: o dono corrige a configuração, salva, e nada acontece — sem erro nenhum, que é a
+	 * pior forma de falhar. Desabilitar ou remover tinha o gêmeo disso: a chamada passava a ser
+	 * recusada (o `call` re-checa `enabled`), mas o PROCESSO seguia vivo.
+	 */
+	abstract evict(ownerId: string, serverKey: string): Promise<void>
 }
