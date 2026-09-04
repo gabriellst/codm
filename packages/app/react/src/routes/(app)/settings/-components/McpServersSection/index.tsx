@@ -74,7 +74,12 @@ export function McpServersSection({ className, ...props }: ComponentProps<'secti
 					<Button type="button" variant="ghost" size="sm" onClick={() => show(<McpImportDialog onDone={hide} />)}>
 						<IconFileImport data-icon="inline-start" /> {t('settings.mcpServers.import.title')}
 					</Button>
-					<Button type="button" variant="ghost" size="sm" onClick={() => show(<McpServerForm onDone={hide} />)}>
+					<Button
+						type="button"
+						variant="ghost"
+						size="sm"
+						onClick={() => show(<McpServerForm presets={data?.mcpPresets ?? []} onDone={hide} />)}
+					>
 						<IconPlus data-icon="inline-start" /> {t('settings.mcpServers.addServer')}
 					</Button>
 				</div>

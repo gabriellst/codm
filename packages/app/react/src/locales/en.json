@@ -775,7 +775,8 @@
 				"transportLabel": "Transport",
 				"urlLabel": "Server URL",
 				"urlPlaceholder": "https://mcp.example.com",
-				"valueColumnLabel": "Value"
+				"valueColumnLabel": "Value",
+				"presetsLabel": "Start from a known server"
 			},
 			"noTools": "This server hasn't published any tools yet.",
 			"policy": {
@@ -809,6 +810,12 @@
 				"wholeDocument": "whole document",
 				"secretsCount": "{{count}} secret(s)",
 				"secretsWillBeBlank": "Secrets come in with their names only — you fill the values in before the server can run."
+			},
+			"presets": {
+				"playwright": "Drives a browser — navigate, click, read pages",
+				"filesystem": "Reads and writes files in a folder you choose",
+				"everything": "The protocol reference server — good for checking your setup works",
+				"github": "Issues, pull requests and repositories (needs a token)"
 			}
 		},
 		"providerNotFound": "not found in PATH",

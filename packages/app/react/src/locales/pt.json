@@ -775,7 +775,8 @@
 				"transportLabel": "Transporte",
 				"urlLabel": "URL do servidor",
 				"urlPlaceholder": "https://mcp.example.com",
-				"valueColumnLabel": "Valor"
+				"valueColumnLabel": "Valor",
+				"presetsLabel": "Comece por um servidor conhecido"
 			},
 			"noTools": "Este servidor ainda não publicou ferramentas.",
 			"policy": {
@@ -809,6 +810,12 @@
 				"wholeDocument": "documento inteiro",
 				"secretsCount": "{{count}} segredo(s)",
 				"secretsWillBeBlank": "Os segredos chegam só com o nome — você preenche os valores antes do servidor poder rodar."
+			},
+			"presets": {
+				"playwright": "Dirige um navegador — navega, clica, lê páginas",
+				"filesystem": "Lê e escreve arquivos numa pasta que você escolhe",
+				"everything": "O servidor de referência do protocolo — bom para conferir se seu cadastro funciona",
+				"github": "Issues, pull requests e repositórios (exige um token)"
 			}
 		},
 		"providerNotFound": "não encontrado no PATH",

@@ -47,6 +47,16 @@ get "policy"(){
     })),
 "reachable": z.boolean()
     })),
+"mcpPresets": z.array(z.object({
+    "key": z.string(),
+get "transport"(){
+                return mcpTransportSchema
+              },
+"command": z.string(),
+"args": z.array(z.string()),
+"envKeys": z.array(z.string()),
+"descriptionKey": z.string()
+    })),
 "stopCriteria": z.object({
     "serverErrors": z.boolean(),
 "blockedByClassification": z.boolean(),

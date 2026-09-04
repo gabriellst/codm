@@ -30,6 +30,16 @@ export const GetSettingsControllerOutputSchema = GetSettingsOutputSchema.example
 				reachable: true,
 			},
 		],
+		mcpPresets: [
+			{
+				key: 'playwright',
+				transport: McpTransport.STDIO,
+				command: 'npx',
+				args: ['-y', '@playwright/mcp'],
+				envKeys: [],
+				descriptionKey: 'settings.mcpServers.presets.playwright',
+			},
+		],
 		stopCriteria: {
 			serverErrors: true,
 			blockedByClassification: true,

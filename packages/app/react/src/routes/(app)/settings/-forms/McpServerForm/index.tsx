@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils'
 
 /** The row this form edits when it is REGISTERING, not RECONFIGURING — the SDK's own element type. */
 type McpServerEntry = GetSettingsQueryResponse['mcpServers'][number]
+type McpPresetEntry = GetSettingsQueryResponse['mcpPresets'][number]
 
 /** The two shapes a NEW server can have — taken straight off the register endpoint's own union. */
 type StdioCreateVariant = Extract<RegisterMcpServerMutationRequest, { transport: 'STDIO' }>
@@ -91,6 +92,47 @@ const nonEmptyEntries = (entries: KeyValueEntry[]): Record<string, string> | und
  * o campo reprova na validação e ele vê o que faltou, que é melhor do que um servidor subindo com
  * dois argumentos colados num só.
  */
+/**
+ * A CHAVE SUGERIDA A PARTIR DO COMANDO — `npx -y @playwright/mcp` → `playwright`.
+ *
+ * ### O que ela resolve
+ * A chave tem padrão restrito (`^[a-z][a-z0-9-]{0,31}$`) e vira NAMESPACE das ferramentas
+ * (`<key>__<tool>`), então errá-la custa uma mensagem de validação sobre um campo que o dono nem
+ * pensou ainda. O nome do pacote quase sempre JÁ é a resposta — ele só precisa ser extraído.
+ *
+ * ### Por que o ÚLTIMO segmento, e não o primeiro
+ * Os nomes reais do ecossistema são escopados: `@playwright/mcp`, `@modelcontextprotocol/server-github`,
+ * `@supermemory/mcp`. O escopo é do PUBLICADOR e o basename é do produto — e são os dois casos em que
+ * o dono reconhece o servidor. Um `@modelcontextprotocol/server-github` vira `server-github`, não
+ * `modelcontextprotocol`: o segundo diria quem publicou, e três servidores diferentes colidiriam.
+ *
+ * ### Sugestão, nunca imposição
+ * Devolve `undefined` quando não consegue extrair algo VÁLIDO, em vez de chutar. Um palpite errado é
+ * pior que palpite nenhum aqui: ele preenche um campo que o dono talvez não releia, e a chave é
+ * permanente — ela vira o namespace pelo qual o agente chama a ferramenta.
+ */
+export const deriveKeyFromCommand = (command: string, rawArgs: string): string | undefined => {
+	// O comando em si (`npx`, `node`, `uvx`, `bunx`) é o EXECUTOR, nunca o servidor — quem nomeia é o
+	// pacote, que vem nos argumentos. Flags são descartadas: `-y` não é nome de nada.
+	const candidates = [...(splitArgs(rawArgs) ?? []), command].filter(token => !token.startsWith('-'))
+
+	for (const token of candidates) {
+		// `@escopo/nome` → `nome`; `caminho/para/servidor.js` → `servidor`; `pacote` → `pacote`.
+		const basename = token.split('/').pop() ?? ''
+		const withoutExtension = basename.replace(/\.[a-z]+$/i, '')
+		const normalized = withoutExtension
+			.toLowerCase()
+			.replace(/[^a-z0-9-]+/g, '-')
+			.replace(/^-+|-+$/g, '')
+
+		// Validado pelo SCHEMA DA SDK, nunca por um regex redigitado aqui: o padrão da chave é do
+		// contrato, e uma segunda cópia dele divergiria no primeiro que alguém mudasse.
+		if (KEY_SCHEMA.safeParse(normalized).success) return normalized
+	}
+
+	return undefined
+}
+
 export const splitArgs = (raw: string): string[] | undefined => {
 	const trimmed = raw.trim()
 	if (trimmed.length === 0) return undefined
@@ -142,9 +184,22 @@ export const splitArgs = (raw: string): string[] | undefined => {
  */
 export function McpServerForm({
 	server,
+	presets = [],
 	onDone,
 	className,
-}: { server?: McpServerEntry; onDone: () => void } & Pick<ComponentProps<typeof DialogContent>, 'className'>) {
+}: {
+	server?: McpServerEntry
+	/**
+	 * O catálogo de sugestões, RECEBIDO POR PROP — não buscado aqui.
+	 *
+	 * A seção que abre este diálogo já faz o `useGetSettings`, e é ela a dona do dado; buscar de novo
+	 * criaria um segundo dono da mesma leitura. É também o que o rail CP-03 cobra de um `index.tsx`
+	 * sob `routes/**`, e a convenção de diálogos deste pacote já diz o mesmo: o diálogo recebe seu
+	 * assunto por prop — `server` chega assim desde sempre.
+	 */
+	presets?: McpPresetEntry[]
+	onDone: () => void
+} & Pick<ComponentProps<typeof DialogContent>, 'className'>) {
 	const { t } = useTranslation()
 	const [transport, setTransport] = useState<McpTransportEnumKey>(server?.transport ?? McpTransportEnum.STDIO)
 	const isReconfigure = server != null
@@ -152,7 +207,7 @@ export function McpServerForm({
 	// Dispatch by MAP, never an if-chain (CMP-P18) — each entry builds its own member's form with its
 	// own default value, so neither variant form knows the other's fields exist.
 	const TRANSPORT_FORMS: Record<McpTransportEnumKey, ReactNode> = {
-		[McpTransportEnum.STDIO]: <StdioServerForm server={server} onDone={onDone} />,
+		[McpTransportEnum.STDIO]: <StdioServerForm server={server} presets={presets} onDone={onDone} />,
 		[McpTransportEnum.HTTP]: <HttpServerForm server={server} onDone={onDone} />,
 	}
 
@@ -267,8 +322,17 @@ interface VariantFormProps extends ComponentProps<'form'> {
 	onDone: () => void
 }
 
+/**
+ * O STDIO recebe os presets; o HTTP não — e a assimetria é o catálogo, não um esquecimento. Todo
+ * preset de hoje é um processo local (`npx …`), então oferecê-los no formulário HTTP seria sugerir
+ * comandos a um transporte que não executa comando nenhum.
+ */
+interface StdioFormProps extends VariantFormProps {
+	presets?: McpPresetEntry[]
+}
+
 /** "npx -y @agent/browser-use-mcp" — the local-process member. */
-function StdioServerForm({ server, onDone, className, ...props }: VariantFormProps) {
+function StdioServerForm({ server, presets = [], onDone, className, ...props }: StdioFormProps) {
 	const { t } = useTranslation()
 	const isReconfigure = server != null
 	const { isPending, submitCreate, submitReconfigure } = useMcpServerSubmit(server, onDone)
@@ -330,6 +394,37 @@ function StdioServerForm({ server, onDone, className, ...props }: VariantFormPro
 				form.handleSubmit()
 			}}
 		>
+			{/* PRESETS — só no cadastro. Reconfigurar já tem os valores do dono, e sobrescrevê-los com uma
+			    sugestão destruiria o que ele digitou. Não há checagem de transporte aqui porque ESTE
+			    componente É a variante STDIO — a união discriminada já resolveu isso montando outro form
+			    para HTTP, e um `if` sobre o discriminante aqui seria a condição que a união eliminou. */}
+			{!isReconfigure && presets.length > 0 && (
+				<Field>
+					<FieldLabel>{t('settings.mcpServers.form.presetsLabel')}</FieldLabel>
+					<div className="flex flex-wrap gap-1.5">
+						{presets.map(preset => (
+							<Button
+								key={preset.key}
+								type="button"
+								variant="ghost"
+								size="sm"
+								title={t(preset.descriptionKey as Parameters<typeof t>[0])}
+								onClick={() => {
+									form.setFieldValue('key', preset.key)
+									form.setFieldValue('command', preset.command)
+									form.setFieldValue('args', preset.args.join(' '))
+									// O preset entrega a FORMA do segredo, nunca o valor — os campos abrem vazios e o
+									// `hasBlankSecret` trava o salvar até o dono preenchê-los. Mesma regra do import.
+									setEnvEntries(preset.envKeys.map(envKey => ({ id: crypto.randomUUID(), key: envKey, value: '' })))
+								}}
+							>
+								{preset.key}
+							</Button>
+						))}
+					</div>
+				</Field>
+			)}
+
 			{!isReconfigure && (
 				<form.Field name="key" validators={{ onChange: KEY_SCHEMA }}>
 					{field => (
@@ -382,7 +477,16 @@ function StdioServerForm({ server, onDone, className, ...props }: VariantFormPro
 							placeholder={t('settings.mcpServers.form.argsPlaceholder')}
 							value={field.state.value}
 							onBlur={field.handleBlur}
-							onChange={e => field.handleChange(e.target.value)}
+							onChange={e => {
+								field.handleChange(e.target.value)
+								// SUGERE A CHAVE, E SÓ ENQUANTO ELA ESTIVER VAZIA. Sobrescrever o que o dono digitou
+								// seria pior que não sugerir nada: a chave é PERMANENTE (vira o namespace
+								// `<key>__<tool>` pelo qual o agente chama a ferramenta), e um campo que muda sozinho
+								// depois de preenchido é a forma mais rápida de alguém salvar um nome que não escolheu.
+								if (isReconfigure || form.getFieldValue('key')) return
+								const suggested = deriveKeyFromCommand(form.getFieldValue('command') ?? '', e.target.value)
+								if (suggested) form.setFieldValue('key', suggested)
+							}}
 						/>
 					</Field>
 				)}

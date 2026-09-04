@@ -9483,6 +9483,14 @@ type GetSettingsResponse struct {
 			OperatorName string `json:"operatorName"`
 			Timezone     string `json:"timezone"`
 		} `json:"general"`
+		McpPresets []struct {
+			Args           []string     `json:"args"`
+			Command        string       `json:"command"`
+			DescriptionKey string       `json:"descriptionKey"`
+			EnvKeys        []string     `json:"envKeys"`
+			Key            string       `json:"key"`
+			Transport      McpTransport `json:"transport"`
+		} `json:"mcpPresets"`
 		McpServers []struct {
 			ApprovalPolicy McpApprovalPolicy `json:"approvalPolicy"`
 			Args           *[]string         `json:"args,omitempty"`
@@ -12607,6 +12615,14 @@ func ParseGetSettingsResponse(rsp *http.Response) (*GetSettingsResponse, error) 
 				OperatorName string `json:"operatorName"`
 				Timezone     string `json:"timezone"`
 			} `json:"general"`
+			McpPresets []struct {
+				Args           []string     `json:"args"`
+				Command        string       `json:"command"`
+				DescriptionKey string       `json:"descriptionKey"`
+				EnvKeys        []string     `json:"envKeys"`
+				Key            string       `json:"key"`
+				Transport      McpTransport `json:"transport"`
+			} `json:"mcpPresets"`
 			McpServers []struct {
 				ApprovalPolicy McpApprovalPolicy `json:"approvalPolicy"`
 				Args           *[]string         `json:"args,omitempty"`

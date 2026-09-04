@@ -10,6 +10,7 @@ import { AgentRunnerFactory } from '@agent/services/AgentRunnerFactory/AgentRunn
 import { McpServerRepository } from '@agent/repositories/McpServerRepository'
 import { McpUpstreamRegistry, type UpstreamTool } from '@agent/services/McpUpstreamRegistry'
 import { StopPolicyConfigRepository } from '@thread/repositories/StopPolicyConfigRepository'
+import { MCP_PRESETS } from '@catalog'
 
 import pkg from '../../../package.json' with { type: 'json' }
 
@@ -77,10 +78,30 @@ const McpServerSummarySchema = z.object({
 	reachable: z.boolean(),
 })
 
+/**
+ * Um servidor que o produto SUGERE — ponto de partida de um cadastro, nunca um cadastro.
+ *
+ * Vem do catálogo declarado (`MCP_PRESETS`), a mesma forma do `PROVIDER_MODELS`: o console é LEITOR
+ * da relação, nunca uma segunda cópia dela. `envKeys` são NOMES (o formulário abre com os campos
+ * vazios e o `hasBlankSecret` trava o salvar) — um preset jamais carrega valor de segredo, e há rail
+ * varrendo o catálogo inteiro atrás disso.
+ */
+const McpPresetSchema = z.object({
+	key: z.string(),
+	transport: z.enum(McpTransport),
+	command: z.string(),
+	args: z.array(z.string()),
+	envKeys: z.array(z.string()),
+	/** CHAVE de i18n, não a frase: o catálogo não carrega texto de UI. */
+	descriptionKey: z.string(),
+})
+
 export const GetSettingsInputSchema = z.object({ ownerId: z.uuid() })
 export const GetSettingsOutputSchema = z.object({
 	providers: z.array(ProviderAvailabilitySchema),
 	mcpServers: z.array(McpServerSummarySchema),
+	/** O catálogo de sugestões — estático, mas servido pela MESMA query que a tela já faz. */
+	mcpPresets: z.array(McpPresetSchema),
 	stopCriteria: z.object({
 		serverErrors: z.boolean(),
 		blockedByClassification: z.boolean(),
@@ -186,6 +207,9 @@ export class GetSettings extends Handler<typeof GetSettingsInputSchema, typeof G
 		return {
 			providers,
 			mcpServers,
+			// Copiado do catálogo, não repassado: `MCP_PRESETS` é `readonly` e entregá-lo direto daria ao
+			// chamador uma referência para a constante do módulo.
+			mcpPresets: MCP_PRESETS.map(preset => ({ ...preset, args: [...preset.args], envKeys: [...preset.envKeys] })),
 			stopCriteria,
 			general: {
 				// Empty when unnamed — the frontend renders its own i18n placeholder; never an EN literal from the API.

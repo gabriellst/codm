@@ -97,6 +97,35 @@ export type GetSettings200 = {
         reachable: boolean;
     }[];
     /**
+     * @type array
+    */
+    mcpPresets: {
+        /**
+         * @type string
+        */
+        key: string;
+        /**
+         * @type string
+        */
+        transport: McpTransport;
+        /**
+         * @type string
+        */
+        command: string;
+        /**
+         * @type array
+        */
+        args: string[];
+        /**
+         * @type array
+        */
+        envKeys: string[];
+        /**
+         * @type string
+        */
+        descriptionKey: string;
+    }[];
+    /**
      * @type object
     */
     stopCriteria: {

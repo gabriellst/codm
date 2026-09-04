@@ -6928,6 +6928,7 @@ pub mod types {
     ///  "required": [
     ///    "appVersion",
     ///    "general",
+    ///    "mcpPresets",
     ///    "mcpServers",
     ///    "providers",
     ///    "stopCriteria"
@@ -6955,6 +6956,47 @@ pub mod types {
     ///        }
     ///      },
     ///      "additionalProperties": false
+    ///    },
+    ///    "mcpPresets": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "args",
+    ///          "command",
+    ///          "descriptionKey",
+    ///          "envKeys",
+    ///          "key",
+    ///          "transport"
+    ///        ],
+    ///        "properties": {
+    ///          "args": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "type": "string"
+    ///            }
+    ///          },
+    ///          "command": {
+    ///            "type": "string"
+    ///          },
+    ///          "descriptionKey": {
+    ///            "type": "string"
+    ///          },
+    ///          "envKeys": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "type": "string"
+    ///            }
+    ///          },
+    ///          "key": {
+    ///            "type": "string"
+    ///          },
+    ///          "transport": {
+    ///            "$ref": "#/components/schemas/McpTransport"
+    ///          }
+    ///        },
+    ///        "additionalProperties": false
+    ///      }
     ///    },
     ///    "mcpServers": {
     ///      "type": "array",
@@ -7117,6 +7159,8 @@ pub mod types {
         #[serde(rename = "appVersion")]
         pub app_version: ::std::string::String,
         pub general: GetSettingsResponseGeneral,
+        #[serde(rename = "mcpPresets")]
+        pub mcp_presets: ::std::vec::Vec<GetSettingsResponseMcpPresetsItem>,
         #[serde(rename = "mcpServers")]
         pub mcp_servers: ::std::vec::Vec<GetSettingsResponseMcpServersItem>,
         pub providers: ::std::vec::Vec<GetSettingsResponseProvidersItem>,
@@ -7167,6 +7211,69 @@ pub mod types {
     impl ::std::convert::From<&GetSettingsResponseGeneral>
     for GetSettingsResponseGeneral {
         fn from(value: &GetSettingsResponseGeneral) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetSettingsResponseMcpPresetsItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "args",
+    ///    "command",
+    ///    "descriptionKey",
+    ///    "envKeys",
+    ///    "key",
+    ///    "transport"
+    ///  ],
+    ///  "properties": {
+    ///    "args": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string"
+    ///      }
+    ///    },
+    ///    "command": {
+    ///      "type": "string"
+    ///    },
+    ///    "descriptionKey": {
+    ///      "type": "string"
+    ///    },
+    ///    "envKeys": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string"
+    ///      }
+    ///    },
+    ///    "key": {
+    ///      "type": "string"
+    ///    },
+    ///    "transport": {
+    ///      "$ref": "#/components/schemas/McpTransport"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetSettingsResponseMcpPresetsItem {
+        pub args: ::std::vec::Vec<::std::string::String>,
+        pub command: ::std::string::String,
+        #[serde(rename = "descriptionKey")]
+        pub description_key: ::std::string::String,
+        #[serde(rename = "envKeys")]
+        pub env_keys: ::std::vec::Vec<::std::string::String>,
+        pub key: ::std::string::String,
+        pub transport: ::codm_contracts_rust::wire::enums::McpTransport,
+    }
+    impl ::std::convert::From<&GetSettingsResponseMcpPresetsItem>
+    for GetSettingsResponseMcpPresetsItem {
+        fn from(value: &GetSettingsResponseMcpPresetsItem) -> Self {
             value.clone()
         }
     }

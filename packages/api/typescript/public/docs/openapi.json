@@ -9442,6 +9442,47 @@
                         "additionalProperties": false
                       }
                     },
+                    "mcpPresets": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "key": {
+                            "type": "string"
+                          },
+                          "transport": {
+                            "$ref": "#/components/schemas/McpTransport"
+                          },
+                          "command": {
+                            "type": "string"
+                          },
+                          "args": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "envKeys": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "descriptionKey": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "key",
+                          "transport",
+                          "command",
+                          "args",
+                          "envKeys",
+                          "descriptionKey"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
                     "stopCriteria": {
                       "type": "object",
                       "properties": {
@@ -9497,6 +9538,7 @@
                   "required": [
                     "providers",
                     "mcpServers",
+                    "mcpPresets",
                     "stopCriteria",
                     "general",
                     "appVersion"
@@ -9538,6 +9580,19 @@
                             }
                           ],
                           "reachable": true
+                        }
+                      ],
+                      "mcpPresets": [
+                        {
+                          "key": "playwright",
+                          "transport": "STDIO",
+                          "command": "npx",
+                          "args": [
+                            "-y",
+                            "@playwright/mcp"
+                          ],
+                          "envKeys": [],
+                          "descriptionKey": "settings.mcpServers.presets.playwright"
                         }
                       ],
                       "stopCriteria": {
@@ -9593,6 +9648,19 @@
                             }
                           ],
                           "reachable": true
+                        }
+                      ],
+                      "mcpPresets": [
+                        {
+                          "key": "playwright",
+                          "transport": "STDIO",
+                          "command": "npx",
+                          "args": [
+                            "-y",
+                            "@playwright/mcp"
+                          ],
+                          "envKeys": [],
+                          "descriptionKey": "settings.mcpServers.presets.playwright"
                         }
                       ],
                       "stopCriteria": {
