@@ -7415,6 +7415,40 @@
           "McpApprovalPolicyASK"
         ]
       },
+      "McpConfigSource": {
+        "enum": [
+          "PASTE",
+          "WORKSPACE_FILE",
+          "CLAUDE_CODE",
+          "CLAUDE_DESKTOP"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "McpConfigSourcePASTE",
+          "McpConfigSourceWORKSPACE_FILE",
+          "McpConfigSourceCLAUDE_CODE",
+          "McpConfigSourceCLAUDE_DESKTOP"
+        ]
+      },
+      "McpImportRejection": {
+        "enum": [
+          "UNSUPPORTED_TRANSPORT",
+          "INVALID_KEY",
+          "MISSING_COMMAND",
+          "MISSING_URL",
+          "ALREADY_REGISTERED",
+          "MALFORMED"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "McpImportRejectionUNSUPPORTED_TRANSPORT",
+          "McpImportRejectionINVALID_KEY",
+          "McpImportRejectionMISSING_COMMAND",
+          "McpImportRejectionMISSING_URL",
+          "McpImportRejectionALREADY_REGISTERED",
+          "McpImportRejectionMALFORMED"
+        ]
+      },
       "McpScope": {
         "enum": [
           "issue-handling",

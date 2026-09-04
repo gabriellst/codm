@@ -1571,6 +1571,209 @@
         }
       }
     },
+    "/mcp-servers/import/preview": {
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "description": "Preview which MCP servers can be imported, and which were rejected and why",
+        "operationId": "PreviewMcpImport",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "workspacePath": {
+                    "type": "string"
+                  },
+                  "pasted": {
+                    "type": "string"
+                  }
+                }
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "workspacePath": "/Users/eu/repo"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Preview which MCP servers can be imported, and which were rejected and why",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sources": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "source": {
+                            "$ref": "#/components/schemas/McpConfigSource"
+                          },
+                          "path": {
+                            "type": "string"
+                          },
+                          "candidates": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "key": {
+                                  "type": "string"
+                                },
+                                "transport": {
+                                  "$ref": "#/components/schemas/McpTransport"
+                                },
+                                "command": {
+                                  "type": "string"
+                                },
+                                "args": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "url": {
+                                  "type": "string"
+                                },
+                                "envKeys": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "headerKeys": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              "required": [
+                                "key",
+                                "transport",
+                                "envKeys",
+                                "headerKeys"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "rejections": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "key": {
+                                  "type": "string"
+                                },
+                                "reason": {
+                                  "$ref": "#/components/schemas/McpImportRejection"
+                                },
+                                "detail": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "key",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "source",
+                          "candidates",
+                          "rejections"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "sources"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "sources": [
+                        {
+                          "source": "WORKSPACE_FILE",
+                          "path": "/Users/eu/repo/.mcp.json",
+                          "candidates": [
+                            {
+                              "key": "playwright",
+                              "transport": "STDIO",
+                              "command": "npx",
+                              "args": [
+                                "-y",
+                                "@playwright/mcp"
+                              ],
+                              "envKeys": [],
+                              "headerKeys": []
+                            }
+                          ],
+                          "rejections": [
+                            {
+                              "key": "legado",
+                              "reason": "UNSUPPORTED_TRANSPORT",
+                              "detail": "sse"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "sources": [
+                        {
+                          "source": "WORKSPACE_FILE",
+                          "path": "/Users/eu/repo/.mcp.json",
+                          "candidates": [
+                            {
+                              "key": "playwright",
+                              "transport": "STDIO",
+                              "command": "npx",
+                              "args": [
+                                "-y",
+                                "@playwright/mcp"
+                              ],
+                              "envKeys": [],
+                              "headerKeys": []
+                            }
+                          ],
+                          "rejections": [
+                            {
+                              "key": "legado",
+                              "reason": "UNSUPPORTED_TRANSPORT",
+                              "detail": "sse"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/threads/{threadId}/artifacts/{artifactId}/content": {
       "get": {
         "tags": [
@@ -9709,6 +9912,26 @@
         "enum": [
           "HTTP",
           "STDIO"
+        ]
+      },
+      "McpConfigSource": {
+        "type": "string",
+        "enum": [
+          "PASTE",
+          "WORKSPACE_FILE",
+          "CLAUDE_CODE",
+          "CLAUDE_DESKTOP"
+        ]
+      },
+      "McpImportRejection": {
+        "type": "string",
+        "enum": [
+          "UNSUPPORTED_TRANSPORT",
+          "INVALID_KEY",
+          "MISSING_COMMAND",
+          "MISSING_URL",
+          "ALREADY_REGISTERED",
+          "MALFORMED"
         ]
       },
       "ArtifactKind": {

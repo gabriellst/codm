@@ -42,6 +42,7 @@ import {
 	listWorkspaces,
 	listenEvents,
 	pauseThread,
+	previewMcpImport,
 	raiseStop,
 	recordArtifact,
 	registerMcpServer,
@@ -245,6 +246,10 @@ export class TypescriptClient {
 
 	pauseThread(...args: Parameters<typeof pauseThread>): ReturnType<typeof pauseThread> {
 		return (pauseThread as (...a: any[]) => ReturnType<typeof pauseThread>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	previewMcpImport(...args: Parameters<typeof previewMcpImport>): ReturnType<typeof previewMcpImport> {
+		return (previewMcpImport as (...a: any[]) => ReturnType<typeof previewMcpImport>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	raiseStop(...args: Parameters<typeof raiseStop>): ReturnType<typeof raiseStop> {

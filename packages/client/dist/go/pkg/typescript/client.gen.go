@@ -943,6 +943,60 @@ func (e McpApprovalPolicy) Valid() bool {
 	}
 }
 
+// Defines values for McpConfigSource.
+const (
+	McpConfigSourceCLAUDECODE    McpConfigSource = "CLAUDE_CODE"
+	McpConfigSourceCLAUDEDESKTOP McpConfigSource = "CLAUDE_DESKTOP"
+	McpConfigSourcePASTE         McpConfigSource = "PASTE"
+	McpConfigSourceWORKSPACEFILE McpConfigSource = "WORKSPACE_FILE"
+)
+
+// Valid indicates whether the value is a known member of the McpConfigSource enum.
+func (e McpConfigSource) Valid() bool {
+	switch e {
+	case McpConfigSourceCLAUDECODE:
+		return true
+	case McpConfigSourceCLAUDEDESKTOP:
+		return true
+	case McpConfigSourcePASTE:
+		return true
+	case McpConfigSourceWORKSPACEFILE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for McpImportRejection.
+const (
+	ALREADYREGISTERED    McpImportRejection = "ALREADY_REGISTERED"
+	INVALIDKEY           McpImportRejection = "INVALID_KEY"
+	MALFORMED            McpImportRejection = "MALFORMED"
+	MISSINGCOMMAND       McpImportRejection = "MISSING_COMMAND"
+	MISSINGURL           McpImportRejection = "MISSING_URL"
+	UNSUPPORTEDTRANSPORT McpImportRejection = "UNSUPPORTED_TRANSPORT"
+)
+
+// Valid indicates whether the value is a known member of the McpImportRejection enum.
+func (e McpImportRejection) Valid() bool {
+	switch e {
+	case ALREADYREGISTERED:
+		return true
+	case INVALIDKEY:
+		return true
+	case MALFORMED:
+		return true
+	case MISSINGCOMMAND:
+		return true
+	case MISSINGURL:
+		return true
+	case UNSUPPORTEDTRANSPORT:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for McpTransport.
 const (
 	HTTP  McpTransport = "HTTP"
@@ -1071,19 +1125,19 @@ func (e OnboardingStep) Valid() bool {
 
 // Defines values for ProviderKind.
 const (
-	CLAUDECODE ProviderKind = "CLAUDE_CODE"
-	CODEX      ProviderKind = "CODEX"
-	OPENCODE   ProviderKind = "OPENCODE"
+	ProviderKindCLAUDECODE ProviderKind = "CLAUDE_CODE"
+	ProviderKindCODEX      ProviderKind = "CODEX"
+	ProviderKindOPENCODE   ProviderKind = "OPENCODE"
 )
 
 // Valid indicates whether the value is a known member of the ProviderKind enum.
 func (e ProviderKind) Valid() bool {
 	switch e {
-	case CLAUDECODE:
+	case ProviderKindCLAUDECODE:
 		return true
-	case CODEX:
+	case ProviderKindCODEX:
 		return true
-	case OPENCODE:
+	case ProviderKindOPENCODE:
 		return true
 	default:
 		return false
@@ -1354,6 +1408,12 @@ type LoopScheduleKind string
 // McpApprovalPolicy defines model for McpApprovalPolicy.
 type McpApprovalPolicy string
 
+// McpConfigSource defines model for McpConfigSource.
+type McpConfigSource string
+
+// McpImportRejection defines model for McpImportRejection.
+type McpImportRejection string
+
 // McpTransport defines model for McpTransport.
 type McpTransport string
 
@@ -1432,6 +1492,12 @@ type RegisterMcpServerJSONBody1 struct {
 	Headers   *map[string]string `json:"headers,omitempty"`
 	Transport string             `json:"transport"`
 	Url       string             `json:"url"`
+}
+
+// PreviewMcpImportJSONBody defines parameters for PreviewMcpImport.
+type PreviewMcpImportJSONBody struct {
+	Pasted        *string `json:"pasted,omitempty"`
+	WorkspacePath *string `json:"workspacePath,omitempty"`
 }
 
 // UpdateMcpServerJSONBody defines parameters for UpdateMcpServer.
@@ -1768,6 +1834,9 @@ type SteerIssueJSONRequestBody SteerIssueJSONBody
 
 // RegisterMcpServerJSONRequestBody defines body for RegisterMcpServer for application/json ContentType.
 type RegisterMcpServerJSONRequestBody RegisterMcpServerJSONBody
+
+// PreviewMcpImportJSONRequestBody defines body for PreviewMcpImport for application/json ContentType.
+type PreviewMcpImportJSONRequestBody PreviewMcpImportJSONBody
 
 // UpdateMcpServerJSONRequestBody defines body for UpdateMcpServer for application/json ContentType.
 type UpdateMcpServerJSONRequestBody UpdateMcpServerJSONBody
@@ -2497,6 +2566,11 @@ type ClientInterface interface {
 
 	RegisterMcpServer(ctx context.Context, body RegisterMcpServerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// PreviewMcpImportWithBody request with any body
+	PreviewMcpImportWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	PreviewMcpImport(ctx context.Context, body PreviewMcpImportJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// RemoveMcpServer request
 	RemoveMcpServer(ctx context.Context, mcpServerId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -2828,6 +2902,30 @@ func (c *Client) RegisterMcpServerWithBody(ctx context.Context, contentType stri
 
 func (c *Client) RegisterMcpServer(ctx context.Context, body RegisterMcpServerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRegisterMcpServerRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PreviewMcpImportWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPreviewMcpImportRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PreviewMcpImport(ctx context.Context, body PreviewMcpImportJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPreviewMcpImportRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -4133,6 +4231,46 @@ func NewRegisterMcpServerRequestWithBody(server string, contentType string, body
 	}
 
 	operationPath := fmt.Sprintf("/mcp-servers")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewPreviewMcpImportRequest calls the generic PreviewMcpImport builder with application/json body
+func NewPreviewMcpImportRequest(server string, body PreviewMcpImportJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPreviewMcpImportRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewPreviewMcpImportRequestWithBody generates requests for PreviewMcpImport with any type of body
+func NewPreviewMcpImportRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/mcp-servers/import/preview")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -6616,6 +6754,11 @@ type ClientWithResponsesInterface interface {
 
 	RegisterMcpServerWithResponse(ctx context.Context, body RegisterMcpServerJSONRequestBody, reqEditors ...RequestEditorFn) (*RegisterMcpServerResponse, error)
 
+	// PreviewMcpImportWithBodyWithResponse request with any body
+	PreviewMcpImportWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PreviewMcpImportResponse, error)
+
+	PreviewMcpImportWithResponse(ctx context.Context, body PreviewMcpImportJSONRequestBody, reqEditors ...RequestEditorFn) (*PreviewMcpImportResponse, error)
+
 	// RemoveMcpServerWithResponse request
 	RemoveMcpServerWithResponse(ctx context.Context, mcpServerId string, reqEditors ...RequestEditorFn) (*RemoveMcpServerResponse, error)
 
@@ -7122,6 +7265,55 @@ func (r RegisterMcpServerResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r RegisterMcpServerResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type PreviewMcpImportResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Sources []struct {
+			Candidates []struct {
+				Args       *[]string    `json:"args,omitempty"`
+				Command    *string      `json:"command,omitempty"`
+				EnvKeys    []string     `json:"envKeys"`
+				HeaderKeys []string     `json:"headerKeys"`
+				Key        string       `json:"key"`
+				Transport  McpTransport `json:"transport"`
+				Url        *string      `json:"url,omitempty"`
+			} `json:"candidates"`
+			Path       *string `json:"path,omitempty"`
+			Rejections []struct {
+				Detail *string            `json:"detail,omitempty"`
+				Key    string             `json:"key"`
+				Reason McpImportRejection `json:"reason"`
+			} `json:"rejections"`
+			Source McpConfigSource `json:"source"`
+		} `json:"sources"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r PreviewMcpImportResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PreviewMcpImportResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r PreviewMcpImportResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -9326,6 +9518,23 @@ func (c *ClientWithResponses) RegisterMcpServerWithResponse(ctx context.Context,
 	return ParseRegisterMcpServerResponse(rsp)
 }
 
+// PreviewMcpImportWithBodyWithResponse request with arbitrary body returning *PreviewMcpImportResponse
+func (c *ClientWithResponses) PreviewMcpImportWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PreviewMcpImportResponse, error) {
+	rsp, err := c.PreviewMcpImportWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePreviewMcpImportResponse(rsp)
+}
+
+func (c *ClientWithResponses) PreviewMcpImportWithResponse(ctx context.Context, body PreviewMcpImportJSONRequestBody, reqEditors ...RequestEditorFn) (*PreviewMcpImportResponse, error) {
+	rsp, err := c.PreviewMcpImport(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePreviewMcpImportResponse(rsp)
+}
+
 // RemoveMcpServerWithResponse request returning *RemoveMcpServerResponse
 func (c *ClientWithResponses) RemoveMcpServerWithResponse(ctx context.Context, mcpServerId string, reqEditors ...RequestEditorFn) (*RemoveMcpServerResponse, error) {
 	rsp, err := c.RemoveMcpServer(ctx, mcpServerId, reqEditors...)
@@ -10320,6 +10529,51 @@ func ParseRegisterMcpServerResponse(rsp *http.Response) (*RegisterMcpServerRespo
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
 			McpServerId string `json:"mcpServerId"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePreviewMcpImportResponse parses an HTTP response from a PreviewMcpImportWithResponse call
+func ParsePreviewMcpImportResponse(rsp *http.Response) (*PreviewMcpImportResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PreviewMcpImportResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Sources []struct {
+				Candidates []struct {
+					Args       *[]string    `json:"args,omitempty"`
+					Command    *string      `json:"command,omitempty"`
+					EnvKeys    []string     `json:"envKeys"`
+					HeaderKeys []string     `json:"headerKeys"`
+					Key        string       `json:"key"`
+					Transport  McpTransport `json:"transport"`
+					Url        *string      `json:"url,omitempty"`
+				} `json:"candidates"`
+				Path       *string `json:"path,omitempty"`
+				Rejections []struct {
+					Detail *string            `json:"detail,omitempty"`
+					Key    string             `json:"key"`
+					Reason McpImportRejection `json:"reason"`
+				} `json:"rejections"`
+				Source McpConfigSource `json:"source"`
+			} `json:"sources"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err

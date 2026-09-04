@@ -11,9 +11,15 @@ import { McpConfigDiscovery, type McpConfigDocument, type McpDiscoveryContext } 
  */
 @injectable()
 export class MockMcpConfigDiscovery extends McpConfigDiscovery {
-	constructor(private readonly documents: McpConfigDocument[] = []) {
-		super()
-	}
+	/**
+	 * CAMPO, NUNCA PARÂMETRO DE CONSTRUTOR COM DEFAULT — e a diferença é de resolução, não de estilo.
+	 *
+	 * MEDIDO: com `constructor(private documents: McpConfigDocument[] = [])`, `container.resolve()`
+	 * falha. O tsyringe lê `design:paramtypes`, vê `Array` e tenta resolvê-lo como TOKEN; o default do
+	 * TypeScript nunca chega a ser consultado, porque quem constrói é o container e não o `new`. O
+	 * mesmo formato silencioso que `tests/architecture/real-di-resolution.test.ts` existe para pegar.
+	 */
+	private readonly documents: McpConfigDocument[] = []
 
 	/** Semeia os documentos que esta suíte quer ver descobertos. */
 	seed(...documents: McpConfigDocument[]): void {

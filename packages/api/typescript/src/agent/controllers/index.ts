@@ -20,6 +20,7 @@ export { SteerIssueTurnController } from './SteerIssueTurn'
 export { RegisterMcpServerController } from './RegisterMcpServer'
 export { UpdateMcpServerController } from './UpdateMcpServer'
 export { RemoveMcpServerController } from './RemoveMcpServer'
+export { PreviewMcpImportController } from './PreviewMcpImport'
 
 import { byEnvironment, Config } from '@codm/core-typescript'
 import { McpDoorController } from '../mcp/door'
@@ -36,6 +37,7 @@ import { SteerIssueTurnController } from './SteerIssueTurn'
 import { RegisterMcpServerController } from './RegisterMcpServer'
 import { UpdateMcpServerController } from './UpdateMcpServer'
 import { RemoveMcpServerController } from './RemoveMcpServer'
+import { PreviewMcpImportController } from './PreviewMcpImport'
 
 /**
  * O QUE ESTE CONTEXTO MONTA (Decisão 10) — três decisões de montagem, agora num lugar só.
@@ -72,6 +74,7 @@ const productionControllers = {
 	RegisterMcpServerController,
 	UpdateMcpServerController,
 	RemoveMcpServerController,
+	PreviewMcpImportController,
 }
 
 const runtimeControllers = Config.env.EMIT_OPENAPI === 'true' ? productionControllers : { ...productionControllers, McpDoorController }

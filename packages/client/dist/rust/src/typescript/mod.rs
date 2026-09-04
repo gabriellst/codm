@@ -8988,6 +8988,382 @@ pub mod types {
             value.clone()
         }
     }
+    ///`PreviewMcpImportBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "properties": {
+    ///    "pasted": {
+    ///      "type": "string"
+    ///    },
+    ///    "workspacePath": {
+    ///      "type": "string"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct PreviewMcpImportBody {
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub pasted: ::std::option::Option<::std::string::String>,
+        #[serde(
+            rename = "workspacePath",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub workspace_path: ::std::option::Option<::std::string::String>,
+    }
+    impl ::std::convert::From<&PreviewMcpImportBody> for PreviewMcpImportBody {
+        fn from(value: &PreviewMcpImportBody) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::default::Default for PreviewMcpImportBody {
+        fn default() -> Self {
+            Self {
+                pasted: Default::default(),
+                workspace_path: Default::default(),
+            }
+        }
+    }
+    ///`PreviewMcpImportResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "sources"
+    ///  ],
+    ///  "properties": {
+    ///    "sources": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "candidates",
+    ///          "rejections",
+    ///          "source"
+    ///        ],
+    ///        "properties": {
+    ///          "candidates": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "type": "object",
+    ///              "required": [
+    ///                "envKeys",
+    ///                "headerKeys",
+    ///                "key",
+    ///                "transport"
+    ///              ],
+    ///              "properties": {
+    ///                "args": {
+    ///                  "type": "array",
+    ///                  "items": {
+    ///                    "type": "string"
+    ///                  }
+    ///                },
+    ///                "command": {
+    ///                  "type": "string"
+    ///                },
+    ///                "envKeys": {
+    ///                  "type": "array",
+    ///                  "items": {
+    ///                    "type": "string"
+    ///                  }
+    ///                },
+    ///                "headerKeys": {
+    ///                  "type": "array",
+    ///                  "items": {
+    ///                    "type": "string"
+    ///                  }
+    ///                },
+    ///                "key": {
+    ///                  "type": "string"
+    ///                },
+    ///                "transport": {
+    ///                  "$ref": "#/components/schemas/McpTransport"
+    ///                },
+    ///                "url": {
+    ///                  "type": "string"
+    ///                }
+    ///              },
+    ///              "additionalProperties": false
+    ///            }
+    ///          },
+    ///          "path": {
+    ///            "type": "string"
+    ///          },
+    ///          "rejections": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "type": "object",
+    ///              "required": [
+    ///                "key",
+    ///                "reason"
+    ///              ],
+    ///              "properties": {
+    ///                "detail": {
+    ///                  "type": "string"
+    ///                },
+    ///                "key": {
+    ///                  "type": "string"
+    ///                },
+    ///                "reason": {
+    ///                  "$ref": "#/components/schemas/McpImportRejection"
+    ///                }
+    ///              },
+    ///              "additionalProperties": false
+    ///            }
+    ///          },
+    ///          "source": {
+    ///            "$ref": "#/components/schemas/McpConfigSource"
+    ///          }
+    ///        },
+    ///        "additionalProperties": false
+    ///      }
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct PreviewMcpImportResponse {
+        pub sources: ::std::vec::Vec<PreviewMcpImportResponseSourcesItem>,
+    }
+    impl ::std::convert::From<&PreviewMcpImportResponse> for PreviewMcpImportResponse {
+        fn from(value: &PreviewMcpImportResponse) -> Self {
+            value.clone()
+        }
+    }
+    ///`PreviewMcpImportResponseSourcesItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "candidates",
+    ///    "rejections",
+    ///    "source"
+    ///  ],
+    ///  "properties": {
+    ///    "candidates": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "envKeys",
+    ///          "headerKeys",
+    ///          "key",
+    ///          "transport"
+    ///        ],
+    ///        "properties": {
+    ///          "args": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "type": "string"
+    ///            }
+    ///          },
+    ///          "command": {
+    ///            "type": "string"
+    ///          },
+    ///          "envKeys": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "type": "string"
+    ///            }
+    ///          },
+    ///          "headerKeys": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "type": "string"
+    ///            }
+    ///          },
+    ///          "key": {
+    ///            "type": "string"
+    ///          },
+    ///          "transport": {
+    ///            "$ref": "#/components/schemas/McpTransport"
+    ///          },
+    ///          "url": {
+    ///            "type": "string"
+    ///          }
+    ///        },
+    ///        "additionalProperties": false
+    ///      }
+    ///    },
+    ///    "path": {
+    ///      "type": "string"
+    ///    },
+    ///    "rejections": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "key",
+    ///          "reason"
+    ///        ],
+    ///        "properties": {
+    ///          "detail": {
+    ///            "type": "string"
+    ///          },
+    ///          "key": {
+    ///            "type": "string"
+    ///          },
+    ///          "reason": {
+    ///            "$ref": "#/components/schemas/McpImportRejection"
+    ///          }
+    ///        },
+    ///        "additionalProperties": false
+    ///      }
+    ///    },
+    ///    "source": {
+    ///      "$ref": "#/components/schemas/McpConfigSource"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct PreviewMcpImportResponseSourcesItem {
+        pub candidates: ::std::vec::Vec<
+            PreviewMcpImportResponseSourcesItemCandidatesItem,
+        >,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub path: ::std::option::Option<::std::string::String>,
+        pub rejections: ::std::vec::Vec<
+            PreviewMcpImportResponseSourcesItemRejectionsItem,
+        >,
+        pub source: ::codm_contracts_rust::wire::enums::McpConfigSource,
+    }
+    impl ::std::convert::From<&PreviewMcpImportResponseSourcesItem>
+    for PreviewMcpImportResponseSourcesItem {
+        fn from(value: &PreviewMcpImportResponseSourcesItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`PreviewMcpImportResponseSourcesItemCandidatesItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "envKeys",
+    ///    "headerKeys",
+    ///    "key",
+    ///    "transport"
+    ///  ],
+    ///  "properties": {
+    ///    "args": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string"
+    ///      }
+    ///    },
+    ///    "command": {
+    ///      "type": "string"
+    ///    },
+    ///    "envKeys": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string"
+    ///      }
+    ///    },
+    ///    "headerKeys": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string"
+    ///      }
+    ///    },
+    ///    "key": {
+    ///      "type": "string"
+    ///    },
+    ///    "transport": {
+    ///      "$ref": "#/components/schemas/McpTransport"
+    ///    },
+    ///    "url": {
+    ///      "type": "string"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct PreviewMcpImportResponseSourcesItemCandidatesItem {
+        #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+        pub args: ::std::vec::Vec<::std::string::String>,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub command: ::std::option::Option<::std::string::String>,
+        #[serde(rename = "envKeys")]
+        pub env_keys: ::std::vec::Vec<::std::string::String>,
+        #[serde(rename = "headerKeys")]
+        pub header_keys: ::std::vec::Vec<::std::string::String>,
+        pub key: ::std::string::String,
+        pub transport: ::codm_contracts_rust::wire::enums::McpTransport,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub url: ::std::option::Option<::std::string::String>,
+    }
+    impl ::std::convert::From<&PreviewMcpImportResponseSourcesItemCandidatesItem>
+    for PreviewMcpImportResponseSourcesItemCandidatesItem {
+        fn from(value: &PreviewMcpImportResponseSourcesItemCandidatesItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`PreviewMcpImportResponseSourcesItemRejectionsItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "key",
+    ///    "reason"
+    ///  ],
+    ///  "properties": {
+    ///    "detail": {
+    ///      "type": "string"
+    ///    },
+    ///    "key": {
+    ///      "type": "string"
+    ///    },
+    ///    "reason": {
+    ///      "$ref": "#/components/schemas/McpImportRejection"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct PreviewMcpImportResponseSourcesItemRejectionsItem {
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub detail: ::std::option::Option<::std::string::String>,
+        pub key: ::std::string::String,
+        pub reason: ::codm_contracts_rust::wire::enums::McpImportRejection,
+    }
+    impl ::std::convert::From<&PreviewMcpImportResponseSourcesItemRejectionsItem>
+    for PreviewMcpImportResponseSourcesItemRejectionsItem {
+        fn from(value: &PreviewMcpImportResponseSourcesItemRejectionsItem) -> Self {
+            value.clone()
+        }
+    }
     ///`RaiseStopBody`
     ///
     /// <details><summary>JSON schema</summary>
@@ -13021,6 +13397,40 @@ Sends a `POST` request to `/mcp-servers`
         body: &'a types::RegisterMcpServerBody,
     ) -> Result<ResponseValue<types::RegisterMcpServerResponse>, Error<()>> {
         let url = format!("{}/mcp-servers", self.baseurl,);
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Preview which MCP servers can be imported, and which were rejected and why
+
+Sends a `POST` request to `/mcp-servers/import/preview`
+
+*/
+    pub async fn preview_mcp_import<'a>(
+        &'a self,
+        body: &'a types::PreviewMcpImportBody,
+    ) -> Result<ResponseValue<types::PreviewMcpImportResponse>, Error<()>> {
+        let url = format!("{}/mcp-servers/import/preview", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(

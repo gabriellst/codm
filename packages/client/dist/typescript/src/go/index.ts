@@ -215,6 +215,8 @@ export type { MarkRemoteAsSeen204, MarkRemoteAsSeenError, MarkRemoteAsSeenMutati
 export type { MarkRemoteAsUnread204, MarkRemoteAsUnreadError, MarkRemoteAsUnreadMutation, MarkRemoteAsUnreadMutationRequest, MarkRemoteAsUnreadMutationResponse } from "./types/MarkRemoteAsUnread.ts";
 export type { McpApprovalDecision, McpApprovalDecisionEnumKey } from "./types/McpApprovalDecision.ts";
 export type { McpApprovalPolicy, McpApprovalPolicyEnumKey } from "./types/McpApprovalPolicy.ts";
+export type { McpConfigSource, McpConfigSourceEnumKey } from "./types/McpConfigSource.ts";
+export type { McpImportRejection, McpImportRejectionEnumKey } from "./types/McpImportRejection.ts";
 export type { McpScope, McpScopeEnumKey } from "./types/McpScope.ts";
 export type { McpTransport, McpTransportEnumKey } from "./types/McpTransport.ts";
 export type { MembershipAction, MembershipActionEnumKey } from "./types/MembershipAction.ts";
@@ -587,6 +589,8 @@ export { MailboxItemKindEnum } from "./types/MailboxItemKind.ts";
 export { MailboxTargetKindEnum } from "./types/MailboxTargetKind.ts";
 export { McpApprovalDecisionEnum } from "./types/McpApprovalDecision.ts";
 export { McpApprovalPolicyEnum } from "./types/McpApprovalPolicy.ts";
+export { McpConfigSourceEnum } from "./types/McpConfigSource.ts";
+export { McpImportRejectionEnum } from "./types/McpImportRejection.ts";
 export { McpScopeEnum } from "./types/McpScope.ts";
 export { McpTransportEnum } from "./types/McpTransport.ts";
 export { MembershipActionEnum } from "./types/MembershipAction.ts";
@@ -782,6 +786,8 @@ export { markRemoteAsSeen204Schema, markRemoteAsSeenErrorSchema, markRemoteAsSee
 export { markRemoteAsUnread204Schema, markRemoteAsUnreadErrorSchema, markRemoteAsUnreadMutationRequestSchema, markRemoteAsUnreadMutationResponseSchema } from "./zod/markRemoteAsUnreadSchema.ts";
 export { mcpApprovalDecisionSchema } from "./zod/mcpApprovalDecisionSchema.ts";
 export { mcpApprovalPolicySchema } from "./zod/mcpApprovalPolicySchema.ts";
+export { mcpConfigSourceSchema } from "./zod/mcpConfigSourceSchema.ts";
+export { mcpImportRejectionSchema } from "./zod/mcpImportRejectionSchema.ts";
 export { mcpScopeSchema } from "./zod/mcpScopeSchema.ts";
 export { mcpTransportSchema } from "./zod/mcpTransportSchema.ts";
 export { membershipActionSchema } from "./zod/membershipActionSchema.ts";
