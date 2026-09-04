@@ -1774,6 +1774,277 @@
         }
       }
     },
+    "/mcp-servers/import": {
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "description": "Import the chosen MCP servers, with secret NAMES only (values stay blank)",
+        "operationId": "ImportMcpServers",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "entries": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "key": {
+                          "type": "string"
+                        },
+                        "transport": {
+                          "$ref": "#/components/schemas/McpTransport"
+                        },
+                        "command": {
+                          "type": "string"
+                        },
+                        "args": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "url": {
+                          "type": "string"
+                        },
+                        "envKeys": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "headerKeys": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "key",
+                        "transport"
+                      ]
+                    }
+                  },
+                  "approvalPolicy": {
+                    "$ref": "#/components/schemas/McpApprovalPolicy"
+                  }
+                },
+                "required": [
+                  "entries"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "entries": [
+                      {
+                        "key": "playwright",
+                        "transport": "STDIO",
+                        "command": "npx",
+                        "args": [
+                          "-y",
+                          "@playwright/mcp"
+                        ],
+                        "envKeys": []
+                      }
+                    ],
+                    "approvalPolicy": "ASK"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Import the chosen MCP servers, with secret NAMES only (values stay blank)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "imported": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "key": {
+                            "type": "string"
+                          },
+                          "mcpServerId": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "key",
+                          "mcpServerId"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "imported"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "imported": [
+                        {
+                          "key": "playwright",
+                          "mcpServerId": "019e4d24-6524-7041-9e1c-8108180cddaf"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "imported": [
+                        {
+                          "key": "playwright",
+                          "mcpServerId": "019e4d24-6524-7041-9e1c-8108180cddaf"
+                        }
+                      ]
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mcp-servers/test-connection": {
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "description": "Connect to an unsaved MCP server config and report its tools, or why it failed",
+        "operationId": "TestMcpServerConnection",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "transport": {
+                    "$ref": "#/components/schemas/McpTransport"
+                  },
+                  "command": {
+                    "type": "string"
+                  },
+                  "args": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "env": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "headers": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "key",
+                  "transport"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "key": "everything",
+                    "transport": "STDIO",
+                    "command": "npx",
+                    "args": [
+                      "-y",
+                      "@modelcontextprotocol/server-everything"
+                    ]
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Connect to an unsaved MCP server config and report its tools, or why it failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "tools": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "tools"
+                  ],
+                  "additionalProperties": false,
+                  "examples": [
+                    {
+                      "ok": true,
+                      "tools": [
+                        "echo",
+                        "get-sum"
+                      ]
+                    }
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": {
+                      "ok": true,
+                      "tools": [
+                        "echo",
+                        "get-sum"
+                      ]
+                    },
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/threads/{threadId}/artifacts/{artifactId}/content": {
       "get": {
         "tags": [

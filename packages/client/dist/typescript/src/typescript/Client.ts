@@ -37,6 +37,7 @@ import {
 	getThreadSettings,
 	getUserInfo,
 	health,
+	importMcpServers,
 	listArtifacts,
 	listThreadLoops,
 	listWorkspaces,
@@ -62,6 +63,7 @@ import {
 	steerIssueTurn,
 	steerThread,
 	streamTerminalSession,
+	testMcpServerConnection,
 	transitionIssueStatus,
 	updateMcpServer,
 	updateStopCriteria,
@@ -228,6 +230,10 @@ export class TypescriptClient {
 		return (health as (...a: any[]) => ReturnType<typeof health>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	importMcpServers(...args: Parameters<typeof importMcpServers>): ReturnType<typeof importMcpServers> {
+		return (importMcpServers as (...a: any[]) => ReturnType<typeof importMcpServers>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	listArtifacts(...args: Parameters<typeof listArtifacts>): ReturnType<typeof listArtifacts> {
 		return (listArtifacts as (...a: any[]) => ReturnType<typeof listArtifacts>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
@@ -326,6 +332,10 @@ export class TypescriptClient {
 
 	streamTerminalSession(...args: Parameters<typeof streamTerminalSession>): ReturnType<typeof streamTerminalSession> {
 		return (streamTerminalSession as (...a: any[]) => ReturnType<typeof streamTerminalSession>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	testMcpServerConnection(...args: Parameters<typeof testMcpServerConnection>): ReturnType<typeof testMcpServerConnection> {
+		return (testMcpServerConnection as (...a: any[]) => ReturnType<typeof testMcpServerConnection>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	transitionIssueStatus(...args: Parameters<typeof transitionIssueStatus>): ReturnType<typeof transitionIssueStatus> {

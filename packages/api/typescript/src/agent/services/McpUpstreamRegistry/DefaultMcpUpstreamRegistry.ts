@@ -4,12 +4,18 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { getDefaultEnvironment, StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import { CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js'
-import { McpTransport } from '@codm/contracts-typescript/wire/enums'
+import { McpApprovalPolicy, McpTransport } from '@codm/contracts-typescript/wire/enums'
 import { BaseError, LoggingService, PROCESS_TREES, z } from '@codm/core-typescript'
 import type { AgentDomainErrors } from '../../errors'
 import type { McpServer } from '../../entities/McpServer'
 import { McpServerRepository } from '../../repositories/McpServerRepository'
-import { McpUpstreamRegistry, type UpstreamCallResult, type UpstreamTool } from './McpUpstreamRegistry'
+import {
+	McpUpstreamRegistry,
+	type McpProbeResult,
+	type McpServerProbeInput,
+	type UpstreamCallResult,
+	type UpstreamTool,
+} from './McpUpstreamRegistry'
 
 /**
  * O env do processo filho — a allowlist do SDK, mais o que o DONO declarou. Nada além disso.
@@ -96,6 +102,57 @@ export class DefaultMcpUpstreamRegistry extends McpUpstreamRegistry {
 		const enabled = await this.servers.listEnabledByOwner(ownerId)
 		const lists = await Promise.all(enabled.map(server => this.safeListTools(server)))
 		return lists.flat()
+	}
+
+	/**
+	 * SONDA uma configuração ainda não salva: conecta, lista, DERRUBA, e responde.
+	 *
+	 * Três decisões, e nenhuma é acidental:
+	 *
+	 * 1. NADA É CACHEADO E NADA FICA VIVO. A sonda não escreve em `clients`/`transports`/`toolsCache`,
+	 *    então uma configuração testada e descartada não deixa processo nem entrada de cache atrás. Um
+	 *    dono que testa cinco variações de comando não pode acumular cinco servidores fantasma.
+	 *
+	 * 2. O TEARDOWN SEGUE A ORDEM QUE O CI ENSINOU: árvore primeiro, `close()` depois. O `close()` do
+	 *    SDK roda a escada `stdin.end()` → 2000ms → SIGTERM → 2000ms → SIGKILL e VOLTA COM O PAI MORTO;
+	 *    derrubar depois dele é tarde, porque os netos já foram reparentados ao init. Mesmo raciocínio
+	 *    do `shutdown`, e o mesmo defeito que reprovou no Ubuntu.
+	 *
+	 * 3. O ERRO VOLTA COMO TEXTO, não como booleano. É a diferença entre "não alcançável" e "o `npx`
+	 *    não está no PATH" — e a informação já existia, só era jogada fora no caminho de volta.
+	 */
+	async probe(server: McpServerProbeInput): Promise<McpProbeResult> {
+		const client = new Client({ name: 'codm-probe', version: '1.0.0' }, { capabilities: {} })
+		let transport: StdioClientTransport | undefined
+
+		try {
+			if (server.transport === McpTransport.STDIO) {
+				if (!server.command) return { ok: false, error: 'STDIO requer um comando' }
+				transport = new StdioClientTransport({ command: server.command, args: [...(server.args ?? [])], env: childEnv(server.env) })
+				await client.connect(transport)
+			} else {
+				if (!server.url) return { ok: false, error: 'HTTP requer uma url' }
+				await client.connect(new StreamableHTTPClientTransport(new URL(server.url), { requestInit: { headers: server.headers ?? {} } }))
+			}
+
+			const { tools } = await client.listTools()
+			return {
+				ok: true,
+				tools: tools.map(tool => ({
+					serverKey: server.key,
+					name: tool.name,
+					description: tool.description,
+					inputSchema: tool.inputSchema,
+					approvalPolicy: McpApprovalPolicy.ASK,
+				})),
+			}
+		} catch (error) {
+			return { ok: false, error: error instanceof Error ? error.message : String(error) }
+		} finally {
+			const pid = transport?.pid
+			if (pid) PROCESS_TREES[process.platform].terminateByPid(pid, 2000)
+			await client.close().catch(() => undefined)
+		}
 	}
 
 	async evict(ownerId: string, serverKey: string): Promise<void> {

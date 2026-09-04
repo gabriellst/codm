@@ -8292,6 +8292,240 @@ pub mod types {
             value.clone()
         }
     }
+    ///`ImportMcpServersBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "entries"
+    ///  ],
+    ///  "properties": {
+    ///    "approvalPolicy": {
+    ///      "$ref": "#/components/schemas/McpApprovalPolicy"
+    ///    },
+    ///    "entries": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "key",
+    ///          "transport"
+    ///        ],
+    ///        "properties": {
+    ///          "args": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "type": "string"
+    ///            }
+    ///          },
+    ///          "command": {
+    ///            "type": "string"
+    ///          },
+    ///          "envKeys": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "type": "string"
+    ///            }
+    ///          },
+    ///          "headerKeys": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "type": "string"
+    ///            }
+    ///          },
+    ///          "key": {
+    ///            "type": "string"
+    ///          },
+    ///          "transport": {
+    ///            "$ref": "#/components/schemas/McpTransport"
+    ///          },
+    ///          "url": {
+    ///            "type": "string"
+    ///          }
+    ///        }
+    ///      },
+    ///      "minItems": 1
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct ImportMcpServersBody {
+        #[serde(
+            rename = "approvalPolicy",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub approval_policy: ::std::option::Option<
+            ::codm_contracts_rust::wire::enums::McpApprovalPolicy,
+        >,
+        pub entries: ::std::vec::Vec<ImportMcpServersBodyEntriesItem>,
+    }
+    impl ::std::convert::From<&ImportMcpServersBody> for ImportMcpServersBody {
+        fn from(value: &ImportMcpServersBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`ImportMcpServersBodyEntriesItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "key",
+    ///    "transport"
+    ///  ],
+    ///  "properties": {
+    ///    "args": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string"
+    ///      }
+    ///    },
+    ///    "command": {
+    ///      "type": "string"
+    ///    },
+    ///    "envKeys": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string"
+    ///      }
+    ///    },
+    ///    "headerKeys": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string"
+    ///      }
+    ///    },
+    ///    "key": {
+    ///      "type": "string"
+    ///    },
+    ///    "transport": {
+    ///      "$ref": "#/components/schemas/McpTransport"
+    ///    },
+    ///    "url": {
+    ///      "type": "string"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct ImportMcpServersBodyEntriesItem {
+        #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+        pub args: ::std::vec::Vec<::std::string::String>,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub command: ::std::option::Option<::std::string::String>,
+        #[serde(
+            rename = "envKeys",
+            default,
+            skip_serializing_if = "::std::vec::Vec::is_empty"
+        )]
+        pub env_keys: ::std::vec::Vec<::std::string::String>,
+        #[serde(
+            rename = "headerKeys",
+            default,
+            skip_serializing_if = "::std::vec::Vec::is_empty"
+        )]
+        pub header_keys: ::std::vec::Vec<::std::string::String>,
+        pub key: ::std::string::String,
+        pub transport: ::codm_contracts_rust::wire::enums::McpTransport,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub url: ::std::option::Option<::std::string::String>,
+    }
+    impl ::std::convert::From<&ImportMcpServersBodyEntriesItem>
+    for ImportMcpServersBodyEntriesItem {
+        fn from(value: &ImportMcpServersBodyEntriesItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`ImportMcpServersResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "imported"
+    ///  ],
+    ///  "properties": {
+    ///    "imported": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "key",
+    ///          "mcpServerId"
+    ///        ],
+    ///        "properties": {
+    ///          "key": {
+    ///            "type": "string"
+    ///          },
+    ///          "mcpServerId": {
+    ///            "type": "string"
+    ///          }
+    ///        },
+    ///        "additionalProperties": false
+    ///      }
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct ImportMcpServersResponse {
+        pub imported: ::std::vec::Vec<ImportMcpServersResponseImportedItem>,
+    }
+    impl ::std::convert::From<&ImportMcpServersResponse> for ImportMcpServersResponse {
+        fn from(value: &ImportMcpServersResponse) -> Self {
+            value.clone()
+        }
+    }
+    ///`ImportMcpServersResponseImportedItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "key",
+    ///    "mcpServerId"
+    ///  ],
+    ///  "properties": {
+    ///    "key": {
+    ///      "type": "string"
+    ///    },
+    ///    "mcpServerId": {
+    ///      "type": "string"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct ImportMcpServersResponseImportedItem {
+        pub key: ::std::string::String,
+        #[serde(rename = "mcpServerId")]
+        pub mcp_server_id: ::std::string::String,
+    }
+    impl ::std::convert::From<&ImportMcpServersResponseImportedItem>
+    for ImportMcpServersResponseImportedItem {
+        fn from(value: &ImportMcpServersResponseImportedItem) -> Self {
+            value.clone()
+        }
+    }
     ///`ListArtifactsResponse`
     ///
     /// <details><summary>JSON schema</summary>
@@ -12016,6 +12250,128 @@ pub mod types {
             value.parse()
         }
     }
+    ///`TestMcpServerConnectionBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "key",
+    ///    "transport"
+    ///  ],
+    ///  "properties": {
+    ///    "args": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string"
+    ///      }
+    ///    },
+    ///    "command": {
+    ///      "type": "string"
+    ///    },
+    ///    "env": {
+    ///      "type": "object",
+    ///      "additionalProperties": {
+    ///        "type": "string"
+    ///      }
+    ///    },
+    ///    "headers": {
+    ///      "type": "object",
+    ///      "additionalProperties": {
+    ///        "type": "string"
+    ///      }
+    ///    },
+    ///    "key": {
+    ///      "type": "string"
+    ///    },
+    ///    "transport": {
+    ///      "$ref": "#/components/schemas/McpTransport"
+    ///    },
+    ///    "url": {
+    ///      "type": "string"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct TestMcpServerConnectionBody {
+        #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+        pub args: ::std::vec::Vec<::std::string::String>,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub command: ::std::option::Option<::std::string::String>,
+        #[serde(
+            default,
+            skip_serializing_if = ":: std :: collections :: HashMap::is_empty"
+        )]
+        pub env: ::std::collections::HashMap<
+            ::std::string::String,
+            ::std::string::String,
+        >,
+        #[serde(
+            default,
+            skip_serializing_if = ":: std :: collections :: HashMap::is_empty"
+        )]
+        pub headers: ::std::collections::HashMap<
+            ::std::string::String,
+            ::std::string::String,
+        >,
+        pub key: ::std::string::String,
+        pub transport: ::codm_contracts_rust::wire::enums::McpTransport,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub url: ::std::option::Option<::std::string::String>,
+    }
+    impl ::std::convert::From<&TestMcpServerConnectionBody>
+    for TestMcpServerConnectionBody {
+        fn from(value: &TestMcpServerConnectionBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`TestMcpServerConnectionResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "ok",
+    ///    "tools"
+    ///  ],
+    ///  "properties": {
+    ///    "error": {
+    ///      "type": "string"
+    ///    },
+    ///    "ok": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "tools": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string"
+    ///      }
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct TestMcpServerConnectionResponse {
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub error: ::std::option::Option<::std::string::String>,
+        pub ok: bool,
+        pub tools: ::std::vec::Vec<::std::string::String>,
+    }
+    impl ::std::convert::From<&TestMcpServerConnectionResponse>
+    for TestMcpServerConnectionResponse {
+        fn from(value: &TestMcpServerConnectionResponse) -> Self {
+            value.clone()
+        }
+    }
     ///`TransitionIssueStatusBody`
     ///
     /// <details><summary>JSON schema</summary>
@@ -13421,6 +13777,40 @@ Sends a `POST` request to `/mcp-servers`
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
+    /**Import the chosen MCP servers, with secret NAMES only (values stay blank)
+
+Sends a `POST` request to `/mcp-servers/import`
+
+*/
+    pub async fn import_mcp_servers<'a>(
+        &'a self,
+        body: &'a types::ImportMcpServersBody,
+    ) -> Result<ResponseValue<types::ImportMcpServersResponse>, Error<()>> {
+        let url = format!("{}/mcp-servers/import", self.baseurl,);
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
     /**Preview which MCP servers can be imported, and which were rejected and why
 
 Sends a `POST` request to `/mcp-servers/import/preview`
@@ -13431,6 +13821,40 @@ Sends a `POST` request to `/mcp-servers/import/preview`
         body: &'a types::PreviewMcpImportBody,
     ) -> Result<ResponseValue<types::PreviewMcpImportResponse>, Error<()>> {
         let url = format!("{}/mcp-servers/import/preview", self.baseurl,);
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Connect to an unsaved MCP server config and report its tools, or why it failed
+
+Sends a `POST` request to `/mcp-servers/test-connection`
+
+*/
+    pub async fn test_mcp_server_connection<'a>(
+        &'a self,
+        body: &'a types::TestMcpServerConnectionBody,
+    ) -> Result<ResponseValue<types::TestMcpServerConnectionResponse>, Error<()>> {
+        let url = format!("{}/mcp-servers/test-connection", self.baseurl,);
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
             .append(

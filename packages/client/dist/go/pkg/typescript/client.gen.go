@@ -1494,10 +1494,35 @@ type RegisterMcpServerJSONBody1 struct {
 	Url       string             `json:"url"`
 }
 
+// ImportMcpServersJSONBody defines parameters for ImportMcpServers.
+type ImportMcpServersJSONBody struct {
+	ApprovalPolicy *McpApprovalPolicy `json:"approvalPolicy,omitempty"`
+	Entries        []struct {
+		Args       *[]string    `json:"args,omitempty"`
+		Command    *string      `json:"command,omitempty"`
+		EnvKeys    *[]string    `json:"envKeys,omitempty"`
+		HeaderKeys *[]string    `json:"headerKeys,omitempty"`
+		Key        string       `json:"key"`
+		Transport  McpTransport `json:"transport"`
+		Url        *string      `json:"url,omitempty"`
+	} `json:"entries"`
+}
+
 // PreviewMcpImportJSONBody defines parameters for PreviewMcpImport.
 type PreviewMcpImportJSONBody struct {
 	Pasted        *string `json:"pasted,omitempty"`
 	WorkspacePath *string `json:"workspacePath,omitempty"`
+}
+
+// TestMcpServerConnectionJSONBody defines parameters for TestMcpServerConnection.
+type TestMcpServerConnectionJSONBody struct {
+	Args      *[]string          `json:"args,omitempty"`
+	Command   *string            `json:"command,omitempty"`
+	Env       *map[string]string `json:"env,omitempty"`
+	Headers   *map[string]string `json:"headers,omitempty"`
+	Key       string             `json:"key"`
+	Transport McpTransport       `json:"transport"`
+	Url       *string            `json:"url,omitempty"`
 }
 
 // UpdateMcpServerJSONBody defines parameters for UpdateMcpServer.
@@ -1835,8 +1860,14 @@ type SteerIssueJSONRequestBody SteerIssueJSONBody
 // RegisterMcpServerJSONRequestBody defines body for RegisterMcpServer for application/json ContentType.
 type RegisterMcpServerJSONRequestBody RegisterMcpServerJSONBody
 
+// ImportMcpServersJSONRequestBody defines body for ImportMcpServers for application/json ContentType.
+type ImportMcpServersJSONRequestBody ImportMcpServersJSONBody
+
 // PreviewMcpImportJSONRequestBody defines body for PreviewMcpImport for application/json ContentType.
 type PreviewMcpImportJSONRequestBody PreviewMcpImportJSONBody
+
+// TestMcpServerConnectionJSONRequestBody defines body for TestMcpServerConnection for application/json ContentType.
+type TestMcpServerConnectionJSONRequestBody TestMcpServerConnectionJSONBody
 
 // UpdateMcpServerJSONRequestBody defines body for UpdateMcpServer for application/json ContentType.
 type UpdateMcpServerJSONRequestBody UpdateMcpServerJSONBody
@@ -2566,10 +2597,20 @@ type ClientInterface interface {
 
 	RegisterMcpServer(ctx context.Context, body RegisterMcpServerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ImportMcpServersWithBody request with any body
+	ImportMcpServersWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ImportMcpServers(ctx context.Context, body ImportMcpServersJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// PreviewMcpImportWithBody request with any body
 	PreviewMcpImportWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	PreviewMcpImport(ctx context.Context, body PreviewMcpImportJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// TestMcpServerConnectionWithBody request with any body
+	TestMcpServerConnectionWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	TestMcpServerConnection(ctx context.Context, body TestMcpServerConnectionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// RemoveMcpServer request
 	RemoveMcpServer(ctx context.Context, mcpServerId string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2912,6 +2953,30 @@ func (c *Client) RegisterMcpServer(ctx context.Context, body RegisterMcpServerJS
 	return c.Client.Do(req)
 }
 
+func (c *Client) ImportMcpServersWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewImportMcpServersRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ImportMcpServers(ctx context.Context, body ImportMcpServersJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewImportMcpServersRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) PreviewMcpImportWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPreviewMcpImportRequestWithBody(c.Server, contentType, body)
 	if err != nil {
@@ -2926,6 +2991,30 @@ func (c *Client) PreviewMcpImportWithBody(ctx context.Context, contentType strin
 
 func (c *Client) PreviewMcpImport(ctx context.Context, body PreviewMcpImportJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPreviewMcpImportRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) TestMcpServerConnectionWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewTestMcpServerConnectionRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) TestMcpServerConnection(ctx context.Context, body TestMcpServerConnectionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewTestMcpServerConnectionRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -4250,6 +4339,46 @@ func NewRegisterMcpServerRequestWithBody(server string, contentType string, body
 	return req, nil
 }
 
+// NewImportMcpServersRequest calls the generic ImportMcpServers builder with application/json body
+func NewImportMcpServersRequest(server string, body ImportMcpServersJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewImportMcpServersRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewImportMcpServersRequestWithBody generates requests for ImportMcpServers with any type of body
+func NewImportMcpServersRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/mcp-servers/import")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewPreviewMcpImportRequest calls the generic PreviewMcpImport builder with application/json body
 func NewPreviewMcpImportRequest(server string, body PreviewMcpImportJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -4271,6 +4400,46 @@ func NewPreviewMcpImportRequestWithBody(server string, contentType string, body 
 	}
 
 	operationPath := fmt.Sprintf("/mcp-servers/import/preview")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewTestMcpServerConnectionRequest calls the generic TestMcpServerConnection builder with application/json body
+func NewTestMcpServerConnectionRequest(server string, body TestMcpServerConnectionJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewTestMcpServerConnectionRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewTestMcpServerConnectionRequestWithBody generates requests for TestMcpServerConnection with any type of body
+func NewTestMcpServerConnectionRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/mcp-servers/test-connection")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -6754,10 +6923,20 @@ type ClientWithResponsesInterface interface {
 
 	RegisterMcpServerWithResponse(ctx context.Context, body RegisterMcpServerJSONRequestBody, reqEditors ...RequestEditorFn) (*RegisterMcpServerResponse, error)
 
+	// ImportMcpServersWithBodyWithResponse request with any body
+	ImportMcpServersWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ImportMcpServersResponse, error)
+
+	ImportMcpServersWithResponse(ctx context.Context, body ImportMcpServersJSONRequestBody, reqEditors ...RequestEditorFn) (*ImportMcpServersResponse, error)
+
 	// PreviewMcpImportWithBodyWithResponse request with any body
 	PreviewMcpImportWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PreviewMcpImportResponse, error)
 
 	PreviewMcpImportWithResponse(ctx context.Context, body PreviewMcpImportJSONRequestBody, reqEditors ...RequestEditorFn) (*PreviewMcpImportResponse, error)
+
+	// TestMcpServerConnectionWithBodyWithResponse request with any body
+	TestMcpServerConnectionWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*TestMcpServerConnectionResponse, error)
+
+	TestMcpServerConnectionWithResponse(ctx context.Context, body TestMcpServerConnectionJSONRequestBody, reqEditors ...RequestEditorFn) (*TestMcpServerConnectionResponse, error)
 
 	// RemoveMcpServerWithResponse request
 	RemoveMcpServerWithResponse(ctx context.Context, mcpServerId string, reqEditors ...RequestEditorFn) (*RemoveMcpServerResponse, error)
@@ -7271,6 +7450,41 @@ func (r RegisterMcpServerResponse) ContentType() string {
 	return ""
 }
 
+type ImportMcpServersResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Imported []struct {
+			Key         string `json:"key"`
+			McpServerId string `json:"mcpServerId"`
+		} `json:"imported"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r ImportMcpServersResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ImportMcpServersResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ImportMcpServersResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type PreviewMcpImportResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -7314,6 +7528,40 @@ func (r PreviewMcpImportResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r PreviewMcpImportResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type TestMcpServerConnectionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Error *string  `json:"error,omitempty"`
+		Ok    bool     `json:"ok"`
+		Tools []string `json:"tools"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r TestMcpServerConnectionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r TestMcpServerConnectionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r TestMcpServerConnectionResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -9518,6 +9766,23 @@ func (c *ClientWithResponses) RegisterMcpServerWithResponse(ctx context.Context,
 	return ParseRegisterMcpServerResponse(rsp)
 }
 
+// ImportMcpServersWithBodyWithResponse request with arbitrary body returning *ImportMcpServersResponse
+func (c *ClientWithResponses) ImportMcpServersWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ImportMcpServersResponse, error) {
+	rsp, err := c.ImportMcpServersWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseImportMcpServersResponse(rsp)
+}
+
+func (c *ClientWithResponses) ImportMcpServersWithResponse(ctx context.Context, body ImportMcpServersJSONRequestBody, reqEditors ...RequestEditorFn) (*ImportMcpServersResponse, error) {
+	rsp, err := c.ImportMcpServers(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseImportMcpServersResponse(rsp)
+}
+
 // PreviewMcpImportWithBodyWithResponse request with arbitrary body returning *PreviewMcpImportResponse
 func (c *ClientWithResponses) PreviewMcpImportWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PreviewMcpImportResponse, error) {
 	rsp, err := c.PreviewMcpImportWithBody(ctx, contentType, body, reqEditors...)
@@ -9533,6 +9798,23 @@ func (c *ClientWithResponses) PreviewMcpImportWithResponse(ctx context.Context, 
 		return nil, err
 	}
 	return ParsePreviewMcpImportResponse(rsp)
+}
+
+// TestMcpServerConnectionWithBodyWithResponse request with arbitrary body returning *TestMcpServerConnectionResponse
+func (c *ClientWithResponses) TestMcpServerConnectionWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*TestMcpServerConnectionResponse, error) {
+	rsp, err := c.TestMcpServerConnectionWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseTestMcpServerConnectionResponse(rsp)
+}
+
+func (c *ClientWithResponses) TestMcpServerConnectionWithResponse(ctx context.Context, body TestMcpServerConnectionJSONRequestBody, reqEditors ...RequestEditorFn) (*TestMcpServerConnectionResponse, error) {
+	rsp, err := c.TestMcpServerConnection(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseTestMcpServerConnectionResponse(rsp)
 }
 
 // RemoveMcpServerWithResponse request returning *RemoveMcpServerResponse
@@ -10540,6 +10822,37 @@ func ParseRegisterMcpServerResponse(rsp *http.Response) (*RegisterMcpServerRespo
 	return response, nil
 }
 
+// ParseImportMcpServersResponse parses an HTTP response from a ImportMcpServersWithResponse call
+func ParseImportMcpServersResponse(rsp *http.Response) (*ImportMcpServersResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ImportMcpServersResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Imported []struct {
+				Key         string `json:"key"`
+				McpServerId string `json:"mcpServerId"`
+			} `json:"imported"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParsePreviewMcpImportResponse parses an HTTP response from a PreviewMcpImportWithResponse call
 func ParsePreviewMcpImportResponse(rsp *http.Response) (*PreviewMcpImportResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -10574,6 +10887,36 @@ func ParsePreviewMcpImportResponse(rsp *http.Response) (*PreviewMcpImportRespons
 				} `json:"rejections"`
 				Source McpConfigSource `json:"source"`
 			} `json:"sources"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseTestMcpServerConnectionResponse parses an HTTP response from a TestMcpServerConnectionWithResponse call
+func ParseTestMcpServerConnectionResponse(rsp *http.Response) (*TestMcpServerConnectionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &TestMcpServerConnectionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Error *string  `json:"error,omitempty"`
+			Ok    bool     `json:"ok"`
+			Tools []string `json:"tools"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err

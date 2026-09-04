@@ -1,5 +1,5 @@
 // packages/api/typescript/src/agent/services/McpUpstreamRegistry/McpUpstreamRegistry.ts — arquivo final COMPLETO
-import type { McpApprovalPolicy } from '@codm/contracts-typescript/wire/enums'
+import type { McpApprovalPolicy, McpTransport } from '@codm/contracts-typescript/wire/enums'
 
 /** Uma ferramenta que um servidor de terceiro publicou. O `inputSchema` é JSON Schema VERBATIM. */
 export interface UpstreamTool {
@@ -15,6 +15,34 @@ export interface UpstreamCallResult {
 	content: unknown[]
 	isError?: boolean
 }
+
+/**
+ * O resultado de SONDAR uma configuração — o que a tela precisa saber ANTES de salvar.
+ *
+ * União discriminada de propósito: hoje o console só consegue dizer "não alcançável", porque
+ * `GetSettings` computa `enabled && tools.length > 0` e o `safeListTools` engole a exceção devolvendo
+ * lista vazia. O MESMO sinal cobre "upstream quebrado" e "upstream sem ferramentas", e o dono fica
+ * sem saber se errou o comando, se o pacote não existe ou se o token foi recusado. O erro existe —
+ * está no log desde a Task T13 — e era jogado fora no caminho de volta.
+ */
+/**
+ * A configuração a sondar — a forma de um servidor que AINDA NÃO EXISTE no banco.
+ *
+ * Um tipo próprio, e não `McpServer`: a entidade tem identidade e invariantes de algo REGISTRADO, e
+ * a sonda roda antes de haver registro. Exigir a entidade obrigaria a criar (e descartar) um
+ * agregado só para perguntar "isto conecta?".
+ */
+export interface McpServerProbeInput {
+	key: string
+	transport: McpTransport
+	command?: string
+	args?: string[]
+	env?: Record<string, string>
+	url?: string
+	headers?: Record<string, string>
+}
+
+export type McpProbeResult = { ok: true; tools: UpstreamTool[] } | { ok: false; error: string }
 
 /**
  * O daemon como CLIENTE MCP — a metade que este produto nunca teve.
@@ -44,4 +72,15 @@ export abstract class McpUpstreamRegistry {
 	 * recusada (o `call` re-checa `enabled`), mas o PROCESSO seguia vivo.
 	 */
 	abstract evict(ownerId: string, serverKey: string): Promise<void>
+	/**
+	 * Conecta a uma configuração AINDA NÃO SALVA e devolve as ferramentas — ou o MOTIVO da falha.
+	 *
+	 * Sonda, não registro: nada é cacheado, nada fica vivo depois. O processo que ela sobe é derrubado
+	 * antes de responder, com a mesma ordem que o `shutdown` usa (árvore primeiro, `close` depois).
+	 *
+	 * Existe porque o dono hoje só descobre que errou DEPOIS de salvar, e mesmo então só recebe
+	 * "não alcançável". A diferença que esta porta entrega é o `error` — "o `npx` não está no PATH" em
+	 * vez de um booleano.
+	 */
+	abstract probe(server: McpServerProbeInput): Promise<McpProbeResult>
 }
