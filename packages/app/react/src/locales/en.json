@@ -378,6 +378,20 @@
 			"DAILY": "Fixed time",
 			"INTERVAL": "Every so often"
 		},
+		"McpConfigSource": {
+			"PASTE": "Pasted JSON",
+			"WORKSPACE_FILE": "Workspace .mcp.json",
+			"CLAUDE_CODE": "Claude Code config",
+			"CLAUDE_DESKTOP": "Claude Desktop config"
+		},
+		"McpImportRejection": {
+			"UNSUPPORTED_TRANSPORT": "transport not supported",
+			"INVALID_KEY": "name not allowed (lowercase letters, digits and dashes)",
+			"MISSING_COMMAND": "no command",
+			"MISSING_URL": "no url",
+			"ALREADY_REGISTERED": "already registered",
+			"MALFORMED": "could not be read"
+		},
 		"McpTransport": {
 			"HTTP": "HTTP",
 			"STDIO": "Local command"
@@ -784,7 +798,18 @@
 			"toolPolicyLabel": "Approval policy for {{tool}}",
 			"unreachable": "Can't reach this server — check the command or URL and reconnect.",
 			"variablesConfigured_one": "{{count}} variable configured",
-			"variablesConfigured_other": "{{count}} variables configured"
+			"variablesConfigured_other": "{{count}} variables configured",
+			"import": {
+				"title": "Import MCP servers",
+				"pasteLabel": "Paste a configuration",
+				"pastePlaceholder": "{ \"mcpServers\": { … } }",
+				"scan": "Look for servers",
+				"confirm": "Import {{count}}",
+				"sourceEmpty": "nothing here",
+				"wholeDocument": "whole document",
+				"secretsCount": "{{count}} secret(s)",
+				"secretsWillBeBlank": "Secrets come in with their names only — you fill the values in before the server can run."
+			}
 		},
 		"providerNotFound": "not found in PATH",
 		"rescanProviders": "Rescan",

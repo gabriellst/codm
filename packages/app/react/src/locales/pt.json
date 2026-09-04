@@ -378,6 +378,20 @@
 			"DAILY": "Horário fixo",
 			"INTERVAL": "De tempos em tempos"
 		},
+		"McpConfigSource": {
+			"PASTE": "JSON colado",
+			"WORKSPACE_FILE": ".mcp.json do workspace",
+			"CLAUDE_CODE": "configuração do Claude Code",
+			"CLAUDE_DESKTOP": "configuração do Claude Desktop"
+		},
+		"McpImportRejection": {
+			"UNSUPPORTED_TRANSPORT": "transporte não suportado",
+			"INVALID_KEY": "nome não permitido (minúsculas, dígitos e hífens)",
+			"MISSING_COMMAND": "sem comando",
+			"MISSING_URL": "sem url",
+			"ALREADY_REGISTERED": "já cadastrado",
+			"MALFORMED": "não foi possível ler"
+		},
 		"McpTransport": {
 			"HTTP": "HTTP",
 			"STDIO": "Comando local"
@@ -784,7 +798,18 @@
 			"toolPolicyLabel": "Política de aprovação de {{tool}}",
 			"unreachable": "Não foi possível conectar a este servidor — confira o comando ou a URL e reconecte.",
 			"variablesConfigured_one": "{{count}} variável configurada",
-			"variablesConfigured_other": "{{count}} variáveis configuradas"
+			"variablesConfigured_other": "{{count}} variáveis configuradas",
+			"import": {
+				"title": "Importar servidores MCP",
+				"pasteLabel": "Cole uma configuração",
+				"pastePlaceholder": "{ \"mcpServers\": { … } }",
+				"scan": "Procurar servidores",
+				"confirm": "Importar {{count}}",
+				"sourceEmpty": "nada aqui",
+				"wholeDocument": "documento inteiro",
+				"secretsCount": "{{count}} segredo(s)",
+				"secretsWillBeBlank": "Os segredos chegam só com o nome — você preenche os valores antes do servidor poder rodar."
+			}
 		},
 		"providerNotFound": "não encontrado no PATH",
 		"rescanProviders": "Reescanear",

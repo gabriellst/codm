@@ -1,7 +1,16 @@
 import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
-import { IconAlertTriangle, IconKey, IconPlug, IconPlugConnectedX, IconPlus, IconSettings, IconTrash } from '@tabler/icons-react'
+import {
+	IconAlertTriangle,
+	IconFileImport,
+	IconKey,
+	IconPlug,
+	IconPlugConnectedX,
+	IconPlus,
+	IconSettings,
+	IconTrash,
+} from '@tabler/icons-react'
 import {
 	getSettingsQueryKey,
 	useGetSettings,
@@ -21,6 +30,7 @@ import { enumLabel } from '@/lib'
 import { cn } from '@/lib/utils'
 import { useDialogStore } from '@/stores/useDialogStore'
 import { McpServerForm } from '../../-forms/McpServerForm'
+import { McpImportDialog } from '../../-forms/McpImportDialog'
 
 type McpServer = GetSettingsQueryResponse['mcpServers'][number]
 type McpTool = McpServer['tools'][number]
@@ -58,9 +68,16 @@ export function McpServersSection({ className, ...props }: ComponentProps<'secti
 		<section className={cn('flex flex-col gap-3', className)} {...props}>
 			<div className="flex items-center justify-between gap-3">
 				<h2 className={sectionLabelBare}>{t('settings.mcpServers.title')}</h2>
-				<Button type="button" variant="ghost" size="sm" onClick={() => show(<McpServerForm onDone={hide} />)}>
-					<IconPlus data-icon="inline-start" /> {t('settings.mcpServers.addServer')}
-				</Button>
+				<div className="flex items-center gap-1.5">
+					{/* Importar vem ANTES de adicionar, e a ordem é a recomendação: quem já tem servidores
+					    configurados noutro cliente não deveria redigitá-los. */}
+					<Button type="button" variant="ghost" size="sm" onClick={() => show(<McpImportDialog onDone={hide} />)}>
+						<IconFileImport data-icon="inline-start" /> {t('settings.mcpServers.import.title')}
+					</Button>
+					<Button type="button" variant="ghost" size="sm" onClick={() => show(<McpServerForm onDone={hide} />)}>
+						<IconPlus data-icon="inline-start" /> {t('settings.mcpServers.addServer')}
+					</Button>
+				</div>
 			</div>
 
 			{!isLoading && !approvalNeeded && (
