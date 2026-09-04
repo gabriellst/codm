@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { SendContactMutationRequest, SendContactMutationResponse } from "../types/SendContact.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { sendContact } from "../client/sendContact.ts";
+import type { SendContactMutationRequest, SendContactMutationResponse } from "../types/SendContact.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { sendContact } from "../client/sendContact.ts";
 
 export const sendContactMutationKey = () => [{ url: '/messaging/messages/contact' }] as const
 

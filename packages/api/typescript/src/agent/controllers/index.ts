@@ -15,6 +15,14 @@ export { TestRunIssueTurnController } from './TestRunIssueTurn'
 export { TestSelectAgentScenarioController } from './TestSelectAgentScenario'
 export { ForkIssueController } from './ForkIssue'
 export { SteerIssueTurnController } from './SteerIssueTurn'
+// Third-party MCP servers (Task T3) — owner administration doors, no `static mcpScopes`: registering
+// a server is not something the model may do for itself (see the docblock on each controller below).
+export { RegisterMcpServerController } from './RegisterMcpServer'
+export { UpdateMcpServerController } from './UpdateMcpServer'
+export { RemoveMcpServerController } from './RemoveMcpServer'
+export { PreviewMcpImportController } from './PreviewMcpImport'
+export { ImportMcpServersController } from './ImportMcpServers'
+export { TestMcpServerConnectionController } from './TestMcpServerConnection'
 
 import { byEnvironment, Config } from '@codm/core-typescript'
 import { McpDoorController } from '../mcp/door'
@@ -28,6 +36,12 @@ import { TestRunIssueTurnController } from './TestRunIssueTurn'
 import { TestSelectAgentScenarioController } from './TestSelectAgentScenario'
 import { ForkIssueController } from './ForkIssue'
 import { SteerIssueTurnController } from './SteerIssueTurn'
+import { RegisterMcpServerController } from './RegisterMcpServer'
+import { UpdateMcpServerController } from './UpdateMcpServer'
+import { RemoveMcpServerController } from './RemoveMcpServer'
+import { PreviewMcpImportController } from './PreviewMcpImport'
+import { ImportMcpServersController } from './ImportMcpServers'
+import { TestMcpServerConnectionController } from './TestMcpServerConnection'
 
 /**
  * O QUE ESTE CONTEXTO MONTA (Decisão 10) — três decisões de montagem, agora num lugar só.
@@ -61,6 +75,12 @@ const productionControllers = {
 	AskOperatorController,
 	ForkIssueController,
 	SteerIssueTurnController,
+	RegisterMcpServerController,
+	UpdateMcpServerController,
+	RemoveMcpServerController,
+	PreviewMcpImportController,
+	ImportMcpServersController,
+	TestMcpServerConnectionController,
 }
 
 const runtimeControllers = Config.env.EMIT_OPENAPI === 'true' ? productionControllers : { ...productionControllers, McpDoorController }

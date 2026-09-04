@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import type { ZodType } from 'zod'
 import type { BaseError } from '@codm/core-typescript'
-import { AgentModelId, MailboxItemKind, McpScope } from '@codm/contracts-typescript/wire/enums'
+import { AgentModelId, MailboxItemKind, McpApprovalPolicy, McpScope } from '@codm/contracts-typescript/wire/enums'
 import { AgentRunner } from '../../services/AgentRunner'
 import { AgentName, AgentRunOutcome, MessageVia } from '../../enums'
 import type { AgentRunRequest } from '../../types/AgentRunRequest'
@@ -14,6 +14,9 @@ import { IssueWorkAgent } from './IssueWorkAgent'
 import { InMemoryAgentIdentityService } from '@codm/core-typescript'
 import type { AgentRunIdentity } from '../../types/AgentRunIdentity'
 import { operationIdsInScope, toolsInScope } from '../../mcp/exposure'
+import { wireToolName } from '../../mcp/wire'
+import { upstreamToolName } from '../../mcp/upstream'
+import { MockMcpUpstreamRegistry, type UpstreamTool } from '../../services/McpUpstreamRegistry'
 
 /**
  * The BASE's contract, exercised through the agent that has no `outputSchema` (§4.5/AC-5.8).
@@ -61,9 +64,12 @@ const input = (overrides: Partial<Parameters<IssueWorkAgent['run']>[1]> = {}): P
 	...overrides,
 })
 
-const build = () => {
+const build = (mcpUpstream?: MockMcpUpstreamRegistry) => {
 	const runner = new CapturingRunner()
-	return { runner, agent: new IssueWorkAgent(new InMemoryAgentIdentityService<AgentRunIdentity>(), new IssueWorkPromptBuilder()) }
+	return {
+		runner,
+		agent: new IssueWorkAgent(new InMemoryAgentIdentityService<AgentRunIdentity>(), new IssueWorkPromptBuilder(), mcpUpstream),
+	}
 }
 
 describe('IssueWorkAgent (and the Agent template method under it)', () => {
@@ -156,13 +162,45 @@ describe('IssueWorkAgent (and the Agent template method under it)', () => {
 			// drain
 		}
 
-		// Compared against the DERIVED expansion, never against a literal list. A literal here would be
-		// exactly the second source of truth this phase exists to kill — and the falsifier is cheap:
-		// declare `static mcpScopes = [McpScope.ISSUE_HANDLING]` on a seventh controller and this
-		// assertion follows with no edit.
+		// `tools` itself is compared against the DERIVED expansion, never against a literal list — no
+		// upstream registry is wired in this test, so `--allowedTools` on the wire is that same
+		// expansion. A literal here would be exactly the second source of truth this phase exists to
+		// kill — and the falsifier is cheap: declare `static mcpScopes = [McpScope.ISSUE_HANDLING]` on a
+		// seventh controller and this assertion follows with no edit.
 		expect(agent.tools).toEqual(toolsInScope(McpScope.ISSUE_HANDLING))
 		expect(agent.tools).toHaveLength(operationIdsInScope(McpScope.ISSUE_HANDLING).length)
 		expect(runner.requests[0]?.mcp?.allowedTools).toEqual(toolsInScope(McpScope.ISSUE_HANDLING))
+	})
+
+	/**
+	 * THE REGRESSION GUARD for the one-run-lagged cache (Task T5's defect).
+	 *
+	 * The old `buildMcpInvocation` was synchronous and `IssueWorkAgent` compensated with a
+	 * fire-and-forget refresh that only landed for the NEXT run — so the FIRST run of a fresh issue
+	 * shipped `--allowedTools` with no upstream tool at all, on exactly the turn the product exists
+	 * for. `resolveTools` now runs (and is awaited) INSIDE the same `buildMcpInvocation` call that
+	 * mints the run token, so there is no "next run" for the tool to wait for.
+	 */
+	it('an upstream tool enabled for this owner appears in `--allowedTools` on the FIRST run (Task T5 regression guard)', async () => {
+		const upstreamTool: UpstreamTool = {
+			serverKey: 'playwright',
+			name: 'browser_navigate',
+			description: 'Navigate a page',
+			inputSchema: {},
+			approvalPolicy: McpApprovalPolicy.AUTO,
+		}
+		const mcpUpstream = new MockMcpUpstreamRegistry()
+		mcpUpstream.tools = [upstreamTool]
+		const { runner, agent } = build(mcpUpstream)
+
+		for await (const _ of agent.run(runner, input())) {
+			// drain — this is the FIRST (and only) run this agent instance ever makes.
+		}
+
+		const allowed = runner.requests[0]?.mcp?.allowedTools ?? []
+		expect(allowed).toContain(wireToolName(upstreamToolName(upstreamTool)))
+		// The derived expansion is still fully present — upstream is an ADDITION, never a replacement.
+		for (const ownTool of toolsInScope(McpScope.ISSUE_HANDLING)) expect(allowed).toContain(ownTool)
 	})
 
 	it('carries NO operation of the `system` scope — owner/* and workspace/* stay out of reach (AC-6.5(c))', async () => {
@@ -174,7 +212,9 @@ describe('IssueWorkAgent (and the Agent template method under it)', () => {
 
 		// The agent is driven by the text of an inbound message written by someone who is not the
 		// operator. `system` carries account administration; a single overlapping entry would put it one
-		// prompt injection away from a stranger.
+		// prompt injection away from a stranger. No upstream registry is wired here, so `allowedTools` is
+		// exactly the derived expansion — the assertion still holds when an upstream IS wired, since
+		// nothing upstream can ever be spelled as a `system` operationId's wire name.
 		const declared = new Set(runner.requests[0]?.mcp?.allowedTools ?? [])
 		for (const systemTool of toolsInScope(McpScope.system)) expect(declared.has(systemTool)).toBe(false)
 	})

@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { CreateWhatsAppChannelMutationRequest, CreateWhatsAppChannelMutationResponse } from "../types/CreateWhatsAppChannel.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { createWhatsAppChannel } from "../client/createWhatsAppChannel.ts";
+import type { CreateWhatsAppChannelMutationRequest, CreateWhatsAppChannelMutationResponse } from "../types/CreateWhatsAppChannel.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { createWhatsAppChannel } from "../client/createWhatsAppChannel.ts";
 
 export const createWhatsAppChannelMutationKey = () => [{ url: '/channel/channels/whatsapp' }] as const
 

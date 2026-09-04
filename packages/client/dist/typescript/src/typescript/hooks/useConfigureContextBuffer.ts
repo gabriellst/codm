@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { ConfigureContextBufferMutationRequest, ConfigureContextBufferMutationResponse, ConfigureContextBufferPathParams } from "../types/ConfigureContextBuffer.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { configureContextBuffer } from "../client/configureContextBuffer.ts";
+import type { ConfigureContextBufferMutationRequest, ConfigureContextBufferMutationResponse, ConfigureContextBufferPathParams } from "../types/ConfigureContextBuffer.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { configureContextBuffer } from "../client/configureContextBuffer.ts";
 
 export const configureContextBufferMutationKey = () => [{ url: '/threads/:threadId/buffer' }] as const
 

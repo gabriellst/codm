@@ -261,6 +261,10 @@ pub mod types {
     ///    "LOOP_NOT_FOUND",
     ///    "LOOP_PROMPT_TOO_LONG",
     ///    "LOOP_WITHOUT_WEEKDAY",
+    ///    "MCP_APPROVAL_ALREADY_SETTLED",
+    ///    "MCP_SERVER_KEY_CONFLICT",
+    ///    "MCP_SERVER_NOT_FOUND",
+    ///    "MCP_SERVER_TRANSPORT_INCOMPLETE",
     ///    "MIGRATIONS_PENDING",
     ///    "MISSING_ENVIRONMENT_VARIABLE",
     ///    "MISSING_LOG_CONTENT",
@@ -437,6 +441,14 @@ pub mod types {
         LoopPromptTooLong,
         #[serde(rename = "LOOP_WITHOUT_WEEKDAY")]
         LoopWithoutWeekday,
+        #[serde(rename = "MCP_APPROVAL_ALREADY_SETTLED")]
+        McpApprovalAlreadySettled,
+        #[serde(rename = "MCP_SERVER_KEY_CONFLICT")]
+        McpServerKeyConflict,
+        #[serde(rename = "MCP_SERVER_NOT_FOUND")]
+        McpServerNotFound,
+        #[serde(rename = "MCP_SERVER_TRANSPORT_INCOMPLETE")]
+        McpServerTransportIncomplete,
         #[serde(rename = "MIGRATIONS_PENDING")]
         MigrationsPending,
         #[serde(rename = "MISSING_ENVIRONMENT_VARIABLE")]
@@ -608,6 +620,14 @@ pub mod types {
                 Self::LoopNotFound => f.write_str("LOOP_NOT_FOUND"),
                 Self::LoopPromptTooLong => f.write_str("LOOP_PROMPT_TOO_LONG"),
                 Self::LoopWithoutWeekday => f.write_str("LOOP_WITHOUT_WEEKDAY"),
+                Self::McpApprovalAlreadySettled => {
+                    f.write_str("MCP_APPROVAL_ALREADY_SETTLED")
+                }
+                Self::McpServerKeyConflict => f.write_str("MCP_SERVER_KEY_CONFLICT"),
+                Self::McpServerNotFound => f.write_str("MCP_SERVER_NOT_FOUND"),
+                Self::McpServerTransportIncomplete => {
+                    f.write_str("MCP_SERVER_TRANSPORT_INCOMPLETE")
+                }
                 Self::MigrationsPending => f.write_str("MIGRATIONS_PENDING"),
                 Self::MissingEnvironmentVariable => {
                     f.write_str("MISSING_ENVIRONMENT_VARIABLE")
@@ -728,6 +748,12 @@ pub mod types {
                 "LOOP_NOT_FOUND" => Ok(Self::LoopNotFound),
                 "LOOP_PROMPT_TOO_LONG" => Ok(Self::LoopPromptTooLong),
                 "LOOP_WITHOUT_WEEKDAY" => Ok(Self::LoopWithoutWeekday),
+                "MCP_APPROVAL_ALREADY_SETTLED" => Ok(Self::McpApprovalAlreadySettled),
+                "MCP_SERVER_KEY_CONFLICT" => Ok(Self::McpServerKeyConflict),
+                "MCP_SERVER_NOT_FOUND" => Ok(Self::McpServerNotFound),
+                "MCP_SERVER_TRANSPORT_INCOMPLETE" => {
+                    Ok(Self::McpServerTransportIncomplete)
+                }
                 "MIGRATIONS_PENDING" => Ok(Self::MigrationsPending),
                 "MISSING_ENVIRONMENT_VARIABLE" => Ok(Self::MissingEnvironmentVariable),
                 "MISSING_LOG_CONTENT" => Ok(Self::MissingLogContent),
@@ -2718,6 +2744,7 @@ pub mod types {
     ///        "required": [
     ///          "available",
     ///          "comingSoon",
+    ///          "models",
     ///          "provider",
     ///          "status"
     ///        ],
@@ -2727,6 +2754,12 @@ pub mod types {
     ///          },
     ///          "comingSoon": {
     ///            "type": "boolean"
+    ///          },
+    ///          "models": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "$ref": "#/components/schemas/AgentModelId"
+    ///            }
     ///          },
     ///          "provider": {
     ///            "$ref": "#/components/schemas/ProviderKind"
@@ -2922,6 +2955,7 @@ pub mod types {
     ///  "required": [
     ///    "available",
     ///    "comingSoon",
+    ///    "models",
     ///    "provider",
     ///    "status"
     ///  ],
@@ -2931,6 +2965,12 @@ pub mod types {
     ///    },
     ///    "comingSoon": {
     ///      "type": "boolean"
+    ///    },
+    ///    "models": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "$ref": "#/components/schemas/AgentModelId"
+    ///      }
     ///    },
     ///    "provider": {
     ///      "$ref": "#/components/schemas/ProviderKind"
@@ -2952,6 +2992,7 @@ pub mod types {
         pub available: bool,
         #[serde(rename = "comingSoon")]
         pub coming_soon: bool,
+        pub models: ::std::vec::Vec<::codm_contracts_rust::wire::enums::AgentModelId>,
         pub provider: ::codm_contracts_rust::wire::enums::ProviderKind,
         pub status: ::codm_contracts_rust::wire::enums::ProviderStatus,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
@@ -6887,6 +6928,7 @@ pub mod types {
     ///  "required": [
     ///    "appVersion",
     ///    "general",
+    ///    "mcpServers",
     ///    "providers",
     ///    "stopCriteria"
     ///  ],
@@ -6913,6 +6955,98 @@ pub mod types {
     ///        }
     ///      },
     ///      "additionalProperties": false
+    ///    },
+    ///    "mcpServers": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "approvalPolicy",
+    ///          "enabled",
+    ///          "envKeys",
+    ///          "headerKeys",
+    ///          "id",
+    ///          "key",
+    ///          "reachable",
+    ///          "tools",
+    ///          "transport"
+    ///        ],
+    ///        "properties": {
+    ///          "approvalPolicy": {
+    ///            "$ref": "#/components/schemas/McpApprovalPolicy"
+    ///          },
+    ///          "args": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "type": "string"
+    ///            }
+    ///          },
+    ///          "command": {
+    ///            "type": "string"
+    ///          },
+    ///          "enabled": {
+    ///            "type": "boolean"
+    ///          },
+    ///          "envKeys": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "type": "string"
+    ///            }
+    ///          },
+    ///          "headerKeys": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "type": "string"
+    ///            }
+    ///          },
+    ///          "id": {
+    ///            "type": "string"
+    ///          },
+    ///          "key": {
+    ///            "type": "string"
+    ///          },
+    ///          "reachable": {
+    ///            "type": "boolean"
+    ///          },
+    ///          "tools": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "type": "object",
+    ///              "required": [
+    ///                "name",
+    ///                "policy"
+    ///              ],
+    ///              "properties": {
+    ///                "name": {
+    ///                  "type": "string"
+    ///                },
+    ///                "policy": {
+    ///                  "oneOf": [
+    ///                    {
+    ///                      "type": "null"
+    ///                    },
+    ///                    {
+    ///                      "allOf": [
+    ///                        {
+    ///                          "$ref": "#/components/schemas/McpApprovalPolicy"
+    ///                        }
+    ///                      ]
+    ///                    }
+    ///                  ]
+    ///                }
+    ///              },
+    ///              "additionalProperties": false
+    ///            }
+    ///          },
+    ///          "transport": {
+    ///            "$ref": "#/components/schemas/McpTransport"
+    ///          },
+    ///          "url": {
+    ///            "type": "string"
+    ///          }
+    ///        },
+    ///        "additionalProperties": false
+    ///      }
     ///    },
     ///    "providers": {
     ///      "type": "array",
@@ -6983,6 +7117,8 @@ pub mod types {
         #[serde(rename = "appVersion")]
         pub app_version: ::std::string::String,
         pub general: GetSettingsResponseGeneral,
+        #[serde(rename = "mcpServers")]
+        pub mcp_servers: ::std::vec::Vec<GetSettingsResponseMcpServersItem>,
         pub providers: ::std::vec::Vec<GetSettingsResponseProvidersItem>,
         #[serde(rename = "stopCriteria")]
         pub stop_criteria: GetSettingsResponseStopCriteria,
@@ -7031,6 +7167,178 @@ pub mod types {
     impl ::std::convert::From<&GetSettingsResponseGeneral>
     for GetSettingsResponseGeneral {
         fn from(value: &GetSettingsResponseGeneral) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetSettingsResponseMcpServersItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "approvalPolicy",
+    ///    "enabled",
+    ///    "envKeys",
+    ///    "headerKeys",
+    ///    "id",
+    ///    "key",
+    ///    "reachable",
+    ///    "tools",
+    ///    "transport"
+    ///  ],
+    ///  "properties": {
+    ///    "approvalPolicy": {
+    ///      "$ref": "#/components/schemas/McpApprovalPolicy"
+    ///    },
+    ///    "args": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string"
+    ///      }
+    ///    },
+    ///    "command": {
+    ///      "type": "string"
+    ///    },
+    ///    "enabled": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "envKeys": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string"
+    ///      }
+    ///    },
+    ///    "headerKeys": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string"
+    ///      }
+    ///    },
+    ///    "id": {
+    ///      "type": "string"
+    ///    },
+    ///    "key": {
+    ///      "type": "string"
+    ///    },
+    ///    "reachable": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "tools": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "name",
+    ///          "policy"
+    ///        ],
+    ///        "properties": {
+    ///          "name": {
+    ///            "type": "string"
+    ///          },
+    ///          "policy": {
+    ///            "oneOf": [
+    ///              {
+    ///                "type": "null"
+    ///              },
+    ///              {
+    ///                "allOf": [
+    ///                  {
+    ///                    "$ref": "#/components/schemas/McpApprovalPolicy"
+    ///                  }
+    ///                ]
+    ///              }
+    ///            ]
+    ///          }
+    ///        },
+    ///        "additionalProperties": false
+    ///      }
+    ///    },
+    ///    "transport": {
+    ///      "$ref": "#/components/schemas/McpTransport"
+    ///    },
+    ///    "url": {
+    ///      "type": "string"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetSettingsResponseMcpServersItem {
+        #[serde(rename = "approvalPolicy")]
+        pub approval_policy: ::codm_contracts_rust::wire::enums::McpApprovalPolicy,
+        #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+        pub args: ::std::vec::Vec<::std::string::String>,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub command: ::std::option::Option<::std::string::String>,
+        pub enabled: bool,
+        #[serde(rename = "envKeys")]
+        pub env_keys: ::std::vec::Vec<::std::string::String>,
+        #[serde(rename = "headerKeys")]
+        pub header_keys: ::std::vec::Vec<::std::string::String>,
+        pub id: ::std::string::String,
+        pub key: ::std::string::String,
+        pub reachable: bool,
+        pub tools: ::std::vec::Vec<GetSettingsResponseMcpServersItemToolsItem>,
+        pub transport: ::codm_contracts_rust::wire::enums::McpTransport,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub url: ::std::option::Option<::std::string::String>,
+    }
+    impl ::std::convert::From<&GetSettingsResponseMcpServersItem>
+    for GetSettingsResponseMcpServersItem {
+        fn from(value: &GetSettingsResponseMcpServersItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetSettingsResponseMcpServersItemToolsItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "name",
+    ///    "policy"
+    ///  ],
+    ///  "properties": {
+    ///    "name": {
+    ///      "type": "string"
+    ///    },
+    ///    "policy": {
+    ///      "oneOf": [
+    ///        {
+    ///          "type": "null"
+    ///        },
+    ///        {
+    ///          "allOf": [
+    ///            {
+    ///              "$ref": "#/components/schemas/McpApprovalPolicy"
+    ///            }
+    ///          ]
+    ///        }
+    ///      ]
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetSettingsResponseMcpServersItemToolsItem {
+        pub name: ::std::string::String,
+        pub policy: ::std::option::Option<
+            ::codm_contracts_rust::wire::enums::McpApprovalPolicy,
+        >,
+    }
+    impl ::std::convert::From<&GetSettingsResponseMcpServersItemToolsItem>
+    for GetSettingsResponseMcpServersItemToolsItem {
+        fn from(value: &GetSettingsResponseMcpServersItemToolsItem) -> Self {
             value.clone()
         }
     }
@@ -7984,6 +8292,240 @@ pub mod types {
             value.clone()
         }
     }
+    ///`ImportMcpServersBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "entries"
+    ///  ],
+    ///  "properties": {
+    ///    "approvalPolicy": {
+    ///      "$ref": "#/components/schemas/McpApprovalPolicy"
+    ///    },
+    ///    "entries": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "key",
+    ///          "transport"
+    ///        ],
+    ///        "properties": {
+    ///          "args": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "type": "string"
+    ///            }
+    ///          },
+    ///          "command": {
+    ///            "type": "string"
+    ///          },
+    ///          "envKeys": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "type": "string"
+    ///            }
+    ///          },
+    ///          "headerKeys": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "type": "string"
+    ///            }
+    ///          },
+    ///          "key": {
+    ///            "type": "string"
+    ///          },
+    ///          "transport": {
+    ///            "$ref": "#/components/schemas/McpTransport"
+    ///          },
+    ///          "url": {
+    ///            "type": "string"
+    ///          }
+    ///        }
+    ///      },
+    ///      "minItems": 1
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct ImportMcpServersBody {
+        #[serde(
+            rename = "approvalPolicy",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub approval_policy: ::std::option::Option<
+            ::codm_contracts_rust::wire::enums::McpApprovalPolicy,
+        >,
+        pub entries: ::std::vec::Vec<ImportMcpServersBodyEntriesItem>,
+    }
+    impl ::std::convert::From<&ImportMcpServersBody> for ImportMcpServersBody {
+        fn from(value: &ImportMcpServersBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`ImportMcpServersBodyEntriesItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "key",
+    ///    "transport"
+    ///  ],
+    ///  "properties": {
+    ///    "args": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string"
+    ///      }
+    ///    },
+    ///    "command": {
+    ///      "type": "string"
+    ///    },
+    ///    "envKeys": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string"
+    ///      }
+    ///    },
+    ///    "headerKeys": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string"
+    ///      }
+    ///    },
+    ///    "key": {
+    ///      "type": "string"
+    ///    },
+    ///    "transport": {
+    ///      "$ref": "#/components/schemas/McpTransport"
+    ///    },
+    ///    "url": {
+    ///      "type": "string"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct ImportMcpServersBodyEntriesItem {
+        #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+        pub args: ::std::vec::Vec<::std::string::String>,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub command: ::std::option::Option<::std::string::String>,
+        #[serde(
+            rename = "envKeys",
+            default,
+            skip_serializing_if = "::std::vec::Vec::is_empty"
+        )]
+        pub env_keys: ::std::vec::Vec<::std::string::String>,
+        #[serde(
+            rename = "headerKeys",
+            default,
+            skip_serializing_if = "::std::vec::Vec::is_empty"
+        )]
+        pub header_keys: ::std::vec::Vec<::std::string::String>,
+        pub key: ::std::string::String,
+        pub transport: ::codm_contracts_rust::wire::enums::McpTransport,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub url: ::std::option::Option<::std::string::String>,
+    }
+    impl ::std::convert::From<&ImportMcpServersBodyEntriesItem>
+    for ImportMcpServersBodyEntriesItem {
+        fn from(value: &ImportMcpServersBodyEntriesItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`ImportMcpServersResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "imported"
+    ///  ],
+    ///  "properties": {
+    ///    "imported": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "key",
+    ///          "mcpServerId"
+    ///        ],
+    ///        "properties": {
+    ///          "key": {
+    ///            "type": "string"
+    ///          },
+    ///          "mcpServerId": {
+    ///            "type": "string"
+    ///          }
+    ///        },
+    ///        "additionalProperties": false
+    ///      }
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct ImportMcpServersResponse {
+        pub imported: ::std::vec::Vec<ImportMcpServersResponseImportedItem>,
+    }
+    impl ::std::convert::From<&ImportMcpServersResponse> for ImportMcpServersResponse {
+        fn from(value: &ImportMcpServersResponse) -> Self {
+            value.clone()
+        }
+    }
+    ///`ImportMcpServersResponseImportedItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "key",
+    ///    "mcpServerId"
+    ///  ],
+    ///  "properties": {
+    ///    "key": {
+    ///      "type": "string"
+    ///    },
+    ///    "mcpServerId": {
+    ///      "type": "string"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct ImportMcpServersResponseImportedItem {
+        pub key: ::std::string::String,
+        #[serde(rename = "mcpServerId")]
+        pub mcp_server_id: ::std::string::String,
+    }
+    impl ::std::convert::From<&ImportMcpServersResponseImportedItem>
+    for ImportMcpServersResponseImportedItem {
+        fn from(value: &ImportMcpServersResponseImportedItem) -> Self {
+            value.clone()
+        }
+    }
     ///`ListArtifactsResponse`
     ///
     /// <details><summary>JSON schema</summary>
@@ -8680,6 +9222,382 @@ pub mod types {
             value.clone()
         }
     }
+    ///`PreviewMcpImportBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "properties": {
+    ///    "pasted": {
+    ///      "type": "string"
+    ///    },
+    ///    "workspacePath": {
+    ///      "type": "string"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct PreviewMcpImportBody {
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub pasted: ::std::option::Option<::std::string::String>,
+        #[serde(
+            rename = "workspacePath",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub workspace_path: ::std::option::Option<::std::string::String>,
+    }
+    impl ::std::convert::From<&PreviewMcpImportBody> for PreviewMcpImportBody {
+        fn from(value: &PreviewMcpImportBody) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::default::Default for PreviewMcpImportBody {
+        fn default() -> Self {
+            Self {
+                pasted: Default::default(),
+                workspace_path: Default::default(),
+            }
+        }
+    }
+    ///`PreviewMcpImportResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "sources"
+    ///  ],
+    ///  "properties": {
+    ///    "sources": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "candidates",
+    ///          "rejections",
+    ///          "source"
+    ///        ],
+    ///        "properties": {
+    ///          "candidates": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "type": "object",
+    ///              "required": [
+    ///                "envKeys",
+    ///                "headerKeys",
+    ///                "key",
+    ///                "transport"
+    ///              ],
+    ///              "properties": {
+    ///                "args": {
+    ///                  "type": "array",
+    ///                  "items": {
+    ///                    "type": "string"
+    ///                  }
+    ///                },
+    ///                "command": {
+    ///                  "type": "string"
+    ///                },
+    ///                "envKeys": {
+    ///                  "type": "array",
+    ///                  "items": {
+    ///                    "type": "string"
+    ///                  }
+    ///                },
+    ///                "headerKeys": {
+    ///                  "type": "array",
+    ///                  "items": {
+    ///                    "type": "string"
+    ///                  }
+    ///                },
+    ///                "key": {
+    ///                  "type": "string"
+    ///                },
+    ///                "transport": {
+    ///                  "$ref": "#/components/schemas/McpTransport"
+    ///                },
+    ///                "url": {
+    ///                  "type": "string"
+    ///                }
+    ///              },
+    ///              "additionalProperties": false
+    ///            }
+    ///          },
+    ///          "path": {
+    ///            "type": "string"
+    ///          },
+    ///          "rejections": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "type": "object",
+    ///              "required": [
+    ///                "key",
+    ///                "reason"
+    ///              ],
+    ///              "properties": {
+    ///                "detail": {
+    ///                  "type": "string"
+    ///                },
+    ///                "key": {
+    ///                  "type": "string"
+    ///                },
+    ///                "reason": {
+    ///                  "$ref": "#/components/schemas/McpImportRejection"
+    ///                }
+    ///              },
+    ///              "additionalProperties": false
+    ///            }
+    ///          },
+    ///          "source": {
+    ///            "$ref": "#/components/schemas/McpConfigSource"
+    ///          }
+    ///        },
+    ///        "additionalProperties": false
+    ///      }
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct PreviewMcpImportResponse {
+        pub sources: ::std::vec::Vec<PreviewMcpImportResponseSourcesItem>,
+    }
+    impl ::std::convert::From<&PreviewMcpImportResponse> for PreviewMcpImportResponse {
+        fn from(value: &PreviewMcpImportResponse) -> Self {
+            value.clone()
+        }
+    }
+    ///`PreviewMcpImportResponseSourcesItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "candidates",
+    ///    "rejections",
+    ///    "source"
+    ///  ],
+    ///  "properties": {
+    ///    "candidates": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "envKeys",
+    ///          "headerKeys",
+    ///          "key",
+    ///          "transport"
+    ///        ],
+    ///        "properties": {
+    ///          "args": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "type": "string"
+    ///            }
+    ///          },
+    ///          "command": {
+    ///            "type": "string"
+    ///          },
+    ///          "envKeys": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "type": "string"
+    ///            }
+    ///          },
+    ///          "headerKeys": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "type": "string"
+    ///            }
+    ///          },
+    ///          "key": {
+    ///            "type": "string"
+    ///          },
+    ///          "transport": {
+    ///            "$ref": "#/components/schemas/McpTransport"
+    ///          },
+    ///          "url": {
+    ///            "type": "string"
+    ///          }
+    ///        },
+    ///        "additionalProperties": false
+    ///      }
+    ///    },
+    ///    "path": {
+    ///      "type": "string"
+    ///    },
+    ///    "rejections": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "key",
+    ///          "reason"
+    ///        ],
+    ///        "properties": {
+    ///          "detail": {
+    ///            "type": "string"
+    ///          },
+    ///          "key": {
+    ///            "type": "string"
+    ///          },
+    ///          "reason": {
+    ///            "$ref": "#/components/schemas/McpImportRejection"
+    ///          }
+    ///        },
+    ///        "additionalProperties": false
+    ///      }
+    ///    },
+    ///    "source": {
+    ///      "$ref": "#/components/schemas/McpConfigSource"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct PreviewMcpImportResponseSourcesItem {
+        pub candidates: ::std::vec::Vec<
+            PreviewMcpImportResponseSourcesItemCandidatesItem,
+        >,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub path: ::std::option::Option<::std::string::String>,
+        pub rejections: ::std::vec::Vec<
+            PreviewMcpImportResponseSourcesItemRejectionsItem,
+        >,
+        pub source: ::codm_contracts_rust::wire::enums::McpConfigSource,
+    }
+    impl ::std::convert::From<&PreviewMcpImportResponseSourcesItem>
+    for PreviewMcpImportResponseSourcesItem {
+        fn from(value: &PreviewMcpImportResponseSourcesItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`PreviewMcpImportResponseSourcesItemCandidatesItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "envKeys",
+    ///    "headerKeys",
+    ///    "key",
+    ///    "transport"
+    ///  ],
+    ///  "properties": {
+    ///    "args": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string"
+    ///      }
+    ///    },
+    ///    "command": {
+    ///      "type": "string"
+    ///    },
+    ///    "envKeys": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string"
+    ///      }
+    ///    },
+    ///    "headerKeys": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string"
+    ///      }
+    ///    },
+    ///    "key": {
+    ///      "type": "string"
+    ///    },
+    ///    "transport": {
+    ///      "$ref": "#/components/schemas/McpTransport"
+    ///    },
+    ///    "url": {
+    ///      "type": "string"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct PreviewMcpImportResponseSourcesItemCandidatesItem {
+        #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+        pub args: ::std::vec::Vec<::std::string::String>,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub command: ::std::option::Option<::std::string::String>,
+        #[serde(rename = "envKeys")]
+        pub env_keys: ::std::vec::Vec<::std::string::String>,
+        #[serde(rename = "headerKeys")]
+        pub header_keys: ::std::vec::Vec<::std::string::String>,
+        pub key: ::std::string::String,
+        pub transport: ::codm_contracts_rust::wire::enums::McpTransport,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub url: ::std::option::Option<::std::string::String>,
+    }
+    impl ::std::convert::From<&PreviewMcpImportResponseSourcesItemCandidatesItem>
+    for PreviewMcpImportResponseSourcesItemCandidatesItem {
+        fn from(value: &PreviewMcpImportResponseSourcesItemCandidatesItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`PreviewMcpImportResponseSourcesItemRejectionsItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "key",
+    ///    "reason"
+    ///  ],
+    ///  "properties": {
+    ///    "detail": {
+    ///      "type": "string"
+    ///    },
+    ///    "key": {
+    ///      "type": "string"
+    ///    },
+    ///    "reason": {
+    ///      "$ref": "#/components/schemas/McpImportRejection"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct PreviewMcpImportResponseSourcesItemRejectionsItem {
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub detail: ::std::option::Option<::std::string::String>,
+        pub key: ::std::string::String,
+        pub reason: ::codm_contracts_rust::wire::enums::McpImportRejection,
+    }
+    impl ::std::convert::From<&PreviewMcpImportResponseSourcesItemRejectionsItem>
+    for PreviewMcpImportResponseSourcesItemRejectionsItem {
+        fn from(value: &PreviewMcpImportResponseSourcesItemRejectionsItem) -> Self {
+            value.clone()
+        }
+    }
     ///`RaiseStopBody`
     ///
     /// <details><summary>JSON schema</summary>
@@ -9076,6 +9994,579 @@ pub mod types {
     }
     impl ::std::convert::From<&RecordArtifactResponse> for RecordArtifactResponse {
         fn from(value: &RecordArtifactResponse) -> Self {
+            value.clone()
+        }
+    }
+    ///`RegisterMcpServerBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "allOf": [
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "key"
+    ///      ],
+    ///      "properties": {
+    ///        "approvalPolicy": {
+    ///          "$ref": "#/components/schemas/McpApprovalPolicy"
+    ///        },
+    ///        "key": {
+    ///          "type": "string",
+    ///          "pattern": "^[a-z][a-z0-9-]{0,31}$"
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "oneOf": [
+    ///        {
+    ///          "type": "object",
+    ///          "required": [
+    ///            "command",
+    ///            "transport"
+    ///          ],
+    ///          "properties": {
+    ///            "args": {
+    ///              "default": [],
+    ///              "type": "array",
+    ///              "items": {
+    ///                "type": "string"
+    ///              }
+    ///            },
+    ///            "command": {
+    ///              "type": "string",
+    ///              "minLength": 1
+    ///            },
+    ///            "env": {
+    ///              "type": "object",
+    ///              "additionalProperties": {
+    ///                "type": "string"
+    ///              }
+    ///            },
+    ///            "transport": {
+    ///              "type": "string",
+    ///              "enum": [
+    ///                "STDIO"
+    ///              ]
+    ///            }
+    ///          }
+    ///        },
+    ///        {
+    ///          "type": "object",
+    ///          "required": [
+    ///            "transport",
+    ///            "url"
+    ///          ],
+    ///          "properties": {
+    ///            "headers": {
+    ///              "type": "object",
+    ///              "additionalProperties": {
+    ///                "type": "string"
+    ///              }
+    ///            },
+    ///            "transport": {
+    ///              "type": "string",
+    ///              "enum": [
+    ///                "HTTP"
+    ///              ]
+    ///            },
+    ///            "url": {
+    ///              "type": "string",
+    ///              "format": "uri"
+    ///            }
+    ///          }
+    ///        }
+    ///      ]
+    ///    }
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(untagged)]
+    pub enum RegisterMcpServerBody {
+        Variant0 {
+            #[serde(
+                rename = "approvalPolicy",
+                default,
+                skip_serializing_if = "::std::option::Option::is_none"
+            )]
+            approval_policy: ::std::option::Option<
+                ::codm_contracts_rust::wire::enums::McpApprovalPolicy,
+            >,
+            #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+            args: ::std::vec::Vec<::std::string::String>,
+            command: RegisterMcpServerBodyVariant0Command,
+            #[serde(
+                default,
+                skip_serializing_if = ":: std :: collections :: HashMap::is_empty"
+            )]
+            env: ::std::collections::HashMap<
+                ::std::string::String,
+                ::std::string::String,
+            >,
+            key: RegisterMcpServerBodyVariant0Key,
+            transport: RegisterMcpServerBodyVariant0Transport,
+        },
+        Variant1 {
+            #[serde(
+                rename = "approvalPolicy",
+                default,
+                skip_serializing_if = "::std::option::Option::is_none"
+            )]
+            approval_policy: ::std::option::Option<
+                ::codm_contracts_rust::wire::enums::McpApprovalPolicy,
+            >,
+            #[serde(
+                default,
+                skip_serializing_if = ":: std :: collections :: HashMap::is_empty"
+            )]
+            headers: ::std::collections::HashMap<
+                ::std::string::String,
+                ::std::string::String,
+            >,
+            key: RegisterMcpServerBodyVariant1Key,
+            transport: RegisterMcpServerBodyVariant1Transport,
+            url: ::std::string::String,
+        },
+    }
+    impl ::std::convert::From<&Self> for RegisterMcpServerBody {
+        fn from(value: &RegisterMcpServerBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`RegisterMcpServerBodyVariant0Command`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct RegisterMcpServerBodyVariant0Command(::std::string::String);
+    impl ::std::ops::Deref for RegisterMcpServerBodyVariant0Command {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<RegisterMcpServerBodyVariant0Command>
+    for ::std::string::String {
+        fn from(value: RegisterMcpServerBodyVariant0Command) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&RegisterMcpServerBodyVariant0Command>
+    for RegisterMcpServerBodyVariant0Command {
+        fn from(value: &RegisterMcpServerBodyVariant0Command) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for RegisterMcpServerBodyVariant0Command {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for RegisterMcpServerBodyVariant0Command {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for RegisterMcpServerBodyVariant0Command {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for RegisterMcpServerBodyVariant0Command {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for RegisterMcpServerBodyVariant0Command {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`RegisterMcpServerBodyVariant0Key`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "pattern": "^[a-z][a-z0-9-]{0,31}$"
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct RegisterMcpServerBodyVariant0Key(::std::string::String);
+    impl ::std::ops::Deref for RegisterMcpServerBodyVariant0Key {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<RegisterMcpServerBodyVariant0Key>
+    for ::std::string::String {
+        fn from(value: RegisterMcpServerBodyVariant0Key) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&RegisterMcpServerBodyVariant0Key>
+    for RegisterMcpServerBodyVariant0Key {
+        fn from(value: &RegisterMcpServerBodyVariant0Key) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for RegisterMcpServerBodyVariant0Key {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            static PATTERN: ::std::sync::LazyLock<::regress::Regex> = ::std::sync::LazyLock::new(||
+            { ::regress::Regex::new("^[a-z][a-z0-9-]{0,31}$").unwrap() });
+            if PATTERN.find(value).is_none() {
+                return Err("doesn't match pattern \"^[a-z][a-z0-9-]{0,31}$\"".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for RegisterMcpServerBodyVariant0Key {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for RegisterMcpServerBodyVariant0Key {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for RegisterMcpServerBodyVariant0Key {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for RegisterMcpServerBodyVariant0Key {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`RegisterMcpServerBodyVariant0Transport`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "STDIO"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum RegisterMcpServerBodyVariant0Transport {
+        #[serde(rename = "STDIO")]
+        Stdio,
+    }
+    impl ::std::convert::From<&Self> for RegisterMcpServerBodyVariant0Transport {
+        fn from(value: &RegisterMcpServerBodyVariant0Transport) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for RegisterMcpServerBodyVariant0Transport {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Stdio => f.write_str("STDIO"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for RegisterMcpServerBodyVariant0Transport {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "STDIO" => Ok(Self::Stdio),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for RegisterMcpServerBodyVariant0Transport {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for RegisterMcpServerBodyVariant0Transport {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for RegisterMcpServerBodyVariant0Transport {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`RegisterMcpServerBodyVariant1Key`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "pattern": "^[a-z][a-z0-9-]{0,31}$"
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct RegisterMcpServerBodyVariant1Key(::std::string::String);
+    impl ::std::ops::Deref for RegisterMcpServerBodyVariant1Key {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<RegisterMcpServerBodyVariant1Key>
+    for ::std::string::String {
+        fn from(value: RegisterMcpServerBodyVariant1Key) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&RegisterMcpServerBodyVariant1Key>
+    for RegisterMcpServerBodyVariant1Key {
+        fn from(value: &RegisterMcpServerBodyVariant1Key) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for RegisterMcpServerBodyVariant1Key {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            static PATTERN: ::std::sync::LazyLock<::regress::Regex> = ::std::sync::LazyLock::new(||
+            { ::regress::Regex::new("^[a-z][a-z0-9-]{0,31}$").unwrap() });
+            if PATTERN.find(value).is_none() {
+                return Err("doesn't match pattern \"^[a-z][a-z0-9-]{0,31}$\"".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for RegisterMcpServerBodyVariant1Key {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for RegisterMcpServerBodyVariant1Key {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for RegisterMcpServerBodyVariant1Key {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for RegisterMcpServerBodyVariant1Key {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`RegisterMcpServerBodyVariant1Transport`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "HTTP"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum RegisterMcpServerBodyVariant1Transport {
+        #[serde(rename = "HTTP")]
+        Http,
+    }
+    impl ::std::convert::From<&Self> for RegisterMcpServerBodyVariant1Transport {
+        fn from(value: &RegisterMcpServerBodyVariant1Transport) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for RegisterMcpServerBodyVariant1Transport {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Http => f.write_str("HTTP"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for RegisterMcpServerBodyVariant1Transport {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "HTTP" => Ok(Self::Http),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for RegisterMcpServerBodyVariant1Transport {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for RegisterMcpServerBodyVariant1Transport {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for RegisterMcpServerBodyVariant1Transport {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`RegisterMcpServerResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "mcpServerId"
+    ///  ],
+    ///  "properties": {
+    ///    "mcpServerId": {
+    ///      "type": "string"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct RegisterMcpServerResponse {
+        #[serde(rename = "mcpServerId")]
+        pub mcp_server_id: ::std::string::String,
+    }
+    impl ::std::convert::From<&RegisterMcpServerResponse> for RegisterMcpServerResponse {
+        fn from(value: &RegisterMcpServerResponse) -> Self {
             value.clone()
         }
     }
@@ -10759,6 +12250,128 @@ pub mod types {
             value.parse()
         }
     }
+    ///`TestMcpServerConnectionBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "key",
+    ///    "transport"
+    ///  ],
+    ///  "properties": {
+    ///    "args": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string"
+    ///      }
+    ///    },
+    ///    "command": {
+    ///      "type": "string"
+    ///    },
+    ///    "env": {
+    ///      "type": "object",
+    ///      "additionalProperties": {
+    ///        "type": "string"
+    ///      }
+    ///    },
+    ///    "headers": {
+    ///      "type": "object",
+    ///      "additionalProperties": {
+    ///        "type": "string"
+    ///      }
+    ///    },
+    ///    "key": {
+    ///      "type": "string"
+    ///    },
+    ///    "transport": {
+    ///      "$ref": "#/components/schemas/McpTransport"
+    ///    },
+    ///    "url": {
+    ///      "type": "string"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct TestMcpServerConnectionBody {
+        #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+        pub args: ::std::vec::Vec<::std::string::String>,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub command: ::std::option::Option<::std::string::String>,
+        #[serde(
+            default,
+            skip_serializing_if = ":: std :: collections :: HashMap::is_empty"
+        )]
+        pub env: ::std::collections::HashMap<
+            ::std::string::String,
+            ::std::string::String,
+        >,
+        #[serde(
+            default,
+            skip_serializing_if = ":: std :: collections :: HashMap::is_empty"
+        )]
+        pub headers: ::std::collections::HashMap<
+            ::std::string::String,
+            ::std::string::String,
+        >,
+        pub key: ::std::string::String,
+        pub transport: ::codm_contracts_rust::wire::enums::McpTransport,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub url: ::std::option::Option<::std::string::String>,
+    }
+    impl ::std::convert::From<&TestMcpServerConnectionBody>
+    for TestMcpServerConnectionBody {
+        fn from(value: &TestMcpServerConnectionBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`TestMcpServerConnectionResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "ok",
+    ///    "tools"
+    ///  ],
+    ///  "properties": {
+    ///    "error": {
+    ///      "type": "string"
+    ///    },
+    ///    "ok": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "tools": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string"
+    ///      }
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct TestMcpServerConnectionResponse {
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub error: ::std::option::Option<::std::string::String>,
+        pub ok: bool,
+        pub tools: ::std::vec::Vec<::std::string::String>,
+    }
+    impl ::std::convert::From<&TestMcpServerConnectionResponse>
+    for TestMcpServerConnectionResponse {
+        fn from(value: &TestMcpServerConnectionResponse) -> Self {
+            value.clone()
+        }
+    }
     ///`TransitionIssueStatusBody`
     ///
     /// <details><summary>JSON schema</summary>
@@ -10922,6 +12535,461 @@ pub mod types {
     for TransitionIssueStatusResponse {
         fn from(value: &TransitionIssueStatusResponse) -> Self {
             value.clone()
+        }
+    }
+    ///`UpdateMcpServerBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "properties": {
+    ///    "approvalPolicy": {
+    ///      "$ref": "#/components/schemas/McpApprovalPolicy"
+    ///    },
+    ///    "config": {
+    ///      "oneOf": [
+    ///        {
+    ///          "type": "object",
+    ///          "required": [
+    ///            "command",
+    ///            "transport"
+    ///          ],
+    ///          "properties": {
+    ///            "args": {
+    ///              "default": [],
+    ///              "type": "array",
+    ///              "items": {
+    ///                "type": "string"
+    ///              }
+    ///            },
+    ///            "command": {
+    ///              "type": "string",
+    ///              "minLength": 1
+    ///            },
+    ///            "env": {
+    ///              "type": "object",
+    ///              "additionalProperties": {
+    ///                "type": "string"
+    ///              }
+    ///            },
+    ///            "transport": {
+    ///              "type": "string",
+    ///              "enum": [
+    ///                "STDIO"
+    ///              ]
+    ///            }
+    ///          }
+    ///        },
+    ///        {
+    ///          "type": "object",
+    ///          "required": [
+    ///            "transport",
+    ///            "url"
+    ///          ],
+    ///          "properties": {
+    ///            "headers": {
+    ///              "type": "object",
+    ///              "additionalProperties": {
+    ///                "type": "string"
+    ///              }
+    ///            },
+    ///            "transport": {
+    ///              "type": "string",
+    ///              "enum": [
+    ///                "HTTP"
+    ///              ]
+    ///            },
+    ///            "url": {
+    ///              "type": "string",
+    ///              "format": "uri"
+    ///            }
+    ///          }
+    ///        }
+    ///      ]
+    ///    },
+    ///    "enabled": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "toolPolicy": {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "policy",
+    ///        "toolName"
+    ///      ],
+    ///      "properties": {
+    ///        "policy": {
+    ///          "oneOf": [
+    ///            {
+    ///              "type": "null"
+    ///            },
+    ///            {
+    ///              "allOf": [
+    ///                {
+    ///                  "$ref": "#/components/schemas/McpApprovalPolicy"
+    ///                }
+    ///              ]
+    ///            }
+    ///          ]
+    ///        },
+    ///        "toolName": {
+    ///          "type": "string",
+    ///          "minLength": 1
+    ///        }
+    ///      }
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct UpdateMcpServerBody {
+        #[serde(
+            rename = "approvalPolicy",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub approval_policy: ::std::option::Option<
+            ::codm_contracts_rust::wire::enums::McpApprovalPolicy,
+        >,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub config: ::std::option::Option<UpdateMcpServerBodyConfig>,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub enabled: ::std::option::Option<bool>,
+        #[serde(
+            rename = "toolPolicy",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub tool_policy: ::std::option::Option<UpdateMcpServerBodyToolPolicy>,
+    }
+    impl ::std::convert::From<&UpdateMcpServerBody> for UpdateMcpServerBody {
+        fn from(value: &UpdateMcpServerBody) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::default::Default for UpdateMcpServerBody {
+        fn default() -> Self {
+            Self {
+                approval_policy: Default::default(),
+                config: Default::default(),
+                enabled: Default::default(),
+                tool_policy: Default::default(),
+            }
+        }
+    }
+    ///`UpdateMcpServerBodyConfig`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "oneOf": [
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "command",
+    ///        "transport"
+    ///      ],
+    ///      "properties": {
+    ///        "args": {
+    ///          "default": [],
+    ///          "type": "array",
+    ///          "items": {
+    ///            "type": "string"
+    ///          }
+    ///        },
+    ///        "command": {
+    ///          "type": "string",
+    ///          "minLength": 1
+    ///        },
+    ///        "env": {
+    ///          "type": "object",
+    ///          "additionalProperties": {
+    ///            "type": "string"
+    ///          }
+    ///        },
+    ///        "transport": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "STDIO"
+    ///          ]
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "transport",
+    ///        "url"
+    ///      ],
+    ///      "properties": {
+    ///        "headers": {
+    ///          "type": "object",
+    ///          "additionalProperties": {
+    ///            "type": "string"
+    ///          }
+    ///        },
+    ///        "transport": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "HTTP"
+    ///          ]
+    ///        },
+    ///        "url": {
+    ///          "type": "string",
+    ///          "format": "uri"
+    ///        }
+    ///      }
+    ///    }
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(tag = "transport")]
+    pub enum UpdateMcpServerBodyConfig {
+        #[serde(rename = "STDIO")]
+        Stdio {
+            #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+            args: ::std::vec::Vec<::std::string::String>,
+            command: UpdateMcpServerBodyConfigCommand,
+            #[serde(
+                default,
+                skip_serializing_if = ":: std :: collections :: HashMap::is_empty"
+            )]
+            env: ::std::collections::HashMap<
+                ::std::string::String,
+                ::std::string::String,
+            >,
+        },
+        #[serde(rename = "HTTP")]
+        Http {
+            #[serde(
+                default,
+                skip_serializing_if = ":: std :: collections :: HashMap::is_empty"
+            )]
+            headers: ::std::collections::HashMap<
+                ::std::string::String,
+                ::std::string::String,
+            >,
+            url: ::std::string::String,
+        },
+    }
+    impl ::std::convert::From<&Self> for UpdateMcpServerBodyConfig {
+        fn from(value: &UpdateMcpServerBodyConfig) -> Self {
+            value.clone()
+        }
+    }
+    ///`UpdateMcpServerBodyConfigCommand`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct UpdateMcpServerBodyConfigCommand(::std::string::String);
+    impl ::std::ops::Deref for UpdateMcpServerBodyConfigCommand {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<UpdateMcpServerBodyConfigCommand>
+    for ::std::string::String {
+        fn from(value: UpdateMcpServerBodyConfigCommand) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&UpdateMcpServerBodyConfigCommand>
+    for UpdateMcpServerBodyConfigCommand {
+        fn from(value: &UpdateMcpServerBodyConfigCommand) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for UpdateMcpServerBodyConfigCommand {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for UpdateMcpServerBodyConfigCommand {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for UpdateMcpServerBodyConfigCommand {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for UpdateMcpServerBodyConfigCommand {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for UpdateMcpServerBodyConfigCommand {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`UpdateMcpServerBodyToolPolicy`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "policy",
+    ///    "toolName"
+    ///  ],
+    ///  "properties": {
+    ///    "policy": {
+    ///      "oneOf": [
+    ///        {
+    ///          "type": "null"
+    ///        },
+    ///        {
+    ///          "allOf": [
+    ///            {
+    ///              "$ref": "#/components/schemas/McpApprovalPolicy"
+    ///            }
+    ///          ]
+    ///        }
+    ///      ]
+    ///    },
+    ///    "toolName": {
+    ///      "type": "string",
+    ///      "minLength": 1
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct UpdateMcpServerBodyToolPolicy {
+        pub policy: ::std::option::Option<
+            ::codm_contracts_rust::wire::enums::McpApprovalPolicy,
+        >,
+        #[serde(rename = "toolName")]
+        pub tool_name: UpdateMcpServerBodyToolPolicyToolName,
+    }
+    impl ::std::convert::From<&UpdateMcpServerBodyToolPolicy>
+    for UpdateMcpServerBodyToolPolicy {
+        fn from(value: &UpdateMcpServerBodyToolPolicy) -> Self {
+            value.clone()
+        }
+    }
+    ///`UpdateMcpServerBodyToolPolicyToolName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct UpdateMcpServerBodyToolPolicyToolName(::std::string::String);
+    impl ::std::ops::Deref for UpdateMcpServerBodyToolPolicyToolName {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<UpdateMcpServerBodyToolPolicyToolName>
+    for ::std::string::String {
+        fn from(value: UpdateMcpServerBodyToolPolicyToolName) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&UpdateMcpServerBodyToolPolicyToolName>
+    for UpdateMcpServerBodyToolPolicyToolName {
+        fn from(value: &UpdateMcpServerBodyToolPolicyToolName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for UpdateMcpServerBodyToolPolicyToolName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for UpdateMcpServerBodyToolPolicyToolName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for UpdateMcpServerBodyToolPolicyToolName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for UpdateMcpServerBodyToolPolicyToolName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for UpdateMcpServerBodyToolPolicyToolName {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
         }
     }
     ///`UpdateStopCriteriaBody`
@@ -11661,6 +13729,214 @@ Sends a `POST` request to `/issues/{issueId}/steer`
         let mut request = self
             .client
             .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Register a third-party MCP server for this owner
+
+Sends a `POST` request to `/mcp-servers`
+
+*/
+    pub async fn register_mcp_server<'a>(
+        &'a self,
+        body: &'a types::RegisterMcpServerBody,
+    ) -> Result<ResponseValue<types::RegisterMcpServerResponse>, Error<()>> {
+        let url = format!("{}/mcp-servers", self.baseurl,);
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Import the chosen MCP servers, with secret NAMES only (values stay blank)
+
+Sends a `POST` request to `/mcp-servers/import`
+
+*/
+    pub async fn import_mcp_servers<'a>(
+        &'a self,
+        body: &'a types::ImportMcpServersBody,
+    ) -> Result<ResponseValue<types::ImportMcpServersResponse>, Error<()>> {
+        let url = format!("{}/mcp-servers/import", self.baseurl,);
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Preview which MCP servers can be imported, and which were rejected and why
+
+Sends a `POST` request to `/mcp-servers/import/preview`
+
+*/
+    pub async fn preview_mcp_import<'a>(
+        &'a self,
+        body: &'a types::PreviewMcpImportBody,
+    ) -> Result<ResponseValue<types::PreviewMcpImportResponse>, Error<()>> {
+        let url = format!("{}/mcp-servers/import/preview", self.baseurl,);
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Connect to an unsaved MCP server config and report its tools, or why it failed
+
+Sends a `POST` request to `/mcp-servers/test-connection`
+
+*/
+    pub async fn test_mcp_server_connection<'a>(
+        &'a self,
+        body: &'a types::TestMcpServerConnectionBody,
+    ) -> Result<ResponseValue<types::TestMcpServerConnectionResponse>, Error<()>> {
+        let url = format!("{}/mcp-servers/test-connection", self.baseurl,);
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Remove a registered MCP server
+
+Sends a `DELETE` request to `/mcp-servers/{mcpServerId}`
+
+*/
+    pub async fn remove_mcp_server<'a>(
+        &'a self,
+        mcp_server_id: &'a str,
+    ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
+        let url = format!(
+            "{}/mcp-servers/{}", self.baseurl, encode_path(& mcp_server_id.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .delete(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Enable, disable, repolicy or reconfigure a registered MCP server
+
+Sends a `PATCH` request to `/mcp-servers/{mcpServerId}`
+
+*/
+    pub async fn update_mcp_server<'a>(
+        &'a self,
+        mcp_server_id: &'a str,
+        body: &'a types::UpdateMcpServerBody,
+    ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
+        let url = format!(
+            "{}/mcp-servers/{}", self.baseurl, encode_path(& mcp_server_id.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .patch(url)
             .header(
                 ::reqwest::header::ACCEPT,
                 ::reqwest::header::HeaderValue::from_static("application/json"),

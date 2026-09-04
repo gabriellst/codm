@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { SendContactMutationRequest, SendContactMutationResponse } from "../types/SendContact.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { SendContactMutationRequest, SendContactMutationResponse } from "../types/SendContact.ts";
 
 function getSendContactUrl() {
   const res = { method: 'POST', url: `/messaging/messages/contact` as const }

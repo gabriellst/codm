@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
-import type { GetAttachThreadWizardQueryResponse, GetAttachThreadWizardQueryParams } from "../../../types/GetAttachThreadWizard.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { GetAttachThreadWizardQueryResponse, GetAttachThreadWizardQueryParams } from "../../../types/GetAttachThreadWizard.ts";
 
 /**
  * @description Attach-thread wizard — contacts, workspaces, providers + attached/no-channel flags (T15)

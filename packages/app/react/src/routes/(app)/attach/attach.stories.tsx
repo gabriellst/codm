@@ -106,9 +106,16 @@ const WORKSPACES: GetAttachThreadWizardQueryResponse['workspaces'] = [
 // DRIVABLE runner today, Codex/OpenCode are both `comingSoon` regardless of `status` (see that
 // component's docblock on why `comingSoon` always wins the row's label over `status`).
 const PROVIDERS: GetAttachThreadWizardQueryResponse['providers'] = [
-	{ provider: 'CLAUDE_CODE', status: 'DETECTED', available: true, comingSoon: false, version: '1.0.0' },
-	{ provider: 'CODEX', status: 'DETECTED', available: false, comingSoon: true, version: '3.1.0' },
-	{ provider: 'OPENCODE', status: 'NOT_INSTALLED', available: false, comingSoon: true },
+	{
+		provider: 'CLAUDE_CODE',
+		status: 'DETECTED',
+		available: true,
+		comingSoon: false,
+		version: '1.0.0',
+		models: ['DEFAULT', 'OPUS', 'SONNET', 'HAIKU'],
+	},
+	{ provider: 'CODEX', status: 'DETECTED', available: false, comingSoon: true, version: '3.1.0', models: ['DEFAULT', 'TERRA', 'LUNA'] },
+	{ provider: 'OPENCODE', status: 'NOT_INSTALLED', available: false, comingSoon: true, models: [] },
 ]
 
 const WIZARD_DATA: DeepPartial<GetAttachThreadWizardQueryResponse> = {

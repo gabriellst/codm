@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { MarkRemoteAsUnreadMutationRequest, MarkRemoteAsUnreadMutationResponse } from "../types/MarkRemoteAsUnread.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { markRemoteAsUnread } from "../client/markRemoteAsUnread.ts";
+import type { MarkRemoteAsUnreadMutationRequest, MarkRemoteAsUnreadMutationResponse } from "../types/MarkRemoteAsUnread.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { markRemoteAsUnread } from "../client/markRemoteAsUnread.ts";
 
 export const markRemoteAsUnreadMutationKey = () => [{ url: '/channel/remotes/mark-as-unread' }] as const
 

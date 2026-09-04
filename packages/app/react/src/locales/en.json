@@ -378,6 +378,24 @@
 			"DAILY": "Fixed time",
 			"INTERVAL": "Every so often"
 		},
+		"McpConfigSource": {
+			"PASTE": "Pasted JSON",
+			"WORKSPACE_FILE": "Workspace .mcp.json",
+			"CLAUDE_CODE": "Claude Code config",
+			"CLAUDE_DESKTOP": "Claude Desktop config"
+		},
+		"McpImportRejection": {
+			"UNSUPPORTED_TRANSPORT": "transport not supported",
+			"INVALID_KEY": "name not allowed (lowercase letters, digits and dashes)",
+			"MISSING_COMMAND": "no command",
+			"MISSING_URL": "no url",
+			"ALREADY_REGISTERED": "already registered",
+			"MALFORMED": "could not be read"
+		},
+		"McpTransport": {
+			"HTTP": "HTTP",
+			"STDIO": "Local command"
+		},
 		"NotificationCategory": {
 			"DAILY_DIGEST": "Daily digest",
 			"FEATURE_ANNOUNCEMENT": "Feature announcement",
@@ -480,6 +498,10 @@
 		"LOOP_NOT_FOUND": "That loop no longer exists in this conversation.",
 		"LOOP_PROMPT_TOO_LONG": "The loop's prompt is past the character limit.",
 		"LOOP_WITHOUT_WEEKDAY": "Pick at least one day of the week for the loop to repeat on.",
+		"MCP_APPROVAL_ALREADY_SETTLED": "This approval was already answered.",
+		"MCP_SERVER_KEY_CONFLICT": "An MCP server with this key already exists.",
+		"MCP_SERVER_NOT_FOUND": "MCP server not found.",
+		"MCP_SERVER_TRANSPORT_INCOMPLETE": "This MCP server's transport is missing a required field.",
 		"MISSING_ENVIRONMENT_VARIABLE": "Server configuration error. Contact support.",
 		"MISSING_LOG_CONTENT": "Internal logging error.",
 		"MODEL_NOT_AVAILABLE": "That agent does not offer that model.",
@@ -725,6 +747,70 @@
 		"general": "General",
 		"generalAppVersion": "App version",
 		"generalDataDir": "Data directory",
+		"mcpServers": {
+			"addServer": "Add server",
+			"emptyDescription": "Register a third-party MCP server so agents in this workspace can call its tools.",
+			"emptyTitle": "No MCP servers yet",
+			"enabledToggle": "Enabled",
+			"form": {
+				"addVariable": "Add variable",
+				"approvalPolicyLabel": "Approval policy",
+				"approvalPolicyPlaceholder": "Default (ask)",
+				"argsLabel": "Arguments",
+				"argsPlaceholder": "-y @agent/browser-use-mcp",
+				"cancel": "Cancel",
+				"commandLabel": "Command",
+				"commandPlaceholder": "npx",
+				"envLabel": "Environment variables",
+				"headersLabel": "Headers",
+				"keyColumnLabel": "Name",
+				"keyLabel": "Key",
+				"keyPlaceholder": "browser-use",
+				"register": "Register",
+				"registerTitle": "Register MCP server",
+				"reconfigureTitle": "Reconfigure {{key}}",
+				"removeVariable": "Remove variable",
+				"save": "Save",
+				"secretsMustBeReentered": "Reconfiguring replaces the variables: re-enter the value of every key you want to keep.",
+				"transportLabel": "Transport",
+				"urlLabel": "Server URL",
+				"urlPlaceholder": "https://mcp.example.com",
+				"valueColumnLabel": "Value"
+			},
+			"noTools": "This server hasn't published any tools yet.",
+			"policy": {
+				"ASK": "Ask",
+				"AUTO": "Auto"
+			},
+			"policyLabel": "Approval policy",
+			"preApprovedWarning": "Approval gate is off — every external tool, including MCP servers registered later, runs without asking.",
+			"reconfigure": "Reconfigure",
+			"remove": "Remove",
+			"removeConfirmAction": "Remove",
+			"removeConfirmDescription": "\"{{key}}\" stops being available to every agent. This can't be undone.",
+			"removeConfirmTitle": "Remove this MCP server?",
+			"title": "MCP servers",
+			"toolPolicy": {
+				"ASK": "Ask",
+				"AUTO": "Auto",
+				"INHERIT": "Inherits from server"
+			},
+			"toolPolicyLabel": "Approval policy for {{tool}}",
+			"unreachable": "Can't reach this server — check the command or URL and reconnect.",
+			"variablesConfigured_one": "{{count}} variable configured",
+			"variablesConfigured_other": "{{count}} variables configured",
+			"import": {
+				"title": "Import MCP servers",
+				"pasteLabel": "Paste a configuration",
+				"pastePlaceholder": "{ \"mcpServers\": { … } }",
+				"scan": "Look for servers",
+				"confirm": "Import {{count}}",
+				"sourceEmpty": "nothing here",
+				"wholeDocument": "whole document",
+				"secretsCount": "{{count}} secret(s)",
+				"secretsWillBeBlank": "Secrets come in with their names only — you fill the values in before the server can run."
+			}
+		},
 		"providerNotFound": "not found in PATH",
 		"rescanProviders": "Rescan",
 		"telemetry": "Telemetry",

@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { GetIssueDetailQueryResponse, GetIssueDetailPathParams } from "../types/GetIssueDetail.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { GetIssueDetailQueryResponse, GetIssueDetailPathParams } from "../types/GetIssueDetail.ts";
 
 function getGetIssueDetailUrl(issueId: GetIssueDetailPathParams["issueId"]) {
   const res = { method: 'GET', url: `/issues/${issueId}` as const }

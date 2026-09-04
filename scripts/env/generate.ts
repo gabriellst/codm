@@ -10,12 +10,33 @@ const ROOT = resolve(import.meta.dirname, '..', '..')
 const TARGET = resolve(ROOT, '.env.example')
 
 // Rendering sections — declarative predicates over the EnvDecl CONTRACT (first match wins).
-const SECTIONS: { title: string; match: (d: EnvDecl) => boolean; note?: string }[] = [
+// `note` aceita VÁRIAS linhas porque uma seção pode precisar ensinar um procedimento, não só
+// rotular. O login social é o caso que forçou isso: as quatro chaves nascem vazias e não há como
+// adivinhar o callback URL a registrar no provedor — sem essas linhas, quem clona bate num 500 (ou
+// num 404 de terceiro) sem nada que aponte para a causa. Uma string continua valendo; um array vira
+// uma linha `#` por elemento.
+const SECTIONS: { title: string; match: (d: EnvDecl) => boolean; note?: string | readonly string[] }[] = [
 	{ title: 'Project', match: d => d.consumers.includes('compose') },
 	{
 		title: 'Billing gateway credentials',
 		match: d => d.group === 'billing-gateway',
 		note: 'Adapters for ALL gateways ship with the template; which are ACTIVE + these secrets are the product plug.',
+	},
+	{
+		title: 'Login social (perfil cloud)',
+		match: d => d.group === 'social-auth',
+		note: [
+			'Vazias = provedor DESLIGADO: ele some da instância do better-auth em vez de ser registrado com',
+			'id vazio, e o boot avisa quais ficaram de fora. Preencha as DUAS chaves de um par ou nenhuma —',
+			'meia credencial é falha dura de boot, nomeando a metade que falta.',
+			'',
+			'Os callbacks abaixo saem do próprio better-auth (baseURL CODM_CLOUD_URL + basePath /auth).',
+			'Registre no provedor ANTES de preencher aqui, trocando localhost:3033 pelo CODM_CLOUD_URL real:',
+			'  Google  console.cloud.google.com → Credenciais → ID do cliente OAuth (Aplicativo da Web)',
+			'          URI de redirecionamento: http://localhost:3033/auth/callback/google',
+			'  GitHub  Settings → Developer settings → OAuth Apps → New OAuth App',
+			'          Authorization callback URL: http://localhost:3033/auth/callback/github',
+		],
 	},
 	{ title: 'Backend — kernel (api-typescript core Config)', match: d => d.schema === 'kernel' },
 	{ title: 'Backend — product (ProductConfig: brand + billing policy)', match: d => d.schema === 'product' },
@@ -55,7 +76,7 @@ export function renderEnvExample(env: Record<string, EnvDecl> = REPO.env, opts: 
 		for (const [k] of keys) claimed.add(k)
 		if (keys.length === 0) continue
 		lines.push(`# ---- ${section.title} ----`)
-		if (section.note) lines.push(`# ${section.note}`)
+		if (section.note) for (const line of typeof section.note === 'string' ? [section.note] : section.note) lines.push(`# ${line}`)
 		const regular = keys.filter(([, d]) => !d.advanced)
 		const advanced = keys.filter(([, d]) => d.advanced)
 		for (const [key, d] of regular) {

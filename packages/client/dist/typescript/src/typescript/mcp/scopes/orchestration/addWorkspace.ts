@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
-import type { AddWorkspaceMutationRequest, AddWorkspaceMutationResponse } from "../../../types/AddWorkspace.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { AddWorkspaceMutationRequest, AddWorkspaceMutationResponse } from "../../../types/AddWorkspace.ts";
 
 /**
  * @description Register a local project folder; auto-detects git / Claude-project badges

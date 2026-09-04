@@ -67,6 +67,11 @@ describe('createNodeAgentProcessSpawner — consumes the ProcessTree strategy', 
 						calls.push({ pid: child.pid, graceMs })
 						child.kill('SIGKILL')
 					},
+					// This suite only exercises `terminate` — `kill()` never reaches `terminateByPid` — so the
+					// fixture delegates to the REAL POSIX strategy instead of a mute stub. Kept honest with the
+					// rest of this describe block, which is already `skipIf(win32)` and already uses
+					// `posixProcessTree` directly for its other cases.
+					terminateByPid: posixProcessTree.terminateByPid,
 				}
 				const proc = createNodeAgentProcessSpawner(tree)({ cmd: ANNOUNCE_PID_THEN_BLOCK, cwd: process.cwd(), stdin: false })
 

@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { AuthPassthroughGetQueryResponse } from "../types/AuthPassthroughGet.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
-import { authPassthroughGet } from "../client/authPassthroughGet.ts";
+import type { AuthPassthroughGetQueryResponse } from "../types/AuthPassthroughGet.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { authPassthroughGet } from "../client/authPassthroughGet.ts";
 
 export const authPassthroughGetSuspenseQueryKey = () => [{ url: '/auth/*' }] as const
 

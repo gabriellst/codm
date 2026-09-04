@@ -112,7 +112,12 @@ describe('injection-cast — só `core/injection` converte um token de DI', () =
 				'`asInjectionToken(token)` (escrita) — os dois vêm de `@template/core-typescript`, preservam o tipo, e ' +
 				'dispensam tanto o `as any` da entrada quanto o `as X` da saída.',
 		).toEqual([])
-	})
+	}, // síncrona — é I/O, não CPU, e o custo depende do cache do FS e de quem mais está lendo disco no // PRAZO EXPLÍCITO, e não o default de 5000ms do bun. Este caso VARRE O REPO INTEIRO de forma
+	// momento. Medido em 9578ms num host Windows sob carga (pre-commit concorrendo com a suíte de
+	// e2e), contra ~2s a frio e sozinho: o teste não estava errado, o prazo é que era um número que
+	// ninguém escolheu. Um rail que reprova conforme a carga da máquina não reprova código; ele
+	// ensina a rodar com --no-verify, que é o oposto do que ele existe para fazer.
+	60_000)
 
 	/**
 	 * FALSEADOR. Sem isto o teste acima passaria com um detector que não detecta nada — e um rail

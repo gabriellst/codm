@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { SetPresenceMutationRequest, SetPresenceMutationResponse, SetPresencePathParams } from "../types/SetPresence.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { SetPresenceMutationRequest, SetPresenceMutationResponse, SetPresencePathParams } from "../types/SetPresence.ts";
 
 function getSetPresenceUrl(id: SetPresencePathParams["id"]) {
   const res = { method: 'PUT', url: `/channel/channels/${id}/presence` as const }

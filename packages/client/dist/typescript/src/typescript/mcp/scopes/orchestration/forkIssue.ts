@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
-import type { ForkIssueMutationRequest, ForkIssueMutationResponse, ForkIssuePathParams } from "../../../types/ForkIssue.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { ForkIssueMutationRequest, ForkIssueMutationResponse, ForkIssuePathParams } from "../../../types/ForkIssue.ts";
 
 /**
  * @description Fork a new issue out of the conversation, from the operator's own words

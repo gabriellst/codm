@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { SignInLoopbackQueryResponse, SignInLoopbackQueryParams } from "../types/SignInLoopback.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
-import { signInLoopback } from "../client/signInLoopback.ts";
+import type { SignInLoopbackQueryResponse, SignInLoopbackQueryParams } from "../types/SignInLoopback.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
+import { signInLoopback } from "../client/signInLoopback.ts";
 
 export const signInLoopbackQueryKey = (params: SignInLoopbackQueryParams) => [{ url: '/sign-in/loopback' }, ...(params ? [params] : [])] as const
 

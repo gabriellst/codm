@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { UnpinRemoteMutationRequest, UnpinRemoteMutationResponse } from "../types/UnpinRemote.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { UnpinRemoteMutationRequest, UnpinRemoteMutationResponse } from "../types/UnpinRemote.ts";
 
 function getUnpinRemoteUrl() {
   const res = { method: 'POST', url: `/channel/remotes/unpin` as const }

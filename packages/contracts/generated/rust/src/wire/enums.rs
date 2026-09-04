@@ -664,6 +664,88 @@ pub enum MailboxTargetKind {
 	ISSUE,
 }
 
+/// Como o dono respondeu um pedido de aprovação de ferramenta MCP externa. A ausência do valor na linha significa PENDENTE — esse estado não tem membro, porque 'ainda não decidiu' não é uma decisão.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum McpApprovalDecision {
+	#[serde(rename = "APPROVED")]
+	#[strum(serialize = "APPROVED")]
+	APPROVED,
+	#[serde(rename = "DENIED")]
+	#[strum(serialize = "DENIED")]
+	DENIED,
+}
+
+/// O que o proxy faz ao encaminhar uma ferramenta deste servidor. AUTO executa direto; ASK recusa a chamada e levanta um stop APPROVAL_NEEDED para o dono decidir. A política efetiva também depende de StopPolicy.approvalNeeded do dono — ver agent/mcp/approvalPolicy.ts.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum McpApprovalPolicy {
+	#[serde(rename = "AUTO")]
+	#[strum(serialize = "AUTO")]
+	AUTO,
+	#[serde(rename = "ASK")]
+	#[strum(serialize = "ASK")]
+	ASK,
+}
+
+/// De onde uma configuração de MCP foi lida para import. Fechado de propósito, e declarado em vez de inferido: nenhum código decide 'é o Claude Desktop' olhando o formato de um caminho — o caminho por plataforma é propriedade DESTA fonte, resolvida por lookup. PASTE é o dono colando JSON na tela (sem disco, funciona com qualquer origem); WORKSPACE_FILE é o .mcp.json do workspace anexado; CLAUDE_CODE é ~/.claude.json, cuja configuração vive sob projects['<caminho absoluto>'].mcpServers e NÃO no topo (medido em 04/09/2026); CLAUDE_DESKTOP é o claude_desktop_config.json do app.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum McpConfigSource {
+	#[serde(rename = "PASTE")]
+	#[strum(serialize = "PASTE")]
+	PASTE,
+	#[serde(rename = "WORKSPACE_FILE")]
+	#[strum(serialize = "WORKSPACE_FILE")]
+	WORKSPACE_FILE,
+	#[serde(rename = "CLAUDE_CODE")]
+	#[strum(serialize = "CLAUDE_CODE")]
+	CLAUDE_CODE,
+	#[serde(rename = "CLAUDE_DESKTOP")]
+	#[strum(serialize = "CLAUDE_DESKTOP")]
+	CLAUDE_DESKTOP,
+}
+
+/// Por que uma entrada de configuração MCP não pôde virar um servidor registrado. Existe porque REJEIÇÃO É CIDADÃ DE PRIMEIRA CLASSE: um import que descarta o que não entende produz o pior resultado possível — o dono vê 2 de 3 servidores e conclui que o terceiro nunca existiu. Toda entrada recusada chega à tela com um destes motivos, ao lado das aceitas. UNSUPPORTED_TRANSPORT é o `type: 'sse'` que existe no mundo e não no nosso contrato (McpTransport é STDIO|HTTP); INVALID_KEY é o nome que não cabe em ^[a-z][a-z0-9-]{0,31}$ (`my_server` e `MyServer` são comuns por aí) — o nome original vai junto, porque renomear em silêncio é inaceitável; MISSING_COMMAND e MISSING_URL são a entrada incoerente com o próprio transporte declarado; ALREADY_REGISTERED é a chave que o dono já tem, recusada em vez de duplicada em silêncio; MALFORMED é o documento que nem JSON é — uma rejeição, nunca uma exceção que derruba a tela.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum McpImportRejection {
+	#[serde(rename = "UNSUPPORTED_TRANSPORT")]
+	#[strum(serialize = "UNSUPPORTED_TRANSPORT")]
+	UNSUPPORTED_TRANSPORT,
+	#[serde(rename = "INVALID_KEY")]
+	#[strum(serialize = "INVALID_KEY")]
+	INVALID_KEY,
+	#[serde(rename = "MISSING_COMMAND")]
+	#[strum(serialize = "MISSING_COMMAND")]
+	MISSING_COMMAND,
+	#[serde(rename = "MISSING_URL")]
+	#[strum(serialize = "MISSING_URL")]
+	MISSING_URL,
+	#[serde(rename = "ALREADY_REGISTERED")]
+	#[strum(serialize = "ALREADY_REGISTERED")]
+	ALREADY_REGISTERED,
+	#[serde(rename = "MALFORMED")]
+	#[strum(serialize = "MALFORMED")]
+	MALFORMED,
+}
+
 /// Which declared MCP tool surface a credential opens. The value is the WIRE spelling — it is the path segment of the JSON-RPC door (/mcp/<value>), the synthetic OpenAPI tag (mcp:<value>) the Kubb tag filter matches on, and the directory the per-scope generated server is emitted into. Changing a value renames all three at once.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
@@ -681,6 +763,22 @@ pub enum McpScope {
 	#[serde(rename = "system")]
 	#[strum(serialize = "system")]
 	system,
+}
+
+/// Como o daemon fala com um servidor MCP de terceiro. STDIO spawna um processo filho e conversa por stdin/stdout; HTTP abre uma conexão para uma URL. A escolha é do servidor cadastrado, não da máquina.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum McpTransport {
+	#[serde(rename = "STDIO")]
+	#[strum(serialize = "STDIO")]
+	STDIO,
+	#[serde(rename = "HTTP")]
+	#[strum(serialize = "HTTP")]
+	HTTP,
 }
 
 /// A live change to a group's member set. Descends the origin channel MembershipAction. Lowercase wire values preserved verbatim. Defined-and-dormant: the membership_added / membership_removed wire events model the join/leave facts directly (with `isAdmin`); this enum is the harmonized closed set for the promoted/demoted transitions the source also emits.

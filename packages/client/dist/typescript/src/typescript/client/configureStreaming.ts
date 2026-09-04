@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { ConfigureStreamingMutationRequest, ConfigureStreamingMutationResponse, ConfigureStreamingPathParams } from "../types/ConfigureStreaming.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { ConfigureStreamingMutationRequest, ConfigureStreamingMutationResponse, ConfigureStreamingPathParams } from "../types/ConfigureStreaming.ts";
 
 function getConfigureStreamingUrl(threadId: ConfigureStreamingPathParams["threadId"]) {
   const res = { method: 'PUT', url: `/threads/${threadId}/streaming` as const }

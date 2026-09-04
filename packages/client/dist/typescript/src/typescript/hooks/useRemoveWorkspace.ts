@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { RemoveWorkspaceMutationResponse, RemoveWorkspacePathParams } from "../types/RemoveWorkspace.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { removeWorkspace } from "../client/removeWorkspace.ts";
+import type { RemoveWorkspaceMutationResponse, RemoveWorkspacePathParams } from "../types/RemoveWorkspace.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { removeWorkspace } from "../client/removeWorkspace.ts";
 
 export const removeWorkspaceMutationKey = () => [{ url: '/workspaces/:workspaceId' }] as const
 

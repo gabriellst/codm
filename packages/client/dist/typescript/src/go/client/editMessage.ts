@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { EditMessageMutationRequest, EditMessageMutationResponse } from "../types/EditMessage.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { EditMessageMutationRequest, EditMessageMutationResponse } from "../types/EditMessage.ts";
 
 function getEditMessageUrl() {
   const res = { method: 'PUT', url: `/messaging/messages/edit` as const }

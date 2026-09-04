@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { GetNeedsYouPanelQueryResponse, GetNeedsYouPanelPathParams } from "../types/GetNeedsYouPanel.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { GetNeedsYouPanelQueryResponse, GetNeedsYouPanelPathParams } from "../types/GetNeedsYouPanel.ts";
 
 function getGetNeedsYouPanelUrl(threadId: GetNeedsYouPanelPathParams["threadId"]) {
   const res = { method: 'GET', url: `/threads/${threadId}/needs-you` as const }

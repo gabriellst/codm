@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { MarkRemoteAsSeenMutationRequest, MarkRemoteAsSeenMutationResponse } from "../types/MarkRemoteAsSeen.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { markRemoteAsSeen } from "../client/markRemoteAsSeen.ts";
+import type { MarkRemoteAsSeenMutationRequest, MarkRemoteAsSeenMutationResponse } from "../types/MarkRemoteAsSeen.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { markRemoteAsSeen } from "../client/markRemoteAsSeen.ts";
 
 export const markRemoteAsSeenMutationKey = () => [{ url: '/channel/remotes/mark-as-seen' }] as const
 

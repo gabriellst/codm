@@ -3,7 +3,11 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import i18n from '@/lib/i18n'
-import { useIntegrationBackend, type IntegrationBackend } from '../../../../../../tests/support/integration-harness'
+import {
+	useIntegrationBackend,
+	type IntegrationBackend,
+	INTEGRATION_BOOT_TIMEOUT_MS,
+} from '../../../../../../tests/support/integration-harness'
 import { ContactStep } from '.'
 
 /**
@@ -35,11 +39,11 @@ describe('ContactStep — contra o backend real', () => {
 
 	beforeAll(async () => {
 		backend = await useIntegrationBackend()
-	})
+	}, INTEGRATION_BOOT_TIMEOUT_MS)
 
 	afterAll(async () => {
 		await backend.stop()
-	})
+	}, INTEGRATION_BOOT_TIMEOUT_MS)
 
 	beforeEach(async () => {
 		await i18n.changeLanguage('pt')

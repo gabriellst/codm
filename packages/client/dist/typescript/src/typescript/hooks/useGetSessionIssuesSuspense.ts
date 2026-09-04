@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { GetSessionIssuesQueryResponse, GetSessionIssuesPathParams } from "../types/GetSessionIssues.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
-import { getSessionIssues } from "../client/getSessionIssues.ts";
+import type { GetSessionIssuesQueryResponse, GetSessionIssuesPathParams } from "../types/GetSessionIssues.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { getSessionIssues } from "../client/getSessionIssues.ts";
 
 export const getSessionIssuesSuspenseQueryKey = (threadId: GetSessionIssuesPathParams["threadId"] | undefined) => [{ url: '/threads/:threadId/issues', params: {threadId:threadId} }] as const
 

@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { DeleteMessageMutationRequest, DeleteMessageMutationResponse } from "../types/DeleteMessage.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { DeleteMessageMutationRequest, DeleteMessageMutationResponse } from "../types/DeleteMessage.ts";
 
 function getDeleteMessageUrl() {
   const res = { method: 'DELETE', url: `/messaging/messages/delete` as const }

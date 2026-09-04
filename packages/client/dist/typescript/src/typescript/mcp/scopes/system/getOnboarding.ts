@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/system/_http";
-import type { GetOnboardingQueryResponse } from "../../../types/GetOnboarding.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/system/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { GetOnboardingQueryResponse } from "../../../types/GetOnboarding.ts";
 
 /**
  * @description Onboarding — jornada persistida (currentStep/completedAt/state) + satisfação derivada dos passos de setup

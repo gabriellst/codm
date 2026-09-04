@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { GetHomeDashboardQueryResponse } from "../types/GetHomeDashboard.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
-import { getHomeDashboard } from "../client/getHomeDashboard.ts";
+import type { GetHomeDashboardQueryResponse } from "../types/GetHomeDashboard.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
+import { getHomeDashboard } from "../client/getHomeDashboard.ts";
 
 export const getHomeDashboardQueryKey = () => [{ url: '/ui/home' }] as const
 

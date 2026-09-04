@@ -5,7 +5,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { getAttachThreadWizardQueryKey, getAttachThreadWizardQueryOptions } from '@codm/client-typescript/typescript'
 import i18n from '@/lib/i18n'
 import { enumLabel } from '@/lib'
-import { useIntegrationBackend, type IntegrationBackend } from '../../../../../../tests/support/integration-harness'
+import {
+	useIntegrationBackend,
+	type IntegrationBackend,
+	INTEGRATION_BOOT_TIMEOUT_MS,
+} from '../../../../../../tests/support/integration-harness'
 import { ProvidersSection } from '.'
 
 /**
@@ -32,11 +36,11 @@ describe('ProvidersSection — contra o backend real', () => {
 
 	beforeAll(async () => {
 		backend = await useIntegrationBackend()
-	})
+	}, INTEGRATION_BOOT_TIMEOUT_MS)
 
 	afterAll(async () => {
 		await backend.stop()
-	})
+	}, INTEGRATION_BOOT_TIMEOUT_MS)
 
 	beforeEach(async () => {
 		await i18n.changeLanguage('pt')

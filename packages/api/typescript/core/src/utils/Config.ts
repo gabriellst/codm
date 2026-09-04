@@ -81,6 +81,18 @@ const RawEnvSchema = z.object({
 	 * diretórios declarados/atestados.
 	 */
 	PATH: z.string().default(''),
+	/**
+	 * O diretório de dados de aplicação do usuário no Windows — declarado aqui pelo MESMO motivo do
+	 * COMSPEC e do PATH acima: quem o define é o SO, e ainda assim toda leitura de ambiente do `src/`
+	 * entra pela porta tipada (rail D14/AC-4, cujo INVENTORY de exceções é VAZIO de propósito).
+	 *
+	 * Consumido por `SystemMcpConfigDiscovery` para achar o `claude_desktop_config.json`, que no
+	 * Windows mora em `%APPDATA%\Claude`. Fora do Windows a variável não existe, e o default `''` é o
+	 * que faz `claudeDesktopDir` cair no caminho derivado do home em vez de compor um caminho com
+	 * `undefined` no meio — que é como um diretório inexistente vira uma leitura que falha por um
+	 * motivo que não tem nada a ver com a causa.
+	 */
+	APPDATA: z.string().default(''),
 	OTEL_COLLECTOR_TRACE_URL: z.string().default(''),
 	OTEL_SERVICE_NAME: z.string().default('service'),
 	OTEL_COLLECTOR_LOG_URL: z.string().default(''),

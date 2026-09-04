@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript-cloud/_http";
-import type { DisableOwnerMutationRequest, DisableOwnerMutationResponse } from "../types/DisableOwner.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
+import type { DisableOwnerMutationRequest, DisableOwnerMutationResponse } from "../types/DisableOwner.ts";
 
 function getDisableOwnerUrl() {
   const res = { method: 'POST', url: `/owners/disable` as const }

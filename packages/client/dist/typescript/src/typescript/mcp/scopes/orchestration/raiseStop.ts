@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
-import type { RaiseStopMutationRequest, RaiseStopMutationResponse, RaiseStopPathParams } from "../../../types/RaiseStop.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { RaiseStopMutationRequest, RaiseStopMutationResponse, RaiseStopPathParams } from "../../../types/RaiseStop.ts";
 
 /**
  * @description Declare that the agent is blocked and needs the human (approval, classification, …)

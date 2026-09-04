@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { AskOperatorMutationRequest, AskOperatorMutationResponse, AskOperatorPathParams } from "../types/AskOperator.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { askOperator } from "../client/askOperator.ts";
+import type { AskOperatorMutationRequest, AskOperatorMutationResponse, AskOperatorPathParams } from "../types/AskOperator.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { askOperator } from "../client/askOperator.ts";
 
 export const askOperatorMutationKey = () => [{ url: '/threads/:threadId/issues/:issueId/operator-questions' }] as const
 

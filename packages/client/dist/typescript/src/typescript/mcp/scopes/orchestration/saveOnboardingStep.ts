@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
-import type { SaveOnboardingStepMutationRequest, SaveOnboardingStepMutationResponse } from "../../../types/SaveOnboardingStep.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { SaveOnboardingStepMutationRequest, SaveOnboardingStepMutationResponse } from "../../../types/SaveOnboardingStep.ts";
 
 /**
  * @description Salva onde o operador parou no wizard e/ou o rascunho (contactRef/workspace/providers) acumulado até aqui

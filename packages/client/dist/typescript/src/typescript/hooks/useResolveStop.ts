@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { ResolveStopMutationRequest, ResolveStopMutationResponse, ResolveStopPathParams } from "../types/ResolveStop.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { resolveStop } from "../client/resolveStop.ts";
+import type { ResolveStopMutationRequest, ResolveStopMutationResponse, ResolveStopPathParams } from "../types/ResolveStop.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { resolveStop } from "../client/resolveStop.ts";
 
 export const resolveStopMutationKey = () => [{ url: '/stops/:stopId/resolve' }] as const
 

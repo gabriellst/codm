@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/system/_http";
-import type { GetSettingsQueryResponse } from "../../../types/GetSettings.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/system/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { GetSettingsQueryResponse } from "../../../types/GetSettings.ts";
 
 /**
  * @description Settings — providers, stop criteria, general, app version (T08)

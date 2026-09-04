@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
-import type { ListWorkspacesQueryResponse } from "../../../types/ListWorkspaces.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { ListWorkspacesQueryResponse } from "../../../types/ListWorkspaces.ts";
 
 /**
  * @description List registered workspaces with badges and thread counts (T07)

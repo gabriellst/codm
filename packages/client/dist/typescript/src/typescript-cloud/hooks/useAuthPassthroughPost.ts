@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { AuthPassthroughPostMutationResponse } from "../types/AuthPassthroughPost.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { authPassthroughPost } from "../client/authPassthroughPost.ts";
+import type { AuthPassthroughPostMutationResponse } from "../types/AuthPassthroughPost.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { authPassthroughPost } from "../client/authPassthroughPost.ts";
 
 export const authPassthroughPostMutationKey = () => [{ url: '/auth/*' }] as const
 

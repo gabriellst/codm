@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import { agentModelIdSchema } from "./agentModelIdSchema.ts";
 import { channelKindSchema } from "./channelKindSchema.ts";
 import { contactKindSchema } from "./contactKindSchema.ts";
 import { providerKindSchema } from "./providerKindSchema.ts";
@@ -55,7 +56,10 @@ get "status"(){
               },
 "available": z.boolean(),
 "comingSoon": z.boolean(),
-"version": z.optional(z.string())
+"version": z.optional(z.string()),
+get "models"(){
+                return z.array(agentModelIdSchema)
+              }
     }))
     })
 
