@@ -811,7 +811,8 @@
 				"sourceEmpty": "nada aqui",
 				"wholeDocument": "documento inteiro",
 				"secretsCount": "{{count}} segredo(s)",
-				"secretsWillBeBlank": "Os segredos chegam só com o nome — você preenche os valores antes do servidor poder rodar."
+				"secretsWillBeBlank": "Os segredos chegam só com o nome — você preenche os valores antes do servidor poder rodar.",
+				"workspaceLabel": "Qual workspace varrer"
 			},
 			"presets": {
 				"playwright": "Dirige um navegador — navega, clica, lê páginas",

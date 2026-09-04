@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
 import { LibSqlDatabaseDriver, Handler, z, Config } from '@codm/core-typescript'
-import { owners } from '@codm/contracts/db'
+import { owners, workspaces } from '@codm/contracts/db'
 import { McpApprovalPolicy, McpTransport, ProviderKind, ProviderStatus } from '@codm/contracts-typescript/wire/enums'
 import { ProviderDetector } from '@agent/services/ProviderDetector'
 // The LEAF, not the barrel: the barrel re-exports the runner implementations, whose graph reaches
@@ -102,6 +102,16 @@ export const GetSettingsOutputSchema = z.object({
 	mcpServers: z.array(McpServerSummarySchema),
 	/** O catálogo de sugestões — estático, mas servido pela MESMA query que a tela já faz. */
 	mcpPresets: z.array(McpPresetSchema),
+	/**
+	 * Os workspaces do dono — a informação SEM A QUAL o import lê só o que foi colado.
+	 *
+	 * MEDIDO contra o daemon vivo: sem `workspacePath`, a prévia devolve a fonte `CLAUDE_CODE` VAZIA,
+	 * porque o `~/.claude.json` guarda a configuração sob `projects['<caminho absoluto>']` e é o
+	 * caminho que escolhe qual projeto interessa. O `.mcp.json` do workspace nem chega a ser procurado.
+	 * Sem este campo, três das quatro fontes ficavam inalcançáveis pela tela — a de colar era a única
+	 * que funcionava, e a seção das outras renderizava vazia sem dizer por quê.
+	 */
+	workspacePaths: z.array(z.string()),
 	stopCriteria: z.object({
 		serverErrors: z.boolean(),
 		blockedByClassification: z.boolean(),
@@ -198,6 +208,11 @@ export class GetSettings extends Handler<typeof GetSettingsInputSchema, typeof G
 
 		const stopCriteria = await this.stopPolicy.get(input.ownerId)
 
+		const workspaceRows = await this.driver.db
+			.select({ path: workspaces.path })
+			.from(workspaces)
+			.where(eq(workspaces.ownerId, input.ownerId))
+
 		const ownerRow = await this.driver.db
 			.select({ name: owners.name, timezone: owners.timezone })
 			.from(owners)
@@ -210,6 +225,7 @@ export class GetSettings extends Handler<typeof GetSettingsInputSchema, typeof G
 			// Copiado do catálogo, não repassado: `MCP_PRESETS` é `readonly` e entregá-lo direto daria ao
 			// chamador uma referência para a constante do módulo.
 			mcpPresets: MCP_PRESETS.map(preset => ({ ...preset, args: [...preset.args], envKeys: [...preset.envKeys] })),
+			workspacePaths: workspaceRows.map(row => row.path),
 			stopCriteria,
 			general: {
 				// Empty when unnamed — the frontend renders its own i18n placeholder; never an EN literal from the API.

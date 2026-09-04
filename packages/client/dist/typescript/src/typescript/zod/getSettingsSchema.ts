@@ -57,6 +57,7 @@ get "transport"(){
 "envKeys": z.array(z.string()),
 "descriptionKey": z.string()
     })),
+"workspacePaths": z.array(z.string()),
 "stopCriteria": z.object({
     "serverErrors": z.boolean(),
 "blockedByClassification": z.boolean(),

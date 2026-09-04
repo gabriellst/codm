@@ -6931,7 +6931,8 @@ pub mod types {
     ///    "mcpPresets",
     ///    "mcpServers",
     ///    "providers",
-    ///    "stopCriteria"
+    ///    "stopCriteria",
+    ///    "workspacePaths"
     ///  ],
     ///  "properties": {
     ///    "appVersion": {
@@ -7147,6 +7148,12 @@ pub mod types {
     ///        }
     ///      },
     ///      "additionalProperties": false
+    ///    },
+    ///    "workspacePaths": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string"
+    ///      }
     ///    }
     ///  },
     ///  "additionalProperties": false
@@ -7166,6 +7173,8 @@ pub mod types {
         pub providers: ::std::vec::Vec<GetSettingsResponseProvidersItem>,
         #[serde(rename = "stopCriteria")]
         pub stop_criteria: GetSettingsResponseStopCriteria,
+        #[serde(rename = "workspacePaths")]
+        pub workspace_paths: ::std::vec::Vec<::std::string::String>,
     }
     impl ::std::convert::From<&GetSettingsResponse> for GetSettingsResponse {
         fn from(value: &GetSettingsResponse) -> Self {

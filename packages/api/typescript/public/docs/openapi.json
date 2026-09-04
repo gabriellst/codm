@@ -9483,6 +9483,12 @@
                         "additionalProperties": false
                       }
                     },
+                    "workspacePaths": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
                     "stopCriteria": {
                       "type": "object",
                       "properties": {
@@ -9539,6 +9545,7 @@
                     "providers",
                     "mcpServers",
                     "mcpPresets",
+                    "workspacePaths",
                     "stopCriteria",
                     "general",
                     "appVersion"
@@ -9594,6 +9601,9 @@
                           "envKeys": [],
                           "descriptionKey": "settings.mcpServers.presets.playwright"
                         }
+                      ],
+                      "workspacePaths": [
+                        "/Users/eu/repo"
                       ],
                       "stopCriteria": {
                         "serverErrors": true,
@@ -9662,6 +9672,9 @@
                           "envKeys": [],
                           "descriptionKey": "settings.mcpServers.presets.playwright"
                         }
+                      ],
+                      "workspacePaths": [
+                        "/Users/eu/repo"
                       ],
                       "stopCriteria": {
                         "serverErrors": true,

@@ -65,9 +65,19 @@ describe('DefaultMcpUpstreamRegistry.probe', () => {
 		})
 
 		expect(result.ok).toBe(false)
-		// Não assertamos a frase exata — ela é do SO e muda entre plataformas. Assertamos que ela EXISTE
-		// e não é vazia, que é a diferença entre "não alcançável" e um diagnóstico.
-		if (!result.ok) expect(result.error.length).toBeGreaterThan(0)
+		/**
+		 * A MENSAGEM TEM DE DIAGNOSTICAR, e este assert já foi FRACO demais para provar isso.
+		 *
+		 * A primeira versão exigia só `error.length > 0` — e passava enquanto a sonda devolvia
+		 * `MCP error -32000: Connection closed`, o erro do PROTOCOLO, que não diz nada ao dono. O teste
+		 * provava que existia uma string, não que ela servia; o defeito só apareceu quando a sonda foi
+		 * exercida à mão contra o daemon vivo.
+		 *
+		 * Agora o assert é o CONTRATO: a mensagem tem de NOMEAR o comando que falhou. Não asserto a
+		 * frase inteira (ela é do SO e muda por plataforma), mas `spawn <cmd> ENOENT` carrega o nome nas
+		 * duas — e "Connection closed" não carrega em nenhuma.
+		 */
+		if (!result.ok) expect(result.error).toContain('este-binario-nao-existe-em-lugar-nenhum-12345')
 	})
 
 	it('STDIO sem comando é recusado antes de tentar spawnar coisa nenhuma', async () => {

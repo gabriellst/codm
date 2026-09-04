@@ -71,7 +71,12 @@ export function McpServersSection({ className, ...props }: ComponentProps<'secti
 				<div className="flex items-center gap-1.5">
 					{/* Importar vem ANTES de adicionar, e a ordem é a recomendação: quem já tem servidores
 					    configurados noutro cliente não deveria redigitá-los. */}
-					<Button type="button" variant="ghost" size="sm" onClick={() => show(<McpImportDialog onDone={hide} />)}>
+					<Button
+						type="button"
+						variant="ghost"
+						size="sm"
+						onClick={() => show(<McpImportDialog workspacePaths={data?.workspacePaths ?? []} onDone={hide} />)}
+					>
 						<IconFileImport data-icon="inline-start" /> {t('settings.mcpServers.import.title')}
 					</Button>
 					<Button

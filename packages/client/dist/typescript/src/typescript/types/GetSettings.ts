@@ -126,6 +126,10 @@ export type GetSettings200 = {
         descriptionKey: string;
     }[];
     /**
+     * @type array
+    */
+    workspacePaths: string[];
+    /**
      * @type object
     */
     stopCriteria: {

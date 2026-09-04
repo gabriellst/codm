@@ -9522,6 +9522,7 @@ type GetSettingsResponse struct {
 			HumanRequested          bool `json:"humanRequested"`
 			ServerErrors            bool `json:"serverErrors"`
 		} `json:"stopCriteria"`
+		WorkspacePaths []string `json:"workspacePaths"`
 	}
 }
 
@@ -12654,6 +12655,7 @@ func ParseGetSettingsResponse(rsp *http.Response) (*GetSettingsResponse, error) 
 				HumanRequested          bool `json:"humanRequested"`
 				ServerErrors            bool `json:"serverErrors"`
 			} `json:"stopCriteria"`
+			WorkspacePaths []string `json:"workspacePaths"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err

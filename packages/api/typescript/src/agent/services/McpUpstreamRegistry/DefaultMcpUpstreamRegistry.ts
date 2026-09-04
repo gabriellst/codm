@@ -125,10 +125,28 @@ export class DefaultMcpUpstreamRegistry extends McpUpstreamRegistry {
 		const client = new Client({ name: 'codm-probe', version: '1.0.0' }, { capabilities: {} })
 		let transport: StdioClientTransport | undefined
 
+		/**
+		 * O ERRO DE VERDADE CHEGA POR AQUI, e não pelo `catch` do `connect`.
+		 *
+		 * MEDIDO contra um comando inexistente: `client.connect()` rejeita com
+		 * `MCP error -32000: Connection closed` — o erro do PROTOCOLO, que só diz que a conexão morreu e
+		 * some com a causa. O que o dono precisa ler ("não é reconhecido como um comando") vem do
+		 * `child.on('error')` do transporte (`sdk/client/stdio.js:83`), que o encaminha para `onerror`.
+		 *
+		 * Instalar o handler ANTES do `connect` funciona porque o `Protocol.connect` ENCADEIA em vez de
+		 * sobrescrever — ele guarda o handler existente e o chama primeiro
+		 * (`sdk/shared/protocol.js:229`). Isso foi verificado no pacote, não suposto: se ele
+		 * sobrescrevesse, este campo ficaria sempre vazio e a sonda voltaria a ser inútil em silêncio.
+		 */
+		let transportError: Error | undefined
+
 		try {
 			if (server.transport === McpTransport.STDIO) {
 				if (!server.command) return { ok: false, error: 'STDIO requer um comando' }
 				transport = new StdioClientTransport({ command: server.command, args: [...(server.args ?? [])], env: childEnv(server.env) })
+				transport.onerror = error => {
+					transportError ??= error
+				}
 				await client.connect(transport)
 			} else {
 				if (!server.url) return { ok: false, error: 'HTTP requer uma url' }
@@ -147,7 +165,10 @@ export class DefaultMcpUpstreamRegistry extends McpUpstreamRegistry {
 				})),
 			}
 		} catch (error) {
-			return { ok: false, error: error instanceof Error ? error.message : String(error) }
+			// O erro do TRANSPORTE ganha do erro do protocolo: "não é reconhecido como um comando" diz ao
+			// dono o que consertar; "Connection closed" só diz que algo morreu.
+			const cause = transportError ?? error
+			return { ok: false, error: cause instanceof Error ? cause.message : String(cause) }
 		} finally {
 			const pid = transport?.pid
 			if (pid) PROCESS_TREES[process.platform].terminateByPid(pid, 2000)

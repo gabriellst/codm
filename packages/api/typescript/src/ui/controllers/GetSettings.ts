@@ -40,6 +40,7 @@ export const GetSettingsControllerOutputSchema = GetSettingsOutputSchema.example
 				descriptionKey: 'settings.mcpServers.presets.playwright',
 			},
 		],
+		workspacePaths: ['/Users/eu/repo'],
 		stopCriteria: {
 			serverErrors: true,
 			blockedByClassification: true,
