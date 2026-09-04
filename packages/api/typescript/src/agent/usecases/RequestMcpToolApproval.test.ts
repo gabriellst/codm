@@ -8,7 +8,8 @@ import { RecordStopFromExecution } from '@thread/handlers/RecordStopFromExecutio
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
 import { McpToolApprovalRepository } from '../repositories/McpToolApprovalRepository'
 import { GetOpenStops } from './GetOpenStops'
-import { RequestMcpToolApproval } from './RequestMcpToolApproval'
+import { canonicalCallHash } from '../entities/McpToolApproval'
+import { RequestMcpToolApproval, maskSensitiveArgs } from './RequestMcpToolApproval'
 
 /**
  * `RequestMcpToolApproval` só grava o FATO no próprio contexto (o domain event + a linha PENDENTE) —
@@ -88,5 +89,64 @@ describe('RequestMcpToolApproval', () => {
 
 		const { stops } = await testBed.resolve(GetOpenStops).execute({ threadId: issue.threadId })
 		expect(stops.filter(s => s.kind === StopKind.APPROVAL_NEEDED).length).toBe(1)
+	})
+
+	/**
+	 * O TEXTO DO CARD É PERSISTIDO. `issue_stops.detail` guarda esta string para sempre, e o card a
+	 * renderiza — então um argumento sensível que passe por aqui vira uma cópia em claro de um segredo,
+	 * nossa e permanente. Medido no app real: uma chamada gateada grava os argumentos em DUAS colunas
+	 * (`agent_mcp_tool_approvals.call_arguments` e `issue_stops.detail`).
+	 */
+	describe('mascaramento de argumentos sensíveis', () => {
+		it('mascara por PALAVRA da chave, inclusive aninhada, e não estraga o que é inocente', () => {
+			const masked = maskSensitiveArgs({
+				apiKey: 'sk-live-DEVERIA-SUMIR',
+				access_token: 'ghp_DEVERIA_SUMIR',
+				'x-authorization': 'Bearer DEVERIA-SUMIR',
+				config: { nested: { password: 'DEVERIA-SUMIR' } },
+				headers: [{ Cookie: 'DEVERIA-SUMIR' }],
+				// Inocentes: casam por SUBSTRING com `key`/`auth`, e é justamente o que um regex solto erraria.
+				keyboard: 'permanece',
+				monkey: 'permanece',
+				author: 'permanece',
+				location: 'Chicago',
+				a: 17,
+			})
+
+			const flat = JSON.stringify(masked)
+			expect(flat).not.toContain('DEVERIA')
+			expect(flat).not.toContain('sk-live')
+			expect(flat).not.toContain('ghp_')
+
+			expect(masked).toMatchObject({
+				keyboard: 'permanece',
+				monkey: 'permanece',
+				author: 'permanece',
+				location: 'Chicago',
+				a: 17,
+			})
+		})
+
+		/**
+		 * A METADE QUE IMPORTA MAIS QUE O MASCARAMENTO.
+		 *
+		 * Se o hash fosse calculado sobre a forma MASCARADA, duas chamadas com segredos diferentes
+		 * colidiriam no mesmo `callHash`. Como `(issueId, callHash)` é ÚNICO e responde "esta chamada
+		 * pode rodar agora?", a aprovação dada para uma passaria a valer para a outra — o mascaramento
+		 * viraria escalada de privilégio. Este teste é o que impede alguém de "simplificar" mascarando
+		 * antes do hash.
+		 */
+		it('o hash canônico NÃO é mascarado — dois segredos distintos seguem sendo chamadas distintas', () => {
+			const base = { serverKey: 'vault', toolName: 'read' }
+			const um = canonicalCallHash({ ...base, args: { apiKey: 'sk-AAA' } })
+			const outro = canonicalCallHash({ ...base, args: { apiKey: 'sk-BBB' } })
+
+			expect(um).not.toBe(outro)
+
+			// E a contraprova do que aconteceria se alguém hasheasse a forma mascarada:
+			const mascaradoUm = canonicalCallHash({ ...base, args: maskSensitiveArgs({ apiKey: 'sk-AAA' }) as Record<string, unknown> })
+			const mascaradoOutro = canonicalCallHash({ ...base, args: maskSensitiveArgs({ apiKey: 'sk-BBB' }) as Record<string, unknown> })
+			expect(mascaradoUm).toBe(mascaradoOutro)
+		})
 	})
 })
