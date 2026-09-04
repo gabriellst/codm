@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { CompleteOnboardingMutationResponse } from "../types/CompleteOnboarding.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { CompleteOnboardingMutationResponse } from "../types/CompleteOnboarding.ts";
 
 function getCompleteOnboardingUrl() {
   const res = { method: 'POST', url: `/ui/onboarding/complete` as const }

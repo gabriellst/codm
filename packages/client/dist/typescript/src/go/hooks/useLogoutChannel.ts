@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { LogoutChannelMutationResponse, LogoutChannelPathParams } from "../types/LogoutChannel.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { logoutChannel } from "../client/logoutChannel.ts";
+import type { LogoutChannelMutationResponse, LogoutChannelPathParams } from "../types/LogoutChannel.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { logoutChannel } from "../client/logoutChannel.ts";
 
 export const logoutChannelMutationKey = () => [{ url: '/channel/channels/:id/logout' }] as const
 

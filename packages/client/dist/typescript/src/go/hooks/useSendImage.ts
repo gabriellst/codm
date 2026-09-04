@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { SendImageMutationRequest, SendImageMutationResponse } from "../types/SendImage.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { sendImage } from "../client/sendImage.ts";
+import type { SendImageMutationRequest, SendImageMutationResponse } from "../types/SendImage.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { sendImage } from "../client/sendImage.ts";
 
 export const sendImageMutationKey = () => [{ url: '/messaging/messages/image' }] as const
 

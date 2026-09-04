@@ -12,7 +12,7 @@ import { betterAuth, type BetterAuthOptions } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { bearer } from 'better-auth/plugins/bearer'
 import { oneTimeToken } from 'better-auth/plugins/one-time-token'
-import { PgDatabaseDriver, Config, Id } from '@codm/core-typescript'
+import { PgDatabaseDriver, BaseError, Config, Id, LoggingService, type BaseInfrastructureErrors } from '@codm/core-typescript'
 import * as schema from '@codm/contracts/db/pg'
 import { IdentityAuthHooks } from '../IdentityAuthHooks'
 
@@ -96,9 +96,81 @@ export abstract class BetterAuthSocialProviders {
 export class BetterAuth {
 	readonly auth: BetterAuthInstance
 
-	constructor(driver: PgDatabaseDriver, socialProviders: BetterAuthSocialProviders, hooks: IdentityAuthHooks) {
-		this.auth = buildAuthInstance(driver, socialProviders, hooks)
+	constructor(driver: PgDatabaseDriver, socialProviders: BetterAuthSocialProviders, hooks: IdentityAuthHooks, logging: LoggingService) {
+		this.auth = buildAuthInstance(driver, socialProviders, hooks, logging)
 	}
+}
+
+/**
+ * SÓ OS PROVEDORES REALMENTE CONFIGURADOS — e o motivo é o que acontecia quando não era assim.
+ *
+ * Este literal registrava `github` e `google` INCONDICIONALMENTE, com o que viesse do `.env`. As
+ * quatro chaves nascem com default `''` (Config: "empty defaults keep the LOCAL daemon profile
+ * booting without them"), então numa nuvem sem credenciais os dois provedores existiam com id
+ * VAZIO — e cada um falhava num lugar diferente, nenhum deles nosso:
+ *
+ *   POST /auth/sign-in/social {"provider":"google"} → 500, opaco, sem uma palavra sobre credencial
+ *   POST /auth/sign-in/social {"provider":"github"} → 200 e um authorize URL com `client_id=`,
+ *                                                     e o 404 quem devolvia era o GitHub
+ *
+ * Dois sintomas diferentes, um sem relação nenhuma com a causa e o outro vindo de um terceiro. Um
+ * provedor que não temos como usar não deve ser oferecido: omitido daqui, o better-auth responde a
+ * uma tentativa com o erro dele para provedor desconhecido, que ao menos nomeia o provedor.
+ *
+ * NÃO é falha de boot quando não há nenhum: a nuvem ainda serve `/auth/ok`, o console ainda abre, e
+ * derrubar o boot deixaria quem só quer olhar a aplicação sem nada. O aviso alto no boot é o que
+ * fecha a distância — a mensagem diz qual provedor está de fora e o que preencher.
+ *
+ * MEIO configurado, esse SIM é falha dura: id sem secret (ou o contrário) nunca é intenção, é um
+ * `.env` pela metade, e seguir com ele reproduz exatamente o 500 que este bloco existe para matar.
+ */
+export function resolveSocialProviders(
+	credentials: BetterAuthSocialProviders,
+	logging: LoggingService,
+): BetterAuthOptions['socialProviders'] {
+	const declared = [
+		{ id: 'github', envPrefix: 'GITHUB', clientId: credentials.githubClientId, clientSecret: credentials.githubClientSecret },
+		{ id: 'google', envPrefix: 'GOOGLE', clientId: credentials.googleClientId, clientSecret: credentials.googleClientSecret },
+	] as const
+
+	const configured: Record<string, { clientId: string; clientSecret: string }> = {}
+	const missing: string[] = []
+
+	for (const provider of declared) {
+		const hasId = provider.clientId.trim().length > 0
+		const hasSecret = provider.clientSecret.trim().length > 0
+
+		if (hasId !== hasSecret) {
+			throw new BaseError<BaseInfrastructureErrors>(
+				'MISSING_ENVIRONMENT_VARIABLE',
+				`${provider.envPrefix}_CLIENT_${hasId ? 'SECRET' : 'ID'} está vazia enquanto a outra metade do par está preenchida. ` +
+					`Um provedor OAuth pela metade não autentica ninguém e falha com um 500 opaco no primeiro clique: ` +
+					`preencha as duas em .env, ou deixe as duas vazias para desligar o ${provider.id}.`,
+			)
+		}
+		if (hasId) configured[provider.id] = { clientId: provider.clientId, clientSecret: provider.clientSecret }
+		else missing.push(provider.envPrefix)
+	}
+
+	if (missing.length > 0) {
+		// Pelo `LoggingService` INJETADO, nunca `console.warn`. A primeira versão disto usou console
+		// com a justificativa de ser "código de bootstrap sem DI", e o rail
+		// `tests/architecture/console-discipline.test.ts` reprovou na hora — com razão: `BetterAuth` é
+		// `@injectable()` e resolvido do container, então recebe `LoggingService` como qualquer outro
+		// serviço. É o mesmo veredito que `SystemProviderDetector` já tinha registrado no docblock dele,
+		// e a razão é a mesma: um `console.*` aqui não chega ao Loki e não carrega correlação de trace —
+		// e uma nuvem sem provedor social é exatamente o que se diagnostica por log, depois do fato.
+		logging.warn({
+			content: {
+				message: 'provedor(es) social desligado(s) por falta de credencial',
+				providers: missing.map(p => p.toLowerCase()),
+				envKeys: missing.flatMap(p => [`${p}_CLIENT_ID`, `${p}_CLIENT_SECRET`]),
+				callback: `${Config.env.CODM_CLOUD_URL}/auth/callback/<provedor>`,
+			},
+		})
+	}
+
+	return configured
 }
 
 /**
@@ -108,7 +180,12 @@ export class BetterAuth {
  * `betterAuth()` inferir, e junto com o alargamento ia embora a lista de plugins. O `satisfies` faz
  * a mesma checagem que a anotação fazia, sem apagar o que o literal sabe.
  */
-function buildAuthInstance(driver: PgDatabaseDriver, socialProviders: BetterAuthSocialProviders, hooks: IdentityAuthHooks) {
+function buildAuthInstance(
+	driver: PgDatabaseDriver,
+	socialProviders: BetterAuthSocialProviders,
+	hooks: IdentityAuthHooks,
+	logging: LoggingService,
+) {
 	const options = {
 		baseURL: Config.env.CODM_CLOUD_URL,
 		basePath: '/auth',
@@ -155,16 +232,7 @@ function buildAuthInstance(driver: PgDatabaseDriver, socialProviders: BetterAuth
 				},
 			},
 		},
-		socialProviders: {
-			github: {
-				clientId: socialProviders.githubClientId,
-				clientSecret: socialProviders.githubClientSecret,
-			},
-			google: {
-				clientId: socialProviders.googleClientId,
-				clientSecret: socialProviders.googleClientSecret,
-			},
-		},
+		socialProviders: resolveSocialProviders(socialProviders, logging),
 		/**
 		 * O CICLO DE VIDA — cada callback é UMA chamada, zero regra de negócio neste literal.
 		 *

@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { SendArtifactMutationRequest, SendArtifactMutationResponse, SendArtifactPathParams } from "../types/SendArtifact.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { sendArtifact } from "../client/sendArtifact.ts";
+import type { SendArtifactMutationRequest, SendArtifactMutationResponse, SendArtifactPathParams } from "../types/SendArtifact.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { sendArtifact } from "../client/sendArtifact.ts";
 
 export const sendArtifactMutationKey = () => [{ url: '/threads/:threadId/artifacts/:artifactId/send' }] as const
 

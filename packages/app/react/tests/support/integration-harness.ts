@@ -244,6 +244,25 @@ function restoreFetch(): void {
  * pediu nada: o processo já subiu com o gateway, então a fronteira já é o subprocesso real para
  * todo mundo nele.
  */
+/**
+ * O ORÇAMENTO DE BOOT — declarado UMA vez aqui, e passado por todo `beforeAll` que sobe o backend.
+ *
+ * `beforeAll(fn)` sem prazo herda o default de 5000ms do bun, e esse número nunca foi escolhido para
+ * ESTE hook: ele compila o gateway Go (`go build`, medido em 6.5s com o cache do Go frio) e boota
+ * dois servidores. Passado o prazo, o bun mata o hook — e o `Bun.spawn` do build morre com SIGTERM,
+ * que chega ao leitor como `testBoot: build for 'apiGo' failed (exit 143)` com stderr VAZIO: uma
+ * mensagem que acusa o build de ter falhado quando o que falhou foi o relógio.
+ *
+ * Não é uma particularidade de um SO nem de uma máquina — é o cache do Go. Um clone novo, uma CI sem
+ * cache ou um `go clean -cache` num mac reproduzem o mesmo estouro; este host só chegou lá primeiro.
+ * O prazo é folgado de propósito: ele não mede nada e não protege contra lentidão, só impede que um
+ * default acidental decida o que é uma falha de build.
+ *
+ * O boot é UM por processo (ver `startIntegrationBackend`), então o custo é pago uma vez por arquivo
+ * de teste, não por caso.
+ */
+export const INTEGRATION_BOOT_TIMEOUT_MS = 120_000
+
 export async function useIntegrationBackend(options?: IntegrationBackendOptions): Promise<IntegrationBackend> {
 	const requestsServices = (options?.services?.length ?? 0) > 0
 	if (requestsServices) patchFetchForServices()
@@ -277,3 +296,31 @@ export async function loadBackendGivens(): Promise<Omit<TestingSurface, 'startIn
 	const { startIntegrationBackend: _startIntegrationBackend, ...givens } = await loadTestingModule()
 	return givens
 }
+
+/**
+ * Esta invocação é a lane cross-service? — a pergunta que decide se uma suíte `services: ['apiGo']`
+ * deve rodar aqui, e a substituta do `pathIgnorePatterns` que NÃO funciona.
+ *
+ * ── POR QUE A EXCLUSÃO POR CAMINHO NÃO BASTA ────────────────────────────────────────────────────
+ * `bunfig.toml` declara `pathIgnorePatterns = ["**\/*.services.test.tsx", …]` justamente para manter
+ * estas suítes fora da suíte padrão — cada uma faz `go build` + spawn de subprocesso, e a lei de UM
+ * backend por processo (`startIntegrationBackend`) proíbe que convivam com a lane default, que boota
+ * sem `services`. Medido em 2026-09-03 (bun 1.3.4, Windows): a exclusão é INERTE. Os 8 arquivos
+ * rodam na suíte padrão, `bun test` conta os mesmos 62 arquivos com qualquer padrão, e a flag de
+ * linha de comando equivalente (`--path-ignore-patterns`) não muda nada — nem com separador `/`,
+ * nem com `\`, nem com um padrão que casaria qualquer coisa (`*services*`).
+ *
+ * O sintoma disso não é "8 suítes a mais": é a lane default INTEIRA ficando vermelha. A primeira
+ * `.services` a bootar tenta limpar o scratch dir que a lane default já abriu, e no Windows apagar
+ * um arquivo com handle aberto é `EBUSY` — 28 falhas em cascata, nenhuma delas apontando para a
+ * causa.
+ *
+ * ── POR QUE UMA FLAG DECLARADA, E NÃO OUTRO PADRÃO DE CAMINHO ───────────────────────────────────
+ * Porque a informação "esta invocação é a lane cross-service" é ESTRUTURAL, e o `tests/setup.ts`
+ * já a declara por este mesmo motivo, com a lição escrita ali: a primeira versão tentou FAREJAR
+ * `--path-ignore-patterns` em `process.argv` e não funcionou — "inferir de convenção falhou,
+ * declarar não falha". `scripts/test-cross-service.ts` é quem declara (`CODM_CROSS_SERVICE: '1'`,
+ * um processo por arquivo). Uma suíte que pergunta ISTO não depende de matcher de glob, de
+ * separador de caminho, nem de qual SO está rodando — é a mesma resposta no mac e no Windows.
+ */
+export const RUNNING_CROSS_SERVICE_LANE = process.env.CODM_CROSS_SERVICE === '1'

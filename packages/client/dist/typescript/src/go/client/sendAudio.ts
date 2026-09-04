@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { SendAudioMutationRequest, SendAudioMutationResponse } from "../types/SendAudio.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { SendAudioMutationRequest, SendAudioMutationResponse } from "../types/SendAudio.ts";
 
 function getSendAudioUrl() {
   const res = { method: 'POST', url: `/messaging/messages/audio` as const }

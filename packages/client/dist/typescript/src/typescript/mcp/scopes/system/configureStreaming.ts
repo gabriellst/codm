@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/system/_http";
-import type { ConfigureStreamingMutationRequest, ConfigureStreamingMutationResponse, ConfigureStreamingPathParams } from "../../../types/ConfigureStreaming.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/system/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { ConfigureStreamingMutationRequest, ConfigureStreamingMutationResponse, ConfigureStreamingPathParams } from "../../../types/ConfigureStreaming.ts";
 
 /**
  * @description Turn intermediate content cuts on or off for this conversation

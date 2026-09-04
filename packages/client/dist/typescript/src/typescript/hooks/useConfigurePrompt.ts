@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { ConfigurePromptMutationRequest, ConfigurePromptMutationResponse, ConfigurePromptPathParams } from "../types/ConfigurePrompt.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { configurePrompt } from "../client/configurePrompt.ts";
+import type { ConfigurePromptMutationRequest, ConfigurePromptMutationResponse, ConfigurePromptPathParams } from "../types/ConfigurePrompt.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { configurePrompt } from "../client/configurePrompt.ts";
 
 export const configurePromptMutationKey = () => [{ url: '/threads/:threadId/prompt' }] as const
 

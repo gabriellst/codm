@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { CheckIsOnPlatformMutationRequest, CheckIsOnPlatformMutationResponse } from "../types/CheckIsOnPlatform.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { CheckIsOnPlatformMutationRequest, CheckIsOnPlatformMutationResponse } from "../types/CheckIsOnPlatform.ts";
 
 function getCheckIsOnPlatformUrl() {
   const res = { method: 'POST', url: `/messaging/messages/check-number` as const }

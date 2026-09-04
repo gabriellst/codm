@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import type { AgentModelId } from "./AgentModelId.ts";
 import type { ChannelKind } from "./ChannelKind.ts";
 import type { ContactKind } from "./ContactKind.ts";
 import type { ProviderKind } from "./ProviderKind.ts";
@@ -125,6 +126,10 @@ export type GetAttachThreadWizard200 = {
          * @type string | undefined
         */
         version?: string;
+        /**
+         * @type array
+        */
+        models: AgentModelId[];
     }[];
 };
 

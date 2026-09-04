@@ -1320,16 +1320,38 @@ export class OpenAPI {
 	}
 
 	private handleEnumSchema(schema: Record<string, unknown>, path: string): Record<string, unknown> {
+		// Nullability belongs to THIS occurrence, not to the shared enum component. Two fields can
+		// point at the same closed value set while only one of them is `.nullable()`
+		// (RegisterMcpServer.approvalPolicy is `.optional()` only; UpdateMcpServer.toolPolicy.policy
+		// is genuinely `.nullable()`). Matching/registering on the enum values alone — with
+		// `nullable` left inside the schema object — let whichever occurrence ran last stamp (or
+		// erase) nullability on the ONE shared component for every consumer. Split it off before
+		// dedup so the component keeps a single identity, and re-attach it only at this call site.
+		//
+		// A BARE `{ $ref, nullable: true }` sibling is NOT safe here even though OAS 3.0 nominally
+		// allows it: the SDK generator's $ref-dereferencing step resolves every `$ref` to that
+		// component to the SAME shared parsed object, and sibling keys next to a `$ref` get merged
+		// into that shared object — so one nullable call site's sibling leaks into every OTHER
+		// consumer of the component too (measured via `mcpApprovalPolicySchema.ts` picking up
+		// `.nullable()` even though `components.schemas.McpApprovalPolicy` itself stayed clean).
+		// Wrapping in `allOf` keeps the `$ref` itself sibling-free — `nullable` sits on the (fresh,
+		// per-call-site) `allOf` wrapper instead, so nothing gets merged into the shared definition.
+		const { nullable, ...schemaWithoutNullable } = schema as Record<string, unknown> & { nullable?: boolean }
+
 		// Check for exact match first
-		const existingMatch = this.findExactMatch(schema)
+		const existingMatch = this.findExactMatch(schemaWithoutNullable)
 		if (existingMatch) {
-			return { $ref: `#/components/schemas/${existingMatch}` }
+			return nullable
+				? { allOf: [{ $ref: `#/components/schemas/${existingMatch}` }], nullable: true }
+				: { $ref: `#/components/schemas/${existingMatch}` }
 		}
 
 		// Try to resolve the enum name from registered enums (by matching sorted values)
-		const schemaName = this.resolveEnumName(schema) ?? this.generateUniqueSchemaName(path, '')
-		this.reusableSchemas.set(schemaName, schema as OpenAPIV3.SchemaObject)
-		return { $ref: `#/components/schemas/${schemaName}` }
+		const schemaName = this.resolveEnumName(schemaWithoutNullable) ?? this.generateUniqueSchemaName(path, '')
+		this.reusableSchemas.set(schemaName, schemaWithoutNullable as OpenAPIV3.SchemaObject)
+		return nullable
+			? { allOf: [{ $ref: `#/components/schemas/${schemaName}` }], nullable: true }
+			: { $ref: `#/components/schemas/${schemaName}` }
 	}
 
 	private resolveEnumName(schema: Record<string, unknown>): string | null {

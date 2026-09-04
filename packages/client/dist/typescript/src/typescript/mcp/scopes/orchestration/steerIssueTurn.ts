@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
-import type { SteerIssueTurnMutationRequest, SteerIssueTurnMutationResponse, SteerIssueTurnPathParams } from "../../../types/SteerIssueTurn.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { SteerIssueTurnMutationRequest, SteerIssueTurnMutationResponse, SteerIssueTurnPathParams } from "../../../types/SteerIssueTurn.ts";
 
 /**
  * @description Redirect an issue of this thread — including one that already finished

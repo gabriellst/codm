@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/system/_http";
-import type { ConfigureThinkingIndicatorMutationRequest, ConfigureThinkingIndicatorMutationResponse, ConfigureThinkingIndicatorPathParams } from "../../../types/ConfigureThinkingIndicator.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/system/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { ConfigureThinkingIndicatorMutationRequest, ConfigureThinkingIndicatorMutationResponse, ConfigureThinkingIndicatorPathParams } from "../../../types/ConfigureThinkingIndicator.ts";
 
 /**
  * @description Turn the "Pensando" channel placeholder on or off for this conversation

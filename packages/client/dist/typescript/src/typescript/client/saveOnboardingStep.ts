@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { SaveOnboardingStepMutationRequest, SaveOnboardingStepMutationResponse } from "../types/SaveOnboardingStep.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { SaveOnboardingStepMutationRequest, SaveOnboardingStepMutationResponse } from "../types/SaveOnboardingStep.ts";
 
 function getSaveOnboardingStepUrl() {
   const res = { method: 'PATCH', url: `/ui/onboarding/step` as const }

@@ -39,7 +39,14 @@
 		"test": {
 			"executor": "nx:run-commands",
 			"cache": true,
-			"inputs": ["{projectRoot}/**/*.go", "{projectRoot}/go.mod", "{projectRoot}/go.sum", "sharedGlobals"],
+			"inputs": [
+				"{projectRoot}/**/*.go",
+				"{projectRoot}/**/*.sql",
+				"{projectRoot}/go.mod",
+				"{projectRoot}/go.sum",
+				"sharedGlobals"
+			],
+			"//inputs": "Os .sql embarcados ENTRAM na chave de cache, e a ausência deles foi o que escondeu uma falha real. O store_test.go conta as tabelas que o boot cria, e essas tabelas vêm das migrações //go:embed — arquivos .sql. Com os inputs limitados a **/*.go + go.mod/go.sum, uma migração que cria tabela não invalida o cache: o `bun run test` serviu um verde ANTIGO e o PR #56 declarou AC-21 bun run test verde acreditando nele. Um alvo cujo resultado depende de um arquivo que ele não declara como entrada não é um gate, é uma memória.",
 			"options": {
 				"command": "go test ./... && go -C core test ./...",
 				"cwd": "packages/api/go"

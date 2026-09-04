@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { GetAttachThreadWizardQueryResponse, GetAttachThreadWizardQueryParams } from "../types/GetAttachThreadWizard.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
-import { getAttachThreadWizard } from "../client/getAttachThreadWizard.ts";
+import type { GetAttachThreadWizardQueryResponse, GetAttachThreadWizardQueryParams } from "../types/GetAttachThreadWizard.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
+import { getAttachThreadWizard } from "../client/getAttachThreadWizard.ts";
 
 export const getAttachThreadWizardQueryKey = (params?: GetAttachThreadWizardQueryParams) => [{ url: '/ui/attach-thread-wizard' }, ...(params ? [params] : [])] as const
 

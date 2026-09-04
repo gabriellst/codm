@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { GetOperatorIdentityQueryResponse } from "../types/GetOperatorIdentity.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { GetOperatorIdentityQueryResponse } from "../types/GetOperatorIdentity.ts";
 
 function getGetOperatorIdentityUrl() {
   const res = { method: 'GET', url: `/ui/operator` as const }

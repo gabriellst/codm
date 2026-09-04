@@ -4,7 +4,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { addWorkspace } from '@codm/client-typescript/typescript'
 import i18n from '@/lib/i18n'
 import { mountRouter, type MountedRouter } from '../../../../../../tests/support/mountRouter'
-import { loadBackendGivens, useIntegrationBackend, type IntegrationBackend } from '../../../../../../tests/support/integration-harness'
+import {
+	loadBackendGivens,
+	useIntegrationBackend,
+	type IntegrationBackend,
+	INTEGRATION_BOOT_TIMEOUT_MS,
+} from '../../../../../../tests/support/integration-harness'
 import { SetupChecklist } from '.'
 
 /**
@@ -31,11 +36,11 @@ describe('SetupChecklist — contra o backend real', () => {
 
 	beforeAll(async () => {
 		backend = await useIntegrationBackend()
-	})
+	}, INTEGRATION_BOOT_TIMEOUT_MS)
 
 	afterAll(async () => {
 		await backend.stop()
-	})
+	}, INTEGRATION_BOOT_TIMEOUT_MS)
 
 	beforeEach(async () => {
 		await i18n.changeLanguage('pt')

@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { SendReactionMutationRequest, SendReactionMutationResponse } from "../types/SendReaction.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { SendReactionMutationRequest, SendReactionMutationResponse } from "../types/SendReaction.ts";
 
 function getSendReactionUrl() {
   const res = { method: 'POST', url: `/messaging/messages/reaction` as const }

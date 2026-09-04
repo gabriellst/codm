@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { ListWorkspacesQueryResponse } from "../types/ListWorkspaces.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
-import { listWorkspaces } from "../client/listWorkspaces.ts";
+import type { ListWorkspacesQueryResponse } from "../types/ListWorkspaces.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { listWorkspaces } from "../client/listWorkspaces.ts";
 
 export const listWorkspacesSuspenseQueryKey = () => [{ url: '/workspaces' }] as const
 

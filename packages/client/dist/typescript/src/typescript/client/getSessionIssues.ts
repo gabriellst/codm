@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { GetSessionIssuesQueryResponse, GetSessionIssuesPathParams } from "../types/GetSessionIssues.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { GetSessionIssuesQueryResponse, GetSessionIssuesPathParams } from "../types/GetSessionIssues.ts";
 
 function getGetSessionIssuesUrl(threadId: GetSessionIssuesPathParams["threadId"]) {
   const res = { method: 'GET', url: `/threads/${threadId}/issues` as const }

@@ -8,3 +8,9 @@
 // existing `PublishAgentIntegrationEvents` bridge republishes as `integration.issue.opened` /
 // `issue.completed` / `issue.stop_raised`. The classification/routing seam
 // stays clean — the engine is triggered by event only, never wired into a use case.
+//
+// T8 — the owner's answer to a stop crosses back INTO this context the same way: `thread` publishes
+// the FROZEN `integration.thread.stop_resolved` (via `PublishThreadIntegrationEvents`), and
+// `SettleMcpToolApproval` is the one subscriber that flips a PENDING `McpToolApproval` row to
+// APPROVED/DENIED on APPROVE/DENY — `agent` never imports `thread` to learn the verdict.
+export { SettleMcpToolApproval } from './SettleMcpToolApproval'

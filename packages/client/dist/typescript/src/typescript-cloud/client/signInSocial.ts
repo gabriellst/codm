@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript-cloud/_http";
-import type { SignInSocialQueryResponse, SignInSocialQueryParams } from "../types/SignInSocial.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
+import type { SignInSocialQueryResponse, SignInSocialQueryParams } from "../types/SignInSocial.ts";
 
 function getSignInSocialUrl() {
   const res = { method: 'GET', url: `/sign-in/social` as const }

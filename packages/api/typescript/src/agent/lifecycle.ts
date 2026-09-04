@@ -2,6 +2,7 @@ import type { DependencyContainer } from 'tsyringe-neo'
 import { resolve } from '@codm/core-typescript'
 import { AgentRunnerFactory } from './services/AgentRunnerFactory/AgentRunnerFactory'
 import { MailboxDispatcher } from './services/MailboxDispatcher'
+import { McpUpstreamRegistry } from './services/McpUpstreamRegistry'
 
 /**
  * O CICLO DE VIDA DO CONTEXTO `agent` (T1.5) — o que ele liga, e o que ele devolve.
@@ -33,12 +34,19 @@ export const start = (container: DependencyContainer): void => {
 
 /**
  * Ordem INVERSA da aquisição, e ela importa: as execuções de agente param antes do dispatcher que as
- * alimenta, senão o dispatcher entregaria um turno novo para um runtime que já está se desfazendo.
+ * alimenta, senão o dispatcher entregaria um turno novo para um runtime que já está se desfazendo. O
+ * registry MCP derruba DEPOIS do runner e ANTES do dispatcher: nenhuma execução em curso ainda precisa
+ * de uma conexão upstream (o runner já parou), e o dispatcher só é parado por último pela mesma razão
+ * de sempre — nada de novo é entregue a um runtime que já não tem para onde ir.
+ *
+ * Sem este passo os servidores STDIO — agora filhos DESTE processo, não mais do CLI do provedor (ver
+ * o docblock de `ProcessTree`) — sobreviveriam ao fim do daemon.
  *
  * O pool de banco NÃO se fecha aqui — é recurso de processo, é o último passo, e continua sendo da
  * raiz de composição (ver o contrato de `shutdown` no kernel).
  */
 export const shutdown = async (container: DependencyContainer): Promise<void> => {
 	await resolve(container, AgentRunnerFactory).shutdown()
+	await resolve(container, McpUpstreamRegistry).shutdown()
 	await resolve(container, MailboxDispatcher).stop()
 }

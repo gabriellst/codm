@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { SendListMutationRequest, SendListMutationResponse } from "../types/SendList.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { sendList } from "../client/sendList.ts";
+import type { SendListMutationRequest, SendListMutationResponse } from "../types/SendList.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { sendList } from "../client/sendList.ts";
 
 export const sendListMutationKey = () => [{ url: '/messaging/messages/list' }] as const
 

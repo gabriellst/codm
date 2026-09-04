@@ -15,6 +15,12 @@ export type AgentDomainErrors =
 	// the runner on the process and the stream — a declared one would be an observation about a
 	// subsystem the model cannot see, and would make the FactSource column lie.
 	| 'AGENT_TRANSPORT_STOP_NOT_DECLARABLE'
+	// The declared transport didn't bring the field it requires (STDIO without a command, HTTP
+	// without a URL) — the entity schema's own `.refine()` raises this, à moda de `Owner`.
+	| 'MCP_SERVER_TRANSPORT_INCOMPLETE'
+	// A tool-approval decision that was already answered (APPROVED/DENIED) does not reopen —
+	// invariant of `McpToolApproval`.
+	| 'MCP_APPROVAL_ALREADY_SETTLED'
 export type DomainErrors = BaseDomainErrors | AgentDomainErrors
 
 // Application Errors — orchestration failures of the runtime: too many concurrent observers, a
@@ -26,6 +32,8 @@ export type AgentApplicationErrors =
 	| 'TERMINAL_SPAWN_FAILED'
 	| 'CLASSIFICATION_FAILED'
 	| 'AGENT_TOOLS_UNSUPPORTED'
+	| 'MCP_SERVER_KEY_CONFLICT'
+	| 'MCP_SERVER_NOT_FOUND'
 export type ApplicationErrors = BaseApplicationErrors | AgentApplicationErrors
 
 /**
@@ -67,4 +75,9 @@ registerErrorCodes({
 	// Interface — the MCP router's per-call boundary. See the union above for why these are two codes.
 	AGENT_RUN_TOKEN_INVALID: HttpStatusCode.UNAUTHORIZED,
 	AGENT_RUN_SCOPE_MISMATCH: HttpStatusCode.FORBIDDEN,
+	// Third-party MCP servers — registry + approval vocabulary (Task T1 contract lock).
+	MCP_SERVER_KEY_CONFLICT: HttpStatusCode.CONFLICT,
+	MCP_SERVER_NOT_FOUND: HttpStatusCode.NOT_FOUND,
+	MCP_SERVER_TRANSPORT_INCOMPLETE: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	MCP_APPROVAL_ALREADY_SETTLED: HttpStatusCode.CONFLICT,
 })

@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
-import type { GetIssueStatusQueryResponse, GetIssueStatusPathParams } from "../../../types/GetIssueStatus.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { GetIssueStatusQueryResponse, GetIssueStatusPathParams } from "../../../types/GetIssueStatus.ts";
 
 /**
  * @description Status of one issue of this thread

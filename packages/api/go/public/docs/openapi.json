@@ -7393,6 +7393,28 @@
           "MailboxTargetKindISSUE"
         ]
       },
+      "McpApprovalDecision": {
+        "enum": [
+          "APPROVED",
+          "DENIED"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "McpApprovalDecisionAPPROVED",
+          "McpApprovalDecisionDENIED"
+        ]
+      },
+      "McpApprovalPolicy": {
+        "enum": [
+          "AUTO",
+          "ASK"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "McpApprovalPolicyAUTO",
+          "McpApprovalPolicyASK"
+        ]
+      },
       "McpScope": {
         "enum": [
           "issue-handling",
@@ -7404,6 +7426,17 @@
           "McpScopeISSUE_HANDLING",
           "McpScopeorchestration",
           "McpScopesystem"
+        ]
+      },
+      "McpTransport": {
+        "enum": [
+          "STDIO",
+          "HTTP"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "McpTransportSTDIO",
+          "McpTransportHTTP"
         ]
       },
       "MembershipAction": {

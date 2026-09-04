@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { GetSessionQueryResponse } from "../types/GetSession.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
-import { getSession } from "../client/getSession.ts";
+import type { GetSessionQueryResponse } from "../types/GetSession.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { getSession } from "../client/getSession.ts";
 
 export const getSessionSuspenseQueryKey = () => [{ url: '/session' }] as const
 

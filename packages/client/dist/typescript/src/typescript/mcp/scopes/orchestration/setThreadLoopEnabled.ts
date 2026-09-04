@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
-import type { SetThreadLoopEnabledMutationRequest, SetThreadLoopEnabledMutationResponse, SetThreadLoopEnabledPathParams } from "../../../types/SetThreadLoopEnabled.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { SetThreadLoopEnabledMutationRequest, SetThreadLoopEnabledMutationResponse, SetThreadLoopEnabledPathParams } from "../../../types/SetThreadLoopEnabled.ts";
 
 /**
  * @description Pause or resume a loop (C23)

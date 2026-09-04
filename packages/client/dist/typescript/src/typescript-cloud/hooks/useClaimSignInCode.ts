@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { ClaimSignInCodeQueryResponse } from "../types/ClaimSignInCode.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
-import { claimSignInCode } from "../client/claimSignInCode.ts";
+import type { ClaimSignInCodeQueryResponse } from "../types/ClaimSignInCode.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
+import { claimSignInCode } from "../client/claimSignInCode.ts";
 
 export const claimSignInCodeQueryKey = () => [{ url: '/sign-in/loopback/claim' }] as const
 

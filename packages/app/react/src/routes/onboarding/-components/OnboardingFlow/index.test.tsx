@@ -13,7 +13,11 @@ import testBindings from '@/services/registry/test'
 import { useSystemPreconditionsStore } from '@/stores/useSystemPreconditionsStore'
 import { composeStories } from '../../../../../tests/support/storybook'
 import { mountRouter, type MountedRouter } from '../../../../../tests/support/mountRouter'
-import { useIntegrationBackend, type IntegrationBackend } from '../../../../../tests/support/integration-harness'
+import {
+	useIntegrationBackend,
+	type IntegrationBackend,
+	INTEGRATION_BOOT_TIMEOUT_MS,
+} from '../../../../../tests/support/integration-harness'
 import { fetchStub } from '../../../../../tests/support/fetchStub'
 import { useOnboardingSetupStore } from '../../-stores/useOnboardingSetupStore'
 import { useOnboardingStore } from '../../-stores/useOnboardingStore'
@@ -122,11 +126,11 @@ describe('OnboardingFlow — contra o backend real', () => {
 
 	beforeAll(async () => {
 		backend = await useIntegrationBackend()
-	})
+	}, INTEGRATION_BOOT_TIMEOUT_MS)
 
 	afterAll(async () => {
 		await backend.stop()
-	})
+	}, INTEGRATION_BOOT_TIMEOUT_MS)
 
 	beforeEach(async () => {
 		await i18n.changeLanguage('pt')

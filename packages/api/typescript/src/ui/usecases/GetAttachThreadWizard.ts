@@ -5,6 +5,7 @@ import type { BaseInterfaceErrors } from '@codm/core-typescript'
 import type { z as zt } from 'zod'
 import { channels, workspaces, threads, remotes, remoteMemberships } from '@codm/contracts/db'
 import {
+	AgentModelId,
 	ChannelKind,
 	ChannelStatus,
 	ContactKind,
@@ -12,6 +13,7 @@ import {
 	ProviderStatus,
 	WorkspaceBadge,
 } from '@codm/contracts-typescript/wire/enums'
+import { modelsFor } from '@catalog'
 import { ProviderDetector } from '@agent/services/ProviderDetector'
 // The LEAF, not the barrel: the barrel re-exports the runner implementations, whose graph reaches
 // `agent/mcp/exposure.ts` → `@ui/controllers` → back here. See that barrel's header.
@@ -66,6 +68,19 @@ const ProviderOptionSchema = z.object({
 	/** No runner class drives this CLI yet — the second axis, documented on `DetectProvidersOutputSchema`. */
 	comingSoon: z.boolean(),
 	version: z.string().optional(),
+	/**
+	 * The models THIS provider offers — `PROVIDER_MODELS[provider]`, the same declared relation
+	 * `GetThreadSettings` reads. Empty ⇒ nothing to choose.
+	 *
+	 * It is here because its ABSENCE was a bug with a visible face: the wizard's model select had no
+	 * per-provider catalog to filter by, so it rendered the flat `AgentModelIdEnum` on every row and
+	 * offered TERRA/LUNA (codex codenames) under claude, and HAIKU/SONNET/OPUS under codex. Filtering
+	 * on the client by re-deriving who-offers-what would restate the relation in a second place, which
+	 * `PROVIDER_MODELS`'s own header forbids ("a member nobody claims fails a test rather than
+	 * resolving by prefix"). So the catalog travels on the wire, exactly as it already does for the
+	 * per-thread settings screen, and the console stays a reader of it.
+	 */
+	models: z.array(z.enum(AgentModelId)),
 })
 
 export const GetAttachThreadWizardInputSchema = z.object({
@@ -177,6 +192,9 @@ export class GetAttachThreadWizard extends Handler<typeof GetAttachThreadWizardI
 				available: d.status === ProviderStatus.DETECTED && !comingSoon,
 				comingSoon,
 				version: d.version,
+				// Copiado, não repassado: `modelsFor` devolve a linha `readonly` do catálogo e entregá-la
+				// direto daria ao chamador uma referência para a constante do módulo.
+				models: [...modelsFor(d.name)],
 			}
 		})
 

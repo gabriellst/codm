@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { StreamTerminalSessionQueryResponse, StreamTerminalSessionPathParams } from "../types/StreamTerminalSession.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
-import { streamTerminalSession } from "../client/streamTerminalSession.ts";
+import type { StreamTerminalSessionQueryResponse, StreamTerminalSessionPathParams } from "../types/StreamTerminalSession.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
+import { streamTerminalSession } from "../client/streamTerminalSession.ts";
 
 export const streamTerminalSessionQueryKey = (issueId: StreamTerminalSessionPathParams["issueId"] | undefined) => [{ url: '/terminal/sessions/:issueId/stream', params: {issueId:issueId} }] as const
 

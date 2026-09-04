@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { MarkRemoteAsUnreadMutationRequest, MarkRemoteAsUnreadMutationResponse } from "../types/MarkRemoteAsUnread.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { MarkRemoteAsUnreadMutationRequest, MarkRemoteAsUnreadMutationResponse } from "../types/MarkRemoteAsUnread.ts";
 
 function getMarkRemoteAsUnreadUrl() {
   const res = { method: 'POST', url: `/channel/remotes/mark-as-unread` as const }

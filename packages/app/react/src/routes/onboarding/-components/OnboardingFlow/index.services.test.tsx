@@ -11,7 +11,12 @@ import { type Bindings, Container, ServicesProvider } from '@/services'
 import testBindings from '@/services/registry/test'
 import { useSystemPreconditionsStore } from '@/stores/useSystemPreconditionsStore'
 import { mountRouter, type MountedRouter } from '../../../../../tests/support/mountRouter'
-import { useIntegrationBackend, type IntegrationBackend } from '../../../../../tests/support/integration-harness'
+import {
+	useIntegrationBackend,
+	type IntegrationBackend,
+	INTEGRATION_BOOT_TIMEOUT_MS,
+	RUNNING_CROSS_SERVICE_LANE,
+} from '../../../../../tests/support/integration-harness'
 import { useOnboardingSetupStore } from '../../-stores/useOnboardingSetupStore'
 import { useOnboardingStore } from '../../-stores/useOnboardingStore'
 import { onboardingSteps, type StepId } from '../steps'
@@ -41,17 +46,24 @@ import { OnboardingFlow } from './index'
 const NEXT = () => i18n.t('onboarding.next')
 const GET_STARTED = () => i18n.t('onboarding.getStarted')
 
-describe('OnboardingFlow — contra o backend real (rascunho/commit atômico)', () => {
+/**
+ * SO NA LANE CROSS-SERVICE. Esta suite faz `go build` + spawn de subprocesso e boota o backend COM
+ * `services`, e a lei de um-backend-por-processo a torna incompativel com a suite padrao. O
+ * `pathIgnorePatterns` do `bunfig.toml` existia para isso e e INERTE (medido: bun 1.3.4 no Windows,
+ * nenhum padrao exclui nada) — ver o docblock de `RUNNING_CROSS_SERVICE_LANE`. A guarda declarada
+ * vale igual nos dois SOs; `scripts/test-cross-service.ts` e quem liga a flag, um processo por arquivo.
+ */
+describe.skipIf(!RUNNING_CROSS_SERVICE_LANE)('OnboardingFlow — contra o backend real (rascunho/commit atômico)', () => {
 	let backend: IntegrationBackend
 	let mounted: MountedRouter | null = null
 
 	beforeAll(async () => {
 		backend = await useIntegrationBackend()
-	})
+	}, INTEGRATION_BOOT_TIMEOUT_MS)
 
 	afterAll(async () => {
 		await backend.stop()
-	})
+	}, INTEGRATION_BOOT_TIMEOUT_MS)
 
 	beforeEach(async () => {
 		await i18n.changeLanguage('pt')

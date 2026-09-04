@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { ForwardMessageMutationRequest, ForwardMessageMutationResponse } from "../types/ForwardMessage.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { ForwardMessageMutationRequest, ForwardMessageMutationResponse } from "../types/ForwardMessage.ts";
 
 function getForwardMessageUrl() {
   const res = { method: 'POST', url: `/messaging/messages/forward` as const }

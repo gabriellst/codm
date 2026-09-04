@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { SignInSocialQueryResponse, SignInSocialQueryParams } from "../types/SignInSocial.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
-import { signInSocial } from "../client/signInSocial.ts";
+import type { SignInSocialQueryResponse, SignInSocialQueryParams } from "../types/SignInSocial.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { signInSocial } from "../client/signInSocial.ts";
 
 export const signInSocialSuspenseQueryKey = (params: SignInSocialQueryParams) => [{ url: '/sign-in/social' }, ...(params ? [params] : [])] as const
 

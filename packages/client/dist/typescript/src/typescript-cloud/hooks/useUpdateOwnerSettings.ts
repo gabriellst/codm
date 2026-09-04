@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { UpdateOwnerSettingsMutationRequest, UpdateOwnerSettingsMutationResponse } from "../types/UpdateOwnerSettings.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { updateOwnerSettings } from "../client/updateOwnerSettings.ts";
+import type { UpdateOwnerSettingsMutationRequest, UpdateOwnerSettingsMutationResponse } from "../types/UpdateOwnerSettings.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { updateOwnerSettings } from "../client/updateOwnerSettings.ts";
 
 export const updateOwnerSettingsMutationKey = () => [{ url: '/owners/settings' }] as const
 

@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { SendArtifactMutationRequest, SendArtifactMutationResponse, SendArtifactPathParams } from "../types/SendArtifact.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { SendArtifactMutationRequest, SendArtifactMutationResponse, SendArtifactPathParams } from "../types/SendArtifact.ts";
 
 function getSendArtifactUrl(threadId: SendArtifactPathParams["threadId"], artifactId: SendArtifactPathParams["artifactId"]) {
   const res = { method: 'POST', url: `/threads/${threadId}/artifacts/${artifactId}/send` as const }

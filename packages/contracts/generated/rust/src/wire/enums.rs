@@ -664,6 +664,38 @@ pub enum MailboxTargetKind {
 	ISSUE,
 }
 
+/// Como o dono respondeu um pedido de aprovação de ferramenta MCP externa. A ausência do valor na linha significa PENDENTE — esse estado não tem membro, porque 'ainda não decidiu' não é uma decisão.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum McpApprovalDecision {
+	#[serde(rename = "APPROVED")]
+	#[strum(serialize = "APPROVED")]
+	APPROVED,
+	#[serde(rename = "DENIED")]
+	#[strum(serialize = "DENIED")]
+	DENIED,
+}
+
+/// O que o proxy faz ao encaminhar uma ferramenta deste servidor. AUTO executa direto; ASK recusa a chamada e levanta um stop APPROVAL_NEEDED para o dono decidir. A política efetiva também depende de StopPolicy.approvalNeeded do dono — ver agent/mcp/approvalPolicy.ts.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum McpApprovalPolicy {
+	#[serde(rename = "AUTO")]
+	#[strum(serialize = "AUTO")]
+	AUTO,
+	#[serde(rename = "ASK")]
+	#[strum(serialize = "ASK")]
+	ASK,
+}
+
 /// Which declared MCP tool surface a credential opens. The value is the WIRE spelling — it is the path segment of the JSON-RPC door (/mcp/<value>), the synthetic OpenAPI tag (mcp:<value>) the Kubb tag filter matches on, and the directory the per-scope generated server is emitted into. Changing a value renames all three at once.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
@@ -681,6 +713,22 @@ pub enum McpScope {
 	#[serde(rename = "system")]
 	#[strum(serialize = "system")]
 	system,
+}
+
+/// Como o daemon fala com um servidor MCP de terceiro. STDIO spawna um processo filho e conversa por stdin/stdout; HTTP abre uma conexão para uma URL. A escolha é do servidor cadastrado, não da máquina.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum McpTransport {
+	#[serde(rename = "STDIO")]
+	#[strum(serialize = "STDIO")]
+	STDIO,
+	#[serde(rename = "HTTP")]
+	#[strum(serialize = "HTTP")]
+	HTTP,
 }
 
 /// A live change to a group's member set. Descends the origin channel MembershipAction. Lowercase wire values preserved verbatim. Defined-and-dormant: the membership_added / membership_removed wire events model the join/leave facts directly (with `isAdmin`); this enum is the harmonized closed set for the promoted/demoted transitions the source also emits.
