@@ -2,10 +2,11 @@ import { useState, type ComponentProps, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm } from '@tanstack/react-form'
 import { useQueryClient } from '@tanstack/react-query'
-import { IconPlus, IconTrash } from '@tabler/icons-react'
+import { IconPlugConnected, IconPlus, IconTrash } from '@tabler/icons-react'
 import {
 	getSettingsQueryKey,
 	registerMcpServerMutationRequestSchema,
+	useTestMcpServerConnection,
 	updateMcpServerMutationRequestSchema,
 	useRegisterMcpServer,
 	useUpdateMcpServer,
@@ -334,6 +335,7 @@ interface StdioFormProps extends VariantFormProps {
 /** "npx -y @agent/browser-use-mcp" — the local-process member. */
 function StdioServerForm({ server, presets = [], onDone, className, ...props }: StdioFormProps) {
 	const { t } = useTranslation()
+	const testConnection = useTestMcpServerConnection()
 	const isReconfigure = server != null
 	const { isPending, submitCreate, submitReconfigure } = useMcpServerSubmit(server, onDone)
 	/**
@@ -491,6 +493,46 @@ function StdioServerForm({ server, presets = [], onDone, className, ...props }: 
 					</Field>
 				)}
 			</form.Field>
+
+			{/* TESTAR ANTES DE SALVAR — a metade da conexão que faltava ao dono.
+			    O `reachable` da lista já dizia "alcançável ou não" DEPOIS de salvar, e dizia só isso:
+			    `GetSettings` computa `enabled && tools.length > 0`, então "quebrado" e "sem ferramentas"
+			    davam o mesmo sinal. Aqui volta o MOTIVO — a mensagem do sistema operacional. */}
+			<Field>
+				<div className="flex flex-wrap items-center gap-2">
+					<Button
+						type="button"
+						variant="ghost"
+						size="sm"
+						disabled={testConnection.isPending}
+						onClick={() =>
+							testConnection.mutate({
+								data: {
+									key: form.getFieldValue('key') || 'probe',
+									transport: McpTransportEnum.STDIO,
+									command: form.getFieldValue('command') ?? '',
+									args: splitArgs(form.getFieldValue('args') ?? ''),
+									// O valor do segredo VAI na sonda e não é gravado em lugar nenhum: o dono digitou
+									// agora, nesta tela, para testar. Ele morre com a requisição.
+									env: nonEmptyEntries(envEntries),
+								},
+							})
+						}
+					>
+						{testConnection.isPending ? <Spinner data-icon="inline-start" /> : <IconPlugConnected data-icon="inline-start" />}
+						{t('settings.mcpServers.form.testConnection')}
+					</Button>
+
+					{testConnection.data?.ok === true && (
+						<span className="text-muted-foreground text-xs">
+							{t('settings.mcpServers.form.testOk', { count: testConnection.data.tools.length })}
+						</span>
+					)}
+				</div>
+
+				{/* O ERRO EM TEXTO, não um booleano — é a operação inteira. */}
+				{testConnection.data?.ok === false && <FieldError>{testConnection.data.error}</FieldError>}
+			</Field>
 
 			<Field>
 				<FieldLabel>{t('settings.mcpServers.form.envLabel')}</FieldLabel>

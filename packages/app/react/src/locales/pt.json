@@ -776,7 +776,9 @@
 				"urlLabel": "URL do servidor",
 				"urlPlaceholder": "https://mcp.example.com",
 				"valueColumnLabel": "Valor",
-				"presetsLabel": "Comece por um servidor conhecido"
+				"presetsLabel": "Comece por um servidor conhecido",
+				"testConnection": "Testar conexão",
+				"testOk": "conectou — {{count}} ferramenta(s)"
 			},
 			"noTools": "Este servidor ainda não publicou ferramentas.",
 			"policy": {
