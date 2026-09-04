@@ -239,3 +239,80 @@ test('mcp servers — an AUTO tool just runs, no Needs-you card appears', async 
 		'Same obstacle as the ASK scenario (see its docstring): no seam to originate a real upstream tools/call under CODM_ENV=e2e. Additionally, without that scenario producing a card, this absence assertion would have no paired positive case to prove the selector has teeth.',
 	)
 })
+
+/**
+ * Story 4 — "Como dono, quero trazer os servidores que já configurei noutro cliente, sem redigitar."
+ *
+ * O que este teste prova, e por que cada metade é obrigatória:
+ *
+ *   (a) O CAMINHO FELIZ: um documento colado vira servidor registrado, com a chave e o transporte
+ *       corretos, verificados TAMBÉM contra o read model — não só contra o DOM.
+ *
+ *   (b) A REJEIÇÃO FICA VISÍVEL NO MESMO GESTO. Esta é a metade que não pode faltar. Um import que
+ *       descarta em silêncio o que não entende faz o dono ver 2 de 3 servidores e concluir que o
+ *       terceiro nunca existiu — e nenhum teste do caminho feliz jamais pegaria isso, porque o
+ *       caminho feliz é exatamente onde o descarte silencioso PARECE sucesso. O documento colado
+ *       aqui carrega um `sse` de propósito.
+ *
+ *   (c) O SEGREDO CHEGA VAZIO, e o aviso disso aparece antes de confirmar.
+ */
+test('mcp servers — owner imports a pasted config, and what could not come is visible', async ({ page, goto }) => {
+	const user = await givenFreshUser({})
+	const attached = await givenAttachedThread(user.session, { displayName: 'Ada' })
+	await givenCompletedOnboarding(user.session, attached)
+	await authenticateCloudSession(page)
+
+	const key = generateMcpKey('e2e-import')
+	// Três entradas, três destinos DIFERENTES — e é a diferença que o teste mede:
+	//   `key`      → candidato importável, com um segredo (nome sem valor)
+	//   `legado`   → rejeitado: `sse` existe no mundo e não no nosso contrato
+	//   `Bad_Name` → rejeitado: fora de ^[a-z][a-z0-9-]{0,31}$
+	const pasted = JSON.stringify({
+		mcpServers: {
+			[key]: { command: 'npx', args: ['-y', '@modelcontextprotocol/server-everything'], env: { API_TOKEN: 'nao-pode-vazar' } },
+			legado: { type: 'sse', url: 'https://exemplo.dev/sse' },
+			Bad_Name: { command: 'node' },
+		},
+	})
+
+	await goto('/settings')
+	await page.getByRole('button', { name: t('settings.mcpServers.import.title') }).click()
+
+	const modal = dialog(page)
+	await modal.getByRole('textbox', { name: t('settings.mcpServers.import.pasteLabel') }).fill(pasted)
+	await modal.getByRole('button', { name: t('settings.mcpServers.import.scan') }).click()
+
+	// (b) As duas rejeições estão na tela, com nome e motivo — antes de qualquer import acontecer.
+	await expect(modal.getByText('legado', { exact: true })).toBeVisible()
+	await expect(modal.getByText(t('enums.McpImportRejection.UNSUPPORTED_TRANSPORT'), { exact: true })).toBeVisible()
+	await expect(modal.getByText('Bad_Name', { exact: true })).toBeVisible()
+	await expect(modal.getByText(t('enums.McpImportRejection.INVALID_KEY'), { exact: true })).toBeVisible()
+
+	// (c) O aviso de segredo em branco aparece assim que um candidato com segredo é escolhido.
+	await modal.getByRole('checkbox').first().check()
+	await expect(modal.getByText(t('settings.mcpServers.import.secretsWillBeBlank'))).toBeVisible()
+
+	// O `t()` do e2e NÃO interpola (ele resolve a chave no bundle e devolve a string crua), então o
+	// rótulo chega como "Importar {{count}}". Casar pelo prefixo estável é o que sobra — e é melhor
+	// que chumbar "Importar 1" aqui, que quebraria no dia em que o plural mudar de forma.
+	const confirmPrefix = t('settings.mcpServers.import.confirm').split('{{')[0]?.trim() ?? ''
+	await modal.getByRole('button', { name: new RegExp(confirmPrefix) }).click()
+	await expect(modal).toHaveCount(0)
+
+	// (a) A linha existe no console...
+	await expect(serverRow(page, key)).toBeVisible()
+
+	// ...e no READ MODEL, que é a fonte de verdade que a linha renderiza. O nome do segredo sobreviveu;
+	// o valor NÃO — `envKeys` carrega chaves, e o import nunca aceitou valores.
+	const settings = await getSettings({ client: user.session.client })
+	const imported = settings.mcpServers.find(server => server.key === key)
+	expect(imported?.transport).toBe(McpTransportEnum.STDIO)
+	expect(imported?.approvalPolicy).toBe(McpApprovalPolicyEnum.ASK)
+	expect(imported?.envKeys).toEqual(['API_TOKEN'])
+	// A CONTRAPROVA: o valor colado não pode aparecer em lugar nenhum do read model.
+	expect(JSON.stringify(settings)).not.toContain('nao-pode-vazar')
+
+	// E o que foi recusado NÃO virou servidor — a rejeição é recusa, não adiamento.
+	expect(settings.mcpServers.map(server => server.key)).not.toContain('legado')
+	expect(settings.mcpServers.map(server => server.key)).not.toContain('Bad_Name')
+})
