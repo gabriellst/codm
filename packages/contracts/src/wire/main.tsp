@@ -42,6 +42,11 @@ import "./enums/mcp-scope.tsp";
 import "./enums/mcp-transport.tsp";
 import "./enums/mcp-approval-policy.tsp";
 import "./enums/mcp-approval-decision.tsp";
+// Import de configuração MCP existente — de ONDE a configuração foi lida (fonte declarada, nunca
+// inferida do formato de um caminho) e POR QUE uma entrada foi recusada (rejeição visível, nunca
+// descarte silencioso).
+import "./enums/mcp-config-source.tsp";
+import "./enums/mcp-import-rejection.tsp";
 import "./enums/workspace-badge.tsp";
 import "./enums/thread-status.tsp";
 import "./enums/thread-mode.tsp";

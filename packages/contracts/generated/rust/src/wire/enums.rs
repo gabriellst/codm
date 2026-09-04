@@ -696,6 +696,56 @@ pub enum McpApprovalPolicy {
 	ASK,
 }
 
+/// De onde uma configuração de MCP foi lida para import. Fechado de propósito, e declarado em vez de inferido: nenhum código decide 'é o Claude Desktop' olhando o formato de um caminho — o caminho por plataforma é propriedade DESTA fonte, resolvida por lookup. PASTE é o dono colando JSON na tela (sem disco, funciona com qualquer origem); WORKSPACE_FILE é o .mcp.json do workspace anexado; CLAUDE_CODE é ~/.claude.json, cuja configuração vive sob projects['<caminho absoluto>'].mcpServers e NÃO no topo (medido em 04/09/2026); CLAUDE_DESKTOP é o claude_desktop_config.json do app.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum McpConfigSource {
+	#[serde(rename = "PASTE")]
+	#[strum(serialize = "PASTE")]
+	PASTE,
+	#[serde(rename = "WORKSPACE_FILE")]
+	#[strum(serialize = "WORKSPACE_FILE")]
+	WORKSPACE_FILE,
+	#[serde(rename = "CLAUDE_CODE")]
+	#[strum(serialize = "CLAUDE_CODE")]
+	CLAUDE_CODE,
+	#[serde(rename = "CLAUDE_DESKTOP")]
+	#[strum(serialize = "CLAUDE_DESKTOP")]
+	CLAUDE_DESKTOP,
+}
+
+/// Por que uma entrada de configuração MCP não pôde virar um servidor registrado. Existe porque REJEIÇÃO É CIDADÃ DE PRIMEIRA CLASSE: um import que descarta o que não entende produz o pior resultado possível — o dono vê 2 de 3 servidores e conclui que o terceiro nunca existiu. Toda entrada recusada chega à tela com um destes motivos, ao lado das aceitas. UNSUPPORTED_TRANSPORT é o `type: 'sse'` que existe no mundo e não no nosso contrato (McpTransport é STDIO|HTTP); INVALID_KEY é o nome que não cabe em ^[a-z][a-z0-9-]{0,31}$ (`my_server` e `MyServer` são comuns por aí) — o nome original vai junto, porque renomear em silêncio é inaceitável; MISSING_COMMAND e MISSING_URL são a entrada incoerente com o próprio transporte declarado; ALREADY_REGISTERED é a chave que o dono já tem, recusada em vez de duplicada em silêncio; MALFORMED é o documento que nem JSON é — uma rejeição, nunca uma exceção que derruba a tela.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum McpImportRejection {
+	#[serde(rename = "UNSUPPORTED_TRANSPORT")]
+	#[strum(serialize = "UNSUPPORTED_TRANSPORT")]
+	UNSUPPORTED_TRANSPORT,
+	#[serde(rename = "INVALID_KEY")]
+	#[strum(serialize = "INVALID_KEY")]
+	INVALID_KEY,
+	#[serde(rename = "MISSING_COMMAND")]
+	#[strum(serialize = "MISSING_COMMAND")]
+	MISSING_COMMAND,
+	#[serde(rename = "MISSING_URL")]
+	#[strum(serialize = "MISSING_URL")]
+	MISSING_URL,
+	#[serde(rename = "ALREADY_REGISTERED")]
+	#[strum(serialize = "ALREADY_REGISTERED")]
+	ALREADY_REGISTERED,
+	#[serde(rename = "MALFORMED")]
+	#[strum(serialize = "MALFORMED")]
+	MALFORMED,
+}
+
 /// Which declared MCP tool surface a credential opens. The value is the WIRE spelling — it is the path segment of the JSON-RPC door (/mcp/<value>), the synthetic OpenAPI tag (mcp:<value>) the Kubb tag filter matches on, and the directory the per-scope generated server is emitted into. Changing a value renames all three at once.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,

@@ -481,6 +481,44 @@ func ParseMcpApprovalPolicy(s string) (McpApprovalPolicy, error) {
 	}
 }
 
+type McpConfigSource string
+
+const (
+	McpConfigSourcePASTE McpConfigSource = "PASTE"
+	McpConfigSourceWORKSPACE_FILE McpConfigSource = "WORKSPACE_FILE"
+	McpConfigSourceCLAUDE_CODE McpConfigSource = "CLAUDE_CODE"
+	McpConfigSourceCLAUDE_DESKTOP McpConfigSource = "CLAUDE_DESKTOP"
+)
+
+func ParseMcpConfigSource(s string) (McpConfigSource, error) {
+	switch McpConfigSource(s) {
+	case McpConfigSourcePASTE, McpConfigSourceWORKSPACE_FILE, McpConfigSourceCLAUDE_CODE, McpConfigSourceCLAUDE_DESKTOP:
+		return McpConfigSource(s), nil
+	default:
+		return "", fmt.Errorf("invalid McpConfigSource: %q", s)
+	}
+}
+
+type McpImportRejection string
+
+const (
+	McpImportRejectionUNSUPPORTED_TRANSPORT McpImportRejection = "UNSUPPORTED_TRANSPORT"
+	McpImportRejectionINVALID_KEY McpImportRejection = "INVALID_KEY"
+	McpImportRejectionMISSING_COMMAND McpImportRejection = "MISSING_COMMAND"
+	McpImportRejectionMISSING_URL McpImportRejection = "MISSING_URL"
+	McpImportRejectionALREADY_REGISTERED McpImportRejection = "ALREADY_REGISTERED"
+	McpImportRejectionMALFORMED McpImportRejection = "MALFORMED"
+)
+
+func ParseMcpImportRejection(s string) (McpImportRejection, error) {
+	switch McpImportRejection(s) {
+	case McpImportRejectionUNSUPPORTED_TRANSPORT, McpImportRejectionINVALID_KEY, McpImportRejectionMISSING_COMMAND, McpImportRejectionMISSING_URL, McpImportRejectionALREADY_REGISTERED, McpImportRejectionMALFORMED:
+		return McpImportRejection(s), nil
+	default:
+		return "", fmt.Errorf("invalid McpImportRejection: %q", s)
+	}
+}
+
 type McpScope string
 
 const (
