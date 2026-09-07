@@ -37,13 +37,17 @@ import {
 	getThreadSettings,
 	getUserInfo,
 	health,
+	importMcpServers,
 	listArtifacts,
 	listThreadLoops,
 	listWorkspaces,
 	listenEvents,
 	pauseThread,
+	previewMcpImport,
 	raiseStop,
 	recordArtifact,
+	registerMcpServer,
+	removeMcpServer,
 	removeWorkspace,
 	resolveStop,
 	restoreIssue,
@@ -59,7 +63,9 @@ import {
 	steerIssueTurn,
 	steerThread,
 	streamTerminalSession,
+	testMcpServerConnection,
 	transitionIssueStatus,
+	updateMcpServer,
 	updateStopCriteria,
 	updateThreadLoop,
 } from './client/index.ts'
@@ -224,6 +230,10 @@ export class TypescriptClient {
 		return (health as (...a: any[]) => ReturnType<typeof health>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	importMcpServers(...args: Parameters<typeof importMcpServers>): ReturnType<typeof importMcpServers> {
+		return (importMcpServers as (...a: any[]) => ReturnType<typeof importMcpServers>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	listArtifacts(...args: Parameters<typeof listArtifacts>): ReturnType<typeof listArtifacts> {
 		return (listArtifacts as (...a: any[]) => ReturnType<typeof listArtifacts>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
@@ -244,12 +254,24 @@ export class TypescriptClient {
 		return (pauseThread as (...a: any[]) => ReturnType<typeof pauseThread>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	previewMcpImport(...args: Parameters<typeof previewMcpImport>): ReturnType<typeof previewMcpImport> {
+		return (previewMcpImport as (...a: any[]) => ReturnType<typeof previewMcpImport>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	raiseStop(...args: Parameters<typeof raiseStop>): ReturnType<typeof raiseStop> {
 		return (raiseStop as (...a: any[]) => ReturnType<typeof raiseStop>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	recordArtifact(...args: Parameters<typeof recordArtifact>): ReturnType<typeof recordArtifact> {
 		return (recordArtifact as (...a: any[]) => ReturnType<typeof recordArtifact>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	registerMcpServer(...args: Parameters<typeof registerMcpServer>): ReturnType<typeof registerMcpServer> {
+		return (registerMcpServer as (...a: any[]) => ReturnType<typeof registerMcpServer>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	removeMcpServer(...args: Parameters<typeof removeMcpServer>): ReturnType<typeof removeMcpServer> {
+		return (removeMcpServer as (...a: any[]) => ReturnType<typeof removeMcpServer>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	removeWorkspace(...args: Parameters<typeof removeWorkspace>): ReturnType<typeof removeWorkspace> {
@@ -312,8 +334,16 @@ export class TypescriptClient {
 		return (streamTerminalSession as (...a: any[]) => ReturnType<typeof streamTerminalSession>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	testMcpServerConnection(...args: Parameters<typeof testMcpServerConnection>): ReturnType<typeof testMcpServerConnection> {
+		return (testMcpServerConnection as (...a: any[]) => ReturnType<typeof testMcpServerConnection>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	transitionIssueStatus(...args: Parameters<typeof transitionIssueStatus>): ReturnType<typeof transitionIssueStatus> {
 		return (transitionIssueStatus as (...a: any[]) => ReturnType<typeof transitionIssueStatus>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	updateMcpServer(...args: Parameters<typeof updateMcpServer>): ReturnType<typeof updateMcpServer> {
+		return (updateMcpServer as (...a: any[]) => ReturnType<typeof updateMcpServer>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	updateStopCriteria(...args: Parameters<typeof updateStopCriteria>): ReturnType<typeof updateStopCriteria> {

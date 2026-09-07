@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript-cloud/_http";
-import type { HealthQueryResponse } from "../types/Health.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
+import type { HealthQueryResponse } from "../types/Health.ts";
 
 function getHealthUrl() {
   const res = { method: 'GET', url: `/health` as const }

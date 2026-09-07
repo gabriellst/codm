@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
-import type { RemoveWorkspaceMutationResponse, RemoveWorkspacePathParams } from "../../../types/RemoveWorkspace.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { RemoveWorkspaceMutationResponse, RemoveWorkspacePathParams } from "../../../types/RemoveWorkspace.ts";
 
 /**
  * @description Remove a registered workspace (refused while an issue is WORKING on it)

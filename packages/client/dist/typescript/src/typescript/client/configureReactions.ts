@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { ConfigureReactionsMutationRequest, ConfigureReactionsMutationResponse, ConfigureReactionsPathParams } from "../types/ConfigureReactions.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { ConfigureReactionsMutationRequest, ConfigureReactionsMutationResponse, ConfigureReactionsPathParams } from "../types/ConfigureReactions.ts";
 
 function getConfigureReactionsUrl(threadId: ConfigureReactionsPathParams["threadId"]) {
   const res = { method: 'PUT', url: `/threads/${threadId}/reactions` as const }

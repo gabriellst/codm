@@ -4,7 +4,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { givenChannel } from '@codm/api-typescript/testing'
 import { completeOnboarding, ContactKindEnum, ProviderKindEnum, saveOnboardingStep } from '@codm/client-typescript/typescript'
 import { mountRouter, type MountedRouter } from '../../../tests/support/mountRouter'
-import { useIntegrationBackend, type IntegrationBackend } from '../../../tests/support/integration-harness'
+import {
+	useIntegrationBackend,
+	type IntegrationBackend,
+	INTEGRATION_BOOT_TIMEOUT_MS,
+	RUNNING_CROSS_SERVICE_LANE,
+} from '../../../tests/support/integration-harness'
 import { useSystemPreconditionsStore } from '@/stores/useSystemPreconditionsStore'
 import { OnboardingGate, resetOnboardingGateForTests } from './OnboardingGate'
 
@@ -33,17 +38,24 @@ import { OnboardingGate, resetOnboardingGateForTests } from './OnboardingGate'
  * app nunca faz fora deste sufixo sancionado (mesma convenção de `AttachThreadWizard/
  * index.services.test.tsx`). Roda via `bun run test:cross-service`, não no `bun test` default.
  */
-describe('OnboardingGate', () => {
+/**
+ * SO NA LANE CROSS-SERVICE. Esta suite faz `go build` + spawn de subprocesso e boota o backend COM
+ * `services`, e a lei de um-backend-por-processo a torna incompativel com a suite padrao. O
+ * `pathIgnorePatterns` do `bunfig.toml` existia para isso e e INERTE (medido: bun 1.3.4 no Windows,
+ * nenhum padrao exclui nada) — ver o docblock de `RUNNING_CROSS_SERVICE_LANE`. A guarda declarada
+ * vale igual nos dois SOs; `scripts/test-cross-service.ts` e quem liga a flag, um processo por arquivo.
+ */
+describe.skipIf(!RUNNING_CROSS_SERVICE_LANE)('OnboardingGate', () => {
 	let backend: IntegrationBackend
 	let mounted: MountedRouter | null = null
 
 	beforeAll(async () => {
 		backend = await useIntegrationBackend()
-	})
+	}, INTEGRATION_BOOT_TIMEOUT_MS)
 
 	afterAll(async () => {
 		await backend.stop()
-	})
+	}, INTEGRATION_BOOT_TIMEOUT_MS)
 
 	beforeEach(async () => {
 		await backend.reset()

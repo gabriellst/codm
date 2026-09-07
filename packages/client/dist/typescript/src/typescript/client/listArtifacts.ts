@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { ListArtifactsQueryResponse, ListArtifactsPathParams } from "../types/ListArtifacts.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { ListArtifactsQueryResponse, ListArtifactsPathParams } from "../types/ListArtifacts.ts";
 
 function getListArtifactsUrl(threadId: ListArtifactsPathParams["threadId"]) {
   const res = { method: 'GET', url: `/threads/${threadId}/artifacts` as const }

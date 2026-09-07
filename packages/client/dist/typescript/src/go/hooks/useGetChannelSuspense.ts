@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { GetChannelQueryResponse, GetChannelPathParams } from "../types/GetChannel.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
-import { getChannel } from "../client/getChannel.ts";
+import type { GetChannelQueryResponse, GetChannelPathParams } from "../types/GetChannel.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { getChannel } from "../client/getChannel.ts";
 
 export const getChannelSuspenseQueryKey = (id: GetChannelPathParams["id"] | undefined) => [{ url: '/channel/channels/:id', params: {id:id} }] as const
 

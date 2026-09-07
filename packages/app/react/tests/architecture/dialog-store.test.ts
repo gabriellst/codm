@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test'
+import { scanPosix } from './support/scan'
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
@@ -43,14 +44,10 @@ const WHITELIST: Record<string, string> = {
 }
 
 async function dialogFiles(): Promise<string[]> {
-	const out: string[] = []
-	for await (const entry of new Bun.Glob('routes/**/-components/**/*.tsx').scan({ cwd: REACT_SRC, onlyFiles: true })) {
-		if (entry.startsWith('routes/styleguide/')) continue
-		if (/\.(test|stories)\.tsx$/.test(entry)) continue
-		if (!entry.includes('Dialog')) continue
-		out.push(entry)
-	}
-	return out.sort()
+	const entries = await scanPosix('routes/**/-components/**/*.tsx', REACT_SRC)
+	return entries
+		.filter(entry => !entry.startsWith('routes/styleguide/') && !/\.(test|stories)\.tsx$/.test(entry) && entry.includes('Dialog'))
+		.sort()
 }
 
 describe('rail A — dialog de rota é dirigido por useDialogStore (component bp-24)', () => {

@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { ListChannelsQueryResponse, ListChannelsQueryParams } from "../types/ListChannels.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
-import { listChannels } from "../client/listChannels.ts";
+import type { ListChannelsQueryResponse, ListChannelsQueryParams } from "../types/ListChannels.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
+import { listChannels } from "../client/listChannels.ts";
 
 export const listChannelsQueryKey = (params?: ListChannelsQueryParams) => [{ url: '/channel/channels' }, ...(params ? [params] : [])] as const
 

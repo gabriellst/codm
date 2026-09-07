@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { DeleteChannelMutationResponse, DeleteChannelPathParams } from "../types/DeleteChannel.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { deleteChannel } from "../client/deleteChannel.ts";
+import type { DeleteChannelMutationResponse, DeleteChannelPathParams } from "../types/DeleteChannel.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { deleteChannel } from "../client/deleteChannel.ts";
 
 export const deleteChannelMutationKey = () => [{ url: '/channel/channels/:id' }] as const
 

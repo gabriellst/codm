@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { SendStatusMutationRequest, SendStatusMutationResponse } from "../types/SendStatus.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { SendStatusMutationRequest, SendStatusMutationResponse } from "../types/SendStatus.ts";
 
 function getSendStatusUrl() {
   const res = { method: 'POST', url: `/messaging/messages/status` as const }

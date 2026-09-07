@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { ConfigureMentionGateMutationRequest, ConfigureMentionGateMutationResponse, ConfigureMentionGatePathParams } from "../types/ConfigureMentionGate.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { configureMentionGate } from "../client/configureMentionGate.ts";
+import type { ConfigureMentionGateMutationRequest, ConfigureMentionGateMutationResponse, ConfigureMentionGatePathParams } from "../types/ConfigureMentionGate.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { configureMentionGate } from "../client/configureMentionGate.ts";
 
 export const configureMentionGateMutationKey = () => [{ url: '/threads/:threadId/mention-gate' }] as const
 

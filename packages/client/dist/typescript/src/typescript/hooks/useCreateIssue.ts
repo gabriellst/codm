@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { CreateIssueMutationRequest, CreateIssueMutationResponse, CreateIssuePathParams } from "../types/CreateIssue.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { createIssue } from "../client/createIssue.ts";
+import type { CreateIssueMutationRequest, CreateIssueMutationResponse, CreateIssuePathParams } from "../types/CreateIssue.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { createIssue } from "../client/createIssue.ts";
 
 export const createIssueMutationKey = () => [{ url: '/threads/:threadId/issues' }] as const
 

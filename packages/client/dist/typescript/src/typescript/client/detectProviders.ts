@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { DetectProvidersQueryResponse, DetectProvidersQueryParams } from "../types/DetectProviders.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { DetectProvidersQueryResponse, DetectProvidersQueryParams } from "../types/DetectProviders.ts";
 
 function getDetectProvidersUrl() {
   const res = { method: 'GET', url: `/terminal/providers` as const }

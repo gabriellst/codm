@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
 import { getBaseUrl } from '@codm/client-typescript/http'
 import { health } from '@codm/client-typescript/go'
-import { useIntegrationBackend } from '../support/integration-harness'
+import { useIntegrationBackend, INTEGRATION_BOOT_TIMEOUT_MS } from '../support/integration-harness'
 import type { IntegrationBackend } from '../support/integration-harness'
 
 /**
@@ -49,11 +49,11 @@ describe('rail: a fronteira do Go falha alto dentro do harness', () => {
 
 	beforeAll(async () => {
 		backend = await useIntegrationBackend()
-	})
+	}, INTEGRATION_BOOT_TIMEOUT_MS)
 
 	afterAll(async () => {
 		await backend.stop()
-	})
+	}, INTEGRATION_BOOT_TIMEOUT_MS)
 
 	it('a SDK real recebe 501 ao chamar um endpoint Go dentro do harness — nunca um 404 fantasma', async () => {
 		let caught: (Error & { status?: number }) | null = null

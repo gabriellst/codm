@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { DeleteChannelMutationResponse, DeleteChannelPathParams } from "../types/DeleteChannel.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { DeleteChannelMutationResponse, DeleteChannelPathParams } from "../types/DeleteChannel.ts";
 
 function getDeleteChannelUrl(id: DeleteChannelPathParams["id"]) {
   const res = { method: 'DELETE', url: `/channel/channels/${id}` as const }

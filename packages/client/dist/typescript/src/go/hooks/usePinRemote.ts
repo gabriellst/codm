@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { PinRemoteMutationRequest, PinRemoteMutationResponse } from "../types/PinRemote.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { pinRemote } from "../client/pinRemote.ts";
+import type { PinRemoteMutationRequest, PinRemoteMutationResponse } from "../types/PinRemote.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { pinRemote } from "../client/pinRemote.ts";
 
 export const pinRemoteMutationKey = () => [{ url: '/channel/remotes/pin' }] as const
 

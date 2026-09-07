@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript-cloud/_http";
-import type { GetSessionQueryResponse } from "../types/GetSession.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
+import type { GetSessionQueryResponse } from "../types/GetSession.ts";
 
 function getGetSessionUrl() {
   const res = { method: 'GET', url: `/session` as const }

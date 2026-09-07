@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { SendStatusMutationRequest, SendStatusMutationResponse } from "../types/SendStatus.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { sendStatus } from "../client/sendStatus.ts";
+import type { SendStatusMutationRequest, SendStatusMutationResponse } from "../types/SendStatus.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { sendStatus } from "../client/sendStatus.ts";
 
 export const sendStatusMutationKey = () => [{ url: '/messaging/messages/status' }] as const
 

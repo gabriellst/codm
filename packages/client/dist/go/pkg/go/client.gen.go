@@ -989,6 +989,96 @@ func (e MailboxTargetKind) Valid() bool {
 	}
 }
 
+// Defines values for McpApprovalDecision.
+const (
+	McpApprovalDecisionAPPROVED McpApprovalDecision = "APPROVED"
+	McpApprovalDecisionDENIED   McpApprovalDecision = "DENIED"
+)
+
+// Valid indicates whether the value is a known member of the McpApprovalDecision enum.
+func (e McpApprovalDecision) Valid() bool {
+	switch e {
+	case McpApprovalDecisionAPPROVED:
+		return true
+	case McpApprovalDecisionDENIED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for McpApprovalPolicy.
+const (
+	McpApprovalPolicyASK  McpApprovalPolicy = "ASK"
+	McpApprovalPolicyAUTO McpApprovalPolicy = "AUTO"
+)
+
+// Valid indicates whether the value is a known member of the McpApprovalPolicy enum.
+func (e McpApprovalPolicy) Valid() bool {
+	switch e {
+	case McpApprovalPolicyASK:
+		return true
+	case McpApprovalPolicyAUTO:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for McpConfigSource.
+const (
+	McpConfigSourceCLAUDECODE    McpConfigSource = "CLAUDE_CODE"
+	McpConfigSourceCLAUDEDESKTOP McpConfigSource = "CLAUDE_DESKTOP"
+	McpConfigSourcePASTE         McpConfigSource = "PASTE"
+	McpConfigSourceWORKSPACEFILE McpConfigSource = "WORKSPACE_FILE"
+)
+
+// Valid indicates whether the value is a known member of the McpConfigSource enum.
+func (e McpConfigSource) Valid() bool {
+	switch e {
+	case McpConfigSourceCLAUDECODE:
+		return true
+	case McpConfigSourceCLAUDEDESKTOP:
+		return true
+	case McpConfigSourcePASTE:
+		return true
+	case McpConfigSourceWORKSPACEFILE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for McpImportRejection.
+const (
+	McpImportRejectionALREADYREGISTERED    McpImportRejection = "ALREADY_REGISTERED"
+	McpImportRejectionINVALIDKEY           McpImportRejection = "INVALID_KEY"
+	McpImportRejectionMALFORMED            McpImportRejection = "MALFORMED"
+	McpImportRejectionMISSINGCOMMAND       McpImportRejection = "MISSING_COMMAND"
+	McpImportRejectionMISSINGURL           McpImportRejection = "MISSING_URL"
+	McpImportRejectionUNSUPPORTEDTRANSPORT McpImportRejection = "UNSUPPORTED_TRANSPORT"
+)
+
+// Valid indicates whether the value is a known member of the McpImportRejection enum.
+func (e McpImportRejection) Valid() bool {
+	switch e {
+	case McpImportRejectionALREADYREGISTERED:
+		return true
+	case McpImportRejectionINVALIDKEY:
+		return true
+	case McpImportRejectionMALFORMED:
+		return true
+	case McpImportRejectionMISSINGCOMMAND:
+		return true
+	case McpImportRejectionMISSINGURL:
+		return true
+	case McpImportRejectionUNSUPPORTEDTRANSPORT:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for McpScope.
 const (
 	McpScopeISSUEHANDLING McpScope = "issue-handling"
@@ -1004,6 +1094,24 @@ func (e McpScope) Valid() bool {
 	case McpScopeorchestration:
 		return true
 	case McpScopesystem:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for McpTransport.
+const (
+	McpTransportHTTP  McpTransport = "HTTP"
+	McpTransportSTDIO McpTransport = "STDIO"
+)
+
+// Valid indicates whether the value is a known member of the McpTransport enum.
+func (e McpTransport) Valid() bool {
+	switch e {
+	case McpTransportHTTP:
+		return true
+	case McpTransportSTDIO:
 		return true
 	default:
 		return false
@@ -3831,8 +3939,23 @@ type MailboxItemKind string
 // MailboxTargetKind defines model for MailboxTargetKind.
 type MailboxTargetKind string
 
+// McpApprovalDecision defines model for McpApprovalDecision.
+type McpApprovalDecision string
+
+// McpApprovalPolicy defines model for McpApprovalPolicy.
+type McpApprovalPolicy string
+
+// McpConfigSource defines model for McpConfigSource.
+type McpConfigSource string
+
+// McpImportRejection defines model for McpImportRejection.
+type McpImportRejection string
+
 // McpScope defines model for McpScope.
 type McpScope string
+
+// McpTransport defines model for McpTransport.
+type McpTransport string
 
 // MembershipAction defines model for MembershipAction.
 type MembershipAction string

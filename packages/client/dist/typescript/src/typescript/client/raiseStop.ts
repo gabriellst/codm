@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { RaiseStopMutationRequest, RaiseStopMutationResponse, RaiseStopPathParams } from "../types/RaiseStop.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { RaiseStopMutationRequest, RaiseStopMutationResponse, RaiseStopPathParams } from "../types/RaiseStop.ts";
 
 function getRaiseStopUrl(threadId: RaiseStopPathParams["threadId"], issueId: RaiseStopPathParams["issueId"]) {
   const res = { method: 'POST', url: `/threads/${threadId}/issues/${issueId}/stops` as const }

@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { ForwardMessageMutationRequest, ForwardMessageMutationResponse } from "../types/ForwardMessage.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { forwardMessage } from "../client/forwardMessage.ts";
+import type { ForwardMessageMutationRequest, ForwardMessageMutationResponse } from "../types/ForwardMessage.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { forwardMessage } from "../client/forwardMessage.ts";
 
 export const forwardMessageMutationKey = () => [{ url: '/messaging/messages/forward' }] as const
 

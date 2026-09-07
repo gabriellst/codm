@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { ConfigureStreamingMutationRequest, ConfigureStreamingMutationResponse, ConfigureStreamingPathParams } from "../types/ConfigureStreaming.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { configureStreaming } from "../client/configureStreaming.ts";
+import type { ConfigureStreamingMutationRequest, ConfigureStreamingMutationResponse, ConfigureStreamingPathParams } from "../types/ConfigureStreaming.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { configureStreaming } from "../client/configureStreaming.ts";
 
 export const configureStreamingMutationKey = () => [{ url: '/threads/:threadId/streaming' }] as const
 

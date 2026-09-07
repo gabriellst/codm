@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
-import type { ConfigurePromptMutationRequest, ConfigurePromptMutationResponse, ConfigurePromptPathParams } from "../../../types/ConfigurePrompt.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { ConfigurePromptMutationRequest, ConfigurePromptMutationResponse, ConfigurePromptPathParams } from "../../../types/ConfigurePrompt.ts";
 
 /**
  * @description Set (or clear, with an empty body value) the operator's custom prompt for this conversation (C15)

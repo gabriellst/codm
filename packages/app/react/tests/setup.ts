@@ -1,4 +1,6 @@
 import 'reflect-metadata'
+import { dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { GlobalRegistrator } from '@happy-dom/global-registrator'
 
 /**
@@ -53,7 +55,24 @@ if (process.env.NODE_ENV !== 'test') {
  */
 const runningExcludedSuites = process.env.CODM_CROSS_SERVICE === '1'
 if (!runningExcludedSuites) {
-	const excluded = [...new Bun.Glob('src/**/*.services.test.tsx').scanSync(new URL('..', import.meta.url).pathname)]
+	// `fileURLToPath` e nao `.pathname`, e a diferenca custava a suite inteira: num `file:///C:/...`
+	// o `.pathname` devolve `/C:/Users/...` — com a barra inicial que o RFC 8089 exige na URL e que
+	// nenhum caminho do Windows aceita. `scanSync` estourava `ENOENT`, o PRELOAD morria antes de
+	// registrar o happy-dom, e as ~130 suites que tocam o DOM caiam com `document is not defined` —
+	// um erro que nao menciona nem este arquivo nem o caminho. `fileURLToPath` e a funcao que existe
+	// exatamente para essa conversao, nos dois SOs.
+	//
+	// O aviso abaixo e best-effort por natureza (ele so CONTA arquivos para lembrar o leitor do que
+	// nao rodou), entao um erro aqui jamais pode derrubar o preload: o `try` garante que a proxima
+	// falha desta varredura seja um aviso a menos, e nao uma suite a menos.
+	const reactRoot = dirname(dirname(fileURLToPath(import.meta.url)))
+	const excluded = (() => {
+		try {
+			return [...new Bun.Glob('src/**/*.services.test.tsx').scanSync(reactRoot)]
+		} catch {
+			return []
+		}
+	})()
 	if (excluded.length > 0) {
 		console.warn(
 			`[tests/setup] ${excluded.length} suíte(s) .services.test.tsx NÃO rodam nesta invocação ` +

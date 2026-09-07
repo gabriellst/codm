@@ -23,7 +23,51 @@ const SHELL_ENV_FILE: &str = "shell-env.json";
 
 fn main() {
     emit_shell_env();
+    declare_common_controls_dependency();
     tauri_build::build()
+}
+
+/// O MANIFESTO QUE O BINARIO DE TESTE NAO GANHAVA — e sem o qual `cargo test` nem chegava a rodar.
+///
+/// Este crate importa `TaskDialogIndirect`, `SetWindowSubclass`, `RemoveWindowSubclass` e
+/// `DefSubclassProc` (via a arvore do Tauri). As quatro existem SOMENTE no comctl32 **v6**, que no
+/// Windows e um assembly side-by-side: um processo so o recebe se declarar a dependencia num
+/// manifesto. Sem isso o carregador entrega o comctl32 v5 do System32 — medido: ZERO ocorrencias de
+/// `TaskDialogIndirect` nos exports dele — e o processo morre ANTES do `main` com
+/// `STATUS_ENTRYPOINT_NOT_FOUND` (0xc0000139), sem uma linha de teste executada e sem nomear a
+/// funcao que faltou.
+///
+/// O binario do APP ja tinha manifesto (`tauri_build::build()` embute um pelo `.rc`), e o binario de
+/// teste do BIN herda o mesmo recurso — medido: os dois carregam a string `Common-Controls`. Só o
+/// binario de teste da LIB nao carregava nenhum. A diferenca nunca esteve no codigo: esteve em qual
+/// binario recebia o recurso.
+///
+/// ── POR QUE UM MANIFESTO EXTERNO, E NAO `/MANIFEST:EMBED` ───────────────────────────────────────
+/// Duas tentativas foram descartadas por medicao, e vale registrar as duas:
+///
+///  1. `cargo:rustc-link-arg-tests` NAO alcanca o teste unitario da lib — ele cobre os alvos
+///     `[[test]]`, e o binario de teste da lib e o alvo `lib` compilado com `--test`. As diretivas
+///     saiam no output do build script e o binario continuava sem manifesto.
+///  2. `cargo:rustc-link-arg=/MANIFEST:EMBED` alcanca tudo — e QUEBRA o bin, que ja tem um manifesto
+///     embutido pelo Tauri: `LINK : fatal error LNK1123: falha durante conversao para COFF`.
+///
+/// Sobra `/MANIFESTDEPENDENCY` sozinho. Com o `/MANIFEST` que o linker ja usa por padrao, ele grava
+/// um `<binario>.manifest` AO LADO do executavel — que e exatamente onde o carregador do Windows
+/// procura quando nao ha manifesto embutido. Para o bin e para o app nada muda: um manifesto
+/// EMBUTIDO tem precedencia sobre o externo, entao o do Tauri continua sendo o que vale, e o arquivo
+/// gerado ao lado e inerte. Para o teste da lib, que nao tinha nenhum, o externo passa a ser o
+/// manifesto — e os 86 testes voltam a rodar.
+///
+/// O recorte por `CARGO_CFG_TARGET_ENV == "msvc"` nao e um desvio sobre convencao: `/MANIFEST*` sao
+/// flags do linker da MSVC e so existem nesse alvo. No mac e no Linux esta funcao nao emite nada,
+/// nao ha comctl32, e `cargo test` de la nunca teve este problema.
+fn declare_common_controls_dependency() {
+    if std::env::var("CARGO_CFG_TARGET_ENV").as_deref() != Ok("msvc") {
+        return;
+    }
+    println!(
+        "cargo:rustc-link-arg=/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'"
+    );
 }
 
 fn emit_shell_env() {

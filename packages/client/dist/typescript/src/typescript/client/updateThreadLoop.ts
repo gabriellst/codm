@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { UpdateThreadLoopMutationRequest, UpdateThreadLoopMutationResponse, UpdateThreadLoopPathParams } from "../types/UpdateThreadLoop.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { UpdateThreadLoopMutationRequest, UpdateThreadLoopMutationResponse, UpdateThreadLoopPathParams } from "../types/UpdateThreadLoop.ts";
 
 function getUpdateThreadLoopUrl(threadId: UpdateThreadLoopPathParams["threadId"], loopId: UpdateThreadLoopPathParams["loopId"]) {
   const res = { method: 'PUT', url: `/threads/${threadId}/loops/${loopId}` as const }

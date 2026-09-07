@@ -62,7 +62,17 @@ function lineOf(source: string, index: number): number {
 
 /** Is this route entry a SHELL — the route's own index.tsx, not one of its `-`-prefixed modules? */
 export function isRouteShell(entry: string): boolean {
-	return !/-components\/|-hooks\/|-stores\//.test(entry)
+	// NORMALIZA O SEPARADOR ANTES DE TESTAR. `Bun.Glob().scan()` devolve o separador NATIVO, então no
+	// Windows a entrada chega como `routes\(app)\x\-components\Y\index.tsx` e um padrão escrito com
+	// `/` não casa NUNCA — todo componente virava "route shell" e o detector emitia CP-03 fabricado
+	// para cada um (6 medidos neste repo). O modo de falha é o pior possível para um gate: ele não
+	// silencia, ele MENTE, e o ruído esconde a violação de verdade que ele existe para achar.
+	//
+	// O teste desta função alimentava só caminhos com `/` — entrada que o chamador real nunca produz
+	// naquela plataforma —, então ficava verde enquanto a varredura errava. Mesma classe do
+	// `toPosix` em `tests/architecture/support/scan.ts`: quem produz a lista normaliza.
+	const normalized = entry.split('\\').join('/')
+	return !/-components\/|-hooks\/|-stores\//.test(normalized)
 }
 
 /** The first SDK read hook a shell calls (`useGetX(` / `useListX(`), or null. */

@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { SteerThreadMutationRequest, SteerThreadMutationResponse, SteerThreadPathParams } from "../types/SteerThread.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { steerThread } from "../client/steerThread.ts";
+import type { SteerThreadMutationRequest, SteerThreadMutationResponse, SteerThreadPathParams } from "../types/SteerThread.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { steerThread } from "../client/steerThread.ts";
 
 export const steerThreadMutationKey = () => [{ url: '/threads/:threadId/steer' }] as const
 

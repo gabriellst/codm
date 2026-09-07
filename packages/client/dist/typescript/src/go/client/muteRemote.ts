@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { MuteRemoteMutationRequest, MuteRemoteMutationResponse } from "../types/MuteRemote.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { MuteRemoteMutationRequest, MuteRemoteMutationResponse } from "../types/MuteRemote.ts";
 
 function getMuteRemoteUrl() {
   const res = { method: 'POST', url: `/channel/remotes/mute` as const }

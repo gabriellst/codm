@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
-import type { SendArtifactMutationRequest, SendArtifactMutationResponse, SendArtifactPathParams } from "../../../types/SendArtifact.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { SendArtifactMutationRequest, SendArtifactMutationResponse, SendArtifactPathParams } from "../../../types/SendArtifact.ts";
 
 /**
  * @description Deliver an already-recorded artifact to the contact on the channel

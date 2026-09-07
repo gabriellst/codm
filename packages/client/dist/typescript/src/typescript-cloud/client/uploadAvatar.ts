@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript-cloud/_http";
-import type { UploadAvatarMutationResponse } from "../types/UploadAvatar.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
+import type { UploadAvatarMutationResponse } from "../types/UploadAvatar.ts";
 
 function getUploadAvatarUrl() {
   const res = { method: 'POST', url: `/identity/account/avatar` as const }

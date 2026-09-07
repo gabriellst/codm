@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { GetHomeDashboardQueryResponse } from "../types/GetHomeDashboard.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
-import { getHomeDashboard } from "../client/getHomeDashboard.ts";
+import type { GetHomeDashboardQueryResponse } from "../types/GetHomeDashboard.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { getHomeDashboard } from "../client/getHomeDashboard.ts";
 
 export const getHomeDashboardSuspenseQueryKey = () => [{ url: '/ui/home' }] as const
 

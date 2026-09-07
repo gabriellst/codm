@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { SendButtonMutationRequest, SendButtonMutationResponse } from "../types/SendButton.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { sendButton } from "../client/sendButton.ts";
+import type { SendButtonMutationRequest, SendButtonMutationResponse } from "../types/SendButton.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { sendButton } from "../client/sendButton.ts";
 
 export const sendButtonMutationKey = () => [{ url: '/messaging/messages/button' }] as const
 

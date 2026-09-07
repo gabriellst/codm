@@ -5,6 +5,7 @@ import type { DependencyContainer } from 'tsyringe-neo'
 import { type InstanceRegistry, expandBindings, HEALTH_CHECKS, PollingHealthCheck, resolve, asPollingService } from '@codm/core-typescript'
 import { AgentRunnerFactory, DefaultAgentRunnerFactory, StubAgentRunnerFactory, E2eAgentRunnerFactory } from './services/AgentRunnerFactory'
 import { ProviderDetector, MockProviderDetector, SystemProviderDetector } from './services/ProviderDetector'
+import { McpConfigDiscovery, MockMcpConfigDiscovery, SystemMcpConfigDiscovery } from './services/McpConfigDiscovery'
 import { AgentStreamRegistry } from './services/AgentStreamRegistry'
 import { AgentScenarioSelection } from './services/AgentScenario'
 import { MailboxDispatcher, LibSqlMailboxDispatcher } from './services/MailboxDispatcher'
@@ -12,7 +13,14 @@ import { IssueWorkAgent, IssueWorkPromptBuilder } from './agents/IssueWorkAgent'
 import { OrchestratorAgent, OrchestratorPromptBuilder } from './agents/OrchestratorAgent'
 import { AgentSessionRepository, LibSqlAgentSessionRepository, MockAgentSessionRepository } from './repositories/AgentSessionRepository'
 import { LibSqlMailboxRepository, MailboxRepository, MockMailboxRepository } from './repositories/MailboxRepository'
+import { McpServerRepository, LibSqlMcpServerRepository, MockMcpServerRepository } from './repositories/McpServerRepository'
+import {
+	McpToolApprovalRepository,
+	LibSqlMcpToolApprovalRepository,
+	MockMcpToolApprovalRepository,
+} from './repositories/McpToolApprovalRepository'
 import { StalledIssueReader, LibSqlStalledIssueReader, MockStalledIssueReader } from './services/StalledIssueReader'
+import { McpUpstreamRegistry, DefaultMcpUpstreamRegistry, MockMcpUpstreamRegistry } from './services/McpUpstreamRegistry'
 
 // E2E HERMETIC SEAM (see shared/registry.ts + src/boot.ts). The Playwright harness boots the REAL
 // daemon but must never spawn a provider CLI or probe host PATH: under the `e2e` boot environment
@@ -59,6 +67,17 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 		real: SystemProviderDetector,
 		e2e: MockProviderDetector,
 	},
+	// Descoberta de configuração MCP existente: o `real` lê os arquivos declarados em `fileSources`;
+	// todo o resto NUNCA toca disco. Sem essa coluna, um teste de import passaria a depender de quais
+	// arquivos existem na máquina que o roda — e medido em 04/09/2026, três das quatro fontes estavam
+	// ausentes aqui, então o verde viria da ausência e esconderia um parser quebrado.
+	{
+		token: McpConfigDiscovery,
+		mock: MockMcpConfigDiscovery,
+		integration: MockMcpConfigDiscovery,
+		real: SystemMcpConfigDiscovery,
+		e2e: MockMcpConfigDiscovery,
+	},
 	// The adopted whatscode AgentStreamRegistry (Fork C): SSE observer channel + the absorbed
 	// single-active-run guard — one shared in-memory instance per process.
 	{ token: AgentStreamRegistry, mock: AgentStreamRegistry, integration: AgentStreamRegistry, real: AgentStreamRegistry },
@@ -82,6 +101,18 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// The durable per-target turn queue. Producers enqueue inside their own transaction; the
 	// dispatcher is the single consumer and holds one lease per target.
 	{ token: MailboxRepository, mock: MockMailboxRepository, integration: LibSqlMailboxRepository, real: LibSqlMailboxRepository },
+	// Third-party MCP servers the owner registered on this machine (Task T3).
+	{ token: McpServerRepository, mock: MockMcpServerRepository, integration: LibSqlMcpServerRepository, real: LibSqlMcpServerRepository },
+	// The owner's decision on ONE external tool call — PENDING/APPROVED/DENIED (Task T7).
+	{
+		token: McpToolApprovalRepository,
+		mock: MockMcpToolApprovalRepository,
+		integration: LibSqlMcpToolApprovalRepository,
+		real: LibSqlMcpToolApprovalRepository,
+	},
+	// The daemon as an MCP CLIENT (Task T5). `integration` binds the MOCK on purpose — a test cannot
+	// depend on a third-party MCP server being installed on the CI machine.
+	{ token: McpUpstreamRegistry, mock: MockMcpUpstreamRegistry, integration: MockMcpUpstreamRegistry, real: DefaultMcpUpstreamRegistry },
 	// A varredura de issues órfãs lê a tabela `issues` a partir daqui — mesmo padrão de
 	// `thread/services/OpenIssuesReader`. `integration` usa a implementação REAL de propósito: o teste do
 	// job existe para exercitar o predicado das duas filas contra o banco, e um mock o tornaria vazio.

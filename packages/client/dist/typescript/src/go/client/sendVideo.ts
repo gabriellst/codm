@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { SendVideoMutationRequest, SendVideoMutationResponse } from "../types/SendVideo.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { SendVideoMutationRequest, SendVideoMutationResponse } from "../types/SendVideo.ts";
 
 function getSendVideoUrl() {
   const res = { method: 'POST', url: `/messaging/messages/video` as const }

@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { DeleteMessageMutationRequest, DeleteMessageMutationResponse } from "../types/DeleteMessage.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { deleteMessage } from "../client/deleteMessage.ts";
+import type { DeleteMessageMutationRequest, DeleteMessageMutationResponse } from "../types/DeleteMessage.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { deleteMessage } from "../client/deleteMessage.ts";
 
 export const deleteMessageMutationKey = () => [{ url: '/messaging/messages/delete' }] as const
 

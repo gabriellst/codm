@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { GetThreadSettingsQueryResponse, GetThreadSettingsPathParams } from "../types/GetThreadSettings.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { GetThreadSettingsQueryResponse, GetThreadSettingsPathParams } from "../types/GetThreadSettings.ts";
 
 function getGetThreadSettingsUrl(threadId: GetThreadSettingsPathParams["threadId"]) {
   const res = { method: 'GET', url: `/threads/${threadId}/settings` as const }

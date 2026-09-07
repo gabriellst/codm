@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { CreateThreadLoopMutationRequest, CreateThreadLoopMutationResponse, CreateThreadLoopPathParams } from "../types/CreateThreadLoop.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { CreateThreadLoopMutationRequest, CreateThreadLoopMutationResponse, CreateThreadLoopPathParams } from "../types/CreateThreadLoop.ts";
 
 function getCreateThreadLoopUrl(threadId: CreateThreadLoopPathParams["threadId"]) {
   const res = { method: 'POST', url: `/threads/${threadId}/loops` as const }

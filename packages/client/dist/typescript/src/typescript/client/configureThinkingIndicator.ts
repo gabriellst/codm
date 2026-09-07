@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { ConfigureThinkingIndicatorMutationRequest, ConfigureThinkingIndicatorMutationResponse, ConfigureThinkingIndicatorPathParams } from "../types/ConfigureThinkingIndicator.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { ConfigureThinkingIndicatorMutationRequest, ConfigureThinkingIndicatorMutationResponse, ConfigureThinkingIndicatorPathParams } from "../types/ConfigureThinkingIndicator.ts";
 
 function getConfigureThinkingIndicatorUrl(threadId: ConfigureThinkingIndicatorPathParams["threadId"]) {
   const res = { method: 'PUT', url: `/threads/${threadId}/thinking-indicator` as const }

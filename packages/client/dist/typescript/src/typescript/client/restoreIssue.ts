@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { RestoreIssueMutationResponse, RestoreIssuePathParams } from "../types/RestoreIssue.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { RestoreIssueMutationResponse, RestoreIssuePathParams } from "../types/RestoreIssue.ts";
 
 function getRestoreIssueUrl(issueId: RestoreIssuePathParams["issueId"]) {
   const res = { method: 'POST', url: `/issues/${issueId}/restore` as const }

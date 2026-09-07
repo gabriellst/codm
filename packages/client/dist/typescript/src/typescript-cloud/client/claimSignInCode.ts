@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript-cloud/_http";
-import type { ClaimSignInCodeQueryResponse } from "../types/ClaimSignInCode.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
+import type { ClaimSignInCodeQueryResponse } from "../types/ClaimSignInCode.ts";
 
 function getClaimSignInCodeUrl() {
   const res = { method: 'GET', url: `/sign-in/loopback/claim` as const }

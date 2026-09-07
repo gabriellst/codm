@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { CreateIssueMutationRequest, CreateIssueMutationResponse, CreateIssuePathParams } from "../types/CreateIssue.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { CreateIssueMutationRequest, CreateIssueMutationResponse, CreateIssuePathParams } from "../types/CreateIssue.ts";
 
 function getCreateIssueUrl(threadId: CreateIssuePathParams["threadId"]) {
   const res = { method: 'POST', url: `/threads/${threadId}/issues` as const }

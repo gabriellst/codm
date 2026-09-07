@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { RestartChannelMutationResponse, RestartChannelPathParams } from "../types/RestartChannel.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { restartChannel } from "../client/restartChannel.ts";
+import type { RestartChannelMutationResponse, RestartChannelPathParams } from "../types/RestartChannel.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { restartChannel } from "../client/restartChannel.ts";
 
 export const restartChannelMutationKey = () => [{ url: '/channel/channels/:id/restart' }] as const
 

@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { MuteRemoteMutationRequest, MuteRemoteMutationResponse } from "../types/MuteRemote.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { muteRemote } from "../client/muteRemote.ts";
+import type { MuteRemoteMutationRequest, MuteRemoteMutationResponse } from "../types/MuteRemote.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { muteRemote } from "../client/muteRemote.ts";
 
 export const muteRemoteMutationKey = () => [{ url: '/channel/remotes/mute' }] as const
 

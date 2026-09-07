@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { GetChannelQueryResponse, GetChannelPathParams } from "../types/GetChannel.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { GetChannelQueryResponse, GetChannelPathParams } from "../types/GetChannel.ts";
 
 function getGetChannelUrl(id: GetChannelPathParams["id"]) {
   const res = { method: 'GET', url: `/channel/channels/${id}` as const }

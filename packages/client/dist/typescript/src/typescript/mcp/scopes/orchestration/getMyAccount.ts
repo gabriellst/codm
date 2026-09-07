@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
-import type { GetMyAccountQueryResponse } from "../../../types/GetMyAccount.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { GetMyAccountQueryResponse } from "../../../types/GetMyAccount.ts";
 
 /**
  * @description Account settings read

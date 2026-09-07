@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { ConfigurePromptMutationRequest, ConfigurePromptMutationResponse, ConfigurePromptPathParams } from "../types/ConfigurePrompt.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { ConfigurePromptMutationRequest, ConfigurePromptMutationResponse, ConfigurePromptPathParams } from "../types/ConfigurePrompt.ts";
 
 function getConfigurePromptUrl(threadId: ConfigurePromptPathParams["threadId"]) {
   const res = { method: 'PUT', url: `/threads/${threadId}/prompt` as const }

@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
-import type { ListArtifactsQueryResponse, ListArtifactsPathParams } from "../../../types/ListArtifacts.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { ListArtifactsQueryResponse, ListArtifactsPathParams } from "../../../types/ListArtifacts.ts";
 
 /**
  * @description The non-code outputs of a thread (T13)

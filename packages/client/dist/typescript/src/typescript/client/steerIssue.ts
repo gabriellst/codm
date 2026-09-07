@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { SteerIssueMutationRequest, SteerIssueMutationResponse, SteerIssuePathParams } from "../types/SteerIssue.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { SteerIssueMutationRequest, SteerIssueMutationResponse, SteerIssuePathParams } from "../types/SteerIssue.ts";
 
 function getSteerIssueUrl(issueId: SteerIssuePathParams["issueId"]) {
   const res = { method: 'POST', url: `/issues/${issueId}/steer` as const }

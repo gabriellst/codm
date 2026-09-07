@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { GetArtifactContentQueryResponse, GetArtifactContentPathParams } from "../types/GetArtifactContent.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { GetArtifactContentQueryResponse, GetArtifactContentPathParams } from "../types/GetArtifactContent.ts";
 
 function getGetArtifactContentUrl(threadId: GetArtifactContentPathParams["threadId"], artifactId: GetArtifactContentPathParams["artifactId"]) {
   const res = { method: 'GET', url: `/threads/${threadId}/artifacts/${artifactId}/content` as const }

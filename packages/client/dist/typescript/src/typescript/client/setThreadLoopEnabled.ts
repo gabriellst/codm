@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { SetThreadLoopEnabledMutationRequest, SetThreadLoopEnabledMutationResponse, SetThreadLoopEnabledPathParams } from "../types/SetThreadLoopEnabled.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { SetThreadLoopEnabledMutationRequest, SetThreadLoopEnabledMutationResponse, SetThreadLoopEnabledPathParams } from "../types/SetThreadLoopEnabled.ts";
 
 function getSetThreadLoopEnabledUrl(threadId: SetThreadLoopEnabledPathParams["threadId"], loopId: SetThreadLoopEnabledPathParams["loopId"]) {
   const res = { method: 'PUT', url: `/threads/${threadId}/loops/${loopId}/enabled` as const }

@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { PinRemoteMutationRequest, PinRemoteMutationResponse } from "../types/PinRemote.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { PinRemoteMutationRequest, PinRemoteMutationResponse } from "../types/PinRemote.ts";
 
 function getPinRemoteUrl() {
   const res = { method: 'POST', url: `/channel/remotes/pin` as const }

@@ -14,15 +14,30 @@ import { AgentsStep } from '.'
  */
 
 const THREE_PROVIDERS: GetAttachThreadWizardQueryResponse['providers'] = [
-	{ provider: 'CLAUDE_CODE', status: 'DETECTED', available: true, comingSoon: false, version: '1.0.0' },
+	{
+		provider: 'CLAUDE_CODE',
+		status: 'DETECTED',
+		available: true,
+		comingSoon: false,
+		version: '1.0.0',
+		models: ['DEFAULT', 'OPUS', 'SONNET', 'HAIKU'],
+	},
 	// Instalado E sem runner — a máquina exata em que o rótulo antigo mentia ("Detectado" e clicável).
-	{ provider: 'CODEX', status: 'DETECTED', available: false, comingSoon: true, version: '3.1.0' },
-	{ provider: 'OPENCODE', status: 'NOT_INSTALLED', available: false, comingSoon: true },
+	{ provider: 'CODEX', status: 'DETECTED', available: false, comingSoon: true, version: '3.1.0', models: ['DEFAULT', 'TERRA', 'LUNA'] },
+	{ provider: 'OPENCODE', status: 'NOT_INSTALLED', available: false, comingSoon: true, models: [] },
 ]
 
 const TWO_AVAILABLE: GetAttachThreadWizardQueryResponse['providers'] = [
-	{ provider: 'CLAUDE_CODE', status: 'DETECTED', available: true, comingSoon: false, version: '1.0.0' },
-	{ provider: 'OPENCODE', status: 'DETECTED', available: true, comingSoon: false, version: '2.0.0' },
+	{
+		provider: 'CLAUDE_CODE',
+		status: 'DETECTED',
+		available: true,
+		comingSoon: false,
+		version: '1.0.0',
+		models: ['DEFAULT', 'OPUS', 'SONNET', 'HAIKU'],
+	},
+	// Disponível e SEM catálogo: a linha renderiza sem seletor, que é o caso que `models.length > 0` cobre.
+	{ provider: 'OPENCODE', status: 'DETECTED', available: true, comingSoon: false, version: '2.0.0', models: [] },
 ]
 
 const meta = {

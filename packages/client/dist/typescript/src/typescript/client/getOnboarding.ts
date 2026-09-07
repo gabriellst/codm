@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { GetOnboardingQueryResponse } from "../types/GetOnboarding.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { GetOnboardingQueryResponse } from "../types/GetOnboarding.ts";
 
 function getGetOnboardingUrl() {
   const res = { method: 'GET', url: `/ui/onboarding` as const }

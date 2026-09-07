@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { HealthQueryResponse } from "../types/Health.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
-import { health } from "../client/health.ts";
+import type { HealthQueryResponse } from "../types/Health.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
+import { health } from "../client/health.ts";
 
 export const healthQueryKey = () => [{ url: '/health' }] as const
 

@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
-import type { DeleteThreadLoopMutationResponse, DeleteThreadLoopPathParams } from "../../../types/DeleteThreadLoop.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { DeleteThreadLoopMutationResponse, DeleteThreadLoopPathParams } from "../../../types/DeleteThreadLoop.ts";
 
 /**
  * @description Remove a loop (C24)

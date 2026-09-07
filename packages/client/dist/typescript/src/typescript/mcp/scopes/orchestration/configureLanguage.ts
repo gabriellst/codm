@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
-import type { ConfigureLanguageMutationRequest, ConfigureLanguageMutationResponse, ConfigureLanguagePathParams } from "../../../types/ConfigureLanguage.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { ConfigureLanguageMutationRequest, ConfigureLanguageMutationResponse, ConfigureLanguagePathParams } from "../../../types/ConfigureLanguage.ts";
 
 /**
  * @description Set the language this conversation speaks, or clear it to follow the account default

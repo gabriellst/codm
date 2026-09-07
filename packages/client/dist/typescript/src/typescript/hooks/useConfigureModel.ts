@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { ConfigureModelMutationRequest, ConfigureModelMutationResponse, ConfigureModelPathParams } from "../types/ConfigureModel.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { configureModel } from "../client/configureModel.ts";
+import type { ConfigureModelMutationRequest, ConfigureModelMutationResponse, ConfigureModelPathParams } from "../types/ConfigureModel.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { configureModel } from "../client/configureModel.ts";
 
 export const configureModelMutationKey = () => [{ url: '/threads/:threadId/model' }] as const
 

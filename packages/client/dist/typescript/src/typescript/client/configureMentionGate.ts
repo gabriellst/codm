@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { ConfigureMentionGateMutationRequest, ConfigureMentionGateMutationResponse, ConfigureMentionGatePathParams } from "../types/ConfigureMentionGate.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { ConfigureMentionGateMutationRequest, ConfigureMentionGateMutationResponse, ConfigureMentionGatePathParams } from "../types/ConfigureMentionGate.ts";
 
 function getConfigureMentionGateUrl(threadId: ConfigureMentionGatePathParams["threadId"]) {
   const res = { method: 'PUT', url: `/threads/${threadId}/mention-gate` as const }

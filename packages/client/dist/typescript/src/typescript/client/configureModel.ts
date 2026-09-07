@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { ConfigureModelMutationRequest, ConfigureModelMutationResponse, ConfigureModelPathParams } from "../types/ConfigureModel.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { ConfigureModelMutationRequest, ConfigureModelMutationResponse, ConfigureModelPathParams } from "../types/ConfigureModel.ts";
 
 function getConfigureModelUrl(threadId: ConfigureModelPathParams["threadId"]) {
   const res = { method: 'PUT', url: `/threads/${threadId}/model` as const }

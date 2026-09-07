@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { StreamTerminalSessionQueryResponse, StreamTerminalSessionPathParams } from "../types/StreamTerminalSession.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { StreamTerminalSessionQueryResponse, StreamTerminalSessionPathParams } from "../types/StreamTerminalSession.ts";
 
 function getStreamTerminalSessionUrl(issueId: StreamTerminalSessionPathParams["issueId"]) {
   const res = { method: 'GET', url: `/terminal/sessions/${issueId}/stream` as const }

@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { ListenEventsQueryResponse } from "../types/ListenEvents.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
-import { listenEvents } from "../client/listenEvents.ts";
+import type { ListenEventsQueryResponse } from "../types/ListenEvents.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
+import { listenEvents } from "../client/listenEvents.ts";
 
 export const listenEventsQueryKey = () => [{ url: '/events' }] as const
 

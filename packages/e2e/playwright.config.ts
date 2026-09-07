@@ -1,4 +1,34 @@
 import { defineConfig } from '@playwright/test'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { REPO } from '../../template.config'
+
+/**
+ * O argv do gateway vem da DECLARACAO, resolvido em caminho ABSOLUTO — nunca digitado aqui.
+ *
+ * Havia duas coisas erradas nesta linha, e a segunda so apareceu quando a primeira foi consertada:
+ *
+ * 1. Era `command: './api'`, o literal que o docblock de `WORKSPACES.apiGo.testBoot` existe para
+ *    impedir e que ele nomeia pelo erro exato — `ENOENT: uv_spawn './api'` com o arquivo ali no
+ *    disco, porque no Windows a extensao E o bit de execucao. O `go build -o api.exe` do
+ *    `run-e2e.ts` ja vinha do manifesto; so o `run` seguia re-digitado, e re-digitado ERRADO.
+ *
+ * 2. `run` e ARGV (`['./api.exe']`), e `webServer.command` e uma STRING DE SHELL. Um `./` relativo
+ *    e sintaxe de `sh`, nao de `cmd.exe` — que responde `'.' nao e reconhecido como um comando
+ *    interno`. Resolver o argv contra o `pkgRoot` declarado da um caminho absoluto, valido em
+ *    QUALQUER shell: nenhuma linha por plataforma, nenhum desvio de fluxo, e a diferenca entre os
+ *    dois shells deixa de ser um caso que este arquivo precise conhecer.
+ *
+ * Vale a regra 5 do CLAUDE.md tal como escrita: informacao estrutural (onde o binario mora, como se
+ * chama) e lida do contrato tipado; o que sobra aqui e so a traducao argv -> shell.
+ */
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
+const API_GO_ROOT = resolve(REPO_ROOT, REPO.workspaces.apiGo.pkgRoot)
+const [apiGoBin, ...apiGoArgs] = REPO.workspaces.apiGo.testBoot.run
+if (apiGoBin === undefined) throw new Error('playwright.config: apiGo testBoot recipe declares an empty run command')
+// Entre aspas por higiene, nao por necessidade neste checkout: um caminho de repo com espaco
+// quebraria a linha nos dois shells, e as aspas sao inertes sem espaco.
+const API_GO_RUN = [JSON.stringify(resolve(API_GO_ROOT, apiGoBin)), ...apiGoArgs].join(' ')
 
 export default defineConfig({
 	testDir: './tests',
@@ -134,9 +164,9 @@ export default defineConfig({
 		{
 			// Prebuilt Go binary — packages/e2e/scripts/run-e2e.ts runs `go build -o api.exe ./cmd/api` ONCE before
 			// Playwright boots anything (mirrors the TS daemon above: build once, run the artifact,
-			// never `go run` under a webServer restart cycle). `./api.exe` is the SAME argv
-			// template.config.ts's `WORKSPACES.apiGo.testBoot.run` declares — one name on every OS,
-			// which is that declaration's point, not a Windows special case.
+			// never `go run` under a webServer restart cycle). O argv sai de
+			// `WORKSPACES.apiGo.testBoot.run` (ver `API_GO_RUN` no topo) — um nome em todo OS, que é o
+			// ponto daquela declaração, e não um caso especial de Windows.
 			//
 			// CODM_ENV=e2e selects `channel.Overlays[EnvE2e]` (internal/channel/overlay.go) — the
 			// scripted MockChannelFactory playing `defaultE2eScenario()` (QR frames, auto-pairing,
@@ -146,7 +176,7 @@ export default defineConfig({
 			// empty `A=  # comment` env line into the apikey guard's literal SECRET unless the
 			// launching cwd's own .env was preloaded — pinned here so the boot is identical however
 			// it's invoked, not just when scripts/run-e2e.ts's env happens to carry it.
-			command: './api',
+			command: API_GO_RUN,
 			// The gateway's HttpRouter serves every controller under `/api/{context}{path}` — its own
 			// OpenAPI spec omits that mount (see forwardToChannel.ts), so `/api/health` (public,
 			// core/services/httprouter) is the probe both this webServer and testBoot.ts's

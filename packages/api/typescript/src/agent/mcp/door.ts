@@ -4,8 +4,16 @@ import { withMcpRunContext } from '@codm/client-typescript/typescript/mcp/contex
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { McpScope } from '@codm/contracts-typescript/wire/enums'
+import { StopPolicyConfigRepository } from '@thread/repositories/StopPolicyConfigRepository'
 import type { AgentRunIdentity } from '../types/AgentRunIdentity'
 import type { AgentInterfaceErrors } from '../errors'
+import { McpUpstreamRegistry, type UpstreamCallResult } from '../services/McpUpstreamRegistry'
+import { McpServerRepository } from '../repositories/McpServerRepository'
+import { McpToolApprovalRepository } from '../repositories/McpToolApprovalRepository'
+import { RequestMcpToolApproval } from '../usecases/RequestMcpToolApproval'
+import { canonicalCallHash } from '../entities/McpToolApproval'
+import { resolveMcpCallDisposition } from './approvalPolicy'
+import { withUpstream, type RequestHandling } from './upstream'
 
 import { MCP_ROUTE_PREFIX } from './route'
 
@@ -40,6 +48,14 @@ export { MCP_ROUTE_PREFIX }
  * `resolve` is a map lookup that fails closed on unknown, expired and revoked, so a late tool call
  * from a run that already died gets 401 and writes nothing — the property §4.11 promises when a run is
  * cancelled.
+ *
+ * THIRD-PARTY TOOLS ARE MERGED IN ONLY FOR `issue-handling` (Task T5)
+ * `buildTransport` wraps the generated transport with `withUpstream` when, and only when, the scope
+ * being served is `issue-handling`. `orchestration` is the surface that reads text a third party
+ * wrote (WhatsApp threads, group chats), so handing it a live upstream tool a human registered — shell,
+ * filesystem, a browser — would put that tool one prompt injection away from a stranger. The fence is
+ * the REGISTER-BY-SCOPE happening here, not the `--allowedTools` list handed to the client: that list is
+ * client-side and the client is the attacker's, same rule as the scope match above.
  * ───────────────────────────────────────────────────────────────────────────────────────────────
  */
 @injectable()
@@ -65,10 +81,44 @@ export class McpDoorController extends McpAdapter {
 	 *
 	 * It also narrows the service's generic to this product's identity, which is what makes `resolve()`
 	 * hand back an `AgentRunIdentity` rather than the bare core format.
+	 *
+	 * `mcpUpstream` is OPTIONAL — not because production may run without one (Task T5.9 binds
+	 * `DefaultMcpUpstreamRegistry` in every DI env), but because every existing test in this file's
+	 * suite builds this door with `new McpDoorController(identities)`, one argument, and overrides
+	 * `buildTransport` outright — so the real one, which is the only method that reads this field,
+	 * never runs against an instance built that way. A required second parameter would fail those call
+	 * sites to COMPILE for a field they never touch at runtime. The `!this.mcpUpstream` guard inside
+	 * `buildTransport` is what makes the optionality sound rather than a landmine.
+	 *
+	 * The FOUR params after it (`mcpServers`, `stopPolicies`, `mcpApprovals`, `requestApproval`) carry
+	 * the SAME optionality for the SAME reason (Task T7): they exist only to let `callUpstream` decide
+	 * between executing and gating, and `door.test.ts`'s `T6` suite already builds this door with
+	 * `new McpDoorController(tokens, upstream)` — two arguments — to exercise `tools/list` merging
+	 * without ever driving a `tools/call` against an upstream tool. Each is bound in every DI env
+	 * alongside `DefaultMcpUpstreamRegistry` (Task T7.8), so production never resolves this door with
+	 * one present and the others missing.
 	 */
+	/**
+	 * A SECOND, correctly-typed reference to the same object `super()` already stored. `McpAdapter`'s
+	 * own field is declared `protected readonly identities: AgentIdentityService` — unparameterized,
+	 * on purpose, because core has no vocabulary for this product's identity shape. That means
+	 * `this.identities.resolve(...)` anywhere in this class returns the bare core `AgentIdentity`, not
+	 * `AgentRunIdentity`, no matter what was actually passed at construction. `E2eMcpDriver` carries the
+	 * same duplication for the same reason.
+	 */
+	private readonly runIdentities: AgentIdentityService<AgentRunIdentity>
+
 	// biome-ignore lint/complexity/noUselessConstructor: carries design:paramtypes for tsyringe — see above
-	constructor(identities: AgentIdentityService<AgentRunIdentity>) {
+	constructor(
+		identities: AgentIdentityService<AgentRunIdentity>,
+		private readonly mcpUpstream?: McpUpstreamRegistry,
+		private readonly mcpServers?: McpServerRepository,
+		private readonly stopPolicies?: StopPolicyConfigRepository,
+		private readonly mcpApprovals?: McpToolApprovalRepository,
+		private readonly requestApproval?: RequestMcpToolApproval,
+	) {
 		super(identities)
+		this.runIdentities = identities
 	}
 
 	/** 401 for a credential that is absent or dead, 403 for one aimed at the wrong surface. */
@@ -78,7 +128,14 @@ export class McpDoorController extends McpAdapter {
 	}
 
 	protected async serve(scope: string, token: string, request: Request): Promise<Response> {
-		const transport = await this.buildTransport(scope)
+		// Resolved a SECOND time, deliberately (Task T5). `McpAdapter.handle` already proved this token
+		// maps to a live identity before calling `serve`, but the identity object itself never crossed
+		// that boundary — only the opaque `token` did. `ownerId` scopes the upstream lookup below, and
+		// it comes from HERE, never from an argument the model supplies.
+		const identity = this.runIdentities.resolve(token)
+		if (!identity) this.refuse('invalid-token', 'missing, unknown, expired or revoked run token')
+
+		const transport = await this.buildTransport(scope, identity)
 		// The context the generated `_http.ts` shims read to address AND authenticate their outbound
 		// call. Established AROUND the whole dispatch, so it covers every async continuation the
 		// transport spawns — a per-tool wrapper would miss the ones the SDK schedules itself.
@@ -117,11 +174,87 @@ export class McpDoorController extends McpAdapter {
 	 * call moves every counter, the rejected one moves none, and the asymmetry is the measurement.
 	 * A `private` method would leave that claim argued in a comment, which is what this AC forbids.
 	 */
-	protected async buildTransport(scope: string): Promise<WebStandardStreamableHTTPServerTransport> {
+	protected async buildTransport(scope: string, identity: AgentRunIdentity): Promise<RequestHandling> {
 		const server = await loadGeneratedServer(scope as McpScope)
 		const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true })
 		await server.connect(transport)
-		return transport
+
+		// See the class docblock: upstream tools exist ONLY in `issue-handling`.
+		if (scope !== McpScope.ISSUE_HANDLING || !this.mcpUpstream) return transport
+
+		const registry = this.mcpUpstream
+		return withUpstream(transport, {
+			scope: McpScope.ISSUE_HANDLING,
+			tools: await registry.listTools(identity.ownerId),
+			call: input => this.callUpstream(registry, identity, input),
+		})
+	}
+
+	/**
+	 * THE GATE (Task T7). Runs BEFORE the upstream is ever touched — `approvalPolicy.ts` is the ONLY
+	 * place that decides between the two outcomes, this method only gathers what it needs to ask.
+	 *
+	 * `identity.issueId` is read here, never from `input`: upstream tools exist only under
+	 * `issue-handling` (see the class docblock), whose identity schema REQUIRES the field, so its
+	 * absence here is a broken invariant rather than a legitimate optional — same shape as
+	 * `ForkIssue`'s `entryId` guard.
+	 */
+	private async callUpstream(
+		registry: McpUpstreamRegistry,
+		identity: AgentRunIdentity,
+		input: { serverKey: string; toolName: string; args: Record<string, unknown> },
+	): Promise<UpstreamCallResult> {
+		if (!this.mcpServers || !this.stopPolicies || !this.mcpApprovals || !this.requestApproval) {
+			// See the constructor docblock: the four gate dependencies are bound together in every DI
+			// env alongside `mcpUpstream` (Task T7.8) — this is a wiring defect, never a runtime case a
+			// caller can hit.
+			throw new Error(
+				'McpDoorController: mcpUpstream is wired but the approval gate (mcpServers/stopPolicies/mcpApprovals/requestApproval) is not',
+			)
+		}
+		if (!identity.issueId) this.refuse('scope-mismatch', 'this run carries no issue to confine an external tool call to')
+
+		const mcpServer = await this.mcpServers.findByKey(identity.ownerId, input.serverKey)
+		// An unregistered/disabled server is not this gate's call to make — `registry.call` already
+		// answers it with a graceful `isError` text instead of throwing (see `DefaultMcpUpstreamRegistry`).
+		// `enabled` is checked HERE too, not just inside `registry.call`: without it, a disabled
+		// server would still fall through to the ASK gate below, raise a stop, and an owner who
+		// approves it would land on `registry.call`'s "unknown MCP server" text anyway — a question
+		// asked that no answer can satisfy.
+		if (!mcpServer?.enabled) return registry.call({ ownerId: identity.ownerId, ...input })
+
+		const stopPolicy = await this.stopPolicies.get(identity.ownerId)
+		const disposition = resolveMcpCallDisposition({
+			serverPolicy: mcpServer.approvalPolicy,
+			toolPolicy: mcpServer.toolPolicies?.[input.toolName],
+			ownerWantsToBeAsked: stopPolicy.approvalNeeded,
+		})
+		if (disposition === 'execute') return registry.call({ ownerId: identity.ownerId, ...input })
+
+		const callHash = canonicalCallHash(input)
+		const existing = await this.mcpApprovals.findByCall(identity.issueId, callHash)
+		if (existing?.grantsExecution) return registry.call({ ownerId: identity.ownerId, ...input })
+
+		// NEITHER approved nor executed — the call NEVER reaches `registry.call` on this branch. A
+		// pending/denied/absent approval all resolve here; `RequestMcpToolApproval` itself decides
+		// whether to reuse a pending request or raise a fresh one.
+		const { stopId } = await this.requestApproval.execute({
+			ownerId: identity.ownerId,
+			issueId: identity.issueId,
+			threadId: identity.threadId,
+			serverKey: input.serverKey,
+			toolName: input.toolName,
+			args: input.args,
+		})
+		return {
+			content: [
+				{
+					type: 'text',
+					text: `"${input.toolName}" on MCP server "${input.serverKey}" needs your approval before it can run (stop ${stopId}).`,
+				},
+			],
+			isError: true,
+		}
 	}
 }
 

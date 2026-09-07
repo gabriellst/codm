@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { SendChatPresenceMutationRequest, SendChatPresenceMutationResponse } from "../types/SendChatPresence.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { sendChatPresence } from "../client/sendChatPresence.ts";
+import type { SendChatPresenceMutationRequest, SendChatPresenceMutationResponse } from "../types/SendChatPresence.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { sendChatPresence } from "../client/sendChatPresence.ts";
 
 export const sendChatPresenceMutationKey = () => [{ url: '/messaging/messages/presence' }] as const
 

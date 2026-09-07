@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { RestartChannelMutationResponse, RestartChannelPathParams } from "../types/RestartChannel.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { RestartChannelMutationResponse, RestartChannelPathParams } from "../types/RestartChannel.ts";
 
 function getRestartChannelUrl(id: RestartChannelPathParams["id"]) {
   const res = { method: 'POST', url: `/channel/channels/${id}/restart` as const }

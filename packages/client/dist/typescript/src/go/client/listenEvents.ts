@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { ListenEventsQueryResponse } from "../types/ListenEvents.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { ListenEventsQueryResponse } from "../types/ListenEvents.ts";
 
 function getListenEventsUrl() {
   const res = { method: 'GET', url: `/events` as const }
