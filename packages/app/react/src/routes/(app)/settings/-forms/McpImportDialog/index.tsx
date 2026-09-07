@@ -1,5 +1,6 @@
 import { useState, type ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import { IconAlertTriangle, IconFileImport } from '@tabler/icons-react'
 import {
@@ -203,9 +204,23 @@ export function McpImportDialog({
 								},
 							},
 							{
-								onSuccess: async () => {
-									await queryClient.invalidateQueries({ queryKey: getSettingsQueryKey() })
+								onSuccess: result => {
+									/**
+									 * FECHA PRIMEIRO, REVALIDA DEPOIS — e o `await` que estava aqui era o defeito.
+									 *
+									 * `invalidateQueries` AGUARDA o refetch das queries ativas, e a query em questão é o
+									 * `GetSettings`: ele chama `listTools` em TODO servidor habilitado, o que SPAWNA os
+									 * processos dos upstreams e espera cada um responder. Depois de importar um servidor
+									 * `npx`, esse refetch leva segundos — e o diálogo ficava aberto, mudo, o tempo todo.
+									 * Pior: se o refetch falhasse, o `onDone()` nunca rodava e a tela ficava travada num
+									 * import que JÁ tinha dado certo. O dono clicava de novo e ouvia "já cadastrado".
+									 *
+									 * O `McpServerForm` ao lado sempre fez assim (`invalidateAndClose`, sem `await`); este
+									 * diálogo é que não seguiu o padrão que já existia.
+									 */
+									toast.success(t('settings.mcpServers.import.imported', { count: result.imported.length }))
 									onDone()
+									queryClient.invalidateQueries({ queryKey: getSettingsQueryKey() })
 								},
 							},
 						)

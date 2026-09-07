@@ -812,7 +812,8 @@
 				"wholeDocument": "whole document",
 				"secretsCount": "{{count}} secret(s)",
 				"secretsWillBeBlank": "Secrets come in with their names only — you fill the values in before the server can run.",
-				"workspaceLabel": "Which workspace to scan"
+				"workspaceLabel": "Which workspace to scan",
+				"imported": "{{count}} server(s) imported"
 			},
 			"presets": {
 				"playwright": "Drives a browser — navigate, click, read pages",
