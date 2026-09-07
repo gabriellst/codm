@@ -9426,6 +9426,9 @@
                           },
                           "reachable": {
                             "type": "boolean"
+                          },
+                          "unreachableReason": {
+                            "type": "string"
                           }
                         },
                         "required": [

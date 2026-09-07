@@ -223,9 +223,16 @@ function McpServerRow({
 			</div>
 
 			{unreachable ? (
-				<div className="flex items-center gap-2 rounded-asymmetric-xs bg-destructive/10 px-3 py-2 text-sm text-destructive">
-					<IconPlugConnectedX className="size-4 shrink-0" />
-					{t('settings.mcpServers.unreachable')}
+				<div className="flex flex-col gap-1 rounded-asymmetric-xs bg-destructive/10 px-3 py-2 text-destructive">
+					<div className="flex items-center gap-2 text-sm">
+						<IconPlugConnectedX className="size-4 shrink-0" />
+						{t('settings.mcpServers.unreachable')}
+					</div>
+					{/* O MOTIVO, quando o upstream deu um. Vem do próprio erro do processo/rede — não é frase
+					    nossa — então fica em `font-mono`: é texto de máquina, e o dono vai copiá-lo para
+					    procurar. Ausente quando não houve tentativa (servidor recém-desabilitado, por
+					    exemplo), e aí a linha simplesmente não aparece em vez de mostrar vazio. */}
+					{server.unreachableReason && <p className="break-all pl-6 font-mono text-xs opacity-80">{server.unreachableReason}</p>}
 				</div>
 			) : server.tools.length === 0 ? (
 				<p className="text-xs text-muted-foreground">{t('settings.mcpServers.noTools')}</p>

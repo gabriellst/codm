@@ -99,9 +99,17 @@ export class DefaultMcpUpstreamRegistry extends McpUpstreamRegistry {
 	}
 
 	async listTools(ownerId: string): Promise<UpstreamTool[]> {
+		// DERIVADO de `listToolsByServer`, não uma segunda travessia: as duas leituras respondem a mesma
+		// pergunta ao mesmo upstream, e mantê-las separadas seria pagar dois spawns e arriscar duas
+		// respostas diferentes na mesma request.
+		const byServer = await this.listToolsByServer(ownerId)
+		return [...byServer.values()].flatMap(result => (result.ok ? result.tools : []))
+	}
+
+	async listToolsByServer(ownerId: string): Promise<Map<string, McpProbeResult>> {
 		const enabled = await this.servers.listEnabledByOwner(ownerId)
-		const lists = await Promise.all(enabled.map(server => this.safeListTools(server)))
-		return lists.flat()
+		const entries = await Promise.all(enabled.map(async server => [server.key, await this.safeListTools(server)] as const))
+		return new Map(entries)
 	}
 
 	/**
@@ -264,10 +272,10 @@ export class DefaultMcpUpstreamRegistry extends McpUpstreamRegistry {
 	 * `@injectable()` resolvida do container, e é o único caminho que chega ao Loki com correlação de
 	 * trace — que é onde um servidor MCP quebrado numa máquina sem ninguém olhando é diagnosticado.
 	 */
-	private async safeListTools(server: McpServer): Promise<UpstreamTool[]> {
+	private async safeListTools(server: McpServer): Promise<McpProbeResult> {
 		const key = cacheKey(server.ownerId, server.key)
 		const cached = this.toolsCache.get(key)
-		if (cached) return cached
+		if (cached) return { ok: true, tools: cached }
 
 		try {
 			const client = await this.connect(server)
@@ -283,7 +291,7 @@ export class DefaultMcpUpstreamRegistry extends McpUpstreamRegistry {
 			// momentaneamente fora) não pode virar um erro FIXO até o próximo `evict` — o próximo
 			// `listTools` tenta de novo, exatamente como se não houvesse cache nenhum.
 			this.toolsCache.set(key, mapped)
-			return mapped
+			return { ok: true, tools: mapped }
 		} catch (error) {
 			this.logging.warn({
 				content: {
@@ -293,7 +301,10 @@ export class DefaultMcpUpstreamRegistry extends McpUpstreamRegistry {
 					error: error instanceof Error ? error.message : String(error),
 				},
 			})
-			return []
+			// O MOTIVO SOBE JUNTO. Devolver `[]` aqui era o que fazia a tela dizer "não alcançável" para
+			// um comando errado, um token vencido e um servidor legitimamente vazio — três causas, um
+			// sinal só. O log já tinha a informação desde a Task T13; ela é que não chegava a quem decide.
+			return { ok: false, error: error instanceof Error ? error.message : String(error) }
 		}
 	}
 

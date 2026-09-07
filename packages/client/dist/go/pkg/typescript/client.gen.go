@@ -9505,8 +9505,9 @@ type GetSettingsResponse struct {
 				Name   string                               `json:"name"`
 				Policy nullable.Nullable[McpApprovalPolicy] `json:"policy"`
 			} `json:"tools"`
-			Transport McpTransport `json:"transport"`
-			Url       *string      `json:"url,omitempty"`
+			Transport         McpTransport `json:"transport"`
+			UnreachableReason *string      `json:"unreachableReason,omitempty"`
+			Url               *string      `json:"url,omitempty"`
 		} `json:"mcpServers"`
 		Providers []struct {
 			Available  bool           `json:"available"`
@@ -12638,8 +12639,9 @@ func ParseGetSettingsResponse(rsp *http.Response) (*GetSettingsResponse, error) 
 					Name   string                               `json:"name"`
 					Policy nullable.Nullable[McpApprovalPolicy] `json:"policy"`
 				} `json:"tools"`
-				Transport McpTransport `json:"transport"`
-				Url       *string      `json:"url,omitempty"`
+				Transport         McpTransport `json:"transport"`
+				UnreachableReason *string      `json:"unreachableReason,omitempty"`
+				Url               *string      `json:"url,omitempty"`
 			} `json:"mcpServers"`
 			Providers []struct {
 				Available  bool           `json:"available"`

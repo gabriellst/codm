@@ -133,6 +133,44 @@ describe('GetSettings — mcpServers', () => {
 		expect(healthySummary?.tools).toEqual([{ name: 'run', policy: null }])
 	})
 
+	/**
+	 * AS TRÊS CAUSAS DEIXAM DE VIRAR UMA PALAVRA SÓ.
+	 *
+	 * `reachable` era `enabled && tools.length > 0`, e o `safeListTools` engolia a exceção devolvendo
+	 * lista vazia — então "comando errado", "token vencido" e "servidor legitimamente sem ferramentas"
+	 * produziam o MESMO "não alcançável" na tela. A única forma de o dono descobrir qual era apagar o
+	 * servidor e recadastrar.
+	 *
+	 * Este teste separa os dois casos que antes eram indistinguíveis, na MESMA leitura — asserta os
+	 * dois lados, porque afirmar só o quebrado passaria mesmo se o vazio tivesse colapsado junto.
+	 */
+	it('distingue upstream QUEBRADO (com motivo) de upstream conectado e VAZIO', async () => {
+		const repo = testBed.resolve(McpServerRepository)
+		const upstream = testBed.resolve(McpUpstreamRegistry) as MockMcpUpstreamRegistry
+
+		await repo.save(McpServer.create({ ownerId, key: 'quebrado', transport: McpTransport.STDIO, command: 'boom' }))
+		await repo.save(McpServer.create({ ownerId, key: 'vazio', transport: McpTransport.STDIO, command: 'npx' }))
+
+		upstream.failures.set('quebrado', 'spawn boom ENOENT')
+		// `vazio` CONECTA e publica ZERO ferramentas — o caso legítimo que antes era acusado de quebrado.
+		upstream.connectedButEmpty.add('vazio')
+		upstream.tools = []
+
+		const settings = await testBed.resolve(GetSettings).execute({ ownerId })
+
+		const quebrado = settings.mcpServers.find(s => s.key === 'quebrado')
+		expect(quebrado?.reachable).toBe(false)
+		expect(quebrado?.unreachableReason).toBe('spawn boom ENOENT')
+
+		// O VAZIO é ALCANÇÁVEL — conectou, só não tem o que publicar. Antes ele era acusado de quebrado
+		// pela mesma regra, e é ESTA metade que prova que as duas causas deixaram de colidir.
+		const vazio = settings.mcpServers.find(s => s.key === 'vazio')
+		expect(vazio?.reachable).toBe(true)
+		expect(vazio?.tools).toEqual([])
+		// E não carrega motivo, porque não houve falha — um motivo aqui seria acusação falsa.
+		expect(vazio?.unreachableReason).toBeUndefined()
+	})
+
 	it('um servidor desabilitado volta tools: [] e reachable: false, mesmo se o upstream reportar ferramentas', async () => {
 		const repo = testBed.resolve(McpServerRepository)
 		const upstream = testBed.resolve(McpUpstreamRegistry) as MockMcpUpstreamRegistry

@@ -8,7 +8,7 @@ import { ProviderDetector } from '@agent/services/ProviderDetector'
 // `agent/mcp/exposure.ts` → `@ui/controllers` → back here. See that barrel's header.
 import { AgentRunnerFactory } from '@agent/services/AgentRunnerFactory/AgentRunnerFactory'
 import { McpServerRepository } from '@agent/repositories/McpServerRepository'
-import { McpUpstreamRegistry, type UpstreamTool } from '@agent/services/McpUpstreamRegistry'
+import { McpUpstreamRegistry } from '@agent/services/McpUpstreamRegistry'
 import { StopPolicyConfigRepository } from '@thread/repositories/StopPolicyConfigRepository'
 import { MCP_PRESETS } from '@catalog'
 
@@ -76,6 +76,14 @@ const McpServerSummarySchema = z.object({
 	 * inteira: os outros servidores continuam presentes com suas próprias `tools`.
 	 */
 	reachable: z.boolean(),
+	/**
+	 * POR QUE não está alcançável — presente só quando `reachable` é falso E houve tentativa.
+	 *
+	 * É a mesma mensagem que a sonda do "Testar conexão" devolve, agora para um servidor JÁ cadastrado.
+	 * Sem ela, `reachable: false` cobria três causas com uma palavra ("não alcançável"), e a única
+	 * forma de o dono descobrir qual era apagar o servidor e recadastrar para testar.
+	 */
+	unreachableReason: z.string().optional(),
 })
 
 /**
@@ -172,21 +180,17 @@ export class GetSettings extends Handler<typeof GetSettingsInputSchema, typeof G
 		})
 
 		const registeredServers = await this.mcpServers.listByOwner(input.ownerId)
-		// UMA chamada, não uma por servidor — o registry já devolve o achatado de todos os habilitados,
-		// namespeado por `serverKey`; agrupar aqui é local, sem round-trip extra por servidor.
-		const upstreamTools = await this.mcpUpstreamRegistry.listTools(input.ownerId)
-		const toolsByServerKey = new Map<string, UpstreamTool[]>()
-		for (const tool of upstreamTools) {
-			const bucket = toolsByServerKey.get(tool.serverKey)
-			if (bucket) bucket.push(tool)
-			else toolsByServerKey.set(tool.serverKey, [tool])
-		}
+		// UMA chamada, não uma por servidor. E `listToolsByServer` em vez de `listTools`: a versão achatada
+		// perde QUAL servidor falhou e POR QUÊ — um upstream quebrado e um upstream sem ferramentas somem
+		// da lista exatamente do mesmo jeito, e era daí que nascia o `reachable` ambíguo desta tela.
+		const upstreamByServer = await this.mcpUpstreamRegistry.listToolsByServer(input.ownerId)
 
 		const mcpServers = registeredServers.map(server => {
-			// Desabilitado nunca é conectado — `DefaultMcpUpstreamRegistry.listTools` já filtra por
-			// `listEnabledByOwner`, mas o gate fica explícito aqui também: um servidor desligado nunca
-			// mostra ferramentas que porventura sobraram no mapa.
-			const tools = server.enabled ? (toolsByServerKey.get(server.key) ?? []) : []
+			// Desabilitado nunca é conectado — `listToolsByServer` já filtra por `listEnabledByOwner`, mas
+			// o gate fica explícito aqui também: um servidor desligado nunca mostra ferramentas que
+			// porventura sobraram no mapa.
+			const outcome = server.enabled ? upstreamByServer.get(server.key) : undefined
+			const tools = outcome?.ok ? outcome.tools : []
 			return {
 				id: server.id.value,
 				key: server.key,
@@ -199,10 +203,14 @@ export class GetSettings extends Handler<typeof GetSettingsInputSchema, typeof G
 				enabled: server.enabled,
 				approvalPolicy: server.approvalPolicy,
 				tools: tools.map(tool => ({ name: tool.name, policy: server.toolPolicies?.[tool.name] ?? null })),
-				// Ausente do resultado do upstream (habilitado mas sem NENHUMA ferramenta de volta) é
-				// `reachable: false` — o mesmo sinal cobre "upstream quebrado" e "upstream vazio", e é a
-				// mesma ambiguidade que `safeListTools` já aceita ao engolir a exceção como lista vazia.
-				reachable: server.enabled && tools.length > 0,
+				// AGORA O SINAL É LIDO, NÃO INFERIDO. Antes era `enabled && tools.length > 0`, e a
+				// consequência era que "comando errado", "token vencido" e "servidor legitimamente sem
+				// ferramentas" produziam a MESMA palavra na tela. `outcome.ok` vem do próprio upstream.
+				reachable: outcome?.ok === true,
+				// E o motivo viaja junto quando falhou — é a mesma informação que o botão "Testar conexão"
+				// entrega ANTES de salvar, agora disponível também para um servidor JÁ cadastrado. Sem ele,
+				// o dono só descobria o porquê apagando e recadastrando.
+				unreachableReason: outcome?.ok === false ? outcome.error : undefined,
 			}
 		})
 

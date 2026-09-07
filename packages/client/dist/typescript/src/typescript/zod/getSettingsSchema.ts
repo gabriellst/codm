@@ -45,7 +45,8 @@ get "policy"(){
                return mcpApprovalPolicySchema.nullable()
               }
     })),
-"reachable": z.boolean()
+"reachable": z.boolean(),
+"unreachableReason": z.optional(z.string())
     })),
 "mcpPresets": z.array(z.object({
     "key": z.string(),

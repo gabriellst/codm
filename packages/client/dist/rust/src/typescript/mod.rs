@@ -7084,6 +7084,9 @@ pub mod types {
     ///          "transport": {
     ///            "$ref": "#/components/schemas/McpTransport"
     ///          },
+    ///          "unreachableReason": {
+    ///            "type": "string"
+    ///          },
     ///          "url": {
     ///            "type": "string"
     ///          }
@@ -7374,6 +7377,9 @@ pub mod types {
     ///    "transport": {
     ///      "$ref": "#/components/schemas/McpTransport"
     ///    },
+    ///    "unreachableReason": {
+    ///      "type": "string"
+    ///    },
     ///    "url": {
     ///      "type": "string"
     ///    }
@@ -7401,6 +7407,12 @@ pub mod types {
         pub reachable: bool,
         pub tools: ::std::vec::Vec<GetSettingsResponseMcpServersItemToolsItem>,
         pub transport: ::codm_contracts_rust::wire::enums::McpTransport,
+        #[serde(
+            rename = "unreachableReason",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub unreachable_reason: ::std::option::Option<::std::string::String>,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub url: ::std::option::Option<::std::string::String>,
     }

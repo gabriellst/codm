@@ -58,6 +58,19 @@ export type McpProbeResult = { ok: true; tools: UpstreamTool[] } | { ok: false; 
 export abstract class McpUpstreamRegistry {
 	/** As ferramentas de todos os servidores HABILITADOS deste dono, já namespeadas por `serverKey`. */
 	abstract listTools(ownerId: string): Promise<UpstreamTool[]>
+	/**
+	 * O MESMO trabalho do `listTools`, mas POR SERVIDOR e sem perder o motivo da falha.
+	 *
+	 * `listTools` achata tudo numa lista só — e achatar é justamente o que apaga a informação: um
+	 * servidor que falhou some da lista exatamente como um servidor que respondeu zero ferramentas.
+	 * Era daí que vinha o `reachable` ambíguo da tela de settings (`enabled && tools.length > 0`), que
+	 * dizia "não alcançável" tanto para um comando errado quanto para um token vencido quanto para um
+	 * servidor legitimamente vazio.
+	 *
+	 * Devolve `McpProbeResult` — o MESMO vocabulário da sonda, de propósito. "Deu certo, e se não, por
+	 * quê" é uma pergunta só, e ter duas formas de respondê-la seria duas verdades a manter em sincronia.
+	 */
+	abstract listToolsByServer(ownerId: string): Promise<Map<string, McpProbeResult>>
 	/** Encaminha uma chamada. NÃO decide política — quem decide é `mcp/approvalPolicy.ts`. */
 	abstract call(input: { ownerId: string; serverKey: string; toolName: string; args: Record<string, unknown> }): Promise<UpstreamCallResult>
 	/** Derruba todo processo/conexão que este registry ainda detém. Idempotente. */

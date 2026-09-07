@@ -95,6 +95,10 @@ export type GetSettings200 = {
          * @type boolean
         */
         reachable: boolean;
+        /**
+         * @type string | undefined
+        */
+        unreachableReason?: string;
     }[];
     /**
      * @type array

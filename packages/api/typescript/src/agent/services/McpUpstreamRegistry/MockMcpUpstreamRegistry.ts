@@ -17,6 +17,41 @@ export class MockMcpUpstreamRegistry extends McpUpstreamRegistry {
 		return this.tools
 	}
 
+	/**
+	 * FALHAS DECLARADAS, por `serverKey` → motivo.
+	 *
+	 * Existe porque AUSÊNCIA e FALHA deixaram de ser a mesma coisa. Antes o mock só sabia simular "esse
+	 * servidor não aparece no achatado", que era o único resultado observável quando `safeListTools`
+	 * engolia a exceção. Agora o motivo sobe junto, e uma suíte que queira provar isso precisa poder
+	 * DIZER qual servidor falhou e com que texto — senão o caminho de erro fica sem cobertura, que é
+	 * exatamente a lacuna que deixou o `reachable` ambíguo passar despercebido.
+	 */
+	readonly failures = new Map<string, string>()
+
+	/**
+	 * Servidores que CONECTAM e publicam ZERO ferramentas — o caso legítimo que era indistinguível de
+	 * "quebrado" antes desta mudança, e que o mock não sabia expressar: sem ferramentas semeadas, o
+	 * servidor simplesmente não aparecia no mapa, exatamente como um que falhou.
+	 *
+	 * Sem esta declaração, um teste do caso "vazio" prova menos do que promete — ele mede ausência, não
+	 * sucesso-sem-conteúdo.
+	 */
+	readonly connectedButEmpty = new Set<string>()
+
+	/** Agrupa as ferramentas semeadas por `serverKey`, e respeita as falhas declaradas. */
+	async listToolsByServer(): Promise<Map<string, McpProbeResult>> {
+		const byServer = new Map<string, McpProbeResult>()
+		for (const tool of this.tools) {
+			const existing = byServer.get(tool.serverKey)
+			const tools = existing?.ok ? [...existing.tools, tool] : [tool]
+			byServer.set(tool.serverKey, { ok: true, tools })
+		}
+		for (const serverKey of this.connectedButEmpty) if (!byServer.has(serverKey)) byServer.set(serverKey, { ok: true, tools: [] })
+		// A falha declarada GANHA da lista semeada: um servidor não pode estar quebrado e publicando.
+		for (const [serverKey, error] of this.failures) byServer.set(serverKey, { ok: false, error })
+		return byServer
+	}
+
 	async call(input: { serverKey: string; toolName: string; args: Record<string, unknown> }): Promise<UpstreamCallResult> {
 		this.calls.push({ serverKey: input.serverKey, toolName: input.toolName, args: input.args })
 		return this.result
