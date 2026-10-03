@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript-cloud/_http";
-import type { DesktopCallbackQueryResponse, DesktopCallbackQueryParams } from "../types/DesktopCallback.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
+import type { DesktopCallbackQueryResponse, DesktopCallbackQueryParams } from "../types/DesktopCallback.ts";
 
 function getDesktopCallbackUrl() {
   const res = { method: 'GET', url: `/desktop-callback` as const }

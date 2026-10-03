@@ -12,7 +12,12 @@ import i18n from '@/lib/i18n'
 import { Dialog } from '@codm/app-ui/dialog'
 import { useDialogStore } from '@/stores/useDialogStore'
 import { mountRouter, type MountedRouter } from '../../../../../../../tests/support/mountRouter'
-import { loadBackendGivens, useIntegrationBackend, type IntegrationBackend } from '../../../../../../../tests/support/integration-harness'
+import {
+	loadBackendGivens,
+	useIntegrationBackend,
+	type IntegrationBackend,
+	INTEGRATION_BOOT_TIMEOUT_MS,
+} from '../../../../../../../tests/support/integration-harness'
 import { ThreadSettingsDialog } from '.'
 
 /**
@@ -50,10 +55,10 @@ let backend: IntegrationBackend
 
 beforeAll(async () => {
 	backend = await useIntegrationBackend()
-})
+}, INTEGRATION_BOOT_TIMEOUT_MS)
 afterAll(async () => {
 	await backend.stop()
-})
+}, INTEGRATION_BOOT_TIMEOUT_MS)
 
 describe('ThreadSettingsDialog — contra o backend real', () => {
 	let mounted: MountedRouter | null = null

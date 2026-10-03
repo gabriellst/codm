@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { SendDirectMessageMutationRequest, SendDirectMessageMutationResponse, SendDirectMessagePathParams } from "../types/SendDirectMessage.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { SendDirectMessageMutationRequest, SendDirectMessageMutationResponse, SendDirectMessagePathParams } from "../types/SendDirectMessage.ts";
 
 function getSendDirectMessageUrl(threadId: SendDirectMessagePathParams["threadId"]) {
   const res = { method: 'POST', url: `/threads/${threadId}/direct` as const }

@@ -542,10 +542,10 @@ export const REPO = {
 		// BETTER_AUTH_SECRET/URL above — the auth bounded context ships in the base template, not a
 		// per-product add-on. Empty defaults keep the LOCAL daemon profile (which never constructs
 		// BetterAuth) booting without them.
-		GITHUB_CLIENT_ID: { consumers: ['apiTs'], schema: 'kernel', example: '' },
-		GITHUB_CLIENT_SECRET: { consumers: ['apiTs'], schema: 'kernel', example: '', secret: true },
-		GOOGLE_CLIENT_ID: { consumers: ['apiTs'], schema: 'kernel', example: '' },
-		GOOGLE_CLIENT_SECRET: { consumers: ['apiTs'], schema: 'kernel', example: '', secret: true },
+		GITHUB_CLIENT_ID: { consumers: ['apiTs'], schema: 'kernel', group: 'social-auth', example: '' },
+		GITHUB_CLIENT_SECRET: { consumers: ['apiTs'], schema: 'kernel', group: 'social-auth', example: '', secret: true },
+		GOOGLE_CLIENT_ID: { consumers: ['apiTs'], schema: 'kernel', group: 'social-auth', example: '' },
+		GOOGLE_CLIENT_SECRET: { consumers: ['apiTs'], schema: 'kernel', group: 'social-auth', example: '', secret: true },
 		// Cloud profile's own public origin — better-auth's trustedOrigins/baseURL (distinct from
 		// CORS_ALLOWED_ORIGINS, which governs the general API's cross-origin allowlist). Defaults to
 		// API_URL when unset (core Config.ts cross-field default).
@@ -695,7 +695,7 @@ export interface EnvDecl {
 	 *  active consumers, by design) ships in every stamp unconditionally, the same posture as the
 	 *  literal `'compose'` consumer, instead of being silently pruned because no workspace
 	 *  "consumes" it. `'billing-gateway'` is presentational-only. */
-	group?: 'billing-gateway' | 'parked'
+	group?: 'billing-gateway' | 'parked' | 'social-auth'
 	example: string
 	doc?: string
 	secret?: boolean

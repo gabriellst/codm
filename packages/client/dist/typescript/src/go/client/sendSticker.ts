@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { SendStickerMutationRequest, SendStickerMutationResponse } from "../types/SendSticker.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { SendStickerMutationRequest, SendStickerMutationResponse } from "../types/SendSticker.ts";
 
 function getSendStickerUrl() {
   const res = { method: 'POST', url: `/messaging/messages/sticker` as const }

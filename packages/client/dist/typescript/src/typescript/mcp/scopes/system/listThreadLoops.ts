@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/system/_http";
-import type { ListThreadLoopsQueryResponse, ListThreadLoopsPathParams } from "../../../types/ListThreadLoops.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/system/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { ListThreadLoopsQueryResponse, ListThreadLoopsPathParams } from "../../../types/ListThreadLoops.ts";
 
 /**
  * @description This conversation's scheduled prompts (loops) (T11)

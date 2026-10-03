@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript-cloud/_http";
-import type { EnableOwnerMutationResponse } from "../types/EnableOwner.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
+import type { EnableOwnerMutationResponse } from "../types/EnableOwner.ts";
 
 function getEnableOwnerUrl() {
   const res = { method: 'POST', url: `/owners/enable` as const }

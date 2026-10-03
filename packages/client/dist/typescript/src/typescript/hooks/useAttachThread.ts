@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { AttachThreadMutationRequest, AttachThreadMutationResponse } from "../types/AttachThread.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { attachThread } from "../client/attachThread.ts";
+import type { AttachThreadMutationRequest, AttachThreadMutationResponse } from "../types/AttachThread.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { attachThread } from "../client/attachThread.ts";
 
 export const attachThreadMutationKey = () => [{ url: '/threads' }] as const
 

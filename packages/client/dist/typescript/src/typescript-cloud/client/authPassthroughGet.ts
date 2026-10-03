@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript-cloud/_http";
-import type { AuthPassthroughGetQueryResponse } from "../types/AuthPassthroughGet.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
+import type { AuthPassthroughGetQueryResponse } from "../types/AuthPassthroughGet.ts";
 
 function getAuthPassthroughGetUrl() {
   const res = { method: 'GET', url: `/auth/*` as const }

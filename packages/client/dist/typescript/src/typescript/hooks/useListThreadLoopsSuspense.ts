@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { ListThreadLoopsQueryResponse, ListThreadLoopsPathParams } from "../types/ListThreadLoops.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
-import { listThreadLoops } from "../client/listThreadLoops.ts";
+import type { ListThreadLoopsQueryResponse, ListThreadLoopsPathParams } from "../types/ListThreadLoops.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { listThreadLoops } from "../client/listThreadLoops.ts";
 
 export const listThreadLoopsSuspenseQueryKey = (threadId: ListThreadLoopsPathParams["threadId"] | undefined) => [{ url: '/threads/:threadId/loops', params: {threadId:threadId} }] as const
 

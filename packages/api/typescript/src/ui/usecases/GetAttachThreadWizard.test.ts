@@ -11,7 +11,8 @@ import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed } from '@test/support'
 import { LibSqlDatabaseDriver } from '@codm/core-typescript'
 import { channels, remotes } from '@codm/contracts/db'
-import { ChannelKind, ChannelStatus, ContactKind, ProviderKind, ProviderStatus } from '@codm/contracts-typescript/wire/enums'
+import { AgentModelId, ChannelKind, ChannelStatus, ContactKind, ProviderKind, ProviderStatus } from '@codm/contracts-typescript/wire/enums'
+import { modelsFor } from '@catalog'
 import { ProviderDetector, MockProviderDetector } from '@agent/services/ProviderDetector'
 import { GetAttachThreadWizard } from './GetAttachThreadWizard'
 
@@ -185,5 +186,39 @@ describe('GetAttachThreadWizard', () => {
 		// The one CLI with a runner class stays offerable — the guard narrows the list, it does not empty it.
 		const claude = out.providers.find(p => p.provider === ProviderKind.CLAUDE_CODE)
 		expect(claude).toMatchObject({ status: ProviderStatus.DETECTED, comingSoon: false, available: true })
+	})
+
+	/**
+	 * THE SECOND LIE ON THE SAME SCREEN, and it needed no bad data to show up — only an absent field.
+	 *
+	 * `ProviderOptionSchema` carried no catalog, so the wizard's model select had nothing to filter by
+	 * and rendered the flat `AgentModelIdEnum` on every row: claude offered TERRA and LUNA, codex
+	 * offered SONNET, OPUS and HAIKU. Every one of those is a codename the OTHER binary answers with
+	 * `not supported for your account` — a 400 on the turn.
+	 *
+	 * The assertions below are written as a COUNTER-PROOF, not as an equality against a copy of the
+	 * catalog: a test that merely restated `[DEFAULT, OPUS, SONNET, HAIKU]` would keep passing if
+	 * `modelsFor` were swapped for the flat enum on a row whose catalog happened to match. What must
+	 * never hold again is a member of one provider's row appearing in the other's.
+	 */
+	it('each provider carries ITS OWN model catalog — no codename crosses to the other binary', async () => {
+		const out = await wizard.execute({ ownerId: OWNER })
+
+		const claude = out.providers.find(p => p.provider === ProviderKind.CLAUDE_CODE)
+		const codex = out.providers.find(p => p.provider === ProviderKind.CODEX)
+
+		expect(claude?.models).toEqual([...modelsFor(ProviderKind.CLAUDE_CODE)])
+		expect(codex?.models).toEqual([...modelsFor(ProviderKind.CODEX)])
+
+		// The counter-proof: the crossing the flat enum produced, in both directions.
+		expect(claude?.models).not.toContain(AgentModelId.TERRA)
+		expect(claude?.models).not.toContain(AgentModelId.LUNA)
+		expect(codex?.models).not.toContain(AgentModelId.SONNET)
+		expect(codex?.models).not.toContain(AgentModelId.OPUS)
+		expect(codex?.models).not.toContain(AgentModelId.HAIKU)
+
+		// And DEFAULT is on both, because "omit --model" is a choice every binary honours.
+		expect(claude?.models).toContain(AgentModelId.DEFAULT)
+		expect(codex?.models).toContain(AgentModelId.DEFAULT)
 	})
 })

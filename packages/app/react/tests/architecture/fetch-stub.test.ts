@@ -2,7 +2,7 @@
 // os ofensores REAIS de hoje (esperados: os testes atuais que fazem `globalThis.fetch =`), e cole
 // os caminhos. A onda B esvazia a lista; o estado final é [] (spec AC-5).
 import { describe, expect, it } from 'bun:test'
-import { Glob } from 'bun'
+import { scanPosixSync } from './support/scan'
 
 /**
  * RAIL COM INVENTÁRIO (spec AC-5, padrão da varredura de rename): stub manual de
@@ -15,9 +15,8 @@ const INVENTORY: readonly string[] = []
 
 describe('rail: stub manual de fetch só no inventário (que só encolhe)', () => {
 	it('nenhum ofensor fora do inventário', () => {
-		const glob = new Glob('src/**/*.test.{ts,tsx}')
 		const offenders: string[] = []
-		for (const file of glob.scanSync({ cwd: `${import.meta.dir}/../..` })) {
+		for (const file of scanPosixSync('src/**/*.test.{ts,tsx}', `${import.meta.dir}/../..`)) {
 			const source = require('node:fs').readFileSync(`${import.meta.dir}/../../${file}`, 'utf8') as string
 			if (/globalThis\.fetch\s*=/.test(source) && !INVENTORY.includes(file)) offenders.push(file)
 		}

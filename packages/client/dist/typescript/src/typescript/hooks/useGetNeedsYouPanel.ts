@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { GetNeedsYouPanelQueryResponse, GetNeedsYouPanelPathParams } from "../types/GetNeedsYouPanel.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
-import { getNeedsYouPanel } from "../client/getNeedsYouPanel.ts";
+import type { GetNeedsYouPanelQueryResponse, GetNeedsYouPanelPathParams } from "../types/GetNeedsYouPanel.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
+import { getNeedsYouPanel } from "../client/getNeedsYouPanel.ts";
 
 export const getNeedsYouPanelQueryKey = (threadId: GetNeedsYouPanelPathParams["threadId"] | undefined) => [{ url: '/threads/:threadId/needs-you', params: {threadId:threadId} }] as const
 

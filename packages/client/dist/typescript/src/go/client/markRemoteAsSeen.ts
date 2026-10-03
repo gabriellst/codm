@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { MarkRemoteAsSeenMutationRequest, MarkRemoteAsSeenMutationResponse } from "../types/MarkRemoteAsSeen.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { MarkRemoteAsSeenMutationRequest, MarkRemoteAsSeenMutationResponse } from "../types/MarkRemoteAsSeen.ts";
 
 function getMarkRemoteAsSeenUrl() {
   const res = { method: 'POST', url: `/channel/remotes/mark-as-seen` as const }

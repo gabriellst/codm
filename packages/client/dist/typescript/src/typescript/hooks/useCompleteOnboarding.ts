@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { CompleteOnboardingMutationResponse } from "../types/CompleteOnboarding.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { completeOnboarding } from "../client/completeOnboarding.ts";
+import type { CompleteOnboardingMutationResponse } from "../types/CompleteOnboarding.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { completeOnboarding } from "../client/completeOnboarding.ts";
 
 export const completeOnboardingMutationKey = () => [{ url: '/ui/onboarding/complete' }] as const
 

@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { AttachThreadMutationRequest, AttachThreadMutationResponse } from "../types/AttachThread.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { AttachThreadMutationRequest, AttachThreadMutationResponse } from "../types/AttachThread.ts";
 
 function getAttachThreadUrl() {
   const res = { method: 'POST', url: `/threads` as const }

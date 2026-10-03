@@ -1,6 +1,14 @@
 import { sql } from 'drizzle-orm'
 import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
-import { AgentModelId, MailboxItemKind, MailboxTargetKind, ProviderKind } from '../../../generated/typescript/src/wire/enums'
+import {
+	AgentModelId,
+	MailboxItemKind,
+	MailboxTargetKind,
+	McpApprovalDecision,
+	McpApprovalPolicy,
+	McpTransport,
+	ProviderKind,
+} from '../../../generated/typescript/src/wire/enums'
 import { enumCheck } from './_enum'
 
 /**
@@ -157,5 +165,144 @@ export const agentMailbox = sqliteTable(
 		uniqueIndex('agent_mailbox_dedup_unq').on(t.dedupKey),
 		// The dispatcher's own query: the oldest unconsumed, unleased, unpoisoned item per target.
 		index('agent_mailbox_pending_idx').on(t.targetKind, t.targetId, t.consumedAt, t.createdAt).where(sql`dead_at IS NULL`),
+	],
+)
+
+/**
+ * `agent_mcp_servers` — os servidores MCP de terceiros que o dono registrou nesta máquina.
+ *
+ * Agregado FINO, na mesma forma que `workspace` (uma pasta que o operador registrou): a única
+ * invariante com dentes é unicidade, e ela é do banco. `key` não é decoração — é o namespace das
+ * ferramentas deste servidor dentro da NOSSA porta (`<key>__<tool>`, que chega ao CLI como
+ * `mcp__codm__<key>__<tool>`), então uma colisão de key é uma colisão de nome de ferramenta.
+ *
+ * As credenciais moram AQUI, não no keychain. Este mesmo arquivo SQLite já carrega as tabelas
+ * `whatsmeow_*` com a sessão do WhatsApp, então material de credencial já reside nele; um keychain só
+ * para MCP criaria um segundo domicílio de segredo e exigiria o daemon (Bun) falar com o keychain,
+ * coisa que hoje só o shell Tauri faz.
+ *
+ * `command`/`args`/`env` são do transporte STDIO; `url`/`headers` são do HTTP. Nenhum é NOT NULL
+ * porque a obrigatoriedade é POR TRANSPORTE — a invariante vive no schema Zod da entidade, que é uma
+ * união discriminada, e não numa constraint que só saberia expressar metade dela.
+ */
+export const mcpServers = sqliteTable(
+	'agent_mcp_servers',
+	{
+		id: text('id').primaryKey(),
+		ownerId: text('owner_id').notNull(),
+		/** Namespace das ferramentas deste servidor. Único por dono — ver o índice abaixo. */
+		key: text('key').notNull(),
+		transport: text('transport').$type<McpTransport>().notNull(),
+
+		// STDIO
+		command: text('command'),
+		/** JSON array de strings. */
+		args: text('args', { mode: 'json' }).$type<string[]>(),
+		/** JSON object — CARREGA SEGREDO (tokens de API dos servidores de terceiros). */
+		env: text('env', { mode: 'json' }).$type<Record<string, string>>(),
+
+		// HTTP
+		url: text('url'),
+		/** JSON object — CARREGA SEGREDO (Authorization dos servidores de terceiros). */
+		headers: text('headers', { mode: 'json' }).$type<Record<string, string>>(),
+
+		enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+		approvalPolicy: text('approval_policy').$type<McpApprovalPolicy>().notNull().default(McpApprovalPolicy.ASK),
+		/**
+		 * Override POR FERRAMENTA da política acima. Medido contra o `browser-use`, que publica no
+		 * MESMO servidor ações granulares (`browser_click`, `browser_navigate`) e uma autônoma,
+		 * `retry_with_browser_use_agent` — "run a complete browser automation task with an AI agent".
+		 * Sem override o dono escolheria entre inutilizável (`ASK` a cada clique) e inseguro (`AUTO`
+		 * liberando junto uma sessão inteira dirigida por outro modelo).
+		 *
+		 * Mapa e não tabela: a chave é o nome da ferramenta NAQUELE servidor, não tem identidade
+		 * própria, não tem ciclo de vida próprio e só é lida junto do servidor. Uma tabela daria uma
+		 * junção por chamada em troca de nada.
+		 */
+		toolPolicies: text('tool_policies', { mode: 'json' }).$type<Record<string, McpApprovalPolicy>>(),
+
+		addedAt: integer('added_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		version: integer('version').notNull().default(1),
+	},
+	t => [
+		enumCheck('agent_mcp_servers_transport_check', t.transport, Object.values(McpTransport)),
+		enumCheck('agent_mcp_servers_policy_check', t.approvalPolicy, Object.values(McpApprovalPolicy)),
+		// A unicidade que a entidade NÃO consegue garantir sozinha: duas requisições concorrentes
+		// passam pela checagem do use case e só o banco recusa a segunda.
+		uniqueIndex('agent_mcp_servers_owner_key_unq').on(t.ownerId, t.key),
+		index('agent_mcp_servers_owner_idx').on(t.ownerId),
+	],
+)
+
+/**
+ * `agent_mcp_tool_approvals` — uma decisão do dono sobre UMA chamada de ferramenta externa.
+ *
+ * Não é log: tem transição de estado dirigida por humano (PENDING → APPROVED | DENIED) e a invariante
+ * de não reabrir decisão. É também o que torna o replay decidível — o proxy insere PENDING carregando
+ * o `stopId` que levantou, o handler faz o flip POR `stopId` quando o stop é resolvido, e a chamada
+ * repetida no turno seguinte procura por `(issueId, callHash)`.
+ *
+ * `callHash` é hash canônico de `(serverKey, toolName, argumentos serializados com chaves ordenadas)`.
+ * Sem canonicalização, "a mesma chamada" não é decidível: um espaço a mais viraria outra chamada.
+ *
+ * `issueId` NOT NULL é a decisão 14 do spec tornada estrutural — ferramentas upstream existem só no
+ * escopo `issue-handling`, logo todo run que chega aqui é confinado a uma issue. É também o que faz o
+ * confinamento da decisão 8 ser uma cláusula de WHERE em vez de uma regra que alguém precisa lembrar.
+ */
+export const mcpToolApprovals = sqliteTable(
+	'agent_mcp_tool_approvals',
+	{
+		id: text('id').primaryKey(),
+		ownerId: text('owner_id').notNull(),
+		issueId: text('issue_id').notNull(),
+		threadId: text('thread_id').notNull(),
+
+		serverKey: text('server_key').notNull(),
+		toolName: text('tool_name').notNull(),
+		/** Hash canônico de (serverKey, toolName, args). Ver o docblock. */
+		callHash: text('call_hash').notNull(),
+		/** Argumentos verbatim, só para o dono LER no card Needs-you. Nunca para casar chamada. */
+		callArguments: text('call_arguments', { mode: 'json' }).$type<Record<string, unknown>>().notNull(),
+
+		/** PENDING enquanto NULL; APPROVED/DENIED quando o stop é resolvido. */
+		decision: text('decision').$type<McpApprovalDecision>(),
+		/** O stop que carrega a pergunta. É por ele que o handler encontra esta linha. */
+		stopId: text('stop_id').notNull(),
+
+		requestedAt: integer('requested_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		settledAt: integer('settled_at', { mode: 'timestamp_ms' }),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+			.notNull()
+			.$defaultFn(() => new Date()),
+		version: integer('version').notNull().default(1),
+	},
+	t => [
+		// NULL passa: `NULL IN (…)` avalia NULL, e um CHECK do SQLite só reprova em FALSE — que é o
+		// que mantém a linha PENDENTE (decision NULL) legal. Os valores vêm do wire enum e nunca de um
+		// array literal, porque é isso que `enumCheck` promete no próprio docblock.
+		enumCheck('agent_mcp_tool_approvals_decision_check', t.decision, Object.values(McpApprovalDecision)),
+		// O lookup do replay: "esta chamada, nesta issue, já foi aprovada?"
+		//
+		// `uniqueIndex`, e não `index`: a tabela é ESTADO CORRENTE ("esta chamada pode rodar nesta
+		// issue?"), não histórico. Com duas linhas para o mesmo par, a leitura do door vira loteria
+		// (`LIMIT 1` sem `ORDER BY` devolve a mais antiga) e o dono passa a ver uma pergunta nova a cada
+		// retry. O histórico de quantas vezes foi perguntado e o que se respondeu vive em `issue_stops`,
+		// uma linha por stop com `resolution` e `resolvedAt` — que é onde ele pertence.
+		uniqueIndex('agent_mcp_tool_approvals_call_unq').on(t.issueId, t.callHash),
+		// O lookup do handler quando o stop é resolvido.
+		uniqueIndex('agent_mcp_tool_approvals_stop_unq').on(t.stopId),
 	],
 )

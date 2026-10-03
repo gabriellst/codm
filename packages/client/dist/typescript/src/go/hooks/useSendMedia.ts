@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { SendMediaMutationRequest, SendMediaMutationResponse } from "../types/SendMedia.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { sendMedia } from "../client/sendMedia.ts";
+import type { SendMediaMutationRequest, SendMediaMutationResponse } from "../types/SendMedia.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { sendMedia } from "../client/sendMedia.ts";
 
 export const sendMediaMutationKey = () => [{ url: '/messaging/messages/media' }] as const
 

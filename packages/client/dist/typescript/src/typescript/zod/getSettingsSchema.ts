@@ -3,6 +3,8 @@
 * Do not edit manually.
 */
 
+import { mcpApprovalPolicySchema } from "./mcpApprovalPolicySchema.ts";
+import { mcpTransportSchema } from "./mcpTransportSchema.ts";
 import { providerKindSchema } from "./providerKindSchema.ts";
 import { providerStatusSchema } from "./providerStatusSchema.ts";
 import { z } from "zod/v4";
@@ -21,6 +23,29 @@ get "status"(){
 "available": z.boolean(),
 "comingSoon": z.boolean(),
 "version": z.optional(z.string())
+    })),
+"mcpServers": z.array(z.object({
+    "id": z.string(),
+"key": z.string(),
+get "transport"(){
+                return mcpTransportSchema
+              },
+"command": z.optional(z.string()),
+"args": z.optional(z.array(z.string())),
+"url": z.optional(z.string()),
+"envKeys": z.array(z.string()),
+"headerKeys": z.array(z.string()),
+"enabled": z.boolean(),
+get "approvalPolicy"(){
+                return mcpApprovalPolicySchema
+              },
+"tools": z.array(z.object({
+    "name": z.string(),
+get "policy"(){
+               return mcpApprovalPolicySchema.nullable()
+              }
+    })),
+"reachable": z.boolean()
     })),
 "stopCriteria": z.object({
     "serverErrors": z.boolean(),

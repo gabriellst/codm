@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, mkdirSync, rmSync, cpSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, resolve, dirname } from 'node:path'
+import { join, resolve, dirname, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 /**
@@ -100,6 +100,23 @@ function drizzleKitBin(): string {
 	return join(dirname(pkgPath), rel)
 }
 
+/**
+ * O caminho como o drizzle-kit o entende: separador `/`, nos dois SOs.
+ *
+ * `schema` do config nao e um caminho — e um GLOB, e o drizzle-kit o entrega a um matcher onde a
+ * barra invertida e o caractere de ESCAPE. Num caminho absoluto do Windows cada separador vira um
+ * escape, o padrao nao casa com nada, e o drizzle-kit responde `No schema files found for path
+ * config [...]` CITANDO o caminho que existe ali no disco — uma mensagem que parece dizer "o
+ * arquivo sumiu" quando o que ela diz e "eu nao sei ler isso".
+ *
+ * `/` funciona nas APIs de arquivo do Windows tambem, entao esta normalizacao nao e um ramo por
+ * plataforma: e escrever o glob no unico dialeto que os dois lados falam. No mac e no Linux o
+ * `split` nao acha nada para trocar.
+ */
+function toGlobPath(path: string): string {
+	return path.split(sep).join('/')
+}
+
 function writeScratchConfig(configPath: string, schema: string, dialect: Trunk['dialect']): void {
 	const dbCredentials =
 		dialect === 'sqlite' ? `{ url: './scratch.db' }` : `{ url: 'postgresql://codm:codm@localhost:5432/codm_scratch' }`
@@ -107,7 +124,7 @@ function writeScratchConfig(configPath: string, schema: string, dialect: Trunk['
 		configPath,
 		[
 			`export default {`,
-			`\tschema: ${JSON.stringify(schema)},`,
+			`\tschema: ${JSON.stringify(toGlobPath(schema))},`,
 			`\tout: './migrations',`,
 			`\tdialect: ${JSON.stringify(dialect)},`,
 			`\tdbCredentials: ${dbCredentials},`,

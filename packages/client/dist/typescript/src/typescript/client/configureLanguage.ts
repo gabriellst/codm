@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { ConfigureLanguageMutationRequest, ConfigureLanguageMutationResponse, ConfigureLanguagePathParams } from "../types/ConfigureLanguage.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { ConfigureLanguageMutationRequest, ConfigureLanguageMutationResponse, ConfigureLanguagePathParams } from "../types/ConfigureLanguage.ts";
 
 function getConfigureLanguageUrl(threadId: ConfigureLanguagePathParams["threadId"]) {
   const res = { method: 'PUT', url: `/threads/${threadId}/language` as const }

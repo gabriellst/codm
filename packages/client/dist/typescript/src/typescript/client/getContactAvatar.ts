@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { GetContactAvatarQueryResponse, GetContactAvatarPathParams } from "../types/GetContactAvatar.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { GetContactAvatarQueryResponse, GetContactAvatarPathParams } from "../types/GetContactAvatar.ts";
 
 function getGetContactAvatarUrl(channelId: GetContactAvatarPathParams["channelId"], remoteId: GetContactAvatarPathParams["remoteId"]) {
   const res = { method: 'GET', url: `/ui/avatars/${channelId}/${remoteId}` as const }

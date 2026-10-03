@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { CheckIsOnPlatformMutationRequest, CheckIsOnPlatformMutationResponse } from "../types/CheckIsOnPlatform.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { checkIsOnPlatform } from "../client/checkIsOnPlatform.ts";
+import type { CheckIsOnPlatformMutationRequest, CheckIsOnPlatformMutationResponse } from "../types/CheckIsOnPlatform.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { checkIsOnPlatform } from "../client/checkIsOnPlatform.ts";
 
 export const checkIsOnPlatformMutationKey = () => [{ url: '/messaging/messages/check-number' }] as const
 

@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { GetThreadSettingsQueryResponse, GetThreadSettingsPathParams } from "../types/GetThreadSettings.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
-import { getThreadSettings } from "../client/getThreadSettings.ts";
+import type { GetThreadSettingsQueryResponse, GetThreadSettingsPathParams } from "../types/GetThreadSettings.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
+import { getThreadSettings } from "../client/getThreadSettings.ts";
 
 export const getThreadSettingsQueryKey = (threadId: GetThreadSettingsPathParams["threadId"] | undefined) => [{ url: '/threads/:threadId/settings', params: {threadId:threadId} }] as const
 

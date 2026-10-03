@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { SendFileMutationRequest, SendFileMutationResponse } from "../types/SendFile.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { SendFileMutationRequest, SendFileMutationResponse } from "../types/SendFile.ts";
 
 function getSendFileUrl() {
   const res = { method: 'POST', url: `/messaging/messages/file` as const }

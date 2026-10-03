@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { GetIssueStatusQueryResponse, GetIssueStatusPathParams } from "../types/GetIssueStatus.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
-import { getIssueStatus } from "../client/getIssueStatus.ts";
+import type { GetIssueStatusQueryResponse, GetIssueStatusPathParams } from "../types/GetIssueStatus.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
+import { getIssueStatus } from "../client/getIssueStatus.ts";
 
 export const getIssueStatusQueryKey = (threadId: GetIssueStatusPathParams["threadId"] | undefined, issueId: GetIssueStatusPathParams["issueId"] | undefined) => [{ url: '/threads/:threadId/issues/:issueId/status', params: {threadId:threadId,issueId:issueId} }] as const
 

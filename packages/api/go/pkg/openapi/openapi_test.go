@@ -260,6 +260,60 @@ type inlineEnumError struct{ path string }
 
 func (e *inlineEnumError) Error() string { return "inline enum at " + e.path }
 
+// A FORMA EMITIDA PARA json.RawMessage NÃO PODE DEPENDER DA VERSÃO DO TOOLCHAIN.
+//
+// Medido em 2026-09-03: no Go 1.25 `json.RawMessage` é um *types.Named em "encoding/json" e o caso
+// especial do walker casa; no Go 1.27 ele virou um *types.Alias para "encoding/json/jsontext".Value,
+// o caso não casa mais, e o walker desce para o underlying []byte — emitindo `items: {type:
+// integer}`. O efeito é um contrato que MENTE em três linguagens (o cliente Go vira *[]int, o Rust
+// vira Vec<i64>, o zod vira z.array(z.int())) para um campo que carrega JSON arbitrário.
+//
+// Este caso trava a saída, não o caminho: qualquer que seja a forma interna que o toolchain do dia
+// dê a RawMessage, o que sai tem de ser `x-unknown`.
+func TestRawMessageEmitsUnknownRegardlessOfToolchain(t *testing.T) {
+	tmp := t.TempDir()
+	out := filepath.Join(tmp, "openapi.json")
+
+	root := findModuleRoot(t)
+
+	if err := Generate(root, out); err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+
+	body, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var spec map[string]any
+	if err := json.Unmarshal(body, &spec); err != nil {
+		t.Fatalf("parse spec: %v", err)
+	}
+
+	components := spec["components"].(map[string]any)
+	schemas := components["schemas"].(map[string]any)
+
+	connected, ok := schemas["ChannelConnectedPayload"].(map[string]any)
+	if !ok {
+		t.Fatal("missing component: ChannelConnectedPayload")
+	}
+	props, ok := connected["properties"].(map[string]any)
+	if !ok {
+		t.Fatal("ChannelConnectedPayload missing properties")
+	}
+	platformData, ok := props["platformData"].(map[string]any)
+	if !ok {
+		t.Fatal("ChannelConnectedPayload missing platformData property")
+	}
+
+	if unknown, _ := platformData["x-unknown"].(bool); !unknown {
+		t.Errorf("platformData: got x-unknown=%v, want true — json.RawMessage must emit x-unknown regardless of toolchain", platformData["x-unknown"])
+	}
+	if _, hasItems := platformData["items"]; hasItems {
+		t.Errorf("platformData: got items=%v, want no items — json.RawMessage collapsed to its []byte underlying (the toolchain-dependent bug)", platformData["items"])
+	}
+}
+
 // findModuleRoot walks up from the current test file directory until it finds a go.mod.
 func findModuleRoot(t *testing.T) string {
 	t.Helper()

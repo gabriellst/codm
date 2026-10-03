@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { UpdateStopCriteriaMutationRequest, UpdateStopCriteriaMutationResponse } from "../types/UpdateStopCriteria.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { UpdateStopCriteriaMutationRequest, UpdateStopCriteriaMutationResponse } from "../types/UpdateStopCriteria.ts";
 
 function getUpdateStopCriteriaUrl() {
   const res = { method: 'PUT', url: `/settings/stop-criteria` as const }

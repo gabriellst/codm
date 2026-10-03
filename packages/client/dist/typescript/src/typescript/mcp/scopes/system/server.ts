@@ -3,6 +3,8 @@
 * Do not edit manually.
 */
 
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { addWorkspaceHandler } from "./addWorkspace.ts";
 import { completeOnboardingHandler } from "./completeOnboarding.ts";
 import { configureContextBufferHandler } from "./configureContextBuffer.ts";
@@ -57,8 +59,6 @@ import { listThreadLoopsQueryResponseSchema } from "../../../zod/listThreadLoops
 import { listWorkspacesQueryResponseSchema } from "../../../zod/listWorkspacesSchema.ts";
 import { removeWorkspaceMutationResponseSchema } from "../../../zod/removeWorkspaceSchema.ts";
 import { saveOnboardingStepMutationRequestSchema, saveOnboardingStepMutationResponseSchema } from "../../../zod/saveOnboardingStepSchema.ts";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
 export function getServer() {

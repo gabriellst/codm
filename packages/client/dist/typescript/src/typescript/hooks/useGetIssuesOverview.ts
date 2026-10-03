@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { GetIssuesOverviewQueryResponse, GetIssuesOverviewQueryParams } from "../types/GetIssuesOverview.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
-import { getIssuesOverview } from "../client/getIssuesOverview.ts";
+import type { GetIssuesOverviewQueryResponse, GetIssuesOverviewQueryParams } from "../types/GetIssuesOverview.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
+import { getIssuesOverview } from "../client/getIssuesOverview.ts";
 
 export const getIssuesOverviewQueryKey = (params?: GetIssuesOverviewQueryParams) => [{ url: '/issues' }, ...(params ? [params] : [])] as const
 

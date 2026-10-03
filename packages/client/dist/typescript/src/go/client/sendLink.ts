@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/go/_http";
-import type { SendLinkMutationRequest, SendLinkMutationResponse } from "../types/SendLink.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
+import type { SendLinkMutationRequest, SendLinkMutationResponse } from "../types/SendLink.ts";
 
 function getSendLinkUrl() {
   const res = { method: 'POST', url: `/messaging/messages/link` as const }

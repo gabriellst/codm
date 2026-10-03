@@ -128,7 +128,11 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 		// The scope is passed DOWN rather than re-read off `this` inside the callee: it is what confines
 		// the minted credential (D6-8), and threading the already-narrowed value is what makes "a token
 		// is always bound to a scope" hold by type instead of by a cast.
-		yield* runner.run({ ...request, ...(this.mcpScope && { mcp: this.buildMcpInvocation(input, request, this.mcpScope) }) })
+		//
+		// AWAITED, not fired-and-forgotten: `buildMcpInvocation` is now async (see its docblock) precisely
+		// so this call site can await it instead of caching a stale result across runs.
+		const mcp = this.mcpScope ? await this.buildMcpInvocation(input, request, this.mcpScope) : undefined
+		yield* runner.run({ ...request, ...(mcp && { mcp }) })
 	}
 
 	/**
@@ -146,8 +150,20 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 	 * `static IdentitySchema` off the concrete class and parses. An agent that needs an issue fails
 	 * loudly here rather than issuing a token confined to nothing, which would hand a model a
 	 * credential the destination-side comparison cannot constrain.
+	 *
+	 * ### Why this is `async` (Task T5)
+	 * `allowedTools` below comes from `resolveTools(input)`, and for `IssueWorkAgent` that list now
+	 * includes third-party tools discovered at run time — the wire names of whichever upstream MCP
+	 * servers this run's owner has enabled. That discovery is a repository read, necessarily I/O, so it
+	 * cannot be resolved synchronously here the way the rest of this method is. `run()` above is already
+	 * `async *`, so the call site simply awaits — the alternative (a cache populated by a previous run)
+	 * is exactly the one-run lag this Task exists to remove.
 	 */
-	private buildMcpInvocation(input: this['input'], request: { caps?: ProviderCapabilities }, scope: McpScope): AgentMcpInvocation {
+	private async buildMcpInvocation(
+		input: this['input'],
+		request: { caps?: ProviderCapabilities },
+		scope: McpScope,
+	): Promise<AgentMcpInvocation> {
 		// A CLI whose probe says it cannot take an MCP config cannot serve an agent that REQUIRES tools.
 		// NAMED failure, never a silent drop to the inferred path (§4.7): degrading here would look
 		// exactly like a healthy run that simply chose to declare nothing, which is the one distinction
@@ -212,8 +228,22 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 			// roteador fazia, e nada aqui é type-checked contra ele.
 			endpoint: `http://127.0.0.1:${Config.env.API_PORT}${MCP_ROUTE_PREFIX}/${this.mcpScope}`,
 			token,
-			allowedTools: this.tools,
+			allowedTools: await this.resolveTools(input),
 		}
+	}
+
+	/**
+	 * PER-RUN resolution of `allowedTools`, layered over the declared `tools` field (Task T5).
+	 *
+	 * Defaults to `tools` unchanged — the common case, where the declared scope IS the whole answer.
+	 * `IssueWorkAgent` overrides this to append the wire names of whichever third-party MCP tools THIS
+	 * run's owner has enabled, discovered by a repository read keyed on `input.ownerId`. It is a
+	 * separate method rather than a mutation of `tools` itself so `tools` can stay what its own
+	 * docblock says it always is: the derived expansion, and nothing an override can smuggle a
+	 * cross-run cache into.
+	 */
+	protected async resolveTools(_input: this['input']): Promise<readonly AgentToolName[]> {
+		return this.tools
 	}
 
 	/** The ONLY point of variation per agent: input → request, WITHOUT `mcp` and WITHOUT identity. */

@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { ConfigureLanguageMutationRequest, ConfigureLanguageMutationResponse, ConfigureLanguagePathParams } from "../types/ConfigureLanguage.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { configureLanguage } from "../client/configureLanguage.ts";
+import type { ConfigureLanguageMutationRequest, ConfigureLanguageMutationResponse, ConfigureLanguagePathParams } from "../types/ConfigureLanguage.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { configureLanguage } from "../client/configureLanguage.ts";
 
 export const configureLanguageMutationKey = () => [{ url: '/threads/:threadId/language' }] as const
 

@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { SaveOnboardingStepMutationRequest, SaveOnboardingStepMutationResponse } from "../types/SaveOnboardingStep.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { saveOnboardingStep } from "../client/saveOnboardingStep.ts";
+import type { SaveOnboardingStepMutationRequest, SaveOnboardingStepMutationResponse } from "../types/SaveOnboardingStep.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { saveOnboardingStep } from "../client/saveOnboardingStep.ts";
 
 export const saveOnboardingStepMutationKey = () => [{ url: '/ui/onboarding/step' }] as const
 

@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { GetArtifactContentQueryResponse, GetArtifactContentPathParams } from "../types/GetArtifactContent.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
-import { getArtifactContent } from "../client/getArtifactContent.ts";
+import type { GetArtifactContentQueryResponse, GetArtifactContentPathParams } from "../types/GetArtifactContent.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { getArtifactContent } from "../client/getArtifactContent.ts";
 
 export const getArtifactContentSuspenseQueryKey = (threadId: GetArtifactContentPathParams["threadId"] | undefined, artifactId: GetArtifactContentPathParams["artifactId"] | undefined) => [{ url: '/threads/:threadId/artifacts/:artifactId/content', params: {threadId:threadId,artifactId:artifactId} }] as const
 

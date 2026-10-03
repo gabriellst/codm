@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/issue-handling/_http";
-import type { SendDirectMessageMutationRequest, SendDirectMessageMutationResponse, SendDirectMessagePathParams } from "../../../types/SendDirectMessage.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/issue-handling/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { SendDirectMessageMutationRequest, SendDirectMessageMutationResponse, SendDirectMessagePathParams } from "../../../types/SendDirectMessage.ts";
 
 /**
  * @description Send a direct message as the operator (only while paused) (C20)

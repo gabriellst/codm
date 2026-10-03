@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { ResumeThreadMutationResponse, ResumeThreadPathParams } from "../types/ResumeThread.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { ResumeThreadMutationResponse, ResumeThreadPathParams } from "../types/ResumeThread.ts";
 
 function getResumeThreadUrl(threadId: ResumeThreadPathParams["threadId"]) {
   const res = { method: 'POST', url: `/threads/${threadId}/resume` as const }

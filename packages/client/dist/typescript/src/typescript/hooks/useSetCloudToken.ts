@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { SetCloudTokenMutationRequest, SetCloudTokenMutationResponse } from "../types/SetCloudToken.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { setCloudToken } from "../client/setCloudToken.ts";
+import type { SetCloudTokenMutationRequest, SetCloudTokenMutationResponse } from "../types/SetCloudToken.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { setCloudToken } from "../client/setCloudToken.ts";
 
 export const setCloudTokenMutationKey = () => [{ url: '/session/cloud-token' }] as const
 

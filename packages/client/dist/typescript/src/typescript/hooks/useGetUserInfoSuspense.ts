@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { GetUserInfoQueryResponse } from "../types/GetUserInfo.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
-import { getUserInfo } from "../client/getUserInfo.ts";
+import type { GetUserInfoQueryResponse } from "../types/GetUserInfo.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { getUserInfo } from "../client/getUserInfo.ts";
 
 export const getUserInfoSuspenseQueryKey = () => [{ url: '/ui/user-info' }] as const
 

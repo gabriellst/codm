@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { UpdateStopCriteriaMutationRequest, UpdateStopCriteriaMutationResponse } from "../types/UpdateStopCriteria.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { updateStopCriteria } from "../client/updateStopCriteria.ts";
+import type { UpdateStopCriteriaMutationRequest, UpdateStopCriteriaMutationResponse } from "../types/UpdateStopCriteria.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { updateStopCriteria } from "../client/updateStopCriteria.ts";
 
 export const updateStopCriteriaMutationKey = () => [{ url: '/settings/stop-criteria' }] as const
 

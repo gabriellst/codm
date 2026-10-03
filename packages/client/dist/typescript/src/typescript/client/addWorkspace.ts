@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { AddWorkspaceMutationRequest, AddWorkspaceMutationResponse } from "../types/AddWorkspace.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { AddWorkspaceMutationRequest, AddWorkspaceMutationResponse } from "../types/AddWorkspace.ts";
 
 function getAddWorkspaceUrl() {
   const res = { method: 'POST', url: `/workspaces` as const }

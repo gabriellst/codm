@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript-cloud/_http";
-import type { SignInLoopbackQueryResponse, SignInLoopbackQueryParams } from "../types/SignInLoopback.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
+import type { SignInLoopbackQueryResponse, SignInLoopbackQueryParams } from "../types/SignInLoopback.ts";
 
 function getSignInLoopbackUrl() {
   const res = { method: 'GET', url: `/sign-in/loopback` as const }

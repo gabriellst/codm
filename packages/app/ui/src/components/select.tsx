@@ -206,10 +206,24 @@ function SelectLabel({ className, ...props }: SelectPrimitive.GroupLabel.Props) 
 	)
 }
 
+/**
+ * `data-value` espelha o `value` do item — e nao e enfeite.
+ *
+ * `packages/e2e/utils/selectors.ts#pickOptionByValue` PROMETE no proprio docblock que "our SelectItem
+ * primitive forwards `value` as `data-value`, so this locator is collision-free regardless of label
+ * translation". A promessa era falsa neste repo: o atributo nunca era emitido, e o helper — a unica
+ * forma de escolher uma opcao sem depender do rotulo traduzido — nao podia funcionar em spec nenhuma.
+ * Uma linha aqui torna verdadeiro o contrato que o helper ja documentava, em vez de aposentar o
+ * helper e mandar cada spec casar por texto traduzido.
+ *
+ * `value` e um primitivo (string/number/null) na API do Base UI, e o `data-*` fica ANTES do spread
+ * para que um caso que precise sobrescrever ainda possa.
+ */
 function SelectItem({ className, children, ...props }: SelectPrimitive.Item.Props) {
 	return (
 		<SelectPrimitive.Item
 			data-slot="select-item"
+			data-value={props.value == null ? undefined : String(props.value)}
 			className={cn(
 				"focus:bg-hover focus:text-foreground gap-1.5 rounded-none first:rounded-t-md last:rounded-b-md py-2.25 pr-8 pl-2.25 text-sm [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2 relative flex w-full cursor-pointer items-center outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
 				className,

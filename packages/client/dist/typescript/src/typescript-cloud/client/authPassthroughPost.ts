@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript-cloud/_http";
-import type { AuthPassthroughPostMutationResponse } from "../types/AuthPassthroughPost.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
+import type { AuthPassthroughPostMutationResponse } from "../types/AuthPassthroughPost.ts";
 
 function getAuthPassthroughPostUrl() {
   const res = { method: 'POST', url: `/auth/*` as const }

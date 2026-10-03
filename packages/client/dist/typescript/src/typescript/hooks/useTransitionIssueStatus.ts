@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { TransitionIssueStatusMutationRequest, TransitionIssueStatusMutationResponse, TransitionIssueStatusPathParams } from "../types/TransitionIssueStatus.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { transitionIssueStatus } from "../client/transitionIssueStatus.ts";
+import type { TransitionIssueStatusMutationRequest, TransitionIssueStatusMutationResponse, TransitionIssueStatusPathParams } from "../types/TransitionIssueStatus.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { transitionIssueStatus } from "../client/transitionIssueStatus.ts";
 
 export const transitionIssueStatusMutationKey = () => [{ url: '/threads/:threadId/issues/:issueId/status' }] as const
 

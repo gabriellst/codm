@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { GetContactAvatarQueryResponse, GetContactAvatarPathParams } from "../types/GetContactAvatar.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
-import { getContactAvatar } from "../client/getContactAvatar.ts";
+import type { GetContactAvatarQueryResponse, GetContactAvatarPathParams } from "../types/GetContactAvatar.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { getContactAvatar } from "../client/getContactAvatar.ts";
 
 export const getContactAvatarSuspenseQueryKey = (channelId: GetContactAvatarPathParams["channelId"] | undefined, remoteId: GetContactAvatarPathParams["remoteId"] | undefined) => [{ url: '/ui/avatars/:channelId/:remoteId', params: {channelId:channelId,remoteId:remoteId} }] as const
 

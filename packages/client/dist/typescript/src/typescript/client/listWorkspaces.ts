@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { ListWorkspacesQueryResponse } from "../types/ListWorkspaces.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { ListWorkspacesQueryResponse } from "../types/ListWorkspaces.ts";
 
 function getListWorkspacesUrl() {
   const res = { method: 'GET', url: `/workspaces` as const }

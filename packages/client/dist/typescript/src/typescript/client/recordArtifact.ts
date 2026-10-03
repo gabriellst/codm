@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { RecordArtifactMutationRequest, RecordArtifactMutationResponse, RecordArtifactPathParams } from "../types/RecordArtifact.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { RecordArtifactMutationRequest, RecordArtifactMutationResponse, RecordArtifactPathParams } from "../types/RecordArtifact.ts";
 
 function getRecordArtifactUrl(threadId: RecordArtifactPathParams["threadId"]) {
   const res = { method: 'POST', url: `/threads/${threadId}/artifacts` as const }

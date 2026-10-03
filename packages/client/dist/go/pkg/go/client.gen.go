@@ -989,6 +989,42 @@ func (e MailboxTargetKind) Valid() bool {
 	}
 }
 
+// Defines values for McpApprovalDecision.
+const (
+	McpApprovalDecisionAPPROVED McpApprovalDecision = "APPROVED"
+	McpApprovalDecisionDENIED   McpApprovalDecision = "DENIED"
+)
+
+// Valid indicates whether the value is a known member of the McpApprovalDecision enum.
+func (e McpApprovalDecision) Valid() bool {
+	switch e {
+	case McpApprovalDecisionAPPROVED:
+		return true
+	case McpApprovalDecisionDENIED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for McpApprovalPolicy.
+const (
+	McpApprovalPolicyASK  McpApprovalPolicy = "ASK"
+	McpApprovalPolicyAUTO McpApprovalPolicy = "AUTO"
+)
+
+// Valid indicates whether the value is a known member of the McpApprovalPolicy enum.
+func (e McpApprovalPolicy) Valid() bool {
+	switch e {
+	case McpApprovalPolicyASK:
+		return true
+	case McpApprovalPolicyAUTO:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for McpScope.
 const (
 	McpScopeISSUEHANDLING McpScope = "issue-handling"
@@ -1004,6 +1040,24 @@ func (e McpScope) Valid() bool {
 	case McpScopeorchestration:
 		return true
 	case McpScopesystem:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for McpTransport.
+const (
+	McpTransportHTTP  McpTransport = "HTTP"
+	McpTransportSTDIO McpTransport = "STDIO"
+)
+
+// Valid indicates whether the value is a known member of the McpTransport enum.
+func (e McpTransport) Valid() bool {
+	switch e {
+	case McpTransportHTTP:
+		return true
+	case McpTransportSTDIO:
 		return true
 	default:
 		return false
@@ -3831,8 +3885,17 @@ type MailboxItemKind string
 // MailboxTargetKind defines model for MailboxTargetKind.
 type MailboxTargetKind string
 
+// McpApprovalDecision defines model for McpApprovalDecision.
+type McpApprovalDecision string
+
+// McpApprovalPolicy defines model for McpApprovalPolicy.
+type McpApprovalPolicy string
+
 // McpScope defines model for McpScope.
 type McpScope string
+
+// McpTransport defines model for McpTransport.
+type McpTransport string
 
 // MembershipAction defines model for MembershipAction.
 type MembershipAction string

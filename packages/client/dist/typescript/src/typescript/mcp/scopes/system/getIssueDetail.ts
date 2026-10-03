@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/system/_http";
-import type { GetIssueDetailQueryResponse, GetIssueDetailPathParams } from "../../../types/GetIssueDetail.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/system/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { GetIssueDetailQueryResponse, GetIssueDetailPathParams } from "../../../types/GetIssueDetail.ts";
 
 /**
  * @description One issue drill-down: terminal log, routed messages, stops (T12)

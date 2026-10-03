@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
-import type { CompleteOnboardingMutationResponse } from "../../../types/CompleteOnboarding.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { CompleteOnboardingMutationResponse } from "../../../types/CompleteOnboarding.ts";
 
 /**
  * @description Conclui o onboarding do operador — commit atômico do rascunho (workspace/thread) seguido de completedAt

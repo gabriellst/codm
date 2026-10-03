@@ -80,3 +80,27 @@ type VariantField<
 	Match extends Partial<UnionShape<M>>,
 	F extends keyof Extract<UnionShape<M>, Match> & string,
 > = Extract<UnionShape<M>, Match>[F]
+
+/**
+ * Os DOIS lados de um `z.union([...]).and(z.object({...}))` — a forma que o Kubb emite quando um
+ * endpoint tem um corpo discriminado MAIS campos comuns a todas as variantes.
+ *
+ * `registerMcpServerMutationRequestSchema` é exatamente isso: a união STDIO|HTTP interseccionada com
+ * `{ key, approvalPolicy }`. Um `ZodIntersection` não tem `.options` nem `.shape`, então nem
+ * `pickUnionVariant` nem um acesso direto alcançam os sub-schemas — e sem eles um formulário sobre
+ * essa operação não tem como validar campo a campo sem RE-DECLARAR as regras que o controller já
+ * declarou, que é o segundo não-negociável do CLAUDE.md.
+ *
+ * Vive aqui e não no componente pelo mesmo motivo que o resto deste módulo existe: a introspecção da
+ * forma do zod é UM lugar, e não uma linha `.def.left` copiada em cada formulário que topar com a
+ * forma. O acesso é tipado — `.and()` devolve `ZodIntersection<this, T>`, então os dois lados são
+ * conhecidos estaticamente e não há cast nenhum aqui.
+ */
+export function unionOf<M extends z.ZodObject, S extends z.ZodObject>(schema: z.ZodIntersection<z.ZodUnion<readonly M[]>, S>) {
+	return schema.def.left
+}
+
+/** O lado COMUM da mesma intersecção — os campos que toda variante carrega (`key`, `approvalPolicy`). */
+export function sharedOf<M extends z.ZodObject, S extends z.ZodObject>(schema: z.ZodIntersection<z.ZodUnion<readonly M[]>, S>) {
+	return schema.def.right
+}

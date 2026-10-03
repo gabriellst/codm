@@ -37,6 +37,11 @@ import "./enums/provider-status.tsp";
 import "./enums/agent-model-id.tsp";
 import "./enums/agent-stop-reason.tsp";
 import "./enums/mcp-scope.tsp";
+// Third-party MCP server vocabulary — how the daemon reaches a registered external MCP server
+// (transport) and how the proxy gates its tools behind the owner's approval (policy / decision).
+import "./enums/mcp-transport.tsp";
+import "./enums/mcp-approval-policy.tsp";
+import "./enums/mcp-approval-decision.tsp";
 import "./enums/workspace-badge.tsp";
 import "./enums/thread-status.tsp";
 import "./enums/thread-mode.tsp";

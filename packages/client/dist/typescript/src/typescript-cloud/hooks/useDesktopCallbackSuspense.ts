@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { DesktopCallbackQueryResponse, DesktopCallbackQueryParams } from "../types/DesktopCallback.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
-import { desktopCallback } from "../client/desktopCallback.ts";
+import type { DesktopCallbackQueryResponse, DesktopCallbackQueryParams } from "../types/DesktopCallback.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { desktopCallback } from "../client/desktopCallback.ts";
 
 export const desktopCallbackSuspenseQueryKey = (params: DesktopCallbackQueryParams) => [{ url: '/desktop-callback' }, ...(params ? [params] : [])] as const
 

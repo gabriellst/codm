@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
 import { getBaseUrl } from '@codm/client-typescript/http'
 import { health, createWhatsAppChannel } from '@codm/client-typescript/go'
-import { useIntegrationBackend } from '../support/integration-harness'
+import { useIntegrationBackend, INTEGRATION_BOOT_TIMEOUT_MS, RUNNING_CROSS_SERVICE_LANE } from '../support/integration-harness'
 import type { IntegrationBackend } from '../support/integration-harness'
 
 /**
@@ -61,16 +61,23 @@ import type { IntegrationBackend } from '../support/integration-harness'
  * original fez este `it` falhar com `Invalid UUID`/`validation failed` do lado Go (o corpo sumia) —
  * RED — restaurado, GREEN de novo.
  */
-describe('rail: com services["apiGo"], o boundary do Go aponta pro subprocesso real', () => {
+/**
+ * SO NA LANE CROSS-SERVICE. Esta suite faz `go build` + spawn de subprocesso e boota o backend COM
+ * `services`, e a lei de um-backend-por-processo a torna incompativel com a suite padrao. O
+ * `pathIgnorePatterns` do `bunfig.toml` existia para isso e e INERTE (medido: bun 1.3.4 no Windows,
+ * nenhum padrao exclui nada) — ver o docblock de `RUNNING_CROSS_SERVICE_LANE`. A guarda declarada
+ * vale igual nos dois SOs; `scripts/test-cross-service.ts` e quem liga a flag, um processo por arquivo.
+ */
+describe.skipIf(!RUNNING_CROSS_SERVICE_LANE)('rail: com services["apiGo"], o boundary do Go aponta pro subprocesso real', () => {
 	let backend: IntegrationBackend
 
 	beforeAll(async () => {
 		backend = await useIntegrationBackend({ services: ['apiGo'], identity: 'double' })
-	})
+	}, INTEGRATION_BOOT_TIMEOUT_MS)
 
 	afterAll(async () => {
 		await backend.stop()
-	})
+	}, INTEGRATION_BOOT_TIMEOUT_MS)
 
 	it('o backend reporta a URL do subprocesso do gateway', () => {
 		expect(backend.services.apiGo).toBeDefined()

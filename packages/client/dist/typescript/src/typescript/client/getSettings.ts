@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { GetSettingsQueryResponse } from "../types/GetSettings.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { GetSettingsQueryResponse } from "../types/GetSettings.ts";
 
 function getGetSettingsUrl() {
   const res = { method: 'GET', url: `/ui/settings` as const }

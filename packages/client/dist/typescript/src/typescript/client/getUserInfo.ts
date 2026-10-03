@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { GetUserInfoQueryResponse } from "../types/GetUserInfo.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { GetUserInfoQueryResponse } from "../types/GetUserInfo.ts";
 
 function getGetUserInfoUrl() {
   const res = { method: 'GET', url: `/ui/user-info` as const }

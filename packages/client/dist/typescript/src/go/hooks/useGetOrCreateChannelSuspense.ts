@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { GetOrCreateChannelQueryResponse, GetOrCreateChannelQueryParams } from "../types/GetOrCreateChannel.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
-import { getOrCreateChannel } from "../client/getOrCreateChannel.ts";
+import type { GetOrCreateChannelQueryResponse, GetOrCreateChannelQueryParams } from "../types/GetOrCreateChannel.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { getOrCreateChannel } from "../client/getOrCreateChannel.ts";
 
 export const getOrCreateChannelSuspenseQueryKey = (params: GetOrCreateChannelQueryParams) => [{ url: '/channel/channels/resolve' }, ...(params ? [params] : [])] as const
 

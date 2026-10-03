@@ -57,9 +57,14 @@
 			],
 			"//PORT": "VAZIO DE PROPÓSITO, pelo mesmo motivo que o `dev-spa` ao lado — e a ausência aqui era um bug. O Nitro resolve `process.env.PORT || server.port` e o dotenv dele (override:false) injeta o `PORT=3030` do `.env` (o fallback genérico), então este alvo subia o console EM CIMA da porta do daemon: os dois processos bindavam, o roteamento virava corrida e as chamadas de API voltavam `{\"error\":\"Only HTML requests are supported here\"}` — o handler SSR do TanStack Start respondendo no lugar do api-ts. `PORT=` (vazio-mas-presente) bloqueia a injeção e deixa o `server.port` do vite.config.ts (5173) vencer. Ver o comentário do `server.port` lá.",
 			"options": {
-				"command": "CODM_DEV_OVERLAYS=true PORT= vite --host",
-				"cwd": "packages/app/react"
-			}
+				"command": "bun x vite --host",
+				"cwd": "packages/app/react",
+				"env": {
+					"CODM_DEV_OVERLAYS": "true",
+					"PORT": ""
+				}
+			},
+			"//env": "O env vai DECLARADO aqui, nunca como prefixo `VAR=x cmd` na linha de comando. Aquele prefixo e sintaxe de `sh`: o `cmd.exe` responde `nao e reconhecido como um comando interno`, e no desktop o estrago e maior do que parece — este alvo e o `beforeDevCommand` do Tauri, entao a falha dele derruba o `tauri dev` inteiro com `The \"beforeDevCommand\" terminated with a non-zero status code`, sem citar o env. E a mesma classe que `scripts/build-spa.ts` ja corrigiu ao lado, com a licao escrita no docblock dele: shell script embutido em alvo nx e uma dependencia de plataforma escondida. `options.env` do nx e a mesma informacao sem shell nenhum no meio, valendo igual no mac."
 		},
 		"dev-spa": {
 			"executor": "nx:run-commands",
@@ -71,9 +76,16 @@
 				}
 			],
 			"options": {
-				"command": "CODM_DEV_OVERLAYS=true PORT= CODM_DESKTOP=true CODM_DESKTOP_DEV=true vite --host",
-				"cwd": "packages/app/react"
-			}
+				"command": "bun x vite --host",
+				"cwd": "packages/app/react",
+				"env": {
+					"CODM_DEV_OVERLAYS": "true",
+					"PORT": "",
+					"CODM_DESKTOP": "true",
+					"CODM_DESKTOP_DEV": "true"
+				}
+			},
+			"//env": "O env vai DECLARADO aqui, nunca como prefixo `VAR=x cmd` na linha de comando. Aquele prefixo e sintaxe de `sh`: o `cmd.exe` responde `nao e reconhecido como um comando interno`, e no desktop o estrago e maior do que parece — este alvo e o `beforeDevCommand` do Tauri, entao a falha dele derruba o `tauri dev` inteiro com `The \"beforeDevCommand\" terminated with a non-zero status code`, sem citar o env. E a mesma classe que `scripts/build-spa.ts` ja corrigiu ao lado, com a licao escrita no docblock dele: shell script embutido em alvo nx e uma dependencia de plataforma escondida. `options.env` do nx e a mesma informacao sem shell nenhum no meio, valendo igual no mac."
 		},
 		"storybook-build": {
 			"executor": "nx:run-commands",

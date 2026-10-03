@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/issue-handling/_http";
-import type { RecordArtifactMutationRequest, RecordArtifactMutationResponse, RecordArtifactPathParams } from "../../../types/RecordArtifact.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/issue-handling/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { RecordArtifactMutationRequest, RecordArtifactMutationResponse, RecordArtifactPathParams } from "../../../types/RecordArtifact.ts";
 
 /**
  * @description Record a non-code agent output (image / file / link) (C30)

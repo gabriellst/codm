@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { SteerIssueMutationRequest, SteerIssueMutationResponse, SteerIssuePathParams } from "../types/SteerIssue.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { steerIssue } from "../client/steerIssue.ts";
+import type { SteerIssueMutationRequest, SteerIssueMutationResponse, SteerIssuePathParams } from "../types/SteerIssue.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { steerIssue } from "../client/steerIssue.ts";
 
 export const steerIssueMutationKey = () => [{ url: '/issues/:issueId/steer' }] as const
 

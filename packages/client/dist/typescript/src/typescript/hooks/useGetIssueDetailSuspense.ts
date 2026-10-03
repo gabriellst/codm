@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { GetIssueDetailQueryResponse, GetIssueDetailPathParams } from "../types/GetIssueDetail.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, UseSuspenseQueryOptions, UseSuspenseQueryResult } from "@tanstack/react-query";
-import { getIssueDetail } from "../client/getIssueDetail.ts";
+import type { GetIssueDetailQueryResponse, GetIssueDetailPathParams } from "../types/GetIssueDetail.ts";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { getIssueDetail } from "../client/getIssueDetail.ts";
 
 export const getIssueDetailSuspenseQueryKey = (issueId: GetIssueDetailPathParams["issueId"] | undefined) => [{ url: '/issues/:issueId', params: {issueId:issueId} }] as const
 

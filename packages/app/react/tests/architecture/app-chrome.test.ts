@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test'
+import { scanPosix } from './support/scan'
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
@@ -42,13 +43,8 @@ const ROOT = 'routes/__root.tsx'
 const DEFINITION = 'components/console/AppChrome.tsx'
 
 async function sourceFiles(): Promise<string[]> {
-	const out: string[] = []
-	for await (const entry of new Bun.Glob('**/*.tsx').scan({ cwd: REACT_SRC, onlyFiles: true })) {
-		if (/\.(test|stories)\.tsx$/.test(entry)) continue
-		if (entry === DEFINITION) continue
-		out.push(entry)
-	}
-	return out.sort()
+	const entries = await scanPosix('**/*.tsx', REACT_SRC)
+	return entries.filter(entry => !/\.(test|stories)\.tsx$/.test(entry) && entry !== DEFINITION).sort()
 }
 
 async function mountSites(): Promise<string[]> {

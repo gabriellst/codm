@@ -1,5 +1,6 @@
-import { completeOnboarding } from '@codm/client-typescript/typescript'
+import { completeOnboarding, saveOnboardingStep } from '@codm/client-typescript/typescript'
 import type { ApiSession } from './api'
+import type { AttachedThread } from './thread'
 
 /**
  * CONCLUI O ONBOARDING — pré-requisito de toda spec que NAVEGA para uma rota `(app)` gateada.
@@ -20,7 +21,39 @@ import type { ApiSession } from './api'
  * usa para provar que os FLAGS de setup completam sozinhos. Concluir o onboarding lá dentro
  * apagaria a distinção entre "os pré-requisitos existem" e "o operador concluiu", que é justamente
  * o que aquela spec separa. Quem precisa da tela pede a tela.
+ *
+ * ── POR QUE PRECISA DO `AttachedThread` (consertado aqui) ───────────────────────────────────────
+ * Este helper chamava `completeOnboarding` NU, e desde a reescrita de draft/commit atômico o
+ * `CompleteOnboarding` REVALIDA um rascunho do lado do servidor: sem `contactRef`, `workspace` e
+ * `providers` gravados, o commit é recusado com `ONBOARDING_DRAFT_INCOMPLETE`. O helper vinha
+ * reprovando TODA spec que o usa (medido: `11-artifact-preview` falha idêntico num checkout limpo),
+ * e o defeito era o próprio helper não dizer o que precisa — a mesma crítica que o docblock acima
+ * faz aos atalhos.
+ *
+ * O rascunho é montado a partir do `AttachedThread` que a spec já criou, e não inventado: o mesmo
+ * canal, o mesmo contato e o MESMO workspace por `existingWorkspaceId` (nunca um `path` novo, que
+ * faria `CompleteOnboarding` registrar um segundo workspace para o mesmo diretório). `providers`
+ * é o que a THREAD foi de fato anexada com — lido de volta de `attached.providers`, nunca um
+ * literal `['CLAUDE_CODE']` redigitado aqui. Um literal envelheceria em silêncio no dia em que
+ * alguma spec chamar `givenAttachedThread({ providers: ['CODEX'] })`: o rascunho do onboarding
+ * diria uma coisa e a thread outra, e `CompleteOnboarding` validaria contra um provider que a
+ * thread nunca teve.
  */
-export async function givenCompletedOnboarding(session: ApiSession): Promise<void> {
+export async function givenCompletedOnboarding(session: ApiSession, attached: AttachedThread): Promise<void> {
+	await saveOnboardingStep(
+		{
+			state: {
+				contactRef: {
+					channelId: attached.channelId,
+					externalId: attached.contactExternalId,
+					displayName: attached.contactDisplayName,
+					kind: 'USER',
+				},
+				workspace: { existingWorkspaceId: attached.workspaceId },
+				providers: [...attached.providers],
+			},
+		},
+		{ client: session.client },
+	)
 	await completeOnboarding({ client: session.client })
 }

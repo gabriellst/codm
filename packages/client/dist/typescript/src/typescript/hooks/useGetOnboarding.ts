@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { GetOnboardingQueryResponse } from "../types/GetOnboarding.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { QueryKey, QueryClient, QueryObserverOptions, UseQueryResult } from "@tanstack/react-query";
-import { getOnboarding } from "../client/getOnboarding.ts";
+import type { GetOnboardingQueryResponse } from "../types/GetOnboarding.ts";
 import { queryOptions, useQuery } from "@tanstack/react-query";
+import { getOnboarding } from "../client/getOnboarding.ts";
 
 export const getOnboardingQueryKey = () => [{ url: '/ui/onboarding' }] as const
 

@@ -22,6 +22,22 @@ describe('isRouteShell', () => {
 		expect(isRouteShell('routes/(app)/threads/-hooks/index.tsx')).toBe(false)
 		expect(isRouteShell('routes/(app)/threads/-stores/index.tsx')).toBe(false)
 	})
+
+	/**
+	 * A ENTRADA QUE O CHAMADOR REALMENTE PRODUZ NO WINDOWS.
+	 *
+	 * `Bun.Glob().scan()` devolve o separador nativo — medido: `routes\onboarding\-components\ValueSlide\index.tsx`.
+	 * Os casos acima só usavam `/`, uma forma que aquela plataforma nunca gera, então passavam verdes
+	 * enquanto a varredura classificava TODO componente como shell e emitia 6 CP-03 fabricados. Um gate
+	 * que mente é pior que um gate ausente: o ruído esconde a violação real.
+	 */
+	test('o separador nativo do Windows não muda a classificação', () => {
+		expect(isRouteShell('routes\\(app)\\dashboard\\-components\\HomeDashboard\\index.tsx')).toBe(false)
+		expect(isRouteShell('routes\\(app)\\threads\\-hooks\\index.tsx')).toBe(false)
+		expect(isRouteShell('routes\\(app)\\threads\\-stores\\index.tsx')).toBe(false)
+		// E a contraprova: o shell de verdade continua sendo shell na mesma grafia.
+		expect(isRouteShell('routes\\(app)\\dashboard\\index.tsx')).toBe(true)
+	})
 })
 
 describe('dataHookCall', () => {

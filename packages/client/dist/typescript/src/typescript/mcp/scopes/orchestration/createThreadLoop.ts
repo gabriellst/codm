@@ -1,7 +1,7 @@
 import fetch from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
-import type { CreateThreadLoopMutationRequest, CreateThreadLoopMutationResponse, CreateThreadLoopPathParams } from "../../../types/CreateThreadLoop.ts";
 import type { ResponseErrorConfig } from "@codm/client-typescript/typescript/mcp/scopes/orchestration/_http";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types";
+import type { CreateThreadLoopMutationRequest, CreateThreadLoopMutationResponse, CreateThreadLoopPathParams } from "../../../types/CreateThreadLoop.ts";
 
 /**
  * @description Schedule a recurring whisper into this conversation (C21)

@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { SendVideoMutationRequest, SendVideoMutationResponse } from "../types/SendVideo.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { sendVideo } from "../client/sendVideo.ts";
+import type { SendVideoMutationRequest, SendVideoMutationResponse } from "../types/SendVideo.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { sendVideo } from "../client/sendVideo.ts";
 
 export const sendVideoMutationKey = () => [{ url: '/messaging/messages/video' }] as const
 

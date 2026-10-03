@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { UploadAvatarMutationResponse } from "../types/UploadAvatar.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript-cloud/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { uploadAvatar } from "../client/uploadAvatar.ts";
+import type { UploadAvatarMutationResponse } from "../types/UploadAvatar.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { uploadAvatar } from "../client/uploadAvatar.ts";
 
 export const uploadAvatarMutationKey = () => [{ url: '/identity/account/avatar' }] as const
 

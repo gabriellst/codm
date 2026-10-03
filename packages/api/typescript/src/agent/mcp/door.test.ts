@@ -5,9 +5,11 @@ import { GlobalErrorMapper, HttpStatusCode } from '@codm/core-typescript'
 import '../errors'
 import { AgentName } from '../enums'
 import { InMemoryAgentIdentityService } from '@codm/core-typescript'
-import { McpScope } from '@codm/contracts-typescript/wire/enums'
+import { McpScope, McpApprovalPolicy } from '@codm/contracts-typescript/wire/enums'
 import type { AgentRunIdentity } from '../types/AgentRunIdentity'
+import { MockMcpUpstreamRegistry, type UpstreamTool } from '../services/McpUpstreamRegistry'
 import { McpDoorController } from './door'
+import { upstreamToolName } from './upstream'
 import { wireToolName } from './wire'
 
 /**
@@ -172,4 +174,91 @@ describe('the door grants no ambient authority', () => {
 		// authority before the token was even read: the confused-deputy shape the whole file prevents.
 		expect(new McpDoorController(new InMemoryAgentIdentityService<AgentRunIdentity>()).middlewares).toEqual([])
 	})
+})
+
+/**
+ * TASK T6, STEP T6.2 — the same invariant `upstream.scope.test.ts` proves against a fake transport,
+ * proven here against the REAL door: a real `buildTransport`, a real generated server per scope, and a
+ * `MockMcpUpstreamRegistry` carrying one third-party tool. `ObservableDoor` above cannot answer this —
+ * it substitutes `buildTransport` outright, which is exactly the method that decides whether upstream
+ * merges in. This suite builds the door with `new McpDoorController(tokens, upstream)`, the two-argument
+ * constructor `buildTransport` reads, and lets it run for real.
+ */
+describe('T6 — a token minted outside issue-handling sees no third-party tool at all', () => {
+	const SHELL: UpstreamTool = {
+		serverKey: 'shell',
+		name: 'run',
+		inputSchema: { type: 'object', properties: { cmd: { type: 'string' } } },
+		approvalPolicy: McpApprovalPolicy.AUTO,
+	}
+
+	let tokens: InMemoryAgentIdentityService<AgentRunIdentity>
+	let upstream: MockMcpUpstreamRegistry
+	let door: McpDoorController
+
+	beforeEach(() => {
+		tokens = new InMemoryAgentIdentityService<AgentRunIdentity>()
+		upstream = new MockMcpUpstreamRegistry()
+		upstream.tools = [SHELL]
+		door = new McpDoorController(tokens, upstream)
+	})
+
+	const identityFor = (scope: McpScope): AgentRunIdentity => ({
+		ownerId: OWNER_A,
+		// `issue-handling` is the only scope that carries an issue; the base schema leaves it optional
+		// for exactly this reason (see `AgentRunIdentity`'s docblock).
+		...(scope === McpScope.ISSUE_HANDLING ? { issueId: ISSUE_A } : {}),
+		threadId: THREAD_A,
+		agentName: AgentName.ISSUE_WORK,
+		scope,
+		expiresAt: new Date(Date.now() + 60_000),
+	})
+
+	// Unlike the rest of this file's `authorized`, this one carries `accept` too: everything else here
+	// substitutes `buildTransport`, so the request never reaches the real `WebStandardStreamableHTTPServer
+	// Transport`, whose SDK rejects a request that does not accept BOTH `application/json` AND
+	// `text/event-stream` with a 406 before any JSON-RPC method is even read. This describe block is the
+	// one place that runs the REAL transport, so it is the one place that needs the real header.
+	const authorized = (token: string) => ({
+		authorization: `Bearer ${token}`,
+		'content-type': 'application/json',
+		accept: 'application/json, text/event-stream',
+	})
+	const toolsList = (): string => JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' })
+
+	it('issue-handling lists the upstream tool, namespaced by its server key', async () => {
+		const token = tokens.issue(identityFor(McpScope.ISSUE_HANDLING))
+		const response = (await door.handle(post('issue-handling', toolsList(), authorized(token)))) as unknown as Response
+		const body = (await response.json()) as { result: { tools: { name: string }[] } }
+
+		expect(body.result.tools.map(t => t.name)).toContain(upstreamToolName(SHELL))
+	})
+
+	it.each([McpScope.orchestration, McpScope.system])(
+		'%s does NOT list the upstream tool — the raw generated server answers',
+		async scope => {
+			const token = tokens.issue(identityFor(scope))
+			const response = (await door.handle(post(scope, toolsList(), authorized(token)))) as unknown as Response
+			const body = (await response.json()) as { result: { tools: { name: string }[] } }
+
+			expect(body.result.tools.map(t => t.name)).not.toContain(upstreamToolName(SHELL))
+		},
+	)
+
+	it.each([McpScope.orchestration, McpScope.system])(
+		'%s refuses a tools/call naming the upstream tool — it falls through to the generated server, which does not know it',
+		async scope => {
+			const token = tokens.issue(identityFor(scope))
+			const call = toolCall(upstreamToolName(SHELL), { cmd: 'rm -rf /' })
+			const response = (await door.handle(post(scope, call, authorized(token)))) as unknown as Response
+			const body = (await response.json()) as { result: { isError?: boolean; content: { text?: string }[] } }
+
+			expect(body.result.isError).toBe(true)
+			expect(JSON.stringify(body.result.content)).toContain(upstreamToolName(SHELL))
+			// MEASURED, not inferred from the response shape: the upstream registry was never reached, so
+			// no third-party process saw `cmd: 'rm -rf /'` — the escalation this whole Task exists to prove
+			// impossible never got a chance to happen.
+			expect(upstream.calls).toHaveLength(0)
+		},
+	)
 })

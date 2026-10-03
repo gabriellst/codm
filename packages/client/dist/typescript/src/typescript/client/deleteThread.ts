@@ -4,8 +4,8 @@
 */
 
 import fetch from "@codm/client-typescript/typescript/_http";
-import type { DeleteThreadMutationResponse, DeleteThreadPathParams } from "../types/DeleteThread.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
+import type { DeleteThreadMutationResponse, DeleteThreadPathParams } from "../types/DeleteThread.ts";
 
 function getDeleteThreadUrl(threadId: DeleteThreadPathParams["threadId"]) {
   const res = { method: 'DELETE', url: `/threads/${threadId}` as const }

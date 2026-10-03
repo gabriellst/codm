@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { RecordArtifactMutationRequest, RecordArtifactMutationResponse, RecordArtifactPathParams } from "../types/RecordArtifact.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/typescript/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { recordArtifact } from "../client/recordArtifact.ts";
+import type { RecordArtifactMutationRequest, RecordArtifactMutationResponse, RecordArtifactPathParams } from "../types/RecordArtifact.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { recordArtifact } from "../client/recordArtifact.ts";
 
 export const recordArtifactMutationKey = () => [{ url: '/threads/:threadId/artifacts' }] as const
 

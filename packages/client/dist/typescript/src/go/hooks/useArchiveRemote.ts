@@ -3,11 +3,11 @@
 * Do not edit manually.
 */
 
-import type { ArchiveRemoteMutationRequest, ArchiveRemoteMutationResponse } from "../types/ArchiveRemote.ts";
 import type { Client, RequestConfig, ResponseErrorConfig } from "@codm/client-typescript/go/_http";
 import type { UseMutationOptions, UseMutationResult, QueryClient } from "@tanstack/react-query";
-import { archiveRemote } from "../client/archiveRemote.ts";
+import type { ArchiveRemoteMutationRequest, ArchiveRemoteMutationResponse } from "../types/ArchiveRemote.ts";
 import { mutationOptions, useMutation } from "@tanstack/react-query";
+import { archiveRemote } from "../client/archiveRemote.ts";
 
 export const archiveRemoteMutationKey = () => [{ url: '/channel/remotes/archive' }] as const
 

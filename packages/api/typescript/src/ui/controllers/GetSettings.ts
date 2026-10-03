@@ -1,13 +1,46 @@
 import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
-import { McpScope } from '@codm/contracts-typescript/wire/enums'
+import { McpApprovalPolicy, McpScope, McpTransport, ProviderKind, ProviderStatus } from '@codm/contracts-typescript/wire/enums'
 import { CloudSessionMiddleware } from '@shared/middlewares'
 import { GetSettings, GetSettingsOutputSchema } from '../usecases/GetSettings'
 
 export const GetSettingsControllerInputSchema = z
 	.object({ ctx: z.object({ ownerId: z.uuid() }) })
 	.example([{ ctx: { ownerId: '00000000-0000-4000-8000-000000000001' } }])
-export const GetSettingsControllerOutputSchema = GetSettingsOutputSchema
+export const GetSettingsControllerOutputSchema = GetSettingsOutputSchema.example([
+	{
+		providers: [
+			{ provider: ProviderKind.CLAUDE_CODE, status: ProviderStatus.DETECTED, available: true, comingSoon: false, version: '1.2.3' },
+		],
+		mcpServers: [
+			{
+				id: '019e4d24-6524-7041-9e1c-8108180cdd02',
+				key: 'playwright',
+				transport: McpTransport.STDIO,
+				command: 'npx',
+				args: ['-y', '@playwright/mcp'],
+				envKeys: [],
+				headerKeys: [],
+				enabled: true,
+				approvalPolicy: McpApprovalPolicy.ASK,
+				tools: [
+					{ name: 'click', policy: McpApprovalPolicy.AUTO },
+					{ name: 'navigate', policy: null },
+				],
+				reachable: true,
+			},
+		],
+		stopCriteria: {
+			serverErrors: true,
+			blockedByClassification: true,
+			humanRequested: true,
+			approvalNeeded: true,
+			authRequired: true,
+		},
+		general: { operatorName: 'Ada Lovelace', timezone: 'America/Sao_Paulo', dataDir: '/home/ada/.codm' },
+		appVersion: '0.1.10',
+	},
+])
 
 @injectable()
 export class GetSettingsController extends Controller<typeof GetSettingsControllerInputSchema, typeof GetSettingsControllerOutputSchema> {

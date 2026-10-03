@@ -28,16 +28,26 @@ export function AgentsStep({ providers, defaultValues, onSubmit, className, ...p
 	/**
 	 * O SELECT DE MODELO É LOCAL, DE PROPÓSITO (D3, screen ZbVfW). O desenho mostra um seletor de
 	 * modelo inline na linha do agente disponível — mas `attachThreadMutationRequestSchema` (o
-	 * contrato que este passo grava, `providers: ProviderKind[]`) não carrega modelo nenhum, e
-	 * `GetAttachThreadWizardQueryResponse['providers']` também não expõe um catálogo por provider: o
-	 * único lugar onde a SDK modela "modelo por provider" é `session.models`, um dado por THREAD que
-	 * só existe DEPOIS que a conversa é criada (`ThreadSettingsDialog`, `useConfigureModel`). Escolher
-	 * o modelo aqui, antes de existir thread, não tem onde pousar no fio — e "nada de SDK/contratos"
-	 * é regra dura desta adequação. Este estado fica LOCAL ao passo (nunca submetido, nunca cruza o
-	 * `onSubmit`): fidelidade visual ao desenho sem inventar campo de contrato. Ajustar o modelo de
-	 * verdade continua sendo o trabalho do `ThreadSettingsDialog`, depois que a conversa existe.
+	 * contrato que este passo grava, `providers: ProviderKind[]`) não carrega modelo nenhum. Escolher
+	 * o modelo aqui, antes de existir thread, não tem onde pousar no fio. Este estado fica LOCAL ao
+	 * passo (nunca submetido, nunca cruza o `onSubmit`): fidelidade visual ao desenho sem inventar
+	 * campo de contrato. Ajustar o modelo de verdade continua sendo o trabalho do
+	 * `ThreadSettingsDialog`, depois que a conversa existe.
+	 *
+	 * O QUE MUDOU, E POR QUE ERA UM BUG E NÃO UMA SIMPLIFICAÇÃO. A versão anterior deste docblock
+	 * também justificava renderizar o `AgentModelIdEnum` INTEIRO, alegando que o wizard não expunha
+	 * catálogo por provider. A alegação era verdadeira e a conclusão não: o efeito visível era o
+	 * seletor do claude oferecendo TERRA e LUNA (codinomes do codex) e o do codex oferecendo HAIKU,
+	 * SONNET e OPUS — uma escolha que o `AgentRunnerFactory` responderia com 400 se um dia chegasse ao
+	 * fio. A ausência do campo era o defeito a corrigir, não um fato a acomodar: `ProviderOptionSchema`
+	 * agora carrega `models` (de `PROVIDER_MODELS`, a mesma relação declarada que o
+	 * `ThreadSettingsDialog` já lia), e cada linha filtra pelo catálogo do SEU provider.
+	 *
+	 * E o estado é POR PROVIDER, não um só compartilhado. Com listas diferentes por linha, um único
+	 * `model` guardaria SONNET escolhido no claude e o entregaria ao seletor do codex, que não o
+	 * oferece — o valor cairia fora da lista e o `Select` mostraria vazio.
 	 */
-	const [model, setModel] = useState<AgentModelId>(AgentModelIdEnum.DEFAULT)
+	const [modelByProvider, setModelByProvider] = useState<Partial<Record<ProviderKind, AgentModelId>>>({})
 
 	const form = useForm({
 		defaultValues,
@@ -165,12 +175,13 @@ export function AgentsStep({ providers, defaultValues, onSubmit, className, ...p
 									    `onKeyDown` param a propagação: sem os dois, um Enter/Espaço dado NO SELECT
 									    (para abrir o dropdown) também borbulharia para o `onKeyDown` da linha e
 									    gravaria a escolha do provider — o mouse já era coberto, o teclado não. */}
-									{available && (
+									{available && entry.models.length > 0 && (
 										<Select
 											enum={AgentModelIdEnum}
 											i18nPrefix="enums.AgentModelId"
-											value={model}
-											onValueChange={setModel}
+											values={entry.models}
+											value={modelByProvider[entry.provider] ?? AgentModelIdEnum.DEFAULT}
+											onValueChange={value => setModelByProvider(prev => ({ ...prev, [entry.provider]: value }))}
 											aria-label={t('session.agentModel')}
 											className="w-[125px] shrink-0"
 											onClick={e => e.stopPropagation()}
