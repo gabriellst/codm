@@ -7,12 +7,13 @@ import {
 	MailboxItemKind,
 	MailboxTargetKind,
 	PermissionPosture,
+	IssueStatus,
 	ProviderKind,
 	StopKind,
 	StopResolution,
 	TranscriptKind,
 } from '@codm/contracts-typescript/wire/enums'
-import { TestBed, givenThread, givenWorkspace } from '@test/support'
+import { TestBed, givenIssue, givenThread, givenWorkspace } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { AgentRunner } from '@agent/services/AgentRunner'
 import { AgentRunnerFactory, FixedAgentRunnerFactory } from '@agent/services/AgentRunnerFactory'
@@ -20,6 +21,10 @@ import { MailboxDispatcher } from '@agent/services/MailboxDispatcher'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
 import { RunIssueTurn } from '@agent/usecases/RunIssueTurn'
 import { RunOrchestratorTurn } from '@agent/usecases/RunOrchestratorTurn'
+import { PublishAgentIntegrationEvents } from '@agent/handlers/PublishAgentIntegrationEvents'
+import { RecordStopFromExecution } from '@thread/handlers/RecordStopFromExecution'
+import { MarkIssueNeedsInputFromStop } from '@issue/handlers/MarkIssueNeedsInputFromStop'
+import { IssueRepository } from '@issue/repositories/IssueRepository'
 import { AgentRunStopRaisedEvent } from '@agent/events/AgentRunStopRaisedEvent'
 import { AgentRunOutcome, FactSource, TRANSPORT_STOP_KINDS, TRANSPORT_STOP_RETRIES } from '@agent/enums'
 import type { AgentRunRequest } from '@agent/types/AgentRunRequest'
@@ -200,5 +205,75 @@ describe('Flow (integration): a permission denial stops the work at once', () =>
 
 		expect(out.transportStop).toBeUndefined()
 		expect(await testBed.resolve(ThreadRepository).openStops(thread.id.value)).toHaveLength(0)
+	})
+
+	/**
+	 * The fact the denied issue turn minted, carried through the REAL bridge (`PublishAgentIntegrationEvents`)
+	 * and handed to the two consumers of `integration.thread.stop_raised` — the same explicit chain
+	 * `stalled-issue.flow` uses, because in `integration` mode there is no outbox dispatcher to drain.
+	 */
+	const relayStopFact = async () => {
+		const [fact] = await testBed.resolve(DomainEventRepository).findByType(AgentRunStopRaisedEvent)
+		await testBed.resolve(PublishAgentIntegrationEvents).handle(fact as never)
+		const published = testBed.externalSpy.getPublishedOfType('integration.thread.stop_raised')
+		for (const event of published) {
+			await testBed.resolve(RecordStopFromExecution).handle(event as never)
+			await testBed.resolve(MarkIssueNeedsInputFromStop).handle(event as never)
+		}
+		return published
+	}
+
+	const enqueueWork = async (threadId: string, issueId: string) => {
+		await testBed.resolve(MailboxRepository).enqueue({
+			ownerId: MOCK_CLOUD_OWNER_ID,
+			targetKind: MailboxTargetKind.ISSUE,
+			targetId: issueId,
+			kind: MailboxItemKind.WORK,
+			payload: { issueId, threadId, key: 'moeda', title: 'Troca a moeda', goal: 'troca a moeda', provider: ProviderKind.CLAUDE_CODE },
+			posture: PermissionPosture.AUTO,
+			dedupKey: `work:${issueId}`,
+		})
+	}
+
+	it('AC-10 — a denied turn of a REAL issue: open PERMISSION_DENIED stop on the thread, issue NEEDS_INPUT, channel notice, no retry', async () => {
+		const thread = await roomThread()
+		const issue = await givenIssue(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value, key: 'moeda' })
+		await enqueueWork(thread.id.value, issue.id.value)
+
+		await testBed.resolve(MailboxDispatcher).bind(testContainer).drain()
+		// ONE run: the denial is recorded on the first occurrence, never retried under the same posture.
+		expect(runner.calls).toBe(1)
+
+		expect(await relayStopFact()).toHaveLength(1)
+
+		const stops = await testBed.resolve(ThreadRepository).openStops(thread.id.value)
+		expect(stops).toHaveLength(1)
+		expect(stops[0]?.kind).toBe(StopKind.PERMISSION_DENIED)
+		expect(stops[0]?.issueId).toBe(issue.id.value)
+		expect(stops[0]?.detail).toContain('me libera?')
+
+		const reloaded = await testBed.resolve(IssueRepository).findById(issue.id.value)
+		expect(reloaded?.status).toBe(IssueStatus.NEEDS_INPUT)
+
+		// The channel notice: a SYSTEM transcript entry plus ONE durable delivery command.
+		const entries = await testBed.resolve(ThreadRepository).listEntries(thread.id.value)
+		expect(entries.filter(entry => entry.kind === TranscriptKind.SYSTEM)).toHaveLength(1)
+		expect(await testBed.probe().count('scheduledCommands', { name: 'deliver_channel_message' })).toBe(1)
+	})
+
+	it('AC-10 — with StopPolicy.permissionDenied OFF a denied ISSUE turn raises no stop and no channel notice', async () => {
+		const thread = await roomThread()
+		const issue = await givenIssue(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value, key: 'moeda' })
+		await testBed.resolve(StopPolicyConfigRepository).upsert(MOCK_CLOUD_OWNER_ID, { ...DEFAULT_STOP_POLICY, permissionDenied: false })
+		await enqueueWork(thread.id.value, issue.id.value)
+
+		await testBed.resolve(MailboxDispatcher).bind(testContainer).drain()
+		expect(runner.calls).toBe(1)
+		await relayStopFact()
+
+		expect(await testBed.resolve(ThreadRepository).openStops(thread.id.value)).toHaveLength(0)
+		const entries = await testBed.resolve(ThreadRepository).listEntries(thread.id.value)
+		expect(entries.some(entry => entry.kind === TranscriptKind.SYSTEM)).toBe(false)
+		expect(await testBed.probe().count('scheduledCommands', { name: 'deliver_channel_message' })).toBe(0)
 	})
 })

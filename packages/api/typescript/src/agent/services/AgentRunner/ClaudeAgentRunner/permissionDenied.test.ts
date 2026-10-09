@@ -98,11 +98,14 @@ describe('ClaudeAgentRunner — a blocked action is a PERMISSION_DENIED transpor
 	it('AC-9 — a non-empty permission_denials stops it too, and the detail names the denied tool', async () => {
 		const result = await runOn({
 			...fixture('auto-no-tool.result.json'),
+			result: 'Preciso editar o arquivo de hosts — me libera? (texto final do agente)',
 			permission_denials: [
 				{ tool_name: 'Write', tool_use_id: 'tu_2', tool_input: { file_path: '/etc/hosts', content: 'sk_live_SENTINEL_VALUE_9f3a' } },
 			],
 		})
 		expect(result.stop?.kind).toBe(StopKind.PERMISSION_DENIED)
+		// AC-9: the agent's own final text — its approval request — leads the detail, ahead of the tool list.
+		expect(result.stop?.detail).toContain('Preciso editar o arquivo de hosts — me libera? (texto final do agente)')
 		expect(result.stop?.detail).toContain('Write')
 		expect(result.stop?.detail).toContain('file_path')
 		// The input's VALUES never reach the detail — an input can carry a credential. The sentinel is a

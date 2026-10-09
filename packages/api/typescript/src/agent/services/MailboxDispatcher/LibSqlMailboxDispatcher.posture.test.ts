@@ -69,56 +69,59 @@ describe('a turn runs with the posture of the item it consumed', () => {
 			.db.insert(agentMailbox)
 			.values({ id: uuidv7(), ownerId: MOCK_CLOUD_OWNER_ID, dedupKey: `posture:${uuidv7()}`, ...values })
 
-	it('the dispatcher hands the claimed posture to the orchestrator turn AND to the issue turn', async () => {
-		const workspace = await givenWorkspace(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
-		const thread = await givenThread(testBed, {
-			ownerId: MOCK_CLOUD_OWNER_ID,
-			workspaceId: workspace.id.value,
-			providers: [ProviderKind.CLAUDE_CODE],
-		})
+	it.each([PermissionPosture.BYPASS, PermissionPosture.AUTO])(
+		'the dispatcher hands the claimed %s posture to the orchestrator turn AND to the issue turn',
+		async posture => {
+			const workspace = await givenWorkspace(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+			const thread = await givenThread(testBed, {
+				ownerId: MOCK_CLOUD_OWNER_ID,
+				workspaceId: workspace.id.value,
+				providers: [ProviderKind.CLAUDE_CODE],
+			})
 
-		const seen: Record<string, PermissionPosture | undefined> = {}
-		const spy = (label: string) => ({
-			bindContainer() {
-				return this
-			},
-			async execute(input: { posture: PermissionPosture }) {
-				seen[label] = input.posture
-				return { spoke: true }
-			},
-		})
-		const spyContainer = testContainer.createChildContainer()
-		spyContainer.registerInstance(RunOrchestratorTurn as never, spy('thread') as never)
-		spyContainer.registerInstance(RunIssueTurn as never, spy('issue') as never)
+			const seen: Record<string, PermissionPosture | undefined> = {}
+			const spy = (label: string) => ({
+				bindContainer() {
+					return this
+				},
+				async execute(input: { posture: PermissionPosture }) {
+					seen[label] = input.posture
+					return { spoke: true }
+				},
+			})
+			const spyContainer = testContainer.createChildContainer()
+			spyContainer.registerInstance(RunOrchestratorTurn as never, spy('thread') as never)
+			spyContainer.registerInstance(RunIssueTurn as never, spy('issue') as never)
 
-		await insertItem({
-			targetKind: MailboxTargetKind.THREAD,
-			targetId: thread.id.value,
-			kind: MailboxItemKind.OPERATOR_MESSAGE,
-			payload: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: uuidv7(), speaker: 'operator', text: 'troca a moeda' },
-			posture: PermissionPosture.BYPASS,
-		})
-		await insertItem({
-			targetKind: MailboxTargetKind.ISSUE,
-			targetId: uuidv7(),
-			kind: MailboxItemKind.WORK,
-			payload: { threadId: thread.id.value, key: 'moeda', title: 'moeda', goal: 'troca a moeda', provider: ProviderKind.CLAUDE_CODE },
-			posture: PermissionPosture.BYPASS,
-		})
+			await insertItem({
+				targetKind: MailboxTargetKind.THREAD,
+				targetId: thread.id.value,
+				kind: MailboxItemKind.OPERATOR_MESSAGE,
+				payload: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: uuidv7(), speaker: 'operator', text: 'troca a moeda' },
+				posture,
+			})
+			await insertItem({
+				targetKind: MailboxTargetKind.ISSUE,
+				targetId: uuidv7(),
+				kind: MailboxItemKind.WORK,
+				payload: { threadId: thread.id.value, key: 'moeda', title: 'moeda', goal: 'troca a moeda', provider: ProviderKind.CLAUDE_CODE },
+				posture,
+			})
 
-		const dispatcher = new LibSqlMailboxDispatcher(
-			testBed.resolve(MailboxRepository),
-			testBed.resolve(ThreadRepository),
-			testBed.resolve(WorkspaceRepository),
-			testBed.resolve(AgentSessionRepository),
-			testBed.resolve(LoggingService),
-			testBed.resolve(CloudSession),
-		).bind(spyContainer)
-		await dispatcher.drain()
+			const dispatcher = new LibSqlMailboxDispatcher(
+				testBed.resolve(MailboxRepository),
+				testBed.resolve(ThreadRepository),
+				testBed.resolve(WorkspaceRepository),
+				testBed.resolve(AgentSessionRepository),
+				testBed.resolve(LoggingService),
+				testBed.resolve(CloudSession),
+			).bind(spyContainer)
+			await dispatcher.drain()
 
-		expect(seen.thread).toBe(PermissionPosture.BYPASS)
-		expect(seen.issue).toBe(PermissionPosture.BYPASS)
-	})
+			expect(seen.thread).toBe(posture)
+			expect(seen.issue).toBe(posture)
+		},
+	)
 
 	it('RunIssueTurn puts the posture on the runner request AND on the run token the tools read back', async () => {
 		const runner = new CapturingRunner()
@@ -141,6 +144,29 @@ describe('a turn runs with the posture of the item it consumed', () => {
 		const request = runner.requests[0]
 		expect(request?.posture).toBe(PermissionPosture.BYPASS)
 		expect(testBed.resolve(AgentIdentityService).resolve(request?.mcp?.token ?? '')?.posture).toBe(PermissionPosture.BYPASS)
+	})
+
+	it('RunIssueTurn does the same for AUTO — the request and the run token both stay AUTO', async () => {
+		const runner = new CapturingRunner()
+		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(runner))
+
+		await testBed.resolve(RunIssueTurn).execute({
+			ownerId: MOCK_CLOUD_OWNER_ID,
+			issueId: uuidv7(),
+			threadId: uuidv7(),
+			key: 'moeda',
+			title: 'Troca a moeda',
+			provider: ProviderKind.CLAUDE_CODE,
+			workspacePath: '/tmp/workspace',
+			prompt: 'troca a moeda da Loja 01',
+			turnKind: MailboxItemKind.WORK,
+			messageId: uuidv7(),
+			posture: PermissionPosture.AUTO,
+		})
+
+		const request = runner.requests[0]
+		expect(request?.posture).toBe(PermissionPosture.AUTO)
+		expect(testBed.resolve(AgentIdentityService).resolve(request?.mcp?.token ?? '')?.posture).toBe(PermissionPosture.AUTO)
 	})
 
 	it('RunOrchestratorTurn does the same for the orchestrator — AUTO stays AUTO', async () => {

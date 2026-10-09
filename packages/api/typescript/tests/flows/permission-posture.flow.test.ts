@@ -123,6 +123,19 @@ describe('Flow (integration): the posture is stamped by whoever triggered the wo
 		expect(steer?.posture).toBe(PermissionPosture.BYPASS)
 	})
 
+	it('AC-5 — a loop tick`s STEER to an open issue is AUTO even though the operator holds canElevate', async () => {
+		const thread = await roomThread()
+		const issue = await givenIssue(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value, key: 'moeda' })
+
+		await testBed
+			.resolve(SteerThread)
+			.execute({ ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value, text: 'bom dia', firedByLoop: 'seg 09:00' })
+
+		const steer = (await claimAll()).find(item => item.targetKind === MailboxTargetKind.ISSUE && item.targetId === issue.id.value)
+		expect(steer?.kind).toBe(MailboxItemKind.STEER)
+		expect(steer?.posture).toBe(PermissionPosture.AUTO)
+	})
+
 	it('AC-6 — ForkIssue stamps the WORK item with the run token`s posture', async () => {
 		const thread = await roomThread()
 
