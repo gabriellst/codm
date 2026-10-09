@@ -107,6 +107,10 @@ export type GetThreadSettings200 = {
         */
         canInvoke: boolean;
         /**
+         * @type boolean
+        */
+        canElevate: boolean;
+        /**
          * @type string, uuid
         */
         channelId: string;

@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { Handler, z, BaseError } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
+import { MailboxItemKind, MailboxTargetKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { OpenIssuesReader } from '@thread/services/OpenIssuesReader'
 import { ReopenIssue } from '@issue/usecases/ReopenIssue'
 import { MailboxRepository } from '../repositories/MailboxRepository'
@@ -13,6 +13,8 @@ export const SteerIssueTurnInputSchema = z.object({
 	issueId: z.uuid(),
 	/** A entrada do transcript que o orquestrador respondia quando decidiu steerar — a chave de dedup. */
 	entryId: z.uuid().optional(),
+	/** The steering run's posture — `ctx.agentIdentity.posture`, never a tool argument (Decision 6). */
+	posture: z.enum(PermissionPosture),
 	text: z.string().trim().min(1),
 })
 export const SteerIssueTurnOutputSchema = z.object({ issueId: z.uuid(), queued: z.boolean() })
@@ -67,6 +69,7 @@ export class SteerIssueTurn extends Handler<typeof SteerIssueTurnInputSchema, ty
 					targetKind: MailboxTargetKind.ISSUE,
 					targetId: input.issueId,
 					kind: MailboxItemKind.STEER,
+					posture: input.posture,
 					payload: { issueId: input.issueId, threadId: input.threadId, key: target.key, title: target.title, text: input.text },
 					// Dois steers de dois turnos são dois itens; o mesmo turno repetido é um só.
 					dedupKey: `steer:${input.entryId ?? input.issueId}:${input.issueId}`,

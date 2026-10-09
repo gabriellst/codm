@@ -2,7 +2,14 @@ import { afterAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenThread, givenWorkspace, givenIssue } from '@test/support'
 import { BaseError } from '@codm/core-typescript'
-import { IssueArchiveReason, IssueStatus, MailboxItemKind, MailboxTargetKind, ProviderKind } from '@codm/contracts-typescript/wire/enums'
+import {
+	IssueArchiveReason,
+	IssueStatus,
+	MailboxItemKind,
+	MailboxTargetKind,
+	ProviderKind,
+	PermissionPosture,
+} from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
 import { SteerIssueTurnController } from '@agent/controllers/SteerIssueTurn'
@@ -115,7 +122,7 @@ describe('Flow (integration): a whisper schedules a turn', () => {
 		const controller = testBed.resolve(SteerIssueTurnController)
 		await expect(
 			controller.handle({
-				ctx: { ownerId: MOCK_CLOUD_OWNER_ID, agentIdentity: { threadId: a.id.value } },
+				ctx: { ownerId: MOCK_CLOUD_OWNER_ID, agentIdentity: { threadId: a.id.value, posture: PermissionPosture.AUTO } },
 				params: { threadId: a.id.value, issueId: foreign.id.value },
 				body: { text: 'muda de rumo' },
 			} as Parameters<SteerIssueTurnController['handle']>[0]),
@@ -127,7 +134,10 @@ describe('Flow (integration): a whisper schedules a turn', () => {
 		const own = await givenIssue(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, threadId: t.id.value, key: 'own' })
 
 		const response = await testBed.resolve(SteerIssueTurnController).handle({
-			ctx: { ownerId: MOCK_CLOUD_OWNER_ID, agentIdentity: { threadId: t.id.value, entryId: '019fac48-06c6-7a11-afdf-29fff08d4a81' } },
+			ctx: {
+				ownerId: MOCK_CLOUD_OWNER_ID,
+				agentIdentity: { threadId: t.id.value, entryId: '019fac48-06c6-7a11-afdf-29fff08d4a81', posture: PermissionPosture.AUTO },
+			},
 			params: { threadId: t.id.value, issueId: own.id.value },
 			body: { text: 'muda de rumo' },
 		} as Parameters<SteerIssueTurnController['handle']>[0])
@@ -171,6 +181,7 @@ describe('steer direcionado numa issue concluída', () => {
 			issueId: issue.id.value,
 			entryId: '019e4d24-6524-7041-9e1c-8108180cddb0',
 			text: 'já pode subir o PR',
+			posture: PermissionPosture.AUTO,
 		})
 
 		const reopened = await testBed.resolve(IssueRepository).findById(issue.id.value)
@@ -201,6 +212,7 @@ describe('steer direcionado numa issue concluída', () => {
 					issueId,
 					entryId: '019e4d24-6524-7041-9e1c-8108180cddb0',
 					text: 'já pode subir o PR',
+					posture: PermissionPosture.AUTO,
 				})
 				throw new Error('deveria ter recusado')
 			} catch (error) {
@@ -230,6 +242,7 @@ describe('steer direcionado numa issue concluída', () => {
 				issueId: issue.id.value,
 				entryId: '019e4d24-6524-7041-9e1c-8108180cddb0',
 				text: 'já pode subir o PR',
+				posture: PermissionPosture.AUTO,
 			}),
 		).rejects.toThrow('mailbox down')
 

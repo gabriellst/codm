@@ -1,7 +1,7 @@
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { addWorkspace, attachThread, getThreadSettings } from '@codm/client-typescript/typescript'
+import { addWorkspace, attachThread, getThreadSettings, type ProviderKind } from '@codm/client-typescript/typescript'
 import type { ApiSession } from './api'
 import { seedConnectedChannel } from './gateway'
 
@@ -10,6 +10,8 @@ export interface AttachedThread {
 	workspaceId: string
 	threadId: string
 	contactExternalId: string
+	displayName: string
+	providers: ProviderKind[]
 	workspacePath: string
 	/**
 	 * The citation the thread was gated on, minted server-side by `AttachThread` from the workspace
@@ -36,16 +38,18 @@ export async function givenAttachedThread(
 	const workspace = await addWorkspace({ path: workspacePath }, { client: session.client })
 
 	const contactExternalId = overrides.contactExternalId ?? `55119${Math.floor(Math.random() * 1e8)}`
+	const displayName = overrides.displayName ?? 'Ada'
+	const providers = (overrides.providers ?? ['CLAUDE_CODE']) as ProviderKind[]
 	const thread = await attachThread(
 		{
 			contactRef: {
 				channelId,
 				externalId: contactExternalId,
-				displayName: overrides.displayName ?? 'Ada',
+				displayName,
 				kind: 'USER',
 			},
 			workspaceId: workspace.workspaceId,
-			providers: (overrides.providers ?? ['CLAUDE_CODE']) as ('CLAUDE_CODE' | 'CODEX' | 'OPENCODE')[],
+			providers,
 		},
 		{ client: session.client },
 	)
@@ -59,6 +63,8 @@ export async function givenAttachedThread(
 		workspaceId: workspace.workspaceId,
 		threadId: thread.threadId,
 		contactExternalId,
+		displayName,
+		providers,
 		workspacePath,
 		mentionTag: settings.mentionGate.tag,
 	}

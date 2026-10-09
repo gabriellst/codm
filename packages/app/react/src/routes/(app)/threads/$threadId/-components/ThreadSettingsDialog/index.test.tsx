@@ -262,6 +262,39 @@ describe('ThreadSettingsDialog — contra o backend real', () => {
 	})
 
 	/**
+	 * "PODE LIBERAR" (participant-permission-posture, AC-3) — o operador nasce podendo liberar e o membro
+	 * não (a semente de `AttachThread`/`givenThread`), e ligar o membro persiste no backend real: a prova
+	 * é a releitura via SDK, não o estado do switch.
+	 */
+	it('o operador nasce podendo liberar, o membro não, e ligar o membro persiste no backend real', async () => {
+		const threadId = await seedThread()
+		await mount(threadId)
+
+		const seeded = await getThreadSettings(threadId)
+		const operator = seeded.participants.find(p => p.participantId === 'operator')
+		const member = seeded.participants.find(p => p.participantId !== 'operator')
+		expect(operator).toBeDefined()
+		expect(member).toBeDefined()
+
+		const toggleFor = (name: string) =>
+			document.querySelector<HTMLElement>(`[aria-label="${i18n.t('session.canElevateToggleFor', { name })}"]`)
+
+		expect(toggleFor(operator!.name)?.getAttribute('aria-checked')).toBe('true')
+		expect(toggleFor(member!.name)?.getAttribute('aria-checked')).toBe('false')
+
+		await act(async () => {
+			toggleFor(member!.name)?.click()
+		})
+
+		await mounted!.settled(() => toggleFor(member!.name)?.getAttribute('aria-checked') === 'true', 'o switch do membro refletir ligado')
+
+		const persisted = await getThreadSettings(threadId)
+		expect(persisted.participants.find(p => p.participantId === member!.participantId)?.canElevate).toBe(true)
+		// O outro eixo não se move: liberar não é invocar.
+		expect(persisted.participants.find(p => p.participantId === member!.participantId)?.canInvoke).toBe(false)
+	})
+
+	/**
 	 * O PROMPT PERSONALIZADO chega na tela e volta pelo fio — e desta vez a prova é o COMPUTADO: em vez
 	 * de inspecionar o corpo do PUT contra um dublê, relê `GetThreadSettings` no backend real depois de
 	 * salvar. Prova a corrente inteira (textarea → mutation → PUT → linha → releitura) num só passo.

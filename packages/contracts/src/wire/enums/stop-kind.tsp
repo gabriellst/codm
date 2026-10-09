@@ -10,4 +10,9 @@ enum StopKind {
   // Raised by the terminal engine when a session cannot proceed without the human re-authing the
   // CLI; admissible resolutions are RETRY (after re-login) and TAKE_OVER (see RESOLUTIONS_BY_KIND).
   AUTH_REQUIRED: "AUTH_REQUIRED",
+  // Participant-permission-posture amendment: the CLI's permission filter blocked an action in a turn
+  // running under PermissionPosture.AUTO. TRANSPORT — observed by the runner on the terminal frame
+  // (`safety_stops` / `permission_denials`), never declared by a tool. Recorded at once, never retried
+  // (a retry under the same posture repeats the denial); resolutions APPROVE / DENY / TAKE_OVER.
+  PERMISSION_DENIED: "PERMISSION_DENIED",
 }

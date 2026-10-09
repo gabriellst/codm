@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { z, type ZodType } from 'zod'
-import { AgentModelId, AgentStopReason, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { AgentModelId, AgentStopReason, PermissionPosture, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { LoggingService } from '@codm/core-typescript'
 import { ProductConfig } from '@shared/config/ProductConfig'
 import { AgentRunOutcome, type TransportStopKind } from '../../../enums'
@@ -61,6 +61,18 @@ const CLAUDE_MODEL_ALIASES: Partial<Record<AgentModelId, string>> = {
 	[AgentModelId.HAIKU]: 'haiku',
 }
 
+/**
+ * `PermissionPosture` → this CLI's permission flag (participant-permission-posture, Decision 8). A typed
+ * table, total over the enum: a posture added to the contract fails compilation HERE until somebody
+ * declares what it means for `claude` — never a branch on a posture's name. `auto` is the CLI's own
+ * graduated mode (its classifier may block an action); `bypassPermissions` lifts the filter, and is only
+ * ever reached when the turn was triggered by a participant the operator allowed to elevate.
+ */
+const CLAUDE_PERMISSION_ARGS: Record<PermissionPosture, readonly string[]> = {
+	[PermissionPosture.AUTO]: ['--permission-mode', 'auto'],
+	[PermissionPosture.BYPASS]: ['--permission-mode', 'bypassPermissions'],
+}
+
 /** Everything `buildArgs` needs to produce a full argv. One record, no ambient state. */
 export interface ClaudeBuildArgsOptions {
 	/** `AgentModelId.DEFAULT` means OMIT the model flag entirely — not "pass the string DEFAULT". */
@@ -76,6 +88,8 @@ export interface ClaudeBuildArgsOptions {
 	mcp?: AgentMcpInvocation
 	/** Probed capabilities of THIS binary. By parameter, on purpose — see `ProviderCapabilities`. */
 	caps: ProviderCapabilities
+	/** Which permission regime this spawn runs under — looked up in `CLAUDE_PERMISSION_ARGS`. */
+	posture: PermissionPosture
 }
 
 /**
@@ -242,11 +256,13 @@ export class ClaudeAgentRunner extends AgentRunner {
 	 *    (`stop_reason: end_turn`, `permission_denials: []`), and Write + Read both executed. So `auto`
 	 *    neither hangs nor disables tools. What `auto` blocks that `bypassPermissions` does not was NOT
 	 *    characterized — that would require probing destructive operations, and is deliberately unmeasured
-	 *    rather than asserted.
+	 *    rather than asserted. Which mode is no longer a constant: it is
+	 *    `CLAUDE_PERMISSION_ARGS[posture]`, and `auto` is what every turn not triggered by an elevating
+	 *    participant still gets.
 	 *  - `--session-id` / `--resume` delete transcript re-sending. Multi-turn context is the CLI's own
 	 *    session; re-rendering the transcript into the prompt is only the fallback for a CLI without it.
 	 */
-	static buildArgs({ model, extraDirs, resumeSessionId, newSessionId, mcp, caps }: ClaudeBuildArgsOptions): string[] {
+	static buildArgs({ model, extraDirs, resumeSessionId, newSessionId, mcp, caps, posture }: ClaudeBuildArgsOptions): string[] {
 		const args = ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose']
 
 		// Capability-gated, NOT version-gated: an older build without the flag would abort on an
@@ -274,9 +290,9 @@ export class ClaudeAgentRunner extends AgentRunner {
 			args.push('--allowedTools', mcp.allowedTools.join(','))
 		}
 
-		// Last, and unconditional: headless `-p` has no TTY to render a permission prompt on, so the
-		// mode is settled here at spawn. `auto` and NOT `bypassPermissions` — see the method docblock.
-		args.push('--permission-mode', 'auto')
+		// Last: headless `-p` has no TTY to render a permission prompt on, so the mode is settled here at
+		// spawn — by the POSTURE of whoever triggered the turn, through the table above.
+		args.push(...CLAUDE_PERMISSION_ARGS[posture])
 		return args
 	}
 
@@ -301,6 +317,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 			newSessionId: request.session?.newId,
 			mcp: request.mcp,
 			caps: request.caps ?? {},
+			posture: request.posture,
 		})
 		const cmd = [request.binaryPath, ...args]
 
@@ -495,7 +512,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 	/**
 	 * Fold everything observed into the ONE terminal record — and never throw while doing it.
 	 *
-	 * Only TRANSPORT stops can be raised here (`AUTH_REQUIRED`, `SERVER_ERROR`); the type says so, and
+	 * Only TRANSPORT stops can be raised here (`AUTH_REQUIRED`, `SERVER_ERROR`, `PERMISSION_DENIED`); the type says so, and
 	 * that is the point. A DOMAIN stop is unrepresentable from this side because it can only come from
 	 * a `RaiseStop` / `AskOperator` tool call, which lands through the MCP router and not through here.
 	 */
@@ -566,9 +583,17 @@ export class ClaudeAgentRunner extends AgentRunner {
 		// a turn that never closes, and must never be allowed to reclassify one that did — even if it
 		// fires later, while the child lingers after `stdin.end()` (measured, see class doc above).
 		if (observed.terminal) {
-			return observed.terminal.isError
-				? { kind: StopKind.SERVER_ERROR as TransportStopKind, detail: observed.terminal.text || 'provider reported an error result' }
-				: undefined
+			if (observed.terminal.isError) {
+				return { kind: StopKind.SERVER_ERROR as TransportStopKind, detail: observed.terminal.text || 'provider reported an error result' }
+			}
+			// THE PERMISSION FILTER BLOCKED SOMETHING (participant-permission-posture, Decision 9). Both signals,
+			// because the measurement (Decision 10) found the auto-mode classifier reporting in `safety_stops`
+			// while `permission_denials` stayed empty. TRANSPORT evidence — the CLI's own counters on the
+			// terminal frame, never the model's prose.
+			if (observed.terminal.safetyStops > 0 || observed.terminal.permissionDenials.length > 0) {
+				return { kind: StopKind.PERMISSION_DENIED, detail: permissionDeniedDetail(observed.terminal) }
+			}
+			return undefined
 		}
 
 		if (observed.watchdogFired) {
@@ -614,6 +639,18 @@ export class ClaudeAgentRunner extends AgentRunner {
 
 function failure(outcome: AgentRunOutcome, detail: string, kind: TransportStopKind): AgentRunResult {
 	return { outcome, replyText: '', sessionId: null, failed: false, stop: { kind, detail } }
+}
+
+/**
+ * The Needs-you text of a PERMISSION_DENIED stop: the agent's own final words (its approval request) and
+ * then, when the CLI listed them, WHICH tools were refused — by name and input keys, never input values.
+ */
+function permissionDeniedDetail(terminal: TerminalResultRecord): string {
+	const denied = terminal.permissionDenials.map(d => `- ${d.tool}${d.inputKeys.length > 0 ? ` (${d.inputKeys.join(', ')})` : ''}`)
+	const lines = [terminal.text.trim(), ...(denied.length > 0 ? ['Negado pelo filtro de permissões:', ...denied] : [])].filter(
+		l => l.length > 0,
+	)
+	return lines.length > 0 ? lines.join('\n') : 'o filtro de permissões barrou uma ação'
 }
 
 /**

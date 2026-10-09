@@ -515,6 +515,9 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			// answers — a conversation that chose nothing reads as `DEFAULT`, which is the instruction to
 			// omit `--model` — so there is no absence for the use case to interpret.
 			model: thread.modelFor(provider),
+			// WHO TRIGGERED IT decides how far the turn may go (participant-permission-posture, Decision 5):
+			// one item per turn, so the claimed item's posture IS the turn's — there is nothing to combine.
+			posture: item.posture,
 			item: item.payload as Parameters<RunOrchestratorTurn['execute']>[0]['item'],
 			// Only an OPERATOR_MESSAGE has an originating entry; an ISSUE_RESULT turn is triggered by a
 			// subagent finishing, and the entry it will CITE is carried on the item, not on the token.
@@ -587,6 +590,7 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			// and giving the issue a second selector would be a second place to configure one thing, in a
 			// screen (the issue detail) where the CLI is not even named.
 			model: thread.modelFor(provider),
+			posture: item.posture,
 			workspacePath: workspace.path,
 			// The issue OWNS its goal since the pivot — the prompt is what the operator asked for, not
 			// the raw inbound text re-read from a transcript. A STEER carries its own text instead: the

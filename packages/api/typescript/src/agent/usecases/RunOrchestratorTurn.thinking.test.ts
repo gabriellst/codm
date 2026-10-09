@@ -3,7 +3,15 @@ import { container, type DependencyContainer } from 'tsyringe-neo'
 import type { ZodType } from 'zod'
 import { CommandQueue, LibSqlCommandQueue, LibSqlDatabaseDriver, MockLoggingService } from '@codm/core-typescript'
 import { PHASE_EDIT_MIN_INTERVAL_MS, THINKING_VERBS_EN, THINKING_VERBS_PT, thinkingErrorCopy } from '@codm/contracts/cues'
-import { ChannelKind, Language, MailboxItemKind, MessageAuthor, MessageType, ProviderKind } from '@codm/contracts-typescript/wire/enums'
+import {
+	ChannelKind,
+	Language,
+	MailboxItemKind,
+	MessageAuthor,
+	MessageType,
+	ProviderKind,
+	PermissionPosture,
+} from '@codm/contracts-typescript/wire/enums'
 import { ChannelMessageReceivedInProcessEvent, OrchestratorRepliedEvent } from '@codm/contracts-typescript/wire/events'
 import { TestBed, givenThread } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
@@ -122,6 +130,7 @@ describe('RunOrchestratorTurn — the "Pensando" placeholder', () => {
 			ownerId: MOCK_CLOUD_OWNER_ID,
 			threadId: thread.id.value,
 			workspacePath: '/tmp/workspace',
+			posture: PermissionPosture.AUTO,
 			provider: ProviderKind.CLAUDE_CODE,
 			item: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: crypto.randomUUID(), speaker: 'operator', text: 'pode ajudar?' },
 		})

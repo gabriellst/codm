@@ -9,7 +9,7 @@ import {
 	type BaseError,
 	type HttpControllerRequest,
 } from '@codm/core-typescript'
-import { McpScope, ProviderKind, AgentModelId } from '@codm/contracts-typescript/wire/enums'
+import { McpScope, ProviderKind, AgentModelId, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { ConfigureModelController } from './ConfigureModel'
@@ -60,6 +60,7 @@ describe('ConfigureModelController — choosable by the console AND from inside 
 		const identities = new InMemoryAgentIdentityService()
 		const token = identities.issue({
 			scope: McpScope.orchestration,
+			posture: PermissionPosture.AUTO,
 			ownerId: MOCK_CLOUD_OWNER_ID,
 			threadId,
 			entryId: uuidv7(),

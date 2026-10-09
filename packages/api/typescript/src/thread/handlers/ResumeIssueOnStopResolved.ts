@@ -48,7 +48,7 @@ export class ResumeIssueOnStopResolved extends EventHandler<typeof ThreadStopRes
 	}
 
 	async handle(event: this['input']): Promise<void> {
-		const { stopId, issueId, threadId, resolution } = event.payload
+		const { stopId, issueId, threadId, resolution, posture } = event.payload
 		if (resolution === StopResolution.TAKE_OVER || !issueId) return
 
 		const open = await this.openIssues.openIssues(threadId)
@@ -71,6 +71,9 @@ export class ResumeIssueOnStopResolved extends EventHandler<typeof ThreadStopRes
 			targetKind: MailboxTargetKind.ISSUE,
 			targetId: issueId,
 			kind: MailboxItemKind.STEER,
+			// The posture the FACT carries (Decision 7): the resolver's, reduced by the resolution — an APPROVE
+			// from someone who may elevate resumes in BYPASS, a DENY always in AUTO.
+			posture,
 			payload: { issueId, threadId, key: issue.key, title: issue.title, text: this.resumeText(stop, resolution) },
 			// THE KEY IS THE STOP, and the choice is the same one `IngestChannelMessage` makes when it
 			// keys on the ENTRY: the dedup key is the unique CAUSE of the work, never the target of it.

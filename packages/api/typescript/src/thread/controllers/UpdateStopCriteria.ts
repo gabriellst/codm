@@ -16,7 +16,14 @@ export const UpdateStopCriteriaControllerInputSchema = z
 		{
 			ctx: { ownerId: '00000000-0000-4000-8000-000000000001' },
 			body: {
-				stopCriteria: { serverErrors: true, blockedByClassification: true, humanRequested: true, approvalNeeded: true, authRequired: true },
+				stopCriteria: {
+					serverErrors: true,
+					blockedByClassification: true,
+					humanRequested: true,
+					approvalNeeded: true,
+					authRequired: true,
+					permissionDenied: true,
+				},
 			},
 		},
 	])

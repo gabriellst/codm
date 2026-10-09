@@ -48,6 +48,7 @@ export const GetSettingsOutputSchema = z.object({
 		humanRequested: z.boolean(),
 		approvalNeeded: z.boolean(),
 		authRequired: z.boolean(),
+		permissionDenied: z.boolean(),
 	}),
 	general: z.object({
 		operatorName: z.string(),

@@ -109,17 +109,23 @@ export class AttachThread extends Handler<typeof AttachThreadInputSchema, typeof
 		if (existing && !existing.deletedAt)
 			throw new BaseError<ApplicationErrors>('THREAD_ALREADY_ATTACHED', 'a thread already exists for this contact')
 
-		// Seed the roster: the operator always invokes. For a 1:1 CONTACT the counterparty observes;
+		// Seed the roster: the operator always invokes and may elevate; everyone else observes and may not. For a 1:1 CONTACT the counterparty observes;
 		// for a GROUP the roster is hydrated from the gateway `remote_memberships` read model (each
 		// member observes), falling back to the group itself when the read model has no members yet.
 		const participants: Parameters<typeof Thread.create>[0]['participants'] = [
-			{ participantId: OPERATOR_PARTICIPANT_ID, name: 'Operator', source: 'Operator on this machine', canInvoke: true },
+			{ participantId: OPERATOR_PARTICIPANT_ID, name: 'Operator', source: 'Operator on this machine', canInvoke: true, canElevate: true },
 		]
 		if (input.contactRef.kind === ContactKind.GROUP) {
 			const members = await this.groupMembers.listMembers(input.contactRef.channelId, input.contactRef.externalId)
 			if (members.length > 0) {
 				for (const m of members) {
-					participants.push({ participantId: m.memberId, name: m.memberId, source: 'Channel group member', canInvoke: false })
+					participants.push({
+						participantId: m.memberId,
+						name: m.memberId,
+						source: 'Channel group member',
+						canInvoke: false,
+						canElevate: false,
+					})
 				}
 			} else {
 				participants.push({
@@ -127,6 +133,7 @@ export class AttachThread extends Handler<typeof AttachThreadInputSchema, typeof
 					name: input.contactRef.displayName,
 					source: 'Channel group',
 					canInvoke: false,
+					canElevate: false,
 				})
 			}
 		} else {
@@ -135,6 +142,7 @@ export class AttachThread extends Handler<typeof AttachThreadInputSchema, typeof
 				name: input.contactRef.displayName,
 				source: 'Channel contact',
 				canInvoke: false,
+				canElevate: false,
 			})
 		}
 

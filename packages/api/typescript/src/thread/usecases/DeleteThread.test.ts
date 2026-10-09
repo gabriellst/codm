@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenIssue, givenStop, givenThread } from '@test/support'
-import { IssueArchiveReason, IssueStatus, StopKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
+import { IssueArchiveReason, IssueStatus, PermissionPosture, StopKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { IssueRepository } from '@issue/repositories/IssueRepository'
 import { ThreadRepository } from '../repositories/ThreadRepository'
@@ -104,7 +104,7 @@ describe('DeleteThread use case', () => {
 		const stop = await givenStop(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value, kind: StopKind.HUMAN_REQUESTED })
 		const repo = testBed.resolve(ThreadRepository)
 		const loaded = (await repo.findById(thread.id.value))!
-		loaded.resolveStop(stop, StopResolution.TAKE_OVER)
+		loaded.resolveStop(stop, StopResolution.TAKE_OVER, PermissionPosture.AUTO)
 		await repo.save(loaded)
 
 		await deleteThread().execute({ ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value })

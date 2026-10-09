@@ -118,6 +118,10 @@ export class CodexFrameDecoder {
 				isError: false,
 				sessionId: this.threadId,
 				apiErrorStatus: null,
+				// codex's stream carries no permission-denial signal in any capture (`raw/*.jsonl`) — declared
+				// absent here rather than guessed from the agent's prose.
+				safetyStops: 0,
+				permissionDenials: [],
 			},
 		}
 	}
@@ -147,6 +151,10 @@ export class CodexFrameDecoder {
 				isError: true,
 				sessionId: this.threadId,
 				apiErrorStatus: null,
+				// codex's stream carries no permission-denial signal in any capture (`raw/*.jsonl`) — declared
+				// absent here rather than guessed from the agent's prose.
+				safetyStops: 0,
+				permissionDenials: [],
 			},
 		}
 	}

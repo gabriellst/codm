@@ -58,6 +58,7 @@ export class MockMailboxRepository extends MailboxRepository {
 			targetId: row.targetId,
 			kind: row.kind,
 			payload: row.payload,
+			posture: row.posture,
 			attempts: row.attempts,
 		}
 	}

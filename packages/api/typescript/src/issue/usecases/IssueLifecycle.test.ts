@@ -91,6 +91,7 @@ describe('Issue lifecycle + stop control plane', () => {
 				humanRequested: true,
 				approvalNeeded: true,
 				authRequired: true,
+				permissionDenied: true,
 			},
 		})
 		await expect(

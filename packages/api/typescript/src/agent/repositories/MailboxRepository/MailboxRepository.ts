@@ -1,5 +1,5 @@
 import type { Transaction } from '@codm/core-typescript'
-import type { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
+import type { MailboxItemKind, MailboxTargetKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 
 /** What a producer states happened. The dispatcher decides what runs. */
 export interface EnqueueMailboxItem {
@@ -8,6 +8,13 @@ export interface EnqueueMailboxItem {
 	targetId: string
 	kind: MailboxItemKind
 	payload: unknown
+	/**
+	 * The posture the scheduled turn runs under — REQUIRED, so no producer can forget to say who
+	 * triggered the work (participant-permission-posture, Decision 4). Derived by the producer from the
+	 * trigger: a sender's `canElevate`, the `operator`'s for a console whisper, the run token's claim for
+	 * work queued from inside a turn, AUTO for a loop tick or an `ISSUE_RESULT`.
+	 */
+	posture: PermissionPosture
 	/**
 	 * Idempotency key of the FACT behind the item — an entry id, an issue's run, a steer's own id.
 	 *
@@ -26,6 +33,11 @@ export interface ClaimedMailboxItem {
 	targetId: string
 	kind: MailboxItemKind
 	payload: unknown
+	/**
+	 * The posture the turn this item schedules runs under — the `posture` column, whose `DEFAULT 'AUTO'`
+	 * is what an item enqueued before the column existed reads as.
+	 */
+	posture: PermissionPosture
 	attempts: number
 }
 

@@ -30,6 +30,10 @@ const EXEMPTIONS: { path: string; why: string }[] = [
 		why: 'the LEASE COLUMNS are the subject: the boot-sweep cases stamp `claimed_boot`/`claimed_pid` on a claimed row (standing in for a daemon that crashed) and then read them back — a write AND a read of columns the probe deliberately does not expose (it counts rows, it does not read them). Same exception class as tests/kernel/LibSqlCommandQueue.test.ts, whose lease/claim behaviour this table mirrors',
 	},
 	{
+		path: 'src/agent/repositories/MailboxRepository/MailboxRepository.legacyPosture.test.ts',
+		why: 'the SCHEMA DEFAULT is the subject (participant-permission-posture, AC-5): a pre-deploy producer wrote `agent_mailbox` rows whose INSERT never named the `posture` column, and the invariant is that such a row is claimed as AUTO. Reproducing that needs a RAW INSERT that omits the column — the repository (which always stamps a posture) and the probe (which counts rows, never writes) both make the legacy shape unreachable. Same exception class as MailboxRepository.test.ts next door',
+	},
+	{
 		path: 'tests/kernel/LibSqlCommandQueue.test.ts',
 		why: "tests LibSqlCommandQueue's own DB-backed scheduling behavior directly (row-by-id, repeat scheduling, lease/claim) — the DB is the subject, same exception class as Drizzle*Repository.test.ts",
 	},

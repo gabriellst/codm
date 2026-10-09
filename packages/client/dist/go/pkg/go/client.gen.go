@@ -1181,6 +1181,24 @@ func (e OwnerKind) Valid() bool {
 	}
 }
 
+// Defines values for PermissionPosture.
+const (
+	PermissionPostureAUTO   PermissionPosture = "AUTO"
+	PermissionPostureBYPASS PermissionPosture = "BYPASS"
+)
+
+// Valid indicates whether the value is a known member of the PermissionPosture enum.
+func (e PermissionPosture) Valid() bool {
+	switch e {
+	case PermissionPostureAUTO:
+		return true
+	case PermissionPostureBYPASS:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PresenceType.
 const (
 	PresenceTypeAvailable   PresenceType = "AVAILABLE"
@@ -1391,6 +1409,7 @@ const (
 	StopKindAUTHREQUIRED            StopKind = "AUTH_REQUIRED"
 	StopKindBLOCKEDBYCLASSIFICATION StopKind = "BLOCKED_BY_CLASSIFICATION"
 	StopKindHUMANREQUESTED          StopKind = "HUMAN_REQUESTED"
+	StopKindPERMISSIONDENIED        StopKind = "PERMISSION_DENIED"
 	StopKindSERVERERROR             StopKind = "SERVER_ERROR"
 )
 
@@ -1404,6 +1423,8 @@ func (e StopKind) Valid() bool {
 	case StopKindBLOCKEDBYCLASSIFICATION:
 		return true
 	case StopKindHUMANREQUESTED:
+		return true
+	case StopKindPERMISSIONDENIED:
 		return true
 	case StopKindSERVERERROR:
 		return true
@@ -3851,6 +3872,9 @@ type OutboxSource string
 
 // OwnerKind defines model for OwnerKind.
 type OwnerKind string
+
+// PermissionPosture defines model for PermissionPosture.
+type PermissionPosture string
 
 // PollMessageData defines model for PollMessageData.
 type PollMessageData struct {

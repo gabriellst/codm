@@ -16,8 +16,10 @@ import {
 	AgentModelId,
 	type BufferSize,
 	ContactKind,
+	PermissionPosture,
 	ProviderKind,
 	ProviderStatus,
+	StopKind,
 	TranscriptKind,
 	type Language,
 } from '@codm/contracts-typescript/wire/enums'
@@ -25,6 +27,7 @@ import { modelsFor } from '@catalog'
 import { CloudSession } from '@shared/services/CloudSession'
 import { resolveThreadLanguage } from '@shared/i18n/messages'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
+import { RaiseStop } from '@thread/usecases/RaiseStop'
 import { ConsumedMessageRepository } from '@thread/repositories/ConsumedMessageRepository'
 import { ChannelSender } from '@thread/services/ChannelSender'
 import { ReplyStreamer, streamKey } from '@thread/services/ReplyStreamer'
@@ -41,7 +44,7 @@ import { AgentSession } from '../entities/AgentSession'
 import { OrchestratorRepliedEvent } from '../events/OrchestratorRepliedEvent'
 import { GetOpenStops } from './GetOpenStops'
 import type { AgentApplicationErrors } from '../errors'
-import { isTransportStopKind } from '../enums/TransportStopKind'
+import { retriesInPlace } from '../enums/TransportStopKind'
 
 export const RunOrchestratorTurnInputSchema = z.object({
 	ownerId: z.uuid(),
@@ -71,6 +74,12 @@ export const RunOrchestratorTurnInputSchema = z.object({
 	 */
 	originEntryId: z.uuid().optional(),
 	model: z.enum(AgentModelId).optional(),
+	/**
+	 * The permission posture of the mailbox item that scheduled this turn — WHO triggered it. REQUIRED
+	 * and undefaulted for the same reason `turnKind` is: a default here would make "nobody decided"
+	 * silently mean something.
+	 */
+	posture: z.enum(PermissionPosture),
 })
 
 export const RunOrchestratorTurnOutputSchema = z.object({
@@ -222,6 +231,11 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 		 * identity; the daemon asks.
 		 */
 		private readonly session: CloudSession,
+		/**
+		 * Records a non-retried transport stop (PERMISSION_DENIED) as a THREAD-level stop on the first
+		 * occurrence — the same use case the dispatcher already calls for a poisoned item.
+		 */
+		private readonly raiseStop: RaiseStop,
 		private readonly logging: LoggingService,
 	) {
 		super()
@@ -483,6 +497,7 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 				session: session.resumed ? { resumeId: session.id } : { newId: session.id },
 				binaryPath: detection.binaryPath,
 				caps: detection.caps,
+				posture: input.posture,
 			})) {
 				accumulator.feed(event)
 
@@ -599,11 +614,11 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 				{ channelId, remoteId, ownerId: input.ownerId, language },
 				{ messageId: thinkingMessageId, landed: firstCutLanded },
 			)
-			return {
-				text: '',
-				spoke,
-				...(isTransportStopKind(outcome.stopKind) ? { transportStop: { detail: outcome.detail ?? outcome.stopKind } } : {}),
-			}
+			// RETRY vs RECORD is DATA (`TRANSPORT_STOP_RETRIES`). A retried stop goes back to the dispatcher;
+			// anything else (PERMISSION_DENIED) becomes a thread-level stop NOW and the item is consumed.
+			if (retriesInPlace(outcome.stopKind)) return { text: '', spoke, transportStop: { detail: outcome.detail ?? outcome.stopKind } }
+			await this.recordThreadStop(input, outcome.stopKind, outcome.detail)
+			return { text: '', spoke }
 		}
 
 		const reply = parseReply(outcome.replyText)
@@ -682,6 +697,24 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 				},
 			})
 		}
+	}
+
+	/**
+	 * A stop the orchestrator's own turn ran into, recorded on the THREAD (it has no issue). Its Needs-you
+	 * card and channel notice carry the agent's own words, which is the approval request. A criterion the
+	 * operator turned off (`STOP_CRITERION_DISABLED`) is the sanctioned no-op — logged, never a failed turn
+	 * (a throw here would send the item back to the queue and repeat the denial). Anything else rethrows.
+	 */
+	private async recordThreadStop(input: this['input'], kind: StopKind, detail: string): Promise<void> {
+		const raised = await tryCatchAsync(() => this.raiseStop.execute({ stopId: uuidv7(), threadId: input.threadId, kind, detail }))
+		if (raised.success) return
+		if (raised.error instanceof BaseError && raised.error.name === 'STOP_CRITERION_DISABLED') {
+			this.logging.warn({
+				content: { message: 'stop not recorded — the operator disabled this criterion', threadId: input.threadId, kind },
+			})
+			return
+		}
+		throw raised.error
 	}
 
 	private async resolveProvider(provider: ProviderKind): Promise<DetectedProvider> {

@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm'
 import { TestBed } from '@test/support'
 import { agentMailbox } from '@codm/contracts/db'
 import { LibSqlDatabaseDriver } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
+import { MailboxItemKind, MailboxTargetKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { MailboxRepository } from './MailboxRepository'
 
@@ -47,6 +47,7 @@ describe('MailboxRepository — one turn per target, durable', () => {
 		targetKind: MailboxTargetKind.THREAD,
 		targetId,
 		kind,
+		posture: PermissionPosture.AUTO,
 		payload: { note: dedupKey },
 		dedupKey,
 	})

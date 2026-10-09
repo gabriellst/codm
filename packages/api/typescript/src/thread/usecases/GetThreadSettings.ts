@@ -60,6 +60,7 @@ export const GetThreadSettingsOutputSchema = z.object({
 			name: z.string(),
 			source: z.string(),
 			canInvoke: z.boolean(),
+			canElevate: z.boolean(),
 			channelId: z.uuid(),
 			hasAvatar: z.boolean(),
 		}),
@@ -225,6 +226,9 @@ export class GetThreadSettings extends Handler<typeof GetThreadSettingsInputSche
 				// `AttachThread` seeds a fresh group roster with, and what `SetParticipantInvocation` writes
 				// into the JSON the first time this row's toggle is flipped.
 				canInvoke: json?.canInvoke ?? false,
+				// Same default for the same reason: a live member the JSON never recorded was never GRANTED
+				// anything — `Thread.admitParticipant` writes `false` the first time a toggle admits them.
+				canElevate: json?.canElevate ?? false,
 				channelId: thread.channelId,
 				hasAvatar: Boolean(contact?.avatarUrl),
 			}

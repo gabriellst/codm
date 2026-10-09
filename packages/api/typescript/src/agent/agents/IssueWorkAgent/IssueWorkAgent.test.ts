@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import type { ZodType } from 'zod'
 import type { BaseError } from '@codm/core-typescript'
-import { AgentModelId, MailboxItemKind, McpScope } from '@codm/contracts-typescript/wire/enums'
+import { AgentModelId, MailboxItemKind, McpScope, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { AgentRunner } from '../../services/AgentRunner'
 import { AgentName, AgentRunOutcome, MessageVia } from '../../enums'
 import type { AgentRunRequest } from '../../types/AgentRunRequest'
@@ -48,6 +48,7 @@ const input = (overrides: Partial<Parameters<IssueWorkAgent['run']>[1]> = {}): P
 	issueId: '00000000-0000-4000-8000-0000000000cc',
 	threadId: '00000000-0000-4000-8000-0000000000bb',
 	cwd: '/Users/dev/project',
+	posture: PermissionPosture.AUTO,
 	binaryPath: '/usr/local/bin/claude',
 	prompt: 'fix the coupon focus bug',
 	// The DEFAULT is the brief that opened the issue — the case every test below that does not say

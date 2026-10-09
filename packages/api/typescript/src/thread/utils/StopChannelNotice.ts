@@ -4,8 +4,9 @@ import { StopKind } from '@codm/contracts-typescript/wire/enums'
  * Quais stops viram mensagem no canal — e o critério NÃO é a gravidade, é a VOZ.
  *
  * Notifica quando o orquestrador não conseguiria ter contado: `SERVER_ERROR` (o turno morreu),
- * `AUTH_REQUIRED` (o CLI pede login e a sessão não anda) e `BLOCKED_BY_CLASSIFICATION` (a resposta do
- * agente foi barrada, então o operador não ouviu nada).
+ * `AUTH_REQUIRED` (o CLI pede login e a sessão não anda), `BLOCKED_BY_CLASSIFICATION` (a resposta do
+ * agente foi barrada, então o operador não ouviu nada) e `PERMISSION_DENIED` (o filtro de permissões
+ * barrou uma ação; o turno termina parado e o pedido de aprovação só chega ao celular por aqui).
  *
  * Não notifica quando houve fala: `HUMAN_REQUESTED` e `APPROVAL_NEEDED` nascem de um turno que rodou e
  * disse alguma coisa — `RecordStopFromExecution` inclusive usa o texto do agente COMO título nesses
@@ -19,6 +20,7 @@ export const NOTIFIES_ON_CHANNEL: Record<StopKind, boolean> = {
 	[StopKind.SERVER_ERROR]: true,
 	[StopKind.AUTH_REQUIRED]: true,
 	[StopKind.BLOCKED_BY_CLASSIFICATION]: true,
+	[StopKind.PERMISSION_DENIED]: true,
 	[StopKind.HUMAN_REQUESTED]: false,
 	[StopKind.APPROVAL_NEEDED]: false,
 }

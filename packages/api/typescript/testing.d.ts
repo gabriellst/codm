@@ -159,6 +159,7 @@ export interface SeedParticipant {
 	name: string
 	source: string
 	canInvoke: boolean
+	canElevate: boolean
 }
 
 export interface ChannelOverrides {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test'
+import { PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { z, type ZodType } from 'zod'
@@ -87,6 +88,7 @@ function request<OutputSchema extends ZodType | undefined = undefined>(
 ): AgentRunRequest<OutputSchema> {
 	return {
 		agentName: AgentName.ISSUE_WORK,
+		posture: PermissionPosture.AUTO,
 		cwd: '/work/thread-1',
 		messages: [{ role: AgentMessageRole.USER, content: 'reply with PONG' }],
 		binaryPath: '/usr/local/bin/codex',

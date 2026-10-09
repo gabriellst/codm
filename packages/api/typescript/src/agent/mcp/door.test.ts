@@ -5,7 +5,7 @@ import { GlobalErrorMapper, HttpStatusCode } from '@codm/core-typescript'
 import '../errors'
 import { AgentName } from '../enums'
 import { InMemoryAgentIdentityService } from '@codm/core-typescript'
-import { McpScope } from '@codm/contracts-typescript/wire/enums'
+import { McpScope, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import type { AgentRunIdentity } from '../types/AgentRunIdentity'
 import { McpDoorController } from './door'
 import { wireToolName } from './wire'
@@ -38,6 +38,7 @@ const identityForA = (): AgentRunIdentity => ({
 	threadId: THREAD_A,
 	agentName: AgentName.ISSUE_WORK,
 	scope: McpScope.ISSUE_HANDLING,
+	posture: PermissionPosture.AUTO,
 	expiresAt: new Date(Date.now() + 60_000),
 })
 

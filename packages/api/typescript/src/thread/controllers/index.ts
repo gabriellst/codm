@@ -14,6 +14,7 @@ export { PauseThreadController } from './PauseThread'
 export { ResumeThreadController } from './ResumeThread'
 export { SendDirectMessageController } from './SendDirectMessage'
 export { SetParticipantInvocationController } from './SetParticipantInvocation'
+export { SetParticipantElevationController } from './SetParticipantElevation'
 export { SteerThreadController } from './SteerThread'
 export { GetNeedsYouPanelController } from './GetNeedsYouPanel'
 export { ResolveStopController } from './ResolveStop'
@@ -48,6 +49,7 @@ import { PauseThreadController } from './PauseThread'
 import { ResumeThreadController } from './ResumeThread'
 import { SendDirectMessageController } from './SendDirectMessage'
 import { SetParticipantInvocationController } from './SetParticipantInvocation'
+import { SetParticipantElevationController } from './SetParticipantElevation'
 import { SteerThreadController } from './SteerThread'
 import { GetNeedsYouPanelController } from './GetNeedsYouPanel'
 import { ResolveStopController } from './ResolveStop'
@@ -88,6 +90,7 @@ const productionControllers = {
 	ResumeThreadController,
 	SendDirectMessageController,
 	SetParticipantInvocationController,
+	SetParticipantElevationController,
 	SteerThreadController,
 	GetNeedsYouPanelController,
 	ResolveStopController,

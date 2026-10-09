@@ -73,6 +73,9 @@ export class ResolveStopController extends Controller<typeof ResolveStopControll
 			// operator, who is already answered for by `CloudSessionMiddleware` and by the use case's own
 			// tenancy check — `runThreadId` simply arrives `undefined` and the use case skips its guard.
 			runThreadId: request.ctx.agentIdentity?.threadId,
+			// Same presence rule as `runThreadId`: the run's posture when a run resolves, absent for the
+			// console — never anything from `body`, which is `{ resolution }` and nothing else.
+			runPosture: request.ctx.agentIdentity?.posture,
 		})
 		return { status: HttpStatusCode.NO_CONTENT, data: undefined }
 	}

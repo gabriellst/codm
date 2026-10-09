@@ -29,6 +29,7 @@ type ThreadParticipant = {
 	name: string
 	source: string
 	canInvoke: boolean
+	canElevate: boolean
 }
 
 export const threads = sqliteTable(

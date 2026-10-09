@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenThread } from '@test/support'
-import { ArtifactKind } from '@codm/contracts-typescript/wire/enums'
+import { ArtifactKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { RecordArtifact } from '@artifact/usecases/RecordArtifact'
 import { AgentName } from '../enums'
@@ -110,6 +110,7 @@ describe('a refused tool call writes NOTHING, counted', () => {
 		threadId,
 		agentName: AgentName.ISSUE_WORK,
 		scope: McpScope.ISSUE_HANDLING,
+		posture: PermissionPosture.AUTO,
 		expiresAt: new Date(Date.now() + 60_000),
 	})
 

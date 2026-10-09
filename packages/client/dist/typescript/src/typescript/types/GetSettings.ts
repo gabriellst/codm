@@ -59,6 +59,10 @@ export type GetSettings200 = {
          * @type boolean
         */
         authRequired: boolean;
+        /**
+         * @type boolean
+        */
+        permissionDenied: boolean;
     };
     /**
      * @type object

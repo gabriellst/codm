@@ -3,7 +3,7 @@ import { container, type DependencyContainer } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { TestBed, givenThread, givenWorkspace } from '@test/support'
 import { LoggingService } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind, ProviderKind, AgentModelId } from '@codm/contracts-typescript/wire/enums'
+import { MailboxItemKind, MailboxTargetKind, ProviderKind, AgentModelId, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { CloudSession, MockCloudSession } from '@shared/services/CloudSession'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
@@ -47,6 +47,7 @@ describe('MailboxRepository — the guarantees the dispatcher is built on', () =
 			targetKind: MailboxTargetKind.THREAD,
 			targetId,
 			kind: MailboxItemKind.OPERATOR_MESSAGE,
+			posture: PermissionPosture.AUTO,
 			payload: { entryId: '019e4d24-6524-7041-9e1c-8108180cddae' },
 			dedupKey,
 		})
@@ -296,6 +297,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 				targetKind: MailboxTargetKind.ISSUE,
 				targetId: issueId,
 				kind: MailboxItemKind.STEER,
+				posture: PermissionPosture.AUTO,
 				payload: { threadId: uuidv7(), key: 'ISS-1', title: 'lease only', text: seq, provider: 'CLAUDE' },
 				dedupKey: `${issueId}:${seq}`,
 			})
@@ -347,6 +349,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			targetKind: MailboxTargetKind.THREAD,
 			targetId: thread.id.value,
 			kind: MailboxItemKind.OPERATOR_MESSAGE,
+			posture: PermissionPosture.AUTO,
 			payload: { entryId: '019e4d24-6524-7041-9e1c-8108180cddae' },
 			dedupKey: 'poison-1',
 		})
@@ -421,6 +424,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 				targetKind: MailboxTargetKind.THREAD,
 				targetId: OTHER_THREAD,
 				kind: MailboxItemKind.OPERATOR_MESSAGE,
+				posture: PermissionPosture.AUTO,
 				payload: { entryId: '019e4d24-6524-7041-9e1c-8108180cddae' },
 				dedupKey: 'long-turn-1',
 			})
@@ -500,6 +504,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 				targetKind: MailboxTargetKind.ISSUE,
 				targetId: uuidv7(),
 				kind: MailboxItemKind.WORK,
+				posture: PermissionPosture.AUTO,
 				payload: { threadId: thread.id.value, key: 'ISS-9', title: 'travada', goal: 'x', provider: 'CLAUDE' },
 				dedupKey: 'wedged-1',
 			})
@@ -565,6 +570,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 				targetKind: MailboxTargetKind.ISSUE,
 				targetId: ISSUE_ID,
 				kind: MailboxItemKind.WORK,
+				posture: PermissionPosture.AUTO,
 				payload: { threadId: ISSUE_THREAD, key: 'some-issue', title: 'Some issue', provider: 'CLAUDE_CODE' },
 				dedupKey: 'issue-work-1',
 			})
@@ -579,6 +585,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 				targetKind: MailboxTargetKind.THREAD,
 				targetId: OTHER_THREAD,
 				kind: MailboxItemKind.OPERATOR_MESSAGE,
+				posture: PermissionPosture.AUTO,
 				payload: { entryId: '019e4d24-6524-7041-9e1c-8108180cddae' },
 				dedupKey: 'operator-msg-1',
 			})
@@ -658,6 +665,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 				targetKind: MailboxTargetKind.THREAD,
 				targetId: thread.id.value,
 				kind: MailboxItemKind.OPERATOR_MESSAGE,
+				posture: PermissionPosture.AUTO,
 				payload: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: uuidv7(), speaker: 'operator', text: 'oi' },
 				dedupKey: `transport:${thread.id.value}`,
 			})
@@ -721,6 +729,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 				targetKind: MailboxTargetKind.THREAD,
 				targetId: thread.id.value,
 				kind: MailboxItemKind.OPERATOR_MESSAGE,
+				posture: PermissionPosture.AUTO,
 				payload: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: uuidv7(), speaker: 'operator', text: 'oi' },
 				dedupKey: `spoke:${thread.id.value}`,
 			})
@@ -788,6 +797,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			targetKind: MailboxTargetKind.THREAD,
 			targetId: thread.id.value,
 			kind: MailboxItemKind.OPERATOR_MESSAGE,
+			posture: PermissionPosture.AUTO,
 			payload: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: uuidv7(), speaker: 'operator', text: 'oi' },
 			dedupKey: `model:${thread.id.value}`,
 		})
@@ -796,6 +806,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			targetKind: MailboxTargetKind.ISSUE,
 			targetId: uuidv7(),
 			kind: MailboxItemKind.WORK,
+			posture: PermissionPosture.AUTO,
 			payload: { threadId: thread.id.value, key: 'ISS-1', title: 'work', goal: 'faz', provider: ProviderKind.CLAUDE_CODE },
 			dedupKey: `model-issue:${thread.id.value}`,
 		})
@@ -843,6 +854,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			targetKind: MailboxTargetKind.THREAD,
 			targetId: thread.id.value,
 			kind: MailboxItemKind.OPERATOR_MESSAGE,
+			posture: PermissionPosture.AUTO,
 			payload: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: uuidv7(), speaker: 'operator', text: 'oi' },
 			dedupKey: `default:${thread.id.value}`,
 		})
@@ -913,6 +925,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 				targetKind: MailboxTargetKind.THREAD,
 				targetId: thread.id.value,
 				kind: MailboxItemKind.OPERATOR_MESSAGE,
+				posture: PermissionPosture.AUTO,
 				payload: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: uuidv7(), speaker: 'operator', text: 'oi' },
 				dedupKey: `gate:${thread.id.value}`,
 			})

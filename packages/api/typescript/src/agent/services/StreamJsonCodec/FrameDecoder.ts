@@ -3,6 +3,17 @@ import { describeToolActivity } from '@codm/contracts/cues'
 import type { AgentFrame, AgentTurnUsage } from '../../types/AgentFrame'
 import { count, isRecord, str } from './wireValues'
 
+/** One tool call the CLI's permission layer refused — WHAT was refused, never what it carried. */
+export interface PermissionDenial {
+	/** `tool_name` on the wire. */
+	tool: string
+	/**
+	 * The KEYS of `tool_input`, never its values: an input can carry a credential (a connection string,
+	 * a token in a command line), and this list ends up in a Needs-you card and a channel message.
+	 */
+	inputKeys: readonly string[]
+}
+
 /**
  * The terminal `result` record, kept OUT of the `AgentFrame` union on purpose.
  *
@@ -24,6 +35,14 @@ export interface TerminalResultRecord {
 	 * UNFALSIFIED, not measured — same caveat as `stopReason === TOOL_USE` above.
 	 */
 	apiErrorStatus: string | number | null
+	/**
+	 * `safety_stops` — how many tool calls the auto-mode CLASSIFIER blocked this turn. MEASURED
+	 * (participant-permission-posture, Decision 10, claude 2.1.295): the classifier's block shows up HERE
+	 * and NOT in `permission_denials`. 0 when absent (`count`'s rule).
+	 */
+	safetyStops: number
+	/** `permission_denials` — tool calls the CLI's permission layer refused. `[]` when absent or malformed. */
+	permissionDenials: readonly PermissionDenial[]
 }
 
 export interface DecodedLine {
@@ -57,6 +76,15 @@ function readUsage(raw: unknown): AgentTurnUsage {
 		cacheCreationInputTokens: count(usage.cache_creation_input_tokens),
 		cacheReadInputTokens: count(usage.cache_read_input_tokens),
 	}
+}
+
+/** `permission_denials` is an array of `{ tool_name, tool_input }` — anything else degrades to nothing. */
+function readDenials(raw: unknown): PermissionDenial[] {
+	if (!Array.isArray(raw)) return []
+	return raw.filter(isRecord).map(entry => ({
+		tool: str(entry.tool_name) ?? 'unknown tool',
+		inputKeys: isRecord(entry.tool_input) ? Object.keys(entry.tool_input) : [],
+	}))
 }
 
 /**
@@ -201,6 +229,8 @@ export class FrameDecoder {
 				isError,
 				sessionId: str(raw.session_id) ?? null,
 				apiErrorStatus: apiErrorStatus(raw.api_error_status),
+				safetyStops: count(raw.safety_stops),
+				permissionDenials: readDenials(raw.permission_denials),
 			},
 		}
 	}

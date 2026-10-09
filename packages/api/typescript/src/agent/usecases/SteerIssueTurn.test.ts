@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenIssue, givenThread, testId } from '@test/support'
-import { IssueStatus } from '@codm/contracts-typescript/wire/enums'
+import { IssueStatus, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { IssueRepository } from '@issue/repositories/IssueRepository'
 import { SteerIssueTurn } from './SteerIssueTurn'
 
@@ -40,6 +40,7 @@ describe('SteerIssueTurn — reabre a issue certa antes de enfileirar', () => {
 			threadId: thread.id.value,
 			issueId: issue.id.value,
 			text: 'segue daqui',
+			posture: PermissionPosture.AUTO,
 		})
 
 		const reloaded = await issues.findById(issue.id.value)
@@ -57,6 +58,7 @@ describe('SteerIssueTurn — reabre a issue certa antes de enfileirar', () => {
 				threadId: thread.id.value,
 				issueId: issue.id.value,
 				text: 'segue daqui',
+				posture: PermissionPosture.AUTO,
 			}),
 		).resolves.toBeDefined()
 	})

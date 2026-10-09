@@ -1,5 +1,6 @@
-import { completeOnboarding } from '@codm/client-typescript/typescript'
+import { completeOnboarding, saveOnboardingStep } from '@codm/client-typescript/typescript'
 import type { ApiSession } from './api'
+import type { AttachedThread } from './thread'
 
 /**
  * CONCLUI O ONBOARDING — pré-requisito de toda spec que NAVEGA para uma rota `(app)` gateada.
@@ -21,6 +22,20 @@ import type { ApiSession } from './api'
  * apagaria a distinção entre "os pré-requisitos existem" e "o operador concluiu", que é justamente
  * o que aquela spec separa. Quem precisa da tela pede a tela.
  */
-export async function givenCompletedOnboarding(session: ApiSession): Promise<void> {
+export async function givenCompletedOnboarding(session: ApiSession, thread: AttachedThread): Promise<void> {
+	// Desde o rascunho atômico (2026-08-26) `CompleteOnboarding` REVALIDA o rascunho do servidor, e um
+	// `completeOnboarding` nu o apresenta vazio (`ONBOARDING_DRAFT_INCOMPLETE`). O rascunho é a thread que
+	// o given acabou de anexar — o commit a REAPROVEITA (`findByChannelContact`/workspace existente), nunca
+	// recria, então concluir não duplica nada.
+	await saveOnboardingStep(
+		{
+			state: {
+				contactRef: { channelId: thread.channelId, externalId: thread.contactExternalId, displayName: thread.displayName, kind: 'USER' },
+				workspace: { existingWorkspaceId: thread.workspaceId },
+				providers: thread.providers,
+			},
+		},
+		{ client: session.client },
+	)
 	await completeOnboarding({ client: session.client })
 }

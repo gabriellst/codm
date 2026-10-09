@@ -12,6 +12,7 @@ import {
 	StopResolution,
 	MessageType,
 	Language,
+	PermissionPosture,
 } from '@codm/contracts-typescript/wire/enums'
 // The DECLARED provider → models relation. A constant, no I/O — unlike the wire enums above (a
 // generated cross-language contract, `@codm/contracts-typescript`), `@catalog` is a single-reader
@@ -21,7 +22,7 @@ import { effectiveModel, offersModel } from '@catalog'
 import type { DomainErrors } from '../errors'
 import { OPERATOR_PARTICIPANT_ID } from '../objects/TranscriptSpeaker'
 import { mentionsTag, stripMentionTag, MentionGateSchema, CustomPromptSchema } from '../schemas'
-import { isResolutionApplicable } from '../utils/StopResolutions'
+import { isResolutionApplicable, RESUMES_WITH_RESOLVER_POSTURE } from '../utils/StopResolutions'
 import { ThreadStopResolvedEvent } from '../events/ThreadStopResolvedEvent'
 
 // ContactRef VO (embedded) — the channel counterparty. channelId lives on the Thread itself.
@@ -31,12 +32,16 @@ export const ContactRefSchema = z.object({
 	kind: z.enum(ContactKind),
 })
 
-// Participant VO — everyone in the conversation; `canInvoke` gates who may trigger agents.
+// Participant VO — everyone in the conversation. Two INDEPENDENT grants: `canInvoke` decides who may
+// trigger agents; `canElevate` decides whose trigger runs the turn with NO permission filter
+// (PermissionPosture.BYPASS). No invariant ties one to the other (participant-permission-posture,
+// Decision 2): a thread where nobody may elevate simply runs every turn in AUTO.
 export const ParticipantSchema = z.object({
 	participantId: z.string().min(1),
 	name: z.string().min(1),
 	source: z.string(),
 	canInvoke: z.boolean(),
+	canElevate: z.boolean(),
 })
 
 /**
@@ -644,9 +649,13 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 * than a guarded throw — the caller only calls it when the id is absent, so a second admission of
 	 * the same id is not a business mistake worth a named error, just a no-op safety net.
 	 */
-	admitParticipant(participant: Participant): void {
+	admitParticipant(participant: Omit<Participant, 'canElevate'>): void {
 		if (this.participants.some(p => p.participantId === participant.participantId)) return
-		this.participants = [...this.participants, participant]
+		// ADMITTED WITHOUT ELEVATION, always — the grant is not even accepted here, and the explicit
+		// `false` is written AFTER the spread so a caller that smuggles one in still loses it. Elevation
+		// is something the operator grants on purpose (`setParticipantElevation`), never a side effect of
+		// joining the roster.
+		this.participants = [...this.participants, { ...participant, canElevate: false }]
 	}
 
 	setParticipantInvocation(participantId: string, canInvoke: boolean): void {
@@ -659,6 +668,36 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 		participant.canInvoke = canInvoke
 		// Reassign to trigger the embedded-array persistence path.
 		this.participants = [...this.participants]
+	}
+
+	/**
+	 * Grant or withdraw the right to run this conversation's turns with NO permission filter.
+	 *
+	 * Independent of `canInvoke` (participant-permission-posture, Decision 2): there is no "last
+	 * elevator" invariant — a thread where nobody may elevate runs every turn in AUTO, which is the safe
+	 * state, not a broken one.
+	 */
+	setParticipantElevation(participantId: string, canElevate: boolean): void {
+		const participant = this.participants.find(p => p.participantId === participantId)
+		if (!participant) throw new BaseError<DomainErrors>('PARTICIPANT_NOT_FOUND', `no participant ${participantId}`)
+		participant.canElevate = canElevate
+		// Reassign to trigger the embedded-array persistence path.
+		this.participants = [...this.participants]
+	}
+
+	/**
+	 * The posture a turn TRIGGERED by this participant runs under (participant-permission-posture,
+	 * Decision 4). The roster is the only authority: BYPASS exactly when the participant is on it AND was
+	 * granted `canElevate`; anyone else — including a sender the roster never recorded — is AUTO.
+	 *
+	 * The owner arrives here as `OPERATOR_PARTICIPANT_ID`, never as their phone-number JID:
+	 * `ConsumeInboundMessage` maps `fromMe` to the sentinel before ingest, and the console whisper names
+	 * the sentinel directly — so the owner's own JID sitting in a group roster without the grant never
+	 * decides the operator's posture.
+	 */
+	postureOf(participantId: string): PermissionPosture {
+		const participant = this.participants.find(p => p.participantId === participantId)
+		return participant?.canElevate ? PermissionPosture.BYPASS : PermissionPosture.AUTO
 	}
 
 	/**
@@ -783,8 +822,12 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 * `PublishThreadIntegrationEvents` bridges. `pullDomainEvents()` — the mechanism `BaseEntity` has
 	 * always exposed and no TypeScript aggregate had used yet (the Go `Channel` uses its twin) — is
 	 * drained by the use case inside the same transaction as the write.
+	 *
+	 * `resolverPosture` is WHO resolved — a run's minted posture, or the `operator` participant's grant for
+	 * the console — and the fact carries the posture the resume will run under, already reduced by
+	 * `RESUMES_WITH_RESOLVER_POSTURE`.
 	 */
-	resolveStop(stop: Stop, resolution: StopResolution): void {
+	resolveStop(stop: Stop, resolution: StopResolution, resolverPosture: PermissionPosture): void {
 		if (stop.threadId !== this.id.value) {
 			throw new BaseError<DomainErrors>('STOP_NOT_IN_THREAD', `stop ${stop.stopId} belongs to thread ${stop.threadId}`)
 		}
@@ -800,7 +843,15 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 			new ThreadStopResolvedEvent({
 				entityId: this.id.value,
 				ownerId: this.ownerId,
-				payload: { stopId: stop.stopId, issueId: stop.issueId, threadId: this.id.value, resolution },
+				payload: {
+					stopId: stop.stopId,
+					issueId: stop.issueId,
+					threadId: this.id.value,
+					resolution,
+					// How far the resume may go (Decision 7): the resolver's posture when the resolution is one
+					// that resumes with it, AUTO otherwise — DENY never lifts the filter.
+					posture: RESUMES_WITH_RESOLVER_POSTURE[resolution] ? resolverPosture : PermissionPosture.AUTO,
+				},
 			}),
 		)
 	}

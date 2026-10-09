@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { AgentModelId } from '@codm/contracts-typescript/wire/enums'
+import { AgentModelId, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { MCP_RUN_TOKEN_ENV, MCP_SERVER_KEY, wireToolName } from '../../../mcp/wire'
 import type { AgentToolName } from '../../../enums'
 import type { AgentMcpInvocation } from '../../../types/AgentMcpInvocation'
@@ -64,7 +64,7 @@ const mcp = (overrides: Partial<AgentMcpInvocation> = {}): AgentMcpInvocation =>
 })
 
 describe('CodexAgentRunner.buildArgs — the plain `exec` shape', () => {
-	const base = { cwd: '/work/thread-1' }
+	const base = { cwd: '/work/thread-1', posture: PermissionPosture.AUTO }
 
 	it('is `exec --json --skip-git-repo-check`, with the workspace pinned by -C', () => {
 		const args = CodexAgentRunner.buildArgs(base)
@@ -191,7 +191,7 @@ describe('CodexAgentRunner.buildArgs — the plain `exec` shape', () => {
 })
 
 describe('CodexAgentRunner.buildArgs — the `exec resume` shape is NARROWER, not incremental', () => {
-	const base = { cwd: '/work/thread-1', resumeSessionId: '01a04541-3924-75f1-9f7e-221f3f57cee8' }
+	const base = { cwd: '/work/thread-1', posture: PermissionPosture.AUTO, resumeSessionId: '01a04541-3924-75f1-9f7e-221f3f57cee8' }
 
 	it('is a SUBCOMMAND with the session id as a positional, not a --resume flag', () => {
 		const args = CodexAgentRunner.buildArgs(base)
@@ -237,8 +237,8 @@ describe('CodexAgentRunner.buildArgs — the `exec resume` shape is NARROWER, no
 	})
 
 	it('the two shapes really do differ — the guard above would pass on identical argv', () => {
-		const plain = CodexAgentRunner.buildArgs({ cwd: '/w', extraDirs: ['/a'] })
-		const resumed = CodexAgentRunner.buildArgs({ cwd: '/w', extraDirs: ['/a'], resumeSessionId: 'id' })
+		const plain = CodexAgentRunner.buildArgs({ cwd: '/w', posture: PermissionPosture.AUTO, extraDirs: ['/a'] })
+		const resumed = CodexAgentRunner.buildArgs({ cwd: '/w', posture: PermissionPosture.AUTO, extraDirs: ['/a'], resumeSessionId: 'id' })
 
 		expect(plain).not.toEqual(resumed)
 	})

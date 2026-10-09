@@ -258,7 +258,9 @@ describe('GetThreadSettings — group roster reflects LIVE membership, not the f
 			contactExternalId: GROUP_ID,
 			contactKind: ContactKind.GROUP,
 			// The JSON roster the operator's dialog would otherwise be stuck with — no MEMBER_A row at all.
-			participants: [{ participantId: 'operator', name: 'Operator', source: 'Operator on this machine', canInvoke: true }],
+			participants: [
+				{ participantId: 'operator', name: 'Operator', source: 'Operator on this machine', canInvoke: true, canElevate: true },
+			],
 		})
 		await givenRemoteMembership(testBed, { channelId: GROUP_CHANNEL, groupId: GROUP_ID, memberId: MEMBER_A })
 
@@ -280,9 +282,9 @@ describe('GetThreadSettings — group roster reflects LIVE membership, not the f
 			contactExternalId: GROUP_ID,
 			contactKind: ContactKind.GROUP,
 			participants: [
-				{ participantId: 'operator', name: 'Operator', source: 'Operator on this machine', canInvoke: true },
-				{ participantId: MEMBER_A, name: MEMBER_A, source: 'Channel group member', canInvoke: false },
-				{ participantId: MEMBER_B, name: MEMBER_B, source: 'Channel group member', canInvoke: false },
+				{ participantId: 'operator', name: 'Operator', source: 'Operator on this machine', canInvoke: true, canElevate: true },
+				{ participantId: MEMBER_A, name: MEMBER_A, source: 'Channel group member', canInvoke: false, canElevate: false },
+				{ participantId: MEMBER_B, name: MEMBER_B, source: 'Channel group member', canInvoke: false, canElevate: false },
 			],
 		})
 		// Only MEMBER_A is still live in the gateway projection — MEMBER_B left the group.

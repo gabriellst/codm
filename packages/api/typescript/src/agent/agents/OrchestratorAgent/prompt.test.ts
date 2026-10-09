@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { ContactKind, MailboxItemKind, StopKind, AgentModelId, Language } from '@codm/contracts-typescript/wire/enums'
+import { ContactKind, MailboxItemKind, StopKind, AgentModelId, Language, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { AgentRunOutcome, MessageVia } from '../../enums'
 import {
 	toolNameOf,
@@ -57,6 +57,7 @@ const base = {
 	ownerId: '00000000-0000-4000-8000-0000000000aa',
 	threadId: '00000000-0000-4000-8000-0000000000bb',
 	cwd: '/Users/dev/project',
+	posture: PermissionPosture.AUTO,
 	binaryPath: '/usr/local/bin/claude',
 	contactKind: ContactKind.GROUP,
 	mentionTag: '@codm',

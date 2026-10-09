@@ -6951,6 +6951,7 @@ pub mod types {
     ///        "authRequired",
     ///        "blockedByClassification",
     ///        "humanRequested",
+    ///        "permissionDenied",
     ///        "serverErrors"
     ///      ],
     ///      "properties": {
@@ -6964,6 +6965,9 @@ pub mod types {
     ///          "type": "boolean"
     ///        },
     ///        "humanRequested": {
+    ///          "type": "boolean"
+    ///        },
+    ///        "permissionDenied": {
     ///          "type": "boolean"
     ///        },
     ///        "serverErrors": {
@@ -7097,6 +7101,7 @@ pub mod types {
     ///    "authRequired",
     ///    "blockedByClassification",
     ///    "humanRequested",
+    ///    "permissionDenied",
     ///    "serverErrors"
     ///  ],
     ///  "properties": {
@@ -7110,6 +7115,9 @@ pub mod types {
     ///      "type": "boolean"
     ///    },
     ///    "humanRequested": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "permissionDenied": {
     ///      "type": "boolean"
     ///    },
     ///    "serverErrors": {
@@ -7131,6 +7139,8 @@ pub mod types {
         pub blocked_by_classification: bool,
         #[serde(rename = "humanRequested")]
         pub human_requested: bool,
+        #[serde(rename = "permissionDenied")]
+        pub permission_denied: bool,
         #[serde(rename = "serverErrors")]
         pub server_errors: bool,
     }
@@ -7235,6 +7245,7 @@ pub mod types {
     ///      "items": {
     ///        "type": "object",
     ///        "required": [
+    ///          "canElevate",
     ///          "canInvoke",
     ///          "channelId",
     ///          "hasAvatar",
@@ -7243,6 +7254,9 @@ pub mod types {
     ///          "source"
     ///        ],
     ///        "properties": {
+    ///          "canElevate": {
+    ///            "type": "boolean"
+    ///          },
     ///          "canInvoke": {
     ///            "type": "boolean"
     ///          },
@@ -7465,6 +7479,7 @@ pub mod types {
     ///{
     ///  "type": "object",
     ///  "required": [
+    ///    "canElevate",
     ///    "canInvoke",
     ///    "channelId",
     ///    "hasAvatar",
@@ -7473,6 +7488,9 @@ pub mod types {
     ///    "source"
     ///  ],
     ///  "properties": {
+    ///    "canElevate": {
+    ///      "type": "boolean"
+    ///    },
     ///    "canInvoke": {
     ///      "type": "boolean"
     ///    },
@@ -7501,6 +7519,8 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct GetThreadSettingsResponseParticipantsItem {
+        #[serde(rename = "canElevate")]
+        pub can_elevate: bool,
         #[serde(rename = "canInvoke")]
         pub can_invoke: bool,
         #[serde(rename = "channelId")]
@@ -9923,6 +9943,35 @@ pub mod types {
                 })
         }
     }
+    ///`SetParticipantElevationBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "canElevate"
+    ///  ],
+    ///  "properties": {
+    ///    "canElevate": {
+    ///      "type": "boolean"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct SetParticipantElevationBody {
+        #[serde(rename = "canElevate")]
+        pub can_elevate: bool,
+    }
+    impl ::std::convert::From<&SetParticipantElevationBody>
+    for SetParticipantElevationBody {
+        fn from(value: &SetParticipantElevationBody) -> Self {
+            value.clone()
+        }
+    }
     ///`SetParticipantInvocationBody`
     ///
     /// <details><summary>JSON schema</summary>
@@ -10942,6 +10991,7 @@ pub mod types {
     ///        "authRequired",
     ///        "blockedByClassification",
     ///        "humanRequested",
+    ///        "permissionDenied",
     ///        "serverErrors"
     ///      ],
     ///      "properties": {
@@ -10955,6 +11005,9 @@ pub mod types {
     ///          "type": "boolean"
     ///        },
     ///        "humanRequested": {
+    ///          "type": "boolean"
+    ///        },
+    ///        "permissionDenied": {
     ///          "type": "boolean"
     ///        },
     ///        "serverErrors": {
@@ -10988,6 +11041,7 @@ pub mod types {
     ///    "authRequired",
     ///    "blockedByClassification",
     ///    "humanRequested",
+    ///    "permissionDenied",
     ///    "serverErrors"
     ///  ],
     ///  "properties": {
@@ -11001,6 +11055,9 @@ pub mod types {
     ///      "type": "boolean"
     ///    },
     ///    "humanRequested": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "permissionDenied": {
     ///      "type": "boolean"
     ///    },
     ///    "serverErrors": {
@@ -11020,6 +11077,8 @@ pub mod types {
         pub blocked_by_classification: bool,
         #[serde(rename = "humanRequested")]
         pub human_requested: bool,
+        #[serde(rename = "permissionDenied")]
+        pub permission_denied: bool,
         #[serde(rename = "serverErrors")]
         pub server_errors: bool,
     }
@@ -12880,6 +12939,45 @@ Sends a `PUT` request to `/threads/{threadId}/participants/{participantId}`
         let url = format!(
             "{}/threads/{}/participants/{}", self.baseurl, encode_path(& thread_id
             .to_string()), encode_path(& participant_id.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .put(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Toggle whether an order from a participant runs with no permission filter
+
+Sends a `PUT` request to `/threads/{threadId}/participants/{participantId}/elevation`
+
+*/
+    pub async fn set_participant_elevation<'a>(
+        &'a self,
+        thread_id: &'a str,
+        participant_id: &'a str,
+        body: &'a types::SetParticipantElevationBody,
+    ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
+        let url = format!(
+            "{}/threads/{}/participants/{}/elevation", self.baseurl, encode_path(&
+            thread_id.to_string()), encode_path(& participant_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map

@@ -96,6 +96,24 @@ export const POLICY_EXCEPTIONS: readonly { file: string; imports: string; why: s
 			'and the card, on the exact path whose failure mode is already "nobody was told". Measured 2026-08-04: an ' +
 			'issue sat WORKING for two and a half hours with three dead items and no signal anywhere.',
 	},
+	{
+		file: 'agent/usecases/RunOrchestratorTurn.ts',
+		imports: 'thread/usecases',
+		why:
+			'An orchestrator turn the permission filter blocked (PERMISSION_DENIED, participant-permission-posture ' +
+			'Decision 9) has to become a THREAD-level Needs-you card on the FIRST occurrence — `TRANSPORT_STOP_RETRIES` ' +
+			'declares it is never retried, so the dispatcher`s poisoned-item path never sees it. The ladder, descended in order:\n' +
+			'  degrau 1 (refactor to repositories/services) — NOT TAKEN, for the reasons the dispatcher`s exception above ' +
+			'names: `RaiseStop` owns the `StopPolicyConfig` gate (`StopPolicy.permissionDenied` off must be a no-op), ' +
+			'`stopId` idempotency, the owner-language title and the channel notice enqueued in the same transaction. ' +
+			'Re-implementing them against the aggregate here would fork that logic.\n' +
+			'  degrau 2 (declared edge + NAMED per-file exception) — TAKEN. Same `agent → thread` edge, same surface, ' +
+			'one more file; this use case already imports `@thread/repositories` and `@thread/services`. Per-file and ' +
+			'liveness-gated.\n' +
+			'  degrau 3 (integration event) — NOT NEEDED. The turn is the only place that knows its own run was denied, ' +
+			'and the frozen `stop_raised` integration event is issue-scoped; minting a fact for someone else to turn into ' +
+			'a card would add a hop on the path whose whole point is telling the operator NOW.',
+	},
 	...(
 		[
 			{ file: 'ui/usecases/CompleteOnboarding.ts', imports: 'workspace/usecases' },

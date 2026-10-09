@@ -3,7 +3,7 @@ import { container, type DependencyContainer } from 'tsyringe-neo'
 import type { ZodType } from 'zod'
 import { TestBed, givenIssue, givenThread, givenWorkspace } from '@test/support'
 import { LoggingService, MockLoggingService } from '@codm/core-typescript'
-import { AgentModelId, MailboxItemKind, ProviderKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
+import { AgentModelId, MailboxItemKind, ProviderKind, TranscriptKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { RunIssueTurn } from '@agent/usecases/RunIssueTurn'
@@ -69,6 +69,7 @@ function argvFor(request: AgentRunRequest<ZodType | undefined> | undefined): str
 		newSessionId: request.session?.newId,
 		mcp: request.mcp,
 		caps: request.caps ?? {},
+		posture: request.posture,
 	})
 }
 
@@ -141,6 +142,7 @@ describe('Flow (integration): two inbound messages on one issue → the second R
 			key: ctx.key,
 			title: ctx.title,
 			provider: ProviderKind.CLAUDE_CODE,
+			posture: PermissionPosture.AUTO,
 			workspacePath: ctx.workspacePath,
 			prompt,
 			// DERIVED from the one fact this helper already has, and the same rule the dispatcher applies:

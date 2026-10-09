@@ -6,6 +6,8 @@ export interface StopPolicy {
 	humanRequested: boolean
 	approvalNeeded: boolean
 	authRequired: boolean
+	/** Whether a `PERMISSION_DENIED` stop (the permission filter blocked an action) is recorded. */
+	permissionDenied: boolean
 }
 
 export const DEFAULT_STOP_POLICY: StopPolicy = {
@@ -14,6 +16,7 @@ export const DEFAULT_STOP_POLICY: StopPolicy = {
 	humanRequested: true,
 	approvalNeeded: true,
 	authRequired: true,
+	permissionDenied: true,
 }
 
 /**

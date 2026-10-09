@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { TestBed, givenIssue, givenThread, givenDomainEvent } from '@test/support'
-import { IssueStatus, MailboxItemKind, MailboxTargetKind, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { IssueStatus, MailboxItemKind, MailboxTargetKind, StopKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { ThreadStopRaisedEvent } from '@codm/contracts-typescript/wire/events'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { IssueRepository } from '@issue/repositories/IssueRepository'
@@ -36,6 +36,7 @@ describe('ReconcileStalledIssues', () => {
 			targetKind: MailboxTargetKind.ISSUE,
 			targetId: issueId,
 			kind: MailboxItemKind.STEER,
+			posture: PermissionPosture.AUTO,
 			payload: { issueId, threadId, key: 'k', title: 't', text: 'segue' },
 			dedupKey: uuidv7(),
 		})

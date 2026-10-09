@@ -18,6 +18,7 @@ const STOP_TITLES_PT: Record<StopKind, string> = {
 	[StopKind.HUMAN_REQUESTED]: 'Alguém pediu para falar com uma pessoa',
 	[StopKind.APPROVAL_NEEDED]: 'Uma ação precisa da sua aprovação',
 	[StopKind.AUTH_REQUIRED]: 'O CLI do agente precisa que você entre de novo',
+	[StopKind.PERMISSION_DENIED]: 'Uma ação foi barrada pelo filtro de permissões — ela precisa da sua aprovação',
 }
 
 /**
@@ -30,6 +31,7 @@ const STOP_TITLES_EN: Record<StopKind, string> = {
 	[StopKind.HUMAN_REQUESTED]: 'A participant asked for a human',
 	[StopKind.APPROVAL_NEEDED]: 'An action needs your approval',
 	[StopKind.AUTH_REQUIRED]: 'The agent CLI needs you to sign in again',
+	[StopKind.PERMISSION_DENIED]: 'An action was blocked by the permission filter — it needs your approval',
 }
 
 const PT_MESSAGES = {

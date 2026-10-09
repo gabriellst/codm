@@ -44,6 +44,9 @@ import "./enums/issue-status.tsp";
 import "./enums/issue-archive-reason.tsp";
 import "./enums/stop-kind.tsp";
 import "./enums/stop-resolution.tsp";
+// The permission regime an agent turn runs under — cross-boundary because the mailbox column, the run
+// token claim and every runner's argv table are typed by it.
+import "./enums/permission-posture.tsp";
 import "./enums/classification-method.tsp";
 import "./enums/artifact-kind.tsp";
 import "./enums/transcript-kind.tsp";

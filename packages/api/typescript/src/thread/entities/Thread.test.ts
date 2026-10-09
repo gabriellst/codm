@@ -9,6 +9,7 @@ import {
 	StopResolution,
 	ThreadStatus,
 	Language,
+	PermissionPosture,
 } from '@codm/contracts-typescript/wire/enums'
 import { ThreadStopResolvedEvent } from '../events/ThreadStopResolvedEvent'
 import { CUSTOM_PROMPT_MAX_LENGTH } from '../schemas'
@@ -22,8 +23,8 @@ const base = {
 	providers: [ProviderKind.CLAUDE_CODE],
 	mentionTag: '@base',
 	participants: [
-		{ participantId: 'operator', name: 'Operator', source: 'Mac', canInvoke: true },
-		{ participantId: 'c1', name: 'Contact', source: 'WA', canInvoke: false },
+		{ participantId: 'operator', name: 'Operator', source: 'Mac', canInvoke: true, canElevate: true },
+		{ participantId: 'c1', name: 'Contact', source: 'WA', canInvoke: false, canElevate: false },
 	],
 }
 
@@ -78,7 +79,10 @@ describe('Thread entity', () => {
 
 	it('rejects a roster with no invoker', () => {
 		expect(() =>
-			Thread.create({ ...base, participants: [{ participantId: 'c1', name: 'Contact', source: 'WA', canInvoke: false }] }),
+			Thread.create({
+				...base,
+				participants: [{ participantId: 'c1', name: 'Contact', source: 'WA', canInvoke: false, canElevate: false }],
+			}),
 		).toThrow(BaseError)
 	})
 
@@ -454,7 +458,7 @@ describe('Thread.recordEntry — the thread owns who may cite what, and who need
 			workspaceId: base.workspaceId,
 			providers: [ProviderKind.CLAUDE_CODE],
 			mentionTag,
-			participants: [{ participantId: 'operator', name: 'Operator', source: 'console', canInvoke: true }],
+			participants: [{ participantId: 'operator', name: 'Operator', source: 'console', canInvoke: true, canElevate: true }],
 		})
 
 	// ── AC-1: quotedEntry must belong to THIS thread ───────────────────────────────────────────────
@@ -567,7 +571,7 @@ describe('Thread.raiseStop / resolveStop — a stop belongs to the thread, with 
 			workspaceId: base.workspaceId,
 			providers: [ProviderKind.CLAUDE_CODE],
 			mentionTag: '@ws',
-			participants: [{ participantId: 'operator', name: 'Operator', source: 'console', canInvoke: true }],
+			participants: [{ participantId: 'operator', name: 'Operator', source: 'console', canInvoke: true, canElevate: true }],
 		})
 
 	it('US-5 — a stop with NO issue is raised, and carries the owner + thread from the aggregate', () => {
@@ -601,7 +605,9 @@ describe('Thread.raiseStop / resolveStop — a stop belongs to the thread, with 
 		const threadB = threadOf()
 		const stop = threadA.raiseStop({ kind: StopKind.APPROVAL_NEEDED, title: 't', detail: 'd' })
 
-		expect(() => threadB.resolveStop(stop, StopResolution.APPROVE)).toThrow(expect.objectContaining({ name: 'STOP_NOT_IN_THREAD' }))
+		expect(() => threadB.resolveStop(stop, StopResolution.APPROVE, PermissionPosture.AUTO)).toThrow(
+			expect.objectContaining({ name: 'STOP_NOT_IN_THREAD' }),
+		)
 		expect(threadB.pullPendingWrites().stopResolutions).toHaveLength(0)
 	})
 
@@ -609,11 +615,11 @@ describe('Thread.raiseStop / resolveStop — a stop belongs to the thread, with 
 		const thread = threadOf()
 		const serverError = thread.raiseStop({ kind: StopKind.SERVER_ERROR, title: 't', detail: 'd' })
 
-		expect(() => thread.resolveStop(serverError, StopResolution.APPROVE)).toThrow(
+		expect(() => thread.resolveStop(serverError, StopResolution.APPROVE, PermissionPosture.AUTO)).toThrow(
 			expect.objectContaining({ name: 'RESOLUTION_NOT_APPLICABLE' }),
 		)
 		// TAKE_OVER applies to every kind — the guard rejects the wrong pair, not every pair.
-		thread.resolveStop(serverError, StopResolution.TAKE_OVER)
+		thread.resolveStop(serverError, StopResolution.TAKE_OVER, PermissionPosture.AUTO)
 		expect(thread.pullPendingWrites().stopResolutions).toHaveLength(1)
 	})
 
@@ -621,14 +627,16 @@ describe('Thread.raiseStop / resolveStop — a stop belongs to the thread, with 
 		const thread = threadOf()
 		const resolved = { ...thread.raiseStop({ kind: StopKind.SERVER_ERROR, title: 't', detail: 'd' }), resolvedAt: new Date() }
 
-		expect(() => thread.resolveStop(resolved, StopResolution.RETRY)).toThrow(expect.objectContaining({ name: 'STOP_ALREADY_RESOLVED' }))
+		expect(() => thread.resolveStop(resolved, StopResolution.RETRY, PermissionPosture.AUTO)).toThrow(
+			expect.objectContaining({ name: 'STOP_ALREADY_RESOLVED' }),
+		)
 	})
 
 	it('resolveStop raises thread.stop_resolved, carrying threadId always and issueId only when there is one', () => {
 		const thread = threadOf()
 		const withoutIssue = thread.raiseStop({ kind: StopKind.HUMAN_REQUESTED, title: 't', detail: 'd' })
 
-		thread.resolveStop(withoutIssue, StopResolution.TAKE_OVER)
+		thread.resolveStop(withoutIssue, StopResolution.TAKE_OVER, PermissionPosture.AUTO)
 
 		const [event] = thread.pullDomainEvents()
 		expect(event).toBeInstanceOf(ThreadStopResolvedEvent)
@@ -706,8 +714,8 @@ describe('Thread.raiseStop / resolveStop — a stop belongs to the thread, with 
 			providers: [ProviderKind.CODEX],
 			mentionTag: '@other-workspace',
 			participants: [
-				{ participantId: 'operator', name: 'Operator', source: 'Mac', canInvoke: true },
-				{ participantId: 'c1', name: 'Contact Renamed', source: 'WA', canInvoke: false },
+				{ participantId: 'operator', name: 'Operator', source: 'Mac', canInvoke: true, canElevate: true },
+				{ participantId: 'c1', name: 'Contact Renamed', source: 'WA', canInvoke: false, canElevate: false },
 			],
 		})
 
@@ -737,7 +745,7 @@ describe('Thread.raiseStop / resolveStop — a stop belongs to the thread, with 
 			deleted().revive({
 				...settings,
 				providers: [ProviderKind.CLAUDE_CODE],
-				participants: [{ participantId: 'c1', name: 'Contact', source: 'WA', canInvoke: false }],
+				participants: [{ participantId: 'c1', name: 'Contact', source: 'WA', canInvoke: false, canElevate: false }],
 			}),
 		).toThrow(expect.objectContaining({ name: 'LAST_INVOKER' }))
 	})

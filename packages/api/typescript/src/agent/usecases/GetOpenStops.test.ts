@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenIssue, givenStop, givenThread } from '@test/support'
-import { StopKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
+import { PermissionPosture, StopKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { GetOpenStops } from './GetOpenStops'
@@ -67,7 +67,7 @@ describe('GetOpenStops — the open stops of ONE thread, shaped for the orchestr
 		// Resolved through the aggregate: this suite is about the READ, not about `ResolveStop`.
 		const repo = testBed.resolve(ThreadRepository)
 		const loaded = (await repo.findById(thread.id.value))!
-		loaded.resolveStop(alreadyAnswered, StopResolution.REVIEW_AND_SEND)
+		loaded.resolveStop(alreadyAnswered, StopResolution.REVIEW_AND_SEND, PermissionPosture.AUTO)
 		await repo.save(loaded)
 
 		const { stops } = await testBed.resolve(GetOpenStops).execute({ threadId: thread.id.value })

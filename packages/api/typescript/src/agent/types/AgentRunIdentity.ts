@@ -1,6 +1,6 @@
 import { z } from '@codm/core-typescript'
 import type { AgentIdentity } from '@codm/core-typescript'
-import { McpScope } from '@codm/contracts-typescript/wire/enums'
+import { McpScope, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import type Z from 'zod'
 import type { AgentName } from '../enums'
 
@@ -39,6 +39,13 @@ export const AgentRunIdentitySchema = z.object({
 	threadId: z.uuid(),
 	/** The transcript entry that TRIGGERED this run, when one did. Absent on runs no message triggered. */
 	entryId: z.uuid().optional(),
+	/**
+	 * The posture the run was minted with (participant-permission-posture, Decision 6) — WHO triggered
+	 * the turn, read back by the tool doors that schedule MORE work (`ForkIssue`, `SteerIssueTurn`,
+	 * `ResolveStop`) so that work inherits it. Same un-forgeability argument as `entryId`: no tool schema
+	 * names it, so there is no argument a model could set.
+	 */
+	posture: z.enum(PermissionPosture),
 })
 
 /** The confinement fields alone — what an agent's `IdentitySchema` produces. */
@@ -100,6 +107,7 @@ export const AgentRunIdentityCtxSchema = z.object({
 			issueId: z.uuid().optional(),
 			threadId: z.uuid(),
 			entryId: z.uuid().optional(),
+			posture: z.enum(PermissionPosture),
 			scope: z.enum(McpScope),
 		})
 		.optional(),

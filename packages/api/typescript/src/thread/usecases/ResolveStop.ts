@@ -1,7 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { Handler, z, BaseError } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { StopResolution } from '@codm/contracts-typescript/wire/enums'
+import { PermissionPosture, StopResolution } from '@codm/contracts-typescript/wire/enums'
+import { OPERATOR_PARTICIPANT_ID } from '../entities/Thread'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import type { ApplicationErrors } from '../errors'
 import type { AgentInterfaceErrors } from '@agent/errors'
@@ -17,6 +18,12 @@ export const ResolveStopInputSchema = z.object({
 	 * repository read, which is exactly what a controller may not do itself).
 	 */
 	runThreadId: z.uuid().optional(),
+	/**
+	 * The posture of the run resolving it — `ctx.agentIdentity.posture`, present ⟺ the caller is an
+	 * orchestration run (the same presence rule as `runThreadId`). Absent ⟺ the console, where the
+	 * authenticated owner resolves as the `operator` participant of the thread (Decision 7).
+	 */
+	runPosture: z.enum(PermissionPosture).optional(),
 })
 export const ResolveStopOutputSchema = z.void()
 
@@ -69,8 +76,12 @@ export class ResolveStop extends Handler<typeof ResolveStopInputSchema, typeof R
 		const thread = await this.threads.findById(stop.threadId)
 		if (!thread) throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${stop.threadId}`)
 
+		// WHO RESOLVED decides how far the resume may go (Decision 7): a run resolves with the posture it
+		// was minted with; the console resolves as the `operator` participant of THIS thread.
+		const resolverPosture = input.runPosture ?? thread.postureOf(OPERATOR_PARTICIPANT_ID)
+
 		await this.withTransaction(tx, async tx => {
-			thread.resolveStop(stop, input.resolution)
+			thread.resolveStop(stop, input.resolution, resolverPosture)
 			await this.threads.save(thread, tx)
 			// The aggregate raised the fact; the use case owns the transaction, so the drain happens here —
 			// unlike Go, where the repository pulls. First TS call site of a mechanism `BaseEntity` has

@@ -2,7 +2,7 @@ import { injectable } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { Handler, z, BaseError } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
+import { MailboxItemKind, MailboxTargetKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { ISSUE_KEY_FALLBACK, uniqueSlugKey } from '@shared/utils/slug'
 import { OpenIssuesReader } from '@thread/services/OpenIssuesReader'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
@@ -22,6 +22,12 @@ export const ForkIssueInputSchema = z.object({
 	 * wrote it about.
 	 */
 	originEntryId: z.uuid(),
+	/**
+	 * The posture of the run that forked it — `ctx.agentIdentity.posture`, INJECTED from the run token
+	 * like `originEntryId`, never an argument the model supplies (Decision 6). The issue's first turn
+	 * runs under it.
+	 */
+	posture: z.enum(PermissionPosture),
 	// NO `provider` FIELD. It used to arrive on the wire — the controller resolved it via
 	// `ThreadRepository` and forwarded it. import-direction#R1 moved that repository lookup HERE
 	// (controllers never touch repositories), so `handle()` now resolves it itself from `threadId`
@@ -112,6 +118,7 @@ export class ForkIssue extends Handler<typeof ForkIssueInputSchema, typeof ForkI
 					targetKind: MailboxTargetKind.ISSUE,
 					targetId: issueId,
 					kind: MailboxItemKind.WORK,
+					posture: input.posture,
 					// `originEntryId` rides along so the finished turn can put it on the ISSUE_RESULT without
 					// reading the issue row — the agent context has no runtime read of `issue` (the declared
 					// edge is declaration-only), and the value is already in hand here.

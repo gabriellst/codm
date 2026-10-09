@@ -1102,6 +1102,7 @@ const (
 	AUTHREQUIRED            StopKind = "AUTH_REQUIRED"
 	BLOCKEDBYCLASSIFICATION StopKind = "BLOCKED_BY_CLASSIFICATION"
 	HUMANREQUESTED          StopKind = "HUMAN_REQUESTED"
+	PERMISSIONDENIED        StopKind = "PERMISSION_DENIED"
 	SERVERERROR             StopKind = "SERVER_ERROR"
 )
 
@@ -1115,6 +1116,8 @@ func (e StopKind) Valid() bool {
 	case BLOCKEDBYCLASSIFICATION:
 		return true
 	case HUMANREQUESTED:
+		return true
+	case PERMISSIONDENIED:
 		return true
 	case SERVERERROR:
 		return true
@@ -1370,6 +1373,7 @@ type UpdateStopCriteriaJSONBody struct {
 		AuthRequired            bool `json:"authRequired"`
 		BlockedByClassification bool `json:"blockedByClassification"`
 		HumanRequested          bool `json:"humanRequested"`
+		PermissionDenied        bool `json:"permissionDenied"`
 		ServerErrors            bool `json:"serverErrors"`
 	} `json:"stopCriteria"`
 }
@@ -1586,6 +1590,11 @@ type SetParticipantInvocationJSONBody struct {
 	CanInvoke bool `json:"canInvoke"`
 }
 
+// SetParticipantElevationJSONBody defines parameters for SetParticipantElevation.
+type SetParticipantElevationJSONBody struct {
+	CanElevate bool `json:"canElevate"`
+}
+
 // ConfigurePromptJSONBody defines parameters for ConfigurePrompt.
 type ConfigurePromptJSONBody struct {
 	CustomPrompt *string `json:"customPrompt,omitempty"`
@@ -1721,6 +1730,9 @@ type ConfigureModelJSONRequestBody ConfigureModelJSONBody
 
 // SetParticipantInvocationJSONRequestBody defines body for SetParticipantInvocation for application/json ContentType.
 type SetParticipantInvocationJSONRequestBody SetParticipantInvocationJSONBody
+
+// SetParticipantElevationJSONRequestBody defines body for SetParticipantElevation for application/json ContentType.
+type SetParticipantElevationJSONRequestBody SetParticipantElevationJSONBody
 
 // ConfigurePromptJSONRequestBody defines body for ConfigurePrompt for application/json ContentType.
 type ConfigurePromptJSONRequestBody ConfigurePromptJSONBody
@@ -2351,6 +2363,11 @@ type ClientInterface interface {
 	SetParticipantInvocationWithBody(ctx context.Context, threadId string, participantId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	SetParticipantInvocation(ctx context.Context, threadId string, participantId string, body SetParticipantInvocationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetParticipantElevationWithBody request with any body
+	SetParticipantElevationWithBody(ctx context.Context, threadId string, participantId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SetParticipantElevation(ctx context.Context, threadId string, participantId string, body SetParticipantElevationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PauseThread request
 	PauseThread(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -3167,6 +3184,30 @@ func (c *Client) SetParticipantInvocationWithBody(ctx context.Context, threadId 
 
 func (c *Client) SetParticipantInvocation(ctx context.Context, threadId string, participantId string, body SetParticipantInvocationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewSetParticipantInvocationRequest(c.Server, threadId, participantId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SetParticipantElevationWithBody(ctx context.Context, threadId string, participantId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetParticipantElevationRequestWithBody(c.Server, threadId, participantId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SetParticipantElevation(ctx context.Context, threadId string, participantId string, body SetParticipantElevationJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetParticipantElevationRequest(c.Server, threadId, participantId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -5269,6 +5310,60 @@ func NewSetParticipantInvocationRequestWithBody(server string, threadId string, 
 	return req, nil
 }
 
+// NewSetParticipantElevationRequest calls the generic SetParticipantElevation builder with application/json body
+func NewSetParticipantElevationRequest(server string, threadId string, participantId string, body SetParticipantElevationJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSetParticipantElevationRequestWithBody(server, threadId, participantId, "application/json", bodyReader)
+}
+
+// NewSetParticipantElevationRequestWithBody generates requests for SetParticipantElevation with any type of body
+func NewSetParticipantElevationRequestWithBody(server string, threadId string, participantId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "participantId", participantId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/threads/%s/participants/%s/elevation", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewPauseThreadRequest generates requests for PauseThread
 func NewPauseThreadRequest(server string, threadId string) (*http.Request, error) {
 	var err error
@@ -6276,6 +6371,11 @@ type ClientWithResponsesInterface interface {
 	SetParticipantInvocationWithBodyWithResponse(ctx context.Context, threadId string, participantId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetParticipantInvocationResponse, error)
 
 	SetParticipantInvocationWithResponse(ctx context.Context, threadId string, participantId string, body SetParticipantInvocationJSONRequestBody, reqEditors ...RequestEditorFn) (*SetParticipantInvocationResponse, error)
+
+	// SetParticipantElevationWithBodyWithResponse request with any body
+	SetParticipantElevationWithBodyWithResponse(ctx context.Context, threadId string, participantId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetParticipantElevationResponse, error)
+
+	SetParticipantElevationWithResponse(ctx context.Context, threadId string, participantId string, body SetParticipantElevationJSONRequestBody, reqEditors ...RequestEditorFn) (*SetParticipantElevationResponse, error)
 
 	// PauseThreadWithResponse request
 	PauseThreadWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*PauseThreadResponse, error)
@@ -7775,6 +7875,36 @@ func (r SetParticipantInvocationResponse) ContentType() string {
 	return ""
 }
 
+type SetParticipantElevationResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r SetParticipantElevationResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SetParticipantElevationResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SetParticipantElevationResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type PauseThreadResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -7909,6 +8039,7 @@ type GetThreadSettingsResponse struct {
 		} `json:"language"`
 		MentionGate  GetThreadSettings200JSONResponseBody_MentionGate `json:"mentionGate"`
 		Participants []struct {
+			CanElevate    bool               `json:"canElevate"`
 			CanInvoke     bool               `json:"canInvoke"`
 			ChannelId     openapi_types.UUID `json:"channelId"`
 			HasAvatar     bool               `json:"hasAvatar"`
@@ -8471,6 +8602,7 @@ type GetSettingsResponse struct {
 			AuthRequired            bool `json:"authRequired"`
 			BlockedByClassification bool `json:"blockedByClassification"`
 			HumanRequested          bool `json:"humanRequested"`
+			PermissionDenied        bool `json:"permissionDenied"`
 			ServerErrors            bool `json:"serverErrors"`
 		} `json:"stopCriteria"`
 	}
@@ -9180,6 +9312,23 @@ func (c *ClientWithResponses) SetParticipantInvocationWithResponse(ctx context.C
 		return nil, err
 	}
 	return ParseSetParticipantInvocationResponse(rsp)
+}
+
+// SetParticipantElevationWithBodyWithResponse request with arbitrary body returning *SetParticipantElevationResponse
+func (c *ClientWithResponses) SetParticipantElevationWithBodyWithResponse(ctx context.Context, threadId string, participantId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetParticipantElevationResponse, error) {
+	rsp, err := c.SetParticipantElevationWithBody(ctx, threadId, participantId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetParticipantElevationResponse(rsp)
+}
+
+func (c *ClientWithResponses) SetParticipantElevationWithResponse(ctx context.Context, threadId string, participantId string, body SetParticipantElevationJSONRequestBody, reqEditors ...RequestEditorFn) (*SetParticipantElevationResponse, error) {
+	rsp, err := c.SetParticipantElevation(ctx, threadId, participantId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetParticipantElevationResponse(rsp)
 }
 
 // PauseThreadWithResponse request returning *PauseThreadResponse
@@ -10675,6 +10824,32 @@ func ParseSetParticipantInvocationResponse(rsp *http.Response) (*SetParticipantI
 	return response, nil
 }
 
+// ParseSetParticipantElevationResponse parses an HTTP response from a SetParticipantElevationWithResponse call
+func ParseSetParticipantElevationResponse(rsp *http.Response) (*SetParticipantElevationResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetParticipantElevationResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParsePauseThreadResponse parses an HTTP response from a PauseThreadWithResponse call
 func ParsePauseThreadResponse(rsp *http.Response) (*PauseThreadResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -10805,6 +10980,7 @@ func ParseGetThreadSettingsResponse(rsp *http.Response) (*GetThreadSettingsRespo
 			} `json:"language"`
 			MentionGate  GetThreadSettings200JSONResponseBody_MentionGate `json:"mentionGate"`
 			Participants []struct {
+				CanElevate    bool               `json:"canElevate"`
 				CanInvoke     bool               `json:"canInvoke"`
 				ChannelId     openapi_types.UUID `json:"channelId"`
 				HasAvatar     bool               `json:"hasAvatar"`
@@ -11297,6 +11473,7 @@ func ParseGetSettingsResponse(rsp *http.Response) (*GetSettingsResponse, error) 
 				AuthRequired            bool `json:"authRequired"`
 				BlockedByClassification bool `json:"blockedByClassification"`
 				HumanRequested          bool `json:"humanRequested"`
+				PermissionDenied        bool `json:"permissionDenied"`
 				ServerErrors            bool `json:"serverErrors"`
 			} `json:"stopCriteria"`
 		}
