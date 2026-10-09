@@ -25,7 +25,7 @@ import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
 import type { AgentApplicationErrors } from '../errors'
 import { ResumeInvalidationReason, AgentRunOutcome, FactSource, MessageVia } from '../enums'
-import { isTransportStopKind } from '../enums/TransportStopKind'
+import { isTransportStopKind, retriesInPlace, TRANSPORT_STOP_RETRIES } from '../enums/TransportStopKind'
 
 export const RunIssueTurnInputSchema = z.object({
 	ownerId: z.uuid(),
@@ -98,7 +98,7 @@ export const RunIssueTurnOutputSchema = z.object({
 	 * it, so nothing was queued and nothing was said.
 	 */
 	spoke: z.boolean(),
-	/** Present only for a TRANSPORT stop kind — the dispatcher's cue to retry via `fail()` instead of consuming the item with `complete()`. */
+	/** Present only for a transport stop kind that RETRIES (`TRANSPORT_STOP_RETRIES`) — the dispatcher's cue to retry via `fail()` instead of consuming the item with `complete()`. */
 	transportStop: z.object({ detail: z.string() }).optional(),
 })
 
@@ -130,8 +130,9 @@ interface SessionPlan {
  *               / issue.completed / issue.stop_raised).
  *
  * ### The one conclusion that does NOT always become a fact here
- * `persistOutcome` is otherwise the place a conclusion always becomes fact — but a TRANSPORT stop
- * (`AUTH_REQUIRED` / `SERVER_ERROR`) is the exception: it returns before `enqueueResult` and before
+ * `persistOutcome` is otherwise the place a conclusion always becomes fact — but a TRANSPORT stop the
+ * `TRANSPORT_STOP_RETRIES` table says to RETRY (`AUTH_REQUIRED` / `SERVER_ERROR`) is the exception
+ * (`PERMISSION_DENIED` is NOT: it is recorded on the first occurrence): it returns before `enqueueResult` and before
  * minting `AgentRunStopRaisedEvent`, and `handle` reports it as `transportStop` with `spoke: false`
  * instead. The dispatcher decides what happens next — `fail()` and a retry, or, once attempts are
  * exhausted, `raiseStopForPoisoned` — so a transport stop becomes a RETRY in the dispatcher rather
@@ -217,10 +218,10 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 			await this.upsertSessionRecord(input, observed.agentSessionId ?? session.id, tx)
 		})
 
+		// Only a transport stop the table says to RETRY goes back to the dispatcher as `transportStop`; one
+		// it says to RECORD (PERMISSION_DENIED) was already minted by `persistOutcome` and consumes the item.
 		const transportStop =
-			observed.outcome.kind === 'STOPPED' && isTransportStopKind(observed.outcome.stopKind)
-				? { detail: observed.outcome.detail }
-				: undefined
+			observed.outcome.kind === 'STOPPED' && retriesInPlace(observed.outcome.stopKind) ? { detail: observed.outcome.detail } : undefined
 
 		return {
 			issueId: input.issueId,
@@ -317,50 +318,47 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 	/**
 	 * Persist the run's conclusion — and this is where §4.3 rule 7 (ONE producer per fact) is enforced.
 	 *
-	 * ### The predicate is the agent's TOOL SCOPE, and it cannot be `request.mcp`
-	 * `AgentRunRequest` is assembled INSIDE the agent (§4.2/§4.5): this use case injects the agent and
-	 * calls `agent.run(input)`, so it never sees the request and `if (request.mcp)` would be literally
-	 * unreachable from here. The equivalent predicate it CAN see is `agent.tools.length`, and the
-	 * equivalence is exact rather than approximate, because the two rules that sustain it are closed:
-	 * §4.2 ("empty `tools` ⇒ no `mcp` is built at all") and §4.7 (an agent that REQUIRES tools against a
-	 * provider with no `mcpConfigFlag` fails named with `AGENT_TOOLS_UNSUPPORTED`, never degrades
-	 * silently). There is no third case, so `request.mcp` present ⟺ `agent.tools.length > 0`.
+	 * ### A TRANSPORT stop: retried, or recorded NOW — the table decides
+	 * The runner observes it on the process/stream, so it never depended on a tool and is always
+	 * `INFERRED`. `TRANSPORT_STOP_RETRIES` says what happens next. A kind that RETRIES (`AUTH_REQUIRED`,
+	 * `SERVER_ERROR`) is not a fact yet: nothing is queued or minted here, `handle` reports it as
+	 * `transportStop`, and the dispatcher `fail()`s and retries — the stop only appears, via
+	 * `raiseStopForPoisoned`, once attempts run out. A kind that RECORDS (`PERMISSION_DENIED`) is minted
+	 * on the first occurrence (issue → NEEDS_INPUT downstream) and the item is consumed — a retry under
+	 * the same posture would only repeat the denial. Neither queues an `ISSUE_RESULT`: the stop's channel
+	 * notice (`NOTIFIES_ON_CHANNEL`) is what tells the operator, exactly as for a poisoned item.
 	 *
-	 * ### What that buys, concretely
-	 * With a non-empty scope the agent DECLARES its conclusion through `TransitionIssueStatus` /
-	 * `RaiseStop`, which already raise these exact event classes with `FactSource.DECLARED`. Minting a
-	 * second one from the terminal outcome would publish the frozen `integration.issue.completed`
-	 * TWICE — the double-publish AC-6.4 measures, and the reason the degenerate case ("declared AND
-	 * also ended normally") is a named test rather than a footnote.
+	 * ### Every other conclusion goes back to the conversation
+	 * The result is queued in THIS transaction, beside the outcome facts (§6.3, B1): an outcome that
+	 * commits always has a result queued, and one that rolls back queues nothing.
 	 *
-	 * ### The one thing that is minted unconditionally
-	 * A TRANSPORT stop (`AUTH_REQUIRED` / `SERVER_ERROR`) never depended on a tool — the runner
-	 * observes it on the process/stream — so it is minted whatever the scope is, always `INFERRED`.
-	 * The accumulator can only ever report a transport kind (`TerminalOutputAccumulator.outcome()`
-	 * narrows to the transport half by construction), which is what makes "a run without tools cannot
-	 * manufacture a DOMAIN stop" true by type rather than by discipline.
-	 *
-	 * An `if` on `agent.tools.length` is legitimate here: it is fact-origin POLICY, not a provider
-	 * branch (§8 rule 4 forbids `if (provider === 'x')`, not this).
+	 * ### The predicate for the completion fact is the agent's TOOL SCOPE
+	 * With a non-empty scope the agent DECLARES its conclusion (`TransitionIssueStatus` / `RaiseStop`),
+	 * which already raise these exact event classes with `FactSource.DECLARED`; minting a second one from
+	 * the terminal outcome would publish the frozen `integration.issue.completed` TWICE. `request.mcp`
+	 * present ⟺ `agent.tools.length > 0`, and the use case can only see the latter.
 	 */
 	private async persistOutcome(input: this['input'], outcome: TerminalOutcome, stopId: string | undefined, tx: Transaction): Promise<void> {
-		// A TRANSPORT stop is not a fact YET. Enqueueing the ISSUE_RESULT here would announce a failure
-		// the dispatcher's retry is about to contradict, and persisting the Stop would give the operator
-		// two signals for one event — the alarm now, the answer a minute later. `handle` reports this
-		// case as `transportStop` with `spoke: false` instead, and the dispatcher decides what happens
-		// next: `fail()` and retry, or — once attempts are exhausted — `raiseStopForPoisoned`.
-		if (outcome.kind === 'STOPPED' && isTransportStopKind(outcome.stopKind)) return
+		if (outcome.kind === 'STOPPED' && isTransportStopKind(outcome.stopKind)) {
+			if (TRANSPORT_STOP_RETRIES[outcome.stopKind]) return
+			await this.domainEventRepository.save(
+				new AgentRunStopRaisedEvent({
+					entityId: input.issueId,
+					ownerId: input.ownerId,
+					payload: {
+						stopId: stopId ?? uuidv7(),
+						issueId: input.issueId,
+						threadId: input.threadId,
+						kind: outcome.stopKind,
+						detail: outcome.detail,
+						source: FactSource.INFERRED,
+					},
+				}),
+				tx,
+			)
+			return
+		}
 
-		// THE RESULT GOES BACK TO THE CONVERSATION (§6.3, B1) — in THIS transaction, beside the outcome
-		// facts. Transactional ⇒ exactly-once: an outcome that commits always has a result queued, and
-		// one that rolls back queues nothing, so "the summary had no source" cannot happen by
-		// construction.
-		//
-		// This REPLACES `AgentRunReplyDraftedEvent`, which used to carry the same text to
-		// the old raw-delivery handler and out to the channel UNEDITED. Keeping both would put the worker's
-		// unedited voice on the wire in a race with the orchestrator's composed answer — two messages
-		// per conclusion, which is the hole the design review found (§5). The text is the same; what
-		// changed is who says it.
 		await this.enqueueResult(input, outcome, tx)
 
 		if (outcome.kind === 'COMPLETED') {
@@ -402,9 +400,9 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 			return
 		}
 
-		// Transport stops are ALWAYS minted (see the docblock); a domain stop can only reach this
-		// branch if the accumulator's type narrowing were broken, and gating it costs nothing.
-		if (!isTransportStopKind(outcome.stopKind) && this.agent.tools.length > 0) return
+		// A DOMAIN stop can only reach this line if the accumulator's type narrowing were broken; with tools,
+		// the agent declared it itself, so minting it again would be the double-publish rule 7 forbids.
+		if (this.agent.tools.length > 0) return
 		await this.domainEventRepository.save(
 			new AgentRunStopRaisedEvent({
 				entityId: input.issueId,

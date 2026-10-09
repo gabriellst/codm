@@ -30,3 +30,23 @@ export const TRANSPORT_STOP_KINDS = [StopKind.AUTH_REQUIRED, StopKind.SERVER_ERR
 export function isTransportStopKind(kind: StopKind): kind is TransportStopKind {
 	return (TRANSPORT_STOP_KINDS as readonly StopKind[]).includes(kind)
 }
+
+/**
+ * RETRY vs RECORD, per transport kind (participant-permission-posture, Decision 9) — DATA, never a branch
+ * on a kind's name. `true`: the turn returns to the queue (`fail()`), and only exhaustion turns it into a
+ * stop (`raiseStopForPoisoned`) — right for a process that died or a CLI that asked for a login, where a
+ * second attempt can succeed. `false`: the stop is recorded on the FIRST occurrence and the item is
+ * consumed — right for PERMISSION_DENIED, where a retry under the same posture only repeats the denial.
+ * Total over the type: a transport kind added to the contract fails compilation here until somebody
+ * decides which it is.
+ */
+export const TRANSPORT_STOP_RETRIES: Record<TransportStopKind, boolean> = {
+	[StopKind.AUTH_REQUIRED]: true,
+	[StopKind.SERVER_ERROR]: true,
+	[StopKind.PERMISSION_DENIED]: false,
+}
+
+/** True when a stop of this kind goes back to the queue instead of being recorded now. */
+export function retriesInPlace(kind: StopKind): boolean {
+	return isTransportStopKind(kind) && TRANSPORT_STOP_RETRIES[kind]
+}
