@@ -512,7 +512,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 	/**
 	 * Fold everything observed into the ONE terminal record — and never throw while doing it.
 	 *
-	 * Only TRANSPORT stops can be raised here (`AUTH_REQUIRED`, `SERVER_ERROR`); the type says so, and
+	 * Only TRANSPORT stops can be raised here (`AUTH_REQUIRED`, `SERVER_ERROR`, `PERMISSION_DENIED`); the type says so, and
 	 * that is the point. A DOMAIN stop is unrepresentable from this side because it can only come from
 	 * a `RaiseStop` / `AskOperator` tool call, which lands through the MCP router and not through here.
 	 */
@@ -583,9 +583,17 @@ export class ClaudeAgentRunner extends AgentRunner {
 		// a turn that never closes, and must never be allowed to reclassify one that did — even if it
 		// fires later, while the child lingers after `stdin.end()` (measured, see class doc above).
 		if (observed.terminal) {
-			return observed.terminal.isError
-				? { kind: StopKind.SERVER_ERROR as TransportStopKind, detail: observed.terminal.text || 'provider reported an error result' }
-				: undefined
+			if (observed.terminal.isError) {
+				return { kind: StopKind.SERVER_ERROR as TransportStopKind, detail: observed.terminal.text || 'provider reported an error result' }
+			}
+			// THE PERMISSION FILTER BLOCKED SOMETHING (participant-permission-posture, Decision 9). Both signals,
+			// because the measurement (Decision 10) found the auto-mode classifier reporting in `safety_stops`
+			// while `permission_denials` stayed empty. TRANSPORT evidence — the CLI's own counters on the
+			// terminal frame, never the model's prose.
+			if (observed.terminal.safetyStops > 0 || observed.terminal.permissionDenials.length > 0) {
+				return { kind: StopKind.PERMISSION_DENIED, detail: permissionDeniedDetail(observed.terminal) }
+			}
+			return undefined
 		}
 
 		if (observed.watchdogFired) {
@@ -631,6 +639,18 @@ export class ClaudeAgentRunner extends AgentRunner {
 
 function failure(outcome: AgentRunOutcome, detail: string, kind: TransportStopKind): AgentRunResult {
 	return { outcome, replyText: '', sessionId: null, failed: false, stop: { kind, detail } }
+}
+
+/**
+ * The Needs-you text of a PERMISSION_DENIED stop: the agent's own final words (its approval request) and
+ * then, when the CLI listed them, WHICH tools were refused — by name and input keys, never input values.
+ */
+function permissionDeniedDetail(terminal: TerminalResultRecord): string {
+	const denied = terminal.permissionDenials.map(d => `- ${d.tool}${d.inputKeys.length > 0 ? ` (${d.inputKeys.join(', ')})` : ''}`)
+	const lines = [terminal.text.trim(), ...(denied.length > 0 ? ['Negado pelo filtro de permissões:', ...denied] : [])].filter(
+		l => l.length > 0,
+	)
+	return lines.length > 0 ? lines.join('\n') : 'o filtro de permissões barrou uma ação'
 }
 
 /**

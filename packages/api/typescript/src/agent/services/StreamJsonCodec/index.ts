@@ -5,7 +5,7 @@
 // over canned frame sequences instead of over a live CLI. The process lives one folder over, in
 // `AgentRunner/StreamJsonAgentRunner/`.
 export { LineBuffer } from './LineBuffer'
-export { FrameDecoder, type DecodedLine, type TerminalResultRecord } from './FrameDecoder'
+export { FrameDecoder, type DecodedLine, type PermissionDenial, type TerminalResultRecord } from './FrameDecoder'
 export { CodexFrameDecoder } from './CodexFrameDecoder'
 export { StreamJsonCodec, type StreamJsonCodecOptions, type WireFrameDecoder } from './StreamJsonCodec'
 export { StreamJsonToTurnFactAccumulator, type TurnFactAccumulatorOptions } from './StreamJsonToTurnFactAccumulator'

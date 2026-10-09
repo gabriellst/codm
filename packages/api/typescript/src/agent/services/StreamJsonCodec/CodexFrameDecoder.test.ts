@@ -77,6 +77,9 @@ describe('CodexFrameDecoder — replayed against the committed captures', () => 
 			isError: false,
 			sessionId: '01a04541-3924-75f1-9f7e-221f3f57cee8',
 			apiErrorStatus: null,
+			// codex has no permission-denial signal — declared absent, never inferred from prose.
+			safetyStops: 0,
+			permissionDenials: [],
 		})
 	})
 

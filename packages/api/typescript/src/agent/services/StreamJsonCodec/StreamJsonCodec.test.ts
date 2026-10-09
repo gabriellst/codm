@@ -237,6 +237,9 @@ describe('FrameDecoder — content[] fan-out (AC-2.2, divergence D3)', () => {
 			sessionId: '2e564f1b-2b2a-4929-83c1-e2e84a9290f4',
 			// `null` on every clean turn measured — RESULT_SUCCESS carries no `api_error_status`.
 			apiErrorStatus: null,
+			// A clean turn blocked nothing — both permission signals are at rest (absent on this capture).
+			safetyStops: 0,
+			permissionDenials: [],
 		})
 	})
 
