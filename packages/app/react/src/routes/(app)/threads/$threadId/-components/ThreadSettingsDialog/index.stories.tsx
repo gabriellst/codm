@@ -23,8 +23,8 @@ const meta: Meta<typeof ThreadSettingsDialog> = {
 					// ao padrão da conta, que só existe quando há escolha a desfazer.
 					language: { declared: 'en-US', effective: 'en-US' },
 					participants: [
-						{ participantId: 'operator', name: 'Operator', source: 'Operator nesta máquina', canInvoke: true },
-						{ participantId: 'ada', name: 'Ada Lovelace', source: 'WhatsApp · +55 11 90000-0000', canInvoke: false },
+						{ participantId: 'operator', name: 'Operator', source: 'Operator nesta máquina', canInvoke: true, canElevate: true },
+						{ participantId: 'ada', name: 'Ada Lovelace', source: 'WhatsApp · +55 11 90000-0000', canInvoke: false, canElevate: false },
 					],
 					invokerCount: 1,
 					bufferSize: '50',

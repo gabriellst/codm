@@ -84,6 +84,7 @@
 		"needChannelTitle": "Connect a channel first",
 		"noContacts": "No contacts found on this channel.",
 		"noContactsFound": "No contacts for “{{term}}”.",
+		"retryContacts": "Search again",
 		"reviewFooterNote": "Once attached, messages on this thread open tasks in this folder. You can pause or undo at any time.",
 		"rowAgents": "Agents",
 		"rowContact": "Contact",
@@ -97,7 +98,6 @@
 		"stepThreadTitle": "Pick a thread",
 		"stepWorkspaceSubtitle": "The project folder your agents will work in.",
 		"stepWorkspaceTitle": "Pick a workspace",
-		"retryContacts": "Search again",
 		"syncingContacts": "Syncing conversations…"
 	},
 	"auth": {
@@ -157,13 +157,13 @@
 			"sectionTitle": "Account"
 		},
 		"login": {
+			"expired": "This sign-in link expired. Sign in again.",
+			"failed": "Could not finish signing in. Try again.",
 			"github": "Continue with GitHub",
 			"google": "Continue with Google",
 			"subtitle": "Sign in with your account to unlock the agents",
-			"title": "Sign in to continue",
-			"failed": "Could not finish signing in. Try again.",
-			"expired": "This sign-in link expired. Sign in again.",
-			"success": "Signed in"
+			"success": "Signed in",
+			"title": "Sign in to continue"
 		}
 	},
 	"common": {
@@ -229,13 +229,13 @@
 		"mentionCtaTitle": "Talk to the agent for the first time",
 		"needsYouName": "{{name}} needs you",
 		"newConversation": "New conversation",
+		"noActiveSessions": "No active sessions.",
 		"noActiveSessionsDescription": "Open a conversation from “New conversation” to put an agent to work. Sessions in progress show up here.",
 		"noActiveSessionsTitle": "No active sessions",
 		"noActivityDescription": "As soon as the first conversation starts, your agents' messages and actions show up in this list.",
 		"noActivityTitle": "No activity yet",
 		"resolve": "Resolve",
-		"today": "Today",
-		"noActiveSessions": "No active sessions."
+		"today": "Today"
 	},
 	"dataTable": {
 		"emptyDescription": "Try adjusting your search filters.",
@@ -440,6 +440,7 @@
 		"CHANNEL_NOT_CONNECTED": "The channel is not connected.",
 		"CLARIFICATION_ALREADY_PENDING": "A clarification is already pending for this sender.",
 		"CLASSIFICATION_FAILED": "Could not classify the message.",
+		"CLOUD_UNREACHABLE": "Could not confirm your identity with the cloud. Check your connection and sign in again.",
 		"COMMAND_HANDLER_NOT_FOUND": "Internal error while processing the operation. Try again shortly.",
 		"COMMAND_QUEUE_NOT_FOUND": "Internal error while queuing the operation. Try again shortly.",
 		"CONTACT_AVATAR_NOT_FOUND": "This contact has no photo.",
@@ -481,6 +482,7 @@
 		"LOOP_NOT_FOUND": "That loop no longer exists in this conversation.",
 		"LOOP_PROMPT_TOO_LONG": "The loop's prompt is past the character limit.",
 		"LOOP_WITHOUT_WEEKDAY": "Pick at least one day of the week for the loop to repeat on.",
+		"MIGRATIONS_PENDING": "The server has pending database migrations and cannot serve requests until the deploy applies them.",
 		"MISSING_ENVIRONMENT_VARIABLE": "Server configuration error. Contact support.",
 		"MISSING_LOG_CONTENT": "Internal logging error.",
 		"MODEL_NOT_AVAILABLE": "That agent does not offer that model.",
@@ -509,6 +511,7 @@
 		"RESOLUTION_NOT_APPLICABLE": "That resolution does not apply to this stop.",
 		"SESSION_ALREADY_STREAMING": "This session is already streaming.",
 		"SESSION_EXPIRED": "Session expired",
+		"SOCIAL_SIGN_IN_FAILED": "Could not start sign-in with that provider. If it persists, tell whoever runs the deploy — it is usually a provider credential.",
 		"STOP_ALREADY_RESOLVED": "This stop has already been resolved.",
 		"STOP_CRITERION_DISABLED": "This stop criterion is disabled in settings.",
 		"STOP_NOT_FOUND": "Stop not found.",
@@ -528,10 +531,7 @@
 		"WEAK_PASSWORD": "Password too weak. Use letters, numbers and symbols.",
 		"WORKSPACE_ALREADY_REGISTERED": "This workspace is already registered.",
 		"WORKSPACE_IN_USE": "This workspace has an issue currently working on it.",
-		"WORKSPACE_NOT_FOUND": "Workspace not found.",
-		"CLOUD_UNREACHABLE": "Could not confirm your identity with the cloud. Check your connection and sign in again.",
-		"MIGRATIONS_PENDING": "The server has pending database migrations and cannot serve requests until the deploy applies them.",
-		"SOCIAL_SIGN_IN_FAILED": "Could not start sign-in with that provider. If it persists, tell whoever runs the deploy — it is usually a provider credential."
+		"WORKSPACE_NOT_FOUND": "Workspace not found."
 	},
 	"home": {
 		"replayIntro": "Replay intro",
@@ -594,19 +594,6 @@
 		"stepWorkspaceDesc": "Point at a project folder — Claude projects are detected",
 		"stepWorkspaceTitle": "Add a workspace"
 	},
-	"systemPreconditions": {
-		"slideTitle": "One permission is missing",
-		"slideBody": "CODM needs this before it can do any work on this computer.",
-		"repairFailed": "Could not start the repair.",
-		"noAppIdentity": "In this build CODM runs without an identity of its own, so the permission does not belong to it — it belongs to the terminal you launched it from. Grant access to that terminal in Settings and restart it.",
-		"fullDiskAccess": {
-			"title": "Full Disk Access",
-			"body": "Agents read your project folders through CODM — as far as macOS is concerned, the app is the reader. Without this permission the system blocks those reads and tasks stop with no explanation.",
-			"action": "Grant Full Disk Access",
-			"actionHint": "Two steps, in this order: CODM clears the denial already on record, then opens Privacy & Security › Full Disk Access, where you switch CODM on.",
-			"afterHint": "Come back to this window after granting — the check runs again on its own."
-		}
-	},
 	"session": {
 		"agentModel": "Model",
 		"agentModelRestartHint": "Switching the model restarts the conversation on the agent: it comes back without the context it had, from the next message on.",
@@ -628,6 +615,8 @@
 		"bufferDecrease": "Decrease context buffer",
 		"bufferIncrease": "Increase context buffer",
 		"bufferMessages": "messages",
+		"canElevateToggle": "Can approve",
+		"canElevateToggleFor": "Can approve unfiltered actions: {{name}}",
 		"canInvokeToggle": "Can invoke",
 		"chatEmptyDescription": "Messages from this contact and your agents will appear here.",
 		"chatEmptyTitle": "No messages yet",
@@ -655,6 +644,10 @@
 		"issuesEmptyDescription": "Routed messages that spawn work will show up here as issues.",
 		"issuesEmptyTitle": "No issues in this thread",
 		"issuesStats": "{{awaiting}} awaiting input · {{working}} working · {{completed}} completed",
+		"language": "Language",
+		"languageAccountDefault": "Account default",
+		"languageHint": "Sets the \"thinking\" cues the room sees and the language the agent replies in. In force now: {{language}}.",
+		"languageUseAccountDefault": "Back to the account default",
 		"loops": {
 			"add": "New loop",
 			"cancel": "Cancel",
@@ -706,10 +699,6 @@
 		"steerPlaceholder": "Steer this issue…",
 		"streaming": "Live reply",
 		"streamingHint": "Sends the reply while the agent writes, editing the same message. Off, the reply arrives whole at the end.",
-		"language": "Language",
-		"languageHint": "Sets the \"thinking\" cues the room sees and the language the agent replies in. In force now: {{language}}.",
-		"languageAccountDefault": "Account default",
-		"languageUseAccountDefault": "Back to the account default",
 		"tabArtifacts": "Artifacts",
 		"tabChat": "Chat",
 		"tabIssues": "Issues",
@@ -732,6 +721,19 @@
 		"telemetryConsentDescription": "Anonymous usage analytics — page views and clicks in this console. Off stops every request immediately.",
 		"telemetryConsentLabel": "Share telemetry",
 		"title": "Settings"
+	},
+	"systemPreconditions": {
+		"fullDiskAccess": {
+			"action": "Grant Full Disk Access",
+			"actionHint": "Two steps, in this order: CODM clears the denial already on record, then opens Privacy & Security › Full Disk Access, where you switch CODM on.",
+			"afterHint": "Come back to this window after granting — the check runs again on its own.",
+			"body": "Agents read your project folders through CODM — as far as macOS is concerned, the app is the reader. Without this permission the system blocks those reads and tasks stop with no explanation.",
+			"title": "Full Disk Access"
+		},
+		"noAppIdentity": "In this build CODM runs without an identity of its own, so the permission does not belong to it — it belongs to the terminal you launched it from. Grant access to that terminal in Settings and restart it.",
+		"repairFailed": "Could not start the repair.",
+		"slideBody": "CODM needs this before it can do any work on this computer.",
+		"slideTitle": "One permission is missing"
 	},
 	"time": {
 		"daysAgo": "{{count}} d ago",

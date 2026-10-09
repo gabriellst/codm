@@ -20,6 +20,7 @@ import {
 	useGetSessionChat,
 	useGetThreadSettings,
 	useSetParticipantInvocation,
+	useSetParticipantElevation,
 	AgentModelIdEnum,
 	LanguageEnum,
 } from '@codm/client-typescript/typescript'
@@ -597,12 +598,17 @@ function AgentsSection({ threadId, className, ...props }: { threadId: string } &
 	)
 }
 
-/** Participantes — quem pode invocar. Split out of the old bundled body so it can move (D3, R13). */
+/**
+ * Participantes — quem pode invocar e quem pode LIBERAR ações sem filtro. Dois eixos independentes
+ * (participant-permission-posture, Decision 2), dois switches por linha; cada um no seu próprio
+ * `<label>`, porque um `<label>` com dois controles alterna sempre o primeiro.
+ */
 function ParticipantsSection({ threadId, className, ...props }: { threadId: string } & ComponentProps<'section'>) {
 	const { t } = useTranslation()
 	const queryClient = useQueryClient()
 	const { data, isLoading } = useGetThreadSettings(threadId)
 	const setInvocation = useSetParticipantInvocation()
+	const setElevation = useSetParticipantElevation()
 
 	const invalidate = () => queryClient.invalidateQueries({ queryKey: getThreadSettingsQueryKey(threadId) })
 
@@ -623,7 +629,7 @@ function ParticipantsSection({ threadId, className, ...props }: { threadId: stri
 			    inside a modal is one frame too many. The avatar is what makes a roster scannable. */}
 			<div className="flex flex-col">
 				{data.participants.map(participant => (
-					<label key={participant.participantId} className="flex items-center gap-3 py-1.5">
+					<div key={participant.participantId} className="flex items-center gap-3 py-1.5">
 						{/* A CARA do participante quando a agenda do gateway tem uma — o `operator` nunca tem
 						    (é uma palavra, não um JID), e um membro que a sincronização ainda não escreveu
 						    também não: os dois caem nas iniciais sem caso especial aqui. */}
@@ -635,17 +641,32 @@ function ParticipantsSection({ threadId, className, ...props }: { threadId: stri
 							<span className="truncate text-sm font-bold text-foreground">{participant.name}</span>
 							<span className="truncate text-xs text-muted-foreground">{participant.source}</span>
 						</div>
-						<span className="shrink-0 text-xs text-muted-foreground">{t('session.canInvokeToggle')}</span>
-						<Switch
-							checked={participant.canInvoke}
-							onCheckedChange={value =>
-								setInvocation.mutate(
-									{ threadId, participantId: participant.participantId, data: { canInvoke: value } },
-									{ onSuccess: invalidate },
-								)
-							}
-						/>
-					</label>
+						<label className="flex shrink-0 items-center gap-2">
+							<span className="text-xs text-muted-foreground">{t('session.canInvokeToggle')}</span>
+							<Switch
+								checked={participant.canInvoke}
+								onCheckedChange={value =>
+									setInvocation.mutate(
+										{ threadId, participantId: participant.participantId, data: { canInvoke: value } },
+										{ onSuccess: invalidate },
+									)
+								}
+							/>
+						</label>
+						<label className="flex shrink-0 items-center gap-2">
+							<span className="text-xs text-muted-foreground">{t('session.canElevateToggle')}</span>
+							<Switch
+								checked={participant.canElevate}
+								aria-label={t('session.canElevateToggleFor', { name: participant.name })}
+								onCheckedChange={value =>
+									setElevation.mutate(
+										{ threadId, participantId: participant.participantId, data: { canElevate: value } },
+										{ onSuccess: invalidate },
+									)
+								}
+							/>
+						</label>
+					</div>
 				))}
 			</div>
 		</section>

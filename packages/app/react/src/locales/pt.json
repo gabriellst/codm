@@ -84,6 +84,7 @@
 		"needChannelTitle": "Conecte um canal primeiro",
 		"noContacts": "Nenhum contato encontrado neste canal.",
 		"noContactsFound": "Nenhum contato para “{{term}}”.",
+		"retryContacts": "Procurar de novo",
 		"reviewFooterNote": "Ao vincular, as mensagens desta conversa passam a abrir tarefas nesta pasta. Você pode pausar ou desfazer a qualquer momento.",
 		"rowAgents": "Agentes",
 		"rowContact": "Contato",
@@ -97,7 +98,6 @@
 		"stepThreadTitle": "Escolha uma conversa",
 		"stepWorkspaceSubtitle": "A pasta de projeto em que seus agentes vão trabalhar.",
 		"stepWorkspaceTitle": "Escolha um espaço de trabalho",
-		"retryContacts": "Procurar de novo",
 		"syncingContacts": "Sincronizando conversas…"
 	},
 	"auth": {
@@ -157,13 +157,13 @@
 			"sectionTitle": "Conta"
 		},
 		"login": {
+			"expired": "Este link de login expirou. Entre novamente.",
+			"failed": "Não foi possível concluir o login. Tente novamente.",
 			"github": "Continuar com GitHub",
 			"google": "Continuar com Google",
 			"subtitle": "Faça login com sua conta para liberar os agentes",
-			"title": "Entre para continuar",
-			"failed": "Não foi possível concluir o login. Tente novamente.",
-			"expired": "Este link de login expirou. Entre novamente.",
-			"success": "Login concluído"
+			"success": "Login concluído",
+			"title": "Entre para continuar"
 		}
 	},
 	"common": {
@@ -229,13 +229,13 @@
 		"mentionCtaTitle": "Fale com o agente pela primeira vez",
 		"needsYouName": "{{name}} precisa de você",
 		"newConversation": "Nova conversa",
+		"noActiveSessions": "Nenhuma sessão ativa.",
 		"noActiveSessionsDescription": "Abra uma conversa em “Nova conversa” para colocar um agente para trabalhar. As sessões em andamento aparecem aqui.",
 		"noActiveSessionsTitle": "Nenhuma sessão ativa",
 		"noActivityDescription": "Assim que a primeira conversa começar, as mensagens e ações dos seus agentes aparecem nesta lista.",
 		"noActivityTitle": "Nenhuma atividade ainda",
 		"resolve": "Resolver",
-		"today": "Hoje",
-		"noActiveSessions": "Nenhuma sessão ativa."
+		"today": "Hoje"
 	},
 	"dataTable": {
 		"emptyDescription": "Tente ajustar os filtros de busca.",
@@ -440,6 +440,7 @@
 		"CHANNEL_NOT_CONNECTED": "O canal não está conectado.",
 		"CLARIFICATION_ALREADY_PENDING": "Já há uma clarificação pendente para este remetente.",
 		"CLASSIFICATION_FAILED": "Não foi possível classificar a mensagem.",
+		"CLOUD_UNREACHABLE": "Não consegui confirmar sua identidade com a nuvem. Verifique a conexão e entre novamente.",
 		"COMMAND_HANDLER_NOT_FOUND": "Erro interno ao processar a operação. Tente novamente em instantes.",
 		"COMMAND_QUEUE_NOT_FOUND": "Erro interno ao enfileirar a operação. Tente novamente em instantes.",
 		"CONTACT_AVATAR_NOT_FOUND": "Não há foto para este contato.",
@@ -481,6 +482,7 @@
 		"LOOP_NOT_FOUND": "Esse loop não existe mais nesta conversa.",
 		"LOOP_PROMPT_TOO_LONG": "O prompt do loop passou do limite de caracteres.",
 		"LOOP_WITHOUT_WEEKDAY": "Escolha pelo menos um dia da semana para o loop se repetir.",
+		"MIGRATIONS_PENDING": "O servidor está com migrações de banco pendentes e não pode atender até que o deploy as aplique.",
 		"MISSING_ENVIRONMENT_VARIABLE": "Erro de configuração do servidor. Contate o suporte.",
 		"MISSING_LOG_CONTENT": "Erro interno de logging.",
 		"MODEL_NOT_AVAILABLE": "Este agente não oferece esse modelo.",
@@ -509,6 +511,7 @@
 		"RESOLUTION_NOT_APPLICABLE": "Essa resolução não se aplica a este stop.",
 		"SESSION_ALREADY_STREAMING": "Esta sessão já está sendo transmitida.",
 		"SESSION_EXPIRED": "Sessão expirada",
+		"SOCIAL_SIGN_IN_FAILED": "Não foi possível iniciar o login com esse provedor. Se persistir, avise quem opera o deploy — costuma ser credencial do provedor.",
 		"STOP_ALREADY_RESOLVED": "Este stop já foi resolvido.",
 		"STOP_CRITERION_DISABLED": "Este critério de stop está desativado nas configurações.",
 		"STOP_NOT_FOUND": "Stop não encontrado.",
@@ -528,10 +531,7 @@
 		"WEAK_PASSWORD": "Senha muito fraca. Use letras, números e símbolos.",
 		"WORKSPACE_ALREADY_REGISTERED": "Este workspace já está registrado.",
 		"WORKSPACE_IN_USE": "Há uma issue trabalhando neste workspace.",
-		"WORKSPACE_NOT_FOUND": "Workspace não encontrado.",
-		"CLOUD_UNREACHABLE": "Não consegui confirmar sua identidade com a nuvem. Verifique a conexão e entre novamente.",
-		"MIGRATIONS_PENDING": "O servidor está com migrações de banco pendentes e não pode atender até que o deploy as aplique.",
-		"SOCIAL_SIGN_IN_FAILED": "Não foi possível iniciar o login com esse provedor. Se persistir, avise quem opera o deploy — costuma ser credencial do provedor."
+		"WORKSPACE_NOT_FOUND": "Workspace não encontrado."
 	},
 	"home": {
 		"replayIntro": "Rever introdução",
@@ -594,19 +594,6 @@
 		"stepWorkspaceDesc": "Aponte para uma pasta de projeto — projetos Claude são detectados",
 		"stepWorkspaceTitle": "Adicione um espaço de trabalho"
 	},
-	"systemPreconditions": {
-		"slideTitle": "Falta uma permissão",
-		"slideBody": "O CODM precisa disto antes de conseguir trabalhar neste computador.",
-		"repairFailed": "Não foi possível iniciar o reparo.",
-		"noAppIdentity": "Neste build o CODM roda sem identidade própria, então a permissão não pertence a ele — pertence ao terminal de onde você o iniciou. Libere o acesso a esse terminal nos Ajustes e reinicie-o.",
-		"fullDiskAccess": {
-			"title": "Acesso Total ao Disco",
-			"body": "Os agentes leem suas pastas de projeto através do CODM — para o macOS, quem lê é o app. Sem esta permissão o sistema bloqueia a leitura e as tarefas param sem explicação.",
-			"action": "Liberar Acesso Total ao Disco",
-			"actionHint": "Dois passos, nesta ordem: o CODM apaga a negação já registrada e depois abre Privacidade e Segurança › Acesso Total ao Disco, onde você liga o CODM.",
-			"afterHint": "Volte para esta janela depois de conceder — a verificação roda de novo sozinha."
-		}
-	},
 	"session": {
 		"agentModel": "Modelo",
 		"agentModelRestartHint": "Trocar o modelo recomeça a conversa no agente: ele volta sem o contexto que tinha, a partir da próxima mensagem.",
@@ -628,6 +615,8 @@
 		"bufferDecrease": "Diminuir o buffer de contexto",
 		"bufferIncrease": "Aumentar o buffer de contexto",
 		"bufferMessages": "mensagens",
+		"canElevateToggle": "Pode liberar",
+		"canElevateToggleFor": "Pode liberar ações sem filtro: {{name}}",
 		"canInvokeToggle": "Pode invocar",
 		"chatEmptyDescription": "Mensagens deste contato e dos seus agentes aparecerão aqui.",
 		"chatEmptyTitle": "Nenhuma mensagem ainda",
@@ -655,6 +644,10 @@
 		"issuesEmptyDescription": "Mensagens encaminhadas que geram trabalho aparecerão aqui como tarefas.",
 		"issuesEmptyTitle": "Nenhuma tarefa nesta conversa",
 		"issuesStats": "{{awaiting}} aguardando entrada · {{working}} em andamento · {{completed}} concluídas",
+		"language": "Idioma",
+		"languageAccountDefault": "Padrão da conta",
+		"languageHint": "Define as pistas de \"pensando\" que a sala vê e o idioma em que o agente responde. Em vigor agora: {{language}}.",
+		"languageUseAccountDefault": "Voltar ao padrão da conta",
 		"loops": {
 			"add": "Novo loop",
 			"cancel": "Cancelar",
@@ -706,10 +699,6 @@
 		"steerPlaceholder": "Oriente esta tarefa…",
 		"streaming": "Resposta em tempo real",
 		"streamingHint": "Envia a resposta enquanto o agente escreve, editando a mesma mensagem. Desligado, a resposta chega inteira no fim.",
-		"language": "Idioma",
-		"languageHint": "Define as pistas de \"pensando\" que a sala vê e o idioma em que o agente responde. Em vigor agora: {{language}}.",
-		"languageAccountDefault": "Padrão da conta",
-		"languageUseAccountDefault": "Voltar ao padrão da conta",
 		"tabArtifacts": "Artefatos",
 		"tabChat": "Chat",
 		"tabIssues": "Tarefas",
@@ -732,6 +721,19 @@
 		"telemetryConsentDescription": "Analytics de uso anônimo — visitas de tela e cliques neste console. Desligado interrompe todo envio na hora.",
 		"telemetryConsentLabel": "Compartilhar telemetria",
 		"title": "Configurações"
+	},
+	"systemPreconditions": {
+		"fullDiskAccess": {
+			"action": "Liberar Acesso Total ao Disco",
+			"actionHint": "Dois passos, nesta ordem: o CODM apaga a negação já registrada e depois abre Privacidade e Segurança › Acesso Total ao Disco, onde você liga o CODM.",
+			"afterHint": "Volte para esta janela depois de conceder — a verificação roda de novo sozinha.",
+			"body": "Os agentes leem suas pastas de projeto através do CODM — para o macOS, quem lê é o app. Sem esta permissão o sistema bloqueia a leitura e as tarefas param sem explicação.",
+			"title": "Acesso Total ao Disco"
+		},
+		"noAppIdentity": "Neste build o CODM roda sem identidade própria, então a permissão não pertence a ele — pertence ao terminal de onde você o iniciou. Libere o acesso a esse terminal nos Ajustes e reinicie-o.",
+		"repairFailed": "Não foi possível iniciar o reparo.",
+		"slideBody": "O CODM precisa disto antes de conseguir trabalhar neste computador.",
+		"slideTitle": "Falta uma permissão"
 	},
 	"time": {
 		"daysAgo": "{{count}} d atrás",
