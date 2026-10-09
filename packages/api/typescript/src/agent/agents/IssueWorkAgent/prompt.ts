@@ -139,7 +139,8 @@ export class IssueWorkPromptBuilder {
 	/**
 	 * A BLOCKED ACTION (participant-permission-posture, Decision 11). The permission filter can refuse an
 	 * action in a turn running under AUTO, and the improvised answer of 2026-10-08 was to coach a human
-	 * through shift+tab, `/permissions` and `export` — steps that do not apply to a headless run. The
+	 * through a mode-toggle shortcut, the CLI's permissions command and environment variables — steps that
+	 * do not apply to a headless run. The
 	 * only lever that works is in the conversation: whoever may elevate approves there, and the next turn
 	 * runs with what they granted. Rendered under the same predicate as `declarationInstruction`, because
 	 * it speaks about this issue's turn. It deliberately does NOT name RaiseStop: the runner already raises
