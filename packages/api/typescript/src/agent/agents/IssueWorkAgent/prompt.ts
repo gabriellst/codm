@@ -60,6 +60,7 @@ export class IssueWorkPromptBuilder {
 			...this.grammar(),
 			'',
 			...this.declarationInstruction(input),
+			...this.blockedActions(input),
 			...this.operatorInstructions(input),
 		].join('\n')
 	}
@@ -131,6 +132,29 @@ export class IssueWorkPromptBuilder {
 			'Every one of those tools takes the ids of THIS issue, and no other values are accepted:',
 			`  threadId: ${input.threadId}`,
 			`  issueId: ${input.issueId}`,
+		]
+	}
+
+	/**
+	 * A BLOCKED ACTION (participant-permission-posture, Decision 11). The permission filter can refuse an
+	 * action in a turn running under AUTO, and the improvised answer of 2026-10-08 was to coach a human
+	 * through shift+tab, `/permissions` and `export` — steps that do not apply to a headless run. The
+	 * only lever that works is in the conversation: whoever may elevate approves there, and the next turn
+	 * runs with what they granted. Rendered under the same predicate as `declarationInstruction`, because
+	 * it speaks about this issue's turn. It deliberately does NOT name RaiseStop: the runner already raises
+	 * PERMISSION_DENIED for a filter block, and a declared APPROVAL_NEEDED would duplicate the card.
+	 */
+	private blockedActions(input: IssueWorkInput): string[] {
+		if (!input.issueId) return []
+		return [
+			'',
+			'WHEN AN ACTION IS BLOCKED',
+			'Some actions are blocked by a permission filter before they run. When that happens, stop and ask for approval in this ' +
+				'conversation: end your turn saying exactly what you were about to do and why it needs approval. The system turns that ' +
+				'block into the approval request on its own — do not raise a stop for it, and do not try to work around it.',
+			'Never tell anyone to take manual steps on the computer to get around it — no keyboard shortcuts, no editing settings or ' +
+				'permission files, no environment variables. Whoever can grant it answers in the conversation, and your next turn runs ' +
+				'with what they granted.',
 		]
 	}
 

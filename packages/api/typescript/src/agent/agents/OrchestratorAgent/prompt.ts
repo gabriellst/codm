@@ -115,6 +115,7 @@ export class OrchestratorPromptBuilder {
 			...this.issues(),
 			...this.redirectingWork(),
 			...this.askingTheOperator(),
+			...this.blockedActions(),
 			...this.artifacts(),
 			...this.directMessages(),
 			...this.productReads(),
@@ -396,6 +397,23 @@ export class OrchestratorPromptBuilder {
 				`call ${askOperator} with that issue id and the question. It does not wait for an answer; the question ` +
 				'surfaces on the operator’s own Needs-you list, and you keep talking here in the meantime.',
 			'This is not how you talk to the contact of this conversation — that is just your ordinary reply.',
+		]
+	}
+
+	/**
+	 * A BLOCKED ACTION (participant-permission-posture, Decision 11) — the orchestrator's half of the same
+	 * rule the working agent gets. Stop, ask here in one line; never coach a human through manual steps on
+	 * the machine. When the filter itself stopped the turn, the system turns these words into the
+	 * approval request the operator receives.
+	 */
+	private blockedActions(): string[] {
+		return [
+			'',
+			'WHEN AN ACTION IS BLOCKED',
+			'Some actions are blocked by a permission filter before they run. When that happens, stop and ask for approval in this ' +
+				'conversation: say in one line what you were about to do and why it needs approval.',
+			'Never tell anyone to take manual steps on the computer to get around it — no keyboard shortcuts, no editing settings or ' +
+				'permission files, no environment variables. Whoever can grant it answers here, and the next turn runs with what they granted.',
 		]
 	}
 
