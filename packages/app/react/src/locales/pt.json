@@ -396,6 +396,7 @@
 			"AUTH_REQUIRED": "Login necessário",
 			"BLOCKED_BY_CLASSIFICATION": "Bloqueada",
 			"HUMAN_REQUESTED": "Humano solicitado",
+			"PERMISSION_DENIED": "Permissão negada",
 			"SERVER_ERROR": "Erro de servidor"
 		},
 		"StopResolution": {

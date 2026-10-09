@@ -11,8 +11,9 @@ import { StopKind } from '@codm/contracts-typescript/wire/enums'
  *
  * | group     | values                                                          | who raises it                                             | FactSource |
  * |-----------|-----------------------------------------------------------------|-----------------------------------------------------------|------------|
- * | TRANSPORT | AUTH_REQUIRED, SERVER_ERROR                                     | the RUNNER, observing the process/stream (CLI asked for   | INFERRED   |
- * |           |                                                                 | `/login`, the process died, the stream broke)             |            |
+ * | TRANSPORT | AUTH_REQUIRED, SERVER_ERROR, PERMISSION_DENIED                  | the RUNNER, observing the process/stream (CLI asked for   | INFERRED   |
+ * |           |                                                                 | `/login`, the process died, the permission filter blocked |            |
+ * |           |                                                                 | an action on the terminal `result` frame)                 |            |
  * | DOMAIN    | APPROVAL_NEEDED, HUMAN_REQUESTED, BLOCKED_BY_CLASSIFICATION     | ONLY `RaiseStop` / `AskOperator` (§4.4) | DECLARED   |
  *
  * `AgentRunResult.stop` is typed with THIS type, not with `StopKind`, so the type system states the
@@ -20,10 +21,10 @@ import { StopKind } from '@codm/contracts-typescript/wire/enums'
  * transport stop never needed a tool — but it can never manufacture a DOMAIN stop, because
  * `raise_stop` does not exist without tools.
  */
-export type TransportStopKind = typeof StopKind.AUTH_REQUIRED | typeof StopKind.SERVER_ERROR
+export type TransportStopKind = typeof StopKind.AUTH_REQUIRED | typeof StopKind.SERVER_ERROR | typeof StopKind.PERMISSION_DENIED
 
 /** Iterable form of the same subset — for exhaustiveness checks and runtime membership tests. */
-export const TRANSPORT_STOP_KINDS = [StopKind.AUTH_REQUIRED, StopKind.SERVER_ERROR] as const
+export const TRANSPORT_STOP_KINDS = [StopKind.AUTH_REQUIRED, StopKind.SERVER_ERROR, StopKind.PERMISSION_DENIED] as const
 
 /** True when a wire `StopKind` belongs to the transport half — i.e. the runner is allowed to raise it. */
 export function isTransportStopKind(kind: StopKind): kind is TransportStopKind {

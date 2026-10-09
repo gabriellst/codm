@@ -137,6 +137,7 @@ describe('Flow (mock): stop raised → recorded → resolved → integration.thr
 			humanRequested: false,
 			approvalNeeded: true,
 			authRequired: true,
+			permissionDenied: true,
 		})
 
 		// The handler swallows STOP_CRITERION_DISABLED — the stop is simply not recorded.

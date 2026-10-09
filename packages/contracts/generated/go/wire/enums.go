@@ -583,6 +583,22 @@ func ParseOwnerKind(s string) (OwnerKind, error) {
 	}
 }
 
+type PermissionPosture string
+
+const (
+	PermissionPostureAUTO PermissionPosture = "AUTO"
+	PermissionPostureBYPASS PermissionPosture = "BYPASS"
+)
+
+func ParsePermissionPosture(s string) (PermissionPosture, error) {
+	switch PermissionPosture(s) {
+	case PermissionPostureAUTO, PermissionPostureBYPASS:
+		return PermissionPosture(s), nil
+	default:
+		return "", fmt.Errorf("invalid PermissionPosture: %q", s)
+	}
+}
+
 type PresenceType string
 
 const (
@@ -675,11 +691,12 @@ const (
 	StopKindHUMAN_REQUESTED StopKind = "HUMAN_REQUESTED"
 	StopKindAPPROVAL_NEEDED StopKind = "APPROVAL_NEEDED"
 	StopKindAUTH_REQUIRED StopKind = "AUTH_REQUIRED"
+	StopKindPERMISSION_DENIED StopKind = "PERMISSION_DENIED"
 )
 
 func ParseStopKind(s string) (StopKind, error) {
 	switch StopKind(s) {
-	case StopKindSERVER_ERROR, StopKindBLOCKED_BY_CLASSIFICATION, StopKindHUMAN_REQUESTED, StopKindAPPROVAL_NEEDED, StopKindAUTH_REQUIRED:
+	case StopKindSERVER_ERROR, StopKindBLOCKED_BY_CLASSIFICATION, StopKindHUMAN_REQUESTED, StopKindAPPROVAL_NEEDED, StopKindAUTH_REQUIRED, StopKindPERMISSION_DENIED:
 		return StopKind(s), nil
 	default:
 		return "", fmt.Errorf("invalid StopKind: %q", s)

@@ -3728,6 +3728,9 @@
                       },
                       "authRequired": {
                         "type": "boolean"
+                      },
+                      "permissionDenied": {
+                        "type": "boolean"
                       }
                     },
                     "required": [
@@ -3735,7 +3738,8 @@
                       "blockedByClassification",
                       "humanRequested",
                       "approvalNeeded",
-                      "authRequired"
+                      "authRequired",
+                      "permissionDenied"
                     ]
                   }
                 },
@@ -3751,7 +3755,8 @@
                       "blockedByClassification": true,
                       "humanRequested": true,
                       "approvalNeeded": true,
-                      "authRequired": true
+                      "authRequired": true,
+                      "permissionDenied": true
                     }
                   },
                   "summary": "Example"
@@ -8591,6 +8596,9 @@
                         },
                         "authRequired": {
                           "type": "boolean"
+                        },
+                        "permissionDenied": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -8598,7 +8606,8 @@
                         "blockedByClassification",
                         "humanRequested",
                         "approvalNeeded",
-                        "authRequired"
+                        "authRequired",
+                        "permissionDenied"
                       ],
                       "additionalProperties": false
                     },
@@ -9186,7 +9195,8 @@
           "BLOCKED_BY_CLASSIFICATION",
           "HUMAN_REQUESTED",
           "APPROVAL_NEEDED",
-          "AUTH_REQUIRED"
+          "AUTH_REQUIRED",
+          "PERMISSION_DENIED"
         ]
       },
       "ArtifactKind": {

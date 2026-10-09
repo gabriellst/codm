@@ -396,6 +396,7 @@
 			"AUTH_REQUIRED": "Sign-in required",
 			"BLOCKED_BY_CLASSIFICATION": "Blocked",
 			"HUMAN_REQUESTED": "Human requested",
+			"PERMISSION_DENIED": "Permission denied",
 			"SERVER_ERROR": "Server error"
 		},
 		"StopResolution": {

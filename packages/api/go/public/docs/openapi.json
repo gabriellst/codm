@@ -7514,6 +7514,17 @@
           "OwnerKindINDIVIDUAL"
         ]
       },
+      "PermissionPosture": {
+        "enum": [
+          "AUTO",
+          "BYPASS"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "PermissionPostureAUTO",
+          "PermissionPostureBYPASS"
+        ]
+      },
       "PollMessageData": {
         "properties": {
           "options": {
@@ -8105,7 +8116,8 @@
           "BLOCKED_BY_CLASSIFICATION",
           "HUMAN_REQUESTED",
           "APPROVAL_NEEDED",
-          "AUTH_REQUIRED"
+          "AUTH_REQUIRED",
+          "PERMISSION_DENIED"
         ],
         "type": "string",
         "x-enum-varnames": [
@@ -8113,7 +8125,8 @@
           "StopKindBLOCKED_BY_CLASSIFICATION",
           "StopKindHUMAN_REQUESTED",
           "StopKindAPPROVAL_NEEDED",
-          "StopKindAUTH_REQUIRED"
+          "StopKindAUTH_REQUIRED",
+          "StopKindPERMISSION_DENIED"
         ]
       },
       "StopResolution": {

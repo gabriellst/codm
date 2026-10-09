@@ -1102,6 +1102,7 @@ const (
 	AUTHREQUIRED            StopKind = "AUTH_REQUIRED"
 	BLOCKEDBYCLASSIFICATION StopKind = "BLOCKED_BY_CLASSIFICATION"
 	HUMANREQUESTED          StopKind = "HUMAN_REQUESTED"
+	PERMISSIONDENIED        StopKind = "PERMISSION_DENIED"
 	SERVERERROR             StopKind = "SERVER_ERROR"
 )
 
@@ -1115,6 +1116,8 @@ func (e StopKind) Valid() bool {
 	case BLOCKEDBYCLASSIFICATION:
 		return true
 	case HUMANREQUESTED:
+		return true
+	case PERMISSIONDENIED:
 		return true
 	case SERVERERROR:
 		return true
@@ -1370,6 +1373,7 @@ type UpdateStopCriteriaJSONBody struct {
 		AuthRequired            bool `json:"authRequired"`
 		BlockedByClassification bool `json:"blockedByClassification"`
 		HumanRequested          bool `json:"humanRequested"`
+		PermissionDenied        bool `json:"permissionDenied"`
 		ServerErrors            bool `json:"serverErrors"`
 	} `json:"stopCriteria"`
 }
@@ -8471,6 +8475,7 @@ type GetSettingsResponse struct {
 			AuthRequired            bool `json:"authRequired"`
 			BlockedByClassification bool `json:"blockedByClassification"`
 			HumanRequested          bool `json:"humanRequested"`
+			PermissionDenied        bool `json:"permissionDenied"`
 			ServerErrors            bool `json:"serverErrors"`
 		} `json:"stopCriteria"`
 	}
@@ -11297,6 +11302,7 @@ func ParseGetSettingsResponse(rsp *http.Response) (*GetSettingsResponse, error) 
 				AuthRequired            bool `json:"authRequired"`
 				BlockedByClassification bool `json:"blockedByClassification"`
 				HumanRequested          bool `json:"humanRequested"`
+				PermissionDenied        bool `json:"permissionDenied"`
 				ServerErrors            bool `json:"serverErrors"`
 			} `json:"stopCriteria"`
 		}

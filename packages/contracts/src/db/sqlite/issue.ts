@@ -95,6 +95,9 @@ export const stopPolicyConfig = sqliteTable('issue_stop_policy_config', {
 	humanRequested: integer('human_requested', { mode: 'boolean' }).notNull().default(true),
 	approvalNeeded: integer('approval_needed', { mode: 'boolean' }).notNull().default(true),
 	authRequired: integer('auth_required', { mode: 'boolean' }).notNull().default(true),
+	// PERMISSION_DENIED (participant-permission-posture, Decision 9) — on by default like every other
+	// criterion; turning it off records nothing when the permission filter blocks an action.
+	permissionDenied: integer('permission_denied', { mode: 'boolean' }).notNull().default(true),
 
 	updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
 		.notNull()

@@ -842,6 +842,22 @@ pub enum OwnerKind {
 	INDIVIDUAL,
 }
 
+/// Under which permission regime an agent turn runs. AUTO = the provider CLI's own graduated mode (its classifier may block an action); BYPASS = no permission filter. Decided by WHO triggered the turn (Participant.canElevate), never by the model; each runner maps it to its own argv through a declared table.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum PermissionPosture {
+	#[serde(rename = "AUTO")]
+	#[strum(serialize = "AUTO")]
+	AUTO,
+	#[serde(rename = "BYPASS")]
+	#[strum(serialize = "BYPASS")]
+	BYPASS,
+}
+
 /// A contact's overall availability signal on a channel. Descends the origin channel PresenceType (whatsmeow *events.Presence). Defined-and-dormant: the presence_updated wire event carries the raw `unavailable` boolean + `lastSeen`; this enum is the harmonized closed set for consumers that want a named state.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
@@ -957,6 +973,9 @@ pub enum StopKind {
 	#[serde(rename = "AUTH_REQUIRED")]
 	#[strum(serialize = "AUTH_REQUIRED")]
 	AUTH_REQUIRED,
+	#[serde(rename = "PERMISSION_DENIED")]
+	#[strum(serialize = "PERMISSION_DENIED")]
+	PERMISSION_DENIED,
 }
 
 /// How an operator resolves a stop. The resolution must match the stop kind (e.g. APPROVE/DENY only for APPROVAL_NEEDED); TAKE_OVER additionally pauses the thread for direct conversation.

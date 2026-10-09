@@ -34,6 +34,10 @@ export type UpdateStopCriteriaMutationRequest = {
          * @type boolean
         */
         authRequired: boolean;
+        /**
+         * @type boolean
+        */
+        permissionDenied: boolean;
     };
 };
 

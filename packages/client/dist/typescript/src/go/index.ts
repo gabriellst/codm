@@ -221,6 +221,7 @@ export type { MuteRemote204, MuteRemoteError, MuteRemoteMutation, MuteRemoteMuta
 export type { OnboardingStep, OnboardingStepEnumKey } from "./types/OnboardingStep.ts";
 export type { OutboxSource, OutboxSourceEnumKey } from "./types/OutboxSource.ts";
 export type { OwnerKind, OwnerKindEnumKey } from "./types/OwnerKind.ts";
+export type { PermissionPosture, PermissionPostureEnumKey } from "./types/PermissionPosture.ts";
 export type { PinRemote204, PinRemoteError, PinRemoteMutation, PinRemoteMutationRequest, PinRemoteMutationResponse } from "./types/PinRemote.ts";
 export type { PollMessageData } from "./types/PollMessageData.ts";
 export type { PollOption } from "./types/PollOption.ts";
@@ -589,6 +590,7 @@ export { MessageTypeEnum } from "./types/MessageType.ts";
 export { OnboardingStepEnum } from "./types/OnboardingStep.ts";
 export { OutboxSourceEnum } from "./types/OutboxSource.ts";
 export { OwnerKindEnum } from "./types/OwnerKind.ts";
+export { PermissionPostureEnum } from "./types/PermissionPosture.ts";
 export { PresenceTypeEnum } from "./types/PresenceType.ts";
 export { ProviderKindEnum } from "./types/ProviderKind.ts";
 export { ProviderStatusEnum } from "./types/ProviderStatus.ts";
@@ -782,6 +784,7 @@ export { muteRemote204Schema, muteRemoteErrorSchema, muteRemoteMutationRequestSc
 export { onboardingStepSchema } from "./zod/onboardingStepSchema.ts";
 export { outboxSourceSchema } from "./zod/outboxSourceSchema.ts";
 export { ownerKindSchema } from "./zod/ownerKindSchema.ts";
+export { permissionPostureSchema } from "./zod/permissionPostureSchema.ts";
 export { pinRemote204Schema, pinRemoteErrorSchema, pinRemoteMutationRequestSchema, pinRemoteMutationResponseSchema } from "./zod/pinRemoteSchema.ts";
 export { pollMessageDataSchema } from "./zod/pollMessageDataSchema.ts";
 export { pollOptionSchema } from "./zod/pollOptionSchema.ts";

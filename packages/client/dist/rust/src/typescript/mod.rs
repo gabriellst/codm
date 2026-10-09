@@ -6951,6 +6951,7 @@ pub mod types {
     ///        "authRequired",
     ///        "blockedByClassification",
     ///        "humanRequested",
+    ///        "permissionDenied",
     ///        "serverErrors"
     ///      ],
     ///      "properties": {
@@ -6964,6 +6965,9 @@ pub mod types {
     ///          "type": "boolean"
     ///        },
     ///        "humanRequested": {
+    ///          "type": "boolean"
+    ///        },
+    ///        "permissionDenied": {
     ///          "type": "boolean"
     ///        },
     ///        "serverErrors": {
@@ -7097,6 +7101,7 @@ pub mod types {
     ///    "authRequired",
     ///    "blockedByClassification",
     ///    "humanRequested",
+    ///    "permissionDenied",
     ///    "serverErrors"
     ///  ],
     ///  "properties": {
@@ -7110,6 +7115,9 @@ pub mod types {
     ///      "type": "boolean"
     ///    },
     ///    "humanRequested": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "permissionDenied": {
     ///      "type": "boolean"
     ///    },
     ///    "serverErrors": {
@@ -7131,6 +7139,8 @@ pub mod types {
         pub blocked_by_classification: bool,
         #[serde(rename = "humanRequested")]
         pub human_requested: bool,
+        #[serde(rename = "permissionDenied")]
+        pub permission_denied: bool,
         #[serde(rename = "serverErrors")]
         pub server_errors: bool,
     }
@@ -10942,6 +10952,7 @@ pub mod types {
     ///        "authRequired",
     ///        "blockedByClassification",
     ///        "humanRequested",
+    ///        "permissionDenied",
     ///        "serverErrors"
     ///      ],
     ///      "properties": {
@@ -10955,6 +10966,9 @@ pub mod types {
     ///          "type": "boolean"
     ///        },
     ///        "humanRequested": {
+    ///          "type": "boolean"
+    ///        },
+    ///        "permissionDenied": {
     ///          "type": "boolean"
     ///        },
     ///        "serverErrors": {
@@ -10988,6 +11002,7 @@ pub mod types {
     ///    "authRequired",
     ///    "blockedByClassification",
     ///    "humanRequested",
+    ///    "permissionDenied",
     ///    "serverErrors"
     ///  ],
     ///  "properties": {
@@ -11001,6 +11016,9 @@ pub mod types {
     ///      "type": "boolean"
     ///    },
     ///    "humanRequested": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "permissionDenied": {
     ///      "type": "boolean"
     ///    },
     ///    "serverErrors": {
@@ -11020,6 +11038,8 @@ pub mod types {
         pub blocked_by_classification: bool,
         #[serde(rename = "humanRequested")]
         pub human_requested: bool,
+        #[serde(rename = "permissionDenied")]
+        pub permission_denied: bool,
         #[serde(rename = "serverErrors")]
         pub server_errors: bool,
     }

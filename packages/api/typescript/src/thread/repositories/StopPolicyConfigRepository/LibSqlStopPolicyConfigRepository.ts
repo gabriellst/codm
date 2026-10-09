@@ -21,6 +21,7 @@ export class LibSqlStopPolicyConfigRepository extends StopPolicyConfigRepository
 			humanRequested: row.humanRequested,
 			approvalNeeded: row.approvalNeeded,
 			authRequired: row.authRequired,
+			permissionDenied: row.permissionDenied,
 		}
 	}
 

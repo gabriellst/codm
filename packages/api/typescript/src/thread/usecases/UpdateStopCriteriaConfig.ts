@@ -11,6 +11,7 @@ export const UpdateStopCriteriaConfigInputSchema = z.object({
 		humanRequested: z.boolean(),
 		approvalNeeded: z.boolean(),
 		authRequired: z.boolean(),
+		permissionDenied: z.boolean(),
 	}),
 })
 export const UpdateStopCriteriaConfigOutputSchema = z.void()

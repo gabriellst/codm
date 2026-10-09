@@ -35,6 +35,9 @@ import type { AgentRunResult } from '../types/AgentRuntimeEvent'
 
 export const authRequiredIsTransport: TransportStopKind = StopKind.AUTH_REQUIRED
 export const serverErrorIsTransport: TransportStopKind = StopKind.SERVER_ERROR
+// PERMISSION_DENIED is TRANSPORT (participant-permission-posture spec, Decision 9): the RUNNER observes
+// it on the terminal `result` frame (`safety_stops` / `permission_denials`) — no tool declares it.
+export const permissionDeniedIsTransport: TransportStopKind = StopKind.PERMISSION_DENIED
 
 // ── THE THREE DOMAIN KINDS ARE REJECTED ──────────────────────────────────────────────────────────
 // Each is a stop only `RaiseStop` / `AskOperator` may originate — i.e. only a MODEL may declare, never
