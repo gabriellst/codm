@@ -22,8 +22,8 @@ const base = {
 	providers: [ProviderKind.CLAUDE_CODE],
 	mentionTag: '@base',
 	participants: [
-		{ participantId: 'operator', name: 'Operator', source: 'Mac', canInvoke: true },
-		{ participantId: 'c1', name: 'Contact', source: 'WA', canInvoke: false },
+		{ participantId: 'operator', name: 'Operator', source: 'Mac', canInvoke: true, canElevate: true },
+		{ participantId: 'c1', name: 'Contact', source: 'WA', canInvoke: false, canElevate: false },
 	],
 }
 
@@ -78,7 +78,10 @@ describe('Thread entity', () => {
 
 	it('rejects a roster with no invoker', () => {
 		expect(() =>
-			Thread.create({ ...base, participants: [{ participantId: 'c1', name: 'Contact', source: 'WA', canInvoke: false }] }),
+			Thread.create({
+				...base,
+				participants: [{ participantId: 'c1', name: 'Contact', source: 'WA', canInvoke: false, canElevate: false }],
+			}),
 		).toThrow(BaseError)
 	})
 
@@ -454,7 +457,7 @@ describe('Thread.recordEntry — the thread owns who may cite what, and who need
 			workspaceId: base.workspaceId,
 			providers: [ProviderKind.CLAUDE_CODE],
 			mentionTag,
-			participants: [{ participantId: 'operator', name: 'Operator', source: 'console', canInvoke: true }],
+			participants: [{ participantId: 'operator', name: 'Operator', source: 'console', canInvoke: true, canElevate: true }],
 		})
 
 	// ── AC-1: quotedEntry must belong to THIS thread ───────────────────────────────────────────────
@@ -567,7 +570,7 @@ describe('Thread.raiseStop / resolveStop — a stop belongs to the thread, with 
 			workspaceId: base.workspaceId,
 			providers: [ProviderKind.CLAUDE_CODE],
 			mentionTag: '@ws',
-			participants: [{ participantId: 'operator', name: 'Operator', source: 'console', canInvoke: true }],
+			participants: [{ participantId: 'operator', name: 'Operator', source: 'console', canInvoke: true, canElevate: true }],
 		})
 
 	it('US-5 — a stop with NO issue is raised, and carries the owner + thread from the aggregate', () => {
@@ -706,8 +709,8 @@ describe('Thread.raiseStop / resolveStop — a stop belongs to the thread, with 
 			providers: [ProviderKind.CODEX],
 			mentionTag: '@other-workspace',
 			participants: [
-				{ participantId: 'operator', name: 'Operator', source: 'Mac', canInvoke: true },
-				{ participantId: 'c1', name: 'Contact Renamed', source: 'WA', canInvoke: false },
+				{ participantId: 'operator', name: 'Operator', source: 'Mac', canInvoke: true, canElevate: true },
+				{ participantId: 'c1', name: 'Contact Renamed', source: 'WA', canInvoke: false, canElevate: false },
 			],
 		})
 
@@ -737,7 +740,7 @@ describe('Thread.raiseStop / resolveStop — a stop belongs to the thread, with 
 			deleted().revive({
 				...settings,
 				providers: [ProviderKind.CLAUDE_CODE],
-				participants: [{ participantId: 'c1', name: 'Contact', source: 'WA', canInvoke: false }],
+				participants: [{ participantId: 'c1', name: 'Contact', source: 'WA', canInvoke: false, canElevate: false }],
 			}),
 		).toThrow(expect.objectContaining({ name: 'LAST_INVOKER' }))
 	})

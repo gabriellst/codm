@@ -31,12 +31,16 @@ export const ContactRefSchema = z.object({
 	kind: z.enum(ContactKind),
 })
 
-// Participant VO — everyone in the conversation; `canInvoke` gates who may trigger agents.
+// Participant VO — everyone in the conversation. Two INDEPENDENT grants: `canInvoke` decides who may
+// trigger agents; `canElevate` decides whose trigger runs the turn with NO permission filter
+// (PermissionPosture.BYPASS). No invariant ties one to the other (participant-permission-posture,
+// Decision 2): a thread where nobody may elevate simply runs every turn in AUTO.
 export const ParticipantSchema = z.object({
 	participantId: z.string().min(1),
 	name: z.string().min(1),
 	source: z.string(),
 	canInvoke: z.boolean(),
+	canElevate: z.boolean(),
 })
 
 /**
@@ -644,9 +648,13 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 * than a guarded throw — the caller only calls it when the id is absent, so a second admission of
 	 * the same id is not a business mistake worth a named error, just a no-op safety net.
 	 */
-	admitParticipant(participant: Participant): void {
+	admitParticipant(participant: Omit<Participant, 'canElevate'>): void {
 		if (this.participants.some(p => p.participantId === participant.participantId)) return
-		this.participants = [...this.participants, participant]
+		// ADMITTED WITHOUT ELEVATION, always — the grant is not even accepted here, and the explicit
+		// `false` is written AFTER the spread so a caller that smuggles one in still loses it. Elevation
+		// is something the operator grants on purpose (`setParticipantElevation`), never a side effect of
+		// joining the roster.
+		this.participants = [...this.participants, { ...participant, canElevate: false }]
 	}
 
 	setParticipantInvocation(participantId: string, canInvoke: boolean): void {
@@ -657,6 +665,21 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 			throw new BaseError<DomainErrors>('LAST_INVOKER', 'at least one participant must keep invocation rights')
 		}
 		participant.canInvoke = canInvoke
+		// Reassign to trigger the embedded-array persistence path.
+		this.participants = [...this.participants]
+	}
+
+	/**
+	 * Grant or withdraw the right to run this conversation's turns with NO permission filter.
+	 *
+	 * Independent of `canInvoke` (participant-permission-posture, Decision 2): there is no "last
+	 * elevator" invariant — a thread where nobody may elevate runs every turn in AUTO, which is the safe
+	 * state, not a broken one.
+	 */
+	setParticipantElevation(participantId: string, canElevate: boolean): void {
+		const participant = this.participants.find(p => p.participantId === participantId)
+		if (!participant) throw new BaseError<DomainErrors>('PARTICIPANT_NOT_FOUND', `no participant ${participantId}`)
+		participant.canElevate = canElevate
 		// Reassign to trigger the embedded-array persistence path.
 		this.participants = [...this.participants]
 	}

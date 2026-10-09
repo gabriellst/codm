@@ -2,6 +2,7 @@ import { injectable } from 'tsyringe-neo'
 import { Handler, z, BaseError } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
 import { BufferSize, ProviderKind, AgentModelId, ContactKind, Language } from '@codm/contracts-typescript/wire/enums'
+import type { Thread } from '../entities/Thread'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { GroupMemberReader } from '../services/GroupMemberReader'
 import { CUSTOM_PROMPT_MAX_LENGTH, MentionGateSchema } from '../schemas'
@@ -38,6 +39,21 @@ export const SetParticipantInvocationInputSchema = z.object({
 export const SetParticipantInvocationOutputSchema = z.void()
 
 /**
+ * Admit a LIVE group member the JSON roster has never recorded — the door both per-participant
+ * toggles share. One copy, because the rule is one: an id is admitted only after
+ * `GroupMemberReader.isMember` confirms it against the live projection, so the admission never becomes
+ * a way to grant anything to an arbitrary id. An id that fails the check falls through untouched, and
+ * the aggregate's own guard raises `PARTICIPANT_NOT_FOUND` for it.
+ */
+async function admitLiveGroupMember(thread: Thread, groupMembers: GroupMemberReader, participantId: string): Promise<void> {
+	const onJsonRoster = thread.participants.some(p => p.participantId === participantId)
+	if (onJsonRoster || thread.contactRef.kind !== ContactKind.GROUP) return
+	const isLiveMember = await groupMembers.isMember(thread.channelId, thread.contactRef.externalId, participantId)
+	if (!isLiveMember) return
+	thread.admitParticipant({ participantId, name: participantId, source: 'Channel group member', canInvoke: false })
+}
+
+/**
  * C13 SetParticipantInvocation.
  *
  * ### Admitting a live member the JSON roster has never recorded
@@ -72,20 +88,47 @@ export class SetParticipantInvocation extends Handler<
 		if (!thread || thread.ownerId !== input.ownerId)
 			throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
 
-		const onJsonRoster = thread.participants.some(p => p.participantId === input.participantId)
-		if (!onJsonRoster && thread.contactRef.kind === ContactKind.GROUP) {
-			const isLiveMember = await this.groupMembers.isMember(thread.channelId, thread.contactRef.externalId, input.participantId)
-			if (isLiveMember) {
-				thread.admitParticipant({
-					participantId: input.participantId,
-					name: input.participantId,
-					source: 'Channel group member',
-					canInvoke: false,
-				})
-			}
-		}
+		await admitLiveGroupMember(thread, this.groupMembers, input.participantId)
 
 		thread.setParticipantInvocation(input.participantId, input.canInvoke)
+		await this.withTransaction(tx, async tx => this.threads.save(thread, tx))
+	}
+}
+
+// SetParticipantElevation — whose order runs this conversation's turns with NO permission filter.
+export const SetParticipantElevationInputSchema = z.object({
+	ownerId: z.uuid(),
+	threadId: z.uuid(),
+	participantId: z.string().min(1),
+	canElevate: z.boolean(),
+})
+export const SetParticipantElevationOutputSchema = z.void()
+
+/**
+ * SetParticipantElevation (participant-permission-posture, Decision 3) — the second per-participant
+ * grant, molded on C13: same tenancy check, same admission of a live group member the JSON roster has
+ * never recorded (`admitLiveGroupMember`), then the aggregate flips the grant. No "last elevator" rule.
+ */
+@injectable()
+export class SetParticipantElevation extends Handler<
+	typeof SetParticipantElevationInputSchema,
+	typeof SetParticipantElevationOutputSchema
+> {
+	readonly name = 'set_participant_elevation' as const
+	readonly inputSchema = SetParticipantElevationInputSchema
+	readonly outputSchema = SetParticipantElevationOutputSchema
+	constructor(
+		private readonly threads: ThreadRepository,
+		private readonly groupMembers: GroupMemberReader,
+	) {
+		super()
+	}
+	protected async handle(input: this['input'], tx?: Transaction): Promise<void> {
+		const thread = await this.threads.findById(input.threadId)
+		if (!thread || thread.ownerId !== input.ownerId)
+			throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
+		await admitLiveGroupMember(thread, this.groupMembers, input.participantId)
+		thread.setParticipantElevation(input.participantId, input.canElevate)
 		await this.withTransaction(tx, async tx => this.threads.save(thread, tx))
 	}
 }

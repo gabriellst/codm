@@ -53,8 +53,8 @@ export async function givenThread(testBed: TestBedLike, overrides: ThreadOverrid
 		// second implementation of `mintMentionTag`.
 		mentionTag: overrides.mentionTag ?? GIVEN_MENTION_TAG,
 		participants: overrides.participants ?? [
-			{ participantId: 'operator', name: 'Operator', source: 'Operator on this machine', canInvoke: true },
-			{ participantId: contactExternalId, name: 'Test Contact', source: 'Channel contact', canInvoke: false },
+			{ participantId: 'operator', name: 'Operator', source: 'Operator on this machine', canInvoke: true, canElevate: true },
+			{ participantId: contactExternalId, name: 'Test Contact', source: 'Channel contact', canInvoke: false, canElevate: false },
 		],
 		bufferSize: overrides.bufferSize ?? BufferSize._50,
 	})

@@ -223,8 +223,8 @@ describe('the instant cues — 👀 on the trigger, "digitando…" while it thin
 				contactExternalId: GROUP_JID,
 				contactKind: ContactKind.GROUP,
 				participants: [
-					{ participantId: 'operator', name: 'Operator', source: 'Operator on this machine', canInvoke: true },
-					{ participantId: MEMBER_JID, name: 'Ana', source: 'Group member', canInvoke: true },
+					{ participantId: 'operator', name: 'Operator', source: 'Operator on this machine', canInvoke: true, canElevate: true },
+					{ participantId: MEMBER_JID, name: 'Ana', source: 'Group member', canInvoke: true, canElevate: false },
 				],
 			})
 
@@ -279,8 +279,8 @@ describe('the instant cues — 👀 on the trigger, "digitando…" while it thin
 				ownerId: MOCK_CLOUD_OWNER_ID,
 				contactExternalId: CONTACT_JID,
 				participants: [
-					{ participantId: 'operator', name: 'Operator', source: 'Operator on this machine', canInvoke: true },
-					{ participantId: CONTACT_JID, name: 'Test Contact', source: 'Channel contact', canInvoke: true },
+					{ participantId: 'operator', name: 'Operator', source: 'Operator on this machine', canInvoke: true, canElevate: true },
+					{ participantId: CONTACT_JID, name: 'Test Contact', source: 'Channel contact', canInvoke: true, canElevate: false },
 				],
 			})
 

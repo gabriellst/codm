@@ -47,7 +47,9 @@ describe('SetParticipantInvocation — admits a live group member the JSON roste
 			contactKind: ContactKind.GROUP,
 			// The operator is the only JSON entry — MEMBER_A is live in the gateway but the JSON has
 			// never heard of them, exactly the shape GetThreadSettings' join now renders a toggle for.
-			participants: [{ participantId: 'operator', name: 'Operator', source: 'Operator on this machine', canInvoke: true }],
+			participants: [
+				{ participantId: 'operator', name: 'Operator', source: 'Operator on this machine', canInvoke: true, canElevate: true },
+			],
 		})
 	}
 
