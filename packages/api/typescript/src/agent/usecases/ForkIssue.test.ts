@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenThread, testId } from '@test/support'
 import { DomainEventRepository, type BaseError } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind, ProviderKind } from '@codm/contracts-typescript/wire/enums'
+import { MailboxItemKind, MailboxTargetKind, ProviderKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
 import { ForkIssue } from './ForkIssue'
 import { IssueForkedEvent } from '../events/IssueForkedEvent'
@@ -45,7 +45,13 @@ describe('ForkIssue — thread + provider resolved from the repository, not the 
 
 		const missingThreadId = testId('fork-issue', 'missing-thread')
 		const failure = await useCase
-			.execute({ ownerId, threadId: missingThreadId, goal: 'põe um toggle de dark mode', originEntryId: testId('fork-issue', 'entry') })
+			.execute({
+				ownerId,
+				threadId: missingThreadId,
+				goal: 'põe um toggle de dark mode',
+				originEntryId: testId('fork-issue', 'entry'),
+				posture: PermissionPosture.AUTO,
+			})
 			.then(
 				() => undefined,
 				(error: unknown) => error,
@@ -67,6 +73,7 @@ describe('ForkIssue — thread + provider resolved from the repository, not the 
 			threadId: thread.id.value,
 			goal: 'põe um toggle de dark mode nas configurações',
 			originEntryId,
+			posture: PermissionPosture.AUTO,
 		})
 
 		expect(out.issueId).toBeDefined()

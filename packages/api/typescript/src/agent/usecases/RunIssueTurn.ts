@@ -546,6 +546,9 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 				targetKind: MailboxTargetKind.THREAD,
 				targetId: input.threadId,
 				kind: MailboxItemKind.ISSUE_RESULT,
+				// AUTO, always (Decision 4): the orchestrator turn this schedules REPORTS a result — nobody
+				// triggered it, so nobody's grant applies, whatever posture the issue turn itself ran under.
+				posture: PermissionPosture.AUTO,
 				payload: {
 					kind: MailboxItemKind.ISSUE_RESULT,
 					issueKey: input.key,

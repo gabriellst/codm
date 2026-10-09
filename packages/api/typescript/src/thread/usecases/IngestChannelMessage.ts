@@ -140,6 +140,8 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 						targetKind: MailboxTargetKind.THREAD,
 						targetId: thread.id.value,
 						kind: MailboxItemKind.OPERATOR_MESSAGE,
+						// WHO SENT IT decides how far the turn may go (Decision 4): the sender's `canElevate`.
+						posture: thread.postureOf(input.senderExternalId),
 						payload: {
 							kind: MailboxItemKind.OPERATOR_MESSAGE,
 							entryId: entry.entryId,

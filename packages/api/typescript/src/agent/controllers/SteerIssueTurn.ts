@@ -107,6 +107,8 @@ export class SteerIssueTurnController extends Controller<
 			threadId,
 			issueId,
 			entryId: identity.entryId,
+			// From the run token, never from `body` (Decision 6).
+			posture: identity.posture,
 			text: request.body.text,
 		})
 

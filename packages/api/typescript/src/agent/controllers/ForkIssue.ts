@@ -124,6 +124,8 @@ export class ForkIssueController extends Controller<typeof ForkIssueControllerIn
 			threadId,
 			goal: request.body.goal,
 			originEntryId: identity.entryId,
+			// From the run token, never from `body` — the body is `{ goal }` and nothing else (Decision 6).
+			posture: identity.posture,
 		})
 		return { status: HttpStatusCode.CREATED, data }
 	}

@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenThread, givenWorkspace } from '@test/support'
-import { MailboxItemKind, MailboxTargetKind, ProviderKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
+import { MailboxItemKind, MailboxTargetKind, ProviderKind, TranscriptKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { scheduledCommands } from '@codm/contracts/db'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
@@ -51,6 +51,7 @@ describe('Flow (integration): ISSUE_RESULT → composed reply that quotes the re
 			targetKind: MailboxTargetKind.THREAD,
 			targetId: threadId,
 			kind: MailboxItemKind.ISSUE_RESULT,
+			posture: PermissionPosture.AUTO,
 			payload: {
 				kind: MailboxItemKind.ISSUE_RESULT,
 				issueKey: 'resumo-do-que-odisseu-fez',
@@ -228,6 +229,7 @@ describe('Flow (integration): the issue result quotes the request ON THE WIRE', 
 			targetKind: MailboxTargetKind.THREAD,
 			targetId: threadId,
 			kind: MailboxItemKind.ISSUE_RESULT,
+			posture: PermissionPosture.AUTO,
 			payload: {
 				kind: MailboxItemKind.ISSUE_RESULT,
 				issueKey: 'resumo-do-que-odisseu-fez',

@@ -12,6 +12,7 @@ import {
 	StopResolution,
 	MessageType,
 	Language,
+	PermissionPosture,
 } from '@codm/contracts-typescript/wire/enums'
 // The DECLARED provider → models relation. A constant, no I/O — unlike the wire enums above (a
 // generated cross-language contract, `@codm/contracts-typescript`), `@catalog` is a single-reader
@@ -682,6 +683,21 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 		participant.canElevate = canElevate
 		// Reassign to trigger the embedded-array persistence path.
 		this.participants = [...this.participants]
+	}
+
+	/**
+	 * The posture a turn TRIGGERED by this participant runs under (participant-permission-posture,
+	 * Decision 4). The roster is the only authority: BYPASS exactly when the participant is on it AND was
+	 * granted `canElevate`; anyone else — including a sender the roster never recorded — is AUTO.
+	 *
+	 * The owner arrives here as `OPERATOR_PARTICIPANT_ID`, never as their phone-number JID:
+	 * `ConsumeInboundMessage` maps `fromMe` to the sentinel before ingest, and the console whisper names
+	 * the sentinel directly — so the owner's own JID sitting in a group roster without the grant never
+	 * decides the operator's posture.
+	 */
+	postureOf(participantId: string): PermissionPosture {
+		const participant = this.participants.find(p => p.participantId === participantId)
+		return participant?.canElevate ? PermissionPosture.BYPASS : PermissionPosture.AUTO
 	}
 
 	/**

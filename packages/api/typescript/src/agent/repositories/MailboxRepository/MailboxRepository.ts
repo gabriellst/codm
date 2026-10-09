@@ -9,6 +9,13 @@ export interface EnqueueMailboxItem {
 	kind: MailboxItemKind
 	payload: unknown
 	/**
+	 * The posture the scheduled turn runs under — REQUIRED, so no producer can forget to say who
+	 * triggered the work (participant-permission-posture, Decision 4). Derived by the producer from the
+	 * trigger: a sender's `canElevate`, the `operator`'s for a console whisper, the run token's claim for
+	 * work queued from inside a turn, AUTO for a loop tick or an `ISSUE_RESULT`.
+	 */
+	posture: PermissionPosture
+	/**
 	 * Idempotency key of the FACT behind the item — an entry id, an issue's run, a steer's own id.
 	 *
 	 * The producer's transaction plus the unique index on this column IS the exactly-once story: a

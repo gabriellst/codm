@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { EventHandler } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
+import { MailboxItemKind, MailboxTargetKind, PermissionPosture, StopResolution } from '@codm/contracts-typescript/wire/enums'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { OpenIssuesReader } from '../services/OpenIssuesReader'
@@ -71,6 +71,9 @@ export class ResumeIssueOnStopResolved extends EventHandler<typeof ThreadStopRes
 			targetKind: MailboxTargetKind.ISSUE,
 			targetId: issueId,
 			kind: MailboxItemKind.STEER,
+			// The resume's own posture (who resolved, and how) is carried by the resolution fact — until it
+			// does, a resume runs as it always has: AUTO.
+			posture: PermissionPosture.AUTO,
 			payload: { issueId, threadId, key: issue.key, title: issue.title, text: this.resumeText(stop, resolution) },
 			// THE KEY IS THE STOP, and the choice is the same one `IngestChannelMessage` makes when it
 			// keys on the ENTRY: the dedup key is the unique CAUSE of the work, never the target of it.

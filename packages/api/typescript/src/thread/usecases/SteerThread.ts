@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { Handler, z, BaseError } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
+import { MailboxItemKind, MailboxTargetKind, PermissionPosture, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
 import { MessageVia } from '@agent/enums'
 import { OpenIssuesReader } from '../services/OpenIssuesReader'
@@ -58,6 +58,10 @@ export class SteerThread extends Handler<typeof SteerThreadInputSchema, typeof S
 		// whose target is already finished, and the dispatcher drops it.
 		const active = await this.openIssues.openIssues(thread.id.value)
 
+		// WHO TRIGGERED IT (Decision 4): a console whisper is the authenticated owner, so it carries the
+		// `operator` participant's grant; a loop tick is a timer, and a timer is never elevated.
+		const posture = input.firedByLoop ? PermissionPosture.AUTO : thread.postureOf(OPERATOR_PARTICIPANT_ID)
+
 		return this.withTransaction(tx, async tx => {
 			// The WHISPER is recorded BY THE AGGREGATE (B4, decision 1) and persisted by `save` in this
 			// same transaction — the id it returns is what the mailbox items below dedup on, so it has to
@@ -88,6 +92,7 @@ export class SteerThread extends Handler<typeof SteerThreadInputSchema, typeof S
 						targetKind: MailboxTargetKind.ISSUE,
 						targetId: issue.issueId,
 						kind: MailboxItemKind.STEER,
+						posture,
 						payload: {
 							issueId: issue.issueId,
 							threadId: thread.id.value,
@@ -118,6 +123,7 @@ export class SteerThread extends Handler<typeof SteerThreadInputSchema, typeof S
 						targetKind: MailboxTargetKind.THREAD,
 						targetId: thread.id.value,
 						kind: MailboxItemKind.OPERATOR_MESSAGE,
+						posture,
 						payload: {
 							kind: MailboxItemKind.OPERATOR_MESSAGE,
 							entryId: entry.entryId,

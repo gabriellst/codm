@@ -28,6 +28,7 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 				targetId: item.targetId,
 				kind: item.kind,
 				payload: item.payload,
+				posture: item.posture,
 				dedupKey: item.dedupKey,
 			})
 			.onConflictDoNothing({ target: agentMailbox.dedupKey })

@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { TestBed, givenIssue, givenThread } from '@test/support'
-import { IssueStatus, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { IssueStatus, StopKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { ThreadStopRaisedEvent } from '@codm/contracts-typescript/wire/events'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { IssueRepository } from '@issue/repositories/IssueRepository'
@@ -84,6 +84,7 @@ describe('Flow (integration): turno sem declaração → NEEDS_INPUT → steer �
 			threadId: thread.id.value,
 			issueId: issue.id.value,
 			text: 'roda a spec destacada e me diz o veredito',
+			posture: PermissionPosture.AUTO,
 		})
 
 		const reopened = await issues.findById(issue.id.value)

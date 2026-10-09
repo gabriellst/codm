@@ -4,7 +4,14 @@ import { uuidv7 } from 'uuidv7'
 import type { ZodType } from 'zod'
 import { TestBed, givenIssue, givenThread, givenWorkspace } from '@test/support'
 import { HttpStatusCode, OutboxDispatcher } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind, ProviderKind, StopKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
+import {
+	MailboxItemKind,
+	MailboxTargetKind,
+	PermissionPosture,
+	ProviderKind,
+	StopKind,
+	StopResolution,
+} from '@codm/contracts-typescript/wire/enums'
 import { ThreadStopRaisedEvent } from '@codm/contracts-typescript/wire/events'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { SteerIssueTurnController } from '@agent/controllers/SteerIssueTurn'
@@ -100,7 +107,10 @@ describe('DIAGNOSTIC: a stopped issue and the steer seam, as of HEAD', () => {
 		const { thread, issue } = await givenStoppedIssue()
 
 		const response = await testBed.resolve(SteerIssueTurnController).handle({
-			ctx: { ownerId: MOCK_CLOUD_OWNER_ID, agentIdentity: { threadId: thread.id.value, entryId: uuidv7() } },
+			ctx: {
+				ownerId: MOCK_CLOUD_OWNER_ID,
+				agentIdentity: { threadId: thread.id.value, entryId: uuidv7(), posture: PermissionPosture.AUTO },
+			},
 			params: { threadId: thread.id.value, issueId: issue.id.value },
 			body: { text: 'full refund' },
 		} as Parameters<SteerIssueTurnController['handle']>[0])
@@ -245,7 +255,10 @@ describe('Flow (integration): a resolved stop puts the issue back to work', () =
 		// The orchestrator answers in the conversation and steers the stopped issue with the operator's
 		// words; the operator ALSO presses resolve in the console. Two paths, one issue, one turn.
 		await testBed.resolve(SteerIssueTurnController).handle({
-			ctx: { ownerId: MOCK_CLOUD_OWNER_ID, agentIdentity: { threadId: thread.id.value, entryId: uuidv7() } },
+			ctx: {
+				ownerId: MOCK_CLOUD_OWNER_ID,
+				agentIdentity: { threadId: thread.id.value, entryId: uuidv7(), posture: PermissionPosture.AUTO },
+			},
 			params: { threadId: thread.id.value, issueId: issue.id.value },
 			body: { text: 'refund total' },
 		} as Parameters<SteerIssueTurnController['handle']>[0])
