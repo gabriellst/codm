@@ -126,7 +126,8 @@ export class IssueWorkPromptBuilder {
 		return [
 			'HOW TO REPORT THE RESULT — do not just describe it in prose, DECLARE it:',
 			`  · finished → call the ${operationIdOf(TransitionIssueStatusController)} tool with status COMPLETED and a short summary.`,
-			`  · blocked and you need the operator to decide or approve → call the ${operationIdOf(RaiseStopController)} tool.`,
+			`  · blocked and you need the operator to decide or approve → call the ${operationIdOf(RaiseStopController)} tool ` +
+				'(not for an action the permission filter refused — see WHEN AN ACTION IS BLOCKED).',
 			`  · you need one specific answer to keep going → call the ${operationIdOf(AskOperatorController)} tool.`,
 			`  · produced a link, image or file worth keeping → call the ${operationIdOf(RecordArtifactController)} tool.`,
 			'Every one of those tools takes the ids of THIS issue, and no other values are accepted:',
