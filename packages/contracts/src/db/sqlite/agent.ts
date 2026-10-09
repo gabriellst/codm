@@ -1,6 +1,12 @@
 import { sql } from 'drizzle-orm'
 import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
-import { AgentModelId, MailboxItemKind, MailboxTargetKind, ProviderKind } from '../../../generated/typescript/src/wire/enums'
+import {
+	AgentModelId,
+	MailboxItemKind,
+	MailboxTargetKind,
+	PermissionPosture,
+	ProviderKind,
+} from '../../../generated/typescript/src/wire/enums'
 import { enumCheck } from './_enum'
 
 /**
@@ -107,6 +113,16 @@ export const agentMailbox = sqliteTable(
 		targetId: text('target_id').notNull(),
 
 		kind: text('kind').$type<MailboxItemKind>().notNull(),
+		/**
+		 * The PERMISSION POSTURE of the turn this item schedules (participant-permission-posture spec,
+		 * Decision 4) — stamped by the producer from WHO triggered the work, never by a model.
+		 *
+		 * A COLUMN, not a key inside `payload`: the payload is opaque to the queue, and a key no producer
+		 * is forced to write is a key somebody forgets. `DEFAULT 'AUTO'` is the legacy rule made
+		 * declarative — an item enqueued before this column existed reads as AUTO, the least privilege,
+		 * with no branch anywhere in the reader.
+		 */
+		posture: text('posture').$type<PermissionPosture>().notNull().default(PermissionPosture.AUTO),
 		// The item's own shape, discriminated by `kind`. Opaque here on purpose: the queue schedules
 		// turns, it does not model what a turn is about.
 		payload: text('payload', { mode: 'json' }).notNull(),
@@ -154,6 +170,7 @@ export const agentMailbox = sqliteTable(
 	t => [
 		enumCheck('agent_mailbox_target_kind_check', t.targetKind, Object.values(MailboxTargetKind)),
 		enumCheck('agent_mailbox_kind_check', t.kind, Object.values(MailboxItemKind)),
+		enumCheck('agent_mailbox_posture_check', t.posture, Object.values(PermissionPosture)),
 		uniqueIndex('agent_mailbox_dedup_unq').on(t.dedupKey),
 		// The dispatcher's own query: the oldest unconsumed, unleased, unpoisoned item per target.
 		index('agent_mailbox_pending_idx').on(t.targetKind, t.targetId, t.consumedAt, t.createdAt).where(sql`dead_at IS NULL`),

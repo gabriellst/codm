@@ -17,7 +17,7 @@ CREATE TABLE "agent_agent_sessions" (
 	"updated_at" integer NOT NULL,
 	"version" integer DEFAULT 1 NOT NULL,
 	CONSTRAINT "agent_agent_sessions_provider_check" CHECK("agent_agent_sessions"."provider" IN ('CLAUDE_CODE', 'CODEX', 'OPENCODE')),
-	CONSTRAINT "agent_agent_sessions_model_check" CHECK("agent_agent_sessions"."model" IN ('DEFAULT', 'SONNET', 'OPUS', 'HAIKU'))
+	CONSTRAINT "agent_agent_sessions_model_check" CHECK("agent_agent_sessions"."model" IN ('DEFAULT', 'SONNET', 'OPUS', 'HAIKU', 'TERRA', 'LUNA'))
 );
 CREATE TABLE "agent_mailbox" (
 	"id" text PRIMARY KEY NOT NULL,
@@ -25,17 +25,21 @@ CREATE TABLE "agent_mailbox" (
 	"target_kind" text NOT NULL,
 	"target_id" text NOT NULL,
 	"kind" text NOT NULL,
+	"posture" text DEFAULT 'AUTO' NOT NULL,
 	"payload" text NOT NULL,
 	"dedup_key" text NOT NULL,
 	"claimed_by" text,
+	"claimed_boot" text,
+	"claimed_pid" integer,
 	"lease_until" integer,
 	"attempts" integer DEFAULT 0 NOT NULL,
 	"last_error" text,
 	"dead_at" integer,
 	"consumed_at" integer,
-	"created_at" integer NOT NULL, "claimed_boot" text, "claimed_pid" integer,
+	"created_at" integer NOT NULL,
 	CONSTRAINT "agent_mailbox_target_kind_check" CHECK("agent_mailbox"."target_kind" IN ('THREAD', 'ISSUE')),
-	CONSTRAINT "agent_mailbox_kind_check" CHECK("agent_mailbox"."kind" IN ('OPERATOR_MESSAGE', 'ISSUE_RESULT', 'WORK', 'STEER'))
+	CONSTRAINT "agent_mailbox_kind_check" CHECK("agent_mailbox"."kind" IN ('OPERATOR_MESSAGE', 'ISSUE_RESULT', 'WORK', 'STEER')),
+	CONSTRAINT "agent_mailbox_posture_check" CHECK("agent_mailbox"."posture" IN ('AUTO', 'BYPASS'))
 );
 CREATE TABLE "artifact_artifacts" (
 	"id" text PRIMARY KEY NOT NULL,
@@ -217,7 +221,7 @@ CREATE TABLE "issue_stop_policy_config" (
 	"auth_required" integer DEFAULT true NOT NULL,
 	"updated_at" integer NOT NULL,
 	"version" integer DEFAULT 1 NOT NULL
-);
+, "permission_denied" integer DEFAULT true NOT NULL);
 CREATE TABLE "issue_stops" (
 	"id" text PRIMARY KEY NOT NULL,
 	"owner_id" text NOT NULL,
@@ -229,7 +233,7 @@ CREATE TABLE "issue_stops" (
 	"raised_at" integer NOT NULL,
 	"resolution" text,
 	"resolved_at" integer,
-	CONSTRAINT "issue_stops_kind_check" CHECK("issue_stops"."kind" IN ('SERVER_ERROR', 'BLOCKED_BY_CLASSIFICATION', 'HUMAN_REQUESTED', 'APPROVAL_NEEDED', 'AUTH_REQUIRED')),
+	CONSTRAINT "issue_stops_kind_check" CHECK("issue_stops"."kind" IN ('SERVER_ERROR', 'BLOCKED_BY_CLASSIFICATION', 'HUMAN_REQUESTED', 'APPROVAL_NEEDED', 'AUTH_REQUIRED', 'PERMISSION_DENIED')),
 	CONSTRAINT "issue_stops_resolution_check" CHECK("issue_stops"."resolution" IN ('RETRY', 'REVIEW_AND_SEND', 'TAKE_OVER', 'APPROVE', 'DENY'))
 );
 CREATE TABLE "issue_terminal_lines" (
