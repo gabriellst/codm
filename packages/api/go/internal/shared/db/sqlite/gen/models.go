@@ -31,17 +31,18 @@ type AgentMailbox struct {
 	TargetKind  string
 	TargetID    string
 	Kind        string
+	Posture     string
 	Payload     string
 	DedupKey    string
 	ClaimedBy   sql.NullString
+	ClaimedBoot sql.NullString
+	ClaimedPid  sql.NullInt64
 	LeaseUntil  sql.NullInt64
 	Attempts    int64
 	LastError   sql.NullString
 	DeadAt      sql.NullInt64
 	ConsumedAt  sql.NullInt64
 	CreatedAt   int64
-	ClaimedBoot sql.NullString
-	ClaimedPid  sql.NullInt64
 }
 
 type ArtifactArtifact struct {
@@ -234,6 +235,7 @@ type IssueStopPolicyConfig struct {
 	AuthRequired            int64
 	UpdatedAt               int64
 	Version                 int64
+	PermissionDenied        int64
 }
 
 type IssueTerminalLine struct {

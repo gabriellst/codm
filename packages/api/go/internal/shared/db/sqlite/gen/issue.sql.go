@@ -88,7 +88,7 @@ func (q *Queries) GetStopByID(ctx context.Context, id string) (IssueStop, error)
 
 const getStopPolicy = `-- name: GetStopPolicy :one
 SELECT owner_id, server_errors, blocked_by_classification, human_requested,
-       approval_needed, auth_required, updated_at, version
+       approval_needed, auth_required, updated_at, version, permission_denied
 FROM issue_stop_policy_config
 WHERE owner_id = ?1
 `
@@ -105,6 +105,7 @@ func (q *Queries) GetStopPolicy(ctx context.Context, ownerID string) (IssueStopP
 		&i.AuthRequired,
 		&i.UpdatedAt,
 		&i.Version,
+		&i.PermissionDenied,
 	)
 	return i, err
 }
