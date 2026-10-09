@@ -69,6 +69,7 @@ function argvFor(request: AgentRunRequest<ZodType | undefined> | undefined): str
 		newSessionId: request.session?.newId,
 		mcp: request.mcp,
 		caps: request.caps ?? {},
+		posture: request.posture,
 	})
 }
 

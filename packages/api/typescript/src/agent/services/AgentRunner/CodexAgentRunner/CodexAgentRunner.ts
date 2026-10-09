@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { injectable } from 'tsyringe-neo'
 import { z, type ZodType } from 'zod'
-import { AgentModelId, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { AgentModelId, PermissionPosture, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { AgentIdentityService, LoggingService } from '@codm/core-typescript'
 import { ProductConfig } from '@shared/config/ProductConfig'
 import { MCP_RUN_TOKEN_ENV, MCP_SERVER_KEY } from '../../../mcp/wire'
@@ -31,6 +31,8 @@ export interface CodexBuildArgsOptions {
 	mcp?: AgentMcpInvocation
 	/** Absolute path of the JSON Schema file, when the run is structured. Written by `run()`, never here. */
 	outputSchemaPath?: string
+	/** Which permission regime this spawn runs under — looked up in `CODEX_PERMISSION_ARGS`. */
+	posture: PermissionPosture
 }
 
 /**
@@ -56,6 +58,17 @@ export interface CodexBuildArgsOptions {
 const CODEX_MODEL_ALIASES: Partial<Record<AgentModelId, string>> = {
 	[AgentModelId.TERRA]: 'gpt-5.6-terra',
 	[AgentModelId.LUNA]: 'gpt-5.6-luna',
+}
+
+/**
+ * `PermissionPosture` → this CLI's permission flag (participant-permission-posture, Decision 8). AUTO is
+ * NO flag — codex's own defaults, exactly what every run passed before postures existed. BYPASS is the
+ * binary's full bypass, which BOTH shapes publish (`help-exec.txt:61`, `help-exec-resume.txt:44`), so it
+ * lives outside the resume guard like `-m` does.
+ */
+const CODEX_PERMISSION_ARGS: Record<PermissionPosture, readonly string[]> = {
+	[PermissionPosture.AUTO]: [],
+	[PermissionPosture.BYPASS]: ['--dangerously-bypass-approvals-and-sandbox'],
 }
 
 /**
@@ -171,7 +184,7 @@ export class CodexAgentRunner extends AgentRunner {
 	 * operator chose and codex otherwise refuses to run outside a git repo — a refusal that would
 	 * surface as a failed turn for a reason that has nothing to do with the turn.
 	 */
-	static buildArgs({ model, cwd, extraDirs, resumeSessionId, mcp, outputSchemaPath }: CodexBuildArgsOptions): string[] {
+	static buildArgs({ model, cwd, extraDirs, resumeSessionId, mcp, outputSchemaPath, posture }: CodexBuildArgsOptions): string[] {
 		// SHAPE FIRST — see point 2 of the class docblock. The narrower set is not a subset chosen for
 		// tidiness; `-C` and `--add-dir` do not EXIST on resume, and passing one aborts the run.
 		const args = resumeSessionId ? ['exec', 'resume'] : ['exec']
@@ -202,6 +215,7 @@ export class CodexAgentRunner extends AgentRunner {
 		// transport exactly as it does for claude's stdio branch — never in a tool argument, never in
 		// the prompt.
 		if (mcp) args.push(...renderMcpOverrides(mcp))
+		args.push(...CODEX_PERMISSION_ARGS[posture])
 
 		// The session id is a POSITIONAL on the resume shape, and it must precede the prompt.
 		if (resumeSessionId) args.push(resumeSessionId)
@@ -244,6 +258,7 @@ export class CodexAgentRunner extends AgentRunner {
 				resumeSessionId: request.session?.resumeId,
 				mcp: request.mcp,
 				outputSchemaPath: schema?.path,
+				posture: request.posture,
 			})
 			// The prompt LAST, as the trailing positional both shapes end with.
 			proc = this.spawner({
