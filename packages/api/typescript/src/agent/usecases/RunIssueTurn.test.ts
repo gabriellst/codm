@@ -10,6 +10,7 @@ import {
 	ProviderKind,
 	ProviderStatus,
 	StopKind,
+	PermissionPosture,
 } from '@codm/contracts-typescript/wire/enums'
 import type { ZodType } from 'zod'
 import { RunIssueTurn } from './RunIssueTurn'
@@ -86,6 +87,7 @@ describe('RunIssueTurn use case', () => {
 		// enum inteiro no tipo inferido desta fábrica — as 16 chamadas deixavam de tipar. Invisível até
 		// agora porque nenhum gate type-checava os testes.
 		turnKind: MailboxItemKind.WORK as const,
+		posture: PermissionPosture.AUTO,
 		messageId: testId('run-issue-turn', 'entry-1'),
 	})
 
@@ -455,6 +457,7 @@ describe('RunIssueTurn — the agent with an EMPTY tool scope (AC-6.4(c), AC-6.7
 		workspacePath: '/tmp/workspace',
 		prompt: 'fix the coupon focus bug',
 		turnKind: MailboxItemKind.WORK as const,
+		posture: PermissionPosture.AUTO,
 		messageId: testId('run-issue-turn-toolless', 'entry-1'),
 	})
 

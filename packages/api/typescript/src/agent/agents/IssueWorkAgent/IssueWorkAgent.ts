@@ -73,7 +73,7 @@ export class IssueWorkAgent extends Agent<typeof IssueWorkInputSchema> {
 		super(identities)
 	}
 
-	protected buildRequest(input: this['input']): Omit<AgentRunRequest, 'mcp' | 'agentName'> {
+	protected buildRequest(input: this['input']): Omit<AgentRunRequest, 'mcp' | 'agentName' | 'posture'> {
 		return {
 			cwd: input.cwd,
 			systemPrompt: this.prompt.system(input),

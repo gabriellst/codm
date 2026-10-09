@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import type { ZodType } from 'zod'
 import type { BaseError } from '@codm/core-typescript'
 import { InMemoryAgentIdentityService, z } from '@codm/core-typescript'
-import { McpScope } from '@codm/contracts-typescript/wire/enums'
+import { McpScope, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { AgentRunner } from '../services/AgentRunner'
 import { AgentName, AgentRunOutcome } from '../enums'
 import type { AgentRunRequest } from '../types/AgentRunRequest'
@@ -90,7 +90,7 @@ function probeAgentFor(scope: McpScope, IdentitySchema: ZodType | undefined) {
 		override readonly mcpScope = scope
 		override readonly tools = ['mcp__codm__Probe']
 
-		protected buildRequest(input: this['input']): Omit<AgentRunRequest, 'mcp' | 'agentName'> {
+		protected buildRequest(input: this['input']): Omit<AgentRunRequest, 'mcp' | 'agentName' | 'posture'> {
 			return { cwd: input.cwd, binaryPath: '/usr/local/bin/claude', systemPrompt: 'probe', messages: [] }
 		}
 	}
@@ -102,7 +102,7 @@ const ISSUE = '00000000-0000-4000-8000-0000000000cc'
 const ENTRY = '00000000-0000-4000-8000-0000000000dd'
 
 const drain = async (agent: Agent<typeof ProbeInputSchema>, runner: CapturingRunner, extra: Record<string, string> = {}) => {
-	for await (const _ of agent.run(runner, { ownerId: OWNER, threadId: THREAD, cwd: '/tmp/x', ...extra })) {
+	for await (const _ of agent.run(runner, { ownerId: OWNER, threadId: THREAD, cwd: '/tmp/x', posture: PermissionPosture.AUTO, ...extra })) {
 		// drain
 	}
 }
@@ -201,10 +201,15 @@ describe('the two REAL agents declare the two shapes', () => {
 		const { IssueWorkAgent } = await import('../agents/IssueWorkAgent')
 		const { OrchestratorAgent } = await import('../agents/OrchestratorAgent')
 
-		expect(IssueWorkAgent.IdentitySchema?.safeParse({ ownerId: OWNER, threadId: THREAD }).success).toBe(false)
-		expect(IssueWorkAgent.IdentitySchema?.safeParse({ ownerId: OWNER, threadId: THREAD, issueId: ISSUE }).success).toBe(true)
+		expect(IssueWorkAgent.IdentitySchema?.safeParse({ ownerId: OWNER, threadId: THREAD, posture: PermissionPosture.AUTO }).success).toBe(
+			false,
+		)
+		expect(
+			IssueWorkAgent.IdentitySchema?.safeParse({ ownerId: OWNER, threadId: THREAD, posture: PermissionPosture.AUTO, issueId: ISSUE })
+				.success,
+		).toBe(true)
 
-		const orchestrator = OrchestratorAgent.IdentitySchema?.safeParse({ ownerId: OWNER, threadId: THREAD })
+		const orchestrator = OrchestratorAgent.IdentitySchema?.safeParse({ ownerId: OWNER, threadId: THREAD, posture: PermissionPosture.AUTO })
 		expect(orchestrator?.success).toBe(true)
 		expect(orchestrator?.success && 'issueId' in orchestrator.data).toBe(false)
 	})

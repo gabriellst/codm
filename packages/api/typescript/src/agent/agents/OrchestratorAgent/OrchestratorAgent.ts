@@ -64,7 +64,7 @@ export class OrchestratorAgent extends Agent<typeof OrchestratorInputSchema> {
 		super(identities)
 	}
 
-	protected buildRequest(input: this['input']): Omit<AgentRunRequest, 'mcp' | 'agentName'> {
+	protected buildRequest(input: this['input']): Omit<AgentRunRequest, 'mcp' | 'agentName' | 'posture'> {
 		return {
 			cwd: input.cwd,
 			// The shared media dir (`<dataDir>/media`), where the Go gateway drops downloaded

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test'
+import { PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 // `LoggingService` is ABSTRACT — the seam, not an implementation. The concrete double this suite
 // takes is the same one the sibling `ClaudeAgentRunner.test.ts` uses.
 import { MockLoggingService } from '@codm/core-typescript'
@@ -138,6 +139,7 @@ describe('cancellation — process-group kill (§4.11, AC-3.3)', () => {
 		const iteration = (async () => {
 			for await (const event of runner.run({
 				agentName: AgentName.ISSUE_WORK,
+				posture: PermissionPosture.AUTO,
 				cwd: process.cwd(),
 				binaryPath: '/opt/bin/claude',
 				messages: [{ role: AgentMessageRole.USER, content: 'noop' }],
@@ -168,6 +170,7 @@ describe('cancellation — process-group kill (§4.11, AC-3.3)', () => {
 		const iteration = (async () => {
 			for await (const event of runner.run({
 				agentName: AgentName.ISSUE_WORK,
+				posture: PermissionPosture.AUTO,
 				cwd: process.cwd(),
 				binaryPath: '/opt/bin/claude',
 				messages: [{ role: AgentMessageRole.USER, content: 'noop' }],

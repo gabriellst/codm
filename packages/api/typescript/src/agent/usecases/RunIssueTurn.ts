@@ -2,7 +2,14 @@ import { injectable } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { Handler, z, BaseError, LoggingService } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { AgentModelId, MailboxItemKind, MailboxTargetKind, ProviderKind, ProviderStatus } from '@codm/contracts-typescript/wire/enums'
+import {
+	AgentModelId,
+	MailboxItemKind,
+	PermissionPosture,
+	MailboxTargetKind,
+	ProviderKind,
+	ProviderStatus,
+} from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_PARTICIPANT_ID } from '@thread/objects'
 import { IssueWorkAgent } from '../agents/IssueWorkAgent'
 import { AgentRunnerFactory } from '../services/AgentRunnerFactory'
@@ -64,6 +71,12 @@ export const RunIssueTurnInputSchema = z.object({
 	priorMessageId: z.uuid().optional(),
 	/** Which model to ask the provider CLI for. Omitted ⇒ `DEFAULT` ⇒ the CLI's own choice. */
 	model: z.enum(AgentModelId).optional(),
+	/**
+	 * The permission posture of the mailbox item that scheduled this turn — WHO triggered it. REQUIRED
+	 * and undefaulted for the same reason `turnKind` is: a default here would make "nobody decided"
+	 * silently mean something.
+	 */
+	posture: z.enum(PermissionPosture),
 	/**
 	 * The transcript entry that ASKED for this issue (§7.6) — carried from the `WORK` mailbox item.
 	 *
@@ -292,6 +305,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 			session: session.resumed ? { resumeId: session.id } : { newId: session.id },
 			binaryPath: detection.binaryPath,
 			caps: detection.caps,
+			posture: input.posture,
 		})) {
 			const frame = accumulator.feed(event)
 			if (frame) await this.registry.send(input.issueId, frame)

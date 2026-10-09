@@ -26,8 +26,8 @@ export class ClassifyIssueAgent extends Agent<typeof ClassifyIssueInputSchema> {
 		super(runner)
 	}
 
-	/** The ONE point of variation. No `mcp`, no `agentName` — the base stamps both. */
-	protected buildRequest(input: this['input']): Omit<AgentRunRequest, 'mcp' | 'agentName'> {
+	/** The ONE point of variation. No `mcp`, no `agentName`, no `posture` — the base stamps all three. */
+	protected buildRequest(input: this['input']): Omit<AgentRunRequest, 'mcp' | 'agentName' | 'posture'> {
 		return {
 			cwd: input.cwd,
 			systemPrompt: this.prompt.system(input),

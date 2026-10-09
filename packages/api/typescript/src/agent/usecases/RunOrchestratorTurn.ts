@@ -16,6 +16,7 @@ import {
 	AgentModelId,
 	type BufferSize,
 	ContactKind,
+	PermissionPosture,
 	ProviderKind,
 	ProviderStatus,
 	TranscriptKind,
@@ -71,6 +72,12 @@ export const RunOrchestratorTurnInputSchema = z.object({
 	 */
 	originEntryId: z.uuid().optional(),
 	model: z.enum(AgentModelId).optional(),
+	/**
+	 * The permission posture of the mailbox item that scheduled this turn — WHO triggered it. REQUIRED
+	 * and undefaulted for the same reason `turnKind` is: a default here would make "nobody decided"
+	 * silently mean something.
+	 */
+	posture: z.enum(PermissionPosture),
 })
 
 export const RunOrchestratorTurnOutputSchema = z.object({
@@ -483,6 +490,7 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 				session: session.resumed ? { resumeId: session.id } : { newId: session.id },
 				binaryPath: detection.binaryPath,
 				caps: detection.caps,
+				posture: input.posture,
 			})) {
 				accumulator.feed(event)
 

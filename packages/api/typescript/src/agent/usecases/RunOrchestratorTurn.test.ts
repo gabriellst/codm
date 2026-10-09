@@ -3,7 +3,7 @@ import { container, type DependencyContainer } from 'tsyringe-neo'
 import type { ZodType } from 'zod'
 import { LibSqlDatabaseDriver, LibSqlTransaction } from '@codm/core-typescript'
 import { scheduledCommands } from '@codm/contracts/db'
-import { MailboxItemKind, ProviderKind, StopKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
+import { MailboxItemKind, ProviderKind, StopKind, StopResolution, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { TestBed, givenIssue, givenStop, givenThread } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
@@ -79,6 +79,7 @@ describe('RunOrchestratorTurn — the cues the turn is responsible for lighting'
 			ownerId: MOCK_CLOUD_OWNER_ID,
 			threadId: thread.id.value,
 			workspacePath: '/tmp/workspace',
+			posture: PermissionPosture.AUTO,
 			provider: ProviderKind.CLAUDE_CODE,
 			item: {
 				kind: MailboxItemKind.OPERATOR_MESSAGE,
@@ -275,6 +276,7 @@ describe('RunOrchestratorTurn — the cues the turn is responsible for lighting'
 				ownerId: MOCK_CLOUD_OWNER_ID,
 				threadId: thread.id.value,
 				workspacePath: '/tmp/workspace',
+				posture: PermissionPosture.AUTO,
 				provider: ProviderKind.CLAUDE_CODE,
 				item: {
 					kind: MailboxItemKind.OPERATOR_MESSAGE,

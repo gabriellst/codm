@@ -7,6 +7,7 @@
  * early), and the inactivity watchdog backstop.
  */
 import { describe, it, expect } from 'bun:test'
+import { PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { z } from 'zod'
 import { MockLoggingService } from '@codm/core-typescript'
 import { AgentMessageRole, AgentName } from '../../../enums'
@@ -102,6 +103,7 @@ function makeRunner(spawner: ReturnType<typeof fakeSpawner>['spawner'], inactivi
 
 const request = (overrides: Partial<AgentRunRequest<z.ZodType | undefined>> = {}): AgentRunRequest<z.ZodType | undefined> => ({
 	agentName: AgentName.ISSUE_WORK,
+	posture: PermissionPosture.AUTO,
 	cwd: '/tmp/workspace',
 	binaryPath: '/opt/bin/claude',
 	messages: [{ role: AgentMessageRole.USER, content: 'do the thing' }],

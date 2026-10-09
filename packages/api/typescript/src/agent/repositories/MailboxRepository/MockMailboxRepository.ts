@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { DAEMON_BOOT, isClaimOrphaned } from '@codm/core-typescript'
-import type { MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
+import { PermissionPosture, type MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
 import { MailboxRepository, type ClaimedMailboxItem, type EnqueueMailboxItem } from './MailboxRepository'
 
 interface Row extends EnqueueMailboxItem {
@@ -58,6 +58,8 @@ export class MockMailboxRepository extends MailboxRepository {
 			targetId: row.targetId,
 			kind: row.kind,
 			payload: row.payload,
+			// The in-memory twin of the column's DEFAULT — what every item reads as until a producer stamps one.
+			posture: PermissionPosture.AUTO,
 			attempts: row.attempts,
 		}
 	}

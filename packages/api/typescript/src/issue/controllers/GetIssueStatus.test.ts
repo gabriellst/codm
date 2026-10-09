@@ -4,7 +4,7 @@ import { TestBed, givenIssue } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { compareIdentity } from '@codm/core-typescript'
 import { AgentName } from '@agent/enums'
-import { McpScope } from '@codm/contracts-typescript/wire/enums'
+import { McpScope, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import type { AgentRunIdentity } from '@agent/types/AgentRunIdentity'
 import { GetIssueStatusController } from './GetIssueStatus'
 
@@ -47,6 +47,7 @@ describe('AC-T2.3 — GetIssueStatus refuses an issue belonging to another threa
 		// No `issueId` — that is the whole point of a thread-confined token.
 		agentName: AgentName.ORCHESTRATOR,
 		scope: McpScope.orchestration,
+		posture: PermissionPosture.AUTO,
 		expiresAt: new Date(Date.now() + 60_000),
 	})
 

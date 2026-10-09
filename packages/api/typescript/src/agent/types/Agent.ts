@@ -124,7 +124,13 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 	 * binding agents identically in all three envs.
 	 */
 	async *run(runner: AgentRunner, input: this['input']): AsyncIterable<AgentRuntimeEvent> {
-		const request = { ...this.buildRequest(input), agentName: (this.constructor as typeof Agent).NAME }
+		const request = {
+			...this.buildRequest(input),
+			agentName: (this.constructor as typeof Agent).NAME,
+			// The POSTURE is the base's to stamp, like the identity: it comes from the envelope — who
+			// triggered the turn — so no agent's `buildRequest` can widen or narrow it.
+			posture: input.posture,
+		}
 		// The scope is passed DOWN rather than re-read off `this` inside the callee: it is what confines
 		// the minted credential (D6-8), and threading the already-narrowed value is what makes "a token
 		// is always bound to a scope" hold by type instead of by a cast.
@@ -183,6 +189,9 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 			// Carried so the destination controller can read the originating entry off `ctx.agentIdentity`
 			// — the reason `ForkIssue` does not take it as an argument. Absent on runs no message triggered.
 			entryId: input.entryId,
+			// The claim the tool doors read to stamp the work THEY schedule (Decision 6). From the envelope,
+			// never from a tool argument — see `AgentRunIdentitySchema.posture`.
+			posture: input.posture,
 		})
 		if (!parsed.success) {
 			throw new BaseError<AgentApplicationErrors>(
@@ -216,8 +225,8 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 		}
 	}
 
-	/** The ONLY point of variation per agent: input → request, WITHOUT `mcp` and WITHOUT identity. */
-	protected abstract buildRequest(input: this['input']): Omit<AgentRunRequest<OutputSchema>, 'mcp' | 'agentName'>
+	/** The ONLY point of variation per agent: input → request, WITHOUT `mcp`, WITHOUT identity and WITHOUT posture. */
+	protected abstract buildRequest(input: this['input']): Omit<AgentRunRequest<OutputSchema>, 'mcp' | 'agentName' | 'posture'>
 
 	/**
 	 * Drain `run()` to its ONE terminal event and return the validated structured output.

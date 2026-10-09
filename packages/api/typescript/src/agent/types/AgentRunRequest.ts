@@ -1,5 +1,5 @@
 import type { ZodType } from 'zod'
-import type { AgentModelId } from '@codm/contracts-typescript/wire/enums'
+import type { AgentModelId, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import type { AgentMessageRole, AgentName } from '../enums'
 import type { ProviderCapabilities } from './ProviderCapabilities'
 import type { AgentMcpInvocation } from './AgentMcpInvocation'
@@ -35,6 +35,13 @@ export interface AgentMessage {
 export interface AgentRunRequest<OutputSchema extends ZodType | undefined = undefined> {
 	/** Identity for telemetry, logs and run-token claims. NEVER a resolution key. */
 	agentName: AgentName
+	/**
+	 * The permission posture this run executes under — REQUIRED (participant-permission-posture,
+	 * Decision 8). Stamped by the base `Agent` from the input envelope (who triggered the turn), never by
+	 * `buildRequest`; each runner maps it to its own argv through a declared `Record<PermissionPosture, …>`.
+	 * Per spawn: every turn is a new process with `--resume`, so a posture never outlives its turn.
+	 */
+	posture: PermissionPosture
 	/** The thread's ABSOLUTE workspace path. Never optional — an implicit `process.cwd()` is the worst default. */
 	cwd: string
 	systemPrompt?: string

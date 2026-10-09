@@ -1,5 +1,5 @@
 import type { Transaction } from '@codm/core-typescript'
-import type { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
+import type { MailboxItemKind, MailboxTargetKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 
 /** What a producer states happened. The dispatcher decides what runs. */
 export interface EnqueueMailboxItem {
@@ -26,6 +26,11 @@ export interface ClaimedMailboxItem {
 	targetId: string
 	kind: MailboxItemKind
 	payload: unknown
+	/**
+	 * The posture the turn this item schedules runs under — the `posture` column, whose `DEFAULT 'AUTO'`
+	 * is what an item enqueued before the column existed reads as.
+	 */
+	posture: PermissionPosture
 	attempts: number
 }
 

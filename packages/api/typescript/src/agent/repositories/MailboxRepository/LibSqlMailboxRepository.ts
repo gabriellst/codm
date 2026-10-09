@@ -85,6 +85,7 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 				targetId: agentMailbox.targetId,
 				kind: agentMailbox.kind,
 				payload: agentMailbox.payload,
+				posture: agentMailbox.posture,
 				attempts: agentMailbox.attempts,
 			})
 		const row = claimed[0]

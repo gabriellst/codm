@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { BaseError, Controller, HttpStatusCode, z } from '@codm/core-typescript'
-import { McpScope } from '@codm/contracts-typescript/wire/enums'
+import { McpScope, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { CloudSessionMiddleware } from '@shared/middlewares'
 import { AgentRunIdentityCtxSchema } from '../types/AgentRunIdentity'
 import { ForkIssue, ForkIssueOutputSchema } from '../usecases/ForkIssue'
@@ -37,6 +37,7 @@ export const ForkIssueControllerInputSchema = z
 					threadId: '019e4d24-6524-7041-9e1c-8108180cddae',
 					entryId: '019e4d24-6524-7041-9e1c-8108180cddb0',
 					scope: McpScope.orchestration,
+					posture: PermissionPosture.AUTO,
 				},
 			},
 			params: { threadId: '019e4d24-6524-7041-9e1c-8108180cddae' },

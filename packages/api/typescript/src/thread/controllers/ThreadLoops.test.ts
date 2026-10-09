@@ -9,7 +9,7 @@ import {
 	type BaseError,
 	type HttpControllerRequest,
 } from '@codm/core-typescript'
-import { DayOfWeek, LoopScheduleKind, McpScope } from '@codm/contracts-typescript/wire/enums'
+import { DayOfWeek, LoopScheduleKind, McpScope, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { LoopRepository } from '../repositories/LoopRepository'
 import {
@@ -85,6 +85,7 @@ describe('ThreadLoops controllers — schedulable by the console AND from inside
 		const identities = new InMemoryAgentIdentityService()
 		const token = identities.issue({
 			scope: McpScope.orchestration,
+			posture: PermissionPosture.AUTO,
 			ownerId: MOCK_CLOUD_OWNER_ID,
 			threadId,
 			entryId: uuidv7(),

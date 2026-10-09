@@ -1,6 +1,7 @@
 import { z, type ZodObject, type ZodRawShape, type ZodTypeAny, type ZodLiteral, ZodDiscriminatedUnion, type util } from 'zod'
 import { instanceInputSchemaMap } from './InstanceRegistry'
 import { stringToInteger } from './Transforms'
+import { PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 
 /**
  * Branded return type of `z.instance()`. Carries the VO schema type `S` as a
@@ -82,6 +83,15 @@ export const BaseAgentInputSchema = z.object({
 	 * item, not by a message.
 	 */
 	entryId: z.uuid().optional(),
+	/**
+	 * The PERMISSION POSTURE this run executes under — decided by WHO triggered it, never by the model.
+	 *
+	 * On the envelope for the same reason `entryId` is: it becomes a RUN TOKEN CLAIM at the single,
+	 * generic mint site, and it shapes the argv every runner builds — both read it off an input whose
+	 * schema they cannot see under constraint erasure. REQUIRED: a run that nobody gave a posture would
+	 * otherwise default to something, and a silent default is exactly what this field exists to remove.
+	 */
+	posture: z.enum(PermissionPosture),
 	context: z.record(z.string(), z.unknown()).optional(),
 })
 

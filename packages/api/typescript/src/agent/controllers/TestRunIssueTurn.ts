@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
-import { MailboxItemKind, ProviderKind } from '@codm/contracts-typescript/wire/enums'
+import { MailboxItemKind, PermissionPosture, ProviderKind } from '@codm/contracts-typescript/wire/enums'
 import { CloudSessionMiddleware } from '@shared/middlewares'
 import { RunIssueTurn } from '../usecases/RunIssueTurn'
 
@@ -81,6 +81,9 @@ export class TestRunIssueTurnController extends Controller<typeof TestRunIssueTu
 			// turn, and inventing a link to a message that was never routed here would be a lie the
 			// resume guard would later read as truth.
 			messageId: uuidv7(),
+			// No participant triggered this turn — an e2e did — so nobody could have elevated it. AUTO is
+			// the posture of a turn no one with `canElevate` asked for, stated rather than defaulted.
+			posture: PermissionPosture.AUTO,
 		})
 		return { status: HttpStatusCode.OK, data: { issueId: result.issueId, outcome: result.outcome } }
 	}
