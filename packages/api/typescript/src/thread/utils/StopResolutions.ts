@@ -31,3 +31,20 @@ export function resolutionsForKind(kind: StopKind): StopResolution[] {
 export function isResolutionApplicable(kind: StopKind, resolution: StopResolution): boolean {
 	return resolutionsForKind(kind).includes(resolution)
 }
+
+/**
+ * Whether the resume a resolution schedules runs with the RESOLVER's posture, or always in AUTO
+ * (participant-permission-posture, Decision 7). A table, total over `StopResolution`, so a resolution
+ * added to the contract fails compilation here until somebody decides whether it may elevate.
+ *
+ * DENY never elevates: "no" must not be the answer that lifts the filter. TAKE_OVER schedules no resume
+ * at all (`ResumeIssueOnStopResolved` returns first), so its value is the safe one rather than a
+ * meaningful one.
+ */
+export const RESUMES_WITH_RESOLVER_POSTURE: Record<StopResolution, boolean> = {
+	[StopResolution.RETRY]: true,
+	[StopResolution.REVIEW_AND_SEND]: true,
+	[StopResolution.APPROVE]: true,
+	[StopResolution.DENY]: false,
+	[StopResolution.TAKE_OVER]: false,
+}

@@ -240,7 +240,13 @@ describe('Flow (integration): a resolved stop puts the issue back to work', () =
 		const fact = new ThreadStopResolvedEvent({
 			entityId: thread.id.value,
 			ownerId: MOCK_CLOUD_OWNER_ID,
-			payload: { stopId, issueId: issue.id.value, threadId: thread.id.value, resolution: StopResolution.REVIEW_AND_SEND },
+			payload: {
+				stopId,
+				issueId: issue.id.value,
+				threadId: thread.id.value,
+				resolution: StopResolution.REVIEW_AND_SEND,
+				posture: PermissionPosture.AUTO,
+			},
 		})
 		const handler = testBed.resolve(ResumeIssueOnStopResolved)
 		await handler.handle(fact as never)

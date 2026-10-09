@@ -214,7 +214,7 @@ describe('RunOrchestratorTurn — the cues the turn is responsible for lighting'
 			})
 			const repo = testBed.resolve(ThreadRepository)
 			const loaded = (await repo.findById(thread.id.value))!
-			loaded.resolveStop(answered, StopResolution.REVIEW_AND_SEND)
+			loaded.resolveStop(answered, StopResolution.REVIEW_AND_SEND, PermissionPosture.AUTO)
 			await repo.save(loaded)
 
 			const system = await capturedSystemPrompt(thread)

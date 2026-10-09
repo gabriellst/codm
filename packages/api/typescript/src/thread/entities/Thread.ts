@@ -22,7 +22,7 @@ import { effectiveModel, offersModel } from '@catalog'
 import type { DomainErrors } from '../errors'
 import { OPERATOR_PARTICIPANT_ID } from '../objects/TranscriptSpeaker'
 import { mentionsTag, stripMentionTag, MentionGateSchema, CustomPromptSchema } from '../schemas'
-import { isResolutionApplicable } from '../utils/StopResolutions'
+import { isResolutionApplicable, RESUMES_WITH_RESOLVER_POSTURE } from '../utils/StopResolutions'
 import { ThreadStopResolvedEvent } from '../events/ThreadStopResolvedEvent'
 
 // ContactRef VO (embedded) — the channel counterparty. channelId lives on the Thread itself.
@@ -822,8 +822,12 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 * `PublishThreadIntegrationEvents` bridges. `pullDomainEvents()` — the mechanism `BaseEntity` has
 	 * always exposed and no TypeScript aggregate had used yet (the Go `Channel` uses its twin) — is
 	 * drained by the use case inside the same transaction as the write.
+	 *
+	 * `resolverPosture` is WHO resolved — a run's minted posture, or the `operator` participant's grant for
+	 * the console — and the fact carries the posture the resume will run under, already reduced by
+	 * `RESUMES_WITH_RESOLVER_POSTURE`.
 	 */
-	resolveStop(stop: Stop, resolution: StopResolution): void {
+	resolveStop(stop: Stop, resolution: StopResolution, resolverPosture: PermissionPosture): void {
 		if (stop.threadId !== this.id.value) {
 			throw new BaseError<DomainErrors>('STOP_NOT_IN_THREAD', `stop ${stop.stopId} belongs to thread ${stop.threadId}`)
 		}
@@ -839,7 +843,15 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 			new ThreadStopResolvedEvent({
 				entityId: this.id.value,
 				ownerId: this.ownerId,
-				payload: { stopId: stop.stopId, issueId: stop.issueId, threadId: this.id.value, resolution },
+				payload: {
+					stopId: stop.stopId,
+					issueId: stop.issueId,
+					threadId: this.id.value,
+					resolution,
+					// How far the resume may go (Decision 7): the resolver's posture when the resolution is one
+					// that resumes with it, AUTO otherwise — DENY never lifts the filter.
+					posture: RESUMES_WITH_RESOLVER_POSTURE[resolution] ? resolverPosture : PermissionPosture.AUTO,
+				},
 			}),
 		)
 	}

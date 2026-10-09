@@ -3,7 +3,15 @@ import { container, type DependencyContainer } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
 import { threads, transcriptEntries, stops } from '@codm/contracts/db'
 import { LibSqlDatabaseDriver, LibSqlTransaction } from '@codm/core-typescript'
-import { TranscriptKind, StopKind, StopResolution, ProviderKind, AgentModelId, Language } from '@codm/contracts-typescript/wire/enums'
+import {
+	TranscriptKind,
+	StopKind,
+	StopResolution,
+	ProviderKind,
+	AgentModelId,
+	Language,
+	PermissionPosture,
+} from '@codm/contracts-typescript/wire/enums'
 import { TestBed, givenThread } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { ThreadRepository } from './ThreadRepository'
@@ -144,7 +152,7 @@ describe('LibSqlThreadRepository — the thread row and its transcript entries c
 		await driver.transaction(tx => repo.save(thread, tx))
 
 		const loaded = await repo.findStop(stop.stopId)
-		thread.resolveStop(loaded!, StopResolution.APPROVE)
+		thread.resolveStop(loaded!, StopResolution.APPROVE, PermissionPosture.AUTO)
 		await driver.transaction(tx => repo.save(thread, tx))
 
 		expect(await repo.openStops(thread.id.value)).toHaveLength(0)
