@@ -45,6 +45,7 @@ get "effective"(){
 "name": z.string(),
 "source": z.string(),
 "canInvoke": z.boolean(),
+"canElevate": z.boolean(),
 "channelId": z.uuid(),
 "hasAvatar": z.boolean()
     })),

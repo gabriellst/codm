@@ -3160,6 +3160,9 @@
                           "canInvoke": {
                             "type": "boolean"
                           },
+                          "canElevate": {
+                            "type": "boolean"
+                          },
                           "channelId": {
                             "type": "string",
                             "format": "uuid",
@@ -3174,6 +3177,7 @@
                           "name",
                           "source",
                           "canInvoke",
+                          "canElevate",
                           "channelId",
                           "hasAvatar"
                         ],
@@ -3456,6 +3460,70 @@
         "responses": {
           "200": {
             "description": "Toggle whether a participant may invoke agents (C13)",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/threads/{threadId}/participants/{participantId}/elevation": {
+      "put": {
+        "tags": [
+          "thread"
+        ],
+        "description": "Toggle whether an order from a participant runs with no permission filter",
+        "operationId": "SetParticipantElevation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "canElevate": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "canElevate"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "canElevate": true
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          },
+          {
+            "in": "path",
+            "name": "participantId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "5511999999999"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Toggle whether an order from a participant runs with no permission filter",
             "content": {
               "application/json": {
                 "schema": {}

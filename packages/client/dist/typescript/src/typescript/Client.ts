@@ -52,6 +52,7 @@ import {
 	sendArtifact,
 	sendDirectMessage,
 	setCloudToken,
+	setParticipantElevation,
 	setParticipantInvocation,
 	setThreadLoopEnabled,
 	signInLoopback,
@@ -282,6 +283,10 @@ export class TypescriptClient {
 
 	setCloudToken(...args: Parameters<typeof setCloudToken>): ReturnType<typeof setCloudToken> {
 		return (setCloudToken as (...a: any[]) => ReturnType<typeof setCloudToken>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	setParticipantElevation(...args: Parameters<typeof setParticipantElevation>): ReturnType<typeof setParticipantElevation> {
+		return (setParticipantElevation as (...a: any[]) => ReturnType<typeof setParticipantElevation>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	setParticipantInvocation(...args: Parameters<typeof setParticipantInvocation>): ReturnType<typeof setParticipantInvocation> {
