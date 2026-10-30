@@ -10,7 +10,7 @@ import { execSync } from 'node:child_process'
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { afterAll, beforeAll, beforeEach, describe, expect, it, spyOn } from 'bun:test'
 import { is, sql } from 'drizzle-orm'
 import { SQLiteTable } from 'drizzle-orm/sqlite-core'
 import * as schema from '@codm/contracts/db'
@@ -216,6 +216,34 @@ describe('LibSqlDriver', () => {
 			await insertEvent('visibility.sentinel')
 			const rows = await driver.db.select().from(events).where(sql`name = 'visibility.sentinel'`)
 			expect(rows.length).toBe(1)
+		})
+	})
+
+	// 2026-10-30: two 10–20s stalls with nobody naming the lock holder. A transaction that keeps the
+	// write lock past a second must SAY so; a quick one must not. FALSIFIER: drop the `finally` report and
+	// the first case goes red.
+	describe('lock instrumentation', () => {
+		it('reports a transaction that HELD the write lock past a second', async () => {
+			const warn = spyOn(console, 'warn').mockImplementation(() => {})
+			try {
+				await driver.transaction(async tx => {
+					await tx.insert(events).values({ id: crypto.randomUUID(), name: 'held.long', payload: {}, source: 'api' })
+					await new Promise(resolve => setTimeout(resolve, 1_100))
+				})
+				expect(warn.mock.calls.some(call => String(call[0]).includes('held the write lock'))).toBe(true)
+			} finally {
+				warn.mockRestore()
+			}
+		})
+
+		it('stays quiet for a quick transaction', async () => {
+			const warn = spyOn(console, 'warn').mockImplementation(() => {})
+			try {
+				await insertEvent('quick.one')
+				expect(warn.mock.calls.some(call => String(call[0]).includes('write lock'))).toBe(false)
+			} finally {
+				warn.mockRestore()
+			}
 		})
 	})
 })

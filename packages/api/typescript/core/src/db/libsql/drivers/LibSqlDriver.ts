@@ -60,6 +60,12 @@ function openClient(url: string, busyTimeoutMs: number = REGIME_BUSY_TIMEOUT_MS)
 }
 
 /**
+ * How long a write-lock wait or hold must last before the driver says so. Well under the 5s
+ * `busy_timeout`: a second is already a stall every other writer on the file pays for.
+ */
+const LOCK_REPORT_MS = 1_000
+
+/**
  * FIFO async mutex. One open write transaction per process.
  *
  * The reason is NOT nested BEGINs (there are none) and NOT dirty reads (the dedicated read client
@@ -204,7 +210,17 @@ export class LibSqlDriver extends LibSqlDatabaseDriver {
 	transaction<Return>(fn: (tx: LibSqlTransaction) => Promise<Return>): Promise<Return> {
 		return this.#gate.run(async () => {
 			await this.#pragmasReady
+			// BOTH SIDES OF THE LOCK ARE TIMED (2026-10-30). The libsql client is synchronous, so a
+			// `BEGIN IMMEDIATE` that meets a held lock busy-waits INSIDE the native call with the whole
+			// event loop stopped — and nothing said who held it. A long WAIT names another connection (the
+			// gateway, or this process's read handle); a long HOLD names this one. Either line, lined up
+			// with the gateway's log, answers the question the stall left open.
+			const beginAt = performance.now()
 			await this.#writeClient.execute('BEGIN IMMEDIATE')
+			const lockedAt = performance.now()
+			if (lockedAt - beginAt >= LOCK_REPORT_MS) {
+				console.warn(`sqlite driver: waited ${Math.round(lockedAt - beginAt)}ms for the write lock — another connection held it`)
+			}
 			try {
 				const out = await fn(this.#write)
 				await this.#writeClient.execute('COMMIT')
@@ -216,6 +232,11 @@ export class LibSqlDriver extends LibSqlDatabaseDriver {
 					// The transaction is already gone (or the connection is); the original error wins.
 				}
 				throw error
+			} finally {
+				const heldMs = performance.now() - lockedAt
+				if (heldMs >= LOCK_REPORT_MS) {
+					console.warn(`sqlite driver: held the write lock ${Math.round(heldMs)}ms — every other writer waited on this transaction`)
+				}
 			}
 		})
 	}
