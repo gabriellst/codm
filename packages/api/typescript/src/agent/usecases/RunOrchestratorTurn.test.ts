@@ -309,4 +309,89 @@ describe('RunOrchestratorTurn — the cues the turn is responsible for lighting'
 			expect(await capturedUserPrompt(thread)).not.toContain('responde:')
 		})
 	})
+
+	/**
+	 * THE SESSION ROTATES PAST ITS CONTEXT BUDGET (2026-10-30) — end to end, through the session row.
+	 *
+	 * Measured: orchestrator sessions resumed since August re-read 500–860k tokens per call. The first
+	 * turn here reports a 650k context; the second must NOT be handed `--resume` — it opens a fresh session,
+	 * which `buildWindow` seeds with the conversation. The falsifier is exact: stop recording `contextTokens` in
+	 * `upsertSession` (or stop declaring the budget) and the second turn resumes `sess-big`.
+	 */
+	describe('the orchestrator session rotates once its measured context passes the budget', () => {
+		class SizedRunner extends AgentRunner {
+			requests: AgentRunRequest<ZodType | undefined>[] = []
+			constructor(private readonly contextTokens: number) {
+				super()
+			}
+			async *run<OutputSchema extends ZodType | undefined = undefined>(
+				request: AgentRunRequest<OutputSchema>,
+			): AsyncIterable<AgentRuntimeEvent> {
+				this.requests.push(request)
+				yield {
+					type: 'finished',
+					result: {
+						outcome: AgentRunOutcome.COMPLETED,
+						replyText: 'ok',
+						sessionId: 'sess-big',
+						failed: false,
+						contextTokens: this.contextTokens,
+					},
+				}
+			}
+			async shutdown(): Promise<void> {}
+		}
+
+		it('a 650k session is not resumed — the next turn opens a fresh one', async () => {
+			const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+			const runner = new SizedRunner(650_000)
+			testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(runner))
+
+			await runTurn(thread)
+			await runTurn(thread)
+
+			expect(runner.requests).toHaveLength(2)
+			expect(runner.requests[1]?.session).not.toEqual({ resumeId: 'sess-big' })
+			expect(runner.requests[1]?.session && 'newId' in runner.requests[1].session).toBe(true)
+		})
+
+		it('a session under the budget keeps resuming', async () => {
+			const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+			const runner = new SizedRunner(80_000)
+			testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(runner))
+
+			await runTurn(thread)
+			await runTurn(thread)
+
+			expect(runner.requests[1]?.session).toEqual({ resumeId: 'sess-big' })
+		})
+	})
+
+	// The usage-limit instant must reach the dispatcher, or the queue retries a known refusal three times
+	// and poisons the item (2026-10-30). Falsifier: drop `retryAfter` from the stop branch's return.
+	it('a run the provider refused until a reset hands that instant to the dispatcher', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const retryAfter = Date.parse('2026-10-30T21:50:00.000Z')
+		class RefusedRunner extends AgentRunner {
+			async *run(): AsyncIterable<AgentRuntimeEvent> {
+				yield {
+					type: 'finished',
+					result: {
+						outcome: AgentRunOutcome.STOPPED,
+						replyText: '',
+						sessionId: null,
+						failed: false,
+						stop: { kind: StopKind.SERVER_ERROR, detail: "You've hit your 5-hour limit", retryAfter },
+					},
+				}
+			}
+			async shutdown(): Promise<void> {}
+		}
+		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(new RefusedRunner()))
+
+		const output = await runTurn(thread)
+
+		expect(output.spoke).toBe(false)
+		expect(output.transportStop?.retryAfter).toBe(retryAfter)
+	})
 })

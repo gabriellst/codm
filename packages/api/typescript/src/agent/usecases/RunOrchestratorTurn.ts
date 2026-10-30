@@ -92,8 +92,12 @@ export const RunOrchestratorTurnOutputSchema = z.object({
 	 * has said nothing yet.
 	 */
 	spoke: z.boolean(),
-	/** Present only when the ending was a TRANSPORT stop kind — the dispatcher's cue to retry via `fail()` instead of consuming the item with `complete()`. */
-	transportStop: z.object({ detail: z.string() }).optional(),
+	/**
+	 * Present only when the ending was a TRANSPORT stop kind — the dispatcher's cue to retry via `fail()`
+	 * instead of consuming the item with `complete()`. `retryAfter` (epoch ms) is set when the provider
+	 * named the earliest instant a retry can succeed (its usage limit), and turns the retry into a wait.
+	 */
+	transportStop: z.object({ detail: z.string(), retryAfter: z.number().int().optional() }).optional(),
 })
 
 /**
@@ -120,6 +124,17 @@ type LoadedThread = NonNullable<Awaited<ReturnType<ThreadRepository['findById']>
 interface LitPresence {
 	conversation?: { channelId: string; remoteId: string }
 }
+
+/**
+ * THE MOST CONTEXT AN ORCHESTRATOR TURN WILL RESUME INTO, in tokens — past it the turn opens a fresh
+ * session seeded with the conversation window (`bufferSize`, 50 entries by default) instead.
+ *
+ * Measured 2026-10-30: a fresh orchestrator session starts at ~50k (system prompt, tools, window), and
+ * the two sessions resumed since August and October were re-reading 500k and 665k on EVERY call of
+ * every reply — slow replies, and the provider's usage limit spent twice in one afternoon. 200k leaves a
+ * conversation room to build up between rotations while bounding the per-call cost far below that.
+ */
+const ORCHESTRATOR_CONTEXT_BUDGET = 200_000
 
 /** How this turn addresses the CLI session: continue the thread's, or open one under an id we mint. */
 interface SessionPlan {
@@ -616,7 +631,9 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 			)
 			// RETRY vs RECORD is DATA (`TRANSPORT_STOP_RETRIES`). A retried stop goes back to the dispatcher;
 			// anything else (PERMISSION_DENIED) becomes a thread-level stop NOW and the item is consumed.
-			if (retriesInPlace(outcome.stopKind)) return { text: '', spoke, transportStop: { detail: outcome.detail ?? outcome.stopKind } }
+			if (retriesInPlace(outcome.stopKind)) {
+				return { text: '', spoke, transportStop: { detail: outcome.detail ?? outcome.stopKind, retryAfter: outcome.retryAfter } }
+			}
 			await this.recordThreadStop(input, outcome.stopKind, outcome.detail)
 			return { text: '', spoke }
 		}
@@ -639,7 +656,7 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 					tx,
 				)
 			}
-			await this.upsertSession(input, accumulator.sessionId ?? session.id, tx)
+			await this.upsertSession(input, accumulator.sessionId ?? session.id, accumulator.contextTokens, tx)
 		})
 
 		// CASE 2 OF THE CATCH TERMINAL (T4's audit finding). A COMPLETED outcome that parsed to an empty
@@ -744,7 +761,11 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 			return { resumed: false, id: uuidv7() }
 		}
 
-		const decision = existing.resumeDecision({ model: input.model ?? AgentModelId.DEFAULT, cwd: input.workspacePath })
+		const decision = existing.resumeDecision({
+			model: input.model ?? AgentModelId.DEFAULT,
+			cwd: input.workspacePath,
+			contextBudget: ORCHESTRATOR_CONTEXT_BUDGET,
+		})
 		if (decision.resume) return { resumed: true, id: decision.id }
 
 		this.logging.warn({
@@ -824,11 +845,16 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 		return Number.isFinite(n) && n > 0 ? n : 50
 	}
 
-	private async upsertSession(input: this['input'], agentSessionId: string, tx: Transaction): Promise<void> {
+	private async upsertSession(
+		input: this['input'],
+		agentSessionId: string,
+		contextTokens: number | undefined,
+		tx: Transaction,
+	): Promise<void> {
 		const model = input.model ?? AgentModelId.DEFAULT
 		const existing = await this.sessions.findOrchestratorByThreadId(input.threadId, tx)
 		if (existing) {
-			existing.recordTurn({ agentSessionId, model, cwd: input.workspacePath })
+			existing.recordTurn({ agentSessionId, model, cwd: input.workspacePath, contextTokens })
 			await this.sessions.save(existing, tx)
 			return
 		}
@@ -841,6 +867,7 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 				cwd: input.workspacePath,
 				agentSessionId,
 				model,
+				contextTokens,
 			}),
 			tx,
 		)

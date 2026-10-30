@@ -98,8 +98,12 @@ export const RunIssueTurnOutputSchema = z.object({
 	 * it, so nothing was queued and nothing was said.
 	 */
 	spoke: z.boolean(),
-	/** Present only for a transport stop kind that RETRIES (`TRANSPORT_STOP_RETRIES`) — the dispatcher's cue to retry via `fail()` instead of consuming the item with `complete()`. */
-	transportStop: z.object({ detail: z.string() }).optional(),
+	/**
+	 * Present only for a transport stop kind that RETRIES (`TRANSPORT_STOP_RETRIES`) — the dispatcher's cue
+	 * to retry via `fail()` instead of consuming the item with `complete()`. `retryAfter` (epoch ms) is set
+	 * when the provider named the earliest instant a retry can succeed (its usage limit).
+	 */
+	transportStop: z.object({ detail: z.string(), retryAfter: z.number().int().optional() }).optional(),
 })
 
 /** What the drain loop observed beyond transport — the run's conclusion and its session identity. */
@@ -221,7 +225,9 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		// Only a transport stop the table says to RETRY goes back to the dispatcher as `transportStop`; one
 		// it says to RECORD (PERMISSION_DENIED) was already minted by `persistOutcome` and consumes the item.
 		const transportStop =
-			observed.outcome.kind === 'STOPPED' && retriesInPlace(observed.outcome.stopKind) ? { detail: observed.outcome.detail } : undefined
+			observed.outcome.kind === 'STOPPED' && retriesInPlace(observed.outcome.stopKind)
+				? { detail: observed.outcome.detail, retryAfter: observed.outcome.retryAfter }
+				: undefined
 
 		return {
 			issueId: input.issueId,

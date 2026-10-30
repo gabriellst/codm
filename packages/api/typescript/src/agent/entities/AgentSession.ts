@@ -55,6 +55,12 @@ export interface ResumeContext {
 	 * a transcript that disagrees with the row), which is itself grounds to start fresh.
 	 */
 	cursor?: string
+	/**
+	 * The most context, in tokens, this caller will resume into. Declared by the CALLER because the cost
+	 * of a fresh session differs by kind: the orchestrator reseeds from the conversation window and loses
+	 * little, an issue mid-task would lose its working memory. Absent ⇒ no budget.
+	 */
+	contextBudget?: number
 }
 
 /** Resume, with the id to hand `--resume`; or don't, with the NAMED reason (never a silent reset). */
@@ -70,7 +76,7 @@ export type ResumeDecision = { resume: true; id: string } | { resume: false; rea
  *
  * The invariant lives in `resumeDecision`. Resuming is only safe while the premises the row was
  * written under still hold; when one stops holding, the turn runs FRESH and says why. See
- * `ResumeInvalidationReason` for the four premises and why each one matters.
+ * `ResumeInvalidationReason` for the premises and the context budget, and why each one matters.
  */
 export class AgentSession extends AggregateRoot<typeof AgentSessionSchema> {
 	static override schema = AgentSessionSchema
@@ -84,6 +90,7 @@ export class AgentSession extends AggregateRoot<typeof AgentSessionSchema> {
 		agentSessionId: string
 		model: AgentModelId
 		lastMessageId?: string
+		contextTokens?: number
 	}): AgentSession {
 		return new AgentSession({
 			ownerId: data.ownerId,
@@ -94,6 +101,7 @@ export class AgentSession extends AggregateRoot<typeof AgentSessionSchema> {
 			agentSessionId: data.agentSessionId,
 			model: data.model,
 			lastMessageId: data.lastMessageId,
+			lastContextTokens: data.contextTokens,
 			lastTurnAt: new Date(),
 		})
 	}
@@ -114,11 +122,22 @@ export class AgentSession extends AggregateRoot<typeof AgentSessionSchema> {
 	 * compared against, and is exactly what makes `CWD_CHANGED` converge (fire once, then resume)
 	 * instead of latch (fire on every turn from then on).
 	 */
-	recordTurn(data: { agentSessionId: string; model: AgentModelId; cwd: string; lastMessageId?: string; at?: Date }): void {
+	recordTurn(data: {
+		agentSessionId: string
+		model: AgentModelId
+		cwd: string
+		lastMessageId?: string
+		/** The session's context after this turn; absent ⇒ the provider did not measure it. */
+		contextTokens?: number
+		at?: Date
+	}): void {
 		this.agentSessionId = data.agentSessionId
 		this.model = data.model
 		this.cwd = data.cwd
 		if (data.lastMessageId !== undefined) this.lastMessageId = data.lastMessageId
+		// REPLACED, never kept: the measurement belongs to `agentSessionId`, which this same call may have
+		// just changed. A rotated session carrying its predecessor's 800k would rotate again on every turn.
+		this.lastContextTokens = data.contextTokens
 		this.lastTurnAt = data.at ?? new Date()
 		this.validate()
 	}
@@ -148,6 +167,11 @@ export class AgentSession extends AggregateRoot<typeof AgentSessionSchema> {
 		// à thread um conceito que ela não tem. `model` e `cwd` seguem sendo checados para os dois tipos.
 		if (this.issueId && !this.lastMessageId) return { resume: false, reason: ResumeInvalidationReason.MISSING_CURSOR }
 		if (ctx.cursor !== this.lastMessageId) return { resume: false, reason: ResumeInvalidationReason.CONVERSATION_ADVANCED }
+		// Last, because it is the only guard that is about cost rather than correctness: a session that
+		// is wrong for another reason should be reported as THAT reason.
+		if (ctx.contextBudget !== undefined && (this.lastContextTokens ?? 0) > ctx.contextBudget) {
+			return { resume: false, reason: ResumeInvalidationReason.CONTEXT_BUDGET_EXCEEDED }
+		}
 		return { resume: true, id: this.agentSessionId }
 	}
 }

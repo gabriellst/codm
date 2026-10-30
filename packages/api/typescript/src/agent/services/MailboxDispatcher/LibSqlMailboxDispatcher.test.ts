@@ -312,6 +312,138 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 	})
 
 	/**
+	 * AS PISTAS (2026-10-30): uma conversa nunca espera turno de código.
+	 *
+	 * Medido em produção: quatro turnos de issue (4–16 min cada) ocupavam o pool único de 4 slots e as
+	 * mensagens dos grupos ficavam no 👀 por minutos. Aqui, cinco issues travadas e UMA conversa que
+	 * chega depois: a conversa tem que começar enquanto as issues seguem presas, e as issues não podem
+	 * passar de quatro ao mesmo tempo.
+	 *
+	 * O falsificador é exato: volte a um pool único de 4 (as duas pistas compartilhando os slots) e a
+	 * conversa nunca começa — `threadStarted` fica falso e este teste fica vermelho.
+	 */
+	it('uma conversa começa mesmo com a pista de issues cheia — e as issues não passam de quatro', async () => {
+		const ownerId = 'owner-lanes'
+		let releaseIssues = (): void => {}
+		const gate = new Promise<void>(resolve => {
+			releaseIssues = resolve
+		})
+		let issuesInFlight = 0
+		let issuesPeak = 0
+		let threadStarted = false
+
+		class LaneDispatcher extends LibSqlMailboxDispatcher {
+			protected override async runIssueWork(): Promise<TurnReport> {
+				issuesInFlight += 1
+				issuesPeak = Math.max(issuesPeak, issuesInFlight)
+				await gate
+				issuesInFlight -= 1
+				return { spoke: true }
+			}
+			protected override async runThreadTurn(): Promise<TurnReport> {
+				threadStarted = true
+				return { spoke: true }
+			}
+		}
+
+		const dispatcher = testBed.resolve(LaneDispatcher)
+		const mailbox = testBed.resolve(MailboxRepository)
+		for (let n = 0; n < 5; n++) {
+			const issueId = uuidv7()
+			await mailbox.enqueue({
+				ownerId,
+				targetKind: MailboxTargetKind.ISSUE,
+				targetId: issueId,
+				kind: MailboxItemKind.STEER,
+				posture: PermissionPosture.AUTO,
+				payload: { threadId: uuidv7(), key: `ISS-${n}`, title: 'lane', text: 'x', provider: 'CLAUDE' },
+				dedupKey: `${issueId}:lane`,
+			})
+		}
+
+		await dispatcher.start()
+		try {
+			expect(await until(async () => issuesInFlight === 4, 2_000)).toBe(true)
+			await mailbox.enqueue({
+				ownerId,
+				targetKind: MailboxTargetKind.THREAD,
+				targetId: OTHER_THREAD,
+				kind: MailboxItemKind.OPERATOR_MESSAGE,
+				posture: PermissionPosture.AUTO,
+				payload: { entryId: uuidv7() },
+				dedupKey: 'lane-thread-message',
+			})
+			expect(await until(async () => threadStarted, 2_000)).toBe(true)
+			expect(issuesPeak).toBe(4)
+		} finally {
+			releaseIssues()
+			await dispatcher.stop()
+		}
+	})
+
+	/**
+	 * O LIMITE DE USO (2026-10-30): esperar o reset, não gastar tentativa, e avisar quem espera.
+	 *
+	 * Medido duas vezes no mesmo dia: a conta bateu o limite de 5h, cada turno voltou recusado em
+	 * segundos, três retries instantâneos mataram os itens e os grupos ficaram no 👀. Aqui o turno volta
+	 * com `retryAfter`: o item tem que ficar vivo com a tentativa devolvida, a fila tem que parar de
+	 * reivindicar até o reset, e cada conversa esperando — inclusive uma que chega DURANTE a pausa — tem
+	 * que receber o aviso uma única vez.
+	 *
+	 * Falsificadores: tire o desvio para `waitForProvider` e o item morre envenenado; tire a pausa do
+	 * `drainLoop` e o segundo item é reivindicado (`calls` vira 2); tire o `noticed` e o aviso repete.
+	 */
+	it('um limite de uso não gasta tentativa: o item espera o reset, a fila pausa e a conversa é avisada', async () => {
+		const mailbox = testBed.resolve(MailboxRepository)
+		const first = await givenThread(testBed)
+		const second = await givenThread(testBed)
+		let calls = 0
+
+		class LimitedDispatcher extends LibSqlMailboxDispatcher {
+			protected override async runThreadTurn(): Promise<TurnReport> {
+				calls += 1
+				return { spoke: false, transportStop: { detail: "You've hit your 5-hour limit", retryAfter: Date.now() + 10 * 60_000 } }
+			}
+		}
+		const dispatcher = new LimitedDispatcher(
+			mailbox,
+			testBed.resolve(ThreadRepository),
+			testBed.resolve(WorkspaceRepository),
+			testBed.resolve(AgentSessionRepository),
+			testBed.resolve(LoggingService),
+			testBed.resolve(CloudSession),
+		).bind(testContainer)
+
+		const message = (threadId: string, dedupKey: string) =>
+			mailbox.enqueue({
+				ownerId: testBed.ownerId,
+				targetKind: MailboxTargetKind.THREAD,
+				targetId: threadId,
+				kind: MailboxItemKind.OPERATOR_MESSAGE,
+				posture: PermissionPosture.AUTO,
+				payload: { entryId: uuidv7() },
+				dedupKey,
+			})
+		// The notices are the only channel deliveries this test produces. The attempt REFUND itself is
+		// asserted at the repository seam (`defer`), where the row is the subject.
+		const notices = () => testBed.probe().count('scheduledCommands', { name: 'deliver_channel_message' })
+
+		await message(first.id.value, 'limit-first')
+		await dispatcher.drain()
+
+		expect(await mailbox.hasPending(MailboxTargetKind.THREAD, first.id.value)).toBe(true)
+		expect(await notices()).toBe(1)
+
+		// A conversation that arrives DURING the pause: not claimed, but told — once.
+		await message(second.id.value, 'limit-second')
+		await dispatcher.drain()
+		await dispatcher.drain()
+		expect(calls).toBe(1)
+		expect(await mailbox.hasPending(MailboxTargetKind.THREAD, second.id.value)).toBe(true)
+		expect(await notices()).toBe(2)
+	})
+
+	/**
 	 * Morrer em silêncio é o defeito, não a morte.
 	 *
 	 * Envenenar é uma decisão defensável: um item que falha sempre não pode bloquear o alvo para

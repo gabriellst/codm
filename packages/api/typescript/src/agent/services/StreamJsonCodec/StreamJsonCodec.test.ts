@@ -315,6 +315,55 @@ describe('FrameDecoder — content[] fan-out (AC-2.2, divergence D3)', () => {
 	})
 })
 
+// THE TWO RUN RECORDS (2026-10-30). Shapes MEASURED on refused turns of claude 2.1.314: the API-error
+// `assistant` line carries `apiErrorParams.rate_limit_info`, `resetsAt` in unix SECONDS. The falsifiers:
+// drop `resetsAt * 1000` and the instant lands in 1970; read a sub-agent's usage and the context jumps.
+describe('FrameDecoder — run records: context size and the usage-limit verdict', () => {
+	const decodeLines = (...lines: unknown[]) => new StreamJsonCodec().push(`${lines.map(l => JSON.stringify(l)).join('\n')}\n`)
+
+	it('reads the main agent call context as input + cache_creation + cache_read', () => {
+		const [line] = decodeLines({
+			type: 'assistant',
+			message: {
+				id: 'm1',
+				content: [],
+				usage: { input_tokens: 3, cache_creation_input_tokens: 1_200, cache_read_input_tokens: 48_000, output_tokens: 90 },
+			},
+		})
+		expect(line?.contextTokens).toBe(49_203)
+	})
+
+	it("ignores a sub-agent's call — its context is not the session's", () => {
+		const [line] = decodeLines({
+			type: 'assistant',
+			parent_tool_use_id: 'toolu_1',
+			message: { id: 'm2', content: [], usage: { input_tokens: 5, cache_read_input_tokens: 900_000 } },
+		})
+		expect(line?.contextTokens).toBeUndefined()
+	})
+
+	it('a refused call carries the verdict and the reset instant, in ms', () => {
+		const [line] = decodeLines({
+			type: 'assistant',
+			isApiErrorMessage: true,
+			error: 'rate_limit',
+			apiErrorParams: { rate_limit_info: { status: 'rejected', resetsAt: 1793397000, rateLimitType: 'five_hour' } },
+			message: { id: 'm3', content: [{ type: 'text', text: "You've hit your 5-hour limit · resets 6:50pm (America/Fortaleza)" }] },
+		})
+		expect(line?.rateLimit).toEqual({ rejected: true, resetsAt: new Date('2026-10-30T21:50:00.000Z') })
+	})
+
+	it('rate_limit_event reports the verdict too, and "allowed" is not a rejection', () => {
+		const [allowed, rejected] = decodeLines(
+			{ type: 'rate_limit_event', rate_limit_info: { status: 'allowed', rateLimitType: 'five_hour' } },
+			{ type: 'rate_limit_event', rate_limit_info: { status: 'rejected', resetsAt: 1793397000 } },
+		)
+		expect(allowed?.rateLimit).toEqual({ rejected: false, resetsAt: null })
+		expect(allowed?.frames).toEqual([])
+		expect(rejected?.rateLimit?.rejected).toBe(true)
+	})
+})
+
 describe('LineBuffer — the boring half', () => {
 	it('keeps a trailing partial line buffered until its newline arrives', () => {
 		const buffer = new LineBuffer()

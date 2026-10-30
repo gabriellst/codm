@@ -37,14 +37,16 @@ export class MockMailboxRepository extends MailboxRepository {
 		return true
 	}
 
-	async claimNext(claimedBy: string, leaseMs: number): Promise<ClaimedMailboxItem | undefined> {
+	async claimNext(claimedBy: string, leaseMs: number, lanes?: readonly MailboxTargetKind[]): Promise<ClaimedMailboxItem | undefined> {
 		const now = Date.now()
 		const runnable = (r: Row) => !r.consumed && !r.dead
 		const leased = (r: Row) => r.leaseUntil !== undefined && r.leaseUntil >= now
+		// Same rule as the SQL twin: a lane's position is its rank, and a kind outside `lanes` is not claimable.
+		const rank = (r: Row) => (lanes ? lanes.indexOf(r.targetKind) : 0)
 		const busy = new Set(this.rows.filter(r => runnable(r) && leased(r)).map(r => `${r.targetKind}:${r.targetId}`))
 		const row = this.rows
-			.filter(r => runnable(r) && !leased(r) && !busy.has(`${r.targetKind}:${r.targetId}`))
-			.sort((a, b) => a.seq - b.seq)[0]
+			.filter(r => runnable(r) && !leased(r) && !busy.has(`${r.targetKind}:${r.targetId}`) && rank(r) >= 0)
+			.sort((a, b) => rank(a) - rank(b) || a.seq - b.seq)[0]
 		if (!row) return undefined
 		row.attempts += 1
 		row.leaseUntil = now + leaseMs
@@ -98,6 +100,19 @@ export class MockMailboxRepository extends MailboxRepository {
 		row.claimedBoot = null
 		row.claimedPid = null
 		if (row.attempts >= maxAttempts) row.dead = true
+	}
+
+	async defer(id: string, until: Date): Promise<void> {
+		const row = this.rows.find(r => r.id === id)
+		if (!row || row.consumed || row.dead) return
+		row.leaseUntil = until.getTime()
+		row.claimedBoot = null
+		row.claimedPid = null
+		row.attempts = Math.max(row.attempts - 1, 0)
+	}
+
+	async pendingTargets(targetKind: MailboxTargetKind): Promise<string[]> {
+		return [...new Set(this.rows.filter(r => !r.consumed && !r.dead && r.targetKind === targetKind).map(r => r.targetId))]
 	}
 
 	async hasPending(targetKind: MailboxTargetKind, targetId: string): Promise<boolean> {

@@ -199,6 +199,52 @@ describe('MailboxRepository — one turn per target, durable', () => {
 		expect(await r.claimNext('worker-outro', 60_000)).toBeUndefined()
 	})
 
+	// THE LANES (2026-10-30): the dispatcher passes the kinds that still have a free slot, in priority
+	// order. The falsifier is exact: drop the CASE rank from the ORDER BY and the older ISSUE item wins.
+	it('claims from the FIRST lane that has work, even when an older item waits in a later lane', async () => {
+		const r = repo()
+		const ISSUE_X = '00000000-0000-4000-8000-0000000000e1'
+		await r.enqueue({ ...item(ISSUE_X, 'issue-older'), targetKind: MailboxTargetKind.ISSUE, kind: MailboxItemKind.STEER })
+		await r.enqueue(item(THREAD_A, 'thread-newer'))
+
+		const first = await r.claimNext('w1', 60_000, [MailboxTargetKind.THREAD, MailboxTargetKind.ISSUE])
+		expect(first?.targetKind).toBe(MailboxTargetKind.THREAD)
+		// A kind left out of `lanes` is never claimed — that is how a full lane stays full.
+		expect(await r.claimNext('w1', 60_000, [MailboxTargetKind.THREAD])).toBeUndefined()
+		expect((await r.claimNext('w1', 60_000, [MailboxTargetKind.ISSUE]))?.targetId).toBe(ISSUE_X)
+	})
+
+	// A turn the provider refused (usage limit) never ran: `defer` gives the attempt back and hides the
+	// item until the reset. The falsifier: make `defer` keep the charge and the attempt count stays at 1.
+	it('defer refunds the attempt and keeps the item unclaimable until the instant given', async () => {
+		const r = repo()
+		const db = testBed.resolve(LibSqlDatabaseDriver).db
+		await r.enqueue(item(THREAD_A, 'deferred'))
+		const claimed = await r.claimNext('w1', 60_000)
+		expect(claimed?.attempts).toBe(1)
+
+		await r.defer(claimed!.id, new Date(Date.now() + 60_000))
+		expect(await r.claimNext('w1', 60_000)).toBeUndefined()
+		const [row] = await db.select().from(agentMailbox).where(eq(agentMailbox.id, claimed!.id))
+		expect(row?.attempts).toBe(0)
+		expect(row?.claimedBy).toBeNull()
+
+		await r.defer(claimed!.id, new Date(Date.now() - 1))
+		expect((await r.claimNext('w1', 60_000))?.attempts).toBe(1)
+	})
+
+	it('pendingTargets names each target of a kind that still has runnable work, once', async () => {
+		const r = repo()
+		await r.enqueue(item(THREAD_A, 'a-1'))
+		await r.enqueue(item(THREAD_A, 'a-2'))
+		await r.enqueue(item(THREAD_B, 'b-1'))
+		const done = await r.claimNext('w1', 60_000)
+		await r.complete(done!.id)
+
+		expect((await r.pendingTargets(MailboxTargetKind.THREAD)).sort()).toEqual([THREAD_A, THREAD_B].sort())
+		expect(await r.pendingTargets(MailboxTargetKind.ISSUE)).toEqual([])
+	})
+
 	it('hasPending sees runnable work and stops seeing it once consumed', async () => {
 		const r = repo()
 		expect(await r.hasPending(MailboxTargetKind.THREAD, THREAD_A)).toBe(false)
