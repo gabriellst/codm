@@ -9,7 +9,7 @@ import type { AgentRunRequest } from '../../../types/AgentRunRequest'
 import type { AgentRunResult, AgentRuntimeEvent } from '../../../types/AgentRuntimeEvent'
 import type { ProviderBinarySpec } from '../../../types/ProviderBinarySpec'
 import type { ProviderCapabilities } from '../../../types/ProviderCapabilities'
-import { StreamJsonCodec, StreamJsonToTurnFactAccumulator, type TerminalResultRecord } from '../../StreamJsonCodec'
+import { StreamJsonCodec, StreamJsonToTurnFactAccumulator, type RateLimitRecord, type TerminalResultRecord } from '../../StreamJsonCodec'
 import { AgentRunner } from '../AgentRunner'
 import { nodeAgentProcessSpawner, type AgentProcess, type AgentProcessSpawner } from './AgentProcess'
 // The server key is single-sourced in `mcp/wire.ts` — a LEAF module — because the runner, the MCP
@@ -342,6 +342,10 @@ export class ClaudeAgentRunner extends AgentRunner {
 
 		let terminal: TerminalResultRecord | undefined
 		let sessionId: string | null = null
+		/** The LAST main-agent call's prompt size — see `DecodedLine.contextTokens`. */
+		let contextTokens: number | undefined
+		/** The LAST usage-limit verdict the CLI reported — see `DecodedLine.rateLimit`. */
+		let rateLimit: RateLimitRecord | undefined
 		let stdinClosed = false
 		let watchdogFired = false
 		/**
@@ -438,6 +442,8 @@ export class ClaudeAgentRunner extends AgentRunner {
 
 				let sawFrame = false
 				for (const decoded of codec.push(settled.value)) {
+					if (decoded.contextTokens !== undefined) contextTokens = decoded.contextTokens
+					if (decoded.rateLimit) rateLimit = decoded.rateLimit
 					for (const frame of decoded.frames) {
 						sawFrame = true
 						if (frame.kind === 'system_init') sessionId = frame.sessionId
@@ -458,6 +464,8 @@ export class ClaudeAgentRunner extends AgentRunner {
 			}
 
 			for (const decoded of codec.flush()) {
+				if (decoded.contextTokens !== undefined) contextTokens = decoded.contextTokens
+				if (decoded.rateLimit) rateLimit = decoded.rateLimit
 				for (const frame of decoded.frames) {
 					yield { type: 'frame', frame }
 					const fact = accumulator.apply(frame)
@@ -488,6 +496,8 @@ export class ClaudeAgentRunner extends AgentRunner {
 				result: this.buildResult(request, {
 					terminal,
 					sessionId,
+					contextTokens,
+					rateLimit,
 					exitCode,
 					watchdogFired,
 					diedMidStream,
@@ -521,6 +531,8 @@ export class ClaudeAgentRunner extends AgentRunner {
 		observed: {
 			terminal?: TerminalResultRecord
 			sessionId: string | null
+			contextTokens?: number
+			rateLimit?: RateLimitRecord
 			exitCode: number
 			watchdogFired: boolean
 			/** The child was reaped while its stdout was still open — see the field in `run`. */
@@ -529,14 +541,21 @@ export class ClaudeAgentRunner extends AgentRunner {
 		},
 	): AgentRunResult {
 		const replyText = observed.terminal?.text ?? ''
-		const stop = this.classifyStop(observed)
+		const classified = this.classifyStop(observed)
+		// A STOPPED run under a REJECTED usage limit is the limit, whatever the stop is called: the CLI
+		// ends that turn as an ordinary error result. What makes it different is the instant the window
+		// resets — the only retry that can succeed — and it is attached here, from the structured
+		// verdict, never from the error's prose.
+		const resetsAt = observed.rateLimit?.rejected ? observed.rateLimit.resetsAt : null
+		const stop = classified && resetsAt ? { ...classified, retryAfter: resetsAt.getTime() } : classified
+		const contextTokens = observed.contextTokens
 
 		if (stop) {
-			return { outcome: AgentRunOutcome.STOPPED, replyText, sessionId: observed.sessionId, failed: false, stop }
+			return { outcome: AgentRunOutcome.STOPPED, replyText, sessionId: observed.sessionId, failed: false, stop, contextTokens }
 		}
 
 		if (!request.outputSchema) {
-			return { outcome: AgentRunOutcome.COMPLETED, replyText, sessionId: observed.sessionId, failed: false }
+			return { outcome: AgentRunOutcome.COMPLETED, replyText, sessionId: observed.sessionId, failed: false, contextTokens }
 		}
 
 		// STRUCTURED OUTPUT — §4.3 rule 4. `safeParse`, never `parse`; a failure is DATA on the terminal
@@ -553,12 +572,20 @@ export class ClaudeAgentRunner extends AgentRunner {
 				sessionId: observed.sessionId,
 				failed: true,
 				failure: 'terminal reply text was not JSON',
+				contextTokens,
 			}
 		}
 		const parsed = request.outputSchema.safeParse(candidate)
 		return parsed.success
-			? { outcome: AgentRunOutcome.COMPLETED, replyText, sessionId: observed.sessionId, output: parsed.data, failed: false }
-			: { outcome: AgentRunOutcome.COMPLETED, replyText, sessionId: observed.sessionId, failed: true, failure: parsed.error.message }
+			? { outcome: AgentRunOutcome.COMPLETED, replyText, sessionId: observed.sessionId, output: parsed.data, failed: false, contextTokens }
+			: {
+					outcome: AgentRunOutcome.COMPLETED,
+					replyText,
+					sessionId: observed.sessionId,
+					failed: true,
+					failure: parsed.error.message,
+					contextTokens,
+				}
 	}
 
 	private classifyStop(observed: {

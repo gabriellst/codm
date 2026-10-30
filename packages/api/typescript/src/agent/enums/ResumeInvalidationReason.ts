@@ -34,4 +34,13 @@ export enum ResumeInvalidationReason {
 	CWD_CHANGED = 'CWD_CHANGED',
 	MISSING_CURSOR = 'MISSING_CURSOR',
 	CONVERSATION_ADVANCED = 'CONVERSATION_ADVANCED',
+	/**
+	 * The session's measured context (`lastContextTokens`) is past the budget the CALLER declared. Not a
+	 * broken premise like the four above — a COST one: every API call of a resumed turn re-reads the whole
+	 * session. Measured 2026-10-30: two orchestrator sessions resumed since August/October re-read
+	 * 500–860k tokens per call, which made every reply slow and spent the provider's usage limit twice in
+	 * one afternoon. A fresh orchestrator session is seeded with the conversation window, so rotating
+	 * keeps the recent conversation and drops only what is older than it.
+	 */
+	CONTEXT_BUDGET_EXCEEDED = 'CONTEXT_BUDGET_EXCEEDED',
 }

@@ -26,7 +26,17 @@ export interface AgentRunResult {
 	/** Structural validation failed — never thrown, always reported. */
 	failed: boolean
 	failure?: string
-	stop?: { kind: TransportStopKind; detail: string }
+	/**
+	 * `retryAfter` (epoch ms) — the earliest instant a retry of this run can succeed, when the provider
+	 * SAID so: the account hit its usage limit and the CLI reported when the window resets. Absent for
+	 * every other stop, which keeps meaning "retry whenever".
+	 */
+	stop?: { kind: TransportStopKind; detail: string; retryAfter?: number }
+	/**
+	 * The session's context size after this run — the prompt the LAST main-agent call read. Absent when
+	 * the provider reported no per-call usage (codex). See `DecodedLine.contextTokens`.
+	 */
+	contextTokens?: number
 }
 
 /**

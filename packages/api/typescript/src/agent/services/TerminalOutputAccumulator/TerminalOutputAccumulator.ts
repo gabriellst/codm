@@ -8,7 +8,10 @@ import type { TerminalSseFrame } from '../AgentStreamRegistry'
  * The domain OUTCOME of one agent turn — the "fact" side of the two-stream split, distilled from a
  * whole run. `COMPLETED` carries the agent's reply text; `STOPPED` carries the stop kind + detail.
  */
-export type TerminalOutcome = { kind: 'COMPLETED'; replyText: string } | { kind: 'STOPPED'; stopKind: StopKind; detail: string }
+export type TerminalOutcome =
+	| { kind: 'COMPLETED'; replyText: string }
+	/** `retryAfter` (epoch ms): the provider named the earliest instant a retry can succeed — see `AgentRunResult.stop`. */
+	| { kind: 'STOPPED'; stopKind: StopKind; detail: string; retryAfter?: number }
 
 export interface TerminalAccumulatorContext {
 	issueId: string
@@ -68,6 +71,11 @@ export class TerminalOutputAccumulator {
 		return this.result?.sessionId ?? null
 	}
 
+	/** The session's context after the run, when the provider measured it — see `AgentRunResult.contextTokens`. */
+	get contextTokens(): number | undefined {
+		return this.result?.contextTokens
+	}
+
 	outcome(): TerminalOutcome {
 		if (!this.result) {
 			// A drain that ended without the terminal event means the iteration was cut short — a
@@ -75,7 +83,7 @@ export class TerminalOutputAccumulator {
 			return { kind: 'STOPPED', stopKind: StopKind.SERVER_ERROR, detail: 'agent run produced no terminal event' }
 		}
 		if (this.result.stop) {
-			return { kind: 'STOPPED', stopKind: this.result.stop.kind, detail: this.result.stop.detail }
+			return { kind: 'STOPPED', stopKind: this.result.stop.kind, detail: this.result.stop.detail, retryAfter: this.result.stop.retryAfter }
 		}
 		if (this.result.failed) {
 			return { kind: 'STOPPED', stopKind: StopKind.SERVER_ERROR, detail: this.result.failure ?? 'agent run failed structural validation' }

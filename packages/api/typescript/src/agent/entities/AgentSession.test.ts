@@ -140,4 +140,46 @@ describe('AgentSession entity', () => {
 			expect(decision.resume === false && decision.reason).toBe(ResumeInvalidationReason.CWD_CHANGED)
 		})
 	})
+
+	// THE CONTEXT BUDGET (2026-10-30): orchestrator sessions resumed since August re-read 500–860k tokens
+	// per call. The falsifier is exact: drop the budget guard and the 650k session resumes.
+	describe('resumeDecision() — the context budget the caller declares', () => {
+		const orchestrator = (contextTokens?: number) =>
+			AgentSession.create({
+				ownerId: '00000000-0000-4000-8000-000000000001',
+				threadId: '00000000-0000-4000-8000-0000000000aa',
+				provider: ProviderKind.CLAUDE_CODE,
+				cwd: '/tmp/ws',
+				agentSessionId: 'cli-session-budget',
+				model: AgentModelId.DEFAULT,
+				contextTokens,
+			})
+		const ctx = { model: AgentModelId.DEFAULT, cwd: '/tmp/ws', contextBudget: 200_000 }
+
+		it('rotates a session whose measured context is past the budget', () => {
+			const decision = orchestrator(650_000).resumeDecision(ctx)
+			expect(decision.resume === false && decision.reason).toBe(ResumeInvalidationReason.CONTEXT_BUDGET_EXCEEDED)
+		})
+
+		it('resumes under the budget, and when nothing was measured yet', () => {
+			expect(orchestrator(120_000).resumeDecision(ctx).resume).toBe(true)
+			expect(orchestrator(undefined).resumeDecision(ctx).resume).toBe(true)
+		})
+
+		it('a caller that declares no budget never rotates for size', () => {
+			expect(orchestrator(900_000).resumeDecision({ model: AgentModelId.DEFAULT, cwd: '/tmp/ws' }).resume).toBe(true)
+		})
+
+		it('a broken premise is reported before the budget', () => {
+			const decision = orchestrator(900_000).resumeDecision({ ...ctx, cwd: '/tmp/OTHER' })
+			expect(decision.resume === false && decision.reason).toBe(ResumeInvalidationReason.CWD_CHANGED)
+		})
+
+		it('recordTurn() REPLACES the measurement — a rotated session does not inherit the old size', () => {
+			const session = orchestrator(900_000)
+			session.recordTurn({ agentSessionId: 'cli-session-fresh', model: AgentModelId.DEFAULT, cwd: '/tmp/ws', contextTokens: 60_000 })
+			expect(session.lastContextTokens).toBe(60_000)
+			expect(session.resumeDecision(ctx).resume).toBe(true)
+		})
+	})
 })

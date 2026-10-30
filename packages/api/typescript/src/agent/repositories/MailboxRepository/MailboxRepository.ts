@@ -64,8 +64,36 @@ export abstract class MailboxRepository {
 	 * that dies mid-turn has its item become claimable again, which is the boot-recovery the design
 	 * review found missing (an in-memory guard forgets everything a restart, and a subagent result
 	 * that arrived just before a crash would never be told to anyone).
+	 *
+	 * `lanes` narrows the claim to the target kinds that still have a free slot, IN PRIORITY ORDER: the
+	 * item claimed is the oldest of the FIRST lane that has one, not the oldest overall. Without it a
+	 * conversation queued behind coding-agent turns waited for them — measured 2026-10-30, operator
+	 * messages sat at 👀 for minutes while four issue turns held every slot. Absent ⇒ every kind,
+	 * oldest first (the shape every caller outside the dispatcher wants).
 	 */
-	abstract claimNext(claimedBy: string, leaseMs: number, tx?: Transaction): Promise<ClaimedMailboxItem | undefined>
+	abstract claimNext(
+		claimedBy: string,
+		leaseMs: number,
+		lanes?: readonly MailboxTargetKind[],
+		tx?: Transaction,
+	): Promise<ClaimedMailboxItem | undefined>
+
+	/**
+	 * Give a CLAIMED item back WITHOUT spending the attempt its claim charged, and keep it unclaimable
+	 * until `until` — the instant a retry can first succeed.
+	 *
+	 * This is not `fail`: a turn refused because the provider account hit its usage limit did not fail,
+	 * it never ran. Charging it poisoned every item the three quick retries reached inside a limit
+	 * window (measured 2026-10-30, 13:21 and 17:13: items dead with "You've hit your 5-hour limit"),
+	 * and retrying before `until` only asks the same question again.
+	 *
+	 * `lease_until = until` with no holder is what makes it wait: `claimNext` refuses an unexpired lease,
+	 * and the per-target exclusion keeps the rest of that target's queue behind it, in order.
+	 */
+	abstract defer(id: string, until: Date, tx?: Transaction): Promise<void>
+
+	/** The targets of `targetKind` with runnable work waiting — who is owed an answer right now. */
+	abstract pendingTargets(targetKind: MailboxTargetKind, tx?: Transaction): Promise<string[]>
 
 	/**
 	 * Push this item's lease forward while ITS TURN IS STILL RUNNING — the heartbeat that keeps

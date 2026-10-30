@@ -65,7 +65,26 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 	 * pollers racing cannot both win: SQLite serializes writers, and the loser's UPDATE matches
 	 * nothing and returns empty rather than throwing.
 	 */
-	async claimNext(claimedBy: string, leaseMs: number, tx?: LibSqlTransaction): Promise<ClaimedMailboxItem | undefined> {
+	async claimNext(
+		claimedBy: string,
+		leaseMs: number,
+		lanes?: readonly MailboxTargetKind[],
+		tx?: LibSqlTransaction,
+	): Promise<ClaimedMailboxItem | undefined> {
+		if (lanes?.length === 0) return undefined
+		// The lane's POSITION is its rank: the first lane with a claimable item wins, oldest first inside
+		// it. One statement, so the choice and the claim below stay in the same write transaction.
+		const inLanes = lanes ? inArray(agentMailbox.targetKind, [...lanes]) : undefined
+		const order = lanes
+			? [
+					sql`CASE ${agentMailbox.targetKind} ${sql.join(
+						lanes.map((kind, rank) => sql`WHEN ${kind} THEN ${rank}`),
+						sql` `,
+					)} END`,
+					asc(agentMailbox.createdAt),
+				]
+			: [asc(agentMailbox.createdAt)]
+
 		const row = await this.write(tx, async dbc => {
 			const now = new Date()
 
@@ -81,8 +100,8 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 			const [candidate] = await dbc
 				.select({ id: agentMailbox.id })
 				.from(agentMailbox)
-				.where(and(runnable(), unleased(now), notExists(busy)))
-				.orderBy(asc(agentMailbox.createdAt))
+				.where(and(runnable(), unleased(now), notExists(busy), inLanes))
+				.orderBy(...order)
 				.limit(1)
 			if (!candidate) return undefined
 
@@ -194,6 +213,33 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 				})
 				.where(eq(agentMailbox.id, id)),
 		)
+	}
+
+	async defer(id: string, until: Date, tx?: LibSqlTransaction): Promise<void> {
+		// The attempt the claim charged is REFUNDED: a turn the provider refused to start never ran, so
+		// it must not move the item toward poison. `MAX(…, 0)` because a row can only be deferred after a
+		// claim, but the floor costs nothing and keeps the counter honest if that ever stops being true.
+		await this.write(tx, dbc =>
+			dbc
+				.update(agentMailbox)
+				.set({
+					claimedBy: null,
+					claimedBoot: null,
+					claimedPid: null,
+					leaseUntil: until,
+					attempts: sql`MAX(${agentMailbox.attempts} - 1, 0)`,
+				})
+				.where(and(eq(agentMailbox.id, id), runnable())),
+		)
+	}
+
+	async pendingTargets(targetKind: MailboxTargetKind, tx?: LibSqlTransaction): Promise<string[]> {
+		const dbc = tx ?? this.driver.db
+		const rows = await dbc
+			.selectDistinct({ targetId: agentMailbox.targetId })
+			.from(agentMailbox)
+			.where(and(eq(agentMailbox.targetKind, targetKind), runnable()))
+		return rows.map(row => row.targetId)
 	}
 
 	async hasPending(targetKind: MailboxTargetKind, targetId: string, tx?: LibSqlTransaction): Promise<boolean> {

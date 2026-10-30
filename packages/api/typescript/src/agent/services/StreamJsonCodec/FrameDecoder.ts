@@ -45,10 +45,41 @@ export interface TerminalResultRecord {
 	permissionDenials: readonly PermissionDenial[]
 }
 
+/**
+ * The provider account's usage-limit verdict, as the CLI reports it — kept OUT of `AgentFrame` for the
+ * same reason as `TerminalResultRecord`: it is run-conclusion evidence, not something the UI renders.
+ *
+ * Two sources carry the same `rate_limit_info` object, and both are read, with DIFFERENT evidence:
+ *  - the `rate_limit_event` line — on the stream-json wire in all four captures, and declared in the
+ *    CLI's own schema ("emitted when rate limit info changes"; claude 2.1.314: `status` one of
+ *    `allowed | allowed_warning | rejected`, optional `resetsAt`);
+ *  - `apiErrorParams.rate_limit_info` on the API-error `assistant` line. MEASURED 2026-10-30 in the
+ *    SESSION TRANSCRIPT of a refused turn (`{ status: 'rejected', resetsAt: 1793397000, rateLimitType:
+ *    'five_hour', … }` — unix SECONDS, 21:50Z, the "resets 6:50pm (America/Fortaleza)" of its text);
+ *    that the stdout line mirrors those fields is INFERRED, not captured. Wrong, it degrades to the
+ *    behaviour before this field existed, and the event above still carries the verdict.
+ * The text is never parsed: the instant comes from a structured field or not at all.
+ */
+export interface RateLimitRecord {
+	/** `status === 'rejected'` — the call was refused for the account's usage limit. */
+	rejected: boolean
+	/** When the window resets; `null` when the CLI did not say. */
+	resetsAt: Date | null
+}
+
 export interface DecodedLine {
 	frames: AgentFrame[]
 	/** Set only for the wire's `type: 'result'` record — the structural end-of-turn candidate. */
 	terminal?: TerminalResultRecord
+	/**
+	 * The size of the prompt ONE main-agent API call read: `input + cache_creation + cache_read` off that
+	 * `assistant` line's `message.usage`. The LAST one of a run is the session's context going into the
+	 * next turn — what `AgentSession.lastContextTokens` stores. A sub-agent's line (`parent_tool_use_id`
+	 * set) is skipped: its context is its own, not the session's.
+	 */
+	contextTokens?: number
+	/** Set when the line carries the account's usage-limit verdict. See `RateLimitRecord`. */
+	rateLimit?: RateLimitRecord
 }
 
 const EMPTY: DecodedLine = { frames: [] }
@@ -76,6 +107,30 @@ function readUsage(raw: unknown): AgentTurnUsage {
 		cacheCreationInputTokens: count(usage.cache_creation_input_tokens),
 		cacheReadInputTokens: count(usage.cache_read_input_tokens),
 	}
+}
+
+/** `rate_limit_info` → the verdict, or nothing when the shape is not the measured one. */
+function readRateLimit(raw: unknown): RateLimitRecord | undefined {
+	if (!isRecord(raw)) return undefined
+	const status = str(raw.status)
+	if (status === undefined) return undefined
+	const resetsAtSeconds = count(raw.resetsAt)
+	return { rejected: status === 'rejected', resetsAt: resetsAtSeconds > 0 ? new Date(resetsAtSeconds * 1000) : null }
+}
+
+/** The codec records an `assistant` line can carry — see `DecodedLine.contextTokens` and `.rateLimit`. */
+function assistantRecords(raw: Record<string, unknown>): Pick<DecodedLine, 'contextTokens' | 'rateLimit'> {
+	const records: Pick<DecodedLine, 'contextTokens' | 'rateLimit'> = {}
+	const message = isRecord(raw.message) ? raw.message : {}
+	if (str(raw.parent_tool_use_id) === undefined && isRecord(message.usage)) {
+		const usage = readUsage(message.usage)
+		const context = usage.inputTokens + usage.cacheCreationInputTokens + usage.cacheReadInputTokens
+		if (context > 0) records.contextTokens = context
+	}
+	const params = isRecord(raw.apiErrorParams) ? raw.apiErrorParams : undefined
+	const rateLimit = readRateLimit(params?.rate_limit_info)
+	if (rateLimit) records.rateLimit = rateLimit
+	return records
 }
 
 /** `permission_denials` is an array of `{ tool_name, tool_input }` — anything else degrades to nothing. */
@@ -122,6 +177,11 @@ function renderToolResult(content: unknown): string {
  * changes with the machine, the user's `~/.claude`, and the CLI build. A codec that treats an unknown
  * frame as an error dies on the first real machine that has a hook configured.
  *
+ * `rate_limit_event` STOPPED being noise on 2026-10-30: it is the only structured word on WHEN a
+ * refused account can try again, and dropping it turned every usage-limit window into three instant
+ * retries and a poisoned item. It is read into `DecodedLine.rateLimit` — still no frame, still nothing
+ * the UI sees, and a status it does not recognise still degrades to "not rejected".
+ *
  * PURE — no I/O, no spawn, no clock (AC-2.5).
  */
 export class FrameDecoder {
@@ -137,7 +197,11 @@ export class FrameDecoder {
 					? { frames: [{ kind: 'system_init', sessionId: str(raw.session_id) ?? '', model: str(raw.model) ?? '' }] }
 					: EMPTY
 			case 'assistant':
-				return { frames: this.decodeAssistant(raw) }
+				return { frames: this.decodeAssistant(raw), ...assistantRecords(raw) }
+			case 'rate_limit_event': {
+				const rateLimit = readRateLimit(raw.rate_limit_info)
+				return rateLimit ? { frames: [], rateLimit } : EMPTY
+			}
 			case 'user':
 				return { frames: this.decodeUser(raw) }
 			case 'stream_event':

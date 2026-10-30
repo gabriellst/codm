@@ -34,6 +34,11 @@ const STOP_TITLES_EN: Record<StopKind, string> = {
 	[StopKind.PERMISSION_DENIED]: 'An action was blocked by the permission filter — it needs your approval',
 }
 
+/** Hora e minuto no fuso desta máquina — o daemon roda no computador do operador. */
+function clock(locale: string, at: Date): string {
+	return new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(at)
+}
+
 const PT_MESSAGES = {
 	stopTitle: (p: { kind: StopKind }) => STOP_TITLES_PT[p.kind],
 	/**
@@ -46,6 +51,13 @@ const PT_MESSAGES = {
 	 */
 	stopChannelNotice: (p: { kind: StopKind; detail: string }) =>
 		p.detail.length > 0 ? `${STOP_TITLES_PT[p.kind]}.\n\n${p.detail}` : `${STOP_TITLES_PT[p.kind]}.`,
+	/**
+	 * O aviso de que a fila parou porque a conta do provedor bateu o limite de uso. Diferente de um stop:
+	 * não há nada para o operador resolver — só esperar. O horário vem do instante ESTRUTURADO que o CLI
+	 * informou (`rate_limit_info.resetsAt`), no fuso desta máquina, que é a do operador.
+	 */
+	providerPausedNotice: (p: { until: Date }) =>
+		`Atingi o limite de uso da conta do provedor do agente. As mensagens estão na fila e eu volto a responder às ${clock('pt-BR', p.until)}.`,
 }
 
 export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
@@ -53,5 +65,7 @@ export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
 	[Language.EN_US]: {
 		stopTitle: p => STOP_TITLES_EN[p.kind],
 		stopChannelNotice: p => (p.detail.length > 0 ? `${STOP_TITLES_EN[p.kind]}.\n\n${p.detail}` : `${STOP_TITLES_EN[p.kind]}.`),
+		providerPausedNotice: p =>
+			`I hit the usage limit of the agent's provider account. Messages are queued and I'll answer again at ${clock('en-US', p.until)}.`,
 	},
 })
