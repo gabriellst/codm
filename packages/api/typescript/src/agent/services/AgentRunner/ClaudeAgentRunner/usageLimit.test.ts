@@ -9,10 +9,10 @@ import { ClaudeAgentRunner } from './ClaudeAgentRunner'
 /**
  * The provider account hit its usage limit — the run must say WHEN a retry can succeed.
  *
- * Measured 2026-10-30 (claude 2.1.314): a refused turn writes an API-error `assistant` line carrying
- * `apiErrorParams.rate_limit_info` (`status: 'rejected'`, `resetsAt` in unix seconds) and closes with an
- * ordinary error `result`. Without the instant, the dispatcher retried three times in seconds and
- * poisoned the item; with it, the item waits for the reset.
+ * The shapes come from 2026-10-30 (claude 2.1.314): the session transcript of a refused turn carries
+ * `apiErrorParams.rate_limit_info` (`status: 'rejected'`, `resetsAt` in unix seconds) on an API-error
+ * `assistant` line, and `rate_limit_event` is on the stream-json wire. Without the instant, the
+ * dispatcher retried three times in seconds and poisoned the item; with it, the item waits for the reset.
  *
  * FALSIFIER: stop attaching `retryAfter` in `buildResult` and the first case goes red; attach it on any
  * verdict instead of a REJECTED one and the second goes red.

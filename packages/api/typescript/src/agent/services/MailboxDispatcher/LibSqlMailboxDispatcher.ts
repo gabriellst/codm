@@ -79,7 +79,9 @@ const POLL_BACKOFF_FACTOR = 2
  * well under one. With four issues running, every slot was taken and a conversation queued behind
  * them — the operator saw 👀 and then minutes of silence, three groups at once. Giving conversations
  * their own lane means a reply never waits for code; ISSUE keeps the four it always had, so this adds
- * no coding-agent concurrency (which is what spends the provider's usage limit).
+ * no coding-agent concurrency (which is what spends the provider's usage limit). The machine-wide
+ * ceiling on CLI processes DID move, from 4 to 7 (3 + 4): the THREAD lane is bounded in practice by
+ * how fast people write, not by its slots.
  *
  * `priority` orders the lanes in the claim: lower goes first, so a free conversation slot is filled
  * before an issue slot on the same pass. A `Record` over the enum, so a target kind added to the
@@ -143,7 +145,7 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	 * it, at the cost of one refused call, while every item it refused is already deferred in the table.
 	 */
 	private pausedUntil = 0
-	/** Conversations already told about the CURRENT pause — cleared when it ends. */
+	/** Conversations already told about the CURRENT pause — cleared once a turn gets through after it. */
 	private readonly noticed = new Set<string>()
 	private draining: Promise<number> | null = null
 	/**
@@ -324,7 +326,6 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			// pause starts with nobody noticed.
 			const paused = Date.now() < this.pausedUntil
 			if (paused) await this.noticePausedConversations()
-			else this.noticed.clear()
 
 			const open = paused ? [] : laneOrder.filter(kind => (running.get(kind) ?? 0) < this.lanes[kind].slots)
 			const item = open.length > 0 ? await this.mailbox.claimNext(this.workerId, this.leaseMs, open) : undefined
@@ -520,6 +521,11 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			}
 
 			await this.mailbox.complete(item.id)
+			// THE PAUSE IS OVER WHEN A TURN GETS THROUGH, not when the clock passes `pausedUntil`. A CLI that
+			// keeps refusing past its reported reset re-pauses on the floor, and clearing on the clock would
+			// re-send "atingi o limite" to every group once a minute. A turn that completed after the window
+			// is the evidence the provider is answering again.
+			if (Date.now() >= this.pausedUntil) this.noticed.clear()
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error)
 
@@ -595,7 +601,8 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	 *
 	 * Called on entering the pause and on every drain while it lasts, so a message that ARRIVES during
 	 * the pause gets the notice too instead of a silent 👀. Best-effort: a failed notice is logged and
-	 * the next drain tries again, because the conversation is only marked noticed once it succeeded.
+	 * the next drain tries again, because the conversation is only marked noticed once it succeeded. The
+	 * set is cleared by the first turn that completes after the window (see `runTurn`).
 	 */
 	private async noticePausedConversations(extra: readonly string[] = []): Promise<void> {
 		try {

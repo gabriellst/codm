@@ -49,12 +49,16 @@ export interface TerminalResultRecord {
  * The provider account's usage-limit verdict, as the CLI reports it — kept OUT of `AgentFrame` for the
  * same reason as `TerminalResultRecord`: it is run-conclusion evidence, not something the UI renders.
  *
- * Two wire sources carry the same `rate_limit_info` object, and both are read: the `rate_limit_event`
- * line ("emitted when rate limit info changes"), and the API-error `assistant` line the CLI writes
- * when a call is refused (`apiErrorParams.rate_limit_info`). MEASURED 2026-10-30 on a refused turn:
- * `{ status: 'rejected', resetsAt: 1793397000, rateLimitType: 'five_hour', … }` — `resetsAt` in unix
- * SECONDS (that one is 21:50Z, the "resets 6:50pm (America/Fortaleza)" of the same line's text). The
- * text is never parsed: the instant comes from the structured field or not at all.
+ * Two sources carry the same `rate_limit_info` object, and both are read, with DIFFERENT evidence:
+ *  - the `rate_limit_event` line — on the stream-json wire in all four captures, and declared in the
+ *    CLI's own schema ("emitted when rate limit info changes"; claude 2.1.314: `status` one of
+ *    `allowed | allowed_warning | rejected`, optional `resetsAt`);
+ *  - `apiErrorParams.rate_limit_info` on the API-error `assistant` line. MEASURED 2026-10-30 in the
+ *    SESSION TRANSCRIPT of a refused turn (`{ status: 'rejected', resetsAt: 1793397000, rateLimitType:
+ *    'five_hour', … }` — unix SECONDS, 21:50Z, the "resets 6:50pm (America/Fortaleza)" of its text);
+ *    that the stdout line mirrors those fields is INFERRED, not captured. Wrong, it degrades to the
+ *    behaviour before this field existed, and the event above still carries the verdict.
+ * The text is never parsed: the instant comes from a structured field or not at all.
  */
 export interface RateLimitRecord {
 	/** `status === 'rejected'` — the call was refused for the account's usage limit. */
