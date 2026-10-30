@@ -367,6 +367,62 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 	})
 
 	/**
+	 * Uma falha que não consegue ser GRAVADA não pode derrubar o daemon.
+	 *
+	 * O turno falha, o `catch` de `runTurn` chama `fail`, e o próprio `fail` perde para outro writer
+	 * (`SQLITE_BUSY`). Antes, essa rejeição subia por `runTurn` sem dono — e como o `drain()` só observa
+	 * um turno enquanto corre o `race`, um `drain()` que já tinha saído deixava a rejeição solta, e o Bun
+	 * encerrava o processo. Medido em 2026-10-30: o daemon morria em todo boot (3 de 3), em 6–28s.
+	 *
+	 * O falsificador é exato: tire o `try` de `recordFailure` e o `drain()` abaixo rejeita com o BUSY.
+	 */
+	it('um `fail` que lança BUSY não faz o drain rejeitar — o item fica com o lease, não derruba o processo', async () => {
+		const mailbox = testBed.resolve(MailboxRepository)
+		const issueId = uuidv7()
+
+		class FailingDispatcher extends LibSqlMailboxDispatcher {
+			protected override async runIssueWork(): Promise<TurnReport> {
+				throw new Error('Premature close')
+			}
+		}
+
+		const dispatcher = new FailingDispatcher(
+			mailbox,
+			testBed.resolve(ThreadRepository),
+			testBed.resolve(WorkspaceRepository),
+			testBed.resolve(AgentSessionRepository),
+			testBed.resolve(LoggingService),
+			testBed.resolve(CloudSession),
+		).bind(testContainer)
+
+		await mailbox.enqueue({
+			ownerId: testBed.ownerId,
+			targetKind: MailboxTargetKind.ISSUE,
+			targetId: issueId,
+			kind: MailboxItemKind.STEER,
+			posture: PermissionPosture.AUTO,
+			payload: { threadId: uuidv7(), key: 'ISS-1', title: 'busy on fail', text: 'x' },
+			dedupKey: `${issueId}:busy`,
+		})
+
+		const realFail = mailbox.fail.bind(mailbox)
+		let failCalls = 0
+		mailbox.fail = async () => {
+			failCalls += 1
+			throw new Error('SQLITE_BUSY: database is locked')
+		}
+		try {
+			expect(await dispatcher.drain()).toBe(1)
+			expect(failCalls).toBe(1)
+			// The write was lost, so the item still holds the lease it was claimed under — runnable, and
+			// claimable again once that lease expires.
+			expect(await mailbox.hasPending(MailboxTargetKind.ISSUE, issueId)).toBe(true)
+		} finally {
+			mailbox.fail = realFail
+		}
+	})
+
+	/**
 	 * A turn that outlives its lease must keep its own item — the wiring, not the primitive.
 	 *
 	 * The repository-level tests above prove `renewLease` behaves; they say NOTHING about whether the

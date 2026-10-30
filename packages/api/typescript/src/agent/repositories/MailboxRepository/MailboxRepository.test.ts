@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { afterAll, beforeAll, beforeEach, describe, expect, it, spyOn } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
 import { TestBed } from '@test/support'
@@ -207,5 +207,38 @@ describe('MailboxRepository — one turn per target, durable', () => {
 		const claimed = await r.claimNext('w1', 60_000)
 		await r.complete(claimed!.id)
 		expect(await r.hasPending(MailboxTargetKind.THREAD, THREAD_A)).toBe(false)
+	})
+
+	/**
+	 * Every write without a caller transaction runs inside the driver's `BEGIN IMMEDIATE` — never on
+	 * the read connection.
+	 *
+	 * The dispatcher passes no `tx`, and these writes used to fall back to `this.driver.db`: implicit
+	 * transactions on the READ handle, outside the write gate, which under contention answer
+	 * `SQLITE_BUSY_SNAPSHOT` (517) — a code `busy_timeout` never retries. Measured 2026-10-30: the
+	 * daemon died on every boot within seconds.
+	 *
+	 * The falsifier is exact: put any of these writes back on `tx ?? this.driver.db` and the count of
+	 * gated transactions drops below six.
+	 */
+	it('writes with no caller transaction go through the driver write gate', async () => {
+		const r = repo()
+		const driver = testBed.resolve(LibSqlDatabaseDriver)
+		await r.enqueue(item(THREAD_A, 'gated-1'))
+		const gate = spyOn(driver, 'transaction')
+		try {
+			await r.enqueue(item(THREAD_B, 'gated-2'))
+			const claimed = await r.claimNext('w1', 60_000)
+			expect(claimed).toBeDefined()
+			await r.renewLease(claimed!.id, 'w1', 60_000)
+			await r.fail(claimed!.id, 'boom', 3)
+			const again = await r.claimNext('w1', 60_000)
+			await r.complete(again!.id)
+			expect(gate).toHaveBeenCalledTimes(6)
+			await r.releaseOrphanedClaims()
+			expect(gate).toHaveBeenCalledTimes(7)
+		} finally {
+			gate.mockRestore()
+		}
 	})
 })

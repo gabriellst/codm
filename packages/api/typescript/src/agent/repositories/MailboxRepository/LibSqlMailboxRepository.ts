@@ -17,22 +17,42 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 		super()
 	}
 
+	/**
+	 * THE WRITE PATH WHEN NO CALLER TRANSACTION IS GIVEN — the driver's `BEGIN IMMEDIATE`, never `this.driver.db`.
+	 *
+	 * `this.driver.db` is the READ connection. Every write here used to fall back to it whenever the
+	 * caller passed no `tx`, and the dispatcher never does — so the claim, the heartbeat, `complete` and
+	 * `fail` all ran as implicit transactions on the read handle, outside the gate the driver calls "the
+	 * one and only write path". A deferred transaction on a handle that is also serving reads upgrades
+	 * read→write and, the moment another writer has committed in between, gets `SQLITE_BUSY_SNAPSHOT`
+	 * (517) — which `busy_timeout` does NOT retry — or `cannot commit transaction - SQL statements in
+	 * progress`. Measured 2026-10-30 on a live install: four issue turns failing at once each wrote
+	 * `fail` through that handle, the writes lost to the gateway and the outbox, and the daemon died on
+	 * every boot (3 of 3) within 6–28s.
+	 *
+	 * A caller that already holds a transaction passes it, and the write joins it as before.
+	 */
+	private write<Return>(tx: LibSqlTransaction | undefined, fn: (dbc: LibSqlTransaction) => Promise<Return>): Promise<Return> {
+		return tx ? fn(tx) : this.driver.transaction(fn)
+	}
+
 	async enqueue(item: EnqueueMailboxItem, tx?: LibSqlTransaction): Promise<boolean> {
-		const dbc = tx ?? this.driver.db
-		const inserted = await dbc
-			.insert(agentMailbox)
-			.values({
-				id: crypto.randomUUID(),
-				ownerId: item.ownerId,
-				targetKind: item.targetKind,
-				targetId: item.targetId,
-				kind: item.kind,
-				payload: item.payload,
-				posture: item.posture,
-				dedupKey: item.dedupKey,
-			})
-			.onConflictDoNothing({ target: agentMailbox.dedupKey })
-			.returning({ id: agentMailbox.id })
+		const inserted = await this.write(tx, dbc =>
+			dbc
+				.insert(agentMailbox)
+				.values({
+					id: crypto.randomUUID(),
+					ownerId: item.ownerId,
+					targetKind: item.targetKind,
+					targetId: item.targetId,
+					kind: item.kind,
+					payload: item.payload,
+					posture: item.posture,
+					dedupKey: item.dedupKey,
+				})
+				.onConflictDoNothing({ target: agentMailbox.dedupKey })
+				.returning({ id: agentMailbox.id }),
+		)
 		return inserted.length > 0
 	}
 
@@ -46,65 +66,67 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 	 * nothing and returns empty rather than throwing.
 	 */
 	async claimNext(claimedBy: string, leaseMs: number, tx?: LibSqlTransaction): Promise<ClaimedMailboxItem | undefined> {
-		const dbc = tx ?? this.driver.db
-		const now = new Date()
+		const row = await this.write(tx, async dbc => {
+			const now = new Date()
 
-		const busy = dbc
-			.select({ one: sql`1` })
-			.from(sql`${agentMailbox} AS busy`)
-			.where(
-				sql`busy.target_kind = ${agentMailbox.targetKind} AND busy.target_id = ${agentMailbox.targetId}
-				    AND busy.consumed_at IS NULL AND busy.dead_at IS NULL
-				    AND busy.lease_until IS NOT NULL AND busy.lease_until >= ${now.getTime()}`,
-			)
+			const busy = dbc
+				.select({ one: sql`1` })
+				.from(sql`${agentMailbox} AS busy`)
+				.where(
+					sql`busy.target_kind = ${agentMailbox.targetKind} AND busy.target_id = ${agentMailbox.targetId}
+					    AND busy.consumed_at IS NULL AND busy.dead_at IS NULL
+					    AND busy.lease_until IS NOT NULL AND busy.lease_until >= ${now.getTime()}`,
+				)
 
-		const [candidate] = await dbc
-			.select({ id: agentMailbox.id })
-			.from(agentMailbox)
-			.where(and(runnable(), unleased(now), notExists(busy)))
-			.orderBy(asc(agentMailbox.createdAt))
-			.limit(1)
-		if (!candidate) return undefined
+			const [candidate] = await dbc
+				.select({ id: agentMailbox.id })
+				.from(agentMailbox)
+				.where(and(runnable(), unleased(now), notExists(busy)))
+				.orderBy(asc(agentMailbox.createdAt))
+				.limit(1)
+			if (!candidate) return undefined
 
-		const claimed = await dbc
-			.update(agentMailbox)
-			.set({
-				claimedBy,
-				// WHICH RUN of the daemon is holding it — what makes a stranded claim provably dead
-				// instead of merely old. Written here and nowhere else: a claim is the only moment a
-				// row acquires a holder, so it is the only moment the holder's identity is a fact.
-				claimedBoot: DAEMON_BOOT.id,
-				claimedPid: DAEMON_BOOT.pid,
-				leaseUntil: new Date(now.getTime() + leaseMs),
-				attempts: sql`${agentMailbox.attempts} + 1`,
-			})
-			.where(and(eq(agentMailbox.id, candidate.id), runnable(), unleased(now)))
-			.returning({
-				id: agentMailbox.id,
-				ownerId: agentMailbox.ownerId,
-				targetKind: agentMailbox.targetKind,
-				targetId: agentMailbox.targetId,
-				kind: agentMailbox.kind,
-				payload: agentMailbox.payload,
-				posture: agentMailbox.posture,
-				attempts: agentMailbox.attempts,
-			})
-		const row = claimed[0]
+			const claimed = await dbc
+				.update(agentMailbox)
+				.set({
+					claimedBy,
+					// WHICH RUN of the daemon is holding it — what makes a stranded claim provably dead
+					// instead of merely old. Written here and nowhere else: a claim is the only moment a
+					// row acquires a holder, so it is the only moment the holder's identity is a fact.
+					claimedBoot: DAEMON_BOOT.id,
+					claimedPid: DAEMON_BOOT.pid,
+					leaseUntil: new Date(now.getTime() + leaseMs),
+					attempts: sql`${agentMailbox.attempts} + 1`,
+				})
+				.where(and(eq(agentMailbox.id, candidate.id), runnable(), unleased(now)))
+				.returning({
+					id: agentMailbox.id,
+					ownerId: agentMailbox.ownerId,
+					targetKind: agentMailbox.targetKind,
+					targetId: agentMailbox.targetId,
+					kind: agentMailbox.kind,
+					payload: agentMailbox.payload,
+					posture: agentMailbox.posture,
+					attempts: agentMailbox.attempts,
+				})
+			return claimed[0]
+		})
 		if (!row) return undefined
 		return { ...row, targetKind: row.targetKind as MailboxTargetKind, kind: row.kind as MailboxItemKind }
 	}
 
 	async renewLease(id: string, claimedBy: string, leaseMs: number, tx?: LibSqlTransaction): Promise<void> {
-		const dbc = tx ?? this.driver.db
 		// `claimedBy` is in the predicate, not just the id: if this worker's lease already lapsed and
 		// another claimed the item, the UPDATE matches nothing rather than yanking the lease back from
 		// under the new holder. A heartbeat that could steal would be worse than no heartbeat.
-		await dbc
-			.update(agentMailbox)
-			.set({ leaseUntil: new Date(Date.now() + leaseMs) })
-			.where(
-				and(eq(agentMailbox.id, id), eq(agentMailbox.claimedBy, claimedBy), isNull(agentMailbox.consumedAt), isNull(agentMailbox.deadAt)),
-			)
+		await this.write(tx, dbc =>
+			dbc
+				.update(agentMailbox)
+				.set({ leaseUntil: new Date(Date.now() + leaseMs) })
+				.where(
+					and(eq(agentMailbox.id, id), eq(agentMailbox.claimedBy, claimedBy), isNull(agentMailbox.consumedAt), isNull(agentMailbox.deadAt)),
+				),
+		)
 	}
 
 	/**
@@ -118,58 +140,60 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 	 * `WHERE id IN (...)` avoids is not a cost anybody pays twice.
 	 */
 	async releaseOrphanedClaims(tx?: LibSqlTransaction): Promise<number> {
-		const dbc = tx ?? this.driver.db
+		return this.write(tx, async dbc => {
+			const candidates = await dbc
+				.select({ id: agentMailbox.id, bootId: agentMailbox.claimedBoot, pid: agentMailbox.claimedPid })
+				.from(agentMailbox)
+				.where(
+					and(
+						runnable(),
+						isNotNull(agentMailbox.leaseUntil),
+						isNotNull(agentMailbox.claimedBoot),
+						ne(agentMailbox.claimedBoot, DAEMON_BOOT.id),
+					),
+				)
 
-		const candidates = await dbc
-			.select({ id: agentMailbox.id, bootId: agentMailbox.claimedBoot, pid: agentMailbox.claimedPid })
-			.from(agentMailbox)
-			.where(
-				and(
-					runnable(),
-					isNotNull(agentMailbox.leaseUntil),
-					isNotNull(agentMailbox.claimedBoot),
-					ne(agentMailbox.claimedBoot, DAEMON_BOOT.id),
-				),
-			)
+			const orphaned = candidates.filter(isClaimOrphaned).map(row => row.id)
+			if (orphaned.length === 0) return 0
 
-		const orphaned = candidates.filter(isClaimOrphaned).map(row => row.id)
-		if (orphaned.length === 0) return 0
-
-		// The predicate is RE-ASSERTED, not just the ids: between the select and here, a poll could have
-		// claimed one of these rows for THIS boot (its lease had expired, which is the other way an
-		// orphan becomes claimable). Releasing it then would strip a live turn of the lease it is
-		// running under — the exact double-turn the queue exists to prevent, produced by the code meant
-		// to protect it.
-		await dbc
-			.update(agentMailbox)
-			.set({ claimedBy: null, claimedBoot: null, claimedPid: null, leaseUntil: null })
-			.where(and(inArray(agentMailbox.id, orphaned), runnable(), ne(agentMailbox.claimedBoot, DAEMON_BOOT.id)))
-		return orphaned.length
+			// The predicate is RE-ASSERTED, not just the ids: between the select and here, a poll could have
+			// claimed one of these rows for THIS boot (its lease had expired, which is the other way an
+			// orphan becomes claimable). Releasing it then would strip a live turn of the lease it is
+			// running under — the exact double-turn the queue exists to prevent, produced by the code meant
+			// to protect it.
+			await dbc
+				.update(agentMailbox)
+				.set({ claimedBy: null, claimedBoot: null, claimedPid: null, leaseUntil: null })
+				.where(and(inArray(agentMailbox.id, orphaned), runnable(), ne(agentMailbox.claimedBoot, DAEMON_BOOT.id)))
+			return orphaned.length
+		})
 	}
 
 	async complete(id: string, tx?: LibSqlTransaction): Promise<void> {
-		const dbc = tx ?? this.driver.db
-		await dbc
-			.update(agentMailbox)
-			.set({ consumedAt: new Date(), claimedBy: null, claimedBoot: null, claimedPid: null, leaseUntil: null })
-			.where(eq(agentMailbox.id, id))
+		await this.write(tx, dbc =>
+			dbc
+				.update(agentMailbox)
+				.set({ consumedAt: new Date(), claimedBy: null, claimedBoot: null, claimedPid: null, leaseUntil: null })
+				.where(eq(agentMailbox.id, id)),
+		)
 	}
 
 	async fail(id: string, error: string, maxAttempts: number, tx?: LibSqlTransaction): Promise<void> {
-		const dbc = tx ?? this.driver.db
 		// `attempts` was already incremented at claim, so the comparison here reads the real count of
 		// runs, not of scheduling opportunities.
-		await dbc
-			.update(agentMailbox)
-			.set({
-				lastError: error,
-				claimedBy: null,
-				claimedBoot: null,
-				claimedPid: null,
-				leaseUntil: null,
-				deadAt: sql`CASE WHEN ${agentMailbox.attempts} >= ${maxAttempts} THEN ${Date.now()} ELSE NULL END`,
-			})
-			.where(eq(agentMailbox.id, id))
+		await this.write(tx, dbc =>
+			dbc
+				.update(agentMailbox)
+				.set({
+					lastError: error,
+					claimedBy: null,
+					claimedBoot: null,
+					claimedPid: null,
+					leaseUntil: null,
+					deadAt: sql`CASE WHEN ${agentMailbox.attempts} >= ${maxAttempts} THEN ${Date.now()} ELSE NULL END`,
+				})
+				.where(eq(agentMailbox.id, id)),
+		)
 	}
 
 	async hasPending(targetKind: MailboxTargetKind, targetId: string, tx?: LibSqlTransaction): Promise<boolean> {

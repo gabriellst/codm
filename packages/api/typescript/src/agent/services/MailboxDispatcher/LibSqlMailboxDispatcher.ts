@@ -285,7 +285,20 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 
 			if (item) {
 				handled++
-				const turn = this.runTurn(item).finally(() => inflight.delete(turn))
+				// The `.catch` is the process's safety net, not a retry path: `runTurn` settles every failure
+				// itself, but this promise outlives `drain()` whenever a later `claimNext` throws, and an
+				// unobserved rejection then ends the daemon (2026-10-30, every boot).
+				const turn = this.runTurn(item)
+					.catch(error => {
+						this.logging.error({
+							content: {
+								message: 'mailbox turn rejected past its own handling',
+								itemId: item.id,
+								error: error instanceof Error ? error.message : String(error),
+							},
+						})
+					})
+					.finally(() => inflight.delete(turn))
 				inflight.add(turn)
 				continue
 			}
@@ -485,7 +498,24 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	 * arrived by copying the other two, which is how the poison counter drifts.
 	 */
 	private async recordFailure(item: ClaimedMailboxItem, cause: string): Promise<void> {
-		await this.mailbox.fail(item.id, cause, MAX_ATTEMPTS)
+		// NEVER REJECTS. This runs from `runTurn`'s catch, and a turn promise is observed only while
+		// `drain()` races it — a `drain()` that already left on a failed `claimNext` leaves the turn with
+		// no observer, and a rejection there is unhandled: measured 2026-10-30, a BUSY on this write
+		// killed the daemon on every boot. Losing the write is recoverable — the item keeps its lease and
+		// is claimable again when it expires, with the attempt already charged at claim.
+		try {
+			await this.mailbox.fail(item.id, cause, MAX_ATTEMPTS)
+		} catch (error) {
+			this.logging.error({
+				content: {
+					message: 'could not record a mailbox turn failure — the lease will expire instead',
+					itemId: item.id,
+					cause,
+					error: error instanceof Error ? error.message : String(error),
+				},
+			})
+			return
+		}
 		if (item.attempts >= MAX_ATTEMPTS) await this.raiseStopForPoisoned(item, cause)
 	}
 
