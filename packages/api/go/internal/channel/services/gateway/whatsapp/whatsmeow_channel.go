@@ -941,7 +941,11 @@ func (c *WhatsmeowChannel) handleEvent(evt any) {
 			"firstEvent", domainEvents[0].GetEventName(),
 			"ownerId", c.ownerID,
 		)
-		if err := c.domainEventRepo.SaveAll(context.Background(), domainEvents); err != nil {
+		// Retried while the database is LOCKED — a dropped `message_received` is a message the agent
+		// never sees, and whatsmeow already acked it. See `persistWithRetry`.
+		if err := persistWithRetry(func() error {
+			return c.domainEventRepo.SaveAll(context.Background(), domainEvents)
+		}, time.Sleep); err != nil {
 			slog.Warn("failed to persist domain events",
 				"instanceId", c.instanceID,
 				"count", len(domainEvents),

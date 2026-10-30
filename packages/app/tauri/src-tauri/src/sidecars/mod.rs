@@ -287,6 +287,15 @@ async fn probe_within_budget(api: &Api, service: SidecarService) -> ProbeOutcome
 /// declared in `tauri.conf.json` with `visible: false`, exactly like the main one — and the main
 /// window is hidden: a dashboard firing queries at dead ports is worse than a screen that says what
 /// broke.
+/// Whether the boot-error splash is what the operator is looking at — the only case where a recovery
+/// should move a window. Checked so a `Healthy`/`Degraded` transition never re-shows (and re-focuses)
+/// a console that is already up.
+fn splash_is_showing(app: &tauri::AppHandle) -> bool {
+    app.get_webview_window("boot-error")
+        .and_then(|window| window.is_visible().ok())
+        .unwrap_or(false)
+}
+
 fn apply(app: &tauri::AppHandle, reveal: Reveal) {
     let (show, hide) = match &reveal {
         Reveal::Main => ("main", "boot-error"),
@@ -382,7 +391,12 @@ fn supervise(app: &tauri::AppHandle) {
 ///   event below plus the `supervision_state` command; the shell decides nothing about it.
 ///
 /// Everything else (`Degraded`, and the recovery back to `Healthy`) is console-only by construction:
-/// the emit fires for every transition, and only the daemon's death touches a window.
+/// the emit fires for every transition, and only the daemon's death touches a window — with ONE
+/// exception: a daemon that was declared down WITHOUT exiting (wedged past `WEDGE_THRESHOLD`) and then
+/// answers again gets its window back. Measured 2026-10-30: the splash took the console away during a
+/// 10–20s SQLite stall and kept it away after the daemon was answering, so the operator read "died"
+/// about a process that was fine. An exited daemon cannot come back (`note_exit` is definitive), so
+/// this never resurrects a dead process — it only stops hiding a live one.
 ///
 /// NO AUTO-RESPAWN (spec Decision 7). Detect and show; the operator restarts through `retry_boot`.
 /// A silent respawn hides the failure, and a crash-loop becomes a blinking window with no cause.
@@ -412,12 +426,18 @@ fn react(
         // operator reading it needs to know WHERE the persisted stderr lives, not just that the
         // daemon died.
         let log_path = monitor.log_path_of(SidecarService::Daemon);
-        let reveal = gate.note_runtime_failure(
-            &name,
-            "sidecar died while the app was running",
-            log_path.as_deref(),
-        );
+        // Say WHICH death: the exit is certain, the wedge is a process that stopped answering — and
+        // the operator's next move differs (read the stderr tail vs. retry and watch the machine).
+        let reason = if monitor.has_exited(SidecarService::Daemon) {
+            "sidecar died while the app was running"
+        } else {
+            "sidecar stopped answering while the app was running"
+        };
+        let reveal = gate.note_runtime_failure(&name, reason, log_path.as_deref());
         apply(app, reveal);
+    } else if splash_is_showing(app) {
+        // The daemon is answering again after a WEDGE (see the docblock): give the console back.
+        apply(app, Reveal::Main);
     }
 }
 

@@ -14,12 +14,25 @@
 use std::sync::Mutex;
 use std::time::Duration;
 
-/// How many CONSECUTIVE failed probes declare a sidecar down (~15s at `PROBE_INTERVAL`).
+/// How many CONSECUTIVE failed probes move a sidecar off `Healthy` (~15s at `PROBE_INTERVAL`).
 ///
 /// Not a magic number and not tunable-for-taste: one isolated failure is a SQLite lock, a GC pause
 /// or a slow query, and a UI that screams at every one of those teaches the operator to ignore it.
-/// Three consecutive misses is a process that stopped answering, not a hiccup.
+/// Three consecutive misses is a process that stopped answering, not a hiccup — but see
+/// `WEDGE_THRESHOLD` for why stopping to answer is not yet DEATH.
 pub const FAILURE_THRESHOLD: usize = 3;
+
+/// How many CONSECUTIVE unanswered probes declare a process that is still ALIVE down (~60s).
+///
+/// A death the shell can SEE needs no probe at all — `note_exit` is instant and definitive. What is
+/// left for the probe to judge is a process that did NOT exit and does not answer. Measured
+/// 2026-10-30, twice in fifteen minutes: the daemon's event loop sat 10–20s inside a synchronous
+/// SQLite busy-wait (the libsql client for a local file is synchronous, and `busy_timeout` is 5s per
+/// statement) while the gateway held the write lock, on a machine deep in swap. Three misses declared
+/// it `Down`, the console window was taken away for the boot-error splash, and the daemon answered
+/// again seconds later to a window that never came back. A stall that long is `Degraded`; only one
+/// that outlasts this threshold is the wedged process the splash and its retry button exist for.
+pub const WEDGE_THRESHOLD: usize = 12;
 
 /// Cadence of the runtime probe. The boot gate polls at 500ms because it is BLOCKING a window;
 /// here nobody is waiting on the answer, so the loop trades latency for near-zero cost.
@@ -77,7 +90,9 @@ pub enum ProbeOutcome {
     Healthy,
     /// Answered with a non-200 (the health contract's 503). Process ALIVE.
     Unhealthy(u16),
-    /// Connection refused, or no answer within the cycle. Process DEAD, as far as anyone can tell.
+    /// Connection refused, or no answer within the cycle. The process did NOT exit (that is
+    /// `note_exit`), so this is a process that is not answering — `Degraded` past
+    /// `FAILURE_THRESHOLD`, `Down` only past `WEDGE_THRESHOLD`.
     Unreachable,
 }
 
@@ -194,6 +209,17 @@ impl SupervisionMonitor {
             .and_then(|w| w.log_path.clone())
     }
 
+    /// Whether this sidecar's process EXITED — the definitive death, as opposed to a process that
+    /// stopped answering. The splash names the difference.
+    pub fn has_exited(&self, service: SidecarService) -> bool {
+        self.state
+            .lock()
+            .expect("supervision mutex")
+            .watched
+            .iter()
+            .any(|w| w.service == service && w.exited)
+    }
+
     /// The current aggregate — the PULL half of spec Decision 9 (`supervision_state`).
     pub fn state(&self) -> SupervisionState {
         let inner = self.state.lock().expect("supervision mutex");
@@ -234,8 +260,10 @@ impl SupervisionMonitor {
                 }
                 ProbeOutcome::Unreachable => {
                     watched.consecutive_failures += 1;
-                    if watched.consecutive_failures >= FAILURE_THRESHOLD {
+                    if watched.consecutive_failures >= WEDGE_THRESHOLD {
                         watched.status = SidecarStatus::Down;
+                    } else if watched.consecutive_failures >= FAILURE_THRESHOLD {
+                        watched.status = SidecarStatus::Degraded;
                     }
                 }
             }
@@ -303,7 +331,7 @@ mod tests {
     /// AC-1 + Story 4 + FALSEADOR AC-9a. Turn the hysteresis off (declare on the 1st failure) and
     /// this goes red on the very first assertion.
     #[test]
-    fn one_failed_probe_changes_nothing_and_the_third_declares_down() {
+    fn one_failed_probe_changes_nothing_and_the_third_declares_degraded() {
         let monitor = armed_fleet();
 
         assert_eq!(
@@ -322,10 +350,45 @@ mod tests {
 
         assert_eq!(
             monitor.note_probe(SidecarService::Gateway, ProbeOutcome::Unreachable),
-            Some(SupervisionState::Down {
+            Some(SupervisionState::Degraded {
                 sidecar: SidecarService::Gateway
             }),
-            "a {FAILURE_THRESHOLD}a falha consecutiva declara o sidecar caido"
+            "a {FAILURE_THRESHOLD}a falha consecutiva tira do Healthy — um processo vivo que nao responde ainda nao esta morto"
+        );
+    }
+
+    /// 2026-10-30: the daemon's event loop sat 10–20s in a synchronous SQLite busy-wait and three
+    /// misses took the console away for a splash that never gave it back. A process that did NOT exit
+    /// stays `Degraded` until the stall outlasts `WEDGE_THRESHOLD`.
+    ///
+    /// FALSEADOR: declare `Down` at `FAILURE_THRESHOLD` again and the first loop goes red.
+    #[test]
+    fn a_live_process_that_stops_answering_is_degraded_until_it_stays_wedged() {
+        let monitor = armed_fleet();
+
+        for _ in 0..WEDGE_THRESHOLD - 1 {
+            monitor.note_probe(SidecarService::Daemon, ProbeOutcome::Unreachable);
+            assert_ne!(
+                monitor.state(),
+                SupervisionState::Down {
+                    sidecar: SidecarService::Daemon
+                },
+                "um travamento de segundos nao pode tirar a janela do operador"
+            );
+        }
+        assert_eq!(
+            monitor.state(),
+            SupervisionState::Degraded {
+                sidecar: SidecarService::Daemon
+            }
+        );
+
+        assert_eq!(
+            monitor.note_probe(SidecarService::Daemon, ProbeOutcome::Unreachable),
+            Some(SupervisionState::Down {
+                sidecar: SidecarService::Daemon
+            }),
+            "a {WEDGE_THRESHOLD}a falha seguida e um processo travado — o splash e o retry existem para isso"
         );
     }
 
@@ -363,7 +426,7 @@ mod tests {
     #[test]
     fn recovery_returns_the_fleet_to_healthy() {
         let monitor = armed_fleet();
-        for _ in 0..FAILURE_THRESHOLD {
+        for _ in 0..WEDGE_THRESHOLD {
             monitor.note_probe(SidecarService::Gateway, ProbeOutcome::Unreachable);
         }
         assert_eq!(
@@ -405,7 +468,9 @@ mod tests {
     fn refusal_declares_down_while_a_503_only_degrades() {
         let monitor = armed_fleet();
 
-        for _ in 0..FAILURE_THRESHOLD {
+        // `WEDGE_THRESHOLD`, not `FAILURE_THRESHOLD`: an unanswering process that did not exit is only
+        // `Down` once it stays wedged — the 503 side never gets there however long it lasts.
+        for _ in 0..WEDGE_THRESHOLD {
             monitor.note_probe(SidecarService::Daemon, ProbeOutcome::Unhealthy(503));
             monitor.note_probe(SidecarService::Gateway, ProbeOutcome::Unreachable);
         }

@@ -14,7 +14,15 @@
 // bundle would die at startup. See that file for the measurement.
 import './polyfill'
 
-import { Config, acquireDataDirLock, armStdinShutdown, resolveDataDir, startParentWatchdog, startTelemetry } from '@codm/core-typescript'
+import {
+	Config,
+	acquireDataDirLock,
+	armStdinShutdown,
+	resolveDataDir,
+	startEventLoopLagMonitor,
+	startParentWatchdog,
+	startTelemetry,
+} from '@codm/core-typescript'
 import { criteriaFromEnv } from '@shared/deployment'
 import { start } from '../composition/server'
 import { phase } from '../composition/bootPhase'
@@ -53,6 +61,14 @@ async function main(): Promise<void> {
 	const server = await start({ env: Config.env.CODM_ENV, port: Config.env.API_PORT })
 	await phase('telemetry', () => startTelemetry())
 	console.log(`✅ api-ts listening on ${server.url}`)
+
+	// A BLOCKED LOOP IS OTHERWISE INVISIBLE FROM IN HERE — see `startEventLoopLagMonitor`. 2s is below
+	// the desktop's 4s health-probe budget, so every stall that can cost a probe leaves a line first.
+	startEventLoopLagMonitor({
+		intervalMs: 500,
+		thresholdMs: 2_000,
+		onLag: lagMs => console.warn(`event loop blocked for ${lagMs}ms — the daemon answered nothing meanwhile`),
+	})
 
 	let isShuttingDown = false
 	const shutdown = async (signal: string): Promise<void> => {
