@@ -269,7 +269,15 @@ export class LibSqlCommandQueue extends CommandQueue {
 		// An aborted instance is permanently stopped — a late registerCommandHandler must not revive it.
 		if (this.pollTimer || this.abortController.signal.aborted) return
 		this.pollTimer = setInterval(() => {
-			void this.tick()
+			// The interval is the tick's ONLY observer, so a failed pass is logged HERE and the next one
+			// retries — never left to reject unowned. A `SQLITE_BUSY` on the claim's `BEGIN IMMEDIATE` (or
+			// its COMMIT) used to end the daemon from this line: measured 2026-10-30, after an hour up. The
+			// outbox and ingress pollers already degrade to a logged poll error; this one did not.
+			void this.tick().catch(error => {
+				this.loggingService.error({
+					content: { message: 'LibSqlCommandQueue poll error', error: error instanceof Error ? error.message : String(error) },
+				})
+			})
 		}, LibSqlCommandQueue.POLL_INTERVAL_MS)
 		// Don't hold the process open just to poll (mirrors worker daemons that exit with the app).
 		this.pollTimer.unref?.()

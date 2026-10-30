@@ -2,7 +2,7 @@
 // The poller is never left running: each test registers handlers, stops the interval, and drives
 // `tick()` deterministically. "The alarm fires" is simulated by rewinding `run_at` via SQL instead
 // of sleeping — deterministic and instant.
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, spyOn } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { eq } from 'drizzle-orm'
 import { TestBed } from '@test/support'
@@ -62,6 +62,33 @@ describe('LibSqlCommandQueue (integration)', () => {
 				.where(eq(scheduledCommands.id, id)),
 		)
 	}
+
+	// The POLLER, not `tick()`: the interval is the only observer a background pass has. A claim that
+	// loses `BEGIN IMMEDIATE` to another writer (`SQLITE_BUSY`) must surface as a logged poll error and
+	// leave the poller alive — measured 2026-10-30, it was an unhandled rejection that ended the daemon.
+	// The falsifier is exact: drop the `.catch` in `startPolling` and the rejection escapes unowned.
+	it('a claim that throws SQLITE_BUSY inside the POLLER is logged, never an unhandled rejection', async () => {
+		const logger = new MockLoggingService()
+		const logged: string[] = []
+		logger.error = args => {
+			logged.push(String((args.content as { message?: string }).message))
+		}
+		const polling = new LibSqlCommandQueue(driver, logger)
+		const unhandled: unknown[] = []
+		const onUnhandled = (reason: unknown) => unhandled.push(reason)
+		process.on('unhandledRejection', onUnhandled)
+		await polling.registerCommandHandler(makeHandler('pgq_test_busy').handler)
+		const busy = spyOn(driver, 'transaction').mockImplementation(() => Promise.reject(new Error('SQLITE_BUSY: database is locked')))
+		try {
+			await new Promise(resolve => setTimeout(resolve, 1_300))
+			expect(unhandled).toHaveLength(0)
+			expect(logged).toContain('LibSqlCommandQueue poll error')
+		} finally {
+			busy.mockRestore()
+			process.off('unhandledRejection', onUnhandled)
+			await polling.close()
+		}
+	})
 
 	it('executes an immediate command once and deletes the row (one-shot consumed)', async () => {
 		const { handler, calls } = makeHandler('pgq_test_now')
