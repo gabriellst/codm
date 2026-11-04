@@ -1,0 +1,82 @@
+---
+title: "Como conectar o Claude no WhatsApp"
+description: "Passo a passo para colocar o Claude Code para trabalhar a partir de uma conversa ou grupo do WhatsApp, rodando no seu computador — com o CODM, grátis e open source."
+publishedAt: 2026-11-04
+author: "Equipe"
+tags: ["whatsapp", "claude-code", "tutorial"]
+category: "product"
+---
+
+Você menciona o agente num grupo do WhatsApp, ele abre uma sessão do Claude Code na pasta do seu projeto, trabalha, e a resposta volta no mesmo grupo. Sem abrir o terminal, sem copiar e colar conversa. Este post mostra como chegar nisso do zero, em uns quinze minutos.
+
+O CODM é o app que faz a ponte. Ele roda no seu computador, é grátis e o código é aberto (MIT).
+
+## O que você precisa antes
+
+- **Um computador que fica ligado.** É nele que o agente trabalha: macOS com Apple Silicon, Windows x64 ou Linux x64. Se ele dormir, o agente dorme junto — vale desligar o repouso automático.
+- **O Claude Code instalado e logado.** O CODM não traz um modelo próprio: ele usa o *seu* Claude Code, com o seu plano. Se `claude` funciona no seu terminal, está pronto.
+- **Um WhatsApp para conectar.** O CODM entra como um aparelho conectado, do mesmo jeito que o WhatsApp Web — e o agente responde em nome dessa conta. Muita gente usa um número só para isso, para o bot não falar como se fosse você.
+- **Uma pasta de projeto.** O repositório ou a pasta onde o agente vai trabalhar. Se ela já tem um `CLAUDE.md` e skills, o agente usa tudo isso.
+
+## 1. Baixe e instale o CODM
+
+Na [página inicial](/pt/), o botão de download já escolhe o instalador do seu sistema. No macOS o app é assinado e notarizado pela Apple. No Windows o instalador ainda não tem certificado, então o navegador e o Windows vão avisar que o arquivo é desconhecido: escolha *Manter* no download e, ao abrir, *Mais informações › Executar assim mesmo*.
+
+## 2. Entre com GitHub ou Google
+
+A conta é grátis, não pede cartão e serve só para identificar você. Conversas e projetos não vão para essa conta — ficam no seu computador.
+
+## 3. No macOS, libere o Acesso Total ao Disco
+
+Quem lê as pastas do projeto, para o macOS, é o app. Sem essa permissão o sistema bloqueia a leitura e as tarefas param sem explicação. O CODM mostra um botão que abre o lugar certo em *Ajustes › Privacidade e Segurança › Acesso Total ao Disco*; é só ligar o CODM ali e voltar.
+
+## 4. Adicione um espaço de trabalho
+
+Em **Espaços de trabalho**, aponte para a pasta do projeto. O CODM detecta sozinho se é um repositório Git e se é um projeto do Claude. Dá para adicionar várias pastas — cada conversa trabalha em uma delas.
+
+## 5. Conecte o WhatsApp pelo QR code
+
+Em **Canais › Conectar canal**, o CODM gera um QR code. No celular, abra o WhatsApp › *Aparelhos conectados* › *Conectar aparelho* e escaneie. O código expira em poucos minutos; se passar, é só gerar outro.
+
+## 6. Vincule uma conversa
+
+É aqui que o agente ganha um lugar para morar. O assistente tem quatro passos:
+
+1. **Contato** — a conversa ou o grupo onde o agente vai atender.
+2. **Espaço** — a pasta em que ele vai trabalhar.
+3. **Agentes** — quais CLIs podem trabalhar ali (hoje, o Claude Code).
+4. **Revisão** — confira e vincule.
+
+A partir daí, as mensagens daquela conversa podem abrir tarefas naquela pasta. Você pode pausar ou desfazer quando quiser.
+
+## 7. Mande a primeira mensagem
+
+Cada conversa ganha uma tag de menção. Em grupo, o agente só responde quando é chamado por ela — o resto da conversa ele lê, mas não interrompe. O painel sugere a primeira:
+
+```
+Olá, @codm, crie uma tarefa para me mandar uma mensagem de boas vindas!
+```
+
+O agente responde no grupo, abre uma tarefa e, quando ela termina, conta o resultado na mesma conversa. Trabalho que mexe em código vira uma tarefa própria, com a sua sessão do Claude Code. Assim vários pedidos andam ao mesmo tempo, e a conversa continua livre enquanto eles rodam.
+
+## Ajustes que valem a pena logo de cara
+
+Na página da conversa, no app:
+
+- **Participantes — quem pode invocar.** Num grupo, escolha quem pode chamar o agente.
+- **Pode liberar.** Para quem você confia, ligue esta opção: o "pode publicar" dessa pessoa vale como o seu, e o agente segue sem pedir a sua confirmação. Para os outros, ações sensíveis param e esperam alguém que possa aprovar.
+- **Instruções da conversa.** Regras que valem para toda mensagem: tom, idioma, o que fazer sempre ("mande um print depois de qualquer mudança"), o que nunca fazer.
+- **Idioma e modelo.** O idioma em que o agente responde e qual modelo do Claude ele usa.
+- **Sussurros.** Pelo app, você pode orientar o agente no meio da conversa sem que o grupo veja.
+
+## Perguntas que todo mundo faz
+
+**Preciso deixar o computador ligado?** Sim. O agente roda nele, na sua pasta, com as suas ferramentas. Desligado, as mensagens esperam até ele voltar.
+
+**Quanto custa?** O CODM é grátis. O trabalho do agente usa o seu plano do Claude, como qualquer uso do Claude Code. Se o limite do plano acabar no meio do dia, o CODM avisa na conversa e retoma sozinho quando o limite volta.
+
+**Meu código sai da minha máquina?** O CODM em si só fala com o WhatsApp (pelo seu aparelho conectado), com o login, com o servidor de atualizações e, se você deixar ligado, com um analytics anônimo de uso. Seu código, suas pastas e suas conversas ficam no computador. O que o agente lê vai para o Claude do mesmo jeito que vai quando você usa o Claude Code no terminal.
+
+**E se o agente for fazer algo arriscado?** Ele para. Erros de servidor, ações barradas pelo filtro de permissões e decisões sensíveis viram uma pausa que espera alguém autorizado responder — na própria conversa.
+
+Com isso conectado, o próximo passo é usar o WhatsApp como painel de controle da empresa — de triagem de bugs a relatórios diários. É o assunto do [próximo post](/pt/blog/como-gerenciar-sua-empresa-pelo-whatsapp-com-claude).

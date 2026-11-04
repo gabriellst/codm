@@ -1,0 +1,102 @@
+---
+title: "Como gerenciar sua empresa pelo WhatsApp com Claude"
+description: "Triagem de suporte, contas de clientes, deploys e relatórios — o que uma empresa de software aprendeu rodando a operação pelo WhatsApp com agentes do Claude por três semanas."
+publishedAt: 2026-11-04
+author: "Equipe"
+tags: ["whatsapp", "claude-code", "operacao"]
+category: "use-cases"
+---
+
+O grupo da empresa já é onde as decisões acontecem. A diferença, com o CODM, é que agora tem alguém no grupo que executa: lê o pedido, abre uma tarefa na pasta do projeto, trabalha e volta com o resultado — e um print provando.
+
+Durante três semanas, uma empresa de software com três produtos SaaS rodou boa parte da operação assim, por quatro grupos de WhatsApp e oito pessoas. Foram cerca de mil pedidos endereçados ao agente e mais de 130 tarefas, com mediana de uns 50 minutos entre abrir e fechar, contando o tempo esperando alguém responder. Este post junta o que funcionou, o que deu errado e as regras que ficaram.
+
+Se você ainda não conectou o Claude ao WhatsApp, comece pelo [passo a passo](/pt/blog/como-conectar-o-claude-no-whatsapp).
+
+## Um grupo por frente de trabalho
+
+Cada produto ganhou o seu grupo, ligado à pasta daquele projeto. Depois de duas semanas, o suporte saiu do grupo principal e ganhou um grupo só dele, "para não misturar". Foi uma das mudanças que mais ajudaram: o agente de cada grupo trabalha no repositório certo, com as instruções certas, e quem está no suporte não precisa ler discussão de produto.
+
+## O que o time pede pelo WhatsApp
+
+- **Funcionalidades e telas novas.** O agente desenvolve, manda prévia no computador e no celular e só publica depois do "ok".
+- **Site e marketing.** Banners dentro do produto, páginas de oferta, cards de preço, tags de conversão — muitas vezes com um esboço visual antes de qualquer código.
+- **Triagem de suporte.** O caso chega do cliente e o agente investiga nos dados reais antes de dar o veredito.
+- **Contas de clientes.** "Libera essa conta, a cortesia caiu." Pedidos de dois a cinco minutos, sempre terminando com um print do que o cliente vê.
+- **Notificações.** Rascunho de push com prévia no celular e várias versões de texto, enviado só depois de aprovado.
+- **Perguntas sobre o negócio.** "Alguém clicou no aviso novo?", análise de funil, viabilidade de uma integração.
+
+Nem tudo vira tarefa: dúvida rápida o agente responde na hora, na própria conversa. Trabalho que mexe em código vira uma tarefa com sessão própria do Claude Code, e várias andam ao mesmo tempo enquanto a conversa segue.
+
+## Triagem de suporte em dois caminhos
+
+A regra que mais economizou tempo foi simples: todo caso cai em um de dois caminhos.
+
+1. **É bug** (o sistema está errado): abre uma tarefa, corrige, publica e confere.
+2. **É orientação** (o sistema está certo e o cliente configurou ou entendeu errado): o agente explica e devolve um texto pronto para o suporte colar para o cliente.
+
+E uma regra junto: **nunca chamar de bug sem olhar os dados reais.** Nas três semanas, os casos de orientação foram cerca de cinco vezes mais comuns que os bugs. Quando era bug, a investigação pagava: num caso em que dois painéis mostravam custos diferentes para o mesmo cliente, o agente achou a causa, corrigiu, e a correção estava no ar uns dez minutos depois.
+
+```
+Suporte: @codm o cliente diz que não consegue conectar a conta de anúncios. print anexado
+CODM: Ele está atrás de um proxy que bloqueia a conexão com a API. Abri uma tarefa para
+      contornar isso do nosso lado e já mando o texto para você passar a ele.
+```
+
+## Prova em vez de promessa
+
+"Feito" não basta. Toda alteração termina com um print: a tela publicada, a conta do cliente vista como o cliente vê, o push no celular. Em três semanas foram uns 870 prints e algumas dezenas de vídeos. Quem pediu confere sem abrir nada, e o grupo vira um histórico visual do que mudou.
+
+## As instruções da conversa viram o manual da empresa
+
+Cada conversa tem instruções próprias, que o agente lê a cada mensagem. O curioso é como elas nasceram: no primeiro dia, o operador pediu ao agente para *transformar a conversa até ali em instruções permanentes*. Depois disso, toda correção virava regra com um "coloca isso nas suas instruções".
+
+As regras que mais fizeram diferença:
+
+- **Veredito primeiro**, com valores concretos e sem jargão.
+- **Uma pergunta por parágrafo**, uma opção por linha, para nada se perder no meio do texto.
+- **Texto para cliente** começa com "Oi!", explica uma causa por parágrafo, termina com o que o cliente deve fazer e nunca promete prazo.
+- **Antes de suspeitar da conta, compare a configuração do cliente.** E leia dados de produção sem alterar nada.
+- **Mudança em conta de cliente é a menor possível**, guardando o estado anterior e como desfazer. Mexer em várias contas de uma vez precisa de aprovação.
+- **Anexos primeiro.** Se faltar alguma informação (e-mail, período, print), pergunte — não chute.
+
+## Relatório de status com uma frase
+
+"Manda a tabelinha das tarefas" virou o comando mais usado: o agente confere o estado atual de cada tarefa e devolve tudo agrupado por etapa.
+
+```
+🚀 No ar
+• Página de oferta depois da compra
+⏳ Aprovado, esperando publicar
+• Gasto de anúncios por período — falta a atualização do banco
+❓ Esperando decisão
+• Novo card de preço — qual dos dois textos?
+🔴 Parada
+• Tela de pedidos no celular — esperando o print de referência
+```
+
+O formato ficou nas instruções dos quatro grupos e foi pedido dezenas de vezes.
+
+## Rotinas que rodam sozinhas
+
+Os *loops* são prompts que a conversa dispara para si mesma: num horário fixo, em dias escolhidos ou de tantos em tantos minutos. Dois usos que pegaram:
+
+- **Envio diário de push às 13h**, escolhendo a próxima mensagem ainda não enviada de uma lista de versões já aprovadas, com um registro do que saiu e uma trava de um envio por dia.
+- **Monitoramento de erros**, lendo os relatórios da ferramenta de analytics e abrindo correção só para o que afeta usuário.
+
+Duas lições vieram logo. A primeira é a **regra do silêncio**: "se não houver novidade, não mande mensagem". Sem ela, o grupo recebe um "nada novo" a cada execução. A segunda é **"abra UMA tarefa por problema"**: sem isso, a rotina abriu correções duplicadas para o mesmo erro. E cadência importa: uma rotina de 30 em 30 minutos pesa na conta do plano do Claude, e é a primeira candidata a espaçar.
+
+## Quem aprova o quê
+
+O agente para antes do que é sensível — publicar, mexer em produção, ações que o filtro de permissões barra — e pergunta na conversa. Das aprovações pedidas, cerca de 85% das respostas foram "sim", com mediana de sete minutos para aprovar.
+
+Sete minutos parecem pouco, mas se somam quando a única pessoa que pode aprovar está em reunião. O que destravou foi distribuir: no começo só o operador aprovava; depois, duas pessoas do time passaram a aprovar também. Hoje isso é o **pode liberar**: o "pode publicar" de quem tem essa permissão vale como o do operador, e o agente segue sem perguntar de novo. Quem não tem a permissão continua podendo pedir — a aprovação é que fica com quem pode dar.
+
+## O que aprendemos
+
+- **Dimensione o plano do Claude.** Tarefa de código consome limite. Quando ele acaba, o agente avisa na conversa e retoma sozinho, mas o time sente a espera. Rotinas frequentes são as primeiras a cortar.
+- **Mande o anexo junto com a menção.** Print e áudio que chegam numa mensagem separada às vezes ficam para trás. Na mesma mensagem que chama o agente, ele sempre vê.
+- **O computador é a infraestrutura.** O agente roda nele: precisa ficar ligado, conectado e com espaço livre em disco.
+- **Escreva as regras.** "Pode aplicar migrações sem perguntar, a menos que apague dados" evita uma aprovação por dia — e deixa claro onde está o limite.
+
+A operação continua acontecendo no grupo, como sempre. A diferença é que agora o grupo também executa.
