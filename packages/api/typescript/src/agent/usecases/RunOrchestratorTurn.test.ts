@@ -385,12 +385,15 @@ describe('RunOrchestratorTurn — the cues the turn is responsible for lighting'
 	describe('the orchestrator session rotates once its measured context passes the budget', () => {
 		class SizedRunner extends AgentRunner {
 			requests: AgentRunRequest<ZodType | undefined>[] = []
-			constructor(private readonly contextTokens: number) {
+			private readonly sizes: readonly number[]
+			constructor(...sizes: readonly number[]) {
 				super()
+				this.sizes = sizes
 			}
 			async *run<OutputSchema extends ZodType | undefined = undefined>(
 				request: AgentRunRequest<OutputSchema>,
 			): AsyncIterable<AgentRuntimeEvent> {
+				const turn = this.requests.length
 				this.requests.push(request)
 				yield {
 					type: 'finished',
@@ -399,12 +402,30 @@ describe('RunOrchestratorTurn — the cues the turn is responsible for lighting'
 						replyText: 'ok',
 						sessionId: 'sess-big',
 						failed: false,
-						contextTokens: this.contextTokens,
+						contextTokens: this.sizes[Math.min(turn, this.sizes.length - 1)],
 					},
 				}
 			}
 			async shutdown(): Promise<void> {}
 		}
+
+		/**
+		 * O CAMINHO QUE OS DOIS CASOS ABAIXO NÃO EXERCITAM: neles o primeiro turno já traz o tamanho final
+		 * e entra pelo INSERT. Uma sessão real nasce pequena e cresce — é o UPDATE que tem de carregar a
+		 * medição, e foi ele que ficou de fora do upsert.
+		 */
+		it('a session that GROWS past the budget rotates — the measurement survives the update', async () => {
+			const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+			const runner = new SizedRunner(80_000, 650_000)
+			testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(runner))
+
+			await runTurn(thread)
+			await runTurn(thread)
+			await runTurn(thread)
+
+			expect(runner.requests[1]?.session).toEqual({ resumeId: 'sess-big' })
+			expect(runner.requests[2]?.session && 'newId' in runner.requests[2].session).toBe(true)
+		})
 
 		it('a 650k session is not resumed — the next turn opens a fresh one', async () => {
 			const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })

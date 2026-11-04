@@ -75,6 +75,9 @@ export class LibSqlAgentSessionRepository extends AgentSessionRepository {
 						lastMessageId: data.lastMessageId,
 						cwd: data.cwd,
 						provider: data.provider,
+						// O orçamento de contexto decide a partir desta coluna. Fora do `set`, só o insert gravava
+						// e o orçamento nunca disparava em sessão que cresceu depois do primeiro turno.
+						lastContextTokens: data.lastContextTokens,
 						lastTurnAt: data.lastTurnAt,
 						updatedAt: new Date(),
 						version: data.version,
