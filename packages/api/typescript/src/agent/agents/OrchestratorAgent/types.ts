@@ -30,6 +30,16 @@ const WindowEntrySchema = z.object({
 	 */
 	addressed: z.boolean(),
 	/**
+	 * Whether the author holds the roster grant "pode liberar" (`canElevate`) — the `libera` attribute.
+	 *
+	 * The SAME predicate that decides the posture of a turn this author triggers (`Thread.postureOf`),
+	 * read at render time so a grant flipped in the console shows up on the next turn. It is what lets
+	 * the model treat an approval from that person as the operator's instead of asking the operator to
+	 * confirm it (2026-11-04: the BK groups, where every member had the grant, heard "depende do ok do
+	 * Gabriel" for work they had already approved). False for the agent's own lines and for schedules.
+	 */
+	canRelease: z.boolean(),
+	/**
 	 * WHEN it was said. The `hora` attribute, formatted against the machine's zone at render time.
 	 *
 	 * A conversation the model reads without timestamps is a conversation it cannot place in time: "de

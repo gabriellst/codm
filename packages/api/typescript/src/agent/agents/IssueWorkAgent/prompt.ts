@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { MailboxItemKind } from '@codm/contracts-typescript/wire/enums'
+import { MailboxItemKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import type Z from 'zod'
 import {
 	operationIdOf,
@@ -60,6 +60,7 @@ export class IssueWorkPromptBuilder {
 			...this.grammar(),
 			'',
 			...this.declarationInstruction(input),
+			...this.requesterApproval(input),
 			...this.blockedActions(input),
 			...this.operatorInstructions(input),
 		].join('\n')
@@ -133,6 +134,32 @@ export class IssueWorkPromptBuilder {
 			'Every one of those tools takes the ids of THIS issue, and no other values are accepted:',
 			`  threadId: ${input.threadId}`,
 			`  issueId: ${input.issueId}`,
+		]
+	}
+
+	/**
+	 * THE REQUEST IS THE APPROVAL — participant-permission-posture, Decision 13.
+	 *
+	 * `de` here is always `operator` (or a schedule), so this agent cannot see WHO asked. What it can
+	 * see is the posture: Decisions 4 and 6 make an issue turn BYPASS exactly when the chain that queued
+	 * it started from someone holding "pode liberar", or from an APPROVE given by one. That person's
+	 * "publica quando terminar" already IS the operator's ok — without this paragraph the worker raised
+	 * an APPROVAL_NEEDED for it anyway, and the stop then sat waiting for a message nobody would send,
+	 * because the requester had already said yes (2026-11-04, BK groups).
+	 *
+	 * Rendered only under BYPASS: an AUTO turn came from someone without the grant (or a schedule), and
+	 * there "ask before publishing" is still the right default.
+	 */
+	private requesterApproval(input: IssueWorkInput): string[] {
+		if (input.posture !== PermissionPosture.BYPASS) return []
+		return [
+			'',
+			'WHO ASKED FOR THIS',
+			'Whoever asked for this work may approve it. When the message tells you to publish, deploy, merge or change the ' +
+				'production database, that IS the approval: do it and report. Do not raise a stop to ask the operator for an ok ' +
+				'that was already given.',
+			'Raise a stop only for a decision the message did not make — two real options it did not choose between, or a risk ' +
+				'it did not mention, like deleting data.',
 		]
 	}
 

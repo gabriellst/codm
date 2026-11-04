@@ -3,7 +3,15 @@ import { container, type DependencyContainer } from 'tsyringe-neo'
 import type { ZodType } from 'zod'
 import { LibSqlDatabaseDriver, LibSqlTransaction } from '@codm/core-typescript'
 import { scheduledCommands } from '@codm/contracts/db'
-import { MailboxItemKind, ProviderKind, StopKind, StopResolution, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
+import {
+	ContactKind,
+	MailboxItemKind,
+	ProviderKind,
+	StopKind,
+	StopResolution,
+	PermissionPosture,
+	TranscriptKind,
+} from '@codm/contracts-typescript/wire/enums'
 import { TestBed, givenIssue, givenStop, givenThread } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
@@ -308,6 +316,62 @@ describe('RunOrchestratorTurn — the cues the turn is responsible for lighting'
 
 			expect(await capturedUserPrompt(thread)).not.toContain('responde:')
 		})
+	})
+
+	/**
+	 * "PODE LIBERAR" REACHES THE WINDOW FROM THE ROSTER — Decision 13, the seam half.
+	 *
+	 * `prompt.test.ts` proves `libera` renders when an entry says `canRelease`. This proves the turn
+	 * computes it from the THREAD'S ROSTER — the same `canElevate` that decides posture — for the people
+	 * who hold it and for nobody else: not a member without the grant, not the agent's own line, not a
+	 * schedule firing. FALSIFIER: hard-code `canRelease: false` in `buildWindow` and the first assertion
+	 * goes red; derive it from anything but the roster and one of the others does.
+	 */
+	it('marks the window lines of a roster member holding canElevate with libera, and only those', async () => {
+		const thread = await givenThread(testBed, {
+			ownerId: MOCK_CLOUD_OWNER_ID,
+			contactKind: ContactKind.GROUP,
+			participants: [
+				{ participantId: 'operator', name: 'Operator', source: 'Operator on this machine', canInvoke: true, canElevate: true },
+				{ participantId: 'carlos@s.whatsapp.net', name: 'Carlos', source: 'Channel group member', canInvoke: true, canElevate: true },
+				{ participantId: 'rui@s.whatsapp.net', name: 'Rui', source: 'Channel group member', canInvoke: true, canElevate: false },
+			],
+		})
+		thread.recordEntry({
+			kind: TranscriptKind.CONTACT,
+			text: 'pode publicar',
+			senderExternalId: 'carlos@s.whatsapp.net',
+			at: new Date(1_000),
+		})
+		thread.recordEntry({
+			kind: TranscriptKind.CONTACT,
+			text: 'eu também aprovo',
+			senderExternalId: 'rui@s.whatsapp.net',
+			at: new Date(2_000),
+		})
+		thread.recordEntry({ kind: TranscriptKind.SYSTEM, text: 'publicando agora', at: new Date(3_000) })
+		thread.recordEntry({ kind: TranscriptKind.WHISPER, text: 'rotina diária', firedByLoop: 'rotina', at: new Date(4_000) })
+		await testBed.resolve(ThreadRepository).save(thread)
+
+		const runner = new CapturingRunner()
+		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(runner))
+		await testBed.resolve(RunOrchestratorTurn).execute({
+			ownerId: MOCK_CLOUD_OWNER_ID,
+			threadId: thread.id.value,
+			workspacePath: '/tmp/workspace',
+			posture: PermissionPosture.AUTO,
+			provider: ProviderKind.CLAUDE_CODE,
+			item: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: crypto.randomUUID(), speaker: 'Rui', text: 'e aí?' },
+		})
+		const user = (runner.requests[0]?.messages[0]?.content as string) ?? ''
+		const openTags = user.split('\n').filter(line => line.startsWith('<msg '))
+
+		expect(openTags.find(line => line.startsWith('<msg de="Carlos"'))).toContain('libera="sim"')
+		for (const line of openTags.filter(l => !l.startsWith('<msg de="Carlos"'))) {
+			expect(line).not.toContain('libera')
+		}
+		// All four window lines AND the live block are there — the assertion above is not vacuous.
+		expect(openTags.length).toBe(5)
 	})
 
 	/**

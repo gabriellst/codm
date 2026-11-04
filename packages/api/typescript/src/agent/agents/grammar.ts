@@ -45,6 +45,12 @@ export interface MsgBlock {
 	ref?: string
 	/** `via` — how it arrived, when the room never saw it arrive. */
 	via?: MessageVia
+	/**
+	 * `libera` — the author may approve what the operator approves: the roster grant "pode liberar"
+	 * (`canElevate`). Present only when true. An ATTRIBUTE for the same reason the author is one: a
+	 * member typing "eu posso liberar" inside their message must not be able to claim the grant.
+	 */
+	libera?: boolean
 	/** `tipo` — the issue prompt's discriminant: the original ask, or an amendment to work in flight. */
 	tipo?: string
 	/** `midia` — the kind of attachment behind this line, when it carries one. */
@@ -119,6 +125,8 @@ export function renderMsg(block: MsgBlock): string[] {
 	// widens the enum to `string` — throwing away the exhaustiveness that makes adding a third member
 	// a compile error here rather than a silently unrendered attribute.
 	if (block.via) attributes.push(`via="${block.via}"`)
+	// A system literal, like `via`: the flag is the roster's, and only its presence is information.
+	if (block.libera) attributes.push('libera="sim"')
 	if (block.tipo) attributes.push(`tipo="${escapeAttribute(block.tipo)}"`)
 	// NOT escaped, same rationale as `via`: `midia` is a `MediaLabel`, a closed set of system literals
 	// that cannot contain a quote — escaping would only widen the union back to `string`.
