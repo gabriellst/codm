@@ -1,0 +1,2 @@
+-- IF NOT EXISTS (hand-added to drizzle-kit's output): installed 0.8.4 databases got this exact index as a live hot-fix on 2026-11-03, before this migration shipped; without the guard their next boot would fail on "index already exists".
+CREATE INDEX IF NOT EXISTS `outbox_claimed_by_idx` ON `shared_outbox` (`claimed_by`) WHERE claimed_by IS NOT NULL;

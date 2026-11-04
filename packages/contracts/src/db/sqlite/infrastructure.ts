@@ -73,6 +73,12 @@ export const outbox = sqliteTable(
 		index('outbox_unprocessed_idx').on(t.source, t.processedAt, t.createdAt),
 		// Serves the SqlExternalMediator claim scan (source + unprocessed + lease).
 		index('outbox_claim_idx').on(t.source, t.processedAt, t.leaseUntil),
+		// Serves the claim READ-BACK (`WHERE claimed_by = <token>`) that all three claim loops run inside
+		// their write transaction — the Go outbox dispatcher and mediator on every poll (50ms–2s). Without
+		// it that read was a full scan of the whole table (7 days of tombstones: ~195k rows / ~180MB,
+		// measured 2026-11-03) with the file's write lock held, which stalled the daemon's event loop for
+		// up to 30s. Partial: finalize clears `claimed_by`, so only in-flight rows are indexed.
+		index('outbox_claimed_by_idx').on(t.claimedBy).where(sql`claimed_by IS NOT NULL`),
 	],
 )
 

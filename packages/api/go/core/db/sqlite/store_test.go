@@ -185,6 +185,42 @@ func TestAcquireDataDirLock_StaleLockIsReclaimed(t *testing.T) {
 	}
 }
 
+// The claim read-back (`WHERE claimed_by = ?`) runs inside the write transaction of every
+// claim loop — the Go outbox dispatcher and mediator on every 50ms–2s poll. As a full scan
+// of shared_outbox (7 days of tombstones, ~180MB measured 2026-11-03) it held the file's
+// write lock long enough to freeze the TS daemon's event loop for up to 30s. Guard the plan,
+// not just the index's existence: a rewrite of the query that stops matching the partial
+// index's predicate would bring the scan back silently.
+func TestOutboxClaimReadBackUsesClaimedByIndex(t *testing.T) {
+	store := newTestStore(t)
+	rows, err := store.DB().QueryContext(context.Background(),
+		`EXPLAIN QUERY PLAN SELECT id, name, owner_id, payload, attempts
+		 FROM shared_outbox
+		 WHERE claimed_by = ?
+		 ORDER BY created_at`, "token")
+	if err != nil {
+		t.Fatalf("EXPLAIN QUERY PLAN: %v", err)
+	}
+	defer rows.Close()
+
+	var plan []string
+	for rows.Next() {
+		var id, parent, notUsed int
+		var detail string
+		if err := rows.Scan(&id, &parent, &notUsed, &detail); err != nil {
+			t.Fatalf("scan plan row: %v", err)
+		}
+		plan = append(plan, detail)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("iterate plan: %v", err)
+	}
+	joined := strings.Join(plan, " | ")
+	if !strings.Contains(joined, "USING INDEX outbox_claimed_by_idx") || strings.Contains(joined, "SCAN shared_outbox") {
+		t.Fatalf("claim read-back is not served by outbox_claimed_by_idx: %s", joined)
+	}
+}
+
 func TestOutboxRoundTrip(t *testing.T) {
 	ctx := context.Background()
 	store := newTestStore(t)

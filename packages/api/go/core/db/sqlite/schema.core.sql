@@ -49,5 +49,6 @@ CREATE INDEX "events_entity_idx" ON "shared_events" ("entity_id","occurred_at");
 CREATE INDEX "events_name_idx" ON "shared_events" ("name","occurred_at");
 CREATE INDEX "idempotency_expires_idx" ON "shared_idempotency_keys" ("expires_at");
 CREATE INDEX "outbox_claim_idx" ON "shared_outbox" ("source","processed_at","lease_until");
+CREATE INDEX "outbox_claimed_by_idx" ON "shared_outbox" ("claimed_by") WHERE claimed_by IS NOT NULL;
 CREATE INDEX "outbox_unprocessed_idx" ON "shared_outbox" ("source","processed_at","created_at");
 CREATE INDEX "scheduled_commands_due_idx" ON "shared_scheduled_commands" ("run_at") WHERE dead_at IS NULL;
