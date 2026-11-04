@@ -22,6 +22,7 @@ export interface ClaudeAgentRunnerOptions {
 	spawner?: AgentProcessSpawner
 	inactivityMs?: number
 	postMortemMs?: number
+	autoCompactWindow?: number
 }
 
 /**
@@ -187,6 +188,14 @@ export class ClaudeAgentRunner extends AgentRunner {
 	private inactivityMs = ProductConfig.env.CODM_AGENT_INACTIVITY_MS
 	/** How long a run keeps draining after the child is already dead. See `POST_MORTEM_DRAIN_MS`. */
 	private postMortemMs = POST_MORTEM_DRAIN_MS
+	/**
+	 * The context size at which the CLI compacts the session on its own, handed to EVERY spawn as
+	 * `CLAUDE_CODE_AUTO_COMPACT_WINDOW`. An env var and not a flag because this build has no flag for it.
+	 * Measured on 2.1.318 in this very transport (stream-json, `--resume`): the session compacts in the
+	 * middle of a turn and keeps its `session_id`, so the row's resume identity survives. See
+	 * `ProductConfig.CODM_AGENT_AUTO_COMPACT_WINDOW` for why the default is 300k.
+	 */
+	private autoCompactWindow = ProductConfig.env.CODM_AGENT_AUTO_COMPACT_WINDOW
 	private readonly live = new Set<AgentProcess>()
 
 	/**
@@ -228,6 +237,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 		if (options.spawner !== undefined) runner.spawner = options.spawner
 		if (options.inactivityMs !== undefined) runner.inactivityMs = options.inactivityMs
 		if (options.postMortemMs !== undefined) runner.postMortemMs = options.postMortemMs
+		if (options.autoCompactWindow !== undefined) runner.autoCompactWindow = options.autoCompactWindow
 		return runner
 	}
 
@@ -323,7 +333,12 @@ export class ClaudeAgentRunner extends AgentRunner {
 
 		let proc: AgentProcess
 		try {
-			proc = this.spawner({ cmd, cwd: request.cwd, stdin: true })
+			proc = this.spawner({
+				cmd,
+				cwd: request.cwd,
+				stdin: true,
+				env: { CLAUDE_CODE_AUTO_COMPACT_WINDOW: String(this.autoCompactWindow) },
+			})
 		} catch (cause) {
 			// Even a spawn that fails synchronously must arrive as the terminal event, not as a throw —
 			// the consumer's drain loop is the only place it can be handled uniformly.
@@ -444,6 +459,10 @@ export class ClaudeAgentRunner extends AgentRunner {
 				for (const decoded of codec.push(settled.value)) {
 					if (decoded.contextTokens !== undefined) contextTokens = decoded.contextTokens
 					if (decoded.rateLimit) rateLimit = decoded.rateLimit
+					// A compaction is about to go silent for as long as the summary takes: the announcement
+					// renews the clock like a frame does. Nothing else that is not a frame does — a retry
+					// line repeating forever must still be bounded by the watchdog.
+					if (decoded.compacting) sawFrame = true
 					for (const frame of decoded.frames) {
 						sawFrame = true
 						if (frame.kind === 'system_init') sessionId = frame.sessionId

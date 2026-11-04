@@ -188,6 +188,42 @@ describe('RunIssueTurn use case', () => {
 	})
 
 	/**
+	 * A issue não tem orçamento (quem limita o contexto dela é a janela de auto-compact do CLI), mas a
+	 * medição é o que mostra quanto cada sessão pesa. Vale nos dois caminhos do upsert.
+	 */
+	it('records the context the run measured, on the first turn and on the next', async () => {
+		class MeasuringRunner extends AgentRunner {
+			private turn = 0
+			async *run<OutputSchema extends ZodType | undefined = undefined>(
+				_request: AgentRunRequest<OutputSchema>,
+			): AsyncIterable<AgentRuntimeEvent> {
+				this.turn += 1
+				yield {
+					type: 'finished',
+					result: {
+						outcome: AgentRunOutcome.COMPLETED,
+						replyText: 'ok',
+						sessionId: 'sess-measured',
+						failed: false,
+						contextTokens: this.turn * 100_000,
+					},
+				}
+			}
+			async shutdown(): Promise<void> {}
+		}
+		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(new MeasuringRunner()))
+		const useCase = testBed.resolve(RunIssueTurn)
+		const sessions = testBed.resolve(AgentSessionRepository)
+		const issueId = testId('run-issue-turn', 'issue-context')
+
+		await useCase.execute(baseInput(issueId))
+		expect((await sessions.findByIssueId(issueId))?.lastContextTokens).toBe(100_000)
+
+		await useCase.execute(baseInput(issueId))
+		expect((await sessions.findByIssueId(issueId))?.lastContextTokens).toBe(200_000)
+	})
+
+	/**
 	 * AC-6.4(b) — THE DEGENERATE CASE, and the DECLARED half of §4.3 rule 6.
 	 *
 	 * Two plausible producers of the same fact are live at once: the agent DECLARED completion through

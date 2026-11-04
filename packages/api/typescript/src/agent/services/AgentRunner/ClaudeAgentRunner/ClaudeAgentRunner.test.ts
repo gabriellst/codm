@@ -17,6 +17,7 @@ import type { AgentRunRequest } from '../../../types/AgentRunRequest'
 import type { AgentRuntimeEvent } from '../../../types/AgentRuntimeEvent'
 import type { AgentProcess, AgentProcessSpec } from './AgentProcess'
 import { ClaudeAgentRunner } from './ClaudeAgentRunner'
+import { ProductConfig } from '@shared/config/ProductConfig'
 // The real token service, not a double: it is a Map with a clock, so a stub would only be a second
 // implementation of the thing under test. Every agent takes one now because the base MINTS in `run()`.
 import { InMemoryAgentIdentityService } from '@codm/core-typescript'
@@ -46,7 +47,10 @@ interface FakeProcess extends AgentProcess {
  * `dieDuringStream` is the opposite lie, told on purpose: the child is reaped while its stdout stays
  * open forever — the leaked-grandchild shape of the 27/08 incident.
  */
-function fakeSpawner(lines: string[], options: { hold?: boolean; exitCode?: number; stderr?: string; dieDuringStream?: boolean } = {}) {
+function fakeSpawner(
+	lines: string[],
+	options: { hold?: boolean; exitCode?: number; stderr?: string; dieDuringStream?: boolean; gapMs?: number } = {},
+) {
 	let created: FakeProcess | undefined
 	const spawner = (spec: AgentProcessSpec): AgentProcess => {
 		let emitted = 0
@@ -62,6 +66,8 @@ function fakeSpawner(lines: string[], options: { hold?: boolean; exitCode?: numb
 			killed: false,
 			stdout: (async function* () {
 				for (const line of lines) {
+					// A silent stretch before each line — what a compaction looks like from the pipe.
+					if (options.gapMs) await new Promise(resolve => setTimeout(resolve, options.gapMs))
 					// Incremented BEFORE the yield so the counter reads "lines emitted INCLUDING the one
 					// being consumed right now" — otherwise the generator sits suspended at the yield and
 					// every reading is one behind the chunk the runner is actually acting on.
@@ -381,6 +387,52 @@ describe('ClaudeAgentRunner — structured output NEVER throws mid-drain (AC-2.3
 		const finished = (await drain(makeRunner(spawner).run(request()))).at(-1)
 
 		expect(finished).toMatchObject({ type: 'finished', result: { failed: false } })
+	})
+})
+
+describe('ClaudeAgentRunner — o contexto limitado pela janela de auto-compact', () => {
+	it('declares the window in the child environment, on every spawn', async () => {
+		const fake = fakeSpawner([INIT, TEXT, RESULT])
+		const runner = ClaudeAgentRunner.withOptions(new MockLoggingService(), new InMemoryAgentIdentityService(), {
+			spawner: fake.spawner,
+			autoCompactWindow: 250_000,
+		})
+
+		await drain(runner.run(request()))
+
+		expect(fake.process().spec.env).toEqual({ CLAUDE_CODE_AUTO_COMPACT_WINDOW: '250000' })
+	})
+
+	it('the default window comes from the product config', async () => {
+		const fake = fakeSpawner([INIT, TEXT, RESULT])
+
+		await drain(makeRunner(fake.spawner).run(request()))
+
+		expect(fake.process().spec.env?.CLAUDE_CODE_AUTO_COMPACT_WINDOW).toBe(String(ProductConfig.env.CODM_AGENT_AUTO_COMPACT_WINDOW))
+	})
+
+	/**
+	 * A compactação fica muda: o CLI anuncia `status: compacting` e só volta a falar quando termina.
+	 * Medido em sessões reais: até 135 s, contra um watchdog de 180 s que não via o anúncio. O anúncio
+	 * renova o prazo, e é isso que este caso prova — sem a renovação, a segunda lacuna estoura.
+	 */
+	it('a compaction starting renews the watchdog, so a silent compaction is not killed as a hang', async () => {
+		const COMPACTING = line({ type: 'system', subtype: 'status', status: 'compacting' })
+		const fake = fakeSpawner([INIT, COMPACTING, TEXT, RESULT], { gapMs: 100 })
+
+		const finished = (await drain(makeRunner(fake.spawner, 150).run(request()))).at(-1)
+
+		// The outcome is the evidence, not `killed`: the runner's `finally` kills every child it spawned.
+		expect(finished).toMatchObject({ type: 'finished', result: { outcome: AgentRunOutcome.COMPLETED } })
+	})
+
+	it('a retry line does NOT renew it — the backstop still bounds a run stuck retrying', async () => {
+		const RETRY = line({ type: 'system', subtype: 'api_retry', attempt: 3 })
+		const fake = fakeSpawner([INIT, RETRY, TEXT, RESULT], { gapMs: 100 })
+
+		const finished = (await drain(makeRunner(fake.spawner, 150).run(request()))).at(-1)
+
+		expect(finished).toMatchObject({ type: 'finished', result: { outcome: AgentRunOutcome.STOPPED, stop: { kind: 'SERVER_ERROR' } } })
 	})
 })
 

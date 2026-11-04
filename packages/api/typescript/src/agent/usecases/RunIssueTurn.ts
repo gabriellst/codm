@@ -110,6 +110,8 @@ export const RunIssueTurnOutputSchema = z.object({
 interface RunObservations {
 	outcome: TerminalOutcome
 	agentSessionId: string | null
+	/** The session's context after the run, when the provider measured it. */
+	contextTokens: number | undefined
 }
 
 /**
@@ -219,7 +221,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		const stopId = observed.outcome.kind === 'STOPPED' ? uuidv7() : undefined
 		await this.withTransaction(tx, async tx => {
 			await this.persistOutcome(input, observed.outcome, stopId, tx)
-			await this.upsertSessionRecord(input, observed.agentSessionId ?? session.id, tx)
+			await this.upsertSessionRecord(input, observed.agentSessionId ?? session.id, observed.contextTokens, tx)
 		})
 
 		// Only a transport stop the table says to RETRY goes back to the dispatcher as `transportStop`; one
@@ -318,7 +320,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 			if (frame) await this.registry.send(input.issueId, frame)
 		}
 
-		return { outcome: accumulator.outcome(), agentSessionId: accumulator.sessionId }
+		return { outcome: accumulator.outcome(), agentSessionId: accumulator.sessionId, contextTokens: accumulator.contextTokens }
 	}
 
 	/**
@@ -499,11 +501,18 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 	 * docblock), so the fallback never actually falls through to nothing. Typing it as always-present
 	 * says so instead of guarding against a case that cannot occur here.
 	 */
-	private async upsertSessionRecord(input: this['input'], agentSessionId: string, tx: Transaction): Promise<void> {
+	private async upsertSessionRecord(
+		input: this['input'],
+		agentSessionId: string,
+		contextTokens: number | undefined,
+		tx: Transaction,
+	): Promise<void> {
 		const model = input.model ?? AgentModelId.DEFAULT
 		const existing = await this.sessions.findByIssueId(input.issueId, tx)
 		if (existing) {
-			existing.recordTurn({ agentSessionId, model, cwd: input.workspacePath, lastMessageId: input.messageId })
+			// The measurement is recorded, never budgeted: an issue mid-task would lose its working memory
+			// to a fresh session, so what bounds its context is the CLI's own auto-compact window.
+			existing.recordTurn({ agentSessionId, model, cwd: input.workspacePath, lastMessageId: input.messageId, contextTokens })
 			await this.sessions.save(existing, tx)
 			return
 		}
@@ -517,6 +526,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 				agentSessionId,
 				model,
 				lastMessageId: input.messageId,
+				contextTokens,
 			}),
 			tx,
 		)
