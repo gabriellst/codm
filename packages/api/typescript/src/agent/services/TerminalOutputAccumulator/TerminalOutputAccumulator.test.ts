@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import { AgentStopReason, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { TerminalOutputAccumulator } from './TerminalOutputAccumulator'
 import { AgentMessageRole, AgentRunOutcome, type TransportStopKind } from '../../enums'
-import { AgentMessageEvent } from '../../events'
+import { AgentMessageEvent, AgentUsageEvent } from '../../events'
 import type { AgentFrame } from '../../types/AgentFrame'
 import type { AgentRunResult, AgentRuntimeEvent } from '../../types/AgentRuntimeEvent'
 
@@ -84,6 +84,19 @@ describe('TerminalOutputAccumulator (two-stream split over AgentRuntimeEvent)', 
 		const acc = new TerminalOutputAccumulator({ issueId: 'issue-1' })
 		const fact = new AgentMessageEvent({ payload: { messageId: 'msg-1', role: AgentMessageRole.ASSISTANT, text: 'hi' } })
 		expect(acc.feed({ type: 'fact', fact })).toBeNull()
+	})
+
+	it('keeps the run usage for the layer that holds identity — and still transports nothing for it', () => {
+		const acc = new TerminalOutputAccumulator({ issueId: 'issue-1' })
+		const usage = { inputTokens: 2, outputTokens: 40, cacheCreationInputTokens: 9_188, cacheReadInputTokens: 15_273 }
+		expect(acc.usage).toBeUndefined()
+
+		expect(acc.feed({ type: 'fact', fact: new AgentUsageEvent({ payload: usage }) })).toBeNull()
+		expect(
+			acc.feed({ type: 'fact', fact: new AgentMessageEvent({ payload: { messageId: 'm', role: AgentMessageRole.ASSISTANT, text: 'x' } }) }),
+		).toBeNull()
+
+		expect(acc.usage).toEqual(usage)
 	})
 
 	it('marks the run exited on the terminal event and exposes the reported session id', () => {
