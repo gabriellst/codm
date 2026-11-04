@@ -45,6 +45,13 @@ export const ProviderCapabilitiesSchema = z.object({
 	 * so it is a different argv SHAPE, not one more flag on the same one.
 	 */
 	sessionResume: z.boolean().optional(),
+	/**
+	 * The CLI takes a file to append to its own system prompt → the agent's standing instructions go
+	 * there once, instead of being folded into every turn's message (where a resumed session piles up
+	 * one copy per turn). A FILE and not the inline flag: on Windows `claude.cmd` runs through `cmd.exe`,
+	 * whose command line stops at 8191 characters — less than an orchestrator's standing prompt.
+	 */
+	appendSystemPromptFile: z.boolean().optional(),
 })
 
 export type ProviderCapabilities = Z.output<typeof ProviderCapabilitiesSchema>

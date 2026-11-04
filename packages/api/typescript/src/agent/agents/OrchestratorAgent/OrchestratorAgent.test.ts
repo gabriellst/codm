@@ -142,9 +142,12 @@ describe('OrchestratorAgent', () => {
 
 		const request = runner.requests[0]
 		expect(request?.agentName).toBe(AgentName.ORCHESTRATOR)
-		expect(request?.systemPrompt).toContain('QUOTING')
+		expect(request?.systemPrompt).toContain('HOW THE CONVERSATION IS WRITTEN DOWN')
 		expect(request?.messages).toHaveLength(1)
 		expect(request?.messages?.[0]?.content).toContain('pode me tirar uma dúvida?')
+		// The per-turn half rides with the message: it changes every turn, the system prompt must not.
+		expect(request?.messages?.[0]?.content).toContain('QUOTING')
+		expect(request?.systemPrompt).not.toContain('QUOTING')
 	})
 })
 

@@ -42,6 +42,7 @@ import { AgentSessionRepository } from '../repositories/AgentSessionRepository'
 import { MessageVia } from '../enums'
 import { AgentSession } from '../entities/AgentSession'
 import { OrchestratorRepliedEvent } from '../events/OrchestratorRepliedEvent'
+import { AgentUsageEvent } from '../events/AgentUsageEvent'
 import { GetOpenStops } from './GetOpenStops'
 import type { AgentApplicationErrors } from '../errors'
 import { retriesInPlace } from '../enums/TransportStopKind'
@@ -608,6 +609,14 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 		}
 
 		const outcome = accumulator.outcome()
+		// BEFORE the outcome branches, because a stopped turn returns early and spent its tokens all the same.
+		// Stamped here — the runner mints the fact unstamped by design; this is the layer that knows whose.
+		const usage = accumulator.usage
+		if (usage) {
+			await this.withTransaction(tx, tx =>
+				this.domainEventRepository.save(new AgentUsageEvent({ entityId: input.threadId, ownerId: input.ownerId, payload: usage }), tx),
+			)
+		}
 		// A stopped turn said nothing worth delivering. Logged rather than thrown: the dispatcher would
 		// treat a throw as a failed turn and retry it, and re-running a conversational turn produces a
 		// SECOND message in a real group — which is exactly why the dispatcher's retry for a transport

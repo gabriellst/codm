@@ -49,7 +49,13 @@ const TIPO: Record<IssueWorkInput['turnKind'], string> = {
  */
 @injectable()
 export class IssueWorkPromptBuilder {
-	/** Standing instructions for the turn: the workspace, the issue under work, and the reply contract. */
+	/**
+	 * Standing instructions: the workspace, the issue under work, and the reply contract.
+	 *
+	 * The SAME text on every turn of the issue — it travels as the CLI's system prompt, ahead of the cached
+	 * conversation, where one changed byte re-writes the cache of the whole context. What varies per turn
+	 * (who asked, i.e. the posture) is rendered by `user()`. Same rule as `OrchestratorPromptBuilder`.
+	 */
 	system(input: IssueWorkInput): string {
 		return [
 			`You are working on a coding issue inside the repository at ${input.cwd}.`,
@@ -60,7 +66,6 @@ export class IssueWorkPromptBuilder {
 			...this.grammar(),
 			'',
 			...this.declarationInstruction(input),
-			...this.requesterApproval(input),
 			...this.blockedActions(input),
 			...this.operatorInstructions(input),
 		].join('\n')
@@ -82,6 +87,8 @@ export class IssueWorkPromptBuilder {
 	user(input: IssueWorkInput): string {
 		return [
 			agoraLine(input.now, input.timezone),
+			// Per turn, so it rides with the message and not in the standing prompt (see `system()`).
+			...this.requesterApproval(input),
 			'',
 			...renderMsg({
 				de: input.speaker,

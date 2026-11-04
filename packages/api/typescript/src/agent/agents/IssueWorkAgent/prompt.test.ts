@@ -51,15 +51,36 @@ describe('IssueWorkPromptBuilder — the request is the approval (Decision 13)',
 	const builder = new IssueWorkPromptBuilder()
 
 	it('under BYPASS, tells the worker not to stop for an ok that was already given', () => {
-		const system = builder.system({ ...input, posture: PermissionPosture.BYPASS })
+		// With the TURN: the posture is per turn, so it cannot live in the standing prompt (see below).
+		const user = builder.user({ ...input, posture: PermissionPosture.BYPASS })
 
-		expect(system).toContain('WHO ASKED FOR THIS')
-		expect(system).toContain('that IS the approval')
-		expect(system).toContain('Do not raise a stop to ask the operator for an ok that was already given')
-		expect(system).toContain('like deleting data')
+		expect(user).toContain('WHO ASKED FOR THIS')
+		expect(user).toContain('that IS the approval')
+		expect(user).toContain('Do not raise a stop to ask the operator for an ok that was already given')
+		expect(user).toContain('like deleting data')
 	})
 
 	it('under AUTO, keeps the default: the section is not rendered', () => {
-		expect(builder.system(input)).not.toContain('WHO ASKED FOR THIS')
+		expect(`${builder.system(input)}\n${builder.user(input)}`).not.toContain('WHO ASKED FOR THIS')
+	})
+})
+
+/**
+ * THE STANDING HALF IS THE SAME TEXT ON EVERY TURN OF THE ISSUE. It travels as the CLI's system prompt,
+ * ahead of the cached conversation, so one changed byte between two turns re-writes the cache of the
+ * whole context. FALSIFIER: move `requesterApproval` back into `system()` and this goes red.
+ */
+describe('IssueWorkPromptBuilder — the standing prompt does not move between turns', () => {
+	const builder = new IssueWorkPromptBuilder()
+
+	it('is byte-identical across a brief, a steer, another posture and another instant', () => {
+		const first = builder.system(input)
+		for (const turn of [
+			{ ...input, turnKind: MailboxItemKind.STEER as const, prompt: 'e a Loja 02 também' },
+			{ ...input, posture: PermissionPosture.BYPASS },
+			{ ...input, now: new Date('2026-10-10T08:00:00.000Z'), speaker: 'loop:diário' },
+		]) {
+			expect(builder.system(turn)).toBe(first)
+		}
 	})
 })

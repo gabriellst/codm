@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import type { ZodType } from 'zod'
-import { LibSqlDatabaseDriver, LibSqlTransaction } from '@codm/core-typescript'
+import { DomainEventRepository, LibSqlDatabaseDriver, LibSqlTransaction } from '@codm/core-typescript'
 import { scheduledCommands } from '@codm/contracts/db'
 import {
 	ContactKind,
@@ -21,6 +21,7 @@ import type { Thread } from '@thread/entities/Thread'
 import { AgentRunner } from '../services/AgentRunner'
 import { AgentRunnerFactory, FixedAgentRunnerFactory } from '../services/AgentRunnerFactory'
 import { AgentRunOutcome } from '../enums'
+import { AgentUsageEvent } from '../events/AgentUsageEvent'
 import type { AgentRunRequest } from '../types/AgentRunRequest'
 import type { AgentRuntimeEvent } from '../types/AgentRuntimeEvent'
 import { RunOrchestratorTurn } from './RunOrchestratorTurn'
@@ -191,7 +192,9 @@ describe('RunOrchestratorTurn — the cues the turn is responsible for lighting'
 			// Before the resolve below, always: a Handler captures its collaborators at RESOLVE time.
 			testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(runner))
 			await runTurn(thread)
-			return runner.requests[0]?.systemPrompt ?? ''
+			// The ASSEMBLED prompt, both halves: the stops are per turn, so they ride with the message.
+			const request = runner.requests[0]
+			return [request?.systemPrompt ?? '', ...(request?.messages ?? []).map(m => m.content)].join('\n')
 		}
 
 		it('a thread with 2 open stops hands the model both — with the issue, the kind and the question', async () => {
@@ -385,12 +388,15 @@ describe('RunOrchestratorTurn — the cues the turn is responsible for lighting'
 	describe('the orchestrator session rotates once its measured context passes the budget', () => {
 		class SizedRunner extends AgentRunner {
 			requests: AgentRunRequest<ZodType | undefined>[] = []
-			constructor(private readonly contextTokens: number) {
+			private readonly sizes: readonly number[]
+			constructor(...sizes: readonly number[]) {
 				super()
+				this.sizes = sizes
 			}
 			async *run<OutputSchema extends ZodType | undefined = undefined>(
 				request: AgentRunRequest<OutputSchema>,
 			): AsyncIterable<AgentRuntimeEvent> {
+				const turn = this.requests.length
 				this.requests.push(request)
 				yield {
 					type: 'finished',
@@ -399,12 +405,75 @@ describe('RunOrchestratorTurn — the cues the turn is responsible for lighting'
 						replyText: 'ok',
 						sessionId: 'sess-big',
 						failed: false,
-						contextTokens: this.contextTokens,
+						contextTokens: this.sizes[Math.min(turn, this.sizes.length - 1)],
 					},
 				}
 			}
 			async shutdown(): Promise<void> {}
 		}
+
+		/**
+		 * The conversation's tokens reach the ledger too, stamped with the THREAD — and on a turn that
+		 * stopped as well, because the tokens were spent all the same. FALSIFIER: persist only inside the
+		 * reply transaction and the stopped case goes red.
+		 */
+		it('persists the run usage as agent.turn.usage on the thread, whether the turn replied or stopped', async () => {
+			const usage = { inputTokens: 1, outputTokens: 64, cacheCreationInputTokens: 2_000, cacheReadInputTokens: 50_000 }
+			class UsageRunner extends AgentRunner {
+				constructor(private readonly stop: boolean) {
+					super()
+				}
+				async *run<OutputSchema extends ZodType | undefined = undefined>(
+					_request: AgentRunRequest<OutputSchema>,
+				): AsyncIterable<AgentRuntimeEvent> {
+					yield { type: 'fact', fact: new AgentUsageEvent({ payload: usage }) }
+					yield {
+						type: 'finished',
+						result: this.stop
+							? {
+									outcome: AgentRunOutcome.STOPPED,
+									replyText: '',
+									sessionId: 'sess-u',
+									failed: false,
+									stop: { kind: StopKind.PERMISSION_DENIED, detail: 'blocked' },
+								}
+							: { outcome: AgentRunOutcome.COMPLETED, replyText: 'ok', sessionId: 'sess-u', failed: false },
+					}
+				}
+				async shutdown(): Promise<void> {}
+			}
+			for (const stop of [false, true]) {
+				const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+				testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(new UsageRunner(stop)))
+
+				await runTurn(thread)
+
+				const recorded = (await testBed.resolve(DomainEventRepository).findByType(AgentUsageEvent)).filter(
+					e => e.entityId === thread.id.value,
+				)
+				expect(recorded).toHaveLength(1)
+				expect(recorded[0]?.ownerId).toBe(MOCK_CLOUD_OWNER_ID)
+				expect(recorded[0]?.payload).toEqual(usage)
+			}
+		})
+
+		/**
+		 * O CAMINHO QUE OS DOIS CASOS ABAIXO NÃO EXERCITAM: neles o primeiro turno já traz o tamanho final
+		 * e entra pelo INSERT. Uma sessão real nasce pequena e cresce — é o UPDATE que tem de carregar a
+		 * medição, e foi ele que ficou de fora do upsert.
+		 */
+		it('a session that GROWS past the budget rotates — the measurement survives the update', async () => {
+			const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+			const runner = new SizedRunner(80_000, 650_000)
+			testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(runner))
+
+			await runTurn(thread)
+			await runTurn(thread)
+			await runTurn(thread)
+
+			expect(runner.requests[1]?.session).toEqual({ resumeId: 'sess-big' })
+			expect(runner.requests[2]?.session && 'newId' in runner.requests[2].session).toBe(true)
+		})
 
 		it('a 650k session is not resumed — the next turn opens a fresh one', async () => {
 			const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })

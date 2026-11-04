@@ -37,6 +37,15 @@ const ProductEnvSchema = z.object({
 	// portável não carrega botão de produto.
 	CODM_AGENT_INACTIVITY_MS: z.coerce.number().default(180_000),
 
+	// A partir de quantos tokens de contexto o `claude` compacta a sessão sozinho — vira
+	// `CLAUDE_CODE_AUTO_COMPACT_WINDOW` no ambiente de cada spawn do `ClaudeAgentRunner`.
+	//
+	// Sem isso, um modelo de janela de 1M só compacta perto de 965k, e cada chamada de uma issue longa
+	// relê esse contexto inteiro: medido em 04/11, 73% do custo de 30 dias veio de chamadas acima de 300k.
+	// 300k foi o ponto escolhido na simulação (−53% nas issues), contra 200k (−56% com 56% mais
+	// compactações). A faixa é a que o CLI aceita; fora dela ele mesmo trocaria o valor por um limite.
+	CODM_AGENT_AUTO_COMPACT_WINDOW: z.coerce.number().int().min(100_000).max(1_000_000).default(300_000),
+
 	// O NOME DO ARQUIVO DE STORE dentro do `CODM_DATA_DIR` (F3/T8).
 	//
 	// Estava literalizado em 10 lugares, dois deles em LINGUAGENS DIFERENTES que precisam casar byte

@@ -333,6 +333,20 @@ describe('FrameDecoder — run records: context size and the usage-limit verdict
 		expect(line?.contextTokens).toBe(49_203)
 	})
 
+	it('a compaction starting is flagged, and no other system line is', () => {
+		const [compacting] = decodeLines({ type: 'system', subtype: 'status', status: 'compacting' })
+		expect(compacting?.compacting).toBe(true)
+		expect(compacting?.frames).toEqual([])
+
+		for (const other of [
+			{ type: 'system', subtype: 'status', status: null },
+			{ type: 'system', subtype: 'api_retry', attempt: 3 },
+			{ type: 'system', subtype: 'hook_started', hook_name: 'SessionStart:startup' },
+		]) {
+			expect(decodeLines(other)[0]?.compacting).toBeUndefined()
+		}
+	})
+
 	it("ignores a sub-agent's call — its context is not the session's", () => {
 		const [line] = decodeLines({
 			type: 'assistant',

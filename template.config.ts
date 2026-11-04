@@ -639,6 +639,16 @@ export const REPO = {
 			doc: 'ClaudeAgentRunner inactivity watchdog backstop, ms',
 			advanced: true,
 		},
+		// Context size, in tokens, at which the claude CLI compacts the session on its own
+		// (CLAUDE_CODE_AUTO_COMPACT_WINDOW, accepted range 100k–1M). Without it a 1M-window model only
+		// compacts near 965k, and every call of a long issue re-reads that whole context.
+		CODM_AGENT_AUTO_COMPACT_WINDOW: {
+			consumers: ['apiTs'],
+			schema: 'product',
+			example: '300000',
+			doc: 'Context size (tokens) at which the claude CLI auto-compacts an agent session, 100000–1000000',
+			advanced: true,
+		},
 		// ── frontend (only VITE_* reach the browser) ──
 		VITE_API_URL: { consumers: ['appReact'], example: 'http://localhost:3030' },
 		// The desktop console's OWN VITE_-mirrored twin of CODM_CLOUD_URL (SP2 Task T6): the browser

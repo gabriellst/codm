@@ -26,6 +26,7 @@ import { IssueWorkAgent, IssueWorkPromptBuilder } from '../agents/IssueWorkAgent
 import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
+import { AgentUsageEvent } from '../events/AgentUsageEvent'
 import { ResumeInvalidationReason, AgentRunOutcome, FactSource, type TransportStopKind } from '../enums'
 import type { AgentRunIdentity } from '../types/AgentRunIdentity'
 import type { AgentRunRequest } from '../types/AgentRunRequest'
@@ -185,6 +186,71 @@ describe('RunIssueTurn use case', () => {
 
 		const row = await sessions.findByIssueId(issueId)
 		expect(row?.agentSessionId).toBe('stub-session')
+	})
+
+	/**
+	 * A issue não tem orçamento (quem limita o contexto dela é a janela de auto-compact do CLI), mas a
+	 * medição é o que mostra quanto cada sessão pesa. Vale nos dois caminhos do upsert.
+	 */
+	/**
+	 * THE RUN'S TOKENS REACH THE LEDGER, stamped with the issue. Until 04/11 the runner minted this fact and
+	 * every layer above dropped it (`shared_events` had 0 rows of it), so "what did this issue cost" could
+	 * only be answered by re-reading the CLI's transcripts by hand.
+	 */
+	it('persists the run usage as agent.turn.usage, stamped with this issue and owner', async () => {
+		const usage = { inputTokens: 3, outputTokens: 512, cacheCreationInputTokens: 4_000, cacheReadInputTokens: 120_000 }
+		class UsageRunner extends AgentRunner {
+			async *run<OutputSchema extends ZodType | undefined = undefined>(
+				_request: AgentRunRequest<OutputSchema>,
+			): AsyncIterable<AgentRuntimeEvent> {
+				// Unstamped, as the real runner mints it — the use case is the layer that knows whose it is.
+				yield { type: 'fact', fact: new AgentUsageEvent({ payload: usage }) }
+				yield { type: 'finished', result: { outcome: AgentRunOutcome.COMPLETED, replyText: 'ok', sessionId: 'sess-usage', failed: false } }
+			}
+			async shutdown(): Promise<void> {}
+		}
+		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(new UsageRunner()))
+		const issueId = testId('run-issue-turn', 'issue-usage')
+
+		await testBed.resolve(RunIssueTurn).execute(baseInput(issueId))
+
+		const recorded = await testBed.resolve(DomainEventRepository).findByType(AgentUsageEvent)
+		expect(recorded).toHaveLength(1)
+		expect(recorded[0]?.entityId).toBe(issueId)
+		expect(recorded[0]?.ownerId).toBe(ownerId)
+		expect(recorded[0]?.payload).toEqual(usage)
+	})
+
+	it('records the context the run measured, on the first turn and on the next', async () => {
+		class MeasuringRunner extends AgentRunner {
+			private turn = 0
+			async *run<OutputSchema extends ZodType | undefined = undefined>(
+				_request: AgentRunRequest<OutputSchema>,
+			): AsyncIterable<AgentRuntimeEvent> {
+				this.turn += 1
+				yield {
+					type: 'finished',
+					result: {
+						outcome: AgentRunOutcome.COMPLETED,
+						replyText: 'ok',
+						sessionId: 'sess-measured',
+						failed: false,
+						contextTokens: this.turn * 100_000,
+					},
+				}
+			}
+			async shutdown(): Promise<void> {}
+		}
+		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(new MeasuringRunner()))
+		const useCase = testBed.resolve(RunIssueTurn)
+		const sessions = testBed.resolve(AgentSessionRepository)
+		const issueId = testId('run-issue-turn', 'issue-context')
+
+		await useCase.execute(baseInput(issueId))
+		expect((await sessions.findByIssueId(issueId))?.lastContextTokens).toBe(100_000)
+
+		await useCase.execute(baseInput(issueId))
+		expect((await sessions.findByIssueId(issueId))?.lastContextTokens).toBe(200_000)
 	})
 
 	/**

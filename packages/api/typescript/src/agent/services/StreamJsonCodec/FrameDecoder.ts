@@ -80,6 +80,13 @@ export interface DecodedLine {
 	contextTokens?: number
 	/** Set when the line carries the account's usage-limit verdict. See `RateLimitRecord`. */
 	rateLimit?: RateLimitRecord
+	/**
+	 * The CLI announced it is compacting the session (`system` / `status: 'compacting'`). It goes silent
+	 * until the summary is written — measured up to 135 s on a ~965k context — so the runner treats the
+	 * announcement as a sign of life rather than letting the inactivity watchdog read it as a hang.
+	 * Not a frame: nothing downstream renders it, the same reason `contextTokens` is not one.
+	 */
+	compacting?: true
 }
 
 const EMPTY: DecodedLine = { frames: [] }
@@ -193,9 +200,10 @@ export class FrameDecoder {
 		if (!isRecord(raw)) return EMPTY
 		switch (raw.type) {
 			case 'system':
-				return raw.subtype === 'init'
-					? { frames: [{ kind: 'system_init', sessionId: str(raw.session_id) ?? '', model: str(raw.model) ?? '' }] }
-					: EMPTY
+				if (raw.subtype === 'init') {
+					return { frames: [{ kind: 'system_init', sessionId: str(raw.session_id) ?? '', model: str(raw.model) ?? '' }] }
+				}
+				return raw.subtype === 'status' && raw.status === 'compacting' ? { frames: [], compacting: true } : EMPTY
 			case 'assistant':
 				return { frames: this.decodeAssistant(raw), ...assistantRecords(raw) }
 			case 'rate_limit_event': {

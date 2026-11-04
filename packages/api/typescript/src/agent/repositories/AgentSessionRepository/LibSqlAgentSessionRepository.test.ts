@@ -121,6 +121,47 @@ describe('LibSqlAgentSessionRepository (integration)', () => {
 		})
 	})
 
+	/**
+	 * O ORÇAMENTO LÊ O QUE O ÚLTIMO TURNO MEDIU, NÃO O PRIMEIRO. A coluna estava em `.values()` e fora do
+	 * `set` do upsert: só o insert gravava. Medido em 04/11: 6 de 7 linhas de orquestrador nulas e a
+	 * sétima parada em 64.647 com o contexto real em 579k, e `ORCHESTRATOR_CONTEXT_BUDGET` sem disparar.
+	 */
+	it('save UPSERTs the measured context — a later turn past the budget invalidates the resume', async () => {
+		const session = makeSession({ contextTokens: 64_647 })
+		await repo.save(session)
+		session.recordTurn({
+			agentSessionId: session.agentSessionId,
+			model: AgentModelId.SONNET,
+			cwd: '/tmp/workspace',
+			lastMessageId: session.lastMessageId,
+			contextTokens: 579_000,
+		})
+		await repo.save(session)
+
+		const found = await repo.findById(session.id.value)
+		expect(found?.lastContextTokens).toBe(579_000)
+		expect(
+			found?.resumeDecision({ model: AgentModelId.SONNET, cwd: '/tmp/workspace', cursor: session.lastMessageId, contextBudget: 200_000 }),
+		).toEqual({
+			resume: false,
+			reason: ResumeInvalidationReason.CONTEXT_BUDGET_EXCEEDED,
+		})
+	})
+
+	it('a turn that measured nothing clears the column — the measurement belongs to the session that took it', async () => {
+		const session = makeSession({ contextTokens: 650_000 })
+		await repo.save(session)
+		session.recordTurn({
+			agentSessionId: testId('agent-session-repo', 'agent-session-rotated'),
+			model: AgentModelId.SONNET,
+			cwd: '/tmp/workspace',
+			lastMessageId: session.lastMessageId,
+		})
+		await repo.save(session)
+
+		expect((await repo.findById(session.id.value))?.lastContextTokens).toBeUndefined()
+	})
+
 	it('the model column accepts DEFAULT — a session that never named a model is still a valid row', async () => {
 		const issueId = testId()
 		const session = makeSession({ issueId, model: AgentModelId.DEFAULT })

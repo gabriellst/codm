@@ -23,6 +23,7 @@ import { AgentSession } from '../entities/AgentSession'
 import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
+import { AgentUsageEvent } from '../events/AgentUsageEvent'
 import type { AgentApplicationErrors } from '../errors'
 import { ResumeInvalidationReason, AgentRunOutcome, FactSource, MessageVia } from '../enums'
 import { isTransportStopKind, retriesInPlace, TRANSPORT_STOP_RETRIES } from '../enums/TransportStopKind'
@@ -110,6 +111,10 @@ export const RunIssueTurnOutputSchema = z.object({
 interface RunObservations {
 	outcome: TerminalOutcome
 	agentSessionId: string | null
+	/** The session's context after the run, when the provider measured it. */
+	contextTokens: number | undefined
+	/** The run's token accounting, when the provider reported one. */
+	usage: AgentUsageEvent['payload'] | undefined
 }
 
 /**
@@ -166,6 +171,8 @@ interface SessionPlan {
  *   translates it rather than re-deriving it from the frames.
  * - **`fact` events are not persisted here** — they arrive unstamped, by seam design (AC-1.11), and
  *   the layer that holds identity is the base `Agent` of Fase 5. Said out loud in the accumulator too.
+ *   Except the run's USAGE: stamped with the issue and persisted as `agent.turn.usage` in the
+ *   conclusion transaction, so what an issue costs is a query and not a transcript dig.
  *
  * The two-transaction discipline is PRESERVED verbatim: the opened fact commits before the stream
  * starts (so `issue.opened` fires at spawn time), the stream runs outside any transaction, and the
@@ -219,7 +226,15 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		const stopId = observed.outcome.kind === 'STOPPED' ? uuidv7() : undefined
 		await this.withTransaction(tx, async tx => {
 			await this.persistOutcome(input, observed.outcome, stopId, tx)
-			await this.upsertSessionRecord(input, observed.agentSessionId ?? session.id, tx)
+			await this.upsertSessionRecord(input, observed.agentSessionId ?? session.id, observed.contextTokens, tx)
+			// STAMPED HERE, the layer that knows whose turn it was: the runner mints this fact unstamped by
+			// design. Persisted for every outcome — a stopped turn spent its tokens all the same.
+			if (observed.usage) {
+				await this.domainEventRepository.save(
+					new AgentUsageEvent({ entityId: input.issueId, ownerId: input.ownerId, payload: observed.usage }),
+					tx,
+				)
+			}
 		})
 
 		// Only a transport stop the table says to RETRY goes back to the dispatcher as `transportStop`; one
@@ -318,7 +333,12 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 			if (frame) await this.registry.send(input.issueId, frame)
 		}
 
-		return { outcome: accumulator.outcome(), agentSessionId: accumulator.sessionId }
+		return {
+			outcome: accumulator.outcome(),
+			agentSessionId: accumulator.sessionId,
+			contextTokens: accumulator.contextTokens,
+			usage: accumulator.usage,
+		}
 	}
 
 	/**
@@ -499,11 +519,18 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 	 * docblock), so the fallback never actually falls through to nothing. Typing it as always-present
 	 * says so instead of guarding against a case that cannot occur here.
 	 */
-	private async upsertSessionRecord(input: this['input'], agentSessionId: string, tx: Transaction): Promise<void> {
+	private async upsertSessionRecord(
+		input: this['input'],
+		agentSessionId: string,
+		contextTokens: number | undefined,
+		tx: Transaction,
+	): Promise<void> {
 		const model = input.model ?? AgentModelId.DEFAULT
 		const existing = await this.sessions.findByIssueId(input.issueId, tx)
 		if (existing) {
-			existing.recordTurn({ agentSessionId, model, cwd: input.workspacePath, lastMessageId: input.messageId })
+			// The measurement is recorded, never budgeted: an issue mid-task would lose its working memory
+			// to a fresh session, so what bounds its context is the CLI's own auto-compact window.
+			existing.recordTurn({ agentSessionId, model, cwd: input.workspacePath, lastMessageId: input.messageId, contextTokens })
 			await this.sessions.save(existing, tx)
 			return
 		}
@@ -517,6 +544,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 				agentSessionId,
 				model,
 				lastMessageId: input.messageId,
+				contextTokens,
 			}),
 			tx,
 		)
