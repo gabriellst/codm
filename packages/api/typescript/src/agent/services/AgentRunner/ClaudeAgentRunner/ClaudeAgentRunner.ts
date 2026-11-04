@@ -346,6 +346,11 @@ export class ClaudeAgentRunner extends AgentRunner {
 		// the write failed) ⇒ it is folded into the turn as before, which is still correct, just dearer.
 		const promptFile =
 			request.systemPrompt && request.caps?.appendSystemPromptFile ? await writeSystemPromptFile(request.systemPrompt, warn) : undefined
+		if (request.systemPrompt && !request.caps?.appendSystemPromptFile) {
+			// Visible on purpose: the capability is read off `--help`, and a build that reprints it differently
+			// would drop the saving with nothing else to show for it.
+			warn('the CLI did not advertise --append-system-prompt-file — folding the system prompt into the turn')
+		}
 
 		const args = ClaudeAgentRunner.buildArgs({
 			model: request.model,

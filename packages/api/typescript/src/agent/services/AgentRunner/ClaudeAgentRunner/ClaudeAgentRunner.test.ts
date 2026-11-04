@@ -416,11 +416,20 @@ describe('ClaudeAgentRunner — o prompt de sistema vai uma vez, como prompt de 
 
 	it('without it, the standing prompt is folded into the turn exactly as before', async () => {
 		const fake = fakeSpawner([INIT, TEXT, RESULT])
+		const logging = new MockLoggingService()
+		const runner = ClaudeAgentRunner.withOptions(logging, new InMemoryAgentIdentityService(), { spawner: fake.spawner })
 
-		await drain(makeRunner(fake.spawner).run(request({ systemPrompt: STANDING, caps: {} })))
+		await drain(runner.run(request({ systemPrompt: STANDING, caps: {} })))
 
 		expect(fake.process().spec.cmd).not.toContain('--append-system-prompt-file')
 		expect(fake.process().writes.join('')).toContain(STANDING)
+		// Correct but dearer, and silent otherwise: a CLI whose help stopped printing the flag would lose
+		// the saving with nothing to show for it. The warn is that something.
+		const warned = logging
+			.getLogs()
+			.filter(l => l.level === 'warn')
+			.map(l => JSON.stringify(l.args))
+		expect(warned.some(w => w.includes('append-system-prompt-file'))).toBe(true)
 	})
 })
 
