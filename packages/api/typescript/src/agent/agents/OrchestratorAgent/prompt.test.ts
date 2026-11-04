@@ -85,6 +85,7 @@ const windowEntry = (overrides: Record<string, unknown> = {}) => ({
 	speaker: 'Marina',
 	text: 'alguém mexeu no toggle?',
 	addressed: false,
+	canRelease: false,
 	at: NOW,
 	ref: REF_A,
 	...overrides,
@@ -221,12 +222,18 @@ describe('OrchestratorPromptBuilder', () => {
 	 * ordinary reply to the contact.
 	 */
 	it('ASKING THE OPERATOR — names AskOperator, derived, and distinguishes it from the contact', () => {
-		const system = builder.system(operatorTurn())
+		const group = builder.system(operatorTurn())
+		const direct = builder.system(operatorTurn({ contactKind: ContactKind.USER }))
 		const askOperator = toolNameOf(AskOperatorController)
 
-		expect(system).toContain('ASKING THE OPERATOR')
-		expect(system).toContain(askOperator)
-		expect(system).toContain('not the person you are talking to')
+		expect(group).toContain('ASKING THE OPERATOR')
+		expect(group).toContain(askOperator)
+		// In a group it is for what only the operator HAS; a decision someone with libera can make is theirs.
+		expect(group).toContain('something only the operator HAS')
+		expect(group).toContain('A decision the person you are talking to can make — they have libera — is theirs')
+		// In a one-to-one the other person IS the operator, and the original distinction stands.
+		expect(direct).toContain('not the person you are talking to')
+		expect(direct).not.toContain('libera')
 	})
 
 	/**
@@ -781,5 +788,82 @@ describe('OrchestratorPromptBuilder', () => {
 		expect(user).not.toContain('ref=')
 		// It is still a block in the same grammar — one grammar or it is not a grammar.
 		expect(user).toContain('<msg de="issue:dark-mode-toggle" hora="agora" para="you">')
+	})
+})
+
+/**
+ * "PODE LIBERAR" CARRIES THE OPERATOR'S SAY — participant-permission-posture, Decision 13.
+ *
+ * 2026-11-04, BK groups: every member held `canElevate`, and the agent still answered their approvals
+ * with "depende do ok do Gabriel", because nothing in the prompt said who besides the operator could
+ * approve. These pin the three halves of the fix: the grant reaches the model as a SYSTEM attribute
+ * (never as text a member could type), a section says what it means, and the gates that used to name
+ * only the operator name the grant too. FALSIFIER: drop `libera` from either block or `whoMayApprove`
+ * from `system()` and a case here goes red.
+ */
+describe('OrchestratorPromptBuilder — who may approve (Decision 13)', () => {
+	const builder = new OrchestratorPromptBuilder()
+	const openStop = {
+		stopId: '00000000-0000-4000-8000-000000000011',
+		issueId: '00000000-0000-4000-8000-000000000012',
+		kind: StopKind.APPROVAL_NEEDED,
+		title: 'Publicar a página',
+		detail: 'Posso publicar?',
+	}
+
+	it('marks a window line whose author holds the grant with libera="sim", and only that line', () => {
+		const user = builder.user(
+			operatorTurn({
+				window: {
+					seeded: true,
+					entries: [
+						windowEntry({ speaker: 'Carlos', canRelease: true, ref: REF_A }),
+						windowEntry({ speaker: 'Rui', canRelease: false, ref: REF_B }),
+					],
+				},
+			}),
+		)
+
+		expect(user).toContain(`<msg de="Carlos" hora="${CLOCK}" ref="${REF_A}" libera="sim">`)
+		expect(user).toContain(`<msg de="Rui" hora="${CLOCK}" ref="${REF_B}">`)
+	})
+
+	it('marks the live block from the turn posture: BYPASS carries libera, AUTO does not', () => {
+		const elevated = builder.user(operatorTurn({ posture: PermissionPosture.BYPASS }))
+		const plain = builder.user(operatorTurn({ posture: PermissionPosture.AUTO }))
+
+		expect(elevated).toContain(`<msg de="operator" hora="agora" para="you" ref="${LIVE_REF}" libera="sim">`)
+		expect(plain).toContain(`<msg de="operator" hora="agora" para="you" ref="${LIVE_REF}">`)
+	})
+
+	it('renders WHO MAY APPROVE in a group: their ok is the approval, and configuration stays the operator’s', () => {
+		const system = builder.system(operatorTurn())
+
+		expect(system).toContain('WHO MAY APPROVE')
+		expect(system).toContain('libera="sim"')
+		expect(system).toContain('Never tell them it still depends on the operator')
+		expect(system).toContain('What stays the operator’s alone')
+		// The gates that used to name only the operator name the grant too.
+		expect(system).toContain('An issue is something the operator, or someone with libera, asks for OUT LOUD')
+		expect(system).toContain('When the operator, or someone with libera, says something about work you already opened')
+	})
+
+	it('lets an answer from someone with libera resolve a stop, and says an answer without it does not', () => {
+		const system = builder.system(operatorTurn({ openStops: [openStop] }))
+
+		expect(system).toContain('If the message you are answering comes from the operator, or someone with libera, and answers one of these')
+		expect(system).toContain('An answer from someone without libera does not resolve a stop')
+	})
+
+	it('leaves a one-to-one exactly as it was: no attribute, no section, the operator alone', () => {
+		const direct = { contactKind: ContactKind.USER, posture: PermissionPosture.BYPASS, openStops: [openStop] }
+		const system = builder.system(operatorTurn(direct))
+		const user = builder.user(operatorTurn({ ...direct, window: { seeded: true, entries: [windowEntry({ canRelease: true })] } }))
+
+		expect(system).not.toContain('WHO MAY APPROVE')
+		expect(system).not.toContain('libera')
+		expect(system).toContain('An issue is something the operator asks for OUT LOUD')
+		expect(system).toContain('If the message you are answering comes from the operator and answers one of these')
+		expect(user).not.toContain('libera')
 	})
 })

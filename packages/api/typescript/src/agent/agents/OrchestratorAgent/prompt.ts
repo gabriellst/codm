@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { ContactKind, Language, MailboxItemKind, MessageType } from '@codm/contracts-typescript/wire/enums'
+import { ContactKind, Language, MailboxItemKind, MessageType, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import type Z from 'zod'
 import {
 	toolNameOf,
@@ -111,10 +111,11 @@ export class OrchestratorPromptBuilder {
 			...this.grammar(input),
 			'',
 			...this.room(input),
+			...this.whoMayApprove(input),
 			'',
-			...this.issues(),
-			...this.redirectingWork(),
-			...this.askingTheOperator(),
+			...this.issues(input),
+			...this.redirectingWork(input),
+			...this.askingTheOperator(input),
 			...this.blockedActions(),
 			...this.artifacts(),
 			...this.directMessages(),
@@ -194,6 +195,12 @@ export class OrchestratorPromptBuilder {
 				`from the console, "${MessageVia.LOOP}" is a schedule firing. No via means it was said in the chat, in front of ` +
 				'everyone. Never thank the room for something only you saw, and never answer a schedule as if a person were ' +
 				'sitting there waiting.',
+			...(isGroup(input)
+				? [
+						'  libera — present (libera="sim") when the person who said it may approve what the operator approves. The ' +
+							'operator granted it to them; see WHO MAY APPROVE.',
+					]
+				: []),
 			'  midia + arquivo — the message is an ATTACHMENT (audio, imagem, video, documento, figurinha) saved at the ' +
 				'absolute path in arquivo, on this machine. The block text is only the caption or a placeholder like ' +
 				'"[áudio 0:12]". When answering it matters what the attachment contains, READ THE FILE at that path with ' +
@@ -307,6 +314,45 @@ export class OrchestratorPromptBuilder {
 	}
 
 	/**
+	 * WHO MAY APPROVE — "pode liberar" carries the operator's say, not just an unfiltered CLI
+	 * (participant-permission-posture, Decision 13).
+	 *
+	 * The grant used to stop at the permission filter: a member with `canElevate` ran turns in bypass,
+	 * and every gate in THIS prompt still said "the operator". Measured 2026-11-04 in the BK groups —
+	 * every member held the grant — the agent answered approvals with "a publicação depende do ok do
+	 * Gabriel", refused to resolve stops the member had just answered, and wrote that dependency into
+	 * the briefs of issues the member asked for.
+	 *
+	 * Scoped to VERBS, deliberately, not to the word "operator": the word also names an identity (who
+	 * owns the repository, who whispers from the console, who never sees ids), and a blanket "read
+	 * operator as anyone with libera" would leak into those. What stays the operator's alone is named
+	 * here too — what only they HAVE, and the conversation's own configuration, whose sections keep
+	 * saying "the operator" on purpose: those rewrite the operator's rules, they do not approve work.
+	 */
+	private whoMayApprove(input: OrchestratorInput): string[] {
+		if (!isGroup(input)) return []
+		return [
+			'',
+			'WHO MAY APPROVE',
+			'The operator is not the only one whose word counts here. A block carrying libera="sim" comes from someone the ' +
+				'operator gave the same say. Coming from them, these count exactly as if the operator had said them:',
+			'  · asking for work — opening an issue, or adding to one already open;',
+			'  · approving — publishing, a deploy, a change to the production database, and anything these instructions ' +
+				'(the operator’s own included) or an issue says needs the operator’s approval or ok;',
+			'  · deciding — answering a pending question or stop, picking between options;',
+			'  · releasing an action the permission filter blocked.',
+			'When one of them asks or approves, that IS the approval: act on it. Never tell them it still depends on the ' +
+				'operator, never ask the operator to confirm it, and never write that it depends on the operator into the ' +
+				'goal of an issue they asked for.',
+			'Without libera, a person can still ask and you still help — but their approval or decision alone is not ' +
+				'enough. Say plainly that it needs the operator or someone who can approve.',
+			'What stays the operator’s alone: what only they HAVE (their accounts, credentials, access to a service), and ' +
+				'this conversation’s own configuration — standing instructions, model, schedules — which follow their own ' +
+				'sections below.',
+		]
+	}
+
+	/**
 	 * ISSUES — D1 (an issue is a DECLARED fork, never inferred) and D4 (the ack is this same turn).
 	 *
 	 * ### Why there is no "I cannot open one yet" branch
@@ -324,14 +370,14 @@ export class OrchestratorPromptBuilder {
 	 * rather than taken positionally off a scope list: the list used to be hand-ordered, the scan
 	 * orders alphabetically, and `[0]` would have changed meaning SILENTLY.
 	 */
-	private issues(): string[] {
+	private issues(input: OrchestratorInput): string[] {
 		const createIssue = toolNameOf(ForkIssueController)
 		return [
 			'ISSUES',
 			'Work that changes code happens in an issue, and an issue runs elsewhere while you keep talking.',
-			'An issue is something the operator asks for OUT LOUD. You never infer one, never turn a remark into work, and ' +
-				'never suggest that something should become an issue unless you were asked.',
-			`To open one, call the ${createIssue} tool with the goal the operator gave you, in their words. It answers with the issue key.`,
+			`An issue is something ${approvers(input)} asks for OUT LOUD. You never infer one, never turn a remark into ` +
+				'work, and never suggest that something should become an issue unless you were asked.',
+			`To open one, call the ${createIssue} tool with the goal you were given, in their words. It answers with the issue key.`,
 			'Acknowledge in that same turn — name the key and say you will report back. One line. Then keep talking; the ' +
 				'work runs on its own, and you will be handed the result when it lands.',
 			'',
@@ -361,12 +407,12 @@ export class OrchestratorPromptBuilder {
 	 * e uma regra geral sobre "não minta" longe do caso que a motiva é uma frase que o modelo lê e não
 	 * aplica.
 	 */
-	private redirectingWork(): string[] {
+	private redirectingWork(input: OrchestratorInput): string[] {
 		const steerIssue = toolNameOf(SteerIssueTurnController)
 		return [
 			'',
 			'REDIRECTING WORK THAT ALREADY EXISTS',
-			'When the operator says something about work you already opened — a correction, an addition, "now do X too" ' +
+			`When ${approvers(input)} says something about work you already opened — a correction, an addition, "now do X too" ` +
 				`— that belongs to the issue that is already carrying it. Call ${steerIssue} with that issue id and WHAT ` +
 				'THEY SAID, in their words. Do not open a second issue for it, and do not answer as if the instruction ' +
 				'reached anyone on its own.',
@@ -388,14 +434,20 @@ export class OrchestratorPromptBuilder {
 	 * talking to. Kept as its own short paragraph rather than folded into `issues()` because the
 	 * distinction it teaches — operator vs. contact — is the entire point.
 	 */
-	private askingTheOperator(): string[] {
+	private askingTheOperator(input: OrchestratorInput): string[] {
 		const askOperator = toolNameOf(AskOperatorController)
+		const when = isGroup(input)
+			? 'When an issue you opened needs something only the operator HAS — their accounts, credentials, access to a ' +
+				'service — or a decision nobody with libera has given here, '
+			: 'When an issue you opened needs a decision only the operator can make — not the person you are talking to — '
 		return [
 			'',
 			'ASKING THE OPERATOR',
-			`When an issue you opened needs a decision only the operator can make — not the person you are talking to — ` +
-				`call ${askOperator} with that issue id and the question. It does not wait for an answer; the question ` +
+			`${when}call ${askOperator} with that issue id and the question. It does not wait for an answer; the question ` +
 				'surfaces on the operator’s own Needs-you list, and you keep talking here in the meantime.',
+			...(isGroup(input)
+				? ['A decision the person you are talking to can make — they have libera — is theirs: ask them in your reply.']
+				: []),
 			'This is not how you talk to the contact of this conversation — that is just your ordinary reply.',
 		]
 	}
@@ -707,13 +759,16 @@ export class OrchestratorPromptBuilder {
 			'Work of yours is STOPPED, waiting on an answer from this conversation. Oldest first:',
 			'',
 			...input.openStops.flatMap(stop => this.stopLines(stop)),
-			'If the operator’s message answers one of these, do it in THIS turn, in this order:',
+			`If the message you are answering comes from ${approvers(input)} and answers one of these, do it in THIS turn, in this order:`,
 			`  1. call ${resolveStop} with that stop id and the resolution their answer amounts to;`,
 			`  2. call ${steerIssue} with that issue id and WHAT THEY SAID, in their words — not "the operator approved". ` +
 				'The worker resumes with that text as its instruction, so a steer that carries no content resumes it blind.',
 			'A stop with no issue is your own: resolve it and answer here. There is nothing to steer.',
 			'If the message does not answer any of them, leave them alone. Never resolve a question on a guess, and never ' +
 				'chase the operator for one they did not bring up.',
+			...(isGroup(input)
+				? ['An answer from someone without libera does not resolve a stop — say that it needs the operator or someone who can approve.']
+				: []),
 			'Then say what you did, in one line, in your own voice — and never put a stop id or an issue id in a reply.',
 		]
 	}
@@ -859,6 +914,7 @@ export class OrchestratorPromptBuilder {
 			para: entry.addressed ? ADDRESSED_TO_AGENT : undefined,
 			ref: entry.ref,
 			via: entry.via,
+			libera: isGroup(input) && entry.canRelease,
 			midia: midiaLabel(entry.messageType),
 			arquivo: entry.mediaPath,
 			content: entry.text,
@@ -885,6 +941,9 @@ export class OrchestratorPromptBuilder {
 					para: ADDRESSED_TO_AGENT,
 					ref: item.entryId,
 					via: item.via,
+					// The live item carries its sender's grant as the turn's POSTURE: `IngestChannelMessage` set it
+					// from that sender's `canElevate` (Decision 4) — the same predicate the window reads per row.
+					libera: isGroup(input) && input.posture === PermissionPosture.BYPASS,
 					midia: midiaLabel(item.messageType),
 					arquivo: item.mediaPath,
 					responde: item.quoted
@@ -981,4 +1040,19 @@ const MIDIA_LABELS: Record<MessageType, MediaLabel | undefined> = {
 
 function midiaLabel(messageType: MessageType | undefined): MediaLabel | undefined {
 	return messageType ? MIDIA_LABELS[messageType] : undefined
+}
+
+/**
+ * Whether there is a ROOM — the same discriminant `room()` branches on. "Pode liberar" only means
+ * something where other people talk: in a one-to-one the other person IS the operator, so the
+ * attribute, its legend line and WHO MAY APPROVE all stay out rather than describe a distinction the
+ * conversation does not have.
+ */
+function isGroup(input: { contactKind: ContactKind }): boolean {
+	return input.contactKind === ContactKind.GROUP
+}
+
+/** WHO may ask for work and answer a stop, in the words of the sections that gate on it. */
+function approvers(input: { contactKind: ContactKind }): string {
+	return isGroup(input) ? 'the operator, or someone with libera,' : 'the operator'
 }

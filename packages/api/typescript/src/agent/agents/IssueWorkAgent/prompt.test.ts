@@ -40,3 +40,26 @@ describe('IssueWorkPromptBuilder — a blocked action', () => {
 		expect(system).not.toMatch(/\bexport\s+[A-Z_]+=/)
 	})
 })
+
+/**
+ * Decision 13 — under BYPASS the request IS the approval. The turn's posture is the only trace this agent
+ * has of WHO asked (`de` is always `operator`), and BYPASS on an issue turn means the chain started from
+ * someone holding "pode liberar". FALSIFIER: render `requesterApproval` unconditionally (or never) and
+ * one of the two cases goes red.
+ */
+describe('IssueWorkPromptBuilder — the request is the approval (Decision 13)', () => {
+	const builder = new IssueWorkPromptBuilder()
+
+	it('under BYPASS, tells the worker not to stop for an ok that was already given', () => {
+		const system = builder.system({ ...input, posture: PermissionPosture.BYPASS })
+
+		expect(system).toContain('WHO ASKED FOR THIS')
+		expect(system).toContain('that IS the approval')
+		expect(system).toContain('Do not raise a stop to ask the operator for an ok that was already given')
+		expect(system).toContain('like deleting data')
+	})
+
+	it('under AUTO, keeps the default: the section is not rendered', () => {
+		expect(builder.system(input)).not.toContain('WHO ASKED FOR THIS')
+	})
+})

@@ -32,7 +32,7 @@ import { ConsumedMessageRepository } from '@thread/repositories/ConsumedMessageR
 import { ChannelSender } from '@thread/services/ChannelSender'
 import { ReplyStreamer, streamKey } from '@thread/services/ReplyStreamer'
 import { beginTypingPresence, endTypingPresence } from '@thread/services/TypingPresence'
-import { AGENT_SPEAKER, INITIAL_CUT_STATE, advanceCutState, decideCut, type ReplyCutState } from '@thread/objects'
+import { AGENT_SPEAKER, INITIAL_CUT_STATE, OPERATOR_PARTICIPANT_ID, advanceCutState, decideCut, type ReplyCutState } from '@thread/objects'
 import { OrchestratorAgent, OrchestratorInputSchema } from '../agents/OrchestratorAgent'
 import { parseReply } from '../agents/OrchestratorAgent/citation'
 import { AgentRunnerFactory } from '../services/AgentRunnerFactory'
@@ -812,6 +812,8 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 				row.kind === TranscriptKind.SYSTEM
 					? false
 					: thread.addressedToAgent({ senderExternalId: row.senderExternalId ?? '', text: row.text }),
+			// The `libera` attribute — whether this author's approval is as good as the operator's.
+			canRelease: this.canReleaseOf(thread, row),
 			// The `hora` and the `ref` — the row's own instant, and its address. The address is what makes
 			// a citation of an OLD message expressible at all: before the grammar the prompt printed one
 			// id (the live item's), so "attach this to what Marina asked an hour ago" had no spelling.
@@ -837,6 +839,19 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 		if (row.kind === TranscriptKind.SYSTEM) return AGENT_SPEAKER
 		if (row.firedByLoop) return `${MessageVia.LOOP}:${row.firedByLoop}`
 		return thread.displayNameOf(row.senderExternalId)
+	}
+
+	/**
+	 * WHETHER a transcript row's author holds "pode liberar" — the same three cases as `speakerOf`.
+	 *
+	 * The grant is read through `Thread.postureOf`, the predicate that already decides how far a turn
+	 * this author triggers may go, so "may approve" and "runs unfiltered" cannot disagree about the same
+	 * person. The agent's own lines and a schedule firing hold no grant: neither is a person approving
+	 * anything. A row with no sender is the operator speaking through the console (`displayNameOf`).
+	 */
+	private canReleaseOf(thread: LoadedThread, row: { kind: TranscriptKind; senderExternalId?: string; firedByLoop?: string }): boolean {
+		if (row.kind === TranscriptKind.SYSTEM || row.firedByLoop) return false
+		return thread.postureOf(row.senderExternalId ?? OPERATOR_PARTICIPANT_ID) === PermissionPosture.BYPASS
 	}
 
 	/** `BufferSize` is a STRING enum of numerals — the same parse `ClassifyMessage` used, inherited with it. */
