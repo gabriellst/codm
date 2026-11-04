@@ -171,7 +171,7 @@ func (d *SqliteOutboxDispatcher) claim(ctx context.Context) ([]outboxRow, error)
 		}
 	}()
 
-	if _, err = tx.ExecContext(ctx,
+	res, err := tx.ExecContext(ctx,
 		`UPDATE shared_outbox
 		 SET claimed_by = ?, lease_until = ?
 		 WHERE id IN (
@@ -184,8 +184,17 @@ func (d *SqliteOutboxDispatcher) claim(ctx context.Context) ([]outboxRow, error)
 		     LIMIT ?
 		 )`,
 		token, leaseUntil, d.source, now, sqliteClaimBatch,
-	); err != nil {
+	)
+	if err != nil {
 		return nil, fmt.Errorf("claim update: %w", err)
+	}
+	// Nothing claimed — the common case, since this runs every 50ms–2s even when idle. Skip
+	// the read-back and let the deferred Rollback release the write lock right away: that
+	// read used to run (as a full table scan, before outbox_claimed_by_idx) with the file's
+	// write lock held on every empty poll, stalling every other writer on the file — the TS
+	// daemon's synchronous BEGIN IMMEDIATE froze its event loop for up to 30s (2026-11-03).
+	if won, raErr := res.RowsAffected(); raErr == nil && won == 0 {
+		return nil, nil
 	}
 
 	rows, err := tx.QueryContext(ctx,

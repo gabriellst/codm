@@ -241,8 +241,30 @@ describe('LibSqlDriver', () => {
 			try {
 				await insertEvent('quick.one')
 				expect(warn.mock.calls.some(call => String(call[0]).includes('write lock'))).toBe(false)
+				expect(warn.mock.calls.some(call => String(call[0]).includes('blocked the event loop'))).toBe(false)
 			} finally {
 				warn.mockRestore()
+			}
+		})
+	})
+
+	// 2026-11-03: 20–30s stalls with the main thread in `pread` and no line naming the query. A statement
+	// past the threshold must log its SQL — and only its SQL: the arguments carry message content.
+	// FALSIFIER: drop `reportSlowStatements` from the constructor and the first case goes red.
+	describe('statement instrumentation', () => {
+		it('names a statement that blocked past the threshold, without its arguments', async () => {
+			const slowDir = mkdtempSync(join(tmpdir(), 'libsql-driver-slow-'))
+			const slow = new LibSqlDriver({ schema, migrationsDir, dbPath: join(slowDir, 'test.db'), slowStatementReportMs: 0 })
+			const warn = spyOn(console, 'warn').mockImplementation(() => {})
+			try {
+				await slow.db.all(sql`select ${'secret-argument'} as probe_column`)
+				const lines = warn.mock.calls.map(call => String(call[0])).filter(line => line.includes('blocked the event loop'))
+				expect(lines.some(line => line.includes('read statement') && line.includes('probe_column'))).toBe(true)
+				expect(lines.some(line => line.includes('secret-argument'))).toBe(false)
+			} finally {
+				warn.mockRestore()
+				await slow.close()
+				removeTempDirWhenFree(slowDir)
 			}
 		})
 	})

@@ -66,6 +66,36 @@ function openClient(url: string, busyTimeoutMs: number = REGIME_BUSY_TIMEOUT_MS)
 const LOCK_REPORT_MS = 1_000
 
 /**
+ * How long ONE statement may block before the driver names it. The lock lines above say THAT a
+ * transaction held or waited; on 2026-11-03 the daemon still stalled 20–30s with ~57% of its main
+ * thread in `pread` and nothing said WHICH query was reading. Because the local client is
+ * synchronous, the time around `execute()` IS the time the event loop stood still.
+ */
+const SLOW_STATEMENT_REPORT_MS = 250
+
+/**
+ * Wrap `client.execute` so a statement that blocks past `thresholdMs` is logged with its SQL (never
+ * its arguments — they carry message content). `BEGIN IMMEDIATE` is left to the lock instrumentation
+ * in `transaction()`, which already reports that wait under its real name.
+ */
+function reportSlowStatements(client: Client, role: 'read' | 'write', thresholdMs: number): void {
+	client.execute = new Proxy(client.execute, {
+		apply(target, _thisArg, args) {
+			const startedAt = performance.now()
+			const result = Reflect.apply(target, client, args)
+			const blockedMs = performance.now() - startedAt
+			const statement = args[0]
+			const text = String(typeof statement === 'string' ? statement : statement?.sql)
+			if (blockedMs >= thresholdMs && text !== 'BEGIN IMMEDIATE') {
+				const oneLine = text.replace(/\s+/g, ' ').trim().slice(0, 300)
+				console.warn(`sqlite driver: ${role} statement blocked the event loop ${Math.round(blockedMs)}ms — ${oneLine}`)
+			}
+			return result
+		},
+	})
+}
+
+/**
  * FIFO async mutex. One open write transaction per process.
  *
  * The reason is NOT nested BEGINs (there are none) and NOT dirty reads (the dedicated read client
@@ -119,6 +149,8 @@ export interface LibSqlDriverOptions {
 	 * the second writer, which are the two properties this driver exists to get right.
 	 */
 	dbPath?: string
+	/** Statement-duration report threshold, ms. Defaults to {@link SLOW_STATEMENT_REPORT_MS}; tests lower it. */
+	slowStatementReportMs?: number
 }
 
 /**
@@ -184,6 +216,9 @@ export class LibSqlDriver extends LibSqlDatabaseDriver {
 		const read = openClient(this.#url)
 		this.#writeClient = write.client
 		this.#readClient = read.client
+		const slowMs = options.slowStatementReportMs ?? SLOW_STATEMENT_REPORT_MS
+		reportSlowStatements(this.#writeClient, 'write', slowMs)
+		reportSlowStatements(this.#readClient, 'read', slowMs)
 		this.#pragmasReady = Promise.all([write.ready, read.ready])
 		// Keep the rejection observable via `await this.#pragmasReady` (in transaction()) without
 		// also tripping the unhandled-rejection warning before the first write happens.

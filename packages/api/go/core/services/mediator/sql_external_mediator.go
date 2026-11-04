@@ -307,7 +307,7 @@ func (m *SqlExternalMediator) claim(ctx context.Context, names []string) ([]outb
 	}
 	updateArgs = append(updateArgs, integrationClaimBatch)
 
-	if _, err = tx.ExecContext(ctx, fmt.Sprintf(
+	res, err := tx.ExecContext(ctx, fmt.Sprintf(
 		`UPDATE shared_outbox
 		 SET claimed_by = ?, lease_until = ?
 		 WHERE id IN (
@@ -318,8 +318,14 @@ func (m *SqlExternalMediator) claim(ctx context.Context, names []string) ([]outb
 		       AND name IN (%s)
 		     ORDER BY created_at
 		     LIMIT ?
-		 )`, nameIn), updateArgs...); err != nil {
+		 )`, nameIn), updateArgs...)
+	if err != nil {
 		return nil, fmt.Errorf("claim update: %w", err)
+	}
+	// Nothing claimed (the common idle poll): skip the read-back and let the deferred
+	// Rollback release the write lock now — see SqliteOutboxDispatcher.claim.
+	if won, raErr := res.RowsAffected(); raErr == nil && won == 0 {
+		return nil, nil
 	}
 
 	rows, err := tx.QueryContext(ctx,
