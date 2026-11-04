@@ -1,3 +1,6 @@
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { injectable } from 'tsyringe-neo'
 import { z, type ZodType } from 'zod'
 import { AgentModelId, AgentStopReason, PermissionPosture, StopKind } from '@codm/contracts-typescript/wire/enums'
@@ -91,6 +94,8 @@ export interface ClaudeBuildArgsOptions {
 	caps: ProviderCapabilities
 	/** Which permission regime this spawn runs under — looked up in `CLAUDE_PERMISSION_ARGS`. */
 	posture: PermissionPosture
+	/** A file holding the agent's standing instructions (`--append-system-prompt-file`), when there is one. */
+	systemPromptFile?: string
 }
 
 /**
@@ -179,6 +184,10 @@ export class ClaudeAgentRunner extends AgentRunner {
 			'--include-partial-messages': 'partialMessages',
 			'--mcp-config': 'mcpConfig',
 			'--resume': 'sessionResume',
+			// The ONLY spelling of the file variant that `--help` prints (2.1.318): it has no option line of
+			// its own, just this bracketed form in the prose. A build whose help does not say it is not
+			// trusted to take the flag — the fallback (folding the prompt into the turn) still works.
+			'--append-system-prompt[-file]': 'appendSystemPromptFile',
 		},
 	}
 
@@ -272,7 +281,16 @@ export class ClaudeAgentRunner extends AgentRunner {
 	 *  - `--session-id` / `--resume` delete transcript re-sending. Multi-turn context is the CLI's own
 	 *    session; re-rendering the transcript into the prompt is only the fallback for a CLI without it.
 	 */
-	static buildArgs({ model, extraDirs, resumeSessionId, newSessionId, mcp, caps, posture }: ClaudeBuildArgsOptions): string[] {
+	static buildArgs({
+		model,
+		extraDirs,
+		resumeSessionId,
+		newSessionId,
+		mcp,
+		caps,
+		posture,
+		systemPromptFile,
+	}: ClaudeBuildArgsOptions): string[] {
 		const args = ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose']
 
 		// Capability-gated, NOT version-gated: an older build without the flag would abort on an
@@ -300,6 +318,9 @@ export class ClaudeAgentRunner extends AgentRunner {
 			args.push('--allowedTools', mcp.allowedTools.join(','))
 		}
 
+		// Handed in only when the probe saw the flag AND the file was written — `run` decides both.
+		if (systemPromptFile) args.push('--append-system-prompt-file', systemPromptFile)
+
 		// Last: headless `-p` has no TTY to render a permission prompt on, so the mode is settled here at
 		// spawn — by the POSTURE of whoever triggered the turn, through the table above.
 		args.push(...CLAUDE_PERMISSION_ARGS[posture])
@@ -319,6 +340,13 @@ export class ClaudeAgentRunner extends AgentRunner {
 		// is indistinguishable from a field to a grep.
 		const accumulator = new StreamJsonToTurnFactAccumulator({})
 
+		// THE STANDING PROMPT GOES ONCE, AS A SYSTEM PROMPT — when this build can take it from a file.
+		// Folded into the turn instead, a resumed session piled up one copy per turn: measured 04/11, 95% of
+		// the prompt lines an orchestrator turn sent were already in its session. Absent (no capability, or
+		// the write failed) ⇒ it is folded into the turn as before, which is still correct, just dearer.
+		const promptFile =
+			request.systemPrompt && request.caps?.appendSystemPromptFile ? await writeSystemPromptFile(request.systemPrompt, warn) : undefined
+
 		const args = ClaudeAgentRunner.buildArgs({
 			model: request.model,
 			cwd: request.cwd,
@@ -328,6 +356,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 			mcp: request.mcp,
 			caps: request.caps ?? {},
 			posture: request.posture,
+			systemPromptFile: promptFile?.path,
 		})
 		const cmd = [request.binaryPath, ...args]
 
@@ -340,6 +369,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 				env: { CLAUDE_CODE_AUTO_COMPACT_WINDOW: String(this.autoCompactWindow) },
 			})
 		} catch (cause) {
+			await promptFile?.remove()
 			// Even a spawn that fails synchronously must arrive as the terminal event, not as a throw —
 			// the consumer's drain loop is the only place it can be handled uniformly.
 			yield {
@@ -382,7 +412,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 		request.signal?.addEventListener('abort', onAbort, { once: true })
 
 		try {
-			proc.write(renderStreamJsonStdin(request))
+			proc.write(renderStreamJsonStdin(request, { foldSystemPrompt: promptFile === undefined }))
 
 			const iterator = proc.stdout[Symbol.asyncIterator]()
 			let pending: Promise<IteratorResult<Uint8Array | string>> | null = null
@@ -527,6 +557,8 @@ export class ClaudeAgentRunner extends AgentRunner {
 			request.signal?.removeEventListener('abort', onAbort)
 			this.live.delete(proc)
 			proc.kill()
+			// The CLI read it at startup; it is the run's own scratch and dies with the run.
+			await promptFile?.remove()
 			// REVOKE — the runner is the ONLY caller (§4.4), because it is the only layer that knows the
 			// process died, and it knows for every ending: clean finish, transport failure, watchdog and
 			// cancellation all pass through this `finally`. A late tool call from a dead run then gets 401
@@ -747,14 +779,15 @@ function structuredOutputDirective(schema: ZodType): string {
  * Several messages are the SAME live turn, not several turns — which is exactly why stdin is a stream
  * and not an argument, and why closing it is a decision rather than a formality.
  *
- * The system prompt is PREPENDED to the first line rather than passed as a flag, and that is a
- * deliberate limit rather than an oversight: sending it as its own line would make it a separate user
- * turn, which is not what it is. When a system-prompt flag is adopted, it lands in `buildArgs` — as
- * argv, not as a second stdin line.
+ * The system prompt normally goes as `--append-system-prompt-file` (see `run`) and is NOT folded here.
+ * Only on a build without that flag is it PREPENDED to the first line — never its own line, which
+ * would make it a separate user turn, which is not what it is.
  */
-function renderStreamJsonStdin(request: AgentRunRequest<ZodType | undefined>): string {
+function renderStreamJsonStdin(request: AgentRunRequest<ZodType | undefined>, { foldSystemPrompt }: { foldSystemPrompt: boolean }): string {
 	const contents = request.messages.map(m => m.content)
-	if (request.systemPrompt) contents[0] = contents[0] ? `${request.systemPrompt}\n\n${contents[0]}` : request.systemPrompt
+	if (foldSystemPrompt && request.systemPrompt) {
+		contents[0] = contents[0] ? `${request.systemPrompt}\n\n${contents[0]}` : request.systemPrompt
+	}
 	// The structured-output directive rides on the LAST line of the turn, for the recency reason stated
 	// on `structuredOutputDirective`. A line of its own would still be the same turn (stdin stays open
 	// until the terminal frame), but it would read as a separate user message rather than as part of
@@ -766,6 +799,27 @@ function renderStreamJsonStdin(request: AgentRunRequest<ZodType | undefined>): s
 		else contents[last] = `${contents[last]}\n\n${directive}`
 	}
 	return contents.map(content => `${JSON.stringify({ type: 'user', message: { role: 'user', content } })}\n`).join('')
+}
+
+/**
+ * Write the standing prompt to a private, per-run temp file — or report why not and let the run fold it.
+ *
+ * A directory of its own per run (not a shared name) because concurrent runs must never read each
+ * other's instructions; mode 0600 because the text can carry the operator's custom prompt.
+ */
+async function writeSystemPromptFile(
+	text: string,
+	warn: (message: string) => void,
+): Promise<{ path: string; remove: () => Promise<void> } | undefined> {
+	try {
+		const dir = await mkdtemp(join(tmpdir(), 'codm-prompt-'))
+		const path = join(dir, 'system.md')
+		await writeFile(path, text, { mode: 0o600 })
+		return { path, remove: () => rm(dir, { recursive: true, force: true }) }
+	} catch (cause) {
+		warn(`could not write the system prompt file — folding it into the turn instead: ${String(cause)}`)
+		return undefined
+	}
 }
 
 async function drainToStrings(stream: AsyncIterable<Uint8Array | string>, sink: string[]): Promise<void> {

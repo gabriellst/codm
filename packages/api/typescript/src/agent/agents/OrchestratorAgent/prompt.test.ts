@@ -149,12 +149,35 @@ describe('OrchestratorPromptBuilder', () => {
 		expect(system).toContain('Reply in Brazilian Portuguese')
 	})
 
-	it('(a) an OPERATOR_MESSAGE turn in a GROUP renders QUOTING, carrying the consumed item id', () => {
-		const system = builder.system(operatorTurn())
+	/**
+	 * THE STANDING HALF IS THE SAME TEXT ON EVERY TURN — and that is a cost invariant, not tidiness.
+	 *
+	 * `system()` travels as the CLI's own system prompt (`--append-system-prompt-file`), which sits BEFORE
+	 * the conversation in the cached prefix. One byte of difference between two turns of the same session
+	 * re-writes the cache of the WHOLE context — 200k tokens at the write price, to change one id. So
+	 * everything that varies per turn (the live item, the open stops, who asked) belongs to `user()`.
+	 * FALSIFIER: move `quoting()` or `stops()` back into `system()` and this goes red.
+	 */
+	it('(s0) system() is byte-identical across turns of one conversation — the live item, the stops and the clock live in user()', () => {
+		const first = builder.system(operatorTurn())
+		const turns = [
+			operatorTurn({ item: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: REF_B, speaker: 'Rui', text: 'e agora?' } }),
+			issueResultTurn(),
+			operatorTurn({
+				openStops: [{ stopId: '00000000-0000-4000-8000-000000000009', kind: StopKind.APPROVAL_NEEDED, title: 'Publicar?', detail: '' }],
+			}),
+			operatorTurn({ posture: PermissionPosture.BYPASS, now: new Date('2026-08-07T10:00:00.000Z') }),
+			operatorTurn({ window: { seeded: false, entries: [windowEntry()] } }),
+		]
+		for (const turn of turns) expect(builder.system(turn)).toBe(first)
+	})
 
-		expect(system).toContain('QUOTING')
+	it('(a) an OPERATOR_MESSAGE turn in a GROUP renders QUOTING with the turn, carrying the consumed item id', () => {
+		const user = builder.user(operatorTurn())
+
+		expect(user).toContain('QUOTING')
 		// The id the model is allowed to cite is the one it was just handed — never an arbitrary entry.
-		expect(system).toContain('[quote: 00000000-0000-4000-8000-0000000000dd]')
+		expect(user).toContain('[quote: 00000000-0000-4000-8000-0000000000dd]')
 	})
 
 	/**
@@ -164,10 +187,15 @@ describe('OrchestratorPromptBuilder', () => {
 	 * emit a sentinel that the use case then has to fight.
 	 */
 	it('(b) an ISSUE_RESULT turn renders NO quoting policy', () => {
-		const system = builder.system(issueResultTurn())
+		const turn = issueResultTurn()
+		const both = `${builder.system(turn)}\n${builder.user(turn)}`
 
-		expect(system).not.toContain('QUOTING')
-		expect(system).not.toContain('[quote:')
+		expect(both).not.toContain('QUOTING')
+		// No citable id is handed out. (The turn itself says NOT to write a `[quote: …]` line — that
+		// prohibition is the point of an ISSUE_RESULT turn, so the bare token is not what is asserted.)
+		expect(both).not.toMatch(/\[quote: [0-9a-f-]{36}\]/)
+		// …and the standing legend does not point at a section this turn does not have.
+		expect(builder.system(turn)).not.toContain('see QUOTING')
 	})
 
 	it('(c) a 1:1 conversation does not render the group paragraph', () => {
@@ -453,11 +481,10 @@ describe('OrchestratorPromptBuilder', () => {
 		expect(user).toContain(`ref="${REF_A}"`)
 		expect(user).toContain(`ref="${REF_B}"`)
 
-		// The system half tells the model the ref is what it cites, and still spells out the live one as
-		// the default — a model made to hunt for a value invents one.
-		const system = builder.system(turn)
-		expect(system).toContain('ref attribute')
-		expect(system).toContain(`[quote: ${LIVE_REF}]`)
+		// QUOTING tells the model the ref is what it cites, and still spells out the live one as the default
+		// — a model made to hunt for a value invents one.
+		expect(user).toContain('ref attribute')
+		expect(user).toContain(`[quote: ${LIVE_REF}]`)
 	})
 
 	/**
@@ -677,20 +704,21 @@ describe('OrchestratorPromptBuilder', () => {
 	]
 
 	it('(j) AC-4 — the open stops are rendered with their issue, kind and the question that was asked', () => {
-		const system = builder.system(operatorTurn({ openStops: stops }))
+		// With the TURN, not the standing prompt: the list changes between turns, see (s0).
+		const user = builder.user(operatorTurn({ openStops: stops }))
 
-		expect(system).toContain('UNANSWERED QUESTIONS')
+		expect(user).toContain('UNANSWERED QUESTIONS')
 		for (const stop of stops) {
 			// The id is what `ResolveStop` is called with — a listed question the model cannot name is a
 			// question it cannot close.
-			expect(system).toContain(stop.stopId)
-			expect(system).toContain(stop.kind)
+			expect(user).toContain(stop.stopId)
+			expect(user).toContain(stop.kind)
 			// `title` + `detail` ARE "o que foi perguntado" — the two columns the stop actually has.
-			expect(system).toContain(stop.title)
-			expect(system).toContain(stop.detail)
+			expect(user).toContain(stop.title)
+			expect(user).toContain(stop.detail)
 		}
 		// The issue waiting on the answer, so the steer can be aimed. Only the first stop has one.
-		expect(system).toContain('00000000-0000-4000-8000-000000000002')
+		expect(user).toContain('00000000-0000-4000-8000-000000000002')
 	})
 
 	/**
@@ -700,10 +728,10 @@ describe('OrchestratorPromptBuilder', () => {
 	 * narrates a call it cannot make, which is the failure `issues()` documents.
 	 */
 	it('(k) AC-4 — resolving and steering are named by the controller class, never typed out', () => {
-		const system = builder.system(operatorTurn({ openStops: stops }))
+		const user = builder.user(operatorTurn({ openStops: stops }))
 
-		expect(system).toContain(toolNameOf(ResolveStopController))
-		expect(system).toContain(toolNameOf(SteerIssueTurnController))
+		expect(user).toContain(toolNameOf(ResolveStopController))
+		expect(user).toContain(toolNameOf(SteerIssueTurnController))
 	})
 
 	/**
@@ -712,10 +740,11 @@ describe('OrchestratorPromptBuilder', () => {
 	 * how it starts asking the operator to confirm things nobody asked about.
 	 */
 	it('(l) AC-4 — a thread with nothing open renders no section at all', () => {
-		const system = builder.system(operatorTurn())
+		const turn = operatorTurn()
+		const both = `${builder.system(turn)}\n${builder.user(turn)}`
 
-		expect(system).not.toContain('UNANSWERED QUESTIONS')
-		expect(system).not.toContain(toolNameOf(ResolveStopController))
+		expect(both).not.toContain('UNANSWERED QUESTIONS')
+		expect(both).not.toContain(toolNameOf(ResolveStopController))
 	})
 
 	/**
@@ -849,10 +878,10 @@ describe('OrchestratorPromptBuilder — who may approve (Decision 13)', () => {
 	})
 
 	it('lets an answer from someone with libera resolve a stop, and says an answer without it does not', () => {
-		const system = builder.system(operatorTurn({ openStops: [openStop] }))
+		const user = builder.user(operatorTurn({ openStops: [openStop] }))
 
-		expect(system).toContain('If the message you are answering comes from the operator, or someone with libera, and answers one of these')
-		expect(system).toContain('An answer from someone without libera does not resolve a stop')
+		expect(user).toContain('If the message you are answering comes from the operator, or someone with libera, and answers one of these')
+		expect(user).toContain('An answer from someone without libera does not resolve a stop')
 	})
 
 	it('leaves a one-to-one exactly as it was: no attribute, no section, the operator alone', () => {
@@ -863,7 +892,9 @@ describe('OrchestratorPromptBuilder — who may approve (Decision 13)', () => {
 		expect(system).not.toContain('WHO MAY APPROVE')
 		expect(system).not.toContain('libera')
 		expect(system).toContain('An issue is something the operator asks for OUT LOUD')
-		expect(system).toContain('If the message you are answering comes from the operator and answers one of these')
+		expect(builder.user(operatorTurn(direct))).toContain(
+			'If the message you are answering comes from the operator and answers one of these',
+		)
 		expect(user).not.toContain('libera')
 	})
 })

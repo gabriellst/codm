@@ -58,6 +58,14 @@ describe('AC-1.1 — ClaudeAgentRunner.buildArgs produces EXACTLY the spec argv'
 		])
 	})
 
+	it('--append-system-prompt-file appears ONLY when a file is handed in, followed by its path', () => {
+		const withFile = ClaudeAgentRunner.buildArgs(opts({ systemPromptFile: '/tmp/codm-prompt-x/system.md' }))
+		const without = ClaudeAgentRunner.buildArgs(opts())
+		const at = withFile.indexOf('--append-system-prompt-file')
+		expect(withFile.slice(at, at + 2)).toEqual(['--append-system-prompt-file', '/tmp/codm-prompt-x/system.md'])
+		expect(without).not.toContain('--append-system-prompt-file')
+	})
+
 	it('--include-partial-messages appears ONLY when caps.partialMessages', () => {
 		const withCap = ClaudeAgentRunner.buildArgs(opts({ caps: { partialMessages: true } }))
 		const withoutCap = ClaudeAgentRunner.buildArgs(opts({ caps: {} }))

@@ -191,7 +191,9 @@ describe('RunOrchestratorTurn — the cues the turn is responsible for lighting'
 			// Before the resolve below, always: a Handler captures its collaborators at RESOLVE time.
 			testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(runner))
 			await runTurn(thread)
-			return runner.requests[0]?.systemPrompt ?? ''
+			// The ASSEMBLED prompt, both halves: the stops are per turn, so they ride with the message.
+			const request = runner.requests[0]
+			return [request?.systemPrompt ?? '', ...(request?.messages ?? []).map(m => m.content)].join('\n')
 		}
 
 		it('a thread with 2 open stops hands the model both — with the issue, the kind and the question', async () => {

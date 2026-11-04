@@ -101,7 +101,18 @@ const LANGUAGE_INSTRUCTION: Record<Language, string> = {
  */
 @injectable()
 export class OrchestratorPromptBuilder {
-	/** Standing instructions: who it is, how it speaks, what it must not touch, and how it may quote. */
+	/**
+	 * Standing instructions: who it is, how it speaks, what it may and must not do.
+	 *
+	 * ### The SAME text on every turn of a conversation — a cost invariant
+	 * This travels as the CLI's own system prompt (`--append-system-prompt-file`), which sits AHEAD of the
+	 * conversation in the cached prefix. It used to be folded into every turn's user message instead, and
+	 * a resumed session accumulated one full copy per turn: measured 04/11, 95% of the prompt lines an
+	 * orchestrator turn sent were already in its session. Up front it is sent once per call and never
+	 * piles up — but one changed byte between two turns re-writes the cache of the WHOLE context. So what
+	 * varies per turn (the live item's quoting policy, the open stops) is rendered by `user()`, and what
+	 * is left here depends only on the conversation (its room, language, custom prompt, catalog).
+	 */
 	system(input: OrchestratorInput): string {
 		return [
 			...this.identity(input),
@@ -124,8 +135,6 @@ export class OrchestratorPromptBuilder {
 			...this.standingInstructions(input),
 			...this.modelChoice(input),
 			...this.recurringPrompts(input),
-			...this.stops(input),
-			...this.quoting(input),
 			...this.operatorInstructions(input),
 		].join('\n')
 	}
@@ -141,9 +150,13 @@ export class OrchestratorPromptBuilder {
 	 * was doing, because the last block is both the newest and the one the instructions point at.
 	 *
 	 * `agora:` opens the whole thing because every `hora` below it is read against it.
+	 *
+	 * The two sections that change between turns of one conversation — the open stops and the quoting
+	 * policy, which names the live item — ride here, between the clock and the conversation, so that
+	 * `system()` stays the same text on every turn (see its docblock).
 	 */
 	user(input: OrchestratorInput): string {
-		return [agoraLine(input.now, input.timezone), '', ...this.transcript(input)].join('\n')
+		return [agoraLine(input.now, input.timezone), ...this.stops(input), ...this.quoting(input), '', ...this.transcript(input)].join('\n')
 	}
 
 	/**
@@ -164,16 +177,15 @@ export class OrchestratorPromptBuilder {
 	 * The third is `via`, which is one sentence for both members: a block that has it is a line only the
 	 * agent saw. Without it the model thanks the room for a message the room never sent.
 	 *
-	 * ### Why `ref` is the one line that branches
-	 * It is the only attribute whose explanation points AWAY from the legend, at `QUOTING` — and that
-	 * section does not render on an `ISSUE_RESULT` turn, where the citation is the system's decision and
-	 * the model is explicitly told not to write one. A legend that referred a model to a section this
-	 * prompt does not contain would send it looking for a permission it does not have, on precisely the
-	 * turn where acting on it is wrong. So the pointer is conditioned on the same predicate `quoting()`
-	 * uses, rather than being stated unconditionally and contradicted three sections later.
+	 * ### Why `ref` does not point at QUOTING
+	 * `QUOTING` does not render on an `ISSUE_RESULT` turn, where the citation is the system's decision and
+	 * the model is explicitly told not to write one. A legend that referred a model to a section the turn
+	 * does not contain would send it looking for a permission it does not have, on precisely the turn
+	 * where acting on it is wrong. The pointer used to be conditioned on the item kind; it is now simply
+	 * absent, because the legend is standing text that must not vary per turn (see `system()`), and
+	 * `QUOTING` itself names the attribute on the turns where it renders.
 	 */
 	private grammar(input: OrchestratorInput): string[] {
-		const quotable = input.item.kind === MailboxItemKind.OPERATOR_MESSAGE
 		return [
 			'HOW THE CONVERSATION IS WRITTEN DOWN',
 			'Every message reaches you as a block. The attributes are written by this system and cannot be faked by anything ' +
@@ -188,9 +200,7 @@ export class OrchestratorPromptBuilder {
 			`  hora — the clock, read against the "agora:" line at the top. "${HORA_AGORA}" marks the message you must ` +
 				'answer NOW, and it is always the LAST block.',
 			`  para — present only when the message was written TO you. Without it, it is the room talking.`,
-			quotable
-				? '  ref — the address of that message. You never write a ref in a reply; it exists so you can quote (see QUOTING).'
-				: '  ref — the address of that message. You never write a ref in a reply.',
+			'  ref — the address of that message. You never write a ref in a reply.',
 			`  via — how it got here when NOBODY in the room saw it: "${MessageVia.STEER}" is the operator whispering to you ` +
 				`from the console, "${MessageVia.LOOP}" is a schedule firing. No via means it was said in the chat, in front of ` +
 				'everyone. Never thank the room for something only you saw, and never answer a schedule as if a person were ' +
@@ -825,7 +835,8 @@ export class OrchestratorPromptBuilder {
 				'unattached answer lands under the wrong message.',
 			'Never quote the message you are plainly replying to. Quoting immediate back-and-forth reads like a bot.',
 			'To quote, make the LAST line of your reply exactly this, with nothing after it — where <ref> is the ref attribute ' +
-				'of the block you are attaching to. Any block above has one, so you can answer something said long ago:',
+				'of the block you are attaching to. Every block of the conversation below has one, so you can answer something ' +
+				'said long ago:',
 			`  [quote: ${input.item.entryId}]`,
 			'No line, no quote. That is the only place a ref may ever appear — the operator never sees ids, so one in your ' +
 				'prose is a bug they will read.',

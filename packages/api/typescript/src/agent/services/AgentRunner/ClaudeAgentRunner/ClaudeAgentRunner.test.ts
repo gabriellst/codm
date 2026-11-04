@@ -7,6 +7,7 @@
  * early), and the inactivity watchdog backstop.
  */
 import { describe, it, expect } from 'bun:test'
+import { existsSync, readFileSync } from 'node:fs'
 import { PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { z } from 'zod'
 import { MockLoggingService } from '@codm/core-typescript'
@@ -387,6 +388,39 @@ describe('ClaudeAgentRunner — structured output NEVER throws mid-drain (AC-2.3
 		const finished = (await drain(makeRunner(spawner).run(request()))).at(-1)
 
 		expect(finished).toMatchObject({ type: 'finished', result: { failed: false } })
+	})
+})
+
+describe('ClaudeAgentRunner — o prompt de sistema vai uma vez, como prompt de sistema', () => {
+	const STANDING = 'REGRAS-DA-CASA: responda curto.'
+
+	it('with the capability, the standing prompt goes as a file the CLI reads, and never into the turn', async () => {
+		const fake = fakeSpawner([INIT, TEXT, RESULT])
+		let atSpawn: { flag?: string; path?: string; content?: string } = {}
+		const spawner = (spec: AgentProcessSpec): AgentProcess => {
+			const at = spec.cmd.indexOf('--append-system-prompt-file')
+			const path = spec.cmd[at + 1]
+			atSpawn = { flag: spec.cmd[at], path, content: path && existsSync(path) ? readFileSync(path, 'utf8') : undefined }
+			return fake.spawner(spec)
+		}
+
+		await drain(makeRunner(spawner).run(request({ systemPrompt: STANDING, caps: { appendSystemPromptFile: true } })))
+
+		expect(atSpawn.flag).toBe('--append-system-prompt-file')
+		expect(atSpawn.content).toBe(STANDING)
+		// The whole point: a resumed session no longer piles up one copy of it per turn.
+		expect(fake.process().writes.join('')).not.toContain(STANDING)
+		// A per-run temp file, gone once the run is over.
+		expect(atSpawn.path && existsSync(atSpawn.path)).toBe(false)
+	})
+
+	it('without it, the standing prompt is folded into the turn exactly as before', async () => {
+		const fake = fakeSpawner([INIT, TEXT, RESULT])
+
+		await drain(makeRunner(fake.spawner).run(request({ systemPrompt: STANDING, caps: {} })))
+
+		expect(fake.process().spec.cmd).not.toContain('--append-system-prompt-file')
+		expect(fake.process().writes.join('')).toContain(STANDING)
 	})
 })
 
