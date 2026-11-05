@@ -1,12 +1,14 @@
 import { injectable } from 'tsyringe-neo'
 import { DAEMON_BOOT, isClaimOrphaned } from '@codm/core-typescript'
 import type { MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
-import { MailboxRepository, type ClaimedMailboxItem, type EnqueueMailboxItem } from './MailboxRepository'
+import { MailboxRepository, type ClaimedMailboxItem, type DeferredMailboxItem, type EnqueueMailboxItem } from './MailboxRepository'
 
 interface Row extends EnqueueMailboxItem {
 	id: string
 	attempts: number
 	leaseUntil?: number
+	/** Who holds the lease — `null` for a row nobody claimed, and for a pause (`defer` drops the holder). */
+	claimedBy: string | null
 	/** WHICH RUN of the daemon holds the lease — the twin of `claimed_boot` / `claimed_pid`. */
 	claimedBoot: string | null
 	claimedPid: number | null
@@ -28,6 +30,7 @@ export class MockMailboxRepository extends MailboxRepository {
 			...item,
 			id: crypto.randomUUID(),
 			attempts: 0,
+			claimedBy: null,
 			claimedBoot: null,
 			claimedPid: null,
 			consumed: false,
@@ -50,9 +53,9 @@ export class MockMailboxRepository extends MailboxRepository {
 		if (!row) return undefined
 		row.attempts += 1
 		row.leaseUntil = now + leaseMs
+		row.claimedBy = claimedBy
 		row.claimedBoot = DAEMON_BOOT.id
 		row.claimedPid = DAEMON_BOOT.pid
-		void claimedBy
 		return {
 			id: row.id,
 			ownerId: row.ownerId,
@@ -77,6 +80,7 @@ export class MockMailboxRepository extends MailboxRepository {
 		)
 		for (const row of orphaned) {
 			row.leaseUntil = undefined
+			row.claimedBy = null
 			row.claimedBoot = null
 			row.claimedPid = null
 		}
@@ -88,6 +92,7 @@ export class MockMailboxRepository extends MailboxRepository {
 		if (row) {
 			row.consumed = true
 			row.leaseUntil = undefined
+			row.claimedBy = null
 			row.claimedBoot = null
 			row.claimedPid = null
 		}
@@ -97,6 +102,7 @@ export class MockMailboxRepository extends MailboxRepository {
 		const row = this.rows.find(r => r.id === id)
 		if (!row) return
 		row.leaseUntil = undefined
+		row.claimedBy = null
 		row.claimedBoot = null
 		row.claimedPid = null
 		if (row.attempts >= maxAttempts) row.dead = true
@@ -106,9 +112,29 @@ export class MockMailboxRepository extends MailboxRepository {
 		const row = this.rows.find(r => r.id === id)
 		if (!row || row.consumed || row.dead) return
 		row.leaseUntil = until.getTime()
+		row.claimedBy = null
 		row.claimedBoot = null
 		row.claimedPid = null
 		row.attempts = Math.max(row.attempts - 1, 0)
+	}
+
+	/** Same predicate as the SQL twin's `deferredAt`: runnable, no holder, lease in the future. */
+	private isDeferred(row: Row, now: number): boolean {
+		return !row.consumed && !row.dead && row.claimedBy === null && row.leaseUntil !== undefined && row.leaseUntil >= now
+	}
+
+	async deferred(): Promise<DeferredMailboxItem[]> {
+		const now = Date.now()
+		return this.rows
+			.filter(r => this.isDeferred(r, now))
+			.map(r => ({ id: r.id, targetKind: r.targetKind, targetId: r.targetId, payload: r.payload }))
+	}
+
+	async releaseDeferred(ids: readonly string[]): Promise<number> {
+		const now = Date.now()
+		const released = this.rows.filter(r => ids.includes(r.id) && this.isDeferred(r, now))
+		for (const row of released) row.leaseUntil = undefined
+		return released.length
 	}
 
 	async pendingTargets(targetKind: MailboxTargetKind): Promise<string[]> {

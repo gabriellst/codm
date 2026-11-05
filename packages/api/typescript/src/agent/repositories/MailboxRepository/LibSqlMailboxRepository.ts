@@ -1,15 +1,25 @@
 import { injectable } from 'tsyringe-neo'
-import { and, asc, eq, inArray, isNotNull, isNull, lt, ne, notExists, or, sql } from 'drizzle-orm'
+import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, ne, notExists, or, sql } from 'drizzle-orm'
 import { DAEMON_BOOT, isClaimOrphaned, LibSqlDatabaseDriver, LibSqlTransaction } from '@codm/core-typescript'
 import { agentMailbox } from '@codm/contracts/db'
 import type { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
-import { MailboxRepository, type ClaimedMailboxItem, type EnqueueMailboxItem } from './MailboxRepository'
+import { MailboxRepository, type ClaimedMailboxItem, type DeferredMailboxItem, type EnqueueMailboxItem } from './MailboxRepository'
 
 /** Runnable = not consumed, not poisoned. */
 const runnable = () => and(isNull(agentMailbox.consumedAt), isNull(agentMailbox.deadAt))
 
 /** Unleased = never claimed, or the lease has expired (the crash budget). */
 const unleased = (now: Date) => or(isNull(agentMailbox.leaseUntil), lt(agentMailbox.leaseUntil, now))
+
+/**
+ * Deferred = runnable, NO holder, lease not yet expired — the state only `defer` writes (see the port's
+ * docblock for the census of every lease writer). Shared by the select and the UPDATE of the release, so
+ * the two can never disagree about what a pause is.
+ *
+ * `>=`, the exact complement of `unleased`'s `<` and the same bound as `claimNext`'s `busy`: at the
+ * instant the lease ends, the item is still paused and not yet claimable — never neither.
+ */
+const deferredAt = (now: Date) => and(runnable(), isNull(agentMailbox.claimedBy), gte(agentMailbox.leaseUntil, now))
 
 @injectable()
 export class LibSqlMailboxRepository extends MailboxRepository {
@@ -231,6 +241,36 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 				})
 				.where(and(eq(agentMailbox.id, id), runnable())),
 		)
+	}
+
+	async deferred(tx?: LibSqlTransaction): Promise<DeferredMailboxItem[]> {
+		const dbc = tx ?? this.driver.db
+		const rows = await dbc
+			.select({
+				id: agentMailbox.id,
+				targetKind: agentMailbox.targetKind,
+				targetId: agentMailbox.targetId,
+				payload: agentMailbox.payload,
+			})
+			.from(agentMailbox)
+			.where(deferredAt(new Date()))
+		return rows.map(row => ({ ...row, targetKind: row.targetKind as MailboxTargetKind }))
+	}
+
+	/**
+	 * ONE UPDATE for the whole batch, with the predicate re-asserted beside the ids — see the port. An id
+	 * that was claimed since `deferred` read it now has a holder and simply does not match.
+	 */
+	async releaseDeferred(ids: readonly string[], tx?: LibSqlTransaction): Promise<number> {
+		if (ids.length === 0) return 0
+		const released = await this.write(tx, dbc =>
+			dbc
+				.update(agentMailbox)
+				.set({ leaseUntil: null })
+				.where(and(inArray(agentMailbox.id, [...ids]), deferredAt(new Date())))
+				.returning({ id: agentMailbox.id }),
+		)
+		return released.length
 	}
 
 	async pendingTargets(targetKind: MailboxTargetKind, tx?: LibSqlTransaction): Promise<string[]> {

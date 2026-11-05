@@ -7,6 +7,7 @@ import { MailboxItemKind, MailboxTargetKind, ProviderKind, AgentModelId, Permiss
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { CloudSession, MockCloudSession } from '@shared/services/CloudSession'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
+import { NotifyProviderPaused } from '@thread/usecases/NotifyProviderPaused'
 import { WorkspaceRepository } from '@workspace/repositories/WorkspaceRepository'
 import { AgentSessionRepository } from '../../repositories/AgentSessionRepository'
 import { MailboxRepository, type ClaimedMailboxItem } from '../../repositories/MailboxRepository'
@@ -284,7 +285,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 				turns.push(item.id)
 				await new Promise(resolve => setTimeout(resolve, 20))
 				inFlight -= 1
-				return { spoke: true }
+				return { spoke: true, provider: ProviderKind.CLAUDE_CODE }
 			}
 		}
 
@@ -338,11 +339,11 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 				issuesPeak = Math.max(issuesPeak, issuesInFlight)
 				await gate
 				issuesInFlight -= 1
-				return { spoke: true }
+				return { spoke: true, provider: ProviderKind.CLAUDE_CODE }
 			}
 			protected override async runThreadTurn(): Promise<TurnReport> {
 				threadStarted = true
-				return { spoke: true }
+				return { spoke: true, provider: ProviderKind.CLAUDE_CODE }
 			}
 		}
 
@@ -402,7 +403,11 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 		class LimitedDispatcher extends LibSqlMailboxDispatcher {
 			protected override async runThreadTurn(): Promise<TurnReport> {
 				calls += 1
-				return { spoke: false, transportStop: { detail: "You've hit your 5-hour limit", retryAfter: Date.now() + 10 * 60_000 } }
+				return {
+					spoke: false,
+					provider: ProviderKind.CLAUDE_CODE,
+					transportStop: { detail: "You've hit your 5-hour limit", retryAfter: Date.now() + 10 * 60_000 },
+				}
 			}
 		}
 		const dispatcher = new LimitedDispatcher(
@@ -441,6 +446,215 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 		expect(calls).toBe(1)
 		expect(await mailbox.hasPending(MailboxTargetKind.THREAD, second.id.value)).toBe(true)
 		expect(await notices()).toBe(2)
+	})
+
+	/** A thread message for `threadId` — the shape every limit-pause case below queues. */
+	const operatorMessage = (threadId: string, dedupKey: string) =>
+		testBed.resolve(MailboxRepository).enqueue({
+			ownerId: testBed.ownerId,
+			targetKind: MailboxTargetKind.THREAD,
+			targetId: threadId,
+			kind: MailboxItemKind.OPERATOR_MESSAGE,
+			posture: PermissionPosture.AUTO,
+			payload: { entryId: uuidv7() },
+			dedupKey,
+		})
+
+	const limitVerdict = (retryAfter: number): TurnReport => ({
+		spoke: false,
+		provider: ProviderKind.CLAUDE_CODE,
+		transportStop: { detail: "You've hit your weekly limit", retryAfter },
+	})
+
+	/**
+	 * A PAUSA É DA CONTA — e um turno aceito pelo mesmo provedor prova que a conta voltou (05/11/2026).
+	 *
+	 * O caso medido, como ele estava no disco: a conta do `claude` foi trocada por uma nova, outras issues
+	 * rodavam nela normalmente, e quatro itens seguiam pausados até 10/11 14:00 pelo limite semanal da
+	 * conta ANTIGA — pausas que uma execução anterior do daemon deixou, sem nada em memória sobre elas.
+	 * Aqui: um item pausado numa thread do claude, outro numa thread do codex, e uma mensagem nova que o
+	 * claude aceita. A pausa do claude tem que acabar ali, e o item ser atendido no MESMO drain; a do
+	 * codex fica, porque um turno aceito pelo claude não diz nada sobre a conta do codex.
+	 *
+	 * Falsificadores: tire a chamada que credita o turno aceito e o item pausado do claude não roda;
+	 * tire o filtro por provedor e o item do codex é solto junto.
+	 */
+	it('um turno aceito pelo MESMO provedor solta as pausas de limite que outra execução deixou — e só as dele', async () => {
+		const mailbox = testBed.resolve(MailboxRepository)
+		const pausedClaude = await givenThread(testBed)
+		const pausedCodex = await givenThread(testBed, { providers: [ProviderKind.CODEX] })
+		const fresh = await givenThread(testBed)
+		const ran: string[] = []
+
+		class AcceptingDispatcher extends LibSqlMailboxDispatcher {
+			protected override async runThreadTurn(item: ClaimedMailboxItem): Promise<TurnReport> {
+				ran.push(item.targetId)
+				return { spoke: true, provider: ProviderKind.CLAUDE_CODE }
+			}
+		}
+		const dispatcher = testBed.resolve(AcceptingDispatcher).bind(testContainer)
+
+		const weeklyReset = Date.now() + 5 * 24 * 60 * 60_000
+		for (const thread of [pausedClaude, pausedCodex]) {
+			await operatorMessage(thread.id.value, `pausado:${thread.id.value}`)
+			const claimed = await mailbox.claimNext('daemon-anterior', 60_000)
+			await mailbox.defer(claimed!.id, new Date(weeklyReset))
+		}
+		await operatorMessage(fresh.id.value, 'conta-nova')
+
+		await dispatcher.drain()
+
+		expect(ran).toEqual([fresh.id.value, pausedClaude.id.value])
+		expect((await mailbox.deferred()).map(item => item.targetId)).toEqual([pausedCodex.id.value])
+	})
+
+	/**
+	 * CONSUMIDO NÃO É ACEITO: um turno que falou e DEPOIS bateu no limite não prova nada sobre a conta.
+	 *
+	 * Ele é consumido via `complete` (já falou no grupo real; repetir duplicaria a mensagem), e é o mesmo
+	 * ramo por onde passa um turno aceito. A diferença é o veredito: o provedor disse "limite" no fim, então
+	 * creditá-lo soltaria a pausa justamente numa recusa. Só um turno que terminou sem parada de transporte
+	 * conta como evidência.
+	 *
+	 * Falsificador: troque o gate por "não foi descartado" (sem olhar a parada) e o item pausado roda.
+	 */
+	it('um turno que falou e depois bateu no limite é consumido, mas não solta pausa nenhuma', async () => {
+		const mailbox = testBed.resolve(MailboxRepository)
+		const paused = await givenThread(testBed)
+		const spokeThenLimited = await givenThread(testBed)
+		const ran: string[] = []
+
+		class SpokeThenLimitedDispatcher extends LibSqlMailboxDispatcher {
+			protected override async runThreadTurn(item: ClaimedMailboxItem): Promise<TurnReport> {
+				ran.push(item.targetId)
+				return {
+					spoke: true,
+					provider: ProviderKind.CLAUDE_CODE,
+					transportStop: { detail: "You've hit your weekly limit", retryAfter: Date.now() + 10 * 60_000 },
+				}
+			}
+		}
+		const dispatcher = testBed.resolve(SpokeThenLimitedDispatcher).bind(testContainer)
+
+		await operatorMessage(paused.id.value, 'pausado-antes')
+		const claimed = await mailbox.claimNext('daemon-anterior', 60_000)
+		await mailbox.defer(claimed!.id, new Date(Date.now() + 5 * 24 * 60 * 60_000))
+		await operatorMessage(spokeThenLimited.id.value, 'falou-e-bateu')
+
+		await dispatcher.drain()
+
+		expect(ran).toEqual([spokeThenLimited.id.value])
+		expect(await mailbox.hasPending(MailboxTargetKind.THREAD, spokeThenLimited.id.value)).toBe(false)
+		expect((await mailbox.deferred()).map(item => item.targetId)).toEqual([paused.id.value])
+	})
+
+	/**
+	 * EVIDÊNCIA MAIS VELHA QUE A RECUSA NÃO É EVIDÊNCIA.
+	 *
+	 * Um turno que COMEÇOU antes de a conta recusar e terminou depois pode ter feito a última chamada
+	 * antes do limite. Se ele soltasse a pausa, a fila voltaria a reivindicar, cada item seria recusado de
+	 * novo — e, com o `noticed` zerado, todo grupo receberia outra vez "atingi o limite". Aqui o turno
+	 * lento está em voo quando o outro volta recusado; quando o lento termina bem, a pausa fica.
+	 *
+	 * Falsificador: tire a comparação entre o início do turno e a recusa e o item recusado é reivindicado
+	 * de novo no mesmo drain (`refused` vira 2).
+	 */
+	it('um turno que começou ANTES da recusa e termina bem não solta a pausa', async () => {
+		const mailbox = testBed.resolve(MailboxRepository)
+		const slow = await givenThread(testBed)
+		const limited = await givenThread(testBed)
+		let refused = 0
+		let finishSlow = (): void => {}
+		const slowGate = new Promise<void>(resolve => {
+			finishSlow = resolve
+		})
+
+		class RaceDispatcher extends LibSqlMailboxDispatcher {
+			protected override async runThreadTurn(item: ClaimedMailboxItem): Promise<TurnReport> {
+				if (item.targetId === slow.id.value) {
+					await slowGate
+					return { spoke: true, provider: ProviderKind.CLAUDE_CODE }
+				}
+				refused += 1
+				return limitVerdict(Date.now() + 10 * 60_000)
+			}
+		}
+		const dispatcher = testBed.resolve(RaceDispatcher).bind(testContainer)
+
+		await operatorMessage(slow.id.value, 'lento')
+		await operatorMessage(limited.id.value, 'recusado')
+		const drained = dispatcher.drain()
+		try {
+			expect(await until(async () => (await mailbox.deferred()).length === 1, 2_000)).toBe(true)
+		} finally {
+			finishSlow()
+			await drained
+		}
+
+		expect(refused).toBe(1)
+		expect((await mailbox.deferred()).map(item => item.targetId)).toEqual([limited.id.value])
+	})
+
+	/**
+	 * O TETO (05/11/2026): um reset a dias de distância pausa no máximo `CODM_AGENT_LIMIT_RECHECK_MS`.
+	 *
+	 * Sem turno nenhum aceito — tudo pausado — nada dispara a liberação, e o único jeito de descobrir que
+	 * a conta mudou é perguntar de novo. A recusa é barata (volta na hora, sem tokens, sem tentativa), então
+	 * a pausa em memória E o lease do item passam a valer o menor entre o reset e o teto. O aviso à conversa
+	 * continua dizendo o reset que o provedor informou: o teto é quando a fila pergunta, não uma promessa.
+	 *
+	 * Falsificador: tire o `Math.min` do teto e o terceiro drain não reivindica nada (`calls` fica 1),
+	 * porque o lease e a pausa vão até o reset semanal.
+	 */
+	it('o teto: um reset a dias de distância só pausa até a próxima pergunta, e o aviso diz o reset real', async () => {
+		const mailbox = testBed.resolve(MailboxRepository)
+		const thread = await givenThread(testBed)
+		const weeklyReset = Date.now() + 5 * 24 * 60 * 60_000
+		let calls = 0
+		const told: Date[] = []
+
+		class CappedDispatcher extends LibSqlMailboxDispatcher {
+			protected override limitRecheckMs = 400
+			protected override providerPauseFloorMs = 0
+			protected override async runThreadTurn(): Promise<TurnReport> {
+				calls += 1
+				return limitVerdict(weeklyReset)
+			}
+		}
+		const spyContainer = testContainer.createChildContainer()
+		spyContainer.registerInstance(
+			NotifyProviderPaused as never,
+			{
+				bindContainer() {
+					return this
+				},
+				async execute(input: { until: Date }) {
+					told.push(input.until)
+					return { notified: true }
+				},
+			} as never,
+		)
+		const dispatcher = new CappedDispatcher(
+			mailbox,
+			testBed.resolve(ThreadRepository),
+			testBed.resolve(WorkspaceRepository),
+			testBed.resolve(AgentSessionRepository),
+			testBed.resolve(LoggingService),
+			testBed.resolve(CloudSession),
+		).bind(spyContainer)
+
+		await operatorMessage(thread.id.value, 'limite-semanal')
+		await dispatcher.drain()
+		await dispatcher.drain()
+		expect(calls).toBe(1)
+		expect(told.map(instant => instant.getTime())).toEqual([weeklyReset])
+
+		// Passado o teto, o lease do item e a pausa em memória acabaram juntos: a fila pergunta de novo.
+		expect(await until(async () => (await mailbox.deferred()).length === 0, 2_000)).toBe(true)
+		await dispatcher.drain()
+		expect(calls).toBe(2)
+		// …e perguntar de novo não é avisar de novo: a conversa já sabe desta pausa.
+		expect(told).toHaveLength(1)
 	})
 
 	/**
@@ -819,7 +1033,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 
 		class TransportFailingDispatcher extends LibSqlMailboxDispatcher {
 			protected override async runThreadTurn(): Promise<TurnReport> {
-				return { spoke: false, transportStop: { detail: 'provider unavailable' } }
+				return { spoke: false, provider: ProviderKind.CLAUDE_CODE, transportStop: { detail: 'provider unavailable' } }
 			}
 		}
 
@@ -891,7 +1105,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 
 		class SpokeThenDiedDispatcher extends LibSqlMailboxDispatcher {
 			protected override async runThreadTurn(): Promise<TurnReport> {
-				return { spoke: true, transportStop: { detail: 'died after speaking' } }
+				return { spoke: true, provider: ProviderKind.CLAUDE_CODE, transportStop: { detail: 'died after speaking' } }
 			}
 		}
 
@@ -1076,7 +1290,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 
 		class NoopTurnDispatcher extends LibSqlMailboxDispatcher {
 			protected override async runThreadTurn(): Promise<TurnReport> {
-				return { spoke: true }
+				return { spoke: true, provider: ProviderKind.CLAUDE_CODE }
 			}
 		}
 		const dispatcher = new NoopTurnDispatcher(
