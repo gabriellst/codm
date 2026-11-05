@@ -472,18 +472,21 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 	 * O caso medido, como ele estava no disco: a conta do `claude` foi trocada por uma nova, outras issues
 	 * rodavam nela normalmente, e quatro itens seguiam pausados até 10/11 14:00 pelo limite semanal da
 	 * conta ANTIGA — pausas que uma execução anterior do daemon deixou, sem nada em memória sobre elas.
-	 * Aqui: um item pausado numa thread do claude, outro numa thread do codex, e uma mensagem nova que o
-	 * claude aceita. A pausa do claude tem que acabar ali, e o item ser atendido no MESMO drain; a do
-	 * codex fica, porque um turno aceito pelo claude não diz nada sobre a conta do codex.
+	 * Aqui: uma ISSUE pausada numa thread do claude (os quatro itens medidos eram de issue, e o provedor
+	 * dela só se acha pela thread que o payload nomeia), uma conversa pausada numa thread do codex, e uma
+	 * mensagem nova que o claude aceita. A pausa do claude tem que acabar ali, e a issue ser atendida no
+	 * MESMO drain; a do codex fica, porque um turno aceito pelo claude não diz nada sobre a conta do codex.
 	 *
-	 * Falsificadores: tire a chamada que credita o turno aceito e o item pausado do claude não roda;
-	 * tire o filtro por provedor e o item do codex é solto junto.
+	 * Falsificadores: tire a chamada que credita o turno aceito e a issue pausada não roda; tire o filtro
+	 * por provedor e o item do codex é solto junto; perca o `payload.threadId` de uma ISSUE e ela fica
+	 * pausada, porque o provedor dela deixa de ser resolvido.
 	 */
 	it('um turno aceito pelo MESMO provedor solta as pausas de limite que outra execução deixou — e só as dele', async () => {
 		const mailbox = testBed.resolve(MailboxRepository)
 		const pausedClaude = await givenThread(testBed)
 		const pausedCodex = await givenThread(testBed, { providers: [ProviderKind.CODEX] })
 		const fresh = await givenThread(testBed)
+		const issueId = uuidv7()
 		const ran: string[] = []
 
 		class AcceptingDispatcher extends LibSqlMailboxDispatcher {
@@ -491,20 +494,35 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 				ran.push(item.targetId)
 				return { spoke: true, provider: ProviderKind.CLAUDE_CODE }
 			}
+			protected override async runIssueWork(item: ClaimedMailboxItem): Promise<TurnReport> {
+				ran.push(item.targetId)
+				return { spoke: true, provider: ProviderKind.CLAUDE_CODE }
+			}
 		}
 		const dispatcher = testBed.resolve(AcceptingDispatcher).bind(testContainer)
 
 		const weeklyReset = Date.now() + 5 * 24 * 60 * 60_000
-		for (const thread of [pausedClaude, pausedCodex]) {
-			await operatorMessage(thread.id.value, `pausado:${thread.id.value}`)
+		const parkAsAPreviousRunDid = async () => {
 			const claimed = await mailbox.claimNext('daemon-anterior', 60_000)
 			await mailbox.defer(claimed!.id, new Date(weeklyReset))
 		}
+		await mailbox.enqueue({
+			ownerId: testBed.ownerId,
+			targetKind: MailboxTargetKind.ISSUE,
+			targetId: issueId,
+			kind: MailboxItemKind.STEER,
+			posture: PermissionPosture.AUTO,
+			payload: { issueId, threadId: pausedClaude.id.value, key: 'ISS-1', title: 'pausada', text: 'continua' },
+			dedupKey: `pausado:${issueId}`,
+		})
+		await parkAsAPreviousRunDid()
+		await operatorMessage(pausedCodex.id.value, `pausado:${pausedCodex.id.value}`)
+		await parkAsAPreviousRunDid()
 		await operatorMessage(fresh.id.value, 'conta-nova')
 
 		await dispatcher.drain()
 
-		expect(ran).toEqual([fresh.id.value, pausedClaude.id.value])
+		expect(ran).toEqual([fresh.id.value, issueId])
 		expect((await mailbox.deferred()).map(item => item.targetId)).toEqual([pausedCodex.id.value])
 	})
 
