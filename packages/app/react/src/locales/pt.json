@@ -138,6 +138,8 @@
 		"gatewayWaiting": "Aguardando o gateway local do WhatsApp iniciar para gerar o código de pareamento…",
 		"pairConnectedHint": "Este canal está vinculado e pronto para rotear mensagens.",
 		"pairConnectedTitle": "WhatsApp conectado",
+		"pairDroppedHint": "O WhatsApp encerrou a sessão deste aparelho, por exemplo porque ele foi desconectado pelo celular. Tente de novo: se a sessão não valer mais, um código novo aparece para você parear.",
+		"pairDroppedTitle": "A conexão caiu",
 		"pairExpiredHint": "Os códigos de pareamento expiram após alguns minutos. Gere um novo para continuar.",
 		"pairExpiredTitle": "Código expirado",
 		"pairRegenerate": "Gerar novo código",

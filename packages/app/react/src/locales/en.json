@@ -138,6 +138,8 @@
 		"gatewayWaiting": "Waiting for the local WhatsApp gateway to start so it can generate the pairing code…",
 		"pairConnectedHint": "This channel is now linked and ready to route messages.",
 		"pairConnectedTitle": "WhatsApp connected",
+		"pairDroppedHint": "WhatsApp ended this device's session, for example because it was unlinked from the phone. Try again: if the session is no longer valid, a new code shows up for you to pair.",
+		"pairDroppedTitle": "The connection dropped",
 		"pairExpiredHint": "Pairing codes expire after a few minutes. Generate a fresh one to continue.",
 		"pairExpiredTitle": "Code expired",
 		"pairRegenerate": "Generate a new code",

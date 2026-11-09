@@ -2,13 +2,14 @@ import { useEffect, useState, type ComponentProps, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { QRCodeSVG } from 'qrcode.react'
 import { useQueryClient } from '@tanstack/react-query'
-import { IconAlertTriangle, IconCheck, IconQrcode, IconRefresh } from '@tabler/icons-react'
+import { IconAlertTriangle, IconCheck, IconPlugConnectedX, IconQrcode, IconRefresh } from '@tabler/icons-react'
 import { getAttachThreadWizardQueryKey, getHomeDashboardQueryKey } from '@codm/client-typescript/typescript'
 import { ChannelKindEnum, ChannelStatusEnum, useConnectChannel, useGetChannel, useGetOrCreateChannel } from '@codm/client-typescript/go'
 import { extractErrorCode, getErrorTranslation } from '@/lib'
 import { cn } from '@/lib/utils'
 import { Button } from '@codm/app-ui/button'
 import { Spinner } from '@codm/app-ui/spinner'
+import { pairingView } from './pairing-view'
 
 // The gateway's whatsmeow QR context lives ~3 min. Treat a code as stale past that and offer a fresh
 // one (a re-connect re-issues a QR) instead of letting the operator scan a dead code.
@@ -88,6 +89,16 @@ export function ConnectChannelForm({ className, onDone, onConnectedChange, showC
 		},
 	})
 	const isConnected = connectedOnConnect || pairing.data?.status === ChannelStatusEnum.CONNECTED
+	// Which screen to show — `pairing-view.ts` owns the precedence, including `dropped` (a resumed
+	// session the platform refused, which used to leave this form spinning forever).
+	const view = pairingView({
+		connected: isConnected,
+		failed: resolve.isError || connect.isError,
+		expired,
+		connectAnswered: !!connect.data,
+		qr,
+		polledStatus: pairing.data?.status,
+	})
 
 	useEffect(() => {
 		onConnectedChange?.(isConnected)
@@ -118,7 +129,7 @@ export function ConnectChannelForm({ className, onDone, onConnectedChange, showC
 	}, [isConnected, queryClient])
 
 	let body: ReactNode
-	if (isConnected) {
+	if (view === 'connected') {
 		// D3 (e6hOKJ) — no boxed container: a small ring+check mark (secondary halo behind a
 		// primary-colored circle-check glyph approximates the design's ring/halo/check trio),
 		// the title and description as plain centered text, then the primary "Fechar" action.
@@ -132,7 +143,7 @@ export function ConnectChannelForm({ className, onDone, onConnectedChange, showC
 				{showCloseButton && <Button onClick={onDone}>{t('common.close')}</Button>}
 			</>
 		)
-	} else if (resolve.isError || connect.isError) {
+	} else if (view === 'error') {
 		// No design screen covers the error path (none of the 8 assigned screens is an error
 		// state) — left as-is rather than invented.
 		const code = extractErrorCode(resolve.error ?? connect.error)
@@ -147,7 +158,23 @@ export function ConnectChannelForm({ className, onDone, onConnectedChange, showC
 				</Button>
 			</>
 		)
-	} else if (expired) {
+	} else if (view === 'dropped') {
+		// No design screen for this one either; it borrows the expired screen's shape (placeholder box,
+		// title, hint, primary action) because the operator's move is the same — start over — and a
+		// retry is what turns an evicted session into a fresh QR.
+		body = (
+			<>
+				<div className="flex size-[176px] items-center justify-center rounded-asymmetric-lg border border-border bg-skeleton">
+					<IconPlugConnectedX className="size-16 text-skeleton-strong" />
+				</div>
+				<p className="text-center text-base font-extrabold text-foreground">{t('channels.pairDroppedTitle')}</p>
+				<p className="text-center text-[13px] text-muted-foreground">{t('channels.pairDroppedHint')}</p>
+				<Button onClick={startPairing}>
+					<IconRefresh data-icon="inline-start" /> {t('common.retry')}
+				</Button>
+			</>
+		)
+	} else if (view === 'expired') {
 		// D3 (oilhX) — the placeholder box goes skeleton-toned (not `bg-muted`) with a faded QR
 		// glyph, radius asymmetric-lg (matching the QR-active box below); the retry action is the
 		// primary solid button, not `outline`.

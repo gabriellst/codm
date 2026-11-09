@@ -424,6 +424,7 @@ CREATE INDEX "loops_thread_id_idx" ON "thread_loops" ("thread_id");
 CREATE UNIQUE INDEX "onboardings_owner_id_idx" ON "owner_onboardings" ("owner_id");
 CREATE INDEX "outbox_claim_idx" ON "shared_outbox" ("source","processed_at","lease_until");
 CREATE INDEX "outbox_claimed_by_idx" ON "shared_outbox" ("claimed_by") WHERE claimed_by IS NOT NULL;
+CREATE INDEX "outbox_dead_at_idx" ON "shared_outbox" ("dead_at") WHERE dead_at IS NOT NULL;
 CREATE INDEX "outbox_unprocessed_idx" ON "shared_outbox" ("source","processed_at","created_at");
 CREATE INDEX "owners_is_disabled_idx" ON "owner_owners" ("is_disabled");
 CREATE INDEX "owners_responsible_user_id_idx" ON "owner_owners" ("responsible_user_id");

@@ -218,6 +218,13 @@
       "when": 1793754178908,
       "tag": "0030_fresh_mister_sinister",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1794224201328,
+      "tag": "0031_high_grey_gargoyle",
+      "breakpoints": true
     }
   ]
 }
