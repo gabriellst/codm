@@ -308,6 +308,9 @@ var Module = fx.Module("channel",
 )
 
 func registerLifecycleHooks(lc fx.Lifecycle, pool pool.ChannelPool, repo channelrepo.ChannelRepository, factory gateway.ChannelFactory) {
+	// Ends the boot-time connect retries (startup_reconnect.go) when the gateway stops, so a retry
+	// never races DisconnectAll below.
+	reconnectCtx, stopReconnects := context.WithCancel(context.Background())
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			channels, err := repo.FindAllActive(ctx)
@@ -322,27 +325,20 @@ func registerLifecycleHooks(lc fx.Lifecycle, pool pool.ChannelPool, repo channel
 				// old connection as still alive and reject the new one with 401
 				// "logged out from another device", causing whatsmeow to delete the
 				// local session keys.
-				time.Sleep(3 * time.Second)
+				if !sleepCtx(reconnectCtx, 3*time.Second) {
+					return
+				}
 				for _, ch := range channels {
-					id := ch.ID
-					ownerID := ch.OwnerID
-					ownerRemoteID := ch.OwnerRemoteID
-					live, err := pool.Register(context.Background(), id.UUID(), gateway.ChannelConfig{
-						OwnerID:       ownerID,
-						OwnerRemoteID: ownerRemoteID,
-					})
-					if err != nil {
-						slog.Warn("startup: failed to register channel", "channelId", id.UUID(), "error", err)
-						continue
-					}
-					if err := live.Connect(context.Background()); err != nil {
-						slog.Warn("startup: failed to connect channel", "channelId", id.UUID(), "error", err)
-					}
+					cfg := gateway.ChannelConfig{OwnerID: ch.OwnerID, OwnerRemoteID: ch.OwnerRemoteID}
+					// One goroutine per channel: a channel waiting out its backoff must not hold the
+					// next one's first attempt hostage.
+					go retryUntilSettled(reconnectCtx, ch.ID.UUID(), bootConnectAttempt(pool, ch.ID.UUID(), cfg), startupRetryDelays, sleepCtx)
 				}
 			}()
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
+			stopReconnects()
 			slog.Info("disconnecting all instances...")
 			pool.DisconnectAll()
 			if c, ok := factory.(interface{ Close() error }); ok {

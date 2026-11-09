@@ -79,6 +79,13 @@ export const outbox = sqliteTable(
 		// measured 2026-11-03) with the file's write lock held, which stalled the daemon's event loop for
 		// up to 30s. Partial: finalize clears `claimed_by`, so only in-flight rows are indexed.
 		index('outbox_claimed_by_idx').on(t.claimedBy).where(sql`claimed_by IS NOT NULL`),
+		// Serves the `outboxDeadLetters` health check (`count(*) WHERE dead_at IS NOT NULL`), which the
+		// desktop shell's supervision probe runs every 5s. Without it every probe was a full scan of the
+		// whole table — ~278k rows on 2026-11-09 — and, the daemon's libsql driver being synchronous, the
+		// event loop sat frozen for the scan: 1s median, 23s worst, ~31% of a night, and 5–13s back to back
+		// once the machine was swapping. Partial: only dead letters are indexed, so the count reads a
+		// handful of entries instead of the table.
+		index('outbox_dead_at_idx').on(t.deadAt).where(sql`dead_at IS NOT NULL`),
 	],
 )
 
