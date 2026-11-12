@@ -47,6 +47,29 @@ describe('DeliverOrchestratorReply — the envelope guard and the delegation', (
 		expect(command?.name).toBe('deliver_channel_message')
 	})
 
+	/**
+	 * A RESULT'S ANSWER IS THAT ISSUE'S MESSAGE. Before this, no agent message in the transcript said which
+	 * issue it came from (measured on a real install: 0% of thousands), so an issue's timeline could not
+	 * show what was said about it and a reply-quote could not point back to it.
+	 *
+	 * Falsifier: drop `issueId` from the delegation (or from `RecordOrchestratorReply`) and the entry
+	 * records unbound.
+	 */
+	it('the issue the reply speaks for is recorded on the SYSTEM entry', async () => {
+		const thread = await givenThread(testBed)
+		const issueId = '019e4d24-6524-7041-9e1c-8108180cde01'
+
+		await testBed.resolve(DeliverOrchestratorReply).handle(
+			new OrchestratorRepliedEvent({
+				ownerId: MOCK_CLOUD_OWNER_ID,
+				payload: { threadId: thread.id.value, text: 'pronto, no ar', issueId },
+			}) as never,
+		)
+
+		const entries = await testBed.resolve(ThreadRepository).recentEntries(thread.id.value, 10)
+		expect(entries.find(e => e.kind === TranscriptKind.SYSTEM)?.issueId).toBe(issueId)
+	})
+
 	it('an envelope with no owner is dropped before anything is written', async () => {
 		const thread = await givenThread(testBed)
 		const before = await testBed.probe().snapshot(['transcriptEntries', 'scheduledCommands'] as const)

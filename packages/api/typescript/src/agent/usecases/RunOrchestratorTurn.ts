@@ -74,6 +74,12 @@ export const RunOrchestratorTurnInputSchema = z.object({
 	 * pick the wrong one, and cannot forget it either.
 	 */
 	originEntryId: z.uuid().optional(),
+	/**
+	 * On an ISSUE_RESULT turn: the issue whose result is being composed. Rides the reply event so the
+	 * transcript records the answer AS THAT ISSUE'S MESSAGE — the link every per-issue view, and every
+	 * reply-quote routed back to the issue, is built on. Like `originEntryId`, never handed to the model.
+	 */
+	issueId: z.uuid().optional(),
 	model: z.enum(AgentModelId).optional(),
 	/**
 	 * The permission posture of the mailbox item that scheduled this turn — WHO triggered it. REQUIRED
@@ -660,7 +666,7 @@ export class RunOrchestratorTurn extends Handler<typeof RunOrchestratorTurnInput
 					new OrchestratorRepliedEvent({
 						entityId: input.threadId,
 						ownerId: input.ownerId,
-						payload: { threadId: input.threadId, text: reply.text, replyToEntryId },
+						payload: { threadId: input.threadId, text: reply.text, replyToEntryId, issueId: input.issueId },
 					}),
 					tx,
 				)

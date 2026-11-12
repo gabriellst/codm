@@ -793,7 +793,7 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 		const provider = thread.providers[0]
 		if (!provider) return this.dropSilently(item, 'thread has no provider')
 
-		const payload = item.payload as { entryId?: string; originEntryId?: string }
+		const payload = item.payload as { entryId?: string; originEntryId?: string; issueId?: string }
 		const result = await this.handlerFor(RunOrchestratorTurn).execute({
 			ownerId: item.ownerId,
 			threadId: item.targetId,
@@ -815,6 +815,9 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			// the run-token claims, because this turn was triggered by a subagent finishing, not by a
 			// message — there is no entry to mint a claim from.
 			originEntryId: item.kind === MailboxItemKind.ISSUE_RESULT ? payload.originEntryId : undefined,
+			// The issue whose result this turn composes — what makes the reply that issue's message in the
+			// transcript. Absent on a result queued before the field existed; the reply then records unbound.
+			issueId: item.kind === MailboxItemKind.ISSUE_RESULT ? payload.issueId : undefined,
 		})
 		return { spoke: result.spoke, transportStop: result.transportStop }
 	}

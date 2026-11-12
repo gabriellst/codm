@@ -589,6 +589,9 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 							? { kind: AgentRunOutcome.COMPLETED, replyText: outcome.replyText }
 							: { kind: AgentRunOutcome.STOPPED, stopKind: outcome.stopKind, detail: outcome.detail },
 					originEntryId: input.originEntryId,
+					// WHICH ISSUE this result is — so the answer the orchestrator composes from it is recorded
+					// as that issue's message. `issueKey` is for the model; the id is for the transcript row.
+					issueId: input.issueId,
 				},
 				dedupKey: `result:${input.issueId}:${input.messageId}`,
 			},
