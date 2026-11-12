@@ -2480,6 +2480,11 @@ pub mod types {
     ///      "type": "string",
     ///      "maxLength": 2000,
     ///      "minLength": 1
+    ///    },
+    ///    "title": {
+    ///      "type": "string",
+    ///      "maxLength": 80,
+    ///      "minLength": 1
     ///    }
     ///  }
     ///}
@@ -2488,6 +2493,8 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct ForkIssueBody {
         pub goal: ForkIssueBodyGoal,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub title: ::std::option::Option<ForkIssueBodyTitle>,
     }
     impl ::std::convert::From<&ForkIssueBody> for ForkIssueBody {
         fn from(value: &ForkIssueBody) -> Self {
@@ -2564,6 +2571,87 @@ pub mod types {
         }
     }
     impl<'de> ::serde::Deserialize<'de> for ForkIssueBodyGoal {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`ForkIssueBodyTitle`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 80,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct ForkIssueBodyTitle(::std::string::String);
+    impl ::std::ops::Deref for ForkIssueBodyTitle {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<ForkIssueBodyTitle> for ::std::string::String {
+        fn from(value: ForkIssueBodyTitle) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&ForkIssueBodyTitle> for ForkIssueBodyTitle {
+        fn from(value: &ForkIssueBodyTitle) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for ForkIssueBodyTitle {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 80usize {
+                return Err("longer than 80 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ForkIssueBodyTitle {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for ForkIssueBodyTitle {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for ForkIssueBodyTitle {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for ForkIssueBodyTitle {
         fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
         where
             D: ::serde::Deserializer<'de>,

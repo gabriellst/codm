@@ -186,3 +186,21 @@ export const agentMailbox = sqliteTable(
 		index('agent_mailbox_pending_idx').on(t.targetKind, t.targetId, t.consumedAt, t.createdAt).where(sql`dead_at IS NULL`),
 	],
 )
+
+/**
+ * The per-workspace counter behind an issue's short key (`<PREFIX>-<n>`, fase 0 item 4).
+ *
+ * Keys used to be a slug of the first 40 characters of the goal ("pedido-no-grupo-08-11-14-15-sobre-o-banne"):
+ * long, unreadable in a chat, and colliding in meaning across issues. A short numbered key is what a person
+ * can say back ("pode publicar a BKD-142"). The number is per WORKSPACE, not per thread, because two groups
+ * working the same repository talk about the same issues.
+ *
+ * Owned by `agent` because the key is minted where the issue is forked (`ForkIssue`, `DeclareIssueOpen`),
+ * inside the same write transaction as the WORK item — SQLite serializes writers, so two forks can never
+ * draw the same number.
+ */
+export const agentIssueSequences = sqliteTable('agent_issue_sequences', {
+	workspaceId: text('workspace_id').primaryKey(),
+	/** The last number handed out. The next issue gets `last_seq + 1`. */
+	lastSeq: integer('last_seq').notNull(),
+})

@@ -12,6 +12,7 @@ import { IssueWorkAgent, IssueWorkPromptBuilder } from './agents/IssueWorkAgent'
 import { OrchestratorAgent, OrchestratorPromptBuilder } from './agents/OrchestratorAgent'
 import { AgentSessionRepository, LibSqlAgentSessionRepository, MockAgentSessionRepository } from './repositories/AgentSessionRepository'
 import { LibSqlMailboxRepository, MailboxRepository, MockMailboxRepository } from './repositories/MailboxRepository'
+import { IssueSequenceRepository, LibSqlIssueSequenceRepository, MockIssueSequenceRepository } from './repositories/IssueSequenceRepository'
 import { StalledIssueReader, LibSqlStalledIssueReader, MockStalledIssueReader } from './services/StalledIssueReader'
 
 // E2E HERMETIC SEAM (see shared/registry.ts + src/boot.ts). The Playwright harness boots the REAL
@@ -82,6 +83,13 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// The durable per-target turn queue. Producers enqueue inside their own transaction; the
 	// dispatcher is the single consumer and holds one lease per target.
 	{ token: MailboxRepository, mock: MockMailboxRepository, integration: LibSqlMailboxRepository, real: LibSqlMailboxRepository },
+	// The per-workspace counter behind an issue's short key (`<PREFIX>-<n>`), drawn inside the fork's transaction.
+	{
+		token: IssueSequenceRepository,
+		mock: MockIssueSequenceRepository,
+		integration: LibSqlIssueSequenceRepository,
+		real: LibSqlIssueSequenceRepository,
+	},
 	// A varredura de issues órfãs lê a tabela `issues` a partir daqui — mesmo padrão de
 	// `thread/services/OpenIssuesReader`. `integration` usa a implementação REAL de propósito: o teste do
 	// job existe para exercitar o predicado das duas filas contra o banco, e um mock o tornaria vazio.

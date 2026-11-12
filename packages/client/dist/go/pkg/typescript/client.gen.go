@@ -1453,7 +1453,8 @@ type CreateIssueJSONBody struct {
 
 // ForkIssueJSONBody defines parameters for ForkIssue.
 type ForkIssueJSONBody struct {
-	Goal string `json:"goal"`
+	Goal  string  `json:"goal"`
+	Title *string `json:"title,omitempty"`
 }
 
 // AskOperatorJSONBody defines parameters for AskOperator.

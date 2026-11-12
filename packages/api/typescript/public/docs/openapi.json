@@ -1093,6 +1093,11 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 2000
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
                   }
                 },
                 "required": [
@@ -1102,7 +1107,8 @@
               "examples": {
                 "default": {
                   "value": {
-                    "goal": "põe um toggle de dark mode nas configurações"
+                    "goal": "põe um toggle de dark mode nas configurações",
+                    "title": "Toggle de dark mode nas configurações"
                   },
                   "summary": "Example"
                 }
@@ -1146,7 +1152,7 @@
                   "examples": [
                     {
                       "issueId": "019e4d24-6524-7041-9e1c-8108180cddaf",
-                      "key": "poe-um-toggle-de-dark-mode-nas"
+                      "key": "APP-42"
                     }
                   ]
                 },
@@ -1154,7 +1160,7 @@
                   "default": {
                     "value": {
                       "issueId": "019e4d24-6524-7041-9e1c-8108180cddaf",
-                      "key": "poe-um-toggle-de-dark-mode-nas"
+                      "key": "APP-42"
                     },
                     "summary": "Example"
                   }

@@ -1,10 +1,14 @@
 import { injectable } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
-import { Handler, z } from '@codm/core-typescript'
+import { BaseError, Handler, z } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
 import { ProviderKind } from '@codm/contracts-typescript/wire/enums'
+import { ThreadRepository } from '@thread/repositories/ThreadRepository'
+import { WorkspaceRepository } from '@workspace/repositories/WorkspaceRepository'
+import { issuePrefixOf } from '@workspace/objects'
 import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
-import { ISSUE_KEY_FALLBACK, slugify } from '@shared/utils/slug'
+import { IssueSequenceRepository } from '../repositories/IssueSequenceRepository'
+import type { AgentInterfaceErrors } from '../errors'
 
 export const DeclareIssueOpenInputSchema = z.object({
 	ownerId: z.uuid(),
@@ -30,7 +34,7 @@ export const DeclareIssueOpenOutputSchema = z.object({ issueId: z.uuid(), key: z
  * ### Ids are minted HERE, not accepted from the caller
  * A model does not get to choose an issue's identity: it would let one run adopt another run's issue
  * by guessing a uuid, and it would make the row's identity depend on a value that arrives over the
- * wire. The key is a slug of the title; uniqueness within the thread is the DB's invariant and
+ * wire. The key is the short `<PREFIX>-<n>` drawn per workspace (`IssueSequenceRepository`); uniqueness is the DB's invariant and
  * `OpenIssue` is a no-op on a redelivery, so a collision degrades to "same issue" rather than a crash.
  */
 @injectable()
@@ -39,10 +43,25 @@ export class DeclareIssueOpen extends Handler<typeof DeclareIssueOpenInputSchema
 	readonly inputSchema = DeclareIssueOpenInputSchema
 	readonly outputSchema = DeclareIssueOpenOutputSchema
 
+	constructor(
+		private readonly threads: ThreadRepository,
+		private readonly workspaces: WorkspaceRepository,
+		private readonly sequences: IssueSequenceRepository,
+	) {
+		super()
+	}
+
 	protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
 		const issueId = uuidv7()
-		const key = slugify(input.title, ISSUE_KEY_FALLBACK)
-		await this.withTransaction(tx, async tx => {
+		const thread = await this.threads.findById(input.threadId)
+		if (!thread) throw new BaseError<AgentInterfaceErrors>('AGENT_RUN_SCOPE_MISMATCH', 'the thread this run is scoped to no longer exists')
+		const workspace = await this.workspaces.findById(thread.workspaceId)
+		if (!workspace)
+			throw new BaseError<AgentInterfaceErrors>('AGENT_RUN_SCOPE_MISMATCH', 'the workspace this run is scoped to is no longer bound')
+
+		const key = await this.withTransaction(tx, async tx => {
+			// Same short key as `ForkIssue` — `<PREFIX>-<n>`, drawn in this transaction.
+			const key = `${issuePrefixOf(workspace.path)}-${await this.sequences.next(workspace.id.value, tx)}`
 			await this.domainEventRepository.save(
 				new AgentRunStartedEvent({
 					entityId: issueId,
@@ -51,6 +70,7 @@ export class DeclareIssueOpen extends Handler<typeof DeclareIssueOpenInputSchema
 				}),
 				tx,
 			)
+			return key
 		})
 		return { issueId, key }
 	}
