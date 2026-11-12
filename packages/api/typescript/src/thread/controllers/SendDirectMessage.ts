@@ -1,11 +1,15 @@
 import { injectable } from 'tsyringe-neo'
-import { Controller, HttpStatusCode } from '@codm/core-typescript'
+import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 import { McpScope } from '@codm/contracts-typescript/wire/enums'
+import { AgentRunIdentityCtxSchema } from '@agent/types/AgentRunIdentity'
 import { CloudSessionMiddleware } from '@shared/middlewares'
 import { SendDirectMessage, SendDirectMessageInputSchema, SendDirectMessageOutputSchema } from '../usecases/SendDirectMessage'
 import { ThreadParam } from '../schemas'
 
 export const SendDirectMessageControllerInputSchema = ThreadParam.extend({
+	// The run identity `AgentIdentityMiddleware` stamps when an AGENT calls this as a tool — composed so Zod
+	// does not strip it (same as `ResolveStopController`). Absent when the operator calls it from the console.
+	ctx: z.object({ ownerId: z.uuid() }).extend(AgentRunIdentityCtxSchema.shape),
 	body: SendDirectMessageInputSchema.pick({ text: true }),
 }).example([
 	{
@@ -36,7 +40,13 @@ export class SendDirectMessageController extends Controller<
 		super()
 	}
 	async handle(request: this['input']): Promise<this['output']> {
-		const data = await this.useCase.execute({ ownerId: request.ctx.ownerId, threadId: request.params.threadId, text: request.body.text })
+		const data = await this.useCase.execute({
+			ownerId: request.ctx.ownerId,
+			threadId: request.params.threadId,
+			text: request.body.text,
+			// An issue's run speaking directly: the message is that issue's (fase 0, item 3).
+			issueId: request.ctx.agentIdentity?.issueId,
+		})
 		return { status: HttpStatusCode.CREATED, data }
 	}
 }

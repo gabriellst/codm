@@ -8,7 +8,13 @@ import { DirectMessageSentEvent } from '../events/DirectMessageSentEvent'
 import type { DeliverChannelMessage } from './DeliverChannelMessage'
 import type { ApplicationErrors } from '../errors'
 
-export const SendDirectMessageInputSchema = z.object({ ownerId: z.uuid(), threadId: z.uuid(), text: z.string().trim().min(1) })
+export const SendDirectMessageInputSchema = z.object({
+	ownerId: z.uuid(),
+	threadId: z.uuid(),
+	text: z.string().trim().min(1),
+	/** The issue whose run sent this, when an issue did — the entry is recorded as that issue's message. */
+	issueId: z.uuid().optional(),
+})
 export const SendDirectMessageOutputSchema = z.object({ entryId: z.uuid() })
 
 /**
@@ -46,7 +52,7 @@ export class SendDirectMessage extends Handler<typeof SendDirectMessageInputSche
 		}
 
 		return this.withTransaction(tx, async tx => {
-			const entry = thread.recordEntry({ kind: TranscriptKind.DIRECT, text: input.text })
+			const entry = thread.recordEntry({ kind: TranscriptKind.DIRECT, text: input.text, issueId: input.issueId })
 			await this.threads.save(thread, tx)
 
 			// THE ORDER, in the SAME transaction as the entry it refers to — the same shape

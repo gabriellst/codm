@@ -64,6 +64,17 @@ describe('SendDirectMessage — the entry and the delivery COMMAND commit togeth
 		})
 	})
 
+	it("an issue's run speaking directly records the entry as that issue's message (fase 0, item 3)", async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const issueId = '019e4d24-6524-7041-9e1c-8108180cde03'
+
+		const { entryId } = await testBed
+			.resolve(SendDirectMessage)
+			.execute({ ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value, text: 'publicado', issueId })
+
+		expect((await testBed.resolve(ThreadRepository).findEntry(entryId))?.issueId).toBe(issueId)
+	})
+
 	it('ATOMICITY — a rolled-back transaction leaves NEITHER the transcript entry NOR the command', async () => {
 		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
 		const before = await testBed.probe().snapshot(['transcriptEntries', 'scheduledCommands', 'events'] as const)
