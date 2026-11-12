@@ -4,6 +4,7 @@ import { LibSqlDatabaseDriver, Handler, z, BaseError } from '@codm/core-typescri
 import { issues, stops, terminalLines, transcriptEntries } from '@codm/contracts/db'
 import { IssueStatus, ProviderKind, StopKind, TranscriptKind, ClassificationMethod } from '@codm/contracts-typescript/wire/enums'
 import type { ApplicationErrors } from '../errors'
+import { providerWaitByIssue } from '../utils/providerWaitByIssue'
 
 export const GetIssueDetailInputSchema = z.object({ ownerId: z.uuid(), issueId: z.uuid() })
 export const GetIssueDetailOutputSchema = z.object({
@@ -14,6 +15,8 @@ export const GetIssueDetailOutputSchema = z.object({
 		status: z.enum(IssueStatus),
 		meta: z.string().optional(),
 		archived: z.boolean(),
+		/** ISO instant until which the issue waits on the provider's usage limit; absent when it is not. */
+		waitingForProviderUntil: z.string().optional(),
 	}),
 	provider: z.enum(ProviderKind),
 	terminalLog: z.array(z.object({ at: z.string(), line: z.string() })),
@@ -59,6 +62,7 @@ export class GetIssueDetail extends Handler<typeof GetIssueDetailInputSchema, ty
 			.select()
 			.from(stops)
 			.where(and(eq(stops.issueId, input.issueId), isNull(stops.resolvedAt)))
+		const waiting = await providerWaitByIssue(this.driver, [input.issueId])
 
 		return {
 			issue: {
@@ -68,6 +72,7 @@ export class GetIssueDetail extends Handler<typeof GetIssueDetailInputSchema, ty
 				status: issue.status as IssueStatus,
 				meta: issue.meta ?? undefined,
 				archived: issue.archived,
+				waitingForProviderUntil: waiting.get(issue.id)?.toISOString(),
 			},
 			provider: issue.provider as ProviderKind,
 			terminalLog: lines.map(l => ({ at: l.at.toISOString(), line: l.line })),

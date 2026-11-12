@@ -1,8 +1,11 @@
 import type { ComponentProps } from 'react'
-import { IconChevronRight } from '@tabler/icons-react'
+import { useTranslation } from 'react-i18next'
+import { IconChevronRight, IconClockPause } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
 import type { IssueStatus } from '@codm/client-typescript/typescript'
+import { useLocale } from '@/hooks'
 import { enumLabel } from '@/lib'
+import { formatDayAndTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { row } from '@codm/app-ui/surfaces'
 import { Badge } from '@codm/app-ui/badge'
@@ -22,6 +25,23 @@ export interface IssueRowItem {
 	threadId: string
 	/** Present on the cross-thread overview (T04); omitted on the per-thread list (T11). */
 	threadDisplayName?: string
+	/** ISO instant the issue's next turn is deferred to by the provider's usage limit; absent when it is not. */
+	waitingForProviderUntil?: string
+}
+
+/**
+ * "Esperando cota até 17/11 00:00" — why an issue that reads WORKING is quiet. Day AND time, because the
+ * provider's window can be a week out and the time alone reads as today.
+ */
+export function ProviderWaitBadge({ until, className, ...props }: { until: string } & ComponentProps<'span'>) {
+	const { t } = useTranslation()
+	const locale = useLocale()
+	return (
+		<span className={cn('inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground', className)} {...props}>
+			<IconClockPause className="size-3.5" />
+			{t('session.waitingForProvider', { when: formatDayAndTime(until, locale) })}
+		</span>
+	)
 }
 
 /**
@@ -96,6 +116,7 @@ export function IssueRow({ item, className }: { item: IssueRowItem } & Pick<Comp
 					{item.title}
 				</span>
 			</div>
+			{item.waitingForProviderUntil && <ProviderWaitBadge until={item.waitingForProviderUntil} className="hidden md:inline-flex" />}
 			<Badge className={cn('shrink-0', issueStatusChipClass[item.status])}>{enumLabel('IssueStatus', item.status)}</Badge>
 		</Link>
 	)

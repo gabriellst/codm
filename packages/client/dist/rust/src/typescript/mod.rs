@@ -3843,6 +3843,9 @@ pub mod types {
     ///        },
     ///        "title": {
     ///          "type": "string"
+    ///        },
+    ///        "waitingForProviderUntil": {
+    ///          "type": "string"
     ///        }
     ///      },
     ///      "additionalProperties": false
@@ -3989,6 +3992,9 @@ pub mod types {
     ///    },
     ///    "title": {
     ///      "type": "string"
+    ///    },
+    ///    "waitingForProviderUntil": {
+    ///      "type": "string"
     ///    }
     ///  },
     ///  "additionalProperties": false
@@ -4006,6 +4012,12 @@ pub mod types {
         pub meta: ::std::option::Option<::std::string::String>,
         pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
         pub title: ::std::string::String,
+        #[serde(
+            rename = "waitingForProviderUntil",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub waiting_for_provider_until: ::std::option::Option<::std::string::String>,
     }
     impl ::std::convert::From<&GetIssueDetailResponseIssue>
     for GetIssueDetailResponseIssue {
@@ -4263,6 +4275,9 @@ pub mod types {
     ///          },
     ///          "title": {
     ///            "type": "string"
+    ///          },
+    ///          "waitingForProviderUntil": {
+    ///            "type": "string"
     ///          }
     ///        },
     ///        "additionalProperties": false
@@ -4317,6 +4332,9 @@ pub mod types {
     ///                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
     ///                },
     ///                "title": {
+    ///                  "type": "string"
+    ///                },
+    ///                "waitingForProviderUntil": {
     ///                  "type": "string"
     ///                }
     ///              },
@@ -4424,6 +4442,9 @@ pub mod types {
     ///    },
     ///    "title": {
     ///      "type": "string"
+    ///    },
+    ///    "waitingForProviderUntil": {
+    ///      "type": "string"
     ///    }
     ///  },
     ///  "additionalProperties": false
@@ -4445,6 +4466,12 @@ pub mod types {
         #[serde(rename = "threadId")]
         pub thread_id: ::uuid::Uuid,
         pub title: ::std::string::String,
+        #[serde(
+            rename = "waitingForProviderUntil",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub waiting_for_provider_until: ::std::option::Option<::std::string::String>,
     }
     impl ::std::convert::From<&GetIssuesOverviewResponseArchivedItem>
     for GetIssuesOverviewResponseArchivedItem {
@@ -4504,6 +4531,9 @@ pub mod types {
     ///            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
     ///          },
     ///          "title": {
+    ///            "type": "string"
+    ///          },
+    ///          "waitingForProviderUntil": {
     ///            "type": "string"
     ///          }
     ///        },
@@ -4574,6 +4604,9 @@ pub mod types {
     ///    },
     ///    "title": {
     ///      "type": "string"
+    ///    },
+    ///    "waitingForProviderUntil": {
+    ///      "type": "string"
     ///    }
     ///  },
     ///  "additionalProperties": false
@@ -4595,6 +4628,12 @@ pub mod types {
         #[serde(rename = "threadId")]
         pub thread_id: ::uuid::Uuid,
         pub title: ::std::string::String,
+        #[serde(
+            rename = "waitingForProviderUntil",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub waiting_for_provider_until: ::std::option::Option<::std::string::String>,
     }
     impl ::std::convert::From<&GetIssuesOverviewResponseGroupsItemItemsItem>
     for GetIssuesOverviewResponseGroupsItemItemsItem {

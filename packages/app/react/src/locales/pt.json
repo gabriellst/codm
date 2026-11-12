@@ -710,6 +710,7 @@
 		"thinkingIndicatorHint": "Mostra a mensagem de fase (✻ verbo…) no canal enquanto o agente trabalha. Desligado, a resposta chega sem o indicador.",
 		"threadSettings": "Configurações da conversa",
 		"transcriptIssue": "tarefa",
+		"waitingForProvider": "Esperando cota até {{when}}",
 		"waitingTerminal": "Aguardando saída do terminal…"
 	},
 	"settings": {

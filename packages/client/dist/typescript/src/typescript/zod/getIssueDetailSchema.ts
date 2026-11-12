@@ -26,7 +26,8 @@ get "status"(){
                 return issueStatusSchema
               },
 "meta": z.optional(z.string()),
-"archived": z.boolean()
+"archived": z.boolean(),
+"waitingForProviderUntil": z.optional(z.string())
     }),
 get "provider"(){
                 return providerKindSchema

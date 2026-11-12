@@ -710,6 +710,7 @@
 		"thinkingIndicatorHint": "Shows the phase message (✻ verb…) in the channel while the agent works. Off, the reply arrives without the indicator.",
 		"threadSettings": "Thread settings",
 		"transcriptIssue": "issue",
+		"waitingForProvider": "Waiting on the usage limit until {{when}}",
 		"waitingTerminal": "Waiting for terminal output…"
 	},
 	"settings": {

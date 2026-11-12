@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils'
 import { useTerminalStream, type TerminalStreamFrame } from '@/hooks'
 import { Dot } from '@/components/console/StatusDot'
 import { resolutionIsPrimary } from '@/components/console/glyphs'
+import { ProviderWaitBadge } from '@/components/console/IssueRow'
 import { TranscriptBubble } from '../TranscriptBubble'
 
 type Detail = GetIssueDetailQueryResponse
@@ -109,6 +110,7 @@ export function IssueDetailSection({
 						{data.issue.title}
 						{data.issue.meta ? ` · ${data.issue.meta}` : ''}
 					</p>
+					{data.issue.waitingForProviderUntil && <ProviderWaitBadge until={data.issue.waitingForProviderUntil} />}
 				</div>
 				<div className="flex shrink-0 items-center gap-2">
 					{/* Dispatch by map (`issueStatusChipClass`, module scope) — never a chain on the discriminant. */}
