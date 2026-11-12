@@ -367,6 +367,26 @@
 			"TUESDAY": "Terça",
 			"WEDNESDAY": "Quarta"
 		},
+		"IssueLifeState": {
+			"DONE": "Concluída",
+			"QUEUED": "Na fila",
+			"REMINDED": "Lembrada de declarar",
+			"RUNNING": "Fazendo",
+			"STALLED": "Parada",
+			"WAITING_PERSON": "Aguardando pessoa",
+			"WAITING_PROVIDER": "Esperando cota"
+		},
+		"IssueTimelineItemKind": {
+			"ARCHIVED": "Arquivada",
+			"ARTIFACT": "Artefato",
+			"COMPLETED": "Concluída",
+			"CREATED": "Criada",
+			"MESSAGE": "Mensagem",
+			"STEER": "Orientação",
+			"STOP_RAISED": "Pediu alguém",
+			"STOP_RESOLVED": "Respondida",
+			"TURN_STARTED": "Turno iniciado"
+		},
 		"IssueStatus": {
 			"COMPLETED": "Concluída",
 			"NEEDS_INPUT": "Precisa de entrada",
@@ -697,6 +717,7 @@
 		"settingsDescriptionNamed": "Como os agentes se comportam em {{name}}.",
 		"settingsTitle": "Configurações da conversa",
 		"steer": "Orientar",
+		"steerAutoReminder": "lembrete automático",
 		"steerDelivered": "Entregue às {{when}}",
 		"steerFailed": "Não entregue",
 		"steerHint": "As orientações chegam apenas ao agente que trabalha nesta tarefa.",
@@ -714,6 +735,10 @@
 		"thinkingIndicator": "Indicador de pensando",
 		"thinkingIndicatorHint": "Mostra a mensagem de fase (✻ verbo…) no canal enquanto o agente trabalha. Desligado, a resposta chega sem o indicador.",
 		"threadSettings": "Configurações da conversa",
+		"timeline": "Linha do tempo",
+		"timelineFromAgent": "agente",
+		"timelineFromPerson": "pessoa",
+		"timelineReplyQuote": "respondeu citando",
 		"transcriptIssue": "tarefa",
 		"waitingForProvider": "Esperando cota até {{when}}",
 		"waitingTerminal": "Aguardando saída do terminal…"

@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import type { IssueLifeState } from "./IssueLifeState.ts";
 import type { IssueStatus } from "./IssueStatus.ts";
 
 export type GetIssuesOverviewQueryParams = {
@@ -93,6 +94,10 @@ export type GetIssuesOverview200 = {
              * @type string | undefined
             */
             waitingForProviderUntil?: string;
+            /**
+             * @type string
+            */
+            lifeState: IssueLifeState;
         }[];
     }[];
     /**
@@ -135,6 +140,10 @@ export type GetIssuesOverview200 = {
          * @type string | undefined
         */
         waitingForProviderUntil?: string;
+        /**
+         * @type string
+        */
+        lifeState: IssueLifeState;
     }[];
 };
 

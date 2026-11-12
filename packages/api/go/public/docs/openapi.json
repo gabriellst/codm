@@ -7181,6 +7181,27 @@
           "IssueArchiveReasonTHREAD_DETACHED"
         ]
       },
+      "IssueLifeState": {
+        "enum": [
+          "RUNNING",
+          "QUEUED",
+          "WAITING_PROVIDER",
+          "WAITING_PERSON",
+          "REMINDED",
+          "STALLED",
+          "DONE"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "IssueLifeStateRUNNING",
+          "IssueLifeStateQUEUED",
+          "IssueLifeStateWAITING_PROVIDER",
+          "IssueLifeStateWAITING_PERSON",
+          "IssueLifeStateREMINDED",
+          "IssueLifeStateSTALLED",
+          "IssueLifeStateDONE"
+        ]
+      },
       "IssueStatus": {
         "enum": [
           "NEEDS_INPUT",
@@ -7192,6 +7213,31 @@
           "IssueStatusNEEDS_INPUT",
           "IssueStatusWORKING",
           "IssueStatusCOMPLETED"
+        ]
+      },
+      "IssueTimelineItemKind": {
+        "enum": [
+          "CREATED",
+          "TURN_STARTED",
+          "MESSAGE",
+          "STEER",
+          "ARTIFACT",
+          "STOP_RAISED",
+          "STOP_RESOLVED",
+          "COMPLETED",
+          "ARCHIVED"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "IssueTimelineItemKindCREATED",
+          "IssueTimelineItemKindTURN_STARTED",
+          "IssueTimelineItemKindMESSAGE",
+          "IssueTimelineItemKindSTEER",
+          "IssueTimelineItemKindARTIFACT",
+          "IssueTimelineItemKindSTOP_RAISED",
+          "IssueTimelineItemKindSTOP_RESOLVED",
+          "IssueTimelineItemKindCOMPLETED",
+          "IssueTimelineItemKindARCHIVED"
         ]
       },
       "Language": {

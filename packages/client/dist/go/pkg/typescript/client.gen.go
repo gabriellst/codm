@@ -441,25 +441,25 @@ func (e ChannelKind) Valid() bool {
 
 // Defines values for ChannelStatus.
 const (
-	CONNECTED    ChannelStatus = "CONNECTED"
-	CONNECTING   ChannelStatus = "CONNECTING"
-	CREATED      ChannelStatus = "CREATED"
-	DELETED      ChannelStatus = "DELETED"
-	DISCONNECTED ChannelStatus = "DISCONNECTED"
+	ChannelStatusCONNECTED    ChannelStatus = "CONNECTED"
+	ChannelStatusCONNECTING   ChannelStatus = "CONNECTING"
+	ChannelStatusCREATED      ChannelStatus = "CREATED"
+	ChannelStatusDELETED      ChannelStatus = "DELETED"
+	ChannelStatusDISCONNECTED ChannelStatus = "DISCONNECTED"
 )
 
 // Valid indicates whether the value is a known member of the ChannelStatus enum.
 func (e ChannelStatus) Valid() bool {
 	switch e {
-	case CONNECTED:
+	case ChannelStatusCONNECTED:
 		return true
-	case CONNECTING:
+	case ChannelStatusCONNECTING:
 		return true
-	case CREATED:
+	case ChannelStatusCREATED:
 		return true
-	case DELETED:
+	case ChannelStatusDELETED:
 		return true
-	case DISCONNECTED:
+	case ChannelStatusDISCONNECTED:
 		return true
 	default:
 		return false
@@ -856,6 +856,39 @@ func (e IssueArchiveReason) Valid() bool {
 	}
 }
 
+// Defines values for IssueLifeState.
+const (
+	IssueLifeStateDONE            IssueLifeState = "DONE"
+	IssueLifeStateQUEUED          IssueLifeState = "QUEUED"
+	IssueLifeStateREMINDED        IssueLifeState = "REMINDED"
+	IssueLifeStateRUNNING         IssueLifeState = "RUNNING"
+	IssueLifeStateSTALLED         IssueLifeState = "STALLED"
+	IssueLifeStateWAITINGPERSON   IssueLifeState = "WAITING_PERSON"
+	IssueLifeStateWAITINGPROVIDER IssueLifeState = "WAITING_PROVIDER"
+)
+
+// Valid indicates whether the value is a known member of the IssueLifeState enum.
+func (e IssueLifeState) Valid() bool {
+	switch e {
+	case IssueLifeStateDONE:
+		return true
+	case IssueLifeStateQUEUED:
+		return true
+	case IssueLifeStateREMINDED:
+		return true
+	case IssueLifeStateRUNNING:
+		return true
+	case IssueLifeStateSTALLED:
+		return true
+	case IssueLifeStateWAITINGPERSON:
+		return true
+	case IssueLifeStateWAITINGPROVIDER:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for IssueStatus.
 const (
 	COMPLETED  IssueStatus = "COMPLETED"
@@ -871,6 +904,45 @@ func (e IssueStatus) Valid() bool {
 	case NEEDSINPUT:
 		return true
 	case WORKING:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IssueTimelineItemKind.
+const (
+	IssueTimelineItemKindARCHIVED     IssueTimelineItemKind = "ARCHIVED"
+	IssueTimelineItemKindARTIFACT     IssueTimelineItemKind = "ARTIFACT"
+	IssueTimelineItemKindCOMPLETED    IssueTimelineItemKind = "COMPLETED"
+	IssueTimelineItemKindCREATED      IssueTimelineItemKind = "CREATED"
+	IssueTimelineItemKindMESSAGE      IssueTimelineItemKind = "MESSAGE"
+	IssueTimelineItemKindSTEER        IssueTimelineItemKind = "STEER"
+	IssueTimelineItemKindSTOPRAISED   IssueTimelineItemKind = "STOP_RAISED"
+	IssueTimelineItemKindSTOPRESOLVED IssueTimelineItemKind = "STOP_RESOLVED"
+	IssueTimelineItemKindTURNSTARTED  IssueTimelineItemKind = "TURN_STARTED"
+)
+
+// Valid indicates whether the value is a known member of the IssueTimelineItemKind enum.
+func (e IssueTimelineItemKind) Valid() bool {
+	switch e {
+	case IssueTimelineItemKindARCHIVED:
+		return true
+	case IssueTimelineItemKindARTIFACT:
+		return true
+	case IssueTimelineItemKindCOMPLETED:
+		return true
+	case IssueTimelineItemKindCREATED:
+		return true
+	case IssueTimelineItemKindMESSAGE:
+		return true
+	case IssueTimelineItemKindSTEER:
+		return true
+	case IssueTimelineItemKindSTOPRAISED:
+		return true
+	case IssueTimelineItemKindSTOPRESOLVED:
+		return true
+	case IssueTimelineItemKindTURNSTARTED:
 		return true
 	default:
 		return false
@@ -1191,22 +1263,22 @@ func (e ThreadMode) Valid() bool {
 
 // Defines values for ThreadStatus.
 const (
-	IDLE           ThreadStatus = "IDLE"
-	NEEDSATTENTION ThreadStatus = "NEEDS_ATTENTION"
-	PAUSED         ThreadStatus = "PAUSED"
-	RUNNING        ThreadStatus = "RUNNING"
+	ThreadStatusIDLE           ThreadStatus = "IDLE"
+	ThreadStatusNEEDSATTENTION ThreadStatus = "NEEDS_ATTENTION"
+	ThreadStatusPAUSED         ThreadStatus = "PAUSED"
+	ThreadStatusRUNNING        ThreadStatus = "RUNNING"
 )
 
 // Valid indicates whether the value is a known member of the ThreadStatus enum.
 func (e ThreadStatus) Valid() bool {
 	switch e {
-	case IDLE:
+	case ThreadStatusIDLE:
 		return true
-	case NEEDSATTENTION:
+	case ThreadStatusNEEDSATTENTION:
 		return true
-	case PAUSED:
+	case ThreadStatusPAUSED:
 		return true
-	case RUNNING:
+	case ThreadStatusRUNNING:
 		return true
 	default:
 		return false
@@ -1297,8 +1369,14 @@ type HistorySyncType string
 // IssueArchiveReason defines model for IssueArchiveReason.
 type IssueArchiveReason string
 
+// IssueLifeState defines model for IssueLifeState.
+type IssueLifeState string
+
 // IssueStatus defines model for IssueStatus.
 type IssueStatus string
+
+// IssueTimelineItemKind defines model for IssueTimelineItemKind.
+type IssueTimelineItemKind string
 
 // Language defines model for Language.
 type Language string
@@ -1359,6 +1437,91 @@ type GetIssuesOverviewParams struct {
 // SteerIssueJSONBody defines parameters for SteerIssue.
 type SteerIssueJSONBody struct {
 	Text string `json:"text"`
+}
+
+// GetIssueTimeline200JSONResponseBodyItems0 defines parameters for GetIssueTimeline.
+type GetIssueTimeline200JSONResponseBodyItems0 struct {
+	At    string `json:"at"`
+	Id    string `json:"id"`
+	Kind  string `json:"kind"`
+	Title string `json:"title"`
+}
+
+// GetIssueTimeline200JSONResponseBodyItems1 defines parameters for GetIssueTimeline.
+type GetIssueTimeline200JSONResponseBodyItems1 struct {
+	At   string `json:"at"`
+	Id   string `json:"id"`
+	Kind string `json:"kind"`
+}
+
+// GetIssueTimeline200JSONResponseBodyItems2 defines parameters for GetIssueTimeline.
+type GetIssueTimeline200JSONResponseBodyItems2 struct {
+	At             string                `json:"at"`
+	Classification *ClassificationMethod `json:"classification,omitempty"`
+	EntryId        openapi_types.UUID    `json:"entryId"`
+	Id             string                `json:"id"`
+	Kind           string                `json:"kind"`
+	Text           string                `json:"text"`
+	TranscriptKind TranscriptKind        `json:"transcriptKind"`
+}
+
+// GetIssueTimeline200JSONResponseBodyItems3 defines parameters for GetIssueTimeline.
+type GetIssueTimeline200JSONResponseBodyItems3 struct {
+	At          string  `json:"at"`
+	DeliveredAt *string `json:"deliveredAt,omitempty"`
+	Id          string  `json:"id"`
+	Kind        string  `json:"kind"`
+	ReadAt      *string `json:"readAt,omitempty"`
+	Reminder    bool    `json:"reminder"`
+	Text        string  `json:"text"`
+}
+
+// GetIssueTimeline200JSONResponseBodyItems4 defines parameters for GetIssueTimeline.
+type GetIssueTimeline200JSONResponseBodyItems4 struct {
+	ArtifactId   openapi_types.UUID `json:"artifactId"`
+	ArtifactKind ArtifactKind       `json:"artifactKind"`
+	At           string             `json:"at"`
+	Id           string             `json:"id"`
+	Kind         string             `json:"kind"`
+	Name         string             `json:"name"`
+}
+
+// GetIssueTimeline200JSONResponseBodyItems5 defines parameters for GetIssueTimeline.
+type GetIssueTimeline200JSONResponseBodyItems5 struct {
+	At       string             `json:"at"`
+	Id       string             `json:"id"`
+	Kind     string             `json:"kind"`
+	StopId   openapi_types.UUID `json:"stopId"`
+	StopKind StopKind           `json:"stopKind"`
+	Title    string             `json:"title"`
+}
+
+// GetIssueTimeline200JSONResponseBodyItems6 defines parameters for GetIssueTimeline.
+type GetIssueTimeline200JSONResponseBodyItems6 struct {
+	At         string             `json:"at"`
+	Id         string             `json:"id"`
+	Kind       string             `json:"kind"`
+	Resolution StopResolution     `json:"resolution"`
+	StopId     openapi_types.UUID `json:"stopId"`
+}
+
+// GetIssueTimeline200JSONResponseBodyItems7 defines parameters for GetIssueTimeline.
+type GetIssueTimeline200JSONResponseBodyItems7 struct {
+	At   string `json:"at"`
+	Id   string `json:"id"`
+	Kind string `json:"kind"`
+}
+
+// GetIssueTimeline200JSONResponseBodyItems8 defines parameters for GetIssueTimeline.
+type GetIssueTimeline200JSONResponseBodyItems8 struct {
+	At   string `json:"at"`
+	Id   string `json:"id"`
+	Kind string `json:"kind"`
+}
+
+// GetIssueTimeline200JSONResponseBody_Items_Item defines parameters for GetIssueTimeline.
+type GetIssueTimeline200JSONResponseBody_Items_Item struct {
+	union json.RawMessage
 }
 
 // SetCloudTokenJSONBody defines parameters for SetCloudToken.
@@ -1755,6 +1918,250 @@ type SaveOnboardingStepJSONRequestBody SaveOnboardingStepJSONBody
 
 // AddWorkspaceJSONRequestBody defines body for AddWorkspace for application/json ContentType.
 type AddWorkspaceJSONRequestBody AddWorkspaceJSONBody
+
+// AsGetIssueTimeline200JSONResponseBodyItems0 returns the union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as a GetIssueTimeline200JSONResponseBodyItems0
+func (t GetIssueTimeline200JSONResponseBody_Items_Item) AsGetIssueTimeline200JSONResponseBodyItems0() (GetIssueTimeline200JSONResponseBodyItems0, error) {
+	var body GetIssueTimeline200JSONResponseBodyItems0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetIssueTimeline200JSONResponseBodyItems0 overwrites any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as the provided GetIssueTimeline200JSONResponseBodyItems0
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) FromGetIssueTimeline200JSONResponseBodyItems0(v GetIssueTimeline200JSONResponseBodyItems0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetIssueTimeline200JSONResponseBodyItems0 performs a merge with any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item, using the provided GetIssueTimeline200JSONResponseBodyItems0
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) MergeGetIssueTimeline200JSONResponseBodyItems0(v GetIssueTimeline200JSONResponseBodyItems0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetIssueTimeline200JSONResponseBodyItems1 returns the union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as a GetIssueTimeline200JSONResponseBodyItems1
+func (t GetIssueTimeline200JSONResponseBody_Items_Item) AsGetIssueTimeline200JSONResponseBodyItems1() (GetIssueTimeline200JSONResponseBodyItems1, error) {
+	var body GetIssueTimeline200JSONResponseBodyItems1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetIssueTimeline200JSONResponseBodyItems1 overwrites any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as the provided GetIssueTimeline200JSONResponseBodyItems1
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) FromGetIssueTimeline200JSONResponseBodyItems1(v GetIssueTimeline200JSONResponseBodyItems1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetIssueTimeline200JSONResponseBodyItems1 performs a merge with any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item, using the provided GetIssueTimeline200JSONResponseBodyItems1
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) MergeGetIssueTimeline200JSONResponseBodyItems1(v GetIssueTimeline200JSONResponseBodyItems1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetIssueTimeline200JSONResponseBodyItems2 returns the union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as a GetIssueTimeline200JSONResponseBodyItems2
+func (t GetIssueTimeline200JSONResponseBody_Items_Item) AsGetIssueTimeline200JSONResponseBodyItems2() (GetIssueTimeline200JSONResponseBodyItems2, error) {
+	var body GetIssueTimeline200JSONResponseBodyItems2
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetIssueTimeline200JSONResponseBodyItems2 overwrites any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as the provided GetIssueTimeline200JSONResponseBodyItems2
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) FromGetIssueTimeline200JSONResponseBodyItems2(v GetIssueTimeline200JSONResponseBodyItems2) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetIssueTimeline200JSONResponseBodyItems2 performs a merge with any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item, using the provided GetIssueTimeline200JSONResponseBodyItems2
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) MergeGetIssueTimeline200JSONResponseBodyItems2(v GetIssueTimeline200JSONResponseBodyItems2) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetIssueTimeline200JSONResponseBodyItems3 returns the union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as a GetIssueTimeline200JSONResponseBodyItems3
+func (t GetIssueTimeline200JSONResponseBody_Items_Item) AsGetIssueTimeline200JSONResponseBodyItems3() (GetIssueTimeline200JSONResponseBodyItems3, error) {
+	var body GetIssueTimeline200JSONResponseBodyItems3
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetIssueTimeline200JSONResponseBodyItems3 overwrites any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as the provided GetIssueTimeline200JSONResponseBodyItems3
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) FromGetIssueTimeline200JSONResponseBodyItems3(v GetIssueTimeline200JSONResponseBodyItems3) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetIssueTimeline200JSONResponseBodyItems3 performs a merge with any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item, using the provided GetIssueTimeline200JSONResponseBodyItems3
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) MergeGetIssueTimeline200JSONResponseBodyItems3(v GetIssueTimeline200JSONResponseBodyItems3) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetIssueTimeline200JSONResponseBodyItems4 returns the union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as a GetIssueTimeline200JSONResponseBodyItems4
+func (t GetIssueTimeline200JSONResponseBody_Items_Item) AsGetIssueTimeline200JSONResponseBodyItems4() (GetIssueTimeline200JSONResponseBodyItems4, error) {
+	var body GetIssueTimeline200JSONResponseBodyItems4
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetIssueTimeline200JSONResponseBodyItems4 overwrites any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as the provided GetIssueTimeline200JSONResponseBodyItems4
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) FromGetIssueTimeline200JSONResponseBodyItems4(v GetIssueTimeline200JSONResponseBodyItems4) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetIssueTimeline200JSONResponseBodyItems4 performs a merge with any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item, using the provided GetIssueTimeline200JSONResponseBodyItems4
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) MergeGetIssueTimeline200JSONResponseBodyItems4(v GetIssueTimeline200JSONResponseBodyItems4) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetIssueTimeline200JSONResponseBodyItems5 returns the union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as a GetIssueTimeline200JSONResponseBodyItems5
+func (t GetIssueTimeline200JSONResponseBody_Items_Item) AsGetIssueTimeline200JSONResponseBodyItems5() (GetIssueTimeline200JSONResponseBodyItems5, error) {
+	var body GetIssueTimeline200JSONResponseBodyItems5
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetIssueTimeline200JSONResponseBodyItems5 overwrites any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as the provided GetIssueTimeline200JSONResponseBodyItems5
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) FromGetIssueTimeline200JSONResponseBodyItems5(v GetIssueTimeline200JSONResponseBodyItems5) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetIssueTimeline200JSONResponseBodyItems5 performs a merge with any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item, using the provided GetIssueTimeline200JSONResponseBodyItems5
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) MergeGetIssueTimeline200JSONResponseBodyItems5(v GetIssueTimeline200JSONResponseBodyItems5) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetIssueTimeline200JSONResponseBodyItems6 returns the union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as a GetIssueTimeline200JSONResponseBodyItems6
+func (t GetIssueTimeline200JSONResponseBody_Items_Item) AsGetIssueTimeline200JSONResponseBodyItems6() (GetIssueTimeline200JSONResponseBodyItems6, error) {
+	var body GetIssueTimeline200JSONResponseBodyItems6
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetIssueTimeline200JSONResponseBodyItems6 overwrites any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as the provided GetIssueTimeline200JSONResponseBodyItems6
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) FromGetIssueTimeline200JSONResponseBodyItems6(v GetIssueTimeline200JSONResponseBodyItems6) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetIssueTimeline200JSONResponseBodyItems6 performs a merge with any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item, using the provided GetIssueTimeline200JSONResponseBodyItems6
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) MergeGetIssueTimeline200JSONResponseBodyItems6(v GetIssueTimeline200JSONResponseBodyItems6) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetIssueTimeline200JSONResponseBodyItems7 returns the union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as a GetIssueTimeline200JSONResponseBodyItems7
+func (t GetIssueTimeline200JSONResponseBody_Items_Item) AsGetIssueTimeline200JSONResponseBodyItems7() (GetIssueTimeline200JSONResponseBodyItems7, error) {
+	var body GetIssueTimeline200JSONResponseBodyItems7
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetIssueTimeline200JSONResponseBodyItems7 overwrites any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as the provided GetIssueTimeline200JSONResponseBodyItems7
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) FromGetIssueTimeline200JSONResponseBodyItems7(v GetIssueTimeline200JSONResponseBodyItems7) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetIssueTimeline200JSONResponseBodyItems7 performs a merge with any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item, using the provided GetIssueTimeline200JSONResponseBodyItems7
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) MergeGetIssueTimeline200JSONResponseBodyItems7(v GetIssueTimeline200JSONResponseBodyItems7) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetIssueTimeline200JSONResponseBodyItems8 returns the union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as a GetIssueTimeline200JSONResponseBodyItems8
+func (t GetIssueTimeline200JSONResponseBody_Items_Item) AsGetIssueTimeline200JSONResponseBodyItems8() (GetIssueTimeline200JSONResponseBodyItems8, error) {
+	var body GetIssueTimeline200JSONResponseBodyItems8
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetIssueTimeline200JSONResponseBodyItems8 overwrites any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as the provided GetIssueTimeline200JSONResponseBodyItems8
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) FromGetIssueTimeline200JSONResponseBodyItems8(v GetIssueTimeline200JSONResponseBodyItems8) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetIssueTimeline200JSONResponseBodyItems8 performs a merge with any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item, using the provided GetIssueTimeline200JSONResponseBodyItems8
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) MergeGetIssueTimeline200JSONResponseBodyItems8(v GetIssueTimeline200JSONResponseBodyItems8) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t GetIssueTimeline200JSONResponseBody_Items_Item) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
 
 // AsGetSessionChat200JSONResponseBodyMentionGate0 returns the union data inside the GetSessionChat200JSONResponseBody_MentionGate as a GetSessionChat200JSONResponseBodyMentionGate0
 func (t GetSessionChat200JSONResponseBody_MentionGate) AsGetSessionChat200JSONResponseBodyMentionGate0() (GetSessionChat200JSONResponseBodyMentionGate0, error) {
@@ -2221,6 +2628,9 @@ type ClientInterface interface {
 
 	SteerIssue(ctx context.Context, issueId string, body SteerIssueJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetIssueTimeline request
+	GetIssueTimeline(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// SetCloudTokenWithBody request with any body
 	SetCloudTokenWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -2525,6 +2935,18 @@ func (c *Client) SteerIssueWithBody(ctx context.Context, issueId string, content
 
 func (c *Client) SteerIssue(ctx context.Context, issueId string, body SteerIssueJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewSteerIssueRequest(c.Server, issueId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetIssueTimeline(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetIssueTimelineRequest(c.Server, issueId)
 	if err != nil {
 		return nil, err
 	}
@@ -3793,6 +4215,40 @@ func NewSteerIssueRequestWithBody(server string, issueId string, contentType str
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetIssueTimelineRequest generates requests for GetIssueTimeline
+func NewGetIssueTimelineRequest(server string, issueId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "issueId", issueId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/issues/%s/timeline", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	return req, nil
 }
@@ -6229,6 +6685,9 @@ type ClientWithResponsesInterface interface {
 
 	SteerIssueWithResponse(ctx context.Context, issueId string, body SteerIssueJSONRequestBody, reqEditors ...RequestEditorFn) (*SteerIssueResponse, error)
 
+	// GetIssueTimelineWithResponse request
+	GetIssueTimelineWithResponse(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*GetIssueTimelineResponse, error)
+
 	// SetCloudTokenWithBodyWithResponse request with any body
 	SetCloudTokenWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetCloudTokenResponse, error)
 
@@ -6504,6 +6963,7 @@ type GetIssuesOverviewResponse struct {
 			Archived                bool               `json:"archived"`
 			IssueId                 openapi_types.UUID `json:"issueId"`
 			Key                     string             `json:"key"`
+			LifeState               IssueLifeState     `json:"lifeState"`
 			Meta                    *string            `json:"meta,omitempty"`
 			Status                  IssueStatus        `json:"status"`
 			ThreadDisplayName       string             `json:"threadDisplayName"`
@@ -6516,6 +6976,7 @@ type GetIssuesOverviewResponse struct {
 				Archived                bool               `json:"archived"`
 				IssueId                 openapi_types.UUID `json:"issueId"`
 				Key                     string             `json:"key"`
+				LifeState               IssueLifeState     `json:"lifeState"`
 				Meta                    *string            `json:"meta,omitempty"`
 				Status                  IssueStatus        `json:"status"`
 				ThreadDisplayName       string             `json:"threadDisplayName"`
@@ -6566,6 +7027,7 @@ type GetIssueDetailResponse struct {
 			Archived                bool               `json:"archived"`
 			IssueId                 openapi_types.UUID `json:"issueId"`
 			Key                     string             `json:"key"`
+			LifeState               IssueLifeState     `json:"lifeState"`
 			Meta                    *string            `json:"meta,omitempty"`
 			Status                  IssueStatus        `json:"status"`
 			Title                   string             `json:"title"`
@@ -6710,6 +7172,38 @@ func (r SteerIssueResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r SteerIssueResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetIssueTimelineResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Items []GetIssueTimeline200JSONResponseBody_Items_Item `json:"items"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetIssueTimelineResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetIssueTimelineResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetIssueTimelineResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -8851,6 +9345,15 @@ func (c *ClientWithResponses) SteerIssueWithResponse(ctx context.Context, issueI
 	return ParseSteerIssueResponse(rsp)
 }
 
+// GetIssueTimelineWithResponse request returning *GetIssueTimelineResponse
+func (c *ClientWithResponses) GetIssueTimelineWithResponse(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*GetIssueTimelineResponse, error) {
+	rsp, err := c.GetIssueTimeline(ctx, issueId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetIssueTimelineResponse(rsp)
+}
+
 // SetCloudTokenWithBodyWithResponse request with arbitrary body returning *SetCloudTokenResponse
 func (c *ClientWithResponses) SetCloudTokenWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetCloudTokenResponse, error) {
 	rsp, err := c.SetCloudTokenWithBody(ctx, contentType, body, reqEditors...)
@@ -9649,6 +10152,7 @@ func ParseGetIssuesOverviewResponse(rsp *http.Response) (*GetIssuesOverviewRespo
 				Archived                bool               `json:"archived"`
 				IssueId                 openapi_types.UUID `json:"issueId"`
 				Key                     string             `json:"key"`
+				LifeState               IssueLifeState     `json:"lifeState"`
 				Meta                    *string            `json:"meta,omitempty"`
 				Status                  IssueStatus        `json:"status"`
 				ThreadDisplayName       string             `json:"threadDisplayName"`
@@ -9661,6 +10165,7 @@ func ParseGetIssuesOverviewResponse(rsp *http.Response) (*GetIssuesOverviewRespo
 					Archived                bool               `json:"archived"`
 					IssueId                 openapi_types.UUID `json:"issueId"`
 					Key                     string             `json:"key"`
+					LifeState               IssueLifeState     `json:"lifeState"`
 					Meta                    *string            `json:"meta,omitempty"`
 					Status                  IssueStatus        `json:"status"`
 					ThreadDisplayName       string             `json:"threadDisplayName"`
@@ -9707,6 +10212,7 @@ func ParseGetIssueDetailResponse(rsp *http.Response) (*GetIssueDetailResponse, e
 				Archived                bool               `json:"archived"`
 				IssueId                 openapi_types.UUID `json:"issueId"`
 				Key                     string             `json:"key"`
+				LifeState               IssueLifeState     `json:"lifeState"`
 				Meta                    *string            `json:"meta,omitempty"`
 				Status                  IssueStatus        `json:"status"`
 				Title                   string             `json:"title"`
@@ -9818,6 +10324,34 @@ func ParseSteerIssueResponse(rsp *http.Response) (*SteerIssueResponse, error) {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
 			EntryId openapi_types.UUID `json:"entryId"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetIssueTimelineResponse parses an HTTP response from a GetIssueTimelineWithResponse call
+func ParseGetIssueTimelineResponse(rsp *http.Response) (*GetIssueTimelineResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetIssueTimelineResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Items []GetIssueTimeline200JSONResponseBody_Items_Item `json:"items"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err

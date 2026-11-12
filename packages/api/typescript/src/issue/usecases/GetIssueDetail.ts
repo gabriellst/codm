@@ -3,6 +3,7 @@ import { and, asc, eq, isNull } from 'drizzle-orm'
 import { LibSqlDatabaseDriver, Handler, z, BaseError } from '@codm/core-typescript'
 import { agentMailbox, issues, stops, terminalLines, transcriptEntries } from '@codm/contracts/db'
 import {
+	IssueLifeState,
 	IssueStatus,
 	MailboxItemKind,
 	MailboxTargetKind,
@@ -13,6 +14,7 @@ import {
 } from '@codm/contracts-typescript/wire/enums'
 import type { ApplicationErrors } from '../errors'
 import { providerWaitByIssue } from '../utils/providerWaitByIssue'
+import { lifeStateByIssue } from '../utils/issueLifeState'
 
 /** A STEER item's payload carries the message as `text` (`SteerIssueTurn`); anything else reads as empty. */
 const SteerPayloadSchema = z.object({ text: z.string() })
@@ -33,6 +35,8 @@ export const GetIssueDetailOutputSchema = z.object({
 		archived: z.boolean(),
 		/** ISO instant until which the issue waits on the provider's usage limit; absent when it is not. */
 		waitingForProviderUntil: z.string().optional(),
+		/** Where the work stands right now, by rule (`lifeStateOf`). */
+		lifeState: z.enum(IssueLifeState),
 	}),
 	provider: z.enum(ProviderKind),
 	terminalLog: z.array(z.object({ at: z.string(), line: z.string() })),
@@ -94,6 +98,7 @@ export class GetIssueDetail extends Handler<typeof GetIssueDetailInputSchema, ty
 			.from(stops)
 			.where(and(eq(stops.issueId, input.issueId), isNull(stops.resolvedAt)))
 		const waiting = await providerWaitByIssue(this.driver, [input.issueId])
+		const life = await lifeStateByIssue(this.driver, [{ issueId: issue.id, status: issue.status as IssueStatus }])
 		const steerRows = await this.driver.db
 			.select()
 			.from(agentMailbox)
@@ -115,6 +120,7 @@ export class GetIssueDetail extends Handler<typeof GetIssueDetailInputSchema, ty
 				meta: issue.meta ?? undefined,
 				archived: issue.archived,
 				waitingForProviderUntil: waiting.get(issue.id)?.toISOString(),
+				lifeState: life.get(issue.id) ?? IssueLifeState.STALLED,
 			},
 			provider: issue.provider as ProviderKind,
 			terminalLog: lines.map(l => ({ at: l.at.toISOString(), line: l.line })),

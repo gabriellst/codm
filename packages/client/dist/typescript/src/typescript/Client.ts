@@ -26,6 +26,7 @@ import {
 	getHomeDashboard,
 	getIssueDetail,
 	getIssueStatus,
+	getIssueTimeline,
 	getIssuesOverview,
 	getMyAccount,
 	getNeedsYouPanel,
@@ -179,6 +180,10 @@ export class TypescriptClient {
 
 	getIssueStatus(...args: Parameters<typeof getIssueStatus>): ReturnType<typeof getIssueStatus> {
 		return (getIssueStatus as (...a: any[]) => ReturnType<typeof getIssueStatus>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	getIssueTimeline(...args: Parameters<typeof getIssueTimeline>): ReturnType<typeof getIssueTimeline> {
+		return (getIssueTimeline as (...a: any[]) => ReturnType<typeof getIssueTimeline>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	getIssuesOverview(...args: Parameters<typeof getIssuesOverview>): ReturnType<typeof getIssuesOverview> {

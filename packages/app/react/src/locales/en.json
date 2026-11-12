@@ -367,6 +367,26 @@
 			"TUESDAY": "Tuesday",
 			"WEDNESDAY": "Wednesday"
 		},
+		"IssueLifeState": {
+			"DONE": "Done",
+			"QUEUED": "Queued",
+			"REMINDED": "Reminded to declare",
+			"RUNNING": "Running",
+			"STALLED": "Stalled",
+			"WAITING_PERSON": "Waiting on someone",
+			"WAITING_PROVIDER": "Waiting on usage limit"
+		},
+		"IssueTimelineItemKind": {
+			"ARCHIVED": "Archived",
+			"ARTIFACT": "Artifact",
+			"COMPLETED": "Completed",
+			"CREATED": "Created",
+			"MESSAGE": "Message",
+			"STEER": "Steer",
+			"STOP_RAISED": "Asked for someone",
+			"STOP_RESOLVED": "Answered",
+			"TURN_STARTED": "Turn started"
+		},
 		"IssueStatus": {
 			"COMPLETED": "Completed",
 			"NEEDS_INPUT": "Needs input",
@@ -697,6 +717,7 @@
 		"settingsDescriptionNamed": "How agents behave in {{name}}.",
 		"settingsTitle": "Thread settings",
 		"steer": "Steer",
+		"steerAutoReminder": "automatic reminder",
 		"steerDelivered": "Delivered at {{when}}",
 		"steerFailed": "Not delivered",
 		"steerHint": "Steers reach the agent working this issue only.",
@@ -714,6 +735,10 @@
 		"thinkingIndicator": "Thinking indicator",
 		"thinkingIndicatorHint": "Shows the phase message (✻ verb…) in the channel while the agent works. Off, the reply arrives without the indicator.",
 		"threadSettings": "Thread settings",
+		"timeline": "Timeline",
+		"timelineFromAgent": "agent",
+		"timelineFromPerson": "person",
+		"timelineReplyQuote": "replied quoting",
 		"transcriptIssue": "issue",
 		"waitingForProvider": "Waiting on the usage limit until {{when}}",
 		"waitingTerminal": "Waiting for terminal output…"
