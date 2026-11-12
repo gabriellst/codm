@@ -3,10 +3,11 @@ import { uuidv7 } from 'uuidv7'
 import { Handler, z, BaseError } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
 import { MailboxItemKind, MailboxTargetKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
-import { ISSUE_KEY_FALLBACK, uniqueSlugKey } from '@shared/utils/slug'
-import { OpenIssuesReader } from '@thread/services/OpenIssuesReader'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
+import { WorkspaceRepository } from '@workspace/repositories/WorkspaceRepository'
+import { issuePrefixOf } from '@workspace/objects'
 import { MailboxRepository } from '../repositories/MailboxRepository'
+import { IssueSequenceRepository } from '../repositories/IssueSequenceRepository'
 import { IssueForkedEvent } from '../events/IssueForkedEvent'
 import type { AgentApplicationErrors, AgentInterfaceErrors } from '../errors'
 
@@ -15,6 +16,8 @@ export const ForkIssueInputSchema = z.object({
 	threadId: z.uuid(),
 	/** What the operator asked for, in their words (§7.2 — `{ goal }` is all the tool takes from the model). */
 	goal: z.string().trim().min(1).max(2000),
+	/** A short human title for the card — the WHAT only. Absent ⇒ the goal, truncated. */
+	title: z.string().trim().min(1).max(80).optional(),
 	/**
 	 * The transcript entry that asked. INJECTED from the run token's claims, never an argument the
 	 * model supplies (§7.2): a model able to name the message it was "answering" could attribute its
@@ -83,7 +86,8 @@ export class ForkIssue extends Handler<typeof ForkIssueInputSchema, typeof ForkI
 
 	constructor(
 		private readonly threads: ThreadRepository,
-		private readonly openIssues: OpenIssuesReader,
+		private readonly workspaces: WorkspaceRepository,
+		private readonly sequences: IssueSequenceRepository,
 		private readonly mailbox: MailboxRepository,
 	) {
 		super()
@@ -99,19 +103,20 @@ export class ForkIssue extends Handler<typeof ForkIssueInputSchema, typeof ForkI
 		const provider = thread.providers[0]
 		if (!provider) throw new BaseError<AgentApplicationErrors>('PROVIDER_NOT_DETECTED', 'this thread has no provider bound')
 
-		const issueId = uuidv7()
-		// The title IS the goal, truncated: the operator described the work in words and there is no
-		// second field to invent one from. The key stays short because a human reads it in a chat
-		// message; `goal` stays whole because a CLI reads it as a prompt.
-		const title = input.goal.slice(0, 200)
-		const open = await this.openIssues.openIssues(input.threadId)
-		const key = uniqueSlugKey(
-			title,
-			open.map(issue => issue.key),
-			ISSUE_KEY_FALLBACK,
-		)
+		const workspace = await this.workspaces.findById(thread.workspaceId)
+		if (!workspace)
+			throw new BaseError<AgentInterfaceErrors>('AGENT_RUN_SCOPE_MISMATCH', 'the workspace this run is scoped to is no longer bound')
 
-		await this.withTransaction(tx, async tx => {
+		const issueId = uuidv7()
+		// THE TITLE is what a person reads on a card: the orchestrator's short `title` when it gave one, the
+		// goal truncated otherwise (the goal is the CLI's brief and routinely opens with who asked and when).
+		const title = input.title ?? input.goal.slice(0, 200)
+
+		const key = await this.withTransaction(tx, async tx => {
+			// THE SHORT KEY (fase 0, item 4): `<PREFIX>-<n>`, numbered per workspace and drawn in this same
+			// transaction, so a rolled-back fork returns its number. It replaced a slug of the goal's first
+			// 40 characters ("pedido-no-grupo-08-11-14-15-sobre-o-banne") that nobody could say back in a chat.
+			const key = `${issuePrefixOf(workspace.path)}-${await this.sequences.next(workspace.id.value, tx)}`
 			await this.mailbox.enqueue(
 				{
 					ownerId: input.ownerId,
@@ -153,6 +158,7 @@ export class ForkIssue extends Handler<typeof ForkIssueInputSchema, typeof ForkI
 				}),
 				tx,
 			)
+			return key
 		})
 
 		return { issueId, key }

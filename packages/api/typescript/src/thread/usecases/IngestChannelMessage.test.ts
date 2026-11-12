@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenThread, GIVEN_MENTION_TAG } from '@test/support'
-import { MailboxTargetKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
+import { ClassificationMethod, MailboxTargetKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
 import { IngestChannelMessage } from './IngestChannelMessage'
@@ -308,6 +308,50 @@ describe('IngestChannelMessage gate matrix', () => {
 			// author to prevent. Absent from the roster, the raw id is the fallback — an ugly name beats a
 			// hole, because losing WHO said something makes a transcript unreadable.
 			expect(payload?.quoted?.speaker).toBe('marina')
+		})
+
+		/**
+		 * A REPLY TO AN ISSUE'S MESSAGE BELONGS TO THAT ISSUE. The quote is the strongest routing signal a
+		 * group gives (more than half of the messages measured on a real install quote the agent), and the
+		 * agent's messages now carry their issue — so the reply inherits it and is marked REPLY_QUOTE.
+		 *
+		 * Falsifier: drop `issueId: quoted?.issueId` from the ingest and the reply records unbound.
+		 */
+		it('a reply to an issue’s message is recorded as that issue’s, classified REPLY_QUOTE', async () => {
+			const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+			const issueId = '019e4d24-6524-7041-9e1c-8108180cde02'
+			const issueLine = thread.recordEntry({ kind: TranscriptKind.SYSTEM, text: 'prévia pronta, posso publicar?', issueId })
+			await testBed.resolve(ThreadRepository).save(thread)
+
+			const out = await testBed.resolve(IngestChannelMessage).execute({
+				threadId: thread.id.value,
+				senderExternalId: 'stranger-42',
+				text: 'pode',
+				quotedEntryId: issueLine.entryId,
+				receivedAt: new Date(),
+			})
+
+			const reply = await testBed.resolve(ThreadRepository).findEntry(out.entryId)
+			expect(reply?.issueId).toBe(issueId)
+			expect(reply?.classification).toBe(ClassificationMethod.REPLY_QUOTE)
+		})
+
+		it('a reply to a conversational message stays unbound', async () => {
+			const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+			const chatLine = thread.recordEntry({ kind: TranscriptKind.SYSTEM, text: 'bom dia!' })
+			await testBed.resolve(ThreadRepository).save(thread)
+
+			const out = await testBed.resolve(IngestChannelMessage).execute({
+				threadId: thread.id.value,
+				senderExternalId: 'stranger-42',
+				text: 'bom dia',
+				quotedEntryId: chatLine.entryId,
+				receivedAt: new Date(),
+			})
+
+			const reply = await testBed.resolve(ThreadRepository).findEntry(out.entryId)
+			expect(reply?.issueId).toBeUndefined()
+			expect(reply?.classification).toBeUndefined()
 		})
 
 		it('an ordinary message with no quote at all carries none', async () => {

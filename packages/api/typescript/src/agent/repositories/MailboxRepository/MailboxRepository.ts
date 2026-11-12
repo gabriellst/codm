@@ -92,6 +92,25 @@ export abstract class MailboxRepository {
 	 */
 	abstract defer(id: string, until: Date, tx?: Transaction): Promise<void>
 
+	/**
+	 * Undo every `defer` still in force for `targetKind` — the items become claimable NOW, attempts
+	 * untouched. Returns how many.
+	 *
+	 * ### Why a deferral must be releasable
+	 * `defer` trusts the instant the provider named, and that instant can be days away: a WEEKLY window
+	 * (measured 2026-11-11: four issue items deferred to 11-17 while the conversation lane kept
+	 * answering). The pause that matched it lives in the dispatcher's memory and dies with a restart; the
+	 * deferral lives in the table and does not — so after a reboot every OTHER target ran while those
+	 * four, and every steer queued behind them, waited out the week. The same happens when the limit
+	 * is lifted early or the operator switches the thread to a model the window does not cover.
+	 *
+	 * Releasing is cheap and self-correcting: if the provider still refuses, the claim that follows is
+	 * refused in seconds and `defer` puts the item back, refunding the attempt. A deferred row is the one
+	 * shape no other path writes — a lease in the future with NO holder (`claimedBy` null) — so the
+	 * predicate cannot touch a live turn.
+	 */
+	abstract releaseDeferred(targetKind: MailboxTargetKind, tx?: Transaction): Promise<number>
+
 	/** The targets of `targetKind` with runnable work waiting — who is owed an answer right now. */
 	abstract pendingTargets(targetKind: MailboxTargetKind, tx?: Transaction): Promise<string[]>
 

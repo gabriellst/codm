@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { and, asc, eq, inArray, isNotNull, isNull, lt, ne, notExists, or, sql } from 'drizzle-orm'
+import { and, asc, eq, gt, inArray, isNotNull, isNull, lt, ne, notExists, or, sql } from 'drizzle-orm'
 import { DAEMON_BOOT, isClaimOrphaned, LibSqlDatabaseDriver, LibSqlTransaction } from '@codm/core-typescript'
 import { agentMailbox } from '@codm/contracts/db'
 import type { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
@@ -116,6 +116,8 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 					claimedPid: DAEMON_BOOT.pid,
 					leaseUntil: new Date(now.getTime() + leaseMs),
 					attempts: sql`${agentMailbox.attempts} + 1`,
+					// The FIRST hand-off only ("entregue"): a retry is the same delivery tried again.
+					firstClaimedAt: sql`COALESCE(${agentMailbox.firstClaimedAt}, ${now.getTime()})`,
 				})
 				.where(and(eq(agentMailbox.id, candidate.id), runnable(), unleased(now)))
 				.returning({
@@ -231,6 +233,25 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 				})
 				.where(and(eq(agentMailbox.id, id), runnable())),
 		)
+	}
+
+	async releaseDeferred(targetKind: MailboxTargetKind, tx?: LibSqlTransaction): Promise<number> {
+		return this.write(tx, async dbc => {
+			const released = await dbc
+				.update(agentMailbox)
+				.set({ leaseUntil: null })
+				.where(
+					and(
+						runnable(),
+						eq(agentMailbox.targetKind, targetKind),
+						isNull(agentMailbox.claimedBy),
+						isNotNull(agentMailbox.leaseUntil),
+						gt(agentMailbox.leaseUntil, new Date()),
+					),
+				)
+				.returning({ id: agentMailbox.id })
+			return released.length
+		})
 	}
 
 	async pendingTargets(targetKind: MailboxTargetKind, tx?: LibSqlTransaction): Promise<string[]> {

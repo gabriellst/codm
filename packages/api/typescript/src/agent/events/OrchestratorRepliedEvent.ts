@@ -11,6 +11,8 @@ export const OrchestratorRepliedEventSchema = z.domainEvent({
 	 * carry no quote, and stacking one on immediate back-and-forth reads like a bot.
 	 */
 	replyToEntryId: z.string().optional(),
+	/** The issue this reply speaks for — set when the turn composed that issue's result. */
+	issueId: z.string().optional(),
 })
 
 /**

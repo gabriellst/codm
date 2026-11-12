@@ -697,8 +697,13 @@
 		"settingsDescriptionNamed": "Como os agentes se comportam em {{name}}.",
 		"settingsTitle": "Configurações da conversa",
 		"steer": "Orientar",
+		"steerDelivered": "Entregue às {{when}}",
+		"steerFailed": "Não entregue",
 		"steerHint": "As orientações chegam apenas ao agente que trabalha nesta tarefa.",
+		"steerHistory": "Orientações enviadas",
 		"steerPlaceholder": "Oriente esta tarefa…",
+		"steerRead": "Lida às {{when}}",
+		"steerSent": "Na fila desde {{when}}",
 		"streaming": "Resposta em tempo real",
 		"streamingHint": "Envia a resposta enquanto o agente escreve, editando a mesma mensagem. Desligado, a resposta chega inteira no fim.",
 		"tabArtifacts": "Artefatos",
@@ -710,6 +715,7 @@
 		"thinkingIndicatorHint": "Mostra a mensagem de fase (✻ verbo…) no canal enquanto o agente trabalha. Desligado, a resposta chega sem o indicador.",
 		"threadSettings": "Configurações da conversa",
 		"transcriptIssue": "tarefa",
+		"waitingForProvider": "Esperando cota até {{when}}",
 		"waitingTerminal": "Aguardando saída do terminal…"
 	},
 	"settings": {

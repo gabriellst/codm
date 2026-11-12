@@ -1,7 +1,13 @@
 import { injectable } from 'tsyringe-neo'
 import { Handler, z, BaseError, CommandQueue, LoggingService, tryCatchAsync } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind, MessageType, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
+import {
+	ClassificationMethod,
+	MailboxItemKind,
+	MailboxTargetKind,
+	MessageType,
+	TranscriptKind,
+} from '@codm/contracts-typescript/wire/enums'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { AGENT_SPEAKER } from '../objects'
@@ -100,6 +106,12 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 				text: input.text,
 				senderExternalId: input.senderExternalId,
 				quotedEntry: quoted ? { entryId: quoted.entryId, threadId: quoted.threadId } : undefined,
+				// A REPLY TO AN ISSUE'S MESSAGE IS ABOUT THAT ISSUE. Measured on a real install: more than half
+				// of what people write in a group quotes one of the agent's messages, and the agent's messages
+				// now carry the issue they speak for — so the quote alone says where this message belongs. It
+				// is recorded here (the issue's timeline shows it); routing it is a later decision.
+				issueId: quoted?.issueId,
+				classification: quoted?.issueId ? ClassificationMethod.REPLY_QUOTE : undefined,
 				messageType: input.messageType,
 				mediaPath: input.mediaPath,
 				at: input.receivedAt,

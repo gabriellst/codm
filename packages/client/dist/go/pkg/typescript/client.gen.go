@@ -1453,7 +1453,8 @@ type CreateIssueJSONBody struct {
 
 // ForkIssueJSONBody defines parameters for ForkIssue.
 type ForkIssueJSONBody struct {
-	Goal string `json:"goal"`
+	Goal  string  `json:"goal"`
+	Title *string `json:"title,omitempty"`
 }
 
 // AskOperatorJSONBody defines parameters for AskOperator.
@@ -6500,25 +6501,27 @@ type GetIssuesOverviewResponse struct {
 	HTTPResponse *http.Response
 	JSON200      *struct {
 		Archived []struct {
-			Archived          bool               `json:"archived"`
-			IssueId           openapi_types.UUID `json:"issueId"`
-			Key               string             `json:"key"`
-			Meta              *string            `json:"meta,omitempty"`
-			Status            IssueStatus        `json:"status"`
-			ThreadDisplayName string             `json:"threadDisplayName"`
-			ThreadId          openapi_types.UUID `json:"threadId"`
-			Title             string             `json:"title"`
+			Archived                bool               `json:"archived"`
+			IssueId                 openapi_types.UUID `json:"issueId"`
+			Key                     string             `json:"key"`
+			Meta                    *string            `json:"meta,omitempty"`
+			Status                  IssueStatus        `json:"status"`
+			ThreadDisplayName       string             `json:"threadDisplayName"`
+			ThreadId                openapi_types.UUID `json:"threadId"`
+			Title                   string             `json:"title"`
+			WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
 		} `json:"archived"`
 		Groups []struct {
 			Items []struct {
-				Archived          bool               `json:"archived"`
-				IssueId           openapi_types.UUID `json:"issueId"`
-				Key               string             `json:"key"`
-				Meta              *string            `json:"meta,omitempty"`
-				Status            IssueStatus        `json:"status"`
-				ThreadDisplayName string             `json:"threadDisplayName"`
-				ThreadId          openapi_types.UUID `json:"threadId"`
-				Title             string             `json:"title"`
+				Archived                bool               `json:"archived"`
+				IssueId                 openapi_types.UUID `json:"issueId"`
+				Key                     string             `json:"key"`
+				Meta                    *string            `json:"meta,omitempty"`
+				Status                  IssueStatus        `json:"status"`
+				ThreadDisplayName       string             `json:"threadDisplayName"`
+				ThreadId                openapi_types.UUID `json:"threadId"`
+				Title                   string             `json:"title"`
+				WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
 			} `json:"items"`
 			Status IssueStatus `json:"status"`
 		} `json:"groups"`
@@ -6560,12 +6563,13 @@ type GetIssueDetailResponse struct {
 	HTTPResponse *http.Response
 	JSON200      *struct {
 		Issue struct {
-			Archived bool               `json:"archived"`
-			IssueId  openapi_types.UUID `json:"issueId"`
-			Key      string             `json:"key"`
-			Meta     *string            `json:"meta,omitempty"`
-			Status   IssueStatus        `json:"status"`
-			Title    string             `json:"title"`
+			Archived                bool               `json:"archived"`
+			IssueId                 openapi_types.UUID `json:"issueId"`
+			Key                     string             `json:"key"`
+			Meta                    *string            `json:"meta,omitempty"`
+			Status                  IssueStatus        `json:"status"`
+			Title                   string             `json:"title"`
+			WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
 		} `json:"issue"`
 		Provider       ProviderKind `json:"provider"`
 		RoutedMessages []struct {
@@ -6575,6 +6579,13 @@ type GetIssueDetailResponse struct {
 			Kind           TranscriptKind        `json:"kind"`
 			Text           string                `json:"text"`
 		} `json:"routedMessages"`
+		Steers []struct {
+			DeliveredAt *string `json:"deliveredAt,omitempty"`
+			Failed      bool    `json:"failed"`
+			ReadAt      *string `json:"readAt,omitempty"`
+			SentAt      string  `json:"sentAt"`
+			Text        string  `json:"text"`
+		} `json:"steers"`
 		Stops []struct {
 			Detail   string             `json:"detail"`
 			Kind     StopKind           `json:"kind"`
@@ -9635,25 +9646,27 @@ func ParseGetIssuesOverviewResponse(rsp *http.Response) (*GetIssuesOverviewRespo
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
 			Archived []struct {
-				Archived          bool               `json:"archived"`
-				IssueId           openapi_types.UUID `json:"issueId"`
-				Key               string             `json:"key"`
-				Meta              *string            `json:"meta,omitempty"`
-				Status            IssueStatus        `json:"status"`
-				ThreadDisplayName string             `json:"threadDisplayName"`
-				ThreadId          openapi_types.UUID `json:"threadId"`
-				Title             string             `json:"title"`
+				Archived                bool               `json:"archived"`
+				IssueId                 openapi_types.UUID `json:"issueId"`
+				Key                     string             `json:"key"`
+				Meta                    *string            `json:"meta,omitempty"`
+				Status                  IssueStatus        `json:"status"`
+				ThreadDisplayName       string             `json:"threadDisplayName"`
+				ThreadId                openapi_types.UUID `json:"threadId"`
+				Title                   string             `json:"title"`
+				WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
 			} `json:"archived"`
 			Groups []struct {
 				Items []struct {
-					Archived          bool               `json:"archived"`
-					IssueId           openapi_types.UUID `json:"issueId"`
-					Key               string             `json:"key"`
-					Meta              *string            `json:"meta,omitempty"`
-					Status            IssueStatus        `json:"status"`
-					ThreadDisplayName string             `json:"threadDisplayName"`
-					ThreadId          openapi_types.UUID `json:"threadId"`
-					Title             string             `json:"title"`
+					Archived                bool               `json:"archived"`
+					IssueId                 openapi_types.UUID `json:"issueId"`
+					Key                     string             `json:"key"`
+					Meta                    *string            `json:"meta,omitempty"`
+					Status                  IssueStatus        `json:"status"`
+					ThreadDisplayName       string             `json:"threadDisplayName"`
+					ThreadId                openapi_types.UUID `json:"threadId"`
+					Title                   string             `json:"title"`
+					WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
 				} `json:"items"`
 				Status IssueStatus `json:"status"`
 			} `json:"groups"`
@@ -9691,12 +9704,13 @@ func ParseGetIssueDetailResponse(rsp *http.Response) (*GetIssueDetailResponse, e
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
 			Issue struct {
-				Archived bool               `json:"archived"`
-				IssueId  openapi_types.UUID `json:"issueId"`
-				Key      string             `json:"key"`
-				Meta     *string            `json:"meta,omitempty"`
-				Status   IssueStatus        `json:"status"`
-				Title    string             `json:"title"`
+				Archived                bool               `json:"archived"`
+				IssueId                 openapi_types.UUID `json:"issueId"`
+				Key                     string             `json:"key"`
+				Meta                    *string            `json:"meta,omitempty"`
+				Status                  IssueStatus        `json:"status"`
+				Title                   string             `json:"title"`
+				WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
 			} `json:"issue"`
 			Provider       ProviderKind `json:"provider"`
 			RoutedMessages []struct {
@@ -9706,6 +9720,13 @@ func ParseGetIssueDetailResponse(rsp *http.Response) (*GetIssueDetailResponse, e
 				Kind           TranscriptKind        `json:"kind"`
 				Text           string                `json:"text"`
 			} `json:"routedMessages"`
+			Steers []struct {
+				DeliveredAt *string `json:"deliveredAt,omitempty"`
+				Failed      bool    `json:"failed"`
+				ReadAt      *string `json:"readAt,omitempty"`
+				SentAt      string  `json:"sentAt"`
+				Text        string  `json:"text"`
+			} `json:"steers"`
 			Stops []struct {
 				Detail   string             `json:"detail"`
 				Kind     StopKind           `json:"kind"`

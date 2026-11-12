@@ -111,6 +111,17 @@ export class MockMailboxRepository extends MailboxRepository {
 		row.attempts = Math.max(row.attempts - 1, 0)
 	}
 
+	async releaseDeferred(targetKind: MailboxTargetKind): Promise<number> {
+		const now = Date.now()
+		// Deferred = a future lease with no holder: `claimNext` stamps the boot, `defer` clears it.
+		const deferred = this.rows.filter(
+			r =>
+				!r.consumed && !r.dead && r.targetKind === targetKind && r.leaseUntil !== undefined && r.leaseUntil > now && r.claimedBoot === null,
+		)
+		for (const row of deferred) row.leaseUntil = undefined
+		return deferred.length
+	}
+
 	async pendingTargets(targetKind: MailboxTargetKind): Promise<string[]> {
 		return [...new Set(this.rows.filter(r => !r.consumed && !r.dead && r.targetKind === targetKind).map(r => r.targetId))]
 	}

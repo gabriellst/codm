@@ -26,7 +26,8 @@ get "status"(){
                 return issueStatusSchema
               },
 "meta": z.optional(z.string()),
-"archived": z.boolean()
+"archived": z.boolean(),
+"waitingForProviderUntil": z.optional(z.string())
     }),
 get "provider"(){
                 return providerKindSchema
@@ -54,6 +55,13 @@ get "kind"(){
 "title": z.string(),
 "detail": z.string(),
 "raisedAt": z.string()
+    })),
+"steers": z.array(z.object({
+    "text": z.string(),
+"sentAt": z.string(),
+"deliveredAt": z.optional(z.string()),
+"readAt": z.optional(z.string()),
+"failed": z.boolean()
     }))
     })
 

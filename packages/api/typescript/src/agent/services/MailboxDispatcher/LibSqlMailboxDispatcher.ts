@@ -50,6 +50,21 @@ const MAX_TURN_MS = 60 * 60 * 1000
  * claim-refuse-claim loop. See `waitForProvider`.
  */
 const PROVIDER_PAUSE_FLOOR_MS = 60_000
+/**
+ * How long a lane stays paused before it asks the provider again, whatever reset instant it was given.
+ *
+ * ### The failure this closes
+ * The instant comes from the provider and can be a WEEK out: measured 2026-11-11, the issue lane was
+ * refused with a weekly window and its items were deferred to 11-17 — while the conversation lane, on
+ * the same account, kept answering. A window that long outlives the reasons it was set: the operator
+ * switches the thread to another model, the plan is upgraded, the limit is lifted early. Nothing in
+ * the queue can observe any of that, so it ASKS: every half hour the lane's deferrals are released and
+ * the next claim either runs or is refused in seconds and deferred again (attempt refunded).
+ *
+ * The price of a probe that is refused is one CLI spawn per free slot of that lane — a handful of
+ * seconds of a process every thirty minutes, against days of silence when the window was wrong.
+ */
+const PROVIDER_PROBE_INTERVAL_MS = 30 * 60_000
 /** Past this many failed turns an item is POISONED rather than retried — it is blocking its target. */
 const MAX_ATTEMPTS = 3
 const POLL_MIN_MS = 250
@@ -139,14 +154,34 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	protected maxTurnMs = MAX_TURN_MS
 	/** Slots and claim order per target kind. A field for the same reason as `leaseMs`; see `TURN_LANES`. */
 	protected lanes = TURN_LANES
+	/** How long a paused lane waits before asking again. A field for the same reason; see the constant. */
+	protected probeIntervalMs = PROVIDER_PROBE_INTERVAL_MS
 	/**
-	 * Epoch ms until which NOTHING new is claimed — the provider account is refusing until then. In
-	 * memory on purpose: after a restart the first claimed item meets the same refusal and re-establishes
-	 * it, at the cost of one refused call, while every item it refused is already deferred in the table.
+	 * Per LANE, the epoch ms until which nothing new of that kind is claimed — the provider is refusing
+	 * that kind of turn until then.
+	 *
+	 * ### Why per lane and not one for the queue
+	 * The two lanes do not hit the same wall. An issue turn is a coding agent on the thread's model for
+	 * minutes; a conversation turn is a short reply. Measured 2026-11-11: the issue lane was refused with
+	 * a weekly window while conversation turns on the same account kept completing. One queue-wide pause
+	 * would have silenced every group for a week to protect turns that were never going to be refused.
+	 * A refusal now pauses only the lane it came from; the other lane keeps running.
+	 *
+	 * In memory on purpose: after a restart the deferrals are released (`releaseDeferredOnce`) and the
+	 * first claim meets the same refusal if it still holds, re-establishing the pause at the cost of one
+	 * refused call per free slot.
 	 */
-	private pausedUntil = 0
-	/** Conversations already told about the CURRENT pause — cleared once a turn gets through after it. */
+	private readonly pausedUntil = new Map<MailboxTargetKind, number>()
+	/** Per lane, when the current pause last asked the provider again — see `PROVIDER_PROBE_INTERVAL_MS`. */
+	private readonly probedAt = new Map<MailboxTargetKind, number>()
+	/**
+	 * Conversations already told about the CURRENT pause of a lane, keyed `<lane>:<threadId>` — the notice
+	 * says which half stopped, so a conversation told "the tasks stopped" must still be told if its own
+	 * replies stop later. Cleared per lane once a turn of that lane gets through after the window.
+	 */
 	private readonly noticed = new Set<string>()
+	/** Whether this run already released the deferrals it inherited — see `releaseDeferredOnce`. */
+	private deferredReleased = false
 	private draining: Promise<number> | null = null
 	/**
 	 * Whether the leases of dead boots have been released THIS run. The sweep is a boot-time repair,
@@ -314,6 +349,8 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			}
 		}
 
+		await this.releaseDeferredOnce()
+
 		let handled = 0
 		const inflight = new Set<Promise<void>>()
 		/** Turns in flight per lane — what decides which lanes the next claim may draw from. */
@@ -321,13 +358,14 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 		const laneOrder = Object.values(MailboxTargetKind).sort((a, b) => this.lanes[a].priority - this.lanes[b].priority)
 
 		for (;;) {
-			// THE PAUSE (see `waitForProvider`): while the account refuses, claim nothing — turns in flight
-			// finish on their own — and make sure everybody waiting has been told. When it ends, the next
-			// pause starts with nobody noticed.
-			const paused = Date.now() < this.pausedUntil
-			if (paused) await this.noticePausedConversations()
+			// THE PAUSE (see `waitForProvider`), per lane: a lane the provider is refusing claims nothing —
+			// its turns in flight finish on their own — while the other lane keeps going. A long pause asks
+			// again every `PROVIDER_PROBE_INTERVAL_MS`. Conversations waiting on a paused conversation lane
+			// are told; the issue lane tells its own threads when it pauses.
+			await this.probeLongPauses()
+			if (this.isPaused(MailboxTargetKind.THREAD)) await this.noticePausedConversations(MailboxTargetKind.THREAD)
 
-			const open = paused ? [] : laneOrder.filter(kind => (running.get(kind) ?? 0) < this.lanes[kind].slots)
+			const open = laneOrder.filter(kind => !this.isPaused(kind) && (running.get(kind) ?? 0) < this.lanes[kind].slots)
 			const item = open.length > 0 ? await this.mailbox.claimNext(this.workerId, this.leaseMs, open) : undefined
 
 			if (item) {
@@ -525,7 +563,7 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			// keeps refusing past its reported reset re-pauses on the floor, and clearing on the clock would
 			// re-send "atingi o limite" to every group once a minute. A turn that completed after the window
 			// is the evidence the provider is answering again.
-			if (Date.now() >= this.pausedUntil) this.noticed.clear()
+			if (!this.isPaused(item.targetKind)) this.clearNoticed(item.targetKind)
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error)
 
@@ -557,10 +595,14 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	 * ### What happens instead
 	 * - The item is DEFERRED (`MailboxRepository.defer`): the attempt its claim charged is refunded and it
 	 *   stays unclaimable until the reset, so no attempt is ever spent on a known refusal.
-	 * - The whole queue PAUSES until then (`pausedUntil`): every other item would hit the same wall, and
-	 *   claiming them would only spawn CLIs to be refused. Turns already in flight finish on their own.
-	 * - Each conversation owed an answer is TOLD, once per pause, with the time it resumes
-	 *   (`noticePausedConversations`).
+	 * - The item's LANE pauses until then (`pausedUntil`): every other item of that kind would hit the same
+	 *   wall, and claiming them would only spawn CLIs to be refused. The other lane keeps running — see
+	 *   `pausedUntil` for why one queue-wide pause was wrong. Turns already in flight finish on their own.
+	 * - Each conversation owed an answer is TOLD, once per pause, what stopped and when it resumes — with
+	 *   the date when that is not today (`noticePausedConversations`).
+	 * - The pause is not taken on faith for its whole length: it asks again every
+	 *   `PROVIDER_PROBE_INTERVAL_MS` (`probeLongPauses`), and a restart releases what it deferred
+	 *   (`releaseDeferredOnce`).
 	 *
 	 * The floor (`PROVIDER_PAUSE_FLOOR_MS`) guards a reset instant already in the past — a clock skew, or a
 	 * CLI still refusing just after the window — from turning into a retry loop.
@@ -568,13 +610,15 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	 * NEVER REJECTS, for the same reason `recordFailure` never does.
 	 */
 	private async waitForProvider(item: ClaimedMailboxItem, retryAfter: number): Promise<void> {
+		const lane = item.targetKind
 		const until = Math.max(retryAfter, Date.now() + PROVIDER_PAUSE_FLOOR_MS)
-		this.pausedUntil = Math.max(this.pausedUntil, until)
+		this.pausedUntil.set(lane, Math.max(this.pausedUntil.get(lane) ?? 0, until))
+		if (!this.probedAt.has(lane)) this.probedAt.set(lane, Date.now())
 		this.logging.warn({
 			content: {
-				message: 'provider usage limit reached — the mailbox waits for the reset',
+				message: 'provider usage limit reached — the lane waits for the reset',
 				itemId: item.id,
-				targetKind: item.targetKind,
+				targetKind: lane,
 				until: new Date(until).toISOString(),
 			},
 		})
@@ -592,7 +636,72 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 		// The item's own conversation: a THREAD item names it, an ISSUE item carries it on its payload.
 		const payload = item.payload as { threadId?: string }
 		const threadId = item.targetKind === MailboxTargetKind.THREAD ? item.targetId : payload.threadId
-		await this.noticePausedConversations(threadId ? [threadId] : [])
+		await this.noticePausedConversations(lane, threadId ? [threadId] : [])
+	}
+
+	private isPaused(lane: MailboxTargetKind): boolean {
+		return Date.now() < (this.pausedUntil.get(lane) ?? 0)
+	}
+
+	private clearNoticed(lane: MailboxTargetKind): void {
+		for (const key of this.noticed) if (key.startsWith(`${lane}:`)) this.noticed.delete(key)
+		this.probedAt.delete(lane)
+	}
+
+	/**
+	 * Once per run, BEFORE the first claim: release every deferral left in the table by a previous run.
+	 *
+	 * The pause that justified them was in that run's memory and is gone; keeping the rows deferred would
+	 * leave exactly those targets — and every message queued behind them — waiting out a window nobody
+	 * is tracking anymore, while every other target runs (the 2026-11-11 incident, which survived two
+	 * restarts). If the provider still refuses, the first claims re-establish the pause in seconds.
+	 *
+	 * The flag is set only on SUCCESS, like the orphan sweep: a failed write retries on the next drain.
+	 */
+	private async releaseDeferredOnce(): Promise<void> {
+		if (this.deferredReleased) return
+		let released = 0
+		for (const lane of Object.values(MailboxTargetKind)) released += await this.mailbox.releaseDeferred(lane)
+		this.deferredReleased = true
+		if (released > 0) {
+			this.logging.info({ content: { message: 'released mailbox items deferred by a previous run', released } })
+		}
+	}
+
+	/**
+	 * A lane paused for longer than `PROVIDER_PROBE_INTERVAL_MS` asks the provider again: the pause is
+	 * lifted and the lane's deferrals released, so the next pass claims. A refusal re-pauses it through
+	 * `waitForProvider` with the attempt refunded; a turn that gets through ends the pause for good.
+	 * Conversations are not told again — `noticed` survives a probe and is cleared only by a success.
+	 */
+	private async probeLongPauses(): Promise<void> {
+		const now = Date.now()
+		for (const [lane, until] of this.pausedUntil) {
+			if (now >= until) continue
+			const since = this.probedAt.get(lane) ?? now
+			if (now - since < this.probeIntervalMs) continue
+			try {
+				const released = await this.mailbox.releaseDeferred(lane)
+				this.pausedUntil.delete(lane)
+				this.probedAt.set(lane, now)
+				this.logging.info({
+					content: {
+						message: 'provider pause probe — the lane asks again before its reset',
+						targetKind: lane,
+						until: new Date(until).toISOString(),
+						released,
+					},
+				})
+			} catch (error) {
+				this.logging.error({
+					content: {
+						message: 'could not release deferred items for a probe — the next drain retries',
+						targetKind: lane,
+						error: error instanceof Error ? error.message : String(error),
+					},
+				})
+			}
+		}
 	}
 
 	/**
@@ -604,13 +713,23 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	 * the next drain tries again, because the conversation is only marked noticed once it succeeded. The
 	 * set is cleared by the first turn that completes after the window (see `runTurn`).
 	 */
-	private async noticePausedConversations(extra: readonly string[] = []): Promise<void> {
+	private async noticePausedConversations(lane: MailboxTargetKind, extra: readonly string[] = []): Promise<void> {
 		try {
-			const owed = new Set([...extra, ...(await this.mailbox.pendingTargets(MailboxTargetKind.THREAD))])
+			// A paused CONVERSATION lane owes a notice to every conversation waiting for a reply; a paused
+			// ISSUE lane only to the threads whose issues it refused (`extra`) — the others are not waiting.
+			const waiting = lane === MailboxTargetKind.THREAD ? await this.mailbox.pendingTargets(MailboxTargetKind.THREAD) : []
+			const owed = new Set([...extra, ...waiting])
+			const until = new Date(this.pausedUntil.get(lane) ?? Date.now())
 			for (const threadId of owed) {
-				if (this.noticed.has(threadId)) continue
-				await this.handlerFor(NotifyProviderPaused).execute({ threadId, until: new Date(this.pausedUntil) })
-				this.noticed.add(threadId)
+				const key = `${lane}:${threadId}`
+				if (this.noticed.has(key)) continue
+				await this.handlerFor(NotifyProviderPaused).execute({
+					threadId,
+					until,
+					lane,
+					probeEveryMinutes: Math.max(1, Math.round(this.probeIntervalMs / 60_000)),
+				})
+				this.noticed.add(key)
 			}
 		} catch (error) {
 			this.logging.error({
@@ -674,7 +793,7 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 		const provider = thread.providers[0]
 		if (!provider) return this.dropSilently(item, 'thread has no provider')
 
-		const payload = item.payload as { entryId?: string; originEntryId?: string }
+		const payload = item.payload as { entryId?: string; originEntryId?: string; issueId?: string }
 		const result = await this.handlerFor(RunOrchestratorTurn).execute({
 			ownerId: item.ownerId,
 			threadId: item.targetId,
@@ -696,6 +815,9 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			// the run-token claims, because this turn was triggered by a subagent finishing, not by a
 			// message — there is no entry to mint a claim from.
 			originEntryId: item.kind === MailboxItemKind.ISSUE_RESULT ? payload.originEntryId : undefined,
+			// The issue whose result this turn composes — what makes the reply that issue's message in the
+			// transcript. Absent on a result queued before the field existed; the reply then records unbound.
+			issueId: item.kind === MailboxItemKind.ISSUE_RESULT ? payload.issueId : undefined,
 		})
 		return { spoke: result.spoke, transportStop: result.transportStop }
 	}
@@ -737,6 +859,7 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			provider: string
 			originEntryId?: string
 			firedByLoop?: string
+			declarationReminder?: boolean
 		}
 		const thread = await this.threads.findById(payload.threadId)
 		if (!thread) return this.dropSilently(item, 'thread no longer exists')
@@ -781,6 +904,8 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			priorMessageId: session?.lastMessageId,
 			// Carried through so `persistOutcome` can put it on the ISSUE_RESULT it queues.
 			originEntryId: payload.originEntryId,
+			// The automatic reminder to declare (`RunIssueTurn.remindToDeclare`) — silent, and never re-reminded.
+			declarationReminder: payload.declarationReminder === true,
 		})
 		return { spoke: result.spoke, transportStop: result.transportStop }
 	}

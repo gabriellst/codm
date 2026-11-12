@@ -14,6 +14,8 @@ export const RecordOrchestratorReplyInputSchema = z.object({
 	threadId: z.string(),
 	text: z.string().min(1),
 	replyToEntryId: z.string().optional(),
+	/** The issue this reply speaks for (mirrors the wire: plain string, same drop posture as above). */
+	issueId: z.string().optional(),
 })
 
 export const RecordOrchestratorReplyOutputSchema = z.void()
@@ -69,6 +71,9 @@ export class RecordOrchestratorReply extends Handler<
 				kind: TranscriptKind.SYSTEM,
 				text: input.text,
 				quotedEntry: quoted ? { entryId: quoted.entryId, threadId: quoted.threadId } : undefined,
+				// The transcript's link to the issue — what a per-issue timeline reads, and what a human's
+				// reply-quote to THIS message resolves back to. Absent on conversational replies.
+				issueId: input.issueId,
 			})
 			await this.threads.save(thread, tx)
 

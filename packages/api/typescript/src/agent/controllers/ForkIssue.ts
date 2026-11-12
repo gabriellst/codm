@@ -24,8 +24,14 @@ export const ForkIssueControllerInputSchema = z
 		ctx: z.object({ ownerId: z.uuid() }).extend(AgentRunIdentityCtxSchema.shape),
 		params: z.object({ threadId: z.uuid() }),
 		body: z.object({
-			/** What the operator asked for, in their words. Becomes the subagent's prompt and the issue title. */
+			/** What the operator asked for, in their words. Becomes the subagent's prompt. */
 			goal: z.string().trim().min(1).max(2000),
+			/**
+			 * A short title for the issue card, up to 80 characters: WHAT is being done, in plain words —
+			 * no requester, no date, no permission notes (those live in the goal). Omit it and the goal is
+			 * truncated into a title, which is long and hard to scan.
+			 */
+			title: z.string().trim().min(1).max(80).optional(),
 		}),
 	})
 	.example([
@@ -41,12 +47,12 @@ export const ForkIssueControllerInputSchema = z
 				},
 			},
 			params: { threadId: '019e4d24-6524-7041-9e1c-8108180cddae' },
-			body: { goal: 'põe um toggle de dark mode nas configurações' },
+			body: { goal: 'põe um toggle de dark mode nas configurações', title: 'Toggle de dark mode nas configurações' },
 		},
 	])
 
 export const ForkIssueControllerOutputSchema = ForkIssueOutputSchema.example([
-	{ issueId: '019e4d24-6524-7041-9e1c-8108180cddaf', key: 'poe-um-toggle-de-dark-mode-nas' },
+	{ issueId: '019e4d24-6524-7041-9e1c-8108180cddaf', key: 'APP-42' },
 ])
 
 /**
@@ -123,8 +129,9 @@ export class ForkIssueController extends Controller<typeof ForkIssueControllerIn
 			ownerId: request.ctx.ownerId,
 			threadId,
 			goal: request.body.goal,
+			title: request.body.title,
 			originEntryId: identity.entryId,
-			// From the run token, never from `body` — the body is `{ goal }` and nothing else (Decision 6).
+			// From the run token, never from `body` — the body is `{ goal, title? }` and nothing else (Decision 6).
 			posture: identity.posture,
 		})
 		return { status: HttpStatusCode.CREATED, data }
