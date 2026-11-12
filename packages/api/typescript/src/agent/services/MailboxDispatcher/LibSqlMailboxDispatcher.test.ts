@@ -443,6 +443,177 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 		expect(await notices()).toBe(2)
 	})
 
+	const WEEK_MS = 7 * 24 * 60 * 60_000
+
+	const enqueueSteer = (mailbox: MailboxRepository, issueId: string, threadId: string, dedupKey: string) =>
+		mailbox.enqueue({
+			ownerId: testBed.ownerId,
+			targetKind: MailboxTargetKind.ISSUE,
+			targetId: issueId,
+			kind: MailboxItemKind.STEER,
+			posture: PermissionPosture.AUTO,
+			payload: { threadId, key: 'ISS-1', title: 'weekly', text: dedupKey, provider: 'CLAUDE' },
+			dedupKey,
+		})
+
+	const build = <T extends LibSqlMailboxDispatcher>(
+		Dispatcher: new (...args: ConstructorParameters<typeof LibSqlMailboxDispatcher>) => T,
+	): T =>
+		new Dispatcher(
+			testBed.resolve(MailboxRepository),
+			testBed.resolve(ThreadRepository),
+			testBed.resolve(WorkspaceRepository),
+			testBed.resolve(AgentSessionRepository),
+			testBed.resolve(LoggingService),
+			testBed.resolve(CloudSession),
+		).bind(testContainer)
+
+	/**
+	 * A PAUSA É DA PISTA (2026-11-11): o limite das issues não cala a conversa.
+	 *
+	 * Medido em produção: a pista de issues foi recusada com uma janela SEMANAL enquanto os turnos de
+	 * conversa, na mesma conta, seguiam completando. Com uma pausa única para a fila, um processo que não
+	 * reiniciasse deixaria todos os grupos mudos por uma semana.
+	 *
+	 * Falsificador: volte `pausedUntil` a um número único e a mensagem da conversa nunca é reivindicada
+	 * — `threadTurns` fica 0.
+	 */
+	it('uma recusa na pista de issues pausa só as issues — a conversa segue respondendo e é avisada do que parou', async () => {
+		const mailbox = testBed.resolve(MailboxRepository)
+		const thread = await givenThread(testBed)
+		let issueTurns = 0
+		let threadTurns = 0
+
+		class WeeklyIssueLimit extends LibSqlMailboxDispatcher {
+			protected override async runIssueWork(): Promise<TurnReport> {
+				issueTurns += 1
+				return { spoke: false, transportStop: { detail: 'weekly limit', retryAfter: Date.now() + WEEK_MS } }
+			}
+			protected override async runThreadTurn(): Promise<TurnReport> {
+				threadTurns += 1
+				return { spoke: true }
+			}
+		}
+		const dispatcher = build(WeeklyIssueLimit)
+
+		await enqueueSteer(mailbox, uuidv7(), thread.id.value, 'weekly-issue')
+		await dispatcher.drain()
+		expect(issueTurns).toBe(1)
+
+		await mailbox.enqueue({
+			ownerId: testBed.ownerId,
+			targetKind: MailboxTargetKind.THREAD,
+			targetId: thread.id.value,
+			kind: MailboxItemKind.OPERATOR_MESSAGE,
+			posture: PermissionPosture.AUTO,
+			payload: { entryId: uuidv7() },
+			dedupKey: 'weekly-thread',
+		})
+		await dispatcher.drain()
+
+		expect(threadTurns).toBe(1)
+		expect(await mailbox.hasPending(MailboxTargetKind.THREAD, thread.id.value)).toBe(false)
+		expect(issueTurns).toBe(1)
+
+		const notices = await testBed.probe().count('scheduledCommands', { name: 'deliver_channel_message' })
+		expect(notices).toBe(1)
+		const entries = await testBed.resolve(ThreadRepository).listEntries(thread.id.value)
+		const notice = entries.find(entry => entry.text.includes('limite de uso'))?.text ?? ''
+		expect(notice).toContain('As tarefas pararam')
+		expect(notice).toContain('continuo respondendo')
+		// A semana não vira "às 00:00": o aviso traz o dia quando o reset não é hoje.
+		expect(notice).toMatch(/em \d{2}\/\d{2} às \d{2}:\d{2}/)
+	})
+
+	/**
+	 * O ADIAMENTO NÃO SOBREVIVE À PAUSA QUE O JUSTIFICOU (2026-11-11).
+	 *
+	 * A pausa vive na memória do processo; o adiamento, na tabela. Depois de um restart, todos os outros
+	 * alvos rodaram, e os quatro itens adiados — com todos os recados enfileirados atrás deles — ficaram
+	 * esperando uma janela que ninguém mais acompanhava. Aqui: um processo adia por uma semana e "morre";
+	 * o seguinte tem que tentar de novo no primeiro drain, e o recado que chegou depois tem que andar.
+	 *
+	 * Falsificador: tire `releaseDeferredOnce` do `drainLoop` e o segundo processo não roda nada.
+	 */
+	it('um restart libera o que o processo anterior adiou — e o recado que estava atrás anda junto', async () => {
+		const mailbox = testBed.resolve(MailboxRepository)
+		const thread = await givenThread(testBed)
+		const issueId = uuidv7()
+
+		class Refuses extends LibSqlMailboxDispatcher {
+			protected override async runIssueWork(): Promise<TurnReport> {
+				return { spoke: false, transportStop: { detail: 'weekly limit', retryAfter: Date.now() + WEEK_MS } }
+			}
+		}
+		await enqueueSteer(mailbox, issueId, thread.id.value, 'deferred-first')
+		await build(Refuses).drain()
+		await enqueueSteer(mailbox, issueId, thread.id.value, 'queued-behind')
+		expect(await mailbox.hasPending(MailboxTargetKind.ISSUE, issueId)).toBe(true)
+
+		const ran: string[] = []
+		class Answers extends LibSqlMailboxDispatcher {
+			protected override async runIssueWork(item: ClaimedMailboxItem): Promise<TurnReport> {
+				ran.push((item.payload as { text: string }).text)
+				return { spoke: true }
+			}
+		}
+		await build(Answers).drain()
+
+		// Os dois, NA ORDEM: o adiado primeiro, o que estava atrás dele depois.
+		expect(ran).toEqual(['deferred-first', 'queued-behind'])
+		expect(await mailbox.hasPending(MailboxTargetKind.ISSUE, issueId)).toBe(false)
+	})
+
+	/**
+	 * A PAUSA LONGA PERGUNTA DE NOVO (2026-11-11): a janela semanal não é tomada como verdade por uma semana.
+	 *
+	 * O operador troca o modelo, o plano muda, o limite cai antes — nada disso é visível para a fila. Com
+	 * o intervalo de sondagem vencido, a pista libera os adiados e reivindica; se o provedor ainda recusar,
+	 * volta a adiar sem gastar tentativa e sem repetir o aviso.
+	 *
+	 * Falsificador: tire `probeLongPauses` do `drainLoop` e `calls` fica em 1.
+	 */
+	it('uma pausa longa sonda o provedor no intervalo — recusa de novo sem repetir o aviso, e anda quando ele volta', async () => {
+		const mailbox = testBed.resolve(MailboxRepository)
+		const thread = await givenThread(testBed)
+		const issueId = uuidv7()
+		let calls = 0
+		let refuse = true
+
+		class Probing extends LibSqlMailboxDispatcher {
+			protected override probeIntervalMs = 30
+			protected override async runIssueWork(): Promise<TurnReport> {
+				calls += 1
+				if (refuse) return { spoke: false, transportStop: { detail: 'weekly limit', retryAfter: Date.now() + WEEK_MS } }
+				return { spoke: true }
+			}
+		}
+		const dispatcher = build(Probing)
+		const notices = () => testBed.probe().count('scheduledCommands', { name: 'deliver_channel_message' })
+
+		await enqueueSteer(mailbox, issueId, thread.id.value, 'probe-me')
+		await dispatcher.drain()
+		expect(calls).toBe(1)
+
+		// Antes do intervalo: nada é tentado.
+		await dispatcher.drain()
+		expect(calls).toBe(1)
+
+		// Intervalo vencido, provedor ainda recusando: tenta uma vez, volta a adiar, não avisa de novo.
+		await new Promise(resolve => setTimeout(resolve, 40))
+		await dispatcher.drain()
+		expect(calls).toBe(2)
+		expect(await notices()).toBe(1)
+		expect(await mailbox.hasPending(MailboxTargetKind.ISSUE, issueId)).toBe(true)
+
+		// O provedor voltou: a próxima sondagem roda e consome o item.
+		refuse = false
+		await new Promise(resolve => setTimeout(resolve, 40))
+		await dispatcher.drain()
+		expect(calls).toBe(3)
+		expect(await mailbox.hasPending(MailboxTargetKind.ISSUE, issueId)).toBe(false)
+	})
+
 	/**
 	 * Morrer em silêncio é o defeito, não a morte.
 	 *

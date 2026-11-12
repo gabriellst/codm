@@ -1,4 +1,4 @@
-import { Language, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { Language, MailboxTargetKind, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { defineMessages } from '@shared/i18n/messages'
 
 /**
@@ -39,6 +39,51 @@ function clock(locale: string, at: Date): string {
 	return new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(at)
 }
 
+/** Dia e mês no fuso desta máquina. */
+function day(locale: string, at: Date): string {
+	return new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit' }).format(at)
+}
+
+/**
+ * Quando a fila volta, dito de um jeito que não engana: só a hora quando é hoje, dia e hora quando não é.
+ *
+ * Medido em 2026-11-11: uma janela SEMANAL virou "eu volto a responder às 00:00" — e o grupo leu meia-noite
+ * daquele dia, quando era dali a seis dias.
+ */
+function whenPt(at: Date, now: Date): string {
+	return day('pt-BR', at) === day('pt-BR', now) ? `às ${clock('pt-BR', at)}` : `em ${day('pt-BR', at)} às ${clock('pt-BR', at)}`
+}
+
+function whenEn(at: Date, now: Date): string {
+	return day('en-US', at) === day('en-US', now) ? `at ${clock('en-US', at)}` : `on ${day('en-US', at)} at ${clock('en-US', at)}`
+}
+
+interface ProviderPausedParams {
+	until: Date
+	now: Date
+	lane: MailboxTargetKind
+	probeEveryMinutes: number
+}
+
+/**
+ * O que parou depende da PISTA que o provedor recusou, e o aviso diz isso — é uma relação declarada por
+ * pista, não um `if`. Pausar as tarefas não cala a conversa (e vice-versa): o grupo precisa saber que
+ * pode continuar falando.
+ */
+const PROVIDER_PAUSED_PT: Record<MailboxTargetKind, (p: ProviderPausedParams) => string> = {
+	[MailboxTargetKind.THREAD]: p =>
+		`Atingi o limite de uso da conta do provedor do agente. As mensagens estão na fila e eu volto a responder ${whenPt(p.until, p.now)}. Antes disso, tento de novo a cada ${p.probeEveryMinutes} minutos.`,
+	[MailboxTargetKind.ISSUE]: p =>
+		`As tarefas pararam: a conta do provedor atingiu o limite de uso para esse trabalho. Elas voltam sozinhas ${whenPt(p.until, p.now)}, e eu tento de novo a cada ${p.probeEveryMinutes} minutos. Aqui na conversa eu continuo respondendo.`,
+}
+
+const PROVIDER_PAUSED_EN: Record<MailboxTargetKind, (p: ProviderPausedParams) => string> = {
+	[MailboxTargetKind.THREAD]: p =>
+		`I hit the usage limit of the agent's provider account. Messages are queued and I'll answer again ${whenEn(p.until, p.now)}. Until then, I'll retry every ${p.probeEveryMinutes} minutes.`,
+	[MailboxTargetKind.ISSUE]: p =>
+		`Tasks are paused: the provider account hit its usage limit for this work. They resume on their own ${whenEn(p.until, p.now)}, and I'll retry every ${p.probeEveryMinutes} minutes. I'm still answering here.`,
+}
+
 const PT_MESSAGES = {
 	stopTitle: (p: { kind: StopKind }) => STOP_TITLES_PT[p.kind],
 	/**
@@ -56,8 +101,7 @@ const PT_MESSAGES = {
 	 * não há nada para o operador resolver — só esperar. O horário vem do instante ESTRUTURADO que o CLI
 	 * informou (`rate_limit_info.resetsAt`), no fuso desta máquina, que é a do operador.
 	 */
-	providerPausedNotice: (p: { until: Date }) =>
-		`Atingi o limite de uso da conta do provedor do agente. As mensagens estão na fila e eu volto a responder às ${clock('pt-BR', p.until)}.`,
+	providerPausedNotice: (p: ProviderPausedParams) => PROVIDER_PAUSED_PT[p.lane](p),
 }
 
 export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
@@ -65,7 +109,6 @@ export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
 	[Language.EN_US]: {
 		stopTitle: p => STOP_TITLES_EN[p.kind],
 		stopChannelNotice: p => (p.detail.length > 0 ? `${STOP_TITLES_EN[p.kind]}.\n\n${p.detail}` : `${STOP_TITLES_EN[p.kind]}.`),
-		providerPausedNotice: p =>
-			`I hit the usage limit of the agent's provider account. Messages are queued and I'll answer again at ${clock('en-US', p.until)}.`,
+		providerPausedNotice: p => PROVIDER_PAUSED_EN[p.lane](p),
 	},
 })
