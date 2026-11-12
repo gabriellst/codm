@@ -1,3 +1,5 @@
+import type { ProviderKind } from '@codm/contracts-typescript/wire/enums'
+
 /**
  * Uma issue que se diz trabalhando e não tem trabalho nenhum em voo.
  *
@@ -9,6 +11,18 @@ export interface StalledIssueRef {
 	issueId: string
 	ownerId: string
 	threadId: string
+	/** What a reminder steer needs to address the issue the way every other steer does. */
+	key: string
+	title: string
+	provider: ProviderKind
+	/**
+	 * The last item a turn of this issue CONSUMED — the turn that ended without declaring anything — or
+	 * `null` when no turn ever ran (an issue declared open with no work queued). Keys the reminder: one
+	 * reminder per turn that went quiet.
+	 */
+	lastConsumedItemId: string | null
+	/** Whether that last turn was ALREADY the declaration reminder — then the sweep raises the stop. */
+	lastTurnWasReminder: boolean
 }
 
 /**

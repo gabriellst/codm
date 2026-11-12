@@ -177,6 +177,22 @@ describe('RunIssueTurn use case', () => {
 		expect(second?.id).not.toBe(first?.id)
 	})
 
+	/**
+	 * O TURNO DO LEMBRETE É SILENCIOSO (fase 0, item 5). It only asks the session to declare; the
+	 * substance was already reported by the turn it follows, and a second "nada novo" in the group is the
+	 * noise this exists to cut. Falsifier: drop the `declarationReminder` guard on `enqueueResult` and a
+	 * result item appears.
+	 */
+	it('a declaration-reminder turn queues NO result for the orchestrator', async () => {
+		const useCase = testBed.resolve(RunIssueTurn)
+		const mailbox = testBed.resolve(MailboxRepository)
+		const issueId = testId('run-issue-turn', 'issue-reminder')
+
+		await useCase.execute({ ...baseInput(issueId), messageId: testId('run-issue-turn', 'entry-reminder'), declarationReminder: true })
+
+		expect(await mailbox.claimNext('run-issue-turn-test', 60_000)).toBeUndefined()
+	})
+
 	it('upserts the durable session row from the session id the terminal event reported', async () => {
 		const useCase = testBed.resolve(RunIssueTurn)
 		const sessions = testBed.resolve(AgentSessionRepository)

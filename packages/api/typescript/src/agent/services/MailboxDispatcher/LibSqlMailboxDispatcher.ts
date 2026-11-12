@@ -859,6 +859,7 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			provider: string
 			originEntryId?: string
 			firedByLoop?: string
+			declarationReminder?: boolean
 		}
 		const thread = await this.threads.findById(payload.threadId)
 		if (!thread) return this.dropSilently(item, 'thread no longer exists')
@@ -903,6 +904,8 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			priorMessageId: session?.lastMessageId,
 			// Carried through so `persistOutcome` can put it on the ISSUE_RESULT it queues.
 			originEntryId: payload.originEntryId,
+			// The automatic reminder to declare (`RunIssueTurn.remindToDeclare`) — silent, and never re-reminded.
+			declarationReminder: payload.declarationReminder === true,
 		})
 		return { spoke: result.spoke, transportStop: result.transportStop }
 	}
