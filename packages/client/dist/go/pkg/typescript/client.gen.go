@@ -6578,6 +6578,13 @@ type GetIssueDetailResponse struct {
 			Kind           TranscriptKind        `json:"kind"`
 			Text           string                `json:"text"`
 		} `json:"routedMessages"`
+		Steers []struct {
+			DeliveredAt *string `json:"deliveredAt,omitempty"`
+			Failed      bool    `json:"failed"`
+			ReadAt      *string `json:"readAt,omitempty"`
+			SentAt      string  `json:"sentAt"`
+			Text        string  `json:"text"`
+		} `json:"steers"`
 		Stops []struct {
 			Detail   string             `json:"detail"`
 			Kind     StopKind           `json:"kind"`
@@ -9712,6 +9719,13 @@ func ParseGetIssueDetailResponse(rsp *http.Response) (*GetIssueDetailResponse, e
 				Kind           TranscriptKind        `json:"kind"`
 				Text           string                `json:"text"`
 			} `json:"routedMessages"`
+			Steers []struct {
+				DeliveredAt *string `json:"deliveredAt,omitempty"`
+				Failed      bool    `json:"failed"`
+				ReadAt      *string `json:"readAt,omitempty"`
+				SentAt      string  `json:"sentAt"`
+				Text        string  `json:"text"`
+			} `json:"steers"`
 			Stops []struct {
 				Detail   string             `json:"detail"`
 				Kind     StopKind           `json:"kind"`

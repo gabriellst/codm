@@ -25,7 +25,8 @@ import { Skeleton } from '@codm/app-ui/skeleton'
 import { VirtualList } from '@codm/app-ui/virtual-list'
 import { enumLabel } from '@/lib'
 import { cn } from '@/lib/utils'
-import { useTerminalStream, type TerminalStreamFrame } from '@/hooks'
+import { useLocale, useTerminalStream, type TerminalStreamFrame } from '@/hooks'
+import { formatDayAndTime } from '@/lib/format'
 import { Dot } from '@/components/console/StatusDot'
 import { resolutionIsPrimary } from '@/components/console/glyphs'
 import { ProviderWaitBadge } from '@/components/console/IssueRow'
@@ -143,8 +144,51 @@ export function IssueDetailSection({
 				</section>
 			)}
 
+			{data.steers.length > 0 && <SteerHistory steers={data.steers} />}
+
 			<IssueSteerComposer issueId={issueId} />
 		</div>
+	)
+}
+
+type Steer = Detail['steers'][number]
+
+/**
+ * Every steer sent to this issue with where it stands: queued, delivered to the issue's session, read
+ * by the turn that took it, or not delivered. The question this answers was the one people kept asking
+ * in the group ("será que ele viu?"), with a gap of minutes to hours between "sent" and "turn ended".
+ */
+function SteerHistory({ steers, className, ...props }: ComponentProps<'section'> & { steers: Steer[] }) {
+	const { t } = useTranslation()
+	return (
+		<section className={cn('flex flex-col gap-3', className)} {...props}>
+			<h2 className="label-eyebrow">{t('session.steerHistory')}</h2>
+			<ul className="flex flex-col gap-2">
+				{steers.map(steer => (
+					<SteerRow key={`${steer.sentAt}-${steer.text}`} steer={steer} />
+				))}
+			</ul>
+		</section>
+	)
+}
+
+function SteerRow({ steer, className, ...props }: ComponentProps<'li'> & { steer: Steer }) {
+	const { t } = useTranslation()
+	const locale = useLocale()
+	const when = (iso: string) => formatDayAndTime(iso, locale)
+	// The furthest step reached wins: failed, read, delivered, or still queued.
+	const status = steer.failed
+		? t('session.steerFailed')
+		: steer.readAt
+			? t('session.steerRead', { when: when(steer.readAt) })
+			: steer.deliveredAt
+				? t('session.steerDelivered', { when: when(steer.deliveredAt) })
+				: t('session.steerSent', { when: when(steer.sentAt) })
+	return (
+		<li className={cn('flex items-start justify-between gap-3 rounded-asymmetric-sm bg-background p-3', className)} {...props}>
+			<span className="min-w-0 flex-1 whitespace-pre-wrap text-sm text-foreground">{steer.text}</span>
+			<span className="shrink-0 text-xs text-muted-foreground">{status}</span>
+		</li>
 	)
 }
 

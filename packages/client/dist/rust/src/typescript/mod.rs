@@ -3810,6 +3810,7 @@ pub mod types {
     ///    "issue",
     ///    "provider",
     ///    "routedMessages",
+    ///    "steers",
     ///    "stops",
     ///    "terminalLog"
     ///  ],
@@ -3885,6 +3886,35 @@ pub mod types {
     ///        "additionalProperties": false
     ///      }
     ///    },
+    ///    "steers": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "failed",
+    ///          "sentAt",
+    ///          "text"
+    ///        ],
+    ///        "properties": {
+    ///          "deliveredAt": {
+    ///            "type": "string"
+    ///          },
+    ///          "failed": {
+    ///            "type": "boolean"
+    ///          },
+    ///          "readAt": {
+    ///            "type": "string"
+    ///          },
+    ///          "sentAt": {
+    ///            "type": "string"
+    ///          },
+    ///          "text": {
+    ///            "type": "string"
+    ///          }
+    ///        },
+    ///        "additionalProperties": false
+    ///      }
+    ///    },
     ///    "stops": {
     ///      "type": "array",
     ///      "items": {
@@ -3949,6 +3979,7 @@ pub mod types {
         pub provider: ::codm_contracts_rust::wire::enums::ProviderKind,
         #[serde(rename = "routedMessages")]
         pub routed_messages: ::std::vec::Vec<GetIssueDetailResponseRoutedMessagesItem>,
+        pub steers: ::std::vec::Vec<GetIssueDetailResponseSteersItem>,
         pub stops: ::std::vec::Vec<GetIssueDetailResponseStopsItem>,
         #[serde(rename = "terminalLog")]
         pub terminal_log: ::std::vec::Vec<GetIssueDetailResponseTerminalLogItem>,
@@ -4077,6 +4108,65 @@ pub mod types {
     impl ::std::convert::From<&GetIssueDetailResponseRoutedMessagesItem>
     for GetIssueDetailResponseRoutedMessagesItem {
         fn from(value: &GetIssueDetailResponseRoutedMessagesItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetIssueDetailResponseSteersItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "failed",
+    ///    "sentAt",
+    ///    "text"
+    ///  ],
+    ///  "properties": {
+    ///    "deliveredAt": {
+    ///      "type": "string"
+    ///    },
+    ///    "failed": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "readAt": {
+    ///      "type": "string"
+    ///    },
+    ///    "sentAt": {
+    ///      "type": "string"
+    ///    },
+    ///    "text": {
+    ///      "type": "string"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetIssueDetailResponseSteersItem {
+        #[serde(
+            rename = "deliveredAt",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub delivered_at: ::std::option::Option<::std::string::String>,
+        pub failed: bool,
+        #[serde(
+            rename = "readAt",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub read_at: ::std::option::Option<::std::string::String>,
+        #[serde(rename = "sentAt")]
+        pub sent_at: ::std::string::String,
+        pub text: ::std::string::String,
+    }
+    impl ::std::convert::From<&GetIssueDetailResponseSteersItem>
+    for GetIssueDetailResponseSteersItem {
+        fn from(value: &GetIssueDetailResponseSteersItem) -> Self {
             value.clone()
         }
     }

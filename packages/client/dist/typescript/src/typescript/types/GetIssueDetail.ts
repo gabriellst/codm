@@ -120,6 +120,31 @@ export type GetIssueDetail200 = {
         */
         raisedAt: string;
     }[];
+    /**
+     * @type array
+    */
+    steers: {
+        /**
+         * @type string
+        */
+        text: string;
+        /**
+         * @type string
+        */
+        sentAt: string;
+        /**
+         * @type string | undefined
+        */
+        deliveredAt?: string;
+        /**
+         * @type string | undefined
+        */
+        readAt?: string;
+        /**
+         * @type boolean
+        */
+        failed: boolean;
+    }[];
 };
 
 export type GetIssueDetailQueryResponse = GetIssueDetail200;

@@ -55,6 +55,13 @@ get "kind"(){
 "title": z.string(),
 "detail": z.string(),
 "raisedAt": z.string()
+    })),
+"steers": z.array(z.object({
+    "text": z.string(),
+"sentAt": z.string(),
+"deliveredAt": z.optional(z.string()),
+"readAt": z.optional(z.string()),
+"failed": z.boolean()
     }))
     })
 

@@ -85,4 +85,44 @@ describe('an issue waiting on the provider says so, and until when', () => {
 		const detail = await testBed.resolve(GetIssueDetail).execute({ ownerId: MOCK_CLOUD_OWNER_ID, issueId: issue.id.value })
 		expect(detail.issue.waitingForProviderUntil).toBeUndefined()
 	})
+
+	/**
+	 * RECADO: ENVIADO → ENTREGUE → LIDO (fase 0, item 3b).
+	 *
+	 * A steer's only times used to be "sent" and "turn ended" — a gap of minutes to hours that could not
+	 * say whether the message was waiting in the queue or being worked on. The first claim now stamps the
+	 * hand-off, and a retry does not move it.
+	 *
+	 * Falsifier: drop the `firstClaimedAt` write from `claimNext` and `deliveredAt` stays undefined.
+	 */
+	it('a steer shows sent, then delivered on the first claim, then read when its turn ends', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const issue = await givenIssue(testBed, { threadId: thread.id.value })
+		const mailbox = testBed.resolve(MailboxRepository)
+		const detail = () => testBed.resolve(GetIssueDetail).execute({ ownerId: MOCK_CLOUD_OWNER_ID, issueId: issue.id.value })
+
+		await steer(issue.id.value, thread.id.value, 'usa o tom mais curto')
+		let [only] = (await detail()).steers
+		expect(only?.text).toBe('usa o tom mais curto')
+		expect(only?.deliveredAt).toBeUndefined()
+		expect(only?.readAt).toBeUndefined()
+
+		const first = await mailbox.claimNext('steer-test', 60_000, [MailboxTargetKind.ISSUE])
+		if (!first) throw new Error('no item claimed')
+		;[only] = (await detail()).steers
+		const deliveredAt = only?.deliveredAt
+		expect(deliveredAt).toBeDefined()
+
+		// A retry is the same delivery tried again — the hand-off instant does not move.
+		await mailbox.fail(first.id, 'transport', 3)
+		await new Promise(resolve => setTimeout(resolve, 5))
+		const retry = await mailbox.claimNext('steer-test', 60_000, [MailboxTargetKind.ISSUE])
+		if (!retry) throw new Error('no retry claimed')
+		await mailbox.complete(retry.id)
+
+		;[only] = (await detail()).steers
+		expect(only?.deliveredAt).toBe(deliveredAt)
+		expect(only?.readAt).toBeDefined()
+		expect(only?.failed).toBe(false)
+	})
 })

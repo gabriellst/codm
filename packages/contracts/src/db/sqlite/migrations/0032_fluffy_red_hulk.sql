@@ -1,0 +1,1 @@
+ALTER TABLE `agent_mailbox` ADD `first_claimed_at` integer;

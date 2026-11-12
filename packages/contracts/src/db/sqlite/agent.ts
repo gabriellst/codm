@@ -162,6 +162,16 @@ export const agentMailbox = sqliteTable(
 		lastError: text('last_error'),
 		deadAt: integer('dead_at', { mode: 'timestamp_ms' }),
 
+		/**
+		 * When a turn FIRST took this item — for a STEER, the instant the issue's session was handed the
+		 * message ("entregue"); `consumed_at` is when that turn finished with it ("lido"). Written once,
+		 * by the first claim: a retry is the same delivery tried again, not a new one.
+		 *
+		 * Without it the only times a steer had were "sent" and "turn ended", and the gap between them
+		 * (measured on a real install: median 23 min, p90 3 h) could not say whether the message was
+		 * waiting in the queue or being worked on — the question people kept asking in the group.
+		 */
+		firstClaimedAt: integer('first_claimed_at', { mode: 'timestamp_ms' }),
 		consumedAt: integer('consumed_at', { mode: 'timestamp_ms' }),
 		createdAt: integer('created_at', { mode: 'timestamp_ms' })
 			.notNull()

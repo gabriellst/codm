@@ -1,10 +1,26 @@
 import { injectable } from 'tsyringe-neo'
 import { and, asc, eq, isNull } from 'drizzle-orm'
 import { LibSqlDatabaseDriver, Handler, z, BaseError } from '@codm/core-typescript'
-import { issues, stops, terminalLines, transcriptEntries } from '@codm/contracts/db'
-import { IssueStatus, ProviderKind, StopKind, TranscriptKind, ClassificationMethod } from '@codm/contracts-typescript/wire/enums'
+import { agentMailbox, issues, stops, terminalLines, transcriptEntries } from '@codm/contracts/db'
+import {
+	IssueStatus,
+	MailboxItemKind,
+	MailboxTargetKind,
+	ProviderKind,
+	StopKind,
+	TranscriptKind,
+	ClassificationMethod,
+} from '@codm/contracts-typescript/wire/enums'
 import type { ApplicationErrors } from '../errors'
 import { providerWaitByIssue } from '../utils/providerWaitByIssue'
+
+/** A STEER item's payload carries the message as `text` (`SteerIssueTurn`); anything else reads as empty. */
+const SteerPayloadSchema = z.object({ text: z.string() })
+
+function steerText(payload: unknown): string {
+	const parsed = SteerPayloadSchema.safeParse(payload)
+	return parsed.success ? parsed.data.text : ''
+}
 
 export const GetIssueDetailInputSchema = z.object({ ownerId: z.uuid(), issueId: z.uuid() })
 export const GetIssueDetailOutputSchema = z.object({
@@ -30,6 +46,21 @@ export const GetIssueDetailOutputSchema = z.object({
 		}),
 	),
 	stops: z.array(z.object({ stopId: z.uuid(), kind: z.enum(StopKind), title: z.string(), detail: z.string(), raisedAt: z.string() })),
+	/**
+	 * Every message steered to this issue, oldest first, with the three instants a person asks about:
+	 * sent (`sentAt`), handed to the issue's session (`deliveredAt`, "entregue") and done with by that
+	 * turn (`readAt`, "lido"). `failed` when the queue gave up on it (poisoned). Absent instants mean the
+	 * step has not happened yet — a steer waiting behind a running turn has `sentAt` only.
+	 */
+	steers: z.array(
+		z.object({
+			text: z.string(),
+			sentAt: z.string(),
+			deliveredAt: z.string().optional(),
+			readAt: z.string().optional(),
+			failed: z.boolean(),
+		}),
+	),
 })
 
 /** Read — IssueDetail (T12). One issue drill-down: terminal session log, the messages routed here,
@@ -63,6 +94,17 @@ export class GetIssueDetail extends Handler<typeof GetIssueDetailInputSchema, ty
 			.from(stops)
 			.where(and(eq(stops.issueId, input.issueId), isNull(stops.resolvedAt)))
 		const waiting = await providerWaitByIssue(this.driver, [input.issueId])
+		const steerRows = await this.driver.db
+			.select()
+			.from(agentMailbox)
+			.where(
+				and(
+					eq(agentMailbox.targetKind, MailboxTargetKind.ISSUE),
+					eq(agentMailbox.targetId, input.issueId),
+					eq(agentMailbox.kind, MailboxItemKind.STEER),
+				),
+			)
+			.orderBy(asc(agentMailbox.createdAt))
 
 		return {
 			issue: {
@@ -89,6 +131,13 @@ export class GetIssueDetail extends Handler<typeof GetIssueDetailInputSchema, ty
 				title: s.title,
 				detail: s.detail,
 				raisedAt: s.raisedAt.toISOString(),
+			})),
+			steers: steerRows.map(m => ({
+				text: steerText(m.payload),
+				sentAt: m.createdAt.toISOString(),
+				deliveredAt: m.firstClaimedAt?.toISOString(),
+				readAt: m.consumedAt?.toISOString(),
+				failed: m.deadAt !== null,
 			})),
 		}
 	}

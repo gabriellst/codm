@@ -1762,6 +1762,35 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "steers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "text": {
+                            "type": "string"
+                          },
+                          "sentAt": {
+                            "type": "string"
+                          },
+                          "deliveredAt": {
+                            "type": "string"
+                          },
+                          "readAt": {
+                            "type": "string"
+                          },
+                          "failed": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "text",
+                          "sentAt",
+                          "failed"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
@@ -1769,7 +1798,8 @@
                     "provider",
                     "terminalLog",
                     "routedMessages",
-                    "stops"
+                    "stops",
+                    "steers"
                   ],
                   "additionalProperties": false
                 }

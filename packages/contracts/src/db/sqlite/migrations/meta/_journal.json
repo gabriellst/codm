@@ -225,6 +225,13 @@
       "when": 1794224201328,
       "tag": "0031_high_grey_gargoyle",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1794516281103,
+      "tag": "0032_fluffy_red_hulk",
+      "breakpoints": true
     }
   ]
 }
