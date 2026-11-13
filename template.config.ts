@@ -649,6 +649,17 @@ export const REPO = {
 			doc: 'Context size (tokens) at which the claude CLI auto-compacts an agent session, 100000–1000000',
 			advanced: true,
 		},
+		// The longest a usage-limit pause lasts before the mailbox asks the provider again, even when the
+		// reported reset is days away. The limit is the ACCOUNT's, and the account can change under the
+		// pause (2026-11-05: a fresh login, and four items still parked until the old account's weekly
+		// reset). A refusal costs no tokens and no attempt, so re-asking every 30 min is cheap.
+		CODM_AGENT_LIMIT_RECHECK_MS: {
+			consumers: ['apiTs'],
+			schema: 'product',
+			example: '1800000',
+			doc: 'Ceiling on a provider usage-limit pause, ms — the mailbox retries the provider after at most this long',
+			advanced: true,
+		},
 		// ── frontend (only VITE_* reach the browser) ──
 		VITE_API_URL: { consumers: ['appReact'], example: 'http://localhost:3030' },
 		// The desktop console's OWN VITE_-mirrored twin of CODM_CLOUD_URL (SP2 Task T6): the browser
