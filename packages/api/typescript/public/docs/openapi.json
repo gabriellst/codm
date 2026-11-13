@@ -1671,6 +1671,9 @@
                         },
                         "waitingForProviderUntil": {
                           "type": "string"
+                        },
+                        "lifeState": {
+                          "$ref": "#/components/schemas/IssueLifeState"
                         }
                       },
                       "required": [
@@ -1678,7 +1681,8 @@
                         "key",
                         "title",
                         "status",
-                        "archived"
+                        "archived",
+                        "lifeState"
                       ],
                       "additionalProperties": false
                     },
@@ -1819,6 +1823,392 @@
         ]
       }
     },
+    "/issues/{issueId}/timeline": {
+      "get": {
+        "tags": [
+          "issue"
+        ],
+        "description": "An issue's timeline: created, turns, messages, steers, artifacts, stops, completion",
+        "operationId": "GetIssueTimeline",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "issueId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddaf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "An issue's timeline: created, turns, messages, steers, artifacts, stops, completion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "CREATED"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "title"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "TURN_STARTED"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "MESSAGE"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "entryId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "transcriptKind": {
+                                "$ref": "#/components/schemas/TranscriptKind"
+                              },
+                              "text": {
+                                "type": "string"
+                              },
+                              "classification": {
+                                "$ref": "#/components/schemas/ClassificationMethod"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "entryId",
+                              "transcriptKind",
+                              "text"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "STEER"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "text": {
+                                "type": "string"
+                              },
+                              "deliveredAt": {
+                                "type": "string"
+                              },
+                              "readAt": {
+                                "type": "string"
+                              },
+                              "reminder": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "text",
+                              "reminder"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "ARTIFACT"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "artifactId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "artifactKind": {
+                                "$ref": "#/components/schemas/ArtifactKind"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "artifactId",
+                              "artifactKind",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "STOP_RAISED"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "stopId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "stopKind": {
+                                "$ref": "#/components/schemas/StopKind"
+                              },
+                              "title": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "stopId",
+                              "stopKind",
+                              "title"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "STOP_RESOLVED"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "stopId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "resolution": {
+                                "$ref": "#/components/schemas/StopResolution"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "stopId",
+                              "resolution"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "COMPLETED"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "ARCHIVED"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/threads/{threadId}/panel-link": {
+      "get": {
+        "tags": [
+          "issue"
+        ],
+        "description": "A conversation's panel link (absent until the first push or when not logged in)",
+        "operationId": "GetThreadPanelLink",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A conversation's panel link (absent until the first push or when not logged in)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/threads/{threadId}/panel-link/rotate": {
+      "post": {
+        "tags": [
+          "issue"
+        ],
+        "description": "Replace a conversation's panel link",
+        "operationId": "RotateThreadPanelLink",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Replace a conversation's panel link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "url"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/issues": {
       "get": {
         "tags": [
@@ -1921,6 +2311,9 @@
                                 },
                                 "waitingForProviderUntil": {
                                   "type": "string"
+                                },
+                                "lifeState": {
+                                  "$ref": "#/components/schemas/IssueLifeState"
                                 }
                               },
                               "required": [
@@ -1930,7 +2323,8 @@
                                 "status",
                                 "archived",
                                 "threadId",
-                                "threadDisplayName"
+                                "threadDisplayName",
+                                "lifeState"
                               ],
                               "additionalProperties": false
                             }
@@ -1978,6 +2372,9 @@
                           },
                           "waitingForProviderUntil": {
                             "type": "string"
+                          },
+                          "lifeState": {
+                            "$ref": "#/components/schemas/IssueLifeState"
                           }
                         },
                         "required": [
@@ -1987,7 +2384,8 @@
                           "status",
                           "archived",
                           "threadId",
-                          "threadDisplayName"
+                          "threadDisplayName",
+                          "lifeState"
                         ],
                         "additionalProperties": false
                       }
@@ -9221,6 +9619,8 @@
           "OWNER_ALREADY_DISABLED",
           "OWNER_NOT_DISABLED",
           "OWNER_NOT_FOUND",
+          "PANEL_LINK_UNAVAILABLE",
+          "PANEL_NOT_FOUND",
           "PARTICIPANT_NOT_FOUND",
           "PASSWORDS_DONT_MATCH",
           "PASSWORD_TOO_WEAK",
@@ -9322,6 +9722,18 @@
           "LINK"
         ]
       },
+      "IssueLifeState": {
+        "type": "string",
+        "enum": [
+          "RUNNING",
+          "QUEUED",
+          "WAITING_PROVIDER",
+          "WAITING_PERSON",
+          "REMINDED",
+          "STALLED",
+          "DONE"
+        ]
+      },
       "TranscriptKind": {
         "type": "string",
         "enum": [
@@ -9339,6 +9751,30 @@
           "CONTEXT_MATCH",
           "NEW_ISSUE",
           "CLARIFIED"
+        ]
+      },
+      "IssueTimelineItemKind": {
+        "type": "string",
+        "enum": [
+          "ARCHIVED",
+          "ARTIFACT",
+          "COMPLETED",
+          "CREATED",
+          "MESSAGE",
+          "STEER",
+          "STOP_RAISED",
+          "STOP_RESOLVED",
+          "TURN_STARTED"
+        ]
+      },
+      "StopResolution": {
+        "type": "string",
+        "enum": [
+          "RETRY",
+          "REVIEW_AND_SEND",
+          "TAKE_OVER",
+          "APPROVE",
+          "DENY"
         ]
       },
       "ContactKind": {
@@ -9397,16 +9833,6 @@
         "enum": [
           "STEER",
           "DIRECT"
-        ]
-      },
-      "StopResolution": {
-        "type": "string",
-        "enum": [
-          "RETRY",
-          "REVIEW_AND_SEND",
-          "TAKE_OVER",
-          "APPROVE",
-          "DENY"
         ]
       },
       "Timezone": {
@@ -9674,6 +10100,8 @@
     "OWNER_ALREADY_DISABLED",
     "OWNER_NOT_DISABLED",
     "OWNER_NOT_FOUND",
+    "PANEL_LINK_UNAVAILABLE",
+    "PANEL_NOT_FOUND",
     "PARTICIPANT_NOT_FOUND",
     "PASSWORDS_DONT_MATCH",
     "PASSWORD_TOO_WEAK",

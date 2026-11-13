@@ -13,6 +13,7 @@ export const CONTEXTS = {
 	external: { kind: 'edge', namespace: null },
 	issue: { kind: 'domain', namespace: 'issue' },
 	owner: { kind: 'domain', namespace: 'owner' },
+	panel: { kind: 'domain', namespace: 'panel' },
 	shared: { kind: 'kernel', namespace: 'shared' },
 	thread: { kind: 'domain', namespace: 'thread' },
 	ui: { kind: 'bff', namespace: null },
@@ -51,6 +52,11 @@ export const CONTEXT_MAP: Partial<Record<ContextId, Partial<Record<ContextId, { 
 	owner: {
 		auth: {
 			note: 'CLOUD-ONLY desde o ADR 0001 (W3 Task 4c): o daemon local não monta `auth` nem emite sessão — ele a LÊ, do `shared/services/CloudSession`, com o `SessionSchema` que mudou para `@shared/schemas` pela mesma razão.',
+		},
+	},
+	panel: {
+		auth: {
+			note: 'PUT /panel/sync and the link rotation are authenticated with the user session bearer the daemon already holds (AuthAccountMiddleware); the public reads are not.',
 		},
 	},
 	thread: {
@@ -95,7 +101,17 @@ export const TABLE_READ_EDGES: readonly { consumer: ContextId; schema: string; n
 	{
 		consumer: 'issue',
 		schema: 'agent',
-		note: "T04/T12 read models read agent_mailbox to show when an issue's next turn is deferred by the provider's usage limit (`providerWaitByIssue`, fase 0 item 2) — a read-only display of a fact only the queue holds; nothing in `issue` decides on it.",
+		note: "T04/T12 read models read agent_mailbox to show when an issue's next turn is deferred by the provider's usage limit (`providerWaitByIssue`, fase 0 item 2), its steers and its life state (`issueLifeState`, fase 1) — a read-only display of facts only the queue holds; nothing in `issue` decides on it.",
+	},
+	{
+		consumer: 'issue',
+		schema: 'artifact',
+		note: "GetIssueTimeline (fase 1) lists the artifacts an issue recorded (artifact_artifacts by issue_id) — the same BFF read-services shape as thread's GetSessionChat join; read-only.",
+	},
+	{
+		consumer: 'issue',
+		schema: 'shared',
+		note: 'GetIssueTimeline (fase 1) reads the recorded domain facts of the issue (shared_events by entity_id: forked, turn started, completed, archived) — the timeline is assembled from facts that already exist, so no new table.',
 	},
 	{
 		consumer: 'owner',
@@ -140,6 +156,7 @@ export const TABLE_READ_EDGES: readonly { consumer: ContextId; schema: string; n
 export const AMBIENT: Partial<Record<ContextId, readonly string[] | '*'>> = {
 	auth: ['middlewares'],
 	owner: ['middlewares'],
+	panel: ['middlewares'],
 	shared: '*',
 }
 
@@ -172,6 +189,7 @@ export const CONTEXT_PLACEMENT = {
 	external: [{ when: { deployment: 'local' }, infra: { db: 'none' } }],
 	issue: [{ when: { deployment: 'local' }, infra: { db: 'libsql' } }],
 	owner: [{ when: { deployment: 'cloud' }, infra: { db: 'pg' } }],
+	panel: [{ when: { deployment: 'cloud' }, infra: { db: 'pg' } }],
 	shared: [
 		{ when: { deployment: 'cloud' }, infra: { db: 'pg' } },
 		{ when: { deployment: 'local' }, infra: { db: 'libsql' } },
@@ -184,4 +202,16 @@ export const CONTEXT_PLACEMENT = {
 /** A ordem de boot, DERIVADA do `kind`: kernel → domain → bff → edge, desempate alfabético.
  *  O kernel vem primeiro porque é ele quem aplica os registries no container raiz e sobe o
  *  transporte que os demais consomem — e o LIFO do shutdown cai de graça, invertendo isto. */
-export const BOOT_ORDER = ['shared', 'agent', 'artifact', 'auth', 'issue', 'owner', 'thread', 'workspace', 'ui', 'external'] as const
+export const BOOT_ORDER = [
+	'shared',
+	'agent',
+	'artifact',
+	'auth',
+	'issue',
+	'owner',
+	'panel',
+	'thread',
+	'workspace',
+	'ui',
+	'external',
+] as const

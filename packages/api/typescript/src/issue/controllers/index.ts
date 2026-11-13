@@ -1,5 +1,7 @@
 export { ArchiveIssueController } from './ArchiveIssue'
 export { GetIssueDetailController } from './GetIssueDetail'
+export { GetIssueTimelineController } from './GetIssueTimeline'
+export { GetThreadPanelLinkController, RotateThreadPanelLinkController } from './ThreadPanelLink'
 export { GetIssueStatusController } from './GetIssueStatus'
 export { GetIssuesOverviewController } from './GetIssuesOverview'
 export { GetSessionIssuesController } from './GetSessionIssues'
@@ -8,6 +10,8 @@ export { SteerIssueController } from './SteerIssue'
 
 import { ArchiveIssueController } from './ArchiveIssue'
 import { GetIssueDetailController } from './GetIssueDetail'
+import { GetIssueTimelineController } from './GetIssueTimeline'
+import { GetThreadPanelLinkController, RotateThreadPanelLinkController } from './ThreadPanelLink'
 import { GetIssueStatusController } from './GetIssueStatus'
 import { GetIssuesOverviewController } from './GetIssuesOverview'
 import { GetSessionIssuesController } from './GetSessionIssues'
@@ -22,6 +26,9 @@ import { SteerIssueController } from './SteerIssue'
 export default {
 	ArchiveIssueController,
 	GetIssueDetailController,
+	GetIssueTimelineController,
+	GetThreadPanelLinkController,
+	RotateThreadPanelLinkController,
 	GetIssueStatusController,
 	GetIssuesOverviewController,
 	GetSessionIssuesController,

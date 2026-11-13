@@ -367,6 +367,26 @@
 			"TUESDAY": "Tuesday",
 			"WEDNESDAY": "Wednesday"
 		},
+		"IssueLifeState": {
+			"DONE": "Done",
+			"QUEUED": "Queued",
+			"REMINDED": "Reminded to declare",
+			"RUNNING": "Running",
+			"STALLED": "Stalled",
+			"WAITING_PERSON": "Waiting on someone",
+			"WAITING_PROVIDER": "Waiting on usage limit"
+		},
+		"IssueTimelineItemKind": {
+			"ARCHIVED": "Archived",
+			"ARTIFACT": "Artifact",
+			"COMPLETED": "Completed",
+			"CREATED": "Created",
+			"MESSAGE": "Message",
+			"STEER": "Steer",
+			"STOP_RAISED": "Asked for someone",
+			"STOP_RESOLVED": "Answered",
+			"TURN_STARTED": "Turn started"
+		},
 		"IssueStatus": {
 			"COMPLETED": "Completed",
 			"NEEDS_INPUT": "Needs input",
@@ -499,6 +519,8 @@
 		"OWNER_ALREADY_DISABLED": "This account is already disabled.",
 		"OWNER_NOT_DISABLED": "This account is not disabled.",
 		"OWNER_NOT_FOUND": "Account not found.",
+		"PANEL_LINK_UNAVAILABLE": "This conversation has no panel link yet. Check that codm is logged in and try again in a few seconds.",
+		"PANEL_NOT_FOUND": "Panel link is invalid or was replaced.",
 		"PARTICIPANT_NOT_FOUND": "Participant not found.",
 		"PASSWORDS_DONT_MATCH": "Passwords do not match.",
 		"PASSWORD_TOO_WEAK": "Password too weak. Use letters, numbers and symbols.",
@@ -681,6 +703,17 @@
 		},
 		"mentionTag": "Mention tag",
 		"mentionTagPlaceholder": "@codm",
+		"panelLink": {
+			"copied": "Panel link copied.",
+			"copy": "Copy link",
+			"hint": "A page where everyone in the group sees the board and each task's timeline, without the app. Whoever has the link sees this group — replace it if someone leaves or it leaks.",
+			"pending": "The link is ready a few seconds after codm pushes this conversation to the cloud (you must be logged in).",
+			"rotate": "Replace link",
+			"rotateConfirmDescription": "The current link stops working at once for everyone who has it. You will need to send the new one to the group.",
+			"rotateConfirmTitle": "Replace the panel link?",
+			"rotated": "Link replaced. The old one stopped working.",
+			"sectionTitle": "Panel link"
+		},
 		"messagesRoutedHere": "Messages routed here",
 		"needsYou": "Needs you",
 		"onlyWhenMentioned": "Only reply when mentioned",
@@ -697,6 +730,7 @@
 		"settingsDescriptionNamed": "How agents behave in {{name}}.",
 		"settingsTitle": "Thread settings",
 		"steer": "Steer",
+		"steerAutoReminder": "automatic reminder",
 		"steerDelivered": "Delivered at {{when}}",
 		"steerFailed": "Not delivered",
 		"steerHint": "Steers reach the agent working this issue only.",
@@ -714,6 +748,10 @@
 		"thinkingIndicator": "Thinking indicator",
 		"thinkingIndicatorHint": "Shows the phase message (✻ verb…) in the channel while the agent works. Off, the reply arrives without the indicator.",
 		"threadSettings": "Thread settings",
+		"timeline": "Timeline",
+		"timelineFromAgent": "agent",
+		"timelineFromPerson": "person",
+		"timelineReplyQuote": "replied quoting",
 		"transcriptIssue": "issue",
 		"waitingForProvider": "Waiting on the usage limit until {{when}}",
 		"waitingTerminal": "Waiting for terminal output…"

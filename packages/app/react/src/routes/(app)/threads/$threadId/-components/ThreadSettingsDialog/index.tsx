@@ -39,6 +39,7 @@ import { providerGlyph, providerLabel } from '@/components/console/glyphs'
 import { useDialogStore } from '@/stores/useDialogStore'
 import { cn } from '@/lib/utils'
 import { LoopsSection } from './LoopsSection'
+import { PanelLinkSection } from './PanelLinkSection'
 
 const BUFFER_SIZES: BufferSize[] = ['25', '50', '100', '200']
 
@@ -119,6 +120,7 @@ export function ThreadSettingsDialog({
 				<CustomPromptSection threadId={threadId} />
 				<ParticipantsSection threadId={threadId} />
 				<LoopsSection threadId={threadId} />
+				<PanelLinkSection threadId={threadId} />
 				{/* The name is READ HERE and handed down, deliberately breaking the "each component owns its
 				    data" habit for one prop: the confirmation must say WHICH conversation is about to go, and
 				    this component already holds the query that knows. A second `useGetSessionChat` inside the

@@ -367,6 +367,26 @@
 			"TUESDAY": "Terça",
 			"WEDNESDAY": "Quarta"
 		},
+		"IssueLifeState": {
+			"DONE": "Concluída",
+			"QUEUED": "Na fila",
+			"REMINDED": "Lembrada de declarar",
+			"RUNNING": "Fazendo",
+			"STALLED": "Parada",
+			"WAITING_PERSON": "Aguardando pessoa",
+			"WAITING_PROVIDER": "Esperando cota"
+		},
+		"IssueTimelineItemKind": {
+			"ARCHIVED": "Arquivada",
+			"ARTIFACT": "Artefato",
+			"COMPLETED": "Concluída",
+			"CREATED": "Criada",
+			"MESSAGE": "Mensagem",
+			"STEER": "Orientação",
+			"STOP_RAISED": "Pediu alguém",
+			"STOP_RESOLVED": "Respondida",
+			"TURN_STARTED": "Turno iniciado"
+		},
 		"IssueStatus": {
 			"COMPLETED": "Concluída",
 			"NEEDS_INPUT": "Precisa de entrada",
@@ -499,6 +519,8 @@
 		"OWNER_ALREADY_DISABLED": "Esta conta já está desativada.",
 		"OWNER_NOT_DISABLED": "Esta conta não está desativada.",
 		"OWNER_NOT_FOUND": "Conta não encontrada.",
+		"PANEL_LINK_UNAVAILABLE": "Esta conversa ainda não tem link do painel. Confira se o codm está logado e tente em alguns segundos.",
+		"PANEL_NOT_FOUND": "Link do painel inválido ou trocado.",
 		"PARTICIPANT_NOT_FOUND": "Participante não encontrado.",
 		"PASSWORDS_DONT_MATCH": "As senhas não coincidem.",
 		"PASSWORD_TOO_WEAK": "Senha muito fraca. Use letras, números e símbolos.",
@@ -681,6 +703,17 @@
 		},
 		"mentionTag": "Tag de menção",
 		"mentionTagPlaceholder": "@codm",
+		"panelLink": {
+			"copied": "Link do painel copiado.",
+			"copy": "Copiar link",
+			"hint": "Página onde todo mundo do grupo vê o quadro e a linha do tempo de cada tarefa, sem precisar do app. Quem tem o link vê este grupo — troque se alguém sair ou o link vazar.",
+			"pending": "O link fica pronto alguns segundos depois de o codm enviar esta conversa à nuvem (é preciso estar logado).",
+			"rotate": "Trocar link",
+			"rotateConfirmDescription": "O link atual para de funcionar na hora para todo mundo que o tem. Você vai precisar mandar o novo no grupo.",
+			"rotateConfirmTitle": "Trocar o link do painel?",
+			"rotated": "Link trocado. O anterior parou de funcionar.",
+			"sectionTitle": "Link do painel"
+		},
 		"messagesRoutedHere": "Mensagens encaminhadas para cá",
 		"needsYou": "Precisa de você",
 		"onlyWhenMentioned": "Responder apenas quando mencionado",
@@ -697,6 +730,7 @@
 		"settingsDescriptionNamed": "Como os agentes se comportam em {{name}}.",
 		"settingsTitle": "Configurações da conversa",
 		"steer": "Orientar",
+		"steerAutoReminder": "lembrete automático",
 		"steerDelivered": "Entregue às {{when}}",
 		"steerFailed": "Não entregue",
 		"steerHint": "As orientações chegam apenas ao agente que trabalha nesta tarefa.",
@@ -714,6 +748,10 @@
 		"thinkingIndicator": "Indicador de pensando",
 		"thinkingIndicatorHint": "Mostra a mensagem de fase (✻ verbo…) no canal enquanto o agente trabalha. Desligado, a resposta chega sem o indicador.",
 		"threadSettings": "Configurações da conversa",
+		"timeline": "Linha do tempo",
+		"timelineFromAgent": "agente",
+		"timelineFromPerson": "pessoa",
+		"timelineReplyQuote": "respondeu citando",
 		"transcriptIssue": "tarefa",
 		"waitingForProvider": "Esperando cota até {{when}}",
 		"waitingTerminal": "Aguardando saída do terminal…"

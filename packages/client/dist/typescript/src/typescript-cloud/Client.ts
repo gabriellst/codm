@@ -7,12 +7,17 @@ import {
 	desktopCallback,
 	disableOwner,
 	enableOwner,
+	getPanelBoard,
+	getPanelIssue,
 	getSession,
 	health,
+	panelPage,
+	rotatePanelLink,
 	setActiveOwner,
 	setCloudToken,
 	signInLoopback,
 	signInSocial,
+	syncPanel,
 	updateOwnerSettings,
 	uploadAvatar,
 } from './client/index.ts'
@@ -57,12 +62,28 @@ export class TypescriptCloudClient {
 		return (enableOwner as (...a: any[]) => ReturnType<typeof enableOwner>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	getPanelBoard(...args: Parameters<typeof getPanelBoard>): ReturnType<typeof getPanelBoard> {
+		return (getPanelBoard as (...a: any[]) => ReturnType<typeof getPanelBoard>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	getPanelIssue(...args: Parameters<typeof getPanelIssue>): ReturnType<typeof getPanelIssue> {
+		return (getPanelIssue as (...a: any[]) => ReturnType<typeof getPanelIssue>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	getSession(...args: Parameters<typeof getSession>): ReturnType<typeof getSession> {
 		return (getSession as (...a: any[]) => ReturnType<typeof getSession>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	health(...args: Parameters<typeof health>): ReturnType<typeof health> {
 		return (health as (...a: any[]) => ReturnType<typeof health>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	panelPage(...args: Parameters<typeof panelPage>): ReturnType<typeof panelPage> {
+		return (panelPage as (...a: any[]) => ReturnType<typeof panelPage>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	rotatePanelLink(...args: Parameters<typeof rotatePanelLink>): ReturnType<typeof rotatePanelLink> {
+		return (rotatePanelLink as (...a: any[]) => ReturnType<typeof rotatePanelLink>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	setActiveOwner(...args: Parameters<typeof setActiveOwner>): ReturnType<typeof setActiveOwner> {
@@ -79,6 +100,10 @@ export class TypescriptCloudClient {
 
 	signInSocial(...args: Parameters<typeof signInSocial>): ReturnType<typeof signInSocial> {
 		return (signInSocial as (...a: any[]) => ReturnType<typeof signInSocial>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	syncPanel(...args: Parameters<typeof syncPanel>): ReturnType<typeof syncPanel> {
+		return (syncPanel as (...a: any[]) => ReturnType<typeof syncPanel>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	updateOwnerSettings(...args: Parameters<typeof updateOwnerSettings>): ReturnType<typeof updateOwnerSettings> {

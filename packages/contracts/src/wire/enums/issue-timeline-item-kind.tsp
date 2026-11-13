@@ -1,0 +1,14 @@
+namespace TemplateContracts;
+
+@doc("The kinds of moment an Issue's timeline shows, oldest first. Discriminant of the timeline item union: each kind carries its own fields. CREATED: the issue was forked. TURN_STARTED: a turn of its session began. MESSAGE: a transcript entry linked to the issue (what the agent said about it, or a reply that quoted it). STEER: guidance sent to it (with sent/delivered/read instants). ARTIFACT: a file, image, video or link it recorded. STOP_RAISED / STOP_RESOLVED: it asked for someone, and someone answered. COMPLETED: it declared itself done. ARCHIVED: it left the board.")
+enum IssueTimelineItemKind {
+  CREATED: "CREATED",
+  TURN_STARTED: "TURN_STARTED",
+  MESSAGE: "MESSAGE",
+  STEER: "STEER",
+  ARTIFACT: "ARTIFACT",
+  STOP_RAISED: "STOP_RAISED",
+  STOP_RESOLVED: "STOP_RESOLVED",
+  COMPLETED: "COMPLETED",
+  ARCHIVED: "ARCHIVED",
+}

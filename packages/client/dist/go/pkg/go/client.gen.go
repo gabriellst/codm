@@ -866,6 +866,39 @@ func (e IssueArchiveReason) Valid() bool {
 	}
 }
 
+// Defines values for IssueLifeState.
+const (
+	IssueLifeStateDONE            IssueLifeState = "DONE"
+	IssueLifeStateQUEUED          IssueLifeState = "QUEUED"
+	IssueLifeStateREMINDED        IssueLifeState = "REMINDED"
+	IssueLifeStateRUNNING         IssueLifeState = "RUNNING"
+	IssueLifeStateSTALLED         IssueLifeState = "STALLED"
+	IssueLifeStateWAITINGPERSON   IssueLifeState = "WAITING_PERSON"
+	IssueLifeStateWAITINGPROVIDER IssueLifeState = "WAITING_PROVIDER"
+)
+
+// Valid indicates whether the value is a known member of the IssueLifeState enum.
+func (e IssueLifeState) Valid() bool {
+	switch e {
+	case IssueLifeStateDONE:
+		return true
+	case IssueLifeStateQUEUED:
+		return true
+	case IssueLifeStateREMINDED:
+		return true
+	case IssueLifeStateRUNNING:
+		return true
+	case IssueLifeStateSTALLED:
+		return true
+	case IssueLifeStateWAITINGPERSON:
+		return true
+	case IssueLifeStateWAITINGPROVIDER:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for IssueStatus.
 const (
 	IssueStatusCOMPLETED  IssueStatus = "COMPLETED"
@@ -881,6 +914,45 @@ func (e IssueStatus) Valid() bool {
 	case IssueStatusNEEDSINPUT:
 		return true
 	case IssueStatusWORKING:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IssueTimelineItemKind.
+const (
+	IssueTimelineItemKindARCHIVED     IssueTimelineItemKind = "ARCHIVED"
+	IssueTimelineItemKindARTIFACT     IssueTimelineItemKind = "ARTIFACT"
+	IssueTimelineItemKindCOMPLETED    IssueTimelineItemKind = "COMPLETED"
+	IssueTimelineItemKindCREATED      IssueTimelineItemKind = "CREATED"
+	IssueTimelineItemKindMESSAGE      IssueTimelineItemKind = "MESSAGE"
+	IssueTimelineItemKindSTEER        IssueTimelineItemKind = "STEER"
+	IssueTimelineItemKindSTOPRAISED   IssueTimelineItemKind = "STOP_RAISED"
+	IssueTimelineItemKindSTOPRESOLVED IssueTimelineItemKind = "STOP_RESOLVED"
+	IssueTimelineItemKindTURNSTARTED  IssueTimelineItemKind = "TURN_STARTED"
+)
+
+// Valid indicates whether the value is a known member of the IssueTimelineItemKind enum.
+func (e IssueTimelineItemKind) Valid() bool {
+	switch e {
+	case IssueTimelineItemKindARCHIVED:
+		return true
+	case IssueTimelineItemKindARTIFACT:
+		return true
+	case IssueTimelineItemKindCOMPLETED:
+		return true
+	case IssueTimelineItemKindCREATED:
+		return true
+	case IssueTimelineItemKindMESSAGE:
+		return true
+	case IssueTimelineItemKindSTEER:
+		return true
+	case IssueTimelineItemKindSTOPRAISED:
+		return true
+	case IssueTimelineItemKindSTOPRESOLVED:
+		return true
+	case IssueTimelineItemKindTURNSTARTED:
 		return true
 	default:
 		return false
@@ -3790,8 +3862,14 @@ type InternalTextContent struct {
 // IssueArchiveReason defines model for IssueArchiveReason.
 type IssueArchiveReason string
 
+// IssueLifeState defines model for IssueLifeState.
+type IssueLifeState string
+
 // IssueStatus defines model for IssueStatus.
 type IssueStatus string
+
+// IssueTimelineItemKind defines model for IssueTimelineItemKind.
+type IssueTimelineItemKind string
 
 // Language defines model for Language.
 type Language string

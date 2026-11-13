@@ -275,6 +275,8 @@ pub mod types {
     ///    "OWNER_ALREADY_DISABLED",
     ///    "OWNER_NOT_DISABLED",
     ///    "OWNER_NOT_FOUND",
+    ///    "PANEL_LINK_UNAVAILABLE",
+    ///    "PANEL_NOT_FOUND",
     ///    "PARTICIPANT_NOT_FOUND",
     ///    "PASSWORDS_DONT_MATCH",
     ///    "PASSWORD_TOO_WEAK",
@@ -465,6 +467,10 @@ pub mod types {
         OwnerNotDisabled,
         #[serde(rename = "OWNER_NOT_FOUND")]
         OwnerNotFound,
+        #[serde(rename = "PANEL_LINK_UNAVAILABLE")]
+        PanelLinkUnavailable,
+        #[serde(rename = "PANEL_NOT_FOUND")]
+        PanelNotFound,
         #[serde(rename = "PARTICIPANT_NOT_FOUND")]
         ParticipantNotFound,
         #[serde(rename = "PASSWORDS_DONT_MATCH")]
@@ -626,6 +632,8 @@ pub mod types {
                 Self::OwnerAlreadyDisabled => f.write_str("OWNER_ALREADY_DISABLED"),
                 Self::OwnerNotDisabled => f.write_str("OWNER_NOT_DISABLED"),
                 Self::OwnerNotFound => f.write_str("OWNER_NOT_FOUND"),
+                Self::PanelLinkUnavailable => f.write_str("PANEL_LINK_UNAVAILABLE"),
+                Self::PanelNotFound => f.write_str("PANEL_NOT_FOUND"),
                 Self::ParticipantNotFound => f.write_str("PARTICIPANT_NOT_FOUND"),
                 Self::PasswordsDontMatch => f.write_str("PASSWORDS_DONT_MATCH"),
                 Self::PasswordTooWeak => f.write_str("PASSWORD_TOO_WEAK"),
@@ -742,6 +750,8 @@ pub mod types {
                 "OWNER_ALREADY_DISABLED" => Ok(Self::OwnerAlreadyDisabled),
                 "OWNER_NOT_DISABLED" => Ok(Self::OwnerNotDisabled),
                 "OWNER_NOT_FOUND" => Ok(Self::OwnerNotFound),
+                "PANEL_LINK_UNAVAILABLE" => Ok(Self::PanelLinkUnavailable),
+                "PANEL_NOT_FOUND" => Ok(Self::PanelNotFound),
                 "PARTICIPANT_NOT_FOUND" => Ok(Self::ParticipantNotFound),
                 "PASSWORDS_DONT_MATCH" => Ok(Self::PasswordsDontMatch),
                 "PASSWORD_TOO_WEAK" => Ok(Self::PasswordTooWeak),
@@ -3909,6 +3919,7 @@ pub mod types {
     ///        "archived",
     ///        "issueId",
     ///        "key",
+    ///        "lifeState",
     ///        "status",
     ///        "title"
     ///      ],
@@ -3923,6 +3934,9 @@ pub mod types {
     ///        },
     ///        "key": {
     ///          "type": "string"
+    ///        },
+    ///        "lifeState": {
+    ///          "$ref": "#/components/schemas/IssueLifeState"
     ///        },
     ///        "meta": {
     ///          "type": "string"
@@ -4088,6 +4102,7 @@ pub mod types {
     ///    "archived",
     ///    "issueId",
     ///    "key",
+    ///    "lifeState",
     ///    "status",
     ///    "title"
     ///  ],
@@ -4102,6 +4117,9 @@ pub mod types {
     ///    },
     ///    "key": {
     ///      "type": "string"
+    ///    },
+    ///    "lifeState": {
+    ///      "$ref": "#/components/schemas/IssueLifeState"
     ///    },
     ///    "meta": {
     ///      "type": "string"
@@ -4127,6 +4145,8 @@ pub mod types {
         #[serde(rename = "issueId")]
         pub issue_id: ::uuid::Uuid,
         pub key: ::std::string::String,
+        #[serde(rename = "lifeState")]
+        pub life_state: ::codm_contracts_rust::wire::enums::IssueLifeState,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub meta: ::std::option::Option<::std::string::String>,
         pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
@@ -4399,6 +4419,692 @@ pub mod types {
             value.clone()
         }
     }
+    ///`GetIssueTimelineResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "items"
+    ///  ],
+    ///  "properties": {
+    ///    "items": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "oneOf": [
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "title"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "CREATED"
+    ///                ]
+    ///              },
+    ///              "title": {
+    ///                "type": "string"
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "TURN_STARTED"
+    ///                ]
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "entryId",
+    ///              "id",
+    ///              "kind",
+    ///              "text",
+    ///              "transcriptKind"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "classification": {
+    ///                "$ref": "#/components/schemas/ClassificationMethod"
+    ///              },
+    ///              "entryId": {
+    ///                "type": "string",
+    ///                "format": "uuid",
+    ///                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "MESSAGE"
+    ///                ]
+    ///              },
+    ///              "text": {
+    ///                "type": "string"
+    ///              },
+    ///              "transcriptKind": {
+    ///                "$ref": "#/components/schemas/TranscriptKind"
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "reminder",
+    ///              "text"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "deliveredAt": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "STEER"
+    ///                ]
+    ///              },
+    ///              "readAt": {
+    ///                "type": "string"
+    ///              },
+    ///              "reminder": {
+    ///                "type": "boolean"
+    ///              },
+    ///              "text": {
+    ///                "type": "string"
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "artifactId",
+    ///              "artifactKind",
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "name"
+    ///            ],
+    ///            "properties": {
+    ///              "artifactId": {
+    ///                "type": "string",
+    ///                "format": "uuid",
+    ///                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///              },
+    ///              "artifactKind": {
+    ///                "$ref": "#/components/schemas/ArtifactKind"
+    ///              },
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "ARTIFACT"
+    ///                ]
+    ///              },
+    ///              "name": {
+    ///                "type": "string"
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "stopId",
+    ///              "stopKind",
+    ///              "title"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "STOP_RAISED"
+    ///                ]
+    ///              },
+    ///              "stopId": {
+    ///                "type": "string",
+    ///                "format": "uuid",
+    ///                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///              },
+    ///              "stopKind": {
+    ///                "$ref": "#/components/schemas/StopKind"
+    ///              },
+    ///              "title": {
+    ///                "type": "string"
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "resolution",
+    ///              "stopId"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "STOP_RESOLVED"
+    ///                ]
+    ///              },
+    ///              "resolution": {
+    ///                "$ref": "#/components/schemas/StopResolution"
+    ///              },
+    ///              "stopId": {
+    ///                "type": "string",
+    ///                "format": "uuid",
+    ///                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "COMPLETED"
+    ///                ]
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "ARCHIVED"
+    ///                ]
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          }
+    ///        ]
+    ///      }
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetIssueTimelineResponse {
+        pub items: ::std::vec::Vec<GetIssueTimelineResponseItemsItem>,
+    }
+    impl ::std::convert::From<&GetIssueTimelineResponse> for GetIssueTimelineResponse {
+        fn from(value: &GetIssueTimelineResponse) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetIssueTimelineResponseItemsItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "oneOf": [
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "title"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "CREATED"
+    ///          ]
+    ///        },
+    ///        "title": {
+    ///          "type": "string"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "TURN_STARTED"
+    ///          ]
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "entryId",
+    ///        "id",
+    ///        "kind",
+    ///        "text",
+    ///        "transcriptKind"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "classification": {
+    ///          "$ref": "#/components/schemas/ClassificationMethod"
+    ///        },
+    ///        "entryId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "MESSAGE"
+    ///          ]
+    ///        },
+    ///        "text": {
+    ///          "type": "string"
+    ///        },
+    ///        "transcriptKind": {
+    ///          "$ref": "#/components/schemas/TranscriptKind"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "reminder",
+    ///        "text"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "deliveredAt": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "STEER"
+    ///          ]
+    ///        },
+    ///        "readAt": {
+    ///          "type": "string"
+    ///        },
+    ///        "reminder": {
+    ///          "type": "boolean"
+    ///        },
+    ///        "text": {
+    ///          "type": "string"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "artifactId",
+    ///        "artifactKind",
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "name"
+    ///      ],
+    ///      "properties": {
+    ///        "artifactId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "artifactKind": {
+    ///          "$ref": "#/components/schemas/ArtifactKind"
+    ///        },
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "ARTIFACT"
+    ///          ]
+    ///        },
+    ///        "name": {
+    ///          "type": "string"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "stopId",
+    ///        "stopKind",
+    ///        "title"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "STOP_RAISED"
+    ///          ]
+    ///        },
+    ///        "stopId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "stopKind": {
+    ///          "$ref": "#/components/schemas/StopKind"
+    ///        },
+    ///        "title": {
+    ///          "type": "string"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "resolution",
+    ///        "stopId"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "STOP_RESOLVED"
+    ///          ]
+    ///        },
+    ///        "resolution": {
+    ///          "$ref": "#/components/schemas/StopResolution"
+    ///        },
+    ///        "stopId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "COMPLETED"
+    ///          ]
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "ARCHIVED"
+    ///          ]
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    }
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(tag = "kind", deny_unknown_fields)]
+    pub enum GetIssueTimelineResponseItemsItem {
+        #[serde(rename = "CREATED")]
+        Created {
+            at: ::std::string::String,
+            id: ::std::string::String,
+            title: ::std::string::String,
+        },
+        #[serde(rename = "TURN_STARTED")]
+        TurnStarted { at: ::std::string::String, id: ::std::string::String },
+        #[serde(rename = "MESSAGE")]
+        Message {
+            at: ::std::string::String,
+            #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+            classification: ::std::option::Option<
+                ::codm_contracts_rust::wire::enums::ClassificationMethod,
+            >,
+            #[serde(rename = "entryId")]
+            entry_id: ::uuid::Uuid,
+            id: ::std::string::String,
+            text: ::std::string::String,
+            #[serde(rename = "transcriptKind")]
+            transcript_kind: ::codm_contracts_rust::wire::enums::TranscriptKind,
+        },
+        #[serde(rename = "STEER")]
+        Steer {
+            at: ::std::string::String,
+            #[serde(
+                rename = "deliveredAt",
+                default,
+                skip_serializing_if = "::std::option::Option::is_none"
+            )]
+            delivered_at: ::std::option::Option<::std::string::String>,
+            id: ::std::string::String,
+            #[serde(
+                rename = "readAt",
+                default,
+                skip_serializing_if = "::std::option::Option::is_none"
+            )]
+            read_at: ::std::option::Option<::std::string::String>,
+            reminder: bool,
+            text: ::std::string::String,
+        },
+        #[serde(rename = "ARTIFACT")]
+        Artifact {
+            #[serde(rename = "artifactId")]
+            artifact_id: ::uuid::Uuid,
+            #[serde(rename = "artifactKind")]
+            artifact_kind: ::codm_contracts_rust::wire::enums::ArtifactKind,
+            at: ::std::string::String,
+            id: ::std::string::String,
+            name: ::std::string::String,
+        },
+        #[serde(rename = "STOP_RAISED")]
+        StopRaised {
+            at: ::std::string::String,
+            id: ::std::string::String,
+            #[serde(rename = "stopId")]
+            stop_id: ::uuid::Uuid,
+            #[serde(rename = "stopKind")]
+            stop_kind: ::codm_contracts_rust::wire::enums::StopKind,
+            title: ::std::string::String,
+        },
+        #[serde(rename = "STOP_RESOLVED")]
+        StopResolved {
+            at: ::std::string::String,
+            id: ::std::string::String,
+            resolution: ::codm_contracts_rust::wire::enums::StopResolution,
+            #[serde(rename = "stopId")]
+            stop_id: ::uuid::Uuid,
+        },
+        #[serde(rename = "COMPLETED")]
+        Completed { at: ::std::string::String, id: ::std::string::String },
+        #[serde(rename = "ARCHIVED")]
+        Archived { at: ::std::string::String, id: ::std::string::String },
+    }
+    impl ::std::convert::From<&Self> for GetIssueTimelineResponseItemsItem {
+        fn from(value: &GetIssueTimelineResponseItemsItem) -> Self {
+            value.clone()
+        }
+    }
     ///`GetIssuesOverviewResponse`
     ///
     /// <details><summary>JSON schema</summary>
@@ -4420,6 +5126,7 @@ pub mod types {
     ///          "archived",
     ///          "issueId",
     ///          "key",
+    ///          "lifeState",
     ///          "status",
     ///          "threadDisplayName",
     ///          "threadId",
@@ -4436,6 +5143,9 @@ pub mod types {
     ///          },
     ///          "key": {
     ///            "type": "string"
+    ///          },
+    ///          "lifeState": {
+    ///            "$ref": "#/components/schemas/IssueLifeState"
     ///          },
     ///          "meta": {
     ///            "type": "string"
@@ -4478,6 +5188,7 @@ pub mod types {
     ///                "archived",
     ///                "issueId",
     ///                "key",
+    ///                "lifeState",
     ///                "status",
     ///                "threadDisplayName",
     ///                "threadId",
@@ -4494,6 +5205,9 @@ pub mod types {
     ///                },
     ///                "key": {
     ///                  "type": "string"
+    ///                },
+    ///                "lifeState": {
+    ///                  "$ref": "#/components/schemas/IssueLifeState"
     ///                },
     ///                "meta": {
     ///                  "type": "string"
@@ -4587,6 +5301,7 @@ pub mod types {
     ///    "archived",
     ///    "issueId",
     ///    "key",
+    ///    "lifeState",
     ///    "status",
     ///    "threadDisplayName",
     ///    "threadId",
@@ -4603,6 +5318,9 @@ pub mod types {
     ///    },
     ///    "key": {
     ///      "type": "string"
+    ///    },
+    ///    "lifeState": {
+    ///      "$ref": "#/components/schemas/IssueLifeState"
     ///    },
     ///    "meta": {
     ///      "type": "string"
@@ -4636,6 +5354,8 @@ pub mod types {
         #[serde(rename = "issueId")]
         pub issue_id: ::uuid::Uuid,
         pub key: ::std::string::String,
+        #[serde(rename = "lifeState")]
+        pub life_state: ::codm_contracts_rust::wire::enums::IssueLifeState,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub meta: ::std::option::Option<::std::string::String>,
         pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
@@ -4677,6 +5397,7 @@ pub mod types {
     ///          "archived",
     ///          "issueId",
     ///          "key",
+    ///          "lifeState",
     ///          "status",
     ///          "threadDisplayName",
     ///          "threadId",
@@ -4693,6 +5414,9 @@ pub mod types {
     ///          },
     ///          "key": {
     ///            "type": "string"
+    ///          },
+    ///          "lifeState": {
+    ///            "$ref": "#/components/schemas/IssueLifeState"
     ///          },
     ///          "meta": {
     ///            "type": "string"
@@ -4749,6 +5473,7 @@ pub mod types {
     ///    "archived",
     ///    "issueId",
     ///    "key",
+    ///    "lifeState",
     ///    "status",
     ///    "threadDisplayName",
     ///    "threadId",
@@ -4765,6 +5490,9 @@ pub mod types {
     ///    },
     ///    "key": {
     ///      "type": "string"
+    ///    },
+    ///    "lifeState": {
+    ///      "$ref": "#/components/schemas/IssueLifeState"
     ///    },
     ///    "meta": {
     ///      "type": "string"
@@ -4798,6 +5526,8 @@ pub mod types {
         #[serde(rename = "issueId")]
         pub issue_id: ::uuid::Uuid,
         pub key: ::std::string::String,
+        #[serde(rename = "lifeState")]
+        pub life_state: ::codm_contracts_rust::wire::enums::IssueLifeState,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub meta: ::std::option::Option<::std::string::String>,
         pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
@@ -7367,6 +8097,39 @@ pub mod types {
             value.clone()
         }
     }
+    ///`GetThreadPanelLinkResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "properties": {
+    ///    "url": {
+    ///      "type": "string"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetThreadPanelLinkResponse {
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub url: ::std::option::Option<::std::string::String>,
+    }
+    impl ::std::convert::From<&GetThreadPanelLinkResponse>
+    for GetThreadPanelLinkResponse {
+        fn from(value: &GetThreadPanelLinkResponse) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::default::Default for GetThreadPanelLinkResponse {
+        fn default() -> Self {
+            Self { url: Default::default() }
+        }
+    }
     ///`GetThreadSettingsResponse`
     ///
     /// <details><summary>JSON schema</summary>
@@ -9340,6 +10103,36 @@ pub mod types {
     }
     impl ::std::convert::From<&ResolveStopBody> for ResolveStopBody {
         fn from(value: &ResolveStopBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`RotateThreadPanelLinkResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "url"
+    ///  ],
+    ///  "properties": {
+    ///    "url": {
+    ///      "type": "string"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct RotateThreadPanelLinkResponse {
+        pub url: ::std::string::String,
+    }
+    impl ::std::convert::From<&RotateThreadPanelLinkResponse>
+    for RotateThreadPanelLinkResponse {
+        fn from(value: &RotateThreadPanelLinkResponse) -> Self {
             value.clone()
         }
     }
@@ -11951,6 +12744,41 @@ Sends a `POST` request to `/issues/{issueId}/steer`
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
+    /**An issue's timeline: created, turns, messages, steers, artifacts, stops, completion
+
+Sends a `GET` request to `/issues/{issueId}/timeline`
+
+*/
+    pub async fn get_issue_timeline<'a>(
+        &'a self,
+        issue_id: &'a str,
+    ) -> Result<ResponseValue<types::GetIssueTimelineResponse>, Error<()>> {
+        let url = format!(
+            "{}/issues/{}/timeline", self.baseurl, encode_path(& issue_id.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .get(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
     /**Push a freshly-exchanged session token into the local daemon
 
 Sends a `POST` request to `/session/cloud-token`
@@ -13129,6 +13957,78 @@ Sends a `GET` request to `/threads/{threadId}/needs-you`
         let mut request = self
             .client
             .get(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**A conversation's panel link (absent until the first push or when not logged in)
+
+Sends a `GET` request to `/threads/{threadId}/panel-link`
+
+*/
+    pub async fn get_thread_panel_link<'a>(
+        &'a self,
+        thread_id: &'a str,
+    ) -> Result<ResponseValue<types::GetThreadPanelLinkResponse>, Error<()>> {
+        let url = format!(
+            "{}/threads/{}/panel-link", self.baseurl, encode_path(& thread_id
+            .to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .get(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Replace a conversation's panel link
+
+Sends a `POST` request to `/threads/{threadId}/panel-link/rotate`
+
+*/
+    pub async fn rotate_thread_panel_link<'a>(
+        &'a self,
+        thread_id: &'a str,
+    ) -> Result<ResponseValue<types::RotateThreadPanelLinkResponse>, Error<()>> {
+        let url = format!(
+            "{}/threads/{}/panel-link/rotate", self.baseurl, encode_path(& thread_id
+            .to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
             .header(
                 ::reqwest::header::ACCEPT,
                 ::reqwest::header::HeaderValue::from_static("application/json"),
