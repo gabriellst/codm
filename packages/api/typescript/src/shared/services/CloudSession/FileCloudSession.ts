@@ -143,6 +143,12 @@ export class FileCloudSession extends CloudSession {
 		return promise
 	}
 
+	authorizationHeader(): Record<string, string> | undefined {
+		const state = this.getState()
+		if (state.revoked || !state.token) return undefined
+		return { Authorization: `Bearer ${state.token}` }
+	}
+
 	async isEntitled(): Promise<boolean> {
 		// Dev-compat (spec T7.1 rollout note): um install sem CODM_CLOUD_URL no ambiente CRU nunca
 		// gateia por login. `Config.env.CODM_CLOUD_URL` não sabe dizer "ausente" — ela recebe o valor

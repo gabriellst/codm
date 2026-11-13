@@ -116,6 +116,7 @@ pub mod types {
     ///    "OWNER_ALREADY_DISABLED",
     ///    "OWNER_NOT_DISABLED",
     ///    "OWNER_NOT_FOUND",
+    ///    "PANEL_LINK_UNAVAILABLE",
     ///    "PANEL_NOT_FOUND",
     ///    "PARTICIPANT_NOT_FOUND",
     ///    "PASSWORDS_DONT_MATCH",
@@ -307,6 +308,8 @@ pub mod types {
         OwnerNotDisabled,
         #[serde(rename = "OWNER_NOT_FOUND")]
         OwnerNotFound,
+        #[serde(rename = "PANEL_LINK_UNAVAILABLE")]
+        PanelLinkUnavailable,
         #[serde(rename = "PANEL_NOT_FOUND")]
         PanelNotFound,
         #[serde(rename = "PARTICIPANT_NOT_FOUND")]
@@ -470,6 +473,7 @@ pub mod types {
                 Self::OwnerAlreadyDisabled => f.write_str("OWNER_ALREADY_DISABLED"),
                 Self::OwnerNotDisabled => f.write_str("OWNER_NOT_DISABLED"),
                 Self::OwnerNotFound => f.write_str("OWNER_NOT_FOUND"),
+                Self::PanelLinkUnavailable => f.write_str("PANEL_LINK_UNAVAILABLE"),
                 Self::PanelNotFound => f.write_str("PANEL_NOT_FOUND"),
                 Self::ParticipantNotFound => f.write_str("PARTICIPANT_NOT_FOUND"),
                 Self::PasswordsDontMatch => f.write_str("PASSWORDS_DONT_MATCH"),
@@ -587,6 +591,7 @@ pub mod types {
                 "OWNER_ALREADY_DISABLED" => Ok(Self::OwnerAlreadyDisabled),
                 "OWNER_NOT_DISABLED" => Ok(Self::OwnerNotDisabled),
                 "OWNER_NOT_FOUND" => Ok(Self::OwnerNotFound),
+                "PANEL_LINK_UNAVAILABLE" => Ok(Self::PanelLinkUnavailable),
                 "PANEL_NOT_FOUND" => Ok(Self::PanelNotFound),
                 "PARTICIPANT_NOT_FOUND" => Ok(Self::ParticipantNotFound),
                 "PASSWORDS_DONT_MATCH" => Ok(Self::PasswordsDontMatch),

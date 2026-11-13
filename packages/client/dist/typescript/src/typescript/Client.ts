@@ -35,6 +35,7 @@ import {
 	getSessionChat,
 	getSessionIssues,
 	getSettings,
+	getThreadPanelLink,
 	getThreadSettings,
 	getUserInfo,
 	health,
@@ -49,6 +50,7 @@ import {
 	resolveStop,
 	restoreIssue,
 	resumeThread,
+	rotateThreadPanelLink,
 	saveOnboardingStep,
 	sendArtifact,
 	sendDirectMessage,
@@ -218,6 +220,10 @@ export class TypescriptClient {
 		return (getSettings as (...a: any[]) => ReturnType<typeof getSettings>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	getThreadPanelLink(...args: Parameters<typeof getThreadPanelLink>): ReturnType<typeof getThreadPanelLink> {
+		return (getThreadPanelLink as (...a: any[]) => ReturnType<typeof getThreadPanelLink>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	getThreadSettings(...args: Parameters<typeof getThreadSettings>): ReturnType<typeof getThreadSettings> {
 		return (getThreadSettings as (...a: any[]) => ReturnType<typeof getThreadSettings>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
@@ -272,6 +278,10 @@ export class TypescriptClient {
 
 	resumeThread(...args: Parameters<typeof resumeThread>): ReturnType<typeof resumeThread> {
 		return (resumeThread as (...a: any[]) => ReturnType<typeof resumeThread>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	rotateThreadPanelLink(...args: Parameters<typeof rotateThreadPanelLink>): ReturnType<typeof rotateThreadPanelLink> {
+		return (rotateThreadPanelLink as (...a: any[]) => ReturnType<typeof rotateThreadPanelLink>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	saveOnboardingStep(...args: Parameters<typeof saveOnboardingStep>): ReturnType<typeof saveOnboardingStep> {

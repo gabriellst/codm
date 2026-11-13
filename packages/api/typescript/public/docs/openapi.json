@@ -2130,6 +2130,85 @@
         }
       }
     },
+    "/threads/{threadId}/panel-link": {
+      "get": {
+        "tags": [
+          "issue"
+        ],
+        "description": "A conversation's panel link (absent until the first push or when not logged in)",
+        "operationId": "GetThreadPanelLink",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A conversation's panel link (absent until the first push or when not logged in)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/threads/{threadId}/panel-link/rotate": {
+      "post": {
+        "tags": [
+          "issue"
+        ],
+        "description": "Replace a conversation's panel link",
+        "operationId": "RotateThreadPanelLink",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Replace a conversation's panel link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "url"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/issues": {
       "get": {
         "tags": [
@@ -9540,6 +9619,7 @@
           "OWNER_ALREADY_DISABLED",
           "OWNER_NOT_DISABLED",
           "OWNER_NOT_FOUND",
+          "PANEL_LINK_UNAVAILABLE",
           "PANEL_NOT_FOUND",
           "PARTICIPANT_NOT_FOUND",
           "PASSWORDS_DONT_MATCH",
@@ -10020,6 +10100,7 @@
     "OWNER_ALREADY_DISABLED",
     "OWNER_NOT_DISABLED",
     "OWNER_NOT_FOUND",
+    "PANEL_LINK_UNAVAILABLE",
     "PANEL_NOT_FOUND",
     "PARTICIPANT_NOT_FOUND",
     "PASSWORDS_DONT_MATCH",

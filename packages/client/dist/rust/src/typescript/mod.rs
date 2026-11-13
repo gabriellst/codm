@@ -275,6 +275,7 @@ pub mod types {
     ///    "OWNER_ALREADY_DISABLED",
     ///    "OWNER_NOT_DISABLED",
     ///    "OWNER_NOT_FOUND",
+    ///    "PANEL_LINK_UNAVAILABLE",
     ///    "PANEL_NOT_FOUND",
     ///    "PARTICIPANT_NOT_FOUND",
     ///    "PASSWORDS_DONT_MATCH",
@@ -466,6 +467,8 @@ pub mod types {
         OwnerNotDisabled,
         #[serde(rename = "OWNER_NOT_FOUND")]
         OwnerNotFound,
+        #[serde(rename = "PANEL_LINK_UNAVAILABLE")]
+        PanelLinkUnavailable,
         #[serde(rename = "PANEL_NOT_FOUND")]
         PanelNotFound,
         #[serde(rename = "PARTICIPANT_NOT_FOUND")]
@@ -629,6 +632,7 @@ pub mod types {
                 Self::OwnerAlreadyDisabled => f.write_str("OWNER_ALREADY_DISABLED"),
                 Self::OwnerNotDisabled => f.write_str("OWNER_NOT_DISABLED"),
                 Self::OwnerNotFound => f.write_str("OWNER_NOT_FOUND"),
+                Self::PanelLinkUnavailable => f.write_str("PANEL_LINK_UNAVAILABLE"),
                 Self::PanelNotFound => f.write_str("PANEL_NOT_FOUND"),
                 Self::ParticipantNotFound => f.write_str("PARTICIPANT_NOT_FOUND"),
                 Self::PasswordsDontMatch => f.write_str("PASSWORDS_DONT_MATCH"),
@@ -746,6 +750,7 @@ pub mod types {
                 "OWNER_ALREADY_DISABLED" => Ok(Self::OwnerAlreadyDisabled),
                 "OWNER_NOT_DISABLED" => Ok(Self::OwnerNotDisabled),
                 "OWNER_NOT_FOUND" => Ok(Self::OwnerNotFound),
+                "PANEL_LINK_UNAVAILABLE" => Ok(Self::PanelLinkUnavailable),
                 "PANEL_NOT_FOUND" => Ok(Self::PanelNotFound),
                 "PARTICIPANT_NOT_FOUND" => Ok(Self::ParticipantNotFound),
                 "PASSWORDS_DONT_MATCH" => Ok(Self::PasswordsDontMatch),
@@ -8092,6 +8097,39 @@ pub mod types {
             value.clone()
         }
     }
+    ///`GetThreadPanelLinkResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "properties": {
+    ///    "url": {
+    ///      "type": "string"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetThreadPanelLinkResponse {
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub url: ::std::option::Option<::std::string::String>,
+    }
+    impl ::std::convert::From<&GetThreadPanelLinkResponse>
+    for GetThreadPanelLinkResponse {
+        fn from(value: &GetThreadPanelLinkResponse) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::default::Default for GetThreadPanelLinkResponse {
+        fn default() -> Self {
+            Self { url: Default::default() }
+        }
+    }
     ///`GetThreadSettingsResponse`
     ///
     /// <details><summary>JSON schema</summary>
@@ -10065,6 +10103,36 @@ pub mod types {
     }
     impl ::std::convert::From<&ResolveStopBody> for ResolveStopBody {
         fn from(value: &ResolveStopBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`RotateThreadPanelLinkResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "url"
+    ///  ],
+    ///  "properties": {
+    ///    "url": {
+    ///      "type": "string"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct RotateThreadPanelLinkResponse {
+        pub url: ::std::string::String,
+    }
+    impl ::std::convert::From<&RotateThreadPanelLinkResponse>
+    for RotateThreadPanelLinkResponse {
+        fn from(value: &RotateThreadPanelLinkResponse) -> Self {
             value.clone()
         }
     }
@@ -13889,6 +13957,78 @@ Sends a `GET` request to `/threads/{threadId}/needs-you`
         let mut request = self
             .client
             .get(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**A conversation's panel link (absent until the first push or when not logged in)
+
+Sends a `GET` request to `/threads/{threadId}/panel-link`
+
+*/
+    pub async fn get_thread_panel_link<'a>(
+        &'a self,
+        thread_id: &'a str,
+    ) -> Result<ResponseValue<types::GetThreadPanelLinkResponse>, Error<()>> {
+        let url = format!(
+            "{}/threads/{}/panel-link", self.baseurl, encode_path(& thread_id
+            .to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .get(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Replace a conversation's panel link
+
+Sends a `POST` request to `/threads/{threadId}/panel-link/rotate`
+
+*/
+    pub async fn rotate_thread_panel_link<'a>(
+        &'a self,
+        thread_id: &'a str,
+    ) -> Result<ResponseValue<types::RotateThreadPanelLinkResponse>, Error<()>> {
+        let url = format!(
+            "{}/threads/{}/panel-link/rotate", self.baseurl, encode_path(& thread_id
+            .to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
             .header(
                 ::reqwest::header::ACCEPT,
                 ::reqwest::header::HeaderValue::from_static("application/json"),

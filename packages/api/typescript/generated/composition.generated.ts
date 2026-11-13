@@ -30,7 +30,7 @@ import { INSTANCE_REGISTRY as externalRegistry } from '@external/registry'
 import issueControllers from '@issue/controllers'
 import * as issueInternalHandlers from '@issue/handlers/internal'
 import * as issueExternalHandlers from '@issue/handlers/external'
-import { AutoArchiveCompletedIssues } from '@issue/jobs'
+import { AutoArchiveCompletedIssues, PublishPanelSnapshot } from '@issue/jobs'
 import { INSTANCE_REGISTRY as issueRegistry } from '@issue/registry'
 import ownerControllers from '@owner/controllers'
 import * as ownerInternalHandlers from '@owner/handlers/internal'
@@ -98,7 +98,7 @@ export const MANIFEST = {
 		controllers: issueControllers,
 		internalHandlers: issueInternalHandlers,
 		externalHandlers: issueExternalHandlers,
-		jobs: [{ handler: AutoArchiveCompletedIssues }],
+		jobs: [{ handler: AutoArchiveCompletedIssues }, { handler: PublishPanelSnapshot }],
 		registry: issueRegistry,
 	},
 	owner: {

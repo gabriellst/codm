@@ -121,6 +121,7 @@ const (
 	OWNERALREADYDISABLED            ApiErrors = "OWNER_ALREADY_DISABLED"
 	OWNERNOTDISABLED                ApiErrors = "OWNER_NOT_DISABLED"
 	OWNERNOTFOUND                   ApiErrors = "OWNER_NOT_FOUND"
+	PANELLINKUNAVAILABLE            ApiErrors = "PANEL_LINK_UNAVAILABLE"
 	PANELNOTFOUND                   ApiErrors = "PANEL_NOT_FOUND"
 	PARTICIPANTNOTFOUND             ApiErrors = "PARTICIPANT_NOT_FOUND"
 	PASSWORDSDONTMATCH              ApiErrors = "PASSWORDS_DONT_MATCH"
@@ -299,6 +300,8 @@ func (e ApiErrors) Valid() bool {
 	case OWNERNOTDISABLED:
 		return true
 	case OWNERNOTFOUND:
+		return true
+	case PANELLINKUNAVAILABLE:
 		return true
 	case PANELNOTFOUND:
 		return true
@@ -2773,6 +2776,12 @@ type ClientInterface interface {
 	// GetNeedsYouPanel request
 	GetNeedsYouPanel(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetThreadPanelLink request
+	GetThreadPanelLink(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RotateThreadPanelLink request
+	RotateThreadPanelLink(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// SetParticipantInvocationWithBody request with any body
 	SetParticipantInvocationWithBody(ctx context.Context, threadId string, participantId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -3586,6 +3595,30 @@ func (c *Client) ConfigureModel(ctx context.Context, threadId string, body Confi
 
 func (c *Client) GetNeedsYouPanel(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetNeedsYouPanelRequest(c.Server, threadId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetThreadPanelLink(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetThreadPanelLinkRequest(c.Server, threadId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RotateThreadPanelLink(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRotateThreadPanelLinkRequest(c.Server, threadId)
 	if err != nil {
 		return nil, err
 	}
@@ -5716,6 +5749,74 @@ func NewGetNeedsYouPanelRequest(server string, threadId string) (*http.Request, 
 	return req, nil
 }
 
+// NewGetThreadPanelLinkRequest generates requests for GetThreadPanelLink
+func NewGetThreadPanelLinkRequest(server string, threadId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/threads/%s/panel-link", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewRotateThreadPanelLinkRequest generates requests for RotateThreadPanelLink
+func NewRotateThreadPanelLinkRequest(server string, threadId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/threads/%s/panel-link/rotate", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewSetParticipantInvocationRequest calls the generic SetParticipantInvocation builder with application/json body
 func NewSetParticipantInvocationRequest(server string, threadId string, participantId string, body SetParticipantInvocationJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -6829,6 +6930,12 @@ type ClientWithResponsesInterface interface {
 
 	// GetNeedsYouPanelWithResponse request
 	GetNeedsYouPanelWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*GetNeedsYouPanelResponse, error)
+
+	// GetThreadPanelLinkWithResponse request
+	GetThreadPanelLinkWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*GetThreadPanelLinkResponse, error)
+
+	// RotateThreadPanelLinkWithResponse request
+	RotateThreadPanelLinkWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*RotateThreadPanelLinkResponse, error)
 
 	// SetParticipantInvocationWithBodyWithResponse request with any body
 	SetParticipantInvocationWithBodyWithResponse(ctx context.Context, threadId string, participantId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetParticipantInvocationResponse, error)
@@ -8353,6 +8460,70 @@ func (r GetNeedsYouPanelResponse) ContentType() string {
 	return ""
 }
 
+type GetThreadPanelLinkResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Url *string `json:"url,omitempty"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetThreadPanelLinkResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetThreadPanelLinkResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetThreadPanelLinkResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RotateThreadPanelLinkResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Url string `json:"url"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r RotateThreadPanelLinkResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RotateThreadPanelLinkResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RotateThreadPanelLinkResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type SetParticipantInvocationResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -9812,6 +9983,24 @@ func (c *ClientWithResponses) GetNeedsYouPanelWithResponse(ctx context.Context, 
 		return nil, err
 	}
 	return ParseGetNeedsYouPanelResponse(rsp)
+}
+
+// GetThreadPanelLinkWithResponse request returning *GetThreadPanelLinkResponse
+func (c *ClientWithResponses) GetThreadPanelLinkWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*GetThreadPanelLinkResponse, error) {
+	rsp, err := c.GetThreadPanelLink(ctx, threadId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetThreadPanelLinkResponse(rsp)
+}
+
+// RotateThreadPanelLinkWithResponse request returning *RotateThreadPanelLinkResponse
+func (c *ClientWithResponses) RotateThreadPanelLinkWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*RotateThreadPanelLinkResponse, error) {
+	rsp, err := c.RotateThreadPanelLink(ctx, threadId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRotateThreadPanelLinkResponse(rsp)
 }
 
 // SetParticipantInvocationWithBodyWithResponse request with arbitrary body returning *SetParticipantInvocationResponse
@@ -11345,6 +11534,62 @@ func ParseGetNeedsYouPanelResponse(rsp *http.Response) (*GetNeedsYouPanelRespons
 				StopId               openapi_types.UUID  `json:"stopId"`
 				Title                string              `json:"title"`
 			} `json:"stops"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetThreadPanelLinkResponse parses an HTTP response from a GetThreadPanelLinkWithResponse call
+func ParseGetThreadPanelLinkResponse(rsp *http.Response) (*GetThreadPanelLinkResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetThreadPanelLinkResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Url *string `json:"url,omitempty"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRotateThreadPanelLinkResponse parses an HTTP response from a RotateThreadPanelLinkWithResponse call
+func ParseRotateThreadPanelLinkResponse(rsp *http.Response) (*RotateThreadPanelLinkResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RotateThreadPanelLinkResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Url string `json:"url"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err

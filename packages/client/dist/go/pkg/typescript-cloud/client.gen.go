@@ -91,6 +91,7 @@ const (
 	OWNERALREADYDISABLED            ApiErrors = "OWNER_ALREADY_DISABLED"
 	OWNERNOTDISABLED                ApiErrors = "OWNER_NOT_DISABLED"
 	OWNERNOTFOUND                   ApiErrors = "OWNER_NOT_FOUND"
+	PANELLINKUNAVAILABLE            ApiErrors = "PANEL_LINK_UNAVAILABLE"
 	PANELNOTFOUND                   ApiErrors = "PANEL_NOT_FOUND"
 	PARTICIPANTNOTFOUND             ApiErrors = "PARTICIPANT_NOT_FOUND"
 	PASSWORDSDONTMATCH              ApiErrors = "PASSWORDS_DONT_MATCH"
@@ -269,6 +270,8 @@ func (e ApiErrors) Valid() bool {
 	case OWNERNOTDISABLED:
 		return true
 	case OWNERNOTFOUND:
+		return true
+	case PANELLINKUNAVAILABLE:
 		return true
 	case PANELNOTFOUND:
 		return true
