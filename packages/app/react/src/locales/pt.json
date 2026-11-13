@@ -519,6 +519,7 @@
 		"OWNER_ALREADY_DISABLED": "Esta conta já está desativada.",
 		"OWNER_NOT_DISABLED": "Esta conta não está desativada.",
 		"OWNER_NOT_FOUND": "Conta não encontrada.",
+		"PANEL_NOT_FOUND": "Link do painel inválido ou trocado.",
 		"PARTICIPANT_NOT_FOUND": "Participante não encontrado.",
 		"PASSWORDS_DONT_MATCH": "As senhas não coincidem.",
 		"PASSWORD_TOO_WEAK": "Senha muito fraca. Use letras, números e símbolos.",

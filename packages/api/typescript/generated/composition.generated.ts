@@ -36,6 +36,8 @@ import ownerControllers from '@owner/controllers'
 import * as ownerInternalHandlers from '@owner/handlers/internal'
 import * as ownerExternalHandlers from '@owner/handlers/external'
 import { INSTANCE_REGISTRY as ownerRegistry } from '@owner/registry'
+import panelControllers from '@panel/controllers'
+import { INSTANCE_REGISTRY as panelRegistry } from '@panel/registry'
 import sharedControllers from '@shared/controllers'
 import { PruneOutbox } from '@shared/jobs'
 import { INSTANCE_REGISTRY as sharedRegistry } from '@shared/registry'
@@ -105,6 +107,11 @@ export const MANIFEST = {
 		internalHandlers: ownerInternalHandlers,
 		externalHandlers: ownerExternalHandlers,
 		registry: ownerRegistry,
+	},
+	panel: {
+		name: 'panel',
+		controllers: panelControllers,
+		registry: panelRegistry,
 	},
 	shared: {
 		name: 'shared',

@@ -1,9 +1,9 @@
 /**
- * O TRONCO CLOUD — dialeto `postgresql`, 13 tabelas, e **nada mais que isso**.
+ * O TRONCO CLOUD — dialeto `postgresql`, 16 tabelas, e **nada mais que isso**.
  *
  * O ADR 0005 decidiu dois troncos, e a metade que importa da decisão é a segunda: este NÃO é um
  * espelho do tronco SQLite. Ele carrega exatamente as tabelas dos contextos que a `PLACEMENT`
- * (ADR 0002) aloca na nuvem — `auth`, `owner` e a linha cloud de `shared` — e nenhuma outra.
+ * (ADR 0002) aloca na nuvem — `auth`, `owner`, `panel` (o painel por grupo, fase 1) e a linha cloud de `shared` — e nenhuma outra.
  *
  * Os seis exports que você NÃO encontra aqui, e por quê:
  *
@@ -21,4 +21,5 @@
  */
 export * from './auth'
 export * from './owner'
+export * from './panel'
 export * from './infrastructure'

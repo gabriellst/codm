@@ -3,65 +3,18 @@ import { and, eq, inArray } from 'drizzle-orm'
 import { LibSqlDatabaseDriver, Handler, z, BaseError } from '@codm/core-typescript'
 import { agentMailbox, artifacts, events, issues, stops, transcriptEntries } from '@codm/contracts/db'
 import {
-	ArtifactKind,
 	ClassificationMethod,
 	IssueTimelineItemKind,
 	MailboxItemKind,
 	MailboxTargetKind,
 	StopKind,
-	StopResolution,
 	TranscriptKind,
 } from '@codm/contracts-typescript/wire/enums'
-import type Z from 'zod'
+import { IssueTimelineItemSchema, type IssueTimelineItem } from '@shared/schemas'
 import type { ApplicationErrors } from '../errors'
 
-const at = z.string()
-/** Stable per item — the source row (event, entry, queue item, artifact, stop), so a list key never shifts. */
-const id = z.string()
-
-/**
- * One moment of an issue's life. A DISCRIMINATED union on `kind` — each kind carries only its own
- * fields, and the console renders each member on its own (Non-Negotiable 3), never an all-optional row.
- */
-const TimelineItemSchema = z.discriminatedUnion('kind', [
-	z.object({ kind: z.literal(IssueTimelineItemKind.CREATED), id, at, title: z.string() }),
-	z.object({ kind: z.literal(IssueTimelineItemKind.TURN_STARTED), id, at }),
-	z.object({
-		kind: z.literal(IssueTimelineItemKind.MESSAGE),
-		id,
-		at,
-		entryId: z.uuid(),
-		transcriptKind: z.enum(TranscriptKind),
-		text: z.string(),
-		classification: z.enum(ClassificationMethod).optional(),
-	}),
-	z.object({
-		kind: z.literal(IssueTimelineItemKind.STEER),
-		id,
-		at,
-		text: z.string(),
-		deliveredAt: z.string().optional(),
-		readAt: z.string().optional(),
-		/** The automatic declaration reminder, not something a person sent. */
-		reminder: z.boolean(),
-	}),
-	z.object({
-		kind: z.literal(IssueTimelineItemKind.ARTIFACT),
-		id,
-		at,
-		artifactId: z.uuid(),
-		artifactKind: z.enum(ArtifactKind),
-		name: z.string(),
-	}),
-	z.object({ kind: z.literal(IssueTimelineItemKind.STOP_RAISED), id, at, stopId: z.uuid(), stopKind: z.enum(StopKind), title: z.string() }),
-	z.object({ kind: z.literal(IssueTimelineItemKind.STOP_RESOLVED), id, at, stopId: z.uuid(), resolution: z.enum(StopResolution) }),
-	z.object({ kind: z.literal(IssueTimelineItemKind.COMPLETED), id, at }),
-	z.object({ kind: z.literal(IssueTimelineItemKind.ARCHIVED), id, at }),
-])
-export type IssueTimelineItem = Z.output<typeof TimelineItemSchema>
-
 export const GetIssueTimelineInputSchema = z.object({ ownerId: z.uuid(), issueId: z.uuid() })
-export const GetIssueTimelineOutputSchema = z.object({ items: z.array(TimelineItemSchema) })
+export const GetIssueTimelineOutputSchema = z.object({ items: z.array(IssueTimelineItemSchema) })
 
 /** Fact names on `shared_events` that become a timeline moment, and which one. */
 const EVENT_KINDS = {

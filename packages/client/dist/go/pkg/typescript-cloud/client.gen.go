@@ -91,6 +91,7 @@ const (
 	OWNERALREADYDISABLED            ApiErrors = "OWNER_ALREADY_DISABLED"
 	OWNERNOTDISABLED                ApiErrors = "OWNER_NOT_DISABLED"
 	OWNERNOTFOUND                   ApiErrors = "OWNER_NOT_FOUND"
+	PANELNOTFOUND                   ApiErrors = "PANEL_NOT_FOUND"
 	PARTICIPANTNOTFOUND             ApiErrors = "PARTICIPANT_NOT_FOUND"
 	PASSWORDSDONTMATCH              ApiErrors = "PASSWORDS_DONT_MATCH"
 	PASSWORDTOOWEAK                 ApiErrors = "PASSWORD_TOO_WEAK"
@@ -269,6 +270,8 @@ func (e ApiErrors) Valid() bool {
 		return true
 	case OWNERNOTFOUND:
 		return true
+	case PANELNOTFOUND:
+		return true
 	case PARTICIPANTNOTFOUND:
 		return true
 	case PASSWORDSDONTMATCH:
@@ -334,6 +337,150 @@ func (e ApiErrors) Valid() bool {
 	case WORKSPACEINUSE:
 		return true
 	case WORKSPACENOTFOUND:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ArtifactKind.
+const (
+	AUDIO ArtifactKind = "AUDIO"
+	FILE  ArtifactKind = "FILE"
+	IMAGE ArtifactKind = "IMAGE"
+	LINK  ArtifactKind = "LINK"
+	VIDEO ArtifactKind = "VIDEO"
+)
+
+// Valid indicates whether the value is a known member of the ArtifactKind enum.
+func (e ArtifactKind) Valid() bool {
+	switch e {
+	case AUDIO:
+		return true
+	case FILE:
+		return true
+	case IMAGE:
+		return true
+	case LINK:
+		return true
+	case VIDEO:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ClassificationMethod.
+const (
+	CLARIFIED    ClassificationMethod = "CLARIFIED"
+	CONTEXTMATCH ClassificationMethod = "CONTEXT_MATCH"
+	NEWISSUE     ClassificationMethod = "NEW_ISSUE"
+	REPLYQUOTE   ClassificationMethod = "REPLY_QUOTE"
+)
+
+// Valid indicates whether the value is a known member of the ClassificationMethod enum.
+func (e ClassificationMethod) Valid() bool {
+	switch e {
+	case CLARIFIED:
+		return true
+	case CONTEXTMATCH:
+		return true
+	case NEWISSUE:
+		return true
+	case REPLYQUOTE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IssueLifeState.
+const (
+	DONE            IssueLifeState = "DONE"
+	QUEUED          IssueLifeState = "QUEUED"
+	REMINDED        IssueLifeState = "REMINDED"
+	RUNNING         IssueLifeState = "RUNNING"
+	STALLED         IssueLifeState = "STALLED"
+	WAITINGPERSON   IssueLifeState = "WAITING_PERSON"
+	WAITINGPROVIDER IssueLifeState = "WAITING_PROVIDER"
+)
+
+// Valid indicates whether the value is a known member of the IssueLifeState enum.
+func (e IssueLifeState) Valid() bool {
+	switch e {
+	case DONE:
+		return true
+	case QUEUED:
+		return true
+	case REMINDED:
+		return true
+	case RUNNING:
+		return true
+	case STALLED:
+		return true
+	case WAITINGPERSON:
+		return true
+	case WAITINGPROVIDER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IssueStatus.
+const (
+	IssueStatusCOMPLETED  IssueStatus = "COMPLETED"
+	IssueStatusNEEDSINPUT IssueStatus = "NEEDS_INPUT"
+	IssueStatusWORKING    IssueStatus = "WORKING"
+)
+
+// Valid indicates whether the value is a known member of the IssueStatus enum.
+func (e IssueStatus) Valid() bool {
+	switch e {
+	case IssueStatusCOMPLETED:
+		return true
+	case IssueStatusNEEDSINPUT:
+		return true
+	case IssueStatusWORKING:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IssueTimelineItemKind.
+const (
+	IssueTimelineItemKindARCHIVED     IssueTimelineItemKind = "ARCHIVED"
+	IssueTimelineItemKindARTIFACT     IssueTimelineItemKind = "ARTIFACT"
+	IssueTimelineItemKindCOMPLETED    IssueTimelineItemKind = "COMPLETED"
+	IssueTimelineItemKindCREATED      IssueTimelineItemKind = "CREATED"
+	IssueTimelineItemKindMESSAGE      IssueTimelineItemKind = "MESSAGE"
+	IssueTimelineItemKindSTEER        IssueTimelineItemKind = "STEER"
+	IssueTimelineItemKindSTOPRAISED   IssueTimelineItemKind = "STOP_RAISED"
+	IssueTimelineItemKindSTOPRESOLVED IssueTimelineItemKind = "STOP_RESOLVED"
+	IssueTimelineItemKindTURNSTARTED  IssueTimelineItemKind = "TURN_STARTED"
+)
+
+// Valid indicates whether the value is a known member of the IssueTimelineItemKind enum.
+func (e IssueTimelineItemKind) Valid() bool {
+	switch e {
+	case IssueTimelineItemKindARCHIVED:
+		return true
+	case IssueTimelineItemKindARTIFACT:
+		return true
+	case IssueTimelineItemKindCOMPLETED:
+		return true
+	case IssueTimelineItemKindCREATED:
+		return true
+	case IssueTimelineItemKindMESSAGE:
+		return true
+	case IssueTimelineItemKindSTEER:
+		return true
+	case IssueTimelineItemKindSTOPRAISED:
+		return true
+	case IssueTimelineItemKindSTOPRESOLVED:
+		return true
+	case IssueTimelineItemKindTURNSTARTED:
 		return true
 	default:
 		return false
@@ -430,8 +577,107 @@ func (e Status2) Valid() bool {
 	}
 }
 
+// Defines values for StopKind.
+const (
+	APPROVALNEEDED          StopKind = "APPROVAL_NEEDED"
+	AUTHREQUIRED            StopKind = "AUTH_REQUIRED"
+	BLOCKEDBYCLASSIFICATION StopKind = "BLOCKED_BY_CLASSIFICATION"
+	HUMANREQUESTED          StopKind = "HUMAN_REQUESTED"
+	PERMISSIONDENIED        StopKind = "PERMISSION_DENIED"
+	SERVERERROR             StopKind = "SERVER_ERROR"
+)
+
+// Valid indicates whether the value is a known member of the StopKind enum.
+func (e StopKind) Valid() bool {
+	switch e {
+	case APPROVALNEEDED:
+		return true
+	case AUTHREQUIRED:
+		return true
+	case BLOCKEDBYCLASSIFICATION:
+		return true
+	case HUMANREQUESTED:
+		return true
+	case PERMISSIONDENIED:
+		return true
+	case SERVERERROR:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StopResolution.
+const (
+	APPROVE       StopResolution = "APPROVE"
+	DENY          StopResolution = "DENY"
+	RETRY         StopResolution = "RETRY"
+	REVIEWANDSEND StopResolution = "REVIEW_AND_SEND"
+	TAKEOVER      StopResolution = "TAKE_OVER"
+)
+
+// Valid indicates whether the value is a known member of the StopResolution enum.
+func (e StopResolution) Valid() bool {
+	switch e {
+	case APPROVE:
+		return true
+	case DENY:
+		return true
+	case RETRY:
+		return true
+	case REVIEWANDSEND:
+		return true
+	case TAKEOVER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TranscriptKind.
+const (
+	ACTION  TranscriptKind = "ACTION"
+	CONTACT TranscriptKind = "CONTACT"
+	DIRECT  TranscriptKind = "DIRECT"
+	SYSTEM  TranscriptKind = "SYSTEM"
+	WHISPER TranscriptKind = "WHISPER"
+)
+
+// Valid indicates whether the value is a known member of the TranscriptKind enum.
+func (e TranscriptKind) Valid() bool {
+	switch e {
+	case ACTION:
+		return true
+	case CONTACT:
+		return true
+	case DIRECT:
+		return true
+	case SYSTEM:
+		return true
+	case WHISPER:
+		return true
+	default:
+		return false
+	}
+}
+
 // ApiErrors All possible error codes
 type ApiErrors string
+
+// ArtifactKind defines model for ArtifactKind.
+type ArtifactKind string
+
+// ClassificationMethod defines model for ClassificationMethod.
+type ClassificationMethod string
+
+// IssueLifeState defines model for IssueLifeState.
+type IssueLifeState string
+
+// IssueStatus defines model for IssueStatus.
+type IssueStatus string
+
+// IssueTimelineItemKind defines model for IssueTimelineItemKind.
+type IssueTimelineItemKind string
 
 // Language defines model for Language.
 type Language string
@@ -447,6 +693,15 @@ type Status string
 
 // Status2 defines model for Status2.
 type Status2 string
+
+// StopKind defines model for StopKind.
+type StopKind string
+
+// StopResolution defines model for StopResolution.
+type StopResolution string
+
+// TranscriptKind defines model for TranscriptKind.
+type TranscriptKind string
 
 // DesktopCallbackParams defines parameters for DesktopCallback.
 type DesktopCallbackParams struct {
@@ -471,6 +726,196 @@ type UpdateOwnerSettingsJSONBody struct {
 	Name       *string                   `json:"name,omitempty"`
 	PictureUrl nullable.Nullable[string] `json:"pictureUrl,omitempty"`
 	Timezone   *string                   `json:"timezone,omitempty"`
+}
+
+// GetPanelIssue200JSONResponseBodyTimeline0 defines parameters for GetPanelIssue.
+type GetPanelIssue200JSONResponseBodyTimeline0 struct {
+	At    string `json:"at"`
+	Id    string `json:"id"`
+	Kind  string `json:"kind"`
+	Title string `json:"title"`
+}
+
+// GetPanelIssue200JSONResponseBodyTimeline1 defines parameters for GetPanelIssue.
+type GetPanelIssue200JSONResponseBodyTimeline1 struct {
+	At   string `json:"at"`
+	Id   string `json:"id"`
+	Kind string `json:"kind"`
+}
+
+// GetPanelIssue200JSONResponseBodyTimeline2 defines parameters for GetPanelIssue.
+type GetPanelIssue200JSONResponseBodyTimeline2 struct {
+	At             string                `json:"at"`
+	Classification *ClassificationMethod `json:"classification,omitempty"`
+	EntryId        openapi_types.UUID    `json:"entryId"`
+	Id             string                `json:"id"`
+	Kind           string                `json:"kind"`
+	Text           string                `json:"text"`
+	TranscriptKind TranscriptKind        `json:"transcriptKind"`
+}
+
+// GetPanelIssue200JSONResponseBodyTimeline3 defines parameters for GetPanelIssue.
+type GetPanelIssue200JSONResponseBodyTimeline3 struct {
+	At          string  `json:"at"`
+	DeliveredAt *string `json:"deliveredAt,omitempty"`
+	Id          string  `json:"id"`
+	Kind        string  `json:"kind"`
+	ReadAt      *string `json:"readAt,omitempty"`
+	Reminder    bool    `json:"reminder"`
+	Text        string  `json:"text"`
+}
+
+// GetPanelIssue200JSONResponseBodyTimeline4 defines parameters for GetPanelIssue.
+type GetPanelIssue200JSONResponseBodyTimeline4 struct {
+	ArtifactId   openapi_types.UUID `json:"artifactId"`
+	ArtifactKind ArtifactKind       `json:"artifactKind"`
+	At           string             `json:"at"`
+	Id           string             `json:"id"`
+	Kind         string             `json:"kind"`
+	Name         string             `json:"name"`
+}
+
+// GetPanelIssue200JSONResponseBodyTimeline5 defines parameters for GetPanelIssue.
+type GetPanelIssue200JSONResponseBodyTimeline5 struct {
+	At       string             `json:"at"`
+	Id       string             `json:"id"`
+	Kind     string             `json:"kind"`
+	StopId   openapi_types.UUID `json:"stopId"`
+	StopKind StopKind           `json:"stopKind"`
+	Title    string             `json:"title"`
+}
+
+// GetPanelIssue200JSONResponseBodyTimeline6 defines parameters for GetPanelIssue.
+type GetPanelIssue200JSONResponseBodyTimeline6 struct {
+	At         string             `json:"at"`
+	Id         string             `json:"id"`
+	Kind       string             `json:"kind"`
+	Resolution StopResolution     `json:"resolution"`
+	StopId     openapi_types.UUID `json:"stopId"`
+}
+
+// GetPanelIssue200JSONResponseBodyTimeline7 defines parameters for GetPanelIssue.
+type GetPanelIssue200JSONResponseBodyTimeline7 struct {
+	At   string `json:"at"`
+	Id   string `json:"id"`
+	Kind string `json:"kind"`
+}
+
+// GetPanelIssue200JSONResponseBodyTimeline8 defines parameters for GetPanelIssue.
+type GetPanelIssue200JSONResponseBodyTimeline8 struct {
+	At   string `json:"at"`
+	Id   string `json:"id"`
+	Kind string `json:"kind"`
+}
+
+// GetPanelIssue200JSONResponseBody_Timeline_Item defines parameters for GetPanelIssue.
+type GetPanelIssue200JSONResponseBody_Timeline_Item struct {
+	union json.RawMessage
+}
+
+// SyncPanelJSONBody defines parameters for SyncPanel.
+type SyncPanelJSONBody struct {
+	Groups []struct {
+		Name     string             `json:"name"`
+		ThreadId openapi_types.UUID `json:"threadId"`
+	} `json:"groups"`
+	Issues []struct {
+		Archived                bool                                     `json:"archived"`
+		IssueId                 openapi_types.UUID                       `json:"issueId"`
+		Key                     string                                   `json:"key"`
+		LifeState               IssueLifeState                           `json:"lifeState"`
+		Status                  IssueStatus                              `json:"status"`
+		ThreadId                openapi_types.UUID                       `json:"threadId"`
+		Timeline                []SyncPanelJSONBody_Issues_Timeline_Item `json:"timeline"`
+		Title                   string                                   `json:"title"`
+		UpdatedAt               time.Time                                `json:"updatedAt"`
+		WaitingForProviderUntil *time.Time                               `json:"waitingForProviderUntil,omitempty"`
+	} `json:"issues"`
+}
+
+// SyncPanelJSONBodyIssuesTimeline0 defines parameters for SyncPanel.
+type SyncPanelJSONBodyIssuesTimeline0 struct {
+	At    string `json:"at"`
+	Id    string `json:"id"`
+	Kind  string `json:"kind"`
+	Title string `json:"title"`
+}
+
+// SyncPanelJSONBodyIssuesTimeline1 defines parameters for SyncPanel.
+type SyncPanelJSONBodyIssuesTimeline1 struct {
+	At   string `json:"at"`
+	Id   string `json:"id"`
+	Kind string `json:"kind"`
+}
+
+// SyncPanelJSONBodyIssuesTimeline2 defines parameters for SyncPanel.
+type SyncPanelJSONBodyIssuesTimeline2 struct {
+	At             string                `json:"at"`
+	Classification *ClassificationMethod `json:"classification,omitempty"`
+	EntryId        openapi_types.UUID    `json:"entryId"`
+	Id             string                `json:"id"`
+	Kind           string                `json:"kind"`
+	Text           string                `json:"text"`
+	TranscriptKind TranscriptKind        `json:"transcriptKind"`
+}
+
+// SyncPanelJSONBodyIssuesTimeline3 defines parameters for SyncPanel.
+type SyncPanelJSONBodyIssuesTimeline3 struct {
+	At          string  `json:"at"`
+	DeliveredAt *string `json:"deliveredAt,omitempty"`
+	Id          string  `json:"id"`
+	Kind        string  `json:"kind"`
+	ReadAt      *string `json:"readAt,omitempty"`
+	Reminder    bool    `json:"reminder"`
+	Text        string  `json:"text"`
+}
+
+// SyncPanelJSONBodyIssuesTimeline4 defines parameters for SyncPanel.
+type SyncPanelJSONBodyIssuesTimeline4 struct {
+	ArtifactId   openapi_types.UUID `json:"artifactId"`
+	ArtifactKind ArtifactKind       `json:"artifactKind"`
+	At           string             `json:"at"`
+	Id           string             `json:"id"`
+	Kind         string             `json:"kind"`
+	Name         string             `json:"name"`
+}
+
+// SyncPanelJSONBodyIssuesTimeline5 defines parameters for SyncPanel.
+type SyncPanelJSONBodyIssuesTimeline5 struct {
+	At       string             `json:"at"`
+	Id       string             `json:"id"`
+	Kind     string             `json:"kind"`
+	StopId   openapi_types.UUID `json:"stopId"`
+	StopKind StopKind           `json:"stopKind"`
+	Title    string             `json:"title"`
+}
+
+// SyncPanelJSONBodyIssuesTimeline6 defines parameters for SyncPanel.
+type SyncPanelJSONBodyIssuesTimeline6 struct {
+	At         string             `json:"at"`
+	Id         string             `json:"id"`
+	Kind       string             `json:"kind"`
+	Resolution StopResolution     `json:"resolution"`
+	StopId     openapi_types.UUID `json:"stopId"`
+}
+
+// SyncPanelJSONBodyIssuesTimeline7 defines parameters for SyncPanel.
+type SyncPanelJSONBodyIssuesTimeline7 struct {
+	At   string `json:"at"`
+	Id   string `json:"id"`
+	Kind string `json:"kind"`
+}
+
+// SyncPanelJSONBodyIssuesTimeline8 defines parameters for SyncPanel.
+type SyncPanelJSONBodyIssuesTimeline8 struct {
+	At   string `json:"at"`
+	Id   string `json:"id"`
+	Kind string `json:"kind"`
+}
+
+// SyncPanelJSONBody_Issues_Timeline_Item defines parameters for SyncPanel.
+type SyncPanelJSONBody_Issues_Timeline_Item struct {
+	union json.RawMessage
 }
 
 // SetCloudTokenJSONBody defines parameters for SetCloudToken.
@@ -498,8 +943,499 @@ type DisableOwnerJSONRequestBody DisableOwnerJSONBody
 // UpdateOwnerSettingsJSONRequestBody defines body for UpdateOwnerSettings for application/json ContentType.
 type UpdateOwnerSettingsJSONRequestBody UpdateOwnerSettingsJSONBody
 
+// SyncPanelJSONRequestBody defines body for SyncPanel for application/json ContentType.
+type SyncPanelJSONRequestBody SyncPanelJSONBody
+
 // SetCloudTokenJSONRequestBody defines body for SetCloudToken for application/json ContentType.
 type SetCloudTokenJSONRequestBody SetCloudTokenJSONBody
+
+// AsGetPanelIssue200JSONResponseBodyTimeline0 returns the union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item as a GetPanelIssue200JSONResponseBodyTimeline0
+func (t GetPanelIssue200JSONResponseBody_Timeline_Item) AsGetPanelIssue200JSONResponseBodyTimeline0() (GetPanelIssue200JSONResponseBodyTimeline0, error) {
+	var body GetPanelIssue200JSONResponseBodyTimeline0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetPanelIssue200JSONResponseBodyTimeline0 overwrites any union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item as the provided GetPanelIssue200JSONResponseBodyTimeline0
+func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) FromGetPanelIssue200JSONResponseBodyTimeline0(v GetPanelIssue200JSONResponseBodyTimeline0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetPanelIssue200JSONResponseBodyTimeline0 performs a merge with any union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item, using the provided GetPanelIssue200JSONResponseBodyTimeline0
+func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) MergeGetPanelIssue200JSONResponseBodyTimeline0(v GetPanelIssue200JSONResponseBodyTimeline0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetPanelIssue200JSONResponseBodyTimeline1 returns the union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item as a GetPanelIssue200JSONResponseBodyTimeline1
+func (t GetPanelIssue200JSONResponseBody_Timeline_Item) AsGetPanelIssue200JSONResponseBodyTimeline1() (GetPanelIssue200JSONResponseBodyTimeline1, error) {
+	var body GetPanelIssue200JSONResponseBodyTimeline1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetPanelIssue200JSONResponseBodyTimeline1 overwrites any union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item as the provided GetPanelIssue200JSONResponseBodyTimeline1
+func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) FromGetPanelIssue200JSONResponseBodyTimeline1(v GetPanelIssue200JSONResponseBodyTimeline1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetPanelIssue200JSONResponseBodyTimeline1 performs a merge with any union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item, using the provided GetPanelIssue200JSONResponseBodyTimeline1
+func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) MergeGetPanelIssue200JSONResponseBodyTimeline1(v GetPanelIssue200JSONResponseBodyTimeline1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetPanelIssue200JSONResponseBodyTimeline2 returns the union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item as a GetPanelIssue200JSONResponseBodyTimeline2
+func (t GetPanelIssue200JSONResponseBody_Timeline_Item) AsGetPanelIssue200JSONResponseBodyTimeline2() (GetPanelIssue200JSONResponseBodyTimeline2, error) {
+	var body GetPanelIssue200JSONResponseBodyTimeline2
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetPanelIssue200JSONResponseBodyTimeline2 overwrites any union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item as the provided GetPanelIssue200JSONResponseBodyTimeline2
+func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) FromGetPanelIssue200JSONResponseBodyTimeline2(v GetPanelIssue200JSONResponseBodyTimeline2) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetPanelIssue200JSONResponseBodyTimeline2 performs a merge with any union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item, using the provided GetPanelIssue200JSONResponseBodyTimeline2
+func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) MergeGetPanelIssue200JSONResponseBodyTimeline2(v GetPanelIssue200JSONResponseBodyTimeline2) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetPanelIssue200JSONResponseBodyTimeline3 returns the union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item as a GetPanelIssue200JSONResponseBodyTimeline3
+func (t GetPanelIssue200JSONResponseBody_Timeline_Item) AsGetPanelIssue200JSONResponseBodyTimeline3() (GetPanelIssue200JSONResponseBodyTimeline3, error) {
+	var body GetPanelIssue200JSONResponseBodyTimeline3
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetPanelIssue200JSONResponseBodyTimeline3 overwrites any union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item as the provided GetPanelIssue200JSONResponseBodyTimeline3
+func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) FromGetPanelIssue200JSONResponseBodyTimeline3(v GetPanelIssue200JSONResponseBodyTimeline3) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetPanelIssue200JSONResponseBodyTimeline3 performs a merge with any union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item, using the provided GetPanelIssue200JSONResponseBodyTimeline3
+func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) MergeGetPanelIssue200JSONResponseBodyTimeline3(v GetPanelIssue200JSONResponseBodyTimeline3) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetPanelIssue200JSONResponseBodyTimeline4 returns the union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item as a GetPanelIssue200JSONResponseBodyTimeline4
+func (t GetPanelIssue200JSONResponseBody_Timeline_Item) AsGetPanelIssue200JSONResponseBodyTimeline4() (GetPanelIssue200JSONResponseBodyTimeline4, error) {
+	var body GetPanelIssue200JSONResponseBodyTimeline4
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetPanelIssue200JSONResponseBodyTimeline4 overwrites any union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item as the provided GetPanelIssue200JSONResponseBodyTimeline4
+func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) FromGetPanelIssue200JSONResponseBodyTimeline4(v GetPanelIssue200JSONResponseBodyTimeline4) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetPanelIssue200JSONResponseBodyTimeline4 performs a merge with any union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item, using the provided GetPanelIssue200JSONResponseBodyTimeline4
+func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) MergeGetPanelIssue200JSONResponseBodyTimeline4(v GetPanelIssue200JSONResponseBodyTimeline4) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetPanelIssue200JSONResponseBodyTimeline5 returns the union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item as a GetPanelIssue200JSONResponseBodyTimeline5
+func (t GetPanelIssue200JSONResponseBody_Timeline_Item) AsGetPanelIssue200JSONResponseBodyTimeline5() (GetPanelIssue200JSONResponseBodyTimeline5, error) {
+	var body GetPanelIssue200JSONResponseBodyTimeline5
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetPanelIssue200JSONResponseBodyTimeline5 overwrites any union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item as the provided GetPanelIssue200JSONResponseBodyTimeline5
+func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) FromGetPanelIssue200JSONResponseBodyTimeline5(v GetPanelIssue200JSONResponseBodyTimeline5) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetPanelIssue200JSONResponseBodyTimeline5 performs a merge with any union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item, using the provided GetPanelIssue200JSONResponseBodyTimeline5
+func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) MergeGetPanelIssue200JSONResponseBodyTimeline5(v GetPanelIssue200JSONResponseBodyTimeline5) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetPanelIssue200JSONResponseBodyTimeline6 returns the union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item as a GetPanelIssue200JSONResponseBodyTimeline6
+func (t GetPanelIssue200JSONResponseBody_Timeline_Item) AsGetPanelIssue200JSONResponseBodyTimeline6() (GetPanelIssue200JSONResponseBodyTimeline6, error) {
+	var body GetPanelIssue200JSONResponseBodyTimeline6
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetPanelIssue200JSONResponseBodyTimeline6 overwrites any union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item as the provided GetPanelIssue200JSONResponseBodyTimeline6
+func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) FromGetPanelIssue200JSONResponseBodyTimeline6(v GetPanelIssue200JSONResponseBodyTimeline6) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetPanelIssue200JSONResponseBodyTimeline6 performs a merge with any union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item, using the provided GetPanelIssue200JSONResponseBodyTimeline6
+func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) MergeGetPanelIssue200JSONResponseBodyTimeline6(v GetPanelIssue200JSONResponseBodyTimeline6) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetPanelIssue200JSONResponseBodyTimeline7 returns the union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item as a GetPanelIssue200JSONResponseBodyTimeline7
+func (t GetPanelIssue200JSONResponseBody_Timeline_Item) AsGetPanelIssue200JSONResponseBodyTimeline7() (GetPanelIssue200JSONResponseBodyTimeline7, error) {
+	var body GetPanelIssue200JSONResponseBodyTimeline7
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetPanelIssue200JSONResponseBodyTimeline7 overwrites any union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item as the provided GetPanelIssue200JSONResponseBodyTimeline7
+func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) FromGetPanelIssue200JSONResponseBodyTimeline7(v GetPanelIssue200JSONResponseBodyTimeline7) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetPanelIssue200JSONResponseBodyTimeline7 performs a merge with any union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item, using the provided GetPanelIssue200JSONResponseBodyTimeline7
+func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) MergeGetPanelIssue200JSONResponseBodyTimeline7(v GetPanelIssue200JSONResponseBodyTimeline7) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetPanelIssue200JSONResponseBodyTimeline8 returns the union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item as a GetPanelIssue200JSONResponseBodyTimeline8
+func (t GetPanelIssue200JSONResponseBody_Timeline_Item) AsGetPanelIssue200JSONResponseBodyTimeline8() (GetPanelIssue200JSONResponseBodyTimeline8, error) {
+	var body GetPanelIssue200JSONResponseBodyTimeline8
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetPanelIssue200JSONResponseBodyTimeline8 overwrites any union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item as the provided GetPanelIssue200JSONResponseBodyTimeline8
+func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) FromGetPanelIssue200JSONResponseBodyTimeline8(v GetPanelIssue200JSONResponseBodyTimeline8) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetPanelIssue200JSONResponseBodyTimeline8 performs a merge with any union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item, using the provided GetPanelIssue200JSONResponseBodyTimeline8
+func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) MergeGetPanelIssue200JSONResponseBodyTimeline8(v GetPanelIssue200JSONResponseBodyTimeline8) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t GetPanelIssue200JSONResponseBody_Timeline_Item) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsSyncPanelJSONBodyIssuesTimeline0 returns the union data inside the SyncPanelJSONBody_Issues_Timeline_Item as a SyncPanelJSONBodyIssuesTimeline0
+func (t SyncPanelJSONBody_Issues_Timeline_Item) AsSyncPanelJSONBodyIssuesTimeline0() (SyncPanelJSONBodyIssuesTimeline0, error) {
+	var body SyncPanelJSONBodyIssuesTimeline0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSyncPanelJSONBodyIssuesTimeline0 overwrites any union data inside the SyncPanelJSONBody_Issues_Timeline_Item as the provided SyncPanelJSONBodyIssuesTimeline0
+func (t *SyncPanelJSONBody_Issues_Timeline_Item) FromSyncPanelJSONBodyIssuesTimeline0(v SyncPanelJSONBodyIssuesTimeline0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSyncPanelJSONBodyIssuesTimeline0 performs a merge with any union data inside the SyncPanelJSONBody_Issues_Timeline_Item, using the provided SyncPanelJSONBodyIssuesTimeline0
+func (t *SyncPanelJSONBody_Issues_Timeline_Item) MergeSyncPanelJSONBodyIssuesTimeline0(v SyncPanelJSONBodyIssuesTimeline0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSyncPanelJSONBodyIssuesTimeline1 returns the union data inside the SyncPanelJSONBody_Issues_Timeline_Item as a SyncPanelJSONBodyIssuesTimeline1
+func (t SyncPanelJSONBody_Issues_Timeline_Item) AsSyncPanelJSONBodyIssuesTimeline1() (SyncPanelJSONBodyIssuesTimeline1, error) {
+	var body SyncPanelJSONBodyIssuesTimeline1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSyncPanelJSONBodyIssuesTimeline1 overwrites any union data inside the SyncPanelJSONBody_Issues_Timeline_Item as the provided SyncPanelJSONBodyIssuesTimeline1
+func (t *SyncPanelJSONBody_Issues_Timeline_Item) FromSyncPanelJSONBodyIssuesTimeline1(v SyncPanelJSONBodyIssuesTimeline1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSyncPanelJSONBodyIssuesTimeline1 performs a merge with any union data inside the SyncPanelJSONBody_Issues_Timeline_Item, using the provided SyncPanelJSONBodyIssuesTimeline1
+func (t *SyncPanelJSONBody_Issues_Timeline_Item) MergeSyncPanelJSONBodyIssuesTimeline1(v SyncPanelJSONBodyIssuesTimeline1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSyncPanelJSONBodyIssuesTimeline2 returns the union data inside the SyncPanelJSONBody_Issues_Timeline_Item as a SyncPanelJSONBodyIssuesTimeline2
+func (t SyncPanelJSONBody_Issues_Timeline_Item) AsSyncPanelJSONBodyIssuesTimeline2() (SyncPanelJSONBodyIssuesTimeline2, error) {
+	var body SyncPanelJSONBodyIssuesTimeline2
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSyncPanelJSONBodyIssuesTimeline2 overwrites any union data inside the SyncPanelJSONBody_Issues_Timeline_Item as the provided SyncPanelJSONBodyIssuesTimeline2
+func (t *SyncPanelJSONBody_Issues_Timeline_Item) FromSyncPanelJSONBodyIssuesTimeline2(v SyncPanelJSONBodyIssuesTimeline2) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSyncPanelJSONBodyIssuesTimeline2 performs a merge with any union data inside the SyncPanelJSONBody_Issues_Timeline_Item, using the provided SyncPanelJSONBodyIssuesTimeline2
+func (t *SyncPanelJSONBody_Issues_Timeline_Item) MergeSyncPanelJSONBodyIssuesTimeline2(v SyncPanelJSONBodyIssuesTimeline2) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSyncPanelJSONBodyIssuesTimeline3 returns the union data inside the SyncPanelJSONBody_Issues_Timeline_Item as a SyncPanelJSONBodyIssuesTimeline3
+func (t SyncPanelJSONBody_Issues_Timeline_Item) AsSyncPanelJSONBodyIssuesTimeline3() (SyncPanelJSONBodyIssuesTimeline3, error) {
+	var body SyncPanelJSONBodyIssuesTimeline3
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSyncPanelJSONBodyIssuesTimeline3 overwrites any union data inside the SyncPanelJSONBody_Issues_Timeline_Item as the provided SyncPanelJSONBodyIssuesTimeline3
+func (t *SyncPanelJSONBody_Issues_Timeline_Item) FromSyncPanelJSONBodyIssuesTimeline3(v SyncPanelJSONBodyIssuesTimeline3) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSyncPanelJSONBodyIssuesTimeline3 performs a merge with any union data inside the SyncPanelJSONBody_Issues_Timeline_Item, using the provided SyncPanelJSONBodyIssuesTimeline3
+func (t *SyncPanelJSONBody_Issues_Timeline_Item) MergeSyncPanelJSONBodyIssuesTimeline3(v SyncPanelJSONBodyIssuesTimeline3) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSyncPanelJSONBodyIssuesTimeline4 returns the union data inside the SyncPanelJSONBody_Issues_Timeline_Item as a SyncPanelJSONBodyIssuesTimeline4
+func (t SyncPanelJSONBody_Issues_Timeline_Item) AsSyncPanelJSONBodyIssuesTimeline4() (SyncPanelJSONBodyIssuesTimeline4, error) {
+	var body SyncPanelJSONBodyIssuesTimeline4
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSyncPanelJSONBodyIssuesTimeline4 overwrites any union data inside the SyncPanelJSONBody_Issues_Timeline_Item as the provided SyncPanelJSONBodyIssuesTimeline4
+func (t *SyncPanelJSONBody_Issues_Timeline_Item) FromSyncPanelJSONBodyIssuesTimeline4(v SyncPanelJSONBodyIssuesTimeline4) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSyncPanelJSONBodyIssuesTimeline4 performs a merge with any union data inside the SyncPanelJSONBody_Issues_Timeline_Item, using the provided SyncPanelJSONBodyIssuesTimeline4
+func (t *SyncPanelJSONBody_Issues_Timeline_Item) MergeSyncPanelJSONBodyIssuesTimeline4(v SyncPanelJSONBodyIssuesTimeline4) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSyncPanelJSONBodyIssuesTimeline5 returns the union data inside the SyncPanelJSONBody_Issues_Timeline_Item as a SyncPanelJSONBodyIssuesTimeline5
+func (t SyncPanelJSONBody_Issues_Timeline_Item) AsSyncPanelJSONBodyIssuesTimeline5() (SyncPanelJSONBodyIssuesTimeline5, error) {
+	var body SyncPanelJSONBodyIssuesTimeline5
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSyncPanelJSONBodyIssuesTimeline5 overwrites any union data inside the SyncPanelJSONBody_Issues_Timeline_Item as the provided SyncPanelJSONBodyIssuesTimeline5
+func (t *SyncPanelJSONBody_Issues_Timeline_Item) FromSyncPanelJSONBodyIssuesTimeline5(v SyncPanelJSONBodyIssuesTimeline5) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSyncPanelJSONBodyIssuesTimeline5 performs a merge with any union data inside the SyncPanelJSONBody_Issues_Timeline_Item, using the provided SyncPanelJSONBodyIssuesTimeline5
+func (t *SyncPanelJSONBody_Issues_Timeline_Item) MergeSyncPanelJSONBodyIssuesTimeline5(v SyncPanelJSONBodyIssuesTimeline5) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSyncPanelJSONBodyIssuesTimeline6 returns the union data inside the SyncPanelJSONBody_Issues_Timeline_Item as a SyncPanelJSONBodyIssuesTimeline6
+func (t SyncPanelJSONBody_Issues_Timeline_Item) AsSyncPanelJSONBodyIssuesTimeline6() (SyncPanelJSONBodyIssuesTimeline6, error) {
+	var body SyncPanelJSONBodyIssuesTimeline6
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSyncPanelJSONBodyIssuesTimeline6 overwrites any union data inside the SyncPanelJSONBody_Issues_Timeline_Item as the provided SyncPanelJSONBodyIssuesTimeline6
+func (t *SyncPanelJSONBody_Issues_Timeline_Item) FromSyncPanelJSONBodyIssuesTimeline6(v SyncPanelJSONBodyIssuesTimeline6) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSyncPanelJSONBodyIssuesTimeline6 performs a merge with any union data inside the SyncPanelJSONBody_Issues_Timeline_Item, using the provided SyncPanelJSONBodyIssuesTimeline6
+func (t *SyncPanelJSONBody_Issues_Timeline_Item) MergeSyncPanelJSONBodyIssuesTimeline6(v SyncPanelJSONBodyIssuesTimeline6) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSyncPanelJSONBodyIssuesTimeline7 returns the union data inside the SyncPanelJSONBody_Issues_Timeline_Item as a SyncPanelJSONBodyIssuesTimeline7
+func (t SyncPanelJSONBody_Issues_Timeline_Item) AsSyncPanelJSONBodyIssuesTimeline7() (SyncPanelJSONBodyIssuesTimeline7, error) {
+	var body SyncPanelJSONBodyIssuesTimeline7
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSyncPanelJSONBodyIssuesTimeline7 overwrites any union data inside the SyncPanelJSONBody_Issues_Timeline_Item as the provided SyncPanelJSONBodyIssuesTimeline7
+func (t *SyncPanelJSONBody_Issues_Timeline_Item) FromSyncPanelJSONBodyIssuesTimeline7(v SyncPanelJSONBodyIssuesTimeline7) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSyncPanelJSONBodyIssuesTimeline7 performs a merge with any union data inside the SyncPanelJSONBody_Issues_Timeline_Item, using the provided SyncPanelJSONBodyIssuesTimeline7
+func (t *SyncPanelJSONBody_Issues_Timeline_Item) MergeSyncPanelJSONBodyIssuesTimeline7(v SyncPanelJSONBodyIssuesTimeline7) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSyncPanelJSONBodyIssuesTimeline8 returns the union data inside the SyncPanelJSONBody_Issues_Timeline_Item as a SyncPanelJSONBodyIssuesTimeline8
+func (t SyncPanelJSONBody_Issues_Timeline_Item) AsSyncPanelJSONBodyIssuesTimeline8() (SyncPanelJSONBodyIssuesTimeline8, error) {
+	var body SyncPanelJSONBodyIssuesTimeline8
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSyncPanelJSONBodyIssuesTimeline8 overwrites any union data inside the SyncPanelJSONBody_Issues_Timeline_Item as the provided SyncPanelJSONBodyIssuesTimeline8
+func (t *SyncPanelJSONBody_Issues_Timeline_Item) FromSyncPanelJSONBodyIssuesTimeline8(v SyncPanelJSONBodyIssuesTimeline8) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSyncPanelJSONBodyIssuesTimeline8 performs a merge with any union data inside the SyncPanelJSONBody_Issues_Timeline_Item, using the provided SyncPanelJSONBodyIssuesTimeline8
+func (t *SyncPanelJSONBody_Issues_Timeline_Item) MergeSyncPanelJSONBodyIssuesTimeline8(v SyncPanelJSONBodyIssuesTimeline8) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t SyncPanelJSONBody_Issues_Timeline_Item) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *SyncPanelJSONBody_Issues_Timeline_Item) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
@@ -609,6 +1545,23 @@ type ClientInterface interface {
 
 	// SetActiveOwner request
 	SetActiveOwner(ctx context.Context, ownerId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PanelPage request
+	PanelPage(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetPanelBoard request
+	GetPanelBoard(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetPanelIssue request
+	GetPanelIssue(ctx context.Context, token string, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RotatePanelLink request
+	RotatePanelLink(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SyncPanelWithBody request with any body
+	SyncPanelWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SyncPanel(ctx context.Context, body SyncPanelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetSession request
 	GetSession(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -774,6 +1727,78 @@ func (c *Client) UpdateOwnerSettings(ctx context.Context, body UpdateOwnerSettin
 
 func (c *Client) SetActiveOwner(ctx context.Context, ownerId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewSetActiveOwnerRequest(c.Server, ownerId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PanelPage(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPanelPageRequest(c.Server, token)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetPanelBoard(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetPanelBoardRequest(c.Server, token)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetPanelIssue(ctx context.Context, token string, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetPanelIssueRequest(c.Server, token, issueId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RotatePanelLink(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRotatePanelLinkRequest(c.Server, threadId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SyncPanelWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSyncPanelRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SyncPanel(ctx context.Context, body SyncPanelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSyncPanelRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1195,6 +2220,189 @@ func NewSetActiveOwnerRequest(server string, ownerId string) (*http.Request, err
 	return req, nil
 }
 
+// NewPanelPageRequest generates requests for PanelPage
+func NewPanelPageRequest(server string, token string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "token", token, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/panel/g/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetPanelBoardRequest generates requests for GetPanelBoard
+func NewGetPanelBoardRequest(server string, token string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "token", token, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/panel/g/%s/board", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetPanelIssueRequest generates requests for GetPanelIssue
+func NewGetPanelIssueRequest(server string, token string, issueId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "token", token, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "issueId", issueId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/panel/g/%s/issues/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewRotatePanelLinkRequest generates requests for RotatePanelLink
+func NewRotatePanelLinkRequest(server string, threadId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/panel/groups/%s/rotate", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewSyncPanelRequest calls the generic SyncPanel builder with application/json body
+func NewSyncPanelRequest(server string, body SyncPanelJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSyncPanelRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewSyncPanelRequestWithBody generates requests for SyncPanel with any type of body
+func NewSyncPanelRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/panel/sync")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewGetSessionRequest generates requests for GetSession
 func NewGetSessionRequest(server string) (*http.Request, error) {
 	var err error
@@ -1475,6 +2683,23 @@ type ClientWithResponsesInterface interface {
 
 	// SetActiveOwnerWithResponse request
 	SetActiveOwnerWithResponse(ctx context.Context, ownerId string, reqEditors ...RequestEditorFn) (*SetActiveOwnerResponse, error)
+
+	// PanelPageWithResponse request
+	PanelPageWithResponse(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*PanelPageResponse, error)
+
+	// GetPanelBoardWithResponse request
+	GetPanelBoardWithResponse(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*GetPanelBoardResponse, error)
+
+	// GetPanelIssueWithResponse request
+	GetPanelIssueWithResponse(ctx context.Context, token string, issueId string, reqEditors ...RequestEditorFn) (*GetPanelIssueResponse, error)
+
+	// RotatePanelLinkWithResponse request
+	RotatePanelLinkWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*RotatePanelLinkResponse, error)
+
+	// SyncPanelWithBodyWithResponse request with any body
+	SyncPanelWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SyncPanelResponse, error)
+
+	SyncPanelWithResponse(ctx context.Context, body SyncPanelJSONRequestBody, reqEditors ...RequestEditorFn) (*SyncPanelResponse, error)
 
 	// GetSessionWithResponse request
 	GetSessionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetSessionResponse, error)
@@ -1813,6 +3038,188 @@ func (r SetActiveOwnerResponse) ContentType() string {
 	return ""
 }
 
+type PanelPageResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *string
+}
+
+// Status returns HTTPResponse.Status
+func (r PanelPageResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PanelPageResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r PanelPageResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetPanelBoardResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		DaemonLastSeenAt *string `json:"daemonLastSeenAt,omitempty"`
+		Group            struct {
+			Name string `json:"name"`
+		} `json:"group"`
+		Issues []struct {
+			IssueId                 openapi_types.UUID `json:"issueId"`
+			Key                     string             `json:"key"`
+			LifeState               IssueLifeState     `json:"lifeState"`
+			Status                  IssueStatus        `json:"status"`
+			Title                   string             `json:"title"`
+			UpdatedAt               string             `json:"updatedAt"`
+			WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
+		} `json:"issues"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetPanelBoardResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetPanelBoardResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetPanelBoardResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetPanelIssueResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Issue struct {
+			IssueId                 openapi_types.UUID `json:"issueId"`
+			Key                     string             `json:"key"`
+			LifeState               IssueLifeState     `json:"lifeState"`
+			Status                  IssueStatus        `json:"status"`
+			Title                   string             `json:"title"`
+			UpdatedAt               string             `json:"updatedAt"`
+			WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
+		} `json:"issue"`
+		Timeline []GetPanelIssue200JSONResponseBody_Timeline_Item `json:"timeline"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetPanelIssueResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetPanelIssueResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetPanelIssueResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RotatePanelLinkResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Token string `json:"token"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r RotatePanelLinkResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RotatePanelLinkResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RotatePanelLinkResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SyncPanelResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Groups []struct {
+			ThreadId openapi_types.UUID `json:"threadId"`
+			Token    string             `json:"token"`
+		} `json:"groups"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r SyncPanelResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SyncPanelResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SyncPanelResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetSessionResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -2091,6 +3498,59 @@ func (c *ClientWithResponses) SetActiveOwnerWithResponse(ctx context.Context, ow
 		return nil, err
 	}
 	return ParseSetActiveOwnerResponse(rsp)
+}
+
+// PanelPageWithResponse request returning *PanelPageResponse
+func (c *ClientWithResponses) PanelPageWithResponse(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*PanelPageResponse, error) {
+	rsp, err := c.PanelPage(ctx, token, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePanelPageResponse(rsp)
+}
+
+// GetPanelBoardWithResponse request returning *GetPanelBoardResponse
+func (c *ClientWithResponses) GetPanelBoardWithResponse(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*GetPanelBoardResponse, error) {
+	rsp, err := c.GetPanelBoard(ctx, token, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetPanelBoardResponse(rsp)
+}
+
+// GetPanelIssueWithResponse request returning *GetPanelIssueResponse
+func (c *ClientWithResponses) GetPanelIssueWithResponse(ctx context.Context, token string, issueId string, reqEditors ...RequestEditorFn) (*GetPanelIssueResponse, error) {
+	rsp, err := c.GetPanelIssue(ctx, token, issueId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetPanelIssueResponse(rsp)
+}
+
+// RotatePanelLinkWithResponse request returning *RotatePanelLinkResponse
+func (c *ClientWithResponses) RotatePanelLinkWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*RotatePanelLinkResponse, error) {
+	rsp, err := c.RotatePanelLink(ctx, threadId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRotatePanelLinkResponse(rsp)
+}
+
+// SyncPanelWithBodyWithResponse request with arbitrary body returning *SyncPanelResponse
+func (c *ClientWithResponses) SyncPanelWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SyncPanelResponse, error) {
+	rsp, err := c.SyncPanelWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSyncPanelResponse(rsp)
+}
+
+func (c *ClientWithResponses) SyncPanelWithResponse(ctx context.Context, body SyncPanelJSONRequestBody, reqEditors ...RequestEditorFn) (*SyncPanelResponse, error) {
+	rsp, err := c.SyncPanel(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSyncPanelResponse(rsp)
 }
 
 // GetSessionWithResponse request returning *GetSessionResponse
@@ -2414,6 +3874,168 @@ func ParseSetActiveOwnerResponse(rsp *http.Response) (*SetActiveOwnerResponse, e
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
 			OwnerId string `json:"ownerId"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePanelPageResponse parses an HTTP response from a PanelPageWithResponse call
+func ParsePanelPageResponse(rsp *http.Response) (*PanelPageResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PanelPageResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest string
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetPanelBoardResponse parses an HTTP response from a GetPanelBoardWithResponse call
+func ParseGetPanelBoardResponse(rsp *http.Response) (*GetPanelBoardResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetPanelBoardResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			DaemonLastSeenAt *string `json:"daemonLastSeenAt,omitempty"`
+			Group            struct {
+				Name string `json:"name"`
+			} `json:"group"`
+			Issues []struct {
+				IssueId                 openapi_types.UUID `json:"issueId"`
+				Key                     string             `json:"key"`
+				LifeState               IssueLifeState     `json:"lifeState"`
+				Status                  IssueStatus        `json:"status"`
+				Title                   string             `json:"title"`
+				UpdatedAt               string             `json:"updatedAt"`
+				WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
+			} `json:"issues"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetPanelIssueResponse parses an HTTP response from a GetPanelIssueWithResponse call
+func ParseGetPanelIssueResponse(rsp *http.Response) (*GetPanelIssueResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetPanelIssueResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Issue struct {
+				IssueId                 openapi_types.UUID `json:"issueId"`
+				Key                     string             `json:"key"`
+				LifeState               IssueLifeState     `json:"lifeState"`
+				Status                  IssueStatus        `json:"status"`
+				Title                   string             `json:"title"`
+				UpdatedAt               string             `json:"updatedAt"`
+				WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
+			} `json:"issue"`
+			Timeline []GetPanelIssue200JSONResponseBody_Timeline_Item `json:"timeline"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRotatePanelLinkResponse parses an HTTP response from a RotatePanelLinkWithResponse call
+func ParseRotatePanelLinkResponse(rsp *http.Response) (*RotatePanelLinkResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RotatePanelLinkResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Token string `json:"token"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSyncPanelResponse parses an HTTP response from a SyncPanelWithResponse call
+func ParseSyncPanelResponse(rsp *http.Response) (*SyncPanelResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SyncPanelResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Groups []struct {
+				ThreadId openapi_types.UUID `json:"threadId"`
+				Token    string             `json:"token"`
+			} `json:"groups"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err

@@ -818,6 +818,955 @@
           }
         }
       }
+    },
+    "/panel/sync": {
+      "put": {
+        "tags": [
+          "panel"
+        ],
+        "description": "Upsert the daemon's panel snapshot (groups + changed issues) and return each group's link token",
+        "operationId": "SyncPanel",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "groups": {
+                    "maxItems": 200,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "threadId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        }
+                      },
+                      "required": [
+                        "threadId",
+                        "name"
+                      ]
+                    }
+                  },
+                  "issues": {
+                    "maxItems": 500,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "issueId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "threadId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "key": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 120
+                        },
+                        "title": {
+                          "type": "string",
+                          "maxLength": 400
+                        },
+                        "status": {
+                          "$ref": "#/components/schemas/IssueStatus"
+                        },
+                        "lifeState": {
+                          "$ref": "#/components/schemas/IssueLifeState"
+                        },
+                        "waitingForProviderUntil": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                        },
+                        "archived": {
+                          "type": "boolean"
+                        },
+                        "timeline": {
+                          "maxItems": 2000,
+                          "type": "array",
+                          "items": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "CREATED"
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "at": {
+                                    "type": "string"
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "id",
+                                  "at",
+                                  "title"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "TURN_STARTED"
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "at": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "id",
+                                  "at"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "MESSAGE"
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "at": {
+                                    "type": "string"
+                                  },
+                                  "entryId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  },
+                                  "transcriptKind": {
+                                    "$ref": "#/components/schemas/TranscriptKind"
+                                  },
+                                  "text": {
+                                    "type": "string"
+                                  },
+                                  "classification": {
+                                    "$ref": "#/components/schemas/ClassificationMethod"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "id",
+                                  "at",
+                                  "entryId",
+                                  "transcriptKind",
+                                  "text"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "STEER"
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "at": {
+                                    "type": "string"
+                                  },
+                                  "text": {
+                                    "type": "string"
+                                  },
+                                  "deliveredAt": {
+                                    "type": "string"
+                                  },
+                                  "readAt": {
+                                    "type": "string"
+                                  },
+                                  "reminder": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "id",
+                                  "at",
+                                  "text",
+                                  "reminder"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "ARTIFACT"
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "at": {
+                                    "type": "string"
+                                  },
+                                  "artifactId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  },
+                                  "artifactKind": {
+                                    "$ref": "#/components/schemas/ArtifactKind"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "id",
+                                  "at",
+                                  "artifactId",
+                                  "artifactKind",
+                                  "name"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "STOP_RAISED"
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "at": {
+                                    "type": "string"
+                                  },
+                                  "stopId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  },
+                                  "stopKind": {
+                                    "$ref": "#/components/schemas/StopKind"
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "id",
+                                  "at",
+                                  "stopId",
+                                  "stopKind",
+                                  "title"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "STOP_RESOLVED"
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "at": {
+                                    "type": "string"
+                                  },
+                                  "stopId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  },
+                                  "resolution": {
+                                    "$ref": "#/components/schemas/StopResolution"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "id",
+                                  "at",
+                                  "stopId",
+                                  "resolution"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "COMPLETED"
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "at": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "id",
+                                  "at"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "ARCHIVED"
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "at": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "id",
+                                  "at"
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                        }
+                      },
+                      "required": [
+                        "issueId",
+                        "threadId",
+                        "key",
+                        "title",
+                        "status",
+                        "lifeState",
+                        "archived",
+                        "timeline",
+                        "updatedAt"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "groups",
+                  "issues"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "groups": [
+                      {
+                        "threadId": "019e4d24-6524-7041-9e1c-8108180cddaf",
+                        "name": "Equipe de produto"
+                      }
+                    ],
+                    "issues": []
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Upsert the daemon's panel snapshot (groups + changed issues) and return each group's link token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "groups": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "threadId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "token": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "threadId",
+                          "token"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "groups"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/groups/{threadId}/rotate": {
+      "post": {
+        "tags": [
+          "panel"
+        ],
+        "description": "Replace a group's panel link token",
+        "operationId": "RotatePanelLink",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddaf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Replace a group's panel link token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "token"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/g/{token}/board": {
+      "get": {
+        "tags": [
+          "panel"
+        ],
+        "description": "A group's issue board, by its panel link token (public)",
+        "operationId": "GetPanelBoard",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "kq3pE1aV0m9xT2yR8wB5nC7dF4gH6jL1sZ0uQ3iO9eA"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A group's issue board, by its panel link token (public)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "group": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "name"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "daemonLastSeenAt": {
+                      "type": "string"
+                    },
+                    "issues": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "issueId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "key": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "$ref": "#/components/schemas/IssueStatus"
+                          },
+                          "lifeState": {
+                            "$ref": "#/components/schemas/IssueLifeState"
+                          },
+                          "waitingForProviderUntil": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "issueId",
+                          "key",
+                          "title",
+                          "status",
+                          "lifeState",
+                          "updatedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "group",
+                    "issues"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/g/{token}/issues/{issueId}": {
+      "get": {
+        "tags": [
+          "panel"
+        ],
+        "description": "One issue of a group with its timeline, by the group's panel link token (public)",
+        "operationId": "GetPanelIssue",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "kq3pE1aV0m9xT2yR8wB5nC7dF4gH6jL1sZ0uQ3iO9eA"
+          },
+          {
+            "in": "path",
+            "name": "issueId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddb0"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One issue of a group with its timeline, by the group's panel link token (public)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "issue": {
+                      "type": "object",
+                      "properties": {
+                        "issueId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "key": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "$ref": "#/components/schemas/IssueStatus"
+                        },
+                        "lifeState": {
+                          "$ref": "#/components/schemas/IssueLifeState"
+                        },
+                        "waitingForProviderUntil": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "issueId",
+                        "key",
+                        "title",
+                        "status",
+                        "lifeState",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "timeline": {
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "CREATED"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "title"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "TURN_STARTED"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "MESSAGE"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "entryId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "transcriptKind": {
+                                "$ref": "#/components/schemas/TranscriptKind"
+                              },
+                              "text": {
+                                "type": "string"
+                              },
+                              "classification": {
+                                "$ref": "#/components/schemas/ClassificationMethod"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "entryId",
+                              "transcriptKind",
+                              "text"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "STEER"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "text": {
+                                "type": "string"
+                              },
+                              "deliveredAt": {
+                                "type": "string"
+                              },
+                              "readAt": {
+                                "type": "string"
+                              },
+                              "reminder": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "text",
+                              "reminder"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "ARTIFACT"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "artifactId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "artifactKind": {
+                                "$ref": "#/components/schemas/ArtifactKind"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "artifactId",
+                              "artifactKind",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "STOP_RAISED"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "stopId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "stopKind": {
+                                "$ref": "#/components/schemas/StopKind"
+                              },
+                              "title": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "stopId",
+                              "stopKind",
+                              "title"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "STOP_RESOLVED"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "stopId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "resolution": {
+                                "$ref": "#/components/schemas/StopResolution"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "stopId",
+                              "resolution"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "COMPLETED"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "ARCHIVED"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "issue",
+                    "timeline"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/g/{token}": {
+      "get": {
+        "tags": [
+          "panel"
+        ],
+        "description": "The per-group panel page (public HTML)",
+        "operationId": "PanelPage",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The per-group panel page (public HTML)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "examples": [
+                    "<html>…</html>"
+                  ]
+                },
+                "examples": {
+                  "default": {
+                    "value": "<html>…</html>",
+                    "summary": "Example"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -895,6 +1844,7 @@
           "OWNER_ALREADY_DISABLED",
           "OWNER_NOT_DISABLED",
           "OWNER_NOT_FOUND",
+          "PANEL_NOT_FOUND",
           "PARTICIPANT_NOT_FOUND",
           "PASSWORDS_DONT_MATCH",
           "PASSWORD_TOO_WEAK",
@@ -965,6 +1915,90 @@
         "enum": [
           "ORGANIZATION",
           "INDIVIDUAL"
+        ]
+      },
+      "IssueStatus": {
+        "type": "string",
+        "enum": [
+          "NEEDS_INPUT",
+          "WORKING",
+          "COMPLETED"
+        ]
+      },
+      "IssueLifeState": {
+        "type": "string",
+        "enum": [
+          "RUNNING",
+          "QUEUED",
+          "WAITING_PROVIDER",
+          "WAITING_PERSON",
+          "REMINDED",
+          "STALLED",
+          "DONE"
+        ]
+      },
+      "IssueTimelineItemKind": {
+        "type": "string",
+        "enum": [
+          "ARCHIVED",
+          "ARTIFACT",
+          "COMPLETED",
+          "CREATED",
+          "MESSAGE",
+          "STEER",
+          "STOP_RAISED",
+          "STOP_RESOLVED",
+          "TURN_STARTED"
+        ]
+      },
+      "TranscriptKind": {
+        "type": "string",
+        "enum": [
+          "CONTACT",
+          "SYSTEM",
+          "DIRECT",
+          "WHISPER",
+          "ACTION"
+        ]
+      },
+      "ClassificationMethod": {
+        "type": "string",
+        "enum": [
+          "REPLY_QUOTE",
+          "CONTEXT_MATCH",
+          "NEW_ISSUE",
+          "CLARIFIED"
+        ]
+      },
+      "ArtifactKind": {
+        "type": "string",
+        "enum": [
+          "IMAGE",
+          "AUDIO",
+          "VIDEO",
+          "FILE",
+          "LINK"
+        ]
+      },
+      "StopKind": {
+        "type": "string",
+        "enum": [
+          "SERVER_ERROR",
+          "BLOCKED_BY_CLASSIFICATION",
+          "HUMAN_REQUESTED",
+          "APPROVAL_NEEDED",
+          "AUTH_REQUIRED",
+          "PERMISSION_DENIED"
+        ]
+      },
+      "StopResolution": {
+        "type": "string",
+        "enum": [
+          "RETRY",
+          "REVIEW_AND_SEND",
+          "TAKE_OVER",
+          "APPROVE",
+          "DENY"
         ]
       }
     }
@@ -1040,6 +2074,7 @@
     "OWNER_ALREADY_DISABLED",
     "OWNER_NOT_DISABLED",
     "OWNER_NOT_FOUND",
+    "PANEL_NOT_FOUND",
     "PARTICIPANT_NOT_FOUND",
     "PASSWORDS_DONT_MATCH",
     "PASSWORD_TOO_WEAK",

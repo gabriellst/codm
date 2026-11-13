@@ -17,6 +17,7 @@ import { INSTANCE_REGISTRY as artifactRegistry } from '@artifact/registry'
 import { INSTANCE_REGISTRY as authRegistry } from '@auth/registry'
 import { INSTANCE_REGISTRY as issueRegistry } from '@issue/registry'
 import { INSTANCE_REGISTRY as ownerRegistry } from '@owner/registry'
+import { INSTANCE_REGISTRY as panelRegistry } from '@panel/registry'
 import { INSTANCE_REGISTRY as threadRegistry } from '@thread/registry'
 import { INSTANCE_REGISTRY as workspaceRegistry } from '@workspace/registry'
 import { INSTANCE_REGISTRY as uiRegistry } from '@ui/registry'
@@ -29,6 +30,7 @@ export const CONTEXT_REGISTRIES = {
 	auth: authRegistry,
 	issue: issueRegistry,
 	owner: ownerRegistry,
+	panel: panelRegistry,
 	thread: threadRegistry,
 	workspace: workspaceRegistry,
 	ui: uiRegistry,

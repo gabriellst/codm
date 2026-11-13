@@ -54,6 +54,8 @@ function listCloudSchemaFiles(): string[] {
 const SQLITE_TABLE_RE = /export const (\w+) = sqliteTable\(\s*'([a-z]+)_/g
 /** O gêmeo pg do anterior, com a mesma tolerância a quebra de linha e pela mesma razão. */
 const PG_TABLE_RE = /export const (\w+) = pgTable\(\s*'([a-z]+)_/g
+/** The cloud trunk's NATIVE namespaces (T1.9): `pgSchema('<namespace>')`. */
+const PG_SCHEMA_RE = /pgSchema\(\s*'([a-z]+)'\s*\)/g
 
 const ALIAS_IMPORT_RE = /from '@([a-z-]+)\/([a-z0-9-]+)/g
 const RELATIVE_IMPORT_RE = /from '(\.\.?\/[^']*)'/g
@@ -186,7 +188,11 @@ describe('context-map (declared intent map + global surface policy over real imp
 		expect(true).toBe(true)
 	})
 
-	test('namespace parity: os namespaces DECLARADOS == os prefixos de tabela em contracts/src/db/sqlite', () => {
+	// BOTH TRUNKS. A cloud-only context with no SQLite copy (`panel`, the per-group web panel) owns a
+	// namespace that exists only as `pgSchema('panel')`; reading the SQLite trunk alone would demand it be
+	// undeclared while NS-01 demands it be declared. The namespaces a context can own are the union of
+	// the SQLite table prefixes and the pg native schemas.
+	test('namespace parity: os namespaces DECLARADOS == os prefixos de tabela SQLite ∪ os pgSchema do tronco cloud', () => {
 		// Esta união era de TRÊS listas — os `pgSchema` dos contextos, os `FOREIGN_PGSCHEMAS` (donos
 		// não-TS) e os `PENDING_PGSCHEMAS` (declarados pelo contract lock antes do contexto existir).
 		// A T1.7 as colapsou em `NAMESPACES`, onde cada namespace declara seu DONO e o dono é checado
@@ -195,9 +201,14 @@ describe('context-map (declared intent map + global surface policy over real imp
 		const declared: string[] = Object.keys(NAMESPACES).sort()
 		const inContracts = [
 			...new Set(
-				listContractsSchemaFiles()
-					.flatMap(f => [...readFileSync(join(CONTRACTS_SCHEMA, f), 'utf8').matchAll(SQLITE_TABLE_RE)].map(m => m[2] ?? ''))
-					.filter(Boolean),
+				[
+					...listContractsSchemaFiles().flatMap(f =>
+						[...readFileSync(join(CONTRACTS_SCHEMA, f), 'utf8').matchAll(SQLITE_TABLE_RE)].map(m => m[2] ?? ''),
+					),
+					...listCloudSchemaFiles().flatMap(f =>
+						[...readFileSync(join(CONTRACTS_CLOUD_SCHEMA, f), 'utf8').matchAll(PG_SCHEMA_RE)].map(m => m[1] ?? ''),
+					),
+				].filter(Boolean),
 			),
 		].sort()
 		expect(

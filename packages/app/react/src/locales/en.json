@@ -519,6 +519,7 @@
 		"OWNER_ALREADY_DISABLED": "This account is already disabled.",
 		"OWNER_NOT_DISABLED": "This account is not disabled.",
 		"OWNER_NOT_FOUND": "Account not found.",
+		"PANEL_NOT_FOUND": "Panel link is invalid or was replaced.",
 		"PARTICIPANT_NOT_FOUND": "Participant not found.",
 		"PASSWORDS_DONT_MATCH": "Passwords do not match.",
 		"PASSWORD_TOO_WEAK": "Password too weak. Use letters, numbers and symbols.",

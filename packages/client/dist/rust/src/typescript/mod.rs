@@ -275,6 +275,7 @@ pub mod types {
     ///    "OWNER_ALREADY_DISABLED",
     ///    "OWNER_NOT_DISABLED",
     ///    "OWNER_NOT_FOUND",
+    ///    "PANEL_NOT_FOUND",
     ///    "PARTICIPANT_NOT_FOUND",
     ///    "PASSWORDS_DONT_MATCH",
     ///    "PASSWORD_TOO_WEAK",
@@ -465,6 +466,8 @@ pub mod types {
         OwnerNotDisabled,
         #[serde(rename = "OWNER_NOT_FOUND")]
         OwnerNotFound,
+        #[serde(rename = "PANEL_NOT_FOUND")]
+        PanelNotFound,
         #[serde(rename = "PARTICIPANT_NOT_FOUND")]
         ParticipantNotFound,
         #[serde(rename = "PASSWORDS_DONT_MATCH")]
@@ -626,6 +629,7 @@ pub mod types {
                 Self::OwnerAlreadyDisabled => f.write_str("OWNER_ALREADY_DISABLED"),
                 Self::OwnerNotDisabled => f.write_str("OWNER_NOT_DISABLED"),
                 Self::OwnerNotFound => f.write_str("OWNER_NOT_FOUND"),
+                Self::PanelNotFound => f.write_str("PANEL_NOT_FOUND"),
                 Self::ParticipantNotFound => f.write_str("PARTICIPANT_NOT_FOUND"),
                 Self::PasswordsDontMatch => f.write_str("PASSWORDS_DONT_MATCH"),
                 Self::PasswordTooWeak => f.write_str("PASSWORD_TOO_WEAK"),
@@ -742,6 +746,7 @@ pub mod types {
                 "OWNER_ALREADY_DISABLED" => Ok(Self::OwnerAlreadyDisabled),
                 "OWNER_NOT_DISABLED" => Ok(Self::OwnerNotDisabled),
                 "OWNER_NOT_FOUND" => Ok(Self::OwnerNotFound),
+                "PANEL_NOT_FOUND" => Ok(Self::PanelNotFound),
                 "PARTICIPANT_NOT_FOUND" => Ok(Self::ParticipantNotFound),
                 "PASSWORDS_DONT_MATCH" => Ok(Self::PasswordsDontMatch),
                 "PASSWORD_TOO_WEAK" => Ok(Self::PasswordTooWeak),

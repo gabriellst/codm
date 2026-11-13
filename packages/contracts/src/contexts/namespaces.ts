@@ -45,6 +45,8 @@ export const NAMESPACES = {
 	thread: { owner: 'thread' },
 	issue: { owner: 'issue' },
 	artifact: { owner: 'artifact' },
+	// Cloud-only, no SQLite copy: the per-group web panel's snapshot (`pgSchema('panel')`, fase 1).
+	panel: { owner: 'panel' },
 
 	// ── dono NÃO-TS ─────────────────────────────────────────────────────────────────────────────
 	// O que o `FOREIGN_PGSCHEMAS` dizia em prosa, agora dito no tipo: o `gateway` é do workspace Go

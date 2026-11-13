@@ -13,6 +13,7 @@ export const CONTEXTS = {
 	external: { kind: 'edge', namespace: null },
 	issue: { kind: 'domain', namespace: 'issue' },
 	owner: { kind: 'domain', namespace: 'owner' },
+	panel: { kind: 'domain', namespace: 'panel' },
 	shared: { kind: 'kernel', namespace: 'shared' },
 	thread: { kind: 'domain', namespace: 'thread' },
 	ui: { kind: 'bff', namespace: null },
@@ -51,6 +52,11 @@ export const CONTEXT_MAP: Partial<Record<ContextId, Partial<Record<ContextId, { 
 	owner: {
 		auth: {
 			note: 'CLOUD-ONLY desde o ADR 0001 (W3 Task 4c): o daemon local não monta `auth` nem emite sessão — ele a LÊ, do `shared/services/CloudSession`, com o `SessionSchema` que mudou para `@shared/schemas` pela mesma razão.',
+		},
+	},
+	panel: {
+		auth: {
+			note: 'PUT /panel/sync and the link rotation are authenticated with the user session bearer the daemon already holds (AuthAccountMiddleware); the public reads are not.',
 		},
 	},
 	thread: {
@@ -150,6 +156,7 @@ export const TABLE_READ_EDGES: readonly { consumer: ContextId; schema: string; n
 export const AMBIENT: Partial<Record<ContextId, readonly string[] | '*'>> = {
 	auth: ['middlewares'],
 	owner: ['middlewares'],
+	panel: ['middlewares'],
 	shared: '*',
 }
 
@@ -182,6 +189,7 @@ export const CONTEXT_PLACEMENT = {
 	external: [{ when: { deployment: 'local' }, infra: { db: 'none' } }],
 	issue: [{ when: { deployment: 'local' }, infra: { db: 'libsql' } }],
 	owner: [{ when: { deployment: 'cloud' }, infra: { db: 'pg' } }],
+	panel: [{ when: { deployment: 'cloud' }, infra: { db: 'pg' } }],
 	shared: [
 		{ when: { deployment: 'cloud' }, infra: { db: 'pg' } },
 		{ when: { deployment: 'local' }, infra: { db: 'libsql' } },
@@ -194,4 +202,16 @@ export const CONTEXT_PLACEMENT = {
 /** A ordem de boot, DERIVADA do `kind`: kernel → domain → bff → edge, desempate alfabético.
  *  O kernel vem primeiro porque é ele quem aplica os registries no container raiz e sobe o
  *  transporte que os demais consomem — e o LIFO do shutdown cai de graça, invertendo isto. */
-export const BOOT_ORDER = ['shared', 'agent', 'artifact', 'auth', 'issue', 'owner', 'thread', 'workspace', 'ui', 'external'] as const
+export const BOOT_ORDER = [
+	'shared',
+	'agent',
+	'artifact',
+	'auth',
+	'issue',
+	'owner',
+	'panel',
+	'thread',
+	'workspace',
+	'ui',
+	'external',
+] as const

@@ -116,6 +116,7 @@ pub mod types {
     ///    "OWNER_ALREADY_DISABLED",
     ///    "OWNER_NOT_DISABLED",
     ///    "OWNER_NOT_FOUND",
+    ///    "PANEL_NOT_FOUND",
     ///    "PARTICIPANT_NOT_FOUND",
     ///    "PASSWORDS_DONT_MATCH",
     ///    "PASSWORD_TOO_WEAK",
@@ -306,6 +307,8 @@ pub mod types {
         OwnerNotDisabled,
         #[serde(rename = "OWNER_NOT_FOUND")]
         OwnerNotFound,
+        #[serde(rename = "PANEL_NOT_FOUND")]
+        PanelNotFound,
         #[serde(rename = "PARTICIPANT_NOT_FOUND")]
         ParticipantNotFound,
         #[serde(rename = "PASSWORDS_DONT_MATCH")]
@@ -467,6 +470,7 @@ pub mod types {
                 Self::OwnerAlreadyDisabled => f.write_str("OWNER_ALREADY_DISABLED"),
                 Self::OwnerNotDisabled => f.write_str("OWNER_NOT_DISABLED"),
                 Self::OwnerNotFound => f.write_str("OWNER_NOT_FOUND"),
+                Self::PanelNotFound => f.write_str("PANEL_NOT_FOUND"),
                 Self::ParticipantNotFound => f.write_str("PARTICIPANT_NOT_FOUND"),
                 Self::PasswordsDontMatch => f.write_str("PASSWORDS_DONT_MATCH"),
                 Self::PasswordTooWeak => f.write_str("PASSWORD_TOO_WEAK"),
@@ -583,6 +587,7 @@ pub mod types {
                 "OWNER_ALREADY_DISABLED" => Ok(Self::OwnerAlreadyDisabled),
                 "OWNER_NOT_DISABLED" => Ok(Self::OwnerNotDisabled),
                 "OWNER_NOT_FOUND" => Ok(Self::OwnerNotFound),
+                "PANEL_NOT_FOUND" => Ok(Self::PanelNotFound),
                 "PARTICIPANT_NOT_FOUND" => Ok(Self::ParticipantNotFound),
                 "PASSWORDS_DONT_MATCH" => Ok(Self::PasswordsDontMatch),
                 "PASSWORD_TOO_WEAK" => Ok(Self::PasswordTooWeak),
@@ -1105,6 +1110,988 @@ pub mod types {
             value.clone()
         }
     }
+    ///`GetPanelBoardResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "group",
+    ///    "issues"
+    ///  ],
+    ///  "properties": {
+    ///    "daemonLastSeenAt": {
+    ///      "type": "string"
+    ///    },
+    ///    "group": {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "name"
+    ///      ],
+    ///      "properties": {
+    ///        "name": {
+    ///          "type": "string"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    "issues": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "issueId",
+    ///          "key",
+    ///          "lifeState",
+    ///          "status",
+    ///          "title",
+    ///          "updatedAt"
+    ///        ],
+    ///        "properties": {
+    ///          "issueId": {
+    ///            "type": "string",
+    ///            "format": "uuid",
+    ///            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///          },
+    ///          "key": {
+    ///            "type": "string"
+    ///          },
+    ///          "lifeState": {
+    ///            "$ref": "#/components/schemas/IssueLifeState"
+    ///          },
+    ///          "status": {
+    ///            "$ref": "#/components/schemas/IssueStatus"
+    ///          },
+    ///          "title": {
+    ///            "type": "string"
+    ///          },
+    ///          "updatedAt": {
+    ///            "type": "string"
+    ///          },
+    ///          "waitingForProviderUntil": {
+    ///            "type": "string"
+    ///          }
+    ///        },
+    ///        "additionalProperties": false
+    ///      }
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetPanelBoardResponse {
+        #[serde(
+            rename = "daemonLastSeenAt",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub daemon_last_seen_at: ::std::option::Option<::std::string::String>,
+        pub group: GetPanelBoardResponseGroup,
+        pub issues: ::std::vec::Vec<GetPanelBoardResponseIssuesItem>,
+    }
+    impl ::std::convert::From<&GetPanelBoardResponse> for GetPanelBoardResponse {
+        fn from(value: &GetPanelBoardResponse) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetPanelBoardResponseGroup`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "name"
+    ///  ],
+    ///  "properties": {
+    ///    "name": {
+    ///      "type": "string"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetPanelBoardResponseGroup {
+        pub name: ::std::string::String,
+    }
+    impl ::std::convert::From<&GetPanelBoardResponseGroup>
+    for GetPanelBoardResponseGroup {
+        fn from(value: &GetPanelBoardResponseGroup) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetPanelBoardResponseIssuesItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "issueId",
+    ///    "key",
+    ///    "lifeState",
+    ///    "status",
+    ///    "title",
+    ///    "updatedAt"
+    ///  ],
+    ///  "properties": {
+    ///    "issueId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
+    ///    "key": {
+    ///      "type": "string"
+    ///    },
+    ///    "lifeState": {
+    ///      "$ref": "#/components/schemas/IssueLifeState"
+    ///    },
+    ///    "status": {
+    ///      "$ref": "#/components/schemas/IssueStatus"
+    ///    },
+    ///    "title": {
+    ///      "type": "string"
+    ///    },
+    ///    "updatedAt": {
+    ///      "type": "string"
+    ///    },
+    ///    "waitingForProviderUntil": {
+    ///      "type": "string"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetPanelBoardResponseIssuesItem {
+        #[serde(rename = "issueId")]
+        pub issue_id: ::uuid::Uuid,
+        pub key: ::std::string::String,
+        #[serde(rename = "lifeState")]
+        pub life_state: ::codm_contracts_rust::wire::enums::IssueLifeState,
+        pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
+        pub title: ::std::string::String,
+        #[serde(rename = "updatedAt")]
+        pub updated_at: ::std::string::String,
+        #[serde(
+            rename = "waitingForProviderUntil",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub waiting_for_provider_until: ::std::option::Option<::std::string::String>,
+    }
+    impl ::std::convert::From<&GetPanelBoardResponseIssuesItem>
+    for GetPanelBoardResponseIssuesItem {
+        fn from(value: &GetPanelBoardResponseIssuesItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetPanelIssueResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "issue",
+    ///    "timeline"
+    ///  ],
+    ///  "properties": {
+    ///    "issue": {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "issueId",
+    ///        "key",
+    ///        "lifeState",
+    ///        "status",
+    ///        "title",
+    ///        "updatedAt"
+    ///      ],
+    ///      "properties": {
+    ///        "issueId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "key": {
+    ///          "type": "string"
+    ///        },
+    ///        "lifeState": {
+    ///          "$ref": "#/components/schemas/IssueLifeState"
+    ///        },
+    ///        "status": {
+    ///          "$ref": "#/components/schemas/IssueStatus"
+    ///        },
+    ///        "title": {
+    ///          "type": "string"
+    ///        },
+    ///        "updatedAt": {
+    ///          "type": "string"
+    ///        },
+    ///        "waitingForProviderUntil": {
+    ///          "type": "string"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    "timeline": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "oneOf": [
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "title"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "CREATED"
+    ///                ]
+    ///              },
+    ///              "title": {
+    ///                "type": "string"
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "TURN_STARTED"
+    ///                ]
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "entryId",
+    ///              "id",
+    ///              "kind",
+    ///              "text",
+    ///              "transcriptKind"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "classification": {
+    ///                "$ref": "#/components/schemas/ClassificationMethod"
+    ///              },
+    ///              "entryId": {
+    ///                "type": "string",
+    ///                "format": "uuid",
+    ///                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "MESSAGE"
+    ///                ]
+    ///              },
+    ///              "text": {
+    ///                "type": "string"
+    ///              },
+    ///              "transcriptKind": {
+    ///                "$ref": "#/components/schemas/TranscriptKind"
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "reminder",
+    ///              "text"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "deliveredAt": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "STEER"
+    ///                ]
+    ///              },
+    ///              "readAt": {
+    ///                "type": "string"
+    ///              },
+    ///              "reminder": {
+    ///                "type": "boolean"
+    ///              },
+    ///              "text": {
+    ///                "type": "string"
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "artifactId",
+    ///              "artifactKind",
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "name"
+    ///            ],
+    ///            "properties": {
+    ///              "artifactId": {
+    ///                "type": "string",
+    ///                "format": "uuid",
+    ///                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///              },
+    ///              "artifactKind": {
+    ///                "$ref": "#/components/schemas/ArtifactKind"
+    ///              },
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "ARTIFACT"
+    ///                ]
+    ///              },
+    ///              "name": {
+    ///                "type": "string"
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "stopId",
+    ///              "stopKind",
+    ///              "title"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "STOP_RAISED"
+    ///                ]
+    ///              },
+    ///              "stopId": {
+    ///                "type": "string",
+    ///                "format": "uuid",
+    ///                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///              },
+    ///              "stopKind": {
+    ///                "$ref": "#/components/schemas/StopKind"
+    ///              },
+    ///              "title": {
+    ///                "type": "string"
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "resolution",
+    ///              "stopId"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "STOP_RESOLVED"
+    ///                ]
+    ///              },
+    ///              "resolution": {
+    ///                "$ref": "#/components/schemas/StopResolution"
+    ///              },
+    ///              "stopId": {
+    ///                "type": "string",
+    ///                "format": "uuid",
+    ///                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "COMPLETED"
+    ///                ]
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "ARCHIVED"
+    ///                ]
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          }
+    ///        ]
+    ///      }
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetPanelIssueResponse {
+        pub issue: GetPanelIssueResponseIssue,
+        pub timeline: ::std::vec::Vec<GetPanelIssueResponseTimelineItem>,
+    }
+    impl ::std::convert::From<&GetPanelIssueResponse> for GetPanelIssueResponse {
+        fn from(value: &GetPanelIssueResponse) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetPanelIssueResponseIssue`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "issueId",
+    ///    "key",
+    ///    "lifeState",
+    ///    "status",
+    ///    "title",
+    ///    "updatedAt"
+    ///  ],
+    ///  "properties": {
+    ///    "issueId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
+    ///    "key": {
+    ///      "type": "string"
+    ///    },
+    ///    "lifeState": {
+    ///      "$ref": "#/components/schemas/IssueLifeState"
+    ///    },
+    ///    "status": {
+    ///      "$ref": "#/components/schemas/IssueStatus"
+    ///    },
+    ///    "title": {
+    ///      "type": "string"
+    ///    },
+    ///    "updatedAt": {
+    ///      "type": "string"
+    ///    },
+    ///    "waitingForProviderUntil": {
+    ///      "type": "string"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetPanelIssueResponseIssue {
+        #[serde(rename = "issueId")]
+        pub issue_id: ::uuid::Uuid,
+        pub key: ::std::string::String,
+        #[serde(rename = "lifeState")]
+        pub life_state: ::codm_contracts_rust::wire::enums::IssueLifeState,
+        pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
+        pub title: ::std::string::String,
+        #[serde(rename = "updatedAt")]
+        pub updated_at: ::std::string::String,
+        #[serde(
+            rename = "waitingForProviderUntil",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub waiting_for_provider_until: ::std::option::Option<::std::string::String>,
+    }
+    impl ::std::convert::From<&GetPanelIssueResponseIssue>
+    for GetPanelIssueResponseIssue {
+        fn from(value: &GetPanelIssueResponseIssue) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetPanelIssueResponseTimelineItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "oneOf": [
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "title"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "CREATED"
+    ///          ]
+    ///        },
+    ///        "title": {
+    ///          "type": "string"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "TURN_STARTED"
+    ///          ]
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "entryId",
+    ///        "id",
+    ///        "kind",
+    ///        "text",
+    ///        "transcriptKind"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "classification": {
+    ///          "$ref": "#/components/schemas/ClassificationMethod"
+    ///        },
+    ///        "entryId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "MESSAGE"
+    ///          ]
+    ///        },
+    ///        "text": {
+    ///          "type": "string"
+    ///        },
+    ///        "transcriptKind": {
+    ///          "$ref": "#/components/schemas/TranscriptKind"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "reminder",
+    ///        "text"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "deliveredAt": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "STEER"
+    ///          ]
+    ///        },
+    ///        "readAt": {
+    ///          "type": "string"
+    ///        },
+    ///        "reminder": {
+    ///          "type": "boolean"
+    ///        },
+    ///        "text": {
+    ///          "type": "string"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "artifactId",
+    ///        "artifactKind",
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "name"
+    ///      ],
+    ///      "properties": {
+    ///        "artifactId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "artifactKind": {
+    ///          "$ref": "#/components/schemas/ArtifactKind"
+    ///        },
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "ARTIFACT"
+    ///          ]
+    ///        },
+    ///        "name": {
+    ///          "type": "string"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "stopId",
+    ///        "stopKind",
+    ///        "title"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "STOP_RAISED"
+    ///          ]
+    ///        },
+    ///        "stopId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "stopKind": {
+    ///          "$ref": "#/components/schemas/StopKind"
+    ///        },
+    ///        "title": {
+    ///          "type": "string"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "resolution",
+    ///        "stopId"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "STOP_RESOLVED"
+    ///          ]
+    ///        },
+    ///        "resolution": {
+    ///          "$ref": "#/components/schemas/StopResolution"
+    ///        },
+    ///        "stopId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "COMPLETED"
+    ///          ]
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "ARCHIVED"
+    ///          ]
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    }
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(tag = "kind", deny_unknown_fields)]
+    pub enum GetPanelIssueResponseTimelineItem {
+        #[serde(rename = "CREATED")]
+        Created {
+            at: ::std::string::String,
+            id: ::std::string::String,
+            title: ::std::string::String,
+        },
+        #[serde(rename = "TURN_STARTED")]
+        TurnStarted { at: ::std::string::String, id: ::std::string::String },
+        #[serde(rename = "MESSAGE")]
+        Message {
+            at: ::std::string::String,
+            #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+            classification: ::std::option::Option<
+                ::codm_contracts_rust::wire::enums::ClassificationMethod,
+            >,
+            #[serde(rename = "entryId")]
+            entry_id: ::uuid::Uuid,
+            id: ::std::string::String,
+            text: ::std::string::String,
+            #[serde(rename = "transcriptKind")]
+            transcript_kind: ::codm_contracts_rust::wire::enums::TranscriptKind,
+        },
+        #[serde(rename = "STEER")]
+        Steer {
+            at: ::std::string::String,
+            #[serde(
+                rename = "deliveredAt",
+                default,
+                skip_serializing_if = "::std::option::Option::is_none"
+            )]
+            delivered_at: ::std::option::Option<::std::string::String>,
+            id: ::std::string::String,
+            #[serde(
+                rename = "readAt",
+                default,
+                skip_serializing_if = "::std::option::Option::is_none"
+            )]
+            read_at: ::std::option::Option<::std::string::String>,
+            reminder: bool,
+            text: ::std::string::String,
+        },
+        #[serde(rename = "ARTIFACT")]
+        Artifact {
+            #[serde(rename = "artifactId")]
+            artifact_id: ::uuid::Uuid,
+            #[serde(rename = "artifactKind")]
+            artifact_kind: ::codm_contracts_rust::wire::enums::ArtifactKind,
+            at: ::std::string::String,
+            id: ::std::string::String,
+            name: ::std::string::String,
+        },
+        #[serde(rename = "STOP_RAISED")]
+        StopRaised {
+            at: ::std::string::String,
+            id: ::std::string::String,
+            #[serde(rename = "stopId")]
+            stop_id: ::uuid::Uuid,
+            #[serde(rename = "stopKind")]
+            stop_kind: ::codm_contracts_rust::wire::enums::StopKind,
+            title: ::std::string::String,
+        },
+        #[serde(rename = "STOP_RESOLVED")]
+        StopResolved {
+            at: ::std::string::String,
+            id: ::std::string::String,
+            resolution: ::codm_contracts_rust::wire::enums::StopResolution,
+            #[serde(rename = "stopId")]
+            stop_id: ::uuid::Uuid,
+        },
+        #[serde(rename = "COMPLETED")]
+        Completed { at: ::std::string::String, id: ::std::string::String },
+        #[serde(rename = "ARCHIVED")]
+        Archived { at: ::std::string::String, id: ::std::string::String },
+    }
+    impl ::std::convert::From<&Self> for GetPanelIssueResponseTimelineItem {
+        fn from(value: &GetPanelIssueResponseTimelineItem) -> Self {
+            value.clone()
+        }
+    }
     ///`GetSessionResponse`
     ///
     /// <details><summary>JSON schema</summary>
@@ -1394,6 +2381,35 @@ pub mod types {
     impl ::std::convert::From<&HealthResponseComponentsValue>
     for HealthResponseComponentsValue {
         fn from(value: &HealthResponseComponentsValue) -> Self {
+            value.clone()
+        }
+    }
+    ///`RotatePanelLinkResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "token"
+    ///  ],
+    ///  "properties": {
+    ///    "token": {
+    ///      "type": "string"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct RotatePanelLinkResponse {
+        pub token: ::std::string::String,
+    }
+    impl ::std::convert::From<&RotatePanelLinkResponse> for RotatePanelLinkResponse {
+        fn from(value: &RotatePanelLinkResponse) -> Self {
             value.clone()
         }
     }
@@ -1850,6 +2866,1492 @@ pub mod types {
             value: ::std::string::String,
         ) -> ::std::result::Result<Self, self::error::ConversionError> {
             value.parse()
+        }
+    }
+    ///`SyncPanelBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "groups",
+    ///    "issues"
+    ///  ],
+    ///  "properties": {
+    ///    "groups": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "name",
+    ///          "threadId"
+    ///        ],
+    ///        "properties": {
+    ///          "name": {
+    ///            "type": "string",
+    ///            "maxLength": 200,
+    ///            "minLength": 1
+    ///          },
+    ///          "threadId": {
+    ///            "type": "string",
+    ///            "format": "uuid",
+    ///            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///          }
+    ///        }
+    ///      },
+    ///      "maxItems": 200
+    ///    },
+    ///    "issues": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "archived",
+    ///          "issueId",
+    ///          "key",
+    ///          "lifeState",
+    ///          "status",
+    ///          "threadId",
+    ///          "timeline",
+    ///          "title",
+    ///          "updatedAt"
+    ///        ],
+    ///        "properties": {
+    ///          "archived": {
+    ///            "type": "boolean"
+    ///          },
+    ///          "issueId": {
+    ///            "type": "string",
+    ///            "format": "uuid",
+    ///            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///          },
+    ///          "key": {
+    ///            "type": "string",
+    ///            "maxLength": 120,
+    ///            "minLength": 1
+    ///          },
+    ///          "lifeState": {
+    ///            "$ref": "#/components/schemas/IssueLifeState"
+    ///          },
+    ///          "status": {
+    ///            "$ref": "#/components/schemas/IssueStatus"
+    ///          },
+    ///          "threadId": {
+    ///            "type": "string",
+    ///            "format": "uuid",
+    ///            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///          },
+    ///          "timeline": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "oneOf": [
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "at",
+    ///                    "id",
+    ///                    "kind",
+    ///                    "title"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "at": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "id": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "CREATED"
+    ///                      ]
+    ///                    },
+    ///                    "title": {
+    ///                      "type": "string"
+    ///                    }
+    ///                  }
+    ///                },
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "at",
+    ///                    "id",
+    ///                    "kind"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "at": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "id": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "TURN_STARTED"
+    ///                      ]
+    ///                    }
+    ///                  }
+    ///                },
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "at",
+    ///                    "entryId",
+    ///                    "id",
+    ///                    "kind",
+    ///                    "text",
+    ///                    "transcriptKind"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "at": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "classification": {
+    ///                      "$ref": "#/components/schemas/ClassificationMethod"
+    ///                    },
+    ///                    "entryId": {
+    ///                      "type": "string",
+    ///                      "format": "uuid",
+    ///                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///                    },
+    ///                    "id": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "MESSAGE"
+    ///                      ]
+    ///                    },
+    ///                    "text": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "transcriptKind": {
+    ///                      "$ref": "#/components/schemas/TranscriptKind"
+    ///                    }
+    ///                  }
+    ///                },
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "at",
+    ///                    "id",
+    ///                    "kind",
+    ///                    "reminder",
+    ///                    "text"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "at": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "deliveredAt": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "id": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "STEER"
+    ///                      ]
+    ///                    },
+    ///                    "readAt": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "reminder": {
+    ///                      "type": "boolean"
+    ///                    },
+    ///                    "text": {
+    ///                      "type": "string"
+    ///                    }
+    ///                  }
+    ///                },
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "artifactId",
+    ///                    "artifactKind",
+    ///                    "at",
+    ///                    "id",
+    ///                    "kind",
+    ///                    "name"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "artifactId": {
+    ///                      "type": "string",
+    ///                      "format": "uuid",
+    ///                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///                    },
+    ///                    "artifactKind": {
+    ///                      "$ref": "#/components/schemas/ArtifactKind"
+    ///                    },
+    ///                    "at": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "id": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "ARTIFACT"
+    ///                      ]
+    ///                    },
+    ///                    "name": {
+    ///                      "type": "string"
+    ///                    }
+    ///                  }
+    ///                },
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "at",
+    ///                    "id",
+    ///                    "kind",
+    ///                    "stopId",
+    ///                    "stopKind",
+    ///                    "title"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "at": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "id": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "STOP_RAISED"
+    ///                      ]
+    ///                    },
+    ///                    "stopId": {
+    ///                      "type": "string",
+    ///                      "format": "uuid",
+    ///                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///                    },
+    ///                    "stopKind": {
+    ///                      "$ref": "#/components/schemas/StopKind"
+    ///                    },
+    ///                    "title": {
+    ///                      "type": "string"
+    ///                    }
+    ///                  }
+    ///                },
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "at",
+    ///                    "id",
+    ///                    "kind",
+    ///                    "resolution",
+    ///                    "stopId"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "at": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "id": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "STOP_RESOLVED"
+    ///                      ]
+    ///                    },
+    ///                    "resolution": {
+    ///                      "$ref": "#/components/schemas/StopResolution"
+    ///                    },
+    ///                    "stopId": {
+    ///                      "type": "string",
+    ///                      "format": "uuid",
+    ///                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///                    }
+    ///                  }
+    ///                },
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "at",
+    ///                    "id",
+    ///                    "kind"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "at": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "id": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "COMPLETED"
+    ///                      ]
+    ///                    }
+    ///                  }
+    ///                },
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "at",
+    ///                    "id",
+    ///                    "kind"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "at": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "id": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "ARCHIVED"
+    ///                      ]
+    ///                    }
+    ///                  }
+    ///                }
+    ///              ]
+    ///            },
+    ///            "maxItems": 2000
+    ///          },
+    ///          "title": {
+    ///            "type": "string",
+    ///            "maxLength": 400
+    ///          },
+    ///          "updatedAt": {
+    ///            "type": "string",
+    ///            "format": "date-time",
+    ///            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+    ///          },
+    ///          "waitingForProviderUntil": {
+    ///            "type": "string",
+    ///            "format": "date-time",
+    ///            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+    ///          }
+    ///        }
+    ///      },
+    ///      "maxItems": 500
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct SyncPanelBody {
+        pub groups: ::std::vec::Vec<SyncPanelBodyGroupsItem>,
+        pub issues: ::std::vec::Vec<SyncPanelBodyIssuesItem>,
+    }
+    impl ::std::convert::From<&SyncPanelBody> for SyncPanelBody {
+        fn from(value: &SyncPanelBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`SyncPanelBodyGroupsItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "name",
+    ///    "threadId"
+    ///  ],
+    ///  "properties": {
+    ///    "name": {
+    ///      "type": "string",
+    ///      "maxLength": 200,
+    ///      "minLength": 1
+    ///    },
+    ///    "threadId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct SyncPanelBodyGroupsItem {
+        pub name: SyncPanelBodyGroupsItemName,
+        #[serde(rename = "threadId")]
+        pub thread_id: ::uuid::Uuid,
+    }
+    impl ::std::convert::From<&SyncPanelBodyGroupsItem> for SyncPanelBodyGroupsItem {
+        fn from(value: &SyncPanelBodyGroupsItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`SyncPanelBodyGroupsItemName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 200,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct SyncPanelBodyGroupsItemName(::std::string::String);
+    impl ::std::ops::Deref for SyncPanelBodyGroupsItemName {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<SyncPanelBodyGroupsItemName> for ::std::string::String {
+        fn from(value: SyncPanelBodyGroupsItemName) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&SyncPanelBodyGroupsItemName>
+    for SyncPanelBodyGroupsItemName {
+        fn from(value: &SyncPanelBodyGroupsItemName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for SyncPanelBodyGroupsItemName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 200usize {
+                return Err("longer than 200 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for SyncPanelBodyGroupsItemName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for SyncPanelBodyGroupsItemName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for SyncPanelBodyGroupsItemName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for SyncPanelBodyGroupsItemName {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`SyncPanelBodyIssuesItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "archived",
+    ///    "issueId",
+    ///    "key",
+    ///    "lifeState",
+    ///    "status",
+    ///    "threadId",
+    ///    "timeline",
+    ///    "title",
+    ///    "updatedAt"
+    ///  ],
+    ///  "properties": {
+    ///    "archived": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "issueId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
+    ///    "key": {
+    ///      "type": "string",
+    ///      "maxLength": 120,
+    ///      "minLength": 1
+    ///    },
+    ///    "lifeState": {
+    ///      "$ref": "#/components/schemas/IssueLifeState"
+    ///    },
+    ///    "status": {
+    ///      "$ref": "#/components/schemas/IssueStatus"
+    ///    },
+    ///    "threadId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
+    ///    "timeline": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "oneOf": [
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "title"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "CREATED"
+    ///                ]
+    ///              },
+    ///              "title": {
+    ///                "type": "string"
+    ///              }
+    ///            }
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "TURN_STARTED"
+    ///                ]
+    ///              }
+    ///            }
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "entryId",
+    ///              "id",
+    ///              "kind",
+    ///              "text",
+    ///              "transcriptKind"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "classification": {
+    ///                "$ref": "#/components/schemas/ClassificationMethod"
+    ///              },
+    ///              "entryId": {
+    ///                "type": "string",
+    ///                "format": "uuid",
+    ///                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "MESSAGE"
+    ///                ]
+    ///              },
+    ///              "text": {
+    ///                "type": "string"
+    ///              },
+    ///              "transcriptKind": {
+    ///                "$ref": "#/components/schemas/TranscriptKind"
+    ///              }
+    ///            }
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "reminder",
+    ///              "text"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "deliveredAt": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "STEER"
+    ///                ]
+    ///              },
+    ///              "readAt": {
+    ///                "type": "string"
+    ///              },
+    ///              "reminder": {
+    ///                "type": "boolean"
+    ///              },
+    ///              "text": {
+    ///                "type": "string"
+    ///              }
+    ///            }
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "artifactId",
+    ///              "artifactKind",
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "name"
+    ///            ],
+    ///            "properties": {
+    ///              "artifactId": {
+    ///                "type": "string",
+    ///                "format": "uuid",
+    ///                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///              },
+    ///              "artifactKind": {
+    ///                "$ref": "#/components/schemas/ArtifactKind"
+    ///              },
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "ARTIFACT"
+    ///                ]
+    ///              },
+    ///              "name": {
+    ///                "type": "string"
+    ///              }
+    ///            }
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "stopId",
+    ///              "stopKind",
+    ///              "title"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "STOP_RAISED"
+    ///                ]
+    ///              },
+    ///              "stopId": {
+    ///                "type": "string",
+    ///                "format": "uuid",
+    ///                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///              },
+    ///              "stopKind": {
+    ///                "$ref": "#/components/schemas/StopKind"
+    ///              },
+    ///              "title": {
+    ///                "type": "string"
+    ///              }
+    ///            }
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "resolution",
+    ///              "stopId"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "STOP_RESOLVED"
+    ///                ]
+    ///              },
+    ///              "resolution": {
+    ///                "$ref": "#/components/schemas/StopResolution"
+    ///              },
+    ///              "stopId": {
+    ///                "type": "string",
+    ///                "format": "uuid",
+    ///                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///              }
+    ///            }
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "COMPLETED"
+    ///                ]
+    ///              }
+    ///            }
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "ARCHIVED"
+    ///                ]
+    ///              }
+    ///            }
+    ///          }
+    ///        ]
+    ///      },
+    ///      "maxItems": 2000
+    ///    },
+    ///    "title": {
+    ///      "type": "string",
+    ///      "maxLength": 400
+    ///    },
+    ///    "updatedAt": {
+    ///      "type": "string",
+    ///      "format": "date-time",
+    ///      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+    ///    },
+    ///    "waitingForProviderUntil": {
+    ///      "type": "string",
+    ///      "format": "date-time",
+    ///      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct SyncPanelBodyIssuesItem {
+        pub archived: bool,
+        #[serde(rename = "issueId")]
+        pub issue_id: ::uuid::Uuid,
+        pub key: SyncPanelBodyIssuesItemKey,
+        #[serde(rename = "lifeState")]
+        pub life_state: ::codm_contracts_rust::wire::enums::IssueLifeState,
+        pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
+        #[serde(rename = "threadId")]
+        pub thread_id: ::uuid::Uuid,
+        pub timeline: ::std::vec::Vec<SyncPanelBodyIssuesItemTimelineItem>,
+        pub title: SyncPanelBodyIssuesItemTitle,
+        #[serde(rename = "updatedAt")]
+        pub updated_at: ::chrono::DateTime<::chrono::offset::Utc>,
+        #[serde(
+            rename = "waitingForProviderUntil",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub waiting_for_provider_until: ::std::option::Option<
+            ::chrono::DateTime<::chrono::offset::Utc>,
+        >,
+    }
+    impl ::std::convert::From<&SyncPanelBodyIssuesItem> for SyncPanelBodyIssuesItem {
+        fn from(value: &SyncPanelBodyIssuesItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`SyncPanelBodyIssuesItemKey`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 120,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct SyncPanelBodyIssuesItemKey(::std::string::String);
+    impl ::std::ops::Deref for SyncPanelBodyIssuesItemKey {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<SyncPanelBodyIssuesItemKey> for ::std::string::String {
+        fn from(value: SyncPanelBodyIssuesItemKey) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&SyncPanelBodyIssuesItemKey>
+    for SyncPanelBodyIssuesItemKey {
+        fn from(value: &SyncPanelBodyIssuesItemKey) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for SyncPanelBodyIssuesItemKey {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 120usize {
+                return Err("longer than 120 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for SyncPanelBodyIssuesItemKey {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for SyncPanelBodyIssuesItemKey {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for SyncPanelBodyIssuesItemKey {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for SyncPanelBodyIssuesItemKey {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`SyncPanelBodyIssuesItemTimelineItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "oneOf": [
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "title"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "CREATED"
+    ///          ]
+    ///        },
+    ///        "title": {
+    ///          "type": "string"
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "TURN_STARTED"
+    ///          ]
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "entryId",
+    ///        "id",
+    ///        "kind",
+    ///        "text",
+    ///        "transcriptKind"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "classification": {
+    ///          "$ref": "#/components/schemas/ClassificationMethod"
+    ///        },
+    ///        "entryId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "MESSAGE"
+    ///          ]
+    ///        },
+    ///        "text": {
+    ///          "type": "string"
+    ///        },
+    ///        "transcriptKind": {
+    ///          "$ref": "#/components/schemas/TranscriptKind"
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "reminder",
+    ///        "text"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "deliveredAt": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "STEER"
+    ///          ]
+    ///        },
+    ///        "readAt": {
+    ///          "type": "string"
+    ///        },
+    ///        "reminder": {
+    ///          "type": "boolean"
+    ///        },
+    ///        "text": {
+    ///          "type": "string"
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "artifactId",
+    ///        "artifactKind",
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "name"
+    ///      ],
+    ///      "properties": {
+    ///        "artifactId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "artifactKind": {
+    ///          "$ref": "#/components/schemas/ArtifactKind"
+    ///        },
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "ARTIFACT"
+    ///          ]
+    ///        },
+    ///        "name": {
+    ///          "type": "string"
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "stopId",
+    ///        "stopKind",
+    ///        "title"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "STOP_RAISED"
+    ///          ]
+    ///        },
+    ///        "stopId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "stopKind": {
+    ///          "$ref": "#/components/schemas/StopKind"
+    ///        },
+    ///        "title": {
+    ///          "type": "string"
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "resolution",
+    ///        "stopId"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "STOP_RESOLVED"
+    ///          ]
+    ///        },
+    ///        "resolution": {
+    ///          "$ref": "#/components/schemas/StopResolution"
+    ///        },
+    ///        "stopId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "COMPLETED"
+    ///          ]
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "ARCHIVED"
+    ///          ]
+    ///        }
+    ///      }
+    ///    }
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(tag = "kind")]
+    pub enum SyncPanelBodyIssuesItemTimelineItem {
+        #[serde(rename = "CREATED")]
+        Created {
+            at: ::std::string::String,
+            id: ::std::string::String,
+            title: ::std::string::String,
+        },
+        #[serde(rename = "TURN_STARTED")]
+        TurnStarted { at: ::std::string::String, id: ::std::string::String },
+        #[serde(rename = "MESSAGE")]
+        Message {
+            at: ::std::string::String,
+            #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+            classification: ::std::option::Option<
+                ::codm_contracts_rust::wire::enums::ClassificationMethod,
+            >,
+            #[serde(rename = "entryId")]
+            entry_id: ::uuid::Uuid,
+            id: ::std::string::String,
+            text: ::std::string::String,
+            #[serde(rename = "transcriptKind")]
+            transcript_kind: ::codm_contracts_rust::wire::enums::TranscriptKind,
+        },
+        #[serde(rename = "STEER")]
+        Steer {
+            at: ::std::string::String,
+            #[serde(
+                rename = "deliveredAt",
+                default,
+                skip_serializing_if = "::std::option::Option::is_none"
+            )]
+            delivered_at: ::std::option::Option<::std::string::String>,
+            id: ::std::string::String,
+            #[serde(
+                rename = "readAt",
+                default,
+                skip_serializing_if = "::std::option::Option::is_none"
+            )]
+            read_at: ::std::option::Option<::std::string::String>,
+            reminder: bool,
+            text: ::std::string::String,
+        },
+        #[serde(rename = "ARTIFACT")]
+        Artifact {
+            #[serde(rename = "artifactId")]
+            artifact_id: ::uuid::Uuid,
+            #[serde(rename = "artifactKind")]
+            artifact_kind: ::codm_contracts_rust::wire::enums::ArtifactKind,
+            at: ::std::string::String,
+            id: ::std::string::String,
+            name: ::std::string::String,
+        },
+        #[serde(rename = "STOP_RAISED")]
+        StopRaised {
+            at: ::std::string::String,
+            id: ::std::string::String,
+            #[serde(rename = "stopId")]
+            stop_id: ::uuid::Uuid,
+            #[serde(rename = "stopKind")]
+            stop_kind: ::codm_contracts_rust::wire::enums::StopKind,
+            title: ::std::string::String,
+        },
+        #[serde(rename = "STOP_RESOLVED")]
+        StopResolved {
+            at: ::std::string::String,
+            id: ::std::string::String,
+            resolution: ::codm_contracts_rust::wire::enums::StopResolution,
+            #[serde(rename = "stopId")]
+            stop_id: ::uuid::Uuid,
+        },
+        #[serde(rename = "COMPLETED")]
+        Completed { at: ::std::string::String, id: ::std::string::String },
+        #[serde(rename = "ARCHIVED")]
+        Archived { at: ::std::string::String, id: ::std::string::String },
+    }
+    impl ::std::convert::From<&Self> for SyncPanelBodyIssuesItemTimelineItem {
+        fn from(value: &SyncPanelBodyIssuesItemTimelineItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`SyncPanelBodyIssuesItemTitle`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 400
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct SyncPanelBodyIssuesItemTitle(::std::string::String);
+    impl ::std::ops::Deref for SyncPanelBodyIssuesItemTitle {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<SyncPanelBodyIssuesItemTitle> for ::std::string::String {
+        fn from(value: SyncPanelBodyIssuesItemTitle) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&SyncPanelBodyIssuesItemTitle>
+    for SyncPanelBodyIssuesItemTitle {
+        fn from(value: &SyncPanelBodyIssuesItemTitle) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for SyncPanelBodyIssuesItemTitle {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 400usize {
+                return Err("longer than 400 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for SyncPanelBodyIssuesItemTitle {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for SyncPanelBodyIssuesItemTitle {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for SyncPanelBodyIssuesItemTitle {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for SyncPanelBodyIssuesItemTitle {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`SyncPanelResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "groups"
+    ///  ],
+    ///  "properties": {
+    ///    "groups": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "threadId",
+    ///          "token"
+    ///        ],
+    ///        "properties": {
+    ///          "threadId": {
+    ///            "type": "string",
+    ///            "format": "uuid",
+    ///            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///          },
+    ///          "token": {
+    ///            "type": "string"
+    ///          }
+    ///        },
+    ///        "additionalProperties": false
+    ///      }
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct SyncPanelResponse {
+        pub groups: ::std::vec::Vec<SyncPanelResponseGroupsItem>,
+    }
+    impl ::std::convert::From<&SyncPanelResponse> for SyncPanelResponse {
+        fn from(value: &SyncPanelResponse) -> Self {
+            value.clone()
+        }
+    }
+    ///`SyncPanelResponseGroupsItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "threadId",
+    ///    "token"
+    ///  ],
+    ///  "properties": {
+    ///    "threadId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
+    ///    "token": {
+    ///      "type": "string"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct SyncPanelResponseGroupsItem {
+        #[serde(rename = "threadId")]
+        pub thread_id: ::uuid::Uuid,
+        pub token: ::std::string::String,
+    }
+    impl ::std::convert::From<&SyncPanelResponseGroupsItem>
+    for SyncPanelResponseGroupsItem {
+        fn from(value: &SyncPanelResponseGroupsItem) -> Self {
+            value.clone()
         }
     }
     ///`UpdateOwnerSettingsBody`
@@ -2472,6 +4974,183 @@ Sends a `POST` request to `/owners/{ownerId}/activate`
                 ::reqwest::header::ACCEPT,
                 ::reqwest::header::HeaderValue::from_static("application/json"),
             )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**The per-group panel page (public HTML)
+
+Sends a `GET` request to `/panel/g/{token}`
+
+*/
+    pub async fn panel_page<'a>(
+        &'a self,
+        token: &'a str,
+    ) -> Result<ResponseValue<::std::string::String>, Error<()>> {
+        let url = format!(
+            "{}/panel/g/{}", self.baseurl, encode_path(& token.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .get(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**A group's issue board, by its panel link token (public)
+
+Sends a `GET` request to `/panel/g/{token}/board`
+
+*/
+    pub async fn get_panel_board<'a>(
+        &'a self,
+        token: &'a str,
+    ) -> Result<ResponseValue<types::GetPanelBoardResponse>, Error<()>> {
+        let url = format!(
+            "{}/panel/g/{}/board", self.baseurl, encode_path(& token.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .get(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**One issue of a group with its timeline, by the group's panel link token (public)
+
+Sends a `GET` request to `/panel/g/{token}/issues/{issueId}`
+
+*/
+    pub async fn get_panel_issue<'a>(
+        &'a self,
+        token: &'a str,
+        issue_id: &'a str,
+    ) -> Result<ResponseValue<types::GetPanelIssueResponse>, Error<()>> {
+        let url = format!(
+            "{}/panel/g/{}/issues/{}", self.baseurl, encode_path(& token.to_string()),
+            encode_path(& issue_id.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .get(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Replace a group's panel link token
+
+Sends a `POST` request to `/panel/groups/{threadId}/rotate`
+
+*/
+    pub async fn rotate_panel_link<'a>(
+        &'a self,
+        thread_id: &'a str,
+    ) -> Result<ResponseValue<types::RotatePanelLinkResponse>, Error<()>> {
+        let url = format!(
+            "{}/panel/groups/{}/rotate", self.baseurl, encode_path(& thread_id
+            .to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Upsert the daemon's panel snapshot (groups + changed issues) and return each group's link token
+
+Sends a `PUT` request to `/panel/sync`
+
+*/
+    pub async fn sync_panel<'a>(
+        &'a self,
+        body: &'a types::SyncPanelBody,
+    ) -> Result<ResponseValue<types::SyncPanelResponse>, Error<()>> {
+        let url = format!("{}/panel/sync", self.baseurl,);
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .put(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
             .headers(header_map)
             .build()?;
         let result = self.client.execute(request).await;
