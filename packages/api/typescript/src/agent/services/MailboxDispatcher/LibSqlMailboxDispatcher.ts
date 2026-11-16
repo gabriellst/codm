@@ -15,7 +15,8 @@ import { AgentSessionRepository } from '../../repositories/AgentSessionRepositor
 import { MailboxRepository, type ClaimedMailboxItem } from '../../repositories/MailboxRepository'
 import { RunOrchestratorTurn } from '../../usecases/RunOrchestratorTurn'
 import { RunIssueTurn } from '../../usecases/RunIssueTurn'
-import { IssueTurnAborter } from '../IssueTurnAborter'
+import { abortReasonOf, IssueTurnAborter } from '../IssueTurnAborter'
+import { TurnAbortReason } from '../../enums/TurnAbortReason'
 import { MailboxDispatcher } from './MailboxDispatcher'
 
 /** How long a claimed item stays leased before a crashed worker's item becomes claimable again. */
@@ -85,6 +86,13 @@ const steerOriginOf = (payload: unknown): RoutedSteerOrigin | undefined => {
 	const parsed = SteerOriginPayloadSchema.safeParse(payload)
 	return parsed.success ? parsed.data.channelOrigin : undefined
 }
+
+/** The transcript entry a routed steer came from (`entryId` on its payload) — absent for every other steer. */
+const SteerEntryPayloadSchema = z.object({ entryId: z.uuid() })
+const steerEntryOf = (payload: unknown): string | undefined => {
+	const parsed = SteerEntryPayloadSchema.safeParse(payload)
+	return parsed.success ? parsed.data.entryId : undefined
+}
 /**
  * THE LANES — how many turns of each TARGET KIND may be in flight at once, and which kind is claimed
  * first when both have room.
@@ -135,6 +143,10 @@ const TURN_LANES: Readonly<Record<MailboxTargetKind, { slots: number; priority: 
  * (fase 2, item 2). Neither done nor broken — the item goes back to the queue deferred with its attempt
  * refunded (`holdItem`), never `complete` (that would lose the work) and never `fail` (that would walk a
  * turn the operator stopped on purpose toward poison and a Needs-you card).
+ *
+ * `interrupted` is the fourth: an "agora" steer cut the turn (fase 2, item 4). `sessionKept` decides what
+ * the cut item is: consumed (its session — and so its content — continues in the steer's turn), or, when
+ * the CLI was cut before it reported a session, released NOW to run again (`releaseInterrupted`).
  */
 export type TurnReport =
 	| {
@@ -144,9 +156,18 @@ export type TurnReport =
 			transportStop?: { detail: string; retryAfter?: number }
 			dropped?: never
 			held?: never
+			interrupted?: never
 	  }
-	| { dropped: true; spoke: false; provider?: never; transportStop?: never; held?: never }
-	| { held: true; spoke: false; dropped?: never; provider?: never; transportStop?: never }
+	| { dropped: true; spoke: false; provider?: never; transportStop?: never; held?: never; interrupted?: never }
+	| { held: true; spoke: false; dropped?: never; provider?: never; transportStop?: never; interrupted?: never }
+	| {
+			interrupted: { sessionKept: boolean }
+			spoke: false
+			dropped?: never
+			provider?: never
+			transportStop?: never
+			held?: never
+	  }
 
 /** The thread as the repository hands it over — derived from the seam, as `RunOrchestratorTurn` does. */
 type LoadedThread = NonNullable<Awaited<ReturnType<ThreadRepository['findById']>>>
@@ -586,6 +607,12 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 				return
 			}
 
+			// CUT BY "AGORA" (fase 2, item 4) — no conclusion was persisted, and no attempt is spent either way.
+			if (report.interrupted && !report.interrupted.sessionKept) {
+				await this.releaseInterrupted(item)
+				return
+			}
+
 			// TRANSPORT + MUTE RETURNS TO THE QUEUE. `fail` bumps `attempts`, records the cause in
 			// `last_error` and releases the lease NOW — the item is claimable on the next poll (250ms)
 			// instead of waiting out the ten-minute lease clock. Past the cap, `raiseStopForPoisoned`
@@ -615,7 +642,8 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			// re-send "atingi o limite" to every group once a minute. A turn the provider ran to its end is
 			// the evidence it is answering again — so a dropped report (no CLI ran) and any transport stop
 			// (one that spoke and THEN hit the limit included) prove nothing and credit nothing.
-			if (!report.dropped && report.transportStop === undefined) await this.creditAcceptedTurn(report.provider, startedAt)
+			if (!report.dropped && !report.interrupted && report.transportStop === undefined)
+				await this.creditAcceptedTurn(report.provider, startedAt)
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error)
 
@@ -928,16 +956,42 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 		// landing between "not held" and the spawn would find nothing to abort and the turn would run to its
 		// end while the issue sat paused. Armed first, that pause aborts a signal `RunIssueTurn` reads before
 		// it starts anything.
-		const turn = this.aborter.begin(item.targetId)
+		// The entry a routed steer carries is registered with the turn, so an "agora" that lands after this
+		// steer's own turn started never cuts it (`IssueTurnAborter.interrupt`).
+		const turn = this.aborter.begin(item.targetId, item.kind === MailboxItemKind.STEER ? steerEntryOf(item.payload) : undefined)
+		// A PAUSE wins over whatever the turn reported; an INTERRUPT is already in the report `RunIssueTurn`
+		// returned (and a cut that landed after the turn concluded changes nothing — it simply ended first).
+		const paused = () => turn.signal.aborted && abortReasonOf(turn.signal) === TurnAbortReason.PAUSE
 		try {
 			if (await this.hold.isHeld(item.targetId)) return { held: true, spoke: false }
 			const report = await this.runIssueTurn(item)
-			return turn.signal.aborted ? { held: true, spoke: false } : report
+			return paused() ? { held: true, spoke: false } : report
 		} catch (error) {
-			if (turn.signal.aborted) return { held: true, spoke: false }
+			if (paused()) return { held: true, spoke: false }
+			if (turn.signal.aborted) return { interrupted: { sessionKept: false }, spoke: false }
 			throw error
 		} finally {
 			turn.end()
+		}
+	}
+
+	/**
+	 * An item whose turn an "agora" cut before the CLI reported a session: nothing of it reached a session,
+	 * so it must run again — released NOW (a `defer` to the present instant, attempt refunded), not after
+	 * the hold's 30 s. It runs before the steer (oldest first), which is the old order and loses nothing.
+	 */
+	private async releaseInterrupted(item: ClaimedMailboxItem): Promise<void> {
+		this.logging.info({ content: { message: 'issue turn cut before its session existed — item released', itemId: item.id } })
+		try {
+			await this.mailbox.defer(item.id, new Date())
+		} catch (error) {
+			this.logging.error({
+				content: {
+					message: 'could not release a cut issue item — its lease will expire instead',
+					itemId: item.id,
+					error: error instanceof Error ? error.message : String(error),
+				},
+			})
 		}
 	}
 
@@ -1034,6 +1088,8 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 		})
 		// A pause killed it (or kept it from starting): nothing was persisted, the item goes back held.
 		if (result.held) return { held: true, spoke: false }
+		// An "agora" steer cut it: the dispatcher consumes or releases the item on `sessionKept`.
+		if (result.interrupted) return { interrupted: result.interrupted, spoke: false }
 		return { spoke: result.spoke, provider, transportStop: result.transportStop }
 	}
 

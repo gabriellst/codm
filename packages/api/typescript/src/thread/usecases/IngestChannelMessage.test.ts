@@ -7,6 +7,7 @@ import { MailboxRepository } from '@agent/repositories/MailboxRepository'
 import { IngestChannelMessage } from './IngestChannelMessage'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { MessageIngestedEvent } from '../events/MessageIngestedEvent'
+import { IssueTurnInterruptRequestedEvent } from '../events/IssueTurnInterruptRequestedEvent'
 import { DomainEventRepository } from '@codm/core-typescript'
 
 /**
@@ -402,6 +403,35 @@ describe('IngestChannelMessage gate matrix', () => {
 				const second = await testBed.resolve(MailboxRepository).claimNext('origin-test', 60_000)
 				expect(second?.targetId).toBe(issue.id.value)
 				expect(originOf(second)).toBeUndefined()
+			})
+
+			/**
+			 * STEER IMEDIATO (fase 2, item 4): "agora" after the target records the cut request with the entry
+			 * (the cut itself runs after commit) and takes the word off what the session is told. Without it,
+			 * nothing is cut. Falsifier: drop the `CUTS_RUNNING_TURN` branch and the first case finds no fact.
+			 */
+			it('"APP-11 agora …" asks for the running turn to be cut; a plain steer does not', async () => {
+				const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+				const issue = await givenIssue(testBed, { threadId: thread.id.value, key: 'APP-11' })
+				const ingest = (text: string) =>
+					testBed.resolve(IngestChannelMessage).execute({
+						threadId: thread.id.value,
+						senderExternalId: 'stranger-42',
+						text: `${GIVEN_MENTION_TAG} ${text}`,
+						receivedAt: new Date(),
+					})
+
+				const out = await ingest('APP-11 agora tira o rodapé')
+				const steer = await testBed.resolve(MailboxRepository).claimNext('urgency-test', 60_000)
+				const text = (steer?.payload as { text?: string } | undefined)?.text ?? ''
+				expect(text).toContain('tira o rodapé')
+				expect(text).not.toMatch(/agora/i)
+				const facts = await testBed.resolve(DomainEventRepository).findByType(IssueTurnInterruptRequestedEvent)
+				expect(facts.map(fact => fact.payload)).toEqual([{ threadId: thread.id.value, issueId: issue.id.value, entryId: out.entryId }])
+				if (steer) await testBed.resolve(MailboxRepository).complete(steer.id)
+
+				await ingest('APP-11 usa o azul')
+				expect(await testBed.resolve(DomainEventRepository).findByType(IssueTurnInterruptRequestedEvent)).toHaveLength(1)
 			})
 
 			it('naming a running issue by key routes there too', async () => {

@@ -21,7 +21,15 @@ import { AGENT_SPEAKER } from '../objects'
 import { MessageIngestedEvent } from '../events/MessageIngestedEvent'
 import { CUE_ACKNOWLEDGED, CUE_PAUSED, CUE_RESUMED } from '../utils/ChannelCues'
 import { parseControlCommand } from '../utils/controlCommand'
-import { IssueControlCommand } from '../enums'
+import { parseSteerUrgency } from '../utils/steerUrgency'
+import { IssueControlCommand, SteerUrgency } from '../enums'
+import { IssueTurnInterruptRequestedEvent } from '../events/IssueTurnInterruptRequestedEvent'
+
+/** Whether a steer of this urgency cuts the issue's running turn (fase 2, item 4). */
+const CUTS_RUNNING_TURN: Readonly<Record<SteerUrgency, boolean>> = {
+	[SteerUrgency.NEXT_STEP]: false,
+	[SteerUrgency.NOW]: true,
+}
 import type { Thread } from '../entities/Thread'
 import { OPERATOR_PARTICIPANT_ID } from '../entities/Thread'
 import type { ReactToChannelMessage } from './ReactToChannelMessage'
@@ -205,7 +213,10 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 				// between (measured: a message waited a median 24 s, p90 110 s, and up to 1h30 behind that queue).
 				// The group gets only the 👀 below; the issue's timeline shows the message as sent, delivered, read.
 				const speaker = thread.displayNameOf(input.senderExternalId)
-				const said = thread.textWithoutMention(input.text)
+				// "agora" / "now" after the target (fase 2, item 4): cut the running turn so this steer leads the
+				// next one. The word itself is taken off what the session is told.
+				const steer = parseSteerUrgency(thread.textWithoutMention(input.text))
+				const said = steer.text
 				const replyingTo = quoted && routed.via === 'REPLY_QUOTE' ? `\n(respondendo a: «${quoted.text.slice(0, 300)}»)` : ''
 				// WHERE IT CAME FROM, so the dispatcher can answer ☑️ / ✅ on this very message (fase 2, item 5).
 				// Same gate as the 👀 below: no platform id or reactions off ⇒ no origin ⇒ no cue later either.
@@ -226,12 +237,25 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 							key: routed.issue.key,
 							title: routed.issue.title,
 							text: `${speaker}: ${said}${replyingTo}`,
+							// The steer's own entry — what the turn carrying it registers, so an "agora" never cuts it.
+							entryId: entry.entryId,
 							channelOrigin,
 						},
 						dedupKey: `steer:${entry.entryId}:${routed.issue.issueId}`,
 					},
 					tx,
 				)
+				if (CUTS_RUNNING_TURN[steer.urgency]) {
+					// The cut happens AFTER commit, in `InterruptIssueTurnOnSteer` — never inside this transaction.
+					await this.domainEventRepository.save(
+						new IssueTurnInterruptRequestedEvent({
+							entityId: thread.id.value,
+							ownerId: thread.ownerId,
+							payload: { threadId: thread.id.value, issueId: routed.issue.issueId, entryId: entry.entryId },
+						}),
+						tx,
+					)
+				}
 				if (input.platformMessageId && thread.reactionsEnabled) {
 					await this.enqueueCue(thread, input, entry.entryId, CUE_ACKNOWLEDGED, tx)
 				}

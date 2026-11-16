@@ -11,3 +11,5 @@ export * from './TransportStopKind'
 export * from './ResumeInvalidationReason'
 // The `<msg>` prompt grammar — how a line reached the conversation when the room did not see it.
 export * from './MessageVia'
+// Why a running issue turn was killed — pause (fase 2, item 2) or "agora" (item 4).
+export * from './TurnAbortReason'

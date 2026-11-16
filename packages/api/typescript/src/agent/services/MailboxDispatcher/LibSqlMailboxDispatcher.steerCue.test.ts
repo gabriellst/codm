@@ -1,14 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
-import {
-	CommandQueue,
-	type Handler,
-	LibSqlCommandQueue,
-	LibSqlDatabaseDriver,
-	MockLoggingService,
-	type Transaction,
-} from '@codm/core-typescript'
+import { CommandQueue, type Handler, MockCommandQueue, type Transaction } from '@codm/core-typescript'
 import { MailboxItemKind, MailboxTargetKind, PermissionPosture, ProviderKind } from '@codm/contracts-typescript/wire/enums'
 import { TestBed, givenIssue, givenThread, givenWorkspace } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
@@ -20,8 +13,11 @@ import { MailboxDispatcher } from './MailboxDispatcher'
 
 type JobsOptions = Parameters<CommandQueue['enqueueCommand']>[2]
 
-/** The real queue, never polled, that also remembers every enqueue — a conflict-dropped duplicate included. */
-class RecordingCommandQueue extends LibSqlCommandQueue {
+/**
+ * A queue that RECORDS every reaction enqueued — each call, so a duplicate a real queue would drop on
+ * its job id still shows — and runs none of them.
+ */
+class RecordingCommandQueue extends MockCommandQueue {
 	readonly reactions: string[] = []
 	override async enqueueCommand<T extends Handler>(
 		name: T['name'],
@@ -29,7 +25,10 @@ class RecordingCommandQueue extends LibSqlCommandQueue {
 		opts?: JobsOptions,
 		tx?: Transaction,
 	): Promise<void> {
-		if (name === 'react_to_channel_message') this.reactions.push((input as { reaction: string }).reaction)
+		if (name === 'react_to_channel_message') {
+			this.reactions.push((input as { reaction: string }).reaction)
+			return
+		}
 		await super.enqueueCommand<T>(name, input, opts, tx)
 	}
 }
@@ -41,7 +40,7 @@ type Outcome = { spoke: boolean; held?: true; transportStop?: { detail: string }
  * ENTREGUE / LIDO NO WHATSAPP (fase 2, item 5) — a steer routed from a channel message walks 👀 → ☑️ → ✅
  * on that very message.
  *
- * Measured on the real queue and the real dispatcher, with the issue turn replaced by a scripted report:
+ * Measured on the real dispatcher (a recording queue), with the issue turn replaced by a scripted report:
  * the first hand-off of the item queues ☑️, the turn that consumes it queues ✅. A retry is the same
  * delivery and queues nothing new; a turn a pause killed is not "read"; a steer that did not come from
  * a channel message (console, loop, stop resolution) queues nothing at all.
@@ -59,8 +58,7 @@ describe('a routed steer answers delivered and read on the message it came from'
 		testContainer = container.createChildContainer()
 		testBed = await TestBed.create('integration', { testContainer, ownerId: MOCK_CLOUD_OWNER_ID })
 		// ONE queue for the suite: the dispatcher is a singleton and keeps the queue it was built with.
-		queue = new RecordingCommandQueue(testBed.resolve(LibSqlDatabaseDriver), new MockLoggingService())
-		queue.stopPolling()
+		queue = new RecordingCommandQueue()
 		testBed.override(CommandQueue, queue)
 	})
 	beforeEach(async () => {
@@ -68,7 +66,6 @@ describe('a routed steer answers delivered and read on the message it came from'
 		queue.reactions.length = 0
 	})
 	afterAll(async () => {
-		await queue.close()
 		await testBed.destroy()
 	})
 

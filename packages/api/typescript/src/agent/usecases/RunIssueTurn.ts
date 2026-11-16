@@ -16,7 +16,7 @@ import { AgentRunnerFactory } from '../services/AgentRunnerFactory'
 import type { AgentRunner } from '../services/AgentRunner'
 import { ProviderDetector, type DetectedProvider, type ProviderDetection } from '../services/ProviderDetector'
 import { AgentStreamRegistry } from '../services/AgentStreamRegistry'
-import { IssueTurnAborter } from '../services/IssueTurnAborter'
+import { abortReasonOf, IssueTurnAborter } from '../services/IssueTurnAborter'
 import { TerminalOutputAccumulator, type TerminalOutcome } from '../services/TerminalOutputAccumulator'
 import { AgentSessionRepository } from '../repositories/AgentSessionRepository'
 import { MailboxRepository } from '../repositories/MailboxRepository'
@@ -26,7 +26,7 @@ import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
 import { AgentUsageEvent } from '../events/AgentUsageEvent'
 import type { AgentApplicationErrors } from '../errors'
-import { ResumeInvalidationReason, AgentRunOutcome, FactSource, MessageVia } from '../enums'
+import { ResumeInvalidationReason, AgentRunOutcome, FactSource, MessageVia, TurnAbortReason } from '../enums'
 import { isTransportStopKind, retriesInPlace, TRANSPORT_STOP_RETRIES } from '../enums/TransportStopKind'
 
 export const RunIssueTurnInputSchema = z.object({
@@ -121,6 +121,14 @@ export const RunIssueTurnOutputSchema = z.object({
 	 * failing it: a turn the operator stopped is neither done nor broken.
 	 */
 	held: z.literal(true).optional(),
+	/**
+	 * The turn was CUT by an "agora" steer (fase 2, item 4 — `TurnAbortReason.INTERRUPT`). Like `held`,
+	 * nothing of its conclusion is persisted — no ISSUE_RESULT, no stop. Unlike `held`, the session cursor
+	 * IS kept when the run reported its session (`sessionKept`), so the steer's turn resumes the same CLI
+	 * session — the brief and the work done so far included — and the cut item counts as consumed. A run
+	 * killed before the CLI reported a session kept nothing, and its item must run again.
+	 */
+	interrupted: z.object({ sessionKept: z.boolean() }).optional(),
 })
 
 /** What the drain loop observed beyond transport — the run's conclusion and its session identity. */
@@ -223,7 +231,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		// that landed in between is already visible here: the turn never starts. Absent for a caller that
 		// registered nothing (the test door) — such a turn simply cannot be killed.
 		const signal = this.aborter.signalFor(input.issueId)
-		if (signal?.aborted) return this.held(input)
+		if (signal?.aborted) return abortReasonOf(signal) === TurnAbortReason.INTERRUPT ? this.interrupted(input, false) : this.held(input)
 
 		const { detection, runner } = await this.resolveProvider(input.provider)
 		// Decided BEFORE the opened fact commits: it is a read of durable state, and the argv it
@@ -247,6 +255,27 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		// KILLED BY A PAUSE: whatever the runner made of the dead child (a transport stop, a thrown error,
 		// a truncated reply) is not this turn's conclusion. Nothing is persisted, so no ISSUE_RESULT reaches
 		// the group and no stop is raised for a run the operator stopped on purpose.
+		if (signal?.aborted && abortReasonOf(signal) === TurnAbortReason.INTERRUPT) {
+			// CUT BY "AGORA" (fase 2, item 4): still no conclusion — the operator cut it on purpose — but the
+			// session the CLI reported is kept, so the steer that asked for the cut resumes it.
+			const reported = drained.success ? drained.data : undefined
+			const sessionId = reported?.agentSessionId ?? null
+			if (sessionId) {
+				await this.withTransaction(tx, async tx => {
+					await this.upsertSessionRecord(input, sessionId, reported?.contextTokens, tx)
+					if (reported?.usage) {
+						await this.domainEventRepository.save(
+							new AgentUsageEvent({ entityId: input.issueId, ownerId: input.ownerId, payload: reported.usage }),
+							tx,
+						)
+					}
+				})
+			}
+			this.logging.info({
+				content: { message: 'issue turn cut by an "agora" steer', issueId: input.issueId, sessionKept: sessionId !== null },
+			})
+			return this.interrupted(input, sessionId !== null)
+		}
 		if (signal?.aborted) {
 			this.logging.info({ content: { message: 'issue turn killed by a pause — the item goes back held', issueId: input.issueId } })
 			return this.held(input)
@@ -289,6 +318,11 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 	/** The report of a turn a pause killed or kept from starting — see `held` on the output schema. */
 	private held(input: this['input']): this['output'] {
 		return { issueId: input.issueId, outcome: AgentRunOutcome.STOPPED, spoke: false, held: true }
+	}
+
+	/** The report of a turn an "agora" steer cut — see `interrupted` on the output schema. */
+	private interrupted(input: this['input'], sessionKept: boolean): this['output'] {
+		return { issueId: input.issueId, outcome: AgentRunOutcome.STOPPED, spoke: false, interrupted: { sessionKept } }
 	}
 
 	/**

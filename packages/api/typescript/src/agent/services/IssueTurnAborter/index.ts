@@ -1,1 +1,1 @@
-export { IssueTurnAborter, type IssueTurnHandle } from './IssueTurnAborter'
+export { abortReasonOf, IssueTurnAborter, type IssueTurnHandle } from './IssueTurnAborter'
