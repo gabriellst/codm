@@ -2,8 +2,9 @@ import { injectable } from 'tsyringe-neo'
 import { and, eq, isNull } from 'drizzle-orm'
 import { LibSqlDatabaseDriver, Handler, z } from '@codm/core-typescript'
 import { issues, threads } from '@codm/contracts/db'
-import { IssueStatus } from '@codm/contracts-typescript/wire/enums'
+import { IssueLifeState, IssueStatus } from '@codm/contracts-typescript/wire/enums'
 import { providerWaitByIssue } from '../utils/providerWaitByIssue'
+import { lifeStateByIssue } from '../utils/issueLifeState'
 
 const IssueItemSchema = z.object({
 	issueId: z.uuid(),
@@ -20,6 +21,8 @@ const IssueItemSchema = z.object({
 	 * by a weekly window rendered as an ordinary `WORKING` row (measured 2026-11-11, four of them).
 	 */
 	waitingForProviderUntil: z.string().optional(),
+	/** Where the work stands right now, by rule (`lifeStateOf`) — what the board columns are. */
+	lifeState: z.enum(IssueLifeState),
 })
 
 export const GetIssuesOverviewInputSchema = z.object({ ownerId: z.uuid(), includeArchived: z.boolean().default(false) })
@@ -67,6 +70,10 @@ export class GetIssuesOverview extends Handler<typeof GetIssuesOverviewInputSche
 			.where(eq(issues.ownerId, input.ownerId))
 
 		const waiting = await providerWaitByIssue(this.driver)
+		const life = await lifeStateByIssue(
+			this.driver,
+			rows.filter(r => !r.archived).map(r => ({ issueId: r.issueId, status: r.status as IssueStatus })),
+		)
 
 		const items = rows.map(r => ({
 			issueId: r.issueId,
@@ -78,6 +85,8 @@ export class GetIssuesOverview extends Handler<typeof GetIssuesOverviewInputSche
 			threadId: r.threadId,
 			threadDisplayName: r.threadDisplayName,
 			waitingForProviderUntil: waiting.get(r.issueId)?.toISOString(),
+			// Archived issues are off the board; they read as DONE rather than paying the queue read.
+			lifeState: life.get(r.issueId) ?? IssueLifeState.DONE,
 		}))
 
 		const active = items.filter(i => !i.archived)

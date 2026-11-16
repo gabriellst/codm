@@ -19,8 +19,16 @@ export const MOCK_CLOUD_OWNER_ID = '33333333-3333-4333-8333-333333333333'
 export class MockCloudSession extends CloudSession {
 	private entitled = true
 
-	setToken(_token: string): void {
+	private token: string | undefined
+
+	setToken(token: string): void {
 		this.entitled = true
+		this.token = token
+	}
+
+	/** A header only once a token was set — a test that never logs in sees "no credential". */
+	authorizationHeader(): Record<string, string> | undefined {
+		return this.token ? { Authorization: `Bearer ${this.token}` } : undefined
 	}
 
 	async isEntitled(): Promise<boolean> {

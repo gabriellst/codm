@@ -196,7 +196,9 @@ export type { InternalChannelMessageReceivedPlatformData } from "./types/Interna
 export type { InternalChannelMessageSentPlatformData } from "./types/InternalChannelMessageSentPlatformData.ts";
 export type { InternalTextContent } from "./types/InternalTextContent.ts";
 export type { IssueArchiveReason, IssueArchiveReasonEnumKey } from "./types/IssueArchiveReason.ts";
+export type { IssueLifeState, IssueLifeStateEnumKey } from "./types/IssueLifeState.ts";
 export type { IssueStatus, IssueStatusEnumKey } from "./types/IssueStatus.ts";
+export type { IssueTimelineItemKind, IssueTimelineItemKindEnumKey } from "./types/IssueTimelineItemKind.ts";
 export type { Language, LanguageEnumKey } from "./types/Language.ts";
 export type { ListChannels200, ListChannelsError, ListChannelsQuery, ListChannelsQueryParams, ListChannelsQueryResponse } from "./types/ListChannels.ts";
 export type { ListChannelsItem } from "./types/ListChannelsItem.ts";
@@ -577,7 +579,9 @@ export { IntegrationChannelSyncCompletedEventNameEnum } from "./types/Integratio
 export { IntegrationChannelSyncProgressEventNameEnum } from "./types/IntegrationChannelSyncProgressEvent.ts";
 export { IntegrationChannelSyncStartedEventNameEnum } from "./types/IntegrationChannelSyncStartedEvent.ts";
 export { IssueArchiveReasonEnum } from "./types/IssueArchiveReason.ts";
+export { IssueLifeStateEnum } from "./types/IssueLifeState.ts";
 export { IssueStatusEnum } from "./types/IssueStatus.ts";
+export { IssueTimelineItemKindEnum } from "./types/IssueTimelineItemKind.ts";
 export { LanguageEnum } from "./types/Language.ts";
 export { LogLevelEnum } from "./types/LogLevel.ts";
 export { LoopScheduleKindEnum } from "./types/LoopScheduleKind.ts";
@@ -759,7 +763,9 @@ export { internalChannelMessageReceivedPlatformDataSchema } from "./zod/internal
 export { internalChannelMessageSentPlatformDataSchema } from "./zod/internalChannelMessageSentPlatformDataSchema.ts";
 export { internalTextContentSchema } from "./zod/internalTextContentSchema.ts";
 export { issueArchiveReasonSchema } from "./zod/issueArchiveReasonSchema.ts";
+export { issueLifeStateSchema } from "./zod/issueLifeStateSchema.ts";
 export { issueStatusSchema } from "./zod/issueStatusSchema.ts";
+export { issueTimelineItemKindSchema } from "./zod/issueTimelineItemKindSchema.ts";
 export { languageSchema } from "./zod/languageSchema.ts";
 export { listChannelsItemSchema } from "./zod/listChannelsItemSchema.ts";
 export { listChannelsOutputSchema } from "./zod/listChannelsOutputSchema.ts";

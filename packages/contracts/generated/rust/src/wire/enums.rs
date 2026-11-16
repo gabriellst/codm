@@ -575,6 +575,37 @@ pub enum IssueArchiveReason {
 	THREAD_DETACHED,
 }
 
+/// Where an Issue's work actually stands RIGHT NOW, computed by rule from the queue and the stops — never stored, never declared by the model. Orthogonal to IssueStatus (the lifecycle): a WORKING issue may be RUNNING, QUEUED, WAITING_PROVIDER, WAITING_PERSON, REMINDED or STALLED. RUNNING: a turn holds a live lease. QUEUED: work is waiting for a free slot. WAITING_PROVIDER: its next turn is deferred by the provider's usage limit. WAITING_PERSON: an open stop asks someone to decide, approve or answer. REMINDED: its last turn ended without declaring anything and the one declaration reminder is pending or running. STALLED: nothing in flight and no open stop — the reconcile sweep has not caught it yet, or the reminder was ignored. DONE: COMPLETED.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum IssueLifeState {
+	#[serde(rename = "RUNNING")]
+	#[strum(serialize = "RUNNING")]
+	RUNNING,
+	#[serde(rename = "QUEUED")]
+	#[strum(serialize = "QUEUED")]
+	QUEUED,
+	#[serde(rename = "WAITING_PROVIDER")]
+	#[strum(serialize = "WAITING_PROVIDER")]
+	WAITING_PROVIDER,
+	#[serde(rename = "WAITING_PERSON")]
+	#[strum(serialize = "WAITING_PERSON")]
+	WAITING_PERSON,
+	#[serde(rename = "REMINDED")]
+	#[strum(serialize = "REMINDED")]
+	REMINDED,
+	#[serde(rename = "STALLED")]
+	#[strum(serialize = "STALLED")]
+	STALLED,
+	#[serde(rename = "DONE")]
+	#[strum(serialize = "DONE")]
+	DONE,
+}
+
 /// Lifecycle of an Issue (a unit of work with its own terminal session). NEEDS_INPUT → WORKING → COMPLETED. Richer than whatscode's ChatSessionStatus{ACTIVE,CLOSED}.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
@@ -592,6 +623,43 @@ pub enum IssueStatus {
 	#[serde(rename = "COMPLETED")]
 	#[strum(serialize = "COMPLETED")]
 	COMPLETED,
+}
+
+/// The kinds of moment an Issue's timeline shows, oldest first. Discriminant of the timeline item union: each kind carries its own fields. CREATED: the issue was forked. TURN_STARTED: a turn of its session began. MESSAGE: a transcript entry linked to the issue (what the agent said about it, or a reply that quoted it). STEER: guidance sent to it (with sent/delivered/read instants). ARTIFACT: a file, image, video or link it recorded. STOP_RAISED / STOP_RESOLVED: it asked for someone, and someone answered. COMPLETED: it declared itself done. ARCHIVED: it left the board.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum IssueTimelineItemKind {
+	#[serde(rename = "CREATED")]
+	#[strum(serialize = "CREATED")]
+	CREATED,
+	#[serde(rename = "TURN_STARTED")]
+	#[strum(serialize = "TURN_STARTED")]
+	TURN_STARTED,
+	#[serde(rename = "MESSAGE")]
+	#[strum(serialize = "MESSAGE")]
+	MESSAGE,
+	#[serde(rename = "STEER")]
+	#[strum(serialize = "STEER")]
+	STEER,
+	#[serde(rename = "ARTIFACT")]
+	#[strum(serialize = "ARTIFACT")]
+	ARTIFACT,
+	#[serde(rename = "STOP_RAISED")]
+	#[strum(serialize = "STOP_RAISED")]
+	STOP_RAISED,
+	#[serde(rename = "STOP_RESOLVED")]
+	#[strum(serialize = "STOP_RESOLVED")]
+	STOP_RESOLVED,
+	#[serde(rename = "COMPLETED")]
+	#[strum(serialize = "COMPLETED")]
+	COMPLETED,
+	#[serde(rename = "ARCHIVED")]
+	#[strum(serialize = "ARCHIVED")]
+	ARCHIVED,
 }
 
 /// UI locale the app ships translations for.

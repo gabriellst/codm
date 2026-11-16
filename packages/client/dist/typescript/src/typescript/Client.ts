@@ -26,6 +26,7 @@ import {
 	getHomeDashboard,
 	getIssueDetail,
 	getIssueStatus,
+	getIssueTimeline,
 	getIssuesOverview,
 	getMyAccount,
 	getNeedsYouPanel,
@@ -34,6 +35,7 @@ import {
 	getSessionChat,
 	getSessionIssues,
 	getSettings,
+	getThreadPanelLink,
 	getThreadSettings,
 	getUserInfo,
 	health,
@@ -48,6 +50,7 @@ import {
 	resolveStop,
 	restoreIssue,
 	resumeThread,
+	rotateThreadPanelLink,
 	saveOnboardingStep,
 	sendArtifact,
 	sendDirectMessage,
@@ -181,6 +184,10 @@ export class TypescriptClient {
 		return (getIssueStatus as (...a: any[]) => ReturnType<typeof getIssueStatus>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	getIssueTimeline(...args: Parameters<typeof getIssueTimeline>): ReturnType<typeof getIssueTimeline> {
+		return (getIssueTimeline as (...a: any[]) => ReturnType<typeof getIssueTimeline>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	getIssuesOverview(...args: Parameters<typeof getIssuesOverview>): ReturnType<typeof getIssuesOverview> {
 		return (getIssuesOverview as (...a: any[]) => ReturnType<typeof getIssuesOverview>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
@@ -211,6 +218,10 @@ export class TypescriptClient {
 
 	getSettings(...args: Parameters<typeof getSettings>): ReturnType<typeof getSettings> {
 		return (getSettings as (...a: any[]) => ReturnType<typeof getSettings>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	getThreadPanelLink(...args: Parameters<typeof getThreadPanelLink>): ReturnType<typeof getThreadPanelLink> {
+		return (getThreadPanelLink as (...a: any[]) => ReturnType<typeof getThreadPanelLink>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	getThreadSettings(...args: Parameters<typeof getThreadSettings>): ReturnType<typeof getThreadSettings> {
@@ -267,6 +278,10 @@ export class TypescriptClient {
 
 	resumeThread(...args: Parameters<typeof resumeThread>): ReturnType<typeof resumeThread> {
 		return (resumeThread as (...a: any[]) => ReturnType<typeof resumeThread>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	rotateThreadPanelLink(...args: Parameters<typeof rotateThreadPanelLink>): ReturnType<typeof rotateThreadPanelLink> {
+		return (rotateThreadPanelLink as (...a: any[]) => ReturnType<typeof rotateThreadPanelLink>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	saveOnboardingStep(...args: Parameters<typeof saveOnboardingStep>): ReturnType<typeof saveOnboardingStep> {

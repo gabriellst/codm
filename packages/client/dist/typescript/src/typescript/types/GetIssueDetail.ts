@@ -4,6 +4,7 @@
 */
 
 import type { ClassificationMethod } from "./ClassificationMethod.ts";
+import type { IssueLifeState } from "./IssueLifeState.ts";
 import type { IssueStatus } from "./IssueStatus.ts";
 import type { ProviderKind } from "./ProviderKind.ts";
 import type { StopKind } from "./StopKind.ts";
@@ -52,6 +53,10 @@ export type GetIssueDetail200 = {
          * @type string | undefined
         */
         waitingForProviderUntil?: string;
+        /**
+         * @type string
+        */
+        lifeState: IssueLifeState;
     };
     /**
      * @type string

@@ -4,6 +4,7 @@
 */
 
 import { classificationMethodSchema } from "./classificationMethodSchema.ts";
+import { issueLifeStateSchema } from "./issueLifeStateSchema.ts";
 import { issueStatusSchema } from "./issueStatusSchema.ts";
 import { providerKindSchema } from "./providerKindSchema.ts";
 import { stopKindSchema } from "./stopKindSchema.ts";
@@ -27,7 +28,10 @@ get "status"(){
               },
 "meta": z.optional(z.string()),
 "archived": z.boolean(),
-"waitingForProviderUntil": z.optional(z.string())
+"waitingForProviderUntil": z.optional(z.string()),
+get "lifeState"(){
+                return issueLifeStateSchema
+              }
     }),
 get "provider"(){
                 return providerKindSchema

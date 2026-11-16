@@ -38,7 +38,7 @@ describe('deployment (a tabela de alocação por contexto)', () => {
 	})
 
 	it('DEP-03: o conjunto da nuvem é DERIVADO da tabela, não declarado à parte', () => {
-		expect(mountedContexts({ deployment: 'cloud' }).sort()).toEqual(['auth', 'owner', 'shared'])
+		expect(mountedContexts({ deployment: 'cloud' }).sort()).toEqual(['auth', 'owner', 'panel', 'shared'])
 	})
 
 	it('DEP-04: o desktop monta OITO — `auth` e `owner` sao da nuvem (ADR 0001)', () => {

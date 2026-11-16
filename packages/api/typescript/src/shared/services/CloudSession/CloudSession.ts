@@ -46,4 +46,12 @@ export abstract class CloudSession {
 
 	/** Este install pode trabalhar. Memoizado — ver a nota de cadência acima. */
 	abstract isEntitled(): Promise<boolean>
+
+	/**
+	 * The header that authenticates a call to the CLOUD as this install's user — `{ Authorization }` —
+	 * or nothing when there is no credential or it was revoked. For the few daemon→cloud calls beyond
+	 * `GET /session` (the panel sync, fase 1): the caller gets a ready header, never the raw token, and
+	 * the cloud still decides whether it is valid.
+	 */
+	abstract authorizationHeader(): Record<string, string> | undefined
 }

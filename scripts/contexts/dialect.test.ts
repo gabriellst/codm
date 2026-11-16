@@ -67,7 +67,7 @@ describe('DialectNamespace — o namespace lógico vira tabela física', () => {
 		expect(owners.get('events')).toBe('shared')
 	})
 
-	it('DIA-07: o TRONCO CLOUD está na forma CERTA — namespace nativo nas 13 tabelas (T1.9)', () => {
+	it('DIA-07: o TRONCO CLOUD está na forma CERTA — namespace nativo nas 16 tabelas (T1.9 + panel)', () => {
 		const source = readSchemas(CLOUD)
 		const owners = pgNamespace.tableOwners(source)
 
@@ -76,7 +76,7 @@ describe('DialectNamespace — o namespace lógico vira tabela física', () => {
 		// escrito. A T1.9 converteu as 13 tabelas, e no mesmo commit em que o tronco mudou de forma
 		// esta linha teve de mudar de sinal. Um rail que mede um defeito é um rail com prazo: ou o
 		// defeito é corrigido e ele vira guarda, ou ele fica verde para sempre descrevendo a doença.
-		expect(owners.size, 'as 13 tabelas do tronco cloud, cada uma sob seu schema').toBe(13)
+		expect(owners.size, 'as 16 tabelas do tronco cloud, cada uma sob seu schema').toBe(16)
 		expect(source).toContain('pgSchema(')
 		// Sobre a DECLARAÇÃO, não sobre o arquivo: os docblocks citam `pgTable('authentication_users')`
 		// de propósito, para dizer o que a T1.9 aposentou. É a mesma lição do CTX-04 — uma asserção de
@@ -88,7 +88,7 @@ describe('DialectNamespace — o namespace lógico vira tabela física', () => {
 		expect(owners.get('users')).toBe('authentication')
 		expect(owners.get('owners')).toBe('owner')
 		expect(owners.get('events')).toBe('shared')
-		expect(new Set(owners.values())).toEqual(new Set(['authentication', 'owner', 'shared']))
+		expect(new Set(owners.values())).toEqual(new Set(['authentication', 'owner', 'panel', 'shared']))
 	})
 
 	it('DIA-08: os dois dialetos estão no registro, e cada um sabe seu id', () => {

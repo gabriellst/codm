@@ -3,6 +3,7 @@
 * Do not edit manually.
 */
 
+import { issueLifeStateSchema } from "./issueLifeStateSchema.ts";
 import { issueStatusSchema } from "./issueStatusSchema.ts";
 import { z } from "zod/v4";
 
@@ -35,7 +36,10 @@ get "status"(){
 "archived": z.boolean(),
 "threadId": z.uuid(),
 "threadDisplayName": z.string(),
-"waitingForProviderUntil": z.optional(z.string())
+"waitingForProviderUntil": z.optional(z.string()),
+get "lifeState"(){
+                return issueLifeStateSchema
+              }
     }))
     })),
 "archived": z.array(z.object({
@@ -49,7 +53,10 @@ get "status"(){
 "archived": z.boolean(),
 "threadId": z.uuid(),
 "threadDisplayName": z.string(),
-"waitingForProviderUntil": z.optional(z.string())
+"waitingForProviderUntil": z.optional(z.string()),
+get "lifeState"(){
+                return issueLifeStateSchema
+              }
     }))
     })
 

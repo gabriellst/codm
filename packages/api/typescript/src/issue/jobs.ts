@@ -5,3 +5,4 @@
  * hora, no `static repeat`) são grandezas diferentes e vivem lado a lado na classe.
  */
 export { AutoArchiveCompletedIssues } from './usecases/AutoArchiveCompletedIssues'
+export { PublishPanelSnapshot } from './usecases/PublishPanelSnapshot'

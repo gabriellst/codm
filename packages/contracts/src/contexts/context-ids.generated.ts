@@ -9,4 +9,4 @@
 // `owner` contra CONTEXTO ∪ WORKSPACE, e contracts não pode importar de `api/typescript/src`.
 
 /** Identidade de pasta/import — casa com `src/<module>/` exatamente. */
-export type ContextId = 'agent' | 'artifact' | 'auth' | 'external' | 'issue' | 'owner' | 'shared' | 'thread' | 'ui' | 'workspace'
+export type ContextId = 'agent' | 'artifact' | 'auth' | 'external' | 'issue' | 'owner' | 'panel' | 'shared' | 'thread' | 'ui' | 'workspace'

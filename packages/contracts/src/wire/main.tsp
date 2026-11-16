@@ -41,6 +41,8 @@ import "./enums/workspace-badge.tsp";
 import "./enums/thread-status.tsp";
 import "./enums/thread-mode.tsp";
 import "./enums/issue-status.tsp";
+import "./enums/issue-life-state.tsp";
+import "./enums/issue-timeline-item-kind.tsp";
 import "./enums/issue-archive-reason.tsp";
 import "./enums/stop-kind.tsp";
 import "./enums/stop-resolution.tsp";
