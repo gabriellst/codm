@@ -46,6 +46,21 @@ const ProductEnvSchema = z.object({
 	// compactações). A faixa é a que o CLI aceita; fora dela ele mesmo trocaria o valor por um limite.
 	CODM_AGENT_AUTO_COMPACT_WINDOW: z.coerce.number().int().min(100_000).max(1_000_000).default(300_000),
 
+	// O TETO DA PAUSA POR LIMITE DE USO — por quanto tempo, no máximo, a fila do agente espera antes de
+	// perguntar de novo ao provedor, mesmo quando o reset informado pelo CLI está a dias de distância.
+	//
+	// O limite é da CONTA, e a conta muda debaixo da pausa: medido em 05/11, o CLI foi logado numa conta
+	// nova e zerada, outras issues rodavam nela, e quatro itens seguiam pausados até 10/11 14:00 pelo
+	// limite semanal da conta antiga. Perguntar de novo é barato: a recusa volta na hora, não gasta
+	// tokens e não gasta tentativa (`MailboxRepository.defer` a devolve). Abaixo do piso de 60 s do
+	// despachante (`PROVIDER_PAUSE_FLOOR_MS`) quem vale é o piso — ele existe para que um valor pequeno
+	// não vire um laço de reivindica-recusa-reivindica.
+	CODM_AGENT_LIMIT_RECHECK_MS: z.coerce
+		.number()
+		.int()
+		.positive()
+		.default(30 * 60 * 1000),
+
 	// O NOME DO ARQUIVO DE STORE dentro do `CODM_DATA_DIR` (F3/T8).
 	//
 	// Estava literalizado em 10 lugares, dois deles em LINGUAGENS DIFERENTES que precisam casar byte

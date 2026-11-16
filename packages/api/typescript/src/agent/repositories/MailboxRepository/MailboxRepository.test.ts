@@ -233,6 +233,77 @@ describe('MailboxRepository — one turn per target, durable', () => {
 		expect((await r.claimNext('w1', 60_000))?.attempts).toBe(1)
 	})
 
+	/**
+	 * A PAUSA POR LIMITE É ACHÁVEL SEM COLUNA NOVA — e só ela.
+	 *
+	 * `deferred` é a metade SQL da liberação (05/11/2026: a conta foi trocada e quatro itens seguiram
+	 * pausados até 10/11 pelo limite semanal da conta ANTIGA). O predicado é o estado que só `defer`
+	 * escreve: item vivo, SEM dono, lease no futuro. Cada vizinho abaixo é um estado que se parece com
+	 * uma pausa e não é: um turno em curso (tem dono), uma pausa já vencida (o claim a pega sozinho), um
+	 * item nunca reivindicado (sem lease) e um item morto.
+	 *
+	 * Falsificador: tire o `claimed_by IS NULL` do predicado e o turno em curso aparece como pausa — e
+	 * a liberação passa a tirar o lease de um turno vivo, que é o turno duplo que a fila existe para impedir.
+	 */
+	it('deferred lista só a pausa por limite: item vivo, sem dono e com lease no futuro', async () => {
+		const r = repo()
+		const db = testBed.resolve(LibSqlDatabaseDriver).db
+		const target = (n: number) => `00000000-0000-4000-8000-0000000d000${n}`
+		for (let n = 1; n <= 5; n++) await r.enqueue(item(target(n), `pausa-${n}`))
+
+		const paused = await r.claimNext('w1', 60_000)
+		const running = await r.claimNext('w-segurando', 600_000)
+		const lapsed = await r.claimNext('w1', 60_000)
+		const dead = await r.claimNext('w1', 60_000)
+		await r.defer(paused!.id, new Date(Date.now() + 600_000))
+		await r.defer(lapsed!.id, new Date(Date.now() - 1))
+		await r.defer(dead!.id, new Date(Date.now() + 600_000))
+		await db.update(agentMailbox).set({ deadAt: new Date() }).where(eq(agentMailbox.id, dead!.id))
+		// o quinto nunca foi reivindicado: lease nulo
+
+		const found = await r.deferred()
+		expect(found.map(d => d.id)).toEqual([paused!.id])
+		expect(found[0]).toMatchObject({ targetKind: MailboxTargetKind.THREAD, targetId: paused!.targetId, payload: paused!.payload })
+		expect(running).toBeDefined()
+	})
+
+	/**
+	 * A LIBERAÇÃO SOLTA A PAUSA DOS IDS PEDIDOS — e o predicado é REAFIRMADO no UPDATE.
+	 *
+	 * Entre o `deferred()` e o `releaseDeferred()` o despachante resolve o provedor de cada candidato, e
+	 * nesse meio tempo um claim pode ter acontecido. Por isso um id que hoje tem dono não é tocado, mesmo
+	 * pedido: o lease dele é de um turno vivo. A pausa liberada devolve o item à fila NA HORA, com a
+	 * tentativa que o `defer` reembolsou.
+	 *
+	 * Falsificadores: tire o UPDATE e o item pausado segue irreclamável; tire o `claimed_by IS NULL` e o
+	 * lease do turno em curso some.
+	 */
+	it('releaseDeferred solta a pausa dos ids pedidos, e nunca o lease de quem segura o item', async () => {
+		const r = repo()
+		const db = testBed.resolve(LibSqlDatabaseDriver).db
+		const THREAD_C = '00000000-0000-4000-8000-00000000cccc'
+		await r.enqueue(item(THREAD_A, 'solta'))
+		await r.enqueue(item(THREAD_B, 'fica'))
+		await r.enqueue(item(THREAD_C, 'segurado'))
+		const released = await r.claimNext('w1', 60_000)
+		const kept = await r.claimNext('w1', 60_000)
+		const held = await r.claimNext('w-segurando', 600_000)
+		await r.defer(released!.id, new Date(Date.now() + 600_000))
+		await r.defer(kept!.id, new Date(Date.now() + 600_000))
+
+		expect(await r.releaseDeferred([released!.id, held!.id])).toBe(1)
+
+		const again = await r.claimNext('w2', 60_000)
+		expect(again?.id).toBe(released!.id)
+		expect(again?.attempts).toBe(1)
+		// O que não foi pedido segue pausado, e o segurado segue com o lease e o dono.
+		expect(await r.claimNext('w2', 60_000)).toBeUndefined()
+		const [heldRow] = await db.select().from(agentMailbox).where(eq(agentMailbox.id, held!.id))
+		expect(heldRow?.claimedBy).toBe('w-segurando')
+		expect(heldRow?.leaseUntil).not.toBeNull()
+		expect(await r.releaseDeferred([])).toBe(0)
+	})
+
 	it('pendingTargets names each target of a kind that still has runnable work, once', async () => {
 		const r = repo()
 		await r.enqueue(item(THREAD_A, 'a-1'))
@@ -283,6 +354,8 @@ describe('MailboxRepository — one turn per target, durable', () => {
 			expect(gate).toHaveBeenCalledTimes(6)
 			await r.releaseOrphanedClaims()
 			expect(gate).toHaveBeenCalledTimes(7)
+			await r.releaseDeferred([again!.id])
+			expect(gate).toHaveBeenCalledTimes(8)
 		} finally {
 			gate.mockRestore()
 		}

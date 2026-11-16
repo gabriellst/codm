@@ -1,4 +1,4 @@
-import { Language, MailboxTargetKind, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { Language, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { defineMessages } from '@shared/i18n/messages'
 
 /**
@@ -61,27 +61,6 @@ function whenEn(at: Date, now: Date): string {
 interface ProviderPausedParams {
 	until: Date
 	now: Date
-	lane: MailboxTargetKind
-	probeEveryMinutes: number
-}
-
-/**
- * O que parou depende da PISTA que o provedor recusou, e o aviso diz isso — é uma relação declarada por
- * pista, não um `if`. Pausar as tarefas não cala a conversa (e vice-versa): o grupo precisa saber que
- * pode continuar falando.
- */
-const PROVIDER_PAUSED_PT: Record<MailboxTargetKind, (p: ProviderPausedParams) => string> = {
-	[MailboxTargetKind.THREAD]: p =>
-		`Atingi o limite de uso da conta do provedor do agente. As mensagens estão na fila e eu volto a responder ${whenPt(p.until, p.now)}. Antes disso, tento de novo a cada ${p.probeEveryMinutes} minutos.`,
-	[MailboxTargetKind.ISSUE]: p =>
-		`As tarefas pararam: a conta do provedor atingiu o limite de uso para esse trabalho. Elas voltam sozinhas ${whenPt(p.until, p.now)}, e eu tento de novo a cada ${p.probeEveryMinutes} minutos. Aqui na conversa eu continuo respondendo.`,
-}
-
-const PROVIDER_PAUSED_EN: Record<MailboxTargetKind, (p: ProviderPausedParams) => string> = {
-	[MailboxTargetKind.THREAD]: p =>
-		`I hit the usage limit of the agent's provider account. Messages are queued and I'll answer again ${whenEn(p.until, p.now)}. Until then, I'll retry every ${p.probeEveryMinutes} minutes.`,
-	[MailboxTargetKind.ISSUE]: p =>
-		`Tasks are paused: the provider account hit its usage limit for this work. They resume on their own ${whenEn(p.until, p.now)}, and I'll retry every ${p.probeEveryMinutes} minutes. I'm still answering here.`,
 }
 
 const PT_MESSAGES = {
@@ -101,7 +80,8 @@ const PT_MESSAGES = {
 	 * não há nada para o operador resolver — só esperar. O horário vem do instante ESTRUTURADO que o CLI
 	 * informou (`rate_limit_info.resetsAt`), no fuso desta máquina, que é a do operador.
 	 */
-	providerPausedNotice: (p: ProviderPausedParams) => PROVIDER_PAUSED_PT[p.lane](p),
+	providerPausedNotice: (p: ProviderPausedParams) =>
+		`Atingi o limite de uso da conta do provedor do agente. As mensagens estão na fila e eu volto a responder ${whenPt(p.until, p.now)}.`,
 }
 
 export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
@@ -109,6 +89,7 @@ export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
 	[Language.EN_US]: {
 		stopTitle: p => STOP_TITLES_EN[p.kind],
 		stopChannelNotice: p => (p.detail.length > 0 ? `${STOP_TITLES_EN[p.kind]}.\n\n${p.detail}` : `${STOP_TITLES_EN[p.kind]}.`),
-		providerPausedNotice: p => PROVIDER_PAUSED_EN[p.lane](p),
+		providerPausedNotice: p =>
+			`I hit the usage limit of the agent's provider account. Messages are queued and I'll answer again ${whenEn(p.until, p.now)}.`,
 	},
 })
