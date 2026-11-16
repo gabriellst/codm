@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
-import { TestBed, givenThread, GIVEN_MENTION_TAG } from '@test/support'
-import { ClassificationMethod, MailboxTargetKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
+import { TestBed, givenIssue, givenThread, GIVEN_MENTION_TAG } from '@test/support'
+import { ClassificationMethod, IssueStatus, MailboxTargetKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
 import { IngestChannelMessage } from './IngestChannelMessage'
@@ -334,6 +334,71 @@ describe('IngestChannelMessage gate matrix', () => {
 			const reply = await testBed.resolve(ThreadRepository).findEntry(out.entryId)
 			expect(reply?.issueId).toBe(issueId)
 			expect(reply?.classification).toBe(ClassificationMethod.REPLY_QUOTE)
+		})
+
+		/**
+		 * THE RULE ROUTER (fase 2, item 1): a message that belongs to a RUNNING issue goes straight to it as
+		 * a steer — no orchestrator turn. A finished issue still goes through the orchestrator (reopening
+		 * is its decision). Falsifier: drop the `invocable && routed` branch and every case queues the THREAD.
+		 */
+		describe('routes straight to a running issue', () => {
+			const queued = async () => {
+				const item = await testBed.resolve(MailboxRepository).claimNext('router-test', 60_000)
+				return { targetKind: item?.targetKind, targetId: item?.targetId, text: (item?.payload as { text?: string } | undefined)?.text }
+			}
+
+			it('a reply quoting a running issue’s message becomes that issue’s steer, signed by who wrote it', async () => {
+				const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+				const issue = await givenIssue(testBed, { threadId: thread.id.value, key: 'APP-7' })
+				const line = thread.recordEntry({ kind: TranscriptKind.SYSTEM, text: 'prévia pronta, posso publicar?', issueId: issue.id.value })
+				await testBed.resolve(ThreadRepository).save(thread)
+
+				await testBed.resolve(IngestChannelMessage).execute({
+					threadId: thread.id.value,
+					senderExternalId: 'stranger-42',
+					text: 'tira o rodapé antes',
+					quotedEntryId: line.entryId,
+					receivedAt: new Date(),
+				})
+
+				const item = await queued()
+				expect(item.targetKind).toBe(MailboxTargetKind.ISSUE)
+				expect(item.targetId).toBe(issue.id.value)
+				expect(item.text).toContain('tira o rodapé antes')
+			})
+
+			it('naming a running issue by key routes there too', async () => {
+				const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+				const issue = await givenIssue(testBed, { threadId: thread.id.value, key: 'APP-8' })
+
+				await testBed.resolve(IngestChannelMessage).execute({
+					threadId: thread.id.value,
+					senderExternalId: 'stranger-42',
+					text: `${GIVEN_MENTION_TAG} na APP-8 usa o azul`,
+					receivedAt: new Date(),
+				})
+
+				const item = await queued()
+				expect(item.targetKind).toBe(MailboxTargetKind.ISSUE)
+				expect(item.targetId).toBe(issue.id.value)
+			})
+
+			it('a finished issue is not routed — the orchestrator decides whether to reopen it', async () => {
+				const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+				const issue = await givenIssue(testBed, { threadId: thread.id.value, key: 'APP-9', status: IssueStatus.COMPLETED })
+				const line = thread.recordEntry({ kind: TranscriptKind.SYSTEM, text: 'no ar', issueId: issue.id.value })
+				await testBed.resolve(ThreadRepository).save(thread)
+
+				await testBed.resolve(IngestChannelMessage).execute({
+					threadId: thread.id.value,
+					senderExternalId: 'stranger-42',
+					text: 'muda a cor',
+					quotedEntryId: line.entryId,
+					receivedAt: new Date(),
+				})
+
+				expect((await queued()).targetKind).toBe(MailboxTargetKind.THREAD)
+			})
 		})
 
 		it('a reply to a conversational message stays unbound', async () => {

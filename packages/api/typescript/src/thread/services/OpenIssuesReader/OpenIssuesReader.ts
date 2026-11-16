@@ -1,3 +1,4 @@
+import type { Transaction } from '@codm/core-typescript'
 /**
  * An open issue a message could be routed to — the element type this reader returns.
  *
@@ -60,5 +61,8 @@ export abstract class OpenIssuesReader {
 	 * Devolve `undefined` para "não é sua" E para "está arquivada", sem distinguir: o chamador
 	 * transforma os dois no mesmo erro, e é isso que impede o endpoint de virar oráculo de ids.
 	 */
-	abstract steerableIssue(threadId: string, issueId: string): Promise<SteerableIssueRef | undefined>
+	abstract steerableIssue(threadId: string, issueId: string, tx?: Transaction): Promise<SteerableIssueRef | undefined>
+
+	/** The same question by the issue's KEY (`APP-12`) — what a person types when they name a task. */
+	abstract steerableIssueByKey(threadId: string, key: string, tx?: Transaction): Promise<SteerableIssueRef | undefined>
 }

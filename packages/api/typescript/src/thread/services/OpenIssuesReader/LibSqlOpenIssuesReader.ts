@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { and, eq, ne } from 'drizzle-orm'
-import { LibSqlDatabaseDriver, tryCatchAsync } from '@codm/core-typescript'
+import { LibSqlDatabaseDriver, LibSqlTransaction, tryCatchAsync } from '@codm/core-typescript'
 import { issues, transcriptEntries } from '@codm/contracts/db'
 import { IssueStatus } from '@codm/contracts-typescript/wire/enums'
 import type { OpenIssueRef, SteerableIssueRef } from './OpenIssuesReader'
@@ -59,11 +59,22 @@ export class LibSqlOpenIssuesReader extends OpenIssuesReader {
 	 * numa recusa silenciosa que o operador leria como "o agente me ignorou de novo". Deixar o erro
 	 * sair é a forma honesta de falhar.
 	 */
-	async steerableIssue(threadId: string, issueId: string): Promise<SteerableIssueRef | undefined> {
-		const rows = await this.driver.db
+	async steerableIssue(threadId: string, issueId: string, tx?: LibSqlTransaction): Promise<SteerableIssueRef | undefined> {
+		const rows = await (tx ?? this.driver.db)
 			.select({ issueId: issues.id, key: issues.key, title: issues.title, status: issues.status })
 			.from(issues)
 			.where(and(eq(issues.threadId, threadId), eq(issues.id, issueId), eq(issues.archived, false)))
+			.limit(1)
+		const row = rows[0]
+		if (!row) return undefined
+		return { issueId: row.issueId, key: row.key, title: row.title, needsReopen: row.status !== IssueStatus.WORKING }
+	}
+
+	async steerableIssueByKey(threadId: string, key: string, tx?: LibSqlTransaction): Promise<SteerableIssueRef | undefined> {
+		const rows = await (tx ?? this.driver.db)
+			.select({ issueId: issues.id, key: issues.key, title: issues.title, status: issues.status })
+			.from(issues)
+			.where(and(eq(issues.threadId, threadId), eq(issues.key, key), eq(issues.archived, false)))
 			.limit(1)
 		const row = rows[0]
 		if (!row) return undefined

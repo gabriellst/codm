@@ -21,4 +21,8 @@ export class MockOpenIssuesReader extends OpenIssuesReader {
 	async steerableIssue(_threadId: string, _issueId: string): Promise<SteerableIssueRef | undefined> {
 		return undefined
 	}
+
+	async steerableIssueByKey(_threadId: string, _key: string): Promise<SteerableIssueRef | undefined> {
+		return undefined
+	}
 }

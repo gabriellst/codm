@@ -10,6 +10,7 @@ import {
 } from '@codm/contracts-typescript/wire/enums'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
 import { ThreadRepository } from '../repositories/ThreadRepository'
+import { RuleRouter } from '../services/RuleRouter'
 import { AGENT_SPEAKER } from '../objects'
 import { MessageIngestedEvent } from '../events/MessageIngestedEvent'
 import { CUE_ACKNOWLEDGED } from '../utils/ChannelCues'
@@ -71,6 +72,7 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 		private readonly mailbox: MailboxRepository,
 		private readonly commands: CommandQueue,
 		private readonly logging: LoggingService,
+		private readonly router: RuleRouter,
 	) {
 		super()
 	}
@@ -100,6 +102,10 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 			// A quote that resolves to anyone else's message, or does not resolve at all, is not one.
 			const repliesToAgent = quoted?.kind === TranscriptKind.SYSTEM
 
+			// THE RULE LAYER (fase 2, item 1): does this message belong to one RUNNING issue — by quoting one
+			// of its messages, or by naming it by key? Decided before recording, so the entry carries the link.
+			const routed = await this.router.route({ threadId: thread.id.value, quotedIssueId: quoted?.issueId, text: input.text }, tx)
+
 			// Always buffer + transcribe, even when the sender can't invoke (observation ≠ invocation).
 			const entry = thread.recordEntry({
 				kind: TranscriptKind.CONTACT,
@@ -108,9 +114,9 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 				quotedEntry: quoted ? { entryId: quoted.entryId, threadId: quoted.threadId } : undefined,
 				// A REPLY TO AN ISSUE'S MESSAGE IS ABOUT THAT ISSUE. Measured on a real install: more than half
 				// of what people write in a group quotes one of the agent's messages, and the agent's messages
-				// now carry the issue they speak for — so the quote alone says where this message belongs. It
-				// is recorded here (the issue's timeline shows it); routing it is a later decision.
-				issueId: quoted?.issueId,
+				// carry the issue they speak for — so the quote alone says where this message belongs. A message
+				// that names a running issue by key belongs to it too.
+				issueId: quoted?.issueId ?? routed?.issue.issueId,
 				classification: quoted?.issueId ? ClassificationMethod.REPLY_QUOTE : undefined,
 				messageType: input.messageType,
 				mediaPath: input.mediaPath,
@@ -145,7 +151,35 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 			// `dedupKey` is the ENTRY id, so a redelivered gateway event re-inserts, conflicts on the
 			// unique index, and queues nothing. This use case does NOT ask whether a turn is already
 			// running: producers only insert, and the dispatcher's per-target lease decides what runs (§3).
-			if (invocable) {
+			if (invocable && routed) {
+				// STRAIGHT TO THE ISSUE: the message becomes a steer of its session, with no orchestrator turn in
+				// between (measured: a message waited a median 24 s, p90 110 s, and up to 1h30 behind that queue).
+				// The group gets only the 👀 below; the issue's timeline shows the message as sent, delivered, read.
+				const speaker = thread.displayNameOf(input.senderExternalId)
+				const said = thread.textWithoutMention(input.text)
+				const replyingTo = quoted && routed.via === 'REPLY_QUOTE' ? `\n(respondendo a: «${quoted.text.slice(0, 300)}»)` : ''
+				await this.mailbox.enqueue(
+					{
+						ownerId: thread.ownerId,
+						targetKind: MailboxTargetKind.ISSUE,
+						targetId: routed.issue.issueId,
+						kind: MailboxItemKind.STEER,
+						posture: thread.postureOf(input.senderExternalId),
+						payload: {
+							issueId: routed.issue.issueId,
+							threadId: thread.id.value,
+							key: routed.issue.key,
+							title: routed.issue.title,
+							text: `${speaker}: ${said}${replyingTo}`,
+						},
+						dedupKey: `steer:${entry.entryId}:${routed.issue.issueId}`,
+					},
+					tx,
+				)
+				if (input.platformMessageId && thread.reactionsEnabled) {
+					await this.enqueueCue(thread.ownerId, thread.channelId, thread.contactRef.externalId, input, entry.entryId, tx)
+				}
+			} else if (invocable) {
 				await this.mailbox.enqueue(
 					{
 						ownerId: thread.ownerId,
