@@ -141,6 +141,8 @@ export class RaiseStop extends Handler<typeof RaiseStopInputSchema, typeof Raise
 				const entry = thread.recordEntry({
 					kind: TranscriptKind.SYSTEM,
 					text: THREAD_MESSAGES.stopChannelNotice(language, { kind: input.kind, detail: input.detail }),
+					// The stop's issue, when it has one: the notice is that issue's message in the transcript.
+					issueId: input.issueId,
 				})
 				await this.threads.save(thread, tx)
 

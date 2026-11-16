@@ -48,6 +48,10 @@ export type GetIssueDetail200 = {
          * @type boolean
         */
         archived: boolean;
+        /**
+         * @type string | undefined
+        */
+        waitingForProviderUntil?: string;
     };
     /**
      * @type string
@@ -115,6 +119,31 @@ export type GetIssueDetail200 = {
          * @type string
         */
         raisedAt: string;
+    }[];
+    /**
+     * @type array
+    */
+    steers: {
+        /**
+         * @type string
+        */
+        text: string;
+        /**
+         * @type string
+        */
+        sentAt: string;
+        /**
+         * @type string | undefined
+        */
+        deliveredAt?: string;
+        /**
+         * @type string | undefined
+        */
+        readAt?: string;
+        /**
+         * @type boolean
+        */
+        failed: boolean;
     }[];
 };
 

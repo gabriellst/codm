@@ -93,6 +93,11 @@ export const TABLE_READ_EDGES: readonly { consumer: ContextId; schema: string; n
 		note: 'T04/T12 read models join threads + transcript entries for display fields (read-services cross-tabela, BUILD-LOG:64).',
 	},
 	{
+		consumer: 'issue',
+		schema: 'agent',
+		note: "T04/T12 read models read agent_mailbox to show when an issue's next turn is deferred by the provider's usage limit (`providerWaitByIssue`, fase 0 item 2) — a read-only display of a fact only the queue holds; nothing in `issue` decides on it.",
+	},
+	{
 		consumer: 'owner',
 		schema: 'authentication',
 		note: 'SetActiveOwner targeted single-column session update (better-auth hook pattern; no aggregate).',

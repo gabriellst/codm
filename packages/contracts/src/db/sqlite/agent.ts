@@ -162,6 +162,16 @@ export const agentMailbox = sqliteTable(
 		lastError: text('last_error'),
 		deadAt: integer('dead_at', { mode: 'timestamp_ms' }),
 
+		/**
+		 * When a turn FIRST took this item — for a STEER, the instant the issue's session was handed the
+		 * message ("entregue"); `consumed_at` is when that turn finished with it ("lido"). Written once,
+		 * by the first claim: a retry is the same delivery tried again, not a new one.
+		 *
+		 * Without it the only times a steer had were "sent" and "turn ended", and the gap between them
+		 * (measured on a real install: median 23 min, p90 3 h) could not say whether the message was
+		 * waiting in the queue or being worked on — the question people kept asking in the group.
+		 */
+		firstClaimedAt: integer('first_claimed_at', { mode: 'timestamp_ms' }),
 		consumedAt: integer('consumed_at', { mode: 'timestamp_ms' }),
 		createdAt: integer('created_at', { mode: 'timestamp_ms' })
 			.notNull()
@@ -176,3 +186,21 @@ export const agentMailbox = sqliteTable(
 		index('agent_mailbox_pending_idx').on(t.targetKind, t.targetId, t.consumedAt, t.createdAt).where(sql`dead_at IS NULL`),
 	],
 )
+
+/**
+ * The per-workspace counter behind an issue's short key (`<PREFIX>-<n>`, fase 0 item 4).
+ *
+ * Keys used to be a slug of the first 40 characters of the goal ("pedido-no-grupo-08-11-14-15-sobre-o-banne"):
+ * long, unreadable in a chat, and colliding in meaning across issues. A short numbered key is what a person
+ * can say back ("pode publicar a BKD-142"). The number is per WORKSPACE, not per thread, because two groups
+ * working the same repository talk about the same issues.
+ *
+ * Owned by `agent` because the key is minted where the issue is forked (`ForkIssue`, `DeclareIssueOpen`),
+ * inside the same write transaction as the WORK item — SQLite serializes writers, so two forks can never
+ * draw the same number.
+ */
+export const agentIssueSequences = sqliteTable('agent_issue_sequences', {
+	workspaceId: text('workspace_id').primaryKey(),
+	/** The last number handed out. The next issue gets `last_seq + 1`. */
+	lastSeq: integer('last_seq').notNull(),
+})

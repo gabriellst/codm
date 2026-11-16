@@ -1093,6 +1093,11 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 2000
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
                   }
                 },
                 "required": [
@@ -1102,7 +1107,8 @@
               "examples": {
                 "default": {
                   "value": {
-                    "goal": "põe um toggle de dark mode nas configurações"
+                    "goal": "põe um toggle de dark mode nas configurações",
+                    "title": "Toggle de dark mode nas configurações"
                   },
                   "summary": "Example"
                 }
@@ -1146,7 +1152,7 @@
                   "examples": [
                     {
                       "issueId": "019e4d24-6524-7041-9e1c-8108180cddaf",
-                      "key": "poe-um-toggle-de-dark-mode-nas"
+                      "key": "APP-42"
                     }
                   ]
                 },
@@ -1154,7 +1160,7 @@
                   "default": {
                     "value": {
                       "issueId": "019e4d24-6524-7041-9e1c-8108180cddaf",
-                      "key": "poe-um-toggle-de-dark-mode-nas"
+                      "key": "APP-42"
                     },
                     "summary": "Example"
                   }
@@ -1662,6 +1668,9 @@
                         },
                         "archived": {
                           "type": "boolean"
+                        },
+                        "waitingForProviderUntil": {
+                          "type": "string"
                         }
                       },
                       "required": [
@@ -1759,6 +1768,35 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "steers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "text": {
+                            "type": "string"
+                          },
+                          "sentAt": {
+                            "type": "string"
+                          },
+                          "deliveredAt": {
+                            "type": "string"
+                          },
+                          "readAt": {
+                            "type": "string"
+                          },
+                          "failed": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "text",
+                          "sentAt",
+                          "failed"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
@@ -1766,7 +1804,8 @@
                     "provider",
                     "terminalLog",
                     "routedMessages",
-                    "stops"
+                    "stops",
+                    "steers"
                   ],
                   "additionalProperties": false
                 }
@@ -1879,6 +1918,9 @@
                                 },
                                 "threadDisplayName": {
                                   "type": "string"
+                                },
+                                "waitingForProviderUntil": {
+                                  "type": "string"
                                 }
                               },
                               "required": [
@@ -1932,6 +1974,9 @@
                             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                           },
                           "threadDisplayName": {
+                            "type": "string"
+                          },
+                          "waitingForProviderUntil": {
                             "type": "string"
                           }
                         },

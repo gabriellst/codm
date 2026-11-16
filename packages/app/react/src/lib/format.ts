@@ -75,6 +75,17 @@ export function formatTimeOfDay(iso: string, locale: Locale = DEFAULT_LOCALE): s
 }
 
 /**
+ * Day and time — `"17/11 00:00"` in pt-BR — for an instant that may be DAYS away, where the time alone
+ * lies: a provider's weekly window rendered as "00:00" was read as midnight the same day. Degrades like
+ * `formatTimeOfDay`.
+ */
+export function formatDayAndTime(iso: string, locale: Locale = DEFAULT_LOCALE): string {
+	const date = new Date(iso)
+	if (Number.isNaN(date.getTime())) return iso
+	return new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(date)
+}
+
+/**
  * Relative time from now, locale-aware: an artifact recorded 12 minutes ago reads "há 12 min" in
  * pt-BR, "12 min. ago" in en-US. `Intl.RelativeTimeFormat` picks the wording; this function only
  * picks the UNIT (second/minute/hour/day), the same threshold shape `formatDurationSeconds` uses —

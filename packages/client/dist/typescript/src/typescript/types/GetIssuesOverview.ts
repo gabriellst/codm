@@ -89,6 +89,10 @@ export type GetIssuesOverview200 = {
              * @type string
             */
             threadDisplayName: string;
+            /**
+             * @type string | undefined
+            */
+            waitingForProviderUntil?: string;
         }[];
     }[];
     /**
@@ -127,6 +131,10 @@ export type GetIssuesOverview200 = {
          * @type string
         */
         threadDisplayName: string;
+        /**
+         * @type string | undefined
+        */
+        waitingForProviderUntil?: string;
     }[];
 };
 

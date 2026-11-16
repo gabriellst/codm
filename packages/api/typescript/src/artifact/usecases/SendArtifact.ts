@@ -120,6 +120,8 @@ export class SendArtifact extends Handler<typeof SendArtifactInputSchema, typeof
 			mediaPath: staged.mediaPath,
 			kind,
 			caption,
+			// The artifact's issue rides along so the delivered message is recorded as that issue's message.
+			issueId: artifact.issueId,
 			...(kind === ArtifactKind.FILE
 				? { fileName: basename(artifact.ref), mimeType: MimeTypeExtractor.extractMimeType(artifact.ref) }
 				: {}),

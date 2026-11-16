@@ -32,6 +32,12 @@ export type ForkIssueMutationRequest = {
      * @type string
     */
     goal: string;
+    /**
+     * @minLength 1
+     * @maxLength 80
+     * @type string | undefined
+    */
+    title?: string;
 };
 
 export type ForkIssueMutationResponse = ForkIssue200;

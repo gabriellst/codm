@@ -86,6 +86,14 @@ export const RunIssueTurnInputSchema = z.object({
 	 * item, which is what lets the composed answer quote the request instead of arriving unanchored.
 	 */
 	originEntryId: z.uuid().optional(),
+	/**
+	 * This turn IS the declaration reminder — the one automatic steer a turn that ended without declaring
+	 * anything receives (`remindToDeclare`). Two consequences, both deliberate: its reply is NOT handed to
+	 * the orchestrator (the substance was already reported by the turn it follows, and a second "nada
+	 * novo" in the group is the noise this exists to cut), and it never schedules another reminder (one
+	 * nudge, then the reconcile sweep raises the stop).
+	 */
+	declarationReminder: z.boolean().optional(),
 })
 
 export const RunIssueTurnOutputSchema = z.object({
@@ -385,7 +393,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 			return
 		}
 
-		await this.enqueueResult(input, outcome, tx)
+		if (!input.declarationReminder) await this.enqueueResult(input, outcome, tx)
 
 		if (outcome.kind === 'COMPLETED') {
 			if (this.agent.tools.length > 0) {
@@ -401,7 +409,9 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 				// sem nada rodando. Esta linha é o que aponta a causa em segundos.
 				this.logging.warn({
 					content: {
-						message: 'turn ended without a declared outcome — the reconcile sweep will close the issue',
+						message: input.declarationReminder
+							? 'turn ended without a declared outcome even after the reminder — the reconcile sweep will raise the stop'
+							: 'turn ended without a declared outcome — the reconcile sweep will remind it once',
 						issueId: input.issueId,
 						threadId: input.threadId,
 						turnKind: input.turnKind,
@@ -589,6 +599,9 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 							? { kind: AgentRunOutcome.COMPLETED, replyText: outcome.replyText }
 							: { kind: AgentRunOutcome.STOPPED, stopKind: outcome.stopKind, detail: outcome.detail },
 					originEntryId: input.originEntryId,
+					// WHICH ISSUE this result is — so the answer the orchestrator composes from it is recorded
+					// as that issue's message. `issueKey` is for the model; the id is for the transcript row.
+					issueId: input.issueId,
 				},
 				dedupKey: `result:${input.issueId}:${input.messageId}`,
 			},

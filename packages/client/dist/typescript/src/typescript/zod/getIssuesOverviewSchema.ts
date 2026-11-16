@@ -34,7 +34,8 @@ get "status"(){
 "meta": z.optional(z.string()),
 "archived": z.boolean(),
 "threadId": z.uuid(),
-"threadDisplayName": z.string()
+"threadDisplayName": z.string(),
+"waitingForProviderUntil": z.optional(z.string())
     }))
     })),
 "archived": z.array(z.object({
@@ -47,7 +48,8 @@ get "status"(){
 "meta": z.optional(z.string()),
 "archived": z.boolean(),
 "threadId": z.uuid(),
-"threadDisplayName": z.string()
+"threadDisplayName": z.string(),
+"waitingForProviderUntil": z.optional(z.string())
     }))
     })
 

@@ -78,6 +78,7 @@ export class PublishAgentIntegrationEvents extends EventHandler<
 						threadId: event.payload.threadId,
 						text: event.payload.text,
 						replyToEntryId: event.payload.replyToEntryId,
+						issueId: event.payload.issueId,
 					},
 				}),
 			)

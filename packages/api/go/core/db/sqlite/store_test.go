@@ -526,12 +526,11 @@ func TestConcurrentBoot(t *testing.T) {
 	).Scan(&tables); err != nil {
 		t.Fatalf("count tables: %v", err)
 	}
-	// 29 drizzle tables (ONB-1 T2 added owner_onboardings, migration 0017 — was 28 after SP2 T2's
-	// authentication_device_tokens + authentication_device_codes in 0016). No gateway-adapter
-	// tables here: that schema is upgraded by the channel module's own store, which this test
-	// does not boot.
-	if tables != 29 {
-		t.Fatalf("found %d application tables, want 29", tables)
+	// 30 drizzle tables (migration 0033 added agent_issue_sequences — was 29 after ONB-1 T2's
+	// owner_onboardings in 0017). No gateway-adapter tables here: that schema is upgraded by the
+	// channel module's own store, which this test does not boot.
+	if tables != 30 {
+		t.Fatalf("found %d application tables, want 30", tables)
 	}
 
 	var foreign int

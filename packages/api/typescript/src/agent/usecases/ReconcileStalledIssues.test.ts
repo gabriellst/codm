@@ -10,6 +10,7 @@ import { IssueArchiveReason } from '@codm/contracts-typescript/wire/enums'
 import { MarkIssueNeedsInputFromStop } from '@issue/handlers/MarkIssueNeedsInputFromStop'
 import { MailboxRepository } from '../repositories/MailboxRepository'
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
+import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
 import { FactSource } from '../enums'
 import { ReconcileStalledIssues } from './ReconcileStalledIssues'
 
@@ -49,6 +50,45 @@ describe('ReconcileStalledIssues', () => {
 		const { stalledIssueIds } = await usecase.execute({})
 
 		expect(stalledIssueIds).toEqual([issue.id.value])
+	})
+
+	/**
+	 * UM LEMBRETE ANTES DA PARADA (fase 0, item 5). A turn that ran and went quiet gets ONE silent steer
+	 * asking it to declare; only a reminder that ALSO goes quiet becomes the stop, with a text that says so.
+	 *
+	 * Falsifiers: drop the `toRemind` branch and the first sweep parks the issue (`stalledIssueIds` has it);
+	 * drop `lastTurnWasReminder` and the second sweep sends a second reminder instead of the stop.
+	 */
+	it('a turn that went quiet gets one reminder; a reminder that also goes quiet becomes the stop', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const issue = await givenIssue(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value })
+		const mailbox = testBed.resolve(MailboxRepository)
+
+		// The real turn ran and ended without declaring anything.
+		await enqueueSteer(issue.ownerId, issue.id.value, thread.id.value)
+		const quiet = await mailbox.claimNext('reconcile-test', 60_000, [MailboxTargetKind.ISSUE])
+		if (!quiet) throw new Error('no turn claimed')
+		await mailbox.complete(quiet.id)
+
+		const first = await usecase.execute({})
+		expect(first.remindedIssueIds).toEqual([issue.id.value])
+		expect(first.stalledIssueIds).toEqual([])
+
+		const reminder = await mailbox.claimNext('reconcile-test', 60_000, [MailboxTargetKind.ISSUE])
+		if (!reminder) throw new Error('no reminder claimed')
+		expect((reminder.payload as { declarationReminder?: boolean }).declarationReminder).toBe(true)
+		expect(reminder.posture).toBe(PermissionPosture.AUTO)
+		// While the reminder is in flight, the sweep leaves the issue alone.
+		expect(await usecase.execute({})).toEqual({ stalledIssueIds: [], remindedIssueIds: [] })
+
+		// The reminder turn ALSO ended without declaring.
+		await mailbox.complete(reminder.id)
+
+		const second = await usecase.execute({})
+		expect(second.stalledIssueIds).toEqual([issue.id.value])
+		expect(second.remindedIssueIds).toEqual([])
+		const raised = await testBed.probe().count('events', { name: AgentRunStopRaisedEvent.name })
+		expect(raised).toBe(1)
 	})
 
 	it('does NOT touch an issue with a mailbox item still in flight', async () => {

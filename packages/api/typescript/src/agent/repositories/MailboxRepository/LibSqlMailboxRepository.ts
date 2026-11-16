@@ -126,6 +126,8 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 					claimedPid: DAEMON_BOOT.pid,
 					leaseUntil: new Date(now.getTime() + leaseMs),
 					attempts: sql`${agentMailbox.attempts} + 1`,
+					// The FIRST hand-off only ("entregue", fase 0 item 3b): a retry is the same delivery tried again.
+					firstClaimedAt: sql`COALESCE(${agentMailbox.firstClaimedAt}, ${now.getTime()})`,
 				})
 				.where(and(eq(agentMailbox.id, candidate.id), runnable(), unleased(now)))
 				.returning({

@@ -25,6 +25,8 @@ export const DeliverChannelAttachmentInputSchema = z.object({
 	fileName: z.string().optional(),
 	/** FILE only — decision 6: resolved by extension. */
 	mimeType: z.string().optional(),
+	/** The artifact's issue, when it has one — the delivered message is recorded as that issue's message. */
+	issueId: z.uuid().optional(),
 })
 
 export const DeliverChannelAttachmentOutputSchema = z.void()
@@ -60,7 +62,10 @@ export const DeliverChannelAttachmentOutputSchema = z.void()
  * an unrecorded delivery (a message the console never shows).
  */
 @injectable()
-export class DeliverChannelAttachment extends Handler<typeof DeliverChannelAttachmentInputSchema, typeof DeliverChannelAttachmentOutputSchema> {
+export class DeliverChannelAttachment extends Handler<
+	typeof DeliverChannelAttachmentInputSchema,
+	typeof DeliverChannelAttachmentOutputSchema
+> {
 	readonly name = 'deliver_channel_attachment' as const
 	readonly inputSchema = DeliverChannelAttachmentInputSchema
 	readonly outputSchema = DeliverChannelAttachmentOutputSchema
@@ -75,7 +80,7 @@ export class DeliverChannelAttachment extends Handler<typeof DeliverChannelAttac
 	}
 
 	protected async handle(input: this['input'], tx?: Transaction): Promise<void> {
-		const { ownerId, threadId, artifactId, mediaPath, kind, caption, fileName, mimeType } = input
+		const { ownerId, threadId, artifactId, mediaPath, kind, caption, fileName, mimeType, issueId } = input
 
 		// Defensive drop, same posture as `RecordOrchestratorReply`: a delivery for a thread that no
 		// longer resolves has nowhere to go, and a THROW here would only earn a retry against an id that
@@ -101,9 +106,12 @@ export class DeliverChannelAttachment extends Handler<typeof DeliverChannelAttac
 
 		await this.withTransaction(tx, async tx => {
 			await this.consumed.claim({ ownerId, channelId: thread.channelId, platformMessageId: messageId }, tx)
-			const entry = thread.recordEntry({ kind: TranscriptKind.SYSTEM, text: caption ?? '', mediaPath, artifactId, at: new Date() })
+			const entry = thread.recordEntry({ kind: TranscriptKind.SYSTEM, text: caption ?? '', mediaPath, artifactId, issueId, at: new Date() })
 			await this.threads.save(thread, tx)
-			await this.consumed.linkEntry({ channelId: thread.channelId, platformMessageId: messageId, threadId: thread.id.value, entryId: entry.entryId }, tx)
+			await this.consumed.linkEntry(
+				{ channelId: thread.channelId, platformMessageId: messageId, threadId: thread.id.value, entryId: entry.entryId },
+				tx,
+			)
 		})
 
 		this.logging.info({ content: { message: 'channel attachment delivered', channelId: thread.channelId, messageId, artifactId, kind } })

@@ -39,6 +39,30 @@ function clock(locale: string, at: Date): string {
 	return new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(at)
 }
 
+/** Dia e mês no fuso desta máquina. */
+function day(locale: string, at: Date): string {
+	return new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit' }).format(at)
+}
+
+/**
+ * Quando a fila volta, dito de um jeito que não engana: só a hora quando é hoje, dia e hora quando não é.
+ *
+ * Medido em 2026-11-11: uma janela SEMANAL virou "eu volto a responder às 00:00" — e o grupo leu meia-noite
+ * daquele dia, quando era dali a seis dias.
+ */
+function whenPt(at: Date, now: Date): string {
+	return day('pt-BR', at) === day('pt-BR', now) ? `às ${clock('pt-BR', at)}` : `em ${day('pt-BR', at)} às ${clock('pt-BR', at)}`
+}
+
+function whenEn(at: Date, now: Date): string {
+	return day('en-US', at) === day('en-US', now) ? `at ${clock('en-US', at)}` : `on ${day('en-US', at)} at ${clock('en-US', at)}`
+}
+
+interface ProviderPausedParams {
+	until: Date
+	now: Date
+}
+
 const PT_MESSAGES = {
 	stopTitle: (p: { kind: StopKind }) => STOP_TITLES_PT[p.kind],
 	/**
@@ -56,8 +80,8 @@ const PT_MESSAGES = {
 	 * não há nada para o operador resolver — só esperar. O horário vem do instante ESTRUTURADO que o CLI
 	 * informou (`rate_limit_info.resetsAt`), no fuso desta máquina, que é a do operador.
 	 */
-	providerPausedNotice: (p: { until: Date }) =>
-		`Atingi o limite de uso da conta do provedor do agente. As mensagens estão na fila e eu volto a responder às ${clock('pt-BR', p.until)}.`,
+	providerPausedNotice: (p: ProviderPausedParams) =>
+		`Atingi o limite de uso da conta do provedor do agente. As mensagens estão na fila e eu volto a responder ${whenPt(p.until, p.now)}.`,
 }
 
 export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
@@ -66,6 +90,6 @@ export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
 		stopTitle: p => STOP_TITLES_EN[p.kind],
 		stopChannelNotice: p => (p.detail.length > 0 ? `${STOP_TITLES_EN[p.kind]}.\n\n${p.detail}` : `${STOP_TITLES_EN[p.kind]}.`),
 		providerPausedNotice: p =>
-			`I hit the usage limit of the agent's provider account. Messages are queued and I'll answer again at ${clock('en-US', p.until)}.`,
+			`I hit the usage limit of the agent's provider account. Messages are queued and I'll answer again ${whenEn(p.until, p.now)}.`,
 	},
 })

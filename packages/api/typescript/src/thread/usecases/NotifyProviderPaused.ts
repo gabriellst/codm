@@ -56,7 +56,7 @@ export class NotifyProviderPaused extends Handler<typeof NotifyProviderPausedInp
 		return this.withTransaction(tx, async tx => {
 			const entry = thread.recordEntry({
 				kind: TranscriptKind.SYSTEM,
-				text: THREAD_MESSAGES.providerPausedNotice(language, { until: input.until }),
+				text: THREAD_MESSAGES.providerPausedNotice(language, { until: input.until, now: new Date() }),
 			})
 			await this.threads.save(thread, tx)
 			await this.commands.enqueueCommand<DeliverChannelMessage>(

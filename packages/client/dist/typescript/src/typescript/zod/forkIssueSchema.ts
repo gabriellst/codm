@@ -18,7 +18,8 @@ export const forkIssue200Schema = z.object({
     })
 
 export const forkIssueMutationRequestSchema = z.object({
-    "goal": z.string().min(1).max(2000)
+    "goal": z.string().min(1).max(2000),
+"title": z.optional(z.string().min(1).max(80))
     })
 
 export const forkIssueMutationResponseSchema = z.lazy(() => forkIssue200Schema)

@@ -3,6 +3,7 @@ import { and, eq, isNull } from 'drizzle-orm'
 import { LibSqlDatabaseDriver, Handler, z } from '@codm/core-typescript'
 import { issues, threads } from '@codm/contracts/db'
 import { IssueStatus } from '@codm/contracts-typescript/wire/enums'
+import { providerWaitByIssue } from '../utils/providerWaitByIssue'
 
 const IssueItemSchema = z.object({
 	issueId: z.uuid(),
@@ -13,6 +14,12 @@ const IssueItemSchema = z.object({
 	archived: z.boolean(),
 	threadId: z.uuid(),
 	threadDisplayName: z.string(),
+	/**
+	 * ISO instant until which this issue is WAITING ON THE PROVIDER'S USAGE LIMIT — its next turn is
+	 * deferred in the queue until then. Absent when it is not waiting. Without it an issue held for days
+	 * by a weekly window rendered as an ordinary `WORKING` row (measured 2026-11-11, four of them).
+	 */
+	waitingForProviderUntil: z.string().optional(),
 })
 
 export const GetIssuesOverviewInputSchema = z.object({ ownerId: z.uuid(), includeArchived: z.boolean().default(false) })
@@ -59,6 +66,8 @@ export class GetIssuesOverview extends Handler<typeof GetIssuesOverviewInputSche
 			.innerJoin(threads, and(eq(issues.threadId, threads.id), isNull(threads.deletedAt)))
 			.where(eq(issues.ownerId, input.ownerId))
 
+		const waiting = await providerWaitByIssue(this.driver)
+
 		const items = rows.map(r => ({
 			issueId: r.issueId,
 			key: r.key,
@@ -68,6 +77,7 @@ export class GetIssuesOverview extends Handler<typeof GetIssuesOverviewInputSche
 			archived: r.archived,
 			threadId: r.threadId,
 			threadDisplayName: r.threadDisplayName,
+			waitingForProviderUntil: waiting.get(r.issueId)?.toISOString(),
 		}))
 
 		const active = items.filter(i => !i.archived)

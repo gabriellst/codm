@@ -106,4 +106,44 @@ describe('ForkIssue — thread + provider resolved from the repository, not the 
 			}),
 		)
 	})
+
+	/**
+	 * THE SHORT KEY AND THE TITLE (fase 0, item 4). Keys were a slug of the goal's first 40 characters;
+	 * now they are `<PREFIX>-<n>`, numbered per WORKSPACE — two groups on the same repository share the
+	 * sequence — and the card title is the orchestrator's short title when it gives one.
+	 *
+	 * Falsifier: revert to `uniqueSlugKey` and the keys stop matching `^[A-Z0-9]+-\d+$`; scope the counter
+	 * by thread and the second group's issue restarts at 1.
+	 */
+	it('keys are <PREFIX>-<n>, numbered per workspace across groups; the short title is used when given', async () => {
+		const first = await givenThread(testBed, { ownerId })
+		const useCase = testBed.resolve(ForkIssue)
+		const fork = (threadId: string, goal: string, title?: string) =>
+			useCase.execute({
+				ownerId,
+				threadId,
+				goal,
+				title,
+				originEntryId: testId('fork-issue', `entry-${goal}`),
+				posture: PermissionPosture.AUTO,
+			})
+
+		const one = await fork(first.id.value, 'Pedido no grupo (12/11, de quem tem libera): põe um toggle de dark mode', 'Toggle de dark mode')
+		const two = await fork(first.id.value, 'corrige o rodapé')
+
+		expect(one.key).toMatch(/^[A-Z0-9]+-1$/)
+		const prefix = one.key.split('-')[0]
+		expect(two.key).toBe(`${prefix}-2`)
+
+		// A SECOND GROUP on the SAME workspace continues the sequence; a group on another workspace starts at 1.
+		const sameRepo = await givenThread(testBed, { ownerId, workspaceId: first.workspaceId })
+		const otherRepo = await givenThread(testBed, { ownerId })
+		expect((await fork(sameRepo.id.value, 'ajusta o cabeçalho')).key).toBe(`${prefix}-3`)
+		expect((await fork(otherRepo.id.value, 'outro projeto')).key).toMatch(/^[A-Z0-9]+-1$/)
+
+		const events = await testBed.resolve(DomainEventRepository).findByType(IssueForkedEvent)
+		const titles = events.map(event => event.payload.title)
+		expect(titles).toContain('Toggle de dark mode')
+		expect(titles).toContain('corrige o rodapé')
+	})
 })
