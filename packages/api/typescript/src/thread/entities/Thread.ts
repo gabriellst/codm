@@ -898,6 +898,18 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 */
 	addressedToAgent(input: { senderExternalId: string; text: string; repliesToAgent?: boolean }): boolean {
 		if (this.paused) return false
+		return this.reachesAgent(input)
+	}
+
+	/**
+	 * `addressedToAgent` WITHOUT the thread's own pause — the participant and mention gates alone.
+	 *
+	 * Split out for one caller with one reason: a CONTROL WORD ("pare APP-12", "continue" quoting an issue)
+	 * must work while the conversation is paused (fase 2, item 2) — "continue" on a paused group is exactly
+	 * when it is needed — and still only from someone who could address the agent at all. A muted
+	 * participant stays muted and the mention gate still applies; only the pause stands down.
+	 */
+	private reachesAgent(input: { senderExternalId: string; text: string; repliesToAgent?: boolean }): boolean {
 		const participant = this.participants.find(p => p.participantId === input.senderExternalId)
 		if (participant && !participant.canInvoke) return false
 		if (input.repliesToAgent) return true
@@ -932,6 +944,21 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 */
 	canInvoke(input: { senderExternalId: string; text: string; repliesToAgent?: boolean; sentAt: Date; now: Date }): boolean {
 		if (!this.addressedToAgent(input)) return false
+		return this.isFresh(input)
+	}
+
+	/**
+	 * May this sender's CONTROL WORD (pause/resume an issue) take effect now? — `canInvoke` minus the
+	 * thread's own pause (fase 2, item 2). Freshness is KEPT: a "pare" replayed from a reconnect backlog
+	 * must not pause work that someone has since resumed.
+	 */
+	canCommand(input: { senderExternalId: string; text: string; repliesToAgent?: boolean; sentAt: Date; now: Date }): boolean {
+		if (!this.reachesAgent(input)) return false
+		return this.isFresh(input)
+	}
+
+	/** The freshness half of `canInvoke` / `canCommand` — see `canInvoke` for the window and its exceptions. */
+	private isFresh(input: { senderExternalId: string; sentAt: Date; now: Date }): boolean {
 		// THE OPERATOR IS NOT A BACKLOG, and the window was never aimed at them. What it exists to stop
 		// is a replay of CONVERSATION scheduling a turn per message; the operator's own line is the
 		// INSTRUCTION, and a late instruction is still the instruction. Measured 2026-08-05: a reconnect

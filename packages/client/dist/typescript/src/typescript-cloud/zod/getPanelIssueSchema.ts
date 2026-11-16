@@ -5,6 +5,7 @@
 
 import { artifactKindSchema } from "./artifactKindSchema.ts";
 import { classificationMethodSchema } from "./classificationMethodSchema.ts";
+import { issueControlSourceSchema } from "./issueControlSourceSchema.ts";
 import { issueLifeStateSchema } from "./issueLifeStateSchema.ts";
 import { issueStatusSchema } from "./issueStatusSchema.ts";
 import { stopKindSchema } from "./stopKindSchema.ts";
@@ -97,6 +98,22 @@ get "resolution"(){
     "kind": z.enum(["ARCHIVED"]),
 "id": z.string(),
 "at": z.string()
+    }), z.object({
+    "kind": z.enum(["PAUSED"]),
+"id": z.string(),
+"at": z.string(),
+get "source"(){
+                return issueControlSourceSchema
+              },
+"by": z.optional(z.string())
+    }), z.object({
+    "kind": z.enum(["RESUMED"]),
+"id": z.string(),
+"at": z.string(),
+get "source"(){
+                return issueControlSourceSchema
+              },
+"by": z.optional(z.string())
     })]))
     })
 

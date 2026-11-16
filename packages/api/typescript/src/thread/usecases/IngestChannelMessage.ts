@@ -3,17 +3,25 @@ import { Handler, z, BaseError, CommandQueue, LoggingService, tryCatchAsync } fr
 import type { Transaction } from '@codm/core-typescript'
 import {
 	ClassificationMethod,
+	IssueControlSource,
+	IssueStatus,
 	MailboxItemKind,
 	MailboxTargetKind,
 	MessageType,
 	TranscriptKind,
 } from '@codm/contracts-typescript/wire/enums'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
+import { IssueRepository } from '@issue/repositories/IssueRepository'
+import { PauseIssue } from '@issue/usecases/PauseIssue'
+import { ResumeIssue } from '@issue/usecases/ResumeIssue'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { RuleRouter } from '../services/RuleRouter'
 import { AGENT_SPEAKER } from '../objects'
 import { MessageIngestedEvent } from '../events/MessageIngestedEvent'
-import { CUE_ACKNOWLEDGED } from '../utils/ChannelCues'
+import { CUE_ACKNOWLEDGED, CUE_PAUSED, CUE_RESUMED } from '../utils/ChannelCues'
+import { parseControlCommand } from '../utils/controlCommand'
+import { IssueControlCommand } from '../enums'
+import type { Thread } from '../entities/Thread'
 import { OPERATOR_PARTICIPANT_ID } from '../entities/Thread'
 import type { ReactToChannelMessage } from './ReactToChannelMessage'
 import type { ApplicationErrors } from '../errors'
@@ -50,6 +58,32 @@ export const IngestChannelMessageOutputSchema = z.object({
 	invocable: z.boolean(),
 })
 
+/** What a control word does to an issue as it stands: run the use case, only acknowledge, or not apply. */
+type ControlAction = 'APPLY' | 'ACKNOWLEDGE' | 'IGNORE'
+
+/**
+ * Per command: whether it applies to the issue as it stands, and the cue that acknowledges it (fase 2,
+ * item 2). A closed map over the command enum — a new command fails compilation until it is given both.
+ *
+ * PAUSE applies to work that can still move; on an issue already paused it is a redelivery (or a second
+ * "pare") and is acknowledged without running anything. RESUME applies only to a paused issue.
+ */
+const CONTROL_EFFECT: Readonly<
+	Record<
+		IssueControlCommand,
+		{ cue: string; decide: (issue: { paused: boolean; archived: boolean; status: IssueStatus }) => ControlAction }
+	>
+> = {
+	[IssueControlCommand.PAUSE]: {
+		cue: CUE_PAUSED,
+		decide: issue => (issue.paused ? 'ACKNOWLEDGE' : issue.archived || issue.status === IssueStatus.COMPLETED ? 'IGNORE' : 'APPLY'),
+	},
+	[IssueControlCommand.RESUME]: {
+		cue: CUE_RESUMED,
+		decide: issue => (issue.paused ? 'APPLY' : 'IGNORE'),
+	},
+}
+
 /**
  * C16 IngestChannelMessage — appends the inbound to the transcript + rolling context buffer
  * UNCONDITIONALLY (even from read-only participants), then evaluates the invocation gates
@@ -73,6 +107,9 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 		private readonly commands: CommandQueue,
 		private readonly logging: LoggingService,
 		private readonly router: RuleRouter,
+		private readonly issues: IssueRepository,
+		private readonly pauseIssue: PauseIssue,
+		private readonly resumeIssue: ResumeIssue,
 	) {
 		super()
 	}
@@ -101,6 +138,17 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 			// those is addressing it — the mention gate stands down for that case (see `Thread.canInvoke`).
 			// A quote that resolves to anyone else's message, or does not resolve at all, is not one.
 			const repliesToAgent = quoted?.kind === TranscriptKind.SYSTEM
+
+			// A CONTROL WORD WITH A TARGET (fase 2, item 2 — "pare APP-12", "continue" quoting an issue) is
+			// handled here, BEFORE the invocation gate: it must work while the conversation is paused, and it
+			// never becomes an orchestrator turn. Anything short of a clean command — no control word, no
+			// target, a sender who may not address the agent, an issue the word does not apply to — returns
+			// `undefined` and the message takes the usual path below, unchanged.
+			const command = parseControlCommand(thread.textWithoutMention(input.text))
+			if (command) {
+				const controlled = await this.control(thread, input, { command, quoted, repliesToAgent }, tx)
+				if (controlled) return controlled
+			}
 
 			// THE RULE LAYER (fase 2, item 1): does this message belong to one RUNNING issue — by quoting one
 			// of its messages, or by naming it by key? Decided before recording, so the entry carries the link.
@@ -177,7 +225,7 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 					tx,
 				)
 				if (input.platformMessageId && thread.reactionsEnabled) {
-					await this.enqueueCue(thread.ownerId, thread.channelId, thread.contactRef.externalId, input, entry.entryId, tx)
+					await this.enqueueCue(thread, input, entry.entryId, CUE_ACKNOWLEDGED, tx)
 				}
 			} else if (invocable) {
 				await this.mailbox.enqueue(
@@ -247,7 +295,7 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 				// same way `thinkingIndicatorEnabled` gates the "Pensando" placeholder: the entry and the
 				// mailbox item above are written exactly as always, only the 👀 itself is skipped.
 				if (input.platformMessageId && thread.reactionsEnabled) {
-					await this.enqueueCue(thread.ownerId, thread.channelId, thread.contactRef.externalId, input, entry.entryId, tx)
+					await this.enqueueCue(thread, input, entry.entryId, CUE_ACKNOWLEDGED, tx)
 				}
 			}
 
@@ -265,6 +313,93 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 	}
 
 	/**
+	 * A CONTROL WORD — pause or resume one issue, now, with no turn in between (fase 2, item 2).
+	 *
+	 * Taken only when ALL of these hold, and each failure falls through to the usual path (`undefined`):
+	 *  - a TARGET: a quoted message linked to an issue, or exactly one issue key — any non-archived issue,
+	 *    not only a WORKING one (`RuleRouter.target`);
+	 *  - the sender could address the agent, minus the thread's own pause (`Thread.canCommand`): a muted
+	 *    participant cannot pause anyone's work, and a backlog replay cannot either;
+	 *  - the word APPLIES to the issue as it stands (`CONTROL_EFFECT`). A "continue" on an issue that is
+	 *    not paused is not a command — it is somebody saying "continue with X", which is a steer.
+	 *
+	 * IDEMPOTENT under redelivery: a "pare" on an issue already paused is acknowledged and recorded but runs
+	 * nothing, so a redelivered gateway event never throws ISSUE_ALREADY_PAUSED inside this transaction and
+	 * rolls the transcript entry back with it.
+	 *
+	 * The entry is recorded linked to the issue (the issue's timeline shows the message), the pause/resume
+	 * runs in THIS transaction (entry and hold commit together), and the only reply is the reaction cue.
+	 */
+	/** The use case each command runs — dispatched by the command, never branched on it. */
+	private controlUseCase(): Readonly<Record<IssueControlCommand, PauseIssue | ResumeIssue>> {
+		return { [IssueControlCommand.PAUSE]: this.pauseIssue, [IssueControlCommand.RESUME]: this.resumeIssue }
+	}
+
+	private async control(
+		thread: Thread,
+		input: this['input'],
+		ctx: {
+			command: IssueControlCommand
+			quoted: Awaited<ReturnType<ThreadRepository['findEntry']>>
+			repliesToAgent: boolean
+		},
+		tx: Transaction,
+	): Promise<this['output'] | undefined> {
+		const target = await this.router.target({ threadId: thread.id.value, quotedIssueId: ctx.quoted?.issueId, text: input.text }, tx)
+		if (!target) return undefined
+		const allowed = thread.canCommand({
+			senderExternalId: input.senderExternalId,
+			text: input.text,
+			repliesToAgent: ctx.repliesToAgent,
+			sentAt: input.receivedAt,
+			now: new Date(),
+		})
+		if (!allowed) return undefined
+		const issue = await this.issues.findById(target.issue.issueId, tx)
+		if (!issue) return undefined
+
+		const effect = CONTROL_EFFECT[ctx.command]
+		const action = effect.decide(issue)
+		if (action === 'IGNORE') return undefined
+
+		const entry = thread.recordEntry({
+			kind: TranscriptKind.CONTACT,
+			text: input.text,
+			senderExternalId: input.senderExternalId,
+			quotedEntry: ctx.quoted ? { entryId: ctx.quoted.entryId, threadId: ctx.quoted.threadId } : undefined,
+			issueId: issue.id.value,
+			classification: ctx.quoted?.issueId ? ClassificationMethod.REPLY_QUOTE : undefined,
+			messageType: input.messageType,
+			mediaPath: input.mediaPath,
+			at: input.receivedAt,
+		})
+		await this.threads.save(thread, tx)
+
+		if (action === 'APPLY') {
+			const request = {
+				ownerId: thread.ownerId,
+				issueId: issue.id.value,
+				source: IssueControlSource.WHATSAPP,
+				requestedBy: thread.displayNameOf(input.senderExternalId),
+				requestedById: input.senderExternalId,
+			}
+			await this.controlUseCase()[ctx.command].execute(request, tx)
+		}
+
+		if (input.platformMessageId && thread.reactionsEnabled) await this.enqueueCue(thread, input, entry.entryId, effect.cue, tx)
+
+		await this.domainEventRepository.save(
+			new MessageIngestedEvent({
+				entityId: thread.id.value,
+				ownerId: thread.ownerId,
+				payload: { threadId: thread.id.value, entryId: entry.entryId, senderExternalId: input.senderExternalId, invocable: false },
+			}),
+			tx,
+		)
+		return { entryId: entry.entryId, invocable: false }
+	}
+
+	/**
 	 * Schedule the `👀` — and REFUSE to let it break the ingest (streaming spec, decision 12).
 	 *
 	 * The guard is not defensive habit; it names a real caller. `CommandQueue.enqueueCommand` is
@@ -278,14 +413,9 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 	 * the time we get here the entry and the mailbox item are already written into this transaction —
 	 * swallowing is what keeps that commit intact.
 	 */
-	private async enqueueCue(
-		ownerId: string,
-		channelId: string,
-		remoteId: string,
-		input: this['input'],
-		entryId: string,
-		tx: Transaction,
-	): Promise<void> {
+	private async enqueueCue(thread: Thread, input: this['input'], entryId: string, reaction: string, tx: Transaction): Promise<void> {
+		const { ownerId, channelId } = thread
+		const remoteId = thread.contactRef.externalId
 		// The owner's own words arrive under the OPERATOR roster id (`ConsumeInboundMessage` rewrites the
 		// sender when the gateway reports `fromMe`), and WhatsApp addresses a reaction by the whole
 		// message key — so the sentinel that already encodes "this account said it" is precisely the fact
@@ -311,7 +441,7 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 					// not a JID. Sending it would have the gateway parse `operator` into a nonsense JID and
 					// break the one case that already works; the device's own id is what answers that case.
 					senderExternalId: fromMe ? undefined : input.senderExternalId,
-					reaction: CUE_ACKNOWLEDGED,
+					reaction,
 				},
 				// Derived from the ENTRY, like the mailbox item's own dedup key: a redelivered gateway event
 				// conflicts on the same id and reacts nothing twice.

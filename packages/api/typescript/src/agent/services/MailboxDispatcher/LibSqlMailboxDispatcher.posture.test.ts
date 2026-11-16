@@ -8,6 +8,8 @@ import { MailboxItemKind, MailboxTargetKind, PermissionPosture, ProviderKind } f
 import { TestBed, givenThread, givenWorkspace } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { CloudSession } from '@shared/services/CloudSession'
+import { IssueHold } from '@issue/services/IssueHold'
+import { IssueTurnAborter } from '../IssueTurnAborter'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { WorkspaceRepository } from '@workspace/repositories/WorkspaceRepository'
 import { AgentSessionRepository } from '../../repositories/AgentSessionRepository'
@@ -115,6 +117,8 @@ describe('a turn runs with the posture of the item it consumed', () => {
 				testBed.resolve(AgentSessionRepository),
 				testBed.resolve(LoggingService),
 				testBed.resolve(CloudSession),
+				testBed.resolve(IssueHold),
+				testBed.resolve(IssueTurnAborter),
 			).bind(spyContainer)
 			await dispatcher.drain()
 

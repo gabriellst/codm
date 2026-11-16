@@ -1151,6 +1151,60 @@
                                   "id",
                                   "at"
                                 ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "PAUSED"
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "at": {
+                                    "type": "string"
+                                  },
+                                  "source": {
+                                    "$ref": "#/components/schemas/IssueControlSource"
+                                  },
+                                  "by": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "id",
+                                  "at",
+                                  "source"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "RESUMED"
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "at": {
+                                    "type": "string"
+                                  },
+                                  "source": {
+                                    "$ref": "#/components/schemas/IssueControlSource"
+                                  },
+                                  "by": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "id",
+                                  "at",
+                                  "source"
+                                ]
                               }
                             ]
                           }
@@ -1711,6 +1765,62 @@
                               "at"
                             ],
                             "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "PAUSED"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "source": {
+                                "$ref": "#/components/schemas/IssueControlSource"
+                              },
+                              "by": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "source"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "RESUMED"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "source": {
+                                "$ref": "#/components/schemas/IssueControlSource"
+                              },
+                              "by": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "source"
+                            ],
+                            "additionalProperties": false
                           }
                         ]
                       }
@@ -1821,11 +1931,15 @@
           "INVALID_TIMEZONE",
           "ISSUE_ALREADY_ARCHIVED",
           "ISSUE_ALREADY_COMPLETED",
+          "ISSUE_ALREADY_PAUSED",
           "ISSUE_ARCHIVED",
           "ISSUE_NOT_ARCHIVED",
           "ISSUE_NOT_COMPLETED",
           "ISSUE_NOT_FOUND",
+          "ISSUE_NOT_PAUSABLE",
+          "ISSUE_NOT_PAUSED",
           "ISSUE_NOT_REOPENABLE",
+          "ISSUE_PAUSED",
           "LAST_INVOKER",
           "LOOP_NOT_FOUND",
           "LOOP_PROMPT_TOO_LONG",
@@ -1935,6 +2049,7 @@
           "WAITING_PERSON",
           "REMINDED",
           "STALLED",
+          "PAUSED",
           "DONE"
         ]
       },
@@ -1946,6 +2061,8 @@
           "COMPLETED",
           "CREATED",
           "MESSAGE",
+          "PAUSED",
+          "RESUMED",
           "STEER",
           "STOP_RAISED",
           "STOP_RESOLVED",
@@ -2001,6 +2118,13 @@
           "APPROVE",
           "DENY"
         ]
+      },
+      "IssueControlSource": {
+        "type": "string",
+        "enum": [
+          "WHATSAPP",
+          "CONSOLE"
+        ]
       }
     }
   },
@@ -2052,11 +2176,15 @@
     "INVALID_TIMEZONE",
     "ISSUE_ALREADY_ARCHIVED",
     "ISSUE_ALREADY_COMPLETED",
+    "ISSUE_ALREADY_PAUSED",
     "ISSUE_ARCHIVED",
     "ISSUE_NOT_ARCHIVED",
     "ISSUE_NOT_COMPLETED",
     "ISSUE_NOT_FOUND",
+    "ISSUE_NOT_PAUSABLE",
+    "ISSUE_NOT_PAUSED",
     "ISSUE_NOT_REOPENABLE",
+    "ISSUE_PAUSED",
     "LAST_INVOKER",
     "LOOP_NOT_FOUND",
     "LOOP_PROMPT_TOO_LONG",

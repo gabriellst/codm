@@ -6,6 +6,7 @@ import { ArtifactKind } from '@codm/contracts-typescript/wire/enums'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { ChannelSender, type SendableArtifactKind } from '@thread/services/ChannelSender'
 import { enqueueArtifactLinkDelivery, enqueueArtifactAttachmentDelivery } from '@thread/services/ArtifactDelivery'
+import { IssueHold } from '@issue/services/IssueHold'
 import { ArtifactRepository } from '../repositories/ArtifactRepository'
 import { MediaStore } from '../services/MediaStore'
 import type { ApplicationErrors } from '../errors'
@@ -68,6 +69,7 @@ export class SendArtifact extends Handler<typeof SendArtifactInputSchema, typeof
 		private readonly sender: ChannelSender,
 		private readonly mediaStore: MediaStore,
 		private readonly commands: CommandQueue,
+		private readonly hold: IssueHold,
 	) {
 		super()
 	}
@@ -78,6 +80,12 @@ export class SendArtifact extends Handler<typeof SendArtifactInputSchema, typeof
 		const artifact = await this.artifacts.findById(artifactId)
 		if (!artifact || artifact.ownerId !== ownerId || artifact.threadId !== threadId)
 			throw new BaseError<ApplicationErrors>('ARTIFACT_NOT_FOUND', `no artifact ${artifactId} on thread ${threadId}`)
+
+		// A HELD issue's artifact does not leave (fase 2, item 2 — pausa como comando). Keyed on the issue
+		// that RECORDED it rather than on the caller's run identity: this context reads no identity (that
+		// would be a new agent edge for one field), and "a paused issue's file does not go out" is the rule
+		// the operator states anyway — whoever relays it.
+		await this.hold.assertNotHeld(artifact.issueId)
 
 		const thread = await this.threads.findById(threadId)
 		if (!thread || thread.ownerId !== ownerId) throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${threadId}`)

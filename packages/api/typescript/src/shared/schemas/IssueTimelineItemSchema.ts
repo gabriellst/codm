@@ -2,6 +2,7 @@ import { z } from '@codm/core-typescript'
 import {
 	ArtifactKind,
 	ClassificationMethod,
+	IssueControlSource,
 	IssueTimelineItemKind,
 	StopKind,
 	StopResolution,
@@ -55,5 +56,9 @@ export const IssueTimelineItemSchema = z.discriminatedUnion('kind', [
 	z.object({ kind: z.literal(IssueTimelineItemKind.STOP_RESOLVED), id, at, stopId: z.uuid(), resolution: z.enum(StopResolution) }),
 	z.object({ kind: z.literal(IssueTimelineItemKind.COMPLETED), id, at }),
 	z.object({ kind: z.literal(IssueTimelineItemKind.ARCHIVED), id, at }),
+	// Pausa como comando (fase 2, item 2): who held the work, and from where — absent `by` when the
+	// console session carried no profile name.
+	z.object({ kind: z.literal(IssueTimelineItemKind.PAUSED), id, at, source: z.enum(IssueControlSource), by: z.string().optional() }),
+	z.object({ kind: z.literal(IssueTimelineItemKind.RESUMED), id, at, source: z.enum(IssueControlSource), by: z.string().optional() }),
 ])
 export type IssueTimelineItem = Z.output<typeof IssueTimelineItemSchema>

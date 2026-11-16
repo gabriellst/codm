@@ -866,9 +866,28 @@ func (e IssueArchiveReason) Valid() bool {
 	}
 }
 
+// Defines values for IssueControlSource.
+const (
+	IssueControlSourceCONSOLE  IssueControlSource = "CONSOLE"
+	IssueControlSourceWHATSAPP IssueControlSource = "WHATSAPP"
+)
+
+// Valid indicates whether the value is a known member of the IssueControlSource enum.
+func (e IssueControlSource) Valid() bool {
+	switch e {
+	case IssueControlSourceCONSOLE:
+		return true
+	case IssueControlSourceWHATSAPP:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for IssueLifeState.
 const (
 	IssueLifeStateDONE            IssueLifeState = "DONE"
+	IssueLifeStatePAUSED          IssueLifeState = "PAUSED"
 	IssueLifeStateQUEUED          IssueLifeState = "QUEUED"
 	IssueLifeStateREMINDED        IssueLifeState = "REMINDED"
 	IssueLifeStateRUNNING         IssueLifeState = "RUNNING"
@@ -881,6 +900,8 @@ const (
 func (e IssueLifeState) Valid() bool {
 	switch e {
 	case IssueLifeStateDONE:
+		return true
+	case IssueLifeStatePAUSED:
 		return true
 	case IssueLifeStateQUEUED:
 		return true
@@ -927,6 +948,8 @@ const (
 	IssueTimelineItemKindCOMPLETED    IssueTimelineItemKind = "COMPLETED"
 	IssueTimelineItemKindCREATED      IssueTimelineItemKind = "CREATED"
 	IssueTimelineItemKindMESSAGE      IssueTimelineItemKind = "MESSAGE"
+	IssueTimelineItemKindPAUSED       IssueTimelineItemKind = "PAUSED"
+	IssueTimelineItemKindRESUMED      IssueTimelineItemKind = "RESUMED"
 	IssueTimelineItemKindSTEER        IssueTimelineItemKind = "STEER"
 	IssueTimelineItemKindSTOPRAISED   IssueTimelineItemKind = "STOP_RAISED"
 	IssueTimelineItemKindSTOPRESOLVED IssueTimelineItemKind = "STOP_RESOLVED"
@@ -945,6 +968,10 @@ func (e IssueTimelineItemKind) Valid() bool {
 	case IssueTimelineItemKindCREATED:
 		return true
 	case IssueTimelineItemKindMESSAGE:
+		return true
+	case IssueTimelineItemKindPAUSED:
+		return true
+	case IssueTimelineItemKindRESUMED:
 		return true
 	case IssueTimelineItemKindSTEER:
 		return true
@@ -3861,6 +3888,9 @@ type InternalTextContent struct {
 
 // IssueArchiveReason defines model for IssueArchiveReason.
 type IssueArchiveReason string
+
+// IssueControlSource defines model for IssueControlSource.
+type IssueControlSource string
 
 // IssueLifeState defines model for IssueLifeState.
 type IssueLifeState string

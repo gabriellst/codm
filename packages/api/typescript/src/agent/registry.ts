@@ -6,6 +6,7 @@ import { type InstanceRegistry, expandBindings, HEALTH_CHECKS, PollingHealthChec
 import { AgentRunnerFactory, DefaultAgentRunnerFactory, StubAgentRunnerFactory, E2eAgentRunnerFactory } from './services/AgentRunnerFactory'
 import { ProviderDetector, MockProviderDetector, SystemProviderDetector } from './services/ProviderDetector'
 import { AgentStreamRegistry } from './services/AgentStreamRegistry'
+import { IssueTurnAborter } from './services/IssueTurnAborter'
 import { AgentScenarioSelection } from './services/AgentScenario'
 import { MailboxDispatcher, LibSqlMailboxDispatcher } from './services/MailboxDispatcher'
 import { IssueWorkAgent, IssueWorkPromptBuilder } from './agents/IssueWorkAgent'
@@ -63,6 +64,9 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// The adopted whatscode AgentStreamRegistry (Fork C): SSE observer channel + the absorbed
 	// single-active-run guard — one shared in-memory instance per process.
 	{ token: AgentStreamRegistry, mock: AgentStreamRegistry, integration: AgentStreamRegistry, real: AgentStreamRegistry },
+	// The kill switch of a running issue turn (fase 2, item 2 — "pare" vale na hora): one in-memory
+	// AbortController per issue in flight, shared by the dispatcher, RunIssueTurn and the pause handler.
+	{ token: IssueTurnAborter, mock: IssueTurnAborter, integration: IssueTurnAborter, real: IssueTurnAborter },
 	// WHICH roteiro the deterministic stand-in performs. Bound in EVERY column, not only `e2e`: the
 	// door that writes it is `e2e`-only, so everywhere else this resolves to a constant reporting the
 	// default. A token bound in one column and absent from the others is how a resolve throws in

@@ -5,6 +5,7 @@
 
 import type { ArtifactKind } from "./ArtifactKind.ts";
 import type { ClassificationMethod } from "./ClassificationMethod.ts";
+import type { IssueControlSource } from "./IssueControlSource.ts";
 import type { IssueLifeState } from "./IssueLifeState.ts";
 import type { IssueStatus } from "./IssueStatus.ts";
 import type { StopKind } from "./StopKind.ts";
@@ -22,59 +23,71 @@ export type GetPanelIssuePathParams = {
     issueId: string;
 };
 
-export const TimelineKindEnum10 = {
-    CREATED: "CREATED"
-} as const;
-
-export type TimelineKindEnum10Key = (typeof TimelineKindEnum10)[keyof typeof TimelineKindEnum10];
-
-export const TimelineKindEnum11 = {
-    TURN_STARTED: "TURN_STARTED"
-} as const;
-
-export type TimelineKindEnum11Key = (typeof TimelineKindEnum11)[keyof typeof TimelineKindEnum11];
-
 export const TimelineKindEnum12 = {
-    MESSAGE: "MESSAGE"
+    CREATED: "CREATED"
 } as const;
 
 export type TimelineKindEnum12Key = (typeof TimelineKindEnum12)[keyof typeof TimelineKindEnum12];
 
 export const TimelineKindEnum13 = {
-    STEER: "STEER"
+    TURN_STARTED: "TURN_STARTED"
 } as const;
 
 export type TimelineKindEnum13Key = (typeof TimelineKindEnum13)[keyof typeof TimelineKindEnum13];
 
 export const TimelineKindEnum14 = {
-    ARTIFACT: "ARTIFACT"
+    MESSAGE: "MESSAGE"
 } as const;
 
 export type TimelineKindEnum14Key = (typeof TimelineKindEnum14)[keyof typeof TimelineKindEnum14];
 
 export const TimelineKindEnum15 = {
-    STOP_RAISED: "STOP_RAISED"
+    STEER: "STEER"
 } as const;
 
 export type TimelineKindEnum15Key = (typeof TimelineKindEnum15)[keyof typeof TimelineKindEnum15];
 
 export const TimelineKindEnum16 = {
-    STOP_RESOLVED: "STOP_RESOLVED"
+    ARTIFACT: "ARTIFACT"
 } as const;
 
 export type TimelineKindEnum16Key = (typeof TimelineKindEnum16)[keyof typeof TimelineKindEnum16];
 
 export const TimelineKindEnum17 = {
-    COMPLETED: "COMPLETED"
+    STOP_RAISED: "STOP_RAISED"
 } as const;
 
 export type TimelineKindEnum17Key = (typeof TimelineKindEnum17)[keyof typeof TimelineKindEnum17];
 
 export const TimelineKindEnum18 = {
-    ARCHIVED: "ARCHIVED"
+    STOP_RESOLVED: "STOP_RESOLVED"
 } as const;
 
 export type TimelineKindEnum18Key = (typeof TimelineKindEnum18)[keyof typeof TimelineKindEnum18];
+
+export const TimelineKindEnum19 = {
+    COMPLETED: "COMPLETED"
+} as const;
+
+export type TimelineKindEnum19Key = (typeof TimelineKindEnum19)[keyof typeof TimelineKindEnum19];
+
+export const TimelineKindEnum20 = {
+    ARCHIVED: "ARCHIVED"
+} as const;
+
+export type TimelineKindEnum20Key = (typeof TimelineKindEnum20)[keyof typeof TimelineKindEnum20];
+
+export const TimelineKindEnum21 = {
+    PAUSED: "PAUSED"
+} as const;
+
+export type TimelineKindEnum21Key = (typeof TimelineKindEnum21)[keyof typeof TimelineKindEnum21];
+
+export const TimelineKindEnum22 = {
+    RESUMED: "RESUMED"
+} as const;
+
+export type TimelineKindEnum22Key = (typeof TimelineKindEnum22)[keyof typeof TimelineKindEnum22];
 
 /**
  * @description One issue of a group with its timeline, by the group\'s panel link token (public)
@@ -120,7 +133,7 @@ export type GetPanelIssue200 = {
         /**
          * @type string
         */
-        kind: TimelineKindEnum10Key;
+        kind: TimelineKindEnum12Key;
         /**
          * @type string
         */
@@ -137,7 +150,7 @@ export type GetPanelIssue200 = {
         /**
          * @type string
         */
-        kind: TimelineKindEnum11Key;
+        kind: TimelineKindEnum13Key;
         /**
          * @type string
         */
@@ -150,7 +163,7 @@ export type GetPanelIssue200 = {
         /**
          * @type string
         */
-        kind: TimelineKindEnum12Key;
+        kind: TimelineKindEnum14Key;
         /**
          * @type string
         */
@@ -179,7 +192,7 @@ export type GetPanelIssue200 = {
         /**
          * @type string
         */
-        kind: TimelineKindEnum13Key;
+        kind: TimelineKindEnum15Key;
         /**
          * @type string
         */
@@ -208,7 +221,7 @@ export type GetPanelIssue200 = {
         /**
          * @type string
         */
-        kind: TimelineKindEnum14Key;
+        kind: TimelineKindEnum16Key;
         /**
          * @type string
         */
@@ -233,7 +246,7 @@ export type GetPanelIssue200 = {
         /**
          * @type string
         */
-        kind: TimelineKindEnum15Key;
+        kind: TimelineKindEnum17Key;
         /**
          * @type string
         */
@@ -258,7 +271,7 @@ export type GetPanelIssue200 = {
         /**
          * @type string
         */
-        kind: TimelineKindEnum16Key;
+        kind: TimelineKindEnum18Key;
         /**
          * @type string
         */
@@ -279,7 +292,7 @@ export type GetPanelIssue200 = {
         /**
          * @type string
         */
-        kind: TimelineKindEnum17Key;
+        kind: TimelineKindEnum19Key;
         /**
          * @type string
         */
@@ -292,7 +305,7 @@ export type GetPanelIssue200 = {
         /**
          * @type string
         */
-        kind: TimelineKindEnum18Key;
+        kind: TimelineKindEnum20Key;
         /**
          * @type string
         */
@@ -301,6 +314,48 @@ export type GetPanelIssue200 = {
          * @type string
         */
         at: string;
+    } | {
+        /**
+         * @type string
+        */
+        kind: TimelineKindEnum21Key;
+        /**
+         * @type string
+        */
+        id: string;
+        /**
+         * @type string
+        */
+        at: string;
+        /**
+         * @type string
+        */
+        source: IssueControlSource;
+        /**
+         * @type string | undefined
+        */
+        by?: string;
+    } | {
+        /**
+         * @type string
+        */
+        kind: TimelineKindEnum22Key;
+        /**
+         * @type string
+        */
+        id: string;
+        /**
+         * @type string
+        */
+        at: string;
+        /**
+         * @type string
+        */
+        source: IssueControlSource;
+        /**
+         * @type string | undefined
+        */
+        by?: string;
     })[];
 };
 

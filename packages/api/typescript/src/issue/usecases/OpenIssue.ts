@@ -56,6 +56,7 @@ export class OpenIssue extends Handler<typeof OpenIssueInputSchema, typeof OpenI
 				status: IssueStatus.WORKING,
 				provider: input.provider,
 				archived: false,
+				paused: false,
 				originEntryId: input.originEntryId,
 				goal: input.goal,
 				id: input.issueId,

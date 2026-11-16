@@ -13,6 +13,8 @@ type IssueOverrides = Partial<{
 	provider: ProviderKind
 	status: IssueStatus
 	completedAt: Date
+	/** Held (fase 2, item 2) — set through the entity's own `pause()`, so the invariants still apply. */
+	paused: boolean
 }>
 
 export async function givenIssue(testBed: TestBedLike, overrides: IssueOverrides = {}): Promise<Issue> {
@@ -31,6 +33,7 @@ export async function givenIssue(testBed: TestBedLike, overrides: IssueOverrides
 		issue.complete()
 		if (overrides.completedAt) issue.completedAt = overrides.completedAt
 	}
+	if (overrides.paused) issue.pause()
 	await repo.save(issue)
 	return issue
 }

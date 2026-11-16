@@ -10,6 +10,8 @@ export const IssueTimelineItemKindEnum = {
     COMPLETED: "COMPLETED",
     CREATED: "CREATED",
     MESSAGE: "MESSAGE",
+    PAUSED: "PAUSED",
+    RESUMED: "RESUMED",
     STEER: "STEER",
     STOP_RAISED: "STOP_RAISED",
     STOP_RESOLVED: "STOP_RESOLVED",

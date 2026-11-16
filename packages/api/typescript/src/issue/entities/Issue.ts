@@ -16,6 +16,12 @@ export const IssueSchema = z.object({
 	archiveReason: z.enum(IssueArchiveReason).optional(),
 	completedAt: z.date().optional(),
 	/**
+	 * Someone HELD this issue's work (fase 2, item 2 — "pausa como comando"). Orthogonal to `status`: the
+	 * lifecycle stays where it was and `resume()` returns to it. While true no turn runs (the dispatcher
+	 * defers its mailbox items) and its external tools refuse with ISSUE_PAUSED (`IssueHold`).
+	 */
+	paused: z.boolean(),
+	/**
 	 * The transcript entry that ASKED for this issue — the message the finished result will quote
 	 * (§7.6, where the issue return always cites it).
 	 *
@@ -72,6 +78,7 @@ export class Issue extends AggregateRoot<typeof IssueSchema> {
 			archived: false,
 			archiveReason: undefined,
 			completedAt: undefined,
+			paused: false,
 			originEntryId: data.originEntryId,
 			goal: data.goal,
 		})
@@ -141,6 +148,34 @@ export class Issue extends AggregateRoot<typeof IssueSchema> {
 		if (!this.archived) throw new BaseError<DomainErrors>('ISSUE_NOT_ARCHIVED')
 		this.archived = false
 		this.archiveReason = undefined
+	}
+
+	/**
+	 * HOLD the work — "pare" / "segura" in the group, or the console's pause button (fase 2, item 2).
+	 *
+	 * Only work that can still move can be held: a COMPLETED issue has nothing left to stop and an
+	 * archived one has left the board, so both are ISSUE_NOT_PAUSABLE rather than a silent no-op — the
+	 * console button must not answer "pausada" about an issue that was never going to run again.
+	 * Pausing twice is ISSUE_ALREADY_PAUSED: the WhatsApp path pre-checks `paused` so a redelivered
+	 * "pare" never reaches this line, which keeps the error for the caller that asked twice on purpose.
+	 *
+	 * `status` is NOT touched. The pause is a hold on top of the lifecycle, not a lifecycle state: a
+	 * NEEDS_INPUT issue paused and resumed is still waiting for its person.
+	 */
+	pause(): void {
+		if (this.archived || this.status === IssueStatus.COMPLETED) throw new BaseError<DomainErrors>('ISSUE_NOT_PAUSABLE')
+		if (this.paused) throw new BaseError<DomainErrors>('ISSUE_ALREADY_PAUSED')
+		this.paused = true
+	}
+
+	/**
+	 * Let the held work continue — "continue" / "retome", or the console's resume button. Valid from any
+	 * lifecycle state, because lifting a hold is always safe; only an issue that is not held refuses
+	 * (ISSUE_NOT_PAUSED).
+	 */
+	resume(): void {
+		if (!this.paused) throw new BaseError<DomainErrors>('ISSUE_NOT_PAUSED')
+		this.paused = false
 	}
 
 	/** Guard used by RaiseStop / SteerIssue — no new stops/steers on an archived issue. */

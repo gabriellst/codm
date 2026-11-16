@@ -11,6 +11,7 @@ export const IssueLifeStateEnum = {
     WAITING_PERSON: "WAITING_PERSON",
     REMINDED: "REMINDED",
     STALLED: "STALLED",
+    PAUSED: "PAUSED",
     DONE: "DONE"
 } as const;
 

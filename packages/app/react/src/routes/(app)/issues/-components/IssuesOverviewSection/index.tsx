@@ -35,8 +35,8 @@ const BOARD_COLUMNS = [
 ] as const satisfies readonly IssueLifeState[]
 
 /**
- * Which column each life state sits in. REMINDED shares STALLED's column — both are "it went quiet" —
- * and the card itself says "reminded". Exhaustive by type: a new life state fails `tsc` until placed.
+ * Which column each life state sits in. REMINDED and PAUSED share STALLED's column — all three are "it
+ * went quiet" — and the card itself says which. Exhaustive by type: a new life state fails `tsc` until placed.
  */
 const COLUMN_OF: Record<IssueLifeState, (typeof BOARD_COLUMNS)[number]> = {
 	[IssueLifeStateEnum.QUEUED]: IssueLifeStateEnum.QUEUED,
@@ -45,6 +45,8 @@ const COLUMN_OF: Record<IssueLifeState, (typeof BOARD_COLUMNS)[number]> = {
 	[IssueLifeStateEnum.WAITING_PROVIDER]: IssueLifeStateEnum.WAITING_PROVIDER,
 	[IssueLifeStateEnum.REMINDED]: IssueLifeStateEnum.STALLED,
 	[IssueLifeStateEnum.STALLED]: IssueLifeStateEnum.STALLED,
+	// Held on purpose (fase 2, item 2): it is quiet like STALLED, and the card says "paused".
+	[IssueLifeStateEnum.PAUSED]: IssueLifeStateEnum.STALLED,
 	[IssueLifeStateEnum.DONE]: IssueLifeStateEnum.DONE,
 }
 

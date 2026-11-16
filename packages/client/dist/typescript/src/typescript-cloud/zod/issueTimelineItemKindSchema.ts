@@ -5,4 +5,4 @@
 
 import { z } from "zod/v4";
 
-export const issueTimelineItemKindSchema = z.enum(["ARCHIVED", "ARTIFACT", "COMPLETED", "CREATED", "MESSAGE", "STEER", "STOP_RAISED", "STOP_RESOLVED", "TURN_STARTED"])
+export const issueTimelineItemKindSchema = z.enum(["ARCHIVED", "ARTIFACT", "COMPLETED", "CREATED", "MESSAGE", "PAUSED", "RESUMED", "STEER", "STOP_RAISED", "STOP_RESOLVED", "TURN_STARTED"])

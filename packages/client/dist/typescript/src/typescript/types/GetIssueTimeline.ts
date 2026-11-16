@@ -5,6 +5,7 @@
 
 import type { ArtifactKind } from "./ArtifactKind.ts";
 import type { ClassificationMethod } from "./ClassificationMethod.ts";
+import type { IssueControlSource } from "./IssueControlSource.ts";
 import type { StopKind } from "./StopKind.ts";
 import type { StopResolution } from "./StopResolution.ts";
 import type { TranscriptKind } from "./TranscriptKind.ts";
@@ -69,6 +70,18 @@ export const ItemsKindEnum9 = {
 } as const;
 
 export type ItemsKindEnum9Key = (typeof ItemsKindEnum9)[keyof typeof ItemsKindEnum9];
+
+export const ItemsKindEnum10 = {
+    PAUSED: "PAUSED"
+} as const;
+
+export type ItemsKindEnum10Key = (typeof ItemsKindEnum10)[keyof typeof ItemsKindEnum10];
+
+export const ItemsKindEnum11 = {
+    RESUMED: "RESUMED"
+} as const;
+
+export type ItemsKindEnum11Key = (typeof ItemsKindEnum11)[keyof typeof ItemsKindEnum11];
 
 /**
  * @description An issue\'s timeline: created, turns, messages, steers, artifacts, stops, completion
@@ -262,6 +275,48 @@ export type GetIssueTimeline200 = {
          * @type string
         */
         at: string;
+    } | {
+        /**
+         * @type string
+        */
+        kind: ItemsKindEnum10Key;
+        /**
+         * @type string
+        */
+        id: string;
+        /**
+         * @type string
+        */
+        at: string;
+        /**
+         * @type string
+        */
+        source: IssueControlSource;
+        /**
+         * @type string | undefined
+        */
+        by?: string;
+    } | {
+        /**
+         * @type string
+        */
+        kind: ItemsKindEnum11Key;
+        /**
+         * @type string
+        */
+        id: string;
+        /**
+         * @type string
+        */
+        at: string;
+        /**
+         * @type string
+        */
+        source: IssueControlSource;
+        /**
+         * @type string | undefined
+        */
+        by?: string;
     })[];
 };
 

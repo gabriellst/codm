@@ -151,4 +151,45 @@ describe('Issue entity', () => {
 		const i = Issue.open(base)
 		expect(() => i.reopen()).toThrow(BaseError)
 	})
+
+	/**
+	 * Pausa como comando (fase 2, item 2): the hold sits ON TOP of the lifecycle. Falsifier: let `pause()`
+	 * touch `status`, or accept a COMPLETED/archived issue, and the matching assertion fails.
+	 */
+	describe('pause() / resume()', () => {
+		it('pauses a WORKING or NEEDS_INPUT issue without touching its status, and resume() lifts it', () => {
+			for (const status of [IssueStatus.WORKING, IssueStatus.NEEDS_INPUT]) {
+				const i = Issue.open({ ...base, status })
+				i.pause()
+				expect(i.paused).toBe(true)
+				expect(i.status).toBe(status)
+				i.resume()
+				expect(i.paused).toBe(false)
+				expect(i.status).toBe(status)
+			}
+		})
+
+		it('opens unpaused', () => {
+			expect(Issue.open(base).paused).toBe(false)
+		})
+
+		it('pausing twice throws ISSUE_ALREADY_PAUSED', () => {
+			const i = Issue.open(base)
+			i.pause()
+			expect(() => i.pause()).toThrow(expect.objectContaining({ name: 'ISSUE_ALREADY_PAUSED' }))
+		})
+
+		it('a COMPLETED or archived issue is ISSUE_NOT_PAUSABLE', () => {
+			const done = Issue.open(base)
+			done.complete()
+			expect(() => done.pause()).toThrow(expect.objectContaining({ name: 'ISSUE_NOT_PAUSABLE' }))
+			const archived = Issue.open(base)
+			archived.archive(IssueArchiveReason.MANUAL)
+			expect(() => archived.pause()).toThrow(expect.objectContaining({ name: 'ISSUE_NOT_PAUSABLE' }))
+		})
+
+		it('resuming an issue that is not paused throws ISSUE_NOT_PAUSED', () => {
+			expect(() => Issue.open(base).resume()).toThrow(expect.objectContaining({ name: 'ISSUE_NOT_PAUSED' }))
+		})
+	})
 })

@@ -44,8 +44,8 @@ export const POLICY_EXCEPTIONS: readonly { file: string; imports: string; why: s
 	//   degrau 3 (integration event) — NOT NEEDED, and under the generated-tools amendment almost
 	//     certainly never will be: there is no cross-context TOOL to register any more. The tool IS the
 	//     owning context's controller.
-	// No cycle is created: `artifact`, `issue`, `ui` and `workspace` do not depend on `agent`
-	// except for the already-annotated `agent ↔ thread` partnership.
+	// No cycle is created by the scan itself: `artifact`, `ui` and `workspace` do not depend on `agent`;
+	// `thread` and `issue` do, through the separately annotated `agent ↔ thread` / `agent ↔ issue` partnerships.
 	//
 	// `owner` SAIU desta lista em 2026-08-14 (ADR 0001, W3 Task 4c): ele passou a ser cloud-only, e a
 	// porta MCP vive em `agent`, que só monta em `local`. A varredura deixou de importar
@@ -145,6 +145,21 @@ export const POLICY_EXCEPTIONS: readonly { file: string; imports: string; why: s
 			"roll back together (spec AC: 'falha revalidação → nada persiste'). An event would make each step " +
 			"eventual and reintroduce exactly the partial-write-on-reboot bug this feature exists to close.",
 	})),
+	{
+		file: 'thread/usecases/IngestChannelMessage.ts',
+		imports: 'issue/usecases',
+		why:
+			'Pausa como comando (fase 2, item 2) — a control word ("pare APP-12", "continue" quoting an issue) pauses or resumes ' +
+			'the issue from the ingest. The ladder:\n' +
+			'  degrau 1 (refactor to repositories/services) — NOT TAKEN. Doing it through `IssueRepository` here would mutate ' +
+			"`Issue` from `thread` and mint `issue.paused` outside the context that owns the fact; `PauseIssue`/`ResumeIssue` " +
+			"are `issue`'s own guarded entrypoints and the console uses the same two.\n" +
+			'  degrau 2 (declared edge + NAMED per-file exception) — TAKEN. `thread → issue` is already a declared edge; this ' +
+			'extends it to the usecases surface for this one file, the shape `SteerIssueTurn → ReopenIssue` already has.\n' +
+			'  degrau 3 (integration event / queued command) — NOT NEEDED, and wrong here. The transcript entry that carries ' +
+			'the "pare" and the hold it asks for must commit in ONE transaction (the `tx` both use cases accept): an eventual ' +
+			'pause would leave a window in which the group sees its "pare" recorded and the work still running.',
+	},
 ]
 
 /**
@@ -155,6 +170,10 @@ export const ANNOTATED_CYCLES: readonly { between: readonly [ContextId, ContextI
 	{
 		between: ['agent', 'ui'],
 		why: "ASYMMETRIC BY NATURE, and only one half is a runtime dependency. ui → agent is real code calling real code: the BFF Settings/AttachWizard queries resolve provider availability through ProviderDetector. agent → ui is the MCP exposure scan READING the `static mcpScopes` of the classes ui's barrel exports — a static-metadata read evaluated once at module load, which constructs nothing and calls nothing. Breaking it would mean either moving the scan into a wiring file where no reviewer looks for it, or dropping the console's own read surface from the scope an external MCP client uses to navigate the system, which is the scope's entire purpose. Recorded rather than hidden: if the scan ever starts INVOKING a ui controller, this annotation stops being true and the edge must be re-argued.",
+	},
+	{
+		between: ['agent', 'issue'],
+		why: "Partnership across the issue's TURN (fase 2, item 2 — pausa como comando). agent → issue: the dispatcher asks IssueHold whether an issue's work is held before running its turn, SteerIssueTurn reopens through ReopenIssue, and the MCP exposure scan reads issue's controller barrel. issue → agent: the pause fact is issue's, and its two in-context handlers command the agent's turn runtime — AbortIssueTurnOnPause kills the running turn (IssueTurnAborter), ReleaseIssueWorkOnResume releases the held mailbox items. Same shape as agent ↔ thread: the owner of a fact reacts to it in its own context and hands the runtime effect to the context that runs turns. Not an integration event because the abort has to reach the in-memory controller of THIS process, and the SQL integration lane would add a poll interval to a command whose whole point is to be immediate; the issues.paused flag stays the authoritative hold either way.",
 	},
 	{
 		between: ['agent', 'thread'],

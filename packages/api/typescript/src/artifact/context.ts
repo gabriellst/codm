@@ -8,6 +8,7 @@ export default {
 	consumes: {
 		thread:
 			'RecordArtifact validates the target thread exists via ThreadRepository (the artifact catalog is a sink, not the owner). SendArtifact ("envio de artefatos pelo canal" design) extends this: ThreadRepository resolves channelId/contactExternalId for the LINK text path, ChannelSender reads capabilities.media (services surface), and the enqueue of both delivery commands (deliver_channel_message for LINK, deliver_channel_attachment for media) crosses through thread/services/ArtifactDelivery — a free-function ignition seam, same shape as beginTypingPresence, because CROSS_CONTEXT_POLICY forbids importing thread/usecases directly.',
-		issue: 'RecordArtifact validates the optional issue exists via IssueRepository (same sink posture).',
+		issue:
+			'RecordArtifact validates the optional issue exists via IssueRepository (same sink posture). SendArtifact refuses to deliver the artifact of a HELD issue through IssueHold (services surface; fase 2, item 2 — pausa como comando).',
 	},
 } satisfies ContextDecl

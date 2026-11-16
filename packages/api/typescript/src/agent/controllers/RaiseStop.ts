@@ -2,13 +2,15 @@ import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 import { McpScope, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { CloudSessionMiddleware } from '@shared/middlewares'
+import { AgentRunIdentityCtxSchema } from '../types/AgentRunIdentity'
 import { DeclareStop, DeclareStopInputSchema, DeclareStopOutputSchema } from '../usecases/DeclareStop'
 
 export const RaiseStopControllerInputSchema = z
 	.object({
-		ctx: z.object({ ownerId: z.uuid() }),
+		// The run identity, composed so Zod does not strip it — its `issueId` is who is calling (the hold gate).
+		ctx: z.object({ ownerId: z.uuid() }).extend(AgentRunIdentityCtxSchema.shape),
 		params: DeclareStopInputSchema.pick({ threadId: true, issueId: true }),
-		body: DeclareStopInputSchema.omit({ ownerId: true, threadId: true, issueId: true }),
+		body: DeclareStopInputSchema.omit({ ownerId: true, threadId: true, issueId: true, actingIssueId: true }),
 	})
 	.example([
 		{
@@ -46,6 +48,7 @@ export class RaiseStopController extends Controller<typeof RaiseStopControllerIn
 			ownerId: request.ctx.ownerId,
 			threadId: request.params.threadId,
 			issueId: request.params.issueId,
+			actingIssueId: request.ctx.agentIdentity?.issueId,
 			...request.body,
 		})
 		return { status: HttpStatusCode.CREATED, data }

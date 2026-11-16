@@ -1,6 +1,6 @@
-import { and, eq, gt, inArray, isNotNull, isNull, max } from 'drizzle-orm'
+import { and, eq, gt, inArray, isNotNull, isNull, max, or } from 'drizzle-orm'
 import type { LibSqlDatabaseDriver } from '@codm/core-typescript'
-import { agentMailbox } from '@codm/contracts/db'
+import { agentMailbox, issues, threads } from '@codm/contracts/db'
 import { MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
 
 /**
@@ -17,8 +17,14 @@ export async function providerWaitByIssue(driver: LibSqlDatabaseDriver, issueIds
 	const rows = await driver.db
 		.select({ issueId: agentMailbox.targetId, until: max(agentMailbox.leaseUntil) })
 		.from(agentMailbox)
+		// A HELD issue's deferred item is the pause, not the provider (fase 2, item 2) — joined out so the
+		// "esperando cota" badge never claims a usage limit for work somebody stopped on purpose.
+		.innerJoin(issues, eq(issues.id, agentMailbox.targetId))
+		.leftJoin(threads, eq(threads.id, issues.threadId))
 		.where(
 			and(
+				eq(issues.paused, false),
+				or(isNull(threads.paused), eq(threads.paused, false)),
 				eq(agentMailbox.targetKind, MailboxTargetKind.ISSUE),
 				isNull(agentMailbox.consumedAt),
 				isNull(agentMailbox.deadAt),

@@ -22,6 +22,8 @@ const DETAIL: { [K in IssueTimelineItemKind]: (props: { item: ItemOf<K> }) => Re
 	STOP_RESOLVED: ({ item }) => enumLabel('StopResolution', item.resolution),
 	COMPLETED: () => null,
 	ARCHIVED: () => null,
+	PAUSED: ({ item }) => <ControlDetail item={item} />,
+	RESUMED: ({ item }) => <ControlDetail item={item} />,
 }
 
 /**
@@ -97,4 +99,11 @@ function SteerDetail({ item }: { item: ItemOf<'STEER'> }) {
 			<span className="block text-xs">{status}</span>
 		</>
 	)
+}
+
+/** Who held / released the work and from where (fase 2, item 2) — the source alone when no name was recorded. */
+function ControlDetail({ item }: { item: ItemOf<'PAUSED'> | ItemOf<'RESUMED'> }) {
+	const { t } = useTranslation()
+	const source = enumLabel('IssueControlSource', item.source)
+	return <>{item.by ? t('session.timelineControlBy', { source, by: item.by }) : source}</>
 }

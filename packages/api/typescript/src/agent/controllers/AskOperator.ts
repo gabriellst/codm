@@ -2,11 +2,13 @@ import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 import { McpScope } from '@codm/contracts-typescript/wire/enums'
 import { CloudSessionMiddleware } from '@shared/middlewares'
+import { AgentRunIdentityCtxSchema } from '../types/AgentRunIdentity'
 import { AskOperator, AskOperatorInputSchema, AskOperatorOutputSchema } from '../usecases/AskOperator'
 
 export const AskOperatorControllerInputSchema = z
 	.object({
-		ctx: z.object({ ownerId: z.uuid() }),
+		// The run identity, composed so Zod does not strip it — its `issueId` is who is calling (the hold gate).
+		ctx: z.object({ ownerId: z.uuid() }).extend(AgentRunIdentityCtxSchema.shape),
 		params: AskOperatorInputSchema.pick({ threadId: true, issueId: true }),
 		// EXACTLY `{ question }` — and the absence of `kind` is the contract, not an omission. The
 		// generated tool's `inputSchema` is derived from this object, so "the model cannot choose the
@@ -52,6 +54,7 @@ export class AskOperatorController extends Controller<typeof AskOperatorControll
 			ownerId: request.ctx.ownerId,
 			threadId: request.params.threadId,
 			issueId: request.params.issueId,
+			actingIssueId: request.ctx.agentIdentity?.issueId,
 			question: request.body.question,
 		})
 		return { status: HttpStatusCode.ACCEPTED, data }

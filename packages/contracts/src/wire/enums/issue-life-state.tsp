@@ -1,6 +1,6 @@
 namespace TemplateContracts;
 
-@doc("Where an Issue's work actually stands RIGHT NOW, computed by rule from the queue and the stops — never stored, never declared by the model. Orthogonal to IssueStatus (the lifecycle): a WORKING issue may be RUNNING, QUEUED, WAITING_PROVIDER, WAITING_PERSON, REMINDED or STALLED. RUNNING: a turn holds a live lease. QUEUED: work is waiting for a free slot. WAITING_PROVIDER: its next turn is deferred by the provider's usage limit. WAITING_PERSON: an open stop asks someone to decide, approve or answer. REMINDED: its last turn ended without declaring anything and the one declaration reminder is pending or running. STALLED: nothing in flight and no open stop — the reconcile sweep has not caught it yet, or the reminder was ignored. DONE: COMPLETED.")
+@doc("Where an Issue's work actually stands RIGHT NOW, computed by rule from the queue and the stops — never stored, never declared by the model. Orthogonal to IssueStatus (the lifecycle): a WORKING issue may be RUNNING, QUEUED, WAITING_PROVIDER, WAITING_PERSON, REMINDED, STALLED or PAUSED. RUNNING: a turn holds a live lease. QUEUED: work is waiting for a free slot. WAITING_PROVIDER: its next turn is deferred by the provider's usage limit. WAITING_PERSON: an open stop asks someone to decide, approve or answer. REMINDED: its last turn ended without declaring anything and the one declaration reminder is pending or running. STALLED: nothing in flight and no open stop — the reconcile sweep has not caught it yet, or the reminder was ignored. PAUSED: someone paused it, or its whole conversation — no turn runs and its external tools refuse until it is resumed; it wins over every state but DONE. DONE: COMPLETED.")
 enum IssueLifeState {
   RUNNING: "RUNNING",
   QUEUED: "QUEUED",
@@ -8,5 +8,6 @@ enum IssueLifeState {
   WAITING_PERSON: "WAITING_PERSON",
   REMINDED: "REMINDED",
   STALLED: "STALLED",
+  PAUSED: "PAUSED",
   DONE: "DONE",
 }

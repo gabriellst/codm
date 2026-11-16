@@ -575,7 +575,23 @@ pub enum IssueArchiveReason {
 	THREAD_DETACHED,
 }
 
-/// Where an Issue's work actually stands RIGHT NOW, computed by rule from the queue and the stops — never stored, never declared by the model. Orthogonal to IssueStatus (the lifecycle): a WORKING issue may be RUNNING, QUEUED, WAITING_PROVIDER, WAITING_PERSON, REMINDED or STALLED. RUNNING: a turn holds a live lease. QUEUED: work is waiting for a free slot. WAITING_PROVIDER: its next turn is deferred by the provider's usage limit. WAITING_PERSON: an open stop asks someone to decide, approve or answer. REMINDED: its last turn ended without declaring anything and the one declaration reminder is pending or running. STALLED: nothing in flight and no open stop — the reconcile sweep has not caught it yet, or the reminder was ignored. DONE: COMPLETED.
+/// Where a pause or resume of an Issue came from. WHATSAPP: a control word (pare, segura, continue…) sent in the conversation with a target (a quoted issue message or one issue key). CONSOLE: the operator's pause/resume buttons on the issue detail.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum IssueControlSource {
+	#[serde(rename = "WHATSAPP")]
+	#[strum(serialize = "WHATSAPP")]
+	WHATSAPP,
+	#[serde(rename = "CONSOLE")]
+	#[strum(serialize = "CONSOLE")]
+	CONSOLE,
+}
+
+/// Where an Issue's work actually stands RIGHT NOW, computed by rule from the queue and the stops — never stored, never declared by the model. Orthogonal to IssueStatus (the lifecycle): a WORKING issue may be RUNNING, QUEUED, WAITING_PROVIDER, WAITING_PERSON, REMINDED, STALLED or PAUSED. RUNNING: a turn holds a live lease. QUEUED: work is waiting for a free slot. WAITING_PROVIDER: its next turn is deferred by the provider's usage limit. WAITING_PERSON: an open stop asks someone to decide, approve or answer. REMINDED: its last turn ended without declaring anything and the one declaration reminder is pending or running. STALLED: nothing in flight and no open stop — the reconcile sweep has not caught it yet, or the reminder was ignored. PAUSED: someone paused it, or its whole conversation — no turn runs and its external tools refuse until it is resumed; it wins over every state but DONE. DONE: COMPLETED.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
 	serde::Serialize, serde::Deserialize,
@@ -601,6 +617,9 @@ pub enum IssueLifeState {
 	#[serde(rename = "STALLED")]
 	#[strum(serialize = "STALLED")]
 	STALLED,
+	#[serde(rename = "PAUSED")]
+	#[strum(serialize = "PAUSED")]
+	PAUSED,
 	#[serde(rename = "DONE")]
 	#[strum(serialize = "DONE")]
 	DONE,
@@ -625,7 +644,7 @@ pub enum IssueStatus {
 	COMPLETED,
 }
 
-/// The kinds of moment an Issue's timeline shows, oldest first. Discriminant of the timeline item union: each kind carries its own fields. CREATED: the issue was forked. TURN_STARTED: a turn of its session began. MESSAGE: a transcript entry linked to the issue (what the agent said about it, or a reply that quoted it). STEER: guidance sent to it (with sent/delivered/read instants). ARTIFACT: a file, image, video or link it recorded. STOP_RAISED / STOP_RESOLVED: it asked for someone, and someone answered. COMPLETED: it declared itself done. ARCHIVED: it left the board.
+/// The kinds of moment an Issue's timeline shows, oldest first. Discriminant of the timeline item union: each kind carries its own fields. CREATED: the issue was forked. TURN_STARTED: a turn of its session began. MESSAGE: a transcript entry linked to the issue (what the agent said about it, or a reply that quoted it). STEER: guidance sent to it (with sent/delivered/read instants). ARTIFACT: a file, image, video or link it recorded. STOP_RAISED / STOP_RESOLVED: it asked for someone, and someone answered. COMPLETED: it declared itself done. ARCHIVED: it left the board. PAUSED / RESUMED: someone held its work (a WhatsApp control word or the console button), and someone let it continue.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
 	serde::Serialize, serde::Deserialize,
@@ -660,6 +679,12 @@ pub enum IssueTimelineItemKind {
 	#[serde(rename = "ARCHIVED")]
 	#[strum(serialize = "ARCHIVED")]
 	ARCHIVED,
+	#[serde(rename = "PAUSED")]
+	#[strum(serialize = "PAUSED")]
+	PAUSED,
+	#[serde(rename = "RESUMED")]
+	#[strum(serialize = "RESUMED")]
+	RESUMED,
 }
 
 /// UI locale the app ships translations for.

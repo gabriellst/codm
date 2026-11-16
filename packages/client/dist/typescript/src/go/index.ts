@@ -196,6 +196,7 @@ export type { InternalChannelMessageReceivedPlatformData } from "./types/Interna
 export type { InternalChannelMessageSentPlatformData } from "./types/InternalChannelMessageSentPlatformData.ts";
 export type { InternalTextContent } from "./types/InternalTextContent.ts";
 export type { IssueArchiveReason, IssueArchiveReasonEnumKey } from "./types/IssueArchiveReason.ts";
+export type { IssueControlSource, IssueControlSourceEnumKey } from "./types/IssueControlSource.ts";
 export type { IssueLifeState, IssueLifeStateEnumKey } from "./types/IssueLifeState.ts";
 export type { IssueStatus, IssueStatusEnumKey } from "./types/IssueStatus.ts";
 export type { IssueTimelineItemKind, IssueTimelineItemKindEnumKey } from "./types/IssueTimelineItemKind.ts";
@@ -579,6 +580,7 @@ export { IntegrationChannelSyncCompletedEventNameEnum } from "./types/Integratio
 export { IntegrationChannelSyncProgressEventNameEnum } from "./types/IntegrationChannelSyncProgressEvent.ts";
 export { IntegrationChannelSyncStartedEventNameEnum } from "./types/IntegrationChannelSyncStartedEvent.ts";
 export { IssueArchiveReasonEnum } from "./types/IssueArchiveReason.ts";
+export { IssueControlSourceEnum } from "./types/IssueControlSource.ts";
 export { IssueLifeStateEnum } from "./types/IssueLifeState.ts";
 export { IssueStatusEnum } from "./types/IssueStatus.ts";
 export { IssueTimelineItemKindEnum } from "./types/IssueTimelineItemKind.ts";
@@ -763,6 +765,7 @@ export { internalChannelMessageReceivedPlatformDataSchema } from "./zod/internal
 export { internalChannelMessageSentPlatformDataSchema } from "./zod/internalChannelMessageSentPlatformDataSchema.ts";
 export { internalTextContentSchema } from "./zod/internalTextContentSchema.ts";
 export { issueArchiveReasonSchema } from "./zod/issueArchiveReasonSchema.ts";
+export { issueControlSourceSchema } from "./zod/issueControlSourceSchema.ts";
 export { issueLifeStateSchema } from "./zod/issueLifeStateSchema.ts";
 export { issueStatusSchema } from "./zod/issueStatusSchema.ts";
 export { issueTimelineItemKindSchema } from "./zod/issueTimelineItemKindSchema.ts";

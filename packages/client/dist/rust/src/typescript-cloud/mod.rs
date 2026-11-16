@@ -93,11 +93,15 @@ pub mod types {
     ///    "INVALID_TIMEZONE",
     ///    "ISSUE_ALREADY_ARCHIVED",
     ///    "ISSUE_ALREADY_COMPLETED",
+    ///    "ISSUE_ALREADY_PAUSED",
     ///    "ISSUE_ARCHIVED",
     ///    "ISSUE_NOT_ARCHIVED",
     ///    "ISSUE_NOT_COMPLETED",
     ///    "ISSUE_NOT_FOUND",
+    ///    "ISSUE_NOT_PAUSABLE",
+    ///    "ISSUE_NOT_PAUSED",
     ///    "ISSUE_NOT_REOPENABLE",
+    ///    "ISSUE_PAUSED",
     ///    "LAST_INVOKER",
     ///    "LOOP_NOT_FOUND",
     ///    "LOOP_PROMPT_TOO_LONG",
@@ -262,6 +266,8 @@ pub mod types {
         IssueAlreadyArchived,
         #[serde(rename = "ISSUE_ALREADY_COMPLETED")]
         IssueAlreadyCompleted,
+        #[serde(rename = "ISSUE_ALREADY_PAUSED")]
+        IssueAlreadyPaused,
         #[serde(rename = "ISSUE_ARCHIVED")]
         IssueArchived,
         #[serde(rename = "ISSUE_NOT_ARCHIVED")]
@@ -270,8 +276,14 @@ pub mod types {
         IssueNotCompleted,
         #[serde(rename = "ISSUE_NOT_FOUND")]
         IssueNotFound,
+        #[serde(rename = "ISSUE_NOT_PAUSABLE")]
+        IssueNotPausable,
+        #[serde(rename = "ISSUE_NOT_PAUSED")]
+        IssueNotPaused,
         #[serde(rename = "ISSUE_NOT_REOPENABLE")]
         IssueNotReopenable,
+        #[serde(rename = "ISSUE_PAUSED")]
+        IssuePaused,
         #[serde(rename = "LAST_INVOKER")]
         LastInvoker,
         #[serde(rename = "LOOP_NOT_FOUND")]
@@ -446,11 +458,15 @@ pub mod types {
                 Self::InvalidTimezone => f.write_str("INVALID_TIMEZONE"),
                 Self::IssueAlreadyArchived => f.write_str("ISSUE_ALREADY_ARCHIVED"),
                 Self::IssueAlreadyCompleted => f.write_str("ISSUE_ALREADY_COMPLETED"),
+                Self::IssueAlreadyPaused => f.write_str("ISSUE_ALREADY_PAUSED"),
                 Self::IssueArchived => f.write_str("ISSUE_ARCHIVED"),
                 Self::IssueNotArchived => f.write_str("ISSUE_NOT_ARCHIVED"),
                 Self::IssueNotCompleted => f.write_str("ISSUE_NOT_COMPLETED"),
                 Self::IssueNotFound => f.write_str("ISSUE_NOT_FOUND"),
+                Self::IssueNotPausable => f.write_str("ISSUE_NOT_PAUSABLE"),
+                Self::IssueNotPaused => f.write_str("ISSUE_NOT_PAUSED"),
                 Self::IssueNotReopenable => f.write_str("ISSUE_NOT_REOPENABLE"),
+                Self::IssuePaused => f.write_str("ISSUE_PAUSED"),
                 Self::LastInvoker => f.write_str("LAST_INVOKER"),
                 Self::LoopNotFound => f.write_str("LOOP_NOT_FOUND"),
                 Self::LoopPromptTooLong => f.write_str("LOOP_PROMPT_TOO_LONG"),
@@ -568,11 +584,15 @@ pub mod types {
                 "INVALID_TIMEZONE" => Ok(Self::InvalidTimezone),
                 "ISSUE_ALREADY_ARCHIVED" => Ok(Self::IssueAlreadyArchived),
                 "ISSUE_ALREADY_COMPLETED" => Ok(Self::IssueAlreadyCompleted),
+                "ISSUE_ALREADY_PAUSED" => Ok(Self::IssueAlreadyPaused),
                 "ISSUE_ARCHIVED" => Ok(Self::IssueArchived),
                 "ISSUE_NOT_ARCHIVED" => Ok(Self::IssueNotArchived),
                 "ISSUE_NOT_COMPLETED" => Ok(Self::IssueNotCompleted),
                 "ISSUE_NOT_FOUND" => Ok(Self::IssueNotFound),
+                "ISSUE_NOT_PAUSABLE" => Ok(Self::IssueNotPausable),
+                "ISSUE_NOT_PAUSED" => Ok(Self::IssueNotPaused),
                 "ISSUE_NOT_REOPENABLE" => Ok(Self::IssueNotReopenable),
+                "ISSUE_PAUSED" => Ok(Self::IssuePaused),
                 "LAST_INVOKER" => Ok(Self::LastInvoker),
                 "LOOP_NOT_FOUND" => Ok(Self::LoopNotFound),
                 "LOOP_PROMPT_TOO_LONG" => Ok(Self::LoopPromptTooLong),
@@ -1285,7 +1305,7 @@ pub mod types {
         pub issue_id: ::uuid::Uuid,
         pub key: ::std::string::String,
         #[serde(rename = "lifeState")]
-        pub life_state: IssueLifeState,
+        pub life_state: ::codm_contracts_rust::wire::enums::IssueLifeState,
         pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
         pub title: ::std::string::String,
         #[serde(rename = "updatedAt")]
@@ -1635,6 +1655,66 @@ pub mod types {
     ///              }
     ///            },
     ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "source"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "by": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "PAUSED"
+    ///                ]
+    ///              },
+    ///              "source": {
+    ///                "$ref": "#/components/schemas/IssueControlSource"
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "source"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "by": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "RESUMED"
+    ///                ]
+    ///              },
+    ///              "source": {
+    ///                "$ref": "#/components/schemas/IssueControlSource"
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
     ///          }
     ///        ]
     ///      }
@@ -1706,7 +1786,7 @@ pub mod types {
         pub issue_id: ::uuid::Uuid,
         pub key: ::std::string::String,
         #[serde(rename = "lifeState")]
-        pub life_state: IssueLifeState,
+        pub life_state: ::codm_contracts_rust::wire::enums::IssueLifeState,
         pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
         pub title: ::std::string::String,
         #[serde(rename = "updatedAt")]
@@ -2010,6 +2090,66 @@ pub mod types {
     ///        }
     ///      },
     ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "source"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "by": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "PAUSED"
+    ///          ]
+    ///        },
+    ///        "source": {
+    ///          "$ref": "#/components/schemas/IssueControlSource"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "source"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "by": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "RESUMED"
+    ///          ]
+    ///        },
+    ///        "source": {
+    ///          "$ref": "#/components/schemas/IssueControlSource"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
     ///    }
     ///  ]
     ///}
@@ -2091,6 +2231,22 @@ pub mod types {
         Completed { at: ::std::string::String, id: ::std::string::String },
         #[serde(rename = "ARCHIVED")]
         Archived { at: ::std::string::String, id: ::std::string::String },
+        #[serde(rename = "PAUSED")]
+        Paused {
+            at: ::std::string::String,
+            #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+            by: ::std::option::Option<::std::string::String>,
+            id: ::std::string::String,
+            source: ::codm_contracts_rust::wire::enums::IssueControlSource,
+        },
+        #[serde(rename = "RESUMED")]
+        Resumed {
+            at: ::std::string::String,
+            #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+            by: ::std::option::Option<::std::string::String>,
+            id: ::std::string::String,
+            source: ::codm_contracts_rust::wire::enums::IssueControlSource,
+        },
     }
     impl ::std::convert::From<&Self> for GetPanelIssueResponseTimelineItem {
         fn from(value: &GetPanelIssueResponseTimelineItem) -> Self {
@@ -2387,228 +2543,6 @@ pub mod types {
     for HealthResponseComponentsValue {
         fn from(value: &HealthResponseComponentsValue) -> Self {
             value.clone()
-        }
-    }
-    ///`IssueLifeState`
-    ///
-    /// <details><summary>JSON schema</summary>
-    ///
-    /// ```json
-    ///{
-    ///  "type": "string",
-    ///  "enum": [
-    ///    "RUNNING",
-    ///    "QUEUED",
-    ///    "WAITING_PROVIDER",
-    ///    "WAITING_PERSON",
-    ///    "REMINDED",
-    ///    "STALLED",
-    ///    "DONE"
-    ///  ]
-    ///}
-    /// ```
-    /// </details>
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd
-    )]
-    pub enum IssueLifeState {
-        #[serde(rename = "RUNNING")]
-        Running,
-        #[serde(rename = "QUEUED")]
-        Queued,
-        #[serde(rename = "WAITING_PROVIDER")]
-        WaitingProvider,
-        #[serde(rename = "WAITING_PERSON")]
-        WaitingPerson,
-        #[serde(rename = "REMINDED")]
-        Reminded,
-        #[serde(rename = "STALLED")]
-        Stalled,
-        #[serde(rename = "DONE")]
-        Done,
-    }
-    impl ::std::convert::From<&Self> for IssueLifeState {
-        fn from(value: &IssueLifeState) -> Self {
-            value.clone()
-        }
-    }
-    impl ::std::fmt::Display for IssueLifeState {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Running => f.write_str("RUNNING"),
-                Self::Queued => f.write_str("QUEUED"),
-                Self::WaitingProvider => f.write_str("WAITING_PROVIDER"),
-                Self::WaitingPerson => f.write_str("WAITING_PERSON"),
-                Self::Reminded => f.write_str("REMINDED"),
-                Self::Stalled => f.write_str("STALLED"),
-                Self::Done => f.write_str("DONE"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for IssueLifeState {
-        type Err = self::error::ConversionError;
-        fn from_str(
-            value: &str,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "RUNNING" => Ok(Self::Running),
-                "QUEUED" => Ok(Self::Queued),
-                "WAITING_PROVIDER" => Ok(Self::WaitingProvider),
-                "WAITING_PERSON" => Ok(Self::WaitingPerson),
-                "REMINDED" => Ok(Self::Reminded),
-                "STALLED" => Ok(Self::Stalled),
-                "DONE" => Ok(Self::Done),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for IssueLifeState {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: &str,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<&::std::string::String> for IssueLifeState {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: &::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for IssueLifeState {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///`IssueTimelineItemKind`
-    ///
-    /// <details><summary>JSON schema</summary>
-    ///
-    /// ```json
-    ///{
-    ///  "type": "string",
-    ///  "enum": [
-    ///    "ARCHIVED",
-    ///    "ARTIFACT",
-    ///    "COMPLETED",
-    ///    "CREATED",
-    ///    "MESSAGE",
-    ///    "STEER",
-    ///    "STOP_RAISED",
-    ///    "STOP_RESOLVED",
-    ///    "TURN_STARTED"
-    ///  ]
-    ///}
-    /// ```
-    /// </details>
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd
-    )]
-    pub enum IssueTimelineItemKind {
-        #[serde(rename = "ARCHIVED")]
-        Archived,
-        #[serde(rename = "ARTIFACT")]
-        Artifact,
-        #[serde(rename = "COMPLETED")]
-        Completed,
-        #[serde(rename = "CREATED")]
-        Created,
-        #[serde(rename = "MESSAGE")]
-        Message,
-        #[serde(rename = "STEER")]
-        Steer,
-        #[serde(rename = "STOP_RAISED")]
-        StopRaised,
-        #[serde(rename = "STOP_RESOLVED")]
-        StopResolved,
-        #[serde(rename = "TURN_STARTED")]
-        TurnStarted,
-    }
-    impl ::std::convert::From<&Self> for IssueTimelineItemKind {
-        fn from(value: &IssueTimelineItemKind) -> Self {
-            value.clone()
-        }
-    }
-    impl ::std::fmt::Display for IssueTimelineItemKind {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Archived => f.write_str("ARCHIVED"),
-                Self::Artifact => f.write_str("ARTIFACT"),
-                Self::Completed => f.write_str("COMPLETED"),
-                Self::Created => f.write_str("CREATED"),
-                Self::Message => f.write_str("MESSAGE"),
-                Self::Steer => f.write_str("STEER"),
-                Self::StopRaised => f.write_str("STOP_RAISED"),
-                Self::StopResolved => f.write_str("STOP_RESOLVED"),
-                Self::TurnStarted => f.write_str("TURN_STARTED"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for IssueTimelineItemKind {
-        type Err = self::error::ConversionError;
-        fn from_str(
-            value: &str,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "ARCHIVED" => Ok(Self::Archived),
-                "ARTIFACT" => Ok(Self::Artifact),
-                "COMPLETED" => Ok(Self::Completed),
-                "CREATED" => Ok(Self::Created),
-                "MESSAGE" => Ok(Self::Message),
-                "STEER" => Ok(Self::Steer),
-                "STOP_RAISED" => Ok(Self::StopRaised),
-                "STOP_RESOLVED" => Ok(Self::StopResolved),
-                "TURN_STARTED" => Ok(Self::TurnStarted),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for IssueTimelineItemKind {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: &str,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<&::std::string::String> for IssueTimelineItemKind {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: &::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for IssueTimelineItemKind {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
         }
     }
     ///`RotatePanelLinkResponse`
@@ -3444,6 +3378,64 @@ pub mod types {
     ///                      ]
     ///                    }
     ///                  }
+    ///                },
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "at",
+    ///                    "id",
+    ///                    "kind",
+    ///                    "source"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "at": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "by": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "id": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "PAUSED"
+    ///                      ]
+    ///                    },
+    ///                    "source": {
+    ///                      "$ref": "#/components/schemas/IssueControlSource"
+    ///                    }
+    ///                  }
+    ///                },
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "at",
+    ///                    "id",
+    ///                    "kind",
+    ///                    "source"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "at": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "by": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "id": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "RESUMED"
+    ///                      ]
+    ///                    },
+    ///                    "source": {
+    ///                      "$ref": "#/components/schemas/IssueControlSource"
+    ///                    }
+    ///                  }
     ///                }
     ///              ]
     ///            },
@@ -3918,6 +3910,64 @@ pub mod types {
     ///                ]
     ///              }
     ///            }
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "source"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "by": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "PAUSED"
+    ///                ]
+    ///              },
+    ///              "source": {
+    ///                "$ref": "#/components/schemas/IssueControlSource"
+    ///              }
+    ///            }
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "source"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "by": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "RESUMED"
+    ///                ]
+    ///              },
+    ///              "source": {
+    ///                "$ref": "#/components/schemas/IssueControlSource"
+    ///              }
+    ///            }
     ///          }
     ///        ]
     ///      },
@@ -3948,7 +3998,7 @@ pub mod types {
         pub issue_id: ::uuid::Uuid,
         pub key: SyncPanelBodyIssuesItemKey,
         #[serde(rename = "lifeState")]
-        pub life_state: IssueLifeState,
+        pub life_state: ::codm_contracts_rust::wire::enums::IssueLifeState,
         pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
         #[serde(rename = "threadId")]
         pub thread_id: ::uuid::Uuid,
@@ -4329,6 +4379,64 @@ pub mod types {
     ///          ]
     ///        }
     ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "source"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "by": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "PAUSED"
+    ///          ]
+    ///        },
+    ///        "source": {
+    ///          "$ref": "#/components/schemas/IssueControlSource"
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "source"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "by": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "RESUMED"
+    ///          ]
+    ///        },
+    ///        "source": {
+    ///          "$ref": "#/components/schemas/IssueControlSource"
+    ///        }
+    ///      }
     ///    }
     ///  ]
     ///}
@@ -4410,6 +4518,22 @@ pub mod types {
         Completed { at: ::std::string::String, id: ::std::string::String },
         #[serde(rename = "ARCHIVED")]
         Archived { at: ::std::string::String, id: ::std::string::String },
+        #[serde(rename = "PAUSED")]
+        Paused {
+            at: ::std::string::String,
+            #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+            by: ::std::option::Option<::std::string::String>,
+            id: ::std::string::String,
+            source: ::codm_contracts_rust::wire::enums::IssueControlSource,
+        },
+        #[serde(rename = "RESUMED")]
+        Resumed {
+            at: ::std::string::String,
+            #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+            by: ::std::option::Option<::std::string::String>,
+            id: ::std::string::String,
+            source: ::codm_contracts_rust::wire::enums::IssueControlSource,
+        },
     }
     impl ::std::convert::From<&Self> for SyncPanelBodyIssuesItemTimelineItem {
         fn from(value: &SyncPanelBodyIssuesItemTimelineItem) -> Self {

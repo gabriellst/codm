@@ -33,6 +33,15 @@ export const CUE_ACKNOWLEDGED = '👀'
 export const CUE_REPLIED = '🤖'
 
 /**
+ * `⏸️` / `▶️` — "done: the issue is held" / "done: it continues", hung on the control word itself
+ * ("pare APP-12", "continue" quoting an issue — fase 2, item 2). The ONLY acknowledgement a command
+ * gets: no text reply in the group, because the person asked the work to be quiet, and a sentence back
+ * would be the opposite. Same cosmetic contract as every cue here.
+ */
+export const CUE_PAUSED = '⏸️'
+export const CUE_RESUMED = '▶️'
+
+/**
  * How often the typing indicator must be re-published to stay lit.
  *
  * Beating faster than the platform's own expiry is the whole mechanism — beat AT the expiry and the

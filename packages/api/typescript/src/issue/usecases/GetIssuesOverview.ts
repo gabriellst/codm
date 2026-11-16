@@ -13,6 +13,11 @@ const IssueItemSchema = z.object({
 	status: z.enum(IssueStatus),
 	meta: z.string().optional(),
 	archived: z.boolean(),
+	/**
+	 * Someone paused THIS issue (fase 2, item 2) — what the pause/resume button reads. The conversation's
+	 * own pause is not folded in: it is shown on the conversation, and `lifeState` = PAUSED covers both.
+	 */
+	paused: z.boolean(),
 	threadId: z.uuid(),
 	threadDisplayName: z.string(),
 	/**
@@ -58,6 +63,7 @@ export class GetIssuesOverview extends Handler<typeof GetIssuesOverviewInputSche
 				status: issues.status,
 				meta: issues.meta,
 				archived: issues.archived,
+				paused: issues.paused,
 				threadId: issues.threadId,
 				threadDisplayName: threads.contactDisplayName,
 			})
@@ -82,6 +88,7 @@ export class GetIssuesOverview extends Handler<typeof GetIssuesOverviewInputSche
 			status: r.status as IssueStatus,
 			meta: r.meta ?? undefined,
 			archived: r.archived,
+			paused: r.paused,
 			threadId: r.threadId,
 			threadDisplayName: r.threadDisplayName,
 			waitingForProviderUntil: waiting.get(r.issueId)?.toISOString(),

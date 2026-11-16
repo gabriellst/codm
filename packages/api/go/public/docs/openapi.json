@@ -7181,6 +7181,17 @@
           "IssueArchiveReasonTHREAD_DETACHED"
         ]
       },
+      "IssueControlSource": {
+        "enum": [
+          "WHATSAPP",
+          "CONSOLE"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "IssueControlSourceWHATSAPP",
+          "IssueControlSourceCONSOLE"
+        ]
+      },
       "IssueLifeState": {
         "enum": [
           "RUNNING",
@@ -7189,6 +7200,7 @@
           "WAITING_PERSON",
           "REMINDED",
           "STALLED",
+          "PAUSED",
           "DONE"
         ],
         "type": "string",
@@ -7199,6 +7211,7 @@
           "IssueLifeStateWAITING_PERSON",
           "IssueLifeStateREMINDED",
           "IssueLifeStateSTALLED",
+          "IssueLifeStatePAUSED",
           "IssueLifeStateDONE"
         ]
       },
@@ -7225,7 +7238,9 @@
           "STOP_RAISED",
           "STOP_RESOLVED",
           "COMPLETED",
-          "ARCHIVED"
+          "ARCHIVED",
+          "PAUSED",
+          "RESUMED"
         ],
         "type": "string",
         "x-enum-varnames": [
@@ -7237,7 +7252,9 @@
           "IssueTimelineItemKindSTOP_RAISED",
           "IssueTimelineItemKindSTOP_RESOLVED",
           "IssueTimelineItemKindCOMPLETED",
-          "IssueTimelineItemKindARCHIVED"
+          "IssueTimelineItemKindARCHIVED",
+          "IssueTimelineItemKindPAUSED",
+          "IssueTimelineItemKindRESUMED"
         ]
       },
       "Language": {

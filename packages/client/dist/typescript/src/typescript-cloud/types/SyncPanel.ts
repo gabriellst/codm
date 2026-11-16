@@ -5,6 +5,7 @@
 
 import type { ArtifactKind } from "./ArtifactKind.ts";
 import type { ClassificationMethod } from "./ClassificationMethod.ts";
+import type { IssueControlSource } from "./IssueControlSource.ts";
 import type { IssueLifeState } from "./IssueLifeState.ts";
 import type { IssueStatus } from "./IssueStatus.ts";
 import type { StopKind } from "./StopKind.ts";
@@ -83,6 +84,18 @@ export const TimelineKindEnum9 = {
 } as const;
 
 export type TimelineKindEnum9Key = (typeof TimelineKindEnum9)[keyof typeof TimelineKindEnum9];
+
+export const TimelineKindEnum10 = {
+    PAUSED: "PAUSED"
+} as const;
+
+export type TimelineKindEnum10Key = (typeof TimelineKindEnum10)[keyof typeof TimelineKindEnum10];
+
+export const TimelineKindEnum11 = {
+    RESUMED: "RESUMED"
+} as const;
+
+export type TimelineKindEnum11Key = (typeof TimelineKindEnum11)[keyof typeof TimelineKindEnum11];
 
 export type SyncPanelMutationRequest = {
     /**
@@ -327,6 +340,48 @@ export type SyncPanelMutationRequest = {
              * @type string
             */
             at: string;
+        } | {
+            /**
+             * @type string
+            */
+            kind: TimelineKindEnum10Key;
+            /**
+             * @type string
+            */
+            id: string;
+            /**
+             * @type string
+            */
+            at: string;
+            /**
+             * @type string
+            */
+            source: IssueControlSource;
+            /**
+             * @type string | undefined
+            */
+            by?: string;
+        } | {
+            /**
+             * @type string
+            */
+            kind: TimelineKindEnum11Key;
+            /**
+             * @type string
+            */
+            id: string;
+            /**
+             * @type string
+            */
+            at: string;
+            /**
+             * @type string
+            */
+            source: IssueControlSource;
+            /**
+             * @type string | undefined
+            */
+            by?: string;
         })[];
         /**
          * @type string, date-time

@@ -98,11 +98,15 @@ const (
 	INVALIDTIMEZONE                 ApiErrors = "INVALID_TIMEZONE"
 	ISSUEALREADYARCHIVED            ApiErrors = "ISSUE_ALREADY_ARCHIVED"
 	ISSUEALREADYCOMPLETED           ApiErrors = "ISSUE_ALREADY_COMPLETED"
+	ISSUEALREADYPAUSED              ApiErrors = "ISSUE_ALREADY_PAUSED"
 	ISSUEARCHIVED                   ApiErrors = "ISSUE_ARCHIVED"
 	ISSUENOTARCHIVED                ApiErrors = "ISSUE_NOT_ARCHIVED"
 	ISSUENOTCOMPLETED               ApiErrors = "ISSUE_NOT_COMPLETED"
 	ISSUENOTFOUND                   ApiErrors = "ISSUE_NOT_FOUND"
+	ISSUENOTPAUSABLE                ApiErrors = "ISSUE_NOT_PAUSABLE"
+	ISSUENOTPAUSED                  ApiErrors = "ISSUE_NOT_PAUSED"
 	ISSUENOTREOPENABLE              ApiErrors = "ISSUE_NOT_REOPENABLE"
+	ISSUEPAUSED                     ApiErrors = "ISSUE_PAUSED"
 	LASTINVOKER                     ApiErrors = "LAST_INVOKER"
 	LOOPNOTFOUND                    ApiErrors = "LOOP_NOT_FOUND"
 	LOOPPROMPTTOOLONG               ApiErrors = "LOOP_PROMPT_TOO_LONG"
@@ -255,6 +259,8 @@ func (e ApiErrors) Valid() bool {
 		return true
 	case ISSUEALREADYCOMPLETED:
 		return true
+	case ISSUEALREADYPAUSED:
+		return true
 	case ISSUEARCHIVED:
 		return true
 	case ISSUENOTARCHIVED:
@@ -263,7 +269,13 @@ func (e ApiErrors) Valid() bool {
 		return true
 	case ISSUENOTFOUND:
 		return true
+	case ISSUENOTPAUSABLE:
+		return true
+	case ISSUENOTPAUSED:
+		return true
 	case ISSUENOTREOPENABLE:
+		return true
+	case ISSUEPAUSED:
 		return true
 	case LASTINVOKER:
 		return true
@@ -429,16 +441,16 @@ func (e BufferSize) Valid() bool {
 
 // Defines values for ChannelKind.
 const (
-	INTERNAL ChannelKind = "INTERNAL"
-	WHATSAPP ChannelKind = "WHATSAPP"
+	ChannelKindINTERNAL ChannelKind = "INTERNAL"
+	ChannelKindWHATSAPP ChannelKind = "WHATSAPP"
 )
 
 // Valid indicates whether the value is a known member of the ChannelKind enum.
 func (e ChannelKind) Valid() bool {
 	switch e {
-	case INTERNAL:
+	case ChannelKindINTERNAL:
 		return true
-	case WHATSAPP:
+	case ChannelKindWHATSAPP:
 		return true
 	default:
 		return false
@@ -862,9 +874,28 @@ func (e IssueArchiveReason) Valid() bool {
 	}
 }
 
+// Defines values for IssueControlSource.
+const (
+	IssueControlSourceCONSOLE  IssueControlSource = "CONSOLE"
+	IssueControlSourceWHATSAPP IssueControlSource = "WHATSAPP"
+)
+
+// Valid indicates whether the value is a known member of the IssueControlSource enum.
+func (e IssueControlSource) Valid() bool {
+	switch e {
+	case IssueControlSourceCONSOLE:
+		return true
+	case IssueControlSourceWHATSAPP:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for IssueLifeState.
 const (
 	IssueLifeStateDONE            IssueLifeState = "DONE"
+	IssueLifeStatePAUSED          IssueLifeState = "PAUSED"
 	IssueLifeStateQUEUED          IssueLifeState = "QUEUED"
 	IssueLifeStateREMINDED        IssueLifeState = "REMINDED"
 	IssueLifeStateRUNNING         IssueLifeState = "RUNNING"
@@ -877,6 +908,8 @@ const (
 func (e IssueLifeState) Valid() bool {
 	switch e {
 	case IssueLifeStateDONE:
+		return true
+	case IssueLifeStatePAUSED:
 		return true
 	case IssueLifeStateQUEUED:
 		return true
@@ -923,6 +956,8 @@ const (
 	IssueTimelineItemKindCOMPLETED    IssueTimelineItemKind = "COMPLETED"
 	IssueTimelineItemKindCREATED      IssueTimelineItemKind = "CREATED"
 	IssueTimelineItemKindMESSAGE      IssueTimelineItemKind = "MESSAGE"
+	IssueTimelineItemKindPAUSED       IssueTimelineItemKind = "PAUSED"
+	IssueTimelineItemKindRESUMED      IssueTimelineItemKind = "RESUMED"
 	IssueTimelineItemKindSTEER        IssueTimelineItemKind = "STEER"
 	IssueTimelineItemKindSTOPRAISED   IssueTimelineItemKind = "STOP_RAISED"
 	IssueTimelineItemKindSTOPRESOLVED IssueTimelineItemKind = "STOP_RESOLVED"
@@ -941,6 +976,10 @@ func (e IssueTimelineItemKind) Valid() bool {
 	case IssueTimelineItemKindCREATED:
 		return true
 	case IssueTimelineItemKindMESSAGE:
+		return true
+	case IssueTimelineItemKindPAUSED:
+		return true
+	case IssueTimelineItemKindRESUMED:
 		return true
 	case IssueTimelineItemKindSTEER:
 		return true
@@ -1375,6 +1414,9 @@ type HistorySyncType string
 // IssueArchiveReason defines model for IssueArchiveReason.
 type IssueArchiveReason string
 
+// IssueControlSource defines model for IssueControlSource.
+type IssueControlSource string
+
 // IssueLifeState defines model for IssueLifeState.
 type IssueLifeState string
 
@@ -1523,6 +1565,24 @@ type GetIssueTimeline200JSONResponseBodyItems8 struct {
 	At   string `json:"at"`
 	Id   string `json:"id"`
 	Kind string `json:"kind"`
+}
+
+// GetIssueTimeline200JSONResponseBodyItems9 defines parameters for GetIssueTimeline.
+type GetIssueTimeline200JSONResponseBodyItems9 struct {
+	At     string             `json:"at"`
+	By     *string            `json:"by,omitempty"`
+	Id     string             `json:"id"`
+	Kind   string             `json:"kind"`
+	Source IssueControlSource `json:"source"`
+}
+
+// GetIssueTimeline200JSONResponseBodyItems10 defines parameters for GetIssueTimeline.
+type GetIssueTimeline200JSONResponseBodyItems10 struct {
+	At     string             `json:"at"`
+	By     *string            `json:"by,omitempty"`
+	Id     string             `json:"id"`
+	Kind   string             `json:"kind"`
+	Source IssueControlSource `json:"source"`
 }
 
 // GetIssueTimeline200JSONResponseBody_Items_Item defines parameters for GetIssueTimeline.
@@ -2159,6 +2219,58 @@ func (t *GetIssueTimeline200JSONResponseBody_Items_Item) MergeGetIssueTimeline20
 	return err
 }
 
+// AsGetIssueTimeline200JSONResponseBodyItems9 returns the union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as a GetIssueTimeline200JSONResponseBodyItems9
+func (t GetIssueTimeline200JSONResponseBody_Items_Item) AsGetIssueTimeline200JSONResponseBodyItems9() (GetIssueTimeline200JSONResponseBodyItems9, error) {
+	var body GetIssueTimeline200JSONResponseBodyItems9
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetIssueTimeline200JSONResponseBodyItems9 overwrites any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as the provided GetIssueTimeline200JSONResponseBodyItems9
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) FromGetIssueTimeline200JSONResponseBodyItems9(v GetIssueTimeline200JSONResponseBodyItems9) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetIssueTimeline200JSONResponseBodyItems9 performs a merge with any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item, using the provided GetIssueTimeline200JSONResponseBodyItems9
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) MergeGetIssueTimeline200JSONResponseBodyItems9(v GetIssueTimeline200JSONResponseBodyItems9) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetIssueTimeline200JSONResponseBodyItems10 returns the union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as a GetIssueTimeline200JSONResponseBodyItems10
+func (t GetIssueTimeline200JSONResponseBody_Items_Item) AsGetIssueTimeline200JSONResponseBodyItems10() (GetIssueTimeline200JSONResponseBodyItems10, error) {
+	var body GetIssueTimeline200JSONResponseBodyItems10
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetIssueTimeline200JSONResponseBodyItems10 overwrites any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as the provided GetIssueTimeline200JSONResponseBodyItems10
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) FromGetIssueTimeline200JSONResponseBodyItems10(v GetIssueTimeline200JSONResponseBodyItems10) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetIssueTimeline200JSONResponseBodyItems10 performs a merge with any union data inside the GetIssueTimeline200JSONResponseBody_Items_Item, using the provided GetIssueTimeline200JSONResponseBodyItems10
+func (t *GetIssueTimeline200JSONResponseBody_Items_Item) MergeGetIssueTimeline200JSONResponseBodyItems10(v GetIssueTimeline200JSONResponseBodyItems10) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
 func (t GetIssueTimeline200JSONResponseBody_Items_Item) MarshalJSON() ([]byte, error) {
 	b, err := t.union.MarshalJSON()
 	return b, err
@@ -2626,8 +2738,14 @@ type ClientInterface interface {
 	// ArchiveIssue request
 	ArchiveIssue(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// PauseIssue request
+	PauseIssue(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// RestoreIssue request
 	RestoreIssue(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ResumeIssue request
+	ResumeIssue(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// SteerIssueWithBody request with any body
 	SteerIssueWithBody(ctx context.Context, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2921,8 +3039,32 @@ func (c *Client) ArchiveIssue(ctx context.Context, issueId string, reqEditors ..
 	return c.Client.Do(req)
 }
 
+func (c *Client) PauseIssue(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPauseIssueRequest(c.Server, issueId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) RestoreIssue(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRestoreIssueRequest(c.Server, issueId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ResumeIssue(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewResumeIssueRequest(c.Server, issueId)
 	if err != nil {
 		return nil, err
 	}
@@ -4174,6 +4316,40 @@ func NewArchiveIssueRequest(server string, issueId string) (*http.Request, error
 	return req, nil
 }
 
+// NewPauseIssueRequest generates requests for PauseIssue
+func NewPauseIssueRequest(server string, issueId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "issueId", issueId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/issues/%s/pause", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewRestoreIssueRequest generates requests for RestoreIssue
 func NewRestoreIssueRequest(server string, issueId string) (*http.Request, error) {
 	var err error
@@ -4191,6 +4367,40 @@ func NewRestoreIssueRequest(server string, issueId string) (*http.Request, error
 	}
 
 	operationPath := fmt.Sprintf("/issues/%s/restore", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewResumeIssueRequest generates requests for ResumeIssue
+func NewResumeIssueRequest(server string, issueId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "issueId", issueId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/issues/%s/resume", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -6781,8 +6991,14 @@ type ClientWithResponsesInterface interface {
 	// ArchiveIssueWithResponse request
 	ArchiveIssueWithResponse(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*ArchiveIssueResponse, error)
 
+	// PauseIssueWithResponse request
+	PauseIssueWithResponse(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*PauseIssueResponse, error)
+
 	// RestoreIssueWithResponse request
 	RestoreIssueWithResponse(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*RestoreIssueResponse, error)
+
+	// ResumeIssueWithResponse request
+	ResumeIssueWithResponse(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*ResumeIssueResponse, error)
 
 	// SteerIssueWithBodyWithResponse request with any body
 	SteerIssueWithBodyWithResponse(ctx context.Context, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SteerIssueResponse, error)
@@ -7075,6 +7291,7 @@ type GetIssuesOverviewResponse struct {
 			Key                     string             `json:"key"`
 			LifeState               IssueLifeState     `json:"lifeState"`
 			Meta                    *string            `json:"meta,omitempty"`
+			Paused                  bool               `json:"paused"`
 			Status                  IssueStatus        `json:"status"`
 			ThreadDisplayName       string             `json:"threadDisplayName"`
 			ThreadId                openapi_types.UUID `json:"threadId"`
@@ -7088,6 +7305,7 @@ type GetIssuesOverviewResponse struct {
 				Key                     string             `json:"key"`
 				LifeState               IssueLifeState     `json:"lifeState"`
 				Meta                    *string            `json:"meta,omitempty"`
+				Paused                  bool               `json:"paused"`
 				Status                  IssueStatus        `json:"status"`
 				ThreadDisplayName       string             `json:"threadDisplayName"`
 				ThreadId                openapi_types.UUID `json:"threadId"`
@@ -7139,6 +7357,7 @@ type GetIssueDetailResponse struct {
 			Key                     string             `json:"key"`
 			LifeState               IssueLifeState     `json:"lifeState"`
 			Meta                    *string            `json:"meta,omitempty"`
+			Paused                  bool               `json:"paused"`
 			Status                  IssueStatus        `json:"status"`
 			Title                   string             `json:"title"`
 			WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
@@ -7226,6 +7445,36 @@ func (r ArchiveIssueResponse) ContentType() string {
 	return ""
 }
 
+type PauseIssueResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r PauseIssueResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PauseIssueResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r PauseIssueResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type RestoreIssueResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -7250,6 +7499,36 @@ func (r RestoreIssueResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r RestoreIssueResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ResumeIssueResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r ResumeIssueResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ResumeIssueResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ResumeIssueResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -9493,6 +9772,15 @@ func (c *ClientWithResponses) ArchiveIssueWithResponse(ctx context.Context, issu
 	return ParseArchiveIssueResponse(rsp)
 }
 
+// PauseIssueWithResponse request returning *PauseIssueResponse
+func (c *ClientWithResponses) PauseIssueWithResponse(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*PauseIssueResponse, error) {
+	rsp, err := c.PauseIssue(ctx, issueId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePauseIssueResponse(rsp)
+}
+
 // RestoreIssueWithResponse request returning *RestoreIssueResponse
 func (c *ClientWithResponses) RestoreIssueWithResponse(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*RestoreIssueResponse, error) {
 	rsp, err := c.RestoreIssue(ctx, issueId, reqEditors...)
@@ -9500,6 +9788,15 @@ func (c *ClientWithResponses) RestoreIssueWithResponse(ctx context.Context, issu
 		return nil, err
 	}
 	return ParseRestoreIssueResponse(rsp)
+}
+
+// ResumeIssueWithResponse request returning *ResumeIssueResponse
+func (c *ClientWithResponses) ResumeIssueWithResponse(ctx context.Context, issueId string, reqEditors ...RequestEditorFn) (*ResumeIssueResponse, error) {
+	rsp, err := c.ResumeIssue(ctx, issueId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseResumeIssueResponse(rsp)
 }
 
 // SteerIssueWithBodyWithResponse request with arbitrary body returning *SteerIssueResponse
@@ -10346,6 +10643,7 @@ func ParseGetIssuesOverviewResponse(rsp *http.Response) (*GetIssuesOverviewRespo
 				Key                     string             `json:"key"`
 				LifeState               IssueLifeState     `json:"lifeState"`
 				Meta                    *string            `json:"meta,omitempty"`
+				Paused                  bool               `json:"paused"`
 				Status                  IssueStatus        `json:"status"`
 				ThreadDisplayName       string             `json:"threadDisplayName"`
 				ThreadId                openapi_types.UUID `json:"threadId"`
@@ -10359,6 +10657,7 @@ func ParseGetIssuesOverviewResponse(rsp *http.Response) (*GetIssuesOverviewRespo
 					Key                     string             `json:"key"`
 					LifeState               IssueLifeState     `json:"lifeState"`
 					Meta                    *string            `json:"meta,omitempty"`
+					Paused                  bool               `json:"paused"`
 					Status                  IssueStatus        `json:"status"`
 					ThreadDisplayName       string             `json:"threadDisplayName"`
 					ThreadId                openapi_types.UUID `json:"threadId"`
@@ -10406,6 +10705,7 @@ func ParseGetIssueDetailResponse(rsp *http.Response) (*GetIssueDetailResponse, e
 				Key                     string             `json:"key"`
 				LifeState               IssueLifeState     `json:"lifeState"`
 				Meta                    *string            `json:"meta,omitempty"`
+				Paused                  bool               `json:"paused"`
 				Status                  IssueStatus        `json:"status"`
 				Title                   string             `json:"title"`
 				WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
@@ -10473,6 +10773,32 @@ func ParseArchiveIssueResponse(rsp *http.Response) (*ArchiveIssueResponse, error
 	return response, nil
 }
 
+// ParsePauseIssueResponse parses an HTTP response from a PauseIssueWithResponse call
+func ParsePauseIssueResponse(rsp *http.Response) (*PauseIssueResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PauseIssueResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseRestoreIssueResponse parses an HTTP response from a RestoreIssueWithResponse call
 func ParseRestoreIssueResponse(rsp *http.Response) (*RestoreIssueResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -10482,6 +10808,32 @@ func ParseRestoreIssueResponse(rsp *http.Response) (*RestoreIssueResponse, error
 	}
 
 	response := &RestoreIssueResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseResumeIssueResponse parses an HTTP response from a ResumeIssueWithResponse call
+func ParseResumeIssueResponse(rsp *http.Response) (*ResumeIssueResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ResumeIssueResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}

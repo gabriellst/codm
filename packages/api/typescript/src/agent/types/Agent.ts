@@ -122,14 +122,20 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 	 * and the caller that already holds the provider (`RunIssueTurn`, `DefaultIssueRouter`) is the one
 	 * layer that can resolve it. The agent is left holding NO I/O at all, which is what lets §4.8 keep
 	 * binding agents identically in all three envs.
+	 *
+	 * ### …and why the cancellation signal is one too
+	 * `signal` is the same kind of thing as the runner: TRANSPORT, not data the agent reasons about, owned
+	 * by whoever runs the turn (`RunIssueTurn`, fed by `IssueTurnAborter` — fase 2, item 2). It is merged
+	 * onto the request here so no `buildRequest` ever has to know a turn can be killed.
 	 */
-	async *run(runner: AgentRunner, input: this['input']): AsyncIterable<AgentRuntimeEvent> {
+	async *run(runner: AgentRunner, input: this['input'], transport: { signal?: AbortSignal } = {}): AsyncIterable<AgentRuntimeEvent> {
 		const request = {
 			...this.buildRequest(input),
 			agentName: (this.constructor as typeof Agent).NAME,
 			// The POSTURE is the base's to stamp, like the identity: it comes from the envelope — who
 			// triggered the turn — so no agent's `buildRequest` can widen or narrow it.
 			posture: input.posture,
+			...(transport.signal && { signal: transport.signal }),
 		}
 		// The scope is passed DOWN rather than re-read off `this` inside the callee: it is what confines
 		// the minted credential (D6-8), and threading the already-narrowed value is what makes "a token

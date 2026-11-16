@@ -29,14 +29,34 @@ export class RuleRouter {
 		input: { threadId: string; quotedIssueId?: string; text: string },
 		tx?: Transaction,
 	): Promise<{ issue: SteerableIssueRef; via: RuleRouteVia } | undefined> {
+		const found = await this.resolve(input, tx)
+		return found && !found.issue.needsReopen ? found : undefined
+	}
+
+	/**
+	 * The TARGET of a control word (fase 2, item 2 — "pare APP-12", "continue" quoting an issue): the same
+	 * two rules as `route`, but ANY non-archived issue of the thread, not only a WORKING one. A NEEDS_INPUT
+	 * issue can be paused, and a paused one resumed — the lifecycle is the entity's to judge, not the
+	 * router's. Ambiguity still returns nothing: a command never guesses its target.
+	 */
+	async target(
+		input: { threadId: string; quotedIssueId?: string; text: string },
+		tx?: Transaction,
+	): Promise<{ issue: SteerableIssueRef; via: RuleRouteVia } | undefined> {
+		return this.resolve(input, tx)
+	}
+
+	private async resolve(
+		input: { threadId: string; quotedIssueId?: string; text: string },
+		tx?: Transaction,
+	): Promise<{ issue: SteerableIssueRef; via: RuleRouteVia } | undefined> {
 		if (input.quotedIssueId) {
 			const issue = await this.issues.steerableIssue(input.threadId, input.quotedIssueId, tx)
-			if (issue && !issue.needsReopen) return { issue, via: 'REPLY_QUOTE' }
-			return undefined
+			return issue ? { issue, via: 'REPLY_QUOTE' } : undefined
 		}
 		const keys = [...new Set([...input.text.matchAll(ISSUE_KEY_IN_TEXT)].map(match => match[1] ?? ''))].filter(Boolean)
 		if (keys.length !== 1) return undefined
 		const issue = await this.issues.steerableIssueByKey(input.threadId, keys[0] ?? '', tx)
-		return issue && !issue.needsReopen ? { issue, via: 'KEY_IN_TEXT' } : undefined
+		return issue ? { issue, via: 'KEY_IN_TEXT' } : undefined
 	}
 }

@@ -6,6 +6,8 @@ import { LoggingService } from '@codm/core-typescript'
 import { MailboxItemKind, MailboxTargetKind, ProviderKind, AgentModelId, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { CloudSession, MockCloudSession } from '@shared/services/CloudSession'
+import { IssueHold } from '@issue/services/IssueHold'
+import { IssueTurnAborter } from '../IssueTurnAborter'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { NotifyProviderPaused } from '@thread/usecases/NotifyProviderPaused'
 import { WorkspaceRepository } from '@workspace/repositories/WorkspaceRepository'
@@ -417,6 +419,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(AgentSessionRepository),
 			testBed.resolve(LoggingService),
 			testBed.resolve(CloudSession),
+			testBed.resolve(IssueHold),
+			testBed.resolve(IssueTurnAborter),
 		).bind(testContainer)
 
 		const message = (threadId: string, dedupKey: string) =>
@@ -659,6 +663,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(AgentSessionRepository),
 			testBed.resolve(LoggingService),
 			testBed.resolve(CloudSession),
+			testBed.resolve(IssueHold),
+			testBed.resolve(IssueTurnAborter),
 		).bind(spyContainer)
 
 		await operatorMessage(thread.id.value, 'limite-semanal')
@@ -706,6 +712,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(AgentSessionRepository),
 			testBed.resolve(LoggingService),
 			testBed.resolve(CloudSession),
+			testBed.resolve(IssueHold),
+			testBed.resolve(IssueTurnAborter),
 		).bind(testContainer)
 
 		await mailbox.enqueue({
@@ -757,6 +765,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(AgentSessionRepository),
 			testBed.resolve(LoggingService),
 			testBed.resolve(CloudSession),
+			testBed.resolve(IssueHold),
+			testBed.resolve(IssueTurnAborter),
 		).bind(testContainer)
 
 		await mailbox.enqueue({
@@ -836,6 +846,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(AgentSessionRepository),
 			testBed.resolve(LoggingService),
 			testBed.resolve(CloudSession),
+			testBed.resolve(IssueHold),
+			testBed.resolve(IssueTurnAborter),
 		).bind(testContainer)
 
 		try {
@@ -916,6 +928,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(AgentSessionRepository),
 			testBed.resolve(LoggingService),
 			testBed.resolve(CloudSession),
+			testBed.resolve(IssueHold),
+			testBed.resolve(IssueTurnAborter),
 		).bind(testContainer)
 
 		try {
@@ -982,6 +996,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(AgentSessionRepository),
 			testBed.resolve(LoggingService),
 			testBed.resolve(CloudSession),
+			testBed.resolve(IssueHold),
+			testBed.resolve(IssueTurnAborter),
 		).bind(testContainer)
 
 		try {
@@ -1210,6 +1226,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(AgentSessionRepository),
 			testBed.resolve(LoggingService),
 			testBed.resolve(CloudSession),
+			testBed.resolve(IssueHold),
+			testBed.resolve(IssueTurnAborter),
 		).bind(spyContainer)
 
 		await mailbox.enqueue({
@@ -1267,6 +1285,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(AgentSessionRepository),
 			testBed.resolve(LoggingService),
 			testBed.resolve(CloudSession),
+			testBed.resolve(IssueHold),
+			testBed.resolve(IssueTurnAborter),
 		).bind(spyContainer)
 
 		await mailbox.enqueue({
@@ -1318,6 +1338,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(AgentSessionRepository),
 			testBed.resolve(LoggingService),
 			cloudSession,
+			testBed.resolve(IssueHold),
+			testBed.resolve(IssueTurnAborter),
 		).bind(testContainer)
 
 		const realClaimNext = mailbox.claimNext.bind(mailbox)

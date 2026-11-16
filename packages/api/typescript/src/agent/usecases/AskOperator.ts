@@ -2,6 +2,7 @@ import { injectable } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { Handler, z } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
+import { IssueHold } from '@issue/services/IssueHold'
 import { StopKind } from '@codm/contracts-typescript/wire/enums'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
 import { FactSource } from '../enums'
@@ -11,6 +12,12 @@ export const AskOperatorInputSchema = z.object({
 	issueId: z.uuid(),
 	threadId: z.uuid(),
 	question: z.string().trim().min(1).max(4000),
+	/**
+	 * The issue whose RUN is calling, read off the run identity by the controller — absent for the
+	 * orchestrator and the console. A held issue's run is refused here (ISSUE_PAUSED, `IssueHold`).
+	 * Never part of the tool's arguments: the controller omits it from the body.
+	 */
+	actingIssueId: z.uuid().optional(),
 })
 
 export const AskOperatorOutputSchema = z.object({ delivered: z.literal(true), stopId: z.uuid() })
@@ -45,7 +52,13 @@ export class AskOperator extends Handler<typeof AskOperatorInputSchema, typeof A
 	readonly inputSchema = AskOperatorInputSchema
 	readonly outputSchema = AskOperatorOutputSchema
 
+	constructor(private readonly hold: IssueHold) {
+		super()
+	}
+
 	protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
+		// A HELD issue's run does not get to raise anything visible (fase 2, item 2 — pausa como comando).
+		await this.hold.assertNotHeld(input.actingIssueId)
 		const stopId = uuidv7()
 		await this.withTransaction(tx, async tx => {
 			await this.domainEventRepository.save(

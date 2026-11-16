@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
-import { Handler, z, BaseError, LoggingService } from '@codm/core-typescript'
+import { Handler, z, BaseError, LoggingService, tryCatchAsync } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
 import {
 	AgentModelId,
@@ -16,6 +16,7 @@ import { AgentRunnerFactory } from '../services/AgentRunnerFactory'
 import type { AgentRunner } from '../services/AgentRunner'
 import { ProviderDetector, type DetectedProvider, type ProviderDetection } from '../services/ProviderDetector'
 import { AgentStreamRegistry } from '../services/AgentStreamRegistry'
+import { IssueTurnAborter } from '../services/IssueTurnAborter'
 import { TerminalOutputAccumulator, type TerminalOutcome } from '../services/TerminalOutputAccumulator'
 import { AgentSessionRepository } from '../repositories/AgentSessionRepository'
 import { MailboxRepository } from '../repositories/MailboxRepository'
@@ -113,6 +114,13 @@ export const RunIssueTurnOutputSchema = z.object({
 	 * when the provider named the earliest instant a retry can succeed (its usage limit).
 	 */
 	transportStop: z.object({ detail: z.string(), retryAfter: z.number().int().optional() }).optional(),
+	/**
+	 * The turn was KILLED because its issue was paused (fase 2, item 2 — `IssueTurnAborter`), or the
+	 * pause landed before it could start. Nothing of its conclusion was persisted — no ISSUE_RESULT, no
+	 * stop, no session cursor — and the dispatcher puts the item back HELD instead of completing or
+	 * failing it: a turn the operator stopped is neither done nor broken.
+	 */
+	held: z.literal(true).optional(),
 })
 
 /** What the drain loop observed beyond transport — the run's conclusion and its session identity. */
@@ -205,11 +213,18 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		private readonly sessions: AgentSessionRepository,
 		private readonly mailbox: MailboxRepository,
 		private readonly logging: LoggingService,
+		private readonly aborter: IssueTurnAborter,
 	) {
 		super()
 	}
 
 	protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
+		// THE KILL SWITCH (fase 2, item 2). Registered by the dispatcher BEFORE its hold check, so a pause
+		// that landed in between is already visible here: the turn never starts. Absent for a caller that
+		// registered nothing (the test door) — such a turn simply cannot be killed.
+		const signal = this.aborter.signalFor(input.issueId)
+		if (signal?.aborted) return this.held(input)
+
 		const { detection, runner } = await this.resolveProvider(input.provider)
 		// Decided BEFORE the opened fact commits: it is a read of durable state, and the argv it
 		// produces has to exist by the time the stream starts.
@@ -228,7 +243,16 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		})
 
 		// TRANSPORT — stream the run's frames to the SSE observer, strictly outside any tx.
-		const observed = await this.drainRun(input, runner, detection, session)
+		const drained = await tryCatchAsync(() => this.drainRun(input, runner, detection, session, signal))
+		// KILLED BY A PAUSE: whatever the runner made of the dead child (a transport stop, a thrown error,
+		// a truncated reply) is not this turn's conclusion. Nothing is persisted, so no ISSUE_RESULT reaches
+		// the group and no stop is raised for a run the operator stopped on purpose.
+		if (signal?.aborted) {
+			this.logging.info({ content: { message: 'issue turn killed by a pause — the item goes back held', issueId: input.issueId } })
+			return this.held(input)
+		}
+		if (!drained.success) throw drained.error
+		const observed = drained.data
 
 		// FACT — the run's conclusion.
 		const stopId = observed.outcome.kind === 'STOPPED' ? uuidv7() : undefined
@@ -260,6 +284,11 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 			spoke: !transportStop,
 			transportStop,
 		}
+	}
+
+	/** The report of a turn a pause killed or kept from starting — see `held` on the output schema. */
+	private held(input: this['input']): this['output'] {
+		return { issueId: input.issueId, outcome: AgentRunOutcome.STOPPED, spoke: false, held: true }
 	}
 
 	/**
@@ -300,6 +329,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		runner: AgentRunner,
 		detection: DetectedProvider,
 		session: SessionPlan,
+		signal: AbortSignal | undefined,
 	): Promise<RunObservations> {
 		const accumulator = new TerminalOutputAccumulator({ issueId: input.issueId })
 
@@ -311,32 +341,36 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 		// and the resume decision (§4.10) are use-case concerns by contract. The RUNNER travels as a
 		// separate parameter rather than inside that input: it is not data the agent reasons about, it
 		// is the transport the agent is pointed at.
-		for await (const event of this.agent.run(runner, {
-			ownerId: input.ownerId,
-			issueId: input.issueId,
-			threadId: input.threadId,
-			cwd: input.workspacePath,
-			prompt: input.prompt,
-			turnKind: input.turnKind,
-			// WHO is asking, in the grammar's own terms. A steer fired by a schedule is not the operator
-			// leaning over the issue, and the prompt says so instead of flattening both to `operator`.
-			speaker: input.firedByLoop ? `${MessageVia.LOOP}:${input.firedByLoop}` : OPERATOR_PARTICIPANT_ID,
-			via: input.firedByLoop ? MessageVia.LOOP : input.turnKind === MailboxItemKind.STEER ? MessageVia.STEER : undefined,
-			// The turn's own instant, read once — same discipline as `RunOrchestratorTurn`, and the reason
-			// the prompt builder is a pure renderer with no clock of its own.
-			now: new Date(),
-			timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-			key: input.key,
-			title: input.title,
-			customPrompt: input.customPrompt,
-			model: input.model ?? AgentModelId.DEFAULT,
-			// EXACTLY ONE of the two is set. `buildArgs` treats them as mutually exclusive by
-			// construction, so handing it both would make the argv version-dependent.
-			session: session.resumed ? { resumeId: session.id } : { newId: session.id },
-			binaryPath: detection.binaryPath,
-			caps: detection.caps,
-			posture: input.posture,
-		})) {
+		for await (const event of this.agent.run(
+			runner,
+			{
+				ownerId: input.ownerId,
+				issueId: input.issueId,
+				threadId: input.threadId,
+				cwd: input.workspacePath,
+				prompt: input.prompt,
+				turnKind: input.turnKind,
+				// WHO is asking, in the grammar's own terms. A steer fired by a schedule is not the operator
+				// leaning over the issue, and the prompt says so instead of flattening both to `operator`.
+				speaker: input.firedByLoop ? `${MessageVia.LOOP}:${input.firedByLoop}` : OPERATOR_PARTICIPANT_ID,
+				via: input.firedByLoop ? MessageVia.LOOP : input.turnKind === MailboxItemKind.STEER ? MessageVia.STEER : undefined,
+				// The turn's own instant, read once — same discipline as `RunOrchestratorTurn`, and the reason
+				// the prompt builder is a pure renderer with no clock of its own.
+				now: new Date(),
+				timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+				key: input.key,
+				title: input.title,
+				customPrompt: input.customPrompt,
+				model: input.model ?? AgentModelId.DEFAULT,
+				// EXACTLY ONE of the two is set. `buildArgs` treats them as mutually exclusive by
+				// construction, so handing it both would make the argv version-dependent.
+				session: session.resumed ? { resumeId: session.id } : { newId: session.id },
+				binaryPath: detection.binaryPath,
+				caps: detection.caps,
+				posture: input.posture,
+			},
+			{ signal },
+		)) {
 			const frame = accumulator.feed(event)
 			if (frame) await this.registry.send(input.issueId, frame)
 		}

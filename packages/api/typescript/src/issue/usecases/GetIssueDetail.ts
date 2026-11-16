@@ -33,6 +33,11 @@ export const GetIssueDetailOutputSchema = z.object({
 		status: z.enum(IssueStatus),
 		meta: z.string().optional(),
 		archived: z.boolean(),
+		/**
+		 * Someone paused THIS issue (fase 2, item 2) — what the pause/resume button reads. The conversation's
+		 * own pause is not folded in: it is shown on the conversation, and `lifeState` = PAUSED covers both.
+		 */
+		paused: z.boolean(),
 		/** ISO instant until which the issue waits on the provider's usage limit; absent when it is not. */
 		waitingForProviderUntil: z.string().optional(),
 		/** Where the work stands right now, by rule (`lifeStateOf`). */
@@ -119,6 +124,7 @@ export class GetIssueDetail extends Handler<typeof GetIssueDetailInputSchema, ty
 				status: issue.status as IssueStatus,
 				meta: issue.meta ?? undefined,
 				archived: issue.archived,
+				paused: issue.paused,
 				waitingForProviderUntil: waiting.get(issue.id)?.toISOString(),
 				lifeState: life.get(issue.id) ?? IssueLifeState.STALLED,
 			},

@@ -50,6 +50,12 @@ export const issues = sqliteTable(
 		// IssueArchiveReason (MANUAL | THREAD_DETACHED) — set only when archived.
 		archiveReason: text('archive_reason').$type<IssueArchiveReason>(),
 		completedAt: integer('completed_at', { mode: 'timestamp_ms' }),
+		/**
+		 * Someone held this issue's work (fase 2, item 2 — "pausa como comando"). ORTHOGONAL to `status`:
+		 * a paused issue keeps its lifecycle state (WORKING / NEEDS_INPUT) and resumes into it. While set,
+		 * the mailbox dispatcher defers its turns and its external tools refuse with ISSUE_PAUSED.
+		 */
+		paused: integer('paused', { mode: 'boolean' }).notNull().default(false),
 
 		createdAt: integer('created_at', { mode: 'timestamp_ms' })
 			.notNull()

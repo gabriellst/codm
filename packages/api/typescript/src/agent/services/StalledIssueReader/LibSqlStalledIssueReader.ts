@@ -77,6 +77,9 @@ export class LibSqlStalledIssueReader extends StalledIssueReader {
 				and(
 					eq(issues.status, IssueStatus.WORKING),
 					eq(issues.archived, false),
+					// A PAUSED issue is not stalled — it is held on purpose (fase 2, item 2). Reminding it or
+					// raising a stop on it would put words in a group that asked for silence.
+					eq(issues.paused, false),
 					sql`NOT EXISTS ${inFlightMailbox}`,
 					sql`NOT EXISTS ${pendingOutbox}`,
 				),

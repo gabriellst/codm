@@ -366,6 +366,22 @@ func ParseIssueArchiveReason(s string) (IssueArchiveReason, error) {
 	}
 }
 
+type IssueControlSource string
+
+const (
+	IssueControlSourceWHATSAPP IssueControlSource = "WHATSAPP"
+	IssueControlSourceCONSOLE IssueControlSource = "CONSOLE"
+)
+
+func ParseIssueControlSource(s string) (IssueControlSource, error) {
+	switch IssueControlSource(s) {
+	case IssueControlSourceWHATSAPP, IssueControlSourceCONSOLE:
+		return IssueControlSource(s), nil
+	default:
+		return "", fmt.Errorf("invalid IssueControlSource: %q", s)
+	}
+}
+
 type IssueLifeState string
 
 const (
@@ -375,12 +391,13 @@ const (
 	IssueLifeStateWAITING_PERSON IssueLifeState = "WAITING_PERSON"
 	IssueLifeStateREMINDED IssueLifeState = "REMINDED"
 	IssueLifeStateSTALLED IssueLifeState = "STALLED"
+	IssueLifeStatePAUSED IssueLifeState = "PAUSED"
 	IssueLifeStateDONE IssueLifeState = "DONE"
 )
 
 func ParseIssueLifeState(s string) (IssueLifeState, error) {
 	switch IssueLifeState(s) {
-	case IssueLifeStateRUNNING, IssueLifeStateQUEUED, IssueLifeStateWAITING_PROVIDER, IssueLifeStateWAITING_PERSON, IssueLifeStateREMINDED, IssueLifeStateSTALLED, IssueLifeStateDONE:
+	case IssueLifeStateRUNNING, IssueLifeStateQUEUED, IssueLifeStateWAITING_PROVIDER, IssueLifeStateWAITING_PERSON, IssueLifeStateREMINDED, IssueLifeStateSTALLED, IssueLifeStatePAUSED, IssueLifeStateDONE:
 		return IssueLifeState(s), nil
 	default:
 		return "", fmt.Errorf("invalid IssueLifeState: %q", s)
@@ -416,11 +433,13 @@ const (
 	IssueTimelineItemKindSTOP_RESOLVED IssueTimelineItemKind = "STOP_RESOLVED"
 	IssueTimelineItemKindCOMPLETED IssueTimelineItemKind = "COMPLETED"
 	IssueTimelineItemKindARCHIVED IssueTimelineItemKind = "ARCHIVED"
+	IssueTimelineItemKindPAUSED IssueTimelineItemKind = "PAUSED"
+	IssueTimelineItemKindRESUMED IssueTimelineItemKind = "RESUMED"
 )
 
 func ParseIssueTimelineItemKind(s string) (IssueTimelineItemKind, error) {
 	switch IssueTimelineItemKind(s) {
-	case IssueTimelineItemKindCREATED, IssueTimelineItemKindTURN_STARTED, IssueTimelineItemKindMESSAGE, IssueTimelineItemKindSTEER, IssueTimelineItemKindARTIFACT, IssueTimelineItemKindSTOP_RAISED, IssueTimelineItemKindSTOP_RESOLVED, IssueTimelineItemKindCOMPLETED, IssueTimelineItemKindARCHIVED:
+	case IssueTimelineItemKindCREATED, IssueTimelineItemKindTURN_STARTED, IssueTimelineItemKindMESSAGE, IssueTimelineItemKindSTEER, IssueTimelineItemKindARTIFACT, IssueTimelineItemKindSTOP_RAISED, IssueTimelineItemKindSTOP_RESOLVED, IssueTimelineItemKindCOMPLETED, IssueTimelineItemKindARCHIVED, IssueTimelineItemKindPAUSED, IssueTimelineItemKindRESUMED:
 		return IssueTimelineItemKind(s), nil
 	default:
 		return "", fmt.Errorf("invalid IssueTimelineItemKind: %q", s)

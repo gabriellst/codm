@@ -8,10 +8,12 @@ import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { NotifyProviderPaused } from '@thread/usecases/NotifyProviderPaused'
 import { RaiseStop } from '@thread/usecases/RaiseStop'
 import { WorkspaceRepository } from '@workspace/repositories/WorkspaceRepository'
+import { IssueHold } from '@issue/services/IssueHold'
 import { AgentSessionRepository } from '../../repositories/AgentSessionRepository'
 import { MailboxRepository, type ClaimedMailboxItem } from '../../repositories/MailboxRepository'
 import { RunOrchestratorTurn } from '../../usecases/RunOrchestratorTurn'
 import { RunIssueTurn } from '../../usecases/RunIssueTurn'
+import { IssueTurnAborter } from '../IssueTurnAborter'
 import { MailboxDispatcher } from './MailboxDispatcher'
 
 /** How long a claimed item stays leased before a crashed worker's item becomes claimable again. */
@@ -67,6 +69,14 @@ const POLL_MIN_MS = 250
 const POLL_MAX_MS = 2_000
 const POLL_BACKOFF_FACTOR = 2
 /**
+ * How long a HELD issue's item waits before the queue asks again (fase 2, item 2 — pausa como comando).
+ *
+ * Not the latency of a resume: `ReleaseIssueWorkOnResume` releases the item the moment the issue is
+ * resumed. This is the bound for the holds nothing announces — the console's "pausar grupo" lifted, or
+ * a resume whose fact is late — and for a crash between the two.
+ */
+const HOLD_RECHECK_MS = 30_000
+/**
  * THE LANES — how many turns of each TARGET KIND may be in flight at once, and which kind is claimed
  * first when both have room.
  *
@@ -111,6 +121,11 @@ const TURN_LANES: Readonly<Record<MailboxTargetKind, { slots: number; priority: 
  * `dropped` distinguishes "the target vanished" (a detached thread, an unbound workspace) from "the
  * turn ran": `dropSilently` no longer writes to the mailbox on its own — the double-write it used to do
  * here was harmless while `complete` was the only outcome, and becomes ambiguous now that there are two.
+ *
+ * `held` is the third: the issue is PAUSED (or its conversation is), or a pause killed the turn mid-run
+ * (fase 2, item 2). Neither done nor broken — the item goes back to the queue deferred with its attempt
+ * refunded (`holdItem`), never `complete` (that would lose the work) and never `fail` (that would walk a
+ * turn the operator stopped on purpose toward poison and a Needs-you card).
  */
 export type TurnReport =
 	| {
@@ -119,8 +134,10 @@ export type TurnReport =
 			/** `retryAfter` (epoch ms): the provider named the instant a retry can succeed — see `waitForProvider`. */
 			transportStop?: { detail: string; retryAfter?: number }
 			dropped?: never
+			held?: never
 	  }
-	| { dropped: true; spoke: false; provider?: never; transportStop?: never }
+	| { dropped: true; spoke: false; provider?: never; transportStop?: never; held?: never }
+	| { held: true; spoke: false; dropped?: never; provider?: never; transportStop?: never }
 
 /** The thread as the repository hands it over — derived from the seam, as `RunOrchestratorTurn` does. */
 type LoadedThread = NonNullable<Awaited<ReturnType<ThreadRepository['findById']>>>
@@ -227,6 +244,11 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 		// SP2 T7 — the login gate (AC-4). LAST param, additive: every pre-existing call site keeps its
 		// first five positional args unchanged. See the gate itself, at the top of `drainLoop`, for why.
 		private readonly cloudSession: CloudSession,
+		// Pausa como comando (fase 2, item 2) — appended, like `cloudSession`, so existing positional call
+		// sites only grow. `hold` answers "is this issue's work held?"; `aborter` is the kill switch the
+		// issue turn registers on, BEFORE the hold check (see `runIssueWork`).
+		private readonly hold: IssueHold,
+		private readonly aborter: IssueTurnAborter,
 	) {
 		super()
 	}
@@ -542,6 +564,13 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 						}),
 				)
 				await this.recordFailure(item, abandoned ?? 'o turno foi abandonado')
+				return
+			}
+
+			// HELD — paused before it ran, or killed mid-run by a pause. Checked FIRST among the outcomes: a
+			// killed run may also look like a transport stop, and that must not spend an attempt.
+			if (report.held) {
+				await this.holdItem(item)
 				return
 			}
 
@@ -875,6 +904,40 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	 * instead of leaving it blank.
 	 */
 	protected async runIssueWork(item: ClaimedMailboxItem): Promise<TurnReport> {
+		// THE KILL SWITCH IS ARMED BEFORE THE HOLD IS CHECKED (fase 2, item 2). In the other order a pause
+		// landing between "not held" and the spawn would find nothing to abort and the turn would run to its
+		// end while the issue sat paused. Armed first, that pause aborts a signal `RunIssueTurn` reads before
+		// it starts anything.
+		const turn = this.aborter.begin(item.targetId)
+		try {
+			if (await this.hold.isHeld(item.targetId)) return { held: true, spoke: false }
+			const report = await this.runIssueTurn(item)
+			return turn.signal.aborted ? { held: true, spoke: false } : report
+		} catch (error) {
+			if (turn.signal.aborted) return { held: true, spoke: false }
+			throw error
+		} finally {
+			turn.end()
+		}
+	}
+
+	/** Park a held issue's item: deferred, attempt refunded, re-checked in `HOLD_RECHECK_MS` unless a resume releases it first. */
+	private async holdItem(item: ClaimedMailboxItem): Promise<void> {
+		this.logging.info({ content: { message: 'issue work held — paused', itemId: item.id, issueId: item.targetId } })
+		try {
+			await this.mailbox.defer(item.id, new Date(Date.now() + HOLD_RECHECK_MS))
+		} catch (error) {
+			this.logging.error({
+				content: {
+					message: 'could not hold a paused issue item — its lease will expire instead',
+					itemId: item.id,
+					error: error instanceof Error ? error.message : String(error),
+				},
+			})
+		}
+	}
+
+	private async runIssueTurn(item: ClaimedMailboxItem): Promise<TurnReport> {
 		const payload = item.payload as {
 			threadId: string
 			key: string
@@ -929,6 +992,8 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			// Carried through so `persistOutcome` can put it on the ISSUE_RESULT it queues.
 			originEntryId: payload.originEntryId,
 		})
+		// A pause killed it (or kept it from starting): nothing was persisted, the item goes back held.
+		if (result.held) return { held: true, spoke: false }
 		return { spoke: result.spoke, provider, transportStop: result.transportStop }
 	}
 

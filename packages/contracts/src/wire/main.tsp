@@ -44,6 +44,7 @@ import "./enums/issue-status.tsp";
 import "./enums/issue-life-state.tsp";
 import "./enums/issue-timeline-item-kind.tsp";
 import "./enums/issue-archive-reason.tsp";
+import "./enums/issue-control-source.tsp";
 import "./enums/stop-kind.tsp";
 import "./enums/stop-resolution.tsp";
 // The permission regime an agent turn runs under — cross-boundary because the mailbox column, the run

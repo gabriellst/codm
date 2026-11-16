@@ -24,8 +24,27 @@ Data: 2026-11-16
 
 A mensagem roteada vira um STEER da sessão da issue, assinado por quem escreveu, com o trecho citado; o grupo recebe só a reação 👀; a linha do tempo da issue mostra enviado/entregue/lido.
 
-### 2. Pausa como comando
-Palavra de controle (`pare`, `pausa`, `segura`) + alvo (citação ou chave) → a issue fica pausada no daemon na hora; as ferramentas de efeito externo recusam enquanto pausada; `continue` / `retome` despausa. Pausa do grupo inteiro por comando do operador.
+### 2. Pausa como comando (feito)
+Palavra de controle + alvo → a issue fica pausada no daemon na hora; as ferramentas de efeito externo recusam enquanto pausada; `continue` / `retome` despausa.
+
+**Estado.** `Issue.paused` (coluna `issue_issues.paused`, migração 0034), ORTOGONAL ao `status`: pausar não muda WORKING/NEEDS_INPUT e retomar volta ao mesmo estado. `Issue.pause()` recusa issue COMPLETED ou arquivada (`ISSUE_NOT_PAUSABLE`) e pausa repetida (`ISSUE_ALREADY_PAUSED`); `resume()` recusa o que não está pausado (`ISSUE_NOT_PAUSED`). Casos de uso `PauseIssue` / `ResumeIssue` (contexto `issue`) gravam a flag e os fatos `issue.paused` / `issue.resumed` com quem pediu (`requestedBy`/`requestedById`) e de onde (`IssueControlSource`: `WHATSAPP` | `CONSOLE`). Console: `POST /issues/:issueId/pause` e `/resume` (CloudSessionMiddleware, sem escopo MCP).
+
+**Segurada = issue pausada OU conversa pausada.** Uma checagem só, `IssueHold` (`issue/services`, lê `issues.paused` ⋈ `threads.paused`), usada por:
+- **Dispatcher** — no topo de `runIssueWork`: segurada ⇒ o item é adiado 30 s (`defer`, tentativa devolvida, nunca `complete`/`fail`); novo variante `held` do `TurnReport`.
+- **Ferramentas externas** — `SendDirectMessage`, `RaiseStop` (`DeclareStop`), `AskOperator` recusam com `ISSUE_PAUSED` quando quem chama é o run de uma issue segurada (o `issueId` da identidade do run). Console e orquestrador não carregam issue e passam — `SendDirectMessage` continua sendo a voz do operador num grupo pausado. `SendArtifact` checa a issue que REGISTROU o artefato (o contexto `artifact` não lê identidade de run; criar a aresta só para isso não valia).
+
+**Na hora.** A flag é a pausa; dois handlers do próprio `issue` só aceleram:
+- `AbortIssueTurnOnPause` (`issue.paused`) relê a issue e, se ainda pausada, chama `IssueTurnAborter.abort` (agent/services, um `AbortController` em memória por turno de issue em voo). O dispatcher arma o controlador ANTES de checar a pausa; `RunIssueTurn` lê o sinal, não começa se já abortado e passa `signal` ao runner (kill do grupo de processos). Turno morto pela pausa não persiste desfecho: sem ISSUE_RESULT, sem stop, sem cursor de sessão; o item volta adiado, sem gastar tentativa.
+- `ReleaseIssueWorkOnResume` (`issue.resumed`) libera (`releaseDeferred`) os itens adiados da issue se ela não está mais segurada.
+- Aresta nova `issue → agent` (ciclo anotado `agent ↔ issue` em `composition/policy.ts`): o dono do fato reage no próprio contexto e comanda o runtime de turnos, mesma forma de `ResumeIssueOnStopResolved`. Evento de integração foi descartado: o abort precisa alcançar o controlador em memória deste processo, e a fila SQL de integração somaria um intervalo de polling.
+
+**WhatsApp.** Em `IngestChannelMessage`, ANTES do portão `canInvoke`: a primeira palavra (depois de tirar menções; caixa e acento ignorados; palavra inteira — "parabéns" não é "para") é de controle — pausa: `pare`, `para`, `pausa`, `pause`, `segura`, `stop`; retomada: `continue`, `continua`, `retome`, `retoma`, `segue` (`thread/utils/controlCommand.ts`) — E há alvo: citação de mensagem ligada a uma issue ou exatamente uma chave (`RuleRouter.target`, qualquer issue não arquivada, não só WORKING). Quem manda: `Thread.canCommand` = `canInvoke` sem a pausa da conversa (participante mudo continua mudo, portão de menção e janela de frescor valem). Efeito por comando (`CONTROL_EFFECT`): `pare` numa issue já pausada só reconhece (reentrega não vira erro nem desfaz a entrada); `pare` em concluída/arquivada e `continue` em issue não pausada caem no caminho de sempre (um "continue com X" é steer). Comando aceito: entrada gravada ligada à issue, `PauseIssue`/`ResumeIssue` na MESMA transação (exceção nomeada `thread → issue/usecases`), nenhum turno do orquestrador, só a reação ⏸️ / ▶️. Sem alvo ou ambíguo → caminho de sempre, inalterado.
+
+**Conversa pausada** (botão "pausar grupo" do console): agora também segura o trabalho das issues dela e as ferramentas externas delas; o resto da semântica não mudou. Retomar o grupo não libera na hora — o item volta no re-check de 30 s.
+
+**Visibilidade.** `IssueTimelineItemKind` ganhou `PAUSED` / `RESUMED` (com `source` e `by`); `IssueLifeState` ganhou `PAUSED`, que vence tudo menos DONE (um item adiado por pausa não é "esperando cota"; o selo de cota e a varredura de issues paradas ignoram issues pausadas). `GetIssuesOverview` / `GetIssueDetail` expõem `paused`. Console: quadro põe PAUSED na coluna de paradas com selo "Pausada"; detalhe da issue tem botão Pausar/Retomar (hooks do SDK) e o selo.
+
+**Fora deste item.** Pausa do grupo inteiro por comando no WhatsApp (só pelo console); evento de integração para o quadro se atualizar sozinho na pausa (atualiza no próximo refresh ou pelo botão).
 
 ### 3. Janela de arrependimento
 Ações irreversíveis (merge, publicar, disparar push, escrever em produção) esperam alguns segundos e conferem a caixa de recados da issue; recado novo cancela a ação e volta para a sessão.

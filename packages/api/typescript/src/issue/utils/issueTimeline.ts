@@ -10,6 +10,7 @@ import {
 	type TranscriptKind,
 } from '@codm/contracts-typescript/wire/enums'
 import type { IssueTimelineItem } from '@shared/schemas'
+import { IssuePausedEventSchema } from '../events/IssuePausedEvent'
 
 /** Fact names on `shared_events` that become a timeline moment, and which one. */
 const EVENT_KINDS = {
@@ -17,11 +18,18 @@ const EVENT_KINDS = {
 	'agent.run.started': IssueTimelineItemKind.TURN_STARTED,
 	'agent.run.completed': IssueTimelineItemKind.COMPLETED,
 	'issue.archived': IssueTimelineItemKind.ARCHIVED,
+	'issue.paused': IssueTimelineItemKind.PAUSED,
+	'issue.resumed': IssueTimelineItemKind.RESUMED,
 } as const satisfies Record<string, IssueTimelineItemKind>
 type EventName = keyof typeof EVENT_KINDS
 const EVENT_NAMES = Object.keys(EVENT_KINDS) as EventName[]
 
 const SteerPayloadSchema = z.object({ text: z.string(), declarationReminder: z.literal(true).optional() })
+/**
+ * Who held / released the work and from where — read off the recorded fact. `issue.resumed` carries the
+ * same attribution fields as `issue.paused` (`IssueResumedEvent`), so one pick parses both.
+ */
+const ControlPayloadSchema = IssuePausedEventSchema.shape.payload.pick({ source: true, requestedBy: true })
 
 /**
  * An issue's TIMELINE (fase 1, item 1): everything that happened to it, oldest first, assembled from facts
@@ -36,7 +44,7 @@ export async function assembleIssueTimeline(driver: LibSqlDatabaseDriver, issueI
 	const db = driver.db
 	const [facts, entries, steers, files, stopRows] = await Promise.all([
 		db
-			.select({ id: events.id, name: events.name, occurredAt: events.occurredAt })
+			.select({ id: events.id, name: events.name, occurredAt: events.occurredAt, payload: events.payload })
 			.from(events)
 			.where(and(eq(events.entityId, issueId), inArray(events.name, EVENT_NAMES))),
 		db.select().from(transcriptEntries).where(eq(transcriptEntries.issueId, issueId)),
@@ -59,7 +67,12 @@ export async function assembleIssueTimeline(driver: LibSqlDatabaseDriver, issueI
 		const kind = EVENT_KINDS[fact.name as EventName]
 		const when = fact.occurredAt.toISOString()
 		if (kind === IssueTimelineItemKind.CREATED) items.push({ kind, id: fact.id, at: when, title })
-		else items.push({ kind, id: fact.id, at: when })
+		else if (kind === IssueTimelineItemKind.PAUSED || kind === IssueTimelineItemKind.RESUMED) {
+			// A fact whose attribution does not parse is not a moment we can render honestly — skipped, the
+			// same posture the steer payload above takes with a malformed row.
+			const control = ControlPayloadSchema.safeParse(fact.payload)
+			if (control.success) items.push({ kind, id: fact.id, at: when, source: control.data.source, by: control.data.requestedBy })
+		} else items.push({ kind, id: fact.id, at: when })
 	}
 	for (const entry of entries) {
 		items.push({
