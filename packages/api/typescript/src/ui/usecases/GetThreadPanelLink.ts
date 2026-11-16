@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { Handler, z } from '@codm/core-typescript'
-import { PanelPublisher } from '../services/PanelPublisher'
+import { PanelPublisher } from '@issue/services/PanelPublisher'
 
 export const GetThreadPanelLinkInputSchema = z.object({ threadId: z.uuid() })
 export const GetThreadPanelLinkOutputSchema = z.object({

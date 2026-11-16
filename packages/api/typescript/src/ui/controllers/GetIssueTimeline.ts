@@ -2,7 +2,7 @@ import { injectable } from 'tsyringe-neo'
 import { Controller, HttpStatusCode } from '@codm/core-typescript'
 import { CloudSessionMiddleware } from '@shared/middlewares'
 import { GetIssueTimeline, GetIssueTimelineOutputSchema } from '../usecases/GetIssueTimeline'
-import { IssueParam } from '../schemas'
+import { IssueParam } from '@issue/schemas'
 
 export const GetIssueTimelineControllerInputSchema = IssueParam.example([
 	{ ctx: { ownerId: '00000000-0000-4000-8000-000000000001' }, params: { issueId: '019e4d24-6524-7041-9e1c-8108180cddaf' } },

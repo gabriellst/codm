@@ -74,6 +74,9 @@ export const CONTEXT_MAP: Partial<Record<ContextId, Partial<Record<ContextId, { 
 		thread: {
 			note: 'BFF Settings reads the per-owner stop-policy toggles via StopPolicyConfigRepository (repositories surface), which lives in thread/ since B4 — the policy follows the aggregate that raises stops. Since the onboarding atomic-commit (spec 2026-08-26), CompleteOnboarding also composes AttachThread (usecases surface, named PolicyException) to materialize the wizard draft — see composition/policy.ts.',
 		},
+		issue: {
+			note: "Console reads of fase 1 that live in the BFF: GetIssueTimeline composes issue's `assembleIssueTimeline` (utils, shared with the panel publisher) and throws issue's ISSUE_NOT_FOUND (errors); GetThreadPanelLink reads the link the PanelPublisher service holds (services). The rotate command stays in issue.",
+		},
 		workspace: {
 			note: "CompleteOnboarding's atomic commit resolves/creates the wizard's workspace via WorkspaceRepository (repositories) and composes AddWorkspace (usecases surface, named PolicyException) — see composition/policy.ts.",
 		},
@@ -106,12 +109,12 @@ export const TABLE_READ_EDGES: readonly { consumer: ContextId; schema: string; n
 	{
 		consumer: 'issue',
 		schema: 'artifact',
-		note: "GetIssueTimeline (fase 1) lists the artifacts an issue recorded (artifact_artifacts by issue_id) — the same BFF read-services shape as thread's GetSessionChat join; read-only.",
+		note: "assembleIssueTimeline (fase 1; console timeline in ui + panel publisher) lists the artifacts an issue recorded (artifact_artifacts by issue_id) — the same BFF read-services shape as thread's GetSessionChat join; read-only.",
 	},
 	{
 		consumer: 'issue',
 		schema: 'shared',
-		note: 'GetIssueTimeline (fase 1) reads the recorded domain facts of the issue (shared_events by entity_id: forked, turn started, completed, archived) — the timeline is assembled from facts that already exist, so no new table.',
+		note: 'assembleIssueTimeline (fase 1) reads the recorded domain facts of the issue (shared_events by entity_id: forked, turn started, completed, archived) — the timeline is assembled from facts that already exist, so no new table.',
 	},
 	{
 		consumer: 'owner',

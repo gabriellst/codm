@@ -6,7 +6,6 @@ import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSess
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { PanelPublisher, type MockPanelPublisher } from '../services/PanelPublisher'
 import { PublishPanelSnapshot } from './PublishPanelSnapshot'
-import { GetThreadPanelLink } from './GetThreadPanelLink'
 import { RotateThreadPanelLink } from './RotateThreadPanelLink'
 
 /**
@@ -63,7 +62,7 @@ describe('PublishPanelSnapshot', () => {
 		const fresh = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
 
 		await testBed.resolve(PublishPanelSnapshot).execute({})
-		expect((await testBed.resolve(GetThreadPanelLink).execute({ threadId: thread.id.value })).url).toBe(
+		expect((testBed.resolve(PanelPublisher) as MockPanelPublisher).linkOf(thread.id.value)).toBe(
 			`https://cloud.test/panel/g/token-${thread.id.value}`,
 		)
 		expect((await testBed.resolve(RotateThreadPanelLink).execute({ threadId: thread.id.value })).url).toBe(

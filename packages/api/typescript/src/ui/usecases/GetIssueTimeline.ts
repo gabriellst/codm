@@ -3,8 +3,8 @@ import { eq } from 'drizzle-orm'
 import { LibSqlDatabaseDriver, Handler, z, BaseError } from '@codm/core-typescript'
 import { issues } from '@codm/contracts/db'
 import { IssueTimelineItemSchema } from '@shared/schemas'
-import type { ApplicationErrors } from '../errors'
-import { assembleIssueTimeline } from '../utils/issueTimeline'
+import type { ApplicationErrors } from '@issue/errors'
+import { assembleIssueTimeline } from '@issue/utils/issueTimeline'
 
 export const GetIssueTimelineInputSchema = z.object({ ownerId: z.uuid(), issueId: z.uuid() })
 export const GetIssueTimelineOutputSchema = z.object({ items: z.array(IssueTimelineItemSchema) })
