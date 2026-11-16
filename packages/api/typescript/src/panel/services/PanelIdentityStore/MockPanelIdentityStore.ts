@@ -25,9 +25,9 @@ export class MockPanelIdentityStore extends PanelIdentityStore {
 		return true
 	}
 
-	async requestTimes(threadId: string, memberId: string, since: Date): Promise<Date[]> {
+	async requestTimes(threadId: string, memberId: string | undefined, since: Date): Promise<Date[]> {
 		return [...this.requests.values()]
-			.filter(row => row.threadId === threadId && row.memberId === memberId && row.requestedAt >= since)
+			.filter(row => row.threadId === threadId && (memberId === undefined || row.memberId === memberId) && row.requestedAt >= since)
 			.map(row => row.requestedAt)
 	}
 

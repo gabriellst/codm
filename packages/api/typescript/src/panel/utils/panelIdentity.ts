@@ -13,6 +13,11 @@ export const PANEL_IDENTITY = {
 	/** Code requests per member: one a minute, five an hour. */
 	perMinute: 1,
 	perHour: 5,
+	/**
+	 * Code requests per GROUP an hour, across members. Anyone with the group link can ask; each ask makes
+	 * the owner's number DM a member — without a group cap a link could turn that number into a spammer.
+	 */
+	perGroupPerHour: 15,
 	/** A request nobody pulled in this long is dropped — the daemon was away and nobody is waiting anymore. */
 	pendingWindowMs: 5 * 60 * 1000,
 	/** A verified device stays verified for 30 days. */

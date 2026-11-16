@@ -34,12 +34,16 @@ export class PgPanelIdentityStore extends PanelIdentityStore {
 		return rows.length > 0
 	}
 
-	async requestTimes(threadId: string, memberId: string, since: Date, tx?: PgTransaction): Promise<Date[]> {
+	async requestTimes(threadId: string, memberId: string | undefined, since: Date, tx?: PgTransaction): Promise<Date[]> {
 		const rows = await (tx ?? this.driver.db)
 			.select({ requestedAt: panelCodeRequests.requestedAt })
 			.from(panelCodeRequests)
 			.where(
-				and(eq(panelCodeRequests.threadId, threadId), eq(panelCodeRequests.memberId, memberId), gte(panelCodeRequests.requestedAt, since)),
+				and(
+					eq(panelCodeRequests.threadId, threadId),
+					memberId === undefined ? undefined : eq(panelCodeRequests.memberId, memberId),
+					gte(panelCodeRequests.requestedAt, since),
+				),
 			)
 		return rows.map(row => row.requestedAt)
 	}

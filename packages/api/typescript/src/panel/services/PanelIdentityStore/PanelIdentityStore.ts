@@ -49,7 +49,8 @@ export abstract class PanelIdentityStore {
 	abstract replaceMembers(ownerId: string, threadId: string, members: readonly PanelMember[], tx?: Transaction): Promise<boolean>
 
 	/** When this member asked for codes since `since` — the rate limit's input. */
-	abstract requestTimes(threadId: string, memberId: string, since: Date, tx?: Transaction): Promise<Date[]>
+	/** Request times since `since` — one member's, or the whole group's when `memberId` is omitted. */
+	abstract requestTimes(threadId: string, memberId: string | undefined, since: Date, tx?: Transaction): Promise<Date[]>
 	abstract insertRequest(row: PanelCodeRequestRow, tx?: Transaction): Promise<void>
 	/** Requests of this owner made since `since` and not handed to the daemon yet, oldest first. */
 	abstract pendingRequests(ownerId: string, since: Date, tx?: Transaction): Promise<PanelCodeRequestRow[]>

@@ -162,6 +162,27 @@ describe('panel — identifying a person by a WhatsApp code', () => {
 		)
 	})
 
+	/**
+	 * Each request makes the owner's number DM someone. Per-member limits alone let a link holder walk the
+	 * roster; the group cap bounds the whole link. Falsifier: drop the group check and the 16th member's
+	 * request goes through.
+	 */
+	it('code requests are also capped per group — fifteen an hour across all members', async () => {
+		const crowd = Array.from({ length: 16 }, (_, i) => ({
+			memberId: `m-crowd-${String(i).padStart(2, '0')}-xxxxxxxxxxxxx`,
+			name: `Pessoa ${i}`,
+			canRelease: false,
+		}))
+		const token = await groupWithRoster(GROUP, crowd)
+		for (const member of crowd.slice(0, 15)) await testBed.resolve(RequestPanelCode).execute({ token, memberId: member.memberId })
+
+		const last = crowd[15]?.memberId ?? ''
+		expect(await refused(testBed.resolve(RequestPanelCode).execute({ token, memberId: last }))).toBe('PANEL_CODE_RATE_LIMITED')
+		// An hour later the group has its budget back.
+		await age({ requestedAt: new Date(Date.now() - 61 * 60 * 1000) })
+		await testBed.resolve(RequestPanelCode).execute({ token, memberId: last })
+	})
+
 	it('a member who left the roster is nobody on a device that was verified as them', async () => {
 		const token = await groupWithRoster()
 		const verified = await testBed

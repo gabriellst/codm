@@ -16,7 +16,8 @@ export const RequestPanelCodeOutputSchema = z.void()
  * the code at that moment and the daemon DMs it to that member's WhatsApp. Whoever clicked learns
  * nothing from here — the code goes to the person, not to the browser.
  *
- * Rate-limited per member (1/min, 5/h): the requests table IS the counter, so the limit holds across
+ * Rate-limited per member (1/min, 5/h) and per group (15/h, so a link cannot turn the owner's number
+ * into a spammer): the requests table IS the counter, so the limit holds across
  * cloud replicas without any extra state.
  */
 @injectable()
@@ -42,6 +43,10 @@ export class RequestPanelCode extends Handler<typeof RequestPanelCodeInputSchema
 			const lastMinute = lastHour.filter(at => at.getTime() > now.getTime() - 60 * 1000)
 			if (lastMinute.length >= PANEL_IDENTITY.perMinute || lastHour.length >= PANEL_IDENTITY.perHour) {
 				throw new BaseError<ApplicationErrors>('PANEL_CODE_RATE_LIMITED', 'too many code requests for this member')
+			}
+			const groupLastHour = await this.store.requestTimes(group.threadId, undefined, new Date(now.getTime() - 60 * 60 * 1000), tx)
+			if (groupLastHour.length >= PANEL_IDENTITY.perGroupPerHour) {
+				throw new BaseError<ApplicationErrors>('PANEL_CODE_RATE_LIMITED', 'too many code requests for this group')
 			}
 
 			await this.store.insertRequest(
