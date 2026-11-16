@@ -7,7 +7,7 @@ import { IssueControlCommand } from '../enums'
  * A closed map over the command enum: a new command fails compilation here until it has its words.
  */
 const CONTROL_WORDS: Readonly<Record<IssueControlCommand, readonly string[]>> = {
-	[IssueControlCommand.PAUSE]: ['pare', 'para', 'pausa', 'pause', 'segura', 'stop'],
+	[IssueControlCommand.PAUSE]: ['pare', 'pausa', 'pause', 'segura', 'stop'],
 	[IssueControlCommand.RESUME]: ['continue', 'continua', 'retome', 'retoma', 'segue'],
 }
 
@@ -17,7 +17,7 @@ const COMMAND_OF_WORD: ReadonlyMap<string, IssueControlCommand> = new Map(
 
 /** Leading @mentions (`@codm`, `@<número>`) and the whitespace around them — addressing, not content. */
 const LEADING_MENTIONS = /^(?:\s*@\S+)*\s*/u
-/** The FIRST WORD, whole: letters up to the first non-letter. "parabéns" is not "para", "seguem" is not "segue". */
+/** The FIRST WORD, whole: letters up to the first non-letter. "parabéns" is not "pare", "seguem" is not "segue". "para" is left out on purpose: it is also the preposition ("Para quando fica pronto?"). */
 const FIRST_WORD = /^(\p{L}+)(?![\p{L}\p{N}])/u
 
 const fold = (text: string): string => text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()

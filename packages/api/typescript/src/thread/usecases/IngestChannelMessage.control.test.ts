@@ -147,7 +147,7 @@ describe('a control word with a target pauses / resumes the issue, with no turn'
 	it('a control word WITHOUT a target goes to the orchestrator unchanged', async () => {
 		const { thread, issue } = await scene()
 
-		await ingest(thread.id.value, `${GIVEN_MENTION_TAG} para tudo e me explica o plano`)
+		await ingest(thread.id.value, `${GIVEN_MENTION_TAG} pare tudo e me explica o plano`)
 
 		expect(await pausedOf(issue.id.value)).toBe(false)
 		const item = await testBed.resolve(MailboxRepository).claimNext('control-test', 60_000)
@@ -181,5 +181,7 @@ describe('parseControlCommand', () => {
 		expect(parseControlCommand('seguem os prints')).toBeUndefined()
 		expect(parseControlCommand('continuar depois')).toBeUndefined()
 		expect(parseControlCommand('acho que pare APP-12')).toBeUndefined()
+		// "para" is the preposition far more often than the verb — a quoted question must never pause.
+		expect(parseControlCommand('Para quando fica pronto?')).toBeUndefined()
 	})
 })
