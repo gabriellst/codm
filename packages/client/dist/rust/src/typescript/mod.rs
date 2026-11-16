@@ -279,7 +279,12 @@ pub mod types {
     ///    "OWNER_ALREADY_DISABLED",
     ///    "OWNER_NOT_DISABLED",
     ///    "OWNER_NOT_FOUND",
+    ///    "PANEL_CODE_ATTEMPTS_EXCEEDED",
+    ///    "PANEL_CODE_EXPIRED",
+    ///    "PANEL_CODE_INVALID",
+    ///    "PANEL_CODE_RATE_LIMITED",
     ///    "PANEL_LINK_UNAVAILABLE",
+    ///    "PANEL_MEMBER_NOT_FOUND",
     ///    "PANEL_NOT_FOUND",
     ///    "PARTICIPANT_NOT_FOUND",
     ///    "PASSWORDS_DONT_MATCH",
@@ -479,8 +484,18 @@ pub mod types {
         OwnerNotDisabled,
         #[serde(rename = "OWNER_NOT_FOUND")]
         OwnerNotFound,
+        #[serde(rename = "PANEL_CODE_ATTEMPTS_EXCEEDED")]
+        PanelCodeAttemptsExceeded,
+        #[serde(rename = "PANEL_CODE_EXPIRED")]
+        PanelCodeExpired,
+        #[serde(rename = "PANEL_CODE_INVALID")]
+        PanelCodeInvalid,
+        #[serde(rename = "PANEL_CODE_RATE_LIMITED")]
+        PanelCodeRateLimited,
         #[serde(rename = "PANEL_LINK_UNAVAILABLE")]
         PanelLinkUnavailable,
+        #[serde(rename = "PANEL_MEMBER_NOT_FOUND")]
+        PanelMemberNotFound,
         #[serde(rename = "PANEL_NOT_FOUND")]
         PanelNotFound,
         #[serde(rename = "PARTICIPANT_NOT_FOUND")]
@@ -648,7 +663,14 @@ pub mod types {
                 Self::OwnerAlreadyDisabled => f.write_str("OWNER_ALREADY_DISABLED"),
                 Self::OwnerNotDisabled => f.write_str("OWNER_NOT_DISABLED"),
                 Self::OwnerNotFound => f.write_str("OWNER_NOT_FOUND"),
+                Self::PanelCodeAttemptsExceeded => {
+                    f.write_str("PANEL_CODE_ATTEMPTS_EXCEEDED")
+                }
+                Self::PanelCodeExpired => f.write_str("PANEL_CODE_EXPIRED"),
+                Self::PanelCodeInvalid => f.write_str("PANEL_CODE_INVALID"),
+                Self::PanelCodeRateLimited => f.write_str("PANEL_CODE_RATE_LIMITED"),
                 Self::PanelLinkUnavailable => f.write_str("PANEL_LINK_UNAVAILABLE"),
+                Self::PanelMemberNotFound => f.write_str("PANEL_MEMBER_NOT_FOUND"),
                 Self::PanelNotFound => f.write_str("PANEL_NOT_FOUND"),
                 Self::ParticipantNotFound => f.write_str("PARTICIPANT_NOT_FOUND"),
                 Self::PasswordsDontMatch => f.write_str("PASSWORDS_DONT_MATCH"),
@@ -770,7 +792,12 @@ pub mod types {
                 "OWNER_ALREADY_DISABLED" => Ok(Self::OwnerAlreadyDisabled),
                 "OWNER_NOT_DISABLED" => Ok(Self::OwnerNotDisabled),
                 "OWNER_NOT_FOUND" => Ok(Self::OwnerNotFound),
+                "PANEL_CODE_ATTEMPTS_EXCEEDED" => Ok(Self::PanelCodeAttemptsExceeded),
+                "PANEL_CODE_EXPIRED" => Ok(Self::PanelCodeExpired),
+                "PANEL_CODE_INVALID" => Ok(Self::PanelCodeInvalid),
+                "PANEL_CODE_RATE_LIMITED" => Ok(Self::PanelCodeRateLimited),
                 "PANEL_LINK_UNAVAILABLE" => Ok(Self::PanelLinkUnavailable),
+                "PANEL_MEMBER_NOT_FOUND" => Ok(Self::PanelMemberNotFound),
                 "PANEL_NOT_FOUND" => Ok(Self::PanelNotFound),
                 "PARTICIPANT_NOT_FOUND" => Ok(Self::ParticipantNotFound),
                 "PASSWORDS_DONT_MATCH" => Ok(Self::PasswordsDontMatch),

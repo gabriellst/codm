@@ -1293,6 +1293,145 @@
         }
       }
     },
+    "/panel/roster": {
+      "put": {
+        "tags": [
+          "panel"
+        ],
+        "description": "Replace each group's panel roster (opaque member ids) and pull the identification codes to deliver",
+        "operationId": "SyncPanelRoster",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "groups": {
+                    "maxItems": 200,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "threadId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "members": {
+                          "maxItems": 1024,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "memberId": {
+                                "type": "string",
+                                "minLength": 16,
+                                "maxLength": 64,
+                                "pattern": "^[A-Za-z0-9_-]+$"
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 120
+                              },
+                              "canRelease": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "memberId",
+                              "name",
+                              "canRelease"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "threadId",
+                        "members"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "groups"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "groups": [
+                      {
+                        "threadId": "019e4d24-6524-7041-9e1c-8108180cddaf",
+                        "members": [
+                          {
+                            "memberId": "q8ZK1x0Lr3mT5aVb2cN7dE",
+                            "name": "Ana",
+                            "canRelease": true
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Replace each group's panel roster (opaque member ids) and pull the identification codes to deliver",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "deliveries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "requestId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "threadId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "memberId": {
+                            "type": "string"
+                          },
+                          "code": {
+                            "type": "string",
+                            "pattern": "^\\d{6}$"
+                          }
+                        },
+                        "required": [
+                          "requestId",
+                          "threadId",
+                          "memberId",
+                          "code"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "deliveries"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/panel/groups/{threadId}/rotate": {
       "post": {
         "tags": [
@@ -1838,6 +1977,311 @@
         }
       }
     },
+    "/panel/g/{token}/members": {
+      "get": {
+        "tags": [
+          "panel"
+        ],
+        "description": "The people of a group (opaque id + name), by its panel link token (public)",
+        "operationId": "ListPanelMembers",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "kq3pE1aV0m9xT2yR8wB5nC7dF4gH6jL1sZ0uQ3iO9eA"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The people of a group (opaque id + name), by its panel link token (public)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "members": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "memberId": {
+                            "type": "string",
+                            "minLength": 16,
+                            "maxLength": 64,
+                            "pattern": "^[A-Za-z0-9_-]+$"
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 120
+                          }
+                        },
+                        "required": [
+                          "memberId",
+                          "name"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "members"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/g/{token}/identify": {
+      "post": {
+        "tags": [
+          "panel"
+        ],
+        "description": "Ask codm to send a panel identification code to a group member's WhatsApp (public)",
+        "operationId": "RequestPanelCode",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "memberId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                },
+                "required": [
+                  "memberId"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "memberId": "q8ZK1x0Lr3mT5aVb2cN7dE"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "kq3pE1aV0m9xT2yR8wB5nC7dF4gH6jL1sZ0uQ3iO9eA"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ask codm to send a panel identification code to a group member's WhatsApp (public)",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/g/{token}/verify": {
+      "post": {
+        "tags": [
+          "panel"
+        ],
+        "description": "Confirm a panel identification code; sets the device cookie (public)",
+        "operationId": "VerifyPanelCode",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "memberId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "code": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$"
+                  }
+                },
+                "required": [
+                  "memberId",
+                  "code"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "memberId": "q8ZK1x0Lr3mT5aVb2cN7dE",
+                    "code": "123456"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "kq3pE1aV0m9xT2yR8wB5nC7dF4gH6jL1sZ0uQ3iO9eA"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Confirm a panel identification code; sets the device cookie (public)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "member": {
+                      "type": "object",
+                      "properties": {
+                        "memberId": {
+                          "type": "string",
+                          "minLength": 16,
+                          "maxLength": 64,
+                          "pattern": "^[A-Za-z0-9_-]+$"
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 120
+                        },
+                        "canRelease": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "memberId",
+                        "name",
+                        "canRelease"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "member"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/g/{token}/me": {
+      "get": {
+        "tags": [
+          "panel"
+        ],
+        "description": "Who this device is on a group's panel, from its device cookie (public)",
+        "operationId": "GetPanelIdentity",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "kq3pE1aV0m9xT2yR8wB5nC7dF4gH6jL1sZ0uQ3iO9eA"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Who this device is on a group's panel, from its device cookie (public)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "member": {
+                      "type": "object",
+                      "properties": {
+                        "memberId": {
+                          "type": "string",
+                          "minLength": 16,
+                          "maxLength": 64,
+                          "pattern": "^[A-Za-z0-9_-]+$"
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 120
+                        },
+                        "canRelease": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "memberId",
+                        "name",
+                        "canRelease"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/g/{token}/forget": {
+      "post": {
+        "tags": [
+          "panel"
+        ],
+        "description": "End this device's identity on a group's panel (public)",
+        "operationId": "ForgetPanelDevice",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "kq3pE1aV0m9xT2yR8wB5nC7dF4gH6jL1sZ0uQ3iO9eA"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "End this device's identity on a group's panel (public)",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/panel/g/{token}": {
       "get": {
         "tags": [
@@ -1958,7 +2402,12 @@
           "OWNER_ALREADY_DISABLED",
           "OWNER_NOT_DISABLED",
           "OWNER_NOT_FOUND",
+          "PANEL_CODE_ATTEMPTS_EXCEEDED",
+          "PANEL_CODE_EXPIRED",
+          "PANEL_CODE_INVALID",
+          "PANEL_CODE_RATE_LIMITED",
           "PANEL_LINK_UNAVAILABLE",
+          "PANEL_MEMBER_NOT_FOUND",
           "PANEL_NOT_FOUND",
           "PARTICIPANT_NOT_FOUND",
           "PASSWORDS_DONT_MATCH",
@@ -2203,7 +2652,12 @@
     "OWNER_ALREADY_DISABLED",
     "OWNER_NOT_DISABLED",
     "OWNER_NOT_FOUND",
+    "PANEL_CODE_ATTEMPTS_EXCEEDED",
+    "PANEL_CODE_EXPIRED",
+    "PANEL_CODE_INVALID",
+    "PANEL_CODE_RATE_LIMITED",
     "PANEL_LINK_UNAVAILABLE",
+    "PANEL_MEMBER_NOT_FOUND",
     "PANEL_NOT_FOUND",
     "PARTICIPANT_NOT_FOUND",
     "PASSWORDS_DONT_MATCH",

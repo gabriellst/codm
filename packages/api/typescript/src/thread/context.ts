@@ -13,10 +13,11 @@ export default {
 			'The inbound path consumes the agent context ProviderDetector (which CLI a thread runs) and, since the orchestrator pivot, its MailboxRepository — an invocable message queues a turn in the SAME transaction as the transcript entry (§7.4). AttachThread and GetThreadSettings additionally read AgentRunnerFactory.supported (services surface, ABSTRACT TOKEN ONLY, via the leaf module): binding a thread to a provider is legal only if a runner exists for it, and the settings read flags a legacy binding for which none does. ResolveStopController adds two type-level edges for the same reason it is an MCP tool at all: it composes AgentRunIdentityCtxSchema (types) so Zod does not strip the identity AgentIdentityMiddleware stamps, and refuses with AgentInterfaceErrors (errors) so a run that targets another thread gets the SAME code every other tool door refuses with. A second copy of either in thread/ would be two spellings of one boundary. Steer imediato (fase 2, item 4): InterruptIssueTurnOnSteer, reacting to the thread-owned "agora" fact, cuts the issue\'s running turn through IssueTurnAborter (services surface) — the shape issue/handlers/AbortIssueTurnOnPause already has.',
 	},
 	reads: {
-		issue: 'OpenIssuesReader (classifier candidate set) + GetSessionChat active stops ride the issue schema.',
+		issue:
+			'OpenIssuesReader (classifier candidate set) + GetSessionChat active stops ride the issue schema. PublishPanelRoster (fase 2, item 6a) selects the conversations that have issues — the ones with a cloud panel board.',
 		workspace: 'GetSessionChat resolves the bound workspace display path.',
 		gateway:
-			'ChannelConnectivity / GroupMemberReader / GetSessionChat read the Go gateway sync tables (channels/remotes — proxy pairing, BUILD-LOG:116).',
+			"ChannelConnectivity / GroupMemberReader / GetSessionChat read the Go gateway sync tables (channels/remotes — proxy pairing, BUILD-LOG:116). PublishPanelRoster (fase 2, item 6a) reads contact names (remotes) and the account's own address (channels.owner_remote_id) to build the cloud panel roster.",
 		artifact:
 			'GetSessionChat joins artifact_artifacts by the transcript entry\'s own artifactId column to render the delivered-artifact bubble ("envio de artefatos pelo canal" design, decisions 4/8) — same BFF read-services shape as the workspace/gateway joins above, addressed by a column this aggregate already owns.',
 	},

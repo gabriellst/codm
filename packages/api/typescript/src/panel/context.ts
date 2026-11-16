@@ -11,7 +11,7 @@ export default {
 	kind: 'domain',
 	ambient: ['middlewares'],
 	consumes: {
-		auth: 'PUT /panel/sync and the link rotation are authenticated with the user session bearer the daemon already holds (AuthAccountMiddleware); the public reads are not.',
+		auth: 'PUT /panel/sync, PUT /panel/roster and the link rotation are authenticated with the user session bearer the daemon already holds (AuthAccountMiddleware); the public reads and the identification endpoints (fase 2, item 6a — the group token plus a WhatsApp code) are not.',
 	},
 	givens: [],
 } satisfies ContextDecl

@@ -125,7 +125,12 @@ const (
 	OWNERALREADYDISABLED            ApiErrors = "OWNER_ALREADY_DISABLED"
 	OWNERNOTDISABLED                ApiErrors = "OWNER_NOT_DISABLED"
 	OWNERNOTFOUND                   ApiErrors = "OWNER_NOT_FOUND"
+	PANELCODEATTEMPTSEXCEEDED       ApiErrors = "PANEL_CODE_ATTEMPTS_EXCEEDED"
+	PANELCODEEXPIRED                ApiErrors = "PANEL_CODE_EXPIRED"
+	PANELCODEINVALID                ApiErrors = "PANEL_CODE_INVALID"
+	PANELCODERATELIMITED            ApiErrors = "PANEL_CODE_RATE_LIMITED"
 	PANELLINKUNAVAILABLE            ApiErrors = "PANEL_LINK_UNAVAILABLE"
+	PANELMEMBERNOTFOUND             ApiErrors = "PANEL_MEMBER_NOT_FOUND"
 	PANELNOTFOUND                   ApiErrors = "PANEL_NOT_FOUND"
 	PARTICIPANTNOTFOUND             ApiErrors = "PARTICIPANT_NOT_FOUND"
 	PASSWORDSDONTMATCH              ApiErrors = "PASSWORDS_DONT_MATCH"
@@ -313,7 +318,17 @@ func (e ApiErrors) Valid() bool {
 		return true
 	case OWNERNOTFOUND:
 		return true
+	case PANELCODEATTEMPTSEXCEEDED:
+		return true
+	case PANELCODEEXPIRED:
+		return true
+	case PANELCODEINVALID:
+		return true
+	case PANELCODERATELIMITED:
+		return true
 	case PANELLINKUNAVAILABLE:
+		return true
+	case PANELMEMBERNOTFOUND:
 		return true
 	case PANELNOTFOUND:
 		return true

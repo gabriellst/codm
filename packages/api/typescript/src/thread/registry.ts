@@ -20,6 +20,8 @@ import { ChannelConnectivity, LibSqlChannelConnectivity, MockChannelConnectivity
 import { GroupMemberReader, LibSqlGroupMemberReader, MockGroupMemberReader } from './services/GroupMemberReader'
 import { ThreadStatusDeriver, LibSqlThreadStatusDeriver, MockThreadStatusDeriver } from './services/ThreadStatusDeriver'
 import { ReplyStreamer } from './services/ReplyStreamer'
+import { PanelRosterRelay, CloudPanelRosterRelay, MockPanelRosterRelay } from './services/PanelRosterRelay'
+import { PanelMemberKey, FilePanelMemberKey, MockPanelMemberKey } from './services/PanelMemberKey'
 
 export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// The one seam in this context that opens a socket (BC4 → BC1 WRITE, over the gateway's own SDK —
@@ -71,4 +73,9 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// is supposed to complete. Process-local by design; see the class doc for why durability buys
 	// nothing here.
 	{ token: ReplyStreamer, mock: ReplyStreamer, integration: ReplyStreamer, real: ReplyStreamer },
+	// Fase 2, item 6a — the people-side pull from the cloud panel (roster out, identification codes in).
+	// Opens a socket to the cloud, so only `real` binds the cloud client (S2S rule, same as PanelPublisher);
+	// the member-id key is a file under the data dir, so tests use a fixed in-memory key.
+	{ token: PanelRosterRelay, mock: MockPanelRosterRelay, integration: MockPanelRosterRelay, real: CloudPanelRosterRelay },
+	{ token: PanelMemberKey, mock: MockPanelMemberKey, integration: MockPanelMemberKey, real: FilePanelMemberKey },
 ])

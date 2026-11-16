@@ -63,7 +63,7 @@ export const CONTEXT_MAP: Partial<Record<ContextId, Partial<Record<ContextId, { 
 	},
 	panel: {
 		auth: {
-			note: 'PUT /panel/sync and the link rotation are authenticated with the user session bearer the daemon already holds (AuthAccountMiddleware); the public reads are not.',
+			note: 'PUT /panel/sync, PUT /panel/roster and the link rotation are authenticated with the user session bearer the daemon already holds (AuthAccountMiddleware); the public reads and the identification endpoints (fase 2, item 6a — the group token plus a WhatsApp code) are not.',
 		},
 	},
 	thread: {
@@ -136,13 +136,13 @@ export const TABLE_READ_EDGES: readonly { consumer: ContextId; schema: string; n
 	{
 		consumer: 'thread',
 		schema: 'issue',
-		note: 'OpenIssuesReader (classifier candidate set) + GetSessionChat active stops ride the issue schema.',
+		note: 'OpenIssuesReader (classifier candidate set) + GetSessionChat active stops ride the issue schema. PublishPanelRoster (fase 2, item 6a) selects the conversations that have issues — the ones with a cloud panel board.',
 	},
 	{ consumer: 'thread', schema: 'workspace', note: 'GetSessionChat resolves the bound workspace display path.' },
 	{
 		consumer: 'thread',
 		schema: 'gateway',
-		note: 'ChannelConnectivity / GroupMemberReader / GetSessionChat read the Go gateway sync tables (channels/remotes — proxy pairing, BUILD-LOG:116).',
+		note: "ChannelConnectivity / GroupMemberReader / GetSessionChat read the Go gateway sync tables (channels/remotes — proxy pairing, BUILD-LOG:116). PublishPanelRoster (fase 2, item 6a) reads contact names (remotes) and the account's own address (channels.owner_remote_id) to build the cloud panel roster.",
 	},
 	{
 		consumer: 'thread',

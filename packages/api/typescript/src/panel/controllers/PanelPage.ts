@@ -59,12 +59,20 @@ dialog::backdrop{background:rgb(0 0 0/.4)}.dh{padding:16px;border-bottom:1px sol
 .tl{list-style:none;margin:0;padding:12px 16px;max-height:70vh;overflow:auto}.tl li{padding:8px 0;border-bottom:1px solid var(--line)}
 .tl .k{font-weight:600;font-size:12px}.tl .t{white-space:pre-wrap;word-break:break-word;color:var(--muted)}
 button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
+.me{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--card);color:inherit;border-radius:8px;padding:6px 10px;font:inherit;cursor:pointer}
+.ib{padding:16px;display:grid;gap:10px}.ib select,.ib input{font:inherit;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:inherit}
+.ib input{letter-spacing:.3em;font-family:ui-monospace,monospace;font-size:18px}
 </style>
 </head>
 <body>
-<header><h1 id="name">Painel de tarefas</h1><span id="seen" class="muted"></span></header>
+<header><h1 id="name">Painel de tarefas</h1><div class="me"><span id="seen" class="muted"></span><span id="who" class="muted"></span><button class="btn" id="identify" type="button" hidden>Identificar-me</button><button class="btn" id="forget" type="button" hidden>Sair</button></div></header>
 <main class="board" id="board"></main>
 <dialog id="detail"><div class="dh"><div><div id="dkey" class="key"></div><div id="dtitle"></div></div><button class="x" id="close" aria-label="Fechar">×</button></div><ol class="tl" id="tl"></ol></dialog>
+<dialog id="ident"><div class="dh"><strong>Identificar-me</strong><button class="x" id="iclose" aria-label="Fechar">×</button></div>
+<div class="ib" id="istep1"><label for="pick">Quem é você neste grupo?</label><select id="pick"></select><button class="btn" id="send" type="button">Enviar código no meu WhatsApp</button></div>
+<div class="ib" id="istep2" hidden><div id="isent" class="muted"></div><input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" aria-label="Código"><button class="btn" id="confirm" type="button">Confirmar</button><button class="btn" id="again" type="button">Escolher outro nome</button></div>
+<div class="ib"><div id="ierr" class="warn" role="alert"></div></div></dialog>
 <script>
 (() => {
   const COLS = [['QUEUED','Na fila'],['RUNNING','Fazendo'],['WAITING_PERSON','Aguardando pessoa'],['WAITING_PROVIDER','Esperando cota'],['STALLED','Parada'],['DONE','Concluída']];
@@ -116,7 +124,52 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
     document.getElementById('detail').showModal();
   }
   document.getElementById('close').addEventListener('click', () => document.getElementById('detail').close());
-  board(); setInterval(board, 15000);
+
+  // Who this device is (fase 2, item 6a). The device token lives in an HttpOnly cookie this script never sees.
+  const $ = id => document.getElementById(id);
+  const ERR = {PANEL_CODE_INVALID:'Código incorreto.',PANEL_CODE_EXPIRED:'Este código venceu ou já foi usado. Peça um novo.',PANEL_CODE_ATTEMPTS_EXCEEDED:'Muitas tentativas. Peça um novo código.',PANEL_CODE_RATE_LIMITED:'Muitos pedidos de código. Espere um minuto e tente de novo.',PANEL_MEMBER_NOT_FOUND:'Essa pessoa não está mais na lista do grupo.',PANEL_NOT_FOUND:'Link inválido ou trocado.'};
+  const post = (path, body) => fetch(base + path, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body || {}), cache:'no-store', credentials:'same-origin'});
+  const fail = async res => { const body = await res.json().catch(() => ({})); $('ierr').textContent = ERR[body.code] || 'Não deu certo. Tente de novo.'; };
+  let picked = null;
+  async function me() {
+    const res = await fetch(base + '/me', {cache:'no-store', credentials:'same-origin'});
+    const data = res.ok ? await res.json() : {};
+    $('who').textContent = data.member ? 'Você é ' + data.member.name + ' neste aparelho' : '';
+    $('identify').hidden = !!data.member || !res.ok;
+    $('forget').hidden = !data.member;
+  }
+  async function openIdent() {
+    $('ierr').textContent = ''; $('istep1').hidden = false; $('istep2').hidden = true; $('code').value = '';
+    const res = await fetch(base + '/members', {cache:'no-store'});
+    if (!res.ok) return fail(res);
+    const data = await res.json();
+    $('pick').replaceChildren(...data.members.map(m => { const o = el('option', null, m.name); o.value = m.memberId; return o; }));
+    $('ident').showModal();
+  }
+  $('identify').addEventListener('click', openIdent);
+  $('iclose').addEventListener('click', () => $('ident').close());
+  $('again').addEventListener('click', () => { $('ierr').textContent = ''; $('istep1').hidden = false; $('istep2').hidden = true; });
+  $('send').addEventListener('click', async () => {
+    $('ierr').textContent = '';
+    const opt = $('pick').selectedOptions[0];
+    if (!opt) return;
+    picked = {memberId: opt.value, name: opt.textContent};
+    const res = await post('/identify', {memberId: picked.memberId});
+    if (!res.ok) return fail(res);
+    $('isent').textContent = 'O codm vai mandar um código no WhatsApp de ' + picked.name + ' em até 15 segundos. Ele vale 10 minutos.';
+    $('istep1').hidden = true; $('istep2').hidden = false; $('code').focus();
+  });
+  $('confirm').addEventListener('click', async () => {
+    $('ierr').textContent = '';
+    const code = $('code').value.replace(/\\D/g, '');
+    if (!picked || code.length !== 6) { $('ierr').textContent = 'Digite os 6 números do código.'; return; }
+    const res = await post('/verify', {memberId: picked.memberId, code});
+    if (!res.ok) return fail(res);
+    $('ident').close(); me();
+  });
+  $('forget').addEventListener('click', async () => { await post('/forget'); me(); });
+
+  board(); setInterval(board, 15000); me();
 })();
 </script>
 </body>

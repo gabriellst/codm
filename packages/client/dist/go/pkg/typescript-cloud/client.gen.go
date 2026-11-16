@@ -95,7 +95,12 @@ const (
 	OWNERALREADYDISABLED            ApiErrors = "OWNER_ALREADY_DISABLED"
 	OWNERNOTDISABLED                ApiErrors = "OWNER_NOT_DISABLED"
 	OWNERNOTFOUND                   ApiErrors = "OWNER_NOT_FOUND"
+	PANELCODEATTEMPTSEXCEEDED       ApiErrors = "PANEL_CODE_ATTEMPTS_EXCEEDED"
+	PANELCODEEXPIRED                ApiErrors = "PANEL_CODE_EXPIRED"
+	PANELCODEINVALID                ApiErrors = "PANEL_CODE_INVALID"
+	PANELCODERATELIMITED            ApiErrors = "PANEL_CODE_RATE_LIMITED"
 	PANELLINKUNAVAILABLE            ApiErrors = "PANEL_LINK_UNAVAILABLE"
+	PANELMEMBERNOTFOUND             ApiErrors = "PANEL_MEMBER_NOT_FOUND"
 	PANELNOTFOUND                   ApiErrors = "PANEL_NOT_FOUND"
 	PARTICIPANTNOTFOUND             ApiErrors = "PARTICIPANT_NOT_FOUND"
 	PASSWORDSDONTMATCH              ApiErrors = "PASSWORDS_DONT_MATCH"
@@ -283,7 +288,17 @@ func (e ApiErrors) Valid() bool {
 		return true
 	case OWNERNOTFOUND:
 		return true
+	case PANELCODEATTEMPTSEXCEEDED:
+		return true
+	case PANELCODEEXPIRED:
+		return true
+	case PANELCODEINVALID:
+		return true
+	case PANELCODERATELIMITED:
+		return true
 	case PANELLINKUNAVAILABLE:
+		return true
+	case PANELMEMBERNOTFOUND:
 		return true
 	case PANELNOTFOUND:
 		return true
@@ -773,6 +788,11 @@ type UpdateOwnerSettingsJSONBody struct {
 	Timezone   *string                   `json:"timezone,omitempty"`
 }
 
+// RequestPanelCodeJSONBody defines parameters for RequestPanelCode.
+type RequestPanelCodeJSONBody struct {
+	MemberId string `json:"memberId"`
+}
+
 // GetPanelIssue200JSONResponseBodyTimeline0 defines parameters for GetPanelIssue.
 type GetPanelIssue200JSONResponseBodyTimeline0 struct {
 	At    string `json:"at"`
@@ -874,6 +894,24 @@ type GetPanelIssue200JSONResponseBodyTimeline10 struct {
 // GetPanelIssue200JSONResponseBody_Timeline_Item defines parameters for GetPanelIssue.
 type GetPanelIssue200JSONResponseBody_Timeline_Item struct {
 	union json.RawMessage
+}
+
+// VerifyPanelCodeJSONBody defines parameters for VerifyPanelCode.
+type VerifyPanelCodeJSONBody struct {
+	Code     string `json:"code"`
+	MemberId string `json:"memberId"`
+}
+
+// SyncPanelRosterJSONBody defines parameters for SyncPanelRoster.
+type SyncPanelRosterJSONBody struct {
+	Groups []struct {
+		Members []struct {
+			CanRelease bool   `json:"canRelease"`
+			MemberId   string `json:"memberId"`
+			Name       string `json:"name"`
+		} `json:"members"`
+		ThreadId openapi_types.UUID `json:"threadId"`
+	} `json:"groups"`
 }
 
 // SyncPanelJSONBody defines parameters for SyncPanel.
@@ -1023,6 +1061,15 @@ type DisableOwnerJSONRequestBody DisableOwnerJSONBody
 
 // UpdateOwnerSettingsJSONRequestBody defines body for UpdateOwnerSettings for application/json ContentType.
 type UpdateOwnerSettingsJSONRequestBody UpdateOwnerSettingsJSONBody
+
+// RequestPanelCodeJSONRequestBody defines body for RequestPanelCode for application/json ContentType.
+type RequestPanelCodeJSONRequestBody RequestPanelCodeJSONBody
+
+// VerifyPanelCodeJSONRequestBody defines body for VerifyPanelCode for application/json ContentType.
+type VerifyPanelCodeJSONRequestBody VerifyPanelCodeJSONBody
+
+// SyncPanelRosterJSONRequestBody defines body for SyncPanelRoster for application/json ContentType.
+type SyncPanelRosterJSONRequestBody SyncPanelRosterJSONBody
 
 // SyncPanelJSONRequestBody defines body for SyncPanel for application/json ContentType.
 type SyncPanelJSONRequestBody SyncPanelJSONBody
@@ -1737,11 +1784,35 @@ type ClientInterface interface {
 	// GetPanelBoard request
 	GetPanelBoard(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ForgetPanelDevice request
+	ForgetPanelDevice(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RequestPanelCodeWithBody request with any body
+	RequestPanelCodeWithBody(ctx context.Context, token string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	RequestPanelCode(ctx context.Context, token string, body RequestPanelCodeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetPanelIssue request
 	GetPanelIssue(ctx context.Context, token string, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetPanelIdentity request
+	GetPanelIdentity(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListPanelMembers request
+	ListPanelMembers(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// VerifyPanelCodeWithBody request with any body
+	VerifyPanelCodeWithBody(ctx context.Context, token string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	VerifyPanelCode(ctx context.Context, token string, body VerifyPanelCodeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// RotatePanelLink request
 	RotatePanelLink(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SyncPanelRosterWithBody request with any body
+	SyncPanelRosterWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SyncPanelRoster(ctx context.Context, body SyncPanelRosterJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// SyncPanelWithBody request with any body
 	SyncPanelWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -1946,6 +2017,42 @@ func (c *Client) GetPanelBoard(ctx context.Context, token string, reqEditors ...
 	return c.Client.Do(req)
 }
 
+func (c *Client) ForgetPanelDevice(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewForgetPanelDeviceRequest(c.Server, token)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RequestPanelCodeWithBody(ctx context.Context, token string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRequestPanelCodeRequestWithBody(c.Server, token, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RequestPanelCode(ctx context.Context, token string, body RequestPanelCodeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRequestPanelCodeRequest(c.Server, token, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) GetPanelIssue(ctx context.Context, token string, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetPanelIssueRequest(c.Server, token, issueId)
 	if err != nil {
@@ -1958,8 +2065,80 @@ func (c *Client) GetPanelIssue(ctx context.Context, token string, issueId string
 	return c.Client.Do(req)
 }
 
+func (c *Client) GetPanelIdentity(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetPanelIdentityRequest(c.Server, token)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListPanelMembers(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListPanelMembersRequest(c.Server, token)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) VerifyPanelCodeWithBody(ctx context.Context, token string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewVerifyPanelCodeRequestWithBody(c.Server, token, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) VerifyPanelCode(ctx context.Context, token string, body VerifyPanelCodeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewVerifyPanelCodeRequest(c.Server, token, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) RotatePanelLink(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRotatePanelLinkRequest(c.Server, threadId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SyncPanelRosterWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSyncPanelRosterRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SyncPanelRoster(ctx context.Context, body SyncPanelRosterJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSyncPanelRosterRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -2473,6 +2652,87 @@ func NewGetPanelBoardRequest(server string, token string) (*http.Request, error)
 	return req, nil
 }
 
+// NewForgetPanelDeviceRequest generates requests for ForgetPanelDevice
+func NewForgetPanelDeviceRequest(server string, token string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "token", token, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/panel/g/%s/forget", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewRequestPanelCodeRequest calls the generic RequestPanelCode builder with application/json body
+func NewRequestPanelCodeRequest(server string, token string, body RequestPanelCodeJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewRequestPanelCodeRequestWithBody(server, token, "application/json", bodyReader)
+}
+
+// NewRequestPanelCodeRequestWithBody generates requests for RequestPanelCode with any type of body
+func NewRequestPanelCodeRequestWithBody(server string, token string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "token", token, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/panel/g/%s/identify", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewGetPanelIssueRequest generates requests for GetPanelIssue
 func NewGetPanelIssueRequest(server string, token string, issueId string) (*http.Request, error) {
 	var err error
@@ -2514,6 +2774,121 @@ func NewGetPanelIssueRequest(server string, token string, issueId string) (*http
 	return req, nil
 }
 
+// NewGetPanelIdentityRequest generates requests for GetPanelIdentity
+func NewGetPanelIdentityRequest(server string, token string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "token", token, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/panel/g/%s/me", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewListPanelMembersRequest generates requests for ListPanelMembers
+func NewListPanelMembersRequest(server string, token string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "token", token, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/panel/g/%s/members", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewVerifyPanelCodeRequest calls the generic VerifyPanelCode builder with application/json body
+func NewVerifyPanelCodeRequest(server string, token string, body VerifyPanelCodeJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewVerifyPanelCodeRequestWithBody(server, token, "application/json", bodyReader)
+}
+
+// NewVerifyPanelCodeRequestWithBody generates requests for VerifyPanelCode with any type of body
+func NewVerifyPanelCodeRequestWithBody(server string, token string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "token", token, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/panel/g/%s/verify", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewRotatePanelLinkRequest generates requests for RotatePanelLink
 func NewRotatePanelLinkRequest(server string, threadId string) (*http.Request, error) {
 	var err error
@@ -2544,6 +2919,46 @@ func NewRotatePanelLinkRequest(server string, threadId string) (*http.Request, e
 	if err != nil {
 		return nil, err
 	}
+
+	return req, nil
+}
+
+// NewSyncPanelRosterRequest calls the generic SyncPanelRoster builder with application/json body
+func NewSyncPanelRosterRequest(server string, body SyncPanelRosterJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSyncPanelRosterRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewSyncPanelRosterRequestWithBody generates requests for SyncPanelRoster with any type of body
+func NewSyncPanelRosterRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/panel/roster")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -2875,11 +3290,35 @@ type ClientWithResponsesInterface interface {
 	// GetPanelBoardWithResponse request
 	GetPanelBoardWithResponse(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*GetPanelBoardResponse, error)
 
+	// ForgetPanelDeviceWithResponse request
+	ForgetPanelDeviceWithResponse(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*ForgetPanelDeviceResponse, error)
+
+	// RequestPanelCodeWithBodyWithResponse request with any body
+	RequestPanelCodeWithBodyWithResponse(ctx context.Context, token string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RequestPanelCodeResponse, error)
+
+	RequestPanelCodeWithResponse(ctx context.Context, token string, body RequestPanelCodeJSONRequestBody, reqEditors ...RequestEditorFn) (*RequestPanelCodeResponse, error)
+
 	// GetPanelIssueWithResponse request
 	GetPanelIssueWithResponse(ctx context.Context, token string, issueId string, reqEditors ...RequestEditorFn) (*GetPanelIssueResponse, error)
 
+	// GetPanelIdentityWithResponse request
+	GetPanelIdentityWithResponse(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*GetPanelIdentityResponse, error)
+
+	// ListPanelMembersWithResponse request
+	ListPanelMembersWithResponse(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*ListPanelMembersResponse, error)
+
+	// VerifyPanelCodeWithBodyWithResponse request with any body
+	VerifyPanelCodeWithBodyWithResponse(ctx context.Context, token string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*VerifyPanelCodeResponse, error)
+
+	VerifyPanelCodeWithResponse(ctx context.Context, token string, body VerifyPanelCodeJSONRequestBody, reqEditors ...RequestEditorFn) (*VerifyPanelCodeResponse, error)
+
 	// RotatePanelLinkWithResponse request
 	RotatePanelLinkWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*RotatePanelLinkResponse, error)
+
+	// SyncPanelRosterWithBodyWithResponse request with any body
+	SyncPanelRosterWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SyncPanelRosterResponse, error)
+
+	SyncPanelRosterWithResponse(ctx context.Context, body SyncPanelRosterJSONRequestBody, reqEditors ...RequestEditorFn) (*SyncPanelRosterResponse, error)
 
 	// SyncPanelWithBodyWithResponse request with any body
 	SyncPanelWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SyncPanelResponse, error)
@@ -3297,6 +3736,66 @@ func (r GetPanelBoardResponse) ContentType() string {
 	return ""
 }
 
+type ForgetPanelDeviceResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r ForgetPanelDeviceResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ForgetPanelDeviceResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ForgetPanelDeviceResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RequestPanelCodeResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r RequestPanelCodeResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RequestPanelCodeResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RequestPanelCodeResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetPanelIssueResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -3338,6 +3837,113 @@ func (r GetPanelIssueResponse) ContentType() string {
 	return ""
 }
 
+type GetPanelIdentityResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Member *struct {
+			CanRelease bool   `json:"canRelease"`
+			MemberId   string `json:"memberId"`
+			Name       string `json:"name"`
+		} `json:"member,omitempty"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetPanelIdentityResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetPanelIdentityResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetPanelIdentityResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ListPanelMembersResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Members []struct {
+			MemberId string `json:"memberId"`
+			Name     string `json:"name"`
+		} `json:"members"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r ListPanelMembersResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListPanelMembersResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListPanelMembersResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type VerifyPanelCodeResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Member struct {
+			CanRelease bool   `json:"canRelease"`
+			MemberId   string `json:"memberId"`
+			Name       string `json:"name"`
+		} `json:"member"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r VerifyPanelCodeResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r VerifyPanelCodeResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r VerifyPanelCodeResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type RotatePanelLinkResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -3364,6 +3970,43 @@ func (r RotatePanelLinkResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r RotatePanelLinkResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SyncPanelRosterResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Deliveries []struct {
+			Code      string             `json:"code"`
+			MemberId  string             `json:"memberId"`
+			RequestId openapi_types.UUID `json:"requestId"`
+			ThreadId  openapi_types.UUID `json:"threadId"`
+		} `json:"deliveries"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r SyncPanelRosterResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SyncPanelRosterResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SyncPanelRosterResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -3703,6 +4346,32 @@ func (c *ClientWithResponses) GetPanelBoardWithResponse(ctx context.Context, tok
 	return ParseGetPanelBoardResponse(rsp)
 }
 
+// ForgetPanelDeviceWithResponse request returning *ForgetPanelDeviceResponse
+func (c *ClientWithResponses) ForgetPanelDeviceWithResponse(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*ForgetPanelDeviceResponse, error) {
+	rsp, err := c.ForgetPanelDevice(ctx, token, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseForgetPanelDeviceResponse(rsp)
+}
+
+// RequestPanelCodeWithBodyWithResponse request with arbitrary body returning *RequestPanelCodeResponse
+func (c *ClientWithResponses) RequestPanelCodeWithBodyWithResponse(ctx context.Context, token string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RequestPanelCodeResponse, error) {
+	rsp, err := c.RequestPanelCodeWithBody(ctx, token, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRequestPanelCodeResponse(rsp)
+}
+
+func (c *ClientWithResponses) RequestPanelCodeWithResponse(ctx context.Context, token string, body RequestPanelCodeJSONRequestBody, reqEditors ...RequestEditorFn) (*RequestPanelCodeResponse, error) {
+	rsp, err := c.RequestPanelCode(ctx, token, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRequestPanelCodeResponse(rsp)
+}
+
 // GetPanelIssueWithResponse request returning *GetPanelIssueResponse
 func (c *ClientWithResponses) GetPanelIssueWithResponse(ctx context.Context, token string, issueId string, reqEditors ...RequestEditorFn) (*GetPanelIssueResponse, error) {
 	rsp, err := c.GetPanelIssue(ctx, token, issueId, reqEditors...)
@@ -3712,6 +4381,41 @@ func (c *ClientWithResponses) GetPanelIssueWithResponse(ctx context.Context, tok
 	return ParseGetPanelIssueResponse(rsp)
 }
 
+// GetPanelIdentityWithResponse request returning *GetPanelIdentityResponse
+func (c *ClientWithResponses) GetPanelIdentityWithResponse(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*GetPanelIdentityResponse, error) {
+	rsp, err := c.GetPanelIdentity(ctx, token, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetPanelIdentityResponse(rsp)
+}
+
+// ListPanelMembersWithResponse request returning *ListPanelMembersResponse
+func (c *ClientWithResponses) ListPanelMembersWithResponse(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*ListPanelMembersResponse, error) {
+	rsp, err := c.ListPanelMembers(ctx, token, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListPanelMembersResponse(rsp)
+}
+
+// VerifyPanelCodeWithBodyWithResponse request with arbitrary body returning *VerifyPanelCodeResponse
+func (c *ClientWithResponses) VerifyPanelCodeWithBodyWithResponse(ctx context.Context, token string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*VerifyPanelCodeResponse, error) {
+	rsp, err := c.VerifyPanelCodeWithBody(ctx, token, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseVerifyPanelCodeResponse(rsp)
+}
+
+func (c *ClientWithResponses) VerifyPanelCodeWithResponse(ctx context.Context, token string, body VerifyPanelCodeJSONRequestBody, reqEditors ...RequestEditorFn) (*VerifyPanelCodeResponse, error) {
+	rsp, err := c.VerifyPanelCode(ctx, token, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseVerifyPanelCodeResponse(rsp)
+}
+
 // RotatePanelLinkWithResponse request returning *RotatePanelLinkResponse
 func (c *ClientWithResponses) RotatePanelLinkWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*RotatePanelLinkResponse, error) {
 	rsp, err := c.RotatePanelLink(ctx, threadId, reqEditors...)
@@ -3719,6 +4423,23 @@ func (c *ClientWithResponses) RotatePanelLinkWithResponse(ctx context.Context, t
 		return nil, err
 	}
 	return ParseRotatePanelLinkResponse(rsp)
+}
+
+// SyncPanelRosterWithBodyWithResponse request with arbitrary body returning *SyncPanelRosterResponse
+func (c *ClientWithResponses) SyncPanelRosterWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SyncPanelRosterResponse, error) {
+	rsp, err := c.SyncPanelRosterWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSyncPanelRosterResponse(rsp)
+}
+
+func (c *ClientWithResponses) SyncPanelRosterWithResponse(ctx context.Context, body SyncPanelRosterJSONRequestBody, reqEditors ...RequestEditorFn) (*SyncPanelRosterResponse, error) {
+	rsp, err := c.SyncPanelRoster(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSyncPanelRosterResponse(rsp)
 }
 
 // SyncPanelWithBodyWithResponse request with arbitrary body returning *SyncPanelResponse
@@ -4136,6 +4857,58 @@ func ParseGetPanelBoardResponse(rsp *http.Response) (*GetPanelBoardResponse, err
 	return response, nil
 }
 
+// ParseForgetPanelDeviceResponse parses an HTTP response from a ForgetPanelDeviceWithResponse call
+func ParseForgetPanelDeviceResponse(rsp *http.Response) (*ForgetPanelDeviceResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ForgetPanelDeviceResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRequestPanelCodeResponse parses an HTTP response from a RequestPanelCodeWithResponse call
+func ParseRequestPanelCodeResponse(rsp *http.Response) (*RequestPanelCodeResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RequestPanelCodeResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetPanelIssueResponse parses an HTTP response from a GetPanelIssueWithResponse call
 func ParseGetPanelIssueResponse(rsp *http.Response) (*GetPanelIssueResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -4173,6 +4946,101 @@ func ParseGetPanelIssueResponse(rsp *http.Response) (*GetPanelIssueResponse, err
 	return response, nil
 }
 
+// ParseGetPanelIdentityResponse parses an HTTP response from a GetPanelIdentityWithResponse call
+func ParseGetPanelIdentityResponse(rsp *http.Response) (*GetPanelIdentityResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetPanelIdentityResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Member *struct {
+				CanRelease bool   `json:"canRelease"`
+				MemberId   string `json:"memberId"`
+				Name       string `json:"name"`
+			} `json:"member,omitempty"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListPanelMembersResponse parses an HTTP response from a ListPanelMembersWithResponse call
+func ParseListPanelMembersResponse(rsp *http.Response) (*ListPanelMembersResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListPanelMembersResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Members []struct {
+				MemberId string `json:"memberId"`
+				Name     string `json:"name"`
+			} `json:"members"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseVerifyPanelCodeResponse parses an HTTP response from a VerifyPanelCodeWithResponse call
+func ParseVerifyPanelCodeResponse(rsp *http.Response) (*VerifyPanelCodeResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &VerifyPanelCodeResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Member struct {
+				CanRelease bool   `json:"canRelease"`
+				MemberId   string `json:"memberId"`
+				Name       string `json:"name"`
+			} `json:"member"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseRotatePanelLinkResponse parses an HTTP response from a RotatePanelLinkWithResponse call
 func ParseRotatePanelLinkResponse(rsp *http.Response) (*RotatePanelLinkResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -4190,6 +5058,39 @@ func ParseRotatePanelLinkResponse(rsp *http.Response) (*RotatePanelLinkResponse,
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
 			Token string `json:"token"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSyncPanelRosterResponse parses an HTTP response from a SyncPanelRosterWithResponse call
+func ParseSyncPanelRosterResponse(rsp *http.Response) (*SyncPanelRosterResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SyncPanelRosterResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Deliveries []struct {
+				Code      string             `json:"code"`
+				MemberId  string             `json:"memberId"`
+				RequestId openapi_types.UUID `json:"requestId"`
+				ThreadId  openapi_types.UUID `json:"threadId"`
+			} `json:"deliveries"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err

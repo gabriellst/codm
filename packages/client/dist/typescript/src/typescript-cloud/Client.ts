@@ -7,19 +7,25 @@ import {
 	desktopCallback,
 	disableOwner,
 	enableOwner,
+	forgetPanelDevice,
 	getPanelBoard,
+	getPanelIdentity,
 	getPanelIssue,
 	getSession,
 	health,
+	listPanelMembers,
 	panelPage,
+	requestPanelCode,
 	rotatePanelLink,
 	setActiveOwner,
 	setCloudToken,
 	signInLoopback,
 	signInSocial,
 	syncPanel,
+	syncPanelRoster,
 	updateOwnerSettings,
 	uploadAvatar,
+	verifyPanelCode,
 } from './client/index.ts'
 
 export interface TypescriptCloudClientConfig {
@@ -62,8 +68,16 @@ export class TypescriptCloudClient {
 		return (enableOwner as (...a: any[]) => ReturnType<typeof enableOwner>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	forgetPanelDevice(...args: Parameters<typeof forgetPanelDevice>): ReturnType<typeof forgetPanelDevice> {
+		return (forgetPanelDevice as (...a: any[]) => ReturnType<typeof forgetPanelDevice>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	getPanelBoard(...args: Parameters<typeof getPanelBoard>): ReturnType<typeof getPanelBoard> {
 		return (getPanelBoard as (...a: any[]) => ReturnType<typeof getPanelBoard>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	getPanelIdentity(...args: Parameters<typeof getPanelIdentity>): ReturnType<typeof getPanelIdentity> {
+		return (getPanelIdentity as (...a: any[]) => ReturnType<typeof getPanelIdentity>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	getPanelIssue(...args: Parameters<typeof getPanelIssue>): ReturnType<typeof getPanelIssue> {
@@ -78,8 +92,16 @@ export class TypescriptCloudClient {
 		return (health as (...a: any[]) => ReturnType<typeof health>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	listPanelMembers(...args: Parameters<typeof listPanelMembers>): ReturnType<typeof listPanelMembers> {
+		return (listPanelMembers as (...a: any[]) => ReturnType<typeof listPanelMembers>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	panelPage(...args: Parameters<typeof panelPage>): ReturnType<typeof panelPage> {
 		return (panelPage as (...a: any[]) => ReturnType<typeof panelPage>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	requestPanelCode(...args: Parameters<typeof requestPanelCode>): ReturnType<typeof requestPanelCode> {
+		return (requestPanelCode as (...a: any[]) => ReturnType<typeof requestPanelCode>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	rotatePanelLink(...args: Parameters<typeof rotatePanelLink>): ReturnType<typeof rotatePanelLink> {
@@ -106,11 +128,19 @@ export class TypescriptCloudClient {
 		return (syncPanel as (...a: any[]) => ReturnType<typeof syncPanel>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	syncPanelRoster(...args: Parameters<typeof syncPanelRoster>): ReturnType<typeof syncPanelRoster> {
+		return (syncPanelRoster as (...a: any[]) => ReturnType<typeof syncPanelRoster>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	updateOwnerSettings(...args: Parameters<typeof updateOwnerSettings>): ReturnType<typeof updateOwnerSettings> {
 		return (updateOwnerSettings as (...a: any[]) => ReturnType<typeof updateOwnerSettings>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	uploadAvatar(...args: Parameters<typeof uploadAvatar>): ReturnType<typeof uploadAvatar> {
 		return (uploadAvatar as (...a: any[]) => ReturnType<typeof uploadAvatar>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	verifyPanelCode(...args: Parameters<typeof verifyPanelCode>): ReturnType<typeof verifyPanelCode> {
+		return (verifyPanelCode as (...a: any[]) => ReturnType<typeof verifyPanelCode>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 }

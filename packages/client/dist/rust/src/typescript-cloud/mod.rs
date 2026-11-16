@@ -120,7 +120,12 @@ pub mod types {
     ///    "OWNER_ALREADY_DISABLED",
     ///    "OWNER_NOT_DISABLED",
     ///    "OWNER_NOT_FOUND",
+    ///    "PANEL_CODE_ATTEMPTS_EXCEEDED",
+    ///    "PANEL_CODE_EXPIRED",
+    ///    "PANEL_CODE_INVALID",
+    ///    "PANEL_CODE_RATE_LIMITED",
     ///    "PANEL_LINK_UNAVAILABLE",
+    ///    "PANEL_MEMBER_NOT_FOUND",
     ///    "PANEL_NOT_FOUND",
     ///    "PARTICIPANT_NOT_FOUND",
     ///    "PASSWORDS_DONT_MATCH",
@@ -320,8 +325,18 @@ pub mod types {
         OwnerNotDisabled,
         #[serde(rename = "OWNER_NOT_FOUND")]
         OwnerNotFound,
+        #[serde(rename = "PANEL_CODE_ATTEMPTS_EXCEEDED")]
+        PanelCodeAttemptsExceeded,
+        #[serde(rename = "PANEL_CODE_EXPIRED")]
+        PanelCodeExpired,
+        #[serde(rename = "PANEL_CODE_INVALID")]
+        PanelCodeInvalid,
+        #[serde(rename = "PANEL_CODE_RATE_LIMITED")]
+        PanelCodeRateLimited,
         #[serde(rename = "PANEL_LINK_UNAVAILABLE")]
         PanelLinkUnavailable,
+        #[serde(rename = "PANEL_MEMBER_NOT_FOUND")]
+        PanelMemberNotFound,
         #[serde(rename = "PANEL_NOT_FOUND")]
         PanelNotFound,
         #[serde(rename = "PARTICIPANT_NOT_FOUND")]
@@ -489,7 +504,14 @@ pub mod types {
                 Self::OwnerAlreadyDisabled => f.write_str("OWNER_ALREADY_DISABLED"),
                 Self::OwnerNotDisabled => f.write_str("OWNER_NOT_DISABLED"),
                 Self::OwnerNotFound => f.write_str("OWNER_NOT_FOUND"),
+                Self::PanelCodeAttemptsExceeded => {
+                    f.write_str("PANEL_CODE_ATTEMPTS_EXCEEDED")
+                }
+                Self::PanelCodeExpired => f.write_str("PANEL_CODE_EXPIRED"),
+                Self::PanelCodeInvalid => f.write_str("PANEL_CODE_INVALID"),
+                Self::PanelCodeRateLimited => f.write_str("PANEL_CODE_RATE_LIMITED"),
                 Self::PanelLinkUnavailable => f.write_str("PANEL_LINK_UNAVAILABLE"),
+                Self::PanelMemberNotFound => f.write_str("PANEL_MEMBER_NOT_FOUND"),
                 Self::PanelNotFound => f.write_str("PANEL_NOT_FOUND"),
                 Self::ParticipantNotFound => f.write_str("PARTICIPANT_NOT_FOUND"),
                 Self::PasswordsDontMatch => f.write_str("PASSWORDS_DONT_MATCH"),
@@ -611,7 +633,12 @@ pub mod types {
                 "OWNER_ALREADY_DISABLED" => Ok(Self::OwnerAlreadyDisabled),
                 "OWNER_NOT_DISABLED" => Ok(Self::OwnerNotDisabled),
                 "OWNER_NOT_FOUND" => Ok(Self::OwnerNotFound),
+                "PANEL_CODE_ATTEMPTS_EXCEEDED" => Ok(Self::PanelCodeAttemptsExceeded),
+                "PANEL_CODE_EXPIRED" => Ok(Self::PanelCodeExpired),
+                "PANEL_CODE_INVALID" => Ok(Self::PanelCodeInvalid),
+                "PANEL_CODE_RATE_LIMITED" => Ok(Self::PanelCodeRateLimited),
                 "PANEL_LINK_UNAVAILABLE" => Ok(Self::PanelLinkUnavailable),
+                "PANEL_MEMBER_NOT_FOUND" => Ok(Self::PanelMemberNotFound),
                 "PANEL_NOT_FOUND" => Ok(Self::PanelNotFound),
                 "PARTICIPANT_NOT_FOUND" => Ok(Self::ParticipantNotFound),
                 "PASSWORDS_DONT_MATCH" => Ok(Self::PasswordsDontMatch),
@@ -1321,6 +1348,283 @@ pub mod types {
     for GetPanelBoardResponseIssuesItem {
         fn from(value: &GetPanelBoardResponseIssuesItem) -> Self {
             value.clone()
+        }
+    }
+    ///`GetPanelIdentityResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "properties": {
+    ///    "member": {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "canRelease",
+    ///        "memberId",
+    ///        "name"
+    ///      ],
+    ///      "properties": {
+    ///        "canRelease": {
+    ///          "type": "boolean"
+    ///        },
+    ///        "memberId": {
+    ///          "type": "string",
+    ///          "maxLength": 64,
+    ///          "minLength": 16,
+    ///          "pattern": "^[A-Za-z0-9_-]+$"
+    ///        },
+    ///        "name": {
+    ///          "type": "string",
+    ///          "maxLength": 120,
+    ///          "minLength": 1
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetPanelIdentityResponse {
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub member: ::std::option::Option<GetPanelIdentityResponseMember>,
+    }
+    impl ::std::convert::From<&GetPanelIdentityResponse> for GetPanelIdentityResponse {
+        fn from(value: &GetPanelIdentityResponse) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::default::Default for GetPanelIdentityResponse {
+        fn default() -> Self {
+            Self { member: Default::default() }
+        }
+    }
+    ///`GetPanelIdentityResponseMember`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "canRelease",
+    ///    "memberId",
+    ///    "name"
+    ///  ],
+    ///  "properties": {
+    ///    "canRelease": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "memberId": {
+    ///      "type": "string",
+    ///      "maxLength": 64,
+    ///      "minLength": 16,
+    ///      "pattern": "^[A-Za-z0-9_-]+$"
+    ///    },
+    ///    "name": {
+    ///      "type": "string",
+    ///      "maxLength": 120,
+    ///      "minLength": 1
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetPanelIdentityResponseMember {
+        #[serde(rename = "canRelease")]
+        pub can_release: bool,
+        #[serde(rename = "memberId")]
+        pub member_id: GetPanelIdentityResponseMemberMemberId,
+        pub name: GetPanelIdentityResponseMemberName,
+    }
+    impl ::std::convert::From<&GetPanelIdentityResponseMember>
+    for GetPanelIdentityResponseMember {
+        fn from(value: &GetPanelIdentityResponseMember) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetPanelIdentityResponseMemberMemberId`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 64,
+    ///  "minLength": 16,
+    ///  "pattern": "^[A-Za-z0-9_-]+$"
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct GetPanelIdentityResponseMemberMemberId(::std::string::String);
+    impl ::std::ops::Deref for GetPanelIdentityResponseMemberMemberId {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<GetPanelIdentityResponseMemberMemberId>
+    for ::std::string::String {
+        fn from(value: GetPanelIdentityResponseMemberMemberId) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&GetPanelIdentityResponseMemberMemberId>
+    for GetPanelIdentityResponseMemberMemberId {
+        fn from(value: &GetPanelIdentityResponseMemberMemberId) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for GetPanelIdentityResponseMemberMemberId {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 64usize {
+                return Err("longer than 64 characters".into());
+            }
+            if value.chars().count() < 16usize {
+                return Err("shorter than 16 characters".into());
+            }
+            static PATTERN: ::std::sync::LazyLock<::regress::Regex> = ::std::sync::LazyLock::new(||
+            { ::regress::Regex::new("^[A-Za-z0-9_-]+$").unwrap() });
+            if PATTERN.find(value).is_none() {
+                return Err("doesn't match pattern \"^[A-Za-z0-9_-]+$\"".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for GetPanelIdentityResponseMemberMemberId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for GetPanelIdentityResponseMemberMemberId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for GetPanelIdentityResponseMemberMemberId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for GetPanelIdentityResponseMemberMemberId {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`GetPanelIdentityResponseMemberName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 120,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct GetPanelIdentityResponseMemberName(::std::string::String);
+    impl ::std::ops::Deref for GetPanelIdentityResponseMemberName {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<GetPanelIdentityResponseMemberName>
+    for ::std::string::String {
+        fn from(value: GetPanelIdentityResponseMemberName) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&GetPanelIdentityResponseMemberName>
+    for GetPanelIdentityResponseMemberName {
+        fn from(value: &GetPanelIdentityResponseMemberName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for GetPanelIdentityResponseMemberName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 120usize {
+                return Err("longer than 120 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for GetPanelIdentityResponseMemberName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for GetPanelIdentityResponseMemberName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for GetPanelIdentityResponseMemberName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for GetPanelIdentityResponseMemberName {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
         }
     }
     ///`GetPanelIssueResponse`
@@ -2543,6 +2847,387 @@ pub mod types {
     for HealthResponseComponentsValue {
         fn from(value: &HealthResponseComponentsValue) -> Self {
             value.clone()
+        }
+    }
+    ///`ListPanelMembersResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "members"
+    ///  ],
+    ///  "properties": {
+    ///    "members": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "memberId",
+    ///          "name"
+    ///        ],
+    ///        "properties": {
+    ///          "memberId": {
+    ///            "type": "string",
+    ///            "maxLength": 64,
+    ///            "minLength": 16,
+    ///            "pattern": "^[A-Za-z0-9_-]+$"
+    ///          },
+    ///          "name": {
+    ///            "type": "string",
+    ///            "maxLength": 120,
+    ///            "minLength": 1
+    ///          }
+    ///        },
+    ///        "additionalProperties": false
+    ///      }
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct ListPanelMembersResponse {
+        pub members: ::std::vec::Vec<ListPanelMembersResponseMembersItem>,
+    }
+    impl ::std::convert::From<&ListPanelMembersResponse> for ListPanelMembersResponse {
+        fn from(value: &ListPanelMembersResponse) -> Self {
+            value.clone()
+        }
+    }
+    ///`ListPanelMembersResponseMembersItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "memberId",
+    ///    "name"
+    ///  ],
+    ///  "properties": {
+    ///    "memberId": {
+    ///      "type": "string",
+    ///      "maxLength": 64,
+    ///      "minLength": 16,
+    ///      "pattern": "^[A-Za-z0-9_-]+$"
+    ///    },
+    ///    "name": {
+    ///      "type": "string",
+    ///      "maxLength": 120,
+    ///      "minLength": 1
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct ListPanelMembersResponseMembersItem {
+        #[serde(rename = "memberId")]
+        pub member_id: ListPanelMembersResponseMembersItemMemberId,
+        pub name: ListPanelMembersResponseMembersItemName,
+    }
+    impl ::std::convert::From<&ListPanelMembersResponseMembersItem>
+    for ListPanelMembersResponseMembersItem {
+        fn from(value: &ListPanelMembersResponseMembersItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`ListPanelMembersResponseMembersItemMemberId`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 64,
+    ///  "minLength": 16,
+    ///  "pattern": "^[A-Za-z0-9_-]+$"
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct ListPanelMembersResponseMembersItemMemberId(::std::string::String);
+    impl ::std::ops::Deref for ListPanelMembersResponseMembersItemMemberId {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<ListPanelMembersResponseMembersItemMemberId>
+    for ::std::string::String {
+        fn from(value: ListPanelMembersResponseMembersItemMemberId) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&ListPanelMembersResponseMembersItemMemberId>
+    for ListPanelMembersResponseMembersItemMemberId {
+        fn from(value: &ListPanelMembersResponseMembersItemMemberId) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for ListPanelMembersResponseMembersItemMemberId {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 64usize {
+                return Err("longer than 64 characters".into());
+            }
+            if value.chars().count() < 16usize {
+                return Err("shorter than 16 characters".into());
+            }
+            static PATTERN: ::std::sync::LazyLock<::regress::Regex> = ::std::sync::LazyLock::new(||
+            { ::regress::Regex::new("^[A-Za-z0-9_-]+$").unwrap() });
+            if PATTERN.find(value).is_none() {
+                return Err("doesn't match pattern \"^[A-Za-z0-9_-]+$\"".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ListPanelMembersResponseMembersItemMemberId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ListPanelMembersResponseMembersItemMemberId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ListPanelMembersResponseMembersItemMemberId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for ListPanelMembersResponseMembersItemMemberId {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`ListPanelMembersResponseMembersItemName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 120,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct ListPanelMembersResponseMembersItemName(::std::string::String);
+    impl ::std::ops::Deref for ListPanelMembersResponseMembersItemName {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<ListPanelMembersResponseMembersItemName>
+    for ::std::string::String {
+        fn from(value: ListPanelMembersResponseMembersItemName) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&ListPanelMembersResponseMembersItemName>
+    for ListPanelMembersResponseMembersItemName {
+        fn from(value: &ListPanelMembersResponseMembersItemName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for ListPanelMembersResponseMembersItemName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 120usize {
+                return Err("longer than 120 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ListPanelMembersResponseMembersItemName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for ListPanelMembersResponseMembersItemName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for ListPanelMembersResponseMembersItemName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for ListPanelMembersResponseMembersItemName {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`RequestPanelCodeBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "memberId"
+    ///  ],
+    ///  "properties": {
+    ///    "memberId": {
+    ///      "type": "string",
+    ///      "maxLength": 64,
+    ///      "minLength": 1
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct RequestPanelCodeBody {
+        #[serde(rename = "memberId")]
+        pub member_id: RequestPanelCodeBodyMemberId,
+    }
+    impl ::std::convert::From<&RequestPanelCodeBody> for RequestPanelCodeBody {
+        fn from(value: &RequestPanelCodeBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`RequestPanelCodeBodyMemberId`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 64,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct RequestPanelCodeBodyMemberId(::std::string::String);
+    impl ::std::ops::Deref for RequestPanelCodeBodyMemberId {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<RequestPanelCodeBodyMemberId> for ::std::string::String {
+        fn from(value: RequestPanelCodeBodyMemberId) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&RequestPanelCodeBodyMemberId>
+    for RequestPanelCodeBodyMemberId {
+        fn from(value: &RequestPanelCodeBodyMemberId) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for RequestPanelCodeBodyMemberId {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 64usize {
+                return Err("longer than 64 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for RequestPanelCodeBodyMemberId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for RequestPanelCodeBodyMemberId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for RequestPanelCodeBodyMemberId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for RequestPanelCodeBodyMemberId {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
         }
     }
     ///`RotatePanelLinkResponse`
@@ -4705,6 +5390,555 @@ pub mod types {
             value.clone()
         }
     }
+    ///`SyncPanelRosterBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "groups"
+    ///  ],
+    ///  "properties": {
+    ///    "groups": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "members",
+    ///          "threadId"
+    ///        ],
+    ///        "properties": {
+    ///          "members": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "type": "object",
+    ///              "required": [
+    ///                "canRelease",
+    ///                "memberId",
+    ///                "name"
+    ///              ],
+    ///              "properties": {
+    ///                "canRelease": {
+    ///                  "type": "boolean"
+    ///                },
+    ///                "memberId": {
+    ///                  "type": "string",
+    ///                  "maxLength": 64,
+    ///                  "minLength": 16,
+    ///                  "pattern": "^[A-Za-z0-9_-]+$"
+    ///                },
+    ///                "name": {
+    ///                  "type": "string",
+    ///                  "maxLength": 120,
+    ///                  "minLength": 1
+    ///                }
+    ///              }
+    ///            },
+    ///            "maxItems": 1024
+    ///          },
+    ///          "threadId": {
+    ///            "type": "string",
+    ///            "format": "uuid",
+    ///            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///          }
+    ///        }
+    ///      },
+    ///      "maxItems": 200
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct SyncPanelRosterBody {
+        pub groups: ::std::vec::Vec<SyncPanelRosterBodyGroupsItem>,
+    }
+    impl ::std::convert::From<&SyncPanelRosterBody> for SyncPanelRosterBody {
+        fn from(value: &SyncPanelRosterBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`SyncPanelRosterBodyGroupsItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "members",
+    ///    "threadId"
+    ///  ],
+    ///  "properties": {
+    ///    "members": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "canRelease",
+    ///          "memberId",
+    ///          "name"
+    ///        ],
+    ///        "properties": {
+    ///          "canRelease": {
+    ///            "type": "boolean"
+    ///          },
+    ///          "memberId": {
+    ///            "type": "string",
+    ///            "maxLength": 64,
+    ///            "minLength": 16,
+    ///            "pattern": "^[A-Za-z0-9_-]+$"
+    ///          },
+    ///          "name": {
+    ///            "type": "string",
+    ///            "maxLength": 120,
+    ///            "minLength": 1
+    ///          }
+    ///        }
+    ///      },
+    ///      "maxItems": 1024
+    ///    },
+    ///    "threadId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct SyncPanelRosterBodyGroupsItem {
+        pub members: ::std::vec::Vec<SyncPanelRosterBodyGroupsItemMembersItem>,
+        #[serde(rename = "threadId")]
+        pub thread_id: ::uuid::Uuid,
+    }
+    impl ::std::convert::From<&SyncPanelRosterBodyGroupsItem>
+    for SyncPanelRosterBodyGroupsItem {
+        fn from(value: &SyncPanelRosterBodyGroupsItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`SyncPanelRosterBodyGroupsItemMembersItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "canRelease",
+    ///    "memberId",
+    ///    "name"
+    ///  ],
+    ///  "properties": {
+    ///    "canRelease": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "memberId": {
+    ///      "type": "string",
+    ///      "maxLength": 64,
+    ///      "minLength": 16,
+    ///      "pattern": "^[A-Za-z0-9_-]+$"
+    ///    },
+    ///    "name": {
+    ///      "type": "string",
+    ///      "maxLength": 120,
+    ///      "minLength": 1
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct SyncPanelRosterBodyGroupsItemMembersItem {
+        #[serde(rename = "canRelease")]
+        pub can_release: bool,
+        #[serde(rename = "memberId")]
+        pub member_id: SyncPanelRosterBodyGroupsItemMembersItemMemberId,
+        pub name: SyncPanelRosterBodyGroupsItemMembersItemName,
+    }
+    impl ::std::convert::From<&SyncPanelRosterBodyGroupsItemMembersItem>
+    for SyncPanelRosterBodyGroupsItemMembersItem {
+        fn from(value: &SyncPanelRosterBodyGroupsItemMembersItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`SyncPanelRosterBodyGroupsItemMembersItemMemberId`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 64,
+    ///  "minLength": 16,
+    ///  "pattern": "^[A-Za-z0-9_-]+$"
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct SyncPanelRosterBodyGroupsItemMembersItemMemberId(::std::string::String);
+    impl ::std::ops::Deref for SyncPanelRosterBodyGroupsItemMembersItemMemberId {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<SyncPanelRosterBodyGroupsItemMembersItemMemberId>
+    for ::std::string::String {
+        fn from(value: SyncPanelRosterBodyGroupsItemMembersItemMemberId) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&SyncPanelRosterBodyGroupsItemMembersItemMemberId>
+    for SyncPanelRosterBodyGroupsItemMembersItemMemberId {
+        fn from(value: &SyncPanelRosterBodyGroupsItemMembersItemMemberId) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for SyncPanelRosterBodyGroupsItemMembersItemMemberId {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 64usize {
+                return Err("longer than 64 characters".into());
+            }
+            if value.chars().count() < 16usize {
+                return Err("shorter than 16 characters".into());
+            }
+            static PATTERN: ::std::sync::LazyLock<::regress::Regex> = ::std::sync::LazyLock::new(||
+            { ::regress::Regex::new("^[A-Za-z0-9_-]+$").unwrap() });
+            if PATTERN.find(value).is_none() {
+                return Err("doesn't match pattern \"^[A-Za-z0-9_-]+$\"".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str>
+    for SyncPanelRosterBodyGroupsItemMembersItemMemberId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for SyncPanelRosterBodyGroupsItemMembersItemMemberId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for SyncPanelRosterBodyGroupsItemMembersItemMemberId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de>
+    for SyncPanelRosterBodyGroupsItemMembersItemMemberId {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`SyncPanelRosterBodyGroupsItemMembersItemName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 120,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct SyncPanelRosterBodyGroupsItemMembersItemName(::std::string::String);
+    impl ::std::ops::Deref for SyncPanelRosterBodyGroupsItemMembersItemName {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<SyncPanelRosterBodyGroupsItemMembersItemName>
+    for ::std::string::String {
+        fn from(value: SyncPanelRosterBodyGroupsItemMembersItemName) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&SyncPanelRosterBodyGroupsItemMembersItemName>
+    for SyncPanelRosterBodyGroupsItemMembersItemName {
+        fn from(value: &SyncPanelRosterBodyGroupsItemMembersItemName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for SyncPanelRosterBodyGroupsItemMembersItemName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 120usize {
+                return Err("longer than 120 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for SyncPanelRosterBodyGroupsItemMembersItemName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for SyncPanelRosterBodyGroupsItemMembersItemName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for SyncPanelRosterBodyGroupsItemMembersItemName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de>
+    for SyncPanelRosterBodyGroupsItemMembersItemName {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`SyncPanelRosterResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "deliveries"
+    ///  ],
+    ///  "properties": {
+    ///    "deliveries": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "code",
+    ///          "memberId",
+    ///          "requestId",
+    ///          "threadId"
+    ///        ],
+    ///        "properties": {
+    ///          "code": {
+    ///            "type": "string",
+    ///            "pattern": "^\\d{6}$"
+    ///          },
+    ///          "memberId": {
+    ///            "type": "string"
+    ///          },
+    ///          "requestId": {
+    ///            "type": "string",
+    ///            "format": "uuid",
+    ///            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///          },
+    ///          "threadId": {
+    ///            "type": "string",
+    ///            "format": "uuid",
+    ///            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///          }
+    ///        },
+    ///        "additionalProperties": false
+    ///      }
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct SyncPanelRosterResponse {
+        pub deliveries: ::std::vec::Vec<SyncPanelRosterResponseDeliveriesItem>,
+    }
+    impl ::std::convert::From<&SyncPanelRosterResponse> for SyncPanelRosterResponse {
+        fn from(value: &SyncPanelRosterResponse) -> Self {
+            value.clone()
+        }
+    }
+    ///`SyncPanelRosterResponseDeliveriesItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "code",
+    ///    "memberId",
+    ///    "requestId",
+    ///    "threadId"
+    ///  ],
+    ///  "properties": {
+    ///    "code": {
+    ///      "type": "string",
+    ///      "pattern": "^\\d{6}$"
+    ///    },
+    ///    "memberId": {
+    ///      "type": "string"
+    ///    },
+    ///    "requestId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
+    ///    "threadId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct SyncPanelRosterResponseDeliveriesItem {
+        pub code: SyncPanelRosterResponseDeliveriesItemCode,
+        #[serde(rename = "memberId")]
+        pub member_id: ::std::string::String,
+        #[serde(rename = "requestId")]
+        pub request_id: ::uuid::Uuid,
+        #[serde(rename = "threadId")]
+        pub thread_id: ::uuid::Uuid,
+    }
+    impl ::std::convert::From<&SyncPanelRosterResponseDeliveriesItem>
+    for SyncPanelRosterResponseDeliveriesItem {
+        fn from(value: &SyncPanelRosterResponseDeliveriesItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`SyncPanelRosterResponseDeliveriesItemCode`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "pattern": "^\\d{6}$"
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct SyncPanelRosterResponseDeliveriesItemCode(::std::string::String);
+    impl ::std::ops::Deref for SyncPanelRosterResponseDeliveriesItemCode {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<SyncPanelRosterResponseDeliveriesItemCode>
+    for ::std::string::String {
+        fn from(value: SyncPanelRosterResponseDeliveriesItemCode) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&SyncPanelRosterResponseDeliveriesItemCode>
+    for SyncPanelRosterResponseDeliveriesItemCode {
+        fn from(value: &SyncPanelRosterResponseDeliveriesItemCode) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for SyncPanelRosterResponseDeliveriesItemCode {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            static PATTERN: ::std::sync::LazyLock<::regress::Regex> = ::std::sync::LazyLock::new(||
+            { ::regress::Regex::new("^\\d{6}$").unwrap() });
+            if PATTERN.find(value).is_none() {
+                return Err("doesn't match pattern \"^\\d{6}$\"".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for SyncPanelRosterResponseDeliveriesItemCode {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for SyncPanelRosterResponseDeliveriesItemCode {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for SyncPanelRosterResponseDeliveriesItemCode {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for SyncPanelRosterResponseDeliveriesItemCode {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
     ///`UpdateOwnerSettingsBody`
     ///
     /// <details><summary>JSON schema</summary>
@@ -4953,6 +6187,478 @@ pub mod types {
     impl ::std::convert::From<&UploadAvatarResponse> for UploadAvatarResponse {
         fn from(value: &UploadAvatarResponse) -> Self {
             value.clone()
+        }
+    }
+    ///`VerifyPanelCodeBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "code",
+    ///    "memberId"
+    ///  ],
+    ///  "properties": {
+    ///    "code": {
+    ///      "type": "string",
+    ///      "pattern": "^\\d{6}$"
+    ///    },
+    ///    "memberId": {
+    ///      "type": "string",
+    ///      "maxLength": 64,
+    ///      "minLength": 1
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct VerifyPanelCodeBody {
+        pub code: VerifyPanelCodeBodyCode,
+        #[serde(rename = "memberId")]
+        pub member_id: VerifyPanelCodeBodyMemberId,
+    }
+    impl ::std::convert::From<&VerifyPanelCodeBody> for VerifyPanelCodeBody {
+        fn from(value: &VerifyPanelCodeBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`VerifyPanelCodeBodyCode`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "pattern": "^\\d{6}$"
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct VerifyPanelCodeBodyCode(::std::string::String);
+    impl ::std::ops::Deref for VerifyPanelCodeBodyCode {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<VerifyPanelCodeBodyCode> for ::std::string::String {
+        fn from(value: VerifyPanelCodeBodyCode) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&VerifyPanelCodeBodyCode> for VerifyPanelCodeBodyCode {
+        fn from(value: &VerifyPanelCodeBodyCode) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for VerifyPanelCodeBodyCode {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            static PATTERN: ::std::sync::LazyLock<::regress::Regex> = ::std::sync::LazyLock::new(||
+            { ::regress::Regex::new("^\\d{6}$").unwrap() });
+            if PATTERN.find(value).is_none() {
+                return Err("doesn't match pattern \"^\\d{6}$\"".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for VerifyPanelCodeBodyCode {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for VerifyPanelCodeBodyCode {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for VerifyPanelCodeBodyCode {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for VerifyPanelCodeBodyCode {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`VerifyPanelCodeBodyMemberId`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 64,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct VerifyPanelCodeBodyMemberId(::std::string::String);
+    impl ::std::ops::Deref for VerifyPanelCodeBodyMemberId {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<VerifyPanelCodeBodyMemberId> for ::std::string::String {
+        fn from(value: VerifyPanelCodeBodyMemberId) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&VerifyPanelCodeBodyMemberId>
+    for VerifyPanelCodeBodyMemberId {
+        fn from(value: &VerifyPanelCodeBodyMemberId) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for VerifyPanelCodeBodyMemberId {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 64usize {
+                return Err("longer than 64 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for VerifyPanelCodeBodyMemberId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for VerifyPanelCodeBodyMemberId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for VerifyPanelCodeBodyMemberId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for VerifyPanelCodeBodyMemberId {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`VerifyPanelCodeResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "member"
+    ///  ],
+    ///  "properties": {
+    ///    "member": {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "canRelease",
+    ///        "memberId",
+    ///        "name"
+    ///      ],
+    ///      "properties": {
+    ///        "canRelease": {
+    ///          "type": "boolean"
+    ///        },
+    ///        "memberId": {
+    ///          "type": "string",
+    ///          "maxLength": 64,
+    ///          "minLength": 16,
+    ///          "pattern": "^[A-Za-z0-9_-]+$"
+    ///        },
+    ///        "name": {
+    ///          "type": "string",
+    ///          "maxLength": 120,
+    ///          "minLength": 1
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct VerifyPanelCodeResponse {
+        pub member: VerifyPanelCodeResponseMember,
+    }
+    impl ::std::convert::From<&VerifyPanelCodeResponse> for VerifyPanelCodeResponse {
+        fn from(value: &VerifyPanelCodeResponse) -> Self {
+            value.clone()
+        }
+    }
+    ///`VerifyPanelCodeResponseMember`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "canRelease",
+    ///    "memberId",
+    ///    "name"
+    ///  ],
+    ///  "properties": {
+    ///    "canRelease": {
+    ///      "type": "boolean"
+    ///    },
+    ///    "memberId": {
+    ///      "type": "string",
+    ///      "maxLength": 64,
+    ///      "minLength": 16,
+    ///      "pattern": "^[A-Za-z0-9_-]+$"
+    ///    },
+    ///    "name": {
+    ///      "type": "string",
+    ///      "maxLength": 120,
+    ///      "minLength": 1
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct VerifyPanelCodeResponseMember {
+        #[serde(rename = "canRelease")]
+        pub can_release: bool,
+        #[serde(rename = "memberId")]
+        pub member_id: VerifyPanelCodeResponseMemberMemberId,
+        pub name: VerifyPanelCodeResponseMemberName,
+    }
+    impl ::std::convert::From<&VerifyPanelCodeResponseMember>
+    for VerifyPanelCodeResponseMember {
+        fn from(value: &VerifyPanelCodeResponseMember) -> Self {
+            value.clone()
+        }
+    }
+    ///`VerifyPanelCodeResponseMemberMemberId`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 64,
+    ///  "minLength": 16,
+    ///  "pattern": "^[A-Za-z0-9_-]+$"
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct VerifyPanelCodeResponseMemberMemberId(::std::string::String);
+    impl ::std::ops::Deref for VerifyPanelCodeResponseMemberMemberId {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<VerifyPanelCodeResponseMemberMemberId>
+    for ::std::string::String {
+        fn from(value: VerifyPanelCodeResponseMemberMemberId) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&VerifyPanelCodeResponseMemberMemberId>
+    for VerifyPanelCodeResponseMemberMemberId {
+        fn from(value: &VerifyPanelCodeResponseMemberMemberId) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for VerifyPanelCodeResponseMemberMemberId {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 64usize {
+                return Err("longer than 64 characters".into());
+            }
+            if value.chars().count() < 16usize {
+                return Err("shorter than 16 characters".into());
+            }
+            static PATTERN: ::std::sync::LazyLock<::regress::Regex> = ::std::sync::LazyLock::new(||
+            { ::regress::Regex::new("^[A-Za-z0-9_-]+$").unwrap() });
+            if PATTERN.find(value).is_none() {
+                return Err("doesn't match pattern \"^[A-Za-z0-9_-]+$\"".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for VerifyPanelCodeResponseMemberMemberId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for VerifyPanelCodeResponseMemberMemberId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for VerifyPanelCodeResponseMemberMemberId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for VerifyPanelCodeResponseMemberMemberId {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`VerifyPanelCodeResponseMemberName`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 120,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct VerifyPanelCodeResponseMemberName(::std::string::String);
+    impl ::std::ops::Deref for VerifyPanelCodeResponseMemberName {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<VerifyPanelCodeResponseMemberName>
+    for ::std::string::String {
+        fn from(value: VerifyPanelCodeResponseMemberName) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&VerifyPanelCodeResponseMemberName>
+    for VerifyPanelCodeResponseMemberName {
+        fn from(value: &VerifyPanelCodeResponseMemberName) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for VerifyPanelCodeResponseMemberName {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 120usize {
+                return Err("longer than 120 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for VerifyPanelCodeResponseMemberName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for VerifyPanelCodeResponseMemberName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for VerifyPanelCodeResponseMemberName {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for VerifyPanelCodeResponseMemberName {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
         }
     }
 }
@@ -5404,6 +7110,78 @@ Sends a `GET` request to `/panel/g/{token}/board`
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
+    /**End this device's identity on a group's panel (public)
+
+Sends a `POST` request to `/panel/g/{token}/forget`
+
+*/
+    pub async fn forget_panel_device<'a>(
+        &'a self,
+        token: &'a str,
+    ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
+        let url = format!(
+            "{}/panel/g/{}/forget", self.baseurl, encode_path(& token.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Ask codm to send a panel identification code to a group member's WhatsApp (public)
+
+Sends a `POST` request to `/panel/g/{token}/identify`
+
+*/
+    pub async fn request_panel_code<'a>(
+        &'a self,
+        token: &'a str,
+        body: &'a types::RequestPanelCodeBody,
+    ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
+        let url = format!(
+            "{}/panel/g/{}/identify", self.baseurl, encode_path(& token.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
     /**One issue of a group with its timeline, by the group's panel link token (public)
 
 Sends a `GET` request to `/panel/g/{token}/issues/{issueId}`
@@ -5441,6 +7219,113 @@ Sends a `GET` request to `/panel/g/{token}/issues/{issueId}`
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
+    /**Who this device is on a group's panel, from its device cookie (public)
+
+Sends a `GET` request to `/panel/g/{token}/me`
+
+*/
+    pub async fn get_panel_identity<'a>(
+        &'a self,
+        token: &'a str,
+    ) -> Result<ResponseValue<types::GetPanelIdentityResponse>, Error<()>> {
+        let url = format!(
+            "{}/panel/g/{}/me", self.baseurl, encode_path(& token.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .get(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**The people of a group (opaque id + name), by its panel link token (public)
+
+Sends a `GET` request to `/panel/g/{token}/members`
+
+*/
+    pub async fn list_panel_members<'a>(
+        &'a self,
+        token: &'a str,
+    ) -> Result<ResponseValue<types::ListPanelMembersResponse>, Error<()>> {
+        let url = format!(
+            "{}/panel/g/{}/members", self.baseurl, encode_path(& token.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .get(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Confirm a panel identification code; sets the device cookie (public)
+
+Sends a `POST` request to `/panel/g/{token}/verify`
+
+*/
+    pub async fn verify_panel_code<'a>(
+        &'a self,
+        token: &'a str,
+        body: &'a types::VerifyPanelCodeBody,
+    ) -> Result<ResponseValue<types::VerifyPanelCodeResponse>, Error<()>> {
+        let url = format!(
+            "{}/panel/g/{}/verify", self.baseurl, encode_path(& token.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
     /**Replace a group's panel link token
 
 Sends a `POST` request to `/panel/groups/{threadId}/rotate`
@@ -5468,6 +7353,40 @@ Sends a `POST` request to `/panel/groups/{threadId}/rotate`
                 ::reqwest::header::ACCEPT,
                 ::reqwest::header::HeaderValue::from_static("application/json"),
             )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Replace each group's panel roster (opaque member ids) and pull the identification codes to deliver
+
+Sends a `PUT` request to `/panel/roster`
+
+*/
+    pub async fn sync_panel_roster<'a>(
+        &'a self,
+        body: &'a types::SyncPanelRosterBody,
+    ) -> Result<ResponseValue<types::SyncPanelRosterResponse>, Error<()>> {
+        let url = format!("{}/panel/roster", self.baseurl,);
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .put(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
             .headers(header_map)
             .build()?;
         let result = self.client.execute(request).await;
