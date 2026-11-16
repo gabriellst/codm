@@ -1,6 +1,6 @@
 # Pausa por pista e adiamento liberável
 
-Status: Implemented (fase 0 do plano de tarefas visíveis — item 1)
+Status: Superseded — a `main` resolveu o mesmo problema no PR #69 (0.8.9: pausa por provedor, teto de nova tentativa, soltura dos adiados quando o mesmo provedor volta a aceitar). Ao trazer a `main` para a fase 0, ficou a versão dela; desta proposta sobreviveu só o aviso com o dia quando a volta não é hoje.
 Data: 2026-11-12
 
 ## Problema

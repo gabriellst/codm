@@ -42,6 +42,20 @@ export interface ClaimedMailboxItem {
 }
 
 /**
+ * An item waiting out a `defer` — what the dispatcher needs to decide WHOSE pause it is.
+ *
+ * The provider is not here, and that is the model, not an omission: which CLI an item runs on is a
+ * property of its thread NOW (the dispatcher resolves it at run time, from `targetKind` + `payload`),
+ * so the release resolves it the same way instead of trusting a copy taken when the item was refused.
+ */
+export interface DeferredMailboxItem {
+	id: string
+	targetKind: MailboxTargetKind
+	targetId: string
+	payload: unknown
+}
+
+/**
  * The durable per-target turn queue (orchestrator pivot §7.4).
  *
  * Producers only ENQUEUE, always inside the transaction of the fact that motivates the item. They
@@ -89,27 +103,44 @@ export abstract class MailboxRepository {
 	 *
 	 * `lease_until = until` with no holder is what makes it wait: `claimNext` refuses an unexpired lease,
 	 * and the per-target exclusion keeps the rest of that target's queue behind it, in order.
+	 *
+	 * ### The pause is a HYPOTHESIS about the account, not a fact about the item
+	 * The limit belongs to the provider ACCOUNT, and the account can change under the pause. Measured
+	 * 2026-11-05: the operator logged the CLI into a fresh account, other issues ran normally on it, and
+	 * four items stayed parked until 10/11 14:00 — the weekly reset of the OLD account — until somebody
+	 * cleared `lease_until` by hand in SQLite. So the pause is tested, twice: the dispatcher caps `until`
+	 * (`CODM_AGENT_LIMIT_RECHECK_MS`), and a turn the same provider accepts afterwards ends it at once
+	 * (`deferred` + `releaseDeferred`).
+	 *
+	 * ### This is the ONLY writer of a lease with no holder
+	 * `claimNext` writes a lease WITH a holder, `renewLease` keeps the holder in its predicate, and
+	 * `complete` / `fail` / `releaseOrphanedClaims` write `lease_until = NULL`. So "runnable, no holder,
+	 * lease in the future" is exactly a pause written here, and the release needs no marker column to
+	 * find it. A second writer of an ownerless lease would have to give the release a way to tell the two
+	 * apart — that is the condition under which a marker becomes necessary.
 	 */
 	abstract defer(id: string, until: Date, tx?: Transaction): Promise<void>
 
 	/**
-	 * Undo every `defer` still in force for `targetKind` — the items become claimable NOW, attempts
-	 * untouched. Returns how many.
+	 * The items waiting out a `defer` right now: runnable, NO holder, lease still in the future.
 	 *
-	 * ### Why a deferral must be releasable
-	 * `defer` trusts the instant the provider named, and that instant can be days away: a WEEKLY window
-	 * (measured 2026-11-11: four issue items deferred to 11-17 while the conversation lane kept
-	 * answering). The pause that matched it lives in the dispatcher's memory and dies with a restart; the
-	 * deferral lives in the table and does not — so after a reboot every OTHER target ran while those
-	 * four, and every steer queued behind them, waited out the week. The same happens when the limit
-	 * is lifted early or the operator switches the thread to a model the window does not cover.
-	 *
-	 * Releasing is cheap and self-correcting: if the provider still refuses, the claim that follows is
-	 * refused in seconds and `defer` puts the item back, refunding the attempt. A deferred row is the one
-	 * shape no other path writes — a lease in the future with NO holder (`claimedBy` null) — so the
-	 * predicate cannot touch a live turn.
+	 * The SQL half of the release, and the split mirrors `releaseOrphanedClaims`: SQL picks the
+	 * candidates, and the dispatcher decides which of them belong to the provider that just answered —
+	 * a question the table cannot answer, because the provider is the thread's, not the row's.
 	 */
-	abstract releaseDeferred(targetKind: MailboxTargetKind, tx?: Transaction): Promise<number>
+	abstract deferred(tx?: Transaction): Promise<DeferredMailboxItem[]>
+
+	/**
+	 * End the pause of these items NOW — `lease_until = NULL`, claimable on the next poll.
+	 *
+	 * The predicate (runnable, no holder, lease in the future) is RE-ASSERTED in the same UPDATE, not
+	 * just the ids: between `deferred` and here an item whose pause lapsed can have been claimed, and
+	 * clearing a lease that has a holder would start a second turn beside a live one — the double turn
+	 * this queue exists to prevent. The attempt `defer` refunded is untouched.
+	 *
+	 * @returns how many pauses were released.
+	 */
+	abstract releaseDeferred(ids: readonly string[], tx?: Transaction): Promise<number>
 
 	/** The targets of `targetKind` with runnable work waiting — who is owed an answer right now. */
 	abstract pendingTargets(targetKind: MailboxTargetKind, tx?: Transaction): Promise<string[]>

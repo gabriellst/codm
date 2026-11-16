@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { Handler, z, CommandQueue } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { MailboxTargetKind, MessageAuthor, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
+import { MessageAuthor, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { CloudSession } from '@shared/services/CloudSession'
 import { resolveThreadLanguage } from '@shared/i18n/messages'
 import { ThreadRepository } from '../repositories/ThreadRepository'
@@ -10,12 +10,8 @@ import type { DeliverChannelMessage } from './DeliverChannelMessage'
 
 export const NotifyProviderPausedInputSchema = z.object({
 	threadId: z.uuid(),
-	/** When the provider account's usage window resets — the instant the lane resumes on its own. */
+	/** When the provider account's usage window resets — the instant the queue resumes. */
 	until: z.date(),
-	/** WHICH lane the provider refused — the issue lane pausing does not silence the conversation. */
-	lane: z.enum(MailboxTargetKind),
-	/** How often the paused lane asks the provider again before `until` — said in the notice. */
-	probeEveryMinutes: z.number().int().positive(),
 })
 
 export const NotifyProviderPausedOutputSchema = z.object({ notified: z.boolean() })
@@ -60,12 +56,7 @@ export class NotifyProviderPaused extends Handler<typeof NotifyProviderPausedInp
 		return this.withTransaction(tx, async tx => {
 			const entry = thread.recordEntry({
 				kind: TranscriptKind.SYSTEM,
-				text: THREAD_MESSAGES.providerPausedNotice(language, {
-					until: input.until,
-					now: new Date(),
-					lane: input.lane,
-					probeEveryMinutes: input.probeEveryMinutes,
-				}),
+				text: THREAD_MESSAGES.providerPausedNotice(language, { until: input.until, now: new Date() }),
 			})
 			await this.threads.save(thread, tx)
 			await this.commands.enqueueCommand<DeliverChannelMessage>(
