@@ -367,6 +367,43 @@ describe('IngestChannelMessage gate matrix', () => {
 				expect(item.text).toContain('tira o rodapé antes')
 			})
 
+			/**
+			 * ENTREGUE/LIDO (fase 2, item 5): the steer carries the reaction address of the message it came
+			 * from, so the dispatcher can hang ☑️ / ✅ on it later. Without a platform id there is nothing to
+			 * react to, and the item carries no origin. Falsifier: drop `channelOrigin` from the payload.
+			 */
+			it('the steer carries the reaction address of the routed message — only when it has a platform id', async () => {
+				const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+				const issue = await givenIssue(testBed, { threadId: thread.id.value, key: 'APP-10' })
+				const ingest = (text: string, platformMessageId?: string) =>
+					testBed.resolve(IngestChannelMessage).execute({
+						threadId: thread.id.value,
+						senderExternalId: 'stranger-42',
+						text: `${GIVEN_MENTION_TAG} APP-10 ${text}`,
+						receivedAt: new Date(),
+						platformMessageId,
+					})
+
+				const out = await ingest('usa o azul', 'wamid-routed')
+				const first = await testBed.resolve(MailboxRepository).claimNext('origin-test', 60_000)
+				expect(first?.targetId).toBe(issue.id.value)
+				const originOf = (item: typeof first) => (item?.payload as { channelOrigin?: unknown } | undefined)?.channelOrigin
+				expect(originOf(first)).toMatchObject({
+					entryId: out.entryId,
+					messageId: 'wamid-routed',
+					channelId: thread.channelId,
+					remoteId: thread.contactRef.externalId,
+					fromMe: false,
+					senderExternalId: 'stranger-42',
+				})
+				if (first) await testBed.resolve(MailboxRepository).complete(first.id)
+
+				await ingest('e o rodapé')
+				const second = await testBed.resolve(MailboxRepository).claimNext('origin-test', 60_000)
+				expect(second?.targetId).toBe(issue.id.value)
+				expect(originOf(second)).toBeUndefined()
+			})
+
 			it('naming a running issue by key routes there too', async () => {
 				const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
 				const issue = await givenIssue(testBed, { threadId: thread.id.value, key: 'APP-8' })

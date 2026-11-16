@@ -16,6 +16,7 @@ import { PauseIssue } from '@issue/usecases/PauseIssue'
 import { ResumeIssue } from '@issue/usecases/ResumeIssue'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { RuleRouter } from '../services/RuleRouter'
+import type { RoutedSteerOrigin } from '../services/SteerCue'
 import { AGENT_SPEAKER } from '../objects'
 import { MessageIngestedEvent } from '../events/MessageIngestedEvent'
 import { CUE_ACKNOWLEDGED, CUE_PAUSED, CUE_RESUMED } from '../utils/ChannelCues'
@@ -206,6 +207,12 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 				const speaker = thread.displayNameOf(input.senderExternalId)
 				const said = thread.textWithoutMention(input.text)
 				const replyingTo = quoted && routed.via === 'REPLY_QUOTE' ? `\n(respondendo a: «${quoted.text.slice(0, 300)}»)` : ''
+				// WHERE IT CAME FROM, so the dispatcher can answer ☑️ / ✅ on this very message (fase 2, item 5).
+				// Same gate as the 👀 below: no platform id or reactions off ⇒ no origin ⇒ no cue later either.
+				const channelOrigin: RoutedSteerOrigin | undefined =
+					input.platformMessageId && thread.reactionsEnabled
+						? { ...this.reactionAddress(thread, input, input.platformMessageId), entryId: entry.entryId }
+						: undefined
 				await this.mailbox.enqueue(
 					{
 						ownerId: thread.ownerId,
@@ -219,6 +226,7 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 							key: routed.issue.key,
 							title: routed.issue.title,
 							text: `${speaker}: ${said}${replyingTo}`,
+							channelOrigin,
 						},
 						dedupKey: `steer:${entry.entryId}:${routed.issue.issueId}`,
 					},
@@ -414,35 +422,10 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 	 * swallowing is what keeps that commit intact.
 	 */
 	private async enqueueCue(thread: Thread, input: this['input'], entryId: string, reaction: string, tx: Transaction): Promise<void> {
-		const { ownerId, channelId } = thread
-		const remoteId = thread.contactRef.externalId
-		// The owner's own words arrive under the OPERATOR roster id (`ConsumeInboundMessage` rewrites the
-		// sender when the gateway reports `fromMe`), and WhatsApp addresses a reaction by the whole
-		// message key — so the sentinel that already encodes "this account said it" is precisely the fact
-		// the gateway needs, read where it is unambiguous. Read ONCE, because the same comparison also
-		// decides whether there is an author to send (below).
-		const fromMe = input.senderExternalId === OPERATOR_PARTICIPANT_ID
-
 		const outcome = await tryCatchAsync(() =>
 			this.commands.enqueueCommand<ReactToChannelMessage>(
 				'react_to_channel_message',
-				{
-					ownerId,
-					channelId,
-					remoteId,
-					messageId: input.platformMessageId ?? '',
-					fromMe,
-					// THE AUTHOR, and the whole reason a `👀` used to vanish in a group. `remoteId` is the GROUP
-					// jid there, never the person's, so without this the gateway could only fill the message
-					// key's `participant` slot with the chat — a key that addresses no message, and an emoji
-					// nobody in the room ever sees. In a DM the two coincide, which is why it looked fine.
-					//
-					// Withheld when `fromMe`, because there the id is `OPERATOR_PARTICIPANT_ID` — a SENTINEL,
-					// not a JID. Sending it would have the gateway parse `operator` into a nonsense JID and
-					// break the one case that already works; the device's own id is what answers that case.
-					senderExternalId: fromMe ? undefined : input.senderExternalId,
-					reaction,
-				},
+				{ ...this.reactionAddress(thread, input, input.platformMessageId ?? ''), reaction },
 				// Derived from the ENTRY, like the mailbox item's own dedup key: a redelivered gateway event
 				// conflicts on the same id and reacts nothing twice.
 				{ jobId: `cue:${entryId}` },
@@ -454,6 +437,35 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 			this.logging.info({
 				content: { message: 'ack cue not scheduled (best-effort)', threadId: input.threadId, reason: outcome.error.message },
 			})
+		}
+	}
+
+	/**
+	 * THE MESSAGE KEY A REACTION IS ADDRESSED BY — shared by the `👀` here and by the steer's later
+	 * ☑️ / ✅ (`RoutedSteerOrigin`, fase 2 item 5), so the two can never disagree about which message.
+	 */
+	private reactionAddress(thread: Thread, input: this['input'], messageId: string): Omit<ReactToChannelMessage['input'], 'reaction'> {
+		// The owner's own words arrive under the OPERATOR roster id (`ConsumeInboundMessage` rewrites the
+		// sender when the gateway reports `fromMe`), and WhatsApp addresses a reaction by the whole
+		// message key — so the sentinel that already encodes "this account said it" is precisely the fact
+		// the gateway needs, read where it is unambiguous. Read ONCE, because the same comparison also
+		// decides whether there is an author to send (below).
+		const fromMe = input.senderExternalId === OPERATOR_PARTICIPANT_ID
+		return {
+			ownerId: thread.ownerId,
+			channelId: thread.channelId,
+			remoteId: thread.contactRef.externalId,
+			messageId,
+			fromMe,
+			// THE AUTHOR, and the whole reason a `👀` used to vanish in a group. `remoteId` is the GROUP
+			// jid there, never the person's, so without this the gateway could only fill the message
+			// key's `participant` slot with the chat — a key that addresses no message, and an emoji
+			// nobody in the room ever sees. In a DM the two coincide, which is why it looked fine.
+			//
+			// Withheld when `fromMe`, because there the id is `OPERATOR_PARTICIPANT_ID` — a SENTINEL,
+			// not a JID. Sending it would have the gateway parse `operator` into a nonsense JID and
+			// break the one case that already works; the device's own id is what answers that case.
+			senderExternalId: fromMe ? undefined : input.senderExternalId,
 		}
 	}
 }

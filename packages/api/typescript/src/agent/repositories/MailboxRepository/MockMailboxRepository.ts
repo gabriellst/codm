@@ -15,6 +15,8 @@ interface Row extends EnqueueMailboxItem {
 	consumed: boolean
 	dead: boolean
 	seq: number
+	/** The twin of `first_claimed_at` — set by the first claim, never cleared. */
+	firstClaimedAt?: number
 }
 
 /** In-memory twin, same semantics: dedup by key, one lease per target, expiry, poison. */
@@ -52,6 +54,8 @@ export class MockMailboxRepository extends MailboxRepository {
 			.sort((a, b) => rank(a) - rank(b) || a.seq - b.seq)[0]
 		if (!row) return undefined
 		row.attempts += 1
+		const firstClaim = row.firstClaimedAt === undefined
+		row.firstClaimedAt ??= now
 		row.leaseUntil = now + leaseMs
 		row.claimedBy = claimedBy
 		row.claimedBoot = DAEMON_BOOT.id
@@ -65,6 +69,7 @@ export class MockMailboxRepository extends MailboxRepository {
 			payload: row.payload,
 			posture: row.posture,
 			attempts: row.attempts,
+			firstClaim,
 		}
 	}
 

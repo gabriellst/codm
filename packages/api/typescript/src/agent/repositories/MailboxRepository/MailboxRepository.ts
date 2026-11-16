@@ -39,6 +39,13 @@ export interface ClaimedMailboxItem {
 	 */
 	posture: PermissionPosture
 	attempts: number
+	/**
+	 * THIS claim is the item's first hand-off — the one that stamped `first_claimed_at` ("entregue").
+	 *
+	 * Not `attempts === 1`: `defer` refunds the attempt (a pause, a provider limit), so a later claim can
+	 * read 1 again. What makes a delivery the first is the stamp, decided in the claim's own write.
+	 */
+	firstClaim: boolean
 }
 
 /**

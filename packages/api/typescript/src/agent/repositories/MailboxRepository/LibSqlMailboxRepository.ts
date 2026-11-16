@@ -108,7 +108,7 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 				)
 
 			const [candidate] = await dbc
-				.select({ id: agentMailbox.id })
+				.select({ id: agentMailbox.id, firstClaimedAt: agentMailbox.firstClaimedAt })
 				.from(agentMailbox)
 				.where(and(runnable(), unleased(now), notExists(busy), inLanes))
 				.orderBy(...order)
@@ -140,7 +140,8 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 					posture: agentMailbox.posture,
 					attempts: agentMailbox.attempts,
 				})
-			return claimed[0]
+			// Read in the SAME write transaction as the stamp, so "first" cannot be won by two claims.
+			return claimed[0] ? { ...claimed[0], firstClaim: candidate.firstClaimedAt === null } : undefined
 		})
 		if (!row) return undefined
 		return { ...row, targetKind: row.targetKind as MailboxTargetKind, kind: row.kind as MailboxItemKind }

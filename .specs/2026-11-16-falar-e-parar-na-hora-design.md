@@ -56,8 +56,21 @@ Ações irreversíveis (merge, publicar, disparar push, escrever em produção) 
 ### 4. Steer imediato (`próximo passo` / `agora`)
 `próximo passo` (padrão): o recado entra na próxima chamada de ferramenta da sessão. `agora`: interrompe o turno. Mecanismo a escolher medindo o runner (entrada em fluxo do CLI × hook entre ferramentas × interromper e retomar).
 
-### 5. Entregue/lido no WhatsApp
+### 5. Entregue/lido no WhatsApp (feito)
 Reação na mensagem roteada quando o recado é entregue à sessão e quando o turno que o leu termina.
+
+**Sinais.** A mensagem roteada anda 👀 → ☑️ → ✅, como os tiques do próprio WhatsApp (caixa cinza, depois o check verde). `CUE_DELIVERED = '☑️'`, `CUE_READ = '✅'` em `thread/utils/ChannelCues.ts`. O WhatsApp guarda UMA reação por remetente por mensagem e a reenviada SUBSTITUI a anterior (`ReactToChannelMessage` já documenta isso), então cada sinal troca o anterior, sem empilhar.
+
+**De onde sai o endereço.** O transcript não guarda o id da mensagem na plataforma, então o STEER leva no payload `channelOrigin` (`RoutedSteerOriginSchema`, `thread/services/SteerCue`: a entrada do comando de reação menos o emoji, mais o `entryId`), montado pelo `IngestChannelMessage` com o MESMO endereço do 👀 (`reactionAddress`) e o mesmo portão (id da plataforma presente, reações ligadas na conversa). Só o ingest escreve `channelOrigin`: steer do console, tique de loop, resolução de stop e o lembrete de declaração não têm, e ficam calados por declaração.
+
+**Quando.** Quem sabe é o `LibSqlMailboxDispatcher`:
+- ☑️ no PRIMEIRO hand-off do item — `ClaimedMailboxItem.firstClaim`, decidido na mesma escrita que carimba `first_claimed_at` (o "entregue" da linha do tempo; os dois nunca discordam). Não `attempts === 1`: `defer` devolve a tentativa (pausa, limite do provedor) e o claim seguinte leria 1 de novo. Retry e re-claim não reagem.
+- ✅ logo depois do `complete` do item — o turno que o levou terminou e o item foi consumido. Não para relatório `dropped` (nenhum turno rodou) e nunca para `held` (turno morto pela pausa volta adiado antes do `complete`).
+- `cueRoutedSteer` (serviço livre em `thread/services`, mesma forma de `beginTypingPresence`) enfileira `react_to_channel_message` com `jobId` `cue:<entry>:<estágio>` — diferente do `cue:<entry>` do 👀, para um não engolir o outro. A fila roda por `run_at`, então o 👀 do ingest sai antes do ☑️. Best-effort como todo sinal; no dispatcher nunca lança (roda depois do `complete`, e um throw ali faria `fail` de um item consumido).
+
+**Por que não evento + handler.** O pedido era "evento → handler do `thread` enfileira a reação". Um handler do `thread` não pode importar `@agent/events` (superfície proibida), e um evento de integração exigiria contrato TypeSpec + SDK + Go para um enfeite. O dispatcher é o único que conhece os dois instantes; ele chama o serviço do `thread` pela aresta `agent → thread` já declarada (nota atualizada em `agent/context.ts`). Nenhuma exceção de política nova.
+
+**Limites conhecidos.** Um steer que chega com a issue pausada ganha ☑️ no primeiro claim (mesmo limite da linha do tempo, que já o mostra "entregue"), e ✅ só quando a issue retomar e o turno terminar. Desligar as reações da conversa depois do steer enfileirado não apaga o `channelOrigin` já gravado (o ☑️/✅ dele ainda sai). Um turno muito curto pode, em tese, ter ☑️ e ✅ no mesmo lote da fila — saem na ordem de `run_at`.
 
 ### 6. Ações pelo painel (identificação por código no WhatsApp)
 Depende do deploy da fase 1.

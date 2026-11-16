@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { TestBed, givenThread, givenWorkspace } from '@test/support'
-import { LoggingService } from '@codm/core-typescript'
+import { CommandQueue, LoggingService } from '@codm/core-typescript'
 import { MailboxItemKind, MailboxTargetKind, ProviderKind, AgentModelId, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { CloudSession, MockCloudSession } from '@shared/services/CloudSession'
@@ -421,6 +421,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(CloudSession),
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
+			testBed.resolve(CommandQueue),
 		).bind(testContainer)
 
 		const message = (threadId: string, dedupKey: string) =>
@@ -665,6 +666,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(CloudSession),
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
+			testBed.resolve(CommandQueue),
 		).bind(spyContainer)
 
 		await operatorMessage(thread.id.value, 'limite-semanal')
@@ -714,6 +716,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(CloudSession),
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
+			testBed.resolve(CommandQueue),
 		).bind(testContainer)
 
 		await mailbox.enqueue({
@@ -767,6 +770,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(CloudSession),
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
+			testBed.resolve(CommandQueue),
 		).bind(testContainer)
 
 		await mailbox.enqueue({
@@ -848,6 +852,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(CloudSession),
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
+			testBed.resolve(CommandQueue),
 		).bind(testContainer)
 
 		try {
@@ -930,6 +935,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(CloudSession),
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
+			testBed.resolve(CommandQueue),
 		).bind(testContainer)
 
 		try {
@@ -998,6 +1004,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(CloudSession),
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
+			testBed.resolve(CommandQueue),
 		).bind(testContainer)
 
 		try {
@@ -1228,6 +1235,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(CloudSession),
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
+			testBed.resolve(CommandQueue),
 		).bind(spyContainer)
 
 		await mailbox.enqueue({
@@ -1287,6 +1295,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			testBed.resolve(CloudSession),
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
+			testBed.resolve(CommandQueue),
 		).bind(spyContainer)
 
 		await mailbox.enqueue({
@@ -1340,6 +1349,7 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 			cloudSession,
 			testBed.resolve(IssueHold),
 			testBed.resolve(IssueTurnAborter),
+			testBed.resolve(CommandQueue),
 		).bind(testContainer)
 
 		const realClaimNext = mailbox.claimNext.bind(mailbox)

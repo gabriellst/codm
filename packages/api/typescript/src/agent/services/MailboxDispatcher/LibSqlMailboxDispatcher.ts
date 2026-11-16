@@ -1,12 +1,14 @@
 import { injectable } from 'tsyringe-neo'
 import type { DependencyContainer } from 'tsyringe-neo'
-import { LoggingService, type PollingService } from '@codm/core-typescript'
+import { CommandQueue, LoggingService, type PollingService, z } from '@codm/core-typescript'
 import { MailboxItemKind, MailboxTargetKind, type ProviderKind, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { ProductConfig } from '@shared/config/ProductConfig'
 import { CloudSession } from '@shared/services/CloudSession'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { NotifyProviderPaused } from '@thread/usecases/NotifyProviderPaused'
 import { RaiseStop } from '@thread/usecases/RaiseStop'
+import { SteerProgress } from '@thread/enums'
+import { cueRoutedSteer, RoutedSteerOriginSchema, type RoutedSteerOrigin } from '@thread/services/SteerCue'
 import { WorkspaceRepository } from '@workspace/repositories/WorkspaceRepository'
 import { IssueHold } from '@issue/services/IssueHold'
 import { AgentSessionRepository } from '../../repositories/AgentSessionRepository'
@@ -76,6 +78,13 @@ const POLL_BACKOFF_FACTOR = 2
  * a resume whose fact is late — and for a crash between the two.
  */
 const HOLD_RECHECK_MS = 30_000
+
+/** The STEER payload's channel origin, parsed — absent, or not shaped like one, reads as "no origin". */
+const SteerOriginPayloadSchema = z.object({ channelOrigin: RoutedSteerOriginSchema })
+const steerOriginOf = (payload: unknown): RoutedSteerOrigin | undefined => {
+	const parsed = SteerOriginPayloadSchema.safeParse(payload)
+	return parsed.success ? parsed.data.channelOrigin : undefined
+}
 /**
  * THE LANES — how many turns of each TARGET KIND may be in flight at once, and which kind is claimed
  * first when both have room.
@@ -249,6 +258,9 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 		// issue turn registers on, BEFORE the hold check (see `runIssueWork`).
 		private readonly hold: IssueHold,
 		private readonly aborter: IssueTurnAborter,
+		// Entregue/lido no WhatsApp (fase 2, item 5) — appended for the same reason. The queue the ☑️ / ✅
+		// ride on: this is the only place that knows when a steer was handed over and when it was consumed.
+		private readonly commands: CommandQueue,
 	) {
 		super()
 	}
@@ -595,6 +607,9 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			}
 
 			await this.mailbox.complete(item.id)
+			// LIDO (fase 2, item 5): the turn that carried a routed steer ended and the item is consumed. Not
+			// for a dropped report — no turn ran, nobody read anything. A held item never reaches this line.
+			if (!report.dropped) await this.cueSteer(item, SteerProgress.READ)
 			// THE PAUSE IS OVER WHEN A TURN GETS THROUGH, not when the clock passes `pausedUntil`. A CLI that
 			// keeps refusing past its reported reset re-pauses on the floor, and clearing on the clock would
 			// re-send "atingi o limite" to every group once a minute. A turn the provider ran to its end is
@@ -904,6 +919,11 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	 * instead of leaving it blank.
 	 */
 	protected async runIssueWork(item: ClaimedMailboxItem): Promise<TurnReport> {
+		// ENTREGUE (fase 2, item 5): the FIRST hand-off of a routed steer — the same instant the issue
+		// timeline reads as "entregue" (`first_claimed_at`), so the two never disagree. A retry, a
+		// re-claim after a pause or a provider limit is the same delivery again and cues nothing.
+		if (item.firstClaim) await this.cueSteer(item, SteerProgress.DELIVERED)
+		// THE KILL SWITCH IS ARMED BEFORE THE HOLD IS CHECKED (fase 2, item 2). In the other order a pause
 		// THE KILL SWITCH IS ARMED BEFORE THE HOLD IS CHECKED (fase 2, item 2). In the other order a pause
 		// landing between "not held" and the spawn would find nothing to abort and the turn would run to its
 		// end while the issue sat paused. Armed first, that pause aborts a signal `RunIssueTurn` reads before
@@ -933,6 +953,26 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 					itemId: item.id,
 					error: error instanceof Error ? error.message : String(error),
 				},
+			})
+		}
+	}
+
+	/**
+	 * Hang ☑️ / ✅ on the channel message a STEER was routed from (fase 2, item 5) — when it was.
+	 *
+	 * Only a STEER whose payload carries `channelOrigin` qualifies, and only the ingest writes one: the
+	 * console, loops, stop resolutions and the declaration reminder queue steers without it and stay silent
+	 * by declaration. NEVER THROWS — it runs right after `complete`, and a throw there would land in
+	 * `runTurn`'s catch and `fail` an item already consumed.
+	 */
+	private async cueSteer(item: ClaimedMailboxItem, stage: SteerProgress): Promise<void> {
+		const origin = item.kind === MailboxItemKind.STEER ? steerOriginOf(item.payload) : undefined
+		if (!origin) return
+		try {
+			await cueRoutedSteer({ commands: this.commands, logging: this.logging, origin, stage })
+		} catch (error) {
+			this.logging.info({
+				content: { message: 'steer cue skipped', itemId: item.id, stage, error: error instanceof Error ? error.message : String(error) },
 			})
 		}
 	}
