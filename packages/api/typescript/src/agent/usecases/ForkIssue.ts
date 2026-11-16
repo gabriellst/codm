@@ -7,7 +7,7 @@ import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { WorkspaceRepository } from '@workspace/repositories/WorkspaceRepository'
 import { issuePrefixOf } from '@workspace/objects'
 import { MailboxRepository } from '../repositories/MailboxRepository'
-import { IssueSequenceRepository } from '../repositories/IssueSequenceRepository'
+import { IssueSequence } from '../services/IssueSequence'
 import { IssueForkedEvent } from '../events/IssueForkedEvent'
 import type { AgentApplicationErrors, AgentInterfaceErrors } from '../errors'
 
@@ -87,7 +87,7 @@ export class ForkIssue extends Handler<typeof ForkIssueInputSchema, typeof ForkI
 	constructor(
 		private readonly threads: ThreadRepository,
 		private readonly workspaces: WorkspaceRepository,
-		private readonly sequences: IssueSequenceRepository,
+		private readonly sequences: IssueSequence,
 		private readonly mailbox: MailboxRepository,
 	) {
 		super()

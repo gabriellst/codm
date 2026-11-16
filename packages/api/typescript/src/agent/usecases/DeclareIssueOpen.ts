@@ -7,7 +7,7 @@ import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { WorkspaceRepository } from '@workspace/repositories/WorkspaceRepository'
 import { issuePrefixOf } from '@workspace/objects'
 import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
-import { IssueSequenceRepository } from '../repositories/IssueSequenceRepository'
+import { IssueSequence } from '../services/IssueSequence'
 import type { AgentInterfaceErrors } from '../errors'
 
 export const DeclareIssueOpenInputSchema = z.object({
@@ -34,7 +34,7 @@ export const DeclareIssueOpenOutputSchema = z.object({ issueId: z.uuid(), key: z
  * ### Ids are minted HERE, not accepted from the caller
  * A model does not get to choose an issue's identity: it would let one run adopt another run's issue
  * by guessing a uuid, and it would make the row's identity depend on a value that arrives over the
- * wire. The key is the short `<PREFIX>-<n>` drawn per workspace (`IssueSequenceRepository`); uniqueness is the DB's invariant and
+ * wire. The key is the short `<PREFIX>-<n>` drawn per workspace (`IssueSequence`); uniqueness is the DB's invariant and
  * `OpenIssue` is a no-op on a redelivery, so a collision degrades to "same issue" rather than a crash.
  */
 @injectable()
@@ -46,7 +46,7 @@ export class DeclareIssueOpen extends Handler<typeof DeclareIssueOpenInputSchema
 	constructor(
 		private readonly threads: ThreadRepository,
 		private readonly workspaces: WorkspaceRepository,
-		private readonly sequences: IssueSequenceRepository,
+		private readonly sequences: IssueSequence,
 	) {
 		super()
 	}

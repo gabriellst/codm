@@ -1,9 +1,9 @@
 import { injectable } from 'tsyringe-neo'
-import { IssueSequenceRepository } from './IssueSequenceRepository'
+import { IssueSequence } from './IssueSequence'
 
 /** In-memory twin: one counter per workspace, starting at 1. */
 @injectable()
-export class MockIssueSequenceRepository extends IssueSequenceRepository {
+export class MockIssueSequence extends IssueSequence {
 	private readonly last = new Map<string, number>()
 
 	async next(workspaceId: string): Promise<number> {

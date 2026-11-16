@@ -8,7 +8,7 @@ import type { Transaction } from '@codm/core-typescript'
  * together: SQLite serializes writers, so two forks never draw the same number, and a rolled-back fork
  * returns its number with it.
  */
-export abstract class IssueSequenceRepository {
+export abstract class IssueSequence {
 	/** The next number for `workspaceId` — 1 for a workspace's first issue. */
 	abstract next(workspaceId: string, tx?: Transaction): Promise<number>
 }
