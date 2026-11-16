@@ -2,10 +2,10 @@ import { injectable } from 'tsyringe-neo'
 import { sql } from 'drizzle-orm'
 import { LibSqlDatabaseDriver, LibSqlTransaction } from '@codm/core-typescript'
 import { agentIssueSequences } from '@codm/contracts/db'
-import { IssueSequenceRepository } from './IssueSequenceRepository'
+import { IssueSequence } from './IssueSequence'
 
 @injectable()
-export class LibSqlIssueSequenceRepository extends IssueSequenceRepository {
+export class LibSqlIssueSequence extends IssueSequence {
 	constructor(private driver: LibSqlDatabaseDriver) {
 		super()
 	}

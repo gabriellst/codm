@@ -9,6 +9,8 @@ export { GetContactAvatarController } from './GetContactAvatar'
 export { GetOperatorIdentityController } from './GetOperatorIdentity'
 export { CompleteOnboardingController } from './CompleteOnboarding'
 export { SaveOnboardingStepController } from './SaveOnboardingStep'
+export { GetIssueTimelineController } from './GetIssueTimeline'
+export { GetThreadPanelLinkController } from './GetThreadPanelLink'
 
 import { ListenEventsController } from './ListenEvents'
 import { GetUserInfoController } from './GetUserInfo'
@@ -21,6 +23,8 @@ import { GetContactAvatarController } from './GetContactAvatar'
 import { GetOperatorIdentityController } from './GetOperatorIdentity'
 import { CompleteOnboardingController } from './CompleteOnboarding'
 import { SaveOnboardingStepController } from './SaveOnboardingStep'
+import { GetIssueTimelineController } from './GetIssueTimeline'
+import { GetThreadPanelLinkController } from './GetThreadPanelLink'
 
 /**
  * O QUE ESTE CONTEXTO MONTA (Decisão 10). Todo contexto expõe o mesmo símbolo, e é isso que deixa o
@@ -39,4 +43,6 @@ export default {
 	GetOperatorIdentityController,
 	CompleteOnboardingController,
 	SaveOnboardingStepController,
+	GetIssueTimelineController,
+	GetThreadPanelLinkController,
 }

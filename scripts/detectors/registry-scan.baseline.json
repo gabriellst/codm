@@ -49,6 +49,8 @@
 	"packages/api/typescript/src/owner/repositories/OwnerRepository/DrizzleOwnerRepository.ts::repository#bp-08",
 	"packages/api/typescript/src/owner/repositories/OwnerRepository/MockOwnerRepository.ts::repository#bp-08",
 	"packages/api/typescript/src/owner/repositories/OwnerRepository/OwnerRepository.ts::repository#bp-08",
+	"packages/api/typescript/src/panel/usecases/GetPanelBoard.ts::usecase#bp-01",
+	"packages/api/typescript/src/panel/usecases/GetPanelIssue.ts::usecase#bp-01",
 	"packages/api/typescript/src/shared/controllers/Health.ts::controller#bp-04",
 	"packages/api/typescript/src/shared/controllers/Health.ts::schema#bp-01",
 	"packages/api/typescript/src/shared/controllers/Health.ts::usecase#bp-11",

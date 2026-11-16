@@ -14,6 +14,8 @@ export default {
 		agent: 'BFF Settings/AttachWizard read provider availability via the ProviderDetector service (detection probe).',
 		thread:
 			'BFF Settings reads the per-owner stop-policy toggles via StopPolicyConfigRepository (repositories surface), which lives in thread/ since B4 — the policy follows the aggregate that raises stops. Since the onboarding atomic-commit (spec 2026-08-26), CompleteOnboarding also composes AttachThread (usecases surface, named PolicyException) to materialize the wizard draft — see composition/policy.ts.',
+		issue:
+			"Console reads of fase 1 that live in the BFF: GetIssueTimeline composes issue's `assembleIssueTimeline` (utils, shared with the panel publisher) and throws issue's ISSUE_NOT_FOUND (errors); GetThreadPanelLink reads the link the PanelPublisher service holds (services). The rotate command stays in issue.",
 		workspace:
 			"CompleteOnboarding's atomic commit resolves/creates the wizard's workspace via WorkspaceRepository (repositories) and composes AddWorkspace (usecases surface, named PolicyException) — see composition/policy.ts.",
 	},

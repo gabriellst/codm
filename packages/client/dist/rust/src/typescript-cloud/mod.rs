@@ -1285,7 +1285,7 @@ pub mod types {
         pub issue_id: ::uuid::Uuid,
         pub key: ::std::string::String,
         #[serde(rename = "lifeState")]
-        pub life_state: ::codm_contracts_rust::wire::enums::IssueLifeState,
+        pub life_state: IssueLifeState,
         pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
         pub title: ::std::string::String,
         #[serde(rename = "updatedAt")]
@@ -1706,7 +1706,7 @@ pub mod types {
         pub issue_id: ::uuid::Uuid,
         pub key: ::std::string::String,
         #[serde(rename = "lifeState")]
-        pub life_state: ::codm_contracts_rust::wire::enums::IssueLifeState,
+        pub life_state: IssueLifeState,
         pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
         pub title: ::std::string::String,
         #[serde(rename = "updatedAt")]
@@ -2387,6 +2387,228 @@ pub mod types {
     for HealthResponseComponentsValue {
         fn from(value: &HealthResponseComponentsValue) -> Self {
             value.clone()
+        }
+    }
+    ///`IssueLifeState`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "RUNNING",
+    ///    "QUEUED",
+    ///    "WAITING_PROVIDER",
+    ///    "WAITING_PERSON",
+    ///    "REMINDED",
+    ///    "STALLED",
+    ///    "DONE"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum IssueLifeState {
+        #[serde(rename = "RUNNING")]
+        Running,
+        #[serde(rename = "QUEUED")]
+        Queued,
+        #[serde(rename = "WAITING_PROVIDER")]
+        WaitingProvider,
+        #[serde(rename = "WAITING_PERSON")]
+        WaitingPerson,
+        #[serde(rename = "REMINDED")]
+        Reminded,
+        #[serde(rename = "STALLED")]
+        Stalled,
+        #[serde(rename = "DONE")]
+        Done,
+    }
+    impl ::std::convert::From<&Self> for IssueLifeState {
+        fn from(value: &IssueLifeState) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for IssueLifeState {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Running => f.write_str("RUNNING"),
+                Self::Queued => f.write_str("QUEUED"),
+                Self::WaitingProvider => f.write_str("WAITING_PROVIDER"),
+                Self::WaitingPerson => f.write_str("WAITING_PERSON"),
+                Self::Reminded => f.write_str("REMINDED"),
+                Self::Stalled => f.write_str("STALLED"),
+                Self::Done => f.write_str("DONE"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for IssueLifeState {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "RUNNING" => Ok(Self::Running),
+                "QUEUED" => Ok(Self::Queued),
+                "WAITING_PROVIDER" => Ok(Self::WaitingProvider),
+                "WAITING_PERSON" => Ok(Self::WaitingPerson),
+                "REMINDED" => Ok(Self::Reminded),
+                "STALLED" => Ok(Self::Stalled),
+                "DONE" => Ok(Self::Done),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for IssueLifeState {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for IssueLifeState {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for IssueLifeState {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    ///`IssueTimelineItemKind`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "ARCHIVED",
+    ///    "ARTIFACT",
+    ///    "COMPLETED",
+    ///    "CREATED",
+    ///    "MESSAGE",
+    ///    "STEER",
+    ///    "STOP_RAISED",
+    ///    "STOP_RESOLVED",
+    ///    "TURN_STARTED"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum IssueTimelineItemKind {
+        #[serde(rename = "ARCHIVED")]
+        Archived,
+        #[serde(rename = "ARTIFACT")]
+        Artifact,
+        #[serde(rename = "COMPLETED")]
+        Completed,
+        #[serde(rename = "CREATED")]
+        Created,
+        #[serde(rename = "MESSAGE")]
+        Message,
+        #[serde(rename = "STEER")]
+        Steer,
+        #[serde(rename = "STOP_RAISED")]
+        StopRaised,
+        #[serde(rename = "STOP_RESOLVED")]
+        StopResolved,
+        #[serde(rename = "TURN_STARTED")]
+        TurnStarted,
+    }
+    impl ::std::convert::From<&Self> for IssueTimelineItemKind {
+        fn from(value: &IssueTimelineItemKind) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for IssueTimelineItemKind {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Archived => f.write_str("ARCHIVED"),
+                Self::Artifact => f.write_str("ARTIFACT"),
+                Self::Completed => f.write_str("COMPLETED"),
+                Self::Created => f.write_str("CREATED"),
+                Self::Message => f.write_str("MESSAGE"),
+                Self::Steer => f.write_str("STEER"),
+                Self::StopRaised => f.write_str("STOP_RAISED"),
+                Self::StopResolved => f.write_str("STOP_RESOLVED"),
+                Self::TurnStarted => f.write_str("TURN_STARTED"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for IssueTimelineItemKind {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "ARCHIVED" => Ok(Self::Archived),
+                "ARTIFACT" => Ok(Self::Artifact),
+                "COMPLETED" => Ok(Self::Completed),
+                "CREATED" => Ok(Self::Created),
+                "MESSAGE" => Ok(Self::Message),
+                "STEER" => Ok(Self::Steer),
+                "STOP_RAISED" => Ok(Self::StopRaised),
+                "STOP_RESOLVED" => Ok(Self::StopResolved),
+                "TURN_STARTED" => Ok(Self::TurnStarted),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for IssueTimelineItemKind {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for IssueTimelineItemKind {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for IssueTimelineItemKind {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`RotatePanelLinkResponse`
@@ -3726,7 +3948,7 @@ pub mod types {
         pub issue_id: ::uuid::Uuid,
         pub key: SyncPanelBodyIssuesItemKey,
         #[serde(rename = "lifeState")]
-        pub life_state: ::codm_contracts_rust::wire::enums::IssueLifeState,
+        pub life_state: IssueLifeState,
         pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
         #[serde(rename = "threadId")]
         pub thread_id: ::uuid::Uuid,
