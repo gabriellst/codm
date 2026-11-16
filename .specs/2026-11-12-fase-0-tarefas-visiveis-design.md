@@ -29,7 +29,7 @@ Complementa: `2026-11-12-pausa-por-pista-e-adiamento-liberavel-design.md` (item 
 - `GetIssueDetail.steers` + lista "Orientações enviadas" no detalhe.
 
 ### Item 4 — chave curta e título
-- Chave `<PREFIXO>-<n>`. O número vem de `agent_issue_sequences` (migração 0033), por **workspace**, sorteado na mesma transação do fork (`IssueSequenceRepository`). Dois grupos no mesmo repositório compartilham a numeração. Chaves antigas (slug) continuam válidas; as novas não colidem com elas.
+- Chave `<PREFIXO>-<n>`. O número vem de `agent_issue_sequences` (migração 0033), por **workspace**, sorteado na mesma transação do fork (`IssueSequence`). Dois grupos no mesmo repositório compartilham a numeração. Chaves antigas (slug) continuam válidas; as novas não colidem com elas.
 - Prefixo derivado da pasta do workspace (`workspace/objects/IssuePrefix`): uma palavra → 3 primeiras letras; várias → iniciais menos a última + 2 letras da última. Derivado, não gravado; um prefixo customizado seria um campo declarado futuro.
 - `ForkIssue` aceita `title` opcional (≤ 80). O prompt do orquestrador pede o título e o uso da chave ao falar de uma issue. `DeclareIssueOpen` usa a mesma chave.
 

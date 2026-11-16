@@ -12,7 +12,7 @@ import { IssueWorkAgent, IssueWorkPromptBuilder } from './agents/IssueWorkAgent'
 import { OrchestratorAgent, OrchestratorPromptBuilder } from './agents/OrchestratorAgent'
 import { AgentSessionRepository, LibSqlAgentSessionRepository, MockAgentSessionRepository } from './repositories/AgentSessionRepository'
 import { LibSqlMailboxRepository, MailboxRepository, MockMailboxRepository } from './repositories/MailboxRepository'
-import { IssueSequenceRepository, LibSqlIssueSequenceRepository, MockIssueSequenceRepository } from './repositories/IssueSequenceRepository'
+import { IssueSequence, LibSqlIssueSequence, MockIssueSequence } from './services/IssueSequence'
 import { StalledIssueReader, LibSqlStalledIssueReader, MockStalledIssueReader } from './services/StalledIssueReader'
 
 // E2E HERMETIC SEAM (see shared/registry.ts + src/boot.ts). The Playwright harness boots the REAL
@@ -85,10 +85,10 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	{ token: MailboxRepository, mock: MockMailboxRepository, integration: LibSqlMailboxRepository, real: LibSqlMailboxRepository },
 	// The per-workspace counter behind an issue's short key (`<PREFIX>-<n>`), drawn inside the fork's transaction.
 	{
-		token: IssueSequenceRepository,
-		mock: MockIssueSequenceRepository,
-		integration: LibSqlIssueSequenceRepository,
-		real: LibSqlIssueSequenceRepository,
+		token: IssueSequence,
+		mock: MockIssueSequence,
+		integration: LibSqlIssueSequence,
+		real: LibSqlIssueSequence,
 	},
 	// A varredura de issues órfãs lê a tabela `issues` a partir daqui — mesmo padrão de
 	// `thread/services/OpenIssuesReader`. `integration` usa a implementação REAL de propósito: o teste do
