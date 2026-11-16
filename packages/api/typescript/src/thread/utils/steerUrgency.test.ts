@@ -20,10 +20,18 @@ describe('parseSteerUrgency', () => {
 		expect(parseSteerUrgency(text)).toEqual({ urgency: SteerUrgency.NOW, text: instruction })
 	})
 
-	it.each(['tira o rodapé agora', 'agora', 'APP-12 agora', 'agorinha tira o rodapé', 'APP-12 usa o azul'])(
-		'%p stays NEXT_STEP, text untouched',
-		text => {
-			expect(parseSteerUrgency(text)).toEqual({ urgency: SteerUrgency.NEXT_STEP, text })
-		},
-	)
+	it.each([
+		'tira o rodapé agora',
+		'agora',
+		'APP-12 agora',
+		'agorinha tira o rodapé',
+		'APP-12 usa o azul',
+		// A reaction to the work, not an order — cutting the turn would throw the work away.
+		'agora sim, ficou ótimo',
+		'Agora ficou bom',
+		'APP-12 agora deu certo',
+		'agora está perfeito',
+	])('%p stays NEXT_STEP, text untouched', text => {
+		expect(parseSteerUrgency(text)).toEqual({ urgency: SteerUrgency.NEXT_STEP, text })
+	})
 })
