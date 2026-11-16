@@ -44,6 +44,10 @@ Palavra de controle + alvo → a issue fica pausada no daemon na hora; as ferram
 
 **Visibilidade.** `IssueTimelineItemKind` ganhou `PAUSED` / `RESUMED` (com `source` e `by`); `IssueLifeState` ganhou `PAUSED`, que vence tudo menos DONE (um item adiado por pausa não é "esperando cota"; o selo de cota e a varredura de issues paradas ignoram issues pausadas). `GetIssuesOverview` / `GetIssueDetail` expõem `paused`. Console: quadro põe PAUSED na coluna de paradas com selo "Pausada"; detalhe da issue tem botão Pausar/Retomar (hooks do SDK) e o selo.
 
+A tabela do painel na nuvem (`panel.panel_issues`) restringe `life_state` por CHECK: migração de nuvem 0004 aceita `PAUSED` (aplicar no deploy, antes do daemon novo publicar).
+
+**Limites conhecidos.** O abort chega pelo outbox (poll de até 1 s), não síncrono. Um primeiro turno morto pela pausa recomeça do brief ao retomar (nenhum cursor de sessão é gravado). Um steer segurado aparece como "entregue" na linha do tempo (o `firstClaimedAt` é carimbado no claim). `para` colide com a preposição: "Para quando fica pronto?" citando uma mensagem de issue a pausa. Citar a linha DIRECT de uma issue (não SYSTEM) num grupo com portão de menção exige a menção, como no steer.
+
 **Fora deste item.** Pausa do grupo inteiro por comando no WhatsApp (só pelo console); evento de integração para o quadro se atualizar sozinho na pausa (atualiza no próximo refresh ou pelo botão).
 
 ### 3. Janela de arrependimento

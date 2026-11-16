@@ -130,6 +130,20 @@ describe('a control word with a target pauses / resumes the issue, with no turn'
 		expect(await cues()).toEqual([CUE_PAUSED])
 	})
 
+	// Same authorization as the steer path: quoting the agent's OWN words (SYSTEM) lowers the mention gate;
+	// an issue run's direct line is DIRECT, so under the gate the tag is still needed.
+	it('quoting an issue’s DIRECT line needs the mention tag, like any other address', async () => {
+		const { thread, issue } = await scene()
+		const direct = thread.recordEntry({ kind: TranscriptKind.DIRECT, text: 'publiquei a prévia', issueId: issue.id.value })
+		await testBed.resolve(ThreadRepository).save(thread)
+
+		await ingest(thread.id.value, 'pare', direct.entryId)
+		expect(await pausedOf(issue.id.value)).toBe(false)
+
+		await ingest(thread.id.value, `${GIVEN_MENTION_TAG} pare`, direct.entryId)
+		expect(await pausedOf(issue.id.value)).toBe(true)
+	})
+
 	it('a control word WITHOUT a target goes to the orchestrator unchanged', async () => {
 		const { thread, issue } = await scene()
 

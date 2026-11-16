@@ -1,0 +1,2 @@
+ALTER TABLE "panel"."panel_issues" DROP CONSTRAINT "panel_issues_life_state_check";--> statement-breakpoint
+ALTER TABLE "panel"."panel_issues" ADD CONSTRAINT "panel_issues_life_state_check" CHECK ("panel"."panel_issues"."life_state" IN ('RUNNING', 'QUEUED', 'WAITING_PROVIDER', 'WAITING_PERSON', 'REMINDED', 'STALLED', 'PAUSED', 'DONE'));

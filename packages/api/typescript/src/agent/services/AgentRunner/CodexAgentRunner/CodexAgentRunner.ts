@@ -289,6 +289,9 @@ export class CodexAgentRunner extends AgentRunner {
 			proc.kill()
 		}
 		request.signal?.addEventListener('abort', onAbort, { once: true })
+		// An abort that landed BEFORE this line never fires the listener — a pause between the caller's own
+		// check and the spawn (fase 2, item 2) would leave the child unkillable. Honor it now.
+		if (request.signal?.aborted) onAbort()
 
 		try {
 			const iterator = proc.stdout[Symbol.asyncIterator]()
