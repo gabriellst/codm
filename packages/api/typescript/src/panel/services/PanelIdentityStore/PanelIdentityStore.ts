@@ -36,10 +36,11 @@ export interface PanelSessionRow {
  * Who a panel visitor is (fase 2, item 6a) — the roster the daemon reports, the code requests a person
  * makes, and the device sessions a verified code opens.
  *
- * Every write that has to be RACE-SAFE is one conditional statement here, never a read-then-write in a
- * use case: spending an attempt (`spendAttempt`) and consuming a code (`consume`) are each a single
- * `UPDATE … WHERE … RETURNING`, so two tabs with the same code cannot both win and a burst of guesses
- * cannot exceed the cap.
+ * The writes that guard a SECRET are one conditional statement each, never a read-then-write in a use
+ * case: issuing (`issue`), spending an attempt (`spendAttempt`) and consuming a code (`consume`) are each
+ * a single `UPDATE … WHERE … RETURNING`, so two tabs with the same code cannot both win and a burst of
+ * guesses cannot exceed the cap. The request rate limit is read-then-insert on purpose: a race there
+ * costs one extra DM, not a guess.
  */
 export abstract class PanelIdentityStore {
 	/** The group a link token opens, or nothing. */
