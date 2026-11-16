@@ -80,7 +80,7 @@ describe('an issue waiting on the provider says so, and until when', () => {
 		const claimed = await mailbox.claimNext('provider-wait-test', 60_000, [MailboxTargetKind.ISSUE])
 		if (!claimed) throw new Error('no item claimed')
 		await mailbox.defer(claimed.id, new Date(Date.now() + 60 * 60_000))
-		await mailbox.releaseDeferred(MailboxTargetKind.ISSUE)
+		await mailbox.releaseDeferred([claimed.id])
 
 		const detail = await testBed.resolve(GetIssueDetail).execute({ ownerId: MOCK_CLOUD_OWNER_ID, issueId: issue.id.value })
 		expect(detail.issue.waitingForProviderUntil).toBeUndefined()

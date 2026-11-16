@@ -1,7 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import type { DependencyContainer } from 'tsyringe-neo'
 import { LoggingService, type PollingService } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { MailboxItemKind, MailboxTargetKind, type ProviderKind, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { ProductConfig } from '@shared/config/ProductConfig'
 import { CloudSession } from '@shared/services/CloudSession'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { NotifyProviderPaused } from '@thread/usecases/NotifyProviderPaused'
@@ -47,24 +48,10 @@ const MAX_TURN_MS = 60 * 60 * 1000
 /**
  * The shortest pause a usage-limit refusal buys, even when the provider's reset instant is already past
  * (a clock skew, or a CLI still refusing right after its window) — so a stale instant cannot become a
- * claim-refuse-claim loop. See `waitForProvider`.
+ * claim-refuse-claim loop. See `waitForProvider`. It also wins over `CODM_AGENT_LIMIT_RECHECK_MS`: a
+ * recheck configured below it would be that same loop by another name.
  */
 const PROVIDER_PAUSE_FLOOR_MS = 60_000
-/**
- * How long a lane stays paused before it asks the provider again, whatever reset instant it was given.
- *
- * ### The failure this closes
- * The instant comes from the provider and can be a WEEK out: measured 2026-11-11, the issue lane was
- * refused with a weekly window and its items were deferred to 11-17 — while the conversation lane, on
- * the same account, kept answering. A window that long outlives the reasons it was set: the operator
- * switches the thread to another model, the plan is upgraded, the limit is lifted early. Nothing in
- * the queue can observe any of that, so it ASKS: every half hour the lane's deferrals are released and
- * the next claim either runs or is refused in seconds and deferred again (attempt refunded).
- *
- * The price of a probe that is refused is one CLI spawn per free slot of that lane — a handful of
- * seconds of a process every thirty minutes, against days of silence when the window was wrong.
- */
-const PROVIDER_PROBE_INTERVAL_MS = 30 * 60_000
 /** Past this many failed turns an item is POISONED rather than retried — it is blocking its target. */
 const MAX_ATTEMPTS = 3
 const POLL_MIN_MS = 250
@@ -110,6 +97,12 @@ const TURN_LANES: Readonly<Record<MailboxTargetKind, { slots: number; priority: 
 /**
  * What a turn reports back to `runTurn`, which is the ONLY place that writes to the mailbox.
  *
+ * Two shapes, because "a turn ran" and "the target vanished" carry different facts. A turn that RAN
+ * names its `provider` — the CLI it ran on, which is what a usage-limit pause is keyed by: the limit is
+ * that provider's ACCOUNT's, and only a turn of the same provider can show the account answers again
+ * (see `creditAcceptedTurn`). A dropped report never resolved a CLI, so it has none to name — and the
+ * type, not a comment, is what keeps a turn that ran from forgetting to say which.
+ *
  * `spoke` exists because retrying is not always safe: `RunOrchestratorTurn` streams via progressive
  * cuts, so a turn that already delivered a cut and only then died has ALREADY SPOKEN in the operator's
  * real chat, and a second attempt would produce a second message. `transportStop` without `spoke` is
@@ -119,11 +112,31 @@ const TURN_LANES: Readonly<Record<MailboxTargetKind, { slots: number; priority: 
  * turn ran": `dropSilently` no longer writes to the mailbox on its own — the double-write it used to do
  * here was harmless while `complete` was the only outcome, and becomes ambiguous now that there are two.
  */
-export interface TurnReport {
-	spoke: boolean
-	/** `retryAfter` (epoch ms): the provider named the instant a retry can succeed — see `waitForProvider`. */
-	transportStop?: { detail: string; retryAfter?: number }
-	dropped?: boolean
+export type TurnReport =
+	| {
+			spoke: boolean
+			provider: ProviderKind
+			/** `retryAfter` (epoch ms): the provider named the instant a retry can succeed — see `waitForProvider`. */
+			transportStop?: { detail: string; retryAfter?: number }
+			dropped?: never
+	  }
+	| { dropped: true; spoke: false; provider?: never; transportStop?: never }
+
+/** The thread as the repository hands it over — derived from the seam, as `RunOrchestratorTurn` does. */
+type LoadedThread = NonNullable<Awaited<ReturnType<ThreadRepository['findById']>>>
+
+/**
+ * A provider account's usage-limit refusal, as THIS run of the daemon last saw it. In memory on purpose:
+ * after a restart the first refused claim re-establishes it, and every item it refused is already
+ * deferred in the table — where `creditAcceptedTurn` finds it whether this run remembers it or not.
+ */
+interface ProviderLimit {
+	/** When the refusal came back. Only a turn that STARTED after it is evidence the account answers again. */
+	refusedAt: number
+	/** Until when nothing new is claimed: the reported reset, capped by `limitRecheckMs`, floored. */
+	recheckAt: number
+	/** The reset the provider reported (floored) — what conversations are told, never the recheck. */
+	resetsAt: number
 }
 
 /**
@@ -154,34 +167,20 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	protected maxTurnMs = MAX_TURN_MS
 	/** Slots and claim order per target kind. A field for the same reason as `leaseMs`; see `TURN_LANES`. */
 	protected lanes = TURN_LANES
-	/** How long a paused lane waits before asking again. A field for the same reason; see the constant. */
-	protected probeIntervalMs = PROVIDER_PROBE_INTERVAL_MS
 	/**
-	 * Per LANE, the epoch ms until which nothing new of that kind is claimed — the provider is refusing
-	 * that kind of turn until then.
-	 *
-	 * ### Why per lane and not one for the queue
-	 * The two lanes do not hit the same wall. An issue turn is a coding agent on the thread's model for
-	 * minutes; a conversation turn is a short reply. Measured 2026-11-11: the issue lane was refused with
-	 * a weekly window while conversation turns on the same account kept completing. One queue-wide pause
-	 * would have silenced every group for a week to protect turns that were never going to be refused.
-	 * A refusal now pauses only the lane it came from; the other lane keeps running.
-	 *
-	 * In memory on purpose: after a restart the deferrals are released (`releaseDeferredOnce`) and the
-	 * first claim meets the same refusal if it still holds, re-establishing the pause at the cost of one
-	 * refused call per free slot.
+	 * THE CEILING ON A USAGE-LIMIT PAUSE — after at most this long the queue asks the provider again,
+	 * whatever reset it reported. A field for the same reason as `leaseMs`. See `waitForProvider`.
 	 */
-	private readonly pausedUntil = new Map<MailboxTargetKind, number>()
-	/** Per lane, when the current pause last asked the provider again — see `PROVIDER_PROBE_INTERVAL_MS`. */
-	private readonly probedAt = new Map<MailboxTargetKind, number>()
+	protected limitRecheckMs = ProductConfig.env.CODM_AGENT_LIMIT_RECHECK_MS
+	/** See `PROVIDER_PAUSE_FLOOR_MS`. A field for the same reason as `leaseMs`. */
+	protected providerPauseFloorMs = PROVIDER_PAUSE_FLOOR_MS
 	/**
-	 * Conversations already told about the CURRENT pause of a lane, keyed `<lane>:<threadId>` — the notice
-	 * says which half stopped, so a conversation told "the tasks stopped" must still be told if its own
-	 * replies stop later. Cleared per lane once a turn of that lane gets through after the window.
+	 * The refusals this run has seen, per provider — until the same provider accepts a turn that started
+	 * after its refusal (`creditAcceptedTurn`). See `ProviderLimit` for why this lives in memory.
 	 */
+	private readonly limits = new Map<ProviderKind, ProviderLimit>()
+	/** Conversations already told about the CURRENT pause — cleared once its provider answers again (`creditAcceptedTurn`). */
 	private readonly noticed = new Set<string>()
-	/** Whether this run already released the deferrals it inherited — see `releaseDeferredOnce`. */
-	private deferredReleased = false
 	private draining: Promise<number> | null = null
 	/**
 	 * Whether the leases of dead boots have been released THIS run. The sweep is a boot-time repair,
@@ -203,6 +202,17 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	 */
 	get running(): boolean {
 		return this.timer !== null || this.draining !== null
+	}
+
+	/**
+	 * Epoch ms until which NOTHING new is claimed — the latest recheck of any provider still refusing.
+	 *
+	 * GLOBAL, not per provider, and it cannot be otherwise: `claimNext` does not know which CLI an item
+	 * will run on until its thread is read, after the claim. So in an install with two CLIs, a codex
+	 * conversation waits out a claude pause — for at most `limitRecheckMs`, which is what the ceiling buys.
+	 */
+	private get pausedUntil(): number {
+		return Math.max(0, ...[...this.limits.values()].map(limit => limit.recheckAt))
 	}
 
 	constructor(
@@ -349,8 +359,6 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			}
 		}
 
-		await this.releaseDeferredOnce()
-
 		let handled = 0
 		const inflight = new Set<Promise<void>>()
 		/** Turns in flight per lane — what decides which lanes the next claim may draw from. */
@@ -358,14 +366,13 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 		const laneOrder = Object.values(MailboxTargetKind).sort((a, b) => this.lanes[a].priority - this.lanes[b].priority)
 
 		for (;;) {
-			// THE PAUSE (see `waitForProvider`), per lane: a lane the provider is refusing claims nothing —
-			// its turns in flight finish on their own — while the other lane keeps going. A long pause asks
-			// again every `PROVIDER_PROBE_INTERVAL_MS`. Conversations waiting on a paused conversation lane
-			// are told; the issue lane tells its own threads when it pauses.
-			await this.probeLongPauses()
-			if (this.isPaused(MailboxTargetKind.THREAD)) await this.noticePausedConversations(MailboxTargetKind.THREAD)
+			// THE PAUSE (see `waitForProvider`): while the account refuses, claim nothing — turns in flight
+			// finish on their own — and make sure everybody waiting has been told. When it ends, the next
+			// pause starts with nobody noticed.
+			const paused = Date.now() < this.pausedUntil
+			if (paused) await this.noticePausedConversations()
 
-			const open = laneOrder.filter(kind => !this.isPaused(kind) && (running.get(kind) ?? 0) < this.lanes[kind].slots)
+			const open = paused ? [] : laneOrder.filter(kind => (running.get(kind) ?? 0) < this.lanes[kind].slots)
 			const item = open.length > 0 ? await this.mailbox.claimNext(this.workerId, this.leaseMs, open) : undefined
 
 			if (item) {
@@ -551,7 +558,7 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 				// is not a failure — the turn never ran — so it waits for that instant instead of spending
 				// one of three instant retries. See `waitForProvider`.
 				if (report.transportStop.retryAfter !== undefined) {
-					await this.waitForProvider(item, report.transportStop.retryAfter)
+					await this.waitForProvider(item, report.transportStop.retryAfter, report.provider)
 					return
 				}
 				await this.recordFailure(item, report.transportStop.detail)
@@ -561,9 +568,10 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			await this.mailbox.complete(item.id)
 			// THE PAUSE IS OVER WHEN A TURN GETS THROUGH, not when the clock passes `pausedUntil`. A CLI that
 			// keeps refusing past its reported reset re-pauses on the floor, and clearing on the clock would
-			// re-send "atingi o limite" to every group once a minute. A turn that completed after the window
-			// is the evidence the provider is answering again.
-			if (!this.isPaused(item.targetKind)) this.clearNoticed(item.targetKind)
+			// re-send "atingi o limite" to every group once a minute. A turn the provider ran to its end is
+			// the evidence it is answering again — so a dropped report (no CLI ran) and any transport stop
+			// (one that spoke and THEN hit the limit included) prove nothing and credit nothing.
+			if (!report.dropped && report.transportStop === undefined) await this.creditAcceptedTurn(report.provider, startedAt)
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error)
 
@@ -595,35 +603,48 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	 * ### What happens instead
 	 * - The item is DEFERRED (`MailboxRepository.defer`): the attempt its claim charged is refunded and it
 	 *   stays unclaimable until the reset, so no attempt is ever spent on a known refusal.
-	 * - The item's LANE pauses until then (`pausedUntil`): every other item of that kind would hit the same
-	 *   wall, and claiming them would only spawn CLIs to be refused. The other lane keeps running — see
-	 *   `pausedUntil` for why one queue-wide pause was wrong. Turns already in flight finish on their own.
-	 * - Each conversation owed an answer is TOLD, once per pause, what stopped and when it resumes — with
-	 *   the date when that is not today (`noticePausedConversations`).
-	 * - The pause is not taken on faith for its whole length: it asks again every
-	 *   `PROVIDER_PROBE_INTERVAL_MS` (`probeLongPauses`), and a restart releases what it deferred
-	 *   (`releaseDeferredOnce`).
+	 * - The whole queue PAUSES until then (`pausedUntil`): every other item would hit the same wall, and
+	 *   claiming them would only spawn CLIs to be refused. Turns already in flight finish on their own.
+	 * - Each conversation owed an answer is TOLD, once per pause, with the time it resumes
+	 *   (`noticePausedConversations`).
 	 *
 	 * The floor (`PROVIDER_PAUSE_FLOOR_MS`) guards a reset instant already in the past — a clock skew, or a
 	 * CLI still refusing just after the window — from turning into a retry loop.
 	 *
+	 * ### …but never longer than the ceiling (`limitRecheckMs`, `CODM_AGENT_LIMIT_RECHECK_MS`)
+	 * The reset is the provider's statement about an ACCOUNT, and the account can change under the pause.
+	 * Measured 2026-11-05: a fresh login, other issues running on it, and four items still parked until
+	 * the old account's weekly reset on 10/11. When a turn of the same provider gets through,
+	 * `creditAcceptedTurn` ends the pause at once — but when EVERYTHING is paused no turn runs to prove
+	 * anything, so the item's lease and the claim gate both end at `min(reset, now + ceiling)` and the
+	 * queue asks again. Asking is cheap: a refusal comes back at once, spends no tokens, and `defer` gives
+	 * its attempt back. What the conversations are told stays the provider's reset (`resumesAt`): the
+	 * recheck is when the queue asks, not when it promises to answer.
+	 *
 	 * NEVER REJECTS, for the same reason `recordFailure` never does.
 	 */
-	private async waitForProvider(item: ClaimedMailboxItem, retryAfter: number): Promise<void> {
-		const lane = item.targetKind
-		const until = Math.max(retryAfter, Date.now() + PROVIDER_PAUSE_FLOOR_MS)
-		this.pausedUntil.set(lane, Math.max(this.pausedUntil.get(lane) ?? 0, until))
-		if (!this.probedAt.has(lane)) this.probedAt.set(lane, Date.now())
+	private async waitForProvider(item: ClaimedMailboxItem, retryAfter: number, provider: ProviderKind): Promise<void> {
+		const now = Date.now()
+		const resetsAt = Math.max(retryAfter, now + this.providerPauseFloorMs)
+		// THE CEILING, and the floor applied LAST: a recheck configured below the floor would be the very
+		// claim-refuse-claim loop the floor exists to prevent.
+		const recheckAt = Math.max(Math.min(resetsAt, now + this.limitRecheckMs), now + this.providerPauseFloorMs)
+		// The LATEST refusal is the provider's latest word about the account, so it replaces the previous one
+		// rather than being merged into it: a pause recorded for a login that has since been swapped out must
+		// not outlive the swap. Refusals within one pass carry the same reset anyway.
+		this.limits.set(provider, { refusedAt: now, recheckAt, resetsAt })
 		this.logging.warn({
 			content: {
-				message: 'provider usage limit reached — the lane waits for the reset',
+				message: 'provider usage limit reached — the mailbox waits for the reset',
 				itemId: item.id,
-				targetKind: lane,
-				until: new Date(until).toISOString(),
+				targetKind: item.targetKind,
+				provider,
+				until: new Date(resetsAt).toISOString(),
+				recheckAt: new Date(recheckAt).toISOString(),
 			},
 		})
 		try {
-			await this.mailbox.defer(item.id, new Date(until))
+			await this.mailbox.defer(item.id, new Date(recheckAt))
 		} catch (error) {
 			this.logging.error({
 				content: {
@@ -633,75 +654,91 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 				},
 			})
 		}
-		// The item's own conversation: a THREAD item names it, an ISSUE item carries it on its payload.
-		const payload = item.payload as { threadId?: string }
-		const threadId = item.targetKind === MailboxTargetKind.THREAD ? item.targetId : payload.threadId
-		await this.noticePausedConversations(lane, threadId ? [threadId] : [])
-	}
-
-	private isPaused(lane: MailboxTargetKind): boolean {
-		return Date.now() < (this.pausedUntil.get(lane) ?? 0)
-	}
-
-	private clearNoticed(lane: MailboxTargetKind): void {
-		for (const key of this.noticed) if (key.startsWith(`${lane}:`)) this.noticed.delete(key)
-		this.probedAt.delete(lane)
+		const threadId = this.threadIdOf(item)
+		await this.noticePausedConversations(threadId ? [threadId] : [])
 	}
 
 	/**
-	 * Once per run, BEFORE the first claim: release every deferral left in the table by a previous run.
+	 * A TURN OF `provider` RAN TO ITS END — its account is answering, so every usage-limit pause that
+	 * provider caused ends NOW, instead of at a reset that may belong to an account nobody is logged into
+	 * anymore.
 	 *
-	 * The pause that justified them was in that run's memory and is gone; keeping the rows deferred would
-	 * leave exactly those targets — and every message queued behind them — waiting out a window nobody
-	 * is tracking anymore, while every other target runs (the 2026-11-11 incident, which survived two
-	 * restarts). If the provider still refuses, the first claims re-establish the pause in seconds.
+	 * ### The failure this closes
+	 * Measured 2026-11-05: the claude CLI was logged into a fresh account, other issues ran normally on it,
+	 * and four items stayed parked until 10/11 14:00 — the weekly reset of the OLD account — until
+	 * `lease_until` was cleared by hand in SQLite. The pause trusted the reset; the account had changed.
+	 * A reset that arrives EARLY (a plan change, a window reset by the provider) is the same failure.
 	 *
-	 * The flag is set only on SUCCESS, like the orphan sweep: a failed write retries on the next drain.
+	 * ### Evidence older than the refusal is not evidence
+	 * The turn must have STARTED after this run's last refusal by the same provider. A turn already in
+	 * flight when the account refused may have made its last call before the limit and finished fine after
+	 * it; releasing on it would claim every paused item straight into the same refusal and, with `noticed`
+	 * cleared, tell every conversation "atingi o limite" a second time. After a restart this run has seen
+	 * no refusal, so any accepted turn counts — which is the case measured. Within one run no new turn
+	 * starts while the pause holds, so the first evidence is the recheck the ceiling schedules.
+	 *
+	 * ### Only the SAME provider's pauses
+	 * The limit is an account's, and the account is per CLI: a turn the codex accepted says nothing about
+	 * the claude login. The item does not carry its provider — which CLI it runs on is a property of its
+	 * thread NOW, the rule `providerFor` states — so the candidates the table returns are resolved here by
+	 * that same rule, and only the ones that would run on `provider` are released. A candidate whose thread
+	 * is gone resolves to nothing and is left alone: its pause lapses on its own at the ceiling, and the
+	 * claim then drops it.
+	 *
+	 * NEVER REJECTS: it runs after `complete`, and a throw would land in `runTurn`'s catch and `fail` an
+	 * item that was already consumed.
 	 */
-	private async releaseDeferredOnce(): Promise<void> {
-		if (this.deferredReleased) return
-		let released = 0
-		for (const lane of Object.values(MailboxTargetKind)) released += await this.mailbox.releaseDeferred(lane)
-		this.deferredReleased = true
-		if (released > 0) {
-			this.logging.info({ content: { message: 'released mailbox items deferred by a previous run', released } })
-		}
-	}
-
-	/**
-	 * A lane paused for longer than `PROVIDER_PROBE_INTERVAL_MS` asks the provider again: the pause is
-	 * lifted and the lane's deferrals released, so the next pass claims. A refusal re-pauses it through
-	 * `waitForProvider` with the attempt refunded; a turn that gets through ends the pause for good.
-	 * Conversations are not told again — `noticed` survives a probe and is cleared only by a success.
-	 */
-	private async probeLongPauses(): Promise<void> {
-		const now = Date.now()
-		for (const [lane, until] of this.pausedUntil) {
-			if (now >= until) continue
-			const since = this.probedAt.get(lane) ?? now
-			if (now - since < this.probeIntervalMs) continue
-			try {
-				const released = await this.mailbox.releaseDeferred(lane)
-				this.pausedUntil.delete(lane)
-				this.probedAt.set(lane, now)
-				this.logging.info({
-					content: {
-						message: 'provider pause probe — the lane asks again before its reset',
-						targetKind: lane,
-						until: new Date(until).toISOString(),
-						released,
-					},
-				})
-			} catch (error) {
-				this.logging.error({
-					content: {
-						message: 'could not release deferred items for a probe — the next drain retries',
-						targetKind: lane,
-						error: error instanceof Error ? error.message : String(error),
-					},
-				})
+	private async creditAcceptedTurn(provider: ProviderKind, startedAt: number): Promise<void> {
+		const limit = this.limits.get(provider)
+		if (limit && startedAt <= limit.refusedAt) return
+		this.limits.delete(provider)
+		// `noticed` belongs to the pause as a whole: it empties only when the LAST refusing provider has
+		// shown it answers, so a codex turn never re-arms the notices of a claude pause still in force.
+		if (this.limits.size === 0) this.noticed.clear()
+		try {
+			const ids: string[] = []
+			for (const candidate of await this.mailbox.deferred()) {
+				const threadId = this.threadIdOf(candidate)
+				const thread = threadId ? await this.threads.findById(threadId) : undefined
+				if (thread && this.providerFor(candidate, thread) === provider) ids.push(candidate.id)
 			}
+			const released = await this.mailbox.releaseDeferred(ids)
+			if (released > 0) {
+				this.logging.info({ content: { message: 'the provider answered — its usage-limit pauses were released', provider, released } })
+			}
+		} catch (error) {
+			this.logging.error({
+				content: {
+					message: 'could not release usage-limit pauses — they lapse at the recheck ceiling instead',
+					provider,
+					error: error instanceof Error ? error.message : String(error),
+				},
+			})
 		}
+	}
+
+	/** The conversation an item belongs to: a THREAD item names it, an ISSUE item carries it on its payload. */
+	private threadIdOf(item: Pick<ClaimedMailboxItem, 'targetKind' | 'targetId' | 'payload'>): string | undefined {
+		const payload = item.payload as { threadId?: string }
+		return item.targetKind === MailboxTargetKind.THREAD ? item.targetId : payload.threadId
+	}
+
+	/**
+	 * THE CLI AN ITEM'S TURN RUNS ON — the thread's first provider, NOW, with the item's own
+	 * `payload.provider` as the fallback an ISSUE item has always had (a THREAD item carries none). One
+	 * rule for the three places that ask: the two turns, and the release, which must free exactly the
+	 * items that would run on the provider that just answered.
+	 */
+	private providerFor(item: Pick<ClaimedMailboxItem, 'payload'>, thread: LoadedThread): ProviderKind | undefined {
+		return thread.providers[0] ?? (item.payload as { provider?: ProviderKind }).provider
+	}
+
+	/**
+	 * The instant conversations are TOLD the answers resume: the latest reset any refusing provider
+	 * reported. Never the recheck — that is when the queue asks again, not a promise it can keep.
+	 */
+	private get resumesAt(): number {
+		return Math.max(0, ...[...this.limits.values()].map(limit => limit.resetsAt))
 	}
 
 	/**
@@ -711,25 +748,16 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	 * Called on entering the pause and on every drain while it lasts, so a message that ARRIVES during
 	 * the pause gets the notice too instead of a silent 👀. Best-effort: a failed notice is logged and
 	 * the next drain tries again, because the conversation is only marked noticed once it succeeded. The
-	 * set is cleared by the first turn that completes after the window (see `runTurn`).
+	 * set is cleared once the last refusing provider has run a turn to its end (`creditAcceptedTurn`) —
+	 * not by the recheck: asking again and being refused again is the same pause, already announced.
 	 */
-	private async noticePausedConversations(lane: MailboxTargetKind, extra: readonly string[] = []): Promise<void> {
+	private async noticePausedConversations(extra: readonly string[] = []): Promise<void> {
 		try {
-			// A paused CONVERSATION lane owes a notice to every conversation waiting for a reply; a paused
-			// ISSUE lane only to the threads whose issues it refused (`extra`) — the others are not waiting.
-			const waiting = lane === MailboxTargetKind.THREAD ? await this.mailbox.pendingTargets(MailboxTargetKind.THREAD) : []
-			const owed = new Set([...extra, ...waiting])
-			const until = new Date(this.pausedUntil.get(lane) ?? Date.now())
+			const owed = new Set([...extra, ...(await this.mailbox.pendingTargets(MailboxTargetKind.THREAD))])
 			for (const threadId of owed) {
-				const key = `${lane}:${threadId}`
-				if (this.noticed.has(key)) continue
-				await this.handlerFor(NotifyProviderPaused).execute({
-					threadId,
-					until,
-					lane,
-					probeEveryMinutes: Math.max(1, Math.round(this.probeIntervalMs / 60_000)),
-				})
-				this.noticed.add(key)
+				if (this.noticed.has(threadId)) continue
+				await this.handlerFor(NotifyProviderPaused).execute({ threadId, until: new Date(this.resumesAt) })
+				this.noticed.add(threadId)
 			}
 		} catch (error) {
 			this.logging.error({
@@ -790,10 +818,10 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 		const workspace = await this.workspaces.findById(thread.workspaceId)
 		if (!workspace) return this.dropSilently(item, 'workspace no longer bound')
 
-		const provider = thread.providers[0]
+		const provider = this.providerFor(item, thread)
 		if (!provider) return this.dropSilently(item, 'thread has no provider')
 
-		const payload = item.payload as { entryId?: string; originEntryId?: string; issueId?: string }
+		const payload = item.payload as { entryId?: string; originEntryId?: string }
 		const result = await this.handlerFor(RunOrchestratorTurn).execute({
 			ownerId: item.ownerId,
 			threadId: item.targetId,
@@ -815,11 +843,8 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			// the run-token claims, because this turn was triggered by a subagent finishing, not by a
 			// message — there is no entry to mint a claim from.
 			originEntryId: item.kind === MailboxItemKind.ISSUE_RESULT ? payload.originEntryId : undefined,
-			// The issue whose result this turn composes — what makes the reply that issue's message in the
-			// transcript. Absent on a result queued before the field existed; the reply then records unbound.
-			issueId: item.kind === MailboxItemKind.ISSUE_RESULT ? payload.issueId : undefined,
 		})
-		return { spoke: result.spoke, transportStop: result.transportStop }
+		return { spoke: result.spoke, provider, transportStop: result.transportStop }
 	}
 
 	/**
@@ -856,10 +881,8 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			title: string
 			goal?: string
 			text?: string
-			provider: string
 			originEntryId?: string
 			firedByLoop?: string
-			declarationReminder?: boolean
 		}
 		const thread = await this.threads.findById(payload.threadId)
 		if (!thread) return this.dropSilently(item, 'thread no longer exists')
@@ -869,7 +892,8 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 
 		const session = await this.sessions.findByIssueId(item.targetId)
 
-		const provider = thread.providers[0] ?? (payload.provider as never)
+		const provider = this.providerFor(item, thread)
+		if (!provider) return this.dropSilently(item, 'thread has no provider')
 
 		const result = await this.handlerFor(RunIssueTurn).execute({
 			ownerId: item.ownerId,
@@ -904,10 +928,8 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			priorMessageId: session?.lastMessageId,
 			// Carried through so `persistOutcome` can put it on the ISSUE_RESULT it queues.
 			originEntryId: payload.originEntryId,
-			// The automatic reminder to declare (`RunIssueTurn.remindToDeclare`) — silent, and never re-reminded.
-			declarationReminder: payload.declarationReminder === true,
 		})
-		return { spoke: result.spoke, transportStop: result.transportStop }
+		return { spoke: result.spoke, provider, transportStop: result.transportStop }
 	}
 
 	/**
@@ -927,10 +949,7 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 	 */
 	private async raiseStopForPoisoned(item: ClaimedMailboxItem, cause: string): Promise<void> {
 		try {
-			// A THREAD item names its thread directly; an ISSUE item carries it on the payload, which is
-			// where `runIssueWork` already reads it from.
-			const payload = item.payload as { threadId?: string }
-			const threadId = item.targetKind === MailboxTargetKind.THREAD ? item.targetId : payload.threadId
+			const threadId = this.threadIdOf(item)
 			if (!threadId) return
 
 			await this.handlerFor(RaiseStop).execute({
