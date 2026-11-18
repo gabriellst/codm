@@ -1,4 +1,4 @@
-import { IssueLifeState, IssueSignalLevel, Language, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { BlockCause, IssueLifeState, IssueSignalLevel, Language, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { defineMessages } from '@shared/i18n/messages'
 import { PanelActionEcho } from '../enums/PanelActionEcho'
 import { BulletinSection } from '../enums/ThreadCommand'
@@ -211,9 +211,11 @@ export interface BulletinRow {
 	key: string
 	title: string
 	lifeState: IssueLifeState
-	/** WAITING: the codes of its open asks (`APP-12 · D1`) and who decides, when the issue declared it. */
+	/** The codes of its open asks (`APP-12 · D1`) and who decides, when the issue declared it. */
 	codes: readonly string[]
 	decider?: string
+	/** What its open blocking stops are about (`CAUSE_OF_STOP`) — "parou sem dizer o que falta", a CLI login. */
+	causes: readonly BlockCause[]
 	/** STOPPED while waiting for the provider: when it runs again. */
 	until?: Date
 }
@@ -238,9 +240,25 @@ const SECTION_EN: Record<BulletinSection, string> = {
 	[BulletinSection.DONE]: 'Done in the last 24 h',
 }
 
-/** What a line adds after "key · title", by where the issue's work stands — total over `IssueLifeState`. */
+/** What a line says about a blocking stop's cause — total over `BlockCause`. */
+const CAUSE_PT: Record<BlockCause, string> = {
+	[BlockCause.PROVIDER_LIMIT]: 'limite do provedor',
+	[BlockCause.PROVIDER_ERROR]: 'erro do provedor',
+	[BlockCause.CLI_LOGIN]: 'o CLI precisa de login',
+	[BlockCause.STALLED]: 'parou sem dizer o que falta',
+	[BlockCause.CLASSIFICATION]: 'barrada pela classificação',
+}
+const CAUSE_EN: Record<BlockCause, string> = {
+	[BlockCause.PROVIDER_LIMIT]: 'provider limit',
+	[BlockCause.PROVIDER_ERROR]: 'provider error',
+	[BlockCause.CLI_LOGIN]: 'the CLI needs a login',
+	[BlockCause.STALLED]: 'stopped without saying what it needs',
+	[BlockCause.CLASSIFICATION]: 'blocked by the classification',
+}
+
+/** What a line adds about where the issue's work stands — total over `IssueLifeState` (the asks speak for WAITING_PERSON). */
 const ROW_DETAIL_PT: Record<IssueLifeState, (row: BulletinRow, now: Date) => string | undefined> = {
-	[IssueLifeState.WAITING_PERSON]: row => inline(row.codes.join(', '), row.decider && `decide: ${row.decider}`),
+	[IssueLifeState.WAITING_PERSON]: () => undefined,
 	[IssueLifeState.PAUSED]: () => 'pausada',
 	[IssueLifeState.STALLED]: () => 'parou sem dizer o que falta',
 	[IssueLifeState.WAITING_PROVIDER]: (row, now) => (row.until ? `volta ${whenPt(row.until, now)}` : 'esperando o provedor'),
@@ -250,7 +268,7 @@ const ROW_DETAIL_PT: Record<IssueLifeState, (row: BulletinRow, now: Date) => str
 	[IssueLifeState.DONE]: () => undefined,
 }
 const ROW_DETAIL_EN: Record<IssueLifeState, (row: BulletinRow, now: Date) => string | undefined> = {
-	[IssueLifeState.WAITING_PERSON]: row => inline(row.codes.join(', '), row.decider && `decides: ${row.decider}`),
+	[IssueLifeState.WAITING_PERSON]: () => undefined,
 	[IssueLifeState.PAUSED]: () => 'paused',
 	[IssueLifeState.STALLED]: () => 'stopped without saying what it needs',
 	[IssueLifeState.WAITING_PROVIDER]: (row, now) => (row.until ? `back ${whenEn(row.until, now)}` : 'waiting for the provider'),
@@ -268,9 +286,10 @@ function inline(...parts: (string | false | undefined)[]): string | undefined {
 
 function bulletin(
 	p: BoardBulletinParams,
-	words: { heading: string; empty: string; more: (n: number, linked: boolean) => string },
+	words: { heading: string; empty: string; decides: string; more: (n: number, linked: boolean) => string },
 	section: Record<BulletinSection, string>,
-	detail: Record<IssueLifeState, (row: BulletinRow, now: Date) => string | undefined>,
+	cause: Record<BlockCause, string>,
+	life: Record<IssueLifeState, (row: BulletinRow, now: Date) => string | undefined>,
 ): string {
 	const filled = p.sections.filter(s => s.rows.length > 0)
 	if (filled.length === 0) return lines(`📋 ${words.heading}`, words.empty, p.link)
@@ -278,7 +297,12 @@ function bulletin(
 		lines(
 			`*${section[s.section]}* (${s.rows.length + s.more})`,
 			...s.rows.map(row => {
-				const extra = detail[row.lifeState](row, p.now)
+				const extra = inline(
+					row.codes.join(', '),
+					row.decider && `${words.decides}: ${row.decider}`,
+					...row.causes.map(c => cause[c]),
+					life[row.lifeState](row, p.now),
+				)
 				return `• ${row.key} · ${row.title}${extra ? ` — ${extra}` : ''}`
 			}),
 			s.more > 0 && words.more(s.more, p.link !== undefined),
@@ -355,8 +379,9 @@ const PT_MESSAGES = {
 	boardBulletin: (p: BoardBulletinParams) =>
 		bulletin(
 			p,
-			{ heading: 'Relatório', empty: 'Nada em andamento.', more: (n, linked) => `+${n}${linked ? ' no painel' : ''}` },
+			{ heading: 'Relatório', empty: 'Nada em andamento.', decides: 'decide', more: (n, linked) => `+${n}${linked ? ' no painel' : ''}` },
 			SECTION_PT,
+			CAUSE_PT,
 			ROW_DETAIL_PT,
 		),
 }
@@ -380,8 +405,14 @@ export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
 		boardBulletin: p =>
 			bulletin(
 				p,
-				{ heading: 'Report', empty: 'Nothing in progress.', more: (n, linked) => `+${n}${linked ? ' on the panel' : ''}` },
+				{
+					heading: 'Report',
+					empty: 'Nothing in progress.',
+					decides: 'decides',
+					more: (n, linked) => `+${n}${linked ? ' on the panel' : ''}`,
+				},
 				SECTION_EN,
+				CAUSE_EN,
 				ROW_DETAIL_EN,
 			),
 	},

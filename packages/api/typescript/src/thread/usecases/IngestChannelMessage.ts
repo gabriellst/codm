@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, z, BaseError, CommandQueue, tryCatchAsync } from '@codm/core-typescript'
+import { Handler, z, BaseError, CommandQueue, LoggingService, tryCatchAsync } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
 import {
 	ClassificationMethod,
@@ -149,6 +149,7 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 		private readonly commands: CommandQueue,
 		private readonly session: CloudSession,
 		private readonly bulletin: BoardBulletin,
+		private readonly logging: LoggingService,
 	) {
 		super()
 	}
@@ -619,8 +620,18 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 		}
 	}
 
-	private async prepareCommand(thread: Thread, command: ThreadCommand): Promise<{ command: ThreadCommand; text: string }> {
-		return { command, text: await this.commandAnswer()[command](thread) }
+	/**
+	 * The command's answer, or `undefined` when it cannot be composed — then the message is NOT a command and
+	 * takes the usual path (the orchestrator answers it). A read that fails must never lose a message whose
+	 * inbound ledger row is already claimed.
+	 */
+	private async prepareCommand(thread: Thread, command: ThreadCommand): Promise<{ command: ThreadCommand; text: string } | undefined> {
+		const answer = await tryCatchAsync(() => this.commandAnswer()[command](thread))
+		if (answer.success) return { command, text: answer.data }
+		this.logging.warn({
+			content: { message: 'conversation command not answered — the message takes the usual path', command, reason: answer.error.message },
+		})
+		return undefined
 	}
 
 	/**

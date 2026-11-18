@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { DomainEventRepository } from '@codm/core-typescript'
 import {
+	AskAnswerKind,
 	IssueStatus,
 	Language,
 	MailboxItemKind,
@@ -14,6 +15,7 @@ import { TestBed, givenIssue, givenStop, givenThread, GIVEN_MENTION_TAG } from '
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
 import { PanelPublisher } from '@issue/services/PanelPublisher'
+import { IssueBoardReader } from '@issue/services/IssueBoardReader'
 import type { Participant } from '../entities/Thread'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { BulletinSentEvent } from '../events/BulletinSentEvent'
@@ -182,6 +184,68 @@ describe('IngestChannelMessage — "relatorio" answered by the board, no model t
 
 		await say('relatorio', MEMBER, true)
 
+		expect(await bulletins()).toHaveLength(0)
+	})
+
+	/**
+	 * Any open stop reads `WAITING_PERSON` as a life state, so the section comes from the open stops first: a
+	 * task the sweep raised as STALLED is a stop (Paradas), not a decision; an open question on a queued task is
+	 * still waiting for the group, with its code.
+	 */
+	it('the section comes from the open stops: STALLED is "Paradas", an ask on queued work keeps its code', async () => {
+		await scene()
+		const stalled = await givenIssue(testBed, { threadId, key: 'APP-20', title: 'Parada' })
+		await givenStop(testBed, { threadId, issueId: stalled.id.value, kind: StopKind.STALLED })
+		const queued = await givenIssue(testBed, { threadId, key: 'APP-21', title: 'Na fila' })
+		await givenStop(testBed, {
+			threadId,
+			issueId: queued.id.value,
+			ask: {
+				question: 'Tema claro?',
+				options: [
+					{ id: 'yes', label: 'Sim' },
+					{ id: 'no', label: 'Não' },
+				],
+				default: { kind: AskAnswerKind.OPTION, optionId: 'yes' },
+				effects: [],
+				requested: StopKind.QUESTION_ASKED,
+			},
+		})
+		await testBed.resolve(MailboxRepository).enqueue({
+			ownerId: MOCK_CLOUD_OWNER_ID,
+			targetKind: MailboxTargetKind.ISSUE,
+			targetId: queued.id.value,
+			kind: MailboxItemKind.WORK,
+			posture: PermissionPosture.AUTO,
+			payload: { threadId, key: 'APP-21', title: 'Na fila' },
+			dedupKey: 'work:app-21',
+		})
+
+		await say('relatorio')
+
+		const text = (await bulletins())[0] ?? ''
+		expect(text).toContain('*Esperando decisão* (1)')
+		expect(text).toContain('• APP-21 · Na fila — APP-21 · D1 · na fila')
+		expect(text).toContain('*Paradas* (1)')
+		expect(text).toContain('• APP-20 · Parada — parou sem dizer o que falta')
+	})
+
+	/** A board that cannot be read never loses the message: it is not a command then, and the orchestrator answers. */
+	it('a bulletin that cannot be composed leaves the message on the usual path', async () => {
+		await scene()
+		testBed.override(
+			IssueBoardReader,
+			new (class extends IssueBoardReader {
+				async boardOf(): Promise<never> {
+					throw new Error('board unavailable')
+				}
+			})(),
+		)
+
+		const out = await say('relatorio')
+
+		expect(out.invocable).toBe(true)
+		expect(await threadTurn()).toBe(true)
 		expect(await bulletins()).toHaveLength(0)
 	})
 })

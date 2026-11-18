@@ -1,1 +1,1 @@
-export { BoardBulletin, BULLETIN_SECTION_MAX, BULLETIN_DONE_WINDOW_MS, SECTION_OF_LIFE } from './BoardBulletin'
+export { BoardBulletin, BULLETIN_SECTION_MAX, BULLETIN_DONE_WINDOW_MS, SECTION_OF_LIFE, SECTION_OF_STOP_LEVEL } from './BoardBulletin'
