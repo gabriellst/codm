@@ -1,12 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
-import { TestBed, givenThread, GIVEN_MENTION_TAG } from '@test/support'
-import { ClassificationMethod, MailboxTargetKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
+import { TestBed, givenIssue, givenThread, GIVEN_MENTION_TAG } from '@test/support'
+import { ClassificationMethod, IssueStatus, MailboxTargetKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
 import { IngestChannelMessage } from './IngestChannelMessage'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { MessageIngestedEvent } from '../events/MessageIngestedEvent'
+import { IssueTurnInterruptRequestedEvent } from '../events/IssueTurnInterruptRequestedEvent'
 import { DomainEventRepository } from '@codm/core-typescript'
 
 /**
@@ -334,6 +335,137 @@ describe('IngestChannelMessage gate matrix', () => {
 			const reply = await testBed.resolve(ThreadRepository).findEntry(out.entryId)
 			expect(reply?.issueId).toBe(issueId)
 			expect(reply?.classification).toBe(ClassificationMethod.REPLY_QUOTE)
+		})
+
+		/**
+		 * THE RULE ROUTER (fase 2, item 1): a message that belongs to a RUNNING issue goes straight to it as
+		 * a steer — no orchestrator turn. A finished issue still goes through the orchestrator (reopening
+		 * is its decision). Falsifier: drop the `invocable && routed` branch and every case queues the THREAD.
+		 */
+		describe('routes straight to a running issue', () => {
+			const queued = async () => {
+				const item = await testBed.resolve(MailboxRepository).claimNext('router-test', 60_000)
+				return { targetKind: item?.targetKind, targetId: item?.targetId, text: (item?.payload as { text?: string } | undefined)?.text }
+			}
+
+			it('a reply quoting a running issue’s message becomes that issue’s steer, signed by who wrote it', async () => {
+				const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+				const issue = await givenIssue(testBed, { threadId: thread.id.value, key: 'APP-7' })
+				const line = thread.recordEntry({ kind: TranscriptKind.SYSTEM, text: 'prévia pronta, posso publicar?', issueId: issue.id.value })
+				await testBed.resolve(ThreadRepository).save(thread)
+
+				await testBed.resolve(IngestChannelMessage).execute({
+					threadId: thread.id.value,
+					senderExternalId: 'stranger-42',
+					text: 'tira o rodapé antes',
+					quotedEntryId: line.entryId,
+					receivedAt: new Date(),
+				})
+
+				const item = await queued()
+				expect(item.targetKind).toBe(MailboxTargetKind.ISSUE)
+				expect(item.targetId).toBe(issue.id.value)
+				expect(item.text).toContain('tira o rodapé antes')
+			})
+
+			/**
+			 * ENTREGUE/LIDO (fase 2, item 5): the steer carries the reaction address of the message it came
+			 * from, so the dispatcher can hang ☑️ / ✅ on it later. Without a platform id there is nothing to
+			 * react to, and the item carries no origin. Falsifier: drop `channelOrigin` from the payload.
+			 */
+			it('the steer carries the reaction address of the routed message — only when it has a platform id', async () => {
+				const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+				const issue = await givenIssue(testBed, { threadId: thread.id.value, key: 'APP-10' })
+				const ingest = (text: string, platformMessageId?: string) =>
+					testBed.resolve(IngestChannelMessage).execute({
+						threadId: thread.id.value,
+						senderExternalId: 'stranger-42',
+						text: `${GIVEN_MENTION_TAG} APP-10 ${text}`,
+						receivedAt: new Date(),
+						platformMessageId,
+					})
+
+				const out = await ingest('usa o azul', 'wamid-routed')
+				const first = await testBed.resolve(MailboxRepository).claimNext('origin-test', 60_000)
+				expect(first?.targetId).toBe(issue.id.value)
+				const originOf = (item: typeof first) => (item?.payload as { channelOrigin?: unknown } | undefined)?.channelOrigin
+				expect(originOf(first)).toMatchObject({
+					entryId: out.entryId,
+					messageId: 'wamid-routed',
+					channelId: thread.channelId,
+					remoteId: thread.contactRef.externalId,
+					fromMe: false,
+					senderExternalId: 'stranger-42',
+				})
+				if (first) await testBed.resolve(MailboxRepository).complete(first.id)
+
+				await ingest('e o rodapé')
+				const second = await testBed.resolve(MailboxRepository).claimNext('origin-test', 60_000)
+				expect(second?.targetId).toBe(issue.id.value)
+				expect(originOf(second)).toBeUndefined()
+			})
+
+			/**
+			 * STEER IMEDIATO (fase 2, item 4): "agora" after the target records the cut request with the entry
+			 * (the cut itself runs after commit) and takes the word off what the session is told. Without it,
+			 * nothing is cut. Falsifier: drop the `CUTS_RUNNING_TURN` branch and the first case finds no fact.
+			 */
+			it('"APP-11 agora …" asks for the running turn to be cut; a plain steer does not', async () => {
+				const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+				const issue = await givenIssue(testBed, { threadId: thread.id.value, key: 'APP-11' })
+				const ingest = (text: string) =>
+					testBed.resolve(IngestChannelMessage).execute({
+						threadId: thread.id.value,
+						senderExternalId: 'stranger-42',
+						text: `${GIVEN_MENTION_TAG} ${text}`,
+						receivedAt: new Date(),
+					})
+
+				const out = await ingest('APP-11 agora tira o rodapé')
+				const steer = await testBed.resolve(MailboxRepository).claimNext('urgency-test', 60_000)
+				const text = (steer?.payload as { text?: string } | undefined)?.text ?? ''
+				expect(text).toContain('tira o rodapé')
+				expect(text).not.toMatch(/agora/i)
+				const facts = await testBed.resolve(DomainEventRepository).findByType(IssueTurnInterruptRequestedEvent)
+				expect(facts.map(fact => fact.payload)).toEqual([{ threadId: thread.id.value, issueId: issue.id.value, entryId: out.entryId }])
+				if (steer) await testBed.resolve(MailboxRepository).complete(steer.id)
+
+				await ingest('APP-11 usa o azul')
+				expect(await testBed.resolve(DomainEventRepository).findByType(IssueTurnInterruptRequestedEvent)).toHaveLength(1)
+			})
+
+			it('naming a running issue by key routes there too', async () => {
+				const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+				const issue = await givenIssue(testBed, { threadId: thread.id.value, key: 'APP-8' })
+
+				await testBed.resolve(IngestChannelMessage).execute({
+					threadId: thread.id.value,
+					senderExternalId: 'stranger-42',
+					text: `${GIVEN_MENTION_TAG} na APP-8 usa o azul`,
+					receivedAt: new Date(),
+				})
+
+				const item = await queued()
+				expect(item.targetKind).toBe(MailboxTargetKind.ISSUE)
+				expect(item.targetId).toBe(issue.id.value)
+			})
+
+			it('a finished issue is not routed — the orchestrator decides whether to reopen it', async () => {
+				const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+				const issue = await givenIssue(testBed, { threadId: thread.id.value, key: 'APP-9', status: IssueStatus.COMPLETED })
+				const line = thread.recordEntry({ kind: TranscriptKind.SYSTEM, text: 'no ar', issueId: issue.id.value })
+				await testBed.resolve(ThreadRepository).save(thread)
+
+				await testBed.resolve(IngestChannelMessage).execute({
+					threadId: thread.id.value,
+					senderExternalId: 'stranger-42',
+					text: 'muda a cor',
+					quotedEntryId: line.entryId,
+					receivedAt: new Date(),
+				})
+
+				expect((await queued()).targetKind).toBe(MailboxTargetKind.THREAD)
+			})
 		})
 
 		it('a reply to a conversational message stays unbound', async () => {

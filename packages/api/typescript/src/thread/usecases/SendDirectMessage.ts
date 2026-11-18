@@ -2,6 +2,7 @@ import { injectable } from 'tsyringe-neo'
 import { Handler, z, BaseError, CommandQueue } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
 import { MessageAuthor, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
+import { IssueHold } from '@issue/services/IssueHold'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { ChannelConnectivity } from '../services/ChannelConnectivity'
 import { DirectMessageSentEvent } from '../events/DirectMessageSentEvent'
@@ -39,11 +40,16 @@ export class SendDirectMessage extends Handler<typeof SendDirectMessageInputSche
 		private readonly threads: ThreadRepository,
 		private readonly connectivity: ChannelConnectivity,
 		private readonly commands: CommandQueue,
+		private readonly hold: IssueHold,
 	) {
 		super()
 	}
 
 	protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
+		// A HELD issue's run does not speak on the channel (fase 2, item 2 — pausa como comando). Gated on
+		// `issueId`, which only an issue's run carries: the operator's own direct message — the reason this
+		// door exists while a group is paused — has none and passes.
+		await this.hold.assertNotHeld(input.issueId)
 		const thread = await this.threads.findById(input.threadId)
 		if (!thread || thread.ownerId !== input.ownerId)
 			throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)

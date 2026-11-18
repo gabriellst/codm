@@ -845,6 +845,36 @@ func (e HistorySyncType) Valid() bool {
 	}
 }
 
+// Defines values for IrreversibleActionKind.
+const (
+	IrreversibleActionKindDEPLOY         IrreversibleActionKind = "DEPLOY"
+	IrreversibleActionKindGITFORCEPUSH   IrreversibleActionKind = "GIT_FORCE_PUSH"
+	IrreversibleActionKindGITPUSH        IrreversibleActionKind = "GIT_PUSH"
+	IrreversibleActionKindPACKAGEPUBLISH IrreversibleActionKind = "PACKAGE_PUBLISH"
+	IrreversibleActionKindPRMERGE        IrreversibleActionKind = "PR_MERGE"
+	IrreversibleActionKindRELEASE        IrreversibleActionKind = "RELEASE"
+)
+
+// Valid indicates whether the value is a known member of the IrreversibleActionKind enum.
+func (e IrreversibleActionKind) Valid() bool {
+	switch e {
+	case IrreversibleActionKindDEPLOY:
+		return true
+	case IrreversibleActionKindGITFORCEPUSH:
+		return true
+	case IrreversibleActionKindGITPUSH:
+		return true
+	case IrreversibleActionKindPACKAGEPUBLISH:
+		return true
+	case IrreversibleActionKindPRMERGE:
+		return true
+	case IrreversibleActionKindRELEASE:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for IssueArchiveReason.
 const (
 	IssueArchiveReasonAUTO24H        IssueArchiveReason = "AUTO_24H"
@@ -866,9 +896,31 @@ func (e IssueArchiveReason) Valid() bool {
 	}
 }
 
+// Defines values for IssueControlSource.
+const (
+	IssueControlSourceCONSOLE  IssueControlSource = "CONSOLE"
+	IssueControlSourcePANEL    IssueControlSource = "PANEL"
+	IssueControlSourceWHATSAPP IssueControlSource = "WHATSAPP"
+)
+
+// Valid indicates whether the value is a known member of the IssueControlSource enum.
+func (e IssueControlSource) Valid() bool {
+	switch e {
+	case IssueControlSourceCONSOLE:
+		return true
+	case IssueControlSourcePANEL:
+		return true
+	case IssueControlSourceWHATSAPP:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for IssueLifeState.
 const (
 	IssueLifeStateDONE            IssueLifeState = "DONE"
+	IssueLifeStatePAUSED          IssueLifeState = "PAUSED"
 	IssueLifeStateQUEUED          IssueLifeState = "QUEUED"
 	IssueLifeStateREMINDED        IssueLifeState = "REMINDED"
 	IssueLifeStateRUNNING         IssueLifeState = "RUNNING"
@@ -881,6 +933,8 @@ const (
 func (e IssueLifeState) Valid() bool {
 	switch e {
 	case IssueLifeStateDONE:
+		return true
+	case IssueLifeStatePAUSED:
 		return true
 	case IssueLifeStateQUEUED:
 		return true
@@ -927,6 +981,9 @@ const (
 	IssueTimelineItemKindCOMPLETED    IssueTimelineItemKind = "COMPLETED"
 	IssueTimelineItemKindCREATED      IssueTimelineItemKind = "CREATED"
 	IssueTimelineItemKindMESSAGE      IssueTimelineItemKind = "MESSAGE"
+	IssueTimelineItemKindPAUSED       IssueTimelineItemKind = "PAUSED"
+	IssueTimelineItemKindREGRETWINDOW IssueTimelineItemKind = "REGRET_WINDOW"
+	IssueTimelineItemKindRESUMED      IssueTimelineItemKind = "RESUMED"
 	IssueTimelineItemKindSTEER        IssueTimelineItemKind = "STEER"
 	IssueTimelineItemKindSTOPRAISED   IssueTimelineItemKind = "STOP_RAISED"
 	IssueTimelineItemKindSTOPRESOLVED IssueTimelineItemKind = "STOP_RESOLVED"
@@ -945,6 +1002,12 @@ func (e IssueTimelineItemKind) Valid() bool {
 	case IssueTimelineItemKindCREATED:
 		return true
 	case IssueTimelineItemKindMESSAGE:
+		return true
+	case IssueTimelineItemKindPAUSED:
+		return true
+	case IssueTimelineItemKindREGRETWINDOW:
+		return true
+	case IssueTimelineItemKindRESUMED:
 		return true
 	case IssueTimelineItemKindSTEER:
 		return true
@@ -1253,6 +1316,72 @@ func (e OwnerKind) Valid() bool {
 	}
 }
 
+// Defines values for PanelActionKind.
+const (
+	PanelActionKindANSWERSTOP PanelActionKind = "ANSWER_STOP"
+	PanelActionKindPAUSE      PanelActionKind = "PAUSE"
+	PanelActionKindRESUME     PanelActionKind = "RESUME"
+	PanelActionKindSTEER      PanelActionKind = "STEER"
+)
+
+// Valid indicates whether the value is a known member of the PanelActionKind enum.
+func (e PanelActionKind) Valid() bool {
+	switch e {
+	case PanelActionKindANSWERSTOP:
+		return true
+	case PanelActionKindPAUSE:
+		return true
+	case PanelActionKindRESUME:
+		return true
+	case PanelActionKindSTEER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PanelActionOutcome.
+const (
+	PanelActionOutcomeDONE    PanelActionOutcome = "DONE"
+	PanelActionOutcomeREFUSED PanelActionOutcome = "REFUSED"
+)
+
+// Valid indicates whether the value is a known member of the PanelActionOutcome enum.
+func (e PanelActionOutcome) Valid() bool {
+	switch e {
+	case PanelActionOutcomeDONE:
+		return true
+	case PanelActionOutcomeREFUSED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PanelActionStatus.
+const (
+	PanelActionStatusDONE    PanelActionStatus = "DONE"
+	PanelActionStatusEXPIRED PanelActionStatus = "EXPIRED"
+	PanelActionStatusPENDING PanelActionStatus = "PENDING"
+	PanelActionStatusREFUSED PanelActionStatus = "REFUSED"
+)
+
+// Valid indicates whether the value is a known member of the PanelActionStatus enum.
+func (e PanelActionStatus) Valid() bool {
+	switch e {
+	case PanelActionStatusDONE:
+		return true
+	case PanelActionStatusEXPIRED:
+		return true
+	case PanelActionStatusPENDING:
+		return true
+	case PanelActionStatusREFUSED:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PermissionPosture.
 const (
 	PermissionPostureAUTO   PermissionPosture = "AUTO"
@@ -1379,6 +1508,27 @@ func (e ReceiptType) Valid() bool {
 	case ReceiptTypeRead:
 		return true
 	case ReceiptTypeReadSelf:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RegretWindowOutcome.
+const (
+	RegretWindowOutcomeCANCELLEDBYPAUSE RegretWindowOutcome = "CANCELLED_BY_PAUSE"
+	RegretWindowOutcomeCANCELLEDBYSTEER RegretWindowOutcome = "CANCELLED_BY_STEER"
+	RegretWindowOutcomePROCEEDED        RegretWindowOutcome = "PROCEEDED"
+)
+
+// Valid indicates whether the value is a known member of the RegretWindowOutcome enum.
+func (e RegretWindowOutcome) Valid() bool {
+	switch e {
+	case RegretWindowOutcomeCANCELLEDBYPAUSE:
+		return true
+	case RegretWindowOutcomeCANCELLEDBYSTEER:
+		return true
+	case RegretWindowOutcomePROCEEDED:
 		return true
 	default:
 		return false
@@ -3859,8 +4009,14 @@ type InternalTextContent struct {
 	Text string `json:"text"`
 }
 
+// IrreversibleActionKind defines model for IrreversibleActionKind.
+type IrreversibleActionKind string
+
 // IssueArchiveReason defines model for IssueArchiveReason.
 type IssueArchiveReason string
+
+// IssueControlSource defines model for IssueControlSource.
+type IssueControlSource string
 
 // IssueLifeState defines model for IssueLifeState.
 type IssueLifeState string
@@ -3951,6 +4107,15 @@ type OutboxSource string
 // OwnerKind defines model for OwnerKind.
 type OwnerKind string
 
+// PanelActionKind defines model for PanelActionKind.
+type PanelActionKind string
+
+// PanelActionOutcome defines model for PanelActionOutcome.
+type PanelActionOutcome string
+
+// PanelActionStatus defines model for PanelActionStatus.
+type PanelActionStatus string
+
 // PermissionPosture defines model for PermissionPosture.
 type PermissionPosture string
 
@@ -3992,6 +4157,9 @@ type ReactionMessageData struct {
 
 // ReceiptType defines model for ReceiptType.
 type ReceiptType string
+
+// RegretWindowOutcome defines model for RegretWindowOutcome.
+type RegretWindowOutcome string
 
 // RestartChannelOutput defines model for RestartChannelOutput.
 type RestartChannelOutput struct {

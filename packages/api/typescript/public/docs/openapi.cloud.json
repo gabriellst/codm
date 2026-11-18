@@ -1151,6 +1151,94 @@
                                   "id",
                                   "at"
                                 ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "PAUSED"
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "at": {
+                                    "type": "string"
+                                  },
+                                  "source": {
+                                    "$ref": "#/components/schemas/IssueControlSource"
+                                  },
+                                  "by": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "id",
+                                  "at",
+                                  "source"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "RESUMED"
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "at": {
+                                    "type": "string"
+                                  },
+                                  "source": {
+                                    "$ref": "#/components/schemas/IssueControlSource"
+                                  },
+                                  "by": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "id",
+                                  "at",
+                                  "source"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "REGRET_WINDOW"
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "at": {
+                                    "type": "string"
+                                  },
+                                  "actionKind": {
+                                    "$ref": "#/components/schemas/IrreversibleActionKind"
+                                  },
+                                  "outcome": {
+                                    "$ref": "#/components/schemas/RegretWindowOutcome"
+                                  },
+                                  "waitedMs": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "id",
+                                  "at",
+                                  "actionKind",
+                                  "outcome",
+                                  "waitedMs"
+                                ]
                               }
                             ]
                           }
@@ -1230,6 +1318,330 @@
                   },
                   "required": [
                     "groups"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/roster": {
+      "put": {
+        "tags": [
+          "panel"
+        ],
+        "description": "Replace each group's panel roster (opaque member ids) and pull the identification codes to deliver",
+        "operationId": "SyncPanelRoster",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "groups": {
+                    "maxItems": 200,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "threadId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "members": {
+                          "maxItems": 1024,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "memberId": {
+                                "type": "string",
+                                "minLength": 16,
+                                "maxLength": 64,
+                                "pattern": "^[A-Za-z0-9_-]+$"
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 120
+                              },
+                              "canRelease": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "memberId",
+                              "name",
+                              "canRelease"
+                            ]
+                          }
+                        },
+                        "openStops": {
+                          "maxItems": 200,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "stopId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "issueId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "kind": {
+                                "$ref": "#/components/schemas/StopKind"
+                              },
+                              "resolutions": {
+                                "maxItems": 8,
+                                "type": "array",
+                                "items": {
+                                  "$ref": "#/components/schemas/StopResolution"
+                                }
+                              }
+                            },
+                            "required": [
+                              "stopId",
+                              "issueId",
+                              "kind",
+                              "resolutions"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "threadId",
+                        "members"
+                      ]
+                    }
+                  },
+                  "outcomes": {
+                    "maxItems": 500,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "actionId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "status": {
+                          "$ref": "#/components/schemas/PanelActionOutcome"
+                        },
+                        "code": {
+                          "type": "string",
+                          "maxLength": 80
+                        }
+                      },
+                      "required": [
+                        "actionId",
+                        "status"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "groups"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "groups": [
+                      {
+                        "threadId": "019e4d24-6524-7041-9e1c-8108180cddaf",
+                        "members": [
+                          {
+                            "memberId": "q8ZK1x0Lr3mT5aVb2cN7dE",
+                            "name": "Ana",
+                            "canRelease": true
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Replace each group's panel roster (opaque member ids) and pull the identification codes to deliver",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "deliveries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "requestId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "threadId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "memberId": {
+                            "type": "string"
+                          },
+                          "code": {
+                            "type": "string",
+                            "pattern": "^\\d{6}$"
+                          }
+                        },
+                        "required": [
+                          "requestId",
+                          "threadId",
+                          "memberId",
+                          "code"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "actions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "actionId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "threadId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "memberId": {
+                            "type": "string"
+                          },
+                          "action": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "PAUSE"
+                                  },
+                                  "issueId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "issueId"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "RESUME"
+                                  },
+                                  "issueId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "issueId"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "STEER"
+                                  },
+                                  "issueId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  },
+                                  "text": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 2000
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "issueId",
+                                  "text"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "ANSWER_STOP"
+                                  },
+                                  "issueId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  },
+                                  "stopId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  },
+                                  "resolution": {
+                                    "$ref": "#/components/schemas/StopResolution"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "issueId",
+                                  "stopId",
+                                  "resolution"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "actionId",
+                          "threadId",
+                          "memberId",
+                          "action"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "deliveries",
+                    "actions"
                   ],
                   "additionalProperties": false
                 }
@@ -1711,14 +2123,654 @@
                               "at"
                             ],
                             "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "PAUSED"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "source": {
+                                "$ref": "#/components/schemas/IssueControlSource"
+                              },
+                              "by": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "source"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "RESUMED"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "source": {
+                                "$ref": "#/components/schemas/IssueControlSource"
+                              },
+                              "by": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "source"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "REGRET_WINDOW"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "actionKind": {
+                                "$ref": "#/components/schemas/IrreversibleActionKind"
+                              },
+                              "outcome": {
+                                "$ref": "#/components/schemas/RegretWindowOutcome"
+                              },
+                              "waitedMs": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "actionKind",
+                              "outcome",
+                              "waitedMs"
+                            ],
+                            "additionalProperties": false
                           }
                         ]
                       }
+                    },
+                    "openStop": {
+                      "type": "object",
+                      "properties": {
+                        "stopId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "kind": {
+                          "$ref": "#/components/schemas/StopKind"
+                        },
+                        "resolutions": {
+                          "maxItems": 8,
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/StopResolution"
+                          }
+                        }
+                      },
+                      "required": [
+                        "stopId",
+                        "kind",
+                        "resolutions"
+                      ],
+                      "additionalProperties": false
                     }
                   },
                   "required": [
                     "issue",
                     "timeline"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/g/{token}/members": {
+      "get": {
+        "tags": [
+          "panel"
+        ],
+        "description": "The people of a group (opaque id + name), by its panel link token (public)",
+        "operationId": "ListPanelMembers",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "kq3pE1aV0m9xT2yR8wB5nC7dF4gH6jL1sZ0uQ3iO9eA"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The people of a group (opaque id + name), by its panel link token (public)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "members": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "memberId": {
+                            "type": "string",
+                            "minLength": 16,
+                            "maxLength": 64,
+                            "pattern": "^[A-Za-z0-9_-]+$"
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 120
+                          }
+                        },
+                        "required": [
+                          "memberId",
+                          "name"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "members"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/g/{token}/identify": {
+      "post": {
+        "tags": [
+          "panel"
+        ],
+        "description": "Ask codm to send a panel identification code to a group member's WhatsApp (public)",
+        "operationId": "RequestPanelCode",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "memberId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                },
+                "required": [
+                  "memberId"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "memberId": "q8ZK1x0Lr3mT5aVb2cN7dE"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "kq3pE1aV0m9xT2yR8wB5nC7dF4gH6jL1sZ0uQ3iO9eA"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ask codm to send a panel identification code to a group member's WhatsApp (public)",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/g/{token}/verify": {
+      "post": {
+        "tags": [
+          "panel"
+        ],
+        "description": "Confirm a panel identification code; sets the device cookie (public)",
+        "operationId": "VerifyPanelCode",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "memberId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "code": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$"
+                  }
+                },
+                "required": [
+                  "memberId",
+                  "code"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "memberId": "q8ZK1x0Lr3mT5aVb2cN7dE",
+                    "code": "123456"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "kq3pE1aV0m9xT2yR8wB5nC7dF4gH6jL1sZ0uQ3iO9eA"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Confirm a panel identification code; sets the device cookie (public)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "member": {
+                      "type": "object",
+                      "properties": {
+                        "memberId": {
+                          "type": "string",
+                          "minLength": 16,
+                          "maxLength": 64,
+                          "pattern": "^[A-Za-z0-9_-]+$"
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 120
+                        },
+                        "canRelease": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "memberId",
+                        "name",
+                        "canRelease"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "member"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/g/{token}/me": {
+      "get": {
+        "tags": [
+          "panel"
+        ],
+        "description": "Who this device is on a group's panel, from its device cookie (public)",
+        "operationId": "GetPanelIdentity",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "kq3pE1aV0m9xT2yR8wB5nC7dF4gH6jL1sZ0uQ3iO9eA"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Who this device is on a group's panel, from its device cookie (public)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "member": {
+                      "type": "object",
+                      "properties": {
+                        "memberId": {
+                          "type": "string",
+                          "minLength": 16,
+                          "maxLength": 64,
+                          "pattern": "^[A-Za-z0-9_-]+$"
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 120
+                        },
+                        "canRelease": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "memberId",
+                        "name",
+                        "canRelease"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/g/{token}/forget": {
+      "post": {
+        "tags": [
+          "panel"
+        ],
+        "description": "End this device's identity on a group's panel (public)",
+        "operationId": "ForgetPanelDevice",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "kq3pE1aV0m9xT2yR8wB5nC7dF4gH6jL1sZ0uQ3iO9eA"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "End this device's identity on a group's panel (public)",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/g/{token}/actions": {
+      "post": {
+        "tags": [
+          "panel"
+        ],
+        "description": "Ask, as the identified member, for an action on one of the group's issues (public, device cookie)",
+        "operationId": "RequestPanelAction",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "PAUSE"
+                      },
+                      "issueId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "issueId"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "RESUME"
+                      },
+                      "issueId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "issueId"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "STEER"
+                      },
+                      "issueId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "text": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2000
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "issueId",
+                      "text"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "ANSWER_STOP"
+                      },
+                      "issueId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "stopId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "resolution": {
+                        "$ref": "#/components/schemas/StopResolution"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "issueId",
+                      "stopId",
+                      "resolution"
+                    ]
+                  }
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "kind": "PAUSE",
+                    "issueId": "019e4d24-6524-7041-9e1c-8108180cddb0"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "kq3pE1aV0m9xT2yR8wB5nC7dF4gH6jL1sZ0uQ3iO9eA"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ask, as the identified member, for an action on one of the group's issues (public, device cookie)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "actionId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "status": {
+                      "type": "string",
+                      "const": "PENDING"
+                    }
+                  },
+                  "required": [
+                    "actionId",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/g/{token}/actions/{actionId}": {
+      "get": {
+        "tags": [
+          "panel"
+        ],
+        "description": "Where a panel action stands — pending, done, refused or expired (public, device cookie)",
+        "operationId": "GetPanelAction",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "kq3pE1aV0m9xT2yR8wB5nC7dF4gH6jL1sZ0uQ3iO9eA"
+          },
+          {
+            "in": "path",
+            "name": "actionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddc0"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Where a panel action stands — pending, done, refused or expired (public, device cookie)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "actionId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "kind": {
+                      "$ref": "#/components/schemas/PanelActionKind"
+                    },
+                    "status": {
+                      "$ref": "#/components/schemas/PanelActionStatus"
+                    },
+                    "code": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "actionId",
+                    "kind",
+                    "status"
                   ],
                   "additionalProperties": false
                 }
@@ -1821,11 +2873,15 @@
           "INVALID_TIMEZONE",
           "ISSUE_ALREADY_ARCHIVED",
           "ISSUE_ALREADY_COMPLETED",
+          "ISSUE_ALREADY_PAUSED",
           "ISSUE_ARCHIVED",
           "ISSUE_NOT_ARCHIVED",
           "ISSUE_NOT_COMPLETED",
           "ISSUE_NOT_FOUND",
+          "ISSUE_NOT_PAUSABLE",
+          "ISSUE_NOT_PAUSED",
           "ISSUE_NOT_REOPENABLE",
+          "ISSUE_PAUSED",
           "LAST_INVOKER",
           "LOOP_NOT_FOUND",
           "LOOP_PROMPT_TOO_LONG",
@@ -1844,8 +2900,18 @@
           "OWNER_ALREADY_DISABLED",
           "OWNER_NOT_DISABLED",
           "OWNER_NOT_FOUND",
+          "PANEL_ACTION_RATE_LIMITED",
+          "PANEL_CANNOT_RELEASE",
+          "PANEL_CODE_ATTEMPTS_EXCEEDED",
+          "PANEL_CODE_EXPIRED",
+          "PANEL_CODE_INVALID",
+          "PANEL_CODE_RATE_LIMITED",
           "PANEL_LINK_UNAVAILABLE",
+          "PANEL_MEMBER_NOT_FOUND",
           "PANEL_NOT_FOUND",
+          "PANEL_RESOLUTION_NOT_OFFERED",
+          "PARTICIPANT_CANNOT_ACT",
+          "PARTICIPANT_CANNOT_RELEASE",
           "PARTICIPANT_NOT_FOUND",
           "PASSWORDS_DONT_MATCH",
           "PASSWORD_TOO_WEAK",
@@ -1935,6 +3001,7 @@
           "WAITING_PERSON",
           "REMINDED",
           "STALLED",
+          "PAUSED",
           "DONE"
         ]
       },
@@ -1946,6 +3013,9 @@
           "COMPLETED",
           "CREATED",
           "MESSAGE",
+          "PAUSED",
+          "REGRET_WINDOW",
+          "RESUMED",
           "STEER",
           "STOP_RAISED",
           "STOP_RESOLVED",
@@ -2001,6 +3071,58 @@
           "APPROVE",
           "DENY"
         ]
+      },
+      "IssueControlSource": {
+        "type": "string",
+        "enum": [
+          "WHATSAPP",
+          "CONSOLE",
+          "PANEL"
+        ]
+      },
+      "IrreversibleActionKind": {
+        "type": "string",
+        "enum": [
+          "GIT_PUSH",
+          "GIT_FORCE_PUSH",
+          "PR_MERGE",
+          "RELEASE",
+          "PACKAGE_PUBLISH",
+          "DEPLOY"
+        ]
+      },
+      "RegretWindowOutcome": {
+        "type": "string",
+        "enum": [
+          "PROCEEDED",
+          "CANCELLED_BY_STEER",
+          "CANCELLED_BY_PAUSE"
+        ]
+      },
+      "PanelActionOutcome": {
+        "type": "string",
+        "enum": [
+          "DONE",
+          "REFUSED"
+        ]
+      },
+      "PanelActionKind": {
+        "type": "string",
+        "enum": [
+          "ANSWER_STOP",
+          "PAUSE",
+          "RESUME",
+          "STEER"
+        ]
+      },
+      "PanelActionStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "DONE",
+          "REFUSED",
+          "EXPIRED"
+        ]
       }
     }
   },
@@ -2052,11 +3174,15 @@
     "INVALID_TIMEZONE",
     "ISSUE_ALREADY_ARCHIVED",
     "ISSUE_ALREADY_COMPLETED",
+    "ISSUE_ALREADY_PAUSED",
     "ISSUE_ARCHIVED",
     "ISSUE_NOT_ARCHIVED",
     "ISSUE_NOT_COMPLETED",
     "ISSUE_NOT_FOUND",
+    "ISSUE_NOT_PAUSABLE",
+    "ISSUE_NOT_PAUSED",
     "ISSUE_NOT_REOPENABLE",
+    "ISSUE_PAUSED",
     "LAST_INVOKER",
     "LOOP_NOT_FOUND",
     "LOOP_PROMPT_TOO_LONG",
@@ -2075,8 +3201,18 @@
     "OWNER_ALREADY_DISABLED",
     "OWNER_NOT_DISABLED",
     "OWNER_NOT_FOUND",
+    "PANEL_ACTION_RATE_LIMITED",
+    "PANEL_CANNOT_RELEASE",
+    "PANEL_CODE_ATTEMPTS_EXCEEDED",
+    "PANEL_CODE_EXPIRED",
+    "PANEL_CODE_INVALID",
+    "PANEL_CODE_RATE_LIMITED",
     "PANEL_LINK_UNAVAILABLE",
+    "PANEL_MEMBER_NOT_FOUND",
     "PANEL_NOT_FOUND",
+    "PANEL_RESOLUTION_NOT_OFFERED",
+    "PARTICIPANT_CANNOT_ACT",
+    "PARTICIPANT_CANNOT_RELEASE",
     "PARTICIPANT_NOT_FOUND",
     "PASSWORDS_DONT_MATCH",
     "PASSWORD_TOO_WEAK",

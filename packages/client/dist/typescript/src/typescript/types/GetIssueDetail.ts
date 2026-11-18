@@ -50,6 +50,10 @@ export type GetIssueDetail200 = {
         */
         archived: boolean;
         /**
+         * @type boolean
+        */
+        paused: boolean;
+        /**
          * @type string | undefined
         */
         waitingForProviderUntil?: string;

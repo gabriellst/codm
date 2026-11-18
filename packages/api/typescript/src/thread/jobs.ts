@@ -6,3 +6,5 @@
  * que o operador sai.
  */
 export { FireDueLoops } from './usecases/FireDueLoops'
+// Fase 2, item 6a — o roster do painel da nuvem sai e os códigos de identificação chegam (a cada 15 s).
+export { PublishPanelRoster } from './usecases/PublishPanelRoster'

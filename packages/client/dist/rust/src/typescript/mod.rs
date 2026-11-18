@@ -252,11 +252,15 @@ pub mod types {
     ///    "INVALID_TIMEZONE",
     ///    "ISSUE_ALREADY_ARCHIVED",
     ///    "ISSUE_ALREADY_COMPLETED",
+    ///    "ISSUE_ALREADY_PAUSED",
     ///    "ISSUE_ARCHIVED",
     ///    "ISSUE_NOT_ARCHIVED",
     ///    "ISSUE_NOT_COMPLETED",
     ///    "ISSUE_NOT_FOUND",
+    ///    "ISSUE_NOT_PAUSABLE",
+    ///    "ISSUE_NOT_PAUSED",
     ///    "ISSUE_NOT_REOPENABLE",
+    ///    "ISSUE_PAUSED",
     ///    "LAST_INVOKER",
     ///    "LOOP_NOT_FOUND",
     ///    "LOOP_PROMPT_TOO_LONG",
@@ -275,8 +279,18 @@ pub mod types {
     ///    "OWNER_ALREADY_DISABLED",
     ///    "OWNER_NOT_DISABLED",
     ///    "OWNER_NOT_FOUND",
+    ///    "PANEL_ACTION_RATE_LIMITED",
+    ///    "PANEL_CANNOT_RELEASE",
+    ///    "PANEL_CODE_ATTEMPTS_EXCEEDED",
+    ///    "PANEL_CODE_EXPIRED",
+    ///    "PANEL_CODE_INVALID",
+    ///    "PANEL_CODE_RATE_LIMITED",
     ///    "PANEL_LINK_UNAVAILABLE",
+    ///    "PANEL_MEMBER_NOT_FOUND",
     ///    "PANEL_NOT_FOUND",
+    ///    "PANEL_RESOLUTION_NOT_OFFERED",
+    ///    "PARTICIPANT_CANNOT_ACT",
+    ///    "PARTICIPANT_CANNOT_RELEASE",
     ///    "PARTICIPANT_NOT_FOUND",
     ///    "PASSWORDS_DONT_MATCH",
     ///    "PASSWORD_TOO_WEAK",
@@ -421,6 +435,8 @@ pub mod types {
         IssueAlreadyArchived,
         #[serde(rename = "ISSUE_ALREADY_COMPLETED")]
         IssueAlreadyCompleted,
+        #[serde(rename = "ISSUE_ALREADY_PAUSED")]
+        IssueAlreadyPaused,
         #[serde(rename = "ISSUE_ARCHIVED")]
         IssueArchived,
         #[serde(rename = "ISSUE_NOT_ARCHIVED")]
@@ -429,8 +445,14 @@ pub mod types {
         IssueNotCompleted,
         #[serde(rename = "ISSUE_NOT_FOUND")]
         IssueNotFound,
+        #[serde(rename = "ISSUE_NOT_PAUSABLE")]
+        IssueNotPausable,
+        #[serde(rename = "ISSUE_NOT_PAUSED")]
+        IssueNotPaused,
         #[serde(rename = "ISSUE_NOT_REOPENABLE")]
         IssueNotReopenable,
+        #[serde(rename = "ISSUE_PAUSED")]
+        IssuePaused,
         #[serde(rename = "LAST_INVOKER")]
         LastInvoker,
         #[serde(rename = "LOOP_NOT_FOUND")]
@@ -467,10 +489,30 @@ pub mod types {
         OwnerNotDisabled,
         #[serde(rename = "OWNER_NOT_FOUND")]
         OwnerNotFound,
+        #[serde(rename = "PANEL_ACTION_RATE_LIMITED")]
+        PanelActionRateLimited,
+        #[serde(rename = "PANEL_CANNOT_RELEASE")]
+        PanelCannotRelease,
+        #[serde(rename = "PANEL_CODE_ATTEMPTS_EXCEEDED")]
+        PanelCodeAttemptsExceeded,
+        #[serde(rename = "PANEL_CODE_EXPIRED")]
+        PanelCodeExpired,
+        #[serde(rename = "PANEL_CODE_INVALID")]
+        PanelCodeInvalid,
+        #[serde(rename = "PANEL_CODE_RATE_LIMITED")]
+        PanelCodeRateLimited,
         #[serde(rename = "PANEL_LINK_UNAVAILABLE")]
         PanelLinkUnavailable,
+        #[serde(rename = "PANEL_MEMBER_NOT_FOUND")]
+        PanelMemberNotFound,
         #[serde(rename = "PANEL_NOT_FOUND")]
         PanelNotFound,
+        #[serde(rename = "PANEL_RESOLUTION_NOT_OFFERED")]
+        PanelResolutionNotOffered,
+        #[serde(rename = "PARTICIPANT_CANNOT_ACT")]
+        ParticipantCannotAct,
+        #[serde(rename = "PARTICIPANT_CANNOT_RELEASE")]
+        ParticipantCannotRelease,
         #[serde(rename = "PARTICIPANT_NOT_FOUND")]
         ParticipantNotFound,
         #[serde(rename = "PASSWORDS_DONT_MATCH")]
@@ -605,11 +647,15 @@ pub mod types {
                 Self::InvalidTimezone => f.write_str("INVALID_TIMEZONE"),
                 Self::IssueAlreadyArchived => f.write_str("ISSUE_ALREADY_ARCHIVED"),
                 Self::IssueAlreadyCompleted => f.write_str("ISSUE_ALREADY_COMPLETED"),
+                Self::IssueAlreadyPaused => f.write_str("ISSUE_ALREADY_PAUSED"),
                 Self::IssueArchived => f.write_str("ISSUE_ARCHIVED"),
                 Self::IssueNotArchived => f.write_str("ISSUE_NOT_ARCHIVED"),
                 Self::IssueNotCompleted => f.write_str("ISSUE_NOT_COMPLETED"),
                 Self::IssueNotFound => f.write_str("ISSUE_NOT_FOUND"),
+                Self::IssueNotPausable => f.write_str("ISSUE_NOT_PAUSABLE"),
+                Self::IssueNotPaused => f.write_str("ISSUE_NOT_PAUSED"),
                 Self::IssueNotReopenable => f.write_str("ISSUE_NOT_REOPENABLE"),
+                Self::IssuePaused => f.write_str("ISSUE_PAUSED"),
                 Self::LastInvoker => f.write_str("LAST_INVOKER"),
                 Self::LoopNotFound => f.write_str("LOOP_NOT_FOUND"),
                 Self::LoopPromptTooLong => f.write_str("LOOP_PROMPT_TOO_LONG"),
@@ -632,8 +678,24 @@ pub mod types {
                 Self::OwnerAlreadyDisabled => f.write_str("OWNER_ALREADY_DISABLED"),
                 Self::OwnerNotDisabled => f.write_str("OWNER_NOT_DISABLED"),
                 Self::OwnerNotFound => f.write_str("OWNER_NOT_FOUND"),
+                Self::PanelActionRateLimited => f.write_str("PANEL_ACTION_RATE_LIMITED"),
+                Self::PanelCannotRelease => f.write_str("PANEL_CANNOT_RELEASE"),
+                Self::PanelCodeAttemptsExceeded => {
+                    f.write_str("PANEL_CODE_ATTEMPTS_EXCEEDED")
+                }
+                Self::PanelCodeExpired => f.write_str("PANEL_CODE_EXPIRED"),
+                Self::PanelCodeInvalid => f.write_str("PANEL_CODE_INVALID"),
+                Self::PanelCodeRateLimited => f.write_str("PANEL_CODE_RATE_LIMITED"),
                 Self::PanelLinkUnavailable => f.write_str("PANEL_LINK_UNAVAILABLE"),
+                Self::PanelMemberNotFound => f.write_str("PANEL_MEMBER_NOT_FOUND"),
                 Self::PanelNotFound => f.write_str("PANEL_NOT_FOUND"),
+                Self::PanelResolutionNotOffered => {
+                    f.write_str("PANEL_RESOLUTION_NOT_OFFERED")
+                }
+                Self::ParticipantCannotAct => f.write_str("PARTICIPANT_CANNOT_ACT"),
+                Self::ParticipantCannotRelease => {
+                    f.write_str("PARTICIPANT_CANNOT_RELEASE")
+                }
                 Self::ParticipantNotFound => f.write_str("PARTICIPANT_NOT_FOUND"),
                 Self::PasswordsDontMatch => f.write_str("PASSWORDS_DONT_MATCH"),
                 Self::PasswordTooWeak => f.write_str("PASSWORD_TOO_WEAK"),
@@ -727,11 +789,15 @@ pub mod types {
                 "INVALID_TIMEZONE" => Ok(Self::InvalidTimezone),
                 "ISSUE_ALREADY_ARCHIVED" => Ok(Self::IssueAlreadyArchived),
                 "ISSUE_ALREADY_COMPLETED" => Ok(Self::IssueAlreadyCompleted),
+                "ISSUE_ALREADY_PAUSED" => Ok(Self::IssueAlreadyPaused),
                 "ISSUE_ARCHIVED" => Ok(Self::IssueArchived),
                 "ISSUE_NOT_ARCHIVED" => Ok(Self::IssueNotArchived),
                 "ISSUE_NOT_COMPLETED" => Ok(Self::IssueNotCompleted),
                 "ISSUE_NOT_FOUND" => Ok(Self::IssueNotFound),
+                "ISSUE_NOT_PAUSABLE" => Ok(Self::IssueNotPausable),
+                "ISSUE_NOT_PAUSED" => Ok(Self::IssueNotPaused),
                 "ISSUE_NOT_REOPENABLE" => Ok(Self::IssueNotReopenable),
+                "ISSUE_PAUSED" => Ok(Self::IssuePaused),
                 "LAST_INVOKER" => Ok(Self::LastInvoker),
                 "LOOP_NOT_FOUND" => Ok(Self::LoopNotFound),
                 "LOOP_PROMPT_TOO_LONG" => Ok(Self::LoopPromptTooLong),
@@ -750,8 +816,18 @@ pub mod types {
                 "OWNER_ALREADY_DISABLED" => Ok(Self::OwnerAlreadyDisabled),
                 "OWNER_NOT_DISABLED" => Ok(Self::OwnerNotDisabled),
                 "OWNER_NOT_FOUND" => Ok(Self::OwnerNotFound),
+                "PANEL_ACTION_RATE_LIMITED" => Ok(Self::PanelActionRateLimited),
+                "PANEL_CANNOT_RELEASE" => Ok(Self::PanelCannotRelease),
+                "PANEL_CODE_ATTEMPTS_EXCEEDED" => Ok(Self::PanelCodeAttemptsExceeded),
+                "PANEL_CODE_EXPIRED" => Ok(Self::PanelCodeExpired),
+                "PANEL_CODE_INVALID" => Ok(Self::PanelCodeInvalid),
+                "PANEL_CODE_RATE_LIMITED" => Ok(Self::PanelCodeRateLimited),
                 "PANEL_LINK_UNAVAILABLE" => Ok(Self::PanelLinkUnavailable),
+                "PANEL_MEMBER_NOT_FOUND" => Ok(Self::PanelMemberNotFound),
                 "PANEL_NOT_FOUND" => Ok(Self::PanelNotFound),
+                "PANEL_RESOLUTION_NOT_OFFERED" => Ok(Self::PanelResolutionNotOffered),
+                "PARTICIPANT_CANNOT_ACT" => Ok(Self::ParticipantCannotAct),
+                "PARTICIPANT_CANNOT_RELEASE" => Ok(Self::ParticipantCannotRelease),
                 "PARTICIPANT_NOT_FOUND" => Ok(Self::ParticipantNotFound),
                 "PASSWORDS_DONT_MATCH" => Ok(Self::PasswordsDontMatch),
                 "PASSWORD_TOO_WEAK" => Ok(Self::PasswordTooWeak),
@@ -3920,6 +3996,7 @@ pub mod types {
     ///        "issueId",
     ///        "key",
     ///        "lifeState",
+    ///        "paused",
     ///        "status",
     ///        "title"
     ///      ],
@@ -3940,6 +4017,9 @@ pub mod types {
     ///        },
     ///        "meta": {
     ///          "type": "string"
+    ///        },
+    ///        "paused": {
+    ///          "type": "boolean"
     ///        },
     ///        "status": {
     ///          "$ref": "#/components/schemas/IssueStatus"
@@ -4103,6 +4183,7 @@ pub mod types {
     ///    "issueId",
     ///    "key",
     ///    "lifeState",
+    ///    "paused",
     ///    "status",
     ///    "title"
     ///  ],
@@ -4123,6 +4204,9 @@ pub mod types {
     ///    },
     ///    "meta": {
     ///      "type": "string"
+    ///    },
+    ///    "paused": {
+    ///      "type": "boolean"
     ///    },
     ///    "status": {
     ///      "$ref": "#/components/schemas/IssueStatus"
@@ -4146,9 +4230,10 @@ pub mod types {
         pub issue_id: ::uuid::Uuid,
         pub key: ::std::string::String,
         #[serde(rename = "lifeState")]
-        pub life_state: IssueLifeState,
+        pub life_state: ::codm_contracts_rust::wire::enums::IssueLifeState,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub meta: ::std::option::Option<::std::string::String>,
+        pub paused: bool,
         pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
         pub title: ::std::string::String,
         #[serde(
@@ -4713,6 +4798,103 @@ pub mod types {
     ///              }
     ///            },
     ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "source"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "by": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "PAUSED"
+    ///                ]
+    ///              },
+    ///              "source": {
+    ///                "$ref": "#/components/schemas/IssueControlSource"
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "source"
+    ///            ],
+    ///            "properties": {
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "by": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "RESUMED"
+    ///                ]
+    ///              },
+    ///              "source": {
+    ///                "$ref": "#/components/schemas/IssueControlSource"
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "actionKind",
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "outcome",
+    ///              "waitedMs"
+    ///            ],
+    ///            "properties": {
+    ///              "actionKind": {
+    ///                "$ref": "#/components/schemas/IrreversibleActionKind"
+    ///              },
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "REGRET_WINDOW"
+    ///                ]
+    ///              },
+    ///              "outcome": {
+    ///                "$ref": "#/components/schemas/RegretWindowOutcome"
+    ///              },
+    ///              "waitedMs": {
+    ///                "type": "integer",
+    ///                "maximum": 9007199254740991.0,
+    ///                "minimum": 0.0
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
     ///          }
     ///        ]
     ///      }
@@ -5018,6 +5200,103 @@ pub mod types {
     ///        }
     ///      },
     ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "source"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "by": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "PAUSED"
+    ///          ]
+    ///        },
+    ///        "source": {
+    ///          "$ref": "#/components/schemas/IssueControlSource"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "source"
+    ///      ],
+    ///      "properties": {
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "by": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "RESUMED"
+    ///          ]
+    ///        },
+    ///        "source": {
+    ///          "$ref": "#/components/schemas/IssueControlSource"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "actionKind",
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "outcome",
+    ///        "waitedMs"
+    ///      ],
+    ///      "properties": {
+    ///        "actionKind": {
+    ///          "$ref": "#/components/schemas/IrreversibleActionKind"
+    ///        },
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "REGRET_WINDOW"
+    ///          ]
+    ///        },
+    ///        "outcome": {
+    ///          "$ref": "#/components/schemas/RegretWindowOutcome"
+    ///        },
+    ///        "waitedMs": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 0.0
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
     ///    }
     ///  ]
     ///}
@@ -5099,6 +5378,32 @@ pub mod types {
         Completed { at: ::std::string::String, id: ::std::string::String },
         #[serde(rename = "ARCHIVED")]
         Archived { at: ::std::string::String, id: ::std::string::String },
+        #[serde(rename = "PAUSED")]
+        Paused {
+            at: ::std::string::String,
+            #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+            by: ::std::option::Option<::std::string::String>,
+            id: ::std::string::String,
+            source: ::codm_contracts_rust::wire::enums::IssueControlSource,
+        },
+        #[serde(rename = "RESUMED")]
+        Resumed {
+            at: ::std::string::String,
+            #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+            by: ::std::option::Option<::std::string::String>,
+            id: ::std::string::String,
+            source: ::codm_contracts_rust::wire::enums::IssueControlSource,
+        },
+        #[serde(rename = "REGRET_WINDOW")]
+        RegretWindow {
+            #[serde(rename = "actionKind")]
+            action_kind: ::codm_contracts_rust::wire::enums::IrreversibleActionKind,
+            at: ::std::string::String,
+            id: ::std::string::String,
+            outcome: ::codm_contracts_rust::wire::enums::RegretWindowOutcome,
+            #[serde(rename = "waitedMs")]
+            waited_ms: i64,
+        },
     }
     impl ::std::convert::From<&Self> for GetIssueTimelineResponseItemsItem {
         fn from(value: &GetIssueTimelineResponseItemsItem) -> Self {
@@ -5127,6 +5432,7 @@ pub mod types {
     ///          "issueId",
     ///          "key",
     ///          "lifeState",
+    ///          "paused",
     ///          "status",
     ///          "threadDisplayName",
     ///          "threadId",
@@ -5149,6 +5455,9 @@ pub mod types {
     ///          },
     ///          "meta": {
     ///            "type": "string"
+    ///          },
+    ///          "paused": {
+    ///            "type": "boolean"
     ///          },
     ///          "status": {
     ///            "$ref": "#/components/schemas/IssueStatus"
@@ -5189,6 +5498,7 @@ pub mod types {
     ///                "issueId",
     ///                "key",
     ///                "lifeState",
+    ///                "paused",
     ///                "status",
     ///                "threadDisplayName",
     ///                "threadId",
@@ -5211,6 +5521,9 @@ pub mod types {
     ///                },
     ///                "meta": {
     ///                  "type": "string"
+    ///                },
+    ///                "paused": {
+    ///                  "type": "boolean"
     ///                },
     ///                "status": {
     ///                  "$ref": "#/components/schemas/IssueStatus"
@@ -5302,6 +5615,7 @@ pub mod types {
     ///    "issueId",
     ///    "key",
     ///    "lifeState",
+    ///    "paused",
     ///    "status",
     ///    "threadDisplayName",
     ///    "threadId",
@@ -5324,6 +5638,9 @@ pub mod types {
     ///    },
     ///    "meta": {
     ///      "type": "string"
+    ///    },
+    ///    "paused": {
+    ///      "type": "boolean"
     ///    },
     ///    "status": {
     ///      "$ref": "#/components/schemas/IssueStatus"
@@ -5355,9 +5672,10 @@ pub mod types {
         pub issue_id: ::uuid::Uuid,
         pub key: ::std::string::String,
         #[serde(rename = "lifeState")]
-        pub life_state: IssueLifeState,
+        pub life_state: ::codm_contracts_rust::wire::enums::IssueLifeState,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub meta: ::std::option::Option<::std::string::String>,
+        pub paused: bool,
         pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
         #[serde(rename = "threadDisplayName")]
         pub thread_display_name: ::std::string::String,
@@ -5398,6 +5716,7 @@ pub mod types {
     ///          "issueId",
     ///          "key",
     ///          "lifeState",
+    ///          "paused",
     ///          "status",
     ///          "threadDisplayName",
     ///          "threadId",
@@ -5420,6 +5739,9 @@ pub mod types {
     ///          },
     ///          "meta": {
     ///            "type": "string"
+    ///          },
+    ///          "paused": {
+    ///            "type": "boolean"
     ///          },
     ///          "status": {
     ///            "$ref": "#/components/schemas/IssueStatus"
@@ -5474,6 +5796,7 @@ pub mod types {
     ///    "issueId",
     ///    "key",
     ///    "lifeState",
+    ///    "paused",
     ///    "status",
     ///    "threadDisplayName",
     ///    "threadId",
@@ -5496,6 +5819,9 @@ pub mod types {
     ///    },
     ///    "meta": {
     ///      "type": "string"
+    ///    },
+    ///    "paused": {
+    ///      "type": "boolean"
     ///    },
     ///    "status": {
     ///      "$ref": "#/components/schemas/IssueStatus"
@@ -5527,9 +5853,10 @@ pub mod types {
         pub issue_id: ::uuid::Uuid,
         pub key: ::std::string::String,
         #[serde(rename = "lifeState")]
-        pub life_state: IssueLifeState,
+        pub life_state: ::codm_contracts_rust::wire::enums::IssueLifeState,
         #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
         pub meta: ::std::option::Option<::std::string::String>,
+        pub paused: bool,
         pub status: ::codm_contracts_rust::wire::enums::IssueStatus,
         #[serde(rename = "threadDisplayName")]
         pub thread_display_name: ::std::string::String,
@@ -8982,228 +9309,6 @@ pub mod types {
     for HealthResponseComponentsValue {
         fn from(value: &HealthResponseComponentsValue) -> Self {
             value.clone()
-        }
-    }
-    ///`IssueLifeState`
-    ///
-    /// <details><summary>JSON schema</summary>
-    ///
-    /// ```json
-    ///{
-    ///  "type": "string",
-    ///  "enum": [
-    ///    "RUNNING",
-    ///    "QUEUED",
-    ///    "WAITING_PROVIDER",
-    ///    "WAITING_PERSON",
-    ///    "REMINDED",
-    ///    "STALLED",
-    ///    "DONE"
-    ///  ]
-    ///}
-    /// ```
-    /// </details>
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd
-    )]
-    pub enum IssueLifeState {
-        #[serde(rename = "RUNNING")]
-        Running,
-        #[serde(rename = "QUEUED")]
-        Queued,
-        #[serde(rename = "WAITING_PROVIDER")]
-        WaitingProvider,
-        #[serde(rename = "WAITING_PERSON")]
-        WaitingPerson,
-        #[serde(rename = "REMINDED")]
-        Reminded,
-        #[serde(rename = "STALLED")]
-        Stalled,
-        #[serde(rename = "DONE")]
-        Done,
-    }
-    impl ::std::convert::From<&Self> for IssueLifeState {
-        fn from(value: &IssueLifeState) -> Self {
-            value.clone()
-        }
-    }
-    impl ::std::fmt::Display for IssueLifeState {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Running => f.write_str("RUNNING"),
-                Self::Queued => f.write_str("QUEUED"),
-                Self::WaitingProvider => f.write_str("WAITING_PROVIDER"),
-                Self::WaitingPerson => f.write_str("WAITING_PERSON"),
-                Self::Reminded => f.write_str("REMINDED"),
-                Self::Stalled => f.write_str("STALLED"),
-                Self::Done => f.write_str("DONE"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for IssueLifeState {
-        type Err = self::error::ConversionError;
-        fn from_str(
-            value: &str,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "RUNNING" => Ok(Self::Running),
-                "QUEUED" => Ok(Self::Queued),
-                "WAITING_PROVIDER" => Ok(Self::WaitingProvider),
-                "WAITING_PERSON" => Ok(Self::WaitingPerson),
-                "REMINDED" => Ok(Self::Reminded),
-                "STALLED" => Ok(Self::Stalled),
-                "DONE" => Ok(Self::Done),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for IssueLifeState {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: &str,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<&::std::string::String> for IssueLifeState {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: &::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for IssueLifeState {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    ///`IssueTimelineItemKind`
-    ///
-    /// <details><summary>JSON schema</summary>
-    ///
-    /// ```json
-    ///{
-    ///  "type": "string",
-    ///  "enum": [
-    ///    "ARCHIVED",
-    ///    "ARTIFACT",
-    ///    "COMPLETED",
-    ///    "CREATED",
-    ///    "MESSAGE",
-    ///    "STEER",
-    ///    "STOP_RAISED",
-    ///    "STOP_RESOLVED",
-    ///    "TURN_STARTED"
-    ///  ]
-    ///}
-    /// ```
-    /// </details>
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        Clone,
-        Copy,
-        Debug,
-        Eq,
-        Hash,
-        Ord,
-        PartialEq,
-        PartialOrd
-    )]
-    pub enum IssueTimelineItemKind {
-        #[serde(rename = "ARCHIVED")]
-        Archived,
-        #[serde(rename = "ARTIFACT")]
-        Artifact,
-        #[serde(rename = "COMPLETED")]
-        Completed,
-        #[serde(rename = "CREATED")]
-        Created,
-        #[serde(rename = "MESSAGE")]
-        Message,
-        #[serde(rename = "STEER")]
-        Steer,
-        #[serde(rename = "STOP_RAISED")]
-        StopRaised,
-        #[serde(rename = "STOP_RESOLVED")]
-        StopResolved,
-        #[serde(rename = "TURN_STARTED")]
-        TurnStarted,
-    }
-    impl ::std::convert::From<&Self> for IssueTimelineItemKind {
-        fn from(value: &IssueTimelineItemKind) -> Self {
-            value.clone()
-        }
-    }
-    impl ::std::fmt::Display for IssueTimelineItemKind {
-        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-            match *self {
-                Self::Archived => f.write_str("ARCHIVED"),
-                Self::Artifact => f.write_str("ARTIFACT"),
-                Self::Completed => f.write_str("COMPLETED"),
-                Self::Created => f.write_str("CREATED"),
-                Self::Message => f.write_str("MESSAGE"),
-                Self::Steer => f.write_str("STEER"),
-                Self::StopRaised => f.write_str("STOP_RAISED"),
-                Self::StopResolved => f.write_str("STOP_RESOLVED"),
-                Self::TurnStarted => f.write_str("TURN_STARTED"),
-            }
-        }
-    }
-    impl ::std::str::FromStr for IssueTimelineItemKind {
-        type Err = self::error::ConversionError;
-        fn from_str(
-            value: &str,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            match value {
-                "ARCHIVED" => Ok(Self::Archived),
-                "ARTIFACT" => Ok(Self::Artifact),
-                "COMPLETED" => Ok(Self::Completed),
-                "CREATED" => Ok(Self::Created),
-                "MESSAGE" => Ok(Self::Message),
-                "STEER" => Ok(Self::Steer),
-                "STOP_RAISED" => Ok(Self::StopRaised),
-                "STOP_RESOLVED" => Ok(Self::StopResolved),
-                "TURN_STARTED" => Ok(Self::TurnStarted),
-                _ => Err("invalid value".into()),
-            }
-        }
-    }
-    impl ::std::convert::TryFrom<&str> for IssueTimelineItemKind {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: &str,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<&::std::string::String> for IssueTimelineItemKind {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: &::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
-        }
-    }
-    impl ::std::convert::TryFrom<::std::string::String> for IssueTimelineItemKind {
-        type Error = self::error::ConversionError;
-        fn try_from(
-            value: ::std::string::String,
-        ) -> ::std::result::Result<Self, self::error::ConversionError> {
-            value.parse()
         }
     }
     ///`ListArtifactsResponse`
@@ -12894,6 +12999,41 @@ Sends a `POST` request to `/issues/{issueId}/archive`
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
+    /**Pause an issue: its turns stop and its external tools refuse until it is resumed
+
+Sends a `POST` request to `/issues/{issueId}/pause`
+
+*/
+    pub async fn pause_issue<'a>(
+        &'a self,
+        issue_id: &'a str,
+    ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
+        let url = format!(
+            "{}/issues/{}/pause", self.baseurl, encode_path(& issue_id.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
     /**Restore an archived issue (C27)
 
 Sends a `POST` request to `/issues/{issueId}/restore`
@@ -12905,6 +13045,41 @@ Sends a `POST` request to `/issues/{issueId}/restore`
     ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
         let url = format!(
             "{}/issues/{}/restore", self.baseurl, encode_path(& issue_id.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Resume a paused issue: its held work continues now
+
+Sends a `POST` request to `/issues/{issueId}/resume`
+
+*/
+    pub async fn resume_issue<'a>(
+        &'a self,
+        issue_id: &'a str,
+    ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
+        let url = format!(
+            "{}/issues/{}/resume", self.baseurl, encode_path(& issue_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map

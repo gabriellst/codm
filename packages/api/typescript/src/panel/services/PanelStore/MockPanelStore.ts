@@ -37,4 +37,9 @@ export class MockPanelStore extends PanelStore {
 		group.token = token
 		return true
 	}
+
+	async findIssue(ownerId: string, threadId: string, issueId: string): Promise<PanelIssueRow | undefined> {
+		const issue = this.issues.get(issueId)
+		return issue && issue.ownerId === ownerId && issue.threadId === threadId ? issue : undefined
+	}
 }

@@ -2,6 +2,7 @@ import { injectable } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { Handler, z, BaseError } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
+import { IssueHold } from '@issue/services/IssueHold'
 import { StopKind } from '@codm/contracts-typescript/wire/enums'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
 import { FactSource } from '../enums'
@@ -19,6 +20,12 @@ export const DeclareStopInputSchema = z.object({
 	 */
 	kind: z.enum(StopKind),
 	detail: z.string().trim().min(1).max(4000),
+	/**
+	 * The issue whose RUN is calling, read off the run identity by the controller — absent for the
+	 * orchestrator and the console. A held issue's run is refused here (ISSUE_PAUSED, `IssueHold`).
+	 * Never part of the tool's arguments: the controller omits it from the body.
+	 */
+	actingIssueId: z.uuid().optional(),
 })
 
 export const DeclareStopOutputSchema = z.object({ stopId: z.uuid() })
@@ -42,7 +49,13 @@ export class DeclareStop extends Handler<typeof DeclareStopInputSchema, typeof D
 	readonly inputSchema = DeclareStopInputSchema
 	readonly outputSchema = DeclareStopOutputSchema
 
+	constructor(private readonly hold: IssueHold) {
+		super()
+	}
+
 	protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
+		// A HELD issue's run does not get to raise anything visible (fase 2, item 2 — pausa como comando).
+		await this.hold.assertNotHeld(input.actingIssueId)
 		if (isTransportStopKind(input.kind)) {
 			throw new BaseError<AgentDomainErrors>(
 				'AGENT_TRANSPORT_STOP_NOT_DECLARABLE',

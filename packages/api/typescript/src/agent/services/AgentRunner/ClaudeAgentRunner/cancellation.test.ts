@@ -159,6 +159,65 @@ describe('cancellation — process-group kill (§4.11, AC-3.3)', () => {
 		expect(types.at(-1)).toBe('finished')
 	})
 
+	/**
+	 * "AGORA" KEEPS THE SESSION (fase 2, item 4): a run killed AFTER the CLI announced its session still
+	 * reports that session on its terminal event — what `RunIssueTurn` persists so the steer's turn can
+	 * `--resume` it. Falsifier: drop `sessionId` from the stopped branch of `buildResult` and the cut item
+	 * is released and rerun from the start instead.
+	 */
+	it('a run killed after its init frame still reports the session it opened', async () => {
+		let release: (() => void) | undefined
+		const closed = new Promise<void>(resolve => {
+			release = resolve
+		})
+		let sentInit = false
+		const init = `${JSON.stringify({ type: 'system', subtype: 'init', session_id: 'sess-cut', model: 'test' })}\n`
+		const proc: AgentProcess = {
+			stdout: {
+				[Symbol.asyncIterator]: () => ({
+					async next(): Promise<IteratorResult<Uint8Array>> {
+						if (!sentInit) {
+							sentInit = true
+							return { done: false, value: new TextEncoder().encode(init) }
+						}
+						await closed
+						return { done: true, value: new Uint8Array() }
+					},
+				}),
+			},
+			stderr: (async function* (): AsyncGenerator<Uint8Array> {})(),
+			write() {},
+			endStdin() {},
+			kill() {
+				release?.()
+			},
+			exited: closed.then(() => 143),
+		}
+		const runner = ClaudeAgentRunner.withOptions(new MockLoggingService(), new InMemoryAgentIdentityService(), {
+			spawner: () => proc,
+			inactivityMs: 30_000,
+		})
+		const controller = new AbortController()
+
+		let finishedSession: string | null | undefined
+		const iteration = (async () => {
+			for await (const event of runner.run({
+				agentName: AgentName.ISSUE_WORK,
+				posture: PermissionPosture.AUTO,
+				cwd: process.cwd(),
+				binaryPath: '/opt/bin/claude',
+				messages: [{ role: AgentMessageRole.USER, content: 'noop' }],
+				signal: controller.signal,
+			})) {
+				if (event.type === 'frame' && event.frame.kind === 'system_init') controller.abort()
+				if (event.type === 'finished') finishedSession = event.result.sessionId
+			}
+		})()
+		await iteration
+
+		expect(finishedSession).toBe('sess-cut')
+	})
+
 	it('shutdown() kills every process the runner still owns', async () => {
 		const { proc, state } = fakeBlockingProcess()
 		const runner = ClaudeAgentRunner.withOptions(new MockLoggingService(), new InMemoryAgentIdentityService(), {

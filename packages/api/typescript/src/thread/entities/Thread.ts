@@ -260,11 +260,22 @@ export type QuotedEntryRef = Z.infer<typeof QuotedEntryRefSchema>
 export type Stop = Z.infer<typeof StopSchema>
 export type StopResolutionPatch = Z.infer<typeof StopResolutionPatchSchema>
 
+/**
+ * The UPDATE half of a late routing (fase 2, triagem paralela): an entry recorded unrouted, linked to the
+ * issue the triage sent it to. `save` stamps these two columns on the already-persisted entry.
+ */
+export interface EntryLinkPatch {
+	entryId: string
+	issueId: string
+	classification: ClassificationMethod
+}
+
 /** What `ThreadRepository.save` drains and writes in the SAME transaction as the thread row. */
 export interface PendingThreadWrites {
 	entries: TranscriptEntry[]
 	stops: Stop[]
 	stopResolutions: StopResolutionPatch[]
+	entryLinks: EntryLinkPatch[]
 }
 
 /**
@@ -348,6 +359,7 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	private pendingEntries: TranscriptEntry[] = []
 	private pendingStops: Stop[] = []
 	private pendingStopResolutions: StopResolutionPatch[] = []
+	private pendingEntryLinks: EntryLinkPatch[] = []
 
 	static create(data: {
 		ownerId: string
@@ -775,6 +787,21 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	}
 
 	/**
+	 * Link an entry that was recorded UNROUTED to the issue a later decision routed it to — the parallel
+	 * triage (fase 2), which decides after the ingest committed the entry. The issue's timeline then shows
+	 * the message, with `classification` saying how it got there.
+	 *
+	 * Takes the LOADED entry, like `resolveStop` takes the loaded stop: the aggregate does no I/O. Returns
+	 * false and writes nothing when the entry is not this conversation's or is ALREADY linked — a routing
+	 * decided at ingest (a quote, a key) is never overwritten by a later guess.
+	 */
+	linkEntryToIssue(entry: TranscriptEntry, issueId: string, classification: ClassificationMethod): boolean {
+		if (entry.threadId !== this.id.value || entry.issueId) return false
+		this.pendingEntryLinks.push({ entryId: entry.entryId, issueId, classification })
+		return true
+	}
+
+	/**
 	 * Raise a stop on this thread (B4, spec decision 4) — with or without an issue behind it.
 	 *
 	 * `stopId` is accepted rather than always minted because the id is frequently DECIDED UPSTREAM: the
@@ -867,10 +894,12 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 			entries: this.pendingEntries,
 			stops: this.pendingStops,
 			stopResolutions: this.pendingStopResolutions,
+			entryLinks: this.pendingEntryLinks,
 		}
 		this.pendingEntries = []
 		this.pendingStops = []
 		this.pendingStopResolutions = []
+		this.pendingEntryLinks = []
 		return writes
 	}
 
@@ -898,6 +927,29 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 */
 	addressedToAgent(input: { senderExternalId: string; text: string; repliesToAgent?: boolean }): boolean {
 		if (this.paused) return false
+		return this.reachesAgent(input)
+	}
+
+	/**
+	 * `addressedToAgent` WITHOUT the thread's own pause — the participant and mention gates alone.
+	 *
+	 * Split out for one caller with one reason: a CONTROL WORD ("pare APP-12", "continue" quoting an issue)
+	 * must work while the conversation is paused (fase 2, item 2) — "continue" on a paused group is exactly
+	 * when it is needed — and still only from someone who could address the agent at all. A muted
+	 * participant stays muted and the mention gate still applies; only the pause stands down.
+	 */
+	/**
+	 * May this participant act on the conversation's work from a door that carries no message — the cloud
+	 * panel (fase 2, item 6b): pause, resume or steer one issue. The participant gate of `reachesAgent`
+	 * alone: a muted participant stays muted. No mention gate (there is no text to tag; the door itself is
+	 * the address) and no freshness window (the panel's request has its own, enforced in the cloud).
+	 */
+	mayAct(participantId: string): boolean {
+		const participant = this.participants.find(p => p.participantId === participantId)
+		return !participant || participant.canInvoke
+	}
+
+	private reachesAgent(input: { senderExternalId: string; text: string; repliesToAgent?: boolean }): boolean {
 		const participant = this.participants.find(p => p.participantId === input.senderExternalId)
 		if (participant && !participant.canInvoke) return false
 		if (input.repliesToAgent) return true
@@ -932,6 +984,21 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 */
 	canInvoke(input: { senderExternalId: string; text: string; repliesToAgent?: boolean; sentAt: Date; now: Date }): boolean {
 		if (!this.addressedToAgent(input)) return false
+		return this.isFresh(input)
+	}
+
+	/**
+	 * May this sender's CONTROL WORD (pause/resume an issue) take effect now? — `canInvoke` minus the
+	 * thread's own pause (fase 2, item 2). Freshness is KEPT: a "pare" replayed from a reconnect backlog
+	 * must not pause work that someone has since resumed.
+	 */
+	canCommand(input: { senderExternalId: string; text: string; repliesToAgent?: boolean; sentAt: Date; now: Date }): boolean {
+		if (!this.reachesAgent(input)) return false
+		return this.isFresh(input)
+	}
+
+	/** The freshness half of `canInvoke` / `canCommand` — see `canInvoke` for the window and its exceptions. */
+	private isFresh(input: { senderExternalId: string; sentAt: Date; now: Date }): boolean {
 		// THE OPERATOR IS NOT A BACKLOG, and the window was never aimed at them. What it exists to stop
 		// is a replay of CONVERSATION scheduling a turn per message; the operator's own line is the
 		// INSTRUCTION, and a late instruction is still the instruction. Measured 2026-08-05: a reconnect
@@ -974,6 +1041,16 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 * deliberate exception. Every other paragraph of the prompt calls them "the operator"; rendering
 	 * `de="Operator"` here would hand the model a second name for the person its instructions are about.
 	 */
+	/**
+	 * The roster NAME of a participant — `undefined` when the roster has none, NEVER the raw id that
+	 * `displayNameOf` falls back to. For surfaces that must not carry an address at all (the parallel
+	 * triage's prompt, fase 2): the caller substitutes a neutral label instead of a phone-number JID.
+	 */
+	rosterNameOf(senderExternalId?: string): string | undefined {
+		if (!senderExternalId || senderExternalId === OPERATOR_PARTICIPANT_ID) return OPERATOR_PARTICIPANT_ID
+		return this.participants.find(p => p.participantId === senderExternalId)?.name
+	}
+
 	displayNameOf(senderExternalId?: string): string {
 		if (!senderExternalId || senderExternalId === OPERATOR_PARTICIPANT_ID) return OPERATOR_PARTICIPANT_ID
 		return this.participants.find(p => p.participantId === senderExternalId)?.name ?? senderExternalId

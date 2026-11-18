@@ -72,4 +72,13 @@ export class PgPanelStore extends PanelStore {
 			.returning({ threadId: panelGroups.threadId })
 		return rows.length > 0
 	}
+
+	async findIssue(ownerId: string, threadId: string, issueId: string, tx?: PgTransaction): Promise<PanelIssueRow | undefined> {
+		const [row] = await (tx ?? this.driver.db)
+			.select()
+			.from(panelIssues)
+			.where(and(eq(panelIssues.issueId, issueId), eq(panelIssues.threadId, threadId), eq(panelIssues.ownerId, ownerId)))
+			.limit(1)
+		return row
+	}
 }

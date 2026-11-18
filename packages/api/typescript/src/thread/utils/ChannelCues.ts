@@ -33,6 +33,26 @@ export const CUE_ACKNOWLEDGED = '👀'
 export const CUE_REPLIED = '🤖'
 
 /**
+ * `⏸️` / `▶️` — "done: the issue is held" / "done: it continues", hung on the control word itself
+ * ("pare APP-12", "continue" quoting an issue — fase 2, item 2). The ONLY acknowledgement a command
+ * gets: no text reply in the group, because the person asked the work to be quiet, and a sentence back
+ * would be the opposite. Same cosmetic contract as every cue here.
+ */
+export const CUE_PAUSED = '⏸️'
+export const CUE_RESUMED = '▶️'
+
+/**
+ * `☑️` / `✅` — "your message reached the work" / "the work read it", hung on a message the rule layer
+ * routed straight to an issue as a steer (fase 2, item 5). Each REPLACES the reaction before it
+ * (WhatsApp keeps one reaction per sender per message), so the message walks 👀 → ☑️ → ✅ the way a
+ * WhatsApp message walks its own ticks: a grey box first, a green check once it was read.
+ *  - `☑️` when the mailbox hands the steer to the issue's session for the first time;
+ *  - `✅` when the turn that carried it ends and the item is consumed — never for a turn a pause killed.
+ */
+export const CUE_DELIVERED = '☑️'
+export const CUE_READ = '✅'
+
+/**
  * How often the typing indicator must be re-published to stay lit.
  *
  * Beating faster than the platform's own expiry is the whole mechanism — beat AT the expiry and the

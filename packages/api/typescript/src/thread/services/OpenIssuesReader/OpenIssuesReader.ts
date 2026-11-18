@@ -1,3 +1,5 @@
+import type { Transaction } from '@codm/core-typescript'
+import type { IssueStatus } from '@codm/contracts-typescript/wire/enums'
 /**
  * An open issue a message could be routed to — the element type this reader returns.
  *
@@ -12,6 +14,15 @@ export interface OpenIssueRef {
 	issueId: string
 	key: string
 	title: string
+}
+
+/**
+ * An open issue as the parallel triage weighs it (fase 2): the ref plus WHERE it stands and WHEN it last
+ * moved — "the one they were talking about a minute ago" is usually the target of a loose message.
+ */
+export interface OpenIssueSummary extends OpenIssueRef {
+	status: IssueStatus
+	lastActivityAt: Date
 }
 
 /**
@@ -36,7 +47,7 @@ export interface SteerableIssueRef extends OpenIssueRef {
  * import): the classification decision needs to know what issues already exist on the thread.
  */
 export abstract class OpenIssuesReader {
-	abstract openIssues(threadId: string): Promise<OpenIssueRef[]>
+	abstract openIssues(threadId: string): Promise<OpenIssueSummary[]>
 	/** Resolve which issue a transcript entry was routed to (for reply-quote authority). */
 	abstract issueIdForEntry(entryId: string): Promise<string | undefined>
 	/**
@@ -60,5 +71,8 @@ export abstract class OpenIssuesReader {
 	 * Devolve `undefined` para "não é sua" E para "está arquivada", sem distinguir: o chamador
 	 * transforma os dois no mesmo erro, e é isso que impede o endpoint de virar oráculo de ids.
 	 */
-	abstract steerableIssue(threadId: string, issueId: string): Promise<SteerableIssueRef | undefined>
+	abstract steerableIssue(threadId: string, issueId: string, tx?: Transaction): Promise<SteerableIssueRef | undefined>
+
+	/** The same question by the issue's KEY (`APP-12`) — what a person types when they name a task. */
+	abstract steerableIssueByKey(threadId: string, key: string, tx?: Transaction): Promise<SteerableIssueRef | undefined>
 }

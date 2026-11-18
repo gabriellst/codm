@@ -4,6 +4,8 @@ export { RotateThreadPanelLinkController } from './RotateThreadPanelLink'
 export { GetIssueStatusController } from './GetIssueStatus'
 export { GetIssuesOverviewController } from './GetIssuesOverview'
 export { GetSessionIssuesController } from './GetSessionIssues'
+export { PauseIssueController } from './PauseIssue'
+export { ResumeIssueController } from './ResumeIssue'
 export { RestoreIssueController } from './RestoreIssue'
 export { SteerIssueController } from './SteerIssue'
 
@@ -13,6 +15,8 @@ import { RotateThreadPanelLinkController } from './RotateThreadPanelLink'
 import { GetIssueStatusController } from './GetIssueStatus'
 import { GetIssuesOverviewController } from './GetIssuesOverview'
 import { GetSessionIssuesController } from './GetSessionIssues'
+import { PauseIssueController } from './PauseIssue'
+import { ResumeIssueController } from './ResumeIssue'
 import { RestoreIssueController } from './RestoreIssue'
 import { SteerIssueController } from './SteerIssue'
 
@@ -28,6 +32,8 @@ export default {
 	GetIssueStatusController,
 	GetIssuesOverviewController,
 	GetSessionIssuesController,
+	PauseIssueController,
+	ResumeIssueController,
 	RestoreIssueController,
 	SteerIssueController,
 }

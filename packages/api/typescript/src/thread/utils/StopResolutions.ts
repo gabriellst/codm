@@ -48,3 +48,23 @@ export const RESUMES_WITH_RESOLVER_POSTURE: Record<StopResolution, boolean> = {
 	[StopResolution.DENY]: false,
 	[StopResolution.TAKE_OVER]: false,
 }
+
+/**
+ * Which answers the cloud PANEL offers (fase 2, item 6b). A table, total over `StopResolution`, so a new
+ * resolution fails compilation here until somebody decides whether a person in the group may give it from
+ * a browser. TAKE_OVER stays off: it pauses the whole conversation and hands it to the operator — the
+ * operator's move from the console, not a button for anyone holding the link. REVIEW_AND_SEND stays off
+ * too: it means "I reviewed the held reply", and the panel shows no held reply to review.
+ */
+export const OFFERED_ON_PANEL: Record<StopResolution, boolean> = {
+	[StopResolution.RETRY]: true,
+	[StopResolution.REVIEW_AND_SEND]: false,
+	[StopResolution.APPROVE]: true,
+	[StopResolution.DENY]: true,
+	[StopResolution.TAKE_OVER]: false,
+}
+
+/** The answers a stop of this kind admits on the panel — the kind's own vocabulary, reduced by `OFFERED_ON_PANEL`. */
+export function panelResolutionsForKind(kind: StopKind): StopResolution[] {
+	return resolutionsForKind(kind).filter(resolution => OFFERED_ON_PANEL[resolution])
+}

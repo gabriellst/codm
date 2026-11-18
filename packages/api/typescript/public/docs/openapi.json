@@ -1669,6 +1669,9 @@
                         "archived": {
                           "type": "boolean"
                         },
+                        "paused": {
+                          "type": "boolean"
+                        },
                         "waitingForProviderUntil": {
                           "type": "string"
                         },
@@ -1682,6 +1685,7 @@
                         "title",
                         "status",
                         "archived",
+                        "paused",
                         "lifeState"
                       ],
                       "additionalProperties": false
@@ -1956,6 +1960,9 @@
                                 "archived": {
                                   "type": "boolean"
                                 },
+                                "paused": {
+                                  "type": "boolean"
+                                },
                                 "threadId": {
                                   "type": "string",
                                   "format": "uuid",
@@ -1977,6 +1984,7 @@
                                 "title",
                                 "status",
                                 "archived",
+                                "paused",
                                 "threadId",
                                 "threadDisplayName",
                                 "lifeState"
@@ -2017,6 +2025,9 @@
                           "archived": {
                             "type": "boolean"
                           },
+                          "paused": {
+                            "type": "boolean"
+                          },
                           "threadId": {
                             "type": "string",
                             "format": "uuid",
@@ -2038,6 +2049,7 @@
                           "title",
                           "status",
                           "archived",
+                          "paused",
                           "threadId",
                           "threadDisplayName",
                           "lifeState"
@@ -2061,6 +2073,66 @@
           "system",
           "orchestration"
         ]
+      }
+    },
+    "/issues/{issueId}/pause": {
+      "post": {
+        "tags": [
+          "issue"
+        ],
+        "description": "Pause an issue: its turns stop and its external tools refuse until it is resumed",
+        "operationId": "PauseIssue",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "issueId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddaf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pause an issue: its turns stop and its external tools refuse until it is resumed",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/issues/{issueId}/resume": {
+      "post": {
+        "tags": [
+          "issue"
+        ],
+        "description": "Resume a paused issue: its held work continues now",
+        "operationId": "ResumeIssue",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "issueId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddaf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resume a paused issue: its held work continues now",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
       }
     },
     "/issues/{issueId}/restore": {
@@ -9489,6 +9561,97 @@
                               "at"
                             ],
                             "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "PAUSED"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "source": {
+                                "$ref": "#/components/schemas/IssueControlSource"
+                              },
+                              "by": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "source"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "RESUMED"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "source": {
+                                "$ref": "#/components/schemas/IssueControlSource"
+                              },
+                              "by": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "source"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "REGRET_WINDOW"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "actionKind": {
+                                "$ref": "#/components/schemas/IrreversibleActionKind"
+                              },
+                              "outcome": {
+                                "$ref": "#/components/schemas/RegretWindowOutcome"
+                              },
+                              "waitedMs": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "actionKind",
+                              "outcome",
+                              "waitedMs"
+                            ],
+                            "additionalProperties": false
                           }
                         ]
                       }
@@ -9596,11 +9759,15 @@
           "INVALID_TIMEZONE",
           "ISSUE_ALREADY_ARCHIVED",
           "ISSUE_ALREADY_COMPLETED",
+          "ISSUE_ALREADY_PAUSED",
           "ISSUE_ARCHIVED",
           "ISSUE_NOT_ARCHIVED",
           "ISSUE_NOT_COMPLETED",
           "ISSUE_NOT_FOUND",
+          "ISSUE_NOT_PAUSABLE",
+          "ISSUE_NOT_PAUSED",
           "ISSUE_NOT_REOPENABLE",
+          "ISSUE_PAUSED",
           "LAST_INVOKER",
           "LOOP_NOT_FOUND",
           "LOOP_PROMPT_TOO_LONG",
@@ -9619,8 +9786,18 @@
           "OWNER_ALREADY_DISABLED",
           "OWNER_NOT_DISABLED",
           "OWNER_NOT_FOUND",
+          "PANEL_ACTION_RATE_LIMITED",
+          "PANEL_CANNOT_RELEASE",
+          "PANEL_CODE_ATTEMPTS_EXCEEDED",
+          "PANEL_CODE_EXPIRED",
+          "PANEL_CODE_INVALID",
+          "PANEL_CODE_RATE_LIMITED",
           "PANEL_LINK_UNAVAILABLE",
+          "PANEL_MEMBER_NOT_FOUND",
           "PANEL_NOT_FOUND",
+          "PANEL_RESOLUTION_NOT_OFFERED",
+          "PARTICIPANT_CANNOT_ACT",
+          "PARTICIPANT_CANNOT_RELEASE",
           "PARTICIPANT_NOT_FOUND",
           "PASSWORDS_DONT_MATCH",
           "PASSWORD_TOO_WEAK",
@@ -9731,6 +9908,7 @@
           "WAITING_PERSON",
           "REMINDED",
           "STALLED",
+          "PAUSED",
           "DONE"
         ]
       },
@@ -10021,10 +10199,40 @@
           "COMPLETED",
           "CREATED",
           "MESSAGE",
+          "PAUSED",
+          "REGRET_WINDOW",
+          "RESUMED",
           "STEER",
           "STOP_RAISED",
           "STOP_RESOLVED",
           "TURN_STARTED"
+        ]
+      },
+      "IssueControlSource": {
+        "type": "string",
+        "enum": [
+          "WHATSAPP",
+          "CONSOLE",
+          "PANEL"
+        ]
+      },
+      "IrreversibleActionKind": {
+        "type": "string",
+        "enum": [
+          "GIT_PUSH",
+          "GIT_FORCE_PUSH",
+          "PR_MERGE",
+          "RELEASE",
+          "PACKAGE_PUBLISH",
+          "DEPLOY"
+        ]
+      },
+      "RegretWindowOutcome": {
+        "type": "string",
+        "enum": [
+          "PROCEEDED",
+          "CANCELLED_BY_STEER",
+          "CANCELLED_BY_PAUSE"
         ]
       }
     }
@@ -10077,11 +10285,15 @@
     "INVALID_TIMEZONE",
     "ISSUE_ALREADY_ARCHIVED",
     "ISSUE_ALREADY_COMPLETED",
+    "ISSUE_ALREADY_PAUSED",
     "ISSUE_ARCHIVED",
     "ISSUE_NOT_ARCHIVED",
     "ISSUE_NOT_COMPLETED",
     "ISSUE_NOT_FOUND",
+    "ISSUE_NOT_PAUSABLE",
+    "ISSUE_NOT_PAUSED",
     "ISSUE_NOT_REOPENABLE",
+    "ISSUE_PAUSED",
     "LAST_INVOKER",
     "LOOP_NOT_FOUND",
     "LOOP_PROMPT_TOO_LONG",
@@ -10100,8 +10312,18 @@
     "OWNER_ALREADY_DISABLED",
     "OWNER_NOT_DISABLED",
     "OWNER_NOT_FOUND",
+    "PANEL_ACTION_RATE_LIMITED",
+    "PANEL_CANNOT_RELEASE",
+    "PANEL_CODE_ATTEMPTS_EXCEEDED",
+    "PANEL_CODE_EXPIRED",
+    "PANEL_CODE_INVALID",
+    "PANEL_CODE_RATE_LIMITED",
     "PANEL_LINK_UNAVAILABLE",
+    "PANEL_MEMBER_NOT_FOUND",
     "PANEL_NOT_FOUND",
+    "PANEL_RESOLUTION_NOT_OFFERED",
+    "PARTICIPANT_CANNOT_ACT",
+    "PARTICIPANT_CANNOT_RELEASE",
     "PARTICIPANT_NOT_FOUND",
     "PASSWORDS_DONT_MATCH",
     "PASSWORD_TOO_WEAK",

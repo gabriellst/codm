@@ -367,8 +367,14 @@
 			"TUESDAY": "Terça",
 			"WEDNESDAY": "Quarta"
 		},
+		"IssueControlSource": {
+			"CONSOLE": "Console",
+			"PANEL": "Painel",
+			"WHATSAPP": "WhatsApp"
+		},
 		"IssueLifeState": {
 			"DONE": "Concluída",
+			"PAUSED": "Pausada",
 			"QUEUED": "Na fila",
 			"REMINDED": "Lembrada de declarar",
 			"RUNNING": "Fazendo",
@@ -382,6 +388,9 @@
 			"COMPLETED": "Concluída",
 			"CREATED": "Criada",
 			"MESSAGE": "Mensagem",
+			"PAUSED": "Pausada",
+			"REGRET_WINDOW": "Janela de arrependimento",
+			"RESUMED": "Retomada",
 			"STEER": "Orientação",
 			"STOP_RAISED": "Pediu alguém",
 			"STOP_RESOLVED": "Respondida",
@@ -444,6 +453,19 @@
 		"WorkspaceBadge": {
 			"CLAUDE_PROJECT": "Projeto Claude",
 			"GIT": "git"
+		},
+		"IrreversibleActionKind": {
+			"DEPLOY": "deploy",
+			"GIT_FORCE_PUSH": "git push forçado",
+			"GIT_PUSH": "git push",
+			"PACKAGE_PUBLISH": "publicar pacote",
+			"PR_MERGE": "merge de PR",
+			"RELEASE": "criar release"
+		},
+		"RegretWindowOutcome": {
+			"CANCELLED_BY_PAUSE": "cancelado pela pausa",
+			"CANCELLED_BY_STEER": "cancelado por recado",
+			"PROCEEDED": "seguiu"
 		}
 	},
 	"errors": {
@@ -495,11 +517,15 @@
 		"INVALID_TIMEZONE": "Fuso horário inválido. Use um nome IANA como \"America/Sao_Paulo\".",
 		"ISSUE_ALREADY_ARCHIVED": "Esta issue já está arquivada.",
 		"ISSUE_ALREADY_COMPLETED": "Esta issue já foi concluída.",
+		"ISSUE_ALREADY_PAUSED": "Esta issue já está pausada.",
 		"ISSUE_ARCHIVED": "Esta issue está arquivada.",
 		"ISSUE_NOT_ARCHIVED": "Esta issue não está arquivada.",
 		"ISSUE_NOT_COMPLETED": "Esta issue não está concluída.",
 		"ISSUE_NOT_FOUND": "Issue não encontrada.",
+		"ISSUE_NOT_PAUSABLE": "Só dá para pausar uma issue que ainda está em andamento.",
+		"ISSUE_NOT_PAUSED": "Esta issue não está pausada.",
 		"ISSUE_NOT_REOPENABLE": "Esta issue já está em andamento e não pode ser reaberta.",
+		"ISSUE_PAUSED": "Esta issue está pausada — nada sai até alguém retomá-la.",
 		"LAST_INVOKER": "Ao menos um participante deve manter permissão de invocação.",
 		"LOOP_NOT_FOUND": "Esse loop não existe mais nesta conversa.",
 		"LOOP_PROMPT_TOO_LONG": "O prompt do loop passou do limite de caracteres.",
@@ -519,8 +545,18 @@
 		"OWNER_ALREADY_DISABLED": "Esta conta já está desativada.",
 		"OWNER_NOT_DISABLED": "Esta conta não está desativada.",
 		"OWNER_NOT_FOUND": "Conta não encontrada.",
+		"PANEL_ACTION_RATE_LIMITED": "Muitas ações deste aparelho. Espere um minuto e tente de novo.",
+		"PANEL_CANNOT_RELEASE": "Só quem pode liberar responde a este pedido.",
+		"PANEL_CODE_ATTEMPTS_EXCEEDED": "Muitas tentativas com este código. Peça um novo.",
+		"PANEL_CODE_EXPIRED": "Este código venceu ou já foi usado. Peça um novo.",
+		"PANEL_CODE_INVALID": "Código incorreto.",
+		"PANEL_CODE_RATE_LIMITED": "Muitos pedidos de código. Espere um pouco e tente de novo.",
 		"PANEL_LINK_UNAVAILABLE": "Esta conversa ainda não tem link do painel. Confira se o codm está logado e tente em alguns segundos.",
+		"PANEL_MEMBER_NOT_FOUND": "Essa pessoa não está mais na lista do grupo.",
 		"PANEL_NOT_FOUND": "Link do painel inválido ou trocado.",
+		"PANEL_RESOLUTION_NOT_OFFERED": "Essa resposta não está disponível para este pedido no painel.",
+		"PARTICIPANT_CANNOT_ACT": "Esta pessoa não pode acionar o agente nesta conversa.",
+		"PARTICIPANT_CANNOT_RELEASE": "Esta pessoa não pode liberar pedidos nesta conversa.",
 		"PARTICIPANT_NOT_FOUND": "Participante não encontrado.",
 		"PASSWORDS_DONT_MATCH": "As senhas não coincidem.",
 		"PASSWORD_TOO_WEAK": "Senha muito fraca. Use letras, números e símbolos.",
@@ -624,6 +660,10 @@
 		"agentStopped": "O agente parou e está aguardando",
 		"allIssues": "Todas as tarefas",
 		"archive": "Arquivar",
+		"pauseIssue": "Pausar",
+		"resumeIssue": "Retomar",
+		"issuePausedBadge": "Pausada",
+		"timelineControlBy": "{{source}} · {{by}}",
 		"archived": "Arquivadas",
 		"artifactOpenExternally": "Abrir fora do console",
 		"artifactOpenFull": "Ver {{name}} em tamanho cheio",
@@ -752,9 +792,12 @@
 		"timelineFromAgent": "agente",
 		"timelineFromPerson": "pessoa",
 		"timelineReplyQuote": "respondeu citando",
+		"timelineTriage": "roteada pela triagem",
 		"transcriptIssue": "tarefa",
 		"waitingForProvider": "Esperando cota até {{when}}",
-		"waitingTerminal": "Aguardando saída do terminal…"
+		"waitingTerminal": "Aguardando saída do terminal…",
+		"timelineRegretWindow": "esperou {{seconds}} s antes de {{action}} — {{outcome}}",
+		"timelineRegretWindowNoWait": "{{action}} — {{outcome}} sem esperar"
 	},
 	"settings": {
 		"agentProviders": "Provedores de agentes",

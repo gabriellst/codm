@@ -5,6 +5,10 @@ export default {
 	placement: [{ when: { deployment: 'local' }, infra: { db: 'libsql' } }],
 
 	kind: 'domain',
+	consumes: {
+		agent:
+			'Pausa como comando (fase 2, item 2): the issue owns the pause fact and its two in-context handlers command the agent turn runtime — AbortIssueTurnOnPause kills the running turn through IssueTurnAborter (services surface), ReleaseIssueWorkOnResume releases the held items through MailboxRepository (repositories surface; the mailbox is a queue, the stance thread/handlers/ResumeIssueOnStopResolved already takes). The pause itself is the issues.paused flag; these only make it immediate.',
+	},
 	reads: {
 		thread: 'T04/T12 read models join threads + transcript entries for display fields (read-services cross-tabela, BUILD-LOG:64).',
 		agent:
@@ -12,7 +16,7 @@ export default {
 		artifact:
 			"assembleIssueTimeline (fase 1; console timeline in ui + panel publisher) lists the artifacts an issue recorded (artifact_artifacts by issue_id) — the same BFF read-services shape as thread's GetSessionChat join; read-only.",
 		shared:
-			'assembleIssueTimeline (fase 1) reads the recorded domain facts of the issue (shared_events by entity_id: forked, turn started, completed, archived) — the timeline is assembled from facts that already exist, so no new table.',
+			'assembleIssueTimeline (fase 1) reads the recorded domain facts of the issue (shared_events by entity_id: forked, turn started, completed, archived, paused/resumed, regret window closed — the last parsed through the shared RegretWindowSchema) — the timeline is assembled from facts that already exist, so no new table.',
 	},
 	givens: ['givenIssue'],
 } satisfies ContextDecl

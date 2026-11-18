@@ -5,8 +5,11 @@
 
 import { artifactKindSchema } from "./artifactKindSchema.ts";
 import { classificationMethodSchema } from "./classificationMethodSchema.ts";
+import { irreversibleActionKindSchema } from "./irreversibleActionKindSchema.ts";
+import { issueControlSourceSchema } from "./issueControlSourceSchema.ts";
 import { issueLifeStateSchema } from "./issueLifeStateSchema.ts";
 import { issueStatusSchema } from "./issueStatusSchema.ts";
+import { regretWindowOutcomeSchema } from "./regretWindowOutcomeSchema.ts";
 import { stopKindSchema } from "./stopKindSchema.ts";
 import { stopResolutionSchema } from "./stopResolutionSchema.ts";
 import { transcriptKindSchema } from "./transcriptKindSchema.ts";
@@ -97,7 +100,43 @@ get "resolution"(){
     "kind": z.enum(["ARCHIVED"]),
 "id": z.string(),
 "at": z.string()
-    })]))
+    }), z.object({
+    "kind": z.enum(["PAUSED"]),
+"id": z.string(),
+"at": z.string(),
+get "source"(){
+                return issueControlSourceSchema
+              },
+"by": z.optional(z.string())
+    }), z.object({
+    "kind": z.enum(["RESUMED"]),
+"id": z.string(),
+"at": z.string(),
+get "source"(){
+                return issueControlSourceSchema
+              },
+"by": z.optional(z.string())
+    }), z.object({
+    "kind": z.enum(["REGRET_WINDOW"]),
+"id": z.string(),
+"at": z.string(),
+get "actionKind"(){
+                return irreversibleActionKindSchema
+              },
+get "outcome"(){
+                return regretWindowOutcomeSchema
+              },
+"waitedMs": z.int().min(0).max(9007199254740991)
+    })])),
+"openStop": z.optional(z.object({
+    "stopId": z.uuid(),
+get "kind"(){
+                return stopKindSchema
+              },
+get "resolutions"(){
+                return z.array(stopResolutionSchema).max(8)
+              }
+    }))
     })
 
 export const getPanelIssueQueryResponseSchema = z.lazy(() => getPanelIssue200Schema)

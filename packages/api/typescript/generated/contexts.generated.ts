@@ -27,7 +27,7 @@ export const CONTEXT_MAP: Partial<Record<ContextId, Partial<Record<ContextId, { 
 			note: "The MCP exposure scan (agent/mcp/exposure.ts) imports each context's `controllers/index.ts` BARREL in order to READ each class's `static mcpScopes` — discovery, not declaration. Nothing is constructed, nothing is invoked, no state crosses; the association scope↔controller lives on the controller itself, which is the founder amendment this replaced the manifest with. The barrel is the whole set because WIRE-03 already requires every Controller subclass to be exported from it. It is confined to ONE file so a prompt builder never has to import another context's barrel to name a tool. The runtime path is the opposite of an import: tool → HTTP → that context's own controller → its own use case.",
 		},
 		issue: {
-			note: "The MCP exposure scan (agent/mcp/exposure.ts) imports each context's `controllers/index.ts` BARREL in order to READ each class's `static mcpScopes` — discovery, not declaration. Nothing is constructed, nothing is invoked, no state crosses; the association scope↔controller lives on the controller itself, which is the founder amendment this replaced the manifest with. The barrel is the whole set because WIRE-03 already requires every Controller subclass to be exported from it. It is confined to ONE file so a prompt builder never has to import another context's barrel to name a tool. The runtime path is the opposite of an import: tool → HTTP → that context's own controller → its own use case.",
+			note: "Pausa como comando (fase 2, item 2): the MailboxDispatcher asks IssueHold (services surface) whether an issue's work is held before running its turn, and the RaiseStop/AskOperator doors refuse a held issue's run through the same check. Janela de arrependimento (fase 2, item 3): OpenRegretWindow asks the same IssueHold whether the issue is held before letting an irreversible shell command through. Also: The MCP exposure scan (agent/mcp/exposure.ts) imports each context's `controllers/index.ts` BARREL in order to READ each class's `static mcpScopes` — discovery, not declaration. Nothing is constructed, nothing is invoked, no state crosses; the association scope↔controller lives on the controller itself, which is the founder amendment this replaced the manifest with. The barrel is the whole set because WIRE-03 already requires every Controller subclass to be exported from it. It is confined to ONE file so a prompt builder never has to import another context's barrel to name a tool. The runtime path is the opposite of an import: tool → HTTP → that context's own controller → its own use case.",
 		},
 		ui: {
 			note: "The MCP exposure scan (agent/mcp/exposure.ts) imports each context's `controllers/index.ts` BARREL in order to READ each class's `static mcpScopes` — discovery, not declaration. Nothing is constructed, nothing is invoked, no state crosses; the association scope↔controller lives on the controller itself, which is the founder amendment this replaced the manifest with. The barrel is the whole set because WIRE-03 already requires every Controller subclass to be exported from it. It is confined to ONE file so a prompt builder never has to import another context's barrel to name a tool. The runtime path is the opposite of an import: tool → HTTP → that context's own controller → its own use case.",
@@ -39,7 +39,7 @@ export const CONTEXT_MAP: Partial<Record<ContextId, Partial<Record<ContextId, { 
 			note: 'LibSqlMailboxDispatcher reads CloudSession (services surface) BEFORE claimNext — the login gate (SP2 Task T7, AC-4/AC-5): no live device-token session, no turn starts; items wait, no attempts spent. The daemon-local login policy lives in auth (the mirror image of BetterAuth, its cloud-profile counterpart — see auth/registry.ts), and the dispatcher is the sole write-side consumer of the gate it exposes.',
 		},
 		thread: {
-			note: "The MailboxDispatcher resolves each turn run context — thread providers/workspaceId, and the conversation window — via BC4 read seams (ThreadRepository/OpenIssuesReader; the transcript window is the thread aggregate's own persistence surface since B4). ForkIssue slugs an issue key against the same reader (an open issue of a thread is a THREAD concept and lives there).",
+			note: "The MailboxDispatcher resolves each turn run context — thread providers/workspaceId, and the conversation window — via BC4 read seams (ThreadRepository/OpenIssuesReader; the transcript window is the thread aggregate's own persistence surface since B4). ForkIssue slugs an issue key against the same reader (an open issue of a thread is a THREAD concept and lives there). Entregue/lido no WhatsApp (fase 2, item 5): the dispatcher hangs ☑️/✅ on the channel message a STEER was routed from through cueRoutedSteer (services surface) — it is the one place that knows when an item is first handed over and when it is consumed, while the command, payload and emojis stay thread's.",
 		},
 		workspace: { note: 'The saga-closer reads the bound workspace path (the run cwd) via WorkspaceRepository (repositories surface).' },
 	},
@@ -47,7 +47,14 @@ export const CONTEXT_MAP: Partial<Record<ContextId, Partial<Record<ContextId, { 
 		thread: {
 			note: 'RecordArtifact validates the target thread exists via ThreadRepository (the artifact catalog is a sink, not the owner). SendArtifact ("envio de artefatos pelo canal" design) extends this: ThreadRepository resolves channelId/contactExternalId for the LINK text path, ChannelSender reads capabilities.media (services surface), and the enqueue of both delivery commands (deliver_channel_message for LINK, deliver_channel_attachment for media) crosses through thread/services/ArtifactDelivery — a free-function ignition seam, same shape as beginTypingPresence, because CROSS_CONTEXT_POLICY forbids importing thread/usecases directly.',
 		},
-		issue: { note: 'RecordArtifact validates the optional issue exists via IssueRepository (same sink posture).' },
+		issue: {
+			note: 'RecordArtifact validates the optional issue exists via IssueRepository (same sink posture). SendArtifact refuses to deliver the artifact of a HELD issue through IssueHold (services surface; fase 2, item 2 — pausa como comando).',
+		},
+	},
+	issue: {
+		agent: {
+			note: 'Pausa como comando (fase 2, item 2): the issue owns the pause fact and its two in-context handlers command the agent turn runtime — AbortIssueTurnOnPause kills the running turn through IssueTurnAborter (services surface), ReleaseIssueWorkOnResume releases the held items through MailboxRepository (repositories surface; the mailbox is a queue, the stance thread/handlers/ResumeIssueOnStopResolved already takes). The pause itself is the issues.paused flag; these only make it immediate.',
+		},
 	},
 	owner: {
 		auth: {
@@ -56,16 +63,16 @@ export const CONTEXT_MAP: Partial<Record<ContextId, Partial<Record<ContextId, { 
 	},
 	panel: {
 		auth: {
-			note: 'PUT /panel/sync and the link rotation are authenticated with the user session bearer the daemon already holds (AuthAccountMiddleware); the public reads are not.',
+			note: 'PUT /panel/sync, PUT /panel/roster and the link rotation are authenticated with the user session bearer the daemon already holds (AuthAccountMiddleware); the public reads and the identification endpoints (fase 2, item 6a — the group token plus a WhatsApp code) are not.',
 		},
 	},
 	thread: {
 		workspace: { note: 'AttachThread validates the workspace exists via WorkspaceRepository (repositories surface).' },
 		issue: {
-			note: "RaiseStop's archived guard READS the issue via IssueRepository (repositories surface) when the stop carries one — the sanctioned cross-context shape. The stop control plane lives here since B4 because the Stop is a child of the Thread aggregate; it never calls an issue entity method, only reads the flag.",
+			note: "RaiseStop's archived guard READS the issue via IssueRepository (repositories surface) when the stop carries one — the sanctioned cross-context shape. The stop control plane lives here since B4 because the Stop is a child of the Thread aggregate; it never calls an issue entity method, only reads the flag. Pausa como comando (fase 2, item 2): SendDirectMessage refuses a held issue's run through IssueHold (services surface), and IngestChannelMessage runs PauseIssue/ResumeIssue (usecases surface, NAMED policy exception) inside the ingest transaction when a control word targets an issue. Agir pelo painel (fase 2, item 6b): ExecutePanelAction runs the same PauseIssue/ResumeIssue (source PANEL) and ReopenIssue before a steer (usecases surface, its own NAMED policy exception), and reads the issue through IssueRepository to confirm it belongs to the conversation.",
 		},
 		agent: {
-			note: 'The inbound path consumes the agent context ProviderDetector (which CLI a thread runs) and, since the orchestrator pivot, its MailboxRepository — an invocable message queues a turn in the SAME transaction as the transcript entry (§7.4). AttachThread and GetThreadSettings additionally read AgentRunnerFactory.supported (services surface, ABSTRACT TOKEN ONLY, via the leaf module): binding a thread to a provider is legal only if a runner exists for it, and the settings read flags a legacy binding for which none does. ResolveStopController adds two type-level edges for the same reason it is an MCP tool at all: it composes AgentRunIdentityCtxSchema (types) so Zod does not strip the identity AgentIdentityMiddleware stamps, and refuses with AgentInterfaceErrors (errors) so a run that targets another thread gets the SAME code every other tool door refuses with. A second copy of either in thread/ would be two spellings of one boundary.',
+			note: 'The inbound path consumes the agent context ProviderDetector (which CLI a thread runs) and, since the orchestrator pivot, its MailboxRepository — an invocable message queues a turn in the SAME transaction as the transcript entry (§7.4). AttachThread and GetThreadSettings additionally read AgentRunnerFactory.supported (services surface, ABSTRACT TOKEN ONLY, via the leaf module): binding a thread to a provider is legal only if a runner exists for it, and the settings read flags a legacy binding for which none does. ResolveStopController adds two type-level edges for the same reason it is an MCP tool at all: it composes AgentRunIdentityCtxSchema (types) so Zod does not strip the identity AgentIdentityMiddleware stamps, and refuses with AgentInterfaceErrors (errors) so a run that targets another thread gets the SAME code every other tool door refuses with. A second copy of either in thread/ would be two spellings of one boundary. Agir pelo painel (fase 2, item 6b): ExecutePanelAction queues a panel steer through the same MailboxRepository the routed steer uses. Steer imediato (fase 2, item 4): InterruptIssueTurnOnSteer, reacting to the thread-owned "agora" fact, cuts the issue\'s running turn through IssueTurnAborter (services surface) — the shape issue/handlers/AbortIssueTurnOnPause already has. Triagem paralela (fase 2): IngestChannelMessage asks InboundTriage (services surface) whether this env triages and queues the orchestrator item HELD by TRIAGE_HOLDER; TriageChannelMessage asks the same service for the verdict and settles the hold through MailboxRepository.settleHold, reading TriageDecision (enums surface) to choose the path.',
 		},
 	},
 	ui: {
@@ -114,7 +121,7 @@ export const TABLE_READ_EDGES: readonly { consumer: ContextId; schema: string; n
 	{
 		consumer: 'issue',
 		schema: 'shared',
-		note: 'assembleIssueTimeline (fase 1) reads the recorded domain facts of the issue (shared_events by entity_id: forked, turn started, completed, archived) — the timeline is assembled from facts that already exist, so no new table.',
+		note: 'assembleIssueTimeline (fase 1) reads the recorded domain facts of the issue (shared_events by entity_id: forked, turn started, completed, archived, paused/resumed, regret window closed — the last parsed through the shared RegretWindowSchema) — the timeline is assembled from facts that already exist, so no new table.',
 	},
 	{
 		consumer: 'owner',
@@ -129,13 +136,13 @@ export const TABLE_READ_EDGES: readonly { consumer: ContextId; schema: string; n
 	{
 		consumer: 'thread',
 		schema: 'issue',
-		note: 'OpenIssuesReader (classifier candidate set) + GetSessionChat active stops ride the issue schema.',
+		note: 'OpenIssuesReader (classifier candidate set) + GetSessionChat active stops ride the issue schema. PublishPanelRoster (fase 2, item 6a) selects the conversations that have issues — the ones with a cloud panel board.',
 	},
 	{ consumer: 'thread', schema: 'workspace', note: 'GetSessionChat resolves the bound workspace display path.' },
 	{
 		consumer: 'thread',
 		schema: 'gateway',
-		note: 'ChannelConnectivity / GroupMemberReader / GetSessionChat read the Go gateway sync tables (channels/remotes — proxy pairing, BUILD-LOG:116).',
+		note: "ChannelConnectivity / GroupMemberReader / GetSessionChat read the Go gateway sync tables (channels/remotes — proxy pairing, BUILD-LOG:116). PublishPanelRoster (fase 2, item 6a) reads contact names (remotes) and the account's own address (channels.owner_remote_id) to build the cloud panel roster.",
 	},
 	{
 		consumer: 'thread',

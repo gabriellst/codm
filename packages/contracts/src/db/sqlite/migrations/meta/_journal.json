@@ -239,6 +239,20 @@
       "when": 1794517281328,
       "tag": "0033_nappy_lady_bullseye",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "6",
+      "when": 1794853740004,
+      "tag": "0034_next_peter_parker",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "6",
+      "when": 1794960913818,
+      "tag": "0035_bizarre_blob",
+      "breakpoints": true
     }
   ]
 }

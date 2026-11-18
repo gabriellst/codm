@@ -1,5 +1,12 @@
-import { pgSchema, text, timestamp, boolean, jsonb, index, uniqueIndex } from 'drizzle-orm/pg-core'
-import { IssueLifeState, IssueStatus } from '../../../../generated/typescript/src/wire/enums'
+import { pgSchema, text, timestamp, boolean, jsonb, index, uniqueIndex, integer } from 'drizzle-orm/pg-core'
+import {
+	IssueLifeState,
+	IssueStatus,
+	PanelActionKind,
+	PanelActionOutcome,
+	type StopKind,
+	type StopResolution,
+} from '../../../../generated/typescript/src/wire/enums'
 import { enumCheck } from './_enum'
 
 /**
@@ -11,6 +18,21 @@ import { enumCheck } from './_enum'
  * app. Nothing in the cloud writes an issue — it only stores what the daemon last reported.
  */
 export const panelSchema = pgSchema('panel')
+
+/** One person of a group as the panel knows them — opaque id, display name, the "pode liberar" grant. */
+export interface PanelMember {
+	memberId: string
+	name: string
+	canRelease: boolean
+}
+
+/** An open stop of one issue the panel may answer, with the answers it admits there. */
+export interface PanelOpenStop {
+	stopId: string
+	issueId: string
+	kind: StopKind
+	resolutions: StopResolution[]
+}
 
 /** One WhatsApp group (a daemon thread) that has a panel link. The token IS the access: whoever has it sees the group. */
 export const panelGroups = panelSchema.table(
@@ -25,6 +47,20 @@ export const panelGroups = panelSchema.table(
 			.notNull()
 			.$defaultFn(() => new Date()),
 		rotatedAt: timestamp('rotated_at', { withTimezone: true, mode: 'date' }),
+		/**
+		 * The group's people as the daemon last reported them (fase 2, item 6a): `[{ memberId, name,
+		 * canRelease }]`. A VALUE of the group — replaced whole on every roster push, read whole, never
+		 * queried inside. `memberId` is opaque (an HMAC the daemon derives; no phone or JID ever reaches
+		 * the cloud).
+		 */
+		members: jsonb('members').$type<PanelMember[]>().notNull().default([]),
+		/**
+		 * The group's OPEN stops that the panel may answer, as the daemon last reported them with the roster
+		 * (fase 2, item 6b): `[{ stopId, issueId, kind, resolutions }]`. Another VALUE of the group, replaced
+		 * whole on every roster push. `resolutions` are the thread's own per-kind table, already reduced to
+		 * what the panel offers — the cloud never re-derives which answers a stop admits.
+		 */
+		openStops: jsonb('open_stops').$type<PanelOpenStop[]>().notNull().default([]),
 	},
 	t => [uniqueIndex('panel_groups_token_unq').on(t.token), index('panel_groups_owner_idx').on(t.ownerId)],
 )
@@ -58,3 +94,84 @@ export const panelDaemons = panelSchema.table('panel_daemons', {
 	ownerId: text('owner_id').primaryKey(),
 	lastSeenAt: timestamp('last_seen_at', { withTimezone: true, mode: 'date' }).notNull(),
 })
+
+/**
+ * A person asked, from the panel, for a code to prove who they are (fase 2, item 6a). The row is the
+ * REQUEST; the code is minted only when the daemon pulls it (`PUT /panel/roster`), and only its HMAC is
+ * kept — the plain code exists in that one HTTP response and in the WhatsApp DM.
+ */
+export const panelCodeRequests = panelSchema.table(
+	'panel_code_requests',
+	{
+		id: text('id').primaryKey(),
+		ownerId: text('owner_id').notNull(),
+		threadId: text('thread_id').notNull(),
+		memberId: text('member_id').notNull(),
+		requestedAt: timestamp('requested_at', { withTimezone: true, mode: 'date' }).notNull(),
+		/** HMAC of `<id>:<code>`; null until the daemon pulled the request. */
+		codeHash: text('code_hash'),
+		issuedAt: timestamp('issued_at', { withTimezone: true, mode: 'date' }),
+		expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }),
+		/** Wrong tries so far — spent BEFORE comparing, capped at 5. */
+		attempts: integer('attempts').notNull().default(0),
+		usedAt: timestamp('used_at', { withTimezone: true, mode: 'date' }),
+	},
+	t => [
+		index('panel_code_requests_member_idx').on(t.threadId, t.memberId, t.requestedAt),
+		index('panel_code_requests_owner_idx').on(t.ownerId, t.requestedAt),
+	],
+)
+
+/**
+ * A browser that proved who it is, for one group (fase 2, item 6a). The cookie carries a random token;
+ * only its SHA-256 is here. Rotating the group link deletes these.
+ */
+export const panelSessions = panelSchema.table(
+	'panel_sessions',
+	{
+		tokenHash: text('token_hash').primaryKey(),
+		ownerId: text('owner_id').notNull(),
+		threadId: text('thread_id').notNull(),
+		memberId: text('member_id').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' }).notNull(),
+		expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }).notNull(),
+	},
+	t => [index('panel_sessions_thread_idx').on(t.threadId), index('panel_sessions_owner_idx').on(t.ownerId, t.expiresAt)],
+)
+
+/**
+ * Something an IDENTIFIED person asked for on the panel (fase 2, item 6b): pause, resume, steer or answer
+ * a stop of one issue. The cloud only STORES the request — it decides nothing about the issue. The daemon
+ * pulls it with the roster (`PUT /panel/roster`), executes it as that member and reports the outcome on
+ * its next pull.
+ *
+ * `payload` is the action body as posted (the `kind`-discriminated `PanelActionBody`), read whole and
+ * handed over whole. `sessionHash` is the device that asked — the per-device rate limit's key.
+ */
+export const panelActions = panelSchema.table(
+	'panel_actions',
+	{
+		id: text('id').primaryKey(),
+		ownerId: text('owner_id').notNull(),
+		threadId: text('thread_id').notNull(),
+		memberId: text('member_id').notNull(),
+		sessionHash: text('session_hash').notNull(),
+		kind: text('kind').$type<PanelActionKind>().notNull(),
+		payload: jsonb('payload').notNull(),
+		requestedAt: timestamp('requested_at', { withTimezone: true, mode: 'date' }).notNull(),
+		/** When the daemon last pulled it — re-stamped if it is handed out again after no outcome came back. */
+		deliveredAt: timestamp('delivered_at', { withTimezone: true, mode: 'date' }),
+		/** DONE or REFUSED, from the daemon; null while pending. */
+		outcome: text('outcome').$type<PanelActionOutcome>(),
+		/** The refusal's error code. */
+		outcomeCode: text('outcome_code'),
+		outcomeAt: timestamp('outcome_at', { withTimezone: true, mode: 'date' }),
+	},
+	t => [
+		enumCheck('panel_actions_kind_check', t.kind, Object.values(PanelActionKind)),
+		enumCheck('panel_actions_outcome_check', t.outcome, Object.values(PanelActionOutcome)),
+		index('panel_actions_owner_idx').on(t.ownerId, t.requestedAt),
+		index('panel_actions_session_idx').on(t.sessionHash, t.requestedAt),
+		index('panel_actions_thread_idx').on(t.threadId),
+	],
+)

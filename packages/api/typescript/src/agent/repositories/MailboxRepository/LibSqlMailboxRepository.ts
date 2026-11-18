@@ -2,8 +2,14 @@ import { injectable } from 'tsyringe-neo'
 import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, ne, notExists, or, sql } from 'drizzle-orm'
 import { DAEMON_BOOT, isClaimOrphaned, LibSqlDatabaseDriver, LibSqlTransaction } from '@codm/core-typescript'
 import { agentMailbox } from '@codm/contracts/db'
-import type { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
-import { MailboxRepository, type ClaimedMailboxItem, type DeferredMailboxItem, type EnqueueMailboxItem } from './MailboxRepository'
+import { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
+import {
+	MailboxRepository,
+	type ClaimedMailboxItem,
+	type DeferredMailboxItem,
+	type EnqueueMailboxItem,
+	type HoldSettlement,
+} from './MailboxRepository'
 
 /** Runnable = not consumed, not poisoned. */
 const runnable = () => and(isNull(agentMailbox.consumedAt), isNull(agentMailbox.deadAt))
@@ -59,6 +65,15 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 					payload: item.payload,
 					posture: item.posture,
 					dedupKey: item.dedupKey,
+					// A HOLD is a claim written at birth (`EnqueueMailboxItem.hold`): same three holder columns a
+					// claim stamps, so the boot sweep frees it exactly like a claim of a dead daemon. No attempt is
+					// charged and `first_claimed_at` stays empty — nothing has been handed to a turn.
+					...(item.hold && {
+						claimedBy: item.hold.holder,
+						claimedBoot: DAEMON_BOOT.id,
+						claimedPid: DAEMON_BOOT.pid,
+						leaseUntil: item.hold.until,
+					}),
 				})
 				.onConflictDoNothing({ target: agentMailbox.dedupKey })
 				.returning({ id: agentMailbox.id }),
@@ -108,7 +123,7 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 				)
 
 			const [candidate] = await dbc
-				.select({ id: agentMailbox.id })
+				.select({ id: agentMailbox.id, firstClaimedAt: agentMailbox.firstClaimedAt })
 				.from(agentMailbox)
 				.where(and(runnable(), unleased(now), notExists(busy), inLanes))
 				.orderBy(...order)
@@ -140,7 +155,8 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 					posture: agentMailbox.posture,
 					attempts: agentMailbox.attempts,
 				})
-			return claimed[0]
+			// Read in the SAME write transaction as the stamp, so "first" cannot be won by two claims.
+			return claimed[0] ? { ...claimed[0], firstClaim: candidate.firstClaimedAt === null } : undefined
 		})
 		if (!row) return undefined
 		return { ...row, targetKind: row.targetKind as MailboxTargetKind, kind: row.kind as MailboxItemKind }
@@ -198,6 +214,30 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 				.where(and(inArray(agentMailbox.id, orphaned), runnable(), ne(agentMailbox.claimedBoot, DAEMON_BOOT.id)))
 			return orphaned.length
 		})
+	}
+
+	async settleHold(dedupKey: string, holder: string, settlement: HoldSettlement, tx?: LibSqlTransaction): Promise<boolean> {
+		const released = { claimedBy: null, claimedBoot: null, claimedPid: null, leaseUntil: null }
+		const set = settlement.consume
+			? { ...released, consumedAt: new Date() }
+			: { ...released, ...(settlement.merge && { payload: sql`json_patch(${agentMailbox.payload}, ${JSON.stringify(settlement.merge)})` }) }
+		const rows = await this.write(tx, dbc =>
+			dbc
+				.update(agentMailbox)
+				.set(set)
+				.where(and(eq(agentMailbox.dedupKey, dedupKey), eq(agentMailbox.claimedBy, holder), runnable()))
+				.returning({ id: agentMailbox.id }),
+		)
+		return rows.length > 0
+	}
+
+	async isHeld(dedupKey: string, holder: string, tx?: LibSqlTransaction): Promise<boolean> {
+		const rows = await (tx ?? this.driver.db)
+			.select({ id: agentMailbox.id })
+			.from(agentMailbox)
+			.where(and(eq(agentMailbox.dedupKey, dedupKey), eq(agentMailbox.claimedBy, holder), runnable()))
+			.limit(1)
+		return rows.length > 0
 	}
 
 	async complete(id: string, tx?: LibSqlTransaction): Promise<void> {
@@ -290,6 +330,28 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 			.select({ id: agentMailbox.id })
 			.from(agentMailbox)
 			.where(and(eq(agentMailbox.targetKind, targetKind), eq(agentMailbox.targetId, targetId), runnable()))
+			.limit(1)
+		return rows.length > 0
+	}
+
+	async hasUnreadSteer(issueId: string, tx?: LibSqlTransaction): Promise<boolean> {
+		const dbc = tx ?? this.driver.db
+		const rows = await dbc
+			.select({ id: agentMailbox.id })
+			.from(agentMailbox)
+			.where(
+				and(
+					eq(agentMailbox.targetKind, MailboxTargetKind.ISSUE),
+					eq(agentMailbox.targetId, issueId),
+					eq(agentMailbox.kind, MailboxItemKind.STEER),
+					runnable(),
+					// Held by no turn: the live turn's own item (a STEER it is reading right now) is not "unread".
+					isNull(agentMailbox.claimedBy),
+					// A PERSON's message: the automatic "declare your outcome" reminder (`ReconcileStalledIssues`)
+					// rides the same kind, and must never cancel a push as if the operator had written.
+					sql`json_extract(${agentMailbox.payload}, '$.declarationReminder') IS NULL`,
+				),
+			)
 			.limit(1)
 		return rows.length > 0
 	}

@@ -83,6 +83,10 @@ export type GetIssuesOverview200 = {
             */
             archived: boolean;
             /**
+             * @type boolean
+            */
+            paused: boolean;
+            /**
              * @type string, uuid
             */
             threadId: string;
@@ -128,6 +132,10 @@ export type GetIssuesOverview200 = {
          * @type boolean
         */
         archived: boolean;
+        /**
+         * @type boolean
+        */
+        paused: boolean;
         /**
          * @type string, uuid
         */

@@ -43,12 +43,14 @@ import {
 	listThreadLoops,
 	listWorkspaces,
 	listenEvents,
+	pauseIssue,
 	pauseThread,
 	raiseStop,
 	recordArtifact,
 	removeWorkspace,
 	resolveStop,
 	restoreIssue,
+	resumeIssue,
 	resumeThread,
 	rotateThreadPanelLink,
 	saveOnboardingStep,
@@ -252,6 +254,10 @@ export class TypescriptClient {
 		return (listenEvents as (...a: any[]) => ReturnType<typeof listenEvents>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	pauseIssue(...args: Parameters<typeof pauseIssue>): ReturnType<typeof pauseIssue> {
+		return (pauseIssue as (...a: any[]) => ReturnType<typeof pauseIssue>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	pauseThread(...args: Parameters<typeof pauseThread>): ReturnType<typeof pauseThread> {
 		return (pauseThread as (...a: any[]) => ReturnType<typeof pauseThread>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
@@ -274,6 +280,10 @@ export class TypescriptClient {
 
 	restoreIssue(...args: Parameters<typeof restoreIssue>): ReturnType<typeof restoreIssue> {
 		return (restoreIssue as (...a: any[]) => ReturnType<typeof restoreIssue>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	resumeIssue(...args: Parameters<typeof resumeIssue>): ReturnType<typeof resumeIssue> {
+		return (resumeIssue as (...a: any[]) => ReturnType<typeof resumeIssue>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	resumeThread(...args: Parameters<typeof resumeThread>): ReturnType<typeof resumeThread> {

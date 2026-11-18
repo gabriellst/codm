@@ -7168,6 +7168,25 @@
         ],
         "type": "object"
       },
+      "IrreversibleActionKind": {
+        "enum": [
+          "GIT_PUSH",
+          "GIT_FORCE_PUSH",
+          "PR_MERGE",
+          "RELEASE",
+          "PACKAGE_PUBLISH",
+          "DEPLOY"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "IrreversibleActionKindGIT_PUSH",
+          "IrreversibleActionKindGIT_FORCE_PUSH",
+          "IrreversibleActionKindPR_MERGE",
+          "IrreversibleActionKindRELEASE",
+          "IrreversibleActionKindPACKAGE_PUBLISH",
+          "IrreversibleActionKindDEPLOY"
+        ]
+      },
       "IssueArchiveReason": {
         "enum": [
           "MANUAL",
@@ -7181,6 +7200,19 @@
           "IssueArchiveReasonTHREAD_DETACHED"
         ]
       },
+      "IssueControlSource": {
+        "enum": [
+          "WHATSAPP",
+          "CONSOLE",
+          "PANEL"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "IssueControlSourceWHATSAPP",
+          "IssueControlSourceCONSOLE",
+          "IssueControlSourcePANEL"
+        ]
+      },
       "IssueLifeState": {
         "enum": [
           "RUNNING",
@@ -7189,6 +7221,7 @@
           "WAITING_PERSON",
           "REMINDED",
           "STALLED",
+          "PAUSED",
           "DONE"
         ],
         "type": "string",
@@ -7199,6 +7232,7 @@
           "IssueLifeStateWAITING_PERSON",
           "IssueLifeStateREMINDED",
           "IssueLifeStateSTALLED",
+          "IssueLifeStatePAUSED",
           "IssueLifeStateDONE"
         ]
       },
@@ -7225,7 +7259,10 @@
           "STOP_RAISED",
           "STOP_RESOLVED",
           "COMPLETED",
-          "ARCHIVED"
+          "ARCHIVED",
+          "PAUSED",
+          "RESUMED",
+          "REGRET_WINDOW"
         ],
         "type": "string",
         "x-enum-varnames": [
@@ -7237,7 +7274,10 @@
           "IssueTimelineItemKindSTOP_RAISED",
           "IssueTimelineItemKindSTOP_RESOLVED",
           "IssueTimelineItemKindCOMPLETED",
-          "IssueTimelineItemKindARCHIVED"
+          "IssueTimelineItemKindARCHIVED",
+          "IssueTimelineItemKindPAUSED",
+          "IssueTimelineItemKindRESUMED",
+          "IssueTimelineItemKindREGRET_WINDOW"
         ]
       },
       "Language": {
@@ -7560,6 +7600,47 @@
           "OwnerKindINDIVIDUAL"
         ]
       },
+      "PanelActionKind": {
+        "enum": [
+          "PAUSE",
+          "RESUME",
+          "STEER",
+          "ANSWER_STOP"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "PanelActionKindPAUSE",
+          "PanelActionKindRESUME",
+          "PanelActionKindSTEER",
+          "PanelActionKindANSWER_STOP"
+        ]
+      },
+      "PanelActionOutcome": {
+        "enum": [
+          "DONE",
+          "REFUSED"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "PanelActionOutcomeDONE",
+          "PanelActionOutcomeREFUSED"
+        ]
+      },
+      "PanelActionStatus": {
+        "enum": [
+          "PENDING",
+          "DONE",
+          "REFUSED",
+          "EXPIRED"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "PanelActionStatusPENDING",
+          "PanelActionStatusDONE",
+          "PanelActionStatusREFUSED",
+          "PanelActionStatusEXPIRED"
+        ]
+      },
       "PermissionPosture": {
         "enum": [
           "AUTO",
@@ -7703,6 +7784,19 @@
           "ReceiptTypeRead",
           "ReceiptTypeReadSelf",
           "ReceiptTypePlayed"
+        ]
+      },
+      "RegretWindowOutcome": {
+        "enum": [
+          "PROCEEDED",
+          "CANCELLED_BY_STEER",
+          "CANCELLED_BY_PAUSE"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "RegretWindowOutcomePROCEEDED",
+          "RegretWindowOutcomeCANCELLED_BY_STEER",
+          "RegretWindowOutcomeCANCELLED_BY_PAUSE"
         ]
       },
       "RestartChannelOutput": {

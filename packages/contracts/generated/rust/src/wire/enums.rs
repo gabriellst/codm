@@ -556,6 +556,34 @@ pub enum HistorySyncType {
 	recent,
 }
 
+/// An action an issue's session can take that cannot be taken back (fase 2, item 3 — janela de arrependimento). The session runs it itself (a shell command inside the provider CLI), so codm recognises it by a declared command pattern and holds it for a few seconds before letting it through. GIT_PUSH: publishing commits to a remote. GIT_FORCE_PUSH: overwriting a remote branch's history. PR_MERGE: merging a pull request. RELEASE: creating a release. PACKAGE_PUBLISH: publishing a package to a registry. DEPLOY: deploying to a hosted environment.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum IrreversibleActionKind {
+	#[serde(rename = "GIT_PUSH")]
+	#[strum(serialize = "GIT_PUSH")]
+	GIT_PUSH,
+	#[serde(rename = "GIT_FORCE_PUSH")]
+	#[strum(serialize = "GIT_FORCE_PUSH")]
+	GIT_FORCE_PUSH,
+	#[serde(rename = "PR_MERGE")]
+	#[strum(serialize = "PR_MERGE")]
+	PR_MERGE,
+	#[serde(rename = "RELEASE")]
+	#[strum(serialize = "RELEASE")]
+	RELEASE,
+	#[serde(rename = "PACKAGE_PUBLISH")]
+	#[strum(serialize = "PACKAGE_PUBLISH")]
+	PACKAGE_PUBLISH,
+	#[serde(rename = "DEPLOY")]
+	#[strum(serialize = "DEPLOY")]
+	DEPLOY,
+}
+
 /// Why an Issue was archived. MANUAL (operator), AUTO_24H (scheduler sweep of COMPLETED issues older than 24h), THREAD_DETACHED (parent thread detached). Harmonized name (modeling called it ArchiveReason) — scoped to the issue lifecycle.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
@@ -575,7 +603,26 @@ pub enum IssueArchiveReason {
 	THREAD_DETACHED,
 }
 
-/// Where an Issue's work actually stands RIGHT NOW, computed by rule from the queue and the stops — never stored, never declared by the model. Orthogonal to IssueStatus (the lifecycle): a WORKING issue may be RUNNING, QUEUED, WAITING_PROVIDER, WAITING_PERSON, REMINDED or STALLED. RUNNING: a turn holds a live lease. QUEUED: work is waiting for a free slot. WAITING_PROVIDER: its next turn is deferred by the provider's usage limit. WAITING_PERSON: an open stop asks someone to decide, approve or answer. REMINDED: its last turn ended without declaring anything and the one declaration reminder is pending or running. STALLED: nothing in flight and no open stop — the reconcile sweep has not caught it yet, or the reminder was ignored. DONE: COMPLETED.
+/// Where a pause or resume of an Issue came from. WHATSAPP: a control word (pare, segura, continue…) sent in the conversation with a target (a quoted issue message or one issue key). CONSOLE: the operator's pause/resume buttons on the issue detail. PANEL: a person identified on the group's cloud panel (fase 2, item 6b), executed by the daemon as that member.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum IssueControlSource {
+	#[serde(rename = "WHATSAPP")]
+	#[strum(serialize = "WHATSAPP")]
+	WHATSAPP,
+	#[serde(rename = "CONSOLE")]
+	#[strum(serialize = "CONSOLE")]
+	CONSOLE,
+	#[serde(rename = "PANEL")]
+	#[strum(serialize = "PANEL")]
+	PANEL,
+}
+
+/// Where an Issue's work actually stands RIGHT NOW, computed by rule from the queue and the stops — never stored, never declared by the model. Orthogonal to IssueStatus (the lifecycle): a WORKING issue may be RUNNING, QUEUED, WAITING_PROVIDER, WAITING_PERSON, REMINDED, STALLED or PAUSED. RUNNING: a turn holds a live lease. QUEUED: work is waiting for a free slot. WAITING_PROVIDER: its next turn is deferred by the provider's usage limit. WAITING_PERSON: an open stop asks someone to decide, approve or answer. REMINDED: its last turn ended without declaring anything and the one declaration reminder is pending or running. STALLED: nothing in flight and no open stop — the reconcile sweep has not caught it yet, or the reminder was ignored. PAUSED: someone paused it, or its whole conversation — no turn runs and its external tools refuse until it is resumed; it wins over every state but DONE. DONE: COMPLETED.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
 	serde::Serialize, serde::Deserialize,
@@ -601,6 +648,9 @@ pub enum IssueLifeState {
 	#[serde(rename = "STALLED")]
 	#[strum(serialize = "STALLED")]
 	STALLED,
+	#[serde(rename = "PAUSED")]
+	#[strum(serialize = "PAUSED")]
+	PAUSED,
 	#[serde(rename = "DONE")]
 	#[strum(serialize = "DONE")]
 	DONE,
@@ -625,7 +675,7 @@ pub enum IssueStatus {
 	COMPLETED,
 }
 
-/// The kinds of moment an Issue's timeline shows, oldest first. Discriminant of the timeline item union: each kind carries its own fields. CREATED: the issue was forked. TURN_STARTED: a turn of its session began. MESSAGE: a transcript entry linked to the issue (what the agent said about it, or a reply that quoted it). STEER: guidance sent to it (with sent/delivered/read instants). ARTIFACT: a file, image, video or link it recorded. STOP_RAISED / STOP_RESOLVED: it asked for someone, and someone answered. COMPLETED: it declared itself done. ARCHIVED: it left the board.
+/// The kinds of moment an Issue's timeline shows, oldest first. Discriminant of the timeline item union: each kind carries its own fields. CREATED: the issue was forked. TURN_STARTED: a turn of its session began. MESSAGE: a transcript entry linked to the issue (what the agent said about it, or a reply that quoted it). STEER: guidance sent to it (with sent/delivered/read instants). ARTIFACT: a file, image, video or link it recorded. STOP_RAISED / STOP_RESOLVED: it asked for someone, and someone answered. COMPLETED: it declared itself done. ARCHIVED: it left the board. PAUSED / RESUMED: someone held its work (a WhatsApp control word or the console button), and someone let it continue. REGRET_WINDOW: before an irreversible action (a push, a merge, a publish, a deploy) the session waited a few seconds for new guidance, and either went ahead or was cancelled by a message or a pause.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
 	serde::Serialize, serde::Deserialize,
@@ -660,6 +710,15 @@ pub enum IssueTimelineItemKind {
 	#[serde(rename = "ARCHIVED")]
 	#[strum(serialize = "ARCHIVED")]
 	ARCHIVED,
+	#[serde(rename = "PAUSED")]
+	#[strum(serialize = "PAUSED")]
+	PAUSED,
+	#[serde(rename = "RESUMED")]
+	#[strum(serialize = "RESUMED")]
+	RESUMED,
+	#[serde(rename = "REGRET_WINDOW")]
+	#[strum(serialize = "REGRET_WINDOW")]
+	REGRET_WINDOW,
 }
 
 /// UI locale the app ships translations for.
@@ -910,6 +969,66 @@ pub enum OwnerKind {
 	INDIVIDUAL,
 }
 
+/// What an identified person asked for on the group's cloud panel (fase 2, item 6b). PAUSE / RESUME hold or release one issue; STEER sends that issue's session a short instruction; ANSWER_STOP answers the issue's open stop (only a member who may release). Requested in the cloud, executed by the daemon as that member on its next pull.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum PanelActionKind {
+	#[serde(rename = "PAUSE")]
+	#[strum(serialize = "PAUSE")]
+	PAUSE,
+	#[serde(rename = "RESUME")]
+	#[strum(serialize = "RESUME")]
+	RESUME,
+	#[serde(rename = "STEER")]
+	#[strum(serialize = "STEER")]
+	STEER,
+	#[serde(rename = "ANSWER_STOP")]
+	#[strum(serialize = "ANSWER_STOP")]
+	ANSWER_STOP,
+}
+
+/// What the daemon did with a panel action (fase 2, item 6b), reported on its next pull. DONE: executed as the member who asked. REFUSED: not executed — the outcome carries the error code (the member lost the release grant, the issue was not pausable, the stop was already answered…).
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum PanelActionOutcome {
+	#[serde(rename = "DONE")]
+	#[strum(serialize = "DONE")]
+	DONE,
+	#[serde(rename = "REFUSED")]
+	#[strum(serialize = "REFUSED")]
+	REFUSED,
+}
+
+/// Where a panel action stands (fase 2, item 6b). PENDING: stored in the cloud, waiting for the daemon to pull and execute it. DONE / REFUSED: the daemon's outcome (REFUSED carries the error code). EXPIRED: no outcome arrived in time — the daemon was away, so the action was dropped rather than run late.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum PanelActionStatus {
+	#[serde(rename = "PENDING")]
+	#[strum(serialize = "PENDING")]
+	PENDING,
+	#[serde(rename = "DONE")]
+	#[strum(serialize = "DONE")]
+	DONE,
+	#[serde(rename = "REFUSED")]
+	#[strum(serialize = "REFUSED")]
+	REFUSED,
+	#[serde(rename = "EXPIRED")]
+	#[strum(serialize = "EXPIRED")]
+	EXPIRED,
+}
+
 /// Under which permission regime an agent turn runs. AUTO = the provider CLI's own graduated mode (its classifier may block an action); BYPASS = no permission filter. Decided by WHO triggered the turn (Participant.canElevate), never by the model; each runner maps it to its own argv through a declared table.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
@@ -984,6 +1103,25 @@ pub enum ProviderStatus {
 	#[serde(rename = "NOT_INSTALLED")]
 	#[strum(serialize = "NOT_INSTALLED")]
 	NOT_INSTALLED,
+}
+
+/// How an issue's regret window ended (fase 2, item 3). PROCEEDED: nothing new arrived while it waited — the action went ahead. CANCELLED_BY_STEER: the issue had guidance its session had not read yet — the action was refused and the guidance is read next. CANCELLED_BY_PAUSE: the issue (or its conversation) was paused — the action was refused.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum RegretWindowOutcome {
+	#[serde(rename = "PROCEEDED")]
+	#[strum(serialize = "PROCEEDED")]
+	PROCEEDED,
+	#[serde(rename = "CANCELLED_BY_STEER")]
+	#[strum(serialize = "CANCELLED_BY_STEER")]
+	CANCELLED_BY_STEER,
+	#[serde(rename = "CANCELLED_BY_PAUSE")]
+	#[strum(serialize = "CANCELLED_BY_PAUSE")]
+	CANCELLED_BY_PAUSE,
 }
 
 /// Membership role within a Store. OWNER + ADMIN may manage; MEMBER may view + use most features.

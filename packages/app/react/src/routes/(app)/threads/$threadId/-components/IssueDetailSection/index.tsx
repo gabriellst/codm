@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
-import { IconArrowUp, IconChevronLeft, IconPlayerPause } from '@tabler/icons-react'
+import { IconArrowUp, IconChevronLeft, IconPlayerPause, IconPlayerPlay } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import {
@@ -11,6 +11,8 @@ import {
 	getSessionIssuesQueryKey,
 	getHomeDashboardQueryKey,
 	useArchiveIssue,
+	usePauseIssue,
+	useResumeIssue,
 	useGetIssueDetail,
 	useGetNeedsYouPanel,
 	useResolveStop,
@@ -121,6 +123,8 @@ export function IssueDetailSection({
 					{/* Não aparece no mock do D3 (o exemplo mostrado é uma tarefa aberta, "Precisa de entrada"),
 					    mas a capacidade é real e não tem outro lugar no design para morar — código vence
 					    aqui: mantida ao lado do chip de status em vez de removida por ausência no canvas. */}
+					{data.issue.paused && <Badge variant="secondary">{t('session.issuePausedBadge')}</Badge>}
+					<IssueHoldButton issue={data.issue} threadId={threadId} />
 					{!data.issue.archived && (
 						<Button variant="outline" size="sm" disabled={archive.isPending} onClick={onArchive}>
 							{t('session.archive')}
@@ -150,6 +154,62 @@ export function IssueDetailSection({
 		</div>
 	)
 }
+/**
+ * PAUSE / RESUME (fase 2, item 2) — the console twin of "pare" / "continue" in the group. One button: it
+ * resumes a paused issue, and pauses one whose work can still move (not completed, not archived — the
+ * entity refuses those with ISSUE_NOT_PAUSABLE, so the button is simply not offered).
+ */
+function IssueHoldButton({
+	issue,
+	threadId,
+	className,
+	...props
+}: Omit<ComponentProps<typeof Button>, 'onClick'> & { issue: Detail['issue']; threadId: string }) {
+	const { t } = useTranslation()
+	const queryClient = useQueryClient()
+	const refresh = {
+		mutation: {
+			onSuccess: () => {
+				queryClient.invalidateQueries({ queryKey: getIssueDetailQueryKey(issue.issueId) })
+				queryClient.invalidateQueries({ queryKey: getSessionIssuesQueryKey(threadId) })
+			},
+		},
+	}
+	const pause = usePauseIssue(refresh)
+	const resume = useResumeIssue(refresh)
+	const pausable = !issue.archived && issue.status !== IssueStatusEnum.COMPLETED
+
+	if (issue.paused) {
+		return (
+			<Button
+				variant="outline"
+				size="sm"
+				className={className}
+				disabled={resume.isPending}
+				onClick={() => resume.mutate({ issueId: issue.issueId })}
+				{...props}
+			>
+				<IconPlayerPlay className="size-4" />
+				{t('session.resumeIssue')}
+			</Button>
+		)
+	}
+	if (!pausable) return null
+	return (
+		<Button
+			variant="outline"
+			size="sm"
+			className={className}
+			disabled={pause.isPending}
+			onClick={() => pause.mutate({ issueId: issue.issueId })}
+			{...props}
+		>
+			<IconPlayerPause className="size-4" />
+			{t('session.pauseIssue')}
+		</Button>
+	)
+}
+
 /**
  * The paused-agent alert card (D3 — "Card / Paused Alert"): a pastel-green banner with the stop's
  * message and its resolution buttons, shown ABOVE the terminal while the issue's agent is stopped.

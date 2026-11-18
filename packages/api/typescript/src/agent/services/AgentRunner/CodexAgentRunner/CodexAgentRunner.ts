@@ -153,6 +153,15 @@ export class CodexAgentRunner extends AgentRunner {
 		},
 	}
 
+	/**
+	 * NO pre-tool hook (fase 2, item 3 — janela de arrependimento), declared rather than inherited so the
+	 * gap is visible here: `codex exec` runs with stdin closed and no approval channel codm answers (AUTO
+	 * passes no flag, BYPASS passes the full bypass — `CODEX_PERMISSION_ARGS`), and nothing in this runner
+	 * can hold a shell command for the daemon. An issue on codex pushes without the window; the spec's
+	 * "Seguimento" says what would have to exist first.
+	 */
+	override readonly preToolHook = false
+
 	// NOT `readonly` and NOT constructor parameters — same reason as the claude runner: an optional
 	// constructor parameter emits `Object` for `design:paramtypes` and tsyringe throws at resolution.
 	private spawner: AgentProcessSpawner = nodeAgentProcessSpawner
@@ -289,6 +298,9 @@ export class CodexAgentRunner extends AgentRunner {
 			proc.kill()
 		}
 		request.signal?.addEventListener('abort', onAbort, { once: true })
+		// An abort that landed BEFORE this line never fires the listener — a pause between the caller's own
+		// check and the spawn (fase 2, item 2) would leave the child unkillable. Honor it now.
+		if (request.signal?.aborted) onAbort()
 
 		try {
 			const iterator = proc.stdout[Symbol.asyncIterator]()

@@ -91,6 +91,7 @@ export class LibSqlIssueRepository extends IssueRepository {
 						archived: data.archived,
 						archiveReason: data.archiveReason,
 						completedAt: data.completedAt,
+						paused: data.paused,
 						updatedAt: new Date(),
 						version: data.version,
 					},
@@ -121,6 +122,7 @@ export class LibSqlIssueRepository extends IssueRepository {
 			archived: row.archived,
 			archiveReason: (row.archiveReason ?? undefined) as IssueArchiveReason | undefined,
 			completedAt: row.completedAt ?? undefined,
+			paused: row.paused,
 			originEntryId: row.originEntryId ?? undefined,
 			goal: row.goal ?? undefined,
 		})
@@ -140,6 +142,7 @@ export class LibSqlIssueRepository extends IssueRepository {
 			archived: entity.archived,
 			archiveReason: entity.archiveReason ?? null,
 			completedAt: entity.completedAt ?? null,
+			paused: entity.paused,
 			originEntryId: entity.originEntryId ?? null,
 			goal: entity.goal ?? null,
 			createdAt: entity.createdAt,

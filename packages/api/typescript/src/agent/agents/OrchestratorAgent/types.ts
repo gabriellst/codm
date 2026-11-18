@@ -1,6 +1,6 @@
 import { z } from '@codm/core-typescript'
 import { AgentModelId, ContactKind, Language, MailboxItemKind, MessageType, StopKind } from '@codm/contracts-typescript/wire/enums'
-import { AgentRunOutcome, MessageVia } from '../../enums'
+import { AgentRunOutcome, MessageVia, TriageDecision } from '../../enums'
 import { ProviderCapabilitiesSchema } from '../../types/ProviderCapabilities'
 import { OpenStopSchema } from '../../usecases/GetOpenStops'
 
@@ -142,6 +142,18 @@ const OperatorMessageItemSchema = z.object({
 	/** Same pair as `WindowEntrySchema` — the live message can be a media message too. */
 	messageType: z.enum(MessageType).optional(),
 	mediaPath: z.string().optional(),
+	/**
+	 * What the parallel triage (fase 2) made of this message, when it ran and handed it here — patched onto
+	 * the held item by `TriageChannelMessage`. A HINT: the turn still decides, but a `NEW_TASK` comes with
+	 * the title the triage would give it, so the turn need not re-derive what the message asks for.
+	 */
+	triage: z
+		.object({
+			decision: z.enum(TriageDecision),
+			confidence: z.number().optional(),
+			title: z.string().optional(),
+		})
+		.optional(),
 })
 
 /**

@@ -28,6 +28,7 @@ get "status"(){
               },
 "meta": z.optional(z.string()),
 "archived": z.boolean(),
+"paused": z.boolean(),
 "waitingForProviderUntil": z.optional(z.string()),
 get "lifeState"(){
                 return issueLifeStateSchema

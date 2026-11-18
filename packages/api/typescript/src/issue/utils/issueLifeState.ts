@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNull } from 'drizzle-orm'
 import { z, type LibSqlDatabaseDriver } from '@codm/core-typescript'
-import { agentMailbox, stops } from '@codm/contracts/db'
+import { agentMailbox, issues as issueTable, stops, threads } from '@codm/contracts/db'
 import { IssueLifeState, IssueStatus, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
 
 /** One unconsumed, unpoisoned queue item of the issue, reduced to what the rule reads. */
@@ -18,6 +18,9 @@ export interface PendingItem {
  * testable on its own:
  *
  *  1. COMPLETED → DONE.
+ *  1b. HELD — the issue or its conversation is paused (fase 2, item 2) → PAUSED. Above everything else
+ *     because a held issue's deferred item is NOT a provider wait, and a queued one will not run: every
+ *     state below would describe work that is not going to happen until somebody resumes it.
  *  2. A turn holds a lease → RUNNING (or REMINDED, when that turn is the reminder).
  *  3. Its next turn is deferred by the provider → WAITING_PROVIDER.
  *  4. Work is queued for a slot → QUEUED (or REMINDED for a queued reminder).
@@ -27,8 +30,14 @@ export interface PendingItem {
  * Work beats a stop on purpose: a resolved stop queues a steer, and an issue about to run again is not
  * waiting on anyone. Never stored — a board that reads a stored state shows yesterday's.
  */
-export function lifeStateOf(input: { status: IssueStatus; pending: readonly PendingItem[]; openStops: number }): IssueLifeState {
+export function lifeStateOf(input: {
+	status: IssueStatus
+	held: boolean
+	pending: readonly PendingItem[]
+	openStops: number
+}): IssueLifeState {
 	if (input.status === IssueStatus.COMPLETED) return IssueLifeState.DONE
+	if (input.held) return IssueLifeState.PAUSED
 	const running = input.pending.find(item => item.running)
 	if (running) return running.reminder ? IssueLifeState.REMINDED : IssueLifeState.RUNNING
 	if (input.pending.some(item => item.deferred)) return IssueLifeState.WAITING_PROVIDER
@@ -40,7 +49,8 @@ export function lifeStateOf(input: { status: IssueStatus; pending: readonly Pend
 
 /**
  * The inputs of `lifeStateOf` for many issues at once: their pending queue items and open stop counts.
- * Two reads, whatever the number of issues — the board asks for every open issue on each refresh.
+ * Three reads, whatever the number of issues — the board asks for every open issue on each refresh. The
+ * third is the hold (issue ⋈ thread `paused`), read here rather than asked of every caller.
  */
 export async function lifeStateByIssue(
 	driver: LibSqlDatabaseDriver,
@@ -83,13 +93,25 @@ export async function lifeStateByIssue(
 		})
 		pending.set(item.issueId, list)
 	}
+	const heldRows = await driver.db
+		.select({ issueId: issueTable.id, issuePaused: issueTable.paused, threadPaused: threads.paused })
+		.from(issueTable)
+		.leftJoin(threads, eq(threads.id, issueTable.threadId))
+		.where(inArray(issueTable.id, ids))
+	const held = new Set(heldRows.filter(row => row.issuePaused || row.threadPaused === true).map(row => row.issueId))
+
 	const openStops = new Map<string, number>()
 	for (const row of openStopRows) if (row.issueId) openStops.set(row.issueId, (openStops.get(row.issueId) ?? 0) + 1)
 
 	for (const issue of issues) {
 		states.set(
 			issue.issueId,
-			lifeStateOf({ status: issue.status, pending: pending.get(issue.issueId) ?? [], openStops: openStops.get(issue.issueId) ?? 0 }),
+			lifeStateOf({
+				status: issue.status,
+				held: held.has(issue.issueId),
+				pending: pending.get(issue.issueId) ?? [],
+				openStops: openStops.get(issue.issueId) ?? 0,
+			}),
 		)
 	}
 	return states

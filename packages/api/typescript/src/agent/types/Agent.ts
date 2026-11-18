@@ -7,7 +7,8 @@ import type { AgentRunner } from '../services/AgentRunner'
 import type { AgentMcpInvocation } from './AgentMcpInvocation'
 import type { ProviderCapabilities } from './ProviderCapabilities'
 import type { AgentRunIdentity, AgentRunIdentityFields } from './AgentRunIdentity'
-import { MCP_ROUTE_PREFIX } from '../mcp/route'
+import { MCP_ROUTE_PREFIX, PRE_TOOL_HOOK_PATH } from '../mcp/route'
+import { REGRET_HOOK_TIMEOUT_S } from '../utils/irreversibleActions'
 import type { AgentApplicationErrors } from '../errors'
 
 /**
@@ -101,6 +102,14 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 	 */
 	readonly mcpScope?: McpScope
 
+	/**
+	 * Does this agent's run hold irreversible actions for the regret window (fase 2, item 3)? An AGENT fact
+	 * — the window checks an issue's mailbox, so only an agent confined to an issue has one to check. It
+	 * takes effect only on a runner that can enforce it (`AgentRunner.preToolHook`); on one that cannot,
+	 * the invocation simply carries no hook, and the gap is the runner's declared one, not a silent drop.
+	 */
+	readonly regretWindow: boolean = false
+
 	/** Phantom — never assigned. See the class docstring. */
 	readonly input!: Z.output<InputSchema> & AgentInputEnvelope
 	/** Phantom — never assigned. `never` for an agent with no `outputSchema`, which makes `collect()` unusable there. */
@@ -122,19 +131,26 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 	 * and the caller that already holds the provider (`RunIssueTurn`, `DefaultIssueRouter`) is the one
 	 * layer that can resolve it. The agent is left holding NO I/O at all, which is what lets §4.8 keep
 	 * binding agents identically in all three envs.
+	 *
+	 * ### …and why the cancellation signal is one too
+	 * `signal` is the same kind of thing as the runner: TRANSPORT, not data the agent reasons about, owned
+	 * by whoever runs the turn (`RunIssueTurn`, fed by `IssueTurnAborter` — fase 2, item 2). It is merged
+	 * onto the request here so no `buildRequest` ever has to know a turn can be killed.
 	 */
-	async *run(runner: AgentRunner, input: this['input']): AsyncIterable<AgentRuntimeEvent> {
+	async *run(runner: AgentRunner, input: this['input'], transport: { signal?: AbortSignal } = {}): AsyncIterable<AgentRuntimeEvent> {
 		const request = {
 			...this.buildRequest(input),
 			agentName: (this.constructor as typeof Agent).NAME,
 			// The POSTURE is the base's to stamp, like the identity: it comes from the envelope — who
 			// triggered the turn — so no agent's `buildRequest` can widen or narrow it.
 			posture: input.posture,
+			...(transport.signal && { signal: transport.signal }),
 		}
 		// The scope is passed DOWN rather than re-read off `this` inside the callee: it is what confines
 		// the minted credential (D6-8), and threading the already-narrowed value is what makes "a token
 		// is always bound to a scope" hold by type instead of by a cast.
-		yield* runner.run({ ...request, ...(this.mcpScope && { mcp: this.buildMcpInvocation(input, request, this.mcpScope) }) })
+		const preToolHook = this.regretWindow && runner.preToolHook
+		yield* runner.run({ ...request, ...(this.mcpScope && { mcp: this.buildMcpInvocation(input, request, this.mcpScope, preToolHook) }) })
 	}
 
 	/**
@@ -153,7 +169,12 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 	 * loudly here rather than issuing a token confined to nothing, which would hand a model a
 	 * credential the destination-side comparison cannot constrain.
 	 */
-	private buildMcpInvocation(input: this['input'], request: { caps?: ProviderCapabilities }, scope: McpScope): AgentMcpInvocation {
+	private buildMcpInvocation(
+		input: this['input'],
+		request: { caps?: ProviderCapabilities },
+		scope: McpScope,
+		preToolHook: boolean,
+	): AgentMcpInvocation {
 		// A CLI whose probe says it cannot take an MCP config cannot serve an agent that REQUIRES tools.
 		// NAMED failure, never a silent drop to the inferred path (§4.7): degrading here would look
 		// exactly like a healthy run that simply chose to declare nothing, which is the one distinction
@@ -222,6 +243,11 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 			endpoint: `http://127.0.0.1:${Config.env.API_PORT}${MCP_ROUTE_PREFIX}/${this.mcpScope}`,
 			token,
 			allowedTools: this.tools,
+			// The regret window's door, authenticated by the SAME token (fase 2, item 3). Present only when the
+			// agent asks for the window AND the runner can attach a pre-tool hook — see `regretWindow`.
+			...(preToolHook && {
+				preToolHook: { endpoint: `http://127.0.0.1:${Config.env.API_PORT}${PRE_TOOL_HOOK_PATH}`, timeoutSeconds: REGRET_HOOK_TIMEOUT_S },
+			}),
 		}
 	}
 
@@ -243,8 +269,10 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 	 * method's job, and `collectFailure()` is where each agent supplies its own code instead of this
 	 * base inventing one it has no vocabulary for.
 	 */
-	protected async collect(runner: AgentRunner, input: this['input']): Promise<this['output']> {
-		for await (const event of this.run(runner, input)) {
+	protected async collect(runner: AgentRunner, input: this['input'], transport: { signal?: AbortSignal } = {}): Promise<this['output']> {
+		// The cancellation signal travels the same way it does for `run()` — a caller that bounds a
+		// structured run (the triage's timeout) must be able to kill the CLI, not only stop waiting for it.
+		for await (const event of this.run(runner, input, transport)) {
 			if (event.type !== 'finished') continue
 			const { result } = event
 			if (result.stop) throw this.collectFailure(`agent run stopped: ${result.stop.kind} — ${result.stop.detail}`)

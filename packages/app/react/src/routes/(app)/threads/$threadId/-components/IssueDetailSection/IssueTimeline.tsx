@@ -22,6 +22,9 @@ const DETAIL: { [K in IssueTimelineItemKind]: (props: { item: ItemOf<K> }) => Re
 	STOP_RESOLVED: ({ item }) => enumLabel('StopResolution', item.resolution),
 	COMPLETED: () => null,
 	ARCHIVED: () => null,
+	PAUSED: ({ item }) => <ControlDetail item={item} />,
+	RESUMED: ({ item }) => <ControlDetail item={item} />,
+	REGRET_WINDOW: ({ item }) => <RegretWindowDetail item={item} />,
 }
 
 /**
@@ -67,14 +70,29 @@ function TimelineRow({ item, className, ...props }: ComponentProps<'li'> & { ite
 	)
 }
 
+type ClassificationMethod = (typeof ClassificationMethodEnum)[keyof typeof ClassificationMethodEnum]
+
+/**
+ * HOW a person's message reached this issue, for the routings worth naming: a quote (the rule layer) or
+ * the parallel triage (fase 2 — `CONTEXT_MATCH`). Dispatched by the classification, never an `if` chain;
+ * a new member fails compilation here until somebody says whether it gets a label.
+ */
+const ROUTED_BY: Readonly<Record<ClassificationMethod, 'session.timelineReplyQuote' | 'session.timelineTriage' | undefined>> = {
+	[ClassificationMethodEnum.REPLY_QUOTE]: 'session.timelineReplyQuote',
+	[ClassificationMethodEnum.CONTEXT_MATCH]: 'session.timelineTriage',
+	[ClassificationMethodEnum.NEW_ISSUE]: undefined,
+	[ClassificationMethodEnum.CLARIFIED]: undefined,
+}
+
 function MessageDetail({ item }: { item: ItemOf<'MESSAGE'> }) {
 	const { t } = useTranslation()
 	const fromPerson = item.transcriptKind === TranscriptKindEnum.CONTACT
+	const routedBy = item.classification ? ROUTED_BY[item.classification] : undefined
 	return (
 		<>
 			<span className="mr-1.5 text-xs text-foreground">
 				{fromPerson ? t('session.timelineFromPerson') : t('session.timelineFromAgent')}
-				{item.classification === ClassificationMethodEnum.REPLY_QUOTE && ` · ${t('session.timelineReplyQuote')}`}
+				{routedBy && ` · ${t(routedBy)}`}
 			</span>
 			{item.text}
 		</>
@@ -95,6 +113,27 @@ function SteerDetail({ item }: { item: ItemOf<'STEER'> }) {
 			{item.reminder && <span className="mr-1.5 text-xs text-foreground">{t('session.steerAutoReminder')}</span>}
 			{item.text}
 			<span className="block text-xs">{status}</span>
+		</>
+	)
+}
+
+/** Who held / released the work and from where (fase 2, item 2) — the source alone when no name was recorded. */
+function ControlDetail({ item }: { item: ItemOf<'PAUSED'> | ItemOf<'RESUMED'> }) {
+	const { t } = useTranslation()
+	const source = enumLabel('IssueControlSource', item.source)
+	return <>{item.by ? t('session.timelineControlBy', { source, by: item.by }) : source}</>
+}
+
+/** "esperou 20 s antes de git push — seguiu / cancelado por recado" (fase 2, item 3). */
+function RegretWindowDetail({ item }: { item: ItemOf<'REGRET_WINDOW'> }) {
+	const { t } = useTranslation()
+	const action = enumLabel('IrreversibleActionKind', item.actionKind)
+	const outcome = enumLabel('RegretWindowOutcome', item.outcome)
+	return (
+		<>
+			{item.waitedMs > 0
+				? t('session.timelineRegretWindow', { seconds: Math.round(item.waitedMs / 1000), action, outcome })
+				: t('session.timelineRegretWindowNoWait', { action, outcome })}
 		</>
 	)
 }

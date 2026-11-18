@@ -1,6 +1,6 @@
-import type { ComponentProps } from 'react'
+import type { ComponentProps, ElementType } from 'react'
 import { Link } from '@tanstack/react-router'
-import { IconBellRinging } from '@tabler/icons-react'
+import { IconBellRinging, IconPlayerPause } from '@tabler/icons-react'
 import type { IssueLifeState } from '@codm/client-typescript/typescript'
 import { IssueLifeStateEnum } from '@codm/client-typescript/typescript'
 import { enumLabel } from '@/lib'
@@ -10,6 +10,21 @@ import { ProviderWaitBadge, type IssueRowItem } from './IssueRow'
 
 export interface IssueCardItem extends IssueRowItem {
 	lifeState: IssueLifeState
+}
+
+/**
+ * The life states the card SPELLS OUT, with their glyph — the ones that share a column with another state
+ * (REMINDED and PAUSED sit in STALLED's). `null` = the column already says it. Exhaustive by type.
+ */
+const LIFE_BADGE_ICON: Record<IssueLifeState, ElementType | null> = {
+	[IssueLifeStateEnum.QUEUED]: null,
+	[IssueLifeStateEnum.RUNNING]: null,
+	[IssueLifeStateEnum.WAITING_PERSON]: null,
+	[IssueLifeStateEnum.WAITING_PROVIDER]: null,
+	[IssueLifeStateEnum.REMINDED]: IconBellRinging,
+	[IssueLifeStateEnum.STALLED]: null,
+	[IssueLifeStateEnum.PAUSED]: IconPlayerPause,
+	[IssueLifeStateEnum.DONE]: null,
 }
 
 /**
@@ -31,12 +46,18 @@ export function IssueCard({ item, className, ...props }: { item: IssueCardItem }
 			</span>
 			{item.threadDisplayName && <span className="truncate text-xs text-muted-foreground">{item.threadDisplayName}</span>}
 			{item.waitingForProviderUntil && <ProviderWaitBadge until={item.waitingForProviderUntil} />}
-			{item.lifeState === IssueLifeStateEnum.REMINDED && (
-				<span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-					<IconBellRinging className="size-3.5" />
-					{enumLabel('IssueLifeState', item.lifeState)}
-				</span>
-			)}
+			<LifeBadge lifeState={item.lifeState} />
 		</Link>
+	)
+}
+
+function LifeBadge({ lifeState, className, ...props }: ComponentProps<'span'> & { lifeState: IssueLifeState }) {
+	const Icon = LIFE_BADGE_ICON[lifeState]
+	if (!Icon) return null
+	return (
+		<span className={cn('inline-flex items-center gap-1 text-xs text-muted-foreground', className)} {...props}>
+			<Icon className="size-3.5" />
+			{enumLabel('IssueLifeState', lifeState)}
+		</span>
 	)
 }

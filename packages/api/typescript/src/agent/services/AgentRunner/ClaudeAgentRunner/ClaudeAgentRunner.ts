@@ -1,6 +1,6 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { injectable } from 'tsyringe-neo'
 import { z, type ZodType } from 'zod'
 import { AgentModelId, AgentStopReason, PermissionPosture, StopKind } from '@codm/contracts-typescript/wire/enums'
@@ -20,6 +20,7 @@ import { nodeAgentProcessSpawner, type AgentProcess, type AgentProcessSpawner } 
 // another would drag a subprocess-spawning module into a pure state machine.
 import { MCP_RUN_TOKEN_ENV, MCP_SERVER_KEY } from '../../../mcp/wire'
 import { AgentIdentityService } from '@codm/core-typescript'
+import { REGRET_WINDOW_REASON_PREFIX } from '../../../utils/irreversibleActions'
 
 export interface ClaudeAgentRunnerOptions {
 	spawner?: AgentProcessSpawner
@@ -79,6 +80,8 @@ const CLAUDE_PERMISSION_ARGS: Record<PermissionPosture, readonly string[]> = {
 
 /** Everything `buildArgs` needs to produce a full argv. One record, no ambient state. */
 export interface ClaudeBuildArgsOptions {
+	/** See `AgentRunRequest.builtinTools` — passed only when the probe saw `--tools`; `run` refuses otherwise. */
+	builtinTools?: readonly string[]
 	/** `AgentModelId.DEFAULT` means OMIT the model flag entirely — not "pass the string DEFAULT". */
 	model?: AgentModelId
 	cwd: string
@@ -96,6 +99,8 @@ export interface ClaudeBuildArgsOptions {
 	posture: PermissionPosture
 	/** A file holding the agent's standing instructions (`--append-system-prompt-file`), when there is one. */
 	systemPromptFile?: string
+	/** A per-run plugin directory carrying the regret window's pre-tool hook (`--plugin-dir`), when there is one. */
+	pluginDir?: string
 }
 
 /**
@@ -188,8 +193,20 @@ export class ClaudeAgentRunner extends AgentRunner {
 			// its own, just this bracketed form in the prose. A build whose help does not say it is not
 			// trusted to take the flag — the fallback (folding the prompt into the turn) still works.
 			'--append-system-prompt[-file]': 'appendSystemPromptFile',
+			// "Load a plugin from a directory … for this session only" (2.1.327). The carrier of the regret
+			// window's per-run hook — see `ProviderCapabilities.pluginDir` for why not `--settings`.
+			'--plugin-dir': 'pluginDir',
+			// `--tools <tools...>  Built-in tools to make available: "" for none` (2.1.327).
+			'--tools <tools...>': 'builtinToolsFlag',
 		},
 	}
+
+	/**
+	 * This CLI can hold a shell command for the daemon first (fase 2, item 3): a `PreToolUse` hook of type
+	 * `http`, attached per run as a session-only plugin (`--plugin-dir`). DOCUMENTED, not measured against a
+	 * real account — the spec lists what is still to measure.
+	 */
+	override readonly preToolHook = true
 
 	// NOT `readonly`, and NOT constructor parameters — see `withOptions` below for why.
 	private spawner: AgentProcessSpawner = nodeAgentProcessSpawner
@@ -290,6 +307,8 @@ export class ClaudeAgentRunner extends AgentRunner {
 		caps,
 		posture,
 		systemPromptFile,
+		pluginDir,
+		builtinTools,
 	}: ClaudeBuildArgsOptions): string[] {
 		const args = ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose']
 
@@ -320,6 +339,12 @@ export class ClaudeAgentRunner extends AgentRunner {
 
 		// Handed in only when the probe saw the flag AND the file was written — `run` decides both.
 		if (systemPromptFile) args.push('--append-system-prompt-file', systemPromptFile)
+
+		// Handed in only when the invocation carries a hook AND the probe saw the flag AND the dir was written.
+		if (pluginDir) args.push('--plugin-dir', pluginDir)
+
+		// A declared built-in tool set — `[]` becomes `--tools ""`, no built-in tool at all.
+		if (builtinTools !== undefined && caps.builtinToolsFlag) args.push('--tools', builtinTools.join(','))
 
 		// Last: headless `-p` has no TTY to render a permission prompt on, so the mode is settled here at
 		// spawn — by the POSTURE of whoever triggered the turn, through the table above.
@@ -352,6 +377,19 @@ export class ClaudeAgentRunner extends AgentRunner {
 			warn('the CLI did not advertise --append-system-prompt-file — folding the system prompt into the turn')
 		}
 
+		// THE REGRET WINDOW'S HOOK, as a session-only plugin (fase 2, item 3). Same shape as the prompt file:
+		// per-run scratch, written before the spawn, removed in every ending. Absent capability ⇒ said out loud
+		// and the run goes on without the window (an older build would abort on the unknown flag).
+		const mcp = request.mcp
+		const hook = mcp?.preToolHook
+		const hookPlugin = mcp && hook && request.caps?.pluginDir ? await writePreToolHookPlugin(hook, mcp.token, warn) : undefined
+		if (hook && !request.caps?.pluginDir) warn('the CLI did not advertise --plugin-dir — this run has no regret window')
+
+		// FAIL CLOSED: an agent that declared its built-in tools never runs with the CLI's full set.
+		if (request.builtinTools !== undefined && !request.caps?.builtinToolsFlag) {
+			throw new Error('the CLI did not advertise --tools — refusing a run that declared its built-in tools')
+		}
+
 		const args = ClaudeAgentRunner.buildArgs({
 			model: request.model,
 			cwd: request.cwd,
@@ -362,6 +400,8 @@ export class ClaudeAgentRunner extends AgentRunner {
 			caps: request.caps ?? {},
 			posture: request.posture,
 			systemPromptFile: promptFile?.path,
+			pluginDir: hookPlugin?.path,
+			builtinTools: request.builtinTools,
 		})
 		const cmd = [request.binaryPath, ...args]
 
@@ -375,6 +415,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 			})
 		} catch (cause) {
 			await promptFile?.remove()
+			await hookPlugin?.remove()
 			// Even a spawn that fails synchronously must arrive as the terminal event, not as a throw —
 			// the consumer's drain loop is the only place it can be handled uniformly.
 			yield {
@@ -391,6 +432,8 @@ export class ClaudeAgentRunner extends AgentRunner {
 		const stderrPump = drainToStrings(proc.stderr, stderrChunks)
 
 		let terminal: TerminalResultRecord | undefined
+		/** Tool calls OUR regret-window hook refused — never a stop (see `withoutRegretRefusals`). */
+		const regretRefused: string[] = []
 		let sessionId: string | null = null
 		/** The LAST main-agent call's prompt size — see `DecodedLine.contextTokens`. */
 		let contextTokens: number | undefined
@@ -415,6 +458,9 @@ export class ClaudeAgentRunner extends AgentRunner {
 			proc.kill()
 		}
 		request.signal?.addEventListener('abort', onAbort, { once: true })
+		// An abort that landed BEFORE this line never fires the listener — a pause between the caller's own
+		// check and the spawn (fase 2, item 2) would leave the child unkillable. Honor it now.
+		if (request.signal?.aborted) onAbort()
 
 		try {
 			proc.write(renderStreamJsonStdin(request, { foldSystemPrompt: promptFile === undefined }))
@@ -501,6 +547,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 					for (const frame of decoded.frames) {
 						sawFrame = true
 						if (frame.kind === 'system_init') sessionId = frame.sessionId
+						if (frame.kind === 'tool_result' && frame.summary.includes(REGRET_WINDOW_REASON_PREFIX)) regretRefused.push(frame.toolUseId)
 						yield { type: 'frame', frame }
 						const fact = accumulator.apply(frame)
 						if (fact) yield { type: 'fact', fact }
@@ -521,6 +568,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 				if (decoded.contextTokens !== undefined) contextTokens = decoded.contextTokens
 				if (decoded.rateLimit) rateLimit = decoded.rateLimit
 				for (const frame of decoded.frames) {
+					if (frame.kind === 'tool_result' && frame.summary.includes(REGRET_WINDOW_REASON_PREFIX)) regretRefused.push(frame.toolUseId)
 					yield { type: 'frame', frame }
 					const fact = accumulator.apply(frame)
 					if (fact) yield { type: 'fact', fact }
@@ -548,7 +596,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 			yield {
 				type: 'finished',
 				result: this.buildResult(request, {
-					terminal,
+					terminal: terminal && withoutRegretRefusals(terminal, regretRefused),
 					sessionId,
 					contextTokens,
 					rateLimit,
@@ -564,6 +612,8 @@ export class ClaudeAgentRunner extends AgentRunner {
 			proc.kill()
 			// The CLI read it at startup; it is the run's own scratch and dies with the run.
 			await promptFile?.remove()
+			// The hook's plugin carries the run token in a header — it dies with the run, like the token.
+			await hookPlugin?.remove()
 			// REVOKE — the runner is the ONLY caller (§4.4), because it is the only layer that knows the
 			// process died, and it knows for every ending: clean finish, transport failure, watchdog and
 			// cancellation all pass through this `finally`. A late tool call from a dead run then gets 401
@@ -827,6 +877,62 @@ async function writeSystemPromptFile(
 	}
 }
 
+/** The plugin's manifest name — what the CLI namespaces it under (`codm-regret-window@inline`). */
+const PRE_TOOL_HOOK_PLUGIN_NAME = 'codm-regret-window'
+
+/**
+ * The files of the per-run plugin that attaches the regret window's hook — PURE: path → content.
+ *
+ * DOCUMENTED shape (Claude Code plugins reference): `.claude-plugin/plugin.json` (only `name` required) and
+ * `hooks/hooks.json`, the same `{"hooks": …}` object a settings file holds. One `PreToolUse` hook of type
+ * `http` on the shell tools: the CLI POSTs the hook input (`tool_input.command`) to the daemon and reads a
+ * 2xx JSON body as its decision. The bearer is the run token, literally — the same bytes `--mcp-config`
+ * already puts on argv — so the daemon resolves WHICH issue from the credential, never from the body.
+ *
+ * `onFailure` is deliberately unset: a failed hook (daemon gone, timeout) lets the command run. See the
+ * spec for why the window fails open.
+ */
+export function renderPreToolHookPlugin(hook: { endpoint: string; timeoutSeconds: number }, token: string): Record<string, string> {
+	const hooks = {
+		hooks: {
+			PreToolUse: [
+				{
+					matcher: 'Bash|PowerShell',
+					hooks: [{ type: 'http', url: hook.endpoint, headers: { Authorization: `Bearer ${token}` }, timeout: hook.timeoutSeconds }],
+				},
+			],
+		},
+	}
+	return {
+		'.claude-plugin/plugin.json': JSON.stringify({ name: PRE_TOOL_HOOK_PLUGIN_NAME }),
+		'hooks/hooks.json': JSON.stringify(hooks),
+	}
+}
+
+/**
+ * Write the per-run hook plugin to a private temp directory — or report why not and run without it.
+ *
+ * Its own directory per run (concurrent runs never share a hook, nor a token); 0600 files under the
+ * 0700 `mkdtemp` directory, because the header carries the run token.
+ */
+async function writePreToolHookPlugin(
+	hook: { endpoint: string; timeoutSeconds: number },
+	token: string,
+	warn: (message: string) => void,
+): Promise<{ path: string; remove: () => Promise<void> } | undefined> {
+	try {
+		const dir = await mkdtemp(join(tmpdir(), 'codm-hook-'))
+		for (const [relative, content] of Object.entries(renderPreToolHookPlugin(hook, token))) {
+			await mkdir(dirname(join(dir, relative)), { recursive: true })
+			await writeFile(join(dir, relative), content, { mode: 0o600 })
+		}
+		return { path: dir, remove: () => rm(dir, { recursive: true, force: true }) }
+	} catch (cause) {
+		warn(`could not write the regret window's hook plugin — this run has no regret window: ${String(cause)}`)
+		return undefined
+	}
+}
+
 async function drainToStrings(stream: AsyncIterable<Uint8Array | string>, sink: string[]): Promise<void> {
 	try {
 		for await (const chunk of stream) sink.push(typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk))
@@ -856,4 +962,30 @@ async function settleWithin<T>(promise: Promise<T>, ms: number, fallback: T): Pr
 	} finally {
 		clearTimeout(timer)
 	}
+}
+
+/**
+ * THE REGRET WINDOW IS NOT A PERMISSION DENIAL (fase 2, item 3). Its hook refuses an irreversible Bash
+ * call with `permissionDecision: deny`, and the CLI may count that on the terminal frame as a
+ * `permission_denial` — which `classifyStop` turns into PERMISSION_DENIED, a stop that parks the issue
+ * waiting for a person. Wrong for ours: the session already read why (the reason came back as the tool
+ * result) and the steer or the pause takes it from here.
+ *
+ * So the denials the hook explains are dropped before classification: by `tool_use_id` when the CLI
+ * sends it, otherwise — Bash only, never more than the refusals seen — by count. Any other denial
+ * still stops the turn.
+ */
+export function withoutRegretRefusals(terminal: TerminalResultRecord, regretRefused: readonly string[]): TerminalResultRecord {
+	if (regretRefused.length === 0 || terminal.permissionDenials.length === 0) return terminal
+	const byId = new Set(regretRefused)
+	let unmatched = regretRefused.length - terminal.permissionDenials.filter(d => d.toolUseId !== undefined && byId.has(d.toolUseId)).length
+	const permissionDenials = terminal.permissionDenials.filter(denial => {
+		if (denial.toolUseId !== undefined) return !byId.has(denial.toolUseId)
+		if (denial.tool === 'Bash' && unmatched > 0) {
+			unmatched--
+			return false
+		}
+		return true
+	})
+	return { ...terminal, permissionDenials }
 }

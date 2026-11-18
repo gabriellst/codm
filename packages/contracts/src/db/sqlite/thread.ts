@@ -13,6 +13,8 @@ import {
 	Language,
 	LoopScheduleKind,
 	MessageType,
+	PanelActionKind,
+	PanelActionOutcome,
 } from '../../../generated/typescript/src/wire/enums'
 import { enumCheck } from './_enum'
 
@@ -416,5 +418,40 @@ export const consumedMessages = sqliteTable(
 		// The REVERSE lookup: a transcript entry → the platform id it became. Quoting the message that
 		// opened an issue reads this way; the unique index above only serves the inbound direction.
 		index('consumed_messages_entry_idx').on(t.entryId),
+	],
+)
+
+/**
+ * `panel_actions` — the daemon's LEDGER of actions people asked for on the cloud panel (fase 2, item 6b).
+ *
+ * Two jobs, one row per cloud action id:
+ *  - the EXACTLY-ONCE latch: the row is inserted (primary key = the cloud's action id) in the SAME
+ *    transaction as the pause/resume/steer/answer it records, so a pull that hands the same action again
+ *    finds the row and acts on nothing;
+ *  - the OUTBOX of outcomes: `reportedAt` stays null until a pull carrying the outcome succeeded, so a
+ *    failed pull or a restart re-sends it instead of losing it.
+ *
+ * Holds no text and no address: the steer's words live in the mailbox item, the member's JID nowhere here.
+ */
+export const panelActionLedger = sqliteTable(
+	'thread_panel_actions',
+	{
+		/** The cloud's action id. */
+		id: text('id').primaryKey(),
+		ownerId: text('owner_id').notNull(),
+		threadId: text('thread_id').notNull(),
+		kind: text('kind').$type<PanelActionKind>().notNull(),
+		/** DONE or REFUSED. */
+		outcome: text('outcome').$type<PanelActionOutcome>().notNull(),
+		/** The refusal's error code (never its message, which can carry ids). */
+		outcomeCode: text('outcome_code'),
+		executedAt: integer('executed_at', { mode: 'timestamp_ms' }).notNull(),
+		/** When a pull carrying this outcome succeeded — null = still to report. */
+		reportedAt: integer('reported_at', { mode: 'timestamp_ms' }),
+	},
+	t => [
+		enumCheck('thread_panel_actions_kind_check', t.kind, Object.values(PanelActionKind)),
+		enumCheck('thread_panel_actions_outcome_check', t.outcome, Object.values(PanelActionOutcome)),
+		index('panel_actions_reported_idx').on(t.reportedAt),
 	],
 )

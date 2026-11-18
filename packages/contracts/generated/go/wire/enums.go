@@ -349,6 +349,26 @@ func ParseHistorySyncType(s string) (HistorySyncType, error) {
 	}
 }
 
+type IrreversibleActionKind string
+
+const (
+	IrreversibleActionKindGIT_PUSH IrreversibleActionKind = "GIT_PUSH"
+	IrreversibleActionKindGIT_FORCE_PUSH IrreversibleActionKind = "GIT_FORCE_PUSH"
+	IrreversibleActionKindPR_MERGE IrreversibleActionKind = "PR_MERGE"
+	IrreversibleActionKindRELEASE IrreversibleActionKind = "RELEASE"
+	IrreversibleActionKindPACKAGE_PUBLISH IrreversibleActionKind = "PACKAGE_PUBLISH"
+	IrreversibleActionKindDEPLOY IrreversibleActionKind = "DEPLOY"
+)
+
+func ParseIrreversibleActionKind(s string) (IrreversibleActionKind, error) {
+	switch IrreversibleActionKind(s) {
+	case IrreversibleActionKindGIT_PUSH, IrreversibleActionKindGIT_FORCE_PUSH, IrreversibleActionKindPR_MERGE, IrreversibleActionKindRELEASE, IrreversibleActionKindPACKAGE_PUBLISH, IrreversibleActionKindDEPLOY:
+		return IrreversibleActionKind(s), nil
+	default:
+		return "", fmt.Errorf("invalid IrreversibleActionKind: %q", s)
+	}
+}
+
 type IssueArchiveReason string
 
 const (
@@ -366,6 +386,23 @@ func ParseIssueArchiveReason(s string) (IssueArchiveReason, error) {
 	}
 }
 
+type IssueControlSource string
+
+const (
+	IssueControlSourceWHATSAPP IssueControlSource = "WHATSAPP"
+	IssueControlSourceCONSOLE IssueControlSource = "CONSOLE"
+	IssueControlSourcePANEL IssueControlSource = "PANEL"
+)
+
+func ParseIssueControlSource(s string) (IssueControlSource, error) {
+	switch IssueControlSource(s) {
+	case IssueControlSourceWHATSAPP, IssueControlSourceCONSOLE, IssueControlSourcePANEL:
+		return IssueControlSource(s), nil
+	default:
+		return "", fmt.Errorf("invalid IssueControlSource: %q", s)
+	}
+}
+
 type IssueLifeState string
 
 const (
@@ -375,12 +412,13 @@ const (
 	IssueLifeStateWAITING_PERSON IssueLifeState = "WAITING_PERSON"
 	IssueLifeStateREMINDED IssueLifeState = "REMINDED"
 	IssueLifeStateSTALLED IssueLifeState = "STALLED"
+	IssueLifeStatePAUSED IssueLifeState = "PAUSED"
 	IssueLifeStateDONE IssueLifeState = "DONE"
 )
 
 func ParseIssueLifeState(s string) (IssueLifeState, error) {
 	switch IssueLifeState(s) {
-	case IssueLifeStateRUNNING, IssueLifeStateQUEUED, IssueLifeStateWAITING_PROVIDER, IssueLifeStateWAITING_PERSON, IssueLifeStateREMINDED, IssueLifeStateSTALLED, IssueLifeStateDONE:
+	case IssueLifeStateRUNNING, IssueLifeStateQUEUED, IssueLifeStateWAITING_PROVIDER, IssueLifeStateWAITING_PERSON, IssueLifeStateREMINDED, IssueLifeStateSTALLED, IssueLifeStatePAUSED, IssueLifeStateDONE:
 		return IssueLifeState(s), nil
 	default:
 		return "", fmt.Errorf("invalid IssueLifeState: %q", s)
@@ -416,11 +454,14 @@ const (
 	IssueTimelineItemKindSTOP_RESOLVED IssueTimelineItemKind = "STOP_RESOLVED"
 	IssueTimelineItemKindCOMPLETED IssueTimelineItemKind = "COMPLETED"
 	IssueTimelineItemKindARCHIVED IssueTimelineItemKind = "ARCHIVED"
+	IssueTimelineItemKindPAUSED IssueTimelineItemKind = "PAUSED"
+	IssueTimelineItemKindRESUMED IssueTimelineItemKind = "RESUMED"
+	IssueTimelineItemKindREGRET_WINDOW IssueTimelineItemKind = "REGRET_WINDOW"
 )
 
 func ParseIssueTimelineItemKind(s string) (IssueTimelineItemKind, error) {
 	switch IssueTimelineItemKind(s) {
-	case IssueTimelineItemKindCREATED, IssueTimelineItemKindTURN_STARTED, IssueTimelineItemKindMESSAGE, IssueTimelineItemKindSTEER, IssueTimelineItemKindARTIFACT, IssueTimelineItemKindSTOP_RAISED, IssueTimelineItemKindSTOP_RESOLVED, IssueTimelineItemKindCOMPLETED, IssueTimelineItemKindARCHIVED:
+	case IssueTimelineItemKindCREATED, IssueTimelineItemKindTURN_STARTED, IssueTimelineItemKindMESSAGE, IssueTimelineItemKindSTEER, IssueTimelineItemKindARTIFACT, IssueTimelineItemKindSTOP_RAISED, IssueTimelineItemKindSTOP_RESOLVED, IssueTimelineItemKindCOMPLETED, IssueTimelineItemKindARCHIVED, IssueTimelineItemKindPAUSED, IssueTimelineItemKindRESUMED, IssueTimelineItemKindREGRET_WINDOW:
 		return IssueTimelineItemKind(s), nil
 	default:
 		return "", fmt.Errorf("invalid IssueTimelineItemKind: %q", s)
@@ -627,6 +668,58 @@ func ParseOwnerKind(s string) (OwnerKind, error) {
 	}
 }
 
+type PanelActionKind string
+
+const (
+	PanelActionKindPAUSE PanelActionKind = "PAUSE"
+	PanelActionKindRESUME PanelActionKind = "RESUME"
+	PanelActionKindSTEER PanelActionKind = "STEER"
+	PanelActionKindANSWER_STOP PanelActionKind = "ANSWER_STOP"
+)
+
+func ParsePanelActionKind(s string) (PanelActionKind, error) {
+	switch PanelActionKind(s) {
+	case PanelActionKindPAUSE, PanelActionKindRESUME, PanelActionKindSTEER, PanelActionKindANSWER_STOP:
+		return PanelActionKind(s), nil
+	default:
+		return "", fmt.Errorf("invalid PanelActionKind: %q", s)
+	}
+}
+
+type PanelActionOutcome string
+
+const (
+	PanelActionOutcomeDONE PanelActionOutcome = "DONE"
+	PanelActionOutcomeREFUSED PanelActionOutcome = "REFUSED"
+)
+
+func ParsePanelActionOutcome(s string) (PanelActionOutcome, error) {
+	switch PanelActionOutcome(s) {
+	case PanelActionOutcomeDONE, PanelActionOutcomeREFUSED:
+		return PanelActionOutcome(s), nil
+	default:
+		return "", fmt.Errorf("invalid PanelActionOutcome: %q", s)
+	}
+}
+
+type PanelActionStatus string
+
+const (
+	PanelActionStatusPENDING PanelActionStatus = "PENDING"
+	PanelActionStatusDONE PanelActionStatus = "DONE"
+	PanelActionStatusREFUSED PanelActionStatus = "REFUSED"
+	PanelActionStatusEXPIRED PanelActionStatus = "EXPIRED"
+)
+
+func ParsePanelActionStatus(s string) (PanelActionStatus, error) {
+	switch PanelActionStatus(s) {
+	case PanelActionStatusPENDING, PanelActionStatusDONE, PanelActionStatusREFUSED, PanelActionStatusEXPIRED:
+		return PanelActionStatus(s), nil
+	default:
+		return "", fmt.Errorf("invalid PanelActionStatus: %q", s)
+	}
+}
+
 type PermissionPosture string
 
 const (
@@ -692,6 +785,23 @@ func ParseProviderStatus(s string) (ProviderStatus, error) {
 		return ProviderStatus(s), nil
 	default:
 		return "", fmt.Errorf("invalid ProviderStatus: %q", s)
+	}
+}
+
+type RegretWindowOutcome string
+
+const (
+	RegretWindowOutcomePROCEEDED RegretWindowOutcome = "PROCEEDED"
+	RegretWindowOutcomeCANCELLED_BY_STEER RegretWindowOutcome = "CANCELLED_BY_STEER"
+	RegretWindowOutcomeCANCELLED_BY_PAUSE RegretWindowOutcome = "CANCELLED_BY_PAUSE"
+)
+
+func ParseRegretWindowOutcome(s string) (RegretWindowOutcome, error) {
+	switch RegretWindowOutcome(s) {
+	case RegretWindowOutcomePROCEEDED, RegretWindowOutcomeCANCELLED_BY_STEER, RegretWindowOutcomeCANCELLED_BY_PAUSE:
+		return RegretWindowOutcome(s), nil
+	default:
+		return "", fmt.Errorf("invalid RegretWindowOutcome: %q", s)
 	}
 }
 

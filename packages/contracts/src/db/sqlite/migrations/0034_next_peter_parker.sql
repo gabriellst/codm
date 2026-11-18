@@ -1,0 +1,1 @@
+ALTER TABLE `issue_issues` ADD `paused` integer DEFAULT false NOT NULL;

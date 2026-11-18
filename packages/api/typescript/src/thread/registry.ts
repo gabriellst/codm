@@ -10,6 +10,7 @@ import {
 	LibSqlConsumedMessageRepository,
 	MockConsumedMessageRepository,
 } from './repositories/ConsumedMessageRepository'
+import { PanelActionLedger, LibSqlPanelActionLedger, MockPanelActionLedger } from './repositories/PanelActionLedger'
 import {
 	StopPolicyConfigRepository,
 	LibSqlStopPolicyConfigRepository,
@@ -20,6 +21,9 @@ import { ChannelConnectivity, LibSqlChannelConnectivity, MockChannelConnectivity
 import { GroupMemberReader, LibSqlGroupMemberReader, MockGroupMemberReader } from './services/GroupMemberReader'
 import { ThreadStatusDeriver, LibSqlThreadStatusDeriver, MockThreadStatusDeriver } from './services/ThreadStatusDeriver'
 import { ReplyStreamer } from './services/ReplyStreamer'
+import { PanelRosterRelay, CloudPanelRosterRelay, MockPanelRosterRelay } from './services/PanelRosterRelay'
+import { PanelMemberKey, FilePanelMemberKey, MockPanelMemberKey } from './services/PanelMemberKey'
+import { InboundTriageQueue } from './services/InboundTriageQueue'
 
 export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// The one seam in this context that opens a socket (BC4 → BC1 WRITE, over the gateway's own SDK —
@@ -71,4 +75,16 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// is supposed to complete. Process-local by design; see the class doc for why durability buys
 	// nothing here.
 	{ token: ReplyStreamer, mock: ReplyStreamer, integration: ReplyStreamer, real: ReplyStreamer },
+	// Fase 2, item 6a — the people-side pull from the cloud panel (roster out, identification codes in).
+	// Opens a socket to the cloud, so only `real` binds the cloud client (S2S rule, same as PanelPublisher);
+	// the member-id key is a file under the data dir, so tests use a fixed in-memory key.
+	{ token: PanelRosterRelay, mock: MockPanelRosterRelay, integration: MockPanelRosterRelay, real: CloudPanelRosterRelay },
+	{ token: PanelMemberKey, mock: MockPanelMemberKey, integration: MockPanelMemberKey, real: FilePanelMemberKey },
+	// Fase 2, item 6b — the exactly-once latch + outcome outbox of panel actions. Real (primary-key ON
+	// CONFLICT DO NOTHING) in real + integration so the dedup is exercised against a real DB.
+	{ token: PanelActionLedger, mock: MockPanelActionLedger, integration: LibSqlPanelActionLedger, real: LibSqlPanelActionLedger },
+	// The parallel triage's bounded pool (fase 2). A SINGLETON by the class-binding rule, and that is the
+	// point: the bound on concurrent triages only holds if every submit reaches the same pool. Same class in
+	// every env — whether anything is triaged is `InboundTriage`'s binding (agent registry), not this one's.
+	{ token: InboundTriageQueue, mock: InboundTriageQueue, integration: InboundTriageQueue, real: InboundTriageQueue },
 ])

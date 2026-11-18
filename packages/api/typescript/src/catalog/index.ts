@@ -1,1 +1,9 @@
-export { PROVIDER_MODELS, modelsFor, offersModel, effectiveModel, auditProviderModels } from './agent-models'
+export {
+	PROVIDER_MODELS,
+	PROVIDER_SMALL_MODEL,
+	modelsFor,
+	smallModelFor,
+	offersModel,
+	effectiveModel,
+	auditProviderModels,
+} from './agent-models'

@@ -1,10 +1,10 @@
 import { injectable } from 'tsyringe-neo'
-import type { OpenIssueRef, SteerableIssueRef } from './OpenIssuesReader'
+import type { OpenIssueSummary, SteerableIssueRef } from './OpenIssuesReader'
 import { OpenIssuesReader } from './OpenIssuesReader'
 
 @injectable()
 export class MockOpenIssuesReader extends OpenIssuesReader {
-	async openIssues(_threadId: string): Promise<OpenIssueRef[]> {
+	async openIssues(_threadId: string): Promise<OpenIssueSummary[]> {
 		return []
 	}
 
@@ -19,6 +19,10 @@ export class MockOpenIssuesReader extends OpenIssuesReader {
 
 	/** Mesma razão: sem tabela de issues em `mock`, nada é steerável. */
 	async steerableIssue(_threadId: string, _issueId: string): Promise<SteerableIssueRef | undefined> {
+		return undefined
+	}
+
+	async steerableIssueByKey(_threadId: string, _key: string): Promise<SteerableIssueRef | undefined> {
 		return undefined
 	}
 }

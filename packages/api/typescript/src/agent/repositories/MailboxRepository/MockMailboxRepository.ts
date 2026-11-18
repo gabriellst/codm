@@ -1,7 +1,13 @@
 import { injectable } from 'tsyringe-neo'
 import { DAEMON_BOOT, isClaimOrphaned } from '@codm/core-typescript'
-import type { MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
-import { MailboxRepository, type ClaimedMailboxItem, type DeferredMailboxItem, type EnqueueMailboxItem } from './MailboxRepository'
+import { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
+import {
+	MailboxRepository,
+	type ClaimedMailboxItem,
+	type DeferredMailboxItem,
+	type EnqueueMailboxItem,
+	type HoldSettlement,
+} from './MailboxRepository'
 
 interface Row extends EnqueueMailboxItem {
 	id: string
@@ -15,6 +21,8 @@ interface Row extends EnqueueMailboxItem {
 	consumed: boolean
 	dead: boolean
 	seq: number
+	/** The twin of `first_claimed_at` — set by the first claim, never cleared. */
+	firstClaimedAt?: number
 }
 
 /** In-memory twin, same semantics: dedup by key, one lease per target, expiry, poison. */
@@ -30,9 +38,10 @@ export class MockMailboxRepository extends MailboxRepository {
 			...item,
 			id: crypto.randomUUID(),
 			attempts: 0,
-			claimedBy: null,
-			claimedBoot: null,
-			claimedPid: null,
+			claimedBy: item.hold?.holder ?? null,
+			claimedBoot: item.hold ? DAEMON_BOOT.id : null,
+			claimedPid: item.hold ? DAEMON_BOOT.pid : null,
+			leaseUntil: item.hold?.until.getTime(),
 			consumed: false,
 			dead: false,
 			seq: this.seq,
@@ -52,6 +61,8 @@ export class MockMailboxRepository extends MailboxRepository {
 			.sort((a, b) => rank(a) - rank(b) || a.seq - b.seq)[0]
 		if (!row) return undefined
 		row.attempts += 1
+		const firstClaim = row.firstClaimedAt === undefined
+		row.firstClaimedAt ??= now
 		row.leaseUntil = now + leaseMs
 		row.claimedBy = claimedBy
 		row.claimedBoot = DAEMON_BOOT.id
@@ -65,6 +76,7 @@ export class MockMailboxRepository extends MailboxRepository {
 			payload: row.payload,
 			posture: row.posture,
 			attempts: row.attempts,
+			firstClaim,
 		}
 	}
 
@@ -85,6 +97,22 @@ export class MockMailboxRepository extends MailboxRepository {
 			row.claimedPid = null
 		}
 		return orphaned.length
+	}
+
+	async settleHold(dedupKey: string, holder: string, settlement: HoldSettlement): Promise<boolean> {
+		const row = this.rows.find(r => r.dedupKey === dedupKey && r.claimedBy === holder && !r.consumed && !r.dead)
+		if (!row) return false
+		row.leaseUntil = undefined
+		row.claimedBy = null
+		row.claimedBoot = null
+		row.claimedPid = null
+		if (settlement.consume) row.consumed = true
+		else if (settlement.merge) row.payload = { ...(row.payload as Record<string, unknown>), ...settlement.merge }
+		return true
+	}
+
+	async isHeld(dedupKey: string, holder: string): Promise<boolean> {
+		return this.rows.some(r => r.dedupKey === dedupKey && r.claimedBy === holder && !r.consumed && !r.dead)
 	}
 
 	async complete(id: string): Promise<void> {
@@ -143,5 +171,18 @@ export class MockMailboxRepository extends MailboxRepository {
 
 	async hasPending(targetKind: MailboxTargetKind, targetId: string): Promise<boolean> {
 		return this.rows.some(r => !r.consumed && !r.dead && r.targetKind === targetKind && r.targetId === targetId)
+	}
+
+	async hasUnreadSteer(issueId: string): Promise<boolean> {
+		return this.rows.some(
+			r =>
+				!r.consumed &&
+				!r.dead &&
+				r.claimedBy === null &&
+				r.targetKind === MailboxTargetKind.ISSUE &&
+				r.targetId === issueId &&
+				r.kind === MailboxItemKind.STEER &&
+				!(typeof r.payload === 'object' && r.payload !== null && 'declarationReminder' in r.payload),
+		)
 	}
 }

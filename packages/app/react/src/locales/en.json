@@ -367,8 +367,14 @@
 			"TUESDAY": "Tuesday",
 			"WEDNESDAY": "Wednesday"
 		},
+		"IssueControlSource": {
+			"CONSOLE": "Console",
+			"PANEL": "Panel",
+			"WHATSAPP": "WhatsApp"
+		},
 		"IssueLifeState": {
 			"DONE": "Done",
+			"PAUSED": "Paused",
 			"QUEUED": "Queued",
 			"REMINDED": "Reminded to declare",
 			"RUNNING": "Running",
@@ -382,6 +388,9 @@
 			"COMPLETED": "Completed",
 			"CREATED": "Created",
 			"MESSAGE": "Message",
+			"PAUSED": "Paused",
+			"REGRET_WINDOW": "Regret window",
+			"RESUMED": "Resumed",
 			"STEER": "Steer",
 			"STOP_RAISED": "Asked for someone",
 			"STOP_RESOLVED": "Answered",
@@ -444,6 +453,19 @@
 		"WorkspaceBadge": {
 			"CLAUDE_PROJECT": "Claude project",
 			"GIT": "git"
+		},
+		"IrreversibleActionKind": {
+			"DEPLOY": "deploy",
+			"GIT_FORCE_PUSH": "git force-push",
+			"GIT_PUSH": "git push",
+			"PACKAGE_PUBLISH": "package publish",
+			"PR_MERGE": "PR merge",
+			"RELEASE": "release"
+		},
+		"RegretWindowOutcome": {
+			"CANCELLED_BY_PAUSE": "cancelled by the pause",
+			"CANCELLED_BY_STEER": "cancelled by a message",
+			"PROCEEDED": "went ahead"
 		}
 	},
 	"errors": {
@@ -495,11 +517,15 @@
 		"INVALID_TIMEZONE": "Invalid timezone. Use an IANA name such as \"America/Sao_Paulo\".",
 		"ISSUE_ALREADY_ARCHIVED": "This issue is already archived.",
 		"ISSUE_ALREADY_COMPLETED": "This issue is already completed.",
+		"ISSUE_ALREADY_PAUSED": "This issue is already paused.",
 		"ISSUE_ARCHIVED": "This issue is archived.",
 		"ISSUE_NOT_ARCHIVED": "This issue is not archived.",
 		"ISSUE_NOT_COMPLETED": "This issue is not completed.",
 		"ISSUE_NOT_FOUND": "Issue not found.",
+		"ISSUE_NOT_PAUSABLE": "Only an issue that is still in progress can be paused.",
+		"ISSUE_NOT_PAUSED": "This issue isn't paused.",
 		"ISSUE_NOT_REOPENABLE": "This issue is already in progress and can't be reopened.",
+		"ISSUE_PAUSED": "This issue is paused — nothing goes out until someone resumes it.",
 		"LAST_INVOKER": "At least one participant must keep invocation rights.",
 		"LOOP_NOT_FOUND": "That loop no longer exists in this conversation.",
 		"LOOP_PROMPT_TOO_LONG": "The loop's prompt is past the character limit.",
@@ -519,8 +545,18 @@
 		"OWNER_ALREADY_DISABLED": "This account is already disabled.",
 		"OWNER_NOT_DISABLED": "This account is not disabled.",
 		"OWNER_NOT_FOUND": "Account not found.",
+		"PANEL_ACTION_RATE_LIMITED": "Too many actions from this device. Wait a minute and try again.",
+		"PANEL_CANNOT_RELEASE": "Only someone who may release can answer this request.",
+		"PANEL_CODE_ATTEMPTS_EXCEEDED": "Too many tries with this code. Ask for a new one.",
+		"PANEL_CODE_EXPIRED": "This code has expired or was already used. Ask for a new one.",
+		"PANEL_CODE_INVALID": "Wrong code.",
+		"PANEL_CODE_RATE_LIMITED": "Too many code requests. Wait a bit and try again.",
 		"PANEL_LINK_UNAVAILABLE": "This conversation has no panel link yet. Check that codm is logged in and try again in a few seconds.",
+		"PANEL_MEMBER_NOT_FOUND": "This person is no longer on the group list.",
 		"PANEL_NOT_FOUND": "Panel link is invalid or was replaced.",
+		"PANEL_RESOLUTION_NOT_OFFERED": "That answer is not available for this request on the panel.",
+		"PARTICIPANT_CANNOT_ACT": "This person may not trigger the agent in this conversation.",
+		"PARTICIPANT_CANNOT_RELEASE": "This person may not release requests in this conversation.",
 		"PARTICIPANT_NOT_FOUND": "Participant not found.",
 		"PASSWORDS_DONT_MATCH": "Passwords do not match.",
 		"PASSWORD_TOO_WEAK": "Password too weak. Use letters, numbers and symbols.",
@@ -624,6 +660,10 @@
 		"agentStopped": "Agent stopped and is waiting",
 		"allIssues": "All issues",
 		"archive": "Archive",
+		"pauseIssue": "Pause",
+		"resumeIssue": "Resume",
+		"issuePausedBadge": "Paused",
+		"timelineControlBy": "{{source}} · {{by}}",
 		"archived": "Archived",
 		"artifactOpenExternally": "Open outside the console",
 		"artifactOpenFull": "View {{name}} full size",
@@ -752,9 +792,12 @@
 		"timelineFromAgent": "agent",
 		"timelineFromPerson": "person",
 		"timelineReplyQuote": "replied quoting",
+		"timelineTriage": "routed by triage",
 		"transcriptIssue": "issue",
 		"waitingForProvider": "Waiting on the usage limit until {{when}}",
-		"waitingTerminal": "Waiting for terminal output…"
+		"waitingTerminal": "Waiting for terminal output…",
+		"timelineRegretWindow": "waited {{seconds}} s before {{action}} — {{outcome}}",
+		"timelineRegretWindowNoWait": "{{action}} — {{outcome}} without waiting"
 	},
 	"settings": {
 		"agentProviders": "Agent providers",
