@@ -303,7 +303,46 @@ select kind, json_extract(payload,'$.via'), count(*) from agent_mailbox where ta
 -- stops: issue_stops por kind, (resolved_at - raised_at) em minutos, mediana/p90 por row_number()
 ```
 
-**Depois (a medir na instalação com esta fase):** mensagens do agente por dia no grupo A; mensagens no grupo por issue concluída (meta ≤ 4 na tarefa típica); fração de turnos do orquestrador acordados por `ISSUE_RESULT` (meta 0, salvo drenagem); `relatorio` sem turno (`thread.bulletin_sent` × itens THREAD); perguntas que seguiram pelo padrão.
+## Como medi (depois)
+
+### Medido sem instalação — fluxo de aceite (S9, 18/11)
+
+`packages/api/typescript/tests/flows/fase3-typical-task.test.ts`, modo `integration`: o pedido entra pelo `IngestChannelMessage`, o dispatcher roda os turnos num runner roteirizado cujas "chamadas de ferramenta" são os casos de uso por trás das ferramentas MCP (`ForkIssue`, `RecordArtifact`, `RequestFeedback`, `AskDecision`, `AskQuestion`, `DeclareIssueComplete`), o outbox leva os fatos às pontes e aos consumidores, e os comandos de entrega são EXECUTADOS — "o grupo" é o que o `MockChannelSender` enviou (texto ou mídia; reação não conta; o placeholder do orquestrador editado na resposta conta uma vez). Modo do grupo: o padrão (`DECISIONS_AND_LIVE`). Relógios entregues (janela de 60 s do resumo, prazo de 15 min).
+
+| Medida | Antes (14 dias, instalação real) | Depois (fluxo de aceite) |
+|---|---|---|
+| Mensagens no grupo por tarefa | mediana 8, p90 51 por issue (limite inferior: só artefatos + respostas a resultados) | **4** na tarefa típica (pedido → prévia → aprovação → no ar): recibo, feedback (print + legenda, uma mensagem), decisão, fechamento (print do que foi ao ar + resumo) |
+| Turnos do orquestrador por tarefa | ~7,9 (1 do pedido + ~6,9 `ISSUE_RESULT` por issue) | **1** (o pedido); **0** `ISSUE_RESULT` |
+| Fim de turno da issue no grupo | 889 respostas a resultados (24% do grupo A) | **0**: os dois turnos terminaram com prosa e ela ficou na linha do tempo (`PROGRESS`, `PANEL`) |
+| Pergunta de nível 2 sem resposta | — (pergunta chegava pela resposta do orquestrador) | **1** mensagem (a pergunta); aos 15 min da entrega o padrão é aplicado e a sessão retomada, sem mensagem no grupo; 1 min antes, nada |
+| `relatorio` | um turno do orquestrador por pedido (134–145 pedidos em 14 dias) | **0** turnos, **1** mensagem (o boletim), fato `thread.bulletin_sent` |
+
+**Não são a mesma medida.** O "antes" é um limite inferior sobre issues reais (conta só artefatos e respostas a resultados; não conta o recibo nem respostas a pessoas). O "depois" é o TETO roteirizado de UMA tarefa típica, recibo incluído. Uma tarefa real com duas rodadas de prévia, perguntas extras ou conversa com quem pediu terá mais mensagens; a meta do critério de aceite (≤ 4 na típica) está verificada, a distribuição real não.
+
+### Só medível depois de instalar
+
+Na instalação com esta fase (mesma janela de 14 dias, mesma cópia somente leitura; comandos abaixo, a rodar quando o dono instalar):
+- mensagens do agente por dia no grupo A e nos demais (mesma consulta do "antes");
+- mensagens no grupo por issue concluída — a DISTRIBUIÇÃO real (mediana/p90), não só a tarefa típica;
+- fração de turnos do orquestrador acordados por `ISSUE_RESULT` (meta 0, salvo itens drenados na atualização);
+- `relatorio` sem turno: `thread.bulletin_sent` × itens THREAD criados por mensagens "relatorio";
+- perguntas que seguiram pelo padrão (o risco previsto: ~29–43% fechavam em 15 min antes) e decisões escaladas por efeito;
+- quantas conclusões perderam o artefato final (`agent.run.completed.finalArtifactRefusal`) e quantos fechamentos responderam a uma pessoa (`answersEntryId`);
+- o que não dá para simular: a qualidade do `summary` declarado (o fechamento perdeu a voz do orquestrador), o modelo classificando para baixo (pergunta onde devia haver decisão), o atraso real do resumo por pessoa.
+
+```sql
+-- fala no grupo por issue (depois): entradas da issue que saíram sozinhas ao canal, + resumos que as levaram
+select issue_id, count(*) from thread_transcript_entries where issue_id is not null and kind in ('SYSTEM','DIRECT') and (routing is null or routing = 'GROUP') and <janela> group by issue_id;
+select count(distinct digest_entry_id) from thread_transcript_entries where routing = 'DIGEST' and digest_entry_id is not null and <janela>;
+-- o que acordou o orquestrador (mesma consulta do antes; ISSUE_RESULT deve ser ~0)
+select kind, json_extract(payload,'$.via'), count(*) from agent_mailbox where target_kind='THREAD' and <janela em created_at> group by 1,2;
+-- relatório e padrão
+select count(*) from shared_events where name='thread.bulletin_sent' and <janela>;
+select kind, resolution, count(*) from issue_stops where kind in ('QUESTION_ASKED','DECISION_REQUESTED') and <janela em raised_at> group by 1,2;
+select count(*) from shared_events where name='agent.run.completed' and json_extract(payload,'$.finalArtifactRefusal') is not null and <janela>;
+```
+
+Também fica para depois: a rodada manual no dev com `bun dev` (S9, entregável 2) e a repetição destas consultas sobre a cópia do banco real.
 
 ## Riscos
 
