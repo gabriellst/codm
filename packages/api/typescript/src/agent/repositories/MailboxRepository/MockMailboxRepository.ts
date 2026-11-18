@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { DAEMON_BOOT, isClaimOrphaned } from '@codm/core-typescript'
-import type { MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
+import { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
 import { MailboxRepository, type ClaimedMailboxItem, type DeferredMailboxItem, type EnqueueMailboxItem } from './MailboxRepository'
 
 interface Row extends EnqueueMailboxItem {
@@ -148,5 +148,17 @@ export class MockMailboxRepository extends MailboxRepository {
 
 	async hasPending(targetKind: MailboxTargetKind, targetId: string): Promise<boolean> {
 		return this.rows.some(r => !r.consumed && !r.dead && r.targetKind === targetKind && r.targetId === targetId)
+	}
+
+	async hasUnreadSteer(issueId: string): Promise<boolean> {
+		return this.rows.some(
+			r =>
+				!r.consumed &&
+				!r.dead &&
+				r.claimedBy === null &&
+				r.targetKind === MailboxTargetKind.ISSUE &&
+				r.targetId === issueId &&
+				r.kind === MailboxItemKind.STEER,
+		)
 	}
 }

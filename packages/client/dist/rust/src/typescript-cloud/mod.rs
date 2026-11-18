@@ -2121,6 +2121,43 @@ pub mod types {
     ///              }
     ///            },
     ///            "additionalProperties": false
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "actionKind",
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "outcome",
+    ///              "waitedMs"
+    ///            ],
+    ///            "properties": {
+    ///              "actionKind": {
+    ///                "$ref": "#/components/schemas/IrreversibleActionKind"
+    ///              },
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "REGRET_WINDOW"
+    ///                ]
+    ///              },
+    ///              "outcome": {
+    ///                "$ref": "#/components/schemas/RegretWindowOutcome"
+    ///              },
+    ///              "waitedMs": {
+    ///                "type": "integer",
+    ///                "maximum": 9007199254740991.0,
+    ///                "minimum": 0.0
+    ///              }
+    ///            },
+    ///            "additionalProperties": false
     ///          }
     ///        ]
     ///      }
@@ -2611,6 +2648,43 @@ pub mod types {
     ///        }
     ///      },
     ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "actionKind",
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "outcome",
+    ///        "waitedMs"
+    ///      ],
+    ///      "properties": {
+    ///        "actionKind": {
+    ///          "$ref": "#/components/schemas/IrreversibleActionKind"
+    ///        },
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "REGRET_WINDOW"
+    ///          ]
+    ///        },
+    ///        "outcome": {
+    ///          "$ref": "#/components/schemas/RegretWindowOutcome"
+    ///        },
+    ///        "waitedMs": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 0.0
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
     ///    }
     ///  ]
     ///}
@@ -2707,6 +2781,16 @@ pub mod types {
             by: ::std::option::Option<::std::string::String>,
             id: ::std::string::String,
             source: ::codm_contracts_rust::wire::enums::IssueControlSource,
+        },
+        #[serde(rename = "REGRET_WINDOW")]
+        RegretWindow {
+            #[serde(rename = "actionKind")]
+            action_kind: ::codm_contracts_rust::wire::enums::IrreversibleActionKind,
+            at: ::std::string::String,
+            id: ::std::string::String,
+            outcome: ::codm_contracts_rust::wire::enums::RegretWindowOutcome,
+            #[serde(rename = "waitedMs")]
+            waited_ms: i64,
         },
     }
     impl ::std::convert::From<&Self> for GetPanelIssueResponseTimelineItem {
@@ -4613,6 +4697,42 @@ pub mod types {
     ///                      "$ref": "#/components/schemas/IssueControlSource"
     ///                    }
     ///                  }
+    ///                },
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "actionKind",
+    ///                    "at",
+    ///                    "id",
+    ///                    "kind",
+    ///                    "outcome",
+    ///                    "waitedMs"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "actionKind": {
+    ///                      "$ref": "#/components/schemas/IrreversibleActionKind"
+    ///                    },
+    ///                    "at": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "id": {
+    ///                      "type": "string"
+    ///                    },
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "REGRET_WINDOW"
+    ///                      ]
+    ///                    },
+    ///                    "outcome": {
+    ///                      "$ref": "#/components/schemas/RegretWindowOutcome"
+    ///                    },
+    ///                    "waitedMs": {
+    ///                      "type": "integer",
+    ///                      "maximum": 9007199254740991.0,
+    ///                      "minimum": 0.0
+    ///                    }
+    ///                  }
     ///                }
     ///              ]
     ///            },
@@ -5145,6 +5265,42 @@ pub mod types {
     ///                "$ref": "#/components/schemas/IssueControlSource"
     ///              }
     ///            }
+    ///          },
+    ///          {
+    ///            "type": "object",
+    ///            "required": [
+    ///              "actionKind",
+    ///              "at",
+    ///              "id",
+    ///              "kind",
+    ///              "outcome",
+    ///              "waitedMs"
+    ///            ],
+    ///            "properties": {
+    ///              "actionKind": {
+    ///                "$ref": "#/components/schemas/IrreversibleActionKind"
+    ///              },
+    ///              "at": {
+    ///                "type": "string"
+    ///              },
+    ///              "id": {
+    ///                "type": "string"
+    ///              },
+    ///              "kind": {
+    ///                "type": "string",
+    ///                "enum": [
+    ///                  "REGRET_WINDOW"
+    ///                ]
+    ///              },
+    ///              "outcome": {
+    ///                "$ref": "#/components/schemas/RegretWindowOutcome"
+    ///              },
+    ///              "waitedMs": {
+    ///                "type": "integer",
+    ///                "maximum": 9007199254740991.0,
+    ///                "minimum": 0.0
+    ///              }
+    ///            }
     ///          }
     ///        ]
     ///      },
@@ -5614,6 +5770,42 @@ pub mod types {
     ///          "$ref": "#/components/schemas/IssueControlSource"
     ///        }
     ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "actionKind",
+    ///        "at",
+    ///        "id",
+    ///        "kind",
+    ///        "outcome",
+    ///        "waitedMs"
+    ///      ],
+    ///      "properties": {
+    ///        "actionKind": {
+    ///          "$ref": "#/components/schemas/IrreversibleActionKind"
+    ///        },
+    ///        "at": {
+    ///          "type": "string"
+    ///        },
+    ///        "id": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "REGRET_WINDOW"
+    ///          ]
+    ///        },
+    ///        "outcome": {
+    ///          "$ref": "#/components/schemas/RegretWindowOutcome"
+    ///        },
+    ///        "waitedMs": {
+    ///          "type": "integer",
+    ///          "maximum": 9007199254740991.0,
+    ///          "minimum": 0.0
+    ///        }
+    ///      }
     ///    }
     ///  ]
     ///}
@@ -5710,6 +5902,16 @@ pub mod types {
             by: ::std::option::Option<::std::string::String>,
             id: ::std::string::String,
             source: ::codm_contracts_rust::wire::enums::IssueControlSource,
+        },
+        #[serde(rename = "REGRET_WINDOW")]
+        RegretWindow {
+            #[serde(rename = "actionKind")]
+            action_kind: ::codm_contracts_rust::wire::enums::IrreversibleActionKind,
+            at: ::std::string::String,
+            id: ::std::string::String,
+            outcome: ::codm_contracts_rust::wire::enums::RegretWindowOutcome,
+            #[serde(rename = "waitedMs")]
+            waited_ms: i64,
         },
     }
     impl ::std::convert::From<&Self> for SyncPanelBodyIssuesItemTimelineItem {

@@ -195,6 +195,7 @@ export type { IntegrationChannelSyncStartedEvent, IntegrationChannelSyncStartedE
 export type { InternalChannelMessageReceivedPlatformData } from "./types/InternalChannelMessageReceivedPlatformData.ts";
 export type { InternalChannelMessageSentPlatformData } from "./types/InternalChannelMessageSentPlatformData.ts";
 export type { InternalTextContent } from "./types/InternalTextContent.ts";
+export type { IrreversibleActionKind, IrreversibleActionKindEnumKey } from "./types/IrreversibleActionKind.ts";
 export type { IssueArchiveReason, IssueArchiveReasonEnumKey } from "./types/IssueArchiveReason.ts";
 export type { IssueControlSource, IssueControlSourceEnumKey } from "./types/IssueControlSource.ts";
 export type { IssueLifeState, IssueLifeStateEnumKey } from "./types/IssueLifeState.ts";
@@ -238,6 +239,7 @@ export type { ProxyProtocol, ProxyProtocolEnumKey } from "./types/ProxyProtocol.
 export type { ReactionKeyData } from "./types/ReactionKeyData.ts";
 export type { ReactionMessageData } from "./types/ReactionMessageData.ts";
 export type { ReceiptType, ReceiptTypeEnumKey } from "./types/ReceiptType.ts";
+export type { RegretWindowOutcome, RegretWindowOutcomeEnumKey } from "./types/RegretWindowOutcome.ts";
 export type { RestartChannel200, RestartChannelError, RestartChannelMutation, RestartChannelMutationResponse, RestartChannelPathParams } from "./types/RestartChannel.ts";
 export type { RestartChannelOutput } from "./types/RestartChannelOutput.ts";
 export type { Role, RoleEnumKey } from "./types/Role.ts";
@@ -582,6 +584,7 @@ export { IntegrationChannelSpecialPlatformEventReceivedEventNameEnum } from "./t
 export { IntegrationChannelSyncCompletedEventNameEnum } from "./types/IntegrationChannelSyncCompletedEvent.ts";
 export { IntegrationChannelSyncProgressEventNameEnum } from "./types/IntegrationChannelSyncProgressEvent.ts";
 export { IntegrationChannelSyncStartedEventNameEnum } from "./types/IntegrationChannelSyncStartedEvent.ts";
+export { IrreversibleActionKindEnum } from "./types/IrreversibleActionKind.ts";
 export { IssueArchiveReasonEnum } from "./types/IssueArchiveReason.ts";
 export { IssueControlSourceEnum } from "./types/IssueControlSource.ts";
 export { IssueLifeStateEnum } from "./types/IssueLifeState.ts";
@@ -608,6 +611,7 @@ export { ProviderKindEnum } from "./types/ProviderKind.ts";
 export { ProviderStatusEnum } from "./types/ProviderStatus.ts";
 export { ProxyProtocolEnum } from "./types/ProxyProtocol.ts";
 export { ReceiptTypeEnum } from "./types/ReceiptType.ts";
+export { RegretWindowOutcomeEnum } from "./types/RegretWindowOutcome.ts";
 export { RoleEnum } from "./types/Role.ts";
 export { ServerEventNameEnum } from "./types/ServerEventName.ts";
 export { StopKindEnum } from "./types/StopKind.ts";
@@ -770,6 +774,7 @@ export { integrationChannelSyncStartedEventSchema } from "./zod/integrationChann
 export { internalChannelMessageReceivedPlatformDataSchema } from "./zod/internalChannelMessageReceivedPlatformDataSchema.ts";
 export { internalChannelMessageSentPlatformDataSchema } from "./zod/internalChannelMessageSentPlatformDataSchema.ts";
 export { internalTextContentSchema } from "./zod/internalTextContentSchema.ts";
+export { irreversibleActionKindSchema } from "./zod/irreversibleActionKindSchema.ts";
 export { issueArchiveReasonSchema } from "./zod/issueArchiveReasonSchema.ts";
 export { issueControlSourceSchema } from "./zod/issueControlSourceSchema.ts";
 export { issueLifeStateSchema } from "./zod/issueLifeStateSchema.ts";
@@ -813,6 +818,7 @@ export { proxyProtocolSchema } from "./zod/proxyProtocolSchema.ts";
 export { reactionKeyDataSchema } from "./zod/reactionKeyDataSchema.ts";
 export { reactionMessageDataSchema } from "./zod/reactionMessageDataSchema.ts";
 export { receiptTypeSchema } from "./zod/receiptTypeSchema.ts";
+export { regretWindowOutcomeSchema } from "./zod/regretWindowOutcomeSchema.ts";
 export { restartChannelOutputSchema } from "./zod/restartChannelOutputSchema.ts";
 export { restartChannel200Schema, restartChannelErrorSchema, restartChannelMutationResponseSchema, restartChannelPathParamsSchema } from "./zod/restartChannelSchema.ts";
 export { roleSchema } from "./zod/roleSchema.ts";

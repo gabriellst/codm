@@ -45,6 +45,8 @@ import "./enums/issue-life-state.tsp";
 import "./enums/issue-timeline-item-kind.tsp";
 import "./enums/issue-archive-reason.tsp";
 import "./enums/issue-control-source.tsp";
+import "./enums/irreversible-action-kind.tsp";
+import "./enums/regret-window-outcome.tsp";
 import "./enums/panel-action-kind.tsp";
 import "./enums/panel-action-status.tsp";
 import "./enums/panel-action-outcome.tsp";

@@ -9,7 +9,7 @@ import {
 	type StopKind,
 	type TranscriptKind,
 } from '@codm/contracts-typescript/wire/enums'
-import type { IssueTimelineItem } from '@shared/schemas'
+import { RegretWindowSchema, type IssueTimelineItem } from '@shared/schemas'
 import { IssuePausedEventSchema } from '../events/IssuePausedEvent'
 
 /** Fact names on `shared_events` that become a timeline moment, and which one. */
@@ -20,6 +20,7 @@ const EVENT_KINDS = {
 	'issue.archived': IssueTimelineItemKind.ARCHIVED,
 	'issue.paused': IssueTimelineItemKind.PAUSED,
 	'issue.resumed': IssueTimelineItemKind.RESUMED,
+	'agent.regret_window_closed': IssueTimelineItemKind.REGRET_WINDOW,
 } as const satisfies Record<string, IssueTimelineItemKind>
 type EventName = keyof typeof EVENT_KINDS
 const EVENT_NAMES = Object.keys(EVENT_KINDS) as EventName[]
@@ -72,6 +73,10 @@ export async function assembleIssueTimeline(driver: LibSqlDatabaseDriver, issueI
 			// same posture the steer payload above takes with a malformed row.
 			const control = ControlPayloadSchema.safeParse(fact.payload)
 			if (control.success) items.push({ kind, id: fact.id, at: when, source: control.data.source, by: control.data.requestedBy })
+		} else if (kind === IssueTimelineItemKind.REGRET_WINDOW) {
+			// Same posture as above: a window whose record does not parse is skipped, not guessed at.
+			const window = RegretWindowSchema.safeParse(fact.payload)
+			if (window.success) items.push({ kind, id: fact.id, at: when, ...window.data })
 		} else items.push({ kind, id: fact.id, at: when })
 	}
 	for (const entry of entries) {

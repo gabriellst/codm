@@ -52,6 +52,13 @@ export const ProviderCapabilitiesSchema = z.object({
 	 * whose command line stops at 8191 characters — less than an orchestrator's standing prompt.
 	 */
 	appendSystemPromptFile: z.boolean().optional(),
+	/**
+	 * The CLI loads a plugin from a directory for ONE session (`--plugin-dir`) → a per-run hook can ride in
+	 * it without touching the user's own settings (fase 2, item 3). Not `--settings`, though that exists
+	 * too: a launcher that wraps the binary to pick an account can own that flag and refuse a second one,
+	 * and `--help` (which such a launcher passes straight through) would never show the collision.
+	 */
+	pluginDir: z.boolean().optional(),
 })
 
 export type ProviderCapabilities = Z.output<typeof ProviderCapabilitiesSchema>

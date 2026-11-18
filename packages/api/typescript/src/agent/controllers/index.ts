@@ -15,6 +15,8 @@ export { TestRunIssueTurnController } from './TestRunIssueTurn'
 export { TestSelectAgentScenarioController } from './TestSelectAgentScenario'
 export { ForkIssueController } from './ForkIssue'
 export { SteerIssueTurnController } from './SteerIssueTurn'
+// The regret window's hook door (fase 2, item 3) — mounted beside the MCP door, never emitted (see below).
+export { PreToolHookController } from './PreToolHook'
 
 import { byEnvironment, Config } from '@codm/core-typescript'
 import { McpDoorController } from '../mcp/door'
@@ -28,6 +30,7 @@ import { TestRunIssueTurnController } from './TestRunIssueTurn'
 import { TestSelectAgentScenarioController } from './TestSelectAgentScenario'
 import { ForkIssueController } from './ForkIssue'
 import { SteerIssueTurnController } from './SteerIssueTurn'
+import { PreToolHookController } from './PreToolHook'
 
 /**
  * O QUE ESTE CONTEXTO MONTA (Decisão 10) — três decisões de montagem, agora num lugar só.
@@ -63,7 +66,10 @@ const productionControllers = {
 	SteerIssueTurnController,
 }
 
-const runtimeControllers = Config.env.EMIT_OPENAPI === 'true' ? productionControllers : { ...productionControllers, McpDoorController }
+// The pre-tool hook door (fase 2, item 3) rides the same carve-out: its only client is the provider CLI's
+// hook, and its wire is that CLI's hook contract, not an operation of ours.
+const runtimeControllers =
+	Config.env.EMIT_OPENAPI === 'true' ? productionControllers : { ...productionControllers, McpDoorController, PreToolHookController }
 
 const testDoors = {
 	TestRunIssueTurnController,

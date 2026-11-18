@@ -5,3 +5,10 @@
  * classifier, which has no tools and never touches either.
  */
 export const MCP_ROUTE_PREFIX = '/mcp'
+
+/**
+ * Where an issue session's pre-tool hook posts (fase 2, item 3 — janela de arrependimento). A sibling of
+ * the MCP prefix and a leaf for the same reason: the base `Agent` builds the URL it hands the runner, and
+ * importing the controller for a path would drag a use case into every agent's module graph.
+ */
+export const PRE_TOOL_HOOK_PATH = '/agent/pre-tool-hook'

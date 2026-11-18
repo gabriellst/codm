@@ -24,6 +24,7 @@ const DETAIL: { [K in IssueTimelineItemKind]: (props: { item: ItemOf<K> }) => Re
 	ARCHIVED: () => null,
 	PAUSED: ({ item }) => <ControlDetail item={item} />,
 	RESUMED: ({ item }) => <ControlDetail item={item} />,
+	REGRET_WINDOW: ({ item }) => <RegretWindowDetail item={item} />,
 }
 
 /**
@@ -106,4 +107,18 @@ function ControlDetail({ item }: { item: ItemOf<'PAUSED'> | ItemOf<'RESUMED'> })
 	const { t } = useTranslation()
 	const source = enumLabel('IssueControlSource', item.source)
 	return <>{item.by ? t('session.timelineControlBy', { source, by: item.by }) : source}</>
+}
+
+/** "esperou 20 s antes de git push — seguiu / cancelado por recado" (fase 2, item 3). */
+function RegretWindowDetail({ item }: { item: ItemOf<'REGRET_WINDOW'> }) {
+	const { t } = useTranslation()
+	const action = enumLabel('IrreversibleActionKind', item.actionKind)
+	const outcome = enumLabel('RegretWindowOutcome', item.outcome)
+	return (
+		<>
+			{item.waitedMs > 0
+				? t('session.timelineRegretWindow', { seconds: Math.round(item.waitedMs / 1000), action, outcome })
+				: t('session.timelineRegretWindowNoWait', { action, outcome })}
+		</>
+	)
 }

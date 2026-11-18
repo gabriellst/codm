@@ -2,13 +2,27 @@ import { z } from '@codm/core-typescript'
 import {
 	ArtifactKind,
 	ClassificationMethod,
+	IrreversibleActionKind,
 	IssueControlSource,
 	IssueTimelineItemKind,
+	RegretWindowOutcome,
 	StopKind,
 	StopResolution,
 	TranscriptKind,
 } from '@codm/contracts-typescript/wire/enums'
 import type Z from 'zod'
+
+/**
+ * One closed REGRET WINDOW (fase 2, item 3): which irreversible action waited, how it ended, and for how
+ * long it was held (0 = cancelled before waiting). Shared because two contexts speak it: `agent` records
+ * it as a fact (`agent.regret_window_closed`), and `issue` reads that fact back into the timeline — the
+ * kind of action, never the command line, which can carry a credential.
+ */
+export const RegretWindowSchema = z.object({
+	actionKind: z.enum(IrreversibleActionKind),
+	outcome: z.enum(RegretWindowOutcome),
+	waitedMs: z.number().int().nonnegative(),
+})
 
 const at = z.string()
 /** Stable per item — the source row (event, entry, queue item, artifact, stop), so a list key never shifts. */
@@ -60,5 +74,7 @@ export const IssueTimelineItemSchema = z.discriminatedUnion('kind', [
 	// console session carried no profile name.
 	z.object({ kind: z.literal(IssueTimelineItemKind.PAUSED), id, at, source: z.enum(IssueControlSource), by: z.string().optional() }),
 	z.object({ kind: z.literal(IssueTimelineItemKind.RESUMED), id, at, source: z.enum(IssueControlSource), by: z.string().optional() }),
+	// Janela de arrependimento (fase 2, item 3): the session waited before a push/merge/publish/deploy.
+	z.object({ kind: z.literal(IssueTimelineItemKind.REGRET_WINDOW), id, at, ...RegretWindowSchema.shape }),
 ])
 export type IssueTimelineItem = Z.output<typeof IssueTimelineItemSchema>

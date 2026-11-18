@@ -7168,6 +7168,25 @@
         ],
         "type": "object"
       },
+      "IrreversibleActionKind": {
+        "enum": [
+          "GIT_PUSH",
+          "GIT_FORCE_PUSH",
+          "PR_MERGE",
+          "RELEASE",
+          "PACKAGE_PUBLISH",
+          "DEPLOY"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "IrreversibleActionKindGIT_PUSH",
+          "IrreversibleActionKindGIT_FORCE_PUSH",
+          "IrreversibleActionKindPR_MERGE",
+          "IrreversibleActionKindRELEASE",
+          "IrreversibleActionKindPACKAGE_PUBLISH",
+          "IrreversibleActionKindDEPLOY"
+        ]
+      },
       "IssueArchiveReason": {
         "enum": [
           "MANUAL",
@@ -7242,7 +7261,8 @@
           "COMPLETED",
           "ARCHIVED",
           "PAUSED",
-          "RESUMED"
+          "RESUMED",
+          "REGRET_WINDOW"
         ],
         "type": "string",
         "x-enum-varnames": [
@@ -7256,7 +7276,8 @@
           "IssueTimelineItemKindCOMPLETED",
           "IssueTimelineItemKindARCHIVED",
           "IssueTimelineItemKindPAUSED",
-          "IssueTimelineItemKindRESUMED"
+          "IssueTimelineItemKindRESUMED",
+          "IssueTimelineItemKindREGRET_WINDOW"
         ]
       },
       "Language": {
@@ -7763,6 +7784,19 @@
           "ReceiptTypeRead",
           "ReceiptTypeReadSelf",
           "ReceiptTypePlayed"
+        ]
+      },
+      "RegretWindowOutcome": {
+        "enum": [
+          "PROCEEDED",
+          "CANCELLED_BY_STEER",
+          "CANCELLED_BY_PAUSE"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "RegretWindowOutcomePROCEEDED",
+          "RegretWindowOutcomeCANCELLED_BY_STEER",
+          "RegretWindowOutcomeCANCELLED_BY_PAUSE"
         ]
       },
       "RestartChannelOutput": {

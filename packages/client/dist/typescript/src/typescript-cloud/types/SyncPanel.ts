@@ -5,9 +5,11 @@
 
 import type { ArtifactKind } from "./ArtifactKind.ts";
 import type { ClassificationMethod } from "./ClassificationMethod.ts";
+import type { IrreversibleActionKind } from "./IrreversibleActionKind.ts";
 import type { IssueControlSource } from "./IssueControlSource.ts";
 import type { IssueLifeState } from "./IssueLifeState.ts";
 import type { IssueStatus } from "./IssueStatus.ts";
+import type { RegretWindowOutcome } from "./RegretWindowOutcome.ts";
 import type { StopKind } from "./StopKind.ts";
 import type { StopResolution } from "./StopResolution.ts";
 import type { TranscriptKind } from "./TranscriptKind.ts";
@@ -96,6 +98,12 @@ export const TimelineKindEnum11 = {
 } as const;
 
 export type TimelineKindEnum11Key = (typeof TimelineKindEnum11)[keyof typeof TimelineKindEnum11];
+
+export const TimelineKindEnum12 = {
+    REGRET_WINDOW: "REGRET_WINDOW"
+} as const;
+
+export type TimelineKindEnum12Key = (typeof TimelineKindEnum12)[keyof typeof TimelineKindEnum12];
 
 export type SyncPanelMutationRequest = {
     /**
@@ -382,6 +390,33 @@ export type SyncPanelMutationRequest = {
              * @type string | undefined
             */
             by?: string;
+        } | {
+            /**
+             * @type string
+            */
+            kind: TimelineKindEnum12Key;
+            /**
+             * @type string
+            */
+            id: string;
+            /**
+             * @type string
+            */
+            at: string;
+            /**
+             * @type string
+            */
+            actionKind: IrreversibleActionKind;
+            /**
+             * @type string
+            */
+            outcome: RegretWindowOutcome;
+            /**
+             * @minLength 0
+             * @maxLength 9007199254740991
+             * @type integer
+            */
+            waitedMs: number;
         })[];
         /**
          * @type string, date-time

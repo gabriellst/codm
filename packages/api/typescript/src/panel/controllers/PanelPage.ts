@@ -80,7 +80,11 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
 (() => {
   const COLS = [['QUEUED','Na fila'],['RUNNING','Fazendo'],['WAITING_PERSON','Aguardando pessoa'],['WAITING_PROVIDER','Esperando cota'],['STALLED','Parada'],['DONE','Concluída']];
   const COLUMN_OF = {QUEUED:'QUEUED',RUNNING:'RUNNING',WAITING_PERSON:'WAITING_PERSON',WAITING_PROVIDER:'WAITING_PROVIDER',REMINDED:'STALLED',STALLED:'STALLED',PAUSED:'STALLED',DONE:'DONE'};
-  const KIND = {CREATED:'Criada',TURN_STARTED:'Turno iniciado',MESSAGE:'Mensagem',STEER:'Orientação',ARTIFACT:'Artefato',STOP_RAISED:'Pediu alguém',STOP_RESOLVED:'Respondida',COMPLETED:'Concluída',ARCHIVED:'Arquivada',PAUSED:'Pausada',RESUMED:'Retomada'};
+  const KIND = {CREATED:'Criada',TURN_STARTED:'Turno iniciado',MESSAGE:'Mensagem',STEER:'Orientação',ARTIFACT:'Artefato',STOP_RAISED:'Pediu alguém',STOP_RESOLVED:'Respondida',COMPLETED:'Concluída',ARCHIVED:'Arquivada',PAUSED:'Pausada',RESUMED:'Retomada',REGRET_WINDOW:'Janela de arrependimento'};
+  // Janela de arrependimento (fase 2, item 3): the kind of action and how the wait ended — never a command line.
+  const ACTION = {GIT_PUSH:'git push',GIT_FORCE_PUSH:'git push forçado',PR_MERGE:'merge de PR',RELEASE:'criar release',PACKAGE_PUBLISH:'publicar pacote',DEPLOY:'deploy'};
+  const OUTCOME = {PROCEEDED:'seguiu',CANCELLED_BY_STEER:'cancelado por recado',CANCELLED_BY_PAUSE:'cancelado pela pausa'};
+  const DETAIL = {REGRET_WINDOW: i => (i.waitedMs > 0 ? 'esperou ' + Math.round(i.waitedMs / 1000) + ' s antes de ' : '') + (ACTION[i.actionKind] || i.actionKind) + ' — ' + (OUTCOME[i.outcome] || i.outcome)};
   const base = location.pathname.replace(/\\/+$/, '');
   const fmt = iso => new Date(iso).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
@@ -126,7 +130,7 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
     document.getElementById('dtitle').textContent = data.issue.title;
     document.getElementById('tl').replaceChildren(...data.timeline.map(item => {
       const li = el('li'); li.append(el('div', 'k', fmt(item.at) + ' · ' + (KIND[item.kind] || item.kind)));
-      const text = item.text ?? item.title ?? item.name ?? '';
+      const text = DETAIL[item.kind] ? DETAIL[item.kind](item) : (item.text ?? item.title ?? item.name ?? '');
       if (text) li.append(el('div', 't', text));
       return li;
     }));

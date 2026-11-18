@@ -349,6 +349,26 @@ func ParseHistorySyncType(s string) (HistorySyncType, error) {
 	}
 }
 
+type IrreversibleActionKind string
+
+const (
+	IrreversibleActionKindGIT_PUSH IrreversibleActionKind = "GIT_PUSH"
+	IrreversibleActionKindGIT_FORCE_PUSH IrreversibleActionKind = "GIT_FORCE_PUSH"
+	IrreversibleActionKindPR_MERGE IrreversibleActionKind = "PR_MERGE"
+	IrreversibleActionKindRELEASE IrreversibleActionKind = "RELEASE"
+	IrreversibleActionKindPACKAGE_PUBLISH IrreversibleActionKind = "PACKAGE_PUBLISH"
+	IrreversibleActionKindDEPLOY IrreversibleActionKind = "DEPLOY"
+)
+
+func ParseIrreversibleActionKind(s string) (IrreversibleActionKind, error) {
+	switch IrreversibleActionKind(s) {
+	case IrreversibleActionKindGIT_PUSH, IrreversibleActionKindGIT_FORCE_PUSH, IrreversibleActionKindPR_MERGE, IrreversibleActionKindRELEASE, IrreversibleActionKindPACKAGE_PUBLISH, IrreversibleActionKindDEPLOY:
+		return IrreversibleActionKind(s), nil
+	default:
+		return "", fmt.Errorf("invalid IrreversibleActionKind: %q", s)
+	}
+}
+
 type IssueArchiveReason string
 
 const (
@@ -436,11 +456,12 @@ const (
 	IssueTimelineItemKindARCHIVED IssueTimelineItemKind = "ARCHIVED"
 	IssueTimelineItemKindPAUSED IssueTimelineItemKind = "PAUSED"
 	IssueTimelineItemKindRESUMED IssueTimelineItemKind = "RESUMED"
+	IssueTimelineItemKindREGRET_WINDOW IssueTimelineItemKind = "REGRET_WINDOW"
 )
 
 func ParseIssueTimelineItemKind(s string) (IssueTimelineItemKind, error) {
 	switch IssueTimelineItemKind(s) {
-	case IssueTimelineItemKindCREATED, IssueTimelineItemKindTURN_STARTED, IssueTimelineItemKindMESSAGE, IssueTimelineItemKindSTEER, IssueTimelineItemKindARTIFACT, IssueTimelineItemKindSTOP_RAISED, IssueTimelineItemKindSTOP_RESOLVED, IssueTimelineItemKindCOMPLETED, IssueTimelineItemKindARCHIVED, IssueTimelineItemKindPAUSED, IssueTimelineItemKindRESUMED:
+	case IssueTimelineItemKindCREATED, IssueTimelineItemKindTURN_STARTED, IssueTimelineItemKindMESSAGE, IssueTimelineItemKindSTEER, IssueTimelineItemKindARTIFACT, IssueTimelineItemKindSTOP_RAISED, IssueTimelineItemKindSTOP_RESOLVED, IssueTimelineItemKindCOMPLETED, IssueTimelineItemKindARCHIVED, IssueTimelineItemKindPAUSED, IssueTimelineItemKindRESUMED, IssueTimelineItemKindREGRET_WINDOW:
 		return IssueTimelineItemKind(s), nil
 	default:
 		return "", fmt.Errorf("invalid IssueTimelineItemKind: %q", s)
@@ -764,6 +785,23 @@ func ParseProviderStatus(s string) (ProviderStatus, error) {
 		return ProviderStatus(s), nil
 	default:
 		return "", fmt.Errorf("invalid ProviderStatus: %q", s)
+	}
+}
+
+type RegretWindowOutcome string
+
+const (
+	RegretWindowOutcomePROCEEDED RegretWindowOutcome = "PROCEEDED"
+	RegretWindowOutcomeCANCELLED_BY_STEER RegretWindowOutcome = "CANCELLED_BY_STEER"
+	RegretWindowOutcomeCANCELLED_BY_PAUSE RegretWindowOutcome = "CANCELLED_BY_PAUSE"
+)
+
+func ParseRegretWindowOutcome(s string) (RegretWindowOutcome, error) {
+	switch RegretWindowOutcome(s) {
+	case RegretWindowOutcomePROCEEDED, RegretWindowOutcomeCANCELLED_BY_STEER, RegretWindowOutcomeCANCELLED_BY_PAUSE:
+		return RegretWindowOutcome(s), nil
+	default:
+		return "", fmt.Errorf("invalid RegretWindowOutcome: %q", s)
 	}
 }
 

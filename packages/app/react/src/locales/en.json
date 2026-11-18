@@ -389,6 +389,7 @@
 			"CREATED": "Created",
 			"MESSAGE": "Message",
 			"PAUSED": "Paused",
+			"REGRET_WINDOW": "Regret window",
 			"RESUMED": "Resumed",
 			"STEER": "Steer",
 			"STOP_RAISED": "Asked for someone",
@@ -452,6 +453,19 @@
 		"WorkspaceBadge": {
 			"CLAUDE_PROJECT": "Claude project",
 			"GIT": "git"
+		},
+		"IrreversibleActionKind": {
+			"DEPLOY": "deploy",
+			"GIT_FORCE_PUSH": "git force-push",
+			"GIT_PUSH": "git push",
+			"PACKAGE_PUBLISH": "package publish",
+			"PR_MERGE": "PR merge",
+			"RELEASE": "release"
+		},
+		"RegretWindowOutcome": {
+			"CANCELLED_BY_PAUSE": "cancelled by the pause",
+			"CANCELLED_BY_STEER": "cancelled by a message",
+			"PROCEEDED": "went ahead"
 		}
 	},
 	"errors": {
@@ -780,7 +794,9 @@
 		"timelineReplyQuote": "replied quoting",
 		"transcriptIssue": "issue",
 		"waitingForProvider": "Waiting on the usage limit until {{when}}",
-		"waitingTerminal": "Waiting for terminal output…"
+		"waitingTerminal": "Waiting for terminal output…",
+		"timelineRegretWindow": "waited {{seconds}} s before {{action}} — {{outcome}}",
+		"timelineRegretWindowNoWait": "{{action}} — {{outcome}} without waiting"
 	},
 	"settings": {
 		"agentProviders": "Agent providers",

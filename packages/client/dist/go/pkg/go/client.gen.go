@@ -845,6 +845,36 @@ func (e HistorySyncType) Valid() bool {
 	}
 }
 
+// Defines values for IrreversibleActionKind.
+const (
+	IrreversibleActionKindDEPLOY         IrreversibleActionKind = "DEPLOY"
+	IrreversibleActionKindGITFORCEPUSH   IrreversibleActionKind = "GIT_FORCE_PUSH"
+	IrreversibleActionKindGITPUSH        IrreversibleActionKind = "GIT_PUSH"
+	IrreversibleActionKindPACKAGEPUBLISH IrreversibleActionKind = "PACKAGE_PUBLISH"
+	IrreversibleActionKindPRMERGE        IrreversibleActionKind = "PR_MERGE"
+	IrreversibleActionKindRELEASE        IrreversibleActionKind = "RELEASE"
+)
+
+// Valid indicates whether the value is a known member of the IrreversibleActionKind enum.
+func (e IrreversibleActionKind) Valid() bool {
+	switch e {
+	case IrreversibleActionKindDEPLOY:
+		return true
+	case IrreversibleActionKindGITFORCEPUSH:
+		return true
+	case IrreversibleActionKindGITPUSH:
+		return true
+	case IrreversibleActionKindPACKAGEPUBLISH:
+		return true
+	case IrreversibleActionKindPRMERGE:
+		return true
+	case IrreversibleActionKindRELEASE:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for IssueArchiveReason.
 const (
 	IssueArchiveReasonAUTO24H        IssueArchiveReason = "AUTO_24H"
@@ -952,6 +982,7 @@ const (
 	IssueTimelineItemKindCREATED      IssueTimelineItemKind = "CREATED"
 	IssueTimelineItemKindMESSAGE      IssueTimelineItemKind = "MESSAGE"
 	IssueTimelineItemKindPAUSED       IssueTimelineItemKind = "PAUSED"
+	IssueTimelineItemKindREGRETWINDOW IssueTimelineItemKind = "REGRET_WINDOW"
 	IssueTimelineItemKindRESUMED      IssueTimelineItemKind = "RESUMED"
 	IssueTimelineItemKindSTEER        IssueTimelineItemKind = "STEER"
 	IssueTimelineItemKindSTOPRAISED   IssueTimelineItemKind = "STOP_RAISED"
@@ -973,6 +1004,8 @@ func (e IssueTimelineItemKind) Valid() bool {
 	case IssueTimelineItemKindMESSAGE:
 		return true
 	case IssueTimelineItemKindPAUSED:
+		return true
+	case IssueTimelineItemKindREGRETWINDOW:
 		return true
 	case IssueTimelineItemKindRESUMED:
 		return true
@@ -1475,6 +1508,27 @@ func (e ReceiptType) Valid() bool {
 	case ReceiptTypeRead:
 		return true
 	case ReceiptTypeReadSelf:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RegretWindowOutcome.
+const (
+	RegretWindowOutcomeCANCELLEDBYPAUSE RegretWindowOutcome = "CANCELLED_BY_PAUSE"
+	RegretWindowOutcomeCANCELLEDBYSTEER RegretWindowOutcome = "CANCELLED_BY_STEER"
+	RegretWindowOutcomePROCEEDED        RegretWindowOutcome = "PROCEEDED"
+)
+
+// Valid indicates whether the value is a known member of the RegretWindowOutcome enum.
+func (e RegretWindowOutcome) Valid() bool {
+	switch e {
+	case RegretWindowOutcomeCANCELLEDBYPAUSE:
+		return true
+	case RegretWindowOutcomeCANCELLEDBYSTEER:
+		return true
+	case RegretWindowOutcomePROCEEDED:
 		return true
 	default:
 		return false
@@ -3955,6 +4009,9 @@ type InternalTextContent struct {
 	Text string `json:"text"`
 }
 
+// IrreversibleActionKind defines model for IrreversibleActionKind.
+type IrreversibleActionKind string
+
 // IssueArchiveReason defines model for IssueArchiveReason.
 type IssueArchiveReason string
 
@@ -4100,6 +4157,9 @@ type ReactionMessageData struct {
 
 // ReceiptType defines model for ReceiptType.
 type ReceiptType string
+
+// RegretWindowOutcome defines model for RegretWindowOutcome.
+type RegretWindowOutcome string
 
 // RestartChannelOutput defines model for RestartChannelOutput.
 type RestartChannelOutput struct {

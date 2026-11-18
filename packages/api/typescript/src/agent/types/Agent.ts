@@ -7,7 +7,8 @@ import type { AgentRunner } from '../services/AgentRunner'
 import type { AgentMcpInvocation } from './AgentMcpInvocation'
 import type { ProviderCapabilities } from './ProviderCapabilities'
 import type { AgentRunIdentity, AgentRunIdentityFields } from './AgentRunIdentity'
-import { MCP_ROUTE_PREFIX } from '../mcp/route'
+import { MCP_ROUTE_PREFIX, PRE_TOOL_HOOK_PATH } from '../mcp/route'
+import { REGRET_HOOK_TIMEOUT_S } from '../utils/irreversibleActions'
 import type { AgentApplicationErrors } from '../errors'
 
 /**
@@ -101,6 +102,14 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 	 */
 	readonly mcpScope?: McpScope
 
+	/**
+	 * Does this agent's run hold irreversible actions for the regret window (fase 2, item 3)? An AGENT fact
+	 * — the window checks an issue's mailbox, so only an agent confined to an issue has one to check. It
+	 * takes effect only on a runner that can enforce it (`AgentRunner.preToolHook`); on one that cannot,
+	 * the invocation simply carries no hook, and the gap is the runner's declared one, not a silent drop.
+	 */
+	readonly regretWindow: boolean = false
+
 	/** Phantom — never assigned. See the class docstring. */
 	readonly input!: Z.output<InputSchema> & AgentInputEnvelope
 	/** Phantom — never assigned. `never` for an agent with no `outputSchema`, which makes `collect()` unusable there. */
@@ -140,7 +149,8 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 		// The scope is passed DOWN rather than re-read off `this` inside the callee: it is what confines
 		// the minted credential (D6-8), and threading the already-narrowed value is what makes "a token
 		// is always bound to a scope" hold by type instead of by a cast.
-		yield* runner.run({ ...request, ...(this.mcpScope && { mcp: this.buildMcpInvocation(input, request, this.mcpScope) }) })
+		const preToolHook = this.regretWindow && runner.preToolHook
+		yield* runner.run({ ...request, ...(this.mcpScope && { mcp: this.buildMcpInvocation(input, request, this.mcpScope, preToolHook) }) })
 	}
 
 	/**
@@ -159,7 +169,12 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 	 * loudly here rather than issuing a token confined to nothing, which would hand a model a
 	 * credential the destination-side comparison cannot constrain.
 	 */
-	private buildMcpInvocation(input: this['input'], request: { caps?: ProviderCapabilities }, scope: McpScope): AgentMcpInvocation {
+	private buildMcpInvocation(
+		input: this['input'],
+		request: { caps?: ProviderCapabilities },
+		scope: McpScope,
+		preToolHook: boolean,
+	): AgentMcpInvocation {
 		// A CLI whose probe says it cannot take an MCP config cannot serve an agent that REQUIRES tools.
 		// NAMED failure, never a silent drop to the inferred path (§4.7): degrading here would look
 		// exactly like a healthy run that simply chose to declare nothing, which is the one distinction
@@ -228,6 +243,11 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 			endpoint: `http://127.0.0.1:${Config.env.API_PORT}${MCP_ROUTE_PREFIX}/${this.mcpScope}`,
 			token,
 			allowedTools: this.tools,
+			// The regret window's door, authenticated by the SAME token (fase 2, item 3). Present only when the
+			// agent asks for the window AND the runner can attach a pre-tool hook — see `regretWindow`.
+			...(preToolHook && {
+				preToolHook: { endpoint: `http://127.0.0.1:${Config.env.API_PORT}${PRE_TOOL_HOOK_PATH}`, timeoutSeconds: REGRET_HOOK_TIMEOUT_S },
+			}),
 		}
 	}
 

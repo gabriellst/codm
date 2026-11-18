@@ -42,4 +42,11 @@ export interface AgentMcpInvocation {
 	 * (§4.3, rule 7).
 	 */
 	allowedTools: readonly AgentToolName[]
+	/**
+	 * The regret window's hook (fase 2, item 3): the CLI posts each shell command here BEFORE running it,
+	 * with `token` as its bearer, and an irreversible one waits for the answer. Present ⟺ the agent declared
+	 * `regretWindow` AND the runner declared `preToolHook` — stamped by the base `Agent`, never by a runner.
+	 * `timeoutSeconds` bounds the CLI's wait; past it the command runs (a failed hook is non-blocking).
+	 */
+	preToolHook?: { endpoint: string; timeoutSeconds: number }
 }

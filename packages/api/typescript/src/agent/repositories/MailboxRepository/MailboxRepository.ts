@@ -210,4 +210,15 @@ export abstract class MailboxRepository {
 
 	/** Whether any runnable (unconsumed, unleased, unpoisoned) item exists for a target. */
 	abstract hasPending(targetKind: MailboxTargetKind, targetId: string, tx?: Transaction): Promise<boolean>
+
+	/**
+	 * Does this issue have guidance its live session has NOT read? — the regret window's question (fase 2,
+	 * item 3): a STEER for the issue, unconsumed, not poisoned, and held by NO turn (`claimed_by IS NULL`).
+	 *
+	 * Not `hasPending`: that one is true for the very item the running turn holds, so the window would
+	 * cancel every action. And not "arrived after the window opened": the case the spec measured is a
+	 * correction queued minutes BEFORE the action and still undelivered (a steer waits for the turn to end),
+	 * which a since-filter would let the push run past. Whatever its age, an unread steer cancels.
+	 */
+	abstract hasUnreadSteer(issueId: string, tx?: Transaction): Promise<boolean>
 }

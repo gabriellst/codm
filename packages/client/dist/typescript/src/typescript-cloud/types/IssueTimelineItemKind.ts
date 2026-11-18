@@ -11,6 +11,7 @@ export const IssueTimelineItemKindEnum = {
     CREATED: "CREATED",
     MESSAGE: "MESSAGE",
     PAUSED: "PAUSED",
+    REGRET_WINDOW: "REGRET_WINDOW",
     RESUMED: "RESUMED",
     STEER: "STEER",
     STOP_RAISED: "STOP_RAISED",

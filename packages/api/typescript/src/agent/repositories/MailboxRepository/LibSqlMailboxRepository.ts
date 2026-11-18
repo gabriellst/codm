@@ -2,7 +2,7 @@ import { injectable } from 'tsyringe-neo'
 import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, ne, notExists, or, sql } from 'drizzle-orm'
 import { DAEMON_BOOT, isClaimOrphaned, LibSqlDatabaseDriver, LibSqlTransaction } from '@codm/core-typescript'
 import { agentMailbox } from '@codm/contracts/db'
-import type { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
+import { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
 import { MailboxRepository, type ClaimedMailboxItem, type DeferredMailboxItem, type EnqueueMailboxItem } from './MailboxRepository'
 
 /** Runnable = not consumed, not poisoned. */
@@ -291,6 +291,25 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 			.select({ id: agentMailbox.id })
 			.from(agentMailbox)
 			.where(and(eq(agentMailbox.targetKind, targetKind), eq(agentMailbox.targetId, targetId), runnable()))
+			.limit(1)
+		return rows.length > 0
+	}
+
+	async hasUnreadSteer(issueId: string, tx?: LibSqlTransaction): Promise<boolean> {
+		const dbc = tx ?? this.driver.db
+		const rows = await dbc
+			.select({ id: agentMailbox.id })
+			.from(agentMailbox)
+			.where(
+				and(
+					eq(agentMailbox.targetKind, MailboxTargetKind.ISSUE),
+					eq(agentMailbox.targetId, issueId),
+					eq(agentMailbox.kind, MailboxItemKind.STEER),
+					runnable(),
+					// Held by no turn: the live turn's own item (a STEER it is reading right now) is not "unread".
+					isNull(agentMailbox.claimedBy),
+				),
+			)
 			.limit(1)
 		return rows.length > 0
 	}

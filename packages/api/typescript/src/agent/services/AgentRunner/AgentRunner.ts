@@ -32,6 +32,14 @@ import type { AgentRuntimeEvent } from '../../types/AgentRuntimeEvent'
  * inside a runner is not forbidden by convention, it is unrepresentable.
  */
 export abstract class AgentRunner {
+	/**
+	 * Can this CLI hold a shell command for the daemon to judge first — a per-run pre-tool hook (fase 2,
+	 * item 3, janela de arrependimento)? A fact about the CLI, declared by its class; READ by the base
+	 * `Agent`, which only attaches the hook's door to a run whose runner says yes. Default `false`: a
+	 * runner earns it by implementing the attachment, and a stub that never runs a CLI has nothing to hold.
+	 */
+	readonly preToolHook: boolean = false
+
 	abstract run<OutputSchema extends ZodType | undefined = undefined>(
 		request: AgentRunRequest<OutputSchema>,
 	): AsyncIterable<AgentRuntimeEvent>

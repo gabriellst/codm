@@ -335,3 +335,31 @@ describe('instrução permanente do operador', () => {
 		expect(system).not.toContain('install dependencies')
 	})
 })
+
+/** A runner that CAN hold a shell command first — what the claude runner declares (fase 2, item 3). */
+class HookingRunner extends CapturingRunner {
+	override readonly preToolHook = true
+}
+
+describe('the regret window rides the invocation only where it can be enforced (fase 2, item 3)', () => {
+	const drain = async (agent: IssueWorkAgent, runner: CapturingRunner) => {
+		for await (const _ of agent.run(runner, input())) {
+			// drain
+		}
+		return runner.requests[0]?.mcp
+	}
+
+	it('runner declares preToolHook → the issue run carries the hook door', async () => {
+		const agent = new IssueWorkAgent(new InMemoryAgentIdentityService<AgentRunIdentity>(), new IssueWorkPromptBuilder())
+		const mcp = await drain(agent, new HookingRunner())
+		expect(mcp?.preToolHook?.endpoint).toEndWith('/agent/pre-tool-hook')
+		expect(mcp?.preToolHook?.timeoutSeconds).toBeGreaterThan(20)
+	})
+
+	it('runner without the capability (codex, a stub) → no hook door at all', async () => {
+		const { runner, agent } = build()
+		const mcp = await drain(agent, runner)
+		expect(mcp).toBeDefined()
+		expect(mcp?.preToolHook).toBeUndefined()
+	})
+})

@@ -1205,6 +1205,40 @@
                                   "at",
                                   "source"
                                 ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "REGRET_WINDOW"
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "at": {
+                                    "type": "string"
+                                  },
+                                  "actionKind": {
+                                    "$ref": "#/components/schemas/IrreversibleActionKind"
+                                  },
+                                  "outcome": {
+                                    "$ref": "#/components/schemas/RegretWindowOutcome"
+                                  },
+                                  "waitedMs": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "id",
+                                  "at",
+                                  "actionKind",
+                                  "outcome",
+                                  "waitedMs"
+                                ]
                               }
                             ]
                           }
@@ -2145,6 +2179,41 @@
                               "source"
                             ],
                             "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "REGRET_WINDOW"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "actionKind": {
+                                "$ref": "#/components/schemas/IrreversibleActionKind"
+                              },
+                              "outcome": {
+                                "$ref": "#/components/schemas/RegretWindowOutcome"
+                              },
+                              "waitedMs": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "actionKind",
+                              "outcome",
+                              "waitedMs"
+                            ],
+                            "additionalProperties": false
                           }
                         ]
                       }
@@ -2945,6 +3014,7 @@
           "CREATED",
           "MESSAGE",
           "PAUSED",
+          "REGRET_WINDOW",
           "RESUMED",
           "STEER",
           "STOP_RAISED",
@@ -3008,6 +3078,25 @@
           "WHATSAPP",
           "CONSOLE",
           "PANEL"
+        ]
+      },
+      "IrreversibleActionKind": {
+        "type": "string",
+        "enum": [
+          "GIT_PUSH",
+          "GIT_FORCE_PUSH",
+          "PR_MERGE",
+          "RELEASE",
+          "PACKAGE_PUBLISH",
+          "DEPLOY"
+        ]
+      },
+      "RegretWindowOutcome": {
+        "type": "string",
+        "enum": [
+          "PROCEEDED",
+          "CANCELLED_BY_STEER",
+          "CANCELLED_BY_PAUSE"
         ]
       },
       "PanelActionOutcome": {

@@ -66,6 +66,9 @@ export class IssueWorkAgent extends Agent<typeof IssueWorkInputSchema> {
 	override readonly mcpScope = McpScope.ISSUE_HANDLING
 	override readonly tools = toolsInScope(McpScope.ISSUE_HANDLING)
 
+	/** An issue session holds its pushes, merges, publishes and deploys for the regret window (fase 2, item 3). */
+	override readonly regretWindow = true
+
 	constructor(
 		identities: AgentIdentityService<AgentRunIdentity>,
 		private readonly prompt: IssueWorkPromptBuilder,

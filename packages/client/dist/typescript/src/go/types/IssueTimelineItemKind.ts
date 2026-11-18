@@ -15,7 +15,8 @@ export const IssueTimelineItemKindEnum = {
     COMPLETED: "COMPLETED",
     ARCHIVED: "ARCHIVED",
     PAUSED: "PAUSED",
-    RESUMED: "RESUMED"
+    RESUMED: "RESUMED",
+    REGRET_WINDOW: "REGRET_WINDOW"
 } as const;
 
 export type IssueTimelineItemKindEnumKey = (typeof IssueTimelineItemKindEnum)[keyof typeof IssueTimelineItemKindEnum];
