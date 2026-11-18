@@ -158,7 +158,8 @@ export class MockMailboxRepository extends MailboxRepository {
 				r.claimedBy === null &&
 				r.targetKind === MailboxTargetKind.ISSUE &&
 				r.targetId === issueId &&
-				r.kind === MailboxItemKind.STEER,
+				r.kind === MailboxItemKind.STEER &&
+				!(typeof r.payload === 'object' && r.payload !== null && 'declarationReminder' in r.payload),
 		)
 	}
 }

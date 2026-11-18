@@ -132,6 +132,20 @@ describe('OpenRegretWindow', () => {
 		expect(closed?.outcome).toBe(RegretWindowOutcome.PROCEEDED)
 	})
 
+	it('the automatic declaration reminder is not a message from anyone — it does not cancel', async () => {
+		const ids = await givenWorkingIssue()
+		await testBed.resolve(MailboxRepository).enqueue({
+			ownerId: MOCK_CLOUD_OWNER_ID,
+			targetKind: MailboxTargetKind.ISSUE,
+			targetId: ids.issueId,
+			kind: MailboxItemKind.STEER,
+			posture: PermissionPosture.AUTO,
+			payload: { text: 'declare o desfecho', declarationReminder: true },
+			dedupKey: `regret-test:reminder:${ids.issueId}`,
+		})
+		expect((await open(ids, 'git push'))?.outcome).toBe(RegretWindowOutcome.PROCEEDED)
+	})
+
 	it('work that is not a steer does not cancel', async () => {
 		const ids = await givenWorkingIssue()
 		await steer(ids.issueId, 1, MailboxItemKind.WORK)

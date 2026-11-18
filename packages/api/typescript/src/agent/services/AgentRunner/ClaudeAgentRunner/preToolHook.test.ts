@@ -129,6 +129,29 @@ describe('ClaudeAgentRunner — per-run pre-tool hook', () => {
 		expect(existsSync(spawn?.pluginDir ?? '/nonexistent')).toBe(false)
 	})
 
+	it('a spawn that fails still removes the plugin (it carries the run token)', async () => {
+		let pluginDir: string | undefined
+		const runner = ClaudeAgentRunner.withOptions(new MockLoggingService(), new InMemoryAgentIdentityService(), {
+			spawner: (spec: AgentProcessSpec): AgentProcess => {
+				pluginDir = spec.cmd[spec.cmd.indexOf('--plugin-dir') + 1]
+				throw new Error('spawn ENOENT')
+			},
+		})
+		for await (const _ of runner.run({
+			agentName: AgentName.ISSUE_WORK,
+			cwd: '/tmp/w',
+			binaryPath: '/opt/bin/claude',
+			messages: [{ role: AgentMessageRole.USER, content: 'publica' }],
+			posture: PermissionPosture.AUTO,
+			mcp: mcp(true),
+			caps: { pluginDir: true },
+		})) {
+			// drain
+		}
+		expect(pluginDir).toBeDefined()
+		expect(existsSync(pluginDir ?? '/nonexistent')).toBe(false)
+	})
+
 	it('no hook in the invocation → no plugin and no flag', async () => {
 		const { seen } = await runWith(mcp(false), { pluginDir: true })
 		expect(seen[0]?.cmd).not.toContain('--plugin-dir')

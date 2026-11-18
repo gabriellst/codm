@@ -219,6 +219,9 @@ export abstract class MailboxRepository {
 	 * cancel every action. And not "arrived after the window opened": the case the spec measured is a
 	 * correction queued minutes BEFORE the action and still undelivered (a steer waits for the turn to end),
 	 * which a since-filter would let the push run past. Whatever its age, an unread steer cancels.
+	 *
+	 * Only a PERSON's steer: the automatic declaration reminder (`declarationReminder` in the payload,
+	 * `ReconcileStalledIssues`) is not a message from anyone and does not cancel.
 	 */
 	abstract hasUnreadSteer(issueId: string, tx?: Transaction): Promise<boolean>
 }
