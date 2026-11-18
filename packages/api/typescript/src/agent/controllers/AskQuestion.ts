@@ -1,18 +1,15 @@
 import { injectable } from 'tsyringe-neo'
-import { BaseError, Controller, z } from '@codm/core-typescript'
-import { AskAnswerKind, McpScope, StopKind } from '@codm/contracts-typescript/wire/enums'
-import { AskDefaultSchema, StopAskSchema } from '@shared/objects'
+import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
+import { AskAnswerKind, McpScope } from '@codm/contracts-typescript/wire/enums'
 import { CloudSessionMiddleware } from '@shared/middlewares'
 import { IssueDoorCtxSchema, IssueDoorParamsSchema } from '../types/IssueDoor'
-import type { ApplicationErrors } from '../errors'
+import { AskQuestion, AskQuestionInputSchema, AskQuestionOutputSchema } from '../usecases/AskQuestion'
 
 export const AskQuestionControllerInputSchema = z
 	.object({
 		ctx: IssueDoorCtxSchema,
 		params: IssueDoorParamsSchema,
-		// A question MUST carry the default it goes on with — required here, so "a question without a
-		// default" is not a value the tool can even receive. `options` may be empty (a free-text question).
-		body: StopAskSchema.extend({ default: AskDefaultSchema }),
+		body: AskQuestionInputSchema.omit({ ownerId: true, threadId: true, issueId: true, actingIssueId: true }),
 	})
 	.example([
 		{
@@ -29,19 +26,12 @@ export const AskQuestionControllerInputSchema = z
 			},
 		},
 	])
-/**
- * `kind` tells the session what the ask became: `QUESTION_ASKED` (goes on with the default after the
- * deadline) or `DECISION_REQUESTED` (a declared effect escalated it — wait for the answer).
- */
-export const AskQuestionControllerOutputSchema = z.object({ stopId: z.uuid(), kind: z.enum(StopKind) })
+export const AskQuestionControllerOutputSchema = AskQuestionOutputSchema
 
 /**
  * The issue asks the group a QUESTION it can go on without (fase 3, item 1) — a stop `QUESTION_ASKED`
  * that holds the issue only until its deadline (15 min after the group received it), then the declared
  * default applies. Any declared effect escalates it to a decision.
- *
- * DECLARED, NOT YET WIRED (slice S0b): the tool exists on the MCP surface and the HTTP contract; the use
- * case lands in S5a. Until then it refuses with `OUTPUT_POLICY_NOT_READY`.
  */
 @injectable()
 export class AskQuestionController extends Controller<typeof AskQuestionControllerInputSchema, typeof AskQuestionControllerOutputSchema> {
@@ -54,7 +44,17 @@ export class AskQuestionController extends Controller<typeof AskQuestionControll
 	readonly inputSchema = AskQuestionControllerInputSchema
 	readonly outputSchema = AskQuestionControllerOutputSchema
 	override middlewares = [CloudSessionMiddleware]
-	async handle(_request: this['input']): Promise<this['output']> {
-		throw new BaseError<ApplicationErrors>('OUTPUT_POLICY_NOT_READY', 'AskQuestion lands in fase 3, slice S5a')
+	constructor(private useCase: AskQuestion) {
+		super()
+	}
+	async handle(request: this['input']): Promise<this['output']> {
+		const data = await this.useCase.execute({
+			ownerId: request.ctx.ownerId,
+			threadId: request.params.threadId,
+			issueId: request.params.issueId,
+			actingIssueId: request.ctx.agentIdentity?.issueId,
+			...request.body,
+		})
+		return { status: HttpStatusCode.CREATED, data }
 	}
 }

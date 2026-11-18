@@ -1,11 +1,13 @@
 import { injectable } from 'tsyringe-neo'
-import { uuidv7 } from 'uuidv7'
 import { Handler, z } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
 import { IssueStatus, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { CloudSession } from '@shared/services/CloudSession'
+import { ThreadRepository } from '@thread/repositories/ThreadRepository'
+import { THREAD_MESSAGES } from '@thread/i18n/messages'
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
-import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
 import { FactSource } from '../enums'
+import { askQuestionOf, askStopFact, conversationLanguage } from '../utils/issueAsk'
 
 export const DeclareIssueCompleteInputSchema = z.object({
 	ownerId: z.uuid(),
@@ -46,10 +48,11 @@ export const DeclareIssueCompleteOutputSchema = z.object({ issueId: z.uuid(), st
  *
  * ### The switch is exhaustive over the frozen `IssueStatus`, and each branch is honest
  *  - `COMPLETED` → the completion fact.
- *  - `NEEDS_INPUT` → a HUMAN_REQUESTED stop. This is not a liberty: "this issue cannot proceed
- *    without a human" IS the Needs-you vocabulary the product already renders, and routing it through
- *    the existing stop path means the operator sees it on the existing card with the agent's own text
- *    as the title (§4.4 item (i)).
+ *  - `NEEDS_INPUT` → a decision (fase 3: an ALIAS of `AskDecision`, sessions in flight still call it) —
+ *    a `DECISION_REQUESTED` stop whose ask is the summary with no options (the answer is free text). The
+ *    output policy puts it in the group with its code; the `HUMAN_REQUESTED` it used to raise said nothing
+ *    there by itself. A summary is optional on this call, an ask's question is not: an empty one asks in the
+ *    group's language what the decision title says, so the declaration still reaches somebody.
  *  - `WORKING` → NO FACT. An agent announcing that it is still working has told us nothing that was
  *    not already true; minting an event for it would put noise in a durable ledger. Returning the
  *    state rather than erroring keeps the tool honest about having accepted the call.
@@ -59,6 +62,13 @@ export class DeclareIssueComplete extends Handler<typeof DeclareIssueCompleteInp
 	readonly name = 'declare_issue_complete' as const
 	readonly inputSchema = DeclareIssueCompleteInputSchema
 	readonly outputSchema = DeclareIssueCompleteOutputSchema
+
+	constructor(
+		private readonly threads: ThreadRepository,
+		private readonly session: CloudSession,
+	) {
+		super()
+	}
 
 	protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
 		const { ownerId, issueId, threadId, status, summary, key } = input
@@ -78,22 +88,22 @@ export class DeclareIssueComplete extends Handler<typeof DeclareIssueCompleteInp
 		}
 
 		if (status === IssueStatus.NEEDS_INPUT) {
+			const question =
+				summary.length > 0
+					? askQuestionOf(summary)
+					: THREAD_MESSAGES.stopTitle(await conversationLanguage(this.threads, this.session, threadId), {
+							kind: StopKind.DECISION_REQUESTED,
+						})
+			const { event } = askStopFact({
+				ownerId,
+				issueId,
+				threadId,
+				requested: StopKind.DECISION_REQUESTED,
+				ask: { question, options: [], effects: [] },
+				detail: summary,
+			})
 			await this.withTransaction(tx, async tx => {
-				await this.domainEventRepository.save(
-					new AgentRunStopRaisedEvent({
-						entityId: issueId,
-						ownerId,
-						payload: {
-							stopId: uuidv7(),
-							issueId,
-							threadId,
-							kind: StopKind.HUMAN_REQUESTED,
-							detail: summary,
-							source: FactSource.DECLARED,
-						},
-					}),
-					tx,
-				)
+				await this.domainEventRepository.save(event, tx)
 			})
 			return { issueId, status }
 		}

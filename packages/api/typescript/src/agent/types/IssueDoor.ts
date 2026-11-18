@@ -9,8 +9,3 @@ import { AgentRunIdentityCtxSchema } from './AgentRunIdentity'
  */
 export const IssueDoorCtxSchema = z.object({ ownerId: z.uuid() }).extend(AgentRunIdentityCtxSchema.shape)
 export const IssueDoorParamsSchema = z.object({ threadId: z.uuid(), issueId: z.uuid() })
-
-/** The longest text a FEEDBACK / PROGRESS signal carries (fase 3). */
-export const ISSUE_SIGNAL_TEXT_MAX = 2000
-/** The most artifacts one feedback may cite — the main preview goes to the group, the rest to the panel. */
-export const FEEDBACK_ARTIFACTS_MAX = 20

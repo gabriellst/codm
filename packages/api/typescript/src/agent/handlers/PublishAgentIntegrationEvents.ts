@@ -137,6 +137,9 @@ export class PublishAgentIntegrationEvents extends EventHandler<
 						// HOW we learned the fact, which is a context-private observation, and forwarding it
 						// would turn a zero-cost domain field into a contract change (§4.3 rule 6).
 						detail: event.payload.detail,
+						// The ask (fase 3), already validated by the tool that raised it — it rides the frozen event
+						// as `unknown` (the codegen carries no nested shape) and the thread parses it back.
+						ask: event.payload.ask,
 					},
 				}),
 			)

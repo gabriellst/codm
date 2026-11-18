@@ -4,8 +4,10 @@ import type Z from 'zod'
 import {
 	operationIdOf,
 	TransitionIssueStatusController,
-	RaiseStopController,
-	AskOperatorController,
+	AskDecisionController,
+	AskQuestionController,
+	RequestFeedbackController,
+	ReportProgressController,
 	RecordArtifactController,
 } from '../../mcp/exposure'
 import type { AgentInputEnvelope } from '../../types/AgentInput'
@@ -60,8 +62,10 @@ export class IssueWorkPromptBuilder {
 		return [
 			`You are working on a coding issue inside the repository at ${input.cwd}.`,
 			`ISSUE [${input.key}] ${input.title}`,
-			'Do the work the message asks for in that repository. When you are done, reply with a short ' +
-				'summary the requester will read in a chat message — not a diff, not a transcript.',
+			'Do the work the message asks for in that repository.',
+			'The text you reply with at the end of a turn is NOT sent to the group: it goes to the task timeline on the ' +
+				'panel. Keep it a short summary — not a diff, not a transcript — and never put a secret, a credential or a ' +
+				'token in it. To reach the people in the group, use the tools below.',
 			'',
 			...this.grammar(),
 			'',
@@ -121,8 +125,15 @@ export class IssueWorkPromptBuilder {
 	}
 
 	/**
-	 * How this turn REPORTS what happened. Tool names are DERIVED from the controller class, never typed
-	 * out: the sentence naming a tool cannot drift from it, and a rename follows the symbol.
+	 * How this turn REPORTS what happened and SPEAKS to the group (fase 3, item 1). Tool names are DERIVED
+	 * from the controller class, never typed out: the sentence naming a tool cannot drift from it, and a
+	 * rename follows the symbol.
+	 *
+	 * The issue no longer speaks to the group directly (`SendDirectMessage` / `SendArtifact` left its scope):
+	 * everything it wants a person to see goes through one of the tools below, at a LEVEL — a decision, a
+	 * question with a default, a preview, progress — and the group's output policy decides where each level
+	 * goes. Hence the effects paragraph: the escalation of a question to a decision rides on what the model
+	 * DECLARES the answer authorizes, so the prompt has to say what each effect means.
 	 *
 	 * `issueId` is optional on the envelope because the CLASSIFIER runs before an issue exists. It is
 	 * always present by the time this agent runs — the base `Agent` refuses to mint a run token without
@@ -132,12 +143,25 @@ export class IssueWorkPromptBuilder {
 	private declarationInstruction(input: IssueWorkInput): string[] {
 		if (!input.issueId) return []
 		return [
-			'HOW TO REPORT THE RESULT — do not just describe it in prose, DECLARE it:',
-			`  · finished → call the ${operationIdOf(TransitionIssueStatusController)} tool with status COMPLETED and a short summary.`,
-			`  · blocked and you need the operator to decide or approve → call the ${operationIdOf(RaiseStopController)} tool ` +
+			'HOW TO REPORT AND HOW TO REACH THE GROUP — do not just describe it in prose, use the tool for it:',
+			`  · finished → call the ${operationIdOf(TransitionIssueStatusController)} tool with status COMPLETED and a short ` +
+				'summary written for whoever asked — it is what the group reads when the task closes.',
+			`  · a decision you cannot go on without (approve, publish, pick between real options) → call the ` +
+				`${operationIdOf(AskDecisionController)} tool with 2 to 6 options. The task waits for the answer ` +
 				'(not for an action the permission filter refused — see WHEN AN ACTION IS BLOCKED).',
-			`  · you need one specific answer to keep going → call the ${operationIdOf(AskOperatorController)} tool.`,
+			`  · a question you CAN go on without → call the ${operationIdOf(AskQuestionController)} tool with the default you ` +
+				'will follow. If nobody answers within 15 minutes after the group sees it, you are told to go on with the default.',
+			`  · a preview people should look at (a screenshot, a video, a link) → record it with the ` +
+				`${operationIdOf(RecordArtifactController)} tool, then call the ${operationIdOf(RequestFeedbackController)} tool ` +
+				'citing it as the main artifact. The group gets the main one; the task does not wait.',
+			`  · what you did along the way → call the ${operationIdOf(ReportProgressController)} tool. It goes to the task ` +
+				'timeline, not to the group.',
 			`  · produced a link, image or file worth keeping → call the ${operationIdOf(RecordArtifactController)} tool.`,
+			`EFFECTS — on ${operationIdOf(AskDecisionController)} and ${operationIdOf(AskQuestionController)}, list in \`effects\` ` +
+				'everything the answer authorizes: PUBLISH (publishing, deploying or sending something people outside will ' +
+				'see), IRREVERSIBLE (an action that cannot be undone, like deleting data), CLIENT_DATA (reading or changing a ' +
+				"client's data). Any effect makes it a decision only someone who may release can answer. Leave it empty only " +
+				'when the answer authorizes none of them.',
 			'Every one of those tools takes the ids of THIS issue, and no other values are accepted:',
 			`  threadId: ${input.threadId}`,
 			`  issueId: ${input.issueId}`,
@@ -163,10 +187,10 @@ export class IssueWorkPromptBuilder {
 			'',
 			'WHO ASKED FOR THIS',
 			'Whoever asked for this work may approve it. When the message tells you to publish, deploy, merge or change the ' +
-				'production database, that IS the approval: do it and report. Do not raise a stop to ask the operator for an ok ' +
-				'that was already given.',
-			'Raise a stop only for a decision the message did not make — two real options it did not choose between, or a risk ' +
-				'it did not mention, like deleting data.',
+				'production database, that IS the approval: do it and report. Do not ask the group for an ok that was already ' +
+				'given.',
+			`Ask for a decision (${operationIdOf(AskDecisionController)}) only for one the message did not make — two real ` +
+				'options it did not choose between, or a risk it did not mention, like deleting data.',
 		]
 	}
 

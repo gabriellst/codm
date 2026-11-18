@@ -77,7 +77,8 @@ export class ReconcileStalledIssues extends Handler<typeof ReconcileStalledIssue
 		'Your last turn ended without declaring where this issue stands, so nobody can tell whether it is done, ' +
 		'waiting on someone, or stuck. Declare it now with the reporting tools, and do not redo any work: ' +
 		'finished → mark the issue COMPLETED with a short summary; waiting for a decision or an approval (for ' +
-		'example "can I publish?") → raise a stop for it; you need one specific answer → ask the operator. ' +
+		'example "can I publish?") → ask for the decision; a question you can go on without → ask it with the ' +
+		'default you will follow; a preview for people to look at → request feedback on it. ' +
 		'Do not write anything for the group — this reminder is not shown to anyone.'
 
 	constructor(

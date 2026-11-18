@@ -1,20 +1,15 @@
 import { injectable } from 'tsyringe-neo'
-import { BaseError, Controller, z } from '@codm/core-typescript'
+import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 import { AskEffect, McpScope } from '@codm/contracts-typescript/wire/enums'
-import { ASK_OPTIONS_MAX, AskOptionSchema, StopAskSchema } from '@shared/objects'
 import { CloudSessionMiddleware } from '@shared/middlewares'
 import { IssueDoorCtxSchema, IssueDoorParamsSchema } from '../types/IssueDoor'
-import type { ApplicationErrors } from '../errors'
+import { AskDecision, AskDecisionInputSchema, AskDecisionOutputSchema } from '../usecases/AskDecision'
 
 export const AskDecisionControllerInputSchema = z
 	.object({
 		ctx: IssueDoorCtxSchema,
 		params: IssueDoorParamsSchema,
-		// A decision has no default and no deadline: it holds the issue until someone answers. Two to six
-		// options; `effects` is required (may be empty) so the model always states what the answer authorizes.
-		body: StopAskSchema.pick({ question: true, effects: true, addresseeId: true }).extend({
-			options: z.array(AskOptionSchema).min(2).max(ASK_OPTIONS_MAX),
-		}),
+		body: AskDecisionInputSchema.omit({ ownerId: true, threadId: true, issueId: true, actingIssueId: true }),
 	})
 	.example([
 		{
@@ -30,14 +25,11 @@ export const AskDecisionControllerInputSchema = z
 			},
 		},
 	])
-export const AskDecisionControllerOutputSchema = z.object({ stopId: z.uuid() })
+export const AskDecisionControllerOutputSchema = AskDecisionOutputSchema
 
 /**
  * The issue asks the group to DECIDE (fase 3, item 1) — a stop `DECISION_REQUESTED` that holds the issue
  * until someone answers; with a declared effect only someone who may release can answer it.
- *
- * DECLARED, NOT YET WIRED (slice S0b): the tool exists on the MCP surface and the HTTP contract; the use
- * case lands in S5a. Until then it refuses with `OUTPUT_POLICY_NOT_READY`.
  */
 @injectable()
 export class AskDecisionController extends Controller<typeof AskDecisionControllerInputSchema, typeof AskDecisionControllerOutputSchema> {
@@ -50,7 +42,17 @@ export class AskDecisionController extends Controller<typeof AskDecisionControll
 	readonly inputSchema = AskDecisionControllerInputSchema
 	readonly outputSchema = AskDecisionControllerOutputSchema
 	override middlewares = [CloudSessionMiddleware]
-	async handle(_request: this['input']): Promise<this['output']> {
-		throw new BaseError<ApplicationErrors>('OUTPUT_POLICY_NOT_READY', 'AskDecision lands in fase 3, slice S5a')
+	constructor(private useCase: AskDecision) {
+		super()
+	}
+	async handle(request: this['input']): Promise<this['output']> {
+		const data = await this.useCase.execute({
+			ownerId: request.ctx.ownerId,
+			threadId: request.params.threadId,
+			issueId: request.params.issueId,
+			actingIssueId: request.ctx.agentIdentity?.issueId,
+			...request.body,
+		})
+		return { status: HttpStatusCode.CREATED, data }
 	}
 }

@@ -205,6 +205,13 @@ export {
 	TransitionIssueStatusController,
 	RaiseStopController,
 	AskOperatorController,
+	// Fase 3, item 1 — the four doors an ISSUE speaks through, named by `IssueWorkPromptBuilder`'s
+	// `declarationInstruction()` in place of the `RaiseStop` / `AskOperator` it used to name (both stay in
+	// scope as aliases for the sessions already running). Same context and same license.
+	AskDecisionController,
+	AskQuestionController,
+	RequestFeedbackController,
+	ReportProgressController,
 	ForkIssueController,
 	RecordArtifactController,
 	// The delivery half of "envio de artefatos pelo canal" — named by `OrchestratorPromptBuilder`'s

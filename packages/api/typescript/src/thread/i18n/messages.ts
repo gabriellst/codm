@@ -231,6 +231,13 @@ const PT_MESSAGES = {
 		`D${p.seq}: ninguém respondeu em 15 min — segui com o padrão: ${p.label}.${p.late ? ' (O codm estava desligado quando o prazo venceu.)' : ''}`,
 	answerDisambiguation: (p: { asks: readonly PendingAskRef[] }) =>
 		`Para qual? ${alternatives(p.asks, 'ou')} — responda citando a pergunta.`,
+	/**
+	 * Os rótulos das opções de uma aprovação pedida pela porta antiga (`RaiseStop APPROVAL_NEEDED`, fase 3):
+	 * ela vira uma decisão sim/não, e o grupo lê as opções na língua da conversa. Os ids (`yes`/`no`) são
+	 * os que as respostas soltas reconhecem.
+	 */
+	approvalYes: () => 'Sim',
+	approvalNo: () => 'Não',
 }
 
 export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
@@ -246,5 +253,7 @@ export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
 		defaultApplied: p =>
 			`D${p.seq}: nobody answered within 15 min — went on with the default: ${p.label}.${p.late ? ' (codm was off when the deadline passed.)' : ''}`,
 		answerDisambiguation: p => `Which one? ${alternatives(p.asks, 'or')} — reply quoting the question.`,
+		approvalYes: () => 'Yes',
+		approvalNo: () => 'No',
 	},
 })

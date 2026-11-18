@@ -1,15 +1,15 @@
 import { injectable } from 'tsyringe-neo'
-import { BaseError, Controller, z } from '@codm/core-typescript'
+import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 import { McpScope } from '@codm/contracts-typescript/wire/enums'
 import { CloudSessionMiddleware } from '@shared/middlewares'
-import { ISSUE_SIGNAL_TEXT_MAX, IssueDoorCtxSchema, IssueDoorParamsSchema } from '../types/IssueDoor'
-import type { ApplicationErrors } from '../errors'
+import { IssueDoorCtxSchema, IssueDoorParamsSchema } from '../types/IssueDoor'
+import { ReportProgress, ReportProgressInputSchema, ReportProgressOutputSchema } from '../usecases/ReportProgress'
 
 export const ReportProgressControllerInputSchema = z
 	.object({
 		ctx: IssueDoorCtxSchema,
 		params: IssueDoorParamsSchema,
-		body: z.object({ text: z.string().trim().min(1).max(ISSUE_SIGNAL_TEXT_MAX) }),
+		body: ReportProgressInputSchema.omit({ ownerId: true, threadId: true, issueId: true, actingIssueId: true }),
 	})
 	.example([
 		{
@@ -18,14 +18,11 @@ export const ReportProgressControllerInputSchema = z
 			body: { text: 'Built the page and ran the checks; deploying the preview next.' },
 		},
 	])
-export const ReportProgressControllerOutputSchema = z.void()
+export const ReportProgressControllerOutputSchema = ReportProgressOutputSchema
 
 /**
  * The issue records what it did (fase 3, item 1) — a PROGRESS signal: the task's timeline and panel, and
  * the group only when it chose the EVERYTHING mode.
- *
- * DECLARED, NOT YET WIRED (slice S0b): the tool exists on the MCP surface and the HTTP contract; the use
- * case lands in S5a. Until then it refuses with `OUTPUT_POLICY_NOT_READY`.
  */
 @injectable()
 export class ReportProgressController extends Controller<
@@ -40,7 +37,17 @@ export class ReportProgressController extends Controller<
 	readonly inputSchema = ReportProgressControllerInputSchema
 	readonly outputSchema = ReportProgressControllerOutputSchema
 	override middlewares = [CloudSessionMiddleware]
-	async handle(_request: this['input']): Promise<this['output']> {
-		throw new BaseError<ApplicationErrors>('OUTPUT_POLICY_NOT_READY', 'ReportProgress lands in fase 3, slice S5a')
+	constructor(private useCase: ReportProgress) {
+		super()
+	}
+	async handle(request: this['input']): Promise<this['output']> {
+		await this.useCase.execute({
+			ownerId: request.ctx.ownerId,
+			threadId: request.params.threadId,
+			issueId: request.params.issueId,
+			actingIssueId: request.ctx.agentIdentity?.issueId,
+			...request.body,
+		})
+		return { status: HttpStatusCode.ACCEPTED }
 	}
 }

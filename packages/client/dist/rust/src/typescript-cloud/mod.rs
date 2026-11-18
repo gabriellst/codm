@@ -49,6 +49,7 @@ pub mod types {
     ///    "AGENT_ENTRY_FORBIDS_SENDER",
     ///    "AGENT_RUN_SCOPE_MISMATCH",
     ///    "AGENT_RUN_TOKEN_INVALID",
+    ///    "AGENT_STOP_KIND_NOT_DECLARABLE",
     ///    "AGENT_TOOLS_UNSUPPORTED",
     ///    "AGENT_TRANSPORT_STOP_NOT_DECLARABLE",
     ///    "ARTIFACT_FILE_MISSING",
@@ -194,6 +195,8 @@ pub mod types {
         AgentRunScopeMismatch,
         #[serde(rename = "AGENT_RUN_TOKEN_INVALID")]
         AgentRunTokenInvalid,
+        #[serde(rename = "AGENT_STOP_KIND_NOT_DECLARABLE")]
+        AgentStopKindNotDeclarable,
         #[serde(rename = "AGENT_TOOLS_UNSUPPORTED")]
         AgentToolsUnsupported,
         #[serde(rename = "AGENT_TRANSPORT_STOP_NOT_DECLARABLE")]
@@ -452,6 +455,9 @@ pub mod types {
                 }
                 Self::AgentRunScopeMismatch => f.write_str("AGENT_RUN_SCOPE_MISMATCH"),
                 Self::AgentRunTokenInvalid => f.write_str("AGENT_RUN_TOKEN_INVALID"),
+                Self::AgentStopKindNotDeclarable => {
+                    f.write_str("AGENT_STOP_KIND_NOT_DECLARABLE")
+                }
                 Self::AgentToolsUnsupported => f.write_str("AGENT_TOOLS_UNSUPPORTED"),
                 Self::AgentTransportStopNotDeclarable => {
                     f.write_str("AGENT_TRANSPORT_STOP_NOT_DECLARABLE")
@@ -608,6 +614,7 @@ pub mod types {
                 "AGENT_ENTRY_FORBIDS_SENDER" => Ok(Self::AgentEntryForbidsSender),
                 "AGENT_RUN_SCOPE_MISMATCH" => Ok(Self::AgentRunScopeMismatch),
                 "AGENT_RUN_TOKEN_INVALID" => Ok(Self::AgentRunTokenInvalid),
+                "AGENT_STOP_KIND_NOT_DECLARABLE" => Ok(Self::AgentStopKindNotDeclarable),
                 "AGENT_TOOLS_UNSUPPORTED" => Ok(Self::AgentToolsUnsupported),
                 "AGENT_TRANSPORT_STOP_NOT_DECLARABLE" => {
                     Ok(Self::AgentTransportStopNotDeclarable)

@@ -1927,7 +1927,6 @@
       "post": {
         "tags": [
           "artifact",
-          "mcp:issue-handling",
           "mcp:orchestration"
         ],
         "description": "Deliver an already-recorded artifact to the contact on the channel",
@@ -1985,7 +1984,6 @@
           }
         },
         "x-mcp-scope": [
-          "issue-handling",
           "orchestration"
         ]
       }
@@ -3893,7 +3891,6 @@
       "post": {
         "tags": [
           "thread",
-          "mcp:issue-handling",
           "mcp:orchestration"
         ],
         "description": "Send a direct message as the operator (only while paused) (C20)",
@@ -3972,7 +3969,6 @@
           }
         },
         "x-mcp-scope": [
-          "issue-handling",
           "orchestration"
         ]
       }
@@ -10322,6 +10318,7 @@
           "AGENT_ENTRY_FORBIDS_SENDER",
           "AGENT_RUN_SCOPE_MISMATCH",
           "AGENT_RUN_TOKEN_INVALID",
+          "AGENT_STOP_KIND_NOT_DECLARABLE",
           "AGENT_TOOLS_UNSUPPORTED",
           "AGENT_TRANSPORT_STOP_NOT_DECLARABLE",
           "ARTIFACT_FILE_MISSING",
@@ -10945,6 +10942,7 @@
     "AGENT_ENTRY_FORBIDS_SENDER",
     "AGENT_RUN_SCOPE_MISMATCH",
     "AGENT_RUN_TOKEN_INVALID",
+    "AGENT_STOP_KIND_NOT_DECLARABLE",
     "AGENT_TOOLS_UNSUPPORTED",
     "AGENT_TRANSPORT_STOP_NOT_DECLARABLE",
     "ARTIFACT_FILE_MISSING",
@@ -11078,8 +11076,6 @@
       "RecordArtifact",
       "ReportProgress",
       "RequestFeedback",
-      "SendArtifact",
-      "SendDirectMessage",
       "TransitionIssueStatus"
     ],
     "orchestration": [

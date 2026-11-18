@@ -479,6 +479,7 @@
 		"AGENT_RUN_TOKEN_INVALID": "The agent run token is missing, expired or was revoked. The run it belonged to is no longer active.",
 		"AGENT_TOOLS_UNSUPPORTED": "This agent needs tools, but the selected CLI does not support them.",
 		"AGENT_TRANSPORT_STOP_NOT_DECLARABLE": "That stop kind is observed by the runtime and cannot be declared by the agent.",
+		"AGENT_STOP_KIND_NOT_DECLARABLE": "That stop kind is not declared by the agent through this door — a question uses AskQuestion, and a stall is observed by the system.",
 		"ARTIFACT_FILE_MISSING": "This artifact's file is no longer on disk, so it cannot be sent to the contact.",
 		"ARTIFACT_NOT_FOUND": "Artifact not found, or its file is no longer on disk.",
 		"ARTIFACT_NOT_PREVIEWABLE": "This artifact is a link — open the URL instead of requesting its content.",

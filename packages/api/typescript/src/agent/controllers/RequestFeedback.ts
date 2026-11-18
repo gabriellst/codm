@@ -1,21 +1,15 @@
 import { injectable } from 'tsyringe-neo'
-import { BaseError, Controller, z } from '@codm/core-typescript'
+import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 import { McpScope } from '@codm/contracts-typescript/wire/enums'
 import { CloudSessionMiddleware } from '@shared/middlewares'
-import { FEEDBACK_ARTIFACTS_MAX, ISSUE_SIGNAL_TEXT_MAX, IssueDoorCtxSchema, IssueDoorParamsSchema } from '../types/IssueDoor'
-import type { ApplicationErrors } from '../errors'
+import { IssueDoorCtxSchema, IssueDoorParamsSchema } from '../types/IssueDoor'
+import { RequestFeedback, RequestFeedbackInputSchema, RequestFeedbackOutputSchema } from '../usecases/RequestFeedback'
 
 export const RequestFeedbackControllerInputSchema = z
 	.object({
 		ctx: IssueDoorCtxSchema,
 		params: IssueDoorParamsSchema,
-		body: z.object({
-			text: z.string().trim().min(1).max(ISSUE_SIGNAL_TEXT_MAX),
-			/** The preview sent to the group — an artifact this issue recorded. */
-			mainArtifactId: z.uuid(),
-			/** Every artifact the feedback cites (the main one included); the others stay on the panel. */
-			artifactIds: z.array(z.uuid()).max(FEEDBACK_ARTIFACTS_MAX),
-		}),
+		body: RequestFeedbackInputSchema.omit({ ownerId: true, threadId: true, issueId: true, actingIssueId: true }),
 	})
 	.example([
 		{
@@ -28,14 +22,11 @@ export const RequestFeedbackControllerInputSchema = z
 			},
 		},
 	])
-export const RequestFeedbackControllerOutputSchema = z.void()
+export const RequestFeedbackControllerOutputSchema = RequestFeedbackOutputSchema
 
 /**
  * The issue shows the group a preview to look at (fase 3, item 1) — a FEEDBACK signal: the main artifact
  * reaches the group, the others the panel. NOT a stop: it does not hold the issue.
- *
- * DECLARED, NOT YET WIRED (slice S0b): the tool exists on the MCP surface and the HTTP contract; the use
- * case lands in S5a. Until then it refuses with `OUTPUT_POLICY_NOT_READY`.
  */
 @injectable()
 export class RequestFeedbackController extends Controller<
@@ -51,7 +42,17 @@ export class RequestFeedbackController extends Controller<
 	readonly inputSchema = RequestFeedbackControllerInputSchema
 	readonly outputSchema = RequestFeedbackControllerOutputSchema
 	override middlewares = [CloudSessionMiddleware]
-	async handle(_request: this['input']): Promise<this['output']> {
-		throw new BaseError<ApplicationErrors>('OUTPUT_POLICY_NOT_READY', 'RequestFeedback lands in fase 3, slice S5a')
+	constructor(private useCase: RequestFeedback) {
+		super()
+	}
+	async handle(request: this['input']): Promise<this['output']> {
+		await this.useCase.execute({
+			ownerId: request.ctx.ownerId,
+			threadId: request.params.threadId,
+			issueId: request.params.issueId,
+			actingIssueId: request.ctx.agentIdentity?.issueId,
+			...request.body,
+		})
+		return { status: HttpStatusCode.ACCEPTED }
 	}
 }

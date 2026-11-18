@@ -11,8 +11,6 @@ exports[`AC-16 — the golden snapshot: scope → the tools a model can call the
     "mcp__codm__RecordArtifact",
     "mcp__codm__ReportProgress",
     "mcp__codm__RequestFeedback",
-    "mcp__codm__SendArtifact",
-    "mcp__codm__SendDirectMessage",
     "mcp__codm__TransitionIssueStatus",
   ],
   "orchestration": [

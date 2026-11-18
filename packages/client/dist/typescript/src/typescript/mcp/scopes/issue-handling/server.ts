@@ -11,8 +11,6 @@ import { raiseStopHandler } from "./raiseStop.ts";
 import { recordArtifactHandler } from "./recordArtifact.ts";
 import { reportProgressHandler } from "./reportProgress.ts";
 import { requestFeedbackHandler } from "./requestFeedback.ts";
-import { sendArtifactHandler } from "./sendArtifact.ts";
-import { sendDirectMessageHandler } from "./sendDirectMessage.ts";
 import { transitionIssueStatusHandler } from "./transitionIssueStatus.ts";
 import { askDecisionMutationRequestSchema, askDecisionMutationResponseSchema } from "../../../zod/askDecisionSchema.ts";
 import { askOperatorMutationRequestSchema, askOperatorMutationResponseSchema } from "../../../zod/askOperatorSchema.ts";
@@ -22,8 +20,6 @@ import { raiseStopMutationRequestSchema, raiseStopMutationResponseSchema } from 
 import { recordArtifactMutationRequestSchema, recordArtifactMutationResponseSchema } from "../../../zod/recordArtifactSchema.ts";
 import { reportProgressMutationRequestSchema, reportProgressMutationResponseSchema } from "../../../zod/reportProgressSchema.ts";
 import { requestFeedbackMutationRequestSchema, requestFeedbackMutationResponseSchema } from "../../../zod/requestFeedbackSchema.ts";
-import { sendArtifactMutationRequestSchema, sendArtifactMutationResponseSchema } from "../../../zod/sendArtifactSchema.ts";
-import { sendDirectMessageMutationRequestSchema, sendDirectMessageMutationResponseSchema } from "../../../zod/sendDirectMessageSchema.ts";
 import { transitionIssueStatusMutationRequestSchema, transitionIssueStatusMutationResponseSchema } from "../../../zod/transitionIssueStatusSchema.ts";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -113,24 +109,6 @@ server.registerTool("RecordArtifact", {
   inputSchema: { threadId: z.string(), data: recordArtifactMutationRequestSchema },
 }, async ({ threadId, data }) => {
   return recordArtifactHandler({ threadId, data })
-})
-          
-
-server.registerTool("SendArtifact", {
-  description: "Deliver an already-recorded artifact to the contact on the channel",
-  outputSchema: { data: sendArtifactMutationResponseSchema },
-  inputSchema: { threadId: z.string(), artifactId: z.string(), data: sendArtifactMutationRequestSchema },
-}, async ({ threadId, artifactId, data }) => {
-  return sendArtifactHandler({ threadId, artifactId, data })
-})
-          
-
-server.registerTool("SendDirectMessage", {
-  description: "Send a direct message as the operator (only while paused) (C20)",
-  outputSchema: { data: sendDirectMessageMutationResponseSchema },
-  inputSchema: { threadId: z.string(), data: sendDirectMessageMutationRequestSchema },
-}, async ({ threadId, data }) => {
-  return sendDirectMessageHandler({ threadId, data })
 })
           
   return server

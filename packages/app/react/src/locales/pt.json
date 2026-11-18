@@ -479,6 +479,7 @@
 		"AGENT_RUN_TOKEN_INVALID": "O token da execução do agente está ausente, expirou ou foi revogado. A execução a que pertencia não está mais ativa.",
 		"AGENT_TOOLS_UNSUPPORTED": "Este agente precisa de ferramentas, mas a CLI selecionada não as suporta.",
 		"AGENT_TRANSPORT_STOP_NOT_DECLARABLE": "Esse tipo de parada é observado pelo runtime e não pode ser declarado pelo agente.",
+		"AGENT_STOP_KIND_NOT_DECLARABLE": "Esse tipo de parada não é declarado pelo agente por esta porta — uma pergunta usa AskQuestion, e a parada sem resposta é observada pelo sistema.",
 		"ARTIFACT_FILE_MISSING": "O arquivo deste artefato não está mais no disco, então não pode ser enviado ao contato.",
 		"ARTIFACT_NOT_FOUND": "Artefato não encontrado, ou o arquivo dele não está mais no disco.",
 		"ARTIFACT_NOT_PREVIEWABLE": "Este artefato é um link — abra a URL em vez de pedir o conteúdo.",
