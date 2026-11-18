@@ -101,6 +101,30 @@ export const TimelineKindEnum24 = {
 
 export type TimelineKindEnum24Key = (typeof TimelineKindEnum24)[keyof typeof TimelineKindEnum24];
 
+export const AskKindEnum3 = {
+    DECISION_REQUESTED: "DECISION_REQUESTED"
+} as const;
+
+export type AskKindEnum3Key = (typeof AskKindEnum3)[keyof typeof AskKindEnum3];
+
+export const ReplyKindEnum3 = {
+    OPTION: "OPTION"
+} as const;
+
+export type ReplyKindEnum3Key = (typeof ReplyKindEnum3)[keyof typeof ReplyKindEnum3];
+
+export const ReplyKindEnum4 = {
+    TEXT: "TEXT"
+} as const;
+
+export type ReplyKindEnum4Key = (typeof ReplyKindEnum4)[keyof typeof ReplyKindEnum4];
+
+export const AskKindEnum4 = {
+    QUESTION_ASKED: "QUESTION_ASKED"
+} as const;
+
+export type AskKindEnum4Key = (typeof AskKindEnum4)[keyof typeof AskKindEnum4];
+
 /**
  * @description One issue of a group with its timeline, by the group\'s panel link token (public)
 */
@@ -439,9 +463,9 @@ export type GetPanelIssue200 = {
         waitedMs: number;
     })[];
     /**
-     * @type object | undefined
+     * @type array
     */
-    openStop?: {
+    openStops: {
         /**
          * @type string, uuid
         */
@@ -454,7 +478,76 @@ export type GetPanelIssue200 = {
          * @type array
         */
         resolutions: StopResolution[];
-    };
+        ask?: ({
+            /**
+             * @type string
+            */
+            kind: AskKindEnum3Key;
+            /**
+             * @type string
+            */
+            code: string;
+            /**
+             * @type string
+            */
+            question: string;
+            reply: ({
+                /**
+                 * @type string
+                */
+                kind: ReplyKindEnum3Key;
+                /**
+                 * @type array
+                */
+                options: AskOption[];
+            } | {
+                /**
+                 * @type string
+                */
+                kind: ReplyKindEnum4Key;
+            });
+            /**
+             * @type boolean
+            */
+            releaseRequired: boolean;
+        } | {
+            /**
+             * @type string
+            */
+            kind: AskKindEnum4Key;
+            /**
+             * @type string
+            */
+            code: string;
+            /**
+             * @type string
+            */
+            question: string;
+            reply: ({
+                /**
+                 * @type string
+                */
+                kind: ReplyKindEnum3Key;
+                /**
+                 * @type array
+                */
+                options: AskOption[];
+            } | {
+                /**
+                 * @type string
+                */
+                kind: ReplyKindEnum4Key;
+            });
+            /**
+             * @type string
+            */
+            defaultLabel: string;
+            /**
+             * @type string | undefined
+            */
+            dueAt?: string;
+        });
+    }[];
 };
 
 export type GetPanelIssueQueryResponse = GetPanelIssue200;

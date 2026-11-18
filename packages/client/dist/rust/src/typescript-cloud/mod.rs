@@ -767,6 +767,234 @@ pub mod types {
             value.parse()
         }
     }
+    ///`AskAnswer`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "oneOf": [
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "kind",
+    ///        "optionId"
+    ///      ],
+    ///      "properties": {
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "OPTION"
+    ///          ]
+    ///        },
+    ///        "optionId": {
+    ///          "type": "string",
+    ///          "maxLength": 40,
+    ///          "minLength": 1
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "kind",
+    ///        "text"
+    ///      ],
+    ///      "properties": {
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "TEXT"
+    ///          ]
+    ///        },
+    ///        "text": {
+    ///          "type": "string",
+    ///          "maxLength": 2000,
+    ///          "minLength": 1
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    }
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(tag = "kind", deny_unknown_fields)]
+    pub enum AskAnswer {
+        #[serde(rename = "OPTION")]
+        Option { #[serde(rename = "optionId")] option_id: AskAnswerOptionId },
+        #[serde(rename = "TEXT")]
+        Text { text: AskAnswerText },
+    }
+    impl ::std::convert::From<&Self> for AskAnswer {
+        fn from(value: &AskAnswer) -> Self {
+            value.clone()
+        }
+    }
+    ///`AskAnswerOptionId`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 40,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct AskAnswerOptionId(::std::string::String);
+    impl ::std::ops::Deref for AskAnswerOptionId {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<AskAnswerOptionId> for ::std::string::String {
+        fn from(value: AskAnswerOptionId) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&AskAnswerOptionId> for AskAnswerOptionId {
+        fn from(value: &AskAnswerOptionId) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for AskAnswerOptionId {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 40usize {
+                return Err("longer than 40 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for AskAnswerOptionId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for AskAnswerOptionId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for AskAnswerOptionId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for AskAnswerOptionId {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`AskAnswerText`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 2000,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct AskAnswerText(::std::string::String);
+    impl ::std::ops::Deref for AskAnswerText {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<AskAnswerText> for ::std::string::String {
+        fn from(value: AskAnswerText) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&AskAnswerText> for AskAnswerText {
+        fn from(value: &AskAnswerText) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for AskAnswerText {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 2000usize {
+                return Err("longer than 2000 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for AskAnswerText {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for AskAnswerText {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for AskAnswerText {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for AskAnswerText {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
     ///`AskOption`
     ///
     /// <details><summary>JSON schema</summary>
@@ -1947,6 +2175,7 @@ pub mod types {
     ///  "type": "object",
     ///  "required": [
     ///    "issue",
+    ///    "openStops",
     ///    "timeline"
     ///  ],
     ///  "properties": {
@@ -1987,31 +2216,183 @@ pub mod types {
     ///      },
     ///      "additionalProperties": false
     ///    },
-    ///    "openStop": {
-    ///      "type": "object",
-    ///      "required": [
-    ///        "kind",
-    ///        "resolutions",
-    ///        "stopId"
-    ///      ],
-    ///      "properties": {
-    ///        "kind": {
-    ///          "$ref": "#/components/schemas/StopKind"
-    ///        },
-    ///        "resolutions": {
-    ///          "type": "array",
-    ///          "items": {
-    ///            "$ref": "#/components/schemas/StopResolution"
+    ///    "openStops": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "kind",
+    ///          "resolutions",
+    ///          "stopId"
+    ///        ],
+    ///        "properties": {
+    ///          "ask": {
+    ///            "oneOf": [
+    ///              {
+    ///                "type": "object",
+    ///                "required": [
+    ///                  "code",
+    ///                  "kind",
+    ///                  "question",
+    ///                  "releaseRequired",
+    ///                  "reply"
+    ///                ],
+    ///                "properties": {
+    ///                  "code": {
+    ///                    "type": "string"
+    ///                  },
+    ///                  "kind": {
+    ///                    "type": "string",
+    ///                    "enum": [
+    ///                      "DECISION_REQUESTED"
+    ///                    ]
+    ///                  },
+    ///                  "question": {
+    ///                    "type": "string"
+    ///                  },
+    ///                  "releaseRequired": {
+    ///                    "type": "boolean"
+    ///                  },
+    ///                  "reply": {
+    ///                    "oneOf": [
+    ///                      {
+    ///                        "type": "object",
+    ///                        "required": [
+    ///                          "kind",
+    ///                          "options"
+    ///                        ],
+    ///                        "properties": {
+    ///                          "kind": {
+    ///                            "type": "string",
+    ///                            "enum": [
+    ///                              "OPTION"
+    ///                            ]
+    ///                          },
+    ///                          "options": {
+    ///                            "type": "array",
+    ///                            "items": {
+    ///                              "$ref": "#/components/schemas/AskOption"
+    ///                            },
+    ///                            "maxItems": 6,
+    ///                            "minItems": 1
+    ///                          }
+    ///                        },
+    ///                        "additionalProperties": false
+    ///                      },
+    ///                      {
+    ///                        "type": "object",
+    ///                        "required": [
+    ///                          "kind"
+    ///                        ],
+    ///                        "properties": {
+    ///                          "kind": {
+    ///                            "type": "string",
+    ///                            "enum": [
+    ///                              "TEXT"
+    ///                            ]
+    ///                          }
+    ///                        },
+    ///                        "additionalProperties": false
+    ///                      }
+    ///                    ]
+    ///                  }
+    ///                },
+    ///                "additionalProperties": false
+    ///              },
+    ///              {
+    ///                "type": "object",
+    ///                "required": [
+    ///                  "code",
+    ///                  "defaultLabel",
+    ///                  "kind",
+    ///                  "question",
+    ///                  "reply"
+    ///                ],
+    ///                "properties": {
+    ///                  "code": {
+    ///                    "type": "string"
+    ///                  },
+    ///                  "defaultLabel": {
+    ///                    "type": "string"
+    ///                  },
+    ///                  "dueAt": {
+    ///                    "type": "string"
+    ///                  },
+    ///                  "kind": {
+    ///                    "type": "string",
+    ///                    "enum": [
+    ///                      "QUESTION_ASKED"
+    ///                    ]
+    ///                  },
+    ///                  "question": {
+    ///                    "type": "string"
+    ///                  },
+    ///                  "reply": {
+    ///                    "oneOf": [
+    ///                      {
+    ///                        "type": "object",
+    ///                        "required": [
+    ///                          "kind",
+    ///                          "options"
+    ///                        ],
+    ///                        "properties": {
+    ///                          "kind": {
+    ///                            "type": "string",
+    ///                            "enum": [
+    ///                              "OPTION"
+    ///                            ]
+    ///                          },
+    ///                          "options": {
+    ///                            "type": "array",
+    ///                            "items": {
+    ///                              "$ref": "#/components/schemas/AskOption"
+    ///                            },
+    ///                            "maxItems": 6,
+    ///                            "minItems": 1
+    ///                          }
+    ///                        },
+    ///                        "additionalProperties": false
+    ///                      },
+    ///                      {
+    ///                        "type": "object",
+    ///                        "required": [
+    ///                          "kind"
+    ///                        ],
+    ///                        "properties": {
+    ///                          "kind": {
+    ///                            "type": "string",
+    ///                            "enum": [
+    ///                              "TEXT"
+    ///                            ]
+    ///                          }
+    ///                        },
+    ///                        "additionalProperties": false
+    ///                      }
+    ///                    ]
+    ///                  }
+    ///                },
+    ///                "additionalProperties": false
+    ///              }
+    ///            ]
     ///          },
-    ///          "maxItems": 8
+    ///          "kind": {
+    ///            "$ref": "#/components/schemas/StopKind"
+    ///          },
+    ///          "resolutions": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "$ref": "#/components/schemas/StopResolution"
+    ///            },
+    ///            "maxItems": 8
+    ///          },
+    ///          "stopId": {
+    ///            "type": "string",
+    ///            "format": "uuid",
+    ///            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///          }
     ///        },
-    ///        "stopId": {
-    ///          "type": "string",
-    ///          "format": "uuid",
-    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-    ///        }
-    ///      },
-    ///      "additionalProperties": false
+    ///        "additionalProperties": false
+    ///      }
     ///    },
     ///    "timeline": {
     ///      "type": "array",
@@ -2454,12 +2835,8 @@ pub mod types {
     #[serde(deny_unknown_fields)]
     pub struct GetPanelIssueResponse {
         pub issue: GetPanelIssueResponseIssue,
-        #[serde(
-            rename = "openStop",
-            default,
-            skip_serializing_if = "::std::option::Option::is_none"
-        )]
-        pub open_stop: ::std::option::Option<GetPanelIssueResponseOpenStop>,
+        #[serde(rename = "openStops")]
+        pub open_stops: ::std::vec::Vec<GetPanelIssueResponseOpenStopsItem>,
         pub timeline: ::std::vec::Vec<GetPanelIssueResponseTimelineItem>,
     }
     impl ::std::convert::From<&GetPanelIssueResponse> for GetPanelIssueResponse {
@@ -2536,7 +2913,7 @@ pub mod types {
             value.clone()
         }
     }
-    ///`GetPanelIssueResponseOpenStop`
+    ///`GetPanelIssueResponseOpenStopsItem`
     ///
     /// <details><summary>JSON schema</summary>
     ///
@@ -2549,6 +2926,155 @@ pub mod types {
     ///    "stopId"
     ///  ],
     ///  "properties": {
+    ///    "ask": {
+    ///      "oneOf": [
+    ///        {
+    ///          "type": "object",
+    ///          "required": [
+    ///            "code",
+    ///            "kind",
+    ///            "question",
+    ///            "releaseRequired",
+    ///            "reply"
+    ///          ],
+    ///          "properties": {
+    ///            "code": {
+    ///              "type": "string"
+    ///            },
+    ///            "kind": {
+    ///              "type": "string",
+    ///              "enum": [
+    ///                "DECISION_REQUESTED"
+    ///              ]
+    ///            },
+    ///            "question": {
+    ///              "type": "string"
+    ///            },
+    ///            "releaseRequired": {
+    ///              "type": "boolean"
+    ///            },
+    ///            "reply": {
+    ///              "oneOf": [
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "kind",
+    ///                    "options"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "OPTION"
+    ///                      ]
+    ///                    },
+    ///                    "options": {
+    ///                      "type": "array",
+    ///                      "items": {
+    ///                        "$ref": "#/components/schemas/AskOption"
+    ///                      },
+    ///                      "maxItems": 6,
+    ///                      "minItems": 1
+    ///                    }
+    ///                  },
+    ///                  "additionalProperties": false
+    ///                },
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "kind"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "TEXT"
+    ///                      ]
+    ///                    }
+    ///                  },
+    ///                  "additionalProperties": false
+    ///                }
+    ///              ]
+    ///            }
+    ///          },
+    ///          "additionalProperties": false
+    ///        },
+    ///        {
+    ///          "type": "object",
+    ///          "required": [
+    ///            "code",
+    ///            "defaultLabel",
+    ///            "kind",
+    ///            "question",
+    ///            "reply"
+    ///          ],
+    ///          "properties": {
+    ///            "code": {
+    ///              "type": "string"
+    ///            },
+    ///            "defaultLabel": {
+    ///              "type": "string"
+    ///            },
+    ///            "dueAt": {
+    ///              "type": "string"
+    ///            },
+    ///            "kind": {
+    ///              "type": "string",
+    ///              "enum": [
+    ///                "QUESTION_ASKED"
+    ///              ]
+    ///            },
+    ///            "question": {
+    ///              "type": "string"
+    ///            },
+    ///            "reply": {
+    ///              "oneOf": [
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "kind",
+    ///                    "options"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "OPTION"
+    ///                      ]
+    ///                    },
+    ///                    "options": {
+    ///                      "type": "array",
+    ///                      "items": {
+    ///                        "$ref": "#/components/schemas/AskOption"
+    ///                      },
+    ///                      "maxItems": 6,
+    ///                      "minItems": 1
+    ///                    }
+    ///                  },
+    ///                  "additionalProperties": false
+    ///                },
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "kind"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "TEXT"
+    ///                      ]
+    ///                    }
+    ///                  },
+    ///                  "additionalProperties": false
+    ///                }
+    ///              ]
+    ///            }
+    ///          },
+    ///          "additionalProperties": false
+    ///        }
+    ///      ]
+    ///    },
     ///    "kind": {
     ///      "$ref": "#/components/schemas/StopKind"
     ///    },
@@ -2571,7 +3097,9 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
-    pub struct GetPanelIssueResponseOpenStop {
+    pub struct GetPanelIssueResponseOpenStopsItem {
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub ask: ::std::option::Option<GetPanelIssueResponseOpenStopsItemAsk>,
         pub kind: ::codm_contracts_rust::wire::enums::StopKind,
         pub resolutions: ::std::vec::Vec<
             ::codm_contracts_rust::wire::enums::StopResolution,
@@ -2579,10 +3107,266 @@ pub mod types {
         #[serde(rename = "stopId")]
         pub stop_id: ::uuid::Uuid,
     }
-    impl ::std::convert::From<&GetPanelIssueResponseOpenStop>
-    for GetPanelIssueResponseOpenStop {
-        fn from(value: &GetPanelIssueResponseOpenStop) -> Self {
+    impl ::std::convert::From<&GetPanelIssueResponseOpenStopsItem>
+    for GetPanelIssueResponseOpenStopsItem {
+        fn from(value: &GetPanelIssueResponseOpenStopsItem) -> Self {
             value.clone()
+        }
+    }
+    ///`GetPanelIssueResponseOpenStopsItemAsk`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "oneOf": [
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "code",
+    ///        "kind",
+    ///        "question",
+    ///        "releaseRequired",
+    ///        "reply"
+    ///      ],
+    ///      "properties": {
+    ///        "code": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "DECISION_REQUESTED"
+    ///          ]
+    ///        },
+    ///        "question": {
+    ///          "type": "string"
+    ///        },
+    ///        "releaseRequired": {
+    ///          "type": "boolean"
+    ///        },
+    ///        "reply": {
+    ///          "oneOf": [
+    ///            {
+    ///              "type": "object",
+    ///              "required": [
+    ///                "kind",
+    ///                "options"
+    ///              ],
+    ///              "properties": {
+    ///                "kind": {
+    ///                  "type": "string",
+    ///                  "enum": [
+    ///                    "OPTION"
+    ///                  ]
+    ///                },
+    ///                "options": {
+    ///                  "type": "array",
+    ///                  "items": {
+    ///                    "$ref": "#/components/schemas/AskOption"
+    ///                  },
+    ///                  "maxItems": 6,
+    ///                  "minItems": 1
+    ///                }
+    ///              },
+    ///              "additionalProperties": false
+    ///            },
+    ///            {
+    ///              "type": "object",
+    ///              "required": [
+    ///                "kind"
+    ///              ],
+    ///              "properties": {
+    ///                "kind": {
+    ///                  "type": "string",
+    ///                  "enum": [
+    ///                    "TEXT"
+    ///                  ]
+    ///                }
+    ///              },
+    ///              "additionalProperties": false
+    ///            }
+    ///          ]
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "code",
+    ///        "defaultLabel",
+    ///        "kind",
+    ///        "question",
+    ///        "reply"
+    ///      ],
+    ///      "properties": {
+    ///        "code": {
+    ///          "type": "string"
+    ///        },
+    ///        "defaultLabel": {
+    ///          "type": "string"
+    ///        },
+    ///        "dueAt": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "QUESTION_ASKED"
+    ///          ]
+    ///        },
+    ///        "question": {
+    ///          "type": "string"
+    ///        },
+    ///        "reply": {
+    ///          "oneOf": [
+    ///            {
+    ///              "type": "object",
+    ///              "required": [
+    ///                "kind",
+    ///                "options"
+    ///              ],
+    ///              "properties": {
+    ///                "kind": {
+    ///                  "type": "string",
+    ///                  "enum": [
+    ///                    "OPTION"
+    ///                  ]
+    ///                },
+    ///                "options": {
+    ///                  "type": "array",
+    ///                  "items": {
+    ///                    "$ref": "#/components/schemas/AskOption"
+    ///                  },
+    ///                  "maxItems": 6,
+    ///                  "minItems": 1
+    ///                }
+    ///              },
+    ///              "additionalProperties": false
+    ///            },
+    ///            {
+    ///              "type": "object",
+    ///              "required": [
+    ///                "kind"
+    ///              ],
+    ///              "properties": {
+    ///                "kind": {
+    ///                  "type": "string",
+    ///                  "enum": [
+    ///                    "TEXT"
+    ///                  ]
+    ///                }
+    ///              },
+    ///              "additionalProperties": false
+    ///            }
+    ///          ]
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    }
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(tag = "kind", deny_unknown_fields)]
+    pub enum GetPanelIssueResponseOpenStopsItemAsk {
+        #[serde(rename = "DECISION_REQUESTED")]
+        DecisionRequested {
+            code: ::std::string::String,
+            question: ::std::string::String,
+            #[serde(rename = "releaseRequired")]
+            release_required: bool,
+            reply: GetPanelIssueResponseOpenStopsItemAskReply,
+        },
+        #[serde(rename = "QUESTION_ASKED")]
+        QuestionAsked {
+            code: ::std::string::String,
+            #[serde(rename = "defaultLabel")]
+            default_label: ::std::string::String,
+            #[serde(
+                rename = "dueAt",
+                default,
+                skip_serializing_if = "::std::option::Option::is_none"
+            )]
+            due_at: ::std::option::Option<::std::string::String>,
+            question: ::std::string::String,
+            reply: GetPanelIssueResponseOpenStopsItemAskReply,
+        },
+    }
+    impl ::std::convert::From<&Self> for GetPanelIssueResponseOpenStopsItemAsk {
+        fn from(value: &GetPanelIssueResponseOpenStopsItemAsk) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetPanelIssueResponseOpenStopsItemAskReply`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "oneOf": [
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "kind",
+    ///        "options"
+    ///      ],
+    ///      "properties": {
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "OPTION"
+    ///          ]
+    ///        },
+    ///        "options": {
+    ///          "type": "array",
+    ///          "items": {
+    ///            "$ref": "#/components/schemas/AskOption"
+    ///          },
+    ///          "maxItems": 6,
+    ///          "minItems": 1
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "TEXT"
+    ///          ]
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    }
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(tag = "kind", content = "options")]
+    pub enum GetPanelIssueResponseOpenStopsItemAskReply {
+        #[serde(rename = "OPTION")]
+        Option(::std::vec::Vec<AskOption>),
+        #[serde(rename = "TEXT")]
+        Text,
+    }
+    impl ::std::convert::From<&Self> for GetPanelIssueResponseOpenStopsItemAskReply {
+        fn from(value: &GetPanelIssueResponseOpenStopsItemAskReply) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::convert::From<::std::vec::Vec<AskOption>>
+    for GetPanelIssueResponseOpenStopsItemAskReply {
+        fn from(value: ::std::vec::Vec<AskOption>) -> Self {
+            Self::Option(value)
         }
     }
     ///`GetPanelIssueResponseTimelineItem`
@@ -3889,6 +4673,36 @@ pub mod types {
     ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
     ///        }
     ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "answer",
+    ///        "issueId",
+    ///        "kind",
+    ///        "stopId"
+    ///      ],
+    ///      "properties": {
+    ///        "answer": {
+    ///          "$ref": "#/components/schemas/AskAnswer"
+    ///        },
+    ///        "issueId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "ANSWER_ASK"
+    ///          ]
+    ///        },
+    ///        "stopId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        }
+    ///      }
     ///    }
     ///  ]
     ///}
@@ -3912,6 +4726,14 @@ pub mod types {
             #[serde(rename = "issueId")]
             issue_id: ::uuid::Uuid,
             resolution: ::codm_contracts_rust::wire::enums::StopResolution,
+            #[serde(rename = "stopId")]
+            stop_id: ::uuid::Uuid,
+        },
+        #[serde(rename = "ANSWER_ASK")]
+        AnswerAsk {
+            answer: AskAnswer,
+            #[serde(rename = "issueId")]
+            issue_id: ::uuid::Uuid,
             #[serde(rename = "stopId")]
             stop_id: ::uuid::Uuid,
         },
@@ -6806,6 +7628,149 @@ pub mod types {
     ///                "stopId"
     ///              ],
     ///              "properties": {
+    ///                "ask": {
+    ///                  "oneOf": [
+    ///                    {
+    ///                      "type": "object",
+    ///                      "required": [
+    ///                        "code",
+    ///                        "kind",
+    ///                        "question",
+    ///                        "releaseRequired",
+    ///                        "reply"
+    ///                      ],
+    ///                      "properties": {
+    ///                        "code": {
+    ///                          "type": "string"
+    ///                        },
+    ///                        "kind": {
+    ///                          "type": "string",
+    ///                          "enum": [
+    ///                            "DECISION_REQUESTED"
+    ///                          ]
+    ///                        },
+    ///                        "question": {
+    ///                          "type": "string"
+    ///                        },
+    ///                        "releaseRequired": {
+    ///                          "type": "boolean"
+    ///                        },
+    ///                        "reply": {
+    ///                          "oneOf": [
+    ///                            {
+    ///                              "type": "object",
+    ///                              "required": [
+    ///                                "kind",
+    ///                                "options"
+    ///                              ],
+    ///                              "properties": {
+    ///                                "kind": {
+    ///                                  "type": "string",
+    ///                                  "enum": [
+    ///                                    "OPTION"
+    ///                                  ]
+    ///                                },
+    ///                                "options": {
+    ///                                  "type": "array",
+    ///                                  "items": {
+    ///                                    "$ref": "#/components/schemas/AskOption"
+    ///                                  },
+    ///                                  "maxItems": 6,
+    ///                                  "minItems": 1
+    ///                                }
+    ///                              }
+    ///                            },
+    ///                            {
+    ///                              "type": "object",
+    ///                              "required": [
+    ///                                "kind"
+    ///                              ],
+    ///                              "properties": {
+    ///                                "kind": {
+    ///                                  "type": "string",
+    ///                                  "enum": [
+    ///                                    "TEXT"
+    ///                                  ]
+    ///                                }
+    ///                              }
+    ///                            }
+    ///                          ]
+    ///                        }
+    ///                      }
+    ///                    },
+    ///                    {
+    ///                      "type": "object",
+    ///                      "required": [
+    ///                        "code",
+    ///                        "defaultLabel",
+    ///                        "kind",
+    ///                        "question",
+    ///                        "reply"
+    ///                      ],
+    ///                      "properties": {
+    ///                        "code": {
+    ///                          "type": "string"
+    ///                        },
+    ///                        "defaultLabel": {
+    ///                          "type": "string"
+    ///                        },
+    ///                        "dueAt": {
+    ///                          "type": "string"
+    ///                        },
+    ///                        "kind": {
+    ///                          "type": "string",
+    ///                          "enum": [
+    ///                            "QUESTION_ASKED"
+    ///                          ]
+    ///                        },
+    ///                        "question": {
+    ///                          "type": "string"
+    ///                        },
+    ///                        "reply": {
+    ///                          "oneOf": [
+    ///                            {
+    ///                              "type": "object",
+    ///                              "required": [
+    ///                                "kind",
+    ///                                "options"
+    ///                              ],
+    ///                              "properties": {
+    ///                                "kind": {
+    ///                                  "type": "string",
+    ///                                  "enum": [
+    ///                                    "OPTION"
+    ///                                  ]
+    ///                                },
+    ///                                "options": {
+    ///                                  "type": "array",
+    ///                                  "items": {
+    ///                                    "$ref": "#/components/schemas/AskOption"
+    ///                                  },
+    ///                                  "maxItems": 6,
+    ///                                  "minItems": 1
+    ///                                }
+    ///                              }
+    ///                            },
+    ///                            {
+    ///                              "type": "object",
+    ///                              "required": [
+    ///                                "kind"
+    ///                              ],
+    ///                              "properties": {
+    ///                                "kind": {
+    ///                                  "type": "string",
+    ///                                  "enum": [
+    ///                                    "TEXT"
+    ///                                  ]
+    ///                                }
+    ///                              }
+    ///                            }
+    ///                          ]
+    ///                        }
+    ///                      }
+    ///                    }
+    ///                  ]
+    ///                },
     ///                "issueId": {
     ///                  "type": "string",
     ///                  "format": "uuid",
@@ -6930,6 +7895,149 @@ pub mod types {
     ///          "stopId"
     ///        ],
     ///        "properties": {
+    ///          "ask": {
+    ///            "oneOf": [
+    ///              {
+    ///                "type": "object",
+    ///                "required": [
+    ///                  "code",
+    ///                  "kind",
+    ///                  "question",
+    ///                  "releaseRequired",
+    ///                  "reply"
+    ///                ],
+    ///                "properties": {
+    ///                  "code": {
+    ///                    "type": "string"
+    ///                  },
+    ///                  "kind": {
+    ///                    "type": "string",
+    ///                    "enum": [
+    ///                      "DECISION_REQUESTED"
+    ///                    ]
+    ///                  },
+    ///                  "question": {
+    ///                    "type": "string"
+    ///                  },
+    ///                  "releaseRequired": {
+    ///                    "type": "boolean"
+    ///                  },
+    ///                  "reply": {
+    ///                    "oneOf": [
+    ///                      {
+    ///                        "type": "object",
+    ///                        "required": [
+    ///                          "kind",
+    ///                          "options"
+    ///                        ],
+    ///                        "properties": {
+    ///                          "kind": {
+    ///                            "type": "string",
+    ///                            "enum": [
+    ///                              "OPTION"
+    ///                            ]
+    ///                          },
+    ///                          "options": {
+    ///                            "type": "array",
+    ///                            "items": {
+    ///                              "$ref": "#/components/schemas/AskOption"
+    ///                            },
+    ///                            "maxItems": 6,
+    ///                            "minItems": 1
+    ///                          }
+    ///                        }
+    ///                      },
+    ///                      {
+    ///                        "type": "object",
+    ///                        "required": [
+    ///                          "kind"
+    ///                        ],
+    ///                        "properties": {
+    ///                          "kind": {
+    ///                            "type": "string",
+    ///                            "enum": [
+    ///                              "TEXT"
+    ///                            ]
+    ///                          }
+    ///                        }
+    ///                      }
+    ///                    ]
+    ///                  }
+    ///                }
+    ///              },
+    ///              {
+    ///                "type": "object",
+    ///                "required": [
+    ///                  "code",
+    ///                  "defaultLabel",
+    ///                  "kind",
+    ///                  "question",
+    ///                  "reply"
+    ///                ],
+    ///                "properties": {
+    ///                  "code": {
+    ///                    "type": "string"
+    ///                  },
+    ///                  "defaultLabel": {
+    ///                    "type": "string"
+    ///                  },
+    ///                  "dueAt": {
+    ///                    "type": "string"
+    ///                  },
+    ///                  "kind": {
+    ///                    "type": "string",
+    ///                    "enum": [
+    ///                      "QUESTION_ASKED"
+    ///                    ]
+    ///                  },
+    ///                  "question": {
+    ///                    "type": "string"
+    ///                  },
+    ///                  "reply": {
+    ///                    "oneOf": [
+    ///                      {
+    ///                        "type": "object",
+    ///                        "required": [
+    ///                          "kind",
+    ///                          "options"
+    ///                        ],
+    ///                        "properties": {
+    ///                          "kind": {
+    ///                            "type": "string",
+    ///                            "enum": [
+    ///                              "OPTION"
+    ///                            ]
+    ///                          },
+    ///                          "options": {
+    ///                            "type": "array",
+    ///                            "items": {
+    ///                              "$ref": "#/components/schemas/AskOption"
+    ///                            },
+    ///                            "maxItems": 6,
+    ///                            "minItems": 1
+    ///                          }
+    ///                        }
+    ///                      },
+    ///                      {
+    ///                        "type": "object",
+    ///                        "required": [
+    ///                          "kind"
+    ///                        ],
+    ///                        "properties": {
+    ///                          "kind": {
+    ///                            "type": "string",
+    ///                            "enum": [
+    ///                              "TEXT"
+    ///                            ]
+    ///                          }
+    ///                        }
+    ///                      }
+    ///                    ]
+    ///                  }
+    ///                }
+    ///              }
+    ///            ]
+    ///          },
     ///          "issueId": {
     ///            "type": "string",
     ///            "format": "uuid",
@@ -7219,6 +8327,149 @@ pub mod types {
     ///    "stopId"
     ///  ],
     ///  "properties": {
+    ///    "ask": {
+    ///      "oneOf": [
+    ///        {
+    ///          "type": "object",
+    ///          "required": [
+    ///            "code",
+    ///            "kind",
+    ///            "question",
+    ///            "releaseRequired",
+    ///            "reply"
+    ///          ],
+    ///          "properties": {
+    ///            "code": {
+    ///              "type": "string"
+    ///            },
+    ///            "kind": {
+    ///              "type": "string",
+    ///              "enum": [
+    ///                "DECISION_REQUESTED"
+    ///              ]
+    ///            },
+    ///            "question": {
+    ///              "type": "string"
+    ///            },
+    ///            "releaseRequired": {
+    ///              "type": "boolean"
+    ///            },
+    ///            "reply": {
+    ///              "oneOf": [
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "kind",
+    ///                    "options"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "OPTION"
+    ///                      ]
+    ///                    },
+    ///                    "options": {
+    ///                      "type": "array",
+    ///                      "items": {
+    ///                        "$ref": "#/components/schemas/AskOption"
+    ///                      },
+    ///                      "maxItems": 6,
+    ///                      "minItems": 1
+    ///                    }
+    ///                  }
+    ///                },
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "kind"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "TEXT"
+    ///                      ]
+    ///                    }
+    ///                  }
+    ///                }
+    ///              ]
+    ///            }
+    ///          }
+    ///        },
+    ///        {
+    ///          "type": "object",
+    ///          "required": [
+    ///            "code",
+    ///            "defaultLabel",
+    ///            "kind",
+    ///            "question",
+    ///            "reply"
+    ///          ],
+    ///          "properties": {
+    ///            "code": {
+    ///              "type": "string"
+    ///            },
+    ///            "defaultLabel": {
+    ///              "type": "string"
+    ///            },
+    ///            "dueAt": {
+    ///              "type": "string"
+    ///            },
+    ///            "kind": {
+    ///              "type": "string",
+    ///              "enum": [
+    ///                "QUESTION_ASKED"
+    ///              ]
+    ///            },
+    ///            "question": {
+    ///              "type": "string"
+    ///            },
+    ///            "reply": {
+    ///              "oneOf": [
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "kind",
+    ///                    "options"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "OPTION"
+    ///                      ]
+    ///                    },
+    ///                    "options": {
+    ///                      "type": "array",
+    ///                      "items": {
+    ///                        "$ref": "#/components/schemas/AskOption"
+    ///                      },
+    ///                      "maxItems": 6,
+    ///                      "minItems": 1
+    ///                    }
+    ///                  }
+    ///                },
+    ///                {
+    ///                  "type": "object",
+    ///                  "required": [
+    ///                    "kind"
+    ///                  ],
+    ///                  "properties": {
+    ///                    "kind": {
+    ///                      "type": "string",
+    ///                      "enum": [
+    ///                        "TEXT"
+    ///                      ]
+    ///                    }
+    ///                  }
+    ///                }
+    ///              ]
+    ///            }
+    ///          }
+    ///        }
+    ///      ]
+    ///    },
     ///    "issueId": {
     ///      "type": "string",
     ///      "format": "uuid",
@@ -7245,6 +8496,8 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct SyncPanelRosterBodyGroupsItemOpenStopsItem {
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub ask: ::std::option::Option<SyncPanelRosterBodyGroupsItemOpenStopsItemAsk>,
         #[serde(rename = "issueId")]
         pub issue_id: ::uuid::Uuid,
         pub kind: ::codm_contracts_rust::wire::enums::StopKind,
@@ -7258,6 +8511,255 @@ pub mod types {
     for SyncPanelRosterBodyGroupsItemOpenStopsItem {
         fn from(value: &SyncPanelRosterBodyGroupsItemOpenStopsItem) -> Self {
             value.clone()
+        }
+    }
+    ///`SyncPanelRosterBodyGroupsItemOpenStopsItemAsk`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "oneOf": [
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "code",
+    ///        "kind",
+    ///        "question",
+    ///        "releaseRequired",
+    ///        "reply"
+    ///      ],
+    ///      "properties": {
+    ///        "code": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "DECISION_REQUESTED"
+    ///          ]
+    ///        },
+    ///        "question": {
+    ///          "type": "string"
+    ///        },
+    ///        "releaseRequired": {
+    ///          "type": "boolean"
+    ///        },
+    ///        "reply": {
+    ///          "oneOf": [
+    ///            {
+    ///              "type": "object",
+    ///              "required": [
+    ///                "kind",
+    ///                "options"
+    ///              ],
+    ///              "properties": {
+    ///                "kind": {
+    ///                  "type": "string",
+    ///                  "enum": [
+    ///                    "OPTION"
+    ///                  ]
+    ///                },
+    ///                "options": {
+    ///                  "type": "array",
+    ///                  "items": {
+    ///                    "$ref": "#/components/schemas/AskOption"
+    ///                  },
+    ///                  "maxItems": 6,
+    ///                  "minItems": 1
+    ///                }
+    ///              }
+    ///            },
+    ///            {
+    ///              "type": "object",
+    ///              "required": [
+    ///                "kind"
+    ///              ],
+    ///              "properties": {
+    ///                "kind": {
+    ///                  "type": "string",
+    ///                  "enum": [
+    ///                    "TEXT"
+    ///                  ]
+    ///                }
+    ///              }
+    ///            }
+    ///          ]
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "code",
+    ///        "defaultLabel",
+    ///        "kind",
+    ///        "question",
+    ///        "reply"
+    ///      ],
+    ///      "properties": {
+    ///        "code": {
+    ///          "type": "string"
+    ///        },
+    ///        "defaultLabel": {
+    ///          "type": "string"
+    ///        },
+    ///        "dueAt": {
+    ///          "type": "string"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "QUESTION_ASKED"
+    ///          ]
+    ///        },
+    ///        "question": {
+    ///          "type": "string"
+    ///        },
+    ///        "reply": {
+    ///          "oneOf": [
+    ///            {
+    ///              "type": "object",
+    ///              "required": [
+    ///                "kind",
+    ///                "options"
+    ///              ],
+    ///              "properties": {
+    ///                "kind": {
+    ///                  "type": "string",
+    ///                  "enum": [
+    ///                    "OPTION"
+    ///                  ]
+    ///                },
+    ///                "options": {
+    ///                  "type": "array",
+    ///                  "items": {
+    ///                    "$ref": "#/components/schemas/AskOption"
+    ///                  },
+    ///                  "maxItems": 6,
+    ///                  "minItems": 1
+    ///                }
+    ///              }
+    ///            },
+    ///            {
+    ///              "type": "object",
+    ///              "required": [
+    ///                "kind"
+    ///              ],
+    ///              "properties": {
+    ///                "kind": {
+    ///                  "type": "string",
+    ///                  "enum": [
+    ///                    "TEXT"
+    ///                  ]
+    ///                }
+    ///              }
+    ///            }
+    ///          ]
+    ///        }
+    ///      }
+    ///    }
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(tag = "kind")]
+    pub enum SyncPanelRosterBodyGroupsItemOpenStopsItemAsk {
+        #[serde(rename = "DECISION_REQUESTED")]
+        DecisionRequested {
+            code: ::std::string::String,
+            question: ::std::string::String,
+            #[serde(rename = "releaseRequired")]
+            release_required: bool,
+            reply: SyncPanelRosterBodyGroupsItemOpenStopsItemAskReply,
+        },
+        #[serde(rename = "QUESTION_ASKED")]
+        QuestionAsked {
+            code: ::std::string::String,
+            #[serde(rename = "defaultLabel")]
+            default_label: ::std::string::String,
+            #[serde(
+                rename = "dueAt",
+                default,
+                skip_serializing_if = "::std::option::Option::is_none"
+            )]
+            due_at: ::std::option::Option<::std::string::String>,
+            question: ::std::string::String,
+            reply: SyncPanelRosterBodyGroupsItemOpenStopsItemAskReply,
+        },
+    }
+    impl ::std::convert::From<&Self> for SyncPanelRosterBodyGroupsItemOpenStopsItemAsk {
+        fn from(value: &SyncPanelRosterBodyGroupsItemOpenStopsItemAsk) -> Self {
+            value.clone()
+        }
+    }
+    ///`SyncPanelRosterBodyGroupsItemOpenStopsItemAskReply`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "oneOf": [
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "kind",
+    ///        "options"
+    ///      ],
+    ///      "properties": {
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "OPTION"
+    ///          ]
+    ///        },
+    ///        "options": {
+    ///          "type": "array",
+    ///          "items": {
+    ///            "$ref": "#/components/schemas/AskOption"
+    ///          },
+    ///          "maxItems": 6,
+    ///          "minItems": 1
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "TEXT"
+    ///          ]
+    ///        }
+    ///      }
+    ///    }
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(tag = "kind", content = "options")]
+    pub enum SyncPanelRosterBodyGroupsItemOpenStopsItemAskReply {
+        #[serde(rename = "OPTION")]
+        Option(::std::vec::Vec<AskOption>),
+        #[serde(rename = "TEXT")]
+        Text,
+    }
+    impl ::std::convert::From<&Self>
+    for SyncPanelRosterBodyGroupsItemOpenStopsItemAskReply {
+        fn from(value: &SyncPanelRosterBodyGroupsItemOpenStopsItemAskReply) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::convert::From<::std::vec::Vec<AskOption>>
+    for SyncPanelRosterBodyGroupsItemOpenStopsItemAskReply {
+        fn from(value: ::std::vec::Vec<AskOption>) -> Self {
+            Self::Option(value)
         }
     }
     ///`SyncPanelRosterBodyOutcomesItem`
@@ -7507,6 +9009,37 @@ pub mod types {
     ///                  }
     ///                },
     ///                "additionalProperties": false
+    ///              },
+    ///              {
+    ///                "type": "object",
+    ///                "required": [
+    ///                  "answer",
+    ///                  "issueId",
+    ///                  "kind",
+    ///                  "stopId"
+    ///                ],
+    ///                "properties": {
+    ///                  "answer": {
+    ///                    "$ref": "#/components/schemas/AskAnswer"
+    ///                  },
+    ///                  "issueId": {
+    ///                    "type": "string",
+    ///                    "format": "uuid",
+    ///                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///                  },
+    ///                  "kind": {
+    ///                    "type": "string",
+    ///                    "enum": [
+    ///                      "ANSWER_ASK"
+    ///                    ]
+    ///                  },
+    ///                  "stopId": {
+    ///                    "type": "string",
+    ///                    "format": "uuid",
+    ///                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///                  }
+    ///                },
+    ///                "additionalProperties": false
     ///              }
     ///            ]
     ///          },
@@ -7690,6 +9223,37 @@ pub mod types {
     ///            }
     ///          },
     ///          "additionalProperties": false
+    ///        },
+    ///        {
+    ///          "type": "object",
+    ///          "required": [
+    ///            "answer",
+    ///            "issueId",
+    ///            "kind",
+    ///            "stopId"
+    ///          ],
+    ///          "properties": {
+    ///            "answer": {
+    ///              "$ref": "#/components/schemas/AskAnswer"
+    ///            },
+    ///            "issueId": {
+    ///              "type": "string",
+    ///              "format": "uuid",
+    ///              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///            },
+    ///            "kind": {
+    ///              "type": "string",
+    ///              "enum": [
+    ///                "ANSWER_ASK"
+    ///              ]
+    ///            },
+    ///            "stopId": {
+    ///              "type": "string",
+    ///              "format": "uuid",
+    ///              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///            }
+    ///          },
+    ///          "additionalProperties": false
     ///        }
     ///      ]
     ///    },
@@ -7834,6 +9398,37 @@ pub mod types {
     ///        }
     ///      },
     ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "answer",
+    ///        "issueId",
+    ///        "kind",
+    ///        "stopId"
+    ///      ],
+    ///      "properties": {
+    ///        "answer": {
+    ///          "$ref": "#/components/schemas/AskAnswer"
+    ///        },
+    ///        "issueId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "ANSWER_ASK"
+    ///          ]
+    ///        },
+    ///        "stopId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
     ///    }
     ///  ]
     ///}
@@ -7857,6 +9452,14 @@ pub mod types {
             #[serde(rename = "issueId")]
             issue_id: ::uuid::Uuid,
             resolution: ::codm_contracts_rust::wire::enums::StopResolution,
+            #[serde(rename = "stopId")]
+            stop_id: ::uuid::Uuid,
+        },
+        #[serde(rename = "ANSWER_ASK")]
+        AnswerAsk {
+            answer: AskAnswer,
+            #[serde(rename = "issueId")]
+            issue_id: ::uuid::Uuid,
             #[serde(rename = "stopId")]
             stop_id: ::uuid::Uuid,
         },

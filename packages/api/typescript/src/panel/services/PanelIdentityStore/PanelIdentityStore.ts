@@ -1,5 +1,8 @@
 import type { Transaction } from '@codm/core-typescript'
-import type { PanelMember, PanelOpenStop } from '@codm/contracts/db/pg'
+import type { PanelMember } from '@codm/contracts/db/pg'
+// The open stops as the shared schema types them (with the parsed `ask`), not as the jsonb column's loose
+// row type: every store parses the column on read (`PanelOpenStopSchema`), so the panel works on validated data.
+import type { PanelOpenStop } from '@shared/schemas'
 
 export type { PanelMember, PanelOpenStop }
 

@@ -65,13 +65,15 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
 .ib input{letter-spacing:.3em;font-family:ui-monospace,monospace;font-size:18px}
 .acts{padding:12px 16px;border-top:1px solid var(--line);display:grid;gap:8px}.row{display:flex;gap:8px;flex-wrap:wrap}
 .acts textarea{font:inherit;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:inherit;min-height:64px;resize:vertical}
+.ask{display:grid;gap:6px;padding:10px;margin-bottom:8px;border:1px solid var(--line);border-radius:10px}.ask-q{white-space:pre-wrap;word-break:break-word}.ask-text{display:grid;gap:6px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
 </style>
 </head>
 <body>
 <header><h1 id="name">Painel de tarefas</h1><div class="me"><span id="seen" class="muted"></span><span id="who" class="muted"></span><button class="btn" id="identify" type="button" hidden>Identificar-me</button><button class="btn" id="forget" type="button" hidden>Sair</button></div></header>
 <main class="board" id="board"></main>
 <dialog id="detail"><div class="dh"><div><div id="dkey" class="key"></div><div id="dtitle"></div></div><button class="x" id="close" aria-label="Fechar">×</button></div><ol class="tl" id="tl"></ol>
-<div class="acts" id="acts" hidden><div class="row" id="ctl"></div><div class="row" id="stopbtns" hidden></div><textarea id="steer" maxlength="2000" placeholder="Orientar esta tarefa…" aria-label="Orientação para a tarefa"></textarea><div class="row"><button class="btn" id="sendsteer" type="button">Orientar</button></div><div id="astatus" class="muted" role="status"></div></div></dialog>
+<div class="acts" id="acts" hidden><div id="asks"></div><div class="row" id="ctl"></div><div class="row" id="stopbtns" hidden></div><textarea id="steer" maxlength="2000" placeholder="Orientar esta tarefa…" aria-label="Orientação para a tarefa"></textarea><div class="row"><button class="btn" id="sendsteer" type="button">Orientar</button></div><div id="astatus" class="muted" role="status"></div></div></dialog>
 <dialog id="ident"><div class="dh"><strong>Identificar-me</strong><button class="x" id="iclose" aria-label="Fechar">×</button></div>
 <div class="ib" id="istep1"><label for="pick">Quem é você neste grupo?</label><select id="pick"></select><button class="btn" id="send" type="button">Enviar código no meu WhatsApp</button></div>
 <div class="ib" id="istep2" hidden><div id="isent" class="muted"></div><input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" aria-label="Código"><button class="btn" id="confirm" type="button">Confirmar</button><button class="btn" id="again" type="button">Escolher outro nome</button></div>
@@ -84,14 +86,22 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
   // Janela de arrependimento (fase 2, item 3): the kind of action and how the wait ended — never a command line.
   const ACTION = {GIT_PUSH:'git push',GIT_FORCE_PUSH:'git push forçado',PR_MERGE:'merge de PR',RELEASE:'criar release',PACKAGE_PUBLISH:'publicar pacote',DEPLOY:'deploy'};
   const OUTCOME = {PROCEEDED:'seguiu',CANCELLED_BY_STEER:'cancelado por recado',CANCELLED_BY_PAUSE:'cancelado pela pausa'};
-  const DETAIL = {REGRET_WINDOW: i => (i.waitedMs > 0 ? 'esperou ' + Math.round(i.waitedMs / 1000) + ' s antes de ' : '') + (ACTION[i.actionKind] || i.actionKind) + ' — ' + (OUTCOME[i.outcome] || i.outcome)};
+  // Fase 3: an ask shows its code and question, its answer what was answered, and what an issue said says where it went.
+  const ROUTED = {PANEL:'só no painel',DIGEST:'no resumo',GROUP:'no grupo'};
+  const DETAIL = {
+    STOP_RAISED: i => (i.ask ? i.ask.code + ' — ' + i.ask.question : i.title),
+    STOP_RESOLVED: i => (i.answer ? i.answer.label : ''),
+    MESSAGE: i => (i.routing ? '[' + (ROUTED[i.routing] || i.routing) + '] ' : '') + i.text,
+    REGRET_WINDOW: i => (i.waitedMs > 0 ? 'esperou ' + Math.round(i.waitedMs / 1000) + ' s antes de ' : '') + (ACTION[i.actionKind] || i.actionKind) + ' — ' + (OUTCOME[i.outcome] || i.outcome)};
   const base = location.pathname.replace(/\\/+$/, '');
   const fmt = iso => new Date(iso).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+  let issuesSeen = [];
   async function board() {
     const res = await fetch(base + '/board', {cache:'no-store'});
     if (!res.ok) { document.getElementById('name').textContent = 'Link inválido ou trocado'; document.getElementById('board').replaceChildren(); return; }
     const data = await res.json();
+    issuesSeen = data.issues;
     document.getElementById('name').textContent = data.group.name;
     document.title = data.group.name + ' · tarefas';
     const seen = document.getElementById('seen');
@@ -120,6 +130,9 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
   let current = null;
   async function open(issueId) {
     current = issueId; document.getElementById('astatus').textContent = ''; document.getElementById('steer').value = '';
+    // The address bar names the open issue (#APP-12), so the link can be passed on as is.
+    const seen = issuesSeen.find(i => i.issueId === issueId);
+    if (seen) history.replaceState(null, '', '#' + encodeURIComponent(seen.key));
     if (await load(issueId)) document.getElementById('detail').showModal();
   }
   async function load(issueId) {
@@ -138,6 +151,8 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
     return true;
   }
   document.getElementById('close').addEventListener('click', () => document.getElementById('detail').close());
+  // Closing (button or Esc) drops the issue from the address, so a reload shows the board.
+  document.getElementById('detail').addEventListener('close', () => history.replaceState(null, '', location.pathname));
 
   // Who this device is (fase 2, item 6a). The device token lives in an HttpOnly cookie this script never sees.
   const $ = id => document.getElementById(id);
@@ -196,13 +211,51 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
     const ctl = el('button', 'btn', paused ? 'Retomar' : 'Pausar'); ctl.type = 'button';
     ctl.addEventListener('click', () => act({kind: paused ? 'RESUME' : 'PAUSE', issueId: data.issue.issueId}));
     $('ctl').replaceChildren(ctl);
-    const stop = data.openStop && meMember.canRelease ? data.openStop : null;
+    const stop = meMember.canRelease ? data.openStops.find(s => !s.ask && s.resolutions.length > 0) : null;
     $('stopbtns').replaceChildren(...(stop ? stop.resolutions.map(resolution => {
       const b = el('button', 'btn', RES[resolution] || resolution); b.type = 'button';
       b.addEventListener('click', () => act({kind:'ANSWER_STOP', issueId: data.issue.issueId, stopId: stop.stopId, resolution}));
       return b;
     }) : []));
     $('stopbtns').hidden = !stop;
+    // Fase 3: the issue's open asks — one block per ask, its note by kind and its answer by reply kind.
+    $('asks').replaceChildren(...data.openStops.filter(s => s.ask).map(s => askBlock(data.issue.issueId, s)));
+  }
+  // What each ask kind says under the question, and how each reply kind is answered (one renderer per variant).
+  const ASK_NOTE = {
+    DECISION_REQUESTED: a => (a.releaseRequired ? 'Só quem pode liberar responde a esta decisão.' : ''),
+    QUESTION_ASKED: a => 'Segue com “' + a.defaultLabel + '”' + (a.dueAt ? ' às ' + fmt(a.dueAt) : ' 15 min depois de chegar ao grupo') + ' se ninguém responder.',
+  };
+  const REPLY = {
+    OPTION: (issueId, s, locked) => {
+      const row = el('div', 'row');
+      for (const option of s.ask.reply.options) {
+        const b = el('button', 'btn', option.label); b.type = 'button'; b.disabled = locked;
+        b.addEventListener('click', () => act({kind:'ANSWER_ASK', issueId, stopId: s.stopId, answer: {kind:'OPTION', optionId: option.id}}));
+        row.append(b);
+      }
+      return row;
+    },
+    TEXT: (issueId, s, locked) => {
+      const box = el('div'); box.className = 'ask-text';
+      const input = el('textarea'); input.maxLength = 2000; input.placeholder = 'Responda com suas palavras…'; input.setAttribute('aria-label', 'Resposta para ' + s.ask.code); input.disabled = locked;
+      const b = el('button', 'btn', 'Responder'); b.type = 'button'; b.disabled = locked;
+      b.addEventListener('click', async () => { const text = input.value.trim(); if (text && await act({kind:'ANSWER_ASK', issueId, stopId: s.stopId, answer: {kind:'TEXT', text}})) input.value = ''; });
+      box.append(input, b);
+      return box;
+    },
+  };
+  function askBlock(issueId, s) {
+    const box = el('div', 'ask');
+    const head = el('div', 'ask-q'); head.append(el('span', 'key', s.ask.code), document.createTextNode(' — ' + s.ask.question));
+    box.append(head);
+    const note = (ASK_NOTE[s.ask.kind] || (() => ''))(s.ask);
+    if (note) box.append(el('div', 'muted', note));
+    // A decision that needs a releaser is shown to everyone, answerable only by who may release.
+    const locked = s.ask.kind === 'DECISION_REQUESTED' && s.ask.releaseRequired && !meMember.canRelease;
+    const reply = REPLY[s.ask.reply.kind];
+    if (reply) box.append(reply(issueId, s, locked));
+    return box;
   }
   let polling = 0;
   async function act(body) {
@@ -230,7 +283,15 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
     if (await act({kind:'STEER', issueId: current, text})) $('steer').value = '';
   });
 
-  board(); setInterval(board, 15000); me();
+  // The issue link the group gets ends in #<key> (fase 3): open that issue once the board is known, and
+  // again whenever the hash changes. An unknown key opens nothing.
+  function openByHash() {
+    const key = decodeURIComponent(location.hash.slice(1));
+    const issue = key ? issuesSeen.find(i => i.key === key) : null;
+    if (issue && !(current === issue.issueId && $('detail').open)) open(issue.issueId);
+  }
+  window.addEventListener('hashchange', openByHash);
+  board().then(openByHash); setInterval(board, 15000); me();
 })();
 </script>
 </body>

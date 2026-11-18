@@ -973,6 +973,23 @@ type ApiErrors string
 // ArtifactKind defines model for ArtifactKind.
 type ArtifactKind string
 
+// AskAnswer defines model for AskAnswer.
+type AskAnswer struct {
+	union json.RawMessage
+}
+
+// AskAnswer0 defines model for .
+type AskAnswer0 struct {
+	Kind     string `json:"kind"`
+	OptionId string `json:"optionId"`
+}
+
+// AskAnswer1 defines model for .
+type AskAnswer1 struct {
+	Kind string `json:"kind"`
+	Text string `json:"text"`
+}
+
 // AskAnswerKind defines model for AskAnswerKind.
 type AskAnswerKind string
 
@@ -1099,9 +1116,73 @@ type RequestPanelActionJSONBody3 struct {
 	StopId     openapi_types.UUID `json:"stopId"`
 }
 
+// RequestPanelActionJSONBody4 defines parameters for RequestPanelAction.
+type RequestPanelActionJSONBody4 struct {
+	Answer  AskAnswer          `json:"answer"`
+	IssueId openapi_types.UUID `json:"issueId"`
+	Kind    string             `json:"kind"`
+	StopId  openapi_types.UUID `json:"stopId"`
+}
+
 // RequestPanelCodeJSONBody defines parameters for RequestPanelCode.
 type RequestPanelCodeJSONBody struct {
 	MemberId string `json:"memberId"`
+}
+
+// GetPanelIssue200JSONResponseBodyOpenStopsAsk0 defines parameters for GetPanelIssue.
+type GetPanelIssue200JSONResponseBodyOpenStopsAsk0 struct {
+	Code            string                                                 `json:"code"`
+	Kind            string                                                 `json:"kind"`
+	Question        string                                                 `json:"question"`
+	ReleaseRequired bool                                                   `json:"releaseRequired"`
+	Reply           GetPanelIssue200JSONResponseBody_OpenStops_Ask_0_Reply `json:"reply"`
+}
+
+// GetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply0 defines parameters for GetPanelIssue.
+type GetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply0 struct {
+	Kind    string      `json:"kind"`
+	Options []AskOption `json:"options"`
+}
+
+// GetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply1 defines parameters for GetPanelIssue.
+type GetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply1 struct {
+	Kind string `json:"kind"`
+}
+
+// GetPanelIssue200JSONResponseBody_OpenStops_Ask_0_Reply defines parameters for GetPanelIssue.
+type GetPanelIssue200JSONResponseBody_OpenStops_Ask_0_Reply struct {
+	union json.RawMessage
+}
+
+// GetPanelIssue200JSONResponseBodyOpenStopsAsk1 defines parameters for GetPanelIssue.
+type GetPanelIssue200JSONResponseBodyOpenStopsAsk1 struct {
+	Code         string                                                 `json:"code"`
+	DefaultLabel string                                                 `json:"defaultLabel"`
+	DueAt        *string                                                `json:"dueAt,omitempty"`
+	Kind         string                                                 `json:"kind"`
+	Question     string                                                 `json:"question"`
+	Reply        GetPanelIssue200JSONResponseBody_OpenStops_Ask_1_Reply `json:"reply"`
+}
+
+// GetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply0 defines parameters for GetPanelIssue.
+type GetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply0 struct {
+	Kind    string      `json:"kind"`
+	Options []AskOption `json:"options"`
+}
+
+// GetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply1 defines parameters for GetPanelIssue.
+type GetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply1 struct {
+	Kind string `json:"kind"`
+}
+
+// GetPanelIssue200JSONResponseBody_OpenStops_Ask_1_Reply defines parameters for GetPanelIssue.
+type GetPanelIssue200JSONResponseBody_OpenStops_Ask_1_Reply struct {
+	union json.RawMessage
+}
+
+// GetPanelIssue200JSONResponseBody_OpenStops_Ask defines parameters for GetPanelIssue.
+type GetPanelIssue200JSONResponseBody_OpenStops_Ask struct {
+	union json.RawMessage
 }
 
 // GetPanelIssue200JSONResponseBodyTimeline0 defines parameters for GetPanelIssue.
@@ -1244,10 +1325,11 @@ type SyncPanelRosterJSONBody struct {
 			Name       string `json:"name"`
 		} `json:"members"`
 		OpenStops *[]struct {
-			IssueId     openapi_types.UUID `json:"issueId"`
-			Kind        StopKind           `json:"kind"`
-			Resolutions []StopResolution   `json:"resolutions"`
-			StopId      openapi_types.UUID `json:"stopId"`
+			Ask         *SyncPanelRosterJSONBody_Groups_OpenStops_Ask `json:"ask,omitempty"`
+			IssueId     openapi_types.UUID                            `json:"issueId"`
+			Kind        StopKind                                      `json:"kind"`
+			Resolutions []StopResolution                              `json:"resolutions"`
+			StopId      openapi_types.UUID                            `json:"stopId"`
 		} `json:"openStops,omitempty"`
 		ThreadId openapi_types.UUID `json:"threadId"`
 	} `json:"groups"`
@@ -1256,6 +1338,62 @@ type SyncPanelRosterJSONBody struct {
 		Code     *string            `json:"code,omitempty"`
 		Status   PanelActionOutcome `json:"status"`
 	} `json:"outcomes,omitempty"`
+}
+
+// SyncPanelRosterJSONBodyGroupsOpenStopsAsk0 defines parameters for SyncPanelRoster.
+type SyncPanelRosterJSONBodyGroupsOpenStopsAsk0 struct {
+	Code            string                                               `json:"code"`
+	Kind            string                                               `json:"kind"`
+	Question        string                                               `json:"question"`
+	ReleaseRequired bool                                                 `json:"releaseRequired"`
+	Reply           SyncPanelRosterJSONBody_Groups_OpenStops_Ask_0_Reply `json:"reply"`
+}
+
+// SyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply0 defines parameters for SyncPanelRoster.
+type SyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply0 struct {
+	Kind    string      `json:"kind"`
+	Options []AskOption `json:"options"`
+}
+
+// SyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply1 defines parameters for SyncPanelRoster.
+type SyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply1 struct {
+	Kind string `json:"kind"`
+}
+
+// SyncPanelRosterJSONBody_Groups_OpenStops_Ask_0_Reply defines parameters for SyncPanelRoster.
+type SyncPanelRosterJSONBody_Groups_OpenStops_Ask_0_Reply struct {
+	union json.RawMessage
+}
+
+// SyncPanelRosterJSONBodyGroupsOpenStopsAsk1 defines parameters for SyncPanelRoster.
+type SyncPanelRosterJSONBodyGroupsOpenStopsAsk1 struct {
+	Code         string                                               `json:"code"`
+	DefaultLabel string                                               `json:"defaultLabel"`
+	DueAt        *string                                              `json:"dueAt,omitempty"`
+	Kind         string                                               `json:"kind"`
+	Question     string                                               `json:"question"`
+	Reply        SyncPanelRosterJSONBody_Groups_OpenStops_Ask_1_Reply `json:"reply"`
+}
+
+// SyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply0 defines parameters for SyncPanelRoster.
+type SyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply0 struct {
+	Kind    string      `json:"kind"`
+	Options []AskOption `json:"options"`
+}
+
+// SyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply1 defines parameters for SyncPanelRoster.
+type SyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply1 struct {
+	Kind string `json:"kind"`
+}
+
+// SyncPanelRosterJSONBody_Groups_OpenStops_Ask_1_Reply defines parameters for SyncPanelRoster.
+type SyncPanelRosterJSONBody_Groups_OpenStops_Ask_1_Reply struct {
+	union json.RawMessage
+}
+
+// SyncPanelRosterJSONBody_Groups_OpenStops_Ask defines parameters for SyncPanelRoster.
+type SyncPanelRosterJSONBody_Groups_OpenStops_Ask struct {
+	union json.RawMessage
 }
 
 // SyncPanelRoster200JSONResponseBodyActionsAction0 defines parameters for SyncPanelRoster.
@@ -1283,6 +1421,14 @@ type SyncPanelRoster200JSONResponseBodyActionsAction3 struct {
 	Kind       string             `json:"kind"`
 	Resolution StopResolution     `json:"resolution"`
 	StopId     openapi_types.UUID `json:"stopId"`
+}
+
+// SyncPanelRoster200JSONResponseBodyActionsAction4 defines parameters for SyncPanelRoster.
+type SyncPanelRoster200JSONResponseBodyActionsAction4 struct {
+	Answer  AskAnswer          `json:"answer"`
+	IssueId openapi_types.UUID `json:"issueId"`
+	Kind    string             `json:"kind"`
+	StopId  openapi_types.UUID `json:"stopId"`
 }
 
 // SyncPanelRoster200JSONResponseBody_Actions_Action defines parameters for SyncPanelRoster.
@@ -1478,6 +1624,68 @@ type SyncPanelJSONRequestBody SyncPanelJSONBody
 // SetCloudTokenJSONRequestBody defines body for SetCloudToken for application/json ContentType.
 type SetCloudTokenJSONRequestBody SetCloudTokenJSONBody
 
+// AsAskAnswer0 returns the union data inside the AskAnswer as a AskAnswer0
+func (t AskAnswer) AsAskAnswer0() (AskAnswer0, error) {
+	var body AskAnswer0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAskAnswer0 overwrites any union data inside the AskAnswer as the provided AskAnswer0
+func (t *AskAnswer) FromAskAnswer0(v AskAnswer0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAskAnswer0 performs a merge with any union data inside the AskAnswer, using the provided AskAnswer0
+func (t *AskAnswer) MergeAskAnswer0(v AskAnswer0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsAskAnswer1 returns the union data inside the AskAnswer as a AskAnswer1
+func (t AskAnswer) AsAskAnswer1() (AskAnswer1, error) {
+	var body AskAnswer1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAskAnswer1 overwrites any union data inside the AskAnswer as the provided AskAnswer1
+func (t *AskAnswer) FromAskAnswer1(v AskAnswer1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAskAnswer1 performs a merge with any union data inside the AskAnswer, using the provided AskAnswer1
+func (t *AskAnswer) MergeAskAnswer1(v AskAnswer1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t AskAnswer) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *AskAnswer) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
 // AsRequestPanelActionJSONBody0 returns the union data inside the RequestPanelActionJSONBody as a RequestPanelActionJSONBody0
 func (t RequestPanelActionJSONBody) AsRequestPanelActionJSONBody0() (RequestPanelActionJSONBody0, error) {
 	var body RequestPanelActionJSONBody0
@@ -1582,12 +1790,224 @@ func (t *RequestPanelActionJSONBody) MergeRequestPanelActionJSONBody3(v RequestP
 	return err
 }
 
+// AsRequestPanelActionJSONBody4 returns the union data inside the RequestPanelActionJSONBody as a RequestPanelActionJSONBody4
+func (t RequestPanelActionJSONBody) AsRequestPanelActionJSONBody4() (RequestPanelActionJSONBody4, error) {
+	var body RequestPanelActionJSONBody4
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRequestPanelActionJSONBody4 overwrites any union data inside the RequestPanelActionJSONBody as the provided RequestPanelActionJSONBody4
+func (t *RequestPanelActionJSONBody) FromRequestPanelActionJSONBody4(v RequestPanelActionJSONBody4) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeRequestPanelActionJSONBody4 performs a merge with any union data inside the RequestPanelActionJSONBody, using the provided RequestPanelActionJSONBody4
+func (t *RequestPanelActionJSONBody) MergeRequestPanelActionJSONBody4(v RequestPanelActionJSONBody4) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
 func (t RequestPanelActionJSONBody) MarshalJSON() ([]byte, error) {
 	b, err := t.union.MarshalJSON()
 	return b, err
 }
 
 func (t *RequestPanelActionJSONBody) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsGetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply0 returns the union data inside the GetPanelIssue200JSONResponseBody_OpenStops_Ask_0_Reply as a GetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply0
+func (t GetPanelIssue200JSONResponseBody_OpenStops_Ask_0_Reply) AsGetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply0() (GetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply0, error) {
+	var body GetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply0 overwrites any union data inside the GetPanelIssue200JSONResponseBody_OpenStops_Ask_0_Reply as the provided GetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply0
+func (t *GetPanelIssue200JSONResponseBody_OpenStops_Ask_0_Reply) FromGetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply0(v GetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply0 performs a merge with any union data inside the GetPanelIssue200JSONResponseBody_OpenStops_Ask_0_Reply, using the provided GetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply0
+func (t *GetPanelIssue200JSONResponseBody_OpenStops_Ask_0_Reply) MergeGetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply0(v GetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply1 returns the union data inside the GetPanelIssue200JSONResponseBody_OpenStops_Ask_0_Reply as a GetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply1
+func (t GetPanelIssue200JSONResponseBody_OpenStops_Ask_0_Reply) AsGetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply1() (GetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply1, error) {
+	var body GetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply1 overwrites any union data inside the GetPanelIssue200JSONResponseBody_OpenStops_Ask_0_Reply as the provided GetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply1
+func (t *GetPanelIssue200JSONResponseBody_OpenStops_Ask_0_Reply) FromGetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply1(v GetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply1 performs a merge with any union data inside the GetPanelIssue200JSONResponseBody_OpenStops_Ask_0_Reply, using the provided GetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply1
+func (t *GetPanelIssue200JSONResponseBody_OpenStops_Ask_0_Reply) MergeGetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply1(v GetPanelIssue200JSONResponseBodyOpenStopsAsk0Reply1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t GetPanelIssue200JSONResponseBody_OpenStops_Ask_0_Reply) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *GetPanelIssue200JSONResponseBody_OpenStops_Ask_0_Reply) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsGetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply0 returns the union data inside the GetPanelIssue200JSONResponseBody_OpenStops_Ask_1_Reply as a GetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply0
+func (t GetPanelIssue200JSONResponseBody_OpenStops_Ask_1_Reply) AsGetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply0() (GetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply0, error) {
+	var body GetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply0 overwrites any union data inside the GetPanelIssue200JSONResponseBody_OpenStops_Ask_1_Reply as the provided GetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply0
+func (t *GetPanelIssue200JSONResponseBody_OpenStops_Ask_1_Reply) FromGetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply0(v GetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply0 performs a merge with any union data inside the GetPanelIssue200JSONResponseBody_OpenStops_Ask_1_Reply, using the provided GetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply0
+func (t *GetPanelIssue200JSONResponseBody_OpenStops_Ask_1_Reply) MergeGetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply0(v GetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply1 returns the union data inside the GetPanelIssue200JSONResponseBody_OpenStops_Ask_1_Reply as a GetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply1
+func (t GetPanelIssue200JSONResponseBody_OpenStops_Ask_1_Reply) AsGetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply1() (GetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply1, error) {
+	var body GetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply1 overwrites any union data inside the GetPanelIssue200JSONResponseBody_OpenStops_Ask_1_Reply as the provided GetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply1
+func (t *GetPanelIssue200JSONResponseBody_OpenStops_Ask_1_Reply) FromGetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply1(v GetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply1 performs a merge with any union data inside the GetPanelIssue200JSONResponseBody_OpenStops_Ask_1_Reply, using the provided GetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply1
+func (t *GetPanelIssue200JSONResponseBody_OpenStops_Ask_1_Reply) MergeGetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply1(v GetPanelIssue200JSONResponseBodyOpenStopsAsk1Reply1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t GetPanelIssue200JSONResponseBody_OpenStops_Ask_1_Reply) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *GetPanelIssue200JSONResponseBody_OpenStops_Ask_1_Reply) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsGetPanelIssue200JSONResponseBodyOpenStopsAsk0 returns the union data inside the GetPanelIssue200JSONResponseBody_OpenStops_Ask as a GetPanelIssue200JSONResponseBodyOpenStopsAsk0
+func (t GetPanelIssue200JSONResponseBody_OpenStops_Ask) AsGetPanelIssue200JSONResponseBodyOpenStopsAsk0() (GetPanelIssue200JSONResponseBodyOpenStopsAsk0, error) {
+	var body GetPanelIssue200JSONResponseBodyOpenStopsAsk0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetPanelIssue200JSONResponseBodyOpenStopsAsk0 overwrites any union data inside the GetPanelIssue200JSONResponseBody_OpenStops_Ask as the provided GetPanelIssue200JSONResponseBodyOpenStopsAsk0
+func (t *GetPanelIssue200JSONResponseBody_OpenStops_Ask) FromGetPanelIssue200JSONResponseBodyOpenStopsAsk0(v GetPanelIssue200JSONResponseBodyOpenStopsAsk0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetPanelIssue200JSONResponseBodyOpenStopsAsk0 performs a merge with any union data inside the GetPanelIssue200JSONResponseBody_OpenStops_Ask, using the provided GetPanelIssue200JSONResponseBodyOpenStopsAsk0
+func (t *GetPanelIssue200JSONResponseBody_OpenStops_Ask) MergeGetPanelIssue200JSONResponseBodyOpenStopsAsk0(v GetPanelIssue200JSONResponseBodyOpenStopsAsk0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetPanelIssue200JSONResponseBodyOpenStopsAsk1 returns the union data inside the GetPanelIssue200JSONResponseBody_OpenStops_Ask as a GetPanelIssue200JSONResponseBodyOpenStopsAsk1
+func (t GetPanelIssue200JSONResponseBody_OpenStops_Ask) AsGetPanelIssue200JSONResponseBodyOpenStopsAsk1() (GetPanelIssue200JSONResponseBodyOpenStopsAsk1, error) {
+	var body GetPanelIssue200JSONResponseBodyOpenStopsAsk1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetPanelIssue200JSONResponseBodyOpenStopsAsk1 overwrites any union data inside the GetPanelIssue200JSONResponseBody_OpenStops_Ask as the provided GetPanelIssue200JSONResponseBodyOpenStopsAsk1
+func (t *GetPanelIssue200JSONResponseBody_OpenStops_Ask) FromGetPanelIssue200JSONResponseBodyOpenStopsAsk1(v GetPanelIssue200JSONResponseBodyOpenStopsAsk1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetPanelIssue200JSONResponseBodyOpenStopsAsk1 performs a merge with any union data inside the GetPanelIssue200JSONResponseBody_OpenStops_Ask, using the provided GetPanelIssue200JSONResponseBodyOpenStopsAsk1
+func (t *GetPanelIssue200JSONResponseBody_OpenStops_Ask) MergeGetPanelIssue200JSONResponseBodyOpenStopsAsk1(v GetPanelIssue200JSONResponseBodyOpenStopsAsk1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t GetPanelIssue200JSONResponseBody_OpenStops_Ask) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *GetPanelIssue200JSONResponseBody_OpenStops_Ask) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }
@@ -1914,6 +2334,192 @@ func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) UnmarshalJSON(b []byte)
 	return err
 }
 
+// AsSyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply0 returns the union data inside the SyncPanelRosterJSONBody_Groups_OpenStops_Ask_0_Reply as a SyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply0
+func (t SyncPanelRosterJSONBody_Groups_OpenStops_Ask_0_Reply) AsSyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply0() (SyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply0, error) {
+	var body SyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply0 overwrites any union data inside the SyncPanelRosterJSONBody_Groups_OpenStops_Ask_0_Reply as the provided SyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply0
+func (t *SyncPanelRosterJSONBody_Groups_OpenStops_Ask_0_Reply) FromSyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply0(v SyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply0 performs a merge with any union data inside the SyncPanelRosterJSONBody_Groups_OpenStops_Ask_0_Reply, using the provided SyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply0
+func (t *SyncPanelRosterJSONBody_Groups_OpenStops_Ask_0_Reply) MergeSyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply0(v SyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply1 returns the union data inside the SyncPanelRosterJSONBody_Groups_OpenStops_Ask_0_Reply as a SyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply1
+func (t SyncPanelRosterJSONBody_Groups_OpenStops_Ask_0_Reply) AsSyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply1() (SyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply1, error) {
+	var body SyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply1 overwrites any union data inside the SyncPanelRosterJSONBody_Groups_OpenStops_Ask_0_Reply as the provided SyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply1
+func (t *SyncPanelRosterJSONBody_Groups_OpenStops_Ask_0_Reply) FromSyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply1(v SyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply1 performs a merge with any union data inside the SyncPanelRosterJSONBody_Groups_OpenStops_Ask_0_Reply, using the provided SyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply1
+func (t *SyncPanelRosterJSONBody_Groups_OpenStops_Ask_0_Reply) MergeSyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply1(v SyncPanelRosterJSONBodyGroupsOpenStopsAsk0Reply1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t SyncPanelRosterJSONBody_Groups_OpenStops_Ask_0_Reply) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *SyncPanelRosterJSONBody_Groups_OpenStops_Ask_0_Reply) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsSyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply0 returns the union data inside the SyncPanelRosterJSONBody_Groups_OpenStops_Ask_1_Reply as a SyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply0
+func (t SyncPanelRosterJSONBody_Groups_OpenStops_Ask_1_Reply) AsSyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply0() (SyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply0, error) {
+	var body SyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply0 overwrites any union data inside the SyncPanelRosterJSONBody_Groups_OpenStops_Ask_1_Reply as the provided SyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply0
+func (t *SyncPanelRosterJSONBody_Groups_OpenStops_Ask_1_Reply) FromSyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply0(v SyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply0 performs a merge with any union data inside the SyncPanelRosterJSONBody_Groups_OpenStops_Ask_1_Reply, using the provided SyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply0
+func (t *SyncPanelRosterJSONBody_Groups_OpenStops_Ask_1_Reply) MergeSyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply0(v SyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply1 returns the union data inside the SyncPanelRosterJSONBody_Groups_OpenStops_Ask_1_Reply as a SyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply1
+func (t SyncPanelRosterJSONBody_Groups_OpenStops_Ask_1_Reply) AsSyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply1() (SyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply1, error) {
+	var body SyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply1 overwrites any union data inside the SyncPanelRosterJSONBody_Groups_OpenStops_Ask_1_Reply as the provided SyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply1
+func (t *SyncPanelRosterJSONBody_Groups_OpenStops_Ask_1_Reply) FromSyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply1(v SyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply1 performs a merge with any union data inside the SyncPanelRosterJSONBody_Groups_OpenStops_Ask_1_Reply, using the provided SyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply1
+func (t *SyncPanelRosterJSONBody_Groups_OpenStops_Ask_1_Reply) MergeSyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply1(v SyncPanelRosterJSONBodyGroupsOpenStopsAsk1Reply1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t SyncPanelRosterJSONBody_Groups_OpenStops_Ask_1_Reply) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *SyncPanelRosterJSONBody_Groups_OpenStops_Ask_1_Reply) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsSyncPanelRosterJSONBodyGroupsOpenStopsAsk0 returns the union data inside the SyncPanelRosterJSONBody_Groups_OpenStops_Ask as a SyncPanelRosterJSONBodyGroupsOpenStopsAsk0
+func (t SyncPanelRosterJSONBody_Groups_OpenStops_Ask) AsSyncPanelRosterJSONBodyGroupsOpenStopsAsk0() (SyncPanelRosterJSONBodyGroupsOpenStopsAsk0, error) {
+	var body SyncPanelRosterJSONBodyGroupsOpenStopsAsk0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSyncPanelRosterJSONBodyGroupsOpenStopsAsk0 overwrites any union data inside the SyncPanelRosterJSONBody_Groups_OpenStops_Ask as the provided SyncPanelRosterJSONBodyGroupsOpenStopsAsk0
+func (t *SyncPanelRosterJSONBody_Groups_OpenStops_Ask) FromSyncPanelRosterJSONBodyGroupsOpenStopsAsk0(v SyncPanelRosterJSONBodyGroupsOpenStopsAsk0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSyncPanelRosterJSONBodyGroupsOpenStopsAsk0 performs a merge with any union data inside the SyncPanelRosterJSONBody_Groups_OpenStops_Ask, using the provided SyncPanelRosterJSONBodyGroupsOpenStopsAsk0
+func (t *SyncPanelRosterJSONBody_Groups_OpenStops_Ask) MergeSyncPanelRosterJSONBodyGroupsOpenStopsAsk0(v SyncPanelRosterJSONBodyGroupsOpenStopsAsk0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSyncPanelRosterJSONBodyGroupsOpenStopsAsk1 returns the union data inside the SyncPanelRosterJSONBody_Groups_OpenStops_Ask as a SyncPanelRosterJSONBodyGroupsOpenStopsAsk1
+func (t SyncPanelRosterJSONBody_Groups_OpenStops_Ask) AsSyncPanelRosterJSONBodyGroupsOpenStopsAsk1() (SyncPanelRosterJSONBodyGroupsOpenStopsAsk1, error) {
+	var body SyncPanelRosterJSONBodyGroupsOpenStopsAsk1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSyncPanelRosterJSONBodyGroupsOpenStopsAsk1 overwrites any union data inside the SyncPanelRosterJSONBody_Groups_OpenStops_Ask as the provided SyncPanelRosterJSONBodyGroupsOpenStopsAsk1
+func (t *SyncPanelRosterJSONBody_Groups_OpenStops_Ask) FromSyncPanelRosterJSONBodyGroupsOpenStopsAsk1(v SyncPanelRosterJSONBodyGroupsOpenStopsAsk1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSyncPanelRosterJSONBodyGroupsOpenStopsAsk1 performs a merge with any union data inside the SyncPanelRosterJSONBody_Groups_OpenStops_Ask, using the provided SyncPanelRosterJSONBodyGroupsOpenStopsAsk1
+func (t *SyncPanelRosterJSONBody_Groups_OpenStops_Ask) MergeSyncPanelRosterJSONBodyGroupsOpenStopsAsk1(v SyncPanelRosterJSONBodyGroupsOpenStopsAsk1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t SyncPanelRosterJSONBody_Groups_OpenStops_Ask) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *SyncPanelRosterJSONBody_Groups_OpenStops_Ask) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
 // AsSyncPanelRoster200JSONResponseBodyActionsAction0 returns the union data inside the SyncPanelRoster200JSONResponseBody_Actions_Action as a SyncPanelRoster200JSONResponseBodyActionsAction0
 func (t SyncPanelRoster200JSONResponseBody_Actions_Action) AsSyncPanelRoster200JSONResponseBodyActionsAction0() (SyncPanelRoster200JSONResponseBodyActionsAction0, error) {
 	var body SyncPanelRoster200JSONResponseBodyActionsAction0
@@ -2008,6 +2614,32 @@ func (t *SyncPanelRoster200JSONResponseBody_Actions_Action) FromSyncPanelRoster2
 
 // MergeSyncPanelRoster200JSONResponseBodyActionsAction3 performs a merge with any union data inside the SyncPanelRoster200JSONResponseBody_Actions_Action, using the provided SyncPanelRoster200JSONResponseBodyActionsAction3
 func (t *SyncPanelRoster200JSONResponseBody_Actions_Action) MergeSyncPanelRoster200JSONResponseBodyActionsAction3(v SyncPanelRoster200JSONResponseBodyActionsAction3) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSyncPanelRoster200JSONResponseBodyActionsAction4 returns the union data inside the SyncPanelRoster200JSONResponseBody_Actions_Action as a SyncPanelRoster200JSONResponseBodyActionsAction4
+func (t SyncPanelRoster200JSONResponseBody_Actions_Action) AsSyncPanelRoster200JSONResponseBodyActionsAction4() (SyncPanelRoster200JSONResponseBodyActionsAction4, error) {
+	var body SyncPanelRoster200JSONResponseBodyActionsAction4
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSyncPanelRoster200JSONResponseBodyActionsAction4 overwrites any union data inside the SyncPanelRoster200JSONResponseBody_Actions_Action as the provided SyncPanelRoster200JSONResponseBodyActionsAction4
+func (t *SyncPanelRoster200JSONResponseBody_Actions_Action) FromSyncPanelRoster200JSONResponseBodyActionsAction4(v SyncPanelRoster200JSONResponseBodyActionsAction4) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSyncPanelRoster200JSONResponseBodyActionsAction4 performs a merge with any union data inside the SyncPanelRoster200JSONResponseBody_Actions_Action, using the provided SyncPanelRoster200JSONResponseBodyActionsAction4
+func (t *SyncPanelRoster200JSONResponseBody_Actions_Action) MergeSyncPanelRoster200JSONResponseBodyActionsAction4(v SyncPanelRoster200JSONResponseBodyActionsAction4) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -4698,11 +5330,12 @@ type GetPanelIssueResponse struct {
 			UpdatedAt               string             `json:"updatedAt"`
 			WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
 		} `json:"issue"`
-		OpenStop *struct {
-			Kind        StopKind           `json:"kind"`
-			Resolutions []StopResolution   `json:"resolutions"`
-			StopId      openapi_types.UUID `json:"stopId"`
-		} `json:"openStop,omitempty"`
+		OpenStops []struct {
+			Ask         *GetPanelIssue200JSONResponseBody_OpenStops_Ask `json:"ask,omitempty"`
+			Kind        StopKind                                        `json:"kind"`
+			Resolutions []StopResolution                                `json:"resolutions"`
+			StopId      openapi_types.UUID                              `json:"stopId"`
+		} `json:"openStops"`
 		Timeline []GetPanelIssue200JSONResponseBody_Timeline_Item `json:"timeline"`
 	}
 }
@@ -5920,11 +6553,12 @@ func ParseGetPanelIssueResponse(rsp *http.Response) (*GetPanelIssueResponse, err
 				UpdatedAt               string             `json:"updatedAt"`
 				WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
 			} `json:"issue"`
-			OpenStop *struct {
-				Kind        StopKind           `json:"kind"`
-				Resolutions []StopResolution   `json:"resolutions"`
-				StopId      openapi_types.UUID `json:"stopId"`
-			} `json:"openStop,omitempty"`
+			OpenStops []struct {
+				Ask         *GetPanelIssue200JSONResponseBody_OpenStops_Ask `json:"ask,omitempty"`
+				Kind        StopKind                                        `json:"kind"`
+				Resolutions []StopResolution                                `json:"resolutions"`
+				StopId      openapi_types.UUID                              `json:"stopId"`
+			} `json:"openStops"`
 			Timeline []GetPanelIssue200JSONResponseBody_Timeline_Item `json:"timeline"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {

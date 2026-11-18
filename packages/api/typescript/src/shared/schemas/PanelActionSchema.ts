@@ -6,6 +6,8 @@ import {
 	StopResolution,
 } from '@codm/contracts-typescript/wire/enums'
 import type Z from 'zod'
+import { AskAnswerSchema } from '@shared/objects'
+import { AskViewSchema } from './AskViewSchema'
 
 /** The longest instruction a person may send an issue from the panel. */
 export const PANEL_STEER_MAX = 2000
@@ -25,6 +27,9 @@ export const PanelActionBodySchema = z.discriminatedUnion('kind', [
 	z.object({ kind: z.literal(PanelActionKind.RESUME), issueId }),
 	z.object({ kind: z.literal(PanelActionKind.STEER), issueId, text: z.string().trim().min(1).max(PANEL_STEER_MAX) }),
 	z.object({ kind: z.literal(PanelActionKind.ANSWER_STOP), issueId, stopId: z.uuid(), resolution: z.enum(StopResolution) }),
+	// Fase 3 — answering an issue's ask (a decision or a question) with one of its options or free text:
+	// the same `AskAnswer` the console posts, so every door speaks one answer.
+	z.object({ kind: z.literal(PanelActionKind.ANSWER_ASK), issueId, stopId: z.uuid(), answer: AskAnswerSchema }),
 ])
 export type PanelActionBody = Z.output<typeof PanelActionBodySchema>
 
@@ -51,11 +56,17 @@ export type PanelActionOutcome = Z.output<typeof PanelActionOutcomeSchema>
 /**
  * An OPEN stop of one issue that the panel may answer, with the answers it admits there — computed on the
  * daemon from the thread's own per-kind table, so the cloud never re-derives it.
+ *
+ * `ask` (fase 3): the stop is an issue's decision or question — its code, the question, how to answer it
+ * (`ANSWER_ASK`) and, for a decision, whether only someone who may release answers it. The same view the
+ * console's Needs-you card shows, built on the daemon; it carries no address. Optional: a stop without an
+ * ask has none, and the cloud deploys first, so a roster from an older daemon still validates.
  */
 export const PanelOpenStopSchema = z.object({
 	stopId: z.uuid(),
 	issueId: z.uuid(),
 	kind: z.enum(StopKind),
 	resolutions: z.array(z.enum(StopResolution)).max(8),
+	ask: AskViewSchema.optional(),
 })
 export type PanelOpenStop = Z.output<typeof PanelOpenStopSchema>

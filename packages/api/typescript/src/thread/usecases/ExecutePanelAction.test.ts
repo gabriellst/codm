@@ -2,6 +2,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { LibSqlDatabaseDriver } from '@codm/core-typescript'
 import {
+	AskAnswerKind,
+	AskEffect,
 	ContactKind,
 	IssueControlSource,
 	IssueStatus,
@@ -247,6 +249,119 @@ describe('ExecutePanelAction — through the roster pull', () => {
 		expect(await testBed.resolve(ThreadRepository).openStops(threadId)).toHaveLength(0)
 		expect((await testBed.resolve(ThreadRepository).findStop(stop.stopId))?.resolution).toBe(StopResolution.APPROVE)
 		expect((await echoes(threadId)).map(entry => entry.text)).toEqual(['Ana aprovou APP-1 pelo painel'])
+	})
+
+	const YES_NO = [
+		{ id: 'yes', label: 'Sim' },
+		{ id: 'no', label: 'Não' },
+	]
+
+	it('fase 3 — an ask goes out with its view (code, options, who may answer, no address), not a bare resolution', async () => {
+		const { threadId, issueId } = await givenGroup()
+		const stop = await givenStop(testBed, {
+			threadId,
+			issueId,
+			ask: {
+				question: 'Publico a prévia?',
+				options: YES_NO,
+				effects: [AskEffect.PUBLISH],
+				addresseeId: ANA_JID,
+				requested: StopKind.DECISION_REQUESTED,
+			},
+		})
+
+		await run()
+		expect(relay().batches.at(-1)?.groups[0]?.openStops).toEqual([
+			{
+				stopId: stop.stopId,
+				issueId,
+				kind: StopKind.DECISION_REQUESTED,
+				resolutions: [],
+				ask: {
+					kind: StopKind.DECISION_REQUESTED,
+					code: 'APP-1 · D1',
+					question: 'Publico a prévia?',
+					reply: { kind: AskAnswerKind.OPTION, options: YES_NO },
+					releaseRequired: true,
+				},
+			},
+		])
+		// The addressee is a WhatsApp address on this machine — it never rides the roster.
+		expect(JSON.stringify(relay().batches)).not.toContain('@')
+	})
+
+	it('fase 3 — ANSWER_ASK runs AnswerStop as the member: the ruler of who answers, the answer recorded, one echo with the code', async () => {
+		const { threadId, issueId, memberOf } = await givenGroup()
+		const stop = await givenStop(testBed, {
+			threadId,
+			issueId,
+			ask: { question: 'Publico a prévia?', options: YES_NO, effects: [AskEffect.PUBLISH], requested: StopKind.DECISION_REQUESTED },
+		})
+		const no = { kind: AskAnswerKind.OPTION, optionId: 'no' } as const
+
+		// Beto may act but not release: a decision that publishes is refused, the ask stays open, no echo.
+		const refused = handOut(threadId, memberOf(BETO_JID), { kind: PanelActionKind.ANSWER_ASK, issueId, stopId: stop.stopId, answer: no })
+		await run()
+		expect(await testBed.resolve(PanelActionLedger).find(refused)).toEqual(
+			expect.objectContaining({ outcome: PanelActionOutcome.REFUSED, code: 'PARTICIPANT_CANNOT_RELEASE' }),
+		)
+		expect(await testBed.resolve(ThreadRepository).openStops(threadId)).toHaveLength(1)
+		expect(await echoes(threadId)).toHaveLength(0)
+
+		// Ana may release: the answer lands as hers, with the echo the group sees.
+		handOut(threadId, memberOf(ANA_JID), { kind: PanelActionKind.ANSWER_ASK, issueId, stopId: stop.stopId, answer: no })
+		await run()
+		const answered = await testBed.resolve(ThreadRepository).findStop(stop.stopId)
+		expect(answered?.resolution).toBe(StopResolution.ANSWER)
+		expect(answered?.answer).toEqual(no)
+		expect(answered?.answeredBy).toBe(ANA_JID)
+		expect((await echoes(threadId)).map(entry => entry.text)).toEqual(['Ana respondeu APP-1 · D1 pelo painel'])
+
+		// A second answer to the same ask (another device, a re-sent click): refused, the first one stands.
+		const late = handOut(threadId, memberOf(ANA_JID), {
+			kind: PanelActionKind.ANSWER_ASK,
+			issueId,
+			stopId: stop.stopId,
+			answer: { kind: AskAnswerKind.OPTION, optionId: 'yes' },
+		})
+		await run()
+		expect(await testBed.resolve(PanelActionLedger).find(late)).toEqual(
+			expect.objectContaining({ outcome: PanelActionOutcome.REFUSED, code: 'STOP_ALREADY_RESOLVED' }),
+		)
+		expect(await echoes(threadId)).toHaveLength(1)
+	})
+
+	it('fase 3 — a question without effect: any member who may act answers in free text; a muted one and another issue are refused', async () => {
+		const { threadId, issueId, memberOf } = await givenGroup()
+		const other = await givenIssue(testBed, { threadId, key: 'APP-2', title: 'Outra' })
+		const stop = await givenStop(testBed, {
+			threadId,
+			issueId,
+			ask: {
+				question: 'Qual título?',
+				options: [],
+				default: { kind: AskAnswerKind.TEXT, text: 'Novidades' },
+				effects: [],
+				requested: StopKind.QUESTION_ASKED,
+			},
+		})
+		const text = { kind: AskAnswerKind.TEXT, text: 'Novidades de novembro' } as const
+
+		const muted = handOut(threadId, memberOf(MUTED_JID), { kind: PanelActionKind.ANSWER_ASK, issueId, stopId: stop.stopId, answer: text })
+		const foreign = handOut(threadId, memberOf(BETO_JID), {
+			kind: PanelActionKind.ANSWER_ASK,
+			issueId: other.id.value,
+			stopId: stop.stopId,
+			answer: text,
+		})
+		await run()
+		expect(await testBed.resolve(PanelActionLedger).find(muted)).toEqual(expect.objectContaining({ code: 'PARTICIPANT_CANNOT_ACT' }))
+		expect(await testBed.resolve(PanelActionLedger).find(foreign)).toEqual(expect.objectContaining({ code: 'STOP_NOT_FOUND' }))
+
+		handOut(threadId, memberOf(BETO_JID), { kind: PanelActionKind.ANSWER_ASK, issueId, stopId: stop.stopId, answer: text })
+		await run()
+		expect((await testBed.resolve(ThreadRepository).findStop(stop.stopId))?.answer).toEqual(text)
+		expect((await echoes(threadId)).map(entry => entry.text)).toEqual(['Beto respondeu APP-1 · D1 pelo painel'])
 	})
 
 	it("the account's own number answers as the operator; a muted member and one who left are refused", async () => {

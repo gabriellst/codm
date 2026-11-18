@@ -5,11 +5,11 @@
 
 
 export const PanelActionKindEnum = {
+    ANSWER_ASK: "ANSWER_ASK",
+    ANSWER_STOP: "ANSWER_STOP",
     PAUSE: "PAUSE",
     RESUME: "RESUME",
-    STEER: "STEER",
-    ANSWER_STOP: "ANSWER_STOP",
-    ANSWER_ASK: "ANSWER_ASK"
+    STEER: "STEER"
 } as const;
 
 export type PanelActionKindEnumKey = (typeof PanelActionKindEnum)[keyof typeof PanelActionKindEnum];
