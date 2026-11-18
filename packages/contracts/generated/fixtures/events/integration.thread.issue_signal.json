@@ -12,6 +12,7 @@
 			"artifactIds-sample"
 		],
 		"mainArtifactId": "mainArtifactId-sample",
-		"addresseeId": "addresseeId-sample"
+		"addresseeId": "addresseeId-sample",
+		"signalId": "signalId-sample"
 	}
 }

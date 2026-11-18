@@ -142,6 +142,9 @@ export class PublishAgentIntegrationEvents extends EventHandler<
 						artifactIds: event.payload.artifactIds,
 						mainArtifactId: event.payload.mainArtifactId,
 						addresseeId: event.payload.addresseeId,
+						// THE FACT'S OWN ID, the one the outbox persisted — a redelivery of this domain event mints a new
+						// integration event (new id) but carries the same `signalId`, so the thread records it once.
+						signalId: event.id,
 					},
 				}),
 			)

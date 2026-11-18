@@ -681,6 +681,9 @@ pub struct ThreadIssueSignalPayload {
 	/// Who the issue is talking to (a thread participant id) — the key of the per-person digest. Absent ⇒ whoever wrote the message the issue came from.
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub addressee_id: Option<String>,
+	/// The id of the fact the issue said this in (the agent's own `agent.issue_spoke` event) — stable across redeliveries, so the consumer records the signal ONCE: it becomes the transcript entry's id. Optional only for facts published before it existed; absent ⇒ the consumer falls back to this event's own id.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub signal_id: Option<String>,
 }
 
 /// `integration.thread.issue_signal` in the canonical transport envelope.

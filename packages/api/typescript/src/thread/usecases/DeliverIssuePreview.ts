@@ -80,6 +80,9 @@ export class DeliverIssuePreview extends Handler<typeof DeliverIssuePreviewInput
 							: {}),
 					},
 					tx,
+					// The entry's send, once: a redelivered preview command finds it still queued and adds nothing.
+					// Prefixed — job ids are one namespace across commands, and the text path below uses the bare id.
+					{ jobId: `preview-media:${entry.entryId}` },
 				)
 				return
 			}

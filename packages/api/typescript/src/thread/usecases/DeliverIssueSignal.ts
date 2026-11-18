@@ -20,6 +20,11 @@ export const DeliverIssueSignalInputSchema = z.object({
 	mainArtifactId: z.uuid().optional(),
 	/** Every artifact the signal cites (the main one included) — the others are counted, and stay on the console. */
 	artifactIds: z.array(z.uuid()).optional(),
+	/**
+	 * What makes delivering the same signal twice a no-op: it becomes the entry's id. A redelivered fact finds
+	 * its entry already recorded and sends nothing more (its delivery was queued with it, in the same commit).
+	 */
+	signalId: z.uuid(),
 })
 export const DeliverIssueSignalOutputSchema = z.object({
 	entryId: z.uuid(),
@@ -64,6 +69,11 @@ export class DeliverIssueSignal extends Handler<typeof DeliverIssueSignalInputSc
 		const others = (input.artifactIds ?? []).filter(artifactId => artifactId !== input.mainArtifactId).length
 
 		return this.withTransaction(tx, async tx => {
+			// ALREADY SAID — the signal's entry committed with its delivery, so there is nothing left to do. Read in
+			// the write transaction; a concurrent twin loses on the entry's primary key and its retry lands here.
+			const said = await this.threads.findEntry(input.signalId, tx)
+			if (said?.routing) return { entryId: said.entryId, routing: said.routing }
+
 			const { entry, routing } = recordIssueSignal(
 				thread,
 				{
@@ -74,6 +84,7 @@ export class DeliverIssueSignal extends Handler<typeof DeliverIssueSignalInputSc
 					requesterId,
 					artifactId: input.mainArtifactId,
 					moreArtifacts: others,
+					entryId: input.signalId,
 				},
 				{ language, panelLink: this.panel.linkOf(thread.id.value) },
 			)

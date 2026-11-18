@@ -12,6 +12,7 @@ export const ThreadIssueSignalEventSchema = z.integrationEvent('integration.thre
 	artifactIds: z.array(z.string()),
 	mainArtifactId: z.string().optional(),
 	addresseeId: z.string().optional(),
+	signalId: z.string().optional(),
 })
 
 export class ThreadIssueSignalEvent extends BaseIntegrationEvent<typeof ThreadIssueSignalEventSchema> {

@@ -1,3 +1,4 @@
+import { uuidv7 } from 'uuidv7'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { GroupOutputMode, IssueSignalLevel, Language, OutputRouting } from '@codm/contracts-typescript/wire/enums'
@@ -41,9 +42,13 @@ describe('DeliverIssueSignal — what an issue says goes where the group mode se
 	it('PROGRESS in the default mode is recorded for the panel and never sent', async () => {
 		const { thread, issue } = await setUp(GroupOutputMode.DECISIONS_AND_LIVE)
 
-		const out = await testBed
-			.resolve(DeliverIssueSignal)
-			.execute({ threadId: thread.id.value, issueId: issue.id.value, level: IssueSignalLevel.PROGRESS, text: 'montei o layout' })
+		const out = await testBed.resolve(DeliverIssueSignal).execute({
+			signalId: uuidv7(),
+			threadId: thread.id.value,
+			issueId: issue.id.value,
+			level: IssueSignalLevel.PROGRESS,
+			text: 'montei o layout',
+		})
 
 		expect(out.routing).toBe(OutputRouting.PANEL)
 		const entry = await testBed.resolve(ThreadRepository).findEntry(out.entryId)
@@ -56,9 +61,13 @@ describe('DeliverIssueSignal — what an issue says goes where the group mode se
 		// The group has a panel link once the cloud handed a token (here: a rotation on the mock).
 		await testBed.resolve(PanelPublisher).rotate(thread.id.value)
 
-		const out = await testBed
-			.resolve(DeliverIssueSignal)
-			.execute({ threadId: thread.id.value, issueId: issue.id.value, level: IssueSignalLevel.PROGRESS, text: 'montei o layout' })
+		const out = await testBed.resolve(DeliverIssueSignal).execute({
+			signalId: uuidv7(),
+			threadId: thread.id.value,
+			issueId: issue.id.value,
+			level: IssueSignalLevel.PROGRESS,
+			text: 'montei o layout',
+		})
 
 		expect(out.routing).toBe(OutputRouting.GROUP)
 		const entry = await testBed.resolve(ThreadRepository).findEntry(out.entryId)
@@ -70,9 +79,13 @@ describe('DeliverIssueSignal — what an issue says goes where the group mode se
 	it('FEEDBACK in DECISIONS_ONLY stays on the panel', async () => {
 		const { thread, issue } = await setUp(GroupOutputMode.DECISIONS_ONLY)
 
-		const out = await testBed
-			.resolve(DeliverIssueSignal)
-			.execute({ threadId: thread.id.value, issueId: issue.id.value, level: IssueSignalLevel.FEEDBACK, text: 'prévia pronta' })
+		const out = await testBed.resolve(DeliverIssueSignal).execute({
+			signalId: uuidv7(),
+			threadId: thread.id.value,
+			issueId: issue.id.value,
+			level: IssueSignalLevel.FEEDBACK,
+			text: 'prévia pronta',
+		})
 
 		expect(out.routing).toBe(OutputRouting.PANEL)
 		expect(await deliveries()).toBe(0)

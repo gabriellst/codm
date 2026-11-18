@@ -10,3 +10,5 @@ export { FireDueLoops } from './usecases/FireDueLoops'
 export { PublishPanelRoster } from './usecases/PublishPanelRoster'
 // Fase 3, item 1b — a pergunta entregue e sem resposta segue com o padrão 15 min depois (a cada 30 s).
 export { ApplyDueQuestionDefaults } from './usecases/ApplyDueQuestionDefaults'
+// Fase 3, item 2 — a rede do resumo por pessoa: sinal que passou da janela sem flush sai (a cada 30 s).
+export { FlushOverdueDigests } from './usecases/FlushOverdueDigests'

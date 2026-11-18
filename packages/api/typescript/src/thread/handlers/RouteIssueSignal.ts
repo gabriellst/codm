@@ -52,6 +52,9 @@ export class RouteIssueSignal extends EventHandler<typeof ThreadIssueSignalEvent
 				addresseeId: payload.addresseeId,
 				mainArtifactId: payload.mainArtifactId,
 				artifactIds: payload.artifactIds,
+				// The dedup key: the issue's own fact, stable across every redelivery (this event's id is not, when
+				// the bridge republishes). Absent only on a fact published before the field existed.
+				signalId: payload.signalId ?? event.id,
 			})
 		} catch (error) {
 			// The conversation or the issue is gone — nowhere to say it; a retry would find them gone too.

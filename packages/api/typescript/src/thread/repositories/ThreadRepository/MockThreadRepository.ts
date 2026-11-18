@@ -4,7 +4,7 @@ import { OutputRouting, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { Thread, type Stop, type TranscriptEntry } from '../../entities/Thread'
 import { askDueAt } from '../../objects/StopAsk'
 import type { DomainErrors } from '../../errors'
-import { ThreadRepository } from './ThreadRepository'
+import { ThreadRepository, type OverdueDigest } from './ThreadRepository'
 
 /**
  * Test double for `mock` mode.
@@ -144,6 +144,15 @@ export class MockThreadRepository extends ThreadRepository {
 		return this.byThreadChronological(threadId).filter(
 			e => e.routing === OutputRouting.DIGEST && !e.digestEntryId && e.addresseeId === addresseeId,
 		)
+	}
+
+	async overdueDigests(cutoff: Date): Promise<OverdueDigest[]> {
+		const seen = new Map<string, OverdueDigest>()
+		for (const e of this.entries) {
+			if (e.routing !== OutputRouting.DIGEST || e.digestEntryId || e.at.getTime() > cutoff.getTime()) continue
+			seen.set(`${e.threadId}:${e.addresseeId ?? ''}`, { ownerId: e.ownerId, threadId: e.threadId, addresseeId: e.addresseeId })
+		}
+		return [...seen.values()]
 	}
 
 	private byThreadChronological(threadId: string): TranscriptEntry[] {

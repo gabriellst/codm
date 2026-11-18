@@ -104,4 +104,17 @@ export abstract class ThreadRepository extends Repository<Thread> {
 	 * person, which digest together), oldest first.
 	 */
 	abstract pendingDigest(threadId: string, addresseeId: string | undefined, tx?: Transaction): Promise<TranscriptEntry[]>
+	/**
+	 * The people (per conversation) with a signal still waiting for its digest that was recorded at or before
+	 * `cutoff` — what the overdue-digest sweep flushes (`FlushOverdueDigests`). One row per (thread, person);
+	 * `addresseeId` absent = the signals with no person.
+	 */
+	abstract overdueDigests(cutoff: Date, tx?: Transaction): Promise<OverdueDigest[]>
+}
+
+/** A person's digest whose window passed without a flush — see `ThreadRepository.overdueDigests`. */
+export interface OverdueDigest {
+	ownerId: string
+	threadId: string
+	addresseeId?: string
 }

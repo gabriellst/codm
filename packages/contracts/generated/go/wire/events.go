@@ -955,6 +955,7 @@ type ThreadIssueSignalEvent struct {
 	ArtifactIDs []string `json:"artifactIds"`
 	MainArtifactID *string `json:"mainArtifactId,omitempty"`
 	AddresseeID *string `json:"addresseeId,omitempty"`
+	SignalID *string `json:"signalId,omitempty"`
 }
 
 func (e ThreadIssueSignalEvent) EventName() string { return ThreadIssueSignalEventName }
@@ -968,6 +969,7 @@ type ThreadIssueSignalPayload struct {
 	ArtifactIDs []string `json:"artifactIds" validate:"required"`
 	MainArtifactID *string `json:"mainArtifactId,omitempty"`
 	AddresseeID *string `json:"addresseeId,omitempty"`
+	SignalID *string `json:"signalId,omitempty"`
 }
 
 // ThreadMessageIngestedEventName is the wire discriminator for ThreadMessageIngestedEvent.

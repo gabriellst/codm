@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { and, asc, desc, eq, inArray, isNull, lte, max, or } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNull, lte, max, min, or } from 'drizzle-orm'
 import { BaseError, LibSqlDatabaseDriver, tryCatchAsync, LibSqlTransaction } from '@codm/core-typescript'
 import { threads, transcriptEntries, stops } from '@codm/contracts/db'
 import {
@@ -14,7 +14,7 @@ import { StopAnswerSchema, StopAskSchema } from '@shared/objects'
 import { Thread, ThreadSchema, type MentionGate, type Participant, type Stop, type TranscriptEntry } from '../../entities/Thread'
 import { askDueAt } from '../../objects/StopAsk'
 import type { DomainErrors } from '../../errors'
-import { ThreadRepository } from './ThreadRepository'
+import { ThreadRepository, type OverdueDigest } from './ThreadRepository'
 
 @injectable()
 export class LibSqlThreadRepository extends ThreadRepository {
@@ -314,6 +314,26 @@ export class LibSqlThreadRepository extends ThreadRepository {
 			)
 			.orderBy(asc(transcriptEntries.at))
 		return rows.map(row => this.toEntry(row))
+	}
+
+	async overdueDigests(cutoff: Date, tx?: LibSqlTransaction): Promise<OverdueDigest[]> {
+		const dbc = tx ?? this.driver.db
+		// Thread by thread (`thread_id IN (…)`) with the three equalities of `transcript_entries_digest_idx`, and
+		// the age as a HAVING over the few waiting rows: an `at` range in the WHERE makes SQLite pick the
+		// (thread, at) index and walk the whole transcript every sweep (EXPLAIN QUERY PLAN, checked).
+		const rows = await dbc
+			.select({ ownerId: transcriptEntries.ownerId, threadId: transcriptEntries.threadId, addresseeId: transcriptEntries.addresseeId })
+			.from(transcriptEntries)
+			.where(
+				and(
+					inArray(transcriptEntries.threadId, dbc.select({ id: threads.id }).from(threads)),
+					eq(transcriptEntries.routing, OutputRouting.DIGEST),
+					isNull(transcriptEntries.digestEntryId),
+				),
+			)
+			.groupBy(transcriptEntries.ownerId, transcriptEntries.threadId, transcriptEntries.addresseeId)
+			.having(lte(min(transcriptEntries.at), cutoff))
+		return rows.map(row => ({ ownerId: row.ownerId, threadId: row.threadId, addresseeId: row.addresseeId ?? undefined }))
 	}
 
 	async stopsCarriedBy(entryId: string, tx?: LibSqlTransaction): Promise<Stop[]> {

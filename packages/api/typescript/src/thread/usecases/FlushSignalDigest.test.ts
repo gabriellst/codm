@@ -26,6 +26,7 @@ import { RouteIssueSignal } from '../handlers/RouteIssueSignal'
 import { DeliverIssueSignal } from './DeliverIssueSignal'
 import { DeliverIssuePreview } from './DeliverIssuePreview'
 import { FlushSignalDigest } from './FlushSignalDigest'
+import { FlushOverdueDigests } from './FlushOverdueDigests'
 import { RaiseStop } from './RaiseStop'
 
 /**
@@ -182,7 +183,7 @@ describe('FlushSignalDigest — one message per person', () => {
 
 		const out = await testBed
 			.resolve(DeliverIssueSignal)
-			.execute({ threadId, issueId, level: IssueSignalLevel.FEEDBACK, text: 'prévia pronta' })
+			.execute({ signalId: uuidv7(), threadId, issueId, level: IssueSignalLevel.FEEDBACK, text: 'prévia pronta' })
 
 		expect(out.routing).toBe(OutputRouting.DIGEST)
 		expect((await threads.findEntry(out.entryId))?.addresseeId).toBe(PERSON)
@@ -197,6 +198,7 @@ describe('FlushSignalDigest — one message per person', () => {
 		const other = await givenArtifact(testBed, threadId, { issueId, kind: ArtifactKind.LINK, ref: 'https://preview.example.test' })
 
 		const out = await testBed.resolve(DeliverIssueSignal).execute({
+			signalId: uuidv7(),
 			threadId,
 			issueId,
 			level: IssueSignalLevel.FEEDBACK,
@@ -222,6 +224,7 @@ describe('FlushSignalDigest — one message per person', () => {
 		const { threadId, issueId } = await setUp()
 		const gone = await givenArtifact(testBed, threadId, { issueId, ref: join(scratch, 'never-written.png') })
 		const out = await testBed.resolve(DeliverIssueSignal).execute({
+			signalId: uuidv7(),
 			threadId,
 			issueId,
 			level: IssueSignalLevel.FEEDBACK,
@@ -243,7 +246,7 @@ describe('FlushSignalDigest — one message per person', () => {
 
 		const out = await testBed
 			.resolve(DeliverIssueSignal)
-			.execute({ threadId, issueId, level: IssueSignalLevel.PROGRESS, text: 'rodei os testes' })
+			.execute({ signalId: uuidv7(), threadId, issueId, level: IssueSignalLevel.PROGRESS, text: 'rodei os testes' })
 
 		expect(out.routing).toBe(OutputRouting.PANEL)
 		expect(await commands('flush_signal_digest')).toHaveLength(0)
@@ -268,5 +271,100 @@ describe('FlushSignalDigest — one message per person', () => {
 
 		const entries = (await testBed.resolve(ThreadRepository).listEntries(threadId)).filter(e => e.issueId === issueId)
 		expect(entries.map(e => e.level)).toEqual([IssueSignalLevel.PROGRESS])
+	})
+
+	/**
+	 * The window's flush is a timer, and a timer can miss: a signal recorded while its window's flush was
+	 * already running finds the job id taken (its own enqueue is a no-op) and is read by nobody; a flush that
+	 * burned its attempts is dead-lettered. Both end the same way — the signal waiting, no job for it. The
+	 * entry itself is the persisted state, so the overdue sweep sends it, once.
+	 */
+	it('a signal its window flush missed is sent by the overdue sweep — once, and not before the window passed', async () => {
+		const { threadId, issueId } = await setUp()
+		await askQuestion(threadId, issueId, 'Uso o tema claro?')
+		// The window's flush runs and sends the first one…
+		expect(await flush(threadId, PERSON)).toEqual({ flushed: 1 })
+		// …and a second signal of the same window lands while that job still holds its id, then the job is
+		// finalized (deleted) — the second signal is left with no job at all.
+		const late = await askQuestion(threadId, issueId, 'Mantenho o rodapé?')
+		const db = testBed.resolve(LibSqlDatabaseDriver).db
+		await db.delete(scheduledCommands).where(eq(scheduledCommands.name, 'flush_signal_digest'))
+		const threads = testBed.resolve(ThreadRepository)
+		const lateEntry = await threads.findEntry((await threads.findStop(late))?.askEntryId ?? '')
+		expect(lateEntry?.routing).toBe(OutputRouting.DIGEST)
+
+		const sweep = (now: Date) => testBed.resolve(FlushOverdueDigests).execute({ now })
+		// Still inside the window (plus the grace its own flush gets): the sweep leaves it alone.
+		expect(await sweep(new Date())).toEqual({ flushed: 0 })
+		const overdue = new Date(Date.now() + 2 * 60 * 1000)
+		expect(await sweep(overdue)).toEqual({ flushed: 1 })
+		expect(await sweep(overdue)).toEqual({ flushed: 0 })
+
+		const deliveries = await commands('deliver_channel_message')
+		expect(deliveries).toHaveLength(2)
+		expect(field(deliveries[1], 'text')).toContain('Mantenho o rodapé?')
+		expect((await threads.findEntry(lateEntry?.entryId ?? ''))?.routing).toBe(OutputRouting.GROUP)
+	})
+
+	it('the overdue sweep flushes the signals with no person too, and each person on their own', async () => {
+		const { threadId, issueId } = await setUp()
+		const deliver = (addresseeId?: string) =>
+			testBed
+				.resolve(DeliverIssueSignal)
+				.execute({ signalId: uuidv7(), threadId, issueId, level: IssueSignalLevel.FEEDBACK, text: 'prévia', addresseeId })
+		await deliver(PERSON)
+		await deliver(undefined)
+		const db = testBed.resolve(LibSqlDatabaseDriver).db
+		await db.delete(scheduledCommands).where(eq(scheduledCommands.name, 'flush_signal_digest'))
+
+		expect(await testBed.resolve(FlushOverdueDigests).execute({ now: new Date(Date.now() + 2 * 60 * 1000) })).toEqual({ flushed: 2 })
+		expect(await commands('deliver_channel_message')).toHaveLength(2)
+	})
+
+	/**
+	 * At-least-once on both hops: the bridge republishes a redelivered `agent.issue_spoke` under a NEW event id
+	 * with the SAME `signalId`. The thread records the signal under that id — the second delivery finds it
+	 * and queues nothing.
+	 */
+	it('a redelivered issue signal (same signalId, new event id) is recorded and sent once', async () => {
+		const { threadId, issueId } = await setUp(GroupOutputMode.EVERYTHING)
+		const signalId = uuidv7()
+		const fact = () =>
+			new ThreadIssueSignalEvent({
+				ownerId: MOCK_CLOUD_OWNER_ID,
+				payload: { issueId, threadId, level: IssueSignalLevel.PROGRESS, text: 'rodei os testes', artifactIds: [], signalId },
+			})
+		const [first, second] = [fact(), fact()]
+		expect(first.id).not.toBe(second.id)
+
+		await testBed.resolve(RouteIssueSignal).handle(first as never)
+		await testBed.resolve(RouteIssueSignal).handle(second as never)
+
+		const said = (await testBed.resolve(ThreadRepository).listEntries(threadId)).filter(e => e.issueId === issueId)
+		expect(said.map(e => e.entryId)).toEqual([signalId])
+		expect(await commands('deliver_channel_message')).toHaveLength(1)
+	})
+
+	it('a re-run preview command queues the print once', async () => {
+		const { threadId, issueId } = await setUp()
+		const path = join(scratch, 'again.png')
+		writeFileSync(path, 'png')
+		const main = await givenArtifact(testBed, threadId, { issueId, ref: path })
+		await testBed.resolve(DeliverIssueSignal).execute({
+			signalId: uuidv7(),
+			threadId,
+			issueId,
+			level: IssueSignalLevel.FEEDBACK,
+			text: 'prévia',
+			addresseeId: PERSON,
+			mainArtifactId: main.id.value,
+		})
+		await flush(threadId, PERSON)
+		const [preview] = await commands('deliver_issue_preview')
+		const input = preview?.input as { ownerId: string; threadId: string; entryId: string }
+		await testBed.resolve(DeliverIssuePreview).execute(input)
+		await testBed.resolve(DeliverIssuePreview).execute(input)
+
+		expect(await commands('deliver_channel_attachment')).toHaveLength(1)
 	})
 })

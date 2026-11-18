@@ -40,6 +40,11 @@ export interface IssueSignalDraft {
 	moreArtifacts?: number
 	/** The cause of this notice is already told in the group (`causeAlreadyTold`) — it goes to the panel only. */
 	alreadyTold?: boolean
+	/**
+	 * The entry's id when the signal has a stable identity of its own (the issue's fact, a completion) — what
+	 * makes recording it twice impossible. Absent ⇒ a fresh id.
+	 */
+	entryId?: string
 }
 
 /** Where the issue's link goes: the group's panel page, opened at the issue. Absent without a cloud login. */
@@ -75,6 +80,7 @@ export function recordIssueSignal(
 		moreArtifacts: draft.moreArtifacts,
 	})
 	const entry = thread.recordEntry({
+		entryId: draft.entryId,
 		kind: TranscriptKind.SYSTEM,
 		text,
 		issueId: draft.issue.issueId,

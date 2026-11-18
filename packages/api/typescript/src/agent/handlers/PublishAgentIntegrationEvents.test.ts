@@ -117,20 +117,19 @@ describe('PublishAgentIntegrationEvents (terminal.* domain facts → frozen inte
 	/** Fase 3 — what an issue SAID crosses whole: the thread's output policy needs every field to route it. */
 	it('agent.issue_spoke → integration.thread.issue_signal', async () => {
 		const { handler, published } = makeHandler()
-		await handler.handle(
-			new IssueSpokeEvent({
-				entityId: 'issue-1',
-				ownerId,
-				payload: {
-					issueId: 'issue-1',
-					threadId: 'thread-1',
-					level: IssueSignalLevel.FEEDBACK,
-					text: 'preview of the page',
-					artifactIds: ['artifact-1', 'artifact-2'],
-					mainArtifactId: 'artifact-1',
-				},
-			}) as never,
-		)
+		const spoke = new IssueSpokeEvent({
+			entityId: 'issue-1',
+			ownerId,
+			payload: {
+				issueId: 'issue-1',
+				threadId: 'thread-1',
+				level: IssueSignalLevel.FEEDBACK,
+				text: 'preview of the page',
+				artifactIds: ['artifact-1', 'artifact-2'],
+				mainArtifactId: 'artifact-1',
+			},
+		})
+		await handler.handle(spoke as never)
 		const event = published[0] as ThreadIssueSignalEvent
 		expect(event).toBeInstanceOf(ThreadIssueSignalEvent)
 		expect(event.name).toBe('integration.thread.issue_signal')
@@ -141,7 +140,28 @@ describe('PublishAgentIntegrationEvents (terminal.* domain facts → frozen inte
 			text: 'preview of the page',
 			artifactIds: ['artifact-1', 'artifact-2'],
 			mainArtifactId: 'artifact-1',
+			signalId: spoke.id,
 		})
+	})
+
+	/**
+	 * The outbox is at-least-once: the SAME `agent.issue_spoke` (same persisted id) can reach this bridge
+	 * twice, and each pass mints a NEW integration event with a new id. What the two share is `signalId` —
+	 * the key the thread records the signal under, so the group never hears it twice.
+	 */
+	it('a redelivered agent.issue_spoke republishes under a new event id but the SAME signalId', async () => {
+		const { handler, published } = makeHandler()
+		const spoke = new IssueSpokeEvent({
+			entityId: 'issue-1',
+			ownerId,
+			payload: { issueId: 'issue-1', threadId: 'thread-1', level: IssueSignalLevel.PROGRESS, text: 'done', artifactIds: [] },
+		})
+		await handler.handle(spoke as never)
+		await handler.handle(spoke as never)
+		const [first, second] = published as ThreadIssueSignalEvent[]
+		expect(first?.id).not.toBe(second?.id)
+		expect(first?.payload.signalId).toBe(spoke.id)
+		expect(second?.payload.signalId).toBe(spoke.id)
 	})
 
 	/**

@@ -22,4 +22,7 @@ model ThreadIssueSignalEvent extends IntegrationEvent {
 
   @doc("Who the issue is talking to (a thread participant id) — the key of the per-person digest. Absent ⇒ whoever wrote the message the issue came from.")
   addresseeId?: string;
+
+  @doc("The id of the fact the issue said this in (the agent's own `agent.issue_spoke` event) — stable across redeliveries, so the consumer records the signal ONCE: it becomes the transcript entry's id. Optional only for facts published before it existed; absent ⇒ the consumer falls back to this event's own id.")
+  signalId?: string;
 }

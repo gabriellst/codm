@@ -856,6 +856,8 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 * decision names covers three kinds, and inventing rules for the other two would be over-building.
 	 */
 	recordEntry(input: {
+		/** A STABLE id, when what is recorded has an identity of its own (a signal) — a second record of it is a duplicate key. */
+		entryId?: string
 		kind: TranscriptKind
 		text: string
 		senderExternalId?: string
@@ -888,7 +890,7 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 		}
 
 		const entry: TranscriptEntry = {
-			entryId: Id.value(),
+			entryId: input.entryId ?? Id.value(),
 			ownerId: this.ownerId,
 			threadId: this.id.value,
 			kind: input.kind,
