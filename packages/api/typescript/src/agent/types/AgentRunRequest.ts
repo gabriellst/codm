@@ -67,6 +67,14 @@ export interface AgentRunRequest<OutputSchema extends ZodType | undefined = unde
 	 * older build aborts on an argument it does not recognize.
 	 */
 	caps?: ProviderCapabilities
+	/**
+	 * The CLI's OWN built-in tools this run may use (Bash, Edit, Read…). Absent = the CLI's default set.
+	 * `[]` = none at all — for an agent that only reads text it was handed and answers in structured
+	 * output (the triage): it reads raw group messages, so with Bash in reach a message written as an
+	 * instruction could run commands in the workspace. A runner that cannot honour a list REFUSES the run
+	 * rather than run with more tools than declared.
+	 */
+	builtinTools?: readonly string[]
 	/** Present ⟺ the agent declared a non-empty tool scope (§4.4). Absent = this run has no tools. */
 	mcp?: AgentMcpInvocation
 	/** Cancellation → process-group kill. */

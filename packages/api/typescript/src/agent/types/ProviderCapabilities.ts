@@ -59,6 +59,8 @@ export const ProviderCapabilitiesSchema = z.object({
 	 * and `--help` (which such a launcher passes straight through) would never show the collision.
 	 */
 	pluginDir: z.boolean().optional(),
+	/** `--tools <tools...>` — the built-in tool set for the session (`""` = none). See `AgentRunRequest.builtinTools`. */
+	builtinToolsFlag: z.boolean().optional(),
 })
 
 export type ProviderCapabilities = Z.output<typeof ProviderCapabilitiesSchema>

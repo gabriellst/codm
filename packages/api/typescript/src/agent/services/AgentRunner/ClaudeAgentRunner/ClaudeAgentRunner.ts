@@ -80,6 +80,8 @@ const CLAUDE_PERMISSION_ARGS: Record<PermissionPosture, readonly string[]> = {
 
 /** Everything `buildArgs` needs to produce a full argv. One record, no ambient state. */
 export interface ClaudeBuildArgsOptions {
+	/** See `AgentRunRequest.builtinTools` — passed only when the probe saw `--tools`; `run` refuses otherwise. */
+	builtinTools?: readonly string[]
 	/** `AgentModelId.DEFAULT` means OMIT the model flag entirely — not "pass the string DEFAULT". */
 	model?: AgentModelId
 	cwd: string
@@ -194,6 +196,8 @@ export class ClaudeAgentRunner extends AgentRunner {
 			// "Load a plugin from a directory … for this session only" (2.1.327). The carrier of the regret
 			// window's per-run hook — see `ProviderCapabilities.pluginDir` for why not `--settings`.
 			'--plugin-dir': 'pluginDir',
+			// `--tools <tools...>  Built-in tools to make available: "" for none` (2.1.327).
+			'--tools <tools...>': 'builtinToolsFlag',
 		},
 	}
 
@@ -304,6 +308,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 		posture,
 		systemPromptFile,
 		pluginDir,
+		builtinTools,
 	}: ClaudeBuildArgsOptions): string[] {
 		const args = ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose']
 
@@ -337,6 +342,9 @@ export class ClaudeAgentRunner extends AgentRunner {
 
 		// Handed in only when the invocation carries a hook AND the probe saw the flag AND the dir was written.
 		if (pluginDir) args.push('--plugin-dir', pluginDir)
+
+		// A declared built-in tool set — `[]` becomes `--tools ""`, no built-in tool at all.
+		if (builtinTools !== undefined && caps.builtinToolsFlag) args.push('--tools', builtinTools.join(','))
 
 		// Last: headless `-p` has no TTY to render a permission prompt on, so the mode is settled here at
 		// spawn — by the POSTURE of whoever triggered the turn, through the table above.
@@ -377,6 +385,11 @@ export class ClaudeAgentRunner extends AgentRunner {
 		const hookPlugin = mcp && hook && request.caps?.pluginDir ? await writePreToolHookPlugin(hook, mcp.token, warn) : undefined
 		if (hook && !request.caps?.pluginDir) warn('the CLI did not advertise --plugin-dir — this run has no regret window')
 
+		// FAIL CLOSED: an agent that declared its built-in tools never runs with the CLI's full set.
+		if (request.builtinTools !== undefined && !request.caps?.builtinToolsFlag) {
+			throw new Error('the CLI did not advertise --tools — refusing a run that declared its built-in tools')
+		}
+
 		const args = ClaudeAgentRunner.buildArgs({
 			model: request.model,
 			cwd: request.cwd,
@@ -388,6 +401,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 			posture: request.posture,
 			systemPromptFile: promptFile?.path,
 			pluginDir: hookPlugin?.path,
+			builtinTools: request.builtinTools,
 		})
 		const cmd = [request.binaryPath, ...args]
 

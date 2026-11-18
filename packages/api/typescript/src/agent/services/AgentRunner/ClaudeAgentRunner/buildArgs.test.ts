@@ -193,6 +193,18 @@ describe('AC-1.2 — buildArgs is PURE: caps arrive by parameter, never from mod
 		expect(b).not.toEqual(a)
 	})
 
+	it('a declared empty built-in tool set becomes --tools "" — only when the probe saw the flag', () => {
+		// Falsifier: drop the push and the triage runs with Bash in reach of whatever a group message says.
+		const args = ClaudeAgentRunner.buildArgs(opts({ builtinTools: [], caps: { builtinToolsFlag: true } }))
+		const at = args.indexOf('--tools')
+		expect(at).toBeGreaterThan(-1)
+		expect(args[at + 1]).toBe('')
+		// Never passed blind: an older build would abort on the unknown flag (and `run` refuses the run instead).
+		expect(ClaudeAgentRunner.buildArgs(opts({ builtinTools: [] }))).not.toContain('--tools')
+		// Not declared ⇒ the CLI's default set, flag absent.
+		expect(ClaudeAgentRunner.buildArgs(opts({ caps: { builtinToolsFlag: true } }))).not.toContain('--tools')
+	})
+
 	it('is callable without an instance — no process, no logger, no container', () => {
 		// `static` on purpose (Fase 4.5): the resume flow spec asserts the argv a captured request WOULD
 		// have spawned with, and a per-CLI fact should not require owning a child process to read. It

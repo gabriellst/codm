@@ -222,7 +222,7 @@ Para o que a camada de regra não resolve (pedido novo, lista): triagens sem est
 **Desvios do pedido (deliberados).** O `STEER` não traz `text` (a sessão recebe as palavras da pessoa, nunca uma paráfrase). A latência fica no fato `thread.message_triaged`, não numa coluna da entrada (sem migração; o fato vive na tabela de eventos). A origem aparece como `CONTEXT_MATCH` (valor existente e sem escritor), não um `TRIAGE` novo no enum de contrato. A dica no prompt do orquestrador só aparece para `NEW_TASK`.
 
 **Limites conhecidos.**
-- O run não tem ferramentas MCP, mas o CLI mantém as próprias (postura `AUTO`), num modelo pequeno lendo texto de grupo não confiável — mesma superfície do orquestrador, só que menor. Menções no corpo (`@número`) podem levar um número ao prompt: o texto vai como a pessoa escreveu, só a menção do agente é tirada.
+- O run não tem ferramentas MCP NEM as do próprio CLI: `builtinTools: []` vira `--tools ""` no Claude (capacidade `builtinToolsFlag`, lida do `--help`); um CLI que não anuncia o flag RECUSA o run e a mensagem vai ao orquestrador (falha fechada). Texto de grupo não confiável não alcança Bash/Edit. No Codex, o run sobe sem flag de postura — na sandbox padrão do `codex exec`. Menções no corpo (`@número`) podem levar um número ao prompt: o texto vai como a pessoa escreveu, só a menção do agente é tirada.
 - Mensagem que termina no orquestrador agora paga o tempo da triagem antes do turno (segundos; até 30 s no pior caso).
 - Holds sobrepostos (várias mensagens seguidas) mantêm o alvo THREAD ocupado enquanto qualquer um estiver vivo — pode passar dos 30 s de uma só.
 - "Última atividade" de uma issue é `updated_at`, que só anda quando a issue é salva (status, pausa, título), não a cada turno.

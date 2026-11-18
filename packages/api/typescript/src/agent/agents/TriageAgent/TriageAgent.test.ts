@@ -69,6 +69,8 @@ describe('TriageAgent', () => {
 		expect(request?.session).toBeUndefined()
 		expect(request?.mcp).toBeUndefined()
 		expect(request?.posture).toBe(PermissionPosture.AUTO)
+		// No built-in tools: it reads raw group messages, and Bash in reach would let a message act.
+		expect(request?.builtinTools).toEqual([])
 	})
 
 	it('the prompt carries the open issues, the tail and the message — and nothing but names and texts', async () => {

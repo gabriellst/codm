@@ -44,6 +44,9 @@ export class TriageAgent extends Agent<typeof TriageInputSchema, typeof TriageOu
 	protected buildRequest(input: this['input']): Omit<AgentRunRequest<typeof TriageOutputSchema>, 'mcp' | 'agentName' | 'posture'> {
 		return {
 			cwd: input.cwd,
+			// NO built-in tools: the triage only reads the text it is handed. It reads raw group messages, so
+			// with Bash or Edit in reach a message written as an instruction could act in the workspace.
+			builtinTools: [],
 			systemPrompt: this.prompt.system(input),
 			messages: [{ role: AgentMessageRole.USER, content: this.prompt.user(input) }],
 			outputSchema: this.outputSchema,
