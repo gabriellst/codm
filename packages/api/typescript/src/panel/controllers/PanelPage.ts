@@ -168,6 +168,8 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
     $('who').textContent = data.member ? 'Você é ' + data.member.name + ' neste aparelho' : '';
     $('identify').hidden = !!data.member || !res.ok;
     $('forget').hidden = !data.member;
+    // Identifying (or leaving) with an issue open redraws what this person may do on it.
+    if (current && $('detail').open) load(current);
   }
   async function openIdent() {
     $('ierr').textContent = ''; $('istep1').hidden = false; $('istep2').hidden = true; $('code').value = '';
@@ -291,7 +293,8 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
     if (issue && !(current === issue.issueId && $('detail').open)) open(issue.issueId);
   }
   window.addEventListener('hashchange', openByHash);
-  board().then(openByHash); setInterval(board, 15000); me();
+  // Who this device is must be known before the issue opens: its answer controls are drawn once, on load.
+  Promise.all([board(), me()]).then(openByHash); setInterval(board, 15000);
 })();
 </script>
 </body>
