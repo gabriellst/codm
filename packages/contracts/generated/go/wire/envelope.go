@@ -213,6 +213,12 @@ func UnmarshalIntegrationEvent(data []byte) (IntegrationEvent, error) {
 			return nil, err
 		}
 		return v, nil
+	case "integration.thread.issue_signal":
+		var v ThreadIssueSignalEvent
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
 	case "integration.thread.message_ingested":
 		var v ThreadMessageIngestedEvent
 		if err := json.Unmarshal(data, &v); err != nil {
@@ -442,6 +448,12 @@ func UnmarshalPayload(name string, data []byte) (any, error) {
 		return v, nil
 	case ThreadAttachedEventName:
 		var v ThreadAttachedPayload
+		if err := json.Unmarshal(data, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	case ThreadIssueSignalEventName:
+		var v ThreadIssueSignalPayload
 		if err := json.Unmarshal(data, &v); err != nil {
 			return nil, err
 		}

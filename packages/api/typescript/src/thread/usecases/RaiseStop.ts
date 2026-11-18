@@ -40,6 +40,11 @@ const POLICY_KEY: Record<StopKind, keyof StopPolicy> = {
 	[StopKind.APPROVAL_NEEDED]: 'approvalNeeded',
 	[StopKind.AUTH_REQUIRED]: 'authRequired',
 	[StopKind.PERMISSION_DENIED]: 'permissionDenied',
+	// Fase 3: the issue's asks and the reconciler's stall are all "a person is needed", so they share the
+	// existing criterion — no new column; turning "human requests" off still turns every one of them off.
+	[StopKind.DECISION_REQUESTED]: 'humanRequested',
+	[StopKind.QUESTION_ASKED]: 'humanRequested',
+	[StopKind.STALLED]: 'humanRequested',
 }
 
 /**

@@ -426,12 +426,17 @@
 			"APPROVAL_NEEDED": "Aprovação necessária",
 			"AUTH_REQUIRED": "Login necessário",
 			"BLOCKED_BY_CLASSIFICATION": "Bloqueada",
+			"DECISION_REQUESTED": "Decisão pedida",
 			"HUMAN_REQUESTED": "Humano solicitado",
 			"PERMISSION_DENIED": "Permissão negada",
-			"SERVER_ERROR": "Erro de servidor"
+			"QUESTION_ASKED": "Pergunta",
+			"SERVER_ERROR": "Erro de servidor",
+			"STALLED": "Parada sem motivo"
 		},
 		"StopResolution": {
+			"ANSWER": "Responder",
 			"APPROVE": "Aprovar",
+			"DEFAULT_APPLIED": "Seguiu com o padrão",
 			"DENY": "Negar",
 			"RETRY": "Tentar novamente",
 			"REVIEW_AND_SEND": "Revisar e enviar",

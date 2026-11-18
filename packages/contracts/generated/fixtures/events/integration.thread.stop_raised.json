@@ -8,6 +8,10 @@
 		"issueId": "issueId-sample",
 		"threadId": "threadId-sample",
 		"kind": "SERVER_ERROR",
-		"detail": "detail-sample"
+		"detail": "detail-sample",
+		"ask": {
+			"field": "ask",
+			"sample": true
+		}
 	}
 }

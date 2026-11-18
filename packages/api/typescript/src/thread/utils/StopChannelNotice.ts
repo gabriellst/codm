@@ -23,4 +23,10 @@ export const NOTIFIES_ON_CHANNEL: Record<StopKind, boolean> = {
 	[StopKind.PERMISSION_DENIED]: true,
 	[StopKind.HUMAN_REQUESTED]: false,
 	[StopKind.APPROVAL_NEEDED]: false,
+	// Fase 3, PROVISÓRIO (só até o slice S2): as perguntas da issue e a parada sem declaração ficam mudas
+	// aqui porque quem as leva ao grupo é a política de saída (`LEVEL_OF_STOP` / `ROUTING_BY_MODE`), que
+	// substitui esta tabela inteira. Até lá nenhum produtor levanta estes kinds.
+	[StopKind.DECISION_REQUESTED]: false,
+	[StopKind.QUESTION_ASKED]: false,
+	[StopKind.STALLED]: false,
 }

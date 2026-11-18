@@ -65,6 +65,8 @@ const ANSWER_ECHO: Readonly<Record<StopResolution, PanelActionEcho>> = {
 	[StopResolution.RETRY]: PanelActionEcho.ANSWERED,
 	[StopResolution.REVIEW_AND_SEND]: PanelActionEcho.ANSWERED,
 	[StopResolution.TAKE_OVER]: PanelActionEcho.ANSWERED,
+	[StopResolution.ANSWER]: PanelActionEcho.ANSWERED,
+	[StopResolution.DEFAULT_APPLIED]: PanelActionEcho.ANSWERED,
 }
 
 type ActionOf<K extends PanelActionKind> = Extract<PanelActionBody, { kind: K }>

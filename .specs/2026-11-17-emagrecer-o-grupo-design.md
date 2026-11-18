@@ -57,6 +57,7 @@ Enums novos em `packages/contracts/src/wire/enums/`:
 - `OutputRouting` — `GROUP`, `DIGEST`, `PANEL`. Para onde a política mandou: mensagem própria no grupo, junto com outras da mesma pessoa, ou só a linha do tempo/painel.
 - `AskEffect` — `PUBLISH`, `IRREVERSIBLE`, `CLIENT_DATA`. O que a resposta a uma pergunta autoriza; qualquer efeito escala para `DECISION`.
 - `BlockCause` — `PROVIDER_LIMIT`, `PROVIDER_ERROR`, `CLI_LOGIN`, `STALLED`, `CLASSIFICATION`. A chave do "um aviso por causa".
+- `AskAnswerKind` — `OPTION`, `TEXT`, `DEFAULT`. Discriminante das uniões de resposta (`AskDefault`, `AskAnswer`, `StopAnswer`); cruza a fronteira (console, painel, SDK), então é TypeSpec como `LoopScheduleKind` (revisão S0a).
 
 Enums existentes que crescem:
 - `StopKind` += `DECISION_REQUESTED`, `QUESTION_ASKED`, `STALLED`. O último separa a parada "nem depois do lembrete" (`ReconcileStalledIssues`, hoje gravada como `HUMAN_REQUESTED`, o mesmo kind do `AskOperator`) de um pedido de verdade: sem ele, as tabelas por kind não distinguiriam um aviso de bloqueio de uma decisão. Resoluções de `STALLED`: `RETRY` (empurra a sessão), `TAKE_OVER`.
@@ -65,15 +66,15 @@ Enums existentes que crescem:
 - `IssueControlSource` (já tem `WHATSAPP`/`CONSOLE`/`PANEL`): sem mudança.
 
 Eventos (`packages/contracts/src/wire/events/`):
-- **Novo** `integration.thread.issue_signal` — `{ issueId, threadId, level: FEEDBACK|PROGRESS, text, artifactIds: uuid[], mainArtifactId?, addresseeId? }`. Fala espontânea de uma issue que não é stop nem conclusão. Produzido só pelo `agent` (ferramentas `RequestFeedback`/`ReportProgress` e fim de turno), pela ponte `PublishAgentIntegrationEvents`, a mesma forma de `stop_raised`; consumido pelo `thread`. Os artefatos vão por id: o `thread` lê a linha do artefato pela leitura `reads.artifact` já declarada (caminho, tipo, mime) e entrega pelo `thread/services/ArtifactDelivery` que já existe — sem descritor duplicado no evento e sem aresta nova `thread → artifact`.
-- `integration.thread.stop_raised` ganha `ask?: { question, options: {id,label}[], default?: AskDefault, effects: AskEffect[], addresseeId? }` (opcional: os stops de transporte não têm). Contrato de fase 0 estendido por campo opcional, sem quebrar o Go.
+- **Novo** `integration.thread.issue_signal` — `{ issueId, threadId, level: IssueSignalLevel (só FEEDBACK|PROGRESS são produzidos; o consumidor recusa os outros — o codegen não tem subconjunto de enum), text, artifactIds: uuid[], mainArtifactId?, addresseeId? }`. Fala espontânea de uma issue que não é stop nem conclusão. Produzido só pelo `agent` (ferramentas `RequestFeedback`/`ReportProgress` e fim de turno), pela ponte `PublishAgentIntegrationEvents`, a mesma forma de `stop_raised`; consumido pelo `thread`. Os artefatos vão por id: o `thread` lê a linha do artefato pela leitura `reads.artifact` já declarada (caminho, tipo, mime) e entrega pelo `thread/services/ArtifactDelivery` que já existe — sem descritor duplicado no evento e sem aresta nova `thread → artifact`.
+- `integration.thread.stop_raised` ganha `ask?: unknown` com a forma `StopAsk` (`{ question, options: {id,label}[], default?: AskDefault, effects: AskEffect[], addresseeId? }`; opcional: os stops de transporte não têm). **`unknown` de propósito (revisão S0a):** o codegen do fio só carrega escalares, enums e arrays (`parse-openapi.ts` lê todo `$ref` como enum e objeto aninhado vira `unknown`), a mesma regra dos union slots — a forma é do núcleo TS (`StopAskSchema`) e o consumidor faz o parse. Produtor e consumidor são TS; o Go só carrega (`json.RawMessage`). Contrato de fase 0 estendido por campo opcional, sem quebrar o Go.
 - `integration.issue.completed` (existe, já tem `summary`) passa a ter um consumidor no `thread`: é dele que sai o fechamento (abaixo).
 
-Schemas compartilhados (`shared/schemas`):
+Schemas compartilhados (`shared/objects/StopAsk.ts` — revisão S0a: o `registerSchemas` gerado em `composition.generated.ts` só publica os barris `objects` dos contextos com `exposes.objects`; `shared/schemas` nunca é registrado, `PanelActionBodySchema` inclusive. Sem `.refine()`: os invariantes cruzados ficam no objeto de valor `thread/objects/StopAsk` do S1, o que também deixa as ferramentas comporem com `.pick()`/`.extend()`):
 - `StopAskSchema` — `question`, `options`, `default?`, `effects`, `addresseeId?`. `default` é união discriminada OBRIGATÓRIA para pergunta: `AskDefault = OPTION { optionId } | TEXT { text }` (Non-Negotiable 3: nada de `defaultOptionId | defaultText` opcionais com `refine`).
 - `AskAnswerSchema` — a resposta de uma PESSOA: `OPTION { optionId } | TEXT { text }`. É o que o painel (`ANSWER_ASK`) e o console (`POST /stops/:stopId/answer`) aceitam.
 - `StopAnswerSchema` — o registro no stop: `AskAnswer | DEFAULT { default: AskDefault }`. `DEFAULT` só o job escreve; nenhuma rota o aceita.
-- `IssueSignalSchema` é payload de evento e NÃO entra no `registerSchemas`. `StopAskSchema`/`AskAnswerSchema` entram (cruzam o fio no painel e no console); nenhum carrega invariante sensível.
+- Não existe `IssueSignalSchema` à mão: o payload do evento é o `ThreadIssueSignalEventSchema` gerado, fora do `registerSchemas`. `StopAskSchema`/`AskOptionSchema`/`AskDefaultSchema`/`AskAnswerSchema`/`StopAnswerSchema` entram (cruzam o fio no painel e no console); nenhum carrega invariante sensível.
 
 ### Quem é dono: contexto `thread`
 
@@ -112,12 +113,12 @@ Todo caminho pelo qual uma issue chega ao canal hoje (mapeado no código) tem n�
 
 **Seleção por propriedade declarada, não por `if` de identidade.** O escopo MCP `ISSUE_HANDLING` deixa de expor `SendDirectMessage` e `SendArtifact` (cada controller declara `static mcpScopes`; a issue perde as duas, o orquestrador mantém). A issue ganha `AskDecision`, `AskQuestion`, `RequestFeedback`, `ReportProgress` e mantém `RecordArtifact`. O snapshot `agent/mcp/__snapshots__/exposure.test.ts.snap` muda e é o gate. Efeito colateral bom: some o bug em que `SendDirectMessage` de uma issue saía com `author: HUMAN` e voltava como mensagem recebida.
 
-### Matriz nível × modo (decidida — ver nota)
+### Matriz nível × modo (decidida)
 
 > **Decidido pelo dono (18/11):** padrão `DECISIONS_AND_LIVE` para grupos existentes e novos; `DECISIONS_ONLY` mantém as perguntas no grupo; `EVERYTHING` leva o progresso ao grupo; sem trava dura (a janela de arrependimento segue como rede); decisão sem efeito e pergunta podem ser respondidas por qualquer participante que pode agir (`Thread.mayAct`); sem modo "legado" no rollout (o modo `EVERYTHING` é o caminho de volta por grupo). Galeria: depende do R2, ainda não habilitado — FEEDBACK manda só o print principal até lá.
 
 
-| Nível | `DECISIONS_ONLY` | `DECISIONS_AND_LIVE` (padrão proposto) | `EVERYTHING` |
+| Nível | `DECISIONS_ONLY` | `DECISIONS_AND_LIVE` (padrão) | `EVERYTHING` |
 |---|---|---|---|
 | DECISION | GROUP | GROUP | GROUP |
 | QUESTION | DIGEST | DIGEST | DIGEST |
@@ -126,20 +127,20 @@ Todo caminho pelo qual uma issue chega ao canal hoje (mapeado no código) tem n�
 | BLOCK_NOTICE | GROUP (1 por causa) | GROUP (1 por causa) | GROUP (1 por causa) |
 | PROGRESS | PANEL | PANEL | GROUP |
 
-PERGUNTAR AO DONO: (a) "só decisões" mantém as perguntas no grupo? A proposta mantém (uma pergunta escondida seguiria com o padrão sem ninguém ver, o que contraria "grupo não mudo"); (b) `EVERYTHING` leva progresso ao grupo (perto do comportamento de hoje, sem a reescrita do orquestrador)?; (c) o padrão para grupos existentes e novos (proposta: `DECISIONS_AND_LIVE`, que é o que o critério de aceite descreve).
+Respondido pelo dono (18/11, nota acima): "só decisões" mantém as perguntas; `EVERYTHING` leva progresso; padrão `DECISIONS_AND_LIVE`.
 
 ### Item 1 — níveis e ferramentas da issue
 
-Ferramentas MCP novas no `agent` (controllers em `agent/controllers/`, `static mcpScopes = [ISSUE_HANDLING]`, use cases em `agent/usecases/`, input schemas de controller compondo `StopAskSchema`/`IssueSignalSchema`):
-- `AskDecision { question, options[2..6] {id,label}, effects: AskEffect[], addressee? }` → stop `DECISION_REQUESTED`. Trava a issue (NEEDS_INPUT, como hoje).
-- `AskQuestion { question, options?, default: AskDefault, effects: AskEffect[], addressee? }` → stop `QUESTION_ASKED` com prazo. `default` é obrigatório pelo schema (pergunta sem padrão não existe). `effects` não vazio ⇒ `Thread.raiseStop` grava `DECISION_REQUESTED` sem prazo (escalada) e a ferramenta devolve à sessão "virou decisão: espere a resposta".
+Ferramentas MCP novas no `agent` (controllers em `agent/controllers/`, `static mcpScopes = [ISSUE_HANDLING]`, use cases em `agent/usecases/`, input schemas de controller compondo `StopAskSchema`/`AskDefaultSchema`; `RequestFeedback`/`ReportProgress` declaram o próprio input):
+- `AskDecision { question, options[2..6] {id,label}, effects: AskEffect[], addresseeId? }` → stop `DECISION_REQUESTED`. Trava a issue (NEEDS_INPUT, como hoje).
+- `AskQuestion { question, options?, default: AskDefault, effects: AskEffect[], addresseeId? }` → stop `QUESTION_ASKED` com prazo. `default` é obrigatório pelo schema (pergunta sem padrão não existe). `effects` não vazio ⇒ `Thread.raiseStop` grava `DECISION_REQUESTED` sem prazo (escalada) e a ferramenta devolve à sessão "virou decisão: espere a resposta".
 - `RequestFeedback { text, mainArtifactId, artifactIds[] }` → `issue_signal` FEEDBACK. **Não** é stop (não trava; §6.1). O use case confere, antes de emitir, o que o `SendArtifact` confere hoje (`artifact/usecases/SendArtifact.ts:48`: artefato desta issue, enviável), para a recusa continuar síncrona para a sessão.
 - `ReportProgress { text }` → `issue_signal` PROGRESS (linha do tempo).
 - `AskOperator`, `RaiseStop` e `TransitionIssueStatus NEEDS_INPUT` ficam como aliases compatíveis (sessões em curso os chamam) e passam a levantar `DECISION_REQUESTED`: `AskOperator`/`NEEDS_INPUT` sem opções (a resposta é `TEXT`); `RaiseStop APPROVAL_NEEDED` com as opções sim/não e efeito `IRREVERSIBLE`; `RaiseStop HUMAN_REQUESTED` como `AskOperator`. `HUMAN_REQUESTED`/`APPROVAL_NEEDED` deixam de ser levantados por ferramenta e ficam no contrato para o histórico (não admitem `ANSWER`). `PERMISSION_DENIED` (do runner) continua com seu kind e `APPROVE`/`DENY`; as regras de resposta traduzem sim/não para `APPROVE`/`DENY` por tabela (`YES_NO_RESOLUTION`) nesse kind.
 - `TransitionIssueStatus COMPLETED` já tem `summary` (até 4000, `DeclareIssueComplete.ts:20`; não muda — apertar o limite quebraria sessões em curso) e ganha `finalArtifactId?`. A mensagem de fechamento corta o resumo na formatação.
 - Prompt da issue (`IssueWorkAgent`): quando usar cada ferramenta, que o texto livre do turno vai só para o painel, e que `effects` deve ser declarado sempre que a resposta autoriza publicar, uma ação irreversível ou mexer em dado de cliente.
 
-**"Dado de cliente" é declarado, não inferido.** O efeito vem da ferramenta (campo obrigatório, pode ser vazio). Um modelo pode declarar menos do que devia; a rede de proteção que já existe é a janela de arrependimento (fase 2, item 3) nas ações irreversíveis reconhecidas. PERGUNTAR AO DONO: quer uma trava dura — "ação irreversível só roda se a issue tem uma decisão aprovada" — mesmo que isso mude o comportamento de tarefas que hoje publicam sem pedir?
+**"Dado de cliente" é declarado, não inferido.** O efeito vem da ferramenta (campo obrigatório, pode ser vazio). Um modelo pode declarar menos do que devia; a rede de proteção que já existe é a janela de arrependimento (fase 2, item 3) nas ações irreversíveis reconhecidas. Decidido pelo dono (18/11): sem trava dura; a janela de arrependimento segue como rede.
 
 ### Decisões e perguntas: reaproveitar o stop, não um agregado novo
 
@@ -160,8 +161,8 @@ O que o stop ganha (`thread/entities/Thread.ts`, `StopSchema`):
 **A resposta chega à sessão.** `ResumeIssueOnStopResolved` hoje (a) só leva a `resolution` no texto ("ANSWER" não diz nada) e (b) volta cedo quando a issue já tem trabalho pendente (`hasPending`). Para `ANSWER`/`DEFAULT_APPLIED`: o texto leva a pergunta, o código e a resposta (ou "ninguém respondeu em 15 min: siga com <padrão>"), e o steer é enfileirado SEMPRE (`dedupKey resume:<stopId>`), mesmo com item pendente — uma resposta engolida porque havia outro recado na fila é o pior desfecho aqui. Para os kinds antigos, o comportamento atual fica.
 
 Custo de reaproveitar (todas as tabelas totais sobre os enums precisam do valor novo — o compilador aponta cada uma):
-- `RESOLUTIONS_BY_KIND` (`DECISION_REQUESTED: [ANSWER, TAKE_OVER]`, `QUESTION_ASKED: [ANSWER, DEFAULT_APPLIED, TAKE_OVER]`, `STALLED: [RETRY, TAKE_OVER]`), `RESUMES_WITH_RESOLVER_POSTURE` (`ANSWER: true` — a postura é a de quem respondeu, e só quem pode liberar responde decisão com efeito; `DEFAULT_APPLIED: false`), `OFFERED_ON_PANEL` (`ANSWER` sim, `DEFAULT_APPLIED` não), `NOTIFIES_ON_CHANNEL` (substituído por `LEVEL_OF_STOP` em `RaiseStop.ts` e `RunIssueTurn.ts`), `STOP_TITLES_PT/EN`, `POLICY_KEY` em `RaiseStop.ts`.
-- SQLite: `issue_stops` com CHECK de `kind` e `resolution` → reconstrução da tabela na migração; espelho Go (`db:sync-go`, `db:check-go`); o gateway Go não lê `issue_stops`, mas gera os enums.
+- `RESOLUTIONS_BY_KIND` (`DECISION_REQUESTED: [ANSWER, TAKE_OVER]`, `QUESTION_ASKED: [ANSWER, DEFAULT_APPLIED, TAKE_OVER]`, `STALLED: [RETRY, TAKE_OVER]`), `RESUMES_WITH_RESOLVER_POSTURE` (`ANSWER: true` — a postura é a de quem respondeu, e só quem pode liberar responde decisão com efeito; `DEFAULT_APPLIED: false`), `OFFERED_ON_PANEL` (`ANSWER` **não**, `DEFAULT_APPLIED` não — revisão S0a: a tabela governa a porta `ANSWER_STOP`, que leva só uma resolução nua; um `ANSWER` sem a resposta não significa nada, e o painel responde perguntas pela variante `ANSWER_ASK`), `ANSWER_ECHO` em `ExecutePanelAction.ts` (`ANSWER`/`DEFAULT_APPLIED` → `ANSWERED`), `resolutionIsPrimary` no console (`glyphs.tsx`), os rótulos `enums.StopKind`/`enums.StopResolution` dos catálogos do console, `KIND_GATE` da nuvem (`ANSWER_ASK` recusa até S8b), `NOTIFIES_ON_CHANNEL` (substituído por `LEVEL_OF_STOP` em `RaiseStop.ts` e `RunIssueTurn.ts`), `STOP_TITLES_PT/EN`, `POLICY_KEY` em `RaiseStop.ts`.
+- SQLite: `issue_stops` com CHECK de `kind` e `resolution` → reconstrução da tabela na migração; espelho Go (`db:sync-go`, `db:check-go`). O Go tem consultas sqlc geradas sobre `issue_stops` (`internal/shared/db/sqlite/query/{issue,thread,ui}.sql`), mas nenhum código as chama e todas listam colunas explícitas, então as colunas novas não as afetam; o Go gera os enums.
 - Nuvem: `panel_groups.open_stops` (jsonb) passa a levar `code`, `question`, `options`; o servidor valida o snapshot com o schema compartilhado ⇒ **deploy da nuvem antes do daemon**, como nas fases 1–2.
 - Snapshot de exposição MCP e os testes de `RESOLUTIONS_BY_KIND`.
 
@@ -178,13 +179,13 @@ Custo de reaproveitar (todas as tabelas totais sobre os enums precisam do valor 
    - mais de uma → **uma** mensagem: "sim para qual? APP-12 · D1 (…) ou APP-15 · D2 (…) — responda citando." Fato `thread.answer_disambiguation_asked` com a pessoa; uma segunda resposta solta da mesma pessoa em 10 min não gera outra pergunta e vai ao orquestrador.
 4. Citação de pergunta já resolvida (resposta atrasada) → vira STEER da issue ("resposta depois do prazo: …"), como a citação de mensagem de issue da fase 2.
 
-**Quem pode responder.** Decisão com `effects` (publicar, irreversível, dado de cliente) e `PERMISSION_DENIED`: só quem pode liberar (`Thread.postureOf = BYPASS`), a mesma régua do `APPROVE` de hoje. Decisão sem efeito e pergunta: qualquer participante que pode agir (`Thread.mayAct`). Quem não pode ⇒ a mensagem segue o caminho de sempre (o orquestrador responde) e a decisão continua aberta. PERGUNTAR AO DONO: confirmar a régua para decisões e perguntas sem efeito.
+**Quem pode responder.** Decisão com `effects` (publicar, irreversível, dado de cliente) e `PERMISSION_DENIED`: só quem pode liberar (`Thread.postureOf = BYPASS`), a mesma régua do `APPROVE` de hoje. Decisão sem efeito e pergunta: qualquer participante que pode agir (`Thread.mayAct`) — confirmado pelo dono (18/11). Quem não pode ⇒ a mensagem segue o caminho de sempre (o orquestrador responde) e a decisão continua aberta.
 
 **Ordem com a fase 2.** As regras 1–3 vêm antes da citação de issue: uma citação de pergunta é mais específica que uma citação de issue. Uma issue esperando alguém hoje vai ao orquestrador (fase 2); com uma pergunta aberta citada, a regra 1 resolve antes. A triagem nunca vê mensagem resolvida por regra; o piso "stop aberto bloqueia `NO_ACTION`" continua.
 
 **Idempotência.** A resolução pela regra, pelo painel, pelo orquestrador (`ResolveStop` via MCP) e pelo prazo passam todas por `Thread.resolveStop` + o `UPDATE` condicional descrito acima: a primeira ganha, as outras recebem `STOP_ALREADY_RESOLVED` e são descartadas sem eco. A regra roda na mesma transação da entrada recebida; se perde, a mensagem segue o caminho de sempre.
 
-**Painel.** `PanelActionBodySchema` ganha a variante `ANSWER_ASK { issueId, stopId, answer: AskAnswer }` (união discriminada por `kind`; Non-Negotiable 3: o painel mostra botões por opção e caixa de texto só quando a pergunta aceita texto). `ANSWER_STOP` continua para os kinds antigos. `PanelActionKind` += `ANSWER_ASK`. Eco "Ana respondeu APP-12 · D1 pelo painel" (`PanelActionEcho` += `ANSWERED`).
+**Painel.** `PanelActionBodySchema` ganha a variante `ANSWER_ASK { issueId, stopId, answer: AskAnswer }` (união discriminada por `kind`; Non-Negotiable 3: o painel mostra botões por opção e caixa de texto só quando a pergunta aceita texto). `ANSWER_STOP` continua para os kinds antigos. `PanelActionKind` += `ANSWER_ASK`. Eco "Ana respondeu APP-12 · D1 pelo painel" (`PanelActionEcho.ANSWERED` já existe — revisão S0a).
 
 **Console.** Detalhe da issue: perguntas abertas no topo com código, opções e prazo ("segue com X às 14:32"), respondíveis pelo console (`POST /stops/:stopId/answer`, hook do SDK). Sem quadro novo.
 
@@ -244,12 +245,14 @@ Consequências e o que o plano faz:
 ## Migrações
 
 SQLite (uma, `0036`, `bun migrate:create` + `db:sync-go` + `db:check-go`):
-- `thread_threads.output_mode` text NOT NULL DEFAULT (padrão decidido) + CHECK.
-- `thread_transcript_entries`: `level` (nullable, CHECK `IssueSignalLevel`), `routing` (nullable, CHECK `OutputRouting`), `stop_id` (nullable), `digest_entry_id` (nullable: a entrada do resumo que levou esta), `addressee_id` (nullable). Índice `(thread_id, routing, digest_entry_id)` para o flush.
+- `thread_threads.output_mode` text NOT NULL DEFAULT `'DECISIONS_AND_LIVE'`, **sem CHECK** (revisão S0a: precedente de `language` — CHECK de tabela numa tabela existente faz o drizzle-kit RECONSTRUIR `thread_threads`/`thread_transcript_entries` em vez de `ADD COLUMN`; o `z.enum` do agregado fecha o conjunto na hidratação).
+- `thread_transcript_entries`: `level` (nullable, sem CHECK, `IssueSignalLevel`), `routing` (nullable, sem CHECK, `OutputRouting`), `stop_id` (nullable), `digest_entry_id` (nullable: a entrada do resumo que levou esta), `addressee_id` (nullable). Índice `(thread_id, routing, digest_entry_id)` para o flush.
 - `issue_stops`: reconstrução (CHECK de `kind` com `DECISION_REQUESTED`/`QUESTION_ASKED`/`STALLED` e de `resolution` com `ANSWER`/`DEFAULT_APPLIED`; precedente nas migrações 0007 e 0029) + `ask` (json), `answer` (json), `answered_by`, `seq` (int), `due_at` (int, nullable, índice), `ask_entry_id`. Único `(issue_id, seq)`. A causa do aviso não é coluna: sai de `CAUSE_OF_STOP[kind]`.
+- `thread_panel_actions` (o livro do daemon, fase 2): reconstrução, porque o CHECK de `kind` é derivado de `PanelActionKind` e passa a aceitar `ANSWER_ASK` (revisão S0a: faltava aqui).
+- O `INSERT … SELECT` que o drizzle-kit gera na reconstrução de `issue_stops` copiava as colunas NOVAS da tabela velha (que não as tem); a 0036 foi corrigida à mão para copiar só as dez existentes, fixado em `tests/kernel/issue-stops-ask.migration.test.ts` (aplicada pelo `LibSqlDriver` real sobre linhas semeadas).
 - Nenhuma tabela nova para decisões, sinais ou resumos.
 
-Nuvem (pg, `0007`, `bun migrate:create` do perfil cloud + `bun migrate:deploy:cloud` manual): `panel_actions_kind_check` é derivado de `PanelActionKind` (`enumCheck`, `packages/contracts/src/db/pg/schema/panel.ts:171`) e precisa aceitar `ANSWER_ASK`. `open_stops` é jsonb (sem CHECK); o servidor valida pelo schema compartilhado, então os kinds novos exigem o servidor novo. Ordem: nuvem antes do daemon.
+Nuvem (pg, `0007`, `bun migrate:create:cloud` + `bun migrate:deploy:cloud` manual): `panel_actions_kind_check` é derivado de `PanelActionKind` (`enumCheck`, `packages/contracts/src/db/pg/schema/panel.ts:171`) e precisa aceitar `ANSWER_ASK`. `open_stops` é jsonb (sem CHECK); o servidor valida pelo schema compartilhado, então os kinds novos exigem o servidor novo. Ordem: nuvem antes do daemon.
 
 Política de stops: `issue_stop_policy_config` tem uma coluna por critério e `POLICY_KEY` é total sobre `StopKind`. Os três kinds novos usam colunas existentes (`DECISION_REQUESTED`/`QUESTION_ASKED`/`STALLED` → `humanRequested`), sem coluna nova: desligar "pedidos de pessoa" continua desligando todos eles.
 
@@ -279,7 +282,7 @@ Os CHECKs do SQLite são derivados dos enums gerados (`enumCheck`, conferido por
 - Deploy da nuvem antes do daemon (schemas de `open_stops`/linha do tempo e a variante `ANSWER_ASK`).
 - Itens `ISSUE_RESULT` já na fila no momento da atualização são drenados pelo orquestrador como antes.
 - Sessões de issue em curso perdem `SendDirectMessage`/`SendArtifact` no próximo turno (a lista de ferramentas é montada por turno); o prompt novo explica as substitutas.
-- PERGUNTAR AO DONO: precisa de um caminho de volta (um quarto modo "legado", com o orquestrador reescrevendo resultados) durante a primeira semana?
+- Sem quarto modo no rollout (dono, 18/11): o caminho de volta por grupo é o modo `EVERYTHING`.
 
 ## Como medi (antes)
 
@@ -328,10 +331,11 @@ Revisão independente (agente sem o contexto do desenho) contra `docs/BACKEND.md
 
 Ficaram como perguntas ao dono os itens abaixo. As correções NÃO foram re-revisadas por um agente independente; uma segunda passada sobre as seções alteradas é o primeiro passo do S0. Numa segunda leitura própria entraram ainda: a regra do "sim" solto exige `canInvoke` inteiro (portão de menção); `CAUSE_DEDUPES` declarado por causa (`STALLED`/`CLASSIFICATION` não agrupam); aliases das ferramentas antigas com kind definido; `POLICY_KEY` e o CHECK da nuvem na lista de migrações; e o pré-requisito de galeria abaixo.
 
+## Revisão do contrato (S0a, 2026-11-18)
+
+Segunda passada sobre as seções de contrato contra o código, antes de construir o S0a. Corrigido acima: `ask` como `unknown` no evento (o codegen não carrega forma aninhada); `level` do sinal como o enum inteiro, com recusa no consumidor; schemas em `shared/objects` (o único barril que o `registerSchemas` publica) e sem `.refine()`; enum `AskAnswerKind` no TypeSpec; sem CHECK nas colunas novas de tabelas existentes; reconstrução de `thread_panel_actions` na 0036 e o `INSERT` do drizzle corrigido à mão; `OFFERED_ON_PANEL[ANSWER] = false`; `PanelActionEcho.ANSWERED` já existia; o Go tem consultas sqlc (mortas) sobre `issue_stops`; `addresseeId` nas ferramentas; sem `IssueSignalSchema` à mão; comando da migração de nuvem; perguntas já respondidas pelo dono marcadas como decididas.
+
 ## Perguntas ao dono (consolidado)
 
-1. Matriz nível × modo e o modo padrão (ver tabela). "Só decisões" mantém perguntas? "Tudo" leva progresso ao grupo?
-2. Trava dura: ação irreversível só com decisão aprovada?
-3. Quem pode responder decisões e perguntas sem efeito (proposta: qualquer participante que pode agir; com efeito, só quem pode liberar).
-4. Modo "legado" temporário no rollout?
+1–4. Respondidas em 18/11 (matriz e padrão, trava dura, régua de quem responde, modo de volta) — ver a nota em "Matriz nível × modo".
 5. Galeria no painel: aprovar bucket (R2) e credencial para subir artefatos? Sem ela, prints de progresso e os extras do feedback ficam visíveis só no console do operador.

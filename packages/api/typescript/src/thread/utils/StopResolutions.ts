@@ -22,6 +22,12 @@ export const RESOLUTIONS_BY_KIND: Record<StopKind, StopResolution[]> = {
 	// action. It is a question of PERMISSION, so it is answered like APPROVAL_NEEDED — APPROVE resumes
 	// with the resolver's posture, DENY resumes in AUTO.
 	[StopKind.PERMISSION_DENIED]: [StopResolution.APPROVE, StopResolution.DENY, StopResolution.TAKE_OVER],
+	// Fase 3 — the issue's asks. A decision is ANSWERed (an option or text) or taken over; a question also
+	// admits DEFAULT_APPLIED, written only by the deadline job once its `dueAt` has passed.
+	[StopKind.DECISION_REQUESTED]: [StopResolution.ANSWER, StopResolution.TAKE_OVER],
+	[StopKind.QUESTION_ASKED]: [StopResolution.ANSWER, StopResolution.DEFAULT_APPLIED, StopResolution.TAKE_OVER],
+	// STALLED (fase 3): the reconciler's stop "not even after the reminder". RETRY nudges the session again.
+	[StopKind.STALLED]: [StopResolution.RETRY, StopResolution.TAKE_OVER],
 }
 
 export function resolutionsForKind(kind: StopKind): StopResolution[] {
@@ -47,6 +53,11 @@ export const RESUMES_WITH_RESOLVER_POSTURE: Record<StopResolution, boolean> = {
 	[StopResolution.APPROVE]: true,
 	[StopResolution.DENY]: false,
 	[StopResolution.TAKE_OVER]: false,
+	// Fase 3: an ANSWER resumes with the posture of whoever answered — only someone who may release answers
+	// a decision with a declared effect, the same rule as APPROVE. A default that applied on its own was
+	// nobody's answer, so it never elevates.
+	[StopResolution.ANSWER]: true,
+	[StopResolution.DEFAULT_APPLIED]: false,
 }
 
 /**
@@ -62,6 +73,11 @@ export const OFFERED_ON_PANEL: Record<StopResolution, boolean> = {
 	[StopResolution.APPROVE]: true,
 	[StopResolution.DENY]: true,
 	[StopResolution.TAKE_OVER]: false,
+	// Fase 3: off on THIS door. `ANSWER_STOP` carries a bare resolution, and an ANSWER without the answer
+	// itself is meaningless — the panel answers an ask through its own kind, `ANSWER_ASK` (option or
+	// text). DEFAULT_APPLIED is the deadline job's, never a person's.
+	[StopResolution.ANSWER]: false,
+	[StopResolution.DEFAULT_APPLIED]: false,
 }
 
 /** The answers a stop of this kind admits on the panel — the kind's own vocabulary, reduced by `OFFERED_ON_PANEL`. */

@@ -20,6 +20,11 @@ const STOP_TITLES_PT: Record<StopKind, string> = {
 	[StopKind.APPROVAL_NEEDED]: 'Uma ação precisa da sua aprovação',
 	[StopKind.AUTH_REQUIRED]: 'O CLI do agente precisa que você entre de novo',
 	[StopKind.PERMISSION_DENIED]: 'Uma ação foi barrada pelo filtro de permissões — ela precisa da sua aprovação',
+	// Fase 3: o título genérico das perguntas da issue. O cartão mostra a PERGUNTA (o `ask`), e o aviso no
+	// grupo sai pelo formato do nível — este título só aparece onde nenhum dos dois cabe.
+	[StopKind.DECISION_REQUESTED]: 'Uma tarefa precisa de uma decisão',
+	[StopKind.QUESTION_ASKED]: 'Uma tarefa fez uma pergunta',
+	[StopKind.STALLED]: 'Uma tarefa parou sem dizer o que falta',
 }
 
 /**
@@ -33,6 +38,9 @@ const STOP_TITLES_EN: Record<StopKind, string> = {
 	[StopKind.APPROVAL_NEEDED]: 'An action needs your approval',
 	[StopKind.AUTH_REQUIRED]: 'The agent CLI needs you to sign in again',
 	[StopKind.PERMISSION_DENIED]: 'An action was blocked by the permission filter — it needs your approval',
+	[StopKind.DECISION_REQUESTED]: 'A task needs a decision',
+	[StopKind.QUESTION_ASKED]: 'A task asked a question',
+	[StopKind.STALLED]: 'A task stopped without saying what it needs',
 }
 
 /** O verbo do eco de uma ação feita pelo painel (fase 2, item 6b). */

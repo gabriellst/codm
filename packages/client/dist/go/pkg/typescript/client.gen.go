@@ -991,6 +991,36 @@ func (e IssueLifeState) Valid() bool {
 	}
 }
 
+// Defines values for IssueSignalLevel.
+const (
+	BLOCKNOTICE IssueSignalLevel = "BLOCK_NOTICE"
+	CLOSING     IssueSignalLevel = "CLOSING"
+	DECISION    IssueSignalLevel = "DECISION"
+	FEEDBACK    IssueSignalLevel = "FEEDBACK"
+	PROGRESS    IssueSignalLevel = "PROGRESS"
+	QUESTION    IssueSignalLevel = "QUESTION"
+)
+
+// Valid indicates whether the value is a known member of the IssueSignalLevel enum.
+func (e IssueSignalLevel) Valid() bool {
+	switch e {
+	case BLOCKNOTICE:
+		return true
+	case CLOSING:
+		return true
+	case DECISION:
+		return true
+	case FEEDBACK:
+		return true
+	case PROGRESS:
+		return true
+	case QUESTION:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for IssueStatus.
 const (
 	COMPLETED  IssueStatus = "COMPLETED"
@@ -1302,28 +1332,37 @@ func (e Status2) Valid() bool {
 
 // Defines values for StopKind.
 const (
-	APPROVALNEEDED          StopKind = "APPROVAL_NEEDED"
-	AUTHREQUIRED            StopKind = "AUTH_REQUIRED"
-	BLOCKEDBYCLASSIFICATION StopKind = "BLOCKED_BY_CLASSIFICATION"
-	HUMANREQUESTED          StopKind = "HUMAN_REQUESTED"
-	PERMISSIONDENIED        StopKind = "PERMISSION_DENIED"
-	SERVERERROR             StopKind = "SERVER_ERROR"
+	StopKindAPPROVALNEEDED          StopKind = "APPROVAL_NEEDED"
+	StopKindAUTHREQUIRED            StopKind = "AUTH_REQUIRED"
+	StopKindBLOCKEDBYCLASSIFICATION StopKind = "BLOCKED_BY_CLASSIFICATION"
+	StopKindDECISIONREQUESTED       StopKind = "DECISION_REQUESTED"
+	StopKindHUMANREQUESTED          StopKind = "HUMAN_REQUESTED"
+	StopKindPERMISSIONDENIED        StopKind = "PERMISSION_DENIED"
+	StopKindQUESTIONASKED           StopKind = "QUESTION_ASKED"
+	StopKindSERVERERROR             StopKind = "SERVER_ERROR"
+	StopKindSTALLED                 StopKind = "STALLED"
 )
 
 // Valid indicates whether the value is a known member of the StopKind enum.
 func (e StopKind) Valid() bool {
 	switch e {
-	case APPROVALNEEDED:
+	case StopKindAPPROVALNEEDED:
 		return true
-	case AUTHREQUIRED:
+	case StopKindAUTHREQUIRED:
 		return true
-	case BLOCKEDBYCLASSIFICATION:
+	case StopKindBLOCKEDBYCLASSIFICATION:
 		return true
-	case HUMANREQUESTED:
+	case StopKindDECISIONREQUESTED:
 		return true
-	case PERMISSIONDENIED:
+	case StopKindHUMANREQUESTED:
 		return true
-	case SERVERERROR:
+	case StopKindPERMISSIONDENIED:
+		return true
+	case StopKindQUESTIONASKED:
+		return true
+	case StopKindSERVERERROR:
+		return true
+	case StopKindSTALLED:
 		return true
 	default:
 		return false
@@ -1332,17 +1371,23 @@ func (e StopKind) Valid() bool {
 
 // Defines values for StopResolution.
 const (
-	APPROVE       StopResolution = "APPROVE"
-	DENY          StopResolution = "DENY"
-	RETRY         StopResolution = "RETRY"
-	REVIEWANDSEND StopResolution = "REVIEW_AND_SEND"
-	TAKEOVER      StopResolution = "TAKE_OVER"
+	ANSWER         StopResolution = "ANSWER"
+	APPROVE        StopResolution = "APPROVE"
+	DEFAULTAPPLIED StopResolution = "DEFAULT_APPLIED"
+	DENY           StopResolution = "DENY"
+	RETRY          StopResolution = "RETRY"
+	REVIEWANDSEND  StopResolution = "REVIEW_AND_SEND"
+	TAKEOVER       StopResolution = "TAKE_OVER"
 )
 
 // Valid indicates whether the value is a known member of the StopResolution enum.
 func (e StopResolution) Valid() bool {
 	switch e {
+	case ANSWER:
+		return true
 	case APPROVE:
+		return true
+	case DEFAULTAPPLIED:
 		return true
 	case DENY:
 		return true
@@ -1395,22 +1440,22 @@ func (e ThreadMode) Valid() bool {
 
 // Defines values for ThreadStatus.
 const (
-	ThreadStatusIDLE           ThreadStatus = "IDLE"
-	ThreadStatusNEEDSATTENTION ThreadStatus = "NEEDS_ATTENTION"
-	ThreadStatusPAUSED         ThreadStatus = "PAUSED"
-	ThreadStatusRUNNING        ThreadStatus = "RUNNING"
+	IDLE           ThreadStatus = "IDLE"
+	NEEDSATTENTION ThreadStatus = "NEEDS_ATTENTION"
+	PAUSED         ThreadStatus = "PAUSED"
+	RUNNING        ThreadStatus = "RUNNING"
 )
 
 // Valid indicates whether the value is a known member of the ThreadStatus enum.
 func (e ThreadStatus) Valid() bool {
 	switch e {
-	case ThreadStatusIDLE:
+	case IDLE:
 		return true
-	case ThreadStatusNEEDSATTENTION:
+	case NEEDSATTENTION:
 		return true
-	case ThreadStatusPAUSED:
+	case PAUSED:
 		return true
-	case ThreadStatusRUNNING:
+	case RUNNING:
 		return true
 	default:
 		return false
@@ -1509,6 +1554,9 @@ type IssueControlSource string
 
 // IssueLifeState defines model for IssueLifeState.
 type IssueLifeState string
+
+// IssueSignalLevel defines model for IssueSignalLevel.
+type IssueSignalLevel string
 
 // IssueStatus defines model for IssueStatus.
 type IssueStatus string

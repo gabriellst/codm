@@ -3059,7 +3059,10 @@
           "HUMAN_REQUESTED",
           "APPROVAL_NEEDED",
           "AUTH_REQUIRED",
-          "PERMISSION_DENIED"
+          "PERMISSION_DENIED",
+          "DECISION_REQUESTED",
+          "QUESTION_ASKED",
+          "STALLED"
         ]
       },
       "StopResolution": {
@@ -3069,7 +3072,9 @@
           "REVIEW_AND_SEND",
           "TAKE_OVER",
           "APPROVE",
-          "DENY"
+          "DENY",
+          "ANSWER",
+          "DEFAULT_APPLIED"
         ]
       },
       "IssueControlSource": {
@@ -3109,10 +3114,11 @@
       "PanelActionKind": {
         "type": "string",
         "enum": [
-          "ANSWER_STOP",
           "PAUSE",
           "RESUME",
-          "STEER"
+          "STEER",
+          "ANSWER_STOP",
+          "ANSWER_ASK"
         ]
       },
       "PanelActionStatus": {

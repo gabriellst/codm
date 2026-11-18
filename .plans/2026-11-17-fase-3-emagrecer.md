@@ -81,9 +81,9 @@ graph TD
 Entregáveis:
 1. Enums TypeSpec (`packages/contracts/src/wire/enums/`): novos `issue-signal-level.tsp`, `group-output-mode.tsp`, `output-routing.tsp`, `ask-effect.tsp`, `block-cause.tsp`; `stop-kind.tsp` += `DECISION_REQUESTED`, `QUESTION_ASKED`, `STALLED`; `stop-resolution.tsp` += `ANSWER`, `DEFAULT_APPLIED`; `panel-action-kind.tsp` += `ANSWER_ASK`; docs de `issue-timeline-item-kind.tsp` (sem kind novo).
 2. Eventos: `events/thread-issue-signal.tsp` (`integration.thread.issue_signal`, `level` FEEDBACK/PROGRESS), `thread-stop-raised.tsp` += `ask?`; `index.tsp`.
-3. `shared/schemas`: `StopAskSchema`, `AskDefaultSchema`, `AskAnswerSchema`, `StopAnswerSchema` (uniões discriminadas por `kind`); `StopAsk`/`AskAnswer` em `registerSchemas`; `IssueSignalSchema` fora.
+3. `shared/objects/StopAsk.ts` (o barril que o `registerSchemas` publica; revisão S0a): `AskOptionSchema`, `StopAskSchema`, `AskDefaultSchema`, `AskAnswerSchema`, `StopAnswerSchema` (uniões discriminadas por `kind` = `AskAnswerKind`, enum TypeSpec novo), sem `.refine()`; o payload do sinal é o schema gerado do evento.
 4. Tabelas totais exigidas pelo compilador: `RESOLUTIONS_BY_KIND`, `RESUMES_WITH_RESOLVER_POSTURE`, `OFFERED_ON_PANEL` (`thread/utils/StopResolutions.ts`), `NOTIFIES_ON_CHANNEL` (provisório: novos `false`; some em S2), `STOP_TITLES_PT/EN`, `POLICY_KEY` (novos → `humanRequested`, sem coluna nova), `KIND_GATE` do painel (`ANSWER_ASK` recusa até S8b).
-5. Drizzle SQLite (`packages/contracts/src/db/sqlite/thread.ts`) + migração `0036` (`bun migrate:create`, `db:sync-go`, `db:check-go`): `thread_threads.output_mode` (DEFAULT `DECISIONS_AND_LIVE`, proposta), `thread_transcript_entries.{level, routing, stop_id, digest_entry_id, addressee_id}` + índice `(thread_id, routing, digest_entry_id)`, `issue_stops` reconstruída (CHECKs novos, `{ask, answer, answered_by, seq, due_at, ask_entry_id}`, único `(issue_id, seq)`, índice `due_at`). No MESMO slice dos enums porque o CHECK é derivado deles (`enumCheck` + `schema-drift.test.ts`): enum sem migração deixa o repo vermelho.
+5. Drizzle SQLite (`packages/contracts/src/db/sqlite/thread.ts`) + migração `0036` (também reconstrói `thread_panel_actions`, CHECK de `PanelActionKind`; colunas novas de tabelas existentes sem CHECK; `INSERT` da reconstrução de `issue_stops` corrigido à mão) (`bun migrate:create`, `db:sync-go`, `db:check-go`): `thread_threads.output_mode` (DEFAULT `DECISIONS_AND_LIVE`, proposta), `thread_transcript_entries.{level, routing, stop_id, digest_entry_id, addressee_id}` + índice `(thread_id, routing, digest_entry_id)`, `issue_stops` reconstruída (CHECKs novos, `{ask, answer, answered_by, seq, due_at, ask_entry_id}`, único `(issue_id, seq)`, índice `due_at`). No MESMO slice dos enums porque o CHECK é derivado deles (`enumCheck` + `schema-drift.test.ts`): enum sem migração deixa o repo vermelho.
 6. Drizzle pg + migração de nuvem `0007` (`panel_actions_kind_check` com `ANSWER_ASK`).
 7. `bun contracts` + `bun sdk` commitados; `cargo check` verde; teste da migração: linhas existentes de `issue_stops` sobrevivem com kind/resolução intactos; `StopResolutions.test.ts` com os valores novos.
 
@@ -95,7 +95,7 @@ Entregáveis:
 1. `thread/controllers/AnswerStop.ts` (`POST /stops/:stopId/answer`, input `AskAnswerSchema`, CloudSessionMiddleware) — mock.
 2. `thread/controllers/ConfigureOutputMode.ts` (`PUT /threads/:threadId/output-mode`, `mcpScopes` system + orchestration, como `ConfigureReactions`) — mock.
 3. `agent/controllers/{AskDecision,AskQuestion,RequestFeedback,ReportProgress}.ts` (`static mcpScopes = [ISSUE_HANDLING]`, input compondo `StopAskSchema`/`AskDefaultSchema`) — mock com erro nomeado.
-4. `bun emit-openapi && bun sdk`; conferir os nomes gerados (`useAnswerStop`, `useConfigureOutputMode` esperados) e corrigir os handoffs de S8a/S8b se o Kubb gerar outros.
+4. `bun emit-openapi && bun sdk`; conferir os nomes gerados (`useAnswerStop`, `useConfigureOutputMode` esperados — conferidos no S0b) e corrigir os handoffs de S8a/S8b se o Kubb gerar outros.
 5. Snapshot `agent/mcp/__snapshots__/exposure.test.ts.snap` com as ferramentas novas (a remoção de `SendDirectMessage`/`SendArtifact` do escopo da issue é S5a).
 
 ## S1 — Entidade, repositório e "a primeira resolução ganha" (serial)
@@ -267,5 +267,5 @@ Entregáveis:
 ## Riscos de execução
 
 - S6 muda o fluxo que ~29 testes de fluxo cobrem (`RunIssueTurn`): ajustar com motivo, nunca apagar a assertiva.
-- S0a reconstrói `issue_stops`: rodar a migração sobre uma cópia do banco real (só leitura, em diretório temporário) antes do PR para medir tempo e conferir linhas.
+- S0a reconstrói `issue_stops`: rodar a migração sobre uma cópia do banco real (só leitura, em diretório temporário) antes do PR para medir tempo e conferir linhas. No S0a isto ficou coberto só por fixture neutra (`tests/kernel/issue-stops-ask.migration.test.ts`); a passada sobre cópia real é do dono, antes do PR.
 - S8b (e a migração pg do S0a) tem deploy da nuvem primeiro; sem ele, o daemon novo tem o snapshot recusado.

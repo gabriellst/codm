@@ -53,6 +53,7 @@ import "./thread-attached.tsp";
 import "./thread-stop-raised.tsp";
 import "./thread-stop-resolved.tsp";
 import "./thread-message-ingested.tsp";
+import "./thread-issue-signal.tsp";
 import "./issue-created.tsp";
 import "./issue-opened.tsp";
 import "./orchestrator-replied.tsp";

@@ -64,6 +64,40 @@ func ParseArtifactKind(s string) (ArtifactKind, error) {
 	}
 }
 
+type AskAnswerKind string
+
+const (
+	AskAnswerKindOPTION AskAnswerKind = "OPTION"
+	AskAnswerKindTEXT AskAnswerKind = "TEXT"
+	AskAnswerKindDEFAULT AskAnswerKind = "DEFAULT"
+)
+
+func ParseAskAnswerKind(s string) (AskAnswerKind, error) {
+	switch AskAnswerKind(s) {
+	case AskAnswerKindOPTION, AskAnswerKindTEXT, AskAnswerKindDEFAULT:
+		return AskAnswerKind(s), nil
+	default:
+		return "", fmt.Errorf("invalid AskAnswerKind: %q", s)
+	}
+}
+
+type AskEffect string
+
+const (
+	AskEffectPUBLISH AskEffect = "PUBLISH"
+	AskEffectIRREVERSIBLE AskEffect = "IRREVERSIBLE"
+	AskEffectCLIENT_DATA AskEffect = "CLIENT_DATA"
+)
+
+func ParseAskEffect(s string) (AskEffect, error) {
+	switch AskEffect(s) {
+	case AskEffectPUBLISH, AskEffectIRREVERSIBLE, AskEffectCLIENT_DATA:
+		return AskEffect(s), nil
+	default:
+		return "", fmt.Errorf("invalid AskEffect: %q", s)
+	}
+}
+
 type AttachFlowStyle string
 
 const (
@@ -77,6 +111,25 @@ func ParseAttachFlowStyle(s string) (AttachFlowStyle, error) {
 		return AttachFlowStyle(s), nil
 	default:
 		return "", fmt.Errorf("invalid AttachFlowStyle: %q", s)
+	}
+}
+
+type BlockCause string
+
+const (
+	BlockCausePROVIDER_LIMIT BlockCause = "PROVIDER_LIMIT"
+	BlockCausePROVIDER_ERROR BlockCause = "PROVIDER_ERROR"
+	BlockCauseCLI_LOGIN BlockCause = "CLI_LOGIN"
+	BlockCauseSTALLED BlockCause = "STALLED"
+	BlockCauseCLASSIFICATION BlockCause = "CLASSIFICATION"
+)
+
+func ParseBlockCause(s string) (BlockCause, error) {
+	switch BlockCause(s) {
+	case BlockCausePROVIDER_LIMIT, BlockCausePROVIDER_ERROR, BlockCauseCLI_LOGIN, BlockCauseSTALLED, BlockCauseCLASSIFICATION:
+		return BlockCause(s), nil
+	default:
+		return "", fmt.Errorf("invalid BlockCause: %q", s)
 	}
 }
 
@@ -316,6 +369,23 @@ func ParseDirection(s string) (Direction, error) {
 	}
 }
 
+type GroupOutputMode string
+
+const (
+	GroupOutputModeDECISIONS_ONLY GroupOutputMode = "DECISIONS_ONLY"
+	GroupOutputModeDECISIONS_AND_LIVE GroupOutputMode = "DECISIONS_AND_LIVE"
+	GroupOutputModeEVERYTHING GroupOutputMode = "EVERYTHING"
+)
+
+func ParseGroupOutputMode(s string) (GroupOutputMode, error) {
+	switch GroupOutputMode(s) {
+	case GroupOutputModeDECISIONS_ONLY, GroupOutputModeDECISIONS_AND_LIVE, GroupOutputModeEVERYTHING:
+		return GroupOutputMode(s), nil
+	default:
+		return "", fmt.Errorf("invalid GroupOutputMode: %q", s)
+	}
+}
+
 type GroupRole string
 
 const (
@@ -422,6 +492,26 @@ func ParseIssueLifeState(s string) (IssueLifeState, error) {
 		return IssueLifeState(s), nil
 	default:
 		return "", fmt.Errorf("invalid IssueLifeState: %q", s)
+	}
+}
+
+type IssueSignalLevel string
+
+const (
+	IssueSignalLevelDECISION IssueSignalLevel = "DECISION"
+	IssueSignalLevelQUESTION IssueSignalLevel = "QUESTION"
+	IssueSignalLevelFEEDBACK IssueSignalLevel = "FEEDBACK"
+	IssueSignalLevelCLOSING IssueSignalLevel = "CLOSING"
+	IssueSignalLevelBLOCK_NOTICE IssueSignalLevel = "BLOCK_NOTICE"
+	IssueSignalLevelPROGRESS IssueSignalLevel = "PROGRESS"
+)
+
+func ParseIssueSignalLevel(s string) (IssueSignalLevel, error) {
+	switch IssueSignalLevel(s) {
+	case IssueSignalLevelDECISION, IssueSignalLevelQUESTION, IssueSignalLevelFEEDBACK, IssueSignalLevelCLOSING, IssueSignalLevelBLOCK_NOTICE, IssueSignalLevelPROGRESS:
+		return IssueSignalLevel(s), nil
+	default:
+		return "", fmt.Errorf("invalid IssueSignalLevel: %q", s)
 	}
 }
 
@@ -652,6 +742,23 @@ func ParseOutboxSource(s string) (OutboxSource, error) {
 	}
 }
 
+type OutputRouting string
+
+const (
+	OutputRoutingGROUP OutputRouting = "GROUP"
+	OutputRoutingDIGEST OutputRouting = "DIGEST"
+	OutputRoutingPANEL OutputRouting = "PANEL"
+)
+
+func ParseOutputRouting(s string) (OutputRouting, error) {
+	switch OutputRouting(s) {
+	case OutputRoutingGROUP, OutputRoutingDIGEST, OutputRoutingPANEL:
+		return OutputRouting(s), nil
+	default:
+		return "", fmt.Errorf("invalid OutputRouting: %q", s)
+	}
+}
+
 type OwnerKind string
 
 const (
@@ -675,11 +782,12 @@ const (
 	PanelActionKindRESUME PanelActionKind = "RESUME"
 	PanelActionKindSTEER PanelActionKind = "STEER"
 	PanelActionKindANSWER_STOP PanelActionKind = "ANSWER_STOP"
+	PanelActionKindANSWER_ASK PanelActionKind = "ANSWER_ASK"
 )
 
 func ParsePanelActionKind(s string) (PanelActionKind, error) {
 	switch PanelActionKind(s) {
-	case PanelActionKindPAUSE, PanelActionKindRESUME, PanelActionKindSTEER, PanelActionKindANSWER_STOP:
+	case PanelActionKindPAUSE, PanelActionKindRESUME, PanelActionKindSTEER, PanelActionKindANSWER_STOP, PanelActionKindANSWER_ASK:
 		return PanelActionKind(s), nil
 	default:
 		return "", fmt.Errorf("invalid PanelActionKind: %q", s)
@@ -846,11 +954,14 @@ const (
 	StopKindAPPROVAL_NEEDED StopKind = "APPROVAL_NEEDED"
 	StopKindAUTH_REQUIRED StopKind = "AUTH_REQUIRED"
 	StopKindPERMISSION_DENIED StopKind = "PERMISSION_DENIED"
+	StopKindDECISION_REQUESTED StopKind = "DECISION_REQUESTED"
+	StopKindQUESTION_ASKED StopKind = "QUESTION_ASKED"
+	StopKindSTALLED StopKind = "STALLED"
 )
 
 func ParseStopKind(s string) (StopKind, error) {
 	switch StopKind(s) {
-	case StopKindSERVER_ERROR, StopKindBLOCKED_BY_CLASSIFICATION, StopKindHUMAN_REQUESTED, StopKindAPPROVAL_NEEDED, StopKindAUTH_REQUIRED, StopKindPERMISSION_DENIED:
+	case StopKindSERVER_ERROR, StopKindBLOCKED_BY_CLASSIFICATION, StopKindHUMAN_REQUESTED, StopKindAPPROVAL_NEEDED, StopKindAUTH_REQUIRED, StopKindPERMISSION_DENIED, StopKindDECISION_REQUESTED, StopKindQUESTION_ASKED, StopKindSTALLED:
 		return StopKind(s), nil
 	default:
 		return "", fmt.Errorf("invalid StopKind: %q", s)
@@ -865,11 +976,13 @@ const (
 	StopResolutionTAKE_OVER StopResolution = "TAKE_OVER"
 	StopResolutionAPPROVE StopResolution = "APPROVE"
 	StopResolutionDENY StopResolution = "DENY"
+	StopResolutionANSWER StopResolution = "ANSWER"
+	StopResolutionDEFAULT_APPLIED StopResolution = "DEFAULT_APPLIED"
 )
 
 func ParseStopResolution(s string) (StopResolution, error) {
 	switch StopResolution(s) {
-	case StopResolutionRETRY, StopResolutionREVIEW_AND_SEND, StopResolutionTAKE_OVER, StopResolutionAPPROVE, StopResolutionDENY:
+	case StopResolutionRETRY, StopResolutionREVIEW_AND_SEND, StopResolutionTAKE_OVER, StopResolutionAPPROVE, StopResolutionDENY, StopResolutionANSWER, StopResolutionDEFAULT_APPLIED:
 		return StopResolution(s), nil
 	default:
 		return "", fmt.Errorf("invalid StopResolution: %q", s)

@@ -633,6 +633,7 @@ func (e OwnerKind) Valid() bool {
 
 // Defines values for PanelActionKind.
 const (
+	ANSWERASK  PanelActionKind = "ANSWER_ASK"
 	ANSWERSTOP PanelActionKind = "ANSWER_STOP"
 	PAUSE      PanelActionKind = "PAUSE"
 	RESUME     PanelActionKind = "RESUME"
@@ -642,6 +643,8 @@ const (
 // Valid indicates whether the value is a known member of the PanelActionKind enum.
 func (e PanelActionKind) Valid() bool {
 	switch e {
+	case ANSWERASK:
+		return true
 	case ANSWERSTOP:
 		return true
 	case PAUSE:
@@ -777,9 +780,12 @@ const (
 	APPROVALNEEDED          StopKind = "APPROVAL_NEEDED"
 	AUTHREQUIRED            StopKind = "AUTH_REQUIRED"
 	BLOCKEDBYCLASSIFICATION StopKind = "BLOCKED_BY_CLASSIFICATION"
+	DECISIONREQUESTED       StopKind = "DECISION_REQUESTED"
 	HUMANREQUESTED          StopKind = "HUMAN_REQUESTED"
 	PERMISSIONDENIED        StopKind = "PERMISSION_DENIED"
+	QUESTIONASKED           StopKind = "QUESTION_ASKED"
 	SERVERERROR             StopKind = "SERVER_ERROR"
+	STALLED                 StopKind = "STALLED"
 )
 
 // Valid indicates whether the value is a known member of the StopKind enum.
@@ -791,11 +797,17 @@ func (e StopKind) Valid() bool {
 		return true
 	case BLOCKEDBYCLASSIFICATION:
 		return true
+	case DECISIONREQUESTED:
+		return true
 	case HUMANREQUESTED:
 		return true
 	case PERMISSIONDENIED:
 		return true
+	case QUESTIONASKED:
+		return true
 	case SERVERERROR:
+		return true
+	case STALLED:
 		return true
 	default:
 		return false
@@ -804,17 +816,23 @@ func (e StopKind) Valid() bool {
 
 // Defines values for StopResolution.
 const (
-	APPROVE       StopResolution = "APPROVE"
-	DENY          StopResolution = "DENY"
-	RETRY         StopResolution = "RETRY"
-	REVIEWANDSEND StopResolution = "REVIEW_AND_SEND"
-	TAKEOVER      StopResolution = "TAKE_OVER"
+	ANSWER         StopResolution = "ANSWER"
+	APPROVE        StopResolution = "APPROVE"
+	DEFAULTAPPLIED StopResolution = "DEFAULT_APPLIED"
+	DENY           StopResolution = "DENY"
+	RETRY          StopResolution = "RETRY"
+	REVIEWANDSEND  StopResolution = "REVIEW_AND_SEND"
+	TAKEOVER       StopResolution = "TAKE_OVER"
 )
 
 // Valid indicates whether the value is a known member of the StopResolution enum.
 func (e StopResolution) Valid() bool {
 	switch e {
+	case ANSWER:
+		return true
 	case APPROVE:
+		return true
+	case DEFAULTAPPLIED:
 		return true
 	case DENY:
 		return true

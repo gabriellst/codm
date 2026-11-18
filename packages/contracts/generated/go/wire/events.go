@@ -938,6 +938,38 @@ type ThreadAttachedPayload struct {
 	Providers []ProviderKind `json:"providers" validate:"required"`
 }
 
+// ThreadIssueSignalEventName is the wire discriminator for ThreadIssueSignalEvent.
+const ThreadIssueSignalEventName = "integration.thread.issue_signal"
+
+// ThreadIssueSignalEvent — wire shape of integration.thread.issue_signal.
+// BC5 Agent -> BC4 Thread & Routing (fase 3, item 1). Something an issue wants to say that is neither a stop nor its completion: a preview to look at (FEEDBACK — RequestFeedback) or what it did (PROGRESS — ReportProgress and the end of a turn). The thread's output policy decides, per group mode, whether it reaches the group, a per-person digest or only the panel/timeline. Produced only by the agent context (bridge PublishAgentIntegrationEvents), consumed only by the thread context.
+type ThreadIssueSignalEvent struct {
+	Name       string    `json:"name"`
+	EntityID   string    `json:"entityId"`
+	OwnerID    string    `json:"ownerId"`
+	OccurredAt time.Time `json:"occurredAt"`
+	IssueID string `json:"issueId"`
+	ThreadID string `json:"threadId"`
+	Level IssueSignalLevel `json:"level"`
+	Text string `json:"text"`
+	ArtifactIDs []string `json:"artifactIds"`
+	MainArtifactID *string `json:"mainArtifactId,omitempty"`
+	AddresseeID *string `json:"addresseeId,omitempty"`
+}
+
+func (e ThreadIssueSignalEvent) EventName() string { return ThreadIssueSignalEventName }
+
+// ThreadIssueSignalPayload — payload of integration.thread.issue_signal, generated from the contract declaration.
+type ThreadIssueSignalPayload struct {
+	IssueID string `json:"issueId" validate:"required"`
+	ThreadID string `json:"threadId" validate:"required"`
+	Level IssueSignalLevel `json:"level" validate:"required"`
+	Text string `json:"text" validate:"required"`
+	ArtifactIDs []string `json:"artifactIds" validate:"required"`
+	MainArtifactID *string `json:"mainArtifactId,omitempty"`
+	AddresseeID *string `json:"addresseeId,omitempty"`
+}
+
 // ThreadMessageIngestedEventName is the wire discriminator for ThreadMessageIngestedEvent.
 const ThreadMessageIngestedEventName = "integration.thread.message_ingested"
 
@@ -973,6 +1005,7 @@ type ThreadStopRaisedEvent struct {
 	ThreadID string `json:"threadId"`
 	Kind StopKind `json:"kind"`
 	Detail string `json:"detail"`
+	Ask json.RawMessage `json:"ask,omitempty"`
 }
 
 func (e ThreadStopRaisedEvent) EventName() string { return ThreadStopRaisedEventName }
@@ -984,6 +1017,7 @@ type ThreadStopRaisedPayload struct {
 	ThreadID string `json:"threadId" validate:"required"`
 	Kind StopKind `json:"kind" validate:"required"`
 	Detail string `json:"detail" validate:"required"`
+	Ask json.RawMessage `json:"ask,omitempty"`
 }
 
 // ThreadStopResolvedEventName is the wire discriminator for ThreadStopResolvedEvent.

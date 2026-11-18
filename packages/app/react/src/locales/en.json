@@ -426,12 +426,17 @@
 			"APPROVAL_NEEDED": "Approval needed",
 			"AUTH_REQUIRED": "Sign-in required",
 			"BLOCKED_BY_CLASSIFICATION": "Blocked",
+			"DECISION_REQUESTED": "Decision requested",
 			"HUMAN_REQUESTED": "Human requested",
 			"PERMISSION_DENIED": "Permission denied",
-			"SERVER_ERROR": "Server error"
+			"QUESTION_ASKED": "Question",
+			"SERVER_ERROR": "Server error",
+			"STALLED": "Stalled"
 		},
 		"StopResolution": {
+			"ANSWER": "Answer",
 			"APPROVE": "Approve",
+			"DEFAULT_APPLIED": "Went on with the default",
 			"DENY": "Deny",
 			"RETRY": "Retry",
 			"REVIEW_AND_SEND": "Review & send",

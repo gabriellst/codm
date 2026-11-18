@@ -7906,6 +7906,62 @@
                         },
                         "name": {
                           "type": "string",
+                          "const": "integration.thread.issue_signal"
+                        },
+                        "payload": {
+                          "type": "object",
+                          "properties": {
+                            "issueId": {
+                              "type": "string"
+                            },
+                            "threadId": {
+                              "type": "string"
+                            },
+                            "level": {
+                              "$ref": "#/components/schemas/IssueSignalLevel"
+                            },
+                            "text": {
+                              "type": "string"
+                            },
+                            "artifactIds": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "mainArtifactId": {
+                              "type": "string"
+                            },
+                            "addresseeId": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "issueId",
+                            "threadId",
+                            "level",
+                            "text",
+                            "artifactIds"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "ownerId",
+                        "name",
+                        "payload"
+                      ],
+                      "additionalProperties": false,
+                      "examples": []
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "ownerId": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string",
                           "const": "integration.thread.message_ingested"
                         },
                         "payload": {
@@ -7956,6 +8012,9 @@
                             },
                             "detail": {
                               "type": "string"
+                            },
+                            "ask": {
+                              "x-tpl-unknown": true
                             }
                           },
                           "required": [
@@ -9886,7 +9945,10 @@
           "HUMAN_REQUESTED",
           "APPROVAL_NEEDED",
           "AUTH_REQUIRED",
-          "PERMISSION_DENIED"
+          "PERMISSION_DENIED",
+          "DECISION_REQUESTED",
+          "QUESTION_ASKED",
+          "STALLED"
         ]
       },
       "ArtifactKind": {
@@ -9996,7 +10058,9 @@
           "REVIEW_AND_SEND",
           "TAKE_OVER",
           "APPROVE",
-          "DENY"
+          "DENY",
+          "ANSWER",
+          "DEFAULT_APPLIED"
         ]
       },
       "Timezone": {
@@ -10080,6 +10144,17 @@
           "MANUAL",
           "AUTO_24H",
           "THREAD_DETACHED"
+        ]
+      },
+      "IssueSignalLevel": {
+        "type": "string",
+        "enum": [
+          "DECISION",
+          "QUESTION",
+          "FEEDBACK",
+          "CLOSING",
+          "BLOCK_NOTICE",
+          "PROGRESS"
         ]
       },
       "CurrencyCode": {

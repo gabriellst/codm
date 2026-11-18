@@ -2272,6 +2272,32 @@
           "ArtifactKindLINK"
         ]
       },
+      "AskAnswerKind": {
+        "enum": [
+          "OPTION",
+          "TEXT",
+          "DEFAULT"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "AskAnswerKindOPTION",
+          "AskAnswerKindTEXT",
+          "AskAnswerKindDEFAULT"
+        ]
+      },
+      "AskEffect": {
+        "enum": [
+          "PUBLISH",
+          "IRREVERSIBLE",
+          "CLIENT_DATA"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "AskEffectPUBLISH",
+          "AskEffectIRREVERSIBLE",
+          "AskEffectCLIENT_DATA"
+        ]
+      },
       "AttachFlowStyle": {
         "enum": [
           "FULLSCREEN",
@@ -2305,6 +2331,23 @@
           }
         },
         "type": "object"
+      },
+      "BlockCause": {
+        "enum": [
+          "PROVIDER_LIMIT",
+          "PROVIDER_ERROR",
+          "CLI_LOGIN",
+          "STALLED",
+          "CLASSIFICATION"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "BlockCausePROVIDER_LIMIT",
+          "BlockCausePROVIDER_ERROR",
+          "BlockCauseCLI_LOGIN",
+          "BlockCauseSTALLED",
+          "BlockCauseCLASSIFICATION"
+        ]
       },
       "BufferSize": {
         "enum": [
@@ -6467,6 +6510,19 @@
         ],
         "type": "object"
       },
+      "GroupOutputMode": {
+        "enum": [
+          "DECISIONS_ONLY",
+          "DECISIONS_AND_LIVE",
+          "EVERYTHING"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "GroupOutputModeDECISIONS_ONLY",
+          "GroupOutputModeDECISIONS_AND_LIVE",
+          "GroupOutputModeEVERYTHING"
+        ]
+      },
       "GroupRole": {
         "enum": [
           "member",
@@ -7236,6 +7292,25 @@
           "IssueLifeStateDONE"
         ]
       },
+      "IssueSignalLevel": {
+        "enum": [
+          "DECISION",
+          "QUESTION",
+          "FEEDBACK",
+          "CLOSING",
+          "BLOCK_NOTICE",
+          "PROGRESS"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "IssueSignalLevelDECISION",
+          "IssueSignalLevelQUESTION",
+          "IssueSignalLevelFEEDBACK",
+          "IssueSignalLevelCLOSING",
+          "IssueSignalLevelBLOCK_NOTICE",
+          "IssueSignalLevelPROGRESS"
+        ]
+      },
       "IssueStatus": {
         "enum": [
           "NEEDS_INPUT",
@@ -7589,6 +7664,19 @@
           "OutboxSourceintegration"
         ]
       },
+      "OutputRouting": {
+        "enum": [
+          "GROUP",
+          "DIGEST",
+          "PANEL"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "OutputRoutingGROUP",
+          "OutputRoutingDIGEST",
+          "OutputRoutingPANEL"
+        ]
+      },
       "OwnerKind": {
         "enum": [
           "ORGANIZATION",
@@ -7605,14 +7693,16 @@
           "PAUSE",
           "RESUME",
           "STEER",
-          "ANSWER_STOP"
+          "ANSWER_STOP",
+          "ANSWER_ASK"
         ],
         "type": "string",
         "x-enum-varnames": [
           "PanelActionKindPAUSE",
           "PanelActionKindRESUME",
           "PanelActionKindSTEER",
-          "PanelActionKindANSWER_STOP"
+          "PanelActionKindANSWER_STOP",
+          "PanelActionKindANSWER_ASK"
         ]
       },
       "PanelActionOutcome": {
@@ -8257,7 +8347,10 @@
           "HUMAN_REQUESTED",
           "APPROVAL_NEEDED",
           "AUTH_REQUIRED",
-          "PERMISSION_DENIED"
+          "PERMISSION_DENIED",
+          "DECISION_REQUESTED",
+          "QUESTION_ASKED",
+          "STALLED"
         ],
         "type": "string",
         "x-enum-varnames": [
@@ -8266,7 +8359,10 @@
           "StopKindHUMAN_REQUESTED",
           "StopKindAPPROVAL_NEEDED",
           "StopKindAUTH_REQUIRED",
-          "StopKindPERMISSION_DENIED"
+          "StopKindPERMISSION_DENIED",
+          "StopKindDECISION_REQUESTED",
+          "StopKindQUESTION_ASKED",
+          "StopKindSTALLED"
         ]
       },
       "StopResolution": {
@@ -8275,7 +8371,9 @@
           "REVIEW_AND_SEND",
           "TAKE_OVER",
           "APPROVE",
-          "DENY"
+          "DENY",
+          "ANSWER",
+          "DEFAULT_APPLIED"
         ],
         "type": "string",
         "x-enum-varnames": [
@@ -8283,7 +8381,9 @@
           "StopResolutionREVIEW_AND_SEND",
           "StopResolutionTAKE_OVER",
           "StopResolutionAPPROVE",
-          "StopResolutionDENY"
+          "StopResolutionDENY",
+          "StopResolutionANSWER",
+          "StopResolutionDEFAULT_APPLIED"
         ]
       },
       "ThreadMode": {

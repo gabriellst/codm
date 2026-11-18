@@ -43,6 +43,10 @@ const KIND_GATE: Readonly<
 		if (!stop) return 'PANEL_NOT_FOUND'
 		return stop.resolutions.includes(action.resolution) ? undefined : 'PANEL_RESOLUTION_NOT_OFFERED'
 	},
+	// Fase 3: answering an ask from the panel. The body variant, the open asks on the roster snapshot and
+	// the who-may-answer rule arrive together in slice S8b; until then the kind exists only in the
+	// contract (the ledger's CHECK and this closed map), and is refused.
+	[PanelActionKind.ANSWER_ASK]: () => 'PANEL_RESOLUTION_NOT_OFFERED',
 }
 
 /**

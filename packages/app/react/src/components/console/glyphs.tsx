@@ -139,6 +139,9 @@ export const resolutionIsPrimary: Record<StopResolution, boolean> = {
 	APPROVE: true,
 	TAKE_OVER: false,
 	DENY: false,
+	// Fase 3: answering an ask is the primary move; a default that applied is never a button anyone presses.
+	ANSWER: true,
+	DEFAULT_APPLIED: false,
 }
 
 // ── Artifacts ────────────────────────────────────────────────────────────────────

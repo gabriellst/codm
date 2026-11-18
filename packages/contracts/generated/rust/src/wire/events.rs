@@ -659,6 +659,33 @@ pub struct ThreadAttachedPayload {
 /// `integration.thread.attached` in the canonical transport envelope.
 pub type ThreadAttachedEvent = super::envelope::Envelope<ThreadAttachedPayload>;
 
+/// Wire discriminator for [`ThreadIssueSignalPayload`].
+pub const THREAD_ISSUE_SIGNAL_EVENT_NAME: &str = "integration.thread.issue_signal";
+
+/// BC5 Agent -> BC4 Thread & Routing (fase 3, item 1). Something an issue wants to say that is neither a stop nor its completion: a preview to look at (FEEDBACK — RequestFeedback) or what it did (PROGRESS — ReportProgress and the end of a turn). The thread's output policy decides, per group mode, whether it reaches the group, a per-person digest or only the panel/timeline. Produced only by the agent context (bridge PublishAgentIntegrationEvents), consumed only by the thread context.
+/// Payload of `integration.thread.issue_signal`, generated from the contract declaration.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreadIssueSignalPayload {
+	pub issue_id: String,
+	pub thread_id: String,
+	/// FEEDBACK or PROGRESS — the only two levels an issue says through this fact. DECISION/QUESTION travel as stops (integration.thread.stop_raised with `ask`), CLOSING comes from integration.issue.completed and BLOCK_NOTICE from the thread's own stops; the consumer refuses any other level.
+	pub level: IssueSignalLevel,
+	/// The issue's own words (verbatim).
+	pub text: String,
+	/// Artifacts the signal cites, by id — the thread reads each row through its declared artifact read and delivers it through its own artifact delivery, so no file descriptor travels here. Empty when it cites none.
+	pub artifact_ids: Vec<String>,
+	/// The one artifact a FEEDBACK sends to the group (the main preview); the others stay on the panel. Absent for PROGRESS.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub main_artifact_id: Option<String>,
+	/// Who the issue is talking to (a thread participant id) — the key of the per-person digest. Absent ⇒ whoever wrote the message the issue came from.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub addressee_id: Option<String>,
+}
+
+/// `integration.thread.issue_signal` in the canonical transport envelope.
+pub type ThreadIssueSignalEvent = super::envelope::Envelope<ThreadIssueSignalPayload>;
+
 /// Wire discriminator for [`ThreadMessageIngestedPayload`].
 pub const THREAD_MESSAGE_INGESTED_EVENT_NAME: &str = "integration.thread.message_ingested";
 
@@ -689,6 +716,9 @@ pub struct ThreadStopRaisedPayload {
 	pub kind: StopKind,
 	/// The human-readable reason the agent gave. ADDITIVE field (GOAL-agent-abstraction Fase 6, §4.4 item (i)): without it the text of `RaiseStop(kind, detail)` and the question of `AskOperator(question)` die at the bridge and the Needs-you card is born empty. Empty string when the fact carries no text — required rather than optional so no producer can omit it silently.
 	pub detail: String,
+	/// ADDITIVE (fase 3, item 1): the issue's ask — question, options, declared effects, default (a question's), addressee. Present only on the asks (DECISION_REQUESTED / QUESTION_ASKED); transport stops carry none. Typed `unknown` ON PURPOSE: the wire codegen carries scalars, enums and arrays, never nested shapes (the same rule the union slots follow), so the shape is owned by the TS core — `StopAskSchema` in `@shared/objects` — and the consumer parses it there. Producer and consumer are both the TS core; the Go side only carries it.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub ask: Option<serde_json::Value>,
 }
 
 /// `integration.thread.stop_raised` in the canonical transport envelope.

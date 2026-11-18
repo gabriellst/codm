@@ -9,6 +9,7 @@ import { chatPresenceTypeSchema } from "./chatPresenceTypeSchema.ts";
 import { contactKindSchema } from "./contactKindSchema.ts";
 import { historySyncTypeSchema } from "./historySyncTypeSchema.ts";
 import { issueArchiveReasonSchema } from "./issueArchiveReasonSchema.ts";
+import { issueSignalLevelSchema } from "./issueSignalLevelSchema.ts";
 import { messageAuthorSchema } from "./messageAuthorSchema.ts";
 import { messageTypeSchema } from "./messageTypeSchema.ts";
 import { providerKindSchema } from "./providerKindSchema.ts";
@@ -746,6 +747,20 @@ get "providers"(){
     })
     }), z.object({
     "ownerId": z.string(),
+"name": z.enum(["integration.thread.issue_signal"]),
+"payload": z.object({
+    "issueId": z.string(),
+"threadId": z.string(),
+get "level"(){
+                return issueSignalLevelSchema
+              },
+"text": z.string(),
+"artifactIds": z.array(z.string()),
+"mainArtifactId": z.optional(z.string()),
+"addresseeId": z.optional(z.string())
+    })
+    }), z.object({
+    "ownerId": z.string(),
 "name": z.enum(["integration.thread.message_ingested"]),
 "payload": z.object({
     "threadId": z.string()
@@ -760,7 +775,8 @@ get "providers"(){
 get "kind"(){
                 return stopKindSchema
               },
-"detail": z.string()
+"detail": z.string(),
+"ask": z.optional(z.any())
     })
     }), z.object({
     "ownerId": z.string(),
