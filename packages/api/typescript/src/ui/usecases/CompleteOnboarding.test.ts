@@ -39,7 +39,11 @@ describe('CompleteOnboarding / SaveOnboardingStep', () => {
 		// MUST override BEFORE resolving `complete`/`saveStep`: `CompleteOnboarding` composes
 		// `AttachThread`, which injects `ChannelConnectivity` at CONSTRUCTION time — resolving once in
 		// `beforeAll` would freeze the pre-override (real) implementation into every test.
-		testBed.override(ChannelConnectivity, { isConnected: async () => true, anyConnected: async () => true } as ChannelConnectivity)
+		testBed.override(ChannelConnectivity, {
+			isConnected: async () => true,
+			anyConnected: async () => true,
+			connectedSince: async () => new Date(0),
+		} as ChannelConnectivity)
 		complete = testBed.resolve(CompleteOnboarding)
 		saveStep = testBed.resolve(SaveOnboardingStep)
 	})

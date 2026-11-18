@@ -171,6 +171,15 @@ function alternatives(asks: readonly PendingAskRef[], or: string): string {
 	return each.length > 1 ? `${each.slice(0, -1).join(', ')} ${or} ${each[each.length - 1]}` : (each[0] ?? '')
 }
 
+interface DefaultAppliedParams {
+	/** The ask's number in its issue — the `2` of `D2`; the line already starts with the issue's key. */
+	seq: number
+	/** What it went on with, as people read it. */
+	label: string
+	/** The default applied well after the deadline — the daemon was off. */
+	late: boolean
+}
+
 interface ProviderPausedParams {
 	until: Date
 	now: Date
@@ -214,6 +223,12 @@ const PT_MESSAGES = {
 	 * Um "sim" solto com várias perguntas abertas que a pessoa pode responder (fase 3, item 3): UMA pergunta de
 	 * volta, curta, com os códigos — nunca um palpite.
 	 */
+	/**
+	 * A pergunta seguiu sozinha com o padrão (fase 3, item 1b) — o corpo de uma linha de PROGRESSO da issue
+	 * (a política decide: só o painel no modo padrão). Quando o prazo foi aplicado atrasado, diz por quê.
+	 */
+	defaultApplied: (p: DefaultAppliedParams) =>
+		`D${p.seq}: ninguém respondeu em 15 min — segui com o padrão: ${p.label}.${p.late ? ' (O codm estava desligado quando o prazo venceu.)' : ''}`,
 	answerDisambiguation: (p: { asks: readonly PendingAskRef[] }) =>
 		`Para qual? ${alternatives(p.asks, 'ou')} — responda citando a pergunta.`,
 }
@@ -228,6 +243,8 @@ export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
 		panelCode: p => `Your codm panel code: ${p.code} — valid for 10 min.`,
 		panelActionEcho: p => `${p.name} ${PANEL_ECHO_EN[p.echo]} ${p.key} from the panel`,
 		issueSignal: p => SIGNAL_EN[p.level](p),
+		defaultApplied: p =>
+			`D${p.seq}: nobody answered within 15 min — went on with the default: ${p.label}.${p.late ? ' (codm was off when the deadline passed.)' : ''}`,
 		answerDisambiguation: p => `Which one? ${alternatives(p.asks, 'or')} — reply quoting the question.`,
 	},
 })

@@ -48,7 +48,7 @@ import threadControllers from '@thread/controllers'
 import * as threadInternalHandlers from '@thread/handlers/internal'
 import * as threadExternalHandlers from '@thread/handlers/external'
 import * as threadCommandHandlers from '@thread/handlers/commands'
-import { FireDueLoops, PublishPanelRoster } from '@thread/jobs'
+import { FireDueLoops, PublishPanelRoster, ApplyDueQuestionDefaults } from '@thread/jobs'
 import { INSTANCE_REGISTRY as threadRegistry } from '@thread/registry'
 import uiControllers from '@ui/controllers'
 import * as uiInternalHandlers from '@ui/handlers/internal'
@@ -129,7 +129,7 @@ export const MANIFEST = {
 		internalHandlers: threadInternalHandlers,
 		externalHandlers: threadExternalHandlers,
 		commandHandlers: threadCommandHandlers,
-		jobs: [{ handler: FireDueLoops }, { handler: PublishPanelRoster }],
+		jobs: [{ handler: FireDueLoops }, { handler: PublishPanelRoster }, { handler: ApplyDueQuestionDefaults }],
 		registry: threadRegistry,
 	},
 	ui: {

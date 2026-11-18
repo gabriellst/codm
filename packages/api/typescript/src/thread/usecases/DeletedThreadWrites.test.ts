@@ -29,7 +29,11 @@ describe('AC-4/AC-5 — the write ports of a deleted thread', () => {
 	})
 	beforeEach(async () => {
 		await testBed.reset()
-		testBed.override(ChannelConnectivity, { isConnected: async () => true, anyConnected: async () => true } as ChannelConnectivity)
+		testBed.override(ChannelConnectivity, {
+			isConnected: async () => true,
+			anyConnected: async () => true,
+			connectedSince: async () => new Date(0),
+		} as ChannelConnectivity)
 	})
 	afterAll(async () => {
 		await testBed.destroy()
