@@ -61,6 +61,29 @@ export const RESUMES_WITH_RESOLVER_POSTURE: Record<StopResolution, boolean> = {
 }
 
 /**
+ * Which resolutions mean something BY THEIR NAME ALONE (fase 3) — what the console's Needs-you card offers as a
+ * button and what the bare door `POST /stops/:stopId/resolve` accepts. A table, total over `StopResolution`.
+ *
+ * `ANSWER` is off: an answer without the answer itself is meaningless — a person answers an ask through its
+ * own doors (the console's `POST /stops/:stopId/answer`, the panel's `ANSWER_ASK`, a quoted reply), each
+ * carrying an option or text. `DEFAULT_APPLIED` is off: it is the deadline job's, never a person's.
+ */
+export const GIVEN_BY_NAME_ALONE: Record<StopResolution, boolean> = {
+	[StopResolution.RETRY]: true,
+	[StopResolution.REVIEW_AND_SEND]: true,
+	[StopResolution.APPROVE]: true,
+	[StopResolution.DENY]: true,
+	[StopResolution.TAKE_OVER]: true,
+	[StopResolution.ANSWER]: false,
+	[StopResolution.DEFAULT_APPLIED]: false,
+}
+
+/** The resolutions of this kind a person gives with a bare button — the kind's vocabulary, reduced by `GIVEN_BY_NAME_ALONE`. */
+export function bareResolutionsForKind(kind: StopKind): StopResolution[] {
+	return resolutionsForKind(kind).filter(resolution => GIVEN_BY_NAME_ALONE[resolution])
+}
+
+/**
  * Which answers the cloud PANEL offers (fase 2, item 6b). A table, total over `StopResolution`, so a new
  * resolution fails compilation here until somebody decides whether a person in the group may give it from
  * a browser. TAKE_OVER stays off: it pauses the whole conversation and hands it to the operator — the

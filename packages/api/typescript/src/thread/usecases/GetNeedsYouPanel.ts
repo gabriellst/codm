@@ -3,7 +3,7 @@ import { and, eq, isNull } from 'drizzle-orm'
 import { LibSqlDatabaseDriver, Handler, z } from '@codm/core-typescript'
 import { stops, issues, threads } from '@codm/contracts/db'
 import { StopKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
-import { resolutionsForKind } from '../utils/StopResolutions'
+import { bareResolutionsForKind } from '../utils/StopResolutions'
 
 export const GetNeedsYouPanelInputSchema = z.object({ ownerId: z.uuid(), threadId: z.uuid() })
 export const GetNeedsYouPanelOutputSchema = z.object({
@@ -83,7 +83,9 @@ export class GetNeedsYouPanel extends Handler<typeof GetNeedsYouPanelInputSchema
 				title: r.title,
 				detail: r.detail,
 				raisedAt: r.raisedAt.toISOString(),
-				availableResolutions: resolutionsForKind(r.kind),
+				// The card's buttons carry a resolution and nothing else, so an ask's ANSWER (which needs the answer)
+				// and the deadline job's DEFAULT_APPLIED are never offered here (fase 3).
+				availableResolutions: bareResolutionsForKind(r.kind),
 			})),
 		}
 	}

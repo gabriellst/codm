@@ -1,8 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
-import { eq } from 'drizzle-orm'
-import { threads, transcriptEntries, stops } from '@codm/contracts/db'
-import { LibSqlDatabaseDriver, LibSqlTransaction } from '@codm/core-typescript'
+import { and, eq } from 'drizzle-orm'
+import { uuidv7 } from 'uuidv7'
+import { threads, transcriptEntries, stops, events } from '@codm/contracts/db'
+import { DomainEventRepository, LibSqlDatabaseDriver, LibSqlTransaction, type BaseError } from '@codm/core-typescript'
 import {
 	TranscriptKind,
 	StopKind,
@@ -11,8 +12,15 @@ import {
 	AgentModelId,
 	Language,
 	PermissionPosture,
+	AskAnswerKind,
+	AskEffect,
+	GroupOutputMode,
+	IssueSignalLevel,
+	OutputRouting,
 } from '@codm/contracts-typescript/wire/enums'
-import { TestBed, givenThread } from '@test/support'
+import { TestBed, givenStop, givenThread } from '@test/support'
+import { ThreadStopResolvedEvent } from '../../events/ThreadStopResolvedEvent'
+import { askDueAt, StopAsk, type StopAskProps } from '../../objects/StopAsk'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { ThreadRepository } from './ThreadRepository'
 
@@ -258,5 +266,188 @@ describe('LibSqlThreadRepository — the thread row and its transcript entries c
 		expect(cleared.language).toBeUndefined()
 		const [clearedRow] = await db.select().from(threads).where(eq(threads.id, thread.id.value))
 		expect(clearedRow?.language).toBeNull()
+	})
+
+	// ── Fase 3: the asks, "the first resolution wins", and the output mode ─────────────────────────
+
+	const yesNoQuestion = (overrides: Partial<StopAskProps> = {}): StopAskProps => ({
+		requested: StopKind.QUESTION_ASKED,
+		question: 'Uso o tema claro?',
+		options: [
+			{ id: 'yes', label: 'Sim' },
+			{ id: 'no', label: 'Não' },
+		],
+		default: { kind: AskAnswerKind.OPTION, optionId: 'yes' },
+		effects: [],
+		...overrides,
+	})
+
+	it('the output mode round-trips on an EXISTING row — it is in the update set', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		expect((await repo.findById(thread.id.value))!.outputMode).toBe(GroupOutputMode.DECISIONS_AND_LIVE)
+
+		const loaded = (await repo.findById(thread.id.value))!
+		loaded.configureOutputMode(GroupOutputMode.DECISIONS_ONLY)
+		await repo.save(loaded)
+
+		const [row] = await db.select().from(threads).where(eq(threads.id, thread.id.value))
+		expect(row?.outputMode).toBe(GroupOutputMode.DECISIONS_ONLY)
+		expect((await repo.findById(thread.id.value))!.outputMode).toBe(GroupOutputMode.DECISIONS_ONLY)
+	})
+
+	it('an ask, its seq, its entry and its answer survive the round trip — the JSON parsed, never cast', async () => {
+		const issueId = uuidv7()
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const stop = thread.raiseStop({ issueId, title: 't', detail: 'd', ask: new StopAsk(yesNoQuestion()), seq: 1 })
+		const entry = thread.recordEntry({
+			kind: TranscriptKind.SYSTEM,
+			text: 'APP-1 · D1',
+			issueId,
+			level: IssueSignalLevel.QUESTION,
+			routing: OutputRouting.GROUP,
+			stopId: stop.stopId,
+		})
+		await driver.transaction(tx => repo.save(thread, tx))
+
+		const loaded = (await repo.findStop(stop.stopId))!
+		expect(loaded.ask?.options.map(o => o.id)).toEqual(['yes', 'no'])
+		expect(loaded.seq).toBe(1)
+		expect(await repo.findEntry(entry.entryId)).toMatchObject({
+			level: IssueSignalLevel.QUESTION,
+			routing: OutputRouting.GROUP,
+			stopId: stop.stopId,
+		})
+
+		thread.resolveStop(loaded, StopResolution.ANSWER, PermissionPosture.AUTO, {
+			answer: { kind: AskAnswerKind.OPTION, optionId: 'no' },
+			answeredBy: 'participant-a',
+		})
+		await driver.transaction(tx => repo.save(thread, tx))
+
+		const answered = (await repo.findStop(stop.stopId))!
+		expect(answered.answer).toEqual({ kind: AskAnswerKind.OPTION, optionId: 'no' })
+		expect(answered.answeredBy).toBe('participant-a')
+	})
+
+	/**
+	 * THE RACE (spec C3). Two resolvers both load the stop OPEN — a quoted reply and the panel, an answer and
+	 * the deadline job — so both pass the aggregate's own `resolvedAt` check. The conditional UPDATE is the
+	 * only thing that can tell the second one it lost, and losing must leave NOTHING of it behind: not the
+	 * resolution, not the entry it recorded beside it, not its `thread.stop_resolved` fact.
+	 */
+	it('RACE — the first resolution wins; the second gets STOP_ALREADY_RESOLVED and nothing of it stays', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const stop = await givenStop(testBed, { threadId: thread.id.value, issueId: uuidv7(), ask: yesNoQuestion() })
+
+		// Both load before either writes.
+		const first = (await repo.findById(thread.id.value))!
+		const second = (await repo.findById(thread.id.value))!
+		const seenByFirst = (await repo.findStop(stop.stopId))!
+		const seenBySecond = (await repo.findStop(stop.stopId))!
+
+		first.resolveStop(seenByFirst, StopResolution.ANSWER, PermissionPosture.AUTO, {
+			answer: { kind: AskAnswerKind.OPTION, optionId: 'yes' },
+		})
+		await driver.transaction(async tx => {
+			await repo.save(first, tx)
+			await testBed.resolve(DomainEventRepository).saveMany(first.pullDomainEvents(), tx)
+		})
+
+		second.resolveStop(seenBySecond, StopResolution.ANSWER, PermissionPosture.AUTO, {
+			answer: { kind: AskAnswerKind.OPTION, optionId: 'no' },
+		})
+		const loserEntry = second.recordEntry({ kind: TranscriptKind.SYSTEM, text: 'eco do perdedor' })
+		const lost = await driver
+			.transaction(async tx => {
+				await testBed.resolve(DomainEventRepository).saveMany(second.pullDomainEvents(), tx)
+				await repo.save(second, tx)
+			})
+			.then(
+				() => undefined,
+				(error: BaseError) => error,
+			)
+
+		expect(lost?.name).toBe('STOP_ALREADY_RESOLVED')
+		const row = (await repo.findStop(stop.stopId))!
+		expect(row.answer).toEqual({ kind: AskAnswerKind.OPTION, optionId: 'yes' })
+		expect(await repo.findEntry(loserEntry.entryId)).toBeUndefined()
+		const resolvedFacts = await db
+			.select()
+			.from(events)
+			.where(and(eq(events.name, ThreadStopResolvedEvent.name), eq(events.entityId, thread.id.value)))
+		expect(resolvedFacts).toHaveLength(1)
+	})
+
+	it('nextAskSeq numbers the asks per issue, and the unique index refuses a second D1', async () => {
+		const issueId = uuidv7()
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		expect(await repo.nextAskSeq(issueId)).toBe(1)
+
+		await givenStop(testBed, { threadId: thread.id.value, issueId, ask: yesNoQuestion() })
+		expect(await repo.nextAskSeq(issueId)).toBe(2)
+		// Another issue counts on its own.
+		expect(await repo.nextAskSeq(uuidv7())).toBe(1)
+
+		const loaded = (await repo.findById(thread.id.value))!
+		loaded.raiseStop({ issueId, title: 't', detail: 'd', ask: new StopAsk(yesNoQuestion()), seq: 1 })
+		await expect(driver.transaction(tx => repo.save(loaded, tx))).rejects.toThrow()
+	})
+
+	it('markAskDelivered starts the clock ONCE — a re-delivery never pushes the deadline', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const stop = await givenStop(testBed, { threadId: thread.id.value, issueId: uuidv7(), ask: yesNoQuestion() })
+		const loaded = (await repo.findById(thread.id.value))!
+		const entry = loaded.recordEntry({ kind: TranscriptKind.SYSTEM, text: 'APP-1 · D1', stopId: stop.stopId })
+		await repo.save(loaded)
+		await db.update(stops).set({ askEntryId: entry.entryId }).where(eq(stops.id, stop.stopId))
+
+		const delivered = new Date('2026-11-18T12:00:00.000Z')
+		expect(await repo.markAskDelivered(entry.entryId, delivered)).toEqual([stop.stopId])
+		expect(await repo.markAskDelivered(entry.entryId, new Date('2026-11-18T12:05:00.000Z'))).toEqual([])
+
+		expect((await repo.findStop(stop.stopId))!.dueAt).toEqual(askDueAt(delivered))
+	})
+
+	it('markAskDelivered on a DIGEST entry starts the clock of every question it carried — never a decision', async () => {
+		const issueId = uuidv7()
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const question = await givenStop(testBed, { threadId: thread.id.value, issueId, ask: yesNoQuestion() })
+		const decision = await givenStop(testBed, { threadId: thread.id.value, issueId, ask: yesNoQuestion({ effects: [AskEffect.PUBLISH] }) })
+		const loaded = (await repo.findById(thread.id.value))!
+		const digest = loaded.recordEntry({ kind: TranscriptKind.SYSTEM, text: '2 coisas' })
+		const questionEntry = loaded.recordEntry({
+			kind: TranscriptKind.SYSTEM,
+			text: 'D1',
+			stopId: question.stopId,
+			digestEntryId: digest.entryId,
+		})
+		const decisionEntry = loaded.recordEntry({
+			kind: TranscriptKind.SYSTEM,
+			text: 'D2',
+			stopId: decision.stopId,
+			digestEntryId: digest.entryId,
+		})
+		await repo.save(loaded)
+		await db.update(stops).set({ askEntryId: questionEntry.entryId }).where(eq(stops.id, question.stopId))
+		await db.update(stops).set({ askEntryId: decisionEntry.entryId }).where(eq(stops.id, decision.stopId))
+
+		expect(await repo.markAskDelivered(digest.entryId, new Date('2026-11-18T12:00:00.000Z'))).toEqual([question.stopId])
+		expect((await repo.findStop(decision.stopId))!.dueAt).toBeUndefined()
+	})
+
+	it('findDueAsks returns the open questions past their deadline — not the future, not the answered', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const due = await givenStop(testBed, { threadId: thread.id.value, issueId: uuidv7(), ask: yesNoQuestion() })
+		const future = await givenStop(testBed, { threadId: thread.id.value, issueId: uuidv7(), ask: yesNoQuestion() })
+		const answered = await givenStop(testBed, { threadId: thread.id.value, issueId: uuidv7(), ask: yesNoQuestion() })
+		const now = new Date('2026-11-18T12:15:00.000Z')
+		await db.update(stops).set({ dueAt: now }).where(eq(stops.id, due.stopId))
+		await db
+			.update(stops)
+			.set({ dueAt: new Date(now.getTime() + 1) })
+			.where(eq(stops.id, future.stopId))
+		await db.update(stops).set({ dueAt: now, resolvedAt: now, resolution: StopResolution.ANSWER }).where(eq(stops.id, answered.stopId))
+
+		expect((await repo.findDueAsks(now)).map(s => s.stopId)).toEqual([due.stopId])
 	})
 })

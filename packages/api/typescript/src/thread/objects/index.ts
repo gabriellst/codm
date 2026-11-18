@@ -29,3 +29,13 @@ export {
 	type DailyLoopScheduleProps,
 	type IntervalLoopScheduleProps,
 } from './LoopSchedule'
+export {
+	StopAsk,
+	StopAskObjectSchema,
+	ASK_STOP_KINDS,
+	QUESTION_DEFAULT_MS,
+	askDueAt,
+	admitsAnswer,
+	type AskStopKind,
+	type StopAskProps,
+} from './StopAsk'

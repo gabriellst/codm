@@ -55,6 +55,11 @@ pub mod types {
     ///    "ARTIFACT_NOT_FOUND",
     ///    "ARTIFACT_NOT_PREVIEWABLE",
     ///    "ARTIFACT_TOO_LARGE",
+    ///    "ASK_ANSWER_REQUIRED",
+    ///    "ASK_DEFAULT_REQUIRED",
+    ///    "ASK_NOT_DUE",
+    ///    "ASK_OPTIONS_DUPLICATED",
+    ///    "ASK_OPTION_UNKNOWN",
     ///    "CANNOT_CONVERT_INPUT",
     ///    "CHANNEL_MEDIA_UNSUPPORTED",
     ///    "CHANNEL_NOT_CONNECTED",
@@ -201,6 +206,16 @@ pub mod types {
         ArtifactNotPreviewable,
         #[serde(rename = "ARTIFACT_TOO_LARGE")]
         ArtifactTooLarge,
+        #[serde(rename = "ASK_ANSWER_REQUIRED")]
+        AskAnswerRequired,
+        #[serde(rename = "ASK_DEFAULT_REQUIRED")]
+        AskDefaultRequired,
+        #[serde(rename = "ASK_NOT_DUE")]
+        AskNotDue,
+        #[serde(rename = "ASK_OPTIONS_DUPLICATED")]
+        AskOptionsDuplicated,
+        #[serde(rename = "ASK_OPTION_UNKNOWN")]
+        AskOptionUnknown,
         #[serde(rename = "CANNOT_CONVERT_INPUT")]
         CannotConvertInput,
         #[serde(rename = "CHANNEL_MEDIA_UNSUPPORTED")]
@@ -445,6 +460,11 @@ pub mod types {
                 Self::ArtifactNotFound => f.write_str("ARTIFACT_NOT_FOUND"),
                 Self::ArtifactNotPreviewable => f.write_str("ARTIFACT_NOT_PREVIEWABLE"),
                 Self::ArtifactTooLarge => f.write_str("ARTIFACT_TOO_LARGE"),
+                Self::AskAnswerRequired => f.write_str("ASK_ANSWER_REQUIRED"),
+                Self::AskDefaultRequired => f.write_str("ASK_DEFAULT_REQUIRED"),
+                Self::AskNotDue => f.write_str("ASK_NOT_DUE"),
+                Self::AskOptionsDuplicated => f.write_str("ASK_OPTIONS_DUPLICATED"),
+                Self::AskOptionUnknown => f.write_str("ASK_OPTION_UNKNOWN"),
                 Self::CannotConvertInput => f.write_str("CANNOT_CONVERT_INPUT"),
                 Self::ChannelMediaUnsupported => f.write_str("CHANNEL_MEDIA_UNSUPPORTED"),
                 Self::ChannelNotConnected => f.write_str("CHANNEL_NOT_CONNECTED"),
@@ -596,6 +616,11 @@ pub mod types {
                 "ARTIFACT_NOT_FOUND" => Ok(Self::ArtifactNotFound),
                 "ARTIFACT_NOT_PREVIEWABLE" => Ok(Self::ArtifactNotPreviewable),
                 "ARTIFACT_TOO_LARGE" => Ok(Self::ArtifactTooLarge),
+                "ASK_ANSWER_REQUIRED" => Ok(Self::AskAnswerRequired),
+                "ASK_DEFAULT_REQUIRED" => Ok(Self::AskDefaultRequired),
+                "ASK_NOT_DUE" => Ok(Self::AskNotDue),
+                "ASK_OPTIONS_DUPLICATED" => Ok(Self::AskOptionsDuplicated),
+                "ASK_OPTION_UNKNOWN" => Ok(Self::AskOptionUnknown),
                 "CANNOT_CONVERT_INPUT" => Ok(Self::CannotConvertInput),
                 "CHANNEL_MEDIA_UNSUPPORTED" => Ok(Self::ChannelMediaUnsupported),
                 "CHANNEL_NOT_CONNECTED" => Ok(Self::ChannelNotConnected),

@@ -37,6 +37,12 @@ import { Thread, type Stop, type TranscriptEntry } from '../../entities/Thread'
  * The pending entries and stops are written on the SAME `dbc` as the thread row, so passing `tx` is what
  * makes thread+children atomic — identical to how the entity row and its domain-event row are atomic
  * only because the use case wraps both in `withTransaction`. Every production writer passes it.
+ *
+ * ### A resolution is conditional — the FIRST one wins (fase 3)
+ * `save` stamps a resolution only on a stop still open (`resolved_at IS NULL`) and raises
+ * `STOP_ALREADY_RESOLVED` when the stop had already moved on, which rolls back the caller's whole
+ * transaction — so the loser's entry, echo and steer never land. Every resolver (a rule, the panel, the
+ * console, the orchestrator, the deadline job) goes through it.
  */
 export abstract class ThreadRepository extends Repository<Thread> {
 	abstract findById(id: string, tx?: Transaction): Promise<Thread | undefined>
@@ -64,4 +70,21 @@ export abstract class ThreadRepository extends Repository<Thread> {
 	abstract openStops(threadId: string, tx?: Transaction): Promise<Stop[]>
 	/** Unresolved stops of one issue. Survives for the issue-detail read and the lifecycle tests. */
 	abstract openStopsByIssue(issueId: string, tx?: Transaction): Promise<Stop[]>
+
+	// ── The asks (fase 3) ──────────────────────────────────────────────────────────────────────────
+
+	/**
+	 * The number the NEXT ask of this issue takes (`max(seq) + 1`, starting at 1) — the `D1` of `APP-12 · D1`.
+	 * Read inside the raising transaction; the unique `(issue_id, seq)` index refuses the race.
+	 */
+	abstract nextAskSeq(issueId: string, tx?: Transaction): Promise<number>
+	/**
+	 * Start the clock of every open QUESTION the entry `entryId` carried to the group — its own ask, or the
+	 * asks folded into it when it is a digest — at `deliveredAt` + `QUESTION_DEFAULT_MS`. Conditional on
+	 * `due_at IS NULL`: a re-delivery after a failed commit never pushes a deadline. Returns the stop ids
+	 * whose deadline this call set.
+	 */
+	abstract markAskDelivered(entryId: string, deliveredAt: Date, tx?: Transaction): Promise<string[]>
+	/** Open QUESTIONS whose deadline has passed at `now` — what the deadline sweep applies the default to. */
+	abstract findDueAsks(now: Date, tx?: Transaction): Promise<Stop[]>
 }

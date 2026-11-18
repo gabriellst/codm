@@ -4,7 +4,8 @@ import type { Transaction } from '@codm/core-typescript'
 import { PermissionPosture, StopResolution } from '@codm/contracts-typescript/wire/enums'
 import { OPERATOR_PARTICIPANT_ID } from '../entities/Thread'
 import { ThreadRepository } from '../repositories/ThreadRepository'
-import type { ApplicationErrors } from '../errors'
+import { GIVEN_BY_NAME_ALONE } from '../utils/StopResolutions'
+import type { ApplicationErrors, DomainErrors } from '../errors'
 import type { AgentInterfaceErrors } from '@agent/errors'
 
 export const ResolveStopInputSchema = z.object({
@@ -63,24 +64,33 @@ export class ResolveStop extends Handler<typeof ResolveStopInputSchema, typeof R
 	}
 
 	protected async handle(input: this['input'], tx?: Transaction): Promise<void> {
-		if (input.runThreadId !== undefined) {
-			const open = await this.threads.openStops(input.runThreadId)
-			if (!open.some(stop => stop.stopId === input.stopId)) {
-				throw new BaseError<AgentInterfaceErrors>('AGENT_RUN_SCOPE_MISMATCH', 'no open stop with that id on this thread')
-			}
+		// THE BARE DOOR (fase 3): this use case carries a resolution and nothing else, so an ask's ANSWER (which
+		// needs the answer) and the deadline job's DEFAULT_APPLIED never come through it.
+		if (!GIVEN_BY_NAME_ALONE[input.resolution]) {
+			throw new BaseError<DomainErrors>('RESOLUTION_NOT_APPLICABLE', `${input.resolution} is not given by its name alone`)
 		}
 
-		const stop = await this.threads.findStop(input.stopId)
-		if (!stop || stop.ownerId !== input.ownerId) throw new BaseError<ApplicationErrors>('STOP_NOT_FOUND', `no stop ${input.stopId}`)
-
-		const thread = await this.threads.findById(stop.threadId)
-		if (!thread) throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${stop.threadId}`)
-
-		// WHO RESOLVED decides how far the resume may go (Decision 7): a run resolves with the posture it
-		// was minted with; the console resolves as the `operator` participant of THIS thread.
-		const resolverPosture = input.runPosture ?? thread.postureOf(OPERATOR_PARTICIPANT_ID)
-
+		// Every read happens INSIDE the transaction (fase 3, "a primeira resolução ganha"): a stop loaded
+		// outside it could be answered by someone else between the read and the write. The conditional
+		// UPDATE of `ThreadRepository.save` is the backstop; reading here keeps the precise verdicts below.
 		await this.withTransaction(tx, async tx => {
+			if (input.runThreadId !== undefined) {
+				const open = await this.threads.openStops(input.runThreadId, tx)
+				if (!open.some(stop => stop.stopId === input.stopId)) {
+					throw new BaseError<AgentInterfaceErrors>('AGENT_RUN_SCOPE_MISMATCH', 'no open stop with that id on this thread')
+				}
+			}
+
+			const stop = await this.threads.findStop(input.stopId, tx)
+			if (!stop || stop.ownerId !== input.ownerId) throw new BaseError<ApplicationErrors>('STOP_NOT_FOUND', `no stop ${input.stopId}`)
+
+			const thread = await this.threads.findById(stop.threadId, tx)
+			if (!thread) throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${stop.threadId}`)
+
+			// WHO RESOLVED decides how far the resume may go (Decision 7): a run resolves with the posture it
+			// was minted with; the console resolves as the `operator` participant of THIS thread.
+			const resolverPosture = input.runPosture ?? thread.postureOf(OPERATOR_PARTICIPANT_ID)
+
 			thread.resolveStop(stop, input.resolution, resolverPosture)
 			await this.threads.save(thread, tx)
 			// The aggregate raised the fact; the use case owns the transaction, so the drain happens here —

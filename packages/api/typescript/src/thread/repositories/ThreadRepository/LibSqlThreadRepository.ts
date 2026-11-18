@@ -1,9 +1,12 @@
 import { injectable } from 'tsyringe-neo'
-import { and, asc, desc, eq, isNull } from 'drizzle-orm'
-import { LibSqlDatabaseDriver, tryCatchAsync, LibSqlTransaction } from '@codm/core-typescript'
+import { and, asc, desc, eq, inArray, isNull, lte, max, or } from 'drizzle-orm'
+import { BaseError, LibSqlDatabaseDriver, tryCatchAsync, LibSqlTransaction } from '@codm/core-typescript'
 import { threads, transcriptEntries, stops } from '@codm/contracts/db'
-import type { ProviderKind, ContactKind, ThreadStatus, BufferSize } from '@codm/contracts-typescript/wire/enums'
+import { StopKind, type ProviderKind, type ContactKind, type ThreadStatus, type BufferSize } from '@codm/contracts-typescript/wire/enums'
+import { StopAnswerSchema, StopAskSchema } from '@shared/objects'
 import { Thread, ThreadSchema, type MentionGate, type Participant, type Stop, type TranscriptEntry } from '../../entities/Thread'
+import { askDueAt } from '../../objects/StopAsk'
+import type { DomainErrors } from '../../errors'
 import { ThreadRepository } from './ThreadRepository'
 
 @injectable()
@@ -82,6 +85,9 @@ export class LibSqlThreadRepository extends ThreadRepository {
 						// set is the worse half — the console would show "follow the account" while every turn kept
 						// speaking the language nobody can see chosen any more.
 						language: data.language,
+						// `configureOutputMode` flips it every way — missing here, a mode change would be a write the
+						// console reports as saved and the output policy never sees.
+						outputMode: data.outputMode,
 						participants: data.participants,
 						bufferSize: data.bufferSize,
 						// Both directions too, and for the same reason the custom prompt is: `configureModel`
@@ -120,8 +126,26 @@ export class LibSqlThreadRepository extends ThreadRepository {
 			// The resolution is an UPDATE of a row that already committed — the caller loaded it with
 			// `findStop`, so it exists. One statement per resolution: a single resolve per request is the
 			// only shape the product has, and a CASE-based bulk update would be machinery for nobody.
+			//
+			// CONDITIONAL (fase 3): only a stop still OPEN is stamped. Two resolvers that both loaded the stop
+			// open — a quoted reply and the panel, an answer and the deadline job — both pass the aggregate's
+			// own `resolvedAt` check; this is where the second one learns it lost. Zero rows ⇒
+			// STOP_ALREADY_RESOLVED, which rolls the caller's whole transaction back, so nothing the loser
+			// recorded beside it (an entry, an echo, a steer) survives.
 			for (const patch of stopResolutions) {
-				await dbc.update(stops).set({ resolution: patch.resolution, resolvedAt: patch.resolvedAt }).where(eq(stops.id, patch.stopId))
+				const stamped = await dbc
+					.update(stops)
+					.set({
+						resolution: patch.resolution,
+						resolvedAt: patch.resolvedAt,
+						answer: patch.answer ?? null,
+						answeredBy: patch.answeredBy ?? null,
+					})
+					.where(and(eq(stops.id, patch.stopId), isNull(stops.resolvedAt)))
+					.returning({ id: stops.id })
+				if (stamped.length === 0) {
+					throw new BaseError<DomainErrors>('STOP_ALREADY_RESOLVED', `stop ${patch.stopId} was resolved by someone else first`)
+				}
 			}
 			// A late routing (`Thread.linkEntryToIssue`) — the entry committed earlier, unrouted. `issue_id IS NULL`
 			// re-asserted in the UPDATE, so a link can never overwrite one decided at ingest.
@@ -200,6 +224,46 @@ export class LibSqlThreadRepository extends ThreadRepository {
 		return rows.map(row => this.toStop(row))
 	}
 
+	// ── The asks (fase 3) ──────────────────────────────────────────────────────────────────────────
+
+	async nextAskSeq(issueId: string, tx?: LibSqlTransaction): Promise<number> {
+		const dbc = tx ?? this.driver.db
+		const [row] = await dbc
+			.select({ last: max(stops.seq) })
+			.from(stops)
+			.where(eq(stops.issueId, issueId))
+		return (row?.last ?? 0) + 1
+	}
+
+	async markAskDelivered(entryId: string, deliveredAt: Date, tx?: LibSqlTransaction): Promise<string[]> {
+		const dbc = tx ?? this.driver.db
+		// The asks a DIGEST entry carried: each question kept its own entry, pointing at the digest that took it.
+		const carried = dbc.select({ id: transcriptEntries.id }).from(transcriptEntries).where(eq(transcriptEntries.digestEntryId, entryId))
+		const marked = await dbc
+			.update(stops)
+			.set({ dueAt: askDueAt(deliveredAt) })
+			.where(
+				and(
+					eq(stops.kind, StopKind.QUESTION_ASKED),
+					isNull(stops.resolvedAt),
+					isNull(stops.dueAt),
+					or(eq(stops.askEntryId, entryId), inArray(stops.askEntryId, carried)),
+				),
+			)
+			.returning({ id: stops.id })
+		return marked.map(row => row.id)
+	}
+
+	async findDueAsks(now: Date, tx?: LibSqlTransaction): Promise<Stop[]> {
+		const dbc = tx ?? this.driver.db
+		const rows = await dbc
+			.select()
+			.from(stops)
+			.where(and(eq(stops.kind, StopKind.QUESTION_ASKED), isNull(stops.resolvedAt), lte(stops.dueAt, now)))
+			.orderBy(asc(stops.dueAt))
+		return rows.map(row => this.toStop(row))
+	}
+
 	// ── Mapping ───────────────────────────────────────────────────────────────────────────────────
 
 	private toDomain(row: typeof threads.$inferSelect): Thread {
@@ -218,6 +282,7 @@ export class LibSqlThreadRepository extends ThreadRepository {
 			// The column is nullable and the field is optional — one spelling of "never chosen" on each
 			// side, collapsed here, exactly as `customPrompt` below does.
 			language: row.language ?? undefined,
+			outputMode: row.outputMode,
 			participants: row.participants as Participant[],
 			bufferSize: row.bufferSize as BufferSize,
 			modelByProvider: row.modelByProvider,
@@ -245,6 +310,7 @@ export class LibSqlThreadRepository extends ThreadRepository {
 			reactionsEnabled: entity.reactionsEnabled,
 			streamingEnabled: entity.streamingEnabled,
 			language: entity.language ?? null,
+			outputMode: entity.outputMode,
 			participants: entity.participants,
 			bufferSize: entity.bufferSize,
 			modelByProvider: entity.modelByProvider,
@@ -273,6 +339,11 @@ export class LibSqlThreadRepository extends ThreadRepository {
 			messageType: entry.messageType ?? null,
 			mediaPath: entry.mediaPath ?? null,
 			artifactId: entry.artifactId ?? null,
+			level: entry.level ?? null,
+			routing: entry.routing ?? null,
+			stopId: entry.stopId ?? null,
+			digestEntryId: entry.digestEntryId ?? null,
+			addresseeId: entry.addresseeId ?? null,
 			at: entry.at,
 		}
 	}
@@ -295,10 +366,18 @@ export class LibSqlThreadRepository extends ThreadRepository {
 			raisedAt: stop.raisedAt,
 			resolution: stop.resolution ?? null,
 			resolvedAt: stop.resolvedAt ?? null,
+			ask: stop.ask ?? null,
+			seq: stop.seq ?? null,
+			dueAt: stop.dueAt ?? null,
+			askEntryId: stop.askEntryId ?? null,
+			answer: stop.answer ?? null,
+			answeredBy: stop.answeredBy ?? null,
 		}
 	}
 
-	// No casts, same reason as `toEntry`: `issue_stops.kind` and `.resolution` carry `$type<…>()`.
+	// No casts, same reason as `toEntry`: `issue_stops.kind` and `.resolution` carry `$type<…>()`. The two
+	// JSON columns are PARSED — their shape is the core's (`StopAskSchema` / `StopAnswerSchema`), never
+	// redeclared on the table, so the read is where it is checked.
 	private toStop(row: typeof stops.$inferSelect): Stop {
 		return {
 			stopId: row.id,
@@ -311,6 +390,12 @@ export class LibSqlThreadRepository extends ThreadRepository {
 			raisedAt: row.raisedAt,
 			resolution: row.resolution ?? undefined,
 			resolvedAt: row.resolvedAt ?? undefined,
+			ask: row.ask == null ? undefined : StopAskSchema.parse(row.ask),
+			seq: row.seq ?? undefined,
+			dueAt: row.dueAt ?? undefined,
+			askEntryId: row.askEntryId ?? undefined,
+			answer: row.answer == null ? undefined : StopAnswerSchema.parse(row.answer),
+			answeredBy: row.answeredBy ?? undefined,
 		}
 	}
 
@@ -330,6 +415,11 @@ export class LibSqlThreadRepository extends ThreadRepository {
 			messageType: row.messageType ?? undefined,
 			mediaPath: row.mediaPath ?? undefined,
 			artifactId: row.artifactId ?? undefined,
+			level: row.level ?? undefined,
+			routing: row.routing ?? undefined,
+			stopId: row.stopId ?? undefined,
+			digestEntryId: row.digestEntryId ?? undefined,
+			addresseeId: row.addresseeId ?? undefined,
 			at: row.at,
 		}
 	}

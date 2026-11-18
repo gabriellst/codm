@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'bun:test'
 import { StopKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
 import {
+	GIVEN_BY_NAME_ALONE,
+	bareResolutionsForKind,
 	OFFERED_ON_PANEL,
 	RESOLUTIONS_BY_KIND,
 	RESUMES_WITH_RESOLVER_POSTURE,
@@ -49,5 +51,14 @@ describe('StopResolutions — fase 3 asks and the stall', () => {
 		expect(OFFERED_ON_PANEL[StopResolution.DEFAULT_APPLIED]).toBe(false)
 		expect(panelResolutionsForKind(StopKind.DECISION_REQUESTED)).toEqual([])
 		expect(panelResolutionsForKind(StopKind.STALLED)).toEqual([StopResolution.RETRY])
+	})
+
+	it('the Needs-you card never offers a bare ANSWER or the job-only DEFAULT_APPLIED', () => {
+		expect(GIVEN_BY_NAME_ALONE[StopResolution.ANSWER]).toBe(false)
+		expect(GIVEN_BY_NAME_ALONE[StopResolution.DEFAULT_APPLIED]).toBe(false)
+		expect(bareResolutionsForKind(StopKind.DECISION_REQUESTED)).toEqual([StopResolution.TAKE_OVER])
+		expect(bareResolutionsForKind(StopKind.QUESTION_ASKED)).toEqual([StopResolution.TAKE_OVER])
+		// The old kinds keep every button they had.
+		expect(bareResolutionsForKind(StopKind.APPROVAL_NEEDED)).toEqual(RESOLUTIONS_BY_KIND[StopKind.APPROVAL_NEEDED])
 	})
 })

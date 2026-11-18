@@ -9,7 +9,7 @@ import {
 	type BaseError,
 	type HttpControllerRequest,
 } from '@codm/core-typescript'
-import { McpScope, StopKind, StopResolution, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
+import { AskAnswerKind, McpScope, StopKind, StopResolution, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { ResolveStopController } from './ResolveStop'
@@ -158,5 +158,39 @@ describe('ResolveStopController — reachable by the console AND from inside an 
 		const stillOpen = await testBed.resolve(ThreadRepository).findStop(stop.stopId)
 		expect(stillOpen?.resolution).toBeUndefined()
 		expect(stillOpen?.resolvedAt).toBeUndefined()
+	})
+
+	/**
+	 * THE BARE DOOR (fase 3). `/resolve` carries a resolution and nothing else; an ANSWER without the answer
+	 * means nothing, and DEFAULT_APPLIED is the deadline job's. Both are refused before anything is read, and
+	 * the ask stays open for the doors that carry an answer.
+	 */
+	it('ANSWER and DEFAULT_APPLIED are refused on the bare door — the ask stays open', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const stop = await givenStop(testBed, {
+			threadId: thread.id.value,
+			issueId: uuidv7(),
+			ask: {
+				requested: StopKind.QUESTION_ASKED,
+				question: 'Uso o tema claro?',
+				options: [{ id: 'yes', label: 'Sim' }],
+				default: { kind: AskAnswerKind.OPTION, optionId: 'yes' },
+				effects: [],
+			},
+		})
+
+		for (const resolution of [StopResolution.ANSWER, StopResolution.DEFAULT_APPLIED]) {
+			const request = requestFor(stop.stopId, resolution)
+			await new AgentIdentityMiddleware(new InMemoryAgentIdentityService()).execute(request)
+			const failure = await testBed
+				.resolve(ResolveStopController)
+				.execute(request)
+				.then(
+					() => undefined,
+					(error: unknown) => error as BaseError,
+				)
+			expect(failure?.name).toBe('RESOLUTION_NOT_APPLICABLE')
+		}
+		expect((await testBed.resolve(ThreadRepository).findStop(stop.stopId))?.resolvedAt).toBeUndefined()
 	})
 })

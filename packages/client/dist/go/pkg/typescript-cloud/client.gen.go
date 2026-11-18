@@ -30,6 +30,11 @@ const (
 	ARTIFACTNOTFOUND                ApiErrors = "ARTIFACT_NOT_FOUND"
 	ARTIFACTNOTPREVIEWABLE          ApiErrors = "ARTIFACT_NOT_PREVIEWABLE"
 	ARTIFACTTOOLARGE                ApiErrors = "ARTIFACT_TOO_LARGE"
+	ASKANSWERREQUIRED               ApiErrors = "ASK_ANSWER_REQUIRED"
+	ASKDEFAULTREQUIRED              ApiErrors = "ASK_DEFAULT_REQUIRED"
+	ASKNOTDUE                       ApiErrors = "ASK_NOT_DUE"
+	ASKOPTIONSDUPLICATED            ApiErrors = "ASK_OPTIONS_DUPLICATED"
+	ASKOPTIONUNKNOWN                ApiErrors = "ASK_OPTION_UNKNOWN"
 	CANNOTCONVERTINPUT              ApiErrors = "CANNOT_CONVERT_INPUT"
 	CHANNELMEDIAUNSUPPORTED         ApiErrors = "CHANNEL_MEDIA_UNSUPPORTED"
 	CHANNELNOTCONNECTED             ApiErrors = "CHANNEL_NOT_CONNECTED"
@@ -163,6 +168,16 @@ func (e ApiErrors) Valid() bool {
 	case ARTIFACTNOTPREVIEWABLE:
 		return true
 	case ARTIFACTTOOLARGE:
+		return true
+	case ASKANSWERREQUIRED:
+		return true
+	case ASKDEFAULTREQUIRED:
+		return true
+	case ASKNOTDUE:
+		return true
+	case ASKOPTIONSDUPLICATED:
+		return true
+	case ASKOPTIONUNKNOWN:
 		return true
 	case CANNOTCONVERTINPUT:
 		return true

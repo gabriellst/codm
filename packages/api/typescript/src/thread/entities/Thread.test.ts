@@ -10,8 +10,14 @@ import {
 	ThreadStatus,
 	Language,
 	PermissionPosture,
+	AskAnswerKind,
+	AskEffect,
+	GroupOutputMode,
+	IssueSignalLevel,
+	OutputRouting,
 } from '@codm/contracts-typescript/wire/enums'
 import { ThreadStopResolvedEvent } from '../events/ThreadStopResolvedEvent'
+import { StopAsk, type StopAskProps } from '../objects/StopAsk'
 import { CUSTOM_PROMPT_MAX_LENGTH } from '../schemas'
 import { INVOCATION_FRESHNESS_WINDOW_MS, Thread } from './Thread'
 
@@ -748,5 +754,170 @@ describe('Thread.raiseStop / resolveStop — a stop belongs to the thread, with 
 				participants: [{ participantId: 'c1', name: 'Contact', source: 'WA', canInvoke: false, canElevate: false }],
 			}),
 		).toThrow(expect.objectContaining({ name: 'LAST_INVOKER' }))
+	})
+})
+
+/**
+ * FASE 3 — the asks: a stop that carries a decision or a question, its answer, and the group's output mode.
+ */
+describe('Thread — asks, answers and the output mode (fase 3)', () => {
+	const issueId = '00000000-0000-4000-8000-0000000000cc'
+	const yesNo = [
+		{ id: 'yes', label: 'Sim' },
+		{ id: 'no', label: 'Não' },
+	]
+	const questionAsk = (overrides: Partial<StopAskProps> = {}) =>
+		new StopAsk({
+			requested: StopKind.QUESTION_ASKED,
+			question: 'Uso o tema claro?',
+			options: yesNo,
+			default: { kind: AskAnswerKind.OPTION, optionId: 'yes' },
+			effects: [],
+			...overrides,
+		})
+	const raiseAsk = (thread: Thread, ask = questionAsk()) => thread.raiseStop({ issueId, title: 't', detail: 'd', ask, seq: 1 })
+
+	it('a fresh thread starts at the decided default mode, and configureOutputMode changes it', () => {
+		const thread = Thread.create(base)
+		expect(thread.outputMode).toBe(GroupOutputMode.DECISIONS_AND_LIVE)
+
+		thread.configureOutputMode(GroupOutputMode.EVERYTHING)
+		expect(thread.outputMode).toBe(GroupOutputMode.EVERYTHING)
+	})
+
+	it('raising an ask stores the wire shape and the seq, with the kind the value object derived', () => {
+		const thread = Thread.create(base)
+
+		const question = raiseAsk(thread)
+		const escalated = raiseAsk(thread, questionAsk({ effects: [AskEffect.PUBLISH] }))
+
+		expect(question.kind).toBe(StopKind.QUESTION_ASKED)
+		expect(question.seq).toBe(1)
+		expect(question.ask?.question).toBe('Uso o tema claro?')
+		expect(question.dueAt).toBeUndefined()
+		// The caller asked a QUESTION; the effect made it a decision — the caller never says what it becomes.
+		expect(escalated.kind).toBe(StopKind.DECISION_REQUESTED)
+	})
+
+	it('ANSWER records the answer and who gave it', () => {
+		const thread = Thread.create(base)
+		const stop = raiseAsk(thread)
+
+		thread.resolveStop(stop, StopResolution.ANSWER, PermissionPosture.AUTO, {
+			answer: { kind: AskAnswerKind.OPTION, optionId: 'no' },
+			answeredBy: 'participant-a',
+		})
+
+		const [patch] = thread.pullPendingWrites().stopResolutions
+		expect(patch).toMatchObject({
+			resolution: StopResolution.ANSWER,
+			answer: { kind: AskAnswerKind.OPTION, optionId: 'no' },
+			answeredBy: 'participant-a',
+		})
+	})
+
+	it('a TEXT answer is admissible even where the ask offers options', () => {
+		const thread = Thread.create(base)
+		const stop = raiseAsk(thread)
+
+		thread.resolveStop(stop, StopResolution.ANSWER, PermissionPosture.AUTO, { answer: { kind: AskAnswerKind.TEXT, text: 'o escuro' } })
+
+		expect(thread.pullPendingWrites().stopResolutions[0]?.answer).toEqual({ kind: AskAnswerKind.TEXT, text: 'o escuro' })
+	})
+
+	it('FALSEADOR — ANSWER without the answer is refused, and nothing is recorded', () => {
+		const thread = Thread.create(base)
+		const stop = raiseAsk(thread)
+
+		expect(() => thread.resolveStop(stop, StopResolution.ANSWER, PermissionPosture.AUTO)).toThrow(
+			expect.objectContaining({ name: 'ASK_ANSWER_REQUIRED' }),
+		)
+		expect(thread.pullPendingWrites().stopResolutions).toHaveLength(0)
+		expect(thread.pullDomainEvents()).toHaveLength(0)
+	})
+
+	it('FALSEADOR — an answer naming an option the ask does not offer is refused', () => {
+		const thread = Thread.create(base)
+		const stop = raiseAsk(thread)
+
+		expect(() =>
+			thread.resolveStop(stop, StopResolution.ANSWER, PermissionPosture.AUTO, {
+				answer: { kind: AskAnswerKind.OPTION, optionId: 'maybe' },
+			}),
+		).toThrow(expect.objectContaining({ name: 'ASK_OPTION_UNKNOWN' }))
+	})
+
+	it('FALSEADOR — ANSWER does not apply to a stop that carries no ask', () => {
+		const thread = Thread.create(base)
+		const stop = thread.raiseStop({ kind: StopKind.SERVER_ERROR, title: 't', detail: 'd' })
+
+		expect(() =>
+			thread.resolveStop(stop, StopResolution.ANSWER, PermissionPosture.AUTO, { answer: { kind: AskAnswerKind.TEXT, text: 'x' } }),
+		).toThrow(expect.objectContaining({ name: 'RESOLUTION_NOT_APPLICABLE' }))
+	})
+
+	it('FALSEADOR — DEFAULT_APPLIED before the deadline, or on a question never delivered, is refused', () => {
+		const thread = Thread.create(base)
+		const due = new Date('2026-11-18T12:15:00.000Z')
+		const undelivered = raiseAsk(thread)
+		const delivered = { ...raiseAsk(thread), dueAt: due }
+
+		expect(() => thread.resolveStop(undelivered, StopResolution.DEFAULT_APPLIED, PermissionPosture.AUTO, { now: due })).toThrow(
+			expect.objectContaining({ name: 'ASK_NOT_DUE' }),
+		)
+		expect(() =>
+			thread.resolveStop(delivered, StopResolution.DEFAULT_APPLIED, PermissionPosture.AUTO, { now: new Date(due.getTime() - 1) }),
+		).toThrow(expect.objectContaining({ name: 'ASK_NOT_DUE' }))
+	})
+
+	it('DEFAULT_APPLIED at the deadline records the ask default, answered by nobody', () => {
+		const thread = Thread.create(base)
+		const due = new Date('2026-11-18T12:15:00.000Z')
+		const stop = { ...raiseAsk(thread), dueAt: due }
+		thread.pullPendingWrites()
+
+		thread.resolveStop(stop, StopResolution.DEFAULT_APPLIED, PermissionPosture.BYPASS, { now: due, answeredBy: 'participant-a' })
+
+		const [patch] = thread.pullPendingWrites().stopResolutions
+		expect(patch).toMatchObject({
+			resolution: StopResolution.DEFAULT_APPLIED,
+			resolvedAt: due,
+			answer: { kind: AskAnswerKind.DEFAULT, default: { kind: AskAnswerKind.OPTION, optionId: 'yes' } },
+		})
+		expect(patch?.answeredBy).toBeUndefined()
+		// A default was nobody's answer: the resume never runs with an elevated posture.
+		expect((thread.pullDomainEvents()[0] as ThreadStopResolvedEvent).payload.posture).toBe(PermissionPosture.AUTO)
+	})
+
+	it('a decision does not admit DEFAULT_APPLIED — it waits for a person', () => {
+		const thread = Thread.create(base)
+		const decision = { ...raiseAsk(thread, questionAsk({ effects: [AskEffect.IRREVERSIBLE] })), dueAt: new Date(0) }
+
+		expect(() => thread.resolveStop(decision, StopResolution.DEFAULT_APPLIED, PermissionPosture.AUTO)).toThrow(
+			expect.objectContaining({ name: 'RESOLUTION_NOT_APPLICABLE' }),
+		)
+	})
+
+	it('recordEntry carries the signal fields — level, routing, the ask it put to the group, the digest and addressee', () => {
+		const thread = Thread.create(base)
+
+		const entry = thread.recordEntry({
+			kind: TranscriptKind.SYSTEM,
+			text: 'APP-1 · D1 — Uso o tema claro?',
+			issueId,
+			level: IssueSignalLevel.QUESTION,
+			routing: OutputRouting.DIGEST,
+			stopId: '019e4d24-6524-7041-9e1c-8108180cddb1',
+			digestEntryId: '019e4d24-6524-7041-9e1c-8108180cddb2',
+			addresseeId: 'participant-a',
+		})
+
+		expect(entry).toMatchObject({
+			level: IssueSignalLevel.QUESTION,
+			routing: OutputRouting.DIGEST,
+			stopId: '019e4d24-6524-7041-9e1c-8108180cddb1',
+			digestEntryId: '019e4d24-6524-7041-9e1c-8108180cddb2',
+			addresseeId: 'participant-a',
+		})
 	})
 })
