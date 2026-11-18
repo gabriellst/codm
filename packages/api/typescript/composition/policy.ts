@@ -160,6 +160,22 @@ export const POLICY_EXCEPTIONS: readonly { file: string; imports: string; why: s
 			'the "pare" and the hold it asks for must commit in ONE transaction (the `tx` both use cases accept): an eventual ' +
 			'pause would leave a window in which the group sees its "pare" recorded and the work still running.',
 	},
+	{
+		file: 'thread/usecases/ExecutePanelAction.ts',
+		imports: 'issue/usecases',
+		why:
+			'Agir pelo painel (fase 2, item 6b) — a person identified on the cloud panel pauses, resumes or steers an issue, ' +
+			'executed on the daemon as that member. The ladder:\n' +
+			'  degrau 1 (refactor to repositories/services) — NOT TAKEN, for the reason the ingest exception above names: ' +
+			"pausing/resuming through `IssueRepository` would mutate `Issue` from `thread` and mint `issue.paused` outside the " +
+			"context that owns it; reopening a finished issue before a steer is `Issue.reopen()`'s guarded entrypoint " +
+			'(`ReopenIssue`), the one `SteerIssueTurn` composes.\n' +
+			'  degrau 2 (declared edge + NAMED per-file exception) — TAKEN. Same `thread → issue` edge, same surface, one more ' +
+			'file: the panel is a third door to the same two use cases the WhatsApp command and the console already use.\n' +
+			'  degrau 3 (integration event / queued command) — NOT NEEDED, and wrong here. The ledger row that makes the action ' +
+			'exactly-once, the effect and the echo line the group gets must commit in ONE transaction: an eventual effect would ' +
+			'let a re-delivered action act twice, or the group read "Ana pausou APP-12" while nothing was paused.',
+	},
 ]
 
 /**

@@ -20,6 +20,7 @@ import { VerifyPanelCode } from './VerifyPanelCode'
 import { RequestPanelAction } from './RequestPanelAction'
 import { GetPanelAction } from './GetPanelAction'
 import { RotatePanelLink } from './RotatePanelLink'
+import { GetPanelIssue } from './GetPanelIssue'
 
 const OWNER = '019e4d24-6524-7041-9e1c-8108180cde10'
 const OTHER_OWNER = '019e4d24-6524-7041-9e1c-8108180cde11'
@@ -158,6 +159,13 @@ describe('panel — acting as an identified member', () => {
 
 		const { actionId } = await act(token, ana, approve)
 		expect((await pull()).actions.map(action => action.actionId)).toEqual([actionId])
+
+		// The page learns the stop and its answers from the issue read.
+		expect((await testBed.resolve(GetPanelIssue).execute({ token, issueId: ISSUE })).openStop).toEqual({
+			stopId: STOP,
+			kind: StopKind.APPROVAL_NEEDED,
+			resolutions: [StopResolution.APPROVE, StopResolution.DENY],
+		})
 	})
 
 	it('the outcome round-trips: the daemon reports, the page reads DONE / REFUSED with the code — first report wins', async () => {

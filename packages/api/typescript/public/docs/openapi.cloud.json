@@ -2148,6 +2148,32 @@
                           }
                         ]
                       }
+                    },
+                    "openStop": {
+                      "type": "object",
+                      "properties": {
+                        "stopId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "kind": {
+                          "$ref": "#/components/schemas/StopKind"
+                        },
+                        "resolutions": {
+                          "maxItems": 8,
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/StopResolution"
+                          }
+                        }
+                      },
+                      "required": [
+                        "stopId",
+                        "kind",
+                        "resolutions"
+                      ],
+                      "additionalProperties": false
                     }
                   },
                   "required": [
@@ -2815,6 +2841,8 @@
           "PANEL_MEMBER_NOT_FOUND",
           "PANEL_NOT_FOUND",
           "PANEL_RESOLUTION_NOT_OFFERED",
+          "PARTICIPANT_CANNOT_ACT",
+          "PARTICIPANT_CANNOT_RELEASE",
           "PARTICIPANT_NOT_FOUND",
           "PASSWORDS_DONT_MATCH",
           "PASSWORD_TOO_WEAK",
@@ -3094,6 +3122,8 @@
     "PANEL_MEMBER_NOT_FOUND",
     "PANEL_NOT_FOUND",
     "PANEL_RESOLUTION_NOT_OFFERED",
+    "PARTICIPANT_CANNOT_ACT",
+    "PARTICIPANT_CANNOT_RELEASE",
     "PARTICIPANT_NOT_FOUND",
     "PASSWORDS_DONT_MATCH",
     "PASSWORD_TOO_WEAK",

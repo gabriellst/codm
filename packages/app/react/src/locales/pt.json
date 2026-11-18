@@ -541,6 +541,8 @@
 		"PANEL_MEMBER_NOT_FOUND": "Essa pessoa não está mais na lista do grupo.",
 		"PANEL_NOT_FOUND": "Link do painel inválido ou trocado.",
 		"PANEL_RESOLUTION_NOT_OFFERED": "Essa resposta não está disponível para este pedido no painel.",
+		"PARTICIPANT_CANNOT_ACT": "Esta pessoa não pode acionar o agente nesta conversa.",
+		"PARTICIPANT_CANNOT_RELEASE": "Esta pessoa não pode liberar pedidos nesta conversa.",
 		"PARTICIPANT_NOT_FOUND": "Participante não encontrado.",
 		"PASSWORDS_DONT_MATCH": "As senhas não coincidem.",
 		"PASSWORD_TOO_WEAK": "Senha muito fraca. Use letras, números e símbolos.",

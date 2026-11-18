@@ -10,6 +10,7 @@ import {
 	LibSqlConsumedMessageRepository,
 	MockConsumedMessageRepository,
 } from './repositories/ConsumedMessageRepository'
+import { PanelActionLedger, LibSqlPanelActionLedger, MockPanelActionLedger } from './repositories/PanelActionLedger'
 import {
 	StopPolicyConfigRepository,
 	LibSqlStopPolicyConfigRepository,
@@ -78,4 +79,7 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// the member-id key is a file under the data dir, so tests use a fixed in-memory key.
 	{ token: PanelRosterRelay, mock: MockPanelRosterRelay, integration: MockPanelRosterRelay, real: CloudPanelRosterRelay },
 	{ token: PanelMemberKey, mock: MockPanelMemberKey, integration: MockPanelMemberKey, real: FilePanelMemberKey },
+	// Fase 2, item 6b — the exactly-once latch + outcome outbox of panel actions. Real (primary-key ON
+	// CONFLICT DO NOTHING) in real + integration so the dedup is exercised against a real DB.
+	{ token: PanelActionLedger, mock: MockPanelActionLedger, integration: LibSqlPanelActionLedger, real: LibSqlPanelActionLedger },
 ])

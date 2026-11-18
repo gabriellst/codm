@@ -909,6 +909,17 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 * when it is needed — and still only from someone who could address the agent at all. A muted
 	 * participant stays muted and the mention gate still applies; only the pause stands down.
 	 */
+	/**
+	 * May this participant act on the conversation's work from a door that carries no message — the cloud
+	 * panel (fase 2, item 6b): pause, resume or steer one issue. The participant gate of `reachesAgent`
+	 * alone: a muted participant stays muted. No mention gate (there is no text to tag; the door itself is
+	 * the address) and no freshness window (the panel's request has its own, enforced in the cloud).
+	 */
+	mayAct(participantId: string): boolean {
+		const participant = this.participants.find(p => p.participantId === participantId)
+		return !participant || participant.canInvoke
+	}
+
 	private reachesAgent(input: { senderExternalId: string; text: string; repliesToAgent?: boolean }): boolean {
 		const participant = this.participants.find(p => p.participantId === input.senderExternalId)
 		if (participant && !participant.canInvoke) return false

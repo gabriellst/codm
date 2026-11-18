@@ -357,6 +357,23 @@ export type GetPanelIssue200 = {
         */
         by?: string;
     })[];
+    /**
+     * @type object | undefined
+    */
+    openStop?: {
+        /**
+         * @type string, uuid
+        */
+        stopId: string;
+        /**
+         * @type string
+        */
+        kind: StopKind;
+        /**
+         * @type array
+        */
+        resolutions: StopResolution[];
+    };
 };
 
 export type GetPanelIssueQueryResponse = GetPanelIssue200;

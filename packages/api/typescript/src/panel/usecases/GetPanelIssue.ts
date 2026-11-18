@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm'
 import { Handler, PgDatabaseDriver, z, BaseError } from '@codm/core-typescript'
 import { panelIssues } from '@codm/contracts/db/pg'
 import { IssueLifeState, IssueStatus } from '@codm/contracts-typescript/wire/enums'
-import { IssueTimelineItemSchema } from '@shared/schemas'
+import { IssueTimelineItemSchema, PanelOpenStopSchema } from '@shared/schemas'
 import type { ApplicationErrors } from '../errors'
 import { panelGroupByToken } from './panelGroupByToken'
 
@@ -19,6 +19,11 @@ export const GetPanelIssueOutputSchema = z.object({
 		updatedAt: z.string(),
 	}),
 	timeline: z.array(IssueTimelineItemSchema),
+	/**
+	 * The issue's open stop the panel may answer, with the answers it admits there (fase 2, item 6b) — as
+	 * the daemon last reported it with the roster. Absent when there is none.
+	 */
+	openStop: PanelOpenStopSchema.omit({ issueId: true }).optional(),
 })
 
 /**
@@ -48,6 +53,7 @@ export class GetPanelIssue extends Handler<typeof GetPanelIssueInputSchema, type
 			: []
 		if (!issue) throw new BaseError<ApplicationErrors>('PANEL_NOT_FOUND', 'no panel for this link')
 		const timeline = z.array(IssueTimelineItemSchema).safeParse(issue.timeline)
+		const open = group?.openStops.find(stop => stop.issueId === issue.issueId)
 		return {
 			issue: {
 				issueId: issue.issueId,
@@ -60,6 +66,7 @@ export class GetPanelIssue extends Handler<typeof GetPanelIssueInputSchema, type
 			},
 			// Stored verbatim from a validated sync; a row that no longer parses shows no timeline rather than failing the page.
 			timeline: timeline.success ? timeline.data : [],
+			openStop: open ? { stopId: open.stopId, kind: open.kind, resolutions: open.resolutions } : undefined,
 		}
 	}
 }

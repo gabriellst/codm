@@ -130,6 +130,8 @@ pub mod types {
     ///    "PANEL_MEMBER_NOT_FOUND",
     ///    "PANEL_NOT_FOUND",
     ///    "PANEL_RESOLUTION_NOT_OFFERED",
+    ///    "PARTICIPANT_CANNOT_ACT",
+    ///    "PARTICIPANT_CANNOT_RELEASE",
     ///    "PARTICIPANT_NOT_FOUND",
     ///    "PASSWORDS_DONT_MATCH",
     ///    "PASSWORD_TOO_WEAK",
@@ -348,6 +350,10 @@ pub mod types {
         PanelNotFound,
         #[serde(rename = "PANEL_RESOLUTION_NOT_OFFERED")]
         PanelResolutionNotOffered,
+        #[serde(rename = "PARTICIPANT_CANNOT_ACT")]
+        ParticipantCannotAct,
+        #[serde(rename = "PARTICIPANT_CANNOT_RELEASE")]
+        ParticipantCannotRelease,
         #[serde(rename = "PARTICIPANT_NOT_FOUND")]
         ParticipantNotFound,
         #[serde(rename = "PASSWORDS_DONT_MATCH")]
@@ -527,6 +533,10 @@ pub mod types {
                 Self::PanelResolutionNotOffered => {
                     f.write_str("PANEL_RESOLUTION_NOT_OFFERED")
                 }
+                Self::ParticipantCannotAct => f.write_str("PARTICIPANT_CANNOT_ACT"),
+                Self::ParticipantCannotRelease => {
+                    f.write_str("PARTICIPANT_CANNOT_RELEASE")
+                }
                 Self::ParticipantNotFound => f.write_str("PARTICIPANT_NOT_FOUND"),
                 Self::PasswordsDontMatch => f.write_str("PASSWORDS_DONT_MATCH"),
                 Self::PasswordTooWeak => f.write_str("PASSWORD_TOO_WEAK"),
@@ -657,6 +667,8 @@ pub mod types {
                 "PANEL_MEMBER_NOT_FOUND" => Ok(Self::PanelMemberNotFound),
                 "PANEL_NOT_FOUND" => Ok(Self::PanelNotFound),
                 "PANEL_RESOLUTION_NOT_OFFERED" => Ok(Self::PanelResolutionNotOffered),
+                "PARTICIPANT_CANNOT_ACT" => Ok(Self::ParticipantCannotAct),
+                "PARTICIPANT_CANNOT_RELEASE" => Ok(Self::ParticipantCannotRelease),
                 "PARTICIPANT_NOT_FOUND" => Ok(Self::ParticipantNotFound),
                 "PASSWORDS_DONT_MATCH" => Ok(Self::PasswordsDontMatch),
                 "PASSWORD_TOO_WEAK" => Ok(Self::PasswordTooWeak),
@@ -1740,6 +1752,32 @@ pub mod types {
     ///      },
     ///      "additionalProperties": false
     ///    },
+    ///    "openStop": {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "kind",
+    ///        "resolutions",
+    ///        "stopId"
+    ///      ],
+    ///      "properties": {
+    ///        "kind": {
+    ///          "$ref": "#/components/schemas/StopKind"
+    ///        },
+    ///        "resolutions": {
+    ///          "type": "array",
+    ///          "items": {
+    ///            "$ref": "#/components/schemas/StopResolution"
+    ///          },
+    ///          "maxItems": 8
+    ///        },
+    ///        "stopId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
     ///    "timeline": {
     ///      "type": "array",
     ///      "items": {
@@ -2096,6 +2134,12 @@ pub mod types {
     #[serde(deny_unknown_fields)]
     pub struct GetPanelIssueResponse {
         pub issue: GetPanelIssueResponseIssue,
+        #[serde(
+            rename = "openStop",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub open_stop: ::std::option::Option<GetPanelIssueResponseOpenStop>,
         pub timeline: ::std::vec::Vec<GetPanelIssueResponseTimelineItem>,
     }
     impl ::std::convert::From<&GetPanelIssueResponse> for GetPanelIssueResponse {
@@ -2169,6 +2213,55 @@ pub mod types {
     impl ::std::convert::From<&GetPanelIssueResponseIssue>
     for GetPanelIssueResponseIssue {
         fn from(value: &GetPanelIssueResponseIssue) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetPanelIssueResponseOpenStop`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "kind",
+    ///    "resolutions",
+    ///    "stopId"
+    ///  ],
+    ///  "properties": {
+    ///    "kind": {
+    ///      "$ref": "#/components/schemas/StopKind"
+    ///    },
+    ///    "resolutions": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "$ref": "#/components/schemas/StopResolution"
+    ///      },
+    ///      "maxItems": 8
+    ///    },
+    ///    "stopId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetPanelIssueResponseOpenStop {
+        pub kind: ::codm_contracts_rust::wire::enums::StopKind,
+        pub resolutions: ::std::vec::Vec<
+            ::codm_contracts_rust::wire::enums::StopResolution,
+        >,
+        #[serde(rename = "stopId")]
+        pub stop_id: ::uuid::Uuid,
+    }
+    impl ::std::convert::From<&GetPanelIssueResponseOpenStop>
+    for GetPanelIssueResponseOpenStop {
+        fn from(value: &GetPanelIssueResponseOpenStop) -> Self {
             value.clone()
         }
     }

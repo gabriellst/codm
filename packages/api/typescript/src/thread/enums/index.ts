@@ -4,3 +4,5 @@ export * from './IssueControlCommand'
 export * from './SteerProgress'
 // Steer imediato (fase 2, item 4) — next step (default) or now.
 export * from './SteerUrgency'
+// Agir pelo painel (fase 2, item 6b) — the verb of the echo line the group gets.
+export * from './PanelActionEcho'

@@ -114,7 +114,16 @@ get "source"(){
                 return issueControlSourceSchema
               },
 "by": z.optional(z.string())
-    })]))
+    })])),
+"openStop": z.optional(z.object({
+    "stopId": z.uuid(),
+get "kind"(){
+                return stopKindSchema
+              },
+get "resolutions"(){
+                return z.array(stopResolutionSchema).max(8)
+              }
+    }))
     })
 
 export const getPanelIssueQueryResponseSchema = z.lazy(() => getPanelIssue200Schema)

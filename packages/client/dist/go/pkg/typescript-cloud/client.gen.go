@@ -105,6 +105,8 @@ const (
 	PANELMEMBERNOTFOUND             ApiErrors = "PANEL_MEMBER_NOT_FOUND"
 	PANELNOTFOUND                   ApiErrors = "PANEL_NOT_FOUND"
 	PANELRESOLUTIONNOTOFFERED       ApiErrors = "PANEL_RESOLUTION_NOT_OFFERED"
+	PARTICIPANTCANNOTACT            ApiErrors = "PARTICIPANT_CANNOT_ACT"
+	PARTICIPANTCANNOTRELEASE        ApiErrors = "PARTICIPANT_CANNOT_RELEASE"
 	PARTICIPANTNOTFOUND             ApiErrors = "PARTICIPANT_NOT_FOUND"
 	PASSWORDSDONTMATCH              ApiErrors = "PASSWORDS_DONT_MATCH"
 	PASSWORDTOOWEAK                 ApiErrors = "PASSWORD_TOO_WEAK"
@@ -310,6 +312,10 @@ func (e ApiErrors) Valid() bool {
 	case PANELNOTFOUND:
 		return true
 	case PANELRESOLUTIONNOTOFFERED:
+		return true
+	case PARTICIPANTCANNOTACT:
+		return true
+	case PARTICIPANTCANNOTRELEASE:
 		return true
 	case PARTICIPANTNOTFOUND:
 		return true
@@ -4410,6 +4416,11 @@ type GetPanelIssueResponse struct {
 			UpdatedAt               string             `json:"updatedAt"`
 			WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
 		} `json:"issue"`
+		OpenStop *struct {
+			Kind        StopKind           `json:"kind"`
+			Resolutions []StopResolution   `json:"resolutions"`
+			StopId      openapi_types.UUID `json:"stopId"`
+		} `json:"openStop,omitempty"`
 		Timeline []GetPanelIssue200JSONResponseBody_Timeline_Item `json:"timeline"`
 	}
 }
@@ -5627,6 +5638,11 @@ func ParseGetPanelIssueResponse(rsp *http.Response) (*GetPanelIssueResponse, err
 				UpdatedAt               string             `json:"updatedAt"`
 				WaitingForProviderUntil *string            `json:"waitingForProviderUntil,omitempty"`
 			} `json:"issue"`
+			OpenStop *struct {
+				Kind        StopKind           `json:"kind"`
+				Resolutions []StopResolution   `json:"resolutions"`
+				StopId      openapi_types.UUID `json:"stopId"`
+			} `json:"openStop,omitempty"`
 			Timeline []GetPanelIssue200JSONResponseBody_Timeline_Item `json:"timeline"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {

@@ -77,6 +77,10 @@ export type ThreadApplicationErrors =
 	// console only ever addresses loops it has just listed, so the only way to reach either branch is a
 	// stale screen or a probe, and telling the second one apart from "no such loop" is a favour to it.
 	| 'LOOP_NOT_FOUND'
+	// Acting from the cloud panel (fase 2, item 6b), re-checked on the daemon — the authority: the member
+	// no longer has the "pode liberar" grant, or is a muted participant who may not act on the work.
+	| 'PARTICIPANT_CANNOT_RELEASE'
+	| 'PARTICIPANT_CANNOT_ACT'
 export type ApplicationErrors = BaseApplicationErrors | ThreadApplicationErrors
 
 export type ThreadInterfaceErrors = never
@@ -138,6 +142,8 @@ registerErrorCodes({
 	// tell the operator the SERVER is broken when the honest answer is "not this CLI, not yet".
 	PROVIDER_COMING_SOON: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	STOP_NOT_FOUND: HttpStatusCode.NOT_FOUND,
+	PARTICIPANT_CANNOT_RELEASE: HttpStatusCode.FORBIDDEN,
+	PARTICIPANT_CANNOT_ACT: HttpStatusCode.FORBIDDEN,
 	STOP_CRITERION_DISABLED: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	ISSUE_NOT_FOUND: HttpStatusCode.NOT_FOUND,
 	ISSUE_ARCHIVED: HttpStatusCode.UNPROCESSABLE_ENTITY,

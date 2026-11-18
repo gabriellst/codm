@@ -289,6 +289,8 @@ pub mod types {
     ///    "PANEL_MEMBER_NOT_FOUND",
     ///    "PANEL_NOT_FOUND",
     ///    "PANEL_RESOLUTION_NOT_OFFERED",
+    ///    "PARTICIPANT_CANNOT_ACT",
+    ///    "PARTICIPANT_CANNOT_RELEASE",
     ///    "PARTICIPANT_NOT_FOUND",
     ///    "PASSWORDS_DONT_MATCH",
     ///    "PASSWORD_TOO_WEAK",
@@ -507,6 +509,10 @@ pub mod types {
         PanelNotFound,
         #[serde(rename = "PANEL_RESOLUTION_NOT_OFFERED")]
         PanelResolutionNotOffered,
+        #[serde(rename = "PARTICIPANT_CANNOT_ACT")]
+        ParticipantCannotAct,
+        #[serde(rename = "PARTICIPANT_CANNOT_RELEASE")]
+        ParticipantCannotRelease,
         #[serde(rename = "PARTICIPANT_NOT_FOUND")]
         ParticipantNotFound,
         #[serde(rename = "PASSWORDS_DONT_MATCH")]
@@ -686,6 +692,10 @@ pub mod types {
                 Self::PanelResolutionNotOffered => {
                     f.write_str("PANEL_RESOLUTION_NOT_OFFERED")
                 }
+                Self::ParticipantCannotAct => f.write_str("PARTICIPANT_CANNOT_ACT"),
+                Self::ParticipantCannotRelease => {
+                    f.write_str("PARTICIPANT_CANNOT_RELEASE")
+                }
                 Self::ParticipantNotFound => f.write_str("PARTICIPANT_NOT_FOUND"),
                 Self::PasswordsDontMatch => f.write_str("PASSWORDS_DONT_MATCH"),
                 Self::PasswordTooWeak => f.write_str("PASSWORD_TOO_WEAK"),
@@ -816,6 +826,8 @@ pub mod types {
                 "PANEL_MEMBER_NOT_FOUND" => Ok(Self::PanelMemberNotFound),
                 "PANEL_NOT_FOUND" => Ok(Self::PanelNotFound),
                 "PANEL_RESOLUTION_NOT_OFFERED" => Ok(Self::PanelResolutionNotOffered),
+                "PARTICIPANT_CANNOT_ACT" => Ok(Self::ParticipantCannotAct),
+                "PARTICIPANT_CANNOT_RELEASE" => Ok(Self::ParticipantCannotRelease),
                 "PARTICIPANT_NOT_FOUND" => Ok(Self::ParticipantNotFound),
                 "PASSWORDS_DONT_MATCH" => Ok(Self::PasswordsDontMatch),
                 "PASSWORD_TOO_WEAK" => Ok(Self::PasswordTooWeak),

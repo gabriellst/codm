@@ -541,6 +541,8 @@
 		"PANEL_MEMBER_NOT_FOUND": "This person is no longer on the group list.",
 		"PANEL_NOT_FOUND": "Panel link is invalid or was replaced.",
 		"PANEL_RESOLUTION_NOT_OFFERED": "That answer is not available for this request on the panel.",
+		"PARTICIPANT_CANNOT_ACT": "This person may not trigger the agent in this conversation.",
+		"PARTICIPANT_CANNOT_RELEASE": "This person may not release requests in this conversation.",
 		"PARTICIPANT_NOT_FOUND": "Participant not found.",
 		"PASSWORDS_DONT_MATCH": "Passwords do not match.",
 		"PASSWORD_TOO_WEAK": "Password too weak. Use letters, numbers and symbols.",

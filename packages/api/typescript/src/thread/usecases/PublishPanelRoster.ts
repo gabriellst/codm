@@ -12,7 +12,11 @@ import { ChannelSender } from '../services/ChannelSender'
 import { GroupMemberReader } from '../services/GroupMemberReader'
 import { PanelMemberKey } from '../services/PanelMemberKey'
 import { PanelRosterRelay, type PanelCodeDelivery, type PanelRosterMember } from '../services/PanelRosterRelay'
+import { PanelActionLedger } from '../repositories/PanelActionLedger'
 import { THREAD_MESSAGES } from '../i18n/messages'
+import { panelResolutionsForKind } from '../utils/StopResolutions'
+import type { PanelActionDelivery, PanelOpenStop } from '@shared/schemas'
+import { ExecutePanelAction } from './ExecutePanelAction'
 
 export const PublishPanelRosterInputSchema = z.object({})
 export const PublishPanelRosterOutputSchema = z.object({
@@ -21,7 +25,14 @@ export const PublishPanelRosterOutputSchema = z.object({
 	groups: z.number().int(),
 	/** Identification codes DMed in this run. */
 	delivered: z.number().int(),
+	/** Panel actions executed (or refused) in this run — reported to the cloud on the next one. */
+	acted: z.number().int(),
 })
+
+/** At most this many outcomes ride one pull; the rest go on the next. */
+const OUTCOMES_PER_PULL = 500
+/** Reported ledger rows are kept this long — far past the cloud's 2-minute hand-out window. */
+const LEDGER_RETENTION_MS = 24 * 60 * 60 * 1000
 
 /**
  * A display name that is really an address — a phone number or a JID. The roster JSON and unsynced
@@ -32,6 +43,10 @@ const ADDRESS_SHAPED = /@|^\+?[\d\s().-]{6,}$/
 /** Where a member id points on THIS machine — never sent anywhere. */
 interface LocalMember {
 	externalId: string
+	/** The roster id the grants are read under — the address, or `operator` for the account's own number. */
+	participantId: string
+	/** The contact-book name — the one the panel lists. */
+	name: string
 	thread: Thread
 }
 
@@ -51,6 +66,12 @@ interface LocalMember {
  * `ChannelSender` — NOT the command queue, whose row would keep the plain code at rest (and forever, if
  * it dead-lettered). A failed DM is logged without the code and dropped: the person asks again. The echo
  * is claimed like every SYSTEM delivery, so the DM never becomes a transcript entry or a turn.
+ *
+ * ACTIONS (fase 2, item 6b) ride the same pull. OUT, each group's open stops with the answers the panel
+ * may give (`panelResolutionsForKind`), and the outcomes of actions already executed — read from the
+ * ledger and marked reported only after the pull succeeded, so none is lost to a failed call or a
+ * restart. IN, the actions people asked for: each is executed by `ExecutePanelAction` as the member the
+ * id resolves to in the map this run just built (by id, never by name), at most once per action id.
  *
  * Not logged in → nothing is sent. A cloud that cannot be reached is a warning; the next run retries.
  */
@@ -72,6 +93,8 @@ export class PublishPanelRoster extends Handler<typeof PublishPanelRosterInputSc
 		private readonly consumed: ConsumedMessageRepository,
 		private readonly session: CloudSession,
 		private readonly logging: LoggingService,
+		private readonly ledger: PanelActionLedger,
+		private readonly executeAction: ExecutePanelAction,
 	) {
 		super()
 	}
@@ -84,23 +107,68 @@ export class PublishPanelRoster extends Handler<typeof PublishPanelRosterInputSc
 			.where(isNull(threads.deletedAt))
 
 		const local = new Map<string, LocalMember>()
-		const groups: { threadId: string; members: PanelRosterMember[] }[] = []
+		const groups: { threadId: string; members: PanelRosterMember[]; openStops: PanelOpenStop[] }[] = []
 		for (const { threadId } of boarded) {
 			const thread = await this.threads.findById(threadId)
 			if (!thread) continue
-			groups.push({ threadId, members: await this.rosterOf(thread, local) })
+			groups.push({ threadId, members: await this.rosterOf(thread, local), openStops: await this.openStopsOf(thread) })
 		}
 
-		const pulled = await tryCatchAsync(() => this.relay.sync({ groups }))
+		const unreported = await this.ledger.unreported(OUTCOMES_PER_PULL)
+		const outcomes = unreported.map(row => ({ actionId: row.actionId, status: row.outcome, code: row.code }))
+		const pulled = await tryCatchAsync(() => this.relay.sync({ groups, outcomes }))
 		if (!pulled.success) {
 			this.logging.warn({ content: { message: 'panel roster sync failed — the next run retries', error: pulled.error.message } })
-			return { sent: false, groups: groups.length, delivered: 0 }
+			return { sent: false, groups: groups.length, delivered: 0, acted: 0 }
 		}
-		if (pulled.data === undefined) return { sent: false, groups: groups.length, delivered: 0 }
+		if (pulled.data === undefined) return { sent: false, groups: groups.length, delivered: 0, acted: 0 }
+
+		// The cloud stored these outcomes in the same request that answered — they never need sending again.
+		const now = new Date()
+		await this.ledger.markReported(
+			unreported.map(row => row.actionId),
+			now,
+		)
+		await this.ledger.purge(new Date(now.getTime() - LEDGER_RETENTION_MS))
 
 		let delivered = 0
-		for (const delivery of pulled.data) if (await this.deliver(delivery, local)) delivered += 1
-		return { sent: true, groups: groups.length, delivered }
+		for (const delivery of pulled.data.deliveries) if (await this.deliver(delivery, local)) delivered += 1
+		let acted = 0
+		for (const action of pulled.data.actions) if (await this.act(action, local)) acted += 1
+		return { sent: true, groups: groups.length, delivered, acted }
+	}
+
+	/** The issue stops of a conversation the panel may answer, each with the answers it admits there. */
+	private async openStopsOf(thread: Thread): Promise<PanelOpenStop[]> {
+		const open = await this.threads.openStops(thread.id.value)
+		const answerable: PanelOpenStop[] = []
+		for (const stop of open) {
+			const resolutions = panelResolutionsForKind(stop.kind)
+			// A thread-level stop (no issue) has no card on the board; a kind with no panel answer has no button.
+			if (stop.issueId && resolutions.length > 0)
+				answerable.push({ stopId: stop.stopId, issueId: stop.issueId, kind: stop.kind, resolutions })
+		}
+		return answerable
+	}
+
+	/** Execute one pulled action as the member its id resolves to here. Never throws: a failure is logged and the cloud re-delivers. */
+	private async act(action: PanelActionDelivery, local: Map<string, LocalMember>): Promise<boolean> {
+		const target = local.get(`${action.threadId}\n${action.memberId}`)
+		const outcome = await tryCatchAsync(() =>
+			this.executeAction.execute({
+				actionId: action.actionId,
+				threadId: action.threadId,
+				member: target && { externalId: target.externalId, participantId: target.participantId, name: target.name },
+				action: action.action,
+			}),
+		)
+		if (!outcome.success) {
+			this.logging.warn({
+				content: { message: 'panel action failed — the cloud hands it out again', actionId: action.actionId, error: outcome.error.message },
+			})
+			return false
+		}
+		return outcome.data.executed
 	}
 
 	/** The people of one conversation as the panel may know them; fills `local` with where each id points. */
@@ -129,7 +197,7 @@ export class PublishPanelRoster extends Handler<typeof PublishPanelRosterInputSc
 			if (!name || ADDRESS_SHAPED.test(name)) continue
 			const asParticipant = externalId === channel?.ownerRemoteId ? OPERATOR_PARTICIPANT_ID : externalId
 			const memberId = this.memberKey.memberIdOf(threadId, externalId)
-			local.set(`${threadId}\n${memberId}`, { externalId, thread })
+			local.set(`${threadId}\n${memberId}`, { externalId, participantId: asParticipant, name, thread })
 			members.push({ memberId, name, canRelease: thread.postureOf(asParticipant) === PermissionPosture.BYPASS })
 		}
 		return members

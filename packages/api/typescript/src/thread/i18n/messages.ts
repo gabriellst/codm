@@ -1,5 +1,6 @@
 import { Language, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { defineMessages } from '@shared/i18n/messages'
+import { PanelActionEcho } from '../enums/PanelActionEcho'
 
 /**
  * O vocabulário que o contexto `thread` diz NO CANAL — a superfície que o frontend nunca traduz,
@@ -32,6 +33,31 @@ const STOP_TITLES_EN: Record<StopKind, string> = {
 	[StopKind.APPROVAL_NEEDED]: 'An action needs your approval',
 	[StopKind.AUTH_REQUIRED]: 'The agent CLI needs you to sign in again',
 	[StopKind.PERMISSION_DENIED]: 'An action was blocked by the permission filter — it needs your approval',
+}
+
+/** O verbo do eco de uma ação feita pelo painel (fase 2, item 6b). */
+const PANEL_ECHO_PT: Record<PanelActionEcho, string> = {
+	[PanelActionEcho.PAUSED]: 'pausou',
+	[PanelActionEcho.RESUMED]: 'retomou',
+	[PanelActionEcho.STEERED]: 'orientou',
+	[PanelActionEcho.APPROVED]: 'aprovou',
+	[PanelActionEcho.DENIED]: 'recusou',
+	[PanelActionEcho.ANSWERED]: 'respondeu',
+}
+
+const PANEL_ECHO_EN: Record<PanelActionEcho, string> = {
+	[PanelActionEcho.PAUSED]: 'paused',
+	[PanelActionEcho.RESUMED]: 'resumed',
+	[PanelActionEcho.STEERED]: 'steered',
+	[PanelActionEcho.APPROVED]: 'approved',
+	[PanelActionEcho.DENIED]: 'denied',
+	[PanelActionEcho.ANSWERED]: 'answered',
+}
+
+interface PanelEchoParams {
+	name: string
+	key: string
+	echo: PanelActionEcho
 }
 
 /** Hora e minuto no fuso desta máquina — o daemon roda no computador do operador. */
@@ -87,6 +113,11 @@ const PT_MESSAGES = {
 	 * ela; nunca entra no transcript nem na fila de comandos.
 	 */
 	panelCode: (p: { code: string }) => `Seu código do painel do codm: ${p.code} — vale 10 min.`,
+	/**
+	 * O eco no grupo de uma ação feita pelo painel (fase 2, item 6b, decisão do dono): uma linha curta,
+	 * quem e o quê — nunca o texto de uma orientação, que foi para a sessão da issue e não para a sala.
+	 */
+	panelActionEcho: (p: PanelEchoParams) => `${p.name} ${PANEL_ECHO_PT[p.echo]} ${p.key} pelo painel`,
 }
 
 export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
@@ -97,5 +128,6 @@ export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
 		providerPausedNotice: p =>
 			`I hit the usage limit of the agent's provider account. Messages are queued and I'll answer again ${whenEn(p.until, p.now)}.`,
 		panelCode: p => `Your codm panel code: ${p.code} — valid for 10 min.`,
+		panelActionEcho: p => `${p.name} ${PANEL_ECHO_EN[p.echo]} ${p.key} from the panel`,
 	},
 })

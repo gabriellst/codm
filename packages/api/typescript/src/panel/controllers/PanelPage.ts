@@ -63,12 +63,15 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
 .btn{border:1px solid var(--line);background:var(--card);color:inherit;border-radius:8px;padding:6px 10px;font:inherit;cursor:pointer}
 .ib{padding:16px;display:grid;gap:10px}.ib select,.ib input{font:inherit;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:inherit}
 .ib input{letter-spacing:.3em;font-family:ui-monospace,monospace;font-size:18px}
+.acts{padding:12px 16px;border-top:1px solid var(--line);display:grid;gap:8px}.row{display:flex;gap:8px;flex-wrap:wrap}
+.acts textarea{font:inherit;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:inherit;min-height:64px;resize:vertical}
 </style>
 </head>
 <body>
 <header><h1 id="name">Painel de tarefas</h1><div class="me"><span id="seen" class="muted"></span><span id="who" class="muted"></span><button class="btn" id="identify" type="button" hidden>Identificar-me</button><button class="btn" id="forget" type="button" hidden>Sair</button></div></header>
 <main class="board" id="board"></main>
-<dialog id="detail"><div class="dh"><div><div id="dkey" class="key"></div><div id="dtitle"></div></div><button class="x" id="close" aria-label="Fechar">×</button></div><ol class="tl" id="tl"></ol></dialog>
+<dialog id="detail"><div class="dh"><div><div id="dkey" class="key"></div><div id="dtitle"></div></div><button class="x" id="close" aria-label="Fechar">×</button></div><ol class="tl" id="tl"></ol>
+<div class="acts" id="acts" hidden><div class="row" id="ctl"></div><div class="row" id="stopbtns" hidden></div><textarea id="steer" maxlength="2000" placeholder="Orientar esta tarefa…" aria-label="Orientação para a tarefa"></textarea><div class="row"><button class="btn" id="sendsteer" type="button">Orientar</button></div><div id="astatus" class="muted" role="status"></div></div></dialog>
 <dialog id="ident"><div class="dh"><strong>Identificar-me</strong><button class="x" id="iclose" aria-label="Fechar">×</button></div>
 <div class="ib" id="istep1"><label for="pick">Quem é você neste grupo?</label><select id="pick"></select><button class="btn" id="send" type="button">Enviar código no meu WhatsApp</button></div>
 <div class="ib" id="istep2" hidden><div id="isent" class="muted"></div><input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" aria-label="Código"><button class="btn" id="confirm" type="button">Confirmar</button><button class="btn" id="again" type="button">Escolher outro nome</button></div>
@@ -76,8 +79,8 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
 <script>
 (() => {
   const COLS = [['QUEUED','Na fila'],['RUNNING','Fazendo'],['WAITING_PERSON','Aguardando pessoa'],['WAITING_PROVIDER','Esperando cota'],['STALLED','Parada'],['DONE','Concluída']];
-  const COLUMN_OF = {QUEUED:'QUEUED',RUNNING:'RUNNING',WAITING_PERSON:'WAITING_PERSON',WAITING_PROVIDER:'WAITING_PROVIDER',REMINDED:'STALLED',STALLED:'STALLED',DONE:'DONE'};
-  const KIND = {CREATED:'Criada',TURN_STARTED:'Turno iniciado',MESSAGE:'Mensagem',STEER:'Orientação',ARTIFACT:'Artefato',STOP_RAISED:'Pediu alguém',STOP_RESOLVED:'Respondida',COMPLETED:'Concluída',ARCHIVED:'Arquivada'};
+  const COLUMN_OF = {QUEUED:'QUEUED',RUNNING:'RUNNING',WAITING_PERSON:'WAITING_PERSON',WAITING_PROVIDER:'WAITING_PROVIDER',REMINDED:'STALLED',STALLED:'STALLED',PAUSED:'STALLED',DONE:'DONE'};
+  const KIND = {CREATED:'Criada',TURN_STARTED:'Turno iniciado',MESSAGE:'Mensagem',STEER:'Orientação',ARTIFACT:'Artefato',STOP_RAISED:'Pediu alguém',STOP_RESOLVED:'Respondida',COMPLETED:'Concluída',ARCHIVED:'Arquivada',PAUSED:'Pausada',RESUMED:'Retomada'};
   const base = location.pathname.replace(/\\/+$/, '');
   const fmt = iso => new Date(iso).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
@@ -102,6 +105,7 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
         card.append(el('div', 'key', issue.key), el('div', 'title', issue.title));
         if (issue.waitingForProviderUntil) card.append(el('div', 'muted', 'Esperando cota até ' + fmt(issue.waitingForProviderUntil)));
         if (issue.lifeState === 'REMINDED') card.append(el('div', 'muted', 'Lembrada de declarar'));
+        if (issue.lifeState === 'PAUSED') card.append(el('div', 'muted', 'Pausada'));
         card.addEventListener('click', () => open(issue.issueId));
         col.append(card);
       }
@@ -109,9 +113,14 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
     });
     document.getElementById('board').replaceChildren(...cols);
   }
+  let current = null;
   async function open(issueId) {
+    current = issueId; document.getElementById('astatus').textContent = ''; document.getElementById('steer').value = '';
+    if (await load(issueId)) document.getElementById('detail').showModal();
+  }
+  async function load(issueId) {
     const res = await fetch(base + '/issues/' + encodeURIComponent(issueId), {cache:'no-store'});
-    if (!res.ok) return;
+    if (!res.ok) return false;
     const data = await res.json();
     document.getElementById('dkey').textContent = data.issue.key;
     document.getElementById('dtitle').textContent = data.issue.title;
@@ -121,7 +130,8 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
       if (text) li.append(el('div', 't', text));
       return li;
     }));
-    document.getElementById('detail').showModal();
+    renderActs(data);
+    return true;
   }
   document.getElementById('close').addEventListener('click', () => document.getElementById('detail').close());
 
@@ -131,9 +141,11 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
   const post = (path, body) => fetch(base + path, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body || {}), cache:'no-store', credentials:'same-origin'});
   const fail = async res => { const body = await res.json().catch(() => ({})); $('ierr').textContent = ERR[body.code] || 'Não deu certo. Tente de novo.'; };
   let picked = null;
+  let meMember = null;
   async function me() {
     const res = await fetch(base + '/me', {cache:'no-store', credentials:'same-origin'});
     const data = res.ok ? await res.json() : {};
+    meMember = data.member || null;
     $('who').textContent = data.member ? 'Você é ' + data.member.name + ' neste aparelho' : '';
     $('identify').hidden = !!data.member || !res.ok;
     $('forget').hidden = !data.member;
@@ -168,6 +180,51 @@ button.x{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}
     $('ident').close(); me();
   });
   $('forget').addEventListener('click', async () => { await post('/forget'); me(); });
+
+  // Acting on an issue as the identified member (fase 2, item 6b). The daemon executes within ~15 s; the page polls.
+  const RES = {APPROVE:'Aprovar',DENY:'Recusar',RETRY:'Tentar de novo'};
+  const ACT_ERR = {PANEL_MEMBER_NOT_FOUND:'Identifique-se de novo para agir.',PANEL_CANNOT_RELEASE:'Só quem pode liberar responde a este pedido.',PANEL_RESOLUTION_NOT_OFFERED:'Essa resposta não está disponível aqui.',PANEL_ACTION_RATE_LIMITED:'Muitas ações seguidas. Espere um minuto.',PANEL_NOT_FOUND:'Esta tarefa não está mais neste painel.',ISSUE_ALREADY_PAUSED:'a tarefa já estava pausada.',ISSUE_NOT_PAUSED:'a tarefa não estava pausada.',ISSUE_NOT_PAUSABLE:'a tarefa já terminou.',ISSUE_NOT_FOUND:'a tarefa não está mais nesta conversa.',STOP_NOT_FOUND:'o pedido já foi respondido.',STOP_ALREADY_RESOLVED:'o pedido já foi respondido.',PARTICIPANT_CANNOT_RELEASE:'você não pode mais liberar neste grupo.',PARTICIPANT_CANNOT_ACT:'você não pode acionar o agente neste grupo.',PARTICIPANT_NOT_FOUND:'você não está mais na lista do grupo.'};
+  function renderActs(data) {
+    const acts = $('acts');
+    acts.hidden = !meMember || data.issue.lifeState === 'DONE';
+    if (acts.hidden) return;
+    const paused = data.issue.lifeState === 'PAUSED';
+    const ctl = el('button', 'btn', paused ? 'Retomar' : 'Pausar'); ctl.type = 'button';
+    ctl.addEventListener('click', () => act({kind: paused ? 'RESUME' : 'PAUSE', issueId: data.issue.issueId}));
+    $('ctl').replaceChildren(ctl);
+    const stop = data.openStop && meMember.canRelease ? data.openStop : null;
+    $('stopbtns').replaceChildren(...(stop ? stop.resolutions.map(resolution => {
+      const b = el('button', 'btn', RES[resolution] || resolution); b.type = 'button';
+      b.addEventListener('click', () => act({kind:'ANSWER_STOP', issueId: data.issue.issueId, stopId: stop.stopId, resolution}));
+      return b;
+    }) : []));
+    $('stopbtns').hidden = !stop;
+  }
+  let polling = 0;
+  async function act(body) {
+    $('astatus').textContent = 'Enviando…';
+    const res = await post('/actions', body);
+    if (!res.ok) { const b = await res.json().catch(() => ({})); $('astatus').textContent = ACT_ERR[b.code] || 'Não deu certo. Tente de novo.'; return false; }
+    const sent = await res.json();
+    $('astatus').textContent = 'Pedido enviado — o codm faz em até 15 segundos.';
+    const mine = ++polling; const started = Date.now(); const issueId = current;
+    const tick = async () => {
+      if (mine !== polling) return;
+      const r = await fetch(base + '/actions/' + encodeURIComponent(sent.actionId), {cache:'no-store', credentials:'same-origin'});
+      const s = r.ok ? await r.json() : {status:'EXPIRED'};
+      if (s.status === 'PENDING' && Date.now() - started < 240000) { setTimeout(tick, 3000); return; }
+      $('astatus').textContent = s.status === 'DONE' ? 'Feito.' : s.status === 'REFUSED' ? 'Recusado: ' + (ACT_ERR[s.code] || 'o codm não pôde fazer isso agora.') : 'Sem resposta do codm. Tente de novo.';
+      board();
+      if (issueId && issueId === current && $('detail').open) load(issueId);
+    };
+    setTimeout(tick, 3000);
+    return true;
+  }
+  $('sendsteer').addEventListener('click', async () => {
+    const text = $('steer').value.trim();
+    if (!text || !current) return;
+    if (await act({kind:'STEER', issueId: current, text})) $('steer').value = '';
+  });
 
   board(); setInterval(board, 15000); me();
 })();

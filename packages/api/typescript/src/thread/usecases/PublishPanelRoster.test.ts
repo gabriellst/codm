@@ -82,7 +82,7 @@ describe('PublishPanelRoster', () => {
 			contactExternalId: '120300000000000009@g.us',
 		})
 
-		expect(await run()).toEqual({ sent: true, groups: 1, delivered: 0 })
+		expect(await run()).toEqual({ sent: true, groups: 1, delivered: 0, acted: 0 })
 		const batch = relay().batches.at(-1)
 		const key = testBed.resolve(PanelMemberKey)
 		expect(batch?.groups).toEqual([
@@ -94,6 +94,7 @@ describe('PublishPanelRoster', () => {
 					{ memberId: key.memberIdOf(threadId, ANA_JID), name: 'Ana', canRelease: true },
 					{ memberId: key.memberIdOf(threadId, BETO_JID), name: 'Beto', canRelease: false },
 				]),
+				openStops: [],
 			},
 		])
 		expect(batch?.groups[0]?.members).toHaveLength(3)
@@ -116,7 +117,7 @@ describe('PublishPanelRoster', () => {
 
 		const before = sender().sent.length
 		const stored = await testBed.probe().snapshot(['scheduledCommands', 'transcriptEntries', 'events'] as const)
-		expect(await run()).toEqual({ sent: true, groups: 1, delivered: 1 })
+		expect(await run()).toEqual({ sent: true, groups: 1, delivered: 1, acted: 0 })
 		expect(sender().sent).toHaveLength(before + 1)
 		const dm = sender().sent.at(-1)
 		expect(dm).toEqual(expect.objectContaining({ channelId, remoteId: BETO_JID, ownerId: MOCK_CLOUD_OWNER_ID }))
@@ -132,7 +133,7 @@ describe('PublishPanelRoster', () => {
 		const before = sender().sent.length
 		relay().offline = true
 		relay().pending = [{ requestId: '019e4d24-6524-7041-9e1c-8108180cde42', threadId, memberId: 'AAAAAAAAAAAAAAAAAAAAAA', code: '222222' }]
-		expect(await run()).toEqual({ sent: false, groups: 1, delivered: 0 })
+		expect(await run()).toEqual({ sent: false, groups: 1, delivered: 0, acted: 0 })
 		expect(sender().sent).toHaveLength(before)
 		relay().pending = []
 		relay().offline = false
