@@ -1024,7 +1024,8 @@ export class OrchestratorPromptBuilder {
 						// quoting it, its key): the notes are the issue's answer to them. What the group must decide already
 						// reached it with its own code — asking it again here is the duplicate this phase removed.
 						instruction:
-							'Someone wrote to this issue; give them its answer YOURSELF, in this conversation’s voice. Lead with the answer. ' +
+							'Tell them YOURSELF, in this conversation’s voice: when someone wrote to this issue, its answer to them; ' +
+							'otherwise what it did for whoever asked. Lead with the answer. ' +
 							'Do not paste the notes, do not narrate the work, do not list the files. One or two lines. ' +
 							'A decision or question the issue raised already reached the group with its own code (like APP-12 · D1): never ask it again here.',
 					}
@@ -1042,7 +1043,7 @@ export class OrchestratorPromptBuilder {
 				content: body.join('\n'),
 			}),
 			'',
-			"An issue of yours finished. What is inside that block is the worker's notes, written to YOU, not to the room.",
+			"An issue of yours reported back. What is inside that block is the worker's notes, written to YOU, not to the room.",
 			instruction,
 			'This reply is attached to the message that asked for it automatically. Do not write a [quote: …] line.',
 		]
