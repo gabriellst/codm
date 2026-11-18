@@ -5,14 +5,17 @@ import type { ZodType } from 'zod'
 import { agentMailbox, scheduledCommands } from '@codm/contracts/db'
 import { CommandQueue, DomainEventRepository, LibSqlCommandQueue, LibSqlDatabaseDriver, MockLoggingService } from '@codm/core-typescript'
 import {
+	ChannelKind,
 	ClassificationMethod,
+	MessageAuthor,
 	IssueStatus,
 	MailboxItemKind,
 	MailboxTargetKind,
 	MessageType,
 	TranscriptKind,
 } from '@codm/contracts-typescript/wire/enums'
-import { TestBed, givenIssue, givenThread, GIVEN_MENTION_TAG } from '@test/support'
+import { ChannelMessageReceivedInProcessEvent } from '@codm/contracts-typescript/wire/events'
+import { TestBed, givenIssue, givenStop, givenThread, GIVEN_MENTION_TAG } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
 import { AgentRunner } from '@agent/services/AgentRunner'
@@ -25,6 +28,7 @@ import { IngestChannelMessage } from './IngestChannelMessage'
 import { TriageChannelMessage } from './TriageChannelMessage'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { InboundTriageQueue } from '../services/InboundTriageQueue'
+import { ConsumeInboundMessage } from '../handlers/ConsumeInboundMessage'
 import { MessageTriagedEvent } from '../events/MessageTriagedEvent'
 import { CUE_ACKNOWLEDGED, CUE_READ } from '../utils/ChannelCues'
 
@@ -408,5 +412,73 @@ describe('parallel triage of an unrouted message', () => {
 		expect(prompt).not.toContain('@s.whatsapp.net')
 		expect(prompt).not.toContain('5500900000')
 		expect(prompt).not.toContain(GIVEN_MENTION_TAG)
+	})
+
+	it('a reply quoting a WAITING issue is not triaged — answering it stays the orchestrator’s call', async () => {
+		const { thread, waiting } = await scene()
+		const question = thread.recordEntry({ kind: TranscriptKind.SYSTEM, text: 'Posso publicar o relatório?', issueId: waiting.id.value })
+		await testBed.resolve(ThreadRepository).save(thread)
+		runner.scripts.set('pode', { confidence: 0.97, verdict: { decision: TriageDecision.NO_ACTION } })
+
+		const out = await ingest(thread.id.value, 'pode', { quotedEntryId: question.entryId })
+
+		expect(out.triage).toBe(false)
+		expect((await threadItem())?.kind).toBe(MailboxItemKind.OPERATOR_MESSAGE)
+		expect(runner.requests).toHaveLength(0)
+	})
+
+	it('NO_ACTION is never honoured for a reply to the agent, nor while a question (stop) is open', async () => {
+		const { thread } = await scene()
+		const said = thread.recordEntry({ kind: TranscriptKind.SYSTEM, text: 'Terminei a primeira parte.' })
+		await testBed.resolve(ThreadRepository).save(thread)
+		runner.scripts.set('ok', { confidence: 0.99, verdict: { decision: TriageDecision.NO_ACTION } })
+
+		const reply = await ingest(thread.id.value, 'ok', { quotedEntryId: said.entryId })
+		expect(reply.triage).toBe(true)
+		await testBed.resolve(TriageChannelMessage).execute({ threadId: thread.id.value, entryId: reply.entryId })
+
+		await givenStop(testBed, { threadId: thread.id.value })
+		const answer = await ingest(thread.id.value, 'ok')
+		await testBed.resolve(TriageChannelMessage).execute({ threadId: thread.id.value, entryId: answer.entryId })
+
+		const facts = await triaged()
+		expect(facts.map(fact => [fact.decision, fact.fallback])).toEqual([
+			[TriageDecision.ORCHESTRATOR, 'NO_ACTION on a possible answer'],
+			[TriageDecision.ORCHESTRATOR, 'NO_ACTION on a possible answer'],
+		])
+		expect(await mailbox().hasPending(MailboxTargetKind.THREAD, thread.id.value)).toBe(true)
+	})
+
+	it('the production trigger: ConsumeInboundMessage hands the held message to the pool after the commit', async () => {
+		const { thread, working } = await scene()
+		runner.scripts.set('deixa o botão azul', steer('APP-7'))
+
+		await testBed.resolve(ConsumeInboundMessage).handle(
+			new ChannelMessageReceivedInProcessEvent({
+				ownerId: MOCK_CLOUD_OWNER_ID,
+				payload: {
+					channelId: thread.channelId,
+					messageId: 'wamid-consumer',
+					internalMessageId: crypto.randomUUID(),
+					remoteId: thread.contactRef.externalId,
+					senderId: thread.contactRef.externalId,
+					fromMe: true,
+					author: MessageAuthor.HUMAN,
+					isGroup: false,
+					timestamp: Math.floor(Date.now() / 1000),
+					occurredAt: new Date(),
+					observedAt: new Date(),
+					messageType: MessageType.TEXT,
+					content: { text: `${GIVEN_MENTION_TAG} deixa o botão azul` },
+					platform: ChannelKind.WHATSAPP,
+					ownerId: MOCK_CLOUD_OWNER_ID,
+				},
+			}),
+		)
+		await testBed.resolve(InboundTriageQueue).idle()
+
+		expect(runner.requests).toHaveLength(1)
+		expect((await issueItem())?.targetId).toBe(working.id.value)
+		expect(await threadItem()).toBeUndefined()
 	})
 })

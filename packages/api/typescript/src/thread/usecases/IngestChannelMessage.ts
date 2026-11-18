@@ -233,8 +233,11 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 				// one open issue, needs no work, or is the orchestrator's after all. The item is written NOW, in
 				// this transaction, HELD for the triage: durable from the first instant, and claimable by the
 				// orchestrator the moment the hold lapses or this daemon dies (`EnqueueMailboxItem.hold`). A
-				// media message is not triaged — the model would read only its placeholder.
-				const holdMs = input.messageType === undefined ? this.triage.holdMs : undefined
+				// media message is not triaged — the model would read only its placeholder. Nor is a message the
+				// rule layer already TIED to an issue and left to the orchestrator on purpose (a reply quoting a
+				// waiting or finished issue: reopening, or answering its question, is the orchestrator's call).
+				const triageable = input.messageType === undefined && !entry.issueId
+				const holdMs = triageable ? this.triage.holdMs : undefined
 				triage = holdMs !== undefined
 				await this.mailbox.enqueue(
 					{

@@ -127,6 +127,13 @@ export class TriageChannelMessage extends Handler<typeof TriageChannelMessageInp
 		return thread.rosterNameOf(row.senderExternalId) ?? UNNAMED_SPEAKER
 	}
 
+	/** Does this message reply to the agent, or land while the conversation has an open question? */
+	private async mayBeAnAnswer(threadId: string, entry: TranscriptEntry, tx: Transaction): Promise<boolean> {
+		const quoted = entry.quotedEntryId ? await this.threads.findEntry(entry.quotedEntryId, tx) : undefined
+		if (quoted?.kind === TranscriptKind.SYSTEM) return true
+		return (await this.threads.openStops(threadId, tx)).length > 0
+	}
+
 	private async settle(input: this['input'], verdict: TriageVerdict, tx: Transaction): Promise<this['output']> {
 		// Read INSIDE the transaction: the model run took seconds, and the aggregate saved below must be the
 		// one as it stands now, not the one loaded before the run.
@@ -177,6 +184,10 @@ export class TriageChannelMessage extends Handler<typeof TriageChannelMessageInp
 		}
 		if (!thread || !entry) return toOrchestrator(TriageDecision.ORCHESTRATOR, 'message no longer there')
 
+		// An entry the ingest already tied to an issue is never re-routed (the ingest does not hold those;
+		// this is the floor for any other path that would).
+		if (entry.issueId) return toOrchestrator(TriageDecision.ORCHESTRATOR, 'entry already tied to an issue')
+
 		const message = { threadId: input.threadId, senderExternalId: entry.senderExternalId ?? '', platformMessageId: input.platformMessageId }
 
 		switch (verdict.decision) {
@@ -199,6 +210,12 @@ export class TriageChannelMessage extends Handler<typeof TriageChannelMessageInp
 				return record(TriageDecision.STEER, true, { issueId: issue.issueId })
 			}
 			case TriageDecision.NO_ACTION: {
+				// "ok" / "pode" are thanks in one place and an APPROVAL in another. Never "nothing to do" for a
+				// message that replies to the agent, or while the conversation has a question open (a stop) — an
+				// answer swallowed there is somebody waiting forever. Decided here, not by the prompt.
+				if (await this.mayBeAnAnswer(thread.id.value, entry, tx)) {
+					return toOrchestrator(TriageDecision.ORCHESTRATOR, 'NO_ACTION on a possible answer')
+				}
 				if (!(await this.mailbox.settleHold(input.entryId, TRIAGE_HOLDER, { consume: true }, tx))) {
 					return record(TriageDecision.NO_ACTION, false)
 				}
