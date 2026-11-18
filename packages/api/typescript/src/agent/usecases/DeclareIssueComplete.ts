@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { BaseError, Handler, z } from '@codm/core-typescript'
+import { BaseError, Handler, LoggingService, z } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
 import { IssueStatus, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { CloudSession } from '@shared/services/CloudSession'
@@ -9,6 +9,7 @@ import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { THREAD_MESSAGES } from '@thread/i18n/messages'
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { FactSource } from '../enums'
+import { IssueTurnAborter } from '../services/IssueTurnAborter'
 import type { ApplicationErrors } from '../errors'
 import { askQuestionOf, askStopFact, conversationLanguage } from '../utils/issueAsk'
 
@@ -36,7 +37,9 @@ export const DeclareIssueCompleteInputSchema = z.object({
 	/**
 	 * The artifact that IS the result (fase 3) — the page, the print of what went live — sent with the closing
 	 * line in the group. Only on `COMPLETED`; an artifact this issue recorded, checked here (the same checks as
-	 * `RequestFeedback`), so a refusal reaches the session instead of a dead-lettered delivery.
+	 * `RequestFeedback`). A refusal does NOT refuse the completion: the task is done whether or not its print can
+	 * travel, and a refused declaration left the issue WORKING with nothing in flight — stuck until the stall
+	 * sweep. The closing goes without it, and the refusal is recorded on the completion fact.
 	 */
 	finalArtifactId: z.uuid().optional(),
 })
@@ -77,6 +80,8 @@ export class DeclareIssueComplete extends Handler<typeof DeclareIssueCompleteInp
 		private readonly session: CloudSession,
 		private readonly artifacts: ArtifactRepository,
 		private readonly sendability: ArtifactSendability,
+		private readonly logging: LoggingService,
+		private readonly turns: IssueTurnAborter,
 	) {
 		super()
 	}
@@ -85,13 +90,32 @@ export class DeclareIssueComplete extends Handler<typeof DeclareIssueCompleteInp
 		const { ownerId, issueId, threadId, status, summary, key, finalArtifactId } = input
 
 		if (status === IssueStatus.COMPLETED) {
-			if (finalArtifactId) await this.assertSendableResult(input, finalArtifactId)
+			const refusal = finalArtifactId ? await this.refusalOf(input, finalArtifactId) : undefined
+			if (refusal) {
+				this.logging.warn({
+					content: { message: 'final artifact refused — the issue closes without it', reason: refusal, issueId, finalArtifactId },
+				})
+			}
+			// The turn declaring this answers a person (a routed steer)? Then the closing IS that answer: it quotes
+			// their message and the turn's own reply is not sent too. Only with a summary — an empty one closes
+			// with "concluída", and the turn's words are then the only answer the person would get.
+			const answersEntryId = summary.length > 0 ? this.turns.answerWithClosing(issueId) : undefined
 			await this.withTransaction(tx, async tx => {
 				await this.domainEventRepository.save(
 					new AgentRunCompletedEvent({
 						entityId: issueId,
 						ownerId,
-						payload: { issueId, threadId, key, completedAt: new Date(), source: FactSource.DECLARED, summary, finalArtifactId },
+						payload: {
+							issueId,
+							threadId,
+							key,
+							completedAt: new Date(),
+							source: FactSource.DECLARED,
+							summary,
+							finalArtifactId: refusal ? undefined : finalArtifactId,
+							finalArtifactRefusal: refusal,
+							answersEntryId,
+						},
 					}),
 					tx,
 				)
@@ -123,11 +147,21 @@ export class DeclareIssueComplete extends Handler<typeof DeclareIssueCompleteInp
 		return { issueId, status }
 	}
 
-	/** The final artifact is this issue's and can go to the group — `RequestFeedback`'s checks, one answer for all. */
-	private async assertSendableResult(input: this['input'], artifactId: string): Promise<void> {
+	/**
+	 * Why the final artifact cannot go with the closing — `RequestFeedback`'s checks (this issue's, sendable by
+	 * the channel), one answer for all — or `undefined` when it can. A refusal is a named error's code; anything
+	 * else (the database, the disk failing) is not a refusal and still fails the call, to be retried.
+	 */
+	private async refusalOf(input: this['input'], artifactId: string): Promise<string | undefined> {
 		const artifact = await this.artifacts.findById(artifactId)
 		if (!artifact || artifact.ownerId !== input.ownerId || artifact.threadId !== input.threadId || artifact.issueId !== input.issueId)
-			throw new BaseError<ApplicationErrors>('ARTIFACT_NOT_FOUND', `no artifact ${artifactId} recorded by issue ${input.issueId}`)
-		await this.sendability.check({ id: artifactId, kind: artifact.kind, ref: artifact.ref })
+			return 'ARTIFACT_NOT_FOUND' satisfies ApplicationErrors
+		try {
+			await this.sendability.check({ id: artifactId, kind: artifact.kind, ref: artifact.ref })
+			return undefined
+		} catch (error) {
+			if (error instanceof BaseError) return error.name
+			throw error
+		}
 	}
 }

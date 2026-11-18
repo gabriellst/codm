@@ -123,6 +123,7 @@ export class PublishAgentIntegrationEvents extends EventHandler<
 						completedAt: event.payload.completedAt,
 						summary: event.payload.summary,
 						finalArtifactId: event.payload.finalArtifactId,
+						answersEntryId: event.payload.answersEntryId,
 					},
 				}),
 			)

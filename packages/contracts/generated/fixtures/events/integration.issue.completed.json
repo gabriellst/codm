@@ -9,6 +9,7 @@
 		"key": "key-sample",
 		"completedAt": "2026-07-30T12:00:00Z",
 		"summary": "summary-sample",
-		"finalArtifactId": "finalArtifactId-sample"
+		"finalArtifactId": "finalArtifactId-sample",
+		"answersEntryId": "answersEntryId-sample"
 	}
 }

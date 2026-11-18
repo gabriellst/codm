@@ -69,5 +69,7 @@ describe('OutputPolicy — one notice per cause', () => {
 
 	it('a cause already told routes to the panel whatever the mode', () => {
 		for (const mode of modes) expect(routeSignal(mode, IssueSignalLevel.BLOCK_NOTICE, true)).toBe(OutputRouting.PANEL)
+		// A reply to a person is outside the policy: it reaches the group in every mode.
+		for (const mode of modes) expect(routeSignal(mode, IssueSignalLevel.CLOSING, false, true)).toBe(OutputRouting.GROUP)
 	})
 })

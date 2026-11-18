@@ -125,7 +125,12 @@ export function causeAlreadyTold(kind: StopKind, otherOpenKinds: readonly StopKi
  * Where a signal of `level` goes in a group of `mode` — `PANEL` when its cause was already told. A `DIGEST`
  * signal waits for its person's window (`DIGEST_WINDOW_MS`); the flush then records the routing that
  * actually happened (`GROUP` for one that went out alone).
+ *
+ * `answersPerson`: the signal is the reply to a message a person wrote to the issue (a closing that answers a
+ * routed steer). Replies to people are outside the policy (owner decision: "resposta a quem falou com o agente
+ * continua no grupo"), so it goes to the group whatever the mode — or that person would be left unanswered.
  */
-export function routeSignal(mode: GroupOutputMode, level: IssueSignalLevel, alreadyTold = false): OutputRouting {
+export function routeSignal(mode: GroupOutputMode, level: IssueSignalLevel, alreadyTold = false, answersPerson = false): OutputRouting {
+	if (answersPerson) return OutputRouting.GROUP
 	return alreadyTold ? OutputRouting.PANEL : ROUTING_BY_MODE[mode][level]
 }

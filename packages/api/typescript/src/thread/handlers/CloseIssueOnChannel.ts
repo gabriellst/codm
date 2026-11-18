@@ -1,7 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { BaseError, EventHandler, Id, LoggingService } from '@codm/core-typescript'
 import { IssueCompletedEvent } from '@codm/contracts-typescript/wire/events'
-import { IssueSignalLevel } from '@codm/contracts-typescript/wire/enums'
+import { IssueSignalLevel, IssueStatus } from '@codm/contracts-typescript/wire/enums'
+import { IssueRepository } from '@issue/repositories/IssueRepository'
 import { DeliverIssueSignal } from '../usecases/DeliverIssueSignal'
 
 /**
@@ -19,9 +20,19 @@ export const CLOSING_SUMMARY_MAX = 600
  * It replaces the orchestrator's answer to an `ISSUE_RESULT`: the end of a turn is no longer the end of the
  * task (it was 6.9 results per issue, measured), the declared completion is — and it is said once.
  *
- * Idempotent across redeliveries: the closing's entry id is derived from the completion itself (issue +
- * instant), so the same completion delivered twice — or republished by the bridge under a new event id — is
- * recorded once and sent once. A reopened issue that completes again is a new instant: a new closing.
+ * ONCE PER COMPLETION CYCLE. The closing's entry id is derived from the issue and the instant its CYCLE
+ * completed — the issue's own `completedAt` when it is already COMPLETED, else this fact's. That instant is
+ * the first declaration's (`MaterializeIssueFromExecution` stamps the fact's `completedAt`, and a second
+ * completion of a COMPLETED issue is a no-op there), so:
+ *  - the same completion delivered twice (a new event id each time) is recorded and sent once;
+ *  - a SECOND declaration of the same cycle (the agent called the tool twice, a later turn declared again)
+ *    finds the first one's instant and closes nothing more;
+ *  - a reopened issue (`reopen()` clears `completedAt`) that completes again is a new cycle: a new closing.
+ * The facts reach this handler in order (the integration lane delivers sequentially), so the second
+ * declaration's closing always runs after the first one was materialized — or ran here with the same seed.
+ *
+ * A completion declared by a turn that was answering a person (`answersEntryId`) is that person's reply: it
+ * quotes their message, and the turn does not send its own (one message — `RunIssueTurn.reportTurn`).
  */
 @injectable()
 export class CloseIssueOnChannel extends EventHandler<typeof IssueCompletedEvent> {
@@ -29,6 +40,7 @@ export class CloseIssueOnChannel extends EventHandler<typeof IssueCompletedEvent
 
 	constructor(
 		private readonly deliver: DeliverIssueSignal,
+		private readonly issues: IssueRepository,
 		private readonly logging: LoggingService,
 	) {
 		super()
@@ -36,6 +48,8 @@ export class CloseIssueOnChannel extends EventHandler<typeof IssueCompletedEvent
 
 	async handle(event: this['input']): Promise<void> {
 		const { payload } = event
+		const issue = await this.issues.findById(payload.issueId)
+		const cycle = issue?.status === IssueStatus.COMPLETED && issue.completedAt ? issue.completedAt : new Date(payload.completedAt)
 		try {
 			await this.deliver.execute({
 				threadId: payload.threadId,
@@ -43,8 +57,9 @@ export class CloseIssueOnChannel extends EventHandler<typeof IssueCompletedEvent
 				level: IssueSignalLevel.CLOSING,
 				text: clip(payload.summary ?? ''),
 				mainArtifactId: payload.finalArtifactId,
-				// The instant as ISO — byte-stable whether the payload arrives as a Date or as its wire string.
-				signalId: Id.fromSeed('issue-closing', payload.issueId, new Date(payload.completedAt).toISOString()).value,
+				answersEntryId: payload.answersEntryId,
+				// The cycle's instant as ISO — byte-stable whether it came as a Date or as its wire string.
+				signalId: Id.fromSeed('issue-closing', payload.issueId, cycle.toISOString()).value,
 			})
 		} catch (error) {
 			// The conversation or the issue is gone — nowhere to say it; a retry would find them gone too.

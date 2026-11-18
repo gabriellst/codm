@@ -17,11 +17,12 @@ import type { ZodType } from 'zod'
 import { RunIssueTurn } from './RunIssueTurn'
 import { DeclareIssueComplete } from './DeclareIssueComplete'
 import { AgentRunner } from '../services/AgentRunner'
-import { AgentRunnerFactory, FixedAgentRunnerFactory } from '../services/AgentRunnerFactory'
+import { AgentRunnerFactory, FixedAgentRunnerFactory, StubAgentRunnerFactory } from '../services/AgentRunnerFactory'
 import { ProviderDetector, MockProviderDetector } from '../services/ProviderDetector'
 import { AgentStreamRegistry, type TerminalSseFrame } from '../services/AgentStreamRegistry'
 import { AgentIdentityService } from '@codm/core-typescript'
 import { AgentSessionRepository } from '../repositories/AgentSessionRepository'
+import { IssueTurnAborter } from '../services/IssueTurnAborter'
 import { MailboxRepository } from '../repositories/MailboxRepository'
 import { IssueWorkAgent, IssueWorkPromptBuilder } from '../agents/IssueWorkAgent'
 import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
@@ -62,6 +63,26 @@ class CapturingRunner extends AgentRunner {
 	): AsyncIterable<AgentRuntimeEvent> {
 		this.requests.push(request)
 		yield { type: 'finished', result: { outcome: AgentRunOutcome.COMPLETED, replyText: 'ok', sessionId: 'sess-cap', failed: false } }
+	}
+	async shutdown(): Promise<void> {}
+}
+
+/** A runner whose session does something mid-turn (a tool call, e.g. declaring the task done) and then ends. */
+class ActingRunner extends AgentRunner {
+	constructor(
+		private readonly act: () => Promise<void>,
+		private readonly replyText: string,
+	) {
+		super()
+	}
+	async *run<OutputSchema extends ZodType | undefined = undefined>(
+		_request: AgentRunRequest<OutputSchema>,
+	): AsyncIterable<AgentRuntimeEvent> {
+		await this.act()
+		yield {
+			type: 'finished',
+			result: { outcome: AgentRunOutcome.COMPLETED, replyText: this.replyText, sessionId: 'sess-act', failed: false },
+		}
 	}
 	async shutdown(): Promise<void> {}
 }
@@ -169,6 +190,70 @@ describe('RunIssueTurn use case', () => {
 		expect(queued?.posture).toBe(PermissionPosture.AUTO)
 		expect(queued?.payload).toMatchObject({ originEntryId: asked, issueId, outcome: { kind: AgentRunOutcome.COMPLETED } })
 		expect(await eventRepo.findByType(IssueSpokeEvent)).toHaveLength(0)
+	})
+
+	/**
+	 * ONE MESSAGE (fase 3): a turn answering a person routed to the issue that ALSO declares the task done used to
+	 * put two messages in the group — the closing and the orchestrator's reply to the ISSUE_RESULT. The closing
+	 * is the answer now (it quotes the person: `answersEntryId` on the completion), so no ISSUE_RESULT is queued
+	 * and the turn's words stay on the timeline. Falsifier: drop the `answeredByClosing` guard in `reportTurn`.
+	 */
+	it('a routed-steer turn that also completes the task queues NO reply — the closing is the answer, quoting the person', async () => {
+		const eventRepo = testBed.resolve(DomainEventRepository)
+		const issueId = testId('run-issue-turn', 'issue-answer-and-close')
+		const asked = testId('run-issue-turn', 'person-asked-close')
+		const declare = () =>
+			testBed
+				.resolve(DeclareIssueComplete)
+				.execute({ ownerId, issueId, threadId, status: IssueStatus.COMPLETED, summary: 'Link no ar: está na página.', key: 'coupon-focus' })
+				.then(() => undefined)
+		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(new ActingRunner(declare, 'O link está na página.')))
+		// The dispatcher registers the running turn with the steer it carries; this test runs the use case directly.
+		const turn = testBed.resolve(IssueTurnAborter).begin(issueId, asked)
+
+		try {
+			await testBed
+				.resolve(RunIssueTurn)
+				.execute({ ...baseInput(issueId), turnKind: MailboxItemKind.STEER as const, answersEntryId: asked, prompt: 'Pessoa: e o link?' })
+		} finally {
+			turn.end()
+			testBed.override(AgentRunnerFactory, testBed.resolve(StubAgentRunnerFactory))
+		}
+
+		expect(await testBed.resolve(MailboxRepository).claimNext('run-issue-turn-test', 60_000)).toBeUndefined()
+		const [completed] = await eventRepo.findByType(AgentRunCompletedEvent)
+		expect(completed?.payload.answersEntryId).toBe(asked)
+		const spoke = await eventRepo.findByType(IssueSpokeEvent)
+		expect(spoke).toHaveLength(1)
+		expect(spoke[0]?.payload).toMatchObject({ level: IssueSignalLevel.PROGRESS, text: 'O link está na página.' })
+	})
+
+	/** With no summary the closing only says "concluída" — the turn's words are the answer, and still go. */
+	it('a routed-steer turn that completes with an EMPTY summary still answers the person through the orchestrator', async () => {
+		const eventRepo = testBed.resolve(DomainEventRepository)
+		const issueId = testId('run-issue-turn', 'issue-answer-close-empty')
+		const asked = testId('run-issue-turn', 'person-asked-empty')
+		const declare = () =>
+			testBed
+				.resolve(DeclareIssueComplete)
+				.execute({ ownerId, issueId, threadId, status: IssueStatus.COMPLETED, summary: '', key: 'coupon-focus' })
+				.then(() => undefined)
+		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(new ActingRunner(declare, 'O link está na página.')))
+		const turn = testBed.resolve(IssueTurnAborter).begin(issueId, asked)
+
+		try {
+			await testBed
+				.resolve(RunIssueTurn)
+				.execute({ ...baseInput(issueId), turnKind: MailboxItemKind.STEER as const, answersEntryId: asked, prompt: 'Pessoa: e o link?' })
+		} finally {
+			turn.end()
+			testBed.override(AgentRunnerFactory, testBed.resolve(StubAgentRunnerFactory))
+		}
+
+		const queued = await testBed.resolve(MailboxRepository).claimNext('run-issue-turn-test', 60_000)
+		expect(queued?.kind).toBe(MailboxItemKind.ISSUE_RESULT)
+		const [completed] = await eventRepo.findByType(AgentRunCompletedEvent)
+		expect(completed?.payload.answersEntryId).toBeUndefined()
 	})
 
 	/** Every other steer — the console, the panel, the orchestrator, a resume after an answer, a loop — is progress. */

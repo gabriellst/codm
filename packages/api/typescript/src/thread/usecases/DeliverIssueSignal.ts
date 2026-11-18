@@ -23,6 +23,12 @@ export const DeliverIssueSignalInputSchema = z.object({
 	/** Every artifact the signal cites (the main one included) — the others are counted, and stay on the console. */
 	artifactIds: z.array(z.uuid()).optional(),
 	/**
+	 * The person's message this signal is the reply to (a closing declared by a turn that was answering a steer
+	 * routed from the group). It is quoted instead of the request, and the signal reaches the group whatever the
+	 * mode: a reply to a person is not the issue talking on its own.
+	 */
+	answersEntryId: z.uuid().optional(),
+	/**
 	 * What makes delivering the same signal twice a no-op: it becomes the entry's id. A redelivered fact finds
 	 * its entry already recorded and sends nothing more (its delivery was queued with it, in the same commit).
 	 */
@@ -70,9 +76,12 @@ export class DeliverIssueSignal extends Handler<typeof DeliverIssueSignalInputSc
 		const language = resolveThreadLanguage(thread.language, ownerLanguage)
 		const origin = issue.originEntryId ? await this.threads.findEntry(issue.originEntryId, tx) : undefined
 		const requesterId = origin?.senderExternalId
+		// A reply to a person quotes THEIR message (it must be this conversation's).
+		const answered = input.answersEntryId ? await this.threads.findEntry(input.answersEntryId, tx) : undefined
+		const answers = answered?.threadId === thread.id.value ? answered : undefined
 		// The closing answers whoever asked (`QUOTES_ORIGIN`): it quotes their message — in the transcript and on
 		// the wire, when the platform id of that message is known (a request typed elsewhere has none).
-		const quoted = QUOTES_ORIGIN[input.level] && origin?.threadId === thread.id.value ? origin : undefined
+		const quoted = answers ?? (QUOTES_ORIGIN[input.level] && origin?.threadId === thread.id.value ? origin : undefined)
 		const quotedMessageId = quoted ? await this.consumed.findPlatformId(quoted.entryId, tx) : undefined
 		const others = (input.artifactIds ?? []).filter(artifactId => artifactId !== input.mainArtifactId).length
 
@@ -94,6 +103,7 @@ export class DeliverIssueSignal extends Handler<typeof DeliverIssueSignalInputSc
 					moreArtifacts: others,
 					entryId: input.signalId,
 					quotedEntry: quoted ? { entryId: quoted.entryId, threadId: quoted.threadId } : undefined,
+					answersPerson: answers !== undefined,
 				},
 				{ language, panelLink: this.panel.linkOf(thread.id.value) },
 			)

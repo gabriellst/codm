@@ -565,6 +565,9 @@ pub struct IssueCompletedPayload {
 	/// The artifact the agent DECLARED as the final result (fase 3), sent with the closing line in the group. Absent when it declared none, or the completion was inferred.
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub final_artifact_id: Option<String>,
+	/// The person's message the completing turn was answering (a steer routed to the issue straight from the group), when it was one. The closing quotes it and is that person's answer — the turn's own reply is not sent as well. Absent otherwise; the closing then quotes the request that opened the issue.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub answers_entry_id: Option<String>,
 }
 
 /// `integration.issue.completed` in the canonical transport envelope.

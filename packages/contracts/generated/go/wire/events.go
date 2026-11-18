@@ -790,6 +790,7 @@ type IssueCompletedEvent struct {
 	CompletedAt time.Time `json:"completedAt"`
 	Summary *string `json:"summary,omitempty"`
 	FinalArtifactID *string `json:"finalArtifactId,omitempty"`
+	AnswersEntryID *string `json:"answersEntryId,omitempty"`
 }
 
 func (e IssueCompletedEvent) EventName() string { return IssueCompletedEventName }
@@ -802,6 +803,7 @@ type IssueCompletedPayload struct {
 	CompletedAt time.Time `json:"completedAt" validate:"required"`
 	Summary *string `json:"summary,omitempty"`
 	FinalArtifactID *string `json:"finalArtifactId,omitempty"`
+	AnswersEntryID *string `json:"answersEntryId,omitempty"`
 }
 
 // IssueCreatedEventName is the wire discriminator for IssueCreatedEvent.

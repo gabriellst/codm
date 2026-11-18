@@ -650,7 +650,8 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 	 * orchestrator turn per issue turn (43% of the orchestrator's turns, measured), and the group got both the
 	 * decision notice and the orchestrator's reply about it. Now:
 	 *  - a turn that ANSWERS A PERSON (`answersEntryId`: they wrote to the issue straight from the group) goes
-	 *    back to that person through the orchestrator, quoting them — replies to people stay (owner decision);
+	 *    back to that person through the orchestrator, quoting them — replies to people stay (owner decision) —
+	 *    unless the turn also declared the task done: then the closing quotes them and is the one answer;
 	 *  - every other turn's words are the issue's PROGRESS (`agent.issue_spoke` → the output policy): the
 	 *    timeline, and the group only in `EVERYTHING`. What the group must hear has its own door now — a
 	 *    decision or a question is a stop, a preview is `RequestFeedback`, the end is the declared completion
@@ -662,7 +663,10 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 	private async reportTurn(input: this['input'], replyText: string, tx: Transaction): Promise<void> {
 		const text = replyText.trim()
 		if (text.length === 0) return
-		if (input.answersEntryId) {
+		// A turn that answers a person AND finished the task: the closing already is that person's answer (it
+		// quotes their message — `IssueTurnAborter.answerWithClosing`), so the reply would be a second message
+		// saying the same thing. Its words stay on the timeline as PROGRESS.
+		if (input.answersEntryId && !this.aborter.answeredByClosing(input.issueId, input.answersEntryId)) {
 			await this.enqueueResult(input, input.answersEntryId, text, tx)
 			return
 		}

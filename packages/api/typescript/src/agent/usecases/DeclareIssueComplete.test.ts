@@ -12,8 +12,8 @@ import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 
 /**
  * The final artifact of a declared completion (fase 3, item 5) — the closing line carries it to the group.
- * Checked when the issue declares it, like `RequestFeedback`'s preview: a refusal reaches the session, and
- * nothing is written.
+ * Checked when the issue declares it, like `RequestFeedback`'s preview — but a refusal never refuses the
+ * completion: the closing goes without the artifact, and the refusal is recorded on the fact.
  */
 describe('DeclareIssueComplete — the final artifact', () => {
 	let testBed: TestBed
@@ -59,22 +59,47 @@ describe('DeclareIssueComplete — the final artifact', () => {
 		expect(fact?.payload).toMatchObject({ summary: 'Página no ar.', finalArtifactId: final.id.value })
 	})
 
-	it('an artifact another issue recorded is refused, and no completion is written', async () => {
+	// It used to refuse the whole declaration (and write nothing): the issue stayed WORKING with nothing in
+	// flight — a finished task stuck until the stall sweep, for a print that could not travel. The completion
+	// is what matters; the artifact is dropped and the refusal recorded on the fact.
+	it('an artifact another issue recorded does not stop the completion — it closes without it, the refusal recorded', async () => {
 		const { threadId, issueId, path } = await setUp()
 		const other = await givenIssue(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, threadId, key: 'APP-13' })
 		const foreign = await givenArtifact(testBed, threadId, { issueId: other.id.value, ref: path })
 
-		await expect(
-			testBed.resolve(DeclareIssueComplete).execute({
-				ownerId: MOCK_CLOUD_OWNER_ID,
-				threadId,
-				issueId,
-				status: IssueStatus.COMPLETED,
-				summary: '',
-				key: 'APP-12',
-				finalArtifactId: foreign.id.value,
-			}),
-		).rejects.toMatchObject({ name: 'ARTIFACT_NOT_FOUND' })
-		expect(await testBed.resolve(DomainEventRepository).findByType(AgentRunCompletedEvent)).toHaveLength(0)
+		const out = await testBed.resolve(DeclareIssueComplete).execute({
+			ownerId: MOCK_CLOUD_OWNER_ID,
+			threadId,
+			issueId,
+			status: IssueStatus.COMPLETED,
+			summary: 'Página no ar.',
+			key: 'APP-12',
+			finalArtifactId: foreign.id.value,
+		})
+
+		expect(out).toEqual({ issueId, status: IssueStatus.COMPLETED })
+		const facts = await testBed.resolve(DomainEventRepository).findByType(AgentRunCompletedEvent)
+		expect(facts).toHaveLength(1)
+		expect(facts[0]?.payload.finalArtifactId).toBeUndefined()
+		expect(facts[0]?.payload).toMatchObject({ summary: 'Página no ar.', finalArtifactRefusal: 'ARTIFACT_NOT_FOUND' })
+	})
+
+	it('an artifact whose file is gone does not stop the completion either', async () => {
+		const { threadId, issueId } = await setUp()
+		const gone = await givenArtifact(testBed, threadId, { issueId, ref: join(scratch, 'nao-existe.png') })
+
+		await testBed.resolve(DeclareIssueComplete).execute({
+			ownerId: MOCK_CLOUD_OWNER_ID,
+			threadId,
+			issueId,
+			status: IssueStatus.COMPLETED,
+			summary: '',
+			key: 'APP-12',
+			finalArtifactId: gone.id.value,
+		})
+
+		const [fact] = await testBed.resolve(DomainEventRepository).findByType(AgentRunCompletedEvent)
+		expect(fact?.payload.finalArtifactId).toBeUndefined()
+		expect(fact?.payload.finalArtifactRefusal).toBe('ARTIFACT_FILE_MISSING')
 	})
 })

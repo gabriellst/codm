@@ -47,6 +47,8 @@ export interface IssueSignalDraft {
 	entryId?: string
 	/** The message this one answers (`QUOTES_ORIGIN`: the closing quotes the request) — quoted in the transcript. */
 	quotedEntry?: { entryId: string; threadId: string }
+	/** `quotedEntry` is a person's message to the issue this signal replies to — the group gets it whatever the mode. */
+	answersPerson?: boolean
 }
 
 /**
@@ -81,7 +83,7 @@ export function recordIssueSignal(
 	draft: IssueSignalDraft,
 	context: { language: Language; panelLink?: string },
 ): { entry: TranscriptEntry; routing: OutputRouting; sends: boolean } {
-	const routing = routeSignal(thread.outputMode, draft.level, draft.alreadyTold)
+	const routing = routeSignal(thread.outputMode, draft.level, draft.alreadyTold, draft.answersPerson)
 	const text = THREAD_MESSAGES.issueSignal(context.language, {
 		level: draft.level,
 		key: draft.issue.key,

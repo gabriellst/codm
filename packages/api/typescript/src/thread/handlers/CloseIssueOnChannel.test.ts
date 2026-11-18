@@ -12,6 +12,8 @@ import { TestBed, givenArtifact, givenIssue, givenThread } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { ConsumedMessageRepository } from '../repositories/ConsumedMessageRepository'
+import { MaterializeIssueFromExecution } from '@issue/handlers/MaterializeIssueFromExecution'
+import { ReopenIssue } from '@issue/usecases/ReopenIssue'
 import { CloseIssueOnChannel, CLOSING_SUMMARY_MAX } from './CloseIssueOnChannel'
 
 /**
@@ -63,7 +65,14 @@ describe('CloseIssueOnChannel — integration.issue.completed → the closing li
 		return { threadId: thread.id.value, issueId: issue.id.value, originEntryId: origin.entryId }
 	}
 
-	const completed = (p: { threadId: string; issueId: string; summary?: string; finalArtifactId?: string; at?: Date }) =>
+	const completed = (p: {
+		threadId: string
+		issueId: string
+		summary?: string
+		finalArtifactId?: string
+		answersEntryId?: string
+		at?: Date
+	}) =>
 		new IssueCompletedEvent({
 			ownerId: MOCK_CLOUD_OWNER_ID,
 			payload: {
@@ -73,6 +82,7 @@ describe('CloseIssueOnChannel — integration.issue.completed → the closing li
 				completedAt: p.at ?? new Date('2026-11-18T12:00:00.000Z'),
 				summary: p.summary,
 				finalArtifactId: p.finalArtifactId,
+				answersEntryId: p.answersEntryId,
 			},
 		})
 
@@ -133,6 +143,73 @@ describe('CloseIssueOnChannel — integration.issue.completed → the closing li
 		await handler.handle(completed({ threadId, issueId, at: new Date('2026-11-18T15:00:00.000Z') }) as never)
 
 		expect(await closings(threadId)).toHaveLength(2)
+	})
+
+	/**
+	 * Both consumers of the fact, the way the integration lane runs them (in order, fact after fact): the issue
+	 * materializes the completion, the thread closes — in either order for one fact.
+	 */
+	async function deliverCompletion(event: IssueCompletedEvent, closeFirst = false) {
+		const close = () => testBed.resolve(CloseIssueOnChannel).handle(event as never)
+		const materialize = () => testBed.resolve(MaterializeIssueFromExecution).handle(event as never)
+		if (closeFirst) {
+			await close()
+			await materialize()
+			return
+		}
+		await materialize()
+		await close()
+	}
+
+	// The agent declared COMPLETED twice in one cycle (the tool called again, a later turn declaring again):
+	// two facts, two instants, no reopen between them. It used to close twice — the seed was each fact's instant.
+	it('a SECOND declaration of the same completion cycle closes nothing more', async () => {
+		const { threadId, issueId } = await setUp()
+
+		await deliverCompletion(completed({ threadId, issueId, summary: 'Página no ar.', at: new Date('2026-11-18T12:00:00.000Z') }), true)
+		await deliverCompletion(completed({ threadId, issueId, summary: 'Página no ar!', at: new Date('2026-11-18T12:00:05.000Z') }))
+
+		expect(await closings(threadId)).toHaveLength(1)
+		expect(await commands('deliver_channel_message')).toHaveLength(1)
+	})
+
+	it('…and with the issue materialized first, the same', async () => {
+		const { threadId, issueId } = await setUp()
+
+		await deliverCompletion(completed({ threadId, issueId, summary: 'Página no ar.', at: new Date('2026-11-18T12:00:00.000Z') }))
+		await deliverCompletion(completed({ threadId, issueId, summary: 'Página no ar!', at: new Date('2026-11-18T12:00:05.000Z') }), true)
+
+		expect(await closings(threadId)).toHaveLength(1)
+	})
+
+	it('reopened between the two completions, it closes again — a new cycle', async () => {
+		const { threadId, issueId } = await setUp()
+
+		await deliverCompletion(completed({ threadId, issueId, summary: 'Página no ar.', at: new Date('2026-11-18T12:00:00.000Z') }))
+		await testBed.resolve(ReopenIssue).execute({ ownerId: MOCK_CLOUD_OWNER_ID, issueId })
+		await deliverCompletion(completed({ threadId, issueId, summary: 'Ajustada.', at: new Date('2026-11-18T15:00:00.000Z') }))
+
+		expect(await closings(threadId)).toHaveLength(2)
+		expect(await commands('deliver_channel_message')).toHaveLength(2)
+	})
+
+	// The turn that declared the completion was answering a person's message routed to the issue: the closing is
+	// that person's answer (the turn sends no reply of its own) — it quotes THEM, and reaches the group even in a
+	// mode that keeps closings on the panel, or they would be left unanswered.
+	it('a closing that answers a person quotes their message, and goes to the group even in DECISIONS_ONLY', async () => {
+		const { threadId, issueId } = await setUp(GroupOutputMode.DECISIONS_ONLY)
+		const threads = testBed.resolve(ThreadRepository)
+		const thread = (await threads.findById(threadId))!
+		const asked = thread.recordEntry({ kind: TranscriptKind.CONTACT, text: 'APP-12 já subiu?', senderExternalId: 'participant-b' })
+		await threads.save(thread)
+
+		await testBed
+			.resolve(CloseIssueOnChannel)
+			.handle(completed({ threadId, issueId, summary: 'Subiu agora.', answersEntryId: asked.entryId }) as never)
+
+		const [closing] = await closings(threadId)
+		expect(closing).toMatchObject({ routing: OutputRouting.GROUP, quotedEntryId: asked.entryId })
+		expect(await commands('deliver_channel_message')).toHaveLength(1)
 	})
 
 	it('the declared final artifact goes with the closing (the preview path), as its caption', async () => {
