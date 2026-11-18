@@ -4,6 +4,8 @@ import { LibSqlDatabaseDriver } from '@codm/core-typescript'
 import {
 	ContactKind,
 	IssueControlSource,
+	IssueStatus,
+	Language,
 	IssueTimelineItemKind,
 	MailboxItemKind,
 	MailboxTargetKind,
@@ -24,6 +26,8 @@ import { ThreadRepository } from '../repositories/ThreadRepository'
 import { PanelActionLedger } from '../repositories/PanelActionLedger'
 import { PanelRosterRelay, type MockPanelRosterRelay } from '../services/PanelRosterRelay'
 import { PanelMemberKey } from '../services/PanelMemberKey'
+import { THREAD_MESSAGES } from '../i18n/messages'
+import { PanelActionEcho } from '../enums'
 import { PublishPanelRoster } from './PublishPanelRoster'
 
 // Neutral fixtures: made-up addresses that only LOOK like WhatsApp ids, so a leak is detectable.
@@ -182,6 +186,30 @@ describe('ExecutePanelAction — through the roster pull', () => {
 
 		const timeline = await assembleIssueTimeline(testBed.resolve(LibSqlDatabaseDriver), issueId, 'Toggle de dark mode')
 		expect(timeline.some(item => item.kind === IssueTimelineItemKind.STEER && item.text === 'Beto: Use o tema escuro no rodapé')).toBe(true)
+	})
+
+	it('steer on a finished or waiting issue reopens it, like SteerIssueTurn — in the same transaction', async () => {
+		const { threadId, memberOf } = await givenGroup()
+		const done = await givenIssue(testBed, { threadId, key: 'APP-2', status: IssueStatus.COMPLETED })
+		const waiting = await givenIssue(testBed, { threadId, key: 'APP-3', status: IssueStatus.NEEDS_INPUT })
+		await givenStop(testBed, { threadId, issueId: waiting.id.value, kind: StopKind.HUMAN_REQUESTED })
+		handOut(threadId, memberOf(ANA_JID), { kind: PanelActionKind.STEER, issueId: done.id.value, text: 'Refaça com o logo novo' })
+		handOut(threadId, memberOf(ANA_JID), { kind: PanelActionKind.STEER, issueId: waiting.id.value, text: 'Pode seguir com a opção B' })
+		expect(await run()).toEqual(expect.objectContaining({ acted: 2 }))
+
+		const issues = testBed.resolve(IssueRepository)
+		expect((await issues.findById(done.id.value))?.status).toBe(IssueStatus.WORKING)
+		expect((await issues.findById(waiting.id.value))?.status).toBe(IssueStatus.WORKING)
+		expect((await echoes(threadId)).map(entry => entry.text)).toEqual(['Ana orientou APP-2 pelo painel', 'Ana orientou APP-3 pelo painel'])
+	})
+
+	it('the echo follows the conversation language', () => {
+		expect(THREAD_MESSAGES.panelActionEcho(Language.EN_US, { name: 'Ana', key: 'APP-12', echo: PanelActionEcho.PAUSED })).toBe(
+			'Ana paused APP-12 from the panel',
+		)
+		expect(THREAD_MESSAGES.panelActionEcho(Language.EN_US, { name: 'Ana', key: 'APP-12', echo: PanelActionEcho.STEERED })).toBe(
+			'Ana steered APP-12 from the panel',
+		)
 	})
 
 	it('answering a stop: a member who may release approves it; one who lost the grant is refused, the stop stays open', async () => {

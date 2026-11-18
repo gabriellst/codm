@@ -18,7 +18,7 @@ import { PauseIssue } from '@issue/usecases/PauseIssue'
 import { ResumeIssue } from '@issue/usecases/ResumeIssue'
 import { ReopenIssue } from '@issue/usecases/ReopenIssue'
 import { CloudSession } from '@shared/services/CloudSession'
-import { resolveThreadLanguage } from '@shared/i18n/messages'
+import { resolveThreadLanguage, type CatalogLanguage } from '@shared/i18n/messages'
 import { PanelActionBodySchema, type PanelActionBody } from '@shared/schemas'
 import type { Thread } from '../entities/Thread'
 import { ThreadRepository } from '../repositories/ThreadRepository'
@@ -73,6 +73,8 @@ interface Act {
 	thread: Thread
 	member: Member
 	actionId: string
+	/** The echo's language — resolved BEFORE the transaction, since it may ask the cloud session. */
+	language: CatalogLanguage
 }
 
 /**
@@ -144,6 +146,9 @@ export class ExecutePanelAction extends Handler<typeof ExecutePanelActionInputSc
 		if (prior) return { outcome: prior.outcome, code: prior.code, executed: false }
 
 		const thread = await this.threads.findById(input.threadId)
+		// Resolved outside the write transaction: the owner's language may come from the cloud session.
+		const ownerLanguage = thread && !thread.language ? (await this.session.identity())?.user.language : undefined
+		const language = resolveThreadLanguage(thread?.language, ownerLanguage)
 		const attempt = await tryCatchAsync(() =>
 			this.withTransaction(undefined, async tx => {
 				if (!thread || thread.deletedAt) throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
@@ -161,7 +166,7 @@ export class ExecutePanelAction extends Handler<typeof ExecutePanelActionInputSc
 				)
 				// A concurrent run took the latch first: it owns the effect and the outcome.
 				if (!recorded) return false
-				const act = { thread, member: input.member, actionId: input.actionId }
+				const act = { thread, member: input.member, actionId: input.actionId, language }
 				const echo = await this.effect(act, input.action, tx)
 				await this.echo(act, input.action.issueId, echo, tx)
 				return true
@@ -278,11 +283,9 @@ export class ExecutePanelAction extends Handler<typeof ExecutePanelActionInputSc
 		const issue = await this.issues.findById(issueId, tx)
 		// Re-read inside the transaction: the effect above may have saved this same thread.
 		const thread = (await this.threads.findById(act.thread.id.value, tx)) ?? act.thread
-		const ownerLanguage = thread.language ? undefined : (await this.session.identity())?.user.language
-		const language = resolveThreadLanguage(thread.language, ownerLanguage)
 		const entry = thread.recordEntry({
 			kind: TranscriptKind.SYSTEM,
-			text: THREAD_MESSAGES.panelActionEcho(language, { name: act.member.name, key: issue?.key ?? '', echo }),
+			text: THREAD_MESSAGES.panelActionEcho(act.language, { name: act.member.name, key: issue?.key ?? '', echo }),
 			issueId,
 		})
 		await this.threads.save(thread, tx)
