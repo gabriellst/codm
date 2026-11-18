@@ -152,6 +152,7 @@ pub mod types {
     ///    "RATE_LIMITED",
     ///    "RESOLUTION_NOT_APPLICABLE",
     ///    "SESSION_ALREADY_STREAMING",
+    ///    "SIGNAL_ALREADY_FLUSHED",
     ///    "SOCIAL_SIGN_IN_FAILED",
     ///    "STOP_ALREADY_RESOLVED",
     ///    "STOP_CRITERION_DISABLED",
@@ -401,6 +402,8 @@ pub mod types {
         ResolutionNotApplicable,
         #[serde(rename = "SESSION_ALREADY_STREAMING")]
         SessionAlreadyStreaming,
+        #[serde(rename = "SIGNAL_ALREADY_FLUSHED")]
+        SignalAlreadyFlushed,
         #[serde(rename = "SOCIAL_SIGN_IN_FAILED")]
         SocialSignInFailed,
         #[serde(rename = "STOP_ALREADY_RESOLVED")]
@@ -580,6 +583,7 @@ pub mod types {
                 Self::RateLimited => f.write_str("RATE_LIMITED"),
                 Self::ResolutionNotApplicable => f.write_str("RESOLUTION_NOT_APPLICABLE"),
                 Self::SessionAlreadyStreaming => f.write_str("SESSION_ALREADY_STREAMING"),
+                Self::SignalAlreadyFlushed => f.write_str("SIGNAL_ALREADY_FLUSHED"),
                 Self::SocialSignInFailed => f.write_str("SOCIAL_SIGN_IN_FAILED"),
                 Self::StopAlreadyResolved => f.write_str("STOP_ALREADY_RESOLVED"),
                 Self::StopCriterionDisabled => f.write_str("STOP_CRITERION_DISABLED"),
@@ -719,6 +723,7 @@ pub mod types {
                 "RATE_LIMITED" => Ok(Self::RateLimited),
                 "RESOLUTION_NOT_APPLICABLE" => Ok(Self::ResolutionNotApplicable),
                 "SESSION_ALREADY_STREAMING" => Ok(Self::SessionAlreadyStreaming),
+                "SIGNAL_ALREADY_FLUSHED" => Ok(Self::SignalAlreadyFlushed),
                 "SOCIAL_SIGN_IN_FAILED" => Ok(Self::SocialSignInFailed),
                 "STOP_ALREADY_RESOLVED" => Ok(Self::StopAlreadyResolved),
                 "STOP_CRITERION_DISABLED" => Ok(Self::StopCriterionDisabled),

@@ -1,12 +1,18 @@
 import { testId } from '@test/support'
 import { describe, expect, it, mock } from 'bun:test'
 import type { ExternalMediator } from '@codm/core-typescript'
-import { IssueOpenedEvent, IssueCompletedEvent, ThreadStopRaisedEvent } from '@codm/contracts-typescript/wire/events'
-import { ProviderKind, StopKind } from '@codm/contracts-typescript/wire/enums'
+import {
+	IssueOpenedEvent,
+	IssueCompletedEvent,
+	ThreadIssueSignalEvent,
+	ThreadStopRaisedEvent,
+} from '@codm/contracts-typescript/wire/events'
+import { IssueSignalLevel, ProviderKind, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { PublishAgentIntegrationEvents } from './PublishAgentIntegrationEvents'
 import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
+import { IssueSpokeEvent } from '../events/IssueSpokeEvent'
 import { FactSource } from '../enums'
 
 const ownerId = testId('terminal-bridge', 'owner')
@@ -108,6 +114,36 @@ describe('PublishAgentIntegrationEvents (terminal.* domain facts → frozen inte
 		})
 	})
 
+	/** Fase 3 — what an issue SAID crosses whole: the thread's output policy needs every field to route it. */
+	it('agent.issue_spoke → integration.thread.issue_signal', async () => {
+		const { handler, published } = makeHandler()
+		await handler.handle(
+			new IssueSpokeEvent({
+				entityId: 'issue-1',
+				ownerId,
+				payload: {
+					issueId: 'issue-1',
+					threadId: 'thread-1',
+					level: IssueSignalLevel.FEEDBACK,
+					text: 'preview of the page',
+					artifactIds: ['artifact-1', 'artifact-2'],
+					mainArtifactId: 'artifact-1',
+				},
+			}) as never,
+		)
+		const event = published[0] as ThreadIssueSignalEvent
+		expect(event).toBeInstanceOf(ThreadIssueSignalEvent)
+		expect(event.name).toBe('integration.thread.issue_signal')
+		expect(event.payload).toEqual({
+			issueId: 'issue-1',
+			threadId: 'thread-1',
+			level: IssueSignalLevel.FEEDBACK,
+			text: 'preview of the page',
+			artifactIds: ['artifact-1', 'artifact-2'],
+			mainArtifactId: 'artifact-1',
+		})
+	})
+
 	/**
 	 * Asserted EXACTLY, in order, because this bridge is the only thing that turns a context-private
 	 * fact into something another service can see. A fact added here with no mapping is silence; a
@@ -133,6 +169,7 @@ describe('PublishAgentIntegrationEvents (terminal.* domain facts → frozen inte
 			'agent.orchestrator_replied',
 			'agent.run.completed',
 			'agent.run.stop_raised',
+			'agent.issue_spoke',
 		])
 	})
 })

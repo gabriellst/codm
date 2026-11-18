@@ -28,6 +28,10 @@ const POLICY_SEND = 'enqueueSignalDelivery('
 const CHANNEL_PRODUCERS: Record<string, string> = {
 	'thread/utils/issueSignal.ts': 'POLICY — `enqueueSignalDelivery`, the send of an entry the output policy routed to the group.',
 	'thread/usecases/DeliverIssueSignal.ts': "POLICY — the one door of an issue's spontaneous signal (feedback, progress, closing).",
+	'thread/usecases/FlushSignalDigest.ts':
+		"POLICY — a person's questions and feedback, together when their window closes (fase 3, item 2), through `enqueueSignalDelivery`.",
+	'thread/usecases/DeliverIssuePreview.ts':
+		'POLICY — a FEEDBACK the policy sent on its own, with its preview (fase 3, item 2); as text when the preview is gone.',
 	'thread/usecases/RaiseStop.ts':
 		"POLICY — a stop's notice: an issue's stop through `recordIssueSignal`; a conversation's stop keeps today's notice.",
 	'thread/usecases/RecordOrchestratorReply.ts':

@@ -22,6 +22,9 @@ export type ThreadDomainErrors =
 	| 'ASK_ANSWER_REQUIRED'
 	| 'ASK_OPTIONS_DUPLICATED'
 	| 'ASK_DEFAULT_REQUIRED'
+	// The per-person digest (fase 3, item 2): an entry already sent on its own or folded into a digest is not
+	// waiting any more — a second flush of it is refused, so nothing goes out twice.
+	| 'SIGNAL_ALREADY_FLUSHED'
 	// Soft delete (thread-deletion spec, decision 8) — `Thread.delete()` refuses a second deletion.
 	| 'THREAD_ALREADY_DELETED'
 	// The operator's custom prompt is capped: it rides in EVERY turn this conversation answers, so an
@@ -118,6 +121,7 @@ registerErrorCodes({
 	// 422 beside their siblings: well-formed, but the answer (or the ask) breaks a rule of the stop.
 	ASK_OPTION_UNKNOWN: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	ASK_NOT_DUE: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	SIGNAL_ALREADY_FLUSHED: HttpStatusCode.CONFLICT,
 	ASK_ANSWER_REQUIRED: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	ASK_OPTIONS_DUPLICATED: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	ASK_DEFAULT_REQUIRED: HttpStatusCode.UNPROCESSABLE_ENTITY,

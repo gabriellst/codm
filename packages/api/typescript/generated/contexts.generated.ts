@@ -147,7 +147,7 @@ export const TABLE_READ_EDGES: readonly { consumer: ContextId; schema: string; n
 	{
 		consumer: 'thread',
 		schema: 'artifact',
-		note: 'GetSessionChat joins artifact_artifacts by the transcript entry\'s own artifactId column to render the delivered-artifact bubble ("envio de artefatos pelo canal" design, decisions 4/8) — same BFF read-services shape as the workspace/gateway joins above, addressed by a column this aggregate already owns.',
+		note: 'GetSessionChat joins artifact_artifacts by the transcript entry\'s own artifactId column to render the delivered-artifact bubble ("envio de artefatos pelo canal" design, decisions 4/8) — same BFF read-services shape as the workspace/gateway joins above, addressed by a column this aggregate already owns. O feedback da issue (fase 3, item 2): IssueArtifactReader reads the row of the artifact a FEEDBACK previews (kind and ref) so DeliverIssuePreview can send it when the output policy says so — the signal carries only ids by design.',
 	},
 	{ consumer: 'ui', schema: 'thread', note: 'BFF read models (dashboard/wizard/checklist) — query-side by design.' },
 	{ consumer: 'ui', schema: 'issue', note: 'BFF read models — GetHomeDashboard reads issues/stops for the operating-status rollup.' },

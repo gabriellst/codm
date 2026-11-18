@@ -1,15 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { BlockCause, GroupOutputMode, IssueSignalLevel, OutputRouting, StopKind } from '@codm/contracts-typescript/wire/enums'
-import {
-	CAUSE_DEDUPES,
-	CAUSE_OF_STOP,
-	causeAlreadyTold,
-	DELIVERED_AS,
-	LEVEL_OF_STOP,
-	ROUTING_BY_MODE,
-	routeSignal,
-	SENDS_NOW,
-} from './OutputPolicy'
+import { CAUSE_DEDUPES, CAUSE_OF_STOP, causeAlreadyTold, LEVEL_OF_STOP, ROUTING_BY_MODE, routeSignal, SENDS_NOW } from './OutputPolicy'
 
 const modes = Object.values(GroupOutputMode)
 const levels = Object.values(IssueSignalLevel)
@@ -36,10 +27,10 @@ describe('OutputPolicy — the tables are total and say what the owner decided',
 		expect(ROUTING_BY_MODE[GroupOutputMode.EVERYTHING][IssueSignalLevel.PROGRESS]).toBe(OutputRouting.GROUP)
 	})
 
-	it('until the digest flush exists (S5b) a DIGEST signal is carried as its own message, and only GROUP sends now', () => {
-		expect(DELIVERED_AS[OutputRouting.DIGEST]).toBe(OutputRouting.GROUP)
+	it("a question waits for its person's digest (S5b), and only GROUP sends now", () => {
 		expect(routings.filter(routing => SENDS_NOW[routing])).toEqual([OutputRouting.GROUP])
-		expect(routeSignal(GroupOutputMode.DECISIONS_AND_LIVE, IssueSignalLevel.QUESTION)).toBe(OutputRouting.GROUP)
+		expect(routeSignal(GroupOutputMode.DECISIONS_AND_LIVE, IssueSignalLevel.QUESTION)).toBe(OutputRouting.DIGEST)
+		expect(routeSignal(GroupOutputMode.DECISIONS_AND_LIVE, IssueSignalLevel.FEEDBACK)).toBe(OutputRouting.DIGEST)
 		expect(routeSignal(GroupOutputMode.DECISIONS_AND_LIVE, IssueSignalLevel.PROGRESS)).toBe(OutputRouting.PANEL)
 	})
 

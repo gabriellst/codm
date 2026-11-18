@@ -44,18 +44,15 @@ export const ROUTING_BY_MODE: Record<GroupOutputMode, Record<IssueSignalLevel, O
 }
 
 /**
- * HOW a routing is carried out TODAY. `DIGEST` (questions and feedback for the same person folded into one
- * message within 60 s) lands with its flush job in slice S5b; until then a DIGEST signal goes out as its
- * own message, and the entry records the routing that actually happened (`GROUP`), so the flush never
- * picks up something already sent. S5b changes the one cell.
+ * How long a person's questions and feedback wait to go out TOGETHER (fase 3, item 2): the signals for the
+ * same person within this window leave as one message (`FlushSignalDigest`); a lone one leaves as itself.
  */
-export const DELIVERED_AS: Record<OutputRouting, OutputRouting> = {
-	[OutputRouting.GROUP]: OutputRouting.GROUP,
-	[OutputRouting.DIGEST]: OutputRouting.GROUP,
-	[OutputRouting.PANEL]: OutputRouting.PANEL,
-}
+export const DIGEST_WINDOW_MS = 60 * 1000
 
-/** Whether a routing puts a message on the channel now — `PANEL` lives only in the timeline/panel. */
+/**
+ * Whether a routing puts a message on the channel NOW — `DIGEST` goes later (its person's window), `PANEL`
+ * lives only in the timeline/panel.
+ */
 export const SENDS_NOW: Record<OutputRouting, boolean> = {
 	[OutputRouting.GROUP]: true,
 	[OutputRouting.DIGEST]: false,
@@ -125,9 +122,10 @@ export function causeAlreadyTold(kind: StopKind, otherOpenKinds: readonly StopKi
 }
 
 /**
- * Where a signal of `level` goes in a group of `mode` — `PANEL` when its cause was already told. The
- * routing the entry records is the one carried out (`DELIVERED_AS`).
+ * Where a signal of `level` goes in a group of `mode` — `PANEL` when its cause was already told. A `DIGEST`
+ * signal waits for its person's window (`DIGEST_WINDOW_MS`); the flush then records the routing that
+ * actually happened (`GROUP` for one that went out alone).
  */
 export function routeSignal(mode: GroupOutputMode, level: IssueSignalLevel, alreadyTold = false): OutputRouting {
-	return alreadyTold ? OutputRouting.PANEL : DELIVERED_AS[ROUTING_BY_MODE[mode][level]]
+	return alreadyTold ? OutputRouting.PANEL : ROUTING_BY_MODE[mode][level]
 }

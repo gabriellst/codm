@@ -1,6 +1,6 @@
 import { injectable } from 'tsyringe-neo'
 import { BaseError } from '@codm/core-typescript'
-import { StopKind } from '@codm/contracts-typescript/wire/enums'
+import { OutputRouting, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { Thread, type Stop, type TranscriptEntry } from '../../entities/Thread'
 import { askDueAt } from '../../objects/StopAsk'
 import type { DomainErrors } from '../../errors'
@@ -39,11 +39,16 @@ export class MockThreadRepository extends ThreadRepository {
 	async save(entity: Thread): Promise<Thread> {
 		// `stops` aliased to `raised` — the drain key collides with nothing here, but the name mirrors
 		// what it is: the stops raised in this unit of work.
-		const { entries, stops: raised, stopResolutions, entryLinks } = entity.pullPendingWrites()
+		const { entries, stops: raised, stopResolutions, entryLinks, digestPatches } = entity.pullPendingWrites()
 		// The first resolution wins, as in `LibSqlThreadRepository.save` — and the refusal comes BEFORE any
 		// write, because this double has no transaction to roll back.
 		const lost = stopResolutions.find(patch => this.stopRows.find(s => s.stopId === patch.stopId)?.resolvedAt)
 		if (lost) throw new BaseError<DomainErrors>('STOP_ALREADY_RESOLVED', `stop ${lost.stopId} was resolved by someone else first`)
+		const flushed = digestPatches.find(patch => {
+			const row = this.entries.find(e => e.entryId === patch.entryId)
+			return !row || row.routing !== OutputRouting.DIGEST || row.digestEntryId
+		})
+		if (flushed) throw new BaseError<DomainErrors>('SIGNAL_ALREADY_FLUSHED', `entry ${flushed.entryId} was flushed by someone else first`)
 		entity.incrementVersion()
 		this.store.set(entity.id.value, entity)
 		this.entries.push(...entries)
@@ -55,6 +60,13 @@ export class MockThreadRepository extends ThreadRepository {
 				row.resolvedAt = patch.resolvedAt
 				row.answer = patch.answer
 				row.answeredBy = patch.answeredBy
+			}
+		}
+		for (const patch of digestPatches) {
+			const row = this.entries.find(e => e.entryId === patch.entryId)
+			if (row) {
+				row.routing = patch.routing
+				row.digestEntryId = patch.digestEntryId
 			}
 		}
 		for (const link of entryLinks) {
@@ -126,6 +138,12 @@ export class MockThreadRepository extends ThreadRepository {
 		return this.stopRows
 			.filter(s => s.stopId === own || (s.askEntryId !== undefined && carried.has(s.askEntryId)))
 			.sort((a, b) => a.raisedAt.getTime() - b.raisedAt.getTime())
+	}
+
+	async pendingDigest(threadId: string, addresseeId: string | undefined): Promise<TranscriptEntry[]> {
+		return this.byThreadChronological(threadId).filter(
+			e => e.routing === OutputRouting.DIGEST && !e.digestEntryId && e.addresseeId === addresseeId,
+		)
 	}
 
 	private byThreadChronological(threadId: string): TranscriptEntry[] {

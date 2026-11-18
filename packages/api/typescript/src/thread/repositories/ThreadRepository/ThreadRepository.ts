@@ -98,4 +98,10 @@ export abstract class ThreadRepository extends Repository<Thread> {
 	 * reply to an answered ask is a late reply, not nothing.
 	 */
 	abstract stopsCarriedBy(entryId: string, tx?: Transaction): Promise<Stop[]>
+	/**
+	 * The signals of a conversation still WAITING for the per-person digest (fase 3, item 2) — `routing =
+	 * DIGEST`, not yet folded into a digest — for one person (`addresseeId`; `undefined` = the signals with no
+	 * person, which digest together), oldest first.
+	 */
+	abstract pendingDigest(threadId: string, addresseeId: string | undefined, tx?: Transaction): Promise<TranscriptEntry[]>
 }

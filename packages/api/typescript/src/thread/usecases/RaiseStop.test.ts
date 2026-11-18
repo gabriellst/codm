@@ -322,9 +322,10 @@ describe('RaiseStop — a política de saída (fase 3)', () => {
 		expect(texts[0]).toContain('APP-12 · D1 — Uso o tema claro?')
 		expect(texts[0]).toContain('Sigo com Tema claro se ninguém disser o contrário em 15 min.')
 		expect(texts[1]).toContain('APP-12 · D2')
-		// Sem resumo ainda (S5b): a pergunta sai sozinha e a entrada registra o que de fato aconteceu.
-		expect((await groupEntries(thread.id.value))[0]?.routing).toBe(OutputRouting.GROUP)
-		expect(await enqueuedDeliveries(testBed)).toBe(2)
+		// S5b: a pergunta espera o resumo da pessoa (60 s) — nada sai agora; UM flush agendado para a janela.
+		expect((await groupEntries(thread.id.value))[0]?.routing).toBe(OutputRouting.DIGEST)
+		expect(await enqueuedDeliveries(testBed)).toBe(0)
+		expect(await testBed.probe().count('scheduledCommands', { name: 'flush_signal_digest' })).toBe(1)
 	})
 
 	it('uma pergunta com efeito declarado vira decisão — sem padrão, sem prazo', async () => {

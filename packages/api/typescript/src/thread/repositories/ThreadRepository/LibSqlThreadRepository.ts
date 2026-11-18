@@ -2,7 +2,14 @@ import { injectable } from 'tsyringe-neo'
 import { and, asc, desc, eq, inArray, isNull, lte, max, or } from 'drizzle-orm'
 import { BaseError, LibSqlDatabaseDriver, tryCatchAsync, LibSqlTransaction } from '@codm/core-typescript'
 import { threads, transcriptEntries, stops } from '@codm/contracts/db'
-import { StopKind, type ProviderKind, type ContactKind, type ThreadStatus, type BufferSize } from '@codm/contracts-typescript/wire/enums'
+import {
+	OutputRouting,
+	StopKind,
+	type ProviderKind,
+	type ContactKind,
+	type ThreadStatus,
+	type BufferSize,
+} from '@codm/contracts-typescript/wire/enums'
 import { StopAnswerSchema, StopAskSchema } from '@shared/objects'
 import { Thread, ThreadSchema, type MentionGate, type Participant, type Stop, type TranscriptEntry } from '../../entities/Thread'
 import { askDueAt } from '../../objects/StopAsk'
@@ -116,7 +123,7 @@ export class LibSqlThreadRepository extends ThreadRepository {
 				})
 
 			// `stops_` aliases the drain so it does not shadow the Drizzle table symbol `stops`.
-			const { entries, stops: stops_, stopResolutions, entryLinks } = entity.pullPendingWrites()
+			const { entries, stops: stops_, stopResolutions, entryLinks, digestPatches } = entity.pullPendingWrites()
 			if (entries.length > 0) {
 				await dbc.insert(transcriptEntries).values(entries.map(entry => this.entryToPersistence(entry)))
 			}
@@ -154,6 +161,24 @@ export class LibSqlThreadRepository extends ThreadRepository {
 					.update(transcriptEntries)
 					.set({ issueId: link.issueId, classification: link.classification })
 					.where(and(eq(transcriptEntries.id, link.entryId), isNull(transcriptEntries.issueId)))
+			}
+			// The per-person digest (fase 3) — CONDITIONAL on the entry still waiting, the same shape as the stop
+			// resolution above: zero rows ⇒ another flush already sent it, and the whole transaction rolls back.
+			for (const patch of digestPatches) {
+				const flushed = await dbc
+					.update(transcriptEntries)
+					.set({ routing: patch.routing, digestEntryId: patch.digestEntryId ?? null })
+					.where(
+						and(
+							eq(transcriptEntries.id, patch.entryId),
+							eq(transcriptEntries.routing, OutputRouting.DIGEST),
+							isNull(transcriptEntries.digestEntryId),
+						),
+					)
+					.returning({ id: transcriptEntries.id })
+				if (flushed.length === 0) {
+					throw new BaseError<DomainErrors>('SIGNAL_ALREADY_FLUSHED', `entry ${patch.entryId} was flushed by someone else first`)
+				}
 			}
 			return entity
 		})
@@ -272,6 +297,23 @@ export class LibSqlThreadRepository extends ThreadRepository {
 			.where(and(eq(stops.issueId, issueId), eq(stops.seq, seq)))
 			.limit(1)
 		return rows[0] ? this.toStop(rows[0]) : undefined
+	}
+
+	async pendingDigest(threadId: string, addresseeId: string | undefined, tx?: LibSqlTransaction): Promise<TranscriptEntry[]> {
+		const dbc = tx ?? this.driver.db
+		const rows = await dbc
+			.select()
+			.from(transcriptEntries)
+			.where(
+				and(
+					eq(transcriptEntries.threadId, threadId),
+					eq(transcriptEntries.routing, OutputRouting.DIGEST),
+					isNull(transcriptEntries.digestEntryId),
+					addresseeId === undefined ? isNull(transcriptEntries.addresseeId) : eq(transcriptEntries.addresseeId, addresseeId),
+				),
+			)
+			.orderBy(asc(transcriptEntries.at))
+		return rows.map(row => this.toEntry(row))
 	}
 
 	async stopsCarriedBy(entryId: string, tx?: LibSqlTransaction): Promise<Stop[]> {

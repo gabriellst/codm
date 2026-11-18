@@ -19,7 +19,7 @@ export default {
 		gateway:
 			"ChannelConnectivity / GroupMemberReader / GetSessionChat read the Go gateway sync tables (channels/remotes — proxy pairing, BUILD-LOG:116). PublishPanelRoster (fase 2, item 6a) reads contact names (remotes) and the account's own address (channels.owner_remote_id) to build the cloud panel roster. ChannelConnectivity.connectedSince (fase 3, item 1b) reads the channel row's `updated_at` while CONNECTED — the instant the gateway saved the (re)connection — for the grace before a question's default.",
 		artifact:
-			'GetSessionChat joins artifact_artifacts by the transcript entry\'s own artifactId column to render the delivered-artifact bubble ("envio de artefatos pelo canal" design, decisions 4/8) — same BFF read-services shape as the workspace/gateway joins above, addressed by a column this aggregate already owns.',
+			'GetSessionChat joins artifact_artifacts by the transcript entry\'s own artifactId column to render the delivered-artifact bubble ("envio de artefatos pelo canal" design, decisions 4/8) — same BFF read-services shape as the workspace/gateway joins above, addressed by a column this aggregate already owns. O feedback da issue (fase 3, item 2): IssueArtifactReader reads the row of the artifact a FEEDBACK previews (kind and ref) so DeliverIssuePreview can send it when the output policy says so — the signal carries only ids by design.',
 	},
 	givens: ['givenThread', 'givenStop'],
 	constants: ['GIVEN_MENTION_TAG'],

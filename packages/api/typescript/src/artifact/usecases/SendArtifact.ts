@@ -6,7 +6,7 @@ import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { enqueueArtifactLinkDelivery, enqueueArtifactAttachmentDelivery } from '@thread/services/ArtifactDelivery'
 import { IssueHold } from '@issue/services/IssueHold'
 import { ArtifactRepository } from '../repositories/ArtifactRepository'
-import { MediaStore } from '../services/MediaStore'
+import { MediaStore } from '@shared/services/MediaStore'
 import { ArtifactSendability } from '../services/ArtifactSendability'
 import type { ApplicationErrors } from '../errors'
 

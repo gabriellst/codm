@@ -136,7 +136,7 @@ export class ApplyDueQuestionDefaults extends Handler<
 			current.resolveStop(stop, StopResolution.DEFAULT_APPLIED, PermissionPosture.AUTO, { now })
 			// The line it leaves — routed by the group's mode, recorded on the same aggregate and committed with
 			// the resolution. The language was resolved before this transaction: no I/O under the write lock.
-			const { entry, sends } = recordIssueSignal(
+			const { entry, routing } = recordIssueSignal(
 				current,
 				{
 					issue: { issueId: issue.id.value, key: issue.key, title: issue.title },
@@ -150,7 +150,7 @@ export class ApplyDueQuestionDefaults extends Handler<
 				{ language, panelLink: this.panel.linkOf(current.id.value) },
 			)
 			await this.threads.save(current, tx)
-			if (sends) await enqueueSignalDelivery(this.commands, current, entry, tx)
+			await enqueueSignalDelivery(this.commands, current, entry, routing, tx)
 			await this.domainEventRepository.saveMany(current.pullDomainEvents(), tx)
 			return 'APPLIED'
 		})

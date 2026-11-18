@@ -360,12 +360,25 @@ export interface EntryLinkPatch {
 	classification: ClassificationMethod
 }
 
+/**
+ * The UPDATE half of a per-person digest (fase 3, item 2): an entry that waited as `DIGEST` either goes out
+ * on its own (its routing becomes `GROUP`, the routing that actually happened) or is folded into a digest
+ * entry (`digestEntryId`). `save` writes it ONLY while the entry is still waiting — a second flush of the
+ * same entry is refused (`SIGNAL_ALREADY_FLUSHED`), so nothing goes out twice.
+ */
+export interface DigestPatch {
+	entryId: string
+	routing: OutputRouting
+	digestEntryId?: string
+}
+
 /** What `ThreadRepository.save` drains and writes in the SAME transaction as the thread row. */
 export interface PendingThreadWrites {
 	entries: TranscriptEntry[]
 	stops: Stop[]
 	stopResolutions: StopResolutionPatch[]
 	entryLinks: EntryLinkPatch[]
+	digestPatches: DigestPatch[]
 }
 
 /**
@@ -450,6 +463,7 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	private pendingStops: Stop[] = []
 	private pendingStopResolutions: StopResolutionPatch[] = []
 	private pendingEntryLinks: EntryLinkPatch[] = []
+	private pendingDigestPatches: DigestPatch[] = []
 
 	static create(data: {
 		ownerId: string
@@ -915,6 +929,36 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	}
 
 	/**
+	 * A signal that waited for its per-person digest (fase 3, item 2) and is the ONLY one when the window
+	 * closes: it goes out as itself, in its own format — its routing becomes `GROUP`, the routing that actually
+	 * happened. Takes the LOADED entry; refuses one that is not this conversation's or not waiting.
+	 */
+	releaseFromDigest(entry: TranscriptEntry): void {
+		this.assertWaitingForDigest(entry)
+		this.pendingDigestPatches.push({ entryId: entry.entryId, routing: OutputRouting.GROUP })
+		entry.routing = OutputRouting.GROUP
+	}
+
+	/**
+	 * Two or more signals for the same person within the window go out as ONE digest (fase 3, item 2): each
+	 * waiting entry points at the digest entry that carries it (`digestEntryId`) — the pointer a quoted reply
+	 * to the digest follows to its questions, and the one that starts their deadline when it is delivered.
+	 */
+	foldIntoDigest(entries: readonly TranscriptEntry[], digest: TranscriptEntry): void {
+		for (const entry of entries) {
+			this.assertWaitingForDigest(entry)
+			this.pendingDigestPatches.push({ entryId: entry.entryId, routing: OutputRouting.DIGEST, digestEntryId: digest.entryId })
+			entry.digestEntryId = digest.entryId
+		}
+	}
+
+	private assertWaitingForDigest(entry: TranscriptEntry): void {
+		if (entry.threadId !== this.id.value || entry.routing !== OutputRouting.DIGEST || entry.digestEntryId) {
+			throw new BaseError<DomainErrors>('SIGNAL_ALREADY_FLUSHED', `entry ${entry.entryId} is not waiting for a digest`)
+		}
+	}
+
+	/**
 	 * Raise a stop on this thread (B4, spec decision 4) — with or without an issue behind it.
 	 *
 	 * `stopId` is accepted rather than always minted because the id is frequently DECIDED UPSTREAM: the
@@ -1034,11 +1078,13 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 			stops: this.pendingStops,
 			stopResolutions: this.pendingStopResolutions,
 			entryLinks: this.pendingEntryLinks,
+			digestPatches: this.pendingDigestPatches,
 		}
 		this.pendingEntries = []
 		this.pendingStops = []
 		this.pendingStopResolutions = []
 		this.pendingEntryLinks = []
+		this.pendingDigestPatches = []
 		return writes
 	}
 

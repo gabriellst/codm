@@ -110,6 +110,8 @@ export interface IssueSignalParams {
 	defaultLabel?: string
 	decider?: string
 	link?: string
+	/** A FEEDBACK's other artifacts — they stay on the console until the panel has a gallery (spec, pré-requisito). */
+	moreArtifacts?: number
 }
 
 /** The lines that appear only when their part exists — the format never renders an empty line or a hole. */
@@ -132,7 +134,8 @@ const SIGNAL_PT: Record<IssueSignalLevel, (p: IssueSignalParams) => string> = {
 			p.defaultLabel && `Sigo com ${p.defaultLabel} se ninguém disser o contrário em 15 min.`,
 			p.link,
 		),
-	[IssueSignalLevel.FEEDBACK]: p => lines(`${p.key} · prévia — ${p.text}`, p.link),
+	[IssueSignalLevel.FEEDBACK]: p =>
+		lines(`${p.key} · prévia — ${p.text}${p.moreArtifacts ? ` (+${p.moreArtifacts} no console)` : ''}`, p.link),
 	[IssueSignalLevel.CLOSING]: p => lines(`✅ ${p.key} · ${p.title} — ${p.text}`, p.link),
 	[IssueSignalLevel.BLOCK_NOTICE]: p => lines(`⚠️ ${p.key} — ${p.title}.`, p.text, p.link),
 	[IssueSignalLevel.PROGRESS]: p => lines(`${p.key} — ${p.text}`, p.link),
@@ -148,10 +151,31 @@ const SIGNAL_EN: Record<IssueSignalLevel, (p: IssueSignalParams) => string> = {
 			p.defaultLabel && `I'll go on with ${p.defaultLabel} unless someone says otherwise within 15 min.`,
 			p.link,
 		),
-	[IssueSignalLevel.FEEDBACK]: p => lines(`${p.key} · preview — ${p.text}`, p.link),
+	[IssueSignalLevel.FEEDBACK]: p =>
+		lines(`${p.key} · preview — ${p.text}${p.moreArtifacts ? ` (+${p.moreArtifacts} on the console)` : ''}`, p.link),
 	[IssueSignalLevel.CLOSING]: p => lines(`✅ ${p.key} · ${p.title} — ${p.text}`, p.link),
 	[IssueSignalLevel.BLOCK_NOTICE]: p => lines(`⚠️ ${p.key} — ${p.title}.`, p.text, p.link),
 	[IssueSignalLevel.PROGRESS]: p => lines(`${p.key} — ${p.text}`, p.link),
+}
+
+/**
+ * Several signals for one person, folded into ONE message (fase 3, item 2) — each item is the signal's own
+ * text without its link; the group's panel link closes the message once. No attachment: the previews stay
+ * behind the link.
+ */
+export interface SignalDigestParams {
+	/** The person's roster name — absent when the signals have no person, or the roster does not know them. */
+	name?: string
+	items: readonly string[]
+	link?: string
+}
+
+/** One item of a digest — its first line bulleted, the following ones (options, the default) indented under it. */
+function bullet(item: string): string {
+	return item
+		.split('\n')
+		.map((line, index) => (index === 0 ? `• ${line}` : `  ${line}`))
+		.join('\n')
 }
 
 /** One ask a bare answer might be for — its code and its question (cut short in the message). */
@@ -231,6 +255,8 @@ const PT_MESSAGES = {
 		`D${p.seq}: ninguém respondeu em 15 min — segui com o padrão: ${p.label}.${p.late ? ' (O codm estava desligado quando o prazo venceu.)' : ''}`,
 	answerDisambiguation: (p: { asks: readonly PendingAskRef[] }) =>
 		`Para qual? ${alternatives(p.asks, 'ou')} — responda citando a pergunta.`,
+	/** Perguntas e prévias para a mesma pessoa em 60 s, numa mensagem só (fase 3, item 2). */
+	signalDigest: (p: SignalDigestParams) => lines(`${p.name ? `${p.name}, ` : ''}${p.items.length} coisas:`, ...p.items.map(bullet), p.link),
 	/**
 	 * Os rótulos das opções de uma aprovação pedida pela porta antiga (`RaiseStop APPROVAL_NEEDED`, fase 3):
 	 * ela vira uma decisão sim/não, e o grupo lê as opções na língua da conversa. Os ids (`yes`/`no`) são
@@ -253,6 +279,7 @@ export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
 		defaultApplied: p =>
 			`D${p.seq}: nobody answered within 15 min — went on with the default: ${p.label}.${p.late ? ' (codm was off when the deadline passed.)' : ''}`,
 		answerDisambiguation: p => `Which one? ${alternatives(p.asks, 'or')} — reply quoting the question.`,
+		signalDigest: p => lines(`${p.name ? `${p.name}, ` : ''}${p.items.length} things:`, ...p.items.map(bullet), p.link),
 		approvalYes: () => 'Yes',
 		approvalNo: () => 'No',
 	},

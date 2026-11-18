@@ -16,6 +16,10 @@ export const DeliverIssueSignalInputSchema = z.object({
 	level: z.enum(IssueSignalLevel),
 	text: z.string().trim().min(1),
 	addresseeId: z.string().min(1).optional(),
+	/** The artifact a FEEDBACK previews — the group gets it with the message when it goes out alone. */
+	mainArtifactId: z.uuid().optional(),
+	/** Every artifact the signal cites (the main one included) — the others are counted, and stay on the console. */
+	artifactIds: z.array(z.uuid()).optional(),
 })
 export const DeliverIssueSignalOutputSchema = z.object({
 	entryId: z.uuid(),
@@ -25,9 +29,9 @@ export const DeliverIssueSignalOutputSchema = z.object({
 /**
  * Deliver what an issue says to its group, through the OUTPUT POLICY (fase 3, item 2) — the one door an
  * issue's spontaneous signal (feedback, progress, closing: slices S5b/S6) takes to the channel. It records
- * the entry with the issue, its level and the routing the group's mode gave it, and queues the delivery
- * when the routing sends now; a PANEL routing stays in the timeline. A DIGEST routing goes out on its own
- * until the digest flush exists (`DELIVERED_AS`, slice S5b).
+ * the entry with the issue, its level, the routing the group's mode gave it and the person it is for (the
+ * declared addressee, or whoever wrote the message the issue came from), and hands it to the channel by
+ * that routing (`enqueueSignalDelivery`): now, in its person's digest, or never (the panel).
  *
  * The stops' own signals (decisions, questions, block notices) go through `RaiseStop`, which shares
  * `recordIssueSignal` so the policy and the formats are written once.
@@ -56,20 +60,25 @@ export class DeliverIssueSignal extends Handler<typeof DeliverIssueSignalInputSc
 
 		const ownerLanguage = thread.language ? undefined : (await this.session.identity())?.user.language
 		const language = resolveThreadLanguage(thread.language, ownerLanguage)
+		const requesterId = issue.originEntryId ? (await this.threads.findEntry(issue.originEntryId, tx))?.senderExternalId : undefined
+		const others = (input.artifactIds ?? []).filter(artifactId => artifactId !== input.mainArtifactId).length
 
 		return this.withTransaction(tx, async tx => {
-			const { entry, routing, sends } = recordIssueSignal(
+			const { entry, routing } = recordIssueSignal(
 				thread,
 				{
 					issue: { issueId: issue.id.value, key: issue.key, title: issue.title },
 					level: input.level,
 					text: input.text,
 					addresseeId: input.addresseeId,
+					requesterId,
+					artifactId: input.mainArtifactId,
+					moreArtifacts: others,
 				},
 				{ language, panelLink: this.panel.linkOf(thread.id.value) },
 			)
 			await this.threads.save(thread, tx)
-			if (sends) await enqueueSignalDelivery(this.commands, thread, entry, tx)
+			await enqueueSignalDelivery(this.commands, thread, entry, routing, tx)
 			return { entryId: entry.entryId, routing }
 		})
 	}

@@ -15,6 +15,8 @@ type IssueOverrides = Partial<{
 	completedAt: Date
 	/** Held (fase 2, item 2) — set through the entity's own `pause()`, so the invariants still apply. */
 	paused: boolean
+	/** The transcript entry the issue was asked from — whose sender is the person its signals are for (fase 3). */
+	originEntryId: string
 }>
 
 export async function givenIssue(testBed: TestBedLike, overrides: IssueOverrides = {}): Promise<Issue> {
@@ -28,6 +30,7 @@ export async function givenIssue(testBed: TestBedLike, overrides: IssueOverrides
 		title: overrides.title ?? 'Test issue',
 		provider: overrides.provider ?? ProviderKind.CLAUDE_CODE,
 		status: wantsCompleted ? IssueStatus.WORKING : (overrides.status ?? IssueStatus.WORKING),
+		originEntryId: overrides.originEntryId,
 	})
 	if (wantsCompleted) {
 		issue.complete()

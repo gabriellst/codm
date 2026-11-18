@@ -486,6 +486,7 @@
 		"ARTIFACT_TOO_LARGE": "Este artefato é grande demais para ser enviado pelo canal.",
 		"ASK_ANSWER_REQUIRED": "Responder uma pergunta exige a resposta — escolha uma opção ou escreva.",
 		"ASK_DEFAULT_REQUIRED": "Uma pergunta precisa de um padrão para seguir quando ninguém responde.",
+		"SIGNAL_ALREADY_FLUSHED": "Esta mensagem já foi enviada ao grupo.",
 		"ASK_NOT_DUE": "O prazo desta pergunta ainda não venceu.",
 		"ASK_OPTIONS_DUPLICATED": "Cada opção de uma pergunta precisa de um id próprio.",
 		"ASK_OPTION_UNKNOWN": "Essa opção não está entre as escolhas desta pergunta.",

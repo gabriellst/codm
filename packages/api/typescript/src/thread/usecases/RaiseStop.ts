@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { Handler, z, BaseError, CommandQueue } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { StopKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
+import { OutputRouting, StopKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { CloudSession } from '@shared/services/CloudSession'
 import { resolveThreadLanguage } from '@shared/i18n/messages'
 import { StopAskSchema } from '@shared/objects'
@@ -165,12 +165,15 @@ export class RaiseStop extends Handler<typeof RaiseStopInputSchema, typeof Raise
 
 		return this.withTransaction(tx, async tx => {
 			// What the stop says on the channel, recorded BEFORE the stop so the stop can point at it.
-			let notice: { entry: TranscriptEntry; sends: boolean } | undefined
+			let notice: { entry: TranscriptEntry; routing: OutputRouting } | undefined
 			if (level !== null && issue) {
 				// An ISSUE's stop speaks through the output policy (fase 3): the format of its level, its code,
 				// the group's mode, and one notice per cause.
 				const others = await this.threads.openStops(thread.id.value, tx)
 				const seq = ask ? await this.threads.nextAskSeq(issue.id.value, tx) : undefined
+				// A question goes out in its person's digest: the declared addressee, or whoever asked for the work.
+				const requesterId =
+					ask && issue.originEntryId ? (await this.threads.findEntry(issue.originEntryId, tx))?.senderExternalId : undefined
 				notice = recordIssueSignal(
 					thread,
 					{
@@ -184,6 +187,7 @@ export class RaiseStop extends Handler<typeof RaiseStopInputSchema, typeof Raise
 						options: ask?.options.map(option => option.label),
 						defaultLabel: ask?.defaultLabel(),
 						addresseeId: ask?.addresseeId,
+						requesterId,
 						stopId: input.stopId,
 						alreadyTold: causeAlreadyTold(
 							kind,
@@ -202,7 +206,7 @@ export class RaiseStop extends Handler<typeof RaiseStopInputSchema, typeof Raise
 					kind: TranscriptKind.SYSTEM,
 					text: THREAD_MESSAGES.stopChannelNotice(language, { kind, detail: input.detail }),
 				})
-				notice = { entry, sends: true }
+				notice = { entry, routing: OutputRouting.GROUP }
 			}
 			const stop = this.raise(thread, input, { title, ask })
 			return this.commit(thread, stop, notice, tx)
@@ -220,11 +224,11 @@ export class RaiseStop extends Handler<typeof RaiseStopInputSchema, typeof Raise
 	private async commit(
 		thread: Thread,
 		stop: Stop,
-		notice: { entry: TranscriptEntry; sends: boolean } | undefined,
+		notice: { entry: TranscriptEntry; routing: OutputRouting } | undefined,
 		tx: Transaction,
 	): Promise<this['output']> {
 		await this.threads.save(thread, tx)
-		if (notice?.sends) await enqueueSignalDelivery(this.commands, thread, notice.entry, tx)
+		if (notice) await enqueueSignalDelivery(this.commands, thread, notice.entry, notice.routing, tx)
 		return { stopId: stop.stopId }
 	}
 }
