@@ -156,6 +156,30 @@ describe('IngestChannelMessage — answering an ask in the group', () => {
 		expect((await stopOf(stop.stopId))?.answer).toEqual({ kind: AskAnswerKind.OPTION, optionId: 'yes' })
 	})
 
+	it('NEGATIVE — a bare "sim" never answers a QUESTION still waiting for its digest (nobody saw it yet)', async () => {
+		const { issue } = await scene()
+		const waiting = await givenStop(testBed, {
+			threadId,
+			issueId: issue.id.value,
+			notice: 'APP-12 · D1 — Uso o tema escuro?',
+			ask: {
+				question: 'Uso o tema escuro?',
+				options: YES_NO,
+				default: { kind: AskAnswerKind.OPTION, optionId: 'yes' },
+				effects: [],
+				requested: StopKind.QUESTION_ASKED,
+			},
+		})
+
+		await say(`${GIVEN_MENTION_TAG} sim`)
+		expect((await stopOf(waiting.stopId))?.resolvedAt).toBeUndefined()
+
+		// Delivered (its clock started), the same "sim" answers it.
+		await testBed.resolve(ThreadRepository).markAskDelivered(waiting.askEntryId ?? '', new Date())
+		await say(`${GIVEN_MENTION_TAG} sim`)
+		expect((await stopOf(waiting.stopId))?.answer).toEqual({ kind: AskAnswerKind.OPTION, optionId: 'yes' })
+	})
+
 	it('NEGATIVE — an unaddressed "sim" in a gated group answers nothing', async () => {
 		const { issue } = await scene()
 		const stop = await ask(issue.id.value)

@@ -24,6 +24,7 @@ import {
 	AddWorkspaceController,
 	RemoveWorkspaceController,
 } from '../../mcp/exposure'
+import { ASKED_AS } from '@thread/objects'
 import { AgentRunOutcome, MessageVia, TriageDecision } from '../../enums'
 import type { AgentInputEnvelope } from '../../types/AgentInput'
 import { agoraLine, clockOf, HORA_AGORA, renderMsg, type MediaLabel } from '../grammar'
@@ -795,7 +796,22 @@ export class OrchestratorPromptBuilder {
 		const head = stop.issueId
 			? `- stop ${stop.stopId} — issue ${stop.issueId} — ${stop.kind}`
 			: `- stop ${stop.stopId} — no issue — ${stop.kind}`
-		return [head, `  ${stop.title}`, ...(stop.detail ? [`  ${stop.detail}`] : []), '']
+		return [head, `  ${stop.title}`, ...(stop.detail ? [`  ${stop.detail}`] : []), ...this.askLine(stop), '']
+	}
+
+	/**
+	 * AN ASK IS NOT YOURS TO RESOLVE (fase 3). A decision or a question of an issue carries a code in the group
+	 * (`APP-12 · D1`) and is answered by the person — quoting it, writing its code, or a bare "sim" when it is
+	 * the only one — through the rule layer, which records WHO answered and checks they may. `ResolveStop` takes
+	 * a bare resolution and cannot carry an answer, so for these the only useful move is to point the person at
+	 * the question. Which kinds are asks is the thread's declaration (`ASKED_AS`), not a list here.
+	 */
+	private askLine(stop: OpenStop): string[] {
+		if (!ASKED_AS[stop.kind]) return []
+		return [
+			'  This one is answered by the person, not by you: they reply QUOTING the question in the group. Do not resolve ' +
+				'it. If the message answers it without quoting, say in one line that they need to reply quoting the question.',
+		]
 	}
 
 	/**

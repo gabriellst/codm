@@ -722,6 +722,20 @@ describe('OrchestratorPromptBuilder', () => {
 	})
 
 	/**
+	 * Fase 3 — an issue's ASK (decision / question) is answered by the person through the rule layer, which
+	 * records who answered; `ResolveStop` cannot carry an answer. The prompt says so under exactly those stops,
+	 * and nowhere else. FALSIFIER: render the line for every stop, or for none.
+	 */
+	it('(j2) fase 3 — an ask is pointed back at the person, never resolved by the orchestrator', () => {
+		const ask = { ...stops[0]!, stopId: '00000000-0000-4000-8000-000000000009', kind: StopKind.DECISION_REQUESTED }
+		const withAsk = builder.user(operatorTurn({ openStops: [ask] }))
+		expect(withAsk).toContain('This one is answered by the person, not by you')
+
+		const legacy = builder.user(operatorTurn({ openStops: stops }))
+		expect(legacy).not.toContain('This one is answered by the person, not by you')
+	})
+
+	/**
 	 * The tool names are DERIVED, exactly like `ForkIssue` in (d) — replace either with a literal and
 	 * this goes red. Both are already in the `orchestration` scope, so the sentence names something the
 	 * model can actually call; naming a tool outside its `--allowedTools` would produce a turn that

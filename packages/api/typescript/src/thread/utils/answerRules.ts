@@ -29,6 +29,29 @@ export const ANSWERED_IN_GROUP_AS: Readonly<Record<StopKind, ReplyAnswerWay | un
  * conversation itself (the orchestrator's, raised with no issue) keeps today's path — the message reaches the
  * orchestrator, and nothing would resume a stop that has no issue to resume.
  */
+/**
+ * WHEN the group sees a stop's message (fase 3, S5b) — total over `StopKind`. A question waits for its
+ * person's digest (up to 60 s) before it reaches the group, and its delivery is what starts its clock
+ * (`dueAt`); every other stop that speaks goes out the moment it is raised. A BARE "sim" names no ask, so
+ * it may only answer one the group has already seen — never a question still waiting to be sent.
+ */
+export const SEEN_WHEN: Readonly<Record<StopKind, 'RAISED' | 'DELIVERED'>> = {
+	[StopKind.QUESTION_ASKED]: 'DELIVERED',
+	[StopKind.DECISION_REQUESTED]: 'RAISED',
+	[StopKind.PERMISSION_DENIED]: 'RAISED',
+	[StopKind.SERVER_ERROR]: 'RAISED',
+	[StopKind.BLOCKED_BY_CLASSIFICATION]: 'RAISED',
+	[StopKind.HUMAN_REQUESTED]: 'RAISED',
+	[StopKind.APPROVAL_NEEDED]: 'RAISED',
+	[StopKind.AUTH_REQUIRED]: 'RAISED',
+	[StopKind.STALLED]: 'RAISED',
+}
+
+/** Whether the group has seen this stop's message — a question only once it was delivered (its clock runs). */
+export function seenByTheGroup(stop: Stop): boolean {
+	return SEEN_WHEN[stop.kind] === 'RAISED' || stop.dueAt !== undefined
+}
+
 export function answeredInGroupAs(stop: Stop): ReplyAnswerWay | undefined {
 	return stop.issueId === undefined ? undefined : ANSWERED_IN_GROUP_AS[stop.kind]
 }

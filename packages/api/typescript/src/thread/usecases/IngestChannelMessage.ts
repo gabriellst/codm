@@ -30,7 +30,7 @@ import type { Stop, Thread, TranscriptEntry } from '../entities/Thread'
 import type { ApplicationErrors } from '../errors'
 import { AnswerDisambiguationAskedEvent } from '../events/AnswerDisambiguationAskedEvent'
 import { THREAD_MESSAGES } from '../i18n/messages'
-import { answeredInGroupAs, mayAnswer, YES_NO_RESOLUTION } from '../utils/answerRules'
+import { answeredInGroupAs, mayAnswer, seenByTheGroup, YES_NO_RESOLUTION } from '../utils/answerRules'
 import { askCode, optionForBare, parseAskAnswer, parseBareAnswer } from '../utils/askAnswer'
 import { AnswerStop } from './AnswerStop'
 import { ResolveStop } from './ResolveStop'
@@ -409,7 +409,7 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 		if (!addressed) return undefined
 		const open = (await this.threads.openStops(thread.id.value, tx)).filter(stop => {
 			const way = answeredInGroupAs(stop)
-			return way !== undefined && BARE_ANSWERS_STOP[way](stop, bare) && mayAnswer(thread, stop, sender)
+			return way !== undefined && seenByTheGroup(stop) && BARE_ANSWERS_STOP[way](stop, bare) && mayAnswer(thread, stop, sender)
 		})
 		const [single] = open
 		if (open.length === 1 && single) return this.give(thread, input, undefined, single, input.text, tx)
