@@ -26,7 +26,7 @@ import { StopAnswerSchema, StopAskSchema, type AskAnswer, type StopAnswer } from
 import { effectiveModel, offersModel } from '@catalog'
 import type { DomainErrors } from '../errors'
 import { OPERATOR_PARTICIPANT_ID } from '../objects/TranscriptSpeaker'
-import { admitsAnswer, type StopAsk } from '../objects/StopAsk'
+import { admitsAnswer, ASKED_AS, type StopAsk } from '../objects/StopAsk'
 import { mentionsTag, stripMentionTag, MentionGateSchema, CustomPromptSchema } from '../schemas'
 import { isResolutionApplicable, RESUMES_WITH_RESOLVER_POSTURE } from '../utils/StopResolutions'
 import { ThreadStopResolvedEvent } from '../events/ThreadStopResolvedEvent'
@@ -312,7 +312,7 @@ export type StopResolutionPatch = Z.infer<typeof StopResolutionPatchSchema>
  */
 export type StopRaise = { stopId?: string; issueId?: string; title: string; detail: string } & (
 	| { kind: StopKind }
-	| { ask: StopAsk; seq?: number }
+	| { ask: StopAsk; seq?: number; askEntryId?: string }
 )
 
 /** What a resolution may carry besides its name — the answer, who gave it, and the instant it is judged at. */
@@ -932,9 +932,14 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 * be a loop.
 	 */
 	raiseStop(input: StopRaise): Stop {
+		// A decision or a question raised WITHOUT its ask is a stop nobody could answer (fase 3).
+		if ('kind' in input && ASKED_AS[input.kind]) {
+			throw new BaseError<DomainErrors>('INVALID_REQUEST', `a ${input.kind} stop needs its ask`)
+		}
 		// An ask decides its own kind (`StopAsk.kind`: any declared effect escalates it to a decision) — the
 		// caller says what it asked for, never what it becomes.
-		const asked = 'ask' in input ? { kind: input.ask.kind, ask: input.ask.toAsk(), seq: input.seq } : { kind: input.kind }
+		const asked =
+			'ask' in input ? { kind: input.ask.kind, ask: input.ask.toAsk(), seq: input.seq, askEntryId: input.askEntryId } : { kind: input.kind }
 		const stop: Stop = {
 			stopId: input.stopId ?? Id.value(),
 			ownerId: this.ownerId,

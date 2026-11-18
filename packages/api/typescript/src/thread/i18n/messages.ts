@@ -1,4 +1,4 @@
-import { Language, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { IssueSignalLevel, Language, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { defineMessages } from '@shared/i18n/messages'
 import { PanelActionEcho } from '../enums/PanelActionEcho'
 
@@ -92,6 +92,68 @@ function whenEn(at: Date, now: Date): string {
 	return day('en-US', at) === day('en-US', now) ? `at ${clock('en-US', at)}` : `on ${day('en-US', at)} at ${clock('en-US', at)}`
 }
 
+/**
+ * What an issue says to the group, already decided by the output policy (fase 3) — the structured parts the
+ * format of each level picks from. `code` is the ask's (`APP-12 · D1`); `options` are the labels in order;
+ * `defaultLabel` is what a question goes on with; `link` is the issue on the cloud panel (absent without a
+ * cloud login). Every text the issue wrote (`text`, `options`) goes VERBATIM — it is the issue's voice.
+ * `text` may be empty only on a decision (it then asks the title — a `PERMISSION_DENIED` with no detail) or a
+ * block notice (which then has no body); the formats never print the title twice.
+ */
+export interface IssueSignalParams {
+	level: IssueSignalLevel
+	key: string
+	code?: string
+	title: string
+	text: string
+	options: readonly string[]
+	defaultLabel?: string
+	decider?: string
+	link?: string
+}
+
+/** The lines that appear only when their part exists — the format never renders an empty line or a hole. */
+function lines(...parts: (string | false | undefined)[]): string {
+	return parts.filter((part): part is string => typeof part === 'string' && part.length > 0).join('\n')
+}
+
+function numbered(options: readonly string[]): string {
+	return options.map((label, index) => `${index + 1}) ${label}`).join('\n')
+}
+
+/** The format of each level — total over `IssueSignalLevel`, so a level added to the contract needs its words here. */
+const SIGNAL_PT: Record<IssueSignalLevel, (p: IssueSignalParams) => string> = {
+	[IssueSignalLevel.DECISION]: p =>
+		lines(`❓ ${p.code ?? p.key} — ${p.text || p.title}`, numbered(p.options), p.decider && `Quem decide: ${p.decider}`, p.link),
+	[IssueSignalLevel.QUESTION]: p =>
+		lines(
+			`${p.code ?? p.key} — ${p.text || p.title}`,
+			numbered(p.options),
+			p.defaultLabel && `Sigo com ${p.defaultLabel} se ninguém disser o contrário em 15 min.`,
+			p.link,
+		),
+	[IssueSignalLevel.FEEDBACK]: p => lines(`${p.key} · prévia — ${p.text}`, p.link),
+	[IssueSignalLevel.CLOSING]: p => lines(`✅ ${p.key} · ${p.title} — ${p.text}`, p.link),
+	[IssueSignalLevel.BLOCK_NOTICE]: p => lines(`⚠️ ${p.key} — ${p.title}.`, p.text, p.link),
+	[IssueSignalLevel.PROGRESS]: p => lines(`${p.key} — ${p.text}`, p.link),
+}
+
+const SIGNAL_EN: Record<IssueSignalLevel, (p: IssueSignalParams) => string> = {
+	[IssueSignalLevel.DECISION]: p =>
+		lines(`❓ ${p.code ?? p.key} — ${p.text || p.title}`, numbered(p.options), p.decider && `Who decides: ${p.decider}`, p.link),
+	[IssueSignalLevel.QUESTION]: p =>
+		lines(
+			`${p.code ?? p.key} — ${p.text || p.title}`,
+			numbered(p.options),
+			p.defaultLabel && `I'll go on with ${p.defaultLabel} unless someone says otherwise within 15 min.`,
+			p.link,
+		),
+	[IssueSignalLevel.FEEDBACK]: p => lines(`${p.key} · preview — ${p.text}`, p.link),
+	[IssueSignalLevel.CLOSING]: p => lines(`✅ ${p.key} · ${p.title} — ${p.text}`, p.link),
+	[IssueSignalLevel.BLOCK_NOTICE]: p => lines(`⚠️ ${p.key} — ${p.title}.`, p.text, p.link),
+	[IssueSignalLevel.PROGRESS]: p => lines(`${p.key} — ${p.text}`, p.link),
+}
+
 interface ProviderPausedParams {
 	until: Date
 	now: Date
@@ -126,6 +188,11 @@ const PT_MESSAGES = {
 	 * quem e o quê — nunca o texto de uma orientação, que foi para a sessão da issue e não para a sala.
 	 */
 	panelActionEcho: (p: PanelEchoParams) => `${p.name} ${PANEL_ECHO_PT[p.echo]} ${p.key} pelo painel`,
+	/**
+	 * O que uma issue diz ao grupo depois da política de saída (fase 3) — o formato do NÍVEL, curto, com o
+	 * código da pergunta e o link da issue no painel.
+	 */
+	issueSignal: (p: IssueSignalParams) => SIGNAL_PT[p.level](p),
 }
 
 export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
@@ -137,5 +204,6 @@ export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
 			`I hit the usage limit of the agent's provider account. Messages are queued and I'll answer again ${whenEn(p.until, p.now)}.`,
 		panelCode: p => `Your codm panel code: ${p.code} — valid for 10 min.`,
 		panelActionEcho: p => `${p.name} ${PANEL_ECHO_EN[p.echo]} ${p.key} from the panel`,
+		issueSignal: p => SIGNAL_EN[p.level](p),
 	},
 })

@@ -1,4 +1,4 @@
-import { BaseValueObject, z } from '@codm/core-typescript'
+import { BaseError, BaseValueObject, z } from '@codm/core-typescript'
 import type Z from 'zod'
 import { AskAnswerKind, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { StopAskSchema, type AskAnswer, type AskDefault, type StopAsk as StopAskShape } from '@shared/objects'
@@ -11,6 +11,22 @@ import type { DomainErrors } from '../errors'
  */
 export const ASK_STOP_KINDS = [StopKind.DECISION_REQUESTED, StopKind.QUESTION_ASKED] as const
 export type AskStopKind = (typeof ASK_STOP_KINDS)[number]
+
+/**
+ * Which kind a stop fact must carry an ask for — and asks to be raised as. Total over `StopKind`: a kind
+ * added to the contract decides here whether it is an ask. `undefined` ⇒ raised without one.
+ */
+export const ASKED_AS: Record<StopKind, AskStopKind | undefined> = {
+	[StopKind.DECISION_REQUESTED]: StopKind.DECISION_REQUESTED,
+	[StopKind.QUESTION_ASKED]: StopKind.QUESTION_ASKED,
+	[StopKind.SERVER_ERROR]: undefined,
+	[StopKind.BLOCKED_BY_CLASSIFICATION]: undefined,
+	[StopKind.HUMAN_REQUESTED]: undefined,
+	[StopKind.APPROVAL_NEEDED]: undefined,
+	[StopKind.AUTH_REQUIRED]: undefined,
+	[StopKind.PERMISSION_DENIED]: undefined,
+	[StopKind.STALLED]: undefined,
+}
 
 /**
  * How long a question waits for somebody before it goes on with its default — counted from the moment the
@@ -55,9 +71,26 @@ export const StopAskObjectSchema = StopAskSchema.extend({ requested: z.enum(ASK_
 export class StopAsk extends BaseValueObject<typeof StopAskObjectSchema> {
 	static override schema = StopAskObjectSchema
 
+	/**
+	 * The ask a stop fact of `kind` carries — refused (`INVALID_REQUEST`) when that kind does not ask
+	 * (`ASKED_AS`): a question attached to a server error is a malformed fact, not a question.
+	 */
+	static forKind(kind: StopKind, ask: StopAskShape): StopAsk {
+		const requested = ASKED_AS[kind]
+		if (!requested) throw new BaseError<DomainErrors>('INVALID_REQUEST', `a ${kind} stop takes no ask`)
+		return new StopAsk({ ...ask, requested })
+	}
+
 	/** The kind the stop is raised as — the requested one, escalated to a decision by any effect. */
 	get kind(): AskStopKind {
 		return this.effects.length > 0 ? StopKind.DECISION_REQUESTED : this.requested
+	}
+
+	/** What a question goes on with, as people read it — the option's label, or the default text. */
+	defaultLabel(): string | undefined {
+		const fallback = this.default
+		if (!fallback) return undefined
+		return fallback.kind === AskAnswerKind.TEXT ? fallback.text : this.options.find(option => option.id === fallback.optionId)?.label
 	}
 
 	/** The wire shape the stop row stores (and the console/panel read) — `requested` is not part of it. */

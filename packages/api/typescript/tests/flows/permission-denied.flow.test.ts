@@ -12,6 +12,8 @@ import {
 	StopKind,
 	StopResolution,
 	TranscriptKind,
+	GroupOutputMode,
+	IssueSignalLevel,
 } from '@codm/contracts-typescript/wire/enums'
 import { TestBed, givenIssue, givenThread, givenWorkspace } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
@@ -32,7 +34,7 @@ import type { AgentRuntimeEvent } from '@agent/types/AgentRuntimeEvent'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { DEFAULT_STOP_POLICY, StopPolicyConfigRepository } from '@thread/repositories/StopPolicyConfigRepository'
 import { RESOLUTIONS_BY_KIND } from '@thread/utils/StopResolutions'
-import { NOTIFIES_ON_CHANNEL } from '@thread/utils/StopChannelNotice'
+import { LEVEL_OF_STOP, ROUTING_BY_MODE, SENDS_NOW } from '@thread/utils/OutputPolicy'
 
 /** Every run ends the way the runner reports a blocked action — and counts how many times it was asked. */
 class DenyingRunner extends AgentRunner {
@@ -86,7 +88,11 @@ describe('Flow (integration): a permission denial stops the work at once', () =>
 	it('AC-10 — the vocabulary: transport, APPROVE/DENY/TAKE_OVER, notifies, and NOT retried', () => {
 		expect(TRANSPORT_STOP_KINDS).toContain(StopKind.PERMISSION_DENIED)
 		expect(RESOLUTIONS_BY_KIND[StopKind.PERMISSION_DENIED]).toEqual([StopResolution.APPROVE, StopResolution.DENY, StopResolution.TAKE_OVER])
-		expect(NOTIFIES_ON_CHANNEL[StopKind.PERMISSION_DENIED]).toBe(true)
+		// It asks for an approval: a DECISION, which every mode sends to the group (fase 3, output policy).
+		expect(LEVEL_OF_STOP[StopKind.PERMISSION_DENIED]).toBe(IssueSignalLevel.DECISION)
+		for (const mode of Object.values(GroupOutputMode)) {
+			expect(SENDS_NOW[ROUTING_BY_MODE[mode][IssueSignalLevel.DECISION]]).toBe(true)
+		}
 		expect(TRANSPORT_STOP_RETRIES[StopKind.PERMISSION_DENIED]).toBe(false)
 		// The two transport stops that DO retry keep doing so — the table changed one row, not the rule.
 		expect(TRANSPORT_STOP_RETRIES[StopKind.SERVER_ERROR]).toBe(true)
@@ -115,7 +121,7 @@ describe('Flow (integration): a permission denial stops the work at once', () =>
 		expect(fact?.payload.kind).toBe(StopKind.PERMISSION_DENIED)
 		expect(fact?.payload.source).toBe(FactSource.INFERRED)
 		expect(fact?.payload.detail).toContain('me libera?')
-		// No ISSUE_RESULT: the stop's channel notice is the voice (NOTIFIES_ON_CHANNEL), not a composed reply.
+		// No ISSUE_RESULT: the stop's channel notice is the voice (LEVEL_OF_STOP), not a composed reply.
 		expect(await testBed.resolve(MailboxRepository).claimNext('denied-test', 60_000)).toBeUndefined()
 	})
 

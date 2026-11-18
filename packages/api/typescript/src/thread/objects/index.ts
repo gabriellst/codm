@@ -33,6 +33,7 @@ export {
 	StopAsk,
 	StopAskObjectSchema,
 	ASK_STOP_KINDS,
+	ASKED_AS,
 	QUESTION_DEFAULT_MS,
 	askDueAt,
 	admitsAnswer,

@@ -42,9 +42,12 @@ export const ReconcileStalledIssuesOutputSchema = z.object({
  * Uma issue que NUNCA teve turno (aberta sem trabalho na fila) não recebe lembrete — não há sessão para
  * lembrar — e é estacionada como sempre foi.
  *
- * ### O que é emitido, e por que reusa o vocabulário existente
- * `HUMAN_REQUESTED` com `source: INFERRED`. O par diz exatamente o que aconteceu — "precisa de humano, e
- * não foi o agente que pediu" — e é para essa distinção que `FactSource` existe.
+ * ### O que é emitido
+ * `STALLED` com `source: INFERRED` (fase 3). Até a fase 3 era `HUMAN_REQUESTED` — o mesmo kind do
+ * `AskOperator` —, e as tabelas por kind não distinguiam "parou sem dizer nada" de um pedido de verdade.
+ * Com o kind próprio a parada vira um AVISO DE BLOQUEIO no grupo (`LEVEL_OF_STOP`), um por issue
+ * (`CAUSE_DEDUPES[STALLED]` é false): a prosa de um turno que não declarou nada nunca termina em silêncio
+ * só no painel. As paradas antigas gravadas como `HUMAN_REQUESTED` ficam como estão (histórico).
  *
  * ### Idempotência sem registro de "já avisei"
  * Ela vem do PREDICADO. O lembrete é um item em voo, e uma issue com item em voo não aparece na
@@ -102,7 +105,7 @@ export class ReconcileStalledIssues extends Handler<typeof ReconcileStalledIssue
 							stopId: uuidv7(),
 							issueId: orphan.issueId,
 							threadId: orphan.threadId,
-							kind: StopKind.HUMAN_REQUESTED,
+							kind: StopKind.STALLED,
 							detail: orphan.lastTurnWasReminder ? ReconcileStalledIssues.DETAIL_AFTER_REMINDER : ReconcileStalledIssues.DETAIL,
 							source: FactSource.INFERRED,
 						},

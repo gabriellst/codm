@@ -1,6 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { BaseError, EventHandler, LoggingService } from '@codm/core-typescript'
 import { ThreadStopRaisedEvent } from '@codm/contracts-typescript/wire/events'
+import { StopAskSchema } from '@shared/objects'
 import { StopKind } from '@codm/contracts-typescript/wire/enums'
 import { Id } from '@codm/core-typescript'
 import { RaiseStop } from '../usecases/RaiseStop'
@@ -47,6 +48,9 @@ export class RecordStopFromExecution extends EventHandler<typeof ThreadStopRaise
 				kind: event.payload.kind,
 				title,
 				detail,
+				// The ask (fase 3) rides the frozen event as `unknown` — the codegen carries no nested shape — so
+				// the consumer parses it against the core's schema. A malformed ask throws and the outbox retries.
+				ask: StopAskSchema.optional().parse(event.payload.ask),
 			})
 		} catch (error) {
 			// ONLY the sanctioned no-op outcomes are swallowed (the stop is simply not recorded). Anything

@@ -1,14 +1,19 @@
 import { injectable } from 'tsyringe-neo'
 import { Handler, z, BaseError, CommandQueue } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { MessageAuthor, StopKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
+import { StopKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { CloudSession } from '@shared/services/CloudSession'
+import { resolveThreadLanguage } from '@shared/i18n/messages'
+import { StopAskSchema } from '@shared/objects'
 import { IssueRepository } from '@issue/repositories/IssueRepository'
+import { PanelPublisher } from '@issue/services/PanelPublisher'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { StopPolicyConfigRepository, type StopPolicy } from '../repositories/StopPolicyConfigRepository'
-import { NOTIFIES_ON_CHANNEL } from '../utils/StopChannelNotice'
+import { causeAlreadyTold, LEVEL_OF_STOP } from '../utils/OutputPolicy'
+import { StopAsk } from '../objects/StopAsk'
+import type { Stop, Thread, TranscriptEntry } from '../entities/Thread'
 import { THREAD_MESSAGES } from '../i18n/messages'
-import type { DeliverChannelMessage } from './DeliverChannelMessage'
+import { enqueueSignalDelivery, recordIssueSignal } from '../utils/issueSignal'
 import type { ApplicationErrors } from '../errors'
 
 export const RaiseStopInputSchema = z.object({
@@ -29,6 +34,12 @@ export const RaiseStopInputSchema = z.object({
 	 */
 	title: z.string().optional(),
 	detail: z.string(),
+	/**
+	 * The ASK of a `DECISION_REQUESTED` / `QUESTION_ASKED` stop (fase 3) — required for those two kinds and
+	 * refused on every other (`ASKED_AS`). The `StopAsk` value object validates it and decides the kind it is
+	 * raised as: any declared effect escalates a question to a decision.
+	 */
+	ask: StopAskSchema.optional(),
 })
 
 export const RaiseStopOutputSchema = z.object({ stopId: z.uuid() })
@@ -71,6 +82,14 @@ const POLICY_KEY: Record<StopKind, keyof StopPolicy> = {
  * que `RecordOrchestratorReply` usa, e nenhum agent runner participa: entrada `SYSTEM` no transcript
  * mais comando durável, que é a propriedade que torna o aviso possível justamente quando o agente não
  * pode falar.
+ *
+ * ### A política de saída (fase 3) decide O QUÊ e PARA ONDE
+ * O stop de uma ISSUE fala pelo nível dele (`LEVEL_OF_STOP`) e pelo modo do grupo (`ROUTING_BY_MODE`),
+ * no formato do nível (`recordIssueSignal`, compartilhado com `DeliverIssueSignal`): a decisão e a
+ * pergunta saem com o código (`APP-12 · D1`, `seq` lido aqui dentro da transação), a entrada guarda o
+ * `stop_id` e o stop guarda a entrada (`askEntryId`); um aviso de bloqueio sai UMA vez por causa enquanto
+ * a causa dura (`causeAlreadyTold`), os seguintes só no painel. `HUMAN_REQUESTED` e `APPROVAL_NEEDED` não
+ * têm nível: nascem de um turno que falou. O stop da CONVERSA (sem issue) mantém o aviso de hoje.
  */
 @injectable()
 export class RaiseStop extends Handler<typeof RaiseStopInputSchema, typeof RaiseStopOutputSchema> {
@@ -84,6 +103,7 @@ export class RaiseStop extends Handler<typeof RaiseStopInputSchema, typeof Raise
 		private readonly policy: StopPolicyConfigRepository,
 		private readonly session: CloudSession,
 		private readonly commands: CommandQueue,
+		private readonly panel: PanelPublisher,
 	) {
 		super()
 	}
@@ -104,8 +124,8 @@ export class RaiseStop extends Handler<typeof RaiseStopInputSchema, typeof Raise
 
 		// The archived guard applies only when there IS an issue. A thread-level stop has no issue to be
 		// archived, and demanding one back would re-close the hole decision 4 opens.
+		const issue = input.issueId ? await this.issues.findById(input.issueId) : undefined
 		if (input.issueId) {
-			const issue = await this.issues.findById(input.issueId)
 			if (!issue) throw new BaseError<ApplicationErrors>('ISSUE_NOT_FOUND', `no issue ${input.issueId}`)
 			if (issue.archived) throw new BaseError<ApplicationErrors>('ISSUE_ARCHIVED', `issue ${input.issueId} is archived`)
 		}
@@ -115,12 +135,19 @@ export class RaiseStop extends Handler<typeof RaiseStopInputSchema, typeof Raise
 			throw new BaseError<ApplicationErrors>('STOP_CRITERION_DISABLED', `the ${input.kind} criterion is disabled`)
 		}
 
+		// The ask kinds carry an ask and only they do (fase 3): the value object refuses an ask on a kind that
+		// does not ask, the aggregate refuses an ask kind raised without one.
+		const ask = input.ask ? StopAsk.forKind(input.kind, input.ask) : undefined
+		// The kind the stop is RAISED as: an ask's own (escalated by any effect), the fact's otherwise.
+		const kind = ask?.kind ?? input.kind
+		const level = LEVEL_OF_STOP[kind]
+
 		// O IDIOMA SÓ É BUSCADO QUANDO ALGUÉM VAI USÁ-LO — e essa é a correção, não uma otimização.
 		//
-		// Ele alimenta exatamente dois textos: o título genérico (só quando o chamador não trouxe um) e o
-		// aviso que vai ao canal (só para os kinds que notificam). Para `HUMAN_REQUESTED` nenhum dos dois
-		// acontece: `NOTIFIES_ON_CHANNEL` é false e `RecordStopFromExecution` já preenche o título com o
-		// `detail` do agente. A resolução eager que existia aqui era, nesse caminho, trabalho jogado fora.
+		// Ele alimenta exatamente dois textos: o título genérico (só quando o chamador não trouxe um) e a
+		// mensagem que vai ao canal (só para os kinds que têm nível). Para `HUMAN_REQUESTED` nenhum dos dois
+		// acontece: `LEVEL_OF_STOP` é null e `RecordStopFromExecution` já preenche o título com o `detail`
+		// do agente. A resolução eager que existia aqui era, nesse caminho, trabalho jogado fora.
 		//
 		// E jogado fora de um jeito caro: ela vinha do `OwnerDirectory`, bindado pelo registry do contexto
 		// `owner`, que é CLOUD-ONLY. No desktop o token não tem binding, o tsyringe construía a classe
@@ -129,53 +156,74 @@ export class RaiseStop extends Handler<typeof RaiseStopInputSchema, typeof Raise
 		//
 		// A fonte agora é `CloudSession`, que mora em `shared` e É bindada no perfil local. A direção do
 		// ADR 0001 fica intacta: a nuvem continua sendo a única autoridade sobre identidade — o desktop
-		// pergunta, não decide.
-		const needsLanguage = input.title === undefined || NOTIFIES_ON_CHANNEL[input.kind]
-		const language = needsLanguage ? (await this.session.identity())?.user.language : undefined
+		// pergunta, não decide. A língua DECLARADA da conversa, quando existe, vence (fase 3).
+		const needsLanguage = !thread.language && (input.title === undefined || level !== null)
+		const ownerLanguage = needsLanguage ? (await this.session.identity())?.user.language : undefined
+		const language = resolveThreadLanguage(thread.language, ownerLanguage)
+		const title = input.title ?? THREAD_MESSAGES.stopTitle(language, { kind })
 
 		return this.withTransaction(tx, async tx => {
-			const stop = thread.raiseStop({
-				stopId: input.stopId,
-				issueId: input.issueId,
-				kind: input.kind,
-				title: input.title ?? THREAD_MESSAGES.stopTitle(language, { kind: input.kind }),
-				detail: input.detail,
-			})
-
-			if (NOTIFIES_ON_CHANNEL[input.kind]) {
+			// What the stop says on the channel, recorded BEFORE the stop so the stop can point at it.
+			let notice: { entry: TranscriptEntry; sends: boolean } | undefined
+			if (level !== null && issue) {
+				// An ISSUE's stop speaks through the output policy (fase 3): the format of its level, its code,
+				// the group's mode, and one notice per cause.
+				const others = await this.threads.openStops(thread.id.value, tx)
+				const seq = ask ? await this.threads.nextAskSeq(issue.id.value, tx) : undefined
+				notice = recordIssueSignal(
+					thread,
+					{
+						issue: { issueId: issue.id.value, key: issue.key, title: issue.title },
+						level,
+						title,
+						// The question the stop puts, or the provider's detail verbatim; empty is fine — the format of a
+						// decision falls back to the title, a notice simply has no body.
+						text: ask?.question ?? input.detail,
+						code: seq === undefined ? undefined : `${issue.key} · D${seq}`,
+						options: ask?.options.map(option => option.label),
+						defaultLabel: ask?.defaultLabel(),
+						addresseeId: ask?.addresseeId,
+						stopId: input.stopId,
+						alreadyTold: causeAlreadyTold(
+							kind,
+							others.map(other => other.kind),
+						),
+					},
+					{ language, panelLink: this.panel.linkOf(thread.id.value) },
+				)
+				const stop = this.raise(thread, input, { title, ask, seq, askEntryId: notice.entry.entryId })
+				return this.commit(thread, stop, notice, tx)
+			}
+			if (level !== null) {
+				// A stop of the CONVERSATION (the orchestrator's, no issue) is not an issue's signal: it keeps
+				// today's notice — the title and the provider's detail, verbatim.
 				const entry = thread.recordEntry({
 					kind: TranscriptKind.SYSTEM,
-					text: THREAD_MESSAGES.stopChannelNotice(language, { kind: input.kind, detail: input.detail }),
-					// The stop's issue, when it has one: the notice is that issue's message in the transcript.
-					issueId: input.issueId,
+					text: THREAD_MESSAGES.stopChannelNotice(language, { kind, detail: input.detail }),
 				})
-				await this.threads.save(thread, tx)
-
-				// `jobId` é o id da entrada: a fila dedup nele, então uma redelivery que já commitou não
-				// agenda um segundo envio do mesmo aviso.
-				await this.commands.enqueueCommand<DeliverChannelMessage>(
-					'deliver_channel_message',
-					{
-						ownerId: thread.ownerId,
-						channelId: thread.channelId,
-						contactExternalId: thread.contactRef.externalId,
-						text: entry.text,
-						author: MessageAuthor.SYSTEM,
-						replyEntryId: entry.entryId,
-						replyThreadId: thread.id.value,
-						// This SYSTEM notice rides the SAME `recordOutbound` cue gate as an orchestrator reply
-						// (reactions/streaming spec) — passed through for the identical reason
-						// `RecordOrchestratorReply` does: the aggregate is already in hand here.
-						reactionsEnabled: thread.reactionsEnabled,
-					},
-					{ jobId: entry.entryId },
-					tx,
-				)
-				return { stopId: stop.stopId }
+				notice = { entry, sends: true }
 			}
-
-			await this.threads.save(thread, tx)
-			return { stopId: stop.stopId }
+			const stop = this.raise(thread, input, { title, ask })
+			return this.commit(thread, stop, notice, tx)
 		})
+	}
+
+	private raise(thread: Thread, input: this['input'], asked: { title: string; ask?: StopAsk; seq?: number; askEntryId?: string }): Stop {
+		const common = { stopId: input.stopId, issueId: input.issueId, title: asked.title, detail: input.detail }
+		return asked.ask
+			? thread.raiseStop({ ...common, ask: asked.ask, seq: asked.seq, askEntryId: asked.askEntryId })
+			: thread.raiseStop({ ...common, kind: input.kind })
+	}
+
+	/** Save the thread with its stop (and notice) and queue the notice's delivery in the same transaction. */
+	private async commit(
+		thread: Thread,
+		stop: Stop,
+		notice: { entry: TranscriptEntry; sends: boolean } | undefined,
+		tx: Transaction,
+	): Promise<this['output']> {
+		await this.threads.save(thread, tx)
+		if (notice?.sends) await enqueueSignalDelivery(this.commands, thread, notice.entry, tx)
+		return { stopId: stop.stopId }
 	}
 }

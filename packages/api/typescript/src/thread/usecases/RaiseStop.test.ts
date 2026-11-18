@@ -2,8 +2,20 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { Id } from '@codm/core-typescript'
-import { TestBed, givenThread } from '@test/support'
-import { Language, StopKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
+import { TestBed, givenIssue, givenThread } from '@test/support'
+import {
+	AskAnswerKind,
+	AskEffect,
+	GroupOutputMode,
+	IssueSignalLevel,
+	Language,
+	OutputRouting,
+	PermissionPosture,
+	StopKind,
+	StopResolution,
+	TranscriptKind,
+} from '@codm/contracts-typescript/wire/enums'
+import type { StopAsk } from '@shared/objects'
 import {
 	CloudSession,
 	MockCloudSession,
@@ -125,7 +137,7 @@ describe('RaiseStop — o aviso no canal', () => {
 	})
 
 	it('AC-2: um stop HUMAN_REQUESTED não resolve idioma nenhum', async () => {
-		// O dublê FALHA se chamado. `NOTIFIES_ON_CHANNEL[HUMAN_REQUESTED]` é false e o título já vem
+		// O dublê FALHA se chamado. `LEVEL_OF_STOP[HUMAN_REQUESTED]` é null e o título já vem
 		// pronto, então nem `stopChannelNotice` nem `stopTitle` rodam — e o idioma que alimentaria os
 		// dois não tem por que ser buscado.
 		const cloud = testBed.resolve(CloudSession) as MockCloudSession
@@ -219,6 +231,233 @@ describe('RaiseStop — o aviso no canal', () => {
 			},
 		})
 		expect(withLanguage.user.language).toBe(Language.EN_US)
+	})
+})
+
+/**
+ * FASE 3 — o stop de uma ISSUE fala pela política de saída: o formato do nível, o código da pergunta, o modo
+ * do grupo e um aviso por causa. Os stops são levantados direto pelo `RaiseStop` com `ask` (as ferramentas da
+ * issue chegam no S5a).
+ */
+describe('RaiseStop — a política de saída (fase 3)', () => {
+	let testBed: TestBed
+	let testContainer: DependencyContainer
+
+	beforeAll(async () => {
+		testContainer = container.createChildContainer()
+		testBed = await TestBed.create('integration', { testContainer, ownerId: 'integration-tenant' })
+	})
+	beforeEach(async () => {
+		await testBed.reset()
+	})
+	afterAll(async () => {
+		await testBed.destroy()
+	})
+
+	const yesNo = [
+		{ id: 'yes', label: 'Publica' },
+		{ id: 'no', label: 'Espera' },
+	]
+	const decision: StopAsk = { question: 'Posso publicar a prévia?', options: yesNo, effects: [AskEffect.PUBLISH] }
+	const question: StopAsk = {
+		question: 'Uso o tema claro?',
+		options: [
+			{ id: 'light', label: 'Tema claro' },
+			{ id: 'dark', label: 'Tema escuro' },
+		],
+		default: { kind: AskAnswerKind.OPTION, optionId: 'light' },
+		effects: [],
+	}
+
+	const issueOn = async (threadId: string, key = 'APP-12') =>
+		givenIssue(testBed, {
+			ownerId: (await testBed.resolve(ThreadRepository).findById(threadId))!.ownerId,
+			threadId,
+			key,
+			title: 'Página nova',
+		})
+
+	const groupEntries = async (threadId: string) =>
+		(await testBed.resolve(ThreadRepository).listEntries(threadId)).filter(e => e.kind === TranscriptKind.SYSTEM)
+
+	it('uma decisão sai no grupo com o código, as opções, e a entrada e o stop apontam um para o outro', async () => {
+		const { thread } = await givenThreadReadyForStops(testBed, Language.PT_BR)
+		const issue = await issueOn(thread.id.value)
+		const stopId = uuidv7()
+
+		await testBed.resolve(RaiseStop).execute({
+			stopId,
+			threadId: thread.id.value,
+			issueId: issue.id.value,
+			kind: StopKind.DECISION_REQUESTED,
+			detail: 'prévia pronta',
+			ask: decision,
+		})
+
+		const [entry] = await groupEntries(thread.id.value)
+		expect(entry?.text).toContain('APP-12 · D1 — Posso publicar a prévia?')
+		expect(entry?.text).toContain('1) Publica')
+		expect(entry).toMatchObject({ issueId: issue.id.value, level: IssueSignalLevel.DECISION, routing: OutputRouting.GROUP, stopId })
+		const stop = await testBed.resolve(ThreadRepository).findStop(stopId)
+		expect(stop).toMatchObject({ kind: StopKind.DECISION_REQUESTED, seq: 1, askEntryId: entry?.entryId })
+		expect(await enqueuedDeliveries(testBed)).toBe(1)
+	})
+
+	it('uma pergunta diz com o que segue em 15 min; a segunda da issue é D2', async () => {
+		const { thread } = await givenThreadReadyForStops(testBed, Language.PT_BR)
+		const issue = await issueOn(thread.id.value)
+
+		for (const stopId of [uuidv7(), uuidv7()]) {
+			await testBed.resolve(RaiseStop).execute({
+				stopId,
+				threadId: thread.id.value,
+				issueId: issue.id.value,
+				kind: StopKind.QUESTION_ASKED,
+				detail: '',
+				ask: question,
+			})
+		}
+
+		const texts = (await groupEntries(thread.id.value)).map(e => e.text)
+		expect(texts[0]).toContain('APP-12 · D1 — Uso o tema claro?')
+		expect(texts[0]).toContain('Sigo com Tema claro se ninguém disser o contrário em 15 min.')
+		expect(texts[1]).toContain('APP-12 · D2')
+		// Sem resumo ainda (S5b): a pergunta sai sozinha e a entrada registra o que de fato aconteceu.
+		expect((await groupEntries(thread.id.value))[0]?.routing).toBe(OutputRouting.GROUP)
+		expect(await enqueuedDeliveries(testBed)).toBe(2)
+	})
+
+	it('uma pergunta com efeito declarado vira decisão — sem padrão, sem prazo', async () => {
+		const { thread } = await givenThreadReadyForStops(testBed, Language.PT_BR)
+		const issue = await issueOn(thread.id.value)
+		const stopId = uuidv7()
+
+		await testBed.resolve(RaiseStop).execute({
+			stopId,
+			threadId: thread.id.value,
+			issueId: issue.id.value,
+			kind: StopKind.QUESTION_ASKED,
+			detail: '',
+			ask: { ...question, effects: [AskEffect.CLIENT_DATA] },
+		})
+
+		expect((await testBed.resolve(ThreadRepository).findStop(stopId))?.kind).toBe(StopKind.DECISION_REQUESTED)
+		const [entry] = await groupEntries(thread.id.value)
+		expect(entry?.level).toBe(IssueSignalLevel.DECISION)
+		expect(entry?.text).not.toContain('15 min')
+	})
+
+	it('FALSEADOR — um kind de pergunta sem `ask`, ou um `ask` num kind que não pergunta, é recusado', async () => {
+		const { thread } = await givenThreadReadyForStops(testBed, Language.PT_BR)
+		const issue = await issueOn(thread.id.value)
+		const raise = (kind: StopKind, ask?: StopAsk) =>
+			testBed
+				.resolve(RaiseStop)
+				.execute({ stopId: uuidv7(), threadId: thread.id.value, issueId: issue.id.value, kind, detail: 'x', ask })
+				.then(
+					() => undefined,
+					(error: Error) => error.name,
+				)
+
+		expect(await raise(StopKind.DECISION_REQUESTED)).toBe('INVALID_REQUEST')
+		expect(await raise(StopKind.SERVER_ERROR, decision)).toBe('INVALID_REQUEST')
+		expect(await testBed.resolve(ThreadRepository).openStops(thread.id.value)).toHaveLength(0)
+	})
+
+	it('um aviso por causa: o segundo SERVER_ERROR com o primeiro aberto fica só no painel; fechada a causa, reabre', async () => {
+		const { thread } = await givenThreadReadyForStops(testBed, Language.PT_BR)
+		const first = await issueOn(thread.id.value, 'APP-12')
+		const second = await issueOn(thread.id.value, 'APP-15')
+		const third = await issueOn(thread.id.value, 'APP-18')
+		const serverError = (issueId: string) =>
+			testBed
+				.resolve(RaiseStop)
+				.execute({ stopId: uuidv7(), threadId: thread.id.value, issueId, kind: StopKind.SERVER_ERROR, detail: 'upstream 503' })
+
+		await serverError(first.id.value)
+		await serverError(second.id.value)
+
+		let entries = await groupEntries(thread.id.value)
+		expect(entries.map(e => e.routing)).toEqual([OutputRouting.GROUP, OutputRouting.PANEL])
+		expect(entries[0]?.text).toContain('⚠️ APP-12')
+		expect(await enqueuedDeliveries(testBed)).toBe(1)
+
+		// Both stops of the cause resolved ⇒ the cause is closed, and the next one is told again.
+		for (const stop of await testBed.resolve(ThreadRepository).openStops(thread.id.value)) {
+			const loaded = (await testBed.resolve(ThreadRepository).findById(thread.id.value))!
+			loaded.resolveStop(stop, StopResolution.RETRY, PermissionPosture.AUTO)
+			await testBed.resolve(ThreadRepository).save(loaded)
+		}
+		await serverError(third.id.value)
+
+		entries = await groupEntries(thread.id.value)
+		expect(entries.at(-1)?.routing).toBe(OutputRouting.GROUP)
+		expect(await enqueuedDeliveries(testBed)).toBe(2)
+	})
+
+	it('STALLED não agrupa: duas tarefas paradas sem dizer nada aparecem as duas no grupo', async () => {
+		const { thread } = await givenThreadReadyForStops(testBed, Language.PT_BR)
+		for (const key of ['APP-12', 'APP-15']) {
+			const issue = await issueOn(thread.id.value, key)
+			await testBed
+				.resolve(RaiseStop)
+				.execute({ stopId: uuidv7(), threadId: thread.id.value, issueId: issue.id.value, kind: StopKind.STALLED, detail: 'parou' })
+		}
+
+		const entries = await groupEntries(thread.id.value)
+		expect(entries.map(e => e.routing)).toEqual([OutputRouting.GROUP, OutputRouting.GROUP])
+		expect(entries[0]?.text).toContain('Uma tarefa parou sem dizer o que falta')
+		expect(await enqueuedDeliveries(testBed)).toBe(2)
+	})
+
+	it('um aviso sem detalhe não repete o título; uma decisão sem pergunta pergunta o título', async () => {
+		const { thread } = await givenThreadReadyForStops(testBed, Language.PT_BR)
+		const stalled = await issueOn(thread.id.value, 'APP-12')
+		const denied = await issueOn(thread.id.value, 'APP-15')
+		for (const [issueId, kind] of [
+			[stalled.id.value, StopKind.STALLED],
+			[denied.id.value, StopKind.PERMISSION_DENIED],
+		] as const) {
+			await testBed.resolve(RaiseStop).execute({ stopId: uuidv7(), threadId: thread.id.value, issueId, kind, detail: '' })
+		}
+
+		const [notice, decisionEntry] = (await groupEntries(thread.id.value)).map(e => e.text)
+		const stalledTitle = THREAD_MESSAGES.stopTitle(Language.PT_BR, { kind: StopKind.STALLED })
+		expect(notice?.split(stalledTitle)).toHaveLength(2)
+		expect(decisionEntry).toContain(`❓ APP-15 — ${THREAD_MESSAGES.stopTitle(Language.PT_BR, { kind: StopKind.PERMISSION_DENIED })}`)
+	})
+
+	it('o stop da CONVERSA (sem issue) mantém o aviso de hoje, sem nível nem código', async () => {
+		const { thread } = await givenThreadReadyForStops(testBed, Language.PT_BR)
+
+		await testBed
+			.resolve(RaiseStop)
+			.execute({ stopId: uuidv7(), threadId: thread.id.value, kind: StopKind.SERVER_ERROR, detail: 'upstream 503' })
+
+		const [entry] = await groupEntries(thread.id.value)
+		expect(entry?.text).toBe(THREAD_MESSAGES.stopChannelNotice(Language.PT_BR, { kind: StopKind.SERVER_ERROR, detail: 'upstream 503' }))
+		expect(entry?.level).toBeUndefined()
+		expect(entry?.issueId).toBeUndefined()
+	})
+
+	it('o modo do grupo vale: em DECISIONS_ONLY a decisão ainda sai no grupo', async () => {
+		const { thread } = await givenThreadReadyForStops(testBed, Language.PT_BR)
+		const loaded = (await testBed.resolve(ThreadRepository).findById(thread.id.value))!
+		loaded.configureOutputMode(GroupOutputMode.DECISIONS_ONLY)
+		await testBed.resolve(ThreadRepository).save(loaded)
+		const issue = await issueOn(thread.id.value)
+
+		await testBed.resolve(RaiseStop).execute({
+			stopId: uuidv7(),
+			threadId: thread.id.value,
+			issueId: issue.id.value,
+			kind: StopKind.DECISION_REQUESTED,
+			detail: '',
+			ask: decision,
+		})
+
+		expect((await groupEntries(thread.id.value))[0]?.routing).toBe(OutputRouting.GROUP)
+		expect(await enqueuedDeliveries(testBed)).toBe(1)
 	})
 })
 

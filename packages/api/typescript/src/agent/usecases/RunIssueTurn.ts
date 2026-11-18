@@ -428,7 +428,8 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 	 * `raiseStopForPoisoned`, once attempts run out. A kind that RECORDS (`PERMISSION_DENIED`) is minted
 	 * on the first occurrence (issue → NEEDS_INPUT downstream) and the item is consumed — a retry under
 	 * the same posture would only repeat the denial. Neither queues an `ISSUE_RESULT`: the stop's channel
-	 * notice (`NOTIFIES_ON_CHANNEL`) is what tells the operator, exactly as for a poisoned item.
+	 * notice (the output policy's `LEVEL_OF_STOP`, in `thread`) is what tells the operator, exactly as for a
+	 * poisoned item.
 	 *
 	 * ### Every other conclusion goes back to the conversation
 	 * The result is queued in THIS transaction, beside the outcome facts (§6.3, B1): an outcome that
