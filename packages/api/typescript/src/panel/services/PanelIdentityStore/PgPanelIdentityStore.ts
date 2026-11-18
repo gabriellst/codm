@@ -7,6 +7,7 @@ import {
 	type PanelCodeRequestRow,
 	type PanelIdentityGroup,
 	type PanelMember,
+	type PanelOpenStop,
 	type PanelSessionRow,
 } from './PanelIdentityStore'
 
@@ -18,17 +19,27 @@ export class PgPanelIdentityStore extends PanelIdentityStore {
 
 	async groupByToken(token: string, tx?: PgTransaction): Promise<PanelIdentityGroup | undefined> {
 		const [group] = await (tx ?? this.driver.db)
-			.select({ threadId: panelGroups.threadId, ownerId: panelGroups.ownerId, members: panelGroups.members })
+			.select({
+				threadId: panelGroups.threadId,
+				ownerId: panelGroups.ownerId,
+				members: panelGroups.members,
+				openStops: panelGroups.openStops,
+			})
 			.from(panelGroups)
 			.where(eq(panelGroups.token, token))
 			.limit(1)
 		return group
 	}
 
-	async replaceMembers(ownerId: string, threadId: string, members: readonly PanelMember[], tx?: PgTransaction): Promise<boolean> {
+	async replaceRoster(
+		ownerId: string,
+		threadId: string,
+		roster: { members: readonly PanelMember[]; openStops: readonly PanelOpenStop[] },
+		tx?: PgTransaction,
+	): Promise<boolean> {
 		const rows = await (tx ?? this.driver.db)
 			.update(panelGroups)
-			.set({ members: [...members] })
+			.set({ members: [...roster.members], openStops: [...roster.openStops] })
 			.where(and(eq(panelGroups.threadId, threadId), eq(panelGroups.ownerId, ownerId)))
 			.returning({ threadId: panelGroups.threadId })
 		return rows.length > 0

@@ -369,6 +369,7 @@
 		},
 		"IssueControlSource": {
 			"CONSOLE": "Console",
+			"PANEL": "Painel",
 			"WHATSAPP": "WhatsApp"
 		},
 		"IssueLifeState": {
@@ -530,6 +531,8 @@
 		"OWNER_ALREADY_DISABLED": "Esta conta já está desativada.",
 		"OWNER_NOT_DISABLED": "Esta conta não está desativada.",
 		"OWNER_NOT_FOUND": "Conta não encontrada.",
+		"PANEL_ACTION_RATE_LIMITED": "Muitas ações deste aparelho. Espere um minuto e tente de novo.",
+		"PANEL_CANNOT_RELEASE": "Só quem pode liberar responde a este pedido.",
 		"PANEL_CODE_ATTEMPTS_EXCEEDED": "Muitas tentativas com este código. Peça um novo.",
 		"PANEL_CODE_EXPIRED": "Este código venceu ou já foi usado. Peça um novo.",
 		"PANEL_CODE_INVALID": "Código incorreto.",
@@ -537,6 +540,7 @@
 		"PANEL_LINK_UNAVAILABLE": "Esta conversa ainda não tem link do painel. Confira se o codm está logado e tente em alguns segundos.",
 		"PANEL_MEMBER_NOT_FOUND": "Essa pessoa não está mais na lista do grupo.",
 		"PANEL_NOT_FOUND": "Link do painel inválido ou trocado.",
+		"PANEL_RESOLUTION_NOT_OFFERED": "Essa resposta não está disponível para este pedido no painel.",
 		"PARTICIPANT_NOT_FOUND": "Participante não encontrado.",
 		"PASSWORDS_DONT_MATCH": "As senhas não coincidem.",
 		"PASSWORD_TOO_WEAK": "Senha muito fraca. Use letras, números e símbolos.",

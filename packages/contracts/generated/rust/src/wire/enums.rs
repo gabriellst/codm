@@ -575,7 +575,7 @@ pub enum IssueArchiveReason {
 	THREAD_DETACHED,
 }
 
-/// Where a pause or resume of an Issue came from. WHATSAPP: a control word (pare, segura, continue…) sent in the conversation with a target (a quoted issue message or one issue key). CONSOLE: the operator's pause/resume buttons on the issue detail.
+/// Where a pause or resume of an Issue came from. WHATSAPP: a control word (pare, segura, continue…) sent in the conversation with a target (a quoted issue message or one issue key). CONSOLE: the operator's pause/resume buttons on the issue detail. PANEL: a person identified on the group's cloud panel (fase 2, item 6b), executed by the daemon as that member.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
 	serde::Serialize, serde::Deserialize,
@@ -589,6 +589,9 @@ pub enum IssueControlSource {
 	#[serde(rename = "CONSOLE")]
 	#[strum(serialize = "CONSOLE")]
 	CONSOLE,
+	#[serde(rename = "PANEL")]
+	#[strum(serialize = "PANEL")]
+	PANEL,
 }
 
 /// Where an Issue's work actually stands RIGHT NOW, computed by rule from the queue and the stops — never stored, never declared by the model. Orthogonal to IssueStatus (the lifecycle): a WORKING issue may be RUNNING, QUEUED, WAITING_PROVIDER, WAITING_PERSON, REMINDED, STALLED or PAUSED. RUNNING: a turn holds a live lease. QUEUED: work is waiting for a free slot. WAITING_PROVIDER: its next turn is deferred by the provider's usage limit. WAITING_PERSON: an open stop asks someone to decide, approve or answer. REMINDED: its last turn ended without declaring anything and the one declaration reminder is pending or running. STALLED: nothing in flight and no open stop — the reconcile sweep has not caught it yet, or the reminder was ignored. PAUSED: someone paused it, or its whole conversation — no turn runs and its external tools refuse until it is resumed; it wins over every state but DONE. DONE: COMPLETED.
@@ -933,6 +936,66 @@ pub enum OwnerKind {
 	#[serde(rename = "INDIVIDUAL")]
 	#[strum(serialize = "INDIVIDUAL")]
 	INDIVIDUAL,
+}
+
+/// What an identified person asked for on the group's cloud panel (fase 2, item 6b). PAUSE / RESUME hold or release one issue; STEER sends that issue's session a short instruction; ANSWER_STOP answers the issue's open stop (only a member who may release). Requested in the cloud, executed by the daemon as that member on its next pull.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum PanelActionKind {
+	#[serde(rename = "PAUSE")]
+	#[strum(serialize = "PAUSE")]
+	PAUSE,
+	#[serde(rename = "RESUME")]
+	#[strum(serialize = "RESUME")]
+	RESUME,
+	#[serde(rename = "STEER")]
+	#[strum(serialize = "STEER")]
+	STEER,
+	#[serde(rename = "ANSWER_STOP")]
+	#[strum(serialize = "ANSWER_STOP")]
+	ANSWER_STOP,
+}
+
+/// What the daemon did with a panel action (fase 2, item 6b), reported on its next pull. DONE: executed as the member who asked. REFUSED: not executed — the outcome carries the error code (the member lost the release grant, the issue was not pausable, the stop was already answered…).
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum PanelActionOutcome {
+	#[serde(rename = "DONE")]
+	#[strum(serialize = "DONE")]
+	DONE,
+	#[serde(rename = "REFUSED")]
+	#[strum(serialize = "REFUSED")]
+	REFUSED,
+}
+
+/// Where a panel action stands (fase 2, item 6b). PENDING: stored in the cloud, waiting for the daemon to pull and execute it. DONE / REFUSED: the daemon's outcome (REFUSED carries the error code). EXPIRED: no outcome arrived in time — the daemon was away, so the action was dropped rather than run late.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum PanelActionStatus {
+	#[serde(rename = "PENDING")]
+	#[strum(serialize = "PENDING")]
+	PENDING,
+	#[serde(rename = "DONE")]
+	#[strum(serialize = "DONE")]
+	DONE,
+	#[serde(rename = "REFUSED")]
+	#[strum(serialize = "REFUSED")]
+	REFUSED,
+	#[serde(rename = "EXPIRED")]
+	#[strum(serialize = "EXPIRED")]
+	EXPIRED,
 }
 
 /// Under which permission regime an agent turn runs. AUTO = the provider CLI's own graduated mode (its classifier may block an action); BYPASS = no permission filter. Decided by WHO triggered the turn (Participant.canElevate), never by the model; each runner maps it to its own argv through a declared table.

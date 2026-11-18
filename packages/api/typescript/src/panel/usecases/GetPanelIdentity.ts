@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { Handler, z, BaseError } from '@codm/core-typescript'
 import { PanelIdentityStore } from '../services/PanelIdentityStore'
-import { panelDeviceTokenHash } from '../utils/panelIdentity'
+import { resolvePanelDevice } from './panelDevice'
 import { PanelMemberSchema } from './SyncPanelRoster'
 import type { ApplicationErrors } from '../errors'
 
@@ -32,11 +32,8 @@ export class GetPanelIdentity extends Handler<typeof GetPanelIdentityInputSchema
 	}
 
 	protected async handle(input: this['input']): Promise<this['output']> {
-		const group = await this.store.groupByToken(input.token)
+		const { group, member } = await resolvePanelDevice(this.store, input.token, input.deviceToken)
 		if (!group) throw new BaseError<ApplicationErrors>('PANEL_NOT_FOUND', 'no panel for this link')
-		if (!input.deviceToken) return {}
-		const session = await this.store.findSession(panelDeviceTokenHash(input.deviceToken))
-		if (!session || session.threadId !== group.threadId || session.expiresAt <= new Date()) return {}
-		return { member: group.members.find(member => member.memberId === session.memberId) }
+		return { member }
 	}
 }

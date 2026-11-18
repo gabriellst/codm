@@ -133,7 +133,7 @@ Texto: "Seu código do painel do codm: 123456 — vale 10 min." (pt) / "Your cod
 - Execução no daemon como AQUELE membro (o `memberId` resolvido para o JID pelo roster vivo, nunca confiando no nome): `PauseIssue`/`ResumeIssue` (issue), `SteerIssueTurn` (agent), `ResolveStop` (thread). `IssueControlSource` ganha `PANEL`; os fatos registram `requestedBy` = nome, `requestedById` = JID (local).
 - Regra de liberar checada DUAS vezes: a nuvem recusa de cara quem não tem `canRelease` (resposta rápida), e o daemon re-checa pelo `postureOf` atual (a nuvem pode estar atrasada 15 s; a autoridade é o daemon).
 - Idempotência: id do pedido de ação vira `jobId`/dedup no daemon; repetição não age duas vezes.
-- **PERGUNTAR AO DONO:** o grupo vê um eco da ação feita pelo painel (ex.: "⏸️ pausada por Fulano pelo painel")? Não decidido.
+- **Eco no grupo — decidido pelo dono (17/11):** sim, uma linha curta por ação feita pelo painel (ex.: "Ana pausou APP-12 pelo painel"). Também decidido: DM do código a qualquer membro do grupo, dentro dos tetos; nomes como construídos (nome do perfil, rótulo da agenda como reserva).
 
 ### Triagem paralela com modelo pequeno
 Para o que a camada de regra não resolve (pedido novo, lista): triagens sem estado em paralelo, uma por mensagem. Depois dos itens 2–5.

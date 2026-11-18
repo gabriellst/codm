@@ -369,6 +369,7 @@
 		},
 		"IssueControlSource": {
 			"CONSOLE": "Console",
+			"PANEL": "Panel",
 			"WHATSAPP": "WhatsApp"
 		},
 		"IssueLifeState": {
@@ -530,6 +531,8 @@
 		"OWNER_ALREADY_DISABLED": "This account is already disabled.",
 		"OWNER_NOT_DISABLED": "This account is not disabled.",
 		"OWNER_NOT_FOUND": "Account not found.",
+		"PANEL_ACTION_RATE_LIMITED": "Too many actions from this device. Wait a minute and try again.",
+		"PANEL_CANNOT_RELEASE": "Only someone who may release can answer this request.",
 		"PANEL_CODE_ATTEMPTS_EXCEEDED": "Too many tries with this code. Ask for a new one.",
 		"PANEL_CODE_EXPIRED": "This code has expired or was already used. Ask for a new one.",
 		"PANEL_CODE_INVALID": "Wrong code.",
@@ -537,6 +540,7 @@
 		"PANEL_LINK_UNAVAILABLE": "This conversation has no panel link yet. Check that codm is logged in and try again in a few seconds.",
 		"PANEL_MEMBER_NOT_FOUND": "This person is no longer on the group list.",
 		"PANEL_NOT_FOUND": "Panel link is invalid or was replaced.",
+		"PANEL_RESOLUTION_NOT_OFFERED": "That answer is not available for this request on the panel.",
 		"PARTICIPANT_NOT_FOUND": "Participant not found.",
 		"PASSWORDS_DONT_MATCH": "Passwords do not match.",
 		"PASSWORD_TOO_WEAK": "Password too weak. Use letters, numbers and symbols.",

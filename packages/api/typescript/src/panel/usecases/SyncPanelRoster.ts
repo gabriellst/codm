@@ -1,8 +1,11 @@
 import { injectable } from 'tsyringe-neo'
 import { Handler, z } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
+import { PanelActionDeliverySchema, PanelActionOutcomeSchema, PanelOpenStopSchema } from '@shared/schemas'
 import { PanelIdentityStore } from '../services/PanelIdentityStore'
+import { PanelActionStore } from '../services/PanelActionStore'
 import { PANEL_IDENTITY, newPanelCode, panelCodeHash } from '../utils/panelIdentity'
+import { PANEL_ACTIONS } from '../utils/panelActions'
 
 /**
  * One person of a group as the panel may know them. `memberId` is OPAQUE — an HMAC the daemon derives
@@ -23,7 +26,18 @@ export const PanelMemberSchema = z.object({
 
 export const SyncPanelRosterInputSchema = z.object({
 	ownerId: z.uuid(),
-	groups: z.array(z.object({ threadId: z.uuid(), members: z.array(PanelMemberSchema).max(1024) })).max(200),
+	groups: z
+		.array(
+			z.object({
+				threadId: z.uuid(),
+				members: z.array(PanelMemberSchema).max(1024),
+				/** The group's open stops the panel may answer (fase 2, item 6b). Absent = none. */
+				openStops: z.array(PanelOpenStopSchema).max(200).optional(),
+			}),
+		)
+		.max(200),
+	/** What the daemon did with the actions it pulled before (fase 2, item 6b) — re-sent until a pull succeeds. */
+	outcomes: z.array(PanelActionOutcomeSchema).max(500).optional(),
 })
 export const SyncPanelRosterOutputSchema = z.object({
 	/**
@@ -38,6 +52,12 @@ export const SyncPanelRosterOutputSchema = z.object({
 			code: z.string().regex(/^\d{6}$/),
 		}),
 	),
+	/**
+	 * The panel actions to execute NOW (fase 2, item 6b), oldest first, each as the member who asked. An
+	 * action whose outcome does not come back is handed out again after a while — the daemon executes an
+	 * action id at most once.
+	 */
+	actions: z.array(PanelActionDeliverySchema),
 })
 
 /**
@@ -45,11 +65,16 @@ export const SyncPanelRosterOutputSchema = z.object({
  *
  * Every 15 s the daemon pushes each group's roster and, in the same answer, receives the code requests
  * people made on the panel since. The cloud cannot call the daemon (a desktop app), so this pull IS the
- * channel. Rosters only land in groups the caller owns (`replaceMembers` is owner-scoped), and a request
+ * channel. Rosters only land in groups the caller owns (`replaceRoster` is owner-scoped), and a request
  * is handed out at most once (`issue` stamps it conditionally).
  *
  * The code is minted HERE rather than at request time so the plain value is never at rest anywhere in
  * the cloud: between the person's click and this pull, only the request exists.
+ *
+ * The same pull carries the panel ACTIONS (fase 2, item 6b) both ways: IN, the outcomes of actions the
+ * daemon executed since its last pull (and each group's open stops, so the panel knows which answers a
+ * stop admits); OUT, the actions people asked for since. An action is handed out only while it is fresh
+ * (`PANEL_ACTIONS.liveMs`) — a daemon back from a long absence does not act on old clicks.
  */
 @injectable()
 export class SyncPanelRoster extends Handler<typeof SyncPanelRosterInputSchema, typeof SyncPanelRosterOutputSchema> {
@@ -57,16 +82,24 @@ export class SyncPanelRoster extends Handler<typeof SyncPanelRosterInputSchema, 
 	readonly inputSchema = SyncPanelRosterInputSchema
 	readonly outputSchema = SyncPanelRosterOutputSchema
 
-	constructor(private readonly store: PanelIdentityStore) {
+	constructor(
+		private readonly store: PanelIdentityStore,
+		private readonly actions: PanelActionStore,
+	) {
 		super()
 	}
 
 	protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
 		return this.withTransaction(tx, async tx => {
-			for (const group of input.groups) await this.store.replaceMembers(input.ownerId, group.threadId, group.members, tx)
+			for (const group of input.groups) {
+				await this.store.replaceRoster(input.ownerId, group.threadId, { members: group.members, openStops: group.openStops ?? [] }, tx)
+			}
 
 			const now = new Date()
+			// Owner-scoped and first-wins: an outcome only lands on this owner's own pending action.
+			for (const outcome of input.outcomes ?? []) await this.actions.recordOutcome(input.ownerId, outcome, now, tx)
 			await this.store.purge(input.ownerId, new Date(now.getTime() - PANEL_IDENTITY.requestRetentionMs), now, tx)
+			await this.actions.purge(input.ownerId, new Date(now.getTime() - PANEL_ACTIONS.retentionMs), tx)
 
 			const pending = await this.store.pendingRequests(input.ownerId, new Date(now.getTime() - PANEL_IDENTITY.pendingWindowMs), tx)
 			const deliveries: this['output']['deliveries'] = []
@@ -77,7 +110,16 @@ export class SyncPanelRoster extends Handler<typeof SyncPanelRosterInputSchema, 
 				if (!(await this.store.issue(request, panelCodeHash(request.id, code), now, expiresAt, tx))) continue
 				deliveries.push({ requestId: request.id, threadId: request.threadId, memberId: request.memberId, code })
 			}
-			return { deliveries }
+
+			const due = await this.actions.handOut(
+				input.ownerId,
+				now,
+				new Date(now.getTime() - PANEL_ACTIONS.liveMs),
+				new Date(now.getTime() - PANEL_ACTIONS.redeliverAfterMs),
+				tx,
+			)
+			const actions = due.map(row => ({ actionId: row.id, threadId: row.threadId, memberId: row.memberId, action: row.payload }))
+			return { deliveries, actions }
 		})
 	}
 }

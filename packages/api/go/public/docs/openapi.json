@@ -7184,12 +7184,14 @@
       "IssueControlSource": {
         "enum": [
           "WHATSAPP",
-          "CONSOLE"
+          "CONSOLE",
+          "PANEL"
         ],
         "type": "string",
         "x-enum-varnames": [
           "IssueControlSourceWHATSAPP",
-          "IssueControlSourceCONSOLE"
+          "IssueControlSourceCONSOLE",
+          "IssueControlSourcePANEL"
         ]
       },
       "IssueLifeState": {
@@ -7575,6 +7577,47 @@
         "x-enum-varnames": [
           "OwnerKindORGANIZATION",
           "OwnerKindINDIVIDUAL"
+        ]
+      },
+      "PanelActionKind": {
+        "enum": [
+          "PAUSE",
+          "RESUME",
+          "STEER",
+          "ANSWER_STOP"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "PanelActionKindPAUSE",
+          "PanelActionKindRESUME",
+          "PanelActionKindSTEER",
+          "PanelActionKindANSWER_STOP"
+        ]
+      },
+      "PanelActionOutcome": {
+        "enum": [
+          "DONE",
+          "REFUSED"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "PanelActionOutcomeDONE",
+          "PanelActionOutcomeREFUSED"
+        ]
+      },
+      "PanelActionStatus": {
+        "enum": [
+          "PENDING",
+          "DONE",
+          "REFUSED",
+          "EXPIRED"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "PanelActionStatusPENDING",
+          "PanelActionStatusDONE",
+          "PanelActionStatusREFUSED",
+          "PanelActionStatusEXPIRED"
         ]
       },
       "PermissionPosture": {

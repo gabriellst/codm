@@ -1,13 +1,14 @@
 import type { Transaction } from '@codm/core-typescript'
-import type { PanelMember } from '@codm/contracts/db/pg'
+import type { PanelMember, PanelOpenStop } from '@codm/contracts/db/pg'
 
-export type { PanelMember }
+export type { PanelMember, PanelOpenStop }
 
-/** The group a link opens, with the people the daemon last reported in it. */
+/** The group a link opens, with the people — and the open stops — the daemon last reported in it. */
 export interface PanelIdentityGroup {
 	threadId: string
 	ownerId: string
 	members: PanelMember[]
+	openStops: PanelOpenStop[]
 }
 
 export interface PanelCodeRequestRow {
@@ -45,10 +46,14 @@ export interface PanelSessionRow {
 export abstract class PanelIdentityStore {
 	/** The group a link token opens, or nothing. */
 	abstract groupByToken(token: string, tx?: Transaction): Promise<PanelIdentityGroup | undefined>
-	/** Replace a group's roster — only when the group is the caller's. Returns whether it was. */
-	abstract replaceMembers(ownerId: string, threadId: string, members: readonly PanelMember[], tx?: Transaction): Promise<boolean>
+	/** Replace a group's roster and open stops — only when the group is the caller's. Returns whether it was. */
+	abstract replaceRoster(
+		ownerId: string,
+		threadId: string,
+		roster: { members: readonly PanelMember[]; openStops: readonly PanelOpenStop[] },
+		tx?: Transaction,
+	): Promise<boolean>
 
-	/** When this member asked for codes since `since` — the rate limit's input. */
 	/** Request times since `since` — one member's, or the whole group's when `memberId` is omitted. */
 	abstract requestTimes(threadId: string, memberId: string | undefined, since: Date, tx?: Transaction): Promise<Date[]>
 	abstract insertRequest(row: PanelCodeRequestRow, tx?: Transaction): Promise<void>

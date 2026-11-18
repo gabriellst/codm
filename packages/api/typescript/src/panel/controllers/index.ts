@@ -8,6 +8,8 @@ export { RequestPanelCodeController } from './RequestPanelCode'
 export { VerifyPanelCodeController } from './VerifyPanelCode'
 export { GetPanelIdentityController } from './GetPanelIdentity'
 export { ForgetPanelDeviceController } from './ForgetPanelDevice'
+export { RequestPanelActionController } from './RequestPanelAction'
+export { GetPanelActionController } from './GetPanelAction'
 export { PanelPageController } from './PanelPage'
 
 import { SyncPanelController } from './SyncPanel'
@@ -20,6 +22,8 @@ import { RequestPanelCodeController } from './RequestPanelCode'
 import { VerifyPanelCodeController } from './VerifyPanelCode'
 import { GetPanelIdentityController } from './GetPanelIdentity'
 import { ForgetPanelDeviceController } from './ForgetPanelDevice'
+import { RequestPanelActionController } from './RequestPanelAction'
+import { GetPanelActionController } from './GetPanelAction'
 import { PanelPageController } from './PanelPage'
 
 /** What this context mounts — the same symbol every context exposes (Decisão 10). */
@@ -34,5 +38,7 @@ export default {
 	VerifyPanelCodeController,
 	GetPanelIdentityController,
 	ForgetPanelDeviceController,
+	RequestPanelActionController,
+	GetPanelActionController,
 	PanelPageController,
 }

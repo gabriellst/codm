@@ -3,6 +3,33 @@
 * Do not edit manually.
 */
 
+import type { PanelActionOutcome } from "./PanelActionOutcome.ts";
+import type { StopKind } from "./StopKind.ts";
+import type { StopResolution } from "./StopResolution.ts";
+
+export const ActionKindEnum = {
+    PAUSE: "PAUSE"
+} as const;
+
+export type ActionKindEnumKey = (typeof ActionKindEnum)[keyof typeof ActionKindEnum];
+
+export const ActionKindEnum2 = {
+    RESUME: "RESUME"
+} as const;
+
+export type ActionKindEnum2Key = (typeof ActionKindEnum2)[keyof typeof ActionKindEnum2];
+
+export const ActionKindEnum3 = {
+    STEER: "STEER"
+} as const;
+
+export type ActionKindEnum3Key = (typeof ActionKindEnum3)[keyof typeof ActionKindEnum3];
+
+export const ActionKindEnum4 = {
+    ANSWER_STOP: "ANSWER_STOP"
+} as const;
+
+export type ActionKindEnum4Key = (typeof ActionKindEnum4)[keyof typeof ActionKindEnum4];
 
 /**
  * @description Replace each group\'s panel roster (opaque member ids) and pull the identification codes to deliver
@@ -29,6 +56,74 @@ export type SyncPanelRoster200 = {
          * @type string
         */
         code: string;
+    }[];
+    /**
+     * @type array
+    */
+    actions: {
+        /**
+         * @type string, uuid
+        */
+        actionId: string;
+        /**
+         * @type string, uuid
+        */
+        threadId: string;
+        /**
+         * @type string
+        */
+        memberId: string;
+        action: ({
+            /**
+             * @type string
+            */
+            kind: ActionKindEnumKey;
+            /**
+             * @type string, uuid
+            */
+            issueId: string;
+        } | {
+            /**
+             * @type string
+            */
+            kind: ActionKindEnum2Key;
+            /**
+             * @type string, uuid
+            */
+            issueId: string;
+        } | {
+            /**
+             * @type string
+            */
+            kind: ActionKindEnum3Key;
+            /**
+             * @type string, uuid
+            */
+            issueId: string;
+            /**
+             * @minLength 1
+             * @maxLength 2000
+             * @type string
+            */
+            text: string;
+        } | {
+            /**
+             * @type string
+            */
+            kind: ActionKindEnum4Key;
+            /**
+             * @type string, uuid
+            */
+            issueId: string;
+            /**
+             * @type string, uuid
+            */
+            stopId: string;
+            /**
+             * @type string
+            */
+            resolution: StopResolution;
+        });
     }[];
 };
 
@@ -63,6 +158,45 @@ export type SyncPanelRosterMutationRequest = {
             */
             canRelease: boolean;
         }[];
+        /**
+         * @type array | undefined
+        */
+        openStops?: {
+            /**
+             * @type string, uuid
+            */
+            stopId: string;
+            /**
+             * @type string, uuid
+            */
+            issueId: string;
+            /**
+             * @type string
+            */
+            kind: StopKind;
+            /**
+             * @type array
+            */
+            resolutions: StopResolution[];
+        }[];
+    }[];
+    /**
+     * @type array | undefined
+    */
+    outcomes?: {
+        /**
+         * @type string, uuid
+        */
+        actionId: string;
+        /**
+         * @type string
+        */
+        status: PanelActionOutcome;
+        /**
+         * @maxLength 80
+         * @type string | undefined
+        */
+        code?: string;
     }[];
 };
 

@@ -4,6 +4,7 @@ import {
 	type PanelCodeRequestRow,
 	type PanelIdentityGroup,
 	type PanelMember,
+	type PanelOpenStop,
 	type PanelSessionRow,
 } from './PanelIdentityStore'
 
@@ -18,10 +19,15 @@ export class MockPanelIdentityStore extends PanelIdentityStore {
 		return [...this.groups.values()].find(group => group.token === token)
 	}
 
-	async replaceMembers(ownerId: string, threadId: string, members: readonly PanelMember[]): Promise<boolean> {
+	async replaceRoster(
+		ownerId: string,
+		threadId: string,
+		roster: { members: readonly PanelMember[]; openStops: readonly PanelOpenStop[] },
+	): Promise<boolean> {
 		const group = this.groups.get(threadId)
 		if (!group || group.ownerId !== ownerId) return false
-		group.members = [...members]
+		group.members = [...roster.members]
+		group.openStops = [...roster.openStops]
 		return true
 	}
 

@@ -8,6 +8,7 @@ import {
 	disableOwner,
 	enableOwner,
 	forgetPanelDevice,
+	getPanelAction,
 	getPanelBoard,
 	getPanelIdentity,
 	getPanelIssue,
@@ -15,6 +16,7 @@ import {
 	health,
 	listPanelMembers,
 	panelPage,
+	requestPanelAction,
 	requestPanelCode,
 	rotatePanelLink,
 	setActiveOwner,
@@ -72,6 +74,10 @@ export class TypescriptCloudClient {
 		return (forgetPanelDevice as (...a: any[]) => ReturnType<typeof forgetPanelDevice>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
+	getPanelAction(...args: Parameters<typeof getPanelAction>): ReturnType<typeof getPanelAction> {
+		return (getPanelAction as (...a: any[]) => ReturnType<typeof getPanelAction>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
 	getPanelBoard(...args: Parameters<typeof getPanelBoard>): ReturnType<typeof getPanelBoard> {
 		return (getPanelBoard as (...a: any[]) => ReturnType<typeof getPanelBoard>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
@@ -98,6 +104,10 @@ export class TypescriptCloudClient {
 
 	panelPage(...args: Parameters<typeof panelPage>): ReturnType<typeof panelPage> {
 		return (panelPage as (...a: any[]) => ReturnType<typeof panelPage>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
+	}
+
+	requestPanelAction(...args: Parameters<typeof requestPanelAction>): ReturnType<typeof requestPanelAction> {
+		return (requestPanelAction as (...a: any[]) => ReturnType<typeof requestPanelAction>)(...args.slice(0, -1), { baseURL: this.config.baseUrl, client: this.config.fetch, ...(args.at(-1) as object | undefined) })
 	}
 
 	requestPanelCode(...args: Parameters<typeof requestPanelCode>): ReturnType<typeof requestPanelCode> {

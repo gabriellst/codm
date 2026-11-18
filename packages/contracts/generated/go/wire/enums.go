@@ -371,11 +371,12 @@ type IssueControlSource string
 const (
 	IssueControlSourceWHATSAPP IssueControlSource = "WHATSAPP"
 	IssueControlSourceCONSOLE IssueControlSource = "CONSOLE"
+	IssueControlSourcePANEL IssueControlSource = "PANEL"
 )
 
 func ParseIssueControlSource(s string) (IssueControlSource, error) {
 	switch IssueControlSource(s) {
-	case IssueControlSourceWHATSAPP, IssueControlSourceCONSOLE:
+	case IssueControlSourceWHATSAPP, IssueControlSourceCONSOLE, IssueControlSourcePANEL:
 		return IssueControlSource(s), nil
 	default:
 		return "", fmt.Errorf("invalid IssueControlSource: %q", s)
@@ -643,6 +644,58 @@ func ParseOwnerKind(s string) (OwnerKind, error) {
 		return OwnerKind(s), nil
 	default:
 		return "", fmt.Errorf("invalid OwnerKind: %q", s)
+	}
+}
+
+type PanelActionKind string
+
+const (
+	PanelActionKindPAUSE PanelActionKind = "PAUSE"
+	PanelActionKindRESUME PanelActionKind = "RESUME"
+	PanelActionKindSTEER PanelActionKind = "STEER"
+	PanelActionKindANSWER_STOP PanelActionKind = "ANSWER_STOP"
+)
+
+func ParsePanelActionKind(s string) (PanelActionKind, error) {
+	switch PanelActionKind(s) {
+	case PanelActionKindPAUSE, PanelActionKindRESUME, PanelActionKindSTEER, PanelActionKindANSWER_STOP:
+		return PanelActionKind(s), nil
+	default:
+		return "", fmt.Errorf("invalid PanelActionKind: %q", s)
+	}
+}
+
+type PanelActionOutcome string
+
+const (
+	PanelActionOutcomeDONE PanelActionOutcome = "DONE"
+	PanelActionOutcomeREFUSED PanelActionOutcome = "REFUSED"
+)
+
+func ParsePanelActionOutcome(s string) (PanelActionOutcome, error) {
+	switch PanelActionOutcome(s) {
+	case PanelActionOutcomeDONE, PanelActionOutcomeREFUSED:
+		return PanelActionOutcome(s), nil
+	default:
+		return "", fmt.Errorf("invalid PanelActionOutcome: %q", s)
+	}
+}
+
+type PanelActionStatus string
+
+const (
+	PanelActionStatusPENDING PanelActionStatus = "PENDING"
+	PanelActionStatusDONE PanelActionStatus = "DONE"
+	PanelActionStatusREFUSED PanelActionStatus = "REFUSED"
+	PanelActionStatusEXPIRED PanelActionStatus = "EXPIRED"
+)
+
+func ParsePanelActionStatus(s string) (PanelActionStatus, error) {
+	switch PanelActionStatus(s) {
+	case PanelActionStatusPENDING, PanelActionStatusDONE, PanelActionStatusREFUSED, PanelActionStatusEXPIRED:
+		return PanelActionStatus(s), nil
+	default:
+		return "", fmt.Errorf("invalid PanelActionStatus: %q", s)
 	}
 }
 

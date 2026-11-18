@@ -43,6 +43,13 @@
       "when": 1794858475832,
       "tag": "0005_tearful_namora",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794960917892,
+      "tag": "0006_melted_dark_phoenix",
+      "breakpoints": true
     }
   ]
 }

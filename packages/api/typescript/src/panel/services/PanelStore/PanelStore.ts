@@ -32,4 +32,6 @@ export abstract class PanelStore {
 	abstract upsertIssues(issues: readonly PanelIssueRow[], tx?: Transaction): Promise<void>
 	abstract touchDaemon(ownerId: string, at: Date, tx?: Transaction): Promise<void>
 	abstract rotateToken(ownerId: string, threadId: string, token: string, tx?: Transaction): Promise<boolean>
+	/** One issue of ONE group as last reported — nothing for an issue of another group or owner. */
+	abstract findIssue(ownerId: string, threadId: string, issueId: string, tx?: Transaction): Promise<PanelIssueRow | undefined>
 }

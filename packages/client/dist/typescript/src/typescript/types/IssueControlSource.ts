@@ -6,7 +6,8 @@
 
 export const IssueControlSourceEnum = {
     WHATSAPP: "WHATSAPP",
-    CONSOLE: "CONSOLE"
+    CONSOLE: "CONSOLE",
+    PANEL: "PANEL"
 } as const;
 
 export type IssueControlSourceEnumKey = (typeof IssueControlSourceEnum)[keyof typeof IssueControlSourceEnum];

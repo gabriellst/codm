@@ -120,6 +120,8 @@ pub mod types {
     ///    "OWNER_ALREADY_DISABLED",
     ///    "OWNER_NOT_DISABLED",
     ///    "OWNER_NOT_FOUND",
+    ///    "PANEL_ACTION_RATE_LIMITED",
+    ///    "PANEL_CANNOT_RELEASE",
     ///    "PANEL_CODE_ATTEMPTS_EXCEEDED",
     ///    "PANEL_CODE_EXPIRED",
     ///    "PANEL_CODE_INVALID",
@@ -127,6 +129,7 @@ pub mod types {
     ///    "PANEL_LINK_UNAVAILABLE",
     ///    "PANEL_MEMBER_NOT_FOUND",
     ///    "PANEL_NOT_FOUND",
+    ///    "PANEL_RESOLUTION_NOT_OFFERED",
     ///    "PARTICIPANT_NOT_FOUND",
     ///    "PASSWORDS_DONT_MATCH",
     ///    "PASSWORD_TOO_WEAK",
@@ -325,6 +328,10 @@ pub mod types {
         OwnerNotDisabled,
         #[serde(rename = "OWNER_NOT_FOUND")]
         OwnerNotFound,
+        #[serde(rename = "PANEL_ACTION_RATE_LIMITED")]
+        PanelActionRateLimited,
+        #[serde(rename = "PANEL_CANNOT_RELEASE")]
+        PanelCannotRelease,
         #[serde(rename = "PANEL_CODE_ATTEMPTS_EXCEEDED")]
         PanelCodeAttemptsExceeded,
         #[serde(rename = "PANEL_CODE_EXPIRED")]
@@ -339,6 +346,8 @@ pub mod types {
         PanelMemberNotFound,
         #[serde(rename = "PANEL_NOT_FOUND")]
         PanelNotFound,
+        #[serde(rename = "PANEL_RESOLUTION_NOT_OFFERED")]
+        PanelResolutionNotOffered,
         #[serde(rename = "PARTICIPANT_NOT_FOUND")]
         ParticipantNotFound,
         #[serde(rename = "PASSWORDS_DONT_MATCH")]
@@ -504,6 +513,8 @@ pub mod types {
                 Self::OwnerAlreadyDisabled => f.write_str("OWNER_ALREADY_DISABLED"),
                 Self::OwnerNotDisabled => f.write_str("OWNER_NOT_DISABLED"),
                 Self::OwnerNotFound => f.write_str("OWNER_NOT_FOUND"),
+                Self::PanelActionRateLimited => f.write_str("PANEL_ACTION_RATE_LIMITED"),
+                Self::PanelCannotRelease => f.write_str("PANEL_CANNOT_RELEASE"),
                 Self::PanelCodeAttemptsExceeded => {
                     f.write_str("PANEL_CODE_ATTEMPTS_EXCEEDED")
                 }
@@ -513,6 +524,9 @@ pub mod types {
                 Self::PanelLinkUnavailable => f.write_str("PANEL_LINK_UNAVAILABLE"),
                 Self::PanelMemberNotFound => f.write_str("PANEL_MEMBER_NOT_FOUND"),
                 Self::PanelNotFound => f.write_str("PANEL_NOT_FOUND"),
+                Self::PanelResolutionNotOffered => {
+                    f.write_str("PANEL_RESOLUTION_NOT_OFFERED")
+                }
                 Self::ParticipantNotFound => f.write_str("PARTICIPANT_NOT_FOUND"),
                 Self::PasswordsDontMatch => f.write_str("PASSWORDS_DONT_MATCH"),
                 Self::PasswordTooWeak => f.write_str("PASSWORD_TOO_WEAK"),
@@ -633,6 +647,8 @@ pub mod types {
                 "OWNER_ALREADY_DISABLED" => Ok(Self::OwnerAlreadyDisabled),
                 "OWNER_NOT_DISABLED" => Ok(Self::OwnerNotDisabled),
                 "OWNER_NOT_FOUND" => Ok(Self::OwnerNotFound),
+                "PANEL_ACTION_RATE_LIMITED" => Ok(Self::PanelActionRateLimited),
+                "PANEL_CANNOT_RELEASE" => Ok(Self::PanelCannotRelease),
                 "PANEL_CODE_ATTEMPTS_EXCEEDED" => Ok(Self::PanelCodeAttemptsExceeded),
                 "PANEL_CODE_EXPIRED" => Ok(Self::PanelCodeExpired),
                 "PANEL_CODE_INVALID" => Ok(Self::PanelCodeInvalid),
@@ -640,6 +656,7 @@ pub mod types {
                 "PANEL_LINK_UNAVAILABLE" => Ok(Self::PanelLinkUnavailable),
                 "PANEL_MEMBER_NOT_FOUND" => Ok(Self::PanelMemberNotFound),
                 "PANEL_NOT_FOUND" => Ok(Self::PanelNotFound),
+                "PANEL_RESOLUTION_NOT_OFFERED" => Ok(Self::PanelResolutionNotOffered),
                 "PARTICIPANT_NOT_FOUND" => Ok(Self::ParticipantNotFound),
                 "PASSWORDS_DONT_MATCH" => Ok(Self::PasswordsDontMatch),
                 "PASSWORD_TOO_WEAK" => Ok(Self::PasswordTooWeak),
@@ -1159,6 +1176,53 @@ pub mod types {
     }
     impl ::std::convert::From<&EnableOwnerResponse> for EnableOwnerResponse {
         fn from(value: &EnableOwnerResponse) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetPanelActionResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "actionId",
+    ///    "kind",
+    ///    "status"
+    ///  ],
+    ///  "properties": {
+    ///    "actionId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
+    ///    "code": {
+    ///      "type": "string"
+    ///    },
+    ///    "kind": {
+    ///      "$ref": "#/components/schemas/PanelActionKind"
+    ///    },
+    ///    "status": {
+    ///      "$ref": "#/components/schemas/PanelActionStatus"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetPanelActionResponse {
+        #[serde(rename = "actionId")]
+        pub action_id: ::uuid::Uuid,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub code: ::std::option::Option<::std::string::String>,
+        pub kind: ::codm_contracts_rust::wire::enums::PanelActionKind,
+        pub status: ::codm_contracts_rust::wire::enums::PanelActionStatus,
+    }
+    impl ::std::convert::From<&GetPanelActionResponse> for GetPanelActionResponse {
+        fn from(value: &GetPanelActionResponse) -> Self {
             value.clone()
         }
     }
@@ -3114,6 +3178,341 @@ pub mod types {
                 .map_err(|e: self::error::ConversionError| {
                     <D::Error as ::serde::de::Error>::custom(e.to_string())
                 })
+        }
+    }
+    ///`RequestPanelActionBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "oneOf": [
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "issueId",
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "issueId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "PAUSE"
+    ///          ]
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "issueId",
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "issueId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "RESUME"
+    ///          ]
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "issueId",
+    ///        "kind",
+    ///        "text"
+    ///      ],
+    ///      "properties": {
+    ///        "issueId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "STEER"
+    ///          ]
+    ///        },
+    ///        "text": {
+    ///          "type": "string",
+    ///          "maxLength": 2000,
+    ///          "minLength": 1
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "issueId",
+    ///        "kind",
+    ///        "resolution",
+    ///        "stopId"
+    ///      ],
+    ///      "properties": {
+    ///        "issueId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "ANSWER_STOP"
+    ///          ]
+    ///        },
+    ///        "resolution": {
+    ///          "$ref": "#/components/schemas/StopResolution"
+    ///        },
+    ///        "stopId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        }
+    ///      }
+    ///    }
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(tag = "kind")]
+    pub enum RequestPanelActionBody {
+        #[serde(rename = "PAUSE")]
+        Pause { #[serde(rename = "issueId")] issue_id: ::uuid::Uuid },
+        #[serde(rename = "RESUME")]
+        Resume { #[serde(rename = "issueId")] issue_id: ::uuid::Uuid },
+        #[serde(rename = "STEER")]
+        Steer {
+            #[serde(rename = "issueId")]
+            issue_id: ::uuid::Uuid,
+            text: RequestPanelActionBodyText,
+        },
+        #[serde(rename = "ANSWER_STOP")]
+        AnswerStop {
+            #[serde(rename = "issueId")]
+            issue_id: ::uuid::Uuid,
+            resolution: ::codm_contracts_rust::wire::enums::StopResolution,
+            #[serde(rename = "stopId")]
+            stop_id: ::uuid::Uuid,
+        },
+    }
+    impl ::std::convert::From<&Self> for RequestPanelActionBody {
+        fn from(value: &RequestPanelActionBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`RequestPanelActionBodyText`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 2000,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct RequestPanelActionBodyText(::std::string::String);
+    impl ::std::ops::Deref for RequestPanelActionBodyText {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<RequestPanelActionBodyText> for ::std::string::String {
+        fn from(value: RequestPanelActionBodyText) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&RequestPanelActionBodyText>
+    for RequestPanelActionBodyText {
+        fn from(value: &RequestPanelActionBodyText) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for RequestPanelActionBodyText {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 2000usize {
+                return Err("longer than 2000 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for RequestPanelActionBodyText {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for RequestPanelActionBodyText {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for RequestPanelActionBodyText {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for RequestPanelActionBodyText {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`RequestPanelActionResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "actionId",
+    ///    "status"
+    ///  ],
+    ///  "properties": {
+    ///    "actionId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
+    ///    "status": {
+    ///      "type": "string",
+    ///      "enum": [
+    ///        "PENDING"
+    ///      ]
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct RequestPanelActionResponse {
+        #[serde(rename = "actionId")]
+        pub action_id: ::uuid::Uuid,
+        pub status: RequestPanelActionResponseStatus,
+    }
+    impl ::std::convert::From<&RequestPanelActionResponse>
+    for RequestPanelActionResponse {
+        fn from(value: &RequestPanelActionResponse) -> Self {
+            value.clone()
+        }
+    }
+    ///`RequestPanelActionResponseStatus`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "enum": [
+    ///    "PENDING"
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(
+        ::serde::Deserialize,
+        ::serde::Serialize,
+        Clone,
+        Copy,
+        Debug,
+        Eq,
+        Hash,
+        Ord,
+        PartialEq,
+        PartialOrd
+    )]
+    pub enum RequestPanelActionResponseStatus {
+        #[serde(rename = "PENDING")]
+        Pending,
+    }
+    impl ::std::convert::From<&Self> for RequestPanelActionResponseStatus {
+        fn from(value: &RequestPanelActionResponseStatus) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::fmt::Display for RequestPanelActionResponseStatus {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            match *self {
+                Self::Pending => f.write_str("PENDING"),
+            }
+        }
+    }
+    impl ::std::str::FromStr for RequestPanelActionResponseStatus {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            match value {
+                "PENDING" => Ok(Self::Pending),
+                _ => Err("invalid value".into()),
+            }
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for RequestPanelActionResponseStatus {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for RequestPanelActionResponseStatus {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for RequestPanelActionResponseStatus {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
         }
     }
     ///`RequestPanelCodeBody`
@@ -5438,6 +5837,41 @@ pub mod types {
     ///            },
     ///            "maxItems": 1024
     ///          },
+    ///          "openStops": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "type": "object",
+    ///              "required": [
+    ///                "issueId",
+    ///                "kind",
+    ///                "resolutions",
+    ///                "stopId"
+    ///              ],
+    ///              "properties": {
+    ///                "issueId": {
+    ///                  "type": "string",
+    ///                  "format": "uuid",
+    ///                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///                },
+    ///                "kind": {
+    ///                  "$ref": "#/components/schemas/StopKind"
+    ///                },
+    ///                "resolutions": {
+    ///                  "type": "array",
+    ///                  "items": {
+    ///                    "$ref": "#/components/schemas/StopResolution"
+    ///                  },
+    ///                  "maxItems": 8
+    ///                },
+    ///                "stopId": {
+    ///                  "type": "string",
+    ///                  "format": "uuid",
+    ///                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///                }
+    ///              }
+    ///            },
+    ///            "maxItems": 200
+    ///          },
     ///          "threadId": {
     ///            "type": "string",
     ///            "format": "uuid",
@@ -5446,6 +5880,31 @@ pub mod types {
     ///        }
     ///      },
     ///      "maxItems": 200
+    ///    },
+    ///    "outcomes": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "actionId",
+    ///          "status"
+    ///        ],
+    ///        "properties": {
+    ///          "actionId": {
+    ///            "type": "string",
+    ///            "format": "uuid",
+    ///            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///          },
+    ///          "code": {
+    ///            "type": "string",
+    ///            "maxLength": 80
+    ///          },
+    ///          "status": {
+    ///            "$ref": "#/components/schemas/PanelActionOutcome"
+    ///          }
+    ///        }
+    ///      },
+    ///      "maxItems": 500
     ///    }
     ///  }
     ///}
@@ -5454,6 +5913,8 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct SyncPanelRosterBody {
         pub groups: ::std::vec::Vec<SyncPanelRosterBodyGroupsItem>,
+        #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+        pub outcomes: ::std::vec::Vec<SyncPanelRosterBodyOutcomesItem>,
     }
     impl ::std::convert::From<&SyncPanelRosterBody> for SyncPanelRosterBody {
         fn from(value: &SyncPanelRosterBody) -> Self {
@@ -5500,6 +5961,41 @@ pub mod types {
     ///      },
     ///      "maxItems": 1024
     ///    },
+    ///    "openStops": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "issueId",
+    ///          "kind",
+    ///          "resolutions",
+    ///          "stopId"
+    ///        ],
+    ///        "properties": {
+    ///          "issueId": {
+    ///            "type": "string",
+    ///            "format": "uuid",
+    ///            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///          },
+    ///          "kind": {
+    ///            "$ref": "#/components/schemas/StopKind"
+    ///          },
+    ///          "resolutions": {
+    ///            "type": "array",
+    ///            "items": {
+    ///              "$ref": "#/components/schemas/StopResolution"
+    ///            },
+    ///            "maxItems": 8
+    ///          },
+    ///          "stopId": {
+    ///            "type": "string",
+    ///            "format": "uuid",
+    ///            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///          }
+    ///        }
+    ///      },
+    ///      "maxItems": 200
+    ///    },
     ///    "threadId": {
     ///      "type": "string",
     ///      "format": "uuid",
@@ -5512,6 +6008,12 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct SyncPanelRosterBodyGroupsItem {
         pub members: ::std::vec::Vec<SyncPanelRosterBodyGroupsItemMembersItem>,
+        #[serde(
+            rename = "openStops",
+            default,
+            skip_serializing_if = "::std::vec::Vec::is_empty"
+        )]
+        pub open_stops: ::std::vec::Vec<SyncPanelRosterBodyGroupsItemOpenStopsItem>,
         #[serde(rename = "threadId")]
         pub thread_id: ::uuid::Uuid,
     }
@@ -5745,6 +6247,184 @@ pub mod types {
                 })
         }
     }
+    ///`SyncPanelRosterBodyGroupsItemOpenStopsItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "issueId",
+    ///    "kind",
+    ///    "resolutions",
+    ///    "stopId"
+    ///  ],
+    ///  "properties": {
+    ///    "issueId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
+    ///    "kind": {
+    ///      "$ref": "#/components/schemas/StopKind"
+    ///    },
+    ///    "resolutions": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "$ref": "#/components/schemas/StopResolution"
+    ///      },
+    ///      "maxItems": 8
+    ///    },
+    ///    "stopId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct SyncPanelRosterBodyGroupsItemOpenStopsItem {
+        #[serde(rename = "issueId")]
+        pub issue_id: ::uuid::Uuid,
+        pub kind: ::codm_contracts_rust::wire::enums::StopKind,
+        pub resolutions: ::std::vec::Vec<
+            ::codm_contracts_rust::wire::enums::StopResolution,
+        >,
+        #[serde(rename = "stopId")]
+        pub stop_id: ::uuid::Uuid,
+    }
+    impl ::std::convert::From<&SyncPanelRosterBodyGroupsItemOpenStopsItem>
+    for SyncPanelRosterBodyGroupsItemOpenStopsItem {
+        fn from(value: &SyncPanelRosterBodyGroupsItemOpenStopsItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`SyncPanelRosterBodyOutcomesItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "actionId",
+    ///    "status"
+    ///  ],
+    ///  "properties": {
+    ///    "actionId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
+    ///    "code": {
+    ///      "type": "string",
+    ///      "maxLength": 80
+    ///    },
+    ///    "status": {
+    ///      "$ref": "#/components/schemas/PanelActionOutcome"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct SyncPanelRosterBodyOutcomesItem {
+        #[serde(rename = "actionId")]
+        pub action_id: ::uuid::Uuid,
+        #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+        pub code: ::std::option::Option<SyncPanelRosterBodyOutcomesItemCode>,
+        pub status: ::codm_contracts_rust::wire::enums::PanelActionOutcome,
+    }
+    impl ::std::convert::From<&SyncPanelRosterBodyOutcomesItem>
+    for SyncPanelRosterBodyOutcomesItem {
+        fn from(value: &SyncPanelRosterBodyOutcomesItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`SyncPanelRosterBodyOutcomesItemCode`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 80
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct SyncPanelRosterBodyOutcomesItemCode(::std::string::String);
+    impl ::std::ops::Deref for SyncPanelRosterBodyOutcomesItemCode {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<SyncPanelRosterBodyOutcomesItemCode>
+    for ::std::string::String {
+        fn from(value: SyncPanelRosterBodyOutcomesItemCode) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&SyncPanelRosterBodyOutcomesItemCode>
+    for SyncPanelRosterBodyOutcomesItemCode {
+        fn from(value: &SyncPanelRosterBodyOutcomesItemCode) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for SyncPanelRosterBodyOutcomesItemCode {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 80usize {
+                return Err("longer than 80 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for SyncPanelRosterBodyOutcomesItemCode {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for SyncPanelRosterBodyOutcomesItemCode {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for SyncPanelRosterBodyOutcomesItemCode {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for SyncPanelRosterBodyOutcomesItemCode {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
     ///`SyncPanelRosterResponse`
     ///
     /// <details><summary>JSON schema</summary>
@@ -5753,9 +6433,142 @@ pub mod types {
     ///{
     ///  "type": "object",
     ///  "required": [
+    ///    "actions",
     ///    "deliveries"
     ///  ],
     ///  "properties": {
+    ///    "actions": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "object",
+    ///        "required": [
+    ///          "action",
+    ///          "actionId",
+    ///          "memberId",
+    ///          "threadId"
+    ///        ],
+    ///        "properties": {
+    ///          "action": {
+    ///            "oneOf": [
+    ///              {
+    ///                "type": "object",
+    ///                "required": [
+    ///                  "issueId",
+    ///                  "kind"
+    ///                ],
+    ///                "properties": {
+    ///                  "issueId": {
+    ///                    "type": "string",
+    ///                    "format": "uuid",
+    ///                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///                  },
+    ///                  "kind": {
+    ///                    "type": "string",
+    ///                    "enum": [
+    ///                      "PAUSE"
+    ///                    ]
+    ///                  }
+    ///                },
+    ///                "additionalProperties": false
+    ///              },
+    ///              {
+    ///                "type": "object",
+    ///                "required": [
+    ///                  "issueId",
+    ///                  "kind"
+    ///                ],
+    ///                "properties": {
+    ///                  "issueId": {
+    ///                    "type": "string",
+    ///                    "format": "uuid",
+    ///                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///                  },
+    ///                  "kind": {
+    ///                    "type": "string",
+    ///                    "enum": [
+    ///                      "RESUME"
+    ///                    ]
+    ///                  }
+    ///                },
+    ///                "additionalProperties": false
+    ///              },
+    ///              {
+    ///                "type": "object",
+    ///                "required": [
+    ///                  "issueId",
+    ///                  "kind",
+    ///                  "text"
+    ///                ],
+    ///                "properties": {
+    ///                  "issueId": {
+    ///                    "type": "string",
+    ///                    "format": "uuid",
+    ///                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///                  },
+    ///                  "kind": {
+    ///                    "type": "string",
+    ///                    "enum": [
+    ///                      "STEER"
+    ///                    ]
+    ///                  },
+    ///                  "text": {
+    ///                    "type": "string",
+    ///                    "maxLength": 2000,
+    ///                    "minLength": 1
+    ///                  }
+    ///                },
+    ///                "additionalProperties": false
+    ///              },
+    ///              {
+    ///                "type": "object",
+    ///                "required": [
+    ///                  "issueId",
+    ///                  "kind",
+    ///                  "resolution",
+    ///                  "stopId"
+    ///                ],
+    ///                "properties": {
+    ///                  "issueId": {
+    ///                    "type": "string",
+    ///                    "format": "uuid",
+    ///                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///                  },
+    ///                  "kind": {
+    ///                    "type": "string",
+    ///                    "enum": [
+    ///                      "ANSWER_STOP"
+    ///                    ]
+    ///                  },
+    ///                  "resolution": {
+    ///                    "$ref": "#/components/schemas/StopResolution"
+    ///                  },
+    ///                  "stopId": {
+    ///                    "type": "string",
+    ///                    "format": "uuid",
+    ///                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///                  }
+    ///                },
+    ///                "additionalProperties": false
+    ///              }
+    ///            ]
+    ///          },
+    ///          "actionId": {
+    ///            "type": "string",
+    ///            "format": "uuid",
+    ///            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///          },
+    ///          "memberId": {
+    ///            "type": "string"
+    ///          },
+    ///          "threadId": {
+    ///            "type": "string",
+    ///            "format": "uuid",
+    ///            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///          }
+    ///        },
+    ///        "additionalProperties": false
+    ///      }
+    ///    },
     ///    "deliveries": {
     ///      "type": "array",
     ///      "items": {
@@ -5796,11 +6609,389 @@ pub mod types {
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     #[serde(deny_unknown_fields)]
     pub struct SyncPanelRosterResponse {
+        pub actions: ::std::vec::Vec<SyncPanelRosterResponseActionsItem>,
         pub deliveries: ::std::vec::Vec<SyncPanelRosterResponseDeliveriesItem>,
     }
     impl ::std::convert::From<&SyncPanelRosterResponse> for SyncPanelRosterResponse {
         fn from(value: &SyncPanelRosterResponse) -> Self {
             value.clone()
+        }
+    }
+    ///`SyncPanelRosterResponseActionsItem`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "action",
+    ///    "actionId",
+    ///    "memberId",
+    ///    "threadId"
+    ///  ],
+    ///  "properties": {
+    ///    "action": {
+    ///      "oneOf": [
+    ///        {
+    ///          "type": "object",
+    ///          "required": [
+    ///            "issueId",
+    ///            "kind"
+    ///          ],
+    ///          "properties": {
+    ///            "issueId": {
+    ///              "type": "string",
+    ///              "format": "uuid",
+    ///              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///            },
+    ///            "kind": {
+    ///              "type": "string",
+    ///              "enum": [
+    ///                "PAUSE"
+    ///              ]
+    ///            }
+    ///          },
+    ///          "additionalProperties": false
+    ///        },
+    ///        {
+    ///          "type": "object",
+    ///          "required": [
+    ///            "issueId",
+    ///            "kind"
+    ///          ],
+    ///          "properties": {
+    ///            "issueId": {
+    ///              "type": "string",
+    ///              "format": "uuid",
+    ///              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///            },
+    ///            "kind": {
+    ///              "type": "string",
+    ///              "enum": [
+    ///                "RESUME"
+    ///              ]
+    ///            }
+    ///          },
+    ///          "additionalProperties": false
+    ///        },
+    ///        {
+    ///          "type": "object",
+    ///          "required": [
+    ///            "issueId",
+    ///            "kind",
+    ///            "text"
+    ///          ],
+    ///          "properties": {
+    ///            "issueId": {
+    ///              "type": "string",
+    ///              "format": "uuid",
+    ///              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///            },
+    ///            "kind": {
+    ///              "type": "string",
+    ///              "enum": [
+    ///                "STEER"
+    ///              ]
+    ///            },
+    ///            "text": {
+    ///              "type": "string",
+    ///              "maxLength": 2000,
+    ///              "minLength": 1
+    ///            }
+    ///          },
+    ///          "additionalProperties": false
+    ///        },
+    ///        {
+    ///          "type": "object",
+    ///          "required": [
+    ///            "issueId",
+    ///            "kind",
+    ///            "resolution",
+    ///            "stopId"
+    ///          ],
+    ///          "properties": {
+    ///            "issueId": {
+    ///              "type": "string",
+    ///              "format": "uuid",
+    ///              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///            },
+    ///            "kind": {
+    ///              "type": "string",
+    ///              "enum": [
+    ///                "ANSWER_STOP"
+    ///              ]
+    ///            },
+    ///            "resolution": {
+    ///              "$ref": "#/components/schemas/StopResolution"
+    ///            },
+    ///            "stopId": {
+    ///              "type": "string",
+    ///              "format": "uuid",
+    ///              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///            }
+    ///          },
+    ///          "additionalProperties": false
+    ///        }
+    ///      ]
+    ///    },
+    ///    "actionId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
+    ///    "memberId": {
+    ///      "type": "string"
+    ///    },
+    ///    "threadId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct SyncPanelRosterResponseActionsItem {
+        pub action: SyncPanelRosterResponseActionsItemAction,
+        #[serde(rename = "actionId")]
+        pub action_id: ::uuid::Uuid,
+        #[serde(rename = "memberId")]
+        pub member_id: ::std::string::String,
+        #[serde(rename = "threadId")]
+        pub thread_id: ::uuid::Uuid,
+    }
+    impl ::std::convert::From<&SyncPanelRosterResponseActionsItem>
+    for SyncPanelRosterResponseActionsItem {
+        fn from(value: &SyncPanelRosterResponseActionsItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`SyncPanelRosterResponseActionsItemAction`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "oneOf": [
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "issueId",
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "issueId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "PAUSE"
+    ///          ]
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "issueId",
+    ///        "kind"
+    ///      ],
+    ///      "properties": {
+    ///        "issueId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "RESUME"
+    ///          ]
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "issueId",
+    ///        "kind",
+    ///        "text"
+    ///      ],
+    ///      "properties": {
+    ///        "issueId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "STEER"
+    ///          ]
+    ///        },
+    ///        "text": {
+    ///          "type": "string",
+    ///          "maxLength": 2000,
+    ///          "minLength": 1
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "issueId",
+    ///        "kind",
+    ///        "resolution",
+    ///        "stopId"
+    ///      ],
+    ///      "properties": {
+    ///        "issueId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        },
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "ANSWER_STOP"
+    ///          ]
+    ///        },
+    ///        "resolution": {
+    ///          "$ref": "#/components/schemas/StopResolution"
+    ///        },
+    ///        "stopId": {
+    ///          "type": "string",
+    ///          "format": "uuid",
+    ///          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///        }
+    ///      },
+    ///      "additionalProperties": false
+    ///    }
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(tag = "kind", deny_unknown_fields)]
+    pub enum SyncPanelRosterResponseActionsItemAction {
+        #[serde(rename = "PAUSE")]
+        Pause { #[serde(rename = "issueId")] issue_id: ::uuid::Uuid },
+        #[serde(rename = "RESUME")]
+        Resume { #[serde(rename = "issueId")] issue_id: ::uuid::Uuid },
+        #[serde(rename = "STEER")]
+        Steer {
+            #[serde(rename = "issueId")]
+            issue_id: ::uuid::Uuid,
+            text: SyncPanelRosterResponseActionsItemActionText,
+        },
+        #[serde(rename = "ANSWER_STOP")]
+        AnswerStop {
+            #[serde(rename = "issueId")]
+            issue_id: ::uuid::Uuid,
+            resolution: ::codm_contracts_rust::wire::enums::StopResolution,
+            #[serde(rename = "stopId")]
+            stop_id: ::uuid::Uuid,
+        },
+    }
+    impl ::std::convert::From<&Self> for SyncPanelRosterResponseActionsItemAction {
+        fn from(value: &SyncPanelRosterResponseActionsItemAction) -> Self {
+            value.clone()
+        }
+    }
+    ///`SyncPanelRosterResponseActionsItemActionText`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 2000,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct SyncPanelRosterResponseActionsItemActionText(::std::string::String);
+    impl ::std::ops::Deref for SyncPanelRosterResponseActionsItemActionText {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<SyncPanelRosterResponseActionsItemActionText>
+    for ::std::string::String {
+        fn from(value: SyncPanelRosterResponseActionsItemActionText) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&SyncPanelRosterResponseActionsItemActionText>
+    for SyncPanelRosterResponseActionsItemActionText {
+        fn from(value: &SyncPanelRosterResponseActionsItemActionText) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for SyncPanelRosterResponseActionsItemActionText {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 2000usize {
+                return Err("longer than 2000 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for SyncPanelRosterResponseActionsItemActionText {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String>
+    for SyncPanelRosterResponseActionsItemActionText {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String>
+    for SyncPanelRosterResponseActionsItemActionText {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de>
+    for SyncPanelRosterResponseActionsItemActionText {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
         }
     }
     ///`SyncPanelRosterResponseDeliveriesItem`
@@ -7051,6 +8242,80 @@ Sends a `GET` request to `/panel/g/{token}`
     ) -> Result<ResponseValue<::std::string::String>, Error<()>> {
         let url = format!(
             "{}/panel/g/{}", self.baseurl, encode_path(& token.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .get(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Ask, as the identified member, for an action on one of the group's issues (public, device cookie)
+
+Sends a `POST` request to `/panel/g/{token}/actions`
+
+*/
+    pub async fn request_panel_action<'a>(
+        &'a self,
+        token: &'a str,
+        body: &'a types::RequestPanelActionBody,
+    ) -> Result<ResponseValue<types::RequestPanelActionResponse>, Error<()>> {
+        let url = format!(
+            "{}/panel/g/{}/actions", self.baseurl, encode_path(& token.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Where a panel action stands — pending, done, refused or expired (public, device cookie)
+
+Sends a `GET` request to `/panel/g/{token}/actions/{actionId}`
+
+*/
+    pub async fn get_panel_action<'a>(
+        &'a self,
+        token: &'a str,
+        action_id: &'a str,
+    ) -> Result<ResponseValue<types::GetPanelActionResponse>, Error<()>> {
+        let url = format!(
+            "{}/panel/g/{}/actions/{}", self.baseurl, encode_path(& token.to_string()),
+            encode_path(& action_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map

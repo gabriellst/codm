@@ -95,6 +95,8 @@ const (
 	OWNERALREADYDISABLED            ApiErrors = "OWNER_ALREADY_DISABLED"
 	OWNERNOTDISABLED                ApiErrors = "OWNER_NOT_DISABLED"
 	OWNERNOTFOUND                   ApiErrors = "OWNER_NOT_FOUND"
+	PANELACTIONRATELIMITED          ApiErrors = "PANEL_ACTION_RATE_LIMITED"
+	PANELCANNOTRELEASE              ApiErrors = "PANEL_CANNOT_RELEASE"
 	PANELCODEATTEMPTSEXCEEDED       ApiErrors = "PANEL_CODE_ATTEMPTS_EXCEEDED"
 	PANELCODEEXPIRED                ApiErrors = "PANEL_CODE_EXPIRED"
 	PANELCODEINVALID                ApiErrors = "PANEL_CODE_INVALID"
@@ -102,6 +104,7 @@ const (
 	PANELLINKUNAVAILABLE            ApiErrors = "PANEL_LINK_UNAVAILABLE"
 	PANELMEMBERNOTFOUND             ApiErrors = "PANEL_MEMBER_NOT_FOUND"
 	PANELNOTFOUND                   ApiErrors = "PANEL_NOT_FOUND"
+	PANELRESOLUTIONNOTOFFERED       ApiErrors = "PANEL_RESOLUTION_NOT_OFFERED"
 	PARTICIPANTNOTFOUND             ApiErrors = "PARTICIPANT_NOT_FOUND"
 	PASSWORDSDONTMATCH              ApiErrors = "PASSWORDS_DONT_MATCH"
 	PASSWORDTOOWEAK                 ApiErrors = "PASSWORD_TOO_WEAK"
@@ -288,6 +291,10 @@ func (e ApiErrors) Valid() bool {
 		return true
 	case OWNERNOTFOUND:
 		return true
+	case PANELACTIONRATELIMITED:
+		return true
+	case PANELCANNOTRELEASE:
+		return true
 	case PANELCODEATTEMPTSEXCEEDED:
 		return true
 	case PANELCODEEXPIRED:
@@ -301,6 +308,8 @@ func (e ApiErrors) Valid() bool {
 	case PANELMEMBERNOTFOUND:
 		return true
 	case PANELNOTFOUND:
+		return true
+	case PANELRESOLUTIONNOTOFFERED:
 		return true
 	case PARTICIPANTNOTFOUND:
 		return true
@@ -427,6 +436,7 @@ func (e ClassificationMethod) Valid() bool {
 // Defines values for IssueControlSource.
 const (
 	CONSOLE  IssueControlSource = "CONSOLE"
+	PANEL    IssueControlSource = "PANEL"
 	WHATSAPP IssueControlSource = "WHATSAPP"
 )
 
@@ -434,6 +444,8 @@ const (
 func (e IssueControlSource) Valid() bool {
 	switch e {
 	case CONSOLE:
+		return true
+	case PANEL:
 		return true
 	case WHATSAPP:
 		return true
@@ -574,6 +586,72 @@ func (e OwnerKind) Valid() bool {
 	case INDIVIDUAL:
 		return true
 	case ORGANIZATION:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PanelActionKind.
+const (
+	ANSWERSTOP PanelActionKind = "ANSWER_STOP"
+	PAUSE      PanelActionKind = "PAUSE"
+	RESUME     PanelActionKind = "RESUME"
+	STEER      PanelActionKind = "STEER"
+)
+
+// Valid indicates whether the value is a known member of the PanelActionKind enum.
+func (e PanelActionKind) Valid() bool {
+	switch e {
+	case ANSWERSTOP:
+		return true
+	case PAUSE:
+		return true
+	case RESUME:
+		return true
+	case STEER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PanelActionOutcome.
+const (
+	PanelActionOutcomeDONE    PanelActionOutcome = "DONE"
+	PanelActionOutcomeREFUSED PanelActionOutcome = "REFUSED"
+)
+
+// Valid indicates whether the value is a known member of the PanelActionOutcome enum.
+func (e PanelActionOutcome) Valid() bool {
+	switch e {
+	case PanelActionOutcomeDONE:
+		return true
+	case PanelActionOutcomeREFUSED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PanelActionStatus.
+const (
+	PanelActionStatusDONE    PanelActionStatus = "DONE"
+	PanelActionStatusEXPIRED PanelActionStatus = "EXPIRED"
+	PanelActionStatusPENDING PanelActionStatus = "PENDING"
+	PanelActionStatusREFUSED PanelActionStatus = "REFUSED"
+)
+
+// Valid indicates whether the value is a known member of the PanelActionStatus enum.
+func (e PanelActionStatus) Valid() bool {
+	switch e {
+	case PanelActionStatusDONE:
+		return true
+	case PanelActionStatusEXPIRED:
+		return true
+	case PanelActionStatusPENDING:
+		return true
+	case PanelActionStatusREFUSED:
 		return true
 	default:
 		return false
@@ -745,6 +823,15 @@ type Language string
 // OwnerKind defines model for OwnerKind.
 type OwnerKind string
 
+// PanelActionKind defines model for PanelActionKind.
+type PanelActionKind string
+
+// PanelActionOutcome defines model for PanelActionOutcome.
+type PanelActionOutcome string
+
+// PanelActionStatus defines model for PanelActionStatus.
+type PanelActionStatus string
+
 // SocialProvider defines model for SocialProvider.
 type SocialProvider string
 
@@ -786,6 +873,38 @@ type UpdateOwnerSettingsJSONBody struct {
 	Name       *string                   `json:"name,omitempty"`
 	PictureUrl nullable.Nullable[string] `json:"pictureUrl,omitempty"`
 	Timezone   *string                   `json:"timezone,omitempty"`
+}
+
+// RequestPanelActionJSONBody defines parameters for RequestPanelAction.
+type RequestPanelActionJSONBody struct {
+	union json.RawMessage
+}
+
+// RequestPanelActionJSONBody0 defines parameters for RequestPanelAction.
+type RequestPanelActionJSONBody0 struct {
+	IssueId openapi_types.UUID `json:"issueId"`
+	Kind    string             `json:"kind"`
+}
+
+// RequestPanelActionJSONBody1 defines parameters for RequestPanelAction.
+type RequestPanelActionJSONBody1 struct {
+	IssueId openapi_types.UUID `json:"issueId"`
+	Kind    string             `json:"kind"`
+}
+
+// RequestPanelActionJSONBody2 defines parameters for RequestPanelAction.
+type RequestPanelActionJSONBody2 struct {
+	IssueId openapi_types.UUID `json:"issueId"`
+	Kind    string             `json:"kind"`
+	Text    string             `json:"text"`
+}
+
+// RequestPanelActionJSONBody3 defines parameters for RequestPanelAction.
+type RequestPanelActionJSONBody3 struct {
+	IssueId    openapi_types.UUID `json:"issueId"`
+	Kind       string             `json:"kind"`
+	Resolution StopResolution     `json:"resolution"`
+	StopId     openapi_types.UUID `json:"stopId"`
 }
 
 // RequestPanelCodeJSONBody defines parameters for RequestPanelCode.
@@ -910,8 +1029,51 @@ type SyncPanelRosterJSONBody struct {
 			MemberId   string `json:"memberId"`
 			Name       string `json:"name"`
 		} `json:"members"`
+		OpenStops *[]struct {
+			IssueId     openapi_types.UUID `json:"issueId"`
+			Kind        StopKind           `json:"kind"`
+			Resolutions []StopResolution   `json:"resolutions"`
+			StopId      openapi_types.UUID `json:"stopId"`
+		} `json:"openStops,omitempty"`
 		ThreadId openapi_types.UUID `json:"threadId"`
 	} `json:"groups"`
+	Outcomes *[]struct {
+		ActionId openapi_types.UUID `json:"actionId"`
+		Code     *string            `json:"code,omitempty"`
+		Status   PanelActionOutcome `json:"status"`
+	} `json:"outcomes,omitempty"`
+}
+
+// SyncPanelRoster200JSONResponseBodyActionsAction0 defines parameters for SyncPanelRoster.
+type SyncPanelRoster200JSONResponseBodyActionsAction0 struct {
+	IssueId openapi_types.UUID `json:"issueId"`
+	Kind    string             `json:"kind"`
+}
+
+// SyncPanelRoster200JSONResponseBodyActionsAction1 defines parameters for SyncPanelRoster.
+type SyncPanelRoster200JSONResponseBodyActionsAction1 struct {
+	IssueId openapi_types.UUID `json:"issueId"`
+	Kind    string             `json:"kind"`
+}
+
+// SyncPanelRoster200JSONResponseBodyActionsAction2 defines parameters for SyncPanelRoster.
+type SyncPanelRoster200JSONResponseBodyActionsAction2 struct {
+	IssueId openapi_types.UUID `json:"issueId"`
+	Kind    string             `json:"kind"`
+	Text    string             `json:"text"`
+}
+
+// SyncPanelRoster200JSONResponseBodyActionsAction3 defines parameters for SyncPanelRoster.
+type SyncPanelRoster200JSONResponseBodyActionsAction3 struct {
+	IssueId    openapi_types.UUID `json:"issueId"`
+	Kind       string             `json:"kind"`
+	Resolution StopResolution     `json:"resolution"`
+	StopId     openapi_types.UUID `json:"stopId"`
+}
+
+// SyncPanelRoster200JSONResponseBody_Actions_Action defines parameters for SyncPanelRoster.
+type SyncPanelRoster200JSONResponseBody_Actions_Action struct {
+	union json.RawMessage
 }
 
 // SyncPanelJSONBody defines parameters for SyncPanel.
@@ -1062,6 +1224,9 @@ type DisableOwnerJSONRequestBody DisableOwnerJSONBody
 // UpdateOwnerSettingsJSONRequestBody defines body for UpdateOwnerSettings for application/json ContentType.
 type UpdateOwnerSettingsJSONRequestBody UpdateOwnerSettingsJSONBody
 
+// RequestPanelActionJSONRequestBody defines body for RequestPanelAction for application/json ContentType.
+type RequestPanelActionJSONRequestBody RequestPanelActionJSONBody
+
 // RequestPanelCodeJSONRequestBody defines body for RequestPanelCode for application/json ContentType.
 type RequestPanelCodeJSONRequestBody RequestPanelCodeJSONBody
 
@@ -1076,6 +1241,120 @@ type SyncPanelJSONRequestBody SyncPanelJSONBody
 
 // SetCloudTokenJSONRequestBody defines body for SetCloudToken for application/json ContentType.
 type SetCloudTokenJSONRequestBody SetCloudTokenJSONBody
+
+// AsRequestPanelActionJSONBody0 returns the union data inside the RequestPanelActionJSONBody as a RequestPanelActionJSONBody0
+func (t RequestPanelActionJSONBody) AsRequestPanelActionJSONBody0() (RequestPanelActionJSONBody0, error) {
+	var body RequestPanelActionJSONBody0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRequestPanelActionJSONBody0 overwrites any union data inside the RequestPanelActionJSONBody as the provided RequestPanelActionJSONBody0
+func (t *RequestPanelActionJSONBody) FromRequestPanelActionJSONBody0(v RequestPanelActionJSONBody0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeRequestPanelActionJSONBody0 performs a merge with any union data inside the RequestPanelActionJSONBody, using the provided RequestPanelActionJSONBody0
+func (t *RequestPanelActionJSONBody) MergeRequestPanelActionJSONBody0(v RequestPanelActionJSONBody0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRequestPanelActionJSONBody1 returns the union data inside the RequestPanelActionJSONBody as a RequestPanelActionJSONBody1
+func (t RequestPanelActionJSONBody) AsRequestPanelActionJSONBody1() (RequestPanelActionJSONBody1, error) {
+	var body RequestPanelActionJSONBody1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRequestPanelActionJSONBody1 overwrites any union data inside the RequestPanelActionJSONBody as the provided RequestPanelActionJSONBody1
+func (t *RequestPanelActionJSONBody) FromRequestPanelActionJSONBody1(v RequestPanelActionJSONBody1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeRequestPanelActionJSONBody1 performs a merge with any union data inside the RequestPanelActionJSONBody, using the provided RequestPanelActionJSONBody1
+func (t *RequestPanelActionJSONBody) MergeRequestPanelActionJSONBody1(v RequestPanelActionJSONBody1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRequestPanelActionJSONBody2 returns the union data inside the RequestPanelActionJSONBody as a RequestPanelActionJSONBody2
+func (t RequestPanelActionJSONBody) AsRequestPanelActionJSONBody2() (RequestPanelActionJSONBody2, error) {
+	var body RequestPanelActionJSONBody2
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRequestPanelActionJSONBody2 overwrites any union data inside the RequestPanelActionJSONBody as the provided RequestPanelActionJSONBody2
+func (t *RequestPanelActionJSONBody) FromRequestPanelActionJSONBody2(v RequestPanelActionJSONBody2) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeRequestPanelActionJSONBody2 performs a merge with any union data inside the RequestPanelActionJSONBody, using the provided RequestPanelActionJSONBody2
+func (t *RequestPanelActionJSONBody) MergeRequestPanelActionJSONBody2(v RequestPanelActionJSONBody2) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsRequestPanelActionJSONBody3 returns the union data inside the RequestPanelActionJSONBody as a RequestPanelActionJSONBody3
+func (t RequestPanelActionJSONBody) AsRequestPanelActionJSONBody3() (RequestPanelActionJSONBody3, error) {
+	var body RequestPanelActionJSONBody3
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromRequestPanelActionJSONBody3 overwrites any union data inside the RequestPanelActionJSONBody as the provided RequestPanelActionJSONBody3
+func (t *RequestPanelActionJSONBody) FromRequestPanelActionJSONBody3(v RequestPanelActionJSONBody3) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeRequestPanelActionJSONBody3 performs a merge with any union data inside the RequestPanelActionJSONBody, using the provided RequestPanelActionJSONBody3
+func (t *RequestPanelActionJSONBody) MergeRequestPanelActionJSONBody3(v RequestPanelActionJSONBody3) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t RequestPanelActionJSONBody) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *RequestPanelActionJSONBody) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
 
 // AsGetPanelIssue200JSONResponseBodyTimeline0 returns the union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item as a GetPanelIssue200JSONResponseBodyTimeline0
 func (t GetPanelIssue200JSONResponseBody_Timeline_Item) AsGetPanelIssue200JSONResponseBodyTimeline0() (GetPanelIssue200JSONResponseBodyTimeline0, error) {
@@ -1369,6 +1648,120 @@ func (t GetPanelIssue200JSONResponseBody_Timeline_Item) MarshalJSON() ([]byte, e
 }
 
 func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsSyncPanelRoster200JSONResponseBodyActionsAction0 returns the union data inside the SyncPanelRoster200JSONResponseBody_Actions_Action as a SyncPanelRoster200JSONResponseBodyActionsAction0
+func (t SyncPanelRoster200JSONResponseBody_Actions_Action) AsSyncPanelRoster200JSONResponseBodyActionsAction0() (SyncPanelRoster200JSONResponseBodyActionsAction0, error) {
+	var body SyncPanelRoster200JSONResponseBodyActionsAction0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSyncPanelRoster200JSONResponseBodyActionsAction0 overwrites any union data inside the SyncPanelRoster200JSONResponseBody_Actions_Action as the provided SyncPanelRoster200JSONResponseBodyActionsAction0
+func (t *SyncPanelRoster200JSONResponseBody_Actions_Action) FromSyncPanelRoster200JSONResponseBodyActionsAction0(v SyncPanelRoster200JSONResponseBodyActionsAction0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSyncPanelRoster200JSONResponseBodyActionsAction0 performs a merge with any union data inside the SyncPanelRoster200JSONResponseBody_Actions_Action, using the provided SyncPanelRoster200JSONResponseBodyActionsAction0
+func (t *SyncPanelRoster200JSONResponseBody_Actions_Action) MergeSyncPanelRoster200JSONResponseBodyActionsAction0(v SyncPanelRoster200JSONResponseBodyActionsAction0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSyncPanelRoster200JSONResponseBodyActionsAction1 returns the union data inside the SyncPanelRoster200JSONResponseBody_Actions_Action as a SyncPanelRoster200JSONResponseBodyActionsAction1
+func (t SyncPanelRoster200JSONResponseBody_Actions_Action) AsSyncPanelRoster200JSONResponseBodyActionsAction1() (SyncPanelRoster200JSONResponseBodyActionsAction1, error) {
+	var body SyncPanelRoster200JSONResponseBodyActionsAction1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSyncPanelRoster200JSONResponseBodyActionsAction1 overwrites any union data inside the SyncPanelRoster200JSONResponseBody_Actions_Action as the provided SyncPanelRoster200JSONResponseBodyActionsAction1
+func (t *SyncPanelRoster200JSONResponseBody_Actions_Action) FromSyncPanelRoster200JSONResponseBodyActionsAction1(v SyncPanelRoster200JSONResponseBodyActionsAction1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSyncPanelRoster200JSONResponseBodyActionsAction1 performs a merge with any union data inside the SyncPanelRoster200JSONResponseBody_Actions_Action, using the provided SyncPanelRoster200JSONResponseBodyActionsAction1
+func (t *SyncPanelRoster200JSONResponseBody_Actions_Action) MergeSyncPanelRoster200JSONResponseBodyActionsAction1(v SyncPanelRoster200JSONResponseBodyActionsAction1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSyncPanelRoster200JSONResponseBodyActionsAction2 returns the union data inside the SyncPanelRoster200JSONResponseBody_Actions_Action as a SyncPanelRoster200JSONResponseBodyActionsAction2
+func (t SyncPanelRoster200JSONResponseBody_Actions_Action) AsSyncPanelRoster200JSONResponseBodyActionsAction2() (SyncPanelRoster200JSONResponseBodyActionsAction2, error) {
+	var body SyncPanelRoster200JSONResponseBodyActionsAction2
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSyncPanelRoster200JSONResponseBodyActionsAction2 overwrites any union data inside the SyncPanelRoster200JSONResponseBody_Actions_Action as the provided SyncPanelRoster200JSONResponseBodyActionsAction2
+func (t *SyncPanelRoster200JSONResponseBody_Actions_Action) FromSyncPanelRoster200JSONResponseBodyActionsAction2(v SyncPanelRoster200JSONResponseBodyActionsAction2) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSyncPanelRoster200JSONResponseBodyActionsAction2 performs a merge with any union data inside the SyncPanelRoster200JSONResponseBody_Actions_Action, using the provided SyncPanelRoster200JSONResponseBodyActionsAction2
+func (t *SyncPanelRoster200JSONResponseBody_Actions_Action) MergeSyncPanelRoster200JSONResponseBodyActionsAction2(v SyncPanelRoster200JSONResponseBodyActionsAction2) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSyncPanelRoster200JSONResponseBodyActionsAction3 returns the union data inside the SyncPanelRoster200JSONResponseBody_Actions_Action as a SyncPanelRoster200JSONResponseBodyActionsAction3
+func (t SyncPanelRoster200JSONResponseBody_Actions_Action) AsSyncPanelRoster200JSONResponseBodyActionsAction3() (SyncPanelRoster200JSONResponseBodyActionsAction3, error) {
+	var body SyncPanelRoster200JSONResponseBodyActionsAction3
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSyncPanelRoster200JSONResponseBodyActionsAction3 overwrites any union data inside the SyncPanelRoster200JSONResponseBody_Actions_Action as the provided SyncPanelRoster200JSONResponseBodyActionsAction3
+func (t *SyncPanelRoster200JSONResponseBody_Actions_Action) FromSyncPanelRoster200JSONResponseBodyActionsAction3(v SyncPanelRoster200JSONResponseBodyActionsAction3) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSyncPanelRoster200JSONResponseBodyActionsAction3 performs a merge with any union data inside the SyncPanelRoster200JSONResponseBody_Actions_Action, using the provided SyncPanelRoster200JSONResponseBodyActionsAction3
+func (t *SyncPanelRoster200JSONResponseBody_Actions_Action) MergeSyncPanelRoster200JSONResponseBodyActionsAction3(v SyncPanelRoster200JSONResponseBodyActionsAction3) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t SyncPanelRoster200JSONResponseBody_Actions_Action) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *SyncPanelRoster200JSONResponseBody_Actions_Action) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }
@@ -1781,6 +2174,14 @@ type ClientInterface interface {
 	// PanelPage request
 	PanelPage(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// RequestPanelActionWithBody request with any body
+	RequestPanelActionWithBody(ctx context.Context, token string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	RequestPanelAction(ctx context.Context, token string, body RequestPanelActionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetPanelAction request
+	GetPanelAction(ctx context.Context, token string, actionId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetPanelBoard request
 	GetPanelBoard(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -1995,6 +2396,42 @@ func (c *Client) SetActiveOwner(ctx context.Context, ownerId string, reqEditors 
 
 func (c *Client) PanelPage(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPanelPageRequest(c.Server, token)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RequestPanelActionWithBody(ctx context.Context, token string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRequestPanelActionRequestWithBody(c.Server, token, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RequestPanelAction(ctx context.Context, token string, body RequestPanelActionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRequestPanelActionRequest(c.Server, token, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetPanelAction(ctx context.Context, token string, actionId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetPanelActionRequest(c.Server, token, actionId)
 	if err != nil {
 		return nil, err
 	}
@@ -2601,6 +3038,94 @@ func NewPanelPageRequest(server string, token string) (*http.Request, error) {
 	}
 
 	operationPath := fmt.Sprintf("/panel/g/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewRequestPanelActionRequest calls the generic RequestPanelAction builder with application/json body
+func NewRequestPanelActionRequest(server string, token string, body RequestPanelActionJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewRequestPanelActionRequestWithBody(server, token, "application/json", bodyReader)
+}
+
+// NewRequestPanelActionRequestWithBody generates requests for RequestPanelAction with any type of body
+func NewRequestPanelActionRequestWithBody(server string, token string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "token", token, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/panel/g/%s/actions", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetPanelActionRequest generates requests for GetPanelAction
+func NewGetPanelActionRequest(server string, token string, actionId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "token", token, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "actionId", actionId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/panel/g/%s/actions/%s", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -3287,6 +3812,14 @@ type ClientWithResponsesInterface interface {
 	// PanelPageWithResponse request
 	PanelPageWithResponse(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*PanelPageResponse, error)
 
+	// RequestPanelActionWithBodyWithResponse request with any body
+	RequestPanelActionWithBodyWithResponse(ctx context.Context, token string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RequestPanelActionResponse, error)
+
+	RequestPanelActionWithResponse(ctx context.Context, token string, body RequestPanelActionJSONRequestBody, reqEditors ...RequestEditorFn) (*RequestPanelActionResponse, error)
+
+	// GetPanelActionWithResponse request
+	GetPanelActionWithResponse(ctx context.Context, token string, actionId string, reqEditors ...RequestEditorFn) (*GetPanelActionResponse, error)
+
 	// GetPanelBoardWithResponse request
 	GetPanelBoardWithResponse(ctx context.Context, token string, reqEditors ...RequestEditorFn) (*GetPanelBoardResponse, error)
 
@@ -3692,6 +4225,74 @@ func (r PanelPageResponse) ContentType() string {
 	return ""
 }
 
+type RequestPanelActionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		ActionId openapi_types.UUID `json:"actionId"`
+		Status   string             `json:"status"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r RequestPanelActionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RequestPanelActionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RequestPanelActionResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetPanelActionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		ActionId openapi_types.UUID `json:"actionId"`
+		Code     *string            `json:"code,omitempty"`
+		Kind     PanelActionKind    `json:"kind"`
+		Status   PanelActionStatus  `json:"status"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r GetPanelActionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetPanelActionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetPanelActionResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetPanelBoardResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -3980,6 +4581,12 @@ type SyncPanelRosterResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *struct {
+		Actions []struct {
+			Action   SyncPanelRoster200JSONResponseBody_Actions_Action `json:"action"`
+			ActionId openapi_types.UUID                                `json:"actionId"`
+			MemberId string                                            `json:"memberId"`
+			ThreadId openapi_types.UUID                                `json:"threadId"`
+		} `json:"actions"`
 		Deliveries []struct {
 			Code      string             `json:"code"`
 			MemberId  string             `json:"memberId"`
@@ -4335,6 +4942,32 @@ func (c *ClientWithResponses) PanelPageWithResponse(ctx context.Context, token s
 		return nil, err
 	}
 	return ParsePanelPageResponse(rsp)
+}
+
+// RequestPanelActionWithBodyWithResponse request with arbitrary body returning *RequestPanelActionResponse
+func (c *ClientWithResponses) RequestPanelActionWithBodyWithResponse(ctx context.Context, token string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RequestPanelActionResponse, error) {
+	rsp, err := c.RequestPanelActionWithBody(ctx, token, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRequestPanelActionResponse(rsp)
+}
+
+func (c *ClientWithResponses) RequestPanelActionWithResponse(ctx context.Context, token string, body RequestPanelActionJSONRequestBody, reqEditors ...RequestEditorFn) (*RequestPanelActionResponse, error) {
+	rsp, err := c.RequestPanelAction(ctx, token, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRequestPanelActionResponse(rsp)
+}
+
+// GetPanelActionWithResponse request returning *GetPanelActionResponse
+func (c *ClientWithResponses) GetPanelActionWithResponse(ctx context.Context, token string, actionId string, reqEditors ...RequestEditorFn) (*GetPanelActionResponse, error) {
+	rsp, err := c.GetPanelAction(ctx, token, actionId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetPanelActionResponse(rsp)
 }
 
 // GetPanelBoardWithResponse request returning *GetPanelBoardResponse
@@ -4817,6 +5450,66 @@ func ParsePanelPageResponse(rsp *http.Response) (*PanelPageResponse, error) {
 	return response, nil
 }
 
+// ParseRequestPanelActionResponse parses an HTTP response from a RequestPanelActionWithResponse call
+func ParseRequestPanelActionResponse(rsp *http.Response) (*RequestPanelActionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RequestPanelActionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			ActionId openapi_types.UUID `json:"actionId"`
+			Status   string             `json:"status"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetPanelActionResponse parses an HTTP response from a GetPanelActionWithResponse call
+func ParseGetPanelActionResponse(rsp *http.Response) (*GetPanelActionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetPanelActionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			ActionId openapi_types.UUID `json:"actionId"`
+			Code     *string            `json:"code,omitempty"`
+			Kind     PanelActionKind    `json:"kind"`
+			Status   PanelActionStatus  `json:"status"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetPanelBoardResponse parses an HTTP response from a GetPanelBoardWithResponse call
 func ParseGetPanelBoardResponse(rsp *http.Response) (*GetPanelBoardResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -5085,6 +5778,12 @@ func ParseSyncPanelRosterResponse(rsp *http.Response) (*SyncPanelRosterResponse,
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
+			Actions []struct {
+				Action   SyncPanelRoster200JSONResponseBody_Actions_Action `json:"action"`
+				ActionId openapi_types.UUID                                `json:"actionId"`
+				MemberId string                                            `json:"memberId"`
+				ThreadId openapi_types.UUID                                `json:"threadId"`
+			} `json:"actions"`
 			Deliveries []struct {
 				Code      string             `json:"code"`
 				MemberId  string             `json:"memberId"`

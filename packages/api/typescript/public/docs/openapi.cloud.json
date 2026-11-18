@@ -1344,11 +1344,71 @@
                               "canRelease"
                             ]
                           }
+                        },
+                        "openStops": {
+                          "maxItems": 200,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "stopId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "issueId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "kind": {
+                                "$ref": "#/components/schemas/StopKind"
+                              },
+                              "resolutions": {
+                                "maxItems": 8,
+                                "type": "array",
+                                "items": {
+                                  "$ref": "#/components/schemas/StopResolution"
+                                }
+                              }
+                            },
+                            "required": [
+                              "stopId",
+                              "issueId",
+                              "kind",
+                              "resolutions"
+                            ]
+                          }
                         }
                       },
                       "required": [
                         "threadId",
                         "members"
+                      ]
+                    }
+                  },
+                  "outcomes": {
+                    "maxItems": 500,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "actionId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "status": {
+                          "$ref": "#/components/schemas/PanelActionOutcome"
+                        },
+                        "code": {
+                          "type": "string",
+                          "maxLength": 80
+                        }
+                      },
+                      "required": [
+                        "actionId",
+                        "status"
                       ]
                     }
                   }
@@ -1419,10 +1479,135 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "actions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "actionId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "threadId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "memberId": {
+                            "type": "string"
+                          },
+                          "action": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "PAUSE"
+                                  },
+                                  "issueId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "issueId"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "RESUME"
+                                  },
+                                  "issueId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "issueId"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "STEER"
+                                  },
+                                  "issueId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  },
+                                  "text": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 2000
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "issueId",
+                                  "text"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "ANSWER_STOP"
+                                  },
+                                  "issueId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  },
+                                  "stopId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  },
+                                  "resolution": {
+                                    "$ref": "#/components/schemas/StopResolution"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "issueId",
+                                  "stopId",
+                                  "resolution"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "actionId",
+                          "threadId",
+                          "memberId",
+                          "action"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
-                    "deliveries"
+                    "deliveries",
+                    "actions"
                   ],
                   "additionalProperties": false
                 }
@@ -2282,6 +2467,224 @@
         }
       }
     },
+    "/panel/g/{token}/actions": {
+      "post": {
+        "tags": [
+          "panel"
+        ],
+        "description": "Ask, as the identified member, for an action on one of the group's issues (public, device cookie)",
+        "operationId": "RequestPanelAction",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "PAUSE"
+                      },
+                      "issueId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "issueId"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "RESUME"
+                      },
+                      "issueId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "issueId"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "STEER"
+                      },
+                      "issueId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "text": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2000
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "issueId",
+                      "text"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "ANSWER_STOP"
+                      },
+                      "issueId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "stopId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "resolution": {
+                        "$ref": "#/components/schemas/StopResolution"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "issueId",
+                      "stopId",
+                      "resolution"
+                    ]
+                  }
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "kind": "PAUSE",
+                    "issueId": "019e4d24-6524-7041-9e1c-8108180cddb0"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "kq3pE1aV0m9xT2yR8wB5nC7dF4gH6jL1sZ0uQ3iO9eA"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ask, as the identified member, for an action on one of the group's issues (public, device cookie)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "actionId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "status": {
+                      "type": "string",
+                      "const": "PENDING"
+                    }
+                  },
+                  "required": [
+                    "actionId",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/g/{token}/actions/{actionId}": {
+      "get": {
+        "tags": [
+          "panel"
+        ],
+        "description": "Where a panel action stands — pending, done, refused or expired (public, device cookie)",
+        "operationId": "GetPanelAction",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "kq3pE1aV0m9xT2yR8wB5nC7dF4gH6jL1sZ0uQ3iO9eA"
+          },
+          {
+            "in": "path",
+            "name": "actionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddc0"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Where a panel action stands — pending, done, refused or expired (public, device cookie)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "actionId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "kind": {
+                      "$ref": "#/components/schemas/PanelActionKind"
+                    },
+                    "status": {
+                      "$ref": "#/components/schemas/PanelActionStatus"
+                    },
+                    "code": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "actionId",
+                    "kind",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/panel/g/{token}": {
       "get": {
         "tags": [
@@ -2402,6 +2805,8 @@
           "OWNER_ALREADY_DISABLED",
           "OWNER_NOT_DISABLED",
           "OWNER_NOT_FOUND",
+          "PANEL_ACTION_RATE_LIMITED",
+          "PANEL_CANNOT_RELEASE",
           "PANEL_CODE_ATTEMPTS_EXCEEDED",
           "PANEL_CODE_EXPIRED",
           "PANEL_CODE_INVALID",
@@ -2409,6 +2814,7 @@
           "PANEL_LINK_UNAVAILABLE",
           "PANEL_MEMBER_NOT_FOUND",
           "PANEL_NOT_FOUND",
+          "PANEL_RESOLUTION_NOT_OFFERED",
           "PARTICIPANT_NOT_FOUND",
           "PASSWORDS_DONT_MATCH",
           "PASSWORD_TOO_WEAK",
@@ -2572,7 +2978,33 @@
         "type": "string",
         "enum": [
           "WHATSAPP",
-          "CONSOLE"
+          "CONSOLE",
+          "PANEL"
+        ]
+      },
+      "PanelActionOutcome": {
+        "type": "string",
+        "enum": [
+          "DONE",
+          "REFUSED"
+        ]
+      },
+      "PanelActionKind": {
+        "type": "string",
+        "enum": [
+          "ANSWER_STOP",
+          "PAUSE",
+          "RESUME",
+          "STEER"
+        ]
+      },
+      "PanelActionStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "DONE",
+          "REFUSED",
+          "EXPIRED"
         ]
       }
     }
@@ -2652,6 +3084,8 @@
     "OWNER_ALREADY_DISABLED",
     "OWNER_NOT_DISABLED",
     "OWNER_NOT_FOUND",
+    "PANEL_ACTION_RATE_LIMITED",
+    "PANEL_CANNOT_RELEASE",
     "PANEL_CODE_ATTEMPTS_EXCEEDED",
     "PANEL_CODE_EXPIRED",
     "PANEL_CODE_INVALID",
@@ -2659,6 +3093,7 @@
     "PANEL_LINK_UNAVAILABLE",
     "PANEL_MEMBER_NOT_FOUND",
     "PANEL_NOT_FOUND",
+    "PANEL_RESOLUTION_NOT_OFFERED",
     "PARTICIPANT_NOT_FOUND",
     "PASSWORDS_DONT_MATCH",
     "PASSWORD_TOO_WEAK",

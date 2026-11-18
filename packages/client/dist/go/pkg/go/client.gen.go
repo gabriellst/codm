@@ -869,6 +869,7 @@ func (e IssueArchiveReason) Valid() bool {
 // Defines values for IssueControlSource.
 const (
 	IssueControlSourceCONSOLE  IssueControlSource = "CONSOLE"
+	IssueControlSourcePANEL    IssueControlSource = "PANEL"
 	IssueControlSourceWHATSAPP IssueControlSource = "WHATSAPP"
 )
 
@@ -876,6 +877,8 @@ const (
 func (e IssueControlSource) Valid() bool {
 	switch e {
 	case IssueControlSourceCONSOLE:
+		return true
+	case IssueControlSourcePANEL:
 		return true
 	case IssueControlSourceWHATSAPP:
 		return true
@@ -1274,6 +1277,72 @@ func (e OwnerKind) Valid() bool {
 	case OwnerKindINDIVIDUAL:
 		return true
 	case OwnerKindORGANIZATION:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PanelActionKind.
+const (
+	PanelActionKindANSWERSTOP PanelActionKind = "ANSWER_STOP"
+	PanelActionKindPAUSE      PanelActionKind = "PAUSE"
+	PanelActionKindRESUME     PanelActionKind = "RESUME"
+	PanelActionKindSTEER      PanelActionKind = "STEER"
+)
+
+// Valid indicates whether the value is a known member of the PanelActionKind enum.
+func (e PanelActionKind) Valid() bool {
+	switch e {
+	case PanelActionKindANSWERSTOP:
+		return true
+	case PanelActionKindPAUSE:
+		return true
+	case PanelActionKindRESUME:
+		return true
+	case PanelActionKindSTEER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PanelActionOutcome.
+const (
+	PanelActionOutcomeDONE    PanelActionOutcome = "DONE"
+	PanelActionOutcomeREFUSED PanelActionOutcome = "REFUSED"
+)
+
+// Valid indicates whether the value is a known member of the PanelActionOutcome enum.
+func (e PanelActionOutcome) Valid() bool {
+	switch e {
+	case PanelActionOutcomeDONE:
+		return true
+	case PanelActionOutcomeREFUSED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PanelActionStatus.
+const (
+	PanelActionStatusDONE    PanelActionStatus = "DONE"
+	PanelActionStatusEXPIRED PanelActionStatus = "EXPIRED"
+	PanelActionStatusPENDING PanelActionStatus = "PENDING"
+	PanelActionStatusREFUSED PanelActionStatus = "REFUSED"
+)
+
+// Valid indicates whether the value is a known member of the PanelActionStatus enum.
+func (e PanelActionStatus) Valid() bool {
+	switch e {
+	case PanelActionStatusDONE:
+		return true
+	case PanelActionStatusEXPIRED:
+		return true
+	case PanelActionStatusPENDING:
+		return true
+	case PanelActionStatusREFUSED:
 		return true
 	default:
 		return false
@@ -3980,6 +4049,15 @@ type OutboxSource string
 
 // OwnerKind defines model for OwnerKind.
 type OwnerKind string
+
+// PanelActionKind defines model for PanelActionKind.
+type PanelActionKind string
+
+// PanelActionOutcome defines model for PanelActionOutcome.
+type PanelActionOutcome string
+
+// PanelActionStatus defines model for PanelActionStatus.
+type PanelActionStatus string
 
 // PermissionPosture defines model for PermissionPosture.
 type PermissionPosture string

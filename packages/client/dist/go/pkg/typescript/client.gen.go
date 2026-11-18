@@ -125,6 +125,8 @@ const (
 	OWNERALREADYDISABLED            ApiErrors = "OWNER_ALREADY_DISABLED"
 	OWNERNOTDISABLED                ApiErrors = "OWNER_NOT_DISABLED"
 	OWNERNOTFOUND                   ApiErrors = "OWNER_NOT_FOUND"
+	PANELACTIONRATELIMITED          ApiErrors = "PANEL_ACTION_RATE_LIMITED"
+	PANELCANNOTRELEASE              ApiErrors = "PANEL_CANNOT_RELEASE"
 	PANELCODEATTEMPTSEXCEEDED       ApiErrors = "PANEL_CODE_ATTEMPTS_EXCEEDED"
 	PANELCODEEXPIRED                ApiErrors = "PANEL_CODE_EXPIRED"
 	PANELCODEINVALID                ApiErrors = "PANEL_CODE_INVALID"
@@ -132,6 +134,7 @@ const (
 	PANELLINKUNAVAILABLE            ApiErrors = "PANEL_LINK_UNAVAILABLE"
 	PANELMEMBERNOTFOUND             ApiErrors = "PANEL_MEMBER_NOT_FOUND"
 	PANELNOTFOUND                   ApiErrors = "PANEL_NOT_FOUND"
+	PANELRESOLUTIONNOTOFFERED       ApiErrors = "PANEL_RESOLUTION_NOT_OFFERED"
 	PARTICIPANTNOTFOUND             ApiErrors = "PARTICIPANT_NOT_FOUND"
 	PASSWORDSDONTMATCH              ApiErrors = "PASSWORDS_DONT_MATCH"
 	PASSWORDTOOWEAK                 ApiErrors = "PASSWORD_TOO_WEAK"
@@ -318,6 +321,10 @@ func (e ApiErrors) Valid() bool {
 		return true
 	case OWNERNOTFOUND:
 		return true
+	case PANELACTIONRATELIMITED:
+		return true
+	case PANELCANNOTRELEASE:
+		return true
 	case PANELCODEATTEMPTSEXCEEDED:
 		return true
 	case PANELCODEEXPIRED:
@@ -331,6 +338,8 @@ func (e ApiErrors) Valid() bool {
 	case PANELMEMBERNOTFOUND:
 		return true
 	case PANELNOTFOUND:
+		return true
+	case PANELRESOLUTIONNOTOFFERED:
 		return true
 	case PARTICIPANTNOTFOUND:
 		return true
@@ -892,6 +901,7 @@ func (e IssueArchiveReason) Valid() bool {
 // Defines values for IssueControlSource.
 const (
 	IssueControlSourceCONSOLE  IssueControlSource = "CONSOLE"
+	IssueControlSourcePANEL    IssueControlSource = "PANEL"
 	IssueControlSourceWHATSAPP IssueControlSource = "WHATSAPP"
 )
 
@@ -899,6 +909,8 @@ const (
 func (e IssueControlSource) Valid() bool {
 	switch e {
 	case IssueControlSourceCONSOLE:
+		return true
+	case IssueControlSourcePANEL:
 		return true
 	case IssueControlSourceWHATSAPP:
 		return true

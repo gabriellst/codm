@@ -5,4 +5,4 @@
 
 import { z } from "zod/v4";
 
-export const issueControlSourceSchema = z.enum(["WHATSAPP", "CONSOLE"])
+export const issueControlSourceSchema = z.enum(["WHATSAPP", "CONSOLE", "PANEL"])
