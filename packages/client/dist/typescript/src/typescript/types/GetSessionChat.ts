@@ -7,6 +7,7 @@ import type { ArtifactKind } from "./ArtifactKind.ts";
 import type { ChannelKind } from "./ChannelKind.ts";
 import type { ClassificationMethod } from "./ClassificationMethod.ts";
 import type { Language } from "./Language.ts";
+import type { OutputRouting } from "./OutputRouting.ts";
 import type { ProviderKind } from "./ProviderKind.ts";
 import type { StopKind } from "./StopKind.ts";
 import type { ThreadMode } from "./ThreadMode.ts";
@@ -165,6 +166,10 @@ export type GetSessionChat200 = {
          * @type string | undefined
         */
         classification?: ClassificationMethod;
+        /**
+         * @type string | undefined
+        */
+        routing?: OutputRouting;
         /**
          * @type object | undefined
         */

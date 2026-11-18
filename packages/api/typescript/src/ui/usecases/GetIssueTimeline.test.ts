@@ -1,8 +1,11 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
-import { TestBed, givenIssue, givenThread } from '@test/support'
+import { TestBed, givenIssue, givenStop, givenThread } from '@test/support'
 import {
+	AskAnswerKind,
+	IssueSignalLevel,
 	IssueTimelineItemKind,
+	OutputRouting,
 	MailboxItemKind,
 	MailboxTargetKind,
 	PermissionPosture,
@@ -13,6 +16,7 @@ import {
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
+import { AnswerStop } from '@thread/usecases/AnswerStop'
 import { GetIssueTimeline } from './GetIssueTimeline'
 
 /**
@@ -77,6 +81,58 @@ describe('GetIssueTimeline', () => {
 		expect(steer?.kind === IssueTimelineItemKind.STEER && steer.text).toBe('tira o rodapé')
 		const resolved = items[3]
 		expect(resolved?.kind === IssueTimelineItemKind.STOP_RESOLVED && resolved.resolution).toBe(StopResolution.APPROVE)
+	})
+
+	it('fase 3 — a message carries its level and routing; an ask its code, question and options; its answer what was answered, never who', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const issue = await givenIssue(testBed, { threadId: thread.id.value, key: 'APP-12' })
+		const threads = testBed.resolve(ThreadRepository)
+
+		thread.recordEntry({
+			kind: TranscriptKind.SYSTEM,
+			text: 'rodei os testes',
+			issueId: issue.id.value,
+			level: IssueSignalLevel.PROGRESS,
+			routing: OutputRouting.PANEL,
+		})
+		await threads.save(thread)
+		await tick()
+		const options = [
+			{ id: 'yes', label: 'Sim' },
+			{ id: 'no', label: 'Não' },
+		]
+		const stop = await givenStop(testBed, {
+			threadId: thread.id.value,
+			issueId: issue.id.value,
+			ask: { question: 'Uso o tema escuro?', options, effects: [], requested: StopKind.DECISION_REQUESTED },
+		})
+		await tick()
+		await testBed
+			.resolve(AnswerStop)
+			.execute({
+				ownerId: MOCK_CLOUD_OWNER_ID,
+				stopId: stop.stopId,
+				answer: { kind: AskAnswerKind.OPTION, optionId: 'no' },
+				answeredBy: 'operator',
+			})
+
+		const { items } = await testBed.resolve(GetIssueTimeline).execute({ ownerId: MOCK_CLOUD_OWNER_ID, issueId: issue.id.value })
+
+		const message = items.find(item => item.kind === IssueTimelineItemKind.MESSAGE)
+		expect(message?.kind === IssueTimelineItemKind.MESSAGE && [message.level, message.routing]).toEqual([
+			IssueSignalLevel.PROGRESS,
+			OutputRouting.PANEL,
+		])
+		const raised = items.find(item => item.kind === IssueTimelineItemKind.STOP_RAISED)
+		expect(raised?.kind === IssueTimelineItemKind.STOP_RAISED && raised.ask).toEqual({
+			code: 'APP-12 · D1',
+			question: 'Uso o tema escuro?',
+			options,
+			dueAt: undefined,
+		})
+		const resolved = items.find(item => item.kind === IssueTimelineItemKind.STOP_RESOLVED)
+		expect(resolved?.kind === IssueTimelineItemKind.STOP_RESOLVED && resolved.answer).toEqual({ kind: AskAnswerKind.OPTION, label: 'Não' })
+		expect(JSON.stringify(resolved)).not.toContain('operator')
 	})
 
 	it("another owner's issue is not found", async () => {

@@ -90,3 +90,33 @@ export const OutboundDirect: Story = {
 		await expect(canvasElement.querySelector('.bg-bubble-out')).toHaveTextContent('05:25')
 	},
 }
+
+/**
+ * Fase 3 — what a task said that the policy kept on the panel never went to WhatsApp: badged "só no painel"
+ * and dimmed, so it does not read as sent. FALSEADOR: drop the routing look and the badge disappears.
+ */
+export const PanelOnly: Story = {
+	args: {
+		entry: {
+			entryId: '019e4d24-6524-7041-9e1c-8108180cdd03',
+			kind: 'SYSTEM',
+			text: 'rodei os testes, tudo verde',
+			at: AT,
+			routing: 'PANEL',
+		},
+	},
+	play: async ({ canvasElement }) => {
+		await expect(canvasElement.querySelector('[data-testid="routing-badge"]')).toHaveTextContent('só no painel')
+		await expect(canvasElement.querySelector('.bg-bubble-out')).toHaveClass('opacity-60')
+	},
+}
+
+/** A line that went to the group carries no badge — sent is the default look. */
+export const SentToGroup: Story = {
+	args: {
+		entry: { entryId: '019e4d24-6524-7041-9e1c-8108180cdd04', kind: 'SYSTEM', text: 'APP-12 · prévia pronta', at: AT, routing: 'GROUP' },
+	},
+	play: async ({ canvasElement }) => {
+		await expect(canvasElement.querySelector('[data-testid="routing-badge"]')).toBeNull()
+	},
+}

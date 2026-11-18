@@ -3511,6 +3511,9 @@
                           "classification": {
                             "$ref": "#/components/schemas/ClassificationMethod"
                           },
+                          "routing": {
+                            "$ref": "#/components/schemas/OutputRouting"
+                          },
                           "artifact": {
                             "type": "object",
                             "properties": {
@@ -3703,6 +3706,9 @@
                       ],
                       "additionalProperties": false
                     },
+                    "outputMode": {
+                      "$ref": "#/components/schemas/GroupOutputMode"
+                    },
                     "language": {
                       "type": "object",
                       "properties": {
@@ -3812,6 +3818,7 @@
                     "thinkingIndicator",
                     "reactions",
                     "streaming",
+                    "outputMode",
                     "language",
                     "participants",
                     "invokerCount",
@@ -4251,6 +4258,143 @@
                             "items": {
                               "$ref": "#/components/schemas/StopResolution"
                             }
+                          },
+                          "ask": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "DECISION_REQUESTED"
+                                  },
+                                  "code": {
+                                    "type": "string"
+                                  },
+                                  "question": {
+                                    "type": "string"
+                                  },
+                                  "reply": {
+                                    "oneOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "const": "OPTION"
+                                          },
+                                          "options": {
+                                            "minItems": 1,
+                                            "maxItems": 6,
+                                            "type": "array",
+                                            "items": {
+                                              "$ref": "#/components/schemas/AskOption"
+                                            }
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "options"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "const": "TEXT"
+                                          }
+                                        },
+                                        "required": [
+                                          "kind"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  },
+                                  "releaseRequired": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "code",
+                                  "question",
+                                  "reply",
+                                  "releaseRequired"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "QUESTION_ASKED"
+                                  },
+                                  "code": {
+                                    "type": "string"
+                                  },
+                                  "question": {
+                                    "type": "string"
+                                  },
+                                  "reply": {
+                                    "oneOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "const": "OPTION"
+                                          },
+                                          "options": {
+                                            "minItems": 1,
+                                            "maxItems": 6,
+                                            "type": "array",
+                                            "items": {
+                                              "$ref": "#/components/schemas/AskOption"
+                                            }
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "options"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "const": "TEXT"
+                                          }
+                                        },
+                                        "required": [
+                                          "kind"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    ]
+                                  },
+                                  "defaultLabel": {
+                                    "type": "string"
+                                  },
+                                  "dueAt": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "code",
+                                  "question",
+                                  "reply",
+                                  "defaultLabel"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
                           }
                         },
                         "required": [
@@ -9986,6 +10130,12 @@
                               },
                               "classification": {
                                 "$ref": "#/components/schemas/ClassificationMethod"
+                              },
+                              "level": {
+                                "$ref": "#/components/schemas/IssueSignalLevel"
+                              },
+                              "routing": {
+                                "$ref": "#/components/schemas/OutputRouting"
                               }
                             },
                             "required": [
@@ -10091,6 +10241,32 @@
                               },
                               "title": {
                                 "type": "string"
+                              },
+                              "ask": {
+                                "type": "object",
+                                "properties": {
+                                  "code": {
+                                    "type": "string"
+                                  },
+                                  "question": {
+                                    "type": "string"
+                                  },
+                                  "options": {
+                                    "type": "array",
+                                    "items": {
+                                      "$ref": "#/components/schemas/AskOption"
+                                    }
+                                  },
+                                  "dueAt": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "code",
+                                  "question",
+                                  "options"
+                                ],
+                                "additionalProperties": false
                               }
                             },
                             "required": [
@@ -10123,6 +10299,22 @@
                               },
                               "resolution": {
                                 "$ref": "#/components/schemas/StopResolution"
+                              },
+                              "answer": {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "$ref": "#/components/schemas/AskAnswerKind"
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "label"
+                                ],
+                                "additionalProperties": false
                               }
                             },
                             "required": [
@@ -10403,7 +10595,6 @@
           "ONBOARDING_DRAFT_INCOMPLETE",
           "ONBOARDING_NOT_COMPLETED",
           "OPTIMISTIC_LOCK_CONFLICT",
-          "OUTPUT_POLICY_NOT_READY",
           "OWNER_ALREADY_DISABLED",
           "OWNER_NOT_DISABLED",
           "OWNER_NOT_FOUND",
@@ -10674,11 +10865,27 @@
           "PAUSED"
         ]
       },
+      "OutputRouting": {
+        "type": "string",
+        "enum": [
+          "GROUP",
+          "DIGEST",
+          "PANEL"
+        ]
+      },
       "ThreadMode": {
         "type": "string",
         "enum": [
           "STEER",
           "DIRECT"
+        ]
+      },
+      "GroupOutputMode": {
+        "type": "string",
+        "enum": [
+          "DECISIONS_ONLY",
+          "DECISIONS_AND_LIVE",
+          "EVERYTHING"
         ]
       },
       "StopResolution": {
@@ -10691,14 +10898,6 @@
           "DENY",
           "ANSWER",
           "DEFAULT_APPLIED"
-        ]
-      },
-      "GroupOutputMode": {
-        "type": "string",
-        "enum": [
-          "DECISIONS_ONLY",
-          "DECISIONS_AND_LIVE",
-          "EVERYTHING"
         ]
       },
       "Timezone": {
@@ -10921,6 +11120,14 @@
           "TURN_STARTED"
         ]
       },
+      "AskAnswerKind": {
+        "type": "string",
+        "enum": [
+          "OPTION",
+          "TEXT",
+          "DEFAULT"
+        ]
+      },
       "IssueControlSource": {
         "type": "string",
         "enum": [
@@ -11028,7 +11235,6 @@
     "ONBOARDING_DRAFT_INCOMPLETE",
     "ONBOARDING_NOT_COMPLETED",
     "OPTIMISTIC_LOCK_CONFLICT",
-    "OUTPUT_POLICY_NOT_READY",
     "OWNER_ALREADY_DISABLED",
     "OWNER_NOT_DISABLED",
     "OWNER_NOT_FOUND",

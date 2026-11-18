@@ -123,7 +123,6 @@ pub mod types {
     ///    "ONBOARDING_DRAFT_INCOMPLETE",
     ///    "ONBOARDING_NOT_COMPLETED",
     ///    "OPTIMISTIC_LOCK_CONFLICT",
-    ///    "OUTPUT_POLICY_NOT_READY",
     ///    "OWNER_ALREADY_DISABLED",
     ///    "OWNER_NOT_DISABLED",
     ///    "OWNER_NOT_FOUND",
@@ -344,8 +343,6 @@ pub mod types {
         OnboardingNotCompleted,
         #[serde(rename = "OPTIMISTIC_LOCK_CONFLICT")]
         OptimisticLockConflict,
-        #[serde(rename = "OUTPUT_POLICY_NOT_READY")]
-        OutputPolicyNotReady,
         #[serde(rename = "OWNER_ALREADY_DISABLED")]
         OwnerAlreadyDisabled,
         #[serde(rename = "OWNER_NOT_DISABLED")]
@@ -548,7 +545,6 @@ pub mod types {
                 }
                 Self::OnboardingNotCompleted => f.write_str("ONBOARDING_NOT_COMPLETED"),
                 Self::OptimisticLockConflict => f.write_str("OPTIMISTIC_LOCK_CONFLICT"),
-                Self::OutputPolicyNotReady => f.write_str("OUTPUT_POLICY_NOT_READY"),
                 Self::OwnerAlreadyDisabled => f.write_str("OWNER_ALREADY_DISABLED"),
                 Self::OwnerNotDisabled => f.write_str("OWNER_NOT_DISABLED"),
                 Self::OwnerNotFound => f.write_str("OWNER_NOT_FOUND"),
@@ -694,7 +690,6 @@ pub mod types {
                 "ONBOARDING_DRAFT_INCOMPLETE" => Ok(Self::OnboardingDraftIncomplete),
                 "ONBOARDING_NOT_COMPLETED" => Ok(Self::OnboardingNotCompleted),
                 "OPTIMISTIC_LOCK_CONFLICT" => Ok(Self::OptimisticLockConflict),
-                "OUTPUT_POLICY_NOT_READY" => Ok(Self::OutputPolicyNotReady),
                 "OWNER_ALREADY_DISABLED" => Ok(Self::OwnerAlreadyDisabled),
                 "OWNER_NOT_DISABLED" => Ok(Self::OwnerNotDisabled),
                 "OWNER_NOT_FOUND" => Ok(Self::OwnerNotFound),
@@ -770,6 +765,204 @@ pub mod types {
             value: ::std::string::String,
         ) -> ::std::result::Result<Self, self::error::ConversionError> {
             value.parse()
+        }
+    }
+    ///`AskOption`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "id",
+    ///    "label"
+    ///  ],
+    ///  "properties": {
+    ///    "id": {
+    ///      "type": "string",
+    ///      "maxLength": 40,
+    ///      "minLength": 1
+    ///    },
+    ///    "label": {
+    ///      "type": "string",
+    ///      "maxLength": 200,
+    ///      "minLength": 1
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct AskOption {
+        pub id: AskOptionId,
+        pub label: AskOptionLabel,
+    }
+    impl ::std::convert::From<&AskOption> for AskOption {
+        fn from(value: &AskOption) -> Self {
+            value.clone()
+        }
+    }
+    ///`AskOptionId`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 40,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct AskOptionId(::std::string::String);
+    impl ::std::ops::Deref for AskOptionId {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<AskOptionId> for ::std::string::String {
+        fn from(value: AskOptionId) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&AskOptionId> for AskOptionId {
+        fn from(value: &AskOptionId) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for AskOptionId {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 40usize {
+                return Err("longer than 40 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for AskOptionId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for AskOptionId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for AskOptionId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for AskOptionId {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`AskOptionLabel`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 200,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct AskOptionLabel(::std::string::String);
+    impl ::std::ops::Deref for AskOptionLabel {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<AskOptionLabel> for ::std::string::String {
+        fn from(value: AskOptionLabel) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&AskOptionLabel> for AskOptionLabel {
+        fn from(value: &AskOptionLabel) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for AskOptionLabel {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 200usize {
+                return Err("longer than 200 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for AskOptionLabel {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for AskOptionLabel {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for AskOptionLabel {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for AskOptionLabel {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
         }
     }
     ///`ClaimSignInCodeResponse`
@@ -1905,6 +2098,12 @@ pub mod types {
     ///                  "MESSAGE"
     ///                ]
     ///              },
+    ///              "level": {
+    ///                "$ref": "#/components/schemas/IssueSignalLevel"
+    ///              },
+    ///              "routing": {
+    ///                "$ref": "#/components/schemas/OutputRouting"
+    ///              },
     ///              "text": {
     ///                "type": "string"
     ///              },
@@ -1999,6 +2198,32 @@ pub mod types {
     ///              "title"
     ///            ],
     ///            "properties": {
+    ///              "ask": {
+    ///                "type": "object",
+    ///                "required": [
+    ///                  "code",
+    ///                  "options",
+    ///                  "question"
+    ///                ],
+    ///                "properties": {
+    ///                  "code": {
+    ///                    "type": "string"
+    ///                  },
+    ///                  "dueAt": {
+    ///                    "type": "string"
+    ///                  },
+    ///                  "options": {
+    ///                    "type": "array",
+    ///                    "items": {
+    ///                      "$ref": "#/components/schemas/AskOption"
+    ///                    }
+    ///                  },
+    ///                  "question": {
+    ///                    "type": "string"
+    ///                  }
+    ///                },
+    ///                "additionalProperties": false
+    ///              },
     ///              "at": {
     ///                "type": "string"
     ///              },
@@ -2035,6 +2260,22 @@ pub mod types {
     ///              "stopId"
     ///            ],
     ///            "properties": {
+    ///              "answer": {
+    ///                "type": "object",
+    ///                "required": [
+    ///                  "kind",
+    ///                  "label"
+    ///                ],
+    ///                "properties": {
+    ///                  "kind": {
+    ///                    "$ref": "#/components/schemas/AskAnswerKind"
+    ///                  },
+    ///                  "label": {
+    ///                    "type": "string"
+    ///                  }
+    ///                },
+    ///                "additionalProperties": false
+    ///              },
     ///              "at": {
     ///                "type": "string"
     ///              },
@@ -2432,6 +2673,12 @@ pub mod types {
     ///            "MESSAGE"
     ///          ]
     ///        },
+    ///        "level": {
+    ///          "$ref": "#/components/schemas/IssueSignalLevel"
+    ///        },
+    ///        "routing": {
+    ///          "$ref": "#/components/schemas/OutputRouting"
+    ///        },
     ///        "text": {
     ///          "type": "string"
     ///        },
@@ -2526,6 +2773,32 @@ pub mod types {
     ///        "title"
     ///      ],
     ///      "properties": {
+    ///        "ask": {
+    ///          "type": "object",
+    ///          "required": [
+    ///            "code",
+    ///            "options",
+    ///            "question"
+    ///          ],
+    ///          "properties": {
+    ///            "code": {
+    ///              "type": "string"
+    ///            },
+    ///            "dueAt": {
+    ///              "type": "string"
+    ///            },
+    ///            "options": {
+    ///              "type": "array",
+    ///              "items": {
+    ///                "$ref": "#/components/schemas/AskOption"
+    ///              }
+    ///            },
+    ///            "question": {
+    ///              "type": "string"
+    ///            }
+    ///          },
+    ///          "additionalProperties": false
+    ///        },
     ///        "at": {
     ///          "type": "string"
     ///        },
@@ -2562,6 +2835,22 @@ pub mod types {
     ///        "stopId"
     ///      ],
     ///      "properties": {
+    ///        "answer": {
+    ///          "type": "object",
+    ///          "required": [
+    ///            "kind",
+    ///            "label"
+    ///          ],
+    ///          "properties": {
+    ///            "kind": {
+    ///              "$ref": "#/components/schemas/AskAnswerKind"
+    ///            },
+    ///            "label": {
+    ///              "type": "string"
+    ///            }
+    ///          },
+    ///          "additionalProperties": false
+    ///        },
     ///        "at": {
     ///          "type": "string"
     ///        },
@@ -2753,6 +3042,14 @@ pub mod types {
             #[serde(rename = "entryId")]
             entry_id: ::uuid::Uuid,
             id: ::std::string::String,
+            #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+            level: ::std::option::Option<
+                ::codm_contracts_rust::wire::enums::IssueSignalLevel,
+            >,
+            #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+            routing: ::std::option::Option<
+                ::codm_contracts_rust::wire::enums::OutputRouting,
+            >,
             text: ::std::string::String,
             #[serde(rename = "transcriptKind")]
             transcript_kind: ::codm_contracts_rust::wire::enums::TranscriptKind,
@@ -2788,6 +3085,8 @@ pub mod types {
         },
         #[serde(rename = "STOP_RAISED")]
         StopRaised {
+            #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+            ask: ::std::option::Option<GetPanelIssueResponseTimelineItemAsk>,
             at: ::std::string::String,
             id: ::std::string::String,
             #[serde(rename = "stopId")]
@@ -2798,6 +3097,8 @@ pub mod types {
         },
         #[serde(rename = "STOP_RESOLVED")]
         StopResolved {
+            #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+            answer: ::std::option::Option<GetPanelIssueResponseTimelineItemAnswer>,
             at: ::std::string::String,
             id: ::std::string::String,
             resolution: ::codm_contracts_rust::wire::enums::StopResolution,
@@ -2837,6 +3138,93 @@ pub mod types {
     }
     impl ::std::convert::From<&Self> for GetPanelIssueResponseTimelineItem {
         fn from(value: &GetPanelIssueResponseTimelineItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetPanelIssueResponseTimelineItemAnswer`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "kind",
+    ///    "label"
+    ///  ],
+    ///  "properties": {
+    ///    "kind": {
+    ///      "$ref": "#/components/schemas/AskAnswerKind"
+    ///    },
+    ///    "label": {
+    ///      "type": "string"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetPanelIssueResponseTimelineItemAnswer {
+        pub kind: ::codm_contracts_rust::wire::enums::AskAnswerKind,
+        pub label: ::std::string::String,
+    }
+    impl ::std::convert::From<&GetPanelIssueResponseTimelineItemAnswer>
+    for GetPanelIssueResponseTimelineItemAnswer {
+        fn from(value: &GetPanelIssueResponseTimelineItemAnswer) -> Self {
+            value.clone()
+        }
+    }
+    ///`GetPanelIssueResponseTimelineItemAsk`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "code",
+    ///    "options",
+    ///    "question"
+    ///  ],
+    ///  "properties": {
+    ///    "code": {
+    ///      "type": "string"
+    ///    },
+    ///    "dueAt": {
+    ///      "type": "string"
+    ///    },
+    ///    "options": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "$ref": "#/components/schemas/AskOption"
+    ///      }
+    ///    },
+    ///    "question": {
+    ///      "type": "string"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct GetPanelIssueResponseTimelineItemAsk {
+        pub code: ::std::string::String,
+        #[serde(
+            rename = "dueAt",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub due_at: ::std::option::Option<::std::string::String>,
+        pub options: ::std::vec::Vec<AskOption>,
+        pub question: ::std::string::String,
+    }
+    impl ::std::convert::From<&GetPanelIssueResponseTimelineItemAsk>
+    for GetPanelIssueResponseTimelineItemAsk {
+        fn from(value: &GetPanelIssueResponseTimelineItemAsk) -> Self {
             value.clone()
         }
     }
@@ -4490,6 +4878,12 @@ pub mod types {
     ///                        "MESSAGE"
     ///                      ]
     ///                    },
+    ///                    "level": {
+    ///                      "$ref": "#/components/schemas/IssueSignalLevel"
+    ///                    },
+    ///                    "routing": {
+    ///                      "$ref": "#/components/schemas/OutputRouting"
+    ///                    },
     ///                    "text": {
     ///                      "type": "string"
     ///                    },
@@ -4581,6 +4975,31 @@ pub mod types {
     ///                    "title"
     ///                  ],
     ///                  "properties": {
+    ///                    "ask": {
+    ///                      "type": "object",
+    ///                      "required": [
+    ///                        "code",
+    ///                        "options",
+    ///                        "question"
+    ///                      ],
+    ///                      "properties": {
+    ///                        "code": {
+    ///                          "type": "string"
+    ///                        },
+    ///                        "dueAt": {
+    ///                          "type": "string"
+    ///                        },
+    ///                        "options": {
+    ///                          "type": "array",
+    ///                          "items": {
+    ///                            "$ref": "#/components/schemas/AskOption"
+    ///                          }
+    ///                        },
+    ///                        "question": {
+    ///                          "type": "string"
+    ///                        }
+    ///                      }
+    ///                    },
     ///                    "at": {
     ///                      "type": "string"
     ///                    },
@@ -4616,6 +5035,21 @@ pub mod types {
     ///                    "stopId"
     ///                  ],
     ///                  "properties": {
+    ///                    "answer": {
+    ///                      "type": "object",
+    ///                      "required": [
+    ///                        "kind",
+    ///                        "label"
+    ///                      ],
+    ///                      "properties": {
+    ///                        "kind": {
+    ///                          "$ref": "#/components/schemas/AskAnswerKind"
+    ///                        },
+    ///                        "label": {
+    ///                          "type": "string"
+    ///                        }
+    ///                      }
+    ///                    },
     ///                    "at": {
     ///                      "type": "string"
     ///                    },
@@ -5058,6 +5492,12 @@ pub mod types {
     ///                  "MESSAGE"
     ///                ]
     ///              },
+    ///              "level": {
+    ///                "$ref": "#/components/schemas/IssueSignalLevel"
+    ///              },
+    ///              "routing": {
+    ///                "$ref": "#/components/schemas/OutputRouting"
+    ///              },
     ///              "text": {
     ///                "type": "string"
     ///              },
@@ -5149,6 +5589,31 @@ pub mod types {
     ///              "title"
     ///            ],
     ///            "properties": {
+    ///              "ask": {
+    ///                "type": "object",
+    ///                "required": [
+    ///                  "code",
+    ///                  "options",
+    ///                  "question"
+    ///                ],
+    ///                "properties": {
+    ///                  "code": {
+    ///                    "type": "string"
+    ///                  },
+    ///                  "dueAt": {
+    ///                    "type": "string"
+    ///                  },
+    ///                  "options": {
+    ///                    "type": "array",
+    ///                    "items": {
+    ///                      "$ref": "#/components/schemas/AskOption"
+    ///                    }
+    ///                  },
+    ///                  "question": {
+    ///                    "type": "string"
+    ///                  }
+    ///                }
+    ///              },
     ///              "at": {
     ///                "type": "string"
     ///              },
@@ -5184,6 +5649,21 @@ pub mod types {
     ///              "stopId"
     ///            ],
     ///            "properties": {
+    ///              "answer": {
+    ///                "type": "object",
+    ///                "required": [
+    ///                  "kind",
+    ///                  "label"
+    ///                ],
+    ///                "properties": {
+    ///                  "kind": {
+    ///                    "$ref": "#/components/schemas/AskAnswerKind"
+    ///                  },
+    ///                  "label": {
+    ///                    "type": "string"
+    ///                  }
+    ///                }
+    ///              },
     ///              "at": {
     ///                "type": "string"
     ///              },
@@ -5563,6 +6043,12 @@ pub mod types {
     ///            "MESSAGE"
     ///          ]
     ///        },
+    ///        "level": {
+    ///          "$ref": "#/components/schemas/IssueSignalLevel"
+    ///        },
+    ///        "routing": {
+    ///          "$ref": "#/components/schemas/OutputRouting"
+    ///        },
     ///        "text": {
     ///          "type": "string"
     ///        },
@@ -5654,6 +6140,31 @@ pub mod types {
     ///        "title"
     ///      ],
     ///      "properties": {
+    ///        "ask": {
+    ///          "type": "object",
+    ///          "required": [
+    ///            "code",
+    ///            "options",
+    ///            "question"
+    ///          ],
+    ///          "properties": {
+    ///            "code": {
+    ///              "type": "string"
+    ///            },
+    ///            "dueAt": {
+    ///              "type": "string"
+    ///            },
+    ///            "options": {
+    ///              "type": "array",
+    ///              "items": {
+    ///                "$ref": "#/components/schemas/AskOption"
+    ///              }
+    ///            },
+    ///            "question": {
+    ///              "type": "string"
+    ///            }
+    ///          }
+    ///        },
     ///        "at": {
     ///          "type": "string"
     ///        },
@@ -5689,6 +6200,21 @@ pub mod types {
     ///        "stopId"
     ///      ],
     ///      "properties": {
+    ///        "answer": {
+    ///          "type": "object",
+    ///          "required": [
+    ///            "kind",
+    ///            "label"
+    ///          ],
+    ///          "properties": {
+    ///            "kind": {
+    ///              "$ref": "#/components/schemas/AskAnswerKind"
+    ///            },
+    ///            "label": {
+    ///              "type": "string"
+    ///            }
+    ///          }
+    ///        },
     ///        "at": {
     ///          "type": "string"
     ///        },
@@ -5874,6 +6400,14 @@ pub mod types {
             #[serde(rename = "entryId")]
             entry_id: ::uuid::Uuid,
             id: ::std::string::String,
+            #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+            level: ::std::option::Option<
+                ::codm_contracts_rust::wire::enums::IssueSignalLevel,
+            >,
+            #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+            routing: ::std::option::Option<
+                ::codm_contracts_rust::wire::enums::OutputRouting,
+            >,
             text: ::std::string::String,
             #[serde(rename = "transcriptKind")]
             transcript_kind: ::codm_contracts_rust::wire::enums::TranscriptKind,
@@ -5909,6 +6443,8 @@ pub mod types {
         },
         #[serde(rename = "STOP_RAISED")]
         StopRaised {
+            #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+            ask: ::std::option::Option<SyncPanelBodyIssuesItemTimelineItemAsk>,
             at: ::std::string::String,
             id: ::std::string::String,
             #[serde(rename = "stopId")]
@@ -5919,6 +6455,8 @@ pub mod types {
         },
         #[serde(rename = "STOP_RESOLVED")]
         StopResolved {
+            #[serde(default, skip_serializing_if = "::std::option::Option::is_none")]
+            answer: ::std::option::Option<SyncPanelBodyIssuesItemTimelineItemAnswer>,
             at: ::std::string::String,
             id: ::std::string::String,
             resolution: ::codm_contracts_rust::wire::enums::StopResolution,
@@ -5958,6 +6496,89 @@ pub mod types {
     }
     impl ::std::convert::From<&Self> for SyncPanelBodyIssuesItemTimelineItem {
         fn from(value: &SyncPanelBodyIssuesItemTimelineItem) -> Self {
+            value.clone()
+        }
+    }
+    ///`SyncPanelBodyIssuesItemTimelineItemAnswer`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "kind",
+    ///    "label"
+    ///  ],
+    ///  "properties": {
+    ///    "kind": {
+    ///      "$ref": "#/components/schemas/AskAnswerKind"
+    ///    },
+    ///    "label": {
+    ///      "type": "string"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct SyncPanelBodyIssuesItemTimelineItemAnswer {
+        pub kind: ::codm_contracts_rust::wire::enums::AskAnswerKind,
+        pub label: ::std::string::String,
+    }
+    impl ::std::convert::From<&SyncPanelBodyIssuesItemTimelineItemAnswer>
+    for SyncPanelBodyIssuesItemTimelineItemAnswer {
+        fn from(value: &SyncPanelBodyIssuesItemTimelineItemAnswer) -> Self {
+            value.clone()
+        }
+    }
+    ///`SyncPanelBodyIssuesItemTimelineItemAsk`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "code",
+    ///    "options",
+    ///    "question"
+    ///  ],
+    ///  "properties": {
+    ///    "code": {
+    ///      "type": "string"
+    ///    },
+    ///    "dueAt": {
+    ///      "type": "string"
+    ///    },
+    ///    "options": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "$ref": "#/components/schemas/AskOption"
+    ///      }
+    ///    },
+    ///    "question": {
+    ///      "type": "string"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct SyncPanelBodyIssuesItemTimelineItemAsk {
+        pub code: ::std::string::String,
+        #[serde(
+            rename = "dueAt",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub due_at: ::std::option::Option<::std::string::String>,
+        pub options: ::std::vec::Vec<AskOption>,
+        pub question: ::std::string::String,
+    }
+    impl ::std::convert::From<&SyncPanelBodyIssuesItemTimelineItemAsk>
+    for SyncPanelBodyIssuesItemTimelineItemAsk {
+        fn from(value: &SyncPanelBodyIssuesItemTimelineItemAsk) -> Self {
             value.clone()
         }
     }

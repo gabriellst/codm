@@ -358,6 +358,35 @@ describe('ThreadSettingsDialog — contra o backend real', () => {
 	})
 
 	/**
+	 * O QUE CHEGA AO GRUPO (fase 3, item 2) — nasce no padrão do dono (decisões e prévias) e escolher
+	 * outro modo salva sozinho; a prova é a releitura real.
+	 */
+	it('o modo do grupo nasce no padrão e escolher "tudo" persiste no backend real', async () => {
+		const threadId = await seedThread()
+		await mount(threadId)
+
+		const trigger = document.querySelector<HTMLElement>(`[aria-label="${i18n.t('session.outputMode')}"]`)
+		expect(trigger?.textContent).toContain(i18n.t('enums.GroupOutputMode.DECISIONS_AND_LIVE'))
+		await act(async () => {
+			trigger?.click()
+		})
+		const option = [...document.querySelectorAll<HTMLElement>('[role="option"]')].find(
+			el => el.textContent === i18n.t('enums.GroupOutputMode.EVERYTHING'),
+		)
+		await act(async () => {
+			option?.click()
+		})
+
+		await mounted!.settled(() => {
+			const t = document.querySelector<HTMLElement>(`[aria-label="${i18n.t('session.outputMode')}"]`)
+			return (t?.textContent ?? '').includes(i18n.t('enums.GroupOutputMode.EVERYTHING'))
+		}, 'o seletor refletir EVERYTHING')
+
+		const persisted = await getThreadSettings(threadId)
+		expect(persisted.outputMode).toBe('EVERYTHING')
+	})
+
+	/**
 	 * O IDIOMA DA CONVERSA — as pistas de "pensando" que a sala vê e o idioma em que o agente responde,
 	 * um campo só. Mesmo molde do modelo acima (escolher salva sozinho, a prova é a releitura real), com
 	 * o eixo extra que só este campo tem: a AUSÊNCIA é um estado, e voltar a ela é uma ação própria.

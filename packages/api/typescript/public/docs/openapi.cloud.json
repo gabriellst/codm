@@ -969,6 +969,12 @@
                                   },
                                   "classification": {
                                     "$ref": "#/components/schemas/ClassificationMethod"
+                                  },
+                                  "level": {
+                                    "$ref": "#/components/schemas/IssueSignalLevel"
+                                  },
+                                  "routing": {
+                                    "$ref": "#/components/schemas/OutputRouting"
                                   }
                                 },
                                 "required": [
@@ -1071,6 +1077,31 @@
                                   },
                                   "title": {
                                     "type": "string"
+                                  },
+                                  "ask": {
+                                    "type": "object",
+                                    "properties": {
+                                      "code": {
+                                        "type": "string"
+                                      },
+                                      "question": {
+                                        "type": "string"
+                                      },
+                                      "options": {
+                                        "type": "array",
+                                        "items": {
+                                          "$ref": "#/components/schemas/AskOption"
+                                        }
+                                      },
+                                      "dueAt": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "code",
+                                      "question",
+                                      "options"
+                                    ]
                                   }
                                 },
                                 "required": [
@@ -1102,6 +1133,21 @@
                                   },
                                   "resolution": {
                                     "$ref": "#/components/schemas/StopResolution"
+                                  },
+                                  "answer": {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "$ref": "#/components/schemas/AskAnswerKind"
+                                      },
+                                      "label": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "label"
+                                    ]
                                   }
                                 },
                                 "required": [
@@ -1934,6 +1980,12 @@
                               },
                               "classification": {
                                 "$ref": "#/components/schemas/ClassificationMethod"
+                              },
+                              "level": {
+                                "$ref": "#/components/schemas/IssueSignalLevel"
+                              },
+                              "routing": {
+                                "$ref": "#/components/schemas/OutputRouting"
                               }
                             },
                             "required": [
@@ -2039,6 +2091,32 @@
                               },
                               "title": {
                                 "type": "string"
+                              },
+                              "ask": {
+                                "type": "object",
+                                "properties": {
+                                  "code": {
+                                    "type": "string"
+                                  },
+                                  "question": {
+                                    "type": "string"
+                                  },
+                                  "options": {
+                                    "type": "array",
+                                    "items": {
+                                      "$ref": "#/components/schemas/AskOption"
+                                    }
+                                  },
+                                  "dueAt": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "code",
+                                  "question",
+                                  "options"
+                                ],
+                                "additionalProperties": false
                               }
                             },
                             "required": [
@@ -2071,6 +2149,22 @@
                               },
                               "resolution": {
                                 "$ref": "#/components/schemas/StopResolution"
+                              },
+                              "answer": {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "$ref": "#/components/schemas/AskAnswerKind"
+                                  },
+                                  "label": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "label"
+                                ],
+                                "additionalProperties": false
                               }
                             },
                             "required": [
@@ -2903,7 +2997,6 @@
           "ONBOARDING_DRAFT_INCOMPLETE",
           "ONBOARDING_NOT_COMPLETED",
           "OPTIMISTIC_LOCK_CONFLICT",
-          "OUTPUT_POLICY_NOT_READY",
           "OWNER_ALREADY_DISABLED",
           "OWNER_NOT_DISABLED",
           "OWNER_NOT_FOUND",
@@ -2992,6 +3085,25 @@
           "INDIVIDUAL"
         ]
       },
+      "AskOption": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ]
+      },
       "IssueStatus": {
         "type": "string",
         "enum": [
@@ -3049,6 +3161,25 @@
           "CLARIFIED"
         ]
       },
+      "IssueSignalLevel": {
+        "type": "string",
+        "enum": [
+          "DECISION",
+          "QUESTION",
+          "FEEDBACK",
+          "CLOSING",
+          "BLOCK_NOTICE",
+          "PROGRESS"
+        ]
+      },
+      "OutputRouting": {
+        "type": "string",
+        "enum": [
+          "GROUP",
+          "DIGEST",
+          "PANEL"
+        ]
+      },
       "ArtifactKind": {
         "type": "string",
         "enum": [
@@ -3083,6 +3214,14 @@
           "DENY",
           "ANSWER",
           "DEFAULT_APPLIED"
+        ]
+      },
+      "AskAnswerKind": {
+        "type": "string",
+        "enum": [
+          "OPTION",
+          "TEXT",
+          "DEFAULT"
         ]
       },
       "IssueControlSource": {
@@ -3218,7 +3357,6 @@
     "ONBOARDING_DRAFT_INCOMPLETE",
     "ONBOARDING_NOT_COMPLETED",
     "OPTIMISTIC_LOCK_CONFLICT",
-    "OUTPUT_POLICY_NOT_READY",
     "OWNER_ALREADY_DISABLED",
     "OWNER_NOT_DISABLED",
     "OWNER_NOT_FOUND",

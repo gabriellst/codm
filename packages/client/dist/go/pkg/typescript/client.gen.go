@@ -21,28 +21,28 @@ import (
 
 // Defines values for AgentModelId.
 const (
-	DEFAULT AgentModelId = "DEFAULT"
-	HAIKU   AgentModelId = "HAIKU"
-	LUNA    AgentModelId = "LUNA"
-	OPUS    AgentModelId = "OPUS"
-	SONNET  AgentModelId = "SONNET"
-	TERRA   AgentModelId = "TERRA"
+	AgentModelIdDEFAULT AgentModelId = "DEFAULT"
+	AgentModelIdHAIKU   AgentModelId = "HAIKU"
+	AgentModelIdLUNA    AgentModelId = "LUNA"
+	AgentModelIdOPUS    AgentModelId = "OPUS"
+	AgentModelIdSONNET  AgentModelId = "SONNET"
+	AgentModelIdTERRA   AgentModelId = "TERRA"
 )
 
 // Valid indicates whether the value is a known member of the AgentModelId enum.
 func (e AgentModelId) Valid() bool {
 	switch e {
-	case DEFAULT:
+	case AgentModelIdDEFAULT:
 		return true
-	case HAIKU:
+	case AgentModelIdHAIKU:
 		return true
-	case LUNA:
+	case AgentModelIdLUNA:
 		return true
-	case OPUS:
+	case AgentModelIdOPUS:
 		return true
-	case SONNET:
+	case AgentModelIdSONNET:
 		return true
-	case TERRA:
+	case AgentModelIdTERRA:
 		return true
 	default:
 		return false
@@ -128,7 +128,6 @@ const (
 	ONBOARDINGDRAFTINCOMPLETE       ApiErrors = "ONBOARDING_DRAFT_INCOMPLETE"
 	ONBOARDINGNOTCOMPLETED          ApiErrors = "ONBOARDING_NOT_COMPLETED"
 	OPTIMISTICLOCKCONFLICT          ApiErrors = "OPTIMISTIC_LOCK_CONFLICT"
-	OUTPUTPOLICYNOTREADY            ApiErrors = "OUTPUT_POLICY_NOT_READY"
 	OWNERALREADYDISABLED            ApiErrors = "OWNER_ALREADY_DISABLED"
 	OWNERNOTDISABLED                ApiErrors = "OWNER_NOT_DISABLED"
 	OWNERNOTFOUND                   ApiErrors = "OWNER_NOT_FOUND"
@@ -337,8 +336,6 @@ func (e ApiErrors) Valid() bool {
 		return true
 	case OPTIMISTICLOCKCONFLICT:
 		return true
-	case OUTPUTPOLICYNOTREADY:
-		return true
 	case OWNERALREADYDISABLED:
 		return true
 	case OWNERNOTDISABLED:
@@ -463,6 +460,27 @@ func (e ArtifactKind) Valid() bool {
 	case ArtifactKindLINK:
 		return true
 	case ArtifactKindVIDEO:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AskAnswerKind.
+const (
+	AskAnswerKindDEFAULT AskAnswerKind = "DEFAULT"
+	AskAnswerKindOPTION  AskAnswerKind = "OPTION"
+	AskAnswerKindTEXT    AskAnswerKind = "TEXT"
+)
+
+// Valid indicates whether the value is a known member of the AskAnswerKind enum.
+func (e AskAnswerKind) Valid() bool {
+	switch e {
+	case AskAnswerKindDEFAULT:
+		return true
+	case AskAnswerKindOPTION:
+		return true
+	case AskAnswerKindTEXT:
 		return true
 	default:
 		return false
@@ -606,19 +624,19 @@ func (e ClassificationMethod) Valid() bool {
 
 // Defines values for ContactKind.
 const (
-	BROADCAST ContactKind = "BROADCAST"
-	GROUP     ContactKind = "GROUP"
-	USER      ContactKind = "USER"
+	ContactKindBROADCAST ContactKind = "BROADCAST"
+	ContactKindGROUP     ContactKind = "GROUP"
+	ContactKindUSER      ContactKind = "USER"
 )
 
 // Valid indicates whether the value is a known member of the ContactKind enum.
 func (e ContactKind) Valid() bool {
 	switch e {
-	case BROADCAST:
+	case ContactKindBROADCAST:
 		return true
-	case GROUP:
+	case ContactKindGROUP:
 		return true
-	case USER:
+	case ContactKindUSER:
 		return true
 	default:
 		return false
@@ -1300,6 +1318,27 @@ func (e OnboardingStep) Valid() bool {
 	}
 }
 
+// Defines values for OutputRouting.
+const (
+	OutputRoutingDIGEST OutputRouting = "DIGEST"
+	OutputRoutingGROUP  OutputRouting = "GROUP"
+	OutputRoutingPANEL  OutputRouting = "PANEL"
+)
+
+// Valid indicates whether the value is a known member of the OutputRouting enum.
+func (e OutputRouting) Valid() bool {
+	switch e {
+	case OutputRoutingDIGEST:
+		return true
+	case OutputRoutingGROUP:
+		return true
+	case OutputRoutingPANEL:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProviderKind.
 const (
 	CLAUDECODE ProviderKind = "CLAUDE_CODE"
@@ -1582,6 +1621,9 @@ type ApiErrors string
 // ArtifactKind defines model for ArtifactKind.
 type ArtifactKind string
 
+// AskAnswerKind defines model for AskAnswerKind.
+type AskAnswerKind string
+
 // AskDefault defines model for AskDefault.
 type AskDefault struct {
 	union json.RawMessage
@@ -1674,6 +1716,9 @@ type MessageType string
 // OnboardingStep defines model for OnboardingStep.
 type OnboardingStep string
 
+// OutputRouting defines model for OutputRouting.
+type OutputRouting string
+
 // ProviderKind defines model for ProviderKind.
 type ProviderKind string
 
@@ -1745,6 +1790,8 @@ type GetIssueTimeline200JSONResponseBodyItems2 struct {
 	EntryId        openapi_types.UUID    `json:"entryId"`
 	Id             string                `json:"id"`
 	Kind           string                `json:"kind"`
+	Level          *IssueSignalLevel     `json:"level,omitempty"`
+	Routing        *OutputRouting        `json:"routing,omitempty"`
 	Text           string                `json:"text"`
 	TranscriptKind TranscriptKind        `json:"transcriptKind"`
 }
@@ -1772,6 +1819,12 @@ type GetIssueTimeline200JSONResponseBodyItems4 struct {
 
 // GetIssueTimeline200JSONResponseBodyItems5 defines parameters for GetIssueTimeline.
 type GetIssueTimeline200JSONResponseBodyItems5 struct {
+	Ask *struct {
+		Code     string      `json:"code"`
+		DueAt    *string     `json:"dueAt,omitempty"`
+		Options  []AskOption `json:"options"`
+		Question string      `json:"question"`
+	} `json:"ask,omitempty"`
 	At       string             `json:"at"`
 	Id       string             `json:"id"`
 	Kind     string             `json:"kind"`
@@ -1782,6 +1835,10 @@ type GetIssueTimeline200JSONResponseBodyItems5 struct {
 
 // GetIssueTimeline200JSONResponseBodyItems6 defines parameters for GetIssueTimeline.
 type GetIssueTimeline200JSONResponseBodyItems6 struct {
+	Answer *struct {
+		Kind  AskAnswerKind `json:"kind"`
+		Label string        `json:"label"`
+	} `json:"answer,omitempty"`
 	At         string             `json:"at"`
 	Id         string             `json:"id"`
 	Kind       string             `json:"kind"`
@@ -2106,6 +2163,62 @@ type ConfigureMentionGateJSONBody_MentionGate struct {
 type ConfigureModelJSONBody struct {
 	Model    AgentModelId `json:"model"`
 	Provider ProviderKind `json:"provider"`
+}
+
+// GetNeedsYouPanel200JSONResponseBodyStopsAsk0 defines parameters for GetNeedsYouPanel.
+type GetNeedsYouPanel200JSONResponseBodyStopsAsk0 struct {
+	Code            string                                                `json:"code"`
+	Kind            string                                                `json:"kind"`
+	Question        string                                                `json:"question"`
+	ReleaseRequired bool                                                  `json:"releaseRequired"`
+	Reply           GetNeedsYouPanel200JSONResponseBody_Stops_Ask_0_Reply `json:"reply"`
+}
+
+// GetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply0 defines parameters for GetNeedsYouPanel.
+type GetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply0 struct {
+	Kind    string      `json:"kind"`
+	Options []AskOption `json:"options"`
+}
+
+// GetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply1 defines parameters for GetNeedsYouPanel.
+type GetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply1 struct {
+	Kind string `json:"kind"`
+}
+
+// GetNeedsYouPanel200JSONResponseBody_Stops_Ask_0_Reply defines parameters for GetNeedsYouPanel.
+type GetNeedsYouPanel200JSONResponseBody_Stops_Ask_0_Reply struct {
+	union json.RawMessage
+}
+
+// GetNeedsYouPanel200JSONResponseBodyStopsAsk1 defines parameters for GetNeedsYouPanel.
+type GetNeedsYouPanel200JSONResponseBodyStopsAsk1 struct {
+	Code         string                                                `json:"code"`
+	DefaultLabel string                                                `json:"defaultLabel"`
+	DueAt        *string                                               `json:"dueAt,omitempty"`
+	Kind         string                                                `json:"kind"`
+	Question     string                                                `json:"question"`
+	Reply        GetNeedsYouPanel200JSONResponseBody_Stops_Ask_1_Reply `json:"reply"`
+}
+
+// GetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply0 defines parameters for GetNeedsYouPanel.
+type GetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply0 struct {
+	Kind    string      `json:"kind"`
+	Options []AskOption `json:"options"`
+}
+
+// GetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply1 defines parameters for GetNeedsYouPanel.
+type GetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply1 struct {
+	Kind string `json:"kind"`
+}
+
+// GetNeedsYouPanel200JSONResponseBody_Stops_Ask_1_Reply defines parameters for GetNeedsYouPanel.
+type GetNeedsYouPanel200JSONResponseBody_Stops_Ask_1_Reply struct {
+	union json.RawMessage
+}
+
+// GetNeedsYouPanel200JSONResponseBody_Stops_Ask defines parameters for GetNeedsYouPanel.
+type GetNeedsYouPanel200JSONResponseBody_Stops_Ask struct {
+	union json.RawMessage
 }
 
 // ConfigureOutputModeJSONBody defines parameters for ConfigureOutputMode.
@@ -3053,6 +3166,192 @@ func (t ConfigureMentionGateJSONBody_MentionGate) MarshalJSON() ([]byte, error) 
 }
 
 func (t *ConfigureMentionGateJSONBody_MentionGate) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsGetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply0 returns the union data inside the GetNeedsYouPanel200JSONResponseBody_Stops_Ask_0_Reply as a GetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply0
+func (t GetNeedsYouPanel200JSONResponseBody_Stops_Ask_0_Reply) AsGetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply0() (GetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply0, error) {
+	var body GetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply0 overwrites any union data inside the GetNeedsYouPanel200JSONResponseBody_Stops_Ask_0_Reply as the provided GetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply0
+func (t *GetNeedsYouPanel200JSONResponseBody_Stops_Ask_0_Reply) FromGetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply0(v GetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply0 performs a merge with any union data inside the GetNeedsYouPanel200JSONResponseBody_Stops_Ask_0_Reply, using the provided GetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply0
+func (t *GetNeedsYouPanel200JSONResponseBody_Stops_Ask_0_Reply) MergeGetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply0(v GetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply1 returns the union data inside the GetNeedsYouPanel200JSONResponseBody_Stops_Ask_0_Reply as a GetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply1
+func (t GetNeedsYouPanel200JSONResponseBody_Stops_Ask_0_Reply) AsGetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply1() (GetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply1, error) {
+	var body GetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply1 overwrites any union data inside the GetNeedsYouPanel200JSONResponseBody_Stops_Ask_0_Reply as the provided GetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply1
+func (t *GetNeedsYouPanel200JSONResponseBody_Stops_Ask_0_Reply) FromGetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply1(v GetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply1 performs a merge with any union data inside the GetNeedsYouPanel200JSONResponseBody_Stops_Ask_0_Reply, using the provided GetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply1
+func (t *GetNeedsYouPanel200JSONResponseBody_Stops_Ask_0_Reply) MergeGetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply1(v GetNeedsYouPanel200JSONResponseBodyStopsAsk0Reply1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t GetNeedsYouPanel200JSONResponseBody_Stops_Ask_0_Reply) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *GetNeedsYouPanel200JSONResponseBody_Stops_Ask_0_Reply) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsGetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply0 returns the union data inside the GetNeedsYouPanel200JSONResponseBody_Stops_Ask_1_Reply as a GetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply0
+func (t GetNeedsYouPanel200JSONResponseBody_Stops_Ask_1_Reply) AsGetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply0() (GetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply0, error) {
+	var body GetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply0 overwrites any union data inside the GetNeedsYouPanel200JSONResponseBody_Stops_Ask_1_Reply as the provided GetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply0
+func (t *GetNeedsYouPanel200JSONResponseBody_Stops_Ask_1_Reply) FromGetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply0(v GetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply0 performs a merge with any union data inside the GetNeedsYouPanel200JSONResponseBody_Stops_Ask_1_Reply, using the provided GetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply0
+func (t *GetNeedsYouPanel200JSONResponseBody_Stops_Ask_1_Reply) MergeGetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply0(v GetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply1 returns the union data inside the GetNeedsYouPanel200JSONResponseBody_Stops_Ask_1_Reply as a GetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply1
+func (t GetNeedsYouPanel200JSONResponseBody_Stops_Ask_1_Reply) AsGetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply1() (GetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply1, error) {
+	var body GetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply1 overwrites any union data inside the GetNeedsYouPanel200JSONResponseBody_Stops_Ask_1_Reply as the provided GetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply1
+func (t *GetNeedsYouPanel200JSONResponseBody_Stops_Ask_1_Reply) FromGetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply1(v GetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply1 performs a merge with any union data inside the GetNeedsYouPanel200JSONResponseBody_Stops_Ask_1_Reply, using the provided GetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply1
+func (t *GetNeedsYouPanel200JSONResponseBody_Stops_Ask_1_Reply) MergeGetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply1(v GetNeedsYouPanel200JSONResponseBodyStopsAsk1Reply1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t GetNeedsYouPanel200JSONResponseBody_Stops_Ask_1_Reply) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *GetNeedsYouPanel200JSONResponseBody_Stops_Ask_1_Reply) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsGetNeedsYouPanel200JSONResponseBodyStopsAsk0 returns the union data inside the GetNeedsYouPanel200JSONResponseBody_Stops_Ask as a GetNeedsYouPanel200JSONResponseBodyStopsAsk0
+func (t GetNeedsYouPanel200JSONResponseBody_Stops_Ask) AsGetNeedsYouPanel200JSONResponseBodyStopsAsk0() (GetNeedsYouPanel200JSONResponseBodyStopsAsk0, error) {
+	var body GetNeedsYouPanel200JSONResponseBodyStopsAsk0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetNeedsYouPanel200JSONResponseBodyStopsAsk0 overwrites any union data inside the GetNeedsYouPanel200JSONResponseBody_Stops_Ask as the provided GetNeedsYouPanel200JSONResponseBodyStopsAsk0
+func (t *GetNeedsYouPanel200JSONResponseBody_Stops_Ask) FromGetNeedsYouPanel200JSONResponseBodyStopsAsk0(v GetNeedsYouPanel200JSONResponseBodyStopsAsk0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetNeedsYouPanel200JSONResponseBodyStopsAsk0 performs a merge with any union data inside the GetNeedsYouPanel200JSONResponseBody_Stops_Ask, using the provided GetNeedsYouPanel200JSONResponseBodyStopsAsk0
+func (t *GetNeedsYouPanel200JSONResponseBody_Stops_Ask) MergeGetNeedsYouPanel200JSONResponseBodyStopsAsk0(v GetNeedsYouPanel200JSONResponseBodyStopsAsk0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetNeedsYouPanel200JSONResponseBodyStopsAsk1 returns the union data inside the GetNeedsYouPanel200JSONResponseBody_Stops_Ask as a GetNeedsYouPanel200JSONResponseBodyStopsAsk1
+func (t GetNeedsYouPanel200JSONResponseBody_Stops_Ask) AsGetNeedsYouPanel200JSONResponseBodyStopsAsk1() (GetNeedsYouPanel200JSONResponseBodyStopsAsk1, error) {
+	var body GetNeedsYouPanel200JSONResponseBodyStopsAsk1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetNeedsYouPanel200JSONResponseBodyStopsAsk1 overwrites any union data inside the GetNeedsYouPanel200JSONResponseBody_Stops_Ask as the provided GetNeedsYouPanel200JSONResponseBodyStopsAsk1
+func (t *GetNeedsYouPanel200JSONResponseBody_Stops_Ask) FromGetNeedsYouPanel200JSONResponseBodyStopsAsk1(v GetNeedsYouPanel200JSONResponseBodyStopsAsk1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetNeedsYouPanel200JSONResponseBodyStopsAsk1 performs a merge with any union data inside the GetNeedsYouPanel200JSONResponseBody_Stops_Ask, using the provided GetNeedsYouPanel200JSONResponseBodyStopsAsk1
+func (t *GetNeedsYouPanel200JSONResponseBody_Stops_Ask) MergeGetNeedsYouPanel200JSONResponseBodyStopsAsk1(v GetNeedsYouPanel200JSONResponseBodyStopsAsk1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t GetNeedsYouPanel200JSONResponseBody_Stops_Ask) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *GetNeedsYouPanel200JSONResponseBody_Stops_Ask) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }
@@ -9094,6 +9393,7 @@ type GetSessionChatResponse struct {
 			Kind           TranscriptKind        `json:"kind"`
 			Provider       *ProviderKind         `json:"provider,omitempty"`
 			QuotedEntryId  *string               `json:"quotedEntryId,omitempty"`
+			Routing        *OutputRouting        `json:"routing,omitempty"`
 			Sender         *struct {
 				ChannelId   openapi_types.UUID `json:"channelId"`
 				DisplayName string             `json:"displayName"`
@@ -9838,14 +10138,15 @@ type GetNeedsYouPanelResponse struct {
 	HTTPResponse *http.Response
 	JSON200      *struct {
 		Stops []struct {
-			AvailableResolutions []StopResolution    `json:"availableResolutions"`
-			Detail               string              `json:"detail"`
-			IssueId              *openapi_types.UUID `json:"issueId,omitempty"`
-			IssueKey             *string             `json:"issueKey,omitempty"`
-			Kind                 StopKind            `json:"kind"`
-			RaisedAt             string              `json:"raisedAt"`
-			StopId               openapi_types.UUID  `json:"stopId"`
-			Title                string              `json:"title"`
+			Ask                  *GetNeedsYouPanel200JSONResponseBody_Stops_Ask `json:"ask,omitempty"`
+			AvailableResolutions []StopResolution                               `json:"availableResolutions"`
+			Detail               string                                         `json:"detail"`
+			IssueId              *openapi_types.UUID                            `json:"issueId,omitempty"`
+			IssueKey             *string                                        `json:"issueKey,omitempty"`
+			Kind                 StopKind                                       `json:"kind"`
+			RaisedAt             string                                         `json:"raisedAt"`
+			StopId               openapi_types.UUID                             `json:"stopId"`
+			Title                string                                         `json:"title"`
 		} `json:"stops"`
 	}
 }
@@ -10161,6 +10462,7 @@ type GetThreadSettingsResponse struct {
 			Effective Language  `json:"effective"`
 		} `json:"language"`
 		MentionGate  GetThreadSettings200JSONResponseBody_MentionGate `json:"mentionGate"`
+		OutputMode   GroupOutputMode                                  `json:"outputMode"`
 		Participants []struct {
 			CanElevate    bool               `json:"canElevate"`
 			CanInvoke     bool               `json:"canInvoke"`
@@ -12623,6 +12925,7 @@ func ParseGetSessionChatResponse(rsp *http.Response) (*GetSessionChatResponse, e
 				Kind           TranscriptKind        `json:"kind"`
 				Provider       *ProviderKind         `json:"provider,omitempty"`
 				QuotedEntryId  *string               `json:"quotedEntryId,omitempty"`
+				Routing        *OutputRouting        `json:"routing,omitempty"`
 				Sender         *struct {
 					ChannelId   openapi_types.UUID `json:"channelId"`
 					DisplayName string             `json:"displayName"`
@@ -13279,14 +13582,15 @@ func ParseGetNeedsYouPanelResponse(rsp *http.Response) (*GetNeedsYouPanelRespons
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
 			Stops []struct {
-				AvailableResolutions []StopResolution    `json:"availableResolutions"`
-				Detail               string              `json:"detail"`
-				IssueId              *openapi_types.UUID `json:"issueId,omitempty"`
-				IssueKey             *string             `json:"issueKey,omitempty"`
-				Kind                 StopKind            `json:"kind"`
-				RaisedAt             string              `json:"raisedAt"`
-				StopId               openapi_types.UUID  `json:"stopId"`
-				Title                string              `json:"title"`
+				Ask                  *GetNeedsYouPanel200JSONResponseBody_Stops_Ask `json:"ask,omitempty"`
+				AvailableResolutions []StopResolution                               `json:"availableResolutions"`
+				Detail               string                                         `json:"detail"`
+				IssueId              *openapi_types.UUID                            `json:"issueId,omitempty"`
+				IssueKey             *string                                        `json:"issueKey,omitempty"`
+				Kind                 StopKind                                       `json:"kind"`
+				RaisedAt             string                                         `json:"raisedAt"`
+				StopId               openapi_types.UUID                             `json:"stopId"`
+				Title                string                                         `json:"title"`
 			} `json:"stops"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
@@ -13562,6 +13866,7 @@ func ParseGetThreadSettingsResponse(rsp *http.Response) (*GetThreadSettingsRespo
 				Effective Language  `json:"effective"`
 			} `json:"language"`
 			MentionGate  GetThreadSettings200JSONResponseBody_MentionGate `json:"mentionGate"`
+			OutputMode   GroupOutputMode                                  `json:"outputMode"`
 			Participants []struct {
 				CanElevate    bool               `json:"canElevate"`
 				CanInvoke     bool               `json:"canInvoke"`

@@ -1,5 +1,5 @@
 import { AskAnswerKind } from '@codm/contracts-typescript/wire/enums'
-import { ASK_TEXT_MAX, type AskAnswer, type StopAnswer, type StopAsk } from '@shared/objects'
+import { ASK_TEXT_MAX, type AskAnswer, type StopAsk } from '@shared/objects'
 import { BareAnswer } from '../enums'
 import { fold, LEADING_MENTIONS } from './controlCommand'
 
@@ -105,14 +105,5 @@ export function parseAskAnswer(text: string, ask: StopAsk): AskAnswer | undefine
 	return { kind: AskAnswerKind.TEXT, text: answer.slice(0, ASK_TEXT_MAX) }
 }
 
-/** An answer as people read it — the option's label (its id when the ask no longer lists it), the text, or the default's. */
-export function labelOfAnswer(ask: StopAsk | undefined, answer: StopAnswer): string {
-	const chosen = answer.kind === AskAnswerKind.DEFAULT ? answer.default : answer
-	if (chosen.kind === AskAnswerKind.TEXT) return chosen.text
-	return ask?.options.find(option => option.id === chosen.optionId)?.label ?? chosen.optionId
-}
-
-/** The code people read for an ask — `APP-12 · D1`; the key alone when the stop is not a numbered ask. */
-export function askCode(key: string, seq: number | undefined): string {
-	return seq === undefined ? key : `${key} · D${seq}`
-}
+// How an ask reads to people — shared with the `issue` timeline, so it lives in `shared/utils`.
+export { askCode, labelOfAnswer } from '@shared/utils/askCode'

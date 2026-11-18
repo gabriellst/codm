@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenArtifact, givenChannel, givenRemote, givenThread, givenWorkspace } from '@test/support'
-import { ArtifactKind, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
+import { ArtifactKind, IssueSignalLevel, OutputRouting, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { OPERATOR_PARTICIPANT_ID } from '../objects'
 import { ThreadRepository } from '../repositories/ThreadRepository'
@@ -275,5 +275,17 @@ describe('GetSessionChat — a delivered artifact joins onto its own entry', () 
 
 		const chat = await testBed.resolve(GetSessionChat).execute({ ownerId: MOCK_CLOUD_OWNER_ID, threadId: t.id.value })
 		expect(chat.transcript.find(e => e.text === 'tudo certo por aqui')?.artifact).toBeUndefined()
+	})
+
+	/** Fase 3 — what an issue said carries where the policy sent it, so the console can mark what never went out. */
+	it('carries the routing of an issue signal, and none on an ordinary line', async () => {
+		const t = await thread()
+		t.recordEntry({ kind: TranscriptKind.SYSTEM, text: 'rodei os testes', level: IssueSignalLevel.PROGRESS, routing: OutputRouting.PANEL })
+		t.recordEntry({ kind: TranscriptKind.SYSTEM, text: 'oi, tudo bem' })
+		await testBed.resolve(ThreadRepository).save(t)
+
+		const chat = await testBed.resolve(GetSessionChat).execute({ ownerId: MOCK_CLOUD_OWNER_ID, threadId: t.id.value })
+		expect(chat.transcript.find(e => e.text === 'rodei os testes')?.routing).toBe(OutputRouting.PANEL)
+		expect(chat.transcript.find(e => e.text === 'oi, tudo bem')?.routing).toBeUndefined()
 	})
 })

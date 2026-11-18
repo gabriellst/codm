@@ -98,7 +98,6 @@ const (
 	ONBOARDINGDRAFTINCOMPLETE       ApiErrors = "ONBOARDING_DRAFT_INCOMPLETE"
 	ONBOARDINGNOTCOMPLETED          ApiErrors = "ONBOARDING_NOT_COMPLETED"
 	OPTIMISTICLOCKCONFLICT          ApiErrors = "OPTIMISTIC_LOCK_CONFLICT"
-	OUTPUTPOLICYNOTREADY            ApiErrors = "OUTPUT_POLICY_NOT_READY"
 	OWNERALREADYDISABLED            ApiErrors = "OWNER_ALREADY_DISABLED"
 	OWNERNOTDISABLED                ApiErrors = "OWNER_NOT_DISABLED"
 	OWNERNOTFOUND                   ApiErrors = "OWNER_NOT_FOUND"
@@ -307,8 +306,6 @@ func (e ApiErrors) Valid() bool {
 		return true
 	case OPTIMISTICLOCKCONFLICT:
 		return true
-	case OUTPUTPOLICYNOTREADY:
-		return true
 	case OWNERALREADYDISABLED:
 		return true
 	case OWNERNOTDISABLED:
@@ -439,6 +436,27 @@ func (e ArtifactKind) Valid() bool {
 	}
 }
 
+// Defines values for AskAnswerKind.
+const (
+	DEFAULT AskAnswerKind = "DEFAULT"
+	OPTION  AskAnswerKind = "OPTION"
+	TEXT    AskAnswerKind = "TEXT"
+)
+
+// Valid indicates whether the value is a known member of the AskAnswerKind enum.
+func (e AskAnswerKind) Valid() bool {
+	switch e {
+	case DEFAULT:
+		return true
+	case OPTION:
+		return true
+	case TEXT:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ClassificationMethod.
 const (
 	CLARIFIED    ClassificationMethod = "CLARIFIED"
@@ -495,19 +513,19 @@ func (e IrreversibleActionKind) Valid() bool {
 
 // Defines values for IssueControlSource.
 const (
-	CONSOLE  IssueControlSource = "CONSOLE"
-	PANEL    IssueControlSource = "PANEL"
-	WHATSAPP IssueControlSource = "WHATSAPP"
+	IssueControlSourceCONSOLE  IssueControlSource = "CONSOLE"
+	IssueControlSourcePANEL    IssueControlSource = "PANEL"
+	IssueControlSourceWHATSAPP IssueControlSource = "WHATSAPP"
 )
 
 // Valid indicates whether the value is a known member of the IssueControlSource enum.
 func (e IssueControlSource) Valid() bool {
 	switch e {
-	case CONSOLE:
+	case IssueControlSourceCONSOLE:
 		return true
-	case PANEL:
+	case IssueControlSourcePANEL:
 		return true
-	case WHATSAPP:
+	case IssueControlSourceWHATSAPP:
 		return true
 	default:
 		return false
@@ -544,6 +562,36 @@ func (e IssueLifeState) Valid() bool {
 	case IssueLifeStateWAITINGPERSON:
 		return true
 	case IssueLifeStateWAITINGPROVIDER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IssueSignalLevel.
+const (
+	BLOCKNOTICE IssueSignalLevel = "BLOCK_NOTICE"
+	CLOSING     IssueSignalLevel = "CLOSING"
+	DECISION    IssueSignalLevel = "DECISION"
+	FEEDBACK    IssueSignalLevel = "FEEDBACK"
+	PROGRESS    IssueSignalLevel = "PROGRESS"
+	QUESTION    IssueSignalLevel = "QUESTION"
+)
+
+// Valid indicates whether the value is a known member of the IssueSignalLevel enum.
+func (e IssueSignalLevel) Valid() bool {
+	switch e {
+	case BLOCKNOTICE:
+		return true
+	case CLOSING:
+		return true
+	case DECISION:
+		return true
+	case FEEDBACK:
+		return true
+	case PROGRESS:
+		return true
+	case QUESTION:
 		return true
 	default:
 		return false
@@ -631,6 +679,27 @@ func (e Language) Valid() bool {
 	case EnUS:
 		return true
 	case PtBR:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OutputRouting.
+const (
+	OutputRoutingDIGEST OutputRouting = "DIGEST"
+	OutputRoutingGROUP  OutputRouting = "GROUP"
+	OutputRoutingPANEL  OutputRouting = "PANEL"
+)
+
+// Valid indicates whether the value is a known member of the OutputRouting enum.
+func (e OutputRouting) Valid() bool {
+	switch e {
+	case OutputRoutingDIGEST:
+		return true
+	case OutputRoutingGROUP:
+		return true
+	case OutputRoutingPANEL:
 		return true
 	default:
 		return false
@@ -904,6 +973,15 @@ type ApiErrors string
 // ArtifactKind defines model for ArtifactKind.
 type ArtifactKind string
 
+// AskAnswerKind defines model for AskAnswerKind.
+type AskAnswerKind string
+
+// AskOption defines model for AskOption.
+type AskOption struct {
+	Id    string `json:"id"`
+	Label string `json:"label"`
+}
+
 // ClassificationMethod defines model for ClassificationMethod.
 type ClassificationMethod string
 
@@ -916,6 +994,9 @@ type IssueControlSource string
 // IssueLifeState defines model for IssueLifeState.
 type IssueLifeState string
 
+// IssueSignalLevel defines model for IssueSignalLevel.
+type IssueSignalLevel string
+
 // IssueStatus defines model for IssueStatus.
 type IssueStatus string
 
@@ -924,6 +1005,9 @@ type IssueTimelineItemKind string
 
 // Language defines model for Language.
 type Language string
+
+// OutputRouting defines model for OutputRouting.
+type OutputRouting string
 
 // OwnerKind defines model for OwnerKind.
 type OwnerKind string
@@ -1042,6 +1126,8 @@ type GetPanelIssue200JSONResponseBodyTimeline2 struct {
 	EntryId        openapi_types.UUID    `json:"entryId"`
 	Id             string                `json:"id"`
 	Kind           string                `json:"kind"`
+	Level          *IssueSignalLevel     `json:"level,omitempty"`
+	Routing        *OutputRouting        `json:"routing,omitempty"`
 	Text           string                `json:"text"`
 	TranscriptKind TranscriptKind        `json:"transcriptKind"`
 }
@@ -1069,6 +1155,12 @@ type GetPanelIssue200JSONResponseBodyTimeline4 struct {
 
 // GetPanelIssue200JSONResponseBodyTimeline5 defines parameters for GetPanelIssue.
 type GetPanelIssue200JSONResponseBodyTimeline5 struct {
+	Ask *struct {
+		Code     string      `json:"code"`
+		DueAt    *string     `json:"dueAt,omitempty"`
+		Options  []AskOption `json:"options"`
+		Question string      `json:"question"`
+	} `json:"ask,omitempty"`
 	At       string             `json:"at"`
 	Id       string             `json:"id"`
 	Kind     string             `json:"kind"`
@@ -1079,6 +1171,10 @@ type GetPanelIssue200JSONResponseBodyTimeline5 struct {
 
 // GetPanelIssue200JSONResponseBodyTimeline6 defines parameters for GetPanelIssue.
 type GetPanelIssue200JSONResponseBodyTimeline6 struct {
+	Answer *struct {
+		Kind  AskAnswerKind `json:"kind"`
+		Label string        `json:"label"`
+	} `json:"answer,omitempty"`
 	At         string             `json:"at"`
 	Id         string             `json:"id"`
 	Kind       string             `json:"kind"`
@@ -1236,6 +1332,8 @@ type SyncPanelJSONBodyIssuesTimeline2 struct {
 	EntryId        openapi_types.UUID    `json:"entryId"`
 	Id             string                `json:"id"`
 	Kind           string                `json:"kind"`
+	Level          *IssueSignalLevel     `json:"level,omitempty"`
+	Routing        *OutputRouting        `json:"routing,omitempty"`
 	Text           string                `json:"text"`
 	TranscriptKind TranscriptKind        `json:"transcriptKind"`
 }
@@ -1263,6 +1361,12 @@ type SyncPanelJSONBodyIssuesTimeline4 struct {
 
 // SyncPanelJSONBodyIssuesTimeline5 defines parameters for SyncPanel.
 type SyncPanelJSONBodyIssuesTimeline5 struct {
+	Ask *struct {
+		Code     string      `json:"code"`
+		DueAt    *string     `json:"dueAt,omitempty"`
+		Options  []AskOption `json:"options"`
+		Question string      `json:"question"`
+	} `json:"ask,omitempty"`
 	At       string             `json:"at"`
 	Id       string             `json:"id"`
 	Kind     string             `json:"kind"`
@@ -1273,6 +1377,10 @@ type SyncPanelJSONBodyIssuesTimeline5 struct {
 
 // SyncPanelJSONBodyIssuesTimeline6 defines parameters for SyncPanel.
 type SyncPanelJSONBodyIssuesTimeline6 struct {
+	Answer *struct {
+		Kind  AskAnswerKind `json:"kind"`
+		Label string        `json:"label"`
+	} `json:"answer,omitempty"`
 	At         string             `json:"at"`
 	Id         string             `json:"id"`
 	Kind       string             `json:"kind"`

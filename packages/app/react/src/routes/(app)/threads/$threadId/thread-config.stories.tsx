@@ -89,6 +89,7 @@ const THREAD_SETTINGS: DeepPartial<GetThreadSettingsQueryResponse> = {
 	thinkingIndicator: { enabled: true },
 	reactions: { enabled: true },
 	streaming: { enabled: true },
+	outputMode: 'DECISIONS_AND_LIVE',
 	participants: [
 		{
 			participantId: 'operator',

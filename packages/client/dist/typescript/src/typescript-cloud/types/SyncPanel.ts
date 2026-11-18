@@ -4,11 +4,15 @@
 */
 
 import type { ArtifactKind } from "./ArtifactKind.ts";
+import type { AskAnswerKind } from "./AskAnswerKind.ts";
+import type { AskOption } from "./AskOption.ts";
 import type { ClassificationMethod } from "./ClassificationMethod.ts";
 import type { IrreversibleActionKind } from "./IrreversibleActionKind.ts";
 import type { IssueControlSource } from "./IssueControlSource.ts";
 import type { IssueLifeState } from "./IssueLifeState.ts";
+import type { IssueSignalLevel } from "./IssueSignalLevel.ts";
 import type { IssueStatus } from "./IssueStatus.ts";
+import type { OutputRouting } from "./OutputRouting.ts";
 import type { RegretWindowOutcome } from "./RegretWindowOutcome.ts";
 import type { StopKind } from "./StopKind.ts";
 import type { StopResolution } from "./StopResolution.ts";
@@ -222,6 +226,14 @@ export type SyncPanelMutationRequest = {
              * @type string | undefined
             */
             classification?: ClassificationMethod;
+            /**
+             * @type string | undefined
+            */
+            level?: IssueSignalLevel;
+            /**
+             * @type string | undefined
+            */
+            routing?: OutputRouting;
         } | {
             /**
              * @type string
@@ -301,6 +313,27 @@ export type SyncPanelMutationRequest = {
              * @type string
             */
             title: string;
+            /**
+             * @type object | undefined
+            */
+            ask?: {
+                /**
+                 * @type string
+                */
+                code: string;
+                /**
+                 * @type string
+                */
+                question: string;
+                /**
+                 * @type array
+                */
+                options: AskOption[];
+                /**
+                 * @type string | undefined
+                */
+                dueAt?: string;
+            };
         } | {
             /**
              * @type string
@@ -322,6 +355,19 @@ export type SyncPanelMutationRequest = {
              * @type string
             */
             resolution: StopResolution;
+            /**
+             * @type object | undefined
+            */
+            answer?: {
+                /**
+                 * @type string
+                */
+                kind: AskAnswerKind;
+                /**
+                 * @type string
+                */
+                label: string;
+            };
         } | {
             /**
              * @type string

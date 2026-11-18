@@ -2,9 +2,10 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { TestBed, givenRemote, givenRemoteMembership, givenThread, givenWorkspace } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
-import { ContactKind, Language } from '@codm/contracts-typescript/wire/enums'
+import { ContactKind, GroupOutputMode, Language } from '@codm/contracts-typescript/wire/enums'
 import { ThreadRepository } from '../repositories/ThreadRepository'
-import { ConfigureLanguage, ConfigureThinkingIndicator, SetParticipantInvocation } from './ConfigureThreadSettings'
+import { ConfigureLanguage, ConfigureOutputMode, ConfigureThinkingIndicator, SetParticipantInvocation } from './ConfigureThreadSettings'
+import { GetThreadSettings } from './GetThreadSettings'
 
 const GROUP_CHANNEL = '019e4d24-0000-7041-9e1c-0000000000e1'
 const GROUP_ID = '120363111111111111@g.us'
@@ -205,6 +206,50 @@ describe('ConfigureLanguage — WHICH language this conversation speaks', () => 
 			testBed
 				.resolve(ConfigureLanguage)
 				.execute({ ownerId: '00000000-0000-4000-8000-000000000099', threadId: thread.id.value, language: Language.EN_US }),
+		).rejects.toThrow(expect.objectContaining({ name: 'THREAD_NOT_FOUND' }))
+	})
+})
+
+describe('ConfigureOutputMode — how much of what its issues say reaches the group (fase 3, item 2)', () => {
+	let testBed: TestBed
+	let testContainer: DependencyContainer
+
+	beforeAll(async () => {
+		testContainer = container.createChildContainer()
+		testBed = await TestBed.create('integration', { testContainer, ownerId: MOCK_CLOUD_OWNER_ID })
+	})
+	beforeEach(async () => {
+		await testBed.reset()
+	})
+	afterAll(async () => {
+		await testBed.destroy()
+	})
+
+	it('a fresh conversation reads the owner-decided default, DECISIONS_AND_LIVE', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+		const settings = await testBed.resolve(GetThreadSettings).execute({ ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value })
+		expect(settings.outputMode).toBe(GroupOutputMode.DECISIONS_AND_LIVE)
+	})
+
+	it('chooses a mode, persists it, and the settings read returns it', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+
+		await testBed
+			.resolve(ConfigureOutputMode)
+			.execute({ ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value, mode: GroupOutputMode.EVERYTHING })
+
+		expect((await testBed.resolve(ThreadRepository).findById(thread.id.value))?.outputMode).toBe(GroupOutputMode.EVERYTHING)
+		const settings = await testBed.resolve(GetThreadSettings).execute({ ownerId: MOCK_CLOUD_OWNER_ID, threadId: thread.id.value })
+		expect(settings.outputMode).toBe(GroupOutputMode.EVERYTHING)
+	})
+
+	it('refuses a thread that does not belong to the caller (THREAD_NOT_FOUND)', async () => {
+		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID })
+
+		await expect(
+			testBed
+				.resolve(ConfigureOutputMode)
+				.execute({ ownerId: '00000000-0000-4000-8000-000000000099', threadId: thread.id.value, mode: GroupOutputMode.DECISIONS_ONLY }),
 		).rejects.toThrow(expect.objectContaining({ name: 'THREAD_NOT_FOUND' }))
 	})
 })

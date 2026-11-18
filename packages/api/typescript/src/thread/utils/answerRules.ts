@@ -96,12 +96,12 @@ export const REFUSED_AS: Readonly<Record<AnswerGate, ApplicationErrors>> = {
 }
 
 /** The effects answering this stop authorizes — the ask's declared ones, or what its kind implies. */
-export function effectsOf(stop: Stop): readonly AskEffect[] {
+export function effectsOf(stop: Pick<Stop, 'kind' | 'ask'>): readonly AskEffect[] {
 	return stop.ask?.effects ?? IMPLIED_EFFECTS[stop.kind]
 }
 
 /** Which gate a stop's answer passes — any effect makes it a release. */
-export function gateOf(stop: Stop): AnswerGate {
+export function gateOf(stop: Pick<Stop, 'kind' | 'ask'>): AnswerGate {
 	return effectsOf(stop).length > 0 ? AnswerGate.WITH_EFFECT : AnswerGate.NO_EFFECT
 }
 

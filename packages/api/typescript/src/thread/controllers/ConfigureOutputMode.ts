@@ -1,12 +1,12 @@
 import { injectable } from 'tsyringe-neo'
-import { BaseError, Controller, z } from '@codm/core-typescript'
+import { Controller, HttpStatusCode } from '@codm/core-typescript'
 import { GroupOutputMode, McpScope } from '@codm/contracts-typescript/wire/enums'
 import { CloudSessionMiddleware } from '@shared/middlewares'
-import type { ApplicationErrors } from '../errors'
+import { ConfigureOutputMode, ConfigureOutputModeInputSchema, ConfigureOutputModeOutputSchema } from '../usecases/ConfigureThreadSettings'
 import { ThreadParam } from '../schemas'
 
 export const ConfigureOutputModeControllerInputSchema = ThreadParam.extend({
-	body: z.object({ mode: z.enum(GroupOutputMode) }),
+	body: ConfigureOutputModeInputSchema.pick({ mode: true }),
 }).example([
 	{
 		ctx: { ownerId: '00000000-0000-4000-8000-000000000001' },
@@ -14,15 +14,11 @@ export const ConfigureOutputModeControllerInputSchema = ThreadParam.extend({
 		body: { mode: GroupOutputMode.DECISIONS_AND_LIVE },
 	},
 ])
-export const ConfigureOutputModeControllerOutputSchema = z.void()
+export const ConfigureOutputModeControllerOutputSchema = ConfigureOutputModeOutputSchema
 
 /**
  * How much of what its issues say reaches this group (fase 3, item 2) — decisions only, decisions and
- * previews/closings (the default), or everything.
- *
- * DECLARED, NOT YET WIRED (slice S0b): the route, its MCP tool and its SDK hook exist so the console's
- * selector can be built against them; `Thread.configureOutputMode` + the settings read land in S8a. Until
- * then it refuses with `OUTPUT_POLICY_NOT_READY` — a silent 204 would tell the caller the mode changed.
+ * previews/closings (the default), or everything. Read back by `GetThreadSettings.outputMode`.
  */
 @injectable()
 export class ConfigureOutputModeController extends Controller<
@@ -37,7 +33,11 @@ export class ConfigureOutputModeController extends Controller<
 	readonly inputSchema = ConfigureOutputModeControllerInputSchema
 	readonly outputSchema = ConfigureOutputModeControllerOutputSchema
 	override middlewares = [CloudSessionMiddleware]
-	async handle(_request: this['input']): Promise<this['output']> {
-		throw new BaseError<ApplicationErrors>('OUTPUT_POLICY_NOT_READY', 'the group output mode lands in fase 3, slice S8a')
+	constructor(private useCase: ConfigureOutputMode) {
+		super()
+	}
+	async handle(request: this['input']): Promise<this['output']> {
+		await this.useCase.execute({ ownerId: request.ctx.ownerId, threadId: request.params.threadId, mode: request.body.mode })
+		return { status: HttpStatusCode.NO_CONTENT, data: undefined }
 	}
 }
