@@ -79,7 +79,7 @@ describe('StopAskCard — contra o backend real', () => {
 		expect((await getNeedsYouPanel(threadId)).stops).toEqual([])
 	})
 
-	it('uma pergunta sem opções é respondida em texto livre e diz com o que segue', async () => {
+	it('uma pergunta sem opções é respondida em texto livre, diz com o que segue, e enviar resolve o stop', async () => {
 		const threadId = await seedAsk({
 			ask: {
 				question: 'Qual título uso?',
@@ -93,7 +93,24 @@ describe('StopAskCard — contra o backend real', () => {
 
 		expect(document.body.textContent).toContain('Novidades de novembro')
 		const textarea = document.querySelector<HTMLTextAreaElement>('[data-testid="stop-ask"] textarea')
-		expect(textarea).not.toBeNull()
-		expect(document.querySelectorAll('[data-testid="stop-ask"] button[type="submit"]')).toHaveLength(1)
+		const send = document.querySelector<HTMLButtonElement>('[data-testid="stop-ask"] button[type="submit"]')
+		// Empty is not a valid TEXT answer (the SDK member's min length): the send stays off.
+		expect(send?.disabled).toBe(true)
+
+		const nativeValue = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set
+		act(() => {
+			nativeValue?.call(textarea, 'Novidades de dezembro')
+			textarea?.dispatchEvent(new Event('input', { bubbles: true }))
+		})
+		await mounted!.settled(
+			() => document.querySelector<HTMLButtonElement>('[data-testid="stop-ask"] button[type="submit"]')?.disabled === false,
+			'o envio liberar com texto válido',
+		)
+		await act(async () => {
+			document.querySelector<HTMLButtonElement>('[data-testid="stop-ask"] button[type="submit"]')?.click()
+		})
+
+		await mounted!.settled(() => document.querySelector('[data-testid="stop-ask"]') === null, 'a pergunta sair do painel')
+		expect((await getNeedsYouPanel(threadId)).stops).toEqual([])
 	})
 })

@@ -25,7 +25,7 @@ test('o operador escolhe o que chega ao grupo, e a escolha persiste', async ({ p
 	await goto('/threads/$threadId', { threadId: thread.threadId })
 	await page.getByRole('button', { name: t('session.threadSettings') }).click()
 
-	const selector = page.getByRole('combobox', { name: t('session.outputMode') })
+	const selector = page.getByLabel(t('session.outputMode'))
 	await expect(selector).toContainText(t('enums.GroupOutputMode.DECISIONS_AND_LIVE'))
 	await selector.click()
 	await page.getByRole('option', { name: t('enums.GroupOutputMode.EVERYTHING') }).click()
@@ -39,7 +39,7 @@ test('o operador escolhe o que chega ao grupo, e a escolha persiste', async ({ p
 
 	await page.reload()
 	await page.getByRole('button', { name: t('session.threadSettings') }).click()
-	await expect(page.getByRole('combobox', { name: t('session.outputMode') })).toContainText(t('enums.GroupOutputMode.EVERYTHING'))
+	await expect(page.getByLabel(t('session.outputMode'))).toContainText(t('enums.GroupOutputMode.EVERYTHING'))
 })
 
 /**
