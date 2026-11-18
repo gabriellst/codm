@@ -264,6 +264,29 @@ export class LibSqlThreadRepository extends ThreadRepository {
 		return rows.map(row => this.toStop(row))
 	}
 
+	async findAsk(issueId: string, seq: number, tx?: LibSqlTransaction): Promise<Stop | undefined> {
+		const dbc = tx ?? this.driver.db
+		const rows = await dbc
+			.select()
+			.from(stops)
+			.where(and(eq(stops.issueId, issueId), eq(stops.seq, seq)))
+			.limit(1)
+		return rows[0] ? this.toStop(rows[0]) : undefined
+	}
+
+	async stopsCarriedBy(entryId: string, tx?: LibSqlTransaction): Promise<Stop[]> {
+		const dbc = tx ?? this.driver.db
+		// The entry's own stop (every notice of an issue's stop carries it), and the asks folded into a digest.
+		const own = dbc.select({ id: transcriptEntries.stopId }).from(transcriptEntries).where(eq(transcriptEntries.id, entryId))
+		const carried = dbc.select({ id: transcriptEntries.id }).from(transcriptEntries).where(eq(transcriptEntries.digestEntryId, entryId))
+		const rows = await dbc
+			.select()
+			.from(stops)
+			.where(or(inArray(stops.id, own), eq(stops.askEntryId, entryId), inArray(stops.askEntryId, carried)))
+			.orderBy(asc(stops.raisedAt))
+		return rows.map(row => this.toStop(row))
+	}
+
 	// ── Mapping ───────────────────────────────────────────────────────────────────────────────────
 
 	private toDomain(row: typeof threads.$inferSelect): Thread {

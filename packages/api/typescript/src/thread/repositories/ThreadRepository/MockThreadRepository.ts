@@ -116,6 +116,18 @@ export class MockThreadRepository extends ThreadRepository {
 			.sort((a, b) => (a.dueAt?.getTime() ?? 0) - (b.dueAt?.getTime() ?? 0))
 	}
 
+	async findAsk(issueId: string, seq: number): Promise<Stop | undefined> {
+		return this.stopRows.find(s => s.issueId === issueId && s.seq === seq)
+	}
+
+	async stopsCarriedBy(entryId: string): Promise<Stop[]> {
+		const own = this.entries.find(e => e.entryId === entryId)?.stopId
+		const carried = new Set([entryId, ...this.entries.filter(e => e.digestEntryId === entryId).map(e => e.entryId)])
+		return this.stopRows
+			.filter(s => s.stopId === own || (s.askEntryId !== undefined && carried.has(s.askEntryId)))
+			.sort((a, b) => a.raisedAt.getTime() - b.raisedAt.getTime())
+	}
+
 	private byThreadChronological(threadId: string): TranscriptEntry[] {
 		return this.entries.filter(e => e.threadId === threadId).sort((a, b) => a.at.getTime() - b.at.getTime())
 	}

@@ -87,4 +87,15 @@ export abstract class ThreadRepository extends Repository<Thread> {
 	abstract markAskDelivered(entryId: string, deliveredAt: Date, tx?: Transaction): Promise<string[]>
 	/** Open QUESTIONS whose deadline has passed at `now` — what the deadline sweep applies the default to. */
 	abstract findDueAsks(now: Date, tx?: Transaction): Promise<Stop[]>
+	/**
+	 * The ask an issue numbered `seq` (the `D1` of `APP-12 · D1`) — open or already resolved, so a reply naming
+	 * it by code can tell "answer it" from "it was answered: a late reply" (slice S3).
+	 */
+	abstract findAsk(issueId: string, seq: number, tx?: Transaction): Promise<Stop | undefined>
+	/**
+	 * The stops the message `entryId` put to the group — the one whose id the entry carries, plus the asks a
+	 * DIGEST entry folded in (their own entries point at it by `digest_entry_id`). Open or resolved: a quoted
+	 * reply to an answered ask is a late reply, not nothing.
+	 */
+	abstract stopsCarriedBy(entryId: string, tx?: Transaction): Promise<Stop[]>
 }

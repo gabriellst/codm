@@ -1,9 +1,10 @@
 import { injectable } from 'tsyringe-neo'
-import { BaseError, Controller, z } from '@codm/core-typescript'
+import { Controller, HttpStatusCode, z } from '@codm/core-typescript'
 import { AskAnswerKind } from '@codm/contracts-typescript/wire/enums'
 import { AskAnswerSchema } from '@shared/objects'
 import { CloudSessionMiddleware } from '@shared/middlewares'
-import type { ApplicationErrors } from '../errors'
+import { OPERATOR_PARTICIPANT_ID } from '../entities/Thread'
+import { AnswerStop } from '../usecases/AnswerStop'
 
 export const AnswerStopControllerInputSchema = z
 	.object({
@@ -25,9 +26,9 @@ export const AnswerStopControllerOutputSchema = z.void()
 /**
  * Answer one of an issue's asks — a decision or a question — from the console (fase 3, item 3).
  *
- * DECLARED, NOT YET WIRED (slice S0b): the route and its SDK hook exist so the console can be built
- * against them; the resolution itself (`ResolveStop` with `ANSWER`, first answer wins) lands in S3.
- * Until then it refuses with `OUTPUT_POLICY_NOT_READY` — never a silent success.
+ * The console is the owner, who answers as the `operator` participant of the stop's conversation — through
+ * the same `AnswerStop` use case a reply in the group takes, so the ruler of who may answer and "the first
+ * answer wins" are one rule for every door. A stop someone else answered first is `STOP_ALREADY_RESOLVED`.
  */
 @injectable()
 export class AnswerStopController extends Controller<typeof AnswerStopControllerInputSchema, typeof AnswerStopControllerOutputSchema> {
@@ -37,7 +38,16 @@ export class AnswerStopController extends Controller<typeof AnswerStopController
 	readonly inputSchema = AnswerStopControllerInputSchema
 	readonly outputSchema = AnswerStopControllerOutputSchema
 	override middlewares = [CloudSessionMiddleware]
-	async handle(_request: this['input']): Promise<this['output']> {
-		throw new BaseError<ApplicationErrors>('OUTPUT_POLICY_NOT_READY', 'answering an ask lands in fase 3, slice S3')
+	constructor(private useCase: AnswerStop) {
+		super()
+	}
+	async handle(request: this['input']): Promise<this['output']> {
+		await this.useCase.execute({
+			ownerId: request.ctx.ownerId,
+			stopId: request.params.stopId,
+			answer: request.body,
+			answeredBy: OPERATOR_PARTICIPANT_ID,
+		})
+		return { status: HttpStatusCode.NO_CONTENT, data: undefined }
 	}
 }

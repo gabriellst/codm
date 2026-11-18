@@ -154,6 +154,23 @@ const SIGNAL_EN: Record<IssueSignalLevel, (p: IssueSignalParams) => string> = {
 	[IssueSignalLevel.PROGRESS]: p => lines(`${p.key} — ${p.text}`, p.link),
 }
 
+/** One ask a bare answer might be for — its code and its question (cut short in the message). */
+export interface PendingAskRef {
+	code: string
+	question: string
+}
+
+/** The question, cut to fit one line of the disambiguation. */
+function brief(question: string): string {
+	const flat = question.replace(/\s+/gu, ' ').trim()
+	return flat.length > 60 ? `${flat.slice(0, 59)}…` : flat
+}
+
+function alternatives(asks: readonly PendingAskRef[], or: string): string {
+	const each = asks.map(ask => `${ask.code} (${brief(ask.question)})`)
+	return each.length > 1 ? `${each.slice(0, -1).join(', ')} ${or} ${each[each.length - 1]}` : (each[0] ?? '')
+}
+
 interface ProviderPausedParams {
 	until: Date
 	now: Date
@@ -193,6 +210,12 @@ const PT_MESSAGES = {
 	 * código da pergunta e o link da issue no painel.
 	 */
 	issueSignal: (p: IssueSignalParams) => SIGNAL_PT[p.level](p),
+	/**
+	 * Um "sim" solto com várias perguntas abertas que a pessoa pode responder (fase 3, item 3): UMA pergunta de
+	 * volta, curta, com os códigos — nunca um palpite.
+	 */
+	answerDisambiguation: (p: { asks: readonly PendingAskRef[] }) =>
+		`Para qual? ${alternatives(p.asks, 'ou')} — responda citando a pergunta.`,
 }
 
 export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
@@ -205,5 +228,6 @@ export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
 		panelCode: p => `Your codm panel code: ${p.code} — valid for 10 min.`,
 		panelActionEcho: p => `${p.name} ${PANEL_ECHO_EN[p.echo]} ${p.key} from the panel`,
 		issueSignal: p => SIGNAL_EN[p.level](p),
+		answerDisambiguation: p => `Which one? ${alternatives(p.asks, 'or')} — reply quoting the question.`,
 	},
 })

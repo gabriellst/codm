@@ -14,6 +14,7 @@ import { StopAsk } from '../objects/StopAsk'
 import type { Stop, Thread, TranscriptEntry } from '../entities/Thread'
 import { THREAD_MESSAGES } from '../i18n/messages'
 import { enqueueSignalDelivery, recordIssueSignal } from '../utils/issueSignal'
+import { askCode } from '../utils/askAnswer'
 import type { ApplicationErrors } from '../errors'
 
 export const RaiseStopInputSchema = z.object({
@@ -179,7 +180,7 @@ export class RaiseStop extends Handler<typeof RaiseStopInputSchema, typeof Raise
 						// The question the stop puts, or the provider's detail verbatim; empty is fine — the format of a
 						// decision falls back to the title, a notice simply has no body.
 						text: ask?.question ?? input.detail,
-						code: seq === undefined ? undefined : `${issue.key} · D${seq}`,
+						code: seq === undefined ? undefined : askCode(issue.key, seq),
 						options: ask?.options.map(option => option.label),
 						defaultLabel: ask?.defaultLabel(),
 						addresseeId: ask?.addresseeId,

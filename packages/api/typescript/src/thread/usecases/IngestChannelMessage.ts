@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, z, BaseError } from '@codm/core-typescript'
+import { Handler, z, BaseError, CommandQueue } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
 import {
 	ClassificationMethod,
@@ -7,24 +7,34 @@ import {
 	IssueStatus,
 	MailboxItemKind,
 	MailboxTargetKind,
+	MessageAuthor,
 	MessageType,
 	TranscriptKind,
 } from '@codm/contracts-typescript/wire/enums'
+import { CloudSession } from '@shared/services/CloudSession'
+import { resolveThreadLanguage } from '@shared/i18n/messages'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
 import { InboundTriage, TRIAGE_HOLDER } from '@agent/services/InboundTriage'
 import { IssueRepository } from '@issue/repositories/IssueRepository'
 import { PauseIssue } from '@issue/usecases/PauseIssue'
 import { ResumeIssue } from '@issue/usecases/ResumeIssue'
 import { ThreadRepository } from '../repositories/ThreadRepository'
-import { RuleRouter } from '../services/RuleRouter'
+import { RuleRouter, type AnswerTarget } from '../services/RuleRouter'
 import { RoutedSteer } from '../services/RoutedSteer'
 import { AGENT_SPEAKER } from '../objects'
 import { MessageIngestedEvent } from '../events/MessageIngestedEvent'
 import { CUE_ACKNOWLEDGED, CUE_PAUSED, CUE_RESUMED } from '../utils/ChannelCues'
 import { parseControlCommand } from '../utils/controlCommand'
-import { IssueControlCommand } from '../enums'
-import type { Thread } from '../entities/Thread'
+import { BareAnswer, IssueControlCommand, ReplyAnswerWay } from '../enums'
+import type { Stop, Thread, TranscriptEntry } from '../entities/Thread'
 import type { ApplicationErrors } from '../errors'
+import { AnswerDisambiguationAskedEvent } from '../events/AnswerDisambiguationAskedEvent'
+import { THREAD_MESSAGES } from '../i18n/messages'
+import { ANSWERED_IN_GROUP_AS, mayAnswer, YES_NO_RESOLUTION } from '../utils/answerRules'
+import { askCode, optionForBare, parseAskAnswer, parseBareAnswer } from '../utils/askAnswer'
+import { AnswerStop } from './AnswerStop'
+import { ResolveStop } from './ResolveStop'
+import type { DeliverChannelMessage } from './DeliverChannelMessage'
 
 export const IngestChannelMessageInputSchema = z.object({
 	threadId: z.uuid(),
@@ -63,6 +73,21 @@ export const IngestChannelMessageOutputSchema = z.object({
 	 */
 	triage: z.boolean(),
 })
+
+/**
+ * How long one person's bare answers stay quiet after the group was asked "which one?" (fase 3, item 3): a
+ * second bare "sim" from them in this window asks nothing again and takes the usual path (the orchestrator).
+ */
+export const DISAMBIGUATION_QUIET_MS = 10 * 60 * 1000
+
+/**
+ * Does a bare yes / no answer this open stop? By how a reply answers its kind: an ask only when one of its
+ * options IS that yes / no (a free-text question is not answered by "sim"); a permission always.
+ */
+const BARE_ANSWERS_STOP: Readonly<Record<ReplyAnswerWay, (stop: Stop, bare: BareAnswer) => boolean>> = {
+	[ReplyAnswerWay.ASK]: (stop, bare) => stop.ask !== undefined && optionForBare(stop.ask, bare) !== undefined,
+	[ReplyAnswerWay.YES_NO]: () => true,
+}
 
 /** What a control word does to an issue as it stands: run the use case, only acknowledge, or not apply. */
 type ControlAction = 'APPLY' | 'ACKNOWLEDGE' | 'IGNORE'
@@ -116,6 +141,10 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 		private readonly issues: IssueRepository,
 		private readonly pauseIssue: PauseIssue,
 		private readonly resumeIssue: ResumeIssue,
+		private readonly answerStop: AnswerStop,
+		private readonly resolveStop: ResolveStop,
+		private readonly commands: CommandQueue,
+		private readonly session: CloudSession,
 	) {
 		super()
 	}
@@ -130,6 +159,10 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 		// apagada conversation would put words in a chat the console answers THREAD_NOT_FOUND for.
 		const thread = await this.threads.findById(input.threadId)
 		if (!thread || thread.deletedAt) throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
+		// The language of the one line this path may write itself (the "which one?" of a bare answer) — resolved
+		// before the transaction, since it may ask the cloud session; only when the conversation declares none.
+		const ownerLanguage = thread.language ? undefined : (await this.session.identity())?.user.language
+		const language = resolveThreadLanguage(thread.language, ownerLanguage)
 
 		return this.withTransaction(tx, async tx => {
 			// THE CITATION, RESOLVED FIRST (B4, decision D-B). This lookup already existed — it is how
@@ -144,6 +177,14 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 			// those is addressing it — the mention gate stands down for that case (see `Thread.canInvoke`).
 			// A quote that resolves to anyone else's message, or does not resolve at all, is not one.
 			const repliesToAgent = quoted?.kind === TranscriptKind.SYSTEM
+
+			// AN ANSWER TO AN ASK (fase 3, item 3) — decided FIRST: before the control words ("segue" quoting a
+			// question is an answer, not a RESUME) and before the issue-quote routing (a quote of a question is
+			// more specific than a quote of its issue). Anything short of a clean answer — nothing to answer, a
+			// person the ruler does not let answer, an answer already given (a late reply) — returns `undefined`
+			// and the message takes the paths below, unchanged.
+			const answered = await this.answer(thread, input, { quoted, repliesToAgent, language }, tx)
+			if (answered) return answered
 
 			// A CONTROL WORD WITH A TARGET (fase 2, item 2 — "pare APP-12", "continue" quoting an issue) is
 			// handled here, BEFORE the invocation gate: it must work while the conversation is paused, and it
@@ -320,6 +361,238 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 
 			return { entryId: entry.entryId, invocable, triage }
 		})
+	}
+
+	/**
+	 * THE ANSWER RULES (fase 3, item 3 — spec rules 1 to 4), in order:
+	 *  1. a QUOTE of the message that put an ask to the group, and 2. an ask's CODE in the text
+	 *     (`RuleRouter.answerTarget`) — under `Thread.mayAct` alone, WITHOUT the freshness window or the mention
+	 *     gate: the answer is tied to one open ask, so a message ingested late still answers it (that is what
+	 *     gives the 15-minute default its grace after a reconnect);
+	 *  3. a BARE yes / no with no quote and no code — under the whole `canInvoke` (mention gate and
+	 *     freshness): in a gated group an unaddressed "sim" between two people must not approve a publication.
+	 *     Exactly one open ask this person may answer with that yes / no ⇒ answered; several ⇒ ONE question
+	 *     back ("which one?"), and a second bare answer from them within `DISAMBIGUATION_QUIET_MS` goes on;
+	 *  4. a quote or code of an ask ALREADY answered (late, or someone else was first) ⇒ nothing here: the
+	 *     message takes the usual path, where a quote of an issue's message steers that issue.
+	 *
+	 * Who may answer is `ANSWER_GATE` (an ask with an effect, or a permission, only by someone who may
+	 * release). Every read is inside the ingest's transaction, which holds the write lock from its first
+	 * statement (`BEGIN IMMEDIATE`), so an ask read open here cannot be answered by anyone else before this
+	 * commits — the rule never loses the race inside its own transaction, and a throw here would lose the
+	 * message (the inbound ledger is claimed before the ingest).
+	 */
+	private async answer(
+		thread: Thread,
+		input: this['input'],
+		ctx: { quoted?: TranscriptEntry; repliesToAgent: boolean; language: ReturnType<typeof resolveThreadLanguage> },
+		tx: Transaction,
+	): Promise<this['output'] | undefined> {
+		const sender = input.senderExternalId
+		const target = await this.router.answerTarget(
+			{ threadId: thread.id.value, quotedEntryId: ctx.quoted?.entryId, quotedIssueId: ctx.quoted?.issueId, text: input.text },
+			tx,
+		)
+		if (target) {
+			const [only] = target.stops
+			if (target.stops.length === 1 && only) return this.give(thread, input, ctx.quoted, only, target.answerText, tx)
+			// A digest quoted without a code: the asks in it this person could still answer.
+			return this.disambiguate(thread, input, this.answerable(thread, target, sender), ctx.language, tx)
+		}
+
+		const bare = ctx.quoted ? undefined : parseBareAnswer(thread.textWithoutMention(input.text))
+		if (!bare) return undefined
+		const addressed = thread.canInvoke({
+			senderExternalId: sender,
+			text: input.text,
+			repliesToAgent: ctx.repliesToAgent,
+			sentAt: input.receivedAt,
+			now: new Date(),
+		})
+		if (!addressed) return undefined
+		const open = (await this.threads.openStops(thread.id.value, tx)).filter(stop => {
+			const way = ANSWERED_IN_GROUP_AS[stop.kind]
+			return way !== undefined && BARE_ANSWERS_STOP[way](stop, bare) && mayAnswer(thread, stop, sender)
+		})
+		const [single] = open
+		if (open.length === 1 && single) return this.give(thread, input, undefined, single, input.text, tx)
+		return this.disambiguate(thread, input, open, ctx.language, tx)
+	}
+
+	/** The open stops of a target this person may answer. */
+	private answerable(thread: Thread, target: AnswerTarget, sender: string): Stop[] {
+		return target.stops.filter(stop => !stop.resolvedAt && mayAnswer(thread, stop, sender))
+	}
+
+	/**
+	 * Answer ONE stop with this message — or `undefined` when it is not this message's to answer: already
+	 * answered (rule 4), a person the ruler refuses, or nothing readable as an answer. The entry is recorded on
+	 * the stop's issue, the answer goes through the same use case every door uses, and the only reply in the
+	 * group is the 👀 — the session hears the answer through `ResumeIssueOnStopResolved`.
+	 */
+	private async give(
+		thread: Thread,
+		input: this['input'],
+		quoted: TranscriptEntry | undefined,
+		stop: Stop,
+		answerText: string,
+		tx: Transaction,
+	): Promise<this['output'] | undefined> {
+		const sender = input.senderExternalId
+		const way = ANSWERED_IN_GROUP_AS[stop.kind]
+		if (stop.resolvedAt || way === undefined || !mayAnswer(thread, stop, sender)) return undefined
+
+		const resolve = this.reading(thread, stop, way, sender, answerText)
+		if (!resolve) return undefined
+
+		const entry = thread.recordEntry({
+			kind: TranscriptKind.CONTACT,
+			text: input.text,
+			senderExternalId: sender,
+			quotedEntry: quoted ? { entryId: quoted.entryId, threadId: quoted.threadId } : undefined,
+			issueId: stop.issueId,
+			classification: quoted?.issueId ? ClassificationMethod.REPLY_QUOTE : undefined,
+			messageType: input.messageType,
+			mediaPath: input.mediaPath,
+			at: input.receivedAt,
+		})
+		await this.threads.save(thread, tx)
+		await resolve(tx)
+		await this.routedSteer.cue(thread, input, entry.entryId, CUE_ACKNOWLEDGED, tx)
+		return this.ingested(thread, input, entry, tx)
+	}
+
+	/**
+	 * How this message resolves the stop, by how a reply answers its kind — `undefined` when the text says
+	 * nothing an answer can be read from. An ask is answered through `AnswerStop`; a permission by a bare yes /
+	 * no through `ResolveStop` (`YES_NO_RESOLUTION`), confined to this conversation, under the sender's posture.
+	 */
+	private reading(
+		thread: Thread,
+		stop: Stop,
+		way: ReplyAnswerWay,
+		sender: string,
+		answerText: string,
+	): ((tx: Transaction) => Promise<void>) | undefined {
+		switch (way) {
+			case ReplyAnswerWay.ASK: {
+				const answer = stop.ask ? parseAskAnswer(thread.textWithoutMention(answerText), stop.ask) : undefined
+				if (!answer) return undefined
+				return async tx => {
+					await this.answerStop.execute(
+						{ ownerId: thread.ownerId, stopId: stop.stopId, answer, answeredBy: sender, threadId: thread.id.value },
+						tx,
+					)
+				}
+			}
+			case ReplyAnswerWay.YES_NO: {
+				const bare = parseBareAnswer(thread.textWithoutMention(answerText))
+				if (!bare) return undefined
+				return async tx => {
+					await this.resolveStop.execute(
+						{
+							ownerId: thread.ownerId,
+							stopId: stop.stopId,
+							resolution: YES_NO_RESOLUTION[bare],
+							runThreadId: thread.id.value,
+							runPosture: thread.postureOf(sender),
+						},
+						tx,
+					)
+				}
+			}
+			default: {
+				const unhandled: never = way
+				return unhandled
+			}
+		}
+	}
+
+	/**
+	 * Several open asks this message could be for: ask the group ONE question — "which one?", with the codes —
+	 * and remember it (`AnswerDisambiguationAskedEvent`). Nothing to choose between, or this person was already
+	 * asked within `DISAMBIGUATION_QUIET_MS` ⇒ `undefined`: the message goes on to the orchestrator.
+	 */
+	private async disambiguate(
+		thread: Thread,
+		input: this['input'],
+		stops: Stop[],
+		language: ReturnType<typeof resolveThreadLanguage>,
+		tx: Transaction,
+	): Promise<this['output'] | undefined> {
+		if (stops.length < 2) return undefined
+		const sender = input.senderExternalId
+		const since = new Date(Date.now() - DISAMBIGUATION_QUIET_MS)
+		const asked = await this.domainEventRepository.listByNameSince(AnswerDisambiguationAskedEvent.name, since, tx)
+		const quiet = asked.some(fact => {
+			const payload = fact.payload as { threadId?: string; participantId?: string }
+			return payload.threadId === thread.id.value && payload.participantId === sender
+		})
+		if (quiet) return undefined
+
+		const asks = await Promise.all(
+			stops.map(async stop => {
+				const issue = stop.issueId ? await this.issues.findById(stop.issueId, tx) : undefined
+				return { code: askCode(issue?.key ?? '', stop.seq), question: stop.ask?.question ?? stop.title }
+			}),
+		)
+		const entry = thread.recordEntry({
+			kind: TranscriptKind.CONTACT,
+			text: input.text,
+			senderExternalId: sender,
+			messageType: input.messageType,
+			mediaPath: input.mediaPath,
+			at: input.receivedAt,
+		})
+		const question = thread.recordEntry({
+			kind: TranscriptKind.SYSTEM,
+			text: THREAD_MESSAGES.answerDisambiguation(language, { asks }),
+			addresseeId: sender,
+		})
+		await this.threads.save(thread, tx)
+		await this.commands.enqueueCommand<DeliverChannelMessage>(
+			'deliver_channel_message',
+			{
+				ownerId: thread.ownerId,
+				channelId: thread.channelId,
+				contactExternalId: thread.contactRef.externalId,
+				text: question.text,
+				author: MessageAuthor.SYSTEM,
+				replyEntryId: question.entryId,
+				replyThreadId: thread.id.value,
+				reactionsEnabled: thread.reactionsEnabled,
+			},
+			{ jobId: question.entryId },
+			tx,
+		)
+		await this.domainEventRepository.save(
+			new AnswerDisambiguationAskedEvent({
+				entityId: thread.id.value,
+				ownerId: thread.ownerId,
+				payload: {
+					threadId: thread.id.value,
+					participantId: sender,
+					entryId: entry.entryId,
+					questionEntryId: question.entryId,
+					stopIds: stops.map(stop => stop.stopId),
+				},
+			}),
+			tx,
+		)
+		return this.ingested(thread, input, entry, tx)
+	}
+
+	/** The fact every ingest ends with, for a message that started no turn. */
+	private async ingested(thread: Thread, input: this['input'], entry: TranscriptEntry, tx: Transaction): Promise<this['output']> {
+		await this.domainEventRepository.save(
+			new MessageIngestedEvent({
+				entityId: thread.id.value,
+				ownerId: thread.ownerId,
+				payload: { threadId: thread.id.value, entryId: entry.entryId, senderExternalId: input.senderExternalId, invocable: false },
+			}),
+			tx,
+		)
+		return { entryId: entry.entryId, invocable: false, triage: false }
 	}
 
 	/**

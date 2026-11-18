@@ -36,6 +36,8 @@ const CHANNEL_PRODUCERS: Record<string, string> = {
 	'thread/usecases/NotifyProviderPaused.ts':
 		'POLICY — the PROVIDER_LIMIT block notice; asks `ROUTING_BY_MODE[mode][BLOCK_NOTICE]` before sending.',
 	'thread/usecases/ExecutePanelAction.ts': 'ECHO — one line per action taken on the cloud panel (fase 2, item 6b).',
+	'thread/usecases/IngestChannelMessage.ts':
+		'THE RULE LAYER — the ONE "which one?" back to a bare "sim" with several open asks (fase 3, item 3); not an issue speaking.',
 	'thread/services/ArtifactDelivery/ArtifactDelivery.ts':
 		"THE OPERATOR / THE ORCHESTRATOR — an artifact sent by `SendArtifact` (out of the issue's scope from S5a).",
 }
