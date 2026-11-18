@@ -122,6 +122,7 @@ const (
 	ONBOARDINGDRAFTINCOMPLETE       ApiErrors = "ONBOARDING_DRAFT_INCOMPLETE"
 	ONBOARDINGNOTCOMPLETED          ApiErrors = "ONBOARDING_NOT_COMPLETED"
 	OPTIMISTICLOCKCONFLICT          ApiErrors = "OPTIMISTIC_LOCK_CONFLICT"
+	OUTPUTPOLICYNOTREADY            ApiErrors = "OUTPUT_POLICY_NOT_READY"
 	OWNERALREADYDISABLED            ApiErrors = "OWNER_ALREADY_DISABLED"
 	OWNERNOTDISABLED                ApiErrors = "OWNER_NOT_DISABLED"
 	OWNERNOTFOUND                   ApiErrors = "OWNER_NOT_FOUND"
@@ -317,6 +318,8 @@ func (e ApiErrors) Valid() bool {
 		return true
 	case OPTIMISTICLOCKCONFLICT:
 		return true
+	case OUTPUTPOLICYNOTREADY:
+		return true
 	case OWNERALREADYDISABLED:
 		return true
 	case OWNERNOTDISABLED:
@@ -439,6 +442,27 @@ func (e ArtifactKind) Valid() bool {
 	case ArtifactKindLINK:
 		return true
 	case ArtifactKindVIDEO:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AskEffect.
+const (
+	CLIENTDATA   AskEffect = "CLIENT_DATA"
+	IRREVERSIBLE AskEffect = "IRREVERSIBLE"
+	PUBLISH      AskEffect = "PUBLISH"
+)
+
+// Valid indicates whether the value is a known member of the AskEffect enum.
+func (e AskEffect) Valid() bool {
+	switch e {
+	case CLIENTDATA:
+		return true
+	case IRREVERSIBLE:
+		return true
+	case PUBLISH:
 		return true
 	default:
 		return false
@@ -859,6 +883,27 @@ func (e DayOfWeek) Valid() bool {
 	case TUESDAY:
 		return true
 	case WEDNESDAY:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GroupOutputMode.
+const (
+	DECISIONSANDLIVE GroupOutputMode = "DECISIONS_AND_LIVE"
+	DECISIONSONLY    GroupOutputMode = "DECISIONS_ONLY"
+	EVERYTHING       GroupOutputMode = "EVERYTHING"
+)
+
+// Valid indicates whether the value is a known member of the GroupOutputMode enum.
+func (e GroupOutputMode) Valid() bool {
+	switch e {
+	case DECISIONSANDLIVE:
+		return true
+	case DECISIONSONLY:
+		return true
+	case EVERYTHING:
 		return true
 	default:
 		return false
@@ -1516,6 +1561,32 @@ type ApiErrors string
 // ArtifactKind defines model for ArtifactKind.
 type ArtifactKind string
 
+// AskDefault defines model for AskDefault.
+type AskDefault struct {
+	union json.RawMessage
+}
+
+// AskDefault0 defines model for .
+type AskDefault0 struct {
+	Kind     string `json:"kind"`
+	OptionId string `json:"optionId"`
+}
+
+// AskDefault1 defines model for .
+type AskDefault1 struct {
+	Kind string `json:"kind"`
+	Text string `json:"text"`
+}
+
+// AskEffect defines model for AskEffect.
+type AskEffect string
+
+// AskOption defines model for AskOption.
+type AskOption struct {
+	Id    string `json:"id"`
+	Label string `json:"label"`
+}
+
 // BufferSize defines model for BufferSize.
 type BufferSize string
 
@@ -1539,6 +1610,9 @@ type CurrencyCode string
 
 // DayOfWeek defines model for DayOfWeek.
 type DayOfWeek string
+
+// GroupOutputMode defines model for GroupOutputMode.
+type GroupOutputMode string
 
 // HistorySyncType defines model for HistorySyncType.
 type HistorySyncType string
@@ -1763,6 +1837,23 @@ type SignInLoopbackParams struct {
 	Code string `form:"code" json:"code"`
 }
 
+// AnswerStopJSONBody defines parameters for AnswerStop.
+type AnswerStopJSONBody struct {
+	union json.RawMessage
+}
+
+// AnswerStopJSONBody0 defines parameters for AnswerStop.
+type AnswerStopJSONBody0 struct {
+	Kind     string `json:"kind"`
+	OptionId string `json:"optionId"`
+}
+
+// AnswerStopJSONBody1 defines parameters for AnswerStop.
+type AnswerStopJSONBody1 struct {
+	Kind string `json:"kind"`
+	Text string `json:"text"`
+}
+
 // ResolveStopJSONBody defines parameters for ResolveStop.
 type ResolveStopJSONBody struct {
 	Resolution StopResolution `json:"resolution"`
@@ -1837,9 +1928,38 @@ type ForkIssueJSONBody struct {
 	Title *string `json:"title,omitempty"`
 }
 
+// AskDecisionJSONBody defines parameters for AskDecision.
+type AskDecisionJSONBody struct {
+	AddresseeId *string     `json:"addresseeId,omitempty"`
+	Effects     []AskEffect `json:"effects"`
+	Options     []AskOption `json:"options"`
+	Question    string      `json:"question"`
+}
+
+// RequestFeedbackJSONBody defines parameters for RequestFeedback.
+type RequestFeedbackJSONBody struct {
+	ArtifactIds    []openapi_types.UUID `json:"artifactIds"`
+	MainArtifactId openapi_types.UUID   `json:"mainArtifactId"`
+	Text           string               `json:"text"`
+}
+
 // AskOperatorJSONBody defines parameters for AskOperator.
 type AskOperatorJSONBody struct {
 	Question string `json:"question"`
+}
+
+// ReportProgressJSONBody defines parameters for ReportProgress.
+type ReportProgressJSONBody struct {
+	Text string `json:"text"`
+}
+
+// AskQuestionJSONBody defines parameters for AskQuestion.
+type AskQuestionJSONBody struct {
+	AddresseeId *string     `json:"addresseeId,omitempty"`
+	Default     AskDefault  `json:"default"`
+	Effects     []AskEffect `json:"effects"`
+	Options     []AskOption `json:"options"`
+	Question    string      `json:"question"`
 }
 
 // TransitionIssueStatusJSONBody defines parameters for TransitionIssueStatus.
@@ -1966,6 +2086,11 @@ type ConfigureModelJSONBody struct {
 	Provider ProviderKind `json:"provider"`
 }
 
+// ConfigureOutputModeJSONBody defines parameters for ConfigureOutputMode.
+type ConfigureOutputModeJSONBody struct {
+	Mode GroupOutputMode `json:"mode"`
+}
+
 // SetParticipantInvocationJSONBody defines parameters for SetParticipantInvocation.
 type SetParticipantInvocationJSONBody struct {
 	CanInvoke bool `json:"canInvoke"`
@@ -2055,6 +2180,9 @@ type SetCloudTokenJSONRequestBody SetCloudTokenJSONBody
 // UpdateStopCriteriaJSONRequestBody defines body for UpdateStopCriteria for application/json ContentType.
 type UpdateStopCriteriaJSONRequestBody UpdateStopCriteriaJSONBody
 
+// AnswerStopJSONRequestBody defines body for AnswerStop for application/json ContentType.
+type AnswerStopJSONRequestBody AnswerStopJSONBody
+
 // ResolveStopJSONRequestBody defines body for ResolveStop for application/json ContentType.
 type ResolveStopJSONRequestBody ResolveStopJSONBody
 
@@ -2079,8 +2207,20 @@ type CreateIssueJSONRequestBody CreateIssueJSONBody
 // ForkIssueJSONRequestBody defines body for ForkIssue for application/json ContentType.
 type ForkIssueJSONRequestBody ForkIssueJSONBody
 
+// AskDecisionJSONRequestBody defines body for AskDecision for application/json ContentType.
+type AskDecisionJSONRequestBody AskDecisionJSONBody
+
+// RequestFeedbackJSONRequestBody defines body for RequestFeedback for application/json ContentType.
+type RequestFeedbackJSONRequestBody RequestFeedbackJSONBody
+
 // AskOperatorJSONRequestBody defines body for AskOperator for application/json ContentType.
 type AskOperatorJSONRequestBody AskOperatorJSONBody
+
+// ReportProgressJSONRequestBody defines body for ReportProgress for application/json ContentType.
+type ReportProgressJSONRequestBody ReportProgressJSONBody
+
+// AskQuestionJSONRequestBody defines body for AskQuestion for application/json ContentType.
+type AskQuestionJSONRequestBody AskQuestionJSONBody
 
 // TransitionIssueStatusJSONRequestBody defines body for TransitionIssueStatus for application/json ContentType.
 type TransitionIssueStatusJSONRequestBody TransitionIssueStatusJSONBody
@@ -2109,6 +2249,9 @@ type ConfigureMentionGateJSONRequestBody ConfigureMentionGateJSONBody
 // ConfigureModelJSONRequestBody defines body for ConfigureModel for application/json ContentType.
 type ConfigureModelJSONRequestBody ConfigureModelJSONBody
 
+// ConfigureOutputModeJSONRequestBody defines body for ConfigureOutputMode for application/json ContentType.
+type ConfigureOutputModeJSONRequestBody ConfigureOutputModeJSONBody
+
 // SetParticipantInvocationJSONRequestBody defines body for SetParticipantInvocation for application/json ContentType.
 type SetParticipantInvocationJSONRequestBody SetParticipantInvocationJSONBody
 
@@ -2135,6 +2278,68 @@ type SaveOnboardingStepJSONRequestBody SaveOnboardingStepJSONBody
 
 // AddWorkspaceJSONRequestBody defines body for AddWorkspace for application/json ContentType.
 type AddWorkspaceJSONRequestBody AddWorkspaceJSONBody
+
+// AsAskDefault0 returns the union data inside the AskDefault as a AskDefault0
+func (t AskDefault) AsAskDefault0() (AskDefault0, error) {
+	var body AskDefault0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAskDefault0 overwrites any union data inside the AskDefault as the provided AskDefault0
+func (t *AskDefault) FromAskDefault0(v AskDefault0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAskDefault0 performs a merge with any union data inside the AskDefault, using the provided AskDefault0
+func (t *AskDefault) MergeAskDefault0(v AskDefault0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsAskDefault1 returns the union data inside the AskDefault as a AskDefault1
+func (t AskDefault) AsAskDefault1() (AskDefault1, error) {
+	var body AskDefault1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAskDefault1 overwrites any union data inside the AskDefault as the provided AskDefault1
+func (t *AskDefault) FromAskDefault1(v AskDefault1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAskDefault1 performs a merge with any union data inside the AskDefault, using the provided AskDefault1
+func (t *AskDefault) MergeAskDefault1(v AskDefault1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t AskDefault) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *AskDefault) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
 
 // AsGetIssueTimeline200JSONResponseBodyItems0 returns the union data inside the GetIssueTimeline200JSONResponseBody_Items_Item as a GetIssueTimeline200JSONResponseBodyItems0
 func (t GetIssueTimeline200JSONResponseBody_Items_Item) AsGetIssueTimeline200JSONResponseBodyItems0() (GetIssueTimeline200JSONResponseBodyItems0, error) {
@@ -2454,6 +2659,68 @@ func (t GetIssueTimeline200JSONResponseBody_Items_Item) MarshalJSON() ([]byte, e
 }
 
 func (t *GetIssueTimeline200JSONResponseBody_Items_Item) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsAnswerStopJSONBody0 returns the union data inside the AnswerStopJSONBody as a AnswerStopJSONBody0
+func (t AnswerStopJSONBody) AsAnswerStopJSONBody0() (AnswerStopJSONBody0, error) {
+	var body AnswerStopJSONBody0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAnswerStopJSONBody0 overwrites any union data inside the AnswerStopJSONBody as the provided AnswerStopJSONBody0
+func (t *AnswerStopJSONBody) FromAnswerStopJSONBody0(v AnswerStopJSONBody0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAnswerStopJSONBody0 performs a merge with any union data inside the AnswerStopJSONBody, using the provided AnswerStopJSONBody0
+func (t *AnswerStopJSONBody) MergeAnswerStopJSONBody0(v AnswerStopJSONBody0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsAnswerStopJSONBody1 returns the union data inside the AnswerStopJSONBody as a AnswerStopJSONBody1
+func (t AnswerStopJSONBody) AsAnswerStopJSONBody1() (AnswerStopJSONBody1, error) {
+	var body AnswerStopJSONBody1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAnswerStopJSONBody1 overwrites any union data inside the AnswerStopJSONBody as the provided AnswerStopJSONBody1
+func (t *AnswerStopJSONBody) FromAnswerStopJSONBody1(v AnswerStopJSONBody1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAnswerStopJSONBody1 performs a merge with any union data inside the AnswerStopJSONBody, using the provided AnswerStopJSONBody1
+func (t *AnswerStopJSONBody) MergeAnswerStopJSONBody1(v AnswerStopJSONBody1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t AnswerStopJSONBody) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *AnswerStopJSONBody) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }
@@ -2948,6 +3215,11 @@ type ClientInterface interface {
 	// ClaimSignInCode request
 	ClaimSignInCode(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// AnswerStopWithBody request with any body
+	AnswerStopWithBody(ctx context.Context, stopId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	AnswerStop(ctx context.Context, stopId string, body AnswerStopJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ResolveStopWithBody request with any body
 	ResolveStopWithBody(ctx context.Context, stopId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -3009,10 +3281,30 @@ type ClientInterface interface {
 
 	ForkIssue(ctx context.Context, threadId string, body ForkIssueJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// AskDecisionWithBody request with any body
+	AskDecisionWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	AskDecision(ctx context.Context, threadId string, issueId string, body AskDecisionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RequestFeedbackWithBody request with any body
+	RequestFeedbackWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	RequestFeedback(ctx context.Context, threadId string, issueId string, body RequestFeedbackJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// AskOperatorWithBody request with any body
 	AskOperatorWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	AskOperator(ctx context.Context, threadId string, issueId string, body AskOperatorJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ReportProgressWithBody request with any body
+	ReportProgressWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ReportProgress(ctx context.Context, threadId string, issueId string, body ReportProgressJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AskQuestionWithBody request with any body
+	AskQuestionWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	AskQuestion(ctx context.Context, threadId string, issueId string, body AskQuestionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetIssueStatus request
 	GetIssueStatus(ctx context.Context, threadId string, issueId string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -3070,6 +3362,11 @@ type ClientInterface interface {
 
 	// GetNeedsYouPanel request
 	GetNeedsYouPanel(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ConfigureOutputModeWithBody request with any body
+	ConfigureOutputModeWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ConfigureOutputMode(ctx context.Context, threadId string, body ConfigureOutputModeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetThreadPanelLink request
 	GetThreadPanelLink(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -3360,6 +3657,30 @@ func (c *Client) ClaimSignInCode(ctx context.Context, reqEditors ...RequestEdito
 	return c.Client.Do(req)
 }
 
+func (c *Client) AnswerStopWithBody(ctx context.Context, stopId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAnswerStopRequestWithBody(c.Server, stopId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AnswerStop(ctx context.Context, stopId string, body AnswerStopJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAnswerStopRequest(c.Server, stopId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) ResolveStopWithBody(ctx context.Context, stopId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewResolveStopRequestWithBody(c.Server, stopId, contentType, body)
 	if err != nil {
@@ -3636,6 +3957,54 @@ func (c *Client) ForkIssue(ctx context.Context, threadId string, body ForkIssueJ
 	return c.Client.Do(req)
 }
 
+func (c *Client) AskDecisionWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAskDecisionRequestWithBody(c.Server, threadId, issueId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AskDecision(ctx context.Context, threadId string, issueId string, body AskDecisionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAskDecisionRequest(c.Server, threadId, issueId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RequestFeedbackWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRequestFeedbackRequestWithBody(c.Server, threadId, issueId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RequestFeedback(ctx context.Context, threadId string, issueId string, body RequestFeedbackJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRequestFeedbackRequest(c.Server, threadId, issueId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) AskOperatorWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewAskOperatorRequestWithBody(c.Server, threadId, issueId, contentType, body)
 	if err != nil {
@@ -3650,6 +4019,54 @@ func (c *Client) AskOperatorWithBody(ctx context.Context, threadId string, issue
 
 func (c *Client) AskOperator(ctx context.Context, threadId string, issueId string, body AskOperatorJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewAskOperatorRequest(c.Server, threadId, issueId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ReportProgressWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReportProgressRequestWithBody(c.Server, threadId, issueId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ReportProgress(ctx context.Context, threadId string, issueId string, body ReportProgressJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReportProgressRequest(c.Server, threadId, issueId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AskQuestionWithBody(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAskQuestionRequestWithBody(c.Server, threadId, issueId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AskQuestion(ctx context.Context, threadId string, issueId string, body AskQuestionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAskQuestionRequest(c.Server, threadId, issueId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -3914,6 +4331,30 @@ func (c *Client) ConfigureModel(ctx context.Context, threadId string, body Confi
 
 func (c *Client) GetNeedsYouPanel(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetNeedsYouPanelRequest(c.Server, threadId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ConfigureOutputModeWithBody(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConfigureOutputModeRequestWithBody(c.Server, threadId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ConfigureOutputMode(ctx context.Context, threadId string, body ConfigureOutputModeJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewConfigureOutputModeRequest(c.Server, threadId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -4833,6 +5274,53 @@ func NewClaimSignInCodeRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
+// NewAnswerStopRequest calls the generic AnswerStop builder with application/json body
+func NewAnswerStopRequest(server string, stopId string, body AnswerStopJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewAnswerStopRequestWithBody(server, stopId, "application/json", bodyReader)
+}
+
+// NewAnswerStopRequestWithBody generates requests for AnswerStop with any type of body
+func NewAnswerStopRequestWithBody(server string, stopId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "stopId", stopId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/stops/%s/answer", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewResolveStopRequest calls the generic ResolveStop builder with application/json body
 func NewResolveStopRequest(server string, stopId string, body ResolveStopJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -5474,6 +5962,114 @@ func NewForkIssueRequestWithBody(server string, threadId string, contentType str
 	return req, nil
 }
 
+// NewAskDecisionRequest calls the generic AskDecision builder with application/json body
+func NewAskDecisionRequest(server string, threadId string, issueId string, body AskDecisionJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewAskDecisionRequestWithBody(server, threadId, issueId, "application/json", bodyReader)
+}
+
+// NewAskDecisionRequestWithBody generates requests for AskDecision with any type of body
+func NewAskDecisionRequestWithBody(server string, threadId string, issueId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "issueId", issueId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/threads/%s/issues/%s/decisions", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewRequestFeedbackRequest calls the generic RequestFeedback builder with application/json body
+func NewRequestFeedbackRequest(server string, threadId string, issueId string, body RequestFeedbackJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewRequestFeedbackRequestWithBody(server, threadId, issueId, "application/json", bodyReader)
+}
+
+// NewRequestFeedbackRequestWithBody generates requests for RequestFeedback with any type of body
+func NewRequestFeedbackRequestWithBody(server string, threadId string, issueId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "issueId", issueId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/threads/%s/issues/%s/feedback", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewAskOperatorRequest calls the generic AskOperator builder with application/json body
 func NewAskOperatorRequest(server string, threadId string, issueId string, body AskOperatorJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -5509,6 +6105,114 @@ func NewAskOperatorRequestWithBody(server string, threadId string, issueId strin
 	}
 
 	operationPath := fmt.Sprintf("/threads/%s/issues/%s/operator-questions", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewReportProgressRequest calls the generic ReportProgress builder with application/json body
+func NewReportProgressRequest(server string, threadId string, issueId string, body ReportProgressJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewReportProgressRequestWithBody(server, threadId, issueId, "application/json", bodyReader)
+}
+
+// NewReportProgressRequestWithBody generates requests for ReportProgress with any type of body
+func NewReportProgressRequestWithBody(server string, threadId string, issueId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "issueId", issueId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/threads/%s/issues/%s/progress", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewAskQuestionRequest calls the generic AskQuestion builder with application/json body
+func NewAskQuestionRequest(server string, threadId string, issueId string, body AskQuestionJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewAskQuestionRequestWithBody(server, threadId, issueId, "application/json", bodyReader)
+}
+
+// NewAskQuestionRequestWithBody generates requests for AskQuestion with any type of body
+func NewAskQuestionRequestWithBody(server string, threadId string, issueId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "issueId", issueId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/threads/%s/issues/%s/questions", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -6132,6 +6836,53 @@ func NewGetNeedsYouPanelRequest(server string, threadId string) (*http.Request, 
 	if err != nil {
 		return nil, err
 	}
+
+	return req, nil
+}
+
+// NewConfigureOutputModeRequest calls the generic ConfigureOutputMode builder with application/json body
+func NewConfigureOutputModeRequest(server string, threadId string, body ConfigureOutputModeJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewConfigureOutputModeRequestWithBody(server, threadId, "application/json", bodyReader)
+}
+
+// NewConfigureOutputModeRequestWithBody generates requests for ConfigureOutputMode with any type of body
+func NewConfigureOutputModeRequestWithBody(server string, threadId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "threadId", threadId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/threads/%s/output-mode", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -7201,6 +7952,11 @@ type ClientWithResponsesInterface interface {
 	// ClaimSignInCodeWithResponse request
 	ClaimSignInCodeWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ClaimSignInCodeResponse, error)
 
+	// AnswerStopWithBodyWithResponse request with any body
+	AnswerStopWithBodyWithResponse(ctx context.Context, stopId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AnswerStopResponse, error)
+
+	AnswerStopWithResponse(ctx context.Context, stopId string, body AnswerStopJSONRequestBody, reqEditors ...RequestEditorFn) (*AnswerStopResponse, error)
+
 	// ResolveStopWithBodyWithResponse request with any body
 	ResolveStopWithBodyWithResponse(ctx context.Context, stopId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ResolveStopResponse, error)
 
@@ -7262,10 +8018,30 @@ type ClientWithResponsesInterface interface {
 
 	ForkIssueWithResponse(ctx context.Context, threadId string, body ForkIssueJSONRequestBody, reqEditors ...RequestEditorFn) (*ForkIssueResponse, error)
 
+	// AskDecisionWithBodyWithResponse request with any body
+	AskDecisionWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AskDecisionResponse, error)
+
+	AskDecisionWithResponse(ctx context.Context, threadId string, issueId string, body AskDecisionJSONRequestBody, reqEditors ...RequestEditorFn) (*AskDecisionResponse, error)
+
+	// RequestFeedbackWithBodyWithResponse request with any body
+	RequestFeedbackWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RequestFeedbackResponse, error)
+
+	RequestFeedbackWithResponse(ctx context.Context, threadId string, issueId string, body RequestFeedbackJSONRequestBody, reqEditors ...RequestEditorFn) (*RequestFeedbackResponse, error)
+
 	// AskOperatorWithBodyWithResponse request with any body
 	AskOperatorWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AskOperatorResponse, error)
 
 	AskOperatorWithResponse(ctx context.Context, threadId string, issueId string, body AskOperatorJSONRequestBody, reqEditors ...RequestEditorFn) (*AskOperatorResponse, error)
+
+	// ReportProgressWithBodyWithResponse request with any body
+	ReportProgressWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ReportProgressResponse, error)
+
+	ReportProgressWithResponse(ctx context.Context, threadId string, issueId string, body ReportProgressJSONRequestBody, reqEditors ...RequestEditorFn) (*ReportProgressResponse, error)
+
+	// AskQuestionWithBodyWithResponse request with any body
+	AskQuestionWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AskQuestionResponse, error)
+
+	AskQuestionWithResponse(ctx context.Context, threadId string, issueId string, body AskQuestionJSONRequestBody, reqEditors ...RequestEditorFn) (*AskQuestionResponse, error)
 
 	// GetIssueStatusWithResponse request
 	GetIssueStatusWithResponse(ctx context.Context, threadId string, issueId string, reqEditors ...RequestEditorFn) (*GetIssueStatusResponse, error)
@@ -7323,6 +8099,11 @@ type ClientWithResponsesInterface interface {
 
 	// GetNeedsYouPanelWithResponse request
 	GetNeedsYouPanelWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*GetNeedsYouPanelResponse, error)
+
+	// ConfigureOutputModeWithBodyWithResponse request with any body
+	ConfigureOutputModeWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfigureOutputModeResponse, error)
+
+	ConfigureOutputModeWithResponse(ctx context.Context, threadId string, body ConfigureOutputModeJSONRequestBody, reqEditors ...RequestEditorFn) (*ConfigureOutputModeResponse, error)
 
 	// GetThreadPanelLinkWithResponse request
 	GetThreadPanelLinkWithResponse(ctx context.Context, threadId string, reqEditors ...RequestEditorFn) (*GetThreadPanelLinkResponse, error)
@@ -7898,6 +8679,36 @@ func (r ClaimSignInCodeResponse) ContentType() string {
 	return ""
 }
 
+type AnswerStopResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r AnswerStopResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AnswerStopResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r AnswerStopResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type ResolveStopResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -8449,6 +9260,68 @@ func (r ForkIssueResponse) ContentType() string {
 	return ""
 }
 
+type AskDecisionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		StopId openapi_types.UUID `json:"stopId"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r AskDecisionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AskDecisionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r AskDecisionResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RequestFeedbackResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r RequestFeedbackResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RequestFeedbackResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RequestFeedbackResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type AskOperatorResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -8476,6 +9349,69 @@ func (r AskOperatorResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r AskOperatorResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ReportProgressResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r ReportProgressResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ReportProgressResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ReportProgressResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type AskQuestionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *struct {
+		Kind   StopKind           `json:"kind"`
+		StopId openapi_types.UUID `json:"stopId"`
+	}
+}
+
+// Status returns HTTPResponse.Status
+func (r AskQuestionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AskQuestionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r AskQuestionResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -8910,6 +9846,36 @@ func (r GetNeedsYouPanelResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetNeedsYouPanelResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ConfigureOutputModeResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *interface{}
+}
+
+// Status returns HTTPResponse.Status
+func (r ConfigureOutputModeResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ConfigureOutputModeResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ConfigureOutputModeResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -10054,6 +11020,23 @@ func (c *ClientWithResponses) ClaimSignInCodeWithResponse(ctx context.Context, r
 	return ParseClaimSignInCodeResponse(rsp)
 }
 
+// AnswerStopWithBodyWithResponse request with arbitrary body returning *AnswerStopResponse
+func (c *ClientWithResponses) AnswerStopWithBodyWithResponse(ctx context.Context, stopId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AnswerStopResponse, error) {
+	rsp, err := c.AnswerStopWithBody(ctx, stopId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAnswerStopResponse(rsp)
+}
+
+func (c *ClientWithResponses) AnswerStopWithResponse(ctx context.Context, stopId string, body AnswerStopJSONRequestBody, reqEditors ...RequestEditorFn) (*AnswerStopResponse, error) {
+	rsp, err := c.AnswerStop(ctx, stopId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAnswerStopResponse(rsp)
+}
+
 // ResolveStopWithBodyWithResponse request with arbitrary body returning *ResolveStopResponse
 func (c *ClientWithResponses) ResolveStopWithBodyWithResponse(ctx context.Context, stopId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ResolveStopResponse, error) {
 	rsp, err := c.ResolveStopWithBody(ctx, stopId, contentType, body, reqEditors...)
@@ -10253,6 +11236,40 @@ func (c *ClientWithResponses) ForkIssueWithResponse(ctx context.Context, threadI
 	return ParseForkIssueResponse(rsp)
 }
 
+// AskDecisionWithBodyWithResponse request with arbitrary body returning *AskDecisionResponse
+func (c *ClientWithResponses) AskDecisionWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AskDecisionResponse, error) {
+	rsp, err := c.AskDecisionWithBody(ctx, threadId, issueId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAskDecisionResponse(rsp)
+}
+
+func (c *ClientWithResponses) AskDecisionWithResponse(ctx context.Context, threadId string, issueId string, body AskDecisionJSONRequestBody, reqEditors ...RequestEditorFn) (*AskDecisionResponse, error) {
+	rsp, err := c.AskDecision(ctx, threadId, issueId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAskDecisionResponse(rsp)
+}
+
+// RequestFeedbackWithBodyWithResponse request with arbitrary body returning *RequestFeedbackResponse
+func (c *ClientWithResponses) RequestFeedbackWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RequestFeedbackResponse, error) {
+	rsp, err := c.RequestFeedbackWithBody(ctx, threadId, issueId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRequestFeedbackResponse(rsp)
+}
+
+func (c *ClientWithResponses) RequestFeedbackWithResponse(ctx context.Context, threadId string, issueId string, body RequestFeedbackJSONRequestBody, reqEditors ...RequestEditorFn) (*RequestFeedbackResponse, error) {
+	rsp, err := c.RequestFeedback(ctx, threadId, issueId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRequestFeedbackResponse(rsp)
+}
+
 // AskOperatorWithBodyWithResponse request with arbitrary body returning *AskOperatorResponse
 func (c *ClientWithResponses) AskOperatorWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AskOperatorResponse, error) {
 	rsp, err := c.AskOperatorWithBody(ctx, threadId, issueId, contentType, body, reqEditors...)
@@ -10268,6 +11285,40 @@ func (c *ClientWithResponses) AskOperatorWithResponse(ctx context.Context, threa
 		return nil, err
 	}
 	return ParseAskOperatorResponse(rsp)
+}
+
+// ReportProgressWithBodyWithResponse request with arbitrary body returning *ReportProgressResponse
+func (c *ClientWithResponses) ReportProgressWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ReportProgressResponse, error) {
+	rsp, err := c.ReportProgressWithBody(ctx, threadId, issueId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseReportProgressResponse(rsp)
+}
+
+func (c *ClientWithResponses) ReportProgressWithResponse(ctx context.Context, threadId string, issueId string, body ReportProgressJSONRequestBody, reqEditors ...RequestEditorFn) (*ReportProgressResponse, error) {
+	rsp, err := c.ReportProgress(ctx, threadId, issueId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseReportProgressResponse(rsp)
+}
+
+// AskQuestionWithBodyWithResponse request with arbitrary body returning *AskQuestionResponse
+func (c *ClientWithResponses) AskQuestionWithBodyWithResponse(ctx context.Context, threadId string, issueId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AskQuestionResponse, error) {
+	rsp, err := c.AskQuestionWithBody(ctx, threadId, issueId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAskQuestionResponse(rsp)
+}
+
+func (c *ClientWithResponses) AskQuestionWithResponse(ctx context.Context, threadId string, issueId string, body AskQuestionJSONRequestBody, reqEditors ...RequestEditorFn) (*AskQuestionResponse, error) {
+	rsp, err := c.AskQuestion(ctx, threadId, issueId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAskQuestionResponse(rsp)
 }
 
 // GetIssueStatusWithResponse request returning *GetIssueStatusResponse
@@ -10457,6 +11508,23 @@ func (c *ClientWithResponses) GetNeedsYouPanelWithResponse(ctx context.Context, 
 		return nil, err
 	}
 	return ParseGetNeedsYouPanelResponse(rsp)
+}
+
+// ConfigureOutputModeWithBodyWithResponse request with arbitrary body returning *ConfigureOutputModeResponse
+func (c *ClientWithResponses) ConfigureOutputModeWithBodyWithResponse(ctx context.Context, threadId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ConfigureOutputModeResponse, error) {
+	rsp, err := c.ConfigureOutputModeWithBody(ctx, threadId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConfigureOutputModeResponse(rsp)
+}
+
+func (c *ClientWithResponses) ConfigureOutputModeWithResponse(ctx context.Context, threadId string, body ConfigureOutputModeJSONRequestBody, reqEditors ...RequestEditorFn) (*ConfigureOutputModeResponse, error) {
+	rsp, err := c.ConfigureOutputMode(ctx, threadId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseConfigureOutputModeResponse(rsp)
 }
 
 // GetThreadPanelLinkWithResponse request returning *GetThreadPanelLinkResponse
@@ -11190,6 +12258,32 @@ func ParseClaimSignInCodeResponse(rsp *http.Response) (*ClaimSignInCodeResponse,
 	return response, nil
 }
 
+// ParseAnswerStopResponse parses an HTTP response from a AnswerStopWithResponse call
+func ParseAnswerStopResponse(rsp *http.Response) (*AnswerStopResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AnswerStopResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseResolveStopResponse parses an HTTP response from a ResolveStopWithResponse call
 func ParseResolveStopResponse(rsp *http.Response) (*ResolveStopResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -11663,6 +12757,60 @@ func ParseForkIssueResponse(rsp *http.Response) (*ForkIssueResponse, error) {
 	return response, nil
 }
 
+// ParseAskDecisionResponse parses an HTTP response from a AskDecisionWithResponse call
+func ParseAskDecisionResponse(rsp *http.Response) (*AskDecisionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AskDecisionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			StopId openapi_types.UUID `json:"stopId"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRequestFeedbackResponse parses an HTTP response from a RequestFeedbackWithResponse call
+func ParseRequestFeedbackResponse(rsp *http.Response) (*RequestFeedbackResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RequestFeedbackResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseAskOperatorResponse parses an HTTP response from a AskOperatorWithResponse call
 func ParseAskOperatorResponse(rsp *http.Response) (*AskOperatorResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -11681,6 +12829,61 @@ func ParseAskOperatorResponse(rsp *http.Response) (*AskOperatorResponse, error) 
 		var dest struct {
 			Delivered bool               `json:"delivered"`
 			StopId    openapi_types.UUID `json:"stopId"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseReportProgressResponse parses an HTTP response from a ReportProgressWithResponse call
+func ParseReportProgressResponse(rsp *http.Response) (*ReportProgressResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ReportProgressResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseAskQuestionResponse parses an HTTP response from a AskQuestionWithResponse call
+func ParseAskQuestionResponse(rsp *http.Response) (*AskQuestionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AskQuestionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			Kind   StopKind           `json:"kind"`
+			StopId openapi_types.UUID `json:"stopId"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
@@ -12064,6 +13267,32 @@ func ParseGetNeedsYouPanelResponse(rsp *http.Response) (*GetNeedsYouPanelRespons
 				Title                string              `json:"title"`
 			} `json:"stops"`
 		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseConfigureOutputModeResponse parses an HTTP response from a ConfigureOutputModeWithResponse call
+func ParseConfigureOutputModeResponse(rsp *http.Response) (*ConfigureOutputModeResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ConfigureOutputModeResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest interface{}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

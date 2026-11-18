@@ -196,6 +196,232 @@ pub mod types {
             value.clone()
         }
     }
+    ///`AnswerStopBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "oneOf": [
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "kind",
+    ///        "optionId"
+    ///      ],
+    ///      "properties": {
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "OPTION"
+    ///          ]
+    ///        },
+    ///        "optionId": {
+    ///          "type": "string",
+    ///          "maxLength": 40,
+    ///          "minLength": 1
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "kind",
+    ///        "text"
+    ///      ],
+    ///      "properties": {
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "TEXT"
+    ///          ]
+    ///        },
+    ///        "text": {
+    ///          "type": "string",
+    ///          "maxLength": 2000,
+    ///          "minLength": 1
+    ///        }
+    ///      }
+    ///    }
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(tag = "kind")]
+    pub enum AnswerStopBody {
+        #[serde(rename = "OPTION")]
+        Option { #[serde(rename = "optionId")] option_id: AnswerStopBodyOptionId },
+        #[serde(rename = "TEXT")]
+        Text { text: AnswerStopBodyText },
+    }
+    impl ::std::convert::From<&Self> for AnswerStopBody {
+        fn from(value: &AnswerStopBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`AnswerStopBodyOptionId`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 40,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct AnswerStopBodyOptionId(::std::string::String);
+    impl ::std::ops::Deref for AnswerStopBodyOptionId {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<AnswerStopBodyOptionId> for ::std::string::String {
+        fn from(value: AnswerStopBodyOptionId) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&AnswerStopBodyOptionId> for AnswerStopBodyOptionId {
+        fn from(value: &AnswerStopBodyOptionId) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for AnswerStopBodyOptionId {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 40usize {
+                return Err("longer than 40 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for AnswerStopBodyOptionId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for AnswerStopBodyOptionId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for AnswerStopBodyOptionId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for AnswerStopBodyOptionId {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`AnswerStopBodyText`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 2000,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct AnswerStopBodyText(::std::string::String);
+    impl ::std::ops::Deref for AnswerStopBodyText {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<AnswerStopBodyText> for ::std::string::String {
+        fn from(value: AnswerStopBodyText) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&AnswerStopBodyText> for AnswerStopBodyText {
+        fn from(value: &AnswerStopBodyText) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for AnswerStopBodyText {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 2000usize {
+                return Err("longer than 2000 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for AnswerStopBodyText {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for AnswerStopBodyText {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for AnswerStopBodyText {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for AnswerStopBodyText {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
     ///All possible error codes
     ///
     /// <details><summary>JSON schema</summary>
@@ -276,6 +502,7 @@ pub mod types {
     ///    "ONBOARDING_DRAFT_INCOMPLETE",
     ///    "ONBOARDING_NOT_COMPLETED",
     ///    "OPTIMISTIC_LOCK_CONFLICT",
+    ///    "OUTPUT_POLICY_NOT_READY",
     ///    "OWNER_ALREADY_DISABLED",
     ///    "OWNER_NOT_DISABLED",
     ///    "OWNER_NOT_FOUND",
@@ -483,6 +710,8 @@ pub mod types {
         OnboardingNotCompleted,
         #[serde(rename = "OPTIMISTIC_LOCK_CONFLICT")]
         OptimisticLockConflict,
+        #[serde(rename = "OUTPUT_POLICY_NOT_READY")]
+        OutputPolicyNotReady,
         #[serde(rename = "OWNER_ALREADY_DISABLED")]
         OwnerAlreadyDisabled,
         #[serde(rename = "OWNER_NOT_DISABLED")]
@@ -675,6 +904,7 @@ pub mod types {
                 }
                 Self::OnboardingNotCompleted => f.write_str("ONBOARDING_NOT_COMPLETED"),
                 Self::OptimisticLockConflict => f.write_str("OPTIMISTIC_LOCK_CONFLICT"),
+                Self::OutputPolicyNotReady => f.write_str("OUTPUT_POLICY_NOT_READY"),
                 Self::OwnerAlreadyDisabled => f.write_str("OWNER_ALREADY_DISABLED"),
                 Self::OwnerNotDisabled => f.write_str("OWNER_NOT_DISABLED"),
                 Self::OwnerNotFound => f.write_str("OWNER_NOT_FOUND"),
@@ -813,6 +1043,7 @@ pub mod types {
                 "ONBOARDING_DRAFT_INCOMPLETE" => Ok(Self::OnboardingDraftIncomplete),
                 "ONBOARDING_NOT_COMPLETED" => Ok(Self::OnboardingNotCompleted),
                 "OPTIMISTIC_LOCK_CONFLICT" => Ok(Self::OptimisticLockConflict),
+                "OUTPUT_POLICY_NOT_READY" => Ok(Self::OutputPolicyNotReady),
                 "OWNER_ALREADY_DISABLED" => Ok(Self::OwnerAlreadyDisabled),
                 "OWNER_NOT_DISABLED" => Ok(Self::OwnerNotDisabled),
                 "OWNER_NOT_FOUND" => Ok(Self::OwnerNotFound),
@@ -887,6 +1118,480 @@ pub mod types {
             value: ::std::string::String,
         ) -> ::std::result::Result<Self, self::error::ConversionError> {
             value.parse()
+        }
+    }
+    ///`AskDecisionBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "effects",
+    ///    "options",
+    ///    "question"
+    ///  ],
+    ///  "properties": {
+    ///    "addresseeId": {
+    ///      "type": "string",
+    ///      "minLength": 1
+    ///    },
+    ///    "effects": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "$ref": "#/components/schemas/AskEffect"
+    ///      }
+    ///    },
+    ///    "options": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "$ref": "#/components/schemas/AskOption"
+    ///      },
+    ///      "maxItems": 6,
+    ///      "minItems": 2
+    ///    },
+    ///    "question": {
+    ///      "type": "string",
+    ///      "maxLength": 1000,
+    ///      "minLength": 1
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct AskDecisionBody {
+        #[serde(
+            rename = "addresseeId",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub addressee_id: ::std::option::Option<AskDecisionBodyAddresseeId>,
+        pub effects: ::std::vec::Vec<::codm_contracts_rust::wire::enums::AskEffect>,
+        pub options: ::std::vec::Vec<AskOption>,
+        pub question: AskDecisionBodyQuestion,
+    }
+    impl ::std::convert::From<&AskDecisionBody> for AskDecisionBody {
+        fn from(value: &AskDecisionBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`AskDecisionBodyAddresseeId`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct AskDecisionBodyAddresseeId(::std::string::String);
+    impl ::std::ops::Deref for AskDecisionBodyAddresseeId {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<AskDecisionBodyAddresseeId> for ::std::string::String {
+        fn from(value: AskDecisionBodyAddresseeId) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&AskDecisionBodyAddresseeId>
+    for AskDecisionBodyAddresseeId {
+        fn from(value: &AskDecisionBodyAddresseeId) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for AskDecisionBodyAddresseeId {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for AskDecisionBodyAddresseeId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for AskDecisionBodyAddresseeId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for AskDecisionBodyAddresseeId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for AskDecisionBodyAddresseeId {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`AskDecisionBodyQuestion`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 1000,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct AskDecisionBodyQuestion(::std::string::String);
+    impl ::std::ops::Deref for AskDecisionBodyQuestion {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<AskDecisionBodyQuestion> for ::std::string::String {
+        fn from(value: AskDecisionBodyQuestion) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&AskDecisionBodyQuestion> for AskDecisionBodyQuestion {
+        fn from(value: &AskDecisionBodyQuestion) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for AskDecisionBodyQuestion {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 1000usize {
+                return Err("longer than 1000 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for AskDecisionBodyQuestion {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for AskDecisionBodyQuestion {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for AskDecisionBodyQuestion {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for AskDecisionBodyQuestion {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`AskDecisionResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "stopId"
+    ///  ],
+    ///  "properties": {
+    ///    "stopId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct AskDecisionResponse {
+        #[serde(rename = "stopId")]
+        pub stop_id: ::uuid::Uuid,
+    }
+    impl ::std::convert::From<&AskDecisionResponse> for AskDecisionResponse {
+        fn from(value: &AskDecisionResponse) -> Self {
+            value.clone()
+        }
+    }
+    ///`AskDefault`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "oneOf": [
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "kind",
+    ///        "optionId"
+    ///      ],
+    ///      "properties": {
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "OPTION"
+    ///          ]
+    ///        },
+    ///        "optionId": {
+    ///          "type": "string",
+    ///          "maxLength": 40,
+    ///          "minLength": 1
+    ///        }
+    ///      }
+    ///    },
+    ///    {
+    ///      "type": "object",
+    ///      "required": [
+    ///        "kind",
+    ///        "text"
+    ///      ],
+    ///      "properties": {
+    ///        "kind": {
+    ///          "type": "string",
+    ///          "enum": [
+    ///            "TEXT"
+    ///          ]
+    ///        },
+    ///        "text": {
+    ///          "type": "string",
+    ///          "maxLength": 2000,
+    ///          "minLength": 1
+    ///        }
+    ///      }
+    ///    }
+    ///  ]
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(tag = "kind")]
+    pub enum AskDefault {
+        #[serde(rename = "OPTION")]
+        Option { #[serde(rename = "optionId")] option_id: AskDefaultOptionId },
+        #[serde(rename = "TEXT")]
+        Text { text: AskDefaultText },
+    }
+    impl ::std::convert::From<&Self> for AskDefault {
+        fn from(value: &AskDefault) -> Self {
+            value.clone()
+        }
+    }
+    ///`AskDefaultOptionId`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 40,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct AskDefaultOptionId(::std::string::String);
+    impl ::std::ops::Deref for AskDefaultOptionId {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<AskDefaultOptionId> for ::std::string::String {
+        fn from(value: AskDefaultOptionId) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&AskDefaultOptionId> for AskDefaultOptionId {
+        fn from(value: &AskDefaultOptionId) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for AskDefaultOptionId {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 40usize {
+                return Err("longer than 40 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for AskDefaultOptionId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for AskDefaultOptionId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for AskDefaultOptionId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for AskDefaultOptionId {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`AskDefaultText`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 2000,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct AskDefaultText(::std::string::String);
+    impl ::std::ops::Deref for AskDefaultText {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<AskDefaultText> for ::std::string::String {
+        fn from(value: AskDefaultText) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&AskDefaultText> for AskDefaultText {
+        fn from(value: &AskDefaultText) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for AskDefaultText {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 2000usize {
+                return Err("longer than 2000 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for AskDefaultText {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for AskDefaultText {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for AskDefaultText {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for AskDefaultText {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
         }
     }
     ///`AskOperatorBody`
@@ -1036,6 +1741,461 @@ pub mod types {
     }
     impl ::std::convert::From<&AskOperatorResponse> for AskOperatorResponse {
         fn from(value: &AskOperatorResponse) -> Self {
+            value.clone()
+        }
+    }
+    ///`AskOption`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "id",
+    ///    "label"
+    ///  ],
+    ///  "properties": {
+    ///    "id": {
+    ///      "type": "string",
+    ///      "maxLength": 40,
+    ///      "minLength": 1
+    ///    },
+    ///    "label": {
+    ///      "type": "string",
+    ///      "maxLength": 200,
+    ///      "minLength": 1
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct AskOption {
+        pub id: AskOptionId,
+        pub label: AskOptionLabel,
+    }
+    impl ::std::convert::From<&AskOption> for AskOption {
+        fn from(value: &AskOption) -> Self {
+            value.clone()
+        }
+    }
+    ///`AskOptionId`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 40,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct AskOptionId(::std::string::String);
+    impl ::std::ops::Deref for AskOptionId {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<AskOptionId> for ::std::string::String {
+        fn from(value: AskOptionId) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&AskOptionId> for AskOptionId {
+        fn from(value: &AskOptionId) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for AskOptionId {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 40usize {
+                return Err("longer than 40 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for AskOptionId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for AskOptionId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for AskOptionId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for AskOptionId {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`AskOptionLabel`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 200,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct AskOptionLabel(::std::string::String);
+    impl ::std::ops::Deref for AskOptionLabel {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<AskOptionLabel> for ::std::string::String {
+        fn from(value: AskOptionLabel) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&AskOptionLabel> for AskOptionLabel {
+        fn from(value: &AskOptionLabel) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for AskOptionLabel {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 200usize {
+                return Err("longer than 200 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for AskOptionLabel {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for AskOptionLabel {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for AskOptionLabel {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for AskOptionLabel {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`AskQuestionBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "default",
+    ///    "effects",
+    ///    "options",
+    ///    "question"
+    ///  ],
+    ///  "properties": {
+    ///    "addresseeId": {
+    ///      "type": "string",
+    ///      "minLength": 1
+    ///    },
+    ///    "default": {
+    ///      "$ref": "#/components/schemas/AskDefault"
+    ///    },
+    ///    "effects": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "$ref": "#/components/schemas/AskEffect"
+    ///      }
+    ///    },
+    ///    "options": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "$ref": "#/components/schemas/AskOption"
+    ///      },
+    ///      "maxItems": 6
+    ///    },
+    ///    "question": {
+    ///      "type": "string",
+    ///      "maxLength": 1000,
+    ///      "minLength": 1
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct AskQuestionBody {
+        #[serde(
+            rename = "addresseeId",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub addressee_id: ::std::option::Option<AskQuestionBodyAddresseeId>,
+        pub default: AskDefault,
+        pub effects: ::std::vec::Vec<::codm_contracts_rust::wire::enums::AskEffect>,
+        pub options: ::std::vec::Vec<AskOption>,
+        pub question: AskQuestionBodyQuestion,
+    }
+    impl ::std::convert::From<&AskQuestionBody> for AskQuestionBody {
+        fn from(value: &AskQuestionBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`AskQuestionBodyAddresseeId`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct AskQuestionBodyAddresseeId(::std::string::String);
+    impl ::std::ops::Deref for AskQuestionBodyAddresseeId {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<AskQuestionBodyAddresseeId> for ::std::string::String {
+        fn from(value: AskQuestionBodyAddresseeId) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&AskQuestionBodyAddresseeId>
+    for AskQuestionBodyAddresseeId {
+        fn from(value: &AskQuestionBodyAddresseeId) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for AskQuestionBodyAddresseeId {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for AskQuestionBodyAddresseeId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for AskQuestionBodyAddresseeId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for AskQuestionBodyAddresseeId {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for AskQuestionBodyAddresseeId {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`AskQuestionBodyQuestion`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 1000,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct AskQuestionBodyQuestion(::std::string::String);
+    impl ::std::ops::Deref for AskQuestionBodyQuestion {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<AskQuestionBodyQuestion> for ::std::string::String {
+        fn from(value: AskQuestionBodyQuestion) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&AskQuestionBodyQuestion> for AskQuestionBodyQuestion {
+        fn from(value: &AskQuestionBodyQuestion) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for AskQuestionBodyQuestion {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 1000usize {
+                return Err("longer than 1000 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for AskQuestionBodyQuestion {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for AskQuestionBodyQuestion {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for AskQuestionBodyQuestion {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for AskQuestionBodyQuestion {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`AskQuestionResponse`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "kind",
+    ///    "stopId"
+    ///  ],
+    ///  "properties": {
+    ///    "kind": {
+    ///      "$ref": "#/components/schemas/StopKind"
+    ///    },
+    ///    "stopId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    }
+    ///  },
+    ///  "additionalProperties": false
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    #[serde(deny_unknown_fields)]
+    pub struct AskQuestionResponse {
+        pub kind: ::codm_contracts_rust::wire::enums::StopKind,
+        #[serde(rename = "stopId")]
+        pub stop_id: ::uuid::Uuid,
+    }
+    impl ::std::convert::From<&AskQuestionResponse> for AskQuestionResponse {
+        fn from(value: &AskQuestionResponse) -> Self {
             value.clone()
         }
     }
@@ -1712,6 +2872,33 @@ pub mod types {
     }
     impl ::std::convert::From<&ConfigureModelBody> for ConfigureModelBody {
         fn from(value: &ConfigureModelBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`ConfigureOutputModeBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "mode"
+    ///  ],
+    ///  "properties": {
+    ///    "mode": {
+    ///      "$ref": "#/components/schemas/GroupOutputMode"
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct ConfigureOutputModeBody {
+        pub mode: ::codm_contracts_rust::wire::enums::GroupOutputMode,
+    }
+    impl ::std::convert::From<&ConfigureOutputModeBody> for ConfigureOutputModeBody {
+        fn from(value: &ConfigureOutputModeBody) -> Self {
             value.clone()
         }
     }
@@ -10406,6 +11593,246 @@ pub mod types {
             value.clone()
         }
     }
+    ///`ReportProgressBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "text"
+    ///  ],
+    ///  "properties": {
+    ///    "text": {
+    ///      "type": "string",
+    ///      "maxLength": 2000,
+    ///      "minLength": 1
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct ReportProgressBody {
+        pub text: ReportProgressBodyText,
+    }
+    impl ::std::convert::From<&ReportProgressBody> for ReportProgressBody {
+        fn from(value: &ReportProgressBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`ReportProgressBodyText`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 2000,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct ReportProgressBodyText(::std::string::String);
+    impl ::std::ops::Deref for ReportProgressBodyText {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<ReportProgressBodyText> for ::std::string::String {
+        fn from(value: ReportProgressBodyText) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&ReportProgressBodyText> for ReportProgressBodyText {
+        fn from(value: &ReportProgressBodyText) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for ReportProgressBodyText {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 2000usize {
+                return Err("longer than 2000 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for ReportProgressBodyText {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for ReportProgressBodyText {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for ReportProgressBodyText {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for ReportProgressBodyText {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
+    ///`RequestFeedbackBody`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "object",
+    ///  "required": [
+    ///    "artifactIds",
+    ///    "mainArtifactId",
+    ///    "text"
+    ///  ],
+    ///  "properties": {
+    ///    "artifactIds": {
+    ///      "type": "array",
+    ///      "items": {
+    ///        "type": "string",
+    ///        "format": "uuid",
+    ///        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///      },
+    ///      "maxItems": 20
+    ///    },
+    ///    "mainArtifactId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
+    ///    "text": {
+    ///      "type": "string",
+    ///      "maxLength": 2000,
+    ///      "minLength": 1
+    ///    }
+    ///  }
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
+    pub struct RequestFeedbackBody {
+        #[serde(rename = "artifactIds")]
+        pub artifact_ids: ::std::vec::Vec<::uuid::Uuid>,
+        #[serde(rename = "mainArtifactId")]
+        pub main_artifact_id: ::uuid::Uuid,
+        pub text: RequestFeedbackBodyText,
+    }
+    impl ::std::convert::From<&RequestFeedbackBody> for RequestFeedbackBody {
+        fn from(value: &RequestFeedbackBody) -> Self {
+            value.clone()
+        }
+    }
+    ///`RequestFeedbackBodyText`
+    ///
+    /// <details><summary>JSON schema</summary>
+    ///
+    /// ```json
+    ///{
+    ///  "type": "string",
+    ///  "maxLength": 2000,
+    ///  "minLength": 1
+    ///}
+    /// ```
+    /// </details>
+    #[derive(::serde::Serialize, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    #[serde(transparent)]
+    pub struct RequestFeedbackBodyText(::std::string::String);
+    impl ::std::ops::Deref for RequestFeedbackBodyText {
+        type Target = ::std::string::String;
+        fn deref(&self) -> &::std::string::String {
+            &self.0
+        }
+    }
+    impl ::std::convert::From<RequestFeedbackBodyText> for ::std::string::String {
+        fn from(value: RequestFeedbackBodyText) -> Self {
+            value.0
+        }
+    }
+    impl ::std::convert::From<&RequestFeedbackBodyText> for RequestFeedbackBodyText {
+        fn from(value: &RequestFeedbackBodyText) -> Self {
+            value.clone()
+        }
+    }
+    impl ::std::str::FromStr for RequestFeedbackBodyText {
+        type Err = self::error::ConversionError;
+        fn from_str(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            if value.chars().count() > 2000usize {
+                return Err("longer than 2000 characters".into());
+            }
+            if value.chars().count() < 1usize {
+                return Err("shorter than 1 characters".into());
+            }
+            Ok(Self(value.to_string()))
+        }
+    }
+    impl ::std::convert::TryFrom<&str> for RequestFeedbackBodyText {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &str,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<&::std::string::String> for RequestFeedbackBodyText {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: &::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl ::std::convert::TryFrom<::std::string::String> for RequestFeedbackBodyText {
+        type Error = self::error::ConversionError;
+        fn try_from(
+            value: ::std::string::String,
+        ) -> ::std::result::Result<Self, self::error::ConversionError> {
+            value.parse()
+        }
+    }
+    impl<'de> ::serde::Deserialize<'de> for RequestFeedbackBodyText {
+        fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+        where
+            D: ::serde::Deserializer<'de>,
+        {
+            ::std::string::String::deserialize(deserializer)?
+                .parse()
+                .map_err(|e: self::error::ConversionError| {
+                    <D::Error as ::serde::de::Error>::custom(e.to_string())
+                })
+        }
+    }
     ///`ResolveStopBody`
     ///
     /// <details><summary>JSON schema</summary>
@@ -13310,6 +14737,43 @@ Sends a `GET` request to `/sign-in/loopback/claim`
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
+    /**Answer an issue's decision or question with one of its options or free text
+
+Sends a `POST` request to `/stops/{stopId}/answer`
+
+*/
+    pub async fn answer_stop<'a>(
+        &'a self,
+        stop_id: &'a str,
+        body: &'a types::AnswerStopBody,
+    ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
+        let url = format!(
+            "{}/stops/{}/answer", self.baseurl, encode_path(& stop_id.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
     /**Resolve a stop — retry / review&send / take over / approve / deny (C25)
 
 Sends a `POST` request to `/stops/{stopId}/resolve`
@@ -13839,6 +15303,84 @@ Sends a `POST` request to `/threads/{threadId}/issues/fork`
             _ => Err(Error::UnexpectedResponse(response)),
         }
     }
+    /**Ask the group for a decision you cannot go on without (2–6 options; declare every effect the answer authorizes). Holds the task until someone answers.
+
+Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/decisions`
+
+*/
+    pub async fn ask_decision<'a>(
+        &'a self,
+        thread_id: &'a str,
+        issue_id: &'a str,
+        body: &'a types::AskDecisionBody,
+    ) -> Result<ResponseValue<types::AskDecisionResponse>, Error<()>> {
+        let url = format!(
+            "{}/threads/{}/issues/{}/decisions", self.baseurl, encode_path(& thread_id
+            .to_string()), encode_path(& issue_id.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Show the group a preview to look at (one main artifact this task recorded, plus the others for the panel). Does not hold the task.
+
+Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/feedback`
+
+*/
+    pub async fn request_feedback<'a>(
+        &'a self,
+        thread_id: &'a str,
+        issue_id: &'a str,
+        body: &'a types::RequestFeedbackBody,
+    ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
+        let url = format!(
+            "{}/threads/{}/issues/{}/feedback", self.baseurl, encode_path(& thread_id
+            .to_string()), encode_path(& issue_id.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
     /**Ask the operator a question (fire-and-forget; surfaces as a Needs-you stop)
 
 Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/operator-questions`
@@ -13853,6 +15395,84 @@ Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/operator-questio
         let url = format!(
             "{}/threads/{}/issues/{}/operator-questions", self.baseurl, encode_path(&
             thread_id.to_string()), encode_path(& issue_id.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Record what you did on this task — it goes to the task's timeline, not to the group.
+
+Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/progress`
+
+*/
+    pub async fn report_progress<'a>(
+        &'a self,
+        thread_id: &'a str,
+        issue_id: &'a str,
+        body: &'a types::ReportProgressBody,
+    ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
+        let url = format!(
+            "{}/threads/{}/issues/{}/progress", self.baseurl, encode_path(& thread_id
+            .to_string()), encode_path(& issue_id.to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .post(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Ask the group a question you can go on without: declare the default you will follow if nobody answers within 15 minutes. Declaring any effect turns it into a decision.
+
+Sends a `POST` request to `/threads/{threadId}/issues/{issueId}/questions`
+
+*/
+    pub async fn ask_question<'a>(
+        &'a self,
+        thread_id: &'a str,
+        issue_id: &'a str,
+        body: &'a types::AskQuestionBody,
+    ) -> Result<ResponseValue<types::AskQuestionResponse>, Error<()>> {
+        let url = format!(
+            "{}/threads/{}/issues/{}/questions", self.baseurl, encode_path(& thread_id
+            .to_string()), encode_path(& issue_id.to_string()),
         );
         let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
         header_map
@@ -14358,6 +15978,44 @@ Sends a `GET` request to `/threads/{threadId}/needs-you`
                 ::reqwest::header::ACCEPT,
                 ::reqwest::header::HeaderValue::from_static("application/json"),
             )
+            .headers(header_map)
+            .build()?;
+        let result = self.client.execute(request).await;
+        let response = result?;
+        match response.status().as_u16() {
+            200u16 => ResponseValue::from_response(response).await,
+            _ => Err(Error::UnexpectedResponse(response)),
+        }
+    }
+    /**Choose how much of its tasks' output this conversation's group receives
+
+Sends a `PUT` request to `/threads/{threadId}/output-mode`
+
+*/
+    pub async fn configure_output_mode<'a>(
+        &'a self,
+        thread_id: &'a str,
+        body: &'a types::ConfigureOutputModeBody,
+    ) -> Result<ResponseValue<::serde_json::Value>, Error<()>> {
+        let url = format!(
+            "{}/threads/{}/output-mode", self.baseurl, encode_path(& thread_id
+            .to_string()),
+        );
+        let mut header_map = ::reqwest::header::HeaderMap::with_capacity(1usize);
+        header_map
+            .append(
+                ::reqwest::header::HeaderName::from_static("api-version"),
+                ::reqwest::header::HeaderValue::from_static(self.api_version()),
+            );
+        #[allow(unused_mut)]
+        let mut request = self
+            .client
+            .put(url)
+            .header(
+                ::reqwest::header::ACCEPT,
+                ::reqwest::header::HeaderValue::from_static("application/json"),
+            )
+            .json(&body)
             .headers(header_map)
             .build()?;
         let result = self.client.execute(request).await;

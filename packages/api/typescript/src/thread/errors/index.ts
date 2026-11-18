@@ -81,6 +81,12 @@ export type ThreadApplicationErrors =
 	// no longer has the "pode liberar" grant, or is a muted participant who may not act on the work.
 	| 'PARTICIPANT_CANNOT_RELEASE'
 	| 'PARTICIPANT_CANNOT_ACT'
+	// Fase 3 (S0b): the door exists on the HTTP/MCP contract — so the console, the panel and the SDK can
+	// build against it — but its behaviour lands in a later slice. Every such door refuses with THIS code,
+	// never a silent 2xx (a 204 from ConfigureOutputMode would tell the caller the mode changed). 501
+	// because that is literally the fact: the route is declared, the implementation is not there yet.
+	// Re-registered in `thread` and `agent` with the same status — one code, one meaning.
+	| 'OUTPUT_POLICY_NOT_READY'
 export type ApplicationErrors = BaseApplicationErrors | ThreadApplicationErrors
 
 export type ThreadInterfaceErrors = never
@@ -149,4 +155,6 @@ registerErrorCodes({
 	ISSUE_ARCHIVED: HttpStatusCode.UNPROCESSABLE_ENTITY,
 	// Same status the external context registers — one code, one meaning, whichever door raised it.
 	GATEWAY_UNAVAILABLE: HttpStatusCode.BAD_GATEWAY,
+	// Fase 3 (S0b) — see the union: a declared door whose behaviour lands in a later slice.
+	OUTPUT_POLICY_NOT_READY: HttpStatusCode.NOT_IMPLEMENTED,
 })

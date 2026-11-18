@@ -117,6 +117,7 @@ pub mod types {
     ///    "ONBOARDING_DRAFT_INCOMPLETE",
     ///    "ONBOARDING_NOT_COMPLETED",
     ///    "OPTIMISTIC_LOCK_CONFLICT",
+    ///    "OUTPUT_POLICY_NOT_READY",
     ///    "OWNER_ALREADY_DISABLED",
     ///    "OWNER_NOT_DISABLED",
     ///    "OWNER_NOT_FOUND",
@@ -324,6 +325,8 @@ pub mod types {
         OnboardingNotCompleted,
         #[serde(rename = "OPTIMISTIC_LOCK_CONFLICT")]
         OptimisticLockConflict,
+        #[serde(rename = "OUTPUT_POLICY_NOT_READY")]
+        OutputPolicyNotReady,
         #[serde(rename = "OWNER_ALREADY_DISABLED")]
         OwnerAlreadyDisabled,
         #[serde(rename = "OWNER_NOT_DISABLED")]
@@ -516,6 +519,7 @@ pub mod types {
                 }
                 Self::OnboardingNotCompleted => f.write_str("ONBOARDING_NOT_COMPLETED"),
                 Self::OptimisticLockConflict => f.write_str("OPTIMISTIC_LOCK_CONFLICT"),
+                Self::OutputPolicyNotReady => f.write_str("OUTPUT_POLICY_NOT_READY"),
                 Self::OwnerAlreadyDisabled => f.write_str("OWNER_ALREADY_DISABLED"),
                 Self::OwnerNotDisabled => f.write_str("OWNER_NOT_DISABLED"),
                 Self::OwnerNotFound => f.write_str("OWNER_NOT_FOUND"),
@@ -654,6 +658,7 @@ pub mod types {
                 "ONBOARDING_DRAFT_INCOMPLETE" => Ok(Self::OnboardingDraftIncomplete),
                 "ONBOARDING_NOT_COMPLETED" => Ok(Self::OnboardingNotCompleted),
                 "OPTIMISTIC_LOCK_CONFLICT" => Ok(Self::OptimisticLockConflict),
+                "OUTPUT_POLICY_NOT_READY" => Ok(Self::OutputPolicyNotReady),
                 "OWNER_ALREADY_DISABLED" => Ok(Self::OwnerAlreadyDisabled),
                 "OWNER_NOT_DISABLED" => Ok(Self::OwnerNotDisabled),
                 "OWNER_NOT_FOUND" => Ok(Self::OwnerNotFound),

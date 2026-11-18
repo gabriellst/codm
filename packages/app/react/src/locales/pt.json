@@ -568,6 +568,7 @@
 		"PATH_NOT_A_DIRECTORY": "O caminho selecionado não é um diretório.",
 		"PATH_NOT_FOUND": "O caminho selecionado não existe.",
 		"PROMPT_TOO_LONG": "O prompt personalizado é longo demais para uma conversa.",
+		"OUTPUT_POLICY_NOT_READY": "Esta ação ainda não está disponível nesta versão.",
 		"PROVIDER_COMING_SOON": "Este agente ainda não pode ser dirigido. Escolha um que já pode.",
 		"PROVIDER_NOT_BOUND": "Esta conversa não roda esse agente.",
 		"PROVIDER_NOT_DETECTED": "Provedor de agente não detectado.",

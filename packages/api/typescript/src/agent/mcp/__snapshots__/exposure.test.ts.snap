@@ -3,10 +3,14 @@
 exports[`AC-16 — the golden snapshot: scope → the tools a model can call the declared tool surface, by scope 1`] = `
 {
   "issue-handling": [
+    "mcp__codm__AskDecision",
     "mcp__codm__AskOperator",
+    "mcp__codm__AskQuestion",
     "mcp__codm__CreateIssue",
     "mcp__codm__RaiseStop",
     "mcp__codm__RecordArtifact",
+    "mcp__codm__ReportProgress",
+    "mcp__codm__RequestFeedback",
     "mcp__codm__SendArtifact",
     "mcp__codm__SendDirectMessage",
     "mcp__codm__TransitionIssueStatus",
@@ -19,6 +23,7 @@ exports[`AC-16 — the golden snapshot: scope → the tools a model can call the
     "mcp__codm__ConfigureLanguage",
     "mcp__codm__ConfigureMentionGate",
     "mcp__codm__ConfigureModel",
+    "mcp__codm__ConfigureOutputMode",
     "mcp__codm__ConfigurePrompt",
     "mcp__codm__ConfigureReactions",
     "mcp__codm__ConfigureStreaming",
@@ -62,6 +67,7 @@ exports[`AC-16 — the golden snapshot: scope → the tools a model can call the
     "mcp__codm__ConfigureLanguage",
     "mcp__codm__ConfigureMentionGate",
     "mcp__codm__ConfigureModel",
+    "mcp__codm__ConfigureOutputMode",
     "mcp__codm__ConfigurePrompt",
     "mcp__codm__ConfigureReactions",
     "mcp__codm__ConfigureStreaming",

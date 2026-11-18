@@ -26,6 +26,12 @@ export type AgentApplicationErrors =
 	| 'TERMINAL_SPAWN_FAILED'
 	| 'CLASSIFICATION_FAILED'
 	| 'AGENT_TOOLS_UNSUPPORTED'
+	// Fase 3 (S0b): the door exists on the HTTP/MCP contract — so the console, the panel and the SDK can
+	// build against it — but its behaviour lands in a later slice. Every such door refuses with THIS code,
+	// never a silent 2xx (a 204 from ConfigureOutputMode would tell the caller the mode changed). 501
+	// because that is literally the fact: the route is declared, the implementation is not there yet.
+	// Re-registered in `thread` and `agent` with the same status — one code, one meaning.
+	| 'OUTPUT_POLICY_NOT_READY'
 export type ApplicationErrors = BaseApplicationErrors | AgentApplicationErrors
 
 /**
@@ -64,6 +70,8 @@ registerErrorCodes({
 	// request, and silently dropping the scope would degrade the run into the inferred path without
 	// anyone noticing (§4.7).
 	AGENT_TOOLS_UNSUPPORTED: HttpStatusCode.UNPROCESSABLE_ENTITY,
+	// Fase 3 (S0b) — see the union: a declared door whose behaviour lands in a later slice.
+	OUTPUT_POLICY_NOT_READY: HttpStatusCode.NOT_IMPLEMENTED,
 	// Interface — the MCP router's per-call boundary. See the union above for why these are two codes.
 	AGENT_RUN_TOKEN_INVALID: HttpStatusCode.UNAUTHORIZED,
 	AGENT_RUN_SCOPE_MISMATCH: HttpStatusCode.FORBIDDEN,

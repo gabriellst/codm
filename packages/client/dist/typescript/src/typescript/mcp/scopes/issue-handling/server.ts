@@ -3,17 +3,25 @@
 * Do not edit manually.
 */
 
+import { askDecisionHandler } from "./askDecision.ts";
 import { askOperatorHandler } from "./askOperator.ts";
+import { askQuestionHandler } from "./askQuestion.ts";
 import { createIssueHandler } from "./createIssue.ts";
 import { raiseStopHandler } from "./raiseStop.ts";
 import { recordArtifactHandler } from "./recordArtifact.ts";
+import { reportProgressHandler } from "./reportProgress.ts";
+import { requestFeedbackHandler } from "./requestFeedback.ts";
 import { sendArtifactHandler } from "./sendArtifact.ts";
 import { sendDirectMessageHandler } from "./sendDirectMessage.ts";
 import { transitionIssueStatusHandler } from "./transitionIssueStatus.ts";
+import { askDecisionMutationRequestSchema, askDecisionMutationResponseSchema } from "../../../zod/askDecisionSchema.ts";
 import { askOperatorMutationRequestSchema, askOperatorMutationResponseSchema } from "../../../zod/askOperatorSchema.ts";
+import { askQuestionMutationRequestSchema, askQuestionMutationResponseSchema } from "../../../zod/askQuestionSchema.ts";
 import { createIssueMutationRequestSchema, createIssueMutationResponseSchema } from "../../../zod/createIssueSchema.ts";
 import { raiseStopMutationRequestSchema, raiseStopMutationResponseSchema } from "../../../zod/raiseStopSchema.ts";
 import { recordArtifactMutationRequestSchema, recordArtifactMutationResponseSchema } from "../../../zod/recordArtifactSchema.ts";
+import { reportProgressMutationRequestSchema, reportProgressMutationResponseSchema } from "../../../zod/reportProgressSchema.ts";
+import { requestFeedbackMutationRequestSchema, requestFeedbackMutationResponseSchema } from "../../../zod/requestFeedbackSchema.ts";
 import { sendArtifactMutationRequestSchema, sendArtifactMutationResponseSchema } from "../../../zod/sendArtifactSchema.ts";
 import { sendDirectMessageMutationRequestSchema, sendDirectMessageMutationResponseSchema } from "../../../zod/sendDirectMessageSchema.ts";
 import { transitionIssueStatusMutationRequestSchema, transitionIssueStatusMutationResponseSchema } from "../../../zod/transitionIssueStatusSchema.ts";
@@ -60,6 +68,42 @@ server.registerTool("AskOperator", {
   inputSchema: { threadId: z.string(), issueId: z.string(), data: askOperatorMutationRequestSchema },
 }, async ({ threadId, issueId, data }) => {
   return askOperatorHandler({ threadId, issueId, data })
+})
+          
+
+server.registerTool("AskDecision", {
+  description: "Ask the group for a decision you cannot go on without (2–6 options; declare every effect the answer authorizes). Holds the task until someone answers.",
+  outputSchema: { data: askDecisionMutationResponseSchema },
+  inputSchema: { threadId: z.string(), issueId: z.string(), data: askDecisionMutationRequestSchema },
+}, async ({ threadId, issueId, data }) => {
+  return askDecisionHandler({ threadId, issueId, data })
+})
+          
+
+server.registerTool("AskQuestion", {
+  description: "Ask the group a question you can go on without: declare the default you will follow if nobody answers within 15 minutes. Declaring any effect turns it into a decision.",
+  outputSchema: { data: askQuestionMutationResponseSchema },
+  inputSchema: { threadId: z.string(), issueId: z.string(), data: askQuestionMutationRequestSchema },
+}, async ({ threadId, issueId, data }) => {
+  return askQuestionHandler({ threadId, issueId, data })
+})
+          
+
+server.registerTool("RequestFeedback", {
+  description: "Show the group a preview to look at (one main artifact this task recorded, plus the others for the panel). Does not hold the task.",
+  outputSchema: { data: requestFeedbackMutationResponseSchema },
+  inputSchema: { threadId: z.string(), issueId: z.string(), data: requestFeedbackMutationRequestSchema },
+}, async ({ threadId, issueId, data }) => {
+  return requestFeedbackHandler({ threadId, issueId, data })
+})
+          
+
+server.registerTool("ReportProgress", {
+  description: "Record what you did on this task — it goes to the task's timeline, not to the group.",
+  outputSchema: { data: reportProgressMutationResponseSchema },
+  inputSchema: { threadId: z.string(), issueId: z.string(), data: reportProgressMutationRequestSchema },
+}, async ({ threadId, issueId, data }) => {
+  return reportProgressHandler({ threadId, issueId, data })
 })
           
 

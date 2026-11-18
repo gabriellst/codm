@@ -1075,6 +1075,408 @@
         ]
       }
     },
+    "/threads/{threadId}/issues/{issueId}/decisions": {
+      "post": {
+        "tags": [
+          "agent",
+          "mcp:issue-handling"
+        ],
+        "description": "Ask the group for a decision you cannot go on without (2–6 options; declare every effect the answer authorizes). Holds the task until someone answers.",
+        "operationId": "AskDecision",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "question": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1000
+                  },
+                  "effects": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/AskEffect"
+                    }
+                  },
+                  "addresseeId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "options": {
+                    "minItems": 2,
+                    "maxItems": 6,
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/AskOption"
+                    }
+                  }
+                },
+                "required": [
+                  "question",
+                  "effects",
+                  "options"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "question": "The preview is ready. Publish it?",
+                    "options": [
+                      {
+                        "id": "yes",
+                        "label": "Publish"
+                      },
+                      {
+                        "id": "no",
+                        "label": "Not yet"
+                      }
+                    ],
+                    "effects": [
+                      "PUBLISH"
+                    ]
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          },
+          {
+            "in": "path",
+            "name": "issueId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddaf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ask the group for a decision you cannot go on without (2–6 options; declare every effect the answer authorizes). Holds the task until someone answers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "stopId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  },
+                  "required": [
+                    "stopId"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "x-mcp-scope": [
+          "issue-handling"
+        ]
+      }
+    },
+    "/threads/{threadId}/issues/{issueId}/questions": {
+      "post": {
+        "tags": [
+          "agent",
+          "mcp:issue-handling"
+        ],
+        "description": "Ask the group a question you can go on without: declare the default you will follow if nobody answers within 15 minutes. Declaring any effect turns it into a decision.",
+        "operationId": "AskQuestion",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "question": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1000
+                  },
+                  "options": {
+                    "maxItems": 6,
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/AskOption"
+                    }
+                  },
+                  "default": {
+                    "$ref": "#/components/schemas/AskDefault"
+                  },
+                  "effects": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/AskEffect"
+                    }
+                  },
+                  "addresseeId": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "question",
+                  "options",
+                  "default",
+                  "effects"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "question": "Blue or green for the banner background?",
+                    "options": [
+                      {
+                        "id": "blue",
+                        "label": "Blue"
+                      },
+                      {
+                        "id": "green",
+                        "label": "Green"
+                      }
+                    ],
+                    "default": {
+                      "kind": "OPTION",
+                      "optionId": "blue"
+                    },
+                    "effects": []
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          },
+          {
+            "in": "path",
+            "name": "issueId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddaf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ask the group a question you can go on without: declare the default you will follow if nobody answers within 15 minutes. Declaring any effect turns it into a decision.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "stopId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "kind": {
+                      "$ref": "#/components/schemas/StopKind"
+                    }
+                  },
+                  "required": [
+                    "stopId",
+                    "kind"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "x-mcp-scope": [
+          "issue-handling"
+        ]
+      }
+    },
+    "/threads/{threadId}/issues/{issueId}/feedback": {
+      "post": {
+        "tags": [
+          "agent",
+          "mcp:issue-handling"
+        ],
+        "description": "Show the group a preview to look at (one main artifact this task recorded, plus the others for the panel). Does not hold the task.",
+        "operationId": "RequestFeedback",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  },
+                  "mainArtifactId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "artifactIds": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  }
+                },
+                "required": [
+                  "text",
+                  "mainArtifactId",
+                  "artifactIds"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "text": "Preview of the new landing page",
+                    "mainArtifactId": "019e4d24-6524-7041-9e1c-8108180cdda2",
+                    "artifactIds": [
+                      "019e4d24-6524-7041-9e1c-8108180cdda2",
+                      "019e4d24-6524-7041-9e1c-8108180cdda3"
+                    ]
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          },
+          {
+            "in": "path",
+            "name": "issueId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddaf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Show the group a preview to look at (one main artifact this task recorded, plus the others for the panel). Does not hold the task.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "x-mcp-scope": [
+          "issue-handling"
+        ]
+      }
+    },
+    "/threads/{threadId}/issues/{issueId}/progress": {
+      "post": {
+        "tags": [
+          "agent",
+          "mcp:issue-handling"
+        ],
+        "description": "Record what you did on this task — it goes to the task's timeline, not to the group.",
+        "operationId": "ReportProgress",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "text"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "text": "Built the page and ran the checks; deploying the preview next."
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          },
+          {
+            "in": "path",
+            "name": "issueId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddaf"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Record what you did on this task — it goes to the task's timeline, not to the group.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "x-mcp-scope": [
+          "issue-handling"
+        ]
+      }
+    },
     "/threads/{threadId}/issues/fork": {
       "post": {
         "tags": [
@@ -3932,6 +4334,152 @@
           }
         },
         "x-mcp-scope": [
+          "orchestration"
+        ]
+      }
+    },
+    "/stops/{stopId}/answer": {
+      "post": {
+        "tags": [
+          "thread"
+        ],
+        "description": "Answer an issue's decision or question with one of its options or free text",
+        "operationId": "AnswerStop",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "OPTION"
+                      },
+                      "optionId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 40
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "optionId"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "TEXT"
+                      },
+                      "text": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2000
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "text"
+                    ]
+                  }
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "kind": "OPTION",
+                    "optionId": "yes"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "stopId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddb1"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Answer an issue's decision or question with one of its options or free text",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/threads/{threadId}/output-mode": {
+      "put": {
+        "tags": [
+          "thread",
+          "mcp:system",
+          "mcp:orchestration"
+        ],
+        "description": "Choose how much of its tasks' output this conversation's group receives",
+        "operationId": "ConfigureOutputMode",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "$ref": "#/components/schemas/GroupOutputMode"
+                  }
+                },
+                "required": [
+                  "mode"
+                ]
+              },
+              "examples": {
+                "default": {
+                  "value": {
+                    "mode": "DECISIONS_AND_LIVE"
+                  },
+                  "summary": "Example"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "threadId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "019e4d24-6524-7041-9e1c-8108180cddae"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Choose how much of its tasks' output this conversation's group receives",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "x-mcp-scope": [
+          "system",
           "orchestration"
         ]
       }
@@ -9842,6 +10390,7 @@
           "ONBOARDING_DRAFT_INCOMPLETE",
           "ONBOARDING_NOT_COMPLETED",
           "OPTIMISTIC_LOCK_CONFLICT",
+          "OUTPUT_POLICY_NOT_READY",
           "OWNER_ALREADY_DISABLED",
           "OWNER_NOT_DISABLED",
           "OWNER_NOT_FOUND",
@@ -9949,6 +10498,73 @@
           "DECISION_REQUESTED",
           "QUESTION_ASKED",
           "STALLED"
+        ]
+      },
+      "AskOption": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ]
+      },
+      "AskEffect": {
+        "type": "string",
+        "enum": [
+          "PUBLISH",
+          "IRREVERSIBLE",
+          "CLIENT_DATA"
+        ]
+      },
+      "AskDefault": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "OPTION"
+              },
+              "optionId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              }
+            },
+            "required": [
+              "kind",
+              "optionId"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "TEXT"
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "kind",
+              "text"
+            ]
+          }
         ]
       },
       "ArtifactKind": {
@@ -10061,6 +10677,14 @@
           "DENY",
           "ANSWER",
           "DEFAULT_APPLIED"
+        ]
+      },
+      "GroupOutputMode": {
+        "type": "string",
+        "enum": [
+          "DECISIONS_ONLY",
+          "DECISIONS_AND_LIVE",
+          "EVERYTHING"
         ]
       },
       "Timezone": {
@@ -10384,6 +11008,7 @@
     "ONBOARDING_DRAFT_INCOMPLETE",
     "ONBOARDING_NOT_COMPLETED",
     "OPTIMISTIC_LOCK_CONFLICT",
+    "OUTPUT_POLICY_NOT_READY",
     "OWNER_ALREADY_DISABLED",
     "OWNER_NOT_DISABLED",
     "OWNER_NOT_FOUND",
@@ -10435,10 +11060,14 @@
   ],
   "x-mcp-scopes": {
     "issue-handling": [
+      "AskDecision",
       "AskOperator",
+      "AskQuestion",
       "CreateIssue",
       "RaiseStop",
       "RecordArtifact",
+      "ReportProgress",
+      "RequestFeedback",
       "SendArtifact",
       "SendDirectMessage",
       "TransitionIssueStatus"
@@ -10451,6 +11080,7 @@
       "ConfigureLanguage",
       "ConfigureMentionGate",
       "ConfigureModel",
+      "ConfigureOutputMode",
       "ConfigurePrompt",
       "ConfigureReactions",
       "ConfigureStreaming",
@@ -10494,6 +11124,7 @@
       "ConfigureLanguage",
       "ConfigureMentionGate",
       "ConfigureModel",
+      "ConfigureOutputMode",
       "ConfigurePrompt",
       "ConfigureReactions",
       "ConfigureStreaming",

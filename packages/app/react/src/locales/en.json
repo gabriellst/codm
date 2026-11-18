@@ -568,6 +568,7 @@
 		"PATH_NOT_A_DIRECTORY": "The selected path is not a directory.",
 		"PATH_NOT_FOUND": "The selected path does not exist.",
 		"PROMPT_TOO_LONG": "That custom prompt is too long for one conversation.",
+		"OUTPUT_POLICY_NOT_READY": "This action is not available in this version yet.",
 		"PROVIDER_COMING_SOON": "That agent can't be driven yet. Pick one that can.",
 		"PROVIDER_NOT_BOUND": "This conversation does not run that agent.",
 		"PROVIDER_NOT_DETECTED": "Agent provider not detected.",
