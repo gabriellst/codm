@@ -8,7 +8,7 @@ import type { AgentRunResult, AgentRuntimeEvent } from '../../../types/AgentRunt
 import { StreamJsonCodec } from '../../StreamJsonCodec'
 import { TerminalOutputAccumulator } from '../../TerminalOutputAccumulator'
 import type { AgentProcess, AgentProcessSpec } from './AgentProcess'
-import { ClaudeAgentRunner } from './ClaudeAgentRunner'
+import { ClaudeAgentRunner, withoutRegretRefusals } from './ClaudeAgentRunner'
 
 /**
  * AC-9 (participant-permission-posture, Decisions 9 + 10) — a turn the permission filter blocked ends
@@ -77,7 +77,7 @@ describe('the terminal frame — what the codec reads off it', () => {
 			}),
 		)
 		expect(decoded?.terminal?.safetyStops).toBe(0)
-		expect(decoded?.terminal?.permissionDenials).toEqual([{ tool: 'Bash', inputKeys: ['command', 'description'] }])
+		expect(decoded?.terminal?.permissionDenials).toEqual([{ tool: 'Bash', inputKeys: ['command', 'description'], toolUseId: 'tu_1' }])
 	})
 
 	it('reads the measured classifier block as two safety stops', () => {
@@ -124,5 +124,46 @@ describe('ClaudeAgentRunner — a blocked action is a PERMISSION_DENIED transpor
 		const accumulator = new TerminalOutputAccumulator({ issueId: '00000000-0000-4000-8000-0000000000cc' })
 		accumulator.feed({ type: 'finished', result })
 		expect(accumulator.outcome()).toMatchObject({ kind: 'STOPPED', stopKind: StopKind.PERMISSION_DENIED })
+	})
+})
+
+/**
+ * A REGRET-WINDOW REFUSAL IS NOT A PERMISSION DENIAL (fase 2, item 3).
+ *
+ * Not measured against the real CLI: whether a PreToolUse `deny` lands in `permission_denials`. If it
+ * does and nothing filters it, every refusal becomes a PERMISSION_DENIED stop and parks the issue
+ * waiting for a person, when the steer or the pause should take it. Pins both wire shapes (with and
+ * without `tool_use_id`) and that a real denial still stops the turn.
+ *
+ * Falsifier: make `withoutRegretRefusals` return `terminal` unchanged and the first two cases fail.
+ */
+describe('withoutRegretRefusals', () => {
+	const PUSH = { command: 'git push origin main' }
+	const terminalWith = (permission_denials: unknown[]) => {
+		const [decoded] = new StreamJsonCodec().push(line({ ...fixture('auto-no-tool.result.json'), permission_denials }))
+		if (!decoded?.terminal) throw new Error('fixture has no terminal frame')
+		return decoded.terminal
+	}
+
+	it('drops the denial our hook explains, matched by tool_use_id', () => {
+		const out = withoutRegretRefusals(terminalWith([{ tool_name: 'Bash', tool_use_id: 'tu_1', tool_input: PUSH }]), ['tu_1'])
+		expect(out.permissionDenials).toEqual([])
+	})
+
+	it('without ids, drops at most as many Bash denials as refusals seen', () => {
+		const denials = [
+			{ tool_name: 'Bash', tool_input: PUSH },
+			{ tool_name: 'Bash', tool_input: PUSH },
+		]
+		expect(withoutRegretRefusals(terminalWith(denials), ['tu_1']).permissionDenials).toHaveLength(1)
+	})
+
+	it('keeps every other denial — a real one still stops the turn', () => {
+		const terminal = terminalWith([
+			{ tool_name: 'Write', tool_input: { file_path: 'x' } },
+			{ tool_name: 'Bash', tool_use_id: 'tu_other', tool_input: { command: 'psql' } },
+		])
+		expect(withoutRegretRefusals(terminal, ['tu_1']).permissionDenials).toHaveLength(2)
+		expect(withoutRegretRefusals(terminal, []).permissionDenials).toHaveLength(2)
 	})
 })

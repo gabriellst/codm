@@ -4,6 +4,7 @@ import { RegretWindowOutcome } from '@codm/contracts-typescript/wire/enums'
 import type { AgentRunIdentity } from '../types/AgentRunIdentity'
 import type { AgentInterfaceErrors } from '../errors'
 import { OpenRegretWindow } from '../usecases/OpenRegretWindow'
+import { REGRET_WINDOW_REASON_PREFIX } from '../utils/irreversibleActions'
 
 import { PRE_TOOL_HOOK_PATH } from '../mcp/route'
 
@@ -24,10 +25,8 @@ export const PreToolHookControllerOutputSchema = z.any()
  * fails compilation here until it says what the session is told. `PROCEEDED` refuses nothing.
  */
 const REFUSAL: Readonly<Record<Exclude<RegretWindowOutcome, typeof RegretWindowOutcome.PROCEEDED>, string>> = {
-	[RegretWindowOutcome.CANCELLED_BY_STEER]:
-		'Janela de arrependimento: o operador mandou um recado novo para esta issue que você ainda não leu. A ação irreversível foi cancelada. Não tente de novo agora: encerre este passo dizendo o que ia fazer; o recado chega no próximo turno — leia e confirme antes de repetir a ação.',
-	[RegretWindowOutcome.CANCELLED_BY_PAUSE]:
-		'Janela de arrependimento: esta issue foi pausada. A ação irreversível foi cancelada. Pare aqui e não tente de novo; o trabalho continua quando a issue for retomada.',
+	[RegretWindowOutcome.CANCELLED_BY_STEER]: `${REGRET_WINDOW_REASON_PREFIX} o operador mandou um recado novo para esta issue que você ainda não leu. A ação irreversível foi cancelada. Não tente de novo agora: encerre este passo dizendo o que ia fazer; o recado chega no próximo turno — leia e confirme antes de repetir a ação.`,
+	[RegretWindowOutcome.CANCELLED_BY_PAUSE]: `${REGRET_WINDOW_REASON_PREFIX} esta issue foi pausada. A ação irreversível foi cancelada. Pare aqui e não tente de novo; o trabalho continua quando a issue for retomada.`,
 }
 
 /** The CLI's own decision JSON — `deny` blocks the call and hands the reason to the model as the tool's result. */

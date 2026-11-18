@@ -20,6 +20,7 @@ import { nodeAgentProcessSpawner, type AgentProcess, type AgentProcessSpawner } 
 // another would drag a subprocess-spawning module into a pure state machine.
 import { MCP_RUN_TOKEN_ENV, MCP_SERVER_KEY } from '../../../mcp/wire'
 import { AgentIdentityService } from '@codm/core-typescript'
+import { REGRET_WINDOW_REASON_PREFIX } from '../../../utils/irreversibleActions'
 
 export interface ClaudeAgentRunnerOptions {
 	spawner?: AgentProcessSpawner
@@ -417,6 +418,8 @@ export class ClaudeAgentRunner extends AgentRunner {
 		const stderrPump = drainToStrings(proc.stderr, stderrChunks)
 
 		let terminal: TerminalResultRecord | undefined
+		/** Tool calls OUR regret-window hook refused — never a stop (see `withoutRegretRefusals`). */
+		const regretRefused: string[] = []
 		let sessionId: string | null = null
 		/** The LAST main-agent call's prompt size — see `DecodedLine.contextTokens`. */
 		let contextTokens: number | undefined
@@ -530,6 +533,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 					for (const frame of decoded.frames) {
 						sawFrame = true
 						if (frame.kind === 'system_init') sessionId = frame.sessionId
+						if (frame.kind === 'tool_result' && frame.summary.includes(REGRET_WINDOW_REASON_PREFIX)) regretRefused.push(frame.toolUseId)
 						yield { type: 'frame', frame }
 						const fact = accumulator.apply(frame)
 						if (fact) yield { type: 'fact', fact }
@@ -550,6 +554,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 				if (decoded.contextTokens !== undefined) contextTokens = decoded.contextTokens
 				if (decoded.rateLimit) rateLimit = decoded.rateLimit
 				for (const frame of decoded.frames) {
+					if (frame.kind === 'tool_result' && frame.summary.includes(REGRET_WINDOW_REASON_PREFIX)) regretRefused.push(frame.toolUseId)
 					yield { type: 'frame', frame }
 					const fact = accumulator.apply(frame)
 					if (fact) yield { type: 'fact', fact }
@@ -577,7 +582,7 @@ export class ClaudeAgentRunner extends AgentRunner {
 			yield {
 				type: 'finished',
 				result: this.buildResult(request, {
-					terminal,
+					terminal: terminal && withoutRegretRefusals(terminal, regretRefused),
 					sessionId,
 					contextTokens,
 					rateLimit,
@@ -943,4 +948,30 @@ async function settleWithin<T>(promise: Promise<T>, ms: number, fallback: T): Pr
 	} finally {
 		clearTimeout(timer)
 	}
+}
+
+/**
+ * THE REGRET WINDOW IS NOT A PERMISSION DENIAL (fase 2, item 3). Its hook refuses an irreversible Bash
+ * call with `permissionDecision: deny`, and the CLI may count that on the terminal frame as a
+ * `permission_denial` — which `classifyStop` turns into PERMISSION_DENIED, a stop that parks the issue
+ * waiting for a person. Wrong for ours: the session already read why (the reason came back as the tool
+ * result) and the steer or the pause takes it from here.
+ *
+ * So the denials the hook explains are dropped before classification: by `tool_use_id` when the CLI
+ * sends it, otherwise — Bash only, never more than the refusals seen — by count. Any other denial
+ * still stops the turn.
+ */
+export function withoutRegretRefusals(terminal: TerminalResultRecord, regretRefused: readonly string[]): TerminalResultRecord {
+	if (regretRefused.length === 0 || terminal.permissionDenials.length === 0) return terminal
+	const byId = new Set(regretRefused)
+	let unmatched = regretRefused.length - terminal.permissionDenials.filter(d => d.toolUseId !== undefined && byId.has(d.toolUseId)).length
+	const permissionDenials = terminal.permissionDenials.filter(denial => {
+		if (denial.toolUseId !== undefined) return !byId.has(denial.toolUseId)
+		if (denial.tool === 'Bash' && unmatched > 0) {
+			unmatched--
+			return false
+		}
+		return true
+	})
+	return { ...terminal, permissionDenials }
 }

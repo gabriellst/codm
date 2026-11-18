@@ -12,6 +12,8 @@ export interface PermissionDenial {
 	 * a token in a command line), and this list ends up in a Needs-you card and a channel message.
 	 */
 	inputKeys: readonly string[]
+	/** `tool_use_id` on the wire, when the CLI sends it — what ties a denial to the tool result that explains it. */
+	toolUseId?: string
 }
 
 /**
@@ -146,6 +148,7 @@ function readDenials(raw: unknown): PermissionDenial[] {
 	return raw.filter(isRecord).map(entry => ({
 		tool: str(entry.tool_name) ?? 'unknown tool',
 		inputKeys: isRecord(entry.tool_input) ? Object.keys(entry.tool_input) : [],
+		...(str(entry.tool_use_id) ? { toolUseId: str(entry.tool_use_id) } : {}),
 	}))
 }
 

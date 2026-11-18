@@ -84,3 +84,10 @@ export function matchIrreversibleAction(command: string): IrreversibleActionKind
 	}
 	return undefined
 }
+
+/**
+ * How every regret-window refusal begins. The hook's reason reaches the model as the Bash tool result,
+ * and the runner reads this prefix there to tell OUR refusal (the session goes on — the steer or the
+ * pause takes it from here) from a real permission denial (a stop that waits for a person).
+ */
+export const REGRET_WINDOW_REASON_PREFIX = 'Janela de arrependimento:'
