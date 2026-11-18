@@ -112,7 +112,10 @@ Todo caminho pelo qual uma issue chega ao canal hoje (mapeado no código) tem n�
 
 **Seleção por propriedade declarada, não por `if` de identidade.** O escopo MCP `ISSUE_HANDLING` deixa de expor `SendDirectMessage` e `SendArtifact` (cada controller declara `static mcpScopes`; a issue perde as duas, o orquestrador mantém). A issue ganha `AskDecision`, `AskQuestion`, `RequestFeedback`, `ReportProgress` e mantém `RecordArtifact`. O snapshot `agent/mcp/__snapshots__/exposure.test.ts.snap` muda e é o gate. Efeito colateral bom: some o bug em que `SendDirectMessage` de uma issue saía com `author: HUMAN` e voltava como mensagem recebida.
 
-### Matriz nível × modo (proposta — PERGUNTAR AO DONO)
+### Matriz nível × modo (decidida — ver nota)
+
+> **Decidido pelo dono (18/11):** padrão `DECISIONS_AND_LIVE` para grupos existentes e novos; `DECISIONS_ONLY` mantém as perguntas no grupo; `EVERYTHING` leva o progresso ao grupo; sem trava dura (a janela de arrependimento segue como rede); decisão sem efeito e pergunta podem ser respondidas por qualquer participante que pode agir (`Thread.mayAct`); sem modo "legado" no rollout (o modo `EVERYTHING` é o caminho de volta por grupo). Galeria: depende do R2, ainda não habilitado — FEEDBACK manda só o print principal até lá.
+
 
 | Nível | `DECISIONS_ONLY` | `DECISIONS_AND_LIVE` (padrão proposto) | `EVERYTHING` |
 |---|---|---|---|
