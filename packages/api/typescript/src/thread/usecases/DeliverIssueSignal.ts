@@ -7,14 +7,16 @@ import { resolveThreadLanguage } from '@shared/i18n/messages'
 import { IssueRepository } from '@issue/repositories/IssueRepository'
 import { PanelPublisher } from '@issue/services/PanelPublisher'
 import { ThreadRepository } from '../repositories/ThreadRepository'
-import { enqueueSignalDelivery, recordIssueSignal } from '../utils/issueSignal'
+import { ConsumedMessageRepository } from '../repositories/ConsumedMessageRepository'
+import { enqueueSignalDelivery, QUOTES_ORIGIN, recordIssueSignal } from '../utils/issueSignal'
 import type { ApplicationErrors } from '../errors'
 
 export const DeliverIssueSignalInputSchema = z.object({
 	threadId: z.uuid(),
 	issueId: z.uuid(),
 	level: z.enum(IssueSignalLevel),
-	text: z.string().trim().min(1),
+	/** The issue's words. Empty only for a CLOSING nobody declared (the format then says "concluída"). */
+	text: z.string().trim(),
 	addresseeId: z.string().min(1).optional(),
 	/** The artifact a FEEDBACK previews — the group gets it with the message when it goes out alone. */
 	mainArtifactId: z.uuid().optional(),
@@ -53,6 +55,7 @@ export class DeliverIssueSignal extends Handler<typeof DeliverIssueSignalInputSc
 		private readonly session: CloudSession,
 		private readonly panel: PanelPublisher,
 		private readonly commands: CommandQueue,
+		private readonly consumed: ConsumedMessageRepository,
 	) {
 		super()
 	}
@@ -65,7 +68,12 @@ export class DeliverIssueSignal extends Handler<typeof DeliverIssueSignalInputSc
 
 		const ownerLanguage = thread.language ? undefined : (await this.session.identity())?.user.language
 		const language = resolveThreadLanguage(thread.language, ownerLanguage)
-		const requesterId = issue.originEntryId ? (await this.threads.findEntry(issue.originEntryId, tx))?.senderExternalId : undefined
+		const origin = issue.originEntryId ? await this.threads.findEntry(issue.originEntryId, tx) : undefined
+		const requesterId = origin?.senderExternalId
+		// The closing answers whoever asked (`QUOTES_ORIGIN`): it quotes their message — in the transcript and on
+		// the wire, when the platform id of that message is known (a request typed elsewhere has none).
+		const quoted = QUOTES_ORIGIN[input.level] && origin?.threadId === thread.id.value ? origin : undefined
+		const quotedMessageId = quoted ? await this.consumed.findPlatformId(quoted.entryId, tx) : undefined
 		const others = (input.artifactIds ?? []).filter(artifactId => artifactId !== input.mainArtifactId).length
 
 		return this.withTransaction(tx, async tx => {
@@ -85,11 +93,12 @@ export class DeliverIssueSignal extends Handler<typeof DeliverIssueSignalInputSc
 					artifactId: input.mainArtifactId,
 					moreArtifacts: others,
 					entryId: input.signalId,
+					quotedEntry: quoted ? { entryId: quoted.entryId, threadId: quoted.threadId } : undefined,
 				},
 				{ language, panelLink: this.panel.linkOf(thread.id.value) },
 			)
 			await this.threads.save(thread, tx)
-			await enqueueSignalDelivery(this.commands, thread, entry, routing, tx)
+			await enqueueSignalDelivery(this.commands, thread, entry, routing, tx, { quotedMessageId })
 			return { entryId: entry.entryId, routing }
 		})
 	}

@@ -145,7 +145,8 @@ export class IssueWorkPromptBuilder {
 		return [
 			'HOW TO REPORT AND HOW TO REACH THE GROUP — do not just describe it in prose, use the tool for it:',
 			`  · finished → call the ${operationIdOf(TransitionIssueStatusController)} tool with status COMPLETED and a short ` +
-				'summary written for whoever asked — it is what the group reads when the task closes.',
+				'summary written for whoever asked — it is what the group reads when the task closes. When an artifact you ' +
+				'recorded IS the result (the print of what went live), pass it as finalArtifactId and it goes with that line.',
 			`  · a decision you cannot go on without (approve, publish, pick between real options) → call the ` +
 				`${operationIdOf(AskDecisionController)} tool with 2 to 6 options. The task waits for the answer ` +
 				'(not for an action the permission filter refused — see WHEN AN ACTION IS BLOCKED).',

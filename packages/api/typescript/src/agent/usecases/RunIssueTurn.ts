@@ -4,6 +4,7 @@ import { Handler, z, BaseError, LoggingService, tryCatchAsync } from '@codm/core
 import type { Transaction } from '@codm/core-typescript'
 import {
 	AgentModelId,
+	IssueSignalLevel,
 	MailboxItemKind,
 	PermissionPosture,
 	MailboxTargetKind,
@@ -25,6 +26,8 @@ import { AgentRunStartedEvent } from '../events/AgentRunStartedEvent'
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { AgentRunStopRaisedEvent } from '../events/AgentRunStopRaisedEvent'
 import { AgentUsageEvent } from '../events/AgentUsageEvent'
+import { IssueSpokeEvent } from '../events/IssueSpokeEvent'
+import { ISSUE_SIGNAL_TEXT_MAX } from './RequestFeedback'
 import type { AgentApplicationErrors } from '../errors'
 import { ResumeInvalidationReason, AgentRunOutcome, FactSource, MessageVia, TurnAbortReason } from '../enums'
 import { isTransportStopKind, retriesInPlace, TRANSPORT_STOP_RETRIES } from '../enums/TransportStopKind'
@@ -83,10 +86,23 @@ export const RunIssueTurnInputSchema = z.object({
 	 * The transcript entry that ASKED for this issue (§7.6) — carried from the `WORK` mailbox item.
 	 *
 	 * Optional because an issue can also be born from the console or from work an agent separated out
-	 * mid-run, and neither has an originating message. When present it rides onto the `ISSUE_RESULT`
-	 * item, which is what lets the composed answer quote the request instead of arriving unanchored.
+	 * mid-run, and neither has an originating message. Since fase 3 the closing quotes it from the issue
+	 * itself (`thread/handlers/CloseIssueOnChannel`); it stays here for the turn's own context.
 	 */
 	originEntryId: z.uuid().optional(),
+	/**
+	 * The PERSON's message this turn answers — present only on a steer the rule layer or the triage routed
+	 * straight to the issue from the group (`RoutedSteer`: a reply quoting the issue, its key, a triage
+	 * verdict), which reaches the issue with NO orchestrator turn in between. Absent on every other turn: the
+	 * brief, a loop tick, a resume after an answer, the declaration reminder, a steer from the console, the
+	 * panel or the orchestrator.
+	 *
+	 * It decides where the turn's words go (fase 3, item 5; owner decision "resposta a quem falou com o agente
+	 * continua no grupo"): with it, they are an ANSWER to that person and go back through the orchestrator
+	 * (`ISSUE_RESULT`, quoting the person's message), the only voice that talks to people; without it, they are
+	 * the issue's PROGRESS — the timeline, and the group only in `EVERYTHING`.
+	 */
+	answersEntryId: z.uuid().optional(),
 	/**
 	 * This turn IS the declaration reminder — the one automatic steer a turn that ended without declaring
 	 * anything receives (`remindToDeclare`). Two consequences, both deliberate: its reply is NOT handed to
@@ -104,8 +120,8 @@ export const RunIssueTurnOutputSchema = z.object({
 	stopId: z.string().optional(),
 	/**
 	 * Whether this turn already told the operator something — the dispatcher's retry gate
-	 * (`TurnReport.spoke`). False only for a TRANSPORT stop: `persistOutcome` skips `enqueueResult` for
-	 * it, so nothing was queued and nothing was said.
+	 * (`TurnReport.spoke`). False only for a TRANSPORT stop: `persistOutcome` returns before recording
+	 * anything for it (no progress, no answer, no stop), so nothing was said.
 	 */
 	spoke: z.boolean(),
 	/**
@@ -165,7 +181,7 @@ interface SessionPlan {
  * ### The one conclusion that does NOT always become a fact here
  * `persistOutcome` is otherwise the place a conclusion always becomes fact — but a TRANSPORT stop the
  * `TRANSPORT_STOP_RETRIES` table says to RETRY (`AUTH_REQUIRED` / `SERVER_ERROR`) is the exception
- * (`PERMISSION_DENIED` is NOT: it is recorded on the first occurrence): it returns before `enqueueResult` and before
+ * (`PERMISSION_DENIED` is NOT: it is recorded on the first occurrence): it returns before `reportTurn` and before
  * minting `AgentRunStopRaisedEvent`, and `handle` reports it as `transportStop` with `spoke: false`
  * instead. The dispatcher decides what happens next — `fail()` and a retry, or, once attempts are
  * exhausted, `raiseStopForPoisoned` — so a transport stop becomes a RETRY in the dispatcher rather
@@ -431,9 +447,10 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 	 * notice (the output policy's `LEVEL_OF_STOP`, in `thread`) is what tells the operator, exactly as for a
 	 * poisoned item.
 	 *
-	 * ### Every other conclusion goes back to the conversation
-	 * The result is queued in THIS transaction, beside the outcome facts (§6.3, B1): an outcome that
-	 * commits always has a result queued, and one that rolls back queues nothing.
+	 * ### A finished turn's words: progress, or an answer to a person (fase 3, item 5)
+	 * No `ISSUE_RESULT` by default any more — see `reportTurn`. Written in THIS transaction, beside the
+	 * outcome facts (§6.3, B1): an outcome that commits always has its words said, one that rolls back
+	 * says nothing. A domain STOP says nothing more here: its own notice (the output policy) tells the group.
 	 *
 	 * ### The predicate for the completion fact is the agent's TOOL SCOPE
 	 * With a non-empty scope the agent DECLARES its conclusion (`TransitionIssueStatus` / `RaiseStop`),
@@ -462,9 +479,8 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 			return
 		}
 
-		if (!input.declarationReminder) await this.enqueueResult(input, outcome, tx)
-
 		if (outcome.kind === 'COMPLETED') {
+			await this.reportTurn(input, outcome.replyText, tx)
 			if (this.agent.tools.length > 0) {
 				// O turno acabou e o agente NÃO declarou nada — nem `TransitionIssueStatus`, nem `RaiseStop`,
 				// nem `AskOperator`. Continua sendo um `return`: inferir a conclusão aqui publicaria
@@ -630,7 +646,44 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 	}
 
 	/**
-	 * Queue the conversational turn that will TELL the operator what happened.
+	 * Where the words a turn ended with go (fase 3, item 5) — it used to be ALWAYS an `ISSUE_RESULT`, i.e. an
+	 * orchestrator turn per issue turn (43% of the orchestrator's turns, measured), and the group got both the
+	 * decision notice and the orchestrator's reply about it. Now:
+	 *  - a turn that ANSWERS A PERSON (`answersEntryId`: they wrote to the issue straight from the group) goes
+	 *    back to that person through the orchestrator, quoting them — replies to people stay (owner decision);
+	 *  - every other turn's words are the issue's PROGRESS (`agent.issue_spoke` → the output policy): the
+	 *    timeline, and the group only in `EVERYTHING`. What the group must hear has its own door now — a
+	 *    decision or a question is a stop, a preview is `RequestFeedback`, the end is the declared completion
+	 *    (`CloseIssueOnChannel`) — and a turn that ended declaring none of them is reminded once and then
+	 *    raised as `STALLED`, a block notice in the group (`ReconcileStalledIssues`): never silent.
+	 * Blank words say nothing — no signal (a blank one would be refused downstream, and retried for nothing).
+	 * In this transaction, beside the outcome facts: an outcome that commits always has its words said.
+	 */
+	private async reportTurn(input: this['input'], replyText: string, tx: Transaction): Promise<void> {
+		const text = replyText.trim()
+		if (text.length === 0) return
+		if (input.answersEntryId) {
+			await this.enqueueResult(input, input.answersEntryId, text, tx)
+			return
+		}
+		await this.domainEventRepository.save(
+			new IssueSpokeEvent({
+				entityId: input.issueId,
+				ownerId: input.ownerId,
+				payload: {
+					issueId: input.issueId,
+					threadId: input.threadId,
+					level: IssueSignalLevel.PROGRESS,
+					text: text.length > ISSUE_SIGNAL_TEXT_MAX ? `${text.slice(0, ISSUE_SIGNAL_TEXT_MAX - 1)}…` : text,
+					artifactIds: [],
+				},
+			}),
+			tx,
+		)
+	}
+
+	/**
+	 * Queue the conversational turn that will TELL the person who wrote to the issue what it answered.
 	 *
 	 * The payload is shaped for `OrchestratorInputSchema`'s `ISSUE_RESULT` member, plus `originEntryId`,
 	 * which the schema deliberately does NOT expose to the model: the issue return always quotes it
@@ -650,7 +703,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 	 * SAME turn — and a redelivery carries the same `messageId` (the mailbox item that drove it), so
 	 * keying on the pair keeps that protection exactly while letting a NEW turn speak.
 	 */
-	private async enqueueResult(input: this['input'], outcome: TerminalOutcome, tx: Transaction): Promise<void> {
+	private async enqueueResult(input: this['input'], answersEntryId: string, replyText: string, tx: Transaction): Promise<void> {
 		await this.mailbox.enqueue(
 			{
 				ownerId: input.ownerId,
@@ -663,11 +716,9 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 				payload: {
 					kind: MailboxItemKind.ISSUE_RESULT,
 					issueKey: input.key,
-					outcome:
-						outcome.kind === 'COMPLETED'
-							? { kind: AgentRunOutcome.COMPLETED, replyText: outcome.replyText }
-							: { kind: AgentRunOutcome.STOPPED, stopKind: outcome.stopKind, detail: outcome.detail },
-					originEntryId: input.originEntryId,
+					outcome: { kind: AgentRunOutcome.COMPLETED, replyText },
+					// The PERSON's message, not the task's request: the answer quotes what it answers.
+					originEntryId: answersEntryId,
 					// WHICH ISSUE this result is — so the answer the orchestrator composes from it is recorded
 					// as that issue's message. `issueKey` is for the model; the id is for the transcript row.
 					issueId: input.issueId,

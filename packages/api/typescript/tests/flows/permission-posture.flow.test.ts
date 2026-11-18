@@ -177,6 +177,8 @@ describe('Flow (integration): the posture is stamped by whoever triggered the wo
 		expect(steer?.posture).toBe(PermissionPosture.BYPASS)
 	})
 
+	// Fase 3 (item 5): only a turn ANSWERING a person who wrote to the issue straight from the group queues an
+	// ISSUE_RESULT any more — so the turn here is that routed steer; the posture rule under test is unchanged.
 	it('AC-4 — the ISSUE_RESULT a BYPASS issue turn queues back to the orchestrator is AUTO', async () => {
 		testBed.override(AgentRunnerFactory, new FixedAgentRunnerFactory(new CompletingRunner()))
 		const thread = await roomThread()
@@ -190,7 +192,8 @@ describe('Flow (integration): the posture is stamped by whoever triggered the wo
 			provider: ProviderKind.CLAUDE_CODE,
 			workspacePath: '/tmp/workspace',
 			prompt: 'troca a moeda',
-			turnKind: MailboxItemKind.WORK,
+			turnKind: MailboxItemKind.STEER,
+			answersEntryId: uuidv7(),
 			messageId: uuidv7(),
 			posture: PermissionPosture.BYPASS,
 		})

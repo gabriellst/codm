@@ -562,6 +562,9 @@ pub struct IssueCompletedPayload {
 	/// What the agent DECLARED it did, in its own words, via the transitionIssueStatus tool. Persisted on the issue so the console can show why it closed — before the orchestrator pivot this was destructured and discarded in DeclareIssueComplete's COMPLETED branch. Empty when the completion was INFERRED from a clean exit rather than declared.
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub summary: Option<String>,
+	/// The artifact the agent DECLARED as the final result (fase 3), sent with the closing line in the group. Absent when it declared none, or the completion was inferred.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub final_artifact_id: Option<String>,
 }
 
 /// `integration.issue.completed` in the canonical transport envelope.

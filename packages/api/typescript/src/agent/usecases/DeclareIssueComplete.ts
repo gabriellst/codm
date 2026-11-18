@@ -1,12 +1,15 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, z } from '@codm/core-typescript'
+import { BaseError, Handler, z } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
 import { IssueStatus, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { CloudSession } from '@shared/services/CloudSession'
+import { ArtifactRepository } from '@artifact/repositories/ArtifactRepository'
+import { ArtifactSendability } from '@artifact/services/ArtifactSendability'
 import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { THREAD_MESSAGES } from '@thread/i18n/messages'
 import { AgentRunCompletedEvent } from '../events/AgentRunCompletedEvent'
 import { FactSource } from '../enums'
+import type { ApplicationErrors } from '../errors'
 import { askQuestionOf, askStopFact, conversationLanguage } from '../utils/issueAsk'
 
 export const DeclareIssueCompleteInputSchema = z.object({
@@ -30,6 +33,12 @@ export const DeclareIssueCompleteInputSchema = z.object({
 	 * than inventing one.
 	 */
 	key: z.string().trim().default(''),
+	/**
+	 * The artifact that IS the result (fase 3) — the page, the print of what went live — sent with the closing
+	 * line in the group. Only on `COMPLETED`; an artifact this issue recorded, checked here (the same checks as
+	 * `RequestFeedback`), so a refusal reaches the session instead of a dead-lettered delivery.
+	 */
+	finalArtifactId: z.uuid().optional(),
 })
 
 export const DeclareIssueCompleteOutputSchema = z.object({ issueId: z.uuid(), status: z.enum(IssueStatus) })
@@ -66,20 +75,23 @@ export class DeclareIssueComplete extends Handler<typeof DeclareIssueCompleteInp
 	constructor(
 		private readonly threads: ThreadRepository,
 		private readonly session: CloudSession,
+		private readonly artifacts: ArtifactRepository,
+		private readonly sendability: ArtifactSendability,
 	) {
 		super()
 	}
 
 	protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
-		const { ownerId, issueId, threadId, status, summary, key } = input
+		const { ownerId, issueId, threadId, status, summary, key, finalArtifactId } = input
 
 		if (status === IssueStatus.COMPLETED) {
+			if (finalArtifactId) await this.assertSendableResult(input, finalArtifactId)
 			await this.withTransaction(tx, async tx => {
 				await this.domainEventRepository.save(
 					new AgentRunCompletedEvent({
 						entityId: issueId,
 						ownerId,
-						payload: { issueId, threadId, key, completedAt: new Date(), source: FactSource.DECLARED, summary },
+						payload: { issueId, threadId, key, completedAt: new Date(), source: FactSource.DECLARED, summary, finalArtifactId },
 					}),
 					tx,
 				)
@@ -109,5 +121,13 @@ export class DeclareIssueComplete extends Handler<typeof DeclareIssueCompleteInp
 		}
 
 		return { issueId, status }
+	}
+
+	/** The final artifact is this issue's and can go to the group — `RequestFeedback`'s checks, one answer for all. */
+	private async assertSendableResult(input: this['input'], artifactId: string): Promise<void> {
+		const artifact = await this.artifacts.findById(artifactId)
+		if (!artifact || artifact.ownerId !== input.ownerId || artifact.threadId !== input.threadId || artifact.issueId !== input.issueId)
+			throw new BaseError<ApplicationErrors>('ARTIFACT_NOT_FOUND', `no artifact ${artifactId} recorded by issue ${input.issueId}`)
+		await this.sendability.check({ id: artifactId, kind: artifact.kind, ref: artifact.ref })
 	}
 }

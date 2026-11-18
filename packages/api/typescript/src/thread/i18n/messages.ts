@@ -97,8 +97,9 @@ function whenEn(at: Date, now: Date): string {
  * format of each level picks from. `code` is the ask's (`APP-12 · D1`); `options` are the labels in order;
  * `defaultLabel` is what a question goes on with; `link` is the issue on the cloud panel (absent without a
  * cloud login). Every text the issue wrote (`text`, `options`) goes VERBATIM — it is the issue's voice.
- * `text` may be empty only on a decision (it then asks the title — a `PERMISSION_DENIED` with no detail) or a
- * block notice (which then has no body); the formats never print the title twice.
+ * `text` may be empty only on a decision (it then asks the title — a `PERMISSION_DENIED` with no detail), a
+ * block notice (which then has no body) or a closing (an INFERRED completion said nothing: it reads
+ * "concluída"); the formats never print the title twice.
  */
 export interface IssueSignalParams {
 	level: IssueSignalLevel
@@ -136,7 +137,7 @@ const SIGNAL_PT: Record<IssueSignalLevel, (p: IssueSignalParams) => string> = {
 		),
 	[IssueSignalLevel.FEEDBACK]: p =>
 		lines(`${p.key} · prévia — ${p.text}${p.moreArtifacts ? ` (+${p.moreArtifacts} no console)` : ''}`, p.link),
-	[IssueSignalLevel.CLOSING]: p => lines(`✅ ${p.key} · ${p.title} — ${p.text}`, p.link),
+	[IssueSignalLevel.CLOSING]: p => lines(`✅ ${p.key} · ${p.title} — ${p.text || 'concluída'}`, p.link),
 	[IssueSignalLevel.BLOCK_NOTICE]: p => lines(`⚠️ ${p.key} — ${p.title}.`, p.text, p.link),
 	[IssueSignalLevel.PROGRESS]: p => lines(`${p.key} — ${p.text}`, p.link),
 }
@@ -153,7 +154,7 @@ const SIGNAL_EN: Record<IssueSignalLevel, (p: IssueSignalParams) => string> = {
 		),
 	[IssueSignalLevel.FEEDBACK]: p =>
 		lines(`${p.key} · preview — ${p.text}${p.moreArtifacts ? ` (+${p.moreArtifacts} on the console)` : ''}`, p.link),
-	[IssueSignalLevel.CLOSING]: p => lines(`✅ ${p.key} · ${p.title} — ${p.text}`, p.link),
+	[IssueSignalLevel.CLOSING]: p => lines(`✅ ${p.key} · ${p.title} — ${p.text || 'done'}`, p.link),
 	[IssueSignalLevel.BLOCK_NOTICE]: p => lines(`⚠️ ${p.key} — ${p.title}.`, p.text, p.link),
 	[IssueSignalLevel.PROGRESS]: p => lines(`${p.key} — ${p.text}`, p.link),
 }

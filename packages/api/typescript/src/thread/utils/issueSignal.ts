@@ -1,5 +1,5 @@
 import type { CommandQueue, Transaction } from '@codm/core-typescript'
-import { type IssueSignalLevel, type Language, MessageAuthor, OutputRouting, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
+import { IssueSignalLevel, type Language, MessageAuthor, OutputRouting, TranscriptKind } from '@codm/contracts-typescript/wire/enums'
 import type { Thread, TranscriptEntry } from '../entities/Thread'
 import { THREAD_MESSAGES } from '../i18n/messages'
 import type { DeliverChannelMessage } from '../usecases/DeliverChannelMessage'
@@ -45,6 +45,22 @@ export interface IssueSignalDraft {
 	 * makes recording it twice impossible. Absent ⇒ a fresh id.
 	 */
 	entryId?: string
+	/** The message this one answers (`QUOTES_ORIGIN`: the closing quotes the request) — quoted in the transcript. */
+	quotedEntry?: { entryId: string; threadId: string }
+}
+
+/**
+ * Which levels QUOTE the message the issue came from — total over `IssueSignalLevel`. The closing is the
+ * answer to whoever asked ("✅ APP-12 · … — <resumo>" replying to the request, spec item 2); the rest speak
+ * on their own (a decision and a question carry their own code to be quoted back).
+ */
+export const QUOTES_ORIGIN: Record<IssueSignalLevel, boolean> = {
+	[IssueSignalLevel.CLOSING]: true,
+	[IssueSignalLevel.DECISION]: false,
+	[IssueSignalLevel.QUESTION]: false,
+	[IssueSignalLevel.FEEDBACK]: false,
+	[IssueSignalLevel.BLOCK_NOTICE]: false,
+	[IssueSignalLevel.PROGRESS]: false,
 }
 
 /** Where the issue's link goes: the group's panel page, opened at the issue. Absent without a cloud login. */
@@ -83,6 +99,7 @@ export function recordIssueSignal(
 		entryId: draft.entryId,
 		kind: TranscriptKind.SYSTEM,
 		text,
+		quotedEntry: draft.quotedEntry,
 		issueId: draft.issue.issueId,
 		level: draft.level,
 		routing,
@@ -103,7 +120,18 @@ export function digestWindowOf(at: Date): number {
 	return Math.floor(at.getTime() / DIGEST_WINDOW_MS)
 }
 
-type Dispatch = (commands: CommandQueue, thread: Thread, entry: TranscriptEntry, tx: Transaction) => Promise<void>
+/** What a delivery carries beyond the entry — the platform id of the message it quotes, resolved by the caller. */
+export interface SignalDeliveryOptions {
+	quotedMessageId?: string
+}
+
+type Dispatch = (
+	commands: CommandQueue,
+	thread: Thread,
+	entry: TranscriptEntry,
+	tx: Transaction,
+	opts: SignalDeliveryOptions,
+) => Promise<void>
 
 /**
  * How each routing reaches the channel — total over `OutputRouting`, so a routing added to the contract needs
@@ -114,7 +142,7 @@ type Dispatch = (commands: CommandQueue, thread: Thread, entry: TranscriptEntry,
  * - `PANEL` — nothing: the entry is the timeline line.
  */
 const DISPATCH: Record<OutputRouting, Dispatch> = {
-	[OutputRouting.GROUP]: async (commands, thread, entry, tx) => {
+	[OutputRouting.GROUP]: async (commands, thread, entry, tx, opts) => {
 		if (entry.artifactId) {
 			await commands.enqueueCommand<DeliverIssuePreview>(
 				'deliver_issue_preview',
@@ -132,6 +160,7 @@ const DISPATCH: Record<OutputRouting, Dispatch> = {
 				contactExternalId: thread.contactRef.externalId,
 				text: entry.text,
 				author: MessageAuthor.SYSTEM,
+				quotedMessageId: opts.quotedMessageId,
 				replyEntryId: entry.entryId,
 				replyThreadId: thread.id.value,
 				reactionsEnabled: thread.reactionsEnabled,
@@ -163,6 +192,7 @@ export async function enqueueSignalDelivery(
 	entry: TranscriptEntry,
 	routing: OutputRouting,
 	tx: Transaction,
+	opts: SignalDeliveryOptions = {},
 ): Promise<void> {
-	await DISPATCH[routing](commands, thread, entry, tx)
+	await DISPATCH[routing](commands, thread, entry, tx, opts)
 }

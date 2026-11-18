@@ -122,6 +122,7 @@ export class PublishAgentIntegrationEvents extends EventHandler<
 						key: event.payload.key,
 						completedAt: event.payload.completedAt,
 						summary: event.payload.summary,
+						finalArtifactId: event.payload.finalArtifactId,
 					},
 				}),
 			)

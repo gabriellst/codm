@@ -1985,9 +1985,10 @@ type AskQuestionJSONBody struct {
 
 // TransitionIssueStatusJSONBody defines parameters for TransitionIssueStatus.
 type TransitionIssueStatusJSONBody struct {
-	Key     *string     `json:"key,omitempty"`
-	Status  IssueStatus `json:"status"`
-	Summary *string     `json:"summary,omitempty"`
+	FinalArtifactId *openapi_types.UUID `json:"finalArtifactId,omitempty"`
+	Key             *string             `json:"key,omitempty"`
+	Status          IssueStatus         `json:"status"`
+	Summary         *string             `json:"summary,omitempty"`
 }
 
 // SteerIssueTurnJSONBody defines parameters for SteerIssueTurn.

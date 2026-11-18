@@ -2534,6 +2534,10 @@ export type ListenEvents200 = ({
          * @type string | undefined
         */
         summary?: string;
+        /**
+         * @type string | undefined
+        */
+        finalArtifactId?: string;
     };
 } | {
     /**
@@ -2724,6 +2728,10 @@ export type ListenEvents200 = ({
          * @type string | undefined
         */
         addresseeId?: string;
+        /**
+         * @type string | undefined
+        */
+        signalId?: string;
     };
 } | {
     /**

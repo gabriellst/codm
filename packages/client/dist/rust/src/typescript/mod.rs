@@ -13620,6 +13620,11 @@ pub mod types {
     ///    "status"
     ///  ],
     ///  "properties": {
+    ///    "finalArtifactId": {
+    ///      "type": "string",
+    ///      "format": "uuid",
+    ///      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    ///    },
     ///    "key": {
     ///      "default": "",
     ///      "type": "string"
@@ -13638,6 +13643,12 @@ pub mod types {
     /// </details>
     #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug)]
     pub struct TransitionIssueStatusBody {
+        #[serde(
+            rename = "finalArtifactId",
+            default,
+            skip_serializing_if = "::std::option::Option::is_none"
+        )]
+        pub final_artifact_id: ::std::option::Option<::uuid::Uuid>,
         #[serde(default)]
         pub key: ::std::string::String,
         pub status: ::codm_contracts_rust::wire::enums::IssueStatus,

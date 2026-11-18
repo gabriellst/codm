@@ -25,6 +25,8 @@ export const AgentRunCompletedEventSchema = z.domainEvent({
 	 * this value was destructured in `DeclareIssueComplete` and thrown away.
 	 */
 	summary: z.string().optional(),
+	/** The artifact the agent DECLARED as the final result (fase 3) — the closing line carries it to the group. */
+	finalArtifactId: z.string().optional(),
 })
 
 export class AgentRunCompletedEvent extends BaseDomainEvent<typeof AgentRunCompletedEventSchema> {

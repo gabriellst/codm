@@ -78,6 +78,28 @@ describe('PublishAgentIntegrationEvents (terminal.* domain facts → frozen inte
 		expect(event.payload).toEqual({ issueId: 'issue-1', threadId: 'thread-1', key: 'coupon-focus', completedAt })
 	})
 
+	/** Fase 3 — the declared summary AND final artifact cross: the thread's closing line carries both. */
+	it('agent.run.completed → integration.issue.completed carries the final artifact', async () => {
+		const { handler, published } = makeHandler()
+		const completedAt = new Date('2026-07-22T00:00:00.000Z')
+		await handler.handle(
+			new AgentRunCompletedEvent({
+				entityId: 'issue-1',
+				ownerId,
+				payload: {
+					issueId: 'issue-1',
+					threadId: 'thread-1',
+					key: 'coupon-focus',
+					completedAt,
+					source: FactSource.DECLARED,
+					summary: 'live',
+					finalArtifactId: 'artifact-1',
+				},
+			}) as never,
+		)
+		expect((published[0] as IssueCompletedEvent).payload).toMatchObject({ summary: 'live', finalArtifactId: 'artifact-1' })
+	})
+
 	/**
 	 * The stop half of the same rule — plus the one field that DOES cross (D6-5).
 	 *

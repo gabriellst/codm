@@ -11,3 +11,5 @@ export { DeliverOrchestratorReply } from './DeliverOrchestratorReply'
 export { RecordStopFromExecution } from './RecordStopFromExecution'
 // What an issue says that is neither a stop nor its completion (fase 3) → the group's output policy.
 export { RouteIssueSignal } from './RouteIssueSignal'
+// The declared completion (fase 3, item 5) → the closing line in the group, through the output policy.
+export { CloseIssueOnChannel } from './CloseIssueOnChannel'

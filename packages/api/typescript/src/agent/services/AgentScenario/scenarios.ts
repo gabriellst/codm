@@ -93,7 +93,7 @@ interface DemoCopy {
 	readonly forkGoal: string
 	/** The answer to the contact, on the turn that also forks the work. */
 	readonly opening: string
-	/** The `ISSUE_RESULT` turn — what the agent says once the issue is done. */
+	/** The `ISSUE_RESULT` turn — only for a result queued before fase 3; the film closes on `completion`. */
 	readonly closing: string
 	/** The narration of the working turn, in order. */
 	readonly locating: string
@@ -147,9 +147,9 @@ function demoScenario(id: AgentScenarioId, copy: DemoCopy): AgentScenario {
 				declarations: [{ kind: 'FORK_ISSUE', goal: copy.forkGoal }],
 				declarationPaceMs: 700,
 			},
-			// ACT 2 — the `ISSUE_RESULT` turn, which the finished issue enqueues. It declares NOTHING (the
-			// dispatcher gives this turn no originating entry, so a fork would be dropped anyway) and exists
-			// to close the conversation the film opened.
+			// ACT 2 — the `ISSUE_RESULT` turn. Since fase 3 (item 5) a finished issue no longer enqueues one —
+			// the film closes on the closing line of the declared completion (`copy.completion`) — so this act
+			// runs only for a result drained from before the update. It declares NOTHING.
 			{
 				echoesRunHeader: false,
 				beats: [{ kind: 'SAY', text: copy.closing, afterMs: 1_200 }],
@@ -245,7 +245,7 @@ const DEMO_PT: DemoCopy = {
 	screenMeta: 'Tela de cobrança com o resumo do plano',
 	pullRequestName: 'PR #214 · Resumo do plano na cobrança',
 	pullRequestMeta: 'Aberto · aguardando revisão',
-	completion: 'Resumo do plano na tela de cobrança, com testes verdes e PR aberto.',
+	completion: 'Resumo do plano na tela de cobrança: os testes passaram e o PR está aberto.',
 }
 
 /** Slugs to `add-the-plan-summary-to-billing`. */
@@ -276,7 +276,7 @@ const DEMO_EN: DemoCopy = {
 	screenMeta: 'Billing screen with the plan summary',
 	pullRequestName: 'PR #214 · Plan summary on billing',
 	pullRequestMeta: 'Open · awaiting review',
-	completion: 'Plan summary on the billing screen, tests green and PR open.',
+	completion: 'Plan summary on the billing screen: the tests pass and the PR is open.',
 }
 
 /** Every roteiro, by id. The ONE place a scenario is looked up — never a branch on the id. */

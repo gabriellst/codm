@@ -692,7 +692,8 @@ get "reason"(){
 "threadId": z.string(),
 "key": z.string(),
 "completedAt": z.iso.datetime(),
-"summary": z.optional(z.string())
+"summary": z.optional(z.string()),
+"finalArtifactId": z.optional(z.string())
     })
     }), z.object({
     "ownerId": z.string(),
@@ -757,7 +758,8 @@ get "level"(){
 "text": z.string(),
 "artifactIds": z.array(z.string()),
 "mainArtifactId": z.optional(z.string()),
-"addresseeId": z.optional(z.string())
+"addresseeId": z.optional(z.string()),
+"signalId": z.optional(z.string())
     })
     }), z.object({
     "ownerId": z.string(),
