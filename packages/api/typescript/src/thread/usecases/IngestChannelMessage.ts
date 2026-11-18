@@ -21,11 +21,14 @@ import { ResumeIssue } from '@issue/usecases/ResumeIssue'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { RuleRouter, type AnswerTarget } from '../services/RuleRouter'
 import { RoutedSteer } from '../services/RoutedSteer'
+import { BoardBulletin } from '../services/BoardBulletin'
+import { BulletinSentEvent } from '../events/BulletinSentEvent'
+import { parseThreadCommand } from '../utils/threadCommand'
 import { AGENT_SPEAKER } from '../objects'
 import { MessageIngestedEvent } from '../events/MessageIngestedEvent'
 import { CUE_ACKNOWLEDGED, CUE_PAUSED, CUE_RESUMED } from '../utils/ChannelCues'
 import { parseControlCommand } from '../utils/controlCommand'
-import { BareAnswer, IssueControlCommand, ReplyAnswerWay } from '../enums'
+import { BareAnswer, IssueControlCommand, ReplyAnswerWay, ThreadCommand } from '../enums'
 import type { Stop, Thread, TranscriptEntry } from '../entities/Thread'
 import type { ApplicationErrors } from '../errors'
 import { AnswerDisambiguationAskedEvent } from '../events/AnswerDisambiguationAskedEvent'
@@ -145,6 +148,7 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 		private readonly resolveStop: ResolveStop,
 		private readonly commands: CommandQueue,
 		private readonly session: CloudSession,
+		private readonly bulletin: BoardBulletin,
 	) {
 		super()
 	}
@@ -160,6 +164,11 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 		const thread = await this.threads.findById(input.threadId)
 		if (!thread || thread.deletedAt) throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
 		const language = await this.disambiguationLanguage(thread)
+		// A CONVERSATION COMMAND (fase 3, item 4 — `relatorio`): its answer is composed HERE, before the
+		// transaction — reads only (the board, the open asks, the language, which may ask the cloud session) —
+		// and only for the message that is one; every other message pays a regex.
+		const command = parseThreadCommand(thread.textWithoutMention(input.text))
+		const prepared = command ? await this.prepareCommand(thread, command) : undefined
 
 		return this.withTransaction(tx, async tx => {
 			// THE CITATION, RESOLVED FIRST (B4, decision D-B). This lookup already existed — it is how
@@ -183,14 +192,21 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 			const answered = await this.answer(thread, input, { quoted, repliesToAgent, language }, tx)
 			if (answered) return answered
 
+			// "relatorio" (fase 3, item 4): after the answers (a quoted question answered "relatório" is an answer),
+			// before the control words. Anyone who may command the agent gets the bulletin, with no model turn.
+			if (prepared) {
+				const reported = await this.runCommand(thread, input, prepared, repliesToAgent, tx)
+				if (reported) return reported
+			}
+
 			// A CONTROL WORD WITH A TARGET (fase 2, item 2 — "pare APP-12", "continue" quoting an issue) is
 			// handled here, BEFORE the invocation gate: it must work while the conversation is paused, and it
 			// never becomes an orchestrator turn. Anything short of a clean command — no control word, no
 			// target, a sender who may not address the agent, an issue the word does not apply to — returns
 			// `undefined` and the message takes the usual path below, unchanged.
-			const command = parseControlCommand(thread.textWithoutMention(input.text))
-			if (command) {
-				const controlled = await this.control(thread, input, { command, quoted, repliesToAgent }, tx)
+			const control = parseControlCommand(thread.textWithoutMention(input.text))
+			if (control) {
+				const controlled = await this.control(thread, input, { command: control, quoted, repliesToAgent }, tx)
 				if (controlled) return controlled
 			}
 
@@ -587,6 +603,95 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 					questionEntryId: question.entryId,
 					stopIds: stops.map(stop => stop.stopId),
 				},
+			}),
+			tx,
+		)
+		return this.ingested(thread, input, entry, tx)
+	}
+
+	/**
+	 * What each conversation command answers, composed before the ingest's transaction — total over
+	 * `ThreadCommand`, so a new command needs its answer here.
+	 */
+	private commandAnswer(): Readonly<Record<ThreadCommand, (thread: Thread) => Promise<string>>> {
+		return {
+			[ThreadCommand.REPORT]: async thread => this.bulletin.compose(thread, await this.conversationLanguage(thread), new Date()),
+		}
+	}
+
+	private async prepareCommand(thread: Thread, command: ThreadCommand): Promise<{ command: ThreadCommand; text: string }> {
+		return { command, text: await this.commandAnswer()[command](thread) }
+	}
+
+	/**
+	 * The conversation's language for a line this path writes itself: the declared one, else the account's —
+	 * a session that cannot answer falls back to the default (a lookup must never lose a message whose inbound
+	 * ledger row is already claimed).
+	 */
+	private async conversationLanguage(thread: Thread): Promise<ReturnType<typeof resolveThreadLanguage>> {
+		if (thread.language) return resolveThreadLanguage(thread.language, undefined)
+		const identity = await tryCatchAsync(() => this.session.identity())
+		return resolveThreadLanguage(undefined, identity.success ? identity.data?.user.language : undefined)
+	}
+
+	/**
+	 * A CONVERSATION COMMAND (fase 3, item 4) — `relatorio` answered by rule: the message is recorded, the
+	 * answer prepared before the transaction is recorded and delivered (quoting the message that asked), and
+	 * `thread.bulletin_sent` counts it. NO model turn — no mailbox item. Only for a sender who may command the
+	 * agent (`Thread.canCommand`: the mention gate and the freshness window — a backlog replay of a week-old
+	 * "relatorio" answers nothing); anyone else's "relatorio" takes the usual path.
+	 */
+	private async runCommand(
+		thread: Thread,
+		input: this['input'],
+		prepared: { command: ThreadCommand; text: string },
+		repliesToAgent: boolean,
+		tx: Transaction,
+	): Promise<this['output'] | undefined> {
+		const allowed = thread.canCommand({
+			senderExternalId: input.senderExternalId,
+			text: input.text,
+			repliesToAgent,
+			sentAt: input.receivedAt,
+			now: new Date(),
+		})
+		if (!allowed) return undefined
+
+		const entry = thread.recordEntry({
+			kind: TranscriptKind.CONTACT,
+			text: input.text,
+			senderExternalId: input.senderExternalId,
+			messageType: input.messageType,
+			mediaPath: input.mediaPath,
+			at: input.receivedAt,
+		})
+		const answer = thread.recordEntry({
+			kind: TranscriptKind.SYSTEM,
+			text: prepared.text,
+			quotedEntry: { entryId: entry.entryId, threadId: thread.id.value },
+		})
+		await this.threads.save(thread, tx)
+		await this.commands.enqueueCommand<DeliverChannelMessage>(
+			'deliver_channel_message',
+			{
+				ownerId: thread.ownerId,
+				channelId: thread.channelId,
+				contactExternalId: thread.contactRef.externalId,
+				text: answer.text,
+				author: MessageAuthor.SYSTEM,
+				quotedMessageId: input.platformMessageId,
+				replyEntryId: answer.entryId,
+				replyThreadId: thread.id.value,
+				reactionsEnabled: thread.reactionsEnabled,
+			},
+			{ jobId: answer.entryId },
+			tx,
+		)
+		await this.domainEventRepository.save(
+			new BulletinSentEvent({
+				entityId: thread.id.value,
+				ownerId: thread.ownerId,
+				payload: { threadId: thread.id.value, entryId: entry.entryId, bulletinEntryId: answer.entryId },
 			}),
 			tx,
 		)

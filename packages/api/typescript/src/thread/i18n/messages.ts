@@ -1,6 +1,7 @@
-import { IssueSignalLevel, Language, StopKind } from '@codm/contracts-typescript/wire/enums'
+import { IssueLifeState, IssueSignalLevel, Language, StopKind } from '@codm/contracts-typescript/wire/enums'
 import { defineMessages } from '@shared/i18n/messages'
 import { PanelActionEcho } from '../enums/PanelActionEcho'
+import { BulletinSection } from '../enums/ThreadCommand'
 
 /**
  * O vocabulário que o contexto `thread` diz NO CANAL — a superfície que o frontend nunca traduz,
@@ -205,6 +206,87 @@ interface DefaultAppliedParams {
 	late: boolean
 }
 
+/** One issue line of the board bulletin (fase 3, item 4) — what its section needs to say about it. */
+export interface BulletinRow {
+	key: string
+	title: string
+	lifeState: IssueLifeState
+	/** WAITING: the codes of its open asks (`APP-12 · D1`) and who decides, when the issue declared it. */
+	codes: readonly string[]
+	decider?: string
+	/** STOPPED while waiting for the provider: when it runs again. */
+	until?: Date
+}
+
+/** The bulletin, its sections in order — each with its lines (at most the cap) and how many more stay behind the link. */
+export interface BoardBulletinParams {
+	sections: readonly { section: BulletinSection; rows: readonly BulletinRow[]; more: number }[]
+	link?: string
+	now: Date
+}
+
+const SECTION_PT: Record<BulletinSection, string> = {
+	[BulletinSection.WAITING]: 'Esperando decisão',
+	[BulletinSection.STOPPED]: 'Paradas',
+	[BulletinSection.DOING]: 'Fazendo',
+	[BulletinSection.DONE]: 'Concluídas nas últimas 24 h',
+}
+const SECTION_EN: Record<BulletinSection, string> = {
+	[BulletinSection.WAITING]: 'Waiting for a decision',
+	[BulletinSection.STOPPED]: 'Stopped',
+	[BulletinSection.DOING]: 'In progress',
+	[BulletinSection.DONE]: 'Done in the last 24 h',
+}
+
+/** What a line adds after "key · title", by where the issue's work stands — total over `IssueLifeState`. */
+const ROW_DETAIL_PT: Record<IssueLifeState, (row: BulletinRow, now: Date) => string | undefined> = {
+	[IssueLifeState.WAITING_PERSON]: row => inline(row.codes.join(', '), row.decider && `decide: ${row.decider}`),
+	[IssueLifeState.PAUSED]: () => 'pausada',
+	[IssueLifeState.STALLED]: () => 'parou sem dizer o que falta',
+	[IssueLifeState.WAITING_PROVIDER]: (row, now) => (row.until ? `volta ${whenPt(row.until, now)}` : 'esperando o provedor'),
+	[IssueLifeState.RUNNING]: () => undefined,
+	[IssueLifeState.QUEUED]: () => 'na fila',
+	[IssueLifeState.REMINDED]: () => undefined,
+	[IssueLifeState.DONE]: () => undefined,
+}
+const ROW_DETAIL_EN: Record<IssueLifeState, (row: BulletinRow, now: Date) => string | undefined> = {
+	[IssueLifeState.WAITING_PERSON]: row => inline(row.codes.join(', '), row.decider && `decides: ${row.decider}`),
+	[IssueLifeState.PAUSED]: () => 'paused',
+	[IssueLifeState.STALLED]: () => 'stopped without saying what it needs',
+	[IssueLifeState.WAITING_PROVIDER]: (row, now) => (row.until ? `back ${whenEn(row.until, now)}` : 'waiting for the provider'),
+	[IssueLifeState.RUNNING]: () => undefined,
+	[IssueLifeState.QUEUED]: () => 'queued',
+	[IssueLifeState.REMINDED]: () => undefined,
+	[IssueLifeState.DONE]: () => undefined,
+}
+
+/** The parts that exist, on one line — `undefined` when none does. */
+function inline(...parts: (string | false | undefined)[]): string | undefined {
+	const present = parts.filter((part): part is string => typeof part === 'string' && part.length > 0)
+	return present.length > 0 ? present.join(' · ') : undefined
+}
+
+function bulletin(
+	p: BoardBulletinParams,
+	words: { heading: string; empty: string; more: (n: number, linked: boolean) => string },
+	section: Record<BulletinSection, string>,
+	detail: Record<IssueLifeState, (row: BulletinRow, now: Date) => string | undefined>,
+): string {
+	const filled = p.sections.filter(s => s.rows.length > 0)
+	if (filled.length === 0) return lines(`📋 ${words.heading}`, words.empty, p.link)
+	const body = filled.map(s =>
+		lines(
+			`*${section[s.section]}* (${s.rows.length + s.more})`,
+			...s.rows.map(row => {
+				const extra = detail[row.lifeState](row, p.now)
+				return `• ${row.key} · ${row.title}${extra ? ` — ${extra}` : ''}`
+			}),
+			s.more > 0 && words.more(s.more, p.link !== undefined),
+		),
+	)
+	return [`📋 ${words.heading}`, ...body, p.link].filter((part): part is string => typeof part === 'string' && part.length > 0).join('\n\n')
+}
+
 interface ProviderPausedParams {
 	until: Date
 	now: Date
@@ -265,6 +347,18 @@ const PT_MESSAGES = {
 	 */
 	approvalYes: () => 'Sim',
 	approvalNo: () => 'Não',
+	/**
+	 * O boletim do grupo (fase 3, item 4) — a resposta ao `relatorio`, sem turno de modelo: o que espera
+	 * decisão, o que parou, o que está andando e o que terminou nas últimas 24 h; uma linha por tarefa, no
+	 * máximo 8 por seção, e o link do painel no fim.
+	 */
+	boardBulletin: (p: BoardBulletinParams) =>
+		bulletin(
+			p,
+			{ heading: 'Relatório', empty: 'Nada em andamento.', more: (n, linked) => `+${n}${linked ? ' no painel' : ''}` },
+			SECTION_PT,
+			ROW_DETAIL_PT,
+		),
 }
 
 export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
@@ -283,5 +377,12 @@ export const THREAD_MESSAGES = defineMessages<typeof PT_MESSAGES>({
 		signalDigest: p => lines(`${p.name ? `${p.name}, ` : ''}${p.items.length} things:`, ...p.items.map(bullet), p.link),
 		approvalYes: () => 'Yes',
 		approvalNo: () => 'No',
+		boardBulletin: p =>
+			bulletin(
+				p,
+				{ heading: 'Report', empty: 'Nothing in progress.', more: (n, linked) => `+${n}${linked ? ' on the panel' : ''}` },
+				SECTION_EN,
+				ROW_DETAIL_EN,
+			),
 	},
 })

@@ -43,7 +43,7 @@ const CHANNEL_PRODUCERS: Record<string, string> = {
 	'thread/usecases/ApplyDueQuestionDefaults.ts':
 		'POLICY — the PROGRESS line "went on with the default" of a question (fase 3, item 1b), routed by `recordIssueSignal`.',
 	'thread/usecases/IngestChannelMessage.ts':
-		'THE RULE LAYER — the ONE "which one?" back to a bare "sim" with several open asks (fase 3, item 3); not an issue speaking.',
+		'THE RULE LAYER — the ONE "which one?" back to a bare "sim" with several open asks (fase 3, item 3), and the bulletin that answers `relatorio` with no model turn (fase 3, item 4); not an issue speaking.',
 	'thread/services/ArtifactDelivery/ArtifactDelivery.ts':
 		"THE OPERATOR / THE ORCHESTRATOR — an artifact sent by `SendArtifact` (out of the issue's scope from S5a); and POLICY — the print of a FEEDBACK `DeliverIssuePreview` sends (S5b).",
 }

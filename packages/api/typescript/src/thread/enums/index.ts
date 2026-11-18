@@ -10,3 +10,5 @@ export * from './PanelActionEcho'
 export * from './BareAnswer'
 export * from './ReplyAnswerWay'
 export * from './AnswerGate'
+// Relatório como consulta (fase 3, item 4) — a command about the whole conversation, and the board's sections.
+export * from './ThreadCommand'
