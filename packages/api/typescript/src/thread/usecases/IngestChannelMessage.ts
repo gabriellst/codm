@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, z, BaseError, CommandQueue, LoggingService, tryCatchAsync } from '@codm/core-typescript'
+import { Handler, z, BaseError } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
 import {
 	ClassificationMethod,
@@ -11,28 +11,19 @@ import {
 	TranscriptKind,
 } from '@codm/contracts-typescript/wire/enums'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
+import { InboundTriage, TRIAGE_HOLDER } from '@agent/services/InboundTriage'
 import { IssueRepository } from '@issue/repositories/IssueRepository'
 import { PauseIssue } from '@issue/usecases/PauseIssue'
 import { ResumeIssue } from '@issue/usecases/ResumeIssue'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { RuleRouter } from '../services/RuleRouter'
-import type { RoutedSteerOrigin } from '../services/SteerCue'
+import { RoutedSteer } from '../services/RoutedSteer'
 import { AGENT_SPEAKER } from '../objects'
 import { MessageIngestedEvent } from '../events/MessageIngestedEvent'
 import { CUE_ACKNOWLEDGED, CUE_PAUSED, CUE_RESUMED } from '../utils/ChannelCues'
 import { parseControlCommand } from '../utils/controlCommand'
-import { parseSteerUrgency } from '../utils/steerUrgency'
-import { IssueControlCommand, SteerUrgency } from '../enums'
-import { IssueTurnInterruptRequestedEvent } from '../events/IssueTurnInterruptRequestedEvent'
-
-/** Whether a steer of this urgency cuts the issue's running turn (fase 2, item 4). */
-const CUTS_RUNNING_TURN: Readonly<Record<SteerUrgency, boolean>> = {
-	[SteerUrgency.NEXT_STEP]: false,
-	[SteerUrgency.NOW]: true,
-}
+import { IssueControlCommand } from '../enums'
 import type { Thread } from '../entities/Thread'
-import { OPERATOR_PARTICIPANT_ID } from '../entities/Thread'
-import type { ReactToChannelMessage } from './ReactToChannelMessage'
 import type { ApplicationErrors } from '../errors'
 
 export const IngestChannelMessageInputSchema = z.object({
@@ -65,6 +56,12 @@ export const IngestChannelMessageInputSchema = z.object({
 export const IngestChannelMessageOutputSchema = z.object({
 	entryId: z.uuid(),
 	invocable: z.boolean(),
+	/**
+	 * The orchestrator's item was queued HELD for the parallel triage (fase 2) — the caller hands the entry
+	 * to `InboundTriageQueue` after this commit. False on every other path: routed, not invocable, media, or
+	 * an env that does not triage.
+	 */
+	triage: z.boolean(),
 })
 
 /** What a control word does to an issue as it stands: run the use case, only acknowledge, or not apply. */
@@ -113,8 +110,8 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 	constructor(
 		private readonly threads: ThreadRepository,
 		private readonly mailbox: MailboxRepository,
-		private readonly commands: CommandQueue,
-		private readonly logging: LoggingService,
+		private readonly routedSteer: RoutedSteer,
+		private readonly triage: InboundTriage,
 		private readonly router: RuleRouter,
 		private readonly issues: IssueRepository,
 		private readonly pauseIssue: PauseIssue,
@@ -208,58 +205,37 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 			// `dedupKey` is the ENTRY id, so a redelivered gateway event re-inserts, conflicts on the
 			// unique index, and queues nothing. This use case does NOT ask whether a turn is already
 			// running: producers only insert, and the dispatcher's per-target lease decides what runs (§3).
+			// Held for the parallel triage (fase 2) — decided below, read by the return.
+			let triage = false
 			if (invocable && routed) {
 				// STRAIGHT TO THE ISSUE: the message becomes a steer of its session, with no orchestrator turn in
 				// between (measured: a message waited a median 24 s, p90 110 s, and up to 1h30 behind that queue).
-				// The group gets only the 👀 below; the issue's timeline shows the message as sent, delivered, read.
-				const speaker = thread.displayNameOf(input.senderExternalId)
-				// "agora" / "now" after the target (fase 2, item 4): cut the running turn so this steer leads the
-				// next one. The word itself is taken off what the session is told.
-				const steer = parseSteerUrgency(thread.textWithoutMention(input.text))
-				const said = steer.text
-				const replyingTo = quoted && routed.via === 'REPLY_QUOTE' ? `\n(respondendo a: «${quoted.text.slice(0, 300)}»)` : ''
-				// WHERE IT CAME FROM, so the dispatcher can answer ☑️ / ✅ on this very message (fase 2, item 5).
-				// Same gate as the 👀 below: no platform id or reactions off ⇒ no origin ⇒ no cue later either.
-				const channelOrigin: RoutedSteerOrigin | undefined =
-					input.platformMessageId && thread.reactionsEnabled
-						? { ...this.reactionAddress(thread, input, input.platformMessageId), entryId: entry.entryId }
-						: undefined
-				await this.mailbox.enqueue(
+				// The group gets only the 👀; the issue's timeline shows the message as sent, delivered, read.
+				const interrupt = await this.routedSteer.enqueue(
 					{
-						ownerId: thread.ownerId,
-						targetKind: MailboxTargetKind.ISSUE,
-						targetId: routed.issue.issueId,
-						kind: MailboxItemKind.STEER,
-						posture: thread.postureOf(input.senderExternalId),
-						payload: {
-							issueId: routed.issue.issueId,
+						thread,
+						message: {
 							threadId: thread.id.value,
-							key: routed.issue.key,
-							title: routed.issue.title,
-							text: `${speaker}: ${said}${replyingTo}`,
-							// The steer's own entry — what the turn carrying it registers, so an "agora" never cuts it.
+							senderExternalId: input.senderExternalId,
+							platformMessageId: input.platformMessageId,
 							entryId: entry.entryId,
-							channelOrigin,
+							text: input.text,
+							replyingTo: quoted && routed.via === 'REPLY_QUOTE' ? quoted.text : undefined,
 						},
-						dedupKey: `steer:${entry.entryId}:${routed.issue.issueId}`,
+						issue: routed.issue,
 					},
 					tx,
 				)
-				if (CUTS_RUNNING_TURN[steer.urgency]) {
-					// The cut happens AFTER commit, in `InterruptIssueTurnOnSteer` — never inside this transaction.
-					await this.domainEventRepository.save(
-						new IssueTurnInterruptRequestedEvent({
-							entityId: thread.id.value,
-							ownerId: thread.ownerId,
-							payload: { threadId: thread.id.value, issueId: routed.issue.issueId, entryId: entry.entryId },
-						}),
-						tx,
-					)
-				}
-				if (input.platformMessageId && thread.reactionsEnabled) {
-					await this.enqueueCue(thread, input, entry.entryId, CUE_ACKNOWLEDGED, tx)
-				}
+				if (interrupt) await this.domainEventRepository.save(interrupt, tx)
 			} else if (invocable) {
+				// THE PARALLEL TRIAGE (fase 2) — the rule layer could not route this, so a stateless triage on the
+				// provider's small model decides, in parallel with every other message, whether it is a steer of
+				// one open issue, needs no work, or is the orchestrator's after all. The item is written NOW, in
+				// this transaction, HELD for the triage: durable from the first instant, and claimable by the
+				// orchestrator the moment the hold lapses or this daemon dies (`EnqueueMailboxItem.hold`). A
+				// media message is not triaged — the model would read only its placeholder.
+				const holdMs = input.messageType === undefined ? this.triage.holdMs : undefined
+				triage = holdMs !== undefined
 				await this.mailbox.enqueue(
 					{
 						ownerId: thread.ownerId,
@@ -306,6 +282,7 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 								: undefined,
 						},
 						dedupKey: entry.entryId,
+						...(holdMs !== undefined && { hold: { holder: TRIAGE_HOLDER, until: new Date(Date.now() + holdMs) } }),
 					},
 					tx,
 				)
@@ -326,9 +303,7 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 				// PER-THREAD OPT-OUT (reactions/streaming spec) — `thread.reactionsEnabled` gates the cue the
 				// same way `thinkingIndicatorEnabled` gates the "Pensando" placeholder: the entry and the
 				// mailbox item above are written exactly as always, only the 👀 itself is skipped.
-				if (input.platformMessageId && thread.reactionsEnabled) {
-					await this.enqueueCue(thread, input, entry.entryId, CUE_ACKNOWLEDGED, tx)
-				}
+				await this.routedSteer.cue(thread, input, entry.entryId, CUE_ACKNOWLEDGED, tx)
 			}
 
 			await this.domainEventRepository.save(
@@ -340,7 +315,7 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 				tx,
 			)
 
-			return { entryId: entry.entryId, invocable }
+			return { entryId: entry.entryId, invocable, triage }
 		})
 	}
 
@@ -418,7 +393,7 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 			await this.controlUseCase()[ctx.command].execute(request, tx)
 		}
 
-		if (input.platformMessageId && thread.reactionsEnabled) await this.enqueueCue(thread, input, entry.entryId, effect.cue, tx)
+		await this.routedSteer.cue(thread, input, entry.entryId, effect.cue, tx)
 
 		await this.domainEventRepository.save(
 			new MessageIngestedEvent({
@@ -428,68 +403,6 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 			}),
 			tx,
 		)
-		return { entryId: entry.entryId, invocable: false }
-	}
-
-	/**
-	 * Schedule the `👀` — and REFUSE to let it break the ingest (streaming spec, decision 12).
-	 *
-	 * The guard is not defensive habit; it names a real caller. `CommandQueue.enqueueCommand` is
-	 * transactional only on the SQLite driver — the broker-backed one declares `transactional = false`
-	 * and its enqueue is NETWORK I/O, which core's own contract says callers on a critical path must
-	 * tolerate failing. An ingest is exactly such a path, and more consequential than most: losing it
-	 * costs the operator the message they can already see in their own chat history, with no answer and
-	 * no trace. A decoration is not allowed to buy that.
-	 *
-	 * So the asymmetry is deliberate: no cue is a shrug, no ingest is the worst bug this file has. By
-	 * the time we get here the entry and the mailbox item are already written into this transaction —
-	 * swallowing is what keeps that commit intact.
-	 */
-	private async enqueueCue(thread: Thread, input: this['input'], entryId: string, reaction: string, tx: Transaction): Promise<void> {
-		const outcome = await tryCatchAsync(() =>
-			this.commands.enqueueCommand<ReactToChannelMessage>(
-				'react_to_channel_message',
-				{ ...this.reactionAddress(thread, input, input.platformMessageId ?? ''), reaction },
-				// Derived from the ENTRY, like the mailbox item's own dedup key: a redelivered gateway event
-				// conflicts on the same id and reacts nothing twice.
-				{ jobId: `cue:${entryId}` },
-				tx,
-			),
-		)
-
-		if (!outcome.success) {
-			this.logging.info({
-				content: { message: 'ack cue not scheduled (best-effort)', threadId: input.threadId, reason: outcome.error.message },
-			})
-		}
-	}
-
-	/**
-	 * THE MESSAGE KEY A REACTION IS ADDRESSED BY — shared by the `👀` here and by the steer's later
-	 * ☑️ / ✅ (`RoutedSteerOrigin`, fase 2 item 5), so the two can never disagree about which message.
-	 */
-	private reactionAddress(thread: Thread, input: this['input'], messageId: string): Omit<ReactToChannelMessage['input'], 'reaction'> {
-		// The owner's own words arrive under the OPERATOR roster id (`ConsumeInboundMessage` rewrites the
-		// sender when the gateway reports `fromMe`), and WhatsApp addresses a reaction by the whole
-		// message key — so the sentinel that already encodes "this account said it" is precisely the fact
-		// the gateway needs, read where it is unambiguous. Read ONCE, because the same comparison also
-		// decides whether there is an author to send (below).
-		const fromMe = input.senderExternalId === OPERATOR_PARTICIPANT_ID
-		return {
-			ownerId: thread.ownerId,
-			channelId: thread.channelId,
-			remoteId: thread.contactRef.externalId,
-			messageId,
-			fromMe,
-			// THE AUTHOR, and the whole reason a `👀` used to vanish in a group. `remoteId` is the GROUP
-			// jid there, never the person's, so without this the gateway could only fill the message
-			// key's `participant` slot with the chat — a key that addresses no message, and an emoji
-			// nobody in the room ever sees. In a DM the two coincide, which is why it looked fine.
-			//
-			// Withheld when `fromMe`, because there the id is `OPERATOR_PARTICIPANT_ID` — a SENTINEL,
-			// not a JID. Sending it would have the gateway parse `operator` into a nonsense JID and
-			// break the one case that already works; the device's own id is what answers that case.
-			senderExternalId: fromMe ? undefined : input.senderExternalId,
-		}
+		return { entryId: entry.entryId, invocable: false, triage: false }
 	}
 }

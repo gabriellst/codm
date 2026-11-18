@@ -70,14 +70,29 @@ function TimelineRow({ item, className, ...props }: ComponentProps<'li'> & { ite
 	)
 }
 
+type ClassificationMethod = (typeof ClassificationMethodEnum)[keyof typeof ClassificationMethodEnum]
+
+/**
+ * HOW a person's message reached this issue, for the routings worth naming: a quote (the rule layer) or
+ * the parallel triage (fase 2 — `CONTEXT_MATCH`). Dispatched by the classification, never an `if` chain;
+ * a new member fails compilation here until somebody says whether it gets a label.
+ */
+const ROUTED_BY: Readonly<Record<ClassificationMethod, 'session.timelineReplyQuote' | 'session.timelineTriage' | undefined>> = {
+	[ClassificationMethodEnum.REPLY_QUOTE]: 'session.timelineReplyQuote',
+	[ClassificationMethodEnum.CONTEXT_MATCH]: 'session.timelineTriage',
+	[ClassificationMethodEnum.NEW_ISSUE]: undefined,
+	[ClassificationMethodEnum.CLARIFIED]: undefined,
+}
+
 function MessageDetail({ item }: { item: ItemOf<'MESSAGE'> }) {
 	const { t } = useTranslation()
 	const fromPerson = item.transcriptKind === TranscriptKindEnum.CONTACT
+	const routedBy = item.classification ? ROUTED_BY[item.classification] : undefined
 	return (
 		<>
 			<span className="mr-1.5 text-xs text-foreground">
 				{fromPerson ? t('session.timelineFromPerson') : t('session.timelineFromAgent')}
-				{item.classification === ClassificationMethodEnum.REPLY_QUOTE && ` · ${t('session.timelineReplyQuote')}`}
+				{routedBy && ` · ${t(routedBy)}`}
 			</span>
 			{item.text}
 		</>

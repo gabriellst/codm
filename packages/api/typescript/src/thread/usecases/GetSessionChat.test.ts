@@ -238,7 +238,12 @@ describe('GetSessionChat — a delivered artifact joins onto its own entry', () 
 
 	it('joins kind/name/ref/meta onto the entry that delivered it, keyed by artifactId', async () => {
 		const t = await thread()
-		const artifact = await givenArtifact(testBed, t.id.value, { kind: ArtifactKind.IMAGE, name: 'preview.png', ref: '/tmp/preview.png', meta: 'v2' })
+		const artifact = await givenArtifact(testBed, t.id.value, {
+			kind: ArtifactKind.IMAGE,
+			name: 'preview.png',
+			ref: '/tmp/preview.png',
+			meta: 'v2',
+		})
 		t.recordEntry({
 			kind: TranscriptKind.SYSTEM,
 			text: 'Segue o print do preview.',

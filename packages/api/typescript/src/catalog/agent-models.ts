@@ -74,6 +74,28 @@ export const PROVIDER_MODELS: Readonly<Record<ProviderKind, readonly AgentModelI
 	[ProviderKind.OPENCODE]: [],
 }
 
+/**
+ * THE SMALL MODEL OF EACH PROVIDER — what a cheap, stateless run (the parallel triage, fase 2) asks for.
+ *
+ * A declared relation like `PROVIDER_MODELS`, never a branch on the provider at the call site: the triage
+ * reads `smallModelFor(provider)` and is done. The value is a TIER, so it floats with the vendor exactly as
+ * the selector's members do — `HAIKU` is claude's fast tier, `LUNA` codex's (`CODEX_MODEL_ALIASES`). A
+ * provider with no known small tier declares `DEFAULT` ("the CLI's own choice"): slower, never wrong.
+ *
+ * Gated by `auditProviderModels` (`smallNotOffered`): the small model must be one the provider offers, or
+ * `DEFAULT` — a tier the provider does not serve would be a guaranteed 400 on every triage.
+ */
+export const PROVIDER_SMALL_MODEL: Readonly<Record<ProviderKind, AgentModelId>> = {
+	[ProviderKind.CLAUDE_CODE]: AgentModelId.HAIKU,
+	[ProviderKind.CODEX]: AgentModelId.LUNA,
+	[ProviderKind.OPENCODE]: AgentModelId.DEFAULT,
+}
+
+/** The small model `provider` runs cheap, stateless work on (see `PROVIDER_SMALL_MODEL`). */
+export function smallModelFor(provider: ProviderKind): AgentModelId {
+	return PROVIDER_SMALL_MODEL[provider]
+}
+
 /** The models `provider` offers. Empty ⇒ nothing to choose (see the header). */
 export function modelsFor(provider: ProviderKind): readonly AgentModelId[] {
 	return PROVIDER_MODELS[provider]
@@ -110,11 +132,15 @@ export function effectiveModel(chosen: Readonly<Partial<Record<ProviderKind, Age
  *  - `missingDefault` — a non-empty list without `DEFAULT`. A provider that can be chosen but offers
  *    no way back to "let the CLI decide" strands whoever picked a model once.
  */
-export function auditProviderModels(catalog: Readonly<Record<ProviderKind, readonly AgentModelId[]>>): {
+export function auditProviderModels(
+	catalog: Readonly<Record<ProviderKind, readonly AgentModelId[]>>,
+	small: Readonly<Record<ProviderKind, AgentModelId>> = PROVIDER_SMALL_MODEL,
+): {
 	unowned: AgentModelId[]
 	shared: AgentModelId[]
 	duplicated: ProviderKind[]
 	missingDefault: ProviderKind[]
+	smallNotOffered: ProviderKind[]
 } {
 	const owners = new Map<AgentModelId, ProviderKind[]>()
 	const duplicated: ProviderKind[] = []
@@ -133,5 +159,10 @@ export function auditProviderModels(catalog: Readonly<Record<ProviderKind, reado
 	const unowned = Object.values(AgentModelId).filter(model => model !== AgentModelId.DEFAULT && !owners.has(model))
 	const shared = [...owners].filter(([, providers]) => providers.length > 1).map(([model]) => model)
 
-	return { unowned, shared, duplicated, missingDefault }
+	// The small model is `DEFAULT` (always valid: "omit --model") or one the provider's own row offers.
+	const smallNotOffered = Object.values(ProviderKind).filter(
+		provider => small[provider] !== AgentModelId.DEFAULT && !catalog[provider].includes(small[provider]),
+	)
+
+	return { unowned, shared, duplicated, missingDefault, smallNotOffered }
 }

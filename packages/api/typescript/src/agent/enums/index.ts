@@ -13,3 +13,5 @@ export * from './ResumeInvalidationReason'
 export * from './MessageVia'
 // Why a running issue turn was killed — pause (fase 2, item 2) or "agora" (item 4).
 export * from './TurnAbortReason'
+// The parallel triage's verdict on one inbound message (fase 2, triagem paralela).
+export * from './TriageDecision'

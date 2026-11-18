@@ -260,11 +260,22 @@ export type QuotedEntryRef = Z.infer<typeof QuotedEntryRefSchema>
 export type Stop = Z.infer<typeof StopSchema>
 export type StopResolutionPatch = Z.infer<typeof StopResolutionPatchSchema>
 
+/**
+ * The UPDATE half of a late routing (fase 2, triagem paralela): an entry recorded unrouted, linked to the
+ * issue the triage sent it to. `save` stamps these two columns on the already-persisted entry.
+ */
+export interface EntryLinkPatch {
+	entryId: string
+	issueId: string
+	classification: ClassificationMethod
+}
+
 /** What `ThreadRepository.save` drains and writes in the SAME transaction as the thread row. */
 export interface PendingThreadWrites {
 	entries: TranscriptEntry[]
 	stops: Stop[]
 	stopResolutions: StopResolutionPatch[]
+	entryLinks: EntryLinkPatch[]
 }
 
 /**
@@ -348,6 +359,7 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	private pendingEntries: TranscriptEntry[] = []
 	private pendingStops: Stop[] = []
 	private pendingStopResolutions: StopResolutionPatch[] = []
+	private pendingEntryLinks: EntryLinkPatch[] = []
 
 	static create(data: {
 		ownerId: string
@@ -775,6 +787,21 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	}
 
 	/**
+	 * Link an entry that was recorded UNROUTED to the issue a later decision routed it to — the parallel
+	 * triage (fase 2), which decides after the ingest committed the entry. The issue's timeline then shows
+	 * the message, with `classification` saying how it got there.
+	 *
+	 * Takes the LOADED entry, like `resolveStop` takes the loaded stop: the aggregate does no I/O. Returns
+	 * false and writes nothing when the entry is not this conversation's or is ALREADY linked — a routing
+	 * decided at ingest (a quote, a key) is never overwritten by a later guess.
+	 */
+	linkEntryToIssue(entry: TranscriptEntry, issueId: string, classification: ClassificationMethod): boolean {
+		if (entry.threadId !== this.id.value || entry.issueId) return false
+		this.pendingEntryLinks.push({ entryId: entry.entryId, issueId, classification })
+		return true
+	}
+
+	/**
 	 * Raise a stop on this thread (B4, spec decision 4) — with or without an issue behind it.
 	 *
 	 * `stopId` is accepted rather than always minted because the id is frequently DECIDED UPSTREAM: the
@@ -867,10 +894,12 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 			entries: this.pendingEntries,
 			stops: this.pendingStops,
 			stopResolutions: this.pendingStopResolutions,
+			entryLinks: this.pendingEntryLinks,
 		}
 		this.pendingEntries = []
 		this.pendingStops = []
 		this.pendingStopResolutions = []
+		this.pendingEntryLinks = []
 		return writes
 	}
 
@@ -1012,6 +1041,16 @@ export class Thread extends AggregateRoot<typeof ThreadSchema> {
 	 * deliberate exception. Every other paragraph of the prompt calls them "the operator"; rendering
 	 * `de="Operator"` here would hand the model a second name for the person its instructions are about.
 	 */
+	/**
+	 * The roster NAME of a participant — `undefined` when the roster has none, NEVER the raw id that
+	 * `displayNameOf` falls back to. For surfaces that must not carry an address at all (the parallel
+	 * triage's prompt, fase 2): the caller substitutes a neutral label instead of a phone-number JID.
+	 */
+	rosterNameOf(senderExternalId?: string): string | undefined {
+		if (!senderExternalId || senderExternalId === OPERATOR_PARTICIPANT_ID) return OPERATOR_PARTICIPANT_ID
+		return this.participants.find(p => p.participantId === senderExternalId)?.name
+	}
+
 	displayNameOf(senderExternalId?: string): string {
 		if (!senderExternalId || senderExternalId === OPERATOR_PARTICIPANT_ID) return OPERATOR_PARTICIPANT_ID
 		return this.participants.find(p => p.participantId === senderExternalId)?.name ?? senderExternalId

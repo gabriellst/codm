@@ -23,7 +23,27 @@ export interface EnqueueMailboxItem {
 	 * second turn, and a second turn becomes a second message in someone's real conversation.
 	 */
 	dedupKey: string
+	/**
+	 * Enqueue the item ALREADY LEASED to `holder` until `until` — the parallel triage's hold (fase 2,
+	 * triagem paralela). The item exists (durable, in the producer's transaction) but no turn may claim it
+	 * while a stateless triage decides whether it needs one; `settleHold` ends the hold.
+	 *
+	 * A lease WITH a holder, stamped with this daemon's boot like a claim, and never an ownerless one:
+	 * an ownerless future lease is a usage-limit pause, and `releaseDeferred` frees those the moment the
+	 * provider answers — it would hand the item to the orchestrator in the middle of the triage. A held
+	 * item survives everything a claimed one does: the hold lapsing (`until`) or the daemon dying
+	 * (`releaseOrphanedClaims`) makes it claimable again, and the message takes the orchestrator's path.
+	 */
+	hold?: { holder: string; until: Date }
 }
+
+/**
+ * How a hold ends (`settleHold`): the triage took the message somewhere else, so the item is CONSUMED
+ * with no turn; or the orchestrator still answers it, so the item is RELEASED — claimable now — with
+ * `merge` patched into its payload (JSON merge-patch: the triage's verdict rides the turn as a hint, and
+ * every key the producer wrote stays as it was).
+ */
+export type HoldSettlement = { consume: true } | { consume: false; merge?: Record<string, unknown> }
 
 /** A leased item, ready to run. */
 export interface ClaimedMailboxItem {
@@ -207,6 +227,22 @@ export abstract class MailboxRepository {
 	 * @returns how many leases were released.
 	 */
 	abstract releaseOrphanedClaims(tx?: Transaction): Promise<number>
+
+	/**
+	 * End a hold (`EnqueueMailboxItem.hold`) — a COMPARE-AND-SWAP on the holder, addressed by the item's
+	 * `dedupKey` (the producer's own fact id, which the triage already has).
+	 *
+	 * It applies only while the item is unconsumed and STILL leased to `holder`. Once the hold lapsed and a
+	 * turn claimed the item, `claimed_by` is that turn's worker and this matches nothing: the triage lost
+	 * the race and its verdict must be dropped — the orchestrator is already answering. A lapsed hold that
+	 * nobody claimed yet still belongs to the triage, which is the honest answer (nothing has run).
+	 *
+	 * @returns true when the hold was this caller's and is now settled.
+	 */
+	abstract settleHold(dedupKey: string, holder: string, settlement: HoldSettlement, tx?: Transaction): Promise<boolean>
+
+	/** Whether `holder` still holds the item behind `dedupKey` — the cheap check before spending a model run. */
+	abstract isHeld(dedupKey: string, holder: string, tx?: Transaction): Promise<boolean>
 
 	/** Whether any runnable (unconsumed, unleased, unpoisoned) item exists for a target. */
 	abstract hasPending(targetKind: MailboxTargetKind, targetId: string, tx?: Transaction): Promise<boolean>

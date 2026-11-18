@@ -23,6 +23,7 @@ import { ThreadStatusDeriver, LibSqlThreadStatusDeriver, MockThreadStatusDeriver
 import { ReplyStreamer } from './services/ReplyStreamer'
 import { PanelRosterRelay, CloudPanelRosterRelay, MockPanelRosterRelay } from './services/PanelRosterRelay'
 import { PanelMemberKey, FilePanelMemberKey, MockPanelMemberKey } from './services/PanelMemberKey'
+import { InboundTriageQueue } from './services/InboundTriageQueue'
 
 export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// The one seam in this context that opens a socket (BC4 → BC1 WRITE, over the gateway's own SDK —
@@ -82,4 +83,8 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	// Fase 2, item 6b — the exactly-once latch + outcome outbox of panel actions. Real (primary-key ON
 	// CONFLICT DO NOTHING) in real + integration so the dedup is exercised against a real DB.
 	{ token: PanelActionLedger, mock: MockPanelActionLedger, integration: LibSqlPanelActionLedger, real: LibSqlPanelActionLedger },
+	// The parallel triage's bounded pool (fase 2). A SINGLETON by the class-binding rule, and that is the
+	// point: the bound on concurrent triages only holds if every submit reaches the same pool. Same class in
+	// every env — whether anything is triaged is `InboundTriage`'s binding (agent registry), not this one's.
+	{ token: InboundTriageQueue, mock: InboundTriageQueue, integration: InboundTriageQueue, real: InboundTriageQueue },
 ])

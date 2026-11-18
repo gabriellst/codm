@@ -12,6 +12,8 @@ import { AgentScenarioSelection } from './services/AgentScenario'
 import { MailboxDispatcher, LibSqlMailboxDispatcher } from './services/MailboxDispatcher'
 import { IssueWorkAgent, IssueWorkPromptBuilder } from './agents/IssueWorkAgent'
 import { OrchestratorAgent, OrchestratorPromptBuilder } from './agents/OrchestratorAgent'
+import { TriageAgent, TriagePromptBuilder } from './agents/TriageAgent'
+import { InboundTriage, ModelInboundTriage, NoInboundTriage } from './services/InboundTriage'
 import { AgentSessionRepository, LibSqlAgentSessionRepository, MockAgentSessionRepository } from './repositories/AgentSessionRepository'
 import { LibSqlMailboxRepository, MailboxRepository, MockMailboxRepository } from './repositories/MailboxRepository'
 import { IssueSequence, LibSqlIssueSequence, MockIssueSequence } from './services/IssueSequence'
@@ -145,6 +147,13 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 	{ token: IssueWorkAgent, mock: { useClass: IssueWorkAgent }, real: { useClass: IssueWorkAgent } },
 	{ token: OrchestratorPromptBuilder, mock: { useClass: OrchestratorPromptBuilder }, real: { useClass: OrchestratorPromptBuilder } },
 	{ token: OrchestratorAgent, mock: { useClass: OrchestratorAgent }, real: { useClass: OrchestratorAgent } },
+	{ token: TriagePromptBuilder, mock: { useClass: TriagePromptBuilder }, real: { useClass: TriagePromptBuilder } },
+	{ token: TriageAgent, mock: { useClass: TriageAgent }, real: { useClass: TriageAgent } },
+	// THE PARALLEL TRIAGE'S POLICY (fase 2) — whether this env triages at all is this binding, not a flag.
+	// On in `real`; off in the test envs and in `e2e` (whose stand-in runner would spend a scripted act on a
+	// triage run), so every existing suite keeps the orchestrator path it was written against. A suite that
+	// exercises the triage overrides it with `ModelInboundTriage` over a stub runner factory.
+	{ token: InboundTriage, mock: NoInboundTriage, integration: NoInboundTriage, real: ModelInboundTriage, e2e: NoInboundTriage },
 	//
 	// The run credential is NOT bound here. `AgentIdentityService` is a CORE token and lives on the
 	// ROOT shelf in `shared/registry.ts` — see the comment there for the mechanical reason

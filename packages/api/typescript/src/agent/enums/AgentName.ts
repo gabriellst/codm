@@ -11,7 +11,13 @@
  * integration events carry the FACT (issue completed, stop raised), never who produced it.
  */
 export enum AgentName {
-	CLASSIFY_ISSUE = 'CLASSIFY_ISSUE',
+	/**
+	 * The parallel triage (fase 2): one stateless run per inbound message the rule layer could not route,
+	 * on the provider's small model, deciding whether it is a steer of one open issue, needs no work, or
+	 * goes to the orchestrator. The identity the removed classifier (`CLASSIFY_ISSUE`) held, repurposed —
+	 * the same question ("where does this message belong?"), asked in parallel instead of in the turn.
+	 */
+	TRIAGE = 'TRIAGE',
 	ISSUE_WORK = 'ISSUE_WORK',
 	/**
 	 * The thread's resident conversationalist (orchestrator pivot, 28-jul). One per thread, with a

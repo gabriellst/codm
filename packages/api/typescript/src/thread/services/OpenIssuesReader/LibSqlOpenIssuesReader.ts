@@ -3,7 +3,7 @@ import { and, eq, ne } from 'drizzle-orm'
 import { LibSqlDatabaseDriver, LibSqlTransaction, tryCatchAsync } from '@codm/core-typescript'
 import { issues, transcriptEntries } from '@codm/contracts/db'
 import { IssueStatus } from '@codm/contracts-typescript/wire/enums'
-import type { OpenIssueRef, SteerableIssueRef } from './OpenIssuesReader'
+import type { OpenIssueSummary, SteerableIssueRef } from './OpenIssuesReader'
 import { OpenIssuesReader } from './OpenIssuesReader'
 
 @injectable()
@@ -12,10 +12,10 @@ export class LibSqlOpenIssuesReader extends OpenIssuesReader {
 		super()
 	}
 
-	async openIssues(threadId: string): Promise<OpenIssueRef[]> {
+	async openIssues(threadId: string): Promise<OpenIssueSummary[]> {
 		const result = await tryCatchAsync(async () =>
 			this.driver.db
-				.select({ issueId: issues.id, key: issues.key, title: issues.title })
+				.select({ issueId: issues.id, key: issues.key, title: issues.title, status: issues.status, lastActivityAt: issues.updatedAt })
 				.from(issues)
 				.where(and(eq(issues.threadId, threadId), eq(issues.archived, false), ne(issues.status, IssueStatus.COMPLETED))),
 		)

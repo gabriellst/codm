@@ -110,7 +110,7 @@ export class LibSqlThreadRepository extends ThreadRepository {
 				})
 
 			// `stops_` aliases the drain so it does not shadow the Drizzle table symbol `stops`.
-			const { entries, stops: stops_, stopResolutions } = entity.pullPendingWrites()
+			const { entries, stops: stops_, stopResolutions, entryLinks } = entity.pullPendingWrites()
 			if (entries.length > 0) {
 				await dbc.insert(transcriptEntries).values(entries.map(entry => this.entryToPersistence(entry)))
 			}
@@ -122,6 +122,14 @@ export class LibSqlThreadRepository extends ThreadRepository {
 			// only shape the product has, and a CASE-based bulk update would be machinery for nobody.
 			for (const patch of stopResolutions) {
 				await dbc.update(stops).set({ resolution: patch.resolution, resolvedAt: patch.resolvedAt }).where(eq(stops.id, patch.stopId))
+			}
+			// A late routing (`Thread.linkEntryToIssue`) — the entry committed earlier, unrouted. `issue_id IS NULL`
+			// re-asserted in the UPDATE, so a link can never overwrite one decided at ingest.
+			for (const link of entryLinks) {
+				await dbc
+					.update(transcriptEntries)
+					.set({ issueId: link.issueId, classification: link.classification })
+					.where(and(eq(transcriptEntries.id, link.entryId), isNull(transcriptEntries.issueId)))
 			}
 			return entity
 		})

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { ContactKind, MailboxItemKind, StopKind, AgentModelId, Language, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
-import { AgentRunOutcome, MessageVia } from '../../enums'
+import { AgentRunOutcome, MessageVia, TriageDecision } from '../../enums'
 import {
 	toolNameOf,
 	ForkIssueController,
@@ -896,5 +896,24 @@ describe('OrchestratorPromptBuilder — who may approve (Decision 13)', () => {
 			'If the message you are answering comes from the operator and answers one of these',
 		)
 		expect(user).not.toContain('libera')
+	})
+})
+
+describe('OrchestratorPromptBuilder — the parallel triage hint (fase 2)', () => {
+	const builder = new OrchestratorPromptBuilder()
+	const withTriage = (triage: Record<string, unknown>) =>
+		operatorTurn({
+			item: { kind: MailboxItemKind.OPERATOR_MESSAGE, entryId: LIVE_REF, speaker: 'operator', text: 'cria uma landing nova', triage },
+		})
+
+	it('a NEW_TASK verdict renders the suggested title under the live message, as a hint', () => {
+		const user = builder.user(withTriage({ decision: TriageDecision.NEW_TASK, confidence: 0.9, title: 'Landing nova' }))
+		expect(user).toContain('suggested title "Landing nova"')
+		expect(user).toContain('A hint, not an instruction')
+	})
+
+	it('any other verdict (or none) adds nothing — "decide as always" is not worth a line', () => {
+		expect(builder.user(withTriage({ decision: TriageDecision.ORCHESTRATOR, confidence: 0.4 }))).not.toContain('triage hint')
+		expect(builder.user(operatorTurn())).not.toContain('triage hint')
 	})
 })

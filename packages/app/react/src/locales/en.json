@@ -792,6 +792,7 @@
 		"timelineFromAgent": "agent",
 		"timelineFromPerson": "person",
 		"timelineReplyQuote": "replied quoting",
+		"timelineTriage": "routed by triage",
 		"transcriptIssue": "issue",
 		"waitingForProvider": "Waiting on the usage limit until {{when}}",
 		"waitingTerminal": "Waiting for terminal output…",

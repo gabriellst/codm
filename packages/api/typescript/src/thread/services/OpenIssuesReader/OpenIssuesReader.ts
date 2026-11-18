@@ -1,4 +1,5 @@
 import type { Transaction } from '@codm/core-typescript'
+import type { IssueStatus } from '@codm/contracts-typescript/wire/enums'
 /**
  * An open issue a message could be routed to — the element type this reader returns.
  *
@@ -13,6 +14,15 @@ export interface OpenIssueRef {
 	issueId: string
 	key: string
 	title: string
+}
+
+/**
+ * An open issue as the parallel triage weighs it (fase 2): the ref plus WHERE it stands and WHEN it last
+ * moved — "the one they were talking about a minute ago" is usually the target of a loose message.
+ */
+export interface OpenIssueSummary extends OpenIssueRef {
+	status: IssueStatus
+	lastActivityAt: Date
 }
 
 /**
@@ -37,7 +47,7 @@ export interface SteerableIssueRef extends OpenIssueRef {
  * import): the classification decision needs to know what issues already exist on the thread.
  */
 export abstract class OpenIssuesReader {
-	abstract openIssues(threadId: string): Promise<OpenIssueRef[]>
+	abstract openIssues(threadId: string): Promise<OpenIssueSummary[]>
 	/** Resolve which issue a transcript entry was routed to (for reply-quote authority). */
 	abstract issueIdForEntry(entryId: string): Promise<string | undefined>
 	/**

@@ -10,6 +10,8 @@ import { ConsumedMessageRepository } from '../repositories/ConsumedMessageReposi
 import { OPERATOR_PARTICIPANT_ID } from '../entities/Thread'
 import { ThreadRepository } from '../repositories/ThreadRepository'
 import { IngestChannelMessage } from '../usecases/IngestChannelMessage'
+import { InboundTriageQueue } from '../services/InboundTriageQueue'
+import { TriageChannelMessage } from '../usecases/TriageChannelMessage'
 
 /**
  * The BC4 inbound ingestion consumer (phase-6 HARD GATE). Subscribes to the gateway's
@@ -39,6 +41,8 @@ export class ConsumeInboundMessage extends EventHandler<typeof ChannelMessageRec
 		private readonly consumed: ConsumedMessageRepository,
 		private readonly threads: ThreadRepository,
 		private readonly ingest: IngestChannelMessage,
+		private readonly triageQueue: InboundTriageQueue,
+		private readonly triage: TriageChannelMessage,
 	) {
 		super()
 	}
@@ -124,9 +128,18 @@ export class ConsumeInboundMessage extends EventHandler<typeof ChannelMessageRec
 		await this.consumed.linkEntry({ channelId, platformMessageId: messageId, threadId: thread.id.value, entryId: ingested.entryId })
 
 		// The turn is scheduled INSIDE `IngestChannelMessage`, in the same transaction as the entry
-		// (§7.4). Nothing happens here any more, and that is the point: an enqueue at this level would
-		// sit outside the ingest's transaction and re-open the window where a crash loses the message
-		// after it is already visible in the operator's own chat history.
+		// (§7.4). Nothing is ENQUEUED here, and that is the point: an enqueue at this level would sit
+		// outside the ingest's transaction and re-open the window where a crash loses the message after it
+		// is already visible in the operator's own chat history.
+		//
+		// THE PARALLEL TRIAGE (fase 2) starts here, AFTER the commit — the ingest queued the orchestrator's
+		// item HELD, so this hand-off carries no durability: if it never happens (a crash right here), the
+		// hold lapses and the orchestrator answers. Fire-and-forget: the pool never rejects, and this
+		// handler must not wait seconds for a model.
+		if (ingested.triage) {
+			const job = { threadId: thread.id.value, entryId: ingested.entryId, platformMessageId: messageId }
+			this.triageQueue.submit({ ...job, run: () => this.triage.execute(job) })
+		}
 	}
 }
 

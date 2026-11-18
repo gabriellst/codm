@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { ProviderKind, AgentModelId } from '@codm/contracts-typescript/wire/enums'
-import { PROVIDER_MODELS, auditProviderModels, modelsFor, offersModel } from './agent-models'
+import { PROVIDER_MODELS, PROVIDER_SMALL_MODEL, auditProviderModels, modelsFor, offersModel, smallModelFor } from './agent-models'
 
 /**
  * THE GATE for the one redeclaration this catalog cannot avoid.
@@ -99,5 +99,22 @@ describe('PROVIDER_MODELS — the declared provider → models relation', () => 
 			}
 			expect(auditProviderModels(repeated).duplicated).toEqual([ProviderKind.CLAUDE_CODE])
 		})
+	})
+})
+
+describe('PROVIDER_SMALL_MODEL — the small model each provider runs the triage on', () => {
+	it('is DEFAULT or a model the provider itself offers', () => {
+		expect(auditProviderModels(PROVIDER_MODELS).smallNotOffered).toEqual([])
+	})
+
+	it('names the fast tier where one is known', () => {
+		expect(smallModelFor(ProviderKind.CLAUDE_CODE)).toBe(AgentModelId.HAIKU)
+		expect(smallModelFor(ProviderKind.CODEX)).toBe(AgentModelId.LUNA)
+		expect(smallModelFor(ProviderKind.OPENCODE)).toBe(AgentModelId.DEFAULT)
+	})
+
+	it('NEGATIVE: a small model the provider does not serve is caught by the same audit', () => {
+		const wrong = { ...PROVIDER_SMALL_MODEL, [ProviderKind.CODEX]: AgentModelId.HAIKU }
+		expect(auditProviderModels(PROVIDER_MODELS, wrong).smallNotOffered).toEqual([ProviderKind.CODEX])
 	})
 })

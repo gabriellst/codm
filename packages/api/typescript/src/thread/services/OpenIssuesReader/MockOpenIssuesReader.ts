@@ -1,10 +1,10 @@
 import { injectable } from 'tsyringe-neo'
-import type { OpenIssueRef, SteerableIssueRef } from './OpenIssuesReader'
+import type { OpenIssueSummary, SteerableIssueRef } from './OpenIssuesReader'
 import { OpenIssuesReader } from './OpenIssuesReader'
 
 @injectable()
 export class MockOpenIssuesReader extends OpenIssuesReader {
-	async openIssues(_threadId: string): Promise<OpenIssueRef[]> {
+	async openIssues(_threadId: string): Promise<OpenIssueSummary[]> {
 		return []
 	}
 

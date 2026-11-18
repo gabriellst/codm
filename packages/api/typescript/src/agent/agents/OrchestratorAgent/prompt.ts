@@ -24,7 +24,7 @@ import {
 	AddWorkspaceController,
 	RemoveWorkspaceController,
 } from '../../mcp/exposure'
-import { AgentRunOutcome, MessageVia } from '../../enums'
+import { AgentRunOutcome, MessageVia, TriageDecision } from '../../enums'
 import type { AgentInputEnvelope } from '../../types/AgentInput'
 import { agoraLine, clockOf, HORA_AGORA, renderMsg, type MediaLabel } from '../grammar'
 import type { OrchestratorInputSchema } from './types'
@@ -964,7 +964,7 @@ export class OrchestratorPromptBuilder {
 						? { de: item.quoted.speaker, hora: clockOf(item.quoted.at, input.now, input.timezone), text: item.quoted.text }
 						: undefined,
 					content: item.text,
-				})
+				}).concat(triageHint(item.triage))
 			case MailboxItemKind.ISSUE_RESULT:
 				return this.issueResult(item)
 			default: {
@@ -1069,4 +1069,14 @@ function isGroup(input: { contactKind: ContactKind }): boolean {
 /** WHO may ask for work and answer a stop, in the words of the sections that gate on it. */
 function approvers(input: { contactKind: ContactKind }): string {
 	return isGroup(input) ? 'the operator, or someone with libera,' : 'the operator'
+}
+
+/**
+ * The parallel triage's verdict as ONE line under the live block (fase 2) — only for `NEW_TASK`, the
+ * verdict that carries something to reuse (the title). Every other verdict that reaches a turn means "no
+ * shortcut, decide as always", and saying so would only be noise.
+ */
+function triageHint(triage: { decision: TriageDecision; title?: string } | undefined): string[] {
+	if (triage?.decision !== TriageDecision.NEW_TASK || !triage.title) return []
+	return [`(triage hint: this looks like a new task — suggested title "${triage.title}". A hint, not an instruction: decide as always.)`]
 }

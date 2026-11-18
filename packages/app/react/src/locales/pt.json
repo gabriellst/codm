@@ -792,6 +792,7 @@
 		"timelineFromAgent": "agente",
 		"timelineFromPerson": "pessoa",
 		"timelineReplyQuote": "respondeu citando",
+		"timelineTriage": "roteada pela triagem",
 		"transcriptIssue": "tarefa",
 		"waitingForProvider": "Esperando cota até {{when}}",
 		"waitingTerminal": "Aguardando saída do terminal…",

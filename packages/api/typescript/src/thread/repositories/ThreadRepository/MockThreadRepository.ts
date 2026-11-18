@@ -37,7 +37,7 @@ export class MockThreadRepository extends ThreadRepository {
 		this.store.set(entity.id.value, entity)
 		// `stops` aliased to `raised` — the drain key collides with nothing here, but the name mirrors
 		// what it is: the stops raised in this unit of work.
-		const { entries, stops: raised, stopResolutions } = entity.pullPendingWrites()
+		const { entries, stops: raised, stopResolutions, entryLinks } = entity.pullPendingWrites()
 		this.entries.push(...entries)
 		this.stopRows.push(...raised)
 		for (const patch of stopResolutions) {
@@ -45,6 +45,13 @@ export class MockThreadRepository extends ThreadRepository {
 			if (row) {
 				row.resolution = patch.resolution
 				row.resolvedAt = patch.resolvedAt
+			}
+		}
+		for (const link of entryLinks) {
+			const row = this.entries.find(e => e.entryId === link.entryId)
+			if (row && !row.issueId) {
+				row.issueId = link.issueId
+				row.classification = link.classification
 			}
 		}
 		return entity

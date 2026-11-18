@@ -269,8 +269,10 @@ export abstract class Agent<InputSchema extends AgentInputSchemaConstraint, Outp
 	 * method's job, and `collectFailure()` is where each agent supplies its own code instead of this
 	 * base inventing one it has no vocabulary for.
 	 */
-	protected async collect(runner: AgentRunner, input: this['input']): Promise<this['output']> {
-		for await (const event of this.run(runner, input)) {
+	protected async collect(runner: AgentRunner, input: this['input'], transport: { signal?: AbortSignal } = {}): Promise<this['output']> {
+		// The cancellation signal travels the same way it does for `run()` — a caller that bounds a
+		// structured run (the triage's timeout) must be able to kill the CLI, not only stop waiting for it.
+		for await (const event of this.run(runner, input, transport)) {
 			if (event.type !== 'finished') continue
 			const { result } = event
 			if (result.stop) throw this.collectFailure(`agent run stopped: ${result.stop.kind} — ${result.stop.detail}`)

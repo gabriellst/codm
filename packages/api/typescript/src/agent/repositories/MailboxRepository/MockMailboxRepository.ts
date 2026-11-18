@@ -1,7 +1,13 @@
 import { injectable } from 'tsyringe-neo'
 import { DAEMON_BOOT, isClaimOrphaned } from '@codm/core-typescript'
 import { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
-import { MailboxRepository, type ClaimedMailboxItem, type DeferredMailboxItem, type EnqueueMailboxItem } from './MailboxRepository'
+import {
+	MailboxRepository,
+	type ClaimedMailboxItem,
+	type DeferredMailboxItem,
+	type EnqueueMailboxItem,
+	type HoldSettlement,
+} from './MailboxRepository'
 
 interface Row extends EnqueueMailboxItem {
 	id: string
@@ -32,9 +38,10 @@ export class MockMailboxRepository extends MailboxRepository {
 			...item,
 			id: crypto.randomUUID(),
 			attempts: 0,
-			claimedBy: null,
-			claimedBoot: null,
-			claimedPid: null,
+			claimedBy: item.hold?.holder ?? null,
+			claimedBoot: item.hold ? DAEMON_BOOT.id : null,
+			claimedPid: item.hold ? DAEMON_BOOT.pid : null,
+			leaseUntil: item.hold?.until.getTime(),
 			consumed: false,
 			dead: false,
 			seq: this.seq,
@@ -90,6 +97,22 @@ export class MockMailboxRepository extends MailboxRepository {
 			row.claimedPid = null
 		}
 		return orphaned.length
+	}
+
+	async settleHold(dedupKey: string, holder: string, settlement: HoldSettlement): Promise<boolean> {
+		const row = this.rows.find(r => r.dedupKey === dedupKey && r.claimedBy === holder && !r.consumed && !r.dead)
+		if (!row) return false
+		row.leaseUntil = undefined
+		row.claimedBy = null
+		row.claimedBoot = null
+		row.claimedPid = null
+		if (settlement.consume) row.consumed = true
+		else if (settlement.merge) row.payload = { ...(row.payload as Record<string, unknown>), ...settlement.merge }
+		return true
+	}
+
+	async isHeld(dedupKey: string, holder: string): Promise<boolean> {
+		return this.rows.some(r => r.dedupKey === dedupKey && r.claimedBy === holder && !r.consumed && !r.dead)
 	}
 
 	async complete(id: string): Promise<void> {
