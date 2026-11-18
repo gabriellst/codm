@@ -1,5 +1,5 @@
 import { injectable } from 'tsyringe-neo'
-import { Handler, z, BaseError, CommandQueue } from '@codm/core-typescript'
+import { Handler, z, BaseError, CommandQueue, tryCatchAsync } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
 import {
 	ClassificationMethod,
@@ -30,7 +30,7 @@ import type { Stop, Thread, TranscriptEntry } from '../entities/Thread'
 import type { ApplicationErrors } from '../errors'
 import { AnswerDisambiguationAskedEvent } from '../events/AnswerDisambiguationAskedEvent'
 import { THREAD_MESSAGES } from '../i18n/messages'
-import { ANSWERED_IN_GROUP_AS, mayAnswer, YES_NO_RESOLUTION } from '../utils/answerRules'
+import { answeredInGroupAs, mayAnswer, YES_NO_RESOLUTION } from '../utils/answerRules'
 import { askCode, optionForBare, parseAskAnswer, parseBareAnswer } from '../utils/askAnswer'
 import { AnswerStop } from './AnswerStop'
 import { ResolveStop } from './ResolveStop'
@@ -159,10 +159,7 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 		// apagada conversation would put words in a chat the console answers THREAD_NOT_FOUND for.
 		const thread = await this.threads.findById(input.threadId)
 		if (!thread || thread.deletedAt) throw new BaseError<ApplicationErrors>('THREAD_NOT_FOUND', `no thread ${input.threadId}`)
-		// The language of the one line this path may write itself (the "which one?" of a bare answer) — resolved
-		// before the transaction, since it may ask the cloud session; only when the conversation declares none.
-		const ownerLanguage = thread.language ? undefined : (await this.session.identity())?.user.language
-		const language = resolveThreadLanguage(thread.language, ownerLanguage)
+		const language = await this.disambiguationLanguage(thread)
 
 		return this.withTransaction(tx, async tx => {
 			// THE CITATION, RESOLVED FIRST (B4, decision D-B). This lookup already existed — it is how
@@ -411,12 +408,26 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 		})
 		if (!addressed) return undefined
 		const open = (await this.threads.openStops(thread.id.value, tx)).filter(stop => {
-			const way = ANSWERED_IN_GROUP_AS[stop.kind]
+			const way = answeredInGroupAs(stop)
 			return way !== undefined && BARE_ANSWERS_STOP[way](stop, bare) && mayAnswer(thread, stop, sender)
 		})
 		const [single] = open
 		if (open.length === 1 && single) return this.give(thread, input, undefined, single, input.text, tx)
 		return this.disambiguate(thread, input, open, ctx.language, tx)
+	}
+
+	/**
+	 * The language of the one line this path may write itself — the "which one?" of a bare answer. ASKED ONLY
+	 * WHEN IT CAN BE USED (the `RaiseStop` rule): the conversation declares none AND it has two or more open
+	 * stops; every other message pays nothing. Resolved BEFORE the transaction (the cloud session may do I/O),
+	 * and a session that cannot answer falls back to the default language — a lookup must never lose a message
+	 * whose inbound ledger row is already claimed.
+	 */
+	private async disambiguationLanguage(thread: Thread): Promise<ReturnType<typeof resolveThreadLanguage>> {
+		if (thread.language) return resolveThreadLanguage(thread.language, undefined)
+		if ((await this.threads.openStops(thread.id.value)).length < 2) return resolveThreadLanguage(undefined, undefined)
+		const identity = await tryCatchAsync(() => this.session.identity())
+		return resolveThreadLanguage(undefined, identity.success ? identity.data?.user.language : undefined)
 	}
 
 	/** The open stops of a target this person may answer. */
@@ -439,7 +450,7 @@ export class IngestChannelMessage extends Handler<typeof IngestChannelMessageInp
 		tx: Transaction,
 	): Promise<this['output'] | undefined> {
 		const sender = input.senderExternalId
-		const way = ANSWERED_IN_GROUP_AS[stop.kind]
+		const way = answeredInGroupAs(stop)
 		if (stop.resolvedAt || way === undefined || !mayAnswer(thread, stop, sender)) return undefined
 
 		const resolve = this.reading(thread, stop, way, sender, answerText)

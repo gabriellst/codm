@@ -24,6 +24,15 @@ export const ANSWERED_IN_GROUP_AS: Readonly<Record<StopKind, ReplyAnswerWay | un
 	[StopKind.STALLED]: undefined,
 }
 
+/**
+ * How a reply in the group answers THIS stop — only an ISSUE's stop is answered by the rules: a stop of the
+ * conversation itself (the orchestrator's, raised with no issue) keeps today's path — the message reaches the
+ * orchestrator, and nothing would resume a stop that has no issue to resume.
+ */
+export function answeredInGroupAs(stop: Stop): ReplyAnswerWay | undefined {
+	return stop.issueId === undefined ? undefined : ANSWERED_IN_GROUP_AS[stop.kind]
+}
+
 /** A bare yes / no on a permission stop — the resolution it gives (`ANSWERED_IN_GROUP_AS` = `YES_NO`). */
 export const YES_NO_RESOLUTION: Readonly<Record<BareAnswer, StopResolution>> = {
 	[BareAnswer.YES]: StopResolution.APPROVE,

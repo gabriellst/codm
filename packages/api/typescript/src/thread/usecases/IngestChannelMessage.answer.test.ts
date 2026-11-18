@@ -81,10 +81,10 @@ describe('IngestChannelMessage — answering an ask in the group', () => {
 
 	let threadId = ''
 	/** A group with one issue (`APP-12`, waiting on its ask). */
-	const scene = async () => {
+	const scene = async (status: IssueStatus = IssueStatus.NEEDS_INPUT) => {
 		const thread = await givenThread(testBed, { ownerId: MOCK_CLOUD_OWNER_ID, participants: roster })
 		threadId = thread.id.value
-		const issue = await givenIssue(testBed, { threadId, key: 'APP-12', status: IssueStatus.NEEDS_INPUT })
+		const issue = await givenIssue(testBed, { threadId, key: 'APP-12', status })
 		return { thread, issue }
 	}
 	const ask = (
@@ -210,8 +210,9 @@ describe('IngestChannelMessage — answering an ask in the group', () => {
 		expect((await stopOf(stop.stopId))?.resolvedAt).toBeUndefined()
 	})
 
-	it('a LATE reply (already answered) resolves nothing again — the first answer stands', async () => {
-		const { issue } = await scene()
+	it('a LATE reply (already answered) resolves nothing again — it becomes a steer of the issue at work', async () => {
+		// The issue went back to work once answered (the resume) — that is when a late reply lands.
+		const { issue } = await scene(IssueStatus.WORKING)
 		const stop = await ask(issue.id.value)
 		await say('1', { quoting: stop.askEntryId })
 
@@ -220,8 +221,20 @@ describe('IngestChannelMessage — answering an ask in the group', () => {
 		const answered = await stopOf(stop.stopId)
 		expect(answered?.answer).toEqual({ kind: AskAnswerKind.OPTION, optionId: 'yes' })
 		expect(answered?.answeredBy).toBe(MEMBER)
-		// The late message is still recorded, on the issue — it takes the usual path.
+		// The usual path of a quote of the issue's message: recorded on the issue, straight to its session.
 		expect((await testBed.resolve(ThreadRepository).findEntry(late.entryId))?.issueId).toBe(issue.id.value)
+		expect(await testBed.resolve(MailboxRepository).hasPending(MailboxTargetKind.ISSUE, issue.id.value)).toBe(true)
+		expect(await threadTurn()).toBe(false)
+	})
+
+	it("a stop of the CONVERSATION (no issue) is not answered by a rule — the orchestrator's path stays", async () => {
+		await scene()
+		const stop = await givenStop(testBed, { threadId, kind: StopKind.PERMISSION_DENIED })
+
+		await say(`${GIVEN_MENTION_TAG} sim`, { from: 'operator' })
+
+		expect((await stopOf(stop.stopId))?.resolvedAt).toBeUndefined()
+		expect(await threadTurn()).toBe(true)
 	})
 
 	it('first answer wins across doors — the console after the group gets STOP_ALREADY_RESOLVED', async () => {

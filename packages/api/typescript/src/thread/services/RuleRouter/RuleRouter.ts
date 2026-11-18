@@ -3,7 +3,7 @@ import { injectable } from 'tsyringe-neo'
 import { OpenIssuesReader, type SteerableIssueRef } from '../OpenIssuesReader'
 import { ThreadRepository } from '../../repositories/ThreadRepository'
 import type { Stop } from '../../entities/Thread'
-import { ANSWERED_IN_GROUP_AS } from '../../utils/answerRules'
+import { answeredInGroupAs } from '../../utils/answerRules'
 import { parseAskCode } from '../../utils/askAnswer'
 
 /** A short issue key a person types in a message (`APP-12`, `BDA-142`) — the format `ForkIssue` mints. */
@@ -66,7 +66,7 @@ export class RuleRouter {
 
 		if (input.quotedEntryId) {
 			const carried = (await this.threads.stopsCarriedBy(input.quotedEntryId, tx)).filter(
-				stop => stop.threadId === input.threadId && ANSWERED_IN_GROUP_AS[stop.kind] !== undefined,
+				stop => stop.threadId === input.threadId && answeredInGroupAs(stop) !== undefined,
 			)
 			const picked = code && carried.length > 1 ? carried.filter(stop => stop.seq === code.seq) : carried
 			if (picked.length > 0) return { via: 'REPLY_QUOTE', stops: picked, answerText }
@@ -76,7 +76,7 @@ export class RuleRouter {
 		const issueId = code.key ? (await this.issues.steerableIssueByKey(input.threadId, code.key, tx))?.issueId : input.quotedIssueId
 		if (!issueId) return undefined
 		const stop = await this.threads.findAsk(issueId, code.seq, tx)
-		if (!stop || stop.threadId !== input.threadId || ANSWERED_IN_GROUP_AS[stop.kind] === undefined) return undefined
+		if (!stop || stop.threadId !== input.threadId || answeredInGroupAs(stop) === undefined) return undefined
 		return { via: 'CODE', stops: [stop], answerText }
 	}
 
