@@ -12,6 +12,7 @@ Depende de: `2026-11-12-fase-0-tarefas-visiveis-design.md` (chave curta, `issueI
 |---|---|
 | Mensagens do agente, todos os grupos (SYSTEM + DIRECT) | 5.636 em 14 dias |
 | Mensagens do agente no grupo A | 3.701 (264/dia; dias entre 33 e 610; pico de 103 numa hora) |
+| Mensagens do agente nos demais grupos | B 971 (69/dia), C 821 (59/dia), D 112 (8/dia), E 17, F 14 |
 | Pedidos de "relatório" (todos os grupos) | 134–145 em 14 dias (~67–72/semana; 98 no grupo A). 134 são mensagens curtas (< 40 caracteres), ou seja, o comando; 145 é qualquer menção |
 | Turnos do orquestrador acordados por `ISSUE_RESULT` | 1.357 de 3.137 (43%) em todos os grupos; 889 de 2.014 (44%) no grupo A |
 | Turnos acordados por pessoas | 1.755 (`OPERATOR_MESSAGE` sem `via`) + 25 por loop agendado |
@@ -131,7 +132,7 @@ Ferramentas MCP novas no `agent` (controllers em `agent/controllers/`, `static m
 - `AskQuestion { question, options?, default: AskDefault, effects: AskEffect[], addressee? }` → stop `QUESTION_ASKED` com prazo. `default` é obrigatório pelo schema (pergunta sem padrão não existe). `effects` não vazio ⇒ `Thread.raiseStop` grava `DECISION_REQUESTED` sem prazo (escalada) e a ferramenta devolve à sessão "virou decisão: espere a resposta".
 - `RequestFeedback { text, mainArtifactId, artifactIds[] }` → `issue_signal` FEEDBACK. **Não** é stop (não trava; §6.1). O use case confere, antes de emitir, o que o `SendArtifact` confere hoje (`artifact/usecases/SendArtifact.ts:48`: artefato desta issue, enviável), para a recusa continuar síncrona para a sessão.
 - `ReportProgress { text }` → `issue_signal` PROGRESS (linha do tempo).
-- `AskOperator` e `RaiseStop` ficam como aliases compatíveis (sessões em curso os chamam): viram `DECISION` sem opções (resposta em texto) e com opções aprovar/recusar, respectivamente.
+- `AskOperator`, `RaiseStop` e `TransitionIssueStatus NEEDS_INPUT` ficam como aliases compatíveis (sessões em curso os chamam) e passam a levantar `DECISION_REQUESTED`: `AskOperator`/`NEEDS_INPUT` sem opções (a resposta é `TEXT`); `RaiseStop APPROVAL_NEEDED` com as opções sim/não e efeito `IRREVERSIBLE`; `RaiseStop HUMAN_REQUESTED` como `AskOperator`. `HUMAN_REQUESTED`/`APPROVAL_NEEDED` deixam de ser levantados por ferramenta e ficam no contrato para o histórico (não admitem `ANSWER`). `PERMISSION_DENIED` (do runner) continua com seu kind e `APPROVE`/`DENY`; as regras de resposta traduzem sim/não para `APPROVE`/`DENY` por tabela (`YES_NO_RESOLUTION`) nesse kind.
 - `TransitionIssueStatus COMPLETED` já tem `summary` (até 4000, `DeclareIssueComplete.ts:20`; não muda — apertar o limite quebraria sessões em curso) e ganha `finalArtifactId?`. A mensagem de fechamento corta o resumo na formatação.
 - Prompt da issue (`IssueWorkAgent`): quando usar cada ferramenta, que o texto livre do turno vai só para o painel, e que `effects` deve ser declarado sempre que a resposta autoriza publicar, uma ação irreversível ou mexer em dado de cliente.
 
@@ -163,12 +164,12 @@ Custo de reaproveitar (todas as tabelas totais sobre os enums precisam do valor 
 
 ### Item 3 — responder: citação, painel e "sim" ambíguo
 
-**Vínculo mensagem↔decisão.** A mensagem que a política manda para uma pergunta grava `stop_id` na entrada do transcript (coluna nova) e o stop guarda `askEntryId`. Num resumo agrupado (DIGEST), a entrada do resumo grava os vários stops (`thread_transcript_entry_stops`, ou a lista no payload — ver migrações).
+**Vínculo mensagem↔decisão.** A mensagem que a política manda para uma pergunta grava `stop_id` na entrada do transcript (coluna nova) e o stop guarda `askEntryId`. Num resumo agrupado (DIGEST), cada pergunta tem a própria entrada (só-registro) que aponta para a entrada do resumo por `digest_entry_id`; a regra de citação acha as perguntas do resumo por esse ponteiro. Nenhuma tabela nova.
 
 **Regras novas no `RuleRouter` (camada sem modelo), em ordem, antes das da fase 2 E antes das palavras de controle** (hoje `control()` roda antes do roteador, `IngestChannelMessage.ts:153-161`; "segue" citando uma pergunta é resposta, não RESUME). As regras de resposta valem sob `Thread.mayAct` sem a janela de frescor do `canInvoke`: a resposta está amarrada a uma pergunta aberta específica, então uma mensagem recebida durante uma queda do daemon e ingerida na volta ainda responde — é isso que dá sentido à carência do item 1b.
 1. **Citação de uma mensagem de pergunta** com stop aberto → resolve aquele stop. A resposta é lida por `parseAskAnswer` (`thread/utils/askAnswer.ts`, mesmo estilo de `controlCommand.ts`): número ou rótulo de opção, palavras de sim/não (tabela `BARE_ANSWERS`, caixa e acento ignorados) quando as opções são sim/não; qualquer outro texto ⇒ `TEXT`. Citação de um resumo com várias perguntas ⇒ precisa do código no texto (`D2 sim`); sem código ⇒ a pergunta de desambiguação abaixo.
 2. **Código no texto** (`APP-12 D1 sim`, `D1 sim` citando mensagem da issue) → resolve aquele stop.
-3. **Resposta solta** (mensagem inteira é uma palavra de `BARE_ANSWERS`, sem citação nem código), com perguntas abertas no grupo que ESTA pessoa pode responder. `BARE_ANSWERS` e `CONTROL_WORDS` são disjuntos (teste de tabela), então "pare"/"segue" soltos continuam sendo comando:
+3. **Resposta solta** (mensagem inteira é uma palavra de `BARE_ANSWERS`, sem citação nem código), com perguntas abertas no grupo que ESTA pessoa pode responder. Esta regra exige `canInvoke` INTEIRO (portão de menção e frescor): num grupo com portão, um "sim" não endereçado entre duas pessoas não pode aprovar uma publicação. Só as regras 1, 2 e 4 (citação/código, que apontam uma pergunta específica) dispensam a janela de frescor. `BARE_ANSWERS` e `CONTROL_WORDS` são disjuntos (teste de tabela), então "pare"/"segue" soltos continuam sendo comando:
    - nenhuma → caminho de sempre;
    - exatamente uma com opções sim/não → resolve;
    - mais de uma → **uma** mensagem: "sim para qual? APP-12 · D1 (…) ou APP-15 · D2 (…) — responda citando." Fato `thread.answer_disambiguation_asked` com a pessoa; uma segunda resposta solta da mesma pessoa em 10 min não gera outra pergunta e vai ao orquestrador.
@@ -200,12 +201,12 @@ Cânone `scheduler` SCH-01/02/03a: estado persistido + varredura repetida, nunca
 - **Formato por nível** (pt/en pela língua da conversa, `THREAD_MESSAGES.signalFormat`):
   - DECISION: "❓ APP-12 · D1 — <pergunta>\n1) … 2) …\n<quem decide>\n<link da issue>" (cita a mensagem de origem da issue quando há).
   - QUESTION: "APP-12 · D2 — <pergunta> Sigo com <padrão> se ninguém disser o contrário em 15 min."
-  - FEEDBACK: o artefato principal com legenda "APP-12 · prévia — <texto>. Galeria: <link>"; os demais artefatos só no painel.
+  - FEEDBACK: o artefato principal com legenda "APP-12 · prévia — <texto>. Galeria: <link>"; os demais artefatos só no painel — **depende do pré-requisito de galeria abaixo**.
   - CLOSING: "✅ APP-12 · <título> — <resumo>" + artefato final quando declarado + link, citando a mensagem de origem (a resposta a quem pediu).
   - BLOCK_NOTICE: "<causa>: N tarefas paradas (APP-12, APP-15). Quem libera: <nome>" — ver um por causa.
-  - Link da issue: `PanelPublisher.linkOf(threadId)` (já existe em `issue/services`, aresta `thread → issue` declarada) + `/t/<chave>`; sem login na nuvem, sem link.
+  - Link da issue: `PanelPublisher.linkOf(threadId)` (já existe em `issue/services`, aresta `thread → issue` declarada) + `#<chave>` (âncora nova na página do painel, ver pré-requisito); sem login na nuvem, sem link.
 - **Agrupar por pessoa (DIGEST).** Pergunta e feedback para a mesma pessoa (o `addresseeId` declarado, senão quem escreveu a mensagem de origem da issue) que chegam em `DIGEST_WINDOW_MS = 60 s` saem numa mensagem só. `DeliverIssueSignal` grava a entrada com `routing = DIGEST` e enfileira `flush_signal_digest` com `jobId = digest:<thread>:<pessoa>:<janela>` e `delay` = janela (o mesmo `jobId` deduplica). O flush lê as entradas pendentes da pessoa: uma só ⇒ sai no formato normal (com print); duas ou mais ⇒ "Ana, 3 coisas: APP-12 · D1 …; APP-15 prévia …; APP-15 · D2 … — <link>", sem anexos (os prints ficam no link). Decisões NÃO entram no resumo (precisam de citação própria). Uma pergunta só começa a contar o prazo quando o resumo que a leva é entregue.
-- **Um aviso por causa.** `BLOCK_NOTICE` carrega `BlockCause` (+ provedor quando a causa é do provedor). Enquanto uma causa está aberta no grupo (há stop aberto dessa causa), o primeiro aviso vai ao grupo e os seguintes só ao painel; a causa fecha quando o último stop dela é resolvido. Estado derivado dos stops abertos (`cause` gravada no stop), sem tabela nova. `PROVIDER_LIMIT` já é um por pausa e só passa a ser lido da tabela.
+- **Um aviso por causa.** `BLOCK_NOTICE` carrega `BlockCause` (+ provedor quando a causa é do provedor). Cada causa DECLARA se agrupa (`CAUSE_DEDUPES: Record<BlockCause, boolean>`): `PROVIDER_LIMIT`, `PROVIDER_ERROR`, `CLI_LOGIN` agrupam — enquanto há stop aberto dessa causa no grupo, o primeiro aviso vai ao grupo e os seguintes só ao painel; a causa fecha quando o último stop dela é resolvido. `STALLED` e `CLASSIFICATION` NÃO agrupam: a causa é a própria issue (uma segunda tarefa parada sem motivo precisa aparecer, senão ela morreria só no painel). Estado derivado dos stops abertos e de `CAUSE_OF_STOP[kind]`, sem coluna nem tabela nova. `PROVIDER_LIMIT` já é um por pausa e só passa a ser lido da tabela.
 
 ### Item 4 — `relatorio` vira consulta
 
@@ -229,6 +230,14 @@ Cânone `scheduler` SCH-01/02/03a: estado persistido + varredura repetida, nunca
 - Painel na nuvem: página da issue mostra perguntas abertas com botões por opção (variante `ANSWER_ASK`), feedback com galeria; mensagens só-painel aparecem na linha do tempo. Quadro sem mudança de colunas.
 - Console: seletor de modo; perguntas abertas no detalhe da issue; o chat da conversa mostra entradas só-painel esmaecidas com o selo "só no painel" (não foram ao WhatsApp).
 
+### Pré-requisito: galeria e link da issue no painel (não existem)
+
+O desenho manda prints intermediários e a galeria "para o painel". Conferido no código: o painel na nuvem **não tem artefatos** — o upload para bucket ficou como "etapa seguinte" no spec da fase 1 e não há código de upload em `panel/` nem em `issue/` — e **não tem link direto para uma issue** (`PanelPage` é uma página só, sem `/t/<chave>` nem âncora). Hoje um print que não vai ao grupo só é visto no console do operador.
+
+Consequências e o que o plano faz:
+- **Link da issue:** pequeno e sem custo — a página do painel passa a abrir a issue por âncora (`…/panel/g/<token>#APP-12`). Entra no slice do painel.
+- **Galeria:** exige bucket (R2), credencial e custo ⇒ pela regra do objetivo, **PERGUNTAR AO DONO** antes de construir. Enquanto não houver galeria, o FEEDBACK manda no grupo só o print principal (uma mensagem, como o critério de aceite pede), com a legenda dizendo quantos outros existem ("+2 no console"), e o link aponta para a issue no painel (linha do tempo com os nomes dos artefatos). Os demais prints, e os de PROGRESS, ficam visíveis só no console do operador até a galeria existir — perda real de visibilidade para o grupo, e por isso a pergunta ao dono.
+
 ## Migrações
 
 SQLite (uma, `0036`, `bun migrate:create` + `db:sync-go` + `db:check-go`):
@@ -237,7 +246,11 @@ SQLite (uma, `0036`, `bun migrate:create` + `db:sync-go` + `db:check-go`):
 - `issue_stops`: reconstrução (CHECK de `kind` com `DECISION_REQUESTED`/`QUESTION_ASKED`/`STALLED` e de `resolution` com `ANSWER`/`DEFAULT_APPLIED`; precedente nas migrações 0007 e 0029) + `ask` (json), `answer` (json), `answered_by`, `seq` (int), `due_at` (int, nullable, índice), `ask_entry_id`. Único `(issue_id, seq)`. A causa do aviso não é coluna: sai de `CAUSE_OF_STOP[kind]`.
 - Nenhuma tabela nova para decisões, sinais ou resumos.
 
-Nuvem (pg, `0007`): CHECKs que validam enums no snapshot (`life_state` já existe; nada novo se o `open_stops` continuar jsonb). Se o servidor valida `open_stops` pelo schema compartilhado, só o deploy (sem migração). Ordem: nuvem antes do daemon.
+Nuvem (pg, `0007`, `bun migrate:create` do perfil cloud + `bun migrate:deploy:cloud` manual): `panel_actions_kind_check` é derivado de `PanelActionKind` (`enumCheck`, `packages/contracts/src/db/pg/schema/panel.ts:171`) e precisa aceitar `ANSWER_ASK`. `open_stops` é jsonb (sem CHECK); o servidor valida pelo schema compartilhado, então os kinds novos exigem o servidor novo. Ordem: nuvem antes do daemon.
+
+Política de stops: `issue_stop_policy_config` tem uma coluna por critério e `POLICY_KEY` é total sobre `StopKind`. Os três kinds novos usam colunas existentes (`DECISION_REQUESTED`/`QUESTION_ASKED`/`STALLED` → `humanRequested`), sem coluna nova: desligar "pedidos de pessoa" continua desligando todos eles.
+
+Os CHECKs do SQLite são derivados dos enums gerados (`enumCheck`, conferido por `schema-drift.test.ts`): mudar `StopKind`/`StopResolution` sem a migração deixa o repo vermelho. Por isso o plano põe a migração no mesmo slice do contrato.
 
 ## Testes
 
@@ -253,7 +266,7 @@ Nuvem (pg, `0007`): CHECKs que validam enums no snapshot (`life_state` já exist
 - `ApplyDueQuestionDefaults.test.ts` (`now` injetado): vence aos 15 min da ENTREGA; não vence sem entrega; reenvio não empurra o prazo; segurada não aplica e aplica ao retomar; carência depois do boot/conexão; resposta e prazo no mesmo ciclo (um ganha); a sessão recebe o padrão mesmo com outro recado pendente.
 - `ResumeIssueOnStopResolved.test.ts`: `ANSWER` leva pergunta, código e resposta; enfileira mesmo com item pendente; kinds antigos inalterados.
 - `IngestChannelMessage.report.test.ts`: `relatorio` sem turno do orquestrador (nenhum item THREAD), seções certas, link quando logado; frase longa com "relatório" não é comando.
-- `RunIssueTurn.test.ts`: nenhum `ISSUE_RESULT`; conclusão vira CLOSING; texto vira PROGRESS; turno mudo → lembrete → parada → aviso no grupo (o teste do advisor: prosa nunca morre só no painel).
+- `RunIssueTurn.test.ts`: nenhum `ISSUE_RESULT`; texto vira PROGRESS; turno mudo → lembrete → parada `STALLED` → aviso no grupo (prosa nunca morre só no painel). O fechamento é testado em `CloseIssueOnChannel.test.ts` (`integration.issue.completed` → CLOSING), não aqui.
 - **Fluxo de aceite** (`tests/flows/fase3-typical-task.test.ts`, modo `integration` — outbox e mediators reais, para `stop_raised`/`issue.completed` chegarem aos handlers do `thread`; runner roteirizado; o job e a marcação de entrega chamados com `now` explícito, sem depender do relógio da fila): pedido → issue → `RequestFeedback` → `AskDecision` (publicar) → resposta citada → conclusão. Assertiva: o grupo recebe exatamente recibo, feedback, decisão e fechamento; nenhum PROGRESS sai; pergunta de nível 2 segue sozinha após 15 min (relógio); `relatorio` não cria item THREAD.
 - e2e (Playwright): seletor de modo no console e resposta a uma pergunta pelo detalhe da issue.
 
@@ -310,7 +323,7 @@ Revisão independente (agente sem o contexto do desenho) contra `docs/BACKEND.md
 - **M4** porta `connectedSince`, `now` como entrada, decisão SCH-04 escrita.
 - **L1–L5** uniões (`AskDefault`, `AskAnswer` × `StopAnswer`), gate de produtores por lista declarada, escalada com um dono só (`StopAsk`), `seq` por consulta + índice único, `IssueBoardReader` e o `why` da aresta.
 
-Ficaram como perguntas ao dono os quatro itens abaixo; nenhum crítico aberto.
+Ficaram como perguntas ao dono os itens abaixo. As correções NÃO foram re-revisadas por um agente independente; uma segunda passada sobre as seções alteradas é o primeiro passo do S0. Numa segunda leitura própria entraram ainda: a regra do "sim" solto exige `canInvoke` inteiro (portão de menção); `CAUSE_DEDUPES` declarado por causa (`STALLED`/`CLASSIFICATION` não agrupam); aliases das ferramentas antigas com kind definido; `POLICY_KEY` e o CHECK da nuvem na lista de migrações; e o pré-requisito de galeria abaixo.
 
 ## Perguntas ao dono (consolidado)
 
@@ -318,3 +331,4 @@ Ficaram como perguntas ao dono os quatro itens abaixo; nenhum crítico aberto.
 2. Trava dura: ação irreversível só com decisão aprovada?
 3. Quem pode responder decisões e perguntas sem efeito (proposta: qualquer participante que pode agir; com efeito, só quem pode liberar).
 4. Modo "legado" temporário no rollout?
+5. Galeria no painel: aprovar bucket (R2) e credencial para subir artefatos? Sem ela, prints de progresso e os extras do feedback ficam visíveis só no console do operador.
