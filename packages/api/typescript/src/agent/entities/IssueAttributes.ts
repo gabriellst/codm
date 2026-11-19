@@ -8,7 +8,11 @@ export const IssueAttributesSchema = z.object({
 	priority: z.enum(IssuePriority),
 	priorityReason: z.enum(PriorityReason),
 	workKind: z.enum(IssueWorkKind),
-	/** Absent ⇒ the task inherits the conversation's model (every task until slice S7). */
+	/**
+	 * The model the task runs on for its whole life (fase 4, S7) — `ForkIssue` resolves it from the kind of work
+	 * (`MODEL_BY_WORK_KIND`). Absent ⇒ the task inherits the conversation's model: every task born before S7, and the
+	 * births that declare none (`DeclareIssueOpen`, `CreateIssue`).
+	 */
 	model: z.enum(AgentModelId).optional(),
 	/**
 	 * The git worktree the task's session works in, as REGISTERED from the hook's declared `cwd` — only when git

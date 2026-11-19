@@ -15,7 +15,7 @@ export const IssueForkedEventSchema = z.domainEvent({
 	/**
 	 * Fase 4 (S0c) — what the task was born with, as `agent_issue_attributes` recorded it in the same transaction;
 	 * carried so `issue.created` gives the issue context its read copy. OPTIONAL only because facts written before
-	 * fase 4 sit in the outbox without them; `ForkIssue` always sets the first three (`model` stays absent until S7).
+	 * fase 4 sit in the outbox without them; `ForkIssue` always sets all four (the model since S7, `MODEL_BY_WORK_KIND`).
 	 */
 	priority: z.enum(IssuePriority).optional(),
 	priorityReason: z.enum(PriorityReason).optional(),

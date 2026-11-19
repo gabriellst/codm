@@ -15,6 +15,7 @@ import { IssueHold } from '@issue/services/IssueHold'
 import { AgentSessionRepository } from '../../repositories/AgentSessionRepository'
 import { MailboxRepository, type ClaimedMailboxBundle, type ClaimedMailboxItem } from '../../repositories/MailboxRepository'
 import { IssueAttributesRepository } from '../../repositories/IssueAttributesRepository'
+import { issueTurnModel } from '../../utils/ModelByWorkKind'
 import { ThroughputGate, type IssueLane } from '../ThroughputGate'
 import { RunOrchestratorTurn } from '../../usecases/RunOrchestratorTurn'
 import { RunIssueTurn } from '../../usecases/RunIssueTurn'
@@ -1185,6 +1186,8 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 
 		const provider = this.providerFor(item, thread)
 		if (!provider) return this.dropSilently(item, 'thread has no provider')
+		// What the task was born with (fase 4, S7): the model its kind of work runs on, fixed at the fork.
+		const attributes = await this.attributes.findByIssueId(item.targetId)
 
 		const result = await this.handlerFor(RunIssueTurn).execute({
 			ownerId: item.ownerId,
@@ -1193,11 +1196,13 @@ export class LibSqlMailboxDispatcher extends MailboxDispatcher implements Pollin
 			key: payload.key,
 			title: payload.title,
 			provider,
-			// THE ISSUE INHERITS THE CONVERSATION'S MODEL, and does not have one of its own. An issue is
-			// work the operator asked for IN a thread — the choice they made there is the one they meant,
-			// and giving the issue a second selector would be a second place to configure one thing, in a
-			// screen (the issue detail) where the CLI is not even named.
-			model: thread.modelFor(provider),
+			// THE TASK'S OWN MODEL (fase 4, S7 — this reverses "the issue inherits the conversation's model, resolved
+			// now"): `ForkIssue` fixes it from the kind of work (`MODEL_BY_WORK_KIND` — a diagnosis runs on a cheaper
+			// tier), so changing the conversation's model no longer moves a task already open and a resume never meets
+			// `MODEL_CHANGED`. Still no selector on the issue: the operator's choice is the conversation's, and it is what
+			// a task born before S7 (no model recorded) keeps inheriting, resolved now. The turn stamps this model on its
+			// usage facts — what lets cost per task be measured by kind of work.
+			model: issueTurnModel(provider, attributes?.model, thread.modelFor(provider)),
 			posture: item.posture,
 			workspacePath: workspace.path,
 			// The issue OWNS its goal since the pivot — the prompt is what the operator asked for, not

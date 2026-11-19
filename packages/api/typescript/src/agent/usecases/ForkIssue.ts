@@ -19,6 +19,7 @@ import { IssueAttributesRepository } from '../repositories/IssueAttributesReposi
 import { ISSUE_ATTRIBUTE_DEFAULTS, IssueAttributes } from '../entities/IssueAttributes'
 import { IssueSequence } from '../services/IssueSequence'
 import { IssueForkedEvent } from '../events/IssueForkedEvent'
+import { modelForWork } from '../utils/ModelByWorkKind'
 import type { AgentApplicationErrors, AgentInterfaceErrors } from '../errors'
 
 export const ForkIssueInputSchema = z.object({
@@ -135,11 +136,15 @@ export class ForkIssue extends Handler<typeof ForkIssueInputSchema, typeof ForkI
 		// goal truncated otherwise (the goal is the CLI's brief and routinely opens with who asked and when).
 		const title = input.title ?? input.goal.slice(0, 200)
 		// WHAT THE TASK IS BORN WITH (fase 4, items 4 and 6d) — the orchestrator's declaration, the defaults for what
-		// it left out. The model stays the conversation's until S7 resolves it from the kind of work.
+		// it left out, and the MODEL the kind of work runs on (`MODEL_BY_WORK_KIND`): fixed here, for the task's whole
+		// life — the conversation's model changing later no longer moves a task already open, and a resume never meets
+		// `MODEL_CHANGED`.
+		const workKind = input.workKind ?? ISSUE_ATTRIBUTE_DEFAULTS.workKind
 		const born = {
 			priority: input.priority ?? ISSUE_ATTRIBUTE_DEFAULTS.priority,
 			priorityReason: input.priorityReason ?? ISSUE_ATTRIBUTE_DEFAULTS.priorityReason,
-			workKind: input.workKind ?? ISSUE_ATTRIBUTE_DEFAULTS.workKind,
+			workKind,
+			model: modelForWork(provider, workKind, thread.modelFor(provider)),
 		}
 
 		const key = await this.withTransaction(tx, async tx => {

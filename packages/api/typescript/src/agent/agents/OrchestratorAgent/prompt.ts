@@ -2,6 +2,7 @@ import { injectable } from 'tsyringe-neo'
 import {
 	ContactKind,
 	IssuePriority,
+	IssueWorkKind,
 	Language,
 	MailboxItemKind,
 	MessageType,
@@ -409,6 +410,11 @@ export class OrchestratorPromptBuilder {
 				`wish or a nice-to-have. Set priority ${IssuePriority.HIGH} (with priorityReason ${PriorityReason.DECLARED}) when ` +
 				`someone says it is urgent or blocks them; ${IssuePriority.LOW} when they say it can wait. Otherwise leave both ` +
 				'out — most work is normal, and equal tasks run in the order they were asked.',
+			// Fase 4 (S7): the kind of work picks the model the task runs on (`MODEL_BY_WORK_KIND`) — a diagnosis runs cheaper.
+			`Set workKind ${IssueWorkKind.DIAGNOSIS} only when the task just looks and reports — find out why something happens, ` +
+				'read logs or data, explain how something works — and changes nothing: no edit, no commit, no deploy, no message ' +
+				`to anyone outside. It runs on a cheaper model. Anything that writes or publishes is ${IssueWorkKind.CHANGE} (the ` +
+				'default — leave it out); when in doubt, leave it out.',
 			'',
 			'  operator: crie uma issue específica para isso e vamos resolver',
 			'  you: abri a APP-42 (toggle de dark mode) — te aviso quando tiver resultado',

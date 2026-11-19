@@ -4,6 +4,7 @@ import { uuidv7 } from 'uuidv7'
 import { TestBed, givenThread, testId } from '@test/support'
 import { DomainEventRepository, LibSqlDatabaseDriver, type BaseError } from '@codm/core-typescript'
 import {
+	AgentModelId,
 	IssuePriority,
 	IssueWorkKind,
 	MailboxClaimClass,
@@ -220,15 +221,37 @@ describe('ForkIssue — the task is born with its attributes, in the fork transa
 				workKind: IssueWorkKind.DIAGNOSIS,
 			}),
 		)
-		expect(row?.model).toBeUndefined()
+		// A DIAGNOSIS runs on the table's cheaper tier (S7) — fixed in the row and carried to `issue.created`.
+		expect(row?.model).toBe(AgentModelId.SONNET)
 		const [fact] = await testBed.resolve(DomainEventRepository).findByType(IssueForkedEvent)
 		expect(fact?.payload).toEqual(
 			expect.objectContaining({
 				priority: IssuePriority.HIGH,
 				priorityReason: PriorityReason.CLIENT_BUG,
 				workKind: IssueWorkKind.DIAGNOSIS,
+				model: AgentModelId.SONNET,
 			}),
 		)
+	})
+
+	/**
+	 * FASE 4, S7 — the model is DATA (`MODEL_BY_WORK_KIND`), resolved at the fork: a DIAGNOSIS takes the table's tier
+	 * whatever the conversation is set to; a CHANGE takes the conversation's model AS IT IS NOW, and keeps it.
+	 *
+	 * Falsifier: resolve the model in the dispatcher instead of the fork and the row stays empty; read the
+	 * conversation's model for every kind and the diagnosis row says OPUS.
+	 */
+	it("the model comes from the table by kind of work — a diagnosis runs cheaper, a change keeps the conversation's", async () => {
+		const thread = await givenThread(testBed, { ownerId })
+		thread.configureModel(ProviderKind.CLAUDE_CODE, AgentModelId.OPUS)
+		await testBed.resolve(ThreadRepository).save(thread)
+
+		const diagnosis = await fork(thread.id.value, { workKind: IssueWorkKind.DIAGNOSIS })
+		const change = await fork(thread.id.value)
+
+		const attributes = testBed.resolve(IssueAttributesRepository)
+		expect((await attributes.findByIssueId(diagnosis.issueId))?.model).toBe(AgentModelId.SONNET)
+		expect((await attributes.findByIssueId(change.issueId))?.model).toBe(AgentModelId.OPUS)
 	})
 
 	it('what the orchestrator leaves out is born NORMAL / DEFAULT / CHANGE — in the row and on the fact', async () => {

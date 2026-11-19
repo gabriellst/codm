@@ -1305,7 +1305,8 @@ describe('LibSqlMailboxDispatcher — the drain loop wakes for work that arrives
 		await dispatcher.drain()
 
 		expect(seen.thread).toBe(AgentModelId.OPUS)
-		// A ISSUE HERDA a escolha da conversa que a abriu — ela não tem eixo próprio, de propósito.
+		// Uma issue SEM atributos (nascida antes da fase 4, S7) herda a escolha da conversa, resolvida agora. As que
+		// nascem pelo ForkIssue têm o modelo fixado pelo tipo de trabalho — `LibSqlMailboxDispatcher.model.test.ts`.
 		expect(seen.issue).toBe(AgentModelId.OPUS)
 	})
 
