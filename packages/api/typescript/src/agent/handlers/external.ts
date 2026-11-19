@@ -8,3 +8,6 @@
 // existing `PublishAgentIntegrationEvents` bridge republishes as `integration.issue.opened` /
 // `issue.completed` / `issue.stop_raised`. The classification/routing seam
 // stays clean — the engine is triggered by event only, never wired into a use case.
+// The task closed (fase 4, item 1): the completion and the archive stamp the attributes' `closed_at`, the start
+// of the grace period after which the worktree janitor (S3) may remove the task's registered worktree.
+export { MarkIssueAttributesClosed } from './MarkIssueAttributesClosed'

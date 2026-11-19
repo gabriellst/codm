@@ -1,7 +1,14 @@
 import { injectable } from 'tsyringe-neo'
 import { Handler, z } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { IssueStatus, ProviderKind } from '@codm/contracts-typescript/wire/enums'
+import {
+	AgentModelId,
+	IssuePriority,
+	IssueStatus,
+	IssueWorkKind,
+	PriorityReason,
+	ProviderKind,
+} from '@codm/contracts-typescript/wire/enums'
 import { Issue } from '../entities/Issue'
 import { IssueRepository } from '../repositories/IssueRepository'
 
@@ -23,6 +30,14 @@ export const OpenIssueInputSchema = z.object({
 	 */
 	originEntryId: z.uuid().optional(),
 	goal: z.string().trim().min(1).optional(),
+	/**
+	 * Fase 4 — the read copy of what the task was born with, carried by `issue.created` only (absent on
+	 * `issue.opened` and on facts from before fase 4). Write-once per field (`Issue.recordBirthAttributes`).
+	 */
+	priority: z.enum(IssuePriority).optional(),
+	priorityReason: z.enum(PriorityReason).optional(),
+	workKind: z.enum(IssueWorkKind).optional(),
+	model: z.enum(AgentModelId).optional(),
 })
 
 export const OpenIssueOutputSchema = z.object({ issueId: z.uuid(), key: z.string() })
@@ -44,8 +59,17 @@ export class OpenIssue extends Handler<typeof OpenIssueInputSchema, typeof OpenI
 	}
 
 	protected async handle(input: this['input'], tx?: Transaction): Promise<this['output']> {
+		const birth = { priority: input.priority, priorityReason: input.priorityReason, workKind: input.workKind, model: input.model }
 		const existing = await this.issues.findById(input.issueId)
-		if (existing) return { issueId: existing.id.value, key: existing.key }
+		if (existing) {
+			// The two births reconcile on one row in either order (§6.2): when `issue.opened` got here first, the row
+			// has no birth attributes yet and `issue.created` fills them — and only them (write-once per field).
+			if (Object.values(birth).some(value => value !== undefined)) {
+				existing.recordBirthAttributes(birth)
+				await this.withTransaction(tx, tx => this.issues.save(existing, tx))
+			}
+			return { issueId: existing.id.value, key: existing.key }
+		}
 
 		return this.withTransaction(tx, async tx => {
 			const issue = new Issue({
@@ -59,6 +83,7 @@ export class OpenIssue extends Handler<typeof OpenIssueInputSchema, typeof OpenI
 				paused: false,
 				originEntryId: input.originEntryId,
 				goal: input.goal,
+				...birth,
 				id: input.issueId,
 			})
 			await this.issues.save(issue, tx)

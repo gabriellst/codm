@@ -11,6 +11,7 @@ import {
 	type HttpControllerRequest,
 } from '@codm/core-typescript'
 import {
+	MailboxClaimClass,
 	MailboxItemKind,
 	MailboxTargetKind,
 	McpScope,
@@ -130,6 +131,7 @@ describe('Flow (integration): an APPROVE from someone who may elevate resumes in
 			targetKind: MailboxTargetKind.ISSUE,
 			targetId: issue.id.value,
 			kind: MailboxItemKind.STEER,
+			claimClass: MailboxClaimClass.STEER,
 			payload: { issueId: issue.id.value, threadId: thread.id.value, key: 'moeda', title: 'moeda', text: 'pode gravar' },
 			posture: PermissionPosture.BYPASS,
 			dedupKey: `steer:${uuidv7()}`,

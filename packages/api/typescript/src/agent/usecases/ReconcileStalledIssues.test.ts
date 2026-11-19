@@ -6,11 +6,12 @@ import { TestBed, givenIssue, givenThread, givenDomainEvent } from '@test/suppor
 import {
 	IssueSignalLevel,
 	IssueStatus,
+	MailboxClaimClass,
 	MailboxItemKind,
 	MailboxTargetKind,
 	OutputRouting,
-	StopKind,
 	PermissionPosture,
+	StopKind,
 	TranscriptKind,
 } from '@codm/contracts-typescript/wire/enums'
 import { ThreadStopRaisedEvent } from '@codm/contracts-typescript/wire/events'
@@ -49,6 +50,7 @@ describe('ReconcileStalledIssues', () => {
 			targetKind: MailboxTargetKind.ISSUE,
 			targetId: issueId,
 			kind: MailboxItemKind.STEER,
+			claimClass: MailboxClaimClass.STEER,
 			posture: PermissionPosture.AUTO,
 			payload: { issueId, threadId, key: 'k', title: 't', text: 'segue' },
 			dedupKey: uuidv7(),

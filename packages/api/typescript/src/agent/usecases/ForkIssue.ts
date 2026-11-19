@@ -5,6 +5,7 @@ import type { Transaction } from '@codm/core-typescript'
 import {
 	IssuePriority,
 	IssueWorkKind,
+	MailboxClaimClass,
 	MailboxItemKind,
 	MailboxTargetKind,
 	PermissionPosture,
@@ -14,6 +15,8 @@ import { ThreadRepository } from '@thread/repositories/ThreadRepository'
 import { WorkspaceRepository } from '@workspace/repositories/WorkspaceRepository'
 import { issuePrefixOf } from '@workspace/objects'
 import { MailboxRepository } from '../repositories/MailboxRepository'
+import { IssueAttributesRepository } from '../repositories/IssueAttributesRepository'
+import { ISSUE_ATTRIBUTE_DEFAULTS, IssueAttributes } from '../entities/IssueAttributes'
 import { IssueSequence } from '../services/IssueSequence'
 import { IssueForkedEvent } from '../events/IssueForkedEvent'
 import type { AgentApplicationErrors, AgentInterfaceErrors } from '../errors'
@@ -31,8 +34,8 @@ export const ForkIssueInputSchema = z.object({
 	/**
 	 * Fase 4 (items 4 and 6d) — what the orchestrator declares about the task at birth: its priority, why it
 	 * has it (`CLIENT_BUG` — a bug a client is hitting — is claimed first) and what kind of work it is
-	 * (`DIAGNOSIS` runs on a cheaper model). Absent ⇒ `NORMAL` / `DEFAULT` / `CHANGE`. Declared in the contract
-	 * in S0b; recorded from slice S0c on.
+	 * (`DIAGNOSIS` runs on a cheaper model). Absent ⇒ `NORMAL` / `DEFAULT` / `CHANGE` (`ISSUE_ATTRIBUTE_DEFAULTS`).
+	 * Recorded in `agent_issue_attributes` in the fork's own transaction and carried on `issue.created`.
 	 */
 	priority: z.enum(IssuePriority).optional(),
 	priorityReason: z.enum(PriorityReason).optional(),
@@ -108,6 +111,7 @@ export class ForkIssue extends Handler<typeof ForkIssueInputSchema, typeof ForkI
 		private readonly workspaces: WorkspaceRepository,
 		private readonly sequences: IssueSequence,
 		private readonly mailbox: MailboxRepository,
+		private readonly attributes: IssueAttributesRepository,
 	) {
 		super()
 	}
@@ -130,18 +134,29 @@ export class ForkIssue extends Handler<typeof ForkIssueInputSchema, typeof ForkI
 		// THE TITLE is what a person reads on a card: the orchestrator's short `title` when it gave one, the
 		// goal truncated otherwise (the goal is the CLI's brief and routinely opens with who asked and when).
 		const title = input.title ?? input.goal.slice(0, 200)
+		// WHAT THE TASK IS BORN WITH (fase 4, items 4 and 6d) — the orchestrator's declaration, the defaults for what
+		// it left out. The model stays the conversation's until S7 resolves it from the kind of work.
+		const born = {
+			priority: input.priority ?? ISSUE_ATTRIBUTE_DEFAULTS.priority,
+			priorityReason: input.priorityReason ?? ISSUE_ATTRIBUTE_DEFAULTS.priorityReason,
+			workKind: input.workKind ?? ISSUE_ATTRIBUTE_DEFAULTS.workKind,
+		}
 
 		const key = await this.withTransaction(tx, async tx => {
 			// THE SHORT KEY (fase 0, item 4): `<PREFIX>-<n>`, numbered per workspace and drawn in this same
 			// transaction, so a rolled-back fork returns its number. It replaced a slug of the goal's first
 			// 40 characters ("pedido-no-grupo-08-11-14-15-sobre-o-banne") that nobody could say back in a chat.
 			const key = `${issuePrefixOf(workspace.path)}-${await this.sequences.next(workspace.id.value, tx)}`
+			// The attributes row commits WITH the work item and the fact: the queue claims by it and the batch receipt
+			// confirms "this issue is of this conversation" by it in the very turn that forked it (`ForkedIssueReader`).
+			await this.attributes.insertIfNew(IssueAttributes.born({ issueId, ownerId: input.ownerId, threadId: input.threadId, ...born }), tx)
 			await this.mailbox.enqueue(
 				{
 					ownerId: input.ownerId,
 					targetKind: MailboxTargetKind.ISSUE,
 					targetId: issueId,
 					kind: MailboxItemKind.WORK,
+					claimClass: MailboxClaimClass.WORK,
 					posture: input.posture,
 					// `originEntryId` rides along so the finished turn can put it on the ISSUE_RESULT without
 					// reading the issue row — the agent context has no runtime read of `issue` (the declared
@@ -173,6 +188,7 @@ export class ForkIssue extends Handler<typeof ForkIssueInputSchema, typeof ForkI
 						goal: input.goal,
 						originEntryId: input.originEntryId,
 						provider,
+						...born,
 					},
 				}),
 				tx,

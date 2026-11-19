@@ -4,18 +4,21 @@ import { RegretWindowOutcome } from '@codm/contracts-typescript/wire/enums'
 import type { AgentRunIdentity } from '../types/AgentRunIdentity'
 import type { AgentInterfaceErrors } from '../errors'
 import { OpenRegretWindow } from '../usecases/OpenRegretWindow'
+import { WorktreeSightings } from '../services/WorktreeSightings'
 import { REGRET_WINDOW_REASON_PREFIX } from '../utils/irreversibleActions'
 
 import { PRE_TOOL_HOOK_PATH } from '../mcp/route'
 
 /**
- * What the provider CLI posts before a shell tool call (its `PreToolUse` hook input). Only
- * `tool_input.command` is read; every other key (`session_id`, `cwd`, `tool_name`, the tool's own
- * `description`/`timeout`…) is tolerated and ignored. LOOSE on purpose, and the reason is the failure
- * mode: a body this schema rejected answers 400, and the CLI treats a non-2xx as "the hook failed — run
- * the tool anyway". A strict schema would silently turn the window off at the CLI's next added field.
+ * What the provider CLI posts before a shell tool call (its `PreToolUse` hook input). Read: `tool_input.command`
+ * and, since fase 4 (item 1), the declared `cwd` — where the command runs, which registers the task's worktree.
+ * Every other key (`session_id`, `tool_name`, the tool's own `description`/`timeout`…) is tolerated and ignored.
+ * LOOSE on purpose, and the reason is the failure mode: a body this schema rejected answers 400, and the CLI treats
+ * a non-2xx as "the hook failed — run the tool anyway". A strict schema would silently turn the window off at the
+ * CLI's next added field — which is also why `cwd` is OPTIONAL: a CLI that stops sending it loses the registration,
+ * never the window.
  */
-const HookInputSchema = z.looseObject({ tool_input: z.looseObject({ command: z.string() }) })
+const HookInputSchema = z.looseObject({ tool_input: z.looseObject({ command: z.string() }), cwd: z.string().min(1).optional() })
 
 export const PreToolHookControllerInputSchema = z.object({ body: HookInputSchema })
 export const PreToolHookControllerOutputSchema = z.any()
@@ -66,6 +69,7 @@ export class PreToolHookController extends Controller<typeof PreToolHookControll
 	constructor(
 		private readonly identities: AgentIdentityService<AgentRunIdentity>,
 		private readonly window: OpenRegretWindow,
+		private readonly sightings: WorktreeSightings,
 	) {
 		super()
 	}
@@ -80,6 +84,10 @@ export class PreToolHookController extends Controller<typeof PreToolHookControll
 		if (!identity) throw new BaseError<AgentInterfaceErrors>('AGENT_RUN_TOKEN_INVALID', 'missing, unknown, expired or revoked run token')
 
 		if (!identity.issueId) return this.rawResponse(goAhead())
+
+		// THE TASK'S WORKTREE (fase 4, item 1) — scheduled, never awaited: the registration runs on a later tick, off
+		// this response, and git can neither delay nor decide what the CLI is told (revisão 2).
+		if (request.body.cwd) this.sightings.schedule({ issueId: identity.issueId, threadId: identity.threadId, cwd: request.body.cwd })
 
 		const closed = await this.window.execute({
 			ownerId: identity.ownerId,

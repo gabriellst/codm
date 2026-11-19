@@ -1,5 +1,5 @@
 import type { Transaction } from '@codm/core-typescript'
-import type { MailboxItemKind, MailboxTargetKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
+import type { MailboxClaimClass, MailboxItemKind, MailboxTargetKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 
 /** What a producer states happened. The dispatcher decides what runs. */
 export interface EnqueueMailboxItem {
@@ -15,6 +15,14 @@ export interface EnqueueMailboxItem {
 	 * work queued from inside a turn, AUTO for a loop tick or an `ISSUE_RESULT`.
 	 */
 	posture: PermissionPosture
+	/**
+	 * WHAT THIS ITEM IS (fase 4, S0c) — REQUIRED, declared by the producer, the only one who knows: the kind cannot
+	 * tell a decision's answer (`DECISION_ANSWER`), an "agora" (`INTERRUPT`) or the declaration reminder (`REMINDER`)
+	 * from an ordinary steer. The claim order (S4) and steer coalescing (S5) read this column — never a payload key
+	 * nor a dedup-key prefix (`resume:`), which would be convention, not contract (Non-Negotiable 5). Gated by
+	 * `tests/architecture/mailbox-claim-class.test.ts`.
+	 */
+	claimClass: MailboxClaimClass
 	/**
 	 * Idempotency key of the FACT behind the item — an entry id, an issue's run, a steer's own id.
 	 *
@@ -58,6 +66,8 @@ export interface ClaimedMailboxItem {
 	 * is what an item enqueued before the column existed reads as.
 	 */
 	posture: PermissionPosture
+	/** What the item is, as its producer declared it (fase 4, S0c) — `WORK` for an item enqueued before the column. */
+	claimClass: MailboxClaimClass
 	attempts: number
 	/**
 	 * THIS claim is the item's first hand-off — the one that stamped `first_claimed_at` ("entregue").

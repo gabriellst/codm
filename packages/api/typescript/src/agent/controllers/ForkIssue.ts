@@ -123,6 +123,10 @@ export class ForkIssueController extends Controller<typeof ForkIssueControllerIn
 			threadId,
 			goal: request.body.goal,
 			title: request.body.title,
+			// What the orchestrator declares about the task (fase 4) — recorded by the use case since S0c.
+			priority: request.body.priority,
+			priorityReason: request.body.priorityReason,
+			workKind: request.body.workKind,
 			originEntryId: identity.entryId,
 			// From the run token, never from `body` — the body is `{ goal, title? }` and nothing else (Decision 6).
 			posture: identity.posture,

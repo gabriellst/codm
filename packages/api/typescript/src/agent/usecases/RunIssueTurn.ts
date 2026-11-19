@@ -5,9 +5,10 @@ import type { Transaction } from '@codm/core-typescript'
 import {
 	AgentModelId,
 	IssueSignalLevel,
+	MailboxClaimClass,
 	MailboxItemKind,
-	PermissionPosture,
 	MailboxTargetKind,
+	PermissionPosture,
 	ProviderKind,
 	ProviderStatus,
 } from '@codm/contracts-typescript/wire/enums'
@@ -714,6 +715,7 @@ export class RunIssueTurn extends Handler<typeof RunIssueTurnInputSchema, typeof
 				targetKind: MailboxTargetKind.THREAD,
 				targetId: input.threadId,
 				kind: MailboxItemKind.ISSUE_RESULT,
+				claimClass: MailboxClaimClass.RESULT,
 				// AUTO, always (Decision 4): the orchestrator turn this schedules REPORTS a result — nobody
 				// triggered it, so nobody's grant applies, whatever posture the issue turn itself ran under.
 				posture: PermissionPosture.AUTO,

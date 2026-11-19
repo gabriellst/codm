@@ -4,16 +4,17 @@ import { uuidv7 } from 'uuidv7'
 import type { ZodType } from 'zod'
 import { DomainEventRepository } from '@codm/core-typescript'
 import {
+	GroupOutputMode,
+	IssueSignalLevel,
+	IssueStatus,
+	MailboxClaimClass,
 	MailboxItemKind,
 	MailboxTargetKind,
 	PermissionPosture,
-	IssueStatus,
 	ProviderKind,
 	StopKind,
 	StopResolution,
 	TranscriptKind,
-	GroupOutputMode,
-	IssueSignalLevel,
 } from '@codm/contracts-typescript/wire/enums'
 import { TestBed, givenIssue, givenThread, givenWorkspace } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
@@ -151,6 +152,7 @@ describe('Flow (integration): a permission denial stops the work at once', () =>
 			targetKind: MailboxTargetKind.ISSUE,
 			targetId: issueId,
 			kind: MailboxItemKind.WORK,
+			claimClass: MailboxClaimClass.WORK,
 			payload: {
 				issueId,
 				threadId: thread.id.value,
@@ -235,6 +237,7 @@ describe('Flow (integration): a permission denial stops the work at once', () =>
 			targetKind: MailboxTargetKind.ISSUE,
 			targetId: issueId,
 			kind: MailboxItemKind.WORK,
+			claimClass: MailboxClaimClass.WORK,
 			payload: { issueId, threadId, key: 'moeda', title: 'Troca a moeda', goal: 'troca a moeda', provider: ProviderKind.CLAUDE_CODE },
 			posture: PermissionPosture.AUTO,
 			dedupKey: `work:${issueId}`,

@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { CommandQueue, LoggingService, tryCatchAsync } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
+import { MailboxClaimClass, MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
 import { MailboxRepository } from '@agent/repositories/MailboxRepository'
 import type { Thread } from '../../entities/Thread'
 import { OPERATOR_PARTICIPANT_ID } from '../../entities/Thread'
@@ -17,6 +17,15 @@ import type { RoutedSteerOrigin } from '../SteerCue'
 const CUTS_RUNNING_TURN: Readonly<Record<SteerUrgency, boolean>> = {
 	[SteerUrgency.NEXT_STEP]: false,
 	[SteerUrgency.NOW]: true,
+}
+
+/**
+ * What a routed steer IS in the queue, by its urgency (fase 4, S0c) — the "agora" is an `INTERRUPT` (it leads the
+ * next turn and never rides with other steers), anything else an ordinary `STEER`. Total over `SteerUrgency`.
+ */
+const CLAIM_CLASS_OF_URGENCY: Readonly<Record<SteerUrgency, MailboxClaimClass>> = {
+	[SteerUrgency.NEXT_STEP]: MailboxClaimClass.STEER,
+	[SteerUrgency.NOW]: MailboxClaimClass.INTERRUPT,
 }
 
 /** The channel message a routed steer, or a cue, hangs off — what a reaction is addressed by. */
@@ -77,6 +86,7 @@ export class RoutedSteer {
 				targetKind: MailboxTargetKind.ISSUE,
 				targetId: issue.issueId,
 				kind: MailboxItemKind.STEER,
+				claimClass: CLAIM_CLASS_OF_URGENCY[steer.urgency],
 				posture: thread.postureOf(message.senderExternalId),
 				payload: {
 					issueId: issue.issueId,

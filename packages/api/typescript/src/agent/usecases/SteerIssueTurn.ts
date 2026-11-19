@@ -1,7 +1,7 @@
 import { injectable } from 'tsyringe-neo'
 import { Handler, z, BaseError } from '@codm/core-typescript'
 import type { Transaction } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
+import { MailboxClaimClass, MailboxItemKind, MailboxTargetKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { OpenIssuesReader } from '@thread/services/OpenIssuesReader'
 import { ReopenIssue } from '@issue/usecases/ReopenIssue'
 import { MailboxRepository } from '../repositories/MailboxRepository'
@@ -69,6 +69,7 @@ export class SteerIssueTurn extends Handler<typeof SteerIssueTurnInputSchema, ty
 					targetKind: MailboxTargetKind.ISSUE,
 					targetId: input.issueId,
 					kind: MailboxItemKind.STEER,
+					claimClass: MailboxClaimClass.STEER,
 					posture: input.posture,
 					payload: { issueId: input.issueId, threadId: input.threadId, key: target.key, title: target.title, text: input.text },
 					// Dois steers de dois turnos são dois itens; o mesmo turno repetido é um só.

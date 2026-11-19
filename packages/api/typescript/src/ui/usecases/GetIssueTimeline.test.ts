@@ -5,12 +5,13 @@ import { LibSqlDatabaseDriver } from '@codm/core-typescript'
 import { batchItems, batches, events } from '@codm/contracts/db'
 import {
 	AskAnswerKind,
+	BatchStatus,
 	IssueSignalLevel,
 	IssueTimelineItemKind,
-	OutputRouting,
+	MailboxClaimClass,
 	MailboxItemKind,
 	MailboxTargetKind,
-	BatchStatus,
+	OutputRouting,
 	PermissionPosture,
 	PublishRunOutcome,
 	StopKind,
@@ -60,6 +61,7 @@ describe('GetIssueTimeline', () => {
 			targetKind: MailboxTargetKind.ISSUE,
 			targetId: issue.id.value,
 			kind: MailboxItemKind.STEER,
+			claimClass: MailboxClaimClass.STEER,
 			posture: PermissionPosture.AUTO,
 			payload: { threadId: thread.id.value, key: issue.key, title: issue.title, text: 'tira o rodapé' },
 			dedupKey: 'timeline-steer',

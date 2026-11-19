@@ -2,7 +2,13 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test'
 import { container, type DependencyContainer } from 'tsyringe-neo'
 import { uuidv7 } from 'uuidv7'
 import { CommandQueue, type Handler, MockCommandQueue, type Transaction } from '@codm/core-typescript'
-import { MailboxItemKind, MailboxTargetKind, PermissionPosture, ProviderKind } from '@codm/contracts-typescript/wire/enums'
+import {
+	MailboxClaimClass,
+	MailboxItemKind,
+	MailboxTargetKind,
+	PermissionPosture,
+	ProviderKind,
+} from '@codm/contracts-typescript/wire/enums'
 import { TestBed, givenIssue, givenThread, givenWorkspace } from '@test/support'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { CUE_DELIVERED, CUE_READ } from '@thread/utils/ChannelCues'
@@ -95,6 +101,7 @@ describe('a routed steer answers delivered and read on the message it came from'
 			targetKind: MailboxTargetKind.ISSUE,
 			targetId: issueId,
 			kind: MailboxItemKind.STEER,
+			claimClass: MailboxClaimClass.STEER,
 			posture: PermissionPosture.AUTO,
 			payload: { issueId, threadId, key: 'APP-12', title: 'Prévia', text: 'Operador: usa o azul', channelOrigin },
 			dedupKey: `steer:${uuidv7()}`,

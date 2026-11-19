@@ -1,9 +1,8 @@
 import { injectable } from 'tsyringe-neo'
 import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, ne, notExists, or, sql } from 'drizzle-orm'
-import { DAEMON_BOOT, isClaimOrphaned, LibSqlDatabaseDriver, LibSqlTransaction } from '@codm/core-typescript'
+import { DAEMON_BOOT, isClaimOrphaned, LibSqlDatabaseDriver, LibSqlTransaction, z } from '@codm/core-typescript'
 import { agentMailbox } from '@codm/contracts/db'
-import { MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
-import { CLAIM_CLASS_OF_KIND } from '../../utils/ClaimClassOfKind'
+import { MailboxClaimClass, MailboxItemKind, MailboxTargetKind } from '@codm/contracts-typescript/wire/enums'
 import {
 	MailboxRepository,
 	type ClaimedMailboxItem,
@@ -65,8 +64,8 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 					kind: item.kind,
 					payload: item.payload,
 					posture: item.posture,
-					// The item's class from its kind (fase 4, S0a) — S0c makes it a producer-declared field.
-					claimClass: CLAIM_CLASS_OF_KIND[item.kind],
+					// What the item is, as its producer declared it (fase 4, S0c).
+					claimClass: item.claimClass,
 					dedupKey: item.dedupKey,
 					// A HOLD is a claim written at birth (`EnqueueMailboxItem.hold`): same three holder columns a
 					// claim stamps, so the boot sweep frees it exactly like a claim of a dead daemon. No attempt is
@@ -156,13 +155,20 @@ export class LibSqlMailboxRepository extends MailboxRepository {
 					kind: agentMailbox.kind,
 					payload: agentMailbox.payload,
 					posture: agentMailbox.posture,
+					claimClass: agentMailbox.claimClass,
 					attempts: agentMailbox.attempts,
 				})
 			// Read in the SAME write transaction as the stamp, so "first" cannot be won by two claims.
 			return claimed[0] ? { ...claimed[0], firstClaim: candidate.firstClaimedAt === null } : undefined
 		})
 		if (!row) return undefined
-		return { ...row, targetKind: row.targetKind as MailboxTargetKind, kind: row.kind as MailboxItemKind }
+		return {
+			...row,
+			targetKind: row.targetKind as MailboxTargetKind,
+			kind: row.kind as MailboxItemKind,
+			// No CHECK on the column (fase 4, S0a: a new column on an existing table) — the enum closes it here.
+			claimClass: z.enum(MailboxClaimClass).parse(row.claimClass),
+		}
 	}
 
 	async renewLease(id: string, claimedBy: string, leaseMs: number, tx?: LibSqlTransaction): Promise<void> {

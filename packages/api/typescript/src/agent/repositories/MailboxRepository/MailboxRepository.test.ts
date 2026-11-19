@@ -7,6 +7,7 @@ import { LibSqlDatabaseDriver } from '@codm/core-typescript'
 import { MailboxItemKind, MailboxTargetKind, PermissionPosture } from '@codm/contracts-typescript/wire/enums'
 import { MOCK_CLOUD_OWNER_ID } from '@shared/services/CloudSession/MockCloudSession'
 import { MailboxRepository } from './MailboxRepository'
+import { CLAIM_CLASS_OF_KIND } from '../../utils/ClaimClassOfKind'
 
 /**
  * Above every platform's pid ceiling, so `kill(pid, 0)` answers ESRCH rather than naming a process
@@ -47,6 +48,7 @@ describe('MailboxRepository — one turn per target, durable', () => {
 		targetKind: MailboxTargetKind.THREAD,
 		targetId,
 		kind,
+		claimClass: CLAIM_CLASS_OF_KIND[kind],
 		posture: PermissionPosture.AUTO,
 		payload: { note: dedupKey },
 		dedupKey,

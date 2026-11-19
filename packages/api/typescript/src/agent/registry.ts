@@ -17,7 +17,15 @@ import { InboundTriage, ModelInboundTriage, NoInboundTriage } from './services/I
 import { AgentSessionRepository, LibSqlAgentSessionRepository, MockAgentSessionRepository } from './repositories/AgentSessionRepository'
 import { LibSqlMailboxRepository, MailboxRepository, MockMailboxRepository } from './repositories/MailboxRepository'
 import { IssueSequence, LibSqlIssueSequence, MockIssueSequence } from './services/IssueSequence'
+import {
+	IssueAttributesRepository,
+	LibSqlIssueAttributesRepository,
+	MockIssueAttributesRepository,
+} from './repositories/IssueAttributesRepository'
 import { StalledIssueReader, LibSqlStalledIssueReader, MockStalledIssueReader } from './services/StalledIssueReader'
+import { AttributesForkedIssueReader, ForkedIssueReader } from './services/ForkedIssueReader'
+import { GitWorktreeProbe, MockGitWorktreeProbe, SystemGitWorktreeProbe } from './services/GitWorktreeProbe'
+import { WorktreeSightings } from './services/WorktreeSightings'
 
 // E2E HERMETIC SEAM (see shared/registry.ts + src/boot.ts). The Playwright harness boots the REAL
 // daemon but must never spawn a provider CLI or probe host PATH: under the `e2e` boot environment
@@ -105,6 +113,27 @@ export const INSTANCE_REGISTRY: InstanceRegistry = expandBindings([
 		integration: LibSqlIssueSequence,
 		real: LibSqlIssueSequence,
 	},
+	// What a task was born with (fase 4, S0c) — priority, reason, kind of work, model — plus the worktree its
+	// session registered and when it closed. Written in the birth's own transaction (`ForkIssue`, `DeclareIssueOpen`).
+	{
+		token: IssueAttributesRepository,
+		mock: MockIssueAttributesRepository,
+		integration: LibSqlIssueAttributesRepository,
+		real: LibSqlIssueAttributesRepository,
+	},
+	// "Is this issue of this conversation?" over the attributes table (fase 4, S0c) — for the batch receipt (S8).
+	// One implementation everywhere: the environment split already lives in the repository it reads.
+	{
+		token: ForkedIssueReader,
+		mock: AttributesForkedIssueReader,
+		integration: AttributesForkedIssueReader,
+		real: AttributesForkedIssueReader,
+	},
+	// What git says about a workspace's worktrees (fase 4, item 1). Scripted in `mock` AND `integration`: no test
+	// spawns git through the container; only `real` asks the real one.
+	{ token: GitWorktreeProbe, mock: MockGitWorktreeProbe, integration: MockGitWorktreeProbe, real: SystemGitWorktreeProbe },
+	// The hook's worktree sightings (fase 4, item 1): one in-memory instance per process, like the kill switch above.
+	{ token: WorktreeSightings, mock: WorktreeSightings, integration: WorktreeSightings, real: WorktreeSightings },
 	// A varredura de issues órfãs lê a tabela `issues` a partir daqui — mesmo padrão de
 	// `thread/services/OpenIssuesReader`. `integration` usa a implementação REAL de propósito: o teste do
 	// job existe para exercitar o predicado das duas filas contra o banco, e um mock o tornaria vazio.

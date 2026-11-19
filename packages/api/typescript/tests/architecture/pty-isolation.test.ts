@@ -23,6 +23,12 @@
  * run exists. Moving it under `services/AgentRunner/` would invert the dependency (the runner would
  * contain the detection that precedes it); a per-file exception would fossilize at the first rename.
  *
+ * Fase 4 (item 1) adds a THIRD, and it spawns no provider CLI: `GitWorktreeProbe` asks git (by argv, no shell,
+ * with a timeout) which worktrees a workspace's repository has — the registration of a task's worktree is a
+ * QUERY to git, never a convention over folder names (Non-Negotiable 5). It is a directory of its own for the same
+ * reason the other two are: the capability is confined to the one module whose job it is, and bound only in `real`
+ * (`mock`/`integration` script it).
+ *
  * Walks all non-test `.ts` files under `packages/api/typescript/src/`, skipping `node_modules`.
  *
  * Lives in `tests/architecture/` — the shared home for repo-wide mechanical detectors (the rail is
@@ -56,6 +62,7 @@ const ALLOWED_PREFIX = join(SRC, 'agent/services/AgentRunner') + sep
 const ALLOWED_SPAWN_PREFIXES = [
 	join(SRC, 'agent/services/AgentRunner') + sep, // Fase 5 (AC-5.9): 'agent/services/AgentRunner'
 	join(SRC, 'agent/services/ProviderDetector') + sep, // Fase 5 (AC-5.9): 'agent/services/ProviderDetector'
+	join(SRC, 'agent/services/GitWorktreeProbe') + sep, // Fase 4 (item 1): git worktree queries, no provider CLI
 ]
 
 function walk(dir: string, out: string[] = []): string[] {
@@ -91,7 +98,7 @@ describe('Import-graph isolation — PTY, transcript paths and process spawn are
 	}
 
 	for (const forbidden of FORBIDDEN_SPAWN_REFS) {
-		it(`only AgentRunner/ and ProviderDetector/ reference "${forbidden}"`, () => {
+		it(`only AgentRunner/, ProviderDetector/ and GitWorktreeProbe/ reference "${forbidden}"`, () => {
 			expect(violators(files, forbidden, ALLOWED_SPAWN_PREFIXES)).toEqual([])
 		})
 	}
