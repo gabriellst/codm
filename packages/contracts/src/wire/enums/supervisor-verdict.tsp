@@ -1,0 +1,9 @@
+namespace TemplateContracts;
+
+@doc("What the supervisor decided for a suspect task (fase 5, item 3) — only these four, and only those admitted for the suspicion reason. NUDGE: resume the task once more, in AUTO, as the last nudge of the episode. RESTART_WITH_NOTES: the next turn opens a fresh session seeded with the handoff notes. ESCALATE: mark the task as escalated on its card and timeline — no message to anyone. LEAVE: do nothing (also the fail-closed fallback).")
+enum SupervisorVerdict {
+  NUDGE: "NUDGE",
+  RESTART_WITH_NOTES: "RESTART_WITH_NOTES",
+  ESCALATE: "ESCALATE",
+  LEAVE: "LEAVE",
+}

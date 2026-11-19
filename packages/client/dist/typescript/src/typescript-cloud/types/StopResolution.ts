@@ -11,7 +11,8 @@ export const StopResolutionEnum = {
     APPROVE: "APPROVE",
     DENY: "DENY",
     ANSWER: "ANSWER",
-    DEFAULT_APPLIED: "DEFAULT_APPLIED"
+    DEFAULT_APPLIED: "DEFAULT_APPLIED",
+    AUTO_RETRY: "AUTO_RETRY"
 } as const;
 
 export type StopResolutionEnumKey = (typeof StopResolutionEnum)[keyof typeof StopResolutionEnum];

@@ -27,6 +27,10 @@ const IssueItemSchema = z.object({
 	 * by a weekly window rendered as an ordinary `WORKING` row (measured 2026-11-11, four of them).
 	 */
 	waitingForProviderUntil: z.string().optional(),
+	/** Fase 5 — ISO instant of a failed turn's next attempt (`WAITING_RETRY`); absent otherwise (filled from S2). */
+	retryingAt: z.string().optional(),
+	/** Fase 5 — ISO instant the supervisor last escalated the issue (badge only; nobody is messaged); absent otherwise (filled from S5). */
+	escalatedAt: z.string().optional(),
 	/** Where the work stands right now, by rule (`lifeStateOf`) — what the board columns are. */
 	lifeState: z.enum(IssueLifeState),
 })

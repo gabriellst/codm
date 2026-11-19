@@ -43,4 +43,9 @@ export enum ResumeInvalidationReason {
 	 * keeps the recent conversation and drops only what is older than it.
 	 */
 	CONTEXT_BUDGET_EXCEEDED = 'CONTEXT_BUDGET_EXCEEDED',
+	/**
+	 * Fase 5 (item 3) — the supervisor asked that the next turn open a fresh session seeded with the handoff notes
+	 * (`RESTART_WITH_NOTES`, `agent_agent_sessions.handoff_requested_at`). Checked before the context budget.
+	 */
+	HANDOFF_REQUESTED = 'HANDOFF_REQUESTED',
 }

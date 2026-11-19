@@ -1,0 +1,9 @@
+namespace TemplateContracts;
+
+@doc("Why the supervisor looks at a task (fase 5, item 3) — decided by rule over persisted data, never by a model. STALLED_OPEN: a STALLED stop has been open for a while. PROVIDER_ERROR_OPEN: a SERVER_ERROR stop (a poisoned item after its retries) has been open for a while. NUDGE_LOOP: the task keeps going silent — several nudge episodes in a day. SILENT_TURN: a live turn holds its lease but has written nothing to its terminal for a while (the supervisor only flags it; it never stops a live turn).")
+enum SuspicionReason {
+  STALLED_OPEN: "STALLED_OPEN",
+  PROVIDER_ERROR_OPEN: "PROVIDER_ERROR_OPEN",
+  NUDGE_LOOP: "NUDGE_LOOP",
+  SILENT_TURN: "SILENT_TURN",
+}

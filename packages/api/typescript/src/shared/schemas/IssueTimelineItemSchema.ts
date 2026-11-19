@@ -7,11 +7,14 @@ import {
 	IssueControlSource,
 	IssueSignalLevel,
 	IssueTimelineItemKind,
+	NudgeSource,
 	OutputRouting,
 	PublishRunOutcome,
 	RegretWindowOutcome,
 	StopKind,
 	StopResolution,
+	SupervisorVerdict,
+	SuspicionReason,
 	TranscriptKind,
 } from '@codm/contracts-typescript/wire/enums'
 import type Z from 'zod'
@@ -42,6 +45,23 @@ export const PublishRunSchema = z.object({
 	/** Absent only when nobody saw the run end (`UNKNOWN`: the daemon stopped between the spawn and the record). */
 	durationMs: z.number().int().nonnegative().optional(),
 })
+
+/**
+ * Fase 5 — the three moments the autonomy work adds, each shared for the same reason as `PublishRunSchema`: `agent`
+ * records it as a fact and `issue` reads that fact back into the timeline. The facts (`agent.issue.nudged`,
+ * `agent.mailbox.retry_scheduled`, `agent.supervisor.reviewed`) compose these shapes, keyed on the issue
+ * (`entity_id`), so the reader parses exactly what the producer wrote.
+ *  - NUDGE: which nudge of the episode (1 declare, 2 finish the step and declare) and who sent it.
+ *  - RETRY: attempt n of max, and when the next one runs (ISO instant) — never the error's text.
+ *  - SUPERVISOR REVIEW: why the supervisor looked and what it decided. Only an ACTED verdict reaches the timeline.
+ */
+export const NudgeMarkSchema = z.object({ ordinal: z.number().int().min(1), source: z.enum(NudgeSource) })
+export const RetryScheduledSchema = z.object({
+	attempt: z.number().int().min(1),
+	maxAttempts: z.number().int().min(1),
+	retryAt: z.string(),
+})
+export const SupervisorReviewSchema = z.object({ reason: z.enum(SuspicionReason), verdict: z.enum(SupervisorVerdict) })
 
 const at = z.string()
 /** Stable per item — the source row (event, entry, queue item, artifact, stop), so a list key never shifts. */
@@ -132,5 +152,13 @@ export const IssueTimelineItemSchema = z.discriminatedUnion('kind', [
 	z.object({ kind: z.literal(IssueTimelineItemKind.BATCH_LINKED), id, at, batchCode: z.string(), n: z.number().int().min(1) }),
 	// "Pode publicar" (fase 4, item 6c): the workspace's declared publish command ran — outcome only.
 	z.object({ kind: z.literal(IssueTimelineItemKind.PUBLISH_RAN), id, at, ...PublishRunSchema.shape }),
+	// Empurrão (fase 5, item 1): the task ended a turn without declaring anything and got nudge `ordinal` — shown in
+	// place of the reminder's STEER.
+	z.object({ kind: z.literal(IssueTimelineItemKind.NUDGED), id, at, ...NudgeMarkSchema.shape }),
+	// Nova tentativa (fase 5, item 2): a failed turn will be tried again — attempt `attempt` of `maxAttempts`, at `retryAt`.
+	z.object({ kind: z.literal(IssueTimelineItemKind.RETRY_SCHEDULED), id, at, ...RetryScheduledSchema.shape }),
+	// Supervisor (fase 5, item 3): it ACTED on the task — why it looked and what it decided (a verdict only
+	// observed never reaches the timeline).
+	z.object({ kind: z.literal(IssueTimelineItemKind.SUPERVISOR_REVIEWED), id, at, ...SupervisorReviewSchema.shape }),
 ])
 export type IssueTimelineItem = Z.output<typeof IssueTimelineItemSchema>

@@ -267,6 +267,13 @@
       "when": 1795056208217,
       "tag": "0037_smooth_northstar",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "6",
+      "when": 1795108695715,
+      "tag": "0038_military_lockheed",
+      "breakpoints": true
     }
   ]
 }

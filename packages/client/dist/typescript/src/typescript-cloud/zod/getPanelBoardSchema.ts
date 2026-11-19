@@ -38,6 +38,8 @@ get "lifeState"(){
                 return issueLifeStateSchema
               },
 "waitingForProviderUntil": z.optional(z.string()),
+"retryingAt": z.optional(z.string()),
+"escalatedAt": z.optional(z.string()),
 "updatedAt": z.string()
     }))
     })

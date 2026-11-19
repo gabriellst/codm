@@ -11,7 +11,10 @@ import { StopKind, StopResolution } from '@codm/contracts-typescript/wire/enums'
  * the aggregate raising it, not in the one that used to own the table.
  */
 export const RESOLUTIONS_BY_KIND: Record<StopKind, StopResolution[]> = {
-	[StopKind.SERVER_ERROR]: [StopResolution.RETRY, StopResolution.TAKE_OVER],
+	// Fase 5: SERVER_ERROR and STALLED also admit AUTO_RETRY — the supervisor resuming the task once more, as
+	// the last nudge of its episode. Written only by the supervisor job (`GIVEN_BY_NAME_ALONE` and
+	// `OFFERED_ON_PANEL` keep it off every door a person or a model can reach).
+	[StopKind.SERVER_ERROR]: [StopResolution.RETRY, StopResolution.TAKE_OVER, StopResolution.AUTO_RETRY],
 	[StopKind.BLOCKED_BY_CLASSIFICATION]: [StopResolution.RETRY, StopResolution.REVIEW_AND_SEND, StopResolution.TAKE_OVER],
 	[StopKind.HUMAN_REQUESTED]: [StopResolution.REVIEW_AND_SEND, StopResolution.TAKE_OVER],
 	[StopKind.APPROVAL_NEEDED]: [StopResolution.APPROVE, StopResolution.DENY, StopResolution.TAKE_OVER],
@@ -27,7 +30,7 @@ export const RESOLUTIONS_BY_KIND: Record<StopKind, StopResolution[]> = {
 	[StopKind.DECISION_REQUESTED]: [StopResolution.ANSWER, StopResolution.TAKE_OVER],
 	[StopKind.QUESTION_ASKED]: [StopResolution.ANSWER, StopResolution.DEFAULT_APPLIED, StopResolution.TAKE_OVER],
 	// STALLED (fase 3): the reconciler's stop "not even after the reminder". RETRY nudges the session again.
-	[StopKind.STALLED]: [StopResolution.RETRY, StopResolution.TAKE_OVER],
+	[StopKind.STALLED]: [StopResolution.RETRY, StopResolution.TAKE_OVER, StopResolution.AUTO_RETRY],
 }
 
 export function resolutionsForKind(kind: StopKind): StopResolution[] {
@@ -58,6 +61,9 @@ export const RESUMES_WITH_RESOLVER_POSTURE: Record<StopResolution, boolean> = {
 	// nobody's answer, so it never elevates.
 	[StopResolution.ANSWER]: true,
 	[StopResolution.DEFAULT_APPLIED]: false,
+	// Fase 5: what nobody asked for runs in AUTO — the supervisor's retry never inherits the posture of
+	// whoever resolved a stop before.
+	[StopResolution.AUTO_RETRY]: false,
 }
 
 /**
@@ -76,6 +82,8 @@ export const GIVEN_BY_NAME_ALONE: Record<StopResolution, boolean> = {
 	[StopResolution.TAKE_OVER]: true,
 	[StopResolution.ANSWER]: false,
 	[StopResolution.DEFAULT_APPLIED]: false,
+	// Fase 5: the supervisor job's, never a person's — `ResolveStop` refuses it with RESOLUTION_NOT_APPLICABLE.
+	[StopResolution.AUTO_RETRY]: false,
 }
 
 /** The resolutions of this kind a person gives with a bare button — the kind's vocabulary, reduced by `GIVEN_BY_NAME_ALONE`. */
@@ -101,6 +109,8 @@ export const OFFERED_ON_PANEL: Record<StopResolution, boolean> = {
 	// text). DEFAULT_APPLIED is the deadline job's, never a person's.
 	[StopResolution.ANSWER]: false,
 	[StopResolution.DEFAULT_APPLIED]: false,
+	// Fase 5: the supervisor job's, never a button on the panel.
+	[StopResolution.AUTO_RETRY]: false,
 }
 
 /** The answers a stop of this kind admits on the panel — the kind's own vocabulary, reduced by `OFFERED_ON_PANEL`. */

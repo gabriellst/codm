@@ -19,6 +19,7 @@ import { ThreadStopResolvedEvent } from '../events/ThreadStopResolvedEvent'
 import { AnswerStop } from '../usecases/AnswerStop'
 import { ResolveStop } from '../usecases/ResolveStop'
 import { ResumeIssueOnStopResolved } from './ResumeIssueOnStopResolved'
+import { ThreadRepository } from '../repositories/ThreadRepository'
 import { ResumeIssuePayloadSchema, type StopAskProps } from '../objects'
 
 /**
@@ -226,5 +227,30 @@ describe('ResumeIssueOnStopResolved — an answer always reaches the session', (
 		expect(ResumeIssuePayloadSchema.parse(items[1]?.payload)).toEqual(
 			expect.objectContaining({ stopId: stop.stopId, resolution: StopResolution.APPROVE }),
 		)
+	})
+
+	/**
+	 * FASE 5 — the supervisor's retry (AUTO_RETRY, written only by its job from S5) is the LAST NUDGE of the task's
+	 * episode, not a person's answer: it queues as a REMINDER (`RESUME_CLAIM_CLASS`), in AUTO, so it never jumps
+	 * ahead of a DECISION_ANSWER and never reaches the publish trigger.
+	 */
+	it('an AUTO_RETRY resume is a REMINDER in AUTO, never a DECISION_ANSWER', async () => {
+		const { thread, issue } = await scene()
+		const stop = await givenStop(testBed, { threadId: thread.id.value, issueId: issue.id.value, kind: StopKind.STALLED })
+		const threads = testBed.resolve(ThreadRepository)
+		const current = await threads.findById(thread.id.value)
+		const raised = await threads.findStop(stop.stopId)
+		if (!current || !raised) throw new Error('scene not persisted')
+		current.resolveStop(raised, StopResolution.AUTO_RETRY, PermissionPosture.AUTO)
+		await threads.save(current)
+		// What the supervisor's job will do from S5 (the ApplyDueQuestionDefaults shape): the entity raised the fact.
+		await testBed.resolve(DomainEventRepository).saveMany(current.pullDomainEvents())
+		await deliverFact()
+
+		const [item, ...rest] = await issueItems(issue.id.value)
+		expect(rest).toHaveLength(0)
+		expect(item?.claimClass).toBe(MailboxClaimClass.REMINDER)
+		expect(ResumeIssuePayloadSchema.parse(item?.payload).resolution).toBe(StopResolution.AUTO_RETRY)
+		expect(ResumeIssuePayloadSchema.parse(item?.payload).text).toContain('does not authorize publishing')
 	})
 })

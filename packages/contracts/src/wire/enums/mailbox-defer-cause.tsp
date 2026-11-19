@@ -1,0 +1,8 @@
+namespace TemplateContracts;
+
+@doc("Why a queued item is deferred (fase 5, item 2) — a column of the shared agent_mailbox table, written by every defer and cleared by every write that clears or replaces the lease, so 'null' means 'not deferred'. Each releaser decides by this cause, never by joining on paused flags. PROVIDER_LIMIT: the provider refused for its usage limit and the item waits for it. HOLD: the issue or its conversation is paused and the item waits for the resume. RETRY: the item failed and waits for its next attempt on a growing schedule.")
+enum MailboxDeferCause {
+  PROVIDER_LIMIT: "PROVIDER_LIMIT",
+  HOLD: "HOLD",
+  RETRY: "RETRY",
+}

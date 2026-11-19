@@ -627,6 +627,7 @@ const (
 	IssueLifeStateWAITINGBUDGET   IssueLifeState = "WAITING_BUDGET"
 	IssueLifeStateWAITINGPERSON   IssueLifeState = "WAITING_PERSON"
 	IssueLifeStateWAITINGPROVIDER IssueLifeState = "WAITING_PROVIDER"
+	IssueLifeStateWAITINGRETRY    IssueLifeState = "WAITING_RETRY"
 )
 
 // Valid indicates whether the value is a known member of the IssueLifeState enum.
@@ -649,6 +650,8 @@ func (e IssueLifeState) Valid() bool {
 	case IssueLifeStateWAITINGPERSON:
 		return true
 	case IssueLifeStateWAITINGPROVIDER:
+		return true
+	case IssueLifeStateWAITINGRETRY:
 		return true
 	default:
 		return false
@@ -708,20 +711,23 @@ func (e IssueStatus) Valid() bool {
 
 // Defines values for IssueTimelineItemKind.
 const (
-	IssueTimelineItemKindARCHIVED     IssueTimelineItemKind = "ARCHIVED"
-	IssueTimelineItemKindARTIFACT     IssueTimelineItemKind = "ARTIFACT"
-	IssueTimelineItemKindBATCHLINKED  IssueTimelineItemKind = "BATCH_LINKED"
-	IssueTimelineItemKindCOMPLETED    IssueTimelineItemKind = "COMPLETED"
-	IssueTimelineItemKindCREATED      IssueTimelineItemKind = "CREATED"
-	IssueTimelineItemKindMESSAGE      IssueTimelineItemKind = "MESSAGE"
-	IssueTimelineItemKindPAUSED       IssueTimelineItemKind = "PAUSED"
-	IssueTimelineItemKindPUBLISHRAN   IssueTimelineItemKind = "PUBLISH_RAN"
-	IssueTimelineItemKindREGRETWINDOW IssueTimelineItemKind = "REGRET_WINDOW"
-	IssueTimelineItemKindRESUMED      IssueTimelineItemKind = "RESUMED"
-	IssueTimelineItemKindSTEER        IssueTimelineItemKind = "STEER"
-	IssueTimelineItemKindSTOPRAISED   IssueTimelineItemKind = "STOP_RAISED"
-	IssueTimelineItemKindSTOPRESOLVED IssueTimelineItemKind = "STOP_RESOLVED"
-	IssueTimelineItemKindTURNSTARTED  IssueTimelineItemKind = "TURN_STARTED"
+	IssueTimelineItemKindARCHIVED           IssueTimelineItemKind = "ARCHIVED"
+	IssueTimelineItemKindARTIFACT           IssueTimelineItemKind = "ARTIFACT"
+	IssueTimelineItemKindBATCHLINKED        IssueTimelineItemKind = "BATCH_LINKED"
+	IssueTimelineItemKindCOMPLETED          IssueTimelineItemKind = "COMPLETED"
+	IssueTimelineItemKindCREATED            IssueTimelineItemKind = "CREATED"
+	IssueTimelineItemKindMESSAGE            IssueTimelineItemKind = "MESSAGE"
+	IssueTimelineItemKindNUDGED             IssueTimelineItemKind = "NUDGED"
+	IssueTimelineItemKindPAUSED             IssueTimelineItemKind = "PAUSED"
+	IssueTimelineItemKindPUBLISHRAN         IssueTimelineItemKind = "PUBLISH_RAN"
+	IssueTimelineItemKindREGRETWINDOW       IssueTimelineItemKind = "REGRET_WINDOW"
+	IssueTimelineItemKindRESUMED            IssueTimelineItemKind = "RESUMED"
+	IssueTimelineItemKindRETRYSCHEDULED     IssueTimelineItemKind = "RETRY_SCHEDULED"
+	IssueTimelineItemKindSTEER              IssueTimelineItemKind = "STEER"
+	IssueTimelineItemKindSTOPRAISED         IssueTimelineItemKind = "STOP_RAISED"
+	IssueTimelineItemKindSTOPRESOLVED       IssueTimelineItemKind = "STOP_RESOLVED"
+	IssueTimelineItemKindSUPERVISORREVIEWED IssueTimelineItemKind = "SUPERVISOR_REVIEWED"
+	IssueTimelineItemKindTURNSTARTED        IssueTimelineItemKind = "TURN_STARTED"
 )
 
 // Valid indicates whether the value is a known member of the IssueTimelineItemKind enum.
@@ -739,6 +745,8 @@ func (e IssueTimelineItemKind) Valid() bool {
 		return true
 	case IssueTimelineItemKindMESSAGE:
 		return true
+	case IssueTimelineItemKindNUDGED:
+		return true
 	case IssueTimelineItemKindPAUSED:
 		return true
 	case IssueTimelineItemKindPUBLISHRAN:
@@ -747,11 +755,15 @@ func (e IssueTimelineItemKind) Valid() bool {
 		return true
 	case IssueTimelineItemKindRESUMED:
 		return true
+	case IssueTimelineItemKindRETRYSCHEDULED:
+		return true
 	case IssueTimelineItemKindSTEER:
 		return true
 	case IssueTimelineItemKindSTOPRAISED:
 		return true
 	case IssueTimelineItemKindSTOPRESOLVED:
+		return true
+	case IssueTimelineItemKindSUPERVISORREVIEWED:
 		return true
 	case IssueTimelineItemKindTURNSTARTED:
 		return true
@@ -772,6 +784,24 @@ func (e Language) Valid() bool {
 	case EnUS:
 		return true
 	case PtBR:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NudgeSource.
+const (
+	RECONCILER NudgeSource = "RECONCILER"
+	SUPERVISOR NudgeSource = "SUPERVISOR"
+)
+
+// Valid indicates whether the value is a known member of the NudgeSource enum.
+func (e NudgeSource) Valid() bool {
+	switch e {
+	case RECONCILER:
+		return true
+	case SUPERVISOR:
 		return true
 	default:
 		return false
@@ -1058,6 +1088,7 @@ func (e StopKind) Valid() bool {
 const (
 	ANSWER         StopResolution = "ANSWER"
 	APPROVE        StopResolution = "APPROVE"
+	AUTORETRY      StopResolution = "AUTO_RETRY"
 	DEFAULTAPPLIED StopResolution = "DEFAULT_APPLIED"
 	DENY           StopResolution = "DENY"
 	RETRY          StopResolution = "RETRY"
@@ -1072,6 +1103,8 @@ func (e StopResolution) Valid() bool {
 		return true
 	case APPROVE:
 		return true
+	case AUTORETRY:
+		return true
 	case DEFAULTAPPLIED:
 		return true
 	case DENY:
@@ -1081,6 +1114,54 @@ func (e StopResolution) Valid() bool {
 	case REVIEWANDSEND:
 		return true
 	case TAKEOVER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SupervisorVerdict.
+const (
+	ESCALATE         SupervisorVerdict = "ESCALATE"
+	LEAVE            SupervisorVerdict = "LEAVE"
+	NUDGE            SupervisorVerdict = "NUDGE"
+	RESTARTWITHNOTES SupervisorVerdict = "RESTART_WITH_NOTES"
+)
+
+// Valid indicates whether the value is a known member of the SupervisorVerdict enum.
+func (e SupervisorVerdict) Valid() bool {
+	switch e {
+	case ESCALATE:
+		return true
+	case LEAVE:
+		return true
+	case NUDGE:
+		return true
+	case RESTARTWITHNOTES:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SuspicionReason.
+const (
+	NUDGELOOP         SuspicionReason = "NUDGE_LOOP"
+	PROVIDERERROROPEN SuspicionReason = "PROVIDER_ERROR_OPEN"
+	SILENTTURN        SuspicionReason = "SILENT_TURN"
+	STALLEDOPEN       SuspicionReason = "STALLED_OPEN"
+)
+
+// Valid indicates whether the value is a known member of the SuspicionReason enum.
+func (e SuspicionReason) Valid() bool {
+	switch e {
+	case NUDGELOOP:
+		return true
+	case PROVIDERERROROPEN:
+		return true
+	case SILENTTURN:
+		return true
+	case STALLEDOPEN:
 		return true
 	default:
 		return false
@@ -1239,6 +1320,9 @@ type IssueTimelineItemKind string
 // Language defines model for Language.
 type Language string
 
+// NudgeSource defines model for NudgeSource.
+type NudgeSource string
+
 // OutputRouting defines model for OutputRouting.
 type OutputRouting string
 
@@ -1290,6 +1374,12 @@ type StopKind string
 
 // StopResolution defines model for StopResolution.
 type StopResolution string
+
+// SupervisorVerdict defines model for SupervisorVerdict.
+type SupervisorVerdict string
+
+// SuspicionReason defines model for SuspicionReason.
+type SuspicionReason string
 
 // TranscriptKind defines model for TranscriptKind.
 type TranscriptKind string
@@ -1559,6 +1649,34 @@ type GetPanelIssue200JSONResponseBodyTimeline13 struct {
 	Outcome    PublishRunOutcome `json:"outcome"`
 }
 
+// GetPanelIssue200JSONResponseBodyTimeline14 defines parameters for GetPanelIssue.
+type GetPanelIssue200JSONResponseBodyTimeline14 struct {
+	At      string      `json:"at"`
+	Id      string      `json:"id"`
+	Kind    string      `json:"kind"`
+	Ordinal int         `json:"ordinal"`
+	Source  NudgeSource `json:"source"`
+}
+
+// GetPanelIssue200JSONResponseBodyTimeline15 defines parameters for GetPanelIssue.
+type GetPanelIssue200JSONResponseBodyTimeline15 struct {
+	At          string `json:"at"`
+	Attempt     int    `json:"attempt"`
+	Id          string `json:"id"`
+	Kind        string `json:"kind"`
+	MaxAttempts int    `json:"maxAttempts"`
+	RetryAt     string `json:"retryAt"`
+}
+
+// GetPanelIssue200JSONResponseBodyTimeline16 defines parameters for GetPanelIssue.
+type GetPanelIssue200JSONResponseBodyTimeline16 struct {
+	At      string            `json:"at"`
+	Id      string            `json:"id"`
+	Kind    string            `json:"kind"`
+	Reason  SuspicionReason   `json:"reason"`
+	Verdict SupervisorVerdict `json:"verdict"`
+}
+
 // GetPanelIssue200JSONResponseBody_Timeline_Item defines parameters for GetPanelIssue.
 type GetPanelIssue200JSONResponseBody_Timeline_Item struct {
 	union json.RawMessage
@@ -1703,9 +1821,11 @@ type SyncPanelJSONBody struct {
 	Health *PanelHealth `json:"health,omitempty"`
 	Issues []struct {
 		Archived                bool                                     `json:"archived"`
+		EscalatedAt             *time.Time                               `json:"escalatedAt,omitempty"`
 		IssueId                 openapi_types.UUID                       `json:"issueId"`
 		Key                     string                                   `json:"key"`
 		LifeState               IssueLifeState                           `json:"lifeState"`
+		RetryingAt              *time.Time                               `json:"retryingAt,omitempty"`
 		Status                  IssueStatus                              `json:"status"`
 		ThreadId                openapi_types.UUID                       `json:"threadId"`
 		Timeline                []SyncPanelJSONBody_Issues_Timeline_Item `json:"timeline"`
@@ -1852,6 +1972,34 @@ type SyncPanelJSONBodyIssuesTimeline13 struct {
 	Id         string            `json:"id"`
 	Kind       string            `json:"kind"`
 	Outcome    PublishRunOutcome `json:"outcome"`
+}
+
+// SyncPanelJSONBodyIssuesTimeline14 defines parameters for SyncPanel.
+type SyncPanelJSONBodyIssuesTimeline14 struct {
+	At      string      `json:"at"`
+	Id      string      `json:"id"`
+	Kind    string      `json:"kind"`
+	Ordinal int         `json:"ordinal"`
+	Source  NudgeSource `json:"source"`
+}
+
+// SyncPanelJSONBodyIssuesTimeline15 defines parameters for SyncPanel.
+type SyncPanelJSONBodyIssuesTimeline15 struct {
+	At          string `json:"at"`
+	Attempt     int    `json:"attempt"`
+	Id          string `json:"id"`
+	Kind        string `json:"kind"`
+	MaxAttempts int    `json:"maxAttempts"`
+	RetryAt     string `json:"retryAt"`
+}
+
+// SyncPanelJSONBodyIssuesTimeline16 defines parameters for SyncPanel.
+type SyncPanelJSONBodyIssuesTimeline16 struct {
+	At      string            `json:"at"`
+	Id      string            `json:"id"`
+	Kind    string            `json:"kind"`
+	Reason  SuspicionReason   `json:"reason"`
+	Verdict SupervisorVerdict `json:"verdict"`
 }
 
 // SyncPanelJSONBody_Issues_Timeline_Item defines parameters for SyncPanel.
@@ -2820,6 +2968,84 @@ func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) MergeGetPanelIssue200JS
 	return err
 }
 
+// AsGetPanelIssue200JSONResponseBodyTimeline14 returns the union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item as a GetPanelIssue200JSONResponseBodyTimeline14
+func (t GetPanelIssue200JSONResponseBody_Timeline_Item) AsGetPanelIssue200JSONResponseBodyTimeline14() (GetPanelIssue200JSONResponseBodyTimeline14, error) {
+	var body GetPanelIssue200JSONResponseBodyTimeline14
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetPanelIssue200JSONResponseBodyTimeline14 overwrites any union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item as the provided GetPanelIssue200JSONResponseBodyTimeline14
+func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) FromGetPanelIssue200JSONResponseBodyTimeline14(v GetPanelIssue200JSONResponseBodyTimeline14) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetPanelIssue200JSONResponseBodyTimeline14 performs a merge with any union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item, using the provided GetPanelIssue200JSONResponseBodyTimeline14
+func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) MergeGetPanelIssue200JSONResponseBodyTimeline14(v GetPanelIssue200JSONResponseBodyTimeline14) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetPanelIssue200JSONResponseBodyTimeline15 returns the union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item as a GetPanelIssue200JSONResponseBodyTimeline15
+func (t GetPanelIssue200JSONResponseBody_Timeline_Item) AsGetPanelIssue200JSONResponseBodyTimeline15() (GetPanelIssue200JSONResponseBodyTimeline15, error) {
+	var body GetPanelIssue200JSONResponseBodyTimeline15
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetPanelIssue200JSONResponseBodyTimeline15 overwrites any union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item as the provided GetPanelIssue200JSONResponseBodyTimeline15
+func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) FromGetPanelIssue200JSONResponseBodyTimeline15(v GetPanelIssue200JSONResponseBodyTimeline15) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetPanelIssue200JSONResponseBodyTimeline15 performs a merge with any union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item, using the provided GetPanelIssue200JSONResponseBodyTimeline15
+func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) MergeGetPanelIssue200JSONResponseBodyTimeline15(v GetPanelIssue200JSONResponseBodyTimeline15) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGetPanelIssue200JSONResponseBodyTimeline16 returns the union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item as a GetPanelIssue200JSONResponseBodyTimeline16
+func (t GetPanelIssue200JSONResponseBody_Timeline_Item) AsGetPanelIssue200JSONResponseBodyTimeline16() (GetPanelIssue200JSONResponseBodyTimeline16, error) {
+	var body GetPanelIssue200JSONResponseBodyTimeline16
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGetPanelIssue200JSONResponseBodyTimeline16 overwrites any union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item as the provided GetPanelIssue200JSONResponseBodyTimeline16
+func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) FromGetPanelIssue200JSONResponseBodyTimeline16(v GetPanelIssue200JSONResponseBodyTimeline16) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGetPanelIssue200JSONResponseBodyTimeline16 performs a merge with any union data inside the GetPanelIssue200JSONResponseBody_Timeline_Item, using the provided GetPanelIssue200JSONResponseBodyTimeline16
+func (t *GetPanelIssue200JSONResponseBody_Timeline_Item) MergeGetPanelIssue200JSONResponseBodyTimeline16(v GetPanelIssue200JSONResponseBodyTimeline16) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
 func (t GetPanelIssue200JSONResponseBody_Timeline_Item) MarshalJSON() ([]byte, error) {
 	b, err := t.union.MarshalJSON()
 	return b, err
@@ -3510,6 +3736,84 @@ func (t *SyncPanelJSONBody_Issues_Timeline_Item) FromSyncPanelJSONBodyIssuesTime
 
 // MergeSyncPanelJSONBodyIssuesTimeline13 performs a merge with any union data inside the SyncPanelJSONBody_Issues_Timeline_Item, using the provided SyncPanelJSONBodyIssuesTimeline13
 func (t *SyncPanelJSONBody_Issues_Timeline_Item) MergeSyncPanelJSONBodyIssuesTimeline13(v SyncPanelJSONBodyIssuesTimeline13) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSyncPanelJSONBodyIssuesTimeline14 returns the union data inside the SyncPanelJSONBody_Issues_Timeline_Item as a SyncPanelJSONBodyIssuesTimeline14
+func (t SyncPanelJSONBody_Issues_Timeline_Item) AsSyncPanelJSONBodyIssuesTimeline14() (SyncPanelJSONBodyIssuesTimeline14, error) {
+	var body SyncPanelJSONBodyIssuesTimeline14
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSyncPanelJSONBodyIssuesTimeline14 overwrites any union data inside the SyncPanelJSONBody_Issues_Timeline_Item as the provided SyncPanelJSONBodyIssuesTimeline14
+func (t *SyncPanelJSONBody_Issues_Timeline_Item) FromSyncPanelJSONBodyIssuesTimeline14(v SyncPanelJSONBodyIssuesTimeline14) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSyncPanelJSONBodyIssuesTimeline14 performs a merge with any union data inside the SyncPanelJSONBody_Issues_Timeline_Item, using the provided SyncPanelJSONBodyIssuesTimeline14
+func (t *SyncPanelJSONBody_Issues_Timeline_Item) MergeSyncPanelJSONBodyIssuesTimeline14(v SyncPanelJSONBodyIssuesTimeline14) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSyncPanelJSONBodyIssuesTimeline15 returns the union data inside the SyncPanelJSONBody_Issues_Timeline_Item as a SyncPanelJSONBodyIssuesTimeline15
+func (t SyncPanelJSONBody_Issues_Timeline_Item) AsSyncPanelJSONBodyIssuesTimeline15() (SyncPanelJSONBodyIssuesTimeline15, error) {
+	var body SyncPanelJSONBodyIssuesTimeline15
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSyncPanelJSONBodyIssuesTimeline15 overwrites any union data inside the SyncPanelJSONBody_Issues_Timeline_Item as the provided SyncPanelJSONBodyIssuesTimeline15
+func (t *SyncPanelJSONBody_Issues_Timeline_Item) FromSyncPanelJSONBodyIssuesTimeline15(v SyncPanelJSONBodyIssuesTimeline15) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSyncPanelJSONBodyIssuesTimeline15 performs a merge with any union data inside the SyncPanelJSONBody_Issues_Timeline_Item, using the provided SyncPanelJSONBodyIssuesTimeline15
+func (t *SyncPanelJSONBody_Issues_Timeline_Item) MergeSyncPanelJSONBodyIssuesTimeline15(v SyncPanelJSONBodyIssuesTimeline15) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSyncPanelJSONBodyIssuesTimeline16 returns the union data inside the SyncPanelJSONBody_Issues_Timeline_Item as a SyncPanelJSONBodyIssuesTimeline16
+func (t SyncPanelJSONBody_Issues_Timeline_Item) AsSyncPanelJSONBodyIssuesTimeline16() (SyncPanelJSONBodyIssuesTimeline16, error) {
+	var body SyncPanelJSONBodyIssuesTimeline16
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSyncPanelJSONBodyIssuesTimeline16 overwrites any union data inside the SyncPanelJSONBody_Issues_Timeline_Item as the provided SyncPanelJSONBodyIssuesTimeline16
+func (t *SyncPanelJSONBody_Issues_Timeline_Item) FromSyncPanelJSONBodyIssuesTimeline16(v SyncPanelJSONBodyIssuesTimeline16) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSyncPanelJSONBodyIssuesTimeline16 performs a merge with any union data inside the SyncPanelJSONBody_Issues_Timeline_Item, using the provided SyncPanelJSONBodyIssuesTimeline16
+func (t *SyncPanelJSONBody_Issues_Timeline_Item) MergeSyncPanelJSONBodyIssuesTimeline16(v SyncPanelJSONBodyIssuesTimeline16) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -5772,9 +6076,11 @@ type GetPanelBoardResponse struct {
 		} `json:"group"`
 		Health *PanelHealth `json:"health,omitempty"`
 		Issues []struct {
+			EscalatedAt             *string            `json:"escalatedAt,omitempty"`
 			IssueId                 openapi_types.UUID `json:"issueId"`
 			Key                     string             `json:"key"`
 			LifeState               IssueLifeState     `json:"lifeState"`
+			RetryingAt              *string            `json:"retryingAt,omitempty"`
 			Status                  IssueStatus        `json:"status"`
 			Title                   string             `json:"title"`
 			UpdatedAt               string             `json:"updatedAt"`
@@ -5872,9 +6178,11 @@ type GetPanelIssueResponse struct {
 	HTTPResponse *http.Response
 	JSON200      *struct {
 		Issue struct {
+			EscalatedAt             *string            `json:"escalatedAt,omitempty"`
 			IssueId                 openapi_types.UUID `json:"issueId"`
 			Key                     string             `json:"key"`
 			LifeState               IssueLifeState     `json:"lifeState"`
+			RetryingAt              *string            `json:"retryingAt,omitempty"`
 			Status                  IssueStatus        `json:"status"`
 			Title                   string             `json:"title"`
 			UpdatedAt               string             `json:"updatedAt"`
@@ -7009,9 +7317,11 @@ func ParseGetPanelBoardResponse(rsp *http.Response) (*GetPanelBoardResponse, err
 			} `json:"group"`
 			Health *PanelHealth `json:"health,omitempty"`
 			Issues []struct {
+				EscalatedAt             *string            `json:"escalatedAt,omitempty"`
 				IssueId                 openapi_types.UUID `json:"issueId"`
 				Key                     string             `json:"key"`
 				LifeState               IssueLifeState     `json:"lifeState"`
+				RetryingAt              *string            `json:"retryingAt,omitempty"`
 				Status                  IssueStatus        `json:"status"`
 				Title                   string             `json:"title"`
 				UpdatedAt               string             `json:"updatedAt"`
@@ -7097,9 +7407,11 @@ func ParseGetPanelIssueResponse(rsp *http.Response) (*GetPanelIssueResponse, err
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
 			Issue struct {
+				EscalatedAt             *string            `json:"escalatedAt,omitempty"`
 				IssueId                 openapi_types.UUID `json:"issueId"`
 				Key                     string             `json:"key"`
 				LifeState               IssueLifeState     `json:"lifeState"`
+				RetryingAt              *string            `json:"retryingAt,omitempty"`
 				Status                  IssueStatus        `json:"status"`
 				Title                   string             `json:"title"`
 				UpdatedAt               string             `json:"updatedAt"`

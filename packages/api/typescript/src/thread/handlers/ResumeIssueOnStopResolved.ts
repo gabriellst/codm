@@ -28,6 +28,25 @@ const RESUMES_EVEN_WITH_PENDING: Readonly<Record<StopResolution, boolean>> = {
 	[StopResolution.TAKE_OVER]: false,
 	[StopResolution.ANSWER]: true,
 	[StopResolution.DEFAULT_APPLIED]: true,
+	// Fase 5: the supervisor's retry is a nudge — a turn already coming carries the task on just as well.
+	[StopResolution.AUTO_RETRY]: false,
+}
+
+/**
+ * WHAT THE RESUME IS in the queue (fase 5) — total over `StopResolution`. An answer or resolution someone gave
+ * is a `DECISION_ANSWER`: claimed first and the trigger the publish command reads. The supervisor's retry is
+ * NOT: it is the last nudge of the task's episode, a `REMINDER` — it never jumps ahead of a person's answer
+ * and never reaches the publish trigger.
+ */
+const RESUME_CLAIM_CLASS: Readonly<Record<StopResolution, MailboxClaimClass>> = {
+	[StopResolution.RETRY]: MailboxClaimClass.DECISION_ANSWER,
+	[StopResolution.REVIEW_AND_SEND]: MailboxClaimClass.DECISION_ANSWER,
+	[StopResolution.APPROVE]: MailboxClaimClass.DECISION_ANSWER,
+	[StopResolution.DENY]: MailboxClaimClass.DECISION_ANSWER,
+	[StopResolution.TAKE_OVER]: MailboxClaimClass.DECISION_ANSWER,
+	[StopResolution.ANSWER]: MailboxClaimClass.DECISION_ANSWER,
+	[StopResolution.DEFAULT_APPLIED]: MailboxClaimClass.DECISION_ANSWER,
+	[StopResolution.AUTO_RETRY]: MailboxClaimClass.REMINDER,
 }
 
 /** What the resumed turn is told — by resolution, total over `StopResolution`. */
@@ -77,6 +96,14 @@ const RESUME_TEXT: Readonly<Record<StopResolution, (context: ResumeContext) => s
 			`Nobody answered your ${code} within 15 minutes: "${questionOf(stop)}"`,
 			`Go on with the default you declared: ${stop.answer ? labelOfAnswer(stop.ask, stop.answer) : '(none recorded)'}`,
 			'Continue this issue from where you stopped.',
+		].join('\n'),
+	// Fase 5: the supervisor resumes a task that stopped (a provider error, or turns that ended without declaring
+	// anything) — the wording of the second nudge, in AUTO, and never an authorization.
+	[StopResolution.AUTO_RETRY]: () =>
+		[
+			'Your work on this issue stopped without a declaration (an error, or a turn that ended without saying where things stand).',
+			'If you stopped in the middle of a step, finish that step; then declare: done, the decision that is missing, or what is missing and from whom.',
+			'This nudge does not authorize publishing, merging or anything irreversible.',
 		].join('\n'),
 }
 
@@ -155,9 +182,10 @@ export class ResumeIssueOnStopResolved extends EventHandler<typeof ThreadStopRes
 			targetKind: MailboxTargetKind.ISSUE,
 			targetId: issueId,
 			kind: MailboxItemKind.STEER,
-			// WHAT IT IS (fase 4, S0c): the answer to a decision the issue was waiting on — claimed first (S4), never
-			// coalesced with ordinary steers (S5), and the trigger the publish command reads (S11).
-			claimClass: MailboxClaimClass.DECISION_ANSWER,
+			// WHAT IT IS (fase 4, S0c; fase 5): the answer to a decision the issue was waiting on — claimed first (S4),
+			// never coalesced with ordinary steers (S5), and the trigger the publish command reads (S11) — except the
+			// supervisor's retry, a REMINDER (`RESUME_CLAIM_CLASS`).
+			claimClass: RESUME_CLAIM_CLASS[resolution],
 			// The posture the FACT carries (Decision 7): the resolver's, reduced by the resolution — an APPROVE
 			// from someone who may elevate resumes in BYPASS, a DENY always in AUTO.
 			posture,

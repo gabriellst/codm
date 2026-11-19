@@ -38,6 +38,8 @@ get "status"(){
 "threadId": z.uuid(),
 "threadDisplayName": z.string(),
 "waitingForProviderUntil": z.optional(z.string()),
+"retryingAt": z.optional(z.string()),
+"escalatedAt": z.optional(z.string()),
 get "lifeState"(){
                 return issueLifeStateSchema
               }
@@ -56,6 +58,8 @@ get "status"(){
 "threadId": z.uuid(),
 "threadDisplayName": z.string(),
 "waitingForProviderUntil": z.optional(z.string()),
+"retryingAt": z.optional(z.string()),
+"escalatedAt": z.optional(z.string()),
 get "lifeState"(){
                 return issueLifeStateSchema
               }

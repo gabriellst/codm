@@ -891,6 +891,16 @@
                           "format": "date-time",
                           "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
                         },
+                        "retryingAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                        },
+                        "escalatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                        },
                         "archived": {
                           "type": "boolean"
                         },
@@ -1348,6 +1358,100 @@
                                   "id",
                                   "at",
                                   "outcome"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "NUDGED"
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "at": {
+                                    "type": "string"
+                                  },
+                                  "ordinal": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "source": {
+                                    "$ref": "#/components/schemas/NudgeSource"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "id",
+                                  "at",
+                                  "ordinal",
+                                  "source"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "RETRY_SCHEDULED"
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "at": {
+                                    "type": "string"
+                                  },
+                                  "attempt": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "maxAttempts": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "retryAt": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "id",
+                                  "at",
+                                  "attempt",
+                                  "maxAttempts",
+                                  "retryAt"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "SUPERVISOR_REVIEWED"
+                                  },
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "at": {
+                                    "type": "string"
+                                  },
+                                  "reason": {
+                                    "$ref": "#/components/schemas/SuspicionReason"
+                                  },
+                                  "verdict": {
+                                    "$ref": "#/components/schemas/SupervisorVerdict"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "id",
+                                  "at",
+                                  "reason",
+                                  "verdict"
                                 ]
                               }
                             ]
@@ -2069,6 +2173,12 @@
                           "waitingForProviderUntil": {
                             "type": "string"
                           },
+                          "retryingAt": {
+                            "type": "string"
+                          },
+                          "escalatedAt": {
+                            "type": "string"
+                          },
                           "updatedAt": {
                             "type": "string"
                           }
@@ -2154,6 +2264,12 @@
                           "$ref": "#/components/schemas/IssueLifeState"
                         },
                         "waitingForProviderUntil": {
+                          "type": "string"
+                        },
+                        "retryingAt": {
+                          "type": "string"
+                        },
+                        "escalatedAt": {
                           "type": "string"
                         },
                         "updatedAt": {
@@ -2638,6 +2754,103 @@
                               "id",
                               "at",
                               "outcome"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "NUDGED"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "ordinal": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991
+                              },
+                              "source": {
+                                "$ref": "#/components/schemas/NudgeSource"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "ordinal",
+                              "source"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "RETRY_SCHEDULED"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "attempt": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991
+                              },
+                              "maxAttempts": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991
+                              },
+                              "retryAt": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "attempt",
+                              "maxAttempts",
+                              "retryAt"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "SUPERVISOR_REVIEWED"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string"
+                              },
+                              "reason": {
+                                "$ref": "#/components/schemas/SuspicionReason"
+                              },
+                              "verdict": {
+                                "$ref": "#/components/schemas/SupervisorVerdict"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "id",
+                              "at",
+                              "reason",
+                              "verdict"
                             ],
                             "additionalProperties": false
                           }
@@ -3904,6 +4117,7 @@
           "RUNNING",
           "QUEUED",
           "WAITING_PROVIDER",
+          "WAITING_RETRY",
           "WAITING_BUDGET",
           "WAITING_PERSON",
           "REMINDED",
@@ -3921,13 +4135,16 @@
           "COMPLETED",
           "CREATED",
           "MESSAGE",
+          "NUDGED",
           "PAUSED",
           "PUBLISH_RAN",
           "REGRET_WINDOW",
           "RESUMED",
+          "RETRY_SCHEDULED",
           "STEER",
           "STOP_RAISED",
           "STOP_RESOLVED",
+          "SUPERVISOR_REVIEWED",
           "TURN_STARTED"
         ]
       },
@@ -4002,7 +4219,8 @@
           "APPROVE",
           "DENY",
           "ANSWER",
-          "DEFAULT_APPLIED"
+          "DEFAULT_APPLIED",
+          "AUTO_RETRY"
         ]
       },
       "AskAnswerKind": {
@@ -4049,6 +4267,31 @@
           "CANCELLED_BY_STEER",
           "CANCELLED_BY_PAUSE",
           "UNKNOWN"
+        ]
+      },
+      "NudgeSource": {
+        "type": "string",
+        "enum": [
+          "RECONCILER",
+          "SUPERVISOR"
+        ]
+      },
+      "SuspicionReason": {
+        "type": "string",
+        "enum": [
+          "STALLED_OPEN",
+          "PROVIDER_ERROR_OPEN",
+          "NUDGE_LOOP",
+          "SILENT_TURN"
+        ]
+      },
+      "SupervisorVerdict": {
+        "type": "string",
+        "enum": [
+          "NUDGE",
+          "RESTART_WITH_NOTES",
+          "ESCALATE",
+          "LEAVE"
         ]
       },
       "PanelActionOutcome": {

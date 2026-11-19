@@ -7306,6 +7306,7 @@
           "RUNNING",
           "QUEUED",
           "WAITING_PROVIDER",
+          "WAITING_RETRY",
           "WAITING_BUDGET",
           "WAITING_PERSON",
           "REMINDED",
@@ -7318,6 +7319,7 @@
           "IssueLifeStateRUNNING",
           "IssueLifeStateQUEUED",
           "IssueLifeStateWAITING_PROVIDER",
+          "IssueLifeStateWAITING_RETRY",
           "IssueLifeStateWAITING_BUDGET",
           "IssueLifeStateWAITING_PERSON",
           "IssueLifeStateREMINDED",
@@ -7386,7 +7388,10 @@
           "RESUMED",
           "REGRET_WINDOW",
           "BATCH_LINKED",
-          "PUBLISH_RAN"
+          "PUBLISH_RAN",
+          "NUDGED",
+          "RETRY_SCHEDULED",
+          "SUPERVISOR_REVIEWED"
         ],
         "type": "string",
         "x-enum-varnames": [
@@ -7403,7 +7408,10 @@
           "IssueTimelineItemKindRESUMED",
           "IssueTimelineItemKindREGRET_WINDOW",
           "IssueTimelineItemKindBATCH_LINKED",
-          "IssueTimelineItemKindPUBLISH_RAN"
+          "IssueTimelineItemKindPUBLISH_RAN",
+          "IssueTimelineItemKindNUDGED",
+          "IssueTimelineItemKindRETRY_SCHEDULED",
+          "IssueTimelineItemKindSUPERVISOR_REVIEWED"
         ]
       },
       "IssueWorkKind": {
@@ -7611,6 +7619,19 @@
           "MailboxClaimClassOPERATOR"
         ]
       },
+      "MailboxDeferCause": {
+        "enum": [
+          "PROVIDER_LIMIT",
+          "HOLD",
+          "RETRY"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "MailboxDeferCausePROVIDER_LIMIT",
+          "MailboxDeferCauseHOLD",
+          "MailboxDeferCauseRETRY"
+        ]
+      },
       "MailboxItemKind": {
         "enum": [
           "OPERATOR_MESSAGE",
@@ -7707,6 +7728,17 @@
           "MessageTypeButton",
           "MessageTypeReaction",
           "MessageTypeStatus"
+        ]
+      },
+      "NudgeSource": {
+        "enum": [
+          "RECONCILER",
+          "SUPERVISOR"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "NudgeSourceRECONCILER",
+          "NudgeSourceSUPERVISOR"
         ]
       },
       "OnboardingStep": {
@@ -8540,7 +8572,8 @@
           "APPROVE",
           "DENY",
           "ANSWER",
-          "DEFAULT_APPLIED"
+          "DEFAULT_APPLIED",
+          "AUTO_RETRY"
         ],
         "type": "string",
         "x-enum-varnames": [
@@ -8550,7 +8583,38 @@
           "StopResolutionAPPROVE",
           "StopResolutionDENY",
           "StopResolutionANSWER",
-          "StopResolutionDEFAULT_APPLIED"
+          "StopResolutionDEFAULT_APPLIED",
+          "StopResolutionAUTO_RETRY"
+        ]
+      },
+      "SupervisorVerdict": {
+        "enum": [
+          "NUDGE",
+          "RESTART_WITH_NOTES",
+          "ESCALATE",
+          "LEAVE"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "SupervisorVerdictNUDGE",
+          "SupervisorVerdictRESTART_WITH_NOTES",
+          "SupervisorVerdictESCALATE",
+          "SupervisorVerdictLEAVE"
+        ]
+      },
+      "SuspicionReason": {
+        "enum": [
+          "STALLED_OPEN",
+          "PROVIDER_ERROR_OPEN",
+          "NUDGE_LOOP",
+          "SILENT_TURN"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "SuspicionReasonSTALLED_OPEN",
+          "SuspicionReasonPROVIDER_ERROR_OPEN",
+          "SuspicionReasonNUDGE_LOOP",
+          "SuspicionReasonSILENT_TURN"
         ]
       },
       "ThreadMode": {
@@ -9229,13 +9293,15 @@
         "enum": [
           "ORCHESTRATOR",
           "ISSUE",
-          "TRIAGE"
+          "TRIAGE",
+          "SUPERVISOR"
         ],
         "type": "string",
         "x-enum-varnames": [
           "UsageRoleORCHESTRATOR",
           "UsageRoleISSUE",
-          "UsageRoleTRIAGE"
+          "UsageRoleTRIAGE",
+          "UsageRoleSUPERVISOR"
         ]
       },
       "VideoMessageData": {

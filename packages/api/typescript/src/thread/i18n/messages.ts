@@ -272,6 +272,8 @@ const ROW_DETAIL_PT: Record<IssueLifeState, (row: BulletinRow, now: Date) => str
 	[IssueLifeState.PAUSED]: () => 'pausada',
 	[IssueLifeState.STALLED]: () => 'parou sem dizer o que falta',
 	[IssueLifeState.WAITING_PROVIDER]: (row, now) => (row.until ? `volta ${whenPt(row.until, now)}` : 'esperando o provedor'),
+	// Fase 5: a failed turn waiting for its next attempt.
+	[IssueLifeState.WAITING_RETRY]: () => 'tentando de novo',
 	// Fase 4: held by the quota budget (only while it is enforced) — the estimated return is the S3 notice's, not the row's.
 	[IssueLifeState.WAITING_BUDGET]: () => 'esperando cota',
 	[IssueLifeState.RUNNING]: () => undefined,
@@ -284,6 +286,7 @@ const ROW_DETAIL_EN: Record<IssueLifeState, (row: BulletinRow, now: Date) => str
 	[IssueLifeState.PAUSED]: () => 'paused',
 	[IssueLifeState.STALLED]: () => 'stopped without saying what it needs',
 	[IssueLifeState.WAITING_PROVIDER]: (row, now) => (row.until ? `back ${whenEn(row.until, now)}` : 'waiting for the provider'),
+	[IssueLifeState.WAITING_RETRY]: () => 'trying again',
 	[IssueLifeState.WAITING_BUDGET]: () => 'waiting for quota',
 	[IssueLifeState.RUNNING]: () => undefined,
 	[IssueLifeState.QUEUED]: () => 'queued',

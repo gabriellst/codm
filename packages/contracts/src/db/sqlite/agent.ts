@@ -5,6 +5,7 @@ import {
 	IssuePriority,
 	IssueWorkKind,
 	MailboxClaimClass,
+	MailboxDeferCause,
 	MailboxItemKind,
 	MailboxTargetKind,
 	PermissionPosture,
@@ -61,6 +62,12 @@ export const agentSessions = sqliteTable(
 		 */
 		handoffNotes: text('handoff_notes'),
 		handoffAt: integer('handoff_at', { mode: 'timestamp_ms' }),
+		/**
+		 * Fase 5 (item 3) — the supervisor asked that the NEXT turn of this issue open a fresh session seeded
+		 * with the handoff notes (`RESTART_WITH_NOTES`). `resumeDecision` reads it before the context budget;
+		 * the handoff clears it. Null when nobody asked.
+		 */
+		handoffRequestedAt: integer('handoff_requested_at', { mode: 'timestamp_ms' }),
 		lastTurnAt: integer('last_turn_at', { mode: 'timestamp_ms' })
 			.notNull()
 			.$defaultFn(() => new Date()),
@@ -181,6 +188,15 @@ export const agentMailbox = sqliteTable(
 		claimedBoot: text('claimed_boot'),
 		claimedPid: integer('claimed_pid'),
 		leaseUntil: integer('lease_until', { mode: 'timestamp_ms' }),
+		/**
+		 * Fase 5 (item 2) — WHY the item is deferred (a future lease with no holder): the provider's usage
+		 * limit, a pause of the issue or its conversation, or a retry on a growing schedule. Written by every
+		 * defer and cleared by every write that clears or replaces the lease, so null ⇔ not deferred. Each
+		 * releaser decides by it (`DEFER_RELEASE`) instead of joining on paused flags — the row's shape alone
+		 * could not tell a third cause from "waiting for quota". No CHECK — a new column on an existing
+		 * table; `z.enum` closes it on hydration. Migration 0038 fills the rows deferred at upgrade time.
+		 */
+		deferCause: text('defer_cause').$type<MailboxDeferCause>(),
 		attempts: integer('attempts').notNull().default(0),
 		lastError: text('last_error'),
 		deadAt: integer('dead_at', { mode: 'timestamp_ms' }),

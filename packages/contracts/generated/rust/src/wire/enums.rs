@@ -751,7 +751,7 @@ pub enum IssueControlSource {
 	PANEL,
 }
 
-/// Where an Issue's work actually stands RIGHT NOW, computed by rule from the queue and the stops — never stored, never declared by the model. Orthogonal to IssueStatus (the lifecycle): a WORKING issue may be RUNNING, QUEUED, WAITING_PROVIDER, WAITING_BUDGET, WAITING_PERSON, REMINDED, STALLED or PAUSED. RUNNING: a turn holds a live lease. QUEUED: work is waiting for a free slot. WAITING_PROVIDER: its next turn is deferred by the provider's usage limit. WAITING_BUDGET (fase 4): it would be QUEUED, but the quota budget is holding new task turns so the orchestrator keeps its reserve — only while the budget is enforced, never in observation mode. WAITING_PERSON: an open stop asks someone to decide, approve or answer. REMINDED: its last turn ended without declaring anything and the one declaration reminder is pending or running. STALLED: nothing in flight and no open stop — the reconcile sweep has not caught it yet, or the reminder was ignored. PAUSED: someone paused it, or its whole conversation — no turn runs and its external tools refuse until it is resumed; it wins over every state but DONE. DONE: COMPLETED.
+/// Where an Issue's work actually stands RIGHT NOW, computed by rule from the queue and the stops — never stored, never declared by the model. Orthogonal to IssueStatus (the lifecycle): a WORKING issue may be RUNNING, QUEUED, WAITING_PROVIDER, WAITING_RETRY, WAITING_BUDGET, WAITING_PERSON, REMINDED, STALLED or PAUSED. RUNNING: a turn holds a live lease. QUEUED: work is waiting for a free slot. WAITING_PROVIDER: its next turn is deferred by the provider's usage limit. WAITING_RETRY (fase 5): its last turn failed (a provider error, a crash, the hard ceiling) and its next attempt is deferred on a growing schedule before anyone is asked. WAITING_BUDGET (fase 4): it would be QUEUED, but the quota budget is holding new task turns so the orchestrator keeps its reserve — only while the budget is enforced, never in observation mode. WAITING_PERSON: an open stop asks someone to decide, approve or answer. REMINDED: its last turn ended without declaring anything and the one declaration reminder is pending or running. STALLED: nothing in flight and no open stop — the reconcile sweep has not caught it yet, or the reminder was ignored. PAUSED: someone paused it, or its whole conversation — no turn runs and its external tools refuse until it is resumed; it wins over every state but DONE. DONE: COMPLETED.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
 	serde::Serialize, serde::Deserialize,
@@ -768,6 +768,9 @@ pub enum IssueLifeState {
 	#[serde(rename = "WAITING_PROVIDER")]
 	#[strum(serialize = "WAITING_PROVIDER")]
 	WAITING_PROVIDER,
+	#[serde(rename = "WAITING_RETRY")]
+	#[strum(serialize = "WAITING_RETRY")]
+	WAITING_RETRY,
 	#[serde(rename = "WAITING_BUDGET")]
 	#[strum(serialize = "WAITING_BUDGET")]
 	WAITING_BUDGET,
@@ -854,7 +857,7 @@ pub enum IssueStatus {
 	COMPLETED,
 }
 
-/// The kinds of moment an Issue's timeline shows, oldest first. Discriminant of the timeline item union: each kind carries its own fields. CREATED: the issue was forked. TURN_STARTED: a turn of its session began. MESSAGE: a transcript entry linked to the issue (what the agent said about it, or a reply that quoted it). STEER: guidance sent to it (with sent/delivered/read instants). ARTIFACT: a file, image, video or link it recorded. STOP_RAISED / STOP_RESOLVED: it asked for someone, and someone answered. COMPLETED: it declared itself done. ARCHIVED: it left the board. PAUSED / RESUMED: someone held its work (a WhatsApp control word or the console button), and someone let it continue. REGRET_WINDOW: before an irreversible action (a push, a merge, a publish, a deploy) the session waited a few seconds for new guidance, and either went ahead or was cancelled by a message or a pause. Fase 3 adds fields, not kinds: MESSAGE carries its IssueSignalLevel and OutputRouting (group vs panel only); STOP_RAISED of an ask carries its code (D1), question, options and deadline; STOP_RESOLVED carries the answer (or the default that applied). Fase 4: BATCH_LINKED: one item of a batch (by its code and number) was sent to this issue. PUBLISH_RAN: the workspace's declared publish command ran (outcome, exit code, duration — never the command line nor its output).
+/// The kinds of moment an Issue's timeline shows, oldest first. Discriminant of the timeline item union: each kind carries its own fields. CREATED: the issue was forked. TURN_STARTED: a turn of its session began. MESSAGE: a transcript entry linked to the issue (what the agent said about it, or a reply that quoted it). STEER: guidance sent to it (with sent/delivered/read instants). ARTIFACT: a file, image, video or link it recorded. STOP_RAISED / STOP_RESOLVED: it asked for someone, and someone answered. COMPLETED: it declared itself done. ARCHIVED: it left the board. PAUSED / RESUMED: someone held its work (a WhatsApp control word or the console button), and someone let it continue. REGRET_WINDOW: before an irreversible action (a push, a merge, a publish, a deploy) the session waited a few seconds for new guidance, and either went ahead or was cancelled by a message or a pause. Fase 3 adds fields, not kinds: MESSAGE carries its IssueSignalLevel and OutputRouting (group vs panel only); STOP_RAISED of an ask carries its code (D1), question, options and deadline; STOP_RESOLVED carries the answer (or the default that applied). Fase 4: BATCH_LINKED: one item of a batch (by its code and number) was sent to this issue. PUBLISH_RAN: the workspace's declared publish command ran (outcome, exit code, duration — never the command line nor its output). Fase 5: NUDGED: the task ended a turn without declaring anything and got an automatic nudge (its ordinal and who sent it) — shown in place of the reminder's STEER. RETRY_SCHEDULED: a failed turn will be tried again (attempt n of max, at an instant). SUPERVISOR_REVIEWED: the supervisor acted on the task (why it looked, and what it decided).
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
 	serde::Serialize, serde::Deserialize,
@@ -904,6 +907,15 @@ pub enum IssueTimelineItemKind {
 	#[serde(rename = "PUBLISH_RAN")]
 	#[strum(serialize = "PUBLISH_RAN")]
 	PUBLISH_RAN,
+	#[serde(rename = "NUDGED")]
+	#[strum(serialize = "NUDGED")]
+	NUDGED,
+	#[serde(rename = "RETRY_SCHEDULED")]
+	#[strum(serialize = "RETRY_SCHEDULED")]
+	RETRY_SCHEDULED,
+	#[serde(rename = "SUPERVISOR_REVIEWED")]
+	#[strum(serialize = "SUPERVISOR_REVIEWED")]
+	SUPERVISOR_REVIEWED,
 }
 
 /// What a task does (fase 4, item 6d) — declared when it is born, it chooses the model the task runs on. CHANGE: it changes something (code, content, configuration). DIAGNOSIS: it reads and reports without changing anything.
@@ -983,6 +995,25 @@ pub enum MailboxClaimClass {
 	#[serde(rename = "OPERATOR")]
 	#[strum(serialize = "OPERATOR")]
 	OPERATOR,
+}
+
+/// Why a queued item is deferred (fase 5, item 2) — a column of the shared agent_mailbox table, written by every defer and cleared by every write that clears or replaces the lease, so 'null' means 'not deferred'. Each releaser decides by this cause, never by joining on paused flags. PROVIDER_LIMIT: the provider refused for its usage limit and the item waits for it. HOLD: the issue or its conversation is paused and the item waits for the resume. RETRY: the item failed and waits for its next attempt on a growing schedule.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum MailboxDeferCause {
+	#[serde(rename = "PROVIDER_LIMIT")]
+	#[strum(serialize = "PROVIDER_LIMIT")]
+	PROVIDER_LIMIT,
+	#[serde(rename = "HOLD")]
+	#[strum(serialize = "HOLD")]
+	HOLD,
+	#[serde(rename = "RETRY")]
+	#[strum(serialize = "RETRY")]
+	RETRY,
 }
 
 /// Why a turn is being scheduled. OPERATOR_MESSAGE = the operator addressed the orchestrator; ISSUE_RESULT = a subagent finished and its outcome must be composed into a reply; WORK = a newly created issue's first subagent turn; STEER = mid-flight guidance for a running issue. The first two target a THREAD, the last two an ISSUE — the pairing is not encoded here on purpose: a producer states what happened, the dispatcher decides what runs.
@@ -1127,6 +1158,22 @@ pub enum MessageType {
 	#[serde(rename = "STATUS")]
 	#[strum(serialize = "STATUS")]
 	STATUS,
+}
+
+/// Who sent an automatic nudge to a task that ended its turn without declaring anything (fase 5, item 1). RECONCILER: the stalled-issue sweep (nudges 1 and 2 of an episode). SUPERVISOR: the small-model supervisor resuming a blocked task — always counted as the last nudge of the episode.
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum NudgeSource {
+	#[serde(rename = "RECONCILER")]
+	#[strum(serialize = "RECONCILER")]
+	RECONCILER,
+	#[serde(rename = "SUPERVISOR")]
+	#[strum(serialize = "SUPERVISOR")]
+	SUPERVISOR,
 }
 
 /// Onde o operador está no wizard de onboarding. SÓ os passos que o SERVIDOR conhece: os três informativos, os cinco de setup, e o final. Uma SystemPrecondition NUNCA entra aqui — o servidor não enxerga o TCC da máquina, e o mesmo ownerId em dois Macs teria respostas diferentes (spec Decision 8).
@@ -1599,6 +1646,53 @@ pub enum StopResolution {
 	#[serde(rename = "DEFAULT_APPLIED")]
 	#[strum(serialize = "DEFAULT_APPLIED")]
 	DEFAULT_APPLIED,
+	#[serde(rename = "AUTO_RETRY")]
+	#[strum(serialize = "AUTO_RETRY")]
+	AUTO_RETRY,
+}
+
+/// What the supervisor decided for a suspect task (fase 5, item 3) — only these four, and only those admitted for the suspicion reason. NUDGE: resume the task once more, in AUTO, as the last nudge of the episode. RESTART_WITH_NOTES: the next turn opens a fresh session seeded with the handoff notes. ESCALATE: mark the task as escalated on its card and timeline — no message to anyone. LEAVE: do nothing (also the fail-closed fallback).
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum SupervisorVerdict {
+	#[serde(rename = "NUDGE")]
+	#[strum(serialize = "NUDGE")]
+	NUDGE,
+	#[serde(rename = "RESTART_WITH_NOTES")]
+	#[strum(serialize = "RESTART_WITH_NOTES")]
+	RESTART_WITH_NOTES,
+	#[serde(rename = "ESCALATE")]
+	#[strum(serialize = "ESCALATE")]
+	ESCALATE,
+	#[serde(rename = "LEAVE")]
+	#[strum(serialize = "LEAVE")]
+	LEAVE,
+}
+
+/// Why the supervisor looks at a task (fase 5, item 3) — decided by rule over persisted data, never by a model. STALLED_OPEN: a STALLED stop has been open for a while. PROVIDER_ERROR_OPEN: a SERVER_ERROR stop (a poisoned item after its retries) has been open for a while. NUDGE_LOOP: the task keeps going silent — several nudge episodes in a day. SILENT_TURN: a live turn holds its lease but has written nothing to its terminal for a while (the supervisor only flags it; it never stops a live turn).
+#[derive(
+	Debug, Clone, Copy, PartialEq, Eq, Hash,
+	serde::Serialize, serde::Deserialize,
+	strum::EnumString, strum::IntoStaticStr, strum::Display,
+)]
+#[allow(non_camel_case_types)]
+pub enum SuspicionReason {
+	#[serde(rename = "STALLED_OPEN")]
+	#[strum(serialize = "STALLED_OPEN")]
+	STALLED_OPEN,
+	#[serde(rename = "PROVIDER_ERROR_OPEN")]
+	#[strum(serialize = "PROVIDER_ERROR_OPEN")]
+	PROVIDER_ERROR_OPEN,
+	#[serde(rename = "NUDGE_LOOP")]
+	#[strum(serialize = "NUDGE_LOOP")]
+	NUDGE_LOOP,
+	#[serde(rename = "SILENT_TURN")]
+	#[strum(serialize = "SILENT_TURN")]
+	SILENT_TURN,
 }
 
 /// Operator composer mode on a Thread. STEER = agents live, typed text is a whisper injected into agent context (never sent to the channel); DIRECT = thread paused, the owner talks directly on the channel as themselves. Promoted from the modeling's inline composerMode (mirrors the MessageAuthor promotion).
@@ -2607,7 +2701,7 @@ pub enum TranscriptKind {
 	ACTION,
 }
 
-/// Who spent provider quota on a turn (fase 4, item 2). The budget sums spend by role and keeps a free floor for the orchestrator. ORCHESTRATOR: a conversation turn of the orchestrator. ISSUE: a turn of an issue's session. TRIAGE: the small-model triage of an inbound message.
+/// Who spent provider quota on a turn (fase 4, item 2). The budget sums spend by role and keeps a free floor for the orchestrator. ORCHESTRATOR: a conversation turn of the orchestrator. ISSUE: a turn of an issue's session. TRIAGE: the small-model triage of an inbound message. SUPERVISOR (fase 5): the small-model supervisor reviewing a suspect task — inside the orchestrator's reserve.
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, Hash,
 	serde::Serialize, serde::Deserialize,
@@ -2624,6 +2718,9 @@ pub enum UsageRole {
 	#[serde(rename = "TRIAGE")]
 	#[strum(serialize = "TRIAGE")]
 	TRIAGE,
+	#[serde(rename = "SUPERVISOR")]
+	#[strum(serialize = "SUPERVISOR")]
+	SUPERVISOR,
 }
 
 /// Detected trait of a registered workspace folder. GIT = a .git repository; CLAUDE_PROJECT = a Claude project marker. A workspace may carry both.

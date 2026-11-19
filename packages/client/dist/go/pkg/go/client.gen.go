@@ -1069,6 +1069,7 @@ const (
 	IssueLifeStateWAITINGBUDGET   IssueLifeState = "WAITING_BUDGET"
 	IssueLifeStateWAITINGPERSON   IssueLifeState = "WAITING_PERSON"
 	IssueLifeStateWAITINGPROVIDER IssueLifeState = "WAITING_PROVIDER"
+	IssueLifeStateWAITINGRETRY    IssueLifeState = "WAITING_RETRY"
 )
 
 // Valid indicates whether the value is a known member of the IssueLifeState enum.
@@ -1091,6 +1092,8 @@ func (e IssueLifeState) Valid() bool {
 	case IssueLifeStateWAITINGPERSON:
 		return true
 	case IssueLifeStateWAITINGPROVIDER:
+		return true
+	case IssueLifeStateWAITINGRETRY:
 		return true
 	default:
 		return false
@@ -1171,20 +1174,23 @@ func (e IssueStatus) Valid() bool {
 
 // Defines values for IssueTimelineItemKind.
 const (
-	IssueTimelineItemKindARCHIVED     IssueTimelineItemKind = "ARCHIVED"
-	IssueTimelineItemKindARTIFACT     IssueTimelineItemKind = "ARTIFACT"
-	IssueTimelineItemKindBATCHLINKED  IssueTimelineItemKind = "BATCH_LINKED"
-	IssueTimelineItemKindCOMPLETED    IssueTimelineItemKind = "COMPLETED"
-	IssueTimelineItemKindCREATED      IssueTimelineItemKind = "CREATED"
-	IssueTimelineItemKindMESSAGE      IssueTimelineItemKind = "MESSAGE"
-	IssueTimelineItemKindPAUSED       IssueTimelineItemKind = "PAUSED"
-	IssueTimelineItemKindPUBLISHRAN   IssueTimelineItemKind = "PUBLISH_RAN"
-	IssueTimelineItemKindREGRETWINDOW IssueTimelineItemKind = "REGRET_WINDOW"
-	IssueTimelineItemKindRESUMED      IssueTimelineItemKind = "RESUMED"
-	IssueTimelineItemKindSTEER        IssueTimelineItemKind = "STEER"
-	IssueTimelineItemKindSTOPRAISED   IssueTimelineItemKind = "STOP_RAISED"
-	IssueTimelineItemKindSTOPRESOLVED IssueTimelineItemKind = "STOP_RESOLVED"
-	IssueTimelineItemKindTURNSTARTED  IssueTimelineItemKind = "TURN_STARTED"
+	IssueTimelineItemKindARCHIVED           IssueTimelineItemKind = "ARCHIVED"
+	IssueTimelineItemKindARTIFACT           IssueTimelineItemKind = "ARTIFACT"
+	IssueTimelineItemKindBATCHLINKED        IssueTimelineItemKind = "BATCH_LINKED"
+	IssueTimelineItemKindCOMPLETED          IssueTimelineItemKind = "COMPLETED"
+	IssueTimelineItemKindCREATED            IssueTimelineItemKind = "CREATED"
+	IssueTimelineItemKindMESSAGE            IssueTimelineItemKind = "MESSAGE"
+	IssueTimelineItemKindNUDGED             IssueTimelineItemKind = "NUDGED"
+	IssueTimelineItemKindPAUSED             IssueTimelineItemKind = "PAUSED"
+	IssueTimelineItemKindPUBLISHRAN         IssueTimelineItemKind = "PUBLISH_RAN"
+	IssueTimelineItemKindREGRETWINDOW       IssueTimelineItemKind = "REGRET_WINDOW"
+	IssueTimelineItemKindRESUMED            IssueTimelineItemKind = "RESUMED"
+	IssueTimelineItemKindRETRYSCHEDULED     IssueTimelineItemKind = "RETRY_SCHEDULED"
+	IssueTimelineItemKindSTEER              IssueTimelineItemKind = "STEER"
+	IssueTimelineItemKindSTOPRAISED         IssueTimelineItemKind = "STOP_RAISED"
+	IssueTimelineItemKindSTOPRESOLVED       IssueTimelineItemKind = "STOP_RESOLVED"
+	IssueTimelineItemKindSUPERVISORREVIEWED IssueTimelineItemKind = "SUPERVISOR_REVIEWED"
+	IssueTimelineItemKindTURNSTARTED        IssueTimelineItemKind = "TURN_STARTED"
 )
 
 // Valid indicates whether the value is a known member of the IssueTimelineItemKind enum.
@@ -1202,6 +1208,8 @@ func (e IssueTimelineItemKind) Valid() bool {
 		return true
 	case IssueTimelineItemKindMESSAGE:
 		return true
+	case IssueTimelineItemKindNUDGED:
+		return true
 	case IssueTimelineItemKindPAUSED:
 		return true
 	case IssueTimelineItemKindPUBLISHRAN:
@@ -1210,11 +1218,15 @@ func (e IssueTimelineItemKind) Valid() bool {
 		return true
 	case IssueTimelineItemKindRESUMED:
 		return true
+	case IssueTimelineItemKindRETRYSCHEDULED:
+		return true
 	case IssueTimelineItemKindSTEER:
 		return true
 	case IssueTimelineItemKindSTOPRAISED:
 		return true
 	case IssueTimelineItemKindSTOPRESOLVED:
+		return true
+	case IssueTimelineItemKindSUPERVISORREVIEWED:
 		return true
 	case IssueTimelineItemKindTURNSTARTED:
 		return true
@@ -1328,6 +1340,27 @@ func (e MailboxClaimClass) Valid() bool {
 	case MailboxClaimClassSTEER:
 		return true
 	case MailboxClaimClassWORK:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MailboxDeferCause.
+const (
+	MailboxDeferCauseHOLD          MailboxDeferCause = "HOLD"
+	MailboxDeferCausePROVIDERLIMIT MailboxDeferCause = "PROVIDER_LIMIT"
+	MailboxDeferCauseRETRY         MailboxDeferCause = "RETRY"
+)
+
+// Valid indicates whether the value is a known member of the MailboxDeferCause enum.
+func (e MailboxDeferCause) Valid() bool {
+	switch e {
+	case MailboxDeferCauseHOLD:
+		return true
+	case MailboxDeferCausePROVIDERLIMIT:
+		return true
+	case MailboxDeferCauseRETRY:
 		return true
 	default:
 		return false
@@ -1484,6 +1517,24 @@ func (e MessageType) Valid() bool {
 	case MessageTypeText:
 		return true
 	case MessageTypeVideo:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NudgeSource.
+const (
+	NudgeSourceRECONCILER NudgeSource = "RECONCILER"
+	NudgeSourceSUPERVISOR NudgeSource = "SUPERVISOR"
+)
+
+// Valid indicates whether the value is a known member of the NudgeSource enum.
+func (e NudgeSource) Valid() bool {
+	switch e {
+	case NudgeSourceRECONCILER:
+		return true
+	case NudgeSourceSUPERVISOR:
 		return true
 	default:
 		return false
@@ -2079,6 +2130,7 @@ func (e StopKind) Valid() bool {
 const (
 	StopResolutionANSWER         StopResolution = "ANSWER"
 	StopResolutionAPPROVE        StopResolution = "APPROVE"
+	StopResolutionAUTORETRY      StopResolution = "AUTO_RETRY"
 	StopResolutionDEFAULTAPPLIED StopResolution = "DEFAULT_APPLIED"
 	StopResolutionDENY           StopResolution = "DENY"
 	StopResolutionRETRY          StopResolution = "RETRY"
@@ -2093,6 +2145,8 @@ func (e StopResolution) Valid() bool {
 		return true
 	case StopResolutionAPPROVE:
 		return true
+	case StopResolutionAUTORETRY:
+		return true
 	case StopResolutionDEFAULTAPPLIED:
 		return true
 	case StopResolutionDENY:
@@ -2102,6 +2156,54 @@ func (e StopResolution) Valid() bool {
 	case StopResolutionREVIEWANDSEND:
 		return true
 	case StopResolutionTAKEOVER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SupervisorVerdict.
+const (
+	SupervisorVerdictESCALATE         SupervisorVerdict = "ESCALATE"
+	SupervisorVerdictLEAVE            SupervisorVerdict = "LEAVE"
+	SupervisorVerdictNUDGE            SupervisorVerdict = "NUDGE"
+	SupervisorVerdictRESTARTWITHNOTES SupervisorVerdict = "RESTART_WITH_NOTES"
+)
+
+// Valid indicates whether the value is a known member of the SupervisorVerdict enum.
+func (e SupervisorVerdict) Valid() bool {
+	switch e {
+	case SupervisorVerdictESCALATE:
+		return true
+	case SupervisorVerdictLEAVE:
+		return true
+	case SupervisorVerdictNUDGE:
+		return true
+	case SupervisorVerdictRESTARTWITHNOTES:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SuspicionReason.
+const (
+	SuspicionReasonNUDGELOOP         SuspicionReason = "NUDGE_LOOP"
+	SuspicionReasonPROVIDERERROROPEN SuspicionReason = "PROVIDER_ERROR_OPEN"
+	SuspicionReasonSILENTTURN        SuspicionReason = "SILENT_TURN"
+	SuspicionReasonSTALLEDOPEN       SuspicionReason = "STALLED_OPEN"
+)
+
+// Valid indicates whether the value is a known member of the SuspicionReason enum.
+func (e SuspicionReason) Valid() bool {
+	switch e {
+	case SuspicionReasonNUDGELOOP:
+		return true
+	case SuspicionReasonPROVIDERERROROPEN:
+		return true
+	case SuspicionReasonSILENTTURN:
+		return true
+	case SuspicionReasonSTALLEDOPEN:
 		return true
 	default:
 		return false
@@ -3126,6 +3228,7 @@ func (e TranscriptKind) Valid() bool {
 const (
 	UsageRoleISSUE        UsageRole = "ISSUE"
 	UsageRoleORCHESTRATOR UsageRole = "ORCHESTRATOR"
+	UsageRoleSUPERVISOR   UsageRole = "SUPERVISOR"
 	UsageRoleTRIAGE       UsageRole = "TRIAGE"
 )
 
@@ -3135,6 +3238,8 @@ func (e UsageRole) Valid() bool {
 	case UsageRoleISSUE:
 		return true
 	case UsageRoleORCHESTRATOR:
+		return true
+	case UsageRoleSUPERVISOR:
 		return true
 	case UsageRoleTRIAGE:
 		return true
@@ -4557,6 +4662,9 @@ type LoopScheduleKind string
 // MailboxClaimClass defines model for MailboxClaimClass.
 type MailboxClaimClass string
 
+// MailboxDeferCause defines model for MailboxDeferCause.
+type MailboxDeferCause string
+
 // MailboxItemKind defines model for MailboxItemKind.
 type MailboxItemKind string
 
@@ -4574,6 +4682,9 @@ type MessageAuthor string
 
 // MessageType defines model for MessageType.
 type MessageType string
+
+// NudgeSource defines model for NudgeSource.
+type NudgeSource string
 
 // OnboardingStep defines model for OnboardingStep.
 type OnboardingStep string
@@ -4785,6 +4896,12 @@ type StopKind string
 
 // StopResolution defines model for StopResolution.
 type StopResolution string
+
+// SupervisorVerdict defines model for SupervisorVerdict.
+type SupervisorVerdict string
+
+// SuspicionReason defines model for SuspicionReason.
+type SuspicionReason string
 
 // ThreadMode defines model for ThreadMode.
 type ThreadMode string

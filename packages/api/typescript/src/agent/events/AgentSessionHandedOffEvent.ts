@@ -1,5 +1,6 @@
 import { BaseDomainEvent, z } from '@codm/core-typescript'
 import { HandoffNotesSource } from '../enums/HandoffNotesSource'
+import { ResumeInvalidationReason } from '../enums/ResumeInvalidationReason'
 
 export const AgentSessionHandedOffEventSchema = z.domainEvent({
 	issueId: z.string(),
@@ -13,6 +14,11 @@ export const AgentSessionHandedOffEventSchema = z.domainEvent({
 	 */
 	fromAgentSessionId: z.string(),
 	toAgentSessionId: z.string(),
+	/**
+	 * Fase 5 — WHY the session was handed off: past the context budget, or the supervisor asked for it
+	 * (`HANDOFF_REQUESTED`). Optional for the facts written before fase 5; every producer from fase 5 on sets it.
+	 */
+	reason: z.enum(ResumeInvalidationReason).optional(),
 })
 
 /**
